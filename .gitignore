@@ -1,0 +1,7 @@
+.env
+splashtail
+.vscode
+config.yaml
+config.yaml.sample
+coverage.out
+__pycache__
