@@ -97,14 +97,14 @@ func Setup() {
 		panic(err)
 	}
 
-	Discord.Identify.Intents = discordgo.IntentsGuilds | discordgo.IntentGuildPresences | discordgo.IntentsGuildMembers
+	// Verify token
+	_, err = Discord.User("@me")
+
+	if err != nil {
+		panic(err)
+	}
 
 	go func() {
-		err = Discord.Open()
-		if err != nil {
-			panic(err)
-		}
-
 		if config.CurrentEnv == config.CurrentEnvProd {
 			err = Discord.UpdateWatchStatus(0, Config.Sites.Frontend.Parse())
 

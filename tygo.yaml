@@ -1,6 +1,6 @@
 packages:
   - path: "splashtail/types"
-    output_path: "/silverpelt/cdn/ibl/dev/bindings/popplio/types.ts"
+    output_path: "/silverpelt/cdn/ibl/dev/bindings/splashtail/types.ts"
     frontmatter: |
       import { PlatformUser } from "./eureka-dovewing"
     type_mappings:
@@ -11,4 +11,4 @@ packages:
       pgtype.Timestamptz: "string | null /* RFC3339, nullable */"
         
   - path: "github.com/infinitybotlist/eureka/dovewing/dovetypes"
-    output_path: "/silverpelt/cdn/ibl/dev/bindings/popplio/eureka-dovewing.ts"
+    output_path: "/silverpelt/cdn/ibl/dev/bindings/splashtail/eureka-dovewing.ts"

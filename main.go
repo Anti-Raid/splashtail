@@ -12,6 +12,7 @@ import (
 
 	"splashtail/api"
 	"splashtail/constants"
+	"splashtail/routes/backups"
 	"splashtail/state"
 	"splashtail/types"
 
@@ -109,6 +110,7 @@ func main() {
 
 	routers := []uapi.APIRouter{
 		// Use same order as routes folder
+		backups.Router{},
 	}
 
 	for _, router := range routers {

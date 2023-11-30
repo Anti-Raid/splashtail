@@ -16,7 +16,8 @@ import (
 )
 
 const (
-	TargetTypeUser = "user"
+	TargetTypeUser   = "user"
+	TargetTypeServer = "server"
 )
 
 type DefaultResponder struct{}
@@ -74,6 +75,25 @@ func Authorize(r uapi.Route, req *http.Request) (uapi.AuthData, uapi.HttpRespons
 				Banned:     banned,
 			}
 			urlIds = []string{id.String}
+		case TargetTypeServer:
+			var id pgtype.Text
+
+			err := state.Pool.QueryRow(state.Context, "SELECT id FROM guilds WHERE api_token = $1", strings.Replace(authHeader, "Server ", "", 1)).Scan(&id)
+
+			if err != nil {
+				continue
+			}
+
+			if !id.Valid {
+				continue
+			}
+
+			authData = uapi.AuthData{
+				TargetType: TargetTypeServer,
+				ID:         id.String,
+				Authorized: true,
+			}
+			urlIds = []string{id.String}
 		}
 
 		// Now handle the URLVar
@@ -106,7 +126,8 @@ func Setup() {
 		Logger:    state.Logger,
 		Authorize: Authorize,
 		AuthTypeMap: map[string]string{
-			TargetTypeUser: "user",
+			TargetTypeUser:   "user",
+			TargetTypeServer: "server",
 		},
 		Redis:   state.Redis,
 		Context: state.Context,
