@@ -109,7 +109,7 @@ func Authorize(r uapi.Route, req *http.Request) (uapi.AuthData, uapi.HttpRespons
 		if authData.Banned && auth.AllowedScope != "ban_exempt" {
 			return uapi.AuthData{}, uapi.HttpResponse{
 				Status: http.StatusForbidden,
-				Json:   types.ApiError{Message: "You are banned from Anti Raid. If you think this is a mistake, please contact support."},
+				Json:   types.ApiError{Message: "You are banned from Anti-Raid. If you think this is a mistake, please contact support."},
 			}, false
 		}
 	}
