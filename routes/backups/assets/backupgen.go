@@ -124,16 +124,16 @@ func CreateServerBackup(taskId, taskName, id string) {
 		return
 	}
 
-	// Create $SecureStorage/backups/$taskId
-	err = os.Mkdir(fmt.Sprintf("%s/backups/%s", state.Config.Meta.SecureStorage, taskId), 0700)
+	// Create $SecureStorage/guilds/$guildId/backups/$taskId
+	err = os.MkdirAll(fmt.Sprintf("%s/guilds/%s/backups/%s", state.Config.Meta.SecureStorage, id, taskId), 0700)
 
 	if err != nil {
 		l.Error("Failed to create directory", zap.Error(err), zap.String("id", id))
 		return
 	}
 
-	// Write backup to $SecureStorage/backups/$taskId/backup.arbackup
-	file, err := os.Create(fmt.Sprintf("%s/backups/%s/backup.arbackup", state.Config.Meta.SecureStorage, taskId))
+	// Write backup to $SecureStorage/guilds/$guildId/backups/$taskId/backup.arbackup
+	file, err := os.Create(fmt.Sprintf("%s/guilds/%s/backups/%s/backup.arbackup", state.Config.Meta.SecureStorage, id, taskId))
 
 	if err != nil {
 		l.Error("Failed to create file", zap.Error(err), zap.String("id", id))
@@ -148,6 +148,8 @@ func CreateServerBackup(taskId, taskName, id string) {
 		l.Error("Failed to write backup", zap.Error(err), zap.String("id", id))
 		return
 	}
+
+	l.Info("Successfully created backup", zap.String("id", id))
 
 	// Commit tx
 	_, err = tx.Exec(state.Context, "UPDATE tasks SET output = $1, state = $2 WHERE task_id = $3", map[string]string{}, "completed", taskId)

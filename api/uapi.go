@@ -16,8 +16,8 @@ import (
 )
 
 const (
-	TargetTypeUser   = "user"
-	TargetTypeServer = "server"
+	TargetTypeUser   = "User"
+	TargetTypeServer = "Berver"
 )
 
 type DefaultResponder struct{}
@@ -126,8 +126,8 @@ func Setup() {
 		Logger:    state.Logger,
 		Authorize: Authorize,
 		AuthTypeMap: map[string]string{
-			TargetTypeUser:   "user",
-			TargetTypeServer: "server",
+			TargetTypeUser:   "User",
+			TargetTypeServer: "Server",
 		},
 		Redis:   state.Redis,
 		Context: state.Context,

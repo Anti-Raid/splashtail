@@ -3,6 +3,7 @@ package get_task
 import (
 	"errors"
 	"net/http"
+	"splashtail/api"
 	"splashtail/db"
 	state "splashtail/state"
 	types "splashtail/types"
@@ -27,7 +28,7 @@ func Docs() *docs.Doc {
 		Params: []docs.Parameter{
 			{
 				Name:        "id",
-				Description: "User ID",
+				Description: "User/Server ID",
 				Required:    true,
 				In:          "path",
 				Schema:      docs.IdSchema,
@@ -54,7 +55,7 @@ func Docs() *docs.Doc {
 func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 	// Check that the user owns the task
 	taskId := chi.URLParam(r, "tid")
-	userId := chi.URLParam(r, "id")
+	entityId := chi.URLParam(r, "id")
 
 	if taskId == "" {
 		return uapi.HttpResponse{
@@ -101,20 +102,53 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 		}
 	}
 
-	if task.AllowUnauthenticated {
-		d.Auth.ID = userId
-	} else if d.Auth.ID == "" {
-		return uapi.HttpResponse{
-			Status: http.StatusUnauthorized,
-			Json:   types.ApiError{Message: "You must be authenticated to access this task"},
-		}
-	}
-
-	if task.ForUser.Valid {
-		if task.ForUser.String != d.Auth.ID {
+	if !task.AllowUnauthenticated {
+		if d.Auth.ID == "" {
 			return uapi.HttpResponse{
-				Status: http.StatusForbidden,
-				Json:   types.ApiError{Message: "This task is not owned by your user account!"},
+				Status: http.StatusUnauthorized,
+				Json:   types.ApiError{Message: "This task requires authentication"},
+			}
+		}
+
+		if task.ForUser.Valid {
+			var forUserSplit = strings.Split(task.ForUser.String, "/")
+
+			if len(forUserSplit) != 2 {
+				return uapi.HttpResponse{
+					Status: http.StatusInternalServerError,
+					Json:   types.ApiError{Message: "Invalid task.ForUser"},
+				}
+			}
+
+			switch forUserSplit[0] {
+			case "g":
+				if d.Auth.TargetType != api.TargetTypeServer {
+					return uapi.HttpResponse{
+						Status: http.StatusForbidden,
+						Json:   types.ApiError{Message: "This task is not owned by your server!"},
+					}
+				}
+
+				if forUserSplit[1] != entityId {
+					return uapi.HttpResponse{
+						Status: http.StatusForbidden,
+						Json:   types.ApiError{Message: "This task is not owned by your server!"},
+					}
+				}
+			case "u":
+				if d.Auth.TargetType != api.TargetTypeUser {
+					return uapi.HttpResponse{
+						Status: http.StatusForbidden,
+						Json:   types.ApiError{Message: "This task is not owned by your user account!"},
+					}
+				}
+
+				if forUserSplit[1] != d.Auth.ID {
+					return uapi.HttpResponse{
+						Status: http.StatusForbidden,
+						Json:   types.ApiError{Message: "This task is not owned by your user account!"},
+					}
+				}
 			}
 		}
 	}

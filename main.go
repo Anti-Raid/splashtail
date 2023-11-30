@@ -14,6 +14,7 @@ import (
 	"splashtail/constants"
 	"splashtail/routes/backups"
 	"splashtail/routes/platform"
+	"splashtail/routes/tasks"
 	"splashtail/state"
 	"splashtail/types"
 
@@ -53,9 +54,17 @@ func corsMiddleware(next http.Handler) http.Handler {
 			}
 		}
 
+		if r.Header.Get("Server-Auth") != "" {
+			if strings.HasPrefix(r.Header.Get("Server-Auth"), "Server ") {
+				r.Header.Set("Authorization", r.Header.Get("Server-Auth"))
+			} else {
+				r.Header.Set("Authorization", "Server "+r.Header.Get("Server-Auth"))
+			}
+		}
+
 		w.Header().Set("Access-Control-Allow-Origin", r.Header.Get("Origin"))
 		w.Header().Set("Access-Control-Allow-Credentials", "true")
-		w.Header().Set("Access-Control-Allow-Headers", "X-Client, Content-Type, Authorization")
+		w.Header().Set("Access-Control-Allow-Headers", "X-Client, Content-Type, Authorization, User-Auth, Server-Auth")
 		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE")
 
 		if r.Method == "OPTIONS" {
@@ -95,6 +104,7 @@ func main() {
 	docs.Setup()
 
 	docs.AddSecuritySchema("User", "User-Auth", "Requires a user token. Should be prefixed with `User ` in `Authorization` header.")
+	docs.AddSecuritySchema("Server", "Server-Auth", "Requires a server token. Should be prefixed with `Server ` in `Authorization` header.")
 
 	api.Setup()
 
@@ -113,6 +123,7 @@ func main() {
 		// Use same order as routes folder
 		backups.Router{},
 		platform.Router{},
+		tasks.Router{},
 	}
 
 	for _, router := range routers {
