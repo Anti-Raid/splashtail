@@ -1,9 +1,12 @@
 TEST__USER_ID := 728871946456137770
 CDN_PATH := /failuremgmt/cdn/antiraid
 
+
 all:
 	CGO_ENABLED=0 go build -v 
 	systemctl reload splashtail-staging
+buildbot:
+	cd bot && npm i && npm run build
 tests:
 	CGO_ENABLED=0 go test -v -coverprofile=coverage.out ./...
 ts:

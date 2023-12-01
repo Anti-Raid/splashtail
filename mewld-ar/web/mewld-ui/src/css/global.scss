@@ -1,0 +1,89 @@
+html, body, h1, h2, h3, h4, h5, h6, p, ul, ol, li, dl, dt, dd, form, fieldset, legend, input, textarea, button, select, blockquote, pre, code, .container {
+    font-family: Verdana, Geneva, Tahoma, sans-serif;
+    margin-bottom: 0px !important;
+}
+
+input {
+    padding: 5px;
+    background: lightgrey;
+    border: 1px thin;
+    border-radius: 4px 4px 4px 4px;
+    width: 500px;
+}
+
+html {
+    margin-bottom: 20px !important;
+}
+
+h2 {
+    font-weight: normal;
+}
+
+.cluster p {
+    margin-top: 0px !important;
+}
+
+.cluster {
+    border: 1px solid;
+}
+
+.cluster-para {
+    font-weight: bold;
+    padding: 5px;
+}
+
+.cluster-pane {
+    min-height: 120px;
+    border-top: 1px solid;
+}
+
+button {
+    background-color: #4CAF50;
+    color: white;
+    padding: 10px 20px;
+    border: none;
+    cursor: pointer;
+    border-radius: 4px;
+}
+
+button:hover {
+    background-color: #45a049;
+}
+
+.unknown {
+    color: #aaa;
+}
+
+.ald {
+    font-size: 0.8em;
+}
+
+.clickable {
+    cursor: pointer;
+}
+
+#action-logs {
+    height: 280px;
+    max-height: 280px;
+    padding-bottom: 10px;
+    overflow-y: scroll;
+    border: 1px solid;
+}
+
+.c-active {
+    background-color: lightgreen;
+}
+
+.c-inactive {
+    background-color: rgba(218, 134, 134, 0.843);
+}
+
+.active {
+    display: initial !important;
+}
+
+code {
+    font-family: Consolas, Monaco, 'Andale Mono', 'Ubuntu Mono', monospace;
+    font-size: 12px;
+    word-wrap: break-word;
+}

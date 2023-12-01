@@ -2,6 +2,8 @@ package main
 
 import (
 	"html/template"
+	"mewld"
+	"mewld/config"
 	"net/http"
 	"os"
 	"os/signal"
@@ -193,6 +195,13 @@ func main() {
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		w.Write([]byte(constants.MethodNotAllowed))
 	})
+
+	// Load mewld bot
+	go mewld.Load(&config.Oauth{
+		ClientID:     state.Config.DiscordAuth.ClientID,
+		ClientSecret: state.Config.DiscordAuth.ClientSecret,
+		RedirectURL:  state.Config.DiscordAuth.MewldRedirect,
+	}, &state.Config.DiscordAuth.Token)
 
 	// If GOOS is windows, do normal http server
 	if runtime.GOOS == "linux" || runtime.GOOS == "darwin" {

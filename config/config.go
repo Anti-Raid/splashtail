@@ -57,6 +57,7 @@ type DiscordAuth struct {
 	ClientID         string   `yaml:"client_id" default:"849331145862283275" comment:"Discord Client ID" validate:"required"`
 	ClientSecret     string   `yaml:"client_secret" comment:"Discord Client Secret" validate:"required"`
 	AllowedRedirects []string `yaml:"allowed_redirects" default:"http://localhost:3000/auth" validate:"required"`
+	MewldRedirect    string   `yaml:"mewld_redirect" default:"https://mewld.antiraid.xyz/login" validate:"required"`
 }
 
 type Sites struct {
@@ -94,4 +95,20 @@ type Meta struct {
 	VulgarList     []string        `yaml:"vulgar_list" default:"fuck,suck,shit,kill" validate:"required"`
 	UrgentMentions string          `yaml:"urgent_mentions" default:"<@&1061643797315993701>" comment:"Urgent mentions" validate:"required"`
 	Proxy          string          `yaml:"proxy" default:"http://127.0.0.1:3219" comment:"Popplio Proxy URL" validate:"required"`
+}
+
+type BotList struct {
+	Name       string         `yaml:"name" comment:"Bot List Name" validate:"required"`
+	APIUrl     string         `yaml:"api_url" comment:"API Url for the list" validate:"required"`
+	APIToken   string         `yaml:"api_token" comment:"API Token for the list" validate:"required"`
+	AuthFormat string         `yaml:"auth_format" comment:"Can be one of h#[header]/{token} or u#[token]={token} or b#[key]={token} (brackets means that anything can be substituted in)" validate:"required"`
+	PostStats  *BotListAction `yaml:"post_stats" comment:"Post Stats Action"`
+}
+
+type BotListAction struct {
+	Enabled    bool              `yaml:"enabled" comment:"Whether or not the action is enabled or not" validate:"required"`
+	Method     string            `yaml:"method" comment:"What HTTP method to use"`
+	Interval   int64             `yaml:"interval" comment:"What interval to send messages at"`
+	URLFormat  string            `yaml:"url_format" comment:"Must be u#{url}?[key1]={key2} (brackets means that anything can be substituted in)"`
+	DataFormat map[string]string `yaml:"data_format" comment:"Must be {key1}={key2} (brackets means that anything can be substituted in)"`
 }
