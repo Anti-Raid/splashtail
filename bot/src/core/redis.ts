@@ -68,7 +68,7 @@ export class BotRedis {
                 let data = JSON.parse(message)
 
                 // Diagnostics payload
-                if(data?.diag) {
+                if(data?.diag && data?.id == this.bot.clusterId) {
                     /*type DiagResponse struct {
                         Nonce string        // Random nonce used to validate that a nonce comes from a specific diag request
                         Data  []ShardHealth // The shard health data
@@ -88,7 +88,7 @@ export class BotRedis {
                         scope: "launcher",
                         action: "diag",
                         output: JSON.stringify({
-                            Nonce: data.diag.Nonce,
+                            Nonce: data.nonce,
                             Data: shardHealthData
                         })
                     }    
