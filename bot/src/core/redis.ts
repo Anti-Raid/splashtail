@@ -1,6 +1,7 @@
 import { RedisClientType } from '@redis/client';
 import { createClient } from 'redis';
 import { AntiRaid } from './client';
+import { Status } from 'discord.js';
 
 /*
 type LauncherCmd struct {
@@ -62,13 +63,11 @@ export class BotRedis {
         await this.mewld_pubsub.connect()
 
         await this.mewld_pubsub.subscribe(process.env.MEWLD_CHANNEL, async (message: string, channel: string) => {
-            this.bot.logger.info("Redis", "Received message", message, channel)
-
             try {
                 let data = JSON.parse(message)
 
                 // Diagnostics payload
-                if(data?.diag && data?.id == this.bot.clusterId) {
+                if(data?.diag) {
                     /*type DiagResponse struct {
                         Nonce string        // Random nonce used to validate that a nonce comes from a specific diag request
                         Data  []ShardHealth // The shard health data
@@ -80,9 +79,26 @@ export class BotRedis {
                             Guilds  uint64  `json:"guilds"`   // The number of guilds in the shard
                         }
                     }*/
+                    if(data?.id != this.bot.clusterId) {
+                        return
+                    }
+
+                    // Collect shard health
                     let shardHealthData = []
 
-                    this.bot.logger.info("Redis", "Have current shards", this.bot.ws.shards)
+                    for(let [id, shard] of this.bot.ws.shards) {
+                        shardHealthData.push({
+                            shard_id: id,
+                            up: shard.status == Status.Ready,
+                            latency: shard.ping,
+                            guilds: this.bot.guilds.cache.filter(g => g.shardId == id).size
+                        })
+                    }
+
+                    // This gets quite spammy...
+                    if(process.env.DEBUG_SHARDS) {
+                        this.bot.logger.debug("Redis", "Have current shards", this.bot.ws.shards)
+                    }
 
                     let resp: LauncherCmd = {
                         scope: "launcher",
@@ -101,6 +117,8 @@ export class BotRedis {
                     }
                     
                     let payload: LauncherCmd = data
+
+                    this.bot.logger.info("Redis", "Received launcherCmd payload", channel, payload)
 
                     if(payload.scope == "bot") {
                         switch (payload.action) {

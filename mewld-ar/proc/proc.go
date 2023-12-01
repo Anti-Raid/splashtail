@@ -34,32 +34,38 @@ type ClusterMap struct {
 }
 
 // The final store of the ClusterMap list as well as a instance store
+//
+// ANTI-RAID SPECIFIC: Add json tags to ensure proper openapi documentation
 type InstanceList struct {
-	LastClusterStartedAt time.Time
-	Map                  []ClusterMap      // The list of clusters (ClusterMap) which defines how mewld will start clusters
-	Instances            []*Instance       // The list of instances (Instance) which are running
-	ShardCount           uint64            // The number of shards in ``mewld``
-	Config               config.CoreConfig // The configuration for ``mewld``
-	Dir                  string            // The base directory instances will use when loading clusters
-	Redis                *redis.Client     `json:"-"` // Redis for publishing new messages, *not* subscribing
-	Ctx                  context.Context   `json:"-"` // Context for redis
-	startMutex           *sync.Mutex       `json:"-"` // Internal mutex to prevent multiple instances from starting at the same time
-	actLogMutex          *sync.Mutex       `json:"-"` // Internal mutex to prevent multiple edits of action logs at the same time
-	RollRestarting       bool              // whether or not we are roll restarting (rolling restart)
-	FullyUp              bool              // whether or not we are fully up
+	LastClusterStartedAt time.Time         `json:"LastClusterStartedAt"`
+	Map                  []ClusterMap      `json:"Map"`            // The list of clusters (ClusterMap) which defines how mewld will start clusters
+	Instances            []*Instance       `json:"Instances"`      // The list of instances (Instance) which are running
+	ShardCount           uint64            `json:"ShardCount"`     // The number of shards in ``mewld``
+	Config               config.CoreConfig `json:"-"`              // The configuration for ``mewld`` ANTIRAID-SPECIFIC: Don't marshal this into JSON
+	Dir                  string            `json:"Dir"`            // The base directory instances will use when loading clusters
+	Redis                *redis.Client     `json:"-"`              // Redis for publishing new messages, *not* subscribing
+	Ctx                  context.Context   `json:"-"`              // Context for redis
+	startMutex           *sync.Mutex       `json:"-"`              // Internal mutex to prevent multiple instances from starting at the same time
+	actLogMutex          *sync.Mutex       `json:"-"`              // Internal mutex to prevent multiple edits of action logs at the same time
+	RollRestarting       bool              `json:"RollRestarting"` // whether or not we are roll restarting (rolling restart)
+	FullyUp              bool              `json:"FullyUp"`        // whether or not we are fully up
 }
 
+// Represents a instance of a cluster
+//
+// ANTI-RAID SPECIFIC: Add json tags to ensure proper openapi documentation
 type Instance struct {
-	StartedAt        time.Time     // The time the instance was last started
-	SessionID        string        // Internally used to identify the instance
-	ClusterID        int           // ClusterID from clustermap
-	Shards           []uint64      // Shards that this instance is responsible for currently, should be equal to clustermap
-	Command          *exec.Cmd     `json:"-"` // Command that is running on the instance
-	Active           bool          // Whether or not this instance is active
-	ClusterHealth    []ShardHealth // Cache of shard health from a ping
-	CurrentlyKilling bool          // Whether or not we are currently killing this instance
-	LockClusterTime  *time.Time    // Time at which we last locked the cluster
-	LaunchedFully    bool          // Whether or not we have launched the instance fully (till launch_next)
+	StartedAt        time.Time     `json:"StartedAt"`        // The time the instance was last started
+	SessionID        string        `json:"SessionID"`        // Internally used to identify the instance
+	ClusterID        int           `json:"ClusterID"`        // ClusterID from clustermap
+	Shards           []uint64      `json:"Shards"`           // Shards that this instance is responsible for currently, should be equal to clustermap
+	Command          *exec.Cmd     `json:"-"`                // Command that is running on the instance
+	Active           bool          `json:"Active"`           // Whether or not this instance is active
+	ClusterHealth    []ShardHealth `json:"ClusterHealth"`    // Cache of shard health from a ping
+	CurrentlyKilling bool          `json:"CurrentlyKilling"` // Whether or not we are currently killing this instance
+	LockClusterTime  *time.Time    `json:"LockClusterTime"`  // Time at which we last locked the cluster
+	LaunchedFully    bool          `json:"LaunchedFully"`    // Whether or not we have launched the instance fully (till launch_next)
+	LastChecked      time.Time     `json:"LastChecked"`      // The last time the shard was checked for health. ANTIRAID-SPECIFIC: Add this field for better observability
 }
 
 type ShardHealth struct {
@@ -162,6 +168,7 @@ func (l *InstanceList) ScanShards(i *Instance) ([]ShardHealth, error) {
 		case diag := <-DiagChannel:
 			if diag.Nonce == nonce {
 				ticker.Stop()
+				i.LastChecked = time.Now()
 				return diag.Data, nil
 			}
 		}
@@ -415,6 +422,7 @@ func (l *InstanceList) Start(i *Instance) {
 	i.StartedAt = time.Now()
 	l.LastClusterStartedAt = time.Now()
 	i.SessionID = coreutils.RandomString(32)
+	i.LastChecked = time.Now() // ANTIRAID-SPECIFIC
 
 	dir, err := os.Getwd()
 

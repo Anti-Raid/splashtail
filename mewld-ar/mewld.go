@@ -18,6 +18,9 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+// ANTIRAID-SPECIFIC: Expose InstanceList as a global
+var InstanceList *proc.InstanceList
+
 //go:embed mewld.yaml
 var configBytes []byte
 
@@ -105,6 +108,8 @@ func Load(manualOauth *config.Oauth, manualToken *string) {
 	}
 
 	il.Init()
+
+	InstanceList = &il
 
 	for _, cMap := range clusterMap {
 		log.Info("Cluster ", cMap.Name, "("+strconv.Itoa(cMap.ID)+"): ", coreutils.ToPyListUInt64(cMap.Shards))

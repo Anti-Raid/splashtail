@@ -2,9 +2,11 @@ TEST__USER_ID := 728871946456137770
 CDN_PATH := /failuremgmt/cdn/antiraid
 
 
-all:
+stcore:
 	CGO_ENABLED=0 go build -v 
 	systemctl reload splashtail-staging
+all:
+	make buildbot && make stcore 
 buildbot:
 	cd bot && npm i && npm run build
 tests:

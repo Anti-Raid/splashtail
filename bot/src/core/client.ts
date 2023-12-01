@@ -74,7 +74,8 @@ export class AntiRaid extends Client {
     commands: Map<string, Command> = new Map();
     logger: Logger;
     clusterId: number;
-    shardCountAtStart: number;
+    shardCount: number;
+    shardIds: number[];
     redis: BotRedis;
     private _config: Config;
     private hasLoadedListeners: boolean = false;
@@ -94,10 +95,13 @@ export class AntiRaid extends Client {
         })
 
         this.clusterId = clusterId
-        this.shardCountAtStart = shardCount
+        this.shardCount = shardCount
+        this.shardIds = shardIds
         this.logger = new Logger(`${clusterName} (${clusterId})`)
         this._config = this.loadConfig()
         this.redis = new BotRedis(this)
+
+        this.logger.info("ClusterData", "Cluster ID", this.clusterId, "with shard ids:", this.shardIds, "and shard count:", this.shardCount)
     }
 
     /**

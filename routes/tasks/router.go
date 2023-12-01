@@ -13,7 +13,7 @@ const tagName = "Tasks"
 type Router struct{}
 
 func (b Router) Tag() (string, string) {
-	return tagName, "These API endpoints are related to tasks on IBL"
+	return tagName, "These API endpoints are related to tasks"
 }
 
 func (b Router) Routes(r *chi.Mux) {
