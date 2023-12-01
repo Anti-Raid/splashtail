@@ -629,5 +629,10 @@ func StartWebserver(webData WebData) {
 		c.Redirect(302, "/")
 	})
 
-	r.Run("0.0.0.0:1293") // listen and serve
+	err := r.Run("127.0.0.1:3820") // listen and serve
+
+	// ANTIRAID-SPECIFIC: Change port and check err returned by r.Run
+	if err != nil {
+		panic(err)
+	}
 }

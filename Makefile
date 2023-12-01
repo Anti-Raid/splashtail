@@ -8,7 +8,7 @@ stcore:
 all:
 	make buildbot && make stcore 
 buildbot:
-	cd bot && npm i && npm run build
+	cd bot && npm i && npm run build && cd ../
 tests:
 	CGO_ENABLED=0 go test -v -coverprofile=coverage.out ./...
 ts:
