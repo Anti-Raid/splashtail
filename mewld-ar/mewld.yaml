@@ -18,4 +18,4 @@ allowed_ids:
 
 ping_interval: 20 # 20 seconds (for testing, change this)
 
-per_cluster: 10 # Number of shards per cluster, can be overrided using ``PER_CLUSTER`` env var
+per_cluster: 2 # Number of shards per cluster, can be overrided using ``PER_CLUSTER`` env var

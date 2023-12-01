@@ -84,6 +84,7 @@ export class AntiRaid extends Client {
     constructor(clusterId: number, clusterName: string, shardIds: number[], shardCount: number) {
         super({
             shards: shardIds,
+            shardCount: shardCount,
             intents: [
                 GatewayIntentBits.Guilds,
                 GatewayIntentBits.GuildMembers,
