@@ -438,7 +438,7 @@ func (l *InstanceList) Start(i *Instance) {
 		log.Fatal("Cluster not found")
 	}
 
-	// ANTIRAID-SPECIFIC: Get rid of loggingCode
+	// ANTIRAID-SPECIFIC: Get rid of loggingCode and add number of clusters
 
 	// Get interpreter/caller
 	var cmd *exec.Cmd
@@ -451,6 +451,7 @@ func (l *InstanceList) Start(i *Instance) {
 			strconv.Itoa(i.ClusterID),
 			cluster.Name,
 			dir,
+			strconv.Itoa(len(l.Map)),
 		)
 	} else {
 		cmd = exec.Command(
@@ -460,6 +461,7 @@ func (l *InstanceList) Start(i *Instance) {
 			strconv.Itoa(i.ClusterID),
 			cluster.Name,
 			dir,
+			strconv.Itoa(len(l.Map)),
 		)
 	}
 

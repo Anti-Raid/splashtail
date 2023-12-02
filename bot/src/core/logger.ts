@@ -15,6 +15,10 @@ export class Logger {
 		console.log(`${this.context.blue} ${"[DEBUG]".green} [${name.green}] =>`, ...message);
 	}
 
+	warn(name: string, ...message: any) {
+		console.log(`${this.context.blue} ${"[WARN]".yellow} [${name.green}] =>`, ...message);
+	}
+
 	error(name: string, ...message: any) {
 		console.log(`${this.context.blue} ${"[ERROR]".red} [${name.green}] =>`, ...message);
 	}

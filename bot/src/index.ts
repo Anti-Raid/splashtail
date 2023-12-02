@@ -11,9 +11,10 @@ const args = process.argv.slice(2);
 			strconv.Itoa(i.ClusterID),
 			cluster.Name,
 			dir,
+			len(l.Map)
  */
-if (args.length < 5) {
-	console.error("Usage: node . <shard count> <total shard count> <cluster id> <cluster name> <cluster directory>");
+if (args.length < 6) {
+	console.error("Usage: node . <shard count> <total shard count> <cluster id> <cluster name> <cluster directory> <no clusters>");
 	console.error("Please ensure that the bot is being run via mewld");
 	process.exit(1);
 }
@@ -28,14 +29,15 @@ if(!shards || !shardCount) {
 
 const clusterId = parseInt(args[2]);
 const clusterName: string = args[3];
+const clusterCount = parseInt(args[5]);
 
-if(!clusterName) {
+if(!clusterName || !clusterCount) {
 	console.error("Invalid cluster data");
 	process.exit(1);
 }
 
 // Create Discord Client
-const client = new AntiRaid(clusterId, clusterName, shards, shardCount);
+const client = new AntiRaid(clusterId, clusterName, shards, shardCount, clusterCount);
 
 client.logger.info("Database", sql)
 /*

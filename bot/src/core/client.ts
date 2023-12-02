@@ -6,7 +6,7 @@ import { Config } from "./config";
 import { createGuildIfNotExists } from "./common/guilds/guildBase";
 import { parse } from "yaml";
 import { validateAction } from "./common/poststats";
-import { BotRedis } from "./redis";
+import { BotRedis, IPCCommand, ShardHealth } from "./redis";
 
 export class FinalResponse {
     private dummyResponse: boolean // If true, then there is no final response (all processing is done in the command itself)
@@ -81,8 +81,10 @@ export class AntiRaid extends Client {
     private hasLoadedListeners: boolean = false;
     private teamOwners: string[] = []
     allClustersLaunched: boolean = false
+    clusterCount: number
+    currentShardHealth: Map<number, ShardHealth> = new Map()
 
-    constructor(clusterId: number, clusterName: string, shardIds: number[], shardCount: number) {
+    constructor(clusterId: number, clusterName: string, shardIds: number[], shardCount: number, clusterCount: number) {
         super({
             shards: shardIds,
             shardCount: shardCount,
@@ -96,6 +98,7 @@ export class AntiRaid extends Client {
 
         this.clusterId = clusterId
         this.shardCount = shardCount
+        this.clusterCount = clusterCount
         this.shardIds = shardIds
         this.logger = new Logger(`${clusterName} (${clusterId})`)
         this._config = this.loadConfig()
@@ -170,6 +173,10 @@ export class AntiRaid extends Client {
 
         this.logger.info("Discord", `Loaded ${this.commands.size} commands`, this.commands)
 
+        await this.loadIPCs()
+
+        this.logger.info("Discord", `Loaded ${this.redis.ipcs.size} IPCs`, this.redis.ipcs)
+
         await this.redis.load()
     }
 
@@ -231,7 +238,7 @@ export class AntiRaid extends Client {
      * This function is called when the bot is ready
      */
     private async onReady() {
-        this.user.setActivity("Development of v6.0.0", {
+        this.user.setActivity(`Development of v6.0.0 | Cluster ${this.clusterId}`, {
             type: ActivityType.Watching,
         });
     
@@ -239,7 +246,8 @@ export class AntiRaid extends Client {
     
         this.logger.success("Discord", `Connected as ${this.user.username}!`);
 
-        await this.redis.launchNext()
+        // Tell mewld we can launch next cluster now
+        await this.redis.mewldLaunchNext()
     }
 
     /**
@@ -490,6 +498,38 @@ export class AntiRaid extends Client {
             if(command.onLoad) {
                 await command.onLoad()
             }
+        }
+    }
+
+    /**
+     * Loads all IPCs of the bot
+     */
+    private async loadIPCs() {
+        // IPCs
+        const ipcFiles = readdirSync("build/core/ipc")
+            .filter((file) => file.endsWith(".js"));
+        
+        for (const file of ipcFiles) {
+            this.logger.info("Loader", `Loading IPC ${file.replace(".js", "")}`)
+            const ipc: IPCCommand = (await import(`./ipc/${file}`))?.default;
+
+            if(!ipc) {
+                throw new Error(`Invalid IPC ${file.replace(".js", "")}. Please ensure that you are exporting the ipc as default using \`export default ipc;\``)
+            }
+
+            let neededProps = ["command"]
+
+            for(let prop of neededProps) {
+                if(!ipc[prop]) {
+                    throw new Error(`IPC ${file} is missing property ${prop}`)
+                }
+            }
+
+            if(ipc.action != file.replace(".js", "")) {
+                throw new Error(`IPC ${file} has an invalid name. Please ensure that the name of the ipc is the same as the file name`)
+            }
+
+            this.redis.ipcs.set(ipc.action, ipc);
         }
     }
 

@@ -11,22 +11,47 @@ import { AntiRaid } from "../client";
  * @returns The total guild count of the client from all shards
  */
 export async function getServerCount(client: AntiRaid) {
-    let guildCacheSize = await client.shard.fetchClientValues('guilds.cache.size')
+    if(!client.currentShardHealth || !client.currentShardHealth.size) {
+        throw new Error("Shard health not initialized")
+    }
 
-    let totalGuilds = guildCacheSize.reduce((acc: number, guildCount: number) => acc + guildCount, 0);
+    client.logger.info("GetServerCount", client.currentShardHealth)
+
+    let totalGuilds = 0
+
+    for(let [_, sh] of client.currentShardHealth) {
+        totalGuilds += sh.guilds || 0
+    }
 
     return totalGuilds
 }
 
 export async function getUserCount(client: AntiRaid) {
-    let memberCount = await client.shard.broadcastEval(c => c.guilds.cache.reduce((acc, guild) => acc + guild.memberCount, 0))
+    let handle = await client.redis.sendIpcRequest({
+        scope: "bot",
+        action: "get_user_count"
+    }, null, {})
 
-    let totalMembers = memberCount.reduce((acc: number, memberCount: number) => acc + memberCount, 0);
+    if(!handle) throw new Error("Invalid IPC handle")
+
+    let res = await handle.fetch()
+
+    let totalMembers = 0
+
+    for(let [cId, cmd] of res) {
+        let memCount = cmd.data.count
+        totalMembers += memCount
+
+        client.logger.info("GetUserCount", `Cluster ${cId} has ${memCount} members`)
+    }
 
     return totalMembers
 }
 
 export async function getShardCount(client: AntiRaid) {
-    return client.shard.count
-    return client
+    if(!client.currentShardHealth || !client.currentShardHealth.size) {
+        throw new Error("Shard health not initialized")
+    }
+
+    return client.currentShardHealth.size || 0
 }

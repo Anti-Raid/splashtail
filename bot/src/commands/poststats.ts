@@ -1,6 +1,7 @@
 import { EmbedBuilder, SlashCommandBuilder } from "discord.js";
 import { BotStaffPerms, Command, FinalResponse } from "../core/client";
 import { postStats } from "../core/common/poststats";
+import { getServerCount, getShardCount, getUserCount } from "../core/common/counts"
 
 let command: Command = {
     userPerms: [],
@@ -20,12 +21,21 @@ let command: Command = {
             ],
         })
 
+        let variables = {
+            servers: await getServerCount(ctx.client),
+            shards: await getShardCount(ctx.client),
+            members: await getUserCount(ctx.client),
+            botId: ctx.client.user.id,
+        }    
+
+        ctx.client.logger.info("PostStats", variables)
+
         let results: { [key: string]: Response } = {}
 
         for (const botList of ctx.client.config.bot_lists) {
             if(!botList?.post_stats?.enabled) continue;
 
-            let res = await postStats(ctx.client, botList, botList.post_stats)
+            let res = await postStats(variables, ctx.client, botList, botList.post_stats)
 
             results[botList.name] = res
         }

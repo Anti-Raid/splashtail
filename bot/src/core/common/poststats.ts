@@ -1,6 +1,5 @@
 import { AntiRaid } from "../client"
 import { BotList, BotListAction } from "../config"
-import { getServerCount, getShardCount } from "./counts"
 
 export function validateAction(action: BotListAction) {
     if(!action.enabled) throw new Error("<action>.enabled is required in bot_lists in config.yaml")
@@ -99,14 +98,7 @@ function createData(botList: BotList, action: BotListAction, initialVariables: {
     }
 }
 
-export async function postStats(client: AntiRaid, botList: BotList, action: BotListAction) {
-    let variables = {
-        servers: await getServerCount(client),
-        shards: await getShardCount(client),
-        members: await getServerCount(client),
-        botId: client.user.id,
-    }
-
+export async function postStats(variables: { [key: string]: any }, client: AntiRaid, botList: BotList, action: BotListAction) {
     let { url, data, headers } = createData(botList, action, variables)
 
     client.logger.info("Posting stats", { url, data, headers })
