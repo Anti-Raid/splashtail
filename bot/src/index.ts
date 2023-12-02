@@ -38,8 +38,6 @@ if(!clusterName || !clusterCount) {
 
 // Create Discord Client
 const client = new AntiRaid(clusterId, clusterName, shards, shardCount, clusterCount);
-
-client.logger.info("Database", sql)
 /*
 // Guild member update event
 client.on(Events.GuildMemberUpdate, async (oldMember, newMember) => {

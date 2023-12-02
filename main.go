@@ -4,6 +4,7 @@ import (
 	"html/template"
 	"mewld"
 	"mewld/config"
+	"mewld/web"
 	"net/http"
 	"os"
 	"os/signal"
@@ -203,7 +204,16 @@ func main() {
 		ClientID:     state.Config.DiscordAuth.ClientID,
 		ClientSecret: state.Config.DiscordAuth.ClientSecret,
 		RedirectURL:  state.Config.DiscordAuth.MewldRedirect,
-	}, &state.Config.DiscordAuth.Token)
+	}, &state.Config.DiscordAuth.Token, &state.Config.Meta.DPSecret)
+
+	// Mount mewld webui
+	for {
+		if web.GlobalRouter != nil {
+			state.Logger.Info("Mounted mewld webui")
+			r.Mount("/mewld", web.GlobalRouter)
+			break
+		}
+	}
 
 	// If GOOS is windows, do normal http server
 	if runtime.GOOS == "linux" || runtime.GOOS == "darwin" {

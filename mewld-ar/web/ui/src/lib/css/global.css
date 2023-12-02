@@ -1,5 +1,5 @@
 html, body, h1, h2, h3, h4, h5, h6, p, ul, ol, li, dl, dt, dd, form, fieldset, legend, input, textarea, button, select, blockquote, pre, code, .container {
-    font-family: Verdana, Geneva, Tahoma, sans-serif;
+    font-family: Verdana, Geneva, Tahoma, sans-serif !important;
     margin-bottom: 0px !important;
 }
 

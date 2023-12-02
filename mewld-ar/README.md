@@ -1,10 +1,8 @@
 # mewld
 
-Fork of ``https://github.com/cheesycod/mewld`` with Anti-Raid specific changes
+Fork of ``https://github.com/cheesycod/mewld`` with Anti-Raid specific changes. Note that while changes will be documented on a best-effor basis. It may not be complete especially in webui
 
 Anti-Raid clusterer. Will be open source to help other large bot developers.
-
-Anti-Raid clusterer is rather generic and any bot should be able to adapt to it without any changes to ``mewld``
 
 ## What is a cluster
 

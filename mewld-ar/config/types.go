@@ -7,7 +7,8 @@ type Oauth struct {
 }
 
 type CoreConfig struct {
-	Token        string   `yaml:"token"` // ANTIRAID-SPECIFIC: Add token to config
+	Token        string   `yaml:"token"`     // ANTIRAID-SPECIFIC: Add token to config
+	DPSecret     string   `yaml:"dp_secret"` // ANTIRAID-SPECIFIC: Add dp_secret to config
 	Dir          string   `yaml:"dir"`
 	OverrideDir  string   `yaml:"override_dir"`
 	Names        []string `yaml:"names"`

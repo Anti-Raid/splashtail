@@ -41,8 +41,8 @@ func init() {
 
 // ANTIRAID-SPECIFIC: Rename main to Load to allow embedding
 //
-// Also allow manualOauth and manualToken to be passed instead of relying on env
-func Load(manualOauth *config.Oauth, manualToken *string) {
+// Also allow manualOauth and manualToken and manualDbSecret to be passed instead of relying on env
+func Load(manualOauth *config.Oauth, manualToken *string, manualDpSecret *string) {
 	// Load the config file
 	var config config.CoreConfig
 
@@ -59,6 +59,10 @@ func Load(manualOauth *config.Oauth, manualToken *string) {
 
 	if manualToken != nil {
 		config.Token = *manualToken
+	}
+
+	if manualDpSecret != nil {
+		config.DPSecret = *manualDpSecret
 	}
 
 	var dir string
@@ -124,7 +128,8 @@ func Load(manualOauth *config.Oauth, manualToken *string) {
 	redish := redis.CreateHandler(config)
 	go redish.Start(&il)
 
-	go web.StartWebserver(web.WebData{
+	// ANTI-RAID SPECIFIC: Dont use goroutine for creating server, and make the created server globally scoped
+	web.CreateServer(web.WebData{
 		RedisHandler: &redish,
 		InstanceList: &il,
 	})

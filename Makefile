@@ -6,9 +6,11 @@ stcore:
 	CGO_ENABLED=0 go build -v 
 	systemctl reload splashtail-staging
 all:
-	make buildbot && make stcore 
+	make buildbot && make buildmewldwebui && make stcore 
 buildbot:
 	cd bot && npm i && npm run build && cd ../
+buildmewldwebui:
+	cd mewld-ar/web/ui && npm i && npm run build && cd ../
 tests:
 	CGO_ENABLED=0 go test -v -coverprofile=coverage.out ./...
 ts:

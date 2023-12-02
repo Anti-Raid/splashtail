@@ -164,14 +164,13 @@ export class AntiRaid extends Client {
         // Fetch team owners of bot
         this.rest.setToken(this.config.discord_auth.token)
         let data = await this.rest.get(Routes.oauth2CurrentApplication())
-        this.logger.info("Discord", "Loaded application", data)
 
         // @ts-expect-error
         let teamMembers: TeamMember[] = data?.team?.members
 
         this.teamOwners = teamMembers.map(member => member.user.id)
 
-        this.logger.info("Discord", `Loaded ${this.teamOwners.length} team owners`, this.teamOwners)
+        this.logger.info("Discord", `Loaded ${this.teamOwners.length} team owners`)
 
         await this.loadCommands()
 
