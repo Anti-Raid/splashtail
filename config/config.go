@@ -58,6 +58,7 @@ type DiscordAuth struct {
 	ClientSecret     string   `yaml:"client_secret" comment:"Discord Client Secret" validate:"required"`
 	AllowedRedirects []string `yaml:"allowed_redirects" default:"http://localhost:3000/auth" validate:"required"`
 	MewldRedirect    string   `yaml:"mewld_redirect" default:"https://mewld.antiraid.xyz/login" validate:"required"`
+	CanUseBot        []string `yaml:"can_use_bot" default:"728871946456137770,564164277251080208,775855009421066262" validate:"required"`
 }
 
 type Sites struct {

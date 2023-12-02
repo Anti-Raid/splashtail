@@ -46,7 +46,9 @@ export class CommandContext {
     }
 
     public async reply(data: ContextReply): Promise<Message<boolean> | InteractionResponse<boolean>> {
-        this.client.logger.error("Context", "ReplyState", this._replyState, "Data", JSON.stringify(data))
+        if(process.env.LOG_REPLYSTATE) {
+            this.client.logger.debug("Context", "ReplyState", this._replyState, "Data", JSON.stringify(data))
+        }
         
         if(this._replyState != ContextReplyStatus.Pending) {
             return await this.interaction.followUp(data)

@@ -4,36 +4,8 @@ import { readFileSync } from "fs";
 import { cpus, totalmem, freemem, release } from "os"
 import { version as djsVersion } from "discord.js"
 import { ContextReplyStatus } from "../core/context";
-
-const uptimeToHuman = (uptime: number) => {
-	const seconds = Math.floor(uptime / 1000);
-	const minutes = Math.floor(seconds / 60);
-	const hours = Math.floor(minutes / 60);
-	const days = Math.floor(hours / 24);
-
-	return `${days}d ${hours % 24}h ${minutes % 60}m ${seconds % 60}s`;
-}
-
-const formatDate = (x: Date, y: string): string => {
-    var z = {
-        M: x.getMonth() + 1,
-        d: x.getDate(),
-        h: x.getHours(),
-        m: x.getMinutes(),
-        s: x.getSeconds()
-    };
-    y = y.replace(/(M+|d+|h+|m+|s+)/g, function(v) {
-        return ((v.length > 1 ? "0" : "") + z[v.slice(-1)]).slice(-2)
-    });
-
-    return y.replace(/(y+)/g, function(v) {
-        return x.getFullYear().toString().slice(-v.length)
-    });
-}
-
-const roundToTwo = (num: number) => {
-    return Math.round(num * 100) / 100
-}
+import { roundToTwo, uptimeToHuman, formatDate } from "../core/common/utils";
+import { getServerCount, getShardCount } from "../core/common/counts";
   
 const getCpuUsage = () => {
 	// Take the first CPU, considering every CPUs have the same specs
@@ -61,7 +33,7 @@ const getCpuUsage = () => {
 let command: Command = {
     userPerms: [],
     botPerms: [],
-    botStaffPerms: [BotStaffPerms.Owner],
+    botStaffPerms: [],
     interactionData: new SlashCommandBuilder()
 	.setName("stats")
 	.setDescription("Shows bot stats")
@@ -78,6 +50,16 @@ let command: Command = {
 
 		switch (type) {
 			case "info":
+				let guildCount = 0
+				let shardCount = 0
+
+				try {
+					guildCount = await getServerCount(ctx.client)
+					shardCount = await getShardCount(ctx.client)
+				} catch (err) {
+					ctx.client.logger.error("Stats.GetCounts", err)
+				}
+
 				const embed = new EmbedBuilder()
 					.setTitle(
 						"Bot stats",
@@ -111,7 +93,17 @@ let command: Command = {
 						},
 						{
 							name: "Servers",
-							value: ctx.interaction.client.guilds.cache.size.toString(),
+							value: guildCount.toString(),
+							inline: true,
+						},
+						{
+							name: "Shards",
+							value: shardCount.toString(),
+							inline: true,
+						},
+						{
+							name: "Cluster",
+							value: `${ctx.client.clusterName} (${ctx.client.clusterId}) with ${ctx.client.clusterCount} clusters`,
 							inline: true,
 						},
 						{

@@ -7,7 +7,7 @@ import { readFileSync } from "fs";
 import { Command } from "./core/client";
 import { parse } from "yaml";
 
-let config: Config = parse(readFileSync("./config.yaml").toString('utf-8'))
+let config: Config = parse(readFileSync("../config.yaml").toString('utf-8'))
 
 // Initalize REST
 const rest = new REST().setToken(config.discord_auth.token);
@@ -20,7 +20,7 @@ let guildOnlyCommandsList = [
 async function start() {
 	let commands = []
 	for (const file of guildOnlyCommandsList) {
-		logger.info("Bootstrap", `Deploying ${file} to server ${config.servers.main}`);
+		logger.info("Bootstrap", `Deploying ${file} to server ${config.servers.main} with client ID ${config.discord_auth.client_id}`);
 
 		const command: Command = (await import(`./commands/${file}`))?.default;
 

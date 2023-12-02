@@ -119,3 +119,33 @@ export const channelPurger = async (ctx: CommandContext, channels: GuildChannel[
         }
     }
 }
+
+export const uptimeToHuman = (uptime: number) => {
+	const seconds = Math.floor(uptime / 1000);
+	const minutes = Math.floor(seconds / 60);
+	const hours = Math.floor(minutes / 60);
+	const days = Math.floor(hours / 24);
+
+	return `${days}d ${hours % 24}h ${minutes % 60}m ${seconds % 60}s`;
+}
+
+export const formatDate = (x: Date, y: string): string => {
+    var z = {
+        M: x.getMonth() + 1,
+        d: x.getDate(),
+        h: x.getHours(),
+        m: x.getMinutes(),
+        s: x.getSeconds()
+    };
+    y = y.replace(/(M+|d+|h+|m+|s+)/g, function(v) {
+        return ((v.length > 1 ? "0" : "") + z[v.slice(-1)]).slice(-2)
+    });
+
+    return y.replace(/(y+)/g, function(v) {
+        return x.getFullYear().toString().slice(-v.length)
+    });
+}
+
+export const roundToTwo = (num: number) => {
+    return Math.round(num * 100) / 100
+}

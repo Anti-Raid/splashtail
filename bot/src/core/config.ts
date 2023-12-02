@@ -22,6 +22,7 @@ export interface DiscordAuth {
     client_id: string,
     client_secret: string,
     token: string
+    can_use_bot: string[]
 }
 
 export interface Config {

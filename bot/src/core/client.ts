@@ -7,6 +7,8 @@ import { createGuildIfNotExists } from "./common/guilds/guildBase";
 import { parse } from "yaml";
 import { validateAction } from "./common/poststats";
 import { BotRedis, IPCCommand, ShardHealth } from "./redis";
+import { getServerCount, getShardCount } from "./common/counts";
+import { uptimeToHuman } from "./common/utils";
 
 export class FinalResponse {
     private dummyResponse: boolean // If true, then there is no final response (all processing is done in the command itself)
@@ -74,14 +76,15 @@ export class AntiRaid extends Client {
     commands: Map<string, Command> = new Map();
     logger: Logger;
     clusterId: number;
+    allClustersLaunched: boolean = false
+    clusterCount: number
+    clusterName: string
     shardCount: number;
     shardIds: number[];
     redis: BotRedis;
     private _config: Config;
     private hasLoadedListeners: boolean = false;
     private teamOwners: string[] = []
-    allClustersLaunched: boolean = false
-    clusterCount: number
     currentShardHealth: Map<number, ShardHealth> = new Map()
 
     constructor(clusterId: number, clusterName: string, shardIds: number[], shardCount: number, clusterCount: number) {
@@ -99,6 +102,7 @@ export class AntiRaid extends Client {
         this.clusterId = clusterId
         this.shardCount = shardCount
         this.clusterCount = clusterCount
+        this.clusterName = clusterName
         this.shardIds = shardIds
         this.logger = new Logger(`${clusterName} (${clusterId})`)
         this._config = this.loadConfig()
@@ -358,6 +362,28 @@ export class AntiRaid extends Client {
         // Slash Command
         if (interaction.isChatInputCommand()) {
             let ctx = new CommandContext(this, interaction)
+
+            // Temp until final release
+            if(!this.config.discord_auth.can_use_bot.includes(ctx.interaction.user.id)) {
+                const embed1 = new EmbedBuilder()
+                .setColor("Red")
+                .setTitle("AntiRaid")
+                .setURL("https://discord.gg/Qa52e2bNms")
+                .setDescription("Unfortunately, AntiRaid is currently unavailable due to poor code management and changes with the Discord API. We are currently in the works of V6, and hope to have it out by next month. All use of our services will not be available, and updates will be pushed here. We are extremely sorry for the inconvenience.\nFor more information you can also join our [Support Server](https://discord.gg/Qa52e2bNms)!")
+
+                let guildCount = await getServerCount(this)
+                let shardCount = await getShardCount(this)
+
+                const embed2 = new EmbedBuilder()
+                .setColor("Red")
+                .setDescription((`**Server Count:** ${guildCount}\n**Shard Count:** ${shardCount}\n**Cluster Count:** ${this.clusterCount}\n**Cluster ID:** ${this.clusterId}\n**Cluster Name:** ${this.clusterName}\n**Uptime:** ${uptimeToHuman(this.uptime)}`))
+
+                await ctx.reply({
+                    embeds: [embed1, embed2]
+                })
+
+                return
+            }
 
             const command = this.commands.get(interaction.commandName);
     
