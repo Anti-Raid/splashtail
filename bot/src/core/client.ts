@@ -1,4 +1,4 @@
-import { Client, GatewayIntentBits, ActivityType, codeBlock, EmbedBuilder, Events, CommandInteraction, Message, InteractionResponse, Routes, Team, SlashCommandBuilder, Interaction, ModalSubmitInteraction, Colors, PermissionsBitField, TeamMember, AutocompleteInteraction } from "discord.js";
+import { Client, GatewayIntentBits, ActivityType, EmbedBuilder, Events, Routes, SlashCommandBuilder, SlashCommandSubcommandsOnlyBuilder, Interaction, ModalSubmitInteraction, Colors, PermissionsBitField, TeamMember } from "discord.js";
 import { AutocompleteContext, CommandContext, ContextReply } from "./context";
 import { Logger } from "./logger";
 import { readFileSync, readdirSync } from "node:fs";
@@ -66,7 +66,7 @@ export interface Command {
     userPerms: (PermissionsBitField | bigint)[];
     botPerms: (PermissionsBitField | bigint)[];
     botStaffPerms?: BotStaffPerms[];
-    interactionData: SlashCommandBuilder | Omit<SlashCommandBuilder, "addSubcommand" | "addSubcommandGroup">;
+    interactionData: SlashCommandBuilder | Omit<SlashCommandBuilder, "addSubcommand" | "addSubcommandGroup"> | SlashCommandSubcommandsOnlyBuilder;
     onLoad?: () => Promise<void>;
     execute: (context: CommandContext) => Promise<FinalResponse>;
     autocomplete?: (context: AutocompleteContext) => Promise<void>;

@@ -5,7 +5,7 @@ import { cpus, totalmem, freemem, release } from "os"
 import { version as djsVersion } from "discord.js"
 import { ContextReplyStatus } from "../core/context";
 import { roundToTwo, uptimeToHuman, formatDate } from "../core/common/utils";
-import { getServerCount, getShardCount } from "../core/common/counts";
+import { getServerCount, getShardCount, getUserCount } from "../core/common/counts";
   
 const getCpuUsage = () => {
 	// Take the first CPU, considering every CPUs have the same specs
@@ -50,12 +50,16 @@ let command: Command = {
 
 		switch (type) {
 			case "info":
+				await ctx.defer()
+
 				let guildCount = 0
 				let shardCount = 0
+				let userCount = 0
 
 				try {
 					guildCount = await getServerCount(ctx.client)
 					shardCount = await getShardCount(ctx.client)
+					userCount = await getUserCount(ctx.client)
 				} catch (err) {
 					ctx.client.logger.error("Stats.GetCounts", err)
 				}
@@ -108,7 +112,7 @@ let command: Command = {
 						},
 						{
 							name: "Users",
-							value: ctx.interaction.client.users.cache.size.toString(),
+							value: userCount.toString(),
 							inline: true,
 						},
 						{

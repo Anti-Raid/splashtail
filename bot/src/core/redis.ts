@@ -102,8 +102,8 @@ export class BotRedis extends EventEmitter {
 
         payload.data = payload.data || {}
 
-        // Set targetCluster
-        if(opts?.targetCluster) {
+        // Set targetCluster if scope is bot
+        if(opts?.targetCluster && payload.scope == "bot") {
             payload.data.targetCluster = opts.targetCluster
         }
 
@@ -254,7 +254,9 @@ export class BotRedis extends EventEmitter {
                         return
                     }
 
-                    this.bot.logger.info("Redis [IPC]", "Received launcherCmd payload", channel, payload)
+                    if(process.env.IPC_DEBUG == "true") {
+                        this.bot.logger.info("Redis [IPC]", "Received launcherCmd payload", channel, payload)
+                    }
 
                     if(payload.scope == "bot") {
                         try {
@@ -318,8 +320,11 @@ export class IPCRequestHandle {
     }
 
     private onResp(resp: LauncherCmd) {
-        this.bot.logger.debug("IPCRequestHandle", "Got response", resp, this.commandId)
-        if(resp.command_id == this.commandId) {
+        if(process.env.IPC_DEBUG == "true") {
+            this.bot.logger.debug("IPCRequestHandle", "Got response", resp, this.commandId)
+        }
+        
+        if(resp.command_id == this.commandId && resp.scope == this.request.scope && resp.action == this.request.action) {
             this.ipcQueue.set(resp.data.respCluster, resp)
         }
     }
