@@ -33,6 +33,10 @@ type WebData struct {
 
 func routeStatic(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "" {
+			http.Redirect(w, r, "/mewld/", http.StatusMovedPermanently)
+		}
+
 		if !strings.HasPrefix(r.URL.Path, "/api") {
 			serverRoot := http.FS(serverRootSubbed)
 

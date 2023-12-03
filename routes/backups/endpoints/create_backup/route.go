@@ -2,22 +2,18 @@ package create_backup
 
 import (
 	"net/http"
-	"splashtail/routes/backups/assets"
 	"splashtail/state"
+	"splashtail/tasks"
+	"splashtail/tasks/backups"
 	"splashtail/types"
 	"time"
 
-	"github.com/infinitybotlist/eureka/crypto"
 	"github.com/infinitybotlist/eureka/uapi/ratelimit"
-	"github.com/jackc/pgx/v5/pgtype"
 	"go.uber.org/zap"
 
 	docs "github.com/infinitybotlist/eureka/doclib"
 	"github.com/infinitybotlist/eureka/uapi"
 )
-
-const taskExpiryTime = time.Hour * 1
-const taskName = "create_backup"
 
 func Docs() *docs.Doc {
 	return &docs.Doc{
@@ -61,19 +57,9 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 		}
 	}
 
-	taskKey := crypto.RandString(128)
-	var taskId string
-
-	err = state.Pool.QueryRow(d.Context, "INSERT INTO tasks (task_name, task_key, for_user, expiry, output, allow_unauthenticated) VALUES ($1, $2, $3, $4, $5, $6) RETURNING task_id",
-		taskName,
-		taskKey,
-		"g/"+d.Auth.ID,
-		taskExpiryTime,
-		map[string]any{
-			"meta": map[string]any{},
-		},
-		false,
-	).Scan(&taskId)
+	task, tcr, err := tasks.CreateTask(d.Context, &backups.ServerBackupCreateTask{
+		ServerID: d.Auth.ID,
+	}, false)
 
 	if err != nil {
 		return uapi.HttpResponse{
@@ -84,18 +70,9 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 		}
 	}
 
-	go assets.CreateServerBackup(taskId, taskName, d.Auth.ID)
+	go tasks.NewTask(task)
 
 	return uapi.HttpResponse{
-		Json: types.TaskCreateResponse{
-			TaskID: taskId,
-			TaskKey: pgtype.Text{
-				Valid:  true,
-				String: taskKey,
-			},
-			TaskName:             taskName,
-			Expiry:               pgtype.Interval{Microseconds: int64(taskExpiryTime / time.Microsecond)},
-			AllowUnauthenticated: false,
-		},
+		Json: tcr,
 	}
 }
