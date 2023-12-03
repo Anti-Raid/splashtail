@@ -66,7 +66,13 @@ export class FinalResponse {
             return await ctx.reply(this.reply)
         } else {
             if(this.isEdit) {
-                return await ctx.edit(this.reply)
+                try {
+                    let r = await ctx.edit(this.reply)
+                    return r
+                } catch (err) {
+                    this.isEdit = false
+                    return await ctx.reply(this.reply)
+                }
             }
 
             return await ctx.reply(this.reply)
