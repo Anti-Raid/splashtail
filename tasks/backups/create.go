@@ -32,7 +32,7 @@ func (t *ServerBackupCreateTask) dir() string {
 
 // $SecureStorage/guilds/$guildId/backups/$taskId/backup.arbackup
 func (t *ServerBackupCreateTask) path() string {
-	return t.dir() + "backup.arbackup"
+	return t.dir() + "/backup.arbackup"
 }
 
 func (t *ServerBackupCreateTask) Validate() error {
