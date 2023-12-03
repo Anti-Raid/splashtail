@@ -158,7 +158,7 @@ func (l *InstanceList) ScanShards(i *Instance) ([]ShardHealth, error) {
 
 	// Wait for diagnostic message from channel with timeout
 
-	ticker := time.NewTicker(time.Second * 120)
+	ticker := time.NewTicker(time.Second * time.Duration(l.Config.PingTimeout))
 
 	for {
 		select {
@@ -438,7 +438,7 @@ func (l *InstanceList) Start(i *Instance) {
 		log.Fatal("Cluster not found")
 	}
 
-	// ANTIRAID-SPECIFIC: Get rid of loggingCode and add number of clusters
+	// ANTIRAID-SPECIFIC: Get rid of loggingCode and add number of clusters and proxy url to args
 
 	// Get interpreter/caller
 	var cmd *exec.Cmd
@@ -452,6 +452,7 @@ func (l *InstanceList) Start(i *Instance) {
 			cluster.Name,
 			dir,
 			strconv.Itoa(len(l.Map)),
+			l.Config.ProxyURL,
 		)
 	} else {
 		cmd = exec.Command(
@@ -462,6 +463,7 @@ func (l *InstanceList) Start(i *Instance) {
 			cluster.Name,
 			dir,
 			strconv.Itoa(len(l.Map)),
+			l.Config.ProxyURL,
 		)
 	}
 

@@ -1,4 +1,4 @@
-import { EmbedBuilder, CommandInteraction, InteractionResponse, Message, InteractionDeferReplyOptions, AutocompleteInteraction, ChatInputCommandInteraction } from "discord.js";
+import { EmbedBuilder, InteractionResponse, Message, InteractionDeferReplyOptions, AutocompleteInteraction, ChatInputCommandInteraction, Guild } from "discord.js";
 import { AntiRaid } from "./client";
 
 export interface ContextReply {
@@ -33,12 +33,14 @@ export enum ContextReplyStatus {
 
 export class CommandContext {
     client: AntiRaid;
+    guild: Guild;
     interaction: ChatInputCommandInteraction
     private _replyState: ContextReplyStatus = ContextReplyStatus.Pending;
 
     constructor(client: AntiRaid, interaction: ChatInputCommandInteraction) {
         this.client = client;
         this.interaction = interaction;
+        this.guild = interaction.guild;
     }
 
     get replyStatus() {

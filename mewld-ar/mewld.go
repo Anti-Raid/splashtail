@@ -42,7 +42,7 @@ func init() {
 // ANTIRAID-SPECIFIC: Rename main to Load to allow embedding
 //
 // Also allow manualOauth and manualToken and manualDbSecret to be passed instead of relying on env
-func Load(manualOauth *config.Oauth, manualToken *string, manualDpSecret *string) {
+func Load(manualOauth *config.Oauth, manualToken *string, manualDpSecret *string, manualProxyUrl *string) {
 	// Load the config file
 	var config config.CoreConfig
 
@@ -63,6 +63,10 @@ func Load(manualOauth *config.Oauth, manualToken *string, manualDpSecret *string
 
 	if manualDpSecret != nil {
 		config.DPSecret = *manualDpSecret
+	}
+
+	if manualProxyUrl != nil {
+		config.ProxyURL = *manualProxyUrl
 	}
 
 	var dir string

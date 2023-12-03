@@ -17,7 +17,9 @@ type MutLogger struct {
 }
 
 func (m *MutLogger) add(p []byte) error {
-	state.Logger.Info("add called", zap.String("taskId", m.taskId))
+	if state.Config.Meta.DebugTaskLogger {
+		state.Logger.Debug("add called", zap.String("taskId", m.taskId))
+	}
 	defer m.Unlock()
 	m.Lock()
 
@@ -40,7 +42,10 @@ func (m *MutLogger) add(p []byte) error {
 }
 
 func (m *MutLogger) Write(p []byte) (n int, err error) {
-	state.Logger.Info("Write called", zap.String("taskId", m.taskId))
+	if state.Config.Meta.DebugTaskLogger {
+		state.Logger.Debug("Write called", zap.String("taskId", m.taskId))
+	}
+
 	err = m.add(p)
 
 	if err != nil {

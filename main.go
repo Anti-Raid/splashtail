@@ -15,6 +15,7 @@ import (
 
 	"splashtail/api"
 	"splashtail/constants"
+	"splashtail/ipc"
 	"splashtail/routes/backups"
 	"splashtail/routes/core"
 	"splashtail/routes/platform"
@@ -204,7 +205,15 @@ func main() {
 		ClientID:     state.Config.DiscordAuth.ClientID,
 		ClientSecret: state.Config.DiscordAuth.ClientSecret,
 		RedirectURL:  state.Config.DiscordAuth.MewldRedirect,
-	}, &state.Config.DiscordAuth.Token, &state.Config.Meta.DPSecret)
+	}, &state.Config.DiscordAuth.Token, &state.Config.Meta.DPSecret, &state.Config.Meta.Proxy)
+
+	// Load IPC
+	for {
+		if mewld.InstanceList != nil {
+			go ipc.Start()
+			break
+		}
+	}
 
 	// Mount mewld webui
 	for {
@@ -248,10 +257,13 @@ func main() {
 			if err != http.ErrServerClosed {
 				state.Logger.Error("Server failed due to unexpected error", zap.Error(err))
 			}
+
+			ipc.IpcDone = true
 		}()
 
 		if err := upg.Ready(); err != nil {
 			state.Logger.Fatal("Error calling upg.Ready", zap.Error(err))
+			ipc.IpcDone = true
 		}
 
 		<-upg.Exit()
@@ -262,6 +274,9 @@ func main() {
 
 		if err != nil {
 			state.Logger.Fatal("Error binding to socket", zap.Error(err))
+			ipc.IpcDone = true
 		}
 	}
+
+	ipc.IpcDone = true
 }

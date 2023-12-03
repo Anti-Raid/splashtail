@@ -30,6 +30,8 @@ type LauncherCmd struct {
 For a response to a bot-scoped IPC command, set data?.respCluster to the cluster ID that sent the command
 
 If a request/response is cluster-specific, set data?.targetCluster to the cluster IDs that should receive the response
+
+For a splashtail scoped IPC command, set respCluster to -1
 */
 export interface LauncherCmd {
     scope: string
@@ -59,7 +61,7 @@ export interface IpcFetchOptions {
      */
     timeout?: number
     /**
-     * The number of clusters that need to respond before the promise resolves. If not set, will wait for all clusters to respond
+     * The number of clusters that need to respond before the promise resolves. If not set, will wait for all clusters to respond or if scope is splashtail, will set to 1
      */
     numClustersNeeded?: number
 }
@@ -115,7 +117,7 @@ export class BotRedis extends EventEmitter {
         let handle: IPCRequestHandle | null = null
 
         if(fetchOpts) {
-            fetchOpts.numClustersNeeded = fetchOpts?.numClustersNeeded || this.bot.clusterCount
+            fetchOpts.numClustersNeeded = fetchOpts?.numClustersNeeded || ((payload?.scope == "splashtail") ? 1 : this.bot.clusterCount)
             fetchOpts.timeout = fetchOpts?.timeout || 10000
 
             // Create handle

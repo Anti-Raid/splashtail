@@ -12,13 +12,17 @@ import (
 	"go.uber.org/zap"
 )
 
+func init() {
+	tasks.RegisterTask(&ServerBackupCreateTask{})
+}
+
 // A task to create backup a server
 type ServerBackupCreateTask struct {
 	// The ID of the task
-	TaskID string
+	TaskID string `json:"task_id"`
 
 	// The ID of the server
-	ServerID string
+	ServerID string `json:"server_id"`
 }
 
 // $SecureStorage/guilds/$guildId/backups/$taskId
@@ -29,6 +33,14 @@ func (t *ServerBackupCreateTask) dir() string {
 // $SecureStorage/guilds/$guildId/backups/$taskId/backup.arbackup
 func (t *ServerBackupCreateTask) path() string {
 	return t.dir() + "backup.arbackup"
+}
+
+func (t *ServerBackupCreateTask) Validate() error {
+	if t.ServerID == "" {
+		return fmt.Errorf("server_id is required")
+	}
+
+	return nil
 }
 
 func (t *ServerBackupCreateTask) Exec(l *zap.Logger, tx pgx.Tx) error {
@@ -131,6 +143,8 @@ func (t *ServerBackupCreateTask) Output() *tasks.TaskOutput {
 	}
 }
 
-func (t *ServerBackupCreateTask) Set(set *tasks.TaskSet) {
+func (t *ServerBackupCreateTask) Set(set *tasks.TaskSet) tasks.Task {
 	t.TaskID = set.TaskID
+
+	return t
 }

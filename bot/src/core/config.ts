@@ -28,5 +28,5 @@ export interface DiscordAuth {
 export interface Config {
     discord_auth: DiscordAuth,
     servers: Servers,
-    bot_lists: BotList[]
+    bot_lists: BotList[],
 }

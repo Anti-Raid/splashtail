@@ -1,5 +1,5 @@
 import { Client, GatewayIntentBits, ActivityType, EmbedBuilder, Events, Routes, SlashCommandBuilder, SlashCommandSubcommandsOnlyBuilder, Interaction, ModalSubmitInteraction, Colors, PermissionsBitField, TeamMember } from "discord.js";
-import { AutocompleteContext, CommandContext, ContextReply } from "./context";
+import { AutocompleteContext, CommandContext, ContextReply, ContextReplyStatus } from "./context";
 import { Logger } from "./logger";
 import { readFileSync, readdirSync } from "node:fs";
 import { Config } from "./config";
@@ -13,6 +13,7 @@ import { uptimeToHuman } from "./common/utils";
 export class FinalResponse {
     private dummyResponse: boolean // If true, then there is no final response (all processing is done in the command itself)
     private reply: ContextReply
+    private isEdit: boolean = false
 
     constructor() {}
 
@@ -25,6 +26,13 @@ export class FinalResponse {
     static reply(reply: ContextReply) {
         let response = new FinalResponse()
         response.reply = reply
+        return response
+    }
+
+    static edit(reply: ContextReply) {
+        let response = new FinalResponse()
+        response.reply = reply
+        response.isEdit = true
         return response
     }
 
@@ -54,7 +62,15 @@ export class FinalResponse {
             return
         }
 
-        return await ctx.reply(this.reply)
+        if(ctx.replyStatus == ContextReplyStatus.Pending) {
+            return await ctx.reply(this.reply)
+        } else {
+            if(this.isEdit) {
+                return await ctx.edit(this.reply)
+            }
+
+            return await ctx.reply(this.reply)
+        }
     }
 }
 
@@ -82,12 +98,13 @@ export class AntiRaid extends Client {
     shardCount: number;
     shardIds: number[];
     redis: BotRedis;
+    proxyUrl: string
     private _config: Config;
     private hasLoadedListeners: boolean = false;
     private teamOwners: string[] = []
     currentShardHealth: Map<number, ShardHealth> = new Map()
 
-    constructor(clusterId: number, clusterName: string, shardIds: number[], shardCount: number, clusterCount: number) {
+    constructor(clusterId: number, clusterName: string, shardIds: number[], shardCount: number, clusterCount: number, proxyUrl: string) {        
         super({
             shards: shardIds,
             shardCount: shardCount,
@@ -97,6 +114,9 @@ export class AntiRaid extends Client {
                 GatewayIntentBits.MessageContent,
                 GatewayIntentBits.GuildMessages,
             ],
+            rest: {
+                api: `${proxyUrl}/api`
+            }
         })
 
         this.clusterId = clusterId
@@ -104,6 +124,7 @@ export class AntiRaid extends Client {
         this.clusterCount = clusterCount
         this.clusterName = clusterName
         this.shardIds = shardIds
+        this.proxyUrl = proxyUrl
         this.logger = new Logger(`${clusterName} (${clusterId})`)
         this._config = this.loadConfig()
         this.redis = new BotRedis(this)

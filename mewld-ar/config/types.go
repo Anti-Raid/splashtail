@@ -19,7 +19,9 @@ type CoreConfig struct {
 	AllowedIDS   []string `yaml:"allowed_ids"`
 	Oauth        Oauth    `yaml:"oauth"`
 	PingInterval int      `yaml:"ping_interval"`
+	PingTimeout  int      `yaml:"ping_timeout"` // ANTIRAID-SPECIFIC: Add ping_timeout to config
 	PerCluster   uint64   `yaml:"per_cluster"`
+	ProxyURL     string   `yaml:"proxy_url"` // ANTIRAID-SPECIFIC: Add proxy_url to config
 }
 
 // ANTIRAID-SPECIFIC: Remove Env from CoreConfig

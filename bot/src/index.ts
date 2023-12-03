@@ -11,10 +11,11 @@ const args = process.argv.slice(2);
 			strconv.Itoa(i.ClusterID),
 			cluster.Name,
 			dir,
-			len(l.Map)
+			len(l.Map),
+			l.Config.ProxyURL,
  */
-if (args.length < 6) {
-	console.error("Usage: node . <shard count> <total shard count> <cluster id> <cluster name> <cluster directory> <no clusters>");
+if (args.length < 7) {
+	console.error("Usage: node . <shard count> <total shard count> <cluster id> <cluster name> <cluster directory> <no clusters> <proxy url>");
 	console.error("Please ensure that the bot is being run via mewld");
 	process.exit(1);
 }
@@ -36,8 +37,10 @@ if(!clusterName || !clusterCount) {
 	process.exit(1);
 }
 
+const proxyUrl = args[6];
+
 // Create Discord Client
-const client = new AntiRaid(clusterId, clusterName, shards, shardCount, clusterCount);
+const client = new AntiRaid(clusterId, clusterName, shards, shardCount, clusterCount, proxyUrl);
 /*
 // Guild member update event
 client.on(Events.GuildMemberUpdate, async (oldMember, newMember) => {

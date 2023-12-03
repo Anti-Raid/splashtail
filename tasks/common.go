@@ -12,6 +12,12 @@ import (
 	"go.uber.org/zap"
 )
 
+var TaskRegistry = map[string]Task{}
+
+func RegisterTask(task Task) {
+	TaskRegistry[task.Info().Name] = task
+}
+
 func Pointer[T any](v T) *T {
 	return &v
 }
@@ -34,6 +40,9 @@ type TaskSet struct {
 
 // Task is a task that can be executed on splashtail
 type Task interface {
+	// Validate validates the task
+	Validate() error
+
 	// Exec executes the task
 	Exec(l *zap.Logger, tx pgx.Tx) error
 
@@ -44,12 +53,18 @@ type Task interface {
 	Output() *TaskOutput
 
 	// Set the output of the task
-	Set(set *TaskSet)
+	Set(set *TaskSet) Task
 }
 
 // Sets up a task
 func CreateTask(ctx context.Context, task Task, allowUnauthenticated bool) (Task, *types.TaskCreateResponse, error) {
 	tInfo := task.Info()
+
+	_, ok := TaskRegistry[tInfo.Name]
+
+	if !ok {
+		return nil, nil, fmt.Errorf("task %s does not exist on registry", tInfo.Name)
+	}
 
 	taskKey := crypto.RandString(128)
 	var taskId string
@@ -69,7 +84,7 @@ func CreateTask(ctx context.Context, task Task, allowUnauthenticated bool) (Task
 		return nil, nil, fmt.Errorf("failed to create task: %w", err)
 	}
 
-	task.Set(&TaskSet{
+	task = task.Set(&TaskSet{
 		TaskID: taskId,
 	})
 

@@ -21,12 +21,71 @@ let command: Command = {
                     embeds: [
                         new EmbedBuilder()
                         .setTitle("Creating backup")
-                        .setDescription(":yellow: Please wait, starting backup task...")
+                        .setDescription(":yellow_circle: Please wait, starting backup task...")
                         .setColor(Colors.Blurple)
                     ]
                 })
 
-                return FinalResponse.dummy()
+                let handle = await ctx.client.redis.sendIpcRequest({
+                    scope: "splashtail",
+                    action: "create_task",
+                    data: {
+                        "name": "create_backup"
+                    },
+                    args: {
+                        "server_id": ctx.guild.id
+                    }
+                }, null, {})
+
+                if(!handle) throw new Error("Invalid IPC handle")
+
+                let rmap = await handle.fetch() 
+                
+                if(rmap.size == 0 || !rmap.has(-1)) {
+                    return FinalResponse.edit({
+                        embeds: [
+                            new EmbedBuilder()
+                            .setTitle("Creating backup")
+                            .setDescription(":x: Failed to create task. No response from co-ordinator server.")
+                            .setColor(Colors.Red)
+                        ]
+                    })
+                }
+
+                let res = rmap.get(-1)
+                
+                if(res?.output?.error) {
+                    return FinalResponse.edit({
+                        embeds: [
+                            new EmbedBuilder()
+                            .setTitle("Creating backup")
+                            .setDescription(`:x: ${res?.output?.error || "Failed to create task"}`)
+                            .setColor(Colors.Red)
+                        ]
+                    })
+                }
+
+                let task: TaskCreateResponse = res?.output
+
+                if(!task?.task_id) {
+                    return FinalResponse.edit({
+                        embeds: [
+                            new EmbedBuilder()
+                            .setTitle("Creating backup")
+                            .setDescription(`:x: Failed to create task. No task ID returned.`)
+                            .setColor(Colors.Red)
+                        ]
+                    })
+                }
+
+                return FinalResponse.edit({
+                    embeds: [
+                        new EmbedBuilder()
+                        .setTitle("Creating backup")
+                        .setDescription(`:white_check_mark: Task created with ID \`${task?.task_id}\`. Waiting for task to complete...`)
+                        .setColor(Colors.Green)
+                    ]
+                })
             default:
                 return FinalResponse.reply({
                     embeds: [
