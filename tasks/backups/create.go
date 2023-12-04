@@ -23,6 +23,9 @@ type ServerBackupCreateTask struct {
 
 	// The ID of the server
 	ServerID string `json:"server_id"`
+
+	// Backup options
+	BackupOpts BackupOpts `json:"backup_opts"`
 }
 
 // $SecureStorage/guilds/$guildId/backups/$taskId
@@ -45,6 +48,14 @@ func (t *ServerBackupCreateTask) Validate() error {
 
 func (t *ServerBackupCreateTask) Exec(l *zap.Logger, tx pgx.Tx) error {
 	l.Info("Backing up core data", zap.String("taskId", t.TaskID))
+
+	if t.BackupOpts.MaxMessages == 0 {
+		t.BackupOpts.MaxMessages = totalMaxMessages
+	}
+
+	if t.BackupOpts.MaxMessages > totalMaxMessages {
+		return fmt.Errorf("max_messages cannot be greater than %d", totalMaxMessages)
+	}
 
 	f, err := iblfile.NewAutoEncryptedFile("")
 

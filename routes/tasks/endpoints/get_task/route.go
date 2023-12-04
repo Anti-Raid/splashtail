@@ -149,6 +149,11 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 						Json:   types.ApiError{Message: "This task is not owned by your user account!"},
 					}
 				}
+			default:
+				return uapi.HttpResponse{
+					Status: http.StatusInternalServerError,
+					Json:   types.ApiError{Message: "Invalid task.ForUser"},
+				}
 			}
 		}
 	}

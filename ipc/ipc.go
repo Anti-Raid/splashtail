@@ -32,7 +32,12 @@ func Start() {
 		}
 	}()
 
-	pubsub := state.Redis.Subscribe(state.Context, state.MewldInstanceList.Config.RedisChannel)
+	pubsub := state.Redis.Subscribe(
+		state.Context,
+		state.MewldInstanceList.Config.RedisChannel,
+	)
+
+	pubsub.PSubscribe(state.Context, state.MewldInstanceList.Config.RedisChannel+"/ipc@*")
 
 	defer pubsub.Close()
 
@@ -68,7 +73,7 @@ func Start() {
 			action, ok := ipcEvents[cmd.Action]
 
 			if !ok {
-				err = core.SendResponse(&mredis.LauncherCmd{
+				err = core.SendResponse(msg.Channel, &mredis.LauncherCmd{
 					Scope:     cmd.Scope,
 					Action:    cmd.Action,
 					CommandId: cmd.CommandId,
@@ -89,7 +94,7 @@ func Start() {
 
 			if err != nil {
 				state.Logger.Error("Error executing IPC command", zap.Any("error", err))
-				err = core.SendResponse(&mredis.LauncherCmd{
+				err = core.SendResponse(msg.Channel, &mredis.LauncherCmd{
 					Scope:     cmd.Scope,
 					Action:    cmd.Action,
 					CommandId: cmd.CommandId,
@@ -108,7 +113,7 @@ func Start() {
 
 			if resp == nil {
 				state.Logger.Error("Error executing IPC command", zap.Any("error", err))
-				err = core.SendResponse(&mredis.LauncherCmd{
+				err = core.SendResponse(msg.Channel, &mredis.LauncherCmd{
 					Scope:     cmd.Scope,
 					Action:    cmd.Action,
 					CommandId: cmd.CommandId,
@@ -129,7 +134,7 @@ func Start() {
 			resp.Action = cmd.Action
 			resp.CommandId = cmd.CommandId
 
-			err = core.SendResponse(resp)
+			err = core.SendResponse(msg.Channel, resp)
 
 			if err != nil {
 				state.Logger.Error("Error sending IPC response", zap.Any("error", err))

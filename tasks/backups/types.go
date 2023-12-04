@@ -8,12 +8,14 @@ import (
 )
 
 const (
-	totalMaxMessages = 10000
+	totalMaxMessages = 500
 	fileType         = "backup.server"
 )
 
-type ChannelMsgCount struct {
+type BackupOpts struct {
 	PerChannel         int            `json:"per_channel" description:"The number of messages per channel"`
+	MaxMessages        int            `json:"max_messages" description:"The maximum number of messages to backup"`
+	BackupMessages     bool           `json:"backup_messages" description:"Whether to backup messages or not"`
 	BackupAttachments  bool           `json:"backup_attachments" description:"Whether to backup attachments or not"`
 	SpecialAllocations map[string]int `json:"special_allocations" description:"Specific channel allocation overrides"`
 }

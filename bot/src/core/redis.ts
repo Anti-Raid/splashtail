@@ -4,6 +4,7 @@ import { AntiRaid } from './client';
 import { Status } from 'discord.js';
 import EventEmitter from 'events';
 import { randomBytes } from 'crypto';
+import { TaskCreateResponse } from './coreTypes/tasks';
 
 export interface DiagResponse {
     Nonce: string
@@ -31,7 +32,7 @@ For a response to a bot-scoped IPC command, set data?.respCluster to the cluster
 
 If a request/response is cluster-specific, set data?.targetCluster to the cluster IDs that should receive the response
 
-For a splashtail scoped IPC command, set respCluster to -1
+For a splashtail scoped IPC command, respCluster must be -1 and originCluster (in request) should be set to the cluster ID that sent the command
 */
 export interface LauncherCmd {
     scope: string
@@ -139,9 +140,15 @@ export class BotRedis extends EventEmitter {
             handle = new IPCRequestHandle(this.bot, this, payload, fetchOpts)
         }
 
+        // Set channel for IPC if scope is splashtail
+        let channel = process.env.MEWLD_CHANNEL
+        if(payload.scope == "splashtail") {
+            channel = `${process.env.MEWLD_CHANNEL}/${this.bot.clusterId}`
+        }
+
         // Publish
         try {
-            await this.client.publish(process.env.MEWLD_CHANNEL, JSON.stringify(payload))
+            await this.client.publish(channel, JSON.stringify(payload))
         } catch (err) {
             if(handle) {
                 handle.stop()
@@ -150,6 +157,10 @@ export class BotRedis extends EventEmitter {
         }
 
         return handle
+    }
+
+    async pollForTasks(tcr: TaskCreateResponse, callback: (cmd: LauncherCmd) => Promise<void>) {
+
     }
 
     /**
@@ -192,6 +203,114 @@ export class BotRedis extends EventEmitter {
     }
 
     /**
+     * The actual IPC implementation
+     */
+    private async ipcEmitter(message: string, channel: string) {
+        try {
+            let data = JSON.parse(message)
+
+            // Diagnostics payload
+            if(data?.diag) {
+                /*type DiagResponse struct {
+                    Nonce string        // Random nonce used to validate that a nonce comes from a specific diag request
+                    Data  []ShardHealth // The shard health data
+
+                    type ShardHealth struct {
+                        ShardID uint64  `json:"shard_id"` // The shard ID
+                        Up      bool    `json:"up"`       // Whether or not the shard is up
+                        Latency float64 `json:"latency"`  // Latency of the shard (optional, send if possible)
+                        Guilds  uint64  `json:"guilds"`   // The number of guilds in the shard
+                    }
+                }*/
+                if(data?.id != this.bot.clusterId) {
+                    return
+                }
+
+                // Collect shard health
+                let shardHealthData: ShardHealth[] = []
+
+                for(let [id, shard] of this.bot.ws.shards) {
+                    shardHealthData.push({
+                        shard_id: id,
+                        up: shard.status == Status.Ready,
+                        latency: shard.ping,
+                        guilds: this.bot.guilds.cache.filter(g => g.shardId == id).size
+                    })
+                }
+
+                // This gets quite spammy...
+                if(process.env.DEBUG_SHARDS) {
+                    this.bot.logger.debug("Redis", "Have current shards", this.bot.ws.shards)
+                }
+
+                let resp: LauncherCmd = {
+                    scope: "launcher",
+                    action: "diag",
+                    output: JSON.stringify({
+                        Nonce: data.nonce,
+                        Data: shardHealthData
+                    })
+                }    
+                
+                await this.client.publish(process.env.MEWLD_CHANNEL, JSON.stringify(resp))
+            } else {
+                if(!data?.action) {
+                    if(data?.output == "ok" && data?.scope == "bot") {
+                        this.emit("ipcAcknowledge", data)
+                        return
+                    }
+
+                    this.bot.logger.error("Redis", "Unimplemented payload [not oneof diag or action payload)", data)
+                    return
+                }
+                
+                let payload: LauncherCmd = data
+
+                if(Array.isArray(payload?.data?.targetCluster) && !payload?.data?.targetCluster.includes(this.bot.clusterId)) {
+                    // This response is not for us, ignore it
+                    return
+                }
+
+                if(payload?.data?.respCluster != undefined && payload?.data?.respCluster != null) {
+                    // Emit it
+                    this.emit("ipcResponse", payload)
+
+                    return
+                }
+
+                if(process.env.IPC_DEBUG == "true") {
+                    this.bot.logger.info("Redis [IPC]", "Received launcherCmd payload", channel, payload)
+                }
+
+                if(payload.scope == "bot") {
+                    try {
+                        await this.ipcHandler(payload)
+                    } catch (err) {
+                        this.bot.logger.error("Redis [IPC]", "Error handling ipc payload", err)
+                    }
+                } else if(payload.scope == "launcher") {
+                    switch (payload.action) {
+                        case "diag":
+                            // We have recieved a diagnostic payload from other clusters, save it
+                            let diagResp: DiagResponse = JSON.parse(payload.output)
+                            if(Array.isArray(diagResp.Data)) {
+                                for(let shard of diagResp.Data) {
+                                    this.bot.currentShardHealth.set(shard.shard_id, shard)
+                                }
+                            }
+                        default:
+                            if(process.env.IPC_DEBUG == "true") {
+                                this.bot.logger.info("Redis [IPC]", "Received launcherCmd payload", channel, payload)
+                            }
+                    }
+                }
+            }
+        } catch (err) {
+            this.bot.logger.error("Redis", "Error responding to core mewld payload", err)
+        }
+    }
+
+    /**
      * Starts the mewld notification client
      */
     private async startMewld() {
@@ -203,110 +322,12 @@ export class BotRedis extends EventEmitter {
     
         await this.mewld_notifier.connect()
 
-        await this.mewld_notifier.subscribe(process.env.MEWLD_CHANNEL, async (message: string, channel: string) => {
-            try {
-                let data = JSON.parse(message)
-
-                // Diagnostics payload
-                if(data?.diag) {
-                    /*type DiagResponse struct {
-                        Nonce string        // Random nonce used to validate that a nonce comes from a specific diag request
-                        Data  []ShardHealth // The shard health data
-
-                        type ShardHealth struct {
-                            ShardID uint64  `json:"shard_id"` // The shard ID
-                            Up      bool    `json:"up"`       // Whether or not the shard is up
-                            Latency float64 `json:"latency"`  // Latency of the shard (optional, send if possible)
-                            Guilds  uint64  `json:"guilds"`   // The number of guilds in the shard
-                        }
-                    }*/
-                    if(data?.id != this.bot.clusterId) {
-                        return
-                    }
-
-                    // Collect shard health
-                    let shardHealthData: ShardHealth[] = []
-
-                    for(let [id, shard] of this.bot.ws.shards) {
-                        shardHealthData.push({
-                            shard_id: id,
-                            up: shard.status == Status.Ready,
-                            latency: shard.ping,
-                            guilds: this.bot.guilds.cache.filter(g => g.shardId == id).size
-                        })
-                    }
-
-                    // This gets quite spammy...
-                    if(process.env.DEBUG_SHARDS) {
-                        this.bot.logger.debug("Redis", "Have current shards", this.bot.ws.shards)
-                    }
-
-                    let resp: LauncherCmd = {
-                        scope: "launcher",
-                        action: "diag",
-                        output: JSON.stringify({
-                            Nonce: data.nonce,
-                            Data: shardHealthData
-                        })
-                    }    
-                    
-                    await this.client.publish(process.env.MEWLD_CHANNEL, JSON.stringify(resp))
-                } else {
-                    if(!data?.action) {
-                        if(data?.output == "ok" && data?.scope == "bot") {
-                            this.emit("ipcAcknowledge", data)
-                            return
-                        }
-
-                        this.bot.logger.error("Redis", "Unimplemented payload [not oneof diag or action payload)", data)
-                        return
-                    }
-                    
-                    let payload: LauncherCmd = data
-
-                    if(Array.isArray(payload?.data?.targetCluster) && !payload?.data?.targetCluster.includes(this.bot.clusterId)) {
-                        // This response is not for us, ignore it
-                        return
-                    }
-
-                    if(payload?.data?.respCluster != undefined && payload?.data?.respCluster != null) {
-                        // Emit it
-                        this.emit("ipcResponse", payload)
-
-                        return
-                    }
-
-                    if(process.env.IPC_DEBUG == "true") {
-                        this.bot.logger.info("Redis [IPC]", "Received launcherCmd payload", channel, payload)
-                    }
-
-                    if(payload.scope == "bot") {
-                        try {
-                            await this.ipcHandler(payload)
-                        } catch (err) {
-                            this.bot.logger.error("Redis [IPC]", "Error handling ipc payload", err)
-                        }
-                    } else if(payload.scope == "launcher") {
-                        switch (payload.action) {
-                            case "diag":
-                                // We have recieved a diagnostic payload from other clusters, save it
-                                let diagResp: DiagResponse = JSON.parse(payload.output)
-                                if(Array.isArray(diagResp.Data)) {
-                                    for(let shard of diagResp.Data) {
-                                        this.bot.currentShardHealth.set(shard.shard_id, shard)
-                                    }
-                                }
-                            default:
-                                if(process.env.IPC_DEBUG == "true") {
-                                    this.bot.logger.info("Redis [IPC]", "Received launcherCmd payload", channel, payload)
-                                }
-                        }
-                    }
-                }
-            } catch (err) {
-                this.bot.logger.error("Redis", "Error responding to core mewld payload", err)
-            }
-        })
+        // There are two channels that we need to subscribe to
+        // 
+        // The first is the common channel, which is used for normal sends
+        //
+        // The other is the cluster-specific channel, which is used for IPC with splashtail (these payloads are much larger)
+        await this.mewld_notifier.subscribe([process.env.MEWLD_CHANNEL, `${process.env.MEWLD_CHANNEL}/${this.bot.clusterId}`], this.ipcEmitter)
     }
 }
 

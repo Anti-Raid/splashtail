@@ -268,11 +268,15 @@ export class AntiRaid extends Client {
      * This function is called when the bot is ready
      */
     private async onReady() {
-        this.user.setActivity(`Development of v6.0.0 | Cluster ${this.clusterId}`, {
-            type: ActivityType.Watching,
-        });
-    
-        this.user.setStatus("dnd");
+        this.user.setPresence({
+            activities: [
+                {
+                    name: `Development of v6.0.0 | Cluster ${this.clusterId}`,
+                    type: ActivityType.Watching,
+                },
+            ],
+            status: "dnd",
+        })
     
         this.logger.success("Discord", `Connected as ${this.user.username}!`);
 

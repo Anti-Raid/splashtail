@@ -17,7 +17,7 @@ import (
 
 const (
 	TargetTypeUser   = "User"
-	TargetTypeServer = "Berver"
+	TargetTypeServer = "Server"
 )
 
 type DefaultResponder struct{}

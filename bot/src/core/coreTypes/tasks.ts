@@ -7,7 +7,7 @@
 }
 */
 
-interface TaskCreateResponse {
+export interface TaskCreateResponse {
     task_id: string;
     task_key?: string;
     allow_unauthenticated: boolean;

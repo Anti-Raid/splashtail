@@ -1,6 +1,7 @@
 import { Colors, EmbedBuilder, PermissionsBitField } from "discord.js";
 import { Command, FinalResponse } from "../core/client";
 import { SlashCommandBuilder } from "@discordjs/builders";
+import { TaskCreateResponse } from "../core/coreTypes/tasks";
 
 let command: Command = {
     userPerms: [PermissionsBitField.Flags.ManageGuild],
@@ -11,12 +12,46 @@ let command: Command = {
     .addSubcommand((sub) => {
         sub.setName("create")
         .setDescription("Create a backup of your server")
+        .addBooleanOption((opt) => {
+            opt.setName("messages")
+            .setDescription("Whether to include messages in the backup (up to 500)")
+
+            return opt
+        })
+        .addBooleanOption((opt) => {
+            opt.setName("attachments")
+            .setDescription("Whether to include attachments in the backup. Requires 'messages' to be enabled")
+
+            return opt
+        })
+        .addIntegerOption((opt) => {
+            opt.setName("max_messages")
+            .setDescription("The maximum number of messages to backup. Defaults to 500")
+            .setRequired(false)
+
+            return opt
+        })
 
         return sub
     }),
     execute: async (ctx) => {
         switch (ctx.interaction.options.getSubcommand()) {
             case "create":
+                let messages = ctx.interaction.options.getBoolean("messages")
+                let attachments = ctx.interaction.options.getBoolean("attachments")
+                let maxMessages = ctx.interaction.options.getInteger("max_messages") || 500
+
+                if(!messages && attachments) {
+                    return FinalResponse.reply({
+                        embeds: [
+                            new EmbedBuilder()
+                            .setTitle("Creating backup")
+                            .setDescription(":x: You cannot backup attachments without also enabling backup of messages")
+                            .setColor(Colors.Red)
+                        ]
+                    })
+                }
+
                 await ctx.reply({
                     embeds: [
                         new EmbedBuilder()
@@ -33,7 +68,12 @@ let command: Command = {
                         "name": "create_backup"
                     },
                     args: {
-                        "server_id": ctx.guild.id
+                        "server_id": ctx.guild.id,
+                        "backup_opts": {
+                            "max_messages": maxMessages || 500,
+                            "backup_messages": messages || false,
+                            "backup_attachments": attachments || false,
+                        }
                     }
                 }, null, {})
 

@@ -10,7 +10,7 @@ import (
 
 var json = jsoniter.ConfigFastest
 
-func SendResponse(resp *mredis.LauncherCmd) error {
+func SendResponse(reqChannel string, resp *mredis.LauncherCmd) error {
 	resp.Scope = "splashtail"
 
 	if len(resp.Data) == 0 {
@@ -25,5 +25,5 @@ func SendResponse(resp *mredis.LauncherCmd) error {
 		return err
 	}
 
-	return state.Redis.Publish(state.Context, state.MewldInstanceList.Config.RedisChannel, bytes).Err()
+	return state.Redis.Publish(state.Context, reqChannel, bytes).Err()
 }
