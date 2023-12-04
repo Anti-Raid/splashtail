@@ -423,7 +423,7 @@ export class BotRedis extends EventEmitter {
         // The first is the common channel, which is used for normal sends
         //
         // The other is the cluster-specific channel, which is used for IPC with splashtail (these payloads are much larger)
-        await this.mewld_notifier.subscribe([process.env.MEWLD_CHANNEL, `${process.env.MEWLD_CHANNEL}/${this.bot.clusterId}`], this.ipcEmitter)
+        await this.mewld_notifier.subscribe([process.env.MEWLD_CHANNEL, `${process.env.MEWLD_CHANNEL}/${this.bot.clusterId}`], (message: string, channel: string) => this.ipcEmitter(message, channel))
     }
 }
 
