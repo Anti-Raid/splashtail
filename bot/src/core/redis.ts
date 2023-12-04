@@ -238,6 +238,11 @@ export class BotRedis extends EventEmitter {
                     await this.client.publish(process.env.MEWLD_CHANNEL, JSON.stringify(resp))
                 } else {
                     if(!data?.action) {
+                        if(data?.output == "ok" && data?.scope == "bot") {
+                            this.emit("ipcAcknowledge", data)
+                            return
+                        }
+
                         this.bot.logger.error("Redis", "Unimplemented payload [not oneof diag or action payload)", data)
                         return
                     }
