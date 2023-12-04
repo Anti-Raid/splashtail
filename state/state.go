@@ -10,6 +10,7 @@ import (
 	"splashtail/config"
 
 	"github.com/bwmarrin/discordgo"
+	mproc "github.com/cheesycod/mewld/proc"
 	"github.com/go-playground/validator/v10"
 	"github.com/go-playground/validator/v10/non-standard/validators"
 	"github.com/infinitybotlist/eureka/dovewing"
@@ -29,6 +30,7 @@ var (
 	Logger                  *zap.Logger
 	Context                 = context.Background()
 	Validator               = validator.New()
+	MewldInstanceList       *mproc.InstanceList
 
 	Config *config.Config
 )

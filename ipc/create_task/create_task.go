@@ -3,9 +3,10 @@ package create_task
 import (
 	"encoding/json"
 	"fmt"
-	mredis "mewld/redis"
 	"splashtail/state"
 	"splashtail/tasks"
+
+	mredis "github.com/cheesycod/mewld/redis"
 )
 
 func CreateTask(c *mredis.LauncherCmd) (*mredis.LauncherCmd, error) {

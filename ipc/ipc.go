@@ -1,11 +1,11 @@
 package ipc
 
 import (
-	"mewld"
-	mredis "mewld/redis"
 	"splashtail/ipc/core"
 	"splashtail/ipc/create_task"
 	"splashtail/state"
+
+	mredis "github.com/cheesycod/mewld/redis"
 
 	jsoniter "github.com/json-iterator/go"
 	"github.com/redis/go-redis/v9"
@@ -32,7 +32,7 @@ func Start() {
 		}
 	}()
 
-	pubsub := state.Redis.Subscribe(state.Context, mewld.InstanceList.Config.RedisChannel)
+	pubsub := state.Redis.Subscribe(state.Context, state.MewldInstanceList.Config.RedisChannel)
 
 	defer pubsub.Close()
 

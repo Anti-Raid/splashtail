@@ -1,9 +1,9 @@
 package core
 
 import (
-	"mewld"
-	mredis "mewld/redis"
 	"splashtail/state"
+
+	mredis "github.com/cheesycod/mewld/redis"
 
 	jsoniter "github.com/json-iterator/go"
 )
@@ -25,5 +25,5 @@ func SendResponse(resp *mredis.LauncherCmd) error {
 		return err
 	}
 
-	return state.Redis.Publish(state.Context, mewld.InstanceList.Config.RedisChannel, bytes).Err()
+	return state.Redis.Publish(state.Context, state.MewldInstanceList.Config.RedisChannel, bytes).Err()
 }

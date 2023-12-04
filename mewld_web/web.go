@@ -1,17 +1,17 @@
-// ANTIRAID-SPECIFIC: The whole thing
-package web
+package mewld_web
 
 import (
 	"embed"
 	"encoding/json"
 	"io"
 	"io/fs"
-	"mewld/config"
-	"mewld/proc"
-	"mewld/redis"
 	"net/http"
 	"strconv"
 	"strings"
+
+	mconfig "github.com/cheesycod/mewld/config"
+	mproc "github.com/cheesycod/mewld/proc"
+	mredis "github.com/cheesycod/mewld/redis"
 
 	"github.com/go-chi/chi/v5"
 	log "github.com/sirupsen/logrus"
@@ -21,14 +21,11 @@ import (
 var serverRoot embed.FS
 var serverRootSubbed fs.FS
 
-var GlobalRouter chi.Router
-
-var globalConfig config.CoreConfig // ANTIRAID-SPECIFIC: Global config
+var globalConfig *mconfig.CoreConfig
 
 type WebData struct {
-	RedisHandler *redis.RedisHandler
-	InstanceList *proc.InstanceList
-	Config       config.CoreConfig
+	RedisHandler *mredis.RedisHandler
+	InstanceList *mproc.InstanceList
 }
 
 func routeStatic(next http.Handler) http.Handler {
@@ -91,8 +88,7 @@ func toJson(w http.ResponseWriter, v interface{}) {
 	w.Write(b)
 }
 
-// ANTIRAID-SPECIFIC: Rewritten webui api with chi and remove ui entirely from splashtail in favor of sysman
-func CreateServer(webData WebData) {
+func CreateServer(webData WebData) *chi.Mux {
 	var err error
 	serverRootSubbed, err = fs.Sub(serverRoot, "ui/build")
 
@@ -116,7 +112,7 @@ func CreateServer(webData WebData) {
 		routeStatic,
 	)
 
-	globalConfig = webData.Config
+	globalConfig = webData.InstanceList.Config
 
 	r.Get("/api/ping", loginRoute(
 		webData,
@@ -217,5 +213,5 @@ func CreateServer(webData WebData) {
 		},
 	))
 
-	GlobalRouter = r
+	return r
 }

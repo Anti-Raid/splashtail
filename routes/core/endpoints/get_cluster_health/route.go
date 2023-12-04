@@ -1,15 +1,15 @@
 package get_cluster_health
 
 import (
-	"mewld"
 	"net/http"
 
+	"splashtail/state"
 	"splashtail/types"
 
 	docs "github.com/infinitybotlist/eureka/doclib"
 	"github.com/infinitybotlist/eureka/uapi"
 
-	mewldproc "mewld/proc"
+	mewldproc "github.com/cheesycod/mewld/proc"
 )
 
 func Docs() *docs.Doc {
@@ -21,7 +21,7 @@ func Docs() *docs.Doc {
 }
 
 func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
-	if mewld.InstanceList == nil {
+	if state.MewldInstanceList == nil {
 		return uapi.HttpResponse{
 			Status: http.StatusPreconditionFailed,
 			Json: types.ApiError{
@@ -34,6 +34,6 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 	}
 
 	return uapi.HttpResponse{
-		Json: *mewld.InstanceList,
+		Json: *state.MewldInstanceList,
 	}
 }

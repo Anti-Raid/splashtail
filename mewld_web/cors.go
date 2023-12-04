@@ -1,5 +1,4 @@
-// ANTIRAID-SPECIFIC: The whole thing
-package web
+package mewld_web
 
 import (
 	"net/http"

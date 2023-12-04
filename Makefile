@@ -10,7 +10,7 @@ all:
 buildbot:
 	cd bot && npm i && npm run build && cd ../
 buildmewldwebui:
-	cd mewld-ar/web/ui && npm i && npm run build && cd ../
+	cd mewld_web/ui && npm i && npm run build && cd ../
 tests:
 	CGO_ENABLED=0 go test -v -coverprofile=coverage.out ./...
 ts:

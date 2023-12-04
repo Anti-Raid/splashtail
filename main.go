@@ -2,20 +2,26 @@ package main
 
 import (
 	"html/template"
-	"mewld"
-	"mewld/config"
-	"mewld/web"
 	"net/http"
 	"os"
+	"os/exec"
 	"os/signal"
 	"runtime"
+	"strconv"
 	"strings"
 	"syscall"
 	"time"
 
+	mconfig "github.com/cheesycod/mewld/config"
+	mcoreutils "github.com/cheesycod/mewld/coreutils"
+	mloader "github.com/cheesycod/mewld/loader"
+	mproc "github.com/cheesycod/mewld/proc"
+	"gopkg.in/yaml.v2"
+
 	"splashtail/api"
 	"splashtail/constants"
 	"splashtail/ipc"
+	"splashtail/mewld_web"
 	"splashtail/routes/backups"
 	"splashtail/routes/core"
 	"splashtail/routes/platform"
@@ -201,28 +207,81 @@ func main() {
 	})
 
 	// Load mewld bot
-	go mewld.Load(&config.Oauth{
+	mldF, err := os.ReadFile("mewld.yaml")
+
+	if err != nil {
+		panic(err)
+	}
+
+	var mldConfig mconfig.CoreConfig
+
+	err = yaml.Unmarshal(mldF, &mldConfig)
+
+	if err != nil {
+		panic(err)
+	}
+
+	mldConfig.Token = state.Config.DiscordAuth.Token
+	mldConfig.Oauth = mconfig.Oauth{
 		ClientID:     state.Config.DiscordAuth.ClientID,
 		ClientSecret: state.Config.DiscordAuth.ClientSecret,
 		RedirectURL:  state.Config.DiscordAuth.MewldRedirect,
-	}, &state.Config.DiscordAuth.Token, &state.Config.Meta.DPSecret, &state.Config.Meta.Proxy)
+	}
+
+	il, rh, err := mloader.Load(&mldConfig, &mproc.LoaderData{
+		Start: func(l *mproc.InstanceList, i *mproc.Instance, cm *mproc.ClusterMap) error {
+			var cmd *exec.Cmd
+			if l.Config.Interp != "" {
+				cmd = exec.Command(
+					l.Config.Interp,
+					l.Dir+"/"+l.Config.Module,
+					mcoreutils.ToPyListUInt64(i.Shards),
+					mcoreutils.UInt64ToString(l.ShardCount),
+					strconv.Itoa(i.ClusterID),
+					cm.Name,
+					l.Dir,
+					strconv.Itoa(len(l.Map)),
+					state.Config.Meta.Proxy,
+				)
+			} else {
+				cmd = exec.Command(
+					l.Config.Module, // If no interpreter, we use the full module as the executable path
+					mcoreutils.ToPyListUInt64(i.Shards),
+					mcoreutils.UInt64ToString(l.ShardCount),
+					strconv.Itoa(i.ClusterID),
+					cm.Name,
+					l.Dir,
+					strconv.Itoa(len(l.Map)),
+					state.Config.Meta.Proxy,
+				)
+			}
+
+			cmd.Stdout = os.Stdout
+			cmd.Stderr = os.Stderr
+
+			env := os.Environ()
+
+			env = append(env, "MEWLD_CHANNEL="+l.Config.RedisChannel)
+
+			cmd.Env = env
+			cmd.Dir = l.Dir
+
+			i.Command = cmd
+
+			// Spawn process
+			return cmd.Start()
+		},
+	})
+
+	state.MewldInstanceList = il
 
 	// Load IPC
-	for {
-		if mewld.InstanceList != nil {
-			go ipc.Start()
-			break
-		}
-	}
+	go ipc.Start()
 
-	// Mount mewld webui
-	for {
-		if web.GlobalRouter != nil {
-			state.Logger.Info("Mounted mewld webui")
-			r.Mount("/mewld", web.GlobalRouter)
-			break
-		}
-	}
+	r.Mount("/mewld", mewld_web.CreateServer(mewld_web.WebData{
+		RedisHandler: rh,
+		InstanceList: il,
+	}))
 
 	// If GOOS is windows, do normal http server
 	if runtime.GOOS == "linux" || runtime.GOOS == "darwin" {

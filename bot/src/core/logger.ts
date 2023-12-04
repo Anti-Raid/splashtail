@@ -24,7 +24,7 @@ export class Logger {
 	}
 
 	success(name: string, ...message: any) {
-		console.log(`${"[SUCCESS]".green} [${name.green}] =>`, ...message);
+		console.log(`${this.context.blue} ${"[SUCCESS]".green} [${name.green}] =>`, ...message);
 	}
 }
 

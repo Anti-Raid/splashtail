@@ -1,5 +1,4 @@
-// ANTIRAID-SPECIFIC: The whole thing
-package web
+package mewld_web
 
 import (
 	"crypto/hmac"
@@ -7,6 +6,7 @@ import (
 	"encoding/hex"
 	"net/http"
 	"slices"
+	"splashtail/state"
 	"strconv"
 	"time"
 )
@@ -54,8 +54,8 @@ func DpAuthMiddleware(next http.Handler) http.Handler {
 		ts := r.Header.Get("X-DP-Timestamp")
 
 		// Validate DP-Secret next
-		if globalConfig.DPSecret != "" {
-			h := hmac.New(sha512.New, []byte(globalConfig.DPSecret))
+		if state.Config.Meta.DPSecret != "" {
+			h := hmac.New(sha512.New, []byte(state.Config.Meta.DPSecret))
 			h.Write([]byte(ts))
 			h.Write([]byte(r.Header.Get("X-DP-UserID")))
 			hexed := hex.EncodeToString(h.Sum(nil))
