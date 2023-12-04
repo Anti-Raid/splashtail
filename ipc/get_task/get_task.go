@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"splashtail/api"
 	"splashtail/db"
-	"splashtail/ipc"
 	"splashtail/state"
 	"splashtail/types"
 	"strings"
@@ -150,8 +149,4 @@ func GetTask(c *mredis.LauncherCmd) (*mredis.LauncherCmd, error) {
 	return &mredis.LauncherCmd{
 		Output: task,
 	}, nil
-}
-
-func init() {
-	ipc.AddIpcEvent("get_task", GetTask)
 }

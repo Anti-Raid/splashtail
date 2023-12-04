@@ -2,6 +2,8 @@ package ipc
 
 import (
 	"splashtail/ipc/core"
+	"splashtail/ipc/create_task"
+	"splashtail/ipc/get_task"
 	"splashtail/state"
 
 	mredis "github.com/cheesycod/mewld/redis"
@@ -13,7 +15,10 @@ import (
 
 var json = jsoniter.ConfigFastest
 
-var ipcEvents = map[string]func(c *mredis.LauncherCmd) (*mredis.LauncherCmd, error){}
+var ipcEvents = map[string]func(c *mredis.LauncherCmd) (*mredis.LauncherCmd, error){
+	"get_task":    get_task.GetTask,
+	"create_task": create_task.CreateTask,
+}
 
 func AddIpcEvent(name string, fn func(c *mredis.LauncherCmd) (*mredis.LauncherCmd, error)) {
 	ipcEvents[name] = fn
@@ -38,7 +43,7 @@ func Start() {
 		state.MewldInstanceList.Config.RedisChannel,
 	)
 
-	pubsub.PSubscribe(state.Context, state.MewldInstanceList.Config.RedisChannel+"/ipc@*")
+	pubsub.PSubscribe(state.Context, state.MewldInstanceList.Config.RedisChannel+"/*")
 
 	defer pubsub.Close()
 
