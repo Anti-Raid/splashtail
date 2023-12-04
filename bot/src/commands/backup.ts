@@ -105,9 +105,9 @@ let command: Command = {
                     })
                 }
 
-                let task: TaskCreateResponse = res?.output
+                let tcr: TaskCreateResponse = res?.output
 
-                if(!task?.task_id) {
+                if(!tcr?.task_id) {
                     return FinalResponse.edit({
                         embeds: [
                             new EmbedBuilder()
@@ -118,13 +118,37 @@ let command: Command = {
                     })
                 }
 
-                return FinalResponse.edit({
+                await ctx.edit({
                     embeds: [
                         new EmbedBuilder()
                         .setTitle("Creating backup")
-                        .setDescription(`:white_check_mark: Task created with ID \`${task?.task_id}\`. Waiting for task to complete...`)
+                        .setDescription(`:white_check_mark: Task created with ID \`${tcr?.task_id}\`. Waiting for task to complete...`)
                         .setColor(Colors.Green)
                     ]
+                })
+
+                let task = await ctx.client.redis.pollForTask(tcr, {
+                    timeout: 60000, // 1 minute timeout
+                    targetId: ctx.guild.id,
+                    targetType: "Server",
+                    callback: async (task) => {
+                        let taskStatuses = []
+
+                        for(let status of task.statuses) {
+                            taskStatuses.push(`\`${status?.level}\` ${status?.msg}`)
+                        }
+
+                        await ctx.edit({
+                            embeds: [
+                                new EmbedBuilder()
+                                .setTitle("Creating backup")
+                                .setDescription(
+                                    `:white_check_mark: Task state: ${task?.state}\n\n${taskStatuses.join("\n")}`
+                                )
+                                .setColor(Colors.Green)
+                            ]
+                        })
+                    }
                 })
             default:
                 return FinalResponse.reply({

@@ -3,6 +3,7 @@ package create_task
 import (
 	"encoding/json"
 	"fmt"
+	"splashtail/ipc"
 	"splashtail/state"
 	"splashtail/tasks"
 
@@ -51,4 +52,8 @@ func CreateTask(c *mredis.LauncherCmd) (*mredis.LauncherCmd, error) {
 	return &mredis.LauncherCmd{
 		Output: tcr,
 	}, nil
+}
+
+func init() {
+	ipc.AddIpcEvent("create_task", CreateTask)
 }

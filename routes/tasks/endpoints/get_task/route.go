@@ -93,8 +93,8 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 		return uapi.DefaultResponse(http.StatusInternalServerError)
 	}
 
-	if task.TaskKey.Valid {
-		if task.TaskKey.String != r.URL.Query().Get("task_key") {
+	if task.TaskKey != nil {
+		if *task.TaskKey != r.URL.Query().Get("task_key") {
 			return uapi.HttpResponse{
 				Status: http.StatusUnauthorized,
 				Json:   types.ApiError{Message: "Invalid task key"},
@@ -110,8 +110,8 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 			}
 		}
 
-		if task.ForUser.Valid {
-			var forUserSplit = strings.Split(task.ForUser.String, "/")
+		if task.ForUser != nil {
+			var forUserSplit = strings.Split(*task.ForUser, "/")
 
 			if len(forUserSplit) != 2 {
 				return uapi.HttpResponse{

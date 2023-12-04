@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"splashtail/api"
 	"splashtail/db"
+	"splashtail/ipc"
 	"splashtail/state"
 	"splashtail/types"
 	"strings"
@@ -19,6 +20,11 @@ var (
 	taskColsStr = strings.Join(taskColsArr, ", ")
 )
 
+// @ci ipc=get_task
+// @param target_id string - The target ID
+// @param target_type string - The target type
+// @param task string - JSON string of a TaskCreateResponse object returned from creating a task
+// @param start_from int - The index to start from
 func GetTask(c *mredis.LauncherCmd) (*mredis.LauncherCmd, error) {
 	if len(c.Data) == 0 {
 		return nil, fmt.Errorf("no data provided to get task")
@@ -41,6 +47,18 @@ func GetTask(c *mredis.LauncherCmd) (*mredis.LauncherCmd, error) {
 	if !ok {
 		return nil, fmt.Errorf("invalid task provided")
 	}
+
+	startFromF, ok := c.Data["start_from"].(float64)
+
+	if !ok {
+		startFromF = 0 // Start task
+	}
+
+	if startFromF < 0 {
+		return nil, fmt.Errorf("invalid start_from provided")
+	}
+
+	startFrom := int(startFromF)
 
 	var tcr *types.TaskCreateResponse
 
@@ -77,22 +95,22 @@ func GetTask(c *mredis.LauncherCmd) (*mredis.LauncherCmd, error) {
 		return nil, fmt.Errorf("error fetching task: %w", err)
 	}
 
-	if task.TaskKey.Valid {
+	if task.TaskKey != nil {
 		if tcr.TaskKey == nil {
 			return nil, fmt.Errorf("task key required")
 		}
 
-		if task.TaskKey.String != *tcr.TaskKey {
+		if *task.TaskKey != *tcr.TaskKey {
 			return nil, fmt.Errorf("invalid task key")
 		}
 	}
 
-	if task.ForUser.Valid {
+	if task.ForUser != nil {
 		if targetId == "" || targetType == "" {
 			return nil, fmt.Errorf("invalid target provided")
 		}
 
-		var forUserSplit = strings.Split(task.ForUser.String, "/")
+		var forUserSplit = strings.Split(*task.ForUser, "/")
 
 		if len(forUserSplit) != 2 {
 			return nil, fmt.Errorf("invalid task.ForUser")
@@ -120,7 +138,20 @@ func GetTask(c *mredis.LauncherCmd) (*mredis.LauncherCmd, error) {
 		}
 	}
 
+	if startFrom != 0 {
+		if startFrom >= len(task.Statuses) {
+			return nil, fmt.Errorf("invalid start_from provided")
+		}
+
+		// trim down statuses sent to only whats actually needed
+		task.Statuses = task.Statuses[startFrom:]
+	}
+
 	return &mredis.LauncherCmd{
-		Output: tcr,
+		Output: task,
 	}, nil
+}
+
+func init() {
+	ipc.AddIpcEvent("get_task", GetTask)
 }

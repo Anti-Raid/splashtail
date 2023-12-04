@@ -4,7 +4,7 @@ import { AntiRaid } from './client';
 import { Status } from 'discord.js';
 import EventEmitter from 'events';
 import { randomBytes } from 'crypto';
-import { TaskCreateResponse } from './coreTypes/tasks';
+import { KV, Task, TaskCreateResponse } from './coreTypes/tasks';
 
 export interface DiagResponse {
     Nonce: string
@@ -37,10 +37,10 @@ For a splashtail scoped IPC command, respCluster must be -1 and originCluster (i
 export interface LauncherCmd {
     scope: string
     action: string
-    args?: { [key: string]: any }
+    args?: KV
     command_id?: string
     output?: any
-    data?: { [key: string]: any }
+    data?: KV
 }
 
 /**
@@ -73,6 +73,31 @@ export interface IpcFetchOptions {
 export interface IPCCommand {
     action: string
     command: (ctx: IPCContext) => Promise<void>
+}
+
+/**
+ * TaskPollOptions is the options for polling for a task
+ */
+export interface TaskPollOptions {
+    /**
+     * The number of milliseconds to wait for a response before timing out
+     */
+    timeout: number
+
+    /**
+     * The target ID who is requesting the task. Needed for Access Control
+     */
+    targetId: string
+
+    /**
+     * The target type who is requesting the task. Needed for Access Control
+     */
+    targetType: "User" | "Server"
+    
+    /**
+     * The callback
+     */
+    callback: (task: Task) => Promise<void>
 }
 
 export class BotRedis extends EventEmitter {
@@ -159,8 +184,79 @@ export class BotRedis extends EventEmitter {
         return handle
     }
 
-    async pollForTasks(tcr: TaskCreateResponse, callback: (cmd: LauncherCmd) => Promise<void>) {
+    /**
+     * 
+     * @param tcr The task create response
+     * @param opts The options for polling for a task
+     */
+    async pollForTask(tcr: TaskCreateResponse, opts: TaskPollOptions) {
+        let done = false
+        let handle: IPCRequestHandle | null = null
+        let task: Task | null = null
+        let start_from = 0
+        let taskStatuses: KV[] = []
 
+        if(opts.timeout) {
+            setTimeout(() => {
+                done = true
+                if(handle) {
+                    handle.stop()
+                }
+            }, opts.timeout)
+        }
+
+        while(task?.state != "completed" && !done) {
+            handle = await this.sendIpcRequest({
+                scope: "splashtail",
+                action: "get_task",
+                data: {
+                    target_id: opts.targetId,
+                    target_type: opts.targetType,
+                    task: tcr,
+                    start_from
+                }
+            }, null, {
+                timeout: opts.timeout,
+            })
+
+            if(!handle) throw new Error("Invalid IPC handle")
+
+            let rmap = await handle.fetch()
+
+            if(rmap.size == 0 || !rmap.has(-1)) {
+                throw new Error("No response from co-ordinator server")
+            }
+
+            let resp = rmap.get(-1)
+
+            if(resp?.output?.error) {
+                throw new Error(resp?.output?.error)
+            }
+
+            task = resp?.output
+
+            if(!task || !task?.task_id) {
+                throw new Error("No task returned")
+            }
+            
+            // Set new statuses
+            taskStatuses = [
+                ...taskStatuses,
+                ...(task?.statuses || [])
+            ]
+
+            task.statuses = taskStatuses
+
+            await opts.callback(task)
+
+            if(task?.state == "completed" || task?.state == "failed") {
+                return task
+            }
+
+            start_from = task?.statuses?.length || 0
+        }
+
+        return task // Return the task till what we have or whatever we have left of a task
     }
 
     /**
@@ -381,6 +477,15 @@ export class IPCRequestHandle {
     }
 
     /**
+     * Whether or not the request is pending
+     * @returns Whether or not the request is pending
+     */
+    private isPending() {
+        if(this.fetchOpts.numClustersNeeded == -1) return false
+        return this.ipcQueue.size < this.fetchOpts.numClustersNeeded
+    }
+
+    /**
      * Fetches the response to the request
      */
     async fetch(): Promise<Map<number, LauncherCmd>> {
@@ -393,7 +498,7 @@ export class IPCRequestHandle {
         }
 
         // Wait for all clusters to respond
-        while(!done && this.ipcQueue.size < this.fetchOpts.numClustersNeeded) {
+        while(!done && this.isPending()) {
             await new Promise((resolve) => setTimeout(resolve, 100))
         }
 

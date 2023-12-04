@@ -414,7 +414,7 @@ export class AntiRaid extends Client {
                 .setColor("Red")
                 .setDescription((`**Server Count:** ${guildCount}\n**Shard Count:** ${shardCount}\n**Cluster Count:** ${this.clusterCount}\n**Cluster ID:** ${this.clusterId}\n**Cluster Name:** ${this.clusterName}\n**Uptime:** ${uptimeToHuman(this.uptime)}`))
 
-                await ctx.reply({
+                ctx.reply({
                     embeds: [embed1, embed2]
                 })
 

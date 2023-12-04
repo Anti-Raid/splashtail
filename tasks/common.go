@@ -157,6 +157,20 @@ func NewTask(task Task) {
 
 	if err != nil {
 		l.Error("Failed to execute task", zap.Error(err), zap.Any("data", tInfo.TaskFields))
+
+		// Set task output
+		outp := task.Output()
+
+		if outp == nil {
+			outp = &TaskOutput{}
+		}
+
+		_, err := tx.Exec(state.Context, "UPDATE tasks SET state = $1, output = $2 WHERE task_id = $3", "failed", outp, tInfo.TaskID)
+
+		if err != nil {
+			l.Error("Failed to update task", zap.Error(err), zap.Any("data", tInfo.TaskFields))
+		}
+
 		return
 	}
 

@@ -2,7 +2,6 @@ package ipc
 
 import (
 	"splashtail/ipc/core"
-	"splashtail/ipc/create_task"
 	"splashtail/state"
 
 	mredis "github.com/cheesycod/mewld/redis"
@@ -14,8 +13,10 @@ import (
 
 var json = jsoniter.ConfigFastest
 
-var ipcEvents = map[string]func(c *mredis.LauncherCmd) (*mredis.LauncherCmd, error){
-	"create_task": create_task.CreateTask,
+var ipcEvents = map[string]func(c *mredis.LauncherCmd) (*mredis.LauncherCmd, error){}
+
+func AddIpcEvent(name string, fn func(c *mredis.LauncherCmd) (*mredis.LauncherCmd, error)) {
+	ipcEvents[name] = fn
 }
 
 var IpcDone bool
