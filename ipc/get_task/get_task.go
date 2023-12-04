@@ -54,7 +54,7 @@ func GetTask(c *mredis.LauncherCmd) (*mredis.LauncherCmd, error) {
 	}
 
 	if startFromF < 0 {
-		return nil, fmt.Errorf("invalid start_from provided")
+		return nil, fmt.Errorf("start_from must be greater than zero")
 	}
 
 	startFrom := int(startFromF)
@@ -139,7 +139,7 @@ func GetTask(c *mredis.LauncherCmd) (*mredis.LauncherCmd, error) {
 
 	if startFrom != 0 {
 		if startFrom >= len(task.Statuses) {
-			return nil, fmt.Errorf("invalid start_from provided")
+			return nil, fmt.Errorf("start_from must be less than the length of the statuses array")
 		}
 
 		// trim down statuses sent to only whats actually needed
