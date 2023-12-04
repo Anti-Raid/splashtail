@@ -205,6 +205,8 @@ export class BotRedis extends EventEmitter {
             }, opts.timeout)
         }
 
+        let tcrB = JSON.stringify(tcr) // Optimization to avoid constant serialization
+
         while(task?.state != "completed" && !done) {
             handle = await this.sendIpcRequest({
                 scope: "splashtail",
@@ -212,7 +214,7 @@ export class BotRedis extends EventEmitter {
                 data: {
                     target_id: opts.targetId,
                     target_type: opts.targetType,
-                    task: tcr,
+                    task: tcrB,
                     start_from
                 }
             }, null, {
