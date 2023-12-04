@@ -91,6 +91,21 @@ export class BotRedis extends EventEmitter {
         await this.startRedis()
         await this.startMewld()
     }
+
+    /**
+     * Creates an action log on mewld
+     */
+    async createMewldActionLog(event: string, data: { [key: string]: any}) {
+        let payload: LauncherCmd = {
+            scope: "launcher",
+            action: "action_logs",
+            data: data || {}
+        }
+
+        payload.data["event"] = event
+
+        await this.client.publish(process.env.MEWLD_CHANNEL, JSON.stringify(payload))
+    }
     
     /**
      * Sends an IPC request to all clusters
@@ -280,6 +295,10 @@ export class BotRedis extends EventEmitter {
                                     for(let shard of diagResp.Data) {
                                         this.bot.currentShardHealth.set(shard.shard_id, shard)
                                     }
+                                }
+                            default:
+                                if(process.env.IPC_DEBUG == "true") {
+                                    this.bot.logger.info("Redis [IPC]", "Received launcherCmd payload", channel, payload)
                                 }
                         }
                     }

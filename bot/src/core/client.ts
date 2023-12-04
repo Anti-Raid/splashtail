@@ -277,6 +277,12 @@ export class AntiRaid extends Client {
         this.logger.success("Discord", `Connected as ${this.user.username}!`);
 
         // Tell mewld we can launch next cluster now
+        await this.redis.createMewldActionLog("shards_launched", {
+            "cluster": this.clusterId,
+            "from": this.shardIds[0],
+            "to": this.shardIds[this.shardIds.length - 1],
+        })
+
         await this.redis.mewldLaunchNext()
     }
 
@@ -601,6 +607,13 @@ export class AntiRaid extends Client {
 
         // Discord Error Event
         this.on(Events.Error, (error) => this.logger.error("Discord", error));
+
+        this.on(Events.ShardReady, async (id) => {
+            await this.redis.createMewldActionLog("shard_ready", {
+                "cluster": this.clusterId,
+                "shard_id": id,
+            })
+        })
 
         this.on(Events.ShardError, (error, id) => this.logger.error("Discord", `Shard ${id} error`, error));
 
