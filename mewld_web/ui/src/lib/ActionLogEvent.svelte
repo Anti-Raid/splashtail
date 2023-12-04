@@ -21,7 +21,11 @@
         {#if logentry.event == "shards_launched"}
             {#if logentry.cluster != undefined}
                 <p id="alp-{i}">Cluster <span class="cluster-id">{logentry.cluster}</span> launched successfully</p>
+            {:else}
+                <p id="alp-{i}">Cluster launched successfully</p>
             {/if}
+        {:else if logentry.event == "shard_ready"}
+            <p id="alp-{i}">Shard <span class="cluster-id">{logentry.shard_id}</span> is ready</p>
         {:else if logentry.event == "rolling_restart"}
             <p id="alp-{i}">Rolling restart begun (instance wide)</p>
         {:else if logentry.event == "ping_failure"}
@@ -36,8 +40,10 @@
 
         {#if logentry.event == "shards_launched"}
             <strong>Cluster:</strong> {logentry.cluster}<br/><strong>From shard:</strong> {logentry.from}<br/><strong>To shard:</strong> {logentry.to}
+        {:else if logentry.event == "shard_ready"}
+            <strong>Shard:</strong> {logentry.shard_id}
         {:else if logentry.event == "ping_failure"}
-        <strong>Cluster:</strong> {logentry.id}
+            <strong>Cluster:</strong> {logentry.id}
         {/if}
     </div>
 {/each}
