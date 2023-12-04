@@ -273,6 +273,10 @@ func main() {
 		},
 	})
 
+	if err != nil {
+		panic(err)
+	}
+
 	state.MewldInstanceList = il
 
 	// Load IPC
