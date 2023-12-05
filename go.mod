@@ -5,7 +5,7 @@ go 1.21
 toolchain go1.21.4
 
 require (
-	github.com/bwmarrin/discordgo v0.27.2-0.20230922130345-1f0b57f11024
+	github.com/bwmarrin/discordgo v0.27.2-0.20231204103810-44e4acb7d545
 	github.com/getkin/kin-openapi v0.122.0 // indirect
 	github.com/go-chi/chi/v5 v5.0.10
 	github.com/infinitybotlist/eureka v0.5.0
@@ -14,7 +14,7 @@ require (
 )
 
 require (
-	github.com/cheesycod/mewld v0.0.0-20231204080509-0c660db1bc58
+	github.com/cheesycod/mewld v0.0.0-20231205022821-3014c7d7c4fa
 	github.com/cloudflare/tableflip v1.2.3
 	github.com/infinitybotlist/iblfile v0.0.0-20231130135340-d7ed6d4e1030
 	github.com/sirupsen/logrus v1.9.3

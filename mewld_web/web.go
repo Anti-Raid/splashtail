@@ -3,6 +3,7 @@ package mewld_web
 import (
 	"embed"
 	"encoding/json"
+	"fmt"
 	"io"
 	"io/fs"
 	"net/http"
@@ -131,10 +132,25 @@ func CreateServer(webData WebData) *chi.Mux {
 	r.Get("/api/action-logs", loginRoute(
 		webData,
 		func(w http.ResponseWriter, r *http.Request, sess *loginDat) {
-			payload := webData.InstanceList.Redis.Get(webData.InstanceList.Ctx, webData.InstanceList.Config.RedisChannel+"_action").Val()
+			payload := webData.InstanceList.Redis.LRange(webData.InstanceList.Ctx, webData.InstanceList.Config.RedisChannel+"/actlogs", 0, -1).Val()
 
-			w.Header().Set("Content-Type", "application/json")
-			w.Write([]byte(payload))
+			var payloadFinal []map[string]any
+
+			for i, p := range payload {
+				var pm map[string]any
+
+				err := json.Unmarshal([]byte(p), &pm)
+
+				if err != nil {
+					w.WriteHeader(http.StatusBadRequest)
+					w.Write([]byte(fmt.Sprintf("Could not marshal payload %d: %s", i, err.Error())))
+					return
+				}
+
+				payloadFinal = append(payloadFinal, pm)
+			}
+
+			toJson(w, payloadFinal)
 		},
 	))
 
