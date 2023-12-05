@@ -16,6 +16,7 @@ export interface ShardHealth {
     up: boolean
     latency: number
     guilds: number
+    users: number
 }
 
 /*
@@ -118,17 +119,15 @@ export class BotRedis extends EventEmitter {
     async handleIpcQueue(cmd: LauncherCmd) {
         for(let [id, handle] of this.ipcCommandQueue) {
             if(!handle) {
+                this.bot.logger.info("Redis [IPCQueueSweep]", "Null handle", id)
                 this.ipcCommandQueue.delete(id)
                 continue
             }
 
             if(!handle.isPending()) {
-                this.ipcCommandQueue.delete(id)
-                continue
-            }
-
-            if(handle.fetchOpts.timeout && handle.fetchOpts.timeout < Date.now()) {
+                this.bot.logger.info("Redis [IPCQueueSweep]", "Not pending handle", id)
                 handle.stop()
+                this.ipcCommandQueue.delete(id)
                 continue
             }
 
@@ -356,7 +355,8 @@ export class BotRedis extends EventEmitter {
                         shard_id: id,
                         up: shard.status == Status.Ready,
                         latency: shard.ping,
-                        guilds: this.bot.guilds.cache.filter(g => g.shardId == id).size
+                        guilds: this.bot.guilds.cache.filter(g => g.shardId == id).size,
+                        users: this.bot.guilds.cache.filter(g => g.shardId == id).reduce((acc, g) => acc + g.memberCount, 0)
                     })
                 }
 
@@ -508,7 +508,7 @@ export class IPCRequestHandle {
      */
     isPending() {
         if(this.done) return false
-        if(this.fetchOpts.numClustersNeeded == -1) return false
+        if(this.fetchOpts.numClustersNeeded == -1 && this.ipcQueue.size != 0) return false
         return this.ipcQueue.size < this.fetchOpts.numClustersNeeded
     }
 

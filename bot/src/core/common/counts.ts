@@ -27,25 +27,17 @@ export async function getServerCount(client: AntiRaid) {
 }
 
 export async function getUserCount(client: AntiRaid) {
-    let handle = await client.redis.sendIpcRequest({
-        scope: "bot",
-        action: "get_user_count"
-    }, null, {})
-
-    if(!handle) throw new Error("Invalid IPC handle")
-
-    let res = await handle.fetch()
-
-    let totalMembers = 0
-
-    for(let [cId, cmd] of res) {
-        let memCount = cmd.data.count
-        totalMembers += memCount
-
-        client.logger.info("GetUserCount", `Cluster ${cId} has ${memCount} members`)
+    if(!client.currentShardHealth || !client.currentShardHealth.size) {
+        throw new Error("Shard health not initialized")
     }
 
-    return totalMembers
+    let totalUsers = 0
+
+    for(let [_, sh] of client.currentShardHealth) {
+        totalUsers += sh.users || 0
+    }
+
+    return totalUsers
 }
 
 export async function getShardCount(client: AntiRaid) {
