@@ -14,7 +14,7 @@ require (
 )
 
 require (
-	github.com/cheesycod/mewld v0.0.0-20231205022821-3014c7d7c4fa
+	github.com/cheesycod/mewld v0.0.0-20231205053749-40535fcdea19
 	github.com/cloudflare/tableflip v1.2.3
 	github.com/infinitybotlist/iblfile v0.0.0-20231130135340-d7ed6d4e1030
 	github.com/sirupsen/logrus v1.9.3

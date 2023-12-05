@@ -24,7 +24,7 @@ let command: Command = {
 			reply.createdTimestamp - ctx.interaction.createdTimestamp
 		);
 
-		reply.edit({
+		await ctx.edit({
 			embeds: [
 				new EmbedBuilder().setColor("Blue").addFields(
 					{

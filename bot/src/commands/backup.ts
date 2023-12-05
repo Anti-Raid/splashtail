@@ -150,6 +150,13 @@ let command: Command = {
                         })
                     }
                 })
+
+                if(task?.state == "completed") {
+                    // TODO: Show user the URL to the backup
+                    return FinalResponse.dummy()
+                } else {
+                    return FinalResponse.dummy()
+                }
             default:
                 return FinalResponse.reply({
                     embeds: [

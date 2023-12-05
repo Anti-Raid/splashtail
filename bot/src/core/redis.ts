@@ -105,12 +105,35 @@ export class BotRedis extends EventEmitter {
     bot: AntiRaid
     ipcs: Map<string, IPCCommand>;
     private mewld_notifier: RedisClientType | null = null
+    private ipcCommandQueue: Map<string, IPCRequestHandle>;
 
     constructor (bot: AntiRaid) {
         super()
 
         this.bot = bot
         this.ipcs = new Map()
+        this.ipcCommandQueue = new Map()
+    }
+
+    async handleIpcQueue(cmd: LauncherCmd) {
+        for(let [id, handle] of this.ipcCommandQueue) {
+            if(!handle) {
+                this.ipcCommandQueue.delete(id)
+                continue
+            }
+
+            if(!handle.isPending()) {
+                this.ipcCommandQueue.delete(id)
+                continue
+            }
+
+            if(handle.fetchOpts.timeout && handle.fetchOpts.timeout < Date.now()) {
+                handle.stop()
+                continue
+            }
+
+            handle.onResp(cmd)
+        }
     }
 
     async load() {
@@ -163,6 +186,7 @@ export class BotRedis extends EventEmitter {
 
             // Create handle
             handle = new IPCRequestHandle(this.bot, this, payload, fetchOpts)
+            this.ipcCommandQueue.set(payload.command_id, handle)
         }
 
         // Set channel for IPC if scope is splashtail
@@ -255,7 +279,7 @@ export class BotRedis extends EventEmitter {
                 return task
             }
 
-            start_from = task?.statuses?.length || 0
+            start_from = (task?.statuses?.length) || 0
         }
 
         return task // Return the task till what we have or whatever we have left of a task
@@ -370,8 +394,9 @@ export class BotRedis extends EventEmitter {
                 }
 
                 if(payload?.data?.respCluster != undefined && payload?.data?.respCluster != null) {
-                    // Emit it
-                    this.emit("ipcResponse", payload)
+                    if(this.ipcCommandQueue.has(payload?.command_id)) {
+                        this.handleIpcQueue(payload)
+                    }
 
                     return
                 }
@@ -437,6 +462,7 @@ export class IPCRequestHandle {
     redis: BotRedis
     private request: LauncherCmd
     private commandId: string
+    private done: boolean;
     ipcQueue: Map<number, LauncherCmd>
     fetchOpts: IpcFetchOptions
 
@@ -460,11 +486,13 @@ export class IPCRequestHandle {
         this.commandId = request.command_id
         this.ipcQueue = new Map()
         this.fetchOpts = fetchOpts
-
-        this.redis.on("ipcResponse", (resp) => this.onResp(resp))
     }
 
-    private onResp(resp: LauncherCmd) {
+    stop() {
+        this.done = true
+    }
+
+    onResp(resp: LauncherCmd) {
         if(process.env.IPC_DEBUG == "true") {
             this.bot.logger.debug("IPCRequestHandle", "Got response", resp, this.commandId)
         }
@@ -474,15 +502,12 @@ export class IPCRequestHandle {
         }
     }
 
-    stop() {
-        this.redis.off("ipcResponse", (resp) => this.onResp(resp))
-    }
-
     /**
      * Whether or not the request is pending
      * @returns Whether or not the request is pending
      */
-    private isPending() {
+    isPending() {
+        if(this.done) return false
         if(this.fetchOpts.numClustersNeeded == -1) return false
         return this.ipcQueue.size < this.fetchOpts.numClustersNeeded
     }
@@ -491,16 +516,8 @@ export class IPCRequestHandle {
      * Fetches the response to the request
      */
     async fetch(): Promise<Map<number, LauncherCmd>> {
-        let done = false
-        if(this.fetchOpts.timeout) {
-            setTimeout(() => {
-                this.stop()
-                done = true
-            }, this.fetchOpts.timeout)
-        }
-
         // Wait for all clusters to respond
-        while(!done && this.isPending()) {
+        while(!this.done && this.isPending()) {
             await new Promise((resolve) => setTimeout(resolve, 100))
         }
 

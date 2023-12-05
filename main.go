@@ -13,9 +13,9 @@ import (
 	"time"
 
 	mconfig "github.com/cheesycod/mewld/config"
-	mcoreutils "github.com/cheesycod/mewld/coreutils"
 	mloader "github.com/cheesycod/mewld/loader"
 	mproc "github.com/cheesycod/mewld/proc"
+	mutils "github.com/cheesycod/mewld/utils"
 	"gopkg.in/yaml.v2"
 
 	"splashtail/api"
@@ -235,8 +235,8 @@ func main() {
 				cmd = exec.Command(
 					l.Config.Interp,
 					l.Dir+"/"+l.Config.Module,
-					mcoreutils.ToPyListUInt64(i.Shards),
-					mcoreutils.UInt64ToString(l.ShardCount),
+					mutils.ToPyListUInt64(i.Shards),
+					mutils.UInt64ToString(l.ShardCount),
 					strconv.Itoa(i.ClusterID),
 					cm.Name,
 					l.Dir,
@@ -246,8 +246,8 @@ func main() {
 			} else {
 				cmd = exec.Command(
 					l.Config.Module, // If no interpreter, we use the full module as the executable path
-					mcoreutils.ToPyListUInt64(i.Shards),
-					mcoreutils.UInt64ToString(l.ShardCount),
+					mutils.ToPyListUInt64(i.Shards),
+					mutils.UInt64ToString(l.ShardCount),
 					strconv.Itoa(i.ClusterID),
 					cm.Name,
 					l.Dir,
