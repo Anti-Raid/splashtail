@@ -150,7 +150,7 @@ export class BotRedis extends EventEmitter {
     /**
      * Creates an action log on mewld
      */
-    async createMewldActionLog(event: string, data: { [key: string]: any}) {
+    async createMewldActionLog(event: string, data: KV) {
         let payload: LauncherCmd = {
             scope: "launcher",
             action: "action_logs",
