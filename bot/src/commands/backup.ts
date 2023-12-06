@@ -3,6 +3,19 @@ import { Command, FinalResponse } from "../core/client";
 import { SlashCommandBuilder } from "@discordjs/builders";
 import { TaskCreateResponse } from "../core/coreTypes/tasks";
 
+/*
+type BackupOpts struct {
+	[I] PerChannel         int            `json:"per_channel" description:"The number of messages per channel"`
+	[I] MaxMessages        int            `json:"max_messages" description:"The maximum number of messages to backup"`
+	[I] BackupMessages     bool           `json:"backup_messages" description:"Whether to backup messages or not"`
+	[I] BackupAttachments  bool           `json:"backup_attachments" description:"Whether to backup attachments or not"`
+	[I] IgnoreMessageBackupErrors bool           `json:"ignore_message_backup_errors" description:"Whether to ignore errors while backing up messages or not"`
+	[I] RolloverLeftovers  bool           `json:"rollover_leftovers" description:"Whether to attempt rollover of leftover message quota to another channels or not"`
+	SpecialAllocations map[string]int `json:"special_allocations" description:"Specific channel allocation overrides"`
+	Encrypt            bool           `json:"encrypt" description:"Whether to encrypt the backup or not"`
+}
+*/
+
 let command: Command = {
     userPerms: [PermissionsBitField.Flags.ManageGuild],
     botPerms: [PermissionsBitField.Flags.ManageGuild],
@@ -24,9 +37,29 @@ let command: Command = {
 
             return opt
         })
+        .addBooleanOption((opt) => {
+            opt.setName("rollover_leftovers")
+            .setDescription("Roll over leftover message quotas to other channels. May make backups much slower. Defaults to false")
+
+            return opt
+        })
+        .addIntegerOption((opt) => {
+            opt.setName("ignore_message_backup_errors")
+            .setDescription("Whether to ignore errors while backing up messages or not and skip these channels")
+            .setRequired(false)
+
+            return opt
+        })
         .addIntegerOption((opt) => {
             opt.setName("max_messages")
             .setDescription("The maximum number of messages to backup. Defaults to 500")
+            .setRequired(false)
+
+            return opt
+        })
+        .addIntegerOption((opt) => {
+            opt.setName("per_channel")
+            .setDescription("The number of messages to backup per channel. Defaults to 100")
             .setRequired(false)
 
             return opt
@@ -39,7 +72,10 @@ let command: Command = {
             case "create":
                 let messages = ctx.interaction.options.getBoolean("messages")
                 let attachments = ctx.interaction.options.getBoolean("attachments")
-                let maxMessages = ctx.interaction.options.getInteger("max_messages") || 500
+                let maxMessages = ctx.interaction.options.getInteger("max_messages")
+                let perChannel = ctx.interaction.options.getInteger("per_channel")
+                let rolloverLeftovers = ctx.interaction.options.getBoolean("rollover_leftovers")
+                let ignoreMessageBackupErrors = ctx.interaction.options.getBoolean("ignore_message_backup_errors")
 
                 if(!messages && attachments) {
                     return FinalResponse.reply({
@@ -73,6 +109,9 @@ let command: Command = {
                             "max_messages": maxMessages || 500,
                             "backup_messages": messages || false,
                             "backup_attachments": attachments || false,
+                            "per_channel": perChannel || 100,
+                            "rollover_leftovers": rolloverLeftovers || false,
+                            "ignore_message_backup_errors": ignoreMessageBackupErrors || false
                         }
                     }
                 }, null, {})

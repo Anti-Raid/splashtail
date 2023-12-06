@@ -142,9 +142,9 @@ func NewTask(task Task) {
 	defer tx.Rollback(state.Context)
 
 	if tInfo.For != nil {
-		_, err = tx.Exec(state.Context, "DELETE FROM tasks WHERE task_name = $1 AND task_id != $2 AND for_user = $3", tInfo.Name, tInfo.TaskID, tInfo.For)
+		_, err = tx.Exec(state.Context, "DELETE FROM tasks WHERE task_name = $1 AND task_id != $2 AND for_user = $3 AND state != 'completed'", tInfo.Name, tInfo.TaskID, tInfo.For)
 	} else {
-		_, err = tx.Exec(state.Context, "DELETE FROM tasks WHERE task_name = $1 AND task_id != $2 AND for_user IS NULL", tInfo.Name, tInfo.TaskID)
+		_, err = tx.Exec(state.Context, "DELETE FROM tasks WHERE task_name = $1 AND task_id != $2 AND for_user IS NULL AND state != 'completed'", tInfo.Name, tInfo.TaskID)
 	}
 
 	if err != nil {

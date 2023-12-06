@@ -132,6 +132,13 @@ export class BotRedis extends EventEmitter {
             }
 
             handle.onResp(cmd)
+
+            // If the handle is now no longer pending, stop it and remove it from the queue
+            if(!handle.isPending()) {
+                handle.stop()
+                this.ipcCommandQueue.delete(id)
+                continue
+            }
         }
     }
 
