@@ -2,6 +2,7 @@ package state
 
 import (
 	"context"
+	"net/http"
 	"os"
 	"reflect"
 	"strings"
@@ -15,6 +16,7 @@ import (
 	"github.com/go-playground/validator/v10/non-standard/validators"
 	"github.com/infinitybotlist/eureka/dovewing"
 	"github.com/infinitybotlist/eureka/genconfig"
+	"github.com/infinitybotlist/eureka/proxy"
 	"github.com/infinitybotlist/eureka/snippets"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/redis/go-redis/v9"
@@ -79,6 +81,8 @@ func Setup() {
 		panic("configError: " + err.Error())
 	}
 
+	Logger = snippets.CreateZap()
+
 	Pool, err = pgxpool.New(Context, Config.Meta.PostgresURL)
 
 	if err != nil {
@@ -99,6 +103,10 @@ func Setup() {
 		panic(err)
 	}
 
+	Discord.Client.Transport = proxy.NewHostRewriter("localhost:3219", http.DefaultTransport, func(s string) {
+		Logger.Info("[PROXY]", zap.String("note", s))
+	})
+
 	// Verify token
 	_, err = Discord.User("@me")
 
@@ -106,17 +114,9 @@ func Setup() {
 		panic(err)
 	}
 
-	go func() {
-		if config.CurrentEnv == config.CurrentEnvProd {
-			err = Discord.UpdateWatchStatus(0, Config.Sites.Frontend.Parse())
-
-			if err != nil {
-				panic(err)
-			}
-		}
-	}()
-
-	Logger = snippets.CreateZap()
+	Discord.AddHandler(func(s *discordgo.Session, r *discordgo.Ready) {
+		Logger.Info("[DISCORD]", zap.String("note", "ready"))
+	})
 
 	// Load dovewing state
 	baseDovewingState := dovewing.BaseState{

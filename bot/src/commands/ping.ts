@@ -28,7 +28,7 @@ let command: Command = {
 			embeds: [
 				new EmbedBuilder().setColor("Blue").addFields(
 					{
-						name: `Discord Websocket Latency`,
+						name: `Local Websocket Latency`,
 						value: `\`${ctx.client.ws.ping}\`ms`,
 						inline: true,
 					},

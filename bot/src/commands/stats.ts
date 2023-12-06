@@ -86,7 +86,7 @@ let command: Command = {
 							inline: true,
 						},
 						{
-							name: "Ping",
+							name: "WS Proxy Ping",
 							value: ctx.interaction.client.ws.ping + "ms",
 							inline: true,
 						},
