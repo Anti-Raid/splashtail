@@ -3,7 +3,6 @@ package tasks
 import (
 	"encoding/json"
 	"fmt"
-	"os"
 	"splashtail/state"
 	"sync"
 
@@ -66,10 +65,7 @@ func NewTaskLogger(taskId string) (*zap.Logger, *MutLogger) {
 
 	logger := zap.New(zapcore.NewCore(
 		zapcore.NewJSONEncoder(zap.NewProductionEncoderConfig()),
-		zapcore.NewMultiWriteSyncer(
-			ml,
-			os.Stdout,
-		),
+		ml,
 		zapcore.DebugLevel,
 	))
 	return logger, ml

@@ -39,7 +39,7 @@ let command: Command = {
         })
         .addBooleanOption((opt) => {
             opt.setName("rollover_leftovers")
-            .setDescription("Roll over leftover message quotas to other channels. May make backups much slower. Defaults to false")
+            .setDescription("Roll over leftover message quotas to other channels. May make backups slower. Defaults to true")
 
             return opt
         })
@@ -110,7 +110,7 @@ let command: Command = {
                             "backup_messages": messages || false,
                             "backup_attachments": attachments || false,
                             "per_channel": perChannel || 100,
-                            "rollover_leftovers": rolloverLeftovers || false,
+                            "rollover_leftovers": rolloverLeftovers || true,
                             "ignore_message_backup_errors": ignoreMessageBackupErrors || false
                         }
                     }

@@ -8,4 +8,5 @@ A backup is an [https://github.com/infinitybotlist/iblfile](iblfile) and has the
 
 - ``backup_opts`` - JSON containing a ``types.BackupOpts`` object
 - ``core`` - The core guild data (``discordgo.Guild``)
-- ``messages/{channel_id}`` - The messages in a channel (``[]discordgo.Message``)
+- ``messages/{channel_id_hash}`` - The messages in a channel (``[]discordgo.Message``). A ``channel_id_hash`` is a random placeholder string for a channel that is used to avoid leaking channel info in backups
+- ``channel_id_hash_table`` - A map of ``channel_id``s to ``channel_id_hash`` (``map[string]string``)

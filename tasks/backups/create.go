@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/bwmarrin/discordgo"
+	"github.com/infinitybotlist/eureka/crypto"
 	"github.com/infinitybotlist/iblfile"
 	"github.com/jackc/pgx/v5"
 	"go.uber.org/zap"
@@ -231,6 +232,8 @@ func (t *ServerBackupCreateTask) Exec(l *zap.Logger, tx pgx.Tx) error {
 		l.Info("Created channel backup allocations", zap.Any("alloc", perChannelBackupMap), zap.Strings("botDisplayIgnore", []string{"alloc"}))
 
 		// Backup messages
+		var channelIdHashTable map[string]string = make(map[string]string) // Used for avoid leaking channel ids publicly
+		var usedHashes []string
 		for channelID, allocation := range perChannelBackupMap {
 			if allocation == 0 {
 				continue
@@ -255,7 +258,19 @@ func (t *ServerBackupCreateTask) Exec(l *zap.Logger, tx pgx.Tx) error {
 				}
 
 				// Write messages of this section
-				f.WriteJsonSection(msgs, "messages/"+channelID)
+				if _, ok := channelIdHashTable[channelID]; !ok {
+					for {
+						h := crypto.RandString(16)
+
+						if !slices.Contains(usedHashes, h) {
+							channelIdHashTable[channelID] = h
+							usedHashes = append(usedHashes, h)
+							break
+						}
+					}
+				}
+
+				f.WriteJsonSection(msgs, "messages/"+channelIdHashTable[channelID])
 			}
 
 			if leftovers > 0 && t.BackupOpts.RolloverLeftovers {
@@ -273,13 +288,27 @@ func (t *ServerBackupCreateTask) Exec(l *zap.Logger, tx pgx.Tx) error {
 							}
 						} else {
 							// Write messages of this section
-							f.WriteJsonSection(msgs, "messages/"+channelID)
+							if _, ok := channelIdHashTable[channelID]; !ok {
+								for {
+									h := crypto.RandString(16)
+
+									if !slices.Contains(usedHashes, h) {
+										channelIdHashTable[channelID] = h
+										usedHashes = append(usedHashes, h)
+										break
+									}
+								}
+							}
+
+							f.WriteJsonSection(msgs, "messages/"+channelIdHashTable[channelID])
 							break
 						}
 					}
 				}
 			}
 		}
+
+		f.WriteJsonSection(channelIdHashTable, "channel_id_hash_table")
 	}
 
 	metadata := iblfile.Meta{
