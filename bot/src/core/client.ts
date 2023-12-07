@@ -408,21 +408,27 @@ export class AntiRaid extends Client {
 
             // Temp until final release
             if(!this.config.discord_auth.can_use_bot.includes(ctx.interaction.user.id)) {
-                const embed1 = new EmbedBuilder()
+                const primary = new EmbedBuilder()
                 .setColor("Red")
                 .setTitle("AntiRaid")
                 .setURL("https://discord.gg/Qa52e2bNms")
                 .setDescription("Unfortunately, AntiRaid is currently unavailable due to poor code management and changes with the Discord API. We are currently in the works of V6, and hope to have it out by next month. All use of our services will not be available, and updates will be pushed here. We are extremely sorry for the inconvenience.\nFor more information you can also join our [Support Server](https://discord.gg/Qa52e2bNms)!")
 
+                const changes = ["We are working extremely hard on Antiraid v6, and have completed working on almost half of the bot. We should have this update out by January 5th, 2024."];
+                const updates = new EmbedBuilder()
+                .setColor("Blue")
+                .setTitle("Updates")
+                .setDescription(changes.join("\t-"))
+
                 let guildCount = await getServerCount(this)
                 let shardCount = await getShardCount(this)
 
-                const embed2 = new EmbedBuilder()
+                const statistics = new EmbedBuilder()
                 .setColor("Red")
                 .setDescription((`**Server Count:** ${guildCount}\n**Shard Count:** ${shardCount}\n**Cluster Count:** ${this.clusterCount}\n**Cluster ID:** ${this.clusterId}\n**Cluster Name:** ${this.clusterName}\n**Uptime:** ${uptimeToHuman(this.uptime)}`))
 
                 ctx.reply({
-                    embeds: [embed1, embed2]
+                    embeds: [primary, updates, statistics]
                 })
 
                 return
