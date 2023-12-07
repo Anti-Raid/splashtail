@@ -12,6 +12,7 @@ const (
 	maxAttachmentFileSize    = 8_000_000  // 8 MB, the limit for one attachment
 	fileSizeWarningThreshold = 50_000_000 // 50 MB, the warning threshold for the total file size. At this point, attachments will not be saved
 	minPerChannel            = 50
+	defaultPerChannel        = 100
 	fileType                 = "backup.server"
 )
 

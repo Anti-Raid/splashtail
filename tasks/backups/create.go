@@ -174,7 +174,7 @@ func (t *ServerBackupCreateTask) Exec(l *zap.Logger, tx pgx.Tx) error {
 	}
 
 	if t.BackupOpts.PerChannel == 0 {
-		t.BackupOpts.PerChannel = 100
+		t.BackupOpts.PerChannel = defaultPerChannel
 	}
 
 	if t.BackupOpts.PerChannel < minPerChannel {
