@@ -29,7 +29,7 @@ export const createTaskEmbed = (ctx: CommandContext, task: Task): ContextEdit =>
 
         add = add.slice(0, 500) + (add.length > 500 ? "..." : "")
 
-        add += ` | \`[${new Date(status?.ts)}]\``
+        add += ` | \`[${new Date(status?.ts * 1000)}]\``
 
         taskStatuses.push(add)
         taskStatusesLength += (add.length > 500 ? 500 : add.length)
