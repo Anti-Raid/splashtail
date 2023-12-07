@@ -15,18 +15,22 @@ import (
 	"github.com/go-playground/validator/v10"
 	"github.com/go-playground/validator/v10/non-standard/validators"
 	"github.com/infinitybotlist/eureka/dovewing"
+	"github.com/infinitybotlist/eureka/dovewing/dovetypes"
 	"github.com/infinitybotlist/eureka/genconfig"
+	hredis "github.com/infinitybotlist/eureka/hotcache/redis"
 	"github.com/infinitybotlist/eureka/proxy"
 	"github.com/infinitybotlist/eureka/snippets"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/redis/go-redis/v9"
+	"github.com/redis/rueidis"
 	"go.uber.org/zap"
 	"gopkg.in/yaml.v3"
 )
 
 var (
 	Pool                    *pgxpool.Pool
-	Redis                   *redis.Client
+	Redis                   *redis.Client  // Used by dovewing and other services etc.
+	Ruedis                  rueidis.Client // where perf is needed
 	DovewingPlatformDiscord *dovewing.DiscordState
 	Discord                 *discordgo.Session
 	Logger                  *zap.Logger
@@ -90,6 +94,18 @@ func Setup() {
 		panic(err)
 	}
 
+	ruOptions, err := rueidis.ParseURL(Config.Meta.RedisURL.Parse())
+
+	if err != nil {
+		panic(err)
+	}
+
+	Ruedis, err = rueidis.NewClient(ruOptions)
+
+	if err != nil {
+		panic(err)
+	}
+
 	rOptions, err := redis.ParseURL(Config.Meta.RedisURL.Parse())
 
 	if err != nil {
@@ -97,6 +113,10 @@ func Setup() {
 	}
 
 	Redis = redis.NewClient(rOptions)
+
+	if err != nil {
+		panic(err)
+	}
 
 	Discord, err = discordgo.New("Bot " + Config.DiscordAuth.Token)
 
@@ -123,10 +143,13 @@ func Setup() {
 
 	// Load dovewing state
 	baseDovewingState := dovewing.BaseState{
-		Pool:           Pool,
-		Logger:         Logger,
-		Context:        Context,
-		Redis:          Redis,
+		Pool:    Pool,
+		Logger:  Logger,
+		Context: Context,
+		PlatformUserCache: hredis.RedisHotCache[dovetypes.PlatformUser]{
+			Redis: Redis,
+			Prefix: "uobj__",
+		},
 		UserExpiryTime: 8 * time.Hour,
 	}
 

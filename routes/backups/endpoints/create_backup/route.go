@@ -8,7 +8,7 @@ import (
 	"splashtail/types"
 	"time"
 
-	"github.com/infinitybotlist/eureka/uapi/ratelimit"
+	"github.com/infinitybotlist/eureka/ratelimit"
 	"go.uber.org/zap"
 
 	docs "github.com/infinitybotlist/eureka/doclib"

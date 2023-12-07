@@ -450,7 +450,7 @@ func (t *ServerBackupCreateTask) Exec(l *zap.Logger, tx pgx.Tx) error {
 	err = os.MkdirAll(t.dir(), 0700)
 
 	if err != nil {
-		l.Error("Failed to create directory", zap.Error(err), zap.String("id", t.ServerID))
+		l.Error("Failed to create directory", zap.Error(err))
 		return fmt.Errorf("error creating directory: %w", err)
 	}
 
@@ -458,7 +458,7 @@ func (t *ServerBackupCreateTask) Exec(l *zap.Logger, tx pgx.Tx) error {
 	file, err := os.Create(t.path())
 
 	if err != nil {
-		l.Error("Failed to create file", zap.Error(err), zap.String("id", t.ServerID))
+		l.Error("Failed to create file", zap.Error(err))
 		return fmt.Errorf("error creating file: %w", err)
 	}
 
@@ -467,11 +467,11 @@ func (t *ServerBackupCreateTask) Exec(l *zap.Logger, tx pgx.Tx) error {
 	err = f.WriteOutput(file)
 
 	if err != nil {
-		l.Error("Failed to write backup", zap.Error(err), zap.String("id", t.ServerID))
+		l.Error("Failed to write backup", zap.Error(err))
 		return fmt.Errorf("error writing backup: %w", err)
 	}
 
-	l.Info("Successfully created backup", zap.String("id", t.ServerID))
+	l.Info("Successfully created backup")
 
 	return nil
 }

@@ -16,8 +16,23 @@ export const createTaskEmbed = (ctx: CommandContext, task: Task): ContextEdit =>
         }
 
         let add = `\`${status?.level}\` ${status?.msg}`
+
+        let vs: string[] = []
+        for(let [k, v] of Object.entries(status || {})) {
+            if(k == "level" || k == "msg" || k == "ts") continue
+            if(status["botDisplayIgnore"]?.includes(k)) continue
+
+            vs.push(`${k}=${typeof v == "object" ? JSON.stringify(v) : v}`)
+        }
+
+        if(vs.length > 0) add += ` ${vs.join(", ")}`
+
+        add = add.slice(0, 500) + (add.length > 500 ? "..." : "")
+
+        add += ` | \`[${new Date(status?.ts)}]\``
+
         taskStatuses.push(add)
-        taskStatusesLength += add.length
+        taskStatusesLength += (add.length > 500 ? 500 : add.length)
     }
 
     let description = `:white_check_mark: Task state: ${task?.state}\n\n${taskStatuses.join("\n")}`

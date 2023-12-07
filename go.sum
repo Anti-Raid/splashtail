@@ -81,6 +81,16 @@ github.com/gorilla/websocket v1.5.1 h1:gmztn0JnHVt9JZquRuzLw3g4wouNVzKL15iLr/zn/
 github.com/gorilla/websocket v1.5.1/go.mod h1:x3kM2JMyaluk02fnUJpQuwD2dCS5NDG2ZHL0uE0tcaY=
 github.com/infinitybotlist/eureka v0.5.0 h1:S4X6X4queBLjQn3Zeb9h6+83tHY5kNxnDGm5X7+QRp4=
 github.com/infinitybotlist/eureka v0.5.0/go.mod h1:XY/H8htZ4EQJwyfwnDrLuKg5M7DGoo6835ZJSKSswCg=
+github.com/infinitybotlist/eureka v0.6.0 h1:6352DVEk2D9jx0XoPYvUezu20uHLd4ti5qwCkKoh6I8=
+github.com/infinitybotlist/eureka v0.6.0/go.mod h1:XY/H8htZ4EQJwyfwnDrLuKg5M7DGoo6835ZJSKSswCg=
+github.com/infinitybotlist/eureka v0.6.1 h1:aVtJt2ssplm/+Gt7bI6EKbQTcQ3Hev0VgHvmrGlmLKU=
+github.com/infinitybotlist/eureka v0.6.1/go.mod h1:XY/H8htZ4EQJwyfwnDrLuKg5M7DGoo6835ZJSKSswCg=
+github.com/infinitybotlist/eureka v0.6.2 h1:FXkRIshN1Ylsp0XpNQseth9BajNqCtN7wjvFgYprIXU=
+github.com/infinitybotlist/eureka v0.6.2/go.mod h1:XY/H8htZ4EQJwyfwnDrLuKg5M7DGoo6835ZJSKSswCg=
+github.com/infinitybotlist/eureka v0.6.3 h1:OJMONMHLwhtTxz9IGiEO/44A4BTK9NW8galMMV/Lz1E=
+github.com/infinitybotlist/eureka v0.6.3/go.mod h1:XY/H8htZ4EQJwyfwnDrLuKg5M7DGoo6835ZJSKSswCg=
+github.com/infinitybotlist/eureka v0.6.4 h1:5ul7dIrh1914rQH3Hyo9lx/TWzApFuNNqKggsHk780Y=
+github.com/infinitybotlist/eureka v0.6.4/go.mod h1:XY/H8htZ4EQJwyfwnDrLuKg5M7DGoo6835ZJSKSswCg=
 github.com/infinitybotlist/iblfile v0.0.0-20231130135340-d7ed6d4e1030 h1:o4unoQC6S+fVlA1gy7ETu4r2gE1v7MStIqDP23GfMY8=
 github.com/infinitybotlist/iblfile v0.0.0-20231130135340-d7ed6d4e1030/go.mod h1:j214HiwMfNCQ/udfZR33O5zv2/FPdSKIEYkMIm7tOjc=
 github.com/infinitybotlist/iblfile v0.0.0-20231207094702-3b69ec47ec5e h1:H1AGLn+COPodbe47KcyxHUe9dwAR+LhVOOkAeT3n5xY=
@@ -132,6 +142,8 @@ github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZb
 github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
 github.com/redis/go-redis/v9 v9.3.0 h1:RiVDjmig62jIWp7Kk4XVLs0hzV6pI3PyTnnL0cnn0u0=
 github.com/redis/go-redis/v9 v9.3.0/go.mod h1:hdY0cQFCN4fnSYT6TkisLufl/4W5UIXyv0b/CLO2V2M=
+github.com/redis/rueidis v1.0.23 h1:OVHv1u35anQgvXjXk0ehTSDGByS245eQBDDM9U6YF/w=
+github.com/redis/rueidis v1.0.23/go.mod h1:8EOzvsg3o5dUDitRj4vpsolUKkSIvFz88PeQnqwTVk0=
 github.com/rogpeppe/go-internal v1.10.0 h1:TMyTOH3F/DB16zRVcYyreMH6GnZZrwQVAoYjRBZyWFQ=
 github.com/rogpeppe/go-internal v1.10.0/go.mod h1:UQnix2H7Ngw/k4C5ijL5+65zddjncjaFoBhdsK/akog=
 github.com/servusdei2018/shards/v2 v2.2.1 h1:p2eBx4bg3N7e/btu40X6cChfJk7zzTo5UqFFkAtLUB0=

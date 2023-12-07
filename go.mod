@@ -8,7 +8,7 @@ require (
 	github.com/bwmarrin/discordgo v0.27.2-0.20231204103810-44e4acb7d545
 	github.com/getkin/kin-openapi v0.122.0 // indirect
 	github.com/go-chi/chi/v5 v5.0.10
-	github.com/infinitybotlist/eureka v0.5.0
+	github.com/infinitybotlist/eureka v0.6.4
 	github.com/wk8/go-ordered-map/v2 v2.1.8 // indirect
 	gopkg.in/yaml.v3 v3.0.1
 )
@@ -17,6 +17,7 @@ require (
 	github.com/cheesycod/mewld v0.0.0-20231205144150-8a2e01d14a33
 	github.com/cloudflare/tableflip v1.2.3
 	github.com/infinitybotlist/iblfile v0.0.0-20231207094702-3b69ec47ec5e
+	github.com/redis/rueidis v1.0.23
 	github.com/sirupsen/logrus v1.9.3
 	gopkg.in/yaml.v2 v2.4.0
 )
