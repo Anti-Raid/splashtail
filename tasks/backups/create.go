@@ -5,6 +5,10 @@ import (
 	"compress/gzip"
 	"encoding/json"
 	"fmt"
+	"image"
+	_ "image/gif"
+	"image/jpeg"
+	_ "image/png"
 	"io"
 	"net/http"
 	"os"
@@ -13,6 +17,8 @@ import (
 	"splashtail/tasks"
 	"splashtail/utils"
 	"time"
+
+	_ "golang.org/x/image/webp"
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/infinitybotlist/iblfile"
@@ -154,8 +160,35 @@ func createAttachmentBlob(logger *zap.Logger, msg *discordgo.Message) ([]Attachm
 		}
 
 		switch attachment.ContentType {
-		case "image/jpeg", "image/png", "image/gif", "image/webp", "video/mp4", "video/webm":
-			// We explicitly can't compress these
+		case "video/mp4", "video/webm":
+			// We don't support compressing these yet, so just use uncompressed
+			attachments = append(attachments, am)
+		case "image/jpeg", "image/png", "image/gif", "image/webp":
+			var img image.Image
+
+			img, _, err = image.Decode(bytes.NewReader(bt))
+
+			// We don't support compressing these yet, so just use uncompressed
+			if err != nil {
+				logger.Error("Error decoding attachment", zap.Error(err), zap.String("url", url))
+				attachments = append(attachments, am)
+				continue
+			}
+
+			var buf bytes.Buffer
+			err := jpeg.Encode(&buf, img, &jpeg.Options{
+				Quality: jpegReencodeQuality,
+			})
+
+			if err != nil {
+				logger.Error("Error encoding attachment", zap.Error(err), zap.String("url", url))
+				attachments = append(attachments, am)
+				continue
+			}
+
+			am.StorageFormat = AttachmentStorageFormatJpegEncoded
+
+			bufs[attachment.ID] = &buf
 			attachments = append(attachments, am)
 		case "text/plain", "text/html", "application/octet-stream":
 			// Gzip compress

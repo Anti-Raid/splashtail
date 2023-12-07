@@ -16,9 +16,11 @@ require (
 require (
 	github.com/cheesycod/mewld v0.0.0-20231205144150-8a2e01d14a33
 	github.com/cloudflare/tableflip v1.2.3
-	github.com/infinitybotlist/iblfile v0.0.0-20231207094702-3b69ec47ec5e
+	github.com/infinitybotlist/iblfile v0.0.0-20231207161249-fec2b8fd0884
 	github.com/redis/rueidis v1.0.23
 	github.com/sirupsen/logrus v1.9.3
+	github.com/vmihailenco/msgpack/v5 v5.4.1
+	golang.org/x/image v0.14.0
 	gopkg.in/yaml.v2 v2.4.0
 )
 
@@ -45,7 +47,6 @@ require (
 	github.com/perimeterx/marshmallow v1.1.5 // indirect
 	github.com/twitchyliquid64/golang-asm v0.15.1 // indirect
 	github.com/ugorji/go/codec v1.2.12 // indirect
-	github.com/vmihailenco/msgpack/v5 v5.4.1 // indirect
 	github.com/vmihailenco/tagparser/v2 v2.0.0 // indirect
 	golang.org/x/arch v0.6.0 // indirect
 	golang.org/x/net v0.19.0 // indirect

@@ -13,6 +13,7 @@ const (
 	fileSizeWarningThreshold = 50_000_000 // 50 MB, the warning threshold for the total file size. At this point, attachments will not be saved
 	minPerChannel            = 50
 	defaultPerChannel        = 100
+	jpegReencodeQuality      = 75
 	fileType                 = "backup.server"
 )
 
@@ -31,6 +32,7 @@ const (
 	AttachmentStorageFormatUnknownOrUnsaved AttachmentStorageFormat = ""
 	AttachmentStorageFormatUncompressed     AttachmentStorageFormat = "uncompressed"
 	AttachmentStorageFormatGzip             AttachmentStorageFormat = "gzip"
+	AttachmentStorageFormatJpegEncoded      AttachmentStorageFormat = "jpeg_encoded"
 	AttachmentStorageFormatRemote           AttachmentStorageFormat = "remote"
 )
 
