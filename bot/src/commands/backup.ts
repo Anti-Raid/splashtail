@@ -2,6 +2,7 @@ import { Colors, EmbedBuilder, PermissionsBitField } from "discord.js";
 import { Command, FinalResponse } from "../core/client";
 import { SlashCommandBuilder } from "@discordjs/builders";
 import { TaskCreateResponse } from "../core/coreTypes/tasks";
+import { createTaskEmbed } from "../core/common/taskPoller";
 
 /*
 type BackupOpts struct {
@@ -171,22 +172,7 @@ let command: Command = {
                     targetId: ctx.guild.id,
                     targetType: "Server",
                     callback: async (task) => {
-                        let taskStatuses = []
-
-                        for(let status of task.statuses) {
-                            taskStatuses.push(`\`${status?.level}\` ${status?.msg}`)
-                        }
-
-                        await ctx.edit({
-                            embeds: [
-                                new EmbedBuilder()
-                                .setTitle("Creating backup")
-                                .setDescription(
-                                    `:white_check_mark: Task state: ${task?.state}\n\n${taskStatuses.join("\n")}`
-                                )
-                                .setColor(Colors.Green)
-                            ]
-                        })
+                        await ctx.edit(createTaskEmbed(ctx, task))
                     }
                 })
 
