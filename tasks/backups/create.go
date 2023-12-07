@@ -1,8 +1,11 @@
 package backups
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
+	"net/http"
 	"os"
 	"slices"
 	"splashtail/state"
@@ -10,7 +13,6 @@ import (
 	"time"
 
 	"github.com/bwmarrin/discordgo"
-	"github.com/infinitybotlist/eureka/crypto"
 	"github.com/infinitybotlist/iblfile"
 	"github.com/jackc/pgx/v5"
 	"go.uber.org/zap"
@@ -30,8 +32,8 @@ func countMap(m map[string]int) int {
 	return count
 }
 
-func backupChannelMessages(channelID string, allocation int) ([]*discordgo.Message, error) {
-	var finalMsgs []*discordgo.Message
+func backupChannelMessages(logger *zap.Logger, channelID string, allocation int, withAttachments bool) ([]*BackupMessage, error) {
+	var finalMsgs []*BackupMessage
 	var currentId string
 	for {
 		// Fetch messages
@@ -48,7 +50,24 @@ func backupChannelMessages(channelID string, allocation int) ([]*discordgo.Messa
 			return nil, fmt.Errorf("error fetching messages: %w", err)
 		}
 
-		finalMsgs = append(finalMsgs, messages...)
+		for _, msg := range messages {
+			im := BackupMessage{
+				Message: msg,
+			}
+
+			if withAttachments {
+				am, bufs, err := createAttachmentBlob(logger, msg)
+
+				if err != nil {
+					return nil, fmt.Errorf("error creating attachment blob: %w", err)
+				}
+
+				im.AttachmentMetadata = am
+				im.attachments = bufs
+			}
+
+			finalMsgs = append(finalMsgs, &im)
+		}
 
 		if len(messages) < limit {
 			// We've reached the end
@@ -57,6 +76,58 @@ func backupChannelMessages(channelID string, allocation int) ([]*discordgo.Messa
 	}
 
 	return finalMsgs, nil
+}
+
+func createAttachmentBlob(logger *zap.Logger, msg *discordgo.Message) ([]AttachmentMetadata, map[string]*bytes.Buffer, error) {
+	var attachments []AttachmentMetadata
+	var bufs = map[string]*bytes.Buffer{}
+	for _, attachment := range msg.Attachments {
+		if attachment.Size > 16_000_000 {
+			attachments = append(attachments, AttachmentMetadata{
+				ID:          attachment.ID,
+				Name:        attachment.Filename,
+				URL:         attachment.URL,
+				ProxyURL:    attachment.ProxyURL,
+				Size:        attachment.Size,
+				ContentType: attachment.ContentType,
+				Errors:      []string{"Attachment is too large to be saved."},
+			})
+			continue
+		}
+
+		// Download the attachment
+		var url string
+
+		if attachment.ProxyURL != "" {
+			url = attachment.ProxyURL
+		} else {
+			url = attachment.URL
+		}
+
+		resp, err := http.Get(url)
+
+		if err != nil {
+			logger.Error("Error downloading attachment", zap.Error(err), zap.String("url", url))
+			return attachments, nil, fmt.Errorf("error downloading attachment: %w", err)
+		}
+
+		bt, err := io.ReadAll(resp.Body)
+
+		if err != nil {
+			logger.Error("Error reading attachment", zap.Error(err), zap.String("url", url))
+			return attachments, nil, fmt.Errorf("error reading attachment: %w", err)
+		}
+
+		bufs[attachment.ID] = bytes.NewBuffer(bt)
+
+		attachments = append(attachments, AttachmentMetadata{
+			ID:     attachment.ID,
+			Name:   attachment.Filename,
+			Errors: []string{},
+		})
+	}
+
+	return attachments, bufs, nil
 }
 
 // A task to create backup a server
@@ -232,8 +303,6 @@ func (t *ServerBackupCreateTask) Exec(l *zap.Logger, tx pgx.Tx) error {
 		l.Info("Created channel backup allocations", zap.Any("alloc", perChannelBackupMap), zap.Strings("botDisplayIgnore", []string{"alloc"}))
 
 		// Backup messages
-		var channelIdHashTable map[string]string = make(map[string]string) // Used for avoid leaking channel ids publicly
-		var usedHashes []string
 		for channelID, allocation := range perChannelBackupMap {
 			if allocation == 0 {
 				continue
@@ -243,7 +312,7 @@ func (t *ServerBackupCreateTask) Exec(l *zap.Logger, tx pgx.Tx) error {
 
 			var leftovers int
 
-			msgs, err := backupChannelMessages(channelID, allocation)
+			msgs, err := backupChannelMessages(l, channelID, allocation, t.BackupOpts.BackupAttachments)
 
 			if err != nil {
 				if t.BackupOpts.IgnoreMessageBackupErrors {
@@ -258,26 +327,22 @@ func (t *ServerBackupCreateTask) Exec(l *zap.Logger, tx pgx.Tx) error {
 				}
 
 				// Write messages of this section
-				if _, ok := channelIdHashTable[channelID]; !ok {
-					for {
-						h := crypto.RandString(16)
+				f.WriteJsonSection(msgs, "messages/"+channelID)
 
-						if !slices.Contains(usedHashes, h) {
-							channelIdHashTable[channelID] = h
-							usedHashes = append(usedHashes, h)
-							break
+				for _, msg := range msgs {
+					if len(msg.attachments) > 0 {
+						for id, buf := range msg.attachments {
+							f.WriteSection(buf, "attachments/"+id)
 						}
 					}
 				}
-
-				f.WriteJsonSection(msgs, "messages/"+channelIdHashTable[channelID])
 			}
 
 			if leftovers > 0 && t.BackupOpts.RolloverLeftovers {
 				// Find a new channel with 0 allocation
 				for channelID, allocation := range perChannelBackupMap {
 					if allocation == 0 {
-						msgs, err := backupChannelMessages(channelID, leftovers)
+						msgs, err := backupChannelMessages(l, channelID, leftovers, t.BackupOpts.BackupAttachments)
 
 						if err != nil {
 							if t.BackupOpts.IgnoreMessageBackupErrors {
@@ -287,28 +352,21 @@ func (t *ServerBackupCreateTask) Exec(l *zap.Logger, tx pgx.Tx) error {
 								return fmt.Errorf("error backing up channel messages [leftovers]: %w", err)
 							}
 						} else {
-							// Write messages of this section
-							if _, ok := channelIdHashTable[channelID]; !ok {
-								for {
-									h := crypto.RandString(16)
+							f.WriteJsonSection(msgs, "messages/"+channelID)
 
-									if !slices.Contains(usedHashes, h) {
-										channelIdHashTable[channelID] = h
-										usedHashes = append(usedHashes, h)
-										break
+							for _, msg := range msgs {
+								if len(msg.attachments) > 0 {
+									for id, buf := range msg.attachments {
+										f.WriteSection(buf, "attachments/"+id)
 									}
 								}
 							}
-
-							f.WriteJsonSection(msgs, "messages/"+channelIdHashTable[channelID])
 							break
 						}
 					}
 				}
 			}
 		}
-
-		f.WriteJsonSection(channelIdHashTable, "channel_id_hash_table")
 	}
 
 	metadata := iblfile.Meta{

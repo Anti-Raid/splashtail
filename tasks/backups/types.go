@@ -27,6 +27,24 @@ type CoreBackup struct {
 	Guild *discordgo.Guild `db:"guild" json:"guild" description:"The guild ID"`
 }
 
+// Attachment contains metadata about an attachment
+type AttachmentMetadata struct {
+	ID          string   `json:"id"`           // ID of the attachment within the ticket
+	URL         string   `json:"url"`          // URL of the attachment
+	ProxyURL    string   `json:"proxy_url"`    // URL (cached) of the attachment
+	Name        string   `json:"name"`         // Name of the attachment
+	ContentType string   `json:"content_type"` // Content type of the attachment
+	Size        int      `json:"size"`         // Size of the attachment in bytes
+	Errors      []string `json:"errors"`       // Non-fatal errors that occurred while uploading the attachment
+}
+
+// Represents a backed up message
+type BackupMessage struct {
+	Message            *discordgo.Message       `json:"message"`
+	AttachmentMetadata []AttachmentMetadata     `json:"attachment_metadata"`
+	attachments        map[string]*bytes.Buffer `json:"-"`
+}
+
 func init() {
 	iblfile.RegisterFormat("backup", &iblfile.Format{
 		Format:  "server",

@@ -25,18 +25,20 @@ export const createTaskEmbed = (ctx: CommandContext, task: Task): ContextEdit =>
 
     if(task?.state == "completed") {
         if(task?.output?.path) {
-            description += `\n\n:link: [Download backup](${ctx.client.apiUrl}/tasks/${task?.task_id}/uauth/download`
+            description += `\n\n:link: [Download backup](${ctx.client.apiUrl}/tasks/${task?.task_id}/uauth/download)`
         }
 
         components.push(
             new ActionRowBuilder(
+            )
+            .addComponents(
                 new ButtonBuilder()
                 .setLabel("Download Backup")
                 .setStyle(ButtonStyle.Link)
                 .setURL(`${ctx.client.apiUrl}/ioauth/tasks/${task?.task_id}/download`)
                 .setEmoji("📥")
-                .toJSON()
-            ).toJSON()
+            )
+            .toJSON()
         )
     }
 
