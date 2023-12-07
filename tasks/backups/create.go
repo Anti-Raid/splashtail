@@ -10,6 +10,7 @@ import (
 	"slices"
 	"splashtail/state"
 	"splashtail/tasks"
+	"splashtail/utils"
 	"time"
 
 	"github.com/bwmarrin/discordgo"
@@ -32,7 +33,12 @@ func countMap(m map[string]int) int {
 	return count
 }
 
-func backupChannelMessages(logger *zap.Logger, channelID string, allocation int, withAttachments bool) ([]*BackupMessage, error) {
+// Backs up messages of a channel
+//
+// Note that attachments are only backed up if withAttachments is true and f.Size() < fileSizeWarningThreshold
+//
+// Note that this function does not write the messages to the file, it only returns them
+func backupChannelMessages(logger *zap.Logger, f *iblfile.AutoEncryptedFile, channelID string, allocation int, withAttachments bool) ([]*BackupMessage, error) {
 	var finalMsgs []*BackupMessage
 	var currentId string
 	for {
@@ -55,7 +61,7 @@ func backupChannelMessages(logger *zap.Logger, channelID string, allocation int,
 				Message: msg,
 			}
 
-			if withAttachments {
+			if withAttachments && f.Size() < fileSizeWarningThreshold {
 				am, bufs, err := createAttachmentBlob(logger, msg)
 
 				if err != nil {
@@ -82,7 +88,7 @@ func createAttachmentBlob(logger *zap.Logger, msg *discordgo.Message) ([]Attachm
 	var attachments []AttachmentMetadata
 	var bufs = map[string]*bytes.Buffer{}
 	for _, attachment := range msg.Attachments {
-		if attachment.Size > 16_000_000 {
+		if attachment.Size > maxAttachmentFileSize {
 			attachments = append(attachments, AttachmentMetadata{
 				ID:          attachment.ID,
 				Name:        attachment.Filename,
@@ -171,6 +177,10 @@ func (t *ServerBackupCreateTask) Exec(l *zap.Logger, tx pgx.Tx) error {
 		t.BackupOpts.PerChannel = 100
 	}
 
+	if t.BackupOpts.PerChannel < minPerChannel {
+		return fmt.Errorf("per_channel cannot be less than %d", minPerChannel)
+	}
+
 	if t.BackupOpts.MaxMessages > totalMaxMessages {
 		return fmt.Errorf("max_messages cannot be greater than %d", totalMaxMessages)
 	}
@@ -193,15 +203,43 @@ func (t *ServerBackupCreateTask) Exec(l *zap.Logger, tx pgx.Tx) error {
 		return fmt.Errorf("error creating file: %w", err)
 	}
 
-	f.WriteJsonSection(t.BackupOpts, "backup_opts")
+	err = f.WriteJsonSection(t.BackupOpts, "backup_opts")
 
-	l.Info("Backing up guild settings")
+	if err != nil {
+		return fmt.Errorf("error writing backup options: %w", err)
+	}
+
+	// Fetch the bots member object in the guild
+	l.Info("Fetching bots current state in server")
+	m, err := state.Discord.GuildMember(t.ServerID, state.BotUser.ID)
+
+	if err != nil {
+		return fmt.Errorf("error fetching bots member object: %w", err)
+	}
+
+	err = f.WriteJsonSection(m, "debug/bot") // Write bot member object to debug section
+
+	if err != nil {
+		return fmt.Errorf("error writing bot member object: %w", err)
+	}
+
+	l.Info("Backing up server settings")
 
 	// Fetch guild
 	g, err := state.Discord.Guild(t.ServerID)
 
 	if err != nil {
 		return fmt.Errorf("error fetching guild: %w", err)
+	}
+
+	// With servers now backed up, get the base permissions now
+	basePerms := utils.BasePermissions(g, m)
+
+	// Write base permissions to debug section
+	err = f.WriteJsonSection(basePerms, "debug/base_permissions")
+
+	if err != nil {
+		return fmt.Errorf("error writing base permissions: %w", err)
 	}
 
 	l.Info("Backing up guild channels")
@@ -253,7 +291,11 @@ func (t *ServerBackupCreateTask) Exec(l *zap.Logger, tx pgx.Tx) error {
 		g.Stickers = s
 	}
 
-	f.WriteJsonSection(cb, "core")
+	err = f.WriteJsonSection(cb, "core")
+
+	if err != nil {
+		return fmt.Errorf("error writing core backup: %w", err)
+	}
 
 	// Backup messages
 	if t.BackupOpts.BackupMessages {
@@ -271,23 +313,35 @@ func (t *ServerBackupCreateTask) Exec(l *zap.Logger, tx pgx.Tx) error {
 
 		// First handle the special allocations
 		for channelID, allocation := range t.BackupOpts.SpecialAllocations {
-			if _, ok := channelMap[channelID]; ok {
+			if c, ok := channelMap[channelID]; ok {
+				// Error on bad channels for special allocations
+				if !slices.Contains(allowedChannelTypes, c.Type) {
+					return fmt.Errorf("special allocation channel %s is not a valid channel type", c.ID)
+				}
+
+				perms := utils.MemberChannelPerms(basePerms, g, m, c)
+
+				if perms&discordgo.PermissionViewChannel != discordgo.PermissionViewChannel {
+					return fmt.Errorf("special allocation channel %s is not readable by the bot", c.ID)
+				}
+
+				if countMap(perChannelBackupMap) >= t.BackupOpts.MaxMessages {
+					continue
+				}
+
 				perChannelBackupMap[channelID] = allocation
 			}
-		}
-
-		allowedChannelTypes := []discordgo.ChannelType{
-			discordgo.ChannelTypeGuildText,
-			discordgo.ChannelTypeGuildNews,
-			discordgo.ChannelTypeGuildNewsThread,
-			discordgo.ChannelTypeGuildPublicThread,
-			discordgo.ChannelTypeGuildPrivateThread,
-			discordgo.ChannelTypeGuildForum,
 		}
 
 		for _, channel := range channels {
 			// Discard bad channels
 			if !slices.Contains(allowedChannelTypes, channel.Type) {
+				continue
+			}
+
+			perms := utils.MemberChannelPerms(basePerms, g, m, channel)
+
+			if perms&discordgo.PermissionViewChannel != discordgo.PermissionViewChannel {
 				continue
 			}
 
@@ -312,7 +366,7 @@ func (t *ServerBackupCreateTask) Exec(l *zap.Logger, tx pgx.Tx) error {
 
 			var leftovers int
 
-			msgs, err := backupChannelMessages(l, channelID, allocation, t.BackupOpts.BackupAttachments)
+			msgs, err := backupChannelMessages(l, f, channelID, allocation, t.BackupOpts.BackupAttachments)
 
 			if err != nil {
 				if t.BackupOpts.IgnoreMessageBackupErrors {
@@ -342,7 +396,7 @@ func (t *ServerBackupCreateTask) Exec(l *zap.Logger, tx pgx.Tx) error {
 				// Find a new channel with 0 allocation
 				for channelID, allocation := range perChannelBackupMap {
 					if allocation == 0 {
-						msgs, err := backupChannelMessages(l, channelID, leftovers, t.BackupOpts.BackupAttachments)
+						msgs, err := backupChannelMessages(l, f, channelID, leftovers, t.BackupOpts.BackupAttachments)
 
 						if err != nil {
 							if t.BackupOpts.IgnoreMessageBackupErrors {

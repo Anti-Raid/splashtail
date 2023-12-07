@@ -8,9 +8,21 @@ import (
 )
 
 const (
-	totalMaxMessages = 500
-	fileType         = "backup.server"
+	totalMaxMessages         = 500
+	maxAttachmentFileSize    = 8_000_000  // 8 MB, the limit for one attachment
+	fileSizeWarningThreshold = 50_000_000 // 50 MB, the warning threshold for the total file size. At this point, attachments will not be saved
+	minPerChannel            = 50
+	fileType                 = "backup.server"
 )
+
+var allowedChannelTypes = []discordgo.ChannelType{
+	discordgo.ChannelTypeGuildText,
+	discordgo.ChannelTypeGuildNews,
+	discordgo.ChannelTypeGuildNewsThread,
+	discordgo.ChannelTypeGuildPublicThread,
+	discordgo.ChannelTypeGuildPrivateThread,
+	discordgo.ChannelTypeGuildForum,
+}
 
 type BackupOpts struct {
 	PerChannel                int            `json:"per_channel" description:"The number of messages per channel"`

@@ -14,9 +14,9 @@ require (
 )
 
 require (
-	github.com/cheesycod/mewld v0.0.0-20231205053749-40535fcdea19
+	github.com/cheesycod/mewld v0.0.0-20231205144150-8a2e01d14a33
 	github.com/cloudflare/tableflip v1.2.3
-	github.com/infinitybotlist/iblfile v0.0.0-20231130135340-d7ed6d4e1030
+	github.com/infinitybotlist/iblfile v0.0.0-20231207094702-3b69ec47ec5e
 	github.com/sirupsen/logrus v1.9.3
 	gopkg.in/yaml.v2 v2.4.0
 )
@@ -74,7 +74,7 @@ require (
 	github.com/json-iterator/go v1.1.12
 	github.com/redis/go-redis/v9 v9.3.0
 	go.uber.org/zap v1.26.0
-	golang.org/x/exp v0.0.0-20231127185646-65229373498e
+	golang.org/x/exp v0.0.0-20231206192017-f3f8817b8deb
 	golang.org/x/sys v0.15.0 // indirect
 )
 

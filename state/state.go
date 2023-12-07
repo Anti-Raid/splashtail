@@ -33,6 +33,7 @@ var (
 	Context                 = context.Background()
 	Validator               = validator.New()
 	MewldInstanceList       *mproc.InstanceList
+	BotUser                 *discordgo.User
 
 	Config *config.Config
 )
@@ -108,11 +109,13 @@ func Setup() {
 	})
 
 	// Verify token
-	_, err = Discord.User("@me")
+	bu, err := Discord.User("@me")
 
 	if err != nil {
 		panic(err)
 	}
+
+	BotUser = bu
 
 	Discord.AddHandler(func(s *discordgo.Session, r *discordgo.Ready) {
 		Logger.Info("[DISCORD]", zap.String("note", "ready"))

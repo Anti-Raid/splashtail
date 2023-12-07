@@ -29,6 +29,8 @@ github.com/cheesycod/mewld v0.0.0-20231205053437-6857388ece72 h1:BOv+ZmZCn6+NGJh
 github.com/cheesycod/mewld v0.0.0-20231205053437-6857388ece72/go.mod h1:zp1cPTRtvHkaygkgOIMNHrc45/F5SGfsyzmVAcEoZ2c=
 github.com/cheesycod/mewld v0.0.0-20231205053749-40535fcdea19 h1:jRqgVDdOW/1NR+1Hnv43UqCCaZt6PtlgsSNIDNnxKVM=
 github.com/cheesycod/mewld v0.0.0-20231205053749-40535fcdea19/go.mod h1:zp1cPTRtvHkaygkgOIMNHrc45/F5SGfsyzmVAcEoZ2c=
+github.com/cheesycod/mewld v0.0.0-20231205144150-8a2e01d14a33 h1:dtUAFrPn+pIND8UFtxSTCToeJQWWBFMfVWjbVhr5Xfs=
+github.com/cheesycod/mewld v0.0.0-20231205144150-8a2e01d14a33/go.mod h1:zp1cPTRtvHkaygkgOIMNHrc45/F5SGfsyzmVAcEoZ2c=
 github.com/chenzhuoyu/base64x v0.0.0-20211019084208-fb5309c8db06/go.mod h1:DH46F32mSOjUmXrMHnKwZdA8wcEefY7UVqBKYGjpdQY=
 github.com/chenzhuoyu/base64x v0.0.0-20221115062448-fe3a3abad311/go.mod h1:b583jCggY9gE99b6G5LEC39OIiVsWj+R97kbl5odCEk=
 github.com/chenzhuoyu/base64x v0.0.0-20230717121745-296ad89f973d h1:77cEq6EriyTZ0g/qfRdp61a3Uu/AWrgIq2s0ClJV1g0=
@@ -81,6 +83,8 @@ github.com/infinitybotlist/eureka v0.5.0 h1:S4X6X4queBLjQn3Zeb9h6+83tHY5kNxnDGm5
 github.com/infinitybotlist/eureka v0.5.0/go.mod h1:XY/H8htZ4EQJwyfwnDrLuKg5M7DGoo6835ZJSKSswCg=
 github.com/infinitybotlist/iblfile v0.0.0-20231130135340-d7ed6d4e1030 h1:o4unoQC6S+fVlA1gy7ETu4r2gE1v7MStIqDP23GfMY8=
 github.com/infinitybotlist/iblfile v0.0.0-20231130135340-d7ed6d4e1030/go.mod h1:j214HiwMfNCQ/udfZR33O5zv2/FPdSKIEYkMIm7tOjc=
+github.com/infinitybotlist/iblfile v0.0.0-20231207094702-3b69ec47ec5e h1:H1AGLn+COPodbe47KcyxHUe9dwAR+LhVOOkAeT3n5xY=
+github.com/infinitybotlist/iblfile v0.0.0-20231207094702-3b69ec47ec5e/go.mod h1:j214HiwMfNCQ/udfZR33O5zv2/FPdSKIEYkMIm7tOjc=
 github.com/invopop/yaml v0.2.0 h1:7zky/qH+O0DwAyoobXUqvVBwgBFRxKoQ/3FjcVpjTMY=
 github.com/invopop/yaml v0.2.0/go.mod h1:2XuRLgs/ouIrW3XNzuNj7J3Nvu/Dig5MXvbCEdiBN3Q=
 github.com/jackc/pgpassfile v1.0.0 h1:/6Hmqy13Ss2zCq62VdNG8tM1wchn8zjSGOBJ6icpsIM=
@@ -165,6 +169,8 @@ golang.org/x/crypto v0.16.0 h1:mMMrFzRSCF0GvB7Ne27XVtVAaXLrPmgPC7/v0tkwHaY=
 golang.org/x/crypto v0.16.0/go.mod h1:gCAAfMLgwOJRpTjQ2zCCt2OcSfYMTeZVSRtQlPC7Nq4=
 golang.org/x/exp v0.0.0-20231127185646-65229373498e h1:Gvh4YaCaXNs6dKTlfgismwWZKyjVZXwOPfIyUaqU3No=
 golang.org/x/exp v0.0.0-20231127185646-65229373498e/go.mod h1:iRJReGqOEeBhDZGkGbynYwcHlctCvnjTYIamk7uXpHI=
+golang.org/x/exp v0.0.0-20231206192017-f3f8817b8deb h1:c0vyKkb6yr3KR7jEfJaOSv4lG7xPkbN6r52aJz1d8a8=
+golang.org/x/exp v0.0.0-20231206192017-f3f8817b8deb/go.mod h1:iRJReGqOEeBhDZGkGbynYwcHlctCvnjTYIamk7uXpHI=
 golang.org/x/net v0.0.0-20210226172049-e18ecbb05110/go.mod h1:m0MpNAwzfU5UDzcl9v0D8zg8gWTRqZa9RBIspLL5mdg=
 golang.org/x/net v0.19.0 h1:zTwKpTd2XuCqf8huc7Fo2iSy+4RHPd10s4KzeTnVr1c=
 golang.org/x/net v0.19.0/go.mod h1:CfAk/cbD4CthTvqiEl8NpboMuiuOYsAr/7NOjZJtv1U=
