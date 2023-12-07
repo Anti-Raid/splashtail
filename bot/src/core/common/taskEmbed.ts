@@ -19,7 +19,7 @@ export const createTaskEmbed = (ctx: CommandContext, task: Task): ContextEdit =>
 
         let vs: string[] = []
         for(let [k, v] of Object.entries(status || {})) {
-            if(k == "level" || k == "msg" || k == "ts") continue
+            if(k == "level" || k == "msg" || k == "ts" || k == "botDisplayIgnore") continue
             if(status["botDisplayIgnore"]?.includes(k)) continue
 
             vs.push(`${k}=${typeof v == "object" ? JSON.stringify(v) : v}`)
@@ -41,20 +41,20 @@ export const createTaskEmbed = (ctx: CommandContext, task: Task): ContextEdit =>
     if(task?.state == "completed") {
         if(task?.output?.path) {
             description += `\n\n:link: [Download](${ctx.client.apiUrl}/ioauth/tasks/${task?.task_id}/download)`
-        }
 
-        components.push(
-            new ActionRowBuilder(
-            )
-            .addComponents(
-                new ButtonBuilder()
-                .setLabel("Download")
-                .setStyle(ButtonStyle.Link)
-                .setURL(`${ctx.client.apiUrl}/ioauth/tasks/${task?.task_id}/download`)
-                .setEmoji("📥")
-            )
-            .toJSON()
-        )
+            components.push(
+                new ActionRowBuilder(
+                )
+                .addComponents(
+                    new ButtonBuilder()
+                    .setLabel("Download")
+                    .setStyle(ButtonStyle.Link)
+                    .setURL(`${ctx.client.apiUrl}/ioauth/tasks/${task?.task_id}/download`)
+                    .setEmoji("📥")
+                )
+                .toJSON()
+            )    
+        }
     }
 
     let embed = new EmbedBuilder()
