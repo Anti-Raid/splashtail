@@ -242,18 +242,10 @@ func main() {
 					l.Dir,
 					strconv.Itoa(len(l.Map)),
 					state.Config.Meta.Proxy,
+					state.Config.Sites.API.Parse(),
 				)
 			} else {
-				cmd = exec.Command(
-					l.Config.Module, // If no interpreter, we use the full module as the executable path
-					mutils.ToPyListUInt64(i.Shards),
-					mutils.UInt64ToString(l.ShardCount),
-					strconv.Itoa(i.ClusterID),
-					cm.Name,
-					l.Dir,
-					strconv.Itoa(len(l.Map)),
-					state.Config.Meta.Proxy,
-				)
+				panic("interp not set in mewld.yaml") // Splashtail doesn't support this
 			}
 
 			cmd.Stdout = os.Stdout

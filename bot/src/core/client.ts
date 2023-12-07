@@ -104,14 +104,15 @@ export class AntiRaid extends Client {
     shardCount: number;
     shardIds: number[];
     redis: BotRedis;
-    proxyUrl: string
+    proxyUrl: string;
+    apiUrl: string;
     private _config: Config;
     private hasLoadedListeners: boolean = false;
     private teamOwners: string[] = []
     gateway: string;
     currentShardHealth: Map<number, ShardHealth> = new Map()
 
-    constructor(clusterId: number, clusterName: string, shardIds: number[], shardCount: number, clusterCount: number, proxyUrl: string) {        
+    constructor(clusterId: number, clusterName: string, shardIds: number[], shardCount: number, clusterCount: number, proxyUrl: string, apiUrl: string) {        
         super({
             shards: shardIds,
             shardCount: shardCount,
@@ -133,6 +134,7 @@ export class AntiRaid extends Client {
         this.clusterName = clusterName
         this.shardIds = shardIds
         this.proxyUrl = proxyUrl
+        this.apiUrl = apiUrl
 
         let logger = new Logger(`${clusterName} (${clusterId})`)
         this.logger = logger

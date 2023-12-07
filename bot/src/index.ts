@@ -1,22 +1,26 @@
 // Packages
 import { AntiRaid } from "./core/client";
-import sql from "./core/db";
 
 // Get args from mewld
 const args = process.argv.slice(2);
 
 /**
- * 			coreutils.ToPyListUInt64(i.Shards),
-			coreutils.UInt64ToString(l.ShardCount),
-			strconv.Itoa(i.ClusterID),
-			cluster.Name,
-			dir,
-			len(l.Map),
-			l.Config.ProxyURL,
- */
-if (args.length < 7) {
-	console.error("Usage: node . <shard count> <total shard count> <cluster id> <cluster name> <cluster directory> <no clusters> <proxy url>");
-	console.error("Please ensure that the bot is being run via mewld");
+				cmd = exec.Command(
+					l.Config.Interp,
+					l.Dir+"/"+l.Config.Module,
+					mutils.ToPyListUInt64(i.Shards), // 0
+					mutils.UInt64ToString(l.ShardCount), // 1
+					strconv.Itoa(i.ClusterID), // 2
+					cm.Name, // 3
+					l.Dir, // 4
+					strconv.Itoa(len(l.Map)), // 5
+					state.Config.Meta.Proxy, // 6
+					state.Config.Sites.API.Parse(), // 7
+				)
+*/
+if (args.length < 8) {
+	console.error("Usage: node . <shard count> <total shard count> <cluster id> <cluster name> <cluster directory> <no clusters> <proxy url> <api url>");
+	console.error("Please ensure that the bot is being run via splashtail/mewld");
 	process.exit(1);
 }
 
@@ -38,9 +42,11 @@ if(!clusterName || !clusterCount) {
 }
 
 const proxyUrl = args[6];
+const apiUrl = args[7];
 
 // Create Discord Client
-const client = new AntiRaid(clusterId, clusterName, shards, shardCount, clusterCount, proxyUrl);
+const client = new AntiRaid(clusterId, clusterName, shards, shardCount, clusterCount, proxyUrl, apiUrl);
+
 /*
 // Guild member update event
 client.on(Events.GuildMemberUpdate, async (oldMember, newMember) => {

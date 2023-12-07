@@ -226,15 +226,6 @@ export class BotRedis extends EventEmitter {
         let start_from = 0
         let taskStatuses: KV[] = []
 
-        if(opts.timeout) {
-            setTimeout(() => {
-                done = true
-                if(handle) {
-                    handle.stop()
-                }
-            }, opts.timeout)
-        }
-
         let tcrB = JSON.stringify(tcr) // Optimization to avoid constant serialization
 
         while(task?.state != "completed" && !done) {

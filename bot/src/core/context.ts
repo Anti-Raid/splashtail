@@ -1,16 +1,20 @@
-import { EmbedBuilder, InteractionResponse, Message, InteractionDeferReplyOptions, AutocompleteInteraction, ChatInputCommandInteraction, Guild } from "discord.js";
+import { EmbedBuilder, InteractionResponse, Message, InteractionDeferReplyOptions, AutocompleteInteraction, ChatInputCommandInteraction, Guild, APIActionRowComponent, APIButtonComponent, APIChannelSelectComponent, APIMentionableSelectComponent, APIRoleSelectComponent, APIStringSelectComponent, APITextInputComponent, APIUserSelectComponent, APIMessageActionRowComponent, JSONEncodable, ActionRowData } from "discord.js";
 import { AntiRaid } from "./client";
+
+export type Component = any // for now
 
 export interface ContextReply {
     content?: string;
     embeds?: EmbedBuilder[];
     ephemeral?: boolean;
+    components?: Component[];
     fetchReply?: boolean;
 }
 
 export interface ContextEdit {
     content?: string;
     embeds?: EmbedBuilder[];
+    components?: Component[];
 }
 
 /**
@@ -64,6 +68,7 @@ export class CommandContext {
             content: data.content,
             embeds: data.embeds,
             ephemeral: data.ephemeral,
+            components: data.components,
             fetchReply: data.fetchReply
         })
 
@@ -76,6 +81,7 @@ export class CommandContext {
         await this.interaction.editReply({
             content: data.content,
             embeds: data.embeds,
+            components: data.components,
         })
     }
 
@@ -91,6 +97,7 @@ export class CommandContext {
             content: data.content,
             embeds: data.embeds,
             ephemeral: data.ephemeral,
+            components: data.components,
             fetchReply: data.fetchReply
         })
     }
