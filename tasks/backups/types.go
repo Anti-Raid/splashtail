@@ -25,6 +25,15 @@ var allowedChannelTypes = []discordgo.ChannelType{
 	discordgo.ChannelTypeGuildForum,
 }
 
+type AttachmentStorageFormat string
+
+const (
+	AttachmentStorageFormatUnknownOrUnsaved AttachmentStorageFormat = ""
+	AttachmentStorageFormatUncompressed     AttachmentStorageFormat = "uncompressed"
+	AttachmentStorageFormatGzip             AttachmentStorageFormat = "gzip"
+	AttachmentStorageFormatRemote           AttachmentStorageFormat = "remote"
+)
+
 type BackupOpts struct {
 	PerChannel                int            `json:"per_channel" description:"The number of messages per channel"`
 	MaxMessages               int            `json:"max_messages" description:"The maximum number of messages to backup"`
@@ -42,13 +51,14 @@ type CoreBackup struct {
 
 // Attachment contains metadata about an attachment
 type AttachmentMetadata struct {
-	ID          string   `json:"id"`           // ID of the attachment within the ticket
-	URL         string   `json:"url"`          // URL of the attachment
-	ProxyURL    string   `json:"proxy_url"`    // URL (cached) of the attachment
-	Name        string   `json:"name"`         // Name of the attachment
-	ContentType string   `json:"content_type"` // Content type of the attachment
-	Size        int      `json:"size"`         // Size of the attachment in bytes
-	Errors      []string `json:"errors"`       // Non-fatal errors that occurred while uploading the attachment
+	ID            string                  `json:"id"`             // ID of the attachment within the ticket
+	URL           string                  `json:"url"`            // URL of the attachment
+	ProxyURL      string                  `json:"proxy_url"`      // URL (cached) of the attachment
+	Name          string                  `json:"name"`           // Name of the attachment
+	ContentType   string                  `json:"content_type"`   // Content type of the attachment
+	StorageFormat AttachmentStorageFormat `json:"storage_format"` // Storage format of the attachment
+	Size          int                     `json:"size"`           // Size of the attachment in bytes
+	Errors        []string                `json:"errors"`         // Non-fatal errors that occurred while uploading the attachment
 }
 
 // Represents a backed up message

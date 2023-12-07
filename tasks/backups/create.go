@@ -2,6 +2,7 @@ package backups
 
 import (
 	"bytes"
+	"compress/gzip"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -16,6 +17,7 @@ import (
 	"github.com/bwmarrin/discordgo"
 	"github.com/infinitybotlist/iblfile"
 	"github.com/jackc/pgx/v5"
+	"github.com/vmihailenco/msgpack/v5"
 	"go.uber.org/zap"
 )
 
@@ -110,6 +112,20 @@ func createAttachmentBlob(logger *zap.Logger, msg *discordgo.Message) ([]Attachm
 			url = attachment.URL
 		}
 
+		/*if !strings.HasPrefix(url, "https://cdn.discordapp.com") {
+			attachments = append(attachments, AttachmentMetadata{
+				ID:            attachment.ID,
+				Name:          attachment.Filename,
+				URL:           attachment.URL,
+				ProxyURL:      attachment.ProxyURL,
+				Size:          attachment.Size,
+				ContentType:   attachment.ContentType,
+				StorageFormat: AttachmentStorageFormatRemote,
+				Errors:        []string{},
+			})
+			continue
+		}*/
+
 		resp, err := http.Get(url)
 
 		if err != nil {
@@ -126,14 +142,61 @@ func createAttachmentBlob(logger *zap.Logger, msg *discordgo.Message) ([]Attachm
 
 		bufs[attachment.ID] = bytes.NewBuffer(bt)
 
-		attachments = append(attachments, AttachmentMetadata{
-			ID:     attachment.ID,
-			Name:   attachment.Filename,
-			Errors: []string{},
-		})
+		am := AttachmentMetadata{
+			ID:            attachment.ID,
+			Name:          attachment.Filename,
+			URL:           attachment.URL,
+			ProxyURL:      attachment.ProxyURL,
+			Size:          attachment.Size,
+			ContentType:   attachment.ContentType,
+			StorageFormat: AttachmentStorageFormatUncompressed,
+			Errors:        []string{},
+		}
+
+		switch attachment.ContentType {
+		case "image/jpeg", "image/png", "image/gif", "image/webp", "video/mp4", "video/webm":
+			// We explicitly can't compress these
+			attachments = append(attachments, am)
+		case "text/plain", "text/html", "application/octet-stream":
+			// Gzip compress
+			am.StorageFormat = AttachmentStorageFormatGzip
+
+			var buf bytes.Buffer
+			gz := gzip.NewWriter(&buf)
+			gz.Write(bt)
+
+			err = gz.Close()
+
+			if err != nil {
+				logger.Error("Error gzipping attachment", zap.Error(err), zap.String("url", url))
+				return attachments, nil, fmt.Errorf("error gzipping attachment: %w", err)
+			}
+
+			bufs[attachment.ID] = &buf
+
+			attachments = append(attachments, am)
+		default:
+			attachments = append(attachments, am)
+		}
 	}
 
 	return attachments, bufs, nil
+}
+
+func writeMsgpack(f *iblfile.AutoEncryptedFile, section string, data any) error {
+	var buf bytes.Buffer
+	enc := msgpack.NewEncoder(&buf)
+	enc.SetCustomStructTag("json")
+	enc.UseCompactInts(true)
+	enc.UseCompactFloats(true)
+	enc.UseInternedStrings(true)
+	err := enc.Encode(data)
+
+	if err != nil {
+		return fmt.Errorf("error marshalling data: %w", err)
+	}
+
+	return f.WriteSection(&buf, section)
 }
 
 // A task to create backup a server
@@ -203,7 +266,7 @@ func (t *ServerBackupCreateTask) Exec(l *zap.Logger, tx pgx.Tx) error {
 		return fmt.Errorf("error creating file: %w", err)
 	}
 
-	err = f.WriteJsonSection(t.BackupOpts, "backup_opts")
+	err = writeMsgpack(f, "backup_opts", t.BackupOpts)
 
 	if err != nil {
 		return fmt.Errorf("error writing backup options: %w", err)
@@ -217,7 +280,7 @@ func (t *ServerBackupCreateTask) Exec(l *zap.Logger, tx pgx.Tx) error {
 		return fmt.Errorf("error fetching bots member object: %w", err)
 	}
 
-	err = f.WriteJsonSection(m, "debug/bot") // Write bot member object to debug section
+	err = writeMsgpack(f, "dbg/bot", m) // Write bot member object to debug section
 
 	if err != nil {
 		return fmt.Errorf("error writing bot member object: %w", err)
@@ -236,7 +299,7 @@ func (t *ServerBackupCreateTask) Exec(l *zap.Logger, tx pgx.Tx) error {
 	basePerms := utils.BasePermissions(g, m)
 
 	// Write base permissions to debug section
-	err = f.WriteJsonSection(basePerms, "debug/base_permissions")
+	err = writeMsgpack(f, "dbg/basePerms", basePerms)
 
 	if err != nil {
 		return fmt.Errorf("error writing base permissions: %w", err)
@@ -291,7 +354,8 @@ func (t *ServerBackupCreateTask) Exec(l *zap.Logger, tx pgx.Tx) error {
 		g.Stickers = s
 	}
 
-	err = f.WriteJsonSection(cb, "core")
+	// Write core backup
+	err = writeMsgpack(f, "core", cb)
 
 	if err != nil {
 		return fmt.Errorf("error writing core backup: %w", err)
@@ -356,6 +420,12 @@ func (t *ServerBackupCreateTask) Exec(l *zap.Logger, tx pgx.Tx) error {
 
 		l.Info("Created channel backup allocations", zap.Any("alloc", perChannelBackupMap), zap.Strings("botDisplayIgnore", []string{"alloc"}))
 
+		err = writeMsgpack(f, "dbg/chanAlloc", perChannelBackupMap)
+
+		if err != nil {
+			return fmt.Errorf("error writing channel allocations: %w", err)
+		}
+
 		// Backup messages
 		for channelID, allocation := range perChannelBackupMap {
 			if allocation == 0 {
@@ -381,7 +451,11 @@ func (t *ServerBackupCreateTask) Exec(l *zap.Logger, tx pgx.Tx) error {
 				}
 
 				// Write messages of this section
-				f.WriteJsonSection(msgs, "messages/"+channelID)
+				err = writeMsgpack(f, "messages/"+channelID, msgs)
+
+				if err != nil {
+					return fmt.Errorf("error writing messages: %w", err)
+				}
 
 				for _, msg := range msgs {
 					if len(msg.attachments) > 0 {
@@ -406,7 +480,12 @@ func (t *ServerBackupCreateTask) Exec(l *zap.Logger, tx pgx.Tx) error {
 								return fmt.Errorf("error backing up channel messages [leftovers]: %w", err)
 							}
 						} else {
-							f.WriteJsonSection(msgs, "messages/"+channelID)
+							// Write messages of this section
+							err = writeMsgpack(f, "messages/"+channelID, msgs)
+
+							if err != nil {
+								return fmt.Errorf("error writing messages [leftovers]: %w", err)
+							}
 
 							for _, msg := range msgs {
 								if len(msg.attachments) > 0 {
