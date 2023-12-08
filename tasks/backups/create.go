@@ -560,6 +560,7 @@ func (t *ServerBackupCreateTask) Exec(l *zap.Logger, tx pgx.Tx) (*tasks.TaskOutp
 
 	return &tasks.TaskOutput{
 		Filename: "antiraid-backup.iblfile",
+		Buffer:   &outputBuf,
 	}, nil
 }
 

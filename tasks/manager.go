@@ -170,8 +170,13 @@ func NewTask(task Task) {
 
 	// Save output to object storage
 	if outp != nil {
-		if outp.Filename != "" {
+		if outp.Filename == "" {
 			outp.Filename = "unnamed." + crypto.RandString(16)
+		}
+
+		if outp.Buffer == nil {
+			l.Error("Task output buffer is nil", zap.Any("data", tInfo.TaskFields))
+			taskState = "failed"
 		}
 
 		l.Info("Saving task output", zap.String("filename", outp.Filename))
