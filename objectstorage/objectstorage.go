@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net/url"
 	"os"
 	"path/filepath"
 	"splashtail/config"
@@ -91,5 +92,26 @@ func (o *ObjectStorage) Save(ctx context.Context, dir, filename string, data *by
 		return nil
 	default:
 		return fmt.Errorf("operation not supported for object storage type %s", o.c.Type)
+	}
+}
+
+// Returns the url to the file
+func (o *ObjectStorage) GetUrl(ctx context.Context, dir, filename string, urlExpiry time.Duration) (*url.URL, error) {
+	switch o.c.Type {
+	case "local":
+		return &url.URL{
+			Scheme: "file",
+			Path:   filepath.Join(o.c.Path, dir, filename),
+		}, nil
+	case "s3-like":
+		p, err := o.minio.PresignedGetObject(ctx, o.c.Path, dir+"/"+filename, urlExpiry, nil)
+
+		if err != nil {
+			return nil, err
+		}
+
+		return p, nil
+	default:
+		return nil, fmt.Errorf("operation not supported for object storage type %s", o.c.Type)
 	}
 }

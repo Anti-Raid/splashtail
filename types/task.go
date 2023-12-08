@@ -1,6 +1,7 @@
 package types
 
 import (
+	"bytes"
 	"time"
 )
 
@@ -21,7 +22,8 @@ type Task struct {
 	TaskKey              *string          `db:"task_key" json:"-" validate:"required" description:"The task key."`
 	AllowUnauthenticated bool             `db:"allow_unauthenticated" json:"allow_unauthenticated" description:"Whether the task can be accessed without authentication"`
 	TaskName             string           `db:"task_name" json:"task_name" validate:"required" description:"The task name."`
-	Output               map[string]any   `db:"output" json:"output" description:"The task output."`
+	Output               *TaskOutput      `db:"output" json:"output" description:"The task output."`
+	TaskInfo             *TaskInfo        `db:"task_info" json:"task_info" description:"The task info."`
 	Statuses             []map[string]any `db:"statuses" json:"statuses" validate:"required" description:"The task statuses."`
 	TaskForRaw           *string          `db:"task_for" json:"-" description:"The entity this task is for." ci:"internal"`
 	TaskFor              *TaskFor         `db:"-" json:"task_for" description:"The entity this task is for."`
@@ -34,4 +36,20 @@ type Task struct {
 type TaskFor struct {
 	ID         string `json:"id" description:"The ID of the entity the task is for"`
 	TargetType string `json:"target_type" description:"The type of the entity the task is for"`
+}
+
+// TaskOutput is the output of a task
+type TaskOutput struct {
+	Filename   string        `json:"filename"`
+	Segregated bool          `json:"segregated"` // If this flag is set, then the stored output will be stored in $taskForSimplexFormat/$taskName/$taskId/$filename instead of $taskId/$filename
+	Buffer     *bytes.Buffer `json:"-"`
+}
+
+// Information on a task
+type TaskInfo struct {
+	TaskID     string        `json:"task_id"`
+	Name       string        `json:"name"`
+	TaskFor    *TaskFor      `json:"task_for" description:"The entity this task is for."`
+	TaskFields any           `json:"task_fields"`
+	Expiry     time.Duration `json:"expiry"`
 }

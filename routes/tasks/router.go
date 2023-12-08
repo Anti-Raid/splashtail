@@ -35,4 +35,15 @@ func (b Router) Routes(r *chi.Mux) {
 			},
 		},
 	}.Route(r)
+
+	uapi.Route{
+		Pattern: "/tasks/{id}/ioauth/download-link",
+		OpId:    "get_task",
+		Method:  uapi.GET,
+		Docs:    get_task.Docs,
+		Handler: get_task.Route,
+		ExtData: map[string]any{
+			"ioauth": []string{"identify", "guilds"},
+		},
+	}.Route(r)
 }

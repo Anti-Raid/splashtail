@@ -1,6 +1,7 @@
 package tasks
 
 import (
+	"fmt"
 	"splashtail/types"
 	"strings"
 
@@ -52,4 +53,12 @@ func FormatTaskForSimplex(fu *types.TaskFor) string {
 	}
 
 	return cases.Lower(language.English).String(fu.TargetType) + "/" + fu.ID
+}
+
+func GetPathFromOutput(tInfo *types.TaskInfo, outp *types.TaskOutput) string {
+	if outp.Segregated {
+		return fmt.Sprintf("%s/%s/%s/%s", FormatTaskForSimplex(tInfo.TaskFor), tInfo.Name, tInfo.TaskID, outp.Filename)
+	} else {
+		return fmt.Sprintf("tasks/%s", tInfo.TaskID)
+	}
 }

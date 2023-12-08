@@ -1,7 +1,6 @@
 package tasks
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"splashtail/state"
@@ -24,21 +23,6 @@ func Pointer[T any](v T) *T {
 	return &v
 }
 
-// TaskOutput is the output of a task
-type TaskOutput struct {
-	Filename   string        `json:"filename"`
-	Segregated bool          `json:"segregated"` // If this flag is set, then the stored output will be stored in $taskForSimplexFormat/$taskName/$taskId/$filename instead of $taskId/$filename
-	Buffer     *bytes.Buffer `json:"-"`
-}
-
-type TaskInfo struct {
-	TaskID     string         `json:"task_id"`
-	Name       string         `json:"name"`
-	TaskFor    *types.TaskFor `json:"task_for" description:"The entity this task is for."`
-	TaskFields any            `json:"task_fields"`
-	Expiry     time.Duration  `json:"expiry"`
-}
-
 type TaskSet struct {
 	TaskID string `json:"task_id"`
 }
@@ -49,10 +33,10 @@ type Task interface {
 	Validate() error
 
 	// Exec executes the task returning an output if any
-	Exec(l *zap.Logger, tx pgx.Tx) (*TaskOutput, error)
+	Exec(l *zap.Logger, tx pgx.Tx) (*types.TaskOutput, error)
 
 	// Returns the info on a task
-	Info() *TaskInfo
+	Info() *types.TaskInfo
 
 	// Set the output of the task
 	Set(set *TaskSet) Task
@@ -71,7 +55,7 @@ func CreateTask(ctx context.Context, task Task, allowUnauthenticated bool) (Task
 	taskKey := crypto.RandString(128)
 	var taskId string
 
-	err := state.Pool.QueryRow(ctx, "INSERT INTO tasks (task_name, task_key, task_for, expiry, output, allow_unauthenticated) VALUES ($1, $2, $3, $4, $5, $6) RETURNING task_id",
+	err := state.Pool.QueryRow(ctx, "INSERT INTO tasks (task_name, task_key, task_for, expiry, output, task_info;, allow_unauthenticated) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING task_id",
 		tInfo.Name,
 		taskKey,
 		FormatTaskFor(tInfo.TaskFor),
@@ -83,6 +67,7 @@ func CreateTask(ctx context.Context, task Task, allowUnauthenticated bool) (Task
 			return &tInfo.Expiry
 		}(),
 		nil,
+		tInfo,
 		allowUnauthenticated,
 	).Scan(&taskId)
 
@@ -183,13 +168,7 @@ func NewTask(task Task) {
 
 		err = state.ObjectStorage.Save(
 			state.Context,
-			func(outp *TaskOutput) string {
-				if outp.Segregated {
-					return fmt.Sprintf("%s/%s/%s/%s", FormatTaskForSimplex(tInfo.TaskFor), tInfo.Name, tInfo.TaskID, outp.Filename)
-				} else {
-					return fmt.Sprintf("tasks/%s", tInfo.TaskID)
-				}
-			}(outp),
+			GetPathFromOutput(tInfo, outp),
 			outp.Filename,
 			outp.Buffer,
 			0,

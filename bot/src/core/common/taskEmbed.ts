@@ -6,6 +6,8 @@ export const createTaskEmbed = (ctx: CommandContext, task: Task): ContextEdit =>
     let taskStatuses: string[] = []
     let taskStatusesLength = 0
 
+    let taskState = task?.state
+
     for(let status of task.statuses) {
         if(taskStatusesLength > 2500) {
             // Keep removing elements from start of array until we are under 2500 characters
@@ -35,21 +37,20 @@ export const createTaskEmbed = (ctx: CommandContext, task: Task): ContextEdit =>
         taskStatusesLength += (add.length > 500 ? 500 : add.length)
     }
 
-    let description = `:white_check_mark: Task state: ${task?.state}\n\n${taskStatuses.join("\n")}`
+    let description = `:white_check_mark: Task state: ${taskState}\n\n${taskStatuses.join("\n")}`
     let components: Component[] = []
 
-    if(task?.state == "completed") {
-        if(task?.output?.path) {
-            description += `\n\n:link: [Download](${ctx.client.apiUrl}/ioauth/tasks/${task?.task_id}/download)`
+    if(taskState == "completed") {
+        if(task?.output?.filename) {
+            description += `\n\n:link: [Download](${ctx.client.apiUrl}/tasks/${task?.task_id}/ioauth/download-link?task_key=${task?.task_key})`
 
             components.push(
-                new ActionRowBuilder(
-                )
+                new ActionRowBuilder()
                 .addComponents(
                     new ButtonBuilder()
                     .setLabel("Download")
                     .setStyle(ButtonStyle.Link)
-                    .setURL(`${ctx.client.apiUrl}/ioauth/tasks/${task?.task_id}/download`)
+                    .setURL(`${ctx.client.apiUrl}/tasks/${task?.task_id}/ioauth/download-link?task_key=${task?.task_key}`)
                     .setEmoji("📥")
                 )
                 .toJSON()
@@ -62,7 +63,7 @@ export const createTaskEmbed = (ctx: CommandContext, task: Task): ContextEdit =>
     .setDescription(description)
     .setColor("Green")
 
-    if(task?.state == "completed") {
+    if(taskState == "completed") {
         embed.setFooter({
             text: "Backup created successfully"
         })

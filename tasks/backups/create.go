@@ -252,7 +252,7 @@ func (t *ServerBackupCreateTask) Validate() error {
 	return nil
 }
 
-func (t *ServerBackupCreateTask) Exec(l *zap.Logger, tx pgx.Tx) (*tasks.TaskOutput, error) {
+func (t *ServerBackupCreateTask) Exec(l *zap.Logger, tx pgx.Tx) (*types.TaskOutput, error) {
 	l.Info("Beginning backup")
 
 	if t.BackupOpts.MaxMessages == 0 {
@@ -558,14 +558,14 @@ func (t *ServerBackupCreateTask) Exec(l *zap.Logger, tx pgx.Tx) (*tasks.TaskOutp
 		return nil, fmt.Errorf("error writing backup: %w", err)
 	}
 
-	return &tasks.TaskOutput{
+	return &types.TaskOutput{
 		Filename: "antiraid-backup.iblfile",
 		Buffer:   &outputBuf,
 	}, nil
 }
 
-func (t *ServerBackupCreateTask) Info() *tasks.TaskInfo {
-	return &tasks.TaskInfo{
+func (t *ServerBackupCreateTask) Info() *types.TaskInfo {
+	return &types.TaskInfo{
 		TaskID: t.TaskID,
 		Name:   "create_backup",
 		TaskFor: &types.TaskFor{
@@ -573,7 +573,6 @@ func (t *ServerBackupCreateTask) Info() *tasks.TaskInfo {
 			TargetType: types.TargetTypeServer,
 		},
 		TaskFields: t,
-		Expiry:     1 * time.Hour,
 	}
 }
 
