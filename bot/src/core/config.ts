@@ -25,8 +25,15 @@ export interface DiscordAuth {
     can_use_bot: string[]
 }
 
+export interface Instatus {
+    page_id: string,
+    token: string,
+    metrics: { [key: string]: string }
+}
+
 export interface Config {
     discord_auth: DiscordAuth,
     servers: Servers,
     bot_lists: BotList[],
+    instatus: Instatus,
 }

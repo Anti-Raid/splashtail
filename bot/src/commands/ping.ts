@@ -14,7 +14,7 @@ let command: Command = {
 				new EmbedBuilder()
 					.setColor("Orange")
 					.setDescription(
-						`Checking Discord Websocket Latency & Discord Interaction Roundtrip Latency...`
+						`Checking Local Websocket Latency & Discord Interaction Roundtrip Latency...`
 					),
 			],
 			fetchReply: true,
@@ -24,7 +24,10 @@ let command: Command = {
 			reply.createdTimestamp - ctx.interaction.createdTimestamp
 		);
 
-		await ctx.edit({
+        //await fetch(`https://api.instatus.com/v1/${ctx.client.config.instatus.page_id}/metrics/${ctx.client.config.instatus.metrics.}`)
+		console.log(ctx.client.config.instatus);
+        
+        await ctx.edit({
 			embeds: [
 				new EmbedBuilder().setColor("Blue").addFields(
 					{

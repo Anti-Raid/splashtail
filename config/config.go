@@ -115,3 +115,9 @@ type BotListAction struct {
 	URLFormat  string            `yaml:"url_format" comment:"Must be u#{url}?[key1]={key2} (brackets means that anything can be substituted in)"`
 	DataFormat map[string]string `yaml:"data_format" comment:"Must be {key1}={key2} (brackets means that anything can be substituted in)"`
 }
+
+type Instatus struct {
+	PageID string `yaml:"page_id" comment:"Instatus Page ID" validate:"required"`
+	Token string `yaml:"token" comment:"Instatus Page API Token" validate:"required"`
+	Metrics map[string]string `yaml:"metrics" comment:"Metrics. Must be {name}={value} <brackets mean that anything can be substituted in>`
+}
