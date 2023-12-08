@@ -344,7 +344,7 @@ func (t *ServerBackupCreateTask) Exec(l *zap.Logger, tx pgx.Tx) (*types.TaskOutp
 	}
 
 	if len(g.Roles) == 0 {
-		l.Info("Backing up guild roles", zap.String("taskId", t.TaskID))
+		l.Info("Backing up guild roles")
 
 		// Fetch roles of guild
 		roles, err := state.Discord.GuildRoles(t.ServerID)
@@ -357,7 +357,7 @@ func (t *ServerBackupCreateTask) Exec(l *zap.Logger, tx pgx.Tx) (*types.TaskOutp
 	}
 
 	if len(g.Stickers) == 0 {
-		l.Info("Backing up guild stickers", zap.String("taskId", t.TaskID))
+		l.Info("Backing up guild stickers")
 
 		// Fetch stickers of guild
 		stickers, err := state.Discord.Request("GET", discordgo.EndpointGuildStickers(t.ServerID), nil)
@@ -386,7 +386,7 @@ func (t *ServerBackupCreateTask) Exec(l *zap.Logger, tx pgx.Tx) (*types.TaskOutp
 
 	// Backup messages
 	if t.BackupOpts.BackupMessages {
-		l.Info("Calculating message backup allocations", zap.String("taskId", t.TaskID))
+		l.Info("Calculating message backup allocations")
 
 		// Create channel map to allow for easy channel lookup
 		var channelMap map[string]*discordgo.Channel = make(map[string]*discordgo.Channel)

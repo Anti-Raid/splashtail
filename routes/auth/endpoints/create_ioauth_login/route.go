@@ -47,7 +47,7 @@ func Docs() *docs.Doc {
 func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 	limit, err := ratelimit.Ratelimit{
 		Expiry:      5 * time.Minute,
-		MaxRequests: 3,
+		MaxRequests: 15,
 		Bucket:      "ioauth",
 		Identifier: func(r *http.Request) string {
 			return d.Auth.ID
@@ -112,15 +112,17 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 		}
 	}
 
+	redirectUrl := state.Config.Sites.API.Parse() + "/ioauth/login"
+
 	if r.URL.Query().Get("code") == "" {
 		// Redirect user
 		return uapi.HttpResponse{
 			Status:   http.StatusTemporaryRedirect,
-			Redirect: fmt.Sprintf("https://discord.com/api/v10/oauth2/authorize?client_id=%s&redirect_uri=%s&response_type=code&scope=%s", state.Config.DiscordAuth.ClientID, r.URL.Scheme+r.URL.Hostname()+"/ioauth/confirm", strings.Join(rd.Scopes, "%20")),
+			Redirect: fmt.Sprintf("https://discord.com/api/v10/oauth2/authorize?client_id=%s&redirect_uri=%s&response_type=code&scope=%s&state=%s", state.Config.DiscordAuth.ClientID, redirectUrl, strings.Join(rd.Scopes, "%20"), rdB),
 		}
 	} else {
 		// Check for reuse
-		reused, err := state.Rueidis.Do(d.Context, state.Rueidis.B().Exists().Key("ioauth:{"+r.URL.Query().Get("code")+"}").Build()).AsInt64()
+		reused, err := state.Rueidis.Do(d.Context, state.Rueidis.B().Exists().Key("ioauth:codereuse:{"+r.URL.Query().Get("code")+"}").Build()).AsInt64()
 
 		if err != nil {
 			state.Logger.Error("Error while checking for reuse", zap.Error(err))
@@ -145,6 +147,7 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 			"client_secret": {state.Config.DiscordAuth.ClientSecret},
 			"grant_type":    {"authorization_code"},
 			"code":          {r.URL.Query().Get("code")},
+			"redirect_uri":  {redirectUrl},
 		}.Encode()))
 
 		if err != nil {
@@ -194,6 +197,17 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 			}
 		}
 
+		// Save to token reuse redis
+		err = state.Rueidis.Do(d.Context, state.Rueidis.B().Set().Key("ioauth:codereuse:{"+r.URL.Query().Get("code")+"}").Value("1").Ex(5*time.Minute).Build()).Error()
+
+		if err != nil {
+			state.Logger.Error("Error while saving token reuse", zap.Error(err))
+			return uapi.HttpResponse{
+				Status: http.StatusBadRequest,
+				Json:   types.ApiError{Message: "Error while saving token reuse: " + err.Error()},
+			}
+		}
+
 		err = json.NewDecoder(resp.Body).Decode(&iot)
 
 		if err != nil {
@@ -204,12 +218,14 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 			}
 		}
 
-		iot.Scopes = strings.Split(r.URL.Query().Get("scope"), "%20")
+		iot.Scope = strings.ReplaceAll(iot.Scope, "%20", " ")
+
+		iot.Scopes = strings.Split(iot.Scope, " ")
 
 		if len(iot.Scopes) != len(rd.Scopes) {
 			return uapi.HttpResponse{
 				Status: http.StatusBadRequest,
-				Json:   types.ApiError{Message: fmt.Sprintf("Invalid scopes. Expected %s, got %s", strings.Join(rd.Scopes, ", "), strings.Join(iot.Scopes, ", "))},
+				Json:   types.ApiError{Message: fmt.Sprintf("Invalid scopes. Expected %s, got %s (%s)", strings.Join(rd.Scopes, ", "), strings.Join(iot.Scopes, ", "), iot.Scope)},
 			}
 		}
 
@@ -356,8 +372,18 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 		}
 
 		// Create ioauth token
+		iotB, err := json.Marshal(iot)
+
+		if err != nil {
+			state.Logger.Error("Error while marshalling ioauth output", zap.Error(err))
+			return uapi.HttpResponse{
+				Status: http.StatusInternalServerError,
+				Json:   types.ApiError{Message: "Error while marshalling ioauth output: " + err.Error()},
+			}
+		}
+
 		token := crypto.RandString(32)
-		err = state.Rueidis.Do(d.Context, state.Rueidis.B().Set().Key("ioauth:{"+token+"}").Value(rdB).Ex(5*time.Minute).Build()).Error()
+		err = state.Rueidis.Do(d.Context, state.Rueidis.B().Set().Key("ioauth:{"+token+"}").Value(string(iotB)).Ex(5*time.Minute).Build()).Error()
 
 		if err != nil {
 			state.Logger.Error("Error while creating token", zap.Error(err))

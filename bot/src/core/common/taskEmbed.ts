@@ -42,7 +42,7 @@ export const createTaskEmbed = (ctx: CommandContext, task: Task): ContextEdit =>
 
     if(taskState == "completed") {
         if(task?.output?.filename) {
-            description += `\n\n:link: [Download](${ctx.client.apiUrl}/tasks/${task?.task_id}/ioauth/download-link?task_key=${task?.task_key})`
+            description += `\n\n:link: [Download](${ctx.client.apiUrl}/tasks/${task?.task_id}/ioauth/download-link)`
 
             components.push(
                 new ActionRowBuilder()
@@ -50,7 +50,7 @@ export const createTaskEmbed = (ctx: CommandContext, task: Task): ContextEdit =>
                     new ButtonBuilder()
                     .setLabel("Download")
                     .setStyle(ButtonStyle.Link)
-                    .setURL(`${ctx.client.apiUrl}/tasks/${task?.task_id}/ioauth/download-link?task_key=${task?.task_key}`)
+                    .setURL(`${ctx.client.apiUrl}/tasks/${task?.task_id}/ioauth/download-link`)
                     .setEmoji("📥")
                 )
                 .toJSON()

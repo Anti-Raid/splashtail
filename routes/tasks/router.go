@@ -2,6 +2,7 @@ package tasks
 
 import (
 	"splashtail/routes/tasks/endpoints/get_task"
+	"splashtail/routes/tasks/endpoints/ioauth_download_task"
 	"splashtail/types"
 
 	"github.com/go-chi/chi/v5"
@@ -40,8 +41,8 @@ func (b Router) Routes(r *chi.Mux) {
 		Pattern: "/tasks/{id}/ioauth/download-link",
 		OpId:    "get_task",
 		Method:  uapi.GET,
-		Docs:    get_task.Docs,
-		Handler: get_task.Route,
+		Docs:    ioauth_download_task.Docs,
+		Handler: ioauth_download_task.Route,
 		ExtData: map[string]any{
 			"ioauth": []string{"identify", "guilds"},
 		},

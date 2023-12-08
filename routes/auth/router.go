@@ -19,7 +19,7 @@ func (m Router) Routes(r *chi.Mux) {
 	uapi.Route{
 		Pattern: "/ioauth/login",
 		OpId:    "create_ioauth_login",
-		Method:  uapi.POST,
+		Method:  uapi.GET,
 		Docs:    create_ioauth_login.Docs,
 		Handler: create_ioauth_login.Route,
 	}.Route(r)

@@ -27,7 +27,7 @@ type Task struct {
 	Statuses             []map[string]any `db:"statuses" json:"statuses" validate:"required" description:"The task statuses."`
 	TaskForRaw           *string          `db:"task_for" json:"-" description:"The entity this task is for." ci:"internal"`
 	TaskFor              *TaskFor         `db:"-" json:"task_for" description:"The entity this task is for."`
-	Expiry               time.Duration    `db:"expiry" json:"expiry" validate:"required" description:"The task expiry."`
+	Expiry               *time.Duration   `db:"expiry" json:"expiry" validate:"required" description:"The task expiry."`
 	State                string           `db:"state" json:"state" validate:"required" description:"The tasks current state (pending/completed etc)."`
 	CreatedAt            time.Time        `db:"created_at" json:"created_at" description:"The time the task was created."`
 }

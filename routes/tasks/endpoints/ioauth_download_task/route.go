@@ -141,21 +141,14 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 		return uapi.DefaultResponse(http.StatusInternalServerError)
 	}
 
-	if task.TaskKey != nil {
-		if *task.TaskKey != r.URL.Query().Get("task_key") {
-			return uapi.HttpResponse{
-				Status: http.StatusUnauthorized,
-				Json:   types.ApiError{Message: "Invalid task key"},
-			}
-		}
-	}
-
 	if task.TaskInfo == nil {
 		return uapi.HttpResponse{
 			Status: http.StatusNotFound,
 			Json:   types.ApiError{Message: "Task info not found"},
 		}
 	}
+
+	task.TaskInfo.TaskID = taskId
 
 	if task.Output == nil {
 		return uapi.HttpResponse{

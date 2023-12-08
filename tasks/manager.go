@@ -55,7 +55,7 @@ func CreateTask(ctx context.Context, task Task, allowUnauthenticated bool) (Task
 	taskKey := crypto.RandString(128)
 	var taskId string
 
-	err := state.Pool.QueryRow(ctx, "INSERT INTO tasks (task_name, task_key, task_for, expiry, output, task_info;, allow_unauthenticated) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING task_id",
+	err := state.Pool.QueryRow(ctx, "INSERT INTO tasks (task_name, task_key, task_for, expiry, output, task_info, allow_unauthenticated) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING task_id",
 		tInfo.Name,
 		taskKey,
 		FormatTaskFor(tInfo.TaskFor),
