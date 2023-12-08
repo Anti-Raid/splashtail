@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"splashtail/config"
+	"splashtail/objectstorage"
 
 	"github.com/bwmarrin/discordgo"
 	mproc "github.com/cheesycod/mewld/proc"
@@ -30,7 +31,7 @@ import (
 var (
 	Pool                    *pgxpool.Pool
 	Redis                   *redis.Client  // Used by dovewing and other services etc.
-	Ruedis                  rueidis.Client // where perf is needed
+	Rueidis                 rueidis.Client // where perf is needed
 	DovewingPlatformDiscord *dovewing.DiscordState
 	Discord                 *discordgo.Session
 	Logger                  *zap.Logger
@@ -38,6 +39,7 @@ var (
 	Validator               = validator.New()
 	MewldInstanceList       *mproc.InstanceList
 	BotUser                 *discordgo.User
+	ObjectStorage           *objectstorage.ObjectStorage
 
 	Config *config.Config
 )
@@ -88,24 +90,27 @@ func Setup() {
 
 	Logger = snippets.CreateZap()
 
+	// Postgres
 	Pool, err = pgxpool.New(Context, Config.Meta.PostgresURL)
 
 	if err != nil {
 		panic(err)
 	}
 
+	// Reuidis
 	ruOptions, err := rueidis.ParseURL(Config.Meta.RedisURL.Parse())
 
 	if err != nil {
 		panic(err)
 	}
 
-	Ruedis, err = rueidis.NewClient(ruOptions)
+	Rueidis, err = rueidis.NewClient(ruOptions)
 
 	if err != nil {
 		panic(err)
 	}
 
+	// Redis
 	rOptions, err := redis.ParseURL(Config.Meta.RedisURL.Parse())
 
 	if err != nil {
@@ -118,6 +123,14 @@ func Setup() {
 		panic(err)
 	}
 
+	// Object Storage
+	ObjectStorage, err = objectstorage.New(&Config.ObjectStorage)
+
+	if err != nil {
+		panic(err)
+	}
+
+	// Discordgo
 	Discord, err = discordgo.New("Bot " + Config.DiscordAuth.Token)
 
 	if err != nil {
@@ -147,7 +160,7 @@ func Setup() {
 		Logger:  Logger,
 		Context: Context,
 		PlatformUserCache: hredis.RedisHotCache[dovetypes.PlatformUser]{
-			Redis: Redis,
+			Redis:  Redis,
 			Prefix: "uobj__",
 		},
 		UserExpiryTime: 8 * time.Hour,

@@ -11,7 +11,6 @@ import (
 	_ "image/png"
 	"io"
 	"net/http"
-	"os"
 	"slices"
 	"splashtail/state"
 	"splashtail/tasks"
@@ -246,7 +245,7 @@ type ServerBackupCreateTask struct {
 
 // $SecureStorage/guilds/$guildId/backups/$taskId
 func (t *ServerBackupCreateTask) dir() string {
-	return fmt.Sprintf("%s/guilds/%s/backups/%s", state.Config.Meta.SecureStorage, t.ServerID, t.TaskID)
+	return fmt.Sprintf("guilds/%s/backups/%s", t.ServerID, t.TaskID)
 }
 
 // $SecureStorage/guilds/$guildId/backups/$taskId/backup.arbackup
@@ -558,29 +557,21 @@ func (t *ServerBackupCreateTask) Exec(l *zap.Logger, tx pgx.Tx) error {
 		return fmt.Errorf("error writing metadata: %w", err)
 	}
 
-	// Create dir
-	err = os.MkdirAll(t.dir(), 0700)
+	// Save file
+	var outputBuf bytes.Buffer
+
+	err = f.WriteOutput(&outputBuf)
 
 	if err != nil {
-		l.Error("Failed to create directory", zap.Error(err))
-		return fmt.Errorf("error creating directory: %w", err)
-	}
-
-	// Write backup to path
-	file, err := os.Create(t.path())
-
-	if err != nil {
-		l.Error("Failed to create file", zap.Error(err))
-		return fmt.Errorf("error creating file: %w", err)
-	}
-
-	defer file.Close()
-
-	err = f.WriteOutput(file)
-
-	if err != nil {
-		l.Error("Failed to write backup", zap.Error(err))
+		l.Error("Failed to write backup to temporary buffer", zap.Error(err))
 		return fmt.Errorf("error writing backup: %w", err)
+	}
+
+	err = state.ObjectStorage.Save(state.Context, t.dir(), "antiraid-backup.iblfile", &outputBuf, 0)
+
+	if err != nil {
+		l.Error("Failed to save backup", zap.Error(err))
+		return fmt.Errorf("error saving backup: %w", err)
 	}
 
 	l.Info("Successfully created backup")

@@ -42,14 +42,15 @@ func (d *Differs[T]) Production() T {
 }
 
 type Config struct {
-	DiscordAuth   DiscordAuth   `yaml:"discord_auth" validate:"required"`
-	Sites         Sites         `yaml:"sites" validate:"required"`
-	Channels      Channels      `yaml:"channels" validate:"required"`
-	Roles         Roles         `yaml:"roles" validate:"required"`
-	JAPI          JAPI          `yaml:"japi" validate:"required"`
-	Notifications Notifications `yaml:"notifications" validate:"required"`
-	Servers       Servers       `yaml:"servers" validate:"required"`
-	Meta          Meta          `yaml:"meta" validate:"required"`
+	DiscordAuth   DiscordAuth         `yaml:"discord_auth" validate:"required"`
+	Sites         Sites               `yaml:"sites" validate:"required"`
+	Channels      Channels            `yaml:"channels" validate:"required"`
+	Roles         Roles               `yaml:"roles" validate:"required"`
+	JAPI          JAPI                `yaml:"japi" validate:"required"`
+	Notifications Notifications       `yaml:"notifications" validate:"required"`
+	Servers       Servers             `yaml:"servers" validate:"required"`
+	Meta          Meta                `yaml:"meta" validate:"required"`
+	ObjectStorage ObjectStorageConfig `yaml:"object_storage" validate:"required"`
 }
 
 type DiscordAuth struct {
@@ -92,7 +93,6 @@ type Meta struct {
 	RedisURL        Differs[string] `yaml:"redis_url" default:"redis://localhost:6379" comment:"Redis URL" validate:"required"`
 	Port            Differs[string] `yaml:"port" default:":8081" comment:"Port to run the server on" validate:"required"`
 	CDNPath         string          `yaml:"cdn_path" default:"/failuremgmt/cdn/antiraid" comment:"CDN Path" validate:"required"`
-	SecureStorage   string          `yaml:"secure_storage" default:"/failuremgmt/sec/antiraid" comment:"Blob Storage URL" validate:"required"`
 	VulgarList      []string        `yaml:"vulgar_list" default:"fuck,suck,shit,kill" validate:"required"`
 	UrgentMentions  string          `yaml:"urgent_mentions" default:"<@&1061643797315993701>" comment:"Urgent mentions" validate:"required"`
 	Proxy           string          `yaml:"proxy" default:"http://127.0.0.1:3219" comment:"Popplio Proxy URL" validate:"required"`
@@ -116,8 +116,12 @@ type BotListAction struct {
 	DataFormat map[string]string `yaml:"data_format" comment:"Must be {key1}={key2} (brackets means that anything can be substituted in)"`
 }
 
-type Instatus struct {
-	PageID string `yaml:"page_id" comment:"Instatus Page ID" validate:"required"`
-	Token string `yaml:"token" comment:"Instatus Page API Token" validate:"required"`
-	Metrics map[string]string `yaml:"metrics" comment:"Metrics. Must be {name}={value} <brackets mean that anything can be substituted in>`
+// Some data such as backups can get quite large.
+// These are stored on a S3-like bucket such as DigitalOcean spaces
+type ObjectStorageConfig struct {
+	Type      string `yaml:"type" comment:"Must be one of s3-like or local" validate:"required" oneof:"s3-like local"`
+	Path      string `yaml:"path" comment:"If s3-like, this should be the name of the bucket. Otherwise, should be the path to the location to store to" validate:"required"`
+	Endpoint  string `yaml:"endpoint" comment:"Only for s3-like, this should be the endpoint to the bucket." validate:"required"`
+	AccessKey string `yaml:"access_key" comment:"Only for s3-like, this should be the access key to the bucket." validate:"required"`
+	SecretKey string `yaml:"secret_key" comment:"Only for s3-like, this should be the secret key to the bucket." validate:"required"`
 }

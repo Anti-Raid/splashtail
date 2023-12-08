@@ -33,6 +33,38 @@ func (d DefaultResponder) New(err string, ctx map[string]string) any {
 
 // Authorizes a request
 func Authorize(r uapi.Route, req *http.Request) (uapi.AuthData, uapi.HttpResponse, bool) {
+	if len(r.ExtData) > 0 {
+		// Immediate Oauth system (ioauth)
+		if a, ok := r.ExtData["ioauth"]; ok {
+			scopes, ok := a.(string)
+
+			if !ok {
+				return uapi.AuthData{}, uapi.HttpResponse{
+					Status: http.StatusInternalServerError,
+					Json:   types.ApiError{Message: "Internal server error: ioauth is not a string of scopes"},
+				}, false
+			}
+
+			if scopes == "" {
+				return uapi.AuthData{}, uapi.HttpResponse{
+					Status: http.StatusInternalServerError,
+					Json:   types.ApiError{Message: "Internal server error: No scopes provided for ioauth"},
+				}, false
+			}
+
+			// Check if the user is authorized
+			ioauthToken := req.URL.Query().Get("ioauth")
+
+			if ioauthToken == "" {
+				// Redirect to discord oauth
+				return uapi.AuthData{}, uapi.HttpResponse{
+					Status:   http.StatusTemporaryRedirect,
+					Redirect: "",
+				}, false
+			}
+		}
+	}
+
 	authHeader := req.Header.Get("Authorization")
 
 	if len(r.Auth) > 0 && authHeader == "" && !r.AuthOptional {
@@ -128,8 +160,8 @@ func Setup() {
 		Logger:    state.Logger,
 		Authorize: Authorize,
 		AuthTypeMap: map[string]string{
-			TargetTypeUser:   "User",
-			TargetTypeServer: "Server",
+			TargetTypeUser:   TargetTypeUser,
+			TargetTypeServer: TargetTypeServer,
 		},
 		Context: state.Context,
 		Constants: &uapi.UAPIConstants{
@@ -146,7 +178,7 @@ func Setup() {
 
 	ratelimit.SetupState(&ratelimit.RLState{
 		HotCache: hredis.RedisHotCache[int]{
-			Redis: state.Redis,
+			Redis:  state.Redis,
 			Prefix: "rl:",
 		},
 	})
