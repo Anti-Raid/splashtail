@@ -1,8 +1,8 @@
 package tasks
 
 import (
-	api "splashtail/api"
 	"splashtail/routes/tasks/endpoints/get_task"
+	"splashtail/types"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/infinitybotlist/eureka/uapi"
@@ -27,11 +27,11 @@ func (b Router) Routes(r *chi.Mux) {
 		Auth: []uapi.AuthType{
 			{
 				URLVar: "id",
-				Type:   api.TargetTypeServer,
+				Type:   types.TargetTypeServer,
 			},
 			{
 				URLVar: "id",
-				Type:   api.TargetTypeUser,
+				Type:   types.TargetTypeUser,
 			},
 		},
 	}.Route(r)

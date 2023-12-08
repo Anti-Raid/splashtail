@@ -6,6 +6,11 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const (
+	TargetTypeUser   = "User"
+	TargetTypeServer = "Server"
+)
+
 // A link is any extra link
 type Link struct {
 	Name  string `json:"name" description:"Name of the link. Links starting with an underscore are 'asset links' and are not visible"`

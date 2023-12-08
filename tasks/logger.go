@@ -31,7 +31,7 @@ func (m *MutLogger) add(p []byte) error {
 	}
 
 	// For us, this is just an array append of the json
-	_, err = state.Pool.Exec(state.Context, "UPDATE tasks SET statuses = array_append(statuses, $1) WHERE task_id = $2", data, m.taskId)
+	_, err = state.Pool.Exec(state.Context, "UPDATE tasks SET statuses = array_append(statuses, $1), last_updated = NOW() WHERE task_id = $2", data, m.taskId)
 
 	if err != nil {
 		return fmt.Errorf("failed to update statuses: %w", err)

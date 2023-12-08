@@ -17,11 +17,6 @@ import (
 	"golang.org/x/exp/slices"
 )
 
-const (
-	TargetTypeUser   = "User"
-	TargetTypeServer = "Server"
-)
-
 type DefaultResponder struct{}
 
 func (d DefaultResponder) New(err string, ctx map[string]string) any {
@@ -87,7 +82,7 @@ func Authorize(r uapi.Route, req *http.Request) (uapi.AuthData, uapi.HttpRespons
 		var urlIds []string
 
 		switch auth.Type {
-		case TargetTypeUser:
+		case types.TargetTypeUser:
 			// Check if the user exists with said API token only
 			var id pgtype.Text
 			var banned bool
@@ -103,13 +98,13 @@ func Authorize(r uapi.Route, req *http.Request) (uapi.AuthData, uapi.HttpRespons
 			}
 
 			authData = uapi.AuthData{
-				TargetType: TargetTypeUser,
+				TargetType: types.TargetTypeUser,
 				ID:         id.String,
 				Authorized: true,
 				Banned:     banned,
 			}
 			urlIds = []string{id.String}
-		case TargetTypeServer:
+		case types.TargetTypeServer:
 			var id pgtype.Text
 
 			err := state.Pool.QueryRow(state.Context, "SELECT id FROM guilds WHERE api_token = $1", strings.Replace(authHeader, "Server ", "", 1)).Scan(&id)
@@ -123,7 +118,7 @@ func Authorize(r uapi.Route, req *http.Request) (uapi.AuthData, uapi.HttpRespons
 			}
 
 			authData = uapi.AuthData{
-				TargetType: TargetTypeServer,
+				TargetType: types.TargetTypeServer,
 				ID:         id.String,
 				Authorized: true,
 			}
@@ -160,8 +155,8 @@ func Setup() {
 		Logger:    state.Logger,
 		Authorize: Authorize,
 		AuthTypeMap: map[string]string{
-			TargetTypeUser:   TargetTypeUser,
-			TargetTypeServer: TargetTypeServer,
+			types.TargetTypeUser:   types.TargetTypeUser,
+			types.TargetTypeServer: types.TargetTypeServer,
 		},
 		Context: state.Context,
 		Constants: &uapi.UAPIConstants{

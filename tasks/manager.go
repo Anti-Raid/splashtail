@@ -1,6 +1,7 @@
 package tasks
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"splashtail/state"
@@ -12,6 +13,7 @@ import (
 	"go.uber.org/zap"
 )
 
+// Task management core
 var TaskRegistry = map[string]Task{}
 
 func RegisterTask(task Task) {
@@ -22,16 +24,19 @@ func Pointer[T any](v T) *T {
 	return &v
 }
 
+// TaskOutput is the output of a task
 type TaskOutput struct {
-	Path string `json:"path"` // If a path, this is the place where the file should be
+	Filename   string        `json:"filename"`
+	Segregated bool          `json:"segregated"` // If this flag is set, then the stored output will be stored in $taskForSimplexFormat/$taskName/$taskId/$filename instead of $taskId/$filename
+	Buffer     *bytes.Buffer `json:"-"`
 }
 
 type TaskInfo struct {
-	TaskID     string        `json:"task_id"`
-	Name       string        `json:"name"`
-	For        *string       `json:"for"`
-	TaskFields any           `json:"task_fields"`
-	Expiry     time.Duration `json:"expiry"`
+	TaskID     string         `json:"task_id"`
+	Name       string         `json:"name"`
+	TaskFor    *types.TaskFor `json:"task_for" description:"The entity this task is for."`
+	TaskFields any            `json:"task_fields"`
+	Expiry     time.Duration  `json:"expiry"`
 }
 
 type TaskSet struct {
@@ -43,14 +48,11 @@ type Task interface {
 	// Validate validates the task
 	Validate() error
 
-	// Exec executes the task
-	Exec(l *zap.Logger, tx pgx.Tx) error
+	// Exec executes the task returning an output if any
+	Exec(l *zap.Logger, tx pgx.Tx) (*TaskOutput, error)
 
 	// Returns the info on a task
 	Info() *TaskInfo
-
-	// The output of the task
-	Output() *TaskOutput
 
 	// Set the output of the task
 	Set(set *TaskSet) Task
@@ -69,14 +71,18 @@ func CreateTask(ctx context.Context, task Task, allowUnauthenticated bool) (Task
 	taskKey := crypto.RandString(128)
 	var taskId string
 
-	err := state.Pool.QueryRow(ctx, "INSERT INTO tasks (task_name, task_key, for_user, expiry, output, allow_unauthenticated) VALUES ($1, $2, $3, $4, $5, $6) RETURNING task_id",
+	err := state.Pool.QueryRow(ctx, "INSERT INTO tasks (task_name, task_key, task_for, expiry, output, allow_unauthenticated) VALUES ($1, $2, $3, $4, $5, $6) RETURNING task_id",
 		tInfo.Name,
 		taskKey,
-		tInfo.For,
-		tInfo.Expiry,
-		map[string]any{
-			"meta": map[string]any{},
-		},
+		FormatTaskFor(tInfo.TaskFor),
+		func() *time.Duration {
+			if tInfo.Expiry == 0 {
+				return nil
+			}
+
+			return &tInfo.Expiry
+		}(),
+		nil,
 		allowUnauthenticated,
 	).Scan(&taskId)
 
@@ -93,6 +99,7 @@ func CreateTask(ctx context.Context, task Task, allowUnauthenticated bool) (Task
 		TaskName:             tInfo.Name,
 		TaskKey:              Pointer(taskKey),
 		AllowUnauthenticated: allowUnauthenticated,
+		TaskFor:              tInfo.TaskFor,
 		Expiry:               tInfo.Expiry,
 	}, nil
 }
@@ -120,8 +127,6 @@ func NewTask(task Task) {
 		}
 
 		if !done {
-			l.Error("Failed to complete task", zap.Any("data", tInfo.TaskFields))
-
 			_, err := state.Pool.Exec(state.Context, "UPDATE tasks SET state = $1 WHERE task_id = $2", "failed", tInfo.TaskID)
 
 			if err != nil {
@@ -141,10 +146,12 @@ func NewTask(task Task) {
 
 	defer tx.Rollback(state.Context)
 
-	if tInfo.For != nil {
-		_, err = tx.Exec(state.Context, "DELETE FROM tasks WHERE task_name = $1 AND task_id != $2 AND for_user = $3 AND state != 'completed'", tInfo.Name, tInfo.TaskID, tInfo.For)
+	// Flush out old tasks
+	tff := FormatTaskFor(tInfo.TaskFor)
+	if tff != nil {
+		_, err = tx.Exec(state.Context, "DELETE FROM tasks WHERE task_name = $1 AND task_id != $2 AND task_for = $3 AND state != 'completed'", tInfo.Name, tInfo.TaskID, tff)
 	} else {
-		_, err = tx.Exec(state.Context, "DELETE FROM tasks WHERE task_name = $1 AND task_id != $2 AND for_user IS NULL AND state != 'completed'", tInfo.Name, tInfo.TaskID)
+		_, err = tx.Exec(state.Context, "DELETE FROM tasks WHERE task_name = $1 AND task_id != $2 AND task_for IS NULL AND state != 'completed'", tInfo.Name, tInfo.TaskID)
 	}
 
 	if err != nil {
@@ -153,35 +160,43 @@ func NewTask(task Task) {
 	}
 
 	// Execute the task here
-	err = task.Exec(l, tx)
+	var taskState = "completed"
+	outp, err := task.Exec(l, tx)
 
 	if err != nil {
 		l.Error("Failed to execute task", zap.Error(err), zap.Any("data", tInfo.TaskFields))
+		taskState = "failed"
+	}
 
-		// Set task output
-		outp := task.Output()
-
-		if outp == nil {
-			outp = &TaskOutput{}
+	// Save output to object storage
+	if outp != nil {
+		if outp.Filename != "" {
+			outp.Filename = "unnamed." + crypto.RandString(16)
 		}
 
-		_, err := tx.Exec(state.Context, "UPDATE tasks SET state = $1, output = $2 WHERE task_id = $3", "failed", outp, tInfo.TaskID)
+		l.Info("Saving task output", zap.String("filename", outp.Filename))
+
+		err = state.ObjectStorage.Save(
+			state.Context,
+			func(outp *TaskOutput) string {
+				if outp.Segregated {
+					return fmt.Sprintf("%s/%s/%s/%s", FormatTaskForSimplex(tInfo.TaskFor), tInfo.Name, tInfo.TaskID, outp.Filename)
+				} else {
+					return fmt.Sprintf("tasks/%s", tInfo.TaskID)
+				}
+			}(outp),
+			outp.Filename,
+			outp.Buffer,
+			0,
+		)
 
 		if err != nil {
-			l.Error("Failed to update task", zap.Error(err), zap.Any("data", tInfo.TaskFields))
+			l.Error("Failed to save backup", zap.Error(err))
+			return
 		}
-
-		return
 	}
 
-	// Set task output
-	outp := task.Output()
-
-	if outp == nil {
-		outp = &TaskOutput{}
-	}
-
-	_, err = tx.Exec(state.Context, "UPDATE tasks SET output = $1, state = $2 WHERE task_id = $3", outp, "completed", tInfo.TaskID)
+	_, err = tx.Exec(state.Context, "UPDATE tasks SET output = $1, state = $2 WHERE task_id = $3", outp, taskState, tInfo.TaskID)
 
 	if err != nil {
 		l.Error("Failed to update task", zap.Error(err), zap.Any("data", tInfo.TaskFields))

@@ -3,9 +3,9 @@ package get_task
 import (
 	"errors"
 	"net/http"
-	"splashtail/api"
 	"splashtail/db"
 	state "splashtail/state"
+	"splashtail/tasks"
 	types "splashtail/types"
 	"strings"
 
@@ -64,6 +64,13 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 		}
 	}
 
+	if d.Auth.ID != entityId {
+		return uapi.HttpResponse{
+			Status: http.StatusInternalServerError,
+			Json:   types.ApiError{Message: "Internal server error: entityId != d.Auth.ID"},
+		}
+	}
+
 	// Delete expired tasks first
 	_, err := state.Pool.Exec(d.Context, "DELETE FROM tasks WHERE created_at + expiry < NOW()")
 
@@ -110,49 +117,34 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 			}
 		}
 
-		if task.ForUser != nil {
-			var forUserSplit = strings.Split(*task.ForUser, "/")
+		if task.TaskForRaw != nil {
+			task.TaskFor = tasks.ParseTaskFor(*task.TaskForRaw)
 
-			if len(forUserSplit) != 2 {
+			if task.TaskFor == nil {
 				return uapi.HttpResponse{
 					Status: http.StatusInternalServerError,
-					Json:   types.ApiError{Message: "Invalid task.ForUser"},
+					Json:   types.ApiError{Message: "Invalid task.TaskFor. Parsing error occurred"},
 				}
 			}
 
-			switch forUserSplit[0] {
-			case "g":
-				if d.Auth.TargetType != api.TargetTypeServer {
-					return uapi.HttpResponse{
-						Status: http.StatusForbidden,
-						Json:   types.ApiError{Message: "This task is not owned by your server!"},
-					}
-				}
-
-				if forUserSplit[1] != entityId {
-					return uapi.HttpResponse{
-						Status: http.StatusForbidden,
-						Json:   types.ApiError{Message: "This task is not owned by your server!"},
-					}
-				}
-			case "u":
-				if d.Auth.TargetType != api.TargetTypeUser {
-					return uapi.HttpResponse{
-						Status: http.StatusForbidden,
-						Json:   types.ApiError{Message: "This task is not owned by your user account!"},
-					}
-				}
-
-				if forUserSplit[1] != d.Auth.ID {
-					return uapi.HttpResponse{
-						Status: http.StatusForbidden,
-						Json:   types.ApiError{Message: "This task is not owned by your user account!"},
-					}
-				}
-			default:
+			if task.TaskFor.ID == "" || task.TaskFor.TargetType == "" {
 				return uapi.HttpResponse{
 					Status: http.StatusInternalServerError,
-					Json:   types.ApiError{Message: "Invalid task.ForUser"},
+					Json:   types.ApiError{Message: "Invalid task.TaskFor. Missing ID or TargetType"},
+				}
+			}
+
+			if task.TaskFor.TargetType != d.Auth.TargetType {
+				return uapi.HttpResponse{
+					Status: http.StatusForbidden,
+					Json:   types.ApiError{Message: "This task has a for of " + task.TaskFor.TargetType + " but you are authenticated as a" + d.Auth.TargetType + "!"},
+				}
+			}
+
+			if task.TaskFor.ID != d.Auth.ID {
+				return uapi.HttpResponse{
+					Status: http.StatusForbidden,
+					Json:   types.ApiError{Message: "You are not authorized to fetch this task!"},
 				}
 			}
 		}

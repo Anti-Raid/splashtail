@@ -14,6 +14,7 @@ import (
 	"slices"
 	"splashtail/state"
 	"splashtail/tasks"
+	"splashtail/types"
 	"splashtail/utils"
 	"time"
 
@@ -243,16 +244,6 @@ type ServerBackupCreateTask struct {
 	BackupOpts BackupOpts `json:"backup_opts"`
 }
 
-// $SecureStorage/guilds/$guildId/backups/$taskId
-func (t *ServerBackupCreateTask) dir() string {
-	return fmt.Sprintf("guilds/%s/backups/%s", t.ServerID, t.TaskID)
-}
-
-// $SecureStorage/guilds/$guildId/backups/$taskId/backup.arbackup
-func (t *ServerBackupCreateTask) path() string {
-	return t.dir() + "/backup.arbackup"
-}
-
 func (t *ServerBackupCreateTask) Validate() error {
 	if t.ServerID == "" {
 		return fmt.Errorf("server_id is required")
@@ -261,7 +252,7 @@ func (t *ServerBackupCreateTask) Validate() error {
 	return nil
 }
 
-func (t *ServerBackupCreateTask) Exec(l *zap.Logger, tx pgx.Tx) error {
+func (t *ServerBackupCreateTask) Exec(l *zap.Logger, tx pgx.Tx) (*tasks.TaskOutput, error) {
 	l.Info("Beginning backup")
 
 	if t.BackupOpts.MaxMessages == 0 {
@@ -273,19 +264,19 @@ func (t *ServerBackupCreateTask) Exec(l *zap.Logger, tx pgx.Tx) error {
 	}
 
 	if t.BackupOpts.PerChannel < minPerChannel {
-		return fmt.Errorf("per_channel cannot be less than %d", minPerChannel)
+		return nil, fmt.Errorf("per_channel cannot be less than %d", minPerChannel)
 	}
 
 	if t.BackupOpts.MaxMessages > totalMaxMessages {
-		return fmt.Errorf("max_messages cannot be greater than %d", totalMaxMessages)
+		return nil, fmt.Errorf("max_messages cannot be greater than %d", totalMaxMessages)
 	}
 
 	if t.BackupOpts.PerChannel > t.BackupOpts.MaxMessages {
-		return fmt.Errorf("per_channel cannot be greater than max_messages")
+		return nil, fmt.Errorf("per_channel cannot be greater than max_messages")
 	}
 
 	if t.BackupOpts.BackupAttachments && !t.BackupOpts.BackupMessages {
-		return fmt.Errorf("cannot backup attachments without messages")
+		return nil, fmt.Errorf("cannot backup attachments without messages")
 	}
 
 	if len(t.BackupOpts.SpecialAllocations) == 0 {
@@ -295,13 +286,13 @@ func (t *ServerBackupCreateTask) Exec(l *zap.Logger, tx pgx.Tx) error {
 	f, err := iblfile.NewAutoEncryptedFile("")
 
 	if err != nil {
-		return fmt.Errorf("error creating file: %w", err)
+		return nil, fmt.Errorf("error creating file: %w", err)
 	}
 
 	err = writeMsgpack(f, "backup_opts", t.BackupOpts)
 
 	if err != nil {
-		return fmt.Errorf("error writing backup options: %w", err)
+		return nil, fmt.Errorf("error writing backup options: %w", err)
 	}
 
 	// Fetch the bots member object in the guild
@@ -309,13 +300,13 @@ func (t *ServerBackupCreateTask) Exec(l *zap.Logger, tx pgx.Tx) error {
 	m, err := state.Discord.GuildMember(t.ServerID, state.BotUser.ID)
 
 	if err != nil {
-		return fmt.Errorf("error fetching bots member object: %w", err)
+		return nil, fmt.Errorf("error fetching bots member object: %w", err)
 	}
 
 	err = writeMsgpack(f, "dbg/bot", m) // Write bot member object to debug section
 
 	if err != nil {
-		return fmt.Errorf("error writing bot member object: %w", err)
+		return nil, fmt.Errorf("error writing bot member object: %w", err)
 	}
 
 	l.Info("Backing up server settings")
@@ -324,7 +315,7 @@ func (t *ServerBackupCreateTask) Exec(l *zap.Logger, tx pgx.Tx) error {
 	g, err := state.Discord.Guild(t.ServerID)
 
 	if err != nil {
-		return fmt.Errorf("error fetching guild: %w", err)
+		return nil, fmt.Errorf("error fetching guild: %w", err)
 	}
 
 	// With servers now backed up, get the base permissions now
@@ -334,7 +325,7 @@ func (t *ServerBackupCreateTask) Exec(l *zap.Logger, tx pgx.Tx) error {
 	err = writeMsgpack(f, "dbg/basePerms", basePerms)
 
 	if err != nil {
-		return fmt.Errorf("error writing base permissions: %w", err)
+		return nil, fmt.Errorf("error writing base permissions: %w", err)
 	}
 
 	l.Info("Backing up guild channels")
@@ -343,7 +334,7 @@ func (t *ServerBackupCreateTask) Exec(l *zap.Logger, tx pgx.Tx) error {
 	channels, err := state.Discord.GuildChannels(t.ServerID)
 
 	if err != nil {
-		return fmt.Errorf("error fetching channels: %w", err)
+		return nil, fmt.Errorf("error fetching channels: %w", err)
 	}
 
 	g.Channels = channels
@@ -359,7 +350,7 @@ func (t *ServerBackupCreateTask) Exec(l *zap.Logger, tx pgx.Tx) error {
 		roles, err := state.Discord.GuildRoles(t.ServerID)
 
 		if err != nil {
-			return fmt.Errorf("error fetching roles: %w", err)
+			return nil, fmt.Errorf("error fetching roles: %w", err)
 		}
 
 		g.Roles = roles
@@ -372,7 +363,7 @@ func (t *ServerBackupCreateTask) Exec(l *zap.Logger, tx pgx.Tx) error {
 		stickers, err := state.Discord.Request("GET", discordgo.EndpointGuildStickers(t.ServerID), nil)
 
 		if err != nil {
-			return fmt.Errorf("error fetching stickers: %w", err)
+			return nil, fmt.Errorf("error fetching stickers: %w", err)
 		}
 
 		var s []*discordgo.Sticker
@@ -380,7 +371,7 @@ func (t *ServerBackupCreateTask) Exec(l *zap.Logger, tx pgx.Tx) error {
 		err = json.Unmarshal(stickers, &s)
 
 		if err != nil {
-			return fmt.Errorf("error unmarshalling stickers: %w", err)
+			return nil, fmt.Errorf("error unmarshalling stickers: %w", err)
 		}
 
 		g.Stickers = s
@@ -390,7 +381,7 @@ func (t *ServerBackupCreateTask) Exec(l *zap.Logger, tx pgx.Tx) error {
 	err = writeMsgpack(f, "core", cb)
 
 	if err != nil {
-		return fmt.Errorf("error writing core backup: %w", err)
+		return nil, fmt.Errorf("error writing core backup: %w", err)
 	}
 
 	// Backup messages
@@ -412,13 +403,13 @@ func (t *ServerBackupCreateTask) Exec(l *zap.Logger, tx pgx.Tx) error {
 			if c, ok := channelMap[channelID]; ok {
 				// Error on bad channels for special allocations
 				if !slices.Contains(allowedChannelTypes, c.Type) {
-					return fmt.Errorf("special allocation channel %s is not a valid channel type", c.ID)
+					return nil, fmt.Errorf("special allocation channel %s is not a valid channel type", c.ID)
 				}
 
 				perms := utils.MemberChannelPerms(basePerms, g, m, c)
 
 				if perms&discordgo.PermissionViewChannel != discordgo.PermissionViewChannel {
-					return fmt.Errorf("special allocation channel %s is not readable by the bot", c.ID)
+					return nil, fmt.Errorf("special allocation channel %s is not readable by the bot", c.ID)
 				}
 
 				if countMap(perChannelBackupMap) >= t.BackupOpts.MaxMessages {
@@ -455,7 +446,7 @@ func (t *ServerBackupCreateTask) Exec(l *zap.Logger, tx pgx.Tx) error {
 		err = writeMsgpack(f, "dbg/chanAlloc", perChannelBackupMap)
 
 		if err != nil {
-			return fmt.Errorf("error writing channel allocations: %w", err)
+			return nil, fmt.Errorf("error writing channel allocations: %w", err)
 		}
 
 		// Backup messages
@@ -475,7 +466,7 @@ func (t *ServerBackupCreateTask) Exec(l *zap.Logger, tx pgx.Tx) error {
 					l.Error("error backing up channel messages", zap.Error(err))
 					leftovers = allocation
 				} else {
-					return fmt.Errorf("error backing up channel messages: %w", err)
+					return nil, fmt.Errorf("error backing up channel messages: %w", err)
 				}
 			} else {
 				if len(msgs) < allocation {
@@ -486,7 +477,7 @@ func (t *ServerBackupCreateTask) Exec(l *zap.Logger, tx pgx.Tx) error {
 				err = writeMsgpack(f, "messages/"+channelID, msgs)
 
 				if err != nil {
-					return fmt.Errorf("error writing messages: %w", err)
+					return nil, fmt.Errorf("error writing messages: %w", err)
 				}
 
 				for _, msg := range msgs {
@@ -509,14 +500,14 @@ func (t *ServerBackupCreateTask) Exec(l *zap.Logger, tx pgx.Tx) error {
 								l.Error("error backing up channel messages [leftovers]", zap.Error(err))
 								continue // Try again
 							} else {
-								return fmt.Errorf("error backing up channel messages [leftovers]: %w", err)
+								return nil, fmt.Errorf("error backing up channel messages [leftovers]: %w", err)
 							}
 						} else {
 							// Write messages of this section
 							err = writeMsgpack(f, "messages/"+channelID, msgs)
 
 							if err != nil {
-								return fmt.Errorf("error writing messages [leftovers]: %w", err)
+								return nil, fmt.Errorf("error writing messages [leftovers]: %w", err)
 							}
 
 							for _, msg := range msgs {
@@ -545,7 +536,7 @@ func (t *ServerBackupCreateTask) Exec(l *zap.Logger, tx pgx.Tx) error {
 
 	if err != nil {
 		l.Error("Error creating backup", zap.Error(err))
-		return fmt.Errorf("error getting format: %w", err)
+		return nil, fmt.Errorf("error getting format: %w", err)
 	}
 
 	metadata.FormatVersion = ifmt.Version
@@ -554,7 +545,7 @@ func (t *ServerBackupCreateTask) Exec(l *zap.Logger, tx pgx.Tx) error {
 
 	if err != nil {
 		l.Error("Error creating backup", zap.Error(err))
-		return fmt.Errorf("error writing metadata: %w", err)
+		return nil, fmt.Errorf("error writing metadata: %w", err)
 	}
 
 	// Save file
@@ -564,34 +555,24 @@ func (t *ServerBackupCreateTask) Exec(l *zap.Logger, tx pgx.Tx) error {
 
 	if err != nil {
 		l.Error("Failed to write backup to temporary buffer", zap.Error(err))
-		return fmt.Errorf("error writing backup: %w", err)
+		return nil, fmt.Errorf("error writing backup: %w", err)
 	}
 
-	err = state.ObjectStorage.Save(state.Context, t.dir(), "antiraid-backup.iblfile", &outputBuf, 0)
-
-	if err != nil {
-		l.Error("Failed to save backup", zap.Error(err))
-		return fmt.Errorf("error saving backup: %w", err)
-	}
-
-	l.Info("Successfully created backup")
-
-	return nil
+	return &tasks.TaskOutput{
+		Filename: "antiraid-backup.iblfile",
+	}, nil
 }
 
 func (t *ServerBackupCreateTask) Info() *tasks.TaskInfo {
 	return &tasks.TaskInfo{
-		TaskID:     t.TaskID,
-		Name:       "create_backup",
-		For:        tasks.Pointer("g/" + t.ServerID),
+		TaskID: t.TaskID,
+		Name:   "create_backup",
+		TaskFor: &types.TaskFor{
+			ID:         t.ServerID,
+			TargetType: types.TargetTypeServer,
+		},
 		TaskFields: t,
 		Expiry:     1 * time.Hour,
-	}
-}
-
-func (t *ServerBackupCreateTask) Output() *tasks.TaskOutput {
-	return &tasks.TaskOutput{
-		Path: t.path(),
 	}
 }
 

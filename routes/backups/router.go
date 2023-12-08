@@ -1,8 +1,8 @@
 package backups
 
 import (
-	"splashtail/api"
 	"splashtail/routes/backups/endpoints/create_backup"
+	"splashtail/types"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/infinitybotlist/eureka/uapi"
@@ -26,7 +26,7 @@ func (m Router) Routes(r *chi.Mux) {
 		Auth: []uapi.AuthType{
 			{
 				URLVar: "id",
-				Type:   api.TargetTypeServer,
+				Type:   types.TargetTypeServer,
 			},
 		},
 	}.Route(r)

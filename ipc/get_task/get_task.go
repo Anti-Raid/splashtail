@@ -4,9 +4,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"splashtail/api"
 	"splashtail/db"
 	"splashtail/state"
+	"splashtail/tasks"
 	"splashtail/types"
 	"strings"
 
@@ -104,36 +104,23 @@ func GetTask(c *mredis.LauncherCmd) (*mredis.LauncherCmd, error) {
 		}
 	}
 
-	if task.ForUser != nil {
-		if targetId == "" || targetType == "" {
-			return nil, fmt.Errorf("invalid target provided")
+	if task.TaskForRaw != nil {
+		task.TaskFor = tasks.ParseTaskFor(*task.TaskForRaw)
+
+		if task.TaskFor == nil {
+			return nil, fmt.Errorf("invalid task.TaskFor [task.TaskFor was parsed to nil]")
 		}
 
-		var forUserSplit = strings.Split(*task.ForUser, "/")
-
-		if len(forUserSplit) != 2 {
-			return nil, fmt.Errorf("invalid task.ForUser")
+		if task.TaskFor.ID == "" || task.TaskFor.TargetType == "" {
+			return nil, fmt.Errorf("invalid task.TaskFor")
 		}
 
-		switch forUserSplit[0] {
-		case "g":
-			if targetType != api.TargetTypeServer {
-				return nil, fmt.Errorf("this task is not owned by your server")
-			}
+		if task.TaskFor.TargetType != targetType {
+			return nil, fmt.Errorf("this task is meant for '%s' but you are a '%s'", task.TaskFor.TargetType, targetType)
+		}
 
-			if forUserSplit[1] != targetId {
-				return nil, fmt.Errorf("this task is not owned by your server")
-			}
-		case "u":
-			if targetType != api.TargetTypeUser {
-				return nil, fmt.Errorf("this task is not owned by your user account")
-			}
-
-			if forUserSplit[1] != targetId {
-				return nil, fmt.Errorf("this task is not owned by your user account")
-			}
-		default:
-			return nil, fmt.Errorf("invalid task.ForUser")
+		if task.TaskFor.ID != targetId {
+			return nil, fmt.Errorf("you are not authorized to view this task")
 		}
 	}
 
