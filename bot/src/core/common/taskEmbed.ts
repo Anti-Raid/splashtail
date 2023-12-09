@@ -40,7 +40,7 @@ export const createTaskEmbed = (ctx: CommandContext, task: Task): ContextEdit =>
     let emoji = ":white_check_mark:"
 
     switch (taskState) {
-        case "running":
+        case "pending":
             emoji = ":hourglass_flowing_sand:"
             break;
         case "completed":
