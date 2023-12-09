@@ -4,7 +4,8 @@ import { AntiRaid } from './client';
 import { Status } from 'discord.js';
 import EventEmitter from 'events';
 import { randomBytes } from 'crypto';
-import { KV, Task, TaskCreateResponse } from './coreTypes/tasks';
+import { KV } from './coreTypes/kv';
+import { Task, TaskCreateResponse } from '../generatedTypes/types';
 
 export interface DiagResponse {
     Nonce: string

@@ -1,8 +1,8 @@
 import { Colors, EmbedBuilder, PermissionsBitField } from "discord.js";
 import { Command, FinalResponse } from "../core/client";
 import { SlashCommandBuilder } from "@discordjs/builders";
-import { TaskCreateResponse } from "../core/coreTypes/tasks";
 import { createTaskEmbed } from "../core/common/taskEmbed";
+import { TaskCreateResponse } from "../generatedTypes/types";
 
 /*
 type BackupOpts struct {

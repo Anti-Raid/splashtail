@@ -18,14 +18,13 @@ ts:
 	~/go/bin/tygo generate
 
 	# Copy over go types
-	mkdir $(CDN_PATH)/dev/bindings/splashtail/go
+	mkdir -p $(CDN_PATH)/dev/bindings/splashtail/go
+	mkdir -p bot/src/generatedTypes
 	cp -rf types $(CDN_PATH)/dev/bindings/splashtail/go
 
 	# Patch to change package name to 'splashtail_types'
 	sed -i 's:package types:package splashtail_types:g' $(CDN_PATH)/dev/bindings/splashtail/go/types/*
-
-	# Add enums
-	STAGING_API=true ibl genenums
+	cp -rf $(CDN_PATH)/dev/bindings/splashtail/*.ts bot/src/generatedTypes 
 
 promoteprod:
 	rm -rf ../prod2

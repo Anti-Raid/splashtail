@@ -1,6 +1,6 @@
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder } from "discord.js";
-import { Task } from "../coreTypes/tasks";
 import { CommandContext, ContextEdit, Component } from "../context";
+import { Task } from "../../generatedTypes/types";
 
 export const createTaskEmbed = (ctx: CommandContext, task: Task): ContextEdit => {
     let taskStatuses: string[] = []
@@ -37,7 +37,21 @@ export const createTaskEmbed = (ctx: CommandContext, task: Task): ContextEdit =>
         taskStatusesLength += (add.length > 500 ? 500 : add.length)
     }
 
-    let description = `:white_check_mark: Task state: ${taskState}\n\n${taskStatuses.join("\n")}`
+    let emoji = ":white_check_mark:"
+
+    switch (taskState) {
+        case "running":
+            emoji = ":hourglass_flowing_sand:"
+            break;
+        case "completed":
+            emoji = ":white_check_mark:"
+            break;
+        case "failed":
+            emoji = ":x:"
+            break;
+    }
+
+    let description = `${emoji} Task state: ${taskState}\nTask ID: ${task?.task_id}\n\n${taskStatuses.join("\n")}`
     let components: Component[] = []
 
     if(taskState == "completed") {
