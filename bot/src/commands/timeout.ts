@@ -1,9 +1,7 @@
-import { EmbedBuilder, GuildMember, GuildMemberRoleManager, PermissionsBitField, Routes } from "discord.js";
+import { GuildMember, PermissionsBitField } from "discord.js";
 import { Command, FinalResponse } from "../core/client";
 import { SlashCommandBuilder } from "@discordjs/builders";
-import { addAuditLogEvent, addGuildAction, editAuditLogEvent } from "../core/common/guilds/auditor";
-import sql from "../core/db";
-import { channelPurger, parseDuration } from "../core/common/utils";
+import { parseDuration } from "../core/common/utils";
 import { moderateUser } from "../core/common/guilds/mod";
 
 let command: Command = {

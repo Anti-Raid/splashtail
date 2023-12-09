@@ -21,6 +21,7 @@ import (
 	"splashtail/api"
 	"splashtail/constants"
 	"splashtail/ipc"
+	"splashtail/jobs"
 	"splashtail/mewld_web"
 	"splashtail/routes/auth"
 	"splashtail/routes/core"
@@ -118,6 +119,8 @@ func main() {
 	docs.AddSecuritySchema("Server", "Server-Auth", "Requires a server token. Should be prefixed with `Server ` in `Authorization` header.")
 
 	api.Setup()
+
+	jobs.StartAllJobs()
 
 	r := chi.NewRouter()
 

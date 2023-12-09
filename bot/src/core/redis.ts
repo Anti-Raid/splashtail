@@ -4,7 +4,6 @@ import { AntiRaid } from './client';
 import { Status } from 'discord.js';
 import EventEmitter from 'events';
 import { randomBytes } from 'crypto';
-import { KV } from './coreTypes/kv';
 import { Task, TaskCreateResponse } from '../generatedTypes/types';
 
 export interface DiagResponse {
@@ -39,10 +38,10 @@ For a splashtail scoped IPC command, respCluster must be -1 and originCluster (i
 export interface LauncherCmd {
     scope: string
     action: string
-    args?: KV
+    args?: { [key: string]: any}
     command_id?: string
     output?: any
-    data?: KV
+    data?: { [key: string]: any}
 }
 
 /**
@@ -151,7 +150,7 @@ export class BotRedis extends EventEmitter {
     /**
      * Creates an action log on mewld
      */
-    async createMewldActionLog(event: string, data: KV) {
+    async createMewldActionLog(event: string, data: { [key: string]: any}) {
         let payload: LauncherCmd = {
             scope: "launcher",
             action: "action_logs",
@@ -225,7 +224,7 @@ export class BotRedis extends EventEmitter {
         let handle: IPCRequestHandle | null = null
         let task: Task | null = null
         let start_from = 0
-        let taskStatuses: KV[] = []
+        let taskStatuses: { [key: string]: any}[] = []
 
         let tcrB = JSON.stringify(tcr) // Optimization to avoid constant serialization
 

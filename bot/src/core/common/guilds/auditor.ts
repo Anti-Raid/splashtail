@@ -97,7 +97,7 @@ export interface CreateGuildAction {
      */
     auditLogEntry: string,
     /**
-     * The expiry of the action
+     * The expiry of the action [as in, when does it no longer make sense to try and execute the action]
      */
     expiry: string
 }
@@ -111,7 +111,7 @@ export interface CreateGuildAction {
 export const addGuildAction = async (sql: postgres.Sql<{}> | postgres.TransactionSql<{}>, action: CreateGuildAction): Promise<string> => {
     let fAction = {
         ...action,
-        expiry: `INTERVAL '${action.expiry}'`
+        expiry: `INTERVAL '${action.expiry}'`,
     }
 
     let id =  await sql`
