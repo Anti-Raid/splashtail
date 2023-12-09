@@ -108,6 +108,14 @@ func NewTask(tcr *types.TaskCreateResponse, task TaskDefinition) {
 
 	l.Info("Creating task", zap.String("taskId", tcr.TaskID), zap.String("taskName", tInfo.Name), zap.Any("data", tInfo.TaskFields))
 
+	// Set task state to running
+	_, err := state.Pool.Exec(state.Context, "UPDATE tasks SET state = $1 WHERE task_id = $2", "running", tcr.TaskID)
+
+	if err != nil {
+		l.Error("Failed to update task", zap.Error(err), zap.Any("data", tInfo.TaskFields))
+		return
+	}
+
 	tx, err := state.Pool.Begin(state.Context)
 
 	if err != nil {
@@ -130,7 +138,6 @@ func NewTask(tcr *types.TaskCreateResponse, task TaskDefinition) {
 		return
 	}
 
-	// Execute the task here
 	var taskState = "completed"
 	outp, err := task.Exec(l, tx, tcr)
 
