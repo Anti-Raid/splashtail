@@ -23,7 +23,6 @@ import (
 	"splashtail/ipc"
 	"splashtail/mewld_web"
 	"splashtail/routes/auth"
-	"splashtail/routes/backups"
 	"splashtail/routes/core"
 	"splashtail/routes/platform"
 	"splashtail/routes/tasks"
@@ -134,7 +133,6 @@ func main() {
 	routers := []uapi.APIRouter{
 		// Use same order as routes folder
 		auth.Router{},
-		backups.Router{},
 		core.Router{},
 		platform.Router{},
 		tasks.Router{},

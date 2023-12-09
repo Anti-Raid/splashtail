@@ -115,3 +115,15 @@ func (o *ObjectStorage) GetUrl(ctx context.Context, dir, filename string, urlExp
 		return nil, fmt.Errorf("operation not supported for object storage type %s", o.c.Type)
 	}
 }
+
+// Deletes a file
+func (o *ObjectStorage) Delete(ctx context.Context, dir, filename string) error {
+	switch o.c.Type {
+	case "local":
+		return os.Remove(filepath.Join(o.c.Path, dir, filename))
+	case "s3-like":
+		return o.minio.RemoveObject(ctx, o.c.Path, dir+"/"+filename, minio.RemoveObjectOptions{})
+	default:
+		return fmt.Errorf("operation not supported for object storage type %s", o.c.Type)
+	}
+}

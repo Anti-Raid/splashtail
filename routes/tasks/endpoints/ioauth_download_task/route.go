@@ -148,8 +148,6 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 		}
 	}
 
-	task.TaskInfo.TaskID = taskId
-
 	if task.Output == nil {
 		return uapi.HttpResponse{
 			Status: http.StatusNotFound,
@@ -228,7 +226,7 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 	}
 
 	// Now get URL
-	url, err := state.ObjectStorage.GetUrl(d.Context, tasks.GetPathFromOutput(task.TaskInfo, task.Output), task.Output.Filename, 10*time.Minute)
+	url, err := state.ObjectStorage.GetUrl(d.Context, tasks.GetPathFromOutput(task.TaskID, task.TaskInfo, task.Output), task.Output.Filename, 10*time.Minute)
 
 	if err != nil {
 		state.Logger.Error("Failed to get url for task", zap.Error(err))

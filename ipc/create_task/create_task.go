@@ -20,7 +20,7 @@ func CreateTask(c *mredis.LauncherCmd) (*mredis.LauncherCmd, error) {
 		return nil, fmt.Errorf("invalid task name provided")
 	}
 
-	task, ok := tasks.TaskRegistry[taskName]
+	baseTaskDef, ok := tasks.TaskDefinitionRegistry[taskName]
 
 	if !ok {
 		return nil, fmt.Errorf("task %s does not exist on registry", taskName)
@@ -32,21 +32,21 @@ func CreateTask(c *mredis.LauncherCmd) (*mredis.LauncherCmd, error) {
 		return nil, fmt.Errorf("error marshalling task args: %w", err)
 	}
 
-	typ := task // Copy task
+	task := baseTaskDef // Copy task
 
-	err = json.Unmarshal(tBytes, &typ)
+	err = json.Unmarshal(tBytes, &task)
 
 	if err != nil {
 		return nil, fmt.Errorf("error unmarshalling task args: %w", err)
 	}
 
-	task, tcr, err := tasks.CreateTask(state.Context, typ, false)
+	tcr, err := tasks.CreateTask(state.Context, task)
 
 	if err != nil {
 		return nil, fmt.Errorf("error creating task: %w", err)
 	}
 
-	go tasks.NewTask(task)
+	go tasks.NewTask(tcr, task)
 
 	return &mredis.LauncherCmd{
 		Output: tcr,

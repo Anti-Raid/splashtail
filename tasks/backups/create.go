@@ -13,7 +13,6 @@ import (
 	"net/http"
 	"slices"
 	"splashtail/state"
-	"splashtail/tasks"
 	"splashtail/types"
 	"splashtail/utils"
 	"time"
@@ -26,10 +25,6 @@ import (
 	"github.com/vmihailenco/msgpack/v5"
 	"go.uber.org/zap"
 )
-
-func init() {
-	tasks.RegisterTask(&ServerBackupCreateTask{})
-}
 
 func countMap(m map[string]int) int {
 	var count int
@@ -234,9 +229,6 @@ func writeMsgpack(f *iblfile.AutoEncryptedFile, section string, data any) error 
 
 // A task to create backup a server
 type ServerBackupCreateTask struct {
-	// The ID of the task
-	TaskID string `json:"task_id"`
-
 	// The ID of the server
 	ServerID string `json:"server_id"`
 
@@ -252,7 +244,7 @@ func (t *ServerBackupCreateTask) Validate() error {
 	return nil
 }
 
-func (t *ServerBackupCreateTask) Exec(l *zap.Logger, tx pgx.Tx) (*types.TaskOutput, error) {
+func (t *ServerBackupCreateTask) Exec(l *zap.Logger, tx pgx.Tx, tcr *types.TaskCreateResponse) (*types.TaskOutput, error) {
 	l.Info("Beginning backup")
 
 	if t.BackupOpts.MaxMessages == 0 {
@@ -566,18 +558,11 @@ func (t *ServerBackupCreateTask) Exec(l *zap.Logger, tx pgx.Tx) (*types.TaskOutp
 
 func (t *ServerBackupCreateTask) Info() *types.TaskInfo {
 	return &types.TaskInfo{
-		TaskID: t.TaskID,
-		Name:   "create_backup",
+		Name: "create_backup",
 		TaskFor: &types.TaskFor{
 			ID:         t.ServerID,
 			TargetType: types.TargetTypeServer,
 		},
 		TaskFields: t,
 	}
-}
-
-func (t *ServerBackupCreateTask) Set(set *tasks.TaskSet) tasks.Task {
-	t.TaskID = set.TaskID
-
-	return t
 }

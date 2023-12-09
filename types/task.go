@@ -5,13 +5,11 @@ import (
 	"time"
 )
 
+// TaskCreateRequest is the response upon creating a task
 type TaskCreateResponse struct {
-	TaskID               string        `json:"task_id" description:"The ID of the newly created task"`
-	TaskKey              *string       `json:"task_key" description:"The key of the newly created task"`
-	AllowUnauthenticated bool          `json:"allow_unauthenticated" description:"Whether the task can be accessed without authentication"`
-	TaskName             string        `db:"task_name" json:"task_name" validate:"required" description:"The task name."`
-	TaskFor              *TaskFor      `db:"-" json:"task_for" description:"The entity this task is for."`
-	Expiry               time.Duration `db:"expiry" json:"expiry" validate:"required" description:"The task expiry."`
+	TaskID   string    `json:"task_id" description:"The ID of the newly created task"`
+	TaskKey  *string   `json:"task_key" description:"The key of the newly created task"`
+	TaskInfo *TaskInfo `json:"task_info" description:"The task info."`
 }
 
 // @ci table=tasks
@@ -47,9 +45,9 @@ type TaskOutput struct {
 
 // Information on a task
 type TaskInfo struct {
-	TaskID     string        `json:"task_id"`
-	Name       string        `json:"name"`
-	TaskFor    *TaskFor      `json:"task_for" description:"The entity this task is for."`
-	TaskFields any           `json:"task_fields"`
-	Expiry     time.Duration `json:"expiry"`
+	Name                 string        `json:"name" description:"The task name."`
+	TaskFor              *TaskFor      `json:"task_for" description:"The entity this task is for."`
+	AllowUnauthenticated bool          `json:"allow_unauthenticated" description:"Whether the task can be accessed without authentication"`
+	TaskFields           any           `json:"task_fields" description:"The task fields."`
+	Expiry               time.Duration `json:"expiry"`
 }
