@@ -55,6 +55,8 @@ github.com/bwmarrin/discordgo v0.27.2-0.20230922130345-1f0b57f11024 h1:fHuF+yROO
 github.com/bwmarrin/discordgo v0.27.2-0.20230922130345-1f0b57f11024/go.mod h1:NJZpH+1AfhIcyQsPeuBKsUtYrRnjkyu0kIVMCHkZtRY=
 github.com/bwmarrin/discordgo v0.27.2-0.20231204103810-44e4acb7d545 h1:qw072CCAXe2mS8lGPA9L+/O0oiLsHMS8pQNu9rQRz8Y=
 github.com/bwmarrin/discordgo v0.27.2-0.20231204103810-44e4acb7d545/go.mod h1:NJZpH+1AfhIcyQsPeuBKsUtYrRnjkyu0kIVMCHkZtRY=
+github.com/bwmarrin/discordgo v0.27.2-0.20231208125110-f7800efc52b8 h1:X+R81uuT6lfRznTtp2Vg7EfMY/8UTvrKGt1rHP5LeBo=
+github.com/bwmarrin/discordgo v0.27.2-0.20231208125110-f7800efc52b8/go.mod h1:NJZpH+1AfhIcyQsPeuBKsUtYrRnjkyu0kIVMCHkZtRY=
 github.com/bytedance/sonic v1.5.0/go.mod h1:ED5hyg4y6t3/9Ku1R6dU/4KyJ48DZ4jPhfY1O2AihPM=
 github.com/bytedance/sonic v1.10.0-rc/go.mod h1:ElCzW+ufi8qKqNW0FY314xriJhyJhuoJ3gFZdAHF7NM=
 github.com/bytedance/sonic v1.10.2 h1:GQebETVBxYB7JGWJtLBi07OVzWwt+8dWA00gEVW2ZFE=
@@ -230,6 +232,10 @@ github.com/infinitybotlist/iblfile v0.0.0-20231207094702-3b69ec47ec5e h1:H1AGLn+
 github.com/infinitybotlist/iblfile v0.0.0-20231207094702-3b69ec47ec5e/go.mod h1:j214HiwMfNCQ/udfZR33O5zv2/FPdSKIEYkMIm7tOjc=
 github.com/infinitybotlist/iblfile v0.0.0-20231207161249-fec2b8fd0884 h1:aJgkb8oS9OfWHMkeiXdYgciorevNy6WyQpPNQOFzlXo=
 github.com/infinitybotlist/iblfile v0.0.0-20231207161249-fec2b8fd0884/go.mod h1:j214HiwMfNCQ/udfZR33O5zv2/FPdSKIEYkMIm7tOjc=
+github.com/infinitybotlist/iblfile v0.0.0-20231209143957-ceee195d4985 h1:X/40ypsdpaeAkfqDT3eqJt0pXBTjK+6T3Vy08Ib0oPY=
+github.com/infinitybotlist/iblfile v0.0.0-20231209143957-ceee195d4985/go.mod h1:j214HiwMfNCQ/udfZR33O5zv2/FPdSKIEYkMIm7tOjc=
+github.com/infinitybotlist/iblfile v0.0.0-20231209150300-3b2e6c00dc7d h1:v26ACOzIjTO4iiPHWSH5yxRyCeKvHBhkM4vd9IMfG/4=
+github.com/infinitybotlist/iblfile v0.0.0-20231209150300-3b2e6c00dc7d/go.mod h1:j214HiwMfNCQ/udfZR33O5zv2/FPdSKIEYkMIm7tOjc=
 github.com/invopop/yaml v0.2.0 h1:7zky/qH+O0DwAyoobXUqvVBwgBFRxKoQ/3FjcVpjTMY=
 github.com/invopop/yaml v0.2.0/go.mod h1:2XuRLgs/ouIrW3XNzuNj7J3Nvu/Dig5MXvbCEdiBN3Q=
 github.com/jackc/pgpassfile v1.0.0 h1:/6Hmqy13Ss2zCq62VdNG8tM1wchn8zjSGOBJ6icpsIM=
@@ -259,6 +265,8 @@ github.com/julienschmidt/httprouter v1.3.0/go.mod h1:JR6WtHb+2LUe8TCKY3cZOxFyyO8
 github.com/kisielk/gotool v1.0.0/go.mod h1:XhKaO+MFFWcvkIS/tQcRk01m1F5IRFswLeQ+oQHNcck=
 github.com/klauspost/compress v1.16.7 h1:2mk3MPGNzKyxErAw8YaohYh69+pa4sIQSC0fPGCFR9I=
 github.com/klauspost/compress v1.16.7/go.mod h1:ntbaceVETuRiXiv4DpjP66DpAtAGkEQskQzEyD//IeE=
+github.com/klauspost/compress v1.17.4 h1:Ej5ixsIri7BrIjBkRZLTo6ghwrEtHFk7ijlczPW4fZ4=
+github.com/klauspost/compress v1.17.4/go.mod h1:/dCuZOvVtNoHsyb+cuJD3itjs3NbnF6KH9zAO4BDxPM=
 github.com/klauspost/cpuid/v2 v2.0.1/go.mod h1:FInQzS24/EEf25PyTYn52gqo7WaD8xa0213Md/qVLRg=
 github.com/klauspost/cpuid/v2 v2.0.9/go.mod h1:FInQzS24/EEf25PyTYn52gqo7WaD8xa0213Md/qVLRg=
 github.com/klauspost/cpuid/v2 v2.2.6 h1:ndNyv040zDGIDh8thGkXYjnFtiN02M1PVVF+JE/48xc=

@@ -5,7 +5,7 @@ go 1.21
 toolchain go1.21.4
 
 require (
-	github.com/bwmarrin/discordgo v0.27.2-0.20231204103810-44e4acb7d545
+	github.com/bwmarrin/discordgo v0.27.2-0.20231208125110-f7800efc52b8
 	github.com/getkin/kin-openapi v0.122.0 // indirect
 	github.com/go-chi/chi/v5 v5.0.10
 	github.com/infinitybotlist/eureka v0.6.5
@@ -16,7 +16,8 @@ require (
 require (
 	github.com/cheesycod/mewld v0.0.0-20231205144150-8a2e01d14a33
 	github.com/cloudflare/tableflip v1.2.3
-	github.com/infinitybotlist/iblfile v0.0.0-20231207161249-fec2b8fd0884
+	github.com/infinitybotlist/iblfile v0.0.0-20231209150300-3b2e6c00dc7d
+	github.com/minio/minio-go/v7 v7.0.65
 	github.com/redis/rueidis v1.0.23
 	github.com/sirupsen/logrus v1.9.3
 	github.com/vmihailenco/msgpack/v5 v5.4.1
@@ -45,13 +46,12 @@ require (
 	github.com/google/go-cmp v0.5.9 // indirect
 	github.com/google/uuid v1.4.0 // indirect
 	github.com/joho/godotenv v1.5.1 // indirect
-	github.com/klauspost/compress v1.16.7 // indirect
+	github.com/klauspost/compress v1.17.4 // indirect
 	github.com/klauspost/cpuid/v2 v2.2.6 // indirect
 	github.com/leodido/go-urn v1.2.4 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/matttproud/golang_protobuf_extensions v1.0.2-0.20181231171920-c182affec369 // indirect
 	github.com/minio/md5-simd v1.1.2 // indirect
-	github.com/minio/minio-go/v7 v7.0.65 // indirect
 	github.com/minio/sha256-simd v1.0.1 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
@@ -89,7 +89,7 @@ require (
 	github.com/mailru/easyjson v0.7.7 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	golang.org/x/crypto v0.16.0 // indirect
-	golang.org/x/text v0.14.0 // indirect
+	golang.org/x/text v0.14.0
 )
 
 require (

@@ -25,7 +25,7 @@ func Pointer[T any](v T) *T {
 
 // TaskDefinition is the definition for any task that can be executed on splashtail
 type TaskDefinition interface {
-	// Validate validates the task
+	// Validate validates the task and sets up state if needed
 	Validate() error
 
 	// Exec executes the task returning an output if any
@@ -37,7 +37,17 @@ type TaskDefinition interface {
 
 // Sets up a task
 func CreateTask(ctx context.Context, task TaskDefinition) (*types.TaskCreateResponse, error) {
+	err := task.Validate()
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to validate task: %w", err)
+	}
+
 	tInfo := task.Info()
+
+	if !tInfo.Valid {
+		return nil, fmt.Errorf("invalid task info")
+	}
 
 	_, ok := TaskDefinitionRegistry[tInfo.Name]
 
@@ -48,7 +58,7 @@ func CreateTask(ctx context.Context, task TaskDefinition) (*types.TaskCreateResp
 	taskKey := crypto.RandString(128)
 	var taskId string
 
-	err := state.Pool.QueryRow(ctx, "INSERT INTO tasks (task_name, task_key, task_for, expiry, output, task_info, allow_unauthenticated) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING task_id",
+	err = state.Pool.QueryRow(ctx, "INSERT INTO tasks (task_name, task_key, task_for, expiry, output, task_info, allow_unauthenticated) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING task_id",
 		tInfo.Name,
 		taskKey,
 		FormatTaskFor(tInfo.TaskFor),
@@ -105,8 +115,6 @@ func NewTask(tcr *types.TaskCreateResponse, task TaskDefinition) {
 			}
 		}
 	}()
-
-	l.Info("Creating task", zap.String("taskId", tcr.TaskID), zap.String("taskName", tInfo.Name), zap.Any("data", tInfo.TaskFields))
 
 	// Set task state to running
 	_, err := state.Pool.Exec(state.Context, "UPDATE tasks SET state = $1 WHERE task_id = $2", "running", tcr.TaskID)

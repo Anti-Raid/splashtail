@@ -119,9 +119,10 @@ type BotListAction struct {
 // Some data such as backups can get quite large.
 // These are stored on a S3-like bucket such as DigitalOcean spaces
 type ObjectStorageConfig struct {
-	Type      string `yaml:"type" comment:"Must be one of s3-like or local" validate:"required" oneof:"s3-like local"`
-	Path      string `yaml:"path" comment:"If s3-like, this should be the name of the bucket. Otherwise, should be the path to the location to store to"`
-	Endpoint  string `yaml:"endpoint" comment:"Only for s3-like, this should be the endpoint to the bucket."`
-	AccessKey string `yaml:"access_key" comment:"Only for s3-like, this should be the access key to the bucket."`
-	SecretKey string `yaml:"secret_key" comment:"Only for s3-like, this should be the secret key to the bucket."`
+	Type        string `yaml:"type" comment:"Must be one of s3-like or local" validate:"required" oneof:"s3-like local"`
+	Path        string `yaml:"path" comment:"If s3-like, this should be the name of the bucket. Otherwise, should be the path to the location to store to"`
+	Endpoint    string `yaml:"endpoint" comment:"Only for s3-like, this should be the endpoint to the bucket."`
+	CdnEndpoint string `yaml:"cdn_endpoint" comment:"Only for s3-like (and DigitalOcean mainly), this should be the CDN endpoint to the bucket."`
+	AccessKey   string `yaml:"access_key" comment:"Only for s3-like, this should be the access key to the bucket."`
+	SecretKey   string `yaml:"secret_key" comment:"Only for s3-like, this should be the secret key to the bucket."`
 }

@@ -50,4 +50,5 @@ type TaskInfo struct {
 	AllowUnauthenticated bool          `json:"allow_unauthenticated" description:"Whether the task can be accessed without authentication"`
 	TaskFields           any           `json:"task_fields" description:"The task fields."`
 	Expiry               time.Duration `json:"expiry"`
+	Valid                bool          `json:"valid"`
 }

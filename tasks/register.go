@@ -7,4 +7,5 @@ import (
 // Add all tasks here
 func init() {
 	RegisterTaskDefinition(&backups.ServerBackupCreateTask{})
+	RegisterTaskDefinition(&backups.ServerBackupRestoreTask{})
 }

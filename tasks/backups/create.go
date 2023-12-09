@@ -113,20 +113,6 @@ func createAttachmentBlob(logger *zap.Logger, msg *discordgo.Message) ([]Attachm
 			url = attachment.URL
 		}
 
-		/*if !strings.HasPrefix(url, "https://cdn.discordapp.com") {
-			attachments = append(attachments, AttachmentMetadata{
-				ID:            attachment.ID,
-				Name:          attachment.Filename,
-				URL:           attachment.URL,
-				ProxyURL:      attachment.ProxyURL,
-				Size:          attachment.Size,
-				ContentType:   attachment.ContentType,
-				StorageFormat: AttachmentStorageFormatRemote,
-				Errors:        []string{},
-			})
-			continue
-		}*/
-
 		resp, err := http.Get(url)
 
 		if err != nil {
@@ -233,7 +219,9 @@ type ServerBackupCreateTask struct {
 	ServerID string `json:"server_id"`
 
 	// Backup options
-	BackupOpts BackupOpts `json:"backup_opts"`
+	Options BackupCreateOpts `json:"options"`
+
+	valid bool `json:"-"`
 }
 
 func (t *ServerBackupCreateTask) Validate() error {
@@ -241,47 +229,49 @@ func (t *ServerBackupCreateTask) Validate() error {
 		return fmt.Errorf("server_id is required")
 	}
 
+	if t.Options.MaxMessages == 0 {
+		t.Options.MaxMessages = totalMaxMessages
+	}
+
+	if t.Options.PerChannel == 0 {
+		t.Options.PerChannel = defaultPerChannel
+	}
+
+	if t.Options.PerChannel < minPerChannel {
+		return fmt.Errorf("per_channel cannot be less than %d", minPerChannel)
+	}
+
+	if t.Options.MaxMessages > totalMaxMessages {
+		return fmt.Errorf("max_messages cannot be greater than %d", totalMaxMessages)
+	}
+
+	if t.Options.PerChannel > t.Options.MaxMessages {
+		return fmt.Errorf("per_channel cannot be greater than max_messages")
+	}
+
+	if t.Options.BackupAttachments && !t.Options.BackupMessages {
+		return fmt.Errorf("cannot backup attachments without messages")
+	}
+
+	if len(t.Options.SpecialAllocations) == 0 {
+		t.Options.SpecialAllocations = make(map[string]int)
+	}
+
+	t.valid = true
+
 	return nil
 }
 
 func (t *ServerBackupCreateTask) Exec(l *zap.Logger, tx pgx.Tx, tcr *types.TaskCreateResponse) (*types.TaskOutput, error) {
 	l.Info("Beginning backup")
 
-	if t.BackupOpts.MaxMessages == 0 {
-		t.BackupOpts.MaxMessages = totalMaxMessages
-	}
-
-	if t.BackupOpts.PerChannel == 0 {
-		t.BackupOpts.PerChannel = defaultPerChannel
-	}
-
-	if t.BackupOpts.PerChannel < minPerChannel {
-		return nil, fmt.Errorf("per_channel cannot be less than %d", minPerChannel)
-	}
-
-	if t.BackupOpts.MaxMessages > totalMaxMessages {
-		return nil, fmt.Errorf("max_messages cannot be greater than %d", totalMaxMessages)
-	}
-
-	if t.BackupOpts.PerChannel > t.BackupOpts.MaxMessages {
-		return nil, fmt.Errorf("per_channel cannot be greater than max_messages")
-	}
-
-	if t.BackupOpts.BackupAttachments && !t.BackupOpts.BackupMessages {
-		return nil, fmt.Errorf("cannot backup attachments without messages")
-	}
-
-	if len(t.BackupOpts.SpecialAllocations) == 0 {
-		t.BackupOpts.SpecialAllocations = make(map[string]int)
-	}
-
-	f, err := iblfile.NewAutoEncryptedFile("")
+	f, err := iblfile.NewAutoEncryptedFile(t.Options.Encrypt, iblfile.DefaultHashMethod)
 
 	if err != nil {
 		return nil, fmt.Errorf("error creating file: %w", err)
 	}
 
-	err = writeMsgpack(f, "backup_opts", t.BackupOpts)
+	err = writeMsgpack(f, "backup_opts", t.Options)
 
 	if err != nil {
 		return nil, fmt.Errorf("error writing backup options: %w", err)
@@ -331,10 +321,6 @@ func (t *ServerBackupCreateTask) Exec(l *zap.Logger, tx pgx.Tx, tcr *types.TaskC
 
 	g.Channels = channels
 
-	cb := CoreBackup{
-		Guild: g,
-	}
-
 	if len(g.Roles) == 0 {
 		l.Info("Backing up guild roles")
 
@@ -370,14 +356,14 @@ func (t *ServerBackupCreateTask) Exec(l *zap.Logger, tx pgx.Tx, tcr *types.TaskC
 	}
 
 	// Write core backup
-	err = writeMsgpack(f, "core", cb)
+	err = writeMsgpack(f, "core/guild", g)
 
 	if err != nil {
 		return nil, fmt.Errorf("error writing core backup: %w", err)
 	}
 
 	// Backup messages
-	if t.BackupOpts.BackupMessages {
+	if t.Options.BackupMessages {
 		l.Info("Calculating message backup allocations")
 
 		// Create channel map to allow for easy channel lookup
@@ -391,7 +377,7 @@ func (t *ServerBackupCreateTask) Exec(l *zap.Logger, tx pgx.Tx, tcr *types.TaskC
 		var perChannelBackupMap = make(map[string]int)
 
 		// First handle the special allocations
-		for channelID, allocation := range t.BackupOpts.SpecialAllocations {
+		for channelID, allocation := range t.Options.SpecialAllocations {
 			if c, ok := channelMap[channelID]; ok {
 				// Error on bad channels for special allocations
 				if !slices.Contains(allowedChannelTypes, c.Type) {
@@ -404,7 +390,7 @@ func (t *ServerBackupCreateTask) Exec(l *zap.Logger, tx pgx.Tx, tcr *types.TaskC
 					return nil, fmt.Errorf("special allocation channel %s is not readable by the bot", c.ID)
 				}
 
-				if countMap(perChannelBackupMap) >= t.BackupOpts.MaxMessages {
+				if countMap(perChannelBackupMap) >= t.Options.MaxMessages {
 					continue
 				}
 
@@ -424,12 +410,12 @@ func (t *ServerBackupCreateTask) Exec(l *zap.Logger, tx pgx.Tx, tcr *types.TaskC
 				continue
 			}
 
-			if countMap(perChannelBackupMap) >= t.BackupOpts.MaxMessages {
+			if countMap(perChannelBackupMap) >= t.Options.MaxMessages {
 				perChannelBackupMap[channel.ID] = 0 // We still need to include the channel in the allocations
 			}
 
 			if _, ok := perChannelBackupMap[channel.ID]; !ok {
-				perChannelBackupMap[channel.ID] = t.BackupOpts.PerChannel
+				perChannelBackupMap[channel.ID] = t.Options.PerChannel
 			}
 		}
 
@@ -451,10 +437,10 @@ func (t *ServerBackupCreateTask) Exec(l *zap.Logger, tx pgx.Tx, tcr *types.TaskC
 
 			var leftovers int
 
-			msgs, err := backupChannelMessages(l, f, channelID, allocation, t.BackupOpts.BackupAttachments)
+			msgs, err := backupChannelMessages(l, f, channelID, allocation, t.Options.BackupAttachments)
 
 			if err != nil {
-				if t.BackupOpts.IgnoreMessageBackupErrors {
+				if t.Options.IgnoreMessageBackupErrors {
 					l.Error("error backing up channel messages", zap.Error(err))
 					leftovers = allocation
 				} else {
@@ -481,14 +467,14 @@ func (t *ServerBackupCreateTask) Exec(l *zap.Logger, tx pgx.Tx, tcr *types.TaskC
 				}
 			}
 
-			if leftovers > 0 && t.BackupOpts.RolloverLeftovers {
+			if leftovers > 0 && t.Options.RolloverLeftovers {
 				// Find a new channel with 0 allocation
 				for channelID, allocation := range perChannelBackupMap {
 					if allocation == 0 {
-						msgs, err := backupChannelMessages(l, f, channelID, leftovers, t.BackupOpts.BackupAttachments)
+						msgs, err := backupChannelMessages(l, f, channelID, leftovers, t.Options.BackupAttachments)
 
 						if err != nil {
-							if t.BackupOpts.IgnoreMessageBackupErrors {
+							if t.Options.IgnoreMessageBackupErrors {
 								l.Error("error backing up channel messages [leftovers]", zap.Error(err))
 								continue // Try again
 							} else {
@@ -564,5 +550,6 @@ func (t *ServerBackupCreateTask) Info() *types.TaskInfo {
 			TargetType: types.TargetTypeServer,
 		},
 		TaskFields: t,
+		Valid:      t.valid,
 	}
 }

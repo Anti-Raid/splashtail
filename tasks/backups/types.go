@@ -36,7 +36,8 @@ const (
 	AttachmentStorageFormatRemote           AttachmentStorageFormat = "remote"
 )
 
-type BackupOpts struct {
+// Options that can be set when creatng a backup
+type BackupCreateOpts struct {
 	PerChannel                int            `json:"per_channel" description:"The number of messages per channel"`
 	MaxMessages               int            `json:"max_messages" description:"The maximum number of messages to backup"`
 	BackupMessages            bool           `json:"backup_messages" description:"Whether to backup messages or not"`
@@ -44,11 +45,13 @@ type BackupOpts struct {
 	IgnoreMessageBackupErrors bool           `json:"ignore_message_backup_errors" description:"Whether to ignore errors while backing up messages or not and skip these channels"`
 	RolloverLeftovers         bool           `json:"rollover_leftovers" description:"Whether to attempt rollover of leftover message quota to another channels or not"`
 	SpecialAllocations        map[string]int `json:"special_allocations" description:"Specific channel allocation overrides"`
-	Encrypt                   bool           `json:"encrypt" description:"Whether to encrypt the backup or not"`
+	Encrypt                   string         `json:"encrypt" description:"The key to encrypt backups with, if any"`
 }
 
-type CoreBackup struct {
-	Guild *discordgo.Guild `db:"guild" json:"guild" description:"The guild ID"`
+// Options that can be set when restoring a backup
+type BackupRestoreOpts struct {
+	ProtectedChannels []string `json:"protected_channels" description:"Channels to protect from being deleted"`
+	BackupSource      string   `json:"backup_source" description:"The source of the backup"`
 }
 
 // Attachment contains metadata about an attachment
