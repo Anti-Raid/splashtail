@@ -1,5 +1,6 @@
 import { GuildChannel } from "discord.js";
 import { CommandContext } from "../context";
+import { AntiRaid } from "../client";
 
 export const parseDuration = (duration: string | undefined): number => {
     if(!duration) {
@@ -64,9 +65,13 @@ export interface ChannelPurgeOptions {
      * Till how many seconds ago should messages be deleted. Is required
      */
     tillInterval: number
+    /**
+     * Ignore errors
+     */
+    ignoreErrors?: boolean
 }
 
-export const channelPurger = async (ctx: CommandContext, channels: GuildChannel[], opts: ChannelPurgeOptions) => {
+export const channelPurger = async (bot: AntiRaid, channels: GuildChannel[], opts: ChannelPurgeOptions) => {
     if(!opts.tillInterval) {
         throw new Error("tillInterval is required")
     }
@@ -111,7 +116,11 @@ export const channelPurger = async (ctx: CommandContext, channels: GuildChannel[
             try {
                 await channel.bulkDelete(messagesToDelete)
             } catch (err) {
-                ctx.client.logger.error(`Failed to delete messages in channel ${channel.id} in guild ${ctx.interaction.guild.id}. Error: ${err.message}`)
+                if(opts.ignoreErrors) {
+                    bot.logger.error(`Failed to delete messages in channel ${channel.id} in guild ${channel.guild?.id || 'None'}. Error: ${err.message}`)
+                } else {
+                    throw err
+                }
             }
 
             // Now set currentMessage to the message with the oldest timestamp

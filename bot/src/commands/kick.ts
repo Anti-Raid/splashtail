@@ -4,6 +4,7 @@ import { SlashCommandBuilder } from "@discordjs/builders";
 import { addAuditLogEvent, addGuildAction, editAuditLogEvent } from "../core/common/guilds/auditor";
 import sql from "../core/db";
 import { channelPurger, parseDuration } from "../core/common/utils";
+import { moderateUser } from "../core/common/guilds/mod";
 
 let command: Command = {
     userPerms: [PermissionsBitField.Flags.KickMembers],
@@ -33,15 +34,7 @@ let command: Command = {
                 content: "This user is not an member of this guild.",
                 ephemeral: true,
             });   
-            
-        // Ensure that the member can kick the target member
-        if (guildMember.roles.highest.comparePositionTo((ctx.interaction.member.roles as GuildMemberRoleManager).highest) > 0) {
-            return FinalResponse.reply({
-                content: "You cannot kick this user as they have a higher role than you.",
-                ephemeral: true,
-            });
-        }
-        
+                    
         const reason = ctx.interaction.options.getString("reason");
         const deleteMessagesTill = parseDuration(ctx.interaction.options.getString("delete_messages_till") || "7d")
 
@@ -55,118 +48,15 @@ let command: Command = {
 
         await ctx.defer()
 
-        let disallowDM = false;
-        await sql.begin(async sql => {
-            let auditLogEntry = await addAuditLogEvent(sql, {
-                type: "kick",
-                userId: ctx.interaction.user.id,
-                guildId: ctx.interaction.guild.id,
-                data: {
-                    "status": "pending",
-                    "target_id": guildMember.id,
-                    "via": "cmd:kick",
-                    "delete_messages_till": deleteMessagesTill,
-                    "reason": reason
-                }
-            })
-    
-            try {
-                const embed = new EmbedBuilder()
-                    .setColor("Red")
-                    .setTitle(`Kicked from ${ctx.interaction.guild.name}`)
-                    .setDescription(reason ?? "No reason specified.")
-                    .setAuthor({
-                        name: ctx.client.user.displayName,
-                        iconURL: ctx.client.user.displayAvatarURL(),
-                    })
-                    .setTimestamp();
-    
-                await guildMember.send({ embeds: [embed] });
-            } catch (error) {
-                disallowDM = true;
-            }     
-            
-            try {
-                await guildMember?.kick(`${ctx.interaction.user.username} [${ctx.interaction.user.id}]: ${reason ?? "No reason specified."}`);    
-            } catch (err) {
-                await editAuditLogEvent(sql, auditLogEntry, {
-                    type: "kick",
-                    userId: ctx.interaction.user.id,
-                    guildId: ctx.interaction.guild.id,
-                    data: {
-                        "status": "failed",
-                        "error": err.message,
-                        "target_id": guildMember.id,
-                        "via": "cmd:kick",
-                        "delete_messages_till": deleteMessagesTill,
-                        "reason": reason
-                    }
-                })    
-                return FinalResponse.reply({
-                    content: `Failed to kick **${guildMember.user.tag}**. Error: \`${err.message}\``,
-                    ephemeral: true,
-                });
-            }
-
-            try {
-                if(deleteMessagesTill > 0) {
-                    let channels = await ctx.interaction.guild.channels.fetch()
-
-                    // Turn channels into a GuildChannel[]
-                    let channelsArr = channels.map((channel) => channel)
-
-                    await channelPurger(ctx, channelsArr, {
-                        tillInterval: deleteMessagesTill,
-                        memberIds: [guildMember.id]
-                    })
-                }
-            } catch (err) {
-                await editAuditLogEvent(sql, auditLogEntry, {
-                    type: "kick",
-                    userId: ctx.interaction.user.id,
-                    guildId: ctx.interaction.guild.id,
-                    data: {
-                        "status": "partially_failed:deleteMessagesTill",
-                        "error": err.message,
-                        "target_id": guildMember.id,
-                        "via": "cmd:kick",
-                        "delete_messages_till": deleteMessagesTill,
-                        "reason": reason
-                    }
-                })    
-                return FinalResponse.reply({
-                    content: `Kick succeeded but failed to delete messages from **${guildMember.user.tag}**. Error: \`${err.message}\``,
-                    ephemeral: true,
-                });
-            }
-
-            await editAuditLogEvent(sql, auditLogEntry, {
-                type: "kick",
-                userId: ctx.interaction.user.id,
-                guildId: ctx.interaction.guild.id,
-                data: {
-                    "status": "success",
-                    "target_id": guildMember.id,
-                    "via": "cmd:kick",
-                    "delete_messages_till": deleteMessagesTill,
-                    "reason": reason
-                }
-            })
+        return await moderateUser({
+            ctx,
+            op: "kick",
+            via: "cmd:kick",
+            guildMember,
+            reason,
+            duration: 0,
+            deleteMessagesTill,
         })
-
-        return FinalResponse.reply(
-            {
-                embeds: [
-                    new EmbedBuilder()
-                        .setColor("Green")
-                        .setDescription(
-                            `Kicked **${guildMember.user.tag}**${
-                                disallowDM ? " (DMs disabled)" : ""
-                            }`
-                        )
-                ]
-            }
-        )
     }
 }
 
