@@ -38,6 +38,20 @@ const (
 	AttachmentStorageFormatRemote           AttachmentStorageFormat = "remote"
 )
 
+type ChannelRestoreMode string
+
+const (
+	ChannelRestoreModeFull           ChannelRestoreMode = "full"
+	ChannelRestoreModeDiff           ChannelRestoreMode = "diff"
+	ChannelRestoreModeIgnoreExisting ChannelRestoreMode = "ignore_existing"
+)
+
+type RoleRestoreMode string
+
+const (
+	RoleRestoreModeFull RoleRestoreMode = "full"
+)
+
 // Options that can be set when creatng a backup
 type BackupCreateOpts struct {
 	PerChannel                int            `json:"per_channel" description:"The number of messages per channel"`
@@ -53,9 +67,12 @@ type BackupCreateOpts struct {
 
 // Options that can be set when restoring a backup
 type BackupRestoreOpts struct {
-	ProtectedChannels []string `json:"protected_channels" description:"Channels to protect from being deleted"`
-	BackupSource      string   `json:"backup_source" description:"The source of the backup"`
-	Decrypt           string   `json:"decrypt" description:"The key to decrypt backups with, if any"`
+	ProtectedChannels  []string           `json:"protected_channels" description:"Channels to protect from being deleted"`
+	ProtectedRoles     []string           `json:"protected_roles" description:"Roles to protect from being deleted"`
+	BackupSource       string             `json:"backup_source" description:"The source of the backup"`
+	Decrypt            string             `json:"decrypt" description:"The key to decrypt backups with, if any"`
+	ChannelRestoreMode ChannelRestoreMode `json:"channel_restore_mode" description:"Channel backup restore method. Use 'full' if unsure"`
+	RoleRestoreMode    RoleRestoreMode    `json:"role_restore_mode" description:"Role backup restore method. Use 'full' if unsure"`
 }
 
 // Attachment contains metadata about an attachment

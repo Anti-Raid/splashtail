@@ -3,6 +3,7 @@ package tasks
 import (
 	"fmt"
 	"splashtail/types"
+	"splashtail/utils"
 	"strings"
 
 	"golang.org/x/text/cases"
@@ -16,9 +17,9 @@ func FormatTaskFor(fu *types.TaskFor) *string {
 
 	switch fu.TargetType {
 	case types.TargetTypeUser:
-		return Pointer("u/" + fu.ID)
+		return utils.Pointer("u/" + fu.ID)
 	case types.TargetTypeServer:
-		return Pointer("g/" + fu.ID)
+		return utils.Pointer("g/" + fu.ID)
 	default:
 		return nil
 	}

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"splashtail/state"
 	"splashtail/types"
+	"splashtail/utils"
 	"time"
 
 	"github.com/infinitybotlist/eureka/crypto"
@@ -17,10 +18,6 @@ var TaskDefinitionRegistry = map[string]TaskDefinition{}
 
 func RegisterTaskDefinition(task TaskDefinition) {
 	TaskDefinitionRegistry[task.Info().Name] = task
-}
-
-func Pointer[T any](v T) *T {
-	return &v
 }
 
 // TaskDefinition is the definition for any task that can be executed on splashtail
@@ -81,7 +78,7 @@ func CreateTask(ctx context.Context, task TaskDefinition) (*types.TaskCreateResp
 	return &types.TaskCreateResponse{
 		TaskID:   taskId,
 		TaskInfo: tInfo,
-		TaskKey:  Pointer(taskKey),
+		TaskKey:  utils.Pointer(taskKey),
 	}, nil
 }
 
@@ -150,7 +147,7 @@ func NewTask(tcr *types.TaskCreateResponse, task TaskDefinition) {
 	outp, err := task.Exec(l, tx, tcr)
 
 	if err != nil {
-		l.Error("Failed to execute task", zap.Error(err), zap.Any("data", tInfo.TaskFields))
+		l.Error("Failed to execute task", zap.Error(err))
 		taskState = "failed"
 	}
 

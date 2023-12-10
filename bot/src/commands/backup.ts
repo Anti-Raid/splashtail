@@ -2,7 +2,7 @@ import { Colors, EmbedBuilder, PermissionsBitField } from "discord.js";
 import { Command, FinalResponse } from "../core/client";
 import { SlashCommandBuilder } from "@discordjs/builders";
 import { createTaskEmbed } from "../core/common/taskEmbed";
-import { TaskCreateResponse } from "../generatedTypes/types";
+import { Task, TaskCreateResponse } from "../generatedTypes/types";
 
 const defaultAssets = ["icon", "banner", "splash"]
 
@@ -23,6 +23,8 @@ type BackupRestoreOpts struct {
 	I ProtectedChannels []string `json:"protected_channels" description:"Channels to protect from being deleted"`
 	I BackupSource      string   `json:"backup_source" description:"The source of the backup"`
 	I Decrypt           string   `json:"decrypt" description:"The key to decrypt backups with, if any"`
+	I ChannelRestoreMode ChannelRestoreMode `json:"channel_restore_mode" description:"Channel backup restore method. Use 'full' if unsure"`
+    RoleRestoreMode    RoleRestoreMode    `json:"role_restore_mode" description:"Role backup restore method. Use 'full' if unsure"`
 }
 */
 
@@ -86,14 +88,7 @@ let command: Command = {
             .setRequired(false)
 
             return opt
-        })
-        .addStringOption((opt) => {
-            opt.setName("protected_channels")
-            .setDescription("Channels to protect seperated by commas")
-            .setRequired(false)
-
-            return opt
-        })
+        })        
 
         return sub
     })
@@ -109,6 +104,42 @@ let command: Command = {
         .addStringOption((opt) => {
             opt.setName("password")
             .setDescription("Password to decrypt backup with. Should not be reused")
+            .setRequired(false)
+
+            return opt
+        })
+        .addStringOption((opt) => {
+            opt.setName("channel_restore_mode")
+            .setDescription("Channel restore mode. Defaults to full. Use 'full' if unsure")
+            .addChoices(
+                {"name": "Full", "value": "full"},
+                {"name": "Difference-Based", "value": "diff"},
+                {"name": "Ignore Existing", "value": "ignore_existing"}
+            )
+            .setRequired(false)
+
+            return opt
+        })
+        .addStringOption((opt) => {
+            opt.setName("role_restore_mode")
+            .setDescription("Role restore mode. Defaults to full. Use 'full' if unsure")
+            .addChoices(
+                {"name": "Full", "value": "full"},
+            )
+            .setRequired(false)
+
+            return opt
+        })
+        .addStringOption((opt) => {
+            opt.setName("protected_channels")
+            .setDescription("Channels to protect seperated by commas")
+            .setRequired(false)
+
+            return opt
+        })
+        .addStringOption((opt) => {
+            opt.setName("protected_roles")
+            .setDescription("Roles to protect seperated by commas")
             .setRequired(false)
 
             return opt
@@ -244,9 +275,16 @@ let command: Command = {
                 let backupFile = ctx.interaction.options.getAttachment("backup_file")
                 let password2 = ctx.interaction.options.getString("password") || ""
                 let protectedChannels = ctx.interaction.options.getString("protected_channels")?.split(",") || []
+                let protectedRoles = ctx.interaction.options.getString("protected_roles")?.split(",") || []
+                let channelRestoreMode = ctx.interaction.options.getString("restore_mode") || "full"
+                let roleRestoreMode = ctx.interaction.options.getString("role_restore_mode") || "full"
 
                 if(protectedChannels.length > 0) {
                     protectedChannels = protectedChannels?.map((v) => v.trim())?.filter((v) => v.length > 0)
+                }
+
+                if(protectedRoles.length > 0) {
+                    protectedRoles = protectedRoles?.map((v) => v.trim())?.filter((v) => v.length > 0)
                 }
 
                 if(!protectedChannels?.includes(ctx?.interaction?.channelId)) {
@@ -298,7 +336,10 @@ let command: Command = {
                         "options": {
                             "backup_source": backupFile.url,
                             "decrypt": password2,
-                            "protected_channels": protectedChannels
+                            "protected_channels": protectedChannels,
+                            "protected_roles": protectedRoles,
+                            "channel_restore_mode": channelRestoreMode,
+                            "role_restore_mode": roleRestoreMode
                         }
                     }
                 }, null, {})
@@ -353,11 +394,15 @@ let command: Command = {
                     ]
                 })
 
+                let prevTask: Task = null
                 let task2 = await ctx.client.redis.pollForTask(tcr2, {
                     timeout: 60000, // 1 minute timeout
                     targetId: ctx.guild.id,
                     targetType: "Server",
                     callback: async (task) => {
+                        // Prevent spamming of edits
+                        if(task?.state === prevTask?.state && JSON.stringify(task) === JSON.stringify(prevTask)) return
+
                         await ctx.edit(createTaskEmbed(ctx, task))
                     }
                 })
