@@ -279,6 +279,15 @@ func (t *ServerBackupRestoreTask) Exec(l *zap.Logger, tx pgx.Tx, tcr *types.Task
 		return nil, fmt.Errorf("bot role isnt high enough")
 	}
 
+	// Fetch channels of guild
+	channels, err := state.Discord.GuildChannels(t.ServerID)
+
+	if err != nil {
+		return nil, fmt.Errorf("error fetching channels: %w", err)
+	}
+
+	tgtGuild.Channels = channels
+
 	l.Info("Got bots highest role", zap.String("role_id", tgtBotGuildHighestRole.ID))
 
 	// Step 1. Fetch guild data
@@ -299,6 +308,10 @@ func (t *ServerBackupRestoreTask) Exec(l *zap.Logger, tx pgx.Tx, tcr *types.Task
 	l.Info("STATISTICS: guildread", zap.Float64("duration", t2.Sub(t1).Seconds()))
 
 	t1 = time.Now()
+
+	if !slices.Contains(tgtGuild.Features, discordgo.GuildFeatureCommunity) && slices.Contains(srcGuild.Features, discordgo.GuildFeatureCommunity) {
+		return nil, fmt.Errorf("cannot restore community guild to non-community guild")
+	}
 
 	// Edit basic guild guild. Note that settings related to ID's are changed later if needed
 	// Notes:
@@ -358,23 +371,6 @@ func (t *ServerBackupRestoreTask) Exec(l *zap.Logger, tx pgx.Tx, tcr *types.Task
 			}
 
 			gp.Splash = splash
-		}
-	}
-
-	if slices.Contains(tgtGuild.Features, discordgo.GuildFeatureCommunity) {
-		// Also disable community for now
-		if basePerms&discordgo.PermissionAdministrator != discordgo.PermissionAdministrator {
-			return nil, fmt.Errorf("**server restore cannot continue unless the bot is given administrator to disable community feature or community server status is disabled**")
-		}
-
-		gp.Features = []discordgo.GuildFeature{}
-
-		for _, feature := range tgtGuild.Features {
-			if feature == discordgo.GuildFeatureCommunity {
-				continue
-			}
-
-			gp.Features = append(gp.Features, feature)
 		}
 	}
 
@@ -482,9 +478,9 @@ func (t *ServerBackupRestoreTask) Exec(l *zap.Logger, tx pgx.Tx, tcr *types.Task
 
 				return &srcGuild.Roles[i].Color
 			}(),
-			Hoist:       utils.Pointer(srcGuild.Roles[i].Hoist),
-			Permissions: utils.Pointer(srcGuild.Roles[i].Permissions),
-			Mentionable: utils.Pointer(srcGuild.Roles[i].Mentionable),
+			Hoist:       &srcGuild.Roles[i].Hoist,
+			Permissions: &srcGuild.Roles[i].Permissions,
+			Mentionable: &srcGuild.Roles[i].Mentionable,
 		})
 
 		if err != nil {
@@ -492,6 +488,8 @@ func (t *ServerBackupRestoreTask) Exec(l *zap.Logger, tx pgx.Tx, tcr *types.Task
 		}
 
 		restoredRolesMap[srcGuild.Roles[i].ID] = newRole.ID
+
+		time.Sleep(1 * time.Second)
 	}
 
 	t2 = time.Now()
@@ -516,25 +514,47 @@ func (t *ServerBackupRestoreTask) Exec(l *zap.Logger, tx pgx.Tx, tcr *types.Task
 
 	switch t.Options.ChannelRestoreMode {
 	case ChannelRestoreModeFull:
-		for _, c := range tgtGuild.Channels {
-			if slices.Contains(t.Options.ProtectedChannels, c.ID) {
+		times := 0
+		for i := range tgtGuild.Channels {
+			if slices.Contains(t.Options.ProtectedChannels, tgtGuild.Channels[i].ID) {
 				continue
 			}
 
-			bp := utils.MemberChannelPerms(basePerms, tgtGuild, m, c)
+			if tgtGuild.Channels[i].ID == tgtGuild.RulesChannelID || tgtGuild.Channels[i].ID == tgtGuild.PublicUpdatesChannelID {
+				if tgtGuild.Channels[i].ParentID != "" {
+					// Move out of parent
+					_, err := state.Discord.ChannelEdit(tgtGuild.Channels[i].ID, &discordgo.ChannelEdit{
+						ParentID: "",
+					})
 
-			if bp&discordgo.PermissionManageChannels != discordgo.PermissionManageChannels {
-				l.Warn("Not removing channel due to lack of 'Manage Channels' permissions", zap.String("channel_id", c.ID))
+					if err != nil {
+						return nil, fmt.Errorf("failed to edit channel: %w", err)
+					}
+				}
 				continue
 			}
 
-			_, err := state.Discord.ChannelDelete(c.ID)
+			if tgtGuild.Channels[i].ID == tgtGuild.PublicUpdatesChannelID {
+				continue
+			}
+
+			bp := utils.MemberChannelPerms(basePerms, tgtGuild, m, tgtGuild.Channels[i])
+
+			if bp&discordgo.PermissionManageChannels != discordgo.PermissionManageChannels && bp&discordgo.PermissionAdministrator != discordgo.PermissionAdministrator {
+				l.Warn("Not removing channel due to lack of 'Manage Channels' permissions", zap.String("channel_id", tgtGuild.Channels[i].ID))
+				continue
+			}
+
+			l.Info("Deleting channel", zap.String("name", tgtGuild.Channels[i].Name), zap.Int("position", tgtGuild.Channels[i].Position), zap.String("id", tgtGuild.Channels[i].ID))
+
+			_, err := state.Discord.ChannelDelete(tgtGuild.Channels[i].ID)
 
 			if err != nil {
 				return nil, fmt.Errorf("failed to delete channel: %w", err)
 			}
 
-			time.Sleep(1 * time.Second)
+			time.Sleep(1*time.Second + time.Duration(times*times)*time.Millisecond)
+			times++
 		}
 	case ChannelRestoreModeDiff:
 		// Remove channels that are not in the backup
@@ -640,10 +660,32 @@ func (t *ServerBackupRestoreTask) Exec(l *zap.Logger, tx pgx.Tx, tcr *types.Task
 
 			time.Sleep(1 * time.Second)
 		}
+	default:
+		return nil, fmt.Errorf("invalid channel_restore_mode")
 	}
 
 	createChannel := func(channel *discordgo.Channel) (*discordgo.Channel, error) {
-		return state.Discord.GuildChannelCreateComplex(t.ServerID, discordgo.GuildChannelCreateData{
+		l.Info("Creating channel", zap.String("name", channel.Name), zap.Int("position", channel.Position), zap.String("srcId", channel.ID), zap.String("parent_id", channel.ParentID), zap.Any("type", channel.Type))
+
+		// fix permission overwrites
+		var permOverwrites = []*discordgo.PermissionOverwrite{}
+
+		for _, overwrite := range channel.PermissionOverwrites {
+			if overwrite.Type == discordgo.PermissionOverwriteTypeRole {
+				if rcid, ok := restoredRolesMap[overwrite.ID]; ok {
+					permOverwrites = append(permOverwrites, &discordgo.PermissionOverwrite{
+						ID:    rcid,
+						Type:  overwrite.Type,
+						Allow: overwrite.Allow,
+						Deny:  overwrite.Deny,
+					})
+				}
+			} else {
+				permOverwrites = append(permOverwrites, overwrite)
+			}
+		}
+
+		c, err := state.Discord.GuildChannelCreateComplex(t.ServerID, discordgo.GuildChannelCreateData{
 			Name:                 channel.Name,
 			Type:                 channel.Type,
 			Topic:                channel.Topic,
@@ -651,52 +693,65 @@ func (t *ServerBackupRestoreTask) Exec(l *zap.Logger, tx pgx.Tx, tcr *types.Task
 			UserLimit:            channel.UserLimit,
 			RateLimitPerUser:     channel.RateLimitPerUser,
 			Position:             channel.Position,
-			PermissionOverwrites: channel.PermissionOverwrites,
+			PermissionOverwrites: permOverwrites,
 			ParentID:             channel.ParentID,
 			NSFW:                 channel.NSFW,
 		})
-	}
-
-	for _, newChan := range srcGuild.Channels {
-		if _, ok := restoredChannelsMap[newChan.ID]; ok {
-			continue
-		}
-
-		// Create corresponding category if needed
-		if newChan.ParentID != "" {
-			if slices.Contains([]discordgo.ChannelType{
-				discordgo.ChannelTypeGuildText,
-				discordgo.ChannelTypeGuildVoice,
-				discordgo.ChannelTypeGuildNews,
-				discordgo.ChannelTypeGuildForum,
-			}, newChan.Type) {
-				if _, ok := restoredChannelsMap[newChan.ParentID]; !ok {
-					// Create parent
-					bmc, ok := backupChannelMap[newChan.ParentID]
-
-					if !ok {
-						l.Warn("Parent channel does not exist, skipping", zap.String("channel_id", newChan.ParentID))
-						newChan.ParentID = ""
-					} else {
-						parent, err := createChannel(backupChannelMap[newChan.ParentID])
-
-						if err != nil {
-							return nil, fmt.Errorf("failed to create parent channel: %w", err)
-						}
-
-						restoredChannelsMap[bmc.ID] = parent.ID
-					}
-				}
-			}
-		}
-
-		nc, err := createChannel(newChan)
 
 		if err != nil {
 			return nil, fmt.Errorf("failed to create channel: %w", err)
 		}
 
-		restoredChannelsMap[newChan.ID] = nc.ID
+		time.Sleep(1 * time.Second)
+
+		return c, nil
+	}
+
+	// First restore categories
+	for i := range srcGuild.Channels {
+		if srcGuild.Channels[i].Type != discordgo.ChannelTypeGuildCategory {
+			continue
+		}
+
+		if _, ok := restoredChannelsMap[srcGuild.Channels[i].ID]; ok {
+			continue
+		}
+
+		nc, err := createChannel(srcGuild.Channels[i])
+
+		if err != nil {
+			return nil, fmt.Errorf("failed to create channel: %w", err)
+		}
+
+		restoredChannelsMap[srcGuild.Channels[i].ID] = nc.ID
+	}
+
+	for i := range srcGuild.Channels {
+		if _, ok := restoredChannelsMap[srcGuild.Channels[i].ID]; ok {
+			continue
+		}
+
+		// Create corresponding category if needed
+		if srcGuild.Channels[i].ParentID != "" {
+			if rcid, ok := restoredChannelsMap[srcGuild.Channels[i].ParentID]; ok {
+				srcGuild.Channels[i].ParentID = rcid
+			} else {
+				if t.Options.IgnoreRestoreErrors {
+					l.Warn("Parent channel does not exist, skipping", zap.String("channel_id", srcGuild.Channels[i].ParentID))
+					srcGuild.Channels[i].ParentID = ""
+				} else {
+					return nil, fmt.Errorf("parent channel does not exist")
+				}
+			}
+		}
+
+		nc, err := createChannel(srcGuild.Channels[i])
+
+		if err != nil {
+			return nil, fmt.Errorf("failed to create channel: %w", err)
+		}
+
+		restoredChannelsMap[srcGuild.Channels[i].ID] = nc.ID
 	}
 
 	gp = &discordgo.GuildParams{}

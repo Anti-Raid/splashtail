@@ -20,6 +20,7 @@ type BackupCreateOpts struct {
 }
 
 type BackupRestoreOpts struct {
+    IgnoreRestoreErrors bool     `json:"ignore_restore_errors" description:"Whether to ignore errors while restoring or not"`
 	I ProtectedChannels []string `json:"protected_channels" description:"Channels to protect from being deleted"`
 	I BackupSource      string   `json:"backup_source" description:"The source of the backup"`
 	I Decrypt           string   `json:"decrypt" description:"The key to decrypt backups with, if any"`
@@ -140,6 +141,13 @@ let command: Command = {
         .addStringOption((opt) => {
             opt.setName("protected_roles")
             .setDescription("Roles to protect seperated by commas")
+            .setRequired(false)
+
+            return opt
+        })
+        .addBooleanOption((opt) => {
+            opt.setName("ignore_restore_errors")
+            .setDescription("Whether to ignore errors while restoring or not")
             .setRequired(false)
 
             return opt
@@ -276,8 +284,9 @@ let command: Command = {
                 let password2 = ctx.interaction.options.getString("password") || ""
                 let protectedChannels = ctx.interaction.options.getString("protected_channels")?.split(",") || []
                 let protectedRoles = ctx.interaction.options.getString("protected_roles")?.split(",") || []
-                let channelRestoreMode = ctx.interaction.options.getString("restore_mode") || "full"
+                let channelRestoreMode = ctx.interaction.options.getString("channel_restore_mode") || "full"
                 let roleRestoreMode = ctx.interaction.options.getString("role_restore_mode") || "full"
+                let ignoreRestoreErrors = ctx.interaction.options.getBoolean("ignore_restore_errors") || false
 
                 if(protectedChannels.length > 0) {
                     protectedChannels = protectedChannels?.map((v) => v.trim())?.filter((v) => v.length > 0)
@@ -339,7 +348,8 @@ let command: Command = {
                             "protected_channels": protectedChannels,
                             "protected_roles": protectedRoles,
                             "channel_restore_mode": channelRestoreMode,
-                            "role_restore_mode": roleRestoreMode
+                            "role_restore_mode": roleRestoreMode,
+                            "ignore_restore_errors": ignoreRestoreErrors
                         }
                     }
                 }, null, {})
