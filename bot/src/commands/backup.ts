@@ -249,6 +249,19 @@ let command: Command = {
                     })
                 }
 
+                let url = backupFile.url || backupFile?.proxyURL
+
+                if(!url) {
+                    return FinalResponse.reply({
+                        embeds: [
+                            new EmbedBuilder()
+                            .setTitle("Restoring backup")
+                            .setDescription(":x: No backup file provided [url missing]")
+                            .setColor(Colors.Red)
+                        ]
+                    })
+                }
+
                 await ctx.reply({
                     embeds: [
                         new EmbedBuilder()
