@@ -16,7 +16,7 @@ require (
 require (
 	github.com/cheesycod/mewld v0.0.0-20231205144150-8a2e01d14a33
 	github.com/cloudflare/tableflip v1.2.3
-	github.com/infinitybotlist/iblfile v0.0.0-20231209150300-3b2e6c00dc7d
+	github.com/infinitybotlist/iblfile v0.0.0-20231210082357-1336dea05708
 	github.com/minio/minio-go/v7 v7.0.65
 	github.com/redis/rueidis v1.0.23
 	github.com/sirupsen/logrus v1.9.3
@@ -94,7 +94,7 @@ require (
 
 require (
 	github.com/go-playground/validator/v10 v10.16.0
-	github.com/jackc/pgx/v5 v5.5.0
+	github.com/jackc/pgx/v5 v5.5.1
 	github.com/json-iterator/go v1.1.12
 	github.com/redis/go-redis/v9 v9.3.0
 	go.uber.org/zap v1.26.0

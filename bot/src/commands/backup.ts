@@ -15,6 +15,12 @@ type BackupCreateOpts struct {
 	SpecialAllocations          map[string]int `json:"special_allocations" description:"Specific channel allocation overrides"`
 	Encrypt                     bool           `json:"encrypt" description:"Whether to encrypt the backup or not"`
 }
+
+type BackupRestoreOpts struct {
+	I ProtectedChannels []string `json:"protected_channels" description:"Channels to protect from being deleted"`
+	I BackupSource      string   `json:"backup_source" description:"The source of the backup"`
+	I Decrypt           string   `json:"decrypt" description:"The key to decrypt backups with, if any"`
+}
 */
 
 let command: Command = {
@@ -72,6 +78,13 @@ let command: Command = {
 
             return opt
         })
+        .addStringOption((opt) => {
+            opt.setName("protected_channels")
+            .setDescription("Channels to protect seperated by commas")
+            .setRequired(false)
+
+            return opt
+        })
 
         return sub
     })
@@ -84,11 +97,19 @@ let command: Command = {
 
             return opt
         })
+        .addStringOption((opt) => {
+            opt.setName("password")
+            .setDescription("Password to decrypt backup with. Should not be reused")
+            .setRequired(false)
+
+            return opt
+        })
 
         return sub
     }),
     execute: async (ctx) => {
-        switch (ctx.interaction.options.getSubcommand()) {
+        let sc = ctx.interaction.options.getSubcommand()
+        switch (sc) {
             case "create":
                 let messages = ctx.interaction.options.getBoolean("messages")
                 let attachments = ctx.interaction.options.getBoolean("attachments")
@@ -199,12 +220,125 @@ let command: Command = {
                 })
 
                 if(task?.state == "completed") {
-                    // TODO: Show user the URL to the backup
                     return FinalResponse.dummy()
                 } else {
                     return FinalResponse.dummy()
                 }
+                break;
             case "restore":
+                let backupFile = ctx.interaction.options.getAttachment("backup_file")
+                let password2 = ctx.interaction.options.getString("password") || ""
+                let protectedChannels = ctx.interaction.options.getString("protected_channels")?.split(",") || []
+
+                if(protectedChannels.length > 0) {
+                    protectedChannels = protectedChannels?.map((v) => v.trim())?.filter((v) => v.length > 0)
+                }
+
+                if(!protectedChannels?.includes(ctx?.interaction?.channelId)) {
+                    protectedChannels.push(ctx?.interaction?.channelId)
+                }
+
+                if(!backupFile) {
+                    return FinalResponse.reply({
+                        embeds: [
+                            new EmbedBuilder()
+                            .setTitle("Restoring backup")
+                            .setDescription(":x: No backup file provided")
+                            .setColor(Colors.Red)
+                        ]
+                    })
+                }
+
+                await ctx.reply({
+                    embeds: [
+                        new EmbedBuilder()
+                        .setTitle("Restoring backup")
+                        .setDescription(":yellow_circle: Please wait, starting restore task...")
+                        .setColor(Colors.Blurple)
+                    ],
+                    ephemeral: true
+                })
+
+                let handle2 = await ctx.client.redis.sendIpcRequest({
+                    scope: "splashtail",
+                    action: "create_task",
+                    data: {
+                        "name": "restore_backup"
+                    },
+                    args: {
+                        "server_id": ctx.guild.id,
+                        "options": {
+                            "backup_source": backupFile.url,
+                            "decrypt": password2,
+                            "protected_channels": protectedChannels
+                        }
+                    }
+                }, null, {})
+
+                if(!handle2) throw new Error("Invalid IPC handle")
+
+                let rmap2 = await handle2.fetch()
+
+                if(rmap2.size == 0 || !rmap2.has(-1)) {
+                    return FinalResponse.edit({
+                        embeds: [
+                            new EmbedBuilder()
+                            .setTitle("Restoring backup")
+                            .setDescription(":x: Failed to create task. No response from co-ordinator server.")
+                            .setColor(Colors.Red)
+                        ]
+                    })
+                }
+
+                let res2 = rmap2.get(-1)
+
+                if(res2?.output?.error) {
+                    return FinalResponse.edit({
+                        embeds: [
+                            new EmbedBuilder()
+                            .setTitle("Restoring backup")
+                            .setDescription(`:x: ${res2?.output?.error || "Failed to create task"}`)
+                            .setColor(Colors.Red)
+                        ]
+                    })
+                }
+
+                let tcr2: TaskCreateResponse = res2?.output
+
+                if(!tcr2?.task_id) {
+                    return FinalResponse.edit({
+                        embeds: [
+                            new EmbedBuilder()
+                            .setTitle("Restoring backup")
+                            .setDescription(`:x: Failed to create task. No task ID returned.`)
+                            .setColor(Colors.Red)
+                        ]
+                    })
+                }
+
+                await ctx.edit({
+                    embeds: [
+                        new EmbedBuilder()
+                        .setTitle("Restoring backup")
+                        .setDescription(`:white_check_mark: Task created with ID \`${tcr2?.task_id}\`. Waiting for task to complete...`)
+                        .setColor(Colors.Green)
+                    ]
+                })
+
+                let task2 = await ctx.client.redis.pollForTask(tcr2, {
+                    timeout: 60000, // 1 minute timeout
+                    targetId: ctx.guild.id,
+                    targetType: "Server",
+                    callback: async (task) => {
+                        await ctx.edit(createTaskEmbed(ctx, task))
+                    }
+                })
+
+                if(task2?.state == "completed") {
+                    return FinalResponse.dummy()
+                } else {
+                    return FinalResponse.dummy()
+                }
             default:
                 return FinalResponse.reply({
                     embeds: [
@@ -228,6 +362,10 @@ let command: Command = {
                                 name: "Info",
                                 value: "Get info on a backup of your server"
                             },
+                            {
+                                name: "You selected",
+                                value: sc
+                            }
                         ])
                         .setColor(Colors.Blurple)
                     ]

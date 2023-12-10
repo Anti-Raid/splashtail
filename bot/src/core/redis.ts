@@ -326,6 +326,11 @@ export class BotRedis extends EventEmitter {
      */
     private async ipcEmitter(message: string, channel: string) {
         try {
+            // OPTIMIZATION: Ignore obvious non-json payloads
+            if(!message?.startsWith("{")) {
+                return
+            }
+
             let data = JSON.parse(message)
 
             // Diagnostics payload
@@ -345,8 +350,14 @@ export class BotRedis extends EventEmitter {
                     return
                 }
 
+                if(!this.bot.isReady()) {
+                    this.bot.logger.warn("Redis", "Got diag payload but bot is not ready")
+                    return
+                }
+
                 // Collect shard health
                 let shardHealthData: ShardHealth[] = []
+                let deadShards: number[] = []
 
                 for(let [id, shard] of this.bot.ws.shards) {
                     shardHealthData.push({
@@ -356,6 +367,25 @@ export class BotRedis extends EventEmitter {
                         guilds: this.bot.guilds.cache.filter(g => g.shardId == id).size,
                         users: this.bot.guilds.cache.filter(g => g.shardId == id).reduce((acc, g) => acc + g.memberCount, 0)
                     })
+
+                    if(![Status.Ready, Status.WaitingForGuilds].includes(shard.status)) {
+                        deadShards.push(id)
+                    }
+                }
+
+                if((this.bot.ws.shards.size / 2) <= deadShards.length) {
+                    // All shards are dead, send a notification and return
+                    await this.createMewldActionLog("critical_dead_shards_in_cluster", {
+                        cluster_id: this.bot.clusterId,
+                        dead_shards: deadShards.map(s => {
+                            return {
+                                shard_id: s,
+                                guilds: this.bot.guilds.cache.filter(g => g.shardId == s).size,
+                                users: this.bot.guilds.cache.filter(g => g.shardId == s).reduce((acc, g) => acc + g.memberCount, 0)
+                            }
+                        }),
+                    })
+                    return
                 }
 
                 // This gets quite spammy...

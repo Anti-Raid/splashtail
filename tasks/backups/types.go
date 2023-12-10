@@ -15,6 +15,7 @@ const (
 	defaultPerChannel        = 100
 	jpegReencodeQuality      = 75
 	fileType                 = "backup.server"
+	restoreMaxBodySize       = 100_000_000 // 100 MB, the maximum size of the backup file
 )
 
 var allowedChannelTypes = []discordgo.ChannelType{
@@ -52,6 +53,7 @@ type BackupCreateOpts struct {
 type BackupRestoreOpts struct {
 	ProtectedChannels []string `json:"protected_channels" description:"Channels to protect from being deleted"`
 	BackupSource      string   `json:"backup_source" description:"The source of the backup"`
+	Decrypt           string   `json:"decrypt" description:"The key to decrypt backups with, if any"`
 }
 
 // Attachment contains metadata about an attachment

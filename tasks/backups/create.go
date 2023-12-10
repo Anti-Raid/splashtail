@@ -21,6 +21,8 @@ import (
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/infinitybotlist/iblfile"
+	"github.com/infinitybotlist/iblfile/autoencryptedencoders/aes256"
+	"github.com/infinitybotlist/iblfile/autoencryptedencoders/noencryption"
 	"github.com/jackc/pgx/v5"
 	"github.com/vmihailenco/msgpack/v5"
 	"go.uber.org/zap"
@@ -265,11 +267,28 @@ func (t *ServerBackupCreateTask) Validate() error {
 func (t *ServerBackupCreateTask) Exec(l *zap.Logger, tx pgx.Tx, tcr *types.TaskCreateResponse) (*types.TaskOutput, error) {
 	l.Info("Beginning backup")
 
-	f, err := iblfile.NewAutoEncryptedFile(t.Options.Encrypt, iblfile.DefaultHashMethod)
+	t1 := time.Now()
+
+	var aeSource iblfile.AEDataSource
+
+	if t.Options.Encrypt == "" {
+		aeSource = noencryption.NoEncryptionSource{}
+	} else {
+		aeSource = aes256.AES256Source{
+			EncryptionKey: t.Options.Encrypt,
+		}
+	}
+
+	t.Options.Encrypt = "" // Clear encryption key
+
+	f, err := iblfile.NewAutoEncryptedFile(aeSource)
 
 	if err != nil {
 		return nil, fmt.Errorf("error creating file: %w", err)
 	}
+	t2 := time.Now()
+
+	l.Info("STATISTICS: newautoencryptedfile", zap.Float64("duration", t2.Sub(t1).Seconds()))
 
 	err = writeMsgpack(f, "backup_opts", t.Options)
 
@@ -504,10 +523,9 @@ func (t *ServerBackupCreateTask) Exec(l *zap.Logger, tx pgx.Tx, tcr *types.TaskC
 	}
 
 	metadata := iblfile.Meta{
-		CreatedAt:      time.Now(),
-		Protocol:       iblfile.Protocol,
-		Type:           fileType,
-		EncryptionData: f.EncDataMap,
+		CreatedAt: time.Now(),
+		Protocol:  iblfile.Protocol,
+		Type:      fileType,
 	}
 
 	ifmt, err := iblfile.GetFormat(fileType)
