@@ -481,7 +481,7 @@ func (t *ServerBackupRestoreTask) Exec(l *zap.Logger, tx pgx.Tx, tcr *types.Task
 			Hoist:       &srcGuild.Roles[i].Hoist,
 			Permissions: &srcGuild.Roles[i].Permissions,
 			Mentionable: &srcGuild.Roles[i].Mentionable,
-		})
+		}, discordgo.WithRetryOnRatelimit(true))
 
 		if err != nil {
 			return nil, fmt.Errorf("failed to create role: %w", err)

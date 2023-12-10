@@ -2,6 +2,7 @@ package backups
 
 import (
 	"bytes"
+	"time"
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/infinitybotlist/iblfile"
@@ -16,7 +17,9 @@ const (
 	jpegReencodeQuality      = 75
 	gaReencodeQuality        = 85
 	fileType                 = "backup.server"
-	restoreMaxBodySize       = 100_000_000 // 100 MB, the maximum size of the backup file
+	restoreMaxBodySize       = 100_000_000     // 100 MB, the maximum size of the backup file
+	roleOpSleep              = 3 * time.Minute // How
+	channelOpSleep           = 3 * time.Minute
 )
 
 var allowedChannelTypes = []discordgo.ChannelType{

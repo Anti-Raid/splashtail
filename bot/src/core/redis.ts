@@ -226,6 +226,10 @@ export class BotRedis extends EventEmitter {
         let start_from = 0
         let taskStatuses: { [key: string]: any}[] = []
 
+        if(opts.timeout == 0) {
+            opts.timeout = 10000
+        }
+
         let tcrB = JSON.stringify(tcr) // Optimization to avoid constant serialization
 
         while(task?.state != "completed" && !done) {
