@@ -4,16 +4,19 @@ import { SlashCommandBuilder } from "@discordjs/builders";
 import { createTaskEmbed } from "../core/common/taskEmbed";
 import { TaskCreateResponse } from "../generatedTypes/types";
 
+const defaultAssets = ["icon", "banner", "splash"]
+
 /*
 type BackupCreateOpts struct {
 	I PerChannel                int            `json:"per_channel" description:"The number of messages per channel"`
 	I MaxMessages               int            `json:"max_messages" description:"The maximum number of messages to backup"`
 	I BackupMessages            bool           `json:"backup_messages" description:"Whether to backup messages or not"`
 	I BackupAttachments         bool           `json:"backup_attachments" description:"Whether to backup attachments or not"`
-	I IgnoreMessageBackupErrors bool           `json:"ignore_message_backup_errors" description:"Whether to ignore errors while backing up messages or not and skip these channels"`
+	I BackupGuildAssets         []string       `json:"backup_guild_assets" description:"What assets to back up"`
+    I IgnoreMessageBackupErrors bool           `json:"ignore_message_backup_errors" description:"Whether to ignore errors while backing up messages or not and skip these channels"`
 	I RolloverLeftovers         bool           `json:"rollover_leftovers" description:"Whether to attempt rollover of leftover message quota to another channels or not"`
 	SpecialAllocations          map[string]int `json:"special_allocations" description:"Specific channel allocation overrides"`
-	Encrypt                     bool           `json:"encrypt" description:"Whether to encrypt the backup or not"`
+	I Encrypt                   string           `json:"encrypt" description:"Whether to encrypt the backup or not"`
 }
 
 type BackupRestoreOpts struct {
@@ -41,6 +44,12 @@ let command: Command = {
         .addBooleanOption((opt) => {
             opt.setName("attachments")
             .setDescription("Whether to include attachments in the backup. Requires 'messages' to be enabled")
+
+            return opt
+        })
+        .addStringOption((opt) => {
+            opt.setName("backup_guild_assets")
+            .setDescription("\"What assets to back up in comma-seperated form (icon,splash,banner)\"")
 
             return opt
         })
@@ -113,11 +122,16 @@ let command: Command = {
             case "create":
                 let messages = ctx.interaction.options.getBoolean("messages")
                 let attachments = ctx.interaction.options.getBoolean("attachments")
+                let backupGuildAssets = ctx.interaction.options.getString("backup_guild_assets")?.split(",") || defaultAssets
                 let maxMessages = ctx.interaction.options.getInteger("max_messages")
                 let perChannel = ctx.interaction.options.getInteger("per_channel")
                 let rolloverLeftovers = ctx.interaction.options.getBoolean("rollover_leftovers")
                 let ignoreMessageBackupErrors = ctx.interaction.options.getBoolean("ignore_message_backup_errors")
                 let password = ctx.interaction.options.getString("password") || ""
+
+                if(backupGuildAssets.length > 0) {
+                    backupGuildAssets = backupGuildAssets?.map((v) => v.trim())?.filter((v) => v.length > 0)
+                }
 
                 if(!messages && attachments) {
                     return FinalResponse.reply({
@@ -152,6 +166,7 @@ let command: Command = {
                             "max_messages": maxMessages || 500,
                             "backup_messages": messages || false,
                             "backup_attachments": attachments || false,
+                            "backup_guild_assets": backupGuildAssets || defaultAssets,
                             "per_channel": perChannel || 100,
                             "rollover_leftovers": rolloverLeftovers || true,
                             "ignore_message_backup_errors": ignoreMessageBackupErrors || false,

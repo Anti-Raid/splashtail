@@ -38,6 +38,53 @@ func countMap(m map[string]int) int {
 	return count
 }
 
+// Backs up image data to a file
+func backupImgData(l *zap.Logger, f *iblfile.AutoEncryptedFile, name, url string) error {
+	l.Info("Backing up guild asset", zap.String("name", name))
+
+	client := http.Client{
+		Timeout: 10 * time.Second,
+	}
+
+	resp, err := client.Get(url)
+
+	if err != nil {
+		return fmt.Errorf("error fetching guild asset: %w", err)
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("error fetching guild asset: %w", fmt.Errorf("status code %d", resp.StatusCode))
+	}
+
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+
+	if err != nil {
+		return fmt.Errorf("error reading guild asset: %w", err)
+	}
+
+	// Re-encode to jpeg
+	img, _, err := image.Decode(bytes.NewReader(body))
+
+	if err != nil {
+		return fmt.Errorf("error decoding guild asset: %w", err)
+	}
+
+	var buf bytes.Buffer
+
+	err = jpeg.Encode(&buf, img, &jpeg.Options{
+		Quality: gaReencodeQuality,
+	})
+
+	if err != nil {
+		return fmt.Errorf("error re-encoding guild asset: %w", err)
+	}
+
+	f.WriteSection(&buf, "assets/"+name)
+	return nil
+}
+
 // Backs up messages of a channel
 //
 // Note that attachments are only backed up if withAttachments is true and f.Size() < fileSizeWarningThreshold
@@ -115,11 +162,31 @@ func createAttachmentBlob(logger *zap.Logger, msg *discordgo.Message) ([]Attachm
 			url = attachment.URL
 		}
 
-		resp, err := http.Get(url)
+		client := http.Client{
+			Timeout: 10 * time.Second,
+		}
+
+		resp, err := client.Get(url)
 
 		if err != nil {
-			logger.Error("Error downloading attachment", zap.Error(err), zap.String("url", url))
-			return attachments, nil, fmt.Errorf("error downloading attachment: %w", err)
+			attachments = append(attachments, AttachmentMetadata{
+				ID:          attachment.ID,
+				Name:        attachment.Filename,
+				URL:         attachment.URL,
+				ProxyURL:    attachment.ProxyURL,
+				Size:        attachment.Size,
+				ContentType: attachment.ContentType,
+				Errors: []string{
+					"Error downloading attachment.",
+					"Got status code " + fmt.Sprintf("%d", resp.StatusCode),
+				},
+			})
+			continue
+		}
+
+		if resp.StatusCode != http.StatusOK {
+			logger.Error("Error downloading attachment", zap.Error(err), zap.String("url", url), zap.Int("status", resp.StatusCode))
+			return attachments, nil, fmt.Errorf("error downloading attachment: %w", fmt.Errorf("status code %d", resp.StatusCode))
 		}
 
 		bt, err := io.ReadAll(resp.Body)
@@ -379,6 +446,43 @@ func (t *ServerBackupCreateTask) Exec(l *zap.Logger, tx pgx.Tx, tcr *types.TaskC
 
 	if err != nil {
 		return nil, fmt.Errorf("error writing core backup: %w", err)
+	}
+
+	for _, b := range t.Options.BackupGuildAssets {
+		switch b {
+		case "icon":
+			if g.Icon == "" {
+				continue
+			}
+
+			err := backupImgData(l, f, "guildIcon", discordgo.EndpointGuildIcon(g.ID, g.Icon))
+
+			if err != nil {
+				return nil, fmt.Errorf("error backing up guild icon: %w", err)
+			}
+		case "banner":
+			if g.Banner == "" {
+				continue
+			}
+
+			err := backupImgData(l, f, "guildBanner", discordgo.EndpointGuildBanner(g.ID, g.Banner))
+
+			if err != nil {
+				return nil, fmt.Errorf("error backing up guild banner: %w", err)
+			}
+		case "splash":
+			if g.Splash == "" {
+				continue
+			}
+
+			err := backupImgData(l, f, "guildSplash", discordgo.EndpointGuildSplash(g.ID, g.Splash))
+
+			if err != nil {
+				return nil, fmt.Errorf("error backing up guild splash: %w", err)
+			}
+		default:
+			return nil, fmt.Errorf("unknown guild asset to backup: %s", b)
+		}
 	}
 
 	// Backup messages

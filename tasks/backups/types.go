@@ -14,6 +14,7 @@ const (
 	minPerChannel            = 50
 	defaultPerChannel        = 100
 	jpegReencodeQuality      = 75
+	gaReencodeQuality        = 85
 	fileType                 = "backup.server"
 	restoreMaxBodySize       = 100_000_000 // 100 MB, the maximum size of the backup file
 )
@@ -43,6 +44,7 @@ type BackupCreateOpts struct {
 	MaxMessages               int            `json:"max_messages" description:"The maximum number of messages to backup"`
 	BackupMessages            bool           `json:"backup_messages" description:"Whether to backup messages or not"`
 	BackupAttachments         bool           `json:"backup_attachments" description:"Whether to backup attachments or not"`
+	BackupGuildAssets         []string       `json:"backup_guild_assets" description:"What assets to back up"`
 	IgnoreMessageBackupErrors bool           `json:"ignore_message_backup_errors" description:"Whether to ignore errors while backing up messages or not and skip these channels"`
 	RolloverLeftovers         bool           `json:"rollover_leftovers" description:"Whether to attempt rollover of leftover message quota to another channels or not"`
 	SpecialAllocations        map[string]int `json:"special_allocations" description:"Specific channel allocation overrides"`
