@@ -20,7 +20,7 @@ type ServerBackupRestoreTask struct {
 	ServerID string `json:"server_id"`
 
 	// Backup options
-	Options BackupRestoreOpts `json:"backup_opts"`
+	Options BackupRestoreOpts `json:"options"`
 
 	valid bool `json:"-"`
 }
