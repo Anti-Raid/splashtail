@@ -421,7 +421,7 @@ func (t *ServerBackupRestoreTask) Exec(l *zap.Logger, tx pgx.Tx, tcr *types.Task
 				return nil, fmt.Errorf("failed to delete role: %w with position of %d", err, r.Position)
 			}
 
-			time.Sleep(1 * time.Second)
+			time.Sleep(3 * time.Second)
 		}
 	}
 
@@ -489,7 +489,7 @@ func (t *ServerBackupRestoreTask) Exec(l *zap.Logger, tx pgx.Tx, tcr *types.Task
 
 		restoredRolesMap[srcGuild.Roles[i].ID] = newRole.ID
 
-		time.Sleep(1 * time.Second)
+		time.Sleep(3 * time.Second)
 	}
 
 	t2 = time.Now()
@@ -675,6 +675,16 @@ func (t *ServerBackupRestoreTask) Exec(l *zap.Logger, tx pgx.Tx, tcr *types.Task
 				if rcid, ok := restoredRolesMap[overwrite.ID]; ok {
 					permOverwrites = append(permOverwrites, &discordgo.PermissionOverwrite{
 						ID:    rcid,
+						Type:  overwrite.Type,
+						Allow: overwrite.Allow,
+						Deny:  overwrite.Deny,
+					})
+					continue
+				}
+
+				if overwrite.ID == srcGuild.ID {
+					permOverwrites = append(permOverwrites, &discordgo.PermissionOverwrite{
+						ID:    tgtGuild.ID,
 						Type:  overwrite.Type,
 						Allow: overwrite.Allow,
 						Deny:  overwrite.Deny,
