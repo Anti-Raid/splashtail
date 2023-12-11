@@ -13,8 +13,8 @@ var ExecuteTask = core.IPC{
 	Description:    "This IPC executes a task given a task and a task id and returns ok if successful. If you do not have both, consider create_task",
 	SupportedModes: []core.IPCMode{core.IPCModeBot, core.IPCModeAPI},
 	Exec: func(c *mredis.LauncherCmd) (*mredis.LauncherCmd, error) {
-		if len(c.Data) == 0 {
-			return nil, fmt.Errorf("no data provided to create task")
+		if len(c.Args) == 0 {
+			return nil, fmt.Errorf("no args provided to create task")
 		}
 
 		taskName, ok := c.Args["name"].(string)
