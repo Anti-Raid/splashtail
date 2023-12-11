@@ -82,10 +82,14 @@ func CreateTask(ctx context.Context, task TaskDefinition) (*types.TaskCreateResp
 }
 
 // Creates a new task on server and executes it
-func NewTask(tcr *types.TaskCreateResponse, task TaskDefinition) {
+func ExecuteTask(taskId string, task TaskDefinition) {
+	if state.CurrentOperationMode != "jobs" {
+		panic("cannot execute task outside of job server")
+	}
+
 	tInfo := task.Info()
 
-	l, _ := NewTaskLogger(tcr.TaskID)
+	l, _ := NewTaskLogger(taskId)
 
 	var done bool
 
@@ -96,7 +100,7 @@ func NewTask(tcr *types.TaskCreateResponse, task TaskDefinition) {
 		if err != nil {
 			l.Error("Panic", zap.Any("err", err), zap.Any("data", tInfo.TaskFields))
 
-			_, err := state.Pool.Exec(state.Context, "UPDATE tasks SET state = $1 WHERE task_id = $2", "failed", tcr.TaskID)
+			_, err := state.Pool.Exec(state.Context, "UPDATE tasks SET state = $1 WHERE task_id = $2", "failed", taskId)
 
 			if err != nil {
 				l.Error("Failed to update task", zap.Error(err), zap.Any("data", tInfo.TaskFields))
@@ -104,7 +108,7 @@ func NewTask(tcr *types.TaskCreateResponse, task TaskDefinition) {
 		}
 
 		if !done {
-			_, err := state.Pool.Exec(state.Context, "UPDATE tasks SET state = $1 WHERE task_id = $2", "failed", tcr.TaskID)
+			_, err := state.Pool.Exec(state.Context, "UPDATE tasks SET state = $1 WHERE task_id = $2", "failed", taskId)
 
 			if err != nil {
 				l.Error("Failed to update task", zap.Error(err), zap.Any("data", tInfo.TaskFields))
@@ -113,7 +117,7 @@ func NewTask(tcr *types.TaskCreateResponse, task TaskDefinition) {
 	}()
 
 	// Set task state to running
-	_, err := state.Pool.Exec(state.Context, "UPDATE tasks SET state = $1 WHERE task_id = $2", "running", tcr.TaskID)
+	_, err := state.Pool.Exec(state.Context, "UPDATE tasks SET state = $1 WHERE task_id = $2", "running", taskId)
 
 	if err != nil {
 		l.Error("Failed to update task", zap.Error(err), zap.Any("data", tInfo.TaskFields))
@@ -121,7 +125,10 @@ func NewTask(tcr *types.TaskCreateResponse, task TaskDefinition) {
 	}
 
 	var taskState = "completed"
-	outp, err := task.Exec(l, tcr)
+	outp, err := task.Exec(l, &types.TaskCreateResponse{
+		TaskID:   taskId,
+		TaskInfo: tInfo,
+	})
 
 	if err != nil {
 		l.Error("Failed to execute task", zap.Error(err))
@@ -143,7 +150,7 @@ func NewTask(tcr *types.TaskCreateResponse, task TaskDefinition) {
 
 		err = state.ObjectStorage.Save(
 			state.Context,
-			GetPathFromOutput(tcr.TaskID, tInfo, outp),
+			GetPathFromOutput(taskId, tInfo, outp),
 			outp.Filename,
 			outp.Buffer,
 			0,
@@ -155,7 +162,7 @@ func NewTask(tcr *types.TaskCreateResponse, task TaskDefinition) {
 		}
 	}
 
-	_, err = state.Pool.Exec(state.Context, "UPDATE tasks SET output = $1, state = $2 WHERE task_id = $3", outp, taskState, tcr.TaskID)
+	_, err = state.Pool.Exec(state.Context, "UPDATE tasks SET output = $1, state = $2 WHERE task_id = $3", outp, taskState, taskId)
 
 	if err != nil {
 		l.Error("Failed to update task", zap.Error(err), zap.Any("data", tInfo.TaskFields))

@@ -20,6 +20,7 @@ import (
 	"github.com/infinitybotlist/eureka/genconfig"
 	hredis "github.com/infinitybotlist/eureka/hotcache/redis"
 	"github.com/infinitybotlist/eureka/proxy"
+	"github.com/infinitybotlist/eureka/ratelimit"
 	"github.com/infinitybotlist/eureka/snippets"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/redis/go-redis/v9"
@@ -37,11 +38,14 @@ var (
 	Logger                  *zap.Logger
 	Context                 = context.Background()
 	Validator               = validator.New()
-	MewldInstanceList       *mproc.InstanceList
 	BotUser                 *discordgo.User
 	ObjectStorage           *objectstorage.ObjectStorage
+	CurrentOperationMode    string // Current mode splashtail is operating in
 
 	Config *config.Config
+
+	// This is only non-nil for webserver
+	MewldInstanceList *mproc.InstanceList
 )
 
 func nonVulgar(fl validator.FieldLevel) bool {
@@ -150,6 +154,7 @@ func Setup() {
 
 	BotUser = bu
 
+	// Shouldnt be called yet as we don't start websocket
 	Discord.AddHandler(func(s *discordgo.Session, r *discordgo.Ready) {
 		Logger.Info("[DISCORD]", zap.String("note", "ready"))
 	})
@@ -175,4 +180,11 @@ func Setup() {
 	if err != nil {
 		panic(err)
 	}
+
+	ratelimit.SetupState(&ratelimit.RLState{
+		HotCache: hredis.RedisHotCache[int]{
+			Redis:  Redis,
+			Prefix: "rl:",
+		},
+	})
 }

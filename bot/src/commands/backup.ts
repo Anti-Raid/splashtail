@@ -196,10 +196,10 @@ let command: Command = {
                 let handle = await ctx.client.redis.sendIpcRequest({
                     scope: "splashtail",
                     action: "create_task",
-                    data: {
+                    args: {
                         "name": "create_backup"
                     },
-                    args: {
+                    output: {
                         "server_id": ctx.guild.id,
                         "options": {
                             "max_messages": maxMessages || 500,
@@ -337,10 +337,10 @@ let command: Command = {
                 let handle2 = await ctx.client.redis.sendIpcRequest({
                     scope: "splashtail",
                     action: "create_task",
-                    data: {
+                    args: {
                         "name": "restore_backup"
                     },
-                    args: {
+                    output: {
                         "server_id": ctx.guild.id,
                         "options": {
                             "backup_source": backupFile.url,

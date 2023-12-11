@@ -80,6 +80,8 @@ github.com/cheesycod/mewld v0.0.0-20231205053749-40535fcdea19 h1:jRqgVDdOW/1NR+1
 github.com/cheesycod/mewld v0.0.0-20231205053749-40535fcdea19/go.mod h1:zp1cPTRtvHkaygkgOIMNHrc45/F5SGfsyzmVAcEoZ2c=
 github.com/cheesycod/mewld v0.0.0-20231205144150-8a2e01d14a33 h1:dtUAFrPn+pIND8UFtxSTCToeJQWWBFMfVWjbVhr5Xfs=
 github.com/cheesycod/mewld v0.0.0-20231205144150-8a2e01d14a33/go.mod h1:zp1cPTRtvHkaygkgOIMNHrc45/F5SGfsyzmVAcEoZ2c=
+github.com/cheesycod/mewld v0.0.0-20231211143407-4241f75cc20b h1:6QO0jF47jHOyqzTgbXbvnc7FtEhlFyRT0Kx/azoxSU8=
+github.com/cheesycod/mewld v0.0.0-20231211143407-4241f75cc20b/go.mod h1:zp1cPTRtvHkaygkgOIMNHrc45/F5SGfsyzmVAcEoZ2c=
 github.com/chenzhuoyu/base64x v0.0.0-20211019084208-fb5309c8db06/go.mod h1:DH46F32mSOjUmXrMHnKwZdA8wcEefY7UVqBKYGjpdQY=
 github.com/chenzhuoyu/base64x v0.0.0-20221115062448-fe3a3abad311/go.mod h1:b583jCggY9gE99b6G5LEC39OIiVsWj+R97kbl5odCEk=
 github.com/chenzhuoyu/base64x v0.0.0-20230717121745-296ad89f973d h1:77cEq6EriyTZ0g/qfRdp61a3Uu/AWrgIq2s0ClJV1g0=
@@ -244,6 +246,8 @@ github.com/infinitybotlist/iblfile v0.0.0-20231210082357-1336dea05708 h1:J6MJquB
 github.com/infinitybotlist/iblfile v0.0.0-20231210082357-1336dea05708/go.mod h1:j214HiwMfNCQ/udfZR33O5zv2/FPdSKIEYkMIm7tOjc=
 github.com/infinitybotlist/iblfile v0.0.0-20231210085154-7a98d9ecd8f8 h1:ioWOm2Tg2udnyGpbJPQKwSQ1rbid08oF6UHTkCHJi6Y=
 github.com/infinitybotlist/iblfile v0.0.0-20231210085154-7a98d9ecd8f8/go.mod h1:j214HiwMfNCQ/udfZR33O5zv2/FPdSKIEYkMIm7tOjc=
+github.com/infinitybotlist/iblfile v0.0.0-20231210092627-3ed3e63c09ae h1:7MbukIzmsHAAdCiHmXXPTdaS1bNs5ZJHIVqPAh3BBbY=
+github.com/infinitybotlist/iblfile v0.0.0-20231210092627-3ed3e63c09ae/go.mod h1:j214HiwMfNCQ/udfZR33O5zv2/FPdSKIEYkMIm7tOjc=
 github.com/invopop/yaml v0.2.0 h1:7zky/qH+O0DwAyoobXUqvVBwgBFRxKoQ/3FjcVpjTMY=
 github.com/invopop/yaml v0.2.0/go.mod h1:2XuRLgs/ouIrW3XNzuNj7J3Nvu/Dig5MXvbCEdiBN3Q=
 github.com/jackc/pgpassfile v1.0.0 h1:/6Hmqy13Ss2zCq62VdNG8tM1wchn8zjSGOBJ6icpsIM=

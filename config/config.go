@@ -89,6 +89,7 @@ type Servers struct {
 }
 
 type Meta struct {
+	WebRedisChannel string          `yaml:"web_redis_channel" default:"ar_web" comment:"Web Redis Channel" validate:"required"`
 	PostgresURL     string          `yaml:"postgres_url" default:"postgresql:///antiraid" comment:"Postgres URL" validate:"required"`
 	RedisURL        Differs[string] `yaml:"redis_url" default:"redis://localhost:6379" comment:"Redis URL" validate:"required"`
 	Port            Differs[string] `yaml:"port" default:":8081" comment:"Port to run the server on" validate:"required"`

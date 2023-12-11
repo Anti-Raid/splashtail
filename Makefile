@@ -4,7 +4,7 @@ CDN_PATH := /failuremgmt/cdn/antiraid
 
 stcore:
 	CGO_ENABLED=0 go build -v 
-	systemctl reload splashtail-staging
+	systemctl reload splashtail-staging-webserver splashtail-staging-jobs
 all:
 	make buildbot && make buildmewldwebui && make stcore 
 buildbot:

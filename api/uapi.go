@@ -11,8 +11,6 @@ import (
 	"strings"
 
 	"github.com/go-chi/chi/v5"
-	hredis "github.com/infinitybotlist/eureka/hotcache/redis"
-	"github.com/infinitybotlist/eureka/ratelimit"
 	"github.com/infinitybotlist/eureka/uapi"
 	"github.com/jackc/pgx/v5/pgtype"
 	"go.uber.org/zap"
@@ -192,12 +190,5 @@ func Setup() {
 			BodyRequired:        constants.BodyRequired,
 		},
 		DefaultResponder: DefaultResponder{},
-	})
-
-	ratelimit.SetupState(&ratelimit.RLState{
-		HotCache: hredis.RedisHotCache[int]{
-			Redis:  state.Redis,
-			Prefix: "rl:",
-		},
 	})
 }
