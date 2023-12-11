@@ -418,7 +418,7 @@ export class BotRedis extends EventEmitter {
                     })
                 }    
                 
-                await this.client.publish(process.env.MEWLD_CHANNEL, JSON.stringify(resp))
+                await this.client.publish(channel, JSON.stringify(resp))
             } else {
                 if(!data?.action) {
                     if(data?.output == "ok" && data?.scope == "bot") {

@@ -82,6 +82,12 @@ github.com/cheesycod/mewld v0.0.0-20231205144150-8a2e01d14a33 h1:dtUAFrPn+pIND8U
 github.com/cheesycod/mewld v0.0.0-20231205144150-8a2e01d14a33/go.mod h1:zp1cPTRtvHkaygkgOIMNHrc45/F5SGfsyzmVAcEoZ2c=
 github.com/cheesycod/mewld v0.0.0-20231211143407-4241f75cc20b h1:6QO0jF47jHOyqzTgbXbvnc7FtEhlFyRT0Kx/azoxSU8=
 github.com/cheesycod/mewld v0.0.0-20231211143407-4241f75cc20b/go.mod h1:zp1cPTRtvHkaygkgOIMNHrc45/F5SGfsyzmVAcEoZ2c=
+github.com/cheesycod/mewld v0.0.0-20231211144148-092d6b8cecd5 h1:2u10t5qu6BGRVQdKQobYgqwxP0tn4lt+0hwKuGUxE2M=
+github.com/cheesycod/mewld v0.0.0-20231211144148-092d6b8cecd5/go.mod h1:zp1cPTRtvHkaygkgOIMNHrc45/F5SGfsyzmVAcEoZ2c=
+github.com/cheesycod/mewld v0.0.0-20231211145654-05d3501e2eb0 h1:r0wUX8aJBicIyttUcuoBLZVq9VeIvtgooE9HneynHxE=
+github.com/cheesycod/mewld v0.0.0-20231211145654-05d3501e2eb0/go.mod h1:zp1cPTRtvHkaygkgOIMNHrc45/F5SGfsyzmVAcEoZ2c=
+github.com/cheesycod/mewld v0.0.0-20231211150103-874e06dbec5a h1:OXK9A4CE4lBlqq/m2d/eTfGBqZR6xXr9uuLRtHhrRJA=
+github.com/cheesycod/mewld v0.0.0-20231211150103-874e06dbec5a/go.mod h1:zp1cPTRtvHkaygkgOIMNHrc45/F5SGfsyzmVAcEoZ2c=
 github.com/chenzhuoyu/base64x v0.0.0-20211019084208-fb5309c8db06/go.mod h1:DH46F32mSOjUmXrMHnKwZdA8wcEefY7UVqBKYGjpdQY=
 github.com/chenzhuoyu/base64x v0.0.0-20221115062448-fe3a3abad311/go.mod h1:b583jCggY9gE99b6G5LEC39OIiVsWj+R97kbl5odCEk=
 github.com/chenzhuoyu/base64x v0.0.0-20230717121745-296ad89f973d h1:77cEq6EriyTZ0g/qfRdp61a3Uu/AWrgIq2s0ClJV1g0=
