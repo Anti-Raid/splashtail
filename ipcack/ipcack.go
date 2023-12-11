@@ -15,7 +15,7 @@ type Ack struct {
 	Chan   chan *mredis.LauncherCmd
 }
 
-var AckQueue = syncmap.Map[string, *Ack]{} // taskID -> chan
+var AckQueue = syncmap.MutexedMap[string, *Ack]{} // taskID -> chan
 
 func Acker() {
 	if state.CurrentOperationMode != "webserver" {
@@ -29,6 +29,10 @@ func Acker() {
 	ch := sp.Channel()
 
 	for msg := range ch {
+		if AckQueue.Length() == 0 {
+			continue
+		}
+
 		var cmd *mredis.LauncherCmd
 
 		err := json.Unmarshal([]byte(msg.Payload), &cmd)

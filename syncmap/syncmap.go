@@ -38,3 +38,13 @@ func (m *Map[K, V]) Range(f func(key K, value V) bool) {
 }
 
 func (m *Map[K, V]) Store(key K, value V) { m.m.Store(key, value) }
+
+// Length returns the number of items in the map.
+func (m *Map[K, V]) Length() int {
+	length := 0
+	m.Range(func(key K, value V) bool {
+		length++
+		return true
+	})
+	return length
+}
