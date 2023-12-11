@@ -86,6 +86,11 @@ export interface TaskPollOptions {
     timeout: number
 
     /**
+     * Poll interval in milliseconds
+     */
+    pollInterval?: number
+
+    /**
      * The target ID who is requesting the task. Needed for Access Control
      */
     targetId: string
@@ -226,8 +231,12 @@ export class BotRedis extends EventEmitter {
         let start_from = 0
         let taskStatuses: { [key: string]: any}[] = []
 
-        if(opts.timeout == 0) {
+        if(!opts.timeout) {
             opts.timeout = 10000
+        }
+
+        if(!opts.pollInterval) {
+            opts.pollInterval = 10000
         }
 
         let tcrB = JSON.stringify(tcr) // Optimization to avoid constant serialization
@@ -281,6 +290,9 @@ export class BotRedis extends EventEmitter {
             }
 
             start_from = (task?.statuses?.length) || 0
+
+            // Sleep for timeout seconds
+            await new Promise((resolve) => setTimeout(resolve, opts.pollInterval))
         }
 
         return task // Return the task till what we have or whatever we have left of a task

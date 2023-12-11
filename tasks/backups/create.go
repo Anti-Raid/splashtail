@@ -23,7 +23,6 @@ import (
 	"github.com/infinitybotlist/iblfile"
 	"github.com/infinitybotlist/iblfile/autoencryptedencoders/aes256"
 	"github.com/infinitybotlist/iblfile/autoencryptedencoders/noencryption"
-	"github.com/jackc/pgx/v5"
 	"github.com/vmihailenco/msgpack/v5"
 	"go.uber.org/zap"
 )
@@ -331,7 +330,25 @@ func (t *ServerBackupCreateTask) Validate() error {
 	return nil
 }
 
-func (t *ServerBackupCreateTask) Exec(l *zap.Logger, tx pgx.Tx, tcr *types.TaskCreateResponse) (*types.TaskOutput, error) {
+func (t *ServerBackupCreateTask) Exec(l *zap.Logger, tcr *types.TaskCreateResponse) (*types.TaskOutput, error) {
+	// Check current backup concurrency
+	count, _ := concurrentBackupState.LoadOrStore(t.ServerID, 0)
+
+	if count >= maxServerBackupTasks {
+		return nil, fmt.Errorf("you already have a backup-related task in progress, please wait for it to finish")
+	}
+
+	concurrentBackupState.Store(t.ServerID, count+1)
+
+	// Decrement count when we're done
+	defer func() {
+		countNow, _ := concurrentBackupState.LoadOrStore(t.ServerID, 0)
+
+		if countNow > 0 {
+			concurrentBackupState.Store(t.ServerID, countNow-1)
+		}
+	}()
+
 	l.Info("Beginning backup")
 
 	t1 := time.Now()

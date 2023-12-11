@@ -18,8 +18,9 @@ const (
 	gaReencodeQuality        = 85
 	fileType                 = "backup.server"
 	restoreMaxBodySize       = 100_000_000     // 100 MB, the maximum size of the backup file
-	roleOpSleep              = 3 * time.Minute // How
-	channelOpSleep           = 3 * time.Minute
+	roleOpSleep              = 3 * time.Minute // How long to sleep between role operations
+	channelOpSleep           = 3 * time.Minute // How long to sleep between channel operations
+	maxServerBackupTasks     = 1               // How many backup tasks can run concurrently per server
 )
 
 var allowedChannelTypes = []discordgo.ChannelType{

@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/infinitybotlist/eureka/crypto"
-	"github.com/jackc/pgx/v5"
 	"go.uber.org/zap"
 )
 
@@ -26,7 +25,7 @@ type TaskDefinition interface {
 	Validate() error
 
 	// Exec executes the task returning an output if any
-	Exec(l *zap.Logger, tx pgx.Tx, tcr *types.TaskCreateResponse) (*types.TaskOutput, error)
+	Exec(l *zap.Logger, tcr *types.TaskCreateResponse) (*types.TaskOutput, error)
 
 	// Returns the info on a task
 	Info() *types.TaskInfo
@@ -121,30 +120,8 @@ func NewTask(tcr *types.TaskCreateResponse, task TaskDefinition) {
 		return
 	}
 
-	tx, err := state.Pool.Begin(state.Context)
-
-	if err != nil {
-		l.Error("Failed to begin transaction", zap.Error(err), zap.Any("data", tInfo.TaskFields))
-		return
-	}
-
-	defer tx.Rollback(state.Context)
-
-	// Flush out old tasks
-	tff := FormatTaskFor(tInfo.TaskFor)
-	if tff != nil {
-		_, err = tx.Exec(state.Context, "DELETE FROM tasks WHERE task_name = $1 AND task_id != $2 AND task_for = $3 AND state != 'completed'", tInfo.Name, tcr.TaskID, tff)
-	} else {
-		_, err = tx.Exec(state.Context, "DELETE FROM tasks WHERE task_name = $1 AND task_id != $2 AND task_for IS NULL AND state != 'completed'", tInfo.Name, tcr.TaskID)
-	}
-
-	if err != nil {
-		l.Error("Failed to delete old tasks", zap.Error(err), zap.Any("data", tInfo.TaskFields))
-		return
-	}
-
 	var taskState = "completed"
-	outp, err := task.Exec(l, tx, tcr)
+	outp, err := task.Exec(l, tcr)
 
 	if err != nil {
 		l.Error("Failed to execute task", zap.Error(err))
@@ -178,17 +155,10 @@ func NewTask(tcr *types.TaskCreateResponse, task TaskDefinition) {
 		}
 	}
 
-	_, err = tx.Exec(state.Context, "UPDATE tasks SET output = $1, state = $2 WHERE task_id = $3", outp, taskState, tcr.TaskID)
+	_, err = state.Pool.Exec(state.Context, "UPDATE tasks SET output = $1, state = $2 WHERE task_id = $3", outp, taskState, tcr.TaskID)
 
 	if err != nil {
 		l.Error("Failed to update task", zap.Error(err), zap.Any("data", tInfo.TaskFields))
-		return
-	}
-
-	err = tx.Commit(state.Context)
-
-	if err != nil {
-		l.Error("Failed to commit transaction", zap.Error(err), zap.Any("data", tInfo.TaskFields))
 		return
 	}
 
