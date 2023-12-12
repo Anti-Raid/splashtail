@@ -1,7 +1,7 @@
 import { Colors, EmbedBuilder, PermissionsBitField } from "discord.js";
 import { Command, FinalResponse } from "../core/client";
 import { SlashCommandBuilder } from "@discordjs/builders";
-import { createTaskEmbed } from "../core/common/taskEmbed";
+import { createTaskEmbed, pollTask } from "../core/common/taskEmbed";
 import { Task, TaskCreateResponse } from "../generatedTypes/types";
 
 const defaultAssets = ["icon", "banner", "splash"]
@@ -264,10 +264,7 @@ let command: Command = {
                     ]
                 })
 
-                let task = await ctx.client.redis.pollForTask(tcr, {
-                    timeout: 60000, // 1 minute timeout
-                    targetId: ctx.guild.id,
-                    targetType: "Server",
+                let task = await pollTask(tcr?.task_id, {
                     callback: async (task) => {
                         await ctx.edit(createTaskEmbed(ctx, task))
                     }
@@ -405,10 +402,7 @@ let command: Command = {
                 })
 
                 let prevTask: Task = null
-                let task2 = await ctx.client.redis.pollForTask(tcr2, {
-                    timeout: 60000, // 1 minute timeout
-                    targetId: ctx.guild.id,
-                    targetType: "Server",
+                let task2 = await pollTask(tcr2?.task_id, {
                     callback: async (task) => {
                         // Prevent spamming of edits
                         if(task?.state === prevTask?.state && JSON.stringify(task) === JSON.stringify(prevTask)) return

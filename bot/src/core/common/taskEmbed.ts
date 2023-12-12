@@ -1,6 +1,58 @@
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder } from "discord.js";
 import { CommandContext, ContextEdit, Component } from "../context";
 import { Task } from "../../generatedTypes/types";
+import { AntiRaid } from "../client";
+import sql from "../db";
+
+export const getTask = async (taskId: string): Promise<Task> => {
+    let data = await sql`SELECT allow_unauthenticated, task_name, output, task_info, statuses, task_for, expiry, state, created_at FROM tasks WHERE task_id = ${taskId}`
+
+    if(data.count == 0) return null
+
+    let task = data[0] as Task
+
+    task.task_id = taskId
+
+    return task
+}
+
+export interface PollTaskOptions {
+    callback: (task: Task) => Promise<void>,
+    timeout?: number,
+    pollInterval?: number
+}
+
+export const pollTask = async (taskId: string, opts: PollTaskOptions): Promise<Task> => {
+    if(!taskId) throw new Error("taskId is required")
+
+    if(!opts?.pollInterval) {
+        opts.pollInterval = 1000
+    }
+
+    let done = false
+
+    if(opts?.timeout) {
+        setTimeout(() => {
+            done = true
+        }, opts?.timeout)
+    }
+
+    while(!done) {
+        let task = await getTask(taskId)
+
+        if(!task) {
+            throw new Error("Task not found")
+        }
+
+        await opts.callback(task)
+
+        if(task.state != "pending" && task.state != "running") {
+            return task
+        }
+
+        await new Promise((resolve) => setTimeout(resolve, opts.pollInterval))
+    }
+}
 
 export const createTaskEmbed = (ctx: CommandContext, task: Task): ContextEdit => {
     let taskStatuses: string[] = []

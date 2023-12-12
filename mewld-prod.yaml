@@ -1,0 +1,27 @@
+dir: bot
+override_dir:
+use_current_directory: true
+use_custom_webui: true
+env:
+names: 
+  - "Flare"
+  - "Waffle"
+  - "Aqua"
+module: build/index.js
+redis: redis://localhost:6379/2
+redis_channel: ar_clusters/prod
+interp: /usr/bin/node
+
+# WEBUI
+allowed_ids:
+  - "728871946456137770"
+  - "564164277251080208"
+  - "775855009421066262"
+
+ping_interval: 20 # 20 seconds (for testing, change this)
+ping_timeout: 60 # 60 seconds (for testing, change this)
+cluster_start_next_delay: 0 # 1 second (for testing, change this)
+per_cluster: 2 # Number of shards per cluster, can be overrided using ``PER_CLUSTER`` env var
+minimum_safe_sessions_remaining: 3
+experimental_features:
+  - reshard

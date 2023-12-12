@@ -20,6 +20,7 @@ import (
 	"gopkg.in/yaml.v2"
 
 	"splashtail/api"
+	"splashtail/config"
 	"splashtail/constants"
 	"splashtail/ipc"
 	"splashtail/ipcack"
@@ -219,7 +220,7 @@ func main() {
 		})
 
 		// Load mewld bot
-		mldF, err := os.ReadFile("mewld.yaml")
+		mldF, err := os.ReadFile("mewld-" + config.CurrentEnv + ".yaml")
 
 		if err != nil {
 			panic(err)
@@ -238,6 +239,10 @@ func main() {
 			ClientID:     state.Config.DiscordAuth.ClientID,
 			ClientSecret: state.Config.DiscordAuth.ClientSecret,
 			RedirectURL:  state.Config.DiscordAuth.MewldRedirect,
+		}
+
+		if mldConfig.Redis != state.Config.Meta.RedisURL.Parse() {
+			panic("Redis URL in mewld.yaml does not match the one in config.yaml")
 		}
 
 		il, rh, err := mloader.Load(&mldConfig, &mproc.LoaderData{
@@ -266,6 +271,7 @@ func main() {
 				env := os.Environ()
 
 				env = append(env, "MEWLD_CHANNEL="+l.Config.RedisChannel)
+				env = append(env, "REDIS_URL="+state.Config.Meta.RedisURL.Parse())
 
 				cmd.Env = env
 				cmd.Dir = l.Dir

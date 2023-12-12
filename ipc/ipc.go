@@ -4,7 +4,7 @@ import (
 	"slices"
 	"splashtail/ipc/core"
 	"splashtail/ipc/endpoints/create_task"
-	"splashtail/ipc/endpoints/get_task"
+	"splashtail/ipc/endpoints/execute_task"
 	"splashtail/state"
 
 	mredis "github.com/cheesycod/mewld/redis"
@@ -17,8 +17,8 @@ import (
 var json = jsoniter.ConfigFastest
 
 var ipcEvents = map[string]core.IPC{
-	"get_task":    get_task.GetTask,
-	"create_task": create_task.CreateTask,
+	"create_task":  create_task.CreateTask,
+	"execute_task": execute_task.ExecuteTask,
 }
 
 var IpcDone bool

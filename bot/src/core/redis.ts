@@ -218,86 +218,7 @@ export class BotRedis extends EventEmitter {
 
         return handle
     }
-
-    /**
-     * 
-     * @param tcr The task create response
-     * @param opts The options for polling for a task
-     */
-    async pollForTask(tcr: TaskCreateResponse, opts: TaskPollOptions) {
-        let done = false
-        let handle: IPCRequestHandle | null = null
-        let task: Task | null = null
-        let start_from = 0
-        let taskStatuses: { [key: string]: any}[] = []
-
-        if(!opts.timeout) {
-            opts.timeout = 10000
-        }
-
-        if(!opts.pollInterval) {
-            opts.pollInterval = 10000
-        }
-
-        let tcrB = JSON.stringify(tcr) // Optimization to avoid constant serialization
-
-        while(task?.state != "completed" && !done) {
-            handle = await this.sendIpcRequest({
-                scope: "splashtail",
-                action: "get_task",
-                data: {
-                    target_id: opts.targetId,
-                    target_type: opts.targetType,
-                    task: tcrB,
-                    start_from
-                }
-            }, null, {
-                timeout: opts.timeout,
-            })
-
-            if(!handle) throw new Error("Invalid IPC handle")
-
-            let rmap = await handle.fetch()
-
-            if(rmap.size == 0 || !rmap.has(-1)) {
-                throw new Error("No response from co-ordinator server")
-            }
-
-            let resp = rmap.get(-1)
-
-            if(resp?.output?.error) {
-                throw new Error(resp?.output?.error)
-            }
-
-            task = resp?.output
-
-            if(!task || !task?.task_id) {
-                throw new Error("No task returned")
-            }
-            
-            // Set new statuses
-            taskStatuses = [
-                ...taskStatuses,
-                ...(task?.statuses || [])
-            ]
-
-            task.statuses = taskStatuses
-
-            await opts.callback(task)
-
-            if(task?.state == "completed" || task?.state == "failed") {
-                return task
-            }
-
-            start_from = (task?.statuses?.length) || 0
-
-            // Sleep for timeout seconds
-            await new Promise((resolve) => setTimeout(resolve, opts.pollInterval))
-        }
-
-        return task // Return the task till what we have or whatever we have left of a task
-    }
-
+    
     /**
      * Signals to mewld to launch the next cluster
      */
@@ -317,7 +238,13 @@ export class BotRedis extends EventEmitter {
      * Starts the base redis client
      */
     private async startRedis() {
-        this.client = createClient()
+        if(!process.env.MEWLD_CHANNEL || !process.env.REDIS_URL) {
+            throw new Error("Missing environment variables")
+        }
+
+        this.client = createClient({
+            url: process.env.REDIS_URL
+        })
         await this.client.connect()
     }
 
