@@ -16,9 +16,9 @@ let command: Command = {
 
         for (const [id, command] of ctx.client.commands) {
             if(command?.botStaffPerms?.includes(BotStaffPerms.Owner)) {
-                guildOnlyCommands.push(command.interactionData.toJSON())
+                guildOnlyCommands.push(command.interactionData.setDMPermission(false).toJSON())
             } else {
-                globalCommands.push(command.interactionData.toJSON())
+                globalCommands.push(command.interactionData.setDMPermission(false).toJSON())
             }
         }
 

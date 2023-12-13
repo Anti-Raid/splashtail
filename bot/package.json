@@ -7,7 +7,6 @@
 		"build": "tsc -p tsconfig.json",
 		"start": "node build/index.js",
 		"dev": "npm run build && node build/index.js",
-		"bootstrap": "npm run build && node build/bootstrap.js",
 		"format": "prettier --write --plugin-search-dir=. ."
 	},
 	"author": "Anti Raid",

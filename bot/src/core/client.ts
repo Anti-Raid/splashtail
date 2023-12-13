@@ -1,4 +1,4 @@
-import { Client, GatewayIntentBits, ActivityType, EmbedBuilder, Events, Routes, SlashCommandBuilder, SlashCommandSubcommandsOnlyBuilder, Interaction, ModalSubmitInteraction, Colors, PermissionsBitField, TeamMember } from "discord.js";
+import { Client, GatewayIntentBits, ActivityType, EmbedBuilder, Events, Routes, SlashCommandBuilder, SlashCommandSubcommandsOnlyBuilder, Interaction, ModalSubmitInteraction, Colors, PermissionsBitField, TeamMember, Message } from "discord.js";
 import { AutocompleteContext, CommandContext, ContextReply, ContextReplyStatus } from "./context";
 import { Logger } from "./logger";
 import { readFileSync, readdirSync } from "node:fs";
@@ -84,18 +84,37 @@ export enum BotStaffPerms {
     Owner,
 }
 
+/**
+ * This is the interface for the interaction data that can be used for a slash command
+ */
+export type InteractionData = SlashCommandBuilder | Omit<SlashCommandBuilder, "addSubcommand" | "addSubcommandGroup"> | SlashCommandSubcommandsOnlyBuilder;
+
+/**
+ * This is the interface for a command
+ */
 export interface Command {
     userPerms: (PermissionsBitField | bigint)[];
     botPerms: (PermissionsBitField | bigint)[];
     botStaffPerms?: BotStaffPerms[];
-    interactionData: SlashCommandBuilder | Omit<SlashCommandBuilder, "addSubcommand" | "addSubcommandGroup"> | SlashCommandSubcommandsOnlyBuilder;
+    interactionData: InteractionData | ((client: AntiRaid) => Promise<InteractionData>);
+    onLoad?: () => Promise<void>;
+    execute: (context: CommandContext) => Promise<FinalResponse>;
+    autocomplete?: (context: AutocompleteContext) => Promise<void>;
+}
+
+// This is an internal interface used for the resolved command
+export interface ResolvedCommand {
+    userPerms: (PermissionsBitField | bigint)[];
+    botPerms: (PermissionsBitField | bigint)[];
+    botStaffPerms?: BotStaffPerms[];
+    interactionData: InteractionData;
     onLoad?: () => Promise<void>;
     execute: (context: CommandContext) => Promise<FinalResponse>;
     autocomplete?: (context: AutocompleteContext) => Promise<void>;
 }
 
 export class AntiRaid extends Client {
-    commands: Map<string, Command> = new Map();
+    commands: Map<string, ResolvedCommand> = new Map();
     logger: Logger;
     clusterId: number;
     allClustersLaunched: boolean = false
@@ -108,7 +127,8 @@ export class AntiRaid extends Client {
     apiUrl: string;
     private _config: Config;
     private hasLoadedListeners: boolean = false;
-    private teamOwners: string[] = []
+    private teamOwners: string[] = [];
+    private bootstrapCmds = ["deploy", "ping"]
     gateway: string;
     currentShardHealth: Map<number, ShardHealth> = new Map()
 
@@ -207,12 +227,12 @@ export class AntiRaid extends Client {
         this.logger.info("Discord", `Loaded ${this.teamOwners.length} team owners`)
 
         await this.loadCommands()
-
-        this.logger.info("Discord", `Loaded ${this.commands.size} commands`, this.commands)
+        
+        this.logger.debug("Discord", `Loaded ${this.commands.size} commands`, this.commands)
 
         await this.loadIPCs()
 
-        this.logger.info("Discord", `Loaded ${this.redis.ipcs.size} IPCs`, this.redis.ipcs)
+        this.logger.debug("Discord", `Loaded ${this.redis.ipcs.size} IPCs`, this.redis.ipcs)
 
         await this.redis.load()
     }
@@ -536,9 +556,55 @@ export class AntiRaid extends Client {
     }
 
     /**
-     * Loads all commands of the bot
+     * Loads a commands of the bot
+     * 
+     * This shouldn't be used outside of special cases such as reload commands etc
      */
-    private async loadCommands() {
+    async loadCommand(file: string) {
+        this.logger.info("Loader", `Loading command ${file.replace(".js", "")}`)
+        const unresolvedCmd: Command = (await import(`../commands/${file}`))?.default;
+
+        if(!unresolvedCmd) {
+            throw new Error(`Invalid command ${file.replace(".js", "")}. Please ensure that you are exporting the command as default using \`export default command;\``)
+        }
+
+        let neededProps = ["execute", "interactionData"]
+
+        for(let prop of neededProps) {
+            if(!unresolvedCmd[prop]) {
+                throw new Error(`Command ${file} is missing property ${prop}`)
+            }
+        }
+
+        let interactionData: InteractionData
+        if(typeof unresolvedCmd.interactionData == "function") {
+            interactionData = await unresolvedCmd.interactionData(this)
+        } else {
+            interactionData = unresolvedCmd.interactionData
+        }
+
+        let command: ResolvedCommand = {
+            ...unresolvedCmd,
+            interactionData
+        }
+
+        if(command.interactionData.name != file.replace(".js", "")) {
+            throw new Error(`Command ${file} has an invalid name. Please ensure that the name of the command is the same as the file name`)
+        }
+
+        this.commands.set(command.interactionData.name, command);
+
+        if(command.onLoad) {
+            await command.onLoad()
+        }
+    }
+
+    /**
+     * Loads all commands of the bot
+     * 
+     * This shouldn't be used outside of special cases such as reload commands etc
+     */
+    async loadCommands() {
         if(this.commands.size > 0) {
             this.logger.error("Discord", "Commands have already been loaded")
             return false
@@ -549,30 +615,25 @@ export class AntiRaid extends Client {
             .filter((file) => file.endsWith(".js"));
         
         for (const file of commandFiles) {
-            this.logger.info("Loader", `Loading command ${file.replace(".js", "")}`)
-            const command: Command = (await import(`../commands/${file}`))?.default;
+            await this.loadCommand(file)
+        }
 
-            if(!command) {
-                throw new Error(`Invalid command ${file.replace(".js", "")}. Please ensure that you are exporting the command as default using \`export default command;\``)
-            }
+        if(process.env.BOOTSTRAP_COMMANDS) {
+            let commands: any[] = [];
 
-            let neededProps = ["execute", "interactionData"]
+            for(let file of this.bootstrapCmds) {
+                this.logger.info("Bootstrap", `Deploying ${file} to server ${this.config.servers.main} with client ID ${this.config.discord_auth.client_id}`);
 
-            for(let prop of neededProps) {
-                if(!command[prop]) {
-                    throw new Error(`Command ${file} is missing property ${prop}`)
+                let cmd = this.commands.get(file)
+
+                if(!cmd) {
+                    throw new Error(`Invalid command ${file.replace(".js", "")}. All bootstrap commands must *exist*`)
                 }
+
+                commands.push(cmd.interactionData.setDMPermission(false).toJSON());
             }
 
-            if(command.interactionData.name != file.replace(".js", "")) {
-                throw new Error(`Command ${file} has an invalid name. Please ensure that the name of the command is the same as the file name`)
-            }
-
-            this.commands.set(command.interactionData.name, command);
-
-            if(command.onLoad) {
-                await command.onLoad()
-            }
+            await this.rest.put(Routes.applicationGuildCommands(this.config.discord_auth.client_id, this.config.servers.main), { body: commands })
         }
     }
 

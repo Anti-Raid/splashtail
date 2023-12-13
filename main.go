@@ -354,7 +354,7 @@ func main() {
 			}
 		}
 	case "jobs":
-		mldF, err := os.ReadFile("mewld.yaml")
+		mldF, err := os.ReadFile("mewld-" + config.CurrentEnv + ".yaml")
 
 		if err != nil {
 			panic(err)
