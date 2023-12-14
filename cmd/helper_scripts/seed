@@ -1,0 +1,7 @@
+#!/bin/bash
+set +e
+
+GIT_ROOT=$(git rev-parse --show-toplevel)
+PWD=$(pwd)
+
+cd $GIT_ROOT && ibl db new seed data/db_seed.iblcli-seed --db=antiraid --backup-tables guild_channel_types --extensions uuid-ossp\|citext\|semver,https://github.com/theory/pg-semver 
