@@ -20,7 +20,7 @@ import (
 	"go.uber.org/zap"
 )
 
-func getImageAsDataUri(l *zap.Logger, f *iblfile.AutoEncryptedFile, name, endpoint string, bo *BackupCreateOpts) (string, error) {
+func getImageAsDataUri(constraints *BackupConstraints, l *zap.Logger, f *iblfile.AutoEncryptedFile, name, endpoint string, bo *BackupCreateOpts) (string, error) {
 	if slices.Contains(bo.BackupGuildAssets, name) {
 		l.Info("Fetching guild asset", zap.String("name", name))
 		iconBytes, err := f.Get("assets/" + name)
@@ -33,7 +33,7 @@ func getImageAsDataUri(l *zap.Logger, f *iblfile.AutoEncryptedFile, name, endpoi
 	} else {
 		// Try fetching still, it might work
 		client := http.Client{
-			Timeout: 10 * time.Second,
+			Timeout: constraints.Restore.HttpClientTimeout,
 		}
 
 		resp, err := client.Get(endpoint)
@@ -98,6 +98,9 @@ type ServerBackupRestoreTask struct {
 	// The ID of the server
 	ServerID string `json:"server_id"`
 
+	// Constraints, this is auto-set by the task and cannot be set by json (clients) etc.
+	Constraints *BackupConstraints `json:"-"`
+
 	// Backup options
 	Options BackupRestoreOpts `json:"options"`
 
@@ -108,6 +111,10 @@ type ServerBackupRestoreTask struct {
 func (t *ServerBackupRestoreTask) Validate() error {
 	if t.ServerID == "" {
 		return fmt.Errorf("server_id is required")
+	}
+
+	if t.Constraints == nil {
+		t.Constraints = FreePlanBackupConstraints // TODO: Add other constraint types based on plans once we have them
 	}
 
 	if t.Options.BackupSource == "" {
@@ -121,6 +128,7 @@ func (t *ServerBackupRestoreTask) Validate() error {
 	switch t.Options.ChannelRestoreMode {
 	case ChannelRestoreModeFull:
 	case ChannelRestoreModeDiff:
+		return fmt.Errorf("channel_restore_mode 'diff' is not yet supported due to the complexity of the approach")
 	case ChannelRestoreModeIgnoreExisting:
 	default:
 		if string(t.Options.ChannelRestoreMode) == "" {
@@ -149,8 +157,8 @@ func (t *ServerBackupRestoreTask) Exec(l *zap.Logger, tcr *types.TaskCreateRespo
 	// Check current backup concurrency
 	count, _ := concurrentBackupState.LoadOrStore(t.ServerID, 0)
 
-	if count >= maxServerBackupTasks {
-		return nil, fmt.Errorf("you already have a backup-related task in progress, please wait for it to finish")
+	if count >= t.Constraints.MaxServerBackupTasks {
+		return nil, fmt.Errorf("you already have more than %d backup-related task in progress, please wait for it to finish", t.Constraints.MaxServerBackupTasks)
 	}
 
 	concurrentBackupState.Store(t.ServerID, count+1)
@@ -167,7 +175,7 @@ func (t *ServerBackupRestoreTask) Exec(l *zap.Logger, tcr *types.TaskCreateRespo
 	// Download backup
 	l.Info("Downloading backup", zap.String("url", t.Options.BackupSource))
 	client := http.Client{
-		Timeout: 10 * time.Second,
+		Timeout: t.Constraints.Restore.HttpClientTimeout,
 	}
 
 	resp, err := client.Get(t.Options.BackupSource)
@@ -177,11 +185,11 @@ func (t *ServerBackupRestoreTask) Exec(l *zap.Logger, tcr *types.TaskCreateRespo
 	}
 
 	// Limit body size to 100mb
-	if resp.ContentLength > restoreMaxBodySize {
-		return nil, fmt.Errorf("backup too large, expected less than %d bytes, got %d bytes", restoreMaxBodySize, resp.ContentLength)
+	if resp.ContentLength > t.Constraints.Restore.MaxBodySize {
+		return nil, fmt.Errorf("backup too large, expected less than %d bytes, got %d bytes", t.Constraints.Restore.MaxBodySize, resp.ContentLength)
 	}
 
-	resp.Body = http.MaxBytesReader(nil, resp.Body, restoreMaxBodySize)
+	resp.Body = http.MaxBytesReader(nil, resp.Body, t.Constraints.Restore.MaxBodySize)
 
 	defer resp.Body.Close()
 
@@ -370,7 +378,7 @@ func (t *ServerBackupRestoreTask) Exec(l *zap.Logger, tcr *types.TaskCreateRespo
 		if !canUseIcon {
 			l.Warn("Not restoring animated icon on unsupported server", zap.String("guild_id", srcGuild.ID))
 		} else {
-			icon, err := getImageAsDataUri(l, f, "guildIcon", srcGuild.IconURL("1024"), bo)
+			icon, err := getImageAsDataUri(t.Constraints, l, f, "guildIcon", srcGuild.IconURL("1024"), bo)
 
 			if err != nil {
 				return nil, fmt.Errorf("failed to get icon: %w", err)
@@ -384,7 +392,7 @@ func (t *ServerBackupRestoreTask) Exec(l *zap.Logger, tcr *types.TaskCreateRespo
 		if !canUseBanner {
 			l.Warn("Not restoring banner on unsupported server", zap.String("guild_id", srcGuild.ID))
 		} else {
-			banner, err := getImageAsDataUri(l, f, "guildBanner", srcGuild.BannerURL("1024"), bo)
+			banner, err := getImageAsDataUri(t.Constraints, l, f, "guildBanner", srcGuild.BannerURL("1024"), bo)
 
 			if err != nil {
 				return nil, fmt.Errorf("failed to get banner: %w", err)
@@ -398,7 +406,7 @@ func (t *ServerBackupRestoreTask) Exec(l *zap.Logger, tcr *types.TaskCreateRespo
 		if !canUseSplash {
 			l.Warn("Not restoring splash on unsupported server", zap.String("guild_id", srcGuild.ID))
 		} else {
-			splash, err := getImageAsDataUri(l, f, "guildSplash", discordgo.EndpointGuildSplash(srcGuild.ID, srcGuild.Splash), bo)
+			splash, err := getImageAsDataUri(t.Constraints, l, f, "guildSplash", discordgo.EndpointGuildSplash(srcGuild.ID, srcGuild.Splash), bo)
 
 			if err != nil {
 				return nil, fmt.Errorf("failed to get splash: %w", err)
@@ -459,7 +467,7 @@ func (t *ServerBackupRestoreTask) Exec(l *zap.Logger, tcr *types.TaskCreateRespo
 				return nil, fmt.Errorf("failed to delete role: %w with position of %d", err, r.Position)
 			}
 
-			time.Sleep(3 * time.Second)
+			time.Sleep(t.Constraints.Restore.RoleDeleteSleep)
 		}
 	}
 
@@ -527,7 +535,7 @@ func (t *ServerBackupRestoreTask) Exec(l *zap.Logger, tcr *types.TaskCreateRespo
 
 		restoredRolesMap[srcGuild.Roles[i].ID] = newRole.ID
 
-		time.Sleep(3 * time.Second)
+		time.Sleep(t.Constraints.Restore.RoleCreateSleep)
 	}
 
 	t2 = time.Now()
@@ -552,15 +560,15 @@ func (t *ServerBackupRestoreTask) Exec(l *zap.Logger, tcr *types.TaskCreateRespo
 
 	switch t.Options.ChannelRestoreMode {
 	case ChannelRestoreModeFull:
-		times := 0
 		for i := range tgtGuild.Channels {
 			if slices.Contains(t.Options.ProtectedChannels, tgtGuild.Channels[i].ID) {
 				continue
 			}
 
 			if tgtGuild.Channels[i].ID == tgtGuild.RulesChannelID || tgtGuild.Channels[i].ID == tgtGuild.PublicUpdatesChannelID {
-				if tgtGuild.Channels[i].ParentID != "" {
+				/*if tgtGuild.Channels[i].ParentID != "" {
 					// Move out of parent
+					l.Info("Moving channel out of parent", zap.String("name", tgtGuild.Channels[i].Name), zap.Int("position", tgtGuild.Channels[i].Position), zap.String("id", tgtGuild.Channels[i].ID))
 					_, err := state.Discord.ChannelEdit(tgtGuild.Channels[i].ID, &discordgo.ChannelEdit{
 						ParentID: "",
 					})
@@ -568,7 +576,9 @@ func (t *ServerBackupRestoreTask) Exec(l *zap.Logger, tcr *types.TaskCreateRespo
 					if err != nil {
 						return nil, fmt.Errorf("failed to edit channel: %w", err)
 					}
-				}
+
+					time.Sleep(t.Constraints.Restore.ChannelEditSleep)
+				}*/
 				continue
 			}
 
@@ -591,86 +601,7 @@ func (t *ServerBackupRestoreTask) Exec(l *zap.Logger, tcr *types.TaskCreateRespo
 				return nil, fmt.Errorf("failed to delete channel: %w", err)
 			}
 
-			time.Sleep(1*time.Second + time.Duration(times*times)*time.Millisecond)
-			times++
-		}
-	case ChannelRestoreModeDiff:
-		// Remove channels that are not in the backup
-		for _, channel := range tgtGuild.Channels {
-			if slices.Contains(t.Options.ProtectedChannels, channel.ID) {
-				continue
-			}
-
-			bp := utils.MemberChannelPerms(basePerms, tgtGuild, m, channel)
-
-			if bp&discordgo.PermissionManageChannels != discordgo.PermissionManageChannels {
-				continue
-			}
-
-			if c, ok := backupChannelMap[channel.ID]; !ok {
-				_, err := state.Discord.ChannelDelete(channel.ID)
-
-				if err != nil {
-					return nil, fmt.Errorf("failed to delete channel: %w", err)
-				}
-
-				time.Sleep(1 * time.Second)
-				continue
-			} else {
-				// Check if type is different, this should never happen but just in case
-				if c.Type != channel.Type || !slices.Contains([]discordgo.ChannelType{
-					discordgo.ChannelTypeGuildText,
-					discordgo.ChannelTypeGuildVoice,
-					discordgo.ChannelTypeGuildNews,
-				}, c.Type) {
-					_, err := state.Discord.ChannelDelete(channel.ID)
-
-					if err != nil {
-						return nil, fmt.Errorf("failed to delete channel: %w", err)
-					}
-
-					time.Sleep(1 * time.Second)
-					continue
-				}
-
-				// If channel has a parent id, make sure it exists [for now, this may be improved later]
-				if c.ParentID != "" {
-					if _, ok := backupChannelMap[c.ParentID]; !ok {
-						// Parent does not exist, fallback to channel delete
-						_, err := state.Discord.ChannelDelete(channel.ID)
-
-						if err != nil {
-							return nil, fmt.Errorf("failed to delete channel: %w", err)
-						}
-
-						time.Sleep(1 * time.Second)
-						continue
-					}
-				}
-
-				// Edit the channel
-				cp := &discordgo.ChannelEdit{
-					Name:                 channel.Name,
-					Topic:                channel.Topic,
-					NSFW:                 utils.Pointer(channel.NSFW),
-					Position:             utils.Pointer(channel.Position),
-					Bitrate:              channel.Bitrate,
-					PermissionOverwrites: channel.PermissionOverwrites,
-					ParentID:             channel.ParentID,
-					Flags:                &channel.Flags,
-				}
-
-				updated, err := state.Discord.ChannelEdit(channel.ID, cp)
-
-				if err != nil {
-					return nil, fmt.Errorf("failed to edit channel, consider full backup mode: %w", err)
-				}
-
-				// Update channel map
-				backupChannelMap[channel.ID] = updated
-
-				restoredChannelsMap[c.ID] = channel.ID
-			}
+			time.Sleep(t.Constraints.Restore.ChannelDeleteSleep)
 		}
 	case ChannelRestoreModeIgnoreExisting:
 		for _, c := range tgtGuild.Channels {
@@ -696,13 +627,14 @@ func (t *ServerBackupRestoreTask) Exec(l *zap.Logger, tcr *types.TaskCreateRespo
 				return nil, fmt.Errorf("failed to delete channel: %w", err)
 			}
 
-			time.Sleep(1 * time.Second)
+			time.Sleep(t.Constraints.Restore.ChannelDeleteSleep)
 		}
 	default:
 		return nil, fmt.Errorf("invalid channel_restore_mode")
 	}
 
-	createChannel := func(channel *discordgo.Channel) (*discordgo.Channel, error) {
+	// Internal function. Given a channel, this fixes permission overwrites and then creates the channel from the old source channel
+	var createChannel = func(channel *discordgo.Channel) (*discordgo.Channel, error) {
 		l.Info("Creating channel", zap.String("name", channel.Name), zap.Int("position", channel.Position), zap.String("srcId", channel.ID), zap.String("parent_id", channel.ParentID), zap.Any("type", channel.Type))
 
 		// fix permission overwrites
@@ -750,7 +682,7 @@ func (t *ServerBackupRestoreTask) Exec(l *zap.Logger, tcr *types.TaskCreateRespo
 			return nil, fmt.Errorf("failed to create channel: %w", err)
 		}
 
-		time.Sleep(1 * time.Second)
+		time.Sleep(t.Constraints.Restore.ChannelCreateSleep)
 
 		return c, nil
 	}
@@ -889,7 +821,7 @@ func (t *ServerBackupRestoreTask) Exec(l *zap.Logger, tcr *types.TaskCreateRespo
 					panic(err)
 				}
 
-				return dtA.Compare(dtB)
+				return dtB.Compare(dtA)
 			})
 
 			// First batch messages to avoid spam
@@ -898,18 +830,8 @@ func (t *ServerBackupRestoreTask) Exec(l *zap.Logger, tcr *types.TaskCreateRespo
 			var contentLength int64
 			var currentMsgAuthor string
 
-			for i := range bm {
-				if bm[i].Message.Author.ID != currentMsgAuthor {
-					currentMsgAuthor = bm[i].Message.Author.ID
-					msgIndex++
-				}
-
-				if contentLength+int64(len(bm[i].Message.Content)) > 1950 {
-					contentLength = 0
-					msgIndex++
-				}
-
-				// Grow messages if msgIndex > len(messages)
+			// Grow messages if msgIndex > len(messages)
+			growMsgs := func(author *discordgo.User) {
 				for {
 					if len(messages) > msgIndex {
 						break
@@ -917,9 +839,39 @@ func (t *ServerBackupRestoreTask) Exec(l *zap.Logger, tcr *types.TaskCreateRespo
 
 					messages = append(messages, &RestoreMessage{
 						MessageSend: &discordgo.MessageSend{},
-						Author:      bm[i].Message.Author,
+						Author:      author,
 					})
 				}
+			}
+
+			for i := range bm {
+				if bm[i].Message.Author.ID != currentMsgAuthor {
+					currentMsgAuthor = bm[i].Message.Author.ID
+					msgIndex++
+				}
+
+				if len(bm[i].Message.Content) > 1900 {
+					// Upload as file
+					content := bm[i].Message.Content
+
+					bm[i].Message.Content = ""
+
+					growMsgs(bm[i].Message.Author)
+
+					messages[msgIndex].SmallFiles = append(messages[msgIndex].SmallFiles, &discordgo.File{
+						Name:        "context.txt",
+						ContentType: "text/plain",
+						Reader:      strings.NewReader(content),
+					})
+				}
+
+				if contentLength+int64(len(bm[i].Message.Content)) > 1900 {
+					contentLength = 0
+					msgIndex++
+				}
+
+				// Grow messages if msgIndex > len(messages)
+				growMsgs(bm[i].Message.Author)
 
 				l.Debug("Processing backed up message", zap.Int("index", i), zap.String("message_id", bm[i].Message.ID), zap.String("author_id", bm[i].Message.Author.ID))
 
@@ -986,7 +938,7 @@ func (t *ServerBackupRestoreTask) Exec(l *zap.Logger, tcr *types.TaskCreateRespo
 					return nil, fmt.Errorf("failed to send message: %w", err)
 				}
 
-				time.Sleep(1 * time.Second)
+				time.Sleep(t.Constraints.Restore.SendMessageSleep)
 			}
 		}
 	}

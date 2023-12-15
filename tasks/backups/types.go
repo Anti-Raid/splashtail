@@ -8,20 +8,57 @@ import (
 	"github.com/infinitybotlist/iblfile"
 )
 
-const (
-	totalMaxMessages         = 500
-	maxAttachmentFileSize    = 8_000_000  // 8 MB, the limit for one attachment
-	fileSizeWarningThreshold = 50_000_000 // 50 MB, the warning threshold for the total file size. At this point, attachments will not be saved
-	minPerChannel            = 50
-	defaultPerChannel        = 100
-	jpegReencodeQuality      = 75
-	gaReencodeQuality        = 85
-	fileType                 = "backup.server"
-	restoreMaxBodySize       = 100_000_000     // 100 MB, the maximum size of the backup file
-	roleOpSleep              = 3 * time.Minute // How long to sleep between role operations
-	channelOpSleep           = 3 * time.Minute // How long to sleep between channel operations
-	maxServerBackupTasks     = 1               // How many backup tasks can run concurrently per server
-)
+type BackupCreateConstraints struct {
+	TotalMaxMessages          int // The maximum number of messages to backup
+	MaxAttachmentFileSize     int // The maximum size of an attachment
+	FileSizeWarningThreshold  int // The warning threshold for the total file size
+	MinPerChannel             int // The minimum number of messages per channel
+	DefaultPerChannel         int // The default number of messages per channel
+	JpegReencodeQuality       int // The quality to use when reencoding to JPEGs
+	GuildAssetReencodeQuality int // The quality to use when reencoding guild assets
+}
+
+type BackupRestoreConstraints struct {
+	RoleDeleteSleep    time.Duration // How long to sleep between role deletes
+	RoleCreateSleep    time.Duration // How long to sleep between role creates
+	ChannelDeleteSleep time.Duration // How long to sleep between channel deletes
+	ChannelCreateSleep time.Duration // How long to sleep between channel creates
+	ChannelEditSleep   time.Duration // How long to sleep between channel edits
+	SendMessageSleep   time.Duration // How long to sleep between message sends
+	HttpClientTimeout  time.Duration // How long to wait for HTTP requests to complete
+	MaxBodySize        int64         // The maximum size of the backup file to download/use
+}
+
+type BackupConstraints struct {
+	Create               *BackupCreateConstraints
+	Restore              *BackupRestoreConstraints
+	MaxServerBackupTasks int    // How many backup tasks can run concurrently per server
+	FileType             string // The file type to use for backups
+}
+
+var FreePlanBackupConstraints = &BackupConstraints{
+	Create: &BackupCreateConstraints{
+		TotalMaxMessages:          500,
+		MaxAttachmentFileSize:     8_000_000,  // 8MB
+		FileSizeWarningThreshold:  50_000_000, // 50MB
+		MinPerChannel:             50,
+		DefaultPerChannel:         100,
+		JpegReencodeQuality:       75,
+		GuildAssetReencodeQuality: 85,
+	},
+	Restore: &BackupRestoreConstraints{
+		RoleDeleteSleep:    3 * time.Second,
+		RoleCreateSleep:    3 * time.Second,
+		ChannelDeleteSleep: 3 * time.Second,
+		ChannelCreateSleep: 3 * time.Second,
+		ChannelEditSleep:   1 * time.Second,
+		SendMessageSleep:   3 * time.Second,
+		HttpClientTimeout:  10 * time.Second,
+		MaxBodySize:        100_000_000, // 100MB
+	},
+	MaxServerBackupTasks: 1,
+	FileType:             "backup.server",
+}
 
 var allowedChannelTypes = []discordgo.ChannelType{
 	discordgo.ChannelTypeGuildText,
@@ -46,7 +83,7 @@ type ChannelRestoreMode string
 
 const (
 	ChannelRestoreModeFull           ChannelRestoreMode = "full"
-	ChannelRestoreModeDiff           ChannelRestoreMode = "diff"
+	ChannelRestoreModeDiff           ChannelRestoreMode = "diff" // TODO
 	ChannelRestoreModeIgnoreExisting ChannelRestoreMode = "ignore_existing"
 )
 
@@ -103,6 +140,7 @@ type BackupMessage struct {
 type RestoreMessage struct {
 	MessageSend *discordgo.MessageSend
 	Author      *discordgo.User
+	SmallFiles  []*discordgo.File
 }
 
 func init() {
