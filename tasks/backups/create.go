@@ -184,8 +184,20 @@ func createAttachmentBlob(logger *zap.Logger, msg *discordgo.Message) ([]Attachm
 		}
 
 		if resp.StatusCode != http.StatusOK {
-			logger.Error("Error downloading attachment", zap.Error(err), zap.String("url", url), zap.Int("status", resp.StatusCode))
-			return attachments, nil, fmt.Errorf("error downloading attachment: %w", fmt.Errorf("status code %d", resp.StatusCode))
+			logger.Warn("Attachment was not found", zap.String("url", url), zap.Int("status", resp.StatusCode))
+			attachments = append(attachments, AttachmentMetadata{
+				ID:          attachment.ID,
+				Name:        attachment.Filename,
+				URL:         attachment.URL,
+				ProxyURL:    attachment.ProxyURL,
+				Size:        attachment.Size,
+				ContentType: attachment.ContentType,
+				Errors: []string{
+					"Attachment was not found.",
+					"Got status code " + fmt.Sprintf("%d", resp.StatusCode),
+				},
+			})
+			continue
 		}
 
 		bt, err := io.ReadAll(resp.Body)

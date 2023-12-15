@@ -99,6 +99,12 @@ type BackupMessage struct {
 	attachments        map[string]*bytes.Buffer `json:"-"`
 }
 
+// INTERNAL: Represents a message to be restored
+type RestoreMessage struct {
+	MessageSend *discordgo.MessageSend
+	Author      *discordgo.User
+}
+
 func init() {
 	iblfile.RegisterFormat("backup", &iblfile.Format{
 		Format:  "server",

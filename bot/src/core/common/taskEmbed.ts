@@ -37,12 +37,23 @@ export const pollTask = async (taskId: string, opts: PollTaskOptions): Promise<T
         }, opts?.timeout)
     }
 
+    let prevTask: Task = null
     while(!done) {
         let task = await getTask(taskId)
 
         if(!task) {
             throw new Error("Task not found")
         }
+
+        if(prevTask) {
+            // Prevent spamming of edits
+            if(task?.state === prevTask?.state && JSON.stringify(task) === JSON.stringify(prevTask)) {
+                await new Promise((resolve) => setTimeout(resolve, opts.pollInterval))
+                continue
+            }
+        }
+
+        prevTask = task
 
         await opts.callback(task)
 

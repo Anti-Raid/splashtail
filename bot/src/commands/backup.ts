@@ -401,12 +401,8 @@ let command: Command = {
                     ]
                 })
 
-                let prevTask: Task = null
                 let task2 = await pollTask(tcr2?.task_id, {
                     callback: async (task) => {
-                        // Prevent spamming of edits
-                        if(task?.state === prevTask?.state && JSON.stringify(task) === JSON.stringify(prevTask)) return
-
                         await ctx.edit(createTaskEmbed(ctx, task))
                     }
                 })

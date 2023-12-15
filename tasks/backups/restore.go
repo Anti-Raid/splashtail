@@ -263,6 +263,16 @@ func (t *ServerBackupRestoreTask) Exec(l *zap.Logger, tcr *types.TaskCreateRespo
 		return nil, fmt.Errorf("bot does not have 'Manage Roles' permissions")
 	}
 
+	if len(tgtGuild.Roles) == 0 {
+		roles, err := state.Discord.GuildRoles(t.ServerID)
+
+		if err != nil {
+			return nil, fmt.Errorf("error fetching roles: %w", err)
+		}
+
+		tgtGuild.Roles = roles
+	}
+
 	// Get highest role
 	var tgtBotGuildHighestRole *discordgo.Role
 
@@ -292,7 +302,7 @@ func (t *ServerBackupRestoreTask) Exec(l *zap.Logger, tcr *types.TaskCreateRespo
 		return nil, fmt.Errorf("bot does not have any roles")
 	}
 
-	if tgtBotGuildHighestRole.Position == 0 {
+	if tgtBotGuildHighestRole.Position <= 0 {
 		return nil, fmt.Errorf("bot role isnt high enough")
 	}
 
@@ -305,7 +315,7 @@ func (t *ServerBackupRestoreTask) Exec(l *zap.Logger, tcr *types.TaskCreateRespo
 
 	tgtGuild.Channels = channels
 
-	l.Info("Got bots highest role", zap.String("role_id", tgtBotGuildHighestRole.ID))
+	l.Info("Got bots highest role", zap.String("role_id", tgtBotGuildHighestRole.ID), zap.Int("role_position", tgtBotGuildHighestRole.Position))
 
 	// Step 1. Fetch guild data
 	t1 = time.Now()
@@ -326,8 +336,11 @@ func (t *ServerBackupRestoreTask) Exec(l *zap.Logger, tcr *types.TaskCreateRespo
 
 	t1 = time.Now()
 
-	if !slices.Contains(tgtGuild.Features, discordgo.GuildFeatureCommunity) && slices.Contains(srcGuild.Features, discordgo.GuildFeatureCommunity) {
-		return nil, fmt.Errorf("cannot restore community guild to non-community guild")
+	var srcIsCommunity = slices.Contains(srcGuild.Features, discordgo.GuildFeatureCommunity)
+	var tgtIsCommunity = slices.Contains(tgtGuild.Features, discordgo.GuildFeatureCommunity)
+
+	if srcIsCommunity && !tgtIsCommunity {
+		return nil, fmt.Errorf("cannot restore community server to non-community server")
 	}
 
 	// Edit basic guild guild. Note that settings related to ID's are changed later if needed
@@ -338,10 +351,14 @@ func (t *ServerBackupRestoreTask) Exec(l *zap.Logger, tcr *types.TaskCreateRespo
 	gp := &discordgo.GuildParams{
 		Name:                        srcGuild.Name,
 		Description:                 srcGuild.Description,
-		VerificationLevel:           &srcGuild.VerificationLevel,
 		DefaultMessageNotifications: int(srcGuild.DefaultMessageNotifications),
-		ExplicitContentFilter:       int(srcGuild.ExplicitContentFilter),
 		AfkTimeout:                  srcGuild.AfkTimeout,
+	}
+
+	// If the src server is a community server or the target isn't, we can restore these settings
+	if srcIsCommunity || !tgtIsCommunity {
+		gp.ExplicitContentFilter = int(srcGuild.ExplicitContentFilter)
+		gp.VerificationLevel = &srcGuild.VerificationLevel
 	}
 
 	// Icons
@@ -426,8 +443,12 @@ func (t *ServerBackupRestoreTask) Exec(l *zap.Logger, tcr *types.TaskCreateRespo
 				continue // Bot role
 			}
 
-			if r.Position >= tgtBotGuildHighestRole.Position {
+			if r.Position > tgtBotGuildHighestRole.Position {
 				continue // Higher than bot role
+			}
+
+			if r.Position == tgtBotGuildHighestRole.Position && tgtBotGuildHighestRole.ID > r.ID {
+				continue
 			}
 
 			l.Info("Deleting role", zap.String("name", r.Name), zap.Int("position", r.Position), zap.String("id", r.ID))
@@ -825,6 +846,149 @@ func (t *ServerBackupRestoreTask) Exec(l *zap.Logger, tcr *types.TaskCreateRespo
 
 	if err != nil {
 		return nil, fmt.Errorf("failed to edit guild: %w", err)
+	}
+
+	l.Info("Waiting 5 seconds to avoid API issues")
+
+	time.Sleep(5 * time.Second)
+
+	if bo.BackupMessages {
+		for backedUpChannelId, restoredChannelId := range restoredChannelsMap {
+			if _, ok := sections["messages/"+backedUpChannelId]; !ok {
+				continue
+			}
+
+			l.Info("Processing backed up channel messages", zap.String("backed_up_channel_id", backedUpChannelId), zap.String("restored_channel_id", restoredChannelId))
+
+			perms := utils.MemberChannelPerms(basePerms, tgtGuild, m, currentChannelMap[restoredChannelId])
+			//canManageWebhooks := perms&discordgo.PermissionManageWebhooks == discordgo.PermissionManageWebhooks
+
+			// Fetch section
+			bmPtr, err := readMsgpackSection[[]*BackupMessage](f, "messages/"+backedUpChannelId)
+
+			if err != nil {
+				if t.Options.IgnoreRestoreErrors {
+					continue
+				}
+				return nil, fmt.Errorf("failed to get section: %w", err)
+			}
+
+			bm := *bmPtr
+
+			// Before doing anything else, sort the messages by timestamp
+			slices.SortFunc(bm, func(a, b *BackupMessage) int {
+				dtA, err := discordgo.SnowflakeTimestamp(a.Message.ID)
+
+				if err != nil {
+					panic(err)
+				}
+
+				dtB, err := discordgo.SnowflakeTimestamp(b.Message.ID)
+
+				if err != nil {
+					panic(err)
+				}
+
+				return dtA.Compare(dtB)
+			})
+
+			// First batch messages to avoid spam
+			var messages = make([]*RestoreMessage, 0)
+			var msgIndex int
+			var contentLength int64
+			var currentMsgAuthor string
+
+			for i := range bm {
+				if bm[i].Message.Author.ID != currentMsgAuthor {
+					currentMsgAuthor = bm[i].Message.Author.ID
+					msgIndex++
+				}
+
+				if contentLength+int64(len(bm[i].Message.Content)) > 1950 {
+					contentLength = 0
+					msgIndex++
+				}
+
+				// Grow messages if msgIndex > len(messages)
+				for {
+					if len(messages) > msgIndex {
+						break
+					}
+
+					messages = append(messages, &RestoreMessage{
+						MessageSend: &discordgo.MessageSend{},
+						Author:      bm[i].Message.Author,
+					})
+				}
+
+				l.Debug("Processing backed up message", zap.Int("index", i), zap.String("message_id", bm[i].Message.ID), zap.String("author_id", bm[i].Message.Author.ID))
+
+				if len(bm[i].Message.Embeds)+len(messages[msgIndex].MessageSend.Embeds) > 10 {
+					// Make the current message only have 10 embeds, then move to the next message and so on
+					embeds := bm[i].Message.Embeds
+
+					embedsPaged := [][]*discordgo.MessageEmbed{}
+
+					for len(embeds) > 10 {
+						embedsPaged = append(embedsPaged, embeds[:10])
+						embeds = embeds[10:]
+					}
+
+					embedsPaged = append(embedsPaged, embeds)
+
+					for mod, embeds := range embedsPaged {
+						for {
+							messages = append(messages, &RestoreMessage{
+								MessageSend: &discordgo.MessageSend{},
+								Author:      bm[i].Message.Author,
+							})
+
+							if len(messages) >= msgIndex+mod {
+								break
+							}
+						}
+
+						messages[msgIndex+mod].MessageSend.Embeds = embeds
+					}
+				} else {
+					messages[msgIndex].MessageSend.Embeds = append(messages[msgIndex].MessageSend.Embeds, bm[i].Message.Embeds...)
+				}
+
+				messages[msgIndex].MessageSend.Content += bm[i].Message.Content + "\n"
+				contentLength += int64(len(bm[i].Message.Content))
+
+				if bm[i].Message.TTS && perms&discordgo.PermissionSendTTSMessages == discordgo.PermissionSendTTSMessages {
+					messages[msgIndex].MessageSend.TTS = bm[i].Message.TTS
+				}
+
+				messages[msgIndex].MessageSend.AllowedMentions = &discordgo.MessageAllowedMentions{} // NOTE: We intentionally do not set allowed mentions to avoid spam
+			}
+
+			// Send messages
+			//
+			// NOTE/WIP: message_reference is not supported yet
+			// NOTE/WIP: StickerIDs and Components and Attachments/Files are not restored yet
+			l.Info("Sending backed up messages", zap.Int("message_count", len(messages)), zap.String("channel_id", restoredChannelId))
+			for i := range messages {
+				if messages[i].MessageSend.Content == "" &&
+					len(messages[i].MessageSend.Embeds) == 0 {
+					continue
+				}
+
+				messages[i].MessageSend.Content = fmt.Sprintf("**%s**\n%s", strings.ReplaceAll(messages[i].Author.Username+"("+messages[i].Author.ID+")", "*", ""), messages[i].MessageSend.Content)
+
+				_, err := state.Discord.ChannelMessageSendComplex(restoredChannelId, messages[i].MessageSend)
+
+				if err != nil {
+					if t.Options.IgnoreRestoreErrors {
+						continue
+					}
+					return nil, fmt.Errorf("failed to send message: %w", err)
+				}
+
+				time.Sleep(1 * time.Second)
+			}
+		}
 	}
 
 	l.Info("Successfully restored guild")

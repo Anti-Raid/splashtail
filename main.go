@@ -17,7 +17,7 @@ import (
 	mloader "github.com/cheesycod/mewld/loader"
 	mproc "github.com/cheesycod/mewld/proc"
 	mutils "github.com/cheesycod/mewld/utils"
-	"gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v3"
 
 	"splashtail/api"
 	"splashtail/config"
@@ -370,6 +370,13 @@ func main() {
 
 		state.MewldInstanceList = &mproc.InstanceList{
 			Config: &mldConfig,
+		}
+
+		// Set state of all pending tasks to 'failed'
+		_, err = state.Pool.Exec(state.Context, "UPDATE tasks SET state = $1 WHERE state = $2", "failed", "pending")
+
+		if err != nil {
+			panic(err)
 		}
 
 		// Load jobs
