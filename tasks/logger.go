@@ -3,8 +3,9 @@ package tasks
 import (
 	"encoding/json"
 	"fmt"
-	"splashtail/state"
 	"sync"
+
+	"github.com/anti-raid/splashtail/state"
 
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"

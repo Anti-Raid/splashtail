@@ -1,6 +1,7 @@
 .env
 splashtail
 .vscode
+localjobs-config.yaml
 config.yaml
 config.yaml.sample
 coverage.out

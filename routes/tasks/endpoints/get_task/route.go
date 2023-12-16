@@ -3,11 +3,12 @@ package get_task
 import (
 	"errors"
 	"net/http"
-	"splashtail/db"
-	state "splashtail/state"
-	"splashtail/tasks"
-	types "splashtail/types"
 	"strings"
+
+	"github.com/anti-raid/splashtail/db"
+	"github.com/anti-raid/splashtail/state"
+	"github.com/anti-raid/splashtail/tasks"
+	types "github.com/anti-raid/splashtail/types"
 
 	"github.com/go-chi/chi/v5"
 	docs "github.com/infinitybotlist/eureka/doclib"

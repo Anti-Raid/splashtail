@@ -6,9 +6,10 @@ import (
 	"encoding/hex"
 	"net/http"
 	"slices"
-	"splashtail/state"
 	"strconv"
 	"time"
+
+	"github.com/anti-raid/splashtail/state"
 )
 
 // Ported from https://github.com/InfinityBotList/sysmanage-web/blob/main/plugins/authdp/mw.go

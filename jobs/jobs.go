@@ -1,9 +1,10 @@
 package jobs
 
 import (
-	"splashtail/state"
 	"sync"
 	"time"
+
+	"github.com/anti-raid/splashtail/state"
 
 	"go.uber.org/zap"
 )

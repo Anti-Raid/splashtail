@@ -1,5 +1,5 @@
 packages:
-  - path: "splashtail/types"
+  - path: "github.com/anti-raid/splashtail/types"
     output_path: "/failuremgmt/cdn/antiraid/dev/bindings/splashtail/types.ts"
     frontmatter: |
       import { PlatformUser } from "./eureka-dovewing"

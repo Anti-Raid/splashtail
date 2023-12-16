@@ -2,10 +2,11 @@ package ipc
 
 import (
 	"slices"
-	"splashtail/ipc/core"
-	"splashtail/ipc/endpoints/create_task"
-	"splashtail/ipc/endpoints/execute_task"
-	"splashtail/state"
+
+	"github.com/anti-raid/splashtail/ipc/core"
+	"github.com/anti-raid/splashtail/ipc/endpoints/create_task"
+	"github.com/anti-raid/splashtail/ipc/endpoints/execute_task"
+	"github.com/anti-raid/splashtail/state"
 
 	mredis "github.com/cheesycod/mewld/redis"
 

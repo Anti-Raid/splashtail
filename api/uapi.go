@@ -5,10 +5,11 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"net/http"
-	"splashtail/constants"
-	"splashtail/state"
-	"splashtail/types"
 	"strings"
+
+	"github.com/anti-raid/splashtail/constants"
+	"github.com/anti-raid/splashtail/state"
+	"github.com/anti-raid/splashtail/types"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/infinitybotlist/eureka/uapi"

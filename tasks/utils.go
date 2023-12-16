@@ -2,9 +2,10 @@ package tasks
 
 import (
 	"fmt"
-	"splashtail/types"
-	"splashtail/utils"
 	"strings"
+
+	"github.com/anti-raid/splashtail/types"
+	"github.com/anti-raid/splashtail/utils"
 
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"

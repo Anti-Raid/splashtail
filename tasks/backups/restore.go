@@ -6,11 +6,12 @@ import (
 	"io"
 	"net/http"
 	"slices"
-	"splashtail/state"
-	"splashtail/types"
-	"splashtail/utils"
 	"strings"
 	"time"
+
+	"github.com/anti-raid/splashtail/state"
+	"github.com/anti-raid/splashtail/types"
+	"github.com/anti-raid/splashtail/utils"
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/infinitybotlist/iblfile"

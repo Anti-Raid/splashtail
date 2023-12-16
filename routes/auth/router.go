@@ -1,7 +1,7 @@
 package auth
 
 import (
-	"splashtail/routes/auth/endpoints/create_ioauth_login"
+	"github.com/anti-raid/splashtail/routes/auth/endpoints/create_ioauth_login"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/infinitybotlist/eureka/uapi"

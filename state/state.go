@@ -8,8 +8,8 @@ import (
 	"strings"
 	"time"
 
-	"splashtail/config"
-	"splashtail/objectstorage"
+	"github.com/anti-raid/splashtail/config"
+	"github.com/anti-raid/splashtail/objectstorage"
 
 	"github.com/bwmarrin/discordgo"
 	mproc "github.com/cheesycod/mewld/proc"

@@ -3,10 +3,11 @@ package tasks
 import (
 	"context"
 	"fmt"
-	"splashtail/state"
-	"splashtail/types"
-	"splashtail/utils"
 	"time"
+
+	"github.com/anti-raid/splashtail/state"
+	"github.com/anti-raid/splashtail/types"
+	"github.com/anti-raid/splashtail/utils"
 
 	"github.com/infinitybotlist/eureka/crypto"
 	"go.uber.org/zap"
@@ -144,21 +145,21 @@ func ExecuteTask(taskId string, task TaskDefinition) {
 		if outp.Buffer == nil {
 			l.Error("Task output buffer is nil", zap.Any("data", tInfo.TaskFields))
 			taskState = "failed"
-		}
+		} else {
+			l.Info("Saving task output", zap.String("filename", outp.Filename))
 
-		l.Info("Saving task output", zap.String("filename", outp.Filename))
+			err = state.ObjectStorage.Save(
+				state.Context,
+				GetPathFromOutput(taskId, tInfo, outp),
+				outp.Filename,
+				outp.Buffer,
+				0,
+			)
 
-		err = state.ObjectStorage.Save(
-			state.Context,
-			GetPathFromOutput(taskId, tInfo, outp),
-			outp.Filename,
-			outp.Buffer,
-			0,
-		)
-
-		if err != nil {
-			l.Error("Failed to save backup", zap.Error(err))
-			return
+			if err != nil {
+				l.Error("Failed to save backup", zap.Error(err))
+				return
+			}
 		}
 	}
 

@@ -3,9 +3,10 @@ package create_task
 import (
 	"encoding/json"
 	"fmt"
-	"splashtail/ipc/core"
-	"splashtail/state"
-	"splashtail/tasks"
+
+	"github.com/anti-raid/splashtail/ipc/core"
+	"github.com/anti-raid/splashtail/state"
+	"github.com/anti-raid/splashtail/tasks"
 
 	mredis "github.com/cheesycod/mewld/redis"
 )

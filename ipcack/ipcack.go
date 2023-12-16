@@ -1,8 +1,8 @@
 package ipcack
 
 import (
-	"splashtail/state"
-	"splashtail/syncmap"
+	"github.com/anti-raid/splashtail/state"
+	"github.com/anti-raid/splashtail/syncmap"
 
 	mredis "github.com/cheesycod/mewld/redis"
 	jsoniter "github.com/json-iterator/go"

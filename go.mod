@@ -1,4 +1,4 @@
-module splashtail
+module github.com/anti-raid/splashtail
 
 go 1.21
 

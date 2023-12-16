@@ -12,10 +12,11 @@ import (
 	"io"
 	"net/http"
 	"slices"
-	"splashtail/state"
-	"splashtail/types"
-	"splashtail/utils"
 	"time"
+
+	"github.com/anti-raid/splashtail/state"
+	"github.com/anti-raid/splashtail/types"
+	"github.com/anti-raid/splashtail/utils"
 
 	_ "golang.org/x/image/webp"
 

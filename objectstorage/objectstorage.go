@@ -9,8 +9,9 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
-	"splashtail/config"
 	"time"
+
+	"github.com/anti-raid/splashtail/config"
 
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"

@@ -1,7 +1,7 @@
 package tasks
 
 import (
-	"splashtail/tasks/backups"
+	"github.com/anti-raid/splashtail/tasks/backups"
 )
 
 // Add all tasks here

@@ -1,7 +1,7 @@
 package core
 
 import (
-	"splashtail/state"
+	"github.com/anti-raid/splashtail/state"
 
 	mredis "github.com/cheesycod/mewld/redis"
 
