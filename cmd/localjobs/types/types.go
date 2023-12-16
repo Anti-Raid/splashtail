@@ -1,5 +1,6 @@
 package types
 
 type Config struct {
-	BotToken string `yaml:"bot_token"`
+	BotToken string
+	Secrets  map[string]string
 }

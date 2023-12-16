@@ -1,0 +1,20 @@
+ServerID: "{{.ServerID}}"
+
+# TODO: Define good constraints
+#Constraints:
+
+Options:
+  MaxMessages: 500
+
+  # This is a local job so backing up messages is likely faster and desired
+  BackupMessages: true 
+  BackupAttachments: true
+
+  # This is a local job so backing up guild assets is likely faster and desired
+  BackupGuildAssets: true
+
+  # Misc
+  PerChannel: 100
+  RolloverLeftovers: true
+  IgnoreMessageBackupErrors: false # We likely don't errors ignored in local jobs
+  Encrypt: "{{.Secrets.backup_password}}" 

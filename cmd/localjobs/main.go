@@ -1,6 +1,7 @@
 package main
 
 import (
+	"embed"
 	"errors"
 	"fmt"
 	"os"
@@ -11,6 +12,9 @@ import (
 	"github.com/bwmarrin/discordgo"
 	"gopkg.in/yaml.v3"
 )
+
+//go:embed all:presets
+var allPresets embed.FS
 
 func main() {
 	f, err := os.Open("localjobs-config.yaml")

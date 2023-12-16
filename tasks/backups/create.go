@@ -297,15 +297,15 @@ func writeMsgpack(f *iblfile.AutoEncryptedFile, section string, data any) error 
 // A task to create backup a server
 type ServerBackupCreateTask struct {
 	// The ID of the server
-	ServerID string `json:"server_id"`
+	ServerID string
 
-	// Constraints, this is auto-set by the task and cannot be set by json (clients) etc.
+	// Constraints, this is auto-set by the task in jobserver and hence not configurable in this mode.
 	Constraints *BackupConstraints `json:"-"`
 
 	// Backup options
-	Options BackupCreateOpts `json:"options"`
+	Options BackupCreateOpts
 
-	valid bool `json:"-"`
+	valid bool
 }
 
 func (t *ServerBackupCreateTask) Validate() error {
@@ -313,7 +313,7 @@ func (t *ServerBackupCreateTask) Validate() error {
 		return fmt.Errorf("server_id is required")
 	}
 
-	if t.Constraints == nil {
+	if t.Constraints == nil || state.CurrentOperationMode == "jobs" {
 		t.Constraints = FreePlanBackupConstraints // TODO: Add other constraint types based on plans once we have them
 	}
 
@@ -703,7 +703,7 @@ func (t *ServerBackupCreateTask) Exec(l *zap.Logger, tcr *types.TaskCreateRespon
 
 func (t *ServerBackupCreateTask) Info() *types.TaskInfo {
 	return &types.TaskInfo{
-		Name: "create_backup",
+		Name: "guild_create_backup",
 		TaskFor: &types.TaskFor{
 			ID:         t.ServerID,
 			TargetType: types.TargetTypeServer,

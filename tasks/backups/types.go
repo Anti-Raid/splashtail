@@ -95,26 +95,26 @@ const (
 
 // Options that can be set when creatng a backup
 type BackupCreateOpts struct {
-	PerChannel                int            `json:"per_channel" description:"The number of messages per channel"`
-	MaxMessages               int            `json:"max_messages" description:"The maximum number of messages to backup"`
-	BackupMessages            bool           `json:"backup_messages" description:"Whether to backup messages or not"`
-	BackupAttachments         bool           `json:"backup_attachments" description:"Whether to backup attachments or not"`
-	BackupGuildAssets         []string       `json:"backup_guild_assets" description:"What assets to back up"`
-	IgnoreMessageBackupErrors bool           `json:"ignore_message_backup_errors" description:"Whether to ignore errors while backing up messages or not and skip these channels"`
-	RolloverLeftovers         bool           `json:"rollover_leftovers" description:"Whether to attempt rollover of leftover message quota to another channels or not"`
-	SpecialAllocations        map[string]int `json:"special_allocations" description:"Specific channel allocation overrides"`
-	Encrypt                   string         `json:"encrypt" description:"The key to encrypt backups with, if any"`
+	PerChannel                int            `description:"The number of messages per channel"`
+	MaxMessages               int            `description:"The maximum number of messages to backup"`
+	BackupMessages            bool           `description:"Whether to backup messages or not"`
+	BackupAttachments         bool           `description:"Whether to backup attachments or not"`
+	BackupGuildAssets         []string       `description:"What assets to back up"`
+	IgnoreMessageBackupErrors bool           `description:"Whether to ignore errors while backing up messages or not and skip these channels"`
+	RolloverLeftovers         bool           `description:"Whether to attempt rollover of leftover message quota to another channels or not"`
+	SpecialAllocations        map[string]int `description:"Specific channel allocation overrides"`
+	Encrypt                   string         `description:"The key to encrypt backups with, if any"`
 }
 
 // Options that can be set when restoring a backup
 type BackupRestoreOpts struct {
-	IgnoreRestoreErrors bool               `json:"ignore_restore_errors" description:"Whether to ignore errors while restoring or not and skip these channels/roles"`
-	ProtectedChannels   []string           `json:"protected_channels" description:"Channels to protect from being deleted"`
-	ProtectedRoles      []string           `json:"protected_roles" description:"Roles to protect from being deleted"`
-	BackupSource        string             `json:"backup_source" description:"The source of the backup"`
-	Decrypt             string             `json:"decrypt" description:"The key to decrypt backups with, if any"`
-	ChannelRestoreMode  ChannelRestoreMode `json:"channel_restore_mode" description:"Channel backup restore method. Use 'full' if unsure"`
-	RoleRestoreMode     RoleRestoreMode    `json:"role_restore_mode" description:"Role backup restore method. Use 'full' if unsure"`
+	IgnoreRestoreErrors bool               `description:"Whether to ignore errors while restoring or not and skip these channels/roles"`
+	ProtectedChannels   []string           `description:"Channels to protect from being deleted"`
+	ProtectedRoles      []string           `description:"Roles to protect from being deleted"`
+	BackupSource        string             `description:"The source of the backup"`
+	Decrypt             string             `description:"The key to decrypt backups with, if any"`
+	ChannelRestoreMode  ChannelRestoreMode `description:"Channel backup restore method. Use 'full' if unsure"`
+	RoleRestoreMode     RoleRestoreMode    `description:"Role backup restore method. Use 'full' if unsure"`
 }
 
 // Attachment contains metadata about an attachment

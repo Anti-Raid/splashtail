@@ -197,19 +197,19 @@ let command: Command = {
                     scope: "splashtail",
                     action: "create_task",
                     args: {
-                        "name": "create_backup"
+                        "name": "guild_create_backup"
                     },
                     output: {
-                        "server_id": ctx.guild.id,
-                        "options": {
-                            "max_messages": maxMessages || 500,
-                            "backup_messages": messages || false,
-                            "backup_attachments": attachments || false,
-                            "backup_guild_assets": backupGuildAssets || defaultAssets,
-                            "per_channel": perChannel || 100,
-                            "rollover_leftovers": rolloverLeftovers || true,
-                            "ignore_message_backup_errors": ignoreMessageBackupErrors || false,
-                            "encrypt": password
+                        "ServerID": ctx.guild.id,
+                        "Options": {
+                            "MaxMessages": maxMessages || 500,
+                            "BackupMessages": messages || false,
+                            "BackupAttachments": attachments || false,
+                            "BackupGuildAssets": backupGuildAssets || defaultAssets,
+                            "PerChannel": perChannel || 100,
+                            "RolloverLeftovers": rolloverLeftovers || true,
+                            "IgnoreMessageBackupErrors": ignoreMessageBackupErrors || false,
+                            "Encrypt": password
                         }
                     }
                 }, null, {})
@@ -335,18 +335,18 @@ let command: Command = {
                     scope: "splashtail",
                     action: "create_task",
                     args: {
-                        "name": "restore_backup"
+                        "name": "guild_restore_backup"
                     },
                     output: {
-                        "server_id": ctx.guild.id,
-                        "options": {
-                            "backup_source": backupFile.url,
-                            "decrypt": password2,
-                            "protected_channels": protectedChannels,
-                            "protected_roles": protectedRoles,
-                            "channel_restore_mode": channelRestoreMode,
-                            "role_restore_mode": roleRestoreMode,
-                            "ignore_restore_errors": ignoreRestoreErrors
+                        "ServerID": ctx.guild.id,
+                        "Options": {
+                            "BackupSource": backupFile.url,
+                            "Decrypt": password2,
+                            "ProtectedChannels": protectedChannels,
+                            "ProtectedRoles": protectedRoles,
+                            "ChannelRestoreMode": channelRestoreMode,
+                            "RoleRestoreMode": roleRestoreMode,
+                            "IgnoreRestoreErrors": ignoreRestoreErrors
                         }
                     }
                 }, null, {})

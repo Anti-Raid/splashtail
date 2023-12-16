@@ -82,6 +82,9 @@ func EasyConfig() (*types.Config, error) {
 
 		return &types.Config{
 			BotToken: token,
+			Secrets: map[string]string{
+				"BackupPassword": "",
+			},
 		}, nil
 	}
 }

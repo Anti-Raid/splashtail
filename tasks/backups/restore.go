@@ -97,15 +97,15 @@ func convertToDataUri(mimeType string, data []byte) string {
 // A task to restore a backup of a server
 type ServerBackupRestoreTask struct {
 	// The ID of the server
-	ServerID string `json:"server_id"`
+	ServerID string
 
-	// Constraints, this is auto-set by the task and cannot be set by json (clients) etc.
+	// Constraints, this is auto-set by the task in jobserver and hence not configurable in this mode.
 	Constraints *BackupConstraints `json:"-"`
 
 	// Backup options
-	Options BackupRestoreOpts `json:"options"`
+	Options BackupRestoreOpts
 
-	valid bool `json:"-"`
+	valid bool
 }
 
 // Validate validates the task and sets up state if needed
@@ -114,7 +114,7 @@ func (t *ServerBackupRestoreTask) Validate() error {
 		return fmt.Errorf("server_id is required")
 	}
 
-	if t.Constraints == nil {
+	if t.Constraints == nil || state.CurrentOperationMode == "jobs" {
 		t.Constraints = FreePlanBackupConstraints // TODO: Add other constraint types based on plans once we have them
 	}
 
@@ -951,7 +951,7 @@ func (t *ServerBackupRestoreTask) Exec(l *zap.Logger, tcr *types.TaskCreateRespo
 
 func (t *ServerBackupRestoreTask) Info() *types.TaskInfo {
 	return &types.TaskInfo{
-		Name: "restore_backup",
+		Name: "guild_restore_backup",
 		TaskFor: &types.TaskFor{
 			ID:         t.ServerID,
 			TargetType: types.TargetTypeServer,
