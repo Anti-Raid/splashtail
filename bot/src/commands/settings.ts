@@ -3,8 +3,7 @@ import { AntiRaid, Command, FinalResponse } from "../core/client";
 import { SlashCommandBuilder } from "@discordjs/builders";
 import sql from "../core/db";
 
-let availableGuildCommandTypes = []
-let guildCommandTypesIdCache = []
+let availableGuildChannelTypes = []
 
 let command: Command = {
     userPerms: [PermissionsBitField.Flags.Administrator],
@@ -14,15 +13,13 @@ let command: Command = {
 			SELECT id, name, description FROM guild_channel_types
 		`
 
-		availableGuildCommandTypes = guildChannelTypes.map((type) => {
+		availableGuildChannelTypes = guildChannelTypes.map((type) => {
 			return {
 				name: type.name,
 				value: type.id,
 				description: type.description,
 			}
 		})
-
-		guildCommandTypesIdCache = guildChannelTypes.map((type) => type.id)
 
 		return new SlashCommandBuilder()
 		.setName("settings")
@@ -34,7 +31,7 @@ let command: Command = {
 			.addStringOption((option) => option
 				.setName("type")
 				.setDescription("Which type of channel to configure?")
-				.addChoices(...availableGuildCommandTypes)
+				.addChoices(...availableGuildChannelTypes)
 				.setRequired(true)
 			)
 			.addChannelOption((option) => option
@@ -54,16 +51,9 @@ let command: Command = {
 				const channel = ctx.interaction.options.getChannel("channel")
 
 				// Ensure type is in availableGuildCommandTypes, using a cache to improve performance
-				if(!guildCommandTypesIdCache.includes(type)) {
-					return FinalResponse.reply({
-						content: "This channel type is not yet implemented/support. Please contact support on our official discord server if you recieve this error",
-						ephemeral: true,
-					})
-				}
+				let option = availableGuildChannelTypes.find((t) => t.value === type)
 
-				let typeData = availableGuildCommandTypes.find((t) => t.value === type)
-
-				if(!typeData) {
+				if(!option) {
 					return FinalResponse.reply({
 						content: "This channel type is not yet implemented/support. Please contact support on our official discord server if you recieve this error",
 						ephemeral: true,
@@ -83,7 +73,7 @@ let command: Command = {
 				`
 
 				return FinalResponse.reply({
-					content: `Successfully set the ${typeData?.name} (${type}) channel to ${channel}`,
+					content: `Successfully set the ${option?.name} (${type}) channel to ${channel}`,
 					ephemeral: true,
 				})
 			default:

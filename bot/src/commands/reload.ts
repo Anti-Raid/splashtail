@@ -25,6 +25,12 @@ let command: Command = {
             return option
         })
 
+        return subcommand
+    })
+    .addSubcommand((subcommand) => {
+        subcommand
+        .setName("all")
+        .setDescription("Reloads all commands!")
 
         return subcommand
     })
@@ -39,7 +45,6 @@ let command: Command = {
                 if(!commandName) {
                     return FinalResponse.reply({
                         content: "You must provide a command name!",
-                        ephemeral: true,
                     })
                 }
 
@@ -47,24 +52,31 @@ let command: Command = {
                     if(!ctx.interaction.options.getBoolean("allow_new")) {
                         return FinalResponse.reply({
                             content: "This command does not exist!",
-                            ephemeral: true,
                         })
                     } else {
                         ctx.client.logger.info("Reload.Command", `Command ${commandName} does not exist, creating it due to allow_new being true`)
                     }
                 }
 
+                await ctx.defer()
+
                 // Note that loadCommand updates the command cache, so we don't need to do that here
                 await ctx.client.loadCommand(`${commandName}.js`)
 
                 return FinalResponse.reply({
                     content: "Command reloaded!",
-                    ephemeral: true,
+                })
+            case "all":
+                await ctx.defer()
+
+                await ctx.client.loadCommands()
+
+                return FinalResponse.reply({
+                    content: "All commands reloaded!",
                 })
             default:
                 return FinalResponse.reply({
                     content: "Unknown subcommand! Please contact a developer!",
-                    ephemeral: true,
                 })
         }
     }

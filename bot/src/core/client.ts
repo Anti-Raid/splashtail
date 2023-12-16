@@ -605,9 +605,9 @@ export class AntiRaid extends Client {
      * This shouldn't be used outside of special cases such as reload commands etc
      */
     async loadCommands() {
+        let commandsToRemoveAfter: string[] = []
         if(this.commands.size > 0) {
-            this.logger.error("Discord", "Commands have already been loaded")
-            return false
+            commandsToRemoveAfter = [...this.commands.keys()]
         }
 
         // Commands
@@ -616,6 +616,17 @@ export class AntiRaid extends Client {
         
         for (const file of commandFiles) {
             await this.loadCommand(file)
+
+            // Remove from commandsToRemoveAfter
+            let index = commandsToRemoveAfter.indexOf(file.replace(".js", ""))
+            if(index > -1) {
+                commandsToRemoveAfter.splice(index, 1)
+            }
+        }
+
+        // Remove commands that are no longer in the commands folder
+        for(let command of commandsToRemoveAfter) {
+            this.commands.delete(command)
         }
 
         if(process.env.BOOTSTRAP_COMMANDS) {
