@@ -6,6 +6,17 @@ import (
 	"time"
 )
 
+// Timed runs a function and returns the time it took to run
+func Timed(f func()) time.Duration {
+	t2 := time.Now()
+
+	f()
+
+	t1 := time.Now()
+
+	return t1.Sub(t2)
+}
+
 // Duration is a wrapper around time.Duration that allows for JSON marshalling and unmarshalling
 type Duration time.Duration
 
