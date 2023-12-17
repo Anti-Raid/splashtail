@@ -34,7 +34,7 @@ func getImageAsDataUri(constraints *BackupConstraints, l *zap.Logger, f *iblfile
 	} else {
 		// Try fetching still, it might work
 		client := http.Client{
-			Timeout: constraints.Restore.HttpClientTimeout,
+			Timeout: time.Duration(constraints.Restore.HttpClientTimeout),
 		}
 
 		resp, err := client.Get(endpoint)
@@ -184,7 +184,7 @@ func (t *ServerBackupRestoreTask) Exec(l *zap.Logger, tcr *types.TaskCreateRespo
 	// Download backup
 	l.Info("Downloading backup", zap.String("url", t.Options.BackupSource))
 	client := http.Client{
-		Timeout: t.Constraints.Restore.HttpClientTimeout,
+		Timeout: time.Duration(t.Constraints.Restore.HttpClientTimeout),
 	}
 
 	resp, err := client.Get(t.Options.BackupSource)
@@ -476,7 +476,7 @@ func (t *ServerBackupRestoreTask) Exec(l *zap.Logger, tcr *types.TaskCreateRespo
 				return nil, fmt.Errorf("failed to delete role: %w with position of %d", err, r.Position)
 			}
 
-			time.Sleep(t.Constraints.Restore.RoleDeleteSleep)
+			time.Sleep(time.Duration(t.Constraints.Restore.RoleDeleteSleep))
 		}
 	}
 
@@ -544,7 +544,7 @@ func (t *ServerBackupRestoreTask) Exec(l *zap.Logger, tcr *types.TaskCreateRespo
 
 		restoredRolesMap[srcGuild.Roles[i].ID] = newRole.ID
 
-		time.Sleep(t.Constraints.Restore.RoleCreateSleep)
+		time.Sleep(time.Duration(t.Constraints.Restore.RoleCreateSleep))
 	}
 
 	t2 = time.Now()
@@ -575,19 +575,6 @@ func (t *ServerBackupRestoreTask) Exec(l *zap.Logger, tcr *types.TaskCreateRespo
 			}
 
 			if tgtGuild.Channels[i].ID == tgtGuild.RulesChannelID || tgtGuild.Channels[i].ID == tgtGuild.PublicUpdatesChannelID {
-				/*if tgtGuild.Channels[i].ParentID != "" {
-					// Move out of parent
-					l.Info("Moving channel out of parent", zap.String("name", tgtGuild.Channels[i].Name), zap.Int("position", tgtGuild.Channels[i].Position), zap.String("id", tgtGuild.Channels[i].ID))
-					_, err := state.Discord.ChannelEdit(tgtGuild.Channels[i].ID, &discordgo.ChannelEdit{
-						ParentID: "",
-					})
-
-					if err != nil {
-						return nil, fmt.Errorf("failed to edit channel: %w", err)
-					}
-
-					time.Sleep(t.Constraints.Restore.ChannelEditSleep)
-				}*/
 				continue
 			}
 
@@ -610,34 +597,9 @@ func (t *ServerBackupRestoreTask) Exec(l *zap.Logger, tcr *types.TaskCreateRespo
 				return nil, fmt.Errorf("failed to delete channel: %w", err)
 			}
 
-			time.Sleep(t.Constraints.Restore.ChannelDeleteSleep)
+			time.Sleep(time.Duration(t.Constraints.Restore.ChannelDeleteSleep))
 		}
 	case ChannelRestoreModeIgnoreExisting:
-		for _, c := range tgtGuild.Channels {
-			if slices.Contains(t.Options.ProtectedChannels, c.ID) {
-				continue
-			}
-
-			// Ignore if channel exists
-			if _, ok := backupChannelMap[c.ID]; ok {
-				continue
-			}
-
-			bp := utils.MemberChannelPerms(basePerms, tgtGuild, m, c)
-
-			if bp&discordgo.PermissionManageChannels != discordgo.PermissionManageChannels {
-				l.Warn("Not removing channel due to lack of 'Manage Channels' permissions", zap.String("channel_id", c.ID))
-				continue
-			}
-
-			_, err := state.Discord.ChannelDelete(c.ID)
-
-			if err != nil {
-				return nil, fmt.Errorf("failed to delete channel: %w", err)
-			}
-
-			time.Sleep(t.Constraints.Restore.ChannelDeleteSleep)
-		}
 	default:
 		return nil, fmt.Errorf("invalid channel_restore_mode")
 	}
@@ -691,7 +653,7 @@ func (t *ServerBackupRestoreTask) Exec(l *zap.Logger, tcr *types.TaskCreateRespo
 			return nil, fmt.Errorf("failed to create channel: %w", err)
 		}
 
-		time.Sleep(t.Constraints.Restore.ChannelCreateSleep)
+		time.Sleep(time.Duration(t.Constraints.Restore.ChannelCreateSleep))
 
 		return c, nil
 	}
@@ -947,7 +909,7 @@ func (t *ServerBackupRestoreTask) Exec(l *zap.Logger, tcr *types.TaskCreateRespo
 					return nil, fmt.Errorf("failed to send message: %w", err)
 				}
 
-				time.Sleep(t.Constraints.Restore.SendMessageSleep)
+				time.Sleep(time.Duration(t.Constraints.Restore.SendMessageSleep))
 			}
 		}
 	}

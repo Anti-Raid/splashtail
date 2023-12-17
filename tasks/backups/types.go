@@ -2,8 +2,8 @@ package backups
 
 import (
 	"bytes"
-	"time"
 
+	"github.com/anti-raid/splashtail/utils/timex"
 	"github.com/bwmarrin/discordgo"
 	"github.com/infinitybotlist/iblfile"
 )
@@ -19,14 +19,14 @@ type BackupCreateConstraints struct {
 }
 
 type BackupRestoreConstraints struct {
-	RoleDeleteSleep    time.Duration // How long to sleep between role deletes
-	RoleCreateSleep    time.Duration // How long to sleep between role creates
-	ChannelDeleteSleep time.Duration // How long to sleep between channel deletes
-	ChannelCreateSleep time.Duration // How long to sleep between channel creates
-	ChannelEditSleep   time.Duration // How long to sleep between channel edits
-	SendMessageSleep   time.Duration // How long to sleep between message sends
-	HttpClientTimeout  time.Duration // How long to wait for HTTP requests to complete
-	MaxBodySize        int64         // The maximum size of the backup file to download/use
+	RoleDeleteSleep    timex.Duration // How long to sleep between role deletes
+	RoleCreateSleep    timex.Duration // How long to sleep between role creates
+	ChannelDeleteSleep timex.Duration // How long to sleep between channel deletes
+	ChannelCreateSleep timex.Duration // How long to sleep between channel creates
+	ChannelEditSleep   timex.Duration // How long to sleep between channel edits
+	SendMessageSleep   timex.Duration // How long to sleep between message sends
+	HttpClientTimeout  timex.Duration // How long to wait for HTTP requests to complete
+	MaxBodySize        int64          // The maximum size of the backup file to download/use
 }
 
 type BackupConstraints struct {
@@ -47,13 +47,13 @@ var FreePlanBackupConstraints = &BackupConstraints{
 		GuildAssetReencodeQuality: 85,
 	},
 	Restore: &BackupRestoreConstraints{
-		RoleDeleteSleep:    3 * time.Second,
-		RoleCreateSleep:    3 * time.Second,
-		ChannelDeleteSleep: 3 * time.Second,
-		ChannelCreateSleep: 3 * time.Second,
-		ChannelEditSleep:   1 * time.Second,
-		SendMessageSleep:   3 * time.Second,
-		HttpClientTimeout:  10 * time.Second,
+		RoleDeleteSleep:    3 * timex.Second,
+		RoleCreateSleep:    3 * timex.Second,
+		ChannelDeleteSleep: 3 * timex.Second,
+		ChannelCreateSleep: 3 * timex.Second,
+		ChannelEditSleep:   1 * timex.Second,
+		SendMessageSleep:   3 * timex.Second,
+		HttpClientTimeout:  10 * timex.Second,
 		MaxBodySize:        100_000_000, // 100MB
 	},
 	MaxServerBackupTasks: 1,
