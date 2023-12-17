@@ -8,4 +8,4 @@ coverage.out
 __pycache__
 node_modules
 ljconfig
-localjobs
+cmd/localjobs/localjobs
