@@ -1,4 +1,4 @@
-package get_task
+package get_task_list
 
 import (
 	"errors"
@@ -8,9 +8,7 @@ import (
 	"github.com/anti-raid/splashtail/db"
 	"github.com/anti-raid/splashtail/state"
 	"github.com/anti-raid/splashtail/tasks"
-	types "github.com/anti-raid/splashtail/types"
-
-	"github.com/go-chi/chi/v5"
+	"github.com/anti-raid/splashtail/types"
 	docs "github.com/infinitybotlist/eureka/doclib"
 	"github.com/infinitybotlist/eureka/uapi"
 	"github.com/jackc/pgx/v5"
@@ -18,14 +16,14 @@ import (
 )
 
 var (
-	taskColsArr = db.GetCols(types.Task{})
+	taskColsArr = db.GetCols(types.PartialTask{})
 	taskColsStr = strings.Join(taskColsArr, ", ")
 )
 
 func Docs() *docs.Doc {
 	return &docs.Doc{
-		Summary:     "Get Task",
-		Description: "Gets a task. Returns the task data if this is successful",
+		Summary:     "Get Task List",
+		Description: "Gets the list of all tasks as a PartialTask object",
 		Params: []docs.Parameter{
 			{
 				Name:        "id",
@@ -34,29 +32,12 @@ func Docs() *docs.Doc {
 				In:          "path",
 				Schema:      docs.IdSchema,
 			},
-			{
-				Name:        "tid",
-				Description: "The task ID",
-				Required:    true,
-				In:          "path",
-				Schema:      docs.IdSchema,
-			},
 		},
-		Resp: types.Task{},
+		Resp: types.TaskListResponse{},
 	}
 }
 
 func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
-	// Check that the user owns the task
-	taskId := chi.URLParam(r, "tid")
-
-	if taskId == "" {
-		return uapi.HttpResponse{
-			Status: http.StatusBadRequest,
-			Json:   types.ApiError{Message: "task id is required"},
-		}
-	}
-
 	// Delete expired tasks first
 	_, err := state.Pool.Exec(d.Context, "DELETE FROM tasks WHERE created_at + expiry < NOW()")
 
@@ -65,10 +46,10 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 		return uapi.DefaultResponse(http.StatusInternalServerError)
 	}
 
-	var row pgx.Rows
+	var taskForStr *string
 
 	if d.Auth.ID != "" {
-		taskForStrPtr, err := tasks.FormatTaskFor(&types.TaskFor{
+		taskForStr, err = tasks.FormatTaskFor(&types.TaskFor{
 			ID:         d.Auth.ID,
 			TargetType: d.Auth.TargetType,
 		})
@@ -80,23 +61,16 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 				Json:   types.ApiError{Message: "Internal server error: Failed to format task for: " + err.Error()},
 			}
 		}
-
-		row, err = state.Pool.Query(d.Context, "SELECT "+taskColsStr+" FROM tasks WHERE task_id = $1 AND (task_for IS NULL OR task_for = $2)", taskId, taskForStrPtr)
-
-		if err != nil {
-			state.Logger.Error("Failed to fetch task [db fetch]", zap.Error(err))
-			return uapi.DefaultResponse(http.StatusInternalServerError)
-		}
-	} else {
-		row, err = state.Pool.Query(d.Context, "SELECT "+taskColsStr+" FROM tasks WHERE task_id = $1 AND task_for IS NULL", taskId)
-
-		if err != nil {
-			state.Logger.Error("Failed to fetch task [db fetch]", zap.Error(err))
-			return uapi.DefaultResponse(http.StatusInternalServerError)
-		}
 	}
 
-	task, err := pgx.CollectOneRow(row, pgx.RowToStructByName[types.Task])
+	row, err := state.Pool.Query(d.Context, "SELECT "+taskColsStr+" FROM tasks WHERE task_for IS NULL OR task_for = $1", taskForStr)
+
+	if err != nil {
+		state.Logger.Error("Failed to fetch task [db fetch]", zap.Error(err))
+		return uapi.DefaultResponse(http.StatusInternalServerError)
+	}
+
+	tasks, err := pgx.CollectRows(row, pgx.RowToStructByName[types.PartialTask])
 
 	if errors.Is(err, pgx.ErrNoRows) {
 		return uapi.HttpResponse{
@@ -112,6 +86,6 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 
 	return uapi.HttpResponse{
 		Status: http.StatusOK,
-		Json:   task,
+		Json:   types.TaskListResponse{Tasks: tasks},
 	}
 }

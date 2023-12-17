@@ -7,7 +7,6 @@ import (
 
 	"github.com/anti-raid/splashtail/state"
 	"github.com/anti-raid/splashtail/types"
-	"github.com/anti-raid/splashtail/utils"
 
 	"github.com/infinitybotlist/eureka/crypto"
 	"go.uber.org/zap"
@@ -52,13 +51,21 @@ func CreateTask(ctx context.Context, task TaskDefinition) (*types.TaskCreateResp
 		return nil, fmt.Errorf("task %s does not exist on registry", tInfo.Name)
 	}
 
-	taskKey := crypto.RandString(128)
 	var taskId string
 
-	err = state.Pool.QueryRow(ctx, "INSERT INTO tasks (task_name, task_key, task_for, expiry, output, task_info, allow_unauthenticated) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING task_id",
+	var taskFor *string
+
+	if tInfo.TaskFor != nil {
+		taskFor, err = FormatTaskFor(tInfo.TaskFor)
+
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	err = state.Pool.QueryRow(ctx, "INSERT INTO tasks (task_name, task_for, expiry, output, task_info) VALUES ($1, $2, $3, $4, $5) RETURNING task_id",
 		tInfo.Name,
-		taskKey,
-		FormatTaskFor(tInfo.TaskFor),
+		taskFor,
 		func() *time.Duration {
 			if tInfo.Expiry == 0 {
 				return nil
@@ -68,7 +75,6 @@ func CreateTask(ctx context.Context, task TaskDefinition) (*types.TaskCreateResp
 		}(),
 		nil,
 		tInfo,
-		tInfo.AllowUnauthenticated,
 	).Scan(&taskId)
 
 	if err != nil {
@@ -78,7 +84,6 @@ func CreateTask(ctx context.Context, task TaskDefinition) (*types.TaskCreateResp
 	return &types.TaskCreateResponse{
 		TaskID:   taskId,
 		TaskInfo: tInfo,
-		TaskKey:  utils.Pointer(taskKey),
 	}, nil
 }
 

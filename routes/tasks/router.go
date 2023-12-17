@@ -3,6 +3,7 @@ package tasks
 import (
 	"github.com/anti-raid/splashtail/routes/tasks/endpoints/create_task"
 	"github.com/anti-raid/splashtail/routes/tasks/endpoints/get_task"
+	"github.com/anti-raid/splashtail/routes/tasks/endpoints/get_task_list"
 	"github.com/anti-raid/splashtail/routes/tasks/endpoints/ioauth_download_task"
 	"github.com/anti-raid/splashtail/types"
 
@@ -25,6 +26,25 @@ func (b Router) Routes(r *chi.Mux) {
 		Method:       uapi.GET,
 		Docs:         get_task.Docs,
 		Handler:      get_task.Route,
+		AuthOptional: true,
+		Auth: []uapi.AuthType{
+			{
+				URLVar: "id",
+				Type:   types.TargetTypeServer,
+			},
+			{
+				URLVar: "id",
+				Type:   types.TargetTypeUser,
+			},
+		},
+	}.Route(r)
+
+	uapi.Route{
+		Pattern:      "/entities/{id}/tasks",
+		OpId:         "get_task_list",
+		Method:       uapi.GET,
+		Docs:         get_task_list.Docs,
+		Handler:      get_task_list.Route,
 		AuthOptional: true,
 		Auth: []uapi.AuthType{
 			{
