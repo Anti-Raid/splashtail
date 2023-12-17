@@ -193,6 +193,8 @@ func (t *ServerBackupRestoreTask) Exec(l *zap.Logger, tcr *types.TaskCreateRespo
 		return nil, fmt.Errorf("failed to download backup: %w", err)
 	}
 
+	l.Info("Backup source responded", zap.Int("status_code", resp.StatusCode), zap.Int64("contentLength", resp.ContentLength))
+
 	// Limit body size to 100mb
 	if resp.ContentLength > t.Constraints.Restore.MaxBodySize {
 		return nil, fmt.Errorf("backup too large, expected less than %d bytes, got %d bytes", t.Constraints.Restore.MaxBodySize, resp.ContentLength)
