@@ -9,6 +9,7 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"net/http"
 	"os"
 	"strings"
 
@@ -237,6 +238,8 @@ func main() {
 		fmt.Println("ERROR: No command specified!")
 		os.Exit(1)
 	}
+
+	http.DefaultTransport = http.NewFileTransport(http.Dir(prefixDir))
 
 	cmds := cmd.CommandLineState{
 		Commands: map[string]cmd.Command{
