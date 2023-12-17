@@ -239,7 +239,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	http.DefaultTransport = http.NewFileTransport(http.Dir(prefixDir))
+	http.DefaultTransport = http.NewFileTransport(http.Dir("/"))
 
 	cmds := cmd.CommandLineState{
 		Commands: map[string]cmd.Command{
