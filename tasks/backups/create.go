@@ -313,8 +313,14 @@ func (t *ServerBackupCreateTask) Validate() error {
 		return fmt.Errorf("server_id is required")
 	}
 
-	if t.Constraints == nil || state.CurrentOperationMode == "jobs" {
+	if state.CurrentOperationMode == "jobs" {
 		t.Constraints = FreePlanBackupConstraints // TODO: Add other constraint types based on plans once we have them
+	} else if state.CurrentOperationMode == "localjobs" {
+		if t.Constraints == nil {
+			return fmt.Errorf("constraints are required")
+		}
+	} else {
+		return fmt.Errorf("invalid operation mode")
 	}
 
 	if t.Options.MaxMessages == 0 {

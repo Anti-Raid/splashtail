@@ -122,8 +122,16 @@ func (t *ServerBackupRestoreTask) Validate() error {
 		return fmt.Errorf("backup_source is required")
 	}
 
-	if !strings.HasPrefix(t.Options.BackupSource, "https://") {
-		return fmt.Errorf("backup_source must be a valid URL")
+	if state.CurrentOperationMode == "jobs" {
+		if !strings.HasPrefix(t.Options.BackupSource, "https://") {
+			return fmt.Errorf("backup_source must be a valid URL")
+		}
+	} else if state.CurrentOperationMode == "localjobs" {
+		if !strings.HasPrefix(t.Options.BackupSource, "file://") && !strings.HasPrefix(t.Options.BackupSource, "http://") && !strings.HasPrefix(t.Options.BackupSource, "https://") {
+			return fmt.Errorf("backup_source must be a valid URL or file path")
+		}
+	} else {
+		return fmt.Errorf("invalid operation mode")
 	}
 
 	switch t.Options.ChannelRestoreMode {
