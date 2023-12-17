@@ -43,7 +43,8 @@ func backupGuildAsset(constraints *BackupConstraints, l *zap.Logger, f *iblfile.
 	l.Info("Backing up guild asset", zap.String("name", name))
 
 	client := http.Client{
-		Timeout: 10 * time.Second,
+		Timeout:   10 * time.Second,
+		Transport: state.TaskTransport,
 	}
 
 	resp, err := client.Get(url)
@@ -163,7 +164,8 @@ func createAttachmentBlob(constraints *BackupConstraints, logger *zap.Logger, ms
 		}
 
 		client := http.Client{
-			Timeout: 10 * time.Second,
+			Timeout:   10 * time.Second,
+			Transport: state.TaskTransport,
 		}
 
 		resp, err := client.Get(url)

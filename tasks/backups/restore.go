@@ -34,7 +34,8 @@ func getImageAsDataUri(constraints *BackupConstraints, l *zap.Logger, f *iblfile
 	} else {
 		// Try fetching still, it might work
 		client := http.Client{
-			Timeout: time.Duration(constraints.Restore.HttpClientTimeout),
+			Timeout:   time.Duration(constraints.Restore.HttpClientTimeout),
+			Transport: state.TaskTransport,
 		}
 
 		resp, err := client.Get(endpoint)
@@ -184,7 +185,8 @@ func (t *ServerBackupRestoreTask) Exec(l *zap.Logger, tcr *types.TaskCreateRespo
 	// Download backup
 	l.Info("Downloading backup", zap.String("url", t.Options.BackupSource))
 	client := http.Client{
-		Timeout: time.Duration(t.Constraints.Restore.HttpClientTimeout),
+		Timeout:   time.Duration(t.Constraints.Restore.HttpClientTimeout),
+		Transport: state.TaskTransport,
 	}
 
 	resp, err := client.Get(t.Options.BackupSource)

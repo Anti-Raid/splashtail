@@ -51,6 +51,9 @@ var (
 	// Debug stuff
 	BuildInfo  *debug.BuildInfo
 	ExtraDebug ExtraDebugInfo
+
+	// Task stuff
+	TaskTransport *http.Transport = &http.Transport{}
 )
 
 type ExtraDebugInfo struct {
