@@ -7,3 +7,4 @@ config.yaml.sample
 coverage.out
 __pycache__
 node_modules
+ljconfig
