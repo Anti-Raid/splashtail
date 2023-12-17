@@ -16,7 +16,7 @@ type TaskLocalOpts struct {
 }
 
 // Executes a task locally
-func ExecuteTaskLocal(taskId string, l *zap.Logger, task tasks.TaskDefinition, opts TaskLocalOpts) error {
+func ExecuteTaskLocal(prefix, taskId string, l *zap.Logger, task tasks.TaskDefinition, opts TaskLocalOpts) error {
 	var currentTaskState = "pending"
 
 	err := opts.OnStateChange(currentTaskState)
@@ -57,6 +57,13 @@ func ExecuteTaskLocal(taskId string, l *zap.Logger, task tasks.TaskDefinition, o
 	})
 
 	if err != nil {
+		l.Error("Failed to execute task", zap.Error(err))
+		currentTaskState = "failed"
+		err = opts.OnStateChange(currentTaskState)
+
+		if err != nil {
+			return fmt.Errorf("failed to update task state: %w", err)
+		}
 		return fmt.Errorf("failed to execute task: %w", err)
 	}
 
@@ -77,13 +84,13 @@ func ExecuteTaskLocal(taskId string, l *zap.Logger, task tasks.TaskDefinition, o
 			}
 		} else {
 			// Write task output to tasks/$taskId/$output
-			err = os.MkdirAll("tasks/"+taskId, 0755)
+			err = os.MkdirAll(prefix+"/tasks/"+taskId, 0755)
 
 			if err != nil {
 				return fmt.Errorf("failed to create task output directory: %w", err)
 			}
 
-			f, err := os.Create("tasks/" + taskId + "/" + outp.Filename)
+			f, err := os.Create(prefix + "/tasks/" + taskId + "/" + outp.Filename)
 
 			if err != nil {
 				return fmt.Errorf("failed to create task output file: %w", err)

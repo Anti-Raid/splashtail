@@ -43,6 +43,7 @@ github.com/go-test/deep v1.0.8 h1:TDsG77qcSprGbC6vTN8OuXp5g+J+b5Pcguhf7Zt61VM=
 github.com/go-test/deep v1.0.8/go.mod h1:5C2ZWiW0ErCdrYzpqxLbTX7MG14M9iiw8DgHncVwcsE=
 github.com/google/go-cmp v0.5.9 h1:O2Tfq5qg4qc4AmwVlvv0oLiVAGB7enBSJ2x2DqQFi38=
 github.com/google/go-cmp v0.5.9/go.mod h1:17dUlkBOakJ0+DkrSSNjCkIjxS6bF9zb3elmeNGIjoY=
+github.com/google/go-cmp v0.6.0 h1:ofyhxvXcZhMsU5ulbFiLKl/XBFqE1GSq7atu8tAmTRI=
 github.com/google/gofuzz v1.0.0/go.mod h1:dBl0BpW6vV/+mYPU4Po3pmUjxk6FQPldtuIdl/M65Eg=
 github.com/google/uuid v1.5.0 h1:1p67kYwdtXjb0gL0BPiP1Av9wiZPo5A8z2cWkTZ+eyU=
 github.com/google/uuid v1.5.0/go.mod h1:TIyPZe4MgqvfeYDBFedMoGGpEw/LqOeaOT+nhxU+yHo=
@@ -53,6 +54,8 @@ github.com/infinitybotlist/eureka v0.6.5 h1:Bnn5bYUHWLBiy3kpokFcN6DezAnCDGY59GZ6
 github.com/infinitybotlist/eureka v0.6.5/go.mod h1:XY/H8htZ4EQJwyfwnDrLuKg5M7DGoo6835ZJSKSswCg=
 github.com/infinitybotlist/iblfile v0.0.0-20231210092627-3ed3e63c09ae h1:7MbukIzmsHAAdCiHmXXPTdaS1bNs5ZJHIVqPAh3BBbY=
 github.com/infinitybotlist/iblfile v0.0.0-20231210092627-3ed3e63c09ae/go.mod h1:j214HiwMfNCQ/udfZR33O5zv2/FPdSKIEYkMIm7tOjc=
+github.com/infinitybotlist/iblfile v0.0.0-20231217062828-5a52f5049ee3 h1:q9caH7IqiYhy9kVRtwIzgll3dRa50+aiZaNFECcDJSs=
+github.com/infinitybotlist/iblfile v0.0.0-20231217062828-5a52f5049ee3/go.mod h1:j214HiwMfNCQ/udfZR33O5zv2/FPdSKIEYkMIm7tOjc=
 github.com/invopop/yaml v0.2.0 h1:7zky/qH+O0DwAyoobXUqvVBwgBFRxKoQ/3FjcVpjTMY=
 github.com/invopop/yaml v0.2.0/go.mod h1:2XuRLgs/ouIrW3XNzuNj7J3Nvu/Dig5MXvbCEdiBN3Q=
 github.com/jackc/pgpassfile v1.0.0 h1:/6Hmqy13Ss2zCq62VdNG8tM1wchn8zjSGOBJ6icpsIM=
@@ -105,6 +108,8 @@ github.com/redis/go-redis/v9 v9.3.0 h1:RiVDjmig62jIWp7Kk4XVLs0hzV6pI3PyTnnL0cnn0
 github.com/redis/go-redis/v9 v9.3.0/go.mod h1:hdY0cQFCN4fnSYT6TkisLufl/4W5UIXyv0b/CLO2V2M=
 github.com/redis/rueidis v1.0.23 h1:OVHv1u35anQgvXjXk0ehTSDGByS245eQBDDM9U6YF/w=
 github.com/redis/rueidis v1.0.23/go.mod h1:8EOzvsg3o5dUDitRj4vpsolUKkSIvFz88PeQnqwTVk0=
+github.com/redis/rueidis v1.0.24 h1:AOMj9w8Df1K7wkm5I3sixPJvbGXl2ELApgP4nH5A/04=
+github.com/redis/rueidis v1.0.24/go.mod h1:NT7lPuiVYijdZVsV0V8i9ZUhqe1OMGaq+NiQigNuKlg=
 github.com/rogpeppe/go-internal v1.10.0 h1:TMyTOH3F/DB16zRVcYyreMH6GnZZrwQVAoYjRBZyWFQ=
 github.com/rogpeppe/go-internal v1.10.0/go.mod h1:UQnix2H7Ngw/k4C5ijL5+65zddjncjaFoBhdsK/akog=
 github.com/rs/xid v1.5.0 h1:mKX4bl4iPYJtEIxp6CYiUuLQ/8DYMoz0PUdtGgMFRVc=

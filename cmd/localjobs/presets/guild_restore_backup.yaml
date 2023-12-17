@@ -1,0 +1,33 @@
+ServerID: "{{.Args.ServerID}}"
+
+Constraints:
+  Restore:
+    RoleDeleteSleep:   "3s"
+    RoleCreateSleep:   "3s"
+    ChannelDeleteSleep: "3s"
+    ChannelCreateSleep: "3s"
+    ChannelEditSleep:  "1s"
+    SendMessageSleep:  "3s"
+    HttpClientTimeout: "10s"
+    MaxBodySize: 100000000 # 100MB
+  MaxServerBackupTasks: 1
+  FileType: backup.server
+
+ckup
+type BackupRestoreOpts struct {
+	IgnoreRestoreErrors bool               `description:"Whether to ignore errors while restoring or not and skip these channels/roles"`
+	ProtectedChannels   []string           `description:"Channels to protect from being deleted"`
+	ProtectedRoles      []string           `description:"Roles to protect from being deleted"`
+	BackupSource        string             `description:"The source of the backup"`
+	Decrypt             string             `description:"The key to decrypt backups with, if any"`
+	ChannelRestoreMode  ChannelRestoreMode `description:"Channel backup restore method. Use 'full' if unsure"`
+	RoleRestoreMode     RoleRestoreMode    `description:"Role backup restore method. Use 'full' if unsure"`
+
+Options:
+  IgnoreRestoreErrors: false # We likely don't want errors ignored in local jobs
+  ProtectedChannels: [] # Edit this to protect channels from being deleted
+  ProtectedRoles: [] # Edit this to protect roles from being deleted
+  BackupSource: "{{.Args.BackupSource}}"
+  Decrypt: "{{.Settings.BackupPassword}}"
+  ChannelRestoreMode: full
+  RoleRestoreMode: full

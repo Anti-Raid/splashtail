@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"os"
 	"reflect"
+	"runtime/debug"
 	"strings"
 	"time"
 
@@ -46,7 +47,35 @@ var (
 
 	// This is only non-nil for webserver
 	MewldInstanceList *mproc.InstanceList
+
+	// Debug stuff
+	BuildInfo  *debug.BuildInfo
+	ExtraDebug ExtraDebugInfo
 )
+
+type ExtraDebugInfo struct {
+	VSC         string
+	VSCRevision string
+}
+
+func SetupDebug() {
+	var ok bool
+	BuildInfo, ok = debug.ReadBuildInfo()
+
+	if !ok {
+		panic("failed to read build info")
+	}
+
+	// Get vcs.revision
+	for _, d := range BuildInfo.Settings {
+		if d.Key == "vcs" {
+			ExtraDebug.VSC = d.Value
+		}
+		if d.Key == "vcs.revision" {
+			ExtraDebug.VSCRevision = d.Value
+		}
+	}
+}
 
 func nonVulgar(fl validator.FieldLevel) bool {
 	// get the field value
@@ -66,6 +95,7 @@ func nonVulgar(fl validator.FieldLevel) bool {
 }
 
 func Setup() {
+	SetupDebug()
 	Validator.RegisterValidation("nonvulgar", nonVulgar)
 	Validator.RegisterValidation("notblank", validators.NotBlank)
 	Validator.RegisterValidation("nospaces", snippets.ValidatorNoSpaces)

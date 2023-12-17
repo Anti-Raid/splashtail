@@ -72,7 +72,7 @@ func EasyConfig() (*types.Config, error) {
 		}
 
 		inviteUrl := fmt.Sprintf("https://discord.com/oauth2/authorize?client_id=%s&scope=bot&permissions=8", currApp.ID)
-		bold("Invite this bot to your server using the following URL: %s", inviteUrl)
+		bold("Invite this bot to your server using the following URL: ", inviteUrl)
 
 		err = lib.OpenDefault(inviteUrl)
 
@@ -82,7 +82,7 @@ func EasyConfig() (*types.Config, error) {
 
 		return &types.Config{
 			BotToken: token,
-			Secrets: map[string]string{
+			Settings: map[string]string{
 				"BackupPassword": "",
 			},
 		}, nil

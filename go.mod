@@ -16,9 +16,9 @@ require (
 require (
 	github.com/cheesycod/mewld v0.0.0-20231215111137-84e09c813335
 	github.com/cloudflare/tableflip v1.2.3
-	github.com/infinitybotlist/iblfile v0.0.0-20231210092627-3ed3e63c09ae
+	github.com/infinitybotlist/iblfile v0.0.0-20231217062828-5a52f5049ee3
 	github.com/minio/minio-go/v7 v7.0.66
-	github.com/redis/rueidis v1.0.23
+	github.com/redis/rueidis v1.0.24
 	github.com/sirupsen/logrus v1.9.3
 	github.com/vmihailenco/msgpack/v5 v5.4.1
 	golang.org/x/image v0.14.0

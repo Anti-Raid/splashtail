@@ -1,7 +1,16 @@
-ServerID: "{{.ServerID}}"
+ServerID: "{{.Args.ServerID}}"
 
-# TODO: Define good constraints
-#Constraints:
+Constraints:
+  Create:
+    TotalMaxMessages: 1000 # Since this is a local job, we can afford to be more generous
+    FileSizeWarningThreshold: 100000000 # 100MB
+    MinPerChannel: 50
+    DefaultPerChannel: 100
+    JpegReencodeQuality: 85
+    GuildAssetReencodeQuality: 85
+
+  MaxServerBackupTasks: 1
+  FileType: backup.server
 
 Options:
   MaxMessages: 500
@@ -11,10 +20,10 @@ Options:
   BackupAttachments: true
 
   # This is a local job so backing up guild assets is likely faster and desired
-  BackupGuildAssets: true
+  BackupGuildAssets: ["icon", "banner", "splash"]
 
   # Misc
   PerChannel: 100
   RolloverLeftovers: true
   IgnoreMessageBackupErrors: false # We likely don't errors ignored in local jobs
-  Encrypt: "{{.Secrets.backup_password}}" 
+  Encrypt: "{{.Settings.BackupPassword}}" 

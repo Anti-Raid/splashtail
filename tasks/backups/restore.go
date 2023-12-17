@@ -100,7 +100,7 @@ type ServerBackupRestoreTask struct {
 	ServerID string
 
 	// Constraints, this is auto-set by the task in jobserver and hence not configurable in this mode.
-	Constraints *BackupConstraints `json:"-"`
+	Constraints *BackupConstraints
 
 	// Backup options
 	Options BackupRestoreOpts

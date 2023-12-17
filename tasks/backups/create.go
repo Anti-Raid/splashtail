@@ -300,7 +300,7 @@ type ServerBackupCreateTask struct {
 	ServerID string
 
 	// Constraints, this is auto-set by the task in jobserver and hence not configurable in this mode.
-	Constraints *BackupConstraints `json:"-"`
+	Constraints *BackupConstraints
 
 	// Backup options
 	Options BackupCreateOpts
@@ -667,6 +667,12 @@ func (t *ServerBackupCreateTask) Exec(l *zap.Logger, tcr *types.TaskCreateRespon
 		CreatedAt: time.Now(),
 		Protocol:  iblfile.Protocol,
 		Type:      t.Constraints.FileType,
+		ExtraMetadata: map[string]string{
+			"OperationMode": state.CurrentOperationMode,
+			"GoVersion":     state.BuildInfo.GoVersion,
+			"BuildRev":      state.ExtraDebug.VSCRevision,
+			"BuildVSC":      state.ExtraDebug.VSC,
+		},
 	}
 
 	ifmt, err := iblfile.GetFormat(t.Constraints.FileType)
