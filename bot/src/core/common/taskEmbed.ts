@@ -5,7 +5,7 @@ import { AntiRaid } from "../client";
 import sql from "../db";
 
 export const getTask = async (taskId: string): Promise<Task> => {
-    let data = await sql`SELECT allow_unauthenticated, task_name, output, task_info, statuses, task_for, expiry, state, created_at FROM tasks WHERE task_id = ${taskId}`
+    let data = await sql`SELECT task_name, output, task_info, statuses, task_for, expiry, state, created_at FROM tasks WHERE task_id = ${taskId}`
 
     if(data.count == 0) return null
 

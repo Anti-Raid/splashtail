@@ -74,8 +74,25 @@ export interface IOAuthDiscordError {
  */
 export interface TaskCreateResponse {
   task_id: string;
-  task_key?: string;
   task_info?: TaskInfo;
+}
+export interface TaskCreateResponseWithWait {
+  task_create_response?: TaskCreateResponse;
+  output: any;
+}
+/**
+ * @ci table=tasks unfilled=1
+ * Tasks are background processes that can be run on a coordinator server.
+ */
+export interface PartialTask {
+  task_id: string;
+  task_name: string;
+  expiry?: any /* time.Duration */;
+  state: string;
+  created_at: string /* RFC3339 */;
+}
+export interface TaskListResponse {
+  tasks: PartialTask[];
 }
 /**
  * @ci table=tasks
@@ -83,7 +100,6 @@ export interface TaskCreateResponse {
  */
 export interface Task {
   task_id: string;
-  allow_unauthenticated: boolean;
   task_name: string;
   output?: TaskOutput;
   task_info?: TaskInfo;
@@ -113,9 +129,9 @@ export interface TaskOutput {
 export interface TaskInfo {
   name: string;
   task_for?: TaskFor;
-  allow_unauthenticated: boolean;
   task_fields: any;
   expiry: any /* time.Duration */;
+  valid: boolean;
 }
 
 //////////
