@@ -3,14 +3,15 @@ mod cmds;
 mod config;
 mod tasks;
 mod modules;
+mod ipc;
 
-use std::collections::HashSet;
+use std::sync::Arc;
 
 use log::{error, info};
-use poise::serenity_prelude::{FullEvent, RoleAction, UserId};
+use poise::serenity_prelude::FullEvent;
 use poise::CreateReply;
-use serenity::model::guild::audit_log::{Action, ChannelAction};
 use sqlx::postgres::PgPoolOptions;
+use std::io::Write;
 
 use crate::impls::cache::CacheHttpImpl;
 
@@ -19,8 +20,10 @@ type Context<'a> = poise::Context<'a, Data, Error>;
 
 // User data, which is stored and accessible in all command invocations
 pub struct Data {
-    pool: sqlx::PgPool,
-    cache_http: crate::impls::cache::CacheHttpImpl,
+    pub pool: sqlx::PgPool,
+    pub ipc: ipc::client::IpcClient,
+    pub mewld_args: Arc<crate::ipc::argparse::MewldCmdArgs>,
+    pub cache_http: crate::impls::cache::CacheHttpImpl,
 }
 
 #[poise::command(prefix_command)]
@@ -88,127 +91,35 @@ async fn event_listener(ctx: &serenity::client::Context, event: &FullEvent, user
                 user_data.cache_http.clone(),
                 ctx.clone(),
             ));
-        }
-        FullEvent::GuildAuditLogEntryCreate {
-            entry,
-            guild_id,
-        } => {
-            info!("Audit log created: {:?}. Guild: {}", entry, guild_id);
 
-            let res = match entry.action {
-                Action::Channel(ch) => {
-                    let ch_id = entry.target_id.ok_or("No channel ID found")?;
-
-                    match ch {
-                        ChannelAction::Create => {
-                            info!("Channel created: {}", ch_id);
-
-                            modules::limits::handler::handle_mod_action(
-                                *guild_id,
-                                entry.user_id,
-                                &user_data.pool,
-                                &user_data.cache_http,
-                                modules::limits::core::UserLimitTypes::ChannelAdd,
-                                ch_id.to_string(),
-                            )
-                            .await
-                        }
-                        ChannelAction::Delete => {
-                            info!("Channel deleted: {}", ch_id);
-
-                            modules::limits::handler::handle_mod_action(
-                                *guild_id,
-                                entry.user_id,
-                                &user_data.pool,
-                                &user_data.cache_http,
-                                modules::limits::core::UserLimitTypes::ChannelRemove,
-                                ch_id.to_string(),
-                            )
-                            .await
-                        }
-                        ChannelAction::Update => {
-                            info!("Channel updated: {}", ch_id);
-
-                            modules::limits::handler::handle_mod_action(
-                                *guild_id,
-                                entry.user_id,
-                                &user_data.pool,
-                                &user_data.cache_http,
-                                modules::limits::core::UserLimitTypes::ChannelUpdate,
-                                ch_id.to_string(),
-                            )
-                            .await
-                        }
-                        _ => Ok(()),
-                    }
-                }
-                Action::Role(ra) => {
-                    let r_id = entry.target_id.ok_or("No role ID found")?;
-
-                    match ra {
-                        RoleAction::Create => {
-                            info!("Role created: {}", r_id);
-
-                            modules::limits::handler::handle_mod_action(
-                                *guild_id,
-                                entry.user_id,
-                                &user_data.pool,
-                                &user_data.cache_http,
-                                modules::limits::core::UserLimitTypes::RoleAdd,
-                                r_id.to_string(),
-                            )
-                            .await
-                        }
-                        RoleAction::Update => {
-                            info!("Role updated: {}", r_id);
-
-                            modules::limits::handler::handle_mod_action(
-                                *guild_id,
-                                entry.user_id,
-                                &user_data.pool,
-                                &user_data.cache_http,
-                                modules::limits::core::UserLimitTypes::RoleUpdate,
-                                r_id.to_string(),
-                            )
-                            .await
-                        }
-                        RoleAction::Delete => {
-                            info!("Role deleted: {}", r_id);
-
-                            modules::limits::handler::handle_mod_action(
-                                *guild_id,
-                                entry.user_id,
-                                &user_data.pool,
-                                &user_data.cache_http,
-                                modules::limits::core::UserLimitTypes::RoleRemove,
-                                r_id.to_string(),
-                            )
-                            .await
-                        }
-                        _ => Ok(()),
-                    }
-                }
-                _ => Ok(()),
-            };
-
-            if let Err(res) = res {
-                error!("Error while handling audit log: {}", res);
-                return Err(res);
-            }
+            user_data.ipc.publish_ipc_launch_next().await?;
         }
         _ => {}
     }
+
+    // Add all event listeners for key modules here
+    crate::modules::limits::events::event_listener(ctx, event, user_data).await?;
 
     Ok(())
 }
 
 #[tokio::main]
 async fn main() {
-    const MAX_CONNECTIONS: u32 = 3; // max connections to the database, we don't need too many here
+    const POSTGRES_MAX_CONNECTIONS: u32 = 3; // max connections to the database, we don't need too many here
+    const REDIS_MAX_CONNECTIONS: u32 = 10; // max connections to the redis
 
-    std::env::set_var("RUST_LOG", "botv2=info");
+    let args = std::env::args().collect::<Vec<_>>();
+    let mewld_args = Arc::new(crate::ipc::argparse::MewldCmdArgs::parse_argv(&args).unwrap());
 
-    env_logger::init();
+    // Setup logging
+    let cluster_id = mewld_args.cluster_id;
+    let cluster_name = mewld_args.cluster_name.clone();
+    let shards = mewld_args.shards.clone();
+    let shard_count = mewld_args.shard_count;
+    env_logger::builder()
+    .format(move |buf, record| writeln!(buf, "[{} ({})] {} - {}", cluster_name, cluster_id, record.level(), record.args()))
+    .filter(None, log::LevelFilter::Info)
+    .init();
 
     let proxy_url = config::CONFIG.meta.proxy.clone();
 
@@ -290,7 +201,7 @@ const primary = new EmbedBuilder()
                             .url("https://discord.gg/Qa52e2bNms")
                             .description("Unfortunately, AntiRaid is currently unavailable due to poor code management and changes with the Discord API. We are currently in the works of V6, and hope to have it out by next month. All use of our services will not be available, and updates will be pushed here. We are extremely sorry for the inconvenience.\nFor more information you can also join our [Support Server](https://discord.gg/Qa52e2bNms)!");
 
-                        let changes = vec!["We are working extremely hard on Antiraid v6, and have completed working on half of the bot. We should have this update out by Q1/Q2 2024! Delays may occur due to the sheer scope of the unique features we want to provide!"];
+                        let changes = ["We are working extremely hard on Antiraid v6, and have completed working on half of the bot. We should have this update out by Q1/Q2 2024! Delays may occur due to the sheer scope of the unique features we want to provide!"];
 
                         let updates = poise::serenity_prelude::CreateEmbed::default()
                             .color(0x0000ff)
@@ -362,15 +273,23 @@ const primary = new EmbedBuilder()
             on_error: |error| Box::pin(on_error(error)),
             ..Default::default()
         },
-        move |ctx, _ready, _framework| {
+        move |ctx, _ready, framework| {
             Box::pin(async move {
                 Ok(Data {
                     cache_http: CacheHttpImpl {
                         cache: ctx.cache.clone(),
                         http: ctx.http.clone(),
                     },
+                    ipc: crate::ipc::client::IpcClient {
+                        redis_pool: fred::prelude::Builder::default_centralized()
+                            .build_pool(REDIS_MAX_CONNECTIONS.try_into().unwrap())
+                            .expect("Could not initialize Redis pool"),
+                        shard_manager: framework.shard_manager().clone(),
+                        mewld_args: mewld_args.clone(),
+                    },
+                    mewld_args: mewld_args.clone(),
                     pool: PgPoolOptions::new()
-                        .max_connections(MAX_CONNECTIONS)
+                        .max_connections(POSTGRES_MAX_CONNECTIONS)
                         .connect(&config::CONFIG.meta.postgres_url)
                         .await
                         .expect("Could not initialize connection"),
@@ -384,7 +303,16 @@ const primary = new EmbedBuilder()
         .await
         .expect("Error creating client");
 
-    if let Err(why) = client.start().await {
+    let shard_range = std::ops::Range {
+        start: shards[0],
+        end: shards[shards.len() - 1] + 1,
+    };
+    
+    info!("Starting shards: {:?}", shard_range);
+
+    if let Err(why) = client.start_shard_range(shard_range, shard_count).await {
         error!("Client error: {:?}", why);
     }
+
+    std::process::exit(1); // Clean exit with status code of 1
 }

@@ -31,6 +31,7 @@ axum-macros = "0.3"
 tower-http = { version = "0.3", features = ["cors"] }
 num-traits = "0.2.14"
 ts-rs = { version = "7.0", features = ["chrono-impl"] }
+fred = { version = "7.1.0", features = ["enable-rustls", "serde-json", "subscriber-client", "check-unresponsive", "mocks", "redis-json"] }
 
 [dependencies.tokio]
 version = "1"

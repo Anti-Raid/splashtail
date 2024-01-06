@@ -258,8 +258,8 @@ func main() {
 						cm.Name,
 						l.Dir,
 						strconv.Itoa(len(l.Map)),
-						state.Config.Meta.Proxy,
 						state.Config.Sites.API.Parse(),
+						l.Config.RedisChannel,
 					)
 				} else {
 					panic("interp not set in mewld.yaml") // Splashtail doesn't support this

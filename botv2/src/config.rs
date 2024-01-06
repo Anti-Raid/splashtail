@@ -21,6 +21,7 @@ pub struct DiscordAuth {
 pub struct Meta {
     pub web_redis_channel: String,
     pub postgres_url: String,
+    pub bot_redis_url: String,
     pub proxy: String,
 }
 
