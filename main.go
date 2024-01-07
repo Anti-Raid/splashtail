@@ -262,7 +262,17 @@ func main() {
 						l.Config.RedisChannel,
 					)
 				} else {
-					panic("interp not set in mewld.yaml") // Splashtail doesn't support this
+					cmd = exec.Command(
+						l.Dir+"/"+l.Config.Module,
+						mutils.ToPyListUInt64(i.Shards),
+						mutils.UInt64ToString(l.ShardCount),
+						strconv.Itoa(i.ClusterID),
+						cm.Name,
+						l.Dir,
+						strconv.Itoa(len(l.Map)),
+						state.Config.Sites.API.Parse(),
+						l.Config.RedisChannel,
+					)
 				}
 
 				cmd.Stdout = os.Stdout

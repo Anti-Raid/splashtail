@@ -11,7 +11,7 @@ reloadjobserver:
 all:
 	make buildbot && make buildmewldwebui && make stcore 
 buildbot:
-	cd bot && npm i && npm run build && cd ../
+	cd botv2 && cargo build --release && cp -v target/release/botv2 .
 buildmewldwebui:
 	cd mewld_web/ui && npm i && npm run build && cd ../
 tests:
