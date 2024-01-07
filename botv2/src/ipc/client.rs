@@ -186,10 +186,6 @@ impl IpcClient {
                 }
             };
 
-            if obj.contains_key("launch_next") {
-                continue; // Ignore launch_next messages
-            }
-
             // Check if this is a mewld diag payload
             if obj.contains_key("diag") {
                 let diag_payload = match serde_json::from_value::<MewldDiagPayload>(value) {
@@ -309,6 +305,7 @@ impl IpcClient {
                         // All clusters have launched, set the flag
                         *self.cache.all_clusters_up.write().await = true;
                     },
+                    "launch_next" => {} // Ignore
                     _ => {
                         log::warn!("Invalid message recieved on channel {} [not a launcher command]", message.channel);
                         continue;
