@@ -21,7 +21,7 @@ type Context<'a> = poise::Context<'a, Data, Error>;
 // User data, which is stored and accessible in all command invocations
 pub struct Data {
     pub pool: sqlx::PgPool,
-    pub ipc: ipc::client::IpcClient,
+    pub ipc: Arc<ipc::client::IpcClient>,
     pub mewld_args: Arc<crate::ipc::argparse::MewldCmdArgs>,
     pub cache_http: crate::impls::cache::CacheHttpImpl,
 }
@@ -114,10 +114,11 @@ async fn main() {
     // Setup logging
     let cluster_id = mewld_args.cluster_id;
     let cluster_name = mewld_args.cluster_name.clone();
+    let cluster_count = mewld_args.cluster_count;
     let shards = mewld_args.shards.clone();
     let shard_count = mewld_args.shard_count;
     env_logger::builder()
-    .format(move |buf, record| writeln!(buf, "[{} ({})] {} - {}", cluster_name, cluster_id, record.level(), record.args()))
+    .format(move |buf, record| writeln!(buf, "[{} ({} of {})] {} - {}", cluster_name, cluster_id, cluster_count, record.level(), record.args()))
     .filter(None, log::LevelFilter::Info)
     .init();
 
@@ -167,34 +168,7 @@ async fn main() {
             command_check: Some(|ctx| {
                 Box::pin(async move {
                     if !config::CONFIG.discord_auth.can_use_bot.contains(&ctx.author().id) {
-                   /*
-const primary = new EmbedBuilder()
-                .setColor("Red")
-                .setTitle("AntiRaid")
-                .setURL("https://discord.gg/Qa52e2bNms")
-                .setDescription("Unfortunately, AntiRaid is currently unavailable due to poor code management and changes with the Discord API. We are currently in the works of V6, and hope to have it out by next month. All use of our services will not be available, and updates will be pushed here. We are extremely sorry for the inconvenience.\nFor more information you can also join our [Support Server](https://discord.gg/Qa52e2bNms)!")
-
-                const changes = ["We are working extremely hard on Antiraid v6, and have completed working on almost half of the bot. We should have this update out by January 5th, 2024."];
-                const updates = new EmbedBuilder()
-                .setColor("Blue")
-                .setTitle("Updates")
-                .setDescription(changes.join("\t-"))
-
-                let guildCount = await getServerCount(this)
-                let shardCount = await getShardCount(this)
-
-                const statistics = new EmbedBuilder()
-                .setColor("Red")
-                .setDescription((`**Server Count:** ${guildCount}\n**Shard Count:** ${shardCount}\n**Cluster Count:** ${this.clusterCount}\n**Cluster ID:** ${this.clusterId}\n**Cluster Name:** ${this.clusterName}\n**Uptime:** ${uptimeToHuman(this.uptime)}`))
-
-                ctx.reply({
-                    embeds: [primary, updates, statistics]
-                })
-
-                return
-            }
-                     */
-
+                        let data = ctx.data();
                         let primary = poise::serenity_prelude::CreateEmbed::default()
                             .color(0xff0000)
                             .title("AntiRaid")
@@ -208,10 +182,23 @@ const primary = new EmbedBuilder()
                             .title("Updates")
                             .description(changes.join("\t-"));
 
+                        let statistics = poise::serenity_prelude::CreateEmbed::default()
+                            .color(0xff0000)
+                            .description(format!(
+                                "**Server Count:** {}\n**Shard Count:** {}\n**Cluster Count:** {}\n**Cluster ID:** {}\n**Cluster Name:** {}\n**Uptime:** {}",
+                                data.ipc.cache.total_guilds(),
+                                data.ipc.mewld_args.shard_count,
+                                data.ipc.mewld_args.cluster_count,
+                                data.ipc.mewld_args.cluster_id,
+                                data.ipc.mewld_args.cluster_name,
+                                ctx.ping().await.as_millis(),
+                            ));
+
                         ctx.send(
                             CreateReply::default()
                             .embed(primary)
                             .embed(updates)
+                            .embed(statistics)
                         )
                         .await
                         .map_err(|e| format!("Error sending reply: {}", e))?;
@@ -275,25 +262,38 @@ const primary = new EmbedBuilder()
         },
         move |ctx, _ready, framework| {
             Box::pin(async move {
-                Ok(Data {
+                let data = Data {
                     cache_http: CacheHttpImpl {
                         cache: ctx.cache.clone(),
                         http: ctx.http.clone(),
                     },
-                    ipc: crate::ipc::client::IpcClient {
+                    ipc: Arc::new(crate::ipc::client::IpcClient {
                         redis_pool: fred::prelude::Builder::default_centralized()
                             .build_pool(REDIS_MAX_CONNECTIONS.try_into().unwrap())
                             .expect("Could not initialize Redis pool"),
                         shard_manager: framework.shard_manager().clone(),
                         mewld_args: mewld_args.clone(),
-                    },
+                        serenity_cache: CacheHttpImpl {
+                            cache: ctx.cache.clone(),
+                            http: ctx.http.clone(),
+                        },
+                        cache: Arc::new(crate::ipc::client::IpcCache::default()),
+                    }),
                     mewld_args: mewld_args.clone(),
                     pool: PgPoolOptions::new()
                         .max_connections(POSTGRES_MAX_CONNECTIONS)
                         .connect(&config::CONFIG.meta.postgres_url)
                         .await
                         .expect("Could not initialize connection"),
-                })
+                };
+
+                let ipc_ref = data.ipc.clone();
+                tokio::task::spawn(async move {
+                    let ipc_ref = ipc_ref;
+                    ipc_ref.start_ipc_listener().await;
+                });
+
+                Ok(data)
             })
         },
     );
