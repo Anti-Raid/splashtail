@@ -126,9 +126,9 @@ async fn event_listener(ctx: &serenity::client::Context, event: &FullEvent, user
                     serenity::all::CreateInteractionResponse::Message(
                         serenity::all::CreateInteractionResponseMessage::default()
                         .flags(serenity::all::InteractionResponseFlags::EPHEMERAL)
-                        .embed(primary)
-                        .embed(updates)
-                        .embed(statistics)
+                        .add_embed(primary)
+                        .add_embed(updates)
+                        .add_embed(statistics)
                     )
                 )
                 .await

@@ -13,9 +13,9 @@ pub async fn update_status(
     ctx: &serenity::client::Context,
 ) -> Result<(), crate::Error> {
     let statuses = vec![
-        (Status::Watch, "sky!help"),
-        (Status::Play, "stopping raids"),
-        (Status::Listen, "to your commands"),
+        (Status::Watch, "Development of Anti-Raid v6"),
+        (Status::Play, "Development of Anti-Raid v6"),
+        (Status::Listen, "Development of Anti-Raid v6"),
     ];
 
     // Get random status

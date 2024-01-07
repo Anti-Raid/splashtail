@@ -17,6 +17,7 @@ pub struct IpcClient {
 pub struct IpcCache {
     /// Stores the health of all clusters
     pub cluster_healths: Arc<dashmap::DashMap<u32, Vec<MewldDiagShardHealth>>>,
+    pub all_clusters_up: Arc<tokio::sync::RwLock<bool>>,
 }
 
 impl IpcCache {
@@ -44,6 +45,11 @@ impl IpcCache {
         }
 
         total
+    }
+
+    /// Returns whether or not all clusters are up
+    pub async fn all_clusters_up(&self) -> bool {
+        *self.all_clusters_up.read().await
     }
 }
 
@@ -148,7 +154,7 @@ impl IpcClient {
 
         
         while let Ok(message) = message_stream.recv().await {
-            log::info!("Recieved message {:#?} on channel {}", message.value, message.channel);
+            log::debug!("Recieved message {:#?} on channel {}", message.value, message.channel);
         
             let strvalue = match message.value {
                 fred::types::RedisValue::String(s) => s,
@@ -179,6 +185,10 @@ impl IpcClient {
                     continue;
                 }
             };
+
+            if obj.contains_key("launch_next") {
+                continue; // Ignore launch_next messages
+            }
 
             // Check if this is a mewld diag payload
             if obj.contains_key("diag") {
@@ -234,15 +244,26 @@ impl IpcClient {
                     shard_healths.push(shard_health);
                 }
 
+                let diag_payload_str = match serde_json::to_string(
+                    &MewldDiagResponse {
+                        cluster_id: self.mewld_args.cluster_id,
+                        nonce: diag_payload.nonce.clone(),
+                        data: shard_healths.clone(),
+                    }
+                ) {
+                    Ok(v) => v,
+                    Err(e) => {
+                        log::warn!("Error processing message recieved on channel {}: {} [cannot serialize]", message.channel, e);
+                        continue;
+                    }
+                };
+
                 let diag_response = LauncherCmd {
                     action: "diag".to_string(),
                     scope: "launcher".to_string(),
                     args: None,
                     command_id: None,
-                    output: Some(serde_json::json!({
-                        "Nonce": diag_payload.nonce,
-                        "Data": shard_healths,
-                    })),
+                    output: Some(serde_json::Value::String(diag_payload_str)),
                     data: None,
                 };
 
@@ -283,6 +304,10 @@ impl IpcClient {
                         
                         // We have recieved a diagnostic payload from other clusters, save it
                         self.cache.cluster_healths.insert(diag_response.cluster_id, diag_response.data);
+                    },
+                    "all_clusters_launched" => {
+                        // All clusters have launched, set the flag
+                        *self.cache.all_clusters_up.write().await = true;
                     },
                     _ => {
                         log::warn!("Invalid message recieved on channel {} [not a launcher command]", message.channel);
