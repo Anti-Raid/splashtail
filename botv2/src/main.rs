@@ -24,6 +24,7 @@ pub struct Data {
     pub ipc: Arc<ipc::client::IpcClient>,
     pub mewld_args: Arc<crate::ipc::argparse::MewldCmdArgs>,
     pub cache_http: crate::impls::cache::CacheHttpImpl,
+    pub shards_ready: dashmap::DashMap<u64, bool>,
 }
 
 #[poise::command(prefix_command)]
@@ -137,15 +138,23 @@ async fn event_listener(ctx: &serenity::client::Context, event: &FullEvent, user
         FullEvent::Ready {
             data_about_bot,
         } => {
-            info!("{} is ready!", data_about_bot.user.name);
-
+            info!("{} is ready on shard {}", data_about_bot.user.name, ctx.shard_id);
+            
             tokio::task::spawn(crate::tasks::taskcat::start_all_tasks(
                 user_data.pool.clone(),
                 user_data.cache_http.clone(),
                 ctx.clone(),
             ));
 
-            user_data.ipc.publish_ipc_launch_next().await?;
+            if ctx.shard_id.0 == *user_data.mewld_args.shards.last().unwrap() {
+                info!("All shards ready, launching next cluster");
+                if let Err(e) = user_data.ipc.publish_ipc_launch_next().await {
+                    error!("Error publishing IPC launch next: {}", e);
+                    return Err(e);
+                }
+
+                info!("Published IPC launch next to channel {}", user_data.mewld_args.mewld_redis_channel);
+            }
         }
         _ => {}
     }
@@ -171,9 +180,11 @@ async fn main() {
     let shards = mewld_args.shards.clone();
     let shard_count = mewld_args.shard_count;
     env_logger::builder()
-    .format(move |buf, record| writeln!(buf, "[{} ({} of {})] {} - {}", cluster_name, cluster_id, cluster_count, record.level(), record.args()))
-    .filter(None, log::LevelFilter::Info)
+    .format(move |buf, record| writeln!(buf, "[{} ({} of {})] {} - {}", cluster_name, cluster_id, cluster_count-1, record.level(), record.args()))
+    .filter(Some("botv2"), log::LevelFilter::Info)
     .init();
+
+    info!("{:#?}", mewld_args);
 
     let proxy_url = config::CONFIG.meta.proxy.clone();
 
@@ -348,6 +359,7 @@ async fn main() {
                         .connect(&config::CONFIG.meta.postgres_url)
                         .await
                         .expect("Could not initialize connection"),
+                    shards_ready: dashmap::DashMap::new(),
                 };
 
                 let ipc_ref = data.ipc.clone();
@@ -368,10 +380,8 @@ async fn main() {
 
     let shard_range = std::ops::Range {
         start: shards[0],
-        end: shards[shards.len() - 1] + 1,
+        end: *shards.last().unwrap(),
     };
-    
-    info!("Starting shards: {:?}", shard_range);
 
     if let Err(why) = client.start_shard_range(shard_range, shard_count).await {
         error!("Client error: {:?}", why);

@@ -158,7 +158,7 @@ impl IpcClient {
                 }
             };
 
-            if strvalue.is_empty() || strvalue.starts_with('{') {
+            if strvalue.is_empty() || !strvalue.starts_with('{') {
                 log::warn!("Invalid message recieved on channel {} [earlyopt: not a json object]", message.channel);
                 continue;
             }
@@ -300,6 +300,8 @@ impl IpcClient {
         let cmd = serde_json::to_string(&cmd)?;
 
         let conn = self.redis_pool.next();
+        conn.connect();
+        conn.wait_for_connect().await?;
         conn.publish(self.mewld_args.mewld_redis_channel.clone(), cmd).await?;
 
         Ok(())
