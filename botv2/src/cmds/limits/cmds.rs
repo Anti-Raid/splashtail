@@ -209,7 +209,7 @@ pub async fn limitactions_view(
         let actions = serde_json::to_string(&actions).map_err(|_| "Could not serialize actions")?;
 
         // Create a attachment
-        let attachment = CreateAttachment::bytes(actions.as_bytes(), "actions.json");
+        let attachment = CreateAttachment::bytes(actions.into_bytes(), "actions.json");
 
         ctx.send(CreateReply::default().attachment(attachment)).await?;
 
@@ -276,7 +276,7 @@ pub async fn limits_hit(
         let hit_limits = serde_json::to_string(&hit_limits).map_err(|_| "Could not serialize hit_limits")?;
 
         // Create a attachment
-        let attachment = CreateAttachment::bytes(hit_limits.as_bytes(), "hit_limits.json");
+        let attachment = CreateAttachment::bytes(hit_limits.into_bytes(), "hit_limits.json");
 
         ctx.send(CreateReply::default().attachment(attachment)).await?;
 

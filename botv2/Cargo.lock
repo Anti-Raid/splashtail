@@ -255,6 +255,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "bool_to_bitflags"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3b88d7c0d95451949312298449b27e4a0c8af520bc880685625ea2a2a4d30a84"
+dependencies = [
+ "darling",
+ "proc-macro2",
+ "quote",
+ "syn 2.0.48",
+]
+
+[[package]]
 name = "botv2"
 version = "0.1.0"
 dependencies = [
@@ -386,8 +398,7 @@ dependencies = [
 [[package]]
 name = "command_attr"
 version = "0.5.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "32f08c85a02e066b7b4f7dcb60eee6ae0793ef7d6452a3547d1f19665df070a9"
+source = "git+https://github.com/serenity-rs/serenity?branch=next#d8ba719faa16b1b3f6c64af6d59f25d122546391"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -1416,6 +1427,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "nonmax"
+version = "0.5.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "610a5acd306ec67f907abe5567859a3c693fb9886eb1f012ab8f2a47bef3db51"
+dependencies = [
+ "serde",
+]
+
+[[package]]
 name = "ntapi"
 version = "0.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1585,8 +1605,8 @@ checksum = "69d3587f8a9e599cc7ec2c00e331f71c4e69a5f9a4b8a6efd5b07466b9736f9a"
 
 [[package]]
 name = "poise"
-version = "0.6.1-rc1"
-source = "git+https://github.com/serenity-rs/poise#6167311216065b953c6dc64406e56a31e52cd9a1"
+version = "0.6.0-rc1"
+source = "git+https://github.com/serenity-rs/poise?branch=serenity-next#dad39fe651c60ac426121908fd114332f96b9c18"
 dependencies = [
  "async-trait",
  "derivative",
@@ -1601,8 +1621,8 @@ dependencies = [
 
 [[package]]
 name = "poise_macros"
-version = "0.6.1-rc1"
-source = "git+https://github.com/serenity-rs/poise#6167311216065b953c6dc64406e56a31e52cd9a1"
+version = "0.6.0-rc1"
+source = "git+https://github.com/serenity-rs/poise?branch=serenity-next#dad39fe651c60ac426121908fd114332f96b9c18"
 dependencies = [
  "darling",
  "proc-macro2",
@@ -2110,13 +2130,13 @@ dependencies = [
 [[package]]
 name = "serenity"
 version = "0.12.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "385647faa24a889929028973650a4f158fb1b4272b2fcf94feb9fcc3c009e813"
+source = "git+https://github.com/serenity-rs/serenity?branch=next#d8ba719faa16b1b3f6c64af6d59f25d122546391"
 dependencies = [
  "arrayvec",
  "async-trait",
  "base64 0.21.5",
  "bitflags 2.4.1",
+ "bool_to_bitflags",
  "bytes",
  "chrono",
  "command_attr",
@@ -2126,12 +2146,14 @@ dependencies = [
  "fxhash",
  "levenshtein",
  "mime_guess",
+ "nonmax",
  "parking_lot 0.12.1",
  "percent-encoding",
  "reqwest",
  "secrecy",
  "serde",
  "serde_json",
+ "small-fixed-array",
  "static_assertions",
  "time",
  "tokio",
@@ -2196,6 +2218,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8f92a496fb766b417c996b9c5e57daf2f7ad3b0bebe1ccfca4856390e3d3bb67"
 dependencies = [
  "autocfg",
+]
+
+[[package]]
+name = "small-fixed-array"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "06d9ffc21173849a13fec2307fbd84d529ebf0b3952dcc76f5c81cfa549d22c1"
+dependencies = [
+ "serde",
+ "tracing",
 ]
 
 [[package]]
@@ -2787,6 +2819,7 @@ dependencies = [
  "dashmap",
  "hashbrown 0.14.3",
  "mini-moka",
+ "nonmax",
  "parking_lot 0.12.1",
  "secrecy",
  "serde_json",

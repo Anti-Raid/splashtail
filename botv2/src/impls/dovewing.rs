@@ -69,7 +69,7 @@ impl DovewingSource {
                                     member.user.name.clone()
                                 }
                             }.to_string(),
-                            bot: member.user.bot,
+                            bot: member.user.bot(),
                             avatar: member.user.face(),
                             status: if let Some(p) = p {
                                 match p.status {
@@ -112,7 +112,7 @@ impl DovewingSource {
                             user.name.clone()
                         }
                     }.to_string(),
-                    bot: user.bot,
+                    bot: user.bot(),
                     avatar: user.face(),
                     status: "offline".to_string(),
                 })

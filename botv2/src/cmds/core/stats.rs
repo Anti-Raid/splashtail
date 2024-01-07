@@ -18,7 +18,7 @@ pub async fn stats(ctx: Context<'_>) -> Result<(), Error> {
     let msg = CreateReply::default().embed(
         CreateEmbed::default()
             .title("Bot Stats")
-            .field("Bot name", ctx.serenity_context().cache.current_user().name.clone(), true)
+            .field("Bot name", ctx.serenity_context().cache.current_user().name.to_string(), true)
             .field("Bot version", VERSION, true)
             .field("rustc", RUSTC_VERSION, true)
             .field(

@@ -16,7 +16,7 @@ pub struct IpcClient {
 #[derive(Default)]
 pub struct IpcCache {
     /// Stores the health of all clusters
-    pub cluster_healths: Arc<dashmap::DashMap<u32, Vec<MewldDiagShardHealth>>>,
+    pub cluster_healths: Arc<dashmap::DashMap<u16, Vec<MewldDiagShardHealth>>>,
     pub all_clusters_up: Arc<tokio::sync::RwLock<bool>>,
 }
 
@@ -99,14 +99,14 @@ type DiagResponse struct {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 struct MewldDiagPayload {
     #[serde(rename = "id")]
-    cluster_id: u32,
+    cluster_id: u16,
     nonce: String,
     diag: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 struct MewldDiagResponse {
-    cluster_id: u32, /// This is not part of the mewld response protocol, but its useful for statistics and mewld will ignore it anyways
+    cluster_id: u16, /// This is not part of the mewld response protocol, but its useful for statistics and mewld will ignore it anyways
     #[serde(rename = "Nonce")]
     nonce: String,
     #[serde(rename = "Data")]
@@ -115,7 +115,7 @@ struct MewldDiagResponse {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MewldDiagShardHealth {
-    pub shard_id: u32,
+    pub shard_id: u16,
     pub up: bool,
     pub latency: f64,
     pub guilds: u64,

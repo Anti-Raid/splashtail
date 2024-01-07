@@ -6,12 +6,16 @@ stcore:
 	CGO_ENABLED=0 go build -v 
 reloadwebserver:
 	systemctl restart splashtail-staging-webserver
+restartwebserver:
+	systemctl stop splashtail-staging-webserver
+	cp -v botv2/target/release/botv2 botv2
+	systemctl start splashtail-staging-webserver
 reloadjobserver:
 	systemctl restart splashtail-staging-jobs
 all:
 	make buildbot && make buildmewldwebui && make stcore 
 buildbot:
-	cd botv2 && cargo build --release && cp -v target/release/botv2 .
+	cd botv2 && cargo build --release
 buildmewldwebui:
 	cd mewld_web/ui && npm i && npm run build && cd ../
 tests:

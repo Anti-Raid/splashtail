@@ -3,7 +3,7 @@ use crate::Context;
 pub async fn limits_autocomplete<'a>(
     ctx: Context<'_>,
     partial: &'a str,
-) -> Vec<serenity::all::AutocompleteChoice> {
+) -> Vec<serenity::all::AutocompleteChoice<'a>> {
     // Fetch all limits available
     let data = ctx.data();
 

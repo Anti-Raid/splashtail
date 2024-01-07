@@ -143,18 +143,18 @@ fn _create_select_menu(data: &[EmbedHelp], index: usize) -> serenity::builder::C
 
     serenity::builder::CreateSelectMenu::new(
         "hnav:selectmenu",
-        serenity::builder::CreateSelectMenuKind::String { options },
+        serenity::builder::CreateSelectMenuKind::String { options: options.into() },
     )
     .custom_id("hnav:selectmenu")
 }
 
-fn _create_reply(
-    data: &EmbedHelp,
-    l_data: &[EmbedHelp],
+fn _create_reply<'a>(
+    data: &'a EmbedHelp,
+    l_data: &'a [EmbedHelp],
     index: usize,
     prev_disabled: bool,
     next_disabled: bool,
-) -> CreateReply {
+) -> CreateReply<'a> {
     CreateReply::default()
         .embed(
             CreateEmbed::default()
