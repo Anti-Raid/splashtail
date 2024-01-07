@@ -80,6 +80,59 @@ async fn event_listener(ctx: &serenity::client::Context, event: &FullEvent, user
             interaction,
         } => {
             info!("Interaction received: {:?}", interaction.id());
+
+            let ic = match interaction {
+                serenity::all::Interaction::Command(ic) => ic,
+                _ => return Ok(()),
+            };
+                 
+            if !config::CONFIG.discord_auth.can_use_bot.contains(&ic.user.id) {
+                let primary = poise::serenity_prelude::CreateEmbed::default()
+                    .color(0xff0000)
+                    .title("AntiRaid")
+                    .url("https://discord.gg/Qa52e2bNms")
+                    .description("Unfortunately, AntiRaid is currently unavailable due to poor code management and changes with the Discord API. We are currently in the works of V6, and hope to have it out by next month. All use of our services will not be available, and updates will be pushed here. We are extremely sorry for the inconvenience.\nFor more information you can also join our [Support Server](https://discord.gg/Qa52e2bNms)!");
+
+                let changes = ["We are working extremely hard on Antiraid v6, and have completed working on half of the bot. We should have this update out by Q1/Q2 2024! Delays may occur due to the sheer scope of the unique features we want to provide!"];
+
+                let updates = poise::serenity_prelude::CreateEmbed::default()
+                    .color(0x0000ff)
+                    .title("Updates")
+                    .description(changes.join("\t-"));
+    
+                let statistics = poise::serenity_prelude::CreateEmbed::default()
+                    .color(0xff0000)
+                    .description(format!(
+                        "**Server Count:** {}\n**Shard Count:** {}\n**Cluster Count:** {}\n**Cluster ID:** {}\n**Cluster Name:** {}\n**Uptime:** {}",
+                        user_data.ipc.cache.total_guilds(),
+                        user_data.ipc.mewld_args.shard_count,
+                        user_data.ipc.mewld_args.cluster_count,
+                        user_data.ipc.mewld_args.cluster_id,
+                        user_data.ipc.mewld_args.cluster_name,
+                        {
+                            let duration: std::time::Duration = std::time::Duration::from_secs((chrono::Utc::now().timestamp() - crate::config::CONFIG.bot_start_time) as u64);
+        
+                            let seconds = duration.as_secs() % 60;
+                            let minutes = (duration.as_secs() / 60) % 60;
+                            let hours = (duration.as_secs() / 60) / 60;
+        
+                            format!("{}h{}m{}s", hours, minutes, seconds)
+                        }
+                    ));
+
+                ic.create_response(
+                    &ctx,
+                    serenity::all::CreateInteractionResponse::Message(
+                        serenity::all::CreateInteractionResponseMessage::default()
+                        .flags(serenity::all::InteractionResponseFlags::EPHEMERAL)
+                        .embed(primary)
+                        .embed(updates)
+                        .embed(statistics)
+                    )
+                )
+                .await
+                .map_err(|e| format!("Error sending reply: {}", e))?;
+            }
         }
         FullEvent::Ready {
             data_about_bot,
@@ -155,19 +208,21 @@ async fn main() {
             commands: {
                 let mut cmds = vec![
                     register(),
-                    cmds::core::help::help(),
-                    cmds::core::help::simplehelp(),
-                    cmds::core::stats::stats(),
-                    cmds::core::ping::ping(),
                 ];
 
-                cmds.extend(cmds::limits::commands());
+                cmds.extend(cmds::core::commands()); // Core plugin
+                cmds.extend(cmds::limits::commands()); // Limits plugin
 
                 cmds
             },
             command_check: Some(|ctx| {
                 Box::pin(async move {
                     if !config::CONFIG.discord_auth.can_use_bot.contains(&ctx.author().id) {
+                        // We already send in the event handler
+                        if let poise::Context::Application(_) = ctx { 
+                            return Ok(false) 
+                        }
+
                         let data = ctx.data();
                         let primary = poise::serenity_prelude::CreateEmbed::default()
                             .color(0xff0000)
@@ -191,7 +246,15 @@ async fn main() {
                                 data.ipc.mewld_args.cluster_count,
                                 data.ipc.mewld_args.cluster_id,
                                 data.ipc.mewld_args.cluster_name,
-                                ctx.ping().await.as_millis(),
+                                {
+                                    let duration: std::time::Duration = std::time::Duration::from_secs((chrono::Utc::now().timestamp() - crate::config::CONFIG.bot_start_time) as u64);
+                
+                                    let seconds = duration.as_secs() % 60;
+                                    let minutes = (duration.as_secs() / 60) % 60;
+                                    let hours = (duration.as_secs() / 60) / 60;
+                
+                                    format!("{}h{}m{}s", hours, minutes, seconds)
+                                }
                             ));
 
                         ctx.send(
