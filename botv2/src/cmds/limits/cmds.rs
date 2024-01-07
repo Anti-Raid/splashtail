@@ -177,7 +177,7 @@ pub async fn limitactions(_ctx: Context<'_>) -> Result<(), Error> {
     Ok(())
 }
 
-/// View actions taken by users that have been recorded by SkyNet
+/// View actions taken by users that have been recorded
 #[poise::command(prefix_command, slash_command, guild_only, rename = "view")]
 pub async fn limitactions_view(
     ctx: Context<'_>,
