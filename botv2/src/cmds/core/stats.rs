@@ -37,6 +37,12 @@ pub async fn stats(ctx: Context<'_>) -> Result<(), Error> {
                     format!("{}h{}m{}s", hours, minutes, seconds)
                 }, 
             true)
+            .field("Cluster", format!(
+                "{} ({} of {})", 
+                ctx.data().ipc.mewld_args.cluster_name, 
+                ctx.data().ipc.mewld_args.cluster_id,
+                ctx.data().ipc.mewld_args.cluster_count,
+            ), true)
             .field("Servers", ctx.data().ipc.cache.total_guilds().to_string(), true)
             .field("Users", ctx.data().ipc.cache.total_users().to_string(), true)
             .field("Commit Message", GIT_COMMIT_MSG, true)
