@@ -6,9 +6,11 @@ stcore:
 	CGO_ENABLED=0 go build -v 
 reloadwebserver:
 	systemctl restart splashtail-staging-webserver
+updatebot:
+	make buildbot && cp -v botv2/target/release/botv2 botv2
 restartwebserver:
 	systemctl stop splashtail-staging-webserver
-	cp -v botv2/target/release/botv2 botv2
+	make updatebot
 	systemctl start splashtail-staging-webserver
 reloadjobserver:
 	systemctl restart splashtail-staging-jobs

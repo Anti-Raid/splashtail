@@ -31,6 +31,12 @@ type ApiError struct {
 	Message string            `json:"message" description:"Message of the error"`
 }
 
+type ApiErrorWith[T any] struct {
+	Data    *T                `json:"data" description:"Any data the client should know about despite the error"`
+	Context map[string]string `json:"context,omitempty" description:"Context of the error. Usually used for validation error contexts"`
+	Message string            `json:"message" description:"Message of the error"`
+}
+
 // Paged result common
 type PagedResult[T any] struct {
 	Count   uint64 `json:"count"`

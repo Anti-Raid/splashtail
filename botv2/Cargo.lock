@@ -398,7 +398,7 @@ dependencies = [
 [[package]]
 name = "command_attr"
 version = "0.5.1"
-source = "git+https://github.com/serenity-rs/serenity?branch=next#d8ba719faa16b1b3f6c64af6d59f25d122546391"
+source = "git+https://github.com/serenity-rs/serenity?branch=next#f4d84d8f77c50eac299eceff941f3ef8904663bf"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -478,9 +478,9 @@ dependencies = [
 
 [[package]]
 name = "crossbeam-deque"
-version = "0.8.3"
+version = "0.8.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ce6fd6f855243022dcecf8702fef0c297d4338e226845fe067f6341ad9fa0cef"
+checksum = "fca89a0e215bab21874660c67903c5f143333cab1da83d041c7ded6053774751"
 dependencies = [
  "cfg-if",
  "crossbeam-epoch",
@@ -489,15 +489,13 @@ dependencies = [
 
 [[package]]
 name = "crossbeam-epoch"
-version = "0.9.15"
+version = "0.9.17"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ae211234986c545741a7dc064309f67ee1e5ad243d0e48335adc0484d960bcc7"
+checksum = "0e3681d554572a651dda4186cd47240627c3d0114d45a95f6ad27f2f22e7548d"
 dependencies = [
  "autocfg",
  "cfg-if",
  "crossbeam-utils",
- "memoffset",
- "scopeguard",
 ]
 
 [[package]]
@@ -1267,9 +1265,9 @@ checksum = "db13adb97ab515a3691f56e4dbab09283d0b86cb45abd991d8634a9d6f501760"
 
 [[package]]
 name = "libc"
-version = "0.2.151"
+version = "0.2.152"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "302d7ab3130588088d277783b1e2d2e10c9e9e4a16dd9050e6ec93fb3e7048f4"
+checksum = "13e3bf6590cbc649f4d1a3eefc9d5d6eb746f5200ffb04e5e142700b8faa56e7"
 
 [[package]]
 name = "libgit2-sys"
@@ -1351,15 +1349,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "523dc4f511e55ab87b694dc30d0f820d60906ef06413f93d4d7a1385599cc149"
 
 [[package]]
-name = "memoffset"
-version = "0.9.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5a634b1c61a95585bd15607c6ab0c4e5b226e695ff2800ba0cdccddf208c406c"
-dependencies = [
- "autocfg",
-]
-
-[[package]]
 name = "mime"
 version = "0.3.17"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1377,9 +1366,9 @@ dependencies = [
 
 [[package]]
 name = "mini-moka"
-version = "0.10.2"
+version = "0.10.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "23e0b72e7c9042467008b10279fc732326bd605459ae03bda88825909dd19b56"
+checksum = "c325dfab65f261f386debee8b0969da215b3fa0037e74c8a1234db7ba986d803"
 dependencies = [
  "crossbeam-channel",
  "crossbeam-utils",
@@ -2130,7 +2119,7 @@ dependencies = [
 [[package]]
 name = "serenity"
 version = "0.12.0"
-source = "git+https://github.com/serenity-rs/serenity?branch=next#d8ba719faa16b1b3f6c64af6d59f25d122546391"
+source = "git+https://github.com/serenity-rs/serenity?branch=next#f4d84d8f77c50eac299eceff941f3ef8904663bf"
 dependencies = [
  "arrayvec",
  "async-trait",

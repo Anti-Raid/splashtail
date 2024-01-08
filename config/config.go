@@ -89,17 +89,20 @@ type Servers struct {
 }
 
 type Meta struct {
-	WebRedisChannel string          `yaml:"web_redis_channel" default:"ar_web" comment:"Web Redis Channel" validate:"required"`
-	PostgresURL     string          `yaml:"postgres_url" default:"postgresql:///antiraid" comment:"Postgres URL" validate:"required"`
-	BotRedisURL     string          `yaml:"bot_redis_url" default:"redis://localhost:6379/0" comment:"Bot Redis URL" validate:"required"`
-	RedisURL        Differs[string] `yaml:"redis_url" default:"redis://localhost:6379" comment:"Redis URL" validate:"required"`
-	Port            Differs[string] `yaml:"port" default:":8081" comment:"Port to run the server on" validate:"required"`
-	CDNPath         string          `yaml:"cdn_path" default:"/failuremgmt/cdn/antiraid" comment:"CDN Path" validate:"required"`
-	VulgarList      []string        `yaml:"vulgar_list" default:"fuck,suck,shit,kill" validate:"required"`
-	UrgentMentions  string          `yaml:"urgent_mentions" default:"<@&1061643797315993701>" comment:"Urgent mentions" validate:"required"`
-	Proxy           string          `yaml:"proxy" default:"http://127.0.0.1:3219" comment:"Popplio Proxy URL" validate:"required"`
-	DPSecret        string          `yaml:"dp_secret" comment:"DeployProxy Auth URL for super-sensitive pages" validate:"required"`
-	DebugTaskLogger bool            `yaml:"debug_task_logger" comment:"Debug the task logger"`
+	WebRedisChannel  string                     `yaml:"web_redis_channel" default:"ar_web" comment:"Web Redis Channel" validate:"required"`
+	PostgresURL      string                     `yaml:"postgres_url" default:"postgresql:///antiraid" comment:"Postgres URL" validate:"required"`
+	BotRedisURL      string                     `yaml:"bot_redis_url" default:"redis://localhost:6379/0" comment:"Bot Redis URL" validate:"required"`
+	RedisURL         Differs[string]            `yaml:"redis_url" default:"redis://localhost:6379" comment:"Redis URL" validate:"required"`
+	Port             Differs[string]            `yaml:"port" default:":8081" comment:"Port to run the server on" validate:"required"`
+	CDNPath          string                     `yaml:"cdn_path" default:"/failuremgmt/cdn/antiraid" comment:"CDN Path" validate:"required"`
+	VulgarList       []string                   `yaml:"vulgar_list" default:"fuck,suck,shit,kill" validate:"required"`
+	UrgentMentions   string                     `yaml:"urgent_mentions" default:"<@&1061643797315993701>" comment:"Urgent mentions" validate:"required"`
+	Proxy            string                     `yaml:"proxy" default:"http://127.0.0.1:3219" comment:"Popplio Proxy URL" validate:"required"`
+	DPSecret         string                     `yaml:"dp_secret" comment:"DeployProxy Auth URL for super-sensitive pages" validate:"required"`
+	DebugTaskLogger  bool                       `yaml:"debug_task_logger" comment:"Debug the task logger"`
+	JobServerPort    Differs[string]            `yaml:"job_server_port" comment:"Job server port" validate:"required"`
+	JobServerUrl     Differs[string]            `yaml:"job_server_url" comment:"Job server url" validate:"required"`
+	JobServerSecrets Differs[map[string]string] `yaml:"job_server_secrets" comment:"Job server secrets"`
 }
 
 type BotList struct {

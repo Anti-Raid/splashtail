@@ -20,11 +20,10 @@ import (
 	"gopkg.in/yaml.v3"
 
 	"github.com/anti-raid/splashtail/api"
+	"github.com/anti-raid/splashtail/bgtasks"
 	"github.com/anti-raid/splashtail/config"
 	"github.com/anti-raid/splashtail/constants"
-	"github.com/anti-raid/splashtail/ipc"
-	"github.com/anti-raid/splashtail/ipcack"
-	"github.com/anti-raid/splashtail/jobs"
+	"github.com/anti-raid/splashtail/jobserver"
 	"github.com/anti-raid/splashtail/mewld_web"
 	"github.com/anti-raid/splashtail/routes/auth"
 	"github.com/anti-raid/splashtail/routes/core"
@@ -130,7 +129,6 @@ func main() {
 		docs.AddSecuritySchema("Server", "Server-Auth", "Requires a server token. Should be prefixed with `Server ` in `Authorization` header.")
 
 		api.Setup()
-		go ipcack.Acker() // Start acker
 
 		r := chi.NewRouter()
 
@@ -390,10 +388,10 @@ func main() {
 		}
 
 		// Load jobs
-		jobs.StartAllJobs()
+		bgtasks.StartAllTasks()
 
 		// Start IPC
-		ipc.Start()
+		jobserver.Start()
 
 		// This should never return
 		os.Exit(1)

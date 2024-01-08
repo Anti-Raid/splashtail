@@ -4,22 +4,15 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/anti-raid/splashtail/ipc/core"
+	"github.com/anti-raid/splashtail/jobserver/core"
 	"github.com/anti-raid/splashtail/state"
 	"github.com/anti-raid/splashtail/tasks"
-
-	mredis "github.com/cheesycod/mewld/redis"
 )
 
 var CreateTask = core.IPC{
-	Description:    "This IPC creates a task and executes it. If you already have both a task and a task create response, consider execute_task",
-	SupportedModes: []core.IPCMode{core.IPCModeBot, core.IPCModeAPI},
-	Exec: func(c *mredis.LauncherCmd) (*mredis.LauncherCmd, error) {
-		if len(c.Args) == 0 {
-			return nil, fmt.Errorf("no args provided to create task")
-		}
-
-		taskName, ok := c.Args["name"].(string)
+	Description: "This IPC creates a task and executes it. If you already have both a task and a task create response, consider execute_task",
+	Exec: func(client string, args map[string]any) (map[string]any, error) {
+		taskName, ok := args["name"].(string)
 
 		if !ok {
 			return nil, fmt.Errorf("invalid task name provided")
@@ -31,7 +24,13 @@ var CreateTask = core.IPC{
 			return nil, fmt.Errorf("task %s does not exist on registry", taskName)
 		}
 
-		tBytes, err := json.Marshal(c.Output)
+		data, ok := args["data"]
+
+		if !ok {
+			return nil, fmt.Errorf("invalid task data provided")
+		}
+
+		tBytes, err := json.Marshal(data)
 
 		if err != nil {
 			return nil, fmt.Errorf("error marshalling task args: %w", err)
@@ -53,8 +52,8 @@ var CreateTask = core.IPC{
 
 		go tasks.ExecuteTask(tcr.TaskID, task)
 
-		return &mredis.LauncherCmd{
-			Output: tcr,
+		return map[string]any{
+			"tcr": tcr,
 		}, nil
 	},
 }

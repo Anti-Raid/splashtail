@@ -11,11 +11,6 @@ type TaskCreateResponse struct {
 	TaskInfo *TaskInfo `json:"task_info" description:"The task info."`
 }
 
-type TaskCreateResponseWithWait struct {
-	TaskCreateResponse *TaskCreateResponse `json:"task_create_response" description:"The task create response"`
-	Output             any                 `json:"output" description:"The task output"`
-}
-
 // @ci table=tasks unfilled=1
 //
 // Tasks are background processes that can be run on a coordinator server.

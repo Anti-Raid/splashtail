@@ -1,23 +1,40 @@
 package create_task
 
 import (
-	"encoding/json"
+	"bytes"
+	"io"
 	"net/http"
 	"time"
 
-	"github.com/anti-raid/splashtail/ipcack"
 	"github.com/anti-raid/splashtail/state"
 	"github.com/anti-raid/splashtail/tasks"
 	"github.com/anti-raid/splashtail/types"
+	jsoniter "github.com/json-iterator/go"
 
-	mredis "github.com/cheesycod/mewld/redis"
 	"github.com/go-chi/chi/v5"
-	"github.com/infinitybotlist/eureka/crypto"
 	docs "github.com/infinitybotlist/eureka/doclib"
 	"github.com/infinitybotlist/eureka/ratelimit"
 	"github.com/infinitybotlist/eureka/uapi"
 	"go.uber.org/zap"
 )
+
+const clientName = "api"
+
+var (
+	clientSecret string
+	json         = jsoniter.ConfigFastest
+)
+
+func Setup() {
+	secrets := state.Config.Meta.JobServerSecrets.Parse()
+
+	var ok bool
+	clientSecret, ok = secrets[clientName]
+
+	if !ok {
+		panic("missing jobserver secret for client " + clientName)
+	}
+}
 
 func Docs() *docs.Doc {
 	return &docs.Doc{
@@ -146,108 +163,81 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 		}
 	}
 
-	var cmdId = crypto.RandString(32)
-	var cmd = mredis.LauncherCmd{
-		Scope:     "splashtail-web",
-		Action:    state.Config.Meta.WebRedisChannel,
-		CommandId: cmdId,
-		Args: map[string]any{
+	var cmd = map[string]any{
+		"args": map[string]any{
 			"task_id": tcr.TaskID,
 			"name":    taskName,
 		},
-		Output: task,
 	}
 
-	bytes, err := json.Marshal(cmd)
+	cmdBytes, err := json.Marshal(cmd)
 
 	if err != nil {
-		state.Logger.Error("Error marshalling IPC command", zap.Error(err))
+		state.Logger.Error("Error marshalling IPC execute_task request", zap.Error(err))
 		return uapi.HttpResponse{
 			Status: http.StatusInternalServerError,
-			Json:   types.ApiError{Message: "Error marshalling IPC command: " + err.Error()},
+			Json: types.ApiErrorWith[types.TaskCreateResponse]{
+				Message: "Error marshalling IPC execute_task request: " + err.Error(),
+				Data:    tcr,
+			},
 		}
 	}
 
-	// Use execute_task IPC
-	if r.URL.Query().Get("wait_for_execute_confirm") == "true" {
-		acker := ipcack.Ack{
-			Chan: make(chan *mredis.LauncherCmd),
-		}
+	// Use execute_task IPC in jobserver
+	client := http.Client{
+		Timeout: 5 * time.Second,
+	}
 
-		var ackMsg *mredis.LauncherCmd
-		var timeout bool
+	// FIXME: Use a better way of defining the job server url
+	req, err := http.NewRequest("POST", state.Config.Meta.JobServerUrl.Parse()+"/ipc/execute_task", bytes.NewBuffer(cmdBytes))
 
-		go func() {
-			timer := time.NewTimer(10 * time.Second)
-
-			select {
-			case <-timer.C:
-				timeout = true
-				timer.Stop()
-				ipcack.AckQueue.Delete(cmdId)
-				return
-			case a := <-acker.Chan:
-				ackMsg = a
-				timer.Stop()
-				ipcack.AckQueue.Delete(cmdId)
-				return
-			}
-		}()
-
-		ipcack.AckQueue.Store(cmdId, &acker)
-
-		err = state.Redis.Publish(state.Context, state.Config.Meta.WebRedisChannel, bytes).Err()
-
-		if err != nil {
-			state.Logger.Error("Error publishing IPC command", zap.Error(err))
-			return uapi.HttpResponse{
-				Status: http.StatusInternalServerError,
-				Json:   types.ApiError{Message: "Error publishing IPC command: " + err.Error()},
-			}
-		}
-
-		for {
-			if timeout || ackMsg != nil {
-				break
-			}
-
-			time.Sleep(10 * time.Millisecond)
-		}
-
-		if ackMsg == nil {
-			if timeout {
-				return uapi.HttpResponse{
-					Status: http.StatusInternalServerError,
-					Json:   types.ApiError{Message: "Error waiting for IPC confirmation: Timeout"},
-				}
-			} else if err != nil {
-				return uapi.HttpResponse{
-					Status: http.StatusInternalServerError,
-					Json:   types.ApiError{Message: "Error waiting for IPC confirmation: " + err.Error()},
-				}
-			} else {
-				return uapi.HttpResponse{
-					Status: http.StatusInternalServerError,
-					Json:   types.ApiError{Message: "Error waiting for IPC confirmation: Unknown error"},
-				}
-			}
-		}
-
+	if err != nil {
+		state.Logger.Error("Error publishing IPC command", zap.Error(err))
 		return uapi.HttpResponse{
-			Json: types.TaskCreateResponseWithWait{
-				TaskCreateResponse: tcr,
-				Output:             ackMsg.Output,
+			Status: http.StatusInternalServerError,
+			Json: types.ApiErrorWith[types.TaskCreateResponse]{
+				Message: "Error publishing IPC command: " + err.Error(),
+				Data:    tcr,
 			},
 		}
-	} else {
-		err = state.Redis.Publish(state.Context, state.Config.Meta.WebRedisChannel, bytes).Err()
+	}
+
+	req.Header.Set("Authorization", clientName+" "+clientSecret)
+
+	resp, err := client.Do(req)
+
+	if err != nil {
+		state.Logger.Error("Error publishing IPC command", zap.Error(err))
+		return uapi.HttpResponse{
+			Status: http.StatusInternalServerError,
+			Json: types.ApiErrorWith[types.TaskCreateResponse]{
+				Message: "Error publishing IPC command: " + err.Error(),
+				Data:    tcr,
+			},
+		}
+	}
+
+	if resp.StatusCode != http.StatusNoContent && resp.StatusCode != http.StatusOK {
+		resp, err := io.ReadAll(resp.Body)
 
 		if err != nil {
-			state.Logger.Error("Error publishing IPC command", zap.Error(err))
+			state.Logger.Error("Error publishing IPC command [recv error]", zap.Error(err))
 			return uapi.HttpResponse{
 				Status: http.StatusInternalServerError,
-				Json:   types.ApiError{Message: "Error publishing IPC command: " + err.Error()},
+				Json: types.ApiErrorWith[types.TaskCreateResponse]{
+					Message: "Error publishing IPC command [recv error]: " + err.Error(),
+					Data:    tcr,
+				},
 			}
+		}
+
+		state.Logger.Error("Error publishing IPC command [got reply]:", zap.String("body", string(resp)))
+		return uapi.HttpResponse{
+			Status: http.StatusInternalServerError,
+			Json: types.ApiErrorWith[types.TaskCreateResponse]{
+				Message: "Error publishing IPC command [got reply]: " + string(resp),
+				Data:    tcr,
+			},
 		}
 	}
 

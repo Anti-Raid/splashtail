@@ -182,6 +182,7 @@ async fn main() {
     env_logger::builder()
     .format(move |buf, record| writeln!(buf, "[{} ({} of {})] {} - {}", cluster_name, cluster_id, cluster_count-1, record.level(), record.args()))
     .filter(Some("botv2"), log::LevelFilter::Info)
+    //.filter(None, log::LevelFilter::Debug)
     .init();
 
     info!("{:#?}", mewld_args);
@@ -336,6 +337,8 @@ async fn main() {
         },
         move |ctx, _ready, framework| {
             Box::pin(async move {
+                info!("Initializing data for shard {}", ctx.shard_id);
+
                 let data = Data {
                     cache_http: CacheHttpImpl {
                         cache: ctx.cache.clone(),
@@ -382,6 +385,8 @@ async fn main() {
         start: shards[0],
         end: *shards.last().unwrap(),
     };
+
+    info!("Starting shard range: {:?}", shard_range);
 
     if let Err(why) = client.start_shard_range(shard_range, shard_count).await {
         error!("Client error: {:?}", why);
