@@ -26,7 +26,7 @@ var (
 )
 
 func Setup() {
-	secrets := state.Config.Meta.JobServerSecrets.Parse()
+	secrets := state.Config.Meta.JobserverSecrets.Parse()
 
 	var ok bool
 	clientSecret, ok = secrets[clientName]
@@ -189,7 +189,7 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 	}
 
 	// FIXME: Use a better way of defining the job server url
-	req, err := http.NewRequest("POST", state.Config.Meta.JobServerUrl.Parse()+"/ipc/execute_task", bytes.NewBuffer(cmdBytes))
+	req, err := http.NewRequest("POST", state.Config.Meta.JobserverUrl.Parse()+"/ipc/execute_task", bytes.NewBuffer(cmdBytes))
 
 	if err != nil {
 		state.Logger.Error("Error publishing IPC command", zap.Error(err))

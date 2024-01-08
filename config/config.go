@@ -100,9 +100,9 @@ type Meta struct {
 	Proxy            string                     `yaml:"proxy" default:"http://127.0.0.1:3219" comment:"Popplio Proxy URL" validate:"required"`
 	DPSecret         string                     `yaml:"dp_secret" comment:"DeployProxy Auth URL for super-sensitive pages" validate:"required"`
 	DebugTaskLogger  bool                       `yaml:"debug_task_logger" comment:"Debug the task logger"`
-	JobServerPort    Differs[string]            `yaml:"job_server_port" comment:"Job server port" validate:"required"`
-	JobServerUrl     Differs[string]            `yaml:"job_server_url" comment:"Job server url" validate:"required"`
-	JobServerSecrets Differs[map[string]string] `yaml:"job_server_secrets" comment:"Job server secrets"`
+	JobserverAddr    Differs[string]            `yaml:"jobserver_addr" default:"localhost:2939" comment:"Job server port" validate:"required"`
+	JobserverUrl     Differs[string]            `yaml:"jobserver_url" default:"localhost:2939" comment:"Job server url" validate:"required"`
+	JobserverSecrets Differs[map[string]string] `yaml:"jobserver_secrets" comment:"Job server secrets"`
 }
 
 type BotList struct {
