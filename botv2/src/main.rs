@@ -182,7 +182,7 @@ async fn main() {
     env_logger::builder()
     .format(move |buf, record| writeln!(buf, "[{} ({} of {})] {} - {}", cluster_name, cluster_id, cluster_count-1, record.level(), record.args()))
     .filter(Some("botv2"), log::LevelFilter::Info)
-    //.filter(None, log::LevelFilter::Debug)
+    .filter(None, log::LevelFilter::Error)
     .init();
 
     info!("{:#?}", mewld_args);
