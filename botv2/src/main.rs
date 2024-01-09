@@ -287,7 +287,7 @@ async fn main() {
 
                     // Look for guild
                     if let Some(guild_id) = ctx.guild_id() {
-                        if ["register", "setup"].contains(&ctx.command().name.as_str()) {
+                        if ["register"].contains(&ctx.command().name.as_str()) {
                             return Ok(true);
                         }
 
@@ -299,7 +299,7 @@ async fn main() {
                         )
                         .fetch_one(&data.pool)
                         .await?;
-
+    
                         if guild.count.unwrap_or_default() == 0 {
                             // Guild not found, create it
                             sqlx::query!(
@@ -308,6 +308,14 @@ async fn main() {
                             )
                             .execute(&data.pool)
                             .await?;
+                        }
+
+                        let Some(member) = ctx.author_member().await else {
+                            return Err("You must be in a server to run this command".into());
+                        };
+
+                        if let Some(command_extra_data) = cmds::COMMAND_EXTRA_DATA.get(&ctx.command().name) {
+                            command_extra_data.can_run_command(&data.cache_http, &data.pool, ctx.command(), &member).await?;
                         }
 
                         Ok(true)

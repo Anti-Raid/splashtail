@@ -279,6 +279,7 @@ dependencies = [
  "fred",
  "futures-util",
  "indexmap 2.1.0",
+ "kittycat",
  "log",
  "num-traits",
  "once_cell",
@@ -1249,6 +1250,14 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cee9c64da59eae3b50095c18d3e74f8b73c0b86d2792824ff01bbce68ba229ca"
 dependencies = [
  "wasm-bindgen",
+]
+
+[[package]]
+name = "kittycat"
+version = "0.1.0"
+source = "git+https://github.com/infinitybotlist/kittycat?branch=main#626a657bee8b0ec9b95331e441f803a60ed9d038"
+dependencies = [
+ "indexmap 2.1.0",
 ]
 
 [[package]]
