@@ -5,44 +5,49 @@ use sqlx::PgPool;
 use crate::{impls::cache::CacheHttpImpl, Error};
 use super::core;
 
+pub async fn precheck_guild(pool: &PgPool, guild_id: GuildId) -> Result<(), Error> {
+    // Look for guild
+    let guild = sqlx::query!(
+        "SELECT COUNT(*) FROM limits WHERE guild_id = $1
+    ",
+        guild_id.to_string()
+    )
+    .fetch_one(pool)
+    .await?;
+
+    if guild.count.unwrap_or_default() == 0 {
+        // Guild not found
+        return Err("Guild has no limits".into());
+    }
+
+    Ok(())
+}
+
 pub async fn handle_mod_action(
     guild_id: GuildId,
     user_id: UserId,
     pool: &PgPool,
     cache_http: &CacheHttpImpl,
     action: core::UserLimitTypes,
-    action_target: String,
+    action_data: &serde_json::Value,
 ) -> Result<(), Error> {
+    precheck_guild(pool, guild_id).await?;
+    
     // SAFETY: Tx should be dropped if error occurs, so make a scope to seperate tx queries
     {
         let mut tx = pool.begin().await?;
 
-        // Look for guild
-        let guild = sqlx::query!(
-            "SELECT COUNT(*) FROM limits WHERE guild_id = $1
-        ",
-            guild_id.to_string()
-        )
-        .fetch_one(&mut tx)
-        .await?;
-
-        if guild.count.unwrap_or_default() == 0 {
-            // Guild not found
-            error!("Guild has no limits: {}", guild_id);
-            return Ok(());
-        }
-
         // Insert into user_actions
         sqlx::query!(
             "
-            INSERT INTO user_actions (action_id, guild_id, user_id, limit_type, action_target)
+            INSERT INTO user_actions (action_id, guild_id, user_id, limit_type, action_data)
             VALUES ($1, $2, $3, $4, $5)
         ",
             crate::impls::crypto::gen_random(48),
             guild_id.to_string(),
             user_id.to_string(),
             action.to_string(),
-            action_target
+            action_data
         )
         .execute(&mut tx)
         .await?;

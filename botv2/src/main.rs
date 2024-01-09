@@ -24,7 +24,7 @@ pub struct Data {
     pub ipc: Arc<ipc::client::IpcClient>,
     pub mewld_args: Arc<crate::ipc::argparse::MewldCmdArgs>,
     pub cache_http: crate::impls::cache::CacheHttpImpl,
-    pub shards_ready: dashmap::DashMap<u64, bool>,
+    pub shards_ready: Arc<dashmap::DashMap<u16, bool>>,
 }
 
 #[poise::command(prefix_command)]
@@ -153,6 +153,8 @@ async fn event_listener(ctx: &serenity::client::Context, event: &FullEvent, user
                     return Err(e);
                 }
 
+                user_data.shards_ready.insert(ctx.shard_id.0, true);
+
                 info!("Published IPC launch next to channel {}", user_data.mewld_args.mewld_redis_channel);
             }
         }
@@ -160,7 +162,9 @@ async fn event_listener(ctx: &serenity::client::Context, event: &FullEvent, user
     }
 
     // Add all event listeners for key modules here
-    crate::modules::limits::events::event_listener(ctx, event, user_data).await?;
+    if let Err(e) = crate::modules::limits::events::event_listener(ctx, event, user_data).await {
+        error!("Error in limits event listener: {}", e);
+    }
 
     Ok(())
 }
@@ -362,7 +366,7 @@ async fn main() {
                         .connect(&config::CONFIG.meta.postgres_url)
                         .await
                         .expect("Could not initialize connection"),
-                    shards_ready: dashmap::DashMap::new(),
+                    shards_ready: Arc::new(dashmap::DashMap::new()),
                 };
 
                 let ipc_ref = data.ipc.clone();

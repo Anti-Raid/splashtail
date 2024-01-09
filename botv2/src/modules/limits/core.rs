@@ -17,6 +17,12 @@ pub enum UserLimitTypesChoices {
     RoleUpdate,
     #[name = "Role Remove"]
     RoleRemove,
+    #[name = "Role Given To Member"]
+    RoleGivenToMember,
+    #[name = "Role Removed From Member"]
+    RoleRemovedFromMember,
+    #[name = "Member Roles Updated"]
+    MemberRolesUpdated,
     #[name = "Channel Create"]
     ChannelAdd,
     #[name = "Channel Update"]
@@ -37,6 +43,9 @@ impl UserLimitTypesChoices {
             Self::RoleAdd => UserLimitTypes::RoleAdd,
             Self::RoleUpdate => UserLimitTypes::RoleUpdate,
             Self::RoleRemove => UserLimitTypes::RoleRemove,
+            Self::RoleGivenToMember => UserLimitTypes::RoleGivenToMember,
+            Self::RoleRemovedFromMember => UserLimitTypes::RoleRemovedFromMember,
+            Self::MemberRolesUpdated => UserLimitTypes::MemberRolesUpdated,
             Self::ChannelAdd => UserLimitTypes::ChannelAdd,
             Self::ChannelUpdate => UserLimitTypes::ChannelUpdate,
             Self::ChannelRemove => UserLimitTypes::ChannelRemove,
@@ -53,12 +62,15 @@ pub enum UserLimitTypes {
     RoleAdd,       // set
     RoleUpdate,    // set
     RoleRemove,    // set
+    RoleGivenToMember,
+    RoleRemovedFromMember,
+    MemberRolesUpdated,
     ChannelAdd,    // set
     ChannelUpdate, // set
     ChannelRemove, //set
-    Kick,
-    Ban,
-    Unban,
+    Kick, // set
+    Ban, // set
+    Unban, // set
 }
 
 impl UserLimitTypes {
@@ -67,6 +79,9 @@ impl UserLimitTypes {
             Self::RoleAdd => "Roles Created".to_string(),
             Self::RoleUpdate => "Roles Updated".to_string(),
             Self::RoleRemove => "Role Removed".to_string(),
+            Self::RoleGivenToMember => "Role Given To Member".to_string(),
+            Self::RoleRemovedFromMember => "Role Removed From Member".to_string(),
+            Self::MemberRolesUpdated => "Member Roles Updated".to_string(),
             Self::ChannelAdd => "Channels Created".to_string(),
             Self::ChannelUpdate => "Channels Updated".to_string(),
             Self::ChannelRemove => "Channels Removed".to_string(),
@@ -122,7 +137,7 @@ pub struct Action {
     pub created_at: DateTime<Utc>,
     pub user_id: UserId,
     pub guild_id: GuildId,
-    pub action_target: String,
+    pub action_data: serde_json::Value,
     pub limits_hit: Vec<String>,
 }
 
@@ -135,7 +150,7 @@ impl Action {
     ) -> Result<Self, Error> {
         let r = sqlx::query!(
             "
-                SELECT user_id, limit_type, created_at, action_target, limits_hit
+                SELECT user_id, limit_type, created_at, action_data, limits_hit
                 FROM user_actions
                 WHERE guild_id = $1
                 AND action_id = $2
@@ -153,7 +168,7 @@ impl Action {
             user_id: r.user_id.parse()?,
             limit_type: r.limit_type.parse()?,
             created_at: r.created_at,
-            action_target: r.action_target.parse()?,
+            action_data: r.action_data,
             limits_hit: r.limits_hit,
         };
 
@@ -168,7 +183,7 @@ impl Action {
     ) -> Result<Vec<Self>, Error> {
         let rec = sqlx::query!(
             "
-                SELECT action_id, limit_type, created_at, action_target, limits_hit
+                SELECT action_id, limit_type, created_at, action_data, limits_hit
                 FROM user_actions
                 WHERE guild_id = $1
                 AND user_id = $2
@@ -188,7 +203,7 @@ impl Action {
                 action_id: r.action_id,
                 limit_type: r.limit_type.parse()?,
                 created_at: r.created_at,
-                action_target: r.action_target.parse()?,
+                action_data: r.action_data,
                 limits_hit: r.limits_hit,
             });
         }
@@ -200,7 +215,7 @@ impl Action {
     pub async fn guild(pool: &PgPool, guild_id: GuildId) -> Result<Vec<Self>, Error> {
         let rec = sqlx::query!(
             "
-                SELECT action_id, limit_type, created_at, user_id, action_target, limits_hit
+                SELECT action_id, limit_type, created_at, user_id, action_data, limits_hit
                 FROM user_actions
                 WHERE guild_id = $1
             ",
@@ -218,7 +233,7 @@ impl Action {
                 limit_type: r.limit_type.parse()?,
                 created_at: r.created_at,
                 user_id: r.user_id.parse()?,
-                action_target: r.action_target.parse()?,
+                action_data: r.action_data,
                 limits_hit: r.limits_hit,
             });
         }
@@ -288,7 +303,7 @@ impl CurrentUserLimitsHit {
             // Find all actions that apply to this limit
             let rec = sqlx::query!(
                 "
-                    SELECT action_id, created_at, user_id, action_target, limits_hit
+                    SELECT action_id, created_at, user_id, action_data, limits_hit
                     FROM user_actions
                     WHERE guild_id = $1
                     AND NOT($4 = ANY(limits_hit)) -- Not already handled
@@ -309,7 +324,7 @@ impl CurrentUserLimitsHit {
                     limit_type: limit.limit_type.clone(),
                     created_at: r.created_at,
                     user_id: r.user_id.parse()?,
-                    action_target: r.action_target.parse()?,
+                    action_data: r.action_data,
                     action_id: r.action_id,
                     limits_hit: r.limits_hit,
                 });

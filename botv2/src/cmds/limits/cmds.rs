@@ -235,9 +235,9 @@ pub async fn limitactions_view(
         embeds[i] = embeds[i].clone().field(
             action.action_id.clone(),
             format!(
-                "``{limit_type}`` on ``{action_target}`` by {user_id} at <t:{timestamp}:R> [{id}]\n**Hit Limits:** {limits_hit:#?}",
+                "``{limit_type}`` by {user_id} at <t:{timestamp}:R> | {action_data} [{id}]\n**Hit Limits:** {limits_hit:#?}",
                 limit_type = action.limit_type,
-                action_target = action.action_target,
+                action_data = serde_json::to_string(&action.action_data).map_err(|_| "Could not serialize action_data")?,
                 user_id = action.user_id.mention().to_string() + " (" + &action.user_id.to_string() + ")",
                 timestamp = action.created_at.timestamp(),
                 id = action.action_id,
@@ -311,9 +311,9 @@ pub async fn limits_hit(
         for cause in hit_limit.cause {
             causes.push_str(
                 &format!(
-                    "``{limit_type}`` on ``{action_target}`` by {user_id} at <t:{timestamp}:R> [{id}]\n**Hit Limits:** {limits_hit:#?}",
+                    "``{limit_type}`` by {user_id} at <t:{timestamp}:R> [{id}] | {action_data} \n**Hit Limits:** {limits_hit:#?}",
                     limit_type = cause.limit_type,
-                    action_target = cause.action_target,
+                    action_data = serde_json::to_string(&cause.action_data).map_err(|_| "Could not serialize action_data")?,
                     user_id = cause.user_id.mention().to_string() + " (" + &cause.user_id.to_string() + ")",
                     timestamp = cause.created_at.timestamp(),
                     id = cause.action_id,
