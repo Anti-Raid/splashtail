@@ -124,12 +124,7 @@ pub async fn embed<'a>(task: &Task) -> Result<poise::CreateReply<'a>, crate::Err
 
     let task_state = &task.state;
 
-    for v_status in &task.statuses {
-        let status = match v_status {
-            serde_json::Value::Object(status) => status,
-            _ => continue,
-        };
-
+    for status in &task.statuses {
         if task_statuses_length > 2500 {
             // Keep removing elements from start of array until we are under 2500 characters
             while task_statuses_length > 2500 {
@@ -138,22 +133,14 @@ pub async fn embed<'a>(task: &Task) -> Result<poise::CreateReply<'a>, crate::Err
             }
         }
 
-        let mut add = format!("`{}` {}", _to_string(&status.get("level")), _to_string(&status.get("msg")));
+        let mut add = format!("`{}` {}", status.level, status.msg);
 
         let mut vs = Vec::new();
 
-        let bdi = status.get("botDisplayIgnore").unwrap_or(&serde_json::Value::Null);
-        let bdi = match bdi {
-            serde_json::Value::Array(bdi) => bdi.iter().map(|v| v.as_str().unwrap_or("")).collect::<Vec<_>>(),
-            _ => continue,
-        };
+        let bdi = status.bot_display_ignore.clone().unwrap_or_default();
 
-        for (k, v) in status {
-            if k == "level" || k == "msg" || k == "ts" || k == "botDisplayIgnore" {
-                continue;
-            }
-
-            if bdi.contains(&k.as_str()) {
+        for (k, v) in status.extra_info.iter() {
+            if bdi.contains(k) {
                 continue;
             }
 
@@ -166,17 +153,7 @@ pub async fn embed<'a>(task: &Task) -> Result<poise::CreateReply<'a>, crate::Err
 
         add = add.chars().take(500).collect::<String>() + if add.len() > 500 { "..." } else { "" };
 
-        let ts: f64 = match status.get("ts") {
-            Some(ts) => {
-                match ts {
-                    serde_json::Value::Number(ts) => ts.as_f64().unwrap_or_default(),
-                    _ => 0.0,
-                }
-            }
-            None => chrono::Utc::now().timestamp() as f64,
-        };
-
-        add += &format!(" | <t:{}:R>`", ts);
+        add += &format!(" | <t:{}:R>`", status.ts);
 
         task_statuses_length += if add.len() > 500 { 500 } else { add.len() };
         task_statuses.push(add);
@@ -242,17 +219,24 @@ pub async fn reactive(
 
         let rec = sqlx::query!(
             "SELECT task_id, task_name, output, task_info, statuses, task_for, expiry, state, created_at FROM tasks WHERE task_id = $1",
-            task_id
+            task_id,
         )
         .fetch_one(pool)
         .await?;
+
+        let mut statuses = Vec::new();
+
+        for status in &rec.statuses {
+            let status = serde_json::from_value::<crate::jobserver::TaskStatuses>(status.clone())?;
+            statuses.push(status);
+        }
 
         let task = Arc::new(Task {
             task_id: rec.task_id,
             task_name: rec.task_name,
             output: rec.output.map(serde_json::from_value::<crate::jobserver::TaskOutput>).transpose()?,
             task_info: serde_json::from_value::<crate::jobserver::TaskInfo>(rec.task_info)?,
-            statuses: rec.statuses,
+            statuses,
             task_for: rec.task_for.map(|task_for| task_for.into()),
             expiry: {
                 if let Some(expiry) = rec.expiry {

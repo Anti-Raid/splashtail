@@ -2,6 +2,19 @@ pub mod taskpoll;
 
 use std::str::FromStr;
 
+/// Rust internal/special type to better serialize/speed up task embed creation
+#[derive(serde::Deserialize, serde::Serialize, Clone, PartialEq)]
+pub struct TaskStatuses {
+    pub level: String,
+    pub msg: String,
+    pub ts: f64,
+    #[serde(rename = "botDisplayIgnore")]
+    pub bot_display_ignore: Option<Vec<String>>,    
+
+    #[serde(flatten)]
+    pub extra_info: std::collections::HashMap<String, serde_json::Value>,
+}
+
 /**
  * export interface Task {
   task_id: string;
@@ -46,7 +59,7 @@ pub struct Task {
     pub task_name: String,
     pub output: Option<TaskOutput>,
     pub task_info: TaskInfo,
-    pub statuses: Vec<serde_json::Value>,
+    pub statuses: Vec<TaskStatuses>,
     pub task_for: Option<TaskFor>,
     pub expiry: Option<chrono::Duration>,
     pub state: String,

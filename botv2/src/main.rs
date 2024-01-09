@@ -174,8 +174,6 @@ async fn main() {
     const POSTGRES_MAX_CONNECTIONS: u32 = 3; // max connections to the database, we don't need too many here
     const REDIS_MAX_CONNECTIONS: u32 = 10; // max connections to the redis
 
-    let args = std::env::args().collect::<Vec<_>>();
-
     // Setup logging
     let cluster_id = ipc::argparse::MEWLD_ARGS.cluster_id;
     let cluster_name = ipc::argparse::MEWLD_ARGS.cluster_name.clone();
@@ -225,8 +223,11 @@ async fn main() {
                     register(),
                 ];
 
-                cmds.extend(cmds::core::commands()); // Core plugin
-                cmds.extend(cmds::limits::commands()); // Limits plugin
+                for cmd_list in cmds::enabled_commands() {
+                    for cmd in cmd_list {
+                        cmds.push(cmd.0);
+                    }
+                }
 
                 cmds
             },

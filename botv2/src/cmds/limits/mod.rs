@@ -1,9 +1,9 @@
 mod cmds;
 mod autocompletes;
 
-pub fn commands() -> Vec<poise::Command<crate::Data, crate::Error>> {
+pub fn commands() -> Vec<super::CommandAndPermissions> {
     vec![
-        cmds::limits(),
-        cmds::limitactions(),
+        (cmds::limits(), super::CommandExtendedData::default()),
+        (cmds::limitactions(), super::CommandExtendedData::default()),
     ]
 }

@@ -2,11 +2,11 @@ pub mod help;
 pub mod stats;
 pub mod ping;
 
-pub fn commands() -> Vec<poise::Command<crate::Data, crate::Error>> {
+pub fn commands() -> Vec<super::CommandAndPermissions> {
     vec![
-        help::help(),
-        help::simplehelp(),
-        stats::stats(),
-        ping::ping(),
+        (help::help(), super::CommandExtendedData::default()),
+        (help::simplehelp(), super::CommandExtendedData::default()),
+        (stats::stats(), super::CommandExtendedData::default()),
+        (ping::ping(), super::CommandExtendedData::default()),
     ]
 }
