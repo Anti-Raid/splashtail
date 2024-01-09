@@ -3,11 +3,35 @@ use poise::serenity_prelude::UserId;
 use serde::{Deserialize, Serialize};
 use sqlx::types::chrono;
 use std::fs::File;
+use std::collections::HashMap;
 
 use crate::Error;
 
 /// Global config object
 pub static CONFIG: Lazy<Config> = Lazy::new(|| Config::load().expect("Failed to load config"));
+
+#[derive(Serialize, Deserialize, Default)]
+pub struct Differs<T: Default + Clone> {
+    staging: T,
+    prod: T,
+}
+
+impl<T: Default + Clone> Differs<T> {
+    /// Get the value for a given environment
+    pub fn get_for_env(&self, env: &str) -> T {
+        if env == "staging" {
+            self.staging.clone()
+        } else {
+            self.prod.clone()
+        }
+    }
+
+    /// Get the value for the current environment
+    pub fn get(&self) -> T {
+        self.get_for_env(&crate::ipc::argparse::MEWLD_ARGS.current_env)
+    }
+}
+
 
 #[derive(Serialize, Deserialize, Default)]
 pub struct DiscordAuth {
@@ -23,12 +47,20 @@ pub struct Meta {
     pub postgres_url: String,
     pub bot_redis_url: String,
     pub proxy: String,
+    pub jobserver_url: Differs<String>,
+    pub jobserver_secrets: Differs<HashMap<String, String>>,
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct Sites {
+    pub api: Differs<String>,
 }
 
 #[derive(Serialize, Deserialize)]
 pub struct Config {
     pub discord_auth: DiscordAuth,
     pub meta: Meta,
+    pub sites: Sites,
 
     #[serde(skip)]
     /// Setup by load() for statistics

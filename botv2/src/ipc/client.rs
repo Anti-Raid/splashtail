@@ -9,7 +9,6 @@ pub struct IpcClient {
     pub redis_pool: fred::clients::RedisPool,
     pub serenity_cache: crate::impls::cache::CacheHttpImpl,
     pub shard_manager: Arc<serenity::all::ShardManager>,
-    pub mewld_args: Arc<crate::ipc::argparse::MewldCmdArgs>,
     pub cache: Arc<IpcCache>,
 }
 
@@ -146,10 +145,10 @@ impl IpcClient {
         subscriber.manage_subscriptions();
 
         let _: () = subscriber.subscribe(
-            &self.mewld_args.mewld_redis_channel.clone(),
+            super::argparse::MEWLD_ARGS.mewld_redis_channel.clone(),
         ).await.unwrap();
         let _: () = subscriber.subscribe(
-            &format!("{}:{}", self.mewld_args.mewld_redis_channel, self.mewld_args.cluster_id),
+            &format!("{}:{}", super::argparse::MEWLD_ARGS.mewld_redis_channel, super::argparse::MEWLD_ARGS.cluster_id),
         ).await.unwrap();
 
         
@@ -196,7 +195,7 @@ impl IpcClient {
                     }
                 };
 
-                if diag_payload.cluster_id != self.mewld_args.cluster_id {
+                if diag_payload.cluster_id != super::argparse::MEWLD_ARGS.cluster_id {
                     // Not for us
                     continue;
                 }
@@ -211,7 +210,7 @@ impl IpcClient {
                 let mut user_counts_per_shard = std::collections::HashMap::new();
 
                 for guild in self.serenity_cache.cache.guilds() {
-                    let shard_id = serenity::utils::shard_id(guild, self.mewld_args.shard_count);
+                    let shard_id = serenity::utils::shard_id(guild, super::argparse::MEWLD_ARGS.shard_count);
 
                     let count = guild_counts_per_shard.entry(shard_id).or_insert(0);
                     *count += 1;
@@ -242,7 +241,7 @@ impl IpcClient {
 
                 let diag_payload_str = match serde_json::to_string(
                     &MewldDiagResponse {
-                        cluster_id: self.mewld_args.cluster_id,
+                        cluster_id: super::argparse::MEWLD_ARGS.cluster_id,
                         nonce: diag_payload.nonce.clone(),
                         data: shard_healths.clone(),
                     }
@@ -324,7 +323,7 @@ impl IpcClient {
         let conn = self.redis_pool.next();
         conn.connect();
         conn.wait_for_connect().await?;
-        conn.publish(self.mewld_args.mewld_redis_channel.clone(), cmd).await?;
+        conn.publish(super::argparse::MEWLD_ARGS.mewld_redis_channel.clone(), cmd).await?;
 
         Ok(())
     }
@@ -335,7 +334,7 @@ impl IpcClient {
             scope: "launcher".to_string(),
             action: "launch_next".to_string(),
             args: Some(serde_json::json!({
-                "id": self.mewld_args.cluster_id,
+                "id": super::argparse::MEWLD_ARGS.cluster_id,
             })),
             command_id: None,
             output: None,

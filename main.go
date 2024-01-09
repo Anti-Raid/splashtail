@@ -258,6 +258,7 @@ func main() {
 						strconv.Itoa(len(l.Map)),
 						state.Config.Sites.API.Parse(),
 						l.Config.RedisChannel,
+						config.CurrentEnv,
 					)
 				} else {
 					cmd = exec.Command(
@@ -270,6 +271,7 @@ func main() {
 						strconv.Itoa(len(l.Map)),
 						state.Config.Sites.API.Parse(),
 						l.Config.RedisChannel,
+						config.CurrentEnv,
 					)
 				}
 

@@ -39,9 +39,9 @@ pub async fn stats(ctx: Context<'_>) -> Result<(), Error> {
             true)
             .field("Cluster", format!(
                 "{} ({} of {})", 
-                ctx.data().mewld_args.cluster_name, 
-                ctx.data().mewld_args.cluster_id,
-                ctx.data().mewld_args.cluster_count,
+                crate::ipc::argparse::MEWLD_ARGS.cluster_name, 
+                crate::ipc::argparse::MEWLD_ARGS.cluster_id,
+                crate::ipc::argparse::MEWLD_ARGS.cluster_count,
             ), true)
             .field("Servers", ctx.data().ipc.cache.total_guilds().to_string(), true)
             .field("Users", ctx.data().ipc.cache.total_users().to_string(), true)

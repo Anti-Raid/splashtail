@@ -1,6 +1,10 @@
 /// This crate parses down the mewld arguments down to a simple MewldCmdArgs struct
+use once_cell::sync::Lazy;
 
-
+pub static MEWLD_ARGS: Lazy<MewldCmdArgs> = Lazy::new(|| {
+    let args: Vec<String> = std::env::args().collect();
+    MewldCmdArgs::parse_argv(&args).expect("Failed to parse mewld arguments")
+});
 
 /*
         l.Dir+"/"+l.Config.Module,
@@ -12,6 +16,7 @@
         strconv.Itoa(len(l.Map)),
         state.Config.Sites.API.Parse(),
         l.Config.RedisChannel,
+        config.CurrentEnv,
      */
 #[derive(Debug, Clone)]
 pub struct MewldCmdArgs {
@@ -23,14 +28,15 @@ pub struct MewldCmdArgs {
     pub cluster_count: u16,
     pub splashtail_url: String,
     pub mewld_redis_channel: String,
+    pub current_env: String,
 }
 
 impl MewldCmdArgs {
     pub fn parse_argv(args: &[String]) -> Result<Self, crate::Error> {
-        if args.len() != 9 {
+        if args.len() != 10 {
             return Err(r#"Invalid number of arguments
             
-Expected arguments: [program name] <shards> <shard_count> <cluster_id> <cluster_name> <base_dir> <cluster_count> <splashtail_url> <mewld_redis_channel>
+Expected arguments: [program name] <shards> <shard_count> <cluster_id> <cluster_name> <base_dir> <cluster_count> <splashtail_url> <mewld_redis_channel> <env>
             "#.into());
         }
 
@@ -42,6 +48,7 @@ Expected arguments: [program name] <shards> <shard_count> <cluster_id> <cluster_
         let cluster_count: u16 = str::parse(&args[6])?;
         let splashtail_url: String = args[7].clone();
         let mewld_redis_channel: String = args[8].clone();
+        let current_env: String = args[9].clone();
 
         Ok(Self {
             shards,
@@ -52,6 +59,7 @@ Expected arguments: [program name] <shards> <shard_count> <cluster_id> <cluster_
             cluster_count,
             splashtail_url,
             mewld_redis_channel,
+            current_env,
         })
     }
 }

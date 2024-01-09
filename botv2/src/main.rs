@@ -4,6 +4,7 @@ mod config;
 mod tasks;
 mod modules;
 mod ipc;
+mod jobserver;
 
 use std::sync::Arc;
 
@@ -22,7 +23,6 @@ type Context<'a> = poise::Context<'a, Data, Error>;
 pub struct Data {
     pub pool: sqlx::PgPool,
     pub ipc: Arc<ipc::client::IpcClient>,
-    pub mewld_args: Arc<crate::ipc::argparse::MewldCmdArgs>,
     pub cache_http: crate::impls::cache::CacheHttpImpl,
     pub shards_ready: Arc<dashmap::DashMap<u16, bool>>,
 }
@@ -106,10 +106,10 @@ async fn event_listener(ctx: &serenity::client::Context, event: &FullEvent, user
                     .description(format!(
                         "**Server Count:** {}\n**Shard Count:** {}\n**Cluster Count:** {}\n**Cluster ID:** {}\n**Cluster Name:** {}\n**Uptime:** {}",
                         user_data.ipc.cache.total_guilds(),
-                        user_data.ipc.mewld_args.shard_count,
-                        user_data.ipc.mewld_args.cluster_count,
-                        user_data.ipc.mewld_args.cluster_id,
-                        user_data.ipc.mewld_args.cluster_name,
+                        ipc::argparse::MEWLD_ARGS.shard_count,
+                        ipc::argparse::MEWLD_ARGS.cluster_count,
+                        ipc::argparse::MEWLD_ARGS.cluster_id,
+                        ipc::argparse::MEWLD_ARGS.cluster_name,
                         {
                             let duration: std::time::Duration = std::time::Duration::from_secs((chrono::Utc::now().timestamp() - crate::config::CONFIG.bot_start_time) as u64);
         
@@ -146,7 +146,7 @@ async fn event_listener(ctx: &serenity::client::Context, event: &FullEvent, user
                 ctx.clone(),
             ));
 
-            if ctx.shard_id.0 == *user_data.mewld_args.shards.last().unwrap() {
+            if ctx.shard_id.0 == *crate::ipc::argparse::MEWLD_ARGS.shards.last().unwrap() {
                 info!("All shards ready, launching next cluster");
                 if let Err(e) = user_data.ipc.publish_ipc_launch_next().await {
                     error!("Error publishing IPC launch next: {}", e);
@@ -155,7 +155,7 @@ async fn event_listener(ctx: &serenity::client::Context, event: &FullEvent, user
 
                 user_data.shards_ready.insert(ctx.shard_id.0, true);
 
-                info!("Published IPC launch next to channel {}", user_data.mewld_args.mewld_redis_channel);
+                info!("Published IPC launch next to channel {}", crate::ipc::argparse::MEWLD_ARGS.mewld_redis_channel);
             }
         }
         _ => {}
@@ -175,21 +175,20 @@ async fn main() {
     const REDIS_MAX_CONNECTIONS: u32 = 10; // max connections to the redis
 
     let args = std::env::args().collect::<Vec<_>>();
-    let mewld_args = Arc::new(crate::ipc::argparse::MewldCmdArgs::parse_argv(&args).unwrap());
 
     // Setup logging
-    let cluster_id = mewld_args.cluster_id;
-    let cluster_name = mewld_args.cluster_name.clone();
-    let cluster_count = mewld_args.cluster_count;
-    let shards = mewld_args.shards.clone();
-    let shard_count = mewld_args.shard_count;
+    let cluster_id = ipc::argparse::MEWLD_ARGS.cluster_id;
+    let cluster_name = ipc::argparse::MEWLD_ARGS.cluster_name.clone();
+    let cluster_count = ipc::argparse::MEWLD_ARGS.cluster_count;
+    let shards = ipc::argparse::MEWLD_ARGS.shards.clone();
+    let shard_count = ipc::argparse::MEWLD_ARGS.shard_count;
     env_logger::builder()
     .format(move |buf, record| writeln!(buf, "[{} ({} of {})] {} - {}", cluster_name, cluster_id, cluster_count-1, record.level(), record.args()))
     .filter(Some("botv2"), log::LevelFilter::Info)
     .filter(None, log::LevelFilter::Error)
     .init();
 
-    info!("{:#?}", mewld_args);
+    info!("{:#?}", ipc::argparse::MEWLD_ARGS);
 
     let proxy_url = config::CONFIG.meta.proxy.clone();
 
@@ -258,10 +257,10 @@ async fn main() {
                             .description(format!(
                                 "**Server Count:** {}\n**Shard Count:** {}\n**Cluster Count:** {}\n**Cluster ID:** {}\n**Cluster Name:** {}\n**Uptime:** {}",
                                 data.ipc.cache.total_guilds(),
-                                data.ipc.mewld_args.shard_count,
-                                data.ipc.mewld_args.cluster_count,
-                                data.ipc.mewld_args.cluster_id,
-                                data.ipc.mewld_args.cluster_name,
+                                ipc::argparse::MEWLD_ARGS.shard_count,
+                                ipc::argparse::MEWLD_ARGS.cluster_count,
+                                ipc::argparse::MEWLD_ARGS.cluster_id,
+                                ipc::argparse::MEWLD_ARGS.cluster_name,
                                 {
                                     let duration: std::time::Duration = std::time::Duration::from_secs((chrono::Utc::now().timestamp() - crate::config::CONFIG.bot_start_time) as u64);
                 
@@ -353,14 +352,12 @@ async fn main() {
                             .build_pool(REDIS_MAX_CONNECTIONS.try_into().unwrap())
                             .expect("Could not initialize Redis pool"),
                         shard_manager: framework.shard_manager().clone(),
-                        mewld_args: mewld_args.clone(),
                         serenity_cache: CacheHttpImpl {
                             cache: ctx.cache.clone(),
                             http: ctx.http.clone(),
                         },
                         cache: Arc::new(crate::ipc::client::IpcCache::default()),
                     }),
-                    mewld_args: mewld_args.clone(),
                     pool: PgPoolOptions::new()
                         .max_connections(POSTGRES_MAX_CONNECTIONS)
                         .connect(&config::CONFIG.meta.postgres_url)
