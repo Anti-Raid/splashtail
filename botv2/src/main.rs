@@ -339,6 +339,7 @@ async fn main() {
                             if let poise::Context::Application(ac) = ctx {
                                 if let Some(m) = &ac.interaction.member {
                                     if let Some(perms) = m.permissions {
+                                        info!("Got perms from interaction member");
                                         return Ok(perms)
                                     }
                                 }
