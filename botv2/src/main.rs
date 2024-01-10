@@ -318,13 +318,17 @@ async fn main() {
 
                         let command_config = command_config.unwrap_or_default();
 
-                        let is_owner = member.user.id == ctx.guild().unwrap().owner_id;
+                        let Some(guild) = ctx.guild() else {
+                            return Err("You must be in a server to run this command [ctx.guild is null]".into());
+                        };
+
+                        let is_owner = member.user.id == guild.owner_id;
 
                         let member_perms = {
                             if is_owner {
                                 serenity::model::permissions::Permissions::all()
                             } else {
-                                ctx.guild().unwrap().member_permissions(&member)
+                                guild.member_permissions(&member)
                             }
                         };
 
