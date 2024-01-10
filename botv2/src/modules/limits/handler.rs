@@ -5,8 +5,22 @@ use sqlx::PgPool;
 use crate::{impls::cache::CacheHttpImpl, Error};
 use super::core;
 
+static PRECHECK_CACHE: once_cell::sync::Lazy<moka::future::Cache<String, bool>> = once_cell::sync::Lazy::new(|| {
+    moka::future::Cache::builder()
+    .time_to_live(std::time::Duration::from_secs(60))
+    .build()
+});
+
 pub async fn precheck_guild(pool: &PgPool, guild_id: GuildId) -> Result<(), Error> {
     // Look for guild
+    if let Some(found) = PRECHECK_CACHE.get(&guild_id.to_string()).await {
+        if !found {
+            return Err("Guild has no limits".into());
+        }
+
+        return Ok(());
+    }
+
     let guild = sqlx::query!(
         "SELECT COUNT(*) FROM limits WHERE guild_id = $1
     ",
@@ -19,6 +33,8 @@ pub async fn precheck_guild(pool: &PgPool, guild_id: GuildId) -> Result<(), Erro
         // Guild not found
         return Err("Guild has no limits".into());
     }
+
+    PRECHECK_CACHE.insert(guild_id.to_string(), true).await;
 
     Ok(())
 }

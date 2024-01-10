@@ -180,11 +180,22 @@ async fn main() {
     let cluster_count = ipc::argparse::MEWLD_ARGS.cluster_count;
     let shards = ipc::argparse::MEWLD_ARGS.shards.clone();
     let shard_count = ipc::argparse::MEWLD_ARGS.shard_count;
-    env_logger::builder()
+
+    let debug_mode = std::env::var("DEBUG").unwrap_or_default() == "true";
+
+    let mut env_builder = env_logger::builder();
+
+    env_builder
     .format(move |buf, record| writeln!(buf, "[{} ({} of {})] {} - {}", cluster_name, cluster_id, cluster_count-1, record.level(), record.args()))
-    .filter(Some("botv2"), log::LevelFilter::Info)
-    .filter(None, log::LevelFilter::Error)
-    .init();
+    .filter(Some("botv2"), log::LevelFilter::Info);
+
+    if debug_mode {
+        env_builder.filter(None, log::LevelFilter::Debug);
+    } else {
+        env_builder.filter(None, log::LevelFilter::Error);
+    }
+
+    env_builder.init();
 
     info!("{:#?}", ipc::argparse::MEWLD_ARGS);
 
