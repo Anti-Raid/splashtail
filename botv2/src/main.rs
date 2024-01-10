@@ -318,7 +318,7 @@ async fn main() {
 
                         let command_config = command_config.unwrap_or_default();
 
-                        let (is_owner, member_perms) = {
+                        async fn get_member_data(ctx: &Context<'_>, member: &serenity::all::Member) -> Result<serenity::model::permissions::Permissions, crate::Error> {
                             if ctx.guild().is_some() {
                                 let guild = ctx.guild().unwrap();
                                 let is_owner = member.user.id == guild.owner_id;
@@ -327,30 +327,44 @@ async fn main() {
                                     if is_owner {
                                         serenity::model::permissions::Permissions::all()
                                     } else {
-                                        guild.member_permissions(&member)
+                                        guild.member_permissions(member)
                                     }
                                 };
 
                                 drop(guild);
 
-                                (is_owner, member_perms)
-                            } else {
-                                // Fetch guild using HTTP
-                                let guild = ctx.http().get_guild(guild_id).await?;
+                                return Ok(member_perms)
+                            } 
 
-                                let is_owner = member.user.id == guild.owner_id;
-
-                                let member_perms = {
-                                    if is_owner {
-                                        serenity::model::permissions::Permissions::all()
-                                    } else {
-                                        guild.member_permissions(&member)
+                            if let poise::Context::Application(ac) = ctx {
+                                if let Some(m) = &ac.interaction.member {
+                                    if let Some(perms) = m.permissions {
+                                        return Ok(perms)
                                     }
-                                };
-
-                                (is_owner, member_perms)
+                                }
                             }
-                        };
+
+                            if let Some(perms) = member.permissions {
+                               return Ok(perms) 
+                            }
+
+                            // Fetch guild using HTTP
+                            let guild = ctx.http().get_guild(member.guild_id).await?;
+
+                            let is_owner = member.user.id == guild.owner_id;
+
+                            let member_perms = {
+                                if is_owner {
+                                    serenity::model::permissions::Permissions::all()
+                                } else {
+                                    guild.member_permissions(member)
+                                }
+                            };
+
+                            Ok(member_perms)
+                        }
+
+                        let member_perms = get_member_data(&ctx, &member).await?;
 
                         if let Err(e) = cmds::can_run_command(
                             &cmd_data,
@@ -358,7 +372,6 @@ async fn main() {
                             &ctx.command().qualified_name,
                             member_perms,
                             &Vec::new(), // kittycat perms not yet implemented
-                            is_owner
                         ) {
                             return Err(
                                 format!(
