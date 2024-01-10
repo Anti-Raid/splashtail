@@ -159,6 +159,8 @@ pub async fn get_command_configuration(pool: &sqlx::PgPool, guild_id: &str, name
 /// 
 /// This may be useful when mocking or visualizing a permission check
 pub fn check_perms_single(cmd_qualified_name: &str, cmd_real_name: &str, check: &PermissionCheck, member_native_perms: serenity::all::Permissions, member_kittycat_perms: &[String]) -> Result<(), (String, crate::Error)> {
+    let is_discord_admin = member_native_perms.contains(serenity::all::Permissions::ADMINISTRATOR); // Speed up stuff
+    
     // Kittycat
     if check.inner_and {
         // inner AND, short-circuit if we don't have the permission
@@ -173,19 +175,21 @@ pub fn check_perms_single(cmd_qualified_name: &str, cmd_real_name: &str, check: 
             }
         }
 
-        for perm in &check.native_perms {
-            if !member_native_perms.contains(*perm) {
-                return Err(
-                    (
-                        "missing_native_perms".into(),
-                        format!("You do not have the required permissions to run this command (``{}``) implied from ``{}``. You need ``{}`` permissions to execute this command.", cmd_qualified_name, cmd_real_name, perm).into()
-                    )
-                );
+        if !is_discord_admin {
+            for perm in &check.native_perms {
+                if !member_native_perms.contains(*perm) {
+                    return Err(
+                        (
+                            "missing_native_perms".into(),
+                            format!("You do not have the required permissions to run this command (``{}``) implied from ``{}``. You need ``{}`` permissions to execute this command.", cmd_qualified_name, cmd_real_name, perm).into()
+                        )
+                    );
+                }
             }
         }
     } else {
         // inner OR, short-circuit if we have the permission
-        let has_any_np = check.native_perms.iter().any(|perm| member_native_perms.contains(*perm));
+        let has_any_np = is_discord_admin || check.native_perms.iter().any(|perm| member_native_perms.contains(*perm));
         
         if !has_any_np {
             let has_any_kc = check.kittycat_perms.iter().any(|perm| kittycat::perms::has_perm(member_kittycat_perms, perm));
@@ -263,6 +267,48 @@ pub fn can_run_command(
         outer_and = check.outer_and;
     }
 
+    // Check the OR now
+    if perms.checks_needed == 0 {
+        if success == 0 {
+            let mut np = Vec::new();
+            let mut kc = Vec::new();
+
+            for check in &perms.checks {
+                np.extend(check.native_perms.iter().map(|p| p.to_string()));
+                kc.extend(check.kittycat_perms.iter().map(|p| p.to_string()));
+            }
+
+            let perms = format!("*Discord*: ``{}`` OR *Custom Permissions*: ``{}``", np.join(" | "), kc.join(" | "));
+            
+            return Err(
+                (
+                    "missing_any_perms".into(),
+                    format!("You do not have the required permissions to run this command (``{}``) implied from ``{}``. You need at least one of the following permissions to execute this command:\n``{}``", cmd_qualified_name, command_config.command, perms).into()
+                )
+            );
+        } else {
+            return Ok(());
+        }
+    } else if success < perms.checks_needed {
+        let mut np = Vec::new();
+        let mut kc = Vec::new();
+
+        for check in &perms.checks {
+            np.extend(check.native_perms.iter().map(|p| p.to_string()));
+            kc.extend(check.kittycat_perms.iter().map(|p| p.to_string()));
+        }
+
+        let ps = format!("*Discord*: ``{}`` OR *Custom Permissions*: ``{}``", np.join(" | "), kc.join(" | "));
+
+        // TODO: Improve this and group the permissions in error
+        return Err(
+            (
+                "missing_min_checks".into(),
+                format!("You do not have the required permissions to run this command (``{}``) implied from ``{}``. You need at least {} of the following permissions to execute this command:\n``{}``", perms.checks_needed, cmd_qualified_name, command_config.command, ps).into()
+            )
+        );
+    }
+
     Ok(())
 }
 
@@ -283,6 +329,15 @@ impl CommandExtendedData {
 mod tests {
     use super::*;
 
+    fn err_with_code(e: Result<(), (String, crate::Error)>, code: &str) -> bool {
+        if let Err((e_code, _)) = e {
+            println!("test_check_perms_single: {} == {}", e_code, code);
+            e_code == code
+        } else {
+            false
+        }
+    }
+
     #[test]
     fn test_names_to_check() {
         println!("{:?}", permute_command_names("limits hit view"));
@@ -292,7 +347,65 @@ mod tests {
     }
 
     #[test]
+    fn test_check_perms_single() {
+        // Basic test
+        assert!(
+            err_with_code(
+                check_perms_single(
+                "test",
+                "test",
+                &PermissionCheck {
+                    kittycat_perms: vec![],
+                    native_perms: vec![serenity::all::Permissions::ADMINISTRATOR],
+                    outer_and: false,
+                    inner_and: false,
+                },
+                serenity::all::Permissions::empty(),
+                &["abc.test".into()],
+            ),
+            "missing_any_perms"
+            )
+        );
+
+        // With inner and
+        assert!(
+            err_with_code(
+                check_perms_single(
+                "test",
+                "test",
+                &PermissionCheck {
+                    kittycat_perms: vec![],
+                    native_perms: vec![serenity::all::Permissions::ADMINISTRATOR, serenity::all::Permissions::BAN_MEMBERS],
+                    outer_and: false,
+                    inner_and: true,
+                },
+                serenity::all::Permissions::BAN_MEMBERS,
+                &["abc.test".into()],
+            ),
+            "missing_native_perms"
+            )
+        );
+
+        // Admin overrides other native perms
+        assert!(
+            check_perms_single(
+                "test",
+                "test",
+                &PermissionCheck {
+                    kittycat_perms: vec![],
+                    native_perms: vec![serenity::all::Permissions::BAN_MEMBERS],
+                    outer_and: false,
+                    inner_and: false,
+                },
+                serenity::all::Permissions::ADMINISTRATOR,
+                &["abc.test".into()],
+            ).is_ok()
+        );
+    }
+
+    #[test]
     fn test_can_run_command() {
+        // Basic test
         assert!(can_run_command(
             &CommandExtendedData::none().get("").unwrap().clone(),
             &GuildCommandConfiguration {
@@ -306,5 +419,127 @@ mod tests {
             serenity::all::Permissions::empty(),
             &["abc.test".into()],
         ).is_ok());
+
+        // With a native permission
+        assert!(
+            err_with_code(
+                can_run_command(
+                    &CommandExtendedData::none().get("").unwrap().clone(),
+                    &GuildCommandConfiguration {
+                        id: "test".into(),
+                        guild_id: "test".into(),
+                        command: "test".into(),
+                        perms: Some(PermissionChecks {
+                            checks: vec![PermissionCheck {
+                                kittycat_perms: vec![],
+                                native_perms: vec![serenity::all::Permissions::ADMINISTRATOR],
+                                outer_and: false,
+                                inner_and: false,
+                            }],
+                            checks_needed: 0,
+                        }),
+                        disabled: false,
+                    },
+                    "test",
+                    serenity::all::Permissions::empty(),
+                    &["abc.test".into()],
+                ),
+                "missing_any_perms"
+            )
+        );
+
+        assert!(
+            err_with_code(
+                can_run_command(
+                    &CommandExtendedData::none().get("").unwrap().clone(),
+                    &GuildCommandConfiguration {
+                        id: "test".into(),
+                        guild_id: "test".into(),
+                        command: "test".into(),
+                        perms: Some(PermissionChecks {
+                            checks: vec![PermissionCheck {
+                                kittycat_perms: vec![],
+                                native_perms: vec![serenity::all::Permissions::ADMINISTRATOR],
+                                outer_and: false,
+                                inner_and: false,
+                            }],
+                            checks_needed: 1,
+                        }),
+                        disabled: false,
+                    },
+                    "test",
+                    serenity::all::Permissions::empty(),
+                    &["abc.test".into()],
+                ),
+                "missing_min_checks"
+            )
+        );
+
+        assert!(
+            err_with_code(
+                can_run_command(
+                    &CommandExtendedData::none().get("").unwrap().clone(),
+                    &GuildCommandConfiguration {
+                        id: "test".into(),
+                        guild_id: "test".into(),
+                        command: "test".into(),
+                        perms: Some(PermissionChecks {
+                            checks: vec![
+                                PermissionCheck {
+                                    kittycat_perms: vec![],
+                                    native_perms: vec![serenity::all::Permissions::BAN_MEMBERS],
+                                    outer_and: false,
+                                    inner_and: false,
+                                },
+                                PermissionCheck {
+                                    kittycat_perms: vec![],
+                                    native_perms: vec![serenity::all::Permissions::KICK_MEMBERS],
+                                    outer_and: false,
+                                    inner_and: false,
+                                },
+                            ],
+                            checks_needed: 2,
+                        }),
+                        disabled: false,
+                    },
+                    "test",
+                    serenity::all::Permissions::BAN_MEMBERS,
+                    &["abc.test".into()],
+                ),
+                "missing_min_checks"
+            )
+        );
+
+        assert!(
+            can_run_command(
+                &CommandExtendedData::none().get("").unwrap().clone(),
+                &GuildCommandConfiguration {
+                    id: "test".into(),
+                    guild_id: "test".into(),
+                    command: "test".into(),
+                    perms: Some(PermissionChecks {
+                        checks: vec![
+                            PermissionCheck {
+                                kittycat_perms: vec![],
+                                native_perms: vec![serenity::all::Permissions::BAN_MEMBERS],
+                                outer_and: false,
+                                inner_and: false,
+                            },
+                            PermissionCheck {
+                                kittycat_perms: vec![],
+                                native_perms: vec![serenity::all::Permissions::KICK_MEMBERS],
+                                outer_and: false,
+                                inner_and: false,
+                            },
+                        ],
+                        checks_needed: 1,
+                    }),
+                    disabled: false,
+                },
+                "test",
+                serenity::all::Permissions::BAN_MEMBERS,
+                &["abc.test".into()],
+            ).is_ok()
+        );
     }
 }
