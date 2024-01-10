@@ -318,17 +318,37 @@ async fn main() {
 
                         let command_config = command_config.unwrap_or_default();
 
-                        let Some(guild) = ctx.guild() else {
-                            return Err("You must be in a server to run this command [ctx.guild is null]".into());
-                        };
+                        let (is_owner, member_perms) = {
+                            if ctx.guild().is_some() {
+                                let guild = ctx.guild().unwrap();
+                                let is_owner = member.user.id == guild.owner_id;
 
-                        let is_owner = member.user.id == guild.owner_id;
+                                let member_perms = {
+                                    if is_owner {
+                                        serenity::model::permissions::Permissions::all()
+                                    } else {
+                                        guild.member_permissions(&member)
+                                    }
+                                };
 
-                        let member_perms = {
-                            if is_owner {
-                                serenity::model::permissions::Permissions::all()
+                                drop(guild);
+
+                                (is_owner, member_perms)
                             } else {
-                                guild.member_permissions(&member)
+                                // Fetch guild using HTTP
+                                let guild = ctx.http().get_guild(guild_id).await?;
+
+                                let is_owner = member.user.id == guild.owner_id;
+
+                                let member_perms = {
+                                    if is_owner {
+                                        serenity::model::permissions::Permissions::all()
+                                    } else {
+                                        guild.member_permissions(&member)
+                                    }
+                                };
+
+                                (is_owner, member_perms)
                             }
                         };
 
