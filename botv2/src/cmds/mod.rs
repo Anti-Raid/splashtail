@@ -218,6 +218,7 @@ pub fn can_run_command(
     cmd_qualified_name: &str, 
     member_native_perms: serenity::all::Permissions,
     member_kittycat_perms: &[String],
+    is_member_owner: bool,
 ) -> Result<(), (String, crate::Error)> {
     if command_config.disabled {
         return Err(
@@ -228,48 +229,69 @@ pub fn can_run_command(
         );
     }
 
-    let perms = command_config.perms.as_ref().unwrap_or(&cmd_data.default_perms);
+    if !is_member_owner {
+        let perms = command_config.perms.as_ref().unwrap_or(&cmd_data.default_perms);
 
-    if perms.checks.is_empty() {
-        return Ok(());
-    }
-
-    // This stores whether or not we need to check the next permission AND the current one or OR the current one 
-    let mut outer_and = false;
-    let mut success: usize = 0;
-    
-    for check in &perms.checks {
-        // Run the check
-        let res = check_perms_single(cmd_qualified_name, &command_config.command, check, member_native_perms, member_kittycat_perms);
-
-        if outer_and {
-            #[allow(clippy::question_mark)] // Question mark needs cloning which may harm performance
-            if res.is_err() {
-                return res;
-            }
-
-            // AND yet check_perms_single returned an error, so we can short-circuit and checks_needed
-            if success >= perms.checks_needed {
-                return res;
-            }
-        } else {
-            // OR, so we can short-circuit if we have the permission and checks_needed
-            if res.is_ok() && success >= perms.checks_needed {
-                return res;
-            }
+        if perms.checks.is_empty() {
+            return Ok(());
         }
+
+        // This stores whether or not we need to check the next permission AND the current one or OR the current one 
+        let mut outer_and = false;
+        let mut success: usize = 0;
         
-        if res.is_ok() {
-            success += 1;
+        for check in &perms.checks {
+            // Run the check
+            let res = check_perms_single(cmd_qualified_name, &command_config.command, check, member_native_perms, member_kittycat_perms);
+
+            if outer_and {
+                #[allow(clippy::question_mark)] // Question mark needs cloning which may harm performance
+                if res.is_err() {
+                    return res;
+                }
+
+                // AND yet check_perms_single returned an error, so we can short-circuit and checks_needed
+                if success >= perms.checks_needed {
+                    return res;
+                }
+            } else {
+                // OR, so we can short-circuit if we have the permission and checks_needed
+                if res.is_ok() && success >= perms.checks_needed {
+                    return res;
+                }
+            }
+            
+            if res.is_ok() {
+                success += 1;
+            }
+
+            // Set the outer AND to the new outer AND
+            outer_and = check.outer_and;
         }
 
-        // Set the outer AND to the new outer AND
-        outer_and = check.outer_and;
-    }
+        // Check the OR now
+        if perms.checks_needed == 0 {
+            if success == 0 {
+                let mut np = Vec::new();
+                let mut kc = Vec::new();
 
-    // Check the OR now
-    if perms.checks_needed == 0 {
-        if success == 0 {
+                for check in &perms.checks {
+                    np.extend(check.native_perms.iter().map(|p| p.to_string()));
+                    kc.extend(check.kittycat_perms.iter().map(|p| p.to_string()));
+                }
+
+                let perms = format!("*Discord*: ``{}`` OR *Custom Permissions*: ``{}``", np.join(" | "), kc.join(" | "));
+                
+                return Err(
+                    (
+                        "missing_any_perms".into(),
+                        format!("You do not have the required permissions to run this command (``{}``) implied from ``{}``. You need at least one of the following permissions to execute this command:\n``{}``", cmd_qualified_name, command_config.command, perms).into()
+                    )
+                );
+            } else {
+                return Ok(());
+            }
+        } else if success < perms.checks_needed {
             let mut np = Vec::new();
             let mut kc = Vec::new();
 
@@ -278,35 +300,16 @@ pub fn can_run_command(
                 kc.extend(check.kittycat_perms.iter().map(|p| p.to_string()));
             }
 
-            let perms = format!("*Discord*: ``{}`` OR *Custom Permissions*: ``{}``", np.join(" | "), kc.join(" | "));
-            
+            let ps = format!("*Discord*: ``{}`` OR *Custom Permissions*: ``{}``", np.join(" | "), kc.join(" | "));
+
+            // TODO: Improve this and group the permissions in error
             return Err(
                 (
-                    "missing_any_perms".into(),
-                    format!("You do not have the required permissions to run this command (``{}``) implied from ``{}``. You need at least one of the following permissions to execute this command:\n``{}``", cmd_qualified_name, command_config.command, perms).into()
+                    "missing_min_checks".into(),
+                    format!("You do not have the required permissions to run this command (``{}``) implied from ``{}``. You need at least {} of the following permissions to execute this command:\n``{}``", perms.checks_needed, cmd_qualified_name, command_config.command, ps).into()
                 )
             );
-        } else {
-            return Ok(());
         }
-    } else if success < perms.checks_needed {
-        let mut np = Vec::new();
-        let mut kc = Vec::new();
-
-        for check in &perms.checks {
-            np.extend(check.native_perms.iter().map(|p| p.to_string()));
-            kc.extend(check.kittycat_perms.iter().map(|p| p.to_string()));
-        }
-
-        let ps = format!("*Discord*: ``{}`` OR *Custom Permissions*: ``{}``", np.join(" | "), kc.join(" | "));
-
-        // TODO: Improve this and group the permissions in error
-        return Err(
-            (
-                "missing_min_checks".into(),
-                format!("You do not have the required permissions to run this command (``{}``) implied from ``{}``. You need at least {} of the following permissions to execute this command:\n``{}``", perms.checks_needed, cmd_qualified_name, command_config.command, ps).into()
-            )
-        );
     }
 
     Ok(())
@@ -418,6 +421,7 @@ mod tests {
             "test",
             serenity::all::Permissions::empty(),
             &["abc.test".into()],
+            false,
         ).is_ok());
 
         // With a native permission
@@ -443,6 +447,7 @@ mod tests {
                     "test",
                     serenity::all::Permissions::empty(),
                     &["abc.test".into()],
+                    false,
                 ),
                 "missing_any_perms"
             )
@@ -470,6 +475,7 @@ mod tests {
                     "test",
                     serenity::all::Permissions::empty(),
                     &["abc.test".into()],
+                    false,
                 ),
                 "missing_min_checks"
             )
@@ -505,6 +511,7 @@ mod tests {
                     "test",
                     serenity::all::Permissions::BAN_MEMBERS,
                     &["abc.test".into()],
+                    false,
                 ),
                 "missing_min_checks"
             )
@@ -539,6 +546,7 @@ mod tests {
                 "test",
                 serenity::all::Permissions::BAN_MEMBERS,
                 &["abc.test".into()],
+                false,
             ).is_ok()
         );
     }

@@ -314,16 +314,27 @@ async fn main() {
                             return Err("You must be in a server to run this command".into());
                         };
 
-                        let member_perms = member.permissions(ctx)?;
-
                         let (cmd_data, command_config) = cmds::get_command_configuration(&data.pool, guild_id.to_string().as_str(), ctx.command().qualified_name.as_str()).await?;
+
+                        let command_config = command_config.unwrap_or_default();
+
+                        let is_owner = member.user.id == ctx.guild().unwrap().owner_id;
+
+                        let member_perms = {
+                            if is_owner {
+                                serenity::model::permissions::Permissions::all()
+                            } else {
+                                ctx.guild().unwrap().member_permissions(&member)
+                            }
+                        };
 
                         if let Err(e) = cmds::can_run_command(
                             &cmd_data,
-                            &command_config.unwrap_or_default(),
+                            &command_config,
                             &ctx.command().qualified_name,
                             member_perms,
                             &Vec::new(), // kittycat perms not yet implemented
+                            is_owner
                         ) {
                             return Err(
                                 format!(
