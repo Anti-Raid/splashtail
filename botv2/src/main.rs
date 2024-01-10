@@ -314,9 +314,26 @@ async fn main() {
                             return Err("You must be in a server to run this command".into());
                         };
 
-                        if let Some(command_extra_data) = cmds::COMMAND_EXTRA_DATA.get(&ctx.command().name) {
-                            command_extra_data.can_run_command(&data.cache_http, &data.pool, ctx.command(), &member).await?;
+                        let member_perms = member.permissions(ctx)?;
+
+                        let (cmd_data, command_config) = cmds::get_command_configuration(&data.pool, guild_id.to_string().as_str(), ctx.command().qualified_name.as_str()).await?;
+
+                        if let Err(e) = cmds::can_run_command(
+                            &cmd_data,
+                            &command_config.unwrap_or_default(),
+                            &ctx.command().qualified_name,
+                            member_perms,
+                            &Vec::new(), // kittycat perms not yet implemented
+                        ) {
+                            return Err(
+                                format!(
+                                    "You do not have permission to run this command: {}\nCode: {}",
+                                    e.0,
+                                    e.1
+                                ).into()
+                            );
                         }
+
 
                         Ok(true)
                     } else {

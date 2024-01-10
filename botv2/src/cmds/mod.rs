@@ -1,11 +1,12 @@
 pub mod core;
 pub mod limits;
 
-use std::str::FromStr;
 use once_cell::sync::Lazy;
+use indexmap::{indexmap, IndexMap};
 
 pub type Command = poise::Command<crate::Data, crate::Error>;
-pub type CommandAndPermissions = (Command, CommandExtendedData);
+pub type CommandExtendedDataMap = IndexMap<&'static str, CommandExtendedData>;
+pub type CommandAndPermissions = (Command, CommandExtendedDataMap);
 
 /// List of enabled commands
 /// 
@@ -17,32 +18,35 @@ pub fn enabled_commands() -> Vec<Vec<CommandAndPermissions>> {
     ]
 }
 
-#[derive(Default, Clone, PartialEq)]
-pub struct NativePermissions {
-    /// The permission level needed to run this command (discord)
-    pub perms: Vec<serenity::all::Permissions>,
+#[derive(Default, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+pub struct PermissionCheck {
+    /// The kittycat permissions needed to run the command
+    pub kittycat_perms: Vec<String>,
+    /// The native permissions needed to run the command
+    pub native_perms: Vec<serenity::all::Permissions>,
+    /// Whether the next permission check should be ANDed (all needed) or OD'd (at least one) to the current
+    pub outer_and: bool,
     /// Whether or not the perms are ANDed (all needed) or OD'd (at least one)
-    pub and: bool,
+    pub inner_and: bool,    
 }
 
-#[derive(Default, Clone, PartialEq)]
-pub struct KittycatPermissions {
-    /// The permission level needed to run this command (kittycat)
-    pub perms: Vec<String>,
-    /// Whether or not the perms are ANDed (all needed) or OD'd (at least one)
-    pub and: bool,
+#[derive(Default, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+pub struct PermissionChecks {
+    /// The list of permission checks
+    pub checks: Vec<PermissionCheck>,
+
+    /// Number of checks that need to be true
+    pub checks_needed: usize,
 }
 
 #[derive(Clone, PartialEq, Default)]
 pub struct CommandExtendedData {
-    /// The permission level needed to run this command (kittycat)
-    pub kittycat_perms: Option<KittycatPermissions>,
-    /// The corresponding native permission(s)
-    pub native_perms: Option<NativePermissions>,
+    /// The default permissions needed to run this command
+    pub default_perms: PermissionChecks,
 }
 
 /// Command extra data (permissions)
-pub static COMMAND_EXTRA_DATA: Lazy<indexmap::IndexMap<String, CommandExtendedData>> = Lazy::new(|| {
+pub static COMMAND_EXTRA_DATA: Lazy<indexmap::IndexMap<String, CommandExtendedDataMap>> = Lazy::new(|| {
     let mut map = indexmap::IndexMap::new();
     
     for commands in enabled_commands() {
@@ -54,18 +58,8 @@ pub static COMMAND_EXTRA_DATA: Lazy<indexmap::IndexMap<String, CommandExtendedDa
     map
 });
 
-#[derive(Clone, PartialEq, serde::Serialize, serde::Deserialize, strum_macros::EnumString, strum_macros::EnumVariantNames)]
-pub enum GuildCommandConfigurationPermissionMethod {
-    /// The permission method is native
-    Native,
-    /// The permission method is kittycat
-    Kittycat,
-    /// Unknown permission method
-    Unknown,
-}
-
 /// Guild command configuration data
-#[derive(Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, PartialEq, serde::Serialize, serde::Deserialize, Default)]
 pub struct GuildCommandConfiguration {
     /// Thd ID
     pub id: String,
@@ -74,7 +68,7 @@ pub struct GuildCommandConfiguration {
     /// The command name
     pub command: String,
     /// The permission method (kittycat)
-    pub permission_method: GuildCommandConfigurationPermissionMethod,
+    pub perms: Option<PermissionChecks>,
     /// Whether or not the command is disabled
     pub disabled: bool,
 }
@@ -109,14 +103,31 @@ pub fn permute_command_names(name: &str) -> Vec<String> {
 }
 
 /// Returns the configuration of a command
-pub async fn get_command_configuration(pool: &sqlx::PgPool, guild_id: &str, name: &str) -> Result<Option<GuildCommandConfiguration>, crate::Error> {
+pub async fn get_command_configuration(pool: &sqlx::PgPool, guild_id: &str, name: &str) -> Result<(CommandExtendedData, Option<GuildCommandConfiguration>), crate::Error> {
     let permutations = permute_command_names(name);
+    let root_cmd = permutations.first().unwrap();
+
+    let root_cmd_data = COMMAND_EXTRA_DATA.get(root_cmd);
+
+    let Some(root_cmd_data) = root_cmd_data else {
+        return Err(
+            format!("The command ``{}`` does not exist [no root configuration found?]", name).into()
+        );
+    };
+
+    let mut cmd_data = root_cmd_data.get("").unwrap_or(&CommandExtendedData::default()).clone();
+    for command in permutations.iter() {
+        let cmd_replaced = command.replace(&root_cmd.to_string(), "");
+        if let Some(data) = root_cmd_data.get(&cmd_replaced.as_str()) {
+            cmd_data = data.clone();
+        }
+    }
 
     let mut command_configuration = None;
 
-    for permutation in permutations {
+    for permutation in permutations.iter() {
         let rec = sqlx::query!(
-            "SELECT id, guild_id, command, perm_method, disabled FROM guild_command_configurations WHERE guild_id = $1 AND command = $2",
+            "SELECT id, guild_id, command, perms, disabled FROM guild_command_configurations WHERE guild_id = $1 AND command = $2",
             guild_id,
             permutation,
         )
@@ -129,114 +140,142 @@ pub async fn get_command_configuration(pool: &sqlx::PgPool, guild_id: &str, name
                 id: rec.id.hyphenated().to_string(),
                 guild_id: rec.guild_id,
                 command: rec.command,
-                permission_method: GuildCommandConfigurationPermissionMethod::from_str(&rec.perm_method).unwrap_or(GuildCommandConfigurationPermissionMethod::Unknown),
+                perms: {
+                    if let Some(perms) = rec.perms {
+                        serde_json::from_value(perms).unwrap()
+                    } else {
+                        None
+                    }
+                },
                 disabled: rec.disabled,
             });
         }
     }
 
-    Ok(command_configuration)
+    Ok((cmd_data, command_configuration))
+}
+
+/// This function runs a single permission check on a command without taking any branching decisions
+/// 
+/// This may be useful when mocking or visualizing a permission check
+pub fn check_perms_single(cmd_qualified_name: &str, cmd_real_name: &str, check: &PermissionCheck, member_native_perms: serenity::all::Permissions, member_kittycat_perms: &[String]) -> Result<(), (String, crate::Error)> {
+    // Kittycat
+    if check.inner_and {
+        // inner AND, short-circuit if we don't have the permission
+        for perm in &check.kittycat_perms {
+            if !kittycat::perms::has_perm(member_kittycat_perms, perm) {
+                return Err(
+                    (
+                        "missing_kittycat_perms".into(),
+                        format!("You do not have the required permissions to run this command (``{}``) implied from ``{}``. You need ``{}`` permissions to execute this command.", cmd_qualified_name, cmd_real_name, perm).into()
+                    )
+                );
+            }
+        }
+
+        for perm in &check.native_perms {
+            if !member_native_perms.contains(*perm) {
+                return Err(
+                    (
+                        "missing_native_perms".into(),
+                        format!("You do not have the required permissions to run this command (``{}``) implied from ``{}``. You need ``{}`` permissions to execute this command.", cmd_qualified_name, cmd_real_name, perm).into()
+                    )
+                );
+            }
+        }
+    } else {
+        // inner OR, short-circuit if we have the permission
+        let has_any_np = check.native_perms.iter().any(|perm| member_native_perms.contains(*perm));
+        
+        if !has_any_np {
+            let has_any_kc = check.kittycat_perms.iter().any(|perm| kittycat::perms::has_perm(member_kittycat_perms, perm));
+
+            if !has_any_kc {
+                let np = check.native_perms.iter().map(|p| format!("{}", p)).collect::<Vec<String>>().join(" | ");
+
+                let perms = format!("*Discord*: ``{}`` OR *Custom Permissions*: ``{}``", check.kittycat_perms.join(" | "), np);
+
+                return Err(
+                    (
+                        "missing_any_perms".into(),
+                        format!("You do not have the required permissions to run this command (``{}``) implied from ``{}``. You need at least one of the following permissions to execute this command:\n``{}``", cmd_qualified_name, cmd_real_name, perms).into()
+                    )
+                );
+            }
+        }
+    }    
+
+    Ok(())
+}
+
+pub fn can_run_command(
+    cmd_data: &CommandExtendedData, 
+    command_config: &GuildCommandConfiguration, 
+    cmd_qualified_name: &str, 
+    member_native_perms: serenity::all::Permissions,
+    member_kittycat_perms: &[String],
+) -> Result<(), (String, crate::Error)> {
+    if command_config.disabled {
+        return Err(
+            (
+                "command_disabled".into(),
+                format!("The command ``{}`` (inherited from ``{}`` is disabled on this server", cmd_qualified_name, command_config.command).into()
+            )
+        );
+    }
+
+    let perms = command_config.perms.as_ref().unwrap_or(&cmd_data.default_perms);
+
+    if perms.checks.is_empty() {
+        return Ok(());
+    }
+
+    // This stores whether or not we need to check the next permission AND the current one or OR the current one 
+    let mut outer_and = false;
+    let mut success: usize = 0;
+    
+    for check in &perms.checks {
+        // Run the check
+        let res = check_perms_single(cmd_qualified_name, &command_config.command, check, member_native_perms, member_kittycat_perms);
+
+        if outer_and {
+            #[allow(clippy::question_mark)] // Question mark needs cloning which may harm performance
+            if res.is_err() {
+                return res;
+            }
+
+            // AND yet check_perms_single returned an error, so we can short-circuit and checks_needed
+            if success >= perms.checks_needed {
+                return res;
+            }
+        } else {
+            // OR, so we can short-circuit if we have the permission and checks_needed
+            if res.is_ok() && success >= perms.checks_needed {
+                return res;
+            }
+        }
+        
+        if res.is_ok() {
+            success += 1;
+        }
+
+        // Set the outer AND to the new outer AND
+        outer_and = check.outer_and;
+    }
+
+    Ok(())
 }
 
 impl CommandExtendedData {
-    pub async fn can_run_command(&self, cache_http: &crate::impls::cache::CacheHttpImpl, pool: &sqlx::PgPool, cmd: &Command, member: &serenity::all::Member) -> Result<(), crate::Error> {
-        let Some(command_config) = get_command_configuration(pool, &member.guild_id.to_string(), &cmd.qualified_name).await? else {
-            return Ok(()); // No command configuration, so we can run the command
-        };
-
-        if command_config.disabled {
-            return Err(
-                format!("The command ``{}`` (inherited from ``{}`` is disabled on this server", cmd.qualified_name, command_config.command).into()
-            );
-        }
-
-        if self.kittycat_perms.is_none() && self.native_perms.is_none() {
-            return Ok(()); // Optimisation: Early return if no perms are set
-        }
-
-        match command_config.permission_method {
-            GuildCommandConfigurationPermissionMethod::Native => {
-                if let Some(native_perms) = &self.native_perms {
-                    let mut has_perms = false;
-
-                    let member_perms = member.permissions(&cache_http.cache)
-                    .map_err(|e| format!("Failed to get member permissions: {}", e))?;
-                    
-                    if native_perms.and {
-                        for perm in &native_perms.perms {
-                            if !member_perms.contains(*perm) {
-                                return Err(
-                                    format!("You do not have the required permissions to run this command (``{}``) implied from ``{}``. You need ``{}`` permissions to execute this command.", cmd.qualified_name, command_config.command, perm).into()
-                                );
-                            }
-                        }
-                    } else {
-                        for perm in &native_perms.perms {
-                            if member_perms.contains(*perm) {
-                                has_perms = true;
-                                break;
-                            }
-                        }
-
-                        if !has_perms {
-                            let mut perms = Vec::new();
-                            for perm in &native_perms.perms {
-                                perms.push(perm.get_permission_names().iter().map(|s| s.to_string()).collect::<Vec<String>>().join(",").to_string());
-                            }
-
-                            let perms: String = perms.join(" | ");
-
-                            return Err(
-                                format!("You do not have the required permissions to run this command (``{}``) implied from ``{}``. You need at least one of the following permissions to execute this command: ``{}``", cmd.qualified_name, command_config.command, perms).into()
-                            );
-                        }
-                    }
-                } else {
-                    return Err(
-                        format!("The command ``{}`` (inherited from ``{}`` does *not* support native permissions yet! Please ask a higher-up to edit server settings!", cmd.qualified_name, command_config.command).into()
-                    );
-                }
-            },
-            GuildCommandConfigurationPermissionMethod::Kittycat => {
-                if let Some(kittycat_perms) = &self.kittycat_perms {
-                    let mut has_perms = false;
-
-                    let member_perms: Vec<String> = Vec::new(); // TODO: Implement support for fetching member perms
-
-                    if kittycat_perms.and {
-                        for perm in &kittycat_perms.perms {
-                            if !kittycat::perms::has_perm(&member_perms, perm) {
-                                return Err(
-                                    format!("You do not have the required permissions to run this command (``{}``) implied from ``{}``. You need ``{}`` permissions to execute this command.", cmd.qualified_name, command_config.command, perm).into()
-                                );
-                            }
-                        }
-                    } else {
-                        for perm in &kittycat_perms.perms {
-                            if member_perms.contains(perm) {
-                                has_perms = true;
-                                break;
-                            }
-                        }
-
-                        if !has_perms {
-                            let perms = kittycat_perms.perms.join(" | ");
-
-                            return Err(
-                                format!("You do not have the required permissions to run this command (``{}``) implied from ``{}``. You need at least one of the following permissions to execute this command: ``{}``", cmd.qualified_name, command_config.command, perms).into()
-                            );
-                        }
-                    }
-                }
-            },
-            GuildCommandConfigurationPermissionMethod::Unknown => {
-                return Err(
-                    format!("The command ``{}`` (inherited from ``{}`` is disabled on this server", cmd.qualified_name, command_config.command).into()
-                );
+    pub fn none() -> CommandExtendedDataMap {
+        indexmap! {
+            "" => CommandExtendedData {
+                default_perms: PermissionChecks {
+                    checks: vec![],
+                    checks_needed: 0,
+                },
             },
         }
-
-        Ok(())
     }
 }
 
@@ -250,5 +289,22 @@ mod tests {
         assert_eq!(permute_command_names("limits"), vec!["limits"]);
         assert_eq!(permute_command_names("limits hit"), vec!["limits", "limits hit"]);
         assert_eq!(permute_command_names("limits hit add"), vec!["limits", "limits hit", "limits hit add"]);
+    }
+
+    #[test]
+    fn test_can_run_command() {
+        assert!(can_run_command(
+            &CommandExtendedData::none().get("").unwrap().clone(),
+            &GuildCommandConfiguration {
+                id: "test".into(),
+                guild_id: "test".into(),
+                command: "test".into(),
+                perms: None,
+                disabled: false,
+            },
+            "test",
+            serenity::all::Permissions::empty(),
+            &["abc.test".into()],
+        ).is_ok());
     }
 }
