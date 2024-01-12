@@ -1,7 +1,7 @@
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 -- Stores the limits that are applied to a guild
-CREATE TABLE limits (
+CREATE TABLE limits__guild_limits (
     guild_id TEXT NOT NULL REFERENCES guilds(id) ON DELETE CASCADE ON UPDATE CASCADE,
     limit_id TEXT PRIMARY KEY DEFAULT uuid_generate_v4(),
     limit_name TEXT NOT NULL default 'Untitled',
@@ -14,7 +14,7 @@ CREATE TABLE limits (
 
 -- Stores a list of user actions and which limits they have hit
 -- A user action contributes to a limit
-CREATE TABLE user_actions (
+CREATE TABLE limits__user_actions (
     action_id TEXT PRIMARY KEY,
     limit_type TEXT NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -25,7 +25,7 @@ CREATE TABLE user_actions (
 );
 
 -- Stores the past limits that have been applied in a guild
-CREATE TABLE past_hit_limits (
+CREATE TABLE limits__past_hit_limits (
     id TEXT PRIMARY KEY,
     user_id TEXT NOT NULL,
     guild_id TEXT NOT NULL REFERENCES guilds(id) ON DELETE CASCADE ON UPDATE CASCADE,

@@ -24,7 +24,7 @@ pub async fn precheck_guild(pool: &PgPool, guild_id: GuildId, limit: &super::cor
     }
 
     let guild = sqlx::query!(
-        "SELECT COUNT(*) FROM limits WHERE guild_id = $1 AND limit_type = $2
+        "SELECT COUNT(*) FROM limits__guild_limits WHERE guild_id = $1 AND limit_type = $2
     ",
         guild_id.to_string(),
         limit_str
@@ -60,10 +60,10 @@ pub async fn handle_mod_action(
     {
         let mut tx = pool.begin().await?;
 
-        // Insert into user_actions
+        // Insert into limits__user_actions
         sqlx::query!(
             "
-            INSERT INTO user_actions (action_id, guild_id, user_id, limit_type, action_data)
+            INSERT INTO limits__user_actions (action_id, guild_id, user_id, limit_type, action_data)
             VALUES ($1, $2, $3, $4, $5)
         ",
             crate::impls::crypto::gen_random(48),
@@ -124,7 +124,7 @@ pub async fn handle_mod_action(
 
                 sqlx::query!(
                     "
-                INSERT INTO past_hit_limits
+                INSERT INTO limits__past_hit_limits
                 (id, guild_id, user_id, limit_id, cause, notes)
                 VALUES ($1, $2, $3, $4, $5, $6)",
                     crate::impls::crypto::gen_random(16),
@@ -147,7 +147,7 @@ pub async fn handle_mod_action(
             for action in hit_limit.cause.iter() {
                 sqlx::query!(
                     "
-                UPDATE user_actions
+                UPDATE limits__user_actions
                 SET limits_hit = array_append(limits_hit, $1)
                 WHERE action_id = $2",
                     hit_limit.limit.limit_id,
@@ -159,7 +159,7 @@ pub async fn handle_mod_action(
 
             sqlx::query!(
                 "
-            INSERT INTO past_hit_limits
+            INSERT INTO limits__past_hit_limits
             (id, guild_id, user_id, limit_id, cause)
             VALUES ($1, $2, $3, $4, $5)",
                 crate::impls::crypto::gen_random(16),

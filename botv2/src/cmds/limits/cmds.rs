@@ -40,7 +40,7 @@ pub async fn limits_add(
     // Add limit to db
     sqlx::query!(
         "
-            INSERT INTO limits (
+            INSERT INTO limits__guild_limits (
                 guild_id,
                 limit_name,
                 limit_type,
@@ -139,7 +139,7 @@ pub async fn limits_remove(
     // Look for limit using COUNT
     let count = sqlx::query!(
         "
-            SELECT COUNT(*) FROM limits
+            SELECT COUNT(*) FROM limits__guild_limits
             WHERE guild_id = $1
             AND limit_id = $2
         ",
@@ -156,7 +156,7 @@ pub async fn limits_remove(
     // Remove limit
     sqlx::query!(
         "
-            DELETE FROM limits
+            DELETE FROM limits__guild_limits
             WHERE guild_id = $1
             AND limit_id = $2
         ",

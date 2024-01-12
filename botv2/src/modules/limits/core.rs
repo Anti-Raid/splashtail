@@ -151,7 +151,7 @@ impl Action {
         let r = sqlx::query!(
             "
                 SELECT user_id, limit_type, created_at, action_data, limits_hit
-                FROM user_actions
+                FROM limits__user_actions
                 WHERE guild_id = $1
                 AND action_id = $2
             ",
@@ -184,7 +184,7 @@ impl Action {
         let rec = sqlx::query!(
             "
                 SELECT action_id, limit_type, created_at, action_data, limits_hit
-                FROM user_actions
+                FROM limits__user_actions
                 WHERE guild_id = $1
                 AND user_id = $2
             ",
@@ -216,7 +216,7 @@ impl Action {
         let rec = sqlx::query!(
             "
                 SELECT action_id, limit_type, created_at, user_id, action_data, limits_hit
-                FROM user_actions
+                FROM limits__user_actions
                 WHERE guild_id = $1
             ",
             guild_id.to_string()
@@ -258,7 +258,7 @@ impl Limit {
         let rec = sqlx::query!(
             "
                 SELECT limit_id, limit_name, limit_type, limit_action, limit_per, limit_time
-                FROM limits
+                FROM limits__guild_limits
                 WHERE guild_id = $1
             ",
             guild_id.to_string()
@@ -304,7 +304,7 @@ impl CurrentUserLimitsHit {
             let rec = sqlx::query!(
                 "
                     SELECT action_id, created_at, user_id, action_data, limits_hit
-                    FROM user_actions
+                    FROM limits__user_actions
                     WHERE guild_id = $1
                     AND NOT($4 = ANY(limits_hit)) -- Not already handled
                     AND NOW() - created_at < $2
@@ -355,7 +355,7 @@ impl PastHitLimits {
     pub async fn guild(pool: &PgPool, guild_id: GuildId) -> Result<Vec<Self>, Error> {
         let rec = sqlx::query!(
             "
-                SELECT id, user_id, limit_id, cause, notes, created_at FROM past_hit_limits
+                SELECT id, user_id, limit_id, cause, notes, created_at FROM limits__past_hit_limits
                 WHERE guild_id = $1
             ",
             guild_id.to_string()
