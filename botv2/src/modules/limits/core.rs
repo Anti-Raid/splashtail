@@ -62,15 +62,15 @@ pub enum UserLimitTypes {
     RoleAdd,       // set
     RoleUpdate,    // set
     RoleRemove,    // set
-    RoleGivenToMember,
-    RoleRemovedFromMember,
-    MemberRolesUpdated,
+    RoleGivenToMember, // set
+    RoleRemovedFromMember, // set
+    MemberRolesUpdated, // set
     ChannelAdd,    // set
     ChannelUpdate, // set
     ChannelRemove, //set
-    Kick, // set
-    Ban, // set
-    Unban, // set
+    Kick,
+    Ban, 
+    Unban,
 }
 
 impl UserLimitTypes {

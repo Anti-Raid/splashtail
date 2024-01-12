@@ -1,7 +1,6 @@
 use log::{error, info};
-use poise::serenity_prelude::{FullEvent, RoleAction};
+use poise::serenity_prelude::{FullEvent, RoleAction, MemberAction, Change};
 use serenity::model::guild::audit_log::{Action, ChannelAction};
-use std::collections::HashSet;
 
 use crate::{Data, Error};
 
@@ -12,12 +11,6 @@ pub async fn event_listener(_ctx: &serenity::client::Context, event: &FullEvent,
             guild_id,
         } => {
             info!("Audit log created: {:?}. Guild: {}", entry, guild_id);
-
-            super::handler::precheck_guild(&user_data.pool, *guild_id).await
-                .map_err(|e| {
-                    info!("Pre-check for guild {} failed: {}", guild_id, e);
-                    e
-                })?;
 
             let res = match entry.action {
                 Action::Channel(ch) => {
@@ -134,6 +127,149 @@ pub async fn event_listener(_ctx: &serenity::client::Context, event: &FullEvent,
                         _ => Ok(()),
                     }
                 },
+                Action::Member(ma) => {
+                    let Some(target) = entry.target_id else {
+                        error!("MEMBER update: No target ID found");
+                        return Err("No target ID found".into());
+                    };
+
+                    #[allow(clippy::single_match)] // Plans to add further events are coming
+                    match ma {
+                        MemberAction::RoleUpdate => {
+                            let Some(ref changes) = entry.changes else {
+                                error!("MEMBER update: No changes found");
+                                return Err("No changes found".into());
+                            };
+
+                            let mut added = Vec::new();
+                            let mut removed = Vec::new();
+                            let mut old_roles = Vec::new();
+
+                            for change in changes {
+                                match change {
+                                    Change::RolesAdded { old, new } => {
+                                        let Some(old) = old else {
+                                            error!("MEMBER update: No old roles found");
+                                            continue;
+                                        };
+
+                                        if old_roles.is_empty() {
+                                            for role in old.iter() {
+                                               old_roles.push(role.id);
+                                            }
+                                        }
+
+                                        let Some(new) = new else {
+                                            error!("MEMBER update: No new roles found");
+                                            continue;
+                                        };
+
+                                        for role in new.iter() {
+                                            if !old.contains(role) {
+                                                added.push(role.id);
+                                            }
+                                        }
+                                    },
+                                    Change::RolesRemove {
+                                        old,
+                                        new,
+                                    } => {
+                                        let Some(old) = old else {
+                                            error!("MEMBER update: No old roles found");
+                                            continue;
+                                        };
+
+                                        if old_roles.is_empty() {
+                                            for role in old.iter() {
+                                                old_roles.push(role.id);
+                                            }
+                                        }
+
+                                        let Some(new) = new else {
+                                            error!("MEMBER update: No new roles found");
+                                            continue;
+                                        };
+
+                                        for role in old.iter() {
+                                            if !new.contains(role) {
+                                                removed.push(role.id);
+                                            }
+                                        }
+                                    },
+                                    _ => {}
+                                }
+                            }
+                            
+                            super::handler::handle_mod_action(
+                                *guild_id,
+                                entry.user_id,
+                                &user_data.pool,
+                                &user_data.cache_http,
+                                super::core::UserLimitTypes::MemberRolesUpdated,
+                                &serde_json::json!(
+                                    {
+                                        "old": old_roles,
+                                        "added": added,
+                                        "removed": removed,
+                                        "target": target.to_string(),
+                                    }
+                                ),
+                            )
+                            .await?;
+
+                            if !added.is_empty() {
+                                info!("Added roles: {:?}", added);
+
+                                for role in added.iter() {
+                                    super::handler::handle_mod_action(
+                                        *guild_id,
+                                        entry.user_id,
+                                        &user_data.pool,
+                                        &user_data.cache_http,
+                                        super::core::UserLimitTypes::RoleGivenToMember,
+                                        &serde_json::json!(
+                                            {
+                                                "old": old_roles,
+                                                "added": added,
+                                                "removed": removed,
+                                                "for": role.to_string(),
+                                                "target": target.to_string(),
+                                            }
+                                        ),
+                                    )
+                                    .await?;
+                                }
+                            }
+
+                            if !removed.is_empty() {
+                                info!("Removed roles: {:?}", removed);
+
+                                for role in removed.iter() {
+                                    super::handler::handle_mod_action(
+                                        *guild_id,
+                                        entry.user_id,
+                                        &user_data.pool,
+                                        &user_data.cache_http,
+                                        super::core::UserLimitTypes::RoleRemovedFromMember,
+                                        &serde_json::json!(
+                                            {
+                                                "old": old_roles,
+                                                "added": added,
+                                                "removed": removed,
+                                                "for": role.to_string(),
+                                                "target": target.to_string(),
+                                            }
+                                        ),
+                                    )
+                                    .await?;
+                                }
+                            }
+                        }
+                        _ => {}
+                    }
+
+                    Ok(())
+                },
                 _ => Ok(()),
             };
 
@@ -144,114 +280,6 @@ pub async fn event_listener(_ctx: &serenity::client::Context, event: &FullEvent,
 
             Ok(())
         },
-        FullEvent::GuildMemberUpdate { old_if_available, new, event } => {
-            super::handler::precheck_guild(&user_data.pool, event.guild_id).await?;
-
-            let Some(old) = old_if_available else {
-                error!("No old member found");
-                return Err("No old member found".into());
-            };
-
-            let old_roles = old.roles.clone();
-
-            let new_roles = if let Some(new) = new {
-                new.roles.clone()
-            } else {
-                event.roles.clone()
-            };
-
-            // Get old and new roles
-            let mut old_roles_hs = HashSet::new();
-            let mut new_roles_hs = HashSet::new();
-
-            for role in old_roles.iter() {
-                old_roles_hs.insert(role);
-            }
-            
-            for role in new_roles.iter() {
-                new_roles_hs.insert(role);
-            }
-
-            let diff = old_roles_hs.symmetric_difference(&new_roles_hs).collect::<Vec<_>>();
-
-            if !diff.is_empty() {
-                info!("Roles changed for user {} in guild {}", event.user.id, event.guild_id);
-
-                super::handler::handle_mod_action(
-                    event.guild_id,
-                    event.user.id,
-                    &user_data.pool,
-                    &user_data.cache_http,
-                    super::core::UserLimitTypes::MemberRolesUpdated,
-                    &serde_json::json!(
-                        {
-                            "old": old_roles_hs,
-                            "new": new_roles_hs
-                        }
-                    ),
-                )
-                .await?;
-
-                let mut added = Vec::new();
-                let mut removed = Vec::new();
-
-                for role in new_roles.iter() {
-                    if !old_roles.contains(role) {
-                        added.push(role);
-                    }
-                }
-
-                for role in old_roles.iter() {
-                    if !new_roles.contains(role) {
-                        removed.push(role);
-                    }
-                }
-
-                if !added.is_empty() {
-                    info!("Added roles: {:?}", added);
-
-                    super::handler::handle_mod_action(
-                        event.guild_id,
-                        event.user.id,
-                        &user_data.pool,
-                        &user_data.cache_http,
-                        super::core::UserLimitTypes::RoleGivenToMember,
-                        &serde_json::json!(
-                            {
-                                "old": old_roles_hs,
-                                "new": new_roles_hs,
-                                "added": added,
-                                "removed": removed
-                            }
-                        ),
-                    )
-                    .await?;
-                }
-
-                if !removed.is_empty() {
-                    info!("Removed roles: {:?}", removed);
-
-                    super::handler::handle_mod_action(
-                        event.guild_id,
-                        event.user.id,
-                        &user_data.pool,
-                        &user_data.cache_http,
-                        super::core::UserLimitTypes::RoleRemovedFromMember,
-                        &serde_json::json!(
-                            {
-                                "old": old_roles_hs,
-                                "new": new_roles_hs,
-                                "added": added,
-                                "removed": removed
-                            }
-                        ),
-                    )
-                    .await?;
-                }
-            }
-
-            Ok(())
-        },
-        _ => Ok(())
+        _ => Ok(()),
     }
 }
