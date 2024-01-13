@@ -43,17 +43,79 @@ pub async fn precheck_guild(pool: &PgPool, guild_id: GuildId, limit: &super::cor
     Ok(())
 }
 
+/// Returns true if the same user+target combo has appeared in the time interval user_target_repeat_rate
+pub async fn ignore_handling(pool: &PgPool, ha: &HandleModAction) -> Result<bool, Error> {
+    let repeat_rate = {
+        let user_target_settings = core::GuildUserTargetSettings::from_guild(pool, ha.guild_id).await?;
+
+        if user_target_settings.is_empty() {
+            ha.limit.default_user_target_repeat_rate()
+        } else {
+            user_target_settings
+                .iter()
+                .find(|a| a.limit_type == ha.limit)
+                .map(|a| a.user_target_repeat_rate)
+                .unwrap_or_else(|| ha.limit.default_user_target_repeat_rate())
+        }
+    };
+
+    // Get the last time the same user-target combo was handled
+    let last_time_rec = sqlx::query!(
+        "
+            SELECT created_at FROM limits__user_actions
+            WHERE guild_id = $1
+            AND user_id = $2
+            AND target = $3
+            ORDER BY created_at DESC
+            LIMIT 1
+        ",
+        ha.guild_id.to_string(),
+        ha.user_id.to_string(),
+        ha.target.to_string()
+    )
+    .fetch_one(pool)
+    .await?;
+
+    // Check if the last time was within the repeat rate
+    if (sqlx::types::chrono::Utc::now() - last_time_rec.created_at).num_seconds() < repeat_rate {
+        return Ok(true); // Ignore
+    }
+
+    Ok(false) // Don't ignore 
+}
+
+pub struct HandleModAction {
+    /// Guild ID
+    pub guild_id: GuildId,
+    /// User ID
+    pub user_id: UserId,
+    /// Limit to handle for the User ID in question
+    pub limit: core::UserLimitTypes,
+    /// Target of the action
+    pub target: String,
+    /// Extra data for the action
+    pub action_data: serde_json::Value,
+}
+
 pub async fn handle_mod_action(
-    guild_id: GuildId,
-    user_id: UserId,
     pool: &PgPool,
     cache_http: &CacheHttpImpl,
-    limit: core::UserLimitTypes,
-    action_data: &serde_json::Value,
+    ha: &HandleModAction,
 ) -> Result<(), Error> {
+    let guild_id = ha.guild_id;
+    let limit = &ha.limit;
+    let user_id = ha.user_id;
+    let target = ha.target.clone();
+    let action_data = &ha.action_data;
+
     if let Err(e) = precheck_guild(pool, guild_id, &limit).await {
         debug!("Limits precheck failed: {}", e);
         return Ok(()) // Avoid spamming errors
+    }
+
+    if ignore_handling(pool, ha).await? {
+        debug!("Ignoring handling [limit={}, user_id={}, target={}]", limit, user_id, target);
+        return Ok(());
     }
     
     // SAFETY: Tx should be dropped if error occurs, so make a scope to seperate tx queries
@@ -63,12 +125,14 @@ pub async fn handle_mod_action(
         // Insert into limits__user_actions
         sqlx::query!(
             "
-            INSERT INTO limits__user_actions (action_id, guild_id, user_id, limit_type, action_data)
-            VALUES ($1, $2, $3, $4, $5)
+            INSERT INTO limits__user_actions 
+            (action_id, guild_id, user_id, target, limit_type, action_data)
+            VALUES ($1, $2, $3, $4, $5, $6)
         ",
             crate::impls::crypto::gen_random(48),
             guild_id.to_string(),
             user_id.to_string(),
+            target,
             limit.to_string(),
             action_data
         )

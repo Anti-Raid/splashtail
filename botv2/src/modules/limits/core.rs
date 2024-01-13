@@ -1,3 +1,4 @@
+use num_traits::ToPrimitive;
 use poise::serenity_prelude::{GuildId, UserId};
 use serde::Serialize;
 use sqlx::{
@@ -90,6 +91,18 @@ impl UserLimitTypes {
             Self::Unban => "Unbans".to_string(),
         }
     }
+
+    /// Returns the default repeat rate for a user-target pair
+    /// 
+    /// Within this rate, limits will be ignored if the same user-target pair has already been handled
+    pub fn default_user_target_repeat_rate(&self) -> i64 {
+        match self {
+            Self::RoleGivenToMember => 2, // 2 seconds
+            Self::RoleRemovedFromMember => 2, // 2 seconds
+            Self::MemberRolesUpdated => 5, // 5 seconds
+            _ => 0, // No repeat rate as other events are more accurate
+        }
+    }
 }
 
 #[derive(poise::ChoiceParameter)]
@@ -130,19 +143,74 @@ impl UserLimitActions {
     }
 }
 
-#[derive(Clone, Debug, Serialize)]
-pub struct Action {
-    pub action_id: String,
-    pub limit_type: UserLimitTypes,
-    pub created_at: DateTime<Utc>,
-    pub user_id: UserId,
+#[derive(Clone, Debug)]
+pub struct GuildUserTargetSettings {
+    /// The guild id
     pub guild_id: GuildId,
-    pub action_data: serde_json::Value,
-    pub limits_hit: Vec<String>,
+    /// If the event has a specific target, the interval at which further events regarding the same user-target pair should be ignored
+    pub user_target_repeat_rate: i64,
+    /// The limit type this field is applicable to
+    pub limit_type: UserLimitTypes,
 }
 
-impl Action {
-    /// Fetch actions for a action id
+impl GuildUserTargetSettings {
+    pub async fn from_guild(pool: &PgPool, guild_id: GuildId) -> Result<Vec<Self>, Error> {
+        match sqlx::query!(
+            "
+                SELECT EXTRACT(seconds FROM user_target_repeat_rate) AS user_target_repeat_rate, limit_type FROM limits__guild_user_target_settings
+                WHERE guild_id = $1
+            ",
+            guild_id.to_string()
+        )
+        .fetch_all(pool)
+        .await {
+            Ok(records) => {
+                let mut settings = Vec::new();
+
+                for rec in records {
+                    settings.push(Self {
+                        guild_id,
+                        user_target_repeat_rate: {
+                            if let Some(rate) = rec.user_target_repeat_rate {
+                                rate.to_i64().expect("rate cannot be parsed to i64. This should never occur")
+                            } else {
+                                0
+                            }
+                        },
+                        limit_type: rec.limit_type.parse()?,
+                    });
+                }
+
+                Ok(settings)
+            },
+            Err(sqlx::Error::RowNotFound) => Ok(Vec::new()),
+            Err(e) => Err(e.into()),
+        }
+    }
+}
+
+#[derive(Clone, Debug, Serialize)]
+pub struct UserAction {
+    /// The ID of the action
+    pub action_id: String,
+    /// The limit type associated with this action performed
+    pub limit_type: UserLimitTypes,
+    /// The time the action was performed
+    pub created_at: DateTime<Utc>,
+    /// The ID of the user who performed the action
+    pub user_id: UserId,
+    /// The ID of the guild the action was performed in
+    pub guild_id: GuildId,
+    /// The data associated with the action (extra data etc.)
+    pub action_data: serde_json::Value,
+    /// The limits that have been hit for this action
+    pub limits_hit: Vec<String>,
+    /// The target the action was intended for
+    pub target: String,
+}
+
+impl UserAction {
+    /// Fetch user actions for a action id
     pub async fn by_id(
         pool: &PgPool,
         guild_id: GuildId,
@@ -150,8 +218,8 @@ impl Action {
     ) -> Result<Self, Error> {
         let r = sqlx::query!(
             "
-                SELECT user_id, limit_type, created_at, action_data, limits_hit
-                FROM limits__user_actions
+                SELECT user_id, limit_type, created_at, action_data, 
+                limits_hit, target FROM limits__user_actions
                 WHERE guild_id = $1
                 AND action_id = $2
             ",
@@ -170,12 +238,13 @@ impl Action {
             created_at: r.created_at,
             action_data: r.action_data,
             limits_hit: r.limits_hit,
+            target: r.target,
         };
 
         Ok(actions)
     }
 
-    /// Fetch actions for user
+    /// Fetch actions for a user in a guild
     pub async fn user(
         pool: &PgPool,
         guild_id: GuildId,
@@ -183,8 +252,8 @@ impl Action {
     ) -> Result<Vec<Self>, Error> {
         let rec = sqlx::query!(
             "
-                SELECT action_id, limit_type, created_at, action_data, limits_hit
-                FROM limits__user_actions
+                SELECT action_id, limit_type, created_at, action_data, 
+                limits_hit, target FROM limits__user_actions
                 WHERE guild_id = $1
                 AND user_id = $2
             ",
@@ -205,18 +274,19 @@ impl Action {
                 created_at: r.created_at,
                 action_data: r.action_data,
                 limits_hit: r.limits_hit,
+                target: r.target,
             });
         }
 
         Ok(actions)
     }
 
-    /// Fetch actions for guild
+    /// Fetch all user actions in a guild
     pub async fn guild(pool: &PgPool, guild_id: GuildId) -> Result<Vec<Self>, Error> {
         let rec = sqlx::query!(
             "
-                SELECT action_id, limit_type, created_at, user_id, action_data, limits_hit
-                FROM limits__user_actions
+                SELECT action_id, limit_type, created_at, user_id, action_data, 
+                limits_hit, target FROM limits__user_actions
                 WHERE guild_id = $1
             ",
             guild_id.to_string()
@@ -235,6 +305,7 @@ impl Action {
                 user_id: r.user_id.parse()?,
                 action_data: r.action_data,
                 limits_hit: r.limits_hit,
+                target: r.target,
             });
         }
 
@@ -244,12 +315,19 @@ impl Action {
 
 #[derive(Debug)]
 pub struct Limit {
+    /// The ID of the guild this limit is for
     pub guild_id: GuildId,
+    /// The ID of the limit
     pub limit_id: String,
+    /// The name of the limit
     pub limit_name: String,
+    /// The type of limit
     pub limit_type: UserLimitTypes,
+    /// The action to take when the limit is hit
     pub limit_action: UserLimitActions,
+    /// The number of times the limit can be hit
     pub limit_per: i32,
+    /// The time frame the limit can be hit in
     pub limit_time: PgInterval,
 }
 
@@ -257,8 +335,8 @@ impl Limit {
     pub async fn from_guild(pool: &PgPool, guild_id: GuildId) -> Result<Vec<Self>, Error> {
         let rec = sqlx::query!(
             "
-                SELECT limit_id, limit_name, limit_type, limit_action, limit_per, limit_time
-                FROM limits__guild_limits
+                SELECT limit_id, limit_name, limit_type, limit_action, limit_per, 
+                limit_time FROM limits__guild_limits
                 WHERE guild_id = $1
             ",
             guild_id.to_string()
@@ -287,7 +365,7 @@ impl Limit {
 #[derive(Debug)]
 pub struct CurrentUserLimitsHit {
     pub limit: Limit,
-    pub cause: Vec<Action>,
+    pub cause: Vec<UserAction>,
 }
 
 impl CurrentUserLimitsHit {
@@ -303,12 +381,12 @@ impl CurrentUserLimitsHit {
             // Find all actions that apply to this limit
             let rec = sqlx::query!(
                 "
-                    SELECT action_id, created_at, user_id, action_data, limits_hit
-                    FROM limits__user_actions
+                    SELECT action_id, created_at, user_id, action_data, 
+                    limits_hit, target FROM limits__user_actions
                     WHERE guild_id = $1
                     AND NOT($4 = ANY(limits_hit)) -- Not already handled
-                    AND NOW() - created_at < $2
-                    AND limit_type = $3
+                    AND NOW() - created_at < $2 -- Within limit_time
+                    AND limit_type = $3 -- Limit type
                 ",
                 guild_id.to_string(),
                 limit.limit_time,
@@ -319,7 +397,7 @@ impl CurrentUserLimitsHit {
             .await?;
 
             for r in rec {
-                cause.push(Action {
+                cause.push(UserAction {
                     guild_id,
                     limit_type: limit.limit_type.clone(),
                     created_at: r.created_at,
@@ -327,6 +405,7 @@ impl CurrentUserLimitsHit {
                     action_data: r.action_data,
                     action_id: r.action_id,
                     limits_hit: r.limits_hit,
+                    target: r.target,
                 });
             }
 
@@ -345,7 +424,7 @@ pub struct PastHitLimits {
     pub user_id: UserId,
     pub guild_id: GuildId,
     pub limit_id: String,
-    pub cause: Vec<Action>,
+    pub cause: Vec<UserAction>,
     pub notes: Vec<String>,
     pub created_at: DateTime<Utc>,
 }
@@ -369,7 +448,7 @@ impl PastHitLimits {
             let mut cause = vec![];
 
             for action in r.cause {
-                cause.push(Action::by_id(pool, guild_id, &action).await?);
+                cause.push(UserAction::by_id(pool, guild_id, &action).await?);
             }
 
             hits.push(Self {

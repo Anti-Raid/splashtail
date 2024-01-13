@@ -185,14 +185,14 @@ pub async fn limitactions_view(
 ) -> Result<(), Error> {
     let actions = {
         if let Some(user_id) = user_id {
-            crate::modules::limits::core::Action::user(
+            crate::modules::limits::core::UserAction::user(
                 &ctx.data().pool,
                 ctx.guild_id().ok_or("Could not get guild id")?,
                 user_id,
             )
             .await?
         } else {
-            crate::modules::limits::core::Action::guild(
+            crate::modules::limits::core::UserAction::guild(
                 &ctx.data().pool,
                 ctx.guild_id().ok_or("Could not get guild id")?,
             )
@@ -235,10 +235,11 @@ pub async fn limitactions_view(
         embeds[i] = embeds[i].clone().field(
             action.action_id.clone(),
             format!(
-                "``{limit_type}`` by {user_id} at <t:{timestamp}:R> | {action_data} [{id}]\n**Hit Limits:** {limits_hit:#?}",
+                "``{limit_type}`` by {user_id} on {target} at <t:{timestamp}:R> | {action_data} [{id}]\n**Hit Limits:** {limits_hit:#?}",
                 limit_type = action.limit_type,
                 action_data = serde_json::to_string(&action.action_data).map_err(|_| "Could not serialize action_data")?,
                 user_id = action.user_id.mention().to_string() + " (" + &action.user_id.to_string() + ")",
+                target = action.target, 
                 timestamp = action.created_at.timestamp(),
                 id = action.action_id,
                 limits_hit = action.limits_hit

@@ -21,14 +21,15 @@ pub async fn event_listener(_ctx: &serenity::client::Context, event: &FullEvent,
                             info!("Channel created: {}", ch_id);
 
                             super::handler::handle_mod_action(
-                                *guild_id,
-                                entry.user_id,
                                 &user_data.pool,
                                 &user_data.cache_http,
-                                super::core::UserLimitTypes::ChannelAdd,
-                                &serde_json::json!({
-                                    "channel_id": ch_id.to_string(),
-                                }),
+                                &super::handler::HandleModAction {
+                                    guild_id: *guild_id,
+                                    limit: super::core::UserLimitTypes::ChannelAdd,
+                                    user_id: entry.user_id,
+                                    target: ch_id.to_string(),
+                                    action_data: serde_json::json!({}),
+                                },
                             )
                             .await
                         }
@@ -36,16 +37,15 @@ pub async fn event_listener(_ctx: &serenity::client::Context, event: &FullEvent,
                             info!("Channel deleted: {}", ch_id);
 
                             super::handler::handle_mod_action(
-                                *guild_id,
-                                entry.user_id,
                                 &user_data.pool,
                                 &user_data.cache_http,
-                                super::core::UserLimitTypes::ChannelRemove,
-                                &serde_json::json!(
-                                    {
-                                        "channel_id": ch_id.to_string(),
-                                    }
-                                )
+                                &super::handler::HandleModAction {
+                                    guild_id: *guild_id,
+                                    limit: super::core::UserLimitTypes::ChannelRemove,
+                                    user_id: entry.user_id,
+                                    target: ch_id.to_string(),
+                                    action_data: serde_json::json!({}),
+                                },
                             )
                             .await
                         }
@@ -53,16 +53,15 @@ pub async fn event_listener(_ctx: &serenity::client::Context, event: &FullEvent,
                             info!("Channel updated: {}", ch_id);
 
                             super::handler::handle_mod_action(
-                                *guild_id,
-                                entry.user_id,
                                 &user_data.pool,
                                 &user_data.cache_http,
-                                super::core::UserLimitTypes::ChannelUpdate,
-                                &serde_json::json!(
-                                    {
-                                        "channel_id": ch_id.to_string(),
-                                    }
-                                )
+                                &super::handler::HandleModAction {
+                                    guild_id: *guild_id,
+                                    limit: super::core::UserLimitTypes::ChannelUpdate,
+                                    user_id: entry.user_id,
+                                    target: ch_id.to_string(),
+                                    action_data: serde_json::json!({}),
+                                },
                             )
                             .await
                         }
@@ -77,16 +76,15 @@ pub async fn event_listener(_ctx: &serenity::client::Context, event: &FullEvent,
                             info!("Role created: {}", r_id);
 
                             super::handler::handle_mod_action(
-                                *guild_id,
-                                entry.user_id,
                                 &user_data.pool,
                                 &user_data.cache_http,
-                                super::core::UserLimitTypes::RoleAdd,
-                                &serde_json::json!(
-                                    {
-                                        "role_id": r_id.to_string(),
-                                    }
-                                )
+                                &super::handler::HandleModAction {
+                                    guild_id: *guild_id,
+                                    limit: super::core::UserLimitTypes::RoleAdd,
+                                    user_id: entry.user_id,
+                                    target: r_id.to_string(),
+                                    action_data: serde_json::json!({}),
+                                },
                             )
                             .await
                         }
@@ -94,16 +92,15 @@ pub async fn event_listener(_ctx: &serenity::client::Context, event: &FullEvent,
                             info!("Role updated: {}", r_id);
 
                             super::handler::handle_mod_action(
-                                *guild_id,
-                                entry.user_id,
                                 &user_data.pool,
                                 &user_data.cache_http,
-                                super::core::UserLimitTypes::RoleUpdate,
-                                &serde_json::json!(
-                                    {
-                                        "role_id": r_id.to_string(),
-                                    }
-                                ),
+                                &super::handler::HandleModAction {
+                                    guild_id: *guild_id,
+                                    limit: super::core::UserLimitTypes::RoleUpdate,
+                                    user_id: entry.user_id,
+                                    target: r_id.to_string(),
+                                    action_data: serde_json::json!({}),
+                                },
                             )
                             .await
                         }
@@ -111,16 +108,15 @@ pub async fn event_listener(_ctx: &serenity::client::Context, event: &FullEvent,
                             info!("Role deleted: {}", r_id);
 
                             super::handler::handle_mod_action(
-                                *guild_id,
-                                entry.user_id,
                                 &user_data.pool,
                                 &user_data.cache_http,
-                                super::core::UserLimitTypes::RoleRemove,
-                                &serde_json::json!(
-                                    {
-                                        "role_id": r_id.to_string(),
-                                    }
-                                ),
+                                &super::handler::HandleModAction {
+                                    guild_id: *guild_id,
+                                    limit: super::core::UserLimitTypes::RoleRemove,
+                                    user_id: entry.user_id,
+                                    target: r_id.to_string(),
+                                    action_data: serde_json::json!({}),
+                                },
                             )
                             .await
                         }
@@ -199,70 +195,64 @@ pub async fn event_listener(_ctx: &serenity::client::Context, event: &FullEvent,
                                     _ => {}
                                 }
                             }
-                            
+
                             super::handler::handle_mod_action(
-                                *guild_id,
-                                entry.user_id,
                                 &user_data.pool,
                                 &user_data.cache_http,
-                                super::core::UserLimitTypes::MemberRolesUpdated,
-                                &serde_json::json!(
-                                    {
+                                &super::handler::HandleModAction {
+                                    guild_id: *guild_id,
+                                    limit: super::core::UserLimitTypes::MemberRolesUpdated,
+                                    user_id: entry.user_id,
+                                    target: target.to_string(),
+                                    action_data: serde_json::json!({
                                         "old": old_roles,
                                         "added": added,
                                         "removed": removed,
-                                        "target": target.to_string(),
-                                    }
-                                ),
+                                    }),
+                                },
                             )
                             .await?;
 
                             if !added.is_empty() {
                                 info!("Added roles: {:?}", added);
 
-                                for role in added.iter() {
-                                    super::handler::handle_mod_action(
-                                        *guild_id,
-                                        entry.user_id,
-                                        &user_data.pool,
-                                        &user_data.cache_http,
-                                        super::core::UserLimitTypes::RoleGivenToMember,
-                                        &serde_json::json!(
-                                            {
-                                                "old": old_roles,
-                                                "added": added,
-                                                "removed": removed,
-                                                "for": role.to_string(),
-                                                "target": target.to_string(),
-                                            }
-                                        ),
-                                    )
-                                    .await?;
-                                }
+                                super::handler::handle_mod_action(
+                                    &user_data.pool,
+                                    &user_data.cache_http,
+                                    &super::handler::HandleModAction {
+                                        guild_id: *guild_id,
+                                        limit: super::core::UserLimitTypes::RoleGivenToMember,
+                                        user_id: entry.user_id,
+                                        target: target.to_string(),
+                                        action_data: serde_json::json!({
+                                            "old": old_roles,
+                                            "added": added,
+                                            "removed": removed,
+                                        }),
+                                    },
+                                )
+                                .await?;
                             }
 
                             if !removed.is_empty() {
                                 info!("Removed roles: {:?}", removed);
 
-                                for role in removed.iter() {
-                                    super::handler::handle_mod_action(
-                                        *guild_id,
-                                        entry.user_id,
-                                        &user_data.pool,
-                                        &user_data.cache_http,
-                                        super::core::UserLimitTypes::RoleRemovedFromMember,
-                                        &serde_json::json!(
-                                            {
-                                                "old": old_roles,
-                                                "added": added,
-                                                "removed": removed,
-                                                "for": role.to_string(),
-                                                "target": target.to_string(),
-                                            }
-                                        ),
-                                    )
-                                    .await?;
-                                }
+                                super::handler::handle_mod_action(
+                                    &user_data.pool,
+                                    &user_data.cache_http,
+                                    &super::handler::HandleModAction {
+                                        guild_id: *guild_id,
+                                        limit: super::core::UserLimitTypes::RoleRemovedFromMember,
+                                        user_id: entry.user_id,
+                                        target: target.to_string(),
+                                        action_data: serde_json::json!({
+                                            "old": old_roles,
+                                            "added": added,
+                                            "removed": removed,
+                                        }),
+                                    },
+                                )
+                                .await?;
                             }
                         }
                         _ => {}
