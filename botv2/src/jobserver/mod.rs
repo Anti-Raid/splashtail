@@ -116,3 +116,9 @@ pub struct TaskCreateResponse {
     /// The task info
     pub task_info: TaskInfo,
 }
+
+/// WrappedTaskCreateResponse is the response upon creating a task
+#[derive(serde::Deserialize, serde::Serialize, Clone)]
+pub struct WrappedTaskCreateResponse {
+    pub tcr: TaskCreateResponse,
+}

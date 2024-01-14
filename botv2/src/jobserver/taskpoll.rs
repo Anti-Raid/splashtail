@@ -61,7 +61,7 @@ pub fn embed<'a>(task: &Task) -> Result<poise::CreateReply<'a>, crate::Error> {
 
         add = add.chars().take(500).collect::<String>() + if add.len() > 500 { "..." } else { "" };
 
-        add += &format!(" | <t:{}:R>`", status.ts);
+        add += &format!(" | <t:{}:R>", status.ts.round());
 
         task_statuses_length += if add.len() > 500 { 500 } else { add.len() };
         task_statuses.push(add);
@@ -168,11 +168,11 @@ pub async fn reactive(
 
         prev_task = Some(task.clone());
 
+        func(cache_http, task.clone()).await?;
+
         if task.state != "pending" && task.state != "running" {
             break;
         }
-
-        func(cache_http, task.clone()).await?;
     }
 
     drop(prev_task); // Drop prev_task

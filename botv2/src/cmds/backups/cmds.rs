@@ -32,6 +32,7 @@ type BackupRestoreOpts struct {
     prefix_command,
     slash_command,
     guild_only,
+    aliases("backup"),
     subcommands("backups_create")
 )]
 pub async fn backups(_ctx: Context<'_>) -> Result<(), Error> {
@@ -120,6 +121,10 @@ pub async fn backups_create(
             let mut map = HashMap::new();
 
             for v in split {
+                if v.is_empty() {
+                    continue;
+                }
+
                 let split = v.split('=').collect::<Vec<&str>>();
 
                 if split.len() != 2 {
@@ -166,7 +171,7 @@ pub async fn backups_create(
             "execute": true,
             "data": {
                 "ServerID": ctx.guild_id().unwrap().to_string(),
-                "BackupCreateOpts": {
+                "Options": {
                     "PerChannel": per_channel,
                     "MaxMessages": max_messages,
                     "BackupMessages": messages,
@@ -190,8 +195,9 @@ pub async fn backups_create(
     )
     .send()
     .await?
-    .json::<crate::jobserver::TaskCreateResponse>()
-    .await?;
+    .json::<crate::jobserver::WrappedTaskCreateResponse>()
+    .await?
+    .tcr;
 
     base_message
     .edit(
