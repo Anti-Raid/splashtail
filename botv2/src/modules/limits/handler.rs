@@ -108,7 +108,7 @@ pub async fn handle_mod_action(
     let target = ha.target.clone();
     let action_data = &ha.action_data;
 
-    if let Err(e) = precheck_guild(pool, guild_id, &limit).await {
+    if let Err(e) = precheck_guild(pool, guild_id, limit).await {
         debug!("Limits precheck failed: {}", e);
         return Ok(()) // Avoid spamming errors
     }
