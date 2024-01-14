@@ -10,7 +10,7 @@ import (
 )
 
 var CreateTask = core.IPC{
-	Description: "This IPC creates a task and executes it. If you already have both a task and a task create response, consider execute_task",
+	Description: "This IPC creates a task and executes it if the execute argument is set. If you already have both a task and a task create response, consider execute_task",
 	Exec: func(client string, args map[string]any) (map[string]any, error) {
 		taskName, ok := args["name"].(string)
 
@@ -50,7 +50,11 @@ var CreateTask = core.IPC{
 			return nil, fmt.Errorf("error creating task: %w", err)
 		}
 
-		go tasks.ExecuteTask(tcr.TaskID, task)
+		execute, _ := args["execute"].(bool)
+
+		if execute {
+			go tasks.ExecuteTask(tcr.TaskID, task)
+		}
 
 		return map[string]any{
 			"tcr": tcr,

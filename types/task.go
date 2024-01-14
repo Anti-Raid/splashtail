@@ -5,7 +5,7 @@ import (
 	"time"
 )
 
-// TaskCreateRequest is the response upon creating a task
+// TaskCreateResponse is the response upon creating a task
 type TaskCreateResponse struct {
 	TaskID   string    `json:"task_id" description:"The ID of the newly created task"`
 	TaskInfo *TaskInfo `json:"task_info" description:"The task info."`

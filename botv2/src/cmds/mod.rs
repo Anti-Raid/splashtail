@@ -1,5 +1,6 @@
 pub mod core;
 pub mod limits;
+pub mod backups;
 
 use once_cell::sync::Lazy;
 use indexmap::{indexmap, IndexMap};
@@ -15,6 +16,7 @@ pub fn enabled_commands() -> Vec<Vec<CommandAndPermissions>> {
     vec![
         core::commands(),
         limits::commands(),
+        backups::commands(),
     ]
 }
 
@@ -24,10 +26,10 @@ pub struct PermissionCheck {
     pub kittycat_perms: Vec<String>,
     /// The native permissions needed to run the command
     pub native_perms: Vec<serenity::all::Permissions>,
-    /// Whether the next permission check should be ANDed (all needed) or OD'd (at least one) to the current
+    /// Whether the next permission check should be ANDed (all needed) or OR'd (at least one) to the current
     pub outer_and: bool,
-    /// Whether or not the perms are ANDed (all needed) or OD'd (at least one)
-    pub inner_and: bool,    
+    /// Whether or not the perms are ANDed (all needed) or OR'd (at least one)
+    pub inner_and: bool,
 }
 
 #[derive(Default, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
@@ -39,10 +41,21 @@ pub struct PermissionChecks {
     pub checks_needed: usize,
 }
 
-#[derive(Clone, PartialEq, Default)]
+#[derive(Clone, PartialEq)]
 pub struct CommandExtendedData {
     /// The default permissions needed to run this command
     pub default_perms: PermissionChecks,
+}
+
+impl Default for CommandExtendedData {
+    fn default() -> Self {
+        Self {
+            default_perms: PermissionChecks {
+                checks: vec![],
+                checks_needed: 0,
+            },
+        }
+    }
 }
 
 /// Command extra data (permissions)
@@ -320,6 +333,20 @@ impl CommandExtendedData {
                     checks: vec![],
                     checks_needed: 0,
                 },
+            },
+        }
+    }
+
+    pub fn kittycat_simple(namespace: &str, permission: &str) -> CommandExtendedData {
+        CommandExtendedData {
+            default_perms: PermissionChecks {
+                checks: vec![PermissionCheck {
+                    kittycat_perms: vec![format!("{}.{}", namespace, permission)],
+                    native_perms: vec![],
+                    outer_and: false,
+                    inner_and: false,
+                }],
+                checks_needed: 1,
             },
         }
     }

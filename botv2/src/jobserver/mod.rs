@@ -107,3 +107,12 @@ pub struct TaskInfo {
     pub expiry: Option<u64>,
     pub valid: bool,
 }
+
+/// TaskCreateResponse is the response upon creating a task
+#[derive(serde::Deserialize, serde::Serialize, Clone)]
+pub struct TaskCreateResponse {
+    /// The ID of the newly created task
+    pub task_id: String,
+    /// The task info
+    pub task_info: TaskInfo,
+}

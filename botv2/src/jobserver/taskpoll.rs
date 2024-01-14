@@ -9,98 +9,6 @@ pub struct PollTaskOptions {
     pub interval: Option<u64>,
 }
 
-/**
- * export const createTaskEmbed = (ctx: CommandContext, task: Task): ContextEdit => {
-    let taskStatuses: string[] = []
-    let taskStatusesLength = 0
-
-    let taskState = task?.state
-
-    for(let status of task.statuses) {
-        if(taskStatusesLength > 2500) {
-            // Keep removing elements from start of array until we are under 2500 characters
-            while(taskStatusesLength > 2500) {
-                let removed = taskStatuses.shift()
-                taskStatusesLength -= removed.length
-            }
-        }
-
-        let add = `\`${status?.level}\` ${status?.msg}`
-
-        let vs: string[] = []
-        for(let [k, v] of Object.entries(status || {})) {
-            if(k == "level" || k == "msg" || k == "ts" || k == "botDisplayIgnore") continue
-            if(status["botDisplayIgnore"]?.includes(k)) continue
-
-            vs.push(`${k}=${typeof v == "object" ? JSON.stringify(v) : v}`)
-        }
-
-        if(vs.length > 0) add += ` ${vs.join(", ")}`
-
-        add = add.slice(0, 500) + (add.length > 500 ? "..." : "")
-
-        add += ` | \`[${new Date(status?.ts * 1000)}]\``
-
-        taskStatuses.push(add)
-        taskStatusesLength += (add.length > 500 ? 500 : add.length)
-    }
-
-    let emoji = ":white_check_mark:"
-
-    switch (taskState) {
-        case "pending":
-            emoji = ":hourglass:"
-            break;
-        case "running":
-            emoji = ":hourglass_flowing_sand:"
-            break;
-        case "completed":
-            emoji = ":white_check_mark:"
-            break;
-        case "failed":
-            emoji = ":x:"
-            break;
-    }
-
-    let description = `${emoji} Task state: ${taskState}\nTask ID: ${task?.task_id}\n\n${taskStatuses.join("\n")}`
-    let components: Component[] = []
-
-    if(taskState == "completed") {
-        if(task?.output?.filename) {
-            description += `\n\n:link: [Download](${ctx.client.apiUrl}/tasks/${task?.task_id}/ioauth/download-link)`
-
-            components.push(
-                new ActionRowBuilder()
-                .addComponents(
-                    new ButtonBuilder()
-                    .setLabel("Download")
-                    .setStyle(ButtonStyle.Link)
-                    .setURL(`${ctx.client.apiUrl}/tasks/${task?.task_id}/ioauth/download-link`)
-                    .setEmoji("📥")
-                )
-                .toJSON()
-            )    
-        }
-    }
-
-    let embed = new EmbedBuilder()
-    .setTitle("Creating backup")
-    .setDescription(description)
-    .setColor("Green")
-
-    if(taskState == "completed") {
-        embed.setFooter({
-            text: "Backup created successfully"
-        })
-    }
-
-    return {
-        embeds: [embed],
-        components
-    }
-}
- */
-
 fn _to_string(v: &Option<&Value>) -> String {
     let v = match v {
         Some(v) => v,
@@ -117,7 +25,7 @@ fn _to_string(v: &Option<&Value>) -> String {
     }
 }
 
-pub async fn embed<'a>(task: &Task) -> Result<poise::CreateReply<'a>, crate::Error> {
+pub fn embed<'a>(task: &Task) -> Result<poise::CreateReply<'a>, crate::Error> {
     let mut task_statuses: Vec<String> = Vec::new();
     let mut task_statuses_length = 0;
     let mut components = Vec::new();
@@ -206,10 +114,10 @@ pub async fn reactive(
     cache_http: &CacheHttpImpl,
     pool: &sqlx::PgPool,
     task_id: &str,
-    func: impl Fn(&CacheHttpImpl, &Task) -> Pin<Box<dyn Future<Output = Result<(), crate::Error>>>>,
+    mut func: impl FnMut(&CacheHttpImpl, Arc<Task>) -> Pin<Box<dyn Future<Output = Result<(), crate::Error>> + Send>>,
     to: PollTaskOptions,
 ) -> Result<(), crate::Error> {
-    let interval = to.interval.unwrap_or(1000);
+    let interval = to.interval.unwrap_or(1);
     let duration = std::time::Duration::from_secs(interval);
     let mut interval = tokio::time::interval(duration);
     let task_id = sqlx::types::uuid::Uuid::parse_str(task_id)?;
@@ -264,7 +172,7 @@ pub async fn reactive(
             break;
         }
 
-        func(cache_http, &task).await?;
+        func(cache_http, task.clone()).await?;
     }
 
     drop(prev_task); // Drop prev_task
