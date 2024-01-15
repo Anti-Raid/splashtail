@@ -18,7 +18,33 @@ impl RawEventHandler for EventDispatch {
             serenity::all::Event::Ready(data_about_bot) => {
                 info!("{} is now ready on shard {}", data_about_bot.ready.user.name, ctx.shard_id);
             }
-            _ => {}
+            _ => {
+                // Reserialize the event back to its raw value form
+                let Ok(raw) = serde_json::to_value(&event) else {
+                    error!("Failed to serialize event: {:?}", event);
+                    return;
+                };
+                
+                log::info!("Sending event: {:?}", raw);
+
+                for sess in ws::SESSIONS.iter() {
+                    let session = sess.value();
+
+                    if session.state == ws::SessionState::Unidentified {
+                        continue;
+                    }
+
+                    let sess_shard = serenity::all::ShardId(session.shard[0]);
+                    
+                    if sess_shard != ctx.shard_id {
+                        continue;
+                    }
+
+                    if let Err(e) = session.dispatcher.send(ws::QueuedEvent::Dispatch(raw.clone())).await {
+                        error!("Failed to send event to session: {}", e);
+                    }
+                }
+            }
         }
     }
 }

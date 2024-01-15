@@ -6,7 +6,7 @@ use futures_util::{SinkExt, StreamExt, stream::SplitSink};
 use tokio_websockets::{CloseCode, Message, WebSocketStream};
 use crate::impls::cache::CacheHttpImpl;
 
-static SESSIONS: Lazy<DashMap<String, Session>> = Lazy::new(DashMap::new);
+pub static SESSIONS: Lazy<DashMap<String, Session>> = Lazy::new(DashMap::new);
 
 const GATEWAY_VERSION: u8 = 10;
 const HEARTBEAT_INTERVAL: u128 = 4000;
@@ -41,8 +41,6 @@ pub async fn start_ws(cache_http: CacheHttpImpl) -> Result<(), crate::Error> {
 }
 
 pub enum QueuedEvent {
-    SendHeartbeat,
-    Stop,
     Dispatch(serde_json::Value),
     Close(CloseCode, String)
 }
@@ -54,10 +52,10 @@ pub enum SessionState {
 }
 
 pub struct Session {
-    last_heartbeat: std::time::Instant,
-    shard: [u16; 2],
-    dispatcher: tokio::sync::mpsc::Sender<QueuedEvent>,
-    state: SessionState,
+    pub last_heartbeat: std::time::Instant,
+    pub shard: [u16; 2],
+    pub dispatcher: tokio::sync::mpsc::Sender<QueuedEvent>,
+    pub state: SessionState,
 }
 
 #[derive(serde::Serialize, serde::Deserialize)]
@@ -89,13 +87,6 @@ pub async fn dispatch_manager(
     let mut seq_no = 0;
     while let Some(event) = dispatcher_recv.recv().await {
         match event {
-            QueuedEvent::SendHeartbeat => {
-                // No-op for now
-            },
-            QueuedEvent::Stop => {
-                // Stop the sender entirely
-                break;
-            },
             QueuedEvent::Close(code, reason) => {
                 // Close the connection
                 if let Err(e) = ws_sender.send(Message::close(Some(code), &reason)).await {
@@ -235,7 +226,7 @@ pub async fn connection(ws_stream: tokio_websockets::WebSocketStream<tokio::net:
                 // Create task in which we dispatch the current cache to the client
                 let ch = cache_http.clone();
                 let sid = session_id.clone();
-                let sc = session.shard.clone();
+                let sc = session.shard;
 
                 drop(session); // Kill the reference to the session
 
