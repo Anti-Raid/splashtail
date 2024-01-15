@@ -322,7 +322,7 @@ pub fn can_run_command(
         return Err(
             (
                 "missing_min_checks".into(),
-                format!("You do not have the required permissions to run this command (``{}``) implied from ``{}``. You need at least {} of the following permissions to execute this command:\n``{}``", perms.checks_needed, cmd_qualified_name, command_config.command, ps).into()
+                format!("You do not have the required permissions to run this command (``{}``) implied from ``{}``. You need at least {} of the following permissions to execute this command:\n\n{}", cmd_qualified_name, command_config.command, perms.checks_needed, ps).into()
             )
         );
     }
