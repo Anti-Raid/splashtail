@@ -76,6 +76,8 @@ pub struct Identify {
 pub struct Event<T: Sized> {
     op: u8,
     d: T,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    t: Option<String>,
 }
 
 pub async fn dispatch_manager(
@@ -104,7 +106,10 @@ pub async fn dispatch_manager(
                 }
                 break;
             },
-            QueuedEvent::Dispatch(event) => {
+            QueuedEvent::Dispatch(mut event) => {
+                // Set the sequence number
+                event["s"] = serde_json::Value::from(seq_no);
+
                 // Send the event
                 let Ok(evt_json) = serde_json::to_string(&event) else {
                     log::error!("Failed to serialize event");
@@ -139,12 +144,16 @@ pub async fn connection(ws_stream: tokio_websockets::WebSocketStream<tokio::net:
         d: Hello {
             heartbeat_interval: HEARTBEAT_INTERVAL,
         },
+        t: None,
     };
 
     ws_sender.send(Message::text(serde_json::to_string(&hello_event)?)).await?;
 
     // Start the dispatch manager
+    let mut curr_tasks: Vec<tokio::task::JoinHandle<()>> = Vec::new();
     let dpm = tokio::spawn(dispatch_manager(session_id.clone(), recv, ws_sender));
+
+    curr_tasks.push(dpm);
 
     while let Some(Ok(msg)) = ws_receiver.next().await {
         if msg.is_binary() {
@@ -154,7 +163,9 @@ pub async fn connection(ws_stream: tokio_websockets::WebSocketStream<tokio::net:
         #[allow(clippy::collapsible_if)]
         if msg.is_text() {
             let Some(session) = SESSIONS.get(&session_id) else {
-                dpm.abort();
+                for task in curr_tasks {
+                    task.abort();
+                }
                 return Ok(());
             };
         
@@ -184,7 +195,9 @@ pub async fn connection(ws_stream: tokio_websockets::WebSocketStream<tokio::net:
                 drop(session); // Kill the reference to the session
 
                 let Some(mut session) = SESSIONS.get_mut(&session_id) else {
-                    dpm.abort();
+                    for task in curr_tasks {
+                        task.abort();
+                    }
                     return Ok(());
                 };
 
@@ -210,13 +223,65 @@ pub async fn connection(ws_stream: tokio_websockets::WebSocketStream<tokio::net:
                             id: cache_http.http.application_id().unwrap(),
                             flags: serenity::all::ApplicationFlags::empty(),
                         }
-                    }
+                    },
+                    t: Some("READY".to_string()),
                 };
 
                 // Dispatch event
                 session.dispatcher.send(QueuedEvent::Dispatch(serde_json::to_value(ready)?)).await?;
 
+                // Create task in which we dispatch the current cache to the client
+                let ch = cache_http.clone();
+                let sid = session_id.clone();
+                let sc = session.shard.clone();
+
                 drop(session); // Kill the reference to the session
+
+                let guild_fan_task = tokio::spawn(async move {
+                    let dispatcher = {
+                        let Some(sess) = SESSIONS.get(&sid) else {
+                            log::error!("Failed to get session");
+                            return;
+                        };
+
+                        sess.dispatcher.clone()
+                    };
+
+                    for guild in ch.cache.guilds() {
+                        if serenity::utils::shard_id(guild, sc[1]) != sc[0] {
+                            continue;
+                        }
+
+                        let guild_create_json = {
+                            if let Some(guild) = ch.cache.guild(guild) {
+                                // Send GUILD_CREATE
+                                let guild_create = Event {
+                                    op: 0,
+                                    d: guild.clone(),
+                                    t: Some("GUILD_CREATE".to_string()),
+                                };
+    
+                                let Ok(guild_create_json) = serde_json::to_value(&guild_create) else {
+                                    log::error!("Failed to serialize GUILD_CREATE");
+                                    continue;
+                                };
+
+                                guild_create_json
+                            } else {
+                                continue;
+                            }    
+                        };
+
+                        if let Err(e) = dispatcher.send(QueuedEvent::Dispatch(guild_create_json)).await {
+                            log::error!("Failed to send GUILD_CREATE fanout: {}", e);
+                            continue;
+                        }
+                    }
+                });
+
+                curr_tasks.push(guild_fan_task);
+
+                continue;
             }
 
             let text = msg.as_text().unwrap();
@@ -231,13 +296,9 @@ pub async fn connection(ws_stream: tokio_websockets::WebSocketStream<tokio::net:
     }
 
     // Stop the dispatch manager
-    let Some(session) = SESSIONS.get(&session_id) else {
-        dpm.abort();
-        return Ok(());
-    };
-
-    session.dispatcher.send(QueuedEvent::Stop).await?;
-    dpm.await?;
+    for task in curr_tasks {
+        task.abort();
+    }
 
     Ok(())
 }
