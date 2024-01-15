@@ -1,6 +1,7 @@
 mod impls;
 mod config;
 mod ws;
+mod models;
 
 use log::{error, info};
 use serenity::{all::{RawEventHandler, FullEvent}, async_trait};
@@ -58,11 +59,16 @@ async fn main() {
 
     let mut client = client_builder
         .raw_event_handler(EventDispatch {})
-        .build()
+        .await
         .expect("Error creating client");
 
+    let cache = client.cache.clone();
+    let http = client.http.clone();
     tokio::spawn(async move {
-        ws::start_ws().await.expect("Failed to start websocket");
+        ws::start_ws(impls::cache::CacheHttpImpl { 
+            cache,
+            http,
+        }).await.expect("Failed to start websocket");
     });
 
     if let Err(why) = client.start_autosharded().await {

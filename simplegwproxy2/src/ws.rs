@@ -1,7 +1,17 @@
-use tokio::net::TcpListener;
-use futures_util::{SinkExt, StreamExt};
+use dashmap::DashMap;
+use once_cell::sync::Lazy;
+use serenity::all::UnavailableGuild;
+use tokio::net::{TcpListener, TcpStream};
+use futures_util::{SinkExt, StreamExt, stream::SplitSink};
+use tokio_websockets::{CloseCode, Message, WebSocketStream};
+use crate::impls::cache::CacheHttpImpl;
 
-pub async fn start_ws() -> Result<(), crate::Error> {
+static SESSIONS: Lazy<DashMap<String, Session>> = Lazy::new(DashMap::new);
+
+const GATEWAY_VERSION: u8 = 10;
+const HEARTBEAT_INTERVAL: u128 = 4000;
+
+pub async fn start_ws(cache_http: CacheHttpImpl) -> Result<(), crate::Error> {
     let listener = TcpListener::bind(
         format!("127.0.0.1:{}", crate::config::CONFIG.simple_gateway_proxy.port)
     ).await?;
@@ -16,11 +26,12 @@ pub async fn start_ws() -> Result<(), crate::Error> {
             continue;
         }
 
-        let mut ws_stream = ws_stream.unwrap();
+        let ws_stream = ws_stream.unwrap();
 
+        let ch = cache_http.clone();
         tokio::spawn(async move {
             // Just an echo server, really
-            if let Err(e) = connection(ws_stream).await {
+            if let Err(e) = connection(ws_stream, ch).await {
                 log::error!("Failed to handle connection: {}", e);
             }
         });
@@ -29,14 +40,204 @@ pub async fn start_ws() -> Result<(), crate::Error> {
     Ok(())
 }
 
-pub async fn connection(ws_stream: tokio_websockets::WebSocketStream<tokio::net::TcpStream>) -> Result<(), crate::Error> {
-    let (mut ws_sender, mut ws_receiver) = ws_stream.split();
+pub enum QueuedEvent {
+    SendHeartbeat,
+    Stop,
+    Dispatch(serde_json::Value),
+    Close(CloseCode, String)
+}
 
-    while let Some(Ok(msg)) = ws_receiver.next().await {
-        if msg.is_text() || msg.is_binary() {
-            ws_sender.send(msg).await?;
+#[derive(PartialEq)]
+pub enum SessionState {
+    Unidentified,
+    Authorized,
+}
+
+pub struct Session {
+    last_heartbeat: std::time::Instant,
+    shard: [u16; 2],
+    dispatcher: tokio::sync::mpsc::Sender<QueuedEvent>,
+    state: SessionState,
+}
+
+#[derive(serde::Serialize, serde::Deserialize)]
+pub struct Hello {
+    heartbeat_interval: u128,
+}
+
+#[derive(serde::Serialize, serde::Deserialize)]
+/// Nothing else matters
+pub struct Identify {
+    token: String,
+    shard: [u16; 2],
+}
+
+#[derive(serde::Serialize, serde::Deserialize)]
+pub struct Event<T: Sized> {
+    op: u8,
+    d: T,
+}
+
+pub async fn dispatch_manager(
+    session_id: String, 
+    mut dispatcher_recv: tokio::sync::mpsc::Receiver<QueuedEvent>,
+    mut ws_sender: SplitSink<WebSocketStream<TcpStream>, Message>
+) {
+    // Read the channel
+    let mut seq_no = 0;
+    while let Some(event) = dispatcher_recv.recv().await {
+        match event {
+            QueuedEvent::SendHeartbeat => {
+                // No-op for now
+            },
+            QueuedEvent::Stop => {
+                // Stop the sender entirely
+                break;
+            },
+            QueuedEvent::Close(code, reason) => {
+                // Close the connection
+                if let Err(e) = ws_sender.send(Message::close(Some(code), &reason)).await {
+                    log::error!("Failed to close websocket [send]: {}", e);
+                }
+                if let Err(e) = ws_sender.close().await {
+                    log::error!("Failed to close websocket [close]: {}", e);
+                }
+                break;
+            },
+            QueuedEvent::Dispatch(event) => {
+                // Send the event
+                let Ok(evt_json) = serde_json::to_string(&event) else {
+                    log::error!("Failed to serialize event");
+                    continue;
+                };
+
+                if let Err(e) = ws_sender.send(Message::text(evt_json)).await {
+                    log::error!("Failed to send event: {}", e);
+                }
+            }
         }
     }
+}
+
+pub async fn connection(ws_stream: tokio_websockets::WebSocketStream<tokio::net::TcpStream>, cache_http: CacheHttpImpl) -> Result<(), crate::Error> {
+    let (mut ws_sender, mut ws_receiver) = ws_stream.split();
+
+    let (sender, recv) = tokio::sync::mpsc::channel::<QueuedEvent>(32);
+
+    let session_id = crate::impls::crypto::gen_random(32);
+
+    SESSIONS.insert(session_id.clone(), Session {
+        last_heartbeat: std::time::Instant::now(),
+        shard: [0, 0],
+        dispatcher: sender,
+        state: SessionState::Unidentified,
+    });
+
+    // Send the hello message
+    let hello_event = Event {
+        op: 10,
+        d: Hello {
+            heartbeat_interval: HEARTBEAT_INTERVAL,
+        },
+    };
+
+    ws_sender.send(Message::text(serde_json::to_string(&hello_event)?)).await?;
+
+    // Start the dispatch manager
+    let dpm = tokio::spawn(dispatch_manager(session_id.clone(), recv, ws_sender));
+
+    while let Some(Ok(msg)) = ws_receiver.next().await {
+        if msg.is_binary() {
+            continue;
+        }
+
+        #[allow(clippy::collapsible_if)]
+        if msg.is_text() {
+            let Some(session) = SESSIONS.get(&session_id) else {
+                dpm.abort();
+                return Ok(());
+            };
+        
+            if session.state == SessionState::Unidentified {
+                // Try reading an identify message
+                let text = msg.as_text().unwrap();
+
+                let identify = serde_json::from_str::<Event<Identify>>(text);
+
+                if let Err(e) = identify {
+                    log::error!("Failed to parse identify message: {}", e);
+                    continue;
+                }
+
+                let identify = identify.unwrap();
+
+                if identify.op != 2 {
+                    session.dispatcher.send(QueuedEvent::Close(CloseCode::PROTOCOL_ERROR, "Expected identify message".to_string())).await?;
+                    break;
+                }
+
+                if identify.d.token != crate::config::CONFIG.discord_auth.token {
+                    session.dispatcher.send(QueuedEvent::Close(CloseCode::PROTOCOL_ERROR, "Invalid token".to_string())).await?;
+                    break;
+                }
+
+                drop(session); // Kill the reference to the session
+
+                let Some(mut session) = SESSIONS.get_mut(&session_id) else {
+                    dpm.abort();
+                    return Ok(());
+                };
+
+                session.shard = identify.d.shard;
+                session.state = SessionState::Authorized;
+
+                // Send Ready event to client
+                let ready = Event {
+                    op: 0,
+                    d: crate::models::Ready {
+                        version: GATEWAY_VERSION,
+                        user: cache_http.cache.current_user().clone(),
+                        session_id: session_id.clone(),
+                        shard: Some(session.shard),
+                        guilds: cache_http.cache.guilds().iter().map(|gid| {
+                            crate::models::UnavailableGuild {
+                                id: *gid,
+                                unavailable: true,
+                            }
+                        }).collect(),
+                        resume_gateway_url: format!("http://{}", crate::config::CONFIG.simple_gateway_proxy.url),
+                        application: crate::models::PartialCurrentApplicationInfo {
+                            id: cache_http.http.application_id().unwrap(),
+                            flags: serenity::all::ApplicationFlags::empty(),
+                        }
+                    }
+                };
+
+                // Dispatch event
+                session.dispatcher.send(QueuedEvent::Dispatch(serde_json::to_value(ready)?)).await?;
+
+                drop(session); // Kill the reference to the session
+            }
+
+            let text = msg.as_text().unwrap();
+
+            let event = serde_json::from_str::<serenity::all::GatewayEvent>(text);
+
+            if let Err(e) = event {
+                log::error!("Failed to parse event: {}", e);
+                continue;
+            }
+        }
+    }
+
+    // Stop the dispatch manager
+    let Some(session) = SESSIONS.get(&session_id) else {
+        dpm.abort();
+        return Ok(());
+    };
+
+    session.dispatcher.send(QueuedEvent::Stop).await?;
+    dpm.await?;
 
     Ok(())
 }
