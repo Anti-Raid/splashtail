@@ -378,6 +378,7 @@ async fn main() {
 
                         let member_perms = get_member_data(&ctx, &member).await?;
 
+                        info!("Checking if user {} ({}) can run command {} with permissions {:?}", member.user.name, member.user.id, ctx.command().qualified_name, member_perms);
                         if let Err(e) = cmds::can_run_command(
                             &cmd_data,
                             &command_config,
@@ -393,7 +394,6 @@ async fn main() {
                                 ).into()
                             );
                         }
-
 
                         Ok(true)
                     } else {

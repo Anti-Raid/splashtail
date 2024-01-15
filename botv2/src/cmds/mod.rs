@@ -171,9 +171,14 @@ pub async fn get_command_configuration(pool: &sqlx::PgPool, guild_id: &str, name
 /// This function runs a single permission check on a command without taking any branching decisions
 /// 
 /// This may be useful when mocking or visualizing a permission check
-pub fn check_perms_single(cmd_qualified_name: &str, cmd_real_name: &str, check: &PermissionCheck, member_native_perms: serenity::all::Permissions, member_kittycat_perms: &[String]) -> Result<(), (String, crate::Error)> {
-    let is_discord_admin = member_native_perms.contains(serenity::all::Permissions::ADMINISTRATOR); // Speed up stuff
+pub fn check_perms_single(cmd_qualified_name: &str, cmd_real_name: &str, check: &PermissionCheck, member_native_perms: serenity::all::Permissions, member_kittycat_perms: &[String]) -> Result<(), (String, crate::Error)> {    
+    if check.kittycat_perms.is_empty() && check.native_perms.is_empty() {
+        return Ok(()); // Short-circuit if we don't have any permissions to check
+    }
     
+    // Check if we have ADMINISTRATOR
+    let is_discord_admin = member_native_perms.contains(serenity::all::Permissions::ADMINISTRATOR);
+
     // Kittycat
     if check.inner_and {
         // inner AND, short-circuit if we don't have the permission
@@ -202,7 +207,7 @@ pub fn check_perms_single(cmd_qualified_name: &str, cmd_real_name: &str, check: 
         }
     } else {
         // inner OR, short-circuit if we have the permission
-        let has_any_np = is_discord_admin || check.native_perms.iter().any(|perm| member_native_perms.contains(*perm));
+        let has_any_np = check.native_perms.iter().any(|perm| is_discord_admin || member_native_perms.contains(*perm));
         
         if !has_any_np {
             let has_any_kc = check.kittycat_perms.iter().any(|perm| kittycat::perms::has_perm(member_kittycat_perms, perm));
@@ -375,7 +380,7 @@ mod tests {
 
     #[test]
     fn test_check_perms_single() {
-        // Basic test
+        // Basic tests
         assert!(
             err_with_code(
                 check_perms_single(
@@ -392,6 +397,21 @@ mod tests {
             ),
             "missing_any_perms"
             )
+        );
+
+        assert!(
+            check_perms_single(
+                "test",
+                "test",
+                &PermissionCheck {
+                    kittycat_perms: vec![],
+                    native_perms: vec![],
+                    outer_and: false,
+                    inner_and: false,
+                },
+                serenity::all::Permissions::empty(),
+                &["abc.test".into()],
+            ).is_ok()
         );
 
         // With inner and
@@ -427,6 +447,25 @@ mod tests {
                 serenity::all::Permissions::ADMINISTRATOR,
                 &["abc.test".into()],
             ).is_ok()
+        );
+
+        // Kittycat
+        assert!(
+            err_with_code(
+                check_perms_single(
+                    "test",
+                    "test",
+                    &PermissionCheck {
+                        kittycat_perms: vec!["backups.create".to_string()],
+                        native_perms: vec![],
+                        outer_and: false,
+                        inner_and: false,
+                    },
+                    serenity::all::Permissions::ADMINISTRATOR,
+                    &[],
+                ),
+                "missing_any_perms"
+            )
         );
     }
 
@@ -532,6 +571,26 @@ mod tests {
                     "test",
                     serenity::all::Permissions::BAN_MEMBERS,
                     &["abc.test".into()],
+                ),
+                "missing_min_checks"
+            )
+        );
+
+        // Real-life example
+        assert!(
+            err_with_code(
+                can_run_command(
+                    &CommandExtendedData::kittycat_simple("backups", "create"),
+                    &GuildCommandConfiguration {
+                        id: "test".into(),
+                        guild_id: "test".into(),
+                        command: "test".into(),
+                        perms: None,
+                        disabled: false,
+                    },
+                    "backups create",
+                    serenity::all::Permissions::ADMINISTRATOR,
+                    &[],
                 ),
                 "missing_min_checks"
             )
