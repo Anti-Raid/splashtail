@@ -42,15 +42,21 @@ func (d *Differs[T]) Production() T {
 }
 
 type Config struct {
-	DiscordAuth   DiscordAuth         `yaml:"discord_auth" validate:"required"`
-	Sites         Sites               `yaml:"sites" validate:"required"`
-	Channels      Channels            `yaml:"channels" validate:"required"`
-	Roles         Roles               `yaml:"roles" validate:"required"`
-	JAPI          JAPI                `yaml:"japi" validate:"required"`
-	Notifications Notifications       `yaml:"notifications" validate:"required"`
-	Servers       Servers             `yaml:"servers" validate:"required"`
-	Meta          Meta                `yaml:"meta" validate:"required"`
-	ObjectStorage ObjectStorageConfig `yaml:"object_storage" validate:"required"`
+	DiscordAuth        DiscordAuth         `yaml:"discord_auth" validate:"required"`
+	Sites              Sites               `yaml:"sites" validate:"required"`
+	Channels           Channels            `yaml:"channels" validate:"required"`
+	Roles              Roles               `yaml:"roles" validate:"required"`
+	JAPI               JAPI                `yaml:"japi" validate:"required"`
+	Notifications      Notifications       `yaml:"notifications" validate:"required"`
+	Servers            Servers             `yaml:"servers" validate:"required"`
+	Meta               Meta                `yaml:"meta" validate:"required"`
+	ObjectStorage      ObjectStorageConfig `yaml:"object_storage" validate:"required"`
+	SimpleGatewayProxy SimpleGatewayProxy  `yaml:"simple_gateway_proxy" validate:"required"`
+}
+
+type SimpleGatewayProxy struct {
+	Port int    `yaml:"port" default:"3220" comment:"Port to run the proxy on" validate:"required"`
+	Url  string `yaml:"url" default:"http://localhost:3220" comment:"Url proxy is accessible on" validate:"required"`
 }
 
 type DiscordAuth struct {
