@@ -60,7 +60,7 @@ async fn on_error(error: poise::FrameworkError<'_, Data, Error>) {
             );
             if let Some(error) = error {
                 error!("Error in command `{}`: {:?}", ctx.command().name, error,);
-                let err = ctx.say(format!("**{}**", error)).await;
+                let err = ctx.say(format!("{}", error)).await;
 
                 if let Err(e) = err {
                     error!("Error while sending error message: {}", e);
@@ -390,7 +390,7 @@ async fn main() {
                         ) {
                             return Err(
                                 format!(
-                                    "You do not have permission to run this command: {}\nCode: {}",
+                                    "{}\n**Code**: {}",
                                     e.1,
                                     e.0
                                 ).into()

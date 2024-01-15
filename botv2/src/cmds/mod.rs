@@ -220,7 +220,7 @@ pub fn check_perms_single(cmd_qualified_name: &str, cmd_real_name: &str, check: 
                 return Err(
                     (
                         "missing_any_perms".into(),
-                        format!("You do not have the required permissions to run this command (``{}``) implied from ``{}``. You need at least one of the following permissions to execute this command:\n``{}``", cmd_qualified_name, cmd_real_name, perms).into()
+                        format!("You do not have the required permissions to run this command (``{}``) implied from ``{}``. You need at least one of the following permissions to execute this command:\n\n{}", cmd_qualified_name, cmd_real_name, perms).into()
                     )
                 );
             }
@@ -241,7 +241,7 @@ pub fn can_run_command(
         return Err(
             (
                 "command_disabled".into(),
-                format!("The command ``{}`` (inherited from ``{}`` is disabled on this server", cmd_qualified_name, command_config.command).into()
+                format!("The command ``{}`` (inherited from ``{}``) is disabled on this server", cmd_qualified_name, command_config.command).into()
             )
         );
     }
