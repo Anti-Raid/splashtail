@@ -119,6 +119,8 @@ pub async fn dispatch_manager(
                 if let Err(e) = ws_sender.send(Message::text(evt_json)).await {
                     log::error!("Failed to send event: {}", e);
                 }
+
+                seq_no += 1;
             }
         }
     }
