@@ -12,12 +12,12 @@ pub type CommandAndPermissions = (Command, CommandExtendedDataMap);
 /// List of enabled commands
 /// 
 /// Add to this list to enable a command
-pub fn enabled_commands() -> Vec<Vec<CommandAndPermissions>> {
-    vec![
-        core::commands(),
-        limits::commands(),
-        backups::commands(),
-    ]
+pub fn enabled_commands() -> IndexMap<&'static str, Vec<CommandAndPermissions>> {
+    indexmap! {
+        "core" => core::commands(),
+        "limits" => limits::commands(),
+        "backups" => backups::commands(),
+    }
 }
 
 #[derive(Default, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
@@ -62,7 +62,7 @@ impl Default for CommandExtendedData {
 pub static COMMAND_EXTRA_DATA: Lazy<indexmap::IndexMap<String, CommandExtendedDataMap>> = Lazy::new(|| {
     let mut map = indexmap::IndexMap::new();
     
-    for commands in enabled_commands() {
+    for (_, commands) in enabled_commands() {
         for (command, extended_data) in commands {
             map.insert(command.name.clone(), extended_data);
         }

@@ -38,7 +38,7 @@ async fn _embed_help(
     let mut help_arr = Vec::new();
 
     for (category_name, commands) in categories {
-        let cat_name = category_name.unwrap_or("Commands".to_string());
+        let cat_name = _titlecase(&category_name.unwrap_or("Commands".to_string()));
         let mut menu = "".to_string();
         for command in commands {
             if command.hide_in_help {
@@ -146,6 +146,18 @@ fn _create_select_menu(data: &[EmbedHelp], index: usize) -> serenity::builder::C
         serenity::builder::CreateSelectMenuKind::String { options: options.into() },
     )
     .custom_id("hnav:selectmenu")
+}
+
+fn _titlecase(s: &str) -> String {
+    let mut s = s.to_string();
+
+    let mut chars = s.chars();
+
+    if let Some(first_char) = chars.next() {
+        s = first_char.to_uppercase().to_string() + chars.as_str();
+    }
+
+    s
 }
 
 fn _create_reply<'a>(
@@ -391,7 +403,7 @@ pub async fn help(ctx: Context<'_>, command: Option<String>) -> Result<(), Error
     Ok(())
 }
 
-#[poise::command(category = "Help", prefix_command, slash_command, user_cooldown = 1)]
+#[poise::command(prefix_command, slash_command, user_cooldown = 1)]
 pub async fn simplehelp(
     ctx: Context<'_>,
     #[description = "Specific command to show help about"]

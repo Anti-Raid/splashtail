@@ -234,9 +234,11 @@ async fn main() {
                     register(),
                 ];
 
-                for cmd_list in cmds::enabled_commands() {
+                for (module, cmd_list) in cmds::enabled_commands() {
                     for cmd in cmd_list {
-                        cmds.push(cmd.0);
+                        let mut cmd = cmd.0;
+                        cmd.category = Some(module.to_string()); 
+                        cmds.push(cmd);
                     }
                 }
 
@@ -389,8 +391,8 @@ async fn main() {
                             return Err(
                                 format!(
                                     "You do not have permission to run this command: {}\nCode: {}",
-                                    e.0,
-                                    e.1
+                                    e.1,
+                                    e.0
                                 ).into()
                             );
                         }
