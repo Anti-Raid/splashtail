@@ -93,69 +93,59 @@ pub async fn dispatch_manager(
                 
                 // Move event out of Arc
                 let mut event = Arc::into_inner(event).unwrap();
-                let session_id = session_id.clone();
 
-                tokio::task::spawn(
-                    async move {
-                        // Set the sequence number
-                        event.s = Some(
-                            incr_session_seq_no(&session_id).await
-                        );
-
-                        // Send the event
-                        let Ok(evt_json) = serde_json::to_string(&event) else {
-                            log::error!("Failed to serialize event");
-                            return;
-                        };
-
-                        let mut ws_sender = ws_sender.lock().await;
-
-                        if let Err(e) = ws_sender.send(Message::text(evt_json)).await {
-                            // Hacky solution to prevent sending when closed
-                            if e.to_string().contains("attempted to send message after closing connection") {
-                                return;
-                            }
-
-                            log::error!("Failed to send event: {}", e);
-                        }
-
-                        drop(ws_sender);
-                    }
+                // Set the sequence number
+                event.s = Some(
+                    incr_session_seq_no(&session_id).await - 2
                 );
+
+                // Send the event
+                let Ok(evt_json) = serde_json::to_string(&event) else {
+                    log::error!("Failed to serialize event");
+                    return;
+                };
+
+                let mut ws_sender = ws_sender.lock().await;
+
+                if let Err(e) = ws_sender.send(Message::text(evt_json)).await {
+                    // Hacky solution to prevent sending when closed
+                    if e.to_string().contains("attempted to send message after closing connection") {
+                        return;
+                    }
+
+                    log::error!("Failed to send event: {}", e);
+                }
+
+                drop(ws_sender);
             },
             QueuedEvent::DispatchValue(event) => {
                 let ws_sender = ws_sender.clone();
                 
                 // Move event out of Arc
                 let mut event = Arc::into_inner(event).unwrap();
-                let session_id = session_id.clone();
 
-                tokio::task::spawn(
-                    async move {
-                        // Set the sequence number
-                        event["s"] = serde_json::Value::from(incr_session_seq_no(&session_id).await);
-                        event["op"] = serde_json::Value::from(0); // Ensure op is set to Dispatch
+                // Set the sequence number
+                event["s"] = serde_json::Value::from(incr_session_seq_no(&session_id).await -2);
+                event["op"] = serde_json::Value::from(0); // Ensure op is set to Dispatch
 
-                        // Send the event
-                        let Ok(evt_json) = serde_json::to_string(&event) else {
-                            log::error!("Failed to serialize event");
-                            return;
-                        };
+                // Send the event
+                let Ok(evt_json) = serde_json::to_string(&event) else {
+                    log::error!("Failed to serialize event");
+                    return;
+                };
 
-                        let mut ws_sender = ws_sender.lock().await;
+                let mut ws_sender = ws_sender.lock().await;
 
-                        if let Err(e) = ws_sender.send(Message::text(evt_json)).await {
-                            // Hacky solution to prevent sending when closed
-                            if e.to_string().contains("attempted to send message after closing connection") {
-                                return;
-                            }
-
-                            log::error!("Failed to send event: {}", e);
-                        }
-
-                        drop(ws_sender);
+                if let Err(e) = ws_sender.send(Message::text(evt_json)).await {
+                    // Hacky solution to prevent sending when closed
+                    if e.to_string().contains("attempted to send message after closing connection") {
+                        return;
                     }
-                );
+
+                    log::error!("Failed to send event: {}", e);
+                }
+
+                drop(ws_sender);
             },
             QueuedEvent::DispatchBulk(events) => {
                 let ws_sender = ws_sender.clone();
@@ -169,7 +159,7 @@ pub async fn dispatch_manager(
                         // Set the sequence number
                         for event in events.iter_mut() {
                             event.s = Some(
-                                incr_session_seq_no(&session_id).await
+                                incr_session_seq_no(&session_id).await - 2 // Minus 2 due to us being 2 behind always
                             );
 
                             // Send the event
@@ -280,7 +270,8 @@ pub async fn connection(ws_stream: tokio_websockets::WebSocketStream<tokio::net:
     
                         let identify = identify.unwrap();
     
-                        if identify.token != crate::config::CONFIG.discord_auth.token {
+                        if identify.token != crate::config::CONFIG.discord_auth.token && format!("Bot {}", crate::config::CONFIG.discord_auth.token) != identify.token {
+                            log::info!("Invalid token, got {}", identify.token);
                             session.dispatcher.send(QueuedEvent::Close(CloseCode::PROTOCOL_ERROR, "Invalid token".to_string())).await?;
                             break;
                         }
@@ -288,6 +279,7 @@ pub async fn connection(ws_stream: tokio_websockets::WebSocketStream<tokio::net:
                         drop(session); // Kill the reference to the session
         
                         let Some(mut session) = SESSIONS.get_mut(&session_id) else {
+                            log::error!("Failed to get session");
                             for task in curr_tasks {
                                 task.abort();
                             }
@@ -296,6 +288,8 @@ pub async fn connection(ws_stream: tokio_websockets::WebSocketStream<tokio::net:
         
                         session.shard = identify.shard;
                         session.state = SessionState::Authorized;
+
+                        log::info!("Authorized shard {}", session.shard[0]);
         
                         // Send Ready event to client
                         let ready = Arc::new(Event {
@@ -370,10 +364,7 @@ pub async fn connection(ws_stream: tokio_websockets::WebSocketStream<tokio::net:
                         curr_tasks.push(guild_fan_task);
             
                         continue;    
-                    } else {
-                        session.dispatcher.send(QueuedEvent::Close(CloseCode::PROTOCOL_ERROR, "Already identified".to_string())).await?;
-                        break;
-                    }        
+                    }       
                 },
                 EventOpCode::PresenceUpdate => {
                     // Send the event directly to Discord
@@ -422,7 +413,7 @@ pub async fn connection(ws_stream: tokio_websockets::WebSocketStream<tokio::net:
 
                         let resume = resume.unwrap();
 
-                        if resume.token != crate::config::CONFIG.discord_auth.token {
+                        if resume.token != crate::config::CONFIG.discord_auth.token && format!("Bot {}", crate::config::CONFIG.discord_auth.token) != resume.token {
                             session.dispatcher.send(QueuedEvent::Close(CloseCode::PROTOCOL_ERROR, "Invalid token".to_string())).await?;
                             break;
                         }
