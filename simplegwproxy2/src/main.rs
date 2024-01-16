@@ -4,7 +4,7 @@ mod ws;
 mod models;
 
 use log::{error, info};
-use serenity::{all::{RawEventHandler, FullEvent}, async_trait};
+use serenity::{all::RawEventHandler, async_trait};
 use std::{io::Write, sync::Arc};
 
 type Error = Box<dyn std::error::Error + Send + Sync>;
@@ -29,10 +29,13 @@ impl RawEventHandler for EventDispatch {
                     let session = sess.value();
 
                     if session.dispatcher.is_closed() {
-                        continue;
+                        // Push to missed_events
+                        let mut missed_events = session.missed_events.lock().await;
+                        missed_events.push_back(raw.clone());
+                        drop(missed_events);
                     }
 
-                    if session.state == ws::SessionState::Unidentified {
+                    if session.state == crate::models::SessionState::Unidentified {
                         continue;
                     }
 
@@ -42,7 +45,7 @@ impl RawEventHandler for EventDispatch {
                         continue;
                     }
 
-                    if let Err(e) = session.dispatcher.send(ws::QueuedEvent::DispatchValue(Arc::new(raw.clone()))).await {
+                    if let Err(e) = session.dispatcher.send(crate::models::QueuedEvent::DispatchValue(Arc::new(raw.clone()))).await {
                         error!("Failed to send event to session: {}", e);
                     }
                 }
@@ -92,10 +95,12 @@ async fn main() {
 
     let cache = client.cache.clone();
     let http = client.http.clone();
+    let shard_manager = client.shard_manager.clone();
     tokio::spawn(async move {
         ws::start_ws(impls::cache::CacheHttpImpl { 
             cache,
             http,
+            shard_manager
         }).await.expect("Failed to start websocket");
     });
 

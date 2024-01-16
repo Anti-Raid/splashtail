@@ -1578,11 +1578,13 @@ dependencies = [
  "serde_json",
  "serde_yaml",
  "serenity",
+ "small-fixed-array",
  "strum",
  "strum_macros",
  "tokio",
  "tokio-websockets",
  "tower-http",
+ "url",
 ]
 
 [[package]]

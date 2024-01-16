@@ -1,7 +1,6 @@
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 use std::fs::File;
-use std::collections::HashMap;
 
 use crate::Error;
 
