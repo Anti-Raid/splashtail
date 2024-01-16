@@ -127,6 +127,7 @@ pub enum EventOpCode {
 #[derive(serde::Serialize, serde::Deserialize)]
 pub struct Event {
     pub op: EventOpCode,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub s: Option<u64>,
     pub d: serde_json::Value,
     #[serde(skip_serializing_if = "Option::is_none")]

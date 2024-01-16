@@ -111,6 +111,11 @@ pub async fn dispatch_manager(
                         let mut ws_sender = ws_sender.lock().await;
 
                         if let Err(e) = ws_sender.send(Message::text(evt_json)).await {
+                            // Hacky solution to prevent sending when closed
+                            if e.to_string().contains("attempted to send message after closing connection") {
+                                return;
+                            }
+
                             log::error!("Failed to send event: {}", e);
                         }
 
@@ -140,6 +145,11 @@ pub async fn dispatch_manager(
                         let mut ws_sender = ws_sender.lock().await;
 
                         if let Err(e) = ws_sender.send(Message::text(evt_json)).await {
+                            // Hacky solution to prevent sending when closed
+                            if e.to_string().contains("attempted to send message after closing connection") {
+                                return;
+                            }
+
                             log::error!("Failed to send event: {}", e);
                         }
 
@@ -171,6 +181,11 @@ pub async fn dispatch_manager(
                             let mut ws_sender = ws_sender.lock().await;
 
                             if let Err(e) = ws_sender.send(Message::text(evt_json)).await {
+                                // Hacky solution to prevent sending when closed
+                                if e.to_string().contains("attempted to send message after closing connection") {
+                                    return;
+                                }
+
                                 log::error!("Failed to send event: {}", e);
                             }
 
