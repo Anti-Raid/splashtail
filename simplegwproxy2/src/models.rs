@@ -108,8 +108,8 @@ pub struct GatewayGuildRequestMembers {
     pub nonce: Option<String>,
 }
 
-#[derive(serde::Serialize, serde::Deserialize, PartialEq)]
-#[serde(untagged)]
+#[derive(serde_repr::Serialize_repr, serde_repr::Deserialize_repr, PartialEq)]
+#[repr(u8)]
 pub enum EventOpCode {
     Dispatch = 0,
     Heartbeat = 1,
