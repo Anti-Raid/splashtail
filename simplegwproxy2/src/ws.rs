@@ -1,10 +1,11 @@
 use dashmap::DashMap;
 use once_cell::sync::Lazy;
-use serenity::all::UnavailableGuild;
 use tokio::net::{TcpListener, TcpStream};
 use futures_util::{SinkExt, StreamExt, stream::SplitSink};
 use tokio_websockets::{CloseCode, Message, WebSocketStream};
 use crate::impls::cache::CacheHttpImpl;
+use std::sync::Arc;
+use tokio::sync::Mutex;
 
 pub static SESSIONS: Lazy<DashMap<String, Session>> = Lazy::new(DashMap::new);
 
@@ -29,8 +30,9 @@ pub async fn start_ws(cache_http: CacheHttpImpl) -> Result<(), crate::Error> {
         let ws_stream = ws_stream.unwrap();
 
         let ch = cache_http.clone();
+
         tokio::spawn(async move {
-            // Just an echo server, really
+            // Start the connection
             if let Err(e) = connection(ws_stream, ch).await {
                 log::error!("Failed to handle connection: {}", e);
             }
@@ -41,8 +43,9 @@ pub async fn start_ws(cache_http: CacheHttpImpl) -> Result<(), crate::Error> {
 }
 
 pub enum QueuedEvent {
-    Dispatch(Event),
-    DispatchValue(serde_json::Value), // Temp
+    Dispatch(Arc<Event>),
+    DispatchBulk(Arc<Vec<Event>>),
+    DispatchValue(Arc<serde_json::Value>), // Temp
     Close(CloseCode, String)
 }
 
@@ -74,7 +77,7 @@ pub struct Identify {
 #[derive(serde::Serialize, serde::Deserialize)]
 pub struct Event {
     op: u8,
-    s: u64,
+    s: Option<u64>,
     d: serde_json::Value,
     #[serde(skip_serializing_if = "Option::is_none")]
     t: Option<String>,
@@ -82,14 +85,17 @@ pub struct Event {
 
 pub async fn dispatch_manager(
     session_id: String, 
+    cache_http: CacheHttpImpl,
     mut dispatcher_recv: tokio::sync::mpsc::Receiver<QueuedEvent>,
     mut ws_sender: SplitSink<WebSocketStream<TcpStream>, Message>
 ) {
     // Read the channel
     let mut seq_no = 0;
+    let ws_sender = Arc::new(Mutex::new(ws_sender));
     while let Some(event) = dispatcher_recv.recv().await {
         match event {
             QueuedEvent::Close(code, reason) => {
+                let mut ws_sender = ws_sender.lock().await;
                 // Close the connection
                 if let Err(e) = ws_sender.send(Message::close(Some(code), &reason)).await {
                     log::error!("Failed to close websocket [send]: {}", e);
@@ -97,39 +103,96 @@ pub async fn dispatch_manager(
                 if let Err(e) = ws_sender.close().await {
                     log::error!("Failed to close websocket [close]: {}", e);
                 }
+                drop(ws_sender);
                 break;
             },
-            QueuedEvent::Dispatch(mut event) => {
-                // Set the sequence number
-                event.s = seq_no;
+            QueuedEvent::Dispatch(event) => {
+                let ws_sender = ws_sender.clone();
+                
+                // Move event out of Arc
+                let mut event = Arc::into_inner(event).unwrap();
 
-                // Send the event
-                let Ok(evt_json) = serde_json::to_string(&event) else {
-                    log::error!("Failed to serialize event");
-                    continue;
-                };
+                tokio::task::spawn(
+                    async move {
+                        // Set the sequence number
+                        event.s = Some(seq_no);
 
-                if let Err(e) = ws_sender.send(Message::text(evt_json)).await {
-                    log::error!("Failed to send event: {}", e);
-                }
+                        // Send the event
+                        let Ok(evt_json) = serde_json::to_string(&event) else {
+                            log::error!("Failed to serialize event");
+                            return;
+                        };
+
+                        let mut ws_sender = ws_sender.lock().await;
+
+                        if let Err(e) = ws_sender.send(Message::text(evt_json)).await {
+                            log::error!("Failed to send event: {}", e);
+                        }
+
+                        drop(ws_sender);
+                    }
+                );
 
                 seq_no += 1;
             },
             QueuedEvent::DispatchValue(mut event) => {
-                // Set the sequence number
-                event["s"] = serde_json::Value::from(seq_no);
+                let ws_sender = ws_sender.clone();
+                
+                // Move event out of Arc
+                let mut event = Arc::into_inner(event).unwrap();
 
-                // Send the event
-                let Ok(evt_json) = serde_json::to_string(&event) else {
-                    log::error!("Failed to serialize event");
-                    continue;
-                };
+                tokio::task::spawn(
+                    async move {
+                        // Set the sequence number
+                        event["s"] = serde_json::Value::from(seq_no);
 
-                if let Err(e) = ws_sender.send(Message::text(evt_json)).await {
-                    log::error!("Failed to send event: {}", e);
-                }
+                        // Send the event
+                        let Ok(evt_json) = serde_json::to_string(&event) else {
+                            log::error!("Failed to serialize event");
+                            return;
+                        };
+
+                        let mut ws_sender = ws_sender.lock().await;
+
+                        if let Err(e) = ws_sender.send(Message::text(evt_json)).await {
+                            log::error!("Failed to send event: {}", e);
+                        }
+
+                        drop(ws_sender);
+                    }
+                );
 
                 seq_no += 1;
+            },
+            QueuedEvent::DispatchBulk(events) => {
+                let ws_sender = ws_sender.clone();
+
+                // Move events out of Arc
+                let mut events = Arc::into_inner(events).unwrap();
+
+                tokio::task::spawn(
+                    async move {
+                        // Set the sequence number
+                        for event in events.iter_mut() {
+                            event.s = Some(seq_no);
+                            seq_no += 1;
+                        }
+
+                        // Send the event
+                        let Ok(evt_json) = serde_json::to_string(&events) else {
+                            log::error!("Failed to serialize event");
+                            return;
+                        };
+
+                        let mut ws_sender = ws_sender.lock().await;
+
+                        if let Err(e) = ws_sender.send(Message::text(evt_json)).await {
+                            log::error!("Failed to send event: {}", e);
+                        }
+
+                        drop(ws_sender);
+                    }
+                );
             }
         }
     }
@@ -156,14 +219,16 @@ pub async fn connection(ws_stream: tokio_websockets::WebSocketStream<tokio::net:
             heartbeat_interval: HEARTBEAT_INTERVAL,
         })?,
         t: None,
-        s: 0,
+        s: None,
     };
 
     ws_sender.send(Message::text(serde_json::to_string(&hello_event)?)).await?;
 
     // Start the dispatch manager
     let mut curr_tasks: Vec<tokio::task::JoinHandle<()>> = Vec::new();
-    let dpm = tokio::spawn(dispatch_manager(session_id.clone(), recv, ws_sender));
+    let dpm = tokio::task::spawn(
+        dispatch_manager(session_id.clone(), cache_http.clone(), recv, ws_sender)
+    );
 
     curr_tasks.push(dpm);
 
@@ -222,9 +287,9 @@ pub async fn connection(ws_stream: tokio_websockets::WebSocketStream<tokio::net:
                     session.state = SessionState::Authorized;
     
                     // Send Ready event to client
-                    let ready = Event {
+                    let ready = Arc::new(Event {
                         op: 0,
-                        s: 0,
+                        s: None,
                         d: serde_json::to_value(crate::models::Ready {
                             version: GATEWAY_VERSION,
                             user: cache_http.cache.current_user().clone(),
@@ -243,7 +308,7 @@ pub async fn connection(ws_stream: tokio_websockets::WebSocketStream<tokio::net:
                             }
                         })?,
                         t: Some("READY".to_string()),
-                    };
+                    });
     
                     // Dispatch event
                     session.dispatcher.send(QueuedEvent::Dispatch(ready)).await?;
@@ -273,14 +338,12 @@ pub async fn connection(ws_stream: tokio_websockets::WebSocketStream<tokio::net:
                             let guild_create = {
                                 if let Some(guild) = ch.cache.guild(guild) {
                                     // Send GUILD_CREATE
-                                    let guild_create = Event {
+                                    Arc::new(Event {
                                         op: 0,
-                                        s: 0,
+                                        s: None,
                                         d: serde_json::to_value(guild.clone()).unwrap(),
                                         t: Some("GUILD_CREATE".to_string()),
-                                    };
-            
-                                    guild_create
+                                    })
                                 } else {
                                     continue;
                                 }    

@@ -5,7 +5,7 @@ mod models;
 
 use log::{error, info};
 use serenity::{all::{RawEventHandler, FullEvent}, async_trait};
-use std::io::Write;
+use std::{io::Write, sync::Arc};
 
 type Error = Box<dyn std::error::Error + Send + Sync>;
 
@@ -38,7 +38,7 @@ impl RawEventHandler for EventDispatch {
                         continue;
                     }
 
-                    if let Err(e) = session.dispatcher.send(ws::QueuedEvent::DispatchValue(raw.clone())).await {
+                    if let Err(e) = session.dispatcher.send(ws::QueuedEvent::DispatchValue(Arc::new(raw.clone()))).await {
                         error!("Failed to send event to session: {}", e);
                     }
                 }
