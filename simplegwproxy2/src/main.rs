@@ -28,6 +28,10 @@ impl RawEventHandler for EventDispatch {
                 for sess in ws::SESSIONS.iter() {
                     let session = sess.value();
 
+                    if session.dispatcher.is_closed() {
+                        continue;
+                    }
+
                     if session.state == ws::SessionState::Unidentified {
                         continue;
                     }
