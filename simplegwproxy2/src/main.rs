@@ -26,13 +26,23 @@ impl RawEventHandler for EventDispatch {
                 };
                 
                 for sess in ws::SESSIONS.iter() {
+                    let session_id = sess.key();
                     let session = sess.value();
 
                     if session.dispatcher.is_closed() {
-                        // Push to missed_events
-                        let mut missed_events = session.missed_events.lock().await;
-                        missed_events.push_back(raw.clone());
-                        drop(missed_events);
+                        // Push to SESSION_MISSING_EVENTS
+                        let Some(mes) = ws::SESSION_MISSING_EVENTS.get(session_id) else {
+                            log::warn!("No missing events queue for shard {}", session.shard[0]);
+                            continue;
+                        };
+
+                        let mut me_queue = mes.lock().await;
+
+                        me_queue.push_back(raw.clone());
+
+                        drop(me_queue);
+
+                        continue;
                     }
 
                     if session.state == crate::models::SessionState::Unidentified {

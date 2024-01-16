@@ -10,18 +10,7 @@ use crate::models::{Event, EventOpCode, Identify, Session, SessionState, QueuedE
 
 pub static SESSIONS: Lazy<DashMap<String, Session>> = Lazy::new(DashMap::new);
 pub static SESSION_SEQ_NO: Lazy<DashMap<String, RwLock<u64>>> = Lazy::new(DashMap::new);
-
-pub async fn get_session_seq_no(session_id: &str) -> u64 {
-    let seq_no = SESSION_SEQ_NO.get(session_id);
-
-    if let Some(seq_no) = seq_no {
-        return *seq_no.read().await;
-    }
-
-    SESSION_SEQ_NO.insert(session_id.to_string(), RwLock::new(0));
-
-    0
-}
+pub static SESSION_MISSING_EVENTS: Lazy<DashMap<String, Mutex<VecDeque<serde_json::Value>>>> = Lazy::new(DashMap::new);
 
 /// Increments the session sequence number and returns the new value
 pub async fn incr_session_seq_no(session_id: &str) -> u64 {
@@ -74,10 +63,9 @@ pub async fn start_ws(cache_http: CacheHttpImpl) -> Result<(), crate::Error> {
 pub async fn dispatch_manager(
     session_id: Arc<String>, 
     mut dispatcher_recv: tokio::sync::mpsc::Receiver<QueuedEvent>,
-    ws_sender: SplitSink<WebSocketStream<TcpStream>, Message>
+    ws_sender: Arc<Mutex<SplitSink<WebSocketStream<TcpStream>, Message>>>
 ) {
     // Read the channel
-    let ws_sender = Arc::new(Mutex::new(ws_sender));
     while let Some(event) = dispatcher_recv.recv().await {
         match event {
             QueuedEvent::Ping => {
@@ -200,15 +188,15 @@ pub async fn connection(ws_stream: tokio_websockets::WebSocketStream<tokio::net:
 
     let (sender, recv) = tokio::sync::mpsc::channel::<QueuedEvent>(512);
 
-    let session_id = crate::impls::crypto::gen_random(32);
+    let mut session_id = crate::impls::crypto::gen_random(32);
 
     SESSIONS.insert(session_id.clone(), Session {
         last_heartbeat: std::time::Instant::now(),
         shard: [0, 0],
         dispatcher: sender,
         state: SessionState::Unidentified,
-        missed_events: Mutex::new(VecDeque::new()),
     });
+    SESSION_MISSING_EVENTS.insert(session_id.clone(), Mutex::new(VecDeque::new()));
 
     // Send the hello message
     let hello_event = Event {
@@ -223,9 +211,11 @@ pub async fn connection(ws_stream: tokio_websockets::WebSocketStream<tokio::net:
     ws_sender.send(Message::text(serde_json::to_string(&hello_event)?)).await?;
 
     // Start the dispatch manager
+    let ws_sender = Arc::new(Mutex::new(ws_sender));
+
     let mut curr_tasks: Vec<tokio::task::JoinHandle<()>> = Vec::new();
     let dpm = tokio::task::spawn(
-        dispatch_manager(Arc::new(session_id.clone()), recv, ws_sender)
+        dispatch_manager(Arc::new(session_id.clone()), recv, ws_sender.clone())
     );
 
     curr_tasks.push(dpm);
@@ -408,10 +398,105 @@ pub async fn connection(ws_stream: tokio_websockets::WebSocketStream<tokio::net:
                 EventOpCode::VoiceStateUpdate => continue, // Not supported
                 EventOpCode::Resume => {
                     if session.state == SessionState::Unidentified {
-                        continue // TODO
-                    } else {
-                        session.dispatcher.send(QueuedEvent::Close(CloseCode::PROTOCOL_ERROR, "Already identified".to_string())).await?;
-                        break;
+                        let resume = serde_json::from_value::<crate::models::GatewayResumeEvent>(event.d);
+
+                        if let Err(e) = resume {
+                            log::error!("Failed to parse resume message: {}", e);
+                            continue;
+                        }
+
+                        let resume = resume.unwrap();
+
+                        if resume.token != crate::config::CONFIG.discord_auth.token {
+                            session.dispatcher.send(QueuedEvent::Close(CloseCode::PROTOCOL_ERROR, "Invalid token".to_string())).await?;
+                            break;
+                        }
+
+                        // Check if session ID is in session
+                        if !SESSIONS.contains_key(&resume.session_id) {
+                            // Send Invalid Session event
+                            let ise = Arc::new(Event {
+                                op: EventOpCode::InvalidSession,
+                                s: None,
+                                d: serde_json::Value::Bool(false),
+                                t: None,
+                            });
+
+                            session.dispatcher.send(QueuedEvent::Dispatch(ise)).await?;
+
+                            continue
+                        }
+
+                        // Kill the old dispatcher
+                        for task in curr_tasks.iter() {
+                            task.abort();
+                        }
+
+                        drop(session); // Kill the reference to the session
+
+                        // Delete the current session
+                        let sid = session_id.clone();
+                        tokio::spawn(async move {
+                            SESSIONS.remove(&sid);
+                            SESSION_SEQ_NO.remove(&sid);
+                            SESSION_MISSING_EVENTS.remove(&sid);
+                        });
+
+                        // Set the session ID
+                        session_id = resume.session_id.clone();
+
+                        // Set the sequence number
+                        let sno = SESSION_SEQ_NO.entry(session_id.clone()).or_insert(RwLock::new(resume.seq));
+                        let mut sno = sno.write().await;
+                        *sno = resume.seq;
+                        drop(sno); // Kill the reference to the sequence number
+
+                        // Start the dispatch manager
+                        let (sender, recv) = tokio::sync::mpsc::channel::<QueuedEvent>(512);
+
+                        let Some(mut new_session) = SESSIONS.get_mut(&resume.session_id) else {
+                            log::error!("Failed to get session");
+                            continue;
+                        };
+
+                        new_session.dispatcher = sender;
+
+                        drop(new_session); // Kill the reference to the new session
+
+                        let dpm = tokio::task::spawn(
+                            dispatch_manager(Arc::new(session_id.clone()), recv, ws_sender.clone())
+                        );
+
+                        curr_tasks.push(dpm);
+
+                        let session_id = session_id.clone();
+                        let resume_fanout_task = tokio::spawn(async move {
+                            let Some(sess) = SESSIONS.get(&session_id) else {
+                                log::error!("Failed to get session");
+                                return;
+                            };
+                            
+                            let dispatcher = sess.dispatcher.clone();
+
+                            let Some(mes) = SESSION_MISSING_EVENTS.get(&session_id) else {
+                                log::warn!("No missing events queue for shard {}", sess.shard[0]);
+                                return;
+                            };
+
+                            drop(sess); // Kill the reference to the session
+
+                            let mut missing_events = mes.lock().await;
+
+                            while let Some(event) = missing_events.pop_front() {
+                                if let Err(e) = dispatcher.send(QueuedEvent::DispatchValue(Arc::new(event))).await {
+                                    log::error!("Failed to send missed event: {}", e);
+                                }
+                            }
+
+                            drop(missing_events); // Kill the reference to the missing events queue
+                        });
+
+                        curr_tasks.push(resume_fanout_task);
                     }
                 },
                 EventOpCode::Reconnect => continue, // Recieve only event
@@ -451,7 +536,7 @@ pub async fn connection(ws_stream: tokio_websockets::WebSocketStream<tokio::net:
                             chunk_guild_filter,
                             req.nonce
                         );
-                    }
+                    }   
                 },
                 EventOpCode::InvalidSession => continue, // Recieve only event
                 EventOpCode::Hello => continue, // Recieve only event

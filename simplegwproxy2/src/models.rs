@@ -53,13 +53,19 @@ pub struct Session {
     pub last_heartbeat: std::time::Instant,
     pub shard: [u16; 2],
     pub dispatcher: tokio::sync::mpsc::Sender<QueuedEvent>,
-    pub missed_events: tokio::sync::Mutex<std::collections::VecDeque<serde_json::Value>>,
     pub state: SessionState,
 }
 
 #[derive(serde::Serialize, serde::Deserialize)]
 pub struct Hello {
     pub heartbeat_interval: u128,
+}
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct GatewayResumeEvent {
+    pub token: String,
+    pub session_id: String,
+    pub seq: u64,
 }
 
 #[derive(serde::Serialize, serde::Deserialize)]
@@ -103,6 +109,7 @@ pub struct GatewayGuildRequestMembers {
 }
 
 #[derive(serde::Serialize, serde::Deserialize, PartialEq)]
+#[serde(untagged)]
 pub enum EventOpCode {
     Dispatch = 0,
     Heartbeat = 1,
