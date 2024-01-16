@@ -41,7 +41,8 @@ pub async fn start_ws(cache_http: CacheHttpImpl) -> Result<(), crate::Error> {
 }
 
 pub enum QueuedEvent {
-    Dispatch(serde_json::Value),
+    Dispatch(Event),
+    DispatchValue(serde_json::Value), // Temp
     Close(CloseCode, String)
 }
 
@@ -71,9 +72,10 @@ pub struct Identify {
 }
 
 #[derive(serde::Serialize, serde::Deserialize)]
-pub struct Event<T: Sized> {
+pub struct Event {
     op: u8,
-    d: T,
+    s: u64,
+    d: serde_json::Value,
     #[serde(skip_serializing_if = "Option::is_none")]
     t: Option<String>,
 }
@@ -99,6 +101,22 @@ pub async fn dispatch_manager(
             },
             QueuedEvent::Dispatch(mut event) => {
                 // Set the sequence number
+                event.s = seq_no;
+
+                // Send the event
+                let Ok(evt_json) = serde_json::to_string(&event) else {
+                    log::error!("Failed to serialize event");
+                    continue;
+                };
+
+                if let Err(e) = ws_sender.send(Message::text(evt_json)).await {
+                    log::error!("Failed to send event: {}", e);
+                }
+
+                seq_no += 1;
+            },
+            QueuedEvent::DispatchValue(mut event) => {
+                // Set the sequence number
                 event["s"] = serde_json::Value::from(seq_no);
 
                 // Send the event
@@ -120,7 +138,7 @@ pub async fn dispatch_manager(
 pub async fn connection(ws_stream: tokio_websockets::WebSocketStream<tokio::net::TcpStream>, cache_http: CacheHttpImpl) -> Result<(), crate::Error> {
     let (mut ws_sender, mut ws_receiver) = ws_stream.split();
 
-    let (sender, recv) = tokio::sync::mpsc::channel::<QueuedEvent>(32);
+    let (sender, recv) = tokio::sync::mpsc::channel::<QueuedEvent>(512);
 
     let session_id = crate::impls::crypto::gen_random(32);
 
@@ -134,10 +152,11 @@ pub async fn connection(ws_stream: tokio_websockets::WebSocketStream<tokio::net:
     // Send the hello message
     let hello_event = Event {
         op: 10,
-        d: Hello {
+        d: serde_json::to_value(Hello {
             heartbeat_interval: HEARTBEAT_INTERVAL,
-        },
+        })?,
         t: None,
+        s: 0,
     };
 
     ws_sender.send(Message::text(serde_json::to_string(&hello_event)?)).await?;
@@ -166,7 +185,7 @@ pub async fn connection(ws_stream: tokio_websockets::WebSocketStream<tokio::net:
                 // Try reading an identify message
                 let text = msg.as_text().unwrap();
 
-                let identify = serde_json::from_str::<Event<Identify>>(text);
+                let identify = serde_json::from_str::<Event>(text);
 
                 if let Err(e) = identify {
                     log::error!("Failed to parse identify message: {}", e);
@@ -175,106 +194,112 @@ pub async fn connection(ws_stream: tokio_websockets::WebSocketStream<tokio::net:
 
                 let identify = identify.unwrap();
 
-                if identify.op != 2 {
+                if identify.op == 2 {
+                    let identify = serde_json::from_value::<Identify>(identify.d);
+
+                    if let Err(e) = identify {
+                        log::error!("Failed to parse identify message: {}", e);
+                        continue;
+                    }
+
+                    let identify = identify.unwrap();
+
+                    if identify.token != crate::config::CONFIG.discord_auth.token {
+                        session.dispatcher.send(QueuedEvent::Close(CloseCode::PROTOCOL_ERROR, "Invalid token".to_string())).await?;
+                        break;
+                    }
+    
+                    drop(session); // Kill the reference to the session
+    
+                    let Some(mut session) = SESSIONS.get_mut(&session_id) else {
+                        for task in curr_tasks {
+                            task.abort();
+                        }
+                        return Ok(());
+                    };
+    
+                    session.shard = identify.shard;
+                    session.state = SessionState::Authorized;
+    
+                    // Send Ready event to client
+                    let ready = Event {
+                        op: 0,
+                        s: 0,
+                        d: serde_json::to_value(crate::models::Ready {
+                            version: GATEWAY_VERSION,
+                            user: cache_http.cache.current_user().clone(),
+                            session_id: session_id.clone(),
+                            shard: Some(session.shard),
+                            guilds: cache_http.cache.guilds().iter().map(|gid| {
+                                crate::models::UnavailableGuild {
+                                    id: *gid,
+                                    unavailable: true,
+                                }
+                            }).collect(),
+                            resume_gateway_url: format!("http://{}", crate::config::CONFIG.simple_gateway_proxy.url),
+                            application: crate::models::PartialCurrentApplicationInfo {
+                                id: cache_http.http.application_id().unwrap(),
+                                flags: serenity::all::ApplicationFlags::empty(),
+                            }
+                        })?,
+                        t: Some("READY".to_string()),
+                    };
+    
+                    // Dispatch event
+                    session.dispatcher.send(QueuedEvent::Dispatch(ready)).await?;
+    
+                    // Create task in which we dispatch the current cache to the client
+                    let ch = cache_http.clone();
+                    let sid = session_id.clone();
+                    let sc = session.shard;
+    
+                    drop(session); // Kill the reference to the session
+    
+                    let guild_fan_task = tokio::spawn(async move {
+                        let dispatcher = {
+                            let Some(sess) = SESSIONS.get(&sid) else {
+                                log::error!("Failed to get session");
+                                return;
+                            };
+    
+                            sess.dispatcher.clone()
+                        };
+    
+                        for guild in ch.cache.guilds() {
+                            if serenity::utils::shard_id(guild, sc[1]) != sc[0] {
+                                continue;
+                            }
+    
+                            let guild_create = {
+                                if let Some(guild) = ch.cache.guild(guild) {
+                                    // Send GUILD_CREATE
+                                    let guild_create = Event {
+                                        op: 0,
+                                        s: 0,
+                                        d: serde_json::to_value(guild.clone()).unwrap(),
+                                        t: Some("GUILD_CREATE".to_string()),
+                                    };
+            
+                                    guild_create
+                                } else {
+                                    continue;
+                                }    
+                            };
+    
+                            if let Err(e) = dispatcher.send(QueuedEvent::Dispatch(guild_create)).await {
+                                log::error!("Failed to send GUILD_CREATE fanout: {}", e);
+                                continue;
+                            }
+                        }
+                    });
+    
+                    curr_tasks.push(guild_fan_task);
+    
+                    continue;    
+                } else {
                     session.dispatcher.send(QueuedEvent::Close(CloseCode::PROTOCOL_ERROR, "Expected identify message".to_string())).await?;
                     break;
                 }
-
-                if identify.d.token != crate::config::CONFIG.discord_auth.token {
-                    session.dispatcher.send(QueuedEvent::Close(CloseCode::PROTOCOL_ERROR, "Invalid token".to_string())).await?;
-                    break;
-                }
-
-                drop(session); // Kill the reference to the session
-
-                let Some(mut session) = SESSIONS.get_mut(&session_id) else {
-                    for task in curr_tasks {
-                        task.abort();
-                    }
-                    return Ok(());
-                };
-
-                session.shard = identify.d.shard;
-                session.state = SessionState::Authorized;
-
-                // Send Ready event to client
-                let ready = Event {
-                    op: 0,
-                    d: crate::models::Ready {
-                        version: GATEWAY_VERSION,
-                        user: cache_http.cache.current_user().clone(),
-                        session_id: session_id.clone(),
-                        shard: Some(session.shard),
-                        guilds: cache_http.cache.guilds().iter().map(|gid| {
-                            crate::models::UnavailableGuild {
-                                id: *gid,
-                                unavailable: true,
-                            }
-                        }).collect(),
-                        resume_gateway_url: format!("http://{}", crate::config::CONFIG.simple_gateway_proxy.url),
-                        application: crate::models::PartialCurrentApplicationInfo {
-                            id: cache_http.http.application_id().unwrap(),
-                            flags: serenity::all::ApplicationFlags::empty(),
-                        }
-                    },
-                    t: Some("READY".to_string()),
-                };
-
-                // Dispatch event
-                session.dispatcher.send(QueuedEvent::Dispatch(serde_json::to_value(ready)?)).await?;
-
-                // Create task in which we dispatch the current cache to the client
-                let ch = cache_http.clone();
-                let sid = session_id.clone();
-                let sc = session.shard;
-
-                drop(session); // Kill the reference to the session
-
-                let guild_fan_task = tokio::spawn(async move {
-                    let dispatcher = {
-                        let Some(sess) = SESSIONS.get(&sid) else {
-                            log::error!("Failed to get session");
-                            return;
-                        };
-
-                        sess.dispatcher.clone()
-                    };
-
-                    for guild in ch.cache.guilds() {
-                        if serenity::utils::shard_id(guild, sc[1]) != sc[0] {
-                            continue;
-                        }
-
-                        let guild_create_json = {
-                            if let Some(guild) = ch.cache.guild(guild) {
-                                // Send GUILD_CREATE
-                                let guild_create = Event {
-                                    op: 0,
-                                    d: guild.clone(),
-                                    t: Some("GUILD_CREATE".to_string()),
-                                };
-    
-                                let Ok(guild_create_json) = serde_json::to_value(&guild_create) else {
-                                    log::error!("Failed to serialize GUILD_CREATE");
-                                    continue;
-                                };
-
-                                guild_create_json
-                            } else {
-                                continue;
-                            }    
-                        };
-
-                        if let Err(e) = dispatcher.send(QueuedEvent::Dispatch(guild_create_json)).await {
-                            log::error!("Failed to send GUILD_CREATE fanout: {}", e);
-                            continue;
-                        }
-                    }
-                });
-
-                curr_tasks.push(guild_fan_task);
-
-                continue;
             }
 
             let text = msg.as_text().unwrap();

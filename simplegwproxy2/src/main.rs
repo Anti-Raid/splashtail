@@ -25,8 +25,6 @@ impl RawEventHandler for EventDispatch {
                     return;
                 };
                 
-                log::info!("Sending event: {:?}", raw);
-
                 for sess in ws::SESSIONS.iter() {
                     let session = sess.value();
 
@@ -40,7 +38,7 @@ impl RawEventHandler for EventDispatch {
                         continue;
                     }
 
-                    if let Err(e) = session.dispatcher.send(ws::QueuedEvent::Dispatch(raw.clone())).await {
+                    if let Err(e) = session.dispatcher.send(ws::QueuedEvent::DispatchValue(raw.clone())).await {
                         error!("Failed to send event to session: {}", e);
                     }
                 }
