@@ -144,7 +144,7 @@ pub async fn get_command_configuration(pool: &sqlx::PgPool, guild_id: &str, name
 
     let mut cmd_data = root_cmd_data.get("").unwrap_or(&CommandExtendedData::default()).clone();
     for command in permutations.iter() {
-        let cmd_replaced = command.replace(&root_cmd.to_string(), "");
+        let cmd_replaced = command.replace(&root_cmd.to_string(), "").trim().to_string();
         if let Some(data) = root_cmd_data.get(&cmd_replaced.as_str()) {
             cmd_data = data.clone();
         }
@@ -362,6 +362,20 @@ impl CommandExtendedData {
                 checks: vec![PermissionCheck {
                     kittycat_perms: vec![format!("{}.{}", namespace, permission)],
                     native_perms: vec![],
+                    outer_and: false,
+                    inner_and: false,
+                }],
+                checks_needed: 1,
+            },
+        }
+    }
+
+    pub fn kittycat_or_admin(namespace: &str, permission: &str) -> CommandExtendedData {
+        CommandExtendedData {
+            default_perms: PermissionChecks {
+                checks: vec![PermissionCheck {
+                    kittycat_perms: vec![format!("{}.{}", namespace, permission)],
+                    native_perms: vec![serenity::all::Permissions::ADMINISTRATOR],
                     outer_and: false,
                     inner_and: false,
                 }],
@@ -608,6 +622,23 @@ mod tests {
                 ),
                 "missing_min_checks"
             )
+        );
+
+        // Real-life example
+        assert!(
+            can_run_command(
+                &CommandExtendedData::kittycat_or_admin("backups", "create"),
+                &GuildCommandConfiguration {
+                    id: "test".into(),
+                    guild_id: "test".into(),
+                    command: "test".into(),
+                    perms: None,
+                    disabled: false,
+                },
+                "backups create",
+                serenity::all::Permissions::ADMINISTRATOR,
+                &[],
+            ).is_ok()
         );
 
         assert!(

@@ -268,7 +268,7 @@ pub async fn backups_list(ctx: Context<'_>) -> Result<(), Error> {
        format!("Failed to get backup tasks: {}", e)
     })?;
 
-    const MAX_TASKS_PER_PAGE: usize = 10;
+    const MAX_TASKS_PER_PAGE: usize = 9;
 
     fn create_embeds(current_embed_page: usize, backup_tasks: &[crate::jobserver::Task]) -> Vec<serenity::all::CreateEmbed> {
         let mut embeds = vec![

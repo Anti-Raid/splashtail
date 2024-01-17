@@ -344,54 +344,27 @@ async fn main() {
 
                         let command_config = command_config.unwrap_or_default();
 
-                        async fn get_member_data(ctx: &Context<'_>, member: &serenity::all::Member) -> Result<serenity::model::permissions::Permissions, crate::Error> {
-                            if ctx.guild().is_some() {
-                                let guild = ctx.guild().unwrap();
-                                let is_owner = member.user.id == guild.owner_id;
-
-                                let member_perms = {
-                                    if is_owner {
-                                        serenity::model::permissions::Permissions::all()
-                                    } else {
-                                        guild.member_permissions(member)
-                                    }
-                                };
-
-                                drop(guild);
-
-                                return Ok(member_perms)
-                            } 
-
-                            if let poise::Context::Application(ac) = ctx {
-                                if let Some(m) = &ac.interaction.member {
-                                    if let Some(perms) = m.permissions {
-                                        info!("Got perms from interaction member");
-                                        return Ok(perms)
-                                    }
-                                }
-                            }
-
-                            if let Some(perms) = member.permissions {
-                               return Ok(perms) 
-                            }
-
-                            // Fetch guild using HTTP
-                            let guild = ctx.http().get_guild(member.guild_id).await?;
-
+                        let (is_owner, member_perms) = if let Some(guild) = ctx.guild() {
                             let is_owner = member.user.id == guild.owner_id;
 
                             let member_perms = {
                                 if is_owner {
                                     serenity::model::permissions::Permissions::all()
                                 } else {
-                                    guild.member_permissions(member)
+                                    guild.member_permissions(&member)
                                 }
                             };
 
-                            Ok(member_perms)
-                        }
+                            drop(guild);
 
-                        let member_perms = get_member_data(&ctx, &member).await?;
+                            (is_owner, member_perms)
+                        } else {
+                            return Err("Your guild has not been cached yet? Please contact support after trying again as this should NEVER happen!".into());
+                        };
+
+                        if is_owner {
+                            return Ok(true)
+                        }
 
                         info!("Checking if user {} ({}) can run command {} with permissions {:?}", member.user.name, member.user.id, ctx.command().qualified_name, member_perms);
                         if let Err(e) = cmds::can_run_command(
