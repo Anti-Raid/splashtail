@@ -371,11 +371,9 @@ pub async fn backups_list(ctx: Context<'_>) -> Result<(), Error> {
 
         let cr = create_reply(current_embed_page, &backup_tasks);
 
-        item.create_response(
+        item.edit_response(
             ctx.serenity_context(), 
-            serenity::all::CreateInteractionResponse::Message(
-                cr.to_slash_initial_response(serenity::all::CreateInteractionResponseMessage::default())
-            )
+            cr.to_slash_initial_response_edit(serenity::all::EditInteractionResponse::default())
         )
         .await?;
     }    
