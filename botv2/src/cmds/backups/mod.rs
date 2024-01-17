@@ -6,6 +6,7 @@ pub fn commands() -> Vec<super::CommandAndPermissions> {
         (cmds::backups(), indexmap! {
             "" => super::CommandExtendedData::kittycat_simple("backups", "*"),
             "create" => super::CommandExtendedData::kittycat_simple("backups", "create"),
+            "list" => super::CommandExtendedData::kittycat_simple("backups", "list"),
         }),
     ]
 }

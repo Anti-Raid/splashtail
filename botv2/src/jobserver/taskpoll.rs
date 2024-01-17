@@ -125,40 +125,7 @@ pub async fn reactive(
     loop {
         interval.tick().await;
 
-        let rec = sqlx::query!(
-            "SELECT task_id, task_name, output, task_info, statuses, task_for, expiry, state, created_at FROM tasks WHERE task_id = $1",
-            task_id,
-        )
-        .fetch_one(pool)
-        .await?;
-
-        let mut statuses = Vec::new();
-
-        for status in &rec.statuses {
-            let status = serde_json::from_value::<crate::jobserver::TaskStatuses>(status.clone())?;
-            statuses.push(status);
-        }
-
-        let task = Arc::new(Task {
-            task_id: rec.task_id,
-            task_name: rec.task_name,
-            output: rec.output.map(serde_json::from_value::<crate::jobserver::TaskOutput>).transpose()?,
-            task_info: serde_json::from_value::<crate::jobserver::TaskInfo>(rec.task_info)?,
-            statuses,
-            task_for: rec.task_for.map(|task_for| task_for.into()),
-            expiry: {
-                if let Some(expiry) = rec.expiry {
-                    let t = expiry.microseconds + 60 * 1_000_000 + (expiry.days as i64) * 24 * 60 * 60 * 1_000_000 + (expiry.months as i64) * 30 * 24 * 60 * 60 * 1_000_000;
-                    Some(
-                        chrono::Duration::microseconds(t)
-                    )
-                } else {
-                    None
-                }
-            },
-            state: rec.state,
-            created_at: rec.created_at,
-        });
+        let task = Arc::new(super::Task::from_id(task_id, pool).await?);
 
         if let Some(ref prev_task) = prev_task {
             if prev_task.state == task.state && task.statuses == prev_task.statuses {

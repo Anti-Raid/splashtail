@@ -147,43 +147,6 @@ pub async fn dispatch_manager(
 
                 drop(ws_sender);
             },
-            QueuedEvent::DispatchBulk(events) => {
-                let ws_sender = ws_sender.clone();
-
-                // Move events out of Arc
-                let mut events = Arc::into_inner(events).unwrap();
-                let session_id = session_id.clone();
-
-                tokio::task::spawn(
-                    async move {
-                        // Set the sequence number
-                        for event in events.iter_mut() {
-                            event.s = Some(
-                                incr_session_seq_no(&session_id).await - 2 // Minus 2 due to us being 2 behind always
-                            );
-
-                            // Send the event
-                            let Ok(evt_json) = serde_json::to_string(event) else {
-                                log::error!("Failed to serialize event");
-                                return;
-                            };
-
-                            let mut ws_sender = ws_sender.lock().await;
-
-                            if let Err(e) = ws_sender.send(Message::text(evt_json)).await {
-                                // Hacky solution to prevent sending when closed
-                                if e.to_string().contains("attempted to send message after closing connection") {
-                                    return;
-                                }
-
-                                log::error!("Failed to send event: {}", e);
-                            }
-
-                            drop(ws_sender);
-                        }
-                    }
-                );
-            }
         }
     }
 }

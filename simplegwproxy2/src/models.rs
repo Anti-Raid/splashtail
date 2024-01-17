@@ -38,7 +38,6 @@ pub struct PartialCurrentApplicationInfo {
 pub enum QueuedEvent {
     Ping,
     Dispatch(Arc<Event>),
-    DispatchBulk(Arc<Vec<Event>>),
     DispatchValue(Arc<serde_json::Value>), // Temp
     Close(tokio_websockets::CloseCode, String)
 }

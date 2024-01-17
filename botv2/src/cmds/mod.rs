@@ -3,7 +3,21 @@ pub mod limits;
 pub mod backups;
 
 use once_cell::sync::Lazy;
+use moka::future::Cache;
 use indexmap::{indexmap, IndexMap};
+use serenity::all::{GuildId, UserId};
+
+#[derive(Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+pub enum CachedPermResult {
+    Ok,
+    Err(String),
+}
+
+pub static COMMAND_PERMISSION_CACHE : Lazy<Cache<(GuildId, UserId), IndexMap<String, CachedPermResult>>> = Lazy::new(|| {
+    Cache::builder()
+    .time_to_live(std::time::Duration::from_secs(60))
+    .build()
+});
 
 pub type Command = poise::Command<crate::Data, crate::Error>;
 pub type CommandExtendedDataMap = IndexMap<&'static str, CommandExtendedData>;

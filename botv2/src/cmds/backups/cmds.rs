@@ -1,4 +1,6 @@
 use std::collections::HashMap;
+use std::time::Duration;
+use futures_util::StreamExt;
 
 use crate::{Context, Error};
 use std::sync::Arc;
@@ -33,7 +35,7 @@ type BackupRestoreOpts struct {
     slash_command,
     guild_only,
     aliases("backup"),
-    subcommands("backups_create")
+    subcommands("backups_create", "backups_list")
 )]
 pub async fn backups(_ctx: Context<'_>) -> Result<(), Error> {
     Ok(())
@@ -244,6 +246,137 @@ pub async fn backups_create(
         }
     )
     .await?;
+
+    Ok(())
+}
+
+/// List all currently made backups and allow for downloading them
+#[poise::command(
+    prefix_command,
+    slash_command,
+    guild_only,
+    rename = "list",
+)]
+pub async fn backups_list(ctx: Context<'_>) -> Result<(), Error> {
+    let Some(guild_id) = ctx.guild_id() else {
+        return Err("This command can only be used in a guild".into());
+    };
+
+    let backup_tasks = crate::jobserver::Task::from_guild_and_task_name(guild_id, "guild_create_backup", &ctx.data().pool)
+    .await
+    .map_err(|e| {
+       format!("Failed to get backup tasks: {}", e)
+    })?;
+
+    const MAX_TASKS_PER_PAGE: usize = 10;
+
+    fn create_embeds(current_embed_page: usize, backup_tasks: &[crate::jobserver::Task]) -> Vec<serenity::all::CreateEmbed> {
+        let mut embeds = vec![
+            poise::serenity_prelude::CreateEmbed::default()
+            .title("Backups")
+            .description("Here are all the backups for this server")
+            .color(poise::serenity_prelude::Colour::DARK_GREEN)
+        ];
+    
+        let backup_tasks_iter = backup_tasks.iter().skip(current_embed_page * MAX_TASKS_PER_PAGE).take(MAX_TASKS_PER_PAGE);
+    
+        for task in backup_tasks_iter {
+            let mut embed = poise::serenity_prelude::CreateEmbed::default()
+            .title(format!("Backup Task {}", task.task_id))
+            .description(format!("Task Name: {}\nTask State: {}\nTask Created At: {}", task.task_name, task.state, task.created_at));
+    
+            if let Some(ref output) = task.output {
+                let furl = format!("{}/tasks/{}/ioauth/download-link", crate::config::CONFIG.sites.api.get(), task.task_id);
+                embed = embed
+                .description(format!("Task Name: {}\nTask State: {}\nTask Created At: {}\n\n:link: [Download {}]({})", task.task_name, task.state, task.created_at, output.filename, &furl));
+            }
+    
+            embed = embed
+            .color(poise::serenity_prelude::Colour::DARK_GREEN);
+    
+            embeds.push(embed);
+        }
+
+        embeds
+    }
+
+    fn create_reply(
+        current_embed_page: usize, 
+        backup_tasks: &[crate::jobserver::Task],
+    ) -> poise::CreateReply {
+        let mut cr = poise::CreateReply::default()
+        .components(
+            vec![
+                serenity::all::CreateActionRow::Buttons(
+                    vec![
+                        serenity::all::CreateButton::new("backups_list_previous")
+                        .label("Previous")
+                        .style(serenity::all::ButtonStyle::Primary)
+                        .disabled(current_embed_page == 0),
+                        serenity::all::CreateButton::new("backups_list_next")
+                        .label("Next")
+                        .style(serenity::all::ButtonStyle::Primary)
+                        .disabled(current_embed_page >= backup_tasks.len() / MAX_TASKS_PER_PAGE),
+                    ]
+                )
+            ]
+        );
+    
+        for embed in create_embeds(current_embed_page, backup_tasks) {
+            cr = cr.embed(embed);
+        }
+    
+        cr
+    }
+
+    let mut current_embed_page = 0;
+
+    let cr = create_reply(current_embed_page, &backup_tasks);
+
+    let msg = ctx.send(cr)
+    .await?
+    .into_message()
+    .await?;
+
+    let collector = msg.await_component_interactions(ctx.serenity_context())
+    .author_id(ctx.author().id)
+    .timeout(Duration::from_secs(120));
+
+    let mut collect_stream = collector.stream();
+
+    while let Some(item) = collect_stream.next().await {
+        let item_id = item.data.custom_id.as_str();
+
+        match item_id {
+            "backups_list_previous" => {
+                if current_embed_page == 0 {
+                    continue;
+                }
+
+                current_embed_page -= 1;
+            },
+            "backups_list_next" => {
+                if current_embed_page >= backup_tasks.len() / MAX_TASKS_PER_PAGE {
+                    continue;
+                }
+
+                current_embed_page += 1;
+            },
+            _ => {
+                continue;
+            }
+        }
+
+        let cr = create_reply(current_embed_page, &backup_tasks);
+
+        item.create_response(
+            ctx.serenity_context(), 
+            serenity::all::CreateInteractionResponse::Message(
+                cr.to_slash_initial_response(serenity::all::CreateInteractionResponseMessage::default())
+            )
+        )
+        .await?;
+    }    
 
     Ok(())
 }

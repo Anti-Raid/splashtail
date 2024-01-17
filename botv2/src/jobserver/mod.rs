@@ -122,3 +122,139 @@ pub struct TaskCreateResponse {
 pub struct WrappedTaskCreateResponse {
     pub tcr: TaskCreateResponse,
 }
+
+impl Task {
+    /// Fetches a task from the database based on id
+    pub async fn from_id(task_id: sqlx::types::uuid::Uuid, pool: &sqlx::PgPool) -> Result<Self, crate::Error> {
+        let rec = sqlx::query!(
+            "SELECT task_id, task_name, output, task_info, statuses, task_for, expiry, state, created_at FROM tasks WHERE task_id = $1",
+            task_id,
+        )
+        .fetch_one(pool)
+        .await?;
+
+        let mut statuses = Vec::new();
+
+        for status in &rec.statuses {
+            let status = serde_json::from_value::<TaskStatuses>(status.clone())?;
+            statuses.push(status);
+        }
+
+        let task = Task {
+            task_id: rec.task_id,
+            task_name: rec.task_name,
+            output: rec.output.map(serde_json::from_value::<TaskOutput>).transpose()?,
+            task_info: serde_json::from_value::<TaskInfo>(rec.task_info)?,
+            statuses,
+            task_for: rec.task_for.map(|task_for| task_for.into()),
+            expiry: {
+                if let Some(expiry) = rec.expiry {
+                    let t = expiry.microseconds + 60 * 1_000_000 + (expiry.days as i64) * 24 * 60 * 60 * 1_000_000 + (expiry.months as i64) * 30 * 24 * 60 * 60 * 1_000_000;
+                    Some(
+                        chrono::Duration::microseconds(t)
+                    )
+                } else {
+                    None
+                }
+            },
+            state: rec.state,
+            created_at: rec.created_at,
+        };
+
+        Ok(task)
+    }
+    
+    /// Fetches all tasks of a guild given guild id
+    #[allow(dead_code)] // Will be used in the near future
+    pub async fn from_guild(guild_id: serenity::all::GuildId, pool: &sqlx::PgPool) -> Result<Vec<Self>, crate::Error> {
+        let recs = sqlx::query!(
+            "SELECT task_id, task_name, output, task_info, statuses, task_for, expiry, state, created_at FROM tasks WHERE task_for = $1",
+            format!("g/{}", guild_id)
+        )
+        .fetch_all(pool)
+        .await?;
+
+        let mut tasks = Vec::new();
+
+        for rec in recs {
+            let mut statuses = Vec::new();
+
+            for status in &rec.statuses {
+                let status = serde_json::from_value::<TaskStatuses>(status.clone())?;
+                statuses.push(status);
+            }
+
+            let task = Task {
+                task_id: rec.task_id,
+                task_name: rec.task_name,
+                output: rec.output.map(serde_json::from_value::<TaskOutput>).transpose()?,
+                task_info: serde_json::from_value::<TaskInfo>(rec.task_info)?,
+                statuses,
+                task_for: rec.task_for.map(|task_for| task_for.into()),
+                expiry: {
+                    if let Some(expiry) = rec.expiry {
+                        let t = expiry.microseconds + 60 * 1_000_000 + (expiry.days as i64) * 24 * 60 * 60 * 1_000_000 + (expiry.months as i64) * 30 * 24 * 60 * 60 * 1_000_000;
+                        Some(
+                            chrono::Duration::microseconds(t)
+                        )
+                    } else {
+                        None
+                    }
+                },
+                state: rec.state,
+                created_at: rec.created_at,
+            };
+
+            tasks.push(task);
+        }
+
+        Ok(tasks)
+    }
+
+    /// Returns all tasks with a specific guild ID and a specific task name
+    pub async fn from_guild_and_task_name(guild_id: serenity::all::GuildId, task_name: &str, pool: &sqlx::PgPool) -> Result<Vec<Self>, crate::Error> {
+        let recs = sqlx::query!(
+            "SELECT task_id, task_name, output, task_info, statuses, task_for, expiry, state, created_at FROM tasks WHERE task_for = $1 AND task_name = $2",
+            format!("g/{}", guild_id),
+            task_name,
+        )
+        .fetch_all(pool)
+        .await?;
+
+        let mut tasks = Vec::new();
+
+        for rec in recs {
+            let mut statuses = Vec::new();
+
+            for status in &rec.statuses {
+                let status = serde_json::from_value::<TaskStatuses>(status.clone())?;
+                statuses.push(status);
+            }
+
+            let task = Task {
+                task_id: rec.task_id,
+                task_name: rec.task_name,
+                output: rec.output.map(serde_json::from_value::<TaskOutput>).transpose()?,
+                task_info: serde_json::from_value::<TaskInfo>(rec.task_info)?,
+                statuses,
+                task_for: rec.task_for.map(|task_for| task_for.into()),
+                expiry: {
+                    if let Some(expiry) = rec.expiry {
+                        let t = expiry.microseconds + 60 * 1_000_000 + (expiry.days as i64) * 24 * 60 * 60 * 1_000_000 + (expiry.months as i64) * 30 * 24 * 60 * 60 * 1_000_000;
+                        Some(
+                            chrono::Duration::microseconds(t)
+                        )
+                    } else {
+                        None
+                    }
+                },
+                state: rec.state,
+                created_at: rec.created_at,
+            };
+
+            tasks.push(task);
+        }
+
+        Ok(tasks)
+    }
+}

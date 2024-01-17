@@ -323,6 +323,19 @@ async fn main() {
                             .await?;
                         }
 
+                        let key = cmds::COMMAND_PERMISSION_CACHE.get(&(guild_id, ctx.author().id)).await;
+
+                        if let Some(ref map) = key {
+                            let cpr = map.get(&ctx.command().qualified_name);
+
+                            if let Some(cpr) = cpr {
+                                match cpr {
+                                    cmds::CachedPermResult::Ok => return Ok(true),
+                                    cmds::CachedPermResult::Err(e) => return Err(e.to_string().into()),
+                                }
+                            }
+                        }
+
                         let Some(member) = ctx.author_member().await else {
                             return Err("You must be in a server to run this command".into());
                         };
@@ -395,6 +408,15 @@ async fn main() {
                                     e.0
                                 ).into()
                             );
+                        }
+
+                        let mut key = cmds::COMMAND_PERMISSION_CACHE.get(&(guild_id, ctx.author().id)).await;
+                        if let Some(ref mut map) = key {
+                            map.insert(ctx.command().qualified_name.clone(), cmds::CachedPermResult::Ok);
+                        } else {
+                            let mut map = indexmap::IndexMap::new();
+                            map.insert(ctx.command().qualified_name.clone(), cmds::CachedPermResult::Ok);
+                            cmds::COMMAND_PERMISSION_CACHE.insert((guild_id, ctx.author().id), map).await;
                         }
 
                         Ok(true)
