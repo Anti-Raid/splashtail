@@ -34,6 +34,7 @@ type BackupRestoreOpts struct {
     prefix_command,
     slash_command,
     guild_only,
+    user_cooldown = "5",
     aliases("backup"),
     subcommands("backups_create", "backups_list")
 )]
@@ -255,6 +256,7 @@ pub async fn backups_create(
     prefix_command,
     slash_command,
     guild_only,
+    user_cooldown = "5",
     rename = "list",
 )]
 pub async fn backups_list(ctx: Context<'_>) -> Result<(), Error> {
