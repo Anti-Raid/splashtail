@@ -369,6 +369,8 @@ pub async fn backups_list(ctx: Context<'_>) -> Result<(), Error> {
             }
         }
 
+        item.defer(&ctx.serenity_context()).await?;
+
         let cr = create_reply(current_embed_page, &backup_tasks);
 
         item.edit_response(
