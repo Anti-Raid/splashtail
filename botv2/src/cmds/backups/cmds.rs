@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, fmt::Display};
 use std::time::Duration;
 use futures_util::StreamExt;
 
@@ -7,25 +7,28 @@ use std::sync::Arc;
 use serenity::all::CreateEmbed;
 
 /*
+// Options that can be set when creatng a backup
 type BackupCreateOpts struct {
-	I PerChannel                int            `json:"per_channel" description:"The number of messages per channel"`
-	I MaxMessages               int            `json:"max_messages" description:"The maximum number of messages to backup"`
-	I BackupMessages            bool           `json:"backup_messages" description:"Whether to backup messages or not"`
-	I BackupAttachments         bool           `json:"backup_attachments" description:"Whether to backup attachments or not"`
-	I BackupGuildAssets         []string       `json:"backup_guild_assets" description:"What assets to back up"`
-    I IgnoreMessageBackupErrors bool           `json:"ignore_message_backup_errors" description:"Whether to ignore errors while backing up messages or not and skip these channels"`
-	I RolloverLeftovers         bool           `json:"rollover_leftovers" description:"Whether to attempt rollover of leftover message quota to another channels or not"`
-	SpecialAllocations          map[string]int `json:"special_allocations" description:"Specific channel allocation overrides"`
-	I Encrypt                   string           `json:"encrypt" description:"Whether to encrypt the backup or not"`
+	PerChannel                int            `description:"The number of messages per channel"`
+	MaxMessages               int            `description:"The maximum number of messages to backup"`
+	BackupMessages            bool           `description:"Whether to backup messages or not"`
+	BackupAttachments         bool           `description:"Whether to backup attachments or not"`
+	BackupGuildAssets         []string       `description:"What assets to back up"`
+	IgnoreMessageBackupErrors bool           `description:"Whether to ignore errors while backing up messages or not and skip these channels"`
+	RolloverLeftovers         bool           `description:"Whether to attempt rollover of leftover message quota to another channels or not"`
+	SpecialAllocations        map[string]int `description:"Specific channel allocation overrides"`
+	Encrypt                   string         `description:"The key to encrypt backups with, if any"`
 }
 
+// Options that can be set when restoring a backup
 type BackupRestoreOpts struct {
-    IgnoreRestoreErrors bool     `json:"ignore_restore_errors" description:"Whether to ignore errors while restoring or not"`
-	I ProtectedChannels []string `json:"protected_channels" description:"Channels to protect from being deleted"`
-	I BackupSource      string   `json:"backup_source" description:"The source of the backup"`
-	I Decrypt           string   `json:"decrypt" description:"The key to decrypt backups with, if any"`
-	I ChannelRestoreMode ChannelRestoreMode `json:"channel_restore_mode" description:"Channel backup restore method. Use 'full' if unsure"`
-    RoleRestoreMode    RoleRestoreMode    `json:"role_restore_mode" description:"Role backup restore method. Use 'full' if unsure"`
+	IgnoreRestoreErrors bool               `description:"Whether to ignore errors while restoring or not and skip these channels/roles"`
+	ProtectedChannels   []string           `description:"Channels to protect from being deleted"`
+	ProtectedRoles      []string           `description:"Roles to protect from being deleted"`
+	BackupSource        string             `description:"The source of the backup"`
+	Decrypt             string             `description:"The key to decrypt backups with, if any"`
+	ChannelRestoreMode  ChannelRestoreMode `description:"Channel backup restore method. Use 'full' if unsure"`
+	RoleRestoreMode     RoleRestoreMode    `description:"Role backup restore method. Use 'full' if unsure"`
 }
 */
 
@@ -36,7 +39,7 @@ type BackupRestoreOpts struct {
     guild_only,
     user_cooldown = "5",
     aliases("backup"),
-    subcommands("backups_create", "backups_list")
+    subcommands("backups_create", "backups_list", "backups_restore")
 )]
 pub async fn backups(_ctx: Context<'_>) -> Result<(), Error> {
     Ok(())
@@ -379,6 +382,219 @@ pub async fn backups_list(ctx: Context<'_>) -> Result<(), Error> {
         )
         .await?;
     }    
+
+    Ok(())
+}
+
+#[derive(poise::ChoiceParameter)]
+enum ChannelRestoreMode {
+    #[name = "full"]
+    Full,
+    #[name = "partial"]
+    Partial,
+    #[name = "none"]
+    None,
+}
+
+impl Display for ChannelRestoreMode {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ChannelRestoreMode::Full => write!(f, "full"),
+            ChannelRestoreMode::Partial => write!(f, "partial"),
+            ChannelRestoreMode::None => write!(f, "none"),
+        }
+    }
+}
+
+#[derive(poise::ChoiceParameter)]
+enum RoleRestoreMode {
+    #[name = "full"]
+    Full,
+}
+
+impl Display for RoleRestoreMode {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            RoleRestoreMode::Full => write!(f, "full"),
+        }
+    }
+}
+
+/// Restores a created backup
+#[poise::command(
+    prefix_command,
+    slash_command,
+    guild_only,
+    user_cooldown = "20",
+    guild_cooldown = "30",
+    rename = "restore",
+)]
+#[allow(clippy::too_many_arguments)] // This function needs these arguments due to poise
+pub async fn backups_restore(
+    ctx: Context<'_>,
+
+    #[description = "The backup attachment to restore"]
+    backup_file: serenity::all::Attachment,
+
+    #[description = "Password to decrypt backup with. Should not be reused"]
+    password: Option<String>,
+
+    #[description = "Channel restore mode. Defaults to full. Use 'full' if unsure"]
+    channel_restore_mode: Option<ChannelRestoreMode>,
+
+    #[description = "Role restore mode. Defaults to full. Use 'full' if unsure"]
+    role_restore_mode: Option<RoleRestoreMode>,
+
+    #[description = "Channels to protect from being deleted, comma seperated"]
+    protected_channels: Option<String>,
+
+    #[description = "Roles to protect from being deleted, comma seperated"]
+    protected_roles: Option<String>,
+
+    #[description = "Whether to ignore errors while restoring or not"]
+    ignore_restore_errors: Option<bool>,
+) -> Result<(), Error> {
+    let protected_channels = {
+        let mut p = Vec::new();
+        let protected_channels = protected_channels.unwrap_or_default();
+        let protected_channels_split = protected_channels.split(',');
+
+        for protected_channel in protected_channels_split {
+            let trimmed = protected_channel.trim().to_string();
+            if trimmed.is_empty() {
+                continue;
+            }
+
+            if trimmed == ctx.channel_id().to_string() {
+                continue;
+            }
+
+            p.push(trimmed);
+        }
+
+        p.push(ctx.channel_id().to_string());
+
+        p
+    };
+
+    let protected_roles = {
+        let mut p = Vec::new();
+        let protected_roles = protected_roles.unwrap_or_default();
+        let protected_roles_split = protected_roles.split(',');
+
+        for protected_role in protected_roles_split {
+            let trimmed = protected_role.trim().to_string();
+            if trimmed.is_empty() {
+                continue;
+            }
+
+            p.push(trimmed);
+        }
+
+        p
+    };
+
+    let json = serde_json::json!({
+        "IgnoreRestoreErrors": ignore_restore_errors.unwrap_or(false),
+        "ProtectedChannels": protected_channels,
+        "ProtectedRoles": protected_roles,
+        "BackupSource": backup_file.url,
+        "Decrypt": password.unwrap_or_default(),
+        "ChannelRestoreMode": channel_restore_mode.unwrap_or(ChannelRestoreMode::Full).to_string(),
+        "RoleRestoreMode": role_restore_mode.unwrap_or(RoleRestoreMode::Full).to_string(),
+    });
+
+    let mut base_message = ctx.send(
+        poise::CreateReply::default()
+        .embed(
+            CreateEmbed::default()
+            .title("Restoring Backup...")
+            .description(":yellow_circle: Please wait, starting backup task...")
+        )
+    )
+    .await?
+    .into_message()
+    .await?;
+
+    // Create reqwest client
+    let client = reqwest::Client::builder()
+    .timeout(std::time::Duration::from_secs(10))
+    .user_agent(
+        format!("Splashtail/botv2 {} (cluster {})", env!("CARGO_PKG_VERSION"), crate::ipc::argparse::MEWLD_ARGS.cluster_id)
+    )
+    .build()?;
+
+    // Restore backup
+    let backup = client.post(format!("{}/ipc/create_task", crate::config::CONFIG.meta.jobserver_url.get()))
+    .json(&serde_json::json!({
+        "args": {
+            "name": "guild_restore_backup",
+            "execute": true,
+            "data": {
+                "ServerID": ctx.guild_id().unwrap().to_string(),
+                "Options": json
+            }
+        }
+    }))
+    .header(
+        "Authorization",
+        format!(
+            "{} {}",
+            "bot",
+            crate::config::CONFIG.meta.jobserver_secrets.get().get("bot").expect("No jobserver secret set")
+        )
+    )
+    .send()
+    .await?
+    .json::<crate::jobserver::WrappedTaskCreateResponse>()
+    .await?
+    .tcr;
+
+    base_message
+    .edit(
+        &ctx,
+        serenity::all::EditMessage::default()
+        .embed(
+            CreateEmbed::default()
+            .title("Restoring Backup...")
+            .description(format!(":yellow_circle: Created task with Task ID of {}", backup.task_id))
+        )
+    )
+    .await?;
+    
+    async fn update_base_message(
+        cache_http: crate::impls::cache::CacheHttpImpl,
+        mut base_message: serenity::model::channel::Message,
+        task: Arc<crate::jobserver::Task>,
+    ) -> Result<(), Error> {
+        let new_task_msg = crate::jobserver::taskpoll::embed(&task)?;   
+    
+        base_message
+        .edit(
+            &cache_http,
+            new_task_msg
+            .to_prefix_edit(serenity::all::EditMessage::default())
+        )
+        .await?;
+
+        Ok(())
+    }
+
+    // Use jobserver::reactive to keep updating the message
+    crate::jobserver::taskpoll::reactive(
+        &ctx.data().cache_http,
+        &ctx.data().pool,
+        backup.task_id.as_str(),
+        |cache_http, task| {
+            Box::pin(
+                update_base_message(cache_http.clone(), base_message.clone(), task.clone())
+            )
+        },
+        crate::jobserver::taskpoll::PollTaskOptions {
+            interval: Some(1),
+        }
+    )
+    .await?;
 
     Ok(())
 }
