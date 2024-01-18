@@ -90,14 +90,6 @@ pub async fn dispatch_manager(
             },
             QueuedEvent::Dispatch(event) => {
                 let ws_sender = ws_sender.clone();
-                
-                // Move event out of Arc
-                let mut event = Arc::into_inner(event).unwrap();
-
-                // Set the sequence number
-                event.s = Some(
-                    incr_session_seq_no(&session_id).await - 2
-                );
 
                 // Send the event
                 let Ok(evt_json) = serde_json::to_string(&event) else {
@@ -124,8 +116,6 @@ pub async fn dispatch_manager(
                 // Move event out of Arc
                 let mut event = Arc::into_inner(event).unwrap();
 
-                // Set the sequence number
-                event["s"] = serde_json::Value::from(incr_session_seq_no(&session_id).await -2);
                 event["op"] = serde_json::Value::from(0); // Ensure op is set to Dispatch
 
                 // Send the event
@@ -287,7 +277,8 @@ pub async fn connection(ws_stream: tokio_websockets::WebSocketStream<tokio::net:
                         let sc = session.shard;
         
                         drop(session); // Kill the reference to the session
-        
+                        
+                        let session_id = session_id.clone();
                         let guild_fan_task = tokio::spawn(async move {
                             let dispatcher = {
                                 let Some(sess) = SESSIONS.get(&sid) else {
@@ -302,13 +293,15 @@ pub async fn connection(ws_stream: tokio_websockets::WebSocketStream<tokio::net:
                                 if serenity::utils::shard_id(guild, sc[1]) != sc[0] {
                                     continue;
                                 }
+
+                                let seq_no = incr_session_seq_no(&session_id).await;
         
                                 let guild_create = {
                                     if let Some(guild) = ch.cache.guild(guild) {
                                         // Send GUILD_CREATE
                                         Arc::new(Event {
                                             op: EventOpCode::Dispatch,
-                                            s: None,
+                                            s: Some(seq_no),
                                             d: serde_json::to_value(guild.clone()).unwrap(),
                                             t: Some("GUILD_CREATE".to_string()),
                                         })

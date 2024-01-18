@@ -4,10 +4,12 @@ mod ws;
 mod models;
 
 use log::{error, info};
-use serenity::{all::RawEventHandler, async_trait};
+use serenity::{all::{RawEventHandler, ShardId}, async_trait};
 use std::{io::Write, sync::Arc};
 
 type Error = Box<dyn std::error::Error + Send + Sync>;
+
+pub static IS_READY: once_cell::sync::Lazy<tokio::sync::RwLock<dashmap::DashMap<ShardId, bool>>> = once_cell::sync::Lazy::new(|| tokio::sync::RwLock::new(dashmap::DashMap::new()));
 
 pub struct EventDispatch {}
 
@@ -17,10 +19,27 @@ impl RawEventHandler for EventDispatch {
         match event {
             serenity::all::Event::Ready(data_about_bot) => {
                 info!("{} is now ready on shard {}", data_about_bot.ready.user.name, ctx.shard_id);
-            }
+
+                let is_ready = IS_READY.write().await;
+
+                is_ready.insert(ctx.shard_id, true);
+            },
+            serenity::all::Event::Resumed(_) => {},
             _ => {
+                {
+                    let is_ready = IS_READY.read().await;
+
+                    if is_ready.contains_key(&ctx.shard_id) {
+                        if !*is_ready.get(&ctx.shard_id).unwrap().value() {
+                            return;
+                        }
+                    } else {
+                        return;
+                    }
+                }
+
                 // Reserialize the event back to its raw value form
-                let Ok(raw) = serde_json::to_value(&event) else {
+                let Ok(mut raw) = serde_json::to_value(&event) else {
                     error!("Failed to serialize event: {:?}", event);
                     return;
                 };
@@ -30,6 +49,13 @@ impl RawEventHandler for EventDispatch {
                     let session = sess.value();
 
                     if session.dispatcher.is_closed() {
+                        // Only some events should not be counted under missing events
+                        match event {
+                            serenity::all::Event::InteractionCreate(_) => continue, // Useless, by the time the session is back up, the interaction will have expired
+                            serenity::all::Event::GuildAuditLogEntryCreate(_) => continue, // By the time we resume, the audit log create event is no longer really useful
+                            _ => {},
+                        }
+
                         // Push to SESSION_MISSING_EVENTS
                         let Some(mes) = ws::SESSION_MISSING_EVENTS.get(session_id) else {
                             log::warn!("No missing events queue for shard {}", session.shard[0]);
@@ -54,6 +80,8 @@ impl RawEventHandler for EventDispatch {
                     if sess_shard != ctx.shard_id {
                         continue;
                     }
+
+                    raw["s"] = crate::ws::incr_session_seq_no(session_id).await.into();
 
                     if let Err(e) = session.dispatcher.send(crate::models::QueuedEvent::DispatchValue(Arc::new(raw.clone()))).await {
                         error!("Failed to send event to session: {}", e);
