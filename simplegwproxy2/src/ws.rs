@@ -70,6 +70,7 @@ pub async fn dispatch_manager(
         match event {
             QueuedEvent::Ping => {
                 // Send heartbeat ACK
+                log::info!("Heartbeat ACK on session {} at time {:#?}", session_id, std::time::SystemTime::now());
                 let mut ws_sender = ws_sender.lock().await;
 
                 if let Err(e) = ws_sender.send(Message::text("{\"op\":11}".to_string())).await {
@@ -90,6 +91,13 @@ pub async fn dispatch_manager(
             },
             QueuedEvent::Dispatch(event) => {
                 let ws_sender = ws_sender.clone();
+
+                // Move event out of Arc
+                let mut event = Arc::into_inner(event).unwrap();
+
+                if event.op == crate::models::EventOpCode::Dispatch {
+                    event.s = Some(incr_session_seq_no(&session_id).await); // Increment the sequence number
+                }
 
                 // Send the event
                 let Ok(evt_json) = serde_json::to_string(&event) else {
@@ -117,6 +125,7 @@ pub async fn dispatch_manager(
                 let mut event = Arc::into_inner(event).unwrap();
 
                 event["op"] = serde_json::Value::from(0); // Ensure op is set to Dispatch
+                event["s"] = incr_session_seq_no(&session_id).await.into(); // Increment the sequence number
 
                 // Send the event
                 let Ok(evt_json) = serde_json::to_string(&event) else {
@@ -186,6 +195,7 @@ pub async fn connection(ws_stream: tokio_websockets::WebSocketStream<tokio::net:
         #[allow(clippy::collapsible_if)]
         if msg.is_text() {
             let Some(session) = SESSIONS.get(&session_id) else {
+                log::error!("Failed to get session {}", session_id);
                 for task in curr_tasks {
                     task.abort();
                 }
@@ -207,9 +217,19 @@ pub async fn connection(ws_stream: tokio_websockets::WebSocketStream<tokio::net:
                 EventOpCode::Dispatch => {}, // Recieve only
                 EventOpCode::Heartbeat => {
                     // Send PING to dispatcher
-                    if let Err(e) = session.dispatcher.send(QueuedEvent::Ping).await {
-                        log::error!("Failed to send PING to dispatcher: {}", e);
-                    }
+                    let dispatcher = session.dispatcher.clone();
+                    tokio::spawn(
+                        async move {
+                            tokio::time::sleep(
+                                std::time::Duration::from_micros(100) // Give 100us for the application to see the sent ping
+                            )
+                            .await;
+
+                            if let Err(e) = dispatcher.send(QueuedEvent::Ping).await {
+                                log::error!("Failed to send PING to dispatcher: {}", e);
+                            }
+                        }
+                    );
                 },
                 EventOpCode::Identify => {
                     // Ensure we're unidentified
@@ -273,35 +293,31 @@ pub async fn connection(ws_stream: tokio_websockets::WebSocketStream<tokio::net:
         
                         // Create task in which we dispatch the current cache to the client
                         let ch = cache_http.clone();
-                        let sid = session_id.clone();
                         let sc = session.shard;
-        
-                        drop(session); // Kill the reference to the session
                         
-                        let session_id = session_id.clone();
+                        let dispatcher = session.dispatcher.clone();
                         let guild_fan_task = tokio::spawn(async move {
-                            let dispatcher = {
-                                let Some(sess) = SESSIONS.get(&sid) else {
-                                    log::error!("Failed to get session");
-                                    return;
-                                };
-        
-                                sess.dispatcher.clone()
-                            };
-        
                             for guild in ch.cache.guilds() {
+                                // Avoid filling the channel with only guild fanouts to allow for other events to be sent
+                                tokio::time::sleep(
+                                    std::time::Duration::from_micros(12000) // 12ms
+                                ).await;
+
                                 if serenity::utils::shard_id(guild, sc[1]) != sc[0] {
                                     continue;
                                 }
 
-                                let seq_no = incr_session_seq_no(&session_id).await;
+                                if dispatcher.is_closed() {
+                                    log::warn!("Dispatcher is closed, ending guild fanout");
+                                    return;
+                                }
         
                                 let guild_create = {
                                     if let Some(guild) = ch.cache.guild(guild) {
                                         // Send GUILD_CREATE
                                         Arc::new(Event {
                                             op: EventOpCode::Dispatch,
-                                            s: Some(seq_no),
+                                            s: None,
                                             d: serde_json::to_value(guild.clone()).unwrap(),
                                             t: Some("GUILD_CREATE".to_string()),
                                         })
@@ -450,6 +466,11 @@ pub async fn connection(ws_stream: tokio_websockets::WebSocketStream<tokio::net:
                             let mut missing_events = mes.lock().await;
 
                             while let Some(event) = missing_events.pop_front() {
+                                if dispatcher.is_closed() {
+                                    log::warn!("Dispatcher is closed, ending resume fanout");
+                                    return;
+                                }
+
                                 if let Err(e) = dispatcher.send(QueuedEvent::DispatchValue(Arc::new(event))).await {
                                     log::error!("Failed to send missed event: {}", e);
                                 }

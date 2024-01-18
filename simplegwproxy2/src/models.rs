@@ -13,6 +13,7 @@ use std::sync::Arc;
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct Ready {
+    #[serde(rename = "v")]
     pub version: u8,
     pub user: CurrentUser,
     pub guilds: Vec<UnavailableGuild>,

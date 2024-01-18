@@ -39,7 +39,7 @@ impl RawEventHandler for EventDispatch {
                 }
 
                 // Reserialize the event back to its raw value form
-                let Ok(mut raw) = serde_json::to_value(&event) else {
+                let Ok(raw) = serde_json::to_value(&event) else {
                     error!("Failed to serialize event: {:?}", event);
                     return;
                 };
@@ -80,8 +80,6 @@ impl RawEventHandler for EventDispatch {
                     if sess_shard != ctx.shard_id {
                         continue;
                     }
-
-                    raw["s"] = crate::ws::incr_session_seq_no(session_id).await.into();
 
                     if let Err(e) = session.dispatcher.send(crate::models::QueuedEvent::DispatchValue(Arc::new(raw.clone()))).await {
                         error!("Failed to send event to session: {}", e);
