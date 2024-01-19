@@ -1,7 +1,7 @@
 package core
 
 import (
-	"github.com/anti-raid/splashtail/routes/core/endpoints/get_cluster_health"
+	"github.com/anti-raid/splashtail/webserver/routes/core/endpoints/get_cluster_health"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/infinitybotlist/eureka/uapi"

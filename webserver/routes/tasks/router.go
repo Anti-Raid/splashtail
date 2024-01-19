@@ -1,11 +1,11 @@
 package tasks
 
 import (
-	"github.com/anti-raid/splashtail/routes/tasks/endpoints/create_task"
-	"github.com/anti-raid/splashtail/routes/tasks/endpoints/get_task"
-	"github.com/anti-raid/splashtail/routes/tasks/endpoints/get_task_list"
-	"github.com/anti-raid/splashtail/routes/tasks/endpoints/ioauth_download_task"
 	"github.com/anti-raid/splashtail/types"
+	"github.com/anti-raid/splashtail/webserver/routes/tasks/endpoints/create_task"
+	"github.com/anti-raid/splashtail/webserver/routes/tasks/endpoints/get_task"
+	"github.com/anti-raid/splashtail/webserver/routes/tasks/endpoints/get_task_list"
+	"github.com/anti-raid/splashtail/webserver/routes/tasks/endpoints/ioauth_download_task"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/infinitybotlist/eureka/uapi"
