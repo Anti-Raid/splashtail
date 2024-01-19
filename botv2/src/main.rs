@@ -285,6 +285,7 @@ async fn main() {
 
                     ctx.send(
                         CreateReply::default()
+                        .content("https://discord.gg/Qa52e2bNms")
                         .embed(primary)
                         .embed(updates)
                         .embed(statistics)
