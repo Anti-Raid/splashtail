@@ -108,7 +108,8 @@ type Meta struct {
 	DebugTaskLogger  bool                       `yaml:"debug_task_logger" comment:"Debug the task logger"`
 	JobserverAddr    Differs[string]            `yaml:"jobserver_addr" default:"localhost:2939" comment:"Job server port" validate:"required"`
 	JobserverUrl     Differs[string]            `yaml:"jobserver_url" default:"localhost:2939" comment:"Job server url" validate:"required"`
-	JobserverSecrets Differs[map[string]string] `yaml:"jobserver_secrets" comment:"Job server secrets"`
+	JobserverSecrets Differs[map[string]string] `yaml:"jobserver_secrets" comment:"Job server secrets" validate:"required"`
+	SupportServer    string                     `yaml:"support_server" comment:"Discord Support Server Link" default:"https://discord.gg/u78NFAXm" validate:"required"`
 }
 
 type BotList struct {

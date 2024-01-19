@@ -83,8 +83,10 @@ async fn event_listener<'a>(ctx: poise::FrameworkContext<'a, Data, Error>, event
                 let primary = poise::serenity_prelude::CreateEmbed::default()
                     .color(0xff0000)
                     .title("AntiRaid")
-                    .url("https://discord.gg/Qa52e2bNms")
-                    .description("Unfortunately, AntiRaid is currently unavailable due to poor code management and changes with the Discord API. We are currently in the works of V6, and hope to have it out by next month. All use of our services will not be available, and updates will be pushed here. We are extremely sorry for the inconvenience.\nFor more information you can also join our [Support Server](https://discord.gg/Qa52e2bNms)!");
+                    .url(&config::CONFIG.meta.support_server)
+                    .description(
+                        format!("Unfortunately, AntiRaid is currently unavailable due to poor code management and changes with the Discord API. We are currently in the works of V6, and hope to have it out by next month. All use of our services will not be available, and updates will be pushed here. We are extremely sorry for the inconvenience.\nFor more information you can also join our [Support Server]({})!", config::CONFIG.meta.support_server)
+                    );
 
                 let changes = ["We are working extremely hard on Antiraid v6, and have completed working on half of the bot. We should have this update out by Q1/Q2 2024! Delays may occur due to the sheer scope of the unique features we want to provide!"];
 
@@ -118,6 +120,7 @@ async fn event_listener<'a>(ctx: poise::FrameworkContext<'a, Data, Error>, event
                     serenity::all::CreateInteractionResponse::Message(
                         serenity::all::CreateInteractionResponseMessage::default()
                         .flags(serenity::all::InteractionResponseFlags::EPHEMERAL)
+                        .content(&config::CONFIG.meta.support_server)
                         .add_embed(primary)
                         .add_embed(updates)
                         .add_embed(statistics)
@@ -253,8 +256,12 @@ async fn main() {
                     let primary = poise::serenity_prelude::CreateEmbed::default()
                         .color(0xff0000)
                         .title("AntiRaid")
-                        .url("https://discord.gg/Qa52e2bNms")
-                        .description("Unfortunately, AntiRaid is currently unavailable due to poor code management and changes with the Discord API. We are currently in the works of V6, and hope to have it out by next month. All use of our services will not be available, and updates will be pushed here. We are extremely sorry for the inconvenience.\nFor more information you can also join our [Support Server](https://discord.gg/Qa52e2bNms)!");
+                        .url(&config::CONFIG.meta.support_server)
+                        .description(
+                            format!(
+                                "Unfortunately, AntiRaid is currently unavailable due to poor code management and changes with the Discord API. We are currently in the works of V6, and hope to have it out by next month. All use of our services will not be available, and updates will be pushed here. We are extremely sorry for the inconvenience.\nFor more information you can also join our [Support Server]({})!", config::CONFIG.meta.support_server
+                            )
+                        );
 
                     let changes = ["We are working extremely hard on Antiraid v6, and have completed working on half of the bot. We should have this update out by Q1/Q2 2024! Delays may occur due to the sheer scope of the unique features we want to provide!"];
 
@@ -285,7 +292,7 @@ async fn main() {
 
                     ctx.send(
                         CreateReply::default()
-                        .content("https://discord.gg/Qa52e2bNms")
+                        .content(&config::CONFIG.meta.support_server)
                         .embed(primary)
                         .embed(updates)
                         .embed(statistics)
