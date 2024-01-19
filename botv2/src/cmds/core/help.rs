@@ -37,8 +37,22 @@ async fn _embed_help(
 
     let mut help_arr = Vec::new();
 
-    for (category_name, commands) in categories {
-        let cat_name = _titlecase(&category_name.unwrap_or("Commands".to_string()));
+    for (category_id, commands) in categories {
+        let cat_name = {
+            if let Some(cat_name) = category_id {
+                // Get the module from the name
+                let cat_module = crate::cmds::COMMAND_MODULE_CACHE.get(&cat_name);
+
+                if let Some(cat_module) = cat_module {
+                    cat_module.name.to_string()
+                } else {
+                    "Misc Commands".to_string()
+                }
+            } else {
+                "Misc Commands".to_string()
+            }
+        };
+
         let mut menu = "".to_string();
         for command in commands {
             if command.hide_in_help {

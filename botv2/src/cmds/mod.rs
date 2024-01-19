@@ -1,6 +1,18 @@
-pub mod core;
-pub mod limits;
-pub mod backups;
+/// List of enabled modules
+/// 
+/// Add to this list to create a module
+mod core;
+mod limits;
+mod server_backups;
+mod root;
+pub fn enabled_modules() -> Vec<Module> {
+    vec![
+        core::module(),
+        limits::module(),
+        server_backups::module(),
+        root::module(),
+    ]
+}
 
 use once_cell::sync::Lazy;
 use moka::future::Cache;
@@ -23,15 +35,17 @@ pub type Command = poise::Command<crate::Data, crate::Error>;
 pub type CommandExtendedDataMap = IndexMap<&'static str, CommandExtendedData>;
 pub type CommandAndPermissions = (Command, CommandExtendedDataMap);
 
-/// List of enabled commands
-/// 
-/// Add to this list to enable a command
-pub fn enabled_commands() -> IndexMap<&'static str, Vec<CommandAndPermissions>> {
-    indexmap! {
-        "core" => core::commands(),
-        "limits" => limits::commands(),
-        "backups" => backups::commands(),
-    }
+#[derive(PartialEq, serde::Serialize, serde::Deserialize)]
+pub struct Module {
+    /// The ID of the module
+    pub id: &'static str,
+
+    /// The name of the module
+    pub name: &'static str,
+
+    #[serde(skip)]
+    /// The commands in the module
+    pub commands: Vec<CommandAndPermissions>,
 }
 
 #[derive(Default, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
@@ -76,10 +90,21 @@ impl Default for CommandExtendedData {
 pub static COMMAND_EXTRA_DATA: Lazy<indexmap::IndexMap<String, CommandExtendedDataMap>> = Lazy::new(|| {
     let mut map = indexmap::IndexMap::new();
     
-    for (_, commands) in enabled_commands() {
-        for (command, extended_data) in commands {
+    for module in enabled_modules() {
+        for (command, extended_data) in module.commands {
             map.insert(command.name.clone(), extended_data);
         }
+    }
+
+    map
+});
+
+/// Command extra data (permissions)
+pub static COMMAND_MODULE_CACHE: Lazy<indexmap::IndexMap<String, Module>> = Lazy::new(|| {
+    let mut map = indexmap::IndexMap::new();
+    
+    for module in enabled_modules() {
+        map.insert(module.id.to_string(), module);
     }
 
     map

@@ -277,7 +277,7 @@ dependencies = [
 
 [[package]]
 name = "botv2"
-version = "0.1.0"
+version = "6.0.0"
 dependencies = [
  "anyhow",
  "axum",

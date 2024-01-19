@@ -27,12 +27,6 @@ pub struct Data {
     pub shards_ready: Arc<dashmap::DashMap<u16, bool>>,
 }
 
-#[poise::command(prefix_command)]
-async fn register(ctx: Context<'_>) -> Result<(), Error> {
-    poise::builtins::register_application_commands_buttons(ctx).await?;
-    Ok(())
-}
-
 async fn on_error(error: poise::FrameworkError<'_, Data, Error>) {
     // This is our custom error handler
     // They are many errors that can occur, so we only handle the ones we want to customize
@@ -230,14 +224,12 @@ async fn main() {
             },
             event_handler: |ctx, event, _fc, user_data| Box::pin(event_listener(ctx, event, user_data)),
             commands: {
-                let mut cmds = vec![
-                    register(),
-                ];
+                let mut cmds = Vec::new();
 
-                for (module, cmd_list) in cmds::enabled_commands() {
-                    for cmd in cmd_list {
+                for module in cmds::enabled_modules() {
+                    for cmd in module.commands {
                         let mut cmd = cmd.0;
-                        cmd.category = Some(module.to_string()); 
+                        cmd.category = Some(module.id.to_string()); 
                         cmds.push(cmd);
                     }
                 }
@@ -296,6 +288,17 @@ async fn main() {
                         .map_err(|e| format!("Error sending reply: {}", e))?;
 
                         return Ok(false)
+                    }
+
+                    let command = ctx.command();
+
+                    if let Some(ref module) = command.category {
+                        if module == "root" {
+                            if !crate::config::CONFIG.discord_auth.can_use_bot.contains(&ctx.author().id) {
+                                return Err("Root commands are off-limits unless you are a bot owner or otherwise have been granted authorization!".into());
+                            }
+                            return Ok(true);
+                        }
                     }
 
                     // Look for guild
