@@ -431,15 +431,17 @@ async fn main() {
     };
 
     let framework = poise::Framework::builder()
-    .setup(move |ctx, _ready, _framework| {
+    .setup(move |ctx, _ready, framework| {
             Box::pin(async move {
                 let data = ctx.data::<Data>();
                 let ipc_ref = data.ipc.clone();
                 let ch = crate::impls::cache::CacheHttpImpl::from_ctx(ctx);
+                let sm = framework.shard_manager().clone();
                 tokio::task::spawn(async move {
                     let ipc_ref = ipc_ref;
                     ipc_ref.start_ipc_listener(
-                        &ch
+                        &ch,
+                        &sm,
                     ).await;
                 });
 
@@ -455,7 +457,6 @@ async fn main() {
             redis_pool: fred::prelude::Builder::default_centralized()
                 .build_pool(REDIS_MAX_CONNECTIONS.try_into().unwrap())
                 .expect("Could not initialize Redis pool"),
-            shard_manager: framework.shard_manager().clone(),
             cache: Arc::new(crate::ipc::client::IpcCache::default()),
         }),
         pool: PgPoolOptions::new()

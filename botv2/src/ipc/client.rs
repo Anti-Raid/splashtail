@@ -7,7 +7,6 @@ use serde::{Serialize, Deserialize};
 /// This is the fundemental primitive atop which the whole of Anti-Raids scales
 pub struct IpcClient {
     pub redis_pool: fred::clients::RedisPool,
-    pub shard_manager: Arc<serenity::all::ShardManager>,
     pub cache: Arc<IpcCache>,
 }
 
@@ -124,7 +123,11 @@ impl IpcClient {
     /// Starts listening to IPC messages
     /// 
     /// This function never quits once executed
-    pub async fn start_ipc_listener(&self, serenity_cache: &crate::impls::cache::CacheHttpImpl) -> ! {
+    pub async fn start_ipc_listener(
+        &self, 
+        serenity_cache: &crate::impls::cache::CacheHttpImpl,
+        shard_manager: &Arc<serenity::all::ShardManager>
+    ) -> ! {
         // Subscribes to the redis IPC channels we need to subscribe to
         let cfg = self.redis_pool.client_config();
 
@@ -226,7 +229,7 @@ impl IpcClient {
 
                 let mut shard_healths = vec![];
 
-                for (shard_id, shard) in self.shard_manager.runners.lock().await.iter() {
+                for (shard_id, shard) in shard_manager.runners.lock().await.iter() {
                     let shard_health = MewldDiagShardHealth {
                         shard_id: shard_id.0,
                         up: shard.stage == serenity::all::ConnectionStage::Connected,
