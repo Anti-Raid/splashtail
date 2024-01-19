@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/anti-raid/splashtail/jobserver/core"
+	"github.com/anti-raid/splashtail/jobserver/core/taskexecutor"
 	"github.com/anti-raid/splashtail/tasks"
 )
 
@@ -43,7 +44,19 @@ var ExecuteTask = core.IPC{
 			return nil, fmt.Errorf("error unmarshalling task args: %w", err)
 		}
 
-		go tasks.ExecuteTask(taskId, task)
+		err = task.Validate()
+
+		if err != nil {
+			return nil, fmt.Errorf("failed to validate task: %w", err)
+		}
+	
+		tInfo := task.Info()
+	
+		if !tInfo.Valid {
+			return nil, fmt.Errorf("invalid task info")
+		}
+
+		go taskexecutor.ExecuteTask(taskId, task)
 
 		return nil, nil
 	},

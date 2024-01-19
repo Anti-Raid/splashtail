@@ -15,7 +15,6 @@ import (
 	"github.com/infinitybotlist/eureka/zapchi"
 
 	jsoniter "github.com/json-iterator/go"
-	"go.uber.org/zap"
 )
 
 var expectedSecretMap map[string]string // Set during setup
@@ -61,7 +60,7 @@ func identifyClient(r *http.Request) (string, error) {
 	return clientType, nil
 }
 
-func Start() {
+func CreateJobServer() *chi.Mux {
 	expectedSecretMap = state.Config.Meta.JobserverSecrets.Parse()
 
 	r := chi.NewMux()
@@ -135,9 +134,5 @@ func Start() {
 		}
 	})
 
-	err := http.ListenAndServe(state.Config.Meta.JobserverAddr.Parse(), r)
-
-	if err != nil {
-		state.Logger.Fatal("Failed to start job server", zap.Error(err))
-	}
+	return r
 }

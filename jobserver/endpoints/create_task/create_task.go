@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/anti-raid/splashtail/jobserver/core"
+	"github.com/anti-raid/splashtail/jobserver/core/taskexecutor"
 	"github.com/anti-raid/splashtail/state"
 	"github.com/anti-raid/splashtail/tasks"
 )
@@ -53,7 +54,7 @@ var CreateTask = core.IPC{
 		execute, _ := args["execute"].(bool)
 
 		if execute {
-			go tasks.ExecuteTask(tcr.TaskID, task)
+			go taskexecutor.ExecuteTask(tcr.TaskID, task)
 		}
 
 		return map[string]any{

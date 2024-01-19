@@ -60,6 +60,6 @@ type TaskInfo struct {
 	Name       string        `json:"name" description:"The task name."`
 	TaskFor    *TaskFor      `json:"task_for" description:"The entity this task is for."`
 	TaskFields any           `json:"task_fields" description:"The task fields."`
-	Expiry     time.Duration `json:"expiry"`
-	Valid      bool          `json:"valid"`
+	Expiry     time.Duration `json:"expiry" description:"The task expiry."`
+	Valid      bool          `json:"valid" description:"Whether the task is valid."`
 }

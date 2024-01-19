@@ -17,9 +17,9 @@ import (
 	mutils "github.com/cheesycod/mewld/utils"
 	"gopkg.in/yaml.v3"
 
-	"github.com/anti-raid/splashtail/bgtasks"
 	"github.com/anti-raid/splashtail/config"
 	"github.com/anti-raid/splashtail/jobserver"
+	"github.com/anti-raid/splashtail/jobserver/bgtasks"
 	"github.com/anti-raid/splashtail/mewld_web"
 	"github.com/anti-raid/splashtail/state"
 	"github.com/anti-raid/splashtail/webserver"
@@ -28,11 +28,7 @@ import (
 	"go.uber.org/zap"
 
 	_ "embed"
-
-	jsoniter "github.com/json-iterator/go"
 )
-
-var json = jsoniter.ConfigCompatibleWithStandardLibrary
 
 func main() {
 	state.Setup()
@@ -219,14 +215,60 @@ func main() {
 			panic(err)
 		}
 
+		r := jobserver.CreateJobServer()
+
 		// Load jobs
 		bgtasks.StartAllTasks()
 
-		// Start IPC
-		jobserver.Start()
+		// If GOOS is windows, do normal http server
+		if runtime.GOOS == "linux" || runtime.GOOS == "darwin" {
+			upg, _ := tableflip.New(tableflip.Options{})
+			defer upg.Stop()
 
-		// This should never return
-		os.Exit(1)
+			go func() {
+				sig := make(chan os.Signal, 1)
+				signal.Notify(sig, syscall.SIGHUP)
+				for range sig {
+					state.Logger.Info("Received SIGHUP, upgrading server")
+					upg.Upgrade()
+				}
+			}()
+
+			// Listen must be called before Ready
+			ln, err := upg.Listen("tcp", state.Config.Meta.Port.Parse())
+
+			if err != nil {
+				state.Logger.Fatal("Error binding to socket", zap.Error(err))
+			}
+
+			defer ln.Close()
+
+			server := http.Server{
+				ReadTimeout: 30 * time.Second,
+				Handler:     r,
+			}
+
+			go func() {
+				err := server.Serve(ln)
+				if err != http.ErrServerClosed {
+					state.Logger.Error("Server failed due to unexpected error", zap.Error(err))
+				}
+			}()
+
+			if err := upg.Ready(); err != nil {
+				state.Logger.Fatal("Error calling upg.Ready", zap.Error(err))
+			}
+
+			<-upg.Exit()
+		} else {
+			// Tableflip not supported
+			state.Logger.Warn("Tableflip not supported on this platform, this is not a production-capable server.")
+			err = http.ListenAndServe(state.Config.Meta.Port.Parse(), r)
+
+			if err != nil {
+				state.Logger.Fatal("Error binding to socket", zap.Error(err))
+			}
+		}
 	default:
 		fmt.Println("Splashtail Usage: splashtail <component>")
 		fmt.Println("webserver: Starts the webserver")
