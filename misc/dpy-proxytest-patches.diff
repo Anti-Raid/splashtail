@@ -1,0 +1,58 @@
+diff --git a/discord/gateway.py b/discord/gateway.py
+index dc528281..d36476c4 100644
+--- a/discord/gateway.py
++++ b/discord/gateway.py
+@@ -294,7 +294,7 @@ class DiscordWebSocket:
+         _max_heartbeat_timeout: float
+ 
+     # fmt: off
+-    DEFAULT_GATEWAY    = yarl.URL('wss://gateway.discord.gg/')
++    DEFAULT_GATEWAY    = yarl.URL('ws://localhost:3220')
+     DISPATCH           = 0
+     HEARTBEAT          = 1
+     IDENTIFY           = 2
+@@ -364,12 +364,9 @@ class DiscordWebSocket:
+         # Circular import
+         from .http import INTERNAL_API_VERSION
+ 
+-        gateway = gateway or cls.DEFAULT_GATEWAY
++        gateway = cls.DEFAULT_GATEWAY
+ 
+-        if zlib:
+-            url = gateway.with_query(v=INTERNAL_API_VERSION, encoding=encoding, compress='zlib-stream')
+-        else:
+-            url = gateway.with_query(v=INTERNAL_API_VERSION, encoding=encoding)
++        url = gateway.with_query(v=INTERNAL_API_VERSION, encoding=encoding)
+ 
+         socket = await client.http.ws_connect(str(url))
+         ws = cls(socket, loop=client.loop)
+@@ -448,7 +445,6 @@ class DiscordWebSocket:
+                     'browser': 'discord.py',
+                     'device': 'discord.py',
+                 },
+-                'compress': True,
+                 'large_threshold': 250,
+             },
+         }
+@@ -874,7 +870,7 @@ class DiscordVoiceWebSocket:
+         hook: Optional[Callable[..., Coroutine[Any, Any, Any]]] = None,
+     ) -> Self:
+         """Creates a voice websocket for the :class:`VoiceClient`."""
+-        gateway = f'wss://{state.endpoint}/?v=4'
++        gateway = f'ws://{state.endpoint}/?v=4'
+         client = state.voice_client
+         http = client._state.http
+         socket = await http.ws_connect(gateway, compress=15)
+diff --git a/discord/member.py b/discord/member.py
+index 71231e42..3c361338 100644
+--- a/discord/member.py
++++ b/discord/member.py
+@@ -358,7 +358,7 @@ class Member(discord.abc.Messageable, _UserTag):
+         self._permissions: Optional[int]
+         self._flags: int = data['flags']
+         try:
+-            self._permissions = int(data['permissions'])
++            self._permissions = int(data.get('permissions', 0) or 0)
+         except KeyError:
+             self._permissions = None
+ 
