@@ -18,6 +18,7 @@ use once_cell::sync::Lazy;
 use moka::future::Cache;
 use indexmap::{indexmap, IndexMap};
 use serenity::all::{GuildId, UserId};
+use futures::future::BoxFuture;
 
 #[derive(Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 pub enum CachedPermResult {
@@ -35,7 +36,17 @@ pub type Command = poise::Command<crate::Data, crate::Error>;
 pub type CommandExtendedDataMap = IndexMap<&'static str, CommandExtendedData>;
 pub type CommandAndPermissions = (Command, CommandExtendedDataMap);
 
-#[derive(PartialEq, serde::Serialize, serde::Deserialize)]
+pub type ModuleEventHandler = Box<
+    dyn Send
+    + Sync
+    + for<'a> Fn(
+        &'a serenity::all::Context,
+        &'a serenity::all::FullEvent,
+    ) -> BoxFuture<'a, Result<(), crate::Error>>,
+>;
+
+/// This structure defines a basic module
+#[derive(serde::Serialize, serde::Deserialize)]
 pub struct Module {
     /// The ID of the module
     pub id: &'static str,
@@ -46,7 +57,12 @@ pub struct Module {
     #[serde(skip)]
     /// The commands in the module
     pub commands: Vec<CommandAndPermissions>,
+
+    #[serde(skip)]
+    /// Event handlers (if any)
+    pub event_handlers: Vec<ModuleEventHandler>
 }
+
 
 #[derive(Default, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct PermissionCheck {
@@ -105,6 +121,17 @@ pub static COMMAND_MODULE_CACHE: Lazy<indexmap::IndexMap<String, Module>> = Lazy
     
     for module in enabled_modules() {
         map.insert(module.id.to_string(), module);
+    }
+
+    map
+});
+
+/// Module event listeners cache
+pub static MODULE_EVENT_LISTENERS_CACHE: Lazy<indexmap::IndexMap<String, Vec<ModuleEventHandler>>> = Lazy::new(|| {
+    let mut map = indexmap::IndexMap::new();
+    
+    for module in enabled_modules() {
+        map.insert(module.id.to_string(), module.event_handlers);
     }
 
     map

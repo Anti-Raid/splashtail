@@ -12,5 +12,6 @@ pub fn module() -> super::Module {
             (stats::stats(), super::CommandExtendedData::none()),
             (ping::ping(), super::CommandExtendedData::none()),
         ],
+        event_handlers: vec![], // Core has no event listeners
     }
 }

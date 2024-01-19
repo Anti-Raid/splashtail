@@ -7,7 +7,6 @@ use serde::{Serialize, Deserialize};
 /// This is the fundemental primitive atop which the whole of Anti-Raids scales
 pub struct IpcClient {
     pub redis_pool: fred::clients::RedisPool,
-    pub serenity_cache: crate::impls::cache::CacheHttpImpl,
     pub shard_manager: Arc<serenity::all::ShardManager>,
     pub cache: Arc<IpcCache>,
 }
@@ -125,7 +124,7 @@ impl IpcClient {
     /// Starts listening to IPC messages
     /// 
     /// This function never quits once executed
-    pub async fn start_ipc_listener(&self) -> ! {
+    pub async fn start_ipc_listener(&self, serenity_cache: &crate::impls::cache::CacheHttpImpl) -> ! {
         // Subscribes to the redis IPC channels we need to subscribe to
         let cfg = self.redis_pool.client_config();
 
@@ -209,14 +208,14 @@ impl IpcClient {
                 let mut guild_counts_per_shard = std::collections::HashMap::new();
                 let mut user_counts_per_shard = std::collections::HashMap::new();
 
-                for guild in self.serenity_cache.cache.guilds() {
+                for guild in serenity_cache.cache.guilds() {
                     let shard_id = serenity::utils::shard_id(guild, super::argparse::MEWLD_ARGS.shard_count);
 
                     let count = guild_counts_per_shard.entry(shard_id).or_insert(0);
                     *count += 1;
 
                     {
-                        let guild = guild.to_guild_cached(&self.serenity_cache.cache);
+                        let guild = guild.to_guild_cached(&serenity_cache.cache);
 
                         if let Some(guild) = guild {
                             let count = user_counts_per_shard.entry(shard_id).or_insert(0);

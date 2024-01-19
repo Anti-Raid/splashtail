@@ -217,6 +217,11 @@ pub async fn backups_create(
     )
     .await?;
 
+    let ch = crate::impls::cache::CacheHttpImpl {
+        cache: ctx.serenity_context().cache.clone(),
+        http: ctx.serenity_context().http.clone(),
+    };
+
     async fn update_base_message(
         cache_http: crate::impls::cache::CacheHttpImpl,
         mut base_message: serenity::model::channel::Message,
@@ -237,7 +242,7 @@ pub async fn backups_create(
 
     // Use jobserver::reactive to keep updating the message
     crate::jobserver::taskpoll::reactive(
-        &ctx.data().cache_http,
+        &ch,
         &ctx.data().pool,
         backup.task_id.as_str(),
         |cache_http, task| {
@@ -561,6 +566,11 @@ pub async fn backups_restore(
         )
     )
     .await?;
+
+    let ch = crate::impls::cache::CacheHttpImpl {
+        cache: ctx.serenity_context().cache.clone(),
+        http: ctx.serenity_context().http.clone(),
+    };
     
     async fn update_base_message(
         cache_http: crate::impls::cache::CacheHttpImpl,
@@ -582,7 +592,7 @@ pub async fn backups_restore(
 
     // Use jobserver::reactive to keep updating the message
     crate::jobserver::taskpoll::reactive(
-        &ctx.data().cache_http,
+        &ch,
         &ctx.data().pool,
         backup.task_id.as_str(),
         |cache_http, task| {

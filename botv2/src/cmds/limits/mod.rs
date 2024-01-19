@@ -16,5 +16,14 @@ pub fn module() -> super::Module {
             }),
             (cmds::limitactions(), super::CommandExtendedData::none()),
         ],
+        event_handlers: vec![
+            Box::new(
+                move |ctx, fe| {
+                    Box::pin(async move {
+                        crate::modules::limits::events::event_listener(ctx, fe).await
+                    })
+                }
+            )
+        ]
     }
 }

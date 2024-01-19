@@ -4,7 +4,14 @@ use serenity::model::guild::audit_log::{Action, ChannelAction};
 
 use crate::{Data, Error};
 
-pub async fn event_listener(_ctx: &serenity::client::Context, event: &FullEvent, user_data: &Data) -> Result<(), Error> {
+pub async fn event_listener(ctx: &serenity::client::Context, event: &FullEvent) -> Result<(), Error> {
+    let user_data = ctx.data::<Data>();
+
+    let cache_http = crate::impls::cache::CacheHttpImpl {
+        cache: ctx.cache.clone(),
+        http: ctx.http.clone(),
+    };
+
     match event {
         FullEvent::GuildAuditLogEntryCreate {
             entry,
@@ -22,7 +29,7 @@ pub async fn event_listener(_ctx: &serenity::client::Context, event: &FullEvent,
 
                             super::handler::handle_mod_action(
                                 &user_data.pool,
-                                &user_data.cache_http,
+                                &cache_http,
                                 &super::handler::HandleModAction {
                                     guild_id: *guild_id,
                                     limit: super::core::UserLimitTypes::ChannelAdd,
@@ -38,7 +45,7 @@ pub async fn event_listener(_ctx: &serenity::client::Context, event: &FullEvent,
 
                             super::handler::handle_mod_action(
                                 &user_data.pool,
-                                &user_data.cache_http,
+                                &cache_http,
                                 &super::handler::HandleModAction {
                                     guild_id: *guild_id,
                                     limit: super::core::UserLimitTypes::ChannelRemove,
@@ -54,7 +61,7 @@ pub async fn event_listener(_ctx: &serenity::client::Context, event: &FullEvent,
 
                             super::handler::handle_mod_action(
                                 &user_data.pool,
-                                &user_data.cache_http,
+                                &cache_http,
                                 &super::handler::HandleModAction {
                                     guild_id: *guild_id,
                                     limit: super::core::UserLimitTypes::ChannelUpdate,
@@ -77,7 +84,7 @@ pub async fn event_listener(_ctx: &serenity::client::Context, event: &FullEvent,
 
                             super::handler::handle_mod_action(
                                 &user_data.pool,
-                                &user_data.cache_http,
+                                &cache_http,
                                 &super::handler::HandleModAction {
                                     guild_id: *guild_id,
                                     limit: super::core::UserLimitTypes::RoleAdd,
@@ -93,7 +100,7 @@ pub async fn event_listener(_ctx: &serenity::client::Context, event: &FullEvent,
 
                             super::handler::handle_mod_action(
                                 &user_data.pool,
-                                &user_data.cache_http,
+                                &cache_http,
                                 &super::handler::HandleModAction {
                                     guild_id: *guild_id,
                                     limit: super::core::UserLimitTypes::RoleUpdate,
@@ -109,7 +116,7 @@ pub async fn event_listener(_ctx: &serenity::client::Context, event: &FullEvent,
 
                             super::handler::handle_mod_action(
                                 &user_data.pool,
-                                &user_data.cache_http,
+                                &cache_http,
                                 &super::handler::HandleModAction {
                                     guild_id: *guild_id,
                                     limit: super::core::UserLimitTypes::RoleRemove,
@@ -198,7 +205,7 @@ pub async fn event_listener(_ctx: &serenity::client::Context, event: &FullEvent,
 
                             super::handler::handle_mod_action(
                                 &user_data.pool,
-                                &user_data.cache_http,
+                                &cache_http,
                                 &super::handler::HandleModAction {
                                     guild_id: *guild_id,
                                     limit: super::core::UserLimitTypes::MemberRolesUpdated,
@@ -218,7 +225,7 @@ pub async fn event_listener(_ctx: &serenity::client::Context, event: &FullEvent,
 
                                 super::handler::handle_mod_action(
                                     &user_data.pool,
-                                    &user_data.cache_http,
+                                    &cache_http,
                                     &super::handler::HandleModAction {
                                         guild_id: *guild_id,
                                         limit: super::core::UserLimitTypes::RoleGivenToMember,
@@ -239,7 +246,7 @@ pub async fn event_listener(_ctx: &serenity::client::Context, event: &FullEvent,
 
                                 super::handler::handle_mod_action(
                                     &user_data.pool,
-                                    &user_data.cache_http,
+                                    &cache_http,
                                     &super::handler::HandleModAction {
                                         guild_id: *guild_id,
                                         limit: super::core::UserLimitTypes::RoleRemovedFromMember,

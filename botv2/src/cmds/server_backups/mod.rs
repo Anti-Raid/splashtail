@@ -13,5 +13,6 @@ pub fn module() -> super::Module {
                 "restore" => super::CommandExtendedData::kittycat_or_admin("backups", "restore"),
             }),
         ],
+        event_handlers: vec![], // Root has no event listeners
     }
 }

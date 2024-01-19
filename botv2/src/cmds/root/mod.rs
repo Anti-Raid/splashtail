@@ -8,5 +8,6 @@ pub fn module() -> super::Module {
         commands: vec![
             (cmds::register(), super::CommandExtendedData::none()),
         ],
+        event_handlers: vec![], // Root has no event listeners
     }
 }
