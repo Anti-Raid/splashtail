@@ -1,7 +1,7 @@
 <script lang="ts">
 	export let data: any;
 
-	import Nightmare from '../../../components/Nightmare.svelte';
+	import Meta from '../../../components/Meta.svelte';
 	import StepProgress from '../../../components/StepProgress.svelte';
 	import Notice from '../../../components/Notice.svelte';
 	import { page } from '$app/stores';
@@ -70,10 +70,10 @@
 	});
 </script>
 
+<Meta title="Invite" description="Invite AntiRaid into your server." />
+
 {#if data.user}
 	{#if guild}
-		<Nightmare Title="Invite" Description="Invite AntiRaid into {guild.name}." />
-
 		<div class="flex justify-center items-center mb-2">
 			<img
 				class="h-8 w-8 rounded-md"
@@ -143,10 +143,8 @@
 			{/if}
 		</StepProgress>
 	{:else}
-		<Nightmare Title="Invite" Description="Invite AntiRaid into your server." />
 		<h1 class="text-white font-bold">You don't have permissions to invite us to this guild.</h1>
 	{/if}
 {:else}
-	<Nightmare Title="Invite" Description="Invite AntiRaid into your server." />
 	<h1 class="text-white font-bold">You are not logged in. Please login and reload this page.</h1>
 {/if}

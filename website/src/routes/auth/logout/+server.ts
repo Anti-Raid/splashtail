@@ -8,5 +8,5 @@ export async function GET({ request, cookies, url }) {
 		expires: new Date()
 	});
 
-	throw redirect(307, '/');
+	redirect(307, '/');
 }

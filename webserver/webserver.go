@@ -16,6 +16,7 @@ import (
 	"github.com/anti-raid/splashtail/webserver/routes/core"
 	"github.com/anti-raid/splashtail/webserver/routes/platform"
 	"github.com/anti-raid/splashtail/webserver/routes/tasks"
+	"github.com/anti-raid/splashtail/webserver/routes/users"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	docs "github.com/infinitybotlist/eureka/doclib"
@@ -114,6 +115,7 @@ func CreateWebserver() *chi.Mux {
 		core.Router{},
 		platform.Router{},
 		tasks.Router{},
+		users.Router{},
 	}
 
 	for _, router := range routers {

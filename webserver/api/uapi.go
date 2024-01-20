@@ -107,9 +107,9 @@ func Authorize(r uapi.Route, req *http.Request) (uapi.AuthData, uapi.HttpRespons
 		case types.TargetTypeUser:
 			// Check if the user exists with said API token only
 			var id pgtype.Text
-			var banned bool
+			var userstate string
 
-			err := state.Pool.QueryRow(state.Context, "SELECT user_id, banned FROM users WHERE api_token = $1", strings.Replace(authHeader, "User ", "", 1)).Scan(&id, &banned)
+			err := state.Pool.QueryRow(state.Context, "SELECT user_id, state FROM users WHERE api_token = $1", strings.Replace(authHeader, "User ", "", 1)).Scan(&id, &userstate)
 
 			if err != nil {
 				continue
@@ -123,7 +123,7 @@ func Authorize(r uapi.Route, req *http.Request) (uapi.AuthData, uapi.HttpRespons
 				TargetType: types.TargetTypeUser,
 				ID:         id.String,
 				Authorized: true,
-				Banned:     banned,
+				Banned:     userstate == "banned" || userstate == "api_banned",
 			}
 			urlIds = []string{id.String}
 		case types.TargetTypeServer:

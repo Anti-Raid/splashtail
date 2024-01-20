@@ -1,10 +1,14 @@
 <script lang="ts">
-	export let user: any;
-	user = user;
-
 	import Update from './Update.svelte';
-	import Swal from 'sweetalert2';
 	import { page } from '$app/stores';
+	import { onMount } from 'svelte';
+	import { getAuthCreds } from '../lib/auth/getAuthCreds';
+	import { checkAuthCreds } from '../lib/auth/checkAuthCreds';
+	import { logoutUser } from '../lib/auth/logoutUser';
+	import { getUser } from '../lib/auth/getUser';
+	import { User } from '../lib/generated/types';
+	import logger from '../lib/ui/logger';
+	import Icon from '@iconify/svelte';
 
 	let navigation = [
 		{ name: 'Home', href: '/', current: false },
@@ -12,85 +16,64 @@
 		{ name: 'About', href: '/about', current: false }
 	];
 
-	navigation.map((p) => {
-		if (p.href === $page.url.pathname) p.current = true;
-	});
-
-	const profileNavigation = [
-		{ name: 'Profile', href: '/profile' },
-		{ name: 'Logout', href: '/auth/logout' }
-	];
-
-	const Alert = (title: string, description: string, time: number) => {
-		Swal.fire({
-			title: title,
-			text: description,
-			timer: time,
-			timerProgressBar: true
+	onMount(() => {
+		navigation.map((p) => {
+			if (p.href === $page.url.pathname) p.current = true;
 		});
-	};
+	})
 
-	const classNames = (...classes: any) => {
-		return classes.filter(Boolean).join(' ');
-	};
+	let mobileMenuOpen: boolean = false
+	let profileMenuOpen: boolean = false
+
+	type LoginData = null | {
+		profileNavigation: {
+			name: string
+			href: string
+		}[]
+		user: User
+	}
+
+	let cachedLoginData: LoginData = null
+	const getLoginData = async () => {
+		if(cachedLoginData) {
+			return cachedLoginData
+		}
+
+		let authCreds = getAuthCreds();
+
+		if(!authCreds) return;
+
+		let authCheck = false;
+		
+		try {
+			authCheck = await checkAuthCreds(authCreds);
+		} catch {}
+
+		if(!authCheck) {
+			logoutUser()
+			return
+		}
+
+		let user = await getUser(authCreds);
+
+		if(!user) {
+			logger.error("Auth", "Failed to get user data")
+			return
+		}
+
+		let data = {
+			profileNavigation: [],
+			user
+		}
+
+		cachedLoginData = data
+
+		return data
+	}
 
 	const loginDiscord = async () => {
-		const data = await fetch('https://api.antiraid.xyz/auth/login').catch((error) => {
-			Alert('Error:', error, 4000);
-		});
-
-		if (data.status === 200) {
-			const json = await data.json();
-
-			if (json.error) Alert('Error:', json.error, 4000);
-			else window.location.href = json.url;
-		} else Alert('Error:', `It seems that our servers is having issues at this time!`, 2000);
-	};
-
-	const openMobileMenu = () => {
-		const menu = document.getElementById('mobile-menu') as HTMLDivElement;
-		const menuIcon = document.getElementById('menuIcon') as HTMLElement;
-		const closeIcon = document.getElementById('closeIcon') as HTMLElement;
-		const currentClass = menu.className;
-
-		if (currentClass === 'hidden') {
-			menu.className = 'block';
-			menuIcon.className.baseVal = 'hidden h-6 w-6';
-			closeIcon.className.baseVal = 'block h-6 w-6';
-		} else {
-			menu.className = 'hidden';
-			menuIcon.className.baseVal = 'block h-6 w-6';
-			closeIcon.className.baseVal = 'hidden h-6 w-6';
-		}
-	};
-
-	const openProfileMenu = () => {
-		const profileMenu = document.getElementById('profile_menu') as HTMLDivElement;
-		const className = profileMenu.className;
-
-		// Open
-		if (className === 'absolute right-0 z-10 mt-2 w-48 origin-top-right invisible')
-			profileMenu.className =
-				'absolute right-0 z-10 mt-2 w-48 origin-top-right rounded-md bg-white py-1 shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none';
-		// Close
-		else profileMenu.className = 'absolute right-0 z-10 mt-2 w-48 origin-top-right invisible';
-	};
-
-	const openNotificationPanel = () => {
-		const notificationPanel = document.getElementById('open-notifications') as HTMLDivElement;
-		const className = notificationPanel.className;
-
-		// Open
-		if (className === 'absolute right-0 z-10 mt-2 w-48 origin-top-right invisible')
-			notificationPanel.className =
-				'absolute right-0 z-10 mt-2 w-48 origin-top-right rounded-md bg-white py-1 shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none';
-		// Close
-		else notificationPanel.className = 'absolute right-0 z-10 mt-2 w-48 origin-top-right invisible';
-	};
-
-	let notificationData = null;
-	if (user) notificationData = user.notifications.filter((i: any) => i.read === false);
-	export let notifications = notificationData;
+		// ...
+	}
 </script>
 
 <Update
@@ -101,11 +84,11 @@
 <nav>
 	<div class="mx-auto max-w-7xl px-2 sm:px-6 lg:px-8">
 		<div class="relative flex h-16 items-center justify-between">
-			<div class="absolute inset-y-0 left-0 flex items-center sm:hidden">
+			<div class="inset-y-0 left-0 flex items-center">
 				<button
 					type="button"
 					class="inline-flex items-center justify-center rounded-md p-2 text-white hover:bg-gray-400 hover:text-white focus:outline-none focus:ring-2 focus:ring-inset focus:ring-white"
-					on:click={openMobileMenu}
+					on:click={() => mobileMenuOpen = !mobileMenuOpen}
 					aria-controls="mobile-menu"
 					aria-expanded="false"
 				>
@@ -151,10 +134,9 @@
 						{#each navigation as item}
 							<a
 								href={item.href}
-								class={classNames(
-									item.current ? 'bg-indigo-600 text-white' : 'text-white hover:bg-indigo-300',
-									'px-3 py-2 rounded-md text-sm font-medium'
-								)}
+								class={
+									item.current ? 'bg-indigo-600 text-white' : 'text-white hover:bg-indigo-300 px-3 py-2 rounded-md text-sm font-medium'
+								}
 								aria-current={item.current ? 'page' : undefined}
 							>
 								{item.name}
@@ -165,117 +147,87 @@
 				<div
 					class="absolute inset-y-0 right-0 flex items-center pr-2 sm:static sm:inset-auto sm:ml-6 sm:pr-0"
 				>
-					{#if user}
-						<button
-							type="button"
-							class="rounded-full p-1 text-white hover:text-gray-300 focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-gray-800"
-							id="notifications-button"
-							aria-expanded="false"
-							aria-haspopup="true"
-							on:click={openNotificationPanel}
-						>
-							<span class="sr-only">View notifications</span>
-							<svg
-								class="h-6 w-6"
-								xmlns="http://www.w3.org/2000/svg"
-								fill="none"
-								viewBox="0 0 24 24"
-								stroke-width="1.5"
-								stroke="currentColor"
-								aria-hidden="true"
-							>
-								<path
-									stroke-linecap="round"
-									stroke-linejoin="round"
-									d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0"
-								/>
-							</svg>
-						</button>
-					{/if}
-
 					<div class="relative ml-3">
-						{#if user}
-							<div>
+						{#await getLoginData()}
+							<span class="w-auto flex items-center justify-center shadow-lg gap-x-2 shadow-themable-600/20 rounded-xl py-2.5 font-medium px-7 bg-gradient-to-tl from-themable-500 to-themable-700 text-white  hover:opacity-80 transition duration-200">
+								<Icon icon="fa-solid:yin-yang" width="32px" class="animate-spin text-white" />
+							</span>
+						{:then data}
+							{#if data && data?.user}
+								<div>
+									<button
+										type="button"
+										class="flex rounded-full hover:bg-gray-200 text-white hover:text-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-gray-800"
+										id="user-menu-button"
+										aria-expanded="false"
+										aria-haspopup="true"
+										on:click={() => profileMenuOpen = !profileMenuOpen}
+									>
+										<span class="sr-only">Open user menu</span>
+										<img
+											class="h-8 w-8 rounded-full"
+											src={data?.user?.user?.avatar}
+											alt=""
+										/>
+									</button>
+								</div>
+
+								<div
+									class="absolute right-0 z-10 mt-2 w-48 origin-top-right invisible"
+									role="menu"
+									aria-orientation="vertical"
+									aria-labelledby="user-menu-button"
+									tabindex="-1"
+									id="profile_menu"
+								>
+									{#each (data?.profileNavigation || []) as item}
+										<a href={item.href} class="block px-4 py-2 text-sm text-gray-700">
+											{item.name}
+										</a>
+									{/each}
+								</div>
+							{:else}
 								<button
 									type="button"
-									class="flex rounded-full hover:bg-gray-200 text-white hover:text-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-gray-800"
-									id="user-menu-button"
-									aria-expanded="false"
-									aria-haspopup="true"
-									on:click={openProfileMenu}
+									on:click={loginDiscord}
+									class="rounded-full p-1 text-gray-400 hover:text-white focus:outline-none"
 								>
-									<span class="sr-only">Open user menu</span>
-									<img
-										class="h-8 w-8 rounded-full"
-										src="https://cdn.discordapp.com/avatars/{user.id}/{user.discordUser.avatar}"
-										alt=""
-									/>
+									Login
 								</button>
-							</div>
-
-							<div
-								class="absolute right-0 z-10 mt-2 w-48 origin-top-right invisible"
-								role="menu"
-								aria-orientation="vertical"
-								aria-labelledby="notifications-button"
-								tabindex="-1"
-								id="open-notifications"
-							>
-								<h2>Notifications</h2>
-								<button>Mark all as Read!</button>
-
-								{#if notifications.length === 0}
-									<h2>There are no notifications to show!</h2>
-								{:else}
-									<h2>There are some notifications to show!</h2>
-								{/if}
-							</div>
-
-							<div
-								class="absolute right-0 z-10 mt-2 w-48 origin-top-right invisible"
-								role="menu"
-								aria-orientation="vertical"
-								aria-labelledby="user-menu-button"
-								tabindex="-1"
-								id="profile_menu"
-							>
-								{#each profileNavigation as item}
-									<a href={item.href} class="block px-4 py-2 text-sm text-gray-700">
-										{item.name}
-									</a>
-								{/each}
-							</div>
-						{:else}
+							{/if}
+						{:catch}
 							<button
 								type="button"
-								on:click={loginDiscord}
-								class="rounded-ful p-1 text-gray-400 hover:text-white focus:outline-none"
+								on:click={() => {
+									window.location.reload()
+								}}
+								class="text-red-500"
 							>
-								Login
+								Reload?
 							</button>
-						{/if}
+						{/await}
 					</div>
 				</div>
 			</div>
 		</div>
 
-		<div class="hidden" id="mobile-menu">
-			<div class="space-y-1 px-2 pt-2 pb-3">
-				{#each navigation as item}
-					<a
-						href={item.href}
-						class={classNames(
-							item.current
+		{#if mobileMenuOpen}
+			<div id="mobile-menu">
+				<div class="space-y-1 px-2 pt-2 pb-3">
+					{#each navigation as item}
+						<a
+							href={item.href}
+							class={item.current
 								? 'bg-indigo-600 text-white'
-								: 'text-gray-300 hover:bg-gray-700 hover:text-white',
-							'block px-3 py-2 rounded-md text-base font-medium'
-						)}
-						aria-current={item.current ? 'page' : undefined}
-					>
-						{item.name}
-					</a>
-				{/each}
+								: 'text-gray-300 hover:bg-gray-700 hover:text-white block px-3 py-2 rounded-md text-base font-medium'
+							}
+							aria-current={item.current ? 'page' : undefined}
+						>
+							{item.name}
+						</a>
+					{/each}
+				</div>
 			</div>
-		</div>
+		{/if}
 	</div>
 </nav>

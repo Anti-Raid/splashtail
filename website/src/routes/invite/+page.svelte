@@ -1,6 +1,6 @@
 <script lang="ts">
 	import ServerCard from '../../components/ServerCard.svelte';
-	import Nightmare from '../../components/Nightmare.svelte';
+	import Meta from '../../components/Meta.svelte';
 
 	export let data: any;
 
@@ -14,7 +14,7 @@
 	};
 </script>
 
-<Nightmare Title="Invite" Description="Invite our bot into your server." />
+<Meta title="Invite" description="Invite our bot into your server." />
 
 {#if data.user}
 	<div class="grid gap-3 md:gap-4 md:grid-cols-3 md:grid-rows-3">

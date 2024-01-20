@@ -1,0 +1,9 @@
+{
+    "splashtail": {
+        "production": "https://splashtail.antiraid.xyz",
+        "development": "https://splashtail-staging.antiraid.xyz"
+    },
+    "cdn": {
+        "production": "https://cdn.antiraid.xyz"
+    }
+}
