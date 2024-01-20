@@ -1,6 +1,7 @@
 <script lang="ts">
 	import Divider from '../../components/Divider.svelte';
 	import BotFeatures from '../BotFeatures.svelte';
+	import support from "$lib/configs/data/support.json";
 
 	interface TeamMember {
 		Name: string;
@@ -56,7 +57,7 @@
 	<span class="text-indigo-600">AntiRaid</span> is a
 	<span class="font-extrabold">Automatic Moderation Service</span>
 	created to protect your
-	<a href="https://discord.gg/v9qRYthfHf" class="text-indigo-600 xl:inline hover:text-red-600"
+	<a href={support?.discord} class="text-indigo-600 xl:inline hover:text-red-600"
 		>Discord Server</a
 	> from threats, unsafe bots and spamming using our advanced technology!
 </p>
