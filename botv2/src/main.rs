@@ -453,6 +453,16 @@ async fn main() {
                     ).await;
                 });
 
+                // Repeat for IServer (due to move)
+                let ch = crate::impls::cache::CacheHttpImpl::from_ctx(ctx);
+                let sm = framework.shard_manager().clone();
+                tokio::task::spawn(async move {
+                    ipc::iserver::server::start_iserver(
+                        &ch,
+                        &sm,
+                    ).await;
+                });
+
                 Ok(())
             })
         }

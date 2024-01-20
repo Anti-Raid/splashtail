@@ -152,7 +152,6 @@ impl IpcClient {
         let _: () = subscriber.subscribe(
             &format!("{}:{}", super::argparse::MEWLD_ARGS.mewld_redis_channel, super::argparse::MEWLD_ARGS.cluster_id),
         ).await.unwrap();
-
         
         while let Ok(message) = message_stream.recv().await {
             log::debug!("Recieved message {:#?} on channel {}", message.value, message.channel);

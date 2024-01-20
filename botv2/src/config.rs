@@ -48,6 +48,7 @@ pub struct Meta {
     pub bot_redis_url: String,
     pub proxy: String,
     pub support_server: String,
+    pub bot_iserver_base_port: Differs<u16>,
     pub jobserver_url: Differs<String>,
     pub jobserver_secrets: Differs<HashMap<String, String>>,
 }

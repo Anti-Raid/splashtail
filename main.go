@@ -153,7 +153,7 @@ func main() {
 			}()
 
 			// Listen must be called before Ready
-			ln, err := upg.Listen("tcp", state.Config.Meta.Port.Parse())
+			ln, err := upg.Listen("tcp", ":"+strconv.Itoa(state.Config.Meta.Port.Parse()))
 
 			if err != nil {
 				il.KillAll()
@@ -182,7 +182,7 @@ func main() {
 		} else {
 			// Tableflip not supported
 			state.Logger.Warn("Tableflip not supported on this platform, this is not a production-capable server.")
-			err = http.ListenAndServe(state.Config.Meta.Port.Parse(), r)
+			err = http.ListenAndServe(":"+strconv.Itoa(state.Config.Meta.Port.Parse()), r)
 
 			if err != nil {
 				il.KillAll()
@@ -235,7 +235,7 @@ func main() {
 			}()
 
 			// Listen must be called before Ready
-			ln, err := upg.Listen("tcp", state.Config.Meta.Port.Parse())
+			ln, err := upg.Listen("tcp", ":"+strconv.Itoa(state.Config.Meta.JobserverPort.Parse()))
 
 			if err != nil {
 				state.Logger.Fatal("Error binding to socket", zap.Error(err))
@@ -263,7 +263,7 @@ func main() {
 		} else {
 			// Tableflip not supported
 			state.Logger.Warn("Tableflip not supported on this platform, this is not a production-capable server.")
-			err = http.ListenAndServe(state.Config.Meta.Port.Parse(), r)
+			err = http.ListenAndServe(":"+strconv.Itoa(state.Config.Meta.JobserverPort.Parse()), r)
 
 			if err != nil {
 				state.Logger.Fatal("Error binding to socket", zap.Error(err))
