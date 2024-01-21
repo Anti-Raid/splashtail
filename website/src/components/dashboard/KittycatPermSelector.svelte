@@ -1,4 +1,5 @@
 <script lang="ts">
+	import BoolInput from "../inputs/BoolInput.svelte";
 	import InputText from "../inputs/InputText.svelte";
     import Select from "../inputs/select/Select.svelte";
 
@@ -9,6 +10,7 @@
     // The following are derived from `perm`
     let namespace: string;
     let permission: string;
+    let negator: boolean;
 
     interface PreselectablePermission {
         namespace_id: string; // The namespace ID (backup/limits etc.)
@@ -66,11 +68,22 @@
             permissions: []
         },
     ]
-    
-    $: {
+
+    const unwindPerm = (perm: string) => {
         const split = perm.split('.');
         
         namespace = split[0] // Namespace is always the first part of the permission
+
+        let negator: boolean;
+        let permission: string;
+        let validPerm: boolean;
+
+        if(namespace.startsWith("~")) {
+            negator = true
+            namespace = namespace.substring(1)
+        } else {
+            negator = false
+        }
         
         if(split.length == 2) {
             permission = split[1];
@@ -78,6 +91,29 @@
         } else {
             permission = ""
         }
+
+        return {
+            namespace,
+            permission,
+            negator,
+            validPerm
+        }
+    }
+
+    const rewindPerms = (namespace: string, permission: string, negator: boolean) => {
+        if(permission) {
+            return `${negator ? "~" : ""}${namespace}.${permission}`
+        } else {
+            return `${negator ? "~" : ""}${namespace}`
+        }
+    }
+    
+    $: {
+        const unwoundPerm = unwindPerm(perm);
+        namespace = unwoundPerm.namespace;
+        permission = unwoundPerm.permission;
+        negator = unwoundPerm.negator;
+        validPerm = unwoundPerm.validPerm;
     }
 </script>
 
@@ -113,7 +149,7 @@
                         {
                             id: "*",
                             value: "*",
-                            label: "All permissions on namespace"
+                            label: "All Permissions On Namespace"
                         },
                         ...preselectablePermissions.find((preselectablePermission) => preselectablePermission.namespace_id == namespace)?.permissions.map((preselectablePermissionPermission) => {
                             return {
@@ -125,13 +161,26 @@
                     ]
                 )}
                 onChange={() => {
+                    perm = rewindPerms(namespace, permission, negator)
                     if(namespace && permission) {
-                        perm = `${namespace}.${permission}`
                         validPerm = true;
                     }
                 }}
             />
         </div>
+    </div>
+    <div class="mt-3">
+        <BoolInput 
+            id="negator"
+            label="Negate Permission"
+            description="Whether or not the permission should be *removed*. This overrides 'All Permissions On Namespace' thus allowing for a easy permission blacklist on certain namespaces/modules."
+            bind:value={negator}
+            onChange={(_) => {
+                perm = rewindPerms(namespace, permission, negator)
+            }}
+            disabled={false}
+            required={false}
+        />
     </div>
     <div class="mt-3">
         <InputText 
