@@ -169,7 +169,7 @@
             />
         </div>
     </div>
-    <div class="mt-3">
+    <div class="mt-3 text-white">
         <BoolInput 
             id="negator"
             label="Negate Permission"
