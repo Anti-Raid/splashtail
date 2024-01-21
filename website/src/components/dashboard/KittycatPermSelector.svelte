@@ -26,15 +26,15 @@
             permissions: [
                 {
                     id: "list",
-                    label: "List Backups"
+                    label: "List Backups",
                 },
                 {
                     id: "create",
-                    label: "Create Backups"
+                    label: "Create Backups",
                 },
                 {
                     id: "restore",
-                    label: "Restore Backups"
+                    label: "Restore Backups",
                 }
             ]
         },
@@ -44,22 +44,27 @@
             permissions: [
                 {
                     id: "view",
-                    label: "View Existing Limits"
+                    label: "View Existing Limits",
                 },
                 {
                     id: "add",
-                    label: "Create Limits"
+                    label: "Create Limits",
                 },
                 {
                     id: "remove",
-                    label: "Remove Limits"
+                    label: "Remove Limits",
                 },
                 {
                     id: "hit",
                     label: "View Hit Limits"
                 }
             ]
-        }
+        },
+        {
+            namespace_id: "global",
+            namespace_label: "Global Permissions",
+            permissions: []
+        },
     ]
     
     $: {
@@ -103,13 +108,22 @@
                 label="Permission"
                 bind:value={permission}
                 disabledDefaultInput={true}
-                choices={preselectablePermissions.find((preselectablePermission) => preselectablePermission.namespace_id == namespace)?.permissions.map((preselectablePermissionPermission) => {
-                    return {
-                        id: preselectablePermissionPermission.id,
-                        value: preselectablePermissionPermission.id,
-                        label: preselectablePermissionPermission.label
-                    }
-                }) || []}
+                choices={(
+                    [
+                        {
+                            id: "*",
+                            value: "*",
+                            label: "All permissions on namespace"
+                        },
+                        ...preselectablePermissions.find((preselectablePermission) => preselectablePermission.namespace_id == namespace)?.permissions.map((preselectablePermissionPermission) => {
+                            return {
+                                id: preselectablePermissionPermission.id,
+                                value: preselectablePermissionPermission.id,
+                                label: preselectablePermissionPermission.label
+                            }
+                        }) || []
+                    ]
+                )}
                 onChange={() => {
                     if(namespace && permission) {
                         perm = `${namespace}.${permission}`

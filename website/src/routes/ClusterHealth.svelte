@@ -2,6 +2,7 @@
 	import { get } from "$lib/configs/functions/services";
 	import { fetchClient } from "$lib/fetch/fetch";
 	import { InstanceList, Instance } from "$lib/generated/mewld/proc";
+	import moment from "moment";
 	import Message from "../components/Message.svelte";
 	import Modal from "../components/Modal.svelte";
     import ObjectRender from "../components/ObjectRender.svelte";
@@ -118,10 +119,10 @@
                                         {/if}
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                        {instance?.StartedAt}
+                                        {moment(instance?.StartedAt).fromNow()}
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                        {instance?.LastChecked}
+                                        {moment(instance?.LastChecked).fromNow()}
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                         <button on:click={() => {

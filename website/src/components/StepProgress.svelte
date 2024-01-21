@@ -1,5 +1,5 @@
 <script lang="ts">
-	import Swal from 'sweetalert2';
+	import { error } from "$lib/toast";
 
 	interface Step {
 		name: string;
@@ -22,12 +22,7 @@
 			currentStep = currentStep + 1;
 			return true;
 		} catch (err) {
-			Swal.fire({
-				title: 'Unable to complete step!',
-				text: `${
-					err?.toString() || 'Could not go to the next step! Ensure you have filled out all fields!'
-				}`
-			});
+			error(err?.toString() || "An unknown error occurred");
 
 			return false;
 		}
