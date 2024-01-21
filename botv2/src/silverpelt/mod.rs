@@ -1,18 +1,4 @@
-/// List of enabled modules
-/// 
-/// Add to this list to create a module
-mod core;
-mod limits;
-mod server_backups;
-mod root;
-pub fn enabled_modules() -> Vec<Module> {
-    vec![
-        core::module(),
-        limits::module(),
-        server_backups::module(),
-        root::module(),
-    ]
-}
+pub mod canonical_repr;
 
 use once_cell::sync::Lazy;
 use moka::future::Cache;
@@ -46,7 +32,6 @@ pub type ModuleEventHandler = Box<
 >;
 
 /// This structure defines a basic module
-#[derive(serde::Serialize, serde::Deserialize)]
 pub struct Module {
     /// The ID of the module
     pub id: &'static str,
@@ -54,15 +39,12 @@ pub struct Module {
     /// The name of the module
     pub name: &'static str,
 
-    #[serde(skip)]
     /// The commands in the module
     pub commands: Vec<CommandAndPermissions>,
 
-    #[serde(skip)]
     /// Event handlers (if any)
     pub event_handlers: Vec<ModuleEventHandler>
 }
-
 
 #[derive(Default, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct PermissionCheck {
@@ -85,7 +67,7 @@ pub struct PermissionChecks {
     pub checks_needed: usize,
 }
 
-#[derive(Clone, PartialEq)]
+#[derive(Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct CommandExtendedData {
     /// The default permissions needed to run this command
     pub default_perms: PermissionChecks,
@@ -106,7 +88,7 @@ impl Default for CommandExtendedData {
 pub static COMMAND_EXTRA_DATA: Lazy<indexmap::IndexMap<String, CommandExtendedDataMap>> = Lazy::new(|| {
     let mut map = indexmap::IndexMap::new();
     
-    for module in enabled_modules() {
+    for module in crate::modules::enabled_modules() {
         for (command, extended_data) in module.commands {
             map.insert(command.name.clone(), extended_data);
         }
@@ -115,12 +97,23 @@ pub static COMMAND_EXTRA_DATA: Lazy<indexmap::IndexMap<String, CommandExtendedDa
     map
 });
 
-/// Command extra data (permissions)
+/// Command extra data (module cache)
 pub static COMMAND_MODULE_CACHE: Lazy<indexmap::IndexMap<String, Module>> = Lazy::new(|| {
     let mut map = indexmap::IndexMap::new();
     
-    for module in enabled_modules() {
+    for module in crate::modules::enabled_modules() {
         map.insert(module.id.to_string(), module);
+    }
+
+    map
+});
+
+/// Module extra data (canonical forms)
+pub static CANONICAL_MODULE_CACHE: Lazy<indexmap::IndexMap<String, canonical_repr::CanonicalModule>> = Lazy::new(|| {
+    let mut map = indexmap::IndexMap::new();
+    
+    for module in crate::modules::enabled_modules() {
+        map.insert(module.id.to_string(), canonical_repr::CanonicalModule::from(module));
     }
 
     map
@@ -130,7 +123,7 @@ pub static COMMAND_MODULE_CACHE: Lazy<indexmap::IndexMap<String, Module>> = Lazy
 pub static MODULE_EVENT_LISTENERS_CACHE: Lazy<indexmap::IndexMap<String, Vec<ModuleEventHandler>>> = Lazy::new(|| {
     let mut map = indexmap::IndexMap::new();
     
-    for module in enabled_modules() {
+    for module in crate::modules::enabled_modules() {
         map.insert(module.id.to_string(), module.event_handlers);
     }
 

@@ -1,5 +1,5 @@
 mod impls;
-mod cmds;
+mod silverpelt;
 mod config;
 mod tasks;
 mod modules;
@@ -160,7 +160,7 @@ async fn event_listener<'a>(ctx: poise::FrameworkContext<'a, Data, Error>, event
     }
 
     // Add all event listeners for key modules here
-    for (module, evts) in cmds::MODULE_EVENT_LISTENERS_CACHE.iter() {
+    for (module, evts) in silverpelt::MODULE_EVENT_LISTENERS_CACHE.iter() {
         log::debug!("Executing event handlers for {}", module);
         for evth in evts.iter() {
             if let Err(e) = evth(ctx.serenity_context, event).await {
@@ -234,7 +234,7 @@ async fn main() {
         commands: {
             let mut cmds = Vec::new();
 
-            for module in cmds::enabled_modules() {
+            for module in modules::enabled_modules() {
                 for cmd in module.commands {
                     let mut cmd = cmd.0;
                     cmd.category = Some(module.id.to_string()); 
@@ -339,15 +339,15 @@ async fn main() {
                         .await?;
                     }
 
-                    let key = cmds::COMMAND_PERMISSION_CACHE.get(&(guild_id, ctx.author().id)).await;
+                    let key = silverpelt::COMMAND_PERMISSION_CACHE.get(&(guild_id, ctx.author().id)).await;
 
                     if let Some(ref map) = key {
                         let cpr = map.get(&ctx.command().qualified_name);
 
                         if let Some(cpr) = cpr {
                             match cpr {
-                                cmds::CachedPermResult::Ok => return Ok(true),
-                                cmds::CachedPermResult::Err(e) => return Err(e.to_string().into()),
+                                silverpelt::CachedPermResult::Ok => return Ok(true),
+                                silverpelt::CachedPermResult::Err(e) => return Err(e.to_string().into()),
                             }
                         }
                     }
@@ -356,7 +356,7 @@ async fn main() {
                         return Err("You must be in a server to run this command".into());
                     };
 
-                    let (cmd_data, command_config) = cmds::get_command_configuration(&data.pool, guild_id.to_string().as_str(), ctx.command().qualified_name.as_str()).await?;
+                    let (cmd_data, command_config) = silverpelt::get_command_configuration(&data.pool, guild_id.to_string().as_str(), ctx.command().qualified_name.as_str()).await?;
 
                     let command_config = command_config.unwrap_or_default();
 
@@ -383,7 +383,7 @@ async fn main() {
                     }
 
                     info!("Checking if user {} ({}) can run command {} with permissions {:?}", member.user.name, member.user.id, ctx.command().qualified_name, member_perms);
-                    if let Err(e) = cmds::can_run_command(
+                    if let Err(e) = silverpelt::can_run_command(
                         &cmd_data,
                         &command_config,
                         &ctx.command().qualified_name,
@@ -399,13 +399,13 @@ async fn main() {
                         );
                     }
 
-                    let mut key = cmds::COMMAND_PERMISSION_CACHE.get(&(guild_id, ctx.author().id)).await;
+                    let mut key = silverpelt::COMMAND_PERMISSION_CACHE.get(&(guild_id, ctx.author().id)).await;
                     if let Some(ref mut map) = key {
-                        map.insert(ctx.command().qualified_name.clone(), cmds::CachedPermResult::Ok);
+                        map.insert(ctx.command().qualified_name.clone(), silverpelt::CachedPermResult::Ok);
                     } else {
                         let mut map = indexmap::IndexMap::new();
-                        map.insert(ctx.command().qualified_name.clone(), cmds::CachedPermResult::Ok);
-                        cmds::COMMAND_PERMISSION_CACHE.insert((guild_id, ctx.author().id), map).await;
+                        map.insert(ctx.command().qualified_name.clone(), silverpelt::CachedPermResult::Ok);
+                        silverpelt::COMMAND_PERMISSION_CACHE.insert((guild_id, ctx.author().id), map).await;
                     }
 
                     Ok(true)

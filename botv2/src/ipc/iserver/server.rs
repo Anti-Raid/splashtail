@@ -83,6 +83,9 @@ pub enum IServerQuery {
     GuildsExist {
         guilds: Vec<GuildId>,
     },
+
+    /// Returns the list of modules on the bot
+    Modules,
 }
 
 #[axum_macros::debug_handler]
@@ -104,7 +107,16 @@ async fn query(
                 });
             }
 
-            Ok(Json(guilds_exist))
+            Ok(Json(guilds_exist).into_response())
+        },
+        IServerQuery::Modules => {
+            let mut modules = indexmap::IndexMap::new();
+
+            for (id, module) in crate::silverpelt::CANONICAL_MODULE_CACHE.iter() {
+                modules.insert(id.to_string(), module.clone());
+            }
+
+            Ok(Json(modules).into_response())
         }
     }
 }
