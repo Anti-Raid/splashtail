@@ -2,6 +2,30 @@
 import { PlatformUser } from "./eureka-dovewing"
 
 //////////
+// source: auth.go
+
+export interface AuthorizeRequest {
+  client_id: string;
+  code: string;
+  redirect_uri: string;
+  protocol: string;
+  scope: string;
+}
+export interface UserLogin {
+  token: string;
+  user_id: string;
+}
+export interface OauthMeta {
+  client_id: string;
+  url: string;
+}
+export interface TestAuth {
+  auth_type: string;
+  target_id: string;
+  token: string;
+}
+
+//////////
 // source: common.go
 
 export const TargetTypeUser = "User";

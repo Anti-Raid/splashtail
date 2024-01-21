@@ -1,14 +1,11 @@
 import services from '../data/services.json'
+import { PUBLIC_BUILD_ENV } from '$env/static/public';
 
 type ConfigKeys = keyof typeof services
 
 export const get = (key: ConfigKeys): string => {
-    if (process.env.BUILD_ENV == 'production') {
+    if (PUBLIC_BUILD_ENV == 'produ:qction') {
         return services?.[key]?.production
-    }
-
-    if (process.env[`${key.toUpperCase()}_OVERRIDE`]) {
-        return process.env[`${key.toUpperCase()}_OVERRIDE`] as string
     }
 
     // @ts-ignore

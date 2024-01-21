@@ -12,3 +12,13 @@ packages:
         
   - path: "github.com/infinitybotlist/eureka/dovewing/dovetypes"
     output_path: "/failuremgmt/cdn/antiraid/dev/bindings/splashtail/eureka-dovewing.ts"
+
+
+  - path: "github.com/cheesycod/mewld/proc"
+    output_path: "/failuremgmt/cdn/antiraid/dev/bindings/splashtail/mewld/proc.ts"
+    type_mappings:
+      time.Time: "string /* RFC3339 */"
+      pgtype.Text: "string | null /* nullable */"
+      pgtype.UUID: "string /* uuid */"
+      dovetypes.PlatformUser: PlatformUser /* from eureka-dovewing.ts */
+      pgtype.Timestamptz: "string | null /* RFC3339, nullable */"

@@ -13,6 +13,7 @@ export async function fetchClient(url: string, options?: FetchClientOptions): Pr
     let headers = {}
 
     if (!options?.noExtraHeaders) {
+        // @ts-ignore
         headers['Content-Type'] = 'application/json'
     }
 
@@ -28,10 +29,12 @@ export async function fetchClient(url: string, options?: FetchClientOptions): Pr
     let modifier = ''
 
     if (options.auth) {
+        // @ts-ignore
         headers['Authorization'] = `User ${options.auth}`
         modifier += ' (authorized)'
         delete options.auth
     } else {
+        // @ts-ignore
         if (headers['Authorization']) {
             logger.error('FetchClient', 'options.auth must be used for auth')
         }

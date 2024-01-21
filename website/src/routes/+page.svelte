@@ -1,9 +1,9 @@
 <script>
-	import Benefit from '../components/Benefit.svelte';
 	import Meta from '../components/Meta.svelte';
 	import Icon from '@iconify/svelte';
 	import support from '../lib/configs/data/support.json';
 	import BotFeatures from './BotFeatures.svelte';
+	import ClusterHealth from './ClusterHealth.svelte';
 </script>
 
 <Meta
@@ -51,9 +51,9 @@
 	</div>
 </main>
 
-<div class="p-6" />
+<div class="m-6" />
 
-<div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+<section class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
 	<div class="lg:text-center" id="features">
 		<h2 class="text-lg font-semibold text-indigo-600">Features</h2>
 		<p class="max-w-2xl text-xl text-white lg:mx-auto">What features does AntiRaid offer?</p>
@@ -64,4 +64,8 @@
 			<BotFeatures />
 		</dl>
 	</div>
-</div>
+
+	<hr class="my-10" />
+
+	<ClusterHealth />
+</section>

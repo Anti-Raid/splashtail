@@ -33,7 +33,8 @@ ts:
 
 	# Patch to change package name to 'splashtail_types'
 	sed -i 's:package types:package splashtail_types:g' $(CDN_PATH)/dev/bindings/splashtail/go/types/*
-	cp -rf $(CDN_PATH)/dev/bindings/splashtail/*.ts website/src/lib/generated
+	cp -rf $(CDN_PATH)/dev/bindings/splashtail/* website/src/lib/generated
+	rm -rf website/src/lib/generated/go
 
 promoteprod:
 	rm -rf ../prod2
