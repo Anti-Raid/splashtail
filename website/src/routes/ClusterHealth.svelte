@@ -59,76 +59,74 @@
     <div class="flex flex-col mt-4">
         <div class="overflow-x-auto sm:-mx-6 lg:-mx-8">
             <div class="py-2 align-middle inline-block min-w-full sm:px-6 lg:px-8">
-                <div class="overflow-hidden border-b border-gray-200 shadow sm:rounded-lg">
+                <div class="overflow-hidden border-b border-gray-200 shadow-md sm:rounded-lg">
                     <table class="min-w-full divide-y divide-gray-200">
-                        <thead class="bg-gray-50">
+                        <thead class="bg-slate-700 text-gray-50">
                             <tr>
-                                <th scope="col" class="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase">
+                                <th scope="col" class="px-6 py-3 text-xs font-medium tracking-wider text-left uppercase">
                                     Cluster
                                 </th>
-                                <th scope="col" class="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase">
+                                <th scope="col" class="px-6 py-3 text-xs font-medium tracking-wider text-left uppercase">
                                     Shards
                                 </th>
-                                <th scope="col" class="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase">
+                                <th scope="col" class="px-6 py-3 text-xs font-medium tracking-wider text-left uppercase">
                                     Guilds
                                 </th>
-                                <th scope="col" class="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase">
+                                <th scope="col" class="px-6 py-3 text-xs font-medium tracking-wider text-left uppercase">
                                     Users
                                 </th>
-                                <th scope="col" class="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase">
+                                <th scope="col" class="px-6 py-3 text-xs font-medium tracking-wider text-left uppercase">
                                     Last Started
                                 </th>
-                                <th scope="col" class="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase">
+                                <th scope="col" class="px-6 py-3 text-xs font-medium tracking-wider text-left uppercase">
                                     Last Health Check
                                 </th>
-                                <th role="" scope="col" class="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase">
-                                    -
+                                <th role="" scope="col" class="px-6 py-3 text-xs font-medium tracking-wider text-left uppercase">
+                                    
                                 </th>
                             </tr>
                         </thead>
-                        <tbody class="bg-white divide-y divide-gray-200">
+                        <tbody class="bg-black text-white divide-y divide-gray-200">
                             {#each data.Instances as instance}
-                                <tr>
+                                <tr class="hover:bg-slate-800">
                                     <td class="px-6 py-4 whitespace-nowrap">
-                                        <div class="text-sm font-medium text-gray-900">
+                                        <div class="text-sm font-medium">
                                             <strong>{instance?.ClusterID} </strong> ({data?.Map?.find((cluster) => cluster.ID == instance?.ClusterID)?.Name})
                                         </div>
                                         <span class={
-                                            instance?.Active ? "text-sm text-green-600" : "text-sm text-red-600"
+                                            instance?.Active ? "text-sm text-green-500" : "text-sm text-red-500"
                                         }>
                                             {instance?.Active ? "Active" : "Inactive"}
                                         </span>
                                     </td>
-                                    <td class="px-6 py-4 whitespace-nowrap">
-                                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
-                                            {instance?.Shards?.join(", ")} 
-                                        </span>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
+                                        {instance?.Shards?.join(", ")} 
                                     </td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
                                         {#if instance}
                                             {getClusterGuildCount(instance)}
                                         {:else}
                                             Unknown
                                         {/if}
                                     </td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
                                         {#if instance}
                                             {getClusterUserCount(instance)}
                                         {:else}
                                             Unknown
                                         {/if}
                                     </td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
                                         {moment(instance?.StartedAt).fromNow()}
                                     </td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
                                         {moment(instance?.LastChecked).fromNow()}
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                         <button on:click={() => {
                                             openCluster = instance?.ClusterID;
                                             showModal = true;
-                                        }} class="text-indigo-600 hover:text-indigo-900">View</button>
+                                        }} class="text-indigo-400 hover:text-indigo-600">View Advanced</button>
                                     </td>
                                 </tr>
                             {/each}

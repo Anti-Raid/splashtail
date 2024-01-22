@@ -2,9 +2,12 @@ package get_cluster_modules
 
 import (
 	"bytes"
+	"context"
+	"errors"
 	"io"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/anti-raid/splashtail/state"
@@ -109,10 +112,30 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 	resp, err := client.Do(req)
 
 	if err != nil {
+		if errors.Is(err, context.DeadlineExceeded) {
+			return uapi.HttpResponse{
+				Status: http.StatusGatewayTimeout,
+				Json: types.ApiError{
+					Message: "Request to bot cluster timed out",
+				},
+			}
+		}
+
+		err := err.Error()
+
+		if strings.Contains(err, "connection refused") {
+			return uapi.HttpResponse{
+				Status: http.StatusBadGateway,
+				Json: types.ApiError{
+					Message: "Failed to connect to bot cluster",
+				},
+			}
+		}
+
 		return uapi.HttpResponse{
 			Status: http.StatusInternalServerError,
 			Json: types.ApiError{
-				Message: "Failed to send request: " + err.Error(),
+				Message: "Failed to send request: " + err,
 			},
 		}
 	}

@@ -9,8 +9,10 @@ reloadwebserver:
 updatebot:
 	make buildbot && cp -v botv2/target/release/botv2 botv2
 restartwebserver:
+	make stcore
+	make buildbot
 	systemctl stop splashtail-staging-webserver
-	make updatebot
+	cp -v botv2/target/release/botv2 botv2
 	systemctl start splashtail-staging-webserver
 reloadjobserver:
 	systemctl restart splashtail-staging-jobs
