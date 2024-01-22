@@ -59,9 +59,9 @@
     <div class="flex flex-col mt-4">
         <div class="overflow-x-auto sm:-mx-6 lg:-mx-8">
             <div class="py-2 align-middle inline-block min-w-full sm:px-6 lg:px-8">
-                <div class="overflow-hidden border-b border-gray-200 shadow-md sm:rounded-lg">
-                    <table class="min-w-full divide-y divide-gray-200">
-                        <thead class="bg-slate-700 text-gray-50">
+                <div class="overflow-hidden shadow-xl sm:rounded-lg">
+                    <table class="min-w-full">
+                        <thead class="bg-slate-800 text-gray-50">
                             <tr>
                                 <th scope="col" class="px-6 py-3 text-xs font-medium tracking-wider text-left uppercase">
                                     Cluster
@@ -86,9 +86,9 @@
                                 </th>
                             </tr>
                         </thead>
-                        <tbody class="bg-black text-white divide-y divide-gray-200">
+                        <tbody class={"bg-black text-white divide-y divide-gray-700"}>
                             {#each data.Instances as instance}
-                                <tr class="hover:bg-slate-800">
+                                <tr class="hover:bg-slate-950">
                                     <td class="px-6 py-4 whitespace-nowrap">
                                         <div class="text-sm font-medium">
                                             <strong>{instance?.ClusterID} </strong> ({data?.Map?.find((cluster) => cluster.ID == instance?.ClusterID)?.Name})

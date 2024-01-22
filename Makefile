@@ -34,7 +34,7 @@ ts:
 	cp -rf types $(CDN_PATH)/dev/bindings/splashtail/go
 
 	# Patch to change package name to 'splashtail_types'
-	sed -i 's:package types:package splashtail_types:g' $(CDN_PATH)/dev/bindings/splashtail/go/types/*
+	sed -i 's:package types:package splashtail_types:g' $(CDN_PATH)/dev/bindings/splashtail/go/types/{go/*,*.ts}
 	cp -rf $(CDN_PATH)/dev/bindings/splashtail/* website/src/lib/generated
 	rm -rf website/src/lib/generated/go
 
