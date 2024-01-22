@@ -11,7 +11,6 @@ import (
 
 	"github.com/anti-raid/splashtail/config"
 	"github.com/anti-raid/splashtail/objectstorage"
-	"github.com/anti-raid/splashtail/utils/mewext"
 
 	"github.com/bwmarrin/discordgo"
 	mproc "github.com/cheesycod/mewld/proc"
@@ -35,7 +34,6 @@ var (
 	Pool                    *pgxpool.Pool
 	Redis                   *redis.Client  // Used by dovewing and other services etc.
 	Rueidis                 rueidis.Client // where perf is needed
-	MewExt                  *mewext.ClusterExt
 	DovewingPlatformDiscord *dovewing.DiscordState
 	Discord                 *discordgo.Session
 	Logger                  *zap.Logger
@@ -222,6 +220,4 @@ func Setup() {
 			Prefix: "rl:",
 		},
 	})
-
-	MewExt = mewext.NewClusterExt()
 }

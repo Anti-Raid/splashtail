@@ -16,7 +16,7 @@ func (b Router) Tag() (string, string) {
 
 func (b Router) Routes(r *chi.Mux) {
 	uapi.Route{
-		Pattern: "/users/{user_id}",
+		Pattern: "/users/{id}",
 		OpId:    "get_user",
 		Method:  uapi.GET,
 		Docs:    get_user.Docs,

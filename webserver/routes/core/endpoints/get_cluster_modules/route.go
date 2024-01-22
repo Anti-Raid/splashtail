@@ -40,6 +40,15 @@ func Docs() *docs.Doc {
 		Summary:     "Get Cluster Modules",
 		Description: "This endpoint returns the modules that are currently running on the cluster.",
 		Resp:        silverpelt.CanonicalModule{},
+		Params: []docs.Parameter{
+			{
+				Name:        "clusterId",
+				Description: "The ID of the cluster to get the modules of.",
+				In:          "path",
+				Required:    true,
+				Schema:      docs.IdSchema,
+			},
+		},
 	}
 }
 

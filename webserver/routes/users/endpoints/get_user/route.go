@@ -26,6 +26,15 @@ func Docs() *docs.Doc {
 		Summary:     "Get User",
 		Description: "This endpoint will return user information given their ID",
 		Resp:        types.User{},
+		Params: []docs.Parameter{
+			{
+				Name:        "id",
+				Description: "The ID of the user to get information about",
+				In:          "path",
+				Required:    true,
+				Schema:      docs.IdSchema,
+			},
+		},
 	}
 }
 
