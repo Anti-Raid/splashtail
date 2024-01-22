@@ -1,4 +1,4 @@
-package get_cluster_health
+package get_clusters_health
 
 import (
 	"net/http"
@@ -14,7 +14,7 @@ import (
 
 func Docs() *docs.Doc {
 	return &docs.Doc{
-		Summary:     "Get Cluster Health",
+		Summary:     "Get Clusters Health",
 		Description: "This endpoint will return the health of all Anti-Raid clusters as collected by ``mewld``.",
 		Resp:        mewldproc.InstanceList{},
 	}

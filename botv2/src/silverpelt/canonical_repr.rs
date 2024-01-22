@@ -20,17 +20,6 @@ pub struct CanonicalCommand {
     pub extended_data: CanonicalCommandExtendedDataMap,
 }
 
-impl CanonicalCommand {
-    pub fn from_repr(cmd: &super::Command, extended_data: super::CommandExtendedDataMap) -> Self {
-        CanonicalCommand {
-            command: cmd.into(),
-            extended_data: extended_data.into_iter().map(|(k, v)| {
-                (k.to_string(), v)
-            }).collect(),
-        }
-    }
-}
-
 /// Canonical representation of a command argument for external use
 #[derive(serde::Serialize, serde::Deserialize)]
 pub struct CanonicalCommandArgument {
@@ -73,6 +62,18 @@ pub struct CanonicalCommandData {
 }
 
 /// Given a command, return its canonical representation
+impl CanonicalCommand {
+    pub fn from_repr(cmd: &super::Command, extended_data: super::CommandExtendedDataMap) -> Self {
+        CanonicalCommand {
+            command: cmd.into(),
+            extended_data: extended_data.into_iter().map(|(k, v)| {
+                (k.to_string(), v)
+            }).collect(),
+        }
+    }
+}
+
+/// Given command data, return its canonical representation
 impl From<&super::Command> for CanonicalCommandData {
     fn from(cmd: &super::Command) -> Self {
         CanonicalCommandData {

@@ -41,29 +41,24 @@ Due to the need for unidirectional server-bot communication, redis simply did no
 
 The base port for the IServer is defined by ``bot_iserver_base_port`` in the ``meta`` section of ``config.yaml``. The IServer for a given cluster is then available at ``http://localhost:<bot_iserver_base_port + cluster id>``.
 
-## Building Bot/API
+## Serializing/Deserializing for external usage
+
+### Canonical Representations
+
+In some cases, the internal representation of a type is not suitable for external usage. For example, the ``Module`` type used in ``botv2`` to store information about a module contains function pointers and internal fields that cannot be serialized/deserialized. In such cases, a canonical representation of the type can be made. For example, the ``Module`` type has a canonical representation of ``CanonicalModule`` which is sent by IServer etc. for use by external consumers such as the API and/or website.
+
+**Botv2 notes:** If a canonical representation is used, the structs should be in a seperate file and the ``From<T>`` trait should be implemented on the canonical type for the internal type. This allows for easy conversion between the internal and canonical representations.
+
+## Self-Hosting and Deployment
+
+### Building Bot/API
 
 - Run ``make buildbot`` to build the bot
 - Run ``make`` to build just the go components
 - Run ``make all`` to build everything
 
-## Running
+### Running
 
 - First run ``./splashtail webserver`` with the environment variable ``BOOTSTRAP_COMMANDS`` set to ``true``. This will start the bot and deploy the base commands.
 - From the next time, run ``./splashtail webserver`` without the ``BOOTSTRAP_COMMANDS`` variable. This is the normal way to run the bot.
 - Run the job server (typically before running the bot in production) using ``./splashtail jobs``
-
-## Extra/uneeded code
-
-The following packages are currently unused and may be used in the future:
-
-- mapofmu: Map of mutexes for concurrent access
-- syncmap: Generic wrapper around sync.Map (potentially consider replacing with [https://github.com/puzpuzpuz/xsync](xsync))
-
-## IPC Notes
-
-- IPC uses the ``mredis.LauncherCmd`` type from ``mewld`` (``import mredis "github.com/cheesycod/mewld/redis"``)
-- ``Args`` should be used to send arguments for the IPC command
-- ``Output`` should be used to send arbitrary data to IPC
-
-Note that the jobserver has a custom HTTP-based API for managing tasks
