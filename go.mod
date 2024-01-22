@@ -9,7 +9,7 @@ require (
 	github.com/getkin/kin-openapi v0.122.0 // indirect
 	github.com/go-chi/chi/v5 v5.0.10
 	github.com/infinitybotlist/eureka v0.6.5
-	github.com/wk8/go-ordered-map/v2 v2.1.8 // indirect
+	github.com/wk8/go-ordered-map/v2 v2.1.8
 	gopkg.in/yaml.v3 v3.0.1
 )
 

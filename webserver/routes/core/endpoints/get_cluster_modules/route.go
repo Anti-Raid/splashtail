@@ -2,7 +2,6 @@ package get_cluster_modules
 
 import (
 	"bytes"
-	"encoding/json"
 	"io"
 	"net/http"
 	"strconv"
@@ -11,20 +10,21 @@ import (
 	"github.com/anti-raid/splashtail/state"
 	"github.com/anti-raid/splashtail/types"
 	"github.com/anti-raid/splashtail/types/silverpelt"
-	"github.com/anti-raid/splashtail/utils/rwmap"
 	"github.com/go-chi/chi/v5"
+	jsoniter "github.com/json-iterator/go"
+	orderedmap "github.com/wk8/go-ordered-map/v2"
 
 	docs "github.com/infinitybotlist/eureka/doclib"
 	"github.com/infinitybotlist/eureka/uapi"
 )
 
+var json = jsoniter.ConfigFastest
+
 var reqBody = map[string]any{
-	"Modules": new(map[string]string),
+	"Modules": map[string]string{},
 }
 
 var reqBodyBytes []byte
-
-var cmCache = rwmap.New[int, silverpelt.CanonicalModule]()
 
 func Setup() {
 	var err error
@@ -39,7 +39,7 @@ func Docs() *docs.Doc {
 	return &docs.Doc{
 		Summary:     "Get Cluster Modules",
 		Description: "This endpoint returns the modules that are currently running on the cluster.",
-		Resp:        silverpelt.CanonicalModule{},
+		Resp:        orderedmap.OrderedMap[string, silverpelt.CanonicalModule]{},
 		Params: []docs.Parameter{
 			{
 				Name:        "clusterId",
@@ -75,12 +75,6 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 			Json: types.ApiError{
 				Message: "Invalid cluster ID",
 			},
-		}
-	}
-
-	if cm, ok := cmCache.Get(clusterId); ok {
-		return uapi.HttpResponse{
-			Json: cm,
 		}
 	}
 
@@ -145,7 +139,7 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 		}
 	}
 
-	var cm silverpelt.CanonicalModule
+	var cm *orderedmap.OrderedMap[string, silverpelt.CanonicalModule]
 
 	err = json.Unmarshal(body, &cm)
 
@@ -157,8 +151,6 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 			},
 		}
 	}
-
-	cmCache.Set(clusterId, cm)
 
 	return uapi.HttpResponse{
 		Json: cm,
