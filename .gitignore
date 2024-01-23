@@ -8,3 +8,5 @@ __pycache__
 node_modules
 ljconfig
 cmd/localjobs/localjobs
+.DS_Store
+/**/.DS_Store

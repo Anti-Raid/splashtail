@@ -10,6 +10,7 @@
     // The following are derived from `perm`
     let namespace: string;
     let permission: string;
+    let scope: string;
     let negator: boolean;
 
     interface PreselectablePermission {
@@ -74,44 +75,60 @@
         
         namespace = split[0] // Namespace is always the first part of the permission
 
-        let negator: boolean;
-        let permission: string;
-        let validPerm: boolean;
+        let negator: boolean = false;
+        let permission: string = "";
+        let validPerm: boolean = false;
+        let scope: string = "";
 
         if(namespace.startsWith("~")) {
             negator = true
             namespace = namespace.substring(1)
-        } else {
-            negator = false
         }
         
         if(split.length == 2) {
             permission = split[1];
             validPerm = true;
-        } else {
-            permission = ""
+
+            // Handle scope (perm#scope form)
+            if(permission.includes("#")) {
+                const splitPermission = permission.split("#");
+                permission = splitPermission[0];
+                scope = splitPermission[1];
+            } else {
+                scope = ""
+            }
         }
 
         return {
             namespace,
             permission,
+            scope,
             negator,
             validPerm
         }
     }
 
-    const rewindPerms = (namespace: string, permission: string, negator: boolean) => {
+    const rewindPerms = (namespace: string, permission: string, scope: string, negator: boolean) => {
+        let base: string;
         if(permission) {
-            return `${negator ? "~" : ""}${namespace}.${permission}`
+            base = `${negator ? "~" : ""}${namespace}.${permission}`
         } else {
-            return `${negator ? "~" : ""}${namespace}`
+            base = `${negator ? "~" : ""}${namespace}`
         }
+
+        // Handle scope (perm#scope form)
+        if(scope && permission) {
+            base = `${base}#${scope}`
+        }
+
+        return base
     }
     
     $: {
         const unwoundPerm = unwindPerm(perm);
         namespace = unwoundPerm.namespace;
         permission = unwoundPerm.permission;
+        scope = unwoundPerm.scope;
         negator = unwoundPerm.negator;
         validPerm = unwoundPerm.validPerm;
     }
@@ -161,7 +178,7 @@
                     ]
                 )}
                 onChange={() => {
-                    perm = rewindPerms(namespace, permission, negator)
+                    perm = rewindPerms(namespace, permission, scope, negator)
                     if(namespace && permission) {
                         validPerm = true;
                     }
@@ -176,7 +193,7 @@
             description="Whether or not the permission should be *removed*. This overrides 'All Permissions On Namespace' thus allowing for a easy permission blacklist on certain namespaces/modules."
             bind:value={negator}
             onChange={(_) => {
-                perm = rewindPerms(namespace, permission, negator)
+                perm = rewindPerms(namespace, permission, scope, negator)
             }}
             disabled={false}
             required={false}

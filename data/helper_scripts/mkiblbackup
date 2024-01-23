@@ -1,0 +1,80 @@
+#!/bin/bash
+
+set -e # Exit on error
+
+# Ensure $1 is set
+if [ -z "$1" ]; then
+    echo "Usage: $0 <db_name> <pubkey>"
+    exit 1
+fi
+
+# Ensure $2 is set to the pubkey
+if [ -z "$2" ]; then
+    echo "Usage: $0 <db_name> <pubkey>"
+    exit 1ls
+fi
+
+DATE=$(date '+%Y-%m-%d@%H:%M:%S')
+FILENAME=$1-${DATE}.iblcli-backup
+FILE=/tmp/${FILENAME}
+
+/usr/bin/ibl db new backup ${FILE} --db $1 --pubkey $2 
+
+mkdir -p /silverpelt/backups/pg/$1
+
+cp ${FILE} /silverpelt/backups/pg/$1
+
+# Check for s3cmd config, if present, upload to s3
+if [ -f ~/.s3cfg ]; then
+    s3cmd put ${FILE} s3://infinity-db-backups/pg/$1/${FILENAME}
+fi
+
+# If waitlog file does not exist, create it
+if [ ! -f /silverpelt/backups/pg/$1/waitlog ]; then
+    touch /silverpelt/backups/pg/$1/waitlog
+fi
+
+# Append the filename to the waitlog followed by a newline
+echo ${FILENAME} >> /silverpelt/backups/pg/$1/waitlog
+
+ssh autobackup@orchard mkdir -p /wafflepaw/backups/pg/$1
+
+scp ${FILE} autobackup@orchard:/wafflepaw/backups/pg/$1/${FILENAME}
+
+# Remove the filename from the waitlog
+sed -i "/${FILENAME}/d" /silverpelt/backups/pg/$1/waitlog
+
+set +e # Don't exit on error for this section due to bugs
+
+# Get entries from waitlog as an array
+IFS=$'\n' read -d '' -r -a waitlog < /silverpelt/backups/pg/$1/waitlog
+
+echo "mkiblbackup: now handling waitlog"
+
+echo "mkiblbackup: waitlog is ${waitlog}"
+
+# If waitlog is empty, exit
+if [ ${#waitlog[@]} -eq 0 ]; then
+    echo "mkiblbackup: waitlog is empty, exiting"
+    exit 0
+fi
+
+set -e # Exit on error
+
+# For every entry in the waitlog, 
+# check if the file exists on orchard:
+# if it does, remove it from the waitlog
+# if it doesn't, scp it to orchard
+for i in "${waitlog[@]}"
+do
+    if ssh autobackup@orchard test -f /wafflepaw/backups/pg/$1/$i; then
+        echo "mkiblbackup: ${i} exists on orchard, removing from waitlog"
+        sed -i "/${i}/d" /silverpelt/backups/pg/$1/waitlog
+    else
+        echo "mkiblbackup: ${i} does not exist on orchard, copying"
+        scp /silverpelt/backups/pg/$1/$i autobackup@orchard:/wafflepaw/backups/pg/$1/$i
+        sed -i "/${i}/d" /silverpelt/backups/pg/$1/waitlog
+    fi
+done
+
+rm ${FILE}

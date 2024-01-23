@@ -1,0 +1,5 @@
+#/bin/bash
+CDN_PATH=/failuremgmt/cdn/antiraid/dev
+LOCAL_PATH=~/splashtail/staging/data
+cd ~/ && ibl db new seed ${CDN_PATH}/seed.iblcli-seed --db infinity --backup-tables automated_vote_resets,changelogs,partner_types,staff_template_types,staff_templates --extensions uuid-ossp\|citext\|semver,https://github.com/theory/pg-semver && ibl db gen-ci-schema /silverpelt/cdn/ibl/dev/seed-ci.json
+cp ${CDN_PATH}/seed.iblseed ${LOCAL_PATH}/db_seed.iblcli-seed

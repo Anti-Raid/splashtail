@@ -6,12 +6,7 @@
 	import Message from "../components/Message.svelte";
 	import Modal from "../components/Modal.svelte";
     import ObjectRender from "../components/ObjectRender.svelte";
-
-    const getClusterHealth = async () => {
-        const response = await fetchClient(`${get('splashtail')}/clusters/health`);
-        const data: InstanceList = await response.json();
-        return data;
-    }
+	import { opGetClusterHealth, makeSharedRequest } from "$lib/fetch/ext";
 
     const getClusterGuildCount = (i: Instance) => {
         let count: number = 0;
@@ -40,7 +35,7 @@
     <span class="block text-white xl:inline">Cluster Health</span>
 </h2>
 
-{#await getClusterHealth()}
+{#await makeSharedRequest(opGetClusterHealth)}
     <Message type="loading">Fetching cluster data...</Message>
 {:then data}
     {#if openCluster != undefined && showModal}
