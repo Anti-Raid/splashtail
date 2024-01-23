@@ -1,0 +1,6 @@
+typegen:
+  path: 'src/lib/generated'
+  projects:
+    - arcadia
+    - htmlsanitize
+    - persepolis

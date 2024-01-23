@@ -10,6 +10,18 @@ Splashtail is a monorepo containing all the code needed to run and setup Anti-Ra
 - **website** => The website for AntiRaid 
 - **misc** => Miscellaneous code such as code used to test the WIP simpleproxy2
 - **simpleproxy2** => Simple WIP gateway proxy to allow AntiRaid to be freely restarted/run multiple gateway sessions without needing to worry about IDENTITY's or compatibility with serenity/discordgo
+- **arcadia** => Staff management bot for AntiRaid
+    - **Forked from:** https://github.com/infinitybotlist/arcadia
+    - **Commit:** 5554dadbd98ed4bd2a9594ac7af8d9ff06108322
+    - **Permalink:** https://github.com/InfinityBotList/Arcadia/commit/5554dadbd98ed4bd2a9594ac7af8d9ff06108322
+    - **License:** AGPLv3
+    - **Affidavits:** The developers of Anti-Raid are copyright owners of Arcadia and so may use it under the AGPLv3 or any license of their choice
+- **arcadia-panel** => Internal staff website to manage Anti-Raid
+    - **Forked from:** https://github.com/infinitybotlist/panelv2
+    - **Commit:** 61c626e5bf383fc8b277e836a9fcb9f02250bcb6
+    - **Permalink:** https://github.com/InfinityBotList/panelv2/commit/61c626e5bf383fc8b277e836a9fcb9f02250bcb6
+    - **License:** AGPLv3
+    - **Affidavits:** The developers of Anti-Raid are copyright owners of Arcadia and so may use it under the AGPLv3 or any license of their choice
 
 ## Communication
 
