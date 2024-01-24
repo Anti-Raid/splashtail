@@ -57,7 +57,7 @@ impl UserLimitTypesChoices {
     }
 }
 
-#[derive(EnumString, Display, PartialEq, EnumVariantNames, Clone, Debug, Serialize)]
+#[derive(EnumString, Display, PartialEq, EnumVariantNames, Clone, Debug, Serialize, Hash, Eq)]
 #[strum(serialize_all = "snake_case")]
 pub enum UserLimitTypes {
     RoleAdd,       // set
@@ -95,6 +95,7 @@ impl UserLimitTypes {
     /// Returns the default repeat rate for a user-target pair
     /// 
     /// Within this rate, limits will be ignored if the same user-target pair has already been handled
+    #[allow(dead_code)] // May be used in the future
     pub fn default_user_target_repeat_rate(&self) -> i64 {
         match self {
             Self::RoleGivenToMember => 2, // 2 seconds
@@ -192,7 +193,9 @@ impl GuildUserTargetSettings {
 #[derive(Clone, Debug, Serialize)]
 pub struct UserAction {
     /// The ID of the action
-    pub action_id: String,
+    /// 
+    /// May be None if the action data is being returned from cache
+    pub action_id: Option<String>,
     /// The limit type associated with this action performed
     pub limit_type: UserLimitTypes,
     /// The time the action was performed
@@ -232,7 +235,7 @@ impl UserAction {
 
     let actions = Self {
             guild_id,
-            action_id: action_id.to_string(),
+            action_id: Some(action_id.to_string()),
             user_id: r.user_id.parse()?,
             limit_type: r.limit_type.parse()?,
             created_at: r.created_at,
@@ -269,7 +272,7 @@ impl UserAction {
             actions.push(Self {
                 guild_id,
                 user_id,
-                action_id: r.action_id,
+                action_id: Some(r.action_id),
                 limit_type: r.limit_type.parse()?,
                 created_at: r.created_at,
                 action_data: r.action_data,
@@ -299,7 +302,7 @@ impl UserAction {
         for r in rec {
             actions.push(Self {
                 guild_id,
-                action_id: r.action_id,
+                action_id: Some(r.action_id),
                 limit_type: r.limit_type.parse()?,
                 created_at: r.created_at,
                 user_id: r.user_id.parse()?,
@@ -327,7 +330,7 @@ pub struct Limit {
     pub limit_action: UserLimitActions,
     /// The number of times the limit can be hit
     pub limit_per: i32,
-    /// The time frame the limit can be hit in
+    /// The time frame, in seconds the limit can be hit in
     pub limit_time: PgInterval,
 }
 
@@ -336,13 +339,19 @@ impl Limit {
         let rec = sqlx::query!(
             "
                 SELECT limit_id, limit_name, limit_type, limit_action, limit_per, 
-                limit_time FROM limits__guild_limits
+                limit_time AS limit_time FROM limits__guild_limits
                 WHERE guild_id = $1
             ",
             guild_id.to_string()
         )
         .fetch_all(pool)
-        .await?;
+        .await;
+
+        let rec = match rec {
+            Ok(rec) => rec,
+            Err(sqlx::Error::RowNotFound) => return Ok(Vec::new()),
+            Err(e) => return Err(e.into()),
+        };
 
         let mut limits = Vec::new();
 
@@ -364,57 +373,58 @@ impl Limit {
 
 #[derive(Debug)]
 pub struct CurrentUserLimitsHit {
-    pub limit: Limit,
+    pub limit_id: String,
     pub cause: Vec<UserAction>,
 }
 
 impl CurrentUserLimitsHit {
-    /// Returns a list of all limits that have been hit for a specific guild
-    pub async fn hit(guild_id: GuildId, pool: &PgPool) -> Result<Vec<Self>, Error> {
-        let limits = Limit::from_guild(pool, guild_id).await?;
-
+    /// Returns a list of all limits that have been newly hit for a specific guild
+    pub fn newly_hit(
+        guild_id: GuildId, 
+        user_id: UserId,
+        guild_cache: &super::cache::GuildCache,
+        guild_member_limits_cache: &super::cache::GuildMemberLimitTypesMap
+    ) -> Vec<Self> {
         let mut hits = Vec::new();
 
-        for limit in limits {
-            let mut cause = Vec::new();
+        // For every limit in guild_cache.limits
+        for (_, limit) in guild_cache.limits.iter() {
+            let made_actions = guild_member_limits_cache.get(&limit.limit_type);
 
-            // Find all actions that apply to this limit
-            let rec = sqlx::query!(
-                "
-                    SELECT action_id, created_at, user_id, action_data, 
-                    limits_hit, target FROM limits__user_actions
-                    WHERE guild_id = $1
-                    AND NOT($4 = ANY(limits_hit)) -- Not already handled
-                    AND NOW() - created_at < $2 -- Within limit_time
-                    AND limit_type = $3 -- Limit type
-                ",
-                guild_id.to_string(),
-                limit.limit_time,
-                limit.limit_type.to_string(),
-                limit.limit_id
-            )
-            .fetch_all(pool)
-            .await?;
-
-            for r in rec {
-                cause.push(UserAction {
-                    guild_id,
-                    limit_type: limit.limit_type.clone(),
-                    created_at: r.created_at,
-                    user_id: r.user_id.parse()?,
-                    action_data: r.action_data,
-                    action_id: r.action_id,
-                    limits_hit: r.limits_hit,
-                    target: r.target,
-                });
+            if made_actions.is_none() {
+                continue;
             }
 
-            if cause.len() >= limit.limit_per as usize {
-                hits.push(Self { limit, cause });
+            let made_actions = made_actions.unwrap();
+
+            let mut cause = Vec::new();
+            for (ts, tr) in made_actions.times.iter() {
+                if tr.limits.contains(&limit.limit_id) {
+                    continue; // Already handled
+                }
+
+                if chrono::Utc::now().timestamp() - ts < crate::impls::utils::pg_interval_to_secs(limit.limit_time.clone()) {
+                    continue; // Not within limit time
+                }
+
+                cause.push(UserAction {
+                    action_id: None,
+                    limit_type: limit.limit_type.clone(),
+                    created_at: sqlx::types::chrono::DateTime::from_timestamp(*ts, 0).unwrap_or(chrono::Utc::now()),
+                    user_id,
+                    guild_id,
+                    action_data: tr.action_data.clone(),
+                    limits_hit: tr.limits.clone(),
+                    target: tr.target.clone(),
+                })
+            }
+
+            if cause.len() > limit.limit_per as usize {
+                hits.push(Self { limit_id: limit.limit_id.to_string(), cause });
             }
         }
 
-        Ok(hits)
+        hits
     }
 }
 

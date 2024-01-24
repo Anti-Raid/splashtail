@@ -1,50 +1,13 @@
-use log::{error, info, warn, debug};
+use log::{error, info, warn};
 use poise::serenity_prelude::{GuildId, UserId};
 use sqlx::PgPool;
 
 use crate::{impls::cache::CacheHttpImpl, Error};
 use super::core;
 
-static PRECHECK_CACHE: once_cell::sync::Lazy<moka::future::Cache<String, bool>> = once_cell::sync::Lazy::new(|| {
-    moka::future::Cache::builder()
-    .time_to_live(std::time::Duration::from_secs(60))
-    .build()
-});
-
-pub async fn precheck_guild(pool: &PgPool, guild_id: GuildId, limit: &super::core::UserLimitTypes) -> Result<(), Error> {
-    let limit_str = limit.to_string();
-    let precache_key = guild_id.to_string() + &limit_str;
-    // Look for guild
-    if let Some(found) = PRECHECK_CACHE.get(&precache_key).await {
-        if !found {
-            return Err("Guild has no limits [cached]".into());
-        }
-
-        return Ok(());
-    }
-
-    let guild = sqlx::query!(
-        "SELECT COUNT(*) FROM limits__guild_limits WHERE guild_id = $1 AND limit_type = $2
-    ",
-        guild_id.to_string(),
-        limit_str
-    )
-    .fetch_one(pool)
-    .await?;
-
-    if guild.count.unwrap_or_default() == 0 {
-        // Guild not found
-        PRECHECK_CACHE.insert(precache_key, false).await;
-        return Err("Guild has no limits".into());
-    }
-
-    PRECHECK_CACHE.insert(precache_key, true).await;
-
-    Ok(())
-}
-
-/// Returns true if the same user+target combo has appeared in the time interval user_target_repeat_rate
-pub async fn ignore_handling(pool: &PgPool, ha: &HandleModAction) -> Result<bool, Error> {
+// Returns true if the same user+target combo has appeared in the time interval user_target_repeat_rate
+// TODO: This function needs to be rewritten as limits are handled in-memory
+/**pub async fn ignore_handling(pool: &PgPool, ha: &HandleModAction) -> Result<bool, Error> {
     let repeat_rate = {
         let user_target_settings = core::GuildUserTargetSettings::from_guild(pool, ha.guild_id).await?;
 
@@ -82,7 +45,7 @@ pub async fn ignore_handling(pool: &PgPool, ha: &HandleModAction) -> Result<bool
     }
 
     Ok(false) // Don't ignore 
-}
+}**/
 
 pub struct HandleModAction {
     /// Guild ID
@@ -106,17 +69,86 @@ pub async fn handle_mod_action(
     let limit = &ha.limit;
     let user_id = ha.user_id;
     let target = ha.target.clone();
-    let action_data = &ha.action_data;
+    let action_data = ha.action_data;
 
-    if let Err(e) = precheck_guild(pool, guild_id, limit).await {
-        debug!("Limits precheck failed: {}", e);
-        return Ok(()) // Avoid spamming errors
-    }
+    // Check limits cache
+    let guild_cache = {
+        let guild_cache = super::cache::GUILD_CACHE.get(&guild_id);
+        if let Some(guild_cache) = guild_cache {
+            guild_cache.clone()
+        } else {
+            let guild_cache = super::cache::GuildCache::from_guild(pool, guild_id).await?;
+            super::cache::GUILD_CACHE.insert(guild_id, guild_cache.clone());
+            guild_cache
+        }
+    };
 
-    if ignore_handling(pool, ha).await? {
-        debug!("Ignoring handling [limit={}, user_id={}, target={}]", limit, user_id, target);
+    if guild_cache.limits.is_empty() {
+        // No limits for this guild
         return Ok(());
     }
+
+    // Add to GUILD_MEMBER_ACTIONS_CACHE
+    {
+        if !super::cache::GUILD_MEMBER_ACTIONS_CACHE.contains_key(&guild_id) {
+            super::cache::GUILD_MEMBER_ACTIONS_CACHE.insert(guild_id, std::collections::HashMap::new());
+        }
+
+        let Some(mut gm) = super::cache::GUILD_MEMBER_ACTIONS_CACHE.get_mut(&guild_id) else {
+            warn!("Guild not found in GUILD_MEMBER_ACTIONS_CACHE: {}", guild_id);
+            return Ok(());
+        };
+
+        let umac = gm.entry(user_id).or_insert_with(std::collections::HashMap::new);
+
+        if !umac.contains_key(&ha.limit) {
+            umac.insert(
+                ha.limit.clone(),
+                super::cache::GuildMemberCurrentActions {
+                    times: indexmap::indexmap! {
+                        sqlx::types::chrono::Utc::now().timestamp() => super::cache::TimesResolution {
+                            target: target.clone(),
+                            limits: Vec::new(),
+                            action_data: action_data.clone()
+                        }
+                    },
+                },
+            );
+        } else {
+            let Some(entry) = umac.get_mut(&ha.limit) else {
+                warn!("Limit not found in GUILD_MEMBER_ACTIONS_CACHE: {}", ha.limit);
+                return Ok(());
+            };
+
+            entry.times.insert(sqlx::types::chrono::Utc::now().timestamp(), super::cache::TimesResolution {
+                target: target.clone(),
+                limits: Vec::new(),
+                action_data: action_data.clone()
+            });
+        }
+    }
+
+    let gmltm = {
+        let Some(gmltm) = super::cache::GUILD_MEMBER_ACTIONS_CACHE.get(&guild_id) else {
+            warn!("Guild not found in GUILD_MEMBER_ACTIONS_CACHE: {}", guild_id);
+            return Ok(());
+        };
+
+        let Some(gmultm) = gmltm.get(&user_id) else {
+            warn!("User not found in GUILD_MEMBER_ACTIONS_CACHE: {}", user_id);
+            return Ok(());
+        };
+
+        gmultm
+    };
+
+    /*if ignore_handling(pool, ha).await? {
+        debug!("Ignoring handling [limit={}, user_id={}, target={}]", limit, user_id, target);
+        return Ok(());
+    }*/
+
+    // Check if they hit any limits yet
+    let hit = core::CurrentUserLimitsHit::newly_hit(guild_id, user_id, &guild_cache, &gmltm);
     
     // SAFETY: Tx should be dropped if error occurs, so make a scope to seperate tx queries
     {
@@ -139,12 +171,14 @@ pub async fn handle_mod_action(
         .execute(&mut tx)
         .await?;
 
-        // Check if they hit any limits yet
-        let hit = core::CurrentUserLimitsHit::hit(guild_id, pool).await?;
-
         for hit_limit in hit {
+            let Some(limit) = guild_cache.limits.get(&hit_limit.limit_id) else {
+                warn!("Limit not found in cache: {}", hit_limit.limit_id);
+                continue
+            };
+
             // We have a hit limit for this user
-            info!("Hit limit: {:?}", hit_limit);
+            info!("Hit limit: limit={:?}, hit={:?}", limit, hit_limit);
 
             // Immediately handle the limit
             let cur_uid = cache_http.cache.current_user().id;
@@ -157,7 +191,7 @@ pub async fn handle_mod_action(
 
             if can_mod == cur_uid {
                 info!("Moderating user");
-                match hit_limit.limit.limit_action {
+                match limit.limit_action {
                     core::UserLimitActions::RemoveAllRoles => {
                         // Get all user roles
                         if let Ok(member) = guild_id.member(cache_http, user_id).await {
@@ -194,7 +228,7 @@ pub async fn handle_mod_action(
                     crate::impls::crypto::gen_random(16),
                     guild_id.to_string(),
                     user_id.to_string(),
-                    hit_limit.limit.limit_id,
+                    hit_limit.limit_id,
                     &hit_limit
                         .cause
                         .iter()
@@ -214,7 +248,7 @@ pub async fn handle_mod_action(
                 UPDATE limits__user_actions
                 SET limits_hit = array_append(limits_hit, $1)
                 WHERE action_id = $2",
-                    hit_limit.limit.limit_id,
+                    hit_limit.limit_id,
                     action.action_id
                 )
                 .execute(&mut tx)
@@ -229,7 +263,7 @@ pub async fn handle_mod_action(
                 crate::impls::crypto::gen_random(16),
                 guild_id.to_string(),
                 user_id.to_string(),
-                hit_limit.limit.limit_id,
+                hit_limit.limit_id,
                 &hit_limit
                     .cause
                     .iter()
