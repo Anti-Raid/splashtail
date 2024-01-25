@@ -6,6 +6,9 @@ pub fn module() -> crate::silverpelt::Module {
     crate::silverpelt::Module {
         id: "core",
         name: "Core Commands",
+        description: "Core commands for the bot",
+        configurable: true,
+        commands_configurable: false,
         commands: vec![
             (help::help(), crate::silverpelt::CommandExtendedData::none()),
             (help::simplehelp(), crate::silverpelt::CommandExtendedData::none()),

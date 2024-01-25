@@ -7,6 +7,12 @@ pub struct CanonicalModule {
     /// The name of the module
     pub name: &'static str,    
 
+    /// The description of the module
+    pub description: &'static str,
+
+    /// Whether or the module is configurable
+    pub configurable: bool,
+
     /// The commands in the module
     pub commands: Vec<CanonicalCommand>,
 }
@@ -105,6 +111,8 @@ impl From<super::Module> for CanonicalModule {
         CanonicalModule {
             id: module.id,
             name: module.name,
+            description: module.description,
+            configurable: module.configurable,
             commands: module.commands.into_iter().map(|(cmd, perms)| {
                 CanonicalCommand::from_repr(&cmd, perms)
             }).collect(),

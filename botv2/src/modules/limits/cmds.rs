@@ -37,6 +37,8 @@ pub async fn limits_add(
     let limit_type = limit_type.resolve();
     let limit_action = limit_action.resolve();
 
+    let guild_id = ctx.guild_id().ok_or("Could not get guild id")?;
+
     // Add limit to db
     sqlx::query!(
         "
@@ -57,7 +59,7 @@ pub async fn limits_add(
                 make_interval(secs => $6)
             )
         ",
-        ctx.guild_id().ok_or("Could not get guild id")?.to_string(),
+        guild_id.to_string(),
         limit_name,
         limit_type.to_string(),
         limit_action.to_string(),
@@ -66,6 +68,18 @@ pub async fn limits_add(
     )
     .execute(&ctx.data().pool)
     .await?;
+
+    // Add to cache
+    let new_gc = super::cache::GuildCache::from_guild(
+        &ctx.data().pool,
+        guild_id,
+    )
+    .await?;
+
+    super::cache::GUILD_CACHE.insert(
+        guild_id,
+        new_gc,
+    );
 
     ctx.say("Added limit successfully").await?;
 
@@ -232,8 +246,10 @@ pub async fn limitactions_view(
             embeds.push(CreateEmbed::default().title("Actions").color(0x00ff00));
         }
 
+        let action_id = action.action_id;
+
         embeds[i] = embeds[i].clone().field(
-            action.action_id.clone(),
+            action_id.clone(),
             format!(
                 "``{limit_type}`` by {user_id} on {target} at <t:{timestamp}:R> | {action_data} [{id}]\n**Hit Limits:** {limits_hit:#?}",
                 limit_type = action.limit_type,
@@ -241,7 +257,7 @@ pub async fn limitactions_view(
                 user_id = action.user_id.mention().to_string() + " (" + &action.user_id.to_string() + ")",
                 target = action.target, 
                 timestamp = action.created_at.timestamp(),
-                id = action.action_id,
+                id = action_id,
                 limits_hit = action.limits_hit
             ),
             false,

@@ -5,6 +5,9 @@ pub fn module() -> crate::silverpelt::Module {
     crate::silverpelt::Module {
         id: "server_backups",
         name: "Server Backups",
+        description: "Customizable advanced server backup system for your server",
+        configurable: true,
+        commands_configurable: true,
         commands: vec![
             (cmds::backups(), indexmap! {
                 "" => crate::silverpelt::CommandExtendedData::kittycat_simple("server_backups", "*"),

@@ -57,7 +57,7 @@ impl UserLimitTypesChoices {
     }
 }
 
-#[derive(EnumString, Display, PartialEq, EnumVariantNames, Clone, Debug, Serialize, Hash, Eq)]
+#[derive(EnumString, Display, PartialEq, EnumVariantNames, Clone, Copy, Debug, Serialize, Hash, Eq)]
 #[strum(serialize_all = "snake_case")]
 pub enum UserLimitTypes {
     RoleAdd,       // set
@@ -193,9 +193,7 @@ impl GuildUserTargetSettings {
 #[derive(Clone, Debug, Serialize)]
 pub struct UserAction {
     /// The ID of the action
-    /// 
-    /// May be None if the action data is being returned from cache
-    pub action_id: Option<String>,
+    pub action_id: String,
     /// The limit type associated with this action performed
     pub limit_type: UserLimitTypes,
     /// The time the action was performed
@@ -235,7 +233,7 @@ impl UserAction {
 
     let actions = Self {
             guild_id,
-            action_id: Some(action_id.to_string()),
+            action_id: action_id.to_string(),
             user_id: r.user_id.parse()?,
             limit_type: r.limit_type.parse()?,
             created_at: r.created_at,
@@ -272,7 +270,7 @@ impl UserAction {
             actions.push(Self {
                 guild_id,
                 user_id,
-                action_id: Some(r.action_id),
+                action_id: r.action_id,
                 limit_type: r.limit_type.parse()?,
                 created_at: r.created_at,
                 action_data: r.action_data,
@@ -302,7 +300,7 @@ impl UserAction {
         for r in rec {
             actions.push(Self {
                 guild_id,
-                action_id: Some(r.action_id),
+                action_id: r.action_id,
                 limit_type: r.limit_type.parse()?,
                 created_at: r.created_at,
                 user_id: r.user_id.parse()?,
@@ -371,7 +369,7 @@ impl Limit {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct CurrentUserLimitsHit {
     pub limit_id: String,
     pub cause: Vec<UserAction>,
@@ -398,6 +396,7 @@ impl CurrentUserLimitsHit {
             let made_actions = made_actions.unwrap();
 
             let mut cause = Vec::new();
+
             for (ts, tr) in made_actions.times.iter() {
                 if tr.limits.contains(&limit.limit_id) {
                     continue; // Already handled
@@ -408,7 +407,7 @@ impl CurrentUserLimitsHit {
                 }
 
                 cause.push(UserAction {
-                    action_id: None,
+                    action_id: "CACHE/".to_string() + &crate::impls::crypto::gen_random(24),
                     limit_type: limit.limit_type.clone(),
                     created_at: sqlx::types::chrono::DateTime::from_timestamp(*ts, 0).unwrap_or(chrono::Utc::now()),
                     user_id,

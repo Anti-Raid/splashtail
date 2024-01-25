@@ -39,6 +39,15 @@ pub struct Module {
     /// The name of the module
     pub name: &'static str,
 
+    /// The description of the module
+    pub description: &'static str,
+
+    /// Whether or the module is configurable
+    pub configurable: bool,
+
+    /// Whether or not individual commands in the module can be configured
+    pub commands_configurable: bool,
+
     /// The commands in the module
     pub commands: Vec<CommandAndPermissions>,
 

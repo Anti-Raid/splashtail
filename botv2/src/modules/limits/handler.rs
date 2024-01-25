@@ -69,7 +69,7 @@ pub async fn handle_mod_action(
     let limit = &ha.limit;
     let user_id = ha.user_id;
     let target = ha.target.clone();
-    let action_data = ha.action_data;
+    let action_data = &ha.action_data;
 
     // Check limits cache
     let guild_cache = {
@@ -112,6 +112,8 @@ pub async fn handle_mod_action(
                             action_data: action_data.clone()
                         }
                     },
+                    time_action_map: dashmap::DashMap::new(),
+                    hit_limits: dashmap::DashMap::new(),
                 },
             );
         } else {
@@ -128,18 +130,14 @@ pub async fn handle_mod_action(
         }
     }
 
-    let gmltm = {
-        let Some(gmltm) = super::cache::GUILD_MEMBER_ACTIONS_CACHE.get(&guild_id) else {
-            warn!("Guild not found in GUILD_MEMBER_ACTIONS_CACHE: {}", guild_id);
-            return Ok(());
-        };
+    let Some(gmltm) = super::cache::GUILD_MEMBER_ACTIONS_CACHE.get(&guild_id) else {
+        warn!("Guild not found in GUILD_MEMBER_ACTIONS_CACHE: {}", guild_id);
+        return Ok(());
+    };
 
-        let Some(gmultm) = gmltm.get(&user_id) else {
-            warn!("User not found in GUILD_MEMBER_ACTIONS_CACHE: {}", user_id);
-            return Ok(());
-        };
-
-        gmultm
+    let Some(gmultm) = gmltm.get(&user_id) else {
+        warn!("User not found in GUILD_MEMBER_ACTIONS_CACHE: {}", user_id);
+        return Ok(());
     };
 
     /*if ignore_handling(pool, ha).await? {
@@ -148,11 +146,13 @@ pub async fn handle_mod_action(
     }*/
 
     // Check if they hit any limits yet
-    let hit = core::CurrentUserLimitsHit::newly_hit(guild_id, user_id, &guild_cache, &gmltm);
+    let hit = core::CurrentUserLimitsHit::newly_hit(guild_id, user_id, &guild_cache, &gmultm.clone());
+
+    drop(gmltm);
     
     // SAFETY: Tx should be dropped if error occurs, so make a scope to seperate tx queries
     {
-        let mut tx = pool.begin().await?;
+        let mut tx: sqlx::Transaction<'_, sqlx::Postgres> = pool.begin().await?;
 
         // Insert into limits__user_actions
         sqlx::query!(
@@ -220,6 +220,22 @@ pub async fn handle_mod_action(
                     can_mod, cur_uid
                 );
 
+                let Some(user_map) = super::cache::GUILD_MEMBER_ACTIONS_CACHE.get(&guild_id) else {
+                    warn!("Guild not found in GUILD_MEMBER_ACTIONS_CACHE: {}", guild_id);
+                    continue;
+                };
+                let Some(action_map) = user_map.get(&user_id) else {
+                    warn!("User not found in GUILD_MEMBER_ACTIONS_CACHE: {}", user_id);
+                    continue;
+                };
+
+                let Some(gmac) = action_map.get(&limit.limit_type) else {
+                    warn!("Limit not found in GUILD_MEMBER_ACTIONS_CACHE: {}", limit.limit_type);
+                    continue;
+                };
+
+                let action_ids = gmac.sync_with_db(pool, limit.limit_type, user_id, guild_id).await?;
+
                 sqlx::query!(
                     "
                 INSERT INTO limits__past_hit_limits
@@ -229,11 +245,7 @@ pub async fn handle_mod_action(
                     guild_id.to_string(),
                     user_id.to_string(),
                     hit_limit.limit_id,
-                    &hit_limit
-                        .cause
-                        .iter()
-                        .map(|a| a.action_id.clone())
-                        .collect::<Vec<_>>(),
+                    &action_ids,
                     &vec!["Not enough permissions to moderate user".to_string()]
                 )
                 .execute(&mut tx)
