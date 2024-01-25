@@ -2,8 +2,10 @@
 	import Meta from '../components/Meta.svelte';
 	import Icon from '@iconify/svelte';
 	import support from '../lib/configs/data/support.json';
-	import BotFeatures from './BotFeatures.svelte';
-	import ClusterHealth from './ClusterHealth.svelte';
+	import BotFeatures from '../components/common/BotFeatures.svelte';
+	import ClusterHealth from '../components/common/ClusterHealth.svelte';
+	import Message from "../components/Message.svelte";
+	import { makeSharedRequest, opGetClusterHealth } from '$lib/fetch/ext';
 </script>
 
 <Meta
@@ -67,5 +69,15 @@
 
 	<hr class="my-10" />
 
-	<ClusterHealth />
+	<h2 class="text-4xl font-bold tracking-tight text-gray-900 sm:text-5xl md:text-6xl">
+		<span class="block text-white xl:inline">Cluster Health</span>
+	</h2>	
+
+	{#await makeSharedRequest(opGetClusterHealth)}
+    	<Message type="loading">Fetching cluster data...</Message>
+	{:then data}
+		<ClusterHealth instanceList={data} />
+	{:catch err}
+		<Message type="error">Error loading cluster data: {err}</Message>
+	{/await}
 </section>

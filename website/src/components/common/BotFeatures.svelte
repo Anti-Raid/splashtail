@@ -1,5 +1,5 @@
 <script lang="ts">
-    import Benefit from "../components/Benefit.svelte";
+    import Benefit from "../Benefit.svelte";
 </script>
 
 <Benefit 

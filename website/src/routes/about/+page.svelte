@@ -1,6 +1,7 @@
 <script lang="ts">
 	import Divider from '../../components/Divider.svelte';
-	import BotFeatures from '../BotFeatures.svelte';
+	import BotFeatures from '../../components/common/BotFeatures.svelte';
+	import ClusterHealth from '../../components/common/ClusterHealth.svelte';
 	import support from "$lib/configs/data/support.json";
 
 	interface TeamMember {
@@ -64,7 +65,7 @@
 
 <div class="p-4" />
 
-<Divider Text="Features" Margin="6" />
+<Divider text="Features" margin="6" />
 
 <div class="p-2" />
 
@@ -83,7 +84,7 @@
 
 <div class="p-4" />
 
-<Divider Text="Meet the Team" Margin="6" />
+<Divider text="Meet the Team" margin="6" />
 
 <div class="py-10">
 	<div class="mx-auto grid max-w-7xl gap-x-6 gap-y-10 px-6 lg:px-8 xl:grid-cols-3">
