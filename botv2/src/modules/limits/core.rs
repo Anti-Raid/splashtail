@@ -75,7 +75,7 @@ pub enum UserLimitTypes {
 }
 
 impl UserLimitTypes {
-    pub fn to_cond(&self) -> String {
+    pub fn to_cond(self) -> String {
         match &self {
             Self::RoleAdd => "Roles Created".to_string(),
             Self::RoleUpdate => "Roles Updated".to_string(),
@@ -408,7 +408,7 @@ impl CurrentUserLimitsHit {
 
                 cause.push(UserAction {
                     action_id: "CACHE/".to_string() + &crate::impls::crypto::gen_random(24),
-                    limit_type: limit.limit_type.clone(),
+                    limit_type: limit.limit_type,
                     created_at: sqlx::types::chrono::DateTime::from_timestamp(*ts, 0).unwrap_or(chrono::Utc::now()),
                     user_id,
                     guild_id,

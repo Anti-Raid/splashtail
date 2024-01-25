@@ -19,7 +19,7 @@ impl GuildCache {
         let target_config = super::core::GuildUserTargetSettings::from_guild(pool, guild_id).await?;
         Ok(Self {
             limits: Arc::new(limits.into_iter().map(|l| (l.limit_id.clone(), l)).collect()),
-            target_config: Arc::new(target_config.into_iter().map(|t| (t.limit_type.clone(), t)).collect())
+            target_config: Arc::new(target_config.into_iter().map(|t| (t.limit_type, t)).collect())
         })
     }
 }

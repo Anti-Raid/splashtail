@@ -101,10 +101,8 @@ pub async fn handle_mod_action(
 
         let umac = gm.entry(user_id).or_insert_with(std::collections::HashMap::new);
 
-        if !umac.contains_key(&ha.limit) {
-            umac.insert(
-                ha.limit.clone(),
-                super::cache::GuildMemberCurrentActions {
+        if let std::collections::hash_map::Entry::Vacant(e) = umac.entry(ha.limit) {
+            e.insert(super::cache::GuildMemberCurrentActions {
                     times: indexmap::indexmap! {
                         sqlx::types::chrono::Utc::now().timestamp() => super::cache::TimesResolution {
                             target: target.clone(),
@@ -114,8 +112,7 @@ pub async fn handle_mod_action(
                     },
                     time_action_map: dashmap::DashMap::new(),
                     hit_limits: dashmap::DashMap::new(),
-                },
-            );
+                });
         } else {
             let Some(entry) = umac.get_mut(&ha.limit) else {
                 warn!("Limit not found in GUILD_MEMBER_ACTIONS_CACHE: {}", ha.limit);
