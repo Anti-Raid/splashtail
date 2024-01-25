@@ -19,9 +19,12 @@ type CommandExtendedData struct {
 }
 
 type CanonicalModule struct {
-	ID       string             `json:"id"`
-	Name     string             `json:"name"`
-	Commands []CanonicalCommand `json:"commands"`
+	ID                   string             `json:"id"`
+	Name                 string             `json:"name"`
+	Description          string             `json:"description"`
+	Configurable         bool               `json:"configurable"`
+	CommandsConfigurable bool               `json:"commands_configurable"`
+	Commands             []CanonicalCommand `json:"commands"`
 }
 
 type CanonicalCommandExtendedDataMap orderedmap.OrderedMap[string, CommandExtendedData]
