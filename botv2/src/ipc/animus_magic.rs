@@ -148,6 +148,8 @@ impl AnimusMagicClient {
     pub async fn start_ipc_listener(
         &self,
         cache_http: crate::impls::cache::CacheHttpImpl,
+
+        #[allow(unused_variables)] // To be used in the future
         shard_manager: Arc<serenity::all::ShardManager>,    
     ) -> ! {
         // Subscribes to the redis IPC channels we need to subscribe to
@@ -177,7 +179,6 @@ impl AnimusMagicClient {
             };
 
             let cache_http = cache_http.clone();
-            let shard_manager = shard_manager.clone();
             let redis_pool = self.redis_pool.clone();
 
             // Take out cluster ID just to check
