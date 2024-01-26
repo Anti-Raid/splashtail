@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/anti-raid/splashtail/animusmagic"
 	"github.com/anti-raid/splashtail/config"
 	"github.com/anti-raid/splashtail/objectstorage"
 
@@ -34,6 +35,7 @@ var (
 	Pool                    *pgxpool.Pool
 	Redis                   *redis.Client  // Used by dovewing and other services etc.
 	Rueidis                 rueidis.Client // where perf is needed
+	AnimusMagicClient       *animusmagic.AnimusMagicClient
 	DovewingPlatformDiscord *dovewing.DiscordState
 	Discord                 *discordgo.Session
 	Logger                  *zap.Logger
@@ -146,6 +148,8 @@ func Setup() {
 	if err != nil {
 		panic(err)
 	}
+
+	AnimusMagicClient = animusmagic.New()
 
 	// Redis
 	rOptions, err := redis.ParseURL(Config.Meta.RedisURL.Parse())

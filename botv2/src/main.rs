@@ -20,7 +20,8 @@ type Context<'a> = poise::Context<'a, Data, Error>;
 // User data, which is stored and accessible in all command invocations
 pub struct Data {
     pub pool: sqlx::PgPool,
-    pub ipc: Arc<ipc::client::IpcClient>,
+    pub mewld_ipc: Arc<ipc::mewld::MewldIpcClient>,
+    pub animus_magic_ipc: Arc<ipc::animus_magic::AnimusMagicClient>,
     pub shards_ready: Arc<dashmap::DashMap<u16, bool>>,
 }
 
@@ -99,7 +100,7 @@ async fn event_listener<'a>(ctx: poise::FrameworkContext<'a, Data, Error>, event
                     .color(0xff0000)
                     .description(format!(
                         "**Server Count:** {}\n**Shard Count:** {}\n**Cluster Count:** {}\n**Cluster ID:** {}\n**Cluster Name:** {}\n**Uptime:** {}",
-                        user_data.ipc.cache.total_guilds(),
+                        user_data.mewld_ipc.cache.total_guilds(),
                         ipc::argparse::MEWLD_ARGS.shard_count,
                         ipc::argparse::MEWLD_ARGS.cluster_count,
                         ipc::argparse::MEWLD_ARGS.cluster_id,
@@ -146,7 +147,7 @@ async fn event_listener<'a>(ctx: poise::FrameworkContext<'a, Data, Error>, event
 
             if ctx.serenity_context.shard_id.0 == *crate::ipc::argparse::MEWLD_ARGS.shards.last().unwrap() {
                 info!("All shards ready, launching next cluster");
-                if let Err(e) = user_data.ipc.publish_ipc_launch_next().await {
+                if let Err(e) = user_data.mewld_ipc.publish_ipc_launch_next().await {
                     error!("Error publishing IPC launch next: {}", e);
                     return Err(e);
                 }
@@ -274,7 +275,7 @@ async fn main() {
                         .color(0xff0000)
                         .description(format!(
                             "**Server Count:** {}\n**Shard Count:** {}\n**Cluster Count:** {}\n**Cluster ID:** {}\n**Cluster Name:** {}\n**Uptime:** {}",
-                            data.ipc.cache.total_guilds(),
+                            data.mewld_ipc.cache.total_guilds(),
                             ipc::argparse::MEWLD_ARGS.shard_count,
                             ipc::argparse::MEWLD_ARGS.cluster_count,
                             ipc::argparse::MEWLD_ARGS.cluster_id,
@@ -442,7 +443,7 @@ async fn main() {
     .setup(move |ctx, _ready, framework| {
             Box::pin(async move {
                 let data = ctx.data::<Data>();
-                let ipc_ref = data.ipc.clone();
+                let ipc_ref = data.mewld_ipc.clone();
                 let ch = crate::impls::cache::CacheHttpImpl::from_ctx(ctx);
                 let sm = framework.shard_manager().clone();
                 tokio::task::spawn(async move {
@@ -453,13 +454,15 @@ async fn main() {
                     ).await;
                 });
 
-                // Repeat for IServer (due to move)
+                // And for animus magic
                 let ch = crate::impls::cache::CacheHttpImpl::from_ctx(ctx);
                 let sm = framework.shard_manager().clone();
+                let am_ref = data.animus_magic_ipc.clone();
                 tokio::task::spawn(async move {
-                    ipc::iserver::server::start_iserver(
-                        &ch,
-                        &sm,
+                    let am_ref = am_ref;
+                    am_ref.start_ipc_listener(
+                        ch,
+                        sm,
                     ).await;
                 });
 
@@ -470,13 +473,20 @@ async fn main() {
     .options(framework_opts)
     .build();
 
+    let pool = fred::prelude::Builder::default_centralized()
+    .build_pool(REDIS_MAX_CONNECTIONS.try_into().unwrap())
+    .expect("Could not initialize Redis pool");
+
     let data = Data {
-        ipc: Arc::new(crate::ipc::client::IpcClient {
-            redis_pool: fred::prelude::Builder::default_centralized()
-                .build_pool(REDIS_MAX_CONNECTIONS.try_into().unwrap())
-                .expect("Could not initialize Redis pool"),
-            cache: Arc::new(crate::ipc::client::IpcCache::default()),
+        mewld_ipc: Arc::new(ipc::mewld::MewldIpcClient {
+            redis_pool: pool.clone(),
+            cache: Arc::new(ipc::mewld::MewldIpcCache::default()),
         }),
+        animus_magic_ipc: Arc::new(
+            ipc::animus_magic::AnimusMagicClient {
+                redis_pool: pool.clone()
+            }
+        ),
         pool: PgPoolOptions::new()
             .max_connections(POSTGRES_MAX_CONNECTIONS)
             .connect(&config::CONFIG.meta.postgres_url)

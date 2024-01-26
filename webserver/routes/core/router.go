@@ -30,6 +30,5 @@ func (b Router) Routes(r *chi.Mux) {
 		Method:  uapi.GET,
 		Docs:    get_cluster_modules.Docs,
 		Handler: get_cluster_modules.Route,
-		Setup:   get_cluster_modules.Setup,
 	}.Route(r)
 }

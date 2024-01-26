@@ -1,3 +1,3 @@
-pub mod client;
+pub mod mewld;
 pub mod argparse;
-pub mod iserver;
+pub mod animus_magic;

@@ -2,11 +2,10 @@ use serde::{Deserialize, Serialize};
 use serenity::all::UserId;
 use sqlx::PgPool;
 use ts_rs::TS;
-use utoipa::ToSchema;
 
 use super::cache::CacheHttpImpl;
 
-#[derive(Clone, Serialize, Deserialize, TS, ToSchema)]
+#[derive(Clone, Serialize, Deserialize, TS)]
 #[ts(export, export_to = ".generated/PlatformUser.ts")]
 pub struct PlatformUser {
     pub id: String,

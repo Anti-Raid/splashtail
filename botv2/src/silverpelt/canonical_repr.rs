@@ -1,14 +1,14 @@
 /// Canonical representation of a module for external use
-#[derive(serde::Serialize, serde::Deserialize)]
+#[derive(serde::Serialize, serde::Deserialize, Clone)]
 pub struct CanonicalModule {
     /// The ID of the module
-    pub id: &'static str,
+    pub id: String,
 
     /// The name of the module
-    pub name: &'static str,    
+    pub name: String,    
 
     /// The description of the module
-    pub description: &'static str,
+    pub description: String,
 
     /// Whether or the module is configurable
     pub configurable: bool,
@@ -20,14 +20,14 @@ pub struct CanonicalModule {
 pub type CanonicalCommandExtendedDataMap = indexmap::IndexMap<String, super::CommandExtendedData>;
 
 /// Canonical representation of a command (data section) for external use
-#[derive(serde::Serialize, serde::Deserialize)]
+#[derive(serde::Serialize, serde::Deserialize, Clone)]
 pub struct CanonicalCommand {
     pub command: CanonicalCommandData,
     pub extended_data: CanonicalCommandExtendedDataMap,
 }
 
 /// Canonical representation of a command argument for external use
-#[derive(serde::Serialize, serde::Deserialize)]
+#[derive(serde::Serialize, serde::Deserialize, Clone)]
 pub struct CanonicalCommandArgument {
     /// The name of the argument
     pub name: String,
@@ -43,7 +43,7 @@ pub struct CanonicalCommandArgument {
 }
 
 /// Canonical representation of a command (data section) for external use
-#[derive(serde::Serialize, serde::Deserialize)]
+#[derive(serde::Serialize, serde::Deserialize, Clone)]
 pub struct CanonicalCommandData {
     /// The name of the command
     pub name: String,
@@ -109,9 +109,9 @@ impl From<&super::Command> for CanonicalCommandData {
 impl From<super::Module> for CanonicalModule {
     fn from(module: super::Module) -> Self {
         CanonicalModule {
-            id: module.id,
-            name: module.name,
-            description: module.description,
+            id: module.id.to_string(),
+            name: module.name.to_string(),
+            description: module.description.to_string(),
             configurable: module.configurable,
             commands: module.commands.into_iter().map(|(cmd, perms)| {
                 CanonicalCommand::from_repr(&cmd, perms)

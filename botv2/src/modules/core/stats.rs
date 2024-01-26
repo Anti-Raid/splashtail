@@ -43,8 +43,8 @@ pub async fn stats(ctx: Context<'_>) -> Result<(), Error> {
                 crate::ipc::argparse::MEWLD_ARGS.cluster_id,
                 crate::ipc::argparse::MEWLD_ARGS.cluster_count,
             ), true)
-            .field("Servers", ctx.data().ipc.cache.total_guilds().to_string(), true)
-            .field("Users", ctx.data().ipc.cache.total_users().to_string(), true)
+            .field("Servers", ctx.data().mewld_ipc.cache.total_guilds().to_string(), true)
+            .field("Users", ctx.data().mewld_ipc.cache.total_users().to_string(), true)
             .field("Commit Message", GIT_COMMIT_MSG, true)
             .field("Built On", BUILD_CPU, true)
             .field("Cargo Profile", CARGO_PROFILE, true),

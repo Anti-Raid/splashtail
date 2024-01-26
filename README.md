@@ -47,11 +47,9 @@ prod:
     bot: SECRET_$
 ```
 
-### Bot IServer
+### Animus Magic
 
-Due to the need for unidirectional server-bot communication, redis simply did not scale that well (does not provide functionality such as timeouts, structured parsing). The bot therefore provides an unstable (constantly changing not crashing-type unstable) HTTP API (``IServer``) to allow for server-bot communication.
-
-The base port for the IServer is defined by ``bot_iserver_base_port`` in the ``meta`` section of ``config.yaml``. The IServer for a given cluster is then available at ``http://localhost:<bot_iserver_base_port + cluster id>``.
+Due to the need for bidirectional server-bot communication, AntiRaid uses an unstable (constantly changing not crashing-type unstable) Redis PubSub API for communication
 
 ## Serializing/Deserializing for external usage
 

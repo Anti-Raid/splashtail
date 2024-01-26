@@ -11,7 +11,6 @@ panic = "abort"  # Abort on panic. This is what we want for a bot.
 
 [dependencies]
 poise = { git = "https://github.com/serenity-rs/poise", branch = "serenity-next" }
-utoipa = { version = "4.1.0", features = ["axum_extras"] }
 serde = "1.0"
 log = "0.4"
 env_logger = "0.9"
@@ -28,9 +27,6 @@ dashmap = { version = "5", features = ["serde", "inline", "rayon"] }
 strum = "0.24"
 strum_macros = "0.24"
 rand = "0.8"
-axum = "0.6"
-axum-macros = "0.3"
-tower-http = { version = "0.3", features = ["cors"] }
 num-traits = "0.2.14"
 ts-rs = { version = "7.0", features = ["chrono-impl"] }
 fred = { version = "7.1.0", features = ["enable-rustls", "serde-json", "subscriber-client", "check-unresponsive", "mocks", "redis-json"] }

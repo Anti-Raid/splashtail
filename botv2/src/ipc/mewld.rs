@@ -4,20 +4,20 @@ use fred::clients::SubscriberClient;
 use fred::interfaces::{ClientLike, PubsubInterface};
 use serde::{Serialize, Deserialize};
 
-/// This is the fundemental primitive atop which the whole of Anti-Raids scales
-pub struct IpcClient {
+/// This is the fundemental primitive for mewld IPC
+pub struct MewldIpcClient {
     pub redis_pool: fred::clients::RedisPool,
-    pub cache: Arc<IpcCache>,
+    pub cache: Arc<MewldIpcCache>,
 }
 
 #[derive(Default)]
-pub struct IpcCache {
+pub struct MewldIpcCache {
     /// Stores the health of all clusters
     pub cluster_healths: Arc<dashmap::DashMap<u16, Vec<MewldDiagShardHealth>>>,
     pub all_clusters_up: Arc<tokio::sync::RwLock<bool>>,
 }
 
-impl IpcCache {
+impl MewldIpcCache {
     /// Returns the true total number of servers the bot has access to
     pub fn total_guilds(&self) -> u64 {
         let mut total = 0;
@@ -119,8 +119,8 @@ pub struct MewldDiagShardHealth {
     pub users: u64,
 }
 
-impl IpcClient {
-    /// Starts listening to IPC messages
+impl MewldIpcClient {
+    /// Starts listening to mewld IPC messages
     /// 
     /// This function never quits once executed
     pub async fn start_ipc_listener(
