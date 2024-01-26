@@ -371,7 +371,7 @@ pub async fn backups_list(ctx: Context<'_>) -> Result<(), Error> {
                 index += 1;
             },
             "backups_last" => {
-                index = backup_tasks.len();
+                index = backup_tasks.len() - 1;
             },
             "backups_first" => {
                 index = 0;
