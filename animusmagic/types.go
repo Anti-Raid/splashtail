@@ -31,7 +31,7 @@ type AnimusResponse struct {
 }
 
 type AnimusMessage struct {
-	Modules     map[string]string `json:"Modules,omitempty"`
+	Modules     *struct{} `json:"Modules,omitempty"`
 	GuildsExist *struct {
 		GuildsExist []string `json:"guilds_exist"`
 	} `json:"GuildsExist,omitempty"`

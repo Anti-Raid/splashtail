@@ -100,15 +100,16 @@ func (c *AnimusMagicClient) ListenOnce(ctx context.Context, redis rueidis.Client
 
 					n, ok := c.Notify.Load(commandId)
 
-					if !ok {
-						l.Warn("[animus magic] received response for unknown command", zap.String("commandId", commandId))
-						return
-					}
-
 					response := &ClientResponse{
 						ClusterID: clusterId,
 						Op:        op,
 						Resp:      resp,
+					}
+
+					if !ok {
+						l.Warn("[animus magic] received response for unknown command", zap.String("commandId", commandId))
+						c.UpdateCache(response) // At least update the cache
+						return
 					}
 
 					n <- response

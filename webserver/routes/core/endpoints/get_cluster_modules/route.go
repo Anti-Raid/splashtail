@@ -9,14 +9,11 @@ import (
 	"github.com/anti-raid/splashtail/types"
 	"github.com/anti-raid/splashtail/types/silverpelt"
 	"github.com/go-chi/chi/v5"
-	jsoniter "github.com/json-iterator/go"
 	orderedmap "github.com/wk8/go-ordered-map/v2"
 
 	docs "github.com/infinitybotlist/eureka/doclib"
 	"github.com/infinitybotlist/eureka/uapi"
 )
-
-var json = jsoniter.ConfigFastest
 
 func Docs() *docs.Doc {
 	return &docs.Doc{
@@ -74,7 +71,7 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 	moduleListResp, err := state.AnimusMagicClient.Request(d.Context, state.Rueidis, &animusmagic.RequestData{
 		ClusterID: &clusterId,
 		Message: &animusmagic.AnimusMessage{
-			Modules: map[string]string{},
+			Modules: &struct{}{},
 		},
 	})
 
@@ -87,7 +84,16 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 		}
 	}
 
+	if len(moduleListResp) == 0 {
+		return uapi.HttpResponse{
+			Status: http.StatusNotFound,
+			Json: types.ApiError{
+				Message: "Data not found",
+			},
+		}
+	}
+
 	return uapi.HttpResponse{
-		Json: moduleListResp,
+		Json: &moduleListResp[0].Resp.Modules.Modules,
 	}
 }

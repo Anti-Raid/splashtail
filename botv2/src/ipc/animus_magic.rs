@@ -52,6 +52,7 @@ pub struct AnimusMessageMetadata {
 }
 
 impl AnimusMessage {
+    #[allow(dead_code)]
     pub fn new_command_id() -> String {
         crate::impls::crypto::gen_random(16)
     }
@@ -172,6 +173,7 @@ impl AnimusMagicClient {
             log::debug!("Got message on channel {}", message.channel);
             let binary = match message.value {
                 fred::types::RedisValue::Bytes(s) => s,
+                fred::types::RedisValue::String(s) => s.into(),
                 _ => {
                     log::warn!("Invalid message recieved on channel [wanted binary, but got text] {}", message.channel);
                     continue;
@@ -240,16 +242,26 @@ impl AnimusMagicClient {
                     return;
                 };
 
-                let Ok(payload) = AnimusMessage::create_payload(&AnimusMessage::new_command_id(), AnimusOp::Response, &data) else {
+                let Ok(payload) = AnimusMessage::create_payload(&meta.command_id, AnimusOp::Response, &data) else {
                     log::warn!("Failed to create payload for message on channel {}", message.channel);
                     return;
                 };
 
+                // Convert payload to redis value
+                let payload = fred::types::RedisValue::Bytes(payload.into());
+
                 let conn = redis_pool.next();
-                let Ok(()) = conn.publish(super::argparse::MEWLD_ARGS.mewld_redis_channel.clone(), payload).await else {
-                    log::warn!("Failed to publish response to channel {}", message.channel);
+                conn.connect();
+                let Ok(()) = conn.wait_for_connect().await else {
+                    log::warn!("Failed to connect to redis");
                     return;
                 };
+                match conn.publish("animus_magic", payload).await {
+                    Ok(()) => {},
+                    Err(e) => {
+                        log::warn!("Failed to publish response to redis: {}", e);
+                    }   
+                }
             });
         }
 
