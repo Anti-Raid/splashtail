@@ -36,19 +36,3 @@ type AnimusMessage struct {
 		GuildsExist []string `json:"guilds_exist"`
 	}
 }
-
-// The Fix function is used to fix the AnimusMessage
-// (Ready needs a non-nil map etc.)
-func (c *AnimusMessage) Fix() {
-	if c.Modules == nil {
-		c.Modules = map[string]string{}
-	}
-
-	if c.GuildsExist == nil {
-		c.GuildsExist = &struct {
-			GuildsExist []string `json:"guilds_exist"`
-		}{
-			GuildsExist: []string{},
-		}
-	}
-}

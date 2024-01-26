@@ -134,8 +134,6 @@ func (c *AnimusMagicClient) Listen(ctx context.Context, redis rueidis.Client, l 
 
 // CreatePayload creates a payload for the given command id and message
 func (c *AnimusMagicClient) CreatePayload(clusterId uint16, op byte, commandId string, resp *AnimusMessage) ([]byte, error) {
-	resp.Fix()
-
 	var finalPayload = []byte{
 		byte(clusterId>>8) & 0xFF,
 		byte(clusterId) & 0xFF,
@@ -156,7 +154,7 @@ func (c *AnimusMagicClient) CreatePayload(clusterId uint16, op byte, commandId s
 }
 
 func (c *AnimusMagicClient) publish(ctx context.Context, redis rueidis.Client, payload []byte) error {
-	return redis.Do(ctx, redis.B().Publish().Channel(ChannelName).Message(string(payload)).Build()).Error()
+	return redis.Do(ctx, redis.B().Publish().Channel(ChannelName).Message(rueidis.BinaryString(payload)).Build()).Error()
 }
 
 // RequestData stores the data for a request

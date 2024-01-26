@@ -173,7 +173,7 @@ impl AnimusMagicClient {
             let binary = match message.value {
                 fred::types::RedisValue::Bytes(s) => s,
                 _ => {
-                    log::warn!("Invalid message recieved on channel {}", message.channel);
+                    log::warn!("Invalid message recieved on channel [wanted binary, but got text] {}", message.channel);
                     continue;
                 }
             };
@@ -183,7 +183,7 @@ impl AnimusMagicClient {
 
             // Take out cluster ID just to check
             let Ok(meta) = AnimusMessage::get_payload_meta(&binary) else {
-                log::warn!("Invalid message recieved on channel {}", message.channel);
+                log::warn!("Invalid message recieved on channel {} [metadata extract error]", message.channel);
                 continue;
             };
 
@@ -196,9 +196,12 @@ impl AnimusMagicClient {
                 let payload = &binary[meta.payload_offset..];
 
                 // Pluck out json
-                let Ok(msg) = serde_json::from_slice::<AnimusMessage>(payload) else {
-                    log::warn!("Invalid message recieved on channel {}", message.channel);
-                    return;
+                let msg = match serde_json::from_slice::<AnimusMessage>(payload) {
+                    Ok(msg) => msg,
+                    Err(e) => {
+                        log::warn!("Invalid message recieved on channel {} [json extract error] {}", message.channel, e);
+                        return;
+                    }
                 };
 
                 let data = match msg {
