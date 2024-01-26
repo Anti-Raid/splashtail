@@ -61,6 +61,24 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 
 	clusterId := uint16(clusterId64)
 
+	// Check mewld instance list if the cluster actually exists
+	var flag bool
+	for _, v := range state.MewldInstanceList.Instances {
+		if v.ClusterID == int(clusterId) {
+			flag = true
+			break
+		}
+	}
+
+	if !flag {
+		return uapi.HttpResponse{
+			Status: http.StatusNotFound,
+			Json: types.ApiError{
+				Message: "Cluster not found",
+			},
+		}
+	}
+
 	// Use animus magic to fetch module list
 	if v, ok := state.AnimusMagicClient.Cache.ClusterModules.Load(clusterId); ok && v != nil {
 		return uapi.HttpResponse{
