@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 use sqlx::types::chrono;
 use std::fs::File;
 use std::collections::HashMap;
+use object_store::ObjectStore;
 
 use crate::Error;
 
@@ -41,6 +42,54 @@ pub struct DiscordAuth {
     pub can_use_bot: Vec<UserId>,
 }
 
+// Object storage code
+
+#[derive(Serialize, Deserialize)]
+pub enum ObjectStorageType {
+    #[serde(rename = "s3-like")]
+    S3Like,
+    #[serde(rename = "local")]
+    Local,
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct ObjectStorage {
+    #[serde(rename = "type")]
+    pub object_storage_type: ObjectStorageType,
+    pub path: String,
+    pub endpoint: Option<String>,
+    pub cdn_endpoint: String,
+    pub access_key: Option<String>,
+    pub secret_key: Option<String>,
+}
+
+impl ObjectStorage {
+    pub fn build(&self) -> Result<Box<dyn ObjectStore>, crate::Error> {
+        match self.object_storage_type {
+            ObjectStorageType::S3Like => {
+                let access_key = self.access_key.as_ref().ok_or("Missing access key")?;
+                let secret_key = self.secret_key.as_ref().ok_or("Missing secret key")?;
+                let endpoint = self.endpoint.as_ref().ok_or("Missing endpoint")?;
+
+                let store = object_store::aws::AmazonS3Builder::new()
+                .with_endpoint(endpoint)
+                .with_bucket_name(self.path.clone())
+                .with_access_key_id(access_key)
+                .with_secret_access_key(secret_key)
+                .build()
+                .map_err(|e| format!("Failed to build S3 object store: {}", e))?;
+
+                Ok(Box::new(store))
+            }
+            ObjectStorageType::Local => {
+                let store = object_store::local::LocalFileSystem::new_with_prefix(self.path.clone())?;
+
+                Ok(Box::new(store))
+            }
+        }
+    }
+}
+
 #[derive(Serialize, Deserialize, Default)]
 pub struct Meta {
     pub web_redis_channel: String,
@@ -63,6 +112,7 @@ pub struct Config {
     pub discord_auth: DiscordAuth,
     pub meta: Meta,
     pub sites: Sites,
+    pub object_storage: ObjectStorage,
 
     #[serde(skip)]
     /// Setup by load() for statistics

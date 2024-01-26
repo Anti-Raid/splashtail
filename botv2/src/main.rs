@@ -13,6 +13,7 @@ use poise::serenity_prelude::FullEvent;
 use poise::CreateReply;
 use sqlx::postgres::PgPoolOptions;
 use std::io::Write;
+use object_store::ObjectStore;
 
 type Error = Box<dyn std::error::Error + Send + Sync>;
 type Context<'a> = poise::Context<'a, Data, Error>;
@@ -21,6 +22,7 @@ type Context<'a> = poise::Context<'a, Data, Error>;
 pub struct Data {
     pub pool: sqlx::PgPool,
     pub mewld_ipc: Arc<ipc::mewld::MewldIpcClient>,
+    pub object_store: Arc<Box<dyn ObjectStore>>,
     pub animus_magic_ipc: Arc<ipc::animus_magic::AnimusMagicClient>,
     pub shards_ready: Arc<dashmap::DashMap<u16, bool>>,
 }
@@ -487,6 +489,7 @@ async fn main() {
                 redis_pool: pool.clone()
             }
         ),
+        object_store: Arc::new(config::CONFIG.object_storage.build().expect("Could not initialize object store")),
         pool: PgPoolOptions::new()
             .max_connections(POSTGRES_MAX_CONNECTIONS)
             .connect(&config::CONFIG.meta.postgres_url)
