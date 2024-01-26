@@ -319,6 +319,16 @@ pub async fn backups_list(ctx: Context<'_>) -> Result<(), Error> {
                         .emoji(serenity::all::ReactionType::Unicode("▶️".to_string().trunc_into()))
                         .style(serenity::all::ButtonStyle::Primary)
                         .disabled(index >= backup_tasks.len()),
+                        serenity::all::CreateButton::new("backups_last")
+                        .label("Last")
+                        .emoji(serenity::all::ReactionType::Unicode("⏩".to_string().trunc_into()))
+                        .style(serenity::all::ButtonStyle::Primary)
+                        .disabled(index >= backup_tasks.len()),
+                        serenity::all::CreateButton::new("backups_first")
+                        .label("First")
+                        .emoji(serenity::all::ReactionType::Unicode("⏪".to_string().trunc_into()))
+                        .style(serenity::all::ButtonStyle::Primary)
+                        .disabled(index == 0),
                     ]
                 )
             ]
@@ -359,6 +369,12 @@ pub async fn backups_list(ctx: Context<'_>) -> Result<(), Error> {
                 }
 
                 index += 1;
+            },
+            "backups_last" => {
+                index = backup_tasks.len();
+            },
+            "backups_first" => {
+                index = 0;
             },
             _ => {
                 continue;
