@@ -41,14 +41,8 @@ var (
 	BotUser                 *discordgo.User
 	ObjectStorage           *objectstorage.ObjectStorage
 	CurrentOperationMode    string // Current mode splashtail is operating in
-
-	Config *config.Config
-
-	// This is only non-nil for webserver
-	MewldInstanceList *mproc.InstanceList
-
-	// Task stuff
-	TaskTransport *http.Transport = &http.Transport{}
+	Config                  *config.Config
+	MewldInstanceList       *mproc.InstanceList
 )
 
 func nonVulgar(fl validator.FieldLevel) bool {
