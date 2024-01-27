@@ -285,7 +285,7 @@ pub async fn backups_list(ctx: Context<'_>) -> Result<(), Error> {
     }
 
     fn create_embed_for_task<'a>(task: &crate::jobserver::Task) -> serenity::all::CreateEmbed<'a> {    
-        let mut initial_desc = format!("Task ID: {}\nTask Name: {}\nTask State: {}\n\n**Created At**: <{}:f> (<{}:R>)", task.task_id, task.task_name, task.state, task.created_at.timestamp(), task.created_at.timestamp());
+        let mut initial_desc = format!("Task ID: {}\nTask Name: {}\nTask State: {}\n\n**Created At**: <t:{}:f> (<t:{}:R>)", task.task_id, task.task_name, task.state, task.created_at.timestamp(), task.created_at.timestamp());
         
         let embed = poise::serenity_prelude::CreateEmbed::default()
         .title(
