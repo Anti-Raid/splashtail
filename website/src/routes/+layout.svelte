@@ -5,6 +5,6 @@
 
 <Header />
 
-<main>
+<main class="p-3">
 	<slot />
 </main>	
