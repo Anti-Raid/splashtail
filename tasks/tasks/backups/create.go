@@ -498,6 +498,9 @@ func (t *ServerBackupCreateTask) Exec(l *zap.Logger, tcr *types.TaskCreateRespon
 		return nil, fmt.Errorf("error writing core backup: %w", err)
 	}
 
+	// Backup guild assets
+	l.Info("Backing up guild assets", zap.Strings("assets", t.Options.BackupGuildAssets))
+
 	for _, b := range t.Options.BackupGuildAssets {
 		switch b {
 		case "icon":

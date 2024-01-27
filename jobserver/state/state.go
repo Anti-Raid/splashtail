@@ -83,6 +83,7 @@ func nonVulgar(fl validator.FieldLevel) bool {
 }
 
 func Setup() {
+	SetupDebug()
 	Validator.RegisterValidation("nonvulgar", nonVulgar)
 	Validator.RegisterValidation("notblank", validators.NotBlank)
 	Validator.RegisterValidation("nospaces", snippets.ValidatorNoSpaces)
