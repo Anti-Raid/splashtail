@@ -7,48 +7,27 @@ import (
 	"reflect"
 	"runtime/debug"
 	"strings"
-	"time"
 
-	"github.com/anti-raid/splashtail/animusmagic"
 	"github.com/anti-raid/splashtail/config"
 	"github.com/anti-raid/splashtail/objectstorage"
-
 	"github.com/bwmarrin/discordgo"
-	mproc "github.com/cheesycod/mewld/proc"
 	"github.com/go-playground/validator/v10"
 	"github.com/go-playground/validator/v10/non-standard/validators"
-	"github.com/infinitybotlist/eureka/dovewing"
-	"github.com/infinitybotlist/eureka/dovewing/dovetypes"
 	"github.com/infinitybotlist/eureka/genconfig"
-	hredis "github.com/infinitybotlist/eureka/hotcache/redis"
 	"github.com/infinitybotlist/eureka/proxy"
-	"github.com/infinitybotlist/eureka/ratelimit"
 	"github.com/infinitybotlist/eureka/snippets"
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/redis/go-redis/v9"
-	"github.com/redis/rueidis"
 	"go.uber.org/zap"
 	"gopkg.in/yaml.v3"
 )
 
 var (
-	Pool                    *pgxpool.Pool
-	Redis                   *redis.Client  // Used by dovewing and other services etc.
-	Rueidis                 rueidis.Client // where perf is needed
-	AnimusMagicClient       *animusmagic.AnimusMagicClient
-	DovewingPlatformDiscord *dovewing.DiscordState
-	Discord                 *discordgo.Session
-	Logger                  *zap.Logger
-	Context                 = context.Background()
-	Validator               = validator.New()
-	BotUser                 *discordgo.User
-	ObjectStorage           *objectstorage.ObjectStorage
-	CurrentOperationMode    string // Current mode splashtail is operating in
-
-	Config *config.Config
-
-	// This is only non-nil for webserver
-	MewldInstanceList *mproc.InstanceList
+	Context              = context.Background()
+	Config               *config.Config
+	Validator            = validator.New()
+	BotUser              *discordgo.User
+	ObjectStorage        *objectstorage.ObjectStorage
+	CurrentOperationMode string // Current mode splashtail is operating in
 
 	// Debug stuff
 	BuildInfo  *debug.BuildInfo
@@ -56,6 +35,10 @@ var (
 
 	// Task stuff
 	TaskTransport *http.Transport = &http.Transport{}
+
+	Pool    *pgxpool.Pool
+	Discord *discordgo.Session
+	Logger  *zap.Logger
 )
 
 type ExtraDebugInfo struct {
@@ -100,7 +83,6 @@ func nonVulgar(fl validator.FieldLevel) bool {
 }
 
 func Setup() {
-	SetupDebug()
 	Validator.RegisterValidation("nonvulgar", nonVulgar)
 	Validator.RegisterValidation("notblank", validators.NotBlank)
 	Validator.RegisterValidation("nospaces", snippets.ValidatorNoSpaces)
@@ -136,34 +118,6 @@ func Setup() {
 		panic(err)
 	}
 
-	// Reuidis
-	ruOptions, err := rueidis.ParseURL(Config.Meta.RedisURL.Parse())
-
-	if err != nil {
-		panic(err)
-	}
-
-	Rueidis, err = rueidis.NewClient(ruOptions)
-
-	if err != nil {
-		panic(err)
-	}
-
-	AnimusMagicClient = animusmagic.New()
-
-	// Redis
-	rOptions, err := redis.ParseURL(Config.Meta.RedisURL.Parse())
-
-	if err != nil {
-		panic(err)
-	}
-
-	Redis = redis.NewClient(rOptions)
-
-	if err != nil {
-		panic(err)
-	}
-
 	// Object Storage
 	ObjectStorage, err = objectstorage.New(&Config.ObjectStorage)
 
@@ -194,34 +148,5 @@ func Setup() {
 	// Shouldnt be called yet as we don't start websocket
 	Discord.AddHandler(func(s *discordgo.Session, r *discordgo.Ready) {
 		Logger.Info("[DISCORD]", zap.String("note", "ready"))
-	})
-
-	// Load dovewing state
-	baseDovewingState := dovewing.BaseState{
-		Pool:    Pool,
-		Logger:  Logger,
-		Context: Context,
-		PlatformUserCache: hredis.RedisHotCache[dovetypes.PlatformUser]{
-			Redis:  Redis,
-			Prefix: "uobj__",
-		},
-		UserExpiryTime: 8 * time.Hour,
-	}
-
-	DovewingPlatformDiscord, err = dovewing.DiscordStateConfig{
-		Session:        Discord,
-		PreferredGuild: Config.Servers.Main,
-		BaseState:      &baseDovewingState,
-	}.New()
-
-	if err != nil {
-		panic(err)
-	}
-
-	ratelimit.SetupState(&ratelimit.RLState{
-		HotCache: hredis.RedisHotCache[int]{
-			Redis:  Redis,
-			Prefix: "rl:",
-		},
 	})
 }

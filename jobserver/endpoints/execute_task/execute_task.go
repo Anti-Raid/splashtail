@@ -4,12 +4,12 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/anti-raid/splashtail/jobserver/core"
-	"github.com/anti-raid/splashtail/jobserver/core/taskexecutor"
+	"github.com/anti-raid/splashtail/jobserver/endpoints"
+	"github.com/anti-raid/splashtail/jobserver/jobrunner"
 	"github.com/anti-raid/splashtail/tasks"
 )
 
-var ExecuteTask = core.IPC{
+var ExecuteTask = endpoints.IPC{
 	Description: "This IPC executes a task given a task and a task id and returns ok if successful. If you do not have both, consider create_task",
 	Exec: func(client string, args map[string]any) (map[string]any, error) {
 		taskName, ok := args["name"].(string)
@@ -44,19 +44,19 @@ var ExecuteTask = core.IPC{
 			return nil, fmt.Errorf("error unmarshalling task args: %w", err)
 		}
 
-		err = task.Validate()
+		err = task.Validate(jobrunner.TaskState{})
 
 		if err != nil {
 			return nil, fmt.Errorf("failed to validate task: %w", err)
 		}
-	
+
 		tInfo := task.Info()
-	
+
 		if !tInfo.Valid {
 			return nil, fmt.Errorf("invalid task info")
 		}
 
-		go taskexecutor.ExecuteTask(taskId, task)
+		go jobrunner.ExecuteTask(taskId, task)
 
 		return nil, nil
 	},

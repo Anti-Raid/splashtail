@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/anti-raid/splashtail/state"
+	"github.com/anti-raid/splashtail/tasks/taskstate"
 	"github.com/anti-raid/splashtail/types"
 	"github.com/anti-raid/splashtail/utils"
 
@@ -21,7 +21,7 @@ import (
 	"go.uber.org/zap"
 )
 
-func getImageAsDataUri(constraints *BackupConstraints, l *zap.Logger, f *iblfile.AutoEncryptedFile, name, endpoint string, bo *BackupCreateOpts) (string, error) {
+func getImageAsDataUri(state taskstate.TaskState, constraints *BackupConstraints, l *zap.Logger, f *iblfile.AutoEncryptedFile, name, endpoint string, bo *BackupCreateOpts) (string, error) {
 	if slices.Contains(bo.BackupGuildAssets, name) {
 		l.Info("Fetching guild asset", zap.String("name", name))
 		iconBytes, err := f.Get("assets/" + name)
@@ -35,7 +35,7 @@ func getImageAsDataUri(constraints *BackupConstraints, l *zap.Logger, f *iblfile
 		// Try fetching still, it might work
 		client := http.Client{
 			Timeout:   time.Duration(constraints.Restore.HttpClientTimeout),
-			Transport: state.TaskTransport,
+			Transport: state.Transport(),
 		}
 
 		resp, err := client.Get(endpoint)
@@ -110,12 +110,13 @@ type ServerBackupRestoreTask struct {
 }
 
 // Validate validates the task and sets up state if needed
-func (t *ServerBackupRestoreTask) Validate() error {
+func (t *ServerBackupRestoreTask) Validate(state taskstate.TaskState) error {
 	if t.ServerID == "" {
 		return fmt.Errorf("server_id is required")
 	}
 
-	if t.Constraints == nil || state.CurrentOperationMode == "jobs" {
+	opMode := state.OperationMode()
+	if t.Constraints == nil || opMode == "jobs" {
 		t.Constraints = FreePlanBackupConstraints // TODO: Add other constraint types based on plans once we have them
 	}
 
@@ -123,11 +124,11 @@ func (t *ServerBackupRestoreTask) Validate() error {
 		return fmt.Errorf("backup_source is required")
 	}
 
-	if state.CurrentOperationMode == "jobs" {
+	if opMode == "jobs" {
 		if !strings.HasPrefix(t.Options.BackupSource, "https://") {
 			return fmt.Errorf("backup_source must be a valid URL")
 		}
-	} else if state.CurrentOperationMode == "localjobs" {
+	} else if opMode == "localjobs" {
 		if !strings.HasPrefix(t.Options.BackupSource, "file://") && !strings.HasPrefix(t.Options.BackupSource, "http://") && !strings.HasPrefix(t.Options.BackupSource, "https://") {
 			return fmt.Errorf("backup_source must be a valid URL or file path")
 		}
@@ -163,7 +164,9 @@ func (t *ServerBackupRestoreTask) Validate() error {
 	return nil
 }
 
-func (t *ServerBackupRestoreTask) Exec(l *zap.Logger, tcr *types.TaskCreateResponse) (*types.TaskOutput, error) {
+func (t *ServerBackupRestoreTask) Exec(l *zap.Logger, tcr *types.TaskCreateResponse, state taskstate.TaskState) (*types.TaskOutput, error) {
+	discord, botUser, _ := state.Discord()
+
 	// Check current backup concurrency
 	count, _ := concurrentBackupState.LoadOrStore(t.ServerID, 0)
 
@@ -186,7 +189,7 @@ func (t *ServerBackupRestoreTask) Exec(l *zap.Logger, tcr *types.TaskCreateRespo
 	l.Info("Downloading backup", zap.String("url", t.Options.BackupSource))
 	client := http.Client{
 		Timeout:   time.Duration(t.Constraints.Restore.HttpClientTimeout),
-		Transport: state.TaskTransport,
+		Transport: state.Transport(),
 	}
 
 	resp, err := client.Get(t.Options.BackupSource)
@@ -261,14 +264,14 @@ func (t *ServerBackupRestoreTask) Exec(l *zap.Logger, tcr *types.TaskCreateRespo
 
 	// Fetch the bots member object in the guild
 	l.Info("Fetching bots current state in server")
-	m, err := state.Discord.GuildMember(t.ServerID, state.BotUser.ID)
+	m, err := discord.GuildMember(t.ServerID, botUser.ID)
 
 	if err != nil {
 		return nil, fmt.Errorf("error fetching bots member object: %w", err)
 	}
 
 	l.Info("Fetching guild object")
-	tgtGuild, err := state.Discord.Guild(t.ServerID)
+	tgtGuild, err := discord.Guild(t.ServerID)
 
 	if err != nil {
 		return nil, fmt.Errorf("error fetching guild: %w", err)
@@ -285,7 +288,7 @@ func (t *ServerBackupRestoreTask) Exec(l *zap.Logger, tcr *types.TaskCreateRespo
 	}
 
 	if len(tgtGuild.Roles) == 0 {
-		roles, err := state.Discord.GuildRoles(t.ServerID)
+		roles, err := discord.GuildRoles(t.ServerID)
 
 		if err != nil {
 			return nil, fmt.Errorf("error fetching roles: %w", err)
@@ -328,7 +331,7 @@ func (t *ServerBackupRestoreTask) Exec(l *zap.Logger, tcr *types.TaskCreateRespo
 	}
 
 	// Fetch channels of guild
-	channels, err := state.Discord.GuildChannels(t.ServerID)
+	channels, err := discord.GuildChannels(t.ServerID)
 
 	if err != nil {
 		return nil, fmt.Errorf("error fetching channels: %w", err)
@@ -391,7 +394,7 @@ func (t *ServerBackupRestoreTask) Exec(l *zap.Logger, tcr *types.TaskCreateRespo
 		if !canUseIcon {
 			l.Warn("Not restoring animated icon on unsupported server", zap.String("guild_id", srcGuild.ID))
 		} else {
-			icon, err := getImageAsDataUri(t.Constraints, l, f, "guildIcon", srcGuild.IconURL("1024"), bo)
+			icon, err := getImageAsDataUri(state, t.Constraints, l, f, "guildIcon", srcGuild.IconURL("1024"), bo)
 
 			if err != nil {
 				return nil, fmt.Errorf("failed to get icon: %w", err)
@@ -405,7 +408,7 @@ func (t *ServerBackupRestoreTask) Exec(l *zap.Logger, tcr *types.TaskCreateRespo
 		if !canUseBanner {
 			l.Warn("Not restoring banner on unsupported server", zap.String("guild_id", srcGuild.ID))
 		} else {
-			banner, err := getImageAsDataUri(t.Constraints, l, f, "guildBanner", srcGuild.BannerURL("1024"), bo)
+			banner, err := getImageAsDataUri(state, t.Constraints, l, f, "guildBanner", srcGuild.BannerURL("1024"), bo)
 
 			if err != nil {
 				return nil, fmt.Errorf("failed to get banner: %w", err)
@@ -419,7 +422,7 @@ func (t *ServerBackupRestoreTask) Exec(l *zap.Logger, tcr *types.TaskCreateRespo
 		if !canUseSplash {
 			l.Warn("Not restoring splash on unsupported server", zap.String("guild_id", srcGuild.ID))
 		} else {
-			splash, err := getImageAsDataUri(t.Constraints, l, f, "guildSplash", discordgo.EndpointGuildSplash(srcGuild.ID, srcGuild.Splash), bo)
+			splash, err := getImageAsDataUri(state, t.Constraints, l, f, "guildSplash", discordgo.EndpointGuildSplash(srcGuild.ID, srcGuild.Splash), bo)
 
 			if err != nil {
 				return nil, fmt.Errorf("failed to get splash: %w", err)
@@ -429,7 +432,7 @@ func (t *ServerBackupRestoreTask) Exec(l *zap.Logger, tcr *types.TaskCreateRespo
 		}
 	}
 
-	_, err = state.Discord.GuildEdit(t.ServerID, gp)
+	_, err = discord.GuildEdit(t.ServerID, gp)
 
 	if err != nil {
 		return nil, fmt.Errorf("failed to edit guild: %w", err)
@@ -474,7 +477,7 @@ func (t *ServerBackupRestoreTask) Exec(l *zap.Logger, tcr *types.TaskCreateRespo
 
 			l.Info("Deleting role", zap.String("name", r.Name), zap.Int("position", r.Position), zap.String("id", r.ID))
 
-			err := state.Discord.GuildRoleDelete(t.ServerID, r.ID)
+			err := discord.GuildRoleDelete(t.ServerID, r.ID)
 
 			if err != nil {
 				return nil, fmt.Errorf("failed to delete role: %w with position of %d", err, r.Position)
@@ -528,7 +531,7 @@ func (t *ServerBackupRestoreTask) Exec(l *zap.Logger, tcr *types.TaskCreateRespo
 
 		l.Info("Creating role", zap.String("name", srcGuild.Roles[i].Name), zap.Int("position", srcGuild.Roles[i].Position), zap.String("id", srcGuild.Roles[i].ID))
 
-		newRole, err := state.Discord.GuildRoleCreate(t.ServerID, &discordgo.RoleParams{
+		newRole, err := discord.GuildRoleCreate(t.ServerID, &discordgo.RoleParams{
 			Name: srcGuild.Roles[i].Name,
 			Color: func() *int {
 				if srcGuild.Roles[i].Color == 0 {
@@ -595,7 +598,7 @@ func (t *ServerBackupRestoreTask) Exec(l *zap.Logger, tcr *types.TaskCreateRespo
 
 			l.Info("Deleting channel", zap.String("name", tgtGuild.Channels[i].Name), zap.Int("position", tgtGuild.Channels[i].Position), zap.String("id", tgtGuild.Channels[i].ID))
 
-			_, err := state.Discord.ChannelDelete(tgtGuild.Channels[i].ID)
+			_, err := discord.ChannelDelete(tgtGuild.Channels[i].ID)
 
 			if err != nil {
 				return nil, fmt.Errorf("failed to delete channel: %w", err)
@@ -640,7 +643,7 @@ func (t *ServerBackupRestoreTask) Exec(l *zap.Logger, tcr *types.TaskCreateRespo
 			}
 		}
 
-		c, err := state.Discord.GuildChannelCreateComplex(t.ServerID, discordgo.GuildChannelCreateData{
+		c, err := discord.GuildChannelCreateComplex(t.ServerID, discordgo.GuildChannelCreateData{
 			Name:                 channel.Name,
 			Type:                 channel.Type,
 			Topic:                channel.Topic,
@@ -749,7 +752,7 @@ func (t *ServerBackupRestoreTask) Exec(l *zap.Logger, tcr *types.TaskCreateRespo
 
 	gp.Features = features
 
-	_, err = state.Discord.GuildEdit(t.ServerID, gp)
+	_, err = discord.GuildEdit(t.ServerID, gp)
 
 	if err != nil {
 		return nil, fmt.Errorf("failed to edit guild: %w", err)
@@ -904,7 +907,7 @@ func (t *ServerBackupRestoreTask) Exec(l *zap.Logger, tcr *types.TaskCreateRespo
 
 				messages[i].MessageSend.Content = fmt.Sprintf("**%s**\n%s", strings.ReplaceAll(messages[i].Author.Username+"("+messages[i].Author.ID+")", "*", ""), messages[i].MessageSend.Content)
 
-				_, err := state.Discord.ChannelMessageSendComplex(restoredChannelId, messages[i].MessageSend)
+				_, err := discord.ChannelMessageSendComplex(restoredChannelId, messages[i].MessageSend)
 
 				if err != nil {
 					if t.Options.IgnoreRestoreErrors {

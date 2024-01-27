@@ -4,13 +4,13 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/anti-raid/splashtail/jobserver/core"
-	"github.com/anti-raid/splashtail/jobserver/core/taskexecutor"
-	"github.com/anti-raid/splashtail/state"
+	"github.com/anti-raid/splashtail/jobserver/endpoints"
+	"github.com/anti-raid/splashtail/jobserver/jobrunner"
+	"github.com/anti-raid/splashtail/jobserver/state"
 	"github.com/anti-raid/splashtail/tasks"
 )
 
-var CreateTask = core.IPC{
+var CreateTask = endpoints.IPC{
 	Description: "This IPC creates a task and executes it if the execute argument is set. If you already have both a task and a task create response, consider execute_task",
 	Exec: func(client string, args map[string]any) (map[string]any, error) {
 		taskName, ok := args["name"].(string)
@@ -45,7 +45,15 @@ var CreateTask = core.IPC{
 			return nil, fmt.Errorf("error unmarshalling task args: %w", err)
 		}
 
-		tcr, err := tasks.CreateTask(state.Context, task)
+		// Validate task
+		err = task.Validate(jobrunner.TaskState{})
+
+		if err != nil {
+			return nil, fmt.Errorf("failed to validate task: %w", err)
+		}
+
+		// Create task
+		tcr, err := jobrunner.CreateTask(state.Context, state.Pool, task)
 
 		if err != nil {
 			return nil, fmt.Errorf("error creating task: %w", err)
@@ -54,7 +62,7 @@ var CreateTask = core.IPC{
 		execute, _ := args["execute"].(bool)
 
 		if execute {
-			go taskexecutor.ExecuteTask(tcr.TaskID, task)
+			go jobrunner.ExecuteTask(tcr.TaskID, task)
 		}
 
 		return map[string]any{

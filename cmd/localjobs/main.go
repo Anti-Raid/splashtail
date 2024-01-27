@@ -11,15 +11,16 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"runtime/debug"
+	"strconv"
 	"strings"
+	"time"
 
 	"text/template"
 
 	"github.com/anti-raid/splashtail/cmd/localjobs/easyconfig"
 	"github.com/anti-raid/splashtail/cmd/localjobs/lib"
 	"github.com/anti-raid/splashtail/cmd/localjobs/ljstate"
-	"github.com/anti-raid/splashtail/config"
-	"github.com/anti-raid/splashtail/state"
 	"github.com/anti-raid/splashtail/tasks"
 	"github.com/bwmarrin/discordgo"
 	"github.com/infinitybotlist/eureka/cmd"
@@ -56,7 +57,7 @@ func (i *fieldFlags) Set(value string) error {
 var flags fieldFlags
 
 func main() {
-	state.Logger = snippets.CreateZap()
+	logger := snippets.CreateZap()
 
 	err := os.MkdirAll(prefixDir, 0755)
 
@@ -214,32 +215,56 @@ func main() {
 		os.Exit(1)
 	}
 
-	state.Discord = discordSess
-
-	state.BotUser, err = discordSess.User("@me")
+	botUser, err := discordSess.User("@me")
 
 	if err != nil {
 		fmt.Println("ERROR: Failed to get bot user:", err.Error())
 		os.Exit(1)
 	}
 
-	// Setup state
-	state.SetupDebug()
-	state.CurrentOperationMode = "localjobs"
-	state.Config = &config.Config{
-		DiscordAuth: config.DiscordAuth{
-			Token: ljstate.Config.BotToken,
-		},
+	var ctx context.Context
+	var cancelFunc context.CancelFunc
+
+	if os.Getenv("CTX_TIMEOUT") != "" {
+		// Parse timeout from env
+		dur, err := strconv.Atoi(os.Getenv("CTX_TIMEOUT"))
+
+		if err != nil {
+			fmt.Println("ERROR: Failed to parse CTX_TIMEOUT:", err.Error())
+			os.Exit(1)
+		}
+
+		ctx, cancelFunc = context.WithTimeout(context.Background(), time.Duration(dur))
+	} else {
+		ctx, cancelFunc = context.WithCancel(context.Background())
 	}
 
-	state.Context = context.Background()
+	// Setup state
+	taskState := lib.TaskState{
+		HttpTransport: func() *http.Transport {
+			transport := http.Transport{}
+			transport.RegisterProtocol("file", http.NewFileTransport(http.Dir("/")))
+
+			return &transport
+		}(),
+		DiscordSess: discordSess,
+		BotUser:     botUser,
+		DebugInfoData: func() *debug.BuildInfo {
+			bi, ok := debug.ReadBuildInfo()
+
+			if !ok {
+				return nil
+			}
+
+			return bi
+		}(),
+		ContextUse: ctx,
+	}
 
 	if len(os.Args) == 0 {
 		fmt.Println("ERROR: No command specified!")
 		os.Exit(1)
 	}
-
-	state.TaskTransport.RegisterProtocol("file", http.NewFileTransport(http.Dir("/")))
 
 	cmds := cmd.CommandLineState{
 		Commands: map[string]cmd.Command{
@@ -356,14 +381,27 @@ func main() {
 
 					fmt.Println("Task ID:", taskId)
 
-					l, _ := lib.NewLocalTaskLogger(taskId)
+					l, _ := lib.NewLocalTaskLogger(taskId, logger)
+
+					go func() {
+						for {
+							select {
+							case <-ctx.Done():
+								fmt.Println("ERROR: Context cancelled, exiting!")
+								cancelFunc() // Just in case
+								os.Exit(1)
+							case <-time.After(time.Second * 30):
+								fmt.Println("REMINDER: Task state is currently:", taskState)
+							}
+						}
+					}()
 
 					err = lib.ExecuteTaskLocal(prefixDir, taskId, l, taskDef, lib.TaskLocalOpts{
 						OnStateChange: func(state string) error {
 							fmt.Println("INFO: Task state has changed to:", state)
 							return nil
 						},
-					})
+					}, taskState)
 
 					if err != nil {
 						fmt.Println("ERROR: Failed to execute task:", err.Error())

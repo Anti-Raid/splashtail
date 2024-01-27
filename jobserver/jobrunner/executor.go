@@ -1,15 +1,43 @@
 // Package taskexecutor defines a "production-ready" task executor.
 //
 // For local/non-production use, consider looking at cmd/localjobs's task executor
-package taskexecutor
+package jobrunner
 
 import (
-	"github.com/anti-raid/splashtail/state"
+	"context"
+	"net/http"
+	"runtime/debug"
+
+	"github.com/anti-raid/splashtail/jobserver/state"
 	"github.com/anti-raid/splashtail/tasks"
 	"github.com/anti-raid/splashtail/types"
+	"github.com/bwmarrin/discordgo"
 	"github.com/infinitybotlist/eureka/crypto"
 	"go.uber.org/zap"
 )
+
+// Implementor of tasks.TaskState
+type TaskState struct{}
+
+func (TaskState) Transport() *http.Transport {
+	return state.TaskTransport
+}
+
+func (TaskState) OperationMode() string {
+	return state.CurrentOperationMode
+}
+
+func (TaskState) Discord() (*discordgo.Session, *discordgo.User, bool) {
+	return state.Discord, state.BotUser, false
+}
+
+func (TaskState) DebugInfo() *debug.BuildInfo {
+	return state.BuildInfo
+}
+
+func (TaskState) Context() context.Context {
+	return state.Context
+}
 
 // Creates a new task on server and executes it
 func ExecuteTask(taskId string, task tasks.TaskDefinition) {
@@ -19,7 +47,7 @@ func ExecuteTask(taskId string, task tasks.TaskDefinition) {
 
 	tInfo := task.Info()
 
-	l, _ := tasks.NewTaskLogger(taskId)
+	l, _ := NewTaskLogger(taskId, state.Pool, state.Context, state.Logger)
 
 	var done bool
 
@@ -58,7 +86,7 @@ func ExecuteTask(taskId string, task tasks.TaskDefinition) {
 	outp, err := task.Exec(l, &types.TaskCreateResponse{
 		TaskID:   taskId,
 		TaskInfo: tInfo,
-	})
+	}, TaskState{})
 
 	if err != nil {
 		l.Error("Failed to execute task", zap.Error(err))

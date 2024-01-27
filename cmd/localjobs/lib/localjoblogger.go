@@ -3,11 +3,10 @@ package lib
 import (
 	"encoding/json"
 	"fmt"
+	"os"
 	"strings"
 	"sync"
 	"time"
-
-	"github.com/anti-raid/splashtail/state"
 
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
@@ -16,11 +15,14 @@ import (
 type LocalMutLogger struct {
 	sync.Mutex
 	taskId string
+	logger *zap.Logger
 }
 
+var dbgtl = os.Getenv("DEBUG_TASK_LOGGER") == "true"
+
 func (m *LocalMutLogger) add(p []byte) error {
-	if state.Config.Meta.DebugTaskLogger {
-		state.Logger.Debug("add called", zap.String("taskId", m.taskId))
+	if dbgtl {
+		m.logger.Debug("add called", zap.String("taskId", m.taskId))
 	}
 	defer m.Unlock()
 	m.Lock()
@@ -74,14 +76,14 @@ func (m *LocalMutLogger) add(p []byte) error {
 }
 
 func (m *LocalMutLogger) Write(p []byte) (n int, err error) {
-	if state.Config.Meta.DebugTaskLogger {
-		state.Logger.Debug("Write called", zap.String("taskId", m.taskId))
+	if dbgtl {
+		m.logger.Debug("Write called", zap.String("taskId", m.taskId))
 	}
 
 	err = m.add(p)
 
 	if err != nil {
-		state.Logger.Error("[dwWriter] Failed to add to buffer", zap.Error(err), zap.String("taskId", m.taskId))
+		m.logger.Error("[dwWriter] Failed to add to buffer", zap.Error(err), zap.String("taskId", m.taskId))
 	}
 
 	return len(p), err
@@ -91,9 +93,10 @@ func (m *LocalMutLogger) Sync() error {
 	return nil
 }
 
-func NewLocalTaskLogger(taskId string) (*zap.Logger, *LocalMutLogger) {
+func NewLocalTaskLogger(taskId string, l *zap.Logger) (*zap.Logger, *LocalMutLogger) {
 	ml := &LocalMutLogger{
 		taskId: taskId,
+		logger: l,
 	}
 
 	logger := zap.New(zapcore.NewCore(

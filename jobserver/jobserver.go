@@ -6,10 +6,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/anti-raid/splashtail/jobserver/core"
+	"github.com/anti-raid/splashtail/jobserver/endpoints"
 	"github.com/anti-raid/splashtail/jobserver/endpoints/create_task"
 	"github.com/anti-raid/splashtail/jobserver/endpoints/execute_task"
-	"github.com/anti-raid/splashtail/state"
+	"github.com/anti-raid/splashtail/jobserver/state"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/infinitybotlist/eureka/zapchi"
@@ -21,7 +21,7 @@ var expectedSecretMap map[string]string // Set during setup
 
 var json = jsoniter.ConfigFastest
 
-var ipcEvents = map[string]core.IPC{
+var ipcEvents = map[string]endpoints.IPC{
 	"create_task":  create_task.CreateTask,
 	"execute_task": execute_task.ExecuteTask,
 }

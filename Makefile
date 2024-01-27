@@ -21,7 +21,7 @@ all:
 buildbot:
 	cd botv2 && cargo build --release
 buildmewldwebui:
-	cd mewld_web/ui && npm i && npm run build && cd ../
+	cd webserver/mewld_web/ui && npm i && npm run build && cd ../../
 tests:
 	CGO_ENABLED=0 go test -v -coverprofile=coverage.out ./...
 ts:

@@ -10,8 +10,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/anti-raid/splashtail/state"
 	"github.com/anti-raid/splashtail/types"
+	"github.com/anti-raid/splashtail/webserver/state"
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/infinitybotlist/eureka/crypto"

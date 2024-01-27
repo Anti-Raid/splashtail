@@ -6,9 +6,9 @@ import (
 	"strings"
 
 	"github.com/anti-raid/splashtail/db"
-	"github.com/anti-raid/splashtail/state"
 	"github.com/anti-raid/splashtail/tasks"
 	types "github.com/anti-raid/splashtail/types"
+	"github.com/anti-raid/splashtail/webserver/state"
 
 	"github.com/go-chi/chi/v5"
 	docs "github.com/infinitybotlist/eureka/doclib"

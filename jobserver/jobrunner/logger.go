@@ -1,11 +1,12 @@
-package tasks
+package jobrunner
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"sync"
 
-	"github.com/anti-raid/splashtail/state"
+	"github.com/jackc/pgx/v5/pgxpool"
 
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
@@ -14,12 +15,12 @@ import (
 type MutLogger struct {
 	sync.Mutex
 	taskId string
+	pool   *pgxpool.Pool
+	ctx    context.Context
+	logger *zap.Logger
 }
 
 func (m *MutLogger) add(p []byte) error {
-	if state.Config.Meta.DebugTaskLogger {
-		state.Logger.Debug("add called", zap.String("taskId", m.taskId))
-	}
 	defer m.Unlock()
 	m.Lock()
 
@@ -32,7 +33,7 @@ func (m *MutLogger) add(p []byte) error {
 	}
 
 	// For us, this is just an array append of the json
-	_, err = state.Pool.Exec(state.Context, "UPDATE tasks SET statuses = array_append(statuses, $1), last_updated = NOW() WHERE task_id = $2", data, m.taskId)
+	_, err = m.pool.Exec(m.ctx, "UPDATE tasks SET statuses = array_append(statuses, $1), last_updated = NOW() WHERE task_id = $2", data, m.taskId)
 
 	if err != nil {
 		return fmt.Errorf("failed to update statuses: %w", err)
@@ -42,14 +43,10 @@ func (m *MutLogger) add(p []byte) error {
 }
 
 func (m *MutLogger) Write(p []byte) (n int, err error) {
-	if state.Config.Meta.DebugTaskLogger {
-		state.Logger.Debug("Write called", zap.String("taskId", m.taskId))
-	}
-
 	err = m.add(p)
 
 	if err != nil {
-		state.Logger.Error("[dwWriter] Failed to add to buffer", zap.Error(err), zap.String("taskId", m.taskId))
+		m.logger.Error("[dwWriter] Failed to add to buffer", zap.Error(err), zap.String("taskId", m.taskId))
 	}
 
 	return len(p), err
@@ -59,9 +56,12 @@ func (m *MutLogger) Sync() error {
 	return nil
 }
 
-func NewTaskLogger(taskId string) (*zap.Logger, *MutLogger) {
+func NewTaskLogger(taskId string, pool *pgxpool.Pool, ctx context.Context, baseLogger *zap.Logger) (*zap.Logger, *MutLogger) {
 	ml := &MutLogger{
 		taskId: taskId,
+		pool:   pool,
+		ctx:    ctx,
+		logger: baseLogger,
 	}
 
 	logger := zap.New(zapcore.NewCore(

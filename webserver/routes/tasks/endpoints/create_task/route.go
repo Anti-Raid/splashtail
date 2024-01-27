@@ -6,9 +6,9 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/anti-raid/splashtail/state"
 	"github.com/anti-raid/splashtail/tasks"
 	"github.com/anti-raid/splashtail/types"
+	"github.com/anti-raid/splashtail/webserver/state"
 	jsoniter "github.com/json-iterator/go"
 
 	"github.com/go-chi/chi/v5"
@@ -38,8 +38,8 @@ func Setup() {
 
 func Docs() *docs.Doc {
 	return &docs.Doc{
-		Summary:     "Get Task",
-		Description: "Gets a task. Returns the task data if this is successful",
+		Summary:     "Create Task",
+		Description: "Creates a task. Returns the task data if this is successful",
 		Params: []docs.Parameter{
 			{
 				Name:        "id",
@@ -54,13 +54,6 @@ func Docs() *docs.Doc {
 				Required:    true,
 				In:          "path",
 				Schema:      docs.IdSchema,
-			},
-			{
-				Name:        "wait_for_execute_confirm",
-				Description: "Whether or not to wait for the task to be confirmed by the job server",
-				Required:    false,
-				In:          "query",
-				Schema:      docs.BoolSchema,
 			},
 		},
 		Req:  "The tasks fields",
@@ -104,7 +97,7 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 		}
 	}
 
-	baseTaskDef, ok := tasks.TaskDefinitionRegistry[taskName]
+	_, ok := tasks.TaskDefinitionRegistry[taskName]
 
 	if !ok {
 		return uapi.HttpResponse{
@@ -115,70 +108,29 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 		}
 	}
 
-	task := baseTaskDef // Copy task
-
-	err = json.NewDecoder(r.Body).Decode(&task)
+	body, err := io.ReadAll(r.Body)
 
 	if err != nil {
-		return uapi.HttpResponse{
-			Json: types.ApiError{
-				Message: "Error decoding task: " + err.Error(),
-			},
-			Status: http.StatusBadRequest,
-		}
-	}
-
-	tInfo := task.Info()
-
-	// Access Control check
-	if tInfo.TaskFor != nil {
-		if tInfo.TaskFor.ID == "" || tInfo.TaskFor.TargetType == "" {
-			return uapi.HttpResponse{
-				Status: http.StatusInternalServerError,
-				Json:   types.ApiError{Message: "Invalid task.TaskFor. Missing ID or TargetType"},
-			}
-		}
-
-		if tInfo.TaskFor.TargetType != d.Auth.TargetType {
-			return uapi.HttpResponse{
-				Status: http.StatusForbidden,
-				Json:   types.ApiError{Message: "This task has a for of " + tInfo.TaskFor.TargetType + " but you are authenticated as a" + d.Auth.TargetType + "!"},
-			}
-		}
-
-		if tInfo.TaskFor.ID != d.Auth.ID {
-			return uapi.HttpResponse{
-				Status: http.StatusForbidden,
-				Json:   types.ApiError{Message: "You are not authorized to fetch this task!"},
-			}
-		}
-	}
-
-	tcr, err := tasks.CreateTask(state.Context, task)
-
-	if err != nil {
-		return uapi.HttpResponse{
-			Status: http.StatusInternalServerError,
-			Json:   types.ApiError{Message: "Error creating task: " + err.Error()},
-		}
+		state.Logger.Error("Error reading body", zap.Error(err))
+		return uapi.DefaultResponse(http.StatusInternalServerError)
 	}
 
 	var cmd = map[string]any{
 		"args": map[string]any{
-			"task_id": tcr.TaskID,
 			"name":    taskName,
+			"data":    string(body),
+			"execute": true,
 		},
 	}
 
 	cmdBytes, err := json.Marshal(cmd)
 
 	if err != nil {
-		state.Logger.Error("Error marshalling IPC execute_task request", zap.Error(err))
+		state.Logger.Error("Error marshalling IPC create_task request", zap.Error(err))
 		return uapi.HttpResponse{
 			Status: http.StatusInternalServerError,
 			Json: types.ApiErrorWith[types.TaskCreateResponse]{
-				Message: "Error marshalling IPC execute_task request: " + err.Error(),
-				Data:    tcr,
+				Message: "Error marshalling IPC create_task request: " + err.Error(),
 			},
 		}
 	}
@@ -189,15 +141,14 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 	}
 
 	// FIXME: Use a better way of defining the job server url
-	req, err := http.NewRequest("POST", state.Config.Meta.JobserverUrl.Parse()+"/ipc/execute_task", bytes.NewBuffer(cmdBytes))
+	req, err := http.NewRequest("POST", state.Config.Meta.JobserverUrl.Parse()+"/ipc/create_task", bytes.NewBuffer(cmdBytes))
 
 	if err != nil {
-		state.Logger.Error("Error publishing IPC command", zap.Error(err))
+		state.Logger.Error("Error sending IPC create_task", zap.Error(err))
 		return uapi.HttpResponse{
 			Status: http.StatusInternalServerError,
 			Json: types.ApiErrorWith[types.TaskCreateResponse]{
-				Message: "Error publishing IPC command: " + err.Error(),
-				Data:    tcr,
+				Message: "Error sending IPC create_task: " + err.Error(),
 			},
 		}
 	}
@@ -212,12 +163,11 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 			Status: http.StatusInternalServerError,
 			Json: types.ApiErrorWith[types.TaskCreateResponse]{
 				Message: "Error publishing IPC command: " + err.Error(),
-				Data:    tcr,
 			},
 		}
 	}
 
-	if resp.StatusCode != http.StatusNoContent && resp.StatusCode != http.StatusOK {
+	if resp.StatusCode != http.StatusOK {
 		resp, err := io.ReadAll(resp.Body)
 
 		if err != nil {
@@ -226,7 +176,6 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 				Status: http.StatusInternalServerError,
 				Json: types.ApiErrorWith[types.TaskCreateResponse]{
 					Message: "Error publishing IPC command [recv error]: " + err.Error(),
-					Data:    tcr,
 				},
 			}
 		}
@@ -236,12 +185,27 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 			Status: http.StatusInternalServerError,
 			Json: types.ApiErrorWith[types.TaskCreateResponse]{
 				Message: "Error publishing IPC command [got reply]: " + string(resp),
-				Data:    tcr,
+			},
+		}
+	}
+
+	var jsResp struct {
+		Tcr types.TaskCreateResponse `json:"tcr"`
+	}
+
+	err = json.Unmarshal(body, &jsResp)
+
+	if err != nil {
+		state.Logger.Error("Error unmarshalling IPC create_task response", zap.Error(err))
+		return uapi.HttpResponse{
+			Status: http.StatusInternalServerError,
+			Json: types.ApiError{
+				Message: "Error unmarshalling IPC create_task response: " + err.Error(),
 			},
 		}
 	}
 
 	return uapi.HttpResponse{
-		Json: tcr,
+		Json: jsResp.Tcr,
 	}
 }

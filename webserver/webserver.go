@@ -8,7 +8,6 @@ import (
 
 	_ "embed"
 
-	"github.com/anti-raid/splashtail/state"
 	"github.com/anti-raid/splashtail/types"
 	"github.com/anti-raid/splashtail/webserver/api"
 	"github.com/anti-raid/splashtail/webserver/constants"
@@ -17,6 +16,7 @@ import (
 	"github.com/anti-raid/splashtail/webserver/routes/platform"
 	"github.com/anti-raid/splashtail/webserver/routes/tasks"
 	"github.com/anti-raid/splashtail/webserver/routes/users"
+	"github.com/anti-raid/splashtail/webserver/state"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	docs "github.com/infinitybotlist/eureka/doclib"

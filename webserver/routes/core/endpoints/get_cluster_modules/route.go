@@ -5,9 +5,9 @@ import (
 	"strconv"
 
 	"github.com/anti-raid/splashtail/animusmagic"
-	"github.com/anti-raid/splashtail/state"
 	"github.com/anti-raid/splashtail/types"
 	"github.com/anti-raid/splashtail/types/silverpelt"
+	"github.com/anti-raid/splashtail/webserver/state"
 	"github.com/go-chi/chi/v5"
 	orderedmap "github.com/wk8/go-ordered-map/v2"
 

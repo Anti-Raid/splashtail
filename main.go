@@ -20,9 +20,10 @@ import (
 	"github.com/anti-raid/splashtail/config"
 	"github.com/anti-raid/splashtail/jobserver"
 	"github.com/anti-raid/splashtail/jobserver/bgtasks"
-	"github.com/anti-raid/splashtail/mewld_web"
-	"github.com/anti-raid/splashtail/state"
+	jobserverstate "github.com/anti-raid/splashtail/jobserver/state"
 	"github.com/anti-raid/splashtail/webserver"
+	"github.com/anti-raid/splashtail/webserver/mewld_web"
+	webserverstate "github.com/anti-raid/splashtail/webserver/state"
 
 	"github.com/cloudflare/tableflip"
 	"go.uber.org/zap"
@@ -31,16 +32,16 @@ import (
 )
 
 func main() {
-	state.Setup()
-
 	if len(os.Args) < 2 {
 		os.Args = append(os.Args, "help")
 	}
 
-	state.CurrentOperationMode = os.Args[1]
-
 	switch os.Args[1] {
 	case "webserver":
+		webserverstate.Setup()
+
+		webserverstate.CurrentOperationMode = os.Args[1]
+
 		r := webserver.CreateWebserver()
 
 		// Load mewld bot
@@ -58,14 +59,14 @@ func main() {
 			panic(err)
 		}
 
-		mldConfig.Token = state.Config.DiscordAuth.Token
+		mldConfig.Token = webserverstate.Config.DiscordAuth.Token
 		mldConfig.Oauth = mconfig.Oauth{
-			ClientID:     state.Config.DiscordAuth.ClientID,
-			ClientSecret: state.Config.DiscordAuth.ClientSecret,
-			RedirectURL:  state.Config.DiscordAuth.MewldRedirect,
+			ClientID:     webserverstate.Config.DiscordAuth.ClientID,
+			ClientSecret: webserverstate.Config.DiscordAuth.ClientSecret,
+			RedirectURL:  webserverstate.Config.DiscordAuth.MewldRedirect,
 		}
 
-		if mldConfig.Redis != state.Config.Meta.RedisURL.Parse() {
+		if mldConfig.Redis != webserverstate.Config.Meta.RedisURL.Parse() {
 			panic("Redis URL in mewld.yaml does not match the one in config.yaml")
 		}
 
@@ -82,7 +83,7 @@ func main() {
 						cm.Name,
 						l.Dir,
 						strconv.Itoa(len(l.Map)),
-						state.Config.Sites.API.Parse(),
+						webserverstate.Config.Sites.API.Parse(),
 						l.Config.RedisChannel,
 						config.CurrentEnv,
 					)
@@ -95,7 +96,7 @@ func main() {
 						cm.Name,
 						l.Dir,
 						strconv.Itoa(len(l.Map)),
-						state.Config.Sites.API.Parse(),
+						webserverstate.Config.Sites.API.Parse(),
 						l.Config.RedisChannel,
 						config.CurrentEnv,
 					)
@@ -107,7 +108,7 @@ func main() {
 				env := os.Environ()
 
 				env = append(env, "MEWLD_CHANNEL="+l.Config.RedisChannel)
-				env = append(env, "REDIS_URL="+state.Config.Meta.RedisURL.Parse())
+				env = append(env, "REDIS_URL="+webserverstate.Config.Meta.RedisURL.Parse())
 
 				cmd.Env = env
 				cmd.Dir = l.Dir
@@ -131,14 +132,14 @@ func main() {
 			}
 		}()
 
-		state.MewldInstanceList = il
+		webserverstate.MewldInstanceList = il
 
 		r.Mount("/mewld", mewld_web.CreateServer(mewld_web.WebData{
 			RedisHandler: rh,
 			InstanceList: il,
 		}))
 
-		go state.AnimusMagicClient.Listen(state.Context, state.Rueidis, state.Logger)
+		go webserverstate.AnimusMagicClient.Listen(webserverstate.Context, webserverstate.Rueidis, webserverstate.Logger)
 
 		// If GOOS is windows, do normal http server
 		if runtime.GOOS == "linux" || runtime.GOOS == "darwin" {
@@ -149,17 +150,17 @@ func main() {
 				sig := make(chan os.Signal, 1)
 				signal.Notify(sig, syscall.SIGHUP)
 				for range sig {
-					state.Logger.Info("Received SIGHUP, upgrading server")
+					webserverstate.Logger.Info("Received SIGHUP, upgrading server")
 					upg.Upgrade()
 				}
 			}()
 
 			// Listen must be called before Ready
-			ln, err := upg.Listen("tcp", ":"+strconv.Itoa(state.Config.Meta.Port.Parse()))
+			ln, err := upg.Listen("tcp", ":"+strconv.Itoa(webserverstate.Config.Meta.Port.Parse()))
 
 			if err != nil {
 				il.KillAll()
-				state.Logger.Fatal("Error binding to socket", zap.Error(err))
+				webserverstate.Logger.Fatal("Error binding to socket", zap.Error(err))
 			}
 
 			defer ln.Close()
@@ -172,46 +173,31 @@ func main() {
 			go func() {
 				err := server.Serve(ln)
 				if err != http.ErrServerClosed {
-					state.Logger.Error("Server failed due to unexpected error", zap.Error(err))
+					webserverstate.Logger.Error("Server failed due to unexpected error", zap.Error(err))
 				}
 			}()
 
 			if err := upg.Ready(); err != nil {
-				state.Logger.Fatal("Error calling upg.Ready", zap.Error(err))
+				webserverstate.Logger.Fatal("Error calling upg.Ready", zap.Error(err))
 			}
 
 			<-upg.Exit()
 		} else {
 			// Tableflip not supported
-			state.Logger.Warn("Tableflip not supported on this platform, this is not a production-capable server.")
-			err = http.ListenAndServe(":"+strconv.Itoa(state.Config.Meta.Port.Parse()), r)
+			webserverstate.Logger.Warn("Tableflip not supported on this platform, this is not a production-capable server.")
+			err = http.ListenAndServe(":"+strconv.Itoa(webserverstate.Config.Meta.Port.Parse()), r)
 
 			if err != nil {
 				il.KillAll()
-				state.Logger.Fatal("Error binding to socket", zap.Error(err))
+				webserverstate.Logger.Fatal("Error binding to socket", zap.Error(err))
 			}
 		}
 	case "jobs":
-		mldF, err := os.ReadFile("mewld-" + config.CurrentEnv + ".yaml")
-
-		if err != nil {
-			panic(err)
-		}
-
-		var mldConfig mconfig.CoreConfig
-
-		err = yaml.Unmarshal(mldF, &mldConfig)
-
-		if err != nil {
-			panic(err)
-		}
-
-		state.MewldInstanceList = &mproc.InstanceList{
-			Config: &mldConfig,
-		}
+		jobserverstate.Setup()
+		jobserverstate.CurrentOperationMode = os.Args[1]
 
 		// Set state of all pending tasks to 'failed'
-		_, err = state.Pool.Exec(state.Context, "UPDATE tasks SET state = $1 WHERE state = $2", "failed", "pending")
+		_, err := jobserverstate.Pool.Exec(jobserverstate.Context, "UPDATE tasks SET state = $1 WHERE state = $2", "failed", "pending")
 
 		if err != nil {
 			panic(err)
@@ -231,16 +217,16 @@ func main() {
 				sig := make(chan os.Signal, 1)
 				signal.Notify(sig, syscall.SIGHUP)
 				for range sig {
-					state.Logger.Info("Received SIGHUP, upgrading server")
+					jobserverstate.Logger.Info("Received SIGHUP, upgrading server")
 					upg.Upgrade()
 				}
 			}()
 
 			// Listen must be called before Ready
-			ln, err := upg.Listen("tcp", ":"+strconv.Itoa(state.Config.Meta.JobserverPort.Parse()))
+			ln, err := upg.Listen("tcp", ":"+strconv.Itoa(jobserverstate.Config.Meta.JobserverPort.Parse()))
 
 			if err != nil {
-				state.Logger.Fatal("Error binding to socket", zap.Error(err))
+				jobserverstate.Logger.Fatal("Error binding to socket", zap.Error(err))
 			}
 
 			defer ln.Close()
@@ -253,22 +239,22 @@ func main() {
 			go func() {
 				err := server.Serve(ln)
 				if err != http.ErrServerClosed {
-					state.Logger.Error("Server failed due to unexpected error", zap.Error(err))
+					jobserverstate.Logger.Error("Server failed due to unexpected error", zap.Error(err))
 				}
 			}()
 
 			if err := upg.Ready(); err != nil {
-				state.Logger.Fatal("Error calling upg.Ready", zap.Error(err))
+				jobserverstate.Logger.Fatal("Error calling upg.Ready", zap.Error(err))
 			}
 
 			<-upg.Exit()
 		} else {
 			// Tableflip not supported
-			state.Logger.Warn("Tableflip not supported on this platform, this is not a production-capable server.")
-			err = http.ListenAndServe(":"+strconv.Itoa(state.Config.Meta.JobserverPort.Parse()), r)
+			jobserverstate.Logger.Warn("Tableflip not supported on this platform, this is not a production-capable server.")
+			err = http.ListenAndServe(":"+strconv.Itoa(jobserverstate.Config.Meta.JobserverPort.Parse()), r)
 
 			if err != nil {
-				state.Logger.Fatal("Error binding to socket", zap.Error(err))
+				jobserverstate.Logger.Fatal("Error binding to socket", zap.Error(err))
 			}
 		}
 	default:

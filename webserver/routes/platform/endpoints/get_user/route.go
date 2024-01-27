@@ -3,8 +3,8 @@ package get_user
 import (
 	"net/http"
 
-	"github.com/anti-raid/splashtail/state"
 	"github.com/anti-raid/splashtail/types"
+	"github.com/anti-raid/splashtail/webserver/state"
 
 	docs "github.com/infinitybotlist/eureka/doclib"
 	"github.com/infinitybotlist/eureka/dovewing"

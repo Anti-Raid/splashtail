@@ -1,4 +1,4 @@
-package core
+package endpoints
 
 type IPC struct {
 	// Description is the description of the IPC event

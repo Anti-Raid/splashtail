@@ -9,7 +9,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/anti-raid/splashtail/state"
+	"github.com/anti-raid/splashtail/webserver/state"
 )
 
 // Ported from https://github.com/InfinityBotList/sysmanage-web/blob/main/plugins/authdp/mw.go

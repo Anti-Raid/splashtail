@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"github.com/anti-raid/splashtail/tasks"
+	"github.com/anti-raid/splashtail/tasks/taskstate"
 	"github.com/anti-raid/splashtail/types"
 
 	"github.com/infinitybotlist/eureka/crypto"
@@ -16,7 +17,7 @@ type TaskLocalOpts struct {
 }
 
 // Executes a task locally
-func ExecuteTaskLocal(prefix, taskId string, l *zap.Logger, task tasks.TaskDefinition, opts TaskLocalOpts) error {
+func ExecuteTaskLocal(prefix, taskId string, l *zap.Logger, task tasks.TaskDefinition, opts TaskLocalOpts, taskState taskstate.TaskState) error {
 	var currentTaskState = "pending"
 
 	err := opts.OnStateChange(currentTaskState)
@@ -25,7 +26,7 @@ func ExecuteTaskLocal(prefix, taskId string, l *zap.Logger, task tasks.TaskDefin
 		return fmt.Errorf("failed to update task state: %w", err)
 	}
 
-	err = task.Validate()
+	err = task.Validate(taskState)
 
 	if err != nil {
 		return fmt.Errorf("failed to validate task: %w", err)
@@ -54,7 +55,7 @@ func ExecuteTaskLocal(prefix, taskId string, l *zap.Logger, task tasks.TaskDefin
 	outp, err := task.Exec(l, &types.TaskCreateResponse{
 		TaskID:   taskId,
 		TaskInfo: tInfo,
-	})
+	}, taskState)
 
 	if err != nil {
 		l.Error("Failed to execute task", zap.Error(err))
