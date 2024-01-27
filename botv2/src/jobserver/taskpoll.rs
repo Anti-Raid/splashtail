@@ -69,13 +69,7 @@ pub fn embed<'a>(task: &Task) -> Result<poise::CreateReply<'a>, crate::Error> {
 
     let mut description = format!(
         "{} Task state: {}\nTask ID: {}\n\n{}",
-        match task_state.as_str() {
-            "pending" => ":hourglass:",
-            "running" => ":hourglass_flowing_sand:",
-            "completed" => ":white_check_mark:",
-            "failed" => ":x:",
-            _ => ":question:",
-        },
+        super::get_icon_of_state(task_state.as_str()),
         task_state,
         task.task_id,
         task_statuses.join("\n")

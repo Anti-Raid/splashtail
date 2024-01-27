@@ -286,8 +286,13 @@ pub async fn backups_list(ctx: Context<'_>) -> Result<(), Error> {
 
     fn create_embed_for_task<'a>(task: &crate::jobserver::Task) -> serenity::all::CreateEmbed<'a> {    
         let mut embed = poise::serenity_prelude::CreateEmbed::default()
-        .title(format!("Backup Task {}", task.task_id))
-        .description(format!("Task Name: {}\nTask State: {}\nTask Created At: {}", task.task_name, task.state, task.created_at));
+        .title(
+            format!(
+                "{} | Server Backup",
+                crate::jobserver::get_icon_of_state(task.state.as_str())
+            )
+        )
+        .description(format!("Task ID: {}, Task Name: {}\nTask State: {}\n\n**Created At**: <{}:f> (<{}:R>)", task.task_id, task.task_name, task.state, task.created_at.timestamp(), task.created_at.timestamp()));
 
         if let Some(ref output) = task.output {
             let furl = format!("{}/tasks/{}/ioauth/download-link", crate::config::CONFIG.sites.api.get(), task.task_id);
