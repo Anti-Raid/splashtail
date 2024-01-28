@@ -25,44 +25,6 @@ pub struct TaskStatuses {
     pub extra_info: std::collections::HashMap<String, serde_json::Value>,
 }
 
-/**
- * export interface Task {
-  task_id: string;
-  task_name: string;
-  output?: TaskOutput;
-  task_info?: TaskInfo;
-  statuses: { [key: string]: any}[];
-  task_for?: TaskFor;
-  expiry?: any /* time.Duration */;
-  state: string;
-  created_at: string /* RFC3339 */;
-}
-
-/**
- * TaskFor is a struct containing the internal representation of who a task is for
- */
-export interface TaskFor {
-  id: string;
-  target_type: string;
-}
-/**
- * TaskOutput is the output of a task
- */
-export interface TaskOutput {
-  filename: string;
-  segregated: boolean; // If this flag is set, then the stored output will be stored in $taskForSimplexFormat/$taskName/$taskId/$filename instead of $taskId/$filename
-}
-/**
- * Information on a task
- */
-export interface TaskInfo {
-  name: string;
-  task_for?: TaskFor;
-  task_fields: any;
-  expiry: any /* time.Duration */;
-  valid: boolean;
-}
- */
 #[derive(Clone)]
 pub struct Task {
     pub task_id: sqlx::types::uuid::Uuid,
@@ -137,7 +99,7 @@ impl Task {
     /// Fetches a task from the database based on id
     pub async fn from_id(task_id: sqlx::types::uuid::Uuid, pool: &sqlx::PgPool) -> Result<Self, crate::Error> {
         let rec = sqlx::query!(
-            "SELECT task_id, task_name, output, task_info, statuses, task_for, expiry, state, created_at FROM tasks WHERE task_id = $1",
+            "SELECT task_id, task_name, output, task_info, statuses, task_for, expiry, state, created_at FROM tasks WHERE task_id = $1 ORDER BY created_at DESC",
             task_id,
         )
         .fetch_one(pool)
