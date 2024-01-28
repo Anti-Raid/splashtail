@@ -10,13 +10,15 @@ import (
 	"github.com/anti-raid/splashtail/types"
 	"github.com/anti-raid/splashtail/webserver/constants"
 	"github.com/anti-raid/splashtail/webserver/state"
-
 	"github.com/go-chi/chi/v5"
+	"go.uber.org/zap"
+
 	"github.com/infinitybotlist/eureka/uapi"
 	"github.com/jackc/pgx/v5/pgtype"
-	"go.uber.org/zap"
 	"golang.org/x/exp/slices"
 )
+
+const SESSION_EXPIRY = 60 * 30 // 30 minutes
 
 type DefaultResponder struct{}
 
@@ -105,11 +107,30 @@ func Authorize(r uapi.Route, req *http.Request) (uapi.AuthData, uapi.HttpRespons
 
 		switch auth.Type {
 		case types.TargetTypeUser:
-			// Check if the user exists with said API token only
+			// Delete old/expiring auths first
+			_, err := state.Pool.Exec(state.Context, "DELETE FROM web_api_tokens WHERE expiry < NOW()")
+
+			if err != nil {
+				state.Logger.Error("Failed to delete expired web API tokens [db delete]", zap.Error(err))
+			}
+
+			// Check if the user exists with said API token
 			var id pgtype.Text
+
+			err = state.Pool.QueryRow(state.Context, "SELECT user_id FROM web_api_tokens WHERE token = $1", strings.Replace(authHeader, "User ", "", 1)).Scan(&id)
+
+			if err != nil {
+				continue
+			}
+
+			if !id.Valid {
+				continue
+			}
+
+			// Check if the user is banned
 			var userstate string
 
-			err := state.Pool.QueryRow(state.Context, "SELECT user_id, state FROM users WHERE api_token = $1", strings.Replace(authHeader, "User ", "", 1)).Scan(&id, &userstate)
+			err = state.Pool.QueryRow(state.Context, "SELECT state FROM users WHERE user_id = $1", id).Scan(&userstate)
 
 			if err != nil {
 				continue
@@ -124,25 +145,6 @@ func Authorize(r uapi.Route, req *http.Request) (uapi.AuthData, uapi.HttpRespons
 				ID:         id.String,
 				Authorized: true,
 				Banned:     userstate == "banned" || userstate == "api_banned",
-			}
-			urlIds = []string{id.String}
-		case types.TargetTypeServer:
-			var id pgtype.Text
-
-			err := state.Pool.QueryRow(state.Context, "SELECT id FROM guilds WHERE api_token = $1", strings.Replace(authHeader, "Server ", "", 1)).Scan(&id)
-
-			if err != nil {
-				continue
-			}
-
-			if !id.Valid {
-				continue
-			}
-
-			authData = uapi.AuthData{
-				TargetType: types.TargetTypeServer,
-				ID:         id.String,
-				Authorized: true,
 			}
 			urlIds = []string{id.String}
 		}
@@ -177,8 +179,7 @@ func Setup() {
 		Logger:    state.Logger,
 		Authorize: Authorize,
 		AuthTypeMap: map[string]string{
-			types.TargetTypeUser:   types.TargetTypeUser,
-			types.TargetTypeServer: types.TargetTypeServer,
+			types.TargetTypeUser: types.TargetTypeUser,
 		},
 		Context: state.Context,
 		Constants: &uapi.UAPIConstants{
