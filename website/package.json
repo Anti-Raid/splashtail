@@ -30,8 +30,10 @@
 	"dependencies": {
 		"@iconify/svelte": "^3.1.6",
 		"@tailwindcss/forms": "^0.5.7",
+		"@tailwindcss/typography": "^0.5.10",
 		"@vincjo/datatables": "^1.14.4",
 		"@zerodevx/svelte-toast": "^0.9.5",
-		"moment": "^2.30.1"
+		"moment": "^2.30.1",
+		"tailwindcss-animate": "^1.0.7"
 	}
 }

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import SideButton from "../../../components/NavButton.svelte";
+	import SideButton from "../../../components/inputs/button/NavButton.svelte";
 
     let selected = 0;
 

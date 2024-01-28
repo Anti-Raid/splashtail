@@ -4,8 +4,12 @@
 	import { CanonicalCommand, CanonicalModule } from "$lib/generated/silverpelt";
 	import logger from "$lib/ui/logger";
 	import Message from "../Message.svelte";
-	import NavButton from "../NavButton.svelte";
+	import Modal from "../Modal.svelte";
+	import NavButton from "../inputs/button/NavButton.svelte";
+    import ButtonReact from "../inputs/button/ButtonReact.svelte";
 	import InputText from "../inputs/InputText.svelte";
+	import GuildClusterLookup from "./GuildClusterLookup.svelte";
+	import { Color } from "../inputs/button/colors";
 
     export let instanceList: InstanceList;
 
@@ -14,13 +18,20 @@
         commandSearch: string;
         clusterModuleData: Record<number, Record<string, CanonicalModule>>;
         searchedCommands: LookedUpCommand[];
+        clusterFinderOpen: boolean;
+        clusterFinderByGuildIdExpectedData: {
+            cluster: number;
+            shard: number;
+        } | null;
     }
 
     let state: State = {
         openCluster: 0,
         clusterModuleData: {},
         commandSearch: "",
-        searchedCommands: []
+        searchedCommands: [],
+        clusterFinderOpen: false,
+        clusterFinderByGuildIdExpectedData: null
     }
 
     interface LookedUpCommand {
@@ -80,10 +91,21 @@
                 <NavButton 
                     current={state.openCluster == instance?.ClusterID} 
                     title={`Cluster ${instance?.ClusterID}`} 
-                    onClick={() => state.openCluster = instance?.ClusterID || 0}
+                    onClick={() => {
+                        state.openCluster = instance?.ClusterID || 0
+                    }}
                     extClass="block mb-2"
                 />
             {/each}
+            <NavButton 
+                current={false} 
+                title={`⚠️ Help`} 
+                onClick={() => {
+                    state.clusterFinderOpen = true
+                    state.clusterFinderByGuildIdExpectedData = null;
+                }}
+                extClass="block mb-2"
+            />
         </nav>
         <div class="cluster-map-content flex-1 px-2">
             {#if !state.clusterModuleData[state?.openCluster]}
@@ -126,4 +148,44 @@
         <summary class="hover:cursor-pointer">Debug</summary>
         <pre>{JSON.stringify(state, null, 4)}</pre>
     </details>
+
+    {#if state.clusterFinderOpen}
+        <Modal bind:showModal={state.clusterFinderOpen}>
+            <h1 slot="header" class="font-semibold text-2xl">Help</h1>
+            <h2 class="text-xl">
+                Server Lookup
+            </h2>
+            <p>
+                If you're planning to add AntiRaid to a specific server, please enter the Server's ID below. 
+
+                You can find your Server's ID from either the <em>AntiRaid Dashboard</em> or by <em><a class="text-blue-400 hover:text-blue-600" href="https://support.discord.com/hc/en-us/articles/206346498-Where-can-I-find-my-User-Server-Message-ID#:~:text=Obtaining%20Server%20IDs%20%2D%20Mobile%20App,name%20and%20select%20Copy%20ID.">following the steps outlined here!</a></em>
+            </p>
+
+            <GuildClusterLookup 
+                instanceList={instanceList} 
+                bind:expectedInfo={state.clusterFinderByGuildIdExpectedData}
+            />  
+
+            {#if state.clusterFinderByGuildIdExpectedData}
+                <ButtonReact 
+                    color={Color.Themable}
+                    icon="mdi:forward"
+                    text="Take Me There!"
+                    onClick={async () => {
+                        if(!state.clusterFinderByGuildIdExpectedData) return false;
+                        state.openCluster = state.clusterFinderByGuildIdExpectedData.cluster;
+                        state.clusterFinderOpen = false;
+                        return true
+                    }}
+                    states={
+                        {
+                            loading: "Loading...",
+                            error: "Failed to find cluster",
+                            success: "Found cluster!"
+                        }
+                    }
+                />
+            {/if}
+        </Modal>
+    {/if}
 </article>

@@ -9,7 +9,7 @@
 	import { User } from '../lib/generated/types';
 	import logger from '../lib/ui/logger';
 	import Icon from '@iconify/svelte';
-	import NavButton from './NavButton.svelte';
+	import NavButton from './inputs/button/NavButton.svelte';
 
 	let navigation = [
 		{ name: 'Home', href: '/' },
@@ -84,7 +84,7 @@
 	long="This website is experimental, and may have issues."
 />
 
-<header class="top-0 w-full bg-gradient-to-b from-themable-600/70 to-themable-600/60">
+<header class="top-0 w-full">
 	<div class="max-w-7xl px-3 mx-auto py-3 flex items-center justify-between">
 		<a href="/">
 			<div class="flex items-center space-x-1">
