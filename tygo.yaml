@@ -21,6 +21,7 @@ packages:
       pgtype.UUID: "string /* uuid */"
       dovetypes.PlatformUser: PlatformUser /* from eureka-dovewing.ts */
       pgtype.Timestamptz: "string | null /* RFC3339, nullable */"
+      orderedmap.OrderedMap: "Record"
 
   - path: "github.com/cheesycod/mewld/proc"
     output_path: "/failuremgmt/cdn/antiraid/dev/bindings/splashtail/mewld/proc.ts"

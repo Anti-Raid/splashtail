@@ -168,6 +168,7 @@ export interface TaskInfo {
 export interface User {
   user?: PlatformUser /* from eureka-dovewing.ts */;
   state: string;
+  vote_banned: boolean;
   created_at: string /* RFC3339 */;
   updated_at: string /* RFC3339 */;
 }

@@ -1,6 +1,7 @@
 import { get } from "$lib/configs/functions/services"
 import { fetchClient } from "$lib/fetch/fetch"
 import { InstanceList } from "$lib/generated/mewld/proc"
+import { CanonicalModule } from "$lib/generated/silverpelt"
 import { ApiError } from "$lib/generated/types"
 
 let cachedData: Map<string, any> = new Map()
@@ -41,4 +42,22 @@ export const opGetClusterHealth: SharedRequester<InstanceList> = {
         
         return data
     }
+}
+
+// Fetches the modules of a cluster
+export const opGetClusterModules = (clusterId: number): SharedRequester<Record<string, CanonicalModule>> => {
+    return {
+        name: `clusterModules:${clusterId}`,
+        requestFunc: async (): Promise<Record<string, CanonicalModule>> => {
+            const res = await fetchClient(`${get('splashtail')}/clusters/${clusterId}/modules`);
+            if(!res.ok) {
+                let resp: ApiError = await res.json()
+                throw new Error(`Failed to fetch clusters modules: ${res.status}: ${resp?.message}`)
+            }
+        
+            const data: Record<string, CanonicalModule> = await res.json()
+            
+            return data
+        }
+    }    
 }
