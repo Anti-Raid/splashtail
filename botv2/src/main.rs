@@ -385,13 +385,26 @@ async fn main() {
                         return Ok(true)
                     }
 
+                    // Get kittycat perms of member (if they have any)
+                    let kittycat_perms = {
+                        let rec = sqlx::query!("SELECT resolved_perms_cache FROM guild_members WHERE guild_id = $1 AND user_id = $2", guild_id.to_string(), member.user.id.to_string())
+                        .fetch_optional(&data.pool)
+                        .await?;
+
+                        if let Some(rec) = rec {
+                            rec.resolved_perms_cache
+                        } else {
+                            Vec::new()
+                        }
+                    };
+
                     info!("Checking if user {} ({}) can run command {} with permissions {:?}", member.user.name, member.user.id, ctx.command().qualified_name, member_perms);
                     if let Err(e) = silverpelt::can_run_command(
                         &cmd_data,
                         &command_config,
                         &ctx.command().qualified_name,
                         member_perms,
-                        &Vec::new(), // kittycat perms not yet implemented
+                        &kittycat_perms,
                     ) {
                         return Err(
                             format!(
