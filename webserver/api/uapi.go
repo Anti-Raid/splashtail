@@ -179,7 +179,8 @@ func Setup() {
 		Logger:    state.Logger,
 		Authorize: Authorize,
 		AuthTypeMap: map[string]string{
-			types.TargetTypeUser: types.TargetTypeUser,
+			types.TargetTypeUser:   types.TargetTypeUser,
+			types.TargetTypeServer: types.TargetTypeServer,
 		},
 		Context: state.Context,
 		Constants: &uapi.UAPIConstants{

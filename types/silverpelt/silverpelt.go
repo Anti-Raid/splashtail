@@ -27,7 +27,7 @@ type CanonicalModule struct {
 	Commands             []CanonicalCommand `json:"commands"`
 }
 
-type CanonicalCommandExtendedDataMap orderedmap.OrderedMap[string, CommandExtendedData]
+type CanonicalCommandExtendedDataMap = orderedmap.OrderedMap[string, CommandExtendedData]
 
 type CanonicalCommand struct {
 	Command      CanonicalCommandData            `json:"command"`

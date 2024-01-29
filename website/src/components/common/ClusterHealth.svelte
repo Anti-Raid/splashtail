@@ -8,7 +8,7 @@
 
     const getClusterGuildCount = (i: Instance) => {
         let count: number = 0;
-        for(let ch of i?.ClusterHealth) {
+        for(let ch of (i?.ClusterHealth || [])) {
             count += ch?.guilds
         }
         return count;
@@ -16,7 +16,7 @@
 
     const getClusterUserCount = (i: Instance) => {
         let count: number = 0;
-        for(let ch of i?.ClusterHealth) {
+        for(let ch of (i?.ClusterHealth || [])) {
             count += ch?.users
         }
         return count;

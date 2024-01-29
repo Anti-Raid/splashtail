@@ -275,10 +275,10 @@
                                                     </td>
                                                     <td>
                                                         <ul class="list-disc list-outside">
-                                                            {#each row.arguments as arg}
-                                                                <li class="mr-2">
+                                                            {#each row.arguments as arg, i}
+                                                                <li class={(i+1) < row.arguments.length ? "mb-2" : ""}>
                                                                     <span class="command-argument">
-                                                                        {arg.name}{#if arg.required}<span class="text-red-400 font-semibold text-lg">*<span class="sr-only">Required parameter)</span></span>{/if}{#if arg.description}: <em>{arg.description}</em>{/if}
+                                                                        <span class="font-semibold">{arg.name}</span>{#if arg.required}<span class="text-red-400 font-semibold text-lg">*<span class="sr-only">Required parameter)</span></span>{/if}{#if arg.description}: <em>{arg.description}</em>{/if}
                                                                     </span>
                                                                 </li>
                                                             {/each}
@@ -286,12 +286,9 @@
                                                     </td>
                                                     <td>
                                                         <ul class="list-disc list-outside">
-                                                            {JSON.stringify(row.extended_data)}
                                                             {#each (row.extended_data?.default_perms?.checks || []) as check}
                                                                 <li class="mr-2">
-                                                                    <span class="command-argument">
-                                                                        {check.kittycat_perms}
-                                                                    </span>
+                                                                    <pre class="command-parameter">{check.kittycat_perms}</pre>
                                                                 </li>
                                                             {/each}
                                                         </ul>
