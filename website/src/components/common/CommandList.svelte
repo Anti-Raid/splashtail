@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { makeSharedRequest, opGetClusterModules } from "$lib/fetch/ext";
 	import { InstanceList } from "$lib/generated/mewld/proc";
-	import { CanonicalCommand, CanonicalCommandData, CanonicalModule } from "$lib/generated/silverpelt";
+	import { CanonicalCommand, CanonicalCommandData, CanonicalModule, CommandExtendedData } from "$lib/generated/silverpelt";
 	import logger from "$lib/ui/logger";
 	import Message from "../Message.svelte";
 	import Modal from "../Modal.svelte";
@@ -86,11 +86,48 @@
         state.searchedCommands = [];
     }
 
-    let cmdDataTable: Readable<CanonicalCommandData[]>;
+    interface ParsedCanonicalCommandData extends CanonicalCommandData {
+        subcommand_depth: number;
+        parent_command?: CanonicalCommandData;
+        extended_data: CommandExtendedData;
+        search_permissions: string;
+    }
+
+    let cmdDataTable: Readable<ParsedCanonicalCommandData[]>;
     const createCmdDataTable = async (_: string) => {
         let module = state.clusterModuleData[state.openCluster][state.openModule];
 
-        const handler = new DataHandler(module.commands.map(c => c.command), { rowsPerPage: 20 })
+        let commands: ParsedCanonicalCommandData[] = [];
+
+        // Recursively parse commands
+        const parseCommand = (
+            command: CanonicalCommandData, 
+            extended_data: Record<string, CommandExtendedData>,
+            depth: number = 0, 
+            parent: CanonicalCommandData | undefined,
+        ) => {
+            let extData = extended_data[depth == 0 ? "" : command?.name] || extended_data[""]
+            logger.info("ParseCommand", "Parsing command", command?.name, depth, parent, extData)
+            commands.push({
+                ...command,
+                subcommand_depth: depth,
+                parent_command: parent,
+                extended_data: extData,
+                search_permissions: extData?.default_perms?.checks?.map(check => check?.kittycat_perms)?.join(", ")
+            })
+
+            if(command?.subcommands) {
+                for(let subcommand of command?.subcommands) {
+                    parseCommand(subcommand, extended_data, depth + 1, command)
+                }
+            }
+        }
+
+        for(let command of module?.commands) {
+            parseCommand(command?.command, command?.extended_data, 0, undefined)
+        }
+
+        const handler = new DataHandler(commands, { rowsPerPage: 20 })
 
         cmdDataTable = handler.getRows()
 
@@ -102,7 +139,7 @@
 </script>
 
 <!--Cluster Menu at the right of the page-->
-<article class="command-list-article">
+<article class="command-list-article overflow-x-auto">
     <small class="text-red-600 word-wrap block mb-1">
         Different clusters may have different available modules due to outages, A/B testing and other reasons.
     </small>
@@ -168,7 +205,7 @@
                     <nav class="cluster-map flex-none border-r border-slate-500 w-40">
                         {#each Object.entries(state.clusterModuleData[state?.openCluster]) as [_, module]}
                             <NavButton 
-                                current={state.openModule == module?.id} 
+                                current={state.openModule == module?.id}
                                 title={module?.name} 
                                 onClick={() => {
                                     state.openModule = module?.id || state.clusterModuleData[state?.openCluster]["core"].id
@@ -186,32 +223,79 @@
                                 </Message>
                             {:then data}
                                 <Datatable handler={data.handler} search={false}>
-                                    <table>
+                                    <table class="overflow-x-auto">
                                         <thead>
                                             <tr>
                                                 <Th handler={data.handler} orderBy={"qualified_name"}>Name</Th>
                                                 <Th handler={data.handler} orderBy={"description"}>Description</Th>
                                                 <Th handler={data.handler} orderBy={"arguments"}>Arguments</Th>
+                                                <Th handler={data.handler} orderBy={"search_permissions"}>Permissions</Th>
                                             </tr>
                                             <tr>
                                                 <ThFilter handler={data.handler} filterBy={"qualified_name"} />
                                                 <ThFilter handler={data.handler} filterBy={"description"} />
                                                 <ThFilter handler={data.handler} filterBy={"arguments"} />
+                                                <ThFilter handler={data.handler} filterBy={"search_permissions"} />
                                             </tr>
                                         </thead>
                                         <tbody>
                                             {#each $cmdDataTable as row}
                                                 <tr>
-                                                    <td>{row.name}</td>
+                                                    <td>
+                                                        {#if row.subcommand_depth == 0}
+                                                            <span class="font-semibold">
+                                                                {row.name}
+                                                            </span>
+                                                        {:else}
+                                                            <span class="whitespace-nowrap">
+                                                                <span class="font-semibold">{row?.parent_command?.name}</span>{" "}<em>{row.name}</em>
+                                                            </span>
+                                                        {/if}
+
+                                                        <!--NSFW command, TODO: Make tooltip-->
+                                                        {#if row.nsfw}
+                                                            <div class="command-note">
+                                                                <span class="text-red-400 font-semibold">NSFW</span>
+                                                            </div>
+                                                        {/if}
+
+                                                        <!--Base command of a slash command, TODO: Make tooltip-->
+                                                        {#if row.subcommand_required || row.subcommands.length}
+                                                            <div class="command-note">
+                                                                <span class="text-blue-400 font-semibold">BASE</span>
+                                                            </div>
+                                                        {/if}
+                                                    </td>
                                                     <td>
                                                         {#if row.description}
                                                             {row.description}
                                                         {:else}
-                                                            Mystery Box
-                                                            <Icon class="inline-block" icon="mdi:question-mark" />
+                                                            Mystery Box?
                                                         {/if}
                                                     </td>
-                                                    <td>{JSON.stringify(row.arguments)}</td> <!--BETTER ARGUMENT DESCRIPTION-->
+                                                    <td>
+                                                        <ul class="list-disc list-outside">
+                                                            {#each row.arguments as arg}
+                                                                <li class="mr-2">
+                                                                    <span class="command-argument">
+                                                                        {arg.name}{#if arg.required}<span class="text-red-400 font-semibold text-lg">*<span class="sr-only">Required parameter)</span></span>{/if}{#if arg.description}: <em>{arg.description}</em>{/if}
+                                                                    </span>
+                                                                </li>
+                                                            {/each}
+                                                        </ul>
+                                                    </td>
+                                                    <td>
+                                                        <ul class="list-disc list-outside">
+                                                            {JSON.stringify(row.extended_data)}
+                                                            {#each (row.extended_data?.default_perms?.checks || []) as check}
+                                                                <li class="mr-2">
+                                                                    <span class="command-argument">
+                                                                        {check.kittycat_perms}
+                                                                    </span>
+                                                                </li>
+                                                            {/each}
+                                                        </ul>
+                                                    </td>
                                                 </tr>
                                             {/each}
                                         </tbody>
