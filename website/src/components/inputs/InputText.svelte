@@ -11,12 +11,17 @@
 	export let inpClass: string = 'mb-4';
 	export let required: boolean = true;
 	export let disabled: boolean = false;
+	export let onChange: (() => void) | undefined = undefined;
 
 	let success: boolean | null = null;
 
 	let errorMsg = '';
 
 	function checkLength() {
+		if(onChange) {
+			onChange()
+		}
+
 		if (!showErrors) return;
 
 		if (!value) {

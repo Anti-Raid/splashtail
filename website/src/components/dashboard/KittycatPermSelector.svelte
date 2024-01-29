@@ -103,6 +103,7 @@
         <InputText 
             id="perm"
             bind:value={perm}
+            onChange={() => perm = rewindPerms(namespace, permission, scope, negator)}
             label="Permission String"
             placeholder="server_backups.list"
             minlength={1}
