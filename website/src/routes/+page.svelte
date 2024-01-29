@@ -6,6 +6,7 @@
 	import ClusterHealth from '../components/common/ClusterHealth.svelte';
 	import Message from "../components/Message.svelte";
 	import { makeSharedRequest, opGetClusterHealth } from '$lib/fetch/ext';
+	import CommandList from '../components/common/CommandList.svelte';
 </script>
 
 <Meta
@@ -65,7 +66,7 @@
 
 <hr class="my-10" />
 
-<h2 class="text-4xl font-bold tracking-tight text-gray-900 sm:text-5xl md:text-6xl">
+<h2 class="text-4xl font-bold tracking-tight text-gray-900">
 	<span class="block text-white xl:inline">Cluster Health</span>
 </h2>	
 
@@ -73,6 +74,20 @@
 	<Message type="loading">Fetching cluster data...</Message>
 {:then data}
 	<ClusterHealth instanceList={data} />
+{:catch err}
+	<Message type="error">Error loading cluster data: {err}</Message>
+{/await}
+
+<div class="mb-6" /> <!--TODO: Experiment with this a bit more-->
+
+<h2 class="text-4xl font-bold tracking-tight text-gray-900">
+	<span class="block text-white xl:inline">Command List</span>
+</h2>	
+
+{#await makeSharedRequest(opGetClusterHealth)}
+	<Message type="loading">Fetching command list</Message>
+{:then data}
+	<CommandList instanceList={data} />
 {:catch err}
 	<Message type="error">Error loading cluster data: {err}</Message>
 {/await}
