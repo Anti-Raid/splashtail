@@ -15,6 +15,7 @@
 
     interface State {
         openCluster: number;
+        openModule: string;
         commandSearch: string;
         clusterModuleData: Record<number, Record<string, CanonicalModule>>;
         searchedCommands: LookedUpCommand[];
@@ -27,6 +28,7 @@
 
     let state: State = {
         openCluster: 0,
+        openModule: "core",
         clusterModuleData: {},
         commandSearch: "",
         searchedCommands: [],
@@ -77,6 +79,8 @@
 
     $: if(state?.commandSearch) {
         state.searchedCommands = commandLookup();
+    } else {
+        state.searchedCommands = [];
     }
 </script>
 
@@ -94,7 +98,7 @@
                     onClick={() => {
                         state.openCluster = instance?.ClusterID || 0
                     }}
-                    extClass="block mb-2"
+                    extClass="block mb-2 w-full"
                 />
             {/each}
             <NavButton 
@@ -104,7 +108,7 @@
                     state.clusterFinderOpen = true
                     state.clusterFinderByGuildIdExpectedData = null;
                 }}
-                extClass="block mb-2"
+                extClass="block mb-2 w-full"
             />
         </nav>
         <div class="cluster-map-content flex-1 px-2">
@@ -140,6 +144,23 @@
                     </li>
                     {/each}
                 </ul>
+
+                <!--Module list-->
+                <section class="cluster-module-list flex flex-grow">
+                    <!--Bar-->
+                    <nav class="cluster-map flex-none border-r border-slate-500 w-40">
+                        {#each Object.entries(state.clusterModuleData[state?.openCluster]) as [_, module]}
+                            <NavButton 
+                                current={state.openModule == module?.id} 
+                                title={module?.name} 
+                                onClick={() => {
+                                    state.openModule = module?.id || state.clusterModuleData[state?.openCluster]["core"].id
+                                }}
+                                extClass="block mb-2 w-full"
+                            />
+                        {/each}
+                    </nav>
+                </section>
             {/if}
         </div>
     </section>
