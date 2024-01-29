@@ -104,6 +104,7 @@
 						onClick={() => {
 							mobileMenuOpen = false
 						}}
+						extClass="hidden md:block"
 					/>
 				{/each}
 			</div>
@@ -111,7 +112,7 @@
 		<div class="flex items-center space-x-4">
 			<button
 				type="button"
-				class="block rounded-md p-2 font-medium text-left text-gray-300 hover:bg-slate-800 hover:text-white focus:outline-none focus:ring-1 focus:ring-inset focus:ring-white"
+				class="block md:hidden rounded-md p-2 font-medium text-left text-gray-300 hover:bg-slate-800 hover:text-white focus:outline-none focus:ring-1 focus:ring-inset focus:ring-white"
 				on:click={() => mobileMenuOpen = !mobileMenuOpen}
 				aria-controls="mobile-menu"
 				aria-expanded="false"
@@ -184,7 +185,7 @@
 	</div>
 
 	{#if mobileMenuOpen}
-		<div id="mobile-menu">
+		<div id="mobile-menu" class="md:hidden">
 			<div class="space-y-1 px-2 pt-2 pb-3">
 				{#each navigation as item}
 					<NavButton
