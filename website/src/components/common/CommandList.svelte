@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { makeSharedRequest, opGetClusterModules } from "$lib/fetch/ext";
 	import { InstanceList } from "$lib/generated/mewld/proc";
-	import { CanonicalCommand, CanonicalModule } from "$lib/generated/silverpelt";
+	import { CanonicalCommand, CanonicalCommandData, CanonicalModule } from "$lib/generated/silverpelt";
 	import logger from "$lib/ui/logger";
 	import Message from "../Message.svelte";
 	import Modal from "../Modal.svelte";
@@ -10,6 +10,9 @@
 	import InputText from "../inputs/InputText.svelte";
 	import GuildClusterLookup from "./GuildClusterLookup.svelte";
 	import { Color } from "../inputs/button/colors";
+	import { DataHandler, Datatable, Th, ThFilter } from "@vincjo/datatables";
+	import { Readable } from "svelte/store";
+	import Icon from "@iconify/svelte";
 
     export let instanceList: InstanceList;
 
@@ -81,6 +84,20 @@
         state.searchedCommands = commandLookup();
     } else {
         state.searchedCommands = [];
+    }
+
+    let cmdDataTable: Readable<CanonicalCommandData[]>;
+    const createCmdDataTable = async (_: string) => {
+        let module = state.clusterModuleData[state.openCluster][state.openModule];
+
+        const handler = new DataHandler(module.commands.map(c => c.command), { rowsPerPage: 20 })
+
+        cmdDataTable = handler.getRows()
+
+        return {
+            handler,
+            rows: cmdDataTable
+        }
     }
 </script>
 
@@ -160,6 +177,53 @@
                             />
                         {/each}
                     </nav>
+                    <!--Content-->
+                    <div class="cluster-module-list-content flex-1 px-2">
+                        {#if state.openModule}
+                            {#await createCmdDataTable(state?.openModule)}
+                                <Message type="loading">
+                                    Loading commands...
+                                </Message>
+                            {:then data}
+                                <Datatable handler={data.handler} search={false}>
+                                    <table>
+                                        <thead>
+                                            <tr>
+                                                <Th handler={data.handler} orderBy={"qualified_name"}>Name</Th>
+                                                <Th handler={data.handler} orderBy={"description"}>Description</Th>
+                                                <Th handler={data.handler} orderBy={"arguments"}>Arguments</Th>
+                                            </tr>
+                                            <tr>
+                                                <ThFilter handler={data.handler} filterBy={"qualified_name"} />
+                                                <ThFilter handler={data.handler} filterBy={"description"} />
+                                                <ThFilter handler={data.handler} filterBy={"arguments"} />
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {#each $cmdDataTable as row}
+                                                <tr>
+                                                    <td>{row.name}</td>
+                                                    <td>
+                                                        {#if row.description}
+                                                            {row.description}
+                                                        {:else}
+                                                            Mystery Box
+                                                            <Icon class="inline-block" icon="mdi:question-mark" />
+                                                        {/if}
+                                                    </td>
+                                                    <td>{JSON.stringify(row.arguments)}</td> <!--BETTER ARGUMENT DESCRIPTION-->
+                                                </tr>
+                                            {/each}
+                                        </tbody>
+                                    </table>            
+                                </Datatable>
+                            {:catch}
+                                <Message type="error">
+                                    Failed to load commands
+                                </Message>
+                            {/await}
+                        {/if}
+                    </div>
                 </section>
             {/if}
         </div>
@@ -210,3 +274,20 @@
         </Modal>
     {/if}
 </article>
+
+<style>
+    table {
+            color: white;
+            margin: 0 !important;
+    }
+    tbody td {
+            border: 1px solid #f5f5f5;
+            padding: 4px 20px;
+    }
+    tbody tr {
+            transition: all, 0.2s;
+    }
+    tbody tr:hover {
+            background: #252323;
+    }
+</style>
