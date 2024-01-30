@@ -11,6 +11,7 @@ import (
 	"github.com/anti-raid/splashtail/types"
 	"github.com/anti-raid/splashtail/webserver/api"
 	"github.com/anti-raid/splashtail/webserver/constants"
+	"github.com/anti-raid/splashtail/webserver/integrations/gitlogs"
 	"github.com/anti-raid/splashtail/webserver/routes/auth"
 	"github.com/anti-raid/splashtail/webserver/routes/core"
 	"github.com/anti-raid/splashtail/webserver/routes/platform"
@@ -185,6 +186,9 @@ func CreateWebserver() *chi.Mux {
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		w.Write([]byte(constants.MethodNotAllowed))
 	})
+
+	// Mount integrations
+	r.Mount("/integrations/gitlogs", gitlogs.Setup())
 
 	return r
 }

@@ -23,6 +23,14 @@ Splashtail is a monorepo containing all the code needed to run and setup Anti-Ra
     - **License:** AGPLv3
     - **Affidavits:** The developers of Anti-Raid are copyright owners of Arcadia and so may use it under the AGPLv3 or any license of their choice
 
+### Integration
+
+To increase our feature set and to popularize these bots, AntiRaid includes several integrations (forked/taken from other AGPL3-licensed projects that we either have permission to use or... owned/made the code for in the first place):
+
+- **Git Logs** 
+    - Website: [https://gitlogs.xyz](https://gitlogs.xyz)
+    - Github: [https://github.com/Git-Logs](https://github.com/Git-Logs)
+
 ## Communication
 
 Communication between the bot, jobserver, server and the ``mewld`` clusterer (used to run multiple clusters of the bot with each cluster responsible for a set of shards) happens in 3 primary ways.
