@@ -24,6 +24,8 @@ type CanonicalModule struct {
 	Description          string             `json:"description"`
 	Configurable         bool               `json:"configurable"`
 	CommandsConfigurable bool               `json:"commands_configurable"`
+	WebHidden            bool               `json:"web_hidden"`
+	IsDefaultEnabled     bool               `json:"is_default_enabled"`
 	Commands             []CanonicalCommand `json:"commands"`
 }
 

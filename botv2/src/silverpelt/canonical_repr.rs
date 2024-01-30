@@ -10,8 +10,17 @@ pub struct CanonicalModule {
     /// The description of the module
     pub description: String,
 
+    /// Whether or not the module should be visible on the websites command lists
+    pub web_hidden: bool,
+
     /// Whether or the module is configurable
     pub configurable: bool,
+
+    /// Whether or not individual commands in the module can be configured
+    pub commands_configurable: bool,
+
+    /// Whether the module is enabled or disabled by default
+    pub is_default_enabled: bool,
 
     /// The commands in the module
     pub commands: Vec<CanonicalCommand>,
@@ -113,6 +122,9 @@ impl From<super::Module> for CanonicalModule {
             name: module.name.to_string(),
             description: module.description.to_string(),
             configurable: module.configurable,
+            commands_configurable: module.commands_configurable,
+            web_hidden: module.web_hidden,
+            is_default_enabled: module.is_default_enabled,
             commands: module.commands.into_iter().map(|(cmd, perms)| {
                 CanonicalCommand::from_repr(&cmd, perms)
             }).collect(),

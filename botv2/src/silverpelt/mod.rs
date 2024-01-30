@@ -42,11 +42,17 @@ pub struct Module {
     /// The description of the module
     pub description: &'static str,
 
+    /// Whether or not the module should be visible on the websites command lists
+    pub web_hidden: bool,
+
     /// Whether or the module is configurable
     pub configurable: bool,
 
     /// Whether or not individual commands in the module can be configured
     pub commands_configurable: bool,
+
+    /// Whether the module is enabled or disabled by default
+    pub is_default_enabled: bool,
 
     /// The commands in the module
     pub commands: Vec<CommandAndPermissions>,
@@ -106,12 +112,25 @@ pub static COMMAND_EXTRA_DATA: Lazy<indexmap::IndexMap<String, CommandExtendedDa
     map
 });
 
-/// Command extra data (module cache)
-pub static COMMAND_MODULE_CACHE: Lazy<indexmap::IndexMap<String, Module>> = Lazy::new(|| {
+/// Command extra data (module cache) maps an module id to a module
+pub static MODULE_ID_CACHE: Lazy<indexmap::IndexMap<String, Module>> = Lazy::new(|| {
     let mut map = indexmap::IndexMap::new();
     
     for module in crate::modules::enabled_modules() {
         map.insert(module.id.to_string(), module);
+    }
+
+    map
+});
+
+/// Command id to its module id map
+pub static COMMAND_ID_MODULE_MAP: Lazy<indexmap::IndexMap<String, String>> = Lazy::new(|| {
+    let mut map = indexmap::IndexMap::new();
+    
+    for module in crate::modules::enabled_modules() {
+        for command in module.commands.iter() {
+            map.insert(command.0.name.to_string(), module.id.to_string());
+        }
     }
 
     map
@@ -142,7 +161,7 @@ pub static MODULE_EVENT_LISTENERS_CACHE: Lazy<indexmap::IndexMap<String, Vec<Mod
 /// Guild command configuration data
 #[derive(Clone, PartialEq, serde::Serialize, serde::Deserialize, Default)]
 pub struct GuildCommandConfiguration {
-    /// Thd ID
+    /// The ID
     pub id: String,
     /// The guild id (from db)
     pub guild_id: String,
@@ -152,6 +171,30 @@ pub struct GuildCommandConfiguration {
     pub perms: Option<PermissionChecks>,
     /// Whether or not the command is disabled
     pub disabled: bool,
+}
+
+/// Guild module configuration data
+#[derive(Clone, PartialEq, serde::Serialize, serde::Deserialize, Default)]
+pub struct GuildModuleConfiguration {
+    /// The ID
+    pub id: String,
+    /// The guild id (from db)
+    pub guild_id: String,
+    /// The module id
+    pub module: String,
+    /// Whether ot not the module is disabled or not. None means to use the default module configuration
+    pub disabled: Option<bool>,
+}
+
+impl GuildModuleConfiguration {
+    /// Useful for unit testing
+    #[cfg(test)]
+    fn root_module() -> Self {
+        Self {
+            module: "root".into(),
+            ..Default::default()
+        }
+    }
 }
 
 /// From name_split, construct a list of all permutations of the command name to check
@@ -184,7 +227,7 @@ pub fn permute_command_names(name: &str) -> Vec<String> {
 }
 
 /// Returns the configuration of a command
-pub async fn get_command_configuration(pool: &sqlx::PgPool, guild_id: &str, name: &str) -> Result<(CommandExtendedData, Option<GuildCommandConfiguration>), crate::Error> {
+pub async fn get_command_configuration(pool: &sqlx::PgPool, guild_id: &str, name: &str) -> Result<(CommandExtendedData, Option<GuildCommandConfiguration>, Option<GuildModuleConfiguration>), crate::Error> {    
     let permutations = permute_command_names(name);
     let root_cmd = permutations.first().unwrap();
 
@@ -195,6 +238,21 @@ pub async fn get_command_configuration(pool: &sqlx::PgPool, guild_id: &str, name
             format!("The command ``{}`` does not exist [no root configuration found?]", name).into()
         );
     };
+
+    // Check if theres any module configuration
+    let module_configuration = sqlx::query!(
+        "SELECT id, guild_id, module, disabled FROM guild_module_configurations WHERE guild_id = $1 AND module = $2",
+        guild_id,
+        COMMAND_ID_MODULE_MAP.get(root_cmd).ok_or::<crate::Error>("Unknown error determining module of command".into())?,
+    )
+    .fetch_optional(pool)
+    .await?
+    .map(|rec| GuildModuleConfiguration {
+        id: rec.id.hyphenated().to_string(),
+        guild_id: rec.guild_id,
+        module: rec.module,
+        disabled: rec.disabled,
+    });
 
     let mut cmd_data = root_cmd_data.get("").unwrap_or(&CommandExtendedData::default()).clone();
     for command in permutations.iter() {
@@ -233,7 +291,7 @@ pub async fn get_command_configuration(pool: &sqlx::PgPool, guild_id: &str, name
         }
     }
 
-    Ok((cmd_data, command_configuration))
+    Ok((cmd_data, command_configuration, module_configuration))
 }
 
 /// This function runs a single permission check on a command without taking any branching decisions
@@ -301,6 +359,7 @@ pub fn check_perms_single(cmd_qualified_name: &str, cmd_real_name: &str, check: 
 pub fn can_run_command(
     cmd_data: &CommandExtendedData, 
     command_config: &GuildCommandConfiguration, 
+    module_config: &GuildModuleConfiguration,
     cmd_qualified_name: &str, 
     member_native_perms: serenity::all::Permissions,
     member_kittycat_perms: &[String],
@@ -310,6 +369,24 @@ pub fn can_run_command(
             (
                 "command_disabled".into(),
                 format!("The command ``{}`` (inherited from ``{}``) is disabled on this server", cmd_qualified_name, command_config.command).into()
+            )
+        );
+    }
+
+    let Some(module) = MODULE_ID_CACHE.get(&module_config.module) else {
+        return Err(
+            (
+                "unknown_module".into(),
+                format!("The module ``{}`` does not exist", module_config.module).into()
+            )
+        );
+    };
+
+    if module_config.disabled.unwrap_or(!module.is_default_enabled) {
+        return Err(
+            (
+                "module_disabled".into(),
+                format!("The module ``{}`` is disabled on this server", module_config.module).into()
             )
         );
     }
@@ -563,6 +640,7 @@ mod tests {
                 perms: None,
                 disabled: false,
             },
+            &GuildModuleConfiguration::root_module(),
             "test",
             serenity::all::Permissions::empty(),
             &["abc.test".into()],
@@ -588,6 +666,7 @@ mod tests {
                         }),
                         disabled: false,
                     },
+                    &GuildModuleConfiguration::root_module(),
                     "test",
                     serenity::all::Permissions::empty(),
                     &["abc.test".into()],
@@ -615,6 +694,7 @@ mod tests {
                         }),
                         disabled: false,
                     },
+                    &GuildModuleConfiguration::root_module(),
                     "test",
                     serenity::all::Permissions::empty(),
                     &["abc.test".into()],
@@ -650,6 +730,7 @@ mod tests {
                         }),
                         disabled: false,
                     },
+                    &GuildModuleConfiguration::root_module(),
                     "test",
                     serenity::all::Permissions::BAN_MEMBERS,
                     &["abc.test".into()],
@@ -670,6 +751,7 @@ mod tests {
                         perms: None,
                         disabled: false,
                     },
+                    &GuildModuleConfiguration::root_module(),
                     "backups create",
                     serenity::all::Permissions::ADMINISTRATOR,
                     &[],
@@ -689,6 +771,7 @@ mod tests {
                     perms: None,
                     disabled: false,
                 },
+                &GuildModuleConfiguration::root_module(),
                 "backups create",
                 serenity::all::Permissions::ADMINISTRATOR,
                 &[],
@@ -721,6 +804,7 @@ mod tests {
                     }),
                     disabled: false,
                 },
+                &GuildModuleConfiguration::root_module(),
                 "test",
                 serenity::all::Permissions::BAN_MEMBERS,
                 &["abc.test".into()],

@@ -308,13 +308,15 @@ async fn main() {
 
                 let command = ctx.command();
 
-                if let Some(ref module) = command.category {
-                    if module == "root" {
-                        if !crate::config::CONFIG.discord_auth.can_use_bot.contains(&ctx.author().id) {
-                            return Err("Root commands are off-limits unless you are a bot owner or otherwise have been granted authorization!".into());
-                        }
-                        return Ok(true);
+                let Some(ref module) = command.category else {
+                    return Err("This command does not have a module, please contact support".into());
+                };
+
+                if module == "root" {
+                    if !crate::config::CONFIG.discord_auth.can_use_bot.contains(&ctx.author().id) {
+                        return Err("Root commands are off-limits unless you are a bot owner or otherwise have been granted authorization!".into());
                     }
+                    return Ok(true);
                 }
 
                 // Look for guild
@@ -359,9 +361,14 @@ async fn main() {
                         return Err("You must be in a server to run this command".into());
                     };
 
-                    let (cmd_data, command_config) = silverpelt::get_command_configuration(&data.pool, guild_id.to_string().as_str(), ctx.command().qualified_name.as_str()).await?;
+                    let (cmd_data, command_config, module_config) = silverpelt::get_command_configuration(&data.pool, guild_id.to_string().as_str(), ctx.command().qualified_name.as_str()).await?;
 
                     let command_config = command_config.unwrap_or_default();
+                    let module_config = {
+                        let mut cfg = module_config.unwrap_or_default();
+                        cfg.module = module.clone();
+                        cfg
+                    };
 
                     let (is_owner, member_perms) = if let Some(guild) = ctx.guild() {
                         let is_owner = member.user.id == guild.owner_id;
@@ -402,6 +409,7 @@ async fn main() {
                     if let Err(e) = silverpelt::can_run_command(
                         &cmd_data,
                         &command_config,
+                        &module_config,
                         &ctx.command().qualified_name,
                         member_perms,
                         &kittycat_perms,

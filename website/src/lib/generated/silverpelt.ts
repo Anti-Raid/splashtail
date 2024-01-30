@@ -22,6 +22,7 @@ export interface CanonicalModule {
   description: string;
   configurable: boolean;
   commands_configurable: boolean;
+  web_hidden: boolean;
   commands: CanonicalCommand[];
 }
 export type CanonicalCommandExtendedDataMap = Record<string, CommandExtendedData>;

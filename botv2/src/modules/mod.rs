@@ -1,5 +1,6 @@
 mod limits;
 mod server_backups;
+mod server_member_backups;
 mod core;
 mod root;
 
@@ -12,5 +13,6 @@ pub fn enabled_modules() -> Vec<crate::silverpelt::Module> {
         limits::module(),
         server_backups::module(),
         root::module(),
+        server_member_backups::module(),
     ]
 }

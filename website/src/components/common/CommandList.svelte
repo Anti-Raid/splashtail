@@ -12,7 +12,6 @@
 	import { Color } from "../inputs/button/colors";
 	import { DataHandler, Datatable, Th, ThFilter } from "@vincjo/datatables";
 	import { Readable } from "svelte/store";
-	import Icon from "@iconify/svelte";
 
     export let instanceList: InstanceList;
 
@@ -51,6 +50,8 @@
         let commands: LookedUpCommand[] = [];
 
         for(let module of Object.values(moduleData)) {
+            if(module?.web_hidden) continue; // Skip web_hidden modules, they are internal and are not publicly usable anyways
+
             for(let command of module?.commands) {
                 let checkProps = [
                     command?.command?.name,
@@ -139,7 +140,7 @@
 </script>
 
 <!--Cluster Menu at the right of the page-->
-<article class="command-list-article overflow-x-auto">
+<article class="command-list-article overflow-x-auto overflow-y-hidden h-full">
     <small class="text-red-600 word-wrap block mb-1">
         Different clusters may have different available modules due to outages, A/B testing and other reasons.
     </small>
@@ -165,7 +166,7 @@
                 extClass="block mb-2 w-full"
             />
         </nav>
-        <div class="cluster-map-content flex-1 px-2">
+        <div class="cluster-map-content flex-1 flex-grow px-2">
             {#if !state.clusterModuleData[state?.openCluster]}
                 {#await fetchCluster(state?.openCluster)}
                     <Message type="loading">
@@ -204,19 +205,50 @@
                     <!--Bar-->
                     <nav class="cluster-map flex-none border-r border-slate-500 w-40">
                         {#each Object.entries(state.clusterModuleData[state?.openCluster]) as [_, module]}
-                            <NavButton 
-                                current={state.openModule == module?.id}
-                                title={module?.name} 
-                                onClick={() => {
-                                    state.openModule = module?.id || state.clusterModuleData[state?.openCluster]["core"].id
-                                }}
-                                extClass="block mb-2 w-full"
-                            />
+                            {#if !module?.web_hidden}
+                                <NavButton 
+                                    current={state.openModule == module?.id}
+                                    title={module?.name} 
+                                    onClick={() => {
+                                        state.openModule = module?.id || state.clusterModuleData[state?.openCluster]["core"].id
+                                    }}
+                                    extClass="block mb-2 w-full"
+                                />
+                            {/if}
                         {/each}
                     </nav>
                     <!--Content-->
-                    <div class="cluster-module-list-content flex-1 px-2">
+                    <div class="cluster-module-list-content flex-1 flex-grow px-2 mb-auto">
                         {#if state.openModule}
+                            <h1 class="text-2xl font-semibold">{state.clusterModuleData[state?.openCluster][state?.openModule]?.name}</h1>
+                            <p class="text-slate-200">{state.clusterModuleData[state?.openCluster][state?.openModule]?.description}</p>
+
+                            {#if state.clusterModuleData[state?.openCluster][state?.openModule].configurable}
+                                <p class="text-green-500 mt-2">
+                                    <strong>This module is CONFIGURABLE</strong>
+                                </p>
+                            {:else}
+                                <p class="text-red-500 mt-2">
+                                    <strong>This module is NOT CONFIGURABLE</strong>
+                                </p>
+                            {/if}
+
+                            {#if state.clusterModuleData[state?.openCluster][state?.openModule].commands_configurable}
+                                <p class="text-green-500 mt-2">
+                                    <strong>Commands in this module are individually CONFIGURABLE</strong>
+                                </p>
+                            {:else}
+                                <p class="text-red-500 mt-2">
+                                    <strong>Commands in this module are NOT individually CONFIGURABLE</strong>
+                                </p>
+                            {/if}
+
+                            {#if state.clusterModuleData[state?.openCluster][state?.openModule].web_hidden}
+                                <p class="text-red-500 mt-2">
+                                    <strong>This module is HIDDEN on the website and dashboard</strong>
+                                </p>
+                            {/if}
+
                             {#await createCmdDataTable(state?.openModule)}
                                 <Message type="loading">
                                     Loading commands...

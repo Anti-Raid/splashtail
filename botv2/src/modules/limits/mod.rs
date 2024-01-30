@@ -14,6 +14,8 @@ pub fn module() -> crate::silverpelt::Module {
         description: "Experimental server ratelimiting module. Not yet suitable for production use.",
         configurable: true,
         commands_configurable: true,
+        web_hidden: false,
+        is_default_enabled: false,
         commands: vec![
             (cmds::limits(), indexmap! {
                 "add" => crate::silverpelt::CommandExtendedData::kittycat_simple("limits", "add"),
