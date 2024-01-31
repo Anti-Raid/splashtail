@@ -1,4 +1,3 @@
-import { goto } from "$app/navigation"
 import { get } from "$lib/configs/functions/services"
 import { fetchClient } from "$lib/fetch/fetch"
 import { ApiError, OauthMeta } from "$lib/generated/types"
@@ -14,5 +13,5 @@ export const loginUser = async () => {
 
     let resp: OauthMeta = await res.json()
 
-    goto(`${resp?.oauth2_base}?client_id=${resp?.client_id}&scope=${resp?.scopes?.join('%20')}&response_type=code&redirect_uri=${window.location.origin}/authorize`)
+    window.location.href = (`${resp?.oauth2_base}?client_id=${resp?.client_id}&scope=${resp?.scopes?.join('%20')}&response_type=code&redirect_uri=${window.location.origin}/authorize`)
 }

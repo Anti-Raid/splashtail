@@ -1,7 +1,6 @@
 <script lang="ts">
 	import Update from './Update.svelte';
 	import { page } from '$app/stores';
-	import { onMount } from 'svelte';
 	import { getAuthCreds } from '../lib/auth/getAuthCreds';
 	import { checkAuthCreds } from '../lib/auth/checkAuthCreds';
 	import { logoutUser } from '../lib/auth/logoutUser';
@@ -10,6 +9,8 @@
 	import logger from '../lib/ui/logger';
 	import Icon from '@iconify/svelte';
 	import NavButton from './inputs/button/NavButton.svelte';
+	import { loginUser } from '$lib/auth/loginUser';
+	import { error, success } from '$lib/toast';
 
 	let navigation = [
 		{ name: 'Home', href: '/' },
@@ -69,7 +70,11 @@
 	}
 
 	const loginDiscord = async () => {
-		// ...
+		try {
+			await loginUser()
+		} catch (err) {
+			error(err?.toString() || "Failed to login")
+		}
 	}
 
 	$: {
@@ -125,9 +130,7 @@
 				{/if}
 			</button>
 			{#await getLoginData()}
-				<span class="w-auto flex items-center justify-center shadow-lg gap-x-2 shadow-themable-600/20 rounded-xl py-2.5 font-medium px-7 bg-gradient-to-tl from-themable-500 to-themable-700 text-white  hover:opacity-80 transition duration-200">
-					<Icon icon="fa-solid:yin-yang" width="32px" class="animate-spin text-white" />
-				</span>
+				<Icon icon="fa-solid:yin-yang" width="32px" class="animate-spin text-white" />
 			{:then data}
 				{#if data && data?.user}
 					<div class="w-full">

@@ -1,7 +1,6 @@
 package types
 
 type AuthorizeRequest struct {
-	ClientID    string `json:"client_id" validate:"required"`
 	Code        string `json:"code" validate:"required,min=5"`
 	RedirectURI string `json:"redirect_uri" validate:"required"`
 	Protocol    string `json:"protocol" validate:"required" description:"Should be 'a1'. This is to identify and block older clients that don't support newer protocols"`
