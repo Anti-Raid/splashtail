@@ -222,9 +222,9 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 			ClusterID: utils.Pointer(uint16(clusterId)),
 			Message: &animusmagic.AnimusMessage{
 				GuildsExist: &struct {
-					GuildsExist []string `json:"guilds_exist"`
+					Guilds []string `json:"guilds"`
 				}{
-					GuildsExist: guilds,
+					Guilds: guilds,
 				},
 			},
 		})
@@ -239,7 +239,7 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 		}
 
 		for _, resp := range moduleListResp {
-			for i, v := range resp.Resp.GuildsExist.GuildsExist {
+			for i, v := range resp.Resp.GuildsExist.Guilds {
 				if v == 1 {
 					botInGuild = append(botInGuild, guilds[i])
 				}

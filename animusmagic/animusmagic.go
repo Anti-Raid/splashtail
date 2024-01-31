@@ -25,6 +25,7 @@ type ClientCache struct {
 type ClientResponse struct {
 	ClusterID uint16
 	Op        byte
+	Error     map[string]string // Only applicable if Op is OpError
 	Resp      *AnimusResponse
 }
 
@@ -72,7 +73,7 @@ func (c *AnimusMagicClient) ListenOnce(ctx context.Context, redis rueidis.Client
 				// Next byte is the op
 				op := bytesData[2]
 
-				if op != OpResponse {
+				if op != OpResponse && op != OpError {
 					return
 				}
 
@@ -89,32 +90,54 @@ func (c *AnimusMagicClient) ListenOnce(ctx context.Context, redis rueidis.Client
 					// Rest is the payload
 					payload := bytesData[len(commandId)+4:]
 
-					var resp *AnimusResponse
+					var response *ClientResponse
 
-					err := json.Unmarshal(payload, &resp)
+					if op == OpResponse {
+						var resp *AnimusResponse
+						err := json.Unmarshal(payload, &resp)
 
-					if err != nil {
-						l.Error("[animus magic] error unmarshaling payload", zap.Error(err))
-						return
+						if err != nil {
+							l.Error("[animus magic] error unmarshaling payload", zap.Error(err))
+							return
+						}
+
+						response = &ClientResponse{
+							ClusterID: clusterId,
+							Op:        op,
+							Resp:      resp,
+						}
+					} else {
+						var data map[string]string
+						err := json.Unmarshal(payload, &data)
+
+						if err != nil {
+							data = map[string]string{
+								"client_error": "failed to unmarshal error payload:" + err.Error(),
+							}
+						}
+
+						response = &ClientResponse{
+							ClusterID: clusterId,
+							Op:        op,
+							Error:     data,
+						}
 					}
 
 					n, ok := c.Notify.Load(commandId)
 
-					response := &ClientResponse{
-						ClusterID: clusterId,
-						Op:        op,
-						Resp:      resp,
-					}
-
 					if !ok {
 						l.Warn("[animus magic] received response for unknown command", zap.String("commandId", commandId))
-						c.UpdateCache(response) // At least update the cache
+						if response.Op == OpResponse {
+							c.UpdateCache(response) // At least update the cache
+						}
 						return
 					}
 
 					n <- response
 					c.Notify.Delete(commandId)
-					c.UpdateCache(response)
+					if response.Op == OpResponse {
+						c.UpdateCache(response)
+					}
 				}()
 			})
 		},
@@ -164,6 +187,7 @@ type RequestData struct {
 	ExpectedResponseCount *int           // must be set if wildcard. this is the number of responses expected
 	CommandID             string         // if unset, will be randomly generated
 	Op                    *byte          // if unset, will be set to OpRequest
+	IgnoreOpError         bool           // if true, will ignore OpError responses
 	Message               *AnimusMessage // must be set
 }
 
@@ -227,6 +251,11 @@ func (c *AnimusMagicClient) Request(ctx context.Context, redis rueidis.Client, d
 			return nil, ctx.Err()
 		case resp := <-notify:
 			resps = append(resps, resp)
+
+			if resp.Op == OpError && !data.IgnoreOpError {
+				return resps, ErrOpError
+			}
+
 			if data.ExpectedResponseCount != nil && *data.ExpectedResponseCount > 1 {
 				if len(resps) >= *data.ExpectedResponseCount {
 					return resps, nil

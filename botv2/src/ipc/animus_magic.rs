@@ -11,14 +11,16 @@ use serenity::all::GuildId;
 #[derive(Serialize, Deserialize, PartialEq)]
 pub enum AnimusOp {
     Request,
-    Response
+    Response,
+    Error,
 }
 
 impl AnimusOp {
     pub fn to_byte(&self) -> u8 {
         match self {
             AnimusOp::Request => 0x0,
-            AnimusOp::Response => 0x1
+            AnimusOp::Response => 0x1,
+            AnimusOp::Error => 0x2,
         }
     }
 }
@@ -202,6 +204,16 @@ impl AnimusMagicClient {
                     Ok(msg) => msg,
                     Err(e) => {
                         log::warn!("Invalid message recieved on channel {} [json extract error] {}", message.channel, e);
+                        // Send error
+                        if let Err(e) = Self::error(redis_pool, &meta.command_id, &serde_json::json!{
+                            {
+                                "message": "Invalid payload",
+                                "context": e.to_string()
+                            }
+                        }).await {
+                            log::warn!("Failed to send error response: {}", e);
+                        }
+
                         return;
                     }
                 };
@@ -241,15 +253,35 @@ impl AnimusMagicClient {
 
                 let Ok(data) = serde_json::to_value(data) else {
                     log::warn!("Failed to serialize response for message on channel {}", message.channel);
+
+                    // Send error
+                    if let Err(e) = Self::error(redis_pool, &meta.command_id, &serde_json::json!{
+                        {
+                            "message": "Error serializing response [no context available]",
+                        }
+                    }).await {
+                        log::warn!("Failed to send error response: {}", e);
+                    }                    
+
                     return;
                 };
 
                 let Ok(payload) = AnimusMessage::create_payload(&meta.command_id, AnimusOp::Response, &data) else {
                     log::warn!("Failed to create payload for message on channel {}", message.channel);
+                    
+                    // Send error
+                    if let Err(e) = Self::error(redis_pool, &meta.command_id, &serde_json::json!{
+                        {
+                            "message": "Error creating response payload [no context available]",
+                        }
+                    }).await {
+                        log::warn!("Failed to send error response: {}", e);
+                    }
+
                     return;
                 };
 
-                // Convert payload to redis value
+                // Convert payload to redis value, from here the Error op is useless to try and send
                 let payload = fred::types::RedisValue::Bytes(payload.into());
 
                 let conn = redis_pool.next();
@@ -268,5 +300,25 @@ impl AnimusMagicClient {
         }
 
         unreachable!("IPC listener exited");    
+    }
+
+    /// Helper method to send an error response
+    pub async fn error(redis_pool: fred::clients::RedisPool, command_id: &str, data: &serde_json::Value) -> Result<(), crate::Error> {
+        let Ok(payload) = AnimusMessage::create_payload(command_id, AnimusOp::Error, data) else {
+            return Err("Failed to create payload for error message".into());
+        };
+
+        // Convert payload to redis value
+        let payload = fred::types::RedisValue::Bytes(payload.into());
+
+        let conn = redis_pool.next();
+        conn.connect();
+        let Ok(()) = conn.wait_for_connect().await else {
+            return Err("Failed to connect to redis".into());
+        };
+        match conn.publish("animus_magic", payload).await {
+            Ok(()) => Ok(()),
+            Err(e) => Err(format!("Failed to publish response to redis: {}", e).into())
+        }
     }
 }

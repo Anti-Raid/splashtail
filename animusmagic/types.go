@@ -11,10 +11,12 @@ var ErrNilRequestData = errors.New("request validation error: nil request data")
 var ErrNilMessage = errors.New("request validation error: nil message")
 var ErrNilClusterID = errors.New("request validation error: nil cluster id")
 var ErrNilExpectedResponseCount = errors.New("request validation error: nil expected response count")
+var ErrOpError = errors.New("request validation error: op is OpError")
 
 const (
 	OpRequest         = 0x0
 	OpResponse        = 0x1
+	OpError           = 0x2
 	WildcardClusterID = 0xFFFF // top means wildcard/all clusters
 )
 
@@ -26,13 +28,13 @@ type AnimusResponse struct {
 	}
 
 	GuildsExist *struct {
-		GuildsExist []uint8 `json:"guilds_exist"`
+		Guilds []uint8 `json:"guilds"`
 	}
 }
 
 type AnimusMessage struct {
 	Modules     *struct{} `json:"Modules,omitempty"`
 	GuildsExist *struct {
-		GuildsExist []string `json:"guilds_exist"`
+		Guilds []string `json:"guilds"`
 	} `json:"GuildsExist,omitempty"`
 }
