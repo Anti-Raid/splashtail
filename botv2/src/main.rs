@@ -308,9 +308,12 @@ async fn main() {
 
                 let command = ctx.command();
 
-                let Some(ref module) = command.category else {
-                    return Err("This command does not have a module, please contact support".into());
-                };
+                // Check COMMAND_ID_MODULE_MAP
+                if !silverpelt::COMMAND_ID_MODULE_MAP.contains_key(&command.name) {
+                    return Err("This command is not registered in the database, please contact support".into());
+                }
+
+                let module = silverpelt::COMMAND_ID_MODULE_MAP.get(&command.name).unwrap();
 
                 if module == "root" {
                     if !crate::config::CONFIG.discord_auth.can_use_bot.contains(&ctx.author().id) {

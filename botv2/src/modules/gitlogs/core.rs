@@ -6,7 +6,6 @@ use crate::{Context, Error, config};
 
 /// Gitlogs base command
 #[poise::command(
-    category = "Gitlogs",
     prefix_command,
     slash_command,
     guild_cooldown = 10,
