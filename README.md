@@ -88,6 +88,7 @@ In some cases, the internal representation of a type is not suitable for externa
 For initial release:
 
 - Stabilizing the module+command permission system []
+- Add the ability to enable/disable modules and commands and also override command permissions []
 - Server Member Backup/Restore []
 - Basic Moderation (warn/kick/ban+tempban/unban) []
 - Passive Anti-nuke (lockserver/unlockserver/lockchannel/unlockchannel) []
