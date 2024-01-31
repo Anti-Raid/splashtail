@@ -28,7 +28,7 @@ type AnimusResponse struct {
 	}
 
 	GuildsExist *struct {
-		Guilds []uint8 `json:"guilds"`
+		GuildsExist []uint8 `json:"guilds_exist"`
 	}
 }
 

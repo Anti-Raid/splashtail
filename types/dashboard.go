@@ -7,6 +7,7 @@ type DashboardGuild struct {
 }
 
 type DashboardGuildData struct {
-	Guilds      []*DashboardGuild `json:"guilds" description:"The guilds the user is in"`
-	BotInGuilds []string          `json:"has_bot" description:"A list of guild IDs that the user has the bot in"`
+	Guilds        []*DashboardGuild `json:"guilds" description:"The guilds the user is in"`
+	BotInGuilds   []string          `json:"has_bot" description:"A list of guild IDs that the user has the bot in"`
+	UnknownGuilds []string          `json:"unknown_guilds" description:"A list of guild IDs where the bot is in an outage etc. in"`
 }

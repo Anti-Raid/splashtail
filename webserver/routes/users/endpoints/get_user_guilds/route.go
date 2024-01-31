@@ -44,9 +44,10 @@ func Docs() *docs.Doc {
 }
 
 func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
-	var limit *ratelimit.Limit
+	var limit ratelimit.Limit
+	var err error
 	if r.URL.Query().Get("refresh") == "true" {
-		limit, err := ratelimit.Ratelimit{
+		limit, err = ratelimit.Ratelimit{
 			Expiry:      5 * time.Minute,
 			MaxRequests: 3,
 			Bucket:      "get_user_guilds_refresh",
@@ -67,7 +68,7 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 			}
 		}
 	} else {
-		limit, err := ratelimit.Ratelimit{
+		limit, err = ratelimit.Ratelimit{
 			Expiry:      5 * time.Minute,
 			MaxRequests: 5,
 			Bucket:      "get_user_guilds_norefresh",
@@ -217,7 +218,18 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 
 	// Now send the requests
 	var botInGuild []string
+	var unknownGuilds []string
 	for clusterId, guilds := range clusterGuildReqs {
+		// Check if the cluster is Up
+		for _, v := range state.MewldInstanceList.Instances {
+			if v.ClusterID == clusterId {
+				if !v.Active || v.CurrentlyKilling || len(v.ClusterHealth) == 0 {
+					unknownGuilds = append(unknownGuilds, guilds...)
+					continue
+				}
+			}
+		}
+
 		moduleListResp, err := state.AnimusMagicClient.Request(d.Context, state.Rueidis, &animusmagic.RequestData{
 			ClusterID: utils.Pointer(uint16(clusterId)),
 			Message: &animusmagic.AnimusMessage{
@@ -239,7 +251,8 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 		}
 
 		for _, resp := range moduleListResp {
-			for i, v := range resp.Resp.GuildsExist.Guilds {
+			state.Logger.Info("Got response from animus magic", zap.Any("resp", resp))
+			for i, v := range resp.Resp.GuildsExist.GuildsExist {
 				if v == 1 {
 					botInGuild = append(botInGuild, guilds[i])
 				}
@@ -249,8 +262,9 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 
 	return uapi.HttpResponse{
 		Json: &types.DashboardGuildData{
-			Guilds:      dashguilds,
-			BotInGuilds: botInGuild,
+			Guilds:        dashguilds,
+			BotInGuilds:   botInGuild,
+			UnknownGuilds: unknownGuilds,
 		},
 		Headers: limit.Headers(),
 	}
