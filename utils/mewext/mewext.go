@@ -29,3 +29,14 @@ func GetShardIDFromGuildID(guildID string, shardCount int) (uint64, error) {
 
 	return uint64(gidNum>>22) % uint64(shardCount), nil
 }
+
+// Given guild ID, return cluster ID
+func GetClusterIDFromGuildID(guildID string, clusterMap []proc.ClusterMap, shardCount int) (int, error) {
+	shardID, err := GetShardIDFromGuildID(guildID, shardCount)
+
+	if err != nil {
+		return 0, err
+	}
+
+	return GetClusterOfShard(shardID, clusterMap), nil
+}

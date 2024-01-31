@@ -14,8 +14,10 @@ export const checkAuthCreds = async (data: LSAuthData) => {
         })
     })
 
-    if (!testAuthResp.ok) {
+    if (testAuthResp.status == 401) {
         return false
+    } else if (!testAuthResp.ok) {
+        throw new Error('An error occurred while checking auth credentials')
     }
 
     logger.info('Auth', 'Auth token is valid!')

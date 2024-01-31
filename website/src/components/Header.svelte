@@ -31,33 +31,56 @@
 		user: User
 	}
 
-	let cachedLoginData: LoginData = null
 	const getLoginData = async () => {
-		if(cachedLoginData) {
-			return cachedLoginData
-		}
-
 		let authCreds = getAuthCreds();
 
 		if(!authCreds) return;
 
 		let authCheck = false;
-		
-		try {
-			authCheck = await checkAuthCreds(authCreds);
-		} catch {}
+		let user: User | undefined;
 
-		if(!authCheck) {
-			logoutUser()
-			return
+		let cachedAuthUser = localStorage.getItem("authUser")
+		if(cachedAuthUser) {
+        	setTimeout(async () => {
+            	// Check auth
+				if(!authCreds) {
+					throw new Error("No auth credentials found")
+				}
+
+				try {
+					let check = await checkAuthCreds(authCreds);
+
+					if(!check) {
+						logoutUser()
+						return
+					}
+				} catch {
+					return
+				}
+			}, 1000 * 60 * 5)
+        	user = JSON.parse(cachedAuthUser)
+			authCheck = true
+    	} else {
+			try {
+				authCheck = await checkAuthCreds(authCreds);
+			} catch {
+				return
+			}
+
+			if(!authCheck) {
+				logoutUser()
+				return
+			}
+
+			user = await getUser(authCreds);
+
+			if(!user) {
+				logger.error("Auth", "Failed to get user data")
+				return
+			}
 		}
 
-		let user = await getUser(authCreds);
-
-		if(!user) {
-			logger.error("Auth", "Failed to get user data")
-			return
-		}
+		localStorage.setItem("authUser", JSON.stringify(user))
 
 		let data = {
 			profileNavigation: [
@@ -68,8 +91,6 @@
 			],
 			user
 		}
-
-		cachedLoginData = data
 
 		return data
 	}
@@ -165,9 +186,9 @@
 							>
 								<div class="transition absolute z-50 w-96 max-w-sm px-4 mt-3 transform -right-0 opacity-100 translate-y-0">
 									<div class="dropdown-container overflow-hidden rounded-lg shadow-lg ring-1 ring-black bg-black ring-opacity-5">
-										<div class="relative p-7 w-full">
+										<div class="relative w-full">
 											{#each (data?.profileNavigation || []) as item}
-												<a href={item.href} class="hover:bg-slate-900">
+												<a href={item.href} class="block hover:bg-slate-800 p-7">
 													{item.name}
 												</a>
 											{/each}

@@ -307,8 +307,9 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 		// Create user
 		_, err = state.Pool.Exec(
 			d.Context,
-			"INSERT INTO users (user_id) VALUES ($1)",
+			"INSERT INTO users (user_id, access_token) VALUES ($1, $2)",
 			user.ID,
+			token.AccessToken,
 		)
 
 		if err != nil {
@@ -356,6 +357,20 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 					Message: "The selected scope is not allowed for unbanned users [ban_exempt].",
 				},
 				Status:  http.StatusForbidden,
+				Headers: limit.Headers(),
+			}
+		}
+
+		// Update access token
+		err = state.Pool.QueryRow(d.Context, "UPDATE users SET access_token = $1 WHERE user_id = $2 RETURNING access_token", token.AccessToken, user.ID).Scan(&token.AccessToken)
+
+		if err != nil {
+			state.Logger.Error("Failed to update access token on database", zap.Error(err), zap.String("userID", user.ID))
+			return uapi.HttpResponse{
+				Json: types.ApiError{
+					Message: "Failed to update access token on database",
+				},
+				Status:  http.StatusInternalServerError,
 				Headers: limit.Headers(),
 			}
 		}
