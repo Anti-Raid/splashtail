@@ -130,6 +130,10 @@ pub static COMMAND_ID_MODULE_MAP: Lazy<indexmap::IndexMap<String, String>> = Laz
     for module in crate::modules::enabled_modules() {
         for command in module.commands.iter() {
             map.insert(command.0.name.to_string(), module.id.to_string());
+
+            for sub in command.0.subcommands.iter() {
+                map.insert(sub.name.to_string(), module.id.to_string());
+            }
         }
     }
 
