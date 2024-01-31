@@ -5,7 +5,7 @@ type AuthorizeRequest struct {
 	Code        string `json:"code" validate:"required,min=5"`
 	RedirectURI string `json:"redirect_uri" validate:"required"`
 	Protocol    string `json:"protocol" validate:"required" description:"Should be 'a1'. This is to identify and block older clients that don't support newer protocols"`
-	Scope       string `json:"scope" validate:"required,oneof=normal ban_exempt external_auth"`
+	Scope       string `json:"scope" validate:"required,oneof=normal ban_exempt"`
 }
 
 type UserLogin struct {
@@ -14,8 +14,9 @@ type UserLogin struct {
 }
 
 type OauthMeta struct {
-	ClientID string `json:"client_id" description:"The client ID"`
-	URL      string `json:"url" description:"The URL to redirect the user to for discord oauth2"`
+	ClientID   string   `json:"client_id" description:"The client ID"`
+	Scopes     []string `json:"scopes" description:"The scopes to use in authentication"`
+	Oauth2Base string   `json:"oauth2_base" description:"The base URL for oauth2 authentication"`
 }
 
 type TestAuth struct {

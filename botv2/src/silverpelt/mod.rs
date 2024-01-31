@@ -6,17 +6,101 @@ use indexmap::{indexmap, IndexMap};
 use serenity::all::{GuildId, UserId};
 use futures::future::BoxFuture;
 
+/// The silverpelt cache is a structure that contains the core state for the bot
+pub struct SilverpeltCache {
+    /// Cache of whether a (GuildId, UserId) pair has the permission to run a command
+    pub command_permission_cache: Cache<(GuildId, UserId), IndexMap<String, CachedPermResult>>,
+
+    /// Cache of the extended data given a command (the extended data map stores the default base permissions and other data per command)
+    pub command_extra_data_map: dashmap::DashMap<String, CommandExtendedDataMap>,
+
+    /// A commonly needed operation is mapping a module id to its respective module
+    /// 
+    /// Module_id_cache is a cache of module id to module
+    pub module_id_cache: dashmap::DashMap<String, Module>,
+
+    /// Command ID to module map
+    /// 
+    /// This uses an indexmap for now to avoid sending values over await point
+    pub command_id_module_map: indexmap::IndexMap<String, String>,
+
+    /// Cache of the canonical forms of all modules
+    pub canonical_module_cache: dashmap::DashMap<String, canonical_repr::CanonicalModule>,
+
+    /// Cache of all event listeners for a given module
+    pub module_event_listeners_cache: indexmap::IndexMap<String, Vec<ModuleEventHandler>>,
+}
+
+impl SilverpeltCache {
+    pub fn new() -> Self {
+        Self {
+            command_permission_cache: Cache::builder()
+                .time_to_live(std::time::Duration::from_secs(60))
+                .build(),
+            command_extra_data_map: {
+                let map = dashmap::DashMap::new();
+    
+                for module in crate::modules::modules() {
+                    for (command, extended_data) in module.commands {
+                        map.insert(command.name.clone(), extended_data);
+                    }
+                }
+
+                map
+            },
+            module_id_cache: {
+                let map = dashmap::DashMap::new();
+    
+                for module in crate::modules::modules() {
+                    map.insert(module.id.to_string(), module);
+                }
+            
+                map
+            },
+            command_id_module_map: {
+                let mut map = indexmap::IndexMap::new();
+    
+                for module in crate::modules::modules() {
+                    for command in module.commands.iter() {
+                        map.insert(command.0.name.to_string(), module.id.to_string());
+
+                        for sub in command.0.subcommands.iter() {
+                            map.insert(sub.name.to_string(), module.id.to_string());
+                        }
+                    }
+                }
+
+                map
+            },
+            canonical_module_cache: {
+                let map = dashmap::DashMap::new();
+    
+                for module in crate::modules::modules() {
+                    map.insert(module.id.to_string(), canonical_repr::CanonicalModule::from(module));
+                }
+
+                map
+            },
+            module_event_listeners_cache: {
+                let mut map = indexmap::IndexMap::new();
+    
+                for module in crate::modules::modules() {
+                    map.insert(module.id.to_string(), module.event_handlers);
+                }
+
+                map
+            }
+        }
+    }
+}
+
+pub static SILVERPELT_CACHE: Lazy<SilverpeltCache> = Lazy::new(SilverpeltCache::new);
+
 #[derive(Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 pub enum CachedPermResult {
     Ok,
     Err(String),
 }
-
-pub static COMMAND_PERMISSION_CACHE : Lazy<Cache<(GuildId, UserId), IndexMap<String, CachedPermResult>>> = Lazy::new(|| {
-    Cache::builder()
-    .time_to_live(std::time::Duration::from_secs(60))
-    .build()
-});
 
 pub type Command = poise::Command<crate::Data, crate::Error>;
 pub type CommandExtendedDataMap = IndexMap<&'static str, CommandExtendedData>;
@@ -97,70 +181,7 @@ impl Default for CommandExtendedData {
             },
         }
     }
-}
-
-/// Command extra data (permissions)
-pub static COMMAND_EXTRA_DATA: Lazy<indexmap::IndexMap<String, CommandExtendedDataMap>> = Lazy::new(|| {
-    let mut map = indexmap::IndexMap::new();
-    
-    for module in crate::modules::enabled_modules() {
-        for (command, extended_data) in module.commands {
-            map.insert(command.name.clone(), extended_data);
-        }
-    }
-
-    map
-});
-
-/// Command extra data (module cache) maps an module id to a module
-pub static MODULE_ID_CACHE: Lazy<indexmap::IndexMap<String, Module>> = Lazy::new(|| {
-    let mut map = indexmap::IndexMap::new();
-    
-    for module in crate::modules::enabled_modules() {
-        map.insert(module.id.to_string(), module);
-    }
-
-    map
-});
-
-/// Command id to its module id map
-pub static COMMAND_ID_MODULE_MAP: Lazy<indexmap::IndexMap<String, String>> = Lazy::new(|| {
-    let mut map = indexmap::IndexMap::new();
-    
-    for module in crate::modules::enabled_modules() {
-        for command in module.commands.iter() {
-            map.insert(command.0.name.to_string(), module.id.to_string());
-
-            for sub in command.0.subcommands.iter() {
-                map.insert(sub.name.to_string(), module.id.to_string());
-            }
-        }
-    }
-
-    map
-});
-
-/// Module extra data (canonical forms)
-pub static CANONICAL_MODULE_CACHE: Lazy<indexmap::IndexMap<String, canonical_repr::CanonicalModule>> = Lazy::new(|| {
-    let mut map = indexmap::IndexMap::new();
-    
-    for module in crate::modules::enabled_modules() {
-        map.insert(module.id.to_string(), canonical_repr::CanonicalModule::from(module));
-    }
-
-    map
-});
-
-/// Module event listeners cache
-pub static MODULE_EVENT_LISTENERS_CACHE: Lazy<indexmap::IndexMap<String, Vec<ModuleEventHandler>>> = Lazy::new(|| {
-    let mut map = indexmap::IndexMap::new();
-    
-    for module in crate::modules::enabled_modules() {
-        map.insert(module.id.to_string(), module.event_handlers);
-    }
-
-    map
-});
+}   
 
 /// Guild command configuration data
 #[derive(Clone, PartialEq, serde::Serialize, serde::Deserialize, Default)]
@@ -235,7 +256,7 @@ pub async fn get_command_configuration(pool: &sqlx::PgPool, guild_id: &str, name
     let permutations = permute_command_names(name);
     let root_cmd = permutations.first().unwrap();
 
-    let root_cmd_data = COMMAND_EXTRA_DATA.get(root_cmd);
+    let root_cmd_data = SILVERPELT_CACHE.command_extra_data_map.get(root_cmd);
 
     let Some(root_cmd_data) = root_cmd_data else {
         return Err(
@@ -247,7 +268,7 @@ pub async fn get_command_configuration(pool: &sqlx::PgPool, guild_id: &str, name
     let module_configuration = sqlx::query!(
         "SELECT id, guild_id, module, disabled FROM guild_module_configurations WHERE guild_id = $1 AND module = $2",
         guild_id,
-        COMMAND_ID_MODULE_MAP.get(root_cmd).ok_or::<crate::Error>("Unknown error determining module of command".into())?,
+        SILVERPELT_CACHE.command_id_module_map.get(root_cmd).ok_or::<crate::Error>("Unknown error determining module of command".into())?,
     )
     .fetch_optional(pool)
     .await?
@@ -376,23 +397,25 @@ pub fn can_run_command(
             )
         );
     }
+    
+    {
+        let Some(module) = SILVERPELT_CACHE.module_id_cache.get(&module_config.module) else {
+            return Err(
+                (
+                    "unknown_module".into(),
+                    format!("The module ``{}`` does not exist", module_config.module).into()
+                )
+            );
+        };
 
-    let Some(module) = MODULE_ID_CACHE.get(&module_config.module) else {
-        return Err(
-            (
-                "unknown_module".into(),
-                format!("The module ``{}`` does not exist", module_config.module).into()
-            )
-        );
-    };
-
-    if module_config.disabled.unwrap_or(!module.is_default_enabled) {
-        return Err(
-            (
-                "module_disabled".into(),
-                format!("The module ``{}`` is disabled on this server", module_config.module).into()
-            )
-        );
+        if module_config.disabled.unwrap_or(!module.is_default_enabled) {
+            return Err(
+                (
+                    "module_disabled".into(),
+                    format!("The module ``{}`` is disabled on this server", module_config.module).into()
+                )
+            );
+        }
     }
 
     let perms = command_config.perms.as_ref().unwrap_or(&cmd_data.default_perms);

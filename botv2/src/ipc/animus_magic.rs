@@ -210,7 +210,9 @@ impl AnimusMagicClient {
                     AnimusMessage::Modules {}  => {
                         let mut modules = indexmap::IndexMap::new();
 
-                        for (id, module) in crate::silverpelt::CANONICAL_MODULE_CACHE.iter() {
+                        for idm in crate::silverpelt::SILVERPELT_CACHE.canonical_module_cache.iter() {
+                            let id = idm.key();
+                            let module = idm.value();
                             modules.insert(id.to_string(), module.clone());
                         }
 

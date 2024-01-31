@@ -17,7 +17,8 @@ export interface UserLogin {
 }
 export interface OauthMeta {
   client_id: string;
-  url: string;
+  scopes: string[];
+  oauth2_base: string;
 }
 export interface TestAuth {
   auth_type: string;

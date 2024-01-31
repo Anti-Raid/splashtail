@@ -4,6 +4,7 @@ pub fn pg_interval_to_secs(i: PgInterval) -> i64 {
     i.microseconds / 1000000 + ((i.days * 86400) as i64) + ((i.months * 2628000) as i64)
 }
 
+#[allow(dead_code)]
 pub fn secs_to_pg_interval(secs: i64) -> PgInterval {
     PgInterval {
         microseconds: secs * 1000000,

@@ -15,13 +15,13 @@ Splashtail is a monorepo containing all the code needed to run and setup Anti-Ra
     - **Commit:** 5554dadbd98ed4bd2a9594ac7af8d9ff06108322
     - **Permalink:** https://github.com/InfinityBotList/Arcadia/commit/5554dadbd98ed4bd2a9594ac7af8d9ff06108322
     - **License:** AGPLv3
-    - **Affidavits:** The developers of Anti-Raid are copyright owners of Arcadia and so may use it under the AGPLv3 or any license of their choice
+    - **Affidavits:** Licensed under the AGPLv3
 - **arcadia-panel** => Internal staff website to manage Anti-Raid
     - **Forked from:** https://github.com/infinitybotlist/panelv2
     - **Commit:** 61c626e5bf383fc8b277e836a9fcb9f02250bcb6
     - **Permalink:** https://github.com/InfinityBotList/panelv2/commit/61c626e5bf383fc8b277e836a9fcb9f02250bcb6
     - **License:** AGPLv3
-    - **Affidavits:** The developers of Anti-Raid are copyright owners of Arcadia and so may use it under the AGPLv3 or any license of their choice
+    - **Affidavits:** Licensed under the AGPLv3
 
 ### Integration
 

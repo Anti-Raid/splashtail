@@ -12,6 +12,7 @@
 	import { Color } from "../inputs/button/colors";
 	import { DataHandler, Datatable, Th, ThFilter } from "@vincjo/datatables";
 	import { Readable } from "svelte/store";
+	import BoolInput from "../inputs/BoolInput.svelte";
 
     export let instanceList: InstanceList;
 
@@ -248,6 +249,15 @@
                                     <strong>This module is HIDDEN on the website and dashboard</strong>
                                 </p>
                             {/if}
+
+                            <BoolInput 
+                                id="enabled-by-default"
+                                label="Enabled by default"
+                                description="Whether this module is enabled by default"
+                                disabled={true}
+                                value={state.clusterModuleData[state?.openCluster][state?.openModule].is_default_enabled}
+                                onChange={() => {}}
+                            />
 
                             {#await createCmdDataTable(state?.openModule)}
                                 <Message type="loading">

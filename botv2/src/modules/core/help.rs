@@ -41,7 +41,7 @@ async fn _embed_help(
         let cat_name = {
             if let Some(cat_name) = category_id {
                 // Get the module from the name
-                let cat_module = crate::silverpelt::MODULE_ID_CACHE.get(&cat_name);
+                let cat_module = crate::silverpelt::SILVERPELT_CACHE.module_id_cache.get(&cat_name);
 
                 if let Some(cat_module) = cat_module {
                     cat_module.name.to_string()
