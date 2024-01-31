@@ -28,6 +28,7 @@ Splashtail is a monorepo containing all the code needed to run and setup Anti-Ra
 To increase our feature set and to popularize these bots, AntiRaid includes several integrations (forked/taken from other AGPL3-licensed projects that we either have permission to use or... owned/made the code for in the first place):
 
 - **Git Logs** 
+    - **Folders:** ``webserver/integration/gitlogs`` and ``botv2/src/modules/gitlogs``
     - Website: [https://gitlogs.xyz](https://gitlogs.xyz)
     - Github: [https://github.com/Git-Logs](https://github.com/Git-Logs)
 
@@ -80,3 +81,22 @@ In some cases, the internal representation of a type is not suitable for externa
 - First run ``./splashtail webserver`` with the environment variable ``BOOTSTRAP_COMMANDS`` set to ``true``. This will start the bot and deploy the base commands.
 - From the next time, run ``./splashtail webserver`` without the ``BOOTSTRAP_COMMANDS`` variable. This is the normal way to run the bot.
 - Run the job server (typically before running the bot in production) using ``./splashtail jobs``
+
+
+# TODO List
+
+For initial release:
+
+- Stabilizing the module+command permission system []
+- Server Member Backup/Restore []
+- Basic Moderation (warn/kick/ban+tempban/unban) []
+- Passive Anti-nuke (lockserver/unlockserver/lockchannel/unlockchannel) []
+- Basic Active Anti-Spam (anti-invite) []
+- Audit Logs []
+- Basic utility functions (if needed) []
+- Stabilizing the `Limits` module []
+- Stabilizing the ``Server Backups`` module []
+
+For future releases (or even initial if time permits):
+
+- Advanced Active Anti-Spam (maybe AI-based image classification blocks) []

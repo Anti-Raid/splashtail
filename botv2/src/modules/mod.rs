@@ -1,8 +1,9 @@
+mod core;
+mod gitlogs;
 mod limits;
+mod root;
 mod server_backups;
 mod server_member_backups;
-mod core;
-mod root;
 
 /// List of enabled modules
 /// 
@@ -10,9 +11,10 @@ mod root;
 pub fn enabled_modules() -> Vec<crate::silverpelt::Module> {
     vec![
         core::module(),
+        gitlogs::module(),
         limits::module(),
-        server_backups::module(),
         root::module(),
+        server_backups::module(),
         server_member_backups::module(),
     ]
 }
