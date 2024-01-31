@@ -5,6 +5,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"strings"
 	"time"
 
 	"github.com/anti-raid/splashtail/types"
@@ -164,6 +165,7 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 
 	var token struct {
 		AccessToken string `json:"access_token"`
+		Scope       string `json:"scope"`
 	}
 
 	err = json.Unmarshal(body, &token)
@@ -173,6 +175,29 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 		return uapi.HttpResponse{
 			Json: types.ApiError{
 				Message: "Failed to parse token response from Discord",
+			},
+			Status:  http.StatusBadRequest,
+			Headers: limit.Headers(),
+		}
+	}
+
+	// Validate scope
+	scopesStr := strings.Split(strings.ReplaceAll(token.Scope, "%20", ""), " ")
+
+	if !slices.Contains(scopesStr, "identify") {
+		return uapi.HttpResponse{
+			Json: types.ApiError{
+				Message: "Required identify scope not granted",
+			},
+			Status:  http.StatusBadRequest,
+			Headers: limit.Headers(),
+		}
+	}
+
+	if !slices.Contains(scopesStr, "guilds") {
+		return uapi.HttpResponse{
+			Json: types.ApiError{
+				Message: "Required guilds scope not granted",
 			},
 			Status:  http.StatusBadRequest,
 			Headers: limit.Headers(),

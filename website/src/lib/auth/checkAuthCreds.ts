@@ -8,7 +8,7 @@ export const checkAuthCreds = async (data: LSAuthData) => {
     const testAuthResp = await fetchClient(`${get('splashtail')}/auth/test`, {
         method: 'POST',
         body: JSON.stringify({
-            auth_type: 'user',
+            auth_type: 'User',
             target_id: data.user_id,
             token: data.token
         })

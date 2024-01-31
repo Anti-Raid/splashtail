@@ -120,6 +120,7 @@ func Authorize(r uapi.Route, req *http.Request) (uapi.AuthData, uapi.HttpRespons
 			err = state.Pool.QueryRow(state.Context, "SELECT user_id FROM web_api_tokens WHERE token = $1", strings.Replace(authHeader, "User ", "", 1)).Scan(&id)
 
 			if err != nil {
+				state.Logger.Error("Failed to get user ID from web API token", zap.Error(err))
 				continue
 			}
 
@@ -133,10 +134,12 @@ func Authorize(r uapi.Route, req *http.Request) (uapi.AuthData, uapi.HttpRespons
 			err = state.Pool.QueryRow(state.Context, "SELECT state FROM users WHERE user_id = $1", id).Scan(&userstate)
 
 			if err != nil {
+				state.Logger.Error("Failed to get user state", zap.Error(err))
 				continue
 			}
 
 			if !id.Valid {
+				state.Logger.Error("User ID is not valid")
 				continue
 			}
 

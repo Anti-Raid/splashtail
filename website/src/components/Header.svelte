@@ -60,7 +60,12 @@
 		}
 
 		let data = {
-			profileNavigation: [],
+			profileNavigation: [
+				{
+					name: "Dashboard",
+					href: "/dashboard"
+				}
+			],
 			user
 		}
 
@@ -149,20 +154,28 @@
 								alt=""
 							/>
 						</button>
-					</div>
 
-					<div
-						role="menu"
-						aria-orientation="vertical"
-						aria-labelledby="user-menu-button"
-						tabindex="-1"
-						id="profile_menu"
-					>
-						{#each (data?.profileNavigation || []) as item}
-							<a href={item.href} class="block px-4 py-2 text-sm text-gray-700">
-								{item.name}
-							</a>
-						{/each}
+						{#if profileMenuOpen}
+							<div
+								role="menu"
+								aria-orientation="vertical"
+								aria-labelledby="user-menu-button"
+								id="profile-menu"
+								class="text-white font-semibold"
+							>
+								<div class="transition absolute z-50 w-96 max-w-sm px-4 mt-3 transform -right-0 opacity-100 translate-y-0">
+									<div class="dropdown-container overflow-hidden rounded-lg shadow-lg ring-1 ring-black bg-black ring-opacity-5">
+										<div class="relative p-7 w-full">
+											{#each (data?.profileNavigation || []) as item}
+												<a href={item.href} class="hover:bg-slate-900">
+													{item.name}
+												</a>
+											{/each}
+										</div>
+									</div>
+								</div>
+							</div>
+						{/if}
 					</div>
 				{:else}
 					<button

@@ -5,7 +5,6 @@ import { PlatformUser } from "./eureka-dovewing"
 // source: auth.go
 
 export interface AuthorizeRequest {
-  client_id: string;
   code: string;
   redirect_uri: string;
   protocol: string;

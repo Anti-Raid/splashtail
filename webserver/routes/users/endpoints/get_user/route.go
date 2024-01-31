@@ -13,6 +13,7 @@ import (
 	"go.uber.org/zap"
 
 	docs "github.com/infinitybotlist/eureka/doclib"
+	"github.com/infinitybotlist/eureka/dovewing"
 	"github.com/infinitybotlist/eureka/uapi"
 )
 
@@ -41,7 +42,7 @@ func Docs() *docs.Doc {
 func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 	id := chi.URLParam(r, "id")
 
-	row, err := state.Pool.Query(d.Context, "SELECT"+userRowsStr+"FROM users WHERE id = $1", id)
+	row, err := state.Pool.Query(d.Context, "SELECT "+userRowsStr+" FROM users WHERE user_id = $1", id)
 
 	if err != nil {
 		state.Logger.Error("Error querying database", zap.Error(err))
@@ -52,6 +53,13 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 
 	if errors.Is(err, pgx.ErrNoRows) {
 		return uapi.DefaultResponse(http.StatusNotFound)
+	}
+
+	user.User, err = dovewing.GetUser(d.Context, id, state.DovewingPlatformDiscord)
+
+	if err != nil {
+		state.Logger.Error("Error getting user from dovewing", zap.Error(err))
+		return uapi.DefaultResponse(http.StatusInternalServerError)
 	}
 
 	return uapi.HttpResponse{
