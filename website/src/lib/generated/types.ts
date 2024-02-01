@@ -75,6 +75,20 @@ export interface Vanity {
 }
 
 //////////
+// source: dashboard.go
+
+export interface DashboardGuild {
+  id: string;
+  name: string;
+  avatar: string;
+}
+export interface DashboardGuildData {
+  guilds: (DashboardGuild | undefined)[];
+  has_bot: string[];
+  unknown_guilds: string[];
+}
+
+//////////
 // source: ioauth.go
 
 export interface IOAuthRedirect {

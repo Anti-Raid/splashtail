@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { makeSharedRequest, opGetClusterModules } from "$lib/fetch/ext";
 	import { InstanceList } from "$lib/generated/mewld/proc";
-	import { CanonicalCommand, CanonicalCommandData, CanonicalModule, CommandExtendedData } from "$lib/generated/silverpelt";
+	import { CanonicalCommand, CanonicalCommandData, CanonicalModule, CanonicalCommandExtendedData } from "$lib/generated/silverpelt";
 	import logger from "$lib/ui/logger";
 	import Message from "../Message.svelte";
 	import Modal from "../Modal.svelte";
@@ -91,7 +91,7 @@
     interface ParsedCanonicalCommandData extends CanonicalCommandData {
         subcommand_depth: number;
         parent_command?: CanonicalCommandData;
-        extended_data: CommandExtendedData;
+        extended_data: CanonicalCommandExtendedData;
         search_permissions: string;
     }
 
@@ -104,7 +104,7 @@
         // Recursively parse commands
         const parseCommand = (
             command: CanonicalCommandData, 
-            extended_data: Record<string, CommandExtendedData>,
+            extended_data: Record<string, CanonicalCommandExtendedData>,
             depth: number = 0, 
             parent: CanonicalCommandData | undefined,
         ) => {
@@ -126,7 +126,15 @@
         }
 
         for(let command of module?.commands) {
-            parseCommand(command?.command, command?.extended_data, 0, undefined)
+            let extData: Record<string, CanonicalCommandExtendedData> = {};
+
+            for(let commandExtData of command?.extended_data) {
+                extData[commandExtData?.id] = commandExtData;
+            }
+
+            logger.info("ParseCommand.ExtData", "Got extended data", extData)
+
+            parseCommand(command?.command, extData, 0, undefined)
         }
 
         const handler = new DataHandler(commands, { rowsPerPage: 20 })

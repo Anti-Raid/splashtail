@@ -13,7 +13,8 @@ export interface PermissionChecks {
   checks: PermissionCheck[];
   checks_needed: number /* int */;
 }
-export interface CommandExtendedData {
+export interface CanonicalCommandExtendedData {
+  id: string;
   default_perms: PermissionChecks;
 }
 export interface CanonicalModule {
@@ -26,10 +27,9 @@ export interface CanonicalModule {
   is_default_enabled: boolean;
   commands: CanonicalCommand[];
 }
-export type CanonicalCommandExtendedDataMap = Record<string, CommandExtendedData>;
 export interface CanonicalCommand {
   command: CanonicalCommandData;
-  extended_data: CanonicalCommandExtendedDataMap;
+  extended_data: CanonicalCommandExtendedData[];
 }
 export interface CanonicalCommandArgument {
   name: string;

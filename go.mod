@@ -9,13 +9,14 @@ require (
 	github.com/getkin/kin-openapi v0.122.0 // indirect
 	github.com/go-chi/chi/v5 v5.0.10
 	github.com/infinitybotlist/eureka v0.6.5
-	github.com/wk8/go-ordered-map/v2 v2.1.8
+	github.com/wk8/go-ordered-map/v2 v2.1.8 // indirect
 	gopkg.in/yaml.v3 v3.0.1
 )
 
 require (
 	github.com/cheesycod/mewld v0.0.0-20231215111137-84e09c813335
 	github.com/cloudflare/tableflip v1.2.3
+	github.com/fxamacker/cbor/v2 v2.5.0
 	github.com/infinitybotlist/iblfile v0.0.0-20231217062828-5a52f5049ee3
 	github.com/minio/minio-go/v7 v7.0.66
 	github.com/redis/rueidis v1.0.24
@@ -24,14 +25,7 @@ require (
 	golang.org/x/image v0.14.0
 )
 
-require (
-	github.com/fxamacker/cbor/v2 v2.5.0 // indirect
-	github.com/golang/protobuf v1.3.4 // indirect
-	github.com/vmihailenco/msgpack/v4 v4.3.13 // indirect
-	github.com/vmihailenco/tagparser v0.1.1 // indirect
-	github.com/x448/float16 v0.8.4 // indirect
-	google.golang.org/appengine v1.6.5 // indirect
-)
+require github.com/x448/float16 v0.8.4 // indirect
 
 require (
 	github.com/buger/jsonparser v1.1.1 // indirect

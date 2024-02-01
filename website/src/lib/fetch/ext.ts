@@ -3,6 +3,7 @@ import { fetchClient } from "$lib/fetch/fetch"
 import { InstanceList } from "$lib/generated/mewld/proc"
 import { CanonicalModule } from "$lib/generated/silverpelt"
 import { ApiError } from "$lib/generated/types"
+import logger from "$lib/ui/logger"
 
 let cachedData: Map<string, any> = new Map()
 
@@ -22,6 +23,8 @@ export async function makeSharedRequest<T>(requester: SharedRequester<T>, opts?:
     }
 
     const data = await requester.requestFunc()
+
+    logger.info('makeSharedRequest', `Fetched ${requester.name} from server`, data)
 
     cachedData.set(requester.name, data)
 
@@ -61,7 +64,7 @@ export const opGetClusterModules = (clusterId: number): SharedRequester<Record<s
             let parsedMap: Record<string, CanonicalModule> = {}
 
             for(let module of data) {
-                parsedMap[module.name] = module
+                parsedMap[module.id] = module
             }
 
             return parsedMap
