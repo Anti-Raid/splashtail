@@ -26,13 +26,20 @@ pub struct CanonicalModule {
     pub commands: Vec<CanonicalCommand>,
 }
 
-pub type CanonicalCommandExtendedDataMap = indexmap::IndexMap<String, super::CommandExtendedData>;
+/// Canonical representation of a extended command data for external use
+#[derive(serde::Serialize, serde::Deserialize, Clone)]
+pub struct CanonicalCommandExtendedData {
+    pub id: String,
+
+    #[serde(flatten)]
+    pub data: super::CommandExtendedData
+}
 
 /// Canonical representation of a command (data section) for external use
 #[derive(serde::Serialize, serde::Deserialize, Clone)]
 pub struct CanonicalCommand {
     pub command: CanonicalCommandData,
-    pub extended_data: CanonicalCommandExtendedDataMap,
+    pub extended_data: Vec<CanonicalCommandExtendedData>,
 }
 
 /// Canonical representation of a command argument for external use
@@ -81,9 +88,18 @@ impl CanonicalCommand {
     pub fn from_repr(cmd: &super::Command, extended_data: super::CommandExtendedDataMap) -> Self {
         CanonicalCommand {
             command: cmd.into(),
-            extended_data: extended_data.into_iter().map(|(k, v)| {
-                (k.to_string(), v)
-            }).collect(),
+            extended_data: {
+                let mut v = Vec::new();
+
+                for (id, data) in extended_data {
+                    v.push(CanonicalCommandExtendedData {
+                        id: id.to_string(),
+                        data,
+                    });
+                }
+
+                v
+            },
         }
     }
 }

@@ -1,6 +1,7 @@
 package get_cluster_modules
 
 import (
+	"fmt"
 	"net/http"
 	"strconv"
 
@@ -9,7 +10,7 @@ import (
 	"github.com/anti-raid/splashtail/types/silverpelt"
 	"github.com/anti-raid/splashtail/webserver/state"
 	"github.com/go-chi/chi/v5"
-	orderedmap "github.com/wk8/go-ordered-map/v2"
+	"go.uber.org/zap"
 
 	docs "github.com/infinitybotlist/eureka/doclib"
 	"github.com/infinitybotlist/eureka/uapi"
@@ -19,7 +20,7 @@ func Docs() *docs.Doc {
 	return &docs.Doc{
 		Summary:     "Get Cluster Modules",
 		Description: "This endpoint returns the modules that are currently running on the cluster.",
-		Resp:        orderedmap.OrderedMap[string, silverpelt.CanonicalModule]{},
+		Resp:        []silverpelt.CanonicalModule{},
 		Params: []docs.Parameter{
 			{
 				Name:        "clusterId",
@@ -107,6 +108,17 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 			Status: http.StatusNotFound,
 			Json: types.ApiError{
 				Message: "Data not found",
+			},
+		}
+	}
+
+	state.Logger.Info("Got response from animus magic", zap.Any("resp", moduleListResp[0]))
+
+	if moduleListResp[0].Op == animusmagic.OpError {
+		return uapi.HttpResponse{
+			Status: http.StatusInternalServerError,
+			Json: types.ApiError{
+				Message: "Failed to fetch module list: " + fmt.Sprint(moduleListResp[0].Error),
 			},
 		}
 	}

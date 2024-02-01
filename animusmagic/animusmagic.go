@@ -1,6 +1,6 @@
 // Animus Magic is the internal redis IPC system for internal communications between the bot and the server
 //
-// Format of payloads: <scope: u8><cluster id: u16><op: 8 bits><command id: alphanumeric string>/<json payload>
+// Format of payloads: <scope: u8><cluster id: u16><op: 8 bits><command id: alphanumeric string>/<cbor payload>
 package animusmagic
 
 import (
@@ -8,13 +8,11 @@ import (
 	"time"
 
 	"github.com/anti-raid/splashtail/utils/syncmap"
+	"github.com/fxamacker/cbor/v2"
 	"github.com/infinitybotlist/eureka/crypto"
-	jsoniter "github.com/json-iterator/go"
 	"github.com/redis/rueidis"
 	"go.uber.org/zap"
 )
-
-var json = jsoniter.ConfigFastest
 
 const ChannelName = "animus_magic"
 
@@ -98,7 +96,7 @@ func (c *AnimusMagicClient) ListenOnce(ctx context.Context, redis rueidis.Client
 
 					if op == OpResponse {
 						var resp *AnimusResponse
-						err := json.Unmarshal(payload, &resp)
+						err := cbor.Unmarshal(payload, &resp)
 
 						if err != nil {
 							l.Error("[animus magic] error unmarshaling payload", zap.Error(err))
@@ -113,7 +111,7 @@ func (c *AnimusMagicClient) ListenOnce(ctx context.Context, redis rueidis.Client
 						}
 					} else {
 						var data map[string]string
-						err := json.Unmarshal(payload, &data)
+						err := cbor.Unmarshal(payload, &data)
 
 						if err != nil {
 							data = map[string]string{
@@ -173,7 +171,7 @@ func (c *AnimusMagicClient) CreatePayload(scope byte, clusterId uint16, op byte,
 
 	finalPayload = append(finalPayload, []byte(commandId+"/")...)
 
-	payload, err := json.Marshal(resp)
+	payload, err := cbor.Marshal(resp)
 
 	if err != nil {
 		return nil, err

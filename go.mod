@@ -25,6 +25,15 @@ require (
 )
 
 require (
+	github.com/fxamacker/cbor/v2 v2.5.0 // indirect
+	github.com/golang/protobuf v1.3.4 // indirect
+	github.com/vmihailenco/msgpack/v4 v4.3.13 // indirect
+	github.com/vmihailenco/tagparser v0.1.1 // indirect
+	github.com/x448/float16 v0.8.4 // indirect
+	google.golang.org/appengine v1.6.5 // indirect
+)
+
+require (
 	github.com/buger/jsonparser v1.1.1 // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/gabriel-vasile/mimetype v1.4.3 // indirect

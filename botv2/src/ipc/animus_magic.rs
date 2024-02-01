@@ -1,6 +1,6 @@
 /// Animus Magic is the internal redis IPC system for internal communications between the bot and the server
 /// 
-/// Format of payloads: <scope: u8><cluster id: u16><op: 8 bits><command id: alphanumeric string>/<json payload>
+/// Format of payloads: <scope: u8><cluster id: u16><op: 8 bits><command id: alphanumeric string>/<cbor payload>
 use std::sync::Arc;
 #[allow(unused_imports)]
 use fred::clients::SubscriberClient;
@@ -58,7 +58,7 @@ impl AnimusOp {
 pub enum AnimusResponse {
     /// Modules event contains module related data
     Modules {
-        modules: indexmap::IndexMap<String, crate::silverpelt::canonical_repr::CanonicalModule>
+        modules: Vec<crate::silverpelt::canonical_repr::CanonicalModule>
     },
     /// GuildsExist event contains a list of u8s, where 1 means the guild exists and 0 means it doesn't
     GuildsExist {
@@ -74,6 +74,13 @@ pub enum AnimusMessage {
     GuildsExist {
         guilds: Vec<GuildId>,
     },
+}
+
+#[derive(Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum AnimusCreatePayload {
+    Response(AnimusResponse),
+    Error(indexmap::IndexMap<String, String>)
 }
 
 pub struct AnimusMessageMetadata {
@@ -94,7 +101,7 @@ impl AnimusMessage {
         cmd_id: &str,
         scope: AnimusScope,
         op: AnimusOp,
-        data: &serde_json::Value
+        data: &AnimusCreatePayload
     ) -> Result<Vec<u8>, crate::Error> {
         let mut payload = Vec::new();
 
@@ -119,10 +126,10 @@ impl AnimusMessage {
         // Push seperator of '/'
         payload.push(0x2f);
 
-        // Push the json payload
-        let json_v = serde_json::to_vec(data)?;
+        // Push the cbor payload
+        let v = serde_cbor::to_vec(data)?;
 
-        for byte in json_v {
+        for byte in v {
             payload.push(byte);
         }
 
@@ -243,11 +250,9 @@ impl AnimusMagicClient {
                             Err(e) => {
                                 log::warn!("Invalid message recieved on channel {} [json extract error] {}", message.channel, e);
                                 // Send error
-                                if let Err(e) = Self::error(redis_pool, &meta.command_id, &serde_json::json!{
-                                    {
-                                        "message": "Invalid payload",
-                                        "context": e.to_string()
-                                    }
+                                if let Err(e) = Self::error(redis_pool, &meta.command_id, indexmap::indexmap!{
+                                    "message".to_string() => "Invalid payload".to_string(),
+                                    "context".to_string() => e.to_string()
                                 }).await {
                                     log::warn!("Failed to send error response: {}", e);
                                 }
@@ -273,16 +278,14 @@ impl AnimusMagicClient {
                 let payload = &binary[meta.payload_offset..];
 
                 // Pluck out json
-                let msg = match serde_json::from_slice::<AnimusMessage>(payload) {
+                let msg = match serde_cbor::from_slice::<AnimusMessage>(payload) {
                     Ok(msg) => msg,
                     Err(e) => {
                         log::warn!("Invalid message recieved on channel {} [json extract error] {}", message.channel, e);
                         // Send error
-                        if let Err(e) = Self::error(redis_pool, &meta.command_id, &serde_json::json!{
-                            {
-                                "message": "Invalid payload",
-                                "context": e.to_string()
-                            }
+                        if let Err(e) = Self::error(redis_pool, &meta.command_id, indexmap::indexmap!{
+                            "message".to_string() => "Invalid payload, failed to unmarshal message".to_string(),
+                            "context".to_string() => e.to_string()
                         }).await {
                             log::warn!("Failed to send error response: {}", e);
                         }
@@ -293,12 +296,11 @@ impl AnimusMagicClient {
 
                 let data = match msg {
                     AnimusMessage::Modules {}  => {
-                        let mut modules = indexmap::IndexMap::new();
+                        let mut modules = Vec::new();
 
                         for idm in crate::silverpelt::SILVERPELT_CACHE.canonical_module_cache.iter() {
-                            let id = idm.key();
                             let module = idm.value();
-                            modules.insert(id.to_string(), module.clone());
+                            modules.push(module.clone());
                         }
 
                         AnimusResponse::Modules {
@@ -324,29 +326,12 @@ impl AnimusMagicClient {
                     }
                 };
 
-                let Ok(data) = serde_json::to_value(data) else {
-                    log::warn!("Failed to serialize response for message on channel {}", message.channel);
-
-                    // Send error
-                    if let Err(e) = Self::error(redis_pool, &meta.command_id, &serde_json::json!{
-                        {
-                            "message": "Error serializing response [no context available]",
-                        }
-                    }).await {
-                        log::warn!("Failed to send error response: {}", e);
-                    }                    
-
-                    return;
-                };
-
-                let Ok(payload) = AnimusMessage::create_payload(&meta.command_id, AnimusScope::Bot, AnimusOp::Response, &data) else {
+                let Ok(payload) = AnimusMessage::create_payload(&meta.command_id, AnimusScope::Bot, AnimusOp::Response, &AnimusCreatePayload::Response(data)) else {
                     log::warn!("Failed to create payload for message on channel {}", message.channel);
                     
                     // Send error
-                    if let Err(e) = Self::error(redis_pool, &meta.command_id, &serde_json::json!{
-                        {
-                            "message": "Error creating response payload [no context available]",
-                        }
+                    if let Err(e) = Self::error(redis_pool, &meta.command_id, indexmap::indexmap!{
+                        "message".to_string() => "Error creating response payload [no context available]".to_string(),
                     }).await {
                         log::warn!("Failed to send error response: {}", e);
                     }
@@ -376,8 +361,8 @@ impl AnimusMagicClient {
     }
 
     /// Helper method to send an error response
-    pub async fn error(redis_pool: fred::clients::RedisPool, command_id: &str, data: &serde_json::Value) -> Result<(), crate::Error> {
-        let Ok(payload) = AnimusMessage::create_payload(command_id, AnimusScope::Bot, AnimusOp::Error, data) else {
+    pub async fn error(redis_pool: fred::clients::RedisPool, command_id: &str, data: indexmap::IndexMap<String, String>) -> Result<(), crate::Error> {
+        let Ok(payload) = AnimusMessage::create_payload(command_id, AnimusScope::Bot, AnimusOp::Error, &AnimusCreatePayload::Error(data)) else {
             return Err("Failed to create payload for error message".into());
         };
 

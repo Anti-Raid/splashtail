@@ -55,9 +55,16 @@ export const opGetClusterModules = (clusterId: number): SharedRequester<Record<s
                 throw new Error(`Failed to fetch clusters modules: ${res.status}: ${resp?.message}`)
             }
         
-            const data: Record<string, CanonicalModule> = await res.json()
+            const data: CanonicalModule[] = await res.json()
             
-            return data
+            // A CanonicalModule[] is hard to work with, so we'll convert it to a map
+            let parsedMap: Record<string, CanonicalModule> = {}
+
+            for(let module of data) {
+                parsedMap[module.name] = module
+            }
+
+            return parsedMap
         }
     }    
 }

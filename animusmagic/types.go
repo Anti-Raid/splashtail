@@ -4,7 +4,6 @@ import (
 	"errors"
 
 	"github.com/anti-raid/splashtail/types/silverpelt"
-	orderedmap "github.com/wk8/go-ordered-map/v2"
 )
 
 var ErrNilRequestData = errors.New("request validation error: nil request data")
@@ -21,7 +20,7 @@ const (
 	WildcardClusterID = 0xFFFF // top means wildcard/all clusters
 )
 
-type ClusterModules = orderedmap.OrderedMap[string, silverpelt.CanonicalModule]
+type ClusterModules = []silverpelt.CanonicalModule
 
 type AnimusResponse struct {
 	Modules *struct {

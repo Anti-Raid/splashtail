@@ -1,7 +1,5 @@
 package silverpelt
 
-import orderedmap "github.com/wk8/go-ordered-map/v2"
-
 type PermissionCheck struct {
 	KittycatPerms []string `json:"kittycat_perms"`
 	NativePerms   []string `json:"native_perms"`
@@ -14,7 +12,8 @@ type PermissionChecks struct {
 	ChecksNeeded int               `json:"checks_needed"`
 }
 
-type CommandExtendedData struct {
+type CanonicalCommandExtendedData struct {
+	ID           string           `json:"id"`
 	DefaultPerms PermissionChecks `json:"default_perms"`
 }
 
@@ -29,11 +28,9 @@ type CanonicalModule struct {
 	Commands             []CanonicalCommand `json:"commands"`
 }
 
-type CanonicalCommandExtendedDataMap = orderedmap.OrderedMap[string, CommandExtendedData]
-
 type CanonicalCommand struct {
-	Command      CanonicalCommandData            `json:"command"`
-	ExtendedData CanonicalCommandExtendedDataMap `json:"extended_data"`
+	Command      CanonicalCommandData           `json:"command"`
+	ExtendedData []CanonicalCommandExtendedData `json:"extended_data"`
 }
 
 type CanonicalCommandArgument struct {
