@@ -243,7 +243,8 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 
 		if err != nil {
 			state.Logger.Error("Failed to send request to animus magic", zap.Error(err))
-			return uapi.DefaultResponse(http.StatusInternalServerError)
+			unknownGuilds = append(unknownGuilds, guilds...)
+			continue
 		}
 
 		if len(moduleListResp) != 1 {

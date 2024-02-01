@@ -1,12 +1,32 @@
 /// Animus Magic is the internal redis IPC system for internal communications between the bot and the server
 /// 
-/// Format of payloads: <cluster id: u16><op: 8 bits><command id: alphanumeric string>/<json payload>
+/// Format of payloads: <scope: u8><cluster id: u16><op: 8 bits><command id: alphanumeric string>/<json payload>
 use std::sync::Arc;
 #[allow(unused_imports)]
 use fred::clients::SubscriberClient;
 use fred::interfaces::{ClientLike, PubsubInterface};
 use serde::{Serialize, Deserialize};
 use serenity::all::GuildId;
+
+#[derive(Serialize, Deserialize, PartialEq)]
+pub enum AnimusScope {
+    Bot
+}
+
+impl AnimusScope {
+    pub fn to_byte(&self) -> u8 {
+        match self {
+            AnimusScope::Bot => 0x0
+        }
+    }
+
+    pub fn from_byte(byte: u8) -> Option<Self> {
+        match byte {
+            0x0 => Some(AnimusScope::Bot),
+            _ => None
+        }
+    }
+}
 
 #[derive(Serialize, Deserialize, PartialEq)]
 pub enum AnimusOp {
@@ -23,6 +43,15 @@ impl AnimusOp {
             AnimusOp::Error => 0x2,
         }
     }
+
+    pub fn from_byte(byte: u8) -> Option<Self> {
+        match byte {
+            0x0 => Some(AnimusOp::Request),
+            0x1 => Some(AnimusOp::Response),
+            0x2 => Some(AnimusOp::Error),
+            _ => None
+        }
+    }
 }
 
 #[derive(Serialize, Deserialize)]
@@ -31,6 +60,7 @@ pub enum AnimusResponse {
     Modules {
         modules: indexmap::IndexMap<String, crate::silverpelt::canonical_repr::CanonicalModule>
     },
+    /// GuildsExist event contains a list of u8s, where 1 means the guild exists and 0 means it doesn't
     GuildsExist {
         guilds_exist: Vec<u8>
     }
@@ -47,6 +77,7 @@ pub enum AnimusMessage {
 }
 
 pub struct AnimusMessageMetadata {
+    pub scope: AnimusScope,
     pub cluster_id: u16,
     pub op: AnimusOp,
     pub command_id: String,
@@ -61,10 +92,14 @@ impl AnimusMessage {
 
     pub fn create_payload(
         cmd_id: &str,
+        scope: AnimusScope,
         op: AnimusOp,
         data: &serde_json::Value
     ) -> Result<Vec<u8>, crate::Error> {
         let mut payload = Vec::new();
+
+        // Push scope as 1 u8
+        payload.push(scope.to_byte());
 
         // Push cluster id as 2 u8s
         let cluster_id = super::argparse::MEWLD_ARGS.cluster_id.to_be_bytes();
@@ -95,18 +130,17 @@ impl AnimusMessage {
     }
 
     pub fn get_payload_meta(payload: &[u8]) -> Result<AnimusMessageMetadata, crate::Error> {
+        // Take out scope
+        let scope = AnimusScope::from_byte(payload[0]).ok_or("Invalid scope byte")?;
+       
         // Take out cluster id
-        let cluster_id = u16::from_be_bytes([payload[0], payload[1]]);
+        let cluster_id = u16::from_be_bytes([payload[1], payload[2]]);
 
-        let op = match payload[2] {
-            0x0 => AnimusOp::Request,
-            0x1 => AnimusOp::Response,
-            _ => return Err("Invalid op byte".into())
-        };
+        let op = AnimusOp::from_byte(payload[3]).ok_or("Invalid op byte")?;
 
         let mut cmd_id = String::new();
 
-        let mut i = 3;
+        let mut i = 4;
         loop {
             if payload[i] == 0x2f {
                 break;
@@ -119,6 +153,7 @@ impl AnimusMessage {
 
         Ok(
             AnimusMessageMetadata {
+                scope,
                 cluster_id,
                 op,
                 command_id: cmd_id,
@@ -142,6 +177,7 @@ impl AnimusMessage {
 
 pub struct AnimusMagicClient {
     pub redis_pool: fred::clients::RedisPool,
+    pub rx_map: std::sync::Arc<dashmap::DashMap<String, tokio::sync::mpsc::Sender<AnimusResponse>>>,
 }
 
 impl AnimusMagicClient {
@@ -191,8 +227,45 @@ impl AnimusMagicClient {
                 continue;
             };
 
+            if meta.op == AnimusOp::Response && meta.cluster_id != super::argparse::MEWLD_ARGS.cluster_id {
+                // We have something interesting
+                let rx_map = self.rx_map.clone();
+
+                tokio::task::spawn(async move {
+                    let sender = rx_map.get(&meta.command_id).map(|s| s.value().clone());
+
+                    if let Some(sender) = sender {
+                        let payload = &binary[meta.payload_offset..];
+
+                        // Pluck out json
+                        let msg = match serde_json::from_slice::<AnimusResponse>(payload) {
+                            Ok(msg) => msg,
+                            Err(e) => {
+                                log::warn!("Invalid message recieved on channel {} [json extract error] {}", message.channel, e);
+                                // Send error
+                                if let Err(e) = Self::error(redis_pool, &meta.command_id, &serde_json::json!{
+                                    {
+                                        "message": "Invalid payload",
+                                        "context": e.to_string()
+                                    }
+                                }).await {
+                                    log::warn!("Failed to send error response: {}", e);
+                                }
+
+                                return;
+                            }
+                        };
+
+                        if let Err(e) = sender.send(msg).await {
+                            log::warn!("Failed to send response to receiver: {}", e);
+                        }
+                    }
+                });
+                continue;
+            }
+
             // Ensure requeest op, and that the cluster id is either the same as ours or the wildcard u16::MAX
-            if meta.op != AnimusOp::Request || (meta.cluster_id != super::argparse::MEWLD_ARGS.cluster_id && meta.cluster_id != u16::MAX) {
+            if meta.scope != AnimusScope::Bot || meta.op != AnimusOp::Request || (meta.cluster_id != super::argparse::MEWLD_ARGS.cluster_id && meta.cluster_id != u16::MAX) {
                 continue; // Not for us
             }
 
@@ -266,7 +339,7 @@ impl AnimusMagicClient {
                     return;
                 };
 
-                let Ok(payload) = AnimusMessage::create_payload(&meta.command_id, AnimusOp::Response, &data) else {
+                let Ok(payload) = AnimusMessage::create_payload(&meta.command_id, AnimusScope::Bot, AnimusOp::Response, &data) else {
                     log::warn!("Failed to create payload for message on channel {}", message.channel);
                     
                     // Send error
@@ -304,7 +377,7 @@ impl AnimusMagicClient {
 
     /// Helper method to send an error response
     pub async fn error(redis_pool: fred::clients::RedisPool, command_id: &str, data: &serde_json::Value) -> Result<(), crate::Error> {
-        let Ok(payload) = AnimusMessage::create_payload(command_id, AnimusOp::Error, data) else {
+        let Ok(payload) = AnimusMessage::create_payload(command_id, AnimusScope::Bot, AnimusOp::Error, data) else {
             return Err("Failed to create payload for error message".into());
         };
 

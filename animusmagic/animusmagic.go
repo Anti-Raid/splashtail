@@ -1,6 +1,6 @@
 // Animus Magic is the internal redis IPC system for internal communications between the bot and the server
 //
-// Format of payloads: <cluster id: u16><op: 8 bits><command id: alphanumeric string>/<json payload>
+// Format of payloads: <scope: u8><cluster id: u16><op: 8 bits><command id: alphanumeric string>/<json payload>
 package animusmagic
 
 import (
@@ -24,6 +24,7 @@ type ClientCache struct {
 
 type ClientResponse struct {
 	ClusterID uint16
+	Scope     byte
 	Op        byte
 	Error     map[string]string // Only applicable if Op is OpError
 	Resp      *AnimusResponse
@@ -67,11 +68,14 @@ func (c *AnimusMagicClient) ListenOnce(ctx context.Context, redis rueidis.Client
 					return
 				}
 
-				// First 2 bytes are the cluster id
-				clusterId := uint16(bytesData[0])<<8 | uint16(bytesData[1])
+				// First byte is the scope
+				scope := bytesData[0]
+
+				// Next 2 bytes are the cluster id
+				clusterId := uint16(bytesData[1])<<8 | uint16(bytesData[2])
 
 				// Next byte is the op
-				op := bytesData[2]
+				op := bytesData[3]
 
 				if op != OpResponse && op != OpError {
 					return
@@ -80,7 +84,7 @@ func (c *AnimusMagicClient) ListenOnce(ctx context.Context, redis rueidis.Client
 				go func() {
 					// Next bytes are the command id but only till '/'
 					commandId := ""
-					for i := 3; i < len(bytesData); i++ {
+					for i := 4; i < len(bytesData); i++ {
 						if bytesData[i] == '/' {
 							break
 						}
@@ -88,7 +92,7 @@ func (c *AnimusMagicClient) ListenOnce(ctx context.Context, redis rueidis.Client
 					}
 
 					// Rest is the payload
-					payload := bytesData[len(commandId)+4:]
+					payload := bytesData[len(commandId)+5:]
 
 					var response *ClientResponse
 
@@ -102,6 +106,7 @@ func (c *AnimusMagicClient) ListenOnce(ctx context.Context, redis rueidis.Client
 						}
 
 						response = &ClientResponse{
+							Scope:     scope,
 							ClusterID: clusterId,
 							Op:        op,
 							Resp:      resp,
@@ -117,6 +122,7 @@ func (c *AnimusMagicClient) ListenOnce(ctx context.Context, redis rueidis.Client
 						}
 
 						response = &ClientResponse{
+							Scope:     scope,
 							ClusterID: clusterId,
 							Op:        op,
 							Error:     data,
@@ -157,8 +163,9 @@ func (c *AnimusMagicClient) Listen(ctx context.Context, redis rueidis.Client, l 
 }
 
 // CreatePayload creates a payload for the given command id and message
-func (c *AnimusMagicClient) CreatePayload(clusterId uint16, op byte, commandId string, resp *AnimusMessage) ([]byte, error) {
+func (c *AnimusMagicClient) CreatePayload(scope byte, clusterId uint16, op byte, commandId string, resp *AnimusMessage) ([]byte, error) {
 	var finalPayload = []byte{
+		scope,
 		byte(clusterId>>8) & 0xFF,
 		byte(clusterId) & 0xFF,
 		op,
@@ -186,6 +193,7 @@ type RequestData struct {
 	ClusterID             *uint16        // must be set, also ExpectedResponseCount must be set if wildcard
 	ExpectedResponseCount *int           // must be set if wildcard. this is the number of responses expected
 	CommandID             string         // if unset, will be randomly generated
+	Scope                 *byte          // if unset, will be set to ScopeBot
 	Op                    *byte          // if unset, will be set to OpRequest
 	IgnoreOpError         bool           // if true, will ignore OpError responses
 	Message               *AnimusMessage // must be set
@@ -213,11 +221,15 @@ func (c *AnimusMagicClient) Request(ctx context.Context, redis rueidis.Client, d
 		data.CommandID = crypto.RandString(16)
 	}
 
+	if data.Scope == nil {
+		data.Scope = new(byte) // 0 is the default value of byte which corresponds to ScopeBot
+	}
+
 	if data.Op == nil {
 		data.Op = new(byte) // 0 is the default value of byte which corresponds to OpRequest
 	}
 
-	payload, err := c.CreatePayload(*data.ClusterID, *data.Op, data.CommandID, data.Message)
+	payload, err := c.CreatePayload(*data.Scope, *data.ClusterID, *data.Op, data.CommandID, data.Message)
 
 	if err != nil {
 		return nil, err
