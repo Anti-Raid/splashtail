@@ -77,10 +77,16 @@ pub enum AnimusMessage {
 }
 
 #[derive(Serialize, Deserialize)]
+pub struct AnimusErrorResponse {
+    pub message: String,
+    pub context: String
+}
+
+#[derive(Serialize, Deserialize)]
 #[serde(untagged)]
 pub enum AnimusCreatePayload {
     Response(AnimusResponse),
-    Error(indexmap::IndexMap<String, String>)
+    Error(AnimusErrorResponse)
 }
 
 pub struct AnimusMessageMetadata {
@@ -250,9 +256,9 @@ impl AnimusMagicClient {
                             Err(e) => {
                                 log::warn!("Invalid message recieved on channel {} [json extract error] {}", message.channel, e);
                                 // Send error
-                                if let Err(e) = Self::error(redis_pool, &meta.command_id, indexmap::indexmap!{
-                                    "message".to_string() => "Invalid payload".to_string(),
-                                    "context".to_string() => e.to_string()
+                                if let Err(e) = Self::error(redis_pool, &meta.command_id, AnimusErrorResponse {
+                                    message: "Invalid payload, failed to unmarshal message".to_string(),
+                                    context: e.to_string()
                                 }).await {
                                     log::warn!("Failed to send error response: {}", e);
                                 }
@@ -283,9 +289,9 @@ impl AnimusMagicClient {
                     Err(e) => {
                         log::warn!("Invalid message recieved on channel {} [json extract error] {}", message.channel, e);
                         // Send error
-                        if let Err(e) = Self::error(redis_pool, &meta.command_id, indexmap::indexmap!{
-                            "message".to_string() => "Invalid payload, failed to unmarshal message".to_string(),
-                            "context".to_string() => e.to_string()
+                        if let Err(e) = Self::error(redis_pool, &meta.command_id, AnimusErrorResponse {
+                            message: "Invalid payload, failed to unmarshal message".to_string(),
+                            context: e.to_string()
                         }).await {
                             log::warn!("Failed to send error response: {}", e);
                         }
@@ -330,8 +336,9 @@ impl AnimusMagicClient {
                     log::warn!("Failed to create payload for message on channel {}", message.channel);
                     
                     // Send error
-                    if let Err(e) = Self::error(redis_pool, &meta.command_id, indexmap::indexmap!{
-                        "message".to_string() => "Error creating response payload [no context available]".to_string(),
+                    if let Err(e) = Self::error(redis_pool, &meta.command_id, AnimusErrorResponse {
+                        message: "Failed to create response payload".to_string(),
+                        context: "create_payload returned Err code".to_string()
                     }).await {
                         log::warn!("Failed to send error response: {}", e);
                     }
@@ -361,7 +368,7 @@ impl AnimusMagicClient {
     }
 
     /// Helper method to send an error response
-    pub async fn error(redis_pool: fred::clients::RedisPool, command_id: &str, data: indexmap::IndexMap<String, String>) -> Result<(), crate::Error> {
+    pub async fn error(redis_pool: fred::clients::RedisPool, command_id: &str, data: AnimusErrorResponse) -> Result<(), crate::Error> {
         let Ok(payload) = AnimusMessage::create_payload(command_id, AnimusScope::Bot, AnimusOp::Error, &AnimusCreatePayload::Error(data)) else {
             return Err("Failed to create payload for error message".into());
         };

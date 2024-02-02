@@ -1,5 +1,5 @@
 <script lang="ts">
-	import ServerCard from '../../components/ServerCard.svelte';
+	import ServerCard from '../../components/dashboard/ServerCard.svelte';
 	import Meta from '../../components/Meta.svelte';
 
 	export let data: any;
@@ -9,7 +9,8 @@
 			name: 'Invite',
 			click: () => {
 				window.location.href = `/invite/${id}`;
-			}
+			},
+			icon: "mdi:discord"
 		};
 	};
 </script>
@@ -21,24 +22,24 @@
 		{#each data.user.guilds as guild}
 			{#if guild.owner === true}
 				<ServerCard
-					name="guild"
-					title={guild.name}
+					id={guild.id}
+					name={guild.name}
 					image="https://cdn.discordapp.com/icons/{guild.id}/{guild.icon}.png"
-					button={Invite(guild.id)}
+					mainAction={Invite(guild.id)}
 				/>
 			{:else if guild.permissions['Administrator'] === true}
 				<ServerCard
-					name="guild"
-					title={guild.name}
+					id={guild.id}
+					name={guild.name}
 					image="https://cdn.discordapp.com/icons/{guild.id}/{guild.icon}.png"
-					button={Invite(guild.id)}
+					mainAction={Invite(guild.id)}
 				/>
 			{:else if guild.permissions['ManageGuild'] === true}
 				<ServerCard
-					name="guild"
-					title={guild.name}
+					id={guild.id}
+					name={guild.name}
 					image="https://cdn.discordapp.com/icons/{guild.id}/{guild.icon}.png"
-					button={Invite(guild.id)}
+					mainAction={Invite(guild.id)}
 				/>
 			{/if}
 		{/each}

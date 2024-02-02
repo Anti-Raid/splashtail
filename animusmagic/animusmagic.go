@@ -24,7 +24,7 @@ type ClientResponse struct {
 	ClusterID uint16
 	Scope     byte
 	Op        byte
-	Error     map[string]string // Only applicable if Op is OpError
+	Error     *AnimusErrorResponse // Only applicable if Op is OpError
 	Resp      *AnimusResponse
 }
 
@@ -110,12 +110,12 @@ func (c *AnimusMagicClient) ListenOnce(ctx context.Context, redis rueidis.Client
 							Resp:      resp,
 						}
 					} else {
-						var data map[string]string
+						var data *AnimusErrorResponse
 						err := cbor.Unmarshal(payload, &data)
 
 						if err != nil {
-							data = map[string]string{
-								"client_error": "failed to unmarshal error payload:" + err.Error(),
+							data = &AnimusErrorResponse{
+								Message: "client error: error unmarshaling payload: " + err.Error(),
 							}
 						}
 

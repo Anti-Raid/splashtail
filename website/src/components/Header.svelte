@@ -28,7 +28,7 @@
 			name: string
 			href: string
 		}[]
-		user: User
+		user: User | undefined
 	}
 
 	const getLoginData = async () => {
@@ -82,7 +82,7 @@
 
 		localStorage.setItem("authUser", JSON.stringify(user))
 
-		let data = {
+		let data: LoginData = {
 			profileNavigation: [
 				{
 					name: "Dashboard",

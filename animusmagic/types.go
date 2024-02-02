@@ -38,3 +38,8 @@ type AnimusMessage struct {
 		Guilds []string `json:"guilds"`
 	} `json:"GuildsExist,omitempty"`
 }
+
+type AnimusErrorResponse struct {
+	Message string `json:"message"`
+	Context string `json:"context"`
+}
