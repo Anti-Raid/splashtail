@@ -409,7 +409,7 @@ async fn main() {
                     };
 
                     info!("Checking if user {} ({}) can run command {} with permissions {:?}", member.user.name, member.user.id, ctx.command().qualified_name, member_perms);
-                    if let Err(e) = silverpelt::can_run_command(
+                    if let Err(e) = silverpelt::permissions::can_run_command(
                         &cmd_data,
                         &command_config,
                         &module_config,

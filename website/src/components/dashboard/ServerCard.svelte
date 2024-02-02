@@ -50,7 +50,7 @@ import { onMount } from 'svelte';
 <section class="rounded-lg p-2 card bg-themable-600/50 shadow-white/50 text-white">
 	<div class="h-16 rounded-t" id="{id}_banner" />
 
-	<div class="bg-white dark:bg-gray-800 pt-6 px-6 pb-2 rounded-b">
+	<div class="bg-slate-900 dark:bg-gray-800 pt-6 px-6 pb-2 rounded-b">
 		<div class="flex justify-center items-center mb-2">
 			<img
 				class={"h-7 w-7 rounded-md icon " + (blurImage ? "blur" : "")}
@@ -62,11 +62,11 @@ import { onMount } from 'svelte';
 			/>
 
 			{#if mainAction.click}
-				<button on:click={mainAction.click} class="ml-2 text-xl font-extrabold text-black dark:text-white truncate hover:underline">
+				<button on:click={mainAction.click} class="ml-2 text-xl font-extrabold dark:text-white truncate hover:underline">
 					{name}
 				</button>
 			{:else}
-				<a href={mainAction.href} class="ml-2 text-xl font-extrabold text-black dark:text-white truncate hover:underline block">
+				<a href={mainAction.href} class="ml-2 text-xl font-extrabold dark:text-white truncate hover:underline block">
 					{name}
 				</a>
 			{/if}

@@ -112,7 +112,7 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 	var dashguilds []*types.DashboardGuild
 	if refresh {
 		// Refresh guilds
-		httpReq, err := http.NewRequestWithContext(d.Context, "GET", "https://discord.com/api/v10/users/@me/guilds", nil)
+		httpReq, err := http.NewRequestWithContext(d.Context, "GET", state.Config.Meta.Proxy+"/api/v10/users/@me/guilds", nil)
 
 		if err != nil {
 			state.Logger.Error("Failed to create oauth2 request to discord", zap.Error(err))
@@ -189,6 +189,14 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 					return utils.IconURL(guild.Icon, discordgo.EndpointGuildIcon(guild.ID, guild.Icon), discordgo.EndpointGuildIconAnimated(guild.ID, guild.Icon), "64")
 				}(),
 			})
+		}
+
+		// Now update the database
+		_, err = state.Pool.Exec(d.Context, "UPDATE users SET guilds_cache = $1 WHERE user_id = $2", dashguilds, d.Auth.ID)
+
+		if err != nil {
+			state.Logger.Error("Failed to update database", zap.Error(err))
+			return uapi.DefaultResponse(http.StatusInternalServerError)
 		}
 	} else {
 		err := state.Pool.QueryRow(d.Context, "SELECT guilds_cache FROM users WHERE user_id = $1", d.Auth.ID).Scan(&dashguilds)
