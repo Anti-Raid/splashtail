@@ -88,7 +88,7 @@ import { onMount } from 'svelte';
 		<div class="buttons flex flex-col justify-center items-center space-x-2 text-lg">
 			{#if disabled}
 				<button
-					class="mt-3 bg-indigo-300 px-4 py-3 text-white rounded-md font-medium hover:cursor-disabled"
+					class="mt-3 bg-indigo-300 px-4 py-3 text-white rounded-md font-medium hover:cursor-not-allowed"
 					disabled={true}
 					aria-disabled="true"
 				>
