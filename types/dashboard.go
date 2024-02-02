@@ -1,9 +1,10 @@
 package types
 
 type DashboardGuild struct {
-	ID     string `json:"id" description:"The ID of the guild"`
-	Name   string `json:"name" description:"The name of the guild"`
-	Avatar string `json:"avatar" description:"The avatar url of the guild"`
+	ID          string `json:"id" description:"The ID of the guild"`
+	Name        string `json:"name" description:"The name of the guild"`
+	Avatar      string `json:"avatar" description:"The avatar url of the guild"`
+	Permissions int64  `json:"permissions" description:"The permissions the user has in the guild"`
 }
 
 type DashboardGuildData struct {

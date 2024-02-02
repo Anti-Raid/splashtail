@@ -11,6 +11,8 @@
             throw new Error("No code in URL")
         }
 
+        let guildId = searchParams.get("guild_id") // Given if user has invited bot using full auth flow
+
         let json: AuthorizeRequest = {
             protocol: "a1",
             scope: "normal",
@@ -32,7 +34,11 @@
         localStorage.setItem("wistala", JSON.stringify(data))
 
         setTimeout(() => {
-            window.location.href = "/dashboard"
+            if(guildId) {
+                window.location.href = `/dashboard/guilds/${guildId}`
+            } else {
+                window.location.href = "/dashboard"
+            }
         }, 1000)
         
         return data

@@ -81,6 +81,7 @@ export interface DashboardGuild {
   id: string;
   name: string;
   avatar: string;
+  permissions: number /* int64 */;
 }
 export interface DashboardGuildData {
   guilds: (DashboardGuild | undefined)[];

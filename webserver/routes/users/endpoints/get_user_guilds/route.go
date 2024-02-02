@@ -183,8 +183,9 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 
 		for _, guild := range guilds {
 			dashguilds = append(dashguilds, &types.DashboardGuild{
-				ID:   guild.ID,
-				Name: guild.Name,
+				ID:          guild.ID,
+				Name:        guild.Name,
+				Permissions: guild.Permissions,
 				Avatar: func() string {
 					return utils.IconURL(guild.Icon, discordgo.EndpointGuildIcon(guild.ID, guild.Icon), discordgo.EndpointGuildIconAnimated(guild.ID, guild.Icon), "64")
 				}(),

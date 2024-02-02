@@ -2,7 +2,7 @@
 	import { getAuthCreds } from "$lib/auth/getAuthCreds";
 	import { get } from "$lib/configs/functions/services";
 	import { fetchClient } from "$lib/fetch/fetch";
-	import { DashboardGuildData } from "$lib/generated/types";
+	import { DashboardGuild, DashboardGuildData } from "$lib/generated/types";
     let currentState = "Loading dashboard data"
     import Message from "../../components/Message.svelte";
 	import ServerCard from "../../components/dashboard/ServerCard.svelte";
@@ -12,6 +12,7 @@
     import { Color } from "../../components/inputs/button/colors";
 
     let guilds: DashboardGuildData;
+    let canInvite: string[] = [];
     let hasBot: string[] = [];
 
     let hasBotSearchFilter: string = "";
@@ -41,6 +42,19 @@
 
         if(guilds?.has_bot) {
             hasBot = guilds?.has_bot;
+        }
+
+        for(let guild of guilds?.guilds || []) {
+            if(!guild) {
+                continue
+            }
+
+            // Check if the user has Manage Server permissions, otherwise they cant invite the bot
+            let hasManageServer = (guild.permissions & ( 1 << 5 )) == ( 1 << 5 )
+
+            if(hasManageServer) {
+                canInvite.push(guild.id)
+            }
         }
     }
 
@@ -87,10 +101,14 @@
                 image={guild?.avatar || "/logo.webp"} 
                 mainAction={
                     hasBot.includes(guild?.id || "") 
-                    ? {name: "View", href: `/dashboard/guild/${guild?.id}`, icon: "mdi:discord"}
-                    : {name: "Invite", href: `/dashboard/invite/${guild?.id}`, icon: "mdi:discord"}
+                    ? {name: "View", href: `/dashboard/guilds/${guild?.id}`, icon: "mdi:elevation-rise"}
+                    : {name: "Invite", href: `/invite?guild_id=${guild?.id}`, icon: "mdi:discord"}
                 }
-            />
+            >
+                <span slot="message" class="text-green-400">
+                    Seems all good to go. Click {hasBot.includes(guild?.id || "") ? "View to get started!" : "Invite and invite the bot to a server you moderate"}
+                </span>
+            </ServerCard>
         {/each}
     </Column>
 
@@ -108,19 +126,50 @@
     />
 
     <Column size="small">
-        {#each (guilds?.guilds || [])?.filter(g => !serverListSearchFilter || g?.name?.toLocaleLowerCase()?.includes(serverListSearchFilter?.toLocaleLowerCase())) as guild}
+        {#each (guilds?.guilds || [])?.filter(g => {
+            // If no filter, show only servers the user can invite the bot to
+            if (!serverListSearchFilter) {
+                if(!hasBot.includes(g?.id || "") && !canInvite.includes(g?.id || "")) {
+                    return false
+                }
+
+                return true
+            }
+
+            // If filter, show servers that match the filter
+            return g?.name?.toLocaleLowerCase()?.includes(serverListSearchFilter?.toLocaleLowerCase())
+        }) as guild}
             <ServerCard 
                 id={guild?.id || ""} 
                 name={guild?.name || ""} 
                 image={guild?.avatar || "/logo.webp"} 
+                disabled={(!hasBot.includes(guild?.id || "") && !canInvite.includes(guild?.id || "")) ? "You do not have permission to invite the bot to this server" : ""}
                 mainAction={
                     hasBot.includes(guild?.id || "") 
-                    ? {name: "View", href: `/dashboard/guild/${guild?.id}`, icon: "mdi:discord"}
-                    : {name: "Invite", href: `/dashboard/invite/${guild?.id}`, icon: "mdi:discord"}
+                    ? {name: "View", href: `/dashboard/guilds/${guild?.id}`, icon: "mdi:elevation-rise"}
+                    : {name: "Invite", href: `/invite?guild_id=${guild?.id}`, icon: "mdi:discord"}
                 }
-            />
+            >
+                <span slot="message" class="text-green-400">
+                    Seems all good to go. Click {hasBot.includes(guild?.id || "") ? "View to get started!" : "Invite and invite the bot to a server you moderate"}
+                </span>
+            </ServerCard>
         {/each}
     </Column>
+
+    <ButtonReact 
+        color={Color.Themable}
+        text="Refresh Server List"
+        icon="mdi:refresh"
+        onClick={recacheForce}
+        states={
+            {
+                loading: "Refreshing...",
+                error: "Failed to refresh",
+                success: "Refreshed"
+            }
+        }
+    />
 {:catch error}
     <Message
         type="error"
@@ -129,16 +178,3 @@
     </Message>
 {/await}
 
-<ButtonReact 
-    color={Color.Themable}
-    text="Refresh Server List"
-    icon="mdi:refresh"
-    onClick={recacheForce}
-    states={
-        {
-            loading: "Refreshing...",
-            error: "Failed to refresh",
-            success: "Refreshed"
-        }
-    }
-/>

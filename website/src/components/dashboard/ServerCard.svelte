@@ -15,6 +15,7 @@ import { onMount } from 'svelte';
 	export let blurImage: boolean = false;
 	export let actions: Action[] = [];
 	export let mainAction: Action;
+	export let disabled: string = ""; // If set, disabled with this message
 
 	const imageLoadError = (a: any) => {
 		a.target.src = '/logo.webp';
@@ -61,55 +62,78 @@ import { onMount } from 'svelte';
 				on:error={imageLoadError}
 			/>
 
-			{#if mainAction.click}
-				<button on:click={mainAction.click} class="ml-2 text-xl font-extrabold dark:text-white truncate hover:underline">
-					{name}
-				</button>
+			{#if disabled}
+				<span class="ml-2 text-xl font-extrabold dark:text-white truncate">{name}</span>
 			{:else}
-				<a href={mainAction.href} class="ml-2 text-xl font-extrabold dark:text-white truncate hover:underline block">
-					{name}
-				</a>
+				{#if mainAction.click}
+					<button on:click={mainAction.click} class="ml-2 text-xl font-extrabold dark:text-white truncate hover:underline">
+						{name}
+					</button>
+				{:else}
+					<a href={mainAction.href} class="ml-2 text-xl font-extrabold dark:text-white truncate hover:underline block">
+						{name}
+					</a>
+				{/if}
 			{/if}
 		</div>
 
+		{#if disabled}
+			<p class="font-extrabold dark:text-white text-red-500 h-16 max-h-16">{disabled}</p>
+		{:else if $$slots.message}
+			<div class="h-16 max-h-16">
+				<slot name="message" />
+			</div>
+		{/if}
+
 		<div class="buttons flex flex-col justify-center items-center space-x-2 text-lg">
-			{#if mainAction.click}
+			{#if disabled}
 				<button
-					on:click={mainAction.click}
-					class="mt-3 bg-indigo-600 px-4 py-3 text-white rounded-md font-medium hover:cursor-pointer hover:bg-indigo-400"
+					class="mt-3 bg-indigo-300 px-4 py-3 text-white rounded-md font-medium hover:cursor-disabled"
+					disabled={true}
+					aria-disabled="true"
 				>
-					<Icon icon={mainAction.icon} class="mr-2 inline" />
+					<Icon icon="mdi:lock" class="mr-2 inline" />
 					{mainAction.name}
 				</button>
 			{:else}
-				<a
-					href={mainAction.href}
-					class="mt-3 bg-indigo-600 px-4 py-3 text-white rounded-md font-medium hover:cursor-pointer hover:bg-indigo-400 block"
-				>
-					<Icon icon={mainAction.icon} class="mr-2 inline" />
-					{mainAction.name}
-				</a>
-			{/if}
-
-			{#each actions as action}
-				{#if action.click}
+				{#if mainAction.click}
 					<button
-						on:click={action.click}
-						class="mt-3 bg-indigo-600 px-4 py-2 text-white rounded-md font-medium hover:cursor-pointer hover:bg-indigo-400"
+						on:click={mainAction.click}
+						class="mt-3 bg-indigo-600 px-4 py-3 text-white rounded-md font-medium hover:cursor-pointer hover:bg-indigo-400"
 					>
-						<Icon icon={action.icon} class="mr-2 inline" />
-						{action.name}
+						<Icon icon={mainAction.icon} class="mr-2 inline" />
+						{mainAction.name}
 					</button>
 				{:else}
 					<a
-						href={action.href}
-						class="mt-3 bg-indigo-600 px-4 py-2 text-white rounded-md font-medium hover:cursor-pointer hover:bg-indigo-400 block"
+						href={mainAction.href}
+						class="mt-3 bg-indigo-600 px-4 py-3 text-white rounded-md font-medium hover:cursor-pointer hover:bg-indigo-400 block"
 					>
-						<Icon icon={action.icon} class="mr-2 inline" />
-						{action.name}
+						<Icon icon={mainAction.icon} class="mr-2 inline" />
+						{mainAction.name}
 					</a>
 				{/if}
-			{/each}
+
+				{#each actions as action}
+					{#if action.click}
+						<button
+							on:click={action.click}
+							class="mt-3 bg-indigo-600 px-4 py-2 text-white rounded-md font-medium hover:cursor-pointer hover:bg-indigo-400"
+						>
+							<Icon icon={action.icon} class="mr-2 inline" />
+							{action.name}
+						</button>
+					{:else}
+						<a
+							href={action.href}
+							class="mt-3 bg-indigo-600 px-4 py-2 text-white rounded-md font-medium hover:cursor-pointer hover:bg-indigo-400 block"
+						>
+							<Icon icon={action.icon} class="mr-2 inline" />
+							{action.name}
+						</a>
+					{/if}
+				{/each}
+			{/if}
 		</div>
 	</div>
 </section>

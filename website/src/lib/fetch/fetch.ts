@@ -26,8 +26,6 @@ export async function fetchClient(url: string, options?: FetchClientOptions): Pr
             ...headers,
             ...options.headers
         }
-
-        delete options.headers
     }
 
     let modifier = ''
@@ -36,7 +34,6 @@ export async function fetchClient(url: string, options?: FetchClientOptions): Pr
         // @ts-ignore
         headers['Authorization'] = `User ${options.auth}`
         modifier += ' (authorized)'
-        delete options.auth
     } else {
         // @ts-ignore
         if (headers['Authorization']) {
