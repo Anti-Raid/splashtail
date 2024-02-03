@@ -2,7 +2,7 @@
 	import { getAuthCreds } from "$lib/auth/getAuthCreds";
 	import { get } from "$lib/configs/functions/services";
 	import { fetchClient } from "$lib/fetch/fetch";
-	import { DashboardGuild, DashboardGuildData } from "$lib/generated/types";
+	import { DashboardGuildData } from "$lib/generated/types";
     let currentState = "Loading dashboard data"
     import Message from "../../components/Message.svelte";
 	import ServerCard from "../../components/dashboard/ServerCard.svelte";
@@ -101,7 +101,7 @@
                 image={guild?.avatar || "/logo.webp"} 
                 mainAction={
                     hasBot.includes(guild?.id || "") 
-                    ? {name: "View", href: `/dashboard/guilds/${guild?.id}`, icon: "mdi:elevation-rise"}
+                    ? {name: "View", href: `/dashboard/guilds?id=${guild?.id}`, icon: "mdi:elevation-rise"}
                     : {name: "Invite", href: `/invite?guild_id=${guild?.id}`, icon: "mdi:discord"}
                 }
             >
@@ -146,7 +146,7 @@
                 disabled={(!hasBot.includes(guild?.id || "") && !canInvite.includes(guild?.id || "")) ? "You do not have permission to invite the bot to this server" : ""}
                 mainAction={
                     hasBot.includes(guild?.id || "") 
-                    ? {name: "View", href: `/dashboard/guilds/${guild?.id}`, icon: "mdi:elevation-rise"}
+                    ? {name: "View", href: `/dashboard/guilds?id=${guild?.id}`, icon: "mdi:elevation-rise"}
                     : {name: "Invite", href: `/invite?guild_id=${guild?.id}`, icon: "mdi:discord"}
                 }
             >

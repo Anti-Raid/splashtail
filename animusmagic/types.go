@@ -3,6 +3,7 @@ package animusmagic
 import (
 	"errors"
 
+	"github.com/anti-raid/splashtail/types"
 	"github.com/anti-raid/splashtail/types/silverpelt"
 )
 
@@ -30,6 +31,8 @@ type AnimusResponse struct {
 	GuildsExist *struct {
 		GuildsExist []uint8 `json:"guilds_exist"`
 	}
+
+	GetBaseGuildAndUserInfo *types.UserGuildBaseData
 }
 
 type AnimusMessage struct {
@@ -37,6 +40,10 @@ type AnimusMessage struct {
 	GuildsExist *struct {
 		Guilds []string `json:"guilds"`
 	} `json:"GuildsExist,omitempty"`
+	GetBaseGuildAndUserInfo *struct {
+		GuildID string `json:"guild_id"`
+		UserID  string `json:"user_id"`
+	} `json:"GetBaseGuildAndUserInfo,omitempty"`
 }
 
 type AnimusErrorResponse struct {

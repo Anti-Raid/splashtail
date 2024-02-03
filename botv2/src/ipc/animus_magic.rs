@@ -6,7 +6,7 @@ use std::sync::Arc;
 use fred::clients::SubscriberClient;
 use fred::interfaces::{ClientLike, PubsubInterface};
 use serde::{Serialize, Deserialize};
-use serenity::all::GuildId;
+use serenity::all::{GuildId, UserId, RoleId};
 
 #[derive(Serialize, Deserialize, PartialEq)]
 pub enum AnimusScope {
@@ -55,14 +55,31 @@ impl AnimusOp {
 }
 
 #[derive(Serialize, Deserialize)]
+pub struct AnimusMagicRole {
+    pub id: RoleId,
+    pub name: String,
+    pub position: i16
+}
+
+#[derive(Serialize, Deserialize)]
 pub enum AnimusResponse {
     /// Modules event contains module related data
     Modules {
-        modules: Vec<crate::silverpelt::canonical_repr::CanonicalModule>
+        modules: Vec<crate::silverpelt::canonical_repr::modules::CanonicalModule>
     },
     /// GuildsExist event contains a list of u8s, where 1 means the guild exists and 0 means it doesn't
     GuildsExist {
         guilds_exist: Vec<u8>
+    },
+    /// GetBaseGuildAndUserInfo event is described in AnimusMessage 
+    GetBaseGuildAndUserInfo {
+        owner_id: String,
+        name: String,
+        icon: Option<String>,
+        /// Format: (role id, role name, index)
+        roles: Vec<AnimusMagicRole>,
+        /// Bot highest role, same format as roles
+        bot_highest: AnimusMagicRole
     }
 }
 
@@ -74,6 +91,134 @@ pub enum AnimusMessage {
     GuildsExist {
         guilds: Vec<GuildId>,
     },
+    /// Given a guild ID and a user ID, check:
+    /// - The server owner
+    /// - The server name
+    /// - The server icon
+    /// - The users roles
+    /// - The bots highest role
+    GetBaseGuildAndUserInfo {
+        guild_id: GuildId,
+        user_id: UserId
+    }
+}
+
+impl AnimusMessage {
+    pub async fn response(&self, cache_http: &crate::impls::cache::CacheHttpImpl) -> Result<AnimusResponse, crate::Error> {
+        match self {
+            AnimusMessage::Modules {}  => {
+                let mut modules = Vec::new();
+
+                for idm in crate::silverpelt::SILVERPELT_CACHE.canonical_module_cache.iter() {
+                    let module = idm.value();
+                    modules.push(module.clone());
+                }
+
+                Ok(AnimusResponse::Modules {
+                    modules
+                })
+            },
+            AnimusMessage::GuildsExist { guilds } => {
+                let mut guilds_exist = Vec::with_capacity(guilds.len());
+
+                for guild in guilds {
+                    guilds_exist.push({
+                        if cache_http.cache.guild(*guild).is_some() {
+                            1
+                        } else {
+                            0
+                        }
+                    });
+                }
+
+                Ok(AnimusResponse::GuildsExist {
+                    guilds_exist
+                })
+            },
+            AnimusMessage::GetBaseGuildAndUserInfo { guild_id, user_id } => {
+                let (name, icon, owner, roles, bot_highest) = {                    
+                    let guild = match cache_http.cache.guild(*guild_id) {
+                        Some(guild) => guild,
+                        None => return Err("Guild not found".into())
+                    }.clone();
+
+                    let role_ids = {
+                        let mem = match guild.member(cache_http, *user_id).await {
+                            Ok(member) => member,
+                            Err(e) => return Err(format!("Failed to get member: {}", e).into())
+                        };
+
+                        mem.roles.clone()
+                    };
+
+                    let mut roles = Vec::new();
+
+                    for role in role_ids.iter() {
+                        // Get role from guild.roles
+                        match guild.roles.get(role) {
+                            Some(role) => {
+                                roles.push(AnimusMagicRole {
+                                    id: role.id,
+                                    name: role.name.to_string(),
+                                    position: role.position
+                                });
+                            }
+                            None => {
+                                roles.push(AnimusMagicRole {
+                                    id: *role,
+                                    name: "Unknown".to_string(),
+                                    position: -1
+                                });
+                            }
+                        }
+                    }
+
+                    let bot_user_id = cache_http.cache.current_user().id;
+                    let bot_roles = guild.member(&cache_http, bot_user_id).await?;
+
+                    let mut bot_highest = AnimusMagicRole {
+                        id: RoleId::new(0),
+                        name: "Unknown".to_string(),
+                        position: -1
+                    };
+
+                    for role in bot_roles.roles.iter() {
+                        // Get role from guild.roles
+                        match guild.roles.get(role) {
+                            Some(role) => {
+                                if role.position > bot_highest.position {
+                                    bot_highest = AnimusMagicRole {
+                                        id: role.id,
+                                        name: role.name.to_string(),
+                                        position: role.position
+                                    };
+                                }
+                            }
+                            None => {
+                                if -1 > bot_highest.position {
+                                    bot_highest = AnimusMagicRole {
+                                        id: *role,
+                                        name: "Unknown".to_string(),
+                                        position: -1
+                                    };
+                                }
+                            }
+                        }
+                    }
+
+                    (guild.name.to_string(), guild.icon_url(), guild.owner_id, roles, bot_highest)
+                };
+
+                Ok(AnimusResponse::GetBaseGuildAndUserInfo {
+                    name,
+                    icon,
+                    owner_id: owner.to_string(),
+                    roles,
+                    bot_highest
+                })
+            }
+        }
+    }
 }
 
 #[derive(Serialize, Deserialize)]
@@ -217,7 +362,7 @@ impl AnimusMagicClient {
         subscriber.manage_subscriptions();
 
         let _: () = subscriber.subscribe(
-    "animus_magic",
+            "animus_magic",
         ).await.unwrap();    
 
         while let Ok(message) = message_stream.recv().await {
@@ -300,35 +445,19 @@ impl AnimusMagicClient {
                     }
                 };
 
-                let data = match msg {
-                    AnimusMessage::Modules {}  => {
-                        let mut modules = Vec::new();
-
-                        for idm in crate::silverpelt::SILVERPELT_CACHE.canonical_module_cache.iter() {
-                            let module = idm.value();
-                            modules.push(module.clone());
+                let data = match msg.response(&cache_http).await {
+                    Ok(data) => data,
+                    Err(e) => {
+                        log::warn!("Failed to get response for message on channel {}", message.channel);
+                        // Send error
+                        if let Err(e) = Self::error(redis_pool, &meta.command_id, AnimusErrorResponse {
+                            message: "Failed to create response".to_string(),
+                            context: e.to_string()
+                        }).await {
+                            log::warn!("Failed to send error response: {}", e);
                         }
 
-                        AnimusResponse::Modules {
-                            modules
-                        }
-                    },
-                    AnimusMessage::GuildsExist { guilds } => {
-                        let mut guilds_exist = Vec::with_capacity(guilds.len());
-
-                        for guild in guilds {
-                            guilds_exist.push({
-                                if cache_http.cache.guild(guild).is_some() {
-                                    1
-                                } else {
-                                    0
-                                }
-                            });
-                        }
-
-                        AnimusResponse::GuildsExist {
-                            guilds_exist
-                        }
+                        return;
                     }
                 };
 

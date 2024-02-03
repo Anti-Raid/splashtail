@@ -26,7 +26,7 @@ pub struct SilverpeltCache {
     pub command_id_module_map: indexmap::IndexMap<String, String>,
 
     /// Cache of the canonical forms of all modules
-    pub canonical_module_cache: dashmap::DashMap<String, canonical_repr::CanonicalModule>,
+    pub canonical_module_cache: dashmap::DashMap<String, canonical_repr::modules::CanonicalModule>,
 
     /// Cache of all event listeners for a given module
     pub module_event_listeners_cache: indexmap::IndexMap<String, Vec<ModuleEventHandler>>,
@@ -77,7 +77,7 @@ impl SilverpeltCache {
                 let map = dashmap::DashMap::new();
     
                 for module in crate::modules::modules() {
-                    map.insert(module.id.to_string(), canonical_repr::CanonicalModule::from(module));
+                    map.insert(module.id.to_string(), canonical_repr::modules::CanonicalModule::from(module));
                 }
 
                 map

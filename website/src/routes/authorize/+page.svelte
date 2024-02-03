@@ -35,7 +35,7 @@
 
         setTimeout(() => {
             if(guildId) {
-                window.location.href = `/dashboard/guilds/${guildId}`
+                window.location.href = `/dashboard/guilds?id=${guildId}`
             } else {
                 window.location.href = "/dashboard"
             }

@@ -32,7 +32,7 @@ pub struct CanonicalCommandExtendedData {
     pub id: String,
 
     #[serde(flatten)]
-    pub data: super::CommandExtendedData
+    pub data: crate::silverpelt::CommandExtendedData
 }
 
 /// Canonical representation of a command (data section) for external use
@@ -85,7 +85,7 @@ pub struct CanonicalCommandData {
 
 /// Given a command, return its canonical representation
 impl CanonicalCommand {
-    pub fn from_repr(cmd: &super::Command, extended_data: super::CommandExtendedDataMap) -> Self {
+    pub fn from_repr(cmd: &crate::silverpelt::Command, extended_data: crate::silverpelt::CommandExtendedDataMap) -> Self {
         CanonicalCommand {
             command: cmd.into(),
             extended_data: {
@@ -105,8 +105,8 @@ impl CanonicalCommand {
 }
 
 /// Given command data, return its canonical representation
-impl From<&super::Command> for CanonicalCommandData {
-    fn from(cmd: &super::Command) -> Self {
+impl From<&crate::silverpelt::Command> for CanonicalCommandData {
+    fn from(cmd: &crate::silverpelt::Command) -> Self {
         CanonicalCommandData {
             name: cmd.name.clone(),
             qualified_name: cmd.qualified_name.clone(),
@@ -131,8 +131,8 @@ impl From<&super::Command> for CanonicalCommandData {
 }
 
 /// Given a module, return its canonical representation
-impl From<super::Module> for CanonicalModule {
-    fn from(module: super::Module) -> Self {
+impl From<crate::silverpelt::Module> for CanonicalModule {
+    fn from(module: crate::silverpelt::Module) -> Self {
         CanonicalModule {
             id: module.id.to_string(),
             name: module.name.to_string(),

@@ -14,3 +14,17 @@ type User struct {
 	CreatedAt  time.Time               `db:"created_at" json:"created_at" description:"The time the user was created"`
 	UpdatedAt  time.Time               `db:"updated_at" json:"updated_at" description:"The time the user was last updated"`
 }
+
+type PartialRole struct {
+	ID       string `json:"id"`
+	Name     string `json:"name"`
+	Position int16  `json:"position"`
+}
+
+type UserGuildBaseData struct {
+	OwnerID    string        `json:"owner_id"`
+	Name       string        `json:"name"`
+	Icon       *string       `json:"icon"`
+	Roles      []PartialRole `json:"roles"`
+	BotHighest PartialRole   `json:"bot_highest"`
+}

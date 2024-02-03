@@ -54,7 +54,7 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 		}.Limit(d.Context, r)
 
 		if err != nil {
-			state.Logger.Error("Error while ratelimiting", zap.Error(err), zap.String("bucket", "login"))
+			state.Logger.Error("Error while ratelimiting", zap.Error(err), zap.String("bucket", "get_user_guilds_refresh"))
 			return uapi.DefaultResponse(http.StatusInternalServerError)
 		}
 

@@ -3,6 +3,7 @@ package users
 import (
 	"github.com/anti-raid/splashtail/types"
 	"github.com/anti-raid/splashtail/webserver/routes/users/endpoints/get_user"
+	"github.com/anti-raid/splashtail/webserver/routes/users/endpoints/get_user_guild_base_info"
 	"github.com/anti-raid/splashtail/webserver/routes/users/endpoints/get_user_guilds"
 	"github.com/go-chi/chi/v5"
 	"github.com/infinitybotlist/eureka/uapi"
@@ -34,6 +35,20 @@ func (b Router) Routes(r *chi.Mux) {
 		Auth: []uapi.AuthType{
 			{
 				URLVar: "id",
+				Type:   types.TargetTypeUser,
+			},
+		},
+	}.Route(r)
+
+	uapi.Route{
+		Pattern: "/users/{user_id}/guilds/{guild_id}",
+		OpId:    "get_user_guild_base_info",
+		Method:  uapi.GET,
+		Docs:    get_user_guild_base_info.Docs,
+		Handler: get_user_guild_base_info.Route,
+		Auth: []uapi.AuthType{
+			{
+				URLVar: "user_id",
 				Type:   types.TargetTypeUser,
 			},
 		},
