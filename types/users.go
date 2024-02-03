@@ -3,6 +3,7 @@ package types
 import (
 	"time"
 
+	"github.com/bwmarrin/discordgo"
 	"github.com/infinitybotlist/eureka/dovewing/dovetypes"
 )
 
@@ -15,16 +16,22 @@ type User struct {
 	UpdatedAt  time.Time               `db:"updated_at" json:"updated_at" description:"The time the user was last updated"`
 }
 
-type PartialRole struct {
-	ID       string `json:"id"`
-	Name     string `json:"name"`
-	Position int16  `json:"position"`
-}
-
+/*
+owner_id: String,
+name: String,
+icon: Option<String>,
+/// List of all roles in the server
+roles: std::collections::HashMap<RoleId, Role>,
+/// List of roles the user has
+user_roles: Vec<RoleId>,
+/// List of roles the bot has
+bot_roles: Vec<RoleId>,
+*/
 type UserGuildBaseData struct {
-	OwnerID    string        `json:"owner_id"`
-	Name       string        `json:"name"`
-	Icon       *string       `json:"icon"`
-	Roles      []PartialRole `json:"roles"`
-	BotHighest PartialRole   `json:"bot_highest"`
+	OwnerID   string                     `json:"owner_id"`
+	Name      string                     `json:"name"`
+	Icon      *string                    `json:"icon"`
+	Roles     map[string]*discordgo.Role `json:"roles"`
+	UserRoles []string                   `json:"user_roles"`
+	BotRoles  []string                   `json:"bot_roles"`
 }
