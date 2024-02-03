@@ -6,7 +6,7 @@ use std::sync::Arc;
 use fred::clients::SubscriberClient;
 use fred::interfaces::{ClientLike, PubsubInterface};
 use serde::{Serialize, Deserialize};
-use serenity::all::{GuildId, UserId, RoleId};
+use serenity::all::{GuildId, UserId, RoleId, Role};
 
 #[derive(Serialize, Deserialize, PartialEq)]
 pub enum AnimusScope {
@@ -55,13 +55,6 @@ impl AnimusOp {
 }
 
 #[derive(Serialize, Deserialize)]
-pub struct AnimusMagicRole {
-    pub id: RoleId,
-    pub name: String,
-    pub position: i16
-}
-
-#[derive(Serialize, Deserialize)]
 pub enum AnimusResponse {
     /// Modules event contains module related data
     Modules {
@@ -76,10 +69,12 @@ pub enum AnimusResponse {
         owner_id: String,
         name: String,
         icon: Option<String>,
-        /// Format: (role id, role name, index)
-        roles: Vec<AnimusMagicRole>,
-        /// Bot highest role, same format as roles
-        bot_highest: AnimusMagicRole
+        /// List of all roles in the server
+        roles: std::collections::HashMap<RoleId, Role>,
+        /// List of roles the user has
+        user_roles: Vec<RoleId>,
+        /// List of roles the bot has
+        bot_roles: Vec<RoleId>,
     }
 }
 
@@ -136,77 +131,25 @@ impl AnimusMessage {
                 })
             },
             AnimusMessage::GetBaseGuildAndUserInfo { guild_id, user_id } => {
-                let (name, icon, owner, roles, bot_highest) = {                    
+                let (name, icon, owner, roles, user_roles, bot_roles) = {                    
                     let guild = match cache_http.cache.guild(*guild_id) {
                         Some(guild) => guild,
                         None => return Err("Guild not found".into())
                     }.clone();
 
-                    let role_ids = {
+                    let user_roles = {
                         let mem = match guild.member(cache_http, *user_id).await {
                             Ok(member) => member,
                             Err(e) => return Err(format!("Failed to get member: {}", e).into())
                         };
 
-                        mem.roles.clone()
+                        mem.roles.to_vec()
                     };
-
-                    let mut roles = Vec::new();
-
-                    for role in role_ids.iter() {
-                        // Get role from guild.roles
-                        match guild.roles.get(role) {
-                            Some(role) => {
-                                roles.push(AnimusMagicRole {
-                                    id: role.id,
-                                    name: role.name.to_string(),
-                                    position: role.position
-                                });
-                            }
-                            None => {
-                                roles.push(AnimusMagicRole {
-                                    id: *role,
-                                    name: "Unknown".to_string(),
-                                    position: -1
-                                });
-                            }
-                        }
-                    }
 
                     let bot_user_id = cache_http.cache.current_user().id;
-                    let bot_roles = guild.member(&cache_http, bot_user_id).await?;
+                    let bot_roles = guild.member(&cache_http, bot_user_id).await?.roles.to_vec();
 
-                    let mut bot_highest = AnimusMagicRole {
-                        id: RoleId::new(0),
-                        name: "Unknown".to_string(),
-                        position: -1
-                    };
-
-                    for role in bot_roles.roles.iter() {
-                        // Get role from guild.roles
-                        match guild.roles.get(role) {
-                            Some(role) => {
-                                if role.position > bot_highest.position {
-                                    bot_highest = AnimusMagicRole {
-                                        id: role.id,
-                                        name: role.name.to_string(),
-                                        position: role.position
-                                    };
-                                }
-                            }
-                            None => {
-                                if -1 > bot_highest.position {
-                                    bot_highest = AnimusMagicRole {
-                                        id: *role,
-                                        name: "Unknown".to_string(),
-                                        position: -1
-                                    };
-                                }
-                            }
-                        }
-                    }
-
-                    (guild.name.to_string(), guild.icon_url(), guild.owner_id, roles, bot_highest)
+                    (guild.name.to_string(), guild.icon_url(), guild.owner_id, guild.roles, user_roles, bot_roles)
                 };
 
                 Ok(AnimusResponse::GetBaseGuildAndUserInfo {
@@ -214,7 +157,8 @@ impl AnimusMessage {
                     icon,
                     owner_id: owner.to_string(),
                     roles,
-                    bot_highest
+                    user_roles,
+                    bot_roles
                 })
             }
         }

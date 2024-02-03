@@ -3,7 +3,6 @@
 	import { get } from "$lib/configs/functions/services";
 	import { fetchClient } from "$lib/fetch/fetch";
 	import { DashboardGuildData } from "$lib/generated/types";
-    let currentState = "Loading dashboard data"
     import Message from "../../components/Message.svelte";
 	import ServerCard from "../../components/dashboard/ServerCard.svelte";
     import Column from "../../components/Column.svelte";
@@ -11,6 +10,7 @@
     import ButtonReact from "../../components/inputs/button/ButtonReact.svelte";
     import { Color } from "../../components/inputs/button/colors";
 
+    let currentState = "Loading dashboard data"
     let guilds: DashboardGuildData;
     let canInvite: string[] = [];
     let hasBot: string[] = [];

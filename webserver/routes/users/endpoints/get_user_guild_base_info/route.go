@@ -113,6 +113,7 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 
 		if errors.Is(err, animusmagic.ErrOpError) && len(resps) > 0 {
 			return uapi.HttpResponse{
+				Status: http.StatusInternalServerError,
 				Json: types.ApiError{
 					Message: "Error from animus magic: " + resps[0].Error.Message,
 					Context: map[string]string{
