@@ -81,6 +81,9 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 			Json: types.ApiError{
 				Message: "Error getting cluster ID: " + err.Error(),
 			},
+			Headers: map[string]string{
+				"Retry-After": "10",
+			},
 		}
 	}
 
@@ -91,6 +94,9 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 					Status: http.StatusInternalServerError,
 					Json: types.ApiError{
 						Message: "Cluster is not healthy",
+					},
+					Headers: map[string]string{
+						"Retry-After": "10",
 					},
 				}
 			}
@@ -117,6 +123,9 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 			return uapi.HttpResponse{
 				Status: http.StatusInternalServerError,
 				Json:   resps[0].Error,
+				Headers: map[string]string{
+					"Retry-After": "10",
+				},
 			}
 		}
 
@@ -124,6 +133,9 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 			Status: http.StatusInternalServerError,
 			Json: types.ApiError{
 				Message: "Error sending request to animus magic: " + err.Error(),
+			},
+			Headers: map[string]string{
+				"Retry-After": "10",
 			},
 		}
 	}

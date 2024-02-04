@@ -2,7 +2,7 @@
 	import { getAuthCreds } from "$lib/auth/getAuthCreds";
 	import { get } from "$lib/configs/functions/services";
 	import { fetchClient } from "$lib/fetch/fetch";
-	import { DashboardGuildData } from "$lib/generated/types";
+	import { ApiError, DashboardGuildData } from "$lib/generated/types";
     import Message from "../../components/Message.svelte";
 	import ServerCard from "../../components/dashboard/ServerCard.svelte";
     import Column from "../../components/Column.svelte";
@@ -27,16 +27,19 @@
 
         let res = await fetchClient(`${get('splashtail')}/users/${authCreds?.user_id}/guilds?refresh=${refresh}`, {
             auth: authCreds?.token,
-            onRatelimit: (n) => {
+            onRatelimit: (n, err) => {
                 if(!n) {
-                    currentState = "Fetching user guild list"
+                    currentState = "Retrying fetching of user guild list"
                 } else {
-                    currentState = `Ratelimited, retrying user guild list fetch in ${n/1000} seconds`
+                    currentState = `Ratelimited, retrying user guild list fetch in ${n/1000} seconds (${err?.message})`
                 }
             }
         })
 
-        if(!res.ok) throw new Error("Failed to fetch user guild list")
+        if(!res.ok) {
+            let err: ApiError = await res.json()
+            throw new Error(`Failed to fetch user guild list: ${err?.message} (${err?.context})`)
+        }
 
         guilds = await res.json()
 
