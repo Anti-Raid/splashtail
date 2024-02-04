@@ -77,6 +77,7 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 	if err != nil {
 		state.Logger.Error("Error getting cluster ID", zap.Error(err))
 		return uapi.HttpResponse{
+			Status: http.StatusInternalServerError,
 			Json: types.ApiError{
 				Message: "Error getting cluster ID: " + err.Error(),
 			},
@@ -87,6 +88,7 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 		if v.ClusterID == clusterId {
 			if !v.Active || v.CurrentlyKilling || len(v.ClusterHealth) == 0 {
 				return uapi.HttpResponse{
+					Status: http.StatusInternalServerError,
 					Json: types.ApiError{
 						Message: "Cluster is not healthy",
 					},
@@ -114,17 +116,12 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 		if errors.Is(err, animusmagic.ErrOpError) && len(resps) > 0 {
 			return uapi.HttpResponse{
 				Status: http.StatusInternalServerError,
-				Json: types.ApiError{
-					Message: "Error from animus magic: " + resps[0].Error.Message,
-					Context: map[string]string{
-						"message": resps[0].Error.Message,
-						"context": resps[0].Error.Context,
-					},
-				},
+				Json:   resps[0].Error,
 			}
 		}
 
 		return uapi.HttpResponse{
+			Status: http.StatusInternalServerError,
 			Json: types.ApiError{
 				Message: "Error sending request to animus magic: " + err.Error(),
 			},
@@ -133,6 +130,7 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 
 	if len(resps) != 1 {
 		return uapi.HttpResponse{
+			Status: http.StatusInternalServerError,
 			Json: types.ApiError{
 				Message: "Unexpected number of responses",
 			},

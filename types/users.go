@@ -3,7 +3,7 @@ package types
 import (
 	"time"
 
-	"github.com/bwmarrin/discordgo"
+	"github.com/anti-raid/splashtail/types/ext"
 	"github.com/infinitybotlist/eureka/dovewing/dovetypes"
 )
 
@@ -27,11 +27,12 @@ user_roles: Vec<RoleId>,
 /// List of roles the bot has
 bot_roles: Vec<RoleId>,
 */
+
 type UserGuildBaseData struct {
-	OwnerID   string                     `json:"owner_id"`
-	Name      string                     `json:"name"`
-	Icon      *string                    `json:"icon"`
-	Roles     map[string]*discordgo.Role `json:"roles"`
-	UserRoles []string                   `json:"user_roles"`
-	BotRoles  []string                   `json:"bot_roles"`
+	OwnerID   string                       `json:"owner_id"`
+	Name      string                       `json:"name"`
+	Icon      *string                      `json:"icon"`
+	Roles     map[string]*ext.SerenityRole `json:"roles"`
+	UserRoles []string                     `json:"user_roles"`
+	BotRoles  []string                     `json:"bot_roles"`
 }

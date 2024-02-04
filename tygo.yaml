@@ -3,6 +3,7 @@ packages:
     output_path: "/failuremgmt/cdn/antiraid/dev/bindings/splashtail/types.ts"
     frontmatter: |
       import { PlatformUser } from "./eureka-dovewing"
+      import * as ext from "./ext"
     type_mappings:
       time.Time: "string /* RFC3339 */"
       pgtype.Text: "string | null /* nullable */"
@@ -15,6 +16,16 @@ packages:
 
   - path: "github.com/anti-raid/splashtail/types/silverpelt"
     output_path: "/failuremgmt/cdn/antiraid/dev/bindings/splashtail/silverpelt.ts"
+    type_mappings:
+      time.Time: "string /* RFC3339 */"
+      pgtype.Text: "string | null /* nullable */"
+      pgtype.UUID: "string /* uuid */"
+      dovetypes.PlatformUser: PlatformUser /* from eureka-dovewing.ts */
+      pgtype.Timestamptz: "string | null /* RFC3339, nullable */"
+      orderedmap.OrderedMap: "Record"
+
+  - path: "github.com/anti-raid/splashtail/types/ext"
+    output_path: "/failuremgmt/cdn/antiraid/dev/bindings/splashtail/ext.ts"
     type_mappings:
       time.Time: "string /* RFC3339 */"
       pgtype.Text: "string | null /* nullable */"

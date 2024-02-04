@@ -100,14 +100,31 @@ func (c *AnimusMagicClient) ListenOnce(ctx context.Context, redis rueidis.Client
 
 						if err != nil {
 							l.Error("[animus magic] error unmarshaling payload", zap.Error(err))
-							return
-						}
 
-						response = &ClientResponse{
-							Scope:     scope,
-							ClusterID: clusterId,
-							Op:        op,
-							Resp:      resp,
+							// Try getting better debug data
+							var cdr map[string]any
+
+							err2 := cbor.Unmarshal(payload, &cdr)
+
+							response = &ClientResponse{
+								Scope:     scope,
+								ClusterID: clusterId,
+								Op:        OpError,
+								Error: &AnimusErrorResponse{
+									Message: "client error: error unmarshaling payload: " + err.Error(),
+									ClientDebugInfo: map[string]any{
+										"data": cdr,
+										"err":  err2,
+									},
+								},
+							}
+						} else {
+							response = &ClientResponse{
+								Scope:     scope,
+								ClusterID: clusterId,
+								Op:        op,
+								Resp:      resp,
+							}
 						}
 					} else {
 						var data *AnimusErrorResponse

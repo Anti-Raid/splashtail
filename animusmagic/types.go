@@ -49,4 +49,7 @@ type AnimusMessage struct {
 type AnimusErrorResponse struct {
 	Message string `json:"message"`
 	Context string `json:"context"`
+
+	// Client internal
+	ClientDebugInfo map[string]any `json:"client_debug_info,omitempty"`
 }
