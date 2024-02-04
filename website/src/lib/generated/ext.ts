@@ -3,7 +3,7 @@
 //////////
 // source: discordgo.go
 
-export type Permissions = number /* int64 */;
+export type Permissions = string;
 /**
  * 	A role tags object from serenity because discordgo doesnt actually support this
  * /// The Id of the bot the [`Role`] belongs to.
@@ -45,7 +45,7 @@ export interface SerenityRoleTags {
 export interface SerenityRole {
   id: string;
   guild_id: string;
-  colour: number /* int */;
+  color: number /* int */;
   name: string;
   permissions?: Permissions;
   position: number /* int16 */;

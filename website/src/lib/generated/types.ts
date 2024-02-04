@@ -15,10 +15,15 @@ export interface UserLogin {
   token: string;
   user_id: string;
 }
-export interface OauthMeta {
-  client_id: string;
-  scopes: string[];
-  oauth2_base: string;
+export interface UserSession {
+  id: string;
+  user_id: string;
+  created_at: string /* RFC3339 */;
+  type: string;
+  expiry: string /* RFC3339 */;
+}
+export interface UserSessionList {
+  sessions: (UserSession | undefined)[];
 }
 export interface TestAuth {
   auth_type: string;
