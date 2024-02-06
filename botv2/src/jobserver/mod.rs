@@ -1,6 +1,10 @@
 pub mod taskpoll;
 
 use std::str::FromStr;
+use std::sync::Arc;
+use sqlx::{PgPool, types::uuid::Uuid};
+use crate::Error;
+use object_store::{path::Path, ObjectStore};
 
 pub fn get_icon_of_state(state: &str) -> String {
     match state {
@@ -25,9 +29,8 @@ pub struct TaskStatuses {
     pub extra_info: std::collections::HashMap<String, serde_json::Value>,
 }
 
-#[derive(Clone)]
 pub struct Task {
-    pub task_id: sqlx::types::uuid::Uuid,
+    pub task_id: Uuid,
     pub task_name: String,
     pub output: Option<TaskOutput>,
     pub task_info: TaskInfo,
@@ -97,7 +100,7 @@ pub struct WrappedTaskCreateResponse {
 
 impl Task {
     /// Fetches a task from the database based on id
-    pub async fn from_id(task_id: sqlx::types::uuid::Uuid, pool: &sqlx::PgPool) -> Result<Self, crate::Error> {
+    pub async fn from_id(task_id: Uuid, pool: &PgPool) -> Result<Self, crate::Error> {
         let rec = sqlx::query!(
             "SELECT task_id, task_name, output, task_info, statuses, task_for, expiry, state, created_at FROM tasks WHERE task_id = $1 ORDER BY created_at DESC",
             task_id,
@@ -228,5 +231,65 @@ impl Task {
         }
 
         Ok(tasks)
+    }
+
+    pub fn format_task_for_simplex(&self) -> String {
+        if let Some(fu) = &self.task_for {
+            format!("{}/{}", fu.target_type.to_lowercase(), fu.id)
+        } else {
+            "".to_string()
+        }
+    }
+
+    pub fn get_path(&self) -> Option<String> {
+        if let Some(output) = &self.output {
+            if output.segregated {
+                Some(format!("{}/{}/{}/{}", self.format_task_for_simplex(), self.task_info.name, self.task_id, output.filename))
+            } else {
+                Some(format!("tasks/{}", self.task_id))
+            }
+        } else {
+            None
+        }
+    }
+
+    /// Deletes the task from the object storage
+    pub async fn delete_from_storage(&self, object_store: &Arc<Box<dyn ObjectStore>>) -> Result<(), Error> {
+        // Check if the task has an output
+        let Some(path) = self.get_path() else {
+            return Err("Task has no output".into());
+        };
+
+        let path = match Path::parse(path) {
+            Ok(p) => p,
+            Err(e) => return Err(format!("Failed to parse path: {}", e).into()),
+        };
+
+        // If the task has an output, delete it from the object store
+        object_store.delete(&path).await?;
+
+        Ok(())
+    }
+
+    /// Delete the task from the database, this also consumes the task dropping it from memory
+    pub async fn delete_from_db(self, pool: &PgPool) -> Result<(), Error> {
+        sqlx::query!(
+            "DELETE FROM tasks WHERE task_id = $1",
+            self.task_id,
+        )
+        .execute(pool)
+        .await?;
+
+        Ok(())
+    }
+
+    /// Deletes the task entirely, this includes deleting it from the object storage and the database
+    /// This also consumes the task dropping it from memory
+    #[allow(dead_code)] // Will be used in the near future
+    pub async fn delete(self, pool: &PgPool, object_store: &Arc<Box<dyn ObjectStore>>) -> Result<(), Error> {
+        self.delete_from_storage(object_store).await?;
+        self.delete_from_db(pool).await?;
+
+        Ok(())
     }
 }

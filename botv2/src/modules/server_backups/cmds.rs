@@ -4,7 +4,7 @@ use futures_util::StreamExt;
 
 use crate::{Context, Error};
 use std::sync::Arc;
-use serenity::all::CreateEmbed;
+use serenity::all::{EditMessage, CreateEmbed};
 use serenity::small_fixed_array::TruncatingInto;
 
 /*
@@ -273,7 +273,7 @@ pub async fn backups_list(ctx: Context<'_>) -> Result<(), Error> {
         return Err("This command can only be used in a guild".into());
     };
 
-    let backup_tasks = crate::jobserver::Task::from_guild_and_task_name(guild_id, "guild_create_backup", &ctx.data().pool)
+    let mut backup_tasks = crate::jobserver::Task::from_guild_and_task_name(guild_id, "guild_create_backup", &ctx.data().pool)
     .await
     .map_err(|e| {
        format!("Failed to get backup tasks: {}", e)
@@ -336,6 +336,10 @@ pub async fn backups_list(ctx: Context<'_>) -> Result<(), Error> {
                         .emoji(serenity::all::ReactionType::Unicode("⏪".to_string().trunc_into()))
                         .style(serenity::all::ButtonStyle::Primary)
                         .disabled(index == 0),
+                        serenity::all::CreateButton::new("backups_delete")
+                        .label("Delete")
+                        .style(serenity::all::ButtonStyle::Danger)
+                        .disabled(index == 0),
                     ]
                 )
             ]
@@ -355,7 +359,7 @@ pub async fn backups_list(ctx: Context<'_>) -> Result<(), Error> {
 
     let collector = msg.await_component_interactions(ctx.serenity_context())
     .author_id(ctx.author().id)
-    .timeout(Duration::from_secs(120));
+    .timeout(Duration::from_secs(180));
 
     let mut collect_stream = collector.stream();
 
@@ -382,6 +386,119 @@ pub async fn backups_list(ctx: Context<'_>) -> Result<(), Error> {
             },
             "backups_first" => {
                 index = 0;
+            },
+            "backups_delete" => {
+                // Ask for confirmation
+                let mut confirm = ctx.send(
+                    poise::reply::CreateReply::default()
+                    .content("Are you sure you want to delete this backup?\n\n**This action is irreversible!**")
+                    .components(
+                        vec![
+                            serenity::all::CreateActionRow::Buttons(
+                                vec![
+                                    serenity::all::CreateButton::new("backups_delete_confirm")
+                                    .label("Yes")
+                                    .style(serenity::all::ButtonStyle::Success),
+                                    serenity::all::CreateButton::new("backups_delete_cancel")
+                                    .label("No")
+                                    .style(serenity::all::ButtonStyle::Danger),
+                                ]
+                            )
+                        ]
+                    )
+                )
+                .await?
+                .into_message()
+                .await?;
+                
+
+                let confirm_collector = confirm
+                .await_component_interaction(ctx.serenity_context())
+                .author_id(ctx.author().id)
+                .timeout(Duration::from_secs(30))
+                .await;
+
+                if confirm_collector.is_none() {
+                    // Edit the message to say that the user took too long to respond
+                    confirm.edit(
+                        &ctx.serenity_context(), 
+                        EditMessage::default()
+                        .content("You took too long to respond")
+                    ).await?;
+                }
+
+                let confirm_item = confirm_collector.unwrap();
+
+                match confirm_item.data.custom_id.as_str() {
+                    "backups_delete_confirm" => {
+                        // Take out the current backup task
+                        let task = backup_tasks.remove(index);
+
+                        let mut base_message = ctx.send(
+                            poise::CreateReply::default()
+                            .embed(
+                                CreateEmbed::default()
+                                .title("Deleting Backup...")
+                                .description(":yellow_circle: Please wait while we delete this backup")
+                            )
+                        )
+                        .await?
+                        .into_message()
+                        .await?;
+
+                        let mut status = Vec::new();
+
+                        match task.delete_from_storage(&ctx.data().object_store).await {
+                            Ok(_) => {
+                                status.push(":white_check_mark: Successfully deleted the backup from storage".to_string());
+                            },
+                            Err(e) => {
+                                status.push(format!(":x: Failed to delete the backup from storage: {}", e));
+                            }
+                        };
+
+                        if let Err(e) = base_message
+                        .edit(
+                            &ctx,
+                            serenity::all::EditMessage::default()
+                            .embed(
+                                CreateEmbed::default()
+                                .title("Deleting Backup")
+                                .description(status.join("\n"))
+                            )
+                        )
+                        .await {
+                            log::error!("Failed to edit message: {}", e);
+                        }
+
+                        // Lastly deleting the task from the database
+                        match task.delete_from_db(&ctx.data().pool).await {
+                            Ok(_) => {
+                                status.push(":white_check_mark: Successfully deleted the backup task from database".to_string());
+                            },
+                            Err(e) => {
+                                status.push(format!(":x: Failed to delete the backup task from database: {}", e));
+                            }
+                        };
+
+                        if let Err(e) = base_message
+                        .edit(
+                            &ctx,
+                            serenity::all::EditMessage::default()
+                            .embed(
+                                CreateEmbed::default()
+                                .title("Deleting Backup")
+                                .description(status.join("\n"))
+                            )
+                        )
+                        .await {
+                            log::error!("Failed to edit message: {}", e);
+                        }
+                    },
+                    _ => {
+                        continue;
+                    }
+                }
             },
             _ => {
                 continue;
