@@ -365,6 +365,7 @@ pub async fn backups_list(ctx: Context<'_>) -> Result<(), Error> {
 
     while let Some(item) = collect_stream.next().await {
         let item_id = item.data.custom_id.as_str();
+        let mut followup = false;
 
         match item_id {
             "backups_previous" => {
@@ -388,7 +389,10 @@ pub async fn backups_list(ctx: Context<'_>) -> Result<(), Error> {
                 index = 0;
             },
             "backups_delete" => {
-                // Ask for confirmation
+                item.defer(&ctx.serenity_context()).await?;
+
+                followup = true;
+
                 let mut confirm = ctx.send(
                     poise::reply::CreateReply::default()
                     .content("Are you sure you want to delete this backup?\n\n**This action is irreversible!**")
@@ -410,7 +414,6 @@ pub async fn backups_list(ctx: Context<'_>) -> Result<(), Error> {
                 .await?
                 .into_message()
                 .await?;
-                
 
                 let confirm_collector = confirm
                 .await_component_interaction(ctx.serenity_context())
@@ -509,7 +512,9 @@ pub async fn backups_list(ctx: Context<'_>) -> Result<(), Error> {
             index = backup_tasks.len() - 1;
         }
 
-        item.defer(&ctx.serenity_context()).await?;
+        if !followup {
+            item.defer(&ctx.serenity_context()).await?;
+        }
 
         let cr = create_reply(index, &backup_tasks);
 

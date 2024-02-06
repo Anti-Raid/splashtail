@@ -72,7 +72,7 @@ impl ObjectStorage {
                 let endpoint = self.endpoint.as_ref().ok_or("Missing endpoint")?;
 
                 let store = object_store::aws::AmazonS3Builder::new()
-                .with_endpoint(endpoint)
+                .with_endpoint(format!("https://{}", endpoint))
                 .with_bucket_name(self.path.clone())
                 .with_access_key_id(access_key)
                 .with_secret_access_key(secret_key)
