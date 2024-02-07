@@ -103,7 +103,6 @@
             <thead>
                 <tr>
                     <Th handler={data.sessionHandler} orderBy={"id"}>ID</Th>
-                    <Th handler={data.sessionHandler} orderBy={"name"}>Name</Th>
                     <Th handler={data.sessionHandler} orderBy={"type"}>Type</Th>
                     <Th handler={data.sessionHandler} orderBy={"expiry"}>Expiry</Th>
                     <Th handler={data.sessionHandler} orderBy={"created_at"}>Created At</Th>
@@ -111,7 +110,6 @@
                 </tr>
                 <tr>
                     <ThFilter handler={data.sessionHandler} filterBy={"id"} />
-                    <ThFilter handler={data.sessionHandler} filterBy={"name"} />
                     <ThFilter handler={data.sessionHandler} filterBy={"type"} />
                     <ThFilter handler={data.sessionHandler} filterBy={"expiry"} />
                     <ThFilter handler={data.sessionHandler} filterBy={"created_at"} />
@@ -128,7 +126,6 @@
                                 <span class="text-green-500"> (Current Session)</span>
                             {/if}
                         </td>
-                        <td>{session.name || "Unnamed Session"}</td>
                         <td>{session.type}</td>
                         <td>{session.expiry}</td>
                         <td>{session.created_at}</td>

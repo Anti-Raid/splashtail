@@ -64,7 +64,7 @@ func (m Router) Routes(r *chi.Mux) {
 	uapi.Route{
 		Pattern: "/users/{user_id}/sessions",
 		OpId:    "create_user_session",
-		Method:  uapi.GET,
+		Method:  uapi.POST,
 		Docs:    create_user_session.Docs,
 		Handler: create_user_session.Route,
 		Auth: []uapi.AuthType{
