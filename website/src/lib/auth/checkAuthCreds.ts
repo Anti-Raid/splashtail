@@ -3,6 +3,18 @@ import { fetchClient } from '../fetch/fetch'
 import logger from '../ui/logger'
 import { LSAuthData } from './core'
 
+interface AuthData {
+    authorized: boolean
+    banned: boolean
+    data: {
+        session_id: string
+    },
+    id: string
+    target_type: string
+}
+
+export let testAuthData: AuthData | null = null
+
 export const checkAuthCreds = async (data: LSAuthData) => {
     // Check that the token is valid
     const testAuthResp = await fetchClient(`${get('splashtail')}/auth/test`, {
@@ -21,5 +33,8 @@ export const checkAuthCreds = async (data: LSAuthData) => {
     }
 
     logger.info('Auth', 'Auth token is valid!')
+
+    testAuthData = await testAuthResp.json()
+
     return true
 }

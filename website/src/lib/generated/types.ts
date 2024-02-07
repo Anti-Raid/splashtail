@@ -17,6 +17,7 @@ export interface UserLogin {
 }
 export interface UserSession {
   id: string;
+  name?: string | null /* nullable */;
   user_id: string;
   created_at: string /* RFC3339 */;
   type: string;

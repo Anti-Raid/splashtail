@@ -1,9 +1,12 @@
 package auth
 
 import (
+	"github.com/anti-raid/splashtail/types"
 	"github.com/anti-raid/splashtail/webserver/routes/auth/endpoints/create_ioauth_login"
 	"github.com/anti-raid/splashtail/webserver/routes/auth/endpoints/create_oauth2_login"
+	"github.com/anti-raid/splashtail/webserver/routes/auth/endpoints/create_user_session"
 	"github.com/anti-raid/splashtail/webserver/routes/auth/endpoints/get_user_sessions"
+	"github.com/anti-raid/splashtail/webserver/routes/auth/endpoints/revoke_user_session"
 	"github.com/anti-raid/splashtail/webserver/routes/auth/endpoints/test_auth"
 
 	"github.com/go-chi/chi/v5"
@@ -49,5 +52,41 @@ func (m Router) Routes(r *chi.Mux) {
 		Method:  uapi.GET,
 		Docs:    get_user_sessions.Docs,
 		Handler: get_user_sessions.Route,
+		Auth: []uapi.AuthType{
+			{
+				URLVar:       "user_id",
+				Type:         types.TargetTypeUser,
+				AllowedScope: "ban_exempt",
+			},
+		},
+	}.Route(r)
+
+	uapi.Route{
+		Pattern: "/users/{user_id}/sessions",
+		OpId:    "create_user_session",
+		Method:  uapi.GET,
+		Docs:    create_user_session.Docs,
+		Handler: create_user_session.Route,
+		Auth: []uapi.AuthType{
+			{
+				URLVar: "user_id",
+				Type:   types.TargetTypeUser,
+			},
+		},
+	}.Route(r)
+
+	uapi.Route{
+		Pattern: "/users/{user_id}/sessions/{session_id}",
+		OpId:    "revoke_user_session",
+		Method:  uapi.DELETE,
+		Docs:    revoke_user_session.Docs,
+		Handler: revoke_user_session.Route,
+		Auth: []uapi.AuthType{
+			{
+				URLVar:       "user_id",
+				Type:         types.TargetTypeUser,
+				AllowedScope: "ban_exempt",
+			},
+		},
 	}.Route(r)
 }

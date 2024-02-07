@@ -87,6 +87,10 @@
 				{
 					name: "Dashboard",
 					href: "/dashboard"
+				},
+				{
+					name: "Developers",
+					href: "/dashboard/developers"
 				}
 			],
 			user
