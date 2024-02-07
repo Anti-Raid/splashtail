@@ -21,7 +21,18 @@ export interface UserSession {
   user_id: string;
   created_at: string /* RFC3339 */;
   type: string;
+  perm_limits: string[];
   expiry: string /* RFC3339 */;
+}
+export interface CreateUserSession {
+  name: string;
+  type: string;
+  perm_limits: string[];
+  expiry: number /* int */;
+}
+export interface CreateUserSessionResponse {
+  token: string;
+  session_id: string;
 }
 export interface UserSessionList {
   sessions: (UserSession | undefined)[];

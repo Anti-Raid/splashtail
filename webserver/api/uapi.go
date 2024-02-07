@@ -117,8 +117,9 @@ func Authorize(r uapi.Route, req *http.Request) (uapi.AuthData, uapi.HttpRespons
 			// Check if the user exists with said API token
 			var id pgtype.Text
 			var sessId string
+			var permLimits []string
 
-			err = state.Pool.QueryRow(state.Context, "SELECT id, user_id FROM web_api_tokens WHERE token = $1", strings.Replace(authHeader, "User ", "", 1)).Scan(&sessId, &id)
+			err = state.Pool.QueryRow(state.Context, "SELECT id, user_id, perm_limits FROM web_api_tokens WHERE token = $1", strings.Replace(authHeader, "User ", "", 1)).Scan(&sessId, &id, &permLimits)
 
 			if err != nil {
 				state.Logger.Error("Failed to get user ID from web API token", zap.Error(err))
@@ -150,7 +151,8 @@ func Authorize(r uapi.Route, req *http.Request) (uapi.AuthData, uapi.HttpRespons
 				Authorized: true,
 				Banned:     userstate == "banned" || userstate == "api_banned",
 				Data: map[string]any{
-					"session_id": sessId,
+					"session_id":  sessId,
+					"perm_limits": permLimits,
 				},
 			}
 			urlIds = []string{id.String}

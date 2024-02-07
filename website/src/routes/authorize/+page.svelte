@@ -2,6 +2,7 @@
 	import { get } from "$lib/configs/functions/services";
 	import { fetchClient } from "$lib/fetch/fetch";
 	import { ApiError, AuthorizeRequest, UserLogin } from "$lib/generated/types";
+	import logger from "$lib/ui/logger";
 	import Message from "../../components/Message.svelte";
 
     const createSession = async () => {
@@ -37,6 +38,17 @@
             if(guildId) {
                 window.location.href = `/dashboard/guilds?id=${guildId}`
             } else {
+                if(searchParams?.get("state")) {
+                    try {
+                        let path = atob(searchParams?.get("state") || "")
+
+                        window.location.href = path
+                        return
+                    } catch(e) {
+                        logger.error("Failed to redirect to state path", e)
+                    }
+                }
+
                 window.location.href = "/dashboard"
             }
         }, 1000)

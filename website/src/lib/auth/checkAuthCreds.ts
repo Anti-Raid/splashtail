@@ -7,7 +7,8 @@ interface AuthData {
     authorized: boolean
     banned: boolean
     data: {
-        session_id: string
+        session_id: string,
+        perm_limits: string[]
     },
     id: string
     target_type: string

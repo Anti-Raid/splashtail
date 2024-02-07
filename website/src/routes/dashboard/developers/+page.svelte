@@ -3,11 +3,18 @@
 	import { getAuthCreds } from "$lib/auth/getAuthCreds";
 	import { get } from "$lib/configs/functions/services";
 	import { fetchClient } from "$lib/fetch/fetch";
-	import { ApiError, UserSession, UserSessionList } from "$lib/generated/types";
+	import { ApiError, CreateUserSession, CreateUserSessionResponse, UserSession, UserSessionList } from "$lib/generated/types";
 	import { error, success } from "$lib/toast";
     import Message from "../../../components/Message.svelte";
     import { DataHandler, Datatable, Th, ThFilter } from "@vincjo/datatables";
 	import { Readable } from "svelte/store";
+	import InputText from "../../../components/inputs/InputText.svelte";
+	import Select from "../../../components/inputs/select/Select.svelte";
+	import InputNumber from "../../../components/inputs/InputNumber.svelte";
+	import KittycatPermSelectArray from "../../../components/dashboard/KittycatPermSelectArray.svelte";
+	import Label from "../../../components/inputs/Label.svelte";
+	import ButtonReact from "../../../components/inputs/button/ButtonReact.svelte";
+	import { Color } from "../../../components/inputs/button/colors";
 
     let sessionRows: Readable<UserSession[]>;
     let otherSessionRows: Readable<UserSession[]>;
@@ -71,6 +78,37 @@
             }
          } catch (err) {
             error(`Failed to revoke session: ${err}`)
+        }
+    }
+
+    let createSession: CreateUserSession = {
+        name: "",
+        type: "api",
+        expiry: 0,
+        perm_limits: []
+    }
+
+    let createSessionResp: CreateUserSessionResponse;
+
+    const createSessionFunc = async () => {
+        let creds = getAuthCreds();
+
+        if(!creds) throw new Error("No auth credentials found")
+
+        let res = await fetchClient(`${get('splashtail')}/users/${creds?.user_id}/sessions`, {
+            method: "POST",
+            auth: creds?.token,
+            body: JSON.stringify(createSession)
+        })
+
+        if(res.ok) {
+            success("Session created")
+            createSessionResp = await res.json()
+            return true
+        } else {
+            let err: ApiError = await res.json()
+            error(`Failed to create session: ${err?.message} (${err?.context})`)
+            return false
         }
     }
 </script>
@@ -186,6 +224,72 @@
             </tbody>
         </table>
     </Datatable>
+
+    <h1 class="font-semibold text-2xl">Create Session</h1>
+
+    <p>
+        A session is a structure that represents a view into the Anti-Raid API. Sessions provide a session token
+        that can then be used to authorize reqiests to the API. Temporary sessions of type "login" are 
+        automatically created when logging in via Discord Oauth2 however these expire 1 hour after creation and 
+        may not support upcoming functionality such as naming sessions and restricting the permissions of sessions
+    </p>
+
+    <InputText 
+        id="session-name"
+        label="Session Name"
+        placeholder="Tycoon Anti-Raid Manager etc."
+        minlength={1}
+        showErrors={false}
+        bind:value={createSession.name}
+    />
+
+    <Select
+        id="session-type"
+        label="Session Type"
+        choices={[
+            { value: "api", label: "API Token", id: "api" },
+        ]}
+        bind:value={createSession.type}
+    />
+
+    <InputNumber
+        id="session-expiry"
+        label="Session Expiry"
+        placeholder="Must be greater than 0. Expiry is *in seconds*."
+        minlength={1}
+        showErrors={false}
+        bind:value={createSession.expiry}
+    />
+
+    <Label id="session-perms" label="Permission Limits" />
+    <div class="mb-3"></div>
+    <KittycatPermSelectArray
+        id="session-perms"
+        bind:perms={createSession.perm_limits}
+    />
+
+    <ButtonReact 
+        color={Color.Themable}
+        icon="mdi:plus"
+        text="Create Session"
+        states={
+            {
+                loading: "Creating Session",
+                success: "Session Created",
+                error: "Failed to create session"
+            }
+        }
+        onClick={createSessionFunc}
+    />
+
+    {#if createSessionResp}
+        <h2 class="font-semibold text-2xl">Session Created</h2>
+        <p class="text-red-500 font-semibold text-lg">Please sace these credentials somewhere safe. You will need to REMOVE and RECREATE the session in order to regenerate a new token!</p>
+        <p class="break-all">
+            <strong>Session ID:</strong> {createSessionResp.session_id}<br/>
+            <strong>Session Token:</strong> {createSessionResp.token}
+        </p>
+    {/if}
 {:catch err}
     <Message type="error">Error loading dashboard data: {err}</Message>
 {/await}
