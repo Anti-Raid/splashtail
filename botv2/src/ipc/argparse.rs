@@ -17,6 +17,7 @@ pub static MEWLD_ARGS: Lazy<MewldCmdArgs> = Lazy::new(|| {
         state.Config.Sites.API.Parse(),
         l.Config.RedisChannel,
         config.CurrentEnv,
+        config.Meta.AnimusMagicChannel
      */
 #[derive(Debug, Clone)]
 pub struct MewldCmdArgs {
@@ -29,14 +30,15 @@ pub struct MewldCmdArgs {
     pub splashtail_url: String,
     pub mewld_redis_channel: String,
     pub current_env: String,
+    pub animus_magic_channel: String,
 }
 
 impl MewldCmdArgs {
     pub fn parse_argv(args: &[String]) -> Result<Self, crate::Error> {
-        if args.len() != 10 {
+        if args.len() != 11 {
             return Err(r#"Invalid number of arguments
             
-Expected arguments: [program name] <shards> <shard_count> <cluster_id> <cluster_name> <base_dir> <cluster_count> <splashtail_url> <mewld_redis_channel> <env>
+Expected arguments: [program name] <shards> <shard_count> <cluster_id> <cluster_name> <base_dir> <cluster_count> <splashtail_url> <mewld_redis_channel> <env> <animus_magic_channel>
             "#.into());
         }
 
@@ -49,6 +51,7 @@ Expected arguments: [program name] <shards> <shard_count> <cluster_id> <cluster_
         let splashtail_url: String = args[7].clone();
         let mewld_redis_channel: String = args[8].clone();
         let current_env: String = args[9].clone();
+        let animus_magic_channel: String = args[10].clone();
 
         Ok(Self {
             shards,
@@ -60,6 +63,7 @@ Expected arguments: [program name] <shards> <shard_count> <cluster_id> <cluster_
             splashtail_url,
             mewld_redis_channel,
             current_env,
+            animus_magic_channel,
         })
     }
 }

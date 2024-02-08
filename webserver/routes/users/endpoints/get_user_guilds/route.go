@@ -239,16 +239,20 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 			}
 		}
 
-		moduleListResp, err := state.AnimusMagicClient.Request(d.Context, state.Rueidis, &animusmagic.RequestData{
-			ClusterID: utils.Pointer(uint16(clusterId)),
-			Message: &animusmagic.AnimusMessage{
+		moduleListResp, err := state.AnimusMagicClient.Request(
+			d.Context,
+			state.Rueidis,
+			&animusmagic.AnimusMessage{
 				GuildsExist: &struct {
 					Guilds []string `json:"guilds"`
 				}{
 					Guilds: guilds,
 				},
 			},
-		})
+			&animusmagic.RequestOptions{
+				ClusterID: utils.Pointer(uint16(clusterId)),
+			},
+		)
 
 		if err != nil {
 			state.Logger.Error("Failed to send request to animus magic", zap.Error(err))
@@ -261,7 +265,6 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 		}
 
 		for _, resp := range moduleListResp {
-			state.Logger.Info("Got response from animus magic", zap.Any("resp", resp))
 			for i, v := range resp.Resp.GuildsExist.GuildsExist {
 				if v == 1 {
 					botInGuild = append(botInGuild, guilds[i])

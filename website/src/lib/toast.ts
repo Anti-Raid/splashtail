@@ -1,4 +1,5 @@
 import { toast } from '@zerodevx/svelte-toast';
+import { ApiError } from './generated/types';
 
 export const success = (m: string) =>
 	toast.push(m, {
@@ -26,4 +27,3 @@ export const error = (m: string) =>
 			'--toastBarBackground': 'maroon'
 		}
 	});
-

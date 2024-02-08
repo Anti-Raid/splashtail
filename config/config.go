@@ -95,21 +95,22 @@ type Servers struct {
 }
 
 type Meta struct {
-	WebRedisChannel  string                     `yaml:"web_redis_channel" default:"ar_web" comment:"Web Redis Channel" validate:"required"`
-	PostgresURL      string                     `yaml:"postgres_url" default:"postgresql:///antiraid" comment:"Postgres URL" validate:"required"`
-	BotRedisURL      string                     `yaml:"bot_redis_url" default:"redis://localhost:6379/0" comment:"Bot Redis URL" validate:"required"`
-	RedisURL         Differs[string]            `yaml:"redis_url" default:"redis://localhost:6379" comment:"Redis URL" validate:"required"`
-	Port             Differs[int]               `yaml:"port" default:":8081" comment:"Port to run the server on" validate:"required"`
-	JobserverPort    Differs[int]               `yaml:"jobserver_port" default:"2939" comment:"Job server port to bind to" validate:"required"`
-	CDNPath          string                     `yaml:"cdn_path" default:"/failuremgmt/cdn/antiraid" comment:"CDN Path" validate:"required"`
-	VulgarList       []string                   `yaml:"vulgar_list" default:"fuck,suck,shit,kill" validate:"required"`
-	UrgentMentions   string                     `yaml:"urgent_mentions" default:"<@&1061643797315993701>" comment:"Urgent mentions" validate:"required"`
-	Proxy            string                     `yaml:"proxy" default:"http://127.0.0.1:3219" comment:"Popplio Proxy URL" validate:"required"`
-	DPSecret         string                     `yaml:"dp_secret" comment:"DeployProxy Auth URL for super-sensitive pages" validate:"required"`
-	DebugTaskLogger  bool                       `yaml:"debug_task_logger" comment:"Debug the task logger"`
-	JobserverUrl     Differs[string]            `yaml:"jobserver_url" default:"localhost:2939" comment:"Job server url" validate:"required"`
-	JobserverSecrets Differs[map[string]string] `yaml:"jobserver_secrets" comment:"Job server secrets" validate:"required"`
-	SupportServer    string                     `yaml:"support_server" comment:"Discord Support Server Link" default:"https://discord.gg/u78NFAXm" validate:"required"`
+	AnimusMagicChannel   Differs[string]            `yaml:"animus_magic_channel" default:"animus_magic_staging" comment:"Animus Magic Channel" validate:"required"`
+	WebDisableRatelimits bool                       `yaml:"web_disable_ratelimits" comment:"Disable ratelimits for the web server"`
+	PostgresURL          string                     `yaml:"postgres_url" default:"postgresql:///antiraid" comment:"Postgres URL" validate:"required"`
+	BotRedisURL          string                     `yaml:"bot_redis_url" default:"redis://localhost:6379/0" comment:"Bot Redis URL" validate:"required"`
+	RedisURL             Differs[string]            `yaml:"redis_url" default:"redis://localhost:6379" comment:"Redis URL" validate:"required"`
+	Port                 Differs[int]               `yaml:"port" default:":8081" comment:"Port to run the server on" validate:"required"`
+	JobserverPort        Differs[int]               `yaml:"jobserver_port" default:"2939" comment:"Job server port to bind to" validate:"required"`
+	CDNPath              string                     `yaml:"cdn_path" default:"/failuremgmt/cdn/antiraid" comment:"CDN Path" validate:"required"`
+	VulgarList           []string                   `yaml:"vulgar_list" default:"fuck,suck,shit,kill" validate:"required"`
+	UrgentMentions       string                     `yaml:"urgent_mentions" default:"<@&1061643797315993701>" comment:"Urgent mentions" validate:"required"`
+	Proxy                string                     `yaml:"proxy" default:"http://127.0.0.1:3219" comment:"Popplio Proxy URL" validate:"required"`
+	DPSecret             string                     `yaml:"dp_secret" comment:"DeployProxy Auth URL for super-sensitive pages" validate:"required"`
+	DebugTaskLogger      bool                       `yaml:"debug_task_logger" comment:"Debug the task logger"`
+	JobserverUrl         Differs[string]            `yaml:"jobserver_url" default:"localhost:2939" comment:"Job server url" validate:"required"`
+	JobserverSecrets     Differs[map[string]string] `yaml:"jobserver_secrets" comment:"Job server secrets" validate:"required"`
+	SupportServer        string                     `yaml:"support_server" comment:"Discord Support Server Link" default:"https://discord.gg/u78NFAXm" validate:"required"`
 }
 
 type BotList struct {

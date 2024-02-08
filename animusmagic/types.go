@@ -18,6 +18,7 @@ const (
 	OpResponse        = 0x1
 	OpError           = 0x2
 	ScopeBot          = 0x0
+	ScopeJobserver    = 0x1
 	WildcardClusterID = 0xFFFF // top means wildcard/all clusters
 )
 

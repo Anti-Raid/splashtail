@@ -12,15 +12,3 @@ type DashboardGuildData struct {
 	BotInGuilds   []string          `json:"has_bot" description:"A list of guild IDs that the user has the bot in"`
 	UnknownGuilds []string          `json:"unknown_guilds" description:"A list of guild IDs where the bot is in an outage etc. in"`
 }
-
-/*
-        owner_id: String,
-        name: String,
-        icon: Option<String>,
-        /// List of all roles in the server
-        roles: std::collections::HashMap<RoleId, Role>,
-        /// List of roles the user has
-        user_roles: Vec<RoleId>,
-        /// List of roles the bot has
-        bot_roles: Vec<RoleId>,
-*/

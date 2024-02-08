@@ -103,9 +103,10 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 		}
 	}
 
-	resps, err := state.AnimusMagicClient.Request(d.Context, state.Rueidis, &animusmagic.RequestData{
-		ClusterID: utils.Pointer(uint16(clusterId)),
-		Message: &animusmagic.AnimusMessage{
+	resps, err := state.AnimusMagicClient.Request(
+		d.Context,
+		state.Rueidis,
+		&animusmagic.AnimusMessage{
 			GetBaseGuildAndUserInfo: &struct {
 				GuildID string `json:"guild_id"`
 				UserID  string `json:"user_id"`
@@ -114,7 +115,10 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 				UserID:  userId,
 			},
 		},
-	})
+		&animusmagic.RequestOptions{
+			ClusterID: utils.Pointer(uint16(clusterId)),
+		},
+	)
 
 	if err != nil {
 		state.Logger.Error("Error sending request to animus magic", zap.Error(err))

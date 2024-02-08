@@ -3,7 +3,8 @@
 	import { getAuthCreds } from "$lib/auth/getAuthCreds";
 	import { get } from "$lib/configs/functions/services";
 	import { fetchClient } from "$lib/fetch/fetch";
-	import { ApiError } from "$lib/generated/types";
+	import { ApiError, UserGuildBaseData } from "$lib/generated/types";
+	import { formatApiError } from "$lib/ui/error";
     import Message from "../../../components/Message.svelte";
 
     let currentState = "Loading dashboard data"
@@ -19,7 +20,7 @@
 
         if(!guildId) {
             await goto("/dashboard")
-            return
+            return null
         }
 
         currentState = "Fetching guild data"
@@ -36,12 +37,15 @@
         })
 
         if (!res.ok) {
-            if(!res.ok) {}
             let err: ApiError = await res.json()
-            throw new Error(`Failed to fetch base guild data: ${err?.message} (${err?.context})`)
+            throw new Error(formatApiError("Failed to fetch base guild data", err))
         }
 
-        return true
+        let guildData: UserGuildBaseData = await res.json()
+
+        return {
+            guildData,
+        }
     }
 </script>
 
@@ -57,8 +61,12 @@
     </small>
 {:then r}
     {#if r}
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"> 
-        </div>
+        <section class="flex justify-center guild-basic-details"> 
+            <!--Avatar-->
+            <img loading="lazy" src={r.guildData.icon} alt="" />
+            <!--Guild Name-->
+            <h1 class="text-2xl font-semibold">{r.guildData.name}</h1>
+        </section>
     {:else}
         <Message type="loading">Please wait</Message>
     {/if}

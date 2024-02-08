@@ -111,7 +111,7 @@ func Setup() {
 		panic(err)
 	}
 
-	AnimusMagicClient = animusmagic.New()
+	AnimusMagicClient = animusmagic.New(Config.Meta.AnimusMagicChannel.Parse())
 
 	// Object Storage
 	ObjectStorage, err = objectstorage.New(&Config.ObjectStorage)
@@ -153,6 +153,7 @@ func Setup() {
 		PlatformUserCache: redishotcache.RuedisHotCache[dovetypes.PlatformUser]{
 			Redis:  Rueidis,
 			Prefix: "uobj__",
+			For:    "dovewing",
 		},
 		UserExpiryTime: 8 * time.Hour,
 	}
@@ -169,8 +170,10 @@ func Setup() {
 
 	ratelimit.SetupState(&ratelimit.RLState{
 		HotCache: redishotcache.RuedisHotCache[int]{
-			Redis:  Rueidis,
-			Prefix: "rl:",
+			Redis:    Rueidis,
+			Prefix:   "rl:",
+			For:      "ratelimit",
+			Disabled: Config.Meta.WebDisableRatelimits,
 		},
 	})
 }

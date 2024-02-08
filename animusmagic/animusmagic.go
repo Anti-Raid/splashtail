@@ -5,6 +5,7 @@ package animusmagic
 
 import (
 	"context"
+	"sync/atomic"
 	"time"
 
 	"github.com/anti-raid/splashtail/utils/syncmap"
@@ -13,8 +14,6 @@ import (
 	"github.com/redis/rueidis"
 	"go.uber.org/zap"
 )
-
-const ChannelName = "animus_magic"
 
 type ClientCache struct {
 	ClusterModules syncmap.Map[uint16, *ClusterModules]
@@ -28,20 +27,30 @@ type ClientResponse struct {
 	Resp      *AnimusResponse
 }
 
+type NotifyWrapper struct {
+	Chan          chan *ClientResponse
+	ExpectedCount uint32
+	ResponseCount atomic.Uint32
+}
+
 type AnimusMagicClient struct {
 	// All data that is stored on the cache
 	Cache *ClientCache
 
 	// Set of notifiers
-	Notify syncmap.Map[string, chan *ClientResponse]
+	Notify syncmap.Map[string, *NotifyWrapper]
+
+	// The redis channel to use
+	Channel string
 }
 
 // New returns a new AnimusMagicClient
-func New() *AnimusMagicClient {
+func New(channel string) *AnimusMagicClient {
 	return &AnimusMagicClient{
 		Cache: &ClientCache{
 			ClusterModules: syncmap.Map[uint16, *ClusterModules]{},
 		},
+		Channel: channel,
 	}
 }
 
@@ -58,7 +67,7 @@ func (c *AnimusMagicClient) UpdateCache(resp *ClientResponse) {
 func (c *AnimusMagicClient) ListenOnce(ctx context.Context, redis rueidis.Client, l *zap.Logger) error {
 	return redis.Dedicated(
 		func(redis rueidis.DedicatedClient) error {
-			return redis.Receive(ctx, redis.B().Subscribe().Channel(ChannelName).Build(), func(msg rueidis.PubSubMessage) {
+			return redis.Receive(ctx, redis.B().Subscribe().Channel(c.Channel).Build(), func(msg rueidis.PubSubMessage) {
 				bytesData := []byte(msg.Message)
 
 				// Below 5 is impossible
@@ -154,10 +163,26 @@ func (c *AnimusMagicClient) ListenOnce(ctx context.Context, redis rueidis.Client
 						return
 					}
 
-					n <- response
-					c.Notify.Delete(commandId)
+					newCount := n.ResponseCount.Add(1)
+
+					if n.ExpectedCount != 0 {
+						if newCount > n.ExpectedCount {
+							l.Warn("[animus magic] received more responses than expected", zap.String("commandId", commandId))
+							if response.Op == OpResponse {
+								c.UpdateCache(response) // At least update the cache
+							}
+							c.CloseNotifier(commandId) // Close the notifier
+							return
+						}
+					}
+
+					n.Chan <- response
 					if response.Op == OpResponse {
 						c.UpdateCache(response)
+					}
+
+					if n.ExpectedCount != 0 && newCount == n.ExpectedCount {
+						c.CloseNotifier(commandId)
 					}
 				}()
 			})
@@ -199,97 +224,182 @@ func (c *AnimusMagicClient) CreatePayload(scope byte, clusterId uint16, op byte,
 	return finalPayload, nil
 }
 
-func (c *AnimusMagicClient) publish(ctx context.Context, redis rueidis.Client, payload []byte) error {
-	return redis.Do(ctx, redis.B().Publish().Channel(ChannelName).Message(rueidis.BinaryString(payload)).Build()).Error()
+func (c *AnimusMagicClient) Publish(ctx context.Context, redis rueidis.Client, payload []byte) error {
+	return redis.Do(ctx, redis.B().Publish().Channel(c.Channel).Message(rueidis.BinaryString(payload)).Build()).Error()
 }
 
 // RequestData stores the data for a request
-type RequestData struct {
-	ClusterID             *uint16        // must be set, also ExpectedResponseCount must be set if wildcard
-	ExpectedResponseCount *int           // must be set if wildcard. this is the number of responses expected
-	CommandID             string         // if unset, will be randomly generated
-	Scope                 *byte          // if unset, will be set to ScopeBot
-	Op                    *byte          // if unset, will be set to OpRequest
-	IgnoreOpError         bool           // if true, will ignore OpError responses
-	Message               *AnimusMessage // must be set
+type RequestOptions struct {
+	ClusterID             *uint16 // must be set, also ExpectedResponseCount must be set if wildcard
+	ExpectedResponseCount uint32  // must be set if wildcard. this is the number of responses expected
+	CommandID             string  // if unset, will be randomly generated
+	Scope                 byte    // if unset is ScopeBot
+	Op                    byte    // if unset is OpRequest
+	IgnoreOpError         bool    // if true, will ignore OpError responses
 }
 
-// Request sends a request to the given cluster id and waits for a response
-func (c *AnimusMagicClient) Request(ctx context.Context, redis rueidis.Client, data *RequestData) ([]*ClientResponse, error) {
+// Parse parses a RequestOptions
+func (o *RequestOptions) Parse() error {
+	if o == nil {
+		return ErrNilRequestData
+	}
+
+	if o.ClusterID == nil {
+		return ErrNilClusterID
+	}
+
+	if o.ExpectedResponseCount == 0 {
+		if *o.ClusterID == WildcardClusterID {
+			return ErrNilExpectedResponseCount
+		} else {
+			o.ExpectedResponseCount = 1
+		}
+	}
+
+	if o.CommandID == "" {
+		o.CommandID = crypto.RandString(16)
+	}
+
+	return nil
+}
+
+// CreateNotifier adds a notifier to the map and returns the channel
+//
+// This channel will receive the response for the given command id
+func (c *AnimusMagicClient) CreateNotifier(opts *RequestOptions) chan *ClientResponse {
+	// Create a channel to receive the response
+	notify := make(chan *ClientResponse, opts.ExpectedResponseCount)
+
+	// Store the channel in the notify map
+	c.Notify.Store(opts.CommandID, &NotifyWrapper{
+		Chan:          notify,
+		ExpectedCount: opts.ExpectedResponseCount,
+	})
+
+	return notify
+}
+
+// CloseNotifier closes the notifier for the given command id
+func (c *AnimusMagicClient) CloseNotifier(commandId string) {
+	n, ok := c.Notify.Load(commandId)
+
+	if !ok {
+		return
+	}
+
+	c.Notify.Delete(commandId)
+	close(n.Chan)
+}
+
+// GatherResponses gathers responses from the given notifier
+//
+// This waits for the expected number of responses or until the context is done
+func (c *AnimusMagicClient) GatherResponses(
+	ctx context.Context,
+	opts *RequestOptions,
+	notify chan *ClientResponse,
+) (r []*ClientResponse, err error) {
+	// Wait for the response
+	var resps []*ClientResponse
+
+	ercInt := int(opts.ExpectedResponseCount) // Cast beforehand to avoid casting every time
+
+	for {
+		select {
+		case <-ctx.Done():
+			// Remove the notifier
+			c.CloseNotifier(opts.CommandID)
+			return nil, ctx.Err()
+		case resp := <-notify:
+			resps = append(resps, resp)
+
+			if resp.Op == OpError && !opts.IgnoreOpError {
+				return resps, ErrOpError
+			}
+
+			if len(resps) >= ercInt {
+				return resps, nil
+			}
+		}
+	}
+}
+
+// RawRequest sends a raw request to the given cluster id and waits for a response
+func (c *AnimusMagicClient) RawRequest(
+	ctx context.Context,
+	redis rueidis.Client,
+	msg []byte,
+	data *RequestOptions,
+) ([]*ClientResponse, error) {
+	if msg == nil {
+		return nil, ErrNilMessage
+	}
+
 	if data == nil {
 		return nil, ErrNilRequestData
 	}
 
-	if data.ClusterID == nil {
-		return nil, ErrNilClusterID
-	}
-
-	if *data.ClusterID == WildcardClusterID && data.ExpectedResponseCount == nil {
-		return nil, ErrNilExpectedResponseCount
-	}
-
-	if data.Message == nil {
-		return nil, ErrNilMessage
-	}
-
-	if data.CommandID == "" {
-		data.CommandID = crypto.RandString(16)
-	}
-
-	if data.Scope == nil {
-		data.Scope = new(byte) // 0 is the default value of byte which corresponds to ScopeBot
-	}
-
-	if data.Op == nil {
-		data.Op = new(byte) // 0 is the default value of byte which corresponds to OpRequest
-	}
-
-	payload, err := c.CreatePayload(*data.Scope, *data.ClusterID, *data.Op, data.CommandID, data.Message)
+	err := data.Parse()
 
 	if err != nil {
 		return nil, err
 	}
 
 	// Create a channel to receive the response
-	size := 1 // default buffer size is 1
-
-	if *data.ClusterID == WildcardClusterID {
-		size = 0 // if wildcard, then we don't know how many responses we'll get
-	}
-
-	notify := make(chan *ClientResponse, size)
-
-	// Store the channel in the notify map
-	c.Notify.Store(data.CommandID, notify)
+	notify := c.CreateNotifier(data)
 
 	// Publish the payload
-	err = c.publish(ctx, redis, payload)
+	err = c.Publish(ctx, redis, msg)
+
+	if err != nil {
+		// Remove the notifier
+		c.CloseNotifier(data.CommandID)
+		return nil, err
+	}
+
+	// Wait for the response
+	return c.GatherResponses(ctx, data, notify)
+}
+
+// Request sends a request to the given cluster id and waits for a response
+func (c *AnimusMagicClient) Request(
+	ctx context.Context,
+	redis rueidis.Client,
+	msg *AnimusMessage,
+	data *RequestOptions,
+) ([]*ClientResponse, error) {
+	if msg == nil {
+		return nil, ErrNilMessage
+	}
+
+	if data == nil {
+		return nil, ErrNilRequestData
+	}
+
+	err := data.Parse()
 
 	if err != nil {
 		return nil, err
 	}
 
-	// Wait for the response
-	var resps []*ClientResponse
+	payload, err := c.CreatePayload(data.Scope, *data.ClusterID, data.Op, data.CommandID, msg)
 
-	for {
-		select {
-		case <-ctx.Done():
-			return nil, ctx.Err()
-		case resp := <-notify:
-			resps = append(resps, resp)
-
-			if resp.Op == OpError && !data.IgnoreOpError {
-				return resps, ErrOpError
-			}
-
-			if data.ExpectedResponseCount != nil && *data.ExpectedResponseCount > 1 {
-				if len(resps) >= *data.ExpectedResponseCount {
-					return resps, nil
-				}
-			} else {
-				return resps, nil
-			}
-		}
+	if err != nil {
+		return nil, err
 	}
+
+	// Create a channel to receive the response
+	notify := c.CreateNotifier(data)
+
+	// Publish the payload
+	err = c.Publish(ctx, redis, payload)
+
+	if err != nil {
+		// Remove the notifier
+		c.CloseNotifier(data.CommandID)
+		return nil, err
+	}
+
+	// Wait for the response
+	return c.GatherResponses(ctx, data, notify)
 }

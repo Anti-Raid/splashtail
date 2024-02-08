@@ -86,6 +86,7 @@ func main() {
 						webserverstate.Config.Sites.API.Parse(),
 						l.Config.RedisChannel,
 						config.CurrentEnv,
+						webserverstate.Config.Meta.AnimusMagicChannel.Parse(),
 					)
 				} else {
 					cmd = exec.Command(
@@ -99,6 +100,7 @@ func main() {
 						webserverstate.Config.Sites.API.Parse(),
 						l.Config.RedisChannel,
 						config.CurrentEnv,
+						webserverstate.Config.Meta.AnimusMagicChannel.Parse(),
 					)
 				}
 

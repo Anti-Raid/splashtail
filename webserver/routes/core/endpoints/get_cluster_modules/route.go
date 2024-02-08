@@ -10,7 +10,6 @@ import (
 	"github.com/anti-raid/splashtail/types/silverpelt"
 	"github.com/anti-raid/splashtail/webserver/state"
 	"github.com/go-chi/chi/v5"
-	"go.uber.org/zap"
 
 	docs "github.com/infinitybotlist/eureka/doclib"
 	"github.com/infinitybotlist/eureka/uapi"
@@ -87,12 +86,16 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 		}
 	}
 
-	moduleListResp, err := state.AnimusMagicClient.Request(d.Context, state.Rueidis, &animusmagic.RequestData{
-		ClusterID: &clusterId,
-		Message: &animusmagic.AnimusMessage{
+	moduleListResp, err := state.AnimusMagicClient.Request(
+		d.Context,
+		state.Rueidis,
+		&animusmagic.AnimusMessage{
 			Modules: &struct{}{},
 		},
-	})
+		&animusmagic.RequestOptions{
+			ClusterID: &clusterId,
+		},
+	)
 
 	if err != nil {
 		return uapi.HttpResponse{
@@ -111,8 +114,6 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 			},
 		}
 	}
-
-	state.Logger.Info("Got response from animus magic", zap.Any("resp", moduleListResp[0]))
 
 	if moduleListResp[0].Op == animusmagic.OpError {
 		return uapi.HttpResponse{

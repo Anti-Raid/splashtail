@@ -2,27 +2,30 @@
 /// 
 /// Format of payloads: <scope: u8><cluster id: u16><op: 8 bits><command id: alphanumeric string>/<cbor payload>
 use std::sync::Arc;
-#[allow(unused_imports)]
-use fred::clients::SubscriberClient;
-use fred::interfaces::{ClientLike, PubsubInterface};
+use fred::{types::RedisValue, clients::RedisPool, prelude::Builder, interfaces::{ClientLike, PubsubInterface}};
 use serde::{Serialize, Deserialize};
 use serenity::all::{GuildId, UserId, RoleId, Role};
 
+use crate::ipc::argparse::MEWLD_ARGS;
+
 #[derive(Serialize, Deserialize, PartialEq)]
 pub enum AnimusScope {
-    Bot
+    Bot,
+    Jobserver,
 }
 
 impl AnimusScope {
     pub fn to_byte(&self) -> u8 {
         match self {
-            AnimusScope::Bot => 0x0
+            AnimusScope::Bot => 0x0,
+            AnimusScope::Jobserver => 0x1,
         }
     }
 
     pub fn from_byte(byte: u8) -> Option<Self> {
         match byte {
             0x0 => Some(AnimusScope::Bot),
+            0x1 => Some(AnimusScope::Jobserver),
             _ => None
         }
     }
@@ -278,7 +281,7 @@ impl AnimusMessage {
 }
 
 pub struct AnimusMagicClient {
-    pub redis_pool: fred::clients::RedisPool,
+    pub redis_pool: RedisPool,
     pub rx_map: std::sync::Arc<dashmap::DashMap<String, tokio::sync::mpsc::Sender<AnimusResponse>>>,
 }
 
@@ -296,7 +299,7 @@ impl AnimusMagicClient {
         // Subscribes to the redis IPC channels we need to subscribe to
         let cfg = self.redis_pool.client_config();
 
-        let subscriber = fred::prelude::Builder::from_config(cfg).build_subscriber_client().unwrap();
+        let subscriber = Builder::from_config(cfg).build_subscriber_client().unwrap();
 
         subscriber.connect();
         subscriber.wait_for_connect().await.unwrap();
@@ -306,14 +309,14 @@ impl AnimusMagicClient {
         subscriber.manage_subscriptions();
 
         let _: () = subscriber.subscribe(
-            "animus_magic",
+            MEWLD_ARGS.animus_magic_channel.as_str(),
         ).await.unwrap();    
 
         while let Ok(message) = message_stream.recv().await {
             log::debug!("Got message on channel {}", message.channel);
             let binary = match message.value {
-                fred::types::RedisValue::Bytes(s) => s,
-                fred::types::RedisValue::String(s) => s.into(),
+                RedisValue::Bytes(s) => s,
+                RedisValue::String(s) => s.into(),
                 _ => {
                     log::warn!("Invalid message recieved on channel [wanted binary, but got text] {}", message.channel);
                     continue;
@@ -420,7 +423,7 @@ impl AnimusMagicClient {
                 };
 
                 // Convert payload to redis value, from here the Error op is useless to try and send
-                let payload = fred::types::RedisValue::Bytes(payload.into());
+                let payload = RedisValue::Bytes(payload.into());
 
                 let conn = redis_pool.next();
                 conn.connect();
@@ -428,7 +431,7 @@ impl AnimusMagicClient {
                     log::warn!("Failed to connect to redis");
                     return;
                 };
-                match conn.publish("animus_magic", payload).await {
+                match conn.publish(MEWLD_ARGS.animus_magic_channel.as_str(), payload).await {
                     Ok(()) => {},
                     Err(e) => {
                         log::warn!("Failed to publish response to redis: {}", e);
@@ -441,20 +444,20 @@ impl AnimusMagicClient {
     }
 
     /// Helper method to send an error response
-    pub async fn error(redis_pool: fred::clients::RedisPool, command_id: &str, data: AnimusErrorResponse) -> Result<(), crate::Error> {
+    pub async fn error(redis_pool: RedisPool, command_id: &str, data: AnimusErrorResponse) -> Result<(), crate::Error> {
         let Ok(payload) = AnimusMessage::create_payload(command_id, AnimusScope::Bot, AnimusOp::Error, &AnimusCreatePayload::Error(data)) else {
             return Err("Failed to create payload for error message".into());
         };
 
         // Convert payload to redis value
-        let payload = fred::types::RedisValue::Bytes(payload.into());
+        let payload = RedisValue::Bytes(payload.into());
 
         let conn = redis_pool.next();
         conn.connect();
         let Ok(()) = conn.wait_for_connect().await else {
             return Err("Failed to connect to redis".into());
         };
-        match conn.publish("animus_magic", payload).await {
+        match conn.publish(MEWLD_ARGS.animus_magic_channel.as_str(), payload).await {
             Ok(()) => Ok(()),
             Err(e) => Err(format!("Failed to publish response to redis: {}", e).into())
         }
