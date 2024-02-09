@@ -114,6 +114,10 @@ func main() {
 					{"to", "Target", "0"},
 				},
 				Run: func(a *shellcli.ShellCli[AnimusCliData], args map[string]string) error {
+					if !a.Data.Connected {
+						return fmt.Errorf("not connected")
+					}
+
 					timeout, ok := args["timeout"]
 
 					if !ok {
@@ -171,6 +175,7 @@ func main() {
 
 					// Wait for the response
 					ticker := time.NewTicker(time.Second * time.Duration(timeoutInt))
+					startTime := time.Now()
 					for {
 						select {
 						case <-a.Data.Context.Done():
@@ -178,7 +183,7 @@ func main() {
 						case <-ticker.C:
 							return nil
 						case response := <-notify:
-							fmt.Println("Response:", response)
+							fmt.Println("Response:", response, "after time", time.Since(startTime), "\nCluster:", response.Meta.ClusterID)
 						}
 					}
 				},
