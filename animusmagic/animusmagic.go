@@ -5,6 +5,7 @@ package animusmagic
 
 import (
 	"context"
+	"errors"
 	"sync/atomic"
 	"time"
 
@@ -15,14 +16,25 @@ import (
 	"go.uber.org/zap"
 )
 
-type ClientCache struct {
-	ClusterModules syncmap.Map[uint16, *ClusterModules]
+// A ClientResponse contains the response from animus magic
+type ClientResponse struct {
+	Meta *AnimusMessageMetadata
+
+	// The raw payload
+	RawPayload []byte
 }
 
-type ClientResponse struct {
-	Meta  *AnimusMessageMetadata
-	Error *AnimusErrorResponse // Only applicable if Op is OpError
-	Resp  *AnimusResponse
+func (c *ClientResponse) Parse() (*AnimusErrorResponse, *AnimusResponse, error) {
+	var err error
+	if c.Meta.Op == OpError {
+		var errResp AnimusErrorResponse
+		err = cbor.Unmarshal(c.RawPayload, &err)
+		return &errResp, nil, err
+	} else {
+		var resp AnimusResponse
+		err = cbor.Unmarshal(c.RawPayload, &resp)
+		return nil, &resp, err
+	}
 }
 
 type NotifyWrapper struct {
@@ -32,9 +44,6 @@ type NotifyWrapper struct {
 }
 
 type AnimusMagicClient struct {
-	// All data that is stored on the cache
-	Cache *ClientCache
-
 	// Set of notifiers
 	Notify syncmap.Map[string, *NotifyWrapper]
 
@@ -45,19 +54,7 @@ type AnimusMagicClient struct {
 // New returns a new AnimusMagicClient
 func New(channel string) *AnimusMagicClient {
 	return &AnimusMagicClient{
-		Cache: &ClientCache{
-			ClusterModules: syncmap.Map[uint16, *ClusterModules]{},
-		},
 		Channel: channel,
-	}
-}
-
-// Fom
-
-// UpdateCache updates the cache with the given response
-func (c *AnimusMagicClient) UpdateCache(resp *ClientResponse) {
-	if resp.Resp.Modules != nil {
-		c.Cache.ClusterModules.Store(resp.Meta.ClusterID, &resp.Resp.Modules.Modules)
 	}
 }
 
@@ -83,55 +80,6 @@ func (c *AnimusMagicClient) ListenOnce(ctx context.Context, redis rueidis.Client
 				}
 
 				go func() {
-					// Rest is the payload
-					payload := bytesData[meta.PayloadOffset:]
-
-					var response *ClientResponse
-
-					if meta.Op == OpResponse {
-						var resp *AnimusResponse
-						err := cbor.Unmarshal(payload, &resp)
-
-						if err != nil {
-							l.Error("[animus magic] error unmarshaling payload", zap.Error(err))
-
-							// Try getting better debug data
-							var cdr map[string]any
-
-							err2 := cbor.Unmarshal(payload, &cdr)
-
-							response = &ClientResponse{
-								Meta: meta,
-								Error: &AnimusErrorResponse{
-									Message: "client error: error unmarshaling payload: " + err.Error(),
-									ClientDebugInfo: map[string]any{
-										"data": cdr,
-										"err":  err2,
-									},
-								},
-							}
-						} else {
-							response = &ClientResponse{
-								Meta: meta,
-								Resp: resp,
-							}
-						}
-					} else {
-						var data *AnimusErrorResponse
-						err := cbor.Unmarshal(payload, &data)
-
-						if err != nil {
-							data = &AnimusErrorResponse{
-								Message: "client error: error unmarshaling payload: " + err.Error(),
-							}
-						}
-
-						response = &ClientResponse{
-							Meta:  meta,
-							Error: data,
-						}
-					}
-
 					n, ok := c.Notify.Load(meta.CommandID)
 
 					if !ok {
@@ -144,17 +92,14 @@ func (c *AnimusMagicClient) ListenOnce(ctx context.Context, redis rueidis.Client
 					if n.ExpectedCount != 0 {
 						if newCount > n.ExpectedCount {
 							l.Warn("[animus magic] received more responses than expected", zap.String("commandId", meta.CommandID))
-							if meta.Op == OpResponse {
-								c.UpdateCache(response) // At least update the cache
-							}
 							c.CloseNotifier(meta.CommandID) // Close the notifier
 							return
 						}
 					}
 
-					n.Chan <- response
-					if meta.Op == OpResponse {
-						c.UpdateCache(response)
+					n.Chan <- &ClientResponse{
+						Meta:       meta,
+						RawPayload: bytesData[meta.PayloadOffset:],
 					}
 
 					if n.ExpectedCount != 0 && newCount == n.ExpectedCount {
@@ -407,4 +352,43 @@ func (c *AnimusMagicClient) Request(
 
 	// Wait for the response
 	return c.GatherResponses(ctx, data, notify)
+}
+
+type ParsedClientResponse struct {
+	Err        *AnimusErrorResponse
+	Resp       *AnimusResponse
+	ClientResp *ClientResponse
+}
+
+// In many cases, raw client responses are not useful.
+// This function parses the client responses and returns a more useful struct
+func (c *AnimusMagicClient) RequestAndParse(
+	ctx context.Context,
+	redis rueidis.Client,
+	msg *AnimusMessage,
+	data *RequestOptions,
+) ([]*ParsedClientResponse, error) {
+	cr, err := c.Request(ctx, redis, msg, data)
+
+	if err != nil && !errors.Is(err, ErrOpError) {
+		return nil, err
+	}
+
+	var parsed []*ParsedClientResponse
+
+	for _, v := range cr {
+		errResp, resp, err := v.Parse()
+
+		if err != nil {
+			return parsed, err
+		}
+
+		parsed = append(parsed, &ParsedClientResponse{
+			Err:        errResp,
+			Resp:       resp,
+			ClientResp: v,
+		})
+	}
+
+	return parsed, nil
 }

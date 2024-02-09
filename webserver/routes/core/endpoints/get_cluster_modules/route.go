@@ -1,11 +1,9 @@
 package get_cluster_modules
 
 import (
-	"fmt"
 	"net/http"
 	"strconv"
 
-	"github.com/anti-raid/splashtail/animusmagic"
 	"github.com/anti-raid/splashtail/types"
 	"github.com/anti-raid/splashtail/types/silverpelt"
 	"github.com/anti-raid/splashtail/webserver/state"
@@ -79,23 +77,7 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 		}
 	}
 
-	// Use animus magic to fetch module list
-	if v, ok := state.AnimusMagicClient.Cache.ClusterModules.Load(clusterId); ok && v != nil {
-		return uapi.HttpResponse{
-			Json: v,
-		}
-	}
-
-	moduleListResp, err := state.AnimusMagicClient.Request(
-		d.Context,
-		state.Rueidis,
-		&animusmagic.AnimusMessage{
-			Modules: &struct{}{},
-		},
-		&animusmagic.RequestOptions{
-			ClusterID: &clusterId,
-		},
-	)
+	modules, err := state.CachedAnimusMagicClient.GetClusterModules(d.Context, state.Rueidis, clusterId)
 
 	if err != nil {
 		return uapi.HttpResponse{
@@ -106,25 +88,7 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 		}
 	}
 
-	if len(moduleListResp) == 0 {
-		return uapi.HttpResponse{
-			Status: http.StatusNotFound,
-			Json: types.ApiError{
-				Message: "Data not found",
-			},
-		}
-	}
-
-	if moduleListResp[0].Meta.Op == animusmagic.OpError {
-		return uapi.HttpResponse{
-			Status: http.StatusInternalServerError,
-			Json: types.ApiError{
-				Message: "Failed to fetch module list: " + fmt.Sprint(moduleListResp[0].Error),
-			},
-		}
-	}
-
 	return uapi.HttpResponse{
-		Json: &moduleListResp[0].Resp.Modules.Modules,
+		Json: modules,
 	}
 }

@@ -103,7 +103,7 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 		}
 	}
 
-	resps, err := state.AnimusMagicClient.Request(
+	resps, err := state.AnimusMagicClient.RequestAndParse(
 		d.Context,
 		state.Rueidis,
 		&animusmagic.AnimusMessage{
@@ -126,7 +126,7 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 		if errors.Is(err, animusmagic.ErrOpError) && len(resps) > 0 {
 			return uapi.HttpResponse{
 				Status: http.StatusInternalServerError,
-				Json:   resps[0].Error,
+				Json:   resps[0].Err,
 				Headers: map[string]string{
 					"Retry-After": "10",
 				},

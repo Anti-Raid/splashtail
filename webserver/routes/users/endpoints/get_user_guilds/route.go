@@ -265,7 +265,40 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 		}
 
 		for _, resp := range moduleListResp {
-			for i, v := range resp.Resp.GuildsExist.GuildsExist {
+			if resp.Meta.Op == animusmagic.OpError {
+				return uapi.HttpResponse{
+					Status: http.StatusInternalServerError,
+					Json:   "Cluster returned OpError when trying to fetch user guilds",
+				}
+			}
+
+			errResp, resp, err := resp.Parse()
+
+			if err != nil {
+				state.Logger.Error("Failed to parse response from animus magic", zap.Error(err))
+				return uapi.HttpResponse{
+					Status: http.StatusInternalServerError,
+					Json:   "Failed to parse response from animus magic: " + err.Error(),
+				}
+			}
+
+			if errResp != nil {
+				state.Logger.Error("Error response from animus magic", zap.Any("error", errResp))
+				return uapi.HttpResponse{
+					Status: http.StatusInternalServerError,
+					Json:   errResp,
+				}
+			}
+
+			if resp == nil || resp.GuildsExist == nil {
+				state.Logger.Error("Nil response from animus magic")
+				return uapi.HttpResponse{
+					Status: http.StatusInternalServerError,
+					Json:   "Nil response from animus magic",
+				}
+			}
+
+			for i, v := range resp.GuildsExist.GuildsExist {
 				if v == 1 {
 					botInGuild = append(botInGuild, guilds[i])
 				}

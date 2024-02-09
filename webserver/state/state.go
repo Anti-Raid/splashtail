@@ -11,6 +11,7 @@ import (
 	"github.com/anti-raid/splashtail/animusmagic"
 	"github.com/anti-raid/splashtail/config"
 	"github.com/anti-raid/splashtail/objectstorage"
+	"github.com/anti-raid/splashtail/webserver/state/animusmagiccache"
 	"github.com/anti-raid/splashtail/webserver/state/redishotcache"
 
 	"github.com/bwmarrin/discordgo"
@@ -33,6 +34,7 @@ var (
 	Pool                    *pgxpool.Pool
 	Rueidis                 rueidis.Client // where perf is needed
 	AnimusMagicClient       *animusmagic.AnimusMagicClient
+	CachedAnimusMagicClient *animusmagiccache.CachedAnimusMagicClient
 	DovewingPlatformDiscord *dovewing.DiscordState
 	Discord                 *discordgo.Session
 	Logger                  *zap.Logger
@@ -112,6 +114,7 @@ func Setup() {
 	}
 
 	AnimusMagicClient = animusmagic.New(Config.Meta.AnimusMagicChannel.Parse())
+	CachedAnimusMagicClient = animusmagiccache.New(AnimusMagicClient)
 
 	// Object Storage
 	ObjectStorage, err = objectstorage.New(&Config.ObjectStorage)
