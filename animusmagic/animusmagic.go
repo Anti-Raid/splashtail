@@ -144,10 +144,10 @@ func (c *AnimusMagicClient) ListenOnce(ctx context.Context, redis rueidis.Client
 					if n.ExpectedCount != 0 {
 						if newCount > n.ExpectedCount {
 							l.Warn("[animus magic] received more responses than expected", zap.String("commandId", meta.CommandID))
-							if response.Meta.Op == OpResponse {
+							if meta.Op == OpResponse {
 								c.UpdateCache(response) // At least update the cache
 							}
-							c.CloseNotifier(response.Meta.CommandID) // Close the notifier
+							c.CloseNotifier(meta.CommandID) // Close the notifier
 							return
 						}
 					}
@@ -224,7 +224,7 @@ func (c *AnimusMagicClient) GetPayloadMeta(payload []byte) (*AnimusMessageMetada
 	}
 
 	meta.CommandID = commandId
-	meta.PayloadOffset = uint(len(commandId) + 5)
+	meta.PayloadOffset = uint(len(commandId) + 6)
 
 	return meta, nil
 }
