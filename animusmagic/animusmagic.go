@@ -1,6 +1,6 @@
 // Animus Magic is the internal redis IPC system for internal communications between the bot and the server
 //
-// Format of payloads: <scope: u8><cluster id: u16><op: 8 bits><command id: alphanumeric string>/<cbor payload>
+// Format of payloads: <target [from]: u8><target [to]: u8><cluster id: u16><op: 8 bits><command id: alphanumeric string>/<cbor payload>
 package animusmagic
 
 import (
@@ -20,11 +20,9 @@ type ClientCache struct {
 }
 
 type ClientResponse struct {
-	ClusterID uint16
-	Scope     byte
-	Op        byte
-	Error     *AnimusErrorResponse // Only applicable if Op is OpError
-	Resp      *AnimusResponse
+	Meta  *AnimusMessageMetadata
+	Error *AnimusErrorResponse // Only applicable if Op is OpError
+	Resp  *AnimusResponse
 }
 
 type NotifyWrapper struct {
@@ -54,10 +52,12 @@ func New(channel string) *AnimusMagicClient {
 	}
 }
 
+// Fom
+
 // UpdateCache updates the cache with the given response
 func (c *AnimusMagicClient) UpdateCache(resp *ClientResponse) {
 	if resp.Resp.Modules != nil {
-		c.Cache.ClusterModules.Store(resp.ClusterID, &resp.Resp.Modules.Modules)
+		c.Cache.ClusterModules.Store(resp.Meta.ClusterID, &resp.Resp.Modules.Modules)
 	}
 }
 
@@ -70,40 +70,25 @@ func (c *AnimusMagicClient) ListenOnce(ctx context.Context, redis rueidis.Client
 			return redis.Receive(ctx, redis.B().Subscribe().Channel(c.Channel).Build(), func(msg rueidis.PubSubMessage) {
 				bytesData := []byte(msg.Message)
 
-				// Below 5 is impossible
-				if len(bytesData) < 5 {
+				meta, err := c.GetPayloadMeta(bytesData)
+
+				if err != nil {
+					l.Error("[animus magic] error getting payload metadata", zap.Error(err))
 					return
 				}
 
-				// First byte is the scope
-				scope := bytesData[0]
-
-				// Next 2 bytes are the cluster id
-				clusterId := uint16(bytesData[1])<<8 | uint16(bytesData[2])
-
-				// Next byte is the op
-				op := bytesData[3]
-
-				if op != OpResponse && op != OpError {
+				// This is not supported anyways
+				if meta.From == AnimusTargetWebserver {
 					return
 				}
 
 				go func() {
-					// Next bytes are the command id but only till '/'
-					commandId := ""
-					for i := 4; i < len(bytesData); i++ {
-						if bytesData[i] == '/' {
-							break
-						}
-						commandId += string(bytesData[i])
-					}
-
 					// Rest is the payload
-					payload := bytesData[len(commandId)+5:]
+					payload := bytesData[meta.PayloadOffset:]
 
 					var response *ClientResponse
 
-					if op == OpResponse {
+					if meta.Op == OpResponse {
 						var resp *AnimusResponse
 						err := cbor.Unmarshal(payload, &resp)
 
@@ -116,9 +101,7 @@ func (c *AnimusMagicClient) ListenOnce(ctx context.Context, redis rueidis.Client
 							err2 := cbor.Unmarshal(payload, &cdr)
 
 							response = &ClientResponse{
-								Scope:     scope,
-								ClusterID: clusterId,
-								Op:        OpError,
+								Meta: meta,
 								Error: &AnimusErrorResponse{
 									Message: "client error: error unmarshaling payload: " + err.Error(),
 									ClientDebugInfo: map[string]any{
@@ -129,10 +112,8 @@ func (c *AnimusMagicClient) ListenOnce(ctx context.Context, redis rueidis.Client
 							}
 						} else {
 							response = &ClientResponse{
-								Scope:     scope,
-								ClusterID: clusterId,
-								Op:        op,
-								Resp:      resp,
+								Meta: meta,
+								Resp: resp,
 							}
 						}
 					} else {
@@ -146,20 +127,15 @@ func (c *AnimusMagicClient) ListenOnce(ctx context.Context, redis rueidis.Client
 						}
 
 						response = &ClientResponse{
-							Scope:     scope,
-							ClusterID: clusterId,
-							Op:        op,
-							Error:     data,
+							Meta:  meta,
+							Error: data,
 						}
 					}
 
-					n, ok := c.Notify.Load(commandId)
+					n, ok := c.Notify.Load(meta.CommandID)
 
 					if !ok {
-						l.Warn("[animus magic] received response for unknown command", zap.String("commandId", commandId))
-						if response.Op == OpResponse {
-							c.UpdateCache(response) // At least update the cache
-						}
+						l.Warn("[animus magic] received response for unknown command", zap.String("commandId", meta.CommandID))
 						return
 					}
 
@@ -167,22 +143,22 @@ func (c *AnimusMagicClient) ListenOnce(ctx context.Context, redis rueidis.Client
 
 					if n.ExpectedCount != 0 {
 						if newCount > n.ExpectedCount {
-							l.Warn("[animus magic] received more responses than expected", zap.String("commandId", commandId))
-							if response.Op == OpResponse {
+							l.Warn("[animus magic] received more responses than expected", zap.String("commandId", meta.CommandID))
+							if response.Meta.Op == OpResponse {
 								c.UpdateCache(response) // At least update the cache
 							}
-							c.CloseNotifier(commandId) // Close the notifier
+							c.CloseNotifier(response.Meta.CommandID) // Close the notifier
 							return
 						}
 					}
 
 					n.Chan <- response
-					if response.Op == OpResponse {
+					if meta.Op == OpResponse {
 						c.UpdateCache(response)
 					}
 
 					if n.ExpectedCount != 0 && newCount == n.ExpectedCount {
-						c.CloseNotifier(commandId)
+						c.CloseNotifier(meta.CommandID)
 					}
 				}()
 			})
@@ -203,9 +179,10 @@ func (c *AnimusMagicClient) Listen(ctx context.Context, redis rueidis.Client, l 
 }
 
 // CreatePayload creates a payload for the given command id and message
-func (c *AnimusMagicClient) CreatePayload(scope byte, clusterId uint16, op byte, commandId string, resp *AnimusMessage) ([]byte, error) {
+func (c *AnimusMagicClient) CreatePayload(from, to AnimusTarget, clusterId uint16, op byte, commandId string, resp *AnimusMessage) ([]byte, error) {
 	var finalPayload = []byte{
-		scope,
+		byte(from),
+		byte(to),
 		byte(clusterId>>8) & 0xFF,
 		byte(clusterId) & 0xFF,
 		op,
@@ -224,18 +201,46 @@ func (c *AnimusMagicClient) CreatePayload(scope byte, clusterId uint16, op byte,
 	return finalPayload, nil
 }
 
+// GetPayloadMeta parses the payload metadata from a message
+func (c *AnimusMagicClient) GetPayloadMeta(payload []byte) (*AnimusMessageMetadata, error) {
+	if len(payload) < 6 {
+		return nil, ErrInvalidPayload
+	}
+
+	meta := &AnimusMessageMetadata{
+		From:      AnimusTarget(payload[0]),
+		To:        AnimusTarget(payload[1]),
+		ClusterID: uint16(payload[2])<<8 | uint16(payload[3]),
+		Op:        payload[4],
+	}
+
+	// Next bytes are the command id but only till '/'
+	commandId := ""
+	for i := 5; i < len(payload); i++ {
+		if payload[i] == '/' {
+			break
+		}
+		commandId += string(payload[i])
+	}
+
+	meta.CommandID = commandId
+	meta.PayloadOffset = uint(len(commandId) + 5)
+
+	return meta, nil
+}
+
 func (c *AnimusMagicClient) Publish(ctx context.Context, redis rueidis.Client, payload []byte) error {
 	return redis.Do(ctx, redis.B().Publish().Channel(c.Channel).Message(rueidis.BinaryString(payload)).Build()).Error()
 }
 
-// RequestData stores the data for a request
+// RequestOptions stores the data for a request
 type RequestOptions struct {
-	ClusterID             *uint16 // must be set, also ExpectedResponseCount must be set if wildcard
-	ExpectedResponseCount uint32  // must be set if wildcard. this is the number of responses expected
-	CommandID             string  // if unset, will be randomly generated
-	Scope                 byte    // if unset is ScopeBot
-	Op                    byte    // if unset is OpRequest
-	IgnoreOpError         bool    // if true, will ignore OpError responses
+	ClusterID             *uint16      // must be set, also ExpectedResponseCount must be set if wildcard
+	ExpectedResponseCount uint32       // must be set if wildcard. this is the number of responses expected
+	CommandID             string       // if unset, will be randomly generated
+	To                    AnimusTarget // if unset, is set to AnimusTargetBot
+	Op                    byte         // if unset is OpRequest
+	IgnoreOpError         bool         // if true, will ignore OpError responses
 }
 
 // Parse parses a RequestOptions
@@ -313,7 +318,7 @@ func (c *AnimusMagicClient) GatherResponses(
 		case resp := <-notify:
 			resps = append(resps, resp)
 
-			if resp.Op == OpError && !opts.IgnoreOpError {
+			if resp.Meta.Op == OpError && !opts.IgnoreOpError {
 				return resps, ErrOpError
 			}
 
@@ -382,7 +387,7 @@ func (c *AnimusMagicClient) Request(
 		return nil, err
 	}
 
-	payload, err := c.CreatePayload(data.Scope, *data.ClusterID, data.Op, data.CommandID, msg)
+	payload, err := c.CreatePayload(AnimusTargetWebserver, data.To, *data.ClusterID, data.Op, data.CommandID, msg)
 
 	if err != nil {
 		return nil, err

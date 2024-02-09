@@ -115,7 +115,7 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 		}
 	}
 
-	if moduleListResp[0].Op == animusmagic.OpError {
+	if moduleListResp[0].Meta.Op == animusmagic.OpError {
 		return uapi.HttpResponse{
 			Status: http.StatusInternalServerError,
 			Json: types.ApiError{
