@@ -3,11 +3,19 @@ package main
 import (
 	"context"
 	"fmt"
+	"os"
+	"strconv"
+	"time"
 
 	"github.com/anti-raid/splashtail/animusmagic"
+	"github.com/infinitybotlist/eureka/crypto"
 	"github.com/infinitybotlist/eureka/shellcli"
 	"github.com/redis/rueidis"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 )
+
+type AnimusCliWriter struct{}
 
 type AnimusCliData struct {
 	Context           context.Context
@@ -15,6 +23,7 @@ type AnimusCliData struct {
 	Rueidis           rueidis.Client
 	AnimusMagicClient *animusmagic.AnimusMagicClient
 	Connected         bool
+	Logger            *zap.Logger
 }
 
 var root *shellcli.ShellCli[AnimusCliData]
@@ -64,6 +73,22 @@ func main() {
 
 					a.Data.Connected = true
 
+					a.Data.Logger = zap.New(
+						zapcore.NewCore(
+							zapcore.NewConsoleEncoder(zap.NewDevelopmentEncoderConfig()),
+							os.Stdout,
+							zap.DebugLevel,
+						),
+					)
+
+					go func() {
+						err := a.Data.AnimusMagicClient.Listen(a.Data.Context, a.Data.Rueidis, a.Data.Logger)
+
+						if err != nil {
+							a.Data.Logger.Fatal("error listening to animus magic", zap.Error(err))
+						}
+					}()
+
 					return nil
 				},
 			},
@@ -80,6 +105,82 @@ func main() {
 					a.Data.Connected = false
 
 					return nil
+				},
+			},
+			"probe": {
+				Description: "Probes the animus magic channel. This only works for clients which implement the Probe AnimusMessage",
+				Args: [][3]string{
+					{"timeout", "Timeout in seconds", "5"},
+					{"to", "Target", "0"},
+				},
+				Run: func(a *shellcli.ShellCli[AnimusCliData], args map[string]string) error {
+					timeout, ok := args["timeout"]
+
+					if !ok {
+						timeout = "5"
+					}
+
+					to, ok := args["to"]
+
+					if !ok {
+						to = "0"
+					}
+
+					// Convert to integer
+					toInt, err := strconv.Atoi(to)
+
+					if err != nil {
+						return fmt.Errorf("error converting to integer: %s", err)
+					}
+
+					timeoutInt, err := strconv.Atoi(timeout)
+
+					if err != nil {
+						return fmt.Errorf("error converting timeout to integer: %s", err)
+					}
+
+					toTarget := animusmagic.AnimusTarget(byte(toInt))
+
+					commandId := crypto.RandString(512)
+					payload, err := a.Data.AnimusMagicClient.CreatePayload(
+						animusmagic.AnimusTargetWebserver,
+						toTarget,
+						animusmagic.WildcardClusterID,
+						animusmagic.OpRequest,
+						commandId,
+						&animusmagic.AnimusMessage{
+							Probe: &struct{}{},
+						},
+					)
+
+					if err != nil {
+						return fmt.Errorf("error creating payload: %s", err)
+					}
+
+					// Create a channel to receive the response
+					notify := a.Data.AnimusMagicClient.CreateNotifier(commandId, 0)
+
+					// Publish the payload
+					err = a.Data.AnimusMagicClient.Publish(a.Data.Context, a.Data.Rueidis, payload)
+
+					if err != nil {
+						// Remove the notifier
+						a.Data.AnimusMagicClient.CloseNotifier(commandId)
+						return fmt.Errorf("error publishing payload: %s", err)
+					}
+
+					// Wait for the response
+					ticker := time.NewTicker(time.Second * time.Duration(timeoutInt))
+					for {
+						select {
+						case <-a.Data.Context.Done():
+							return fmt.Errorf("context cancelled")
+						case <-ticker.C:
+							return nil
+						case response := <-notify:
+							fmt.Println("Response:", response)
+						}
+					}
 				},
 			},
 		},

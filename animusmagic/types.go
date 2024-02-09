@@ -53,6 +53,7 @@ type AnimusResponse struct {
 }
 
 type AnimusMessage struct {
+	Probe       *struct{} `json:"Probe,omitempty"`
 	Modules     *struct{} `json:"Modules,omitempty"`
 	GuildsExist *struct {
 		Guilds []string `json:"guilds"`

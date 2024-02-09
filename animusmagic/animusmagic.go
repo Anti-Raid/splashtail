@@ -216,14 +216,14 @@ func (o *RequestOptions) Parse() error {
 // CreateNotifier adds a notifier to the map and returns the channel
 //
 // This channel will receive the response for the given command id
-func (c *AnimusMagicClient) CreateNotifier(opts *RequestOptions) chan *ClientResponse {
+func (c *AnimusMagicClient) CreateNotifier(commandId string, expectedResponseCount uint32) chan *ClientResponse {
 	// Create a channel to receive the response
-	notify := make(chan *ClientResponse, opts.ExpectedResponseCount)
+	notify := make(chan *ClientResponse, expectedResponseCount)
 
 	// Store the channel in the notify map
-	c.Notify.Store(opts.CommandID, &NotifyWrapper{
+	c.Notify.Store(commandId, &NotifyWrapper{
 		Chan:          notify,
-		ExpectedCount: opts.ExpectedResponseCount,
+		ExpectedCount: expectedResponseCount,
 	})
 
 	return notify
@@ -296,7 +296,7 @@ func (c *AnimusMagicClient) RawRequest(
 	}
 
 	// Create a channel to receive the response
-	notify := c.CreateNotifier(data)
+	notify := c.CreateNotifier(data.CommandID, data.ExpectedResponseCount)
 
 	// Publish the payload
 	err = c.Publish(ctx, redis, msg)
@@ -339,7 +339,7 @@ func (c *AnimusMagicClient) Request(
 	}
 
 	// Create a channel to receive the response
-	notify := c.CreateNotifier(data)
+	notify := c.CreateNotifier(data.CommandID, data.ExpectedResponseCount)
 
 	// Publish the payload
 	err = c.Publish(ctx, redis, payload)
