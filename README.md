@@ -101,6 +101,13 @@ To load the database seed, follow the following steps:
 - Run ``make`` to build just the go components
 - Run ``make all`` to build everything
 
+### Configuration
+
+Run ``./splashtail webserver``. This will create ``config.yaml.sample``. Copy this to ``config.yaml`` and fill in the required fields as per the below:
+
+- ``discord_auth``: use https://discord.dev to fill this out on a new application. Be sure to edit ``can_use_bot`` with your User ID 
+- ``animus_magic_channel``: Set ``animus_magic_channel.staging`` to ``animus_magic-staging`` and ``animus_magic_channel.prod`` to ``animus_magic-prod``. These are the Redis PubSub channels used for communication between the bot, server and jobserver
+
 ### Running
 
 - First run ``./splashtail webserver`` with the environment variable ``BOOTSTRAP_COMMANDS`` set to ``true``. This will start the bot and deploy the base commands.
