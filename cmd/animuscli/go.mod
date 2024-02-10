@@ -3,9 +3,10 @@ module github.com/anti-raid/splashtail/cmd/animuscli
 go 1.21.5
 
 require (
-	github.com/anti-raid/splashtail v0.0.0-20240209145859-13d4acbd0e99
-	github.com/infinitybotlist/eureka v0.8.0
+	github.com/anti-raid/splashtail v0.0.0-20240210040230-c3cf735b7907
+	github.com/infinitybotlist/eureka v0.9.2
 	github.com/redis/rueidis v1.0.28
+	go.uber.org/zap v1.26.0
 )
 
 require (
@@ -16,7 +17,6 @@ require (
 	github.com/jackc/pgx/v5 v5.5.3 // indirect
 	github.com/x448/float16 v0.8.4 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
-	go.uber.org/zap v1.26.0 // indirect
 	golang.org/x/crypto v0.19.0 // indirect
 	golang.org/x/net v0.21.0 // indirect
 	golang.org/x/sys v0.17.0 // indirect

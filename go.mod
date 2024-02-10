@@ -8,7 +8,7 @@ require (
 	github.com/bwmarrin/discordgo v0.27.2-0.20231208125110-f7800efc52b8
 	github.com/getkin/kin-openapi v0.123.0 // indirect
 	github.com/go-chi/chi/v5 v5.0.11
-	github.com/infinitybotlist/eureka v0.8.0
+	github.com/infinitybotlist/eureka v0.9.2
 	github.com/wk8/go-ordered-map/v2 v2.1.8 // indirect
 	gopkg.in/yaml.v3 v3.0.1
 )
