@@ -70,6 +70,31 @@ In some cases, the internal representation of a type is not suitable for externa
 
 ## Self-Hosting and Deployment
 
+### Database Seeding
+
+To load the database seed, follow the following steps:
+
+0. Install and setup PostgreSQL 15.5 or 16 (production uses 15.5 currently)
+1. Install ``iblcli`` using ``go install github.com/InfinityBotList/ibl@latest``. This will install ``iblcli`` which is used for database seeding to ``~/go/bin`` from which you can either copy it to ``/usr/bin`` or add it to your ``$PATH``.
+2. Install postgres server development headers: ``apt install postgresql-server-dev-VERSION`` where version is >= 15.
+3. Create the following databases and roles:
+    - ``antiraid``
+    - ``frostpaw``
+    - ``YOUR_USER_ACCOUNT``
+    - **TIP:** Use ``CREATE ROLE <role> WITH SUPERUSER`` to create a superuser role and ``CREATE DATABASE <db> WITH OWNER <role>`` to create a database with the role as the owner. Do this for all roles and databases.
+
+4. Run ``ibl db load data/db_seed.iblcli-seed`` to try loading the seed into the database. 
+
+**Note that due to a bug in ``ibl``, this may fail with an error related to copying the extension ``semver``. If this occurs, follow the below steps**
+
+5. Enter the created ``semver`` folder and run ``make && sudo make install`` to build and install the extension with the correct permissions.
+6. Exit the ``semver`` folder and delete it (``rm -r semver``)
+7. Rerun Step 3
+
+**End of note. All further steps can be followed by all**
+
+8. If ``ibl`` fails with a ``seed_info`` error, rerun Step 3 to properly setup seeding
+
 ### Building Bot/API
 
 - Run ``make buildbot`` to build the bot
