@@ -20,6 +20,19 @@ const (
 	AnimusTargetWebserver AnimusTarget = 0x2
 )
 
+func (a AnimusTarget) String() string {
+	switch a {
+	case AnimusTargetBot:
+		return "Bot"
+	case AnimusTargetJobserver:
+		return "Jobserver"
+	case AnimusTargetWebserver:
+		return "Webserver"
+	default:
+		return "Unknown"
+	}
+}
+
 const (
 	OpRequest         = 0x0
 	OpResponse        = 0x1

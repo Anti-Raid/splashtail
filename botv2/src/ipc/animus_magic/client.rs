@@ -78,7 +78,12 @@ pub enum AnimusResponse {
 }
 
 impl AnimusResponse {
-    pub fn from_payload(payload: &[u8], target: AnimusTarget) -> Result<Self, crate::Error> {
+    pub fn from_payload(payload: &[u8], op: AnimusOp, target: AnimusTarget) -> Result<Self, crate::Error> {
+        if op == AnimusOp::Error {
+            let msg = serde_cbor::from_slice::<AnimusErrorResponse>(payload)?;
+            return Ok(Self::Error(msg));
+        }
+        
         match target {
             AnimusTarget::Bot => {
                 let msg = serde_cbor::from_slice::<BotAnimusResponse>(payload)?;
@@ -122,7 +127,7 @@ impl From<AnimusResponse> for AnimusPayload {
 }
 
 impl AnimusMessage {
-    pub fn from_payload(payload: &[u8], target: AnimusTarget) -> Result<Self, crate::Error> {
+    pub fn from_payload(payload: &[u8], target: AnimusTarget) -> Result<Self, crate::Error> {        
         match target {
             AnimusTarget::Bot => {
                 let msg = serde_cbor::from_slice::<BotAnimusMessage>(payload)?;
@@ -199,7 +204,7 @@ impl AnimusMagicClient {
 
             // Case of response
             match meta.op {
-                AnimusOp::Response => {
+                AnimusOp::Response | AnimusOp::Error => {
                     if meta.from == AnimusTarget::Bot && (meta.cluster_id != MEWLD_ARGS.cluster_id && meta.cluster_id != u16::MAX) {
                         continue; // Not for us
                     }
@@ -214,11 +219,10 @@ impl AnimusMagicClient {
                         if let Some(sender) = sender {
                             let payload = &binary[meta.payload_offset..];
 
-                            // Pluck out json
-                            let resp = match AnimusResponse::from_payload(payload, meta.to) {
+                            let resp = match AnimusResponse::from_payload(payload, meta.op, meta.from) {
                                 Ok(resp) => resp,
                                 Err(e) => {
-                                    log::warn!("Invalid message recieved on channel {} [json extract error] {}", message.channel, e);
+                                    log::warn!("Invalid message recieved on channel {} [response extract error] {}", message.channel, e);
                                     // Send error
                                     if let Err(e) = Self::error(&redis_pool, &meta.command_id, AnimusErrorResponse {
                                         message: "Invalid payload, failed to unmarshal message".to_string(),
@@ -243,7 +247,7 @@ impl AnimusMagicClient {
 
                 AnimusOp::Request => {
                     // Ensure requeest op, and that the cluster id is either the same as ours or the wildcard u16::MAX
-                    if meta.from == AnimusTarget::Bot && (meta.cluster_id != MEWLD_ARGS.cluster_id && meta.cluster_id != u16::MAX) {
+                    if meta.to != AnimusTarget::Bot && (meta.cluster_id == MEWLD_ARGS.cluster_id || meta.cluster_id != u16::MAX) {
                         continue; // Not for us
                     }
 
@@ -257,7 +261,7 @@ impl AnimusMagicClient {
                         let resp = match AnimusMessage::from_payload(payload, meta.to) {
                             Ok(resp) => resp,
                             Err(e) => {
-                                log::warn!("Invalid message recieved on channel {} [json extract error] {}", message.channel, e);
+                                log::warn!("Invalid message recieved on channel {} [request extract error] {}", message.channel, e);
                                 // Send error
                                 if let Err(e) = Self::error(&redis_pool, &meta.command_id, AnimusErrorResponse {
                                     message: "Invalid payload, failed to unmarshal message".to_string(),
@@ -329,8 +333,6 @@ impl AnimusMagicClient {
                         }
                     });
                 }
-
-                _ => {}
             }      
         }
 

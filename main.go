@@ -209,6 +209,13 @@ func main() {
 
 		// Load jobs
 		bgtasks.StartAllTasks()
+
+		// Wait until signal is received
+		c := make(chan os.Signal, 1)
+
+		signal.Notify(c, syscall.SIGTERM, syscall.SIGINT, syscall.SIGHUP)
+
+		<-c
 	default:
 		fmt.Println("Splashtail Usage: splashtail <component>")
 		fmt.Println("webserver: Starts the webserver")

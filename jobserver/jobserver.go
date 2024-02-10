@@ -3,30 +3,15 @@ package jobserver
 import (
 	"fmt"
 
-	"github.com/anti-raid/splashtail/jobserver/endpoints"
-	"github.com/anti-raid/splashtail/jobserver/endpoints/create_task"
-	"github.com/anti-raid/splashtail/jobserver/endpoints/execute_task"
 	"github.com/anti-raid/splashtail/jobserver/jobrunner"
 	"github.com/anti-raid/splashtail/jobserver/state"
 	"github.com/anti-raid/splashtail/splashcore/animusmagic"
 	"github.com/anti-raid/splashtail/tasks"
-
 	jsoniter "github.com/json-iterator/go"
+	"go.uber.org/zap"
 )
 
-var expectedSecretMap map[string]string // Set during setup
-
 var json = jsoniter.ConfigFastest
-
-var ipcEvents = map[string]endpoints.IPC{
-	"create_task":  create_task.CreateTask,
-	"execute_task": execute_task.ExecuteTask,
-}
-
-type IpcRequest struct {
-	// Arguments to pass to the ipc command
-	Args map[string]any `json:"args"`
-}
 
 func CreateJobServer() {
 	state.AnimusMagicClient.OnRequest = func(c *animusmagic.ClientRequest) (animusmagic.AnimusResponse, error) {
@@ -35,6 +20,8 @@ func CreateJobServer() {
 				fmt.Println("Recovered from panic:", rvr)
 			}
 		}()
+
+		state.Logger.Info("Recieved request", zap.String("from", c.Meta.From.String()), zap.String("to", c.Meta.To.String()), zap.String("commandId", c.Meta.CommandID))
 
 		data, err := animusmagic.ParseClientRequest[animusmagic.JobserverMessage](c)
 
@@ -65,7 +52,7 @@ func CreateJobServer() {
 				return nil, fmt.Errorf("invalid task data provided")
 			}
 
-			tBytes, err := json.Marshal(data)
+			tBytes, err := json.Marshal(data.SpawnTask.Data)
 
 			if err != nil {
 				return nil, fmt.Errorf("error marshalling task args: %w", err)
@@ -127,6 +114,4 @@ func CreateJobServer() {
 		state.Rueidis,
 		state.Logger,
 	)
-
-	return
 }

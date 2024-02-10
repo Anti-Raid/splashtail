@@ -3,7 +3,6 @@ use poise::serenity_prelude::UserId;
 use serde::{Deserialize, Serialize};
 use sqlx::types::chrono;
 use std::fs::File;
-use std::collections::HashMap;
 use object_store::ObjectStore;
 
 use crate::Error;

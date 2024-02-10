@@ -144,6 +144,10 @@ func (c *AnimusMagicClient) ListenOnce(ctx context.Context, r rueidis.Client, l 
 					case OpError:
 						fallthrough // Both response and error are handled the same way
 					case OpResponse:
+						if meta.From == AnimusTargetWebserver {
+							return
+						}
+
 						n, ok := c.Notify.Load(meta.CommandID)
 
 						if !ok {
