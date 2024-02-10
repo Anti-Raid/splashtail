@@ -82,12 +82,12 @@ type Channels struct {
 }
 
 type JAPI struct {
-	Key string `yaml:"key" comment:"JAPI Key. Get it from https://japi.rest" validate:"required"`
+	Key string `yaml:"key" default:"Currently unused, ignore this field" comment:"JAPI Key. Get it from https://japi.rest" validate:"required"`
 }
 
 type Notifications struct {
 	VapidPublicKey  string `yaml:"vapid_public_key" default:"BNMhOWvN-6_jm72D3Ncnxmvwz03TLDNVOi1bd9uD-OjWbHmaa4w1A5nq8MTjSKL_tnMueI64ZxtRXWRltRu0Vio" comment:"Vapid Public Key (https://www.stephane-quantin.com/en/tools/generators/vapid-keys)" validate:"required"`
-	VapidPrivateKey string `yaml:"vapid_private_key" comment:"Vapid Private Key (https://www.stephane-quantin.com/en/tools/generators/vapid-keys)" validate:"required"`
+	VapidPrivateKey string `yaml:"vapid_private_key" default:"Set this here if you want notifications to work" comment:"Vapid Private Key (https://www.stephane-quantin.com/en/tools/generators/vapid-keys)" validate:"required"`
 }
 
 type Servers struct {
