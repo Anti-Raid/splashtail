@@ -14,9 +14,9 @@ import (
 	"slices"
 	"time"
 
+	"github.com/anti-raid/splashtail/splashcore/types"
+	"github.com/anti-raid/splashtail/splashcore/utils"
 	"github.com/anti-raid/splashtail/tasks/taskstate"
-	"github.com/anti-raid/splashtail/types"
-	"github.com/anti-raid/splashtail/utils"
 
 	_ "golang.org/x/image/webp"
 

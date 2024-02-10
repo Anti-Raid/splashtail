@@ -8,8 +8,8 @@ import (
 	"runtime/debug"
 	"strings"
 
-	"github.com/anti-raid/splashtail/config"
-	"github.com/anti-raid/splashtail/objectstorage"
+	"github.com/anti-raid/splashtail/splashcore/config"
+	"github.com/anti-raid/splashtail/splashcore/objectstorage"
 	"github.com/bwmarrin/discordgo"
 	"github.com/go-playground/validator/v10"
 	"github.com/go-playground/validator/v10/non-standard/validators"

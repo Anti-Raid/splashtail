@@ -17,10 +17,10 @@ import (
 	mutils "github.com/cheesycod/mewld/utils"
 	"gopkg.in/yaml.v3"
 
-	"github.com/anti-raid/splashtail/config"
 	"github.com/anti-raid/splashtail/jobserver"
 	"github.com/anti-raid/splashtail/jobserver/bgtasks"
 	jobserverstate "github.com/anti-raid/splashtail/jobserver/state"
+	"github.com/anti-raid/splashtail/splashcore/config"
 	"github.com/anti-raid/splashtail/webserver"
 	"github.com/anti-raid/splashtail/webserver/mewld_web"
 	webserverstate "github.com/anti-raid/splashtail/webserver/state"

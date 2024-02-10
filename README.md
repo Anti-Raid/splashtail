@@ -4,6 +4,7 @@ Splashtail is a monorepo containing all the code needed to run and setup Anti-Ra
 
 ## Components
 
+- **infra** => Core infrastructure for the bot
 - **botv2** => The core bot interface for AntiRaid
 - **jobserver** => The jobserver is the component of AntiRaid responsible for handling tasks concurrently to ensure that Bot/API restarts/issues/outages does not affect ongoing backup creations/backup restores/member restores etc. The jobserver also allows code related to core functionality to be shared between the Bot (rust) and the API/website
 - **webserver** (API) => The API interface for AntiRaid used for third-party integrations and the website

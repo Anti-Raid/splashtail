@@ -6,8 +6,8 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/anti-raid/splashtail/splashcore/types"
 	"github.com/anti-raid/splashtail/tasks"
-	"github.com/anti-raid/splashtail/types"
 	"github.com/anti-raid/splashtail/webserver/state"
 	jsoniter "github.com/json-iterator/go"
 

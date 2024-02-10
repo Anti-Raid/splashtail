@@ -3,8 +3,8 @@ package animusmagic
 import (
 	"errors"
 
-	"github.com/anti-raid/splashtail/types"
-	"github.com/anti-raid/splashtail/types/silverpelt"
+	"github.com/anti-raid/splashtail/splashcore/types"
+	"github.com/anti-raid/splashtail/splashcore/types/silverpelt"
 )
 
 var ErrNilRequestData = errors.New("request validation error: nil request data")

@@ -5,9 +5,9 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/anti-raid/splashtail/db"
+	"github.com/anti-raid/splashtail/splashcore/structparser/db"
+	"github.com/anti-raid/splashtail/splashcore/types"
 	"github.com/anti-raid/splashtail/tasks"
-	"github.com/anti-raid/splashtail/types"
 	"github.com/anti-raid/splashtail/webserver/state"
 	docs "github.com/infinitybotlist/eureka/doclib"
 	"github.com/infinitybotlist/eureka/uapi"

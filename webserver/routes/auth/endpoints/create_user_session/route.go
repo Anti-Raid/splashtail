@@ -4,7 +4,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/anti-raid/splashtail/types"
+	"github.com/anti-raid/splashtail/splashcore/types"
 	"github.com/anti-raid/splashtail/webserver/state"
 	"github.com/go-playground/validator/v10"
 	"go.uber.org/zap"

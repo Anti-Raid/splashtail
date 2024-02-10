@@ -8,7 +8,7 @@ import (
 
 	_ "embed"
 
-	"github.com/anti-raid/splashtail/types"
+	"github.com/anti-raid/splashtail/splashcore/types"
 	"github.com/anti-raid/splashtail/webserver/api"
 	"github.com/anti-raid/splashtail/webserver/constants"
 	"github.com/anti-raid/splashtail/webserver/integrations/gitlogs"

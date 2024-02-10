@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/anti-raid/splashtail/animusmagic"
+	"github.com/anti-raid/splashtail/splashcore/animusmagic"
 	"github.com/infinitybotlist/eureka/crypto"
 	"github.com/infinitybotlist/eureka/shellcli"
 	"github.com/redis/rueidis"

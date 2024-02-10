@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/anti-raid/splashtail/splashcore/types"
 	"github.com/anti-raid/splashtail/tasks"
-	"github.com/anti-raid/splashtail/types"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 

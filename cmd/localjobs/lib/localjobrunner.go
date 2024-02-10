@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/anti-raid/splashtail/splashcore/types"
 	"github.com/anti-raid/splashtail/tasks"
 	"github.com/anti-raid/splashtail/tasks/taskstate"
-	"github.com/anti-raid/splashtail/types"
 
 	"github.com/infinitybotlist/eureka/crypto"
 	"go.uber.org/zap"

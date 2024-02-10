@@ -1,7 +1,7 @@
 package users
 
 import (
-	"github.com/anti-raid/splashtail/types"
+	"github.com/anti-raid/splashtail/splashcore/types"
 	"github.com/anti-raid/splashtail/webserver/routes/users/endpoints/get_user"
 	"github.com/anti-raid/splashtail/webserver/routes/users/endpoints/get_user_guild_base_info"
 	"github.com/anti-raid/splashtail/webserver/routes/users/endpoints/get_user_guilds"

@@ -1,5 +1,5 @@
 packages:
-  - path: "github.com/anti-raid/splashtail/types"
+  - path: "github.com/anti-raid/splashtail/splashcore/types"
     output_path: "/failuremgmt/cdn/antiraid/dev/bindings/splashtail/types.ts"
     frontmatter: |
       import { PlatformUser } from "./eureka-dovewing"
@@ -14,7 +14,7 @@ packages:
   - path: "github.com/infinitybotlist/eureka/dovewing/dovetypes"
     output_path: "/failuremgmt/cdn/antiraid/dev/bindings/splashtail/eureka-dovewing.ts"
 
-  - path: "github.com/anti-raid/splashtail/types/silverpelt"
+  - path: "github.com/anti-raid/splashtail/splashcore/types/silverpelt"
     output_path: "/failuremgmt/cdn/antiraid/dev/bindings/splashtail/silverpelt.ts"
     type_mappings:
       time.Time: "string /* RFC3339 */"
@@ -24,7 +24,7 @@ packages:
       pgtype.Timestamptz: "string | null /* RFC3339, nullable */"
       orderedmap.OrderedMap: "Record"
 
-  - path: "github.com/anti-raid/splashtail/types/ext"
+  - path: "github.com/anti-raid/splashtail/splashcore/types/ext"
     output_path: "/failuremgmt/cdn/antiraid/dev/bindings/splashtail/ext.ts"
     type_mappings:
       time.Time: "string /* RFC3339 */"

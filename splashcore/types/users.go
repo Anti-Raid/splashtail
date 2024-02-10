@@ -3,7 +3,7 @@ package types
 import (
 	"time"
 
-	"github.com/anti-raid/splashtail/types/ext"
+	"github.com/anti-raid/splashtail/splashcore/types/ext"
 	"github.com/infinitybotlist/eureka/dovewing/dovetypes"
 )
 

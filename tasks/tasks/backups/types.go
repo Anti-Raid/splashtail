@@ -3,7 +3,7 @@ package backups
 import (
 	"bytes"
 
-	"github.com/anti-raid/splashtail/utils/timex"
+	"github.com/anti-raid/splashtail/splashcore/utils/timex"
 	"github.com/bwmarrin/discordgo"
 	"github.com/infinitybotlist/iblfile"
 )

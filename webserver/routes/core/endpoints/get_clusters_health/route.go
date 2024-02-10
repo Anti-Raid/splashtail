@@ -3,7 +3,7 @@ package get_clusters_health
 import (
 	"net/http"
 
-	"github.com/anti-raid/splashtail/types"
+	"github.com/anti-raid/splashtail/splashcore/types"
 	"github.com/anti-raid/splashtail/webserver/state"
 
 	docs "github.com/infinitybotlist/eureka/doclib"

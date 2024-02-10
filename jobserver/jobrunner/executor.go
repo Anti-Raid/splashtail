@@ -9,8 +9,8 @@ import (
 	"runtime/debug"
 
 	"github.com/anti-raid/splashtail/jobserver/state"
+	"github.com/anti-raid/splashtail/splashcore/types"
 	"github.com/anti-raid/splashtail/tasks"
-	"github.com/anti-raid/splashtail/types"
 	"github.com/bwmarrin/discordgo"
 	"github.com/infinitybotlist/eureka/crypto"
 	"go.uber.org/zap"

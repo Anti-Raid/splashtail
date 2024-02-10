@@ -9,7 +9,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/anti-raid/splashtail/utils/syncmap"
+	"github.com/anti-raid/splashtail/splashcore/utils/syncmap"
 	"github.com/fxamacker/cbor/v2"
 	"github.com/infinitybotlist/eureka/crypto"
 	"github.com/redis/rueidis"

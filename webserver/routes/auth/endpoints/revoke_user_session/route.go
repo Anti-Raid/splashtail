@@ -4,7 +4,7 @@ import (
 	"errors"
 	"net/http"
 
-	"github.com/anti-raid/splashtail/types"
+	"github.com/anti-raid/splashtail/splashcore/types"
 	"github.com/anti-raid/splashtail/webserver/state"
 	"github.com/go-chi/chi/v5"
 	"github.com/jackc/pgx/v5"

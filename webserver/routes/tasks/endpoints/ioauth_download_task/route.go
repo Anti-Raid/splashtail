@@ -7,9 +7,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/anti-raid/splashtail/db"
+	"github.com/anti-raid/splashtail/splashcore/structparser/db"
+	types "github.com/anti-raid/splashtail/splashcore/types"
 	"github.com/anti-raid/splashtail/tasks"
-	types "github.com/anti-raid/splashtail/types"
 	"github.com/anti-raid/splashtail/webserver/state"
 
 	"github.com/bwmarrin/discordgo"

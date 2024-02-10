@@ -1,7 +1,7 @@
 package auth
 
 import (
-	"github.com/anti-raid/splashtail/types"
+	"github.com/anti-raid/splashtail/splashcore/types"
 	"github.com/anti-raid/splashtail/webserver/routes/auth/endpoints/create_ioauth_login"
 	"github.com/anti-raid/splashtail/webserver/routes/auth/endpoints/create_oauth2_login"
 	"github.com/anti-raid/splashtail/webserver/routes/auth/endpoints/create_user_session"

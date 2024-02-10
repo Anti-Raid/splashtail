@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/anti-raid/splashtail/animusmagic"
-	"github.com/anti-raid/splashtail/utils/syncmap"
+	"github.com/anti-raid/splashtail/splashcore/animusmagic"
+	"github.com/anti-raid/splashtail/splashcore/utils/syncmap"
 	"github.com/redis/rueidis"
 )
 

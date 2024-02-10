@@ -1,7 +1,7 @@
 package tasks
 
 import (
-	"github.com/anti-raid/splashtail/types"
+	"github.com/anti-raid/splashtail/splashcore/types"
 	"github.com/anti-raid/splashtail/webserver/routes/tasks/endpoints/create_task"
 	"github.com/anti-raid/splashtail/webserver/routes/tasks/endpoints/get_task"
 	"github.com/anti-raid/splashtail/webserver/routes/tasks/endpoints/get_task_list"

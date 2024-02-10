@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/anti-raid/splashtail/types"
+	"github.com/anti-raid/splashtail/splashcore/types"
 	"github.com/anti-raid/splashtail/webserver/state"
 	"github.com/redis/rueidis"
 

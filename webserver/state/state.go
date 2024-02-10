@@ -8,9 +8,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/anti-raid/splashtail/animusmagic"
-	"github.com/anti-raid/splashtail/config"
-	"github.com/anti-raid/splashtail/objectstorage"
+	"github.com/anti-raid/splashtail/splashcore/animusmagic"
+	"github.com/anti-raid/splashtail/splashcore/config"
+	"github.com/anti-raid/splashtail/splashcore/objectstorage"
 	"github.com/anti-raid/splashtail/webserver/state/animusmagiccache"
 	"github.com/anti-raid/splashtail/webserver/state/redishotcache"
 
