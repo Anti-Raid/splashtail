@@ -40,6 +40,7 @@ func main() {
 				Args: [][3]string{
 					{"redis", "Redis URL to connect to", "redis://localhost:6379"},
 					{"channel", "AnimusMagic channel to connect to", "animus_magic-staging"},
+					{"from", "Source", "0x2 (AnimusTargetWebserver)"},
 				},
 				Run: func(a *shellcli.ShellCli[AnimusCliData], args map[string]string) error {
 					var redisUrl = "redis://localhost:6379"
@@ -67,7 +68,19 @@ func main() {
 						return fmt.Errorf("error creating redis client: %s", err)
 					}
 
-					a.Data.AnimusMagicClient = animusmagic.New(animusMagicChannel)
+					var target = 0x2
+
+					if from, ok := args["from"]; ok && from != "" {
+						targetInt, err := strconv.Atoi(from)
+
+						if err != nil {
+							return fmt.Errorf("error converting target to integer: %s", err)
+						}
+
+						target = targetInt
+					}
+
+					a.Data.AnimusMagicClient = animusmagic.New(animusMagicChannel, animusmagic.AnimusTarget(target))
 
 					a.Data.Context, a.Data.ContextClose = context.WithCancel(context.Background())
 
@@ -145,6 +158,10 @@ func main() {
 
 					toTarget := animusmagic.AnimusTarget(byte(toInt))
 
+					var msg animusmagic.AnimusMessage = animusmagic.CommonAnimusMessage{
+						Probe: &struct{}{},
+					}
+
 					commandId := crypto.RandString(512)
 					payload, err := a.Data.AnimusMagicClient.CreatePayload(
 						animusmagic.AnimusTargetWebserver,
@@ -152,9 +169,7 @@ func main() {
 						animusmagic.WildcardClusterID,
 						animusmagic.OpRequest,
 						commandId,
-						&animusmagic.AnimusMessage{
-							Probe: &struct{}{},
-						},
+						msg,
 					)
 
 					if err != nil {
@@ -183,7 +198,10 @@ func main() {
 						case <-ticker.C:
 							return nil
 						case response := <-notify:
-							fmt.Println("Response:", response, "after time", time.Since(startTime), "\nCluster:", response.Meta.ClusterID)
+							since := time.Since(startTime)
+							go func() {
+								fmt.Println("Response:", response, "after time", since, "\nCluster:", response.Meta.ClusterID)
+							}()
 						}
 					}
 				},

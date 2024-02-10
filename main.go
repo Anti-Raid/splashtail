@@ -205,60 +205,10 @@ func main() {
 			panic(err)
 		}
 
-		r := jobserver.CreateJobServer()
+		jobserver.CreateJobServer()
 
 		// Load jobs
 		bgtasks.StartAllTasks()
-
-		// If GOOS is windows, do normal http server
-		if runtime.GOOS == "linux" || runtime.GOOS == "darwin" {
-			upg, _ := tableflip.New(tableflip.Options{})
-			defer upg.Stop()
-
-			go func() {
-				sig := make(chan os.Signal, 1)
-				signal.Notify(sig, syscall.SIGHUP)
-				for range sig {
-					jobserverstate.Logger.Info("Received SIGHUP, upgrading server")
-					upg.Upgrade()
-				}
-			}()
-
-			// Listen must be called before Ready
-			ln, err := upg.Listen("tcp", ":"+strconv.Itoa(jobserverstate.Config.Meta.JobserverPort.Parse()))
-
-			if err != nil {
-				jobserverstate.Logger.Fatal("Error binding to socket", zap.Error(err))
-			}
-
-			defer ln.Close()
-
-			server := http.Server{
-				ReadTimeout: 30 * time.Second,
-				Handler:     r,
-			}
-
-			go func() {
-				err := server.Serve(ln)
-				if err != http.ErrServerClosed {
-					jobserverstate.Logger.Error("Server failed due to unexpected error", zap.Error(err))
-				}
-			}()
-
-			if err := upg.Ready(); err != nil {
-				jobserverstate.Logger.Fatal("Error calling upg.Ready", zap.Error(err))
-			}
-
-			<-upg.Exit()
-		} else {
-			// Tableflip not supported
-			jobserverstate.Logger.Warn("Tableflip not supported on this platform, this is not a production-capable server.")
-			err = http.ListenAndServe(":"+strconv.Itoa(jobserverstate.Config.Meta.JobserverPort.Parse()), r)
-
-			if err != nil {
-				jobserverstate.Logger.Fatal("Error binding to socket", zap.Error(err))
-			}
-		}
 	default:
 		fmt.Println("Splashtail Usage: splashtail <component>")
 		fmt.Println("webserver: Starts the webserver")

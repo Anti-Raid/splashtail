@@ -3,7 +3,7 @@ module github.com/anti-raid/splashtail/cmd/animuscli
 go 1.21.5
 
 require (
-	github.com/anti-raid/splashtail v0.0.0-20240210040230-c3cf735b7907
+	github.com/anti-raid/splashtail v0.0.0-20240210060604-2a3156ed0b08
 	github.com/infinitybotlist/eureka v0.9.2
 	github.com/redis/rueidis v1.0.28
 	go.uber.org/zap v1.26.0

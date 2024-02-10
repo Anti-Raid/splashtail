@@ -23,7 +23,7 @@ pub struct Data {
     pub pool: sqlx::PgPool,
     pub mewld_ipc: Arc<ipc::mewld::MewldIpcClient>,
     pub object_store: Arc<Box<dyn ObjectStore>>,
-    pub animus_magic_ipc: Arc<ipc::animus_magic::AnimusMagicClient>,
+    pub animus_magic_ipc: Arc<ipc::animus_magic::client::AnimusMagicClient>,
     pub shards_ready: Arc<dashmap::DashMap<u16, bool>>,
 }
 
@@ -509,7 +509,7 @@ async fn main() {
             cache: Arc::new(ipc::mewld::MewldIpcCache::default()),
         }),
         animus_magic_ipc: Arc::new(
-            ipc::animus_magic::AnimusMagicClient {
+            ipc::animus_magic::client::AnimusMagicClient {
                 redis_pool: pool.clone(),
                 rx_map: Arc::new(dashmap::DashMap::new()),
             }

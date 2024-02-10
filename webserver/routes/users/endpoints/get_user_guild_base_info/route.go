@@ -103,11 +103,11 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 		}
 	}
 
-	resps, err := state.AnimusMagicClient.RequestAndParse(
+	resps, err := state.AnimusMagicClient.Request(
 		d.Context,
 		state.Rueidis,
-		&animusmagic.AnimusMessage{
-			GetBaseGuildAndUserInfo: &struct {
+		animusmagic.BotAnimusMessage{
+			BaseGuildUserInfo: &struct {
 				GuildID string `json:"guild_id"`
 				UserID  string `json:"user_id"`
 			}{
@@ -124,9 +124,21 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 		state.Logger.Error("Error sending request to animus magic", zap.Error(err))
 
 		if errors.Is(err, animusmagic.ErrOpError) && len(resps) > 0 {
+			p, err := animusmagic.ParseClientResponse[animusmagic.BotAnimusResponse](resps[0])
+
+			if err != nil {
+				state.Logger.Error("Error parsing response", zap.Error(err))
+				return uapi.HttpResponse{
+					Status: http.StatusInternalServerError,
+					Json: types.ApiError{
+						Message: "Error parsing error response: " + err.Error(),
+					},
+				}
+			}
+
 			return uapi.HttpResponse{
 				Status: http.StatusInternalServerError,
-				Json:   resps[0].Err,
+				Json:   p.Err,
 				Headers: map[string]string{
 					"Retry-After": "10",
 				},
@@ -155,7 +167,19 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 
 	resp := resps[0]
 
+	pr, err := animusmagic.ParseClientResponse[animusmagic.BotAnimusResponse](resp)
+
+	if err != nil {
+		state.Logger.Error("Error parsing response", zap.Error(err))
+		return uapi.HttpResponse{
+			Status: http.StatusInternalServerError,
+			Json: types.ApiError{
+				Message: "Error parsing response: " + err.Error(),
+			},
+		}
+	}
+
 	return uapi.HttpResponse{
-		Json: resp.Resp.GetBaseGuildAndUserInfo,
+		Json: pr.Resp.BaseGuildUserInfo,
 	}
 }

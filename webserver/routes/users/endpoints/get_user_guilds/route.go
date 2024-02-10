@@ -242,7 +242,7 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 		moduleListResp, err := state.AnimusMagicClient.Request(
 			d.Context,
 			state.Rueidis,
-			&animusmagic.AnimusMessage{
+			animusmagic.BotAnimusMessage{
 				GuildsExist: &struct {
 					Guilds []string `json:"guilds"`
 				}{
@@ -264,33 +264,33 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 			continue
 		}
 
-		for _, resp := range moduleListResp {
-			if resp.Meta.Op == animusmagic.OpError {
+		parsedModuleListResp, err := animusmagic.ParseClientResponses[animusmagic.BotAnimusResponse](moduleListResp)
+
+		if err != nil {
+			state.Logger.Error("Failed to parse response from animus magic", zap.Error(err))
+			return uapi.HttpResponse{
+				Status: http.StatusInternalServerError,
+				Json:   "Failed to parse response from animus magic: " + err.Error(),
+			}
+		}
+
+		for _, resp := range parsedModuleListResp {
+			if resp.ClientResp.Meta.Op == animusmagic.OpError {
 				return uapi.HttpResponse{
 					Status: http.StatusInternalServerError,
 					Json:   "Cluster returned OpError when trying to fetch user guilds",
 				}
 			}
 
-			errResp, resp, err := resp.Parse()
-
-			if err != nil {
-				state.Logger.Error("Failed to parse response from animus magic", zap.Error(err))
+			if resp.Err != nil {
+				state.Logger.Error("Error response from animus magic", zap.Any("error", resp.Err))
 				return uapi.HttpResponse{
 					Status: http.StatusInternalServerError,
-					Json:   "Failed to parse response from animus magic: " + err.Error(),
+					Json:   resp.Err,
 				}
 			}
 
-			if errResp != nil {
-				state.Logger.Error("Error response from animus magic", zap.Any("error", errResp))
-				return uapi.HttpResponse{
-					Status: http.StatusInternalServerError,
-					Json:   errResp,
-				}
-			}
-
-			if resp == nil || resp.GuildsExist == nil {
+			if resp == nil || resp.Resp.GuildsExist == nil {
 				state.Logger.Error("Nil response from animus magic")
 				return uapi.HttpResponse{
 					Status: http.StatusInternalServerError,
@@ -298,7 +298,7 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 				}
 			}
 
-			for i, v := range resp.GuildsExist.GuildsExist {
+			for i, v := range resp.Resp.GuildsExist.GuildsExist {
 				if v == 1 {
 					botInGuild = append(botInGuild, guilds[i])
 				}

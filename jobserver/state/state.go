@@ -8,6 +8,7 @@ import (
 	"runtime/debug"
 	"strings"
 
+	"github.com/anti-raid/splashtail/splashcore/animusmagic"
 	"github.com/anti-raid/splashtail/splashcore/config"
 	"github.com/anti-raid/splashtail/splashcore/objectstorage"
 	"github.com/bwmarrin/discordgo"
@@ -17,6 +18,7 @@ import (
 	"github.com/infinitybotlist/eureka/proxy"
 	"github.com/infinitybotlist/eureka/snippets"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/redis/rueidis"
 	"go.uber.org/zap"
 	"gopkg.in/yaml.v3"
 )
@@ -28,6 +30,9 @@ var (
 	BotUser              *discordgo.User
 	ObjectStorage        *objectstorage.ObjectStorage
 	CurrentOperationMode string // Current mode splashtail is operating in
+
+	Rueidis           rueidis.Client
+	AnimusMagicClient *animusmagic.AnimusMagicClient
 
 	// Debug stuff
 	BuildInfo  *debug.BuildInfo
@@ -150,4 +155,19 @@ func Setup() {
 	Discord.AddHandler(func(s *discordgo.Session, r *discordgo.Ready) {
 		Logger.Info("[DISCORD]", zap.String("note", "ready"))
 	})
+
+	// Reuidis
+	ruOptions, err := rueidis.ParseURL(Config.Meta.RedisURL.Parse())
+
+	if err != nil {
+		panic(err)
+	}
+
+	Rueidis, err = rueidis.NewClient(ruOptions)
+
+	if err != nil {
+		panic(err)
+	}
+
+	AnimusMagicClient = animusmagic.New(Config.Meta.AnimusMagicChannel.Parse(), animusmagic.AnimusTargetJobserver)
 }

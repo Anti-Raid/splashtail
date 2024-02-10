@@ -6,6 +6,7 @@ package animusmagic
 import (
 	"context"
 	"errors"
+	"fmt"
 	"sync/atomic"
 	"time"
 
@@ -24,17 +25,18 @@ type ClientResponse struct {
 	RawPayload []byte
 }
 
-func (c *ClientResponse) Parse() (*AnimusErrorResponse, *AnimusResponse, error) {
-	var err error
-	if c.Meta.Op == OpError {
-		var errResp AnimusErrorResponse
-		err = cbor.Unmarshal(c.RawPayload, &err)
-		return &errResp, nil, err
-	} else {
-		var resp AnimusResponse
-		err = cbor.Unmarshal(c.RawPayload, &resp)
-		return nil, &resp, err
-	}
+// A ClientResponse contains the request from animus magic
+type ClientRequest struct {
+	Meta *AnimusMessageMetadata
+
+	// The raw payload
+	RawPayload []byte
+}
+
+func ParseClientRequest[T AnimusMessage](c *ClientRequest) (*T, error) {
+	var req T
+	err := cbor.Unmarshal(c.RawPayload, &req)
+	return &req, err
 }
 
 type NotifyWrapper struct {
@@ -44,6 +46,12 @@ type NotifyWrapper struct {
 }
 
 type AnimusMagicClient struct {
+	// Target / who the client is for
+	From AnimusTarget
+
+	// On request function, if set, will be called upon recieving op of type OpRequest
+	OnRequest func(*ClientRequest) (AnimusResponse, error)
+
 	// Set of notifiers
 	Notify syncmap.Map[string, *NotifyWrapper]
 
@@ -52,17 +60,18 @@ type AnimusMagicClient struct {
 }
 
 // New returns a new AnimusMagicClient
-func New(channel string) *AnimusMagicClient {
+func New(channel string, from AnimusTarget) *AnimusMagicClient {
 	return &AnimusMagicClient{
 		Channel: channel,
+		From:    from,
 	}
 }
 
 // ListenOnce starts listening for messages from redis
 //
 // This is *blocking* and should be run in a goroutine
-func (c *AnimusMagicClient) ListenOnce(ctx context.Context, redis rueidis.Client, l *zap.Logger) error {
-	return redis.Dedicated(
+func (c *AnimusMagicClient) ListenOnce(ctx context.Context, r rueidis.Client, l *zap.Logger) error {
+	return r.Dedicated(
 		func(redis rueidis.DedicatedClient) error {
 			return redis.Receive(ctx, redis.B().Subscribe().Channel(c.Channel).Build(), func(msg rueidis.PubSubMessage) {
 				bytesData := []byte(msg.Message)
@@ -74,36 +83,94 @@ func (c *AnimusMagicClient) ListenOnce(ctx context.Context, redis rueidis.Client
 					return
 				}
 
-				// This is not supported anyways
-				if meta.From == AnimusTargetWebserver {
+				// If the target of the message is not us, ignore it
+				if meta.To != c.From {
 					return
 				}
 
 				go func() {
-					n, ok := c.Notify.Load(meta.CommandID)
+					switch meta.Op {
+					case OpRequest:
+						if c.OnRequest != nil {
+							resp, err := c.OnRequest(&ClientRequest{
+								Meta:       meta,
+								RawPayload: bytesData[meta.PayloadOffset:],
+							})
 
-					if !ok {
-						l.Warn("[animus magic] received response for unknown command", zap.String("commandId", meta.CommandID))
-						return
-					}
+							if err != nil {
+								cp, err := c.CreatePayload(
+									c.From,
+									meta.From,
+									meta.ClusterID,
+									OpError,
+									meta.CommandID,
+									&AnimusErrorResponse{Message: err.Error(), Context: fmt.Sprint(resp)},
+								)
 
-					newCount := n.ResponseCount.Add(1)
+								if err != nil {
+									l.Error("[animus magic] error creating error payload", zap.Error(err))
+									return
+								}
 
-					if n.ExpectedCount != 0 {
-						if newCount > n.ExpectedCount {
-							l.Warn("[animus magic] received more responses than expected", zap.String("commandId", meta.CommandID))
-							c.CloseNotifier(meta.CommandID) // Close the notifier
+								err = c.Publish(ctx, r, cp)
+
+								if err != nil {
+									l.Error("[animus magic] error publishing error payload", zap.Error(err))
+									return
+								}
+							} else if resp != nil {
+								cp, err := c.CreatePayload(
+									c.From,
+									meta.From,
+									meta.ClusterID,
+									OpResponse,
+									meta.CommandID,
+									resp,
+								)
+
+								if err != nil {
+									l.Error("[animus magic] error creating response payload", zap.Error(err))
+									return
+								}
+
+								err = c.Publish(ctx, r, cp)
+
+								if err != nil {
+									l.Error("[animus magic] error publishing response payload", zap.Error(err))
+									return
+								}
+							}
+						}
+					case OpError:
+						fallthrough // Both response and error are handled the same way
+					case OpResponse:
+						n, ok := c.Notify.Load(meta.CommandID)
+
+						if !ok {
+							l.Warn("[animus magic] received response for unknown command", zap.String("commandId", meta.CommandID))
 							return
 						}
-					}
 
-					n.Chan <- &ClientResponse{
-						Meta:       meta,
-						RawPayload: bytesData[meta.PayloadOffset:],
-					}
+						newCount := n.ResponseCount.Add(1)
 
-					if n.ExpectedCount != 0 && newCount == n.ExpectedCount {
-						c.CloseNotifier(meta.CommandID)
+						if n.ExpectedCount != 0 {
+							if newCount > n.ExpectedCount {
+								l.Warn("[animus magic] received more responses than expected", zap.String("commandId", meta.CommandID))
+								c.CloseNotifier(meta.CommandID) // Close the notifier
+								return
+							}
+						}
+
+						n.Chan <- &ClientResponse{
+							Meta:       meta,
+							RawPayload: bytesData[meta.PayloadOffset:],
+						}
+
+						if n.ExpectedCount != 0 && newCount == n.ExpectedCount {
+							c.CloseNotifier(meta.CommandID)
+						}
+					default:
+						l.Warn("[animus magic] received unknown op", zap.Uint8("op", meta.Op))
 					}
 				}()
 			})
@@ -124,7 +191,7 @@ func (c *AnimusMagicClient) Listen(ctx context.Context, redis rueidis.Client, l 
 }
 
 // CreatePayload creates a payload for the given command id and message
-func (c *AnimusMagicClient) CreatePayload(from, to AnimusTarget, clusterId uint16, op byte, commandId string, resp *AnimusMessage) ([]byte, error) {
+func (c *AnimusMagicClient) CreatePayload(from, to AnimusTarget, clusterId uint16, op byte, commandId string, resp any) ([]byte, error) {
 	var finalPayload = []byte{
 		byte(from),
 		byte(to),
@@ -315,7 +382,7 @@ func (c *AnimusMagicClient) RawRequest(
 func (c *AnimusMagicClient) Request(
 	ctx context.Context,
 	redis rueidis.Client,
-	msg *AnimusMessage,
+	msg AnimusMessage,
 	data *RequestOptions,
 ) ([]*ClientResponse, error) {
 	if msg == nil {
@@ -332,7 +399,18 @@ func (c *AnimusMagicClient) Request(
 		return nil, err
 	}
 
-	payload, err := c.CreatePayload(AnimusTargetWebserver, data.To, *data.ClusterID, data.Op, data.CommandID, msg)
+	if msg.Target() != data.To {
+		return nil, ErrInvalidTarget
+	}
+
+	payload, err := c.CreatePayload(
+		AnimusTargetWebserver,
+		data.To,
+		*data.ClusterID,
+		data.Op,
+		data.CommandID,
+		msg,
+	)
 
 	if err != nil {
 		return nil, err
@@ -354,41 +432,58 @@ func (c *AnimusMagicClient) Request(
 	return c.GatherResponses(ctx, data, notify)
 }
 
-type ParsedClientResponse struct {
+type ParsedClientResponse[T AnimusResponse] struct {
 	Err        *AnimusErrorResponse
-	Resp       *AnimusResponse
+	Resp       *T
 	ClientResp *ClientResponse
 }
 
-// In many cases, raw client responses are not useful.
-// This function parses the client responses and returns a more useful struct
-func (c *AnimusMagicClient) RequestAndParse(
-	ctx context.Context,
-	redis rueidis.Client,
-	msg *AnimusMessage,
-	data *RequestOptions,
-) ([]*ParsedClientResponse, error) {
-	cr, err := c.Request(ctx, redis, msg, data)
-
-	if err != nil && !errors.Is(err, ErrOpError) {
-		return nil, err
-	}
-
-	var parsed []*ParsedClientResponse
-
-	for _, v := range cr {
-		errResp, resp, err := v.Parse()
+func ParseClientResponse[T AnimusResponse](
+	cr *ClientResponse,
+) (*ParsedClientResponse[T], error) {
+	if cr.Meta.Op == OpError {
+		var errResp AnimusErrorResponse
+		err := cbor.Unmarshal(cr.RawPayload, &errResp)
 
 		if err != nil {
-			return parsed, err
+			return nil, err
 		}
 
-		parsed = append(parsed, &ParsedClientResponse{
-			Err:        errResp,
-			Resp:       resp,
-			ClientResp: v,
-		})
+		return &ParsedClientResponse[T]{
+			Err:        &errResp,
+			ClientResp: cr,
+		}, nil
+	} else if cr.Meta.Op == OpResponse {
+		var resp T
+		err := cbor.Unmarshal(cr.RawPayload, &resp)
+
+		if err != nil {
+			return nil, err
+		}
+
+		return &ParsedClientResponse[T]{
+			Resp:       &resp,
+			ClientResp: cr,
+		}, nil
+	} else {
+		return nil, errors.ErrUnsupported
+	}
+}
+
+func ParseClientResponses[T AnimusResponse](
+	cr []*ClientResponse,
+) ([]*ParsedClientResponse[T], error) {
+	var resp []*ParsedClientResponse[T]
+
+	for _, r := range cr {
+		p, err := ParseClientResponse[T](r)
+
+		if err != nil {
+			return nil, err
+		}
+
+		resp = append(resp, p)
 	}
 
-	return parsed, nil
+	return resp, nil
 }

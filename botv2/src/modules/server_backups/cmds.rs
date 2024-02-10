@@ -1,10 +1,10 @@
 use std::{collections::HashMap, fmt::Display};
 use std::time::Duration;
 use futures_util::StreamExt;
-
 use crate::{Context, Error};
 use std::sync::Arc;
 use serenity::all::{EditMessage, CreateEmbed};
+use crate::ipc::animus_magic::{client::{AnimusTarget, AnimusMessage, AnimusResponse}, jobserver::{JobserverAnimusMessage, JobserverAnimusResponse}};
 use serenity::small_fixed_array::TruncatingInto;
 
 /*
@@ -162,49 +162,43 @@ pub async fn backups_create(
     .into_message()
     .await?;
 
-    // Create reqwest client
-    let client = reqwest::Client::builder()
-    .timeout(std::time::Duration::from_secs(10))
-    .user_agent(
-        format!("Splashtail/botv2 {} (cluster {})", env!("CARGO_PKG_VERSION"), crate::ipc::argparse::MEWLD_ARGS.cluster_id)
-    )
-    .build()?;
-
     // Create backup
-    let backup = client.post(format!("{}/ipc/create_task", crate::config::CONFIG.meta.jobserver_url.get()))
-    .json(&serde_json::json!({
-        "args": {
-            "name": "guild_create_backup",
-            "execute": true,
-            "data": {
-                "ServerID": ctx.guild_id().unwrap().to_string(),
-                "Options": {
-                    "PerChannel": per_channel,
-                    "MaxMessages": max_messages,
-                    "BackupMessages": messages,
-                    "BackupAttachments": attachments,
-                    "BackupGuildAssets": backup_guild_assets,
-                    "IgnoreMessageBackupErrors": ignore_message_backup_errors,
-                    "RolloverLeftovers": rollover_leftovers,
-                    "SpecialAllocations": special_allocations,
-                    "Encrypt": password
-                }
-            }
+    let backup_args = serde_json::json!({
+        "ServerID": ctx.guild_id().unwrap().to_string(),
+        "Options": {
+            "PerChannel": per_channel,
+            "MaxMessages": max_messages,
+            "BackupMessages": messages,
+            "BackupAttachments": attachments,
+            "BackupGuildAssets": backup_guild_assets,
+            "IgnoreMessageBackupErrors": ignore_message_backup_errors,
+            "RolloverLeftovers": rollover_leftovers,
+            "SpecialAllocations": special_allocations,
+            "Encrypt": password
         }
-    }))
-    .header(
-        "Authorization",
-        format!(
-            "{} {}",
-            "bot",
-            crate::config::CONFIG.meta.jobserver_secrets.get().get("bot").expect("No jobserver secret set")
+    });
+
+    let data = ctx.data();
+
+    let backup_task_id = match data.animus_magic_ipc.request(
+        AnimusTarget::Jobserver, 
+        AnimusMessage::Jobserver(
+            JobserverAnimusMessage::SpawnTask { 
+                name: "guild_create_backup".to_string(),
+                data: backup_args,
+                create: true,
+                execute: true,
+                task_id: None,
+             }
         )
     )
-    .send()
-    .await?
-    .json::<crate::jobserver::WrappedTaskCreateResponse>()
-    .await?
-    .tcr;
+    .await
+    .map_err(|e| {
+        format!("Failed to create backup task: {}", e)
+    })? {
+        AnimusResponse::Jobserver(JobserverAnimusResponse::SpawnTask { task_id }) => task_id,
+        _ => return Err("Invalid response from jobserver".into()),
+    };
 
     base_message
     .edit(
@@ -213,7 +207,7 @@ pub async fn backups_create(
         .embed(
             CreateEmbed::default()
             .title("Creating Backup...")
-            .description(format!(":yellow_circle: Created task with Task ID of {}", backup.task_id))
+            .description(format!(":yellow_circle: Created task with Task ID of {}", backup_task_id))
         )
     )
     .await?;
@@ -245,7 +239,7 @@ pub async fn backups_create(
     crate::jobserver::taskpoll::reactive(
         &ch,
         &ctx.data().pool,
-        backup.task_id.as_str(),
+        &backup_task_id,
         |cache_http, task| {
             Box::pin(
                 update_base_message(cache_http.clone(), base_message.clone(), task.clone())
@@ -636,16 +630,6 @@ pub async fn backups_restore(
         p
     };
 
-    let json = serde_json::json!({
-        "IgnoreRestoreErrors": ignore_restore_errors.unwrap_or(false),
-        "ProtectedChannels": protected_channels,
-        "ProtectedRoles": protected_roles,
-        "BackupSource": backup_file.url,
-        "Decrypt": password.unwrap_or_default(),
-        "ChannelRestoreMode": channel_restore_mode.unwrap_or(ChannelRestoreMode::Full).to_string(),
-        "RoleRestoreMode": role_restore_mode.unwrap_or(RoleRestoreMode::Full).to_string(),
-    });
-
     let mut base_message = ctx.send(
         poise::CreateReply::default()
         .embed(
@@ -658,39 +642,39 @@ pub async fn backups_restore(
     .into_message()
     .await?;
 
-    // Create reqwest client
-    let client = reqwest::Client::builder()
-    .timeout(std::time::Duration::from_secs(10))
-    .user_agent(
-        format!("Splashtail/botv2 {} (cluster {})", env!("CARGO_PKG_VERSION"), crate::ipc::argparse::MEWLD_ARGS.cluster_id)
-    )
-    .build()?;
+    let json = serde_json::json!({
+        "ServerID": ctx.guild_id().unwrap().to_string(),
+        "Options": {
+            "IgnoreRestoreErrors": ignore_restore_errors.unwrap_or(false),
+            "ProtectedChannels": protected_channels,
+            "ProtectedRoles": protected_roles,
+            "BackupSource": backup_file.url,
+            "Decrypt": password.unwrap_or_default(),
+            "ChannelRestoreMode": channel_restore_mode.unwrap_or(ChannelRestoreMode::Full).to_string(),
+            "RoleRestoreMode": role_restore_mode.unwrap_or(RoleRestoreMode::Full).to_string(),
+        },
+    });
 
     // Restore backup
-    let backup = client.post(format!("{}/ipc/create_task", crate::config::CONFIG.meta.jobserver_url.get()))
-    .json(&serde_json::json!({
-        "args": {
-            "name": "guild_restore_backup",
-            "execute": true,
-            "data": {
-                "ServerID": ctx.guild_id().unwrap().to_string(),
-                "Options": json
-            }
-        }
-    }))
-    .header(
-        "Authorization",
-        format!(
-            "{} {}",
-            "bot",
-            crate::config::CONFIG.meta.jobserver_secrets.get().get("bot").expect("No jobserver secret set")
+    let restore_task_id = match ctx.data().animus_magic_ipc.request(
+        AnimusTarget::Jobserver, 
+        AnimusMessage::Jobserver(
+            JobserverAnimusMessage::SpawnTask { 
+                name: "guild_restore_backup".to_string(),
+                data: json,
+                create: true,
+                execute: true,
+                task_id: None,
+             }
         )
     )
-    .send()
-    .await?
-    .json::<crate::jobserver::WrappedTaskCreateResponse>()
-    .await?
-    .tcr;
+    .await
+    .map_err(|e| {
+        format!("Failed to create restore backup task: {}", e)
+    })? {
+        AnimusResponse::Jobserver(JobserverAnimusResponse::SpawnTask { task_id }) => task_id,
+        _ => return Err("Invalid response from jobserver".into()),
+    };
 
     base_message
     .edit(
@@ -699,7 +683,7 @@ pub async fn backups_restore(
         .embed(
             CreateEmbed::default()
             .title("Restoring Backup...")
-            .description(format!(":yellow_circle: Created task with Task ID of {}", backup.task_id))
+            .description(format!(":yellow_circle: Created task with Task ID of {}", restore_task_id))
         )
     )
     .await?;
@@ -731,7 +715,7 @@ pub async fn backups_restore(
     crate::jobserver::taskpoll::reactive(
         &ch,
         &ctx.data().pool,
-        backup.task_id.as_str(),
+        restore_task_id.as_str(),
         |cache_http, task| {
             Box::pin(
                 update_base_message(cache_http.clone(), base_message.clone(), task.clone())

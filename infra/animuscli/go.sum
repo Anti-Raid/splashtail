@@ -4,6 +4,8 @@ github.com/anti-raid/splashtail v0.0.0-20240209145859-13d4acbd0e99 h1:AH+FcLWbwB
 github.com/anti-raid/splashtail v0.0.0-20240209145859-13d4acbd0e99/go.mod h1:UEIa5/8XA/PMCqdZW1ZxEebuoea1lJLYeiI2AkUni0o=
 github.com/anti-raid/splashtail v0.0.0-20240210040230-c3cf735b7907 h1:qoiDYRAwenXVtRn6DCTZL6+1gnrFHtyLI1SUPARcYKk=
 github.com/anti-raid/splashtail v0.0.0-20240210040230-c3cf735b7907/go.mod h1:UEIa5/8XA/PMCqdZW1ZxEebuoea1lJLYeiI2AkUni0o=
+github.com/anti-raid/splashtail v0.0.0-20240210060604-2a3156ed0b08 h1:+5wn2TA28blSbrdffcmeGAqcNnJMdTReZmwg32j20hw=
+github.com/anti-raid/splashtail v0.0.0-20240210060604-2a3156ed0b08/go.mod h1:o5f9oMy4ARHTMIdN1lGxNOEaI+dbOoHChjqXguQK90w=
 github.com/bwmarrin/discordgo v0.27.2-0.20231208125110-f7800efc52b8 h1:X+R81uuT6lfRznTtp2Vg7EfMY/8UTvrKGt1rHP5LeBo=
 github.com/bwmarrin/discordgo v0.27.2-0.20231208125110-f7800efc52b8/go.mod h1:NJZpH+1AfhIcyQsPeuBKsUtYrRnjkyu0kIVMCHkZtRY=
 github.com/bzick/tokenizer v1.4.0 h1:eEqnfsoEpOdg3tvUn92T7cfaWZcyQJQkJBBPSlyTvAY=

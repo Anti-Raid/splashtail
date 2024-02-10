@@ -31,10 +31,10 @@ func (c *CachedAnimusMagicClient) GetClusterModules(ctx context.Context, redis r
 		return v, nil
 	}
 
-	moduleListResp, err := c.RequestAndParse(
+	mlr, err := c.Request(
 		ctx,
 		redis,
-		&animusmagic.AnimusMessage{
+		animusmagic.BotAnimusMessage{
 			Modules: &struct{}{},
 		},
 		&animusmagic.RequestOptions{
@@ -46,15 +46,21 @@ func (c *CachedAnimusMagicClient) GetClusterModules(ctx context.Context, redis r
 		return nil, err
 	}
 
-	if len(moduleListResp) == 0 {
+	if len(mlr) == 0 {
 		return nil, animusmagic.ErrNilMessage
 	}
 
-	if len(moduleListResp) > 1 {
-		return nil, fmt.Errorf("expected 1 response, got %d", len(moduleListResp))
+	if len(mlr) > 1 {
+		return nil, fmt.Errorf("expected 1 response, got %d", len(mlr))
 	}
 
-	resp := moduleListResp[0]
+	upr := mlr[0]
+
+	resp, err := animusmagic.ParseClientResponse[animusmagic.BotAnimusResponse](upr)
+
+	if err != nil {
+		return nil, err
+	}
 
 	if resp.ClientResp.Meta.Op == animusmagic.OpError {
 		return nil, animusmagic.ErrOpError

@@ -2,17 +2,14 @@ package jobserver
 
 import (
 	"fmt"
-	"net/http"
-	"strings"
-	"time"
 
 	"github.com/anti-raid/splashtail/jobserver/endpoints"
 	"github.com/anti-raid/splashtail/jobserver/endpoints/create_task"
 	"github.com/anti-raid/splashtail/jobserver/endpoints/execute_task"
+	"github.com/anti-raid/splashtail/jobserver/jobrunner"
 	"github.com/anti-raid/splashtail/jobserver/state"
-	"github.com/go-chi/chi/v5"
-	"github.com/go-chi/chi/v5/middleware"
-	"github.com/infinitybotlist/eureka/zapchi"
+	"github.com/anti-raid/splashtail/splashcore/animusmagic"
+	"github.com/anti-raid/splashtail/tasks"
 
 	jsoniter "github.com/json-iterator/go"
 )
@@ -31,108 +28,105 @@ type IpcRequest struct {
 	Args map[string]any `json:"args"`
 }
 
-// Auth header format: client_type secret
-func identifyClient(r *http.Request) (string, error) {
-	if r.Header.Get("Authorization") == "" {
-		return "", fmt.Errorf("no authorization header provided")
+func CreateJobServer() {
+	state.AnimusMagicClient.OnRequest = func(c *animusmagic.ClientRequest) (animusmagic.AnimusResponse, error) {
+		defer func() {
+			if rvr := recover(); rvr != nil {
+				fmt.Println("Recovered from panic:", rvr)
+			}
+		}()
+
+		data, err := animusmagic.ParseClientRequest[animusmagic.JobserverMessage](c)
+
+		if err != nil {
+			return nil, err
+		}
+
+		if data == nil {
+			return nil, fmt.Errorf("nil data")
+		}
+
+		if data.SpawnTask != nil {
+			if !data.SpawnTask.Create && !data.SpawnTask.Execute {
+				return nil, fmt.Errorf("either create or execute must be set")
+			}
+
+			if data.SpawnTask.Name == "" {
+				return nil, fmt.Errorf("invalid task name provided")
+			}
+
+			baseTaskDef, ok := tasks.TaskDefinitionRegistry[data.SpawnTask.Name]
+
+			if !ok {
+				return nil, fmt.Errorf("task %s does not exist on registry", data.SpawnTask.Name)
+			}
+
+			if len(data.SpawnTask.Data) == 0 {
+				return nil, fmt.Errorf("invalid task data provided")
+			}
+
+			tBytes, err := json.Marshal(data)
+
+			if err != nil {
+				return nil, fmt.Errorf("error marshalling task args: %w", err)
+			}
+
+			task := baseTaskDef // Copy task
+
+			err = json.Unmarshal(tBytes, &task)
+
+			if err != nil {
+				return nil, fmt.Errorf("error unmarshalling task args: %w", err)
+			}
+
+			// Validate task
+			err = task.Validate(jobrunner.TaskState{})
+
+			if err != nil {
+				return nil, fmt.Errorf("failed to validate task: %w", err)
+			}
+
+			// Create task
+			var taskId string
+			if data.SpawnTask.Create {
+				tcr, err := jobrunner.CreateTask(state.Context, state.Pool, task)
+
+				if err != nil {
+					return nil, fmt.Errorf("error creating task: %w", err)
+				}
+
+				taskId = tcr.TaskID
+			} else {
+				if data.SpawnTask.TaskID == "" {
+					return nil, fmt.Errorf("task id must be set if SpawnTask.Create is false")
+				}
+
+				taskId = data.SpawnTask.TaskID
+			}
+
+			// Execute task
+			if data.SpawnTask.Execute {
+				go jobrunner.ExecuteTask(taskId, task)
+			}
+
+			return &animusmagic.JobserverResponse{
+				SpawnTask: &struct {
+					TaskID string "json:\"task_id\""
+				}{
+					TaskID: taskId,
+				},
+			}, nil
+		}
+
+		return nil, fmt.Errorf("invalid request")
 	}
 
-	authSplit := strings.Split(r.Header.Get("Authorization"), " ")
-
-	if len(authSplit) != 2 {
-		return "", fmt.Errorf("invalid authorization header provided [not of format client_type secret]")
-	}
-
-	clientType := authSplit[0]
-	secret := authSplit[1]
-
-	// Verify secret
-	expectedSecret, ok := expectedSecretMap[clientType]
-
-	if !ok {
-		return "", fmt.Errorf("invalid client type provided")
-	}
-
-	if secret != expectedSecret {
-		return "", fmt.Errorf("invalid secret provided for client type %s", clientType)
-	}
-
-	return clientType, nil
-}
-
-func CreateJobServer() *chi.Mux {
-	expectedSecretMap = state.Config.Meta.JobserverSecrets.Parse()
-
-	r := chi.NewMux()
-
-	r.Use(
-		middleware.Recoverer,
-		zapchi.Logger(state.Logger, "jobserver_http"),
-		middleware.Timeout(120*time.Second),
+	// Start listening
+	go state.AnimusMagicClient.ListenOnce(
+		state.Context,
+		state.Rueidis,
+		state.Logger,
 	)
 
-	r.Post("/ipc/{name}", func(w http.ResponseWriter, r *http.Request) {
-		clientType, err := identifyClient(r)
-
-		if err != nil {
-			w.Write([]byte("identifyClient failed:" + err.Error()))
-			w.WriteHeader(http.StatusForbidden)
-			return
-		}
-
-		name := chi.URLParam(r, "name")
-
-		if name == "" {
-			w.Write([]byte("IPC name must be provided"))
-			w.WriteHeader(http.StatusBadRequest)
-			return
-		}
-
-		ipc, ok := ipcEvents[name]
-
-		if !ok {
-			w.Write([]byte("IPC does not exist"))
-			w.WriteHeader(http.StatusBadRequest)
-			return
-		}
-
-		var req *IpcRequest
-
-		err = json.NewDecoder(r.Body).Decode(&req)
-
-		if err != nil {
-			w.Write([]byte("Invalid JSON"))
-			w.WriteHeader(http.StatusBadRequest)
-			return
-		}
-
-		if len(req.Args) == 0 {
-			w.Write([]byte("No args provided"))
-			w.WriteHeader(http.StatusBadRequest)
-			return
-		}
-
-		resp, err := ipc.Exec(clientType, req.Args)
-
-		if err != nil {
-			w.Write([]byte(err.Error()))
-			w.WriteHeader(http.StatusInternalServerError)
-			return
-		}
-
-		if len(resp) == 0 {
-			w.WriteHeader(http.StatusNoContent)
-			return
-		}
-
-		err = json.NewEncoder(w).Encode(resp)
-
-		if err != nil {
-			w.Write([]byte(err.Error()))
-			w.WriteHeader(http.StatusInternalServerError)
-			return
-		}
-	})
-
-	return r
+	return
 }
