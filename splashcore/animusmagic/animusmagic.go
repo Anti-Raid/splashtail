@@ -17,6 +17,16 @@ import (
 	"go.uber.org/zap"
 )
 
+// Helper function to serialize data to the correct/current format
+func SerializeData[T any](data T) ([]byte, error) {
+	return cbor.Marshal(data)
+}
+
+// Helper function to deserialize data from the correct/current format
+func DeserializeData[T any](data []byte, d *T) error {
+	return cbor.Unmarshal(data, d)
+}
+
 // A ClientResponse contains the response from animus magic
 type ClientResponse struct {
 	Meta *AnimusMessageMetadata
@@ -35,7 +45,7 @@ type ClientRequest struct {
 
 func ParseClientRequest[T AnimusMessage](c *ClientRequest) (*T, error) {
 	var req T
-	err := cbor.Unmarshal(c.RawPayload, &req)
+	err := DeserializeData(c.RawPayload, &req)
 	return &req, err
 }
 
@@ -206,7 +216,7 @@ func (c *AnimusMagicClient) CreatePayload(from, to AnimusTarget, clusterId uint1
 
 	finalPayload = append(finalPayload, []byte(commandId+"/")...)
 
-	payload, err := cbor.Marshal(resp)
+	payload, err := SerializeData(resp)
 
 	if err != nil {
 		return nil, err
@@ -447,7 +457,7 @@ func ParseClientResponse[T AnimusResponse](
 ) (*ParsedClientResponse[T], error) {
 	if cr.Meta.Op == OpError {
 		var errResp AnimusErrorResponse
-		err := cbor.Unmarshal(cr.RawPayload, &errResp)
+		err := DeserializeData(cr.RawPayload, &errResp)
 
 		if err != nil {
 			return nil, err
@@ -459,7 +469,7 @@ func ParseClientResponse[T AnimusResponse](
 		}, nil
 	} else if cr.Meta.Op == OpResponse {
 		var resp T
-		err := cbor.Unmarshal(cr.RawPayload, &resp)
+		err := DeserializeData(cr.RawPayload, &resp)
 
 		if err != nil {
 			return nil, err

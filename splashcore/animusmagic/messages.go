@@ -1,3 +1,4 @@
+// This package defines all possible responses to an action
 package animusmagic
 
 import (
@@ -32,6 +33,7 @@ func (b CommonAnimusResponse) Target() AnimusTarget {
 }
 
 type BotAnimusMessage struct {
+	Probe       *struct{} `json:"Probe,omitempty"`
 	Modules     *struct{} `json:"Modules,omitempty"`
 	GuildsExist *struct {
 		Guilds []string `json:"guilds"`
@@ -49,6 +51,10 @@ func (b BotAnimusMessage) Target() AnimusTarget {
 }
 
 type BotAnimusResponse struct {
+	Probe *struct {
+		Message string `json:"message"`
+	} `json:"Probe,omitempty"`
+
 	Modules *struct {
 		Modules ClusterModules `json:"modules"`
 	} `json:"Modules,omitempty"`
@@ -67,6 +73,8 @@ func (b BotAnimusResponse) Target() AnimusTarget {
 }
 
 type JobserverMessage struct {
+	Probe *struct{} `json:"Probe,omitempty"`
+
 	// spawns a task and executes it if the execute argument is set.
 	// If you already have both a task and a task create response, consider execute_task
 	SpawnTask *struct {
@@ -87,6 +95,10 @@ func (b JobserverMessage) Target() AnimusTarget {
 }
 
 type JobserverResponse struct {
+	Probe *struct {
+		Message string `json:"message"`
+	} `json:"Probe,omitempty"`
+
 	SpawnTask *struct {
 		TaskID string `json:"task_id"`
 	} `json:"SpawnTask,omitempty"`

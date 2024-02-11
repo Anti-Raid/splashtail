@@ -33,7 +33,15 @@ func CreateJobServer() {
 			return nil, fmt.Errorf("nil data")
 		}
 
-		if data.SpawnTask != nil {
+		if data.Probe != nil {
+			return &animusmagic.JobserverResponse{
+				Probe: &struct {
+					Message string "json:\"message\""
+				}{
+					Message: "Pong",
+				},
+			}, nil
+		} else if data.SpawnTask != nil {
 			if !data.SpawnTask.Create && !data.SpawnTask.Execute {
 				return nil, fmt.Errorf("either create or execute must be set")
 			}

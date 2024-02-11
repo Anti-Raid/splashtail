@@ -19,6 +19,7 @@ const (
 	AnimusTargetBot       AnimusTarget = 0x0
 	AnimusTargetJobserver AnimusTarget = 0x1
 	AnimusTargetWebserver AnimusTarget = 0x2
+	AnimusTargetWildcard  AnimusTarget = 0xFF
 )
 
 func (a AnimusTarget) String() string {
@@ -29,6 +30,8 @@ func (a AnimusTarget) String() string {
 		return "Jobserver"
 	case AnimusTargetWebserver:
 		return "Webserver"
+	case AnimusTargetWildcard:
+		return "Wildcard"
 	default:
 		return "Unknown"
 	}

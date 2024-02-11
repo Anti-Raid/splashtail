@@ -247,8 +247,12 @@ impl AnimusMagicClient {
 
                 AnimusOp::Request => {
                     // Ensure requeest op, and that the cluster id is either the same as ours or the wildcard u16::MAX
-                    if meta.to != AnimusTarget::Bot && (meta.cluster_id == MEWLD_ARGS.cluster_id || meta.cluster_id != u16::MAX) {
-                        continue; // Not for us
+                    if meta.to != AnimusTarget::Bot && meta.to != AnimusTarget::Wildcard {
+                        continue; // Not for us, to != Bot and != wildcard
+                    }
+
+                    if meta.cluster_id == MEWLD_ARGS.cluster_id || meta.cluster_id != u16::MAX {
+                        continue; // Not for us, cluster_id != ours and != wildcard
                     }
 
                     let cache_http = cache_http.clone();
@@ -258,7 +262,7 @@ impl AnimusMagicClient {
                         let payload = &binary[meta.payload_offset..];
 
                         // Pluck out json
-                        let resp = match AnimusMessage::from_payload(payload, meta.to) {
+                        let resp = match AnimusMessage::from_payload(payload, AnimusTarget::Bot) {
                             Ok(resp) => resp,
                             Err(e) => {
                                 log::warn!("Invalid message recieved on channel {} [request extract error] {}", message.channel, e);

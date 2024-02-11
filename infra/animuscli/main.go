@@ -157,10 +157,10 @@ func main() {
 					}
 
 					// Convert to integer
-					toInt, err := strconv.Atoi(to)
+					toTarget, ok := animusmagic.StringToAnimusTarget(to)
 
-					if err != nil {
-						return fmt.Errorf("error converting to integer: %s", err)
+					if !ok {
+						return fmt.Errorf("invalid target")
 					}
 
 					timeoutInt, err := strconv.Atoi(timeout)
@@ -168,8 +168,6 @@ func main() {
 					if err != nil {
 						return fmt.Errorf("error converting timeout to integer: %s", err)
 					}
-
-					toTarget := animusmagic.AnimusTarget(byte(toInt))
 
 					var msg animusmagic.AnimusMessage = animusmagic.CommonAnimusMessage{
 						Probe: &struct{}{},
@@ -213,7 +211,18 @@ func main() {
 						case response := <-notify:
 							since := time.Since(startTime)
 							go func() {
-								fmt.Print(prettyPrintAnimusMessageMetadata(response.Meta), "\nElapsed Time: ", since, "\n\n")
+								// Try parsing the response
+								var resp any
+
+								err := animusmagic.DeserializeData(response.RawPayload, &resp)
+
+								fmt.Print(
+									prettyPrintAnimusMessageMetadata(response.Meta),
+									"\nElapsed Time: ", since,
+									"\nResponse: ", resp,
+									"\nDeserializeErrors:", err,
+									"\n\n",
+								)
 							}()
 						}
 					}

@@ -363,6 +363,8 @@ pub async fn backups_list(ctx: Context<'_>) -> Result<(), Error> {
     while let Some(item) = collect_stream.next().await {
         let item_id = item.data.custom_id.as_str();
 
+        let mut followup_done = false;
+
         match item_id {
             "backups_previous" => {
                 if index == 0 {
@@ -386,6 +388,8 @@ pub async fn backups_list(ctx: Context<'_>) -> Result<(), Error> {
             },
             "backups_delete" => {
                 item.defer(&ctx.serenity_context()).await?;
+
+                followup_done = true;
 
                 let mut confirm = ctx.send(
                     poise::reply::CreateReply::default()
@@ -506,6 +510,10 @@ pub async fn backups_list(ctx: Context<'_>) -> Result<(), Error> {
 
         if index >= backup_tasks.len() {
             index = backup_tasks.len() - 1;
+        }
+
+        if !followup_done {
+            item.defer(&ctx.serenity_context()).await?;
         }
 
         let cr = create_reply(index, &backup_tasks)?;
