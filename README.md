@@ -101,6 +101,9 @@ To load the database seed, follow the following steps:
 - Run ``make buildbot`` to build the bot
 - Run ``make`` to build just the go components
 - Run ``make all`` to build everything
+- Run ``make restartwebserver`` to restart the webserver
+
+After first building the bot, you will need to run ``cp -v botv2/target/release/botv2 botv2`` to copy the binary to the correct location. This is later automated for you if you use the Makefile commands listed above to setup and update the bot
 
 ### Configuration
 
