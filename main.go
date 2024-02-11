@@ -67,7 +67,7 @@ func main() {
 		}
 
 		if mldConfig.Redis != webserverstate.Config.Meta.RedisURL.Parse() {
-			panic("Redis URL in mewld.yaml does not match the one in config.yaml")
+			webserverstate.Logger.Warn("Redis URL in mewld.yaml does not match the one in config.yaml")
 		}
 
 		il, rh, err := mloader.Load(&mldConfig, &mproc.LoaderData{
