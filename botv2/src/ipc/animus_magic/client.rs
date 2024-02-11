@@ -2,7 +2,7 @@
 /// 
 /// Format of payloads: <target [from]: u8><target [to]: u8><cluster id: u16><op: 8 bits><command id: alphanumeric string>/<cbor payload>
 use std::sync::Arc;
-use fred::{types::RedisValue, clients::RedisPool, prelude::Builder, interfaces::{ClientLike, PubsubInterface}};
+use fred::{types::RedisValue, clients::{RedisClient, RedisPool}, prelude::Builder, interfaces::{ClientLike, PubsubInterface, EventInterface}};
 use serde::{Serialize, Deserialize};
 use super::bot::{BotAnimusResponse, BotAnimusMessage};
 use super::jobserver::{JobserverAnimusMessage, JobserverAnimusResponse};
@@ -177,7 +177,9 @@ impl AnimusMagicClient {
         subscriber.connect();
         subscriber.wait_for_connect().await.unwrap();
 
-        let mut message_stream = subscriber.on_message();
+        self.redis_pool.connect_pool();
+
+        let mut message_stream = subscriber.message_rx();
 
         subscriber.manage_subscriptions();
 
@@ -224,7 +226,7 @@ impl AnimusMagicClient {
                                 Err(e) => {
                                     log::warn!("Invalid message recieved on channel {} [response extract error] {}", message.channel, e);
                                     // Send error
-                                    if let Err(e) = Self::error(&redis_pool, &meta.command_id, AnimusErrorResponse {
+                                    if let Err(e) = Self::error(redis_pool.next(), &meta.command_id, AnimusErrorResponse {
                                         message: "Invalid payload, failed to unmarshal message".to_string(),
                                         context: e.to_string()
                                     }, meta.from).await {
@@ -267,7 +269,7 @@ impl AnimusMagicClient {
                             Err(e) => {
                                 log::warn!("Invalid message recieved on channel {} [request extract error] {}", message.channel, e);
                                 // Send error
-                                if let Err(e) = Self::error(&redis_pool, &meta.command_id, AnimusErrorResponse {
+                                if let Err(e) = Self::error(redis_pool.next(), &meta.command_id, AnimusErrorResponse {
                                     message: "Invalid payload, failed to unmarshal message".to_string(),
                                     context: e.to_string()
                                 }, meta.from).await {
@@ -283,7 +285,7 @@ impl AnimusMagicClient {
                             AnimusMessage::Jobserver(_) => {
                                 log::warn!("Invalid message recieved on channel {} [invalid message type]", message.channel);
                                 // Send error
-                                if let Err(e) = Self::error(&redis_pool, &meta.command_id, AnimusErrorResponse {
+                                if let Err(e) = Self::error(redis_pool.next(), &meta.command_id, AnimusErrorResponse {
                                     message: "Invalid payload, failed to unmarshal message".to_string(),
                                     context: "Invalid message type".to_string()
                                 }, meta.from).await {
@@ -299,7 +301,7 @@ impl AnimusMagicClient {
                             Err(e) => {
                                 log::warn!("Failed to get response for message on channel {}", message.channel);
                                 // Send error
-                                if let Err(e) = Self::error(&redis_pool, &meta.command_id, AnimusErrorResponse {
+                                if let Err(e) = Self::error(redis_pool.next(), &meta.command_id, AnimusErrorResponse {
                                     message: "Failed to create response".to_string(),
                                     context: e.to_string()
                                 }, meta.from).await {
@@ -314,7 +316,7 @@ impl AnimusMagicClient {
                             log::warn!("Failed to create payload for message on channel {}", message.channel);
                             
                             // Send error
-                            if let Err(e) = Self::error(&redis_pool, &meta.command_id, AnimusErrorResponse {
+                            if let Err(e) = Self::error(redis_pool.next(), &meta.command_id, AnimusErrorResponse {
                                 message: "Failed to create response payload".to_string(),
                                 context: "create_payload returned Err code".to_string()
                             }, meta.from).await {
@@ -324,11 +326,11 @@ impl AnimusMagicClient {
                             return;
                         };
 
-                        if let Err(e) = Self::publish(&redis_pool, payload).await {
+                        if let Err(e) = Self::publish(redis_pool.next(), payload).await {
                             log::warn!("Failed to publish response to redis: {}", e);
 
                             // Send error
-                            if let Err(e) = Self::error(&redis_pool, &meta.command_id, AnimusErrorResponse {
+                            if let Err(e) = Self::error(redis_pool.next(), &meta.command_id, AnimusErrorResponse {
                                 message: "Failed to publish response to redis".to_string(),
                                 context: e.to_string()
                             }, meta.from).await {
@@ -344,25 +346,20 @@ impl AnimusMagicClient {
     }
 
     /// Helper method to send an error response
-    pub async fn error(redis_pool: &RedisPool, command_id: &str, data: AnimusErrorResponse, to: AnimusTarget) -> Result<(), crate::Error> {
+    pub async fn error(redis_conn: &RedisClient, command_id: &str, data: AnimusErrorResponse, to: AnimusTarget) -> Result<(), crate::Error> {
         let Ok(payload) = Self::create_payload(command_id, AnimusTarget::Bot, to, AnimusOp::Error, &AnimusResponse::Error(data).into()) else {
             return Err("Failed to create payload for error message".into());
         };
 
-        Self::publish(redis_pool, payload).await
+        Self::publish(redis_conn, payload).await
     }
 
     /// Helper method to send a response
-    pub async fn publish(redis_pool: &RedisPool, payload: Vec<u8>) -> Result<(), Error> {
+    pub async fn publish(redis_conn: &RedisClient, payload: Vec<u8>) -> Result<(), Error> {
         // Convert payload to redis value
         let payload = RedisValue::Bytes(payload.into());
 
-        let conn = redis_pool.next();
-        conn.connect();
-        let Ok(()) = conn.wait_for_connect().await else {
-            return Err("Failed to connect to redis".into());
-        };
-        match conn.publish(MEWLD_ARGS.animus_magic_channel.as_str(), payload).await {
+        match redis_conn.publish(MEWLD_ARGS.animus_magic_channel.as_str(), payload).await {
             Ok(()) => Ok(()),
             Err(e) => Err(format!("Failed to publish response to redis: {}", e).into())
         }
@@ -381,7 +378,7 @@ impl AnimusMagicClient {
 
         self.rx_map.insert(cmd_id.clone(), tx);
 
-        Self::publish(&self.redis_pool, payload).await?;
+        Self::publish(self.redis_pool.next(), payload).await?;
 
         let resp = match tokio::time::timeout(std::time::Duration::from_secs(10), rx.recv()).await {
             Ok(resp) => resp,

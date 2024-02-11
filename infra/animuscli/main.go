@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"strconv"
@@ -56,6 +57,10 @@ func main() {
 					{"from", "Source", "0x2 (AnimusTargetWebserver)"},
 				},
 				Run: func(a *shellcli.ShellCli[AnimusCliData], args map[string]string) error {
+					if a.Data != nil && a.Data.Connected {
+						return fmt.Errorf("already connected")
+					}
+
 					var redisUrl = "redis://localhost:6379"
 
 					if args["redis"] != "" {
@@ -110,7 +115,7 @@ func main() {
 					go func() {
 						err := a.Data.AnimusMagicClient.Listen(a.Data.Context, a.Data.Rueidis, a.Data.Logger)
 
-						if err != nil {
+						if err != nil && !errors.Is(err, context.Canceled) {
 							a.Data.Logger.Fatal("error listening to animus magic", zap.Error(err))
 						}
 					}()
@@ -225,6 +230,41 @@ func main() {
 								)
 							}()
 						}
+					}
+				},
+			},
+			"ping": {
+				Description: "Pings redis",
+				Args: [][3]string{
+					{"to", "Target", "redis"},
+				},
+				Run: func(a *shellcli.ShellCli[AnimusCliData], args map[string]string) error {
+					if !a.Data.Connected {
+						return fmt.Errorf("not connected")
+					}
+
+					to, ok := args["to"]
+
+					if !ok {
+						to = "redis"
+					}
+
+					switch to {
+					case "redis":
+						ts1 := time.Now()
+						_, err := a.Data.Rueidis.Do(a.Data.Context, a.Data.Rueidis.B().Ping().Build()).AsBytes()
+
+						if err != nil {
+							return fmt.Errorf("error pinging redis: %s", err)
+						}
+
+						ts2 := time.Now()
+
+						fmt.Println("Latency: ", ts2.Sub(ts1))
+
+						return nil
+					default:
+						return fmt.Errorf("invalid target")
 					}
 				},
 			},

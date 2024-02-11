@@ -196,10 +196,20 @@ func (c *AnimusMagicClient) ListenOnce(ctx context.Context, r rueidis.Client, l 
 // and restarts the listener if it dies
 func (c *AnimusMagicClient) Listen(ctx context.Context, redis rueidis.Client, l *zap.Logger) error {
 	for {
-		err := c.ListenOnce(ctx, redis, l)
-		if err != nil {
-			l.Error("[animus magic] error listening to redis", zap.Error(err))
-			time.Sleep(1 * time.Second)
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		default:
+			err := c.ListenOnce(ctx, redis, l)
+
+			if errors.Is(err, context.Canceled) {
+				return nil
+			}
+
+			if err != nil {
+				l.Error("[animus magic] error listening to redis", zap.Error(err))
+				time.Sleep(1 * time.Second)
+			}
 		}
 	}
 }

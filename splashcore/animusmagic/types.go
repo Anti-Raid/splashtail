@@ -61,6 +61,9 @@ func StringToAnimusTarget(s string) (AnimusTarget, bool) {
 		"webserver": AnimusTargetWebserver,
 		"web":       AnimusTargetWebserver,
 		"api":       AnimusTargetWebserver,
+		"wildcard":  AnimusTargetWildcard,
+		"all":       AnimusTargetWildcard,
+		"*":         AnimusTargetWildcard,
 	}
 
 	if val, ok := strMap[strings.ToLower(s)]; ok {

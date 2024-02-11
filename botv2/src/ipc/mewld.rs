@@ -1,7 +1,7 @@
 use std::sync::Arc;
 #[allow(unused_imports)]
 use fred::clients::SubscriberClient;
-use fred::interfaces::{ClientLike, PubsubInterface};
+use fred::interfaces::{ClientLike, PubsubInterface, EventInterface};
 use serde::{Serialize, Deserialize};
 
 /// This is the fundemental primitive for mewld IPC
@@ -136,7 +136,7 @@ impl MewldIpcClient {
         subscriber.connect();
         subscriber.wait_for_connect().await.unwrap();
 
-        let mut message_stream = subscriber.on_message();
+        let mut message_stream = subscriber.message_rx();
 
         // Subscribe to the mewld channel
         // There are two channels we need to subscribe to:
