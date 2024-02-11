@@ -174,7 +174,7 @@ func (c *AnimusMagicClient) ListenOnce(ctx context.Context, r rueidis.Client, l 
 							c.CloseNotifier(meta.CommandID)
 						}
 					default:
-						l.Warn("[animus magic] received unknown op", zap.Uint8("op", meta.Op))
+						l.Warn("[animus magic] received unknown op", zap.Uint8("op", uint8(meta.Op)))
 					}
 				}()
 			})
@@ -195,13 +195,13 @@ func (c *AnimusMagicClient) Listen(ctx context.Context, redis rueidis.Client, l 
 }
 
 // CreatePayload creates a payload for the given command id and message
-func (c *AnimusMagicClient) CreatePayload(from, to AnimusTarget, clusterId uint16, op byte, commandId string, resp any) ([]byte, error) {
+func (c *AnimusMagicClient) CreatePayload(from, to AnimusTarget, clusterId uint16, op AnimusOp, commandId string, resp any) ([]byte, error) {
 	var finalPayload = []byte{
 		byte(from),
 		byte(to),
 		byte(clusterId>>8) & 0xFF,
 		byte(clusterId) & 0xFF,
-		op,
+		byte(op),
 	}
 
 	finalPayload = append(finalPayload, []byte(commandId+"/")...)
@@ -227,7 +227,7 @@ func (c *AnimusMagicClient) GetPayloadMeta(payload []byte) (*AnimusMessageMetada
 		From:      AnimusTarget(payload[0]),
 		To:        AnimusTarget(payload[1]),
 		ClusterID: uint16(payload[2])<<8 | uint16(payload[3]),
-		Op:        payload[4],
+		Op:        AnimusOp(payload[4]),
 	}
 
 	// Next bytes are the command id but only till '/'
@@ -255,7 +255,7 @@ type RequestOptions struct {
 	ExpectedResponseCount uint32       // must be set if wildcard. this is the number of responses expected
 	CommandID             string       // if unset, will be randomly generated
 	To                    AnimusTarget // if unset, is set to AnimusTargetBot
-	Op                    byte         // if unset is OpRequest
+	Op                    AnimusOp     // if unset is OpRequest
 	IgnoreOpError         bool         // if true, will ignore OpError responses
 }
 
@@ -278,7 +278,7 @@ func (o *RequestOptions) Parse() error {
 	}
 
 	if o.CommandID == "" {
-		o.CommandID = crypto.RandString(16)
+		o.CommandID = NewCommandId()
 	}
 
 	return nil
@@ -490,4 +490,9 @@ func ParseClientResponses[T AnimusResponse](
 	}
 
 	return resp, nil
+}
+
+// Helper function to create a new command id
+func NewCommandId() string {
+	return crypto.RandString(16)
 }

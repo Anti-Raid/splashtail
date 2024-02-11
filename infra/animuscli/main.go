@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/anti-raid/splashtail/splashcore/animusmagic"
-	"github.com/infinitybotlist/eureka/crypto"
 	"github.com/infinitybotlist/eureka/shellcli"
 	"github.com/redis/rueidis"
 	"go.uber.org/zap"
@@ -24,6 +24,19 @@ type AnimusCliData struct {
 	AnimusMagicClient *animusmagic.AnimusMagicClient
 	Connected         bool
 	Logger            *zap.Logger
+}
+
+func prettyPrintAnimusMessageMetadata(meta *animusmagic.AnimusMessageMetadata) string {
+	str := strings.Builder{}
+
+	str.WriteString("From: " + meta.From.String() + "\n")
+	str.WriteString("To: " + meta.To.String() + "\n")
+	str.WriteString("Op: " + meta.Op.String() + "\n")
+	str.WriteString("Cluster: " + strconv.Itoa(int(meta.ClusterID)) + "\n")
+	str.WriteString("CommandID: " + meta.CommandID + "\n")
+	str.WriteString("PayloadOffset: " + strconv.Itoa(int(meta.PayloadOffset)))
+
+	return str.String()
 }
 
 var root *shellcli.ShellCli[AnimusCliData]
@@ -162,7 +175,7 @@ func main() {
 						Probe: &struct{}{},
 					}
 
-					commandId := crypto.RandString(512)
+					commandId := animusmagic.NewCommandId()
 					payload, err := a.Data.AnimusMagicClient.CreatePayload(
 						animusmagic.AnimusTargetWebserver,
 						toTarget,
@@ -200,7 +213,7 @@ func main() {
 						case response := <-notify:
 							since := time.Since(startTime)
 							go func() {
-								fmt.Println("Response:", response, "after time", since, "\nCluster:", response.Meta.ClusterID)
+								fmt.Print(prettyPrintAnimusMessageMetadata(response.Meta), "\nElapsed Time: ", since, "\n\n")
 							}()
 						}
 					}

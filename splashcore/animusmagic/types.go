@@ -2,6 +2,7 @@ package animusmagic
 
 import (
 	"errors"
+	"strings"
 )
 
 var ErrNilRequestData = errors.New("request validation error: nil request data")
@@ -33,10 +34,94 @@ func (a AnimusTarget) String() string {
 	}
 }
 
+func ByteToAnimusTarget(b uint8) (AnimusTarget, bool) {
+	switch b {
+	case 0x0:
+		return AnimusTargetBot, true
+	case 0x1:
+		return AnimusTargetJobserver, true
+	case 0x2:
+		return AnimusTargetWebserver, true
+	default:
+		return 0, false
+	}
+}
+
+func StringToAnimusTarget(s string) (AnimusTarget, bool) {
+	var strMap = map[string]AnimusTarget{
+		"0":         AnimusTargetBot,
+		"bot":       AnimusTargetBot,
+		"1":         AnimusTargetJobserver,
+		"jobserver": AnimusTargetJobserver,
+		"jobs":      AnimusTargetJobserver,
+		"2":         AnimusTargetWebserver,
+		"webserver": AnimusTargetWebserver,
+		"web":       AnimusTargetWebserver,
+		"api":       AnimusTargetWebserver,
+	}
+
+	if val, ok := strMap[strings.ToLower(s)]; ok {
+		return val, true
+	}
+
+	return 0, false
+}
+
+type AnimusOp byte
+
 const (
-	OpRequest         = 0x0
-	OpResponse        = 0x1
-	OpError           = 0x2
+	OpRequest  AnimusOp = 0x0
+	OpResponse AnimusOp = 0x1
+	OpError    AnimusOp = 0x2
+)
+
+func (a AnimusOp) String() string {
+	switch a {
+	case OpRequest:
+		return "Request"
+	case OpResponse:
+		return "Response"
+	case OpError:
+		return "Error"
+	default:
+		return "Unknown"
+	}
+}
+
+func ByteToAnimusOp(b uint8) (AnimusOp, bool) {
+	switch b {
+	case 0x0:
+		return OpRequest, true
+	case 0x1:
+		return OpResponse, true
+	case 0x2:
+		return OpError, true
+	default:
+		return 0, false
+	}
+}
+
+func StringToAnimusOp(s string) (AnimusOp, bool) {
+	var strMap = map[string]AnimusOp{
+		"0":        OpRequest,
+		"request":  OpRequest,
+		"req":      OpRequest,
+		"1":        OpResponse,
+		"response": OpResponse,
+		"resp":     OpResponse,
+		"2":        OpError,
+		"error":    OpError,
+		"err":      OpError,
+	}
+
+	if val, ok := strMap[strings.ToLower(s)]; ok {
+		return val, true
+	}
+
+	return 0, false
+}
+
+const (
 	WildcardClusterID = 0xFFFF // top means wildcard/all clusters
 )
 
@@ -44,7 +129,7 @@ type AnimusMessageMetadata struct {
 	From          AnimusTarget
 	To            AnimusTarget
 	ClusterID     uint16
-	Op            byte
+	Op            AnimusOp
 	CommandID     string
 	PayloadOffset uint
 }
