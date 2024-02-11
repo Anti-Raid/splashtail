@@ -303,7 +303,11 @@ pub async fn backups_list(ctx: Context<'_>) -> Result<(), Error> {
     fn create_reply<'a>(
         index: usize,
         backup_tasks: &[crate::jobserver::Task]
-    ) -> poise::CreateReply<'a> {
+    ) -> Result<poise::CreateReply<'a>, Error> {
+        if backup_tasks.is_empty() || index >= backup_tasks.len() {
+            return Err("No backups found".into());
+        }
+
         let cr = poise::CreateReply::default()
         .embed(create_embed_for_task(&backup_tasks[index]))
         .components(
@@ -333,18 +337,17 @@ pub async fn backups_list(ctx: Context<'_>) -> Result<(), Error> {
                         serenity::all::CreateButton::new("backups_delete")
                         .label("Delete")
                         .style(serenity::all::ButtonStyle::Danger)
-                        .disabled(index == 0),
                     ]
                 )
             ]
         );
     
-        cr
+        Ok(cr)
     }
 
     let mut index = 0;
 
-    let cr = create_reply(index, &backup_tasks);
+    let cr = create_reply(index, &backup_tasks)?;
 
     let msg = ctx.send(cr)
     .await?
@@ -359,7 +362,6 @@ pub async fn backups_list(ctx: Context<'_>) -> Result<(), Error> {
 
     while let Some(item) = collect_stream.next().await {
         let item_id = item.data.custom_id.as_str();
-        let mut followup = false;
 
         match item_id {
             "backups_previous" => {
@@ -384,8 +386,6 @@ pub async fn backups_list(ctx: Context<'_>) -> Result<(), Error> {
             },
             "backups_delete" => {
                 item.defer(&ctx.serenity_context()).await?;
-
-                followup = true;
 
                 let mut confirm = ctx.send(
                     poise::reply::CreateReply::default()
@@ -431,16 +431,18 @@ pub async fn backups_list(ctx: Context<'_>) -> Result<(), Error> {
                         // Take out the current backup task
                         let task = backup_tasks.remove(index);
 
-                        let mut base_message = ctx.send(
-                            poise::CreateReply::default()
-                            .embed(
-                                CreateEmbed::default()
-                                .title("Deleting Backup...")
-                                .description(":yellow_circle: Please wait while we delete this backup")
+                        // Respond to the interaction
+                        confirm_item.create_response(
+                            &ctx,
+                            serenity::all::CreateInteractionResponse::Message(
+                                serenity::all::CreateInteractionResponseMessage::default()
+                                .embed(
+                                    CreateEmbed::default()
+                                    .title("Deleting Backup...")
+                                    .description(":yellow_circle: Please wait while we delete this backup")
+                                )    
                             )
                         )
-                        .await?
-                        .into_message()
                         .await?;
 
                         let mut status = Vec::new();
@@ -454,10 +456,10 @@ pub async fn backups_list(ctx: Context<'_>) -> Result<(), Error> {
                             }
                         };
 
-                        if let Err(e) = base_message
-                        .edit(
+                        if let Err(e) = confirm_item
+                        .edit_response(
                             &ctx,
-                            serenity::all::EditMessage::default()
+                            serenity::all::EditInteractionResponse::default()
                             .embed(
                                 CreateEmbed::default()
                                 .title("Deleting Backup")
@@ -478,10 +480,10 @@ pub async fn backups_list(ctx: Context<'_>) -> Result<(), Error> {
                             }
                         };
 
-                        if let Err(e) = base_message
-                        .edit(
+                        if let Err(e) = confirm_item
+                        .edit_response(
                             &ctx,
-                            serenity::all::EditMessage::default()
+                            serenity::all::EditInteractionResponse::default()
                             .embed(
                                 CreateEmbed::default()
                                 .title("Deleting Backup")
@@ -506,11 +508,7 @@ pub async fn backups_list(ctx: Context<'_>) -> Result<(), Error> {
             index = backup_tasks.len() - 1;
         }
 
-        if !followup {
-            item.defer(&ctx.serenity_context()).await?;
-        }
-
-        let cr = create_reply(index, &backup_tasks);
+        let cr = create_reply(index, &backup_tasks)?;
 
         item.edit_response(
             ctx.serenity_context(), 
