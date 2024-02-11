@@ -499,7 +499,9 @@ async fn main() {
     .options(framework_opts)
     .build();
 
-    let pool = fred::prelude::Builder::default_centralized()
+    let pool = fred::prelude::Builder::from_config(
+        fred::prelude::RedisConfig::from_url(&config::CONFIG.meta.bot_redis_url).expect("Could not initialize Redis config")
+    )
     .build_pool(REDIS_MAX_CONNECTIONS.try_into().unwrap())
     .expect("Could not initialize Redis pool");
 
