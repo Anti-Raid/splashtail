@@ -143,3 +143,7 @@ For initial release:
 For future releases (or even initial if time permits):
 
 - Advanced Active Anti-Spam (maybe AI-based image classification blocks) []
+
+### Development
+
+Run ``cargo sqlx prepare`` in the ``botv2`` folder if you have made changes to the database schema. This will regenerate the SQLX files used by the bot to interact with the database.
