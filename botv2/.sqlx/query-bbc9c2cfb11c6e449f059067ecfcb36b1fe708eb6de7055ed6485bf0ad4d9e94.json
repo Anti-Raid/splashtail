@@ -1,0 +1,28 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n                SELECT EXTRACT(seconds FROM user_target_repeat_rate) AS user_target_repeat_rate, limit_type FROM limits__guild_user_target_settings\n                WHERE guild_id = $1\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "user_target_repeat_rate",
+        "type_info": "Numeric"
+      },
+      {
+        "ordinal": 1,
+        "name": "limit_type",
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": [
+      null,
+      false
+    ]
+  },
+  "hash": "bbc9c2cfb11c6e449f059067ecfcb36b1fe708eb6de7055ed6485bf0ad4d9e94"
+}

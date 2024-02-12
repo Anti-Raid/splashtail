@@ -1,0 +1,70 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT task_id, task_name, output, task_info, statuses, task_for, expiry, state, created_at FROM tasks WHERE task_for = $1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "task_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "task_name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "output",
+        "type_info": "Jsonb"
+      },
+      {
+        "ordinal": 3,
+        "name": "task_info",
+        "type_info": "Jsonb"
+      },
+      {
+        "ordinal": 4,
+        "name": "statuses",
+        "type_info": "JsonbArray"
+      },
+      {
+        "ordinal": 5,
+        "name": "task_for",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 6,
+        "name": "expiry",
+        "type_info": "Interval"
+      },
+      {
+        "ordinal": 7,
+        "name": "state",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 8,
+        "name": "created_at",
+        "type_info": "Timestamp"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      true,
+      false,
+      false,
+      true,
+      true,
+      false,
+      false
+    ]
+  },
+  "hash": "3120e18a7bfaa5b6f0f7415bddc7aad7170ae2ba6ac74131fafa407174cf7d9b"
+}

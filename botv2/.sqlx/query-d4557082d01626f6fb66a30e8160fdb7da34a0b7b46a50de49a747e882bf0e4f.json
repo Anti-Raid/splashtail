@@ -1,0 +1,18 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            INSERT INTO limits__past_hit_limits\n            (id, guild_id, user_id, limit_id, cause)\n            VALUES ($1, $2, $3, $4, $5)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text",
+        "Text",
+        "Text",
+        "TextArray"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "d4557082d01626f6fb66a30e8160fdb7da34a0b7b46a50de49a747e882bf0e4f"
+}

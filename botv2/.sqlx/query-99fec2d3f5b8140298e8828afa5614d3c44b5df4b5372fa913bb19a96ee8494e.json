@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "DELETE FROM gitlogs__event_modifiers WHERE id = $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "99fec2d3f5b8140298e8828afa5614d3c44b5df4b5372fa913bb19a96ee8494e"
+}
