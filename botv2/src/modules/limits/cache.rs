@@ -3,32 +3,35 @@ use serenity::all::{GuildId, UserId};
 use sqlx::PgPool;
 use std::sync::Arc;
 use std::collections::HashMap;
+use surrealdb::engine::local::Db;
+use surrealdb::Surreal;
 
 pub type GCLimitCache = Arc<HashMap<String, super::core::Limit>>;
-pub type GCTargetConfigCache = Arc<HashMap<super::core::UserLimitTypes, super::core::GuildUserTargetSettings>>;
 
 #[derive(Clone)]
 pub struct GuildCache {
     pub limits: GCLimitCache,
-    pub target_config: GCTargetConfigCache
 }
 
 impl GuildCache {
-    pub async fn from_guild(pool: &PgPool, guild_id: GuildId) -> Result<Self, crate::Error> {
-        let limits = super::core::Limit::from_guild(pool, guild_id).await?;
-        let target_config = super::core::GuildUserTargetSettings::from_guild(pool, guild_id).await?;
+    pub async fn from_database(pool: &PgPool, guild_id: GuildId) -> Result<Self, crate::Error> {
+        let limits = super::core::Limit::from_database(pool, guild_id).await?;
+
         Ok(Self {
             limits: Arc::new(limits.into_iter().map(|l| (l.limit_id.clone(), l)).collect()),
-            target_config: Arc::new(target_config.into_iter().map(|t| (t.limit_type, t)).collect())
         })
+    }
+
+    pub async fn from_cache(host: &Surreal<Db>, guild_id: GuildId) -> Result<Self, crate::Error> {
+        todo!()
     }
 }
 
 pub static GUILD_CACHE: once_cell::sync::Lazy<DashMap<GuildId, GuildCache>> = once_cell::sync::Lazy::new(|| {
     DashMap::new()
 });
-
-/// In order to properly handle and ignore already resolved/hit actions, 
+//
+/// In order to properly handle and ignore already resolved/hit actions,
 /// we need to store a resolution of each action
 #[derive(Debug, Clone)]
 pub struct TimesResolution {
@@ -37,7 +40,7 @@ pub struct TimesResolution {
     /// Which limit IDs were hit
     pub limits: Vec<String>,
     /// Action data
-    pub action_data: serde_json::Value,    
+    pub action_data: serde_json::Value,
 }
 
 #[derive(Debug, Clone)]
@@ -51,9 +54,9 @@ pub struct HitLimitsData {
 #[derive(Debug, Clone)]
 pub struct GuildMemberCurrentActions {
     /// The times the user has performed the action
-    /// 
+    ///
     /// The key is the timestamp and the value is the target
-    pub times: indexmap::IndexMap<i64, TimesResolution>, 
+    pub times: indexmap::IndexMap<i64, TimesResolution>,
     /// Timestamp->Limit map
     pub time_action_map: DashMap<i64, String>,
     /// Hit limits
@@ -62,7 +65,7 @@ pub struct GuildMemberCurrentActions {
 
 impl GuildMemberCurrentActions {
     /// Syncs with the database returning newly created action IDs
-    pub async fn sync_with_db(&self, pool: &PgPool, limit_type: super::core::UserLimitTypes, user_id: UserId, guild_id: GuildId) -> Result<Vec<String>, crate::Error> {        
+    pub async fn sync_with_db(&self, pool: &PgPool, limit_type: super::core::UserLimitTypes, user_id: UserId, guild_id: GuildId) -> Result<Vec<String>, crate::Error> {
         let mut action_ids = Vec::new();
         for (ts, tr) in self.times.iter() {
             if self.time_action_map.contains_key(ts) {
@@ -73,7 +76,7 @@ impl GuildMemberCurrentActions {
             let action_id = crate::impls::crypto::gen_random(48);
             sqlx::query!(
                 "
-                INSERT INTO limits__user_actions 
+                INSERT INTO limits__user_actions
                 (action_id, guild_id, user_id, target, limit_type, action_data, created_at)
                 VALUES ($1, $2, $3, $4, $5, $6, $7)
             ",
@@ -95,13 +98,13 @@ impl GuildMemberCurrentActions {
         }
 
         // Add in the hit limits
-        for mut entry in self.hit_limits.iter_mut() {  
+        for mut entry in self.hit_limits.iter_mut() {
             let entries = entry.value_mut();
             for data in entries {
                 if data.hit_id.is_some() {
                     continue;
                 }
-                
+
                 let hit_id = crate::impls::crypto::gen_random(16);
                 sqlx::query!(
                     "

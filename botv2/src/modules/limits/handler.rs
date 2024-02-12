@@ -1,6 +1,8 @@
 use log::{error, info, warn};
 use poise::serenity_prelude::{GuildId, UserId};
 use sqlx::PgPool;
+use surrealdb::engine::local::Db;
+use surrealdb::Surreal;
 
 use crate::{impls::cache::CacheHttpImpl, Error};
 use super::core;
@@ -62,6 +64,7 @@ pub struct HandleModAction {
 
 pub async fn handle_mod_action(
     pool: &PgPool,
+    cache: &Surreal<Db>,
     cache_http: &CacheHttpImpl,
     ha: &HandleModAction,
 ) -> Result<(), Error> {
@@ -77,17 +80,15 @@ pub async fn handle_mod_action(
         if let Some(guild_cache) = guild_cache {
             guild_cache.clone()
         } else {
-            let guild_cache = super::cache::GuildCache::from_guild(pool, guild_id).await?;
+            let guild_cache = super::cache::GuildCache::from_database(pool, guild_id).await?;
             super::cache::GUILD_CACHE.insert(guild_id, guild_cache.clone());
             guild_cache
         }
     };
-
     if guild_cache.limits.is_empty() {
         // No limits for this guild
         return Ok(());
     }
-
     // Add to GUILD_MEMBER_ACTIONS_CACHE
     {
         if !super::cache::GUILD_MEMBER_ACTIONS_CACHE.contains_key(&guild_id) {
@@ -126,7 +127,6 @@ pub async fn handle_mod_action(
             });
         }
     }
-
     let Some(gmltm) = super::cache::GUILD_MEMBER_ACTIONS_CACHE.get(&guild_id) else {
         warn!("Guild not found in GUILD_MEMBER_ACTIONS_CACHE: {}", guild_id);
         return Ok(());
@@ -138,13 +138,11 @@ pub async fn handle_mod_action(
     };
 
     /*if ignore_handling(pool, ha).await? {
-        debug!("Ignoring handling [limit={}, user_id={}, target={}]", limit, user_id, target);
+        // debug!("Ignoring handling [limit={}, user_id={}, target={}]", limit, user_id, target);
         return Ok(());
     }*/
-
     // Check if they hit any limits yet
     let hit = core::CurrentUserLimitsHit::newly_hit(guild_id, user_id, &guild_cache, &gmultm.clone());
-
     drop(gmltm);
     
     // SAFETY: Tx should be dropped if error occurs, so make a scope to seperate tx queries
@@ -185,7 +183,6 @@ pub async fn handle_mod_action(
                 guild.greater_member_hierarchy(cache_http.cache.clone(), cur_uid, user_id)
             }
             .unwrap_or(cur_uid);
-
             if can_mod == cur_uid {
                 info!("Moderating user");
                 match limit.limit_action {

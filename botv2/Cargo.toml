@@ -33,11 +33,12 @@ fred = { version = "8.0.1", features = ["enable-rustls", "serde-json", "subscrib
 moka = { version = "0.12.3", features = ["future", "futures-util"] }
 object_store = { version = "0.9.0", features = ["serde", "serde_json", "aws", "reqwest"] }
 serde_cbor = "0.11.2"
+surrealdb = { version = "1.1.1", features = ["kv-mem"] }
 
 [dependencies.tokio]
 version = "1"
 default-features = true
-features = ["full"]
+features = ["full", "macros", "rt-multi-thread"]
 
 [dependencies.serenity]
 git = "https://github.com/serenity-rs/serenity"

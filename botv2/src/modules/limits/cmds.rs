@@ -70,7 +70,7 @@ pub async fn limits_add(
     .await?;
 
     // Add to cache
-    let new_gc = super::cache::GuildCache::from_guild(
+    let new_gc = super::cache::GuildCache::from_database(
         &ctx.data().pool,
         guild_id,
     )
@@ -89,7 +89,7 @@ pub async fn limits_add(
 /// View the limits setup for this server
 #[poise::command(prefix_command, slash_command, guild_only, rename = "view")]
 pub async fn limits_view(ctx: Context<'_>) -> Result<(), Error> {
-    let limits = crate::modules::limits::core::Limit::from_guild(
+    let limits = crate::modules::limits::core::Limit::from_database(
         &ctx.data().pool,
         ctx.guild_id().ok_or("Could not get guild id")?,
     )

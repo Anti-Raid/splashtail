@@ -14,6 +14,9 @@ use poise::CreateReply;
 use sqlx::postgres::PgPoolOptions;
 use std::io::Write;
 use object_store::ObjectStore;
+use once_cell::sync::Lazy;
+use surrealdb::engine::local::{Db, Mem};
+use surrealdb::Surreal;
 
 type Error = Box<dyn std::error::Error + Send + Sync>;
 type Context<'a> = poise::Context<'a, Data, Error>;
@@ -25,6 +28,7 @@ pub struct Data {
     pub object_store: Arc<Box<dyn ObjectStore>>,
     pub animus_magic_ipc: Arc<ipc::animus_magic::client::AnimusMagicClient>,
     pub shards_ready: Arc<dashmap::DashMap<u16, bool>>,
+    pub surreal_cache: Surreal<Db>
 }
 
 async fn on_error(error: poise::FrameworkError<'_, Data, Error>) {
@@ -523,8 +527,14 @@ async fn main() {
             .await
             .expect("Could not initialize connection"),
         shards_ready: Arc::new(dashmap::DashMap::new()),
+        surreal_cache: Surreal::new::<Mem>(())
+            .await
+            .expect("Couldnt initialize cache")
     };
-
+    data.surreal_cache.use_ns("kakarot")
+        .use_db("splashtail")
+        .await
+        .expect("Couldnt use namespace and database");
     info!("Initializing bot state");
 
     let mut client = client_builder
