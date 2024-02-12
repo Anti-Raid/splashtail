@@ -118,6 +118,12 @@ Run ``./splashtail webserver``. This will create ``config.yaml.sample``. Copy th
 - From the next time, run ``./splashtail webserver`` without the ``BOOTSTRAP_COMMANDS`` variable. This is the normal way to run the bot.
 - Run the job server (typically before running the bot in production) using ``./splashtail jobs``
 
+### Proxy
+
+Anti-Raid has 2 gateway proxies that can optionally be used to reduce the number of ``IDENTIFY`` packets needed:
+
+- **simplegwproxy** - Still buggy, not recommended for production
+- **twiglight gateway-proxy** (fork with patches for serenity) - Also may be buggy but more production quality
 
 # TODO List
 
