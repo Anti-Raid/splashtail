@@ -9,8 +9,11 @@ env:
 
 jobs:
   build_and_test:
-    name: Rust project - latest
+    name: Botv2
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./botv2
     strategy:
       matrix:
         toolchain:
