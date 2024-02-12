@@ -19,7 +19,7 @@ impl RawEventHandler for EventDispatch {
                 match event {
                     serenity::all::Event::InteractionCreate(_) => {},
                     serenity::all::Event::GuildAuditLogEntryCreate(_) => {},
-                    serenity::all::Event::MessageCreate(_) => {},
+                    serenity::all::Event::GuildCreate(_) => {},
                     _ => return
                 }
                 info!("Event: {:?}", event)
