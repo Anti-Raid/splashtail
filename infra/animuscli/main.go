@@ -314,16 +314,16 @@ func main() {
 					defer restoreCtx()
 
 					a.Data.AnimusMagicClient.AllowAll = true
-					a.Data.AnimusMagicClient.OnMiddleware = func(meta *animusmagic.AnimusMessageMetadata, payload []byte) error {
+					a.Data.AnimusMagicClient.OnMiddleware = func(meta *animusmagic.AnimusMessageMetadata, payload []byte) (bool, error) {
 						if !isReady {
-							return nil
+							return false, nil
 						}
 
 						c <- &ObservableRequest{
 							Meta:       meta,
 							RawPayload: payload,
 						}
-						return nil
+						return false, nil
 					}
 
 					timeoutCtx, closer := context.WithCancel(context.Background())

@@ -66,7 +66,9 @@ type AnimusMagicClient struct {
 	OnResponse func(*ClientResponse) error
 
 	// Middleware function, will be called regardless of the op
-	OnMiddleware func(*AnimusMessageMetadata, []byte) error
+	//
+	// If bool is false, the message will be ignored/dropped for further processing
+	OnMiddleware func(*AnimusMessageMetadata, []byte) (bool, error)
 
 	// Allow all requests
 	AllowAll bool
@@ -111,10 +113,14 @@ func (c *AnimusMagicClient) ListenOnce(ctx context.Context, r rueidis.Client, l 
 
 				go func() {
 					if c.OnMiddleware != nil {
-						err := c.OnMiddleware(meta, bytesData[meta.PayloadOffset:])
+						ok, err := c.OnMiddleware(meta, bytesData[meta.PayloadOffset:])
 
 						if err != nil {
 							l.Error("[animus magic] error in middleware", zap.Error(err))
+							return
+						}
+
+						if !ok {
 							return
 						}
 					}
