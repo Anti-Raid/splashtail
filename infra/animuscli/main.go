@@ -268,6 +268,90 @@ func main() {
 					}
 				},
 			},
+			"observe": {
+				Description: "Observes the animus magic channel. Not yet working",
+				Args: [][3]string{
+					{"timeout", "Timeout in seconds", ""},
+				},
+				Run: func(a *shellcli.ShellCli[AnimusCliData], args map[string]string) error {
+					if !a.Data.Connected {
+						return fmt.Errorf("not connected")
+					}
+
+					timeout, ok := args["timeout"]
+
+					if !ok {
+						timeout = ""
+					}
+
+					var timeoutInt int
+
+					if timeout != "" {
+						var err error
+						timeoutInt, err = strconv.Atoi(timeout)
+
+						if err != nil {
+							return fmt.Errorf("error converting timeout to integer: %s", err)
+						}
+					}
+
+					type ObservableRequest struct {
+						Meta *animusmagic.AnimusMessageMetadata
+
+						// The raw payload
+						RawPayload []byte
+					}
+
+					c := make(chan *ObservableRequest)
+
+					var isReady bool
+
+					restoreCtx := func() {
+						a.Data.AnimusMagicClient.OnMiddleware = nil
+						a.Data.AnimusMagicClient.AllowAll = false
+					}
+
+					defer restoreCtx()
+
+					a.Data.AnimusMagicClient.AllowAll = true
+					a.Data.AnimusMagicClient.OnMiddleware = func(meta *animusmagic.AnimusMessageMetadata, payload []byte) error {
+						if !isReady {
+							return nil
+						}
+
+						c <- &ObservableRequest{
+							Meta:       meta,
+							RawPayload: payload,
+						}
+						return nil
+					}
+
+					timeoutCtx, closer := context.WithCancel(context.Background())
+
+					if timeout != "" {
+						go func() {
+							time.Sleep(time.Second * time.Duration(timeoutInt))
+							closer()
+						}()
+					}
+
+					for {
+						isReady = true
+						select {
+						case <-a.Data.Context.Done():
+							close(c)
+							closer()
+							return fmt.Errorf("context cancelled")
+						case <-timeoutCtx.Done():
+							close(c)
+							closer()
+							return nil
+						case response := <-c:
+							fmt.Println(prettyPrintAnimusMessageMetadata(response.Meta))
+						}
+					}
+				},
+			},
 		},
 	}
 

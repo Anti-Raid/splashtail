@@ -253,7 +253,7 @@ impl AnimusMagicClient {
                         continue; // Not for us, to != Bot and != wildcard
                     }
 
-                    if meta.cluster_id == MEWLD_ARGS.cluster_id || meta.cluster_id != u16::MAX {
+                    if meta.cluster_id != MEWLD_ARGS.cluster_id && meta.cluster_id != u16::MAX {
                         continue; // Not for us, cluster_id != ours and != wildcard
                     }
 
