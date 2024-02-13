@@ -15,7 +15,7 @@ use crate::Error;
 
 #[derive(poise::ChoiceParameter)]
 pub enum UserLimitTypesChoices {
-    #[name = "Role Create"]
+    #[  name = "Role Create"]
     RoleAdd,
     #[name = "Role Update"]
     RoleUpdate,
