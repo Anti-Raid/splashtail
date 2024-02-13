@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n                UPDATE limits__user_actions\n                SET limits_hit = array_append(limits_hit, $1)\n                WHERE action_id = $2",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "27768bc4442f2dfe408cf34060dad5716ec073217e977cb1fd8bf6ebfdfa8fa7"
+}

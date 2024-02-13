@@ -1,0 +1,31 @@
+name: Cargo Build & Test
+
+on:
+  push:
+  pull_request:
+
+env: 
+  CARGO_TERM_COLOR: always
+  SQLX_OFFLINE: true
+
+jobs:
+  build_and_test:
+    name: Botv2
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./botv2
+    strategy:
+      matrix:
+        toolchain:
+          - stable
+          - beta
+    steps:
+      - uses: actions/checkout@v3
+      - uses: Swatinem/rust-cache@v2
+        with:
+          prefix-key: ${{ matrix.toolchain }}
+          workspaces: "botv2 -> target"
+      - run: rustup update ${{ matrix.toolchain }} && rustup default ${{ matrix.toolchain }}
+      - run: cargo build --verbose
+      - run: cargo test --verbose

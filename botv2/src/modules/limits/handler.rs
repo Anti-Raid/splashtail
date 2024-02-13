@@ -163,7 +163,7 @@ pub async fn handle_mod_action(
             limit.to_string(),
             action_data
         )
-        .execute(&mut tx)
+        .execute(&mut *tx)
         .await?;
 
         for hit_limit in hit {
@@ -242,7 +242,7 @@ pub async fn handle_mod_action(
                     &action_ids,
                     &vec!["Not enough permissions to moderate user".to_string()]
                 )
-                .execute(&mut tx)
+                .execute(&mut *tx)
                 .await?;
 
                 return Ok(());
@@ -257,7 +257,7 @@ pub async fn handle_mod_action(
                     hit_limit.limit_id,
                     action.action_id
                 )
-                .execute(&mut tx)
+                .execute(&mut *tx)
                 .await?;
             }
 
@@ -276,7 +276,7 @@ pub async fn handle_mod_action(
                     .map(|a| a.action_id.clone())
                     .collect::<Vec<_>>()
             )
-            .execute(&mut tx)
+            .execute(&mut *tx)
             .await?;
         }
 
