@@ -1,4 +1,5 @@
 use crate::Context;
+use crate::modules::limits::core::Limit;
 
 pub async fn limits_autocomplete<'a>(
     ctx: Context<'_>,
@@ -15,7 +16,7 @@ pub async fn limits_autocomplete<'a>(
 
     let guild_id = guild_id.unwrap();
 
-    let limits = crate::modules::limits::core::Limit::from_database(&data.pool, guild_id).await;
+    let limits = Limit::fetch(&data.surreal_cache, &data.pool, guild_id).await;
 
     if let Ok(limits) = limits {
         let mut choices = Vec::new();

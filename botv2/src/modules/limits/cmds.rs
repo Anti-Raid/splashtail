@@ -3,8 +3,9 @@ use poise::{
     CreateReply,
 };
 use serenity::{all::{UserId, Mentionable}, builder::CreateAttachment};
-
+use crate::impls::utils::{parse_pg_interval, secs_to_pg_interval};
 use crate::{Context, Error};
+use crate::modules::limits::core::Limit;
 
 /// Limits base command
 #[poise::command(
@@ -40,7 +41,7 @@ pub async fn limits_add(
     let guild_id = ctx.guild_id().ok_or("Could not get guild id")?;
 
     // Add limit to db
-    sqlx::query!(
+    let limit = sqlx::query!(
         "
             INSERT INTO limits__guild_limits (
                 guild_id,
@@ -58,6 +59,7 @@ pub async fn limits_add(
                 $5,
                 make_interval(secs => $6)
             )
+            RETURNING limit_id
         ",
         guild_id.to_string(),
         limit_name,
@@ -66,21 +68,20 @@ pub async fn limits_add(
         limit_per,
         (limit_time * limit_time_unit.to_seconds()) as f64
     )
-    .execute(&ctx.data().pool)
+        .fetch_one(&ctx.data().pool)
     .await?;
 
-    // Add to cache
-    let new_gc = super::cache::GuildCache::from_database(
-        &ctx.data().pool,
-        guild_id,
-    )
-    .await?;
+    let limit_id = limit.limit_id;
 
-    super::cache::GUILD_CACHE.insert(
+    &ctx.data().surreal_cache.create::<Vec<Limit>>("guild_limits").content(Limit {
+        limit_id,
         guild_id,
-        new_gc,
-    );
-
+        limit_name,
+        limit_type,
+        limit_action,
+        limit_per,
+        limit_time: (limit_time * limit_time_unit.to_seconds()),
+    }).await?;
     ctx.say("Added limit successfully").await?;
 
     Ok(())
@@ -89,7 +90,8 @@ pub async fn limits_add(
 /// View the limits setup for this server
 #[poise::command(prefix_command, slash_command, guild_only, rename = "view")]
 pub async fn limits_view(ctx: Context<'_>) -> Result<(), Error> {
-    let limits = crate::modules::limits::core::Limit::from_database(
+    let limits = Limit::fetch(
+        &ctx.data().surreal_cache,
         &ctx.data().pool,
         ctx.guild_id().ok_or("Could not get guild id")?,
     )
@@ -124,7 +126,7 @@ pub async fn limits_view(ctx: Context<'_>) -> Result<(), Error> {
                 "If over {amount} ``{cond}`` triggered between {time} interval: ``{then}`` [{id}]",
                 amount = limit.limit_per,
                 cond = limit.limit_type.to_cond(),
-                time = crate::impls::utils::parse_pg_interval(limit.limit_time),
+                time = parse_pg_interval(secs_to_pg_interval(limit.limit_time)),
                 then = limit.limit_action.to_cond(),
                 id = limit.limit_id
             ),
@@ -180,6 +182,10 @@ pub async fn limits_remove(
     .execute(&ctx.data().pool)
     .await?;
 
+    &ctx.data().surreal_cache.query("delete guild_limits where guild_id=type::string($guild_id) and limit_id=type::string($limit_id) return none")
+        .bind(("guild_id", ctx.guild_id().ok_or("Could not get guild id")?.to_string()))
+        .bind(("limit_id", limit_id))
+        .await?;
     ctx.say("Removed limit successfully").await?;
 
     Ok(())

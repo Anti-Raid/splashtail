@@ -1,7 +1,7 @@
 use log::info;
 use num_traits::ToPrimitive;
 use poise::serenity_prelude::{GuildId, UserId};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use sqlx::{
     postgres::types::PgInterval,
     types::chrono::{DateTime, Utc},
@@ -12,10 +12,11 @@ use surrealdb::engine::local::Db;
 use surrealdb::Surreal;
 
 use crate::Error;
+use crate::impls::utils::pg_interval_to_secs;
 
 #[derive(poise::ChoiceParameter)]
 pub enum UserLimitTypesChoices {
-    #[  name = "Role Create"]
+    #[name = "Role Create"]
     RoleAdd,
     #[name = "Role Update"]
     RoleUpdate,
@@ -60,7 +61,7 @@ impl UserLimitTypesChoices {
     }
 }
 
-#[derive(EnumString, Display, PartialEq, EnumVariantNames, Clone, Copy, Debug, Serialize, Hash, Eq)]
+#[derive(EnumString, Display, PartialEq, EnumVariantNames, Clone, Copy, Debug, Serialize, Hash, Eq, Deserialize)]
 #[strum(serialize_all = "snake_case")]
 pub enum UserLimitTypes {
     RoleAdd,       // set
@@ -129,7 +130,7 @@ impl UserLimitActionsChoices {
     }
 }
 
-#[derive(EnumString, Display, PartialEq, EnumVariantNames, Clone, Debug, Serialize)]
+#[derive(EnumString, Display, PartialEq, EnumVariantNames, Clone, Debug, Serialize, Deserialize)]
 #[strum(serialize_all = "snake_case")]
 pub enum UserLimitActions {
     RemoveAllRoles,
@@ -147,7 +148,7 @@ impl UserLimitActions {
     }
 }
 
-#[derive(Clone, Debug, Serialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct UserAction {
     /// The ID of the action
     pub action_id: String,
@@ -271,7 +272,7 @@ impl UserAction {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Limit {
     /// The ID of the guild this limit is for
     pub guild_id: GuildId,
@@ -286,7 +287,7 @@ pub struct Limit {
     /// The number of times the limit can be hit
     pub limit_per: i32,
     /// The time frame, in seconds the limit can be hit in
-    pub limit_time: PgInterval,
+    pub limit_time: i64,
 }
 
 impl Limit {
@@ -318,23 +319,29 @@ impl Limit {
                 limit_type: r.limit_type.parse()?,
                 limit_action: r.limit_action.parse()?,
                 limit_per: r.limit_per,
-                limit_time: r.limit_time,
+                limit_time: pg_interval_to_secs(r.limit_time),
             });
         }
 
         Ok(limits)
     }
-
     pub async fn from_cache(cache: &Surreal<Db>, guild_id: GuildId) -> Result<Vec<Self>, Error> {
-        // Handle Errors better tomm
         let mut request = cache
-            .query("select limit_id, limit_name, limit_type, limit_action, limit_per, limit_time from guild_limits where guild_id = type::string($guild_id)")
+            .query("select guild_id, limit_id, limit_name, limit_type, limit_action, limit_per, limit_time from guild_limits where guild_id = type::string($guild_id)")
             .bind(("guild_id", guild_id.to_string()))
             .await?;
 
         let records: Vec<Limit> = request.take(0)?;
-
         Ok(records)
+    }
+
+    pub async fn fetch(cache: &Surreal<Db>, pool: &PgPool, guild_id: GuildId) -> Result<Vec<Self>, Error> {
+        let cache = Self::from_cache(cache, guild_id).await?;
+        if cache.is_empty() {
+            let db = Self::from_database(pool, guild_id).await?;
+            return Ok(db);
+        }
+        Ok(cache)
     }
 }
 

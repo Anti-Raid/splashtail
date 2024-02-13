@@ -3,15 +3,20 @@ use serenity::all::{GuildId, UserId};
 use sqlx::PgPool;
 use std::sync::Arc;
 use std::collections::HashMap;
+use sqlx::postgres::types::PgInterval;
 use surrealdb::engine::local::Db;
 use surrealdb::Surreal;
+use crate::modules::limits::core::{UserLimitActions, UserLimitTypes};
 
 pub type GCLimitCache = Arc<HashMap<String, super::core::Limit>>;
 
+/// Limits of a guild
 #[derive(Clone)]
 pub struct GuildCache {
     pub limits: GCLimitCache,
 }
+
+pub struct GuildLimit {}
 
 impl GuildCache {
     pub async fn from_database(pool: &PgPool, guild_id: GuildId) -> Result<Self, crate::Error> {
@@ -20,10 +25,6 @@ impl GuildCache {
         Ok(Self {
             limits: Arc::new(limits.into_iter().map(|l| (l.limit_id.clone(), l)).collect()),
         })
-    }
-
-    pub async fn from_cache(host: &Surreal<Db>, guild_id: GuildId) -> Result<Self, crate::Error> {
-        todo!()
     }
 }
 
