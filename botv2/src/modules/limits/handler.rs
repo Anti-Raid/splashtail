@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use log::{error, info, warn};
 use poise::serenity_prelude::{GuildId, UserId};
 use sqlx::PgPool;
@@ -5,6 +6,7 @@ use surrealdb::engine::local::Db;
 use surrealdb::Surreal;
 
 use crate::{impls::cache::CacheHttpImpl, Error};
+use crate::modules::limits::core::{Limit, UserAction};
 use super::core;
 
 // Returns true if the same user+target combo has appeared in the time interval user_target_repeat_rate
@@ -69,25 +71,45 @@ pub async fn handle_mod_action(
     ha: &HandleModAction,
 ) -> Result<(), Error> {
     let guild_id = ha.guild_id;
-    let limit = &ha.limit;
+    let limit = ha.limit;
     let user_id = ha.user_id;
     let target = ha.target.clone();
     let action_data = &ha.action_data;
 
     // Check limits cache
-    let guild_cache = {
-        let guild_cache = super::cache::GUILD_CACHE.get(&guild_id);
-        if let Some(guild_cache) = guild_cache {
-            guild_cache.clone()
-        } else {
-            let guild_cache = super::cache::GuildCache::from_database(pool, guild_id).await?;
-            super::cache::GUILD_CACHE.insert(guild_id, guild_cache.clone());
-            guild_cache
-        }
+    let guild_limits: HashMap<String, Limit> = {
+        Limit::fetch(&cache, &pool, guild_id).await?
+            .into_iter()
+            .filter(|a| a.limit_type == limit)
+            .map(|a| (a.limit_id.clone(), a))
+            .collect()
+
     };
-    if guild_cache.limits.is_empty() {
+    if guild_limits.is_empty() {
         // No limits for this guild
         return Ok(());
+    }
+    for (limit_id, limit) in guild_limits.into_iter() {
+        // Check the limit type and user_id and guild to see if it is in the cache
+        let mut query = cache.query("select * from user_actions where guild_id=type::string($guild_id) and user_id=type::string($user_id) and limit_type=type::string($limit_type)")
+            .bind(("guild_id", guild_id.clone()))
+            .bind(("user_id", user_id.clone()))
+            .bind(("limit_type", limit.to_string()))
+            .await?;
+        let response: Vec<UserAction> = query.take(0)?;
+        // if response.len() >
+        // Add to cache
+        let req: Vec<UserAction> = cache.create("user_actions")
+            .content(UserAction {
+                action_id: crate::impls::crypto::gen_random(48),
+                guild_id: guild_id,
+                user_id: user_id,
+                target: target.clone(),
+                limit_type: limit,
+                action_data: action_data.clone(),
+                created_at: sqlx::types::chrono::Utc::now(),
+            })
+            .await?;
     }
     // Add to GUILD_MEMBER_ACTIONS_CACHE
     {

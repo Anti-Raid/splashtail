@@ -69,11 +69,11 @@ pub async fn limits_add(
         (limit_time * limit_time_unit.to_seconds()) as f64
     )
         .fetch_one(&ctx.data().pool)
-    .await?;
+        .await?;
 
     let limit_id = limit.limit_id;
 
-    &ctx.data().surreal_cache.create::<Vec<Limit>>("guild_limits").content(Limit {
+    let _ = &ctx.data().surreal_cache.create::<Vec<Limit>>("guild_limits").content(Limit {
         limit_id,
         guild_id,
         limit_name,
@@ -182,7 +182,7 @@ pub async fn limits_remove(
     .execute(&ctx.data().pool)
     .await?;
 
-    &ctx.data().surreal_cache.query("delete guild_limits where guild_id=type::string($guild_id) and limit_id=type::string($limit_id) return none")
+    let _ = &ctx.data().surreal_cache.query("delete guild_limits where guild_id=type::string($guild_id) and limit_id=type::string($limit_id) return none")
         .bind(("guild_id", ctx.guild_id().ok_or("Could not get guild id")?.to_string()))
         .bind(("limit_id", limit_id))
         .await?;

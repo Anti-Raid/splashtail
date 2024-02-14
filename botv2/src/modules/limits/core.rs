@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use log::info;
 use num_traits::ToPrimitive;
 use poise::serenity_prelude::{GuildId, UserId};
@@ -63,7 +64,7 @@ impl UserLimitTypesChoices {
 
 #[derive(EnumString, Display, PartialEq, EnumVariantNames, Clone, Copy, Debug, Serialize, Hash, Eq, Deserialize)]
 #[strum(serialize_all = "snake_case")]
-pub enum UserLimitTypes {
+pub enum    UserLimitTypes {
     RoleAdd,       // set
     RoleUpdate,    // set
     RoleRemove,    // set
@@ -272,7 +273,7 @@ impl UserAction {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Limit {
     /// The ID of the guild this limit is for
     pub guild_id: GuildId,
@@ -322,7 +323,6 @@ impl Limit {
                 limit_time: pg_interval_to_secs(r.limit_time),
             });
         }
-
         Ok(limits)
     }
     pub async fn from_cache(cache: &Surreal<Db>, guild_id: GuildId) -> Result<Vec<Self>, Error> {
@@ -345,7 +345,7 @@ impl Limit {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct CurrentUserLimitsHit {
     pub limit_id: String,
     pub cause: Vec<UserAction>,
@@ -356,12 +356,12 @@ impl CurrentUserLimitsHit {
     pub fn newly_hit(
         guild_id: GuildId, 
         user_id: UserId,
-        guild_cache: &super::cache::GuildCache,
+        guild_cache: HashMap<String, Limit>,
         guild_member_limits_cache: &super::cache::GuildMemberLimitTypesMap
     ) -> Vec<Self> {
         let mut hits = Vec::new();
         // For every limit in guild_cache.limits
-        for (_, limit) in guild_cache.limits.iter() {
+        for (_, limit) in guild_cache.iter() {
             let made_actions = guild_member_limits_cache.get(&limit.limit_type);
             info!("{:?}", made_actions);
             if made_actions.is_none() {
