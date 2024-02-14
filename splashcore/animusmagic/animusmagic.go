@@ -62,6 +62,17 @@ type AnimusMagicClient struct {
 	// On request function, if set, will be called upon recieving op of type OpRequest
 	OnRequest func(*ClientRequest) (AnimusResponse, error)
 
+	// On response function, if set, will be called upon recieving op of type OpResponse
+	OnResponse func(*ClientResponse) error
+
+	// Middleware function, will be called regardless of the op
+	//
+	// If bool is false, the message will be ignored/dropped for further processing
+	OnMiddleware func(*AnimusMessageMetadata, []byte) (bool, error)
+
+	// Allow all requests
+	AllowAll bool
+
 	// Set of notifiers
 	Notify syncmap.Map[string, *NotifyWrapper]
 
@@ -93,12 +104,27 @@ func (c *AnimusMagicClient) ListenOnce(ctx context.Context, r rueidis.Client, l 
 					return
 				}
 
-				// If the target of the message is not us, ignore it
-				if meta.To != c.From {
-					return
+				// If the target of the message is not us or not wildcard, ignore it
+				if !c.AllowAll {
+					if meta.To != c.From && meta.To != AnimusTargetWildcard {
+						return
+					}
 				}
 
 				go func() {
+					if c.OnMiddleware != nil {
+						ok, err := c.OnMiddleware(meta, bytesData[meta.PayloadOffset:])
+
+						if err != nil {
+							l.Error("[animus magic] error in middleware", zap.Error(err))
+							return
+						}
+
+						if !ok {
+							return
+						}
+					}
+
 					switch meta.Op {
 					case OpRequest:
 						if c.OnRequest != nil {
@@ -154,8 +180,17 @@ func (c *AnimusMagicClient) ListenOnce(ctx context.Context, r rueidis.Client, l 
 					case OpError:
 						fallthrough // Both response and error are handled the same way
 					case OpResponse:
-						if meta.From == AnimusTargetWebserver {
-							return
+						if c.OnResponse != nil {
+							go func() {
+								err := c.OnResponse(&ClientResponse{
+									Meta:       meta,
+									RawPayload: bytesData[meta.PayloadOffset:],
+								})
+
+								if err != nil {
+									l.Error("[animus magic] error handling response", zap.Error(err))
+								}
+							}()
 						}
 
 						n, ok := c.Notify.Load(meta.CommandID)
