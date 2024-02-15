@@ -345,63 +345,6 @@ impl Limit {
     }
 }
 
-#[derive(Debug, Clone, Deserialize, Serialize)]
-pub struct CurrentUserLimitsHit {
-    pub limit_id: String,
-    pub cause: Vec<UserAction>,
-}
-
-impl CurrentUserLimitsHit {
-    /// Returns a list of all limits that have been newly hit for a specific guild
-    pub fn newly_hit(
-        guild_id: GuildId, 
-        user_id: UserId,
-        guild_cache: HashMap<String, Limit>,
-        guild_member_limits_cache: &super::cache::GuildMemberLimitTypesMap
-    ) -> Vec<Self> {
-        let mut hits = Vec::new();
-        // For every limit in guild_cache.limits
-        for (_, limit) in guild_cache.iter() {
-            let made_actions = guild_member_limits_cache.get(&limit.limit_type);
-            info!("{:?}", made_actions);
-            if made_actions.is_none() {
-                continue;
-            }
-
-            let made_actions = made_actions.unwrap();
-
-            let mut cause = Vec::new();
-
-            for (ts, tr) in made_actions.times.iter() {
-                if tr.limits.contains(&limit.limit_id) {
-                    continue; // Already handled
-                }
-
-                // if chrono::Utc::now().timestamp() - ts < crate::impls::utils::pg_interval_to_secs(limit.limit_time.clone()) {
-                //     continue; // Not within limit time
-                // }
-
-                cause.push(UserAction {
-                    action_id: "CACHE/".to_string() + &crate::impls::crypto::gen_random(24),
-                    limit_type: limit.limit_type,
-                    created_at: sqlx::types::chrono::DateTime::from_timestamp(*ts, 0).unwrap_or(chrono::Utc::now()),
-                    user_id,
-                    guild_id,
-                    action_data: tr.action_data.clone(),
-                    limits_hit: tr.limits.clone(),
-                    target: tr.target.clone(),
-                })
-            }
-
-            if cause.len() > limit.limit_per as usize {
-                hits.push(Self { limit_id: limit.limit_id.to_string(), cause });
-            }
-        }
-
-        hits
-    }
-}
-
 #[derive(Debug, Serialize)]
 pub struct PastHitLimits {
     pub id: String,

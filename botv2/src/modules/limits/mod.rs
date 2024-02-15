@@ -1,5 +1,4 @@
 mod core;
-mod cache;
 mod handler;
 mod events;
 mod cmds;
