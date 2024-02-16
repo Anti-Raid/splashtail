@@ -75,15 +75,13 @@ pub async fn handle_mod_action(
     let user_id = ha.user_id;
     let target = ha.target.clone();
     let action_data = &ha.action_data;
-
     // Check limits cache
-    let guild_limits: HashMap<String, Limit> = {
-        Limit::fetch(&cache, &pool, guild_id).await?
+    let guild_limits: HashMap<String, Limit> = Limit::fetch(&cache, &pool, guild_id).await?
             .into_iter()
             .filter(|a| a.limit_type == limit)
             .map(|a| (a.limit_id.clone(), a))
-            .collect()
-    };
+            .collect();
+
     if guild_limits.is_empty() {
         // No limits for this guild
         return Ok(());
@@ -91,33 +89,40 @@ pub async fn handle_mod_action(
     for (limit_id, guild_limit) in guild_limits.into_iter() {
         // Check the limit type and user_id and guild to see if it is in the cache
         let mut query = cache.query("select * from user_actions where guild_id=type::string($guild_id) and user_id=type::string($user_id) and limit_type=type::string($limit_type)")
-            .bind(("guild_id", guild_id.clone()))
-            .bind(("user_id", user_id.clone()))
-            .bind(("limit_type", limit.to_string()))
+            .bind(("guild_id", guild_id))
+            .bind(("user_id", user_id))
+            .bind(("limit_type", limit))
             .await?;
         let response: Vec<UserAction> = query.take(0)?;
-        if response.len() as i32 > guild_limit.limit_per {
+        if response.len() as i32 >= guild_limit.limit_per {
             // Cut off the latest limit_per(number) of actions from response
             let mut actions = response.clone();
             actions.sort_by(|a, b| a.created_at.cmp(&b.created_at));
             actions.reverse();
-            actions.truncate(guild_limit.limit_per as usize);
+            actions.truncate(guild_limit.limit_per as usize + 1);
             // Now check if actions are done within the time limit
-            let mut last_time = actions[0].created_at;
+            let last_time = actions[0].created_at;
             let mut action_ids = Vec::new();
-
             for action in actions {
                 if (last_time - action.created_at).num_seconds() < guild_limit.limit_time {
                     action_ids.push(action.action_id.clone());
                 }
             }
-            if action_ids.len() as i32 > guild_limit.limit_per {
+            info!("Action IDs: {:?}", action_ids.len());
+            if action_ids.len() as i32 >= guild_limit.limit_per {
                 // remove from cache here
                 {
                     let mut tx: sqlx::Transaction<'_, sqlx::Postgres> = pool.begin().await?;
 
                     info!("Hit limit: limit={:?}", limit);
-
+                    // Remove Cache
+                    let _ = cache
+                            .query("delete user_actions where guild_id=type::string($guild_id) and user_id=type::string($user_id) and limit_type=type::string($limit_type) return none")
+                            .bind(("guild_id", guild_id))
+                            .bind(("user_id", user_id))
+                            .bind(("limit_type", limit))
+                        .await?;
+                    // Add UserActions to db Here.
                     // Immediately handle the limit
                     let cur_uid = cache_http.cache.current_user().id;
                     let can_mod = {
@@ -156,8 +161,6 @@ pub async fn handle_mod_action(
                             can_mod, cur_uid
                         );
 
-                        // Add UserActions to db Here.
-
                         sqlx::query!("
                             INSERT INTO limits__past_hit_limits
                             (id, guild_id, user_id, limit_id, cause, notes)
@@ -170,10 +173,8 @@ pub async fn handle_mod_action(
                             .execute(&mut *tx)
                             .await?;
 
-                        return Ok(());
+                        return Ok(())
                     }
-
-                    // Add UserActions to db Here.
 
                     sqlx::query!("
                         INSERT INTO limits__past_hit_limits
@@ -183,7 +184,8 @@ pub async fn handle_mod_action(
                         guild_id.to_string(), user_id.to_string(),
                         limit_id, &action_ids
                     ).execute(&mut *tx)
-                        .await?
+                        .await?;
+                    return Ok(())
                 }
             }
         } else {
