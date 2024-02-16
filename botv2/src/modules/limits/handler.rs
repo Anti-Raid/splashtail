@@ -86,6 +86,18 @@ pub async fn handle_mod_action(
         // No limits for this guild
         return Ok(());
     }
+    let _ = cache.create::<Vec<UserAction>>("user_actions")
+        .content(UserAction {
+            action_id: crate::impls::crypto::gen_random(48),
+            guild_id,
+            user_id,
+            target: target.clone(),
+            limit_type: limit,
+            action_data: action_data.clone(),
+            created_at: sqlx::types::chrono::Utc::now(),
+            limits_hit: Vec::new(),
+        })
+        .await?;
     for (limit_id, guild_limit) in guild_limits.into_iter() {
         // Check the limit type and user_id and guild to see if it is in the cache
         let mut query = cache.query("select * from user_actions where guild_id=type::string($guild_id) and user_id=type::string($user_id) and limit_type=type::string($limit_type)")
@@ -108,8 +120,7 @@ pub async fn handle_mod_action(
                     action_ids.push(action.action_id.clone());
                 }
             }
-            info!("Action IDs: {:?}", action_ids.len());
-            if action_ids.len() as i32 >= guild_limit.limit_per {
+            if action_ids.len() as i32 > guild_limit.limit_per {
                 // remove from cache here
                 {
                     let mut tx: sqlx::Transaction<'_, sqlx::Postgres> = pool.begin().await?;
@@ -123,6 +134,22 @@ pub async fn handle_mod_action(
                             .bind(("limit_type", limit))
                         .await?;
                     // Add UserActions to db Here.
+                    sqlx::query!(
+            "
+            INSERT INTO limits__user_actions
+            (action_id, guild_id, user_id, target, limit_type, action_data, limits_hit)
+            VALUES ($1, $2, $3, $4, $5, $6, $7)
+        ",
+            crate::impls::crypto::gen_random(48),
+            guild_id.to_string(),
+            user_id.to_string(),
+            target,
+            limit.to_string(),
+            action_data,
+                        &action_ids
+        )
+                        .execute(&mut *tx)
+                        .await?;
                     // Immediately handle the limit
                     let cur_uid = cache_http.cache.current_user().id;
                     let can_mod = {
@@ -189,18 +216,8 @@ pub async fn handle_mod_action(
                 }
             }
         } else {
-            let _ = cache.create::<Vec<UserAction>>("user_actions")
-                .content(UserAction {
-                    action_id: crate::impls::crypto::gen_random(48),
-                    guild_id,
-                    user_id,
-                    target: target.clone(),
-                    limit_type: limit,
-                    action_data: action_data.clone(),
-                    created_at: sqlx::types::chrono::Utc::now(),
-                    limits_hit: Vec::new(),
-                })
-                .await?;
+           // No Limits hit.
+            continue;
         }
     }
     Ok(())
