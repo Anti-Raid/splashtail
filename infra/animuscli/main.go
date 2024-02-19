@@ -300,6 +300,9 @@ func main() {
 
 						// The raw payload
 						RawPayload []byte
+
+						// Time since last message
+						TimeSince time.Duration
 					}
 
 					c := make(chan *ObservableRequest)
@@ -314,7 +317,12 @@ func main() {
 					defer restoreCtx()
 
 					a.Data.AnimusMagicClient.AllowAll = true
+					var lastMessage = time.Now()
 					a.Data.AnimusMagicClient.OnMiddleware = func(meta *animusmagic.AnimusMessageMetadata, payload []byte) (bool, error) {
+						newLm := time.Now()
+						timeSince := newLm.Sub(lastMessage)
+						lastMessage = newLm
+
 						if !isReady {
 							return false, nil
 						}
@@ -322,6 +330,7 @@ func main() {
 						c <- &ObservableRequest{
 							Meta:       meta,
 							RawPayload: payload,
+							TimeSince:  timeSince,
 						}
 						return false, nil
 					}
@@ -347,7 +356,10 @@ func main() {
 							closer()
 							return nil
 						case response := <-c:
-							fmt.Println(prettyPrintAnimusMessageMetadata(response.Meta))
+							fmt.Println(
+								prettyPrintAnimusMessageMetadata(response.Meta),
+								"\nTime since last message: ", response.TimeSince,
+							)
 						}
 					}
 				},
