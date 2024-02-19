@@ -558,18 +558,18 @@ async fn main() {
     .build_pool(REDIS_MAX_CONNECTIONS.try_into().unwrap())
     .expect("Could not initialize Redis pool");
 
-    let cache_config = config::CONFIG.cache.clone();
-    let cache_client = Surreal::new::<Ws>(cache_config.url)
+    let surreal_config = config::CONFIG.surreal.clone();
+    let surreal_client = Surreal::new::<Ws>(surreal_config.url)
         .await
-        .expect("Couldnt initialize cache");
-    let _ = cache_client
+        .expect("Couldnt initialize surreal");
+    let _ = surreal_client
         .signin(Root {
-            username: cache_config.username.as_str(),
-            password: cache_config.password.as_str(),
+            username: surreal_config.username.as_str(),
+            password: surreal_config.password.as_str(),
         })
         .await;
-    cache_client
-        .use_ns("kakarot")
+    surreal_client
+        .use_ns("antiraid")
         .use_db("splashtail")
         .await
         .expect("Couldnt use namespace and database");
@@ -595,7 +595,7 @@ async fn main() {
             .await
             .expect("Could not initialize connection"),
         shards_ready: Arc::new(dashmap::DashMap::new()),
-        surreal_cache: cache_client,
+        surreal_cache: surreal_client,
     };
 
     info!("Initializing bot state");

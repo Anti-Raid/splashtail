@@ -103,7 +103,7 @@ pub struct Sites {
 }
 
 #[derive(Serialize, Deserialize, Clone)]
-pub struct Cache {
+pub struct Surreal {
     pub url: String,
     pub username: String,
     pub password: String,
@@ -114,7 +114,7 @@ pub struct Config {
     pub discord_auth: DiscordAuth,
     pub meta: Meta,
     pub sites: Sites,
-    pub cache: Cache,
+    pub surreal: Surreal,
     pub object_storage: ObjectStorage,
 
     #[serde(skip)]
