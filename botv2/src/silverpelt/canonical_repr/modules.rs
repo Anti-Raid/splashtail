@@ -5,7 +5,7 @@ pub struct CanonicalModule {
     pub id: String,
 
     /// The name of the module
-    pub name: String,    
+    pub name: String,
 
     /// The description of the module
     pub description: String,
@@ -32,7 +32,7 @@ pub struct CanonicalCommandExtendedData {
     pub id: String,
 
     #[serde(flatten)]
-    pub data: crate::silverpelt::CommandExtendedData
+    pub data: crate::silverpelt::CommandExtendedData,
 }
 
 /// Canonical representation of a command (data section) for external use
@@ -85,7 +85,10 @@ pub struct CanonicalCommandData {
 
 /// Given a command, return its canonical representation
 impl CanonicalCommand {
-    pub fn from_repr(cmd: &crate::silverpelt::Command, extended_data: crate::silverpelt::CommandExtendedDataMap) -> Self {
+    pub fn from_repr(
+        cmd: &crate::silverpelt::Command,
+        extended_data: crate::silverpelt::CommandExtendedDataMap,
+    ) -> Self {
         CanonicalCommand {
             command: cmd.into(),
             extended_data: {
@@ -112,20 +115,26 @@ impl From<&crate::silverpelt::Command> for CanonicalCommandData {
             qualified_name: cmd.qualified_name.clone(),
             description: cmd.description.clone(),
             nsfw: cmd.nsfw_only,
-            subcommands: cmd.subcommands.iter().map(|cmd| {
-                CanonicalCommandData::from(cmd)
-            }).collect(),
+            subcommands: cmd
+                .subcommands
+                .iter()
+                .map(|cmd| CanonicalCommandData::from(cmd))
+                .collect(),
             subcommand_required: cmd.subcommand_required,
-            arguments: cmd.parameters.iter().map(|arg| {
-                CanonicalCommandArgument {
+            arguments: cmd
+                .parameters
+                .iter()
+                .map(|arg| CanonicalCommandArgument {
                     name: arg.name.clone(),
                     description: arg.description.clone(),
                     required: arg.required,
-                    choices: arg.choices.iter().map(|choice| {
-                        choice.name.to_string()
-                    }).collect(),
-                }
-            }).collect(),
+                    choices: arg
+                        .choices
+                        .iter()
+                        .map(|choice| choice.name.to_string())
+                        .collect(),
+                })
+                .collect(),
         }
     }
 }
@@ -141,9 +150,11 @@ impl From<crate::silverpelt::Module> for CanonicalModule {
             commands_configurable: module.commands_configurable,
             web_hidden: module.web_hidden,
             is_default_enabled: module.is_default_enabled,
-            commands: module.commands.into_iter().map(|(cmd, perms)| {
-                CanonicalCommand::from_repr(&cmd, perms)
-            }).collect(),
+            commands: module
+                .commands
+                .into_iter()
+                .map(|(cmd, perms)| CanonicalCommand::from_repr(&cmd, perms))
+                .collect(),
         }
     }
 }

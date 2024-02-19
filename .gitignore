@@ -10,3 +10,7 @@ ljconfig
 cmd/localjobs/localjobs
 .DS_Store
 /**/.DS_Store
+.idea
+semver
+mewld-staging.yaml
+mewld-prod.yaml

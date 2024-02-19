@@ -76,7 +76,7 @@ In some cases, the internal representation of a type is not suitable for externa
 To load the database seed, follow the following steps:
 
 0. Install and setup PostgreSQL 15.5 or 16 (production uses 15.5 currently)
-1. Install ``iblcli`` using ``go install github.com/InfinityBotList/ibl@latest``. This will install ``iblcli`` which is used for database seeding to ``~/go/bin`` from which you can either copy it to ``/usr/bin`` or add it to your ``$PATH``.
+1. Install ``iblcli`` using ``go install github.com/infinitybotlist/ibl@latest``. This will install ``iblcli`` which is used for database seeding to ``~/go/bin`` from which you can either copy it to ``/usr/bin`` or add it to your ``$PATH``.
 2. Install postgres server development headers: ``apt install postgresql-server-dev-VERSION`` where version is >= 15.
 3. Create the following databases and roles:
     - ``antiraid``

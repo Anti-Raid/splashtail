@@ -1,8 +1,8 @@
-use std::sync::Arc;
 #[allow(unused_imports)]
 use fred::clients::SubscriberClient;
-use fred::interfaces::{ClientLike, PubsubInterface, EventInterface};
-use serde::{Serialize, Deserialize};
+use fred::interfaces::{ClientLike, EventInterface, PubsubInterface};
+use serde::{Deserialize, Serialize};
+use std::sync::Arc;
 
 /// This is the fundemental primitive for mewld IPC
 pub struct MewldIpcClient {
@@ -52,11 +52,11 @@ impl MewldIpcCache {
 
 /*
 Scope     string         `json:"scope"`
-	Action    string         `json:"action"`
-	Args      map[string]any `json:"args,omitempty"`
-	CommandId string         `json:"command_id,omitempty"`
-	Output    any            `json:"output,omitempty"`
-	Data      map[string]any `json:"data,omitempty"` // Used in action logs */
+    Action    string         `json:"action"`
+    Args      map[string]any `json:"args,omitempty"`
+    CommandId string         `json:"command_id,omitempty"`
+    Output    any            `json:"output,omitempty"`
+    Data      map[string]any `json:"data,omitempty"` // Used in action logs */
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LauncherCmd {
@@ -74,22 +74,22 @@ Mewld structures
 
 // Internal payload for diagnostics
 type diagPayload struct {
-	ClusterID int    `json:"id"`    // The cluster ID
-	Nonce     string `json:"nonce"` // Random nonce sent that is used to validate that a nonce comes from a specific diag request
-	Diag      bool   `json:"diag"`  // Whether or not this is a diag request, is always true in this struct
+    ClusterID int    `json:"id"`    // The cluster ID
+    Nonce     string `json:"nonce"` // Random nonce sent that is used to validate that a nonce comes from a specific diag request
+    Diag      bool   `json:"diag"`  // Whether or not this is a diag request, is always true in this struct
 }
 
 type ShardHealth struct {
-	ShardID uint64  `json:"shard_id"` // The shard ID
-	Up      bool    `json:"up"`       // Whether or not the shard is up
-	Latency float64 `json:"latency"`  // Latency of the shard (optional, send if possible)
-	Guilds  uint64  `json:"guilds"`   // The number of guilds in the shard. Is optional
-	Users   uint64  `json:"users"`    // The number of users in the shard. Is optional
+    ShardID uint64  `json:"shard_id"` // The shard ID
+    Up      bool    `json:"up"`       // Whether or not the shard is up
+    Latency float64 `json:"latency"`  // Latency of the shard (optional, send if possible)
+    Guilds  uint64  `json:"guilds"`   // The number of guilds in the shard. Is optional
+    Users   uint64  `json:"users"`    // The number of users in the shard. Is optional
 }
 
 type DiagResponse struct {
-	Nonce string        // Random nonce used to validate that a nonce comes from a specific diag request
-	Data  []ShardHealth // The shard health data
+    Nonce string        // Random nonce used to validate that a nonce comes from a specific diag request
+    Data  []ShardHealth // The shard health data
 }
  */
 
@@ -103,7 +103,8 @@ struct MewldDiagPayload {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 struct MewldDiagResponse {
-    cluster_id: u16, /// This is not part of the mewld response protocol, but its useful for statistics and mewld will ignore it anyways
+    cluster_id: u16,
+    /// This is not part of the mewld response protocol, but its useful for statistics and mewld will ignore it anyways
     #[serde(rename = "Nonce")]
     nonce: String,
     #[serde(rename = "Data")]
@@ -121,17 +122,19 @@ pub struct MewldDiagShardHealth {
 
 impl MewldIpcClient {
     /// Starts listening to mewld IPC messages
-    /// 
+    ///
     /// This function never quits once executed
     pub async fn start_ipc_listener(
-        &self, 
+        &self,
         serenity_cache: &crate::impls::cache::CacheHttpImpl,
-        shard_manager: &Arc<serenity::all::ShardManager>
+        shard_manager: &Arc<serenity::all::ShardManager>,
     ) -> ! {
         // Subscribes to the redis IPC channels we need to subscribe to
         let cfg = self.redis_pool.client_config();
 
-        let subscriber = fred::prelude::Builder::from_config(cfg).build_subscriber_client().unwrap();
+        let subscriber = fred::prelude::Builder::from_config(cfg)
+            .build_subscriber_client()
+            .unwrap();
 
         subscriber.connect();
         subscriber.wait_for_connect().await.unwrap();
@@ -146,16 +149,26 @@ impl MewldIpcClient {
         // Note that jobserver will use HTTP for communication
         subscriber.manage_subscriptions();
 
-        let _: () = subscriber.subscribe(
-            super::argparse::MEWLD_ARGS.mewld_redis_channel.clone(),
-        ).await.unwrap();
-        let _: () = subscriber.subscribe(
-            &format!("{}:{}", super::argparse::MEWLD_ARGS.mewld_redis_channel, super::argparse::MEWLD_ARGS.cluster_id),
-        ).await.unwrap();
-        
+        let _: () = subscriber
+            .subscribe(super::argparse::MEWLD_ARGS.mewld_redis_channel.clone())
+            .await
+            .unwrap();
+        let _: () = subscriber
+            .subscribe(&format!(
+                "{}:{}",
+                super::argparse::MEWLD_ARGS.mewld_redis_channel,
+                super::argparse::MEWLD_ARGS.cluster_id
+            ))
+            .await
+            .unwrap();
+
         while let Ok(message) = message_stream.recv().await {
-            log::debug!("Recieved message {:#?} on channel {}", message.value, message.channel);
-        
+            log::debug!(
+                "Recieved message {:#?} on channel {}",
+                message.value,
+                message.channel
+            );
+
             let strvalue = match message.value {
                 fred::types::RedisValue::String(s) => s,
                 _ => {
@@ -165,7 +178,10 @@ impl MewldIpcClient {
             };
 
             if strvalue.is_empty() || !strvalue.starts_with('{') {
-                log::warn!("Invalid message recieved on channel {} [earlyopt: not a json object]", message.channel);
+                log::warn!(
+                    "Invalid message recieved on channel {} [earlyopt: not a json object]",
+                    message.channel
+                );
                 continue;
             }
 
@@ -173,7 +189,11 @@ impl MewldIpcClient {
             let value: serde_json::Value = match serde_json::from_str(&strvalue) {
                 Ok(v) => v,
                 Err(e) => {
-                    log::warn!("Invalid message recieved on channel {}: {} [cannot deserialize]", message.channel, e);
+                    log::warn!(
+                        "Invalid message recieved on channel {}: {} [cannot deserialize]",
+                        message.channel,
+                        e
+                    );
                     continue;
                 }
             };
@@ -181,7 +201,10 @@ impl MewldIpcClient {
             let obj = match value {
                 serde_json::Value::Object(ref obj) => obj,
                 _ => {
-                    log::warn!("Invalid message recieved on channel {} [not an object]", message.channel);
+                    log::warn!(
+                        "Invalid message recieved on channel {} [not an object]",
+                        message.channel
+                    );
                     continue;
                 }
             };
@@ -202,7 +225,10 @@ impl MewldIpcClient {
                 }
 
                 if diag_payload.nonce.is_empty() {
-                    log::warn!("Invalid diag payload recieved on channel {}: nonce is empty", message.channel);
+                    log::warn!(
+                        "Invalid diag payload recieved on channel {}: nonce is empty",
+                        message.channel
+                    );
                     continue;
                 }
 
@@ -211,7 +237,8 @@ impl MewldIpcClient {
                 let mut user_counts_per_shard = std::collections::HashMap::new();
 
                 for guild in serenity_cache.cache.guilds() {
-                    let shard_id = serenity::utils::shard_id(guild, super::argparse::MEWLD_ARGS.shard_count);
+                    let shard_id =
+                        serenity::utils::shard_id(guild, super::argparse::MEWLD_ARGS.shard_count);
 
                     let count = guild_counts_per_shard.entry(shard_id).or_insert(0);
                     *count += 1;
@@ -233,20 +260,24 @@ impl MewldIpcClient {
                         shard_id: shard_id.0,
                         up: shard.stage == serenity::all::ConnectionStage::Connected,
                         latency: shard.latency.unwrap_or_default().as_millis() as f64,
-                        guilds: guild_counts_per_shard.get(&shard_id.0).copied().unwrap_or_default(),
-                        users: user_counts_per_shard.get(&shard_id.0).copied().unwrap_or_default(),
+                        guilds: guild_counts_per_shard
+                            .get(&shard_id.0)
+                            .copied()
+                            .unwrap_or_default(),
+                        users: user_counts_per_shard
+                            .get(&shard_id.0)
+                            .copied()
+                            .unwrap_or_default(),
                     };
 
                     shard_healths.push(shard_health);
                 }
 
-                let diag_payload_str = match serde_json::to_string(
-                    &MewldDiagResponse {
-                        cluster_id: super::argparse::MEWLD_ARGS.cluster_id,
-                        nonce: diag_payload.nonce.clone(),
-                        data: shard_healths.clone(),
-                    }
-                ) {
+                let diag_payload_str = match serde_json::to_string(&MewldDiagResponse {
+                    cluster_id: super::argparse::MEWLD_ARGS.cluster_id,
+                    nonce: diag_payload.nonce.clone(),
+                    data: shard_healths.clone(),
+                }) {
                     Ok(v) => v,
                     Err(e) => {
                         log::warn!("Error processing message recieved on channel {}: {} [cannot serialize]", message.channel, e);
@@ -268,7 +299,11 @@ impl MewldIpcClient {
                 let lcmd: LauncherCmd = match serde_json::from_value(value) {
                     Ok(v) => v,
                     Err(e) => {
-                        log::warn!("Invalid message recieved on channel {}: {} [not a launcher command]", message.channel, e);
+                        log::warn!(
+                            "Invalid message recieved on channel {}: {} [not a launcher command]",
+                            message.channel,
+                            e
+                        );
                         continue;
                     }
                 };
@@ -290,24 +325,31 @@ impl MewldIpcClient {
                         };
 
                         // Parse output to a diagresponse
-                        let diag_response: MewldDiagResponse = match serde_json::from_str(&output_str) {
+                        let diag_response: MewldDiagResponse = match serde_json::from_str(
+                            &output_str,
+                        ) {
                             Ok(v) => v,
                             Err(e) => {
                                 log::warn!("Invalid message recieved on channel {}: {} [diag key set but not a diag payload]", message.channel, e);
                                 continue;
                             }
                         };
-                        
+
                         // We have recieved a diagnostic payload from other clusters, save it
-                        self.cache.cluster_healths.insert(diag_response.cluster_id, diag_response.data);
-                    },
+                        self.cache
+                            .cluster_healths
+                            .insert(diag_response.cluster_id, diag_response.data);
+                    }
                     "all_clusters_launched" => {
                         // All clusters have launched, set the flag
                         *self.cache.all_clusters_up.write().await = true;
-                    },
+                    }
                     "launch_next" => {} // Ignore
                     _ => {
-                        log::warn!("Invalid message recieved on channel {} [not a launcher command]", message.channel);
+                        log::warn!(
+                            "Invalid message recieved on channel {} [not a launcher command]",
+                            message.channel
+                        );
                         continue;
                     }
                 }
@@ -324,7 +366,8 @@ impl MewldIpcClient {
         let conn = self.redis_pool.next();
         conn.connect();
         conn.wait_for_connect().await?;
-        conn.publish(super::argparse::MEWLD_ARGS.mewld_redis_channel.clone(), cmd).await?;
+        conn.publish(super::argparse::MEWLD_ARGS.mewld_redis_channel.clone(), cmd)
+            .await?;
 
         Ok(())
     }

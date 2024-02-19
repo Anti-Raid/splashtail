@@ -1,12 +1,17 @@
+use super::bot::{BotAnimusMessage, BotAnimusResponse};
+use super::jobserver::{JobserverAnimusMessage, JobserverAnimusResponse};
+use crate::{ipc::argparse::MEWLD_ARGS, Error};
+use fred::{
+    clients::{RedisClient, RedisPool},
+    interfaces::{ClientLike, EventInterface, PubsubInterface},
+    prelude::Builder,
+    types::RedisValue,
+};
+use serde::{Deserialize, Serialize};
 /// Animus Magic is the internal redis IPC system for internal communications between the bot and the server
-/// 
+///
 /// Format of payloads: <target [from]: u8><target [to]: u8><cluster id: u16><op: 8 bits><command id: alphanumeric string>/<cbor payload>
 use std::sync::Arc;
-use fred::{types::RedisValue, clients::{RedisClient, RedisPool}, prelude::Builder, interfaces::{ClientLike, PubsubInterface, EventInterface}};
-use serde::{Serialize, Deserialize};
-use super::bot::{BotAnimusResponse, BotAnimusMessage};
-use super::jobserver::{JobserverAnimusMessage, JobserverAnimusResponse};
-use crate::{Error, ipc::argparse::MEWLD_ARGS};
 
 #[derive(Serialize, Deserialize, PartialEq, Clone, Copy)]
 pub enum AnimusTarget {
@@ -32,7 +37,7 @@ impl AnimusTarget {
             0x1 => Some(AnimusTarget::Jobserver),
             0x2 => Some(AnimusTarget::Webserver),
             u8::MAX => Some(AnimusTarget::Wildcard),
-            _ => None
+            _ => None,
         }
     }
 }
@@ -58,7 +63,7 @@ impl AnimusOp {
             0x0 => Some(AnimusOp::Request),
             0x1 => Some(AnimusOp::Response),
             0x2 => Some(AnimusOp::Error),
-            _ => None
+            _ => None,
         }
     }
 }
@@ -66,7 +71,7 @@ impl AnimusOp {
 #[derive(Serialize, Deserialize)]
 pub struct AnimusErrorResponse {
     pub message: String,
-    pub context: String
+    pub context: String,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -78,12 +83,16 @@ pub enum AnimusResponse {
 }
 
 impl AnimusResponse {
-    pub fn from_payload(payload: &[u8], op: AnimusOp, target: AnimusTarget) -> Result<Self, crate::Error> {
+    pub fn from_payload(
+        payload: &[u8],
+        op: AnimusOp,
+        target: AnimusTarget,
+    ) -> Result<Self, crate::Error> {
         if op == AnimusOp::Error {
             let msg = serde_cbor::from_slice::<AnimusErrorResponse>(payload)?;
             return Ok(Self::Error(msg));
         }
-        
+
         match target {
             AnimusTarget::Bot => {
                 let msg = serde_cbor::from_slice::<BotAnimusResponse>(payload)?;
@@ -95,7 +104,7 @@ impl AnimusResponse {
                 Ok(Self::Jobserver(msg))
             }
 
-            _ => Err("Invalid target for payload".into())
+            _ => Err("Invalid target for payload".into()),
         }
     }
 }
@@ -111,7 +120,7 @@ pub enum AnimusMessage {
 #[serde(untagged)]
 pub enum AnimusPayload {
     Message(AnimusMessage),
-    Response(AnimusResponse),   
+    Response(AnimusResponse),
 }
 
 impl From<AnimusMessage> for AnimusPayload {
@@ -127,7 +136,7 @@ impl From<AnimusResponse> for AnimusPayload {
 }
 
 impl AnimusMessage {
-    pub fn from_payload(payload: &[u8], target: AnimusTarget) -> Result<Self, crate::Error> {        
+    pub fn from_payload(payload: &[u8], target: AnimusTarget) -> Result<Self, crate::Error> {
         match target {
             AnimusTarget::Bot => {
                 let msg = serde_cbor::from_slice::<BotAnimusMessage>(payload)?;
@@ -139,7 +148,7 @@ impl AnimusMessage {
                 Ok(Self::Jobserver(msg))
             }
 
-            _ => Err("Invalid target for payload".into())
+            _ => Err("Invalid target for payload".into()),
         }
     }
 }
@@ -150,7 +159,7 @@ pub struct AnimusMessageMetadata {
     pub cluster_id: u16,
     pub op: AnimusOp,
     pub command_id: String,
-    pub payload_offset: usize
+    pub payload_offset: usize,
 }
 
 pub struct AnimusMagicClient {
@@ -160,14 +169,14 @@ pub struct AnimusMagicClient {
 
 impl AnimusMagicClient {
     /// Starts listening to mewld IPC messages
-    /// 
+    ///
     /// This function never quits once executed
     pub async fn start_ipc_listener(
         &self,
         cache_http: crate::impls::cache::CacheHttpImpl,
 
         #[allow(unused_variables)] // To be used in the future
-        shard_manager: Arc<serenity::all::ShardManager>,    
+        shard_manager: Arc<serenity::all::ShardManager>,
     ) -> ! {
         // Subscribes to the redis IPC channels we need to subscribe to
         let cfg = self.redis_pool.client_config();
@@ -183,9 +192,10 @@ impl AnimusMagicClient {
 
         subscriber.manage_subscriptions();
 
-        let _: () = subscriber.subscribe(
-            MEWLD_ARGS.animus_magic_channel.as_str(),
-        ).await.unwrap();    
+        let _: () = subscriber
+            .subscribe(MEWLD_ARGS.animus_magic_channel.as_str())
+            .await
+            .unwrap();
 
         while let Ok(message) = message_stream.recv().await {
             log::debug!("Got message on channel {}", message.channel);
@@ -193,21 +203,29 @@ impl AnimusMagicClient {
                 RedisValue::Bytes(s) => s,
                 RedisValue::String(s) => s.into(),
                 _ => {
-                    log::warn!("Invalid message recieved on channel [wanted binary, but got text] {}", message.channel);
+                    log::warn!(
+                        "Invalid message recieved on channel [wanted binary, but got text] {}",
+                        message.channel
+                    );
                     continue;
                 }
             };
 
             // Parse the payload
             let Ok(meta) = Self::get_payload_meta(&binary) else {
-                log::warn!("Invalid message recieved on channel {} [metadata extract error]", message.channel);
+                log::warn!(
+                    "Invalid message recieved on channel {} [metadata extract error]",
+                    message.channel
+                );
                 continue;
             };
 
             // Case of response
             match meta.op {
                 AnimusOp::Response | AnimusOp::Error => {
-                    if meta.from == AnimusTarget::Bot && (meta.cluster_id != MEWLD_ARGS.cluster_id && meta.cluster_id != u16::MAX) {
+                    if meta.from == AnimusTarget::Bot
+                        && (meta.cluster_id != MEWLD_ARGS.cluster_id && meta.cluster_id != u16::MAX)
+                    {
                         continue; // Not for us
                     }
 
@@ -221,15 +239,25 @@ impl AnimusMagicClient {
                         if let Some(sender) = sender {
                             let payload = &binary[meta.payload_offset..];
 
-                            let resp = match AnimusResponse::from_payload(payload, meta.op, meta.from) {
+                            let resp = match AnimusResponse::from_payload(
+                                payload, meta.op, meta.from,
+                            ) {
                                 Ok(resp) => resp,
                                 Err(e) => {
                                     log::warn!("Invalid message recieved on channel {} [response extract error] {}", message.channel, e);
                                     // Send error
-                                    if let Err(e) = Self::error(redis_pool.next(), &meta.command_id, AnimusErrorResponse {
-                                        message: "Invalid payload, failed to unmarshal message".to_string(),
-                                        context: e.to_string()
-                                    }, meta.from).await {
+                                    if let Err(e) = Self::error(
+                                        redis_pool.next(),
+                                        &meta.command_id,
+                                        AnimusErrorResponse {
+                                            message: "Invalid payload, failed to unmarshal message"
+                                                .to_string(),
+                                            context: e.to_string(),
+                                        },
+                                        meta.from,
+                                    )
+                                    .await
+                                    {
                                         log::warn!("Failed to send error response: {}", e);
                                     }
 
@@ -269,26 +297,45 @@ impl AnimusMagicClient {
                             Err(e) => {
                                 log::warn!("Invalid message recieved on channel {} [request extract error] {}", message.channel, e);
                                 // Send error
-                                if let Err(e) = Self::error(redis_pool.next(), &meta.command_id, AnimusErrorResponse {
-                                    message: "Invalid payload, failed to unmarshal message".to_string(),
-                                    context: e.to_string()
-                                }, meta.from).await {
+                                if let Err(e) = Self::error(
+                                    redis_pool.next(),
+                                    &meta.command_id,
+                                    AnimusErrorResponse {
+                                        message: "Invalid payload, failed to unmarshal message"
+                                            .to_string(),
+                                        context: e.to_string(),
+                                    },
+                                    meta.from,
+                                )
+                                .await
+                                {
                                     log::warn!("Failed to send error response: {}", e);
                                 }
 
                                 return;
                             }
                         };
-                        
+
                         let msg = match resp {
                             AnimusMessage::Bot(msg) => msg,
                             AnimusMessage::Jobserver(_) => {
-                                log::warn!("Invalid message recieved on channel {} [invalid message type]", message.channel);
+                                log::warn!(
+                                    "Invalid message recieved on channel {} [invalid message type]",
+                                    message.channel
+                                );
                                 // Send error
-                                if let Err(e) = Self::error(redis_pool.next(), &meta.command_id, AnimusErrorResponse {
-                                    message: "Invalid payload, failed to unmarshal message".to_string(),
-                                    context: "Invalid message type".to_string()
-                                }, meta.from).await {
+                                if let Err(e) = Self::error(
+                                    redis_pool.next(),
+                                    &meta.command_id,
+                                    AnimusErrorResponse {
+                                        message: "Invalid payload, failed to unmarshal message"
+                                            .to_string(),
+                                        context: "Invalid message type".to_string(),
+                                    },
+                                    meta.from,
+                                )
+                                .await
+                                {
                                     log::warn!("Failed to send error response: {}", e);
                                 }
 
@@ -299,12 +346,22 @@ impl AnimusMagicClient {
                         let data = match msg.response(&cache_http).await {
                             Ok(data) => data,
                             Err(e) => {
-                                log::warn!("Failed to get response for message on channel {}", message.channel);
+                                log::warn!(
+                                    "Failed to get response for message on channel {}",
+                                    message.channel
+                                );
                                 // Send error
-                                if let Err(e) = Self::error(redis_pool.next(), &meta.command_id, AnimusErrorResponse {
-                                    message: "Failed to create response".to_string(),
-                                    context: e.to_string()
-                                }, meta.from).await {
+                                if let Err(e) = Self::error(
+                                    redis_pool.next(),
+                                    &meta.command_id,
+                                    AnimusErrorResponse {
+                                        message: "Failed to create response".to_string(),
+                                        context: e.to_string(),
+                                    },
+                                    meta.from,
+                                )
+                                .await
+                                {
                                     log::warn!("Failed to send error response: {}", e);
                                 }
 
@@ -312,14 +369,30 @@ impl AnimusMagicClient {
                             }
                         };
 
-                        let Ok(payload) = Self::create_payload(&meta.command_id, AnimusTarget::Bot, meta.from, AnimusOp::Response, &AnimusResponse::Bot(data).into()) else {
-                            log::warn!("Failed to create payload for message on channel {}", message.channel);
-                            
+                        let Ok(payload) = Self::create_payload(
+                            &meta.command_id,
+                            AnimusTarget::Bot,
+                            meta.from,
+                            AnimusOp::Response,
+                            &AnimusResponse::Bot(data).into(),
+                        ) else {
+                            log::warn!(
+                                "Failed to create payload for message on channel {}",
+                                message.channel
+                            );
+
                             // Send error
-                            if let Err(e) = Self::error(redis_pool.next(), &meta.command_id, AnimusErrorResponse {
-                                message: "Failed to create response payload".to_string(),
-                                context: "create_payload returned Err code".to_string()
-                            }, meta.from).await {
+                            if let Err(e) = Self::error(
+                                redis_pool.next(),
+                                &meta.command_id,
+                                AnimusErrorResponse {
+                                    message: "Failed to create response payload".to_string(),
+                                    context: "create_payload returned Err code".to_string(),
+                                },
+                                meta.from,
+                            )
+                            .await
+                            {
                                 log::warn!("Failed to send error response: {}", e);
                             }
 
@@ -330,24 +403,42 @@ impl AnimusMagicClient {
                             log::warn!("Failed to publish response to redis: {}", e);
 
                             // Send error
-                            if let Err(e) = Self::error(redis_pool.next(), &meta.command_id, AnimusErrorResponse {
-                                message: "Failed to publish response to redis".to_string(),
-                                context: e.to_string()
-                            }, meta.from).await {
+                            if let Err(e) = Self::error(
+                                redis_pool.next(),
+                                &meta.command_id,
+                                AnimusErrorResponse {
+                                    message: "Failed to publish response to redis".to_string(),
+                                    context: e.to_string(),
+                                },
+                                meta.from,
+                            )
+                            .await
+                            {
                                 log::warn!("Failed to send error response: {}", e);
                             }
                         }
                     });
                 }
-            }      
+            }
         }
 
-        unreachable!("IPC listener exited");    
+        unreachable!("IPC listener exited");
     }
 
     /// Helper method to send an error response
-    pub async fn error(redis_conn: &RedisClient, command_id: &str, data: AnimusErrorResponse, to: AnimusTarget) -> Result<(), crate::Error> {
-        let Ok(payload) = Self::create_payload(command_id, AnimusTarget::Bot, to, AnimusOp::Error, &AnimusResponse::Error(data).into()) else {
+    pub async fn error(
+        redis_conn: &RedisClient,
+        command_id: &str,
+        data: AnimusErrorResponse,
+        to: AnimusTarget,
+    ) -> Result<(), crate::Error> {
+        let Ok(payload) = Self::create_payload(
+            command_id,
+            AnimusTarget::Bot,
+            to,
+            AnimusOp::Error,
+            &AnimusResponse::Error(data).into(),
+        ) else {
             return Err("Failed to create payload for error message".into());
         };
 
@@ -359,19 +450,32 @@ impl AnimusMagicClient {
         // Convert payload to redis value
         let payload = RedisValue::Bytes(payload.into());
 
-        match redis_conn.publish(MEWLD_ARGS.animus_magic_channel.as_str(), payload).await {
+        match redis_conn
+            .publish(MEWLD_ARGS.animus_magic_channel.as_str(), payload)
+            .await
+        {
             Ok(()) => Ok(()),
-            Err(e) => Err(format!("Failed to publish response to redis: {}", e).into())
+            Err(e) => Err(format!("Failed to publish response to redis: {}", e).into()),
         }
     }
 
     /// request creates a new request and waits for a response until either timeout or response
-    pub async fn request(&self, target: AnimusTarget, msg: AnimusMessage) -> Result<AnimusResponse, crate::Error> {
+    pub async fn request(
+        &self,
+        target: AnimusTarget,
+        msg: AnimusMessage,
+    ) -> Result<AnimusResponse, crate::Error> {
         let cmd_id = Self::new_command_id();
 
-        let payload = match Self::create_payload(&cmd_id, AnimusTarget::Bot, target, AnimusOp::Request, &msg.into()) {
+        let payload = match Self::create_payload(
+            &cmd_id,
+            AnimusTarget::Bot,
+            target,
+            AnimusOp::Request,
+            &msg.into(),
+        ) {
             Ok(payload) => payload,
-            Err(e) => return Err(e)
+            Err(e) => return Err(e),
         };
 
         let (tx, mut rx) = tokio::sync::mpsc::channel(1);
@@ -382,12 +486,12 @@ impl AnimusMagicClient {
 
         let resp = match tokio::time::timeout(std::time::Duration::from_secs(10), rx.recv()).await {
             Ok(resp) => resp,
-            Err(_) => return Err("Request timed out".into())
+            Err(_) => return Err("Request timed out".into()),
         };
 
         match resp {
             Some(resp) => Ok(resp),
-            None => Err("Failed to get response".into())
+            None => Err("Failed to get response".into()),
         }
     }
 
@@ -396,13 +500,13 @@ impl AnimusMagicClient {
         crate::impls::crypto::gen_random(16)
     }
 
-    /// Creates a payload 
+    /// Creates a payload
     pub fn create_payload(
         cmd_id: &str,
         from: AnimusTarget,
         to: AnimusTarget,
         op: AnimusOp,
-        data: &AnimusPayload
+        data: &AnimusPayload,
     ) -> Result<Vec<u8>, crate::Error> {
         let mut payload = Vec::new();
 
@@ -444,7 +548,7 @@ impl AnimusMagicClient {
     pub fn get_payload_meta(payload: &[u8]) -> Result<AnimusMessageMetadata, crate::Error> {
         // Take out scope
         let from = AnimusTarget::from_byte(payload[0]).ok_or("Invalid from byte")?;
-        
+
         // Take out scope
         let to = AnimusTarget::from_byte(payload[1]).ok_or("Invalid type byte")?;
 
@@ -466,15 +570,13 @@ impl AnimusMagicClient {
             i += 1;
         }
 
-        Ok(
-            AnimusMessageMetadata {
-                from,
-                to,
-                cluster_id,
-                op,
-                command_id: cmd_id,
-                payload_offset: i + 1
-            }
-        )
+        Ok(AnimusMessageMetadata {
+            from,
+            to,
+            cluster_id,
+            op,
+            command_id: cmd_id,
+            payload_offset: i + 1,
+        })
     }
 }

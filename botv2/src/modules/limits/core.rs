@@ -1,13 +1,14 @@
-use num_traits::ToPrimitive;
 use poise::serenity_prelude::{GuildId, UserId};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use sqlx::{
-    postgres::types::PgInterval,
     types::chrono::{DateTime, Utc},
     PgPool,
 };
 use strum_macros::{Display, EnumString, EnumVariantNames};
+use surrealdb::engine::remote::ws::Client;
+use surrealdb::Surreal;
 
+use crate::impls::utils::pg_interval_to_secs;
 use crate::Error;
 
 #[derive(poise::ChoiceParameter)]
@@ -57,20 +58,32 @@ impl UserLimitTypesChoices {
     }
 }
 
-#[derive(EnumString, Display, PartialEq, EnumVariantNames, Clone, Copy, Debug, Serialize, Hash, Eq)]
+#[derive(
+    EnumString,
+    Display,
+    PartialEq,
+    EnumVariantNames,
+    Clone,
+    Copy,
+    Debug,
+    Serialize,
+    Hash,
+    Eq,
+    Deserialize,
+)]
 #[strum(serialize_all = "snake_case")]
 pub enum UserLimitTypes {
-    RoleAdd,       // set
-    RoleUpdate,    // set
-    RoleRemove,    // set
-    RoleGivenToMember, // set
+    RoleAdd,               // set
+    RoleUpdate,            // set
+    RoleRemove,            // set
+    RoleGivenToMember,     // set
     RoleRemovedFromMember, // set
-    MemberRolesUpdated, // set
-    ChannelAdd,    // set
-    ChannelUpdate, // set
-    ChannelRemove, //set
+    MemberRolesUpdated,    // set
+    ChannelAdd,            // set
+    ChannelUpdate,         // set
+    ChannelRemove,         //set
     Kick,
-    Ban, 
+    Ban,
     Unban,
 }
 
@@ -93,15 +106,15 @@ impl UserLimitTypes {
     }
 
     /// Returns the default repeat rate for a user-target pair
-    /// 
+    ///
     /// Within this rate, limits will be ignored if the same user-target pair has already been handled
     #[allow(dead_code)] // May be used in the future
     pub fn default_user_target_repeat_rate(&self) -> i64 {
         match self {
-            Self::RoleGivenToMember => 2, // 2 seconds
+            Self::RoleGivenToMember => 2,     // 2 seconds
             Self::RoleRemovedFromMember => 2, // 2 seconds
-            Self::MemberRolesUpdated => 5, // 5 seconds
-            _ => 0, // No repeat rate as other events are more accurate
+            Self::MemberRolesUpdated => 5,    // 5 seconds
+            _ => 0,                           // No repeat rate as other events are more accurate
         }
     }
 }
@@ -126,7 +139,9 @@ impl UserLimitActionsChoices {
     }
 }
 
-#[derive(EnumString, Display, PartialEq, EnumVariantNames, Clone, Debug, Serialize)]
+#[derive(
+    EnumString, Display, PartialEq, EnumVariantNames, Clone, Debug, Serialize, Deserialize,
+)]
 #[strum(serialize_all = "snake_case")]
 pub enum UserLimitActions {
     RemoveAllRoles,
@@ -144,53 +159,7 @@ impl UserLimitActions {
     }
 }
 
-#[derive(Clone, Debug)]
-pub struct GuildUserTargetSettings {
-    /// The guild id
-    pub guild_id: GuildId,
-    /// If the event has a specific target, the interval at which further events regarding the same user-target pair should be ignored
-    pub user_target_repeat_rate: i64,
-    /// The limit type this field is applicable to
-    pub limit_type: UserLimitTypes,
-}
-
-impl GuildUserTargetSettings {
-    pub async fn from_guild(pool: &PgPool, guild_id: GuildId) -> Result<Vec<Self>, Error> {
-        match sqlx::query!(
-            "
-                SELECT EXTRACT(seconds FROM user_target_repeat_rate) AS user_target_repeat_rate, limit_type FROM limits__guild_user_target_settings
-                WHERE guild_id = $1
-            ",
-            guild_id.to_string()
-        )
-        .fetch_all(pool)
-        .await {
-            Ok(records) => {
-                let mut settings = Vec::new();
-
-                for rec in records {
-                    settings.push(Self {
-                        guild_id,
-                        user_target_repeat_rate: {
-                            if let Some(rate) = rec.user_target_repeat_rate {
-                                rate.to_i64().expect("rate cannot be parsed to i64. This should never occur")
-                            } else {
-                                0
-                            }
-                        },
-                        limit_type: rec.limit_type.parse()?,
-                    });
-                }
-
-                Ok(settings)
-            },
-            Err(sqlx::Error::RowNotFound) => Ok(Vec::new()),
-            Err(e) => Err(e.into()),
-        }
-    }
-}
-
-#[derive(Clone, Debug, Serialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct UserAction {
     /// The ID of the action
     pub action_id: String,
@@ -212,11 +181,7 @@ pub struct UserAction {
 
 impl UserAction {
     /// Fetch user actions for a action id
-    pub async fn by_id(
-        pool: &PgPool,
-        guild_id: GuildId,
-        action_id: &str,
-    ) -> Result<Self, Error> {
+    pub async fn by_id(pool: &PgPool, guild_id: GuildId, action_id: &str) -> Result<Self, Error> {
         let r = sqlx::query!(
             "
                 SELECT user_id, limit_type, created_at, action_data, 
@@ -230,8 +195,7 @@ impl UserAction {
         .fetch_one(pool)
         .await?;
 
-
-    let actions = Self {
+        let actions = Self {
             guild_id,
             action_id: action_id.to_string(),
             user_id: r.user_id.parse()?,
@@ -314,7 +278,7 @@ impl UserAction {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Limit {
     /// The ID of the guild this limit is for
     pub guild_id: GuildId,
@@ -329,11 +293,11 @@ pub struct Limit {
     /// The number of times the limit can be hit
     pub limit_per: i32,
     /// The time frame, in seconds the limit can be hit in
-    pub limit_time: PgInterval,
+    pub limit_time: i64,
 }
 
 impl Limit {
-    pub async fn from_guild(pool: &PgPool, guild_id: GuildId) -> Result<Vec<Self>, Error> {
+    pub async fn from_database(pool: &PgPool, guild_id: GuildId) -> Result<Vec<Self>, Error> {
         let rec = sqlx::query!(
             "
                 SELECT limit_id, limit_name, limit_type, limit_action, limit_per, 
@@ -361,69 +325,35 @@ impl Limit {
                 limit_type: r.limit_type.parse()?,
                 limit_action: r.limit_action.parse()?,
                 limit_per: r.limit_per,
-                limit_time: r.limit_time,
+                limit_time: pg_interval_to_secs(r.limit_time),
             });
         }
-
         Ok(limits)
     }
-}
+    pub async fn from_cache(
+        cache: &Surreal<Client>,
+        guild_id: GuildId,
+    ) -> Result<Vec<Self>, Error> {
+        let mut request = cache
+            .query("select guild_id, limit_id, limit_name, limit_type, limit_action, limit_per, limit_time from guild_limits where guild_id = type::string($guild_id)")
+            .bind(("guild_id", guild_id.to_string()))
+            .await?;
 
-#[derive(Debug, Clone)]
-pub struct CurrentUserLimitsHit {
-    pub limit_id: String,
-    pub cause: Vec<UserAction>,
-}
+        let records: Vec<Limit> = request.take(0)?;
+        Ok(records)
+    }
 
-impl CurrentUserLimitsHit {
-    /// Returns a list of all limits that have been newly hit for a specific guild
-    pub fn newly_hit(
-        guild_id: GuildId, 
-        user_id: UserId,
-        guild_cache: &super::cache::GuildCache,
-        guild_member_limits_cache: &super::cache::GuildMemberLimitTypesMap
-    ) -> Vec<Self> {
-        let mut hits = Vec::new();
-
-        // For every limit in guild_cache.limits
-        for (_, limit) in guild_cache.limits.iter() {
-            let made_actions = guild_member_limits_cache.get(&limit.limit_type);
-
-            if made_actions.is_none() {
-                continue;
-            }
-
-            let made_actions = made_actions.unwrap();
-
-            let mut cause = Vec::new();
-
-            for (ts, tr) in made_actions.times.iter() {
-                if tr.limits.contains(&limit.limit_id) {
-                    continue; // Already handled
-                }
-
-                if chrono::Utc::now().timestamp() - ts < crate::impls::utils::pg_interval_to_secs(limit.limit_time.clone()) {
-                    continue; // Not within limit time
-                }
-
-                cause.push(UserAction {
-                    action_id: "CACHE/".to_string() + &crate::impls::crypto::gen_random(24),
-                    limit_type: limit.limit_type,
-                    created_at: sqlx::types::chrono::DateTime::from_timestamp(*ts, 0).unwrap_or(chrono::Utc::now()),
-                    user_id,
-                    guild_id,
-                    action_data: tr.action_data.clone(),
-                    limits_hit: tr.limits.clone(),
-                    target: tr.target.clone(),
-                })
-            }
-
-            if cause.len() > limit.limit_per as usize {
-                hits.push(Self { limit_id: limit.limit_id.to_string(), cause });
-            }
+    pub async fn fetch(
+        cache: &Surreal<Client>,
+        pool: &PgPool,
+        guild_id: GuildId,
+    ) -> Result<Vec<Self>, Error> {
+        let cache = Self::from_cache(cache, guild_id).await?;
+        if cache.is_empty() {
+            let db = Self::from_database(pool, guild_id).await?;
+            return Ok(db);
         }
-
-        hits
+        Ok(cache)
     }
 }
 
@@ -472,5 +402,5 @@ impl PastHitLimits {
         }
 
         Ok(hits)
-    }    
+    }
 }

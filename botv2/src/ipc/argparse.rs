@@ -7,18 +7,18 @@ pub static MEWLD_ARGS: Lazy<MewldCmdArgs> = Lazy::new(|| {
 });
 
 /*
-        l.Dir+"/"+l.Config.Module,
-        mutils.ToPyListUInt64(i.Shards),
-        mutils.UInt64ToString(l.ShardCount),
-        strconv.Itoa(i.ClusterID),
-        cm.Name,
-        l.Dir,
-        strconv.Itoa(len(l.Map)),
-        state.Config.Sites.API.Parse(),
-        l.Config.RedisChannel,
-        config.CurrentEnv,
-        config.Meta.AnimusMagicChannel
-     */
+   l.Dir+"/"+l.Config.Module,
+   mutils.ToPyListUInt64(i.Shards),
+   mutils.UInt64ToString(l.ShardCount),
+   strconv.Itoa(i.ClusterID),
+   cm.Name,
+   l.Dir,
+   strconv.Itoa(len(l.Map)),
+   state.Config.Sites.API.Parse(),
+   l.Config.RedisChannel,
+   config.CurrentEnv,
+   config.Meta.AnimusMagicChannel
+*/
 #[derive(Debug, Clone)]
 pub struct MewldCmdArgs {
     pub shards: Vec<u16>,

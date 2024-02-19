@@ -1,10 +1,14 @@
 use log::{error, info};
-use poise::serenity_prelude::{FullEvent, RoleAction, MemberAction, Change};
+use poise::serenity_prelude::{Change, FullEvent, MemberAction, RoleAction};
 use serenity::model::guild::audit_log::{Action, ChannelAction};
 
+use super::handler::handle_mod_action;
 use crate::{Data, Error};
 
-pub async fn event_listener(ctx: &serenity::client::Context, event: &FullEvent) -> Result<(), Error> {
+pub async fn event_listener(
+    ctx: &serenity::client::Context,
+    event: &FullEvent,
+) -> Result<(), Error> {
     let user_data = ctx.data::<Data>();
 
     let cache_http = crate::impls::cache::CacheHttpImpl {
@@ -13,10 +17,7 @@ pub async fn event_listener(ctx: &serenity::client::Context, event: &FullEvent) 
     };
 
     match event {
-        FullEvent::GuildAuditLogEntryCreate {
-            entry,
-            guild_id,
-        } => {
+        FullEvent::GuildAuditLogEntryCreate { entry, guild_id } => {
             info!("Audit log created: {:?}. Guild: {}", entry, guild_id);
 
             let res = match entry.action {
@@ -27,8 +28,9 @@ pub async fn event_listener(ctx: &serenity::client::Context, event: &FullEvent) 
                         ChannelAction::Create => {
                             info!("Channel created: {}", ch_id);
 
-                            super::handler::handle_mod_action(
+                            handle_mod_action(
                                 &user_data.pool,
+                                &user_data.surreal_cache,
                                 &cache_http,
                                 &super::handler::HandleModAction {
                                     guild_id: *guild_id,
@@ -43,8 +45,9 @@ pub async fn event_listener(ctx: &serenity::client::Context, event: &FullEvent) 
                         ChannelAction::Delete => {
                             info!("Channel deleted: {}", ch_id);
 
-                            super::handler::handle_mod_action(
+                            handle_mod_action(
                                 &user_data.pool,
+                                &user_data.surreal_cache,
                                 &cache_http,
                                 &super::handler::HandleModAction {
                                     guild_id: *guild_id,
@@ -58,9 +61,9 @@ pub async fn event_listener(ctx: &serenity::client::Context, event: &FullEvent) 
                         }
                         ChannelAction::Update => {
                             info!("Channel updated: {}", ch_id);
-
-                            super::handler::handle_mod_action(
+                            handle_mod_action(
                                 &user_data.pool,
+                                &user_data.surreal_cache,
                                 &cache_http,
                                 &super::handler::HandleModAction {
                                     guild_id: *guild_id,
@@ -82,8 +85,9 @@ pub async fn event_listener(ctx: &serenity::client::Context, event: &FullEvent) 
                         RoleAction::Create => {
                             info!("Role created: {}", r_id);
 
-                            super::handler::handle_mod_action(
+                            handle_mod_action(
                                 &user_data.pool,
+                                &user_data.surreal_cache,
                                 &cache_http,
                                 &super::handler::HandleModAction {
                                     guild_id: *guild_id,
@@ -98,8 +102,9 @@ pub async fn event_listener(ctx: &serenity::client::Context, event: &FullEvent) 
                         RoleAction::Update => {
                             info!("Role updated: {}", r_id);
 
-                            super::handler::handle_mod_action(
+                            handle_mod_action(
                                 &user_data.pool,
+                                &user_data.surreal_cache,
                                 &cache_http,
                                 &super::handler::HandleModAction {
                                     guild_id: *guild_id,
@@ -114,8 +119,9 @@ pub async fn event_listener(ctx: &serenity::client::Context, event: &FullEvent) 
                         RoleAction::Delete => {
                             info!("Role deleted: {}", r_id);
 
-                            super::handler::handle_mod_action(
+                            handle_mod_action(
                                 &user_data.pool,
+                                &user_data.surreal_cache,
                                 &cache_http,
                                 &super::handler::HandleModAction {
                                     guild_id: *guild_id,
@@ -129,7 +135,8 @@ pub async fn event_listener(ctx: &serenity::client::Context, event: &FullEvent) 
                         }
                         _ => Ok(()),
                     }
-                },
+                }
+                // DEAL WITH THIS HELL LATER.
                 Action::Member(ma) => {
                     let Some(target) = entry.target_id else {
                         error!("MEMBER update: No target ID found");
@@ -158,7 +165,7 @@ pub async fn event_listener(ctx: &serenity::client::Context, event: &FullEvent) 
 
                                         if old_roles.is_empty() {
                                             for role in old.iter() {
-                                               old_roles.push(role.id);
+                                                old_roles.push(role.id);
                                             }
                                         }
 
@@ -172,11 +179,8 @@ pub async fn event_listener(ctx: &serenity::client::Context, event: &FullEvent) 
                                                 added.push(role.id);
                                             }
                                         }
-                                    },
-                                    Change::RolesRemove {
-                                        old,
-                                        new,
-                                    } => {
+                                    }
+                                    Change::RolesRemove { old, new } => {
                                         let Some(old) = old else {
                                             error!("MEMBER update: No old roles found");
                                             continue;
@@ -198,13 +202,14 @@ pub async fn event_listener(ctx: &serenity::client::Context, event: &FullEvent) 
                                                 removed.push(role.id);
                                             }
                                         }
-                                    },
+                                    }
                                     _ => {}
                                 }
                             }
 
-                            super::handler::handle_mod_action(
+                            handle_mod_action(
                                 &user_data.pool,
+                                &user_data.surreal_cache,
                                 &cache_http,
                                 &super::handler::HandleModAction {
                                     guild_id: *guild_id,
@@ -223,8 +228,9 @@ pub async fn event_listener(ctx: &serenity::client::Context, event: &FullEvent) 
                             if !added.is_empty() {
                                 info!("Added roles: {:?}", added);
 
-                                super::handler::handle_mod_action(
+                                handle_mod_action(
                                     &user_data.pool,
+                                    &user_data.surreal_cache,
                                     &cache_http,
                                     &super::handler::HandleModAction {
                                         guild_id: *guild_id,
@@ -244,8 +250,9 @@ pub async fn event_listener(ctx: &serenity::client::Context, event: &FullEvent) 
                             if !removed.is_empty() {
                                 info!("Removed roles: {:?}", removed);
 
-                                super::handler::handle_mod_action(
+                                handle_mod_action(
                                     &user_data.pool,
+                                    &user_data.surreal_cache,
                                     &cache_http,
                                     &super::handler::HandleModAction {
                                         guild_id: *guild_id,
@@ -266,7 +273,7 @@ pub async fn event_listener(ctx: &serenity::client::Context, event: &FullEvent) 
                     }
 
                     Ok(())
-                },
+                }
                 _ => Ok(()),
             };
 
@@ -276,7 +283,7 @@ pub async fn event_listener(ctx: &serenity::client::Context, event: &FullEvent) 
             }
 
             Ok(())
-        },
+        }
         _ => Ok(()),
     }
 }

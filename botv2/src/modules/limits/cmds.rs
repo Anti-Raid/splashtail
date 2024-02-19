@@ -1,10 +1,11 @@
-use poise::{
-    serenity_prelude::CreateEmbed,
-    CreateReply,
-};
-use serenity::{all::{UserId, Mentionable}, builder::CreateAttachment};
-
+use crate::impls::utils::{parse_pg_interval, secs_to_pg_interval};
+use crate::modules::limits::core::Limit;
 use crate::{Context, Error};
+use poise::{serenity_prelude::CreateEmbed, CreateReply};
+use serenity::{
+    all::{Mentionable, UserId},
+    builder::CreateAttachment,
+};
 
 /// Limits base command
 #[poise::command(
@@ -21,14 +22,11 @@ pub async fn limits(_ctx: Context<'_>) -> Result<(), Error> {
 #[poise::command(prefix_command, slash_command, guild_only, rename = "add")]
 pub async fn limits_add(
     ctx: Context<'_>,
-    #[description = "The name of the limit"]
-    limit_name: String,
+    #[description = "The name of the limit"] limit_name: String,
     #[description = "The type of limit to impose on moderators"]
     limit_type: crate::modules::limits::core::UserLimitTypesChoices,
-    #[description = "The amount of times the limit can be hit"]
-    limit_per: i32,
-    #[description = "The time interval infractions are counted in"]
-    limit_time: i64,
+    #[description = "The amount of times the limit can be hit"] limit_per: i32,
+    #[description = "The time interval infractions are counted in"] limit_time: i64,
     #[description = "The time unit for the time interval [seconds/minutes/hours/days]"]
     limit_time_unit: crate::impls::utils::Unit,
     #[description = "The action to take when the limit is hit"]
@@ -40,7 +38,7 @@ pub async fn limits_add(
     let guild_id = ctx.guild_id().ok_or("Could not get guild id")?;
 
     // Add limit to db
-    sqlx::query!(
+    let limit = sqlx::query!(
         "
             INSERT INTO limits__guild_limits (
                 guild_id,
@@ -58,6 +56,7 @@ pub async fn limits_add(
                 $5,
                 make_interval(secs => $6)
             )
+            RETURNING limit_id
         ",
         guild_id.to_string(),
         limit_name,
@@ -66,21 +65,25 @@ pub async fn limits_add(
         limit_per,
         (limit_time * limit_time_unit.to_seconds()) as f64
     )
-    .execute(&ctx.data().pool)
+    .fetch_one(&ctx.data().pool)
     .await?;
 
-    // Add to cache
-    let new_gc = super::cache::GuildCache::from_guild(
-        &ctx.data().pool,
-        guild_id,
-    )
-    .await?;
+    let limit_id = limit.limit_id;
 
-    super::cache::GUILD_CACHE.insert(
-        guild_id,
-        new_gc,
-    );
-
+    let _ = &ctx
+        .data()
+        .surreal_cache
+        .create::<Vec<Limit>>("guild_limits")
+        .content(Limit {
+            limit_id,
+            guild_id,
+            limit_name,
+            limit_type,
+            limit_action,
+            limit_per,
+            limit_time: (limit_time * limit_time_unit.to_seconds()),
+        })
+        .await?;
     ctx.say("Added limit successfully").await?;
 
     Ok(())
@@ -89,7 +92,8 @@ pub async fn limits_add(
 /// View the limits setup for this server
 #[poise::command(prefix_command, slash_command, guild_only, rename = "view")]
 pub async fn limits_view(ctx: Context<'_>) -> Result<(), Error> {
-    let limits = crate::modules::limits::core::Limit::from_guild(
+    let limits = Limit::fetch(
+        &ctx.data().surreal_cache,
         &ctx.data().pool,
         ctx.guild_id().ok_or("Could not get guild id")?,
     )
@@ -124,7 +128,7 @@ pub async fn limits_view(ctx: Context<'_>) -> Result<(), Error> {
                 "If over {amount} ``{cond}`` triggered between {time} interval: ``{then}`` [{id}]",
                 amount = limit.limit_per,
                 cond = limit.limit_type.to_cond(),
-                time = crate::impls::utils::parse_pg_interval(limit.limit_time),
+                time = parse_pg_interval(secs_to_pg_interval(limit.limit_time)),
                 then = limit.limit_action.to_cond(),
                 id = limit.limit_id
             ),
@@ -180,13 +184,22 @@ pub async fn limits_remove(
     .execute(&ctx.data().pool)
     .await?;
 
+    let _ = &ctx.data().surreal_cache.query("delete guild_limits where guild_id=type::string($guild_id) and limit_id=type::string($limit_id) return none")
+        .bind(("guild_id", ctx.guild_id().ok_or("Could not get guild id")?.to_string()))
+        .bind(("limit_id", limit_id))
+        .await?;
     ctx.say("Removed limit successfully").await?;
 
     Ok(())
 }
 
 /// Action management
-#[poise::command(prefix_command, slash_command, guild_only, subcommands("limitactions_view"))]
+#[poise::command(
+    prefix_command,
+    slash_command,
+    guild_only,
+    subcommands("limitactions_view")
+)]
 pub async fn limitactions(_ctx: Context<'_>) -> Result<(), Error> {
     Ok(())
 }
@@ -225,7 +238,8 @@ pub async fn limitactions_view(
         // Create a attachment
         let attachment = CreateAttachment::bytes(actions.into_bytes(), "actions.json");
 
-        ctx.send(CreateReply::default().attachment(attachment)).await?;
+        ctx.send(CreateReply::default().attachment(attachment))
+            .await?;
 
         return Ok(());
     }
@@ -255,7 +269,7 @@ pub async fn limitactions_view(
                 limit_type = action.limit_type,
                 action_data = serde_json::to_string(&action.action_data).map_err(|_| "Could not serialize action_data")?,
                 user_id = action.user_id.mention().to_string() + " (" + &action.user_id.to_string() + ")",
-                target = action.target, 
+                target = action.target,
                 timestamp = action.created_at.timestamp(),
                 id = action_id,
                 limits_hit = action.limits_hit
@@ -266,7 +280,7 @@ pub async fn limitactions_view(
 
     let reply = CreateReply {
         embeds,
-        ..Default::default()    
+        ..Default::default()
     };
 
     ctx.send(reply).await?;
@@ -276,13 +290,12 @@ pub async fn limitactions_view(
 
 /// View hit limits
 #[poise::command(prefix_command, slash_command, guild_only, rename = "hit")]
-pub async fn limits_hit(
-    ctx: Context<'_>,
-) -> Result<(), Error> {
+pub async fn limits_hit(ctx: Context<'_>) -> Result<(), Error> {
     let hit_limits = crate::modules::limits::core::PastHitLimits::guild(
         &ctx.data().pool,
         ctx.guild_id().ok_or("Could not get guild id")?,
-    ).await?;        
+    )
+    .await?;
 
     if hit_limits.is_empty() {
         ctx.say("No hit limits recorded").await?;
@@ -290,12 +303,14 @@ pub async fn limits_hit(
     }
 
     if hit_limits.len() > 64 {
-        let hit_limits = serde_json::to_string(&hit_limits).map_err(|_| "Could not serialize hit_limits")?;
+        let hit_limits =
+            serde_json::to_string(&hit_limits).map_err(|_| "Could not serialize hit_limits")?;
 
         // Create a attachment
         let attachment = CreateAttachment::bytes(hit_limits.into_bytes(), "hit_limits.json");
 
-        ctx.send(CreateReply::default().attachment(attachment)).await?;
+        ctx.send(CreateReply::default().attachment(attachment))
+            .await?;
 
         return Ok(());
     }
@@ -314,7 +329,11 @@ pub async fn limits_hit(
         }
 
         if embeds.len() <= i {
-            embeds.push(CreateEmbed::default().title("Past Limits History").color(0x00ff00));
+            embeds.push(
+                CreateEmbed::default()
+                    .title("Past Limits History")
+                    .color(0x00ff00),
+            );
         }
 
         let mut notes = String::new();
@@ -360,7 +379,6 @@ pub async fn limits_hit(
     };
 
     ctx.send(reply).await?;
-
 
     Ok(())
 }

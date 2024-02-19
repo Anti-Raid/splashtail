@@ -18,7 +18,13 @@ pub async fn eventmod(_ctx: Context<'_>) -> Result<(), Error> {
 }
 
 /// Creates a event modifier on a webhook
-#[poise::command(slash_command, prefix_command, guild_only, guild_cooldown = 60, required_permissions = "MANAGE_GUILD")]
+#[poise::command(
+    slash_command,
+    prefix_command,
+    guild_only,
+    guild_cooldown = 60,
+    required_permissions = "MANAGE_GUILD"
+)]
 #[allow(clippy::too_many_arguments)]
 pub async fn create(
     ctx: Context<'_>,
@@ -28,7 +34,9 @@ pub async fn create(
     #[description = "Whitelist the events. Other events will not be allowed"] whitelisted: bool,
     #[description = "Priority. Use 0 for normal priority"] priority: Option<i32>,
     // Lazy = "prefer to parse the current argument as the other params first"
-    #[description = "Repository ID, will match all if unset"] #[lazy] repo_id: Option<String>,
+    #[description = "Repository ID, will match all if unset"]
+    #[lazy]
+    repo_id: Option<String>,
     #[description = "Redirect channel ID"] redirect_channel: Option<ChannelId>,
 ) -> Result<(), Error> {
     let data = ctx.data();
@@ -40,7 +48,7 @@ pub async fn create(
     )
     .fetch_one(&data.pool)
     .await?;
-    
+
     if guild.count.unwrap_or_default() == 0 {
         // If it doesn't, return a error
         return Err("You don't have any webhooks in this guild! Use ``/newhook`` (or ``git!newhook``) to create one".into());
@@ -69,7 +77,10 @@ pub async fn create(
         .await?;
 
         if webhook.count.unwrap_or_default() == 0 {
-            return Err("That webhook doesn't exist! Use ``/newhook`` (or ``git!newhook``) to create one".into());
+            return Err(
+                "That webhook doesn't exist! Use ``/newhook`` (or ``git!newhook``) to create one"
+                    .into(),
+            );
         }
 
         let mut parsed_repo_id = repo_id.clone(); // Since prefix commands suck without this
@@ -93,7 +104,13 @@ pub async fn create(
             }
         }
 
-        let events = events.replace('`', "").replace(',', " ").replace("  ", " ").split(' ').map(|s| s.to_string()).collect::<Vec<String>>();
+        let events = events
+            .replace('`', "")
+            .replace(',', " ")
+            .replace("  ", " ")
+            .split(' ')
+            .map(|s| s.to_string())
+            .collect::<Vec<String>>();
 
         // Check the number of modifiers we already have
         let modifier_count = sqlx::query!(
@@ -126,14 +143,21 @@ pub async fn create(
         .execute(&data.pool)
         .await?;
 
-        ctx.say(format!("Modifier created with ID ``{}``.", modifier_id)).await?;
+        ctx.say(format!("Modifier created with ID ``{}``.", modifier_id))
+            .await?;
 
         Ok(())
     }
 }
 
 /// Deletes a event modifier by id
-#[poise::command(slash_command, prefix_command, guild_only, guild_cooldown = 60, required_permissions = "MANAGE_GUILD")]
+#[poise::command(
+    slash_command,
+    prefix_command,
+    guild_only,
+    guild_cooldown = 60,
+    required_permissions = "MANAGE_GUILD"
+)]
 pub async fn delete(
     ctx: Context<'_>,
     #[description = "The modifier ID"] modifier_id: String,
@@ -147,7 +171,7 @@ pub async fn delete(
     )
     .fetch_one(&data.pool)
     .await?;
-    
+
     if guild.count.unwrap_or_default() == 0 {
         // If it doesn't, return a error
         return Err("You don't have any webhooks in this guild! Use ``/gitlogs newhook`` (or ``%gitlogs newhook``) to create one".into());

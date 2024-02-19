@@ -1,19 +1,22 @@
-mod impls;
-mod silverpelt;
 mod config;
-mod tasks;
-mod modules;
+mod impls;
 mod ipc;
 mod jobserver;
+mod modules;
+mod silverpelt;
+mod tasks;
 
 use std::sync::Arc;
 
 use log::{error, info};
+use object_store::ObjectStore;
 use poise::serenity_prelude::FullEvent;
 use poise::CreateReply;
 use sqlx::postgres::PgPoolOptions;
 use std::io::Write;
-use object_store::ObjectStore;
+use surrealdb::engine::remote::ws::{Client, Ws};
+use surrealdb::opt::auth::Root;
+use surrealdb::Surreal;
 
 type Error = Box<dyn std::error::Error + Send + Sync>;
 type Context<'a> = poise::Context<'a, Data, Error>;
@@ -25,6 +28,7 @@ pub struct Data {
     pub object_store: Arc<Box<dyn ObjectStore>>,
     pub animus_magic_ipc: Arc<ipc::animus_magic::client::AnimusMagicClient>,
     pub shards_ready: Arc<dashmap::DashMap<u16, bool>>,
+    pub surreal_cache: Surreal<Client>,
 }
 
 async fn on_error(error: poise::FrameworkError<'_, Data, Error>) {
@@ -69,20 +73,25 @@ async fn on_error(error: poise::FrameworkError<'_, Data, Error>) {
     }
 }
 
-async fn event_listener<'a>(ctx: poise::FrameworkContext<'a, Data, Error>, event: &FullEvent) -> Result<(), Error> {
+async fn event_listener<'a>(
+    ctx: poise::FrameworkContext<'a, Data, Error>,
+    event: &FullEvent,
+) -> Result<(), Error> {
     let user_data = ctx.serenity_context.data::<Data>();
     match event {
-        FullEvent::InteractionCreate {
-            interaction,
-        } => {
+        FullEvent::InteractionCreate { interaction } => {
             info!("Interaction received: {:?}", interaction.id());
 
             let ic = match interaction {
                 serenity::all::Interaction::Command(ic) => ic,
                 _ => return Ok(()),
             };
-                 
-            if !config::CONFIG.discord_auth.can_use_bot.contains(&ic.user.id) {
+
+            if !config::CONFIG
+                .discord_auth
+                .can_use_bot
+                .contains(&ic.user.id)
+            {
                 let primary = poise::serenity_prelude::CreateEmbed::default()
                     .color(0xff0000)
                     .title("AntiRaid")
@@ -97,7 +106,7 @@ async fn event_listener<'a>(ctx: poise::FrameworkContext<'a, Data, Error>, event
                     .color(0x0000ff)
                     .title("Updates")
                     .description(changes.join("\t-"));
-    
+
                 let statistics = poise::serenity_prelude::CreateEmbed::default()
                     .color(0xff0000)
                     .description(format!(
@@ -109,11 +118,9 @@ async fn event_listener<'a>(ctx: poise::FrameworkContext<'a, Data, Error>, event
                         ipc::argparse::MEWLD_ARGS.cluster_name,
                         {
                             let duration: std::time::Duration = std::time::Duration::from_secs((chrono::Utc::now().timestamp() - crate::config::CONFIG.bot_start_time) as u64);
-        
                             let seconds = duration.as_secs() % 60;
                             let minutes = (duration.as_secs() / 60) % 60;
                             let hours = (duration.as_secs() / 60) / 60;
-        
                             format!("{}h{}m{}s", hours, minutes, seconds)
                         }
                     ));
@@ -122,22 +129,23 @@ async fn event_listener<'a>(ctx: poise::FrameworkContext<'a, Data, Error>, event
                     &ctx.serenity_context,
                     serenity::all::CreateInteractionResponse::Message(
                         serenity::all::CreateInteractionResponseMessage::default()
-                        .flags(serenity::all::InteractionResponseFlags::EPHEMERAL)
-                        .content(&config::CONFIG.meta.support_server)
-                        .add_embed(primary)
-                        .add_embed(updates)
-                        .add_embed(statistics)
-                    )
+                            .flags(serenity::all::InteractionResponseFlags::EPHEMERAL)
+                            .content(&config::CONFIG.meta.support_server)
+                            .add_embed(primary)
+                            .add_embed(updates)
+                            .add_embed(statistics),
+                    ),
                 )
                 .await
                 .map_err(|e| format!("Error sending reply: {}", e))?;
             }
         }
-        FullEvent::Ready {
-            data_about_bot,
-        } => {
-            info!("{} is ready on shard {}", data_about_bot.user.name, ctx.serenity_context.shard_id);
-            
+        FullEvent::Ready { data_about_bot } => {
+            info!(
+                "{} is ready on shard {}",
+                data_about_bot.user.name, ctx.serenity_context.shard_id
+            );
+
             tokio::task::spawn(crate::tasks::taskcat::start_all_tasks(
                 user_data.pool.clone(),
                 crate::impls::cache::CacheHttpImpl {
@@ -147,23 +155,33 @@ async fn event_listener<'a>(ctx: poise::FrameworkContext<'a, Data, Error>, event
                 ctx.serenity_context.clone(),
             ));
 
-            if ctx.serenity_context.shard_id.0 == *crate::ipc::argparse::MEWLD_ARGS.shards.last().unwrap() {
+            if ctx.serenity_context.shard_id.0
+                == *crate::ipc::argparse::MEWLD_ARGS.shards.last().unwrap()
+            {
                 info!("All shards ready, launching next cluster");
                 if let Err(e) = user_data.mewld_ipc.publish_ipc_launch_next().await {
                     error!("Error publishing IPC launch next: {}", e);
                     return Err(e);
                 }
 
-                user_data.shards_ready.insert(ctx.serenity_context.shard_id.0, true);
+                user_data
+                    .shards_ready
+                    .insert(ctx.serenity_context.shard_id.0, true);
 
-                info!("Published IPC launch next to channel {}", crate::ipc::argparse::MEWLD_ARGS.mewld_redis_channel);
+                info!(
+                    "Published IPC launch next to channel {}",
+                    crate::ipc::argparse::MEWLD_ARGS.mewld_redis_channel
+                );
             }
         }
         _ => {}
     }
 
     // Add all event listeners for key modules here
-    for (module, evts) in silverpelt::SILVERPELT_CACHE.module_event_listeners_cache.iter() {
+    for (module, evts) in silverpelt::SILVERPELT_CACHE
+        .module_event_listeners_cache
+        .iter()
+    {
         log::debug!("Executing event handlers for {}", module);
         for evth in evts.iter() {
             if let Err(e) = evth(ctx.serenity_context, event).await {
@@ -192,8 +210,18 @@ async fn main() {
     let mut env_builder = env_logger::builder();
 
     env_builder
-    .format(move |buf, record| writeln!(buf, "[{} ({} of {})] {} - {}", cluster_name, cluster_id, cluster_count-1, record.level(), record.args()))
-    .filter(Some("botv2"), log::LevelFilter::Info);
+        .format(move |buf, record| {
+            writeln!(
+                buf,
+                "[{} ({} of {})] {} - {}",
+                cluster_name,
+                cluster_id,
+                cluster_count - 1,
+                record.level(),
+                record.args()
+            )
+        })
+        .filter(Some("botv2"), log::LevelFilter::Info);
 
     if debug_mode {
         env_builder.filter(None, log::LevelFilter::Debug);
@@ -222,10 +250,7 @@ async fn main() {
     intents.remove(serenity::all::GatewayIntents::DIRECT_MESSAGE_TYPING); // Don't care about typing
     intents.remove(serenity::all::GatewayIntents::DIRECT_MESSAGES); // Don't care about DMs
 
-    let client_builder = serenity::all::ClientBuilder::new_with_http(
-        http,
-        intents,
-    );
+    let client_builder = serenity::all::ClientBuilder::new_with_http(http, intents);
 
     let framework_opts = poise::FrameworkOptions {
         initialize_owners: true,
@@ -240,7 +265,7 @@ async fn main() {
             for module in modules::modules() {
                 for cmd in module.commands {
                     let mut cmd = cmd.0;
-                    cmd.category = Some(module.id.to_string()); 
+                    cmd.category = Some(module.id.to_string());
                     cmds.push(cmd);
                 }
             }
@@ -249,10 +274,14 @@ async fn main() {
         },
         command_check: Some(|ctx| {
             Box::pin(async move {
-                if !config::CONFIG.discord_auth.can_use_bot.contains(&ctx.author().id) {
+                if !config::CONFIG
+                    .discord_auth
+                    .can_use_bot
+                    .contains(&ctx.author().id)
+                {
                     // We already send in the event handler
-                    if let poise::Context::Application(_) = ctx { 
-                        return Ok(false) 
+                    if let poise::Context::Application(_) = ctx {
+                        return Ok(false);
                     }
 
                     let data = ctx.data();
@@ -284,39 +313,49 @@ async fn main() {
                             ipc::argparse::MEWLD_ARGS.cluster_name,
                             {
                                 let duration: std::time::Duration = std::time::Duration::from_secs((chrono::Utc::now().timestamp() - crate::config::CONFIG.bot_start_time) as u64);
-            
                                 let seconds = duration.as_secs() % 60;
                                 let minutes = (duration.as_secs() / 60) % 60;
                                 let hours = (duration.as_secs() / 60) / 60;
-            
                                 format!("{}h{}m{}s", hours, minutes, seconds)
                             }
                         ));
-
                     ctx.send(
                         CreateReply::default()
-                        .content(&config::CONFIG.meta.support_server)
-                        .embed(primary)
-                        .embed(updates)
-                        .embed(statistics)
+                            .content(&config::CONFIG.meta.support_server)
+                            .embed(primary)
+                            .embed(updates)
+                            .embed(statistics),
                     )
                     .await
                     .map_err(|e| format!("Error sending reply: {}", e))?;
 
-                    return Ok(false)
+                    return Ok(false);
                 }
 
                 let command = ctx.command();
 
                 // Check COMMAND_ID_MODULE_MAP
-                if !silverpelt::SILVERPELT_CACHE.command_id_module_map.contains_key(&command.name) {
-                    return Err("This command is not registered in the database, please contact support".into());
+                if !silverpelt::SILVERPELT_CACHE
+                    .command_id_module_map
+                    .contains_key(&command.name)
+                {
+                    return Err(
+                        "This command is not registered in the database, please contact support"
+                            .into(),
+                    );
                 }
 
-                let module = silverpelt::SILVERPELT_CACHE.command_id_module_map.get(&command.name).unwrap();
+                let module = silverpelt::SILVERPELT_CACHE
+                    .command_id_module_map
+                    .get(&command.name)
+                    .unwrap();
 
                 if module == "root" {
-                    if !crate::config::CONFIG.discord_auth.can_use_bot.contains(&ctx.author().id) {
+                    if !crate::config::CONFIG
+                        .discord_auth
+                        .can_use_bot
+                        .contains(&ctx.author().id)
+                    {
                         return Err("Root commands are off-limits unless you are a bot owner or otherwise have been granted authorization!".into());
                     }
                     return Ok(true);
@@ -339,15 +378,15 @@ async fn main() {
 
                     if guild.count.unwrap_or_default() == 0 {
                         // Guild not found, create it
-                        sqlx::query!(
-                            "INSERT INTO guilds (id) VALUES ($1)", 
-                            guild_id.to_string()
-                        )
-                        .execute(&data.pool)
-                        .await?;
+                        sqlx::query!("INSERT INTO guilds (id) VALUES ($1)", guild_id.to_string())
+                            .execute(&data.pool)
+                            .await?;
                     }
 
-                    let key = silverpelt::SILVERPELT_CACHE.command_permission_cache.get(&(guild_id, ctx.author().id)).await;
+                    let key = silverpelt::SILVERPELT_CACHE
+                        .command_permission_cache
+                        .get(&(guild_id, ctx.author().id))
+                        .await;
 
                     if let Some(ref map) = key {
                         let cpr = map.get(&ctx.command().qualified_name);
@@ -355,7 +394,9 @@ async fn main() {
                         if let Some(cpr) = cpr {
                             match cpr {
                                 silverpelt::CachedPermResult::Ok => return Ok(true),
-                                silverpelt::CachedPermResult::Err(e) => return Err(e.to_string().into()),
+                                silverpelt::CachedPermResult::Err(e) => {
+                                    return Err(e.to_string().into())
+                                }
                             }
                         }
                     }
@@ -364,7 +405,13 @@ async fn main() {
                         return Err("You must be in a server to run this command".into());
                     };
 
-                    let (cmd_data, command_config, module_config) = silverpelt::get_command_configuration(&data.pool, guild_id.to_string().as_str(), ctx.command().qualified_name.as_str()).await?;
+                    let (cmd_data, command_config, module_config) =
+                        silverpelt::get_command_configuration(
+                            &data.pool,
+                            guild_id.to_string().as_str(),
+                            ctx.command().qualified_name.as_str(),
+                        )
+                        .await?;
 
                     let command_config = command_config.unwrap_or_default();
                     let module_config = {
@@ -392,7 +439,7 @@ async fn main() {
                     };
 
                     if is_owner {
-                        return Ok(true)
+                        return Ok(true);
                     }
 
                     // Get kittycat perms of member (if they have any)
@@ -408,7 +455,13 @@ async fn main() {
                         }
                     };
 
-                    info!("Checking if user {} ({}) can run command {} with permissions {:?}", member.user.name, member.user.id, ctx.command().qualified_name, member_perms);
+                    info!(
+                        "Checking if user {} ({}) can run command {} with permissions {:?}",
+                        member.user.name,
+                        member.user.id,
+                        ctx.command().qualified_name,
+                        member_perms
+                    );
                     if let Err(e) = silverpelt::permissions::can_run_command(
                         &cmd_data,
                         &command_config,
@@ -417,22 +470,28 @@ async fn main() {
                         member_perms,
                         &kittycat_perms,
                     ) {
-                        return Err(
-                            format!(
-                                "{}\n**Code**: {}",
-                                e.1,
-                                e.0
-                            ).into()
-                        );
+                        return Err(format!("{}\n**Code**: {}", e.1, e.0).into());
                     }
 
-                    let mut key = silverpelt::SILVERPELT_CACHE.command_permission_cache.get(&(guild_id, ctx.author().id)).await;
+                    let mut key = silverpelt::SILVERPELT_CACHE
+                        .command_permission_cache
+                        .get(&(guild_id, ctx.author().id))
+                        .await;
                     if let Some(ref mut map) = key {
-                        map.insert(ctx.command().qualified_name.clone(), silverpelt::CachedPermResult::Ok);
+                        map.insert(
+                            ctx.command().qualified_name.clone(),
+                            silverpelt::CachedPermResult::Ok,
+                        );
                     } else {
                         let mut map = indexmap::IndexMap::new();
-                        map.insert(ctx.command().qualified_name.clone(), silverpelt::CachedPermResult::Ok);
-                        silverpelt::SILVERPELT_CACHE.command_permission_cache.insert((guild_id, ctx.author().id), map).await;
+                        map.insert(
+                            ctx.command().qualified_name.clone(),
+                            silverpelt::CachedPermResult::Ok,
+                        );
+                        silverpelt::SILVERPELT_CACHE
+                            .command_permission_cache
+                            .insert((guild_id, ctx.author().id), map)
+                            .await;
                     }
 
                     Ok(true)
@@ -466,7 +525,7 @@ async fn main() {
     };
 
     let framework = poise::Framework::builder()
-    .setup(move |ctx, _ready, framework| {
+        .setup(move |ctx, _ready, framework| {
             Box::pin(async move {
                 let data = ctx.data::<Data>();
                 let ipc_ref = data.mewld_ipc.clone();
@@ -474,10 +533,7 @@ async fn main() {
                 let sm = framework.shard_manager().clone();
                 tokio::task::spawn(async move {
                     let ipc_ref = ipc_ref;
-                    ipc_ref.start_ipc_listener(
-                        &ch,
-                        &sm,
-                    ).await;
+                    ipc_ref.start_ipc_listener(&ch, &sm).await;
                 });
 
                 // And for animus magic
@@ -486,43 +542,60 @@ async fn main() {
                 let am_ref = data.animus_magic_ipc.clone();
                 tokio::task::spawn(async move {
                     let am_ref = am_ref;
-                    am_ref.start_ipc_listener(
-                        ch,
-                        sm,
-                    ).await;
+                    am_ref.start_ipc_listener(ch, sm).await;
                 });
 
                 Ok(())
             })
-        }
-    )
-    .options(framework_opts)
-    .build();
+        })
+        .options(framework_opts)
+        .build();
 
     let pool = fred::prelude::Builder::from_config(
-        fred::prelude::RedisConfig::from_url(&config::CONFIG.meta.bot_redis_url).expect("Could not initialize Redis config")
+        fred::prelude::RedisConfig::from_url(&config::CONFIG.meta.bot_redis_url)
+            .expect("Could not initialize Redis config"),
     )
     .build_pool(REDIS_MAX_CONNECTIONS.try_into().unwrap())
     .expect("Could not initialize Redis pool");
+
+    let cache_config = config::CONFIG.cache.clone();
+    let cache_client = Surreal::new::<Ws>(cache_config.url)
+        .await
+        .expect("Couldnt initialize cache");
+    let _ = cache_client
+        .signin(Root {
+            username: cache_config.username.as_str(),
+            password: cache_config.password.as_str(),
+        })
+        .await;
+    cache_client
+        .use_ns("kakarot")
+        .use_db("splashtail")
+        .await
+        .expect("Couldnt use namespace and database");
 
     let data = Data {
         mewld_ipc: Arc::new(ipc::mewld::MewldIpcClient {
             redis_pool: pool.clone(),
             cache: Arc::new(ipc::mewld::MewldIpcCache::default()),
         }),
-        animus_magic_ipc: Arc::new(
-            ipc::animus_magic::client::AnimusMagicClient {
-                redis_pool: pool.clone(),
-                rx_map: Arc::new(dashmap::DashMap::new()),
-            }
+        animus_magic_ipc: Arc::new(ipc::animus_magic::client::AnimusMagicClient {
+            redis_pool: pool.clone(),
+            rx_map: Arc::new(dashmap::DashMap::new()),
+        }),
+        object_store: Arc::new(
+            config::CONFIG
+                .object_storage
+                .build()
+                .expect("Could not initialize object store"),
         ),
-        object_store: Arc::new(config::CONFIG.object_storage.build().expect("Could not initialize object store")),
         pool: PgPoolOptions::new()
             .max_connections(POSTGRES_MAX_CONNECTIONS)
             .connect(&config::CONFIG.meta.postgres_url)
             .await
             .expect("Could not initialize connection"),
         shards_ready: Arc::new(dashmap::DashMap::new()),
+        surreal_cache: cache_client,
     };
 
     info!("Initializing bot state");

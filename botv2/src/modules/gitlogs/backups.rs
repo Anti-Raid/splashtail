@@ -1,5 +1,8 @@
-use poise::{CreateReply, serenity_prelude::{CreateAttachment, Attachment}};
-use serde::{Serialize, Deserialize};
+use poise::{
+    serenity_prelude::{Attachment, CreateAttachment},
+    CreateReply,
+};
+use serde::{Deserialize, Serialize};
 
 use crate::{Context, Error};
 
@@ -50,7 +53,7 @@ pub async fn backup(
     )
     .fetch_one(&data.pool)
     .await?;
-    
+
     if guild.count.unwrap_or_default() == 0 {
         // If it doesn't, return a error
         return Err("You don't have any webhooks in this guild! Use ``/gitlogs newhook`` (or ``%gitlogs newhook``) to create one".into());
@@ -115,10 +118,8 @@ pub async fn backup(
     })?;
 
     let msg = CreateReply::default()
-    .content("Here's your backup file!")
-    .attachment(
-        CreateAttachment::bytes(json.into_bytes(), id + ".glb")
-    );
+        .content("Here's your backup file!")
+        .attachment(CreateAttachment::bytes(json.into_bytes(), id + ".glb"));
 
     ctx.send(msg).await?;
 
@@ -141,7 +142,7 @@ pub async fn restore(
     )
     .fetch_one(&data.pool)
     .await?;
-    
+
     if guild.count.unwrap_or_default() == 0 {
         // If it doesn't, return a error
         return Err("You don't have any webhooks in this guild! Use ``/gitlogs newhook`` (or ``%gitlogs newhook``) to create one".into());
@@ -165,15 +166,18 @@ pub async fn restore(
     let backup_protocol: ProtocolCheck = serde_json::from_slice(&backup_bytes)?;
 
     if backup_protocol.protocol.unwrap_or_default() != PROTOCOL {
-        return Err(
-            format!("This backup file is not compatible with this version of the bot. 
+        return Err(format!(
+            "This backup file is not compatible with this version of the bot. 
 
 Protocol version expected: {},
 Protocol version found: {}                
 
 Please contact our support team.
-            ", PROTOCOL, backup_protocol.protocol.unwrap_or_default()).into()
-        );
+            ",
+            PROTOCOL,
+            backup_protocol.protocol.unwrap_or_default()
+        )
+        .into());
     }
 
     let backup: Backup = serde_json::from_slice(&backup_bytes)?;
@@ -224,11 +228,12 @@ Please contact our support team.
     }
 
     // Restore event modifiers
-    status.edit(
-        ctx,
-        CreateReply::default()
-        .content("Restoring event modifiers [2/2]...")
-    ).await?;
+    status
+        .edit(
+            ctx,
+            CreateReply::default().content("Restoring event modifiers [2/2]..."),
+        )
+        .await?;
 
     let mut inserted_modifiers = 0;
     let mut updated_modifiers = 0;
@@ -281,25 +286,25 @@ Please contact our support team.
         }
     }
 
-    status.edit(
-        ctx,
-        CreateReply::default()
-        .content(
-            format!(r#"
+    status
+        .edit(
+            ctx,
+            CreateReply::default().content(format!(
+                r#"
 **Summary**
 
 - **Inserted repos:** {inserted_repos}
 - **Updated repos:** {updated_repos}
 - **Inserted event modifiers:** {inserted_modifiers}
 - **Updated event modifiers:** {updated_modifiers}
-"#, 
-                inserted_repos = inserted_repos, 
+"#,
+                inserted_repos = inserted_repos,
                 updated_repos = updated_repos,
                 inserted_modifiers = inserted_modifiers,
                 updated_modifiers = updated_modifiers
-            )
-        )    
-    ).await?;
+            )),
+        )
+        .await?;
 
     Ok(())
 }

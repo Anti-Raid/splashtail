@@ -41,7 +41,9 @@ async fn _embed_help(
         let cat_name = {
             if let Some(cat_name) = category_id {
                 // Get the module from the name
-                let cat_module = crate::silverpelt::SILVERPELT_CACHE.module_id_cache.get(&cat_name);
+                let cat_module = crate::silverpelt::SILVERPELT_CACHE
+                    .module_id_cache
+                    .get(&cat_name);
 
                 if let Some(cat_module) = cat_module {
                     cat_module.name.to_string()
@@ -157,7 +159,9 @@ fn _create_select_menu(data: &[EmbedHelp], index: usize) -> serenity::builder::C
 
     serenity::builder::CreateSelectMenu::new(
         "hnav:selectmenu",
-        serenity::builder::CreateSelectMenuKind::String { options: options.into() },
+        serenity::builder::CreateSelectMenuKind::String {
+            options: options.into(),
+        },
     )
     .custom_id("hnav:selectmenu")
 }
@@ -238,7 +242,9 @@ async fn _help_send_index(
                         .edit_response(
                             http,
                             _create_reply(data, l_data, index, prev_disabled, next_disabled)
-                                .to_slash_initial_response_edit(poise::serenity_prelude::EditInteractionResponse::new()),
+                                .to_slash_initial_response_edit(
+                                    poise::serenity_prelude::EditInteractionResponse::new(),
+                                ),
                         )
                         .await?;
                 }

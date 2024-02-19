@@ -10,9 +10,10 @@ pub fn module() -> crate::silverpelt::Module {
         web_hidden: true,
         is_default_enabled: true,
         // These commands do not follow the typical permission system anyways
-        commands: vec![
-            (cmds::register(), crate::silverpelt::CommandExtendedData::none()),
-        ],
+        commands: vec![(
+            cmds::register(),
+            crate::silverpelt::CommandExtendedData::none(),
+        )],
         event_handlers: vec![], // Root has no event listeners
     }
 }

@@ -52,11 +52,18 @@ type Config struct {
 	Meta               Meta                `yaml:"meta" validate:"required"`
 	ObjectStorage      ObjectStorageConfig `yaml:"object_storage" validate:"required"`
 	SimpleGatewayProxy SimpleGatewayProxy  `yaml:"simple_gateway_proxy" validate:"required"`
+    Cache           Cache               `yaml:"cache" validate:"required"`
 }
 
 type SimpleGatewayProxy struct {
 	Port int    `yaml:"port" default:"3220" comment:"Port to run the proxy on" validate:"required"`
 	Url  string `yaml:"url" default:"http://localhost:3220" comment:"Url proxy is accessible on" validate:"required"`
+}
+
+type Cache Struct struct {
+    Url string `yaml:"url" comment: "Surreal Cache Url" validate:"required"`
+    Username string `yaml:"username" comment: "Surreal Cache Username" validate:"required"`
+    Password string `yaml:"password" comment: "Surreal Cache Password" validate:"required"`
 }
 
 type DiscordAuth struct {

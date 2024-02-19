@@ -11,7 +11,7 @@ static TASK_MUTEX: Lazy<Mutex<i32>> = Lazy::new(|| Mutex::new(0));
 #[derive(EnumIter, Display)]
 #[strum(serialize_all = "snake_case")]
 pub enum Task {
-    UpdateStatus
+    UpdateStatus,
 }
 
 impl Task {
@@ -44,7 +44,9 @@ impl Task {
         ctx: &serenity::client::Context,
     ) -> Result<(), crate::Error> {
         match self {
-            Task::UpdateStatus => crate::tasks::update_status::update_status(pool, cache_http, ctx).await,
+            Task::UpdateStatus => {
+                crate::tasks::update_status::update_status(pool, cache_http, ctx).await
+            }
         }
     }
 }

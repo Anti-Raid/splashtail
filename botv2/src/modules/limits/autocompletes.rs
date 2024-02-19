@@ -1,3 +1,4 @@
+use crate::modules::limits::core::Limit;
 use crate::Context;
 
 pub async fn limits_autocomplete<'a>(
@@ -15,14 +16,17 @@ pub async fn limits_autocomplete<'a>(
 
     let guild_id = guild_id.unwrap();
 
-    let limits = crate::modules::limits::core::Limit::from_guild(&data.pool, guild_id).await;
+    let limits = Limit::fetch(&data.surreal_cache, &data.pool, guild_id).await;
 
     if let Ok(limits) = limits {
         let mut choices = Vec::new();
 
         for limit in limits {
             if limit.limit_name.starts_with(partial) {
-                choices.push(serenity::all::AutocompleteChoice::new(limit.limit_name, limit.limit_id));
+                choices.push(serenity::all::AutocompleteChoice::new(
+                    limit.limit_name,
+                    limit.limit_id,
+                ));
             }
         }
 

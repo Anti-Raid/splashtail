@@ -18,7 +18,11 @@ pub async fn stats(ctx: Context<'_>) -> Result<(), Error> {
     let msg = CreateReply::default().embed(
         CreateEmbed::default()
             .title("Bot Stats")
-            .field("Bot name", ctx.serenity_context().cache.current_user().name.to_string(), true)
+            .field(
+                "Bot name",
+                ctx.serenity_context().cache.current_user().name.to_string(),
+                true,
+            )
             .field("Bot version", VERSION, true)
             .field("rustc", RUSTC_VERSION, true)
             .field(
@@ -27,24 +31,41 @@ pub async fn stats(ctx: Context<'_>) -> Result<(), Error> {
                 true,
             )
             .field(
-                "Uptime", {
-                    let duration: std::time::Duration = std::time::Duration::from_secs((chrono::Utc::now().timestamp() - crate::config::CONFIG.bot_start_time) as u64);
+                "Uptime",
+                {
+                    let duration: std::time::Duration = std::time::Duration::from_secs(
+                        (chrono::Utc::now().timestamp() - crate::config::CONFIG.bot_start_time)
+                            as u64,
+                    );
 
                     let seconds = duration.as_secs() % 60;
                     let minutes = (duration.as_secs() / 60) % 60;
                     let hours = (duration.as_secs() / 60) / 60;
 
                     format!("{}h{}m{}s", hours, minutes, seconds)
-                }, 
-            true)
-            .field("Cluster", format!(
-                "{} ({} of {})", 
-                crate::ipc::argparse::MEWLD_ARGS.cluster_name, 
-                crate::ipc::argparse::MEWLD_ARGS.cluster_id,
-                crate::ipc::argparse::MEWLD_ARGS.cluster_count,
-            ), true)
-            .field("Servers", ctx.data().mewld_ipc.cache.total_guilds().to_string(), true)
-            .field("Users", ctx.data().mewld_ipc.cache.total_users().to_string(), true)
+                },
+                true,
+            )
+            .field(
+                "Cluster",
+                format!(
+                    "{} ({} of {})",
+                    crate::ipc::argparse::MEWLD_ARGS.cluster_name,
+                    crate::ipc::argparse::MEWLD_ARGS.cluster_id,
+                    crate::ipc::argparse::MEWLD_ARGS.cluster_count,
+                ),
+                true,
+            )
+            .field(
+                "Servers",
+                ctx.data().mewld_ipc.cache.total_guilds().to_string(),
+                true,
+            )
+            .field(
+                "Users",
+                ctx.data().mewld_ipc.cache.total_users().to_string(),
+                true,
+            )
             .field("Commit Message", GIT_COMMIT_MSG, true)
             .field("Built On", BUILD_CPU, true)
             .field("Cargo Profile", CARGO_PROFILE, true),

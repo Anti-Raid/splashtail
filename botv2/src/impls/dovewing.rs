@@ -24,7 +24,7 @@ impl PartialEq for PlatformUser {
 
 #[derive(Clone)]
 pub enum DovewingSource {
-    Discord(CacheHttpImpl)
+    Discord(CacheHttpImpl),
 }
 
 impl DovewingSource {
@@ -57,7 +57,7 @@ impl DovewingSource {
                                 None
                             }
                         };
-                        
+
                         return Ok(Some(PlatformUser {
                             id: user_id.to_string(),
                             username: member.user.name.clone().to_string(),
@@ -67,7 +67,8 @@ impl DovewingSource {
                                 } else {
                                     member.user.name.clone()
                                 }
-                            }.to_string(),
+                            }
+                            .to_string(),
                             bot: member.user.bot(),
                             avatar: member.user.face(),
                             status: if let Some(p) = p {
@@ -78,23 +79,23 @@ impl DovewingSource {
                                     serenity::model::user::OnlineStatus::Invisible => "invisible",
                                     serenity::model::user::OnlineStatus::Offline => "offline",
                                     _ => "offline",
-                                }.to_string()
+                                }
+                                .to_string()
                             } else {
                                 "offline".to_string()
                             },
                         }));
                     }
                 }
-                
+
                 Ok(None)
-            },
+            }
         }
     }
 
     pub async fn http_user(&self, user_id: &str) -> Result<PlatformUser, crate::Error> {
         match self {
             DovewingSource::Discord(c) => {
-
                 let Ok(uid) = user_id.parse::<UserId>() else {
                     return Err("Invalid user id".into());
                 };
@@ -110,7 +111,8 @@ impl DovewingSource {
                         } else {
                             user.name.clone()
                         }
-                    }.to_string(),
+                    }
+                    .to_string(),
                     bot: user.bot(),
                     avatar: user.face(),
                     status: "offline".to_string(),
@@ -120,7 +122,11 @@ impl DovewingSource {
     }
 }
 
-pub async fn get_platform_user(pool: &PgPool, src: DovewingSource, user_id: &str) -> Result<PlatformUser, crate::Error> {
+pub async fn get_platform_user(
+    pool: &PgPool,
+    src: DovewingSource,
+    user_id: &str,
+) -> Result<PlatformUser, crate::Error> {
     // First check cache_http
     let cached_uid = src.cached_user(user_id)?;
 
