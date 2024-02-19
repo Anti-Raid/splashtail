@@ -1,16 +1,12 @@
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize)]
 pub enum JobserverAnimusResponse {
     /// Probe response
-    Probe {
-        message: String
-    },
+    Probe { message: String },
 
     /// SpawnTask response
-    SpawnTask {
-        task_id: String
-    }
+    SpawnTask { task_id: String },
 }
 
 #[derive(Serialize, Deserialize)]
@@ -24,6 +20,6 @@ pub enum JobserverAnimusMessage {
         data: serde_json::Value,
         create: bool,
         execute: bool,
-        task_id: Option<String> // If create is false, this is required
-    }
+        task_id: Option<String>, // If create is false, this is required
+    },
 }

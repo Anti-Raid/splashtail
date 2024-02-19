@@ -1,5 +1,5 @@
-use crate::Context;
 use crate::modules::limits::core::Limit;
+use crate::Context;
 
 pub async fn limits_autocomplete<'a>(
     ctx: Context<'_>,
@@ -23,7 +23,10 @@ pub async fn limits_autocomplete<'a>(
 
         for limit in limits {
             if limit.limit_name.starts_with(partial) {
-                choices.push(serenity::all::AutocompleteChoice::new(limit.limit_name, limit.limit_id));
+                choices.push(serenity::all::AutocompleteChoice::new(
+                    limit.limit_name,
+                    limit.limit_id,
+                ));
             }
         }
 

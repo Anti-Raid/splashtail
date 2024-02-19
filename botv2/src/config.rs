@@ -1,9 +1,9 @@
+use object_store::ObjectStore;
 use once_cell::sync::Lazy;
 use poise::serenity_prelude::UserId;
 use serde::{Deserialize, Serialize};
 use sqlx::types::chrono;
 use std::fs::File;
-use object_store::ObjectStore;
 
 use crate::Error;
 
@@ -31,7 +31,6 @@ impl<T: Default + Clone> Differs<T> {
         self.get_for_env(&crate::ipc::argparse::MEWLD_ARGS.current_env)
     }
 }
-
 
 #[derive(Serialize, Deserialize, Default)]
 pub struct DiscordAuth {
@@ -71,17 +70,18 @@ impl ObjectStorage {
                 let endpoint = self.endpoint.as_ref().ok_or("Missing endpoint")?;
 
                 let store = object_store::aws::AmazonS3Builder::new()
-                .with_endpoint(format!("https://{}", endpoint))
-                .with_bucket_name(self.path.clone())
-                .with_access_key_id(access_key)
-                .with_secret_access_key(secret_key)
-                .build()
-                .map_err(|e| format!("Failed to build S3 object store: {}", e))?;
+                    .with_endpoint(format!("https://{}", endpoint))
+                    .with_bucket_name(self.path.clone())
+                    .with_access_key_id(access_key)
+                    .with_secret_access_key(secret_key)
+                    .build()
+                    .map_err(|e| format!("Failed to build S3 object store: {}", e))?;
 
                 Ok(Box::new(store))
             }
             ObjectStorageType::Local => {
-                let store = object_store::local::LocalFileSystem::new_with_prefix(self.path.clone())?;
+                let store =
+                    object_store::local::LocalFileSystem::new_with_prefix(self.path.clone())?;
 
                 Ok(Box::new(store))
             }
@@ -119,7 +119,7 @@ pub struct Config {
 
     #[serde(skip)]
     /// Setup by load() for statistics
-    pub bot_start_time: i64, 
+    pub bot_start_time: i64,
 }
 
 impl Config {

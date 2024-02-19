@@ -10,14 +10,15 @@ pub fn module() -> crate::silverpelt::Module {
         commands_configurable: true,
         web_hidden: false,
         is_default_enabled: true,
-        commands: vec![
-            (cmds::backups(), indexmap! {
+        commands: vec![(
+            cmds::backups(),
+            indexmap! {
                 "" => crate::silverpelt::CommandExtendedData::kittycat_simple("server_backups", "*"),
                 "create" => crate::silverpelt::CommandExtendedData::kittycat_or_admin("server_backups", "create"),
                 "list" => crate::silverpelt::CommandExtendedData::kittycat_or_admin("server_backups", "list"),
                 "restore" => crate::silverpelt::CommandExtendedData::kittycat_or_admin("server_backups", "restore"),
-            }),
-        ],
+            },
+        )],
         event_handlers: vec![], // Root has no event listeners
     }
 }

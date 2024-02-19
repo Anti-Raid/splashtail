@@ -1,13 +1,13 @@
-use std::collections::HashMap;
 use log::{error, info, warn};
 use poise::serenity_prelude::{GuildId, UserId};
 use sqlx::PgPool;
+use std::collections::HashMap;
 use surrealdb::engine::remote::ws::Client;
 use surrealdb::Surreal;
 
-use crate::{impls::cache::CacheHttpImpl, Error};
-use crate::modules::limits::core::{Limit, UserAction};
 use super::core;
+use crate::modules::limits::core::{Limit, UserAction};
+use crate::{impls::cache::CacheHttpImpl, Error};
 
 // Returns true if the same user+target combo has appeared in the time interval user_target_repeat_rate
 // TODO: This function needs to be rewritten as limits are handled in-memory
@@ -76,17 +76,19 @@ pub async fn handle_mod_action(
     let target = ha.target.clone();
     let action_data = &ha.action_data;
     // Check limits cache
-    let guild_limits: HashMap<String, Limit> = Limit::fetch(&cache, &pool, guild_id).await?
-            .into_iter()
-            .filter(|a| a.limit_type == limit)
-            .map(|a| (a.limit_id.clone(), a))
-            .collect();
+    let guild_limits: HashMap<String, Limit> = Limit::fetch(&cache, &pool, guild_id)
+        .await?
+        .into_iter()
+        .filter(|a| a.limit_type == limit)
+        .map(|a| (a.limit_id.clone(), a))
+        .collect();
 
     if guild_limits.is_empty() {
         // No limits for this guild
         return Ok(());
     }
-    let _ = cache.create::<Vec<UserAction>>("user_actions")
+    let _ = cache
+        .create::<Vec<UserAction>>("user_actions")
         .content(UserAction {
             action_id: crate::impls::crypto::gen_random(48),
             guild_id,
@@ -135,21 +137,21 @@ pub async fn handle_mod_action(
                         .await?;
                     // Add UserActions to db Here.
                     sqlx::query!(
-            "
+                        "
             INSERT INTO limits__user_actions
             (action_id, guild_id, user_id, target, limit_type, action_data, limits_hit)
             VALUES ($1, $2, $3, $4, $5, $6, $7)
         ",
-            crate::impls::crypto::gen_random(48),
-            guild_id.to_string(),
-            user_id.to_string(),
-            target,
-            limit.to_string(),
-            action_data,
+                        crate::impls::crypto::gen_random(48),
+                        guild_id.to_string(),
+                        user_id.to_string(),
+                        target,
+                        limit.to_string(),
+                        action_data,
                         &action_ids
-        )
-                        .execute(&mut *tx)
-                        .await?;
+                    )
+                    .execute(&mut *tx)
+                    .await?;
                     // Immediately handle the limit
                     let cur_uid = cache_http.cache.current_user().id;
                     let can_mod = {
@@ -157,7 +159,7 @@ pub async fn handle_mod_action(
 
                         guild.greater_member_hierarchy(cache_http.cache.clone(), cur_uid, user_id)
                     }
-                        .unwrap_or(cur_uid);
+                    .unwrap_or(cur_uid);
                     if can_mod == cur_uid {
                         info!("Moderating user");
                         match guild_limit.limit_action {
@@ -166,7 +168,9 @@ pub async fn handle_mod_action(
                                 if let Ok(member) = guild_id.member(cache_http, user_id).await {
                                     let roles = member.roles.clone();
                                     for role in roles.iter() {
-                                        if let Err(e) = member.remove_role(&cache_http.http, *role).await {
+                                        if let Err(e) =
+                                            member.remove_role(&cache_http.http, *role).await
+                                        {
                                             error!("Failed to remove role: {}", e);
                                         }
                                     }
@@ -184,39 +188,47 @@ pub async fn handle_mod_action(
                             }
                         }
                     } else {
-                        warn!("Cannot moderate user, not enough permissions: {}, {}",
+                        warn!(
+                            "Cannot moderate user, not enough permissions: {}, {}",
                             can_mod, cur_uid
                         );
 
-                        sqlx::query!("
+                        sqlx::query!(
+                            "
                             INSERT INTO limits__past_hit_limits
                             (id, guild_id, user_id, limit_id, cause, notes)
                             VALUES ($1, $2, $3, $4, $5, $6)",
                             crate::impls::crypto::gen_random(16),
-                            guild_id.to_string(), user_id.to_string(),
-                            limit_id, &action_ids,
+                            guild_id.to_string(),
+                            user_id.to_string(),
+                            limit_id,
+                            &action_ids,
                             &vec!["Not enough permissions to moderate user".to_string()]
                         )
-                            .execute(&mut *tx)
-                            .await?;
+                        .execute(&mut *tx)
+                        .await?;
 
-                        return Ok(())
+                        return Ok(());
                     }
 
-                    sqlx::query!("
+                    sqlx::query!(
+                        "
                         INSERT INTO limits__past_hit_limits
                         (id, guild_id, user_id, limit_id, cause)
                         VALUES ($1, $2, $3, $4, $5)",
                         crate::impls::crypto::gen_random(16),
-                        guild_id.to_string(), user_id.to_string(),
-                        limit_id, &action_ids
-                    ).execute(&mut *tx)
-                        .await?;
-                    return Ok(())
+                        guild_id.to_string(),
+                        user_id.to_string(),
+                        limit_id,
+                        &action_ids
+                    )
+                    .execute(&mut *tx)
+                    .await?;
+                    return Ok(());
                 }
             }
         } else {
-           // No Limits hit.
+            // No Limits hit.
             continue;
         }
     }

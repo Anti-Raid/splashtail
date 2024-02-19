@@ -1,10 +1,10 @@
 pub mod taskpoll;
 
-use std::str::FromStr;
-use std::sync::Arc;
-use sqlx::{PgPool, types::uuid::Uuid};
 use crate::Error;
 use object_store::{path::Path, ObjectStore};
+use sqlx::{types::uuid::Uuid, PgPool};
+use std::str::FromStr;
+use std::sync::Arc;
 
 pub fn get_icon_of_state(state: &str) -> String {
     match state {
@@ -13,7 +13,8 @@ pub fn get_icon_of_state(state: &str) -> String {
         "completed" => ":white_check_mark:",
         "failed" => ":x:",
         _ => ":question:",
-    }.to_string()
+    }
+    .to_string()
 }
 
 /// Rust internal/special type to better serialize/speed up task embed creation
@@ -23,7 +24,7 @@ pub struct TaskStatuses {
     pub msg: String,
     pub ts: f64,
     #[serde(rename = "botDisplayIgnore")]
-    pub bot_display_ignore: Option<Vec<String>>,    
+    pub bot_display_ignore: Option<Vec<String>>,
 
     #[serde(flatten)]
     pub extra_info: std::collections::HashMap<String, serde_json::Value>,
@@ -118,16 +119,20 @@ impl Task {
         let task = Task {
             task_id: rec.task_id,
             task_name: rec.task_name,
-            output: rec.output.map(serde_json::from_value::<TaskOutput>).transpose()?,
+            output: rec
+                .output
+                .map(serde_json::from_value::<TaskOutput>)
+                .transpose()?,
             task_info: serde_json::from_value::<TaskInfo>(rec.task_info)?,
             statuses,
             task_for: rec.task_for.map(|task_for| task_for.into()),
             expiry: {
                 if let Some(expiry) = rec.expiry {
-                    let t = expiry.microseconds + 60 * 1_000_000 + (expiry.days as i64) * 24 * 60 * 60 * 1_000_000 + (expiry.months as i64) * 30 * 24 * 60 * 60 * 1_000_000;
-                    Some(
-                        chrono::Duration::microseconds(t)
-                    )
+                    let t = expiry.microseconds
+                        + 60 * 1_000_000
+                        + (expiry.days as i64) * 24 * 60 * 60 * 1_000_000
+                        + (expiry.months as i64) * 30 * 24 * 60 * 60 * 1_000_000;
+                    Some(chrono::Duration::microseconds(t))
                 } else {
                     None
                 }
@@ -138,10 +143,13 @@ impl Task {
 
         Ok(task)
     }
-    
+
     /// Fetches all tasks of a guild given guild id
     #[allow(dead_code)] // Will be used in the near future
-    pub async fn from_guild(guild_id: serenity::all::GuildId, pool: &sqlx::PgPool) -> Result<Vec<Self>, crate::Error> {
+    pub async fn from_guild(
+        guild_id: serenity::all::GuildId,
+        pool: &sqlx::PgPool,
+    ) -> Result<Vec<Self>, crate::Error> {
         let recs = sqlx::query!(
             "SELECT task_id, task_name, output, task_info, statuses, task_for, expiry, state, created_at FROM tasks WHERE task_for = $1",
             format!("g/{}", guild_id)
@@ -162,16 +170,20 @@ impl Task {
             let task = Task {
                 task_id: rec.task_id,
                 task_name: rec.task_name,
-                output: rec.output.map(serde_json::from_value::<TaskOutput>).transpose()?,
+                output: rec
+                    .output
+                    .map(serde_json::from_value::<TaskOutput>)
+                    .transpose()?,
                 task_info: serde_json::from_value::<TaskInfo>(rec.task_info)?,
                 statuses,
                 task_for: rec.task_for.map(|task_for| task_for.into()),
                 expiry: {
                     if let Some(expiry) = rec.expiry {
-                        let t = expiry.microseconds + 60 * 1_000_000 + (expiry.days as i64) * 24 * 60 * 60 * 1_000_000 + (expiry.months as i64) * 30 * 24 * 60 * 60 * 1_000_000;
-                        Some(
-                            chrono::Duration::microseconds(t)
-                        )
+                        let t = expiry.microseconds
+                            + 60 * 1_000_000
+                            + (expiry.days as i64) * 24 * 60 * 60 * 1_000_000
+                            + (expiry.months as i64) * 30 * 24 * 60 * 60 * 1_000_000;
+                        Some(chrono::Duration::microseconds(t))
                     } else {
                         None
                     }
@@ -187,7 +199,11 @@ impl Task {
     }
 
     /// Returns all tasks with a specific guild ID and a specific task name
-    pub async fn from_guild_and_task_name(guild_id: serenity::all::GuildId, task_name: &str, pool: &sqlx::PgPool) -> Result<Vec<Self>, crate::Error> {
+    pub async fn from_guild_and_task_name(
+        guild_id: serenity::all::GuildId,
+        task_name: &str,
+        pool: &sqlx::PgPool,
+    ) -> Result<Vec<Self>, crate::Error> {
         let recs = sqlx::query!(
             "SELECT task_id, task_name, output, task_info, statuses, task_for, expiry, state, created_at FROM tasks WHERE task_for = $1 AND task_name = $2",
             format!("g/{}", guild_id),
@@ -209,16 +225,20 @@ impl Task {
             let task = Task {
                 task_id: rec.task_id,
                 task_name: rec.task_name,
-                output: rec.output.map(serde_json::from_value::<TaskOutput>).transpose()?,
+                output: rec
+                    .output
+                    .map(serde_json::from_value::<TaskOutput>)
+                    .transpose()?,
                 task_info: serde_json::from_value::<TaskInfo>(rec.task_info)?,
                 statuses,
                 task_for: rec.task_for.map(|task_for| task_for.into()),
                 expiry: {
                     if let Some(expiry) = rec.expiry {
-                        let t = expiry.microseconds + 60 * 1_000_000 + (expiry.days as i64) * 24 * 60 * 60 * 1_000_000 + (expiry.months as i64) * 30 * 24 * 60 * 60 * 1_000_000;
-                        Some(
-                            chrono::Duration::microseconds(t)
-                        )
+                        let t = expiry.microseconds
+                            + 60 * 1_000_000
+                            + (expiry.days as i64) * 24 * 60 * 60 * 1_000_000
+                            + (expiry.months as i64) * 30 * 24 * 60 * 60 * 1_000_000;
+                        Some(chrono::Duration::microseconds(t))
                     } else {
                         None
                     }
@@ -244,7 +264,13 @@ impl Task {
     pub fn get_path(&self) -> Option<String> {
         if let Some(output) = &self.output {
             if output.segregated {
-                Some(format!("{}/{}/{}/{}", self.format_task_for_simplex(), self.task_info.name, self.task_id, output.filename))
+                Some(format!(
+                    "{}/{}/{}/{}",
+                    self.format_task_for_simplex(),
+                    self.task_info.name,
+                    self.task_id,
+                    output.filename
+                ))
             } else {
                 Some(format!("tasks/{}", self.task_id))
             }
@@ -254,7 +280,10 @@ impl Task {
     }
 
     /// Deletes the task from the object storage
-    pub async fn delete_from_storage(&self, object_store: &Arc<Box<dyn ObjectStore>>) -> Result<(), Error> {
+    pub async fn delete_from_storage(
+        &self,
+        object_store: &Arc<Box<dyn ObjectStore>>,
+    ) -> Result<(), Error> {
         // Check if the task has an output
         let Some(path) = self.get_path() else {
             return Err("Task has no output".into());
@@ -273,12 +302,9 @@ impl Task {
 
     /// Delete the task from the database, this also consumes the task dropping it from memory
     pub async fn delete_from_db(self, pool: &PgPool) -> Result<(), Error> {
-        sqlx::query!(
-            "DELETE FROM tasks WHERE task_id = $1",
-            self.task_id,
-        )
-        .execute(pool)
-        .await?;
+        sqlx::query!("DELETE FROM tasks WHERE task_id = $1", self.task_id,)
+            .execute(pool)
+            .await?;
 
         Ok(())
     }
@@ -286,7 +312,11 @@ impl Task {
     /// Deletes the task entirely, this includes deleting it from the object storage and the database
     /// This also consumes the task dropping it from memory
     #[allow(dead_code)] // Will be used in the near future
-    pub async fn delete(self, pool: &PgPool, object_store: &Arc<Box<dyn ObjectStore>>) -> Result<(), Error> {
+    pub async fn delete(
+        self,
+        pool: &PgPool,
+        object_store: &Arc<Box<dyn ObjectStore>>,
+    ) -> Result<(), Error> {
         self.delete_from_storage(object_store).await?;
         self.delete_from_db(pool).await?;
 

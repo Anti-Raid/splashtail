@@ -1,8 +1,8 @@
 use indexmap::indexmap;
 
+mod backups;
 mod core;
 mod eventmods;
-mod backups;
 
 pub fn module() -> crate::silverpelt::Module {
     crate::silverpelt::Module {

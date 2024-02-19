@@ -1,11 +1,11 @@
 pub mod canonical_repr;
 pub mod permissions;
 
-use once_cell::sync::Lazy;
-use moka::future::Cache;
-use indexmap::IndexMap;
-use serenity::all::{GuildId, UserId};
 use futures::future::BoxFuture;
+use indexmap::IndexMap;
+use moka::future::Cache;
+use once_cell::sync::Lazy;
+use serenity::all::{GuildId, UserId};
 
 /// The silverpelt cache is a structure that contains the core state for the bot
 pub struct SilverpeltCache {
@@ -16,12 +16,12 @@ pub struct SilverpeltCache {
     pub command_extra_data_map: dashmap::DashMap<String, CommandExtendedDataMap>,
 
     /// A commonly needed operation is mapping a module id to its respective module
-    /// 
+    ///
     /// Module_id_cache is a cache of module id to module
     pub module_id_cache: dashmap::DashMap<String, Module>,
 
     /// Command ID to module map
-    /// 
+    ///
     /// This uses an indexmap for now to avoid sending values over await point
     pub command_id_module_map: indexmap::IndexMap<String, String>,
 
@@ -40,7 +40,7 @@ impl SilverpeltCache {
                 .build(),
             command_extra_data_map: {
                 let map = dashmap::DashMap::new();
-    
+
                 for module in crate::modules::modules() {
                     for (command, extended_data) in module.commands {
                         map.insert(command.name.clone(), extended_data);
@@ -51,16 +51,16 @@ impl SilverpeltCache {
             },
             module_id_cache: {
                 let map = dashmap::DashMap::new();
-    
+
                 for module in crate::modules::modules() {
                     map.insert(module.id.to_string(), module);
                 }
-            
+
                 map
             },
             command_id_module_map: {
                 let mut map = indexmap::IndexMap::new();
-    
+
                 for module in crate::modules::modules() {
                     for command in module.commands.iter() {
                         map.insert(command.0.name.to_string(), module.id.to_string());
@@ -75,22 +75,25 @@ impl SilverpeltCache {
             },
             canonical_module_cache: {
                 let map = dashmap::DashMap::new();
-    
+
                 for module in crate::modules::modules() {
-                    map.insert(module.id.to_string(), canonical_repr::modules::CanonicalModule::from(module));
+                    map.insert(
+                        module.id.to_string(),
+                        canonical_repr::modules::CanonicalModule::from(module),
+                    );
                 }
 
                 map
             },
             module_event_listeners_cache: {
                 let mut map = indexmap::IndexMap::new();
-    
+
                 for module in crate::modules::modules() {
                     map.insert(module.id.to_string(), module.event_handlers);
                 }
 
                 map
-            }
+            },
         }
     }
 }
@@ -109,11 +112,11 @@ pub type CommandAndPermissions = (Command, CommandExtendedDataMap);
 
 pub type ModuleEventHandler = Box<
     dyn Send
-    + Sync
-    + for<'a> Fn(
-        &'a serenity::all::Context,
-        &'a serenity::all::FullEvent,
-    ) -> BoxFuture<'a, Result<(), crate::Error>>,
+        + Sync
+        + for<'a> Fn(
+            &'a serenity::all::Context,
+            &'a serenity::all::FullEvent,
+        ) -> BoxFuture<'a, Result<(), crate::Error>>,
 >;
 
 /// This structure defines a basic module
@@ -143,7 +146,7 @@ pub struct Module {
     pub commands: Vec<CommandAndPermissions>,
 
     /// Event handlers (if any)
-    pub event_handlers: Vec<ModuleEventHandler>
+    pub event_handlers: Vec<ModuleEventHandler>,
 }
 
 #[derive(Default, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
@@ -182,7 +185,7 @@ impl Default for CommandExtendedData {
             },
         }
     }
-}   
+}
 
 /// Guild command configuration data
 #[derive(Clone, PartialEq, serde::Serialize, serde::Deserialize, Default)]
@@ -247,22 +250,35 @@ pub fn permute_command_names(name: &str) -> Vec<String> {
         }
 
         commands_to_check.push(command);
-    }        
+    }
 
     commands_to_check
 }
 
 /// Returns the configuration of a command
-pub async fn get_command_configuration(pool: &sqlx::PgPool, guild_id: &str, name: &str) -> Result<(CommandExtendedData, Option<GuildCommandConfiguration>, Option<GuildModuleConfiguration>), crate::Error> {    
+pub async fn get_command_configuration(
+    pool: &sqlx::PgPool,
+    guild_id: &str,
+    name: &str,
+) -> Result<
+    (
+        CommandExtendedData,
+        Option<GuildCommandConfiguration>,
+        Option<GuildModuleConfiguration>,
+    ),
+    crate::Error,
+> {
     let permutations = permute_command_names(name);
     let root_cmd = permutations.first().unwrap();
 
     let root_cmd_data = SILVERPELT_CACHE.command_extra_data_map.get(root_cmd);
 
     let Some(root_cmd_data) = root_cmd_data else {
-        return Err(
-            format!("The command ``{}`` does not exist [no root configuration found?]", name).into()
-        );
+        return Err(format!(
+            "The command ``{}`` does not exist [no root configuration found?]",
+            name
+        )
+        .into());
     };
 
     // Check if theres any module configuration
@@ -280,9 +296,15 @@ pub async fn get_command_configuration(pool: &sqlx::PgPool, guild_id: &str, name
         disabled: rec.disabled,
     });
 
-    let mut cmd_data = root_cmd_data.get("").unwrap_or(&CommandExtendedData::default()).clone();
+    let mut cmd_data = root_cmd_data
+        .get("")
+        .unwrap_or(&CommandExtendedData::default())
+        .clone();
     for command in permutations.iter() {
-        let cmd_replaced = command.replace(&root_cmd.to_string(), "").trim().to_string();
+        let cmd_replaced = command
+            .replace(&root_cmd.to_string(), "")
+            .trim()
+            .to_string();
         if let Some(data) = root_cmd_data.get(&cmd_replaced.as_str()) {
             cmd_data = data.clone();
         }

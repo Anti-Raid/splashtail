@@ -1,8 +1,8 @@
 use crate::{impls::cache::CacheHttpImpl, jobserver::Task};
+use serde_json::Value;
+use std::future::Future;
 use std::pin::Pin;
 use std::sync::Arc;
-use std::future::Future;
-use serde_json::Value;
 
 pub struct PollTaskOptions {
     /// The interval at which to update/poll at in seconds
@@ -20,8 +20,16 @@ fn _to_string(v: &Option<&Value>) -> String {
         Value::Number(n) => n.to_string(),
         Value::Bool(b) => b.to_string(),
         Value::Null => "null".to_string(),
-        Value::Array(a) => a.iter().map(|v| _to_string(&Some(v))).collect::<Vec<_>>().join(", "),
-        Value::Object(o) => o.iter().map(|(k, v)| format!("{}={}", k, _to_string(&Some(v)))).collect::<Vec<_>>().join(", "),
+        Value::Array(a) => a
+            .iter()
+            .map(|v| _to_string(&Some(v)))
+            .collect::<Vec<_>>()
+            .join(", "),
+        Value::Object(o) => o
+            .iter()
+            .map(|(k, v)| format!("{}={}", k, _to_string(&Some(v))))
+            .collect::<Vec<_>>()
+            .join(", "),
     }
 }
 
@@ -77,20 +85,18 @@ pub fn embed<'a>(task: &Task) -> Result<poise::CreateReply<'a>, crate::Error> {
 
     if task.state == "completed" {
         if let Some(ref output) = task.output {
-            let furl = format!("{}/tasks/{}/ioauth/download-link", crate::config::CONFIG.sites.api.get(), task.task_id);
+            let furl = format!(
+                "{}/tasks/{}/ioauth/download-link",
+                crate::config::CONFIG.sites.api.get(),
+                task.task_id
+            );
             description += &format!("\n\n:link: [Download {}]({})", output.filename, &furl);
 
-            components.push(
-                poise::serenity_prelude::CreateActionRow::Buttons(
-                    vec![
-                        poise::serenity_prelude::CreateButton::new_link(
-                            furl,
-                        )
-                        .label("Download")
-                        .emoji('📥'),
-                    ]
-                ),
-            );
+            components.push(poise::serenity_prelude::CreateActionRow::Buttons(vec![
+                poise::serenity_prelude::CreateButton::new_link(furl)
+                    .label("Download")
+                    .emoji('📥'),
+            ]));
         }
     }
 
@@ -99,7 +105,9 @@ pub fn embed<'a>(task: &Task) -> Result<poise::CreateReply<'a>, crate::Error> {
         .description(description)
         .color(poise::serenity_prelude::Colour::DARK_GREEN);
 
-    let msg = poise::CreateReply::default().embed(embed).components(components);
+    let msg = poise::CreateReply::default()
+        .embed(embed)
+        .components(components);
 
     Ok(msg)
 }
@@ -108,7 +116,10 @@ pub async fn reactive(
     cache_http: &CacheHttpImpl,
     pool: &sqlx::PgPool,
     task_id: &str,
-    mut func: impl FnMut(&CacheHttpImpl, Arc<Task>) -> Pin<Box<dyn Future<Output = Result<(), crate::Error>> + Send>>,
+    mut func: impl FnMut(
+        &CacheHttpImpl,
+        Arc<Task>,
+    ) -> Pin<Box<dyn Future<Output = Result<(), crate::Error>> + Send>>,
     to: PollTaskOptions,
 ) -> Result<(), crate::Error> {
     let interval = to.interval.unwrap_or(1);

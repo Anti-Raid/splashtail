@@ -8,8 +8,8 @@ use strum_macros::{Display, EnumString, EnumVariantNames};
 use surrealdb::engine::remote::ws::Client;
 use surrealdb::Surreal;
 
-use crate::Error;
 use crate::impls::utils::pg_interval_to_secs;
+use crate::Error;
 
 #[derive(poise::ChoiceParameter)]
 pub enum UserLimitTypesChoices {
@@ -58,20 +58,32 @@ impl UserLimitTypesChoices {
     }
 }
 
-#[derive(EnumString, Display, PartialEq, EnumVariantNames, Clone, Copy, Debug, Serialize, Hash, Eq, Deserialize)]
+#[derive(
+    EnumString,
+    Display,
+    PartialEq,
+    EnumVariantNames,
+    Clone,
+    Copy,
+    Debug,
+    Serialize,
+    Hash,
+    Eq,
+    Deserialize,
+)]
 #[strum(serialize_all = "snake_case")]
-pub enum    UserLimitTypes {
-    RoleAdd,       // set
-    RoleUpdate,    // set
-    RoleRemove,    // set
-    RoleGivenToMember, // set
+pub enum UserLimitTypes {
+    RoleAdd,               // set
+    RoleUpdate,            // set
+    RoleRemove,            // set
+    RoleGivenToMember,     // set
     RoleRemovedFromMember, // set
-    MemberRolesUpdated, // set
-    ChannelAdd,    // set
-    ChannelUpdate, // set
-    ChannelRemove, //set
+    MemberRolesUpdated,    // set
+    ChannelAdd,            // set
+    ChannelUpdate,         // set
+    ChannelRemove,         //set
     Kick,
-    Ban, 
+    Ban,
     Unban,
 }
 
@@ -94,15 +106,15 @@ impl UserLimitTypes {
     }
 
     /// Returns the default repeat rate for a user-target pair
-    /// 
+    ///
     /// Within this rate, limits will be ignored if the same user-target pair has already been handled
     #[allow(dead_code)] // May be used in the future
     pub fn default_user_target_repeat_rate(&self) -> i64 {
         match self {
-            Self::RoleGivenToMember => 2, // 2 seconds
+            Self::RoleGivenToMember => 2,     // 2 seconds
             Self::RoleRemovedFromMember => 2, // 2 seconds
-            Self::MemberRolesUpdated => 5, // 5 seconds
-            _ => 0, // No repeat rate as other events are more accurate
+            Self::MemberRolesUpdated => 5,    // 5 seconds
+            _ => 0,                           // No repeat rate as other events are more accurate
         }
     }
 }
@@ -127,7 +139,9 @@ impl UserLimitActionsChoices {
     }
 }
 
-#[derive(EnumString, Display, PartialEq, EnumVariantNames, Clone, Debug, Serialize, Deserialize)]
+#[derive(
+    EnumString, Display, PartialEq, EnumVariantNames, Clone, Debug, Serialize, Deserialize,
+)]
 #[strum(serialize_all = "snake_case")]
 pub enum UserLimitActions {
     RemoveAllRoles,
@@ -167,11 +181,7 @@ pub struct UserAction {
 
 impl UserAction {
     /// Fetch user actions for a action id
-    pub async fn by_id(
-        pool: &PgPool,
-        guild_id: GuildId,
-        action_id: &str,
-    ) -> Result<Self, Error> {
+    pub async fn by_id(pool: &PgPool, guild_id: GuildId, action_id: &str) -> Result<Self, Error> {
         let r = sqlx::query!(
             "
                 SELECT user_id, limit_type, created_at, action_data, 
@@ -185,8 +195,7 @@ impl UserAction {
         .fetch_one(pool)
         .await?;
 
-
-    let actions = Self {
+        let actions = Self {
             guild_id,
             action_id: action_id.to_string(),
             user_id: r.user_id.parse()?,
@@ -321,7 +330,10 @@ impl Limit {
         }
         Ok(limits)
     }
-    pub async fn from_cache(cache: &Surreal<Client>, guild_id: GuildId) -> Result<Vec<Self>, Error> {
+    pub async fn from_cache(
+        cache: &Surreal<Client>,
+        guild_id: GuildId,
+    ) -> Result<Vec<Self>, Error> {
         let mut request = cache
             .query("select guild_id, limit_id, limit_name, limit_type, limit_action, limit_per, limit_time from guild_limits where guild_id = type::string($guild_id)")
             .bind(("guild_id", guild_id.to_string()))
@@ -331,7 +343,11 @@ impl Limit {
         Ok(records)
     }
 
-    pub async fn fetch(cache: &Surreal<Client>, pool: &PgPool, guild_id: GuildId) -> Result<Vec<Self>, Error> {
+    pub async fn fetch(
+        cache: &Surreal<Client>,
+        pool: &PgPool,
+        guild_id: GuildId,
+    ) -> Result<Vec<Self>, Error> {
         let cache = Self::from_cache(cache, guild_id).await?;
         if cache.is_empty() {
             let db = Self::from_database(pool, guild_id).await?;
@@ -386,5 +402,5 @@ impl PastHitLimits {
         }
 
         Ok(hits)
-    }    
+    }
 }
