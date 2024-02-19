@@ -1,15 +1,11 @@
-use std::collections::HashMap;
-use log::info;
-use num_traits::ToPrimitive;
 use poise::serenity_prelude::{GuildId, UserId};
 use serde::{Deserialize, Serialize};
 use sqlx::{
-    postgres::types::PgInterval,
     types::chrono::{DateTime, Utc},
     PgPool,
 };
 use strum_macros::{Display, EnumString, EnumVariantNames};
-use surrealdb::engine::local::Db;
+use surrealdb::engine::remote::ws::Client;
 use surrealdb::Surreal;
 
 use crate::Error;
@@ -325,7 +321,7 @@ impl Limit {
         }
         Ok(limits)
     }
-    pub async fn from_cache(cache: &Surreal<Db>, guild_id: GuildId) -> Result<Vec<Self>, Error> {
+    pub async fn from_cache(cache: &Surreal<Client>, guild_id: GuildId) -> Result<Vec<Self>, Error> {
         let mut request = cache
             .query("select guild_id, limit_id, limit_name, limit_type, limit_action, limit_per, limit_time from guild_limits where guild_id = type::string($guild_id)")
             .bind(("guild_id", guild_id.to_string()))
@@ -335,7 +331,7 @@ impl Limit {
         Ok(records)
     }
 
-    pub async fn fetch(cache: &Surreal<Db>, pool: &PgPool, guild_id: GuildId) -> Result<Vec<Self>, Error> {
+    pub async fn fetch(cache: &Surreal<Client>, pool: &PgPool, guild_id: GuildId) -> Result<Vec<Self>, Error> {
         let cache = Self::from_cache(cache, guild_id).await?;
         if cache.is_empty() {
             let db = Self::from_database(pool, guild_id).await?;

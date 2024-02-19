@@ -14,8 +14,8 @@ use poise::CreateReply;
 use sqlx::postgres::PgPoolOptions;
 use std::io::Write;
 use object_store::ObjectStore;
-use once_cell::sync::Lazy;
-use surrealdb::engine::local::{Db, Mem};
+use surrealdb::engine::remote::ws::{Client, Ws};
+use surrealdb::opt::auth::Root;
 use surrealdb::Surreal;
 
 type Error = Box<dyn std::error::Error + Send + Sync>;
@@ -28,7 +28,7 @@ pub struct Data {
     pub object_store: Arc<Box<dyn ObjectStore>>,
     pub animus_magic_ipc: Arc<ipc::animus_magic::client::AnimusMagicClient>,
     pub shards_ready: Arc<dashmap::DashMap<u16, bool>>,
-    pub surreal_cache: Surreal<Db>
+    pub surreal_cache: Surreal<Client>
 }
 
 async fn on_error(error: poise::FrameworkError<'_, Data, Error>) {
@@ -509,6 +509,20 @@ async fn main() {
     .build_pool(REDIS_MAX_CONNECTIONS.try_into().unwrap())
     .expect("Could not initialize Redis pool");
 
+    let cache_config = config::CONFIG.cache.clone();
+    let cache_client = Surreal::new::<Ws>(cache_config.url)
+        .await
+        .expect("Couldnt initialize cache");
+    let _ = cache_client.signin(Root {
+        username: cache_config.username.as_str(),
+        password: cache_config.password.as_str()
+    }).await;
+    cache_client.use_ns("kakarot")
+        .use_db("splashtail")
+        .await
+        .expect("Couldnt use namespace and database");
+
+
     let data = Data {
         mewld_ipc: Arc::new(ipc::mewld::MewldIpcClient {
             redis_pool: pool.clone(),
@@ -527,14 +541,9 @@ async fn main() {
             .await
             .expect("Could not initialize connection"),
         shards_ready: Arc::new(dashmap::DashMap::new()),
-        surreal_cache: Surreal::new::<Mem>(())
-            .await
-            .expect("Couldnt initialize cache")
+        surreal_cache: cache_client
     };
-    data.surreal_cache.use_ns("kakarot")
-        .use_db("splashtail")
-        .await
-        .expect("Couldnt use namespace and database");
+
     info!("Initializing bot state");
 
     let mut client = client_builder

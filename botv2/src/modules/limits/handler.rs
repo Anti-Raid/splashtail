@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use log::{error, info, warn};
 use poise::serenity_prelude::{GuildId, UserId};
 use sqlx::PgPool;
-use surrealdb::engine::local::Db;
+use surrealdb::engine::remote::ws::Client;
 use surrealdb::Surreal;
 
 use crate::{impls::cache::CacheHttpImpl, Error};
@@ -66,7 +66,7 @@ pub struct HandleModAction {
 
 pub async fn handle_mod_action(
     pool: &PgPool,
-    cache: &Surreal<Db>,
+    cache: &Surreal<Client>,
     cache_http: &CacheHttpImpl,
     ha: &HandleModAction,
 ) -> Result<(), Error> {
