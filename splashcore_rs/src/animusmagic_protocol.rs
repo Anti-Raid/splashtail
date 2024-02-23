@@ -48,6 +48,7 @@ pub enum AnimusOp {
     Request,
     Response,
     Error,
+    Probe,
 }
 
 impl AnimusOp {
@@ -56,6 +57,7 @@ impl AnimusOp {
             AnimusOp::Request => 0x0,
             AnimusOp::Response => 0x1,
             AnimusOp::Error => 0x2,
+            AnimusOp::Probe => 0x3,
         }
     }
 
@@ -64,6 +66,7 @@ impl AnimusOp {
             0x0 => Some(AnimusOp::Request),
             0x1 => Some(AnimusOp::Response),
             0x2 => Some(AnimusOp::Error),
+            0x3 => Some(AnimusOp::Probe),
             _ => None,
         }
     }

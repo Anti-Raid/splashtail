@@ -197,7 +197,7 @@ impl AnimusMagicClient {
                     });
                 }
 
-                AnimusOp::Request => {
+                AnimusOp::Request | AnimusOp::Probe => {
                     // Ensure requeest op, and that the cluster id is either the same as ours or the wildcard u16::MAX
                     if meta.to != AnimusTarget::Bot && meta.to != AnimusTarget::Wildcard {
                         continue; // Not for us, to != Bot and != wildcard
@@ -205,6 +205,37 @@ impl AnimusMagicClient {
 
                     if meta.cluster_id != MEWLD_ARGS.cluster_id && meta.cluster_id != u16::MAX {
                         continue; // Not for us, cluster_id != ours and != wildcard
+                    }
+
+                    if meta.op == AnimusOp::Probe {
+                        // Send probe response
+                        let redis_pool = self.redis_pool.clone();
+
+                        tokio::spawn(async move {
+                            let Ok(payload) = create_payload::<AnimusErrorResponse>(
+                                &meta.command_id,
+                                AnimusTarget::Bot,
+                                MEWLD_ARGS.cluster_id,
+                                meta.from,
+                                AnimusOp::Response,
+                                &AnimusErrorResponse {
+                                    message: "Pong".to_string(),
+                                    context: "".to_string(),
+                                },
+                            ) else {
+                                log::warn!(
+                                    "Failed to create payload for message on channel {}",
+                                    message.channel
+                                );
+                                return;
+                            };
+
+                            if let Err(e) = Self::publish(redis_pool.next(), payload).await {
+                                log::warn!("Failed to publish response to redis: {}", e);
+                            }
+                        });
+
+                        continue;
                     }
 
                     let cache_http = cache_http.clone();

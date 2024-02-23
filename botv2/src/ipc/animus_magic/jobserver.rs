@@ -2,18 +2,12 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize)]
 pub enum JobserverAnimusResponse {
-    /// Probe response
-    Probe { message: String },
-
     /// SpawnTask response
     SpawnTask { task_id: String },
 }
 
 #[derive(Serialize, Deserialize)]
 pub enum JobserverAnimusMessage {
-    /// Probe operation
-    Probe {},
-
     /// Spawn task. Note that oneof create and execute must be true
     SpawnTask {
         name: String,

@@ -174,18 +174,14 @@ func main() {
 						return fmt.Errorf("error converting timeout to integer: %s", err)
 					}
 
-					var msg animusmagic.AnimusMessage = animusmagic.CommonAnimusMessage{
-						Probe: &struct{}{},
-					}
-
 					commandId := animusmagic.NewCommandId()
 					payload, err := a.Data.AnimusMagicClient.CreatePayload(
 						animusmagic.AnimusTargetWebserver,
 						toTarget,
 						animusmagic.WildcardClusterID,
-						animusmagic.OpRequest,
+						animusmagic.OpProbe,
 						commandId,
-						msg,
+						[]byte{},
 					)
 
 					if err != nil {

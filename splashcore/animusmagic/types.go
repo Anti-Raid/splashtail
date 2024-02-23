@@ -79,6 +79,7 @@ const (
 	OpRequest  AnimusOp = 0x0
 	OpResponse AnimusOp = 0x1
 	OpError    AnimusOp = 0x2
+	OpProbe    AnimusOp = 0x3
 )
 
 func (a AnimusOp) String() string {
@@ -89,6 +90,8 @@ func (a AnimusOp) String() string {
 		return "Response"
 	case OpError:
 		return "Error"
+	case OpProbe:
+		return "Probe"
 	default:
 		return "Unknown"
 	}
@@ -102,6 +105,8 @@ func ByteToAnimusOp(b uint8) (AnimusOp, bool) {
 		return OpResponse, true
 	case 0x2:
 		return OpError, true
+	case 0x3:
+		return OpProbe, true
 	default:
 		return 0, false
 	}
@@ -118,6 +123,10 @@ func StringToAnimusOp(s string) (AnimusOp, bool) {
 		"2":        OpError,
 		"error":    OpError,
 		"err":      OpError,
+		"3":        OpProbe,
+		"probe":    OpProbe,
+		"prb":      OpProbe,
+		"ping":     OpProbe,
 	}
 
 	if val, ok := strMap[strings.ToLower(s)]; ok {

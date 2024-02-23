@@ -126,6 +126,27 @@ func (c *AnimusMagicClient) ListenOnce(ctx context.Context, r rueidis.Client, l 
 					}
 
 					switch meta.Op {
+					case OpProbe:
+						cp, err := c.CreatePayload(
+							c.From,
+							meta.From,
+							meta.ClusterID,
+							OpError,
+							meta.CommandID,
+							&AnimusErrorResponse{Message: "Pong", Context: time.Now().String()},
+						)
+
+						if err != nil {
+							l.Error("[animus magic] error creating error payload", zap.Error(err))
+							return
+						}
+
+						err = c.Publish(ctx, r, cp)
+
+						if err != nil {
+							l.Error("[animus magic] error publishing error payload", zap.Error(err))
+							return
+						}
 					case OpRequest:
 						if c.OnRequest != nil {
 							resp, err := c.OnRequest(&ClientRequest{

@@ -10,8 +10,6 @@ use serenity::all::{GuildId, Role, RoleId, UserId};
 
 #[derive(Serialize, Deserialize)]
 pub enum BotAnimusResponse {
-    /// Probe response
-    Probe { message: String },
     /// Modules event contains module related data
     Modules { modules: Vec<CanonicalModule> },
     /// GuildsExist event contains a list of u8s, where 1 means the guild exists and 0 means it doesn't
@@ -32,8 +30,6 @@ pub enum BotAnimusResponse {
 
 #[derive(Serialize, Deserialize)]
 pub enum BotAnimusMessage {
-    /// Probe operation
-    Probe {},
     /// Ask the bot for module data
     Modules {},
     /// Given a list of guild IDs, return whether or not they exist on the bot
@@ -50,9 +46,6 @@ pub enum BotAnimusMessage {
 impl BotAnimusMessage {
     pub async fn response(&self, cache_http: &CacheHttpImpl) -> Result<BotAnimusResponse, Error> {
         match self {
-            Self::Probe {} => Ok(BotAnimusResponse::Probe {
-                message: "Pong".to_string(),
-            }),
             Self::Modules {} => {
                 let mut modules = Vec::new();
 
