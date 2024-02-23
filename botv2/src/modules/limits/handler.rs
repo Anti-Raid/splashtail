@@ -2,6 +2,7 @@ use log::{error, info, warn};
 use poise::serenity_prelude::{GuildId, UserId};
 use sqlx::PgPool;
 use std::collections::HashMap;
+use splashcore_rs::crypto::gen_random;
 use surrealdb::engine::remote::ws::Client;
 use surrealdb::Surreal;
 
@@ -90,7 +91,7 @@ pub async fn handle_mod_action(
     let _ = cache
         .create::<Vec<UserAction>>("user_actions")
         .content(UserAction {
-            action_id: crate::impls::crypto::gen_random(48),
+            action_id: gen_random(48),
             guild_id,
             user_id,
             target: target.clone(),
@@ -142,7 +143,7 @@ pub async fn handle_mod_action(
             (action_id, guild_id, user_id, target, limit_type, action_data, limits_hit)
             VALUES ($1, $2, $3, $4, $5, $6, $7)
         ",
-                        crate::impls::crypto::gen_random(48),
+                        gen_random(48),
                         guild_id.to_string(),
                         user_id.to_string(),
                         target,
@@ -198,7 +199,7 @@ pub async fn handle_mod_action(
                             INSERT INTO limits__past_hit_limits
                             (id, guild_id, user_id, limit_id, cause, notes)
                             VALUES ($1, $2, $3, $4, $5, $6)",
-                            crate::impls::crypto::gen_random(16),
+                            gen_random(16),
                             guild_id.to_string(),
                             user_id.to_string(),
                             limit_id,
@@ -216,7 +217,7 @@ pub async fn handle_mod_action(
                         INSERT INTO limits__past_hit_limits
                         (id, guild_id, user_id, limit_id, cause)
                         VALUES ($1, $2, $3, $4, $5)",
-                        crate::impls::crypto::gen_random(16),
+                        gen_random(16),
                         guild_id.to_string(),
                         user_id.to_string(),
                         limit_id,

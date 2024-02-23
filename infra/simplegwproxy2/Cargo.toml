@@ -24,7 +24,7 @@ indexmap = { version = "2.1", features = ["serde"] }
 dashmap = { version = "5", features = ["serde", "inline", "rayon"] }
 strum = "0.24"
 strum_macros = "0.24"
-rand = "0.8"
+splashcore_rs = { path = "../splashcore_rs" }
 tower-http = { version = "0.3", features = ["cors"] }
 num-traits = "0.2.14"
 moka = { version = "0.12.3", features = ["future", "futures-util"] }

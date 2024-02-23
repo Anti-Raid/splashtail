@@ -118,7 +118,7 @@ impl From<&crate::silverpelt::Command> for CanonicalCommandData {
             subcommands: cmd
                 .subcommands
                 .iter()
-                .map(|cmd| CanonicalCommandData::from(cmd))
+                .map(CanonicalCommandData::from)
                 .collect(),
             subcommand_required: cmd.subcommand_required,
             arguments: cmd

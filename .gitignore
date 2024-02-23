@@ -9,6 +9,7 @@ node_modules
 ljconfig
 cmd/localjobs/localjobs
 .DS_Store
+/**/target
 /**/.DS_Store
 .idea
 semver

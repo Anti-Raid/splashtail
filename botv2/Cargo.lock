@@ -476,6 +476,7 @@ dependencies = [
  "serde_json",
  "serde_yaml",
  "serenity",
+ "splashcore_rs",
  "sqlx",
  "strum",
  "strum_macros",
@@ -3650,6 +3651,17 @@ checksum = "d91ed6c858b01f942cd56b37a94b3e0a1798290327d1236e4d9cf4eaca44d29d"
 dependencies = [
  "base64ct",
  "der",
+]
+
+[[package]]
+name = "splashcore_rs"
+version = "0.1.0"
+dependencies = [
+ "dashmap",
+ "rand",
+ "serde",
+ "serde_cbor",
+ "tokio",
 ]
 
 [[package]]

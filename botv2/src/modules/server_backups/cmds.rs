@@ -1,7 +1,8 @@
 use crate::ipc::animus_magic::{
-    client::{AnimusMessage, AnimusResponse, AnimusTarget},
+    client::{AnimusMessage, AnimusResponse},
     jobserver::{JobserverAnimusMessage, JobserverAnimusResponse},
 };
+use splashcore_rs::animusmagic_protocol::{AnimusTarget, default_request_timeout};
 use crate::{Context, Error};
 use futures_util::StreamExt;
 use serenity::all::{CreateEmbed, EditMessage};
@@ -9,6 +10,7 @@ use serenity::small_fixed_array::TruncatingInto;
 use std::sync::Arc;
 use std::time::Duration;
 use std::{collections::HashMap, fmt::Display};
+use splashcore_rs::animusmagic_ext::AnimusMagicClientExt;
 
 /*
 // Options that can be set when creatng a backup
@@ -192,6 +194,7 @@ pub async fn backups_create(
                 execute: true,
                 task_id: None,
             }),
+            default_request_timeout()
         )
         .await
         .map_err(|e| format!("Failed to create backup task: {}", e))?
@@ -693,6 +696,7 @@ pub async fn backups_restore(
                 execute: true,
                 task_id: None,
             }),
+            default_request_timeout()
         )
         .await
         .map_err(|e| format!("Failed to create restore backup task: {}", e))?

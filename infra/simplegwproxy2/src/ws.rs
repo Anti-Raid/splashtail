@@ -6,6 +6,7 @@ use tokio_websockets::{CloseCode, Message, WebSocketStream};
 use crate::impls::cache::CacheHttpImpl;
 use std::{sync::Arc, collections::VecDeque};
 use tokio::sync::{Mutex, RwLock};
+use splashcore_rs::crypto::gen_random;
 use crate::models::{Event, EventOpCode, Identify, Session, SessionState, QueuedEvent, Hello};
 
 pub static SESSIONS: Lazy<DashMap<String, Session>> = Lazy::new(DashMap::new);
@@ -155,7 +156,7 @@ pub async fn connection(ws_stream: tokio_websockets::WebSocketStream<tokio::net:
 
     let (sender, recv) = tokio::sync::mpsc::channel::<QueuedEvent>(512);
 
-    let mut session_id = crate::impls::crypto::gen_random(32);
+    let mut session_id = gen_random(32);
 
     SESSIONS.insert(session_id.clone(), Session {
         last_heartbeat: std::time::Instant::now(),
