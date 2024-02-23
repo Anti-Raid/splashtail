@@ -76,7 +76,7 @@ pub async fn handle_mod_action(
     let target = ha.target.clone();
     let action_data = &ha.action_data;
     // Check limits cache
-    let guild_limits: HashMap<String, Limit> = Limit::fetch(&cache, &pool, guild_id)
+    let guild_limits: HashMap<String, Limit> = Limit::fetch(cache, pool, guild_id)
         .await?
         .into_iter()
         .filter(|a| a.limit_type == limit)

@@ -7,7 +7,9 @@ stcore:
 reloadwebserver:
 	systemctl restart splashtail-staging-webserver
 updatebot:
-	make buildbot && cp -v botv2/target/debug/botv2 botv2
+	make buildbot && cp -v botv2/target/release/botv2 botv2
+updatebot_dbg:
+	make buildbot_dbg && cp -v botv2/target/debug/botv2 botv2
 restartwebserver:
 	make stcore
 	make buildbot
@@ -19,6 +21,8 @@ reloadjobserver:
 all:
 	make buildbot && make buildmewldwebui && make stcore 
 buildbot:
+	cd botv2 && cargo build --release
+buildbot_dbg:
 	cd botv2 && cargo build
 buildmewldwebui:
 	cd webserver/mewld_web/ui && npm i && npm run build && cd ../../

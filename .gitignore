@@ -14,4 +14,4 @@ cmd/localjobs/localjobs
 semver
 mewld-staging.yaml
 mewld-prod.yaml
-surreal.db
+data/cache
