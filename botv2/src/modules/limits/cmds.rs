@@ -136,10 +136,11 @@ pub async fn limits_view(ctx: Context<'_>) -> Result<(), Error> {
         );
     }
 
-    let reply = CreateReply {
-        embeds,
-        ..Default::default()
-    };
+    let mut reply = CreateReply::new();
+
+    for embed in embeds {
+        reply = reply.embed(embed);
+    }
 
     ctx.send(reply).await?;
 
@@ -278,11 +279,12 @@ pub async fn limitactions_view(
         );
     }
 
-    let reply = CreateReply {
-        embeds,
-        ..Default::default()
-    };
-
+    let mut reply = CreateReply::new();
+    
+    for embed in embeds {
+        reply = reply.embed(embed);
+    }
+    
     ctx.send(reply).await?;
 
     Ok(())
@@ -373,10 +375,11 @@ pub async fn limits_hit(ctx: Context<'_>) -> Result<(), Error> {
         );
     }
 
-    let reply = CreateReply {
-        embeds,
-        ..Default::default()
-    };
+    let mut reply = CreateReply::new();
+
+    for embed in embeds {
+        reply = reply.embed(embed);
+    }
 
     ctx.send(reply).await?;
 

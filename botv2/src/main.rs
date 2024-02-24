@@ -10,6 +10,7 @@ use std::sync::Arc;
 
 use log::{error, info};
 use object_store::ObjectStore;
+use serenity::all::HttpBuilder;
 use poise::serenity_prelude::FullEvent;
 use poise::CreateReply;
 use sqlx::postgres::PgPoolOptions;
@@ -36,7 +37,6 @@ async fn on_error(error: poise::FrameworkError<'_, Data, Error>) {
     // They are many errors that can occur, so we only handle the ones we want to customize
     // and forward the rest to the default handler
     match error {
-        poise::FrameworkError::Setup { error, .. } => panic!("Failed to start bot: {:?}", error),
         poise::FrameworkError::Command { error, ctx, .. } => {
             error!("Error in command `{}`: {:?}", ctx.command().name, error,);
             let err = ctx
@@ -126,7 +126,7 @@ async fn event_listener<'a>(
                     ));
 
                 ic.create_response(
-                    &ctx.serenity_context,
+                    &ctx.serenity_context.http,
                     serenity::all::CreateInteractionResponse::Message(
                         serenity::all::CreateInteractionResponseMessage::default()
                             .flags(serenity::all::InteractionResponseFlags::EPHEMERAL)
@@ -154,6 +154,26 @@ async fn event_listener<'a>(
                 },
                 ctx.serenity_context.clone(),
             ));
+
+            if ctx.serenity_context.shard_id.0 == 0 {
+                let data = ctx.serenity_context.data::<Data>();
+                let ipc_ref = data.mewld_ipc.clone();
+                let ch = crate::impls::cache::CacheHttpImpl::from_ctx(ctx.serenity_context);
+                let sm = ctx.shard_manager().clone();
+                tokio::task::spawn(async move {
+                    let ipc_ref = ipc_ref;
+                    ipc_ref.start_ipc_listener(&ch, &sm).await;
+                });
+
+                // And for animus magic
+                let ch = crate::impls::cache::CacheHttpImpl::from_ctx(ctx.serenity_context);
+                let sm = ctx.shard_manager().clone();
+                let am_ref = data.animus_magic_ipc.clone();
+                tokio::task::spawn(async move {
+                    let am_ref = am_ref;
+                    am_ref.start_ipc_listener(ch, sm).await;
+                });
+            }
 
             if ctx.serenity_context.shard_id.0
                 == *crate::ipc::argparse::MEWLD_ARGS.shards.last().unwrap()
@@ -237,10 +257,10 @@ async fn main() {
 
     info!("Proxy URL: {}", proxy_url);
 
-    let http = serenity::all::HttpBuilder::new(&config::CONFIG.discord_auth.token)
+    let http = Arc::new(HttpBuilder::new(&config::CONFIG.discord_auth.token)
         .proxy(proxy_url)
         .ratelimiter_disabled(true)
-        .build();
+        .build());
 
     let mut intents = serenity::all::GatewayIntents::all();
 
@@ -525,29 +545,6 @@ async fn main() {
     };
 
     let framework = poise::Framework::builder()
-        .setup(move |ctx, _ready, framework| {
-            Box::pin(async move {
-                let data = ctx.data::<Data>();
-                let ipc_ref = data.mewld_ipc.clone();
-                let ch = crate::impls::cache::CacheHttpImpl::from_ctx(ctx);
-                let sm = framework.shard_manager().clone();
-                tokio::task::spawn(async move {
-                    let ipc_ref = ipc_ref;
-                    ipc_ref.start_ipc_listener(&ch, &sm).await;
-                });
-
-                // And for animus magic
-                let ch = crate::impls::cache::CacheHttpImpl::from_ctx(ctx);
-                let sm = framework.shard_manager().clone();
-                let am_ref = data.animus_magic_ipc.clone();
-                tokio::task::spawn(async move {
-                    let am_ref = am_ref;
-                    am_ref.start_ipc_listener(ch, sm).await;
-                });
-
-                Ok(())
-            })
-        })
         .options(framework_opts)
         .build();
 

@@ -158,7 +158,7 @@ pub async fn handle_mod_action(
                     let can_mod = {
                         let guild = cache_http.cache.guild(guild_id).ok_or("Guild not found")?;
 
-                        guild.greater_member_hierarchy(cache_http.cache.clone(), cur_uid, user_id)
+                        guild.greater_member_hierarchy(&cache_http.cache, cur_uid, user_id)
                     }
                     .unwrap_or(cur_uid);
                     if can_mod == cur_uid {

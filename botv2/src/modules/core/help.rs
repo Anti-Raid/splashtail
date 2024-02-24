@@ -347,21 +347,21 @@ pub async fn help(ctx: Context<'_>, command: Option<String>) -> Result<(), Error
     if let Some(msg) = msg {
         // Create a collector
         let interaction = msg
-            .await_component_interactions(ctx.serenity_context())
+            .await_component_interactions(ctx.serenity_context().shard.clone())
             .author_id(ctx.author().id)
             .timeout(Duration::from_secs(120));
 
         let mut collect_stream = interaction.stream();
 
         while let Some(item) = collect_stream.next().await {
-            item.defer(&ctx.serenity_context()).await?;
+            item.defer(&ctx.serenity_context().http).await?;
 
             let id = &item.data.custom_id;
 
             info!("Received interaction: {}", id);
 
             if id == "hnav:cancel" {
-                item.delete_response(ctx.serenity_context()).await?;
+                item.delete_response(&ctx.serenity_context().http).await?;
                 return Ok(());
             }
 

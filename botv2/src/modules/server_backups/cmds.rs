@@ -368,7 +368,7 @@ pub async fn backups_list(ctx: Context<'_>) -> Result<(), Error> {
     let msg = ctx.send(cr).await?.into_message().await?;
 
     let collector = msg
-        .await_component_interactions(ctx.serenity_context())
+        .await_component_interactions(ctx.serenity_context().shard.clone())
         .author_id(ctx.author().id)
         .timeout(Duration::from_secs(180));
 
@@ -401,7 +401,7 @@ pub async fn backups_list(ctx: Context<'_>) -> Result<(), Error> {
                 index = 0;
             }
             "backups_delete" => {
-                item.defer(&ctx.serenity_context()).await?;
+                item.defer(&ctx.serenity_context().http).await?;
 
                 followup_done = true;
 
@@ -428,7 +428,7 @@ pub async fn backups_list(ctx: Context<'_>) -> Result<(), Error> {
                 .await?;
 
                 let confirm_collector = confirm
-                    .await_component_interaction(ctx.serenity_context())
+                    .await_component_interaction(ctx.serenity_context().shard.clone())
                     .author_id(ctx.author().id)
                     .timeout(Duration::from_secs(30))
                     .await;
@@ -437,7 +437,7 @@ pub async fn backups_list(ctx: Context<'_>) -> Result<(), Error> {
                     // Edit the message to say that the user took too long to respond
                     confirm
                         .edit(
-                            &ctx.serenity_context(),
+                            &ctx.serenity_context().http,
                             EditMessage::default().content("You took too long to respond"),
                         )
                         .await?;
@@ -452,7 +452,7 @@ pub async fn backups_list(ctx: Context<'_>) -> Result<(), Error> {
 
                         // Respond to the interaction
                         confirm_item.create_response(
-                            &ctx,
+                            &ctx.serenity_context().http,
                             serenity::all::CreateInteractionResponse::Message(
                                 serenity::all::CreateInteractionResponseMessage::default()
                                 .embed(
@@ -480,7 +480,7 @@ pub async fn backups_list(ctx: Context<'_>) -> Result<(), Error> {
 
                         if let Err(e) = confirm_item
                             .edit_response(
-                                &ctx,
+                                &ctx.serenity_context().http,
                                 serenity::all::EditInteractionResponse::default().embed(
                                     CreateEmbed::default()
                                         .title("Deleting Backup")
@@ -507,7 +507,7 @@ pub async fn backups_list(ctx: Context<'_>) -> Result<(), Error> {
 
                         if let Err(e) = confirm_item
                             .edit_response(
-                                &ctx,
+                                &ctx.serenity_context().http,
                                 serenity::all::EditInteractionResponse::default().embed(
                                     CreateEmbed::default()
                                         .title("Deleting Backup")
@@ -534,13 +534,13 @@ pub async fn backups_list(ctx: Context<'_>) -> Result<(), Error> {
         }
 
         if !followup_done {
-            item.defer(&ctx.serenity_context()).await?;
+            item.defer(&ctx.serenity_context().http).await?;
         }
 
         let cr = create_reply(index, &backup_tasks)?;
 
         item.edit_response(
-            ctx.serenity_context(),
+            &ctx.serenity_context().http,
             cr.to_slash_initial_response_edit(serenity::all::EditInteractionResponse::default()),
         )
         .await?;
