@@ -155,7 +155,9 @@ async fn event_listener<'a>(
                 ctx.serenity_context.clone(),
             ));
 
-            if ctx.serenity_context.shard_id.0 == 0 {
+            if ctx.serenity_context.shard_id.0 == *crate::ipc::argparse::MEWLD_ARGS.shards.first().unwrap() {
+                info!("Starting IPC");
+                
                 let data = ctx.serenity_context.data::<Data>();
                 let ipc_ref = data.mewld_ipc.clone();
                 let ch = crate::impls::cache::CacheHttpImpl::from_ctx(ctx.serenity_context);
