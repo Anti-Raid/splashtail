@@ -40,6 +40,14 @@ pub fn modules() -> Vec<crate::silverpelt::Module> {
         module_list.push(folder_name);
     }
 
+    module_list.sort();
+
+    // Move root to bottom
+    if let Some(root_index) = module_list.iter().position(|x| x == "root") {
+        let root = module_list.remove(root_index);
+        module_list.push(root);
+    }
+
     // Construct module_uses_list
     let mut module_use_list = Vec::new();
 

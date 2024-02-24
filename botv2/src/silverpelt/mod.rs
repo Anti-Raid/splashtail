@@ -1,5 +1,6 @@
 pub mod canonical_repr;
 pub mod permissions;
+pub mod poise_ext;
 
 use futures::future::BoxFuture;
 use indexmap::IndexMap;
@@ -20,6 +21,11 @@ pub struct SilverpeltCache {
     ///
     /// Module_id_cache is a cache of module id to module
     pub module_id_cache: dashmap::DashMap<String, Module>,
+
+    // A commonly needed operation is mapping the name of a module to its module id
+    //
+    // module_id_name_cache is a cache of module name to module id
+    pub module_id_name_cache: dashmap::DashMap<String, String>,
 
     /// Command ID to module map
     ///
@@ -55,6 +61,15 @@ impl SilverpeltCache {
 
                 for module in crate::modules::modules() {
                     map.insert(module.id.to_string(), module);
+                }
+
+                map
+            },
+            module_id_name_cache: {
+                let map = dashmap::DashMap::new();
+
+                for module in crate::modules::modules() {
+                    map.insert(module.name.to_string(), module.id.to_string());
                 }
 
                 map
@@ -96,6 +111,18 @@ impl SilverpeltCache {
                 map
             },
         }
+    }
+
+    pub fn invalidate_for_guild(&self, guild_id: GuildId) -> Result<(), crate::Error> {
+        self.command_permission_cache.invalidate_entries_if(move |k, _| {
+            if k.0 == guild_id {
+                true
+            } else {
+                false
+            }
+        })?;
+
+        Ok(())
     }
 }
 
