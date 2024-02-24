@@ -264,6 +264,8 @@ async fn main() {
         .ratelimiter_disabled(true)
         .build());
 
+    info!("HttpBuilder done");
+
     let mut intents = serenity::all::GatewayIntents::all();
 
     // Remove the really spammy intents
@@ -273,6 +275,8 @@ async fn main() {
     intents.remove(serenity::all::GatewayIntents::DIRECT_MESSAGES); // Don't care about DMs
 
     let client_builder = serenity::all::ClientBuilder::new_with_http(http, intents);
+
+    info!("Created ClientBuilder");
 
     let framework_opts = poise::FrameworkOptions {
         initialize_owners: true,
@@ -285,6 +289,7 @@ async fn main() {
             let mut cmds = Vec::new();
 
             for module in modules::modules() {
+                log::info!("Loading module {}", module.id);
                 for cmd in module.commands {
                     let mut cmd = cmd.0;
                     cmd.category = Some(module.id.to_string());
@@ -558,12 +563,16 @@ async fn main() {
         .options(framework_opts)
         .build();
 
+    info!("Connecting to redis");
+
     let pool = fred::prelude::Builder::from_config(
         fred::prelude::RedisConfig::from_url(&config::CONFIG.meta.bot_redis_url)
             .expect("Could not initialize Redis config"),
     )
     .build_pool(REDIS_MAX_CONNECTIONS.try_into().unwrap())
     .expect("Could not initialize Redis pool");
+
+    info!("Connecting to surreal");
 
     let surreal_config = config::CONFIG.surreal.clone();
     let surreal_client = Surreal::new::<Ws>(surreal_config.url)

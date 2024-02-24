@@ -41,6 +41,7 @@ pub struct SilverpeltCache {
 
 impl SilverpeltCache {
     pub fn new() -> Self {
+        log::info!("Making new SilverpeltCache");
         Self {
             command_permission_cache: Cache::builder()
                 .time_to_live(std::time::Duration::from_secs(60))
@@ -115,12 +116,10 @@ impl SilverpeltCache {
 
     pub fn invalidate_for_guild(&self, guild_id: GuildId) -> Result<(), crate::Error> {
         self.command_permission_cache.invalidate_entries_if(move |k, _| {
-            if k.0 == guild_id {
-                true
-            } else {
-                false
-            }
+            k.0 == guild_id
         })?;
+
+        log::info!("Invalidated cache for guild {}", guild_id);
 
         Ok(())
     }

@@ -11,7 +11,13 @@ fn autogen_modules_mod_rs() -> Result<()> {
 /// List of modules available. Not all may be enabled
 pub fn modules() -> Vec<crate::silverpelt::Module> {
     vec![
-        {module_list}
+        {module_func_list}
+    ]
+}
+
+pub fn module_ids() -> Vec<&'static str> {
+    vec![
+        {module_ids_list}
     ]
 }
     "#;
@@ -64,15 +70,22 @@ pub fn modules() -> Vec<crate::silverpelt::Module> {
         module_dat_list.push(format!("{}::module(),", module));
     }
 
-    let module_list = module_dat_list.join("\n        ");
+    let module_func_list = module_dat_list.join("\n        ");
+    
+    let mut module_ids_list = Vec::new();
 
-    let module_list = MODULE_TEMPLATE
+    for module in &module_list {
+        module_ids_list.push(format!("\"{}\",", module));
+    }
+
+    let module_list_final = MODULE_TEMPLATE
         .replace("{module_use_list}", &module_use_list)
-        .replace("{module_list}", &module_list);
+        .replace("{module_func_list}", &module_func_list)
+        .replace("{module_ids_list}", &module_ids_list.join("\n        "));
 
-    let module_list = module_list.trim().to_string();
+    let module_list_final = module_list_final.trim().to_string();
 
-    std::fs::write("src/modules/mod.rs", module_list)?;
+    std::fs::write("src/modules/mod.rs", module_list_final)?;
 
     Ok(())
 }

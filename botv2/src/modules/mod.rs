@@ -19,3 +19,15 @@ pub fn modules() -> Vec<crate::silverpelt::Module> {
         root::module(),
     ]
 }
+
+pub fn module_ids() -> Vec<&'static str> {
+    vec![
+        "core",
+        "gitlogs",
+        "limits",
+        "server_backups",
+        "server_member_backups",
+        "settings",
+        "root",
+    ]
+}

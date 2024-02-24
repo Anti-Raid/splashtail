@@ -1,6 +1,5 @@
 use crate::silverpelt::poise_ext::module_list::ModuleList;
 
-type Data = crate::Data;
 type Error = crate::Error;
 type Context<'a> = crate::Context<'a>;
 

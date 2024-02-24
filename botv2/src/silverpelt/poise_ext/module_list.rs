@@ -6,10 +6,9 @@ use once_cell::sync::Lazy;
 static MODULE_LIST_CPC: Lazy<Vec<CommandParameterChoice>> = Lazy::new(|| {
     let mut cpc = Vec::new();
 
-    for mv in SILVERPELT_CACHE.module_id_cache.iter() {
-        let module = mv.value();
+    for module in crate::modules::module_ids() {
         cpc.push(CommandParameterChoice {
-            name: module.name.into(),
+            name: module.into(),
             localizations: HashMap::new(),
             __non_exhaustive: (), // Poise moment
         });
@@ -19,6 +18,8 @@ static MODULE_LIST_CPC: Lazy<Vec<CommandParameterChoice>> = Lazy::new(|| {
 });
 
 /// Helper struct to allow the user to select a module from a list of modules
+///
+/// Note that this currently only works based on the ID and not the module name due to technical issues regarding a loop in silverpelt_cache
 pub struct ModuleList {
     /// The id of the module they have chosen
     pub chosen_id: String,
@@ -31,11 +32,10 @@ impl ChoiceParameter for ModuleList {
 
     fn from_index(index: usize) -> Option<Self> {        
         let module_name = MODULE_LIST_CPC.get(index)?.name.clone().into_owned();
-
-        let chosen_module_id = SILVERPELT_CACHE.module_id_name_cache.get(&module_name)?;
+        //let chosen_module_id = SILVERPELT_CACHE.module_id_name_cache.get(&module_name)?;
 
         Some(ModuleList {
-            chosen_id: chosen_module_id.clone(),
+            chosen_id: module_name.clone(),
         })
     }
 
