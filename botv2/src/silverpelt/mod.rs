@@ -149,7 +149,7 @@ pub struct Module {
     pub event_handlers: Vec<ModuleEventHandler>,
 }
 
-#[derive(Default, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+#[derive(Default, Clone, PartialEq, serde::Serialize, serde::Deserialize, Debug)]
 pub struct PermissionCheck {
     /// The kittycat permissions needed to run the command
     pub kittycat_perms: Vec<String>,
@@ -161,7 +161,7 @@ pub struct PermissionCheck {
     pub inner_and: bool,
 }
 
-#[derive(Default, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+#[derive(Default, Clone, PartialEq, serde::Serialize, serde::Deserialize, Debug)]
 pub struct PermissionChecks {
     /// The list of permission checks
     pub checks: Vec<PermissionCheck>,
@@ -170,7 +170,7 @@ pub struct PermissionChecks {
     pub checks_needed: usize,
 }
 
-#[derive(Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, PartialEq, serde::Serialize, serde::Deserialize, Debug)]
 pub struct CommandExtendedData {
     /// The default permissions needed to run this command
     pub default_perms: PermissionChecks,
@@ -188,7 +188,7 @@ impl Default for CommandExtendedData {
 }
 
 /// Guild command configuration data
-#[derive(Clone, PartialEq, serde::Serialize, serde::Deserialize, Default)]
+#[derive(Clone, PartialEq, serde::Serialize, serde::Deserialize, Debug)]
 pub struct GuildCommandConfiguration {
     /// The ID
     pub id: String,
@@ -203,7 +203,7 @@ pub struct GuildCommandConfiguration {
 }
 
 /// Guild module configuration data
-#[derive(Clone, PartialEq, serde::Serialize, serde::Deserialize, Default)]
+#[derive(Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct GuildModuleConfiguration {
     /// The ID
     pub id: String,
@@ -213,17 +213,6 @@ pub struct GuildModuleConfiguration {
     pub module: String,
     /// Whether ot not the module is disabled or not. None means to use the default module configuration
     pub disabled: Option<bool>,
-}
-
-impl GuildModuleConfiguration {
-    /// Useful for unit testing
-    #[cfg(test)]
-    fn root_module() -> Self {
-        Self {
-            module: "root".into(),
-            ..Default::default()
-        }
-    }
 }
 
 /// From name_split, construct a list of all permutations of the command name to check

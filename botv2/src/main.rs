@@ -435,12 +435,20 @@ async fn main() {
                         )
                         .await?;
 
-                    let command_config = command_config.unwrap_or_default();
-                    let module_config = {
-                        let mut cfg = module_config.unwrap_or_default();
-                        cfg.module = module.clone();
-                        cfg
-                    };
+                    let command_config = command_config.unwrap_or(silverpelt::GuildCommandConfiguration {
+                        id: "".to_string(),
+                        guild_id: guild_id.to_string(),
+                        command: ctx.command().qualified_name.clone(),
+                        perms: None,
+                        disabled: false,
+                    });
+
+                    let module_config = module_config.unwrap_or(silverpelt::GuildModuleConfiguration {
+                        id: "".to_string(),
+                        guild_id: guild_id.to_string(),
+                        module: module.clone(),
+                        disabled: None,
+                    });
 
                     let (is_owner, member_perms) = if let Some(guild) = ctx.guild() {
                         let is_owner = member.user.id == guild.owner_id;

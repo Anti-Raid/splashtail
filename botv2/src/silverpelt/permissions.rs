@@ -95,6 +95,8 @@ pub fn can_run_command(
     member_native_perms: serenity::all::Permissions,
     member_kittycat_perms: &[String],
 ) -> Result<(), (String, crate::Error)> {
+    log::info!("Command config: {:?}", command_config);
+
     if command_config.disabled {
         return Err((
             "command_disabled".into(),
@@ -274,6 +276,16 @@ mod tests {
     use super::*;
     use crate::silverpelt::*;
 
+    /// Generates a module configuration with the given name
+    fn gen_module_config(name: &str) -> GuildModuleConfiguration {
+        GuildModuleConfiguration {
+            id: "".to_string(),
+            guild_id: "testing".into(),
+            module: name.into(),
+            disabled: None,
+        }
+    }
+
     fn err_with_code(e: Result<(), (String, crate::Error)>, code: &str) -> bool {
         if let Err((e_code, _)) = e {
             println!("test_check_perms_single: {} == {}", e_code, code);
@@ -395,7 +407,7 @@ mod tests {
                 perms: None,
                 disabled: false,
             },
-            &GuildModuleConfiguration::root_module(),
+            &gen_module_config("core"),
             "test",
             serenity::all::Permissions::empty(),
             &["abc.test".into()],
@@ -421,7 +433,7 @@ mod tests {
                     }),
                     disabled: false,
                 },
-                &GuildModuleConfiguration::root_module(),
+                &gen_module_config("core"),
                 "test",
                 serenity::all::Permissions::empty(),
                 &["abc.test".into()],
@@ -447,7 +459,7 @@ mod tests {
                     }),
                     disabled: false,
                 },
-                &GuildModuleConfiguration::root_module(),
+                &gen_module_config("core"),
                 "test",
                 serenity::all::Permissions::empty(),
                 &["abc.test".into()],
@@ -481,7 +493,7 @@ mod tests {
                     }),
                     disabled: false,
                 },
-                &GuildModuleConfiguration::root_module(),
+                &gen_module_config("core"),
                 "test",
                 serenity::all::Permissions::BAN_MEMBERS,
                 &["abc.test".into()],
@@ -500,7 +512,7 @@ mod tests {
                     perms: None,
                     disabled: false,
                 },
-                &GuildModuleConfiguration::root_module(),
+                &gen_module_config("core"),
                 "backups create",
                 serenity::all::Permissions::ADMINISTRATOR,
                 &[],
@@ -518,7 +530,7 @@ mod tests {
                 perms: None,
                 disabled: false,
             },
-            &GuildModuleConfiguration::root_module(),
+            &gen_module_config("core"),
             "backups create",
             serenity::all::Permissions::ADMINISTRATOR,
             &[],
@@ -550,7 +562,7 @@ mod tests {
                 }),
                 disabled: false,
             },
-            &GuildModuleConfiguration::root_module(),
+            &gen_module_config("core"),
             "test",
             serenity::all::Permissions::BAN_MEMBERS,
             &["abc.test".into()],

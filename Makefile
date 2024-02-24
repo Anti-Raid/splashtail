@@ -14,6 +14,7 @@ restartwebserver:
 	make stcore
 	make buildbot
 	systemctl stop splashtail-staging-webserver
+	sleep 3 # Give time for the webserver to stop
 	cp -v botv2/target/release/botv2 botv2
 	systemctl start splashtail-staging-webserver
 reloadjobserver:
