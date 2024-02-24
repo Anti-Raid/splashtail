@@ -375,7 +375,7 @@ async fn main() {
                 if module == "root" {
                     if !crate::config::CONFIG
                         .discord_auth
-                        .can_use_bot
+                        .root_users
                         .contains(&ctx.author().id)
                     {
                         return Err("Root commands are off-limits unless you are a bot owner or otherwise have been granted authorization!".into());
@@ -500,7 +500,7 @@ async fn main() {
                         member_perms,
                         &kittycat_perms,
                     ) {
-                        return Err(format!("{}\n**Code**: {}", e.1, e.0).into());
+                        return Err(format!("{}\n\n**Code**: {}", e.1, e.0).into());
                     }
 
                     let mut key = silverpelt::SILVERPELT_CACHE

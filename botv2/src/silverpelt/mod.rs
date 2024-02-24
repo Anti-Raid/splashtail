@@ -6,6 +6,7 @@ use indexmap::IndexMap;
 use moka::future::Cache;
 use once_cell::sync::Lazy;
 use serenity::all::{GuildId, UserId};
+use std::fmt::Display;
 
 /// The silverpelt cache is a structure that contains the core state for the bot
 pub struct SilverpeltCache {
@@ -161,6 +162,52 @@ pub struct PermissionCheck {
     pub inner_and: bool,
 }
 
+impl Display for PermissionCheck {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        if !self.native_perms.is_empty() {
+            write!(f, "\nDiscord: ")?;
+
+            for (j, perm) in self.native_perms.iter().enumerate() {
+                if j != 0 {
+                    write!(f, " ")?;
+                }
+
+                write!(f, "{}", perm)?;
+
+                if j < self.native_perms.len() - 1 {
+                    if self.inner_and {
+                        write!(f, " AND")?;
+                    } else {
+                        write!(f, " OR")?;
+                    }
+                }
+            }
+        }
+
+        if !self.kittycat_perms.is_empty() {
+            write!(f, "\nCustom Permissions (kittycat): ")?;
+
+            for (j, perm) in self.kittycat_perms.iter().enumerate() {
+                if j != 0 {
+                    write!(f, " ")?;
+                }
+
+                write!(f, "{}", perm)?;
+
+                if j < self.kittycat_perms.len() - 1 {
+                    if self.inner_and {
+                        write!(f, " AND")?;
+                    } else {
+                        write!(f, " OR")?;
+                    }
+                }
+            }
+        }
+
+        Ok(())
+    }
+}
+
 #[derive(Default, Clone, PartialEq, serde::Serialize, serde::Deserialize, Debug)]
 pub struct PermissionChecks {
     /// The list of permission checks
@@ -168,6 +215,30 @@ pub struct PermissionChecks {
 
     /// Number of checks that need to be true
     pub checks_needed: usize,
+}
+
+impl Display for PermissionChecks {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        for (i, check) in self.checks.iter().enumerate() {
+            if i != 0 {
+                write!(f, " ")?;
+            }
+
+            write!(f, "{}", check)?; // The Display trait on PermissionCheck automatically formats individual permissions the correct way
+
+            let empty = check.kittycat_perms.is_empty() && check.native_perms.is_empty();
+
+            if i < self.checks.len() - 1 {
+                if check.outer_and && !empty {
+                    write!(f, "AND ")?;
+                } else {
+                    write!(f, "OR ")?;
+                }
+            }
+        }
+
+        Ok(())
+    }
 }
 
 #[derive(Clone, PartialEq, serde::Serialize, serde::Deserialize, Debug)]

@@ -9,7 +9,6 @@ use indexmap::indexmap;
 /// This may be useful when mocking or visualizing a permission check
 pub fn check_perms_single(
     cmd_qualified_name: &str,
-    cmd_real_name: &str,
     check: &PermissionCheck,
     member_native_perms: serenity::all::Permissions,
     member_kittycat_perms: &[String],
@@ -29,7 +28,7 @@ pub fn check_perms_single(
                 return Err(
                     (
                         "missing_kittycat_perms".into(),
-                        format!("You do not have the required permissions to run this command (``{}``) implied from ``{}``. You need ``{}`` permissions to execute this command.", cmd_qualified_name, cmd_real_name, perm).into()
+                        format!("You do not have the required permissions to run this command ``{}``. Try checking that you have the below permissions: {}", cmd_qualified_name, check).into()
                     )
                 );
             }
@@ -41,7 +40,7 @@ pub fn check_perms_single(
                     return Err(
                         (
                             "missing_native_perms".into(),
-                            format!("You do not have the required permissions to run this command (``{}``) implied from ``{}``. You need ``{}`` permissions to execute this command.", cmd_qualified_name, cmd_real_name, perm).into()
+                            format!("You do not have the required permissions to run this command ``{}``. Try checking that you have the below permissions: {}.", cmd_qualified_name, check).into()
                         )
                     );
                 }
@@ -61,23 +60,10 @@ pub fn check_perms_single(
                 .any(|perm| kittycat::perms::has_perm(member_kittycat_perms, perm));
 
             if !has_any_kc {
-                let np = check
-                    .native_perms
-                    .iter()
-                    .map(|p| format!("{}", p))
-                    .collect::<Vec<String>>()
-                    .join(" | ");
-
-                let perms = format!(
-                    "*Discord*: ``{}`` OR *Custom Permissions*: ``{}``",
-                    check.kittycat_perms.join(" | "),
-                    np
-                );
-
                 return Err(
                     (
                         "missing_any_perms".into(),
-                        format!("You do not have the required permissions to run this command (``{}``) implied from ``{}``. You need at least one of the following permissions to execute this command:\n\n{}", cmd_qualified_name, cmd_real_name, perms).into()
+                        format!("You do not have the required permissions to run this command ``{}``. Try checking that you have the below permissions: {}.", cmd_qualified_name, check).into()
                     )
                 );
             }
@@ -145,7 +131,6 @@ pub fn can_run_command(
         // Run the check
         let res = check_perms_single(
             cmd_qualified_name,
-            &command_config.command,
             check,
             member_native_perms,
             member_kittycat_perms,
@@ -180,49 +165,21 @@ pub fn can_run_command(
     // Check the OR now
     if perms.checks_needed == 0 {
         if success == 0 {
-            let mut np = Vec::new();
-            let mut kc = Vec::new();
-
-            for check in &perms.checks {
-                np.extend(check.native_perms.iter().map(|p| p.to_string()));
-                kc.extend(check.kittycat_perms.iter().map(|p| p.to_string()));
-            }
-
-            let perms = format!(
-                "*Discord*: ``{}`` OR *Custom Permissions*: ``{}``",
-                np.join(" | "),
-                kc.join(" | ")
-            );
-
             return Err(
                 (
                     "missing_any_perms".into(),
-                    format!("You do not have the required permissions to run this command (``{}``) implied from ``{}``. You need at least one of the following permissions to execute this command:\n``{}``", cmd_qualified_name, command_config.command, perms).into()
+                    format!("You do not have the required permissions to run this command ``{}``. You need at least one of the following permissions to execute this command:\n\n**Required Permissions**: {}", cmd_qualified_name, perms).into()
                 )
             );
         } else {
             return Ok(());
         }
     } else if success < perms.checks_needed {
-        let mut np = Vec::new();
-        let mut kc = Vec::new();
-
-        for check in &perms.checks {
-            np.extend(check.native_perms.iter().map(|p| p.to_string()));
-            kc.extend(check.kittycat_perms.iter().map(|p| p.to_string()));
-        }
-
-        let ps = format!(
-            "*Discord*: ``{}`` OR *Custom Permissions*: ``{}``",
-            np.join(" | "),
-            kc.join(" | ")
-        );
-
         // TODO: Improve this and group the permissions in error
         return Err(
             (
                 "missing_min_checks".into(),
-                format!("You do not have the required permissions to run this command (``{}``) implied from ``{}``. You need at least {} of the following permissions to execute this command:\n\n{}", cmd_qualified_name, command_config.command, perms.checks_needed, ps).into()
+                format!("You do not have the required permissions to run this command ``{}``. You need at least {} of the following permissions to execute this command:\n\n**Required Permissions**: {}", cmd_qualified_name, perms.checks_needed, perms).into()
             )
         );
     }
@@ -315,7 +272,6 @@ mod tests {
         assert!(err_with_code(
             check_perms_single(
                 "test",
-                "test",
                 &PermissionCheck {
                     kittycat_perms: vec![],
                     native_perms: vec![serenity::all::Permissions::ADMINISTRATOR],
@@ -329,7 +285,6 @@ mod tests {
         ));
 
         assert!(check_perms_single(
-            "test",
             "test",
             &PermissionCheck {
                 kittycat_perms: vec![],
@@ -345,7 +300,6 @@ mod tests {
         // With inner and
         assert!(err_with_code(
             check_perms_single(
-                "test",
                 "test",
                 &PermissionCheck {
                     kittycat_perms: vec![],
@@ -365,7 +319,6 @@ mod tests {
         // Admin overrides other native perms
         assert!(check_perms_single(
             "test",
-            "test",
             &PermissionCheck {
                 kittycat_perms: vec![],
                 native_perms: vec![serenity::all::Permissions::BAN_MEMBERS],
@@ -380,7 +333,6 @@ mod tests {
         // Kittycat
         assert!(err_with_code(
             check_perms_single(
-                "test",
                 "test",
                 &PermissionCheck {
                     kittycat_perms: vec!["backups.create".to_string()],

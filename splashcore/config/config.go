@@ -52,7 +52,7 @@ type Config struct {
 	Meta               Meta                `yaml:"meta" validate:"required"`
 	ObjectStorage      ObjectStorageConfig `yaml:"object_storage" validate:"required"`
 	SimpleGatewayProxy SimpleGatewayProxy  `yaml:"simple_gateway_proxy" validate:"required"`
-    	SurrealDB          SurrealDB               `yaml:"surreal" validate:"required"`
+	SurrealDB          SurrealDB           `yaml:"surreal" validate:"required"`
 }
 
 type SimpleGatewayProxy struct {
@@ -61,9 +61,9 @@ type SimpleGatewayProxy struct {
 }
 
 type SurrealDB struct {
-    Url string `yaml:"url" comment: "Surreal Cache Url" validate:"required"`
-    Username string `yaml:"username" comment: "Surreal Cache Username" validate:"required"`
-    Password string `yaml:"password" comment: "Surreal Cache Password" validate:"required"`
+	Url      string `yaml:"url" comment:"Surreal Cache Url" validate:"required"`
+	Username string `yaml:"username" comment:"Surreal Cache Username" validate:"required"`
+	Password string `yaml:"password" comment:"Surreal Cache Password" validate:"required"`
 }
 
 type DiscordAuth struct {
@@ -73,6 +73,7 @@ type DiscordAuth struct {
 	AllowedRedirects []string `yaml:"allowed_redirects" default:"http://localhost:3000/auth" validate:"required"`
 	MewldRedirect    string   `yaml:"mewld_redirect" default:"https://mewld.antiraid.xyz/login" validate:"required"`
 	CanUseBot        []string `yaml:"can_use_bot" default:"728871946456137770,564164277251080208,775855009421066262" validate:"required"`
+	RootUsers        []string `yaml:"root_users" default:"728871946456137770,564164277251080208,775855009421066262" validate:"required"`
 }
 
 type Sites struct {
