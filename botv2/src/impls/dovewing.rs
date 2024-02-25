@@ -23,10 +23,12 @@ impl PartialEq for PlatformUser {
 }
 
 #[derive(Clone)]
+#[allow(dead_code)]
 pub enum DovewingSource {
     Discord(CacheHttpImpl),
 }
 
+#[allow(dead_code)]
 impl DovewingSource {
     /// Returns the expiry time of a user
     pub fn user_expiry_time(&self) -> i64 {
@@ -122,6 +124,7 @@ impl DovewingSource {
     }
 }
 
+#[allow(dead_code)]
 pub async fn get_platform_user(
     pool: &PgPool,
     src: DovewingSource,
