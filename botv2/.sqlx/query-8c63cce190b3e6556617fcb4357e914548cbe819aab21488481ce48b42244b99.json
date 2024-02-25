@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT id, repo_id, events, blacklisted, whitelisted, redirect_channel, priority FROM gitlogs__event_modifiers WHERE webhook_id = $1",
+  "query": "SELECT id, repo_id, events, blacklisted, whitelisted, redirect_channel, priority FROM gitlogs__event_modifiers WHERE webhook_id = $1 AND guild_id = $2",
   "describe": {
     "columns": [
       {
@@ -41,6 +41,7 @@
     ],
     "parameters": {
       "Left": [
+        "Text",
         "Text"
       ]
     },
@@ -54,5 +55,5 @@
       false
     ]
   },
-  "hash": "fef5b965e719bc0afd78cd1413ebeed15e811e1269cb6a33ac96ddef7d5f4fe3"
+  "hash": "8c63cce190b3e6556617fcb4357e914548cbe819aab21488481ce48b42244b99"
 }

@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT COUNT(1) FROM gitlogs__event_modifiers WHERE id = $1 AND webhook_id = $2",
+  "query": "SELECT COUNT(1) FROM gitlogs__repos WHERE id = $1 AND webhook_id = $2 AND guild_id = $3",
   "describe": {
     "columns": [
       {
@@ -12,6 +12,7 @@
     "parameters": {
       "Left": [
         "Text",
+        "Text",
         "Text"
       ]
     },
@@ -19,5 +20,5 @@
       null
     ]
   },
-  "hash": "3ec87ceb23a9500b3ce840e1f717b8a5ce806b8457f65cdc12c9e0a4ec3bc33f"
+  "hash": "2ed5686e7b2661145cf61dd2d90a43fedbfeb7d43c9069d2ae1580f3be865f14"
 }
