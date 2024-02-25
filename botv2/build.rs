@@ -14,12 +14,6 @@ pub fn modules() -> Vec<crate::silverpelt::Module> {
         {module_func_list}
     ]
 }
-
-pub fn module_ids() -> Vec<&'static str> {
-    vec![
-        {module_ids_list}
-    ]
-}
     "#;
 
     let mut module_list = Vec::new();
@@ -81,7 +75,7 @@ pub fn module_ids() -> Vec<&'static str> {
     let module_list_final = MODULE_TEMPLATE
         .replace("{module_use_list}", &module_use_list)
         .replace("{module_func_list}", &module_func_list)
-        .replace("{module_ids_list}", &module_ids_list.join("\n        "));
+        .replace("{module_ids_list}", &module_ids_list.join("\n        ")); // Not used currently but may be used in the future
 
     let module_list_final = module_list_final.trim().to_string();
 

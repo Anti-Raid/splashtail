@@ -1,5 +1,3 @@
-use crate::silverpelt::poise_ext::module_list::ModuleList;
-
 type Error = crate::Error;
 type Context<'a> = crate::Context<'a>;
 
@@ -19,6 +17,7 @@ pub async fn modules(
     Ok(())
 }
 
+/// Enables a module. Note that globally disabled modules cannot be used even if enabled
 #[poise::command(
     prefix_command, 
     slash_command, 
@@ -28,11 +27,23 @@ pub async fn modules(
 )]
 pub async fn modules_enable(
     ctx: Context<'_>,
-    #[description = "The module to enable"] module: ModuleList,
+    #[description = "The module to enable"] 
+    #[autocomplete = "crate::silverpelt::poise_ext::module_list::autocomplete"]
+    module: String,
 ) -> Result<(), Error> {
     let Some(guild_id) = ctx.guild_id() else {
         return Err("This command must be run in a guild".into());
     };
+
+    // Check that the module exists
+    if !crate::silverpelt::SILVERPELT_CACHE.module_id_cache.contains_key(&module) {
+        return Err(
+            format!(
+                "The module you are trying to disable ({}) does not exist",
+                module
+            ).into()
+        );
+    }    
 
     // Check for a module_configuration in db
     // If it doesn't exist, create it
@@ -42,7 +53,7 @@ pub async fn modules_enable(
     let disabled = sqlx::query!(
         "SELECT disabled FROM guild_module_configurations WHERE guild_id = $1 AND module = $2 FOR UPDATE",
         guild_id.to_string(),
-        module.chosen_id
+        module
     )
     .fetch_optional(&mut *tx)
     .await?;
@@ -56,7 +67,7 @@ pub async fn modules_enable(
         sqlx::query!(
             "UPDATE guild_module_configurations SET disabled = false WHERE guild_id = $1 AND module = $2",
             guild_id.to_string(),
-            module.chosen_id
+            module
         )
         .execute(&mut *tx)
         .await?;
@@ -65,7 +76,7 @@ pub async fn modules_enable(
         sqlx::query!(
             "INSERT INTO guild_module_configurations (guild_id, module, disabled) VALUES ($1, $2, false)",
             guild_id.to_string(),
-            module.chosen_id
+            module
         )
         .execute(&mut *tx)
         .await?;
@@ -84,6 +95,7 @@ pub async fn modules_enable(
     Ok(())
 }
 
+/// Disables a module. Note that certain modules may not be disablable
 #[poise::command(
     prefix_command, 
     slash_command, 
@@ -93,11 +105,23 @@ pub async fn modules_enable(
 )]
 pub async fn modules_disable(
     ctx: Context<'_>,
-    #[description = "The module to disable"] module: ModuleList,
+    #[description = "The module to disable"] 
+    #[autocomplete = "crate::silverpelt::poise_ext::module_list::autocomplete"]
+    module: String,
 ) -> Result<(), Error> {
     let Some(guild_id) = ctx.guild_id() else {
         return Err("This command must be run in a guild".into());
     };
+
+    // Check that the module exists
+    if !crate::silverpelt::SILVERPELT_CACHE.module_id_cache.contains_key(&module) {
+        return Err(
+            format!(
+                "The module you are trying to disable ({}) does not exist",
+                module
+            ).into()
+        );
+    }
 
     // Check for a module_configuration in db
     // If it doesn't exist, create it
@@ -107,7 +131,7 @@ pub async fn modules_disable(
     let disabled = sqlx::query!(
         "SELECT disabled FROM guild_module_configurations WHERE guild_id = $1 AND module = $2 FOR UPDATE",
         guild_id.to_string(),
-        module.chosen_id
+        module
     )
     .fetch_optional(&mut *tx)
     .await?;
@@ -121,7 +145,7 @@ pub async fn modules_disable(
         sqlx::query!(
             "UPDATE guild_module_configurations SET disabled = true WHERE guild_id = $1 AND module = $2",
             guild_id.to_string(),
-            module.chosen_id
+            module
         )
         .execute(&mut *tx)
         .await?;
@@ -130,7 +154,7 @@ pub async fn modules_disable(
         sqlx::query!(
             "INSERT INTO guild_module_configurations (guild_id, module, disabled) VALUES ($1, $2, true)",
             guild_id.to_string(),
-            module.chosen_id
+            module
         )
         .execute(&mut *tx)
         .await?;

@@ -91,8 +91,9 @@ pub async fn backup(
 
     // Fetch the event modifiers
     let rows = sqlx::query!(
-        "SELECT id, repo_id, events, blacklisted, whitelisted, redirect_channel, priority FROM gitlogs__event_modifiers WHERE webhook_id = $1",
-        id
+        "SELECT id, repo_id, events, blacklisted, whitelisted, redirect_channel, priority FROM gitlogs__event_modifiers WHERE webhook_id = $1 AND guild_id = $2",
+        id,
+        ctx.guild_id().unwrap().to_string(),
     )
     .fetch_all(&data.pool)
     .await?;
@@ -191,9 +192,10 @@ Please contact our support team.
     for repo in backup.repos {
         // Check that the repo exists
         let repo_exists = sqlx::query!(
-            "SELECT COUNT(1) FROM gitlogs__repos WHERE id = $1 AND webhook_id = $2",
+            "SELECT COUNT(1) FROM gitlogs__repos WHERE id = $1 AND webhook_id = $2 AND guild_id = $3",
             repo.repo_id,
-            id
+            id,
+            ctx.guild_id().unwrap().to_string(),
         )
         .fetch_one(&data.pool)
         .await?;
@@ -201,10 +203,11 @@ Please contact our support team.
         if repo_exists.count.unwrap_or_default() == 0 {
             // If it doesn't, create it
             sqlx::query!(
-                "INSERT INTO gitlogs__repos (id, repo_name, webhook_id, channel_id) VALUES ($1, $2, $3, $4)",
+                "INSERT INTO gitlogs__repos (id, repo_name, webhook_id, guild_id, channel_id) VALUES ($1, $2, $3, $4, $5)",
                 repo.repo_id,
                 repo.repo_name,
                 id,
+                ctx.guild_id().unwrap().to_string(),
                 repo.channel_id,
             )
             .execute(&data.pool)
@@ -214,11 +217,12 @@ Please contact our support team.
         } else {
             // If it does, update it
             sqlx::query!(
-                "UPDATE gitlogs__repos SET repo_name = $1, channel_id = $2 WHERE id = $3 AND webhook_id = $4",
+                "UPDATE gitlogs__repos SET repo_name = $1, channel_id = $2 WHERE id = $3 AND webhook_id = $4 AND guild_id = $5",
                 repo.repo_name,
                 repo.channel_id,
                 repo.repo_id,
-                id
+                id,
+                ctx.guild_id().unwrap().to_string(),
             )
             .execute(&data.pool)
             .await?;
@@ -241,9 +245,10 @@ Please contact our support team.
     for event_modifier in backup.event_modifiers {
         // Check that the event modifier exists
         let event_modifier_exists = sqlx::query!(
-            "SELECT COUNT(1) FROM gitlogs__event_modifiers WHERE id = $1 AND webhook_id = $2",
+            "SELECT COUNT(1) FROM gitlogs__event_modifiers WHERE id = $1 AND webhook_id = $2 AND guild_id = $3",
             event_modifier.event_modifier_id,
-            id
+            id,
+            ctx.guild_id().unwrap().to_string(),
         )
         .fetch_one(&data.pool)
         .await?;
@@ -269,7 +274,7 @@ Please contact our support team.
         } else {
             // If it does, update it
             sqlx::query!(
-                "UPDATE gitlogs__event_modifiers SET repo_id = $1, events = $2, blacklisted = $3, whitelisted = $4, redirect_channel = $5, priority = $6 WHERE id = $7 AND webhook_id = $8",
+                "UPDATE gitlogs__event_modifiers SET repo_id = $1, events = $2, blacklisted = $3, whitelisted = $4, redirect_channel = $5, priority = $6 WHERE id = $7 AND webhook_id = $8 AND guild_id = $9",
                 event_modifier.repo_id,
                 &event_modifier.events,
                 event_modifier.blacklisted,
@@ -277,7 +282,8 @@ Please contact our support team.
                 event_modifier.redirect_channel,
                 event_modifier.priority,
                 event_modifier.event_modifier_id,
-                id
+                id,
+                ctx.guild_id().unwrap().to_string(),
             )
             .execute(&data.pool)
             .await?;

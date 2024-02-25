@@ -5,9 +5,9 @@ go 1.21
 toolchain go1.21.4
 
 require (
-	github.com/bwmarrin/discordgo v0.27.2-0.20231208125110-f7800efc52b8
+	github.com/bwmarrin/discordgo v0.27.2-0.20240216140604-15ef2a43d47f
 	github.com/getkin/kin-openapi v0.123.0 // indirect
-	github.com/go-chi/chi/v5 v5.0.11
+	github.com/go-chi/chi/v5 v5.0.12
 	github.com/infinitybotlist/eureka v0.9.2
 	github.com/wk8/go-ordered-map/v2 v2.1.8 // indirect
 	gopkg.in/yaml.v3 v3.0.1
@@ -16,10 +16,10 @@ require (
 require (
 	github.com/cheesycod/mewld v0.0.0-20231223082556-5dc0e141721c
 	github.com/cloudflare/tableflip v1.2.3
-	github.com/fxamacker/cbor/v2 v2.5.0
+	github.com/fxamacker/cbor/v2 v2.6.0
 	github.com/infinitybotlist/iblfile v0.0.0-20231217062828-5a52f5049ee3
-	github.com/minio/minio-go/v7 v7.0.66
-	github.com/redis/rueidis v1.0.28
+	github.com/minio/minio-go/v7 v7.0.67
+	github.com/redis/rueidis v1.0.30
 	github.com/sirupsen/logrus v1.9.3
 	github.com/vmihailenco/msgpack/v5 v5.4.1
 	golang.org/x/image v0.15.0
@@ -31,13 +31,13 @@ require (
 	github.com/buger/jsonparser v1.1.1 // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/gabriel-vasile/mimetype v1.4.3 // indirect
-	github.com/git-logs/client/webserver v0.0.0-20240130145321-4aa463d03d85
+	github.com/git-logs/client/webserver v0.0.0-20240225060655-d669ec3da5a9
 	github.com/go-playground/locales v0.14.1 // indirect
 	github.com/go-playground/universal-translator v0.18.1 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/joho/godotenv v1.5.1 // indirect
-	github.com/klauspost/compress v1.17.6 // indirect
-	github.com/klauspost/cpuid/v2 v2.2.6 // indirect
+	github.com/klauspost/compress v1.17.7 // indirect
+	github.com/klauspost/cpuid/v2 v2.2.7 // indirect
 	github.com/leodido/go-urn v1.4.0 // indirect
 	github.com/minio/md5-simd v1.1.2 // indirect
 	github.com/minio/sha256-simd v1.0.1 // indirect
@@ -72,11 +72,11 @@ require (
 )
 
 require (
-	github.com/go-playground/validator/v10 v10.17.0
+	github.com/go-playground/validator/v10 v10.18.0
 	github.com/jackc/pgx/v5 v5.5.3
 	github.com/json-iterator/go v1.1.12
-	github.com/redis/go-redis/v9 v9.4.0 // indirect
-	go.uber.org/zap v1.26.0
-	golang.org/x/exp v0.0.0-20240205201215-2c58cdc269a3
+	github.com/redis/go-redis/v9 v9.5.1 // indirect
+	go.uber.org/zap v1.27.0
+	golang.org/x/exp v0.0.0-20240222234643-814bf88cf225
 	golang.org/x/sys v0.17.0 // indirect
 )

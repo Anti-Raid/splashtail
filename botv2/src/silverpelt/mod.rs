@@ -408,6 +408,7 @@ pub async fn get_command_configuration(
         .await?;
 
         // We are deeper in the tree, so we can overwrite the command configuration
+        let mut _cmd_perms_overriden = false; // Not used currently but will be used in the future for module no_admin etc.
         if let Some(rec) = rec {
             command_configuration = Some(GuildCommandConfiguration {
                 id: rec.id.hyphenated().to_string(),
@@ -415,6 +416,7 @@ pub async fn get_command_configuration(
                 command: rec.command,
                 perms: {
                     if let Some(perms) = rec.perms {
+                        _cmd_perms_overriden = true;
                         serde_json::from_value(perms).unwrap()
                     } else {
                         None

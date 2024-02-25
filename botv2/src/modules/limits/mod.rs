@@ -20,15 +20,17 @@ pub fn module() -> crate::silverpelt::Module {
             (
                 cmds::limits(),
                 indexmap! {
-                    "add" => crate::silverpelt::CommandExtendedData::kittycat_simple("limits", "add"),
-                    "view" => crate::silverpelt::CommandExtendedData::kittycat_simple("limits", "view"),
-                    "remove" => crate::silverpelt::CommandExtendedData::kittycat_simple("limits", "remove"),
-                    "hit" => crate::silverpelt::CommandExtendedData::kittycat_simple("limits", "hit"),
+                    "add" => crate::silverpelt::CommandExtendedData::kittycat_or_admin("limits", "add"),
+                    "view" => crate::silverpelt::CommandExtendedData::kittycat_or_admin("limits", "view"),
+                    "remove" => crate::silverpelt::CommandExtendedData::kittycat_or_admin("limits", "remove"),
+                    "hit" => crate::silverpelt::CommandExtendedData::kittycat_or_admin("limits", "hit"),
                 },
             ),
             (
                 cmds::limitactions(),
-                crate::silverpelt::CommandExtendedData::none(),
+                indexmap! {
+                    "view" => crate::silverpelt::CommandExtendedData::kittycat_or_admin("limits", "limitactions_view"),
+                }
             ),
         ],
         event_handlers: vec![Box::new(move |ctx, fe| {
