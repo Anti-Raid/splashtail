@@ -6,6 +6,11 @@ mod modules;
 mod silverpelt;
 mod tasks;
 
+use silverpelt::{
+    silverpelt_cache::SILVERPELT_CACHE,
+    module_config::get_command_configuration,
+};
+
 use std::sync::Arc;
 
 use log::{error, info};
@@ -200,7 +205,7 @@ async fn event_listener<'a>(
     }
 
     // Add all event listeners for key modules here
-    for (module, evts) in silverpelt::SILVERPELT_CACHE
+    for (module, evts) in SILVERPELT_CACHE
         .module_event_listeners_cache
         .iter()
     {
@@ -362,7 +367,7 @@ async fn main() {
                 let command = ctx.command();
 
                 // Check COMMAND_ID_MODULE_MAP
-                if !silverpelt::SILVERPELT_CACHE
+                if !SILVERPELT_CACHE
                     .command_id_module_map
                     .contains_key(&command.name)
                 {
@@ -372,7 +377,7 @@ async fn main() {
                     );
                 }
 
-                let module = silverpelt::SILVERPELT_CACHE
+                let module = SILVERPELT_CACHE
                     .command_id_module_map
                     .get(&command.name)
                     .unwrap();
@@ -410,7 +415,7 @@ async fn main() {
                             .await?;
                     }
 
-                    let key = silverpelt::SILVERPELT_CACHE
+                    let key = SILVERPELT_CACHE
                         .command_permission_cache
                         .get(&(guild_id, ctx.author().id))
                         .await;
@@ -420,8 +425,8 @@ async fn main() {
 
                         if let Some(cpr) = cpr {
                             match cpr {
-                                silverpelt::CachedPermResult::Ok => return Ok(true),
-                                silverpelt::CachedPermResult::Err(e) => {
+                                Ok(()) => return Ok(true),
+                                Err(e) => {
                                     return Err(e.to_string().into())
                                 }
                             }
@@ -433,7 +438,7 @@ async fn main() {
                     };
 
                     let (cmd_data, command_config, module_config) =
-                        silverpelt::get_command_configuration(
+                        get_command_configuration(
                             &data.pool,
                             guild_id.to_string().as_str(),
                             ctx.command().qualified_name.as_str(),
@@ -477,7 +482,7 @@ async fn main() {
                         return Ok(true);
                     }
 
-                    let kittycat_perms = silverpelt::permission_calc::get_kittycat_perms(&data.pool, guild_id, member.user.id, &member.roles).await?;
+                    let kittycat_perms = silverpelt::member_permission_calc::get_kittycat_perms(&data.pool, guild_id, member.user.id, &member.roles).await?;
 
                     info!(
                         "Checking if user {} ({}) can run command {} with permissions {:?}",
@@ -494,25 +499,49 @@ async fn main() {
                         member_perms,
                         &kittycat_perms,
                     ) {
-                        return Err(format!("{}\n\n**Code**: {}", e.1, e.0).into());
+                        let err = format!("{}\n\n**Code**: {}", e.1, e.0);
+
+                        let mut key = SILVERPELT_CACHE
+                        .command_permission_cache
+                        .get(&(guild_id, ctx.author().id))
+                        .await;
+                    
+                        if let Some(ref mut map) = key {
+                            map.insert(
+                                ctx.command().qualified_name.clone(),
+                                Err(err.clone()),
+                            );
+                        } else {
+                            let mut map = indexmap::IndexMap::new();
+                            map.insert(
+                                ctx.command().qualified_name.clone(),
+                                Err(err.clone()),
+                            );
+                            SILVERPELT_CACHE
+                                .command_permission_cache
+                                .insert((guild_id, ctx.author().id), map)
+                                .await;
+                        }
+
+                        return Err(err.into());
                     }
 
-                    let mut key = silverpelt::SILVERPELT_CACHE
+                    let mut key = SILVERPELT_CACHE
                         .command_permission_cache
                         .get(&(guild_id, ctx.author().id))
                         .await;
                     if let Some(ref mut map) = key {
                         map.insert(
                             ctx.command().qualified_name.clone(),
-                            silverpelt::CachedPermResult::Ok,
+                            Ok(()),
                         );
                     } else {
                         let mut map = indexmap::IndexMap::new();
                         map.insert(
                             ctx.command().qualified_name.clone(),
-                            silverpelt::CachedPermResult::Ok,
+                            Ok(()),
                         );
-                        silverpelt::SILVERPELT_CACHE
+                        SILVERPELT_CACHE
                             .command_permission_cache
                             .insert((guild_id, ctx.author().id), map)
                             .await;

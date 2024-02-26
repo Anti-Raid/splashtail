@@ -1,4 +1,4 @@
-use crate::silverpelt::SILVERPELT_CACHE;
+use crate::silverpelt::silverpelt_cache::SILVERPELT_CACHE;
 use serenity::all::AutocompleteChoice;
 use crate::Context;
 

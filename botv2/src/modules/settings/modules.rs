@@ -1,3 +1,5 @@
+use crate::silverpelt::silverpelt_cache::SILVERPELT_CACHE;
+
 type Error = crate::Error;
 type Context<'a> = crate::Context<'a>;
 
@@ -36,7 +38,7 @@ pub async fn modules_enable(
     };
 
     // Check that the module exists
-    if !crate::silverpelt::SILVERPELT_CACHE.module_id_cache.contains_key(&module) {
+    if !SILVERPELT_CACHE.module_id_cache.contains_key(&module) {
         return Err(
             format!(
                 "The module you are trying to disable ({}) does not exist",
@@ -84,9 +86,15 @@ pub async fn modules_enable(
 
     tx.commit().await?;
 
+    SILVERPELT_CACHE.module_enabled_cache.remove(&(guild_id, module)).await;
+
     tokio::spawn(async move {
-        if let Err(e) = crate::silverpelt::SILVERPELT_CACHE.invalidate_for_guild(guild_id) {
-            log::error!("Failed to invalidate cache for guild {}: {}", guild_id, e);
+        if let Err(err) = SILVERPELT_CACHE.command_permission_cache.invalidate_entries_if(move |k, _| {
+            k.0 == guild_id
+        }) {
+            log::error!("Failed to invalidate command permission cache for guild {}: {}", guild_id, err);
+        } else {
+            log::info!("Invalidated cache for guild {}", guild_id);
         }
     });
 
@@ -114,7 +122,7 @@ pub async fn modules_disable(
     };
 
     // Check that the module exists
-    if !crate::silverpelt::SILVERPELT_CACHE.module_id_cache.contains_key(&module) {
+    if !SILVERPELT_CACHE.module_id_cache.contains_key(&module) {
         return Err(
             format!(
                 "The module you are trying to disable ({}) does not exist",
@@ -162,9 +170,15 @@ pub async fn modules_disable(
 
     tx.commit().await?;
 
+    SILVERPELT_CACHE.module_enabled_cache.remove(&(guild_id, module)).await;
+
     tokio::spawn(async move {
-        if let Err(e) = crate::silverpelt::SILVERPELT_CACHE.invalidate_for_guild(guild_id) {
-            log::error!("Failed to invalidate cache for guild {}: {}", guild_id, e);
+        if let Err(err) = SILVERPELT_CACHE.command_permission_cache.invalidate_entries_if(move |k, _| {
+            k.0 == guild_id
+        }) {
+            log::error!("Failed to invalidate command permission cache for guild {}: {}", guild_id, err);
+        } else {
+            log::info!("Invalidated cache for guild {}", guild_id);
         }
     });
 

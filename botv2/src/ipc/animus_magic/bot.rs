@@ -2,8 +2,10 @@ use crate::impls::cache::CacheHttpImpl;
 /// Bot animus contains the request and response for a bot
 ///
 /// To edit/add responses, add them both to bot.rs and to splashcore/animusmagic/types.go
-use crate::silverpelt::canonical_repr::modules::CanonicalModule;
-use crate::silverpelt::SILVERPELT_CACHE;
+use crate::silverpelt::{
+    canonical_repr::modules::CanonicalModule,
+    silverpelt_cache::SILVERPELT_CACHE,
+};
 use crate::Error;
 use serde::{Deserialize, Serialize};
 use serenity::all::{GuildId, Role, RoleId, UserId};

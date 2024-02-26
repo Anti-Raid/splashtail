@@ -1,6 +1,7 @@
 use super::{
     CommandExtendedData, CommandExtendedDataMap, GuildCommandConfiguration,
-    GuildModuleConfiguration, PermissionCheck, PermissionChecks, SILVERPELT_CACHE,
+    GuildModuleConfiguration, PermissionCheck, PermissionChecks, 
+    silverpelt_cache::SILVERPELT_CACHE,
 };
 use indexmap::indexmap;
 
@@ -250,20 +251,6 @@ mod tests {
         } else {
             false
         }
-    }
-
-    #[test]
-    fn test_names_to_check() {
-        println!("{:?}", permute_command_names("limits hit view"));
-        assert_eq!(permute_command_names("limits"), vec!["limits"]);
-        assert_eq!(
-            permute_command_names("limits hit"),
-            vec!["limits", "limits hit"]
-        );
-        assert_eq!(
-            permute_command_names("limits hit add"),
-            vec!["limits", "limits hit", "limits hit add"]
-        );
     }
 
     #[test]
