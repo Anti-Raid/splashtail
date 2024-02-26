@@ -75,6 +75,11 @@ pub async fn rederive_perms(
         (false, Vec::new())
     };
 
+    if user_positions.is_empty() && perm_overrides.is_empty() && !in_db {
+        // To avoid just spamming the db with new members, skip all future steps if the user has no roles, no perm overrides and is not in the db
+        return Ok(Vec::new());
+    }
+
     let resolved_perms = kittycat::perms::StaffPermissions {
         user_positions,
         perm_overrides,

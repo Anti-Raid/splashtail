@@ -1,7 +1,6 @@
 TEST__USER_ID := 728871946456137770
 CDN_PATH := /failuremgmt/cdn/antiraid
 
-
 stcore:
 	CGO_ENABLED=0 go build -v 
 reloadwebserver:
@@ -17,6 +16,7 @@ restartwebserver:
 	sleep 3 # Give time for the webserver to stop
 	cp -v botv2/target/release/botv2 botv2
 	systemctl start splashtail-staging-webserver
+	cd botv2 && cargo sqlx prepare && cd .. 
 reloadjobserver:
 	systemctl restart splashtail-staging-jobs
 all:
