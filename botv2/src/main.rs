@@ -477,18 +477,7 @@ async fn main() {
                         return Ok(true);
                     }
 
-                    // Get kittycat perms of member (if they have any)
-                    let kittycat_perms = {
-                        let rec = sqlx::query!("SELECT resolved_perms_cache FROM guild_members WHERE guild_id = $1 AND user_id = $2", guild_id.to_string(), member.user.id.to_string())
-                        .fetch_optional(&data.pool)
-                        .await?;
-
-                        if let Some(rec) = rec {
-                            rec.resolved_perms_cache
-                        } else {
-                            Vec::new()
-                        }
-                    };
+                    let kittycat_perms = silverpelt::permissions::get_kittycat_perms(&data.pool, guild_id, member.user.id, &member.roles).await?;
 
                     info!(
                         "Checking if user {} ({}) can run command {} with permissions {:?}",

@@ -25,7 +25,10 @@ require (
 	golang.org/x/image v0.15.0
 )
 
-require github.com/x448/float16 v0.8.4 // indirect
+require (
+	github.com/deckarep/golang-set/v2 v2.6.0 // indirect
+	github.com/x448/float16 v0.8.4 // indirect
+)
 
 require (
 	github.com/buger/jsonparser v1.1.1 // indirect
