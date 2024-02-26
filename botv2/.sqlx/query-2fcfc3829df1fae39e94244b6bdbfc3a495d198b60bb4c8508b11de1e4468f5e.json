@@ -1,11 +1,11 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT resolved_perms_cache FROM guild_members WHERE guild_id = $1 AND user_id = $2",
+  "query": "SELECT perm_overrides FROM guild_members WHERE guild_id = $1 AND user_id = $2",
   "describe": {
     "columns": [
       {
         "ordinal": 0,
-        "name": "resolved_perms_cache",
+        "name": "perm_overrides",
         "type_info": "TextArray"
       }
     ],
@@ -19,5 +19,5 @@
       false
     ]
   },
-  "hash": "ff62817fe065973be1563e3bf0d0af7ed28673f8443dd0f382bbc048d3d3ec46"
+  "hash": "2fcfc3829df1fae39e94244b6bdbfc3a495d198b60bb4c8508b11de1e4468f5e"
 }
