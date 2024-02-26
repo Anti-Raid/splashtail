@@ -1,4 +1,4 @@
-dir: bot
+dir: botv2
 override_dir:
 use_current_directory: true
 use_custom_webui: true
@@ -7,10 +7,9 @@ names:
   - "Flare"
   - "Waffle"
   - "Aqua"
-module: build/index.js
-redis: redis://localhost:6379/2
+module: botv2
 redis_channel: ar_clusters/prod
-interp: /usr/bin/node
+interp: 
 
 # WEBUI
 allowed_ids:

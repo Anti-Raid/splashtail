@@ -66,6 +66,10 @@ func main() {
 			RedirectURL:  webserverstate.Config.DiscordAuth.MewldRedirect,
 		}
 
+		if mldConfig.Redis == "" {
+			mldConfig.Redis = webserverstate.Config.Meta.RedisURL.Parse()
+		}
+
 		if mldConfig.Redis != webserverstate.Config.Meta.RedisURL.Parse() {
 			webserverstate.Logger.Warn("Redis URL in mewld.yaml does not match the one in config.yaml")
 		}
