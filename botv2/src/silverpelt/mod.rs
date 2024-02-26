@@ -1,5 +1,6 @@
 pub mod canonical_repr;
 pub mod permissions;
+pub mod permission_calc;
 pub mod poise_ext;
 
 use futures::future::BoxFuture;

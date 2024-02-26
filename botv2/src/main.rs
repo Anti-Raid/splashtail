@@ -477,7 +477,7 @@ async fn main() {
                         return Ok(true);
                     }
 
-                    let kittycat_perms = silverpelt::permissions::get_kittycat_perms(&data.pool, guild_id, member.user.id, &member.roles).await?;
+                    let kittycat_perms = silverpelt::permission_calc::get_kittycat_perms(&data.pool, guild_id, member.user.id, &member.roles).await?;
 
                     info!(
                         "Checking if user {} ({}) can run command {} with permissions {:?}",
