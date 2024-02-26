@@ -16,6 +16,7 @@ allowed_ids:
   - "728871946456137770"
   - "564164277251080208"
   - "775855009421066262"
+  - "773193286776389653"
 
 ping_interval: 20 # 20 seconds (for testing, change this)
 ping_timeout: 60 # 60 seconds (for testing, change this)
