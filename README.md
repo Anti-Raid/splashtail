@@ -95,6 +95,9 @@ To load the database seed, follow the following steps:
 **End of note. All further steps can be followed by all**
 
 8. If ``ibl`` fails with a ``seed_info`` error, rerun Step 3 to properly setup seeding
+9. Install sqlx cli: 
+
+``cargo install sqlx-cli``
 
 ### SurrealDB setup
 
@@ -161,4 +164,4 @@ For future releases (or even initial if time permits):
 
 ### Development
 
-Run ``cargo sqlx prepare`` in the ``botv2`` folder if you have made changes to the database schema. This will regenerate the SQLX files used by the bot to interact with the database.
+Run ``cargo sqlx prepare`` in the ``botv2`` folder before committing anything. This will regenerate the SQLX files used by the bot to interact with the database. Note that ``make buildbot`` will automatically run this now.

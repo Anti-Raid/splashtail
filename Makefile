@@ -16,12 +16,12 @@ restartwebserver:
 	sleep 3 # Give time for the webserver to stop
 	cp -v botv2/target/release/botv2 botv2
 	systemctl start splashtail-staging-webserver
-	cd botv2 && cargo sqlx prepare && cd .. 
 reloadjobserver:
 	systemctl restart splashtail-staging-jobs
 all:
 	make buildbot && make buildmewldwebui && make stcore 
 buildbot:
+	cd botv2 && cargo sqlx prepare && cd .. 
 	cd botv2 && cargo build --release
 buildbot_dbg:
 	cd botv2 && cargo build
