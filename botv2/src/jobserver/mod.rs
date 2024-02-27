@@ -265,11 +265,10 @@ impl Task {
         if let Some(output) = &self.output {
             if output.segregated {
                 Some(format!(
-                    "{}/{}/{}/{}",
+                    "{}/{}/{}",
                     self.format_task_for_simplex(),
                     self.task_info.name,
                     self.task_id,
-                    output.filename
                 ))
             } else {
                 Some(format!("tasks/{}", self.task_id))
@@ -289,13 +288,19 @@ impl Task {
             return Err("Task has no output".into());
         };
 
-        let path = match Path::parse(path) {
-            Ok(p) => p,
-            Err(e) => return Err(format!("Failed to parse path: {}", e).into()),
+        let Some(outp) = &self.output else {
+            return Err("Task has no output".into());
         };
 
-        // If the task has an output, delete it from the object store
-        object_store.delete(&path).await?;
+        for path in [format!("{}/{}", path, outp.filename), path].iter() {
+            let path = match Path::parse(path) {
+                Ok(p) => p,
+                Err(e) => return Err(format!("Failed to parse path: {}", e).into()),
+            };
+
+            // If the task has an output, delete it from the object store
+            object_store.delete(&path).await?;
+        }
 
         Ok(())
     }
