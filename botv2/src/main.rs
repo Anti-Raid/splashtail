@@ -222,6 +222,7 @@ pub fn get_event_guild_id(
                 return Err(None);
             }
         },
+        FullEvent::ThreadMembersUpdate { thread_members_update, .. } => thread_members_update.guild_id,
         FullEvent::ThreadUpdate { new, .. } => new.guild_id,
         FullEvent::TypingStart { .. } => return Err(None), // We dont handle typing start
         FullEvent::UserUpdate { .. } => return Err(None), // We dont handle user updates
