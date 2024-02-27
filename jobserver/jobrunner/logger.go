@@ -24,6 +24,12 @@ func (m *MutLogger) add(p []byte) error {
 	defer m.Unlock()
 	m.Lock()
 
+	select {
+	case <-m.ctx.Done():
+		return nil
+	default:
+	}
+
 	var data map[string]any
 
 	err := json.Unmarshal(p, &data)

@@ -36,3 +36,13 @@ func (ts TaskState) DebugInfo() *debug.BuildInfo {
 func (ts TaskState) Context() context.Context {
 	return ts.ContextUse
 }
+
+type TaskProgress struct{}
+
+func (ts TaskProgress) GetProgress() (string, map[string]any, error) {
+	return "", nil, nil
+}
+
+func (ts TaskProgress) SetProgress(state string, data map[string]any) error {
+	return nil
+}

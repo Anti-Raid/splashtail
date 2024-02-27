@@ -41,13 +41,19 @@ func countMap(m map[string]int) int {
 // Backs up image data to a file
 func backupGuildAsset(state taskstate.TaskState, constraints *BackupConstraints, l *zap.Logger, f *iblfile.AutoEncryptedFile, name, url string) error {
 	l.Info("Backing up guild asset", zap.String("name", name))
-
+	ctx := state.Context()
 	client := http.Client{
 		Timeout:   10 * time.Second,
 		Transport: state.Transport(),
 	}
 
-	resp, err := client.Get(url)
+	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
+
+	if err != nil {
+		return fmt.Errorf("error creating guild asset request: %w", err)
+	}
+
+	resp, err := client.Do(req)
 
 	if err != nil {
 		return fmt.Errorf("error fetching guild asset: %w", err)
@@ -82,6 +88,12 @@ func backupGuildAsset(state taskstate.TaskState, constraints *BackupConstraints,
 		return fmt.Errorf("error re-encoding guild asset: %w", err)
 	}
 
+	select {
+	case <-ctx.Done():
+		return fmt.Errorf("context done")
+	default:
+	}
+
 	f.WriteSection(&buf, "assets/"+name)
 	return nil
 }
@@ -93,6 +105,7 @@ func backupGuildAsset(state taskstate.TaskState, constraints *BackupConstraints,
 // Note that this function does not write the messages to the file, it only returns them
 func backupChannelMessages(state taskstate.TaskState, constraints *BackupConstraints, logger *zap.Logger, f *iblfile.AutoEncryptedFile, channelID string, allocation int, withAttachments bool) ([]*BackupMessage, error) {
 	discord, _, _ := state.Discord()
+	ctx := state.Context()
 
 	var finalMsgs []*BackupMessage
 	var currentId string
@@ -105,7 +118,7 @@ func backupChannelMessages(state taskstate.TaskState, constraints *BackupConstra
 
 		limit := min(100, allocation-len(finalMsgs))
 
-		messages, err := discord.ChannelMessages(channelID, limit, "", currentId, "")
+		messages, err := discord.ChannelMessages(channelID, limit, "", currentId, "", discordgo.WithContext(ctx))
 
 		if err != nil {
 			return nil, fmt.Errorf("error fetching messages: %w", err)
@@ -140,9 +153,17 @@ func backupChannelMessages(state taskstate.TaskState, constraints *BackupConstra
 }
 
 func createAttachmentBlob(state taskstate.TaskState, constraints *BackupConstraints, logger *zap.Logger, msg *discordgo.Message) ([]AttachmentMetadata, map[string]*bytes.Buffer, error) {
+	ctx := state.Context()
+
 	var attachments []AttachmentMetadata
 	var bufs = map[string]*bytes.Buffer{}
 	for _, attachment := range msg.Attachments {
+		select {
+		case <-ctx.Done():
+			return nil, nil, fmt.Errorf("context deadline exceeded")
+		default:
+		}
+
 		if attachment.Size > constraints.Create.MaxAttachmentFileSize {
 			attachments = append(attachments, AttachmentMetadata{
 				ID:          attachment.ID,
@@ -170,7 +191,25 @@ func createAttachmentBlob(state taskstate.TaskState, constraints *BackupConstrai
 			Transport: state.Transport(),
 		}
 
-		resp, err := client.Get(url)
+		req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
+
+		if err != nil {
+			attachments = append(attachments, AttachmentMetadata{
+				ID:          attachment.ID,
+				Name:        attachment.Filename,
+				URL:         attachment.URL,
+				ProxyURL:    attachment.ProxyURL,
+				Size:        attachment.Size,
+				ContentType: attachment.ContentType,
+				Errors: []string{
+					"Error creating attachment request.",
+					"Got error: " + err.Error(),
+				},
+			})
+			continue
+		}
+
+		resp, err := client.Do(req)
 
 		if err != nil {
 			attachments = append(attachments, AttachmentMetadata{
@@ -361,8 +400,14 @@ func (t *ServerBackupCreateTask) Validate(state taskstate.TaskState) error {
 	return nil
 }
 
-func (t *ServerBackupCreateTask) Exec(l *zap.Logger, tcr *types.TaskCreateResponse, state taskstate.TaskState) (*types.TaskOutput, error) {
+func (t *ServerBackupCreateTask) Exec(
+	l *zap.Logger,
+	tcr *types.TaskCreateResponse,
+	state taskstate.TaskState,
+	progstate taskstate.TaskProgressState,
+) (*types.TaskOutput, error) {
 	discord, botUser, _ := state.Discord()
+	ctx := state.Context()
 
 	// Check current backup concurrency
 	count, _ := concurrentBackupState.LoadOrStore(t.ServerID, 0)
@@ -415,7 +460,7 @@ func (t *ServerBackupCreateTask) Exec(l *zap.Logger, tcr *types.TaskCreateRespon
 
 	// Fetch the bots member object in the guild
 	l.Info("Fetching bots current state in server")
-	m, err := discord.GuildMember(t.ServerID, botUser.ID)
+	m, err := discord.GuildMember(t.ServerID, botUser.ID, discordgo.WithContext(ctx))
 
 	if err != nil {
 		return nil, fmt.Errorf("error fetching bots member object: %w", err)
@@ -430,7 +475,7 @@ func (t *ServerBackupCreateTask) Exec(l *zap.Logger, tcr *types.TaskCreateRespon
 	l.Info("Backing up server settings")
 
 	// Fetch guild
-	g, err := discord.Guild(t.ServerID)
+	g, err := discord.Guild(t.ServerID, discordgo.WithContext(ctx))
 
 	if err != nil {
 		return nil, fmt.Errorf("error fetching guild: %w", err)
@@ -449,7 +494,7 @@ func (t *ServerBackupCreateTask) Exec(l *zap.Logger, tcr *types.TaskCreateRespon
 	l.Info("Backing up guild channels")
 
 	// Fetch channels of guild
-	channels, err := discord.GuildChannels(t.ServerID)
+	channels, err := discord.GuildChannels(t.ServerID, discordgo.WithContext(ctx))
 
 	if err != nil {
 		return nil, fmt.Errorf("error fetching channels: %w", err)
@@ -461,7 +506,7 @@ func (t *ServerBackupCreateTask) Exec(l *zap.Logger, tcr *types.TaskCreateRespon
 		l.Info("Backing up guild roles")
 
 		// Fetch roles of guild
-		roles, err := discord.GuildRoles(t.ServerID)
+		roles, err := discord.GuildRoles(t.ServerID, discordgo.WithContext(ctx))
 
 		if err != nil {
 			return nil, fmt.Errorf("error fetching roles: %w", err)
@@ -474,7 +519,7 @@ func (t *ServerBackupCreateTask) Exec(l *zap.Logger, tcr *types.TaskCreateRespon
 		l.Info("Backing up guild stickers")
 
 		// Fetch stickers of guild
-		stickers, err := discord.Request("GET", discordgo.EndpointGuildStickers(t.ServerID), nil)
+		stickers, err := discord.Request("GET", discordgo.EndpointGuildStickers(t.ServerID), nil, discordgo.WithContext(ctx))
 
 		if err != nil {
 			return nil, fmt.Errorf("error fetching stickers: %w", err)

@@ -5,6 +5,7 @@ use object_store::{path::Path, ObjectStore};
 use sqlx::{types::uuid::Uuid, PgPool};
 use std::str::FromStr;
 use std::sync::Arc;
+use indexmap::IndexMap;
 
 pub fn get_icon_of_state(state: &str) -> String {
     match state {
@@ -27,7 +28,7 @@ pub struct TaskStatuses {
     pub bot_display_ignore: Option<Vec<String>>,
 
     #[serde(flatten)]
-    pub extra_info: std::collections::HashMap<String, serde_json::Value>,
+    pub extra_info: IndexMap<String, serde_json::Value>,
 }
 
 pub struct Task {

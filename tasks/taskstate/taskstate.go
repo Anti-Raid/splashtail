@@ -30,3 +30,12 @@ type TaskState interface {
 	// Context returns the context to use for the task
 	Context() context.Context
 }
+
+type TaskProgressState interface {
+	// GetProgress returns the current progress of the task. This is useful
+	// for resumable tasks like server restores
+	GetProgress() (string, map[string]any, error)
+
+	// Sets/demarkates the progress of the task, if supported
+	SetProgress(state string, data map[string]any) error
+}

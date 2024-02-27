@@ -164,7 +164,12 @@ func (t *ServerBackupRestoreTask) Validate(state taskstate.TaskState) error {
 	return nil
 }
 
-func (t *ServerBackupRestoreTask) Exec(l *zap.Logger, tcr *types.TaskCreateResponse, state taskstate.TaskState) (*types.TaskOutput, error) {
+func (t *ServerBackupRestoreTask) Exec(
+	l *zap.Logger,
+	tcr *types.TaskCreateResponse,
+	state taskstate.TaskState,
+	progstate taskstate.TaskProgressState,
+) (*types.TaskOutput, error) {
 	discord, botUser, _ := state.Discord()
 
 	// Check current backup concurrency

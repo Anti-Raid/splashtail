@@ -55,7 +55,7 @@ func ExecuteTaskLocal(prefix, taskId string, l *zap.Logger, task tasks.TaskDefin
 	outp, err := task.Exec(l, &types.TaskCreateResponse{
 		TaskID:   taskId,
 		TaskInfo: tInfo,
-	}, taskState)
+	}, taskState, TaskProgress{})
 
 	if err != nil {
 		l.Error("Failed to execute task", zap.Error(err))

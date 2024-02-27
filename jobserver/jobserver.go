@@ -1,7 +1,9 @@
 package jobserver
 
 import (
+	"context"
 	"fmt"
+	"time"
 
 	"github.com/anti-raid/splashtail/jobserver/jobrunner"
 	"github.com/anti-raid/splashtail/jobserver/state"
@@ -10,6 +12,9 @@ import (
 	jsoniter "github.com/json-iterator/go"
 	"go.uber.org/zap"
 )
+
+var DefaultTimeout = 1 * time.Microsecond
+var DefaultValidationTimeout = 5 * time.Second
 
 var json = jsoniter.ConfigFastest
 
@@ -67,7 +72,11 @@ func CreateJobServer() {
 			}
 
 			// Validate task
-			err = task.Validate(jobrunner.TaskState{})
+			ctx, cancel := context.WithTimeout(state.Context, DefaultValidationTimeout)
+			defer cancel()
+			err = task.Validate(jobrunner.TaskState{
+				Ctx: ctx,
+			})
 
 			if err != nil {
 				return nil, fmt.Errorf("failed to validate task: %w", err)
@@ -93,7 +102,8 @@ func CreateJobServer() {
 
 			// Execute task
 			if data.SpawnTask.Execute {
-				go jobrunner.ExecuteTask(taskId, task)
+				ctx, cancel := context.WithTimeout(state.Context, DefaultTimeout)
+				go jobrunner.ExecuteTask(ctx, cancel, taskId, task, nil)
 			}
 
 			return &animusmagic.JobserverResponse{

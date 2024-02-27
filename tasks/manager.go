@@ -20,7 +20,7 @@ type TaskDefinition interface {
 	Validate(state taskstate.TaskState) error
 
 	// Exec executes the task returning an output if any
-	Exec(l *zap.Logger, tcr *types.TaskCreateResponse, state taskstate.TaskState) (*types.TaskOutput, error)
+	Exec(l *zap.Logger, tcr *types.TaskCreateResponse, state taskstate.TaskState, progstate taskstate.TaskProgressState) (*types.TaskOutput, error)
 
 	// Returns the info on a task
 	Info() *types.TaskInfo

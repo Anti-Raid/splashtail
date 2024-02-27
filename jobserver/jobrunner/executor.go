@@ -5,8 +5,10 @@ package jobrunner
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
 	"runtime/debug"
+	"time"
 
 	"github.com/anti-raid/splashtail/jobserver/state"
 	"github.com/anti-raid/splashtail/splashcore/types"
@@ -16,8 +18,50 @@ import (
 	"go.uber.org/zap"
 )
 
+// PersistTaskState persists task state to redis temporarily
+func PersistTaskState(tc *TaskProgress, s string, data map[string]any) error {
+	ip := &InternalTaskProgress{
+		State: s,
+		Data:  data,
+	}
+
+	b, err := json.Marshal(ip)
+
+	if err != nil {
+		return err
+	}
+
+	return state.Rueidis.Do(tc.TaskState.Context(), state.Rueidis.B().Set().Key("taskprogress:"+tc.TaskID).Value(string(b)).Ex(1*time.Hour).Build()).Error()
+}
+
+// GetPersistedTaskState gets persisted task state from redis
+func GetPersistedTaskState(tc *TaskProgress) (*InternalTaskProgress, error) {
+	b, err := state.Rueidis.Do(tc.TaskState.Context(), state.Rueidis.B().Get().Key("taskprogress:"+tc.TaskID).Build()).AsBytes()
+
+	if err != nil {
+		return nil, err
+	}
+
+	var ip InternalTaskProgress
+
+	err = json.Unmarshal(b, &ip)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return &ip, nil
+}
+
+type InternalTaskProgress struct {
+	State string
+	Data  map[string]any
+}
+
 // Implementor of tasks.TaskState
-type TaskState struct{}
+type TaskState struct {
+	Ctx context.Context
+}
 
 func (TaskState) Transport() *http.Transport {
 	return state.TaskTransport
@@ -35,28 +79,91 @@ func (TaskState) DebugInfo() *debug.BuildInfo {
 	return state.BuildInfo
 }
 
-func (TaskState) Context() context.Context {
-	return state.Context
+func (t TaskState) Context() context.Context {
+	return t.Ctx
+}
+
+type TaskProgress struct {
+	TaskID string
+
+	TaskState TaskState
+
+	// Used to cache the current task progress in resumes
+	//
+	// When resuming, set this to the current progress
+	InternalTaskProgress *InternalTaskProgress
+
+	// OnGetProgress is a callback that is called when GetProgress is called
+	//
+	// If unset, calls GetPersistedTaskState
+	OnGetProgress func(tc *TaskProgress) (string, map[string]any, error)
+
+	// OnSetProgress is a callback that is called when SetProgress is called
+	//
+	// If unset, calls PersistTaskState
+	OnSetProgress func(tc *TaskProgress, state string, data map[string]any) error
+}
+
+func (ts TaskProgress) GetProgress() (string, map[string]any, error) {
+	if ts.InternalTaskProgress == nil {
+		return "", nil, nil
+	}
+
+	return ts.InternalTaskProgress.State, ts.InternalTaskProgress.Data, nil
+}
+
+func (ts TaskProgress) SetProgress(state string, data map[string]any) error {
+	ts.InternalTaskProgress = &InternalTaskProgress{
+		State: state,
+		Data:  data,
+	}
+
+	if ts.OnSetProgress != nil {
+		err := ts.OnSetProgress(&ts, state, data)
+
+		if err != nil {
+			return err
+		}
+	} else {
+		err := PersistTaskState(&ts, state, data)
+
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 // Creates a new task on server and executes it
-func ExecuteTask(taskId string, task tasks.TaskDefinition) {
+//
+// If prog is set, it will be used to cache the task progress, otherwise a blank one will be used
+func ExecuteTask(
+	ctx context.Context,
+	ctxCancel context.CancelFunc,
+	taskId string,
+	task tasks.TaskDefinition,
+	prog *TaskProgress,
+) {
 	if state.CurrentOperationMode != "jobs" {
 		panic("cannot execute task outside of job server")
 	}
 
 	tInfo := task.Info()
 
-	l, _ := NewTaskLogger(taskId, state.Pool, state.Context, state.Logger)
+	l, _ := NewTaskLogger(taskId, state.Pool, ctx, state.Logger)
+	erl, _ := NewTaskLogger(taskId, state.Pool, state.Context, state.Logger)
 
 	var done bool
+	var bChan = make(chan int) // bChan is a channel thats used to control the canceller channel
 
 	// Fail failed tasks
 	defer func() {
 		err := recover()
 
 		if err != nil {
-			l.Error("Panic", zap.Any("err", err), zap.Any("data", tInfo.TaskFields))
+			erl.Error("Panic", zap.Any("err", err), zap.Any("data", tInfo.TaskFields))
+			state.Logger.Error("Panic", zap.Any("err", err), zap.Any("data", tInfo.TaskFields))
 
 			_, err := state.Pool.Exec(state.Context, "UPDATE tasks SET state = $1 WHERE task_id = $2", "failed", taskId)
 
@@ -72,6 +179,25 @@ func ExecuteTask(taskId string, task tasks.TaskDefinition) {
 				l.Error("Failed to update task", zap.Error(err), zap.Any("data", tInfo.TaskFields))
 			}
 		}
+
+		if ctxCancel != nil {
+			defer ctxCancel()
+		}
+
+		bChan <- 1
+	}()
+
+	go func() {
+		for {
+			select {
+			case <-bChan:
+				return
+			case <-ctx.Done():
+				erl.Error("Context done, timeout?")
+				done = true
+				return
+			}
+		}
 	}()
 
 	// Set task state to running
@@ -82,11 +208,22 @@ func ExecuteTask(taskId string, task tasks.TaskDefinition) {
 		return
 	}
 
+	ts := TaskState{
+		Ctx: ctx,
+	}
+	if prog == nil {
+		prog = &TaskProgress{
+			TaskID:    taskId,
+			TaskState: ts,
+		}
+	}
+
 	var taskState = "completed"
-	outp, err := task.Exec(l, &types.TaskCreateResponse{
+	var outp *types.TaskOutput
+	outp, err = task.Exec(l, &types.TaskCreateResponse{
 		TaskID:   taskId,
 		TaskInfo: tInfo,
-	}, TaskState{})
+	}, ts, *prog)
 
 	if err != nil {
 		l.Error("Failed to execute task", zap.Error(err))
