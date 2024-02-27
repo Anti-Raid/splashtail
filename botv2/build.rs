@@ -89,38 +89,27 @@ pub fn modules() -> Vec<crate::silverpelt::Module> {
 fn check_src_files() -> Result<(), Error> {
     // Find the commit of serenity used by the project
     let cargo_lock = std::fs::read_to_string("Cargo.lock")?;
+    let lock_values = cargo_lock.parse::<toml::Table>().unwrap();
 
-    /* Skip to lines:
-[[package]]
-name = "serenity"
-     */
-    let serenity_start = cargo_lock
-        .lines()
-        .position(|x| x.contains("name = \"serenity\""));
+    let dep = lock_values["package"]
+    .as_array()
+    .unwrap()
+    .iter()
+    .find(|x| x["name"].as_str().unwrap() == "serenity");
 
-    if serenity_start.is_none() {
+    if dep.is_none() {
         return Err("serenity not found in Cargo.lock".into());
     }
 
-    let serenity_start = serenity_start.unwrap();
+    let dep = dep.unwrap();
 
-    // Now look for source
-    let serenity_url = cargo_lock
-        .lines()
-        .skip(serenity_start)
-        .position(|x| x.contains("source = \""));
+    let serenity_url = dep["source"].as_str();
 
     if serenity_url.is_none() {
         return Err("serenity source not found in Cargo.lock".into());
     }
 
     let serenity_url = serenity_url.unwrap();
-
-    // Get the fill line
-    let serenity_url = cargo_lock
-        .lines()
-        .nth(serenity_start + serenity_url)
-        .unwrap();
 
     let commit = serenity_url.split('#').last().unwrap();
 
