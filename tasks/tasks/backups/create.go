@@ -90,7 +90,7 @@ func backupGuildAsset(state taskstate.TaskState, constraints *BackupConstraints,
 
 	select {
 	case <-ctx.Done():
-		return fmt.Errorf("context done")
+		return ctx.Err()
 	default:
 	}
 
@@ -160,7 +160,7 @@ func createAttachmentBlob(state taskstate.TaskState, constraints *BackupConstrai
 	for _, attachment := range msg.Attachments {
 		select {
 		case <-ctx.Done():
-			return nil, nil, fmt.Errorf("context deadline exceeded")
+			return nil, nil, ctx.Err()
 		default:
 		}
 

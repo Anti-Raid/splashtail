@@ -5,10 +5,8 @@ package jobrunner
 
 import (
 	"context"
-	"encoding/json"
 	"net/http"
 	"runtime/debug"
-	"time"
 
 	"github.com/anti-raid/splashtail/jobserver/state"
 	"github.com/anti-raid/splashtail/splashcore/types"
@@ -20,37 +18,30 @@ import (
 
 // PersistTaskState persists task state to redis temporarily
 func PersistTaskState(tc *TaskProgress, s string, data map[string]any) error {
-	ip := &InternalTaskProgress{
-		State: s,
-		Data:  data,
-	}
-
-	b, err := json.Marshal(ip)
+	_, err := state.Pool.Exec(tc.TaskState.Context(), "INSERT INTO ongoing_tasks (task_id, state, data) VALUES ($1, $2, $3) ON CONFLICT (task_id) DO UPDATE SET state = $2, data = $3", tc.TaskID, s, data)
 
 	if err != nil {
 		return err
 	}
 
-	return state.Rueidis.Do(tc.TaskState.Context(), state.Rueidis.B().Set().Key("taskprogress:"+tc.TaskID).Value(string(b)).Ex(1*time.Hour).Build()).Error()
+	return nil
 }
 
 // GetPersistedTaskState gets persisted task state from redis
 func GetPersistedTaskState(tc *TaskProgress) (*InternalTaskProgress, error) {
-	b, err := state.Rueidis.Do(tc.TaskState.Context(), state.Rueidis.B().Get().Key("taskprogress:"+tc.TaskID).Build()).AsBytes()
+	var s string
+	var data map[string]any
+
+	err := state.Pool.QueryRow(tc.TaskState.Context(), "SELECT state, data FROM ongoing_tasks WHERE task_id = $1", tc.TaskID).Scan(&s, &data)
 
 	if err != nil {
 		return nil, err
 	}
 
-	var ip InternalTaskProgress
-
-	err = json.Unmarshal(b, &ip)
-
-	if err != nil {
-		return nil, err
-	}
-
-	return &ip, nil
+	return &InternalTaskProgress{
+		State: s,
+		Data:  data,
+	}, nil
 }
 
 type InternalTaskProgress struct {
@@ -220,6 +211,7 @@ func ExecuteTask(
 
 	var taskState = "completed"
 	var outp *types.TaskOutput
+
 	outp, err = task.Exec(l, &types.TaskCreateResponse{
 		TaskID:   taskId,
 		TaskInfo: tInfo,

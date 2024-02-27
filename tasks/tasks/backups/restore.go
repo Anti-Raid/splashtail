@@ -38,7 +38,13 @@ func getImageAsDataUri(state taskstate.TaskState, constraints *BackupConstraints
 			Transport: state.Transport(),
 		}
 
-		resp, err := client.Get(endpoint)
+		req, err := http.NewRequestWithContext(state.Context(), "GET", endpoint, nil)
+
+		if err != nil {
+			return "", fmt.Errorf("failed to create request: %w", err)
+		}
+
+		resp, err := client.Do(req)
 
 		if err != nil {
 			return "", fmt.Errorf("error fetching guild asset: %w", err)
@@ -171,6 +177,7 @@ func (t *ServerBackupRestoreTask) Exec(
 	progstate taskstate.TaskProgressState,
 ) (*types.TaskOutput, error) {
 	discord, botUser, _ := state.Discord()
+	ctx := state.Context()
 
 	// Check current backup concurrency
 	count, _ := concurrentBackupState.LoadOrStore(t.ServerID, 0)
@@ -197,7 +204,13 @@ func (t *ServerBackupRestoreTask) Exec(
 		Transport: state.Transport(),
 	}
 
-	resp, err := client.Get(t.Options.BackupSource)
+	req, err := http.NewRequestWithContext(ctx, "GET", t.Options.BackupSource, nil)
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to create request: %w", err)
+	}
+
+	resp, err := client.Do(req)
 
 	if err != nil {
 		return nil, fmt.Errorf("failed to download backup: %w", err)
@@ -269,14 +282,14 @@ func (t *ServerBackupRestoreTask) Exec(
 
 	// Fetch the bots member object in the guild
 	l.Info("Fetching bots current state in server")
-	m, err := discord.GuildMember(t.ServerID, botUser.ID)
+	m, err := discord.GuildMember(t.ServerID, botUser.ID, discordgo.WithContext(ctx))
 
 	if err != nil {
 		return nil, fmt.Errorf("error fetching bots member object: %w", err)
 	}
 
 	l.Info("Fetching guild object")
-	tgtGuild, err := discord.Guild(t.ServerID)
+	tgtGuild, err := discord.Guild(t.ServerID, discordgo.WithContext(ctx))
 
 	if err != nil {
 		return nil, fmt.Errorf("error fetching guild: %w", err)
@@ -293,7 +306,7 @@ func (t *ServerBackupRestoreTask) Exec(
 	}
 
 	if len(tgtGuild.Roles) == 0 {
-		roles, err := discord.GuildRoles(t.ServerID)
+		roles, err := discord.GuildRoles(t.ServerID, discordgo.WithContext(ctx))
 
 		if err != nil {
 			return nil, fmt.Errorf("error fetching roles: %w", err)
@@ -336,7 +349,7 @@ func (t *ServerBackupRestoreTask) Exec(
 	}
 
 	// Fetch channels of guild
-	channels, err := discord.GuildChannels(t.ServerID)
+	channels, err := discord.GuildChannels(t.ServerID, discordgo.WithContext(ctx))
 
 	if err != nil {
 		return nil, fmt.Errorf("error fetching channels: %w", err)
@@ -437,7 +450,7 @@ func (t *ServerBackupRestoreTask) Exec(
 		}
 	}
 
-	_, err = discord.GuildEdit(t.ServerID, gp)
+	_, err = discord.GuildEdit(t.ServerID, gp, discordgo.WithContext(ctx))
 
 	if err != nil {
 		return nil, fmt.Errorf("failed to edit guild: %w", err)
@@ -482,7 +495,7 @@ func (t *ServerBackupRestoreTask) Exec(
 
 			l.Info("Deleting role", zap.String("name", r.Name), zap.Int("position", r.Position), zap.String("id", r.ID))
 
-			err := discord.GuildRoleDelete(t.ServerID, r.ID)
+			err := discord.GuildRoleDelete(t.ServerID, r.ID, discordgo.WithContext(ctx))
 
 			if err != nil {
 				return nil, fmt.Errorf("failed to delete role: %w with position of %d", err, r.Position)
@@ -548,7 +561,7 @@ func (t *ServerBackupRestoreTask) Exec(
 			Hoist:       &srcGuild.Roles[i].Hoist,
 			Permissions: &srcGuild.Roles[i].Permissions,
 			Mentionable: &srcGuild.Roles[i].Mentionable,
-		}, discordgo.WithRetryOnRatelimit(true))
+		}, discordgo.WithRetryOnRatelimit(true), discordgo.WithContext(ctx))
 
 		if err != nil {
 			return nil, fmt.Errorf("failed to create role: %w", err)
@@ -603,7 +616,7 @@ func (t *ServerBackupRestoreTask) Exec(
 
 			l.Info("Deleting channel", zap.String("name", tgtGuild.Channels[i].Name), zap.Int("position", tgtGuild.Channels[i].Position), zap.String("id", tgtGuild.Channels[i].ID))
 
-			_, err := discord.ChannelDelete(tgtGuild.Channels[i].ID)
+			_, err := discord.ChannelDelete(tgtGuild.Channels[i].ID, discordgo.WithContext(ctx))
 
 			if err != nil {
 				return nil, fmt.Errorf("failed to delete channel: %w", err)
@@ -659,7 +672,7 @@ func (t *ServerBackupRestoreTask) Exec(
 			PermissionOverwrites: permOverwrites,
 			ParentID:             channel.ParentID,
 			NSFW:                 channel.NSFW,
-		})
+		}, discordgo.WithContext(ctx), discordgo.WithRetryOnRatelimit(true))
 
 		if err != nil {
 			return nil, fmt.Errorf("failed to create channel: %w", err)
@@ -757,7 +770,7 @@ func (t *ServerBackupRestoreTask) Exec(
 
 	gp.Features = features
 
-	_, err = discord.GuildEdit(t.ServerID, gp)
+	_, err = discord.GuildEdit(t.ServerID, gp, discordgo.WithContext(ctx))
 
 	if err != nil {
 		return nil, fmt.Errorf("failed to edit guild: %w", err)
@@ -912,7 +925,7 @@ func (t *ServerBackupRestoreTask) Exec(
 
 				messages[i].MessageSend.Content = fmt.Sprintf("**%s**\n%s", strings.ReplaceAll(messages[i].Author.Username+"("+messages[i].Author.ID+")", "*", ""), messages[i].MessageSend.Content)
 
-				_, err := discord.ChannelMessageSendComplex(restoredChannelId, messages[i].MessageSend)
+				_, err := discord.ChannelMessageSendComplex(restoredChannelId, messages[i].MessageSend, discordgo.WithContext(ctx))
 
 				if err != nil {
 					if t.Options.IgnoreRestoreErrors {
