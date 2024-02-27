@@ -92,6 +92,13 @@ pub fn get_event_guild_id(
         FullEvent::CategoryDelete { category, .. } => category.guild_id,
         FullEvent::ChannelCreate { channel, .. } => channel.guild_id,
         FullEvent::ChannelDelete { channel, .. } => channel.guild_id,
+        FullEvent::ChannelPinsUpdate { pin } => {
+            if let Some(guild_id) = pin.guild_id {
+                guild_id.to_owned()
+            } else {
+                return Err(None);
+            }
+        },
         FullEvent::ChannelUpdate { new, .. } => new.guild_id,
         FullEvent::CommandPermissionsUpdate { permission, .. } => permission.guild_id,
         FullEvent::EntitlementCreate { entitlement, .. } => {

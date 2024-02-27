@@ -2,6 +2,8 @@ extern crate vergen;
 use anyhow::Result;
 use vergen::*;
 
+type Error = Box<dyn std::error::Error + Send + Sync>;
+
 /// Build src/modules/mod.rs based on the folder listing of src/modules
 fn autogen_modules_mod_rs() -> Result<()> {
     const MODULE_TEMPLATE: &str = r#"
@@ -84,6 +86,156 @@ pub fn modules() -> Vec<crate::silverpelt::Module> {
     Ok(())
 }
 
+fn check_src_files() -> Result<(), Error> {
+    // Find the commit of serenity used by the project
+    let cargo_lock = std::fs::read_to_string("Cargo.lock")?;
+
+    /* Skip to lines:
+[[package]]
+name = "serenity"
+     */
+    let serenity_start = cargo_lock
+        .lines()
+        .position(|x| x.contains("name = \"serenity\""));
+
+    if serenity_start.is_none() {
+        return Err("serenity not found in Cargo.lock".into());
+    }
+
+    let serenity_start = serenity_start.unwrap();
+
+    // Now look for source
+    let serenity_url = cargo_lock
+        .lines()
+        .skip(serenity_start)
+        .position(|x| x.contains("source = \""));
+
+    if serenity_url.is_none() {
+        return Err("serenity source not found in Cargo.lock".into());
+    }
+
+    let serenity_url = serenity_url.unwrap();
+
+    // Get the fill line
+    let serenity_url = cargo_lock
+        .lines()
+        .nth(serenity_start + serenity_url)
+        .unwrap();
+
+    let commit = serenity_url.split('#').last().unwrap();
+
+    // From the long commit, get the short commit (8 chars)
+    let commit = commit[0..7].to_string();
+
+    // println!("cargo:warning=serenity commit: {}", commit);
+
+    // First check serenity::model::event::FullEvent
+    // Find serenity in ~/.cargo/git/checkouts
+    let serenity_path = std::env::var("CARGO_HOME")?.to_string() + "/git/checkouts/serenity-*";
+
+    let serenity_path = glob::glob(&serenity_path)?
+        .collect::<Result<Vec<_>, _>>()?;
+
+    // Emit a warning 
+    /* for path in serenity_path.iter() {
+        println!("cargo:warning=serenity path: {:?}", path);
+    } */
+
+    let base_path = serenity_path[0].as_path().to_string_lossy().to_string() + "/" + &commit;
+
+    // println!("cargo:warning=serenity base path: {}", base_path);
+
+    // Find enum FullEvent
+    let models_file = std::fs::read_to_string(base_path + "/src/client/event_handler.rs")?;
+    let models_file = models_file.lines().collect::<Vec<&str>>();
+
+    let mut serenity_events = Vec::new();
+
+    let evt_handler_start = models_file
+        .iter()
+        .position(|x| x.contains("event_handler!"));
+
+    for line in models_file.iter().skip(evt_handler_start.unwrap() + 1) {
+        let line = line.trim();
+
+        if line.starts_with("pub") {
+            break
+        }
+
+        if line.starts_with('/') || line.is_empty() || !line.contains("=>") {
+            continue
+        }
+
+        let event_name = line.split(' ')
+            .filter(|x| !x.is_empty())
+            .collect::<Vec<&str>>();
+            
+        let event_name = event_name.first().unwrap();
+
+        serenity_events.push(event_name.to_string());
+    }
+
+    let fe_checks = indexmap::indexmap! {
+        "src/main.rs" => vec![("fn get_event_guild_id", "FullEvent")],
+    };
+
+    for (file, checks) in fe_checks {
+        let file = std::fs::read_to_string(file)?;
+
+        for (check, e) in checks {
+            let lines = file.lines().collect::<Vec<&str>>();
+
+            let start = lines.iter().position(|x| x.contains(check));
+
+            if start.is_none() {
+                return Err(format!("{} not found in {}", check, file).into());
+            }
+
+            let start = start.unwrap();
+
+            let mut has_fe = Vec::new();
+
+            for line in lines.iter().skip(start) {
+                if line.trim().starts_with("_ =>") {
+                    break
+                }
+
+                // Look for FullEvent
+                if !line.contains(e) {
+                    continue
+                }
+
+                let fe_section = line.split(' ')
+                .filter(|x| x.contains(e))
+                .collect::<Vec<&str>>();
+
+                if fe_section.is_empty() {
+                    continue
+                }
+
+                let fe_section = fe_section[0].trim();
+
+                //println!("cargo:warning=fe_section{}", fe_section);
+                has_fe.push(fe_section.replace(&(e.to_string()+"::"), ""));
+            }
+
+            match e {
+                "FullEvent" => {
+                    for evt in serenity_events.iter() {
+                        if !has_fe.contains(evt) {
+                            return Err(format!("{} ({}) does not contain {}", file, check, evt).into());
+                        }
+                    
+                    }
+                },
+                _ => unreachable!(),
+            }
+        }
+    }
+
+    Ok(())
+}
+
 fn main() -> Result<()> {
     let mut config = Config::default();
 
@@ -96,6 +248,13 @@ fn main() -> Result<()> {
     *config.git_mut().semver_dirty_mut() = Some("-dirty");
 
     vergen(config)?;
+
+    if let Err(e) = check_src_files() {
+        eprintln!("Error: check_src_files failed with error: {}", e);
+        
+        // Exit
+        std::process::exit(1);
+    }
 
     // Run the autogen stuff
     autogen_modules_mod_rs()?;

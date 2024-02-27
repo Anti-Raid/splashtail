@@ -461,6 +461,7 @@ dependencies = [
  "fred",
  "futures",
  "futures-util",
+ "glob",
  "indexmap 2.2.3",
  "kittycat",
  "log",

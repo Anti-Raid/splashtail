@@ -53,3 +53,5 @@ branch = "main"
 [build-dependencies]
 vergen = "7"
 anyhow = "1.0"
+glob = "0.3.1"
+indexmap = { version = "2.1", features = ["serde"] }
