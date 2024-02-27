@@ -82,7 +82,7 @@ pub fn can_run_command(
     member_native_perms: serenity::all::Permissions,
     member_kittycat_perms: &[String],
 ) -> Result<(), (String, crate::Error)> {
-    log::info!("Command config: {:?}", command_config);
+    log::debug!("Command config: {:?}", command_config);
 
     if command_config.disabled {
         return Err((

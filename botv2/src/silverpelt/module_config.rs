@@ -42,8 +42,8 @@ pub async fn is_module_enabled(
                     format!("Could not find module {} in cache", module).into()
                 )?;
 
-                SILVERPELT_CACHE.module_enabled_cache.insert((guild_id, module.id.to_string()), !module.is_default_enabled).await;
-                Ok(!module.is_default_enabled)
+                SILVERPELT_CACHE.module_enabled_cache.insert((guild_id, module.id.to_string()), module.is_default_enabled).await;
+                Ok(module.is_default_enabled)
             }
         } else {
             // User wants to use the default value
@@ -51,8 +51,8 @@ pub async fn is_module_enabled(
                 format!("Could not find module {} in cache", module).into()
             )?;
 
-            SILVERPELT_CACHE.module_enabled_cache.insert((guild_id, module.id.to_string()), !module.is_default_enabled).await;
-            Ok(!module.is_default_enabled)
+            SILVERPELT_CACHE.module_enabled_cache.insert((guild_id, module.id.to_string()), module.is_default_enabled).await;
+            Ok(module.is_default_enabled)
         }
     }
 }

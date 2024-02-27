@@ -204,6 +204,7 @@ pub fn get_event_guild_id(
         FullEvent::ReactionAdd { .. } => return Err(None), // We dont handle reactions right now
         FullEvent::ReactionRemove { .. } => return Err(None), // We dont handle reactions right now
         FullEvent::ReactionRemoveAll { .. } => return Err(None), // We dont handle reactions right now
+        FullEvent::ReactionRemoveEmoji { .. } => return Err(None), // We dont handle reactions right now
         FullEvent::Ready { .. } => return Err(None), // We dont handle ready events
         FullEvent::Resume { .. } => return Err(None), // We dont handle resume events
         FullEvent::ShardStageUpdate { .. } => return Err(None), // We dont handle shard stage updates
