@@ -57,6 +57,8 @@ pub struct ObjectStorage {
     pub object_storage_type: ObjectStorageType,
     pub path: String,
     pub endpoint: Option<String>,
+    pub secure: Option<bool>,
+    pub cdn_secure: Option<bool>,
     pub cdn_endpoint: String,
     pub access_key: Option<String>,
     pub secret_key: Option<String>,
@@ -71,7 +73,21 @@ impl ObjectStorage {
                 let endpoint = self.endpoint.as_ref().ok_or("Missing endpoint")?;
 
                 let store = object_store::aws::AmazonS3Builder::new()
-                    .with_endpoint(format!("https://{}", endpoint))
+                    .with_endpoint(
+                        {
+                            if let Some(secure) = self.secure {
+                                if secure {
+                                    format!("https://{}", endpoint)
+                                } else {
+                                    format!("http://{}", endpoint)
+                                }
+                            } else {
+                                // Default is false
+                                format!("http://{}", endpoint)
+                            }
+                        }
+                    )
+                    .with_allow_http(!self.secure.unwrap_or_default())
                     .with_bucket_name(self.path.clone())
                     .with_access_key_id(access_key)
                     .with_secret_access_key(secret_key)

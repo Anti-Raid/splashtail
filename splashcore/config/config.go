@@ -141,6 +141,8 @@ type ObjectStorageConfig struct {
 	Path        string `yaml:"path" comment:"If s3-like, this should be the name of the bucket. Otherwise, should be the path to the location to store to"`
 	Endpoint    string `yaml:"endpoint" comment:"Only for s3-like, this should be the endpoint to the bucket."`
 	CdnEndpoint string `yaml:"cdn_endpoint" comment:"Only for s3-like (and DigitalOcean mainly), this should be the CDN endpoint to the bucket."`
+	Secure      bool   `yaml:"secure" comment:"Only for s3-like, this should be whether or not to use a secure connection to the bucket."`
+	CdnSecure   bool   `yaml:"cdn_secure" comment:"Only for s3-like, this should be whether or not to use a secure connection to the CDN."`
 	AccessKey   string `yaml:"access_key" comment:"Only for s3-like, this should be the access key to the bucket."`
 	SecretKey   string `yaml:"secret_key" comment:"Only for s3-like, this should be the secret key to the bucket."`
 }

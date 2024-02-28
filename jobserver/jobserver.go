@@ -13,7 +13,7 @@ import (
 	"go.uber.org/zap"
 )
 
-var DefaultTimeout = 1 * time.Microsecond
+var DefaultTimeout = 15 * time.Minute
 var DefaultValidationTimeout = 5 * time.Second
 
 var json = jsoniter.ConfigFastest
