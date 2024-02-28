@@ -1,8 +1,10 @@
 package ioauth_download_task
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
+	"html/template"
 	"net/http"
 	"strings"
 	"time"
@@ -33,6 +35,20 @@ var (
 	}
 )
 
+var downloadTemplate = template.Must(template.New("download").Parse(`<!DOCTYPE html>
+<html>
+	Your download should start in a moment. If not, <a href="{{.URL}}">click here</a>
+	<script>
+		if(window.opener) {
+			window.opener.postMessage("dl:{{.URL}}", {{.Domain}});
+		} else if(window.parent) {
+			window.parent.postMessage("dl::{{.URL}}", {{.Domain}});
+		}
+		window.location.href = "{{.URL}}";
+	</script>
+</html>
+`))
+
 func Docs() *docs.Doc {
 	return &docs.Doc{
 		Summary:     "Get IOAuth Download Link",
@@ -47,7 +63,7 @@ func Docs() *docs.Doc {
 			},
 			{
 				Name:        "no_redirect",
-				Description: "Whether or not to avoid the redirect and merely return the link",
+				Description: "Whether or not to avoid the redirect/text response and merely return the link",
 				Required:    true,
 				In:          "query",
 				Schema:      docs.IdSchema,
@@ -245,9 +261,26 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 			},
 		}
 	} else {
+		var buf bytes.Buffer
+		err := downloadTemplate.Execute(&buf, map[string]any{
+			"URL":    url.String(),
+			"Domain": state.Config.Sites.Frontend.Parse(),
+		})
+
+		if err != nil {
+			state.Logger.Error("Failed to execute download template", zap.Error(err))
+			return uapi.HttpResponse{
+				Status: http.StatusInternalServerError,
+				Json:   types.ApiError{Message: "Failed to execute download template: " + err.Error()},
+			}
+		}
+
 		return uapi.HttpResponse{
-			Status:   http.StatusFound,
-			Redirect: url.String(),
+			Status: http.StatusFound,
+			Bytes:  buf.Bytes(),
+			Headers: map[string]string{
+				"Content-Type": "text/html, charset=utf-8",
+			},
 		}
 	}
 }
