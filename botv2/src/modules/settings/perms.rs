@@ -10,6 +10,7 @@ use crate::silverpelt::member_permission_calc::get_kittycat_perms;
     subcommands(
         "perms_modrole",
         "perms_list",
+        "perms_deleterole"
     )
 )]
 pub async fn perms(
