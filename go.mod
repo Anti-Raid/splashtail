@@ -1,8 +1,8 @@
 module github.com/anti-raid/splashtail
 
-go 1.21
+go 1.21.5
 
-toolchain go1.21.4
+toolchain go1.21.6
 
 require (
 	github.com/bwmarrin/discordgo v0.27.2-0.20240216140604-15ef2a43d47f
@@ -27,6 +27,7 @@ require (
 
 require (
 	github.com/deckarep/golang-set/v2 v2.6.0 // indirect
+	github.com/infinitybotlist/kittycat/go v0.0.0-20240229022404-eaef242cde70 // indirect
 	github.com/x448/float16 v0.8.4 // indirect
 )
 

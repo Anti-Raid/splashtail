@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/anti-raid/splashtail/splashcore/kittycat/perms"
+	perms "github.com/infinitybotlist/kittycat/go"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
