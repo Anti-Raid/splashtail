@@ -1,4 +1,5 @@
-use serenity::all::Role;
+use serenity::all::{Role, RoleId};
+use poise::CreateReply;
 use crate::silverpelt::member_permission_calc::get_kittycat_perms;
 
 #[poise::command(
@@ -7,12 +8,60 @@ use crate::silverpelt::member_permission_calc::get_kittycat_perms;
     user_cooldown = 1,
     guild_cooldown = 1,
     subcommands(
-        "perms_editrole",
+        "perms_modrole",
+        "perms_list",
     )
 )]
 pub async fn perms(
     _ctx: crate::Context<'_>,
 ) -> Result<(), crate::Error> {
+    Ok(())
+}
+
+/// Lists all roles with the setup permission and index
+#[poise::command(
+    prefix_command, 
+    slash_command, 
+    user_cooldown = 1,
+    guild_cooldown = 1,
+    rename = "list",
+)]
+pub async fn perms_list(
+    ctx: crate::Context<'_>,
+) -> Result<(), crate::Error> {
+    let data = ctx.data();
+
+    let Some(guild_id) = ctx.guild_id() else {
+        return Err("You must be in a server to run this command".into());
+    };
+
+    let mut tx = data.pool.begin().await?;
+
+    let roles = sqlx::query!(
+        "SELECT role_id, perms, index FROM guild_roles WHERE guild_id = $1 ORDER BY index",
+        guild_id.to_string()
+    )
+    .fetch_all(&mut *tx)
+    .await?;
+
+    let mut embed = serenity::all::CreateEmbed::default()
+        .title("Configured Roles")
+        .description("The roles with setup permissions and their indexes");
+
+    for role in roles {
+        let Ok(role_id) = role.role_id.parse::<RoleId>() else {
+            continue
+        };
+
+        embed = embed.field(
+            format!("<@&{}>", role_id),
+            format!("ID: {}, Permissions: {}\nIndex: {}", role_id, role.perms.join(", "), role.index),
+            false
+        );
+    }
+
+    ctx.send(CreateReply::default().embed(embed)).await?;
+
     Ok(())
 }
 
@@ -22,9 +71,9 @@ pub async fn perms(
     slash_command, 
     user_cooldown = 1,
     guild_cooldown = 1,
-    rename = "editrole",
+    rename = "modrole",
 )]
-pub async fn perms_editrole(
+pub async fn perms_modrole(
     ctx: crate::Context<'_>,
     #[description = "The role to edit"]
     role: Role,

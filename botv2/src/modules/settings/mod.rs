@@ -23,7 +23,7 @@ pub fn module() -> crate::silverpelt::Module {
             (
                 perms::perms(),
                 indexmap! {
-                    "editrole" => crate::silverpelt::CommandExtendedData {
+                    "modrole" => crate::silverpelt::CommandExtendedData {
                         default_perms: crate::silverpelt::PermissionChecks {
                             checks: vec![
                                 crate::silverpelt::PermissionCheck {

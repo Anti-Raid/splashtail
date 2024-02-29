@@ -77,7 +77,7 @@ pub async fn get_command_configuration(
 
     let Some(root_cmd_data) = root_cmd_data else {
         return Err(format!(
-            "The command ``{}`` does not exist [no root configuration found?]",
+            "The command ``{}`` does not exist [command not found in cache?]",
             name
         )
         .into());
@@ -100,7 +100,9 @@ pub async fn get_command_configuration(
 
     let mut cmd_data = root_cmd_data
         .get("")
-        .unwrap_or(&CommandExtendedData::default())
+        .unwrap_or(
+            &CommandExtendedData::kittycat_or_admin(root_cmd, "*")
+        )
         .clone();
 
     for command in permutations.iter() {
