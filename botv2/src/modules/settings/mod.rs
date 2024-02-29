@@ -1,6 +1,7 @@
 use indexmap::indexmap;
 
 mod modules;
+mod perms;
 
 pub fn module() -> crate::silverpelt::Module {
     crate::silverpelt::Module {
@@ -17,6 +18,24 @@ pub fn module() -> crate::silverpelt::Module {
                 indexmap! {
                     "enable" => crate::silverpelt::CommandExtendedData::kittycat_or_admin("modules", "enable"),
                     "disable" => crate::silverpelt::CommandExtendedData::kittycat_or_admin("modules", "disable"),
+                },
+            ),
+            (
+                perms::perms(),
+                indexmap! {
+                    "editrole" => crate::silverpelt::CommandExtendedData {
+                        default_perms: crate::silverpelt::PermissionChecks {
+                            checks: vec![
+                                crate::silverpelt::PermissionCheck {
+                                    kittycat_perms: vec!["perms.editrole".to_string(), "perms.manage".to_string()],
+                                    native_perms: vec![serenity::model::permissions::Permissions::MANAGE_ROLES],
+                                    inner_and: true,        
+                                    outer_and: false,
+                                },
+                            ],
+                            checks_needed: 1,
+                        },
+                    },
                 },
             ),
         ],

@@ -29,18 +29,22 @@ pub async fn rederive_perms(
         .await?;
 
         if let Some(rec) = rec {
+            let resolved_perms = kittycat::perms::StaffPermissions {
+                user_positions: vec![],
+                perm_overrides: rec.perm_overrides
+            }.resolve();
+
             sqlx::query!(
                 "UPDATE guild_members SET roles = $1, resolved_perms_cache = $2 WHERE guild_id = $3 AND user_id = $4",
                 &roles_str,
-                &kittycat::perms::StaffPermissions {
-                    user_positions: vec![],
-                    perm_overrides: rec.perm_overrides
-                }.resolve(),
+                &resolved_perms,
                 guild_id.to_string(),
                 user_id.to_string()
             )
             .execute(pool)
             .await?;
+
+            return Ok(resolved_perms);
         }
         
         return Ok(Vec::new());
