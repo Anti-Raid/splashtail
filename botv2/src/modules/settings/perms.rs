@@ -92,14 +92,45 @@ pub async fn perms_modrole(
         perms_vec.push(perm.to_string());
     }
 
-    // Check if existing in db already
     let data = ctx.data();
-
-    let Some(guild_id) = ctx.guild_id() else {
+    
+    let Some(member) = ctx.author_member().await else {
         return Err("You must be in a server to run this command".into());
     };
 
-    let Some(member) = ctx.author_member().await else {
+    {
+        let Some(guild) = ctx.guild() else {
+            return Err("You must be in a server to run this command".into());
+        };
+
+        // Get highest role of user if not owner
+        if guild.owner_id != member.user.id {    
+            let Some(first_role) = member.roles.first() else {
+                return Err("You must have at least one role to run this command!".into());
+            };
+
+            let Some(first_role) = guild.roles.get(first_role) else {
+                return Err("You must have at least one role to run this command!".into());
+            };
+
+            let mut highest_role = first_role;
+
+            for r in &member.roles {
+                let Some(r) = guild.roles.get(r) else {
+                    continue;
+                };
+                if r.position > highest_role.position {
+                    highest_role = r;
+                }
+            }
+
+            if highest_role.position < role.position {
+                return Err("You do not have permission to edit this role's permissions as they are higher than you".into());
+            }
+        }
+    }
+
+    let Some(guild_id) = ctx.guild_id() else {
         return Err("You must be in a server to run this command".into());
     };
 
@@ -213,6 +244,100 @@ pub async fn perms_modrole(
     tx.commit().await?;
 
     ctx.say("Permissions updated successfully for role").await?;
+
+    Ok(())
+}
+
+/// Deletes role configuration
+#[poise::command(
+    prefix_command, 
+    slash_command, 
+    user_cooldown = 1,
+    guild_cooldown = 1,
+    rename = "deleterole",
+)]
+pub async fn perms_deleterole(
+    ctx: crate::Context<'_>,
+    #[description = "The role to delete"]
+    role: Role,
+) -> Result<(), crate::Error> {
+    let data = ctx.data();
+
+    let Some(member) = ctx.author_member().await else {
+        return Err("You must be in a server to run this command".into());
+    };
+
+    {
+        let Some(guild) = ctx.guild() else {
+            return Err("You must be in a server to run this command".into());
+        };
+
+        // Get highest role of user if not owner
+        if guild.owner_id != member.user.id {    
+            let Some(first_role) = member.roles.first() else {
+                return Err("You must have at least one role to run this command!".into());
+            };
+
+            let Some(first_role) = guild.roles.get(first_role) else {
+                return Err("You must have at least one role to run this command!".into());
+            };
+
+            let mut highest_role = first_role;
+
+            for r in &member.roles {
+                let Some(r) = guild.roles.get(r) else {
+                    continue;
+                };
+                if r.position > highest_role.position {
+                    highest_role = r;
+                }
+            }
+
+            if highest_role.position < role.position {
+                return Err("You do not have permission to edit this role's permissions as they are higher than you".into());
+            }
+        }
+    }
+
+    let Some(guild_id) = ctx.guild_id() else {
+        return Err("You must be in a server to run this command".into());
+    };
+
+    let author_kittycat_perms = get_kittycat_perms(&data.pool, guild_id, member.user.id, &member.roles).await?;
+
+    let mut tx = data.pool.begin().await?;
+
+    let current = sqlx::query!(
+        "SELECT perms FROM guild_roles WHERE guild_id = $1 AND role_id = $2",
+        guild_id.to_string(),
+        role.id.to_string()
+    )
+    .fetch_optional(&mut *tx)
+    .await?;
+
+    if current.is_none() {
+        return Err("Role has not been configured yet!".into());
+    }
+
+    let current = current.unwrap();
+
+    // Check if the user has permission to delete the role (that is, permissions to remove all permissions)
+    if !current.perms.is_empty() {
+        kittycat::perms::check_patch_changes(&author_kittycat_perms, &current.perms, &[])
+        .map_err(|e| format!("You do not have permission to delete this role's permissions: {}", e))?;
+    }
+
+    sqlx::query!(
+        "DELETE FROM guild_roles WHERE guild_id = $1 AND role_id = $2",
+        guild_id.to_string(),
+        role.id.to_string()
+    )
+    .execute(&mut *tx)
+    .await?;
+
+    tx.commit().await?;
+
+    ctx.say("Role configuration deleted successfully").await?;
 
     Ok(())
 }
