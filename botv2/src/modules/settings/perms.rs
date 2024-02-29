@@ -92,9 +92,10 @@ pub async fn perms_editrole(
             if existing.is_some() {
                 // To avoid index collisions, take all indexes higher than the given index and add one to them
                 sqlx::query!(
-                    "UPDATE guild_roles SET index = index + 1 WHERE guild_id = $1 AND index >= $2",
+                    "UPDATE guild_roles SET index = index + 1 WHERE guild_id = $1 AND index >= $2 AND role_id != $3",
                     guild_id.to_string(),
-                    index
+                    index,
+                    role.id.to_string()
                 )
                 .execute(&mut *tx)
                 .await?;
@@ -136,9 +137,10 @@ pub async fn perms_editrole(
                 if existing.is_some() {
                     // To avoid index collisions, take all indexes higher than the given index and add one to them
                     sqlx::query!(
-                        "UPDATE guild_roles SET index = index + 1 WHERE guild_id = $1 AND index >= $2",
+                        "UPDATE guild_roles SET index = index + 1 WHERE guild_id = $1 AND index >= $2 AND role_id != $3",
                         guild_id.to_string(),
-                        index
+                        index,
+                        role.id.to_string()
                     )
                     .execute(&mut *tx)
                     .await?;

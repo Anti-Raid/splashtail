@@ -28,10 +28,16 @@ pub fn module() -> crate::silverpelt::Module {
                             checks: vec![
                                 crate::silverpelt::PermissionCheck {
                                     kittycat_perms: vec!["perms.editrole".to_string(), "perms.manage".to_string()],
-                                    native_perms: vec![serenity::model::permissions::Permissions::MANAGE_ROLES],
+                                    native_perms: vec![],
                                     inner_and: true,        
                                     outer_and: false,
                                 },
+                                crate::silverpelt::PermissionCheck {
+                                    kittycat_perms: vec![],
+                                    native_perms: vec![serenity::model::permissions::Permissions::MANAGE_ROLES],
+                                    inner_and: true,
+                                    outer_and: false,
+                                }
                             ],
                             checks_needed: 1,
                         },
