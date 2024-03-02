@@ -648,7 +648,11 @@ pub async fn backups_restore(
                 return Err("Backup task is not for this guild".into());
             }
 
-            task.get_url(&ctx.data().object_store).await?
+            let Some(path) = task.get_path() else {
+                return Err("Failed to get backup path".into());
+            };
+
+            format!("task://{}", path)
         }
     };
 

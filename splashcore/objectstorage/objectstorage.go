@@ -112,12 +112,28 @@ func (o *ObjectStorage) Save(ctx context.Context, dir, filename string, data *by
 func (o *ObjectStorage) GetUrl(ctx context.Context, dir, filename string, urlExpiry time.Duration) (*url.URL, error) {
 	switch o.c.Type {
 	case "local":
+		var path string
+
+		if filename == "" {
+			path = filepath.Join(o.c.Path, dir)
+		} else {
+			path = filepath.Join(o.c.Path, dir, filename)
+		}
+
 		return &url.URL{
 			Scheme: "file",
-			Path:   filepath.Join(o.c.Path, dir, filename),
+			Path:   path,
 		}, nil
 	case "s3-like":
-		p, err := o.cdnMinio.PresignedGetObject(ctx, o.c.Path, dir+"/"+filename, urlExpiry, nil)
+		var path = ""
+
+		if filename == "" {
+			path = dir
+		} else {
+			path = dir + "/" + filename
+		}
+
+		p, err := o.cdnMinio.PresignedGetObject(ctx, o.c.Path, path, urlExpiry, nil)
 
 		if err != nil {
 			return nil, err

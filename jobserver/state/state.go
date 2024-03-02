@@ -154,6 +154,7 @@ func Setup() {
 	// Shouldnt be called yet as we don't start websocket
 	Discord.AddHandler(func(s *discordgo.Session, r *discordgo.Ready) {
 		Logger.Info("[DISCORD]", zap.String("note", "ready"))
+		panic("Shouldn't be called yet")
 	})
 
 	// Reuidis
@@ -170,4 +171,6 @@ func Setup() {
 	}
 
 	AnimusMagicClient = animusmagic.New(Config.Meta.AnimusMagicChannel.Parse(), animusmagic.AnimusTargetJobserver)
+
+	TaskTransport.RegisterProtocol("task", TaskRT{next: TaskTransport})
 }

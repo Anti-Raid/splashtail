@@ -283,17 +283,20 @@ impl Task {
         }
     }
 
+    pub fn get_file_path(&self) -> Option<String> {
+        let path = self.get_path()?;
+
+        self.output.as_ref().map(|output| format!("{}/{}", path, output.filename))
+    }
+
+    #[allow(dead_code)]
     pub async fn get_url(&self, object_store: &Arc<config::ObjectStore>) -> Result<String, Error> {
         // Check if the task has an output
-        let Some(path) = self.get_path() else {
+        let Some(path) = &self.get_file_path() else {
             return Err("Task has no output".into());
         };
 
-        let Some(outp) = &self.output else {
-            return Err("Task has no output".into());
-        };
-
-        let path = match Path::parse(format!("{}/{}", path, outp.filename)) {
+        let path = match Path::parse(path) {
             Ok(p) => p,
             Err(e) => return Err(format!("Failed to parse path: {}", e).into()),
         };
