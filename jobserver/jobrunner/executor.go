@@ -222,7 +222,7 @@ func ExecuteTask(
 	outp, err = task.Exec(l, &types.TaskCreateResponse{
 		TaskID:   taskId,
 		TaskInfo: tInfo,
-	}, ts, *prog)
+	}, ts, prog)
 
 	if err != nil {
 		l.Error("Failed to execute task", zap.Error(err))
