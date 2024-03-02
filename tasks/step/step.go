@@ -5,6 +5,7 @@
 package step
 
 import (
+	"fmt"
 	"strconv"
 
 	"github.com/anti-raid/splashtail/splashcore/types"
@@ -21,10 +22,14 @@ type Stepper[T any] struct {
 // NewStepper creates a new stepper
 func NewStepper[T any](steps ...Step[T]) *Stepper[T] {
 	var s = &Stepper[T]{
-		steps: []*Step[T]{},
+		steps:          []*Step[T]{},
+		stepCache:      map[string]*Step[T]{},
+		stepIndexCache: map[string]int{},
 	}
 
-	for i, step := range steps {
+	for i := range steps {
+		step := steps[i]
+
 		if step.State == "" {
 			panic("step state cannot be empty")
 		}
@@ -37,6 +42,8 @@ func NewStepper[T any](steps ...Step[T]) *Stepper[T] {
 		if step.Index == 0 {
 			step.Index = i
 		}
+
+		fmt.Println(i, step.Index, step.State)
 
 		s.steps = append(s.steps, &step)
 		s.stepCache[step.State] = &step
@@ -78,13 +85,26 @@ func (s *Stepper[T]) Exec(
 		return nil, err
 	}
 
-	for i, step := range s.steps {
+	if curProg == nil {
+		curProg = &taskstate.Progress{
+			State: "",
+			Data:  map[string]any{},
+		}
+	}
+
+	fmt.Println(curProg.State)
+
+	for i := range s.steps {
+		step := s.steps[i]
+
 		select {
 		case <-state.Context().Done():
 			return nil, state.Context().Err()
 		default:
 			// Continue
 		}
+
+		fmt.Println(curProg.State)
 
 		// Conditions to run a step:
 		//
@@ -134,7 +154,6 @@ func (s *Stepper[T]) Exec(
 			}
 		} else {
 			l.Info("[" + strconv.Itoa(step.Index) + "] Skipping step '" + step.State + "' [resuming task?]")
-			continue
 		}
 	}
 

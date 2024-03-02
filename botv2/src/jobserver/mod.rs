@@ -1,11 +1,15 @@
 pub mod taskpoll;
 
 use crate::Error;
-use object_store::{path::Path, ObjectStore};
+use object_store::path::Path;
+use object_store::signer::Signer;
+use reqwest::Method;
 use sqlx::{types::uuid::Uuid, PgPool};
 use std::str::FromStr;
 use std::sync::Arc;
+use std::time::Duration;
 use indexmap::IndexMap;
+use crate::config;
 
 pub fn get_icon_of_state(state: &str) -> String {
     match state {
@@ -279,10 +283,37 @@ impl Task {
         }
     }
 
+    pub async fn get_url(&self, object_store: &Arc<config::ObjectStore>) -> Result<String, Error> {
+        // Check if the task has an output
+        let Some(path) = self.get_path() else {
+            return Err("Task has no output".into());
+        };
+
+        let Some(outp) = &self.output else {
+            return Err("Task has no output".into());
+        };
+
+        let path = match Path::parse(format!("{}/{}", path, outp.filename)) {
+            Ok(p) => p,
+            Err(e) => return Err(format!("Failed to parse path: {}", e).into()),
+        };
+
+        match **object_store {
+            config::ObjectStore::S3(ref store) => {
+                let url = store.signed_url(Method::GET, &path, Duration::from_secs(600)).await?;
+                
+                Ok(url.to_string())
+            },
+            config::ObjectStore::Local(_) => {
+                Ok(format!("file://{}", path))
+            }
+        }
+    }
+
     /// Deletes the task from the object storage
     pub async fn delete_from_storage(
         &self,
-        object_store: &Arc<Box<dyn ObjectStore>>,
+        object_store: &Arc<config::ObjectStore>,
     ) -> Result<(), Error> {
         // Check if the task has an output
         let Some(path) = self.get_path() else {
@@ -300,7 +331,7 @@ impl Task {
             };
 
             // If the task has an output, delete it from the object store
-            object_store.delete(&path).await?;
+            object_store.get().delete(&path).await?;
         }
 
         Ok(())
@@ -321,7 +352,7 @@ impl Task {
     pub async fn delete(
         self,
         pool: &PgPool,
-        object_store: &Arc<Box<dyn ObjectStore>>,
+        object_store: &Arc<config::ObjectStore>,
     ) -> Result<(), Error> {
         self.delete_from_storage(object_store).await?;
         self.delete_from_db(pool).await?;

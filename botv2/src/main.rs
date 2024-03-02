@@ -14,7 +14,6 @@ use silverpelt::{
 use std::sync::Arc;
 
 use log::{error, warn, info};
-use object_store::ObjectStore;
 use serenity::all::{HttpBuilder, GuildId};
 use poise::serenity_prelude::FullEvent;
 use poise::CreateReply;
@@ -31,7 +30,7 @@ type Context<'a> = poise::Context<'a, Data, Error>;
 pub struct Data {
     pub pool: sqlx::PgPool,
     pub mewld_ipc: Arc<ipc::mewld::MewldIpcClient>,
-    pub object_store: Arc<Box<dyn ObjectStore>>,
+    pub object_store: Arc<config::ObjectStore>,
     pub animus_magic_ipc: Arc<ipc::animus_magic::client::AnimusMagicClient>,
     pub shards_ready: Arc<dashmap::DashMap<u16, bool>>,
     pub surreal_cache: Surreal<Client>,

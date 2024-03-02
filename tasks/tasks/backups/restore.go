@@ -13,6 +13,7 @@ import (
 	"github.com/anti-raid/splashtail/splashcore/utils"
 	"github.com/anti-raid/splashtail/tasks/step"
 	"github.com/anti-raid/splashtail/tasks/taskstate"
+	"github.com/go-viper/mapstructure/v2"
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/infinitybotlist/iblfile"
@@ -376,7 +377,7 @@ func (t *ServerBackupRestoreTask) Exec(
 	}
 
 	// Resumability starts here
-	step.NewStepper[ServerBackupRestoreTask](
+	outp, err := step.NewStepper(
 		step.Step[ServerBackupRestoreTask]{
 			State: "edit_base_guild",
 			Exec: func(t *ServerBackupRestoreTask, l *zap.Logger, tcr *types.TaskCreateResponse, state taskstate.TaskState, progstate taskstate.TaskProgressState, progress *taskstate.Progress) (*types.TaskOutput, *taskstate.Progress, error) {
@@ -635,20 +636,22 @@ func (t *ServerBackupRestoreTask) Exec(
 		step.Step[ServerBackupRestoreTask]{
 			State: "create_new_channels",
 			Exec: func(t *ServerBackupRestoreTask, l *zap.Logger, tcr *types.TaskCreateResponse, state taskstate.TaskState, progstate taskstate.TaskProgressState, progress *taskstate.Progress) (*types.TaskOutput, *taskstate.Progress, error) {
-				ignoredChannels, ok := progress.Data["ignoredChannels"].([]string)
-
-				if !ok {
-					ignoredChannels = []string{}
+				var prevState struct {
+					IgnoredChannels []string          `mapstructure:"ignoredChannels"`
+					RestoredRoleMap map[string]string `mapstructure:"restoredRoleMap"`
 				}
+
+				err := mapstructure.Decode(progress.Data, &prevState)
+
+				if err != nil {
+					return nil, nil, fmt.Errorf("failed to decode progress data: %w", err)
+				}
+
+				ignoredChannels := prevState.IgnoredChannels
+				restoredRolesMap := prevState.RestoredRoleMap
 
 				// Map of backed up channel id to restored channel id
 				var restoredChannelsMap = make(map[string]string)
-
-				restoredRolesMap, ok := progress.Data["restoredRoleMap"].(map[string]string)
-
-				if !ok {
-					return nil, nil, fmt.Errorf("failed to get restored role map")
-				}
 
 				// Internal function. Given a channel, this fixes permission overwrites and then creates the channel from the old source channel
 				var createChannel = func(channel *discordgo.Channel) (*discordgo.Channel, error) {
@@ -774,11 +777,17 @@ func (t *ServerBackupRestoreTask) Exec(
 		step.Step[ServerBackupRestoreTask]{
 			State: "update_guild_features",
 			Exec: func(t *ServerBackupRestoreTask, l *zap.Logger, tcr *types.TaskCreateResponse, state taskstate.TaskState, progstate taskstate.TaskProgressState, progress *taskstate.Progress) (*types.TaskOutput, *taskstate.Progress, error) {
-				restoredChannelsMap, ok := progress.Data["restoredChannelsMap"].(map[string]string)
-
-				if !ok {
-					return nil, nil, fmt.Errorf("failed to get restored channel map")
+				var prevState struct {
+					RestoredChannelsMap map[string]string `mapstructure:"restoredChannelsMap"`
 				}
+
+				err := mapstructure.Decode(progress.Data, &prevState)
+
+				if err != nil {
+					return nil, nil, fmt.Errorf("failed to decode progress data: %w", err)
+				}
+
+				restoredChannelsMap := prevState.RestoredChannelsMap
 
 				gp := &discordgo.GuildParams{}
 
@@ -832,11 +841,17 @@ func (t *ServerBackupRestoreTask) Exec(
 		step.Step[ServerBackupRestoreTask]{
 			State: "restore_messages",
 			Exec: func(t *ServerBackupRestoreTask, l *zap.Logger, tcr *types.TaskCreateResponse, state taskstate.TaskState, progstate taskstate.TaskProgressState, progress *taskstate.Progress) (*types.TaskOutput, *taskstate.Progress, error) {
-				restoredChannelsMap, ok := progress.Data["restoredChannelsMap"].(map[string]string)
-
-				if !ok {
-					return nil, nil, fmt.Errorf("failed to get restored channel map")
+				var prevState struct {
+					RestoredChannelsMap map[string]string `mapstructure:"restoredChannelsMap"`
 				}
+
+				err := mapstructure.Decode(progress.Data, &prevState)
+
+				if err != nil {
+					return nil, nil, fmt.Errorf("failed to decode progress data: %w", err)
+				}
+
+				restoredChannelsMap := prevState.RestoredChannelsMap
 
 				var currentChannelMap = make(map[string]*discordgo.Channel) // Map of current channel id to channel object
 				for _, channel := range tgtGuild.Channels {
@@ -1017,9 +1032,13 @@ func (t *ServerBackupRestoreTask) Exec(
 		progstate,
 	)
 
-	l.Info("Successfully restored guild")
+	if err != nil {
+		l.Error("Failed to restore server", zap.Error(err))
+		return nil, err
+	}
 
-	return nil, nil
+	l.Info("Server restore complete")
+	return outp, nil
 }
 
 func (t *ServerBackupRestoreTask) Info() *types.TaskInfo {

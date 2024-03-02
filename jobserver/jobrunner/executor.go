@@ -86,11 +86,6 @@ type TaskProgress struct {
 	// When resuming, set this to the current progress
 	CurrentTaskProgress *taskstate.Progress
 
-	// OnGetProgress is a callback that is called when GetProgress is called
-	//
-	// If unset, calls GetPersistedTaskState
-	OnGetProgress func(tc *TaskProgress) (*taskstate.Progress, error)
-
 	// OnSetProgress is a callback that is called when SetProgress is called
 	//
 	// If unset, calls PersistTaskState

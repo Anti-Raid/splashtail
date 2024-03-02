@@ -16,6 +16,7 @@ require (
 	github.com/go-playground/locales v0.14.1 // indirect
 	github.com/go-playground/universal-translator v0.18.1 // indirect
 	github.com/go-playground/validator/v10 v10.18.0 // indirect
+	github.com/go-viper/mapstructure/v2 v2.0.0-alpha.1 // indirect
 	github.com/gorilla/websocket v1.5.1 // indirect
 	github.com/infinitybotlist/iblfile v0.0.0-20231217062828-5a52f5049ee3 // indirect
 	github.com/jackc/pgx/v5 v5.5.3 // indirect

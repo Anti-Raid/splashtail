@@ -27,6 +27,7 @@ require (
 
 require (
 	github.com/deckarep/golang-set/v2 v2.6.0 // indirect
+	github.com/go-viper/mapstructure/v2 v2.0.0-alpha.1 // indirect
 	github.com/infinitybotlist/kittycat/go v0.0.0-20240229022404-eaef242cde70 // indirect
 	github.com/x448/float16 v0.8.4 // indirect
 )

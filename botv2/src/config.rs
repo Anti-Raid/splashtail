@@ -1,4 +1,3 @@
-use object_store::ObjectStore;
 use once_cell::sync::Lazy;
 use poise::serenity_prelude::UserId;
 use serde::{Deserialize, Serialize};
@@ -64,8 +63,22 @@ pub struct ObjectStorage {
     pub secret_key: Option<String>,
 }
 
+pub enum ObjectStore {
+    S3(object_store::aws::AmazonS3),
+    Local(object_store::local::LocalFileSystem),
+}
+
+impl ObjectStore {
+    pub fn get(&self) -> &dyn object_store::ObjectStore {
+        match self {
+            ObjectStore::S3(store) => store,
+            ObjectStore::Local(store) => store,
+        }
+    }
+}
+
 impl ObjectStorage {
-    pub fn build(&self) -> Result<Box<dyn ObjectStore>, crate::Error> {
+    pub fn build(&self) -> Result<ObjectStore, crate::Error> {
         match self.object_storage_type {
             ObjectStorageType::S3Like => {
                 let access_key = self.access_key.as_ref().ok_or("Missing access key")?;
@@ -94,13 +107,13 @@ impl ObjectStorage {
                     .build()
                     .map_err(|e| format!("Failed to build S3 object store: {}", e))?;
 
-                Ok(Box::new(store))
+                Ok(ObjectStore::S3(store))
             }
             ObjectStorageType::Local => {
                 let store =
                     object_store::local::LocalFileSystem::new_with_prefix(self.path.clone())?;
 
-                Ok(Box::new(store))
+                Ok(ObjectStore::Local(store))
             }
         }
     }

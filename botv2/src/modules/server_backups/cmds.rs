@@ -11,6 +11,7 @@ use std::sync::Arc;
 use std::time::Duration;
 use std::{collections::HashMap, fmt::Display};
 use splashcore_rs::animusmagic_ext::AnimusMagicClientExt;
+use sqlx::types::uuid::Uuid;
 
 /*
 // Options that can be set when creatng a backup
@@ -583,7 +584,7 @@ impl Display for RoleRestoreMode {
     }
 }
 
-/// Restores a created backup
+/// Restores a created backup. Either backup_file or backup_id must be provided
 #[poise::command(
     prefix_command,
     slash_command,
@@ -596,11 +597,11 @@ impl Display for RoleRestoreMode {
 pub async fn backups_restore(
     ctx: Context<'_>,
 
-    #[description = "The backup attachment to restore"] backup_file: serenity::all::Attachment,
+    #[description = "The backup attachment to restore"] backup_file: Option<serenity::all::Attachment>,
 
-    #[description = "Password to decrypt backup with. Should not be reused"] password: Option<
-        String,
-    >,
+    #[description = "The task id of the backup to restore"] backup_id: Option<String>,
+
+    #[description = "Password to decrypt backup with. Should not be reused"] password: Option<String>,
 
     #[description = "Channel restore mode. Defaults to full. Use 'full' if unsure"]
     channel_restore_mode: Option<ChannelRestoreMode>,
@@ -618,6 +619,39 @@ pub async fn backups_restore(
     #[description = "Whether to ignore errors while restoring or not"]
     ignore_restore_errors: Option<bool>,
 ) -> Result<(), Error> {
+    let Some(guild_id) = ctx.guild_id() else {
+        return Err("This command can only be used in a guild".into());
+    };
+
+    if backup_file.is_some() && backup_id.is_some() {
+        return Err("You can only provide either a backup file or a backup id".into());
+    }
+
+    if backup_file.is_none() && backup_id.is_none() {
+        return Err("You must provide either a backup file or a backup id".into());
+    }
+
+    let backup_url = {
+        if let Some(backup_file) = backup_file {
+            backup_file.url.to_string()
+        } else {
+            let Some(backup_id) = backup_id else {
+                return Err("Failed to get backup id".into());
+            };
+
+            // Get the task
+            let task = crate::jobserver::Task::from_id(backup_id.parse::<Uuid>()?, &ctx.data().pool)
+                .await
+                .map_err(|e| format!("Failed to get backup task: {}", e))?;
+            
+            if task.format_task_for_simplex() != format!("g/{}", guild_id) {
+                return Err("Backup task is not for this guild".into());
+            }
+
+            task.get_url(&ctx.data().object_store).await?
+        }
+    };
+
     let protected_channels = {
         let mut p = Vec::new();
         let protected_channels = protected_channels.unwrap_or_default();
@@ -676,7 +710,7 @@ pub async fn backups_restore(
             "IgnoreRestoreErrors": ignore_restore_errors.unwrap_or(false),
             "ProtectedChannels": protected_channels,
             "ProtectedRoles": protected_roles,
-            "BackupSource": backup_file.url,
+            "BackupSource": backup_url,
             "Decrypt": password.unwrap_or_default(),
             "ChannelRestoreMode": channel_restore_mode.unwrap_or(ChannelRestoreMode::Full).to_string(),
             "RoleRestoreMode": role_restore_mode.unwrap_or(RoleRestoreMode::Full).to_string(),
