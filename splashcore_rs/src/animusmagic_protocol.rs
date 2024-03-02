@@ -98,8 +98,7 @@ pub fn default_request_timeout() -> Duration {
 pub fn create_payload<T: Serialize>(
     cmd_id: &str,
     from: AnimusTarget,
-    // From which cluster the message is coming from
-    cluster_id: u16, 
+    cluster_id: u16, // From which cluster the message is coming from
     to: AnimusTarget,
     op: AnimusOp,
     data: &T,
@@ -142,16 +141,21 @@ pub fn create_payload<T: Serialize>(
 
 // Parses the metadata of a payload
 pub fn get_payload_meta(payload: &[u8]) -> Result<AnimusMessageMetadata, crate::Error> {
-    // Take out scope
-    let from = AnimusTarget::from_byte(payload[0]).ok_or("Invalid from byte")?;
+    const FROM_BYTE: usize = 0;
+    const TO_BYTE: usize = FROM_BYTE + 1;
+    const CLUSTER_ID_BYTE: usize = TO_BYTE + 1;
+    const OP_BYTE: usize = CLUSTER_ID_BYTE + 2;
+
+    // Take out from
+    let from = AnimusTarget::from_byte(payload[FROM_BYTE]).ok_or("Invalid from byte")?;
 
     // Take out scope
-    let to = AnimusTarget::from_byte(payload[1]).ok_or("Invalid type byte")?;
+    let to = AnimusTarget::from_byte(payload[TO_BYTE]).ok_or("Invalid type byte")?;
 
     // Take out cluster id
-    let cluster_id = u16::from_be_bytes([payload[2], payload[3]]);
+    let cluster_id = u16::from_be_bytes([payload[CLUSTER_ID_BYTE], payload[CLUSTER_ID_BYTE+1]]);
 
-    let op = AnimusOp::from_byte(payload[4]).ok_or("Invalid op byte")?;
+    let op = AnimusOp::from_byte(payload[OP_BYTE]).ok_or("Invalid op byte")?;
 
     let mut cmd_id = String::new();
 

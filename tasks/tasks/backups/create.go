@@ -395,6 +395,13 @@ func (t *ServerBackupCreateTask) Validate(state taskstate.TaskState) error {
 		t.Options.SpecialAllocations = make(map[string]int)
 	}
 
+	// Check current backup concurrency
+	count, _ := concurrentBackupState.LoadOrStore(t.ServerID, 0)
+
+	if count >= t.Constraints.MaxServerBackupTasks {
+		return fmt.Errorf("you already have more than %d backup-related task in progress, please wait for it to finish", t.Constraints.MaxServerBackupTasks)
+	}
+
 	t.valid = true
 
 	return nil

@@ -11,6 +11,7 @@ import (
 
 	"github.com/anti-raid/splashtail/splashcore/types"
 	"github.com/anti-raid/splashtail/splashcore/utils"
+	"github.com/anti-raid/splashtail/tasks/step"
 	"github.com/anti-raid/splashtail/tasks/taskstate"
 
 	"github.com/bwmarrin/discordgo"
@@ -155,14 +156,11 @@ func (t *ServerBackupRestoreTask) Validate(state taskstate.TaskState) error {
 		}
 	}
 
-	switch t.Options.RoleRestoreMode {
-	case RoleRestoreModeFull:
-	default:
-		if string(t.Options.RoleRestoreMode) == "" {
-			t.Options.RoleRestoreMode = RoleRestoreModeFull
-		} else {
-			return fmt.Errorf("invalid role_restore_mode")
-		}
+	// Check current backup concurrency
+	count, _ := concurrentBackupState.LoadOrStore(t.ServerID, 0)
+
+	if count >= t.Constraints.MaxServerBackupTasks {
+		return fmt.Errorf("you already have more than %d backup-related task in progress, please wait for it to finish", t.Constraints.MaxServerBackupTasks)
 	}
 
 	t.valid = true
@@ -252,7 +250,7 @@ func (t *ServerBackupRestoreTask) Exec(
 
 	t2 := time.Now()
 
-	l.Info("STATISTICS: openautoencryptedfile", zap.Float64("duration", t2.Sub(t1).Seconds()))
+	l.Debug("STATISTICS: openautoencryptedfile", zap.Float64("duration", t2.Sub(t1).Seconds()))
 
 	t1 = time.Now()
 
@@ -265,7 +263,7 @@ func (t *ServerBackupRestoreTask) Exec(
 
 	t2 = time.Now()
 
-	l.Info("STATISTICS: keys", zap.Float64("duration", t2.Sub(t1).Seconds()), zap.Strings("keys", keys))
+	l.Debug("STATISTICS: keys", zap.Float64("duration", t2.Sub(t1).Seconds()), zap.Strings("keys", keys))
 
 	// Step 0. Fetch backup_opts
 	t1 = time.Now()
@@ -278,7 +276,7 @@ func (t *ServerBackupRestoreTask) Exec(
 
 	t2 = time.Now()
 
-	l.Info("STATISTICS: backupopts", zap.Float64("duration", t2.Sub(t1).Seconds()))
+	l.Debug("STATISTICS: backupopts", zap.Float64("duration", t2.Sub(t1).Seconds()))
 
 	// Fetch the bots member object in the guild
 	l.Info("Fetching bots current state in server")
@@ -360,8 +358,6 @@ func (t *ServerBackupRestoreTask) Exec(
 	l.Info("Got bots highest role", zap.String("role_id", tgtBotGuildHighestRole.ID), zap.Int("role_position", tgtBotGuildHighestRole.Position))
 
 	// Step 1. Fetch guild data
-	t1 = time.Now()
-
 	srcGuild, err := readMsgpackSection[discordgo.Guild](f, "core/guild")
 
 	if err != nil {
@@ -372,12 +368,6 @@ func (t *ServerBackupRestoreTask) Exec(
 		return nil, fmt.Errorf("guild data is invalid [id is empty], likely an internal decoding error")
 	}
 
-	t2 = time.Now()
-
-	l.Info("STATISTICS: guildread", zap.Float64("duration", t2.Sub(t1).Seconds()))
-
-	t1 = time.Now()
-
 	var srcIsCommunity = slices.Contains(srcGuild.Features, discordgo.GuildFeatureCommunity)
 	var tgtIsCommunity = slices.Contains(tgtGuild.Features, discordgo.GuildFeatureCommunity)
 
@@ -385,559 +375,647 @@ func (t *ServerBackupRestoreTask) Exec(
 		return nil, fmt.Errorf("cannot restore community server to non-community server")
 	}
 
-	// Edit basic guild guild. Note that settings related to ID's are changed later if needed
-	// Notes:
-	//
-	// - Region is not restored
-	// - Owner is not restored
-	gp := &discordgo.GuildParams{
-		Name:                        srcGuild.Name,
-		Description:                 srcGuild.Description,
-		DefaultMessageNotifications: int(srcGuild.DefaultMessageNotifications),
-		AfkTimeout:                  srcGuild.AfkTimeout,
-	}
-
-	// If the src server is a community server or the target isn't, we can restore these settings
-	if srcIsCommunity || !tgtIsCommunity {
-		gp.ExplicitContentFilter = int(srcGuild.ExplicitContentFilter)
-		gp.VerificationLevel = &srcGuild.VerificationLevel
-	}
-
-	// Icons
-	canUseIcon := slices.Contains(srcGuild.Features, "ANIMATED_ICON") || !strings.HasPrefix(srcGuild.Icon, "a_")
-	canUseBanner := (slices.Contains(srcGuild.Features, "BANNER") && !strings.HasPrefix(srcGuild.Banner, "a_")) || slices.Contains(srcGuild.Features, "ANIMATED_BANNER")
-	canUseSplash := slices.Contains(srcGuild.Features, "INVITE_SPLASH") && !strings.HasPrefix(srcGuild.Splash, "a_")
-
-	if srcGuild.Icon != "" {
-		if !canUseIcon {
-			l.Warn("Not restoring animated icon on unsupported server", zap.String("guild_id", srcGuild.ID))
-		} else {
-			icon, err := getImageAsDataUri(state, t.Constraints, l, f, "guildIcon", srcGuild.IconURL("1024"), bo)
-
-			if err != nil {
-				return nil, fmt.Errorf("failed to get icon: %w", err)
-			}
-
-			gp.Icon = icon
-		}
-	}
-
-	if srcGuild.Banner != "" {
-		if !canUseBanner {
-			l.Warn("Not restoring banner on unsupported server", zap.String("guild_id", srcGuild.ID))
-		} else {
-			banner, err := getImageAsDataUri(state, t.Constraints, l, f, "guildBanner", srcGuild.BannerURL("1024"), bo)
-
-			if err != nil {
-				return nil, fmt.Errorf("failed to get banner: %w", err)
-			}
-
-			gp.Banner = banner
-		}
-	}
-
-	if srcGuild.Splash != "" {
-		if !canUseSplash {
-			l.Warn("Not restoring splash on unsupported server", zap.String("guild_id", srcGuild.ID))
-		} else {
-			splash, err := getImageAsDataUri(state, t.Constraints, l, f, "guildSplash", discordgo.EndpointGuildSplash(srcGuild.ID, srcGuild.Splash), bo)
-
-			if err != nil {
-				return nil, fmt.Errorf("failed to get splash: %w", err)
-			}
-
-			gp.Splash = splash
-		}
-	}
-
-	_, err = discord.GuildEdit(t.ServerID, gp, discordgo.WithContext(ctx))
-
-	if err != nil {
-		return nil, fmt.Errorf("failed to edit guild: %w", err)
-	}
-
-	t2 = time.Now()
-
-	l.Info("STATISTICS: guildedit", zap.Float64("duration", t2.Sub(t1).Seconds()))
-
-	// Step 2. Restore roles
-	t1 = time.Now()
-
-	// Map of backed up role id to restored role id
-	var restoredRolesMap = make(map[string]string)
-
-	switch t.Options.RoleRestoreMode {
-	case RoleRestoreModeFull:
-		for _, r := range tgtGuild.Roles {
-			if slices.Contains(t.Options.ProtectedRoles, r.ID) {
-				continue
-			}
-
-			if r.Managed {
-				continue
-			}
-
-			if r.ID == tgtGuild.ID {
-				continue // @everyone
-			}
-
-			if r.ID == tgtBotGuildHighestRole.ID {
-				continue // Bot role
-			}
-
-			if r.Position > tgtBotGuildHighestRole.Position {
-				continue // Higher than bot role
-			}
-
-			if r.Position == tgtBotGuildHighestRole.Position && tgtBotGuildHighestRole.ID > r.ID {
-				continue
-			}
-
-			l.Info("Deleting role", zap.String("name", r.Name), zap.Int("position", r.Position), zap.String("id", r.ID))
-
-			err := discord.GuildRoleDelete(t.ServerID, r.ID, discordgo.WithContext(ctx))
-
-			if err != nil {
-				return nil, fmt.Errorf("failed to delete role: %w with position of %d", err, r.Position)
-			}
-
-			time.Sleep(time.Duration(t.Constraints.Restore.RoleDeleteSleep))
-		}
-	}
-
-	// Sort in descending order
-	slices.SortFunc(srcGuild.Roles, func(a, b *discordgo.Role) int {
-		if a.Position == b.Position {
-			if a.ID == b.ID {
-				return 0
-			} else {
-				if a.ID > b.ID {
-					return -1
-				} else {
-					return 1
-				}
-			}
-		}
-
-		if a.Position > b.Position {
-			return -1
-		} else {
-			return 1
-		}
-	})
-
-	for i := range srcGuild.Roles {
-		if _, ok := restoredRolesMap[srcGuild.Roles[i].ID]; ok {
-			continue
-		}
-
-		if srcGuild.Roles[i].Position >= tgtBotGuildHighestRole.Position {
-			srcGuild.Roles[i].Position = tgtBotGuildHighestRole.Position - 1
-		}
-
-		if slices.Contains(t.Options.ProtectedRoles, srcGuild.Roles[i].ID) {
-			continue
-		}
-
-		if srcGuild.Roles[i].Managed {
-			continue
-		}
-
-		if srcGuild.Roles[i].ID == srcGuild.ID {
-			continue // @everyone
-		}
-
-		l.Info("Creating role", zap.String("name", srcGuild.Roles[i].Name), zap.Int("position", srcGuild.Roles[i].Position), zap.String("id", srcGuild.Roles[i].ID))
-
-		newRole, err := discord.GuildRoleCreate(t.ServerID, &discordgo.RoleParams{
-			Name: srcGuild.Roles[i].Name,
-			Color: func() *int {
-				if srcGuild.Roles[i].Color == 0 {
-					return nil
+	// Resumability starts here
+	step.NewStepper[ServerBackupRestoreTask](
+		step.Step[ServerBackupRestoreTask]{
+			State: "edit_base_guild",
+			Exec: func(t *ServerBackupRestoreTask, l *zap.Logger, tcr *types.TaskCreateResponse, state taskstate.TaskState, progstate taskstate.TaskProgressState, progress *taskstate.Progress) (*types.TaskOutput, *taskstate.Progress, error) {
+				// Edit basic guild. Note that settings related to ID's are changed later if needed
+				// Notes:
+				//
+				// - Region is not restored
+				// - Owner is not restored
+				gp := &discordgo.GuildParams{
+					Name:                        srcGuild.Name,
+					Description:                 srcGuild.Description,
+					DefaultMessageNotifications: int(srcGuild.DefaultMessageNotifications),
+					AfkTimeout:                  srcGuild.AfkTimeout,
 				}
 
-				return &srcGuild.Roles[i].Color
-			}(),
-			Hoist:       &srcGuild.Roles[i].Hoist,
-			Permissions: &srcGuild.Roles[i].Permissions,
-			Mentionable: &srcGuild.Roles[i].Mentionable,
-		}, discordgo.WithRetryOnRatelimit(true), discordgo.WithContext(ctx))
-
-		if err != nil {
-			return nil, fmt.Errorf("failed to create role: %w", err)
-		}
-
-		restoredRolesMap[srcGuild.Roles[i].ID] = newRole.ID
-
-		time.Sleep(time.Duration(t.Constraints.Restore.RoleCreateSleep))
-	}
-
-	t2 = time.Now()
-
-	l.Info("STATISTICS: roles", zap.Float64("duration", t2.Sub(t1).Seconds()))
-
-	// Step 3. Next restore channels
-
-	// // Map of backed up channel id to restored channel id
-	var restoredChannelsMap = make(map[string]string)
-
-	var backupChannelMap = make(map[string]*discordgo.Channel) // Map of backed up channel id to channel object
-
-	var currentChannelMap = make(map[string]*discordgo.Channel) // Map of current channel id to channel object
-	for _, channel := range tgtGuild.Channels {
-		currentChannelMap[channel.ID] = channel
-	}
-
-	for _, channel := range srcGuild.Channels {
-		backupChannelMap[channel.ID] = channel
-	}
-
-	switch t.Options.ChannelRestoreMode {
-	case ChannelRestoreModeFull:
-		for i := range tgtGuild.Channels {
-			if slices.Contains(t.Options.ProtectedChannels, tgtGuild.Channels[i].ID) {
-				continue
-			}
-
-			if tgtGuild.Channels[i].ID == tgtGuild.RulesChannelID || tgtGuild.Channels[i].ID == tgtGuild.PublicUpdatesChannelID {
-				continue
-			}
-
-			if tgtGuild.Channels[i].ID == tgtGuild.PublicUpdatesChannelID {
-				continue
-			}
-
-			bp := utils.MemberChannelPerms(basePerms, tgtGuild, m, tgtGuild.Channels[i])
-
-			if bp&discordgo.PermissionManageChannels != discordgo.PermissionManageChannels && bp&discordgo.PermissionAdministrator != discordgo.PermissionAdministrator {
-				l.Warn("Not removing channel due to lack of 'Manage Channels' permissions", zap.String("channel_id", tgtGuild.Channels[i].ID))
-				continue
-			}
-
-			l.Info("Deleting channel", zap.String("name", tgtGuild.Channels[i].Name), zap.Int("position", tgtGuild.Channels[i].Position), zap.String("id", tgtGuild.Channels[i].ID))
-
-			_, err := discord.ChannelDelete(tgtGuild.Channels[i].ID, discordgo.WithContext(ctx))
-
-			if err != nil {
-				return nil, fmt.Errorf("failed to delete channel: %w", err)
-			}
-
-			time.Sleep(time.Duration(t.Constraints.Restore.ChannelDeleteSleep))
-		}
-	case ChannelRestoreModeIgnoreExisting:
-	default:
-		return nil, fmt.Errorf("invalid channel_restore_mode")
-	}
-
-	// Internal function. Given a channel, this fixes permission overwrites and then creates the channel from the old source channel
-	var createChannel = func(channel *discordgo.Channel) (*discordgo.Channel, error) {
-		l.Info("Creating channel", zap.String("name", channel.Name), zap.Int("position", channel.Position), zap.String("srcId", channel.ID), zap.String("parent_id", channel.ParentID), zap.Any("type", channel.Type))
-
-		// fix permission overwrites
-		var permOverwrites = []*discordgo.PermissionOverwrite{}
-
-		for _, overwrite := range channel.PermissionOverwrites {
-			if overwrite.Type == discordgo.PermissionOverwriteTypeRole {
-				if rcid, ok := restoredRolesMap[overwrite.ID]; ok {
-					permOverwrites = append(permOverwrites, &discordgo.PermissionOverwrite{
-						ID:    rcid,
-						Type:  overwrite.Type,
-						Allow: overwrite.Allow,
-						Deny:  overwrite.Deny,
-					})
-					continue
+				// If the src server is a community server or the target isn't, we can restore these settings
+				if srcIsCommunity || !tgtIsCommunity {
+					gp.ExplicitContentFilter = int(srcGuild.ExplicitContentFilter)
+					gp.VerificationLevel = &srcGuild.VerificationLevel
 				}
 
-				if overwrite.ID == srcGuild.ID {
-					permOverwrites = append(permOverwrites, &discordgo.PermissionOverwrite{
-						ID:    tgtGuild.ID,
-						Type:  overwrite.Type,
-						Allow: overwrite.Allow,
-						Deny:  overwrite.Deny,
-					})
-				}
-			} else {
-				permOverwrites = append(permOverwrites, overwrite)
-			}
-		}
+				// Icons
+				canUseIcon := slices.Contains(srcGuild.Features, "ANIMATED_ICON") || !strings.HasPrefix(srcGuild.Icon, "a_")
+				canUseBanner := (slices.Contains(srcGuild.Features, "BANNER") && !strings.HasPrefix(srcGuild.Banner, "a_")) || slices.Contains(srcGuild.Features, "ANIMATED_BANNER")
+				canUseSplash := slices.Contains(srcGuild.Features, "INVITE_SPLASH") && !strings.HasPrefix(srcGuild.Splash, "a_")
 
-		c, err := discord.GuildChannelCreateComplex(t.ServerID, discordgo.GuildChannelCreateData{
-			Name:                 channel.Name,
-			Type:                 channel.Type,
-			Topic:                channel.Topic,
-			Bitrate:              channel.Bitrate,
-			UserLimit:            channel.UserLimit,
-			RateLimitPerUser:     channel.RateLimitPerUser,
-			Position:             channel.Position,
-			PermissionOverwrites: permOverwrites,
-			ParentID:             channel.ParentID,
-			NSFW:                 channel.NSFW,
-		}, discordgo.WithContext(ctx), discordgo.WithRetryOnRatelimit(true))
+				if srcGuild.Icon != "" {
+					if !canUseIcon {
+						l.Warn("Not restoring animated icon on unsupported server", zap.String("guild_id", srcGuild.ID))
+					} else {
+						icon, err := getImageAsDataUri(state, t.Constraints, l, f, "guildIcon", srcGuild.IconURL("1024"), bo)
 
-		if err != nil {
-			return nil, fmt.Errorf("failed to create channel: %w", err)
-		}
+						if err != nil {
+							return nil, nil, fmt.Errorf("failed to get icon: %w", err)
+						}
 
-		time.Sleep(time.Duration(t.Constraints.Restore.ChannelCreateSleep))
-
-		return c, nil
-	}
-
-	// First restore categories
-	for i := range srcGuild.Channels {
-		if srcGuild.Channels[i].Type != discordgo.ChannelTypeGuildCategory {
-			continue
-		}
-
-		if _, ok := restoredChannelsMap[srcGuild.Channels[i].ID]; ok {
-			continue
-		}
-
-		nc, err := createChannel(srcGuild.Channels[i])
-
-		if err != nil {
-			return nil, fmt.Errorf("failed to create channel: %w", err)
-		}
-
-		restoredChannelsMap[srcGuild.Channels[i].ID] = nc.ID
-	}
-
-	for i := range srcGuild.Channels {
-		if _, ok := restoredChannelsMap[srcGuild.Channels[i].ID]; ok {
-			continue
-		}
-
-		// Create corresponding category if needed
-		if srcGuild.Channels[i].ParentID != "" {
-			if rcid, ok := restoredChannelsMap[srcGuild.Channels[i].ParentID]; ok {
-				srcGuild.Channels[i].ParentID = rcid
-			} else {
-				if t.Options.IgnoreRestoreErrors {
-					l.Warn("Parent channel does not exist, skipping", zap.String("channel_id", srcGuild.Channels[i].ParentID))
-					srcGuild.Channels[i].ParentID = ""
-				} else {
-					return nil, fmt.Errorf("parent channel does not exist")
-				}
-			}
-		}
-
-		nc, err := createChannel(srcGuild.Channels[i])
-
-		if err != nil {
-			return nil, fmt.Errorf("failed to create channel: %w", err)
-		}
-
-		restoredChannelsMap[srcGuild.Channels[i].ID] = nc.ID
-	}
-
-	gp = &discordgo.GuildParams{}
-
-	// Features, only COMMUNITY is editable IIRC
-	var features []discordgo.GuildFeature = tgtGuild.Features
-	if basePerms&discordgo.PermissionAdministrator == discordgo.PermissionAdministrator {
-		if slices.Contains(srcGuild.Features, discordgo.GuildFeatureCommunity) && !slices.Contains(features, discordgo.GuildFeatureCommunity) {
-			var rulesChannelId string
-			var publicUpdatesChannelId string
-
-			for srcChannel, restoredChannel := range restoredChannelsMap {
-				if srcChannel == srcGuild.RulesChannelID {
-					rulesChannelId = restoredChannel
+						gp.Icon = icon
+					}
 				}
 
-				if srcChannel == srcGuild.PublicUpdatesChannelID {
-					publicUpdatesChannelId = restoredChannel
+				if srcGuild.Banner != "" {
+					if !canUseBanner {
+						l.Warn("Not restoring banner on unsupported server", zap.String("guild_id", srcGuild.ID))
+					} else {
+						banner, err := getImageAsDataUri(state, t.Constraints, l, f, "guildBanner", srcGuild.BannerURL("1024"), bo)
+
+						if err != nil {
+							return nil, nil, fmt.Errorf("failed to get banner: %w", err)
+						}
+
+						gp.Banner = banner
+					}
 				}
 
-				if rulesChannelId != "" && publicUpdatesChannelId != "" {
-					break
+				if srcGuild.Splash != "" {
+					if !canUseSplash {
+						l.Warn("Not restoring splash on unsupported server", zap.String("guild_id", srcGuild.ID))
+					} else {
+						splash, err := getImageAsDataUri(state, t.Constraints, l, f, "guildSplash", discordgo.EndpointGuildSplash(srcGuild.ID, srcGuild.Splash), bo)
+
+						if err != nil {
+							return nil, nil, fmt.Errorf("failed to get splash: %w", err)
+						}
+
+						gp.Splash = splash
+					}
 				}
-			}
 
-			gp.RulesChannelID = rulesChannelId
-			gp.PublicUpdatesChannelID = publicUpdatesChannelId
-
-			if gp.RulesChannelID != "" && gp.PublicUpdatesChannelID != "" {
-				features = append(features, discordgo.GuildFeatureCommunity)
-				if tgtGuild.VerificationLevel == discordgo.VerificationLevelNone || tgtGuild.VerificationLevel == discordgo.VerificationLevelLow {
-					medium := discordgo.VerificationLevelMedium
-					gp.VerificationLevel = &medium
-				}
-			}
-		}
-	} else {
-		l.Warn("Not admin, certain features may not be editable", zap.Int64("basePerms", basePerms))
-	}
-
-	gp.Features = features
-
-	_, err = discord.GuildEdit(t.ServerID, gp, discordgo.WithContext(ctx))
-
-	if err != nil {
-		return nil, fmt.Errorf("failed to edit guild: %w", err)
-	}
-
-	l.Info("Waiting 5 seconds to avoid API issues")
-
-	time.Sleep(5 * time.Second)
-
-	if bo.BackupMessages {
-		for backedUpChannelId, restoredChannelId := range restoredChannelsMap {
-			if _, ok := sections["messages/"+backedUpChannelId]; !ok {
-				continue
-			}
-
-			l.Info("Processing backed up channel messages", zap.String("backed_up_channel_id", backedUpChannelId), zap.String("restored_channel_id", restoredChannelId))
-
-			perms := utils.MemberChannelPerms(basePerms, tgtGuild, m, currentChannelMap[restoredChannelId])
-			//canManageWebhooks := perms&discordgo.PermissionManageWebhooks == discordgo.PermissionManageWebhooks
-
-			// Fetch section
-			bmPtr, err := readMsgpackSection[[]*BackupMessage](f, "messages/"+backedUpChannelId)
-
-			if err != nil {
-				if t.Options.IgnoreRestoreErrors {
-					continue
-				}
-				return nil, fmt.Errorf("failed to get section: %w", err)
-			}
-
-			bm := *bmPtr
-
-			// Before doing anything else, sort the messages by timestamp
-			slices.SortFunc(bm, func(a, b *BackupMessage) int {
-				dtA, err := discordgo.SnowflakeTimestamp(a.Message.ID)
+				_, err = discord.GuildEdit(t.ServerID, gp, discordgo.WithContext(ctx))
 
 				if err != nil {
-					panic(err)
+					return nil, nil, fmt.Errorf("failed to edit guild: %w", err)
 				}
 
-				dtB, err := discordgo.SnowflakeTimestamp(b.Message.ID)
-
-				if err != nil {
-					panic(err)
-				}
-
-				return dtB.Compare(dtA)
-			})
-
-			// First batch messages to avoid spam
-			var messages = make([]*RestoreMessage, 0)
-			var msgIndex int
-			var contentLength int64
-			var currentMsgAuthor string
-
-			// Grow messages if msgIndex > len(messages)
-			growMsgs := func(author *discordgo.User) {
-				for {
-					if len(messages) > msgIndex {
-						break
+				return nil, &taskstate.Progress{}, nil
+			},
+		},
+		step.Step[ServerBackupRestoreTask]{
+			State: "delete_old_roles",
+			Exec: func(t *ServerBackupRestoreTask, l *zap.Logger, tcr *types.TaskCreateResponse, state taskstate.TaskState, progstate taskstate.TaskProgressState, progress *taskstate.Progress) (*types.TaskOutput, *taskstate.Progress, error) {
+				for _, r := range tgtGuild.Roles {
+					if slices.Contains(t.Options.ProtectedRoles, r.ID) {
+						continue
 					}
 
-					messages = append(messages, &RestoreMessage{
-						MessageSend: &discordgo.MessageSend{},
-						Author:      author,
-					})
-				}
-			}
-
-			for i := range bm {
-				if bm[i].Message.Author.ID != currentMsgAuthor {
-					currentMsgAuthor = bm[i].Message.Author.ID
-					msgIndex++
-				}
-
-				if len(bm[i].Message.Content) > 1900 {
-					// Upload as file
-					content := bm[i].Message.Content
-
-					bm[i].Message.Content = ""
-
-					growMsgs(bm[i].Message.Author)
-
-					messages[msgIndex].SmallFiles = append(messages[msgIndex].SmallFiles, &discordgo.File{
-						Name:        "context.txt",
-						ContentType: "text/plain",
-						Reader:      strings.NewReader(content),
-					})
-				}
-
-				if contentLength+int64(len(bm[i].Message.Content)) > 1900 {
-					contentLength = 0
-					msgIndex++
-				}
-
-				// Grow messages if msgIndex > len(messages)
-				growMsgs(bm[i].Message.Author)
-
-				l.Debug("Processing backed up message", zap.Int("index", i), zap.String("message_id", bm[i].Message.ID), zap.String("author_id", bm[i].Message.Author.ID))
-
-				if len(bm[i].Message.Embeds)+len(messages[msgIndex].MessageSend.Embeds) > 10 {
-					// Make the current message only have 10 embeds, then move to the next message and so on
-					embeds := bm[i].Message.Embeds
-
-					embedsPaged := [][]*discordgo.MessageEmbed{}
-
-					for len(embeds) > 10 {
-						embedsPaged = append(embedsPaged, embeds[:10])
-						embeds = embeds[10:]
+					if r.Managed {
+						continue
 					}
 
-					embedsPaged = append(embedsPaged, embeds)
+					if r.ID == tgtGuild.ID {
+						continue // @everyone
+					}
 
-					for mod, embeds := range embedsPaged {
-						for {
-							messages = append(messages, &RestoreMessage{
-								MessageSend: &discordgo.MessageSend{},
-								Author:      bm[i].Message.Author,
-							})
+					if r.ID == tgtBotGuildHighestRole.ID {
+						continue // Bot role
+					}
 
-							if len(messages) >= msgIndex+mod {
+					if r.Position > tgtBotGuildHighestRole.Position {
+						continue // Higher than bot role
+					}
+
+					if r.Position == tgtBotGuildHighestRole.Position && tgtBotGuildHighestRole.ID > r.ID {
+						continue
+					}
+
+					l.Info("Deleting role", zap.String("name", r.Name), zap.Int("position", r.Position), zap.String("id", r.ID))
+
+					err := discord.GuildRoleDelete(t.ServerID, r.ID, discordgo.WithRetryOnRatelimit(true), discordgo.WithContext(ctx))
+
+					if err != nil {
+						return nil, nil, fmt.Errorf("failed to delete role: %w with position of %d", err, r.Position)
+					}
+
+					time.Sleep(time.Duration(t.Constraints.Restore.RoleDeleteSleep))
+				}
+
+				return nil, &taskstate.Progress{}, nil
+			},
+		},
+		step.Step[ServerBackupRestoreTask]{
+			State: "create_new_roles",
+			Exec: func(t *ServerBackupRestoreTask, l *zap.Logger, tcr *types.TaskCreateResponse, state taskstate.TaskState, progstate taskstate.TaskProgressState, progress *taskstate.Progress) (*types.TaskOutput, *taskstate.Progress, error) {
+				// Map of backed up role id to restored role id
+				var restoredRolesMap = make(map[string]string)
+
+				// Sort in descending order
+				slices.SortFunc(srcGuild.Roles, func(a, b *discordgo.Role) int {
+					if a.Position == b.Position {
+						if a.ID == b.ID {
+							return 0
+						} else {
+							if a.ID > b.ID {
+								return -1
+							} else {
+								return 1
+							}
+						}
+					}
+
+					if a.Position > b.Position {
+						return -1
+					} else {
+						return 1
+					}
+				})
+
+				for i := range srcGuild.Roles {
+					// Already done
+					if _, ok := restoredRolesMap[srcGuild.Roles[i].ID]; ok {
+						continue
+					}
+
+					if srcGuild.Roles[i].Position >= tgtBotGuildHighestRole.Position {
+						srcGuild.Roles[i].Position = tgtBotGuildHighestRole.Position - 1
+					}
+
+					if slices.Contains(t.Options.ProtectedRoles, srcGuild.Roles[i].ID) {
+						continue
+					}
+
+					if srcGuild.Roles[i].Managed {
+						continue
+					}
+
+					if srcGuild.Roles[i].ID == srcGuild.ID {
+						continue // @everyone
+					}
+
+					l.Info("Creating role", zap.String("name", srcGuild.Roles[i].Name), zap.Int("position", srcGuild.Roles[i].Position), zap.String("id", srcGuild.Roles[i].ID))
+
+					newRole, err := discord.GuildRoleCreate(t.ServerID, &discordgo.RoleParams{
+						Name: srcGuild.Roles[i].Name,
+						Color: func() *int {
+							if srcGuild.Roles[i].Color == 0 {
+								return nil
+							}
+
+							return &srcGuild.Roles[i].Color
+						}(),
+						Hoist:       &srcGuild.Roles[i].Hoist,
+						Permissions: &srcGuild.Roles[i].Permissions,
+						Mentionable: &srcGuild.Roles[i].Mentionable,
+					}, discordgo.WithRetryOnRatelimit(true), discordgo.WithContext(ctx))
+
+					if err != nil {
+						return nil, nil, fmt.Errorf("failed to create role: %w", err)
+					}
+
+					restoredRolesMap[srcGuild.Roles[i].ID] = newRole.ID
+
+					time.Sleep(time.Duration(t.Constraints.Restore.RoleCreateSleep))
+				}
+
+				return nil, &taskstate.Progress{
+					Data: map[string]any{
+						"restoredRoleMap": restoredRolesMap,
+					},
+				}, nil
+			},
+		},
+		step.Step[ServerBackupRestoreTask]{
+			State: "delete_old_channels",
+			Exec: func(t *ServerBackupRestoreTask, l *zap.Logger, tcr *types.TaskCreateResponse, state taskstate.TaskState, progstate taskstate.TaskProgressState, progress *taskstate.Progress) (*types.TaskOutput, *taskstate.Progress, error) {
+				var srcChannelMap = make(map[string]*discordgo.Channel) // Map of backed up channel id to channel object
+				for _, channel := range srcGuild.Channels {
+					srcChannelMap[channel.ID] = channel
+				}
+
+				var ignoredChannels []string
+				for i := range tgtGuild.Channels {
+					if slices.Contains(t.Options.ProtectedChannels, tgtGuild.Channels[i].ID) {
+						continue
+					}
+
+					if tgtGuild.Channels[i].ID == tgtGuild.RulesChannelID || tgtGuild.Channels[i].ID == tgtGuild.PublicUpdatesChannelID {
+						continue
+					}
+
+					if tgtGuild.Channels[i].ID == tgtGuild.PublicUpdatesChannelID {
+						continue
+					}
+
+					bp := utils.MemberChannelPerms(basePerms, tgtGuild, m, tgtGuild.Channels[i])
+
+					if bp&discordgo.PermissionManageChannels != discordgo.PermissionManageChannels && bp&discordgo.PermissionAdministrator != discordgo.PermissionAdministrator {
+						l.Warn("Not removing channel due to lack of 'Manage Channels' permissions", zap.String("channel_id", tgtGuild.Channels[i].ID))
+						continue
+					}
+
+					switch t.Options.ChannelRestoreMode {
+					case ChannelRestoreModeIgnoreExisting:
+						if _, ok := srcChannelMap[tgtGuild.Channels[i].ID]; ok {
+							ignoredChannels = append(ignoredChannels, tgtGuild.Channels[i].ID)
+							continue
+						}
+					}
+
+					l.Info("Deleting channel", zap.String("name", tgtGuild.Channels[i].Name), zap.Int("position", tgtGuild.Channels[i].Position), zap.String("id", tgtGuild.Channels[i].ID))
+
+					_, err := discord.ChannelDelete(tgtGuild.Channels[i].ID, discordgo.WithRetryOnRatelimit(true), discordgo.WithContext(ctx))
+
+					if err != nil {
+						return nil, nil, fmt.Errorf("failed to delete channel: %w", err)
+					}
+
+					time.Sleep(time.Duration(t.Constraints.Restore.ChannelDeleteSleep))
+				}
+
+				return nil, &taskstate.Progress{
+					Data: map[string]any{
+						"ignoredChannels": ignoredChannels,
+					},
+				}, nil
+			},
+		},
+		step.Step[ServerBackupRestoreTask]{
+			State: "create_new_channels",
+			Exec: func(t *ServerBackupRestoreTask, l *zap.Logger, tcr *types.TaskCreateResponse, state taskstate.TaskState, progstate taskstate.TaskProgressState, progress *taskstate.Progress) (*types.TaskOutput, *taskstate.Progress, error) {
+				ignoredChannels, ok := progress.Data["ignoredChannels"].([]string)
+
+				if !ok {
+					ignoredChannels = []string{}
+				}
+
+				// Map of backed up channel id to restored channel id
+				var restoredChannelsMap = make(map[string]string)
+
+				restoredRolesMap, ok := progress.Data["restoredRoleMap"].(map[string]string)
+
+				if !ok {
+					return nil, nil, fmt.Errorf("failed to get restored role map")
+				}
+
+				// Internal function. Given a channel, this fixes permission overwrites and then creates the channel from the old source channel
+				var createChannel = func(channel *discordgo.Channel) (*discordgo.Channel, error) {
+					l.Info("Creating channel", zap.String("name", channel.Name), zap.Int("position", channel.Position), zap.String("srcId", channel.ID), zap.String("parent_id", channel.ParentID), zap.Any("type", channel.Type))
+
+					// fix permission overwrites
+					var permOverwrites = []*discordgo.PermissionOverwrite{}
+
+					for _, overwrite := range channel.PermissionOverwrites {
+						if overwrite.Type == discordgo.PermissionOverwriteTypeRole {
+							if rcid, ok := restoredRolesMap[overwrite.ID]; ok {
+								permOverwrites = append(permOverwrites, &discordgo.PermissionOverwrite{
+									ID:    rcid,
+									Type:  overwrite.Type,
+									Allow: overwrite.Allow,
+									Deny:  overwrite.Deny,
+								})
+								continue
+							}
+
+							if overwrite.ID == srcGuild.ID {
+								permOverwrites = append(permOverwrites, &discordgo.PermissionOverwrite{
+									ID:    tgtGuild.ID,
+									Type:  overwrite.Type,
+									Allow: overwrite.Allow,
+									Deny:  overwrite.Deny,
+								})
+							}
+						} else {
+							permOverwrites = append(permOverwrites, overwrite)
+						}
+					}
+
+					c, err := discord.GuildChannelCreateComplex(t.ServerID, discordgo.GuildChannelCreateData{
+						Name:                 channel.Name,
+						Type:                 channel.Type,
+						Topic:                channel.Topic,
+						Bitrate:              channel.Bitrate,
+						UserLimit:            channel.UserLimit,
+						RateLimitPerUser:     channel.RateLimitPerUser,
+						Position:             channel.Position,
+						PermissionOverwrites: permOverwrites,
+						ParentID:             channel.ParentID,
+						NSFW:                 channel.NSFW,
+					}, discordgo.WithContext(ctx), discordgo.WithRetryOnRatelimit(true))
+
+					if err != nil {
+						return nil, fmt.Errorf("failed to create channel: %w", err)
+					}
+
+					time.Sleep(time.Duration(t.Constraints.Restore.ChannelCreateSleep))
+
+					return c, nil
+				}
+
+				// First restore categories
+				for i := range srcGuild.Channels {
+					if srcGuild.Channels[i].Type != discordgo.ChannelTypeGuildCategory {
+						continue
+					}
+
+					if _, ok := restoredChannelsMap[srcGuild.Channels[i].ID]; ok {
+						continue
+					}
+
+					// Ignore existing
+					if slices.Contains(ignoredChannels, srcGuild.Channels[i].ID) {
+						restoredChannelsMap[srcGuild.Channels[i].ID] = srcGuild.Channels[i].ID
+						continue
+					}
+
+					nc, err := createChannel(srcGuild.Channels[i])
+
+					if err != nil {
+						return nil, nil, fmt.Errorf("failed to create channel: %w", err)
+					}
+
+					restoredChannelsMap[srcGuild.Channels[i].ID] = nc.ID
+				}
+
+				// Next restore channels
+				for i := range srcGuild.Channels {
+					if _, ok := restoredChannelsMap[srcGuild.Channels[i].ID]; ok {
+						continue
+					}
+
+					// Ignore existing
+					if slices.Contains(ignoredChannels, srcGuild.Channels[i].ID) {
+						restoredChannelsMap[srcGuild.Channels[i].ID] = srcGuild.Channels[i].ID
+						continue
+					}
+
+					// Create corresponding category if needed
+					if srcGuild.Channels[i].ParentID != "" {
+						if rcid, ok := restoredChannelsMap[srcGuild.Channels[i].ParentID]; ok {
+							srcGuild.Channels[i].ParentID = rcid
+						} else {
+							if t.Options.IgnoreRestoreErrors {
+								l.Warn("Parent channel does not exist, skipping", zap.String("channel_id", srcGuild.Channels[i].ParentID))
+								srcGuild.Channels[i].ParentID = ""
+							} else {
+								return nil, nil, fmt.Errorf("parent channel does not exist")
+							}
+						}
+					}
+
+					nc, err := createChannel(srcGuild.Channels[i])
+
+					if err != nil {
+						return nil, nil, fmt.Errorf("failed to create channel: %w", err)
+					}
+
+					restoredChannelsMap[srcGuild.Channels[i].ID] = nc.ID
+				}
+
+				return nil, &taskstate.Progress{
+					Data: map[string]any{
+						"restoredChannelsMap": restoredChannelsMap,
+					},
+				}, nil
+			},
+		},
+		step.Step[ServerBackupRestoreTask]{
+			State: "update_guild_features",
+			Exec: func(t *ServerBackupRestoreTask, l *zap.Logger, tcr *types.TaskCreateResponse, state taskstate.TaskState, progstate taskstate.TaskProgressState, progress *taskstate.Progress) (*types.TaskOutput, *taskstate.Progress, error) {
+				restoredChannelsMap, ok := progress.Data["restoredChannelsMap"].(map[string]string)
+
+				if !ok {
+					return nil, nil, fmt.Errorf("failed to get restored channel map")
+				}
+
+				gp := &discordgo.GuildParams{}
+
+				// Features, only COMMUNITY is editable IIRC
+				var features []discordgo.GuildFeature = tgtGuild.Features
+				if basePerms&discordgo.PermissionAdministrator == discordgo.PermissionAdministrator {
+					if slices.Contains(srcGuild.Features, discordgo.GuildFeatureCommunity) && !slices.Contains(features, discordgo.GuildFeatureCommunity) {
+						var rulesChannelId string
+						var publicUpdatesChannelId string
+
+						for srcChannel, restoredChannel := range restoredChannelsMap {
+							if srcChannel == srcGuild.RulesChannelID {
+								rulesChannelId = restoredChannel
+							}
+
+							if srcChannel == srcGuild.PublicUpdatesChannelID {
+								publicUpdatesChannelId = restoredChannel
+							}
+
+							if rulesChannelId != "" && publicUpdatesChannelId != "" {
 								break
 							}
 						}
 
-						messages[msgIndex+mod].MessageSend.Embeds = embeds
+						gp.RulesChannelID = rulesChannelId
+						gp.PublicUpdatesChannelID = publicUpdatesChannelId
+
+						if gp.RulesChannelID != "" && gp.PublicUpdatesChannelID != "" {
+							features = append(features, discordgo.GuildFeatureCommunity)
+							if tgtGuild.VerificationLevel == discordgo.VerificationLevelNone || tgtGuild.VerificationLevel == discordgo.VerificationLevelLow {
+								medium := discordgo.VerificationLevelMedium
+								gp.VerificationLevel = &medium
+							}
+						}
 					}
 				} else {
-					messages[msgIndex].MessageSend.Embeds = append(messages[msgIndex].MessageSend.Embeds, bm[i].Message.Embeds...)
+					l.Warn("Not admin, certain features cannot be editted (e.g. COMMUNITY)", zap.Int64("basePerms", basePerms))
 				}
 
-				messages[msgIndex].MessageSend.Content += bm[i].Message.Content + "\n"
-				contentLength += int64(len(bm[i].Message.Content))
+				gp.Features = features
 
-				if bm[i].Message.TTS && perms&discordgo.PermissionSendTTSMessages == discordgo.PermissionSendTTSMessages {
-					messages[msgIndex].MessageSend.TTS = bm[i].Message.TTS
-				}
-
-				messages[msgIndex].MessageSend.AllowedMentions = &discordgo.MessageAllowedMentions{} // NOTE: We intentionally do not set allowed mentions to avoid spam
-			}
-
-			// Send messages
-			//
-			// NOTE/WIP: message_reference is not supported yet
-			// NOTE/WIP: StickerIDs and Components and Attachments/Files are not restored yet
-			l.Info("Sending backed up messages", zap.Int("message_count", len(messages)), zap.String("channel_id", restoredChannelId))
-			for i := range messages {
-				if messages[i].MessageSend.Content == "" &&
-					len(messages[i].MessageSend.Embeds) == 0 {
-					continue
-				}
-
-				messages[i].MessageSend.Content = fmt.Sprintf("**%s**\n%s", strings.ReplaceAll(messages[i].Author.Username+"("+messages[i].Author.ID+")", "*", ""), messages[i].MessageSend.Content)
-
-				_, err := discord.ChannelMessageSendComplex(restoredChannelId, messages[i].MessageSend, discordgo.WithContext(ctx))
+				_, err = discord.GuildEdit(t.ServerID, gp, discordgo.WithRetryOnRatelimit(true), discordgo.WithContext(ctx))
 
 				if err != nil {
-					if t.Options.IgnoreRestoreErrors {
-						continue
-					}
-					return nil, fmt.Errorf("failed to send message: %w", err)
+					return nil, nil, fmt.Errorf("failed to edit guild: %w", err)
 				}
 
-				time.Sleep(time.Duration(t.Constraints.Restore.SendMessageSleep))
-			}
-		}
-	}
+				return nil, &taskstate.Progress{}, nil
+			},
+		},
+		step.Step[ServerBackupRestoreTask]{
+			State: "restore_messages",
+			Exec: func(t *ServerBackupRestoreTask, l *zap.Logger, tcr *types.TaskCreateResponse, state taskstate.TaskState, progstate taskstate.TaskProgressState, progress *taskstate.Progress) (*types.TaskOutput, *taskstate.Progress, error) {
+				restoredChannelsMap, ok := progress.Data["restoredChannelsMap"].(map[string]string)
+
+				if !ok {
+					return nil, nil, fmt.Errorf("failed to get restored channel map")
+				}
+
+				var currentChannelMap = make(map[string]*discordgo.Channel) // Map of current channel id to channel object
+				for _, channel := range tgtGuild.Channels {
+					currentChannelMap[channel.ID] = channel
+				}
+
+				l.Info("Waiting 5 seconds to avoid API issues")
+
+				time.Sleep(5 * time.Second)
+
+				if bo.BackupMessages {
+					for backedUpChannelId, restoredChannelId := range restoredChannelsMap {
+						if _, ok := sections["messages/"+backedUpChannelId]; !ok {
+							continue
+						}
+
+						l.Info("Processing backed up channel messages", zap.String("backed_up_channel_id", backedUpChannelId), zap.String("restored_channel_id", restoredChannelId))
+
+						perms := utils.MemberChannelPerms(basePerms, tgtGuild, m, currentChannelMap[restoredChannelId])
+						//canManageWebhooks := perms&discordgo.PermissionManageWebhooks == discordgo.PermissionManageWebhooks
+
+						// Fetch section
+						bmPtr, err := readMsgpackSection[[]*BackupMessage](f, "messages/"+backedUpChannelId)
+
+						if err != nil {
+							if t.Options.IgnoreRestoreErrors {
+								continue
+							}
+							return nil, nil, fmt.Errorf("failed to get section: %w", err)
+						}
+
+						bm := *bmPtr
+
+						// Before doing anything else, sort the messages by timestamp
+						slices.SortFunc(bm, func(a, b *BackupMessage) int {
+							dtA, err := discordgo.SnowflakeTimestamp(a.Message.ID)
+
+							if err != nil {
+								panic(err)
+							}
+
+							dtB, err := discordgo.SnowflakeTimestamp(b.Message.ID)
+
+							if err != nil {
+								panic(err)
+							}
+
+							return dtB.Compare(dtA)
+						})
+
+						// First batch messages to avoid spam
+						var messages = make([]*RestoreMessage, 0)
+						var msgIndex int
+						var contentLength int64
+						var currentMsgAuthor string
+
+						// Grow messages if msgIndex > len(messages)
+						growMsgs := func(author *discordgo.User) {
+							for {
+								if len(messages) > msgIndex {
+									break
+								}
+
+								messages = append(messages, &RestoreMessage{
+									MessageSend: &discordgo.MessageSend{},
+									Author:      author,
+								})
+							}
+						}
+
+						for i := range bm {
+							if bm[i].Message.Author.ID != currentMsgAuthor {
+								currentMsgAuthor = bm[i].Message.Author.ID
+								msgIndex++
+							}
+
+							if len(bm[i].Message.Content) > 1900 {
+								// Upload as file
+								content := bm[i].Message.Content
+
+								bm[i].Message.Content = ""
+
+								growMsgs(bm[i].Message.Author)
+
+								messages[msgIndex].SmallFiles = append(messages[msgIndex].SmallFiles, &discordgo.File{
+									Name:        "context.txt",
+									ContentType: "text/plain",
+									Reader:      strings.NewReader(content),
+								})
+							}
+
+							if contentLength+int64(len(bm[i].Message.Content)) > 1900 {
+								contentLength = 0
+								msgIndex++
+							}
+
+							// Grow messages if msgIndex > len(messages)
+							growMsgs(bm[i].Message.Author)
+
+							l.Debug("Processing backed up message", zap.Int("index", i), zap.String("message_id", bm[i].Message.ID), zap.String("author_id", bm[i].Message.Author.ID))
+
+							if len(bm[i].Message.Embeds)+len(messages[msgIndex].MessageSend.Embeds) > 10 {
+								// Make the current message only have 10 embeds, then move to the next message and so on
+								embeds := bm[i].Message.Embeds
+
+								embedsPaged := [][]*discordgo.MessageEmbed{}
+
+								for len(embeds) > 10 {
+									embedsPaged = append(embedsPaged, embeds[:10])
+									embeds = embeds[10:]
+								}
+
+								embedsPaged = append(embedsPaged, embeds)
+
+								for mod, embeds := range embedsPaged {
+									for {
+										messages = append(messages, &RestoreMessage{
+											MessageSend: &discordgo.MessageSend{},
+											Author:      bm[i].Message.Author,
+										})
+
+										if len(messages) >= msgIndex+mod {
+											break
+										}
+									}
+
+									messages[msgIndex+mod].MessageSend.Embeds = embeds
+								}
+							} else {
+								messages[msgIndex].MessageSend.Embeds = append(messages[msgIndex].MessageSend.Embeds, bm[i].Message.Embeds...)
+							}
+
+							messages[msgIndex].MessageSend.Content += bm[i].Message.Content + "\n"
+							contentLength += int64(len(bm[i].Message.Content))
+
+							if bm[i].Message.TTS && perms&discordgo.PermissionSendTTSMessages == discordgo.PermissionSendTTSMessages {
+								messages[msgIndex].MessageSend.TTS = bm[i].Message.TTS
+							}
+
+							messages[msgIndex].MessageSend.AllowedMentions = &discordgo.MessageAllowedMentions{} // NOTE: We intentionally do not set allowed mentions to avoid spam
+						}
+
+						// Send messages
+						//
+						// NOTE/WIP: message_reference is not supported yet
+						// NOTE/WIP: StickerIDs and Components and Attachments/Files are not restored yet
+						l.Info("Sending backed up messages", zap.Int("message_count", len(messages)), zap.String("channel_id", restoredChannelId))
+						for i := range messages {
+							if messages[i].MessageSend.Content == "" &&
+								len(messages[i].MessageSend.Embeds) == 0 {
+								continue
+							}
+
+							messages[i].MessageSend.Content = fmt.Sprintf("**%s**\n%s", strings.ReplaceAll(messages[i].Author.Username+"("+messages[i].Author.ID+")", "*", ""), messages[i].MessageSend.Content)
+
+							_, err := discord.ChannelMessageSendComplex(restoredChannelId, messages[i].MessageSend, discordgo.WithContext(ctx))
+
+							if err != nil {
+								if t.Options.IgnoreRestoreErrors {
+									continue
+								}
+								return nil, nil, fmt.Errorf("failed to send message: %w", err)
+							}
+
+							time.Sleep(time.Duration(t.Constraints.Restore.SendMessageSleep))
+						}
+					}
+				}
+
+				return nil, nil, nil
+			},
+		},
+	).Exec(
+		t,
+		l,
+		tcr,
+		state,
+		progstate,
+	)
 
 	l.Info("Successfully restored guild")
 

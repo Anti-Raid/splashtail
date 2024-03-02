@@ -11,14 +11,21 @@ import (
 	"github.com/anti-raid/splashtail/jobserver/state"
 	"github.com/anti-raid/splashtail/splashcore/types"
 	"github.com/anti-raid/splashtail/tasks"
+	"github.com/anti-raid/splashtail/tasks/taskstate"
 	"github.com/bwmarrin/discordgo"
 	"github.com/infinitybotlist/eureka/crypto"
 	"go.uber.org/zap"
 )
 
 // PersistTaskState persists task state to redis temporarily
-func PersistTaskState(tc *TaskProgress, s string, data map[string]any) error {
-	_, err := state.Pool.Exec(tc.TaskState.Context(), "INSERT INTO ongoing_tasks (task_id, state, data) VALUES ($1, $2, $3) ON CONFLICT (task_id) DO UPDATE SET state = $2, data = $3", tc.TaskID, s, data)
+func PersistTaskState(tc *TaskProgress, prog *taskstate.Progress) error {
+	_, err := state.Pool.Exec(
+		tc.TaskState.Context(),
+		"INSERT INTO ongoing_tasks (task_id, state, data) VALUES ($1, $2, $3) ON CONFLICT (task_id) DO UPDATE SET state = $2, data = $3",
+		tc.TaskID,
+		prog.State,
+		prog.Data,
+	)
 
 	if err != nil {
 		return err
@@ -28,7 +35,7 @@ func PersistTaskState(tc *TaskProgress, s string, data map[string]any) error {
 }
 
 // GetPersistedTaskState gets persisted task state from redis
-func GetPersistedTaskState(tc *TaskProgress) (*InternalTaskProgress, error) {
+func GetPersistedTaskState(tc *TaskProgress) (*taskstate.Progress, error) {
 	var s string
 	var data map[string]any
 
@@ -38,15 +45,10 @@ func GetPersistedTaskState(tc *TaskProgress) (*InternalTaskProgress, error) {
 		return nil, err
 	}
 
-	return &InternalTaskProgress{
+	return &taskstate.Progress{
 		State: s,
 		Data:  data,
 	}, nil
-}
-
-type InternalTaskProgress struct {
-	State string
-	Data  map[string]any
 }
 
 // Implementor of tasks.TaskState
@@ -82,41 +84,41 @@ type TaskProgress struct {
 	// Used to cache the current task progress in resumes
 	//
 	// When resuming, set this to the current progress
-	InternalTaskProgress *InternalTaskProgress
+	CurrentTaskProgress *taskstate.Progress
 
 	// OnGetProgress is a callback that is called when GetProgress is called
 	//
 	// If unset, calls GetPersistedTaskState
-	OnGetProgress func(tc *TaskProgress) (string, map[string]any, error)
+	OnGetProgress func(tc *TaskProgress) (*taskstate.Progress, error)
 
 	// OnSetProgress is a callback that is called when SetProgress is called
 	//
 	// If unset, calls PersistTaskState
-	OnSetProgress func(tc *TaskProgress, state string, data map[string]any) error
+	OnSetProgress func(tc *TaskProgress, prog *taskstate.Progress) error
 }
 
-func (ts TaskProgress) GetProgress() (string, map[string]any, error) {
-	if ts.InternalTaskProgress == nil {
-		return "", nil, nil
+func (ts TaskProgress) GetProgress() (*taskstate.Progress, error) {
+	if ts.CurrentTaskProgress == nil {
+		return &taskstate.Progress{
+			State: "",
+			Data:  map[string]any{},
+		}, nil
 	}
 
-	return ts.InternalTaskProgress.State, ts.InternalTaskProgress.Data, nil
+	return ts.CurrentTaskProgress, nil
 }
 
-func (ts TaskProgress) SetProgress(state string, data map[string]any) error {
-	ts.InternalTaskProgress = &InternalTaskProgress{
-		State: state,
-		Data:  data,
-	}
+func (ts TaskProgress) SetProgress(prog *taskstate.Progress) error {
+	ts.CurrentTaskProgress = prog
 
 	if ts.OnSetProgress != nil {
-		err := ts.OnSetProgress(&ts, state, data)
+		err := ts.OnSetProgress(&ts, prog)
 
 		if err != nil {
 			return err
 		}
 	} else {
-		err := PersistTaskState(&ts, state, data)
+		err := PersistTaskState(&ts, prog)
 
 		if err != nil {
 			return err
@@ -176,6 +178,16 @@ func ExecuteTask(
 		}
 
 		bChan <- 1
+
+		// Delete the task from ongoing tasks
+		if prog.CurrentTaskProgress != nil {
+			_, err2 := state.Pool.Exec(state.Context, "DELETE FROM ongoing_tasks WHERE task_id = $1", taskId)
+
+			if err != nil {
+				l.Error("Failed to delete task from ongoing tasks", zap.Error(err2), zap.Any("data", tInfo.TaskFields))
+				return
+			}
+		}
 	}()
 
 	go func() {

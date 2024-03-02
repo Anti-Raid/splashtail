@@ -1,6 +1,6 @@
 // Animus Magic is the internal redis IPC system for internal communications between the bot and the server
 //
-// Format of payloads: <target [from]: u8><target [to]: u8><cluster id: u16><op: 8 bits><command id: alphanumeric string>/<cbor payload>
+// Format of payloads: <env: u8 [staging/prod]><target [from]: u8><target [to]: u8><cluster id: u16><op: 8 bits><command id: alphanumeric string>/<cbor payload>
 package animusmagic
 
 import (
@@ -271,7 +271,13 @@ func (c *AnimusMagicClient) Listen(ctx context.Context, redis rueidis.Client, l 
 }
 
 // CreatePayload creates a payload for the given command id and message
-func (c *AnimusMagicClient) CreatePayload(from, to AnimusTarget, clusterId uint16, op AnimusOp, commandId string, resp any) ([]byte, error) {
+func (c *AnimusMagicClient) CreatePayload(
+	from, to AnimusTarget,
+	clusterId uint16,
+	op AnimusOp,
+	commandId string,
+	resp any,
+) ([]byte, error) {
 	var finalPayload = []byte{
 		byte(from),
 		byte(to),

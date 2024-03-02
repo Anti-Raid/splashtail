@@ -399,6 +399,10 @@ impl AnimusMagicClientExt<AnimusResponse> for AnimusMagicClient {
         self.rx_map.clone()
     }
 
+    fn from(&self) -> AnimusTarget {
+        AnimusTarget::Bot
+    }
+
     fn cluster_id(&self) -> u16 {
         MEWLD_ARGS.cluster_id
     }

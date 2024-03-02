@@ -87,12 +87,6 @@ const (
 	ChannelRestoreModeIgnoreExisting ChannelRestoreMode = "ignore_existing"
 )
 
-type RoleRestoreMode string
-
-const (
-	RoleRestoreModeFull RoleRestoreMode = "full"
-)
-
 // Options that can be set when creatng a backup
 type BackupCreateOpts struct {
 	PerChannel                int            `description:"The number of messages per channel"`
@@ -114,7 +108,6 @@ type BackupRestoreOpts struct {
 	BackupSource        string             `description:"The source of the backup"`
 	Decrypt             string             `description:"The key to decrypt backups with, if any"`
 	ChannelRestoreMode  ChannelRestoreMode `description:"Channel backup restore method. Use 'full' if unsure"`
-	RoleRestoreMode     RoleRestoreMode    `description:"Role backup restore method. Use 'full' if unsure"`
 }
 
 // Attachment contains metadata about an attachment

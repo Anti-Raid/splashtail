@@ -12,8 +12,29 @@ where Response: Serialize + for<'a> Deserialize<'a> {
     /// Returns the map of command ids to response senders
     fn rx_map(&self) -> Arc<dashmap::DashMap<String, Sender<Response>>>;
 
+    /// Returns who the client is/from
+    fn from(&self) -> AnimusTarget;
+
     /// Returns the cluster id of the client
     fn cluster_id(&self) -> u16;
+
+    /// Creates a payload based on the clients and returns a byte vector
+    fn create_payload_simplex<T: Serialize>(
+        &self,
+        cmd_id: &str,
+        to: AnimusTarget,
+        op: AnimusOp,
+        msg: &T,
+    ) -> Result<Vec<u8>, Error> {
+        create_payload::<T>(
+            cmd_id,
+            self.from(),
+            self.cluster_id(),
+            to,
+            op,
+            msg,
+        )
+    }
 
     /// Publish via the next available connection
     async fn publish_next(&self, payload: Vec<u8>) -> Result<(), Error>;
@@ -27,10 +48,8 @@ where Response: Serialize + for<'a> Deserialize<'a> {
     ) -> Result<Response, crate::Error> {
         let cmd_id = new_command_id();
 
-        let payload = match create_payload::<T>(
+        let payload = match self.create_payload_simplex::<T>(
             &cmd_id,
-            AnimusTarget::Bot,
-            self.cluster_id(),
             target,
             AnimusOp::Request,
             &msg,
@@ -63,10 +82,8 @@ where Response: Serialize + for<'a> Deserialize<'a> {
         data: AnimusErrorResponse,
         to: AnimusTarget,
     ) -> Result<(), crate::Error> {
-        let Ok(payload) = create_payload::<AnimusErrorResponse>(
+        let Ok(payload) = self.create_payload_simplex::<AnimusErrorResponse>(
             command_id,
-            AnimusTarget::Bot,
-            self.cluster_id(),
             to,
             AnimusOp::Error,
             &data,

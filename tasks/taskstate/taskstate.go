@@ -31,11 +31,16 @@ type TaskState interface {
 	Context() context.Context
 }
 
+type Progress struct {
+	State string
+	Data  map[string]any
+}
+
 type TaskProgressState interface {
 	// GetProgress returns the current progress of the task. This is useful
 	// for resumable tasks like server restores
-	GetProgress() (string, map[string]any, error)
+	GetProgress() (*Progress, error)
 
 	// Sets/demarkates the progress of the task, if supported
-	SetProgress(state string, data map[string]any) error
+	SetProgress(prog *Progress) error
 }

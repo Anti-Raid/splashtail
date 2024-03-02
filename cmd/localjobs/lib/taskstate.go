@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"runtime/debug"
 
+	"github.com/anti-raid/splashtail/tasks/taskstate"
 	"github.com/bwmarrin/discordgo"
 )
 
@@ -39,10 +40,13 @@ func (ts TaskState) Context() context.Context {
 
 type TaskProgress struct{}
 
-func (ts TaskProgress) GetProgress() (string, map[string]any, error) {
-	return "", nil, nil
+func (ts TaskProgress) GetProgress() (*taskstate.Progress, error) {
+	return &taskstate.Progress{
+		State: "",
+		Data:  map[string]any{},
+	}, nil
 }
 
-func (ts TaskProgress) SetProgress(state string, data map[string]any) error {
+func (ts TaskProgress) SetProgress(prog *taskstate.Progress) error {
 	return nil
 }
