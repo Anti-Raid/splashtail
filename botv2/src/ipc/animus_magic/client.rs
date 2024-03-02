@@ -103,6 +103,7 @@ impl From<AnimusResponse> for AnimusPayload {
 pub struct AnimusMagicClient {
     pub redis_pool: RedisPool,
     pub rx_map: std::sync::Arc<dashmap::DashMap<String, tokio::sync::mpsc::Sender<AnimusResponse>>>,
+    pub err_map: std::sync::Arc<dashmap::DashMap<String, tokio::sync::mpsc::Sender<AnimusErrorResponse>>>,
 }
 
 impl AnimusMagicClient {
@@ -160,7 +161,43 @@ impl AnimusMagicClient {
 
             // Case of response
             match meta.op {
-                AnimusOp::Response | AnimusOp::Error => {
+                AnimusOp::Error => {
+                    if meta.from == AnimusTarget::Bot
+                        && (meta.cluster_id != MEWLD_ARGS.cluster_id && meta.cluster_id != u16::MAX)
+                    {
+                        continue; // Not for us
+                    }
+
+                    let err_map = self.err_map.clone();
+
+                    tokio::task::spawn(async move {
+                        let sender = err_map.get(&meta.command_id).map(|s| s.value().clone());
+
+                        if let Some(sender) = sender {
+                            let payload = &binary[meta.payload_offset..];
+
+                            let resp = match from_payload::<AnimusErrorResponse>(payload) {
+                                Ok(resp) => resp,
+                                Err(e) => {
+                                    log::warn!(
+                                        "Invalid message recieved on channel {} [response extract error] {}",
+                                        message.channel,
+                                        e
+                                    );
+                                    return;
+                                }
+                            };
+
+                            if let Err(e) = sender.send(resp).await {
+                                err_map.remove(&meta.command_id);
+                                log::warn!("Failed to send response to receiver: {}", e);
+                            }
+
+                            err_map.remove(&meta.command_id);
+                        }
+                    });
+                },
+                AnimusOp::Response => {
                     if meta.from == AnimusTarget::Bot
                         && (meta.cluster_id != MEWLD_ARGS.cluster_id && meta.cluster_id != u16::MAX)
                     {
@@ -244,6 +281,7 @@ impl AnimusMagicClient {
                     let client = AnimusMagicClient {
                         redis_pool: self.redis_pool.clone(),
                         rx_map: self.rx_map.clone(),
+                        err_map: self.err_map.clone(),
                     };
                     
                     tokio::spawn(async move {
@@ -395,6 +433,10 @@ impl AnimusMagicClient {
 }
 
 impl AnimusMagicClientExt<AnimusResponse> for AnimusMagicClient {
+    fn error_map(&self) -> Arc<dashmap::DashMap<String, tokio::sync::mpsc::Sender<AnimusErrorResponse>>> {
+        self.err_map.clone()
+    }
+
     fn rx_map(&self) -> Arc<dashmap::DashMap<String, tokio::sync::mpsc::Sender<AnimusResponse>>> {
         self.rx_map.clone()
     }

@@ -133,8 +133,8 @@ func (t *ServerBackupRestoreTask) Validate(state taskstate.TaskState) error {
 	}
 
 	if opMode == "jobs" {
-		if !strings.HasPrefix(t.Options.BackupSource, "https://") {
-			return fmt.Errorf("backup_source must be a valid URL")
+		if !strings.HasPrefix(t.Options.BackupSource, "https://") && !strings.HasPrefix(t.Options.BackupSource, "task://") {
+			return fmt.Errorf("backup_source must be a valid URL or a task id")
 		}
 	} else if opMode == "localjobs" {
 		if !strings.HasPrefix(t.Options.BackupSource, "file://") && !strings.HasPrefix(t.Options.BackupSource, "http://") && !strings.HasPrefix(t.Options.BackupSource, "https://") {

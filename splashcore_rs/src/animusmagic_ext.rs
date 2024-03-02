@@ -9,6 +9,9 @@ use tokio::sync::mpsc::Sender;
 #[allow(async_fn_in_trait)] // It's our own code
 pub trait AnimusMagicClientExt<Response>
 where Response: Serialize + for<'a> Deserialize<'a> {
+    /// Returns the map of command ids to error senders
+    fn error_map(&self) -> Arc<dashmap::DashMap<String, Sender<AnimusErrorResponse>>>;
+
     /// Returns the map of command ids to response senders
     fn rx_map(&self) -> Arc<dashmap::DashMap<String, Sender<Response>>>;
 
@@ -59,19 +62,35 @@ where Response: Serialize + for<'a> Deserialize<'a> {
         };
 
         let (tx, mut rx) = tokio::sync::mpsc::channel(1);
+        let (err_tx, mut err_rx) = tokio::sync::mpsc::channel(1);
 
         self.rx_map().insert(cmd_id.clone(), tx);
+        self.error_map().insert(cmd_id.clone(), err_tx);
 
         self.publish_next(payload).await?;
 
-        let resp = match tokio::time::timeout(timeout, rx.recv()).await {
-            Ok(resp) => resp,
-            Err(_) => return Err("Request timed out".into()),
-        };
+        // Create a timeout channel (to be used in the select! macro)
+        let (timeout_tx, timeout_rx) = tokio::sync::oneshot::channel();
 
-        match resp {
-            Some(resp) => Ok(resp),
-            None => Err("Failed to get response".into()),
+        tokio::spawn(async move {
+            tokio::time::sleep(timeout).await;
+            let _ = timeout_tx.send(());
+        });
+
+        tokio::select! {
+            resp = rx.recv() => {
+                match resp {
+                    Some(resp) => Ok(resp),
+                    None => Err("Failed to get response".into()),
+                }
+            },
+            err = err_rx.recv() => {
+                match err {
+                    Some(err) => Err(err.message.into()),
+                    None => Err("Failed to get error response".into()),
+                }
+            },
+            _ = timeout_rx => Err("Request timed out".into()),
         }
     }    
 

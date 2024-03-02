@@ -815,6 +815,7 @@ async fn main() {
         animus_magic_ipc: Arc::new(ipc::animus_magic::client::AnimusMagicClient {
             redis_pool: pool.clone(),
             rx_map: Arc::new(dashmap::DashMap::new()),
+            err_map: Arc::new(dashmap::DashMap::new()),
         }),
         object_store: Arc::new(
             config::CONFIG

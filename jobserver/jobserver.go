@@ -19,7 +19,7 @@ import (
 )
 
 var DefaultTimeout = 15 * time.Minute
-var ResumeOngoingTaskTimeout = 15 * time.Minute
+var ResumeOngoingTaskTimeoutSecs = 15 * 60
 var DefaultValidationTimeout = 5 * time.Second
 
 var json = jsoniter.ConfigFastest
@@ -138,9 +138,9 @@ func CreateJobServer() {
 
 	// Begin fanning out resume tasks
 	go func() {
-		state.Logger.Info("Deleting ancient ongoing_tasks older than ResumeOngoingTaskTimeout", zap.Duration("timeout", ResumeOngoingTaskTimeout))
+		state.Logger.Info("Deleting ancient ongoing_tasks older than ResumeOngoingTaskTimeout", zap.Int("timeout", ResumeOngoingTaskTimeoutSecs))
 
-		_, err := state.Pool.Exec(state.Context, "DELETE FROM ongoing_tasks WHERE created_at < NOW() - INTERVAL $1", ResumeOngoingTaskTimeout)
+		_, err := state.Pool.Exec(state.Context, "DELETE FROM ongoing_tasks WHERE created_at < NOW() - make_interval(secs => $1)", ResumeOngoingTaskTimeoutSecs)
 
 		if err != nil {
 			state.Logger.Error("Failed to delete ancient ongoing_tasks", zap.Error(err))

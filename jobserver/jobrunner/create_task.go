@@ -2,6 +2,7 @@ package jobrunner
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"time"
 
@@ -44,7 +45,7 @@ func CreateTask(ctx context.Context, pool *pgxpool.Pool, task tasks.TaskDefiniti
 
 	defer tx.Rollback(ctx)
 
-	err = tx.QueryRow(ctx, "INSERT INTO tasks (task_name, task_for, expiry, output, task_info) VALUES ($1, $2, $3, $4, $5, $6) RETURNING task_id",
+	err = tx.QueryRow(ctx, "INSERT INTO tasks (task_name, task_for, expiry, output, task_info) VALUES ($1, $2, $3, $4, $5) RETURNING task_id",
 		tInfo.Name,
 		taskFor,
 		func() *time.Duration {
@@ -62,6 +63,12 @@ func CreateTask(ctx context.Context, pool *pgxpool.Pool, task tasks.TaskDefiniti
 		return nil, fmt.Errorf("failed to create task: %w", err)
 	}
 
+	bytes, err := json.Marshal(taskData)
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to decode task data: %w", err)
+	}
+
 	// Add to ongoing_tasks
 	_, err = tx.Exec(
 		ctx,
@@ -69,11 +76,17 @@ func CreateTask(ctx context.Context, pool *pgxpool.Pool, task tasks.TaskDefiniti
 		taskId,
 		"",
 		map[string]any{},
-		taskData,
+		bytes,
 	)
 
 	if err != nil {
 		return nil, fmt.Errorf("failed to add task to ongoing_tasks: %w", err)
+	}
+
+	err = tx.Commit(ctx)
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
 	return &types.TaskCreateResponse{
