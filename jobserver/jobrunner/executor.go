@@ -172,8 +172,6 @@ func ExecuteTask(
 			defer ctxCancel()
 		}
 
-		bChan <- 1
-
 		// Delete the task from ongoing tasks
 		if prog.CurrentTaskProgress != nil {
 			_, err2 := state.Pool.Exec(state.Context, "DELETE FROM ongoing_tasks WHERE task_id = $1", taskId)
@@ -183,6 +181,8 @@ func ExecuteTask(
 				return
 			}
 		}
+
+		bChan <- 1
 	}()
 
 	go func() {

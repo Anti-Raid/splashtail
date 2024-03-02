@@ -11,7 +11,7 @@ import (
 )
 
 // Sets up a task
-func CreateTask(ctx context.Context, pool *pgxpool.Pool, task tasks.TaskDefinition) (*types.TaskCreateResponse, error) {
+func CreateTask(ctx context.Context, pool *pgxpool.Pool, task tasks.TaskDefinition, taskData map[string]any) (*types.TaskCreateResponse, error) {
 	tInfo := task.Info()
 
 	if !tInfo.Valid {
@@ -36,7 +36,15 @@ func CreateTask(ctx context.Context, pool *pgxpool.Pool, task tasks.TaskDefiniti
 		}
 	}
 
-	err = pool.QueryRow(ctx, "INSERT INTO tasks (task_name, task_for, expiry, output, task_info) VALUES ($1, $2, $3, $4, $5) RETURNING task_id",
+	tx, err := pool.Begin(ctx)
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to start transaction: %w", err)
+	}
+
+	defer tx.Rollback(ctx)
+
+	err = tx.QueryRow(ctx, "INSERT INTO tasks (task_name, task_for, expiry, output, task_info) VALUES ($1, $2, $3, $4, $5, $6) RETURNING task_id",
 		tInfo.Name,
 		taskFor,
 		func() *time.Duration {
@@ -52,6 +60,20 @@ func CreateTask(ctx context.Context, pool *pgxpool.Pool, task tasks.TaskDefiniti
 
 	if err != nil {
 		return nil, fmt.Errorf("failed to create task: %w", err)
+	}
+
+	// Add to ongoing_tasks
+	_, err = tx.Exec(
+		ctx,
+		"INSERT INTO ongoing_tasks (task_id, state, data, initial_opts) VALUES ($1, $2, $3, $4)",
+		taskId,
+		"",
+		map[string]any{},
+		taskData,
+	)
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to add task to ongoing_tasks: %w", err)
 	}
 
 	return &types.TaskCreateResponse{

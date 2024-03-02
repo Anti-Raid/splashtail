@@ -1049,6 +1049,7 @@ func (t *ServerBackupRestoreTask) Info() *types.TaskInfo {
 			TargetType: types.TargetTypeServer,
 		},
 		TaskFields: t,
+		Resumable:  true,
 		Valid:      t.valid,
 	}
 }
