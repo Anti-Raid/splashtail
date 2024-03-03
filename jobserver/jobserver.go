@@ -136,118 +136,120 @@ func CreateJobServer() {
 		state.Logger,
 	)
 
-	// Begin fanning out resume tasks
-	go func() {
-		state.Logger.Info("Deleting ancient ongoing_tasks older than ResumeOngoingTaskTimeout", zap.Int("timeout", ResumeOngoingTaskTimeoutSecs))
+	// Resume ongoing tasks
+	go Resume()
+}
 
-		_, err := state.Pool.Exec(state.Context, "DELETE FROM ongoing_tasks WHERE created_at < NOW() - make_interval(secs => $1)", ResumeOngoingTaskTimeoutSecs)
+func Resume() {
+	state.Logger.Info("Deleting ancient ongoing_tasks older than ResumeOngoingTaskTimeout", zap.Int("timeout", ResumeOngoingTaskTimeoutSecs))
+
+	_, err := state.Pool.Exec(state.Context, "DELETE FROM ongoing_tasks WHERE created_at < NOW() - make_interval(secs => $1)", ResumeOngoingTaskTimeoutSecs)
+
+	if err != nil {
+		state.Logger.Error("Failed to delete ancient ongoing_tasks", zap.Error(err))
+		panic("Failed to delete ancient ongoing_tasks")
+	}
+
+	state.Logger.Info("Looking for tasks to resume")
+
+	var taskId string
+	var taskState string
+	var data map[string]any
+	var initialOpts map[string]any
+	var createdAt time.Time
+
+	rows, err := state.Pool.Query(state.Context, "SELECT task_id, state, data, initial_opts, created_at FROM ongoing_tasks")
+
+	if err != nil {
+		state.Logger.Error("Failed to query tasks", zap.Error(err))
+		panic("Failed to query tasks")
+	}
+
+	defer rows.Close()
+
+	for rows.Next() {
+		err = rows.Scan(&taskId, &taskState, &data, &initialOpts, &createdAt)
 
 		if err != nil {
-			state.Logger.Error("Failed to delete ancient ongoing_tasks", zap.Error(err))
-			panic("Failed to delete ancient ongoing_tasks")
+			state.Logger.Error("Failed to scan task", zap.Error(err))
+			panic("Failed to scan task")
 		}
 
-		state.Logger.Info("Looking for tasks to resume")
+		// Select the task from the task db
+		row, err := state.Pool.Query(state.Context, "SELECT "+taskColsStr+" FROM tasks WHERE task_id = $1", taskId)
 
-		var taskId string
-		var taskState string
-		var data map[string]any
-		var initialOpts map[string]any
-		var createdAt time.Time
-
-		rows, err := state.Pool.Query(state.Context, "SELECT task_id, state, data, initial_opts, created_at FROM ongoing_tasks")
+		if errors.Is(err, pgx.ErrNoRows) {
+			state.Logger.Error("Task not found", zap.String("task_id", taskId))
+			continue
+		}
 
 		if err != nil {
-			state.Logger.Error("Failed to query tasks", zap.Error(err))
-			panic("Failed to query tasks")
+			state.Logger.Error("Failed to query task", zap.Error(err))
+			continue
 		}
 
-		defer rows.Close()
+		defer row.Close()
 
-		for rows.Next() {
-			err = rows.Scan(&taskId, &taskState, &data, &initialOpts, &createdAt)
+		t, err := pgx.CollectOneRow(row, pgx.RowToAddrOfStructByName[types.Task])
 
-			if err != nil {
-				state.Logger.Error("Failed to scan task", zap.Error(err))
-				panic("Failed to scan task")
-			}
-
-			// Select the task from the task db
-			row, err := state.Pool.Query(state.Context, "SELECT "+taskColsStr+" FROM tasks WHERE task_id = $1", taskId)
-
-			if errors.Is(err, pgx.ErrNoRows) {
-				state.Logger.Error("Task not found", zap.String("task_id", taskId))
-				continue
-			}
-
-			if err != nil {
-				state.Logger.Error("Failed to query task", zap.Error(err))
-				continue
-			}
-
-			defer row.Close()
-
-			t, err := pgx.CollectOneRow(row, pgx.RowToAddrOfStructByName[types.Task])
-
-			if errors.Is(err, pgx.ErrNoRows) {
-				state.Logger.Error("Task not found", zap.String("task_id", taskId))
-				continue
-			}
-
-			if err != nil {
-				state.Logger.Error("Failed to collect task", zap.Error(err))
-				continue
-			}
-
-			if !t.TaskInfo.Resumable {
-				continue
-			}
-
-			if t.State == "completed" || t.State == "failed" {
-				continue
-			}
-
-			baseTaskDef, ok := tasks.TaskDefinitionRegistry[t.TaskInfo.Name]
-
-			if !ok {
-				state.Logger.Error("Task not found in registry", zap.String("task_id", taskId))
-				continue
-			}
-
-			tBytes, err := json.Marshal(initialOpts)
-
-			if err != nil {
-				state.Logger.Error("Failed to marshal task create opts", zap.Error(err))
-				continue
-			}
-
-			task := baseTaskDef // Copy task
-
-			err = json.Unmarshal(tBytes, &task)
-
-			if err != nil {
-				state.Logger.Error("Failed to unmarshal task create opts", zap.Error(err))
-				continue
-			}
-
-			// Validate task
-			ctx, cancel := context.WithTimeout(state.Context, DefaultValidationTimeout)
-
-			err = task.Validate(jobrunner.TaskState{
-				Ctx: ctx,
-			})
-
-			cancel()
-
-			if err != nil {
-				state.Logger.Error("Failed to validate task", zap.Error(err))
-				continue
-			}
-
-			// Execute task
-			ctx, cancel = context.WithTimeout(state.Context, DefaultTimeout)
-
-			go jobrunner.ExecuteTask(ctx, cancel, taskId, task, nil)
+		if errors.Is(err, pgx.ErrNoRows) {
+			state.Logger.Error("Task not found", zap.String("task_id", taskId))
+			continue
 		}
-	}()
+
+		if err != nil {
+			state.Logger.Error("Failed to collect task", zap.Error(err))
+			continue
+		}
+
+		if !t.TaskInfo.Resumable {
+			continue
+		}
+
+		if t.State == "completed" || t.State == "failed" {
+			continue
+		}
+
+		baseTaskDef, ok := tasks.TaskDefinitionRegistry[t.TaskInfo.Name]
+
+		if !ok {
+			state.Logger.Error("Task not found in registry", zap.String("task_id", taskId))
+			continue
+		}
+
+		tBytes, err := json.Marshal(initialOpts)
+
+		if err != nil {
+			state.Logger.Error("Failed to marshal task create opts", zap.Error(err))
+			continue
+		}
+
+		task := baseTaskDef // Copy task
+
+		err = json.Unmarshal(tBytes, &task)
+
+		if err != nil {
+			state.Logger.Error("Failed to unmarshal task create opts", zap.Error(err))
+			continue
+		}
+
+		// Validate task
+		ctx, cancel := context.WithTimeout(state.Context, DefaultValidationTimeout)
+
+		err = task.Validate(jobrunner.TaskState{
+			Ctx: ctx,
+		})
+
+		cancel()
+
+		if err != nil {
+			state.Logger.Error("Failed to validate task", zap.Error(err))
+			continue
+		}
+
+		// Execute task
+		ctx, cancel = context.WithTimeout(state.Context, DefaultTimeout)
+
+		go jobrunner.ExecuteTask(ctx, cancel, taskId, task, nil)
+	}
 }
