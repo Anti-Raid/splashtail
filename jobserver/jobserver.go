@@ -96,7 +96,7 @@ func CreateJobServer() {
 			// Create task
 			var taskId string
 			if data.SpawnTask.Create {
-				tcr, err := jobrunner.CreateTask(state.Context, state.Pool, task, data.SpawnTask.Data)
+				tcr, err := jobrunner.CreateTask(state.Context, state.Pool, task)
 
 				if err != nil {
 					return nil, fmt.Errorf("error creating task: %w", err)
@@ -155,7 +155,7 @@ func CreateJobServer() {
 		var initialOpts map[string]any
 		var createdAt time.Time
 
-		rows, err := state.Pool.Query(state.Context, "SELECT task_id, state, data, ongoing_tasks, created_at FROM ongoing_tasks")
+		rows, err := state.Pool.Query(state.Context, "SELECT task_id, state, data, initial_opts, created_at FROM ongoing_tasks")
 
 		if err != nil {
 			state.Logger.Error("Failed to query tasks", zap.Error(err))
@@ -200,6 +200,10 @@ func CreateJobServer() {
 			}
 
 			if !t.TaskInfo.Resumable {
+				continue
+			}
+
+			if t.State == "completed" || t.State == "failed" {
 				continue
 			}
 

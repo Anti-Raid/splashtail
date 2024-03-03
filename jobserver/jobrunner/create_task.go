@@ -2,7 +2,6 @@ package jobrunner
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"time"
 
@@ -12,7 +11,7 @@ import (
 )
 
 // Sets up a task
-func CreateTask(ctx context.Context, pool *pgxpool.Pool, task tasks.TaskDefinition, taskData map[string]any) (*types.TaskCreateResponse, error) {
+func CreateTask(ctx context.Context, pool *pgxpool.Pool, task tasks.TaskDefinition) (*types.TaskCreateResponse, error) {
 	tInfo := task.Info()
 
 	if !tInfo.Valid {
@@ -63,12 +62,6 @@ func CreateTask(ctx context.Context, pool *pgxpool.Pool, task tasks.TaskDefiniti
 		return nil, fmt.Errorf("failed to create task: %w", err)
 	}
 
-	bytes, err := json.Marshal(taskData)
-
-	if err != nil {
-		return nil, fmt.Errorf("failed to decode task data: %w", err)
-	}
-
 	// Add to ongoing_tasks
 	_, err = tx.Exec(
 		ctx,
@@ -76,7 +69,7 @@ func CreateTask(ctx context.Context, pool *pgxpool.Pool, task tasks.TaskDefiniti
 		taskId,
 		"",
 		map[string]any{},
-		bytes,
+		task,
 	)
 
 	if err != nil {

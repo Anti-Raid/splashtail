@@ -21,7 +21,7 @@ import (
 func PersistTaskState(tc *TaskProgress, prog *taskstate.Progress) error {
 	_, err := state.Pool.Exec(
 		tc.TaskState.Context(),
-		"INSERT INTO ongoing_tasks (task_id, state, data) VALUES ($1, $2, $3) ON CONFLICT (task_id) DO UPDATE SET state = $2, data = $3",
+		"UPDATE ongoing_tasks SET state = $2, data = $3 WHERE task_id = $1",
 		tc.TaskID,
 		prog.State,
 		prog.Data,
@@ -172,14 +172,11 @@ func ExecuteTask(
 			defer ctxCancel()
 		}
 
-		// Delete the task from ongoing tasks
-		if prog.CurrentTaskProgress != nil {
-			_, err2 := state.Pool.Exec(state.Context, "DELETE FROM ongoing_tasks WHERE task_id = $1", taskId)
+		_, err2 := state.Pool.Exec(state.Context, "DELETE FROM ongoing_tasks WHERE task_id = $1", taskId)
 
-			if err != nil {
-				l.Error("Failed to delete task from ongoing tasks", zap.Error(err2), zap.Any("data", tInfo.TaskFields))
-				return
-			}
+		if err != nil {
+			l.Error("Failed to delete task from ongoing tasks", zap.Error(err2), zap.Any("data", tInfo.TaskFields))
+			return
 		}
 
 		bChan <- 1

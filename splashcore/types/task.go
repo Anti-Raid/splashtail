@@ -30,17 +30,16 @@ type TaskListResponse struct {
 //
 // Tasks are background processes that can be run on a coordinator server.
 type Task struct {
-	TaskID         string           `db:"task_id" json:"task_id" validate:"required" description:"The task ID."`
-	TaskName       string           `db:"task_name" json:"task_name" validate:"required" description:"The task name."`
-	Output         *TaskOutput      `db:"output" json:"output" description:"The task output."`
-	TaskInfo       *TaskInfo        `db:"task_info" json:"task_info" description:"The task info."`
-	TaskCreateOpts map[string]any   `db:"task_create_opts" json:"task_create_opts" description:"The task create options."`
-	Statuses       []map[string]any `db:"statuses" json:"statuses" validate:"required" description:"The task statuses."`
-	TaskForRaw     *string          `db:"task_for" json:"-" description:"The entity this task is for." ci:"internal"`
-	TaskFor        *TaskFor         `db:"-" json:"task_for" description:"The entity this task is for."`
-	Expiry         *time.Duration   `db:"expiry" json:"expiry" validate:"required" description:"The task expiry."`
-	State          string           `db:"state" json:"state" validate:"required" description:"The tasks current state (pending/completed etc)."`
-	CreatedAt      time.Time        `db:"created_at" json:"created_at" description:"The time the task was created."`
+	TaskID     string           `db:"task_id" json:"task_id" validate:"required" description:"The task ID."`
+	TaskName   string           `db:"task_name" json:"task_name" validate:"required" description:"The task name."`
+	Output     *TaskOutput      `db:"output" json:"output" description:"The task output."`
+	TaskInfo   *TaskInfo        `db:"task_info" json:"task_info" description:"The task info."`
+	Statuses   []map[string]any `db:"statuses" json:"statuses" validate:"required" description:"The task statuses."`
+	TaskForRaw *string          `db:"task_for" json:"-" description:"The entity this task is for." ci:"internal"`
+	TaskFor    *TaskFor         `db:"-" json:"task_for" description:"The entity this task is for."`
+	Expiry     *time.Duration   `db:"expiry" json:"expiry" validate:"required" description:"The task expiry."`
+	State      string           `db:"state" json:"state" validate:"required" description:"The tasks current state (pending/completed etc)."`
+	CreatedAt  time.Time        `db:"created_at" json:"created_at" description:"The time the task was created."`
 }
 
 // TaskFor is a struct containing the internal representation of who a task is for

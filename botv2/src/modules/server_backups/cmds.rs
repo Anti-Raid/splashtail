@@ -648,11 +648,11 @@ pub async fn backups_restore(
                 return Err("Backup task is not for this guild".into());
             }
 
-            let Some(path) = task.get_path() else {
+            let Some(path) = task.get_file_path() else {
                 return Err("Failed to get backup path".into());
             };
 
-            format!("task://{}", path)
+            format!("task:///{}", path)
         }
     };
 

@@ -1,6 +1,7 @@
 package state
 
 import (
+	"fmt"
 	"net/http"
 	"time"
 )
@@ -26,6 +27,8 @@ func (t TaskRT) RoundTrip(req *http.Request) (resp *http.Response, err error) {
 	} else {
 		expiryDuration = taskRtDefaultExp
 	}
+
+	fmt.Println(req.URL.Path)
 
 	url, err := ObjectStorage.GetUrl(req.Context(), req.URL.Path, "", expiryDuration)
 
