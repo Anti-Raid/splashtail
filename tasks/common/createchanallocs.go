@@ -6,7 +6,22 @@ import (
 
 	"github.com/anti-raid/splashtail/splashcore/utils"
 	"github.com/bwmarrin/discordgo"
+	orderedmap "github.com/wk8/go-ordered-map/v2"
 )
+
+type ChannelAllocationMap struct {
+	*orderedmap.OrderedMap[string, int]
+}
+
+func (c ChannelAllocationMap) TotalAllocations() int {
+	var count int
+
+	for pair := c.Oldest(); pair != nil; pair = pair.Next() {
+		count += pair.Value
+	}
+
+	return count
+}
 
 func CreateChannelAllocations(
 	basePerms int64,
@@ -17,20 +32,22 @@ func CreateChannelAllocations(
 	specialAllocs map[string]int,
 	perChannel int,
 	maxMessages int,
-) (map[string]int, error) {
+) (*ChannelAllocationMap, error) {
 	// Create channel map to allow for easy channel lookup
-	var channelMap map[string]*discordgo.Channel = make(map[string]*discordgo.Channel)
+	var channelMap = orderedmap.New[string, *discordgo.Channel]()
 
 	for _, channel := range channels {
-		channelMap[channel.ID] = channel
+		channelMap.Set(channel.ID, channel)
 	}
 
 	// Allocations per channel
-	var perChannelMap = make(map[string]int)
+	var perChannelMap = ChannelAllocationMap{
+		OrderedMap: orderedmap.New[string, int](),
+	}
 
 	// First handle the special allocations
 	for channelID, allocation := range specialAllocs {
-		if c, ok := channelMap[channelID]; ok {
+		if c, ok := channelMap.Get(channelID); ok {
 			// Error on bad channels for special allocations
 			if !slices.Contains(allowedChannelTypes, c.Type) {
 				return nil, fmt.Errorf("special allocation channel %s is not a valid channel type", c.ID)
@@ -42,11 +59,11 @@ func CreateChannelAllocations(
 				return nil, fmt.Errorf("special allocation channel %s is not readable by the bot", c.ID)
 			}
 
-			if CountMap(perChannelMap) >= maxMessages {
+			if perChannelMap.TotalAllocations() >= maxMessages {
 				continue
 			}
 
-			perChannelMap[channelID] = allocation
+			perChannelMap.Set(channelID, allocation)
 		}
 	}
 
@@ -62,28 +79,31 @@ func CreateChannelAllocations(
 			continue
 		}
 
-		if CountMap(perChannelMap) >= maxMessages {
-			perChannelMap[channel.ID] = 0 // We still need to include the channel in the allocations
+		if perChannelMap.TotalAllocations() >= maxMessages {
+			perChannelMap.Set(channel.ID, 0) // We still need to include the channel in the allocations
 			continue
 		}
 
-		if _, ok := perChannelMap[channel.ID]; !ok {
-			perChannelMap[channel.ID] = perChannel
+		if _, ok := perChannelMap.Get(channel.ID); !ok {
+			perChannelMap.Set(channel.ID, perChannel)
 		}
 	}
 
-	return perChannelMap, nil
+	return &perChannelMap, nil
 }
 
 func ChannelAllocationStream(
-	channelAllocs map[string]int,
+	channelAllocs *ChannelAllocationMap,
 	callback func(channelID string, allocation int) (collected int, err error),
 	maxMessages int,
 	rolloverLeftovers int, // Number of messages to rollover per future channel
 ) error {
 	var totalHandledMessages int
-	// Backup messages
-	for channelID, allocation := range channelAllocs {
+
+	for pair := channelAllocs.Oldest(); pair != nil; pair = pair.Next() {
+		channelID := pair.Key
+		allocation := pair.Value
+
 		if allocation == 0 {
 			continue
 		}
@@ -98,7 +118,10 @@ func ChannelAllocationStream(
 	}
 
 	if rolloverLeftovers != 0 && totalHandledMessages < maxMessages {
-		for channelID, allocation := range channelAllocs {
+		for pair := channelAllocs.Oldest(); pair != nil; pair = pair.Next() {
+			channelID := pair.Key
+			allocation := pair.Value
+
 			if allocation == 0 {
 				collected, err := callback(channelID, rolloverLeftovers)
 
