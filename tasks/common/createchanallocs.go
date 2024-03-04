@@ -16,7 +16,7 @@ func CreateChannelAllocations(
 	channels []*discordgo.Channel,
 	specialAllocs map[string]int,
 	perChannel int,
-	maxMessagesPerChannel int,
+	maxMessages int,
 ) (map[string]int, error) {
 	// Create channel map to allow for easy channel lookup
 	var channelMap map[string]*discordgo.Channel = make(map[string]*discordgo.Channel)
@@ -38,11 +38,11 @@ func CreateChannelAllocations(
 
 			perms := utils.MemberChannelPerms(basePerms, g, m, c)
 
-			if perms&discordgo.PermissionViewChannel != discordgo.PermissionViewChannel {
+			if !utils.CheckPermission(perms, discordgo.PermissionViewChannel) {
 				return nil, fmt.Errorf("special allocation channel %s is not readable by the bot", c.ID)
 			}
 
-			if CountMap(perChannelMap) >= maxMessagesPerChannel {
+			if CountMap(perChannelMap) >= maxMessages {
 				continue
 			}
 
@@ -62,8 +62,9 @@ func CreateChannelAllocations(
 			continue
 		}
 
-		if CountMap(perChannelMap) >= maxMessagesPerChannel {
+		if CountMap(perChannelMap) >= maxMessages {
 			perChannelMap[channel.ID] = 0 // We still need to include the channel in the allocations
+			continue
 		}
 
 		if _, ok := perChannelMap[channel.ID]; !ok {
@@ -77,8 +78,10 @@ func CreateChannelAllocations(
 func ChannelAllocationStream(
 	channelAllocs map[string]int,
 	callback func(channelID string, allocation int) (collected int, err error),
-	rolloverLeftovers bool,
+	maxMessages int,
+	rolloverLeftovers int, // Number of messages to rollover per future channel
 ) error {
+	var totalHandledMessages int
 	// Backup messages
 	for channelID, allocation := range channelAllocs {
 		if allocation == 0 {
@@ -91,22 +94,22 @@ func ChannelAllocationStream(
 			return err
 		}
 
-		var leftovers int
-		if collected > allocation {
-			leftovers = 0
-		} else {
-			leftovers = allocation - collected
-		}
+		totalHandledMessages += collected
+	}
 
-		if leftovers > 0 && rolloverLeftovers {
-			// Find a new channel with 0 allocation
-			for channelID, allocation := range channelAllocs {
-				if allocation == 0 {
-					_, err := callback(channelID, leftovers)
+	if rolloverLeftovers != 0 && totalHandledMessages < maxMessages {
+		for channelID, allocation := range channelAllocs {
+			if allocation == 0 {
+				collected, err := callback(channelID, rolloverLeftovers)
 
-					if err != nil {
-						return err
-					}
+				if err != nil {
+					return err
+				}
+
+				totalHandledMessages += collected
+
+				if totalHandledMessages >= maxMessages {
+					break
 				}
 			}
 		}

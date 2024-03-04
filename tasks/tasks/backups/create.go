@@ -613,9 +613,9 @@ func (t *ServerBackupCreateTask) Exec(
 
 				// Write messages of this section regardless of error
 				if len(msgs) > 0 {
-					err = writeMsgpack(f, "messages/"+channelID, msgs)
+					errMsg := writeMsgpack(f, "messages/"+channelID, msgs)
 
-					if err != nil {
+					if errMsg != nil {
 						return len(msgs), fmt.Errorf("error writing messages: %w", err)
 					}
 
@@ -633,13 +633,20 @@ func (t *ServerBackupCreateTask) Exec(
 						l.Error("error backing up channel messages", zap.Error(err))
 						return len(msgs), nil
 					} else {
-						return 0, fmt.Errorf("error backing up channel messages: %w", err)
+						return len(msgs), fmt.Errorf("error backing up channel messages: %w", err)
 					}
 				}
 
 				return len(msgs), nil
 			},
-			t.Options.RolloverLeftovers,
+			t.Options.MaxMessages,
+			func() int {
+				if t.Options.RolloverLeftovers {
+					return t.Options.PerChannel
+				}
+
+				return 0
+			}(),
 		)
 
 		if err != nil {

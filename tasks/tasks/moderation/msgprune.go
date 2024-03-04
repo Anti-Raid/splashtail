@@ -174,7 +174,14 @@ func (t *MessagePruneTask) Exec(
 			// Prune messages, TODO
 			return 0, nil
 		},
-		t.Options.RolloverLeftovers,
+		t.Options.MaxMessages,
+		func() int {
+			if t.Options.RolloverLeftovers {
+				return t.Options.PerChannel
+			}
+
+			return 0
+		}(),
 	)
 
 	if err != nil {
