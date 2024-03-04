@@ -11,11 +11,11 @@ import (
 	_ "image/png"
 	"io"
 	"net/http"
-	"slices"
 	"time"
 
 	"github.com/anti-raid/splashtail/splashcore/types"
 	"github.com/anti-raid/splashtail/splashcore/utils"
+	"github.com/anti-raid/splashtail/tasks/common"
 	"github.com/anti-raid/splashtail/tasks/taskstate"
 
 	_ "golang.org/x/image/webp"
@@ -27,16 +27,6 @@ import (
 	"github.com/vmihailenco/msgpack/v5"
 	"go.uber.org/zap"
 )
-
-func countMap(m map[string]int) int {
-	var count int
-
-	for _, v := range m {
-		count += v
-	}
-
-	return count
-}
 
 // Backs up image data to a file
 func backupGuildAsset(state taskstate.TaskState, constraints *BackupConstraints, l *zap.Logger, f *iblfile.AutoEncryptedFile, name, url string) error {
@@ -133,7 +123,8 @@ func backupChannelMessages(state taskstate.TaskState, constraints *BackupConstra
 				am, bufs, err := createAttachmentBlob(state, constraints, logger, msg)
 
 				if err != nil {
-					return nil, fmt.Errorf("error creating attachment blob: %w", err)
+					finalMsgs = append(finalMsgs, &im)
+					return finalMsgs, fmt.Errorf("error creating attachment blob: %w", err)
 				}
 
 				im.AttachmentMetadata = am
@@ -399,7 +390,7 @@ func (t *ServerBackupCreateTask) Validate(state taskstate.TaskState) error {
 	count, _ := concurrentBackupState.LoadOrStore(t.ServerID, 0)
 
 	if count >= t.Constraints.MaxServerBackupTasks {
-		return fmt.Errorf("you already have more than %d backup-related task in progress, please wait for it to finish", t.Constraints.MaxServerBackupTasks)
+		return fmt.Errorf("you already have more than %d backup-related tasks in progress, please wait for it to finish", t.Constraints.MaxServerBackupTasks)
 	}
 
 	t.valid = true
@@ -420,7 +411,7 @@ func (t *ServerBackupCreateTask) Exec(
 	count, _ := concurrentBackupState.LoadOrStore(t.ServerID, 0)
 
 	if count >= t.Constraints.MaxServerBackupTasks {
-		return nil, fmt.Errorf("you already have more than %d backup-related task in progress, please wait for it to finish", t.Constraints.MaxServerBackupTasks)
+		return nil, fmt.Errorf("you already have more than %d backup-related tasks in progress, please wait for it to finish", t.Constraints.MaxServerBackupTasks)
 	}
 
 	concurrentBackupState.Store(t.ServerID, count+1)
@@ -433,8 +424,6 @@ func (t *ServerBackupCreateTask) Exec(
 			concurrentBackupState.Store(t.ServerID, countNow-1)
 		}
 	}()
-
-	l.Info("Beginning backup")
 
 	t1 := time.Now()
 
@@ -488,26 +477,15 @@ func (t *ServerBackupCreateTask) Exec(
 		return nil, fmt.Errorf("error fetching guild: %w", err)
 	}
 
-	// With servers now backed up, get the base permissions now
-	basePerms := utils.BasePermissions(g, m)
+	if len(g.Channels) == 0 {
+		channels, err := discord.GuildChannels(t.ServerID, discordgo.WithContext(ctx))
 
-	// Write base permissions to debug section
-	err = writeMsgpack(f, "dbg/basePerms", basePerms)
+		if err != nil {
+			return nil, fmt.Errorf("error fetching channels: %w", err)
+		}
 
-	if err != nil {
-		return nil, fmt.Errorf("error writing base permissions: %w", err)
+		g.Channels = channels
 	}
-
-	l.Info("Backing up guild channels")
-
-	// Fetch channels of guild
-	channels, err := discord.GuildChannels(t.ServerID, discordgo.WithContext(ctx))
-
-	if err != nil {
-		return nil, fmt.Errorf("error fetching channels: %w", err)
-	}
-
-	g.Channels = channels
 
 	if len(g.Roles) == 0 {
 		l.Info("Backing up guild roles")
@@ -520,6 +498,16 @@ func (t *ServerBackupCreateTask) Exec(
 		}
 
 		g.Roles = roles
+	}
+
+	// With servers now backed up, get the base permissions now
+	basePerms := utils.BasePermissions(g, m)
+
+	// Write base permissions to debug section
+	err = writeMsgpack(f, "dbg/basePerms", basePerms)
+
+	if err != nil {
+		return nil, fmt.Errorf("error writing base permissions: %w", err)
 	}
 
 	if len(g.Stickers) == 0 {
@@ -592,59 +580,19 @@ func (t *ServerBackupCreateTask) Exec(
 
 	// Backup messages
 	if t.Options.BackupMessages {
-		l.Info("Calculating message backup allocations")
+		perChannelBackupMap, err := common.CreateChannelAllocations(
+			basePerms,
+			g,
+			m,
+			allowedChannelTypes,
+			g.Channels,
+			t.Options.SpecialAllocations,
+			t.Options.PerChannel,
+			t.Options.MaxMessages,
+		)
 
-		// Create channel map to allow for easy channel lookup
-		var channelMap map[string]*discordgo.Channel = make(map[string]*discordgo.Channel)
-
-		for _, channel := range channels {
-			channelMap[channel.ID] = channel
-		}
-
-		// Allocations per channel
-		var perChannelBackupMap = make(map[string]int)
-
-		// First handle the special allocations
-		for channelID, allocation := range t.Options.SpecialAllocations {
-			if c, ok := channelMap[channelID]; ok {
-				// Error on bad channels for special allocations
-				if !slices.Contains(allowedChannelTypes, c.Type) {
-					return nil, fmt.Errorf("special allocation channel %s is not a valid channel type", c.ID)
-				}
-
-				perms := utils.MemberChannelPerms(basePerms, g, m, c)
-
-				if perms&discordgo.PermissionViewChannel != discordgo.PermissionViewChannel {
-					return nil, fmt.Errorf("special allocation channel %s is not readable by the bot", c.ID)
-				}
-
-				if countMap(perChannelBackupMap) >= t.Options.MaxMessages {
-					continue
-				}
-
-				perChannelBackupMap[channelID] = allocation
-			}
-		}
-
-		for _, channel := range channels {
-			// Discard bad channels
-			if !slices.Contains(allowedChannelTypes, channel.Type) {
-				continue
-			}
-
-			perms := utils.MemberChannelPerms(basePerms, g, m, channel)
-
-			if perms&discordgo.PermissionViewChannel != discordgo.PermissionViewChannel {
-				continue
-			}
-
-			if countMap(perChannelBackupMap) >= t.Options.MaxMessages {
-				perChannelBackupMap[channel.ID] = 0 // We still need to include the channel in the allocations
-			}
-
-			if _, ok := perChannelBackupMap[channel.ID]; !ok {
-				perChannelBackupMap[channel.ID] = t.Options.PerChannel
-			}
+		if err != nil {
+			return nil, fmt.Errorf("error creating channel allocations: %w", err)
 		}
 
 		l.Info("Created channel backup allocations", zap.Any("alloc", perChannelBackupMap), zap.Strings("botDisplayIgnore", []string{"alloc"}))
@@ -656,78 +604,46 @@ func (t *ServerBackupCreateTask) Exec(
 		}
 
 		// Backup messages
-		for channelID, allocation := range perChannelBackupMap {
-			if allocation == 0 {
-				continue
-			}
+		err = common.ChannelAllocationStream(
+			perChannelBackupMap,
+			func(channelID string, allocation int) (collected int, err error) {
+				l.Info("Backing up channel messages", zap.String("channelId", channelID))
 
-			l.Info("Backing up channel messages", zap.String("channelId", channelID))
+				msgs, err := backupChannelMessages(state, t.Constraints, l, f, channelID, allocation, t.Options.BackupAttachments)
 
-			var leftovers int
+				// Write messages of this section regardless of error
+				if len(msgs) > 0 {
+					err = writeMsgpack(f, "messages/"+channelID, msgs)
 
-			msgs, err := backupChannelMessages(state, t.Constraints, l, f, channelID, allocation, t.Options.BackupAttachments)
+					if err != nil {
+						return len(msgs), fmt.Errorf("error writing messages: %w", err)
+					}
 
-			if err != nil {
-				if t.Options.IgnoreMessageBackupErrors {
-					l.Error("error backing up channel messages", zap.Error(err))
-					leftovers = allocation
-				} else {
-					return nil, fmt.Errorf("error backing up channel messages: %w", err)
+					for _, msg := range msgs {
+						if len(msg.attachments) > 0 {
+							for id, buf := range msg.attachments {
+								f.WriteSection(buf, "attachments/"+id)
+							}
+						}
+					}
 				}
-			} else {
-				if len(msgs) < allocation {
-					leftovers = allocation - len(msgs)
-				}
-
-				// Write messages of this section
-				err = writeMsgpack(f, "messages/"+channelID, msgs)
 
 				if err != nil {
-					return nil, fmt.Errorf("error writing messages: %w", err)
-				}
-
-				for _, msg := range msgs {
-					if len(msg.attachments) > 0 {
-						for id, buf := range msg.attachments {
-							f.WriteSection(buf, "attachments/"+id)
-						}
+					if t.Options.IgnoreMessageBackupErrors {
+						l.Error("error backing up channel messages", zap.Error(err))
+						return len(msgs), nil
+					} else {
+						return 0, fmt.Errorf("error backing up channel messages: %w", err)
 					}
 				}
-			}
 
-			if leftovers > 0 && t.Options.RolloverLeftovers {
-				// Find a new channel with 0 allocation
-				for channelID, allocation := range perChannelBackupMap {
-					if allocation == 0 {
-						msgs, err := backupChannelMessages(state, t.Constraints, l, f, channelID, leftovers, t.Options.BackupAttachments)
+				return len(msgs), nil
+			},
+			t.Options.RolloverLeftovers,
+		)
 
-						if err != nil {
-							if t.Options.IgnoreMessageBackupErrors {
-								l.Error("error backing up channel messages [leftovers]", zap.Error(err))
-								continue // Try again
-							} else {
-								return nil, fmt.Errorf("error backing up channel messages [leftovers]: %w", err)
-							}
-						} else {
-							// Write messages of this section
-							err = writeMsgpack(f, "messages/"+channelID, msgs)
-
-							if err != nil {
-								return nil, fmt.Errorf("error writing messages [leftovers]: %w", err)
-							}
-
-							for _, msg := range msgs {
-								if len(msg.attachments) > 0 {
-									for id, buf := range msg.attachments {
-										f.WriteSection(buf, "attachments/"+id)
-									}
-								}
-							}
-							break
-						}
-					}
-				}
-			}
+		if err != nil {
+			return nil, fmt.Errorf("error streaming channel allocations: %w", err)
 		}
 	}
 

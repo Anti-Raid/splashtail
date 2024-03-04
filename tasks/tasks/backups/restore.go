@@ -161,7 +161,7 @@ func (t *ServerBackupRestoreTask) Validate(state taskstate.TaskState) error {
 	count, _ := concurrentBackupState.LoadOrStore(t.ServerID, 0)
 
 	if count >= t.Constraints.MaxServerBackupTasks {
-		return fmt.Errorf("you already have more than %d backup-related task in progress, please wait for it to finish", t.Constraints.MaxServerBackupTasks)
+		return fmt.Errorf("you already have more than %d backup-related tasks in progress, please wait for it to finish", t.Constraints.MaxServerBackupTasks)
 	}
 
 	t.valid = true
@@ -182,7 +182,7 @@ func (t *ServerBackupRestoreTask) Exec(
 	count, _ := concurrentBackupState.LoadOrStore(t.ServerID, 0)
 
 	if count >= t.Constraints.MaxServerBackupTasks {
-		return nil, fmt.Errorf("you already have more than %d backup-related task in progress, please wait for it to finish", t.Constraints.MaxServerBackupTasks)
+		return nil, fmt.Errorf("you already have more than %d backup-related tasks in progress, please wait for it to finish", t.Constraints.MaxServerBackupTasks)
 	}
 
 	concurrentBackupState.Store(t.ServerID, count+1)
@@ -294,16 +294,7 @@ func (t *ServerBackupRestoreTask) Exec(
 		return nil, fmt.Errorf("error fetching guild: %w", err)
 	}
 
-	basePerms := utils.BasePermissions(tgtGuild, m)
-
-	if basePerms&discordgo.PermissionManageChannels != discordgo.PermissionManageChannels && basePerms&discordgo.PermissionAdministrator != discordgo.PermissionAdministrator {
-		return nil, fmt.Errorf("bot does not have 'Manage Channels' permissions")
-	}
-
-	if basePerms&discordgo.PermissionManageRoles != discordgo.PermissionManageRoles && basePerms&discordgo.PermissionAdministrator != discordgo.PermissionAdministrator {
-		return nil, fmt.Errorf("bot does not have 'Manage Roles' permissions")
-	}
-
+	// Fetch roles first before calculating base permissions
 	if len(tgtGuild.Roles) == 0 {
 		roles, err := discord.GuildRoles(t.ServerID, discordgo.WithContext(ctx))
 
@@ -312,6 +303,16 @@ func (t *ServerBackupRestoreTask) Exec(
 		}
 
 		tgtGuild.Roles = roles
+	}
+
+	basePerms := utils.BasePermissions(tgtGuild, m)
+
+	if !utils.CheckPermission(basePerms, discordgo.PermissionManageChannels) {
+		return nil, fmt.Errorf("bot does not have 'Manage Channels' permissions")
+	}
+
+	if !utils.CheckPermission(basePerms, discordgo.PermissionManageRoles) {
+		return nil, fmt.Errorf("bot does not have 'Manage Roles' permissions")
 	}
 
 	// Get highest role
@@ -602,7 +603,7 @@ func (t *ServerBackupRestoreTask) Exec(
 
 					bp := utils.MemberChannelPerms(basePerms, tgtGuild, m, tgtGuild.Channels[i])
 
-					if bp&discordgo.PermissionManageChannels != discordgo.PermissionManageChannels && bp&discordgo.PermissionAdministrator != discordgo.PermissionAdministrator {
+					if !utils.CheckPermission(bp, discordgo.PermissionManageChannels) {
 						l.Warn("Not removing channel due to lack of 'Manage Channels' permissions", zap.String("channel_id", tgtGuild.Channels[i].ID))
 						continue
 					}
@@ -987,7 +988,7 @@ func (t *ServerBackupRestoreTask) Exec(
 							messages[msgIndex].MessageSend.Content += bm[i].Message.Content + "\n"
 							contentLength += int64(len(bm[i].Message.Content))
 
-							if bm[i].Message.TTS && perms&discordgo.PermissionSendTTSMessages == discordgo.PermissionSendTTSMessages {
+							if bm[i].Message.TTS && utils.CheckPermission(perms, discordgo.PermissionSendTTSMessages) {
 								messages[msgIndex].MessageSend.TTS = bm[i].Message.TTS
 							}
 

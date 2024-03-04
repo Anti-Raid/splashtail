@@ -87,3 +87,11 @@ func MemberChannelPerms(basePerms int64, g *discordgo.Guild, m *discordgo.Member
 
 	return perms
 }
+
+// Check if a permission int64 has a permission
+func CheckPermission(basePerms int64, permission int64) bool {
+	if basePerms&permission != discordgo.PermissionManageMessages && basePerms&discordgo.PermissionAdministrator != discordgo.PermissionAdministrator {
+		return false
+	}
+	return true
+}
