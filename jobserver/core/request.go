@@ -88,7 +88,7 @@ func AnimusOnRequest(c *animusmagic.ClientRequest) (animusmagic.AnimusResponse, 
 		if taskInfo.TaskFor.TargetType == types.TargetTypeUser && state.Shard != 0 {
 			return nil, fmt.Errorf("task is not for this shard [user tasks must run on shard 0]")
 		} else {
-			taskShard, err := mewext.GetShardIDFromGuildID(taskInfo.TaskFor.ID, int(state.Shard))
+			taskShard, err := mewext.GetShardIDFromGuildID(taskInfo.TaskFor.ID, int(state.ShardCount))
 
 			if err != nil {
 				state.Logger.Error("Failed to get shard id from guild id", zap.Error(err))
@@ -247,7 +247,7 @@ func Resume() {
 		if taskInfo.TaskFor.TargetType == types.TargetTypeUser && state.Shard != 0 {
 			continue
 		} else {
-			taskShard, err := mewext.GetShardIDFromGuildID(taskInfo.TaskFor.ID, int(state.Shard))
+			taskShard, err := mewext.GetShardIDFromGuildID(taskInfo.TaskFor.ID, int(state.ShardCount))
 
 			if err != nil {
 				state.Logger.Error("Failed to get shard id from guild id", zap.Error(err))

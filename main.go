@@ -249,6 +249,7 @@ func main() {
 					strconv.Itoa(i.ClusterID),
 					cm.Name,
 					mldConfig.RedisChannel,
+					mutils.UInt64ToString(l.ShardCount),
 				)
 
 				cmd.Stdout = os.Stdout
@@ -345,8 +346,8 @@ func main() {
 		jobserverstate.CurrentOperationMode = "jobs"
 
 		// Read cmd args
-		if len(os.Args) < 5 {
-			panic("Not enough arguments. Expected <cmd> jobs.node <shards> <clusterID> <clusterName> <redisChannel>")
+		if len(os.Args) < 7 {
+			panic("Not enough arguments. Expected <cmd> jobs.node <shards> <clusterID> <clusterName> <redisChannel> <shard count>")
 		}
 
 		shardsStr := os.Args[2]
@@ -372,6 +373,16 @@ func main() {
 		jobserverstate.ClusterName = clusterName
 
 		redisChannel := os.Args[5]
+
+		shardCount := os.Args[6]
+
+		shardCountInt, err := strconv.Atoi(shardCount)
+
+		if err != nil {
+			panic(err)
+		}
+
+		jobserverstate.ShardCount = uint16(shardCountInt)
 
 		jobserverstate.Setup()
 

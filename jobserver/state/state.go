@@ -28,6 +28,7 @@ var (
 	ClusterID      uint16
 	ClusterName    string
 	Shard          uint16 // A cluster can only have one associated shard
+	ShardCount     uint16
 	MewldResponder *mewldresponder.MewldResponder
 )
 
@@ -156,7 +157,8 @@ func Setup() {
 		Logger.Info("[PROXY]", zap.String("note", s))
 	})
 
-	Discord
+	Discord.ShardID = int(Shard)
+	Discord.Identify.Shard = &[2]int{int(Shard), int(ShardCount)}
 
 	// Verify token
 	bu, err := Discord.User("@me")

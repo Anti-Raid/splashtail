@@ -33,6 +33,14 @@ func (c *MewldResponder) ListenOnce(ctx context.Context, r rueidis.Client, l *za
 	return r.Dedicated(
 		func(redis rueidis.DedicatedClient) error {
 			return redis.Receive(ctx, redis.B().Subscribe().Channel(c.Channel).Build(), func(msg rueidis.PubSubMessage) {
+				if len(msg.Message) == 0 {
+					return
+				}
+
+				if msg.Message[0] != '{' {
+					return // TODO: support this
+				}
+
 				if strings.Contains(msg.Message, "\"diag\":true") {
 					// Hack but its performant
 					var payload MewldDiagPayload
@@ -59,6 +67,19 @@ func (c *MewldResponder) ListenOnce(ctx context.Context, r rueidis.Client, l *za
 						}
 
 						bytes, err := json.Marshal(resp)
+
+						if err != nil {
+							l.Error("[mewld] error marshalling diag response", zap.Error(err))
+							return
+						}
+
+						lcmd := mredis.LauncherCmd{
+							Scope:  "launcher",
+							Action: "diag",
+							Output: string(bytes),
+						}
+
+						bytes, err = json.Marshal(lcmd)
 
 						if err != nil {
 							l.Error("[mewld] error marshalling diag response", zap.Error(err))
