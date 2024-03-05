@@ -33,7 +33,8 @@ func prettyPrintAnimusMessageMetadata(meta *animusmagic.AnimusMessageMetadata) s
 	str.WriteString("From: " + meta.From.String() + "\n")
 	str.WriteString("To: " + meta.To.String() + "\n")
 	str.WriteString("Op: " + meta.Op.String() + "\n")
-	str.WriteString("Cluster: " + strconv.Itoa(int(meta.ClusterID)) + "\n")
+	str.WriteString("ClusterIDFrom: " + strconv.Itoa(int(meta.ClusterIDFrom)) + "\n")
+	str.WriteString("ClusterIDTo: " + strconv.Itoa(int(meta.ClusterIDTo)) + "\n")
 	str.WriteString("CommandID: " + meta.CommandID + "\n")
 	str.WriteString("PayloadOffset: " + strconv.Itoa(int(meta.PayloadOffset)))
 
@@ -54,7 +55,8 @@ func main() {
 				Args: [][3]string{
 					{"redis", "Redis URL to connect to", "redis://localhost:6379"},
 					{"channel", "AnimusMagic channel to connect to", "animus_magic-staging"},
-					{"from", "Source", "0x2 (AnimusTargetWebserver)"},
+					{"from", "Source", "0x3 (AnimusTargetInfra)"},
+					{"fromClusterId", "Source Cluster ID. Uses 0 as it is unused", "1"},
 				},
 				Run: func(a *shellcli.ShellCli[AnimusCliData], args map[string]string) error {
 					if a.Data != nil && a.Data.Connected {
@@ -86,19 +88,31 @@ func main() {
 						return fmt.Errorf("error creating redis client: %s", err)
 					}
 
-					var target = 0x2
+					var target = animusmagic.AnimusTargetInfra
 
 					if from, ok := args["from"]; ok && from != "" {
-						targetInt, err := strconv.Atoi(from)
+						targetNew, ok := animusmagic.StringToAnimusTarget(from)
 
-						if err != nil {
-							return fmt.Errorf("error converting target to integer: %s", err)
+						if !ok {
+							return fmt.Errorf("invalid source")
 						}
 
-						target = targetInt
+						target = targetNew
 					}
 
-					a.Data.AnimusMagicClient = animusmagic.New(animusMagicChannel, animusmagic.AnimusTarget(target))
+					var fromClusterId int
+
+					if fromClusterIdStr, ok := args["fromClusterId"]; ok && fromClusterIdStr != "" {
+						fromClusterIdInt, err := strconv.Atoi(fromClusterIdStr)
+
+						if err != nil {
+							return fmt.Errorf("error converting fromClusterId to integer: %s", err)
+						}
+
+						fromClusterId = fromClusterIdInt
+					}
+
+					a.Data.AnimusMagicClient = animusmagic.New(animusMagicChannel, animusmagic.AnimusTarget(target), uint16(fromClusterId))
 
 					a.Data.Context, a.Data.ContextClose = context.WithCancel(context.Background())
 
@@ -176,8 +190,9 @@ func main() {
 
 					commandId := animusmagic.NewCommandId()
 					payload, err := a.Data.AnimusMagicClient.CreatePayload(
-						animusmagic.AnimusTargetWebserver,
+						a.Data.AnimusMagicClient.From,
 						toTarget,
+						a.Data.AnimusMagicClient.ClusterID,
 						animusmagic.WildcardClusterID,
 						animusmagic.OpProbe,
 						commandId,
@@ -187,6 +202,8 @@ func main() {
 					if err != nil {
 						return fmt.Errorf("error creating payload: %s", err)
 					}
+
+					fmt.Println("Probing with commandId:", commandId, "and timeout:", timeoutInt, " seconds")
 
 					// Create a channel to receive the response
 					notify := a.Data.AnimusMagicClient.CreateNotifier(commandId, 0)

@@ -1,6 +1,6 @@
 /// Animus Magic is the internal redis IPC system for internal communications between the bot and the server
 ///
-/// Format of payloads: <target [from]: u8><target [to]: u8><cluster id: u16><op: 8 bits><command id: alphanumeric string>/<cbor payload>
+/// Format of payloads: <target [from]: u8><target [to]: u8><cluster id from: u16><cluster id to: u16><op: 8 bits><command id: alphanumeric string>/<cbor payload>
 use serde::{Deserialize, Serialize};
 use crate::crypto::gen_random;
 use std::time::Duration;
@@ -8,7 +8,8 @@ use std::time::Duration;
 pub struct AnimusMessageMetadata {
     pub from: AnimusTarget,
     pub to: AnimusTarget,
-    pub cluster_id: u16,
+    pub cluster_id_from: u16,
+    pub cluster_id_to: u16,
     pub op: AnimusOp,
     pub command_id: String,
     pub payload_offset: usize,
@@ -19,6 +20,7 @@ pub enum AnimusTarget {
     Bot,
     Jobserver,
     Webserver,
+    Infra,
     Wildcard,
 }
 
@@ -28,6 +30,7 @@ impl AnimusTarget {
             AnimusTarget::Bot => 0x0,
             AnimusTarget::Jobserver => 0x1,
             AnimusTarget::Webserver => 0x2,
+            AnimusTarget::Infra => 0x3,
             AnimusTarget::Wildcard => u8::MAX,
         }
     }
@@ -37,6 +40,7 @@ impl AnimusTarget {
             0x0 => Some(AnimusTarget::Bot),
             0x1 => Some(AnimusTarget::Jobserver),
             0x2 => Some(AnimusTarget::Webserver),
+            0x3 => Some(AnimusTarget::Infra),
             u8::MAX => Some(AnimusTarget::Wildcard),
             _ => None,
         }
@@ -98,7 +102,8 @@ pub fn default_request_timeout() -> Duration {
 pub fn create_payload<T: Serialize>(
     cmd_id: &str,
     from: AnimusTarget,
-    cluster_id: u16, // From which cluster the message is coming from
+    cluster_id_from: u16, // From which cluster the message is coming from
+    cluster_id_to: u16, // To which cluster the message is is going to
     to: AnimusTarget,
     op: AnimusOp,
     data: &T,
@@ -111,8 +116,14 @@ pub fn create_payload<T: Serialize>(
     // Push to as 1 u8
     payload.push(to.to_byte());
 
-    // Push cluster id as 2 u8s
-    let cluster_id = cluster_id.to_be_bytes();
+    // Push cluster id from and to as 2 u8s
+    let cluster_id = cluster_id_from.to_be_bytes();
+
+    for byte in cluster_id {
+        payload.push(byte);
+    }
+
+    let cluster_id = cluster_id_to.to_be_bytes();
 
     for byte in cluster_id {
         payload.push(byte);
@@ -143,8 +154,9 @@ pub fn create_payload<T: Serialize>(
 pub fn get_payload_meta(payload: &[u8]) -> Result<AnimusMessageMetadata, crate::Error> {
     const FROM_BYTE: usize = 0;
     const TO_BYTE: usize = FROM_BYTE + 1;
-    const CLUSTER_ID_BYTE: usize = TO_BYTE + 1;
-    const OP_BYTE: usize = CLUSTER_ID_BYTE + 2;
+    const CLUSTER_ID_FROM_BYTE: usize = TO_BYTE + 1;
+    const CLUSTER_ID_TO_BYTE: usize = CLUSTER_ID_FROM_BYTE + 2;
+    const OP_BYTE: usize = CLUSTER_ID_TO_BYTE + 2;
 
     // Take out from
     let from = AnimusTarget::from_byte(payload[FROM_BYTE]).ok_or("Invalid from byte")?;
@@ -153,13 +165,14 @@ pub fn get_payload_meta(payload: &[u8]) -> Result<AnimusMessageMetadata, crate::
     let to = AnimusTarget::from_byte(payload[TO_BYTE]).ok_or("Invalid type byte")?;
 
     // Take out cluster id
-    let cluster_id = u16::from_be_bytes([payload[CLUSTER_ID_BYTE], payload[CLUSTER_ID_BYTE+1]]);
+    let cluster_id_from = u16::from_be_bytes([payload[CLUSTER_ID_FROM_BYTE], payload[CLUSTER_ID_FROM_BYTE+1]]);
+    let cluster_id_to = u16::from_be_bytes([payload[CLUSTER_ID_TO_BYTE], payload[CLUSTER_ID_TO_BYTE+1]]);
 
     let op = AnimusOp::from_byte(payload[OP_BYTE]).ok_or("Invalid op byte")?;
 
     let mut cmd_id = String::new();
 
-    let mut i = 5;
+    let mut i = OP_BYTE + 1;
     loop {
         if payload[i] == 0x2f {
             break;
@@ -173,7 +186,8 @@ pub fn get_payload_meta(payload: &[u8]) -> Result<AnimusMessageMetadata, crate::
     Ok(AnimusMessageMetadata {
         from,
         to,
-        cluster_id,
+        cluster_id_from,
+        cluster_id_to,
         op,
         command_id: cmd_id,
         payload_offset: i + 1,

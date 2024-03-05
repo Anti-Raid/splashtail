@@ -113,7 +113,7 @@ func Setup() {
 		panic(err)
 	}
 
-	AnimusMagicClient = animusmagic.New(Config.Meta.AnimusMagicChannel.Parse(), animusmagic.AnimusTargetWebserver)
+	AnimusMagicClient = animusmagic.New(Config.Meta.AnimusMagicChannel.Parse(), animusmagic.AnimusTargetWebserver, 0)
 	CachedAnimusMagicClient = animusmagiccache.New(AnimusMagicClient)
 
 	// Object Storage

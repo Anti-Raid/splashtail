@@ -10,6 +10,7 @@ import (
 
 	"github.com/anti-raid/splashtail/splashcore/animusmagic"
 	"github.com/anti-raid/splashtail/splashcore/config"
+	"github.com/anti-raid/splashtail/splashcore/mewldresponder"
 	"github.com/anti-raid/splashtail/splashcore/objectstorage"
 	"github.com/bwmarrin/discordgo"
 	"github.com/go-playground/validator/v10"
@@ -21,6 +22,13 @@ import (
 	"github.com/redis/rueidis"
 	"go.uber.org/zap"
 	"gopkg.in/yaml.v3"
+)
+
+var (
+	ClusterID      uint16
+	ClusterName    string
+	Shard          uint16 // A cluster can only have one associated shard
+	MewldResponder *mewldresponder.MewldResponder
 )
 
 var (
@@ -87,14 +95,7 @@ func nonVulgar(fl validator.FieldLevel) bool {
 	}
 }
 
-func Setup() {
-	SetupDebug()
-	Validator.RegisterValidation("nonvulgar", nonVulgar)
-	Validator.RegisterValidation("notblank", validators.NotBlank)
-	Validator.RegisterValidation("nospaces", snippets.ValidatorNoSpaces)
-	Validator.RegisterValidation("https", snippets.ValidatorIsHttps)
-	Validator.RegisterValidation("httporhttps", snippets.ValidatorIsHttpOrHttps)
-
+func SetupBase() {
 	genconfig.GenConfig(config.Config{})
 
 	cfg, err := os.ReadFile("config.yaml")
@@ -116,6 +117,19 @@ func Setup() {
 	}
 
 	Logger = snippets.CreateZap()
+}
+
+func Setup() {
+	SetupDebug()
+	Validator.RegisterValidation("nonvulgar", nonVulgar)
+	Validator.RegisterValidation("notblank", validators.NotBlank)
+	Validator.RegisterValidation("nospaces", snippets.ValidatorNoSpaces)
+	Validator.RegisterValidation("https", snippets.ValidatorIsHttps)
+	Validator.RegisterValidation("httporhttps", snippets.ValidatorIsHttpOrHttps)
+
+	SetupBase()
+
+	var err error
 
 	// Postgres
 	Pool, err = pgxpool.New(Context, Config.Meta.PostgresURL)
@@ -142,6 +156,8 @@ func Setup() {
 		Logger.Info("[PROXY]", zap.String("note", s))
 	})
 
+	Discord
+
 	// Verify token
 	bu, err := Discord.User("@me")
 
@@ -154,7 +170,6 @@ func Setup() {
 	// Shouldnt be called yet as we don't start websocket
 	Discord.AddHandler(func(s *discordgo.Session, r *discordgo.Ready) {
 		Logger.Info("[DISCORD]", zap.String("note", "ready"))
-		panic("Shouldn't be called yet")
 	})
 
 	// Reuidis
@@ -170,7 +185,7 @@ func Setup() {
 		panic(err)
 	}
 
-	AnimusMagicClient = animusmagic.New(Config.Meta.AnimusMagicChannel.Parse(), animusmagic.AnimusTargetJobserver)
+	AnimusMagicClient = animusmagic.New(Config.Meta.AnimusMagicChannel.Parse(), animusmagic.AnimusTargetJobserver, Shard)
 
 	TaskTransport.RegisterProtocol("task", TaskRT{next: TaskTransport})
 }

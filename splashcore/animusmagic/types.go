@@ -19,6 +19,7 @@ const (
 	AnimusTargetBot       AnimusTarget = 0x0
 	AnimusTargetJobserver AnimusTarget = 0x1
 	AnimusTargetWebserver AnimusTarget = 0x2
+	AnimusTargetInfra     AnimusTarget = 0x3
 	AnimusTargetWildcard  AnimusTarget = 0xFF
 )
 
@@ -30,6 +31,8 @@ func (a AnimusTarget) String() string {
 		return "Jobserver"
 	case AnimusTargetWebserver:
 		return "Webserver"
+	case AnimusTargetInfra:
+		return "Infra"
 	case AnimusTargetWildcard:
 		return "Wildcard"
 	default:
@@ -45,6 +48,8 @@ func ByteToAnimusTarget(b uint8) (AnimusTarget, bool) {
 		return AnimusTargetJobserver, true
 	case 0x2:
 		return AnimusTargetWebserver, true
+	case 0x3:
+		return AnimusTargetInfra, true
 	default:
 		return 0, false
 	}
@@ -61,6 +66,8 @@ func StringToAnimusTarget(s string) (AnimusTarget, bool) {
 		"webserver": AnimusTargetWebserver,
 		"web":       AnimusTargetWebserver,
 		"api":       AnimusTargetWebserver,
+		"3":         AnimusTargetInfra,
+		"infra":     AnimusTargetInfra,
 		"wildcard":  AnimusTargetWildcard,
 		"all":       AnimusTargetWildcard,
 		"*":         AnimusTargetWildcard,
@@ -143,7 +150,8 @@ const (
 type AnimusMessageMetadata struct {
 	From          AnimusTarget
 	To            AnimusTarget
-	ClusterID     uint16
+	ClusterIDFrom uint16
+	ClusterIDTo   uint16
 	Op            AnimusOp
 	CommandID     string
 	PayloadOffset uint

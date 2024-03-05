@@ -2,11 +2,13 @@ use crate::ipc::animus_magic::{
     client::{AnimusMessage, AnimusResponse},
     jobserver::{JobserverAnimusMessage, JobserverAnimusResponse},
 };
+use crate::ipc::argparse::MEWLD_ARGS;
 use splashcore_rs::animusmagic_protocol::{AnimusTarget, default_request_timeout};
 use crate::{Context, Error};
 use futures_util::StreamExt;
 use serenity::all::{CreateEmbed, EditMessage};
 use serenity::small_fixed_array::TruncatingInto;
+use serenity::utils::shard_id;
 use std::sync::Arc;
 use std::time::Duration;
 use std::{collections::HashMap, fmt::Display};
@@ -97,6 +99,11 @@ pub async fn backups_create(
                 if(backupGuildAssets.length > 0) {
                     backupGuildAssets = backupGuildAssets?.map((v) => v.trim())?.filter((v) => v.length > 0)
                 } */
+    
+    let Some(guild_id) = ctx.guild_id() else {
+        return Err("This command can only be used in a guild".into());
+    };
+
     let messages = messages.unwrap_or(false);
     let attachments = attachments.unwrap_or(false);
     let backup_guild_assets = backup_guild_assets.unwrap_or_default();
@@ -168,7 +175,7 @@ pub async fn backups_create(
 
     // Create backup
     let backup_args = serde_json::json!({
-        "ServerID": ctx.guild_id().unwrap().to_string(),
+        "ServerID": guild_id.to_string(),
         "Options": {
             "PerChannel": per_channel,
             "MaxMessages": max_messages,
@@ -181,13 +188,14 @@ pub async fn backups_create(
             "Encrypt": password
         }
     });
-
+    
     let data = ctx.data();
 
     let backup_task_id = match data
         .animus_magic_ipc
         .request(
             AnimusTarget::Jobserver,
+            shard_id(guild_id, MEWLD_ARGS.shard_count),
             AnimusMessage::Jobserver(JobserverAnimusMessage::SpawnTask {
                 name: "guild_create_backup".to_string(),
                 data: backup_args,
@@ -728,6 +736,7 @@ pub async fn backups_restore(
         .animus_magic_ipc
         .request(
             AnimusTarget::Jobserver,
+            shard_id(guild_id, MEWLD_ARGS.shard_count),
             AnimusMessage::Jobserver(JobserverAnimusMessage::SpawnTask {
                 name: "guild_restore_backup".to_string(),
                 data: json,

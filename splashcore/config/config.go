@@ -108,6 +108,7 @@ type Meta struct {
 	PostgresURL          string          `yaml:"postgres_url" default:"postgresql:///antiraid" comment:"Postgres URL" validate:"required"`
 	BotRedisURL          string          `yaml:"bot_redis_url" default:"redis://localhost:6379/0" comment:"Bot Redis URL" validate:"required"`
 	RedisURL             Differs[string] `yaml:"redis_url" default:"redis://localhost:6379" comment:"Redis URL" validate:"required"`
+	JobserverPort        Differs[int]    `yaml:"jobserver_port" default:"8080" comment:"Jobserver Port" validate:"required"`
 	Port                 Differs[int]    `yaml:"port" default:":8081" comment:"Port to run the server on" validate:"required"`
 	CDNPath              string          `yaml:"cdn_path" default:"/failuremgmt/cdn/antiraid" comment:"CDN Path" validate:"required"`
 	VulgarList           []string        `yaml:"vulgar_list" default:"fuck,suck,shit,kill" validate:"required"`

@@ -28,6 +28,7 @@ where Response: Serialize + for<'a> Deserialize<'a> {
     fn create_payload_simplex<T: Serialize>(
         &self,
         cmd_id: &str,
+        cluster_id_to: u16,
         to: AnimusTarget,
         op: AnimusOp,
         msg: &T,
@@ -36,6 +37,7 @@ where Response: Serialize + for<'a> Deserialize<'a> {
             cmd_id,
             self.from(),
             self.cluster_id(),
+            cluster_id_to,
             to,
             op,
             msg,
@@ -49,6 +51,7 @@ where Response: Serialize + for<'a> Deserialize<'a> {
     async fn request<T: Serialize>(
         &self,
         target: AnimusTarget,
+        cluster_id_to: u16,
         msg: T,
         timeout: Duration,
     ) -> Result<AnimusAnyResponse<Response>, crate::Error> {
@@ -56,6 +59,7 @@ where Response: Serialize + for<'a> Deserialize<'a> {
 
         let payload = match self.create_payload_simplex::<T>(
             &cmd_id,
+            cluster_id_to,
             target,
             AnimusOp::Request,
             &msg,
@@ -86,10 +90,12 @@ where Response: Serialize + for<'a> Deserialize<'a> {
         &self,
         command_id: &str,
         data: AnimusErrorResponse,
+        cluster_id_to: u16,
         to: AnimusTarget,
     ) -> Result<(), crate::Error> {
         let Ok(payload) = self.create_payload_simplex::<AnimusErrorResponse>(
             command_id,
+            cluster_id_to,
             to,
             AnimusOp::Error,
             &data,

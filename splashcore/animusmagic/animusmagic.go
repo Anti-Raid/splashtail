@@ -1,6 +1,6 @@
 // Animus Magic is the internal redis IPC system for internal communications between the bot and the server
 //
-// Format of payloads: <env: u8 [staging/prod]><target [from]: u8><target [to]: u8><cluster id: u16><op: 8 bits><command id: alphanumeric string>/<cbor payload>
+// Format of payloads: <target [from]: u8><target [to]: u8><cluster id from: u16><cluster id to: u16><op: 8 bits><command id: alphanumeric string>/<cbor payload>
 package animusmagic
 
 import (
@@ -59,6 +59,9 @@ type AnimusMagicClient struct {
 	// Target / who the client is for
 	From AnimusTarget
 
+	// The cluster id
+	ClusterID uint16
+
 	// On request function, if set, will be called upon recieving op of type OpRequest
 	OnRequest func(*ClientRequest) (AnimusResponse, error)
 
@@ -81,10 +84,11 @@ type AnimusMagicClient struct {
 }
 
 // New returns a new AnimusMagicClient
-func New(channel string, from AnimusTarget) *AnimusMagicClient {
+func New(channel string, from AnimusTarget, clusterId uint16) *AnimusMagicClient {
 	return &AnimusMagicClient{
-		Channel: channel,
-		From:    from,
+		Channel:   channel,
+		From:      from,
+		ClusterID: clusterId,
 	}
 }
 
@@ -109,6 +113,10 @@ func (c *AnimusMagicClient) ListenOnce(ctx context.Context, r rueidis.Client, l 
 					if meta.To != c.From && meta.To != AnimusTargetWildcard {
 						return
 					}
+
+					if meta.ClusterIDTo != c.ClusterID {
+						return
+					}
 				}
 
 				go func() {
@@ -130,7 +138,8 @@ func (c *AnimusMagicClient) ListenOnce(ctx context.Context, r rueidis.Client, l 
 						cp, err := c.CreatePayload(
 							c.From,
 							meta.From,
-							meta.ClusterID,
+							meta.ClusterIDTo,
+							meta.ClusterIDFrom,
 							OpError,
 							meta.CommandID,
 							&AnimusErrorResponse{Message: "Pong", Context: time.Now().String()},
@@ -158,7 +167,8 @@ func (c *AnimusMagicClient) ListenOnce(ctx context.Context, r rueidis.Client, l 
 								cp, err := c.CreatePayload(
 									c.From,
 									meta.From,
-									meta.ClusterID,
+									meta.ClusterIDTo,
+									meta.ClusterIDFrom,
 									OpError,
 									meta.CommandID,
 									&AnimusErrorResponse{Message: err.Error(), Context: fmt.Sprint(resp)},
@@ -179,7 +189,8 @@ func (c *AnimusMagicClient) ListenOnce(ctx context.Context, r rueidis.Client, l 
 								cp, err := c.CreatePayload(
 									c.From,
 									meta.From,
-									meta.ClusterID,
+									meta.ClusterIDTo,
+									meta.ClusterIDFrom,
 									OpResponse,
 									meta.CommandID,
 									resp,
@@ -273,7 +284,8 @@ func (c *AnimusMagicClient) Listen(ctx context.Context, redis rueidis.Client, l 
 // CreatePayload creates a payload for the given command id and message
 func (c *AnimusMagicClient) CreatePayload(
 	from, to AnimusTarget,
-	clusterId uint16,
+	clusterIdFrom uint16,
+	clusterIdTo uint16,
 	op AnimusOp,
 	commandId string,
 	resp any,
@@ -281,8 +293,10 @@ func (c *AnimusMagicClient) CreatePayload(
 	var finalPayload = []byte{
 		byte(from),
 		byte(to),
-		byte(clusterId>>8) & 0xFF,
-		byte(clusterId) & 0xFF,
+		byte(clusterIdFrom>>8) & 0xFF,
+		byte(clusterIdFrom) & 0xFF,
+		byte(clusterIdTo>>8) & 0xFF,
+		byte(clusterIdTo) & 0xFF,
 		byte(op),
 	}
 
@@ -301,20 +315,34 @@ func (c *AnimusMagicClient) CreatePayload(
 
 // GetPayloadMeta parses the payload metadata from a message
 func (c *AnimusMagicClient) GetPayloadMeta(payload []byte) (*AnimusMessageMetadata, error) {
-	if len(payload) < 6 {
+	/*
+			    const FROM_BYTE: usize = 0;
+		    const TO_BYTE: usize = FROM_BYTE + 1;
+		    const CLUSTER_ID_FROM_BYTE: usize = TO_BYTE + 1;
+		    const CLUSTER_ID_TO_BYTE: usize = CLUSTER_ID_FROM_BYTE + 2;
+		    const OP_BYTE: usize = CLUSTER_ID_TO_BYTE + 2;
+	*/
+	const FROM_BYTE = 0
+	const TO_BYTE = FROM_BYTE + 1
+	const CLUSTER_ID_FROM_BYTE = TO_BYTE + 1
+	const CLUSTER_ID_TO_BYTE = CLUSTER_ID_FROM_BYTE + 2
+	const OP_BYTE = CLUSTER_ID_TO_BYTE + 2
+
+	if len(payload) < OP_BYTE {
 		return nil, ErrInvalidPayload
 	}
 
 	meta := &AnimusMessageMetadata{
-		From:      AnimusTarget(payload[0]),
-		To:        AnimusTarget(payload[1]),
-		ClusterID: uint16(payload[2])<<8 | uint16(payload[3]),
-		Op:        AnimusOp(payload[4]),
+		From:          AnimusTarget(payload[FROM_BYTE]),
+		To:            AnimusTarget(payload[TO_BYTE]),
+		ClusterIDFrom: uint16(payload[CLUSTER_ID_FROM_BYTE])<<8 | uint16(payload[CLUSTER_ID_FROM_BYTE+1]),
+		ClusterIDTo:   uint16(payload[CLUSTER_ID_TO_BYTE])<<8 | uint16(payload[CLUSTER_ID_TO_BYTE+1]),
+		Op:            AnimusOp(payload[OP_BYTE]),
 	}
 
 	// Next bytes are the command id but only till '/'
 	commandId := ""
-	for i := 5; i < len(payload); i++ {
+	for i := OP_BYTE + 1; i < len(payload); i++ {
 		if payload[i] == '/' {
 			break
 		}
@@ -322,7 +350,7 @@ func (c *AnimusMagicClient) GetPayloadMeta(payload []byte) (*AnimusMessageMetada
 	}
 
 	meta.CommandID = commandId
-	meta.PayloadOffset = uint(len(commandId) + 6)
+	meta.PayloadOffset = uint(len(commandId) + OP_BYTE + 2)
 
 	return meta, nil
 }
@@ -333,7 +361,7 @@ func (c *AnimusMagicClient) Publish(ctx context.Context, redis rueidis.Client, p
 
 // RequestOptions stores the data for a request
 type RequestOptions struct {
-	ClusterID             *uint16      // must be set, also ExpectedResponseCount must be set if wildcard
+	ClusterID             *uint16      // the cluster id to send to, must be set, also ExpectedResponseCount must be set if wildcard
 	ExpectedResponseCount uint32       // must be set if wildcard. this is the number of responses expected
 	CommandID             string       // if unset, will be randomly generated
 	To                    AnimusTarget // if unset, is set to AnimusTargetBot
@@ -492,6 +520,7 @@ func (c *AnimusMagicClient) Request(
 	payload, err := c.CreatePayload(
 		AnimusTargetWebserver,
 		data.To,
+		c.ClusterID,
 		*data.ClusterID,
 		data.Op,
 		data.CommandID,

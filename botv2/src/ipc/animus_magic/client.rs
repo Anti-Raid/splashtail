@@ -162,7 +162,7 @@ impl AnimusMagicClient {
             match meta.op {
                 AnimusOp::Error => {
                     if meta.from == AnimusTarget::Bot
-                        && (meta.cluster_id != MEWLD_ARGS.cluster_id && meta.cluster_id != u16::MAX)
+                        && (meta.cluster_id_to != MEWLD_ARGS.cluster_id && meta.cluster_id_to != u16::MAX)
                     {
                         continue; // Not for us
                     }
@@ -198,7 +198,7 @@ impl AnimusMagicClient {
                 },
                 AnimusOp::Response => {
                     if meta.from == AnimusTarget::Bot
-                        && (meta.cluster_id != MEWLD_ARGS.cluster_id && meta.cluster_id != u16::MAX)
+                        && (meta.cluster_id_to != MEWLD_ARGS.cluster_id && meta.cluster_id_to != u16::MAX)
                     {
                         continue; // Not for us
                     }
@@ -239,7 +239,7 @@ impl AnimusMagicClient {
                         continue; // Not for us, to != Bot and != wildcard
                     }
 
-                    if meta.cluster_id != MEWLD_ARGS.cluster_id && meta.cluster_id != u16::MAX {
+                    if meta.cluster_id_to != MEWLD_ARGS.cluster_id && meta.cluster_id_to != u16::MAX {
                         continue; // Not for us, cluster_id != ours and != wildcard
                     }
 
@@ -248,10 +248,12 @@ impl AnimusMagicClient {
                         let redis_pool = self.redis_pool.clone();
 
                         tokio::spawn(async move {
+                            // For probe, respond with the same cluster_id_from
                             let Ok(payload) = create_payload::<AnimusErrorResponse>(
                                 &meta.command_id,
                                 AnimusTarget::Bot,
                                 MEWLD_ARGS.cluster_id,
+                                meta.cluster_id_from,
                                 meta.from,
                                 AnimusOp::Response,
                                 &AnimusErrorResponse {
@@ -298,6 +300,7 @@ impl AnimusMagicClient {
                                             .to_string(),
                                         context: e.to_string(),
                                     },
+                                    meta.cluster_id_from,
                                     meta.from,
                                 )
                                 .await
@@ -324,6 +327,7 @@ impl AnimusMagicClient {
                                             .to_string(),
                                         context: "Invalid message type".to_string(),
                                     },
+                                    meta.cluster_id_from,
                                     meta.from,
                                 )
                                 .await
@@ -349,6 +353,7 @@ impl AnimusMagicClient {
                                         message: "Failed to create response".to_string(),
                                         context: e.to_string(),
                                     },
+                                    meta.cluster_id_from,
                                     meta.from,
                                 )
                                 .await
@@ -364,6 +369,7 @@ impl AnimusMagicClient {
                             &meta.command_id,
                             AnimusTarget::Bot,
                             MEWLD_ARGS.cluster_id,
+                            meta.cluster_id_from,
                             meta.from,
                             AnimusOp::Response,
                             &AnimusResponse::Bot(data),
@@ -380,6 +386,7 @@ impl AnimusMagicClient {
                                     message: "Failed to create response payload".to_string(),
                                     context: "create_payload returned Err code".to_string(),
                                 },
+                                meta.cluster_id_from,
                                 meta.from,
                             )
                             .await
@@ -400,6 +407,7 @@ impl AnimusMagicClient {
                                     message: "Failed to publish response to redis".to_string(),
                                     context: e.to_string(),
                                 },
+                                meta.cluster_id_from,
                                 meta.from,
                             )
                             .await
