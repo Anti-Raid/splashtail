@@ -9,7 +9,7 @@ require (
 	github.com/getkin/kin-openapi v0.123.0 // indirect
 	github.com/go-chi/chi/v5 v5.0.12
 	github.com/infinitybotlist/eureka v0.9.2
-	github.com/wk8/go-ordered-map/v2 v2.1.8 // indirect
+	github.com/wk8/go-ordered-map/v2 v2.1.8
 	gopkg.in/yaml.v3 v3.0.1
 )
 
@@ -17,7 +17,9 @@ require (
 	github.com/cheesycod/mewld v0.0.0-20231223082556-5dc0e141721c
 	github.com/cloudflare/tableflip v1.2.3
 	github.com/fxamacker/cbor/v2 v2.6.0
+	github.com/go-viper/mapstructure/v2 v2.0.0-alpha.1
 	github.com/infinitybotlist/iblfile v0.0.0-20231217062828-5a52f5049ee3
+	github.com/infinitybotlist/kittycat/go v0.0.0-20240229022404-eaef242cde70
 	github.com/minio/minio-go/v7 v7.0.67
 	github.com/redis/rueidis v1.0.30
 	github.com/sirupsen/logrus v1.9.3
@@ -27,8 +29,6 @@ require (
 
 require (
 	github.com/deckarep/golang-set/v2 v2.6.0 // indirect
-	github.com/go-viper/mapstructure/v2 v2.0.0-alpha.1 // indirect
-	github.com/infinitybotlist/kittycat/go v0.0.0-20240229022404-eaef242cde70 // indirect
 	github.com/x448/float16 v0.8.4 // indirect
 )
 

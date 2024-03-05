@@ -9,7 +9,7 @@ use splashcore_rs::animusmagic_protocol::{
     from_payload,
     get_payload_meta,
 };
-use splashcore_rs::animusmagic_ext::AnimusMagicClientExt;
+use splashcore_rs::animusmagic_ext::{AnimusMagicClientExt, AnimusAnyResponse};
 use fred::{
     clients::{RedisClient, RedisPool},
     interfaces::{ClientLike, EventInterface, PubsubInterface},
@@ -102,8 +102,7 @@ impl From<AnimusResponse> for AnimusPayload {
 
 pub struct AnimusMagicClient {
     pub redis_pool: RedisPool,
-    pub rx_map: std::sync::Arc<dashmap::DashMap<String, tokio::sync::mpsc::Sender<AnimusResponse>>>,
-    pub err_map: std::sync::Arc<dashmap::DashMap<String, tokio::sync::mpsc::Sender<AnimusErrorResponse>>>,
+    pub rx_map: std::sync::Arc<dashmap::DashMap<String, tokio::sync::mpsc::Sender<AnimusAnyResponse<AnimusResponse>>>>,
 }
 
 impl AnimusMagicClient {
@@ -168,10 +167,10 @@ impl AnimusMagicClient {
                         continue; // Not for us
                     }
 
-                    let err_map = self.err_map.clone();
+                    let rx_map = self.rx_map.clone();
 
                     tokio::task::spawn(async move {
-                        let sender = err_map.get(&meta.command_id).map(|s| s.value().clone());
+                        let sender = rx_map.get(&meta.command_id).map(|s| s.value().clone());
 
                         if let Some(sender) = sender {
                             let payload = &binary[meta.payload_offset..];
@@ -188,12 +187,12 @@ impl AnimusMagicClient {
                                 }
                             };
 
-                            if let Err(e) = sender.send(resp).await {
-                                err_map.remove(&meta.command_id);
+                            if let Err(e) = sender.send(AnimusAnyResponse::Error(resp)).await {
+                                rx_map.remove(&meta.command_id);
                                 log::warn!("Failed to send response to receiver: {}", e);
                             }
 
-                            err_map.remove(&meta.command_id);
+                            rx_map.remove(&meta.command_id);
                         }
                     });
                 },
@@ -224,7 +223,7 @@ impl AnimusMagicClient {
                                 }
                             };
 
-                            if let Err(e) = sender.send(resp).await {
+                            if let Err(e) = sender.send(AnimusAnyResponse::Response(resp)).await {
                                 rx_map.remove(&meta.command_id);
                                 log::warn!("Failed to send response to receiver: {}", e);
                             }
@@ -281,7 +280,6 @@ impl AnimusMagicClient {
                     let client = AnimusMagicClient {
                         redis_pool: self.redis_pool.clone(),
                         rx_map: self.rx_map.clone(),
-                        err_map: self.err_map.clone(),
                     };
                     
                     tokio::spawn(async move {
@@ -433,11 +431,7 @@ impl AnimusMagicClient {
 }
 
 impl AnimusMagicClientExt<AnimusResponse> for AnimusMagicClient {
-    fn error_map(&self) -> Arc<dashmap::DashMap<String, tokio::sync::mpsc::Sender<AnimusErrorResponse>>> {
-        self.err_map.clone()
-    }
-
-    fn rx_map(&self) -> Arc<dashmap::DashMap<String, tokio::sync::mpsc::Sender<AnimusResponse>>> {
+    fn rx_map(&self) -> Arc<dashmap::DashMap<String, tokio::sync::mpsc::Sender<AnimusAnyResponse<AnimusResponse>>>> {
         self.rx_map.clone()
     }
 

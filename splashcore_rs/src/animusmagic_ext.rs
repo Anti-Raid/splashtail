@@ -6,14 +6,17 @@ use std::sync::Arc;
 use crate::animusmagic_protocol::{AnimusTarget, AnimusOp, AnimusErrorResponse, create_payload, new_command_id};
 use tokio::sync::mpsc::Sender;
 
+pub enum AnimusAnyResponse<Response>
+where Response: Serialize + for<'a> Deserialize<'a> {
+    Response(Response),
+    Error(AnimusErrorResponse),
+}
+
 #[allow(async_fn_in_trait)] // It's our own code
 pub trait AnimusMagicClientExt<Response>
 where Response: Serialize + for<'a> Deserialize<'a> {
-    /// Returns the map of command ids to error senders
-    fn error_map(&self) -> Arc<dashmap::DashMap<String, Sender<AnimusErrorResponse>>>;
-
     /// Returns the map of command ids to response senders
-    fn rx_map(&self) -> Arc<dashmap::DashMap<String, Sender<Response>>>;
+    fn rx_map(&self) -> Arc<dashmap::DashMap<String, Sender<AnimusAnyResponse<Response>>>>;
 
     /// Returns who the client is/from
     fn from(&self) -> AnimusTarget;
@@ -48,7 +51,7 @@ where Response: Serialize + for<'a> Deserialize<'a> {
         target: AnimusTarget,
         msg: T,
         timeout: Duration,
-    ) -> Result<Response, crate::Error> {
+    ) -> Result<AnimusAnyResponse<Response>, crate::Error> {
         let cmd_id = new_command_id();
 
         let payload = match self.create_payload_simplex::<T>(
@@ -62,35 +65,19 @@ where Response: Serialize + for<'a> Deserialize<'a> {
         };
 
         let (tx, mut rx) = tokio::sync::mpsc::channel(1);
-        let (err_tx, mut err_rx) = tokio::sync::mpsc::channel(1);
 
         self.rx_map().insert(cmd_id.clone(), tx);
-        self.error_map().insert(cmd_id.clone(), err_tx);
 
         self.publish_next(payload).await?;
 
-        // Create a timeout channel (to be used in the select! macro)
-        let (timeout_tx, timeout_rx) = tokio::sync::oneshot::channel();
+        let resp = match tokio::time::timeout(timeout, rx.recv()).await {
+            Ok(resp) => resp,
+            Err(_) => return Err("Request timed out".into()),
+        };
 
-        tokio::spawn(async move {
-            tokio::time::sleep(timeout).await;
-            let _ = timeout_tx.send(());
-        });
-
-        tokio::select! {
-            resp = rx.recv() => {
-                match resp {
-                    Some(resp) => Ok(resp),
-                    None => Err("Failed to get response".into()),
-                }
-            },
-            err = err_rx.recv() => {
-                match err {
-                    Some(err) => Err(err.message.into()),
-                    None => Err("Failed to get error response".into()),
-                }
-            },
-            _ = timeout_rx => Err("Request timed out".into()),
+        match resp {
+            Some(resp) => Ok(resp),
+            None => Err("Failed to get response".into()),
         }
     }    
 

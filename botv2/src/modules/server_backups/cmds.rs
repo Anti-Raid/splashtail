@@ -10,7 +10,7 @@ use serenity::small_fixed_array::TruncatingInto;
 use std::sync::Arc;
 use std::time::Duration;
 use std::{collections::HashMap, fmt::Display};
-use splashcore_rs::animusmagic_ext::AnimusMagicClientExt;
+use splashcore_rs::animusmagic_ext::{AnimusAnyResponse, AnimusMagicClientExt};
 use sqlx::types::uuid::Uuid;
 
 /*
@@ -200,7 +200,8 @@ pub async fn backups_create(
         .await
         .map_err(|e| format!("Failed to create backup task: {}", e))?
     {
-        AnimusResponse::Jobserver(JobserverAnimusResponse::SpawnTask { task_id }) => task_id,
+        AnimusAnyResponse::Response(AnimusResponse::Jobserver(JobserverAnimusResponse::SpawnTask { task_id })) => task_id,
+        AnimusAnyResponse::Error(e) => return Err(format!("Failed to create backup task: {}", e.message).into()),
         _ => return Err("Invalid response from jobserver".into()),
     };
 
@@ -739,7 +740,8 @@ pub async fn backups_restore(
         .await
         .map_err(|e| format!("Failed to create restore backup task: {}", e))?
     {
-        AnimusResponse::Jobserver(JobserverAnimusResponse::SpawnTask { task_id }) => task_id,
+        AnimusAnyResponse::Response(AnimusResponse::Jobserver(JobserverAnimusResponse::SpawnTask { task_id })) => task_id,
+        AnimusAnyResponse::Error(e) => return Err(format!("Failed to create backup task: {}", e.message).into()),
         _ => return Err("Invalid response from jobserver".into()),
     };
 
