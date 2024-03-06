@@ -114,7 +114,7 @@ func (c *AnimusMagicClient) ListenOnce(ctx context.Context, r rueidis.Client, l 
 						return
 					}
 
-					if meta.ClusterIDTo != c.ClusterID {
+					if meta.ClusterIDTo != c.ClusterID && meta.ClusterIDTo != WildcardClusterID {
 						return
 					}
 				}
@@ -138,7 +138,7 @@ func (c *AnimusMagicClient) ListenOnce(ctx context.Context, r rueidis.Client, l 
 						cp, err := c.CreatePayload(
 							c.From,
 							meta.From,
-							meta.ClusterIDTo,
+							c.ClusterID,
 							meta.ClusterIDFrom,
 							OpError,
 							meta.CommandID,
@@ -167,7 +167,7 @@ func (c *AnimusMagicClient) ListenOnce(ctx context.Context, r rueidis.Client, l 
 								cp, err := c.CreatePayload(
 									c.From,
 									meta.From,
-									meta.ClusterIDTo,
+									c.ClusterID,
 									meta.ClusterIDFrom,
 									OpError,
 									meta.CommandID,
@@ -189,7 +189,7 @@ func (c *AnimusMagicClient) ListenOnce(ctx context.Context, r rueidis.Client, l 
 								cp, err := c.CreatePayload(
 									c.From,
 									meta.From,
-									meta.ClusterIDTo,
+									c.ClusterID,
 									meta.ClusterIDFrom,
 									OpResponse,
 									meta.CommandID,

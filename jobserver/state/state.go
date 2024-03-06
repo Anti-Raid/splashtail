@@ -118,6 +118,10 @@ func SetupBase() {
 	}
 
 	Logger = snippets.CreateZap()
+
+	if Shard != ClusterID {
+		panic("shard and cluster id must be the same at this time")
+	}
 }
 
 func Setup() {
@@ -187,7 +191,7 @@ func Setup() {
 		panic(err)
 	}
 
-	AnimusMagicClient = animusmagic.New(Config.Meta.AnimusMagicChannel.Parse(), animusmagic.AnimusTargetJobserver, Shard)
+	AnimusMagicClient = animusmagic.New(Config.Meta.AnimusMagicChannel.Parse(), animusmagic.AnimusTargetJobserver, ClusterID)
 
 	TaskTransport.RegisterProtocol("task", TaskRT{next: TaskTransport})
 }
