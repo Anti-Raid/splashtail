@@ -1,6 +1,7 @@
 package moderation
 
 import (
+	"bytes"
 	"fmt"
 
 	"github.com/anti-raid/splashtail/splashcore/types"
@@ -8,6 +9,8 @@ import (
 	"github.com/anti-raid/splashtail/tasks/common"
 	"github.com/anti-raid/splashtail/tasks/taskstate"
 	"github.com/bwmarrin/discordgo"
+	jsoniter "github.com/json-iterator/go"
+	orderedmap "github.com/wk8/go-ordered-map/v2"
 	"go.uber.org/zap"
 )
 
@@ -168,10 +171,64 @@ func (t *MessagePruneTask) Exec(
 	l.Info("Created channel backup allocations", zap.Any("alloc", perChannelBackupMap), zap.Strings("botDisplayIgnore", []string{"alloc"}))
 
 	// Now handle all the channel allocations
+	var finalMessagesEnd = orderedmap.New[string, []*discordgo.Message]()
 	err = common.ChannelAllocationStream(
 		perChannelBackupMap,
 		func(channelID string, allocation int) (collected int, err error) {
-			// Prune messages, TODO
+			// Fetch messages and bulk delete
+			currentId := ""
+			finalMsgs := make([]*discordgo.Message, 0, allocation)
+			for {
+				// Fetch messages
+				if allocation < len(finalMsgs) {
+					// We've gone over, break
+					break
+				}
+
+				limit := min(100, allocation-len(finalMsgs))
+
+				l.Info("Fetching messages", zap.String("channelID", channelID), zap.Int("limit", limit), zap.String("currentId", currentId))
+
+				// Fetch messages
+				messages, err := discord.ChannelMessages(
+					channelID,
+					limit,
+					"",
+					currentId,
+					"",
+					discordgo.WithContext(ctx),
+				)
+
+				if err != nil {
+					return len(finalMsgs), fmt.Errorf("error fetching messages: %w", err)
+				}
+
+				if len(messages) == 0 {
+					break
+				}
+
+				var messageList = make([]string, 0, len(messages))
+
+				for _, m := range messages {
+					messageList = append(messageList, m.ID)
+					finalMsgs = append(finalMsgs, m)
+				}
+
+				// Bulk delete
+				err = discord.ChannelMessagesBulkDelete(channelID, messageList, discordgo.WithContext(ctx))
+
+				if err != nil {
+					return len(finalMsgs), fmt.Errorf("error bulk deleting messages: %w", err)
+				}
+
+				if len(messages) < allocation {
+					// We've reached the end
+					break
+				}
+			}
+
+			finalMessagesEnd.Set(channelID, finalMsgs)
+
 			return 0, nil
 		},
 		t.Options.MaxMessages,
@@ -188,5 +245,17 @@ func (t *MessagePruneTask) Exec(
 		return nil, fmt.Errorf("error handling channel allocations: %w", err)
 	}
 
-	return nil, nil
+	var outputBuf bytes.Buffer
+
+	// Write to buffer
+	err = jsoniter.ConfigFastest.NewEncoder(&outputBuf).Encode(finalMessagesEnd)
+
+	if err != nil {
+		return nil, fmt.Errorf("error encoding final messages: %w", err)
+	}
+
+	return &types.TaskOutput{
+		Filename: "pruned-messages.txt",
+		Buffer:   &outputBuf,
+	}, nil
 }
