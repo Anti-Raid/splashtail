@@ -259,3 +259,15 @@ func (t *MessagePruneTask) Exec(
 		Buffer:   &outputBuf,
 	}, nil
 }
+
+func (t *MessagePruneTask) Info() *types.TaskInfo {
+	return &types.TaskInfo{
+		Name: "message_prune",
+		TaskFor: &types.TaskFor{
+			ID:         t.ServerID,
+			TargetType: types.TargetTypeServer,
+		},
+		TaskFields: t,
+		Valid:      t.valid,
+	}
+}
