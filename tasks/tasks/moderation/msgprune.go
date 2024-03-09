@@ -211,10 +211,10 @@ func (t *MessagePruneTask) Exec(
 
 				var messageList = make([]string, 0, len(messages))
 
-				var weekAgo = time.Now().Add(-14 * 24 * time.Hour)
+				var twoWeeksAgo = time.Now().Add(-14 * 24 * time.Hour)
 				for _, m := range messages {
 					// Check that the message is under 14 days old
-					if m.Timestamp.Before(weekAgo) {
+					if m.Timestamp.Before(twoWeeksAgo) {
 						continue
 					}
 
