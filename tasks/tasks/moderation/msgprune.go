@@ -3,6 +3,7 @@ package moderation
 import (
 	"bytes"
 	"fmt"
+	"time"
 
 	"github.com/anti-raid/splashtail/splashcore/types"
 	"github.com/anti-raid/splashtail/splashcore/utils"
@@ -210,9 +211,19 @@ func (t *MessagePruneTask) Exec(
 
 				var messageList = make([]string, 0, len(messages))
 
+				var weekAgo = time.Now().Add(-14 * 24 * time.Hour)
 				for _, m := range messages {
+					// Check that the message is under 14 days old
+					if m.Timestamp.Before(weekAgo) {
+						continue
+					}
+
 					messageList = append(messageList, m.ID)
 					finalMsgs = append(finalMsgs, m)
+				}
+
+				if len(messageList) == 0 {
+					break
 				}
 
 				// Bulk delete
@@ -284,6 +295,9 @@ func (t *MessagePruneTask) LocalPresets() *taskdef.PresetInfo {
 					MinPerChannel:    10,
 				},
 				MaxServerModerationTasks: 1,
+			},
+			Options: MessagePruneOpts{
+				PerChannel: 100,
 			},
 		},
 		Comments: map[string]string{

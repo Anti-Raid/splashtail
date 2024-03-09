@@ -53,21 +53,10 @@ func ExecuteTaskLocal(prefix, taskId string, l *zap.Logger, task taskdef.TaskDef
 		return fmt.Errorf("failed to update task state: %w", err)
 	}
 
-	outp, err := task.Exec(l, &types.TaskCreateResponse{
+	outp, terr := task.Exec(l, &types.TaskCreateResponse{
 		TaskID:   taskId,
 		TaskInfo: tInfo,
 	}, taskState, TaskProgress{})
-
-	if err != nil {
-		l.Error("Failed to execute task", zap.Error(err))
-		currentTaskState = "failed"
-		err = opts.OnStateChange(currentTaskState)
-
-		if err != nil {
-			return fmt.Errorf("failed to update task state: %w", err)
-		}
-		return fmt.Errorf("failed to execute task: %w", err)
-	}
 
 	// Save output to object storage
 	if outp != nil {
@@ -106,6 +95,17 @@ func ExecuteTaskLocal(prefix, taskId string, l *zap.Logger, task taskdef.TaskDef
 
 			l.Info("Saved task output", zap.String("filename", outp.Filename), zap.String("task_id", taskId))
 		}
+	}
+
+	if terr != nil {
+		l.Error("Failed to execute task", zap.Error(err))
+		currentTaskState = "failed"
+		err = opts.OnStateChange(currentTaskState)
+
+		if err != nil {
+			return fmt.Errorf("failed to update task state: %w", err)
+		}
+		return fmt.Errorf("failed to execute task: %w", err)
 	}
 
 	return nil

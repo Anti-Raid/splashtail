@@ -215,14 +215,13 @@ func ExecuteTask(
 	}
 
 	var taskState = "completed"
-	var outp *types.TaskOutput
 
-	outp, err = task.Exec(l, &types.TaskCreateResponse{
+	outp, terr := task.Exec(l, &types.TaskCreateResponse{
 		TaskID:   taskId,
 		TaskInfo: tInfo,
 	}, ts, prog)
 
-	if err != nil {
+	if terr != nil {
 		l.Error("Failed to execute task", zap.Error(err))
 		taskState = "failed"
 	}
