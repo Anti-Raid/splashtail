@@ -16,6 +16,7 @@ import (
 	"github.com/anti-raid/splashtail/splashcore/types"
 	"github.com/anti-raid/splashtail/splashcore/utils"
 	"github.com/anti-raid/splashtail/tasks/common"
+	"github.com/anti-raid/splashtail/tasks/taskdef"
 	"github.com/anti-raid/splashtail/tasks/taskstate"
 
 	_ "golang.org/x/image/webp"
@@ -706,5 +707,46 @@ func (t *ServerBackupCreateTask) Info() *types.TaskInfo {
 		},
 		TaskFields: t,
 		Valid:      t.valid,
+	}
+}
+
+func (t *ServerBackupCreateTask) LocalPresets() *taskdef.PresetInfo {
+	return &taskdef.PresetInfo{
+		Runnable: true,
+		Preset: &ServerBackupCreateTask{
+			ServerID: "{{.Args.ServerID}}",
+			Constraints: &BackupConstraints{
+				Create: &BackupCreateConstraints{
+					TotalMaxMessages:          1000,
+					FileSizeWarningThreshold:  100000000,
+					MinPerChannel:             50,
+					DefaultPerChannel:         100,
+					JpegReencodeQuality:       85,
+					GuildAssetReencodeQuality: 85,
+				},
+				MaxServerBackupTasks: 1,
+				FileType:             "backup.server",
+			},
+			Options: BackupCreateOpts{
+				MaxMessages:               500,
+				BackupMessages:            true,
+				BackupAttachments:         true,
+				BackupGuildAssets:         []string{"icon", "banner", "splash"},
+				PerChannel:                100,
+				RolloverLeftovers:         true,
+				IgnoreMessageBackupErrors: false,
+				Encrypt:                   "{{.Settings.BackupPassword}}",
+			},
+		},
+		Comments: map[string]string{
+			"Constraints.MaxServerBackupTasks":            "Only 1 backup task should be running at any given time locally",
+			"Constraints.FileType":                        "The file type of the backup, you probably don't want to change this",
+			"Constraints.Create.TotalMaxMessages":         "Since this is a local job, we can afford to be more generous",
+			"Constraints.Create.FileSizeWarningThreshold": "100MB is used as default as we can be more generous with storage locally",
+			"Options.BackupMessages":                      "This is a local job so backing up messages is likely faster and desired",
+			"Options.BackupAttachments":                   "This is a local job so backing up attachments is likely faster and desired",
+			"Options.BackupGuildAssets":                   "This is a local job so backing up guild assets is likely faster and desired",
+			"Options.IgnoreMessageBackupErrors":           "We likely don't want errors ignored in local jobs",
+		},
 	}
 }

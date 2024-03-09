@@ -1,18 +1,11 @@
-package tasks
+// To avoid circular dependencies, taskdef contains the core TaskDefinition
+package taskdef
 
 import (
 	"github.com/anti-raid/splashtail/splashcore/types"
 	"github.com/anti-raid/splashtail/tasks/taskstate"
-
 	"go.uber.org/zap"
 )
-
-// Task management core
-var TaskDefinitionRegistry = map[string]TaskDefinition{}
-
-func RegisterTaskDefinition(task TaskDefinition) {
-	TaskDefinitionRegistry[task.Info().Name] = task
-}
 
 // TaskDefinition is the definition for any task that can be executed on splashtail
 type TaskDefinition interface {
@@ -24,4 +17,18 @@ type TaskDefinition interface {
 
 	// Returns the info on a task
 	Info() *types.TaskInfo
+
+	// LocalPresets returns the preset options of a task
+	LocalPresets() *PresetInfo
+}
+
+type PresetInfo struct {
+	// Whether or not this task should be runnable
+	Runnable bool
+
+	// The default options/data of the task
+	Preset TaskDefinition
+
+	// Any comments for specific fields
+	Comments map[string]string
 }

@@ -7,6 +7,7 @@ import (
 	"github.com/anti-raid/splashtail/splashcore/types"
 	"github.com/anti-raid/splashtail/splashcore/utils"
 	"github.com/anti-raid/splashtail/tasks/common"
+	"github.com/anti-raid/splashtail/tasks/taskdef"
 	"github.com/anti-raid/splashtail/tasks/taskstate"
 	"github.com/bwmarrin/discordgo"
 	jsoniter "github.com/json-iterator/go"
@@ -269,5 +270,26 @@ func (t *MessagePruneTask) Info() *types.TaskInfo {
 		},
 		TaskFields: t,
 		Valid:      t.valid,
+	}
+}
+
+func (t *MessagePruneTask) LocalPresets() *taskdef.PresetInfo {
+	return &taskdef.PresetInfo{
+		Runnable: true,
+		Preset: &MessagePruneTask{
+			ServerID: "{{.Args.ServerID}}",
+			Constraints: &ModerationConstraints{
+				MessagePrune: &MessagePruneConstraints{
+					TotalMaxMessages: 1000,
+					MinPerChannel:    10,
+				},
+				MaxServerModerationTasks: 1,
+			},
+		},
+		Comments: map[string]string{
+			"Constraints.MaxServerModerationTasks":      "Only 1 mod task should be running at any given time locally",
+			"Constraints.MessagePrune.TotalMaxMessages": "We can be more generous here with 1000 by default",
+			"Constraints.MessagePrune.MinPerChannel":    "We can be more generous here with 10 by default",
+		},
 	}
 }

@@ -3,15 +3,14 @@ package main
 import (
 	"bytes"
 	"context"
-	"embed"
 	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
-	"io"
 	"net/http"
 	"os"
 	"runtime/debug"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -26,13 +25,11 @@ import (
 	"github.com/infinitybotlist/eureka/cmd"
 	"github.com/infinitybotlist/eureka/crypto"
 	"github.com/infinitybotlist/eureka/snippets"
+	orderedmap "github.com/wk8/go-ordered-map/v2"
 	"gopkg.in/yaml.v3"
 )
 
 var prefixDir = "ljconfig"
-
-//go:embed all:presets
-var allPresets embed.FS
 
 type fieldFlags map[string]string
 
@@ -135,25 +132,14 @@ func main() {
 		}
 	}
 
-	presets, err := allPresets.ReadDir("presets")
-
-	if err != nil {
-		fmt.Println("ERROR: Failed to read presets:", err.Error())
-		os.Exit(1)
-	}
-
-	for _, preset := range presets {
-		if preset.IsDir() {
-			continue
-		}
-
+	for _, task := range tasks.TaskDefinitionRegistry {
 		// Stat localjobs/presets/preset.Name()
-		s, err := os.Stat(prefixDir + "/presets/" + preset.Name())
+		s, err := os.Stat(prefixDir + "/presets/" + task.Info().Name + ".yaml")
 
 		var isNotExist bool
 		if err == nil && s.IsDir() {
-			fmt.Println("INFO: Removing invalid preset", preset.Name())
-			err = os.Remove(prefixDir + "/presets/" + preset.Name())
+			fmt.Println("INFO: Removing invalid preset", task.Info().Name+".yaml")
+			err = os.Remove(prefixDir + "/presets/" + task.Info().Name + ".yaml")
 
 			if err != nil {
 				fmt.Println("ERROR: Failed to remove preset:", err.Error())
@@ -172,36 +158,86 @@ func main() {
 			continue
 		}
 
-		f, err := allPresets.Open("presets/" + preset.Name())
+		// Create preset now from task.LocalPreset
+		localPresets := task.LocalPresets()
+
+		// WARN if not runnable
+		if !localPresets.Runnable {
+			fmt.Println("WARNING: Task", task.Info().Name, "is not officially runnable yet")
+		}
+
+		// Because yaml doesnt properly handle presets, we have to use reflection to convert it to a map then yaml it
+		var pMap = orderedmap.New[string, any]()
+
+		// This is hacky, but it works, first use encoding/json marshal/unmarshal and then yaml it
+		pBytes, err := json.Marshal(localPresets.Preset)
 
 		if err != nil {
-			fmt.Println("ERROR: Failed to open preset:", err.Error())
+			fmt.Println("ERROR: Failed to encode stage 0 preset:", err.Error())
 			os.Exit(1)
 		}
 
-		presetFile, err := os.Create(prefixDir + "/presets/" + preset.Name())
+		err = json.Unmarshal(pBytes, &pMap)
+
+		if err != nil {
+			fmt.Println("ERROR: Failed to decode stage 0 preset:", err.Error())
+			os.Exit(1)
+		}
+
+		// YAML unmarshal to preset file
+		pBytes, err = yaml.Marshal(pMap)
+
+		if err != nil {
+			fmt.Println("ERROR: Failed to generate preset YAML content:", err.Error())
+			os.Exit(1)
+		}
+
+		f, err := os.Create(prefixDir + "/presets/" + task.Info().Name + ".yaml")
 
 		if err != nil {
 			fmt.Println("ERROR: Failed to create preset:", err.Error())
 			os.Exit(1)
 		}
 
-		size, err := io.Copy(presetFile, f)
+		// TODO: Make this look better in the actual file
+		//
+		// First write the comments in alphabetical order
+		var commentKeysAlpha []string
+		for key := range localPresets.Comments {
+			commentKeysAlpha = append(commentKeysAlpha, key)
+		}
+
+		// Sort the keys
+		slices.Sort(commentKeysAlpha)
+
+		for _, key := range commentKeysAlpha {
+			_, err = f.WriteString("# " + key + ": " + localPresets.Comments[key] + "\n")
+
+			if err != nil {
+				fmt.Println("ERROR: Failed to write preset:", err.Error())
+				os.Exit(1)
+			}
+		}
+
+		// One extra newline
+		_, err = f.WriteString("\n")
 
 		if err != nil {
 			fmt.Println("ERROR: Failed to write preset:", err.Error())
 			os.Exit(1)
 		}
 
-		fmt.Printf("INFO: Wrote preset %s (%d bytes)\n", preset.Name(), size)
-
-		err = f.Close()
+		// Now write the actual preset
+		_, err = f.Write(pBytes)
 
 		if err != nil {
-			fmt.Println("ERROR: Failed to close preset:", err.Error())
+			fmt.Println("ERROR: Failed to write preset:", err.Error())
+			os.Exit(1)
 		}
 
-		err = presetFile.Close()
+		fmt.Printf("INFO: Wrote preset %s (%d bytes [preset])\n", task.Info().Name, len(pBytes))
+
+		err = f.Close()
 
 		if err != nil {
 			fmt.Println("ERROR: Failed to close preset:", err.Error())

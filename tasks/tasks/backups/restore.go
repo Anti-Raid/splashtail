@@ -11,7 +11,9 @@ import (
 
 	"github.com/anti-raid/splashtail/splashcore/types"
 	"github.com/anti-raid/splashtail/splashcore/utils"
+	"github.com/anti-raid/splashtail/splashcore/utils/timex"
 	"github.com/anti-raid/splashtail/tasks/step"
+	"github.com/anti-raid/splashtail/tasks/taskdef"
 	"github.com/anti-raid/splashtail/tasks/taskstate"
 	"github.com/go-viper/mapstructure/v2"
 
@@ -1052,5 +1054,47 @@ func (t *ServerBackupRestoreTask) Info() *types.TaskInfo {
 		TaskFields: t,
 		Resumable:  true,
 		Valid:      t.valid,
+	}
+}
+
+func (t *ServerBackupRestoreTask) LocalPresets() *taskdef.PresetInfo {
+	return &taskdef.PresetInfo{
+		Runnable: true,
+		Preset: &ServerBackupRestoreTask{
+			ServerID: "{{.Args.ServerID}}",
+			Constraints: &BackupConstraints{
+				Restore: &BackupRestoreConstraints{
+					RoleDeleteSleep:    3 * timex.Second,
+					RoleCreateSleep:    3 * timex.Second,
+					ChannelDeleteSleep: 3 * timex.Second,
+					ChannelCreateSleep: 3 * timex.Second,
+					ChannelEditSleep:   1 * timex.Second,
+					SendMessageSleep:   3 * timex.Second,
+					HttpClientTimeout:  10 * timex.Second,
+					MaxBodySize:        100000000,
+				},
+				MaxServerBackupTasks: 1,
+				FileType:             "backup.server",
+			},
+			Options: BackupRestoreOpts{
+				IgnoreRestoreErrors: false,
+				ProtectedChannels:   []string{},
+				ProtectedRoles:      []string{},
+				BackupSource:        "{{.Args.BackupSource}}",
+				Decrypt:             "{{.Settings.BackupPassword}}",
+				ChannelRestoreMode:  ChannelRestoreModeFull,
+			},
+		},
+		Comments: map[string]string{
+			"Constraints.MaxServerBackupTasks":  "Only 1 backup task should be running at any given time locally",
+			"Constraints.FileType":              "The file type of the backup, you probably don't want to change this",
+			"Constraints.Restore.MaxBodySize":   "Since this is a local job, we can afford to be more generous",
+			"Options.IgnoreMessageBackupErrors": "We likely don't want errors ignored in local jobs",
+			"Options.ProtectedChannels":         "Edit this to protect channels from being deleted",
+			"Options.ProtectedRoles":            "Edit this to protect roles from being deleted",
+			"Options.Decrypt":                   "The decryption key",
+			"Options.ChannelRestoreMode":        "Should be full unless you know what you're doing",
+			"Options.RoleRestoreMode":           "Should be full unless you know what you're doing",
+		},
 	}
 }

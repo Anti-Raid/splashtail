@@ -7,11 +7,12 @@ import (
 
 	"github.com/anti-raid/splashtail/splashcore/types"
 	"github.com/anti-raid/splashtail/tasks"
+	"github.com/anti-raid/splashtail/tasks/taskdef"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 // Sets up a task
-func CreateTask(ctx context.Context, pool *pgxpool.Pool, task tasks.TaskDefinition) (*types.TaskCreateResponse, error) {
+func CreateTask(ctx context.Context, pool *pgxpool.Pool, task taskdef.TaskDefinition) (*types.TaskCreateResponse, error) {
 	tInfo := task.Info()
 
 	if !tInfo.Valid {

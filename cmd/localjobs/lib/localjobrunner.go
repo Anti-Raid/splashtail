@@ -6,6 +6,7 @@ import (
 
 	"github.com/anti-raid/splashtail/splashcore/types"
 	"github.com/anti-raid/splashtail/tasks"
+	"github.com/anti-raid/splashtail/tasks/taskdef"
 	"github.com/anti-raid/splashtail/tasks/taskstate"
 
 	"github.com/infinitybotlist/eureka/crypto"
@@ -17,7 +18,7 @@ type TaskLocalOpts struct {
 }
 
 // Executes a task locally
-func ExecuteTaskLocal(prefix, taskId string, l *zap.Logger, task tasks.TaskDefinition, opts TaskLocalOpts, taskState taskstate.TaskState) error {
+func ExecuteTaskLocal(prefix, taskId string, l *zap.Logger, task taskdef.TaskDefinition, opts TaskLocalOpts, taskState taskstate.TaskState) error {
 	var currentTaskState = "pending"
 
 	err := opts.OnStateChange(currentTaskState)

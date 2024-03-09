@@ -11,6 +11,7 @@ import (
 	"github.com/anti-raid/splashtail/jobserver/state"
 	"github.com/anti-raid/splashtail/splashcore/types"
 	"github.com/anti-raid/splashtail/tasks"
+	"github.com/anti-raid/splashtail/tasks/taskdef"
 	"github.com/anti-raid/splashtail/tasks/taskstate"
 	"github.com/bwmarrin/discordgo"
 	"github.com/infinitybotlist/eureka/crypto"
@@ -130,7 +131,7 @@ func ExecuteTask(
 	ctx context.Context,
 	ctxCancel context.CancelFunc,
 	taskId string,
-	task tasks.TaskDefinition,
+	task taskdef.TaskDefinition,
 	prog *TaskProgress,
 ) {
 	if state.CurrentOperationMode != "jobs" {
