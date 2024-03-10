@@ -3,11 +3,12 @@ use poise::serenity_prelude::{Change, FullEvent, MemberAction, RoleAction};
 use serenity::model::guild::audit_log::{Action, ChannelAction};
 
 use super::handler::handle_mod_action;
-use crate::{Data, Error};
+use crate::{Data, Error, silverpelt::EventHandlerContext};
 
 pub async fn event_listener(
     ctx: &serenity::client::Context,
     event: &FullEvent,
+    _: EventHandlerContext,
 ) -> Result<(), Error> {
     let user_data = ctx.data::<Data>();
 

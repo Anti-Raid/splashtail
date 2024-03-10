@@ -477,6 +477,7 @@ dependencies = [
  "serde_json",
  "serde_yaml",
  "serenity",
+ "small-fixed-array",
  "splashcore_rs",
  "sqlx",
  "strum",

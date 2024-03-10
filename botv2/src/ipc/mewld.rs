@@ -3,6 +3,7 @@ use fred::clients::SubscriberClient;
 use fred::interfaces::{ClientLike, EventInterface, PubsubInterface};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
+use crate::impls::cache::CacheHttpImpl;
 
 /// This is the fundemental primitive for mewld IPC
 pub struct MewldIpcClient {
@@ -126,7 +127,7 @@ impl MewldIpcClient {
     /// This function never quits once executed
     pub async fn start_ipc_listener(
         &self,
-        serenity_cache: &crate::impls::cache::CacheHttpImpl,
+        serenity_cache: &CacheHttpImpl,
         shard_manager: &Arc<serenity::all::ShardManager>,
     ) -> ! {
         // Subscribes to the redis IPC channels we need to subscribe to

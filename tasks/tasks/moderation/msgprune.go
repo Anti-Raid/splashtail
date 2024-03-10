@@ -159,8 +159,33 @@ func (t *MessagePruneTask) Exec(
 		basePerms,
 		g,
 		m,
+		[]int64{discordgo.PermissionViewChannel, discordgo.PermissionReadMessageHistory, discordgo.PermissionManageMessages},
 		allowedMsgPruneChannelTypes,
-		g.Channels,
+		func() []*discordgo.Channel {
+			if len(t.Options.Channels) == 0 {
+				return g.Channels
+			}
+
+			// Store all channels selected in a hashmap
+			hasChannels := make(map[string]bool, len(t.Options.Channels))
+
+			for _, c := range t.Options.Channels {
+				hasChannels[c] = true
+			}
+
+			// Now filter out the channels
+			chans := make([]*discordgo.Channel, 0, len(t.Options.Channels))
+
+			for _, c := range g.Channels {
+				if !hasChannels[c.ID] {
+					continue
+				}
+
+				chans = append(chans, c)
+			}
+
+			return chans
+		}(),
 		t.Options.SpecialAllocations,
 		t.Options.PerChannel,
 		t.Options.MaxMessages,

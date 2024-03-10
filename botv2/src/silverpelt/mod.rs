@@ -5,6 +5,7 @@ pub mod module_config;
 pub mod poise_ext;
 pub mod silverpelt_cache;
 pub mod utils;
+pub mod gwevent;
 
 use futures::future::BoxFuture;
 use indexmap::IndexMap;
@@ -13,12 +14,17 @@ use std::fmt::Display;
 pub type Command = poise::Command<crate::Data, crate::Error>;
 pub type CommandExtendedDataMap = IndexMap<&'static str, CommandExtendedData>;
 
+pub struct EventHandlerContext {
+    pub guild_id: serenity::all::GuildId,
+}
+
 pub type ModuleEventHandler = Box<
     dyn Send
         + Sync
         + for<'a> Fn(
             &'a serenity::all::Context,
             &'a serenity::all::FullEvent,
+            EventHandlerContext,
         ) -> BoxFuture<'a, Result<(), crate::Error>>,
 >;
 

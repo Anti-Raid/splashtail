@@ -585,6 +585,7 @@ func (t *ServerBackupCreateTask) Exec(
 			basePerms,
 			g,
 			m,
+			[]int64{discordgo.PermissionViewChannel},
 			allowedChannelTypes,
 			g.Channels,
 			t.Options.SpecialAllocations,

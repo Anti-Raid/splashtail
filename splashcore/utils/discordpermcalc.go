@@ -95,3 +95,20 @@ func CheckPermission(basePerms int64, permission int64) bool {
 	}
 	return true
 }
+
+// Check if a permission list has all permissions
+func CheckAllPermissions(basePerms int64, permissions []int64) bool {
+	// Check if admin, if so, everything is allowed
+	if basePerms&discordgo.PermissionAdministrator == discordgo.PermissionAdministrator {
+		return true
+	}
+
+	// Check if all permissions are allowed
+	for _, perm := range permissions {
+		if basePerms&perm != perm {
+			return false
+		}
+	}
+
+	return true
+}

@@ -165,7 +165,9 @@ fn check_src_files() -> Result<(), Error> {
     }
 
     let fe_checks = indexmap::indexmap! {
-        "src/main.rs" => vec![("fn get_event_guild_id", "FullEvent")],
+        "src/silverpelt/gwevent.rs" => vec![
+            ("fn get_event_guild_id", "FullEvent"),
+        ],
     };
 
     for (file, checks) in fe_checks {

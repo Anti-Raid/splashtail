@@ -33,8 +33,8 @@ pub fn module() -> crate::silverpelt::Module {
                 }
             ),
         ],
-        event_handlers: vec![Box::new(move |ctx, fe| {
-            Box::pin(async move { events::event_listener(ctx, fe).await })
+        event_handlers: vec![Box::new(move |ctx, fe, ectx| {
+            Box::pin(async move { events::event_listener(ctx, fe, ectx).await })
         })],
     }
 }

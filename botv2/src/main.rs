@@ -8,13 +8,16 @@ mod tasks;
 
 use silverpelt::{
     silverpelt_cache::SILVERPELT_CACHE,
+    EventHandlerContext,
     module_config::{get_command_configuration, is_module_enabled},
+    gwevent,
 };
+use crate::impls::cache::CacheHttpImpl;
 
 use std::sync::Arc;
 
 use log::{error, warn, info};
-use serenity::all::{HttpBuilder, GuildId};
+use serenity::all::HttpBuilder;
 use poise::serenity_prelude::FullEvent;
 use poise::CreateReply;
 use sqlx::postgres::PgPoolOptions;
@@ -75,175 +78,6 @@ async fn on_error(error: poise::FrameworkError<'_, Data, Error>) {
             }
         }
     }
-}
-
-/// Given an event and a module, return whether or not to filter said event
-pub fn get_event_guild_id(
-    event: &FullEvent,
-) -> Result<GuildId, Option<crate::Error>> {
-    let guild_id = match event {
-        FullEvent::AutoModActionExecution { execution } => execution.guild_id,
-        FullEvent::AutoModRuleCreate { rule, .. } => rule.guild_id,
-        FullEvent::AutoModRuleDelete { rule, .. } => rule.guild_id,
-        FullEvent::AutoModRuleUpdate { rule, .. } => rule.guild_id,
-        FullEvent::CacheReady { .. } => return Err(None), // We don't want this to be propogated anyways
-        FullEvent::CategoryCreate { category, .. } => category.guild_id,
-        FullEvent::CategoryDelete { category, .. } => category.guild_id,
-        FullEvent::ChannelCreate { channel, .. } => channel.guild_id,
-        FullEvent::ChannelDelete { channel, .. } => channel.guild_id,
-        FullEvent::ChannelPinsUpdate { pin } => {
-            if let Some(guild_id) = pin.guild_id {
-                guild_id.to_owned()
-            } else {
-                return Err(None);
-            }
-        },
-        FullEvent::ChannelUpdate { new, .. } => new.guild_id,
-        FullEvent::CommandPermissionsUpdate { permission, .. } => permission.guild_id,
-        FullEvent::EntitlementCreate { entitlement, .. } => {
-            if let Some(guild_id) = entitlement.guild_id {
-                guild_id.to_owned()
-            } else {
-                return Err(None);
-            }
-        },
-        FullEvent::EntitlementDelete { entitlement, .. } => {
-            if let Some(guild_id) = entitlement.guild_id {
-                guild_id.to_owned()
-            } else {
-                return Err(None);
-            }
-        },
-        FullEvent::EntitlementUpdate { entitlement, .. } => {
-            if let Some(guild_id) = entitlement.guild_id {
-                guild_id.to_owned()
-            } else {
-                return Err(None);
-            }
-        },
-        FullEvent::GuildAuditLogEntryCreate { guild_id, .. } => *guild_id,
-        FullEvent::GuildBanAddition { guild_id, .. } => *guild_id,
-        FullEvent::GuildBanRemoval { guild_id, .. } => *guild_id,
-        FullEvent::GuildCreate { guild, .. } => guild.id,
-        FullEvent::GuildDelete { incomplete, .. } => incomplete.id,
-        FullEvent::GuildEmojisUpdate { guild_id, .. } => *guild_id,
-        FullEvent::GuildIntegrationsUpdate { guild_id, .. } => *guild_id,
-        FullEvent::GuildMemberAddition { new_member, .. } => new_member.guild_id,
-        FullEvent::GuildMemberRemoval { guild_id, .. } => *guild_id,
-        FullEvent::GuildMemberUpdate { event, .. } => event.guild_id,
-        FullEvent::GuildMembersChunk { chunk, .. } => chunk.guild_id,
-        FullEvent::GuildRoleCreate { new, .. } => new.guild_id,
-        FullEvent::GuildRoleDelete { guild_id, .. } => *guild_id,
-        FullEvent::GuildRoleUpdate { new, .. } => new.guild_id,
-        FullEvent::GuildScheduledEventCreate { event, .. } => event.guild_id,
-        FullEvent::GuildScheduledEventDelete { event, .. } => event.guild_id,
-        FullEvent::GuildScheduledEventUpdate { event, .. } => event.guild_id,
-        FullEvent::GuildScheduledEventUserAdd { subscribed, .. } => subscribed.guild_id,
-        FullEvent::GuildScheduledEventUserRemove { unsubscribed, .. } => unsubscribed.guild_id,
-        FullEvent::GuildStickersUpdate { guild_id, .. } => *guild_id,
-        FullEvent::GuildUpdate { new_data, .. } => new_data.id,
-        FullEvent::IntegrationCreate { integration, .. } => {
-            if let Some(guild_id) = integration.guild_id {
-                guild_id.to_owned()
-            } else {
-                return Err(None);
-            }
-        },
-        FullEvent::IntegrationDelete { guild_id, .. } => *guild_id,
-        FullEvent::IntegrationUpdate { integration, .. } => {
-            if let Some(guild_id) = integration.guild_id {
-                guild_id.to_owned()
-            } else {
-                return Err(None);
-            }
-        },
-        FullEvent::InteractionCreate { .. } => return Err(None), // We dont handle interactions create events in event handlers
-        FullEvent::InviteCreate { data, .. } => {
-            if let Some(guild_id) = data.guild_id {
-                guild_id.to_owned()
-            } else {
-                return Err(None);
-            }
-        },
-        FullEvent::InviteDelete { data, .. } => {
-            if let Some(guild_id) = data.guild_id {
-                guild_id.to_owned()
-            } else {
-                return Err(None);
-            }
-        },
-        FullEvent::Message { new_message, .. } => {
-            if let Some(guild_id) = &new_message.guild_id {
-                guild_id.to_owned()
-            } else {
-                return Err(None);
-            }
-        },
-        FullEvent::MessageDelete { guild_id, .. } => {
-            if let Some(guild_id) = guild_id {
-                guild_id.to_owned()
-            } else {
-                return Err(None);
-            }
-        },
-        FullEvent::MessageDeleteBulk { guild_id, .. } => {
-            if let Some(guild_id) = guild_id {
-                guild_id.to_owned()
-            } else {
-                return Err(None);
-            }
-        },
-        FullEvent::MessageUpdate { event, .. } => {
-            if let Some(guild_id) = &event.guild_id {
-                guild_id.to_owned()
-            } else {
-                return Err(None);
-            }
-        },
-        FullEvent::PresenceReplace { .. } => return Err(None), // We dont handle precenses
-        FullEvent::PresenceUpdate { .. } => return Err(None), // We dont handle precenses
-        FullEvent::Ratelimit { data, .. } => {
-            // Warn i guess
-            warn!("Ratelimit event recieved: {:?}", data);
-            return Err(None);
-        },
-        FullEvent::ReactionAdd { .. } => return Err(None), // We dont handle reactions right now
-        FullEvent::ReactionRemove { .. } => return Err(None), // We dont handle reactions right now
-        FullEvent::ReactionRemoveAll { .. } => return Err(None), // We dont handle reactions right now
-        FullEvent::ReactionRemoveEmoji { .. } => return Err(None), // We dont handle reactions right now
-        FullEvent::Ready { .. } => return Err(None), // We dont handle ready events
-        FullEvent::Resume { .. } => return Err(None), // We dont handle resume events
-        FullEvent::ShardStageUpdate { .. } => return Err(None), // We dont handle shard stage updates
-        FullEvent::ShardsReady { .. } => return Err(None), // We dont handle shards ready
-        FullEvent::StageInstanceCreate { .. } => return Err(None), // We dont handle stage instances right now
-        FullEvent::StageInstanceDelete { .. } => return Err(None), // We dont handle stage instances right now
-        FullEvent::StageInstanceUpdate { .. } => return Err(None), // We dont handle stage instances right now
-        FullEvent::ThreadCreate { thread, .. } => thread.guild_id, 
-        FullEvent::ThreadDelete { thread, .. } => thread.guild_id, 
-        FullEvent::ThreadListSync { thread_list_sync, .. } => thread_list_sync.guild_id,
-        FullEvent::ThreadMemberUpdate { thread_member, .. } => {
-            if let Some(guild_id) = thread_member.guild_id {
-                guild_id.to_owned()
-            } else {
-                return Err(None);
-            }
-        },
-        FullEvent::ThreadMembersUpdate { thread_members_update, .. } => thread_members_update.guild_id,
-        FullEvent::ThreadUpdate { new, .. } => new.guild_id,
-        FullEvent::TypingStart { .. } => return Err(None), // We dont handle typing start
-        FullEvent::UserUpdate { .. } => return Err(None), // We dont handle user updates
-        FullEvent::VoiceChannelStatusUpdate { guild_id, .. } => *guild_id,
-        FullEvent::VoiceServerUpdate { .. } => return Err(None), // We dont handle voice right now
-        FullEvent::VoiceStateUpdate { .. } => return Err(None), // We dont handle voice right now
-        FullEvent::WebhookUpdate { guild_id, .. } => *guild_id,
-        _ => {
-            return Err(
-                Some(format!("Unhandled event: {:?}", event).into()),
-            );
-        }
-    };
-
-    Ok(guild_id)
 }
 
 async fn event_listener<'a>(
@@ -324,7 +158,7 @@ async fn event_listener<'a>(
 
             tokio::task::spawn(crate::tasks::taskcat::start_all_tasks(
                 user_data.pool.clone(),
-                crate::impls::cache::CacheHttpImpl {
+                CacheHttpImpl {
                     cache: ctx.serenity_context.cache.clone(),
                     http: ctx.serenity_context.http.clone(),
                 },
@@ -336,7 +170,7 @@ async fn event_listener<'a>(
                 
                 let data = ctx.serenity_context.data::<Data>();
                 let ipc_ref = data.mewld_ipc.clone();
-                let ch = crate::impls::cache::CacheHttpImpl::from_ctx(ctx.serenity_context);
+                let ch = CacheHttpImpl::from_ctx(ctx.serenity_context);
                 let sm = ctx.shard_manager().clone();
                 tokio::task::spawn(async move {
                     let ipc_ref = ipc_ref;
@@ -344,7 +178,7 @@ async fn event_listener<'a>(
                 });
 
                 // And for animus magic
-                let ch = crate::impls::cache::CacheHttpImpl::from_ctx(ctx.serenity_context);
+                let ch = CacheHttpImpl::from_ctx(ctx.serenity_context);
                 let sm = ctx.shard_manager().clone();
                 let am_ref = data.animus_magic_ipc.clone();
                 tokio::task::spawn(async move {
@@ -376,7 +210,7 @@ async fn event_listener<'a>(
     }
 
     // Add all event listeners for key modules here
-    let event_guild_id = match get_event_guild_id(event) {
+    let event_guild_id = match gwevent::get_event_guild_id(event) {
         Ok(guild_id) => guild_id,
         Err(None) => return Ok(()),
         Err(Some(e)) => {
@@ -410,7 +244,13 @@ async fn event_listener<'a>(
 
         log::debug!("Executing event handlers for {}", module);
         for evth in evts.iter() {
-            if let Err(e) = evth(ctx.serenity_context, event).await {
+            if let Err(e) = evth(
+                ctx.serenity_context, 
+                event,
+                EventHandlerContext {
+                    guild_id: event_guild_id,
+                }
+            ).await {
                 error!("Error in event handler: {}", e);
             }
         }

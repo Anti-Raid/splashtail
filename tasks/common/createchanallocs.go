@@ -27,6 +27,7 @@ func CreateChannelAllocations(
 	basePerms int64,
 	g *discordgo.Guild,
 	m *discordgo.Member,
+	neededPerms []int64,
 	allowedChannelTypes []discordgo.ChannelType,
 	channels []*discordgo.Channel,
 	specialAllocs map[string]int,
@@ -55,8 +56,8 @@ func CreateChannelAllocations(
 
 			perms := utils.MemberChannelPerms(basePerms, g, m, c)
 
-			if !utils.CheckPermission(perms, discordgo.PermissionViewChannel) {
-				return nil, fmt.Errorf("special allocation channel %s is not readable by the bot", c.ID)
+			if !utils.CheckAllPermissions(perms, neededPerms) {
+				return nil, fmt.Errorf("special allocation channel %s lacks needed perms: %d", c.ID, neededPerms)
 			}
 
 			if perChannelMap.TotalAllocations() >= maxMessages {
@@ -75,7 +76,7 @@ func CreateChannelAllocations(
 
 		perms := utils.MemberChannelPerms(basePerms, g, m, channel)
 
-		if perms&discordgo.PermissionViewChannel != discordgo.PermissionViewChannel {
+		if !utils.CheckAllPermissions(perms, neededPerms) {
 			continue
 		}
 

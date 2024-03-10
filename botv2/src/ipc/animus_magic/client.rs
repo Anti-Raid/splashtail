@@ -1,6 +1,6 @@
 use super::bot::{BotAnimusMessage, BotAnimusResponse};
 use super::jobserver::{JobserverAnimusMessage, JobserverAnimusResponse};
-use crate::{ipc::argparse::MEWLD_ARGS, Error};
+use crate::{ipc::argparse::MEWLD_ARGS, Error, impls::cache::CacheHttpImpl};
 use splashcore_rs::animusmagic_protocol::{
     AnimusOp, 
     AnimusTarget, 
@@ -18,6 +18,8 @@ use fred::{
 };
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
+use dashmap::DashMap;
+use tokio::sync::mpsc::Sender;
 
 #[derive(Serialize, Deserialize)]
 #[serde(untagged)]
@@ -102,7 +104,7 @@ impl From<AnimusResponse> for AnimusPayload {
 
 pub struct AnimusMagicClient {
     pub redis_pool: RedisPool,
-    pub rx_map: std::sync::Arc<dashmap::DashMap<String, tokio::sync::mpsc::Sender<AnimusAnyResponse<AnimusResponse>>>>,
+    pub rx_map: Arc<DashMap<String, Sender<AnimusAnyResponse<AnimusResponse>>>>,
 }
 
 impl AnimusMagicClient {
@@ -111,7 +113,7 @@ impl AnimusMagicClient {
     /// This function never quits once executed
     pub async fn start_ipc_listener(
         &self,
-        cache_http: crate::impls::cache::CacheHttpImpl,
+        cache_http: CacheHttpImpl,
 
         #[allow(unused_variables)] // To be used in the future
         shard_manager: Arc<serenity::all::ShardManager>,
@@ -439,7 +441,7 @@ impl AnimusMagicClient {
 }
 
 impl AnimusMagicClientExt<AnimusResponse> for AnimusMagicClient {
-    fn rx_map(&self) -> Arc<dashmap::DashMap<String, tokio::sync::mpsc::Sender<AnimusAnyResponse<AnimusResponse>>>> {
+    fn rx_map(&self) -> Arc<DashMap<String, Sender<AnimusAnyResponse<AnimusResponse>>>> {
         self.rx_map.clone()
     }
 
