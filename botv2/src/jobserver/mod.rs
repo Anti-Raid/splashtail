@@ -9,18 +9,7 @@ use std::str::FromStr;
 use std::sync::Arc;
 use std::time::Duration;
 use indexmap::IndexMap;
-use crate::config;
-
-pub fn get_icon_of_state(state: &str) -> String {
-    match state {
-        "pending" => ":hourglass:",
-        "running" => ":hourglass_flowing_sand:",
-        "completed" => ":white_check_mark:",
-        "failed" => ":x:",
-        _ => ":question:",
-    }
-    .to_string()
-}
+use crate::{config, impls::utils::get_icon_of_state};
 
 /// Rust internal/special type to better serialize/speed up task embed creation
 #[derive(serde::Deserialize, serde::Serialize, Clone, PartialEq)]

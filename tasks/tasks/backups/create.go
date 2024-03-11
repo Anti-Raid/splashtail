@@ -587,7 +587,7 @@ func (t *ServerBackupCreateTask) Exec(
 			m,
 			[]int64{discordgo.PermissionViewChannel},
 			allowedChannelTypes,
-			g.Channels,
+			common.GetChannelsFromList(g, t.Options.Channels),
 			t.Options.SpecialAllocations,
 			t.Options.PerChannel,
 			t.Options.MaxMessages,
@@ -597,7 +597,7 @@ func (t *ServerBackupCreateTask) Exec(
 			return nil, fmt.Errorf("error creating channel allocations: %w", err)
 		}
 
-		l.Info("Created channel backup allocations", zap.Any("alloc", perChannelBackupMap), zap.Strings("botDisplayIgnore", []string{"alloc"}))
+		l.Info("Created channel allocations", zap.Any("alloc", perChannelBackupMap), zap.Strings("botDisplayIgnore", []string{"alloc"}))
 
 		err = writeMsgpack(f, "dbg/chanAlloc", perChannelBackupMap)
 

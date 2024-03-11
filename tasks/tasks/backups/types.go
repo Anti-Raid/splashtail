@@ -89,6 +89,7 @@ const (
 
 // Options that can be set when creatng a backup
 type BackupCreateOpts struct {
+	Channels                  []string       `description:"If set, the channels to prune messages from"`
 	PerChannel                int            `description:"The number of messages per channel"`
 	MaxMessages               int            `description:"The maximum number of messages to backup"`
 	BackupMessages            bool           `description:"Whether to backup messages or not"`

@@ -9,6 +9,35 @@ import (
 	orderedmap "github.com/wk8/go-ordered-map/v2"
 )
 
+// Given a guild and a list of channels, return the channels that are in the list, removing duplicates
+//
+// This is useful for creating a set of channels to allocate messages counts to etc.
+func GetChannelsFromList(g *discordgo.Guild, filterChans []string) []*discordgo.Channel {
+	if len(filterChans) == 0 {
+		return g.Channels
+	}
+
+	// Store all channels selected in a hashmap
+	hasChannels := make(map[string]bool, len(filterChans))
+
+	for _, c := range filterChans {
+		hasChannels[c] = true
+	}
+
+	// Now filter out the channels
+	chans := make([]*discordgo.Channel, 0, len(filterChans))
+
+	for _, c := range g.Channels {
+		if !hasChannels[c.ID] {
+			continue
+		}
+
+		chans = append(chans, c)
+	}
+
+	return chans
+}
+
 type ChannelAllocationMap struct {
 	*orderedmap.OrderedMap[string, int]
 }

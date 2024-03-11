@@ -63,7 +63,7 @@ pub async fn limits_add(
         limit_type.to_string(),
         limit_action.to_string(),
         limit_per,
-        (limit_time * limit_time_unit.to_seconds()) as f64
+        (limit_time * limit_time_unit.to_seconds_i64()) as f64
     )
     .fetch_one(&ctx.data().pool)
     .await?;
@@ -81,7 +81,7 @@ pub async fn limits_add(
             limit_type,
             limit_action,
             limit_per,
-            limit_time: (limit_time * limit_time_unit.to_seconds()),
+            limit_time: (limit_time * limit_time_unit.to_seconds_i64()),
         })
         .await?;
     ctx.say("Added limit successfully").await?;

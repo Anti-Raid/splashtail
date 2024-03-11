@@ -2,31 +2,34 @@ use crate::ipc::animus_magic::{
     client::{AnimusMessage, AnimusResponse},
     jobserver::{JobserverAnimusMessage, JobserverAnimusResponse},
 };
+use crate::impls::utils::{REPLACE_CHANNEL, create_special_allocation_from_str, parse_numeric_list};
 use crate::ipc::argparse::MEWLD_ARGS;
 use splashcore_rs::animusmagic_protocol::{AnimusTarget, default_request_timeout};
 use crate::{Context, Error};
 use futures_util::StreamExt;
-use serenity::all::{CreateEmbed, EditMessage};
+use serenity::all::{CreateEmbed, EditMessage, ChannelId};
 use serenity::small_fixed_array::TruncatingInto;
 use serenity::utils::shard_id;
 use std::sync::Arc;
 use std::time::Duration;
-use std::{collections::HashMap, fmt::Display};
+use std::fmt::Display;
 use splashcore_rs::animusmagic_ext::{AnimusAnyResponse, AnimusMagicClientExt};
 use sqlx::types::uuid::Uuid;
+use crate::impls::utils::get_icon_of_state;
 
 /*
 // Options that can be set when creatng a backup
 type BackupCreateOpts struct {
-    PerChannel                int            `description:"The number of messages per channel"`
-    MaxMessages               int            `description:"The maximum number of messages to backup"`
-    BackupMessages            bool           `description:"Whether to backup messages or not"`
-    BackupAttachments         bool           `description:"Whether to backup attachments or not"`
-    BackupGuildAssets         []string       `description:"What assets to back up"`
-    IgnoreMessageBackupErrors bool           `description:"Whether to ignore errors while backing up messages or not and skip these channels"`
-    RolloverLeftovers         bool           `description:"Whether to attempt rollover of leftover message quota to another channels or not"`
-    SpecialAllocations        map[string]int `description:"Specific channel allocation overrides"`
-    Encrypt                   string         `description:"The key to encrypt backups with, if any"`
+	Channels                  []string       `description:"If set, the channels to prune messages from"`
+	PerChannel                int            `description:"The number of messages per channel"`
+	MaxMessages               int            `description:"The maximum number of messages to backup"`
+	BackupMessages            bool           `description:"Whether to backup messages or not"`
+	BackupAttachments         bool           `description:"Whether to backup attachments or not"`
+	BackupGuildAssets         []string       `description:"What assets to back up"`
+	IgnoreMessageBackupErrors bool           `description:"Whether to ignore errors while backing up messages or not and skip these channels"`
+	RolloverLeftovers         bool           `description:"Whether to attempt rollover of leftover message quota to another channels or not"`
+	SpecialAllocations        map[string]int `description:"Specific channel allocation overrides"`
+	Encrypt                   string         `description:"The key to encrypt backups with, if any"`
 }
 
 // Options that can be set when restoring a backup
@@ -62,6 +65,8 @@ pub async fn backups_create(
 
     #[description = "Whether to include messages in the backup (up to 500)"] messages: Option<bool>,
 
+    #[description = "Channels to backup messages from, otherwise all channels will have messages backed up"] channels: Option<String>,
+
     #[description = "Whether to include attachments in the backup. Requires 'messages' to be enabled"]
     attachments: Option<bool>,
 
@@ -85,21 +90,7 @@ pub async fn backups_create(
 
     #[description = "Password to encrypt the backup with. If not provided, the backup will not be encrypted"]
     password: Option<String>,
-) -> Result<(), Error> {
-    /*
-    let messages = ctx.interaction.options.getBoolean("messages")
-                let attachments = ctx.interaction.options.getBoolean("attachments")
-                let backupGuildAssets = ctx.interaction.options.getString("backup_guild_assets")?.split(",") || defaultAssets
-                let maxMessages = ctx.interaction.options.getInteger("max_messages")
-                let perChannel = ctx.interaction.options.getInteger("per_channel")
-                let rolloverLeftovers = ctx.interaction.options.getBoolean("rollover_leftovers")
-                let ignoreMessageBackupErrors = ctx.interaction.options.getBoolean("ignore_message_backup_errors")
-                let password = ctx.interaction.options.getString("password") || ""
-
-                if(backupGuildAssets.length > 0) {
-                    backupGuildAssets = backupGuildAssets?.map((v) => v.trim())?.filter((v) => v.length > 0)
-                } */
-    
+) -> Result<(), Error> {    
     let Some(guild_id) = ctx.guild_id() else {
         return Err("This command can only be used in a guild".into());
     };
@@ -113,7 +104,6 @@ pub async fn backups_create(
     let per_channel = per_channel.unwrap_or(100);
     let special_allocations = special_allocations.unwrap_or_default();
     let password = password.unwrap_or_default();
-
     if !messages && attachments {
         return Err("You must backup messages to backup attachments".into());
     }
@@ -132,34 +122,16 @@ pub async fn backups_create(
         }
     };
 
-    let special_allocations = {
-        let split = special_allocations.split(',').collect::<Vec<&str>>();
-
-        if !split.is_empty() {
-            let mut map = HashMap::new();
-
-            for v in split {
-                if v.is_empty() {
-                    continue;
-                }
-
-                let split = v.split('=').collect::<Vec<&str>>();
-
-                if split.len() != 2 {
-                    return Err("Invalid special allocation format".into());
-                }
-
-                let channel_id = split[0].to_string();
-                let number = split[1].parse::<u32>()?;
-
-                map.insert(channel_id, number);
-            }
-
-            map
-        } else {
-            HashMap::new()
-        }
+    let channels: Vec<ChannelId> = if let Some(channels) = channels {
+        parse_numeric_list(
+            &channels, 
+            &REPLACE_CHANNEL
+        )?
+    } else {
+        vec![]
     };
+
+    let special_allocations = create_special_allocation_from_str(&special_allocations)?;
 
     let mut base_message = ctx
         .send(
@@ -177,6 +149,7 @@ pub async fn backups_create(
     let backup_args = serde_json::json!({
         "ServerID": guild_id.to_string(),
         "Options": {
+            "Channels": channels,
             "PerChannel": per_channel,
             "MaxMessages": max_messages,
             "BackupMessages": messages,
@@ -306,7 +279,7 @@ pub async fn backups_list(ctx: Context<'_>) -> Result<(), Error> {
 
         let embed = poise::serenity_prelude::CreateEmbed::default().title(format!(
             "{} | Server Backup",
-            crate::jobserver::get_icon_of_state(task.state.as_str())
+            get_icon_of_state(task.state.as_str())
         ));
 
         if let Some(ref output) = task.output {

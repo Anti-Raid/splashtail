@@ -7,6 +7,7 @@ import (
 
 	"github.com/anti-raid/splashtail/splashcore/types"
 	"github.com/anti-raid/splashtail/splashcore/utils"
+	"github.com/anti-raid/splashtail/splashcore/utils/timex"
 	"github.com/anti-raid/splashtail/tasks/common"
 	"github.com/anti-raid/splashtail/tasks/taskdef"
 	"github.com/anti-raid/splashtail/tasks/taskstate"
@@ -52,6 +53,10 @@ func (t *MessagePruneTask) Validate(state taskstate.TaskState) error {
 		}
 	} else {
 		return fmt.Errorf("invalid operation mode")
+	}
+
+	if t.Options.PruneFrom > 14*24*timex.Hour {
+		t.Options.PruneFrom = 14 * 24 * timex.Hour
 	}
 
 	if t.Options.MaxMessages == 0 {
@@ -161,31 +166,7 @@ func (t *MessagePruneTask) Exec(
 		m,
 		[]int64{discordgo.PermissionViewChannel, discordgo.PermissionReadMessageHistory, discordgo.PermissionManageMessages},
 		allowedMsgPruneChannelTypes,
-		func() []*discordgo.Channel {
-			if len(t.Options.Channels) == 0 {
-				return g.Channels
-			}
-
-			// Store all channels selected in a hashmap
-			hasChannels := make(map[string]bool, len(t.Options.Channels))
-
-			for _, c := range t.Options.Channels {
-				hasChannels[c] = true
-			}
-
-			// Now filter out the channels
-			chans := make([]*discordgo.Channel, 0, len(t.Options.Channels))
-
-			for _, c := range g.Channels {
-				if !hasChannels[c.ID] {
-					continue
-				}
-
-				chans = append(chans, c)
-			}
-
-			return chans
-		}(),
+		common.GetChannelsFromList(g, t.Options.Channels),
 		t.Options.SpecialAllocations,
 		t.Options.PerChannel,
 		t.Options.MaxMessages,
@@ -195,7 +176,7 @@ func (t *MessagePruneTask) Exec(
 		return nil, fmt.Errorf("error creating channel allocations: %w", err)
 	}
 
-	l.Info("Created channel backup allocations", zap.Any("alloc", perChannelBackupMap), zap.Strings("botDisplayIgnore", []string{"alloc"}))
+	l.Info("Created channel allocations", zap.Any("alloc", perChannelBackupMap), zap.Strings("botDisplayIgnore", []string{"alloc"}))
 
 	// Now handle all the channel allocations
 	var finalMessagesEnd = orderedmap.New[string, []*discordgo.Message]()
@@ -236,10 +217,10 @@ func (t *MessagePruneTask) Exec(
 
 				var messageList = make([]string, 0, len(messages))
 
-				var twoWeeksAgo = time.Now().Add(-14 * 24 * time.Hour)
+				var beyondPast = time.Now().Add(-1 * time.Duration(t.Options.PruneFrom))
 				for _, m := range messages {
-					// Check that the message is under 14 days old
-					if m.Timestamp.Before(twoWeeksAgo) {
+					// Check that the message is under beyondPast
+					if m.Timestamp.Before(beyondPast) {
 						continue
 					}
 
