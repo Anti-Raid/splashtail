@@ -1,10 +1,17 @@
 use serenity::all::{
     ChannelId, EmojiId, FullEvent, GenericId, GuildId, MessageId, RoleId, RuleId as AutomodRuleId, UserId, ActionExecution
 };
+use strum::VariantNames;
 use small_fixed_array::FixedString;
 use indexmap::IndexMap;
 use crate::Error;
 use log::warn;
+
+/// Returns all events
+#[allow(dead_code)]
+pub const fn event_list() -> &'static [&'static str] {
+    FullEvent::VARIANTS
+}
 
 /// Given an event and a module, return whether or not to filter said event
 pub fn get_event_guild_id(
@@ -165,11 +172,6 @@ pub fn get_event_guild_id(
         FullEvent::VoiceServerUpdate { .. } => return Err(None), // We dont handle voice right now
         FullEvent::VoiceStateUpdate { .. } => return Err(None), // We dont handle voice right now
         FullEvent::WebhookUpdate { guild_id, .. } => *guild_id,
-        _ => {
-            return Err(
-                Some(format!("Unhandled event: {:?}", event).into()),
-            );
-        }
     };
 
     Ok(guild_id)
@@ -273,6 +275,7 @@ impl From<AutomodRuleId> for FieldType {
     }
 } 
 
+#[allow(dead_code)]
 pub struct Field {
     /// The value of the field
     value: Option<FieldType>,
@@ -286,6 +289,7 @@ impl Field {
 }
 
 /// Given an event, expand it to a hashmap of fields
+#[allow(dead_code)]
 pub fn expand_event(
     event: &FullEvent,
 ) -> Option<IndexMap<String, Field>> {

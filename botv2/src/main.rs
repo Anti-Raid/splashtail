@@ -10,7 +10,7 @@ use silverpelt::{
     silverpelt_cache::SILVERPELT_CACHE,
     EventHandlerContext,
     module_config::{get_command_configuration, is_module_enabled},
-    gwevent,
+    gwevent::core::get_event_guild_id,
 };
 use crate::impls::cache::CacheHttpImpl;
 
@@ -210,7 +210,7 @@ async fn event_listener<'a>(
     }
 
     // Add all event listeners for key modules here
-    let event_guild_id = match gwevent::get_event_guild_id(event) {
+    let event_guild_id = match get_event_guild_id(event) {
         Ok(guild_id) => guild_id,
         Err(None) => return Ok(()),
         Err(Some(e)) => {

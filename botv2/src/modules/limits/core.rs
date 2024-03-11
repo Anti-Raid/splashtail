@@ -4,7 +4,7 @@ use sqlx::{
     types::chrono::{DateTime, Utc},
     PgPool,
 };
-use strum_macros::{Display, EnumString, EnumVariantNames};
+use strum_macros::{Display, EnumString, VariantNames};
 use surrealdb::engine::remote::ws::Client;
 use surrealdb::Surreal;
 
@@ -62,7 +62,7 @@ impl UserLimitTypesChoices {
     EnumString,
     Display,
     PartialEq,
-    EnumVariantNames,
+    VariantNames,
     Clone,
     Copy,
     Debug,
@@ -140,7 +140,7 @@ impl UserLimitActionsChoices {
 }
 
 #[derive(
-    EnumString, Display, PartialEq, EnumVariantNames, Clone, Debug, Serialize, Deserialize,
+    EnumString, Display, PartialEq, VariantNames, Clone, Debug, Serialize, Deserialize,
 )]
 #[strum(serialize_all = "snake_case")]
 pub enum UserLimitActions {
