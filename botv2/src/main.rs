@@ -489,7 +489,7 @@ async fn main() {
                         guild_id: guild_id.to_string(),
                         command: ctx.command().qualified_name.clone(),
                         perms: None,
-                        disabled: false,
+                        disabled: None,
                     });
 
                     let module_config = module_config.unwrap_or(silverpelt::GuildModuleConfiguration {

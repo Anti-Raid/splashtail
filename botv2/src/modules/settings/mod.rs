@@ -41,6 +41,7 @@ pub fn module() -> crate::silverpelt::Module {
                             ],
                             checks_needed: 1,
                         },
+                        ..Default::default()
                     },
                 },
             ),

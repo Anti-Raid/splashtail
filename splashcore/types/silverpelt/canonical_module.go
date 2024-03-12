@@ -1,16 +1,5 @@
+// From silverpelt/canonical_module
 package silverpelt
-
-type PermissionCheck struct {
-	KittycatPerms []string `json:"kittycat_perms"`
-	NativePerms   []string `json:"native_perms"`
-	OuterAnd      bool     `json:"outer_and"`
-	InnerAnd      bool     `json:"inner_and"`
-}
-
-type PermissionChecks struct {
-	Checks       []PermissionCheck `json:"checks"`
-	ChecksNeeded int               `json:"checks_needed"`
-}
 
 type CanonicalCommandExtendedData struct {
 	ID           string           `json:"id"`

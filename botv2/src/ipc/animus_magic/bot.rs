@@ -3,7 +3,7 @@ use crate::impls::cache::CacheHttpImpl;
 ///
 /// To edit/add responses, add them both to bot.rs and to splashcore/animusmagic/types.go
 use crate::silverpelt::{
-    canonical_repr::modules::CanonicalModule,
+    canonical_module::CanonicalModule,
     silverpelt_cache::SILVERPELT_CACHE,
 };
 use crate::Error;
@@ -111,7 +111,7 @@ impl BotAnimusMessage {
                     user_roles,
                     bot_roles,
                 })
-            }
+            },
         }
     }
 }

@@ -83,11 +83,13 @@ pub async fn get_command_configuration(
         .into());
     };
 
+    let module = SILVERPELT_CACHE.command_id_module_map.get(root_cmd).ok_or::<crate::Error>("Unknown error determining module of command".into())?;
+
     // Check if theres any module configuration
     let module_configuration = sqlx::query!(
         "SELECT id, guild_id, module, disabled FROM guild_module_configurations WHERE guild_id = $1 AND module = $2",
         guild_id,
-        SILVERPELT_CACHE.command_id_module_map.get(root_cmd).ok_or::<crate::Error>("Unknown error determining module of command".into())?,
+        module,
     )
     .fetch_optional(pool)
     .await?

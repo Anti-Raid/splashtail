@@ -1,4 +1,4 @@
-pub mod canonical_repr;
+pub mod canonical_module;
 pub mod permissions;
 pub mod member_permission_calc;
 pub mod module_config;
@@ -153,6 +153,8 @@ impl Display for PermissionChecks {
 pub struct CommandExtendedData {
     /// The default permissions needed to run this command
     pub default_perms: PermissionChecks,
+    /// Whether the command is enabeld by default or not
+    pub is_default_enabled: bool,
 }
 
 impl Default for CommandExtendedData {
@@ -162,6 +164,7 @@ impl Default for CommandExtendedData {
                 checks: vec![],
                 checks_needed: 0,
             },
+            is_default_enabled: true,
         }
     }
 }
@@ -177,8 +180,8 @@ pub struct GuildCommandConfiguration {
     pub command: String,
     /// The permission method (kittycat)
     pub perms: Option<PermissionChecks>,
-    /// Whether or not the command is disabled
-    pub disabled: bool,
+    /// Whether or not the command is disabled. None means to use the default command configuration
+    pub disabled: Option<bool>,
 }
 
 /// Guild module configuration data

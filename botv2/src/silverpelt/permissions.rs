@@ -84,7 +84,7 @@ pub fn can_run_command(
 ) -> Result<(), (String, crate::Error)> {
     log::debug!("Command config: {:?}", command_config);
 
-    if command_config.disabled {
+    if command_config.disabled.unwrap_or(!cmd_data.is_default_enabled) {
         return Err((
             "command_disabled".into(),
             format!(
@@ -196,6 +196,7 @@ impl CommandExtendedData {
                     checks: vec![],
                     checks_needed: 0,
                 },
+                is_default_enabled: true,
             },
         }
     }
@@ -211,6 +212,7 @@ impl CommandExtendedData {
                 }],
                 checks_needed: 1,
             },
+            is_default_enabled: true,
         }
     }
 
@@ -225,6 +227,7 @@ impl CommandExtendedData {
                 }],
                 checks_needed: 1,
             },
+            is_default_enabled: true,
         }
     }
 }

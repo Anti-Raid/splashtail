@@ -481,7 +481,7 @@ pub async fn timeout(
 
     let time = (duration * unit.to_seconds() * 1000) as i64;
     member.edit(
-        &ctx.http(),
+        ctx.http(),
         EditMember::new()
         .disable_communication_until(
             Timestamp::from_millis(

@@ -2,7 +2,7 @@ use indexmap::IndexMap;
 use moka::future::Cache;
 use once_cell::sync::Lazy;
 use serenity::all::{GuildId, UserId};
-use super::{CommandExtendedDataMap, Module, ModuleEventHandler, canonical_repr::modules::CanonicalModule};
+use super::{CommandExtendedDataMap, Module, ModuleEventHandler, canonical_module::CanonicalModule};
 
 /// The silverpelt cache is a structure that contains the core state for the bot
 pub struct SilverpeltCache {
