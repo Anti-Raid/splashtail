@@ -210,7 +210,7 @@ pub async fn backups_create(
         mut base_message: serenity::model::channel::Message,
         task: Arc<crate::jobserver::Task>,
     ) -> Result<(), Error> {
-        let new_task_msg = crate::jobserver::taskpoll::embed(&task)?;
+        let new_task_msg = crate::jobserver::taskpoll::embed(&task, vec![], true)?;
 
         base_message
             .edit(
@@ -751,7 +751,7 @@ pub async fn backups_restore(
         mut base_message: serenity::model::channel::Message,
         task: Arc<crate::jobserver::Task>,
     ) -> Result<(), Error> {
-        let new_task_msg = crate::jobserver::taskpoll::embed(&task)?;
+        let new_task_msg = crate::jobserver::taskpoll::embed(&task, vec![], true)?;
 
         base_message
             .edit(

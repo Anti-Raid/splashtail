@@ -1,4 +1,5 @@
 use crate::{impls::cache::CacheHttpImpl, jobserver::Task};
+use serenity::all::{CreateActionRow, CreateButton, CreateEmbed};
 use serde_json::Value;
 use std::future::Future;
 use std::pin::Pin;
@@ -33,46 +34,48 @@ fn _to_string(v: &Option<&Value>) -> String {
     }
 }
 
-pub fn embed<'a>(task: &Task) -> Result<poise::CreateReply<'a>, crate::Error> {
+pub fn embed<'a>(task: &Task, pre_embeds: Vec<CreateEmbed<'a>>, show_status: bool) -> Result<poise::CreateReply<'a>, crate::Error> {
     let mut task_statuses: Vec<String> = Vec::new();
     let mut task_statuses_length = 0;
     let mut components = Vec::new();
 
     let task_state = &task.state;
 
-    for status in &task.statuses {
-        if task_statuses_length > 2500 {
-            // Keep removing elements from start of array until we are under 2500 characters
-            while task_statuses_length > 2500 {
-                let removed = task_statuses.remove(0);
-                task_statuses_length -= removed.len();
-            }
-        }
-
-        let mut add = format!("`{}` {}", status.level, status.msg);
-
-        let mut vs = Vec::new();
-
-        let bdi = status.bot_display_ignore.clone().unwrap_or_default();
-
-        for (k, v) in status.extra_info.iter() {
-            if bdi.contains(k) {
-                continue;
+    if show_status {
+        for status in &task.statuses {
+            if task_statuses_length > 2500 {
+                // Keep removing elements from start of array until we are under 2500 characters
+                while task_statuses_length > 2500 {
+                    let removed = task_statuses.remove(0);
+                    task_statuses_length -= removed.len();
+                }
             }
 
-            vs.push(format!("{}={}", k, serde_json::to_string(v)?));
+            let mut add = format!("`{}` {}", status.level, status.msg);
+
+            let mut vs = Vec::new();
+
+            let bdi = status.bot_display_ignore.clone().unwrap_or_default();
+
+            for (k, v) in status.extra_info.iter() {
+                if bdi.contains(k) {
+                    continue;
+                }
+
+                vs.push(format!("{}={}", k, serde_json::to_string(v)?));
+            }
+
+            if !vs.is_empty() {
+                add += &format!(" {}", vs.join(", "));
+            }
+
+            add = add.chars().take(500).collect::<String>() + if add.len() > 500 { "..." } else { "" };
+
+            add += &format!(" | <t:{}:R>", status.ts.round());
+
+            task_statuses_length += if add.len() > 500 { 500 } else { add.len() };
+            task_statuses.push(add);
         }
-
-        if !vs.is_empty() {
-            add += &format!(" {}", vs.join(", "));
-        }
-
-        add = add.chars().take(500).collect::<String>() + if add.len() > 500 { "..." } else { "" };
-
-        add += &format!(" | <t:{}:R>", status.ts.round());
-
-        task_statuses_length += if add.len() > 500 { 500 } else { add.len() };
-        task_statuses.push(add);
     }
 
     let mut description = format!(
@@ -92,22 +95,28 @@ pub fn embed<'a>(task: &Task) -> Result<poise::CreateReply<'a>, crate::Error> {
             );
             description += &format!("\n\n:link: [Download {}]({})", output.filename, &furl);
 
-            components.push(poise::serenity_prelude::CreateActionRow::Buttons(vec![
-                poise::serenity_prelude::CreateButton::new_link(furl)
+            components.push(CreateActionRow::Buttons(vec![
+                CreateButton::new_link(furl)
                     .label("Download")
                     .emoji('📥'),
             ]));
         }
     }
 
-    let embed = poise::serenity_prelude::CreateEmbed::default()
+    let embed = CreateEmbed::default()
         .title("Task Status")
         .description(description)
         .color(poise::serenity_prelude::Colour::DARK_GREEN);
 
-    let msg = poise::CreateReply::default()
-        .embed(embed)
-        .components(components);
+    let mut msg = poise::CreateReply::default();
+
+    for pre_embed in pre_embeds {
+        msg = msg.embed(pre_embed);
+    }
+
+    msg = msg
+    .embed(embed)
+    .components(components);
 
     Ok(msg)
 }
