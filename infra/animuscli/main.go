@@ -16,8 +16,6 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
-type AnimusCliWriter struct{}
-
 type AnimusCliData struct {
 	Context           context.Context
 	ContextClose      context.CancelFunc
@@ -375,6 +373,19 @@ func main() {
 							)
 						}
 					}
+				},
+			},
+			"request": {
+				Description: "Sends a request to animus magic",
+				Args: [][3]string{
+					{"to", "Target", "0"},
+					{"op", "Operation", "0"},
+					{"opName", "Operation Name", ""},
+					{"[fields]", "Fields in format a=b", ""},
+					{"timeout", "Timeout in seconds", "5"},
+				},
+				Run: func(a *shellcli.ShellCli[AnimusCliData], args map[string]string) error {
+					return fmt.Errorf("not implemented")
 				},
 			},
 		},
