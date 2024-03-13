@@ -1,4 +1,5 @@
 pub mod canonical_module;
+pub mod cmd;
 pub mod permissions;
 pub mod member_permission_calc;
 pub mod module_config;

@@ -14,6 +14,7 @@ import (
 	"github.com/anti-raid/splashtail/webserver/integrations/gitlogs"
 	"github.com/anti-raid/splashtail/webserver/routes/auth"
 	"github.com/anti-raid/splashtail/webserver/routes/core"
+	"github.com/anti-raid/splashtail/webserver/routes/guilds"
 	"github.com/anti-raid/splashtail/webserver/routes/platform"
 	"github.com/anti-raid/splashtail/webserver/routes/tasks"
 	"github.com/anti-raid/splashtail/webserver/routes/users"
@@ -115,6 +116,7 @@ func CreateWebserver() *chi.Mux {
 		// Use same order as routes folder
 		auth.Router{},
 		core.Router{},
+		guilds.Router{},
 		platform.Router{},
 		tasks.Router{},
 		users.Router{},

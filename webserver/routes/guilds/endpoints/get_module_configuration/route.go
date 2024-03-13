@@ -6,9 +6,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/anti-raid/splashtail/splashcore/silverpelt"
 	"github.com/anti-raid/splashtail/splashcore/structparser/db"
 	"github.com/anti-raid/splashtail/splashcore/types"
-	"github.com/anti-raid/splashtail/splashcore/types/silverpelt"
 	"github.com/anti-raid/splashtail/webserver/state"
 	"github.com/go-chi/chi/v5"
 	docs "github.com/infinitybotlist/eureka/doclib"
@@ -51,7 +51,7 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 	limit, err := ratelimit.Ratelimit{
 		Expiry:      2 * time.Minute,
 		MaxRequests: 10,
-		Bucket:      "get_module_configuration",
+		Bucket:      "module_configuration",
 	}.Limit(d.Context, r)
 
 	if err != nil {
@@ -77,7 +77,7 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 	}
 
 	// Fetch row from guild_module_configuration
-	row, err := state.Pool.Query(d.Context, "SELECT"+gmcColsStr+" FROM guild_module_configuration WHERE guild_id = $12", guildId)
+	row, err := state.Pool.Query(d.Context, "SELECT "+gmcColsStr+" FROM guild_module_configurations WHERE guild_id = $1", guildId)
 
 	if err != nil {
 		state.Logger.Error("Failed to query guild_module_configuration", zap.Error(err))

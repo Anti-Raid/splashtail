@@ -18,14 +18,15 @@ func (b Router) Tag() (string, string) {
 func (b Router) Routes(r *chi.Mux) {
 	uapi.Route{
 		Pattern: "/users/{user_id}/guilds/{guild_id}/module-configurations",
-		OpId:    "get_user_guild_base_info",
+		OpId:    "get_module_configuration",
 		Method:  uapi.GET,
 		Docs:    get_module_configuration.Docs,
 		Handler: get_module_configuration.Route,
 		Auth: []uapi.AuthType{
 			{
-				URLVar: "user_id",
-				Type:   types.TargetTypeUser,
+				URLVar:       "user_id",
+				Type:         types.TargetTypeUser,
+				AllowedScope: "modules enable",
 			},
 		},
 	}.Route(r)

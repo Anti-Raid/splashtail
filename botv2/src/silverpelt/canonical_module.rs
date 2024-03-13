@@ -1,3 +1,5 @@
+use indexmap::IndexMap;
+
 /// Canonical representation of a module for external use
 #[derive(serde::Serialize, serde::Deserialize, Clone)]
 pub struct CanonicalModule {
@@ -26,20 +28,11 @@ pub struct CanonicalModule {
     pub commands: Vec<CanonicalCommand>,
 }
 
-/// Canonical representation of a extended command data for external use
-#[derive(serde::Serialize, serde::Deserialize, Clone)]
-pub struct CanonicalCommandExtendedData {
-    pub id: String,
-
-    #[serde(flatten)]
-    pub data: crate::silverpelt::CommandExtendedData,
-}
-
 /// Canonical representation of a command (data section) for external use
 #[derive(serde::Serialize, serde::Deserialize, Clone)]
 pub struct CanonicalCommand {
     pub command: CanonicalCommandData,
-    pub extended_data: Vec<CanonicalCommandExtendedData>,
+    pub extended_data: IndexMap<String, crate::silverpelt::CommandExtendedData>,
 }
 
 /// Canonical representation of a command argument for external use
@@ -87,22 +80,14 @@ pub struct CanonicalCommandData {
 impl CanonicalCommand {
     pub fn from_repr(
         cmd: &crate::silverpelt::Command,
-        extended_data: crate::silverpelt::CommandExtendedDataMap,
+        extended_data: IndexMap<&'static str, crate::silverpelt::CommandExtendedData>,
     ) -> Self {
         CanonicalCommand {
             command: cmd.into(),
-            extended_data: {
-                let mut v = Vec::new();
-
-                for (id, data) in extended_data {
-                    v.push(CanonicalCommandExtendedData {
-                        id: id.to_string(),
-                        data,
-                    });
-                }
-
-                v
-            },
+            extended_data: extended_data
+                .into_iter()
+                .map(|(k, v)| (k.to_string(), v))
+                .collect(),
         }
     }
 }

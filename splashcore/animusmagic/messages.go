@@ -2,8 +2,8 @@
 package animusmagic
 
 import (
+	"github.com/anti-raid/splashtail/splashcore/silverpelt"
 	"github.com/anti-raid/splashtail/splashcore/types"
-	"github.com/anti-raid/splashtail/splashcore/types/silverpelt"
 )
 
 type ClusterModules = []silverpelt.CanonicalModule
@@ -17,6 +17,16 @@ type BotAnimusMessage struct {
 		GuildID string `json:"guild_id"`
 		UserID  string `json:"user_id"`
 	} `json:"BaseGuildUserInfo,omitempty"`
+	CheckCommandPermission *struct {
+		GuildID string `json:"guild_id"`
+		UserID  string `json:"user_id"`
+		Command string `json:"command"`
+	} `json:"CheckCommandPermission,omitempty"`
+	ToggleModule *struct {
+		GuildID string `json:"guild_id"`
+		Module  string `json:"module"`
+		Enabled bool   `json:"enabled"`
+	} `json:"ToggleModule,omitempty"`
 }
 
 func (b BotAnimusMessage) Message() {}
@@ -26,6 +36,9 @@ func (b BotAnimusMessage) Target() AnimusTarget {
 }
 
 type BotAnimusResponse struct {
+	OK *struct {
+		Message string `json:"message"`
+	} `json:"OK,omitempty"`
 	Modules *struct {
 		Modules ClusterModules `json:"modules"`
 	} `json:"Modules,omitempty"`

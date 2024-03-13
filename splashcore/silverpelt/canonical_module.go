@@ -1,10 +1,9 @@
 // From silverpelt/canonical_module
 package silverpelt
 
-type CanonicalCommandExtendedData struct {
-	ID           string           `json:"id"`
-	DefaultPerms PermissionChecks `json:"default_perms"`
-}
+import orderedmap "github.com/wk8/go-ordered-map/v2"
+
+type CommandExtendedDataMap = orderedmap.OrderedMap[string, CommandExtendedData]
 
 type CanonicalModule struct {
 	ID                   string             `json:"id"`
@@ -18,8 +17,8 @@ type CanonicalModule struct {
 }
 
 type CanonicalCommand struct {
-	Command      CanonicalCommandData           `json:"command"`
-	ExtendedData []CanonicalCommandExtendedData `json:"extended_data"`
+	Command      CanonicalCommandData   `json:"command"`
+	ExtendedData CommandExtendedDataMap `json:"extended_data"`
 }
 
 type CanonicalCommandArgument struct {

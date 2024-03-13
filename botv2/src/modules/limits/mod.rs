@@ -11,7 +11,7 @@ pub fn module() -> crate::silverpelt::Module {
         id: "limits",
         name: "Limits",
         description:
-            "Experimental server ratelimiting module. Not yet suitable for production use.",
+            "Experimental server ratelimiting module. Not yet suitable for production use. Should be combined with anti-nuke bots for best efficacy",
         configurable: true,
         commands_configurable: true,
         web_hidden: false,

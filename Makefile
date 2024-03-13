@@ -1,5 +1,5 @@
 TEST__USER_ID := 728871946456137770
-CDN_PATH := /failuremgmt/cdn/antiraid
+CDN_PATH := /silverpelt/cdn/antiraid
 
 stcore:
 	CGO_ENABLED=0 go build -v 
@@ -38,7 +38,7 @@ ts:
 
 	# Copy over go types
 	mkdir -p $(CDN_PATH)/dev/bindings/splashtail/go
-	cp -rf types $(CDN_PATH)/dev/bindings/splashtail/go
+	cp -rf splashcore/types $(CDN_PATH)/dev/bindings/splashtail/go
 
 	# Patch to change package name to 'splashtail_types'
 	#sed -i 's:package types:package splashtail_types:g' $(CDN_PATH)/dev/bindings/splashtail/go/types/{*.go,*.ts}

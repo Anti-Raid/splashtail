@@ -4,9 +4,10 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/anti-raid/splashtail/splashcore/silverpelt"
 	"github.com/anti-raid/splashtail/splashcore/types"
-	"github.com/anti-raid/splashtail/splashcore/types/silverpelt"
 	"github.com/anti-raid/splashtail/webserver/state"
+	"github.com/anti-raid/splashtail/webserver/webutils"
 	"github.com/go-chi/chi/v5"
 
 	docs "github.com/infinitybotlist/eureka/doclib"
@@ -57,27 +58,13 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 		}
 	}
 
-	clusterId := uint16(clusterId64)
+	hresp, ok := webutils.ClusterCheck(int(clusterId64))
 
-	// Check mewld instance list if the cluster actually exists
-	var flag bool
-	for _, v := range state.MewldInstanceList.Instances {
-		if v.ClusterID == int(clusterId) {
-			flag = true
-			break
-		}
+	if !ok {
+		return hresp
 	}
 
-	if !flag {
-		return uapi.HttpResponse{
-			Status: http.StatusNotFound,
-			Json: types.ApiError{
-				Message: "Cluster not found",
-			},
-		}
-	}
-
-	modules, err := state.CachedAnimusMagicClient.GetClusterModules(d.Context, state.Rueidis, clusterId)
+	modules, err := state.CachedAnimusMagicClient.GetClusterModules(d.Context, state.Rueidis, uint16(clusterId64))
 
 	if err != nil {
 		return uapi.HttpResponse{

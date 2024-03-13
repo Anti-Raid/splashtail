@@ -113,6 +113,7 @@ impl AnimusMagicClient {
     /// This function never quits once executed
     pub async fn start_ipc_listener(
         &self,
+        pool: sqlx::PgPool,
         cache_http: CacheHttpImpl,
 
         #[allow(unused_variables)] // To be used in the future
@@ -279,6 +280,7 @@ impl AnimusMagicClient {
                     }
 
                     let cache_http = cache_http.clone();
+                    let pool = pool.clone();
                     let redis_pool = self.redis_pool.clone();
 
                     let client = AnimusMagicClient {
@@ -341,7 +343,7 @@ impl AnimusMagicClient {
                             }
                         };
 
-                        let data = match msg.response(&cache_http).await {
+                        let data = match msg.response(&pool, &cache_http).await {
                             Ok(data) => data,
                             Err(e) => {
                                 log::warn!(

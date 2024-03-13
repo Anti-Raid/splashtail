@@ -9,7 +9,7 @@ mod tasks;
 use silverpelt::{
     silverpelt_cache::SILVERPELT_CACHE,
     EventHandlerContext,
-    module_config::{get_command_configuration, is_module_enabled},
+    module_config::is_module_enabled,
     gwevent::core::get_event_guild_id,
 };
 use crate::impls::cache::CacheHttpImpl;
@@ -178,12 +178,13 @@ async fn event_listener<'a>(
                 });
 
                 // And for animus magic
+                let pool = data.pool.clone();
                 let ch = CacheHttpImpl::from_ctx(ctx.serenity_context);
                 let sm = ctx.shard_manager().clone();
                 let am_ref = data.animus_magic_ipc.clone();
                 tokio::task::spawn(async move {
                     let am_ref = am_ref;
-                    am_ref.start_ipc_listener(ch, sm).await;
+                    am_ref.start_ipc_listener(pool, ch, sm).await;
                 });
             }
 
@@ -403,192 +404,26 @@ async fn main() {
                     return Ok(false);
                 }
 
+                let Some(guild_id) = ctx.guild_id() else {
+                    return Err("This command can only be run from servers".into())
+                };
+
+                let data = ctx.data();
+
                 let command = ctx.command();
 
-                // Check COMMAND_ID_MODULE_MAP
-                if !SILVERPELT_CACHE
-                    .command_id_module_map
-                    .contains_key(&command.name)
+                match silverpelt::cmd::check_command(
+                    command.name.as_str(),
+                    &command.qualified_name,
+                    guild_id,
+                    ctx.author().id,
+                    &data.pool,
+                    &CacheHttpImpl::from_ctx(ctx.serenity_context())
+                )
+                .await
                 {
-                    return Err(
-                        "This command is not registered in the database, please contact support"
-                            .into(),
-                    );
-                }
-
-                let module = SILVERPELT_CACHE
-                    .command_id_module_map
-                    .get(&command.name)
-                    .unwrap();
-
-                if module == "root" {
-                    if !crate::config::CONFIG
-                        .discord_auth
-                        .root_users
-                        .contains(&ctx.author().id)
-                    {
-                        return Err("Root commands are off-limits unless you are a bot owner or otherwise have been granted authorization!".into());
-                    }
-                    return Ok(true);
-                }
-
-                // Look for guild
-                if let Some(guild_id) = ctx.guild_id() {
-                    if ["register"].contains(&ctx.command().name.as_str()) {
-                        return Ok(true);
-                    }
-
-                    let data = ctx.data();
-
-                    let guild = sqlx::query!(
-                        "SELECT COUNT(*) FROM guilds WHERE id = $1",
-                        guild_id.to_string()
-                    )
-                    .fetch_one(&data.pool)
-                    .await?;
-
-                    if guild.count.unwrap_or_default() == 0 {
-                        // Guild not found, create it
-                        sqlx::query!("INSERT INTO guilds (id) VALUES ($1)", guild_id.to_string())
-                            .execute(&data.pool)
-                            .await?;
-                    }
-
-                    let key = SILVERPELT_CACHE
-                        .command_permission_cache
-                        .get(&(guild_id, ctx.author().id))
-                        .await;
-
-                    if let Some(ref map) = key {
-                        let cpr = map.get(&ctx.command().qualified_name);
-
-                        if let Some(cpr) = cpr {
-                            match cpr {
-                                Ok(()) => return Ok(true),
-                                Err(e) => {
-                                    return Err(e.to_string().into())
-                                }
-                            }
-                        }
-                    }
-
-                    let Some(member) = ctx.author_member().await else {
-                        return Err("You must be in a server to run this command".into());
-                    };
-
-                    let (cmd_data, command_config, module_config) =
-                        get_command_configuration(
-                            &data.pool,
-                            guild_id.to_string().as_str(),
-                            ctx.command().qualified_name.as_str(),
-                        )
-                        .await?;
-
-                    let command_config = command_config.unwrap_or(silverpelt::GuildCommandConfiguration {
-                        id: "".to_string(),
-                        guild_id: guild_id.to_string(),
-                        command: ctx.command().qualified_name.clone(),
-                        perms: None,
-                        disabled: None,
-                    });
-
-                    let module_config = module_config.unwrap_or(silverpelt::GuildModuleConfiguration {
-                        id: "".to_string(),
-                        guild_id: guild_id.to_string(),
-                        module: module.clone(),
-                        disabled: None,
-                    });
-
-                    let (is_owner, member_perms) = if let Some(guild) = ctx.guild() {
-                        let is_owner = member.user.id == guild.owner_id;
-
-                        let member_perms = {
-                            if is_owner {
-                                serenity::model::permissions::Permissions::all()
-                            } else {
-                                guild.member_permissions(&member)
-                            }
-                        };
-
-                        drop(guild);
-
-                        (is_owner, member_perms)
-                    } else {
-                        return Err("Your guild has not been cached yet? Please contact support after trying again as this should NEVER happen!".into());
-                    };
-
-                    if is_owner {
-                        return Ok(true);
-                    }
-
-                    let kittycat_perms = silverpelt::member_permission_calc::get_kittycat_perms(&data.pool, guild_id, member.user.id, &member.roles).await?;
-
-                    info!(
-                        "Checking if user {} ({}) can run command {} with permissions {:?}",
-                        member.user.name,
-                        member.user.id,
-                        ctx.command().qualified_name,
-                        member_perms
-                    );
-                    if let Err(e) = silverpelt::permissions::can_run_command(
-                        &cmd_data,
-                        &command_config,
-                        &module_config,
-                        &ctx.command().qualified_name,
-                        member_perms,
-                        &kittycat_perms,
-                    ) {
-                        let err = format!("{}\n\n**Code**: {}", e.1, e.0);
-
-                        let mut key = SILVERPELT_CACHE
-                        .command_permission_cache
-                        .get(&(guild_id, ctx.author().id))
-                        .await;
-                    
-                        if let Some(ref mut map) = key {
-                            map.insert(
-                                ctx.command().qualified_name.clone(),
-                                Err(err.clone()),
-                            );
-                        } else {
-                            let mut map = indexmap::IndexMap::new();
-                            map.insert(
-                                ctx.command().qualified_name.clone(),
-                                Err(err.clone()),
-                            );
-                            SILVERPELT_CACHE
-                                .command_permission_cache
-                                .insert((guild_id, ctx.author().id), map)
-                                .await;
-                        }
-
-                        return Err(err.into());
-                    }
-
-                    let mut key = SILVERPELT_CACHE
-                        .command_permission_cache
-                        .get(&(guild_id, ctx.author().id))
-                        .await;
-                    if let Some(ref mut map) = key {
-                        map.insert(
-                            ctx.command().qualified_name.clone(),
-                            Ok(()),
-                        );
-                    } else {
-                        let mut map = indexmap::IndexMap::new();
-                        map.insert(
-                            ctx.command().qualified_name.clone(),
-                            Ok(()),
-                        );
-                        SILVERPELT_CACHE
-                            .command_permission_cache
-                            .insert((guild_id, ctx.author().id), map)
-                            .await;
-                    }
-
-                    Ok(true)
-                } else {
-                    Err("This command can only be run from servers".into())
+                    Ok(_) => Ok(true),
+                    Err(e) => Err(e),
                 }
             })
         }),

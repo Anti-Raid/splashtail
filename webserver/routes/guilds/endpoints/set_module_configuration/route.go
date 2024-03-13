@@ -1,29 +1,30 @@
-package get_user_guild_base_info
+package set_module_configuration
 
 import (
-	"errors"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/anti-raid/splashtail/splashcore/animusmagic"
+	"github.com/anti-raid/splashtail/splashcore/silverpelt"
 	"github.com/anti-raid/splashtail/splashcore/types"
 	"github.com/anti-raid/splashtail/splashcore/utils"
 	"github.com/anti-raid/splashtail/splashcore/utils/mewext"
 	"github.com/anti-raid/splashtail/webserver/state"
 	"github.com/anti-raid/splashtail/webserver/webutils"
 	"github.com/go-chi/chi/v5"
-	"go.uber.org/zap"
-
 	docs "github.com/infinitybotlist/eureka/doclib"
 	"github.com/infinitybotlist/eureka/ratelimit"
 	"github.com/infinitybotlist/eureka/uapi"
+	"go.uber.org/zap"
 )
 
 func Docs() *docs.Doc {
 	return &docs.Doc{
-		Summary:     "Get User Guild Base Info",
-		Description: "This endpoint will return basic user and guild information given their IDs",
-		Resp:        types.UserGuildBaseData{},
+		Summary:     "Set Module Configuration",
+		Description: "Edit the configration for a specific module",
+		Req:         silverpelt.GuildModuleConfiguration{},
+		Resp:        silverpelt.GuildModuleConfiguration{},
 		Params: []docs.Parameter{
 			{
 				Name:        "user_id",
@@ -45,9 +46,9 @@ func Docs() *docs.Doc {
 
 func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 	limit, err := ratelimit.Ratelimit{
-		Expiry:      5 * time.Minute,
-		MaxRequests: 5,
-		Bucket:      "get_user_guild_base_info",
+		Expiry:      2 * time.Minute,
+		MaxRequests: 10,
+		Bucket:      "module_configuration",
 	}.Limit(d.Context, r)
 
 	if err != nil {
@@ -93,83 +94,89 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 		return hresp
 	}
 
-	resps, err := state.AnimusMagicClient.Request(
-		d.Context,
-		state.Rueidis,
-		animusmagic.BotAnimusMessage{
-			BaseGuildUserInfo: &struct {
-				GuildID string `json:"guild_id"`
-				UserID  string `json:"user_id"`
-			}{
-				GuildID: guildId,
-				UserID:  userId,
+	var gmc *silverpelt.GuildModuleConfiguration
+	resp, ok := uapi.MarshalReqWithHeaders(r, &gmc, limit.Headers())
+
+	if !ok {
+		return resp
+	}
+
+	if gmc.GuildID != guildId {
+		return uapi.HttpResponse{
+			Json: types.ApiError{
+				Message: "Guild ID in body does not match guild ID in URL",
 			},
-		},
-		&animusmagic.RequestOptions{
-			ClusterID: utils.Pointer(uint16(clusterId)),
-		},
-	)
+			Status: http.StatusBadRequest,
+		}
+	}
+
+	// INSERT ON CONFLICT UPDATE RETURNING id
+	var id string
+	err = state.Pool.QueryRow(
+		d.Context,
+		"INSERT INTO guild_module_configurations (guild_id, module, disabled) VALUES ($1, $2, $3) ON CONFLICT (guild_id, module) DO UPDATE SET disabled = $3 RETURNING id",
+		gmc.GuildID,
+		gmc.Module,
+		gmc.Disabled,
+	).Scan(&id)
 
 	if err != nil {
-		state.Logger.Error("Error sending request to animus magic", zap.Error(err))
+		state.Logger.Error("Failed to insert guild_module_configuration", zap.Error(err))
+		return uapi.HttpResponse{
+			Json: types.ApiError{
+				Message: "Failed to insert guild_module_configuration: " + err.Error(),
+			},
+			Status: http.StatusInternalServerError,
+		}
+	}
 
-		if errors.Is(err, animusmagic.ErrOpError) && len(resps) > 0 {
-			p, err := animusmagic.ParseClientResponse[animusmagic.BotAnimusResponse](resps[0])
+	if gmc.Disabled != nil {
+		resps, err := state.AnimusMagicClient.Request(
+			d.Context,
+			state.Rueidis,
+			animusmagic.BotAnimusMessage{
+				ToggleModule: &struct {
+					GuildID string `json:"guild_id"`
+					Module  string `json:"module"`
+					Enabled bool   `json:"enabled"`
+				}{
+					GuildID: guildId,
+					Module:  gmc.Module,
+					Enabled: !*gmc.Disabled,
+				},
+			},
+			&animusmagic.RequestOptions{
+				ClusterID: utils.Pointer(uint16(clusterId)),
+			},
+		)
 
-			if err != nil {
-				state.Logger.Error("Error parsing response", zap.Error(err))
-				return uapi.HttpResponse{
-					Status: http.StatusInternalServerError,
-					Json: types.ApiError{
-						Message: "Error parsing error response: " + err.Error(),
-					},
-				}
-			}
-
+		if err != nil {
 			return uapi.HttpResponse{
 				Status: http.StatusInternalServerError,
-				Json:   p.Err,
+				Json: types.ApiError{
+					Message: "Error sending request to animus magic: " + err.Error(),
+				},
 				Headers: map[string]string{
 					"Retry-After": "10",
 				},
 			}
 		}
 
-		return uapi.HttpResponse{
-			Status: http.StatusInternalServerError,
-			Json: types.ApiError{
-				Message: "Error sending request to animus magic: " + err.Error(),
-			},
-			Headers: map[string]string{
-				"Retry-After": "10",
-			},
+		if len(resps) != 1 {
+			return uapi.HttpResponse{
+				Status: http.StatusInternalServerError,
+				Json: types.ApiError{
+					Message: "Error sending request to animus magic: [unexpected response count of " + strconv.Itoa(len(resps)) + "]",
+				},
+				Headers: map[string]string{
+					"Retry-After": "10",
+				},
+			}
 		}
 	}
 
-	if len(resps) != 1 {
-		return uapi.HttpResponse{
-			Status: http.StatusInternalServerError,
-			Json: types.ApiError{
-				Message: "Unexpected number of responses",
-			},
-		}
-	}
-
-	resp := resps[0]
-
-	pr, err := animusmagic.ParseClientResponse[animusmagic.BotAnimusResponse](resp)
-
-	if err != nil {
-		state.Logger.Error("Error parsing response", zap.Error(err))
-		return uapi.HttpResponse{
-			Status: http.StatusInternalServerError,
-			Json: types.ApiError{
-				Message: "Error parsing response: " + err.Error(),
-			},
-		}
-	}
-
+	gmc.ID = id
 	return uapi.HttpResponse{
-		Json: pr.Resp.BaseGuildUserInfo,
+		Json: gmc,
 	}
 }
