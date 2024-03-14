@@ -51,7 +51,7 @@ pub async fn check_command(
         .await;
 
     if let Some(ref map) = key {
-        let cpr = map.get(base_command);
+        let cpr = map.get(command);
 
         if let Some(cpr) = cpr {
             return cpr.clone();
