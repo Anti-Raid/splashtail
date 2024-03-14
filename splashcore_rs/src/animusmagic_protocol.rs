@@ -82,6 +82,16 @@ pub struct AnimusErrorResponse {
     pub context: String,
 }
 
+// Impl From trait for converting a display to an AnimusErrorResponse
+impl<T: core::fmt::Display> From<T> for AnimusErrorResponse {
+    fn from(e: T) -> Self {
+        Self {
+            message: "Failed to create response".to_string(),
+            context: e.to_string(),
+        }
+    }
+}
+
 /// Wrapper to parse a payload to a struct T
 pub fn from_payload<T: for<'a> Deserialize<'a>>(payload: &[u8]) -> Result<T, crate::Error> {
     let msg = serde_cbor::from_slice::<T>(payload)?;

@@ -6,8 +6,8 @@ use crate::silverpelt::{
     canonical_module::CanonicalModule,
     silverpelt_cache::SILVERPELT_CACHE,
 };
+use splashcore_rs::animusmagic_protocol::AnimusErrorResponse;
 use crate::silverpelt;
-use crate::Error;
 
 use sqlx::PgPool;
 use serde::{Deserialize, Serialize};
@@ -56,7 +56,7 @@ pub enum BotAnimusMessage {
 }
 
 impl BotAnimusMessage {
-    pub async fn response(&self, pool: &PgPool, cache_http: &CacheHttpImpl) -> Result<BotAnimusResponse, Error> {
+    pub async fn response(&self, pool: &PgPool, cache_http: &CacheHttpImpl) -> Result<BotAnimusResponse, AnimusErrorResponse> {
         match self {
             Self::Modules {} => {
                 let mut modules = Vec::new();
@@ -136,10 +136,11 @@ impl BotAnimusMessage {
                 )
                 .await
                 {
-                    Ok(m) => Ok(BotAnimusResponse::Ok {
-                        message: m
+                    Ok(m) => Ok(BotAnimusResponse::Ok { message: m }),
+                    Err(e) => Err(AnimusErrorResponse {
+                        message: e.code,
+                        context: e.message,
                     }),
-                    Err(e) => Err(e),
                 }
             },
             Self::ToggleModule { guild_id, module, enabled } => {

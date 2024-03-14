@@ -6,7 +6,8 @@ env:
 names: 
   - "Flare"
   - "Waffle"
-  - "Aqua"
+  - "Struma"
+  - "Oppenheimer"
 module: botv2
 redis_channel: ar_clusters/staging
 interp: 

@@ -353,10 +353,7 @@ impl AnimusMagicClient {
                                 // Send error
                                 if let Err(e) = client.error(
                                     &meta.command_id,
-                                    AnimusErrorResponse {
-                                        message: "Failed to create response".to_string(),
-                                        context: e.to_string(),
-                                    },
+                                    e,
                                     meta.cluster_id_from,
                                     meta.from,
                                 )

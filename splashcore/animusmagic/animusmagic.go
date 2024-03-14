@@ -288,7 +288,7 @@ func (c *AnimusMagicClient) CreatePayload(
 	clusterIdTo uint16,
 	op AnimusOp,
 	commandId string,
-	resp any,
+	data any,
 ) ([]byte, error) {
 	var finalPayload = []byte{
 		byte(from),
@@ -302,7 +302,7 @@ func (c *AnimusMagicClient) CreatePayload(
 
 	finalPayload = append(finalPayload, []byte(commandId+"/")...)
 
-	payload, err := SerializeData(resp)
+	payload, err := SerializeData(data)
 
 	if err != nil {
 		return nil, err

@@ -4,6 +4,7 @@ go 1.21.5
 
 require (
 	github.com/anti-raid/splashtail v0.0.0-20240313102422-183acf67fdb5
+	github.com/davecgh/go-spew v1.1.1
 	github.com/infinitybotlist/eureka v0.10.0
 	github.com/redis/rueidis v1.0.31
 	go.uber.org/zap v1.27.0

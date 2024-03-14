@@ -410,6 +410,20 @@ async fn main() {
 
                 let data = ctx.data();
 
+                let guild = sqlx::query!(
+                    "SELECT COUNT(*) FROM guilds WHERE id = $1",
+                    guild_id.to_string()
+                )
+                .fetch_one(&data.pool)
+                .await?;
+
+                if guild.count.unwrap_or_default() == 0 {
+                    // Guild not found, create it
+                    sqlx::query!("INSERT INTO guilds (id) VALUES ($1)", guild_id.to_string())
+                        .execute(&data.pool)
+                        .await?;
+                }
+
                 let command = ctx.command();
 
                 match silverpelt::cmd::check_command(
@@ -423,7 +437,10 @@ async fn main() {
                 .await
                 {
                     Ok(_) => Ok(true),
-                    Err(e) => Err(e),
+                    // TODO: Parse this a bit better
+                    Err(e) => Err(
+                        format!("{}\n\n**Code:** {}", e.message, e.code).into()
+                    ),
                 }
             })
         }),

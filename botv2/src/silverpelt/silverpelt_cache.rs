@@ -2,7 +2,7 @@ use indexmap::IndexMap;
 use moka::future::Cache;
 use once_cell::sync::Lazy;
 use serenity::all::{GuildId, UserId};
-use super::{CommandExtendedDataMap, Module, ModuleEventHandler, canonical_module::CanonicalModule};
+use super::{CommandExtendedDataMap, Module, ModuleEventHandler, canonical_module::CanonicalModule, cmd::CheckCommandError};
 
 /// The silverpelt cache is a structure that contains the core state for the bot
 pub struct SilverpeltCache {
@@ -10,7 +10,7 @@ pub struct SilverpeltCache {
     pub module_enabled_cache: Cache<(GuildId, String), bool>,
 
     /// Cache of whether a (GuildId, UserId) pair has the permission to run a command
-    pub command_permission_cache: Cache<(GuildId, UserId), IndexMap<String, Result<(), String>>>,
+    pub command_permission_cache: Cache<(GuildId, UserId), IndexMap<String, Result<(), CheckCommandError>>>,
 
     /// Cache of the extended data given a command (the extended data map stores the default base permissions and other data per command)
     pub command_extra_data_map: dashmap::DashMap<String, CommandExtendedDataMap>,

@@ -5,6 +5,22 @@ use serenity::all::{GuildId, UserId};
 use sqlx::PgPool;
 use log::info;
 
+#[derive(Clone, Debug)]
+pub struct CheckCommandError {
+    pub code: String,
+    pub message: String,
+}
+
+// Impl From trait for all types satisfying Display
+impl<T: core::fmt::Display> From<T> for CheckCommandError {
+    fn from(e: T) -> Self {
+        Self {
+            code: "generic_error".to_string(),
+            message: e.to_string(),
+        }
+    }
+}
+
 pub async fn check_command(
     base_command: &str,
     command: &str,
@@ -12,7 +28,7 @@ pub async fn check_command(
     user_id: UserId,
     pool: &PgPool,
     cache_http: &CacheHttpImpl
-) -> Result<String, crate::Error> {
+) -> Result<String, CheckCommandError> {
     if !SILVERPELT_CACHE
                     .command_id_module_map
                     .contains_key(base_command)
@@ -43,20 +59,6 @@ pub async fn check_command(
                     return Ok("register_cmd".to_string());
                 }
 
-                let guild = sqlx::query!(
-                    "SELECT COUNT(*) FROM guilds WHERE id = $1",
-                    guild_id.to_string()
-                )
-                .fetch_one(pool)
-                .await?;
-
-                if guild.count.unwrap_or_default() == 0 {
-                    // Guild not found, create it
-                    sqlx::query!("INSERT INTO guilds (id) VALUES ($1)", guild_id.to_string())
-                        .execute(pool)
-                        .await?;
-                }
-
                 let key = SILVERPELT_CACHE
                     .command_permission_cache
                     .get(&(guild_id, user_id))
@@ -69,7 +71,7 @@ pub async fn check_command(
                         match cpr {
                             Ok(()) => return Ok("cached".to_string()),
                             Err(e) => {
-                                return Err(e.to_string().into())
+                                return Err(e.clone())
                             }
                         }
                     }
@@ -138,7 +140,10 @@ pub async fn check_command(
                     member_perms,
                     &kittycat_perms,
                 ) {
-                    let err = format!("{}\n\n**Code**: {}", e.1, e.0);
+                    let err = CheckCommandError {
+                        code: e.0,
+                        message: e.1.to_string(),
+                    };
 
                     let mut key = SILVERPELT_CACHE
                     .command_permission_cache

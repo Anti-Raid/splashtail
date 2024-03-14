@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -10,6 +11,7 @@ import (
 	"time"
 
 	"github.com/anti-raid/splashtail/splashcore/animusmagic"
+	"github.com/davecgh/go-spew/spew"
 	"github.com/infinitybotlist/eureka/shellcli"
 	"github.com/redis/rueidis"
 	"go.uber.org/zap"
@@ -280,7 +282,7 @@ func main() {
 				},
 			},
 			"observe": {
-				Description: "Observes the animus magic channel. Not yet working",
+				Description: "Observes the animus magic channel",
 				Args: [][3]string{
 					{"timeout", "Timeout in seconds", ""},
 				},
@@ -378,14 +380,200 @@ func main() {
 			"request": {
 				Description: "Sends a request to animus magic",
 				Args: [][3]string{
-					{"to", "Target", "0"},
+					{"to", "Target", ""},
+					{"clusterIdTo", "Cluster ID to send to", ""},
 					{"op", "Operation", "0"},
-					{"opName", "Operation Name", ""},
+					{"key", "Animuc magic request key", ""},
 					{"[fields]", "Fields in format a=b", ""},
 					{"timeout", "Timeout in seconds", "5"},
 				},
 				Run: func(a *shellcli.ShellCli[AnimusCliData], args map[string]string) error {
-					return fmt.Errorf("not implemented")
+					if !a.Data.Connected {
+						return fmt.Errorf("not connected")
+					}
+
+					timeout, ok := args["timeout"]
+
+					if !ok {
+						timeout = "5"
+					}
+
+					var timeoutInt int
+
+					if timeout != "" {
+						var err error
+						timeoutInt, err = strconv.Atoi(timeout)
+
+						if err != nil {
+							return fmt.Errorf("error converting timeout to integer: %s", err)
+						}
+					}
+
+					opStr, ok := args["op"]
+
+					if !ok {
+						opStr = "0"
+					}
+
+					op, ok := animusmagic.StringToAnimusOp(opStr)
+
+					if !ok {
+						return fmt.Errorf("invalid operation")
+					}
+
+					key, ok := args["key"]
+
+					if !ok {
+						return fmt.Errorf("key is required to create payload")
+					}
+
+					to, ok := args["to"]
+
+					if !ok {
+						return fmt.Errorf("to is required [bot/jobs/webserver/infra etc.]")
+					}
+
+					toTarget, ok := animusmagic.StringToAnimusTarget(to)
+
+					if !ok {
+						return fmt.Errorf("invalid target")
+					}
+
+					clusterIdTo, ok := args["clusterIdTo"]
+
+					if !ok {
+						return fmt.Errorf("clusterIdTo is required. Use 'wildcard' for wildcard cluster")
+					}
+
+					var clusterIdToInt int
+					var err error
+
+					if clusterIdTo == "wildcard" {
+						clusterIdToInt = animusmagic.WildcardClusterID
+					} else {
+						clusterIdToInt, err = strconv.Atoi(clusterIdTo)
+
+						if err != nil {
+							return fmt.Errorf("error converting clusterIdTo to integer: %s", err)
+						}
+					}
+
+					var data = map[string]any{}
+
+					for arg, value := range args {
+						if arg != "to" && arg != "op" && arg != "key" && arg != "timeout" && arg != "clusterIdTo" {
+							argSplit := strings.Split(arg, "@")
+
+							if len(argSplit) == 1 {
+								argSplit = []string{argSplit[0], "str"}
+							}
+
+							var valueParsed any
+							switch argSplit[1] {
+							case "string":
+								fallthrough
+							case "str":
+								valueParsed = value
+							case "int":
+								valueParsedInt, err := strconv.Atoi(value)
+
+								if err != nil {
+									return fmt.Errorf("error parsing int: %s", err)
+								}
+
+								valueParsed = valueParsedInt
+							case "float":
+								valueParsedFloat, err := strconv.ParseFloat(value, 64)
+
+								if err != nil {
+									return fmt.Errorf("error parsing float: %s", err)
+								}
+
+								valueParsed = valueParsedFloat
+							case "bool":
+								valueParsedBool, err := strconv.ParseBool(value)
+
+								if err != nil {
+									return fmt.Errorf("error parsing bool: %s", err)
+								}
+
+								valueParsed = valueParsedBool
+							case "json":
+								err := json.Unmarshal([]byte(value), &valueParsed)
+
+								if err != nil {
+									return fmt.Errorf("error parsing json: %s", err)
+								}
+							default:
+								return fmt.Errorf("invalid type for key %s: %s", value, argSplit[1])
+							}
+
+							data[argSplit[0]] = valueParsed
+						}
+					}
+
+					// Construct payload
+					commandId := animusmagic.NewCommandId()
+					initData := map[string]any{
+						key: data,
+					}
+					payload, err := a.Data.AnimusMagicClient.CreatePayload(
+						a.Data.AnimusMagicClient.From,
+						toTarget,
+						a.Data.AnimusMagicClient.ClusterID,
+						uint16(clusterIdToInt),
+						op,
+						commandId,
+						initData,
+					)
+
+					if err != nil {
+						return fmt.Errorf("error creating payload: %s", err)
+					}
+
+					fmt.Println(spew.Sdump(initData))
+					fmt.Println(spew.Sdump(payload))
+					fmt.Println("Sending request with commandId:", commandId, "and timeout:", timeoutInt, " seconds")
+
+					// Create a channel to receive the response
+					notify := a.Data.AnimusMagicClient.CreateNotifier(commandId, 0)
+
+					// Publish the payload
+					err = a.Data.AnimusMagicClient.Publish(a.Data.Context, a.Data.Rueidis, payload)
+
+					if err != nil {
+						// Remove the notifier
+						a.Data.AnimusMagicClient.CloseNotifier(commandId)
+						return fmt.Errorf("error publishing payload: %s", err)
+					}
+
+					// Wait for the response
+					ticker := time.NewTicker(time.Second * time.Duration(timeoutInt))
+					startTime := time.Now()
+					for {
+						select {
+						case <-a.Data.Context.Done():
+							return fmt.Errorf("context cancelled")
+						case <-ticker.C:
+							return nil
+						case response := <-notify:
+							since := time.Since(startTime)
+							go func() {
+								// Try parsing the response
+								var resp any
+
+								err := animusmagic.DeserializeData(response.RawPayload, &resp)
+
+								fmt.Print(
+									prettyPrintAnimusMessageMetadata(response.Meta),
+									"\nElapsed Time: ", since,
+									"\nResponse: ", resp,
+									"\nDeserializeErrors:", err,
+									"\n\n",
+								)
+							}()
+						}
+					}
 				},
 			},
 		},
