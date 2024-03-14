@@ -4,18 +4,141 @@ use super::{
     silverpelt_cache::SILVERPELT_CACHE,
 };
 use indexmap::indexmap;
+use serde::{Deserialize, Serialize};
+
+#[derive(Clone, Serialize, Deserialize)]
+#[serde(tag = "var")]
+pub enum PermissionResult {
+    Ok {},
+    OkWithMessage {
+        message: String,
+    },
+    MissingKittycatPerms {
+        check: PermissionCheck,
+    },
+    MissingNativePerms {
+        check: PermissionCheck,
+    },
+    MissingAnyPerms {
+        check: PermissionCheck,
+    },
+    CommandDisabled {
+        command_config: GuildCommandConfiguration,
+    },
+    UnknownModule {
+        module_config: GuildModuleConfiguration,
+    },
+    ModuleDisabled {
+        module_config: GuildModuleConfiguration,
+    },
+    NoChecksSucceeded {
+        checks: PermissionChecks,
+    },
+    MissingMinChecks {
+        checks: PermissionChecks,
+    },
+    DiscordError {
+        error: String,
+    },
+    GenericError {
+        error: String,
+    }
+}
+
+impl<T: core::fmt::Display> From<T> for PermissionResult {
+    fn from(e: T) -> Self {
+        PermissionResult::GenericError {
+            error: e.to_string(),
+        }
+    }
+}
+
+impl PermissionResult {
+    pub fn code(&self) -> &'static str {
+        match self {
+            PermissionResult::Ok { .. } => "ok",
+            PermissionResult::OkWithMessage { .. } => "ok_with_message",
+            PermissionResult::MissingKittycatPerms { .. } => "missing_kittycat_perms",
+            PermissionResult::MissingNativePerms { .. } => "missing_native_perms",
+            PermissionResult::MissingAnyPerms { .. } => "missing_any_perms",
+            PermissionResult::CommandDisabled { .. } => "command_disabled",
+            PermissionResult::UnknownModule { .. } => "unknown_module",
+            PermissionResult::ModuleDisabled { .. } => "module_disabled",
+            PermissionResult::NoChecksSucceeded { .. } => "no_checks_succeeded",
+            PermissionResult::MissingMinChecks { .. } => "missing_min_checks",
+            PermissionResult::DiscordError { .. } => "discord_error",
+            PermissionResult::GenericError { .. } => "generic_error",
+        }
+    }
+
+    pub fn is_ok(&self) -> bool {
+        matches!(self, PermissionResult::Ok { .. } | PermissionResult::OkWithMessage { .. })
+    }
+
+    pub fn to_markdown(&self) -> String {
+        match self {
+            PermissionResult::Ok { .. } => "No message/context available".to_string(),
+            PermissionResult::OkWithMessage { message } => message.clone(),
+            PermissionResult::MissingKittycatPerms { check } => {
+                format!(
+                    "You do not have the required permissions to run this command. Try checking that you have the below permissions: {}",
+                    check
+                )
+            }
+            PermissionResult::MissingNativePerms { check } => {
+                format!(
+                    "You do not have the required permissions to run this command. Try checking that you have the below permissions: {}",
+                    check
+                )
+            }
+            PermissionResult::MissingAnyPerms { check } => {
+                format!(
+                    "You do not have the required permissions to run this command. Try checking that you have the below permissions: {}",
+                    check
+                )
+            }
+            PermissionResult::CommandDisabled { command_config } => {
+                format!(
+                    "The command ``{}`` (inherited from ``{}``) is disabled on this server",
+                    command_config.command, command_config.command
+                )
+            }
+            PermissionResult::UnknownModule { module_config } => {
+                format!("The module ``{}`` does not exist", module_config.module)
+            }
+            PermissionResult::ModuleDisabled { module_config } => {
+                format!("The module ``{}`` is disabled on this server", module_config.module)
+            }
+            PermissionResult::NoChecksSucceeded { checks } => {
+                format!(
+                    "You do not have the required permissions to run this command. You need at least one of the following permissions to execute this command:\n\n**Required Permissions**: {}",
+                    checks
+                )
+            }
+            PermissionResult::MissingMinChecks { checks } => {
+                format!(
+                    "You do not have the required permissions to run this command. You need at least {} of the following permissions to execute this command:\n\n**Required Permissions**: {}",
+                    checks.checks_needed, checks
+                )
+            }
+            PermissionResult::DiscordError { error } => {
+                format!("A Discord-related error seems to have occurred: {}.\n\nPlease try again later, it might work!", error)
+            }
+            PermissionResult::GenericError { error } => error.clone(),
+        }
+    }
+}
 
 /// This function runs a single permission check on a command without taking any branching decisions
 ///
 /// This may be useful when mocking or visualizing a permission check
 pub fn check_perms_single(
-    cmd_qualified_name: &str,
     check: &PermissionCheck,
     member_native_perms: serenity::all::Permissions,
     member_kittycat_perms: &[String],
-) -> Result<(), (String, crate::Error)> {
+) -> PermissionResult {
     if check.kittycat_perms.is_empty() && check.native_perms.is_empty() {
-        return Ok(()); // Short-circuit if we don't have any permissions to check
+        return PermissionResult::Ok {}; // Short-circuit if we don't have any permissions to check
     }
 
     // Check if we have ADMINISTRATOR
@@ -26,24 +149,18 @@ pub fn check_perms_single(
         // inner AND, short-circuit if we don't have the permission
         for perm in &check.kittycat_perms {
             if !kittycat::perms::has_perm(member_kittycat_perms, perm) {
-                return Err(
-                    (
-                        "missing_kittycat_perms".into(),
-                        format!("You do not have the required permissions to run this command ``{}``. Try checking that you have the below permissions: {}", cmd_qualified_name, check).into()
-                    )
-                );
+                return PermissionResult::MissingKittycatPerms {
+                    check: check.clone(),
+                };
             }
         }
 
         if !is_discord_admin {
             for perm in &check.native_perms {
                 if !member_native_perms.contains(*perm) {
-                    return Err(
-                        (
-                            "missing_native_perms".into(),
-                            format!("You do not have the required permissions to run this command ``{}``. Try checking that you have the below permissions: {}.", cmd_qualified_name, check).into()
-                        )
-                    );
+                    return PermissionResult::MissingNativePerms {
+                        check: check.clone(),
+                    };
                 }
             }
         }
@@ -61,17 +178,14 @@ pub fn check_perms_single(
                 .any(|perm| kittycat::perms::has_perm(member_kittycat_perms, perm));
 
             if !has_any_kc {
-                return Err(
-                    (
-                        "missing_any_perms".into(),
-                        format!("You do not have the required permissions to run this command ``{}``. Try checking that you have the below permissions: {}.", cmd_qualified_name, check).into()
-                    )
-                );
+                return PermissionResult::MissingAnyPerms {
+                    check: check.clone(),
+                };
             }
         }
     }
 
-    Ok(())
+    PermissionResult::Ok {}
 }
 
 pub fn can_run_command(
@@ -81,37 +195,26 @@ pub fn can_run_command(
     cmd_qualified_name: &str,
     member_native_perms: serenity::all::Permissions,
     member_kittycat_perms: &[String],
-) -> Result<(), (String, crate::Error)> {
-    log::debug!("Command config: {:?}", command_config);
+) -> PermissionResult {
+    log::debug!("Command config: {:?} [{}]", command_config, cmd_qualified_name);
 
     if command_config.disabled.unwrap_or(!cmd_data.is_default_enabled) {
-        return Err((
-            "command_disabled".into(),
-            format!(
-                "The command ``{}`` (inherited from ``{}``) is disabled on this server",
-                cmd_qualified_name, command_config.command
-            )
-            .into(),
-        ));
+        return PermissionResult::CommandDisabled {
+            command_config: command_config.clone(),
+        };
     }
 
     {
         let Some(module) = SILVERPELT_CACHE.module_id_cache.get(&module_config.module) else {
-            return Err((
-                "unknown_module".into(),
-                format!("The module ``{}`` does not exist", module_config.module).into(),
-            ));
+            return PermissionResult::UnknownModule {
+                module_config: module_config.clone(),
+            };
         };
 
         if module_config.disabled.unwrap_or(!module.is_default_enabled) {
-            return Err((
-                "module_disabled".into(),
-                format!(
-                    "The module ``{}`` is disabled on this server",
-                    module_config.module
-                )
-                .into(),
-            ));
+            return PermissionResult::ModuleDisabled {
+                module_config: module_config.clone(),
+            };
         }
     }
 
@@ -121,7 +224,7 @@ pub fn can_run_command(
         .unwrap_or(&cmd_data.default_perms);
 
     if perms.checks.is_empty() {
-        return Ok(());
+        return PermissionResult::Ok {};
     }
 
     // This stores whether or not we need to check the next permission AND the current one or OR the current one
@@ -131,16 +234,14 @@ pub fn can_run_command(
     for check in &perms.checks {
         // Run the check
         let res = check_perms_single(
-            cmd_qualified_name,
             check,
             member_native_perms,
             member_kittycat_perms,
         );
 
         if outer_and {
-            #[allow(clippy::question_mark)]
             // Question mark needs cloning which may harm performance
-            if res.is_err() {
+            if !res.is_ok() {
                 return res;
             }
 
@@ -164,28 +265,19 @@ pub fn can_run_command(
     }
 
     // Check the OR now
-    if perms.checks_needed == 0 {
-        if success == 0 {
-            return Err(
-                (
-                    "missing_any_perms".into(),
-                    format!("You do not have the required permissions to run this command ``{}``. You need at least one of the following permissions to execute this command:\n\n**Required Permissions**: {}", cmd_qualified_name, perms).into()
-                )
-            );
-        } else {
-            return Ok(());
-        }
-    } else if success < perms.checks_needed {
-        // TODO: Improve this and group the permissions in error
-        return Err(
-            (
-                "missing_min_checks".into(),
-                format!("You do not have the required permissions to run this command ``{}``. You need at least {} of the following permissions to execute this command:\n\n**Required Permissions**: {}", cmd_qualified_name, perms.checks_needed, perms).into()
-            )
-        );
+    if success == 0 {
+        return PermissionResult::NoChecksSucceeded {
+            checks: perms.clone(),
+        };
     }
 
-    Ok(())
+    if success < perms.checks_needed {
+        return PermissionResult::MissingMinChecks {
+            checks: perms.clone(),
+        };
+    }
+
+    PermissionResult::Ok {}
 }
 
 impl CommandExtendedData {
@@ -247,13 +339,10 @@ mod tests {
         }
     }
 
-    fn err_with_code(e: Result<(), (String, crate::Error)>, code: &str) -> bool {
-        if let Err((e_code, _)) = e {
-            println!("test_check_perms_single: {} == {}", e_code, code);
-            e_code == code
-        } else {
-            false
-        }
+    fn err_with_code(e: PermissionResult, code: &str) -> bool {
+        let code_got = e.code();
+        println!("test_check_perms_single: {} == {}", code_got, code);
+        code == code_got
     }
 
     #[test]
@@ -261,7 +350,6 @@ mod tests {
         // Basic tests
         assert!(err_with_code(
             check_perms_single(
-                "test",
                 &PermissionCheck {
                     kittycat_perms: vec![],
                     native_perms: vec![serenity::all::Permissions::ADMINISTRATOR],
@@ -275,7 +363,6 @@ mod tests {
         ));
 
         assert!(check_perms_single(
-            "test",
             &PermissionCheck {
                 kittycat_perms: vec![],
                 native_perms: vec![],
@@ -290,7 +377,6 @@ mod tests {
         // With inner and
         assert!(err_with_code(
             check_perms_single(
-                "test",
                 &PermissionCheck {
                     kittycat_perms: vec![],
                     native_perms: vec![
@@ -308,7 +394,6 @@ mod tests {
 
         // Admin overrides other native perms
         assert!(check_perms_single(
-            "test",
             &PermissionCheck {
                 kittycat_perms: vec![],
                 native_perms: vec![serenity::all::Permissions::BAN_MEMBERS],
@@ -323,7 +408,6 @@ mod tests {
         // Kittycat
         assert!(err_with_code(
             check_perms_single(
-                "test",
                 &PermissionCheck {
                     kittycat_perms: vec!["backups.create".to_string()],
                     native_perms: vec![],

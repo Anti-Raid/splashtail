@@ -4,6 +4,7 @@ use crate::impls::cache::CacheHttpImpl;
 /// To edit/add responses, add them both to bot.rs and to splashcore/animusmagic/types.go
 use crate::silverpelt::{
     canonical_module::CanonicalModule,
+    permissions::PermissionResult,
     silverpelt_cache::SILVERPELT_CACHE,
 };
 use splashcore_rs::animusmagic_protocol::AnimusErrorResponse;
@@ -33,6 +34,11 @@ pub enum BotAnimusResponse {
         user_roles: Vec<RoleId>,
         /// List of roles the bot has
         bot_roles: Vec<RoleId>,
+    },
+    /// Returns the response of a command permission check
+    CheckCommandPermission { 
+        perm_res: PermissionResult,
+        is_ok: bool,
     },
 }
 
@@ -126,7 +132,7 @@ impl BotAnimusMessage {
                 // Check COMMAND_ID_MODULE_MAP
                 let base_command = command.split_whitespace().next().unwrap();
                 
-                match silverpelt::cmd::check_command(
+                let perm_res = silverpelt::cmd::check_command(
                     base_command,
                     command,
                     *guild_id,
@@ -134,14 +140,14 @@ impl BotAnimusMessage {
                     pool,
                     cache_http,
                 )
-                .await
-                {
-                    Ok(m) => Ok(BotAnimusResponse::Ok { message: m }),
-                    Err(e) => Err(AnimusErrorResponse {
-                        message: e.code,
-                        context: e.message,
-                    }),
-                }
+                .await;
+
+                let is_ok = perm_res.is_ok();
+
+                Ok(BotAnimusResponse::CheckCommandPermission {
+                    perm_res,
+                    is_ok,
+                })
             },
             Self::ToggleModule { guild_id, module, enabled } => {
                 let guild_id = *guild_id;

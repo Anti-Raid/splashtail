@@ -426,7 +426,7 @@ async fn main() {
 
                 let command = ctx.command();
 
-                match silverpelt::cmd::check_command(
+                let res = silverpelt::cmd::check_command(
                     command.name.as_str(),
                     &command.qualified_name,
                     guild_id,
@@ -434,14 +434,13 @@ async fn main() {
                     &data.pool,
                     &CacheHttpImpl::from_ctx(ctx.serenity_context())
                 )
-                .await
-                {
-                    Ok(_) => Ok(true),
-                    // TODO: Parse this a bit better
-                    Err(e) => Err(
-                        format!("{}\n\n**Code:** {}", e.message, e.code).into()
-                    ),
+                .await;
+
+                if res.is_ok() {
+                    return Ok(true);
                 }
+
+                Err(res.to_markdown().into())
             })
         }),
         pre_command: |ctx| {
