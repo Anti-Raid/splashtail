@@ -2,10 +2,12 @@ use crate::Error;
 use indexmap::IndexMap;
 use log::warn;
 use serenity::all::{
-    ActionExecution, ChannelId, EmojiId, FullEvent, GenericId, GuildId, MessageId, RoleId,
-    RuleId as AutomodRuleId, UserId,
+    ActionExecution, ChannelId, EmojiId, FullEvent, GenericId, GuildChannel, GuildId, MessageId,
+    RoleId, RuleId as AutomodRuleId, UserId, CommandId, ApplicationId
 };
+use serenity::nonmax::NonMaxU16;
 use serenity::model::guild::automod::Action;
+use serenity::model::timestamp::Timestamp;
 use small_fixed_array::FixedString;
 use strum::VariantNames;
 
@@ -186,6 +188,10 @@ pub enum FieldType {
     /// A string
     Strings(Vec<String>),
 
+    Bool(bool),
+
+    Number(u64),
+
     /// A user id
     Users(Vec<UserId>),
 
@@ -200,6 +206,12 @@ pub enum FieldType {
 
     /// A guild id
     Guild(GuildId),
+    
+    // Command Id
+    Command(CommandId),
+
+    // Application Id
+    Application(ApplicationId),
 
     /// An emoji id
     Emojis(Vec<EmojiId>),
@@ -215,6 +227,9 @@ pub enum FieldType {
 
     // Trigger
     AutomodTrigger(serenity::model::guild::automod::Trigger),
+
+    // TimeStamp
+    TimeStamp(serenity::model::timestamp::Timestamp),
 }
 
 macro_rules! from_field_type {
@@ -252,6 +267,29 @@ impl From<GuildId> for FieldType {
     }
 }
 
+impl From<CommandId> for FieldType {
+    fn from(s: CommandId) -> Self {
+        Self::Command(s)
+    }
+}
+impl From<ApplicationId> for FieldType {
+    fn from(s: ApplicationId) -> Self {
+        Self::Application(s)
+    }
+}
+
+impl From<Timestamp> for FieldType {
+    fn from(s: Timestamp) -> Self {
+        Self::TimeStamp(s)
+    }
+}
+
+impl From<bool> for FieldType {
+    fn from(s: bool) -> Self {
+        Self::Bool(s)
+    }
+}
+
 impl From<serenity::model::guild::automod::Trigger> for FieldType {
     fn from(s: serenity::model::guild::automod::Trigger) -> Self {
         Self::AutomodTrigger(s)
@@ -261,6 +299,18 @@ impl From<serenity::model::guild::automod::Trigger> for FieldType {
 impl From<FixedString<u32>> for FieldType {
     fn from(s: FixedString<u32>) -> Self {
         Self::Strings(vec![s.to_string()])
+    }
+}
+
+impl From<FixedString<u16>> for FieldType {
+    fn from(s: FixedString<u16>) -> Self {
+        Self::Strings(vec![s.to_string()])
+    }
+}
+
+impl From<NonMaxU16> for FieldType {
+    fn from(s: NonMaxU16) -> Self {
+        Self::Number(s.get().into())
     }
 }
 
@@ -322,7 +372,7 @@ pub fn expand_event(event: &FullEvent) -> Option<IndexMap<String, Field>> {
                 _ => "Unknown".to_string(),
             },
         );
-        insert_field(fields, "content", execution.content.clone().into());
+        insert_field(fields, "content", execution.content.clone().into_string());
         insert_field(fields, "user_id", execution.user_id);
 
         insert_optional_field(fields, "channel_id", execution.channel_id);
@@ -332,8 +382,8 @@ pub fn expand_event(event: &FullEvent) -> Option<IndexMap<String, Field>> {
             "alert_system_message_id",
             execution.alert_system_message_id,
         );
-        insert_optional_field(fields, "matched_keyword", execution.matched_keyword.clone().into());
-        insert_optional_field(fields, "matched_content", execution.matched_content.clone().into());
+        insert_optional_field(fields, "matched_keyword", execution.matched_keyword.clone());
+        insert_optional_field(fields, "matched_content", execution.matched_content.clone());
     }
 
     fn expand_rule(
@@ -354,12 +404,56 @@ pub fn expand_event(event: &FullEvent) -> Option<IndexMap<String, Field>> {
                 _ => "Unknown".to_string(),
             },
         );
-        insert_field(fields, "trigger", rule.trigger);  
+        insert_field(fields, "trigger", rule.trigger.clone());
         insert_field(fields, "actions", rule.actions.clone().into_vec());
 
-        insert_field(fields, "enabled", rule.enabled.into());
-        insert_field(fields, "exempt_roles", rule.exempt_roles.clone().into());
-        insert_field(fields, "exempt_channels", rule.exempt_channels.clone().into());
+        insert_field(fields, "enabled", rule.enabled);
+        insert_field(fields, "exempt_roles", rule.exempt_roles.clone().into_vec());
+        insert_field(
+            fields,
+            "exempt_channels",
+            rule.exempt_channels.clone().into_vec(),
+        );
+    }
+
+    fn expand_channel(fields: &mut IndexMap<String, Field>, channel: &GuildChannel) {
+        insert_field(fields, "id", channel.id);
+        insert_field(fields, "guild_id", channel.guild_id);
+        insert_field(fields, "name", channel.name.clone());
+        insert_field(fields, "nsfw", channel.nsfw);
+        insert_field(
+            fields,
+            "kind",
+            match channel.kind {
+                serenity::model::channel::ChannelType::Text => "Text".to_string(),
+                serenity::model::channel::ChannelType::Voice => "Voice".to_string(),
+                serenity::model::channel::ChannelType::Private => "PrivateChannel".to_string(),
+                serenity::model::channel::ChannelType::GroupDm => "GroupDm".to_string(),
+                serenity::model::channel::ChannelType::Category => "Category".to_string(),
+                serenity::model::channel::ChannelType::News => "News".to_string(),
+                serenity::model::channel::ChannelType::NewsThread => "NewsThread".to_string(),
+                serenity::model::channel::ChannelType::PublicThread => "PublicThread".to_string(),
+                serenity::model::channel::ChannelType::PrivateThread => "PrivateThread".to_string(),
+                serenity::model::channel::ChannelType::Stage => "Stage".to_string(),
+                serenity::model::channel::ChannelType::Directory => "Directory".to_string(),
+                _ => "Unknown".to_string(),
+            },
+        );
+
+        // Optional fields
+        insert_optional_field(fields, "topic", channel.topic.clone());
+        insert_optional_field(fields, "rate_limit_per_user", channel.rate_limit_per_user);
+        insert_optional_field(fields, "parent_id", channel.parent_id);
+        insert_optional_field(fields, "user_limit", channel.user_limit);
+    }
+
+    fn expand_command_permissions(
+        fields: &mut IndexMap<String, Field>,
+        permission: &serenity::model::application::CommandPermissions,
+    ) {
+        insert_field(fields, "command_id", permission.id);
+        insert_field(fields, "application_id", permission.application_id);
+        // Continue from here
     }
 
     match event {
@@ -369,9 +463,37 @@ pub fn expand_event(event: &FullEvent) -> Option<IndexMap<String, Field>> {
         FullEvent::AutoModRuleCreate { rule } => {
             expand_rule(&mut fields, rule);
         }
-        _ => {
-            return None;
+        FullEvent::AutoModRuleDelete { rule } => {
+            expand_rule(&mut fields, rule);
         }
+        FullEvent::AutoModRuleUpdate { rule } => {
+            expand_rule(&mut fields, rule);
+        }
+        FullEvent::CacheReady { .. } => return None, // We don't want this to be propogated anyways and it's not a guild event
+        FullEvent::CategoryCreate { category } => {
+            expand_channel(&mut fields, category);
+        }
+        FullEvent::CategoryDelete { category } => {
+            expand_channel(&mut fields, category);
+        }
+        FullEvent::ChannelCreate { channel } => {
+            expand_channel(&mut fields, channel);
+        }
+        FullEvent::ChannelDelete { channel, .. } => {
+            expand_channel(&mut fields, channel);
+        }
+        FullEvent::ChannelPinsUpdate { pin } => {
+            insert_field(&mut fields, "channel_id", pin.channel_id);
+            insert_optional_field(&mut fields, "last_pin_timestamp", pin.last_pin_timestamp);
+        }
+        FullEvent::ChannelUpdate { new, .. } => {
+            expand_channel(&mut fields, new);
+        }
+        FullEvent::CommandPermissionsUpdate { permission, .. } => {
+            expand_command_permissions(&mut fields, permission);
+        }
+
+        _ => {}
     }
 
     Some(fields)
