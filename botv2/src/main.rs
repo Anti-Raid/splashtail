@@ -429,7 +429,8 @@ async fn main() {
                     guild_id,
                     ctx.author().id,
                     &data.pool,
-                    &CacheHttpImpl::from_ctx(ctx.serenity_context())
+                    &CacheHttpImpl::from_ctx(ctx.serenity_context()),
+                    &Some(ctx),
                 )
                 .await;
 

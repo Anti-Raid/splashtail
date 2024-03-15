@@ -139,6 +139,7 @@ impl BotAnimusMessage {
                     *user_id,
                     pool,
                     cache_http,
+                    &None,
                 )
                 .await;
 
