@@ -86,34 +86,52 @@ pub async fn check_command(
         disabled: None,
     });
 
-    let guild = match guild_id.to_partial_guild(&cache_http).await {
-        Ok(guild) => guild,
-        Err(e) => {
-            return PermissionResult::DiscordError { error: e.to_string() }
+    #[inline]
+    async fn get_perm_info(
+        guild_id: GuildId,
+        user_id: UserId,
+        cache_http: &CacheHttpImpl,
+    ) -> Result<(bool, serenity::all::Permissions, small_fixed_array::FixedArray<serenity::all::RoleId>), PermissionResult> {
+        if let Some(cached_guild) = guild_id.to_guild_cached(&cache_http.cache) {
+            // OPTIMIZATION: if owner, we dont need to continue further
+            if user_id == cached_guild.owner_id {
+                return Ok((true, serenity::all::Permissions::all(), small_fixed_array::FixedArray::new()));
+            }
+            
+            // Now fetch the member, here calling member automatically tries to find in its cache first
+            if let Some(member) = cached_guild.members.get(&user_id) {
+                return Ok((member.user.id == cached_guild.owner_id, cached_guild.member_permissions(member), member.roles.clone()));
+            }
         }
-    };
 
-    let member = match guild.member(&cache_http, user_id).await {
-        Ok(member) => member,
-        Err(e) => {
-            return PermissionResult::DiscordError { error: e.to_string() }
-        }
-    };
-
-    let (is_owner, member_perms) = {
-        let is_owner = member.user.id == guild.owner_id;
-
-        let member_perms = {
-            if is_owner {
-                serenity::model::permissions::Permissions::all()
-            } else {
-                guild.member_permissions(&member)
+        let guild = match guild_id.to_partial_guild(&cache_http).await {
+            Ok(guild) => guild,
+            Err(e) => {
+                return Err(PermissionResult::DiscordError { error: e.to_string() })
             }
         };
 
-        drop(guild);
+        // OPTIMIZATION: if owner, we dont need to continue further
+        if user_id == guild.owner_id {
+            return Ok((true, serenity::all::Permissions::all(), small_fixed_array::FixedArray::new()));
+        }
+    
+        let member = match guild.member(&cache_http, user_id).await {
+            Ok(member) => member,
+            Err(e) => {
+                return Err(PermissionResult::DiscordError { error: e.to_string() })
+            }
+        };
 
-        (is_owner, member_perms)
+        Ok((member.user.id == guild.owner_id, guild.member_permissions(&member), member.roles.clone()))
+    }
+
+    // Try getting guild+member from cache to speed up response times first
+    let (is_owner, member_perms, roles) = match get_perm_info(guild_id, user_id, cache_http).await {
+        Ok(v) => v,
+        Err(e) => {
+            return e;
+        }
     };
 
     if is_owner {
@@ -122,7 +140,7 @@ pub async fn check_command(
         };
     }
 
-    let kittycat_perms = match silverpelt::member_permission_calc::get_kittycat_perms(pool, guild_id, member.user.id, &member.roles).await {
+    let kittycat_perms = match silverpelt::member_permission_calc::get_kittycat_perms(pool, guild_id, user_id, &roles).await {
         Ok(v) => v,
         Err(e) => {
             return e.into();
@@ -130,9 +148,8 @@ pub async fn check_command(
     };
 
     info!(
-        "Checking if user {} ({}) can run command {} with permissions {:?}",
-        member.user.name,
-        member.user.id,
+        "Checking if user {} can run command {} with permissions {:?}",
+        user_id,
         command,
         member_perms
     );
