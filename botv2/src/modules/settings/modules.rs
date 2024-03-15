@@ -37,15 +37,21 @@ pub async fn modules_enable(
         return Err("This command must be run in a guild".into());
     };
 
-    // Check that the module exists
-    if !SILVERPELT_CACHE.module_id_cache.contains_key(&module) {
+   // Check that the module exists
+   let Some(module_data) = SILVERPELT_CACHE.module_id_cache.get(&module) else {
         return Err(
             format!(
                 "The module you are trying to disable ({}) does not exist",
                 module
             ).into()
         );
-    }    
+    };
+
+    if !module_data.toggleable {
+        return Err("This module cannot be enabled/disabled".into());
+    }
+
+    drop(module_data);
 
     // Check for a module_configuration in db
     // If it doesn't exist, create it
@@ -122,14 +128,20 @@ pub async fn modules_disable(
     };
 
     // Check that the module exists
-    if !SILVERPELT_CACHE.module_id_cache.contains_key(&module) {
+    let Some(module_data) = SILVERPELT_CACHE.module_id_cache.get(&module) else {
         return Err(
             format!(
                 "The module you are trying to disable ({}) does not exist",
                 module
             ).into()
         );
+    };
+    
+    if !module_data.toggleable {
+        return Err("This module cannot be enabled/disabled".into());
     }
+
+    drop(module_data);
 
     // Check for a module_configuration in db
     // If it doesn't exist, create it

@@ -15,8 +15,8 @@ pub struct CanonicalModule {
     /// Whether or not the module should be visible on the websites command lists
     pub web_hidden: bool,
 
-    /// Whether or the module is configurable
-    pub configurable: bool,
+    /// Whether or the module can be enabled and/or disabled
+    pub toggleable: bool,
 
     /// Whether or not individual commands in the module can be configured
     pub commands_configurable: bool,
@@ -131,7 +131,7 @@ impl From<crate::silverpelt::Module> for CanonicalModule {
             id: module.id.to_string(),
             name: module.name.to_string(),
             description: module.description.to_string(),
-            configurable: module.configurable,
+            toggleable: module.toggleable,
             commands_configurable: module.commands_configurable,
             web_hidden: module.web_hidden,
             is_default_enabled: module.is_default_enabled,

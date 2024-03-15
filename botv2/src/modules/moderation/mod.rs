@@ -6,7 +6,7 @@ pub fn module() -> crate::silverpelt::Module {
         id: "moderation",
         name: "Moderation",
         description: "Basic customizable moderation plugin for your server.",
-        configurable: true,
+        toggleable: true,
         commands_configurable: true,
         web_hidden: false,
         is_default_enabled: true,

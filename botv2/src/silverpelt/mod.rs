@@ -43,8 +43,8 @@ pub struct Module {
     /// Whether or not the module should be visible on the websites command lists
     pub web_hidden: bool,
 
-    /// Whether or the module is configurable
-    pub configurable: bool,
+    /// Whether or the module can be enabled and/or disabled
+    pub toggleable: bool,
 
     /// Whether or not individual commands in the module can be configured
     pub commands_configurable: bool,
