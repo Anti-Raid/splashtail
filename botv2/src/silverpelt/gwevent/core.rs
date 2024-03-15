@@ -1,11 +1,13 @@
-use serenity::all::{
-    ChannelId, EmojiId, FullEvent, GenericId, GuildId, MessageId, RoleId, RuleId as AutomodRuleId, UserId, ActionExecution
-};
-use strum::VariantNames;
-use small_fixed_array::FixedString;
-use indexmap::IndexMap;
 use crate::Error;
+use indexmap::IndexMap;
 use log::warn;
+use serenity::all::{
+    ActionExecution, ChannelId, EmojiId, FullEvent, GenericId, GuildId, MessageId, RoleId,
+    RuleId as AutomodRuleId, UserId,
+};
+use serenity::model::guild::automod::Action;
+use small_fixed_array::FixedString;
+use strum::VariantNames;
 
 /// Returns all events
 #[allow(dead_code)]
@@ -14,9 +16,7 @@ pub const fn event_list() -> &'static [&'static str] {
 }
 
 /// Given an event and a module, return whether or not to filter said event
-pub fn get_event_guild_id(
-    event: &FullEvent,
-) -> Result<GuildId, Option<Error>> {
+pub fn get_event_guild_id(event: &FullEvent) -> Result<GuildId, Option<Error>> {
     let guild_id = match event {
         FullEvent::AutoModActionExecution { execution } => execution.guild_id,
         FullEvent::AutoModRuleCreate { rule, .. } => rule.guild_id,
@@ -33,7 +33,7 @@ pub fn get_event_guild_id(
             } else {
                 return Err(None);
             }
-        },
+        }
         FullEvent::ChannelUpdate { new, .. } => new.guild_id,
         FullEvent::CommandPermissionsUpdate { permission, .. } => permission.guild_id,
         FullEvent::EntitlementCreate { entitlement, .. } => {
@@ -42,21 +42,21 @@ pub fn get_event_guild_id(
             } else {
                 return Err(None);
             }
-        },
+        }
         FullEvent::EntitlementDelete { entitlement, .. } => {
             if let Some(guild_id) = entitlement.guild_id {
                 guild_id.to_owned()
             } else {
                 return Err(None);
             }
-        },
+        }
         FullEvent::EntitlementUpdate { entitlement, .. } => {
             if let Some(guild_id) = entitlement.guild_id {
                 guild_id.to_owned()
             } else {
                 return Err(None);
             }
-        },
+        }
         FullEvent::GuildAuditLogEntryCreate { guild_id, .. } => *guild_id,
         FullEvent::GuildBanAddition { guild_id, .. } => *guild_id,
         FullEvent::GuildBanRemoval { guild_id, .. } => *guild_id,
@@ -84,7 +84,7 @@ pub fn get_event_guild_id(
             } else {
                 return Err(None);
             }
-        },
+        }
         FullEvent::IntegrationDelete { guild_id, .. } => *guild_id,
         FullEvent::IntegrationUpdate { integration, .. } => {
             if let Some(guild_id) = integration.guild_id {
@@ -92,7 +92,7 @@ pub fn get_event_guild_id(
             } else {
                 return Err(None);
             }
-        },
+        }
         FullEvent::InteractionCreate { .. } => return Err(None), // We dont handle interactions create events in event handlers
         FullEvent::InviteCreate { data, .. } => {
             if let Some(guild_id) = data.guild_id {
@@ -100,77 +100,82 @@ pub fn get_event_guild_id(
             } else {
                 return Err(None);
             }
-        },
+        }
         FullEvent::InviteDelete { data, .. } => {
             if let Some(guild_id) = data.guild_id {
                 guild_id.to_owned()
             } else {
                 return Err(None);
             }
-        },
+        }
         FullEvent::Message { new_message, .. } => {
             if let Some(guild_id) = &new_message.guild_id {
                 guild_id.to_owned()
             } else {
                 return Err(None);
             }
-        },
+        }
         FullEvent::MessageDelete { guild_id, .. } => {
             if let Some(guild_id) = guild_id {
                 guild_id.to_owned()
             } else {
                 return Err(None);
             }
-        },
+        }
         FullEvent::MessageDeleteBulk { guild_id, .. } => {
             if let Some(guild_id) = guild_id {
                 guild_id.to_owned()
             } else {
                 return Err(None);
             }
-        },
+        }
         FullEvent::MessageUpdate { event, .. } => {
             if let Some(guild_id) = &event.guild_id {
                 guild_id.to_owned()
             } else {
                 return Err(None);
             }
-        },
+        }
         FullEvent::PresenceReplace { .. } => return Err(None), // We dont handle precenses
-        FullEvent::PresenceUpdate { .. } => return Err(None), // We dont handle precenses
+        FullEvent::PresenceUpdate { .. } => return Err(None),  // We dont handle precenses
         FullEvent::Ratelimit { data, .. } => {
             // Warn i guess
             warn!("Ratelimit event recieved: {:?}", data);
             return Err(None);
-        },
+        }
         FullEvent::ReactionAdd { .. } => return Err(None), // We dont handle reactions right now
         FullEvent::ReactionRemove { .. } => return Err(None), // We dont handle reactions right now
         FullEvent::ReactionRemoveAll { .. } => return Err(None), // We dont handle reactions right now
         FullEvent::ReactionRemoveEmoji { .. } => return Err(None), // We dont handle reactions right now
-        FullEvent::Ready { .. } => return Err(None), // We dont handle ready events
-        FullEvent::Resume { .. } => return Err(None), // We dont handle resume events
+        FullEvent::Ready { .. } => return Err(None),               // We dont handle ready events
+        FullEvent::Resume { .. } => return Err(None),              // We dont handle resume events
         FullEvent::ShardStageUpdate { .. } => return Err(None), // We dont handle shard stage updates
-        FullEvent::ShardsReady { .. } => return Err(None), // We dont handle shards ready
+        FullEvent::ShardsReady { .. } => return Err(None),      // We dont handle shards ready
         FullEvent::StageInstanceCreate { .. } => return Err(None), // We dont handle stage instances right now
         FullEvent::StageInstanceDelete { .. } => return Err(None), // We dont handle stage instances right now
         FullEvent::StageInstanceUpdate { .. } => return Err(None), // We dont handle stage instances right now
-        FullEvent::ThreadCreate { thread, .. } => thread.guild_id, 
-        FullEvent::ThreadDelete { thread, .. } => thread.guild_id, 
-        FullEvent::ThreadListSync { thread_list_sync, .. } => thread_list_sync.guild_id,
+        FullEvent::ThreadCreate { thread, .. } => thread.guild_id,
+        FullEvent::ThreadDelete { thread, .. } => thread.guild_id,
+        FullEvent::ThreadListSync {
+            thread_list_sync, ..
+        } => thread_list_sync.guild_id,
         FullEvent::ThreadMemberUpdate { thread_member, .. } => {
             if let Some(guild_id) = thread_member.guild_id {
                 guild_id.to_owned()
             } else {
                 return Err(None);
             }
-        },
-        FullEvent::ThreadMembersUpdate { thread_members_update, .. } => thread_members_update.guild_id,
+        }
+        FullEvent::ThreadMembersUpdate {
+            thread_members_update,
+            ..
+        } => thread_members_update.guild_id,
         FullEvent::ThreadUpdate { new, .. } => new.guild_id,
         FullEvent::TypingStart { .. } => return Err(None), // We dont handle typing start
-        FullEvent::UserUpdate { .. } => return Err(None), // We dont handle user updates
+        FullEvent::UserUpdate { .. } => return Err(None),  // We dont handle user updates
         FullEvent::VoiceChannelStatusUpdate { guild_id, .. } => *guild_id,
         FullEvent::VoiceServerUpdate { .. } => return Err(None), // We dont handle voice right now
-        FullEvent::VoiceStateUpdate { .. } => return Err(None), // We dont handle voice right now
+        FullEvent::VoiceStateUpdate { .. } => return Err(None),  // We dont handle voice right now
         FullEvent::WebhookUpdate { guild_id, .. } => *guild_id,
     };
 
@@ -179,70 +184,66 @@ pub fn get_event_guild_id(
 
 pub enum FieldType {
     /// A string
-    String(String),
+    Strings(Vec<String>),
 
     /// A user id
-    User(UserId),
+    Users(Vec<UserId>),
 
     /// A channel id
-    Channel(ChannelId),
+    Channels(Vec<ChannelId>),
 
     /// A role id
-    Role(RoleId),
+    Roles(Vec<RoleId>),
 
     /// A message id
-    Message(MessageId),
+    Messages(Vec<MessageId>),
 
     /// A guild id
     Guild(GuildId),
 
     /// An emoji id
-    Emoji(EmojiId),
+    Emojis(Vec<EmojiId>),
 
     /// A generic id
-    GenericId(GenericId),
+    GenericIds(Vec<GenericId>),
 
     /// An automod action
-    AutomodAction(serenity::model::guild::automod::Action),
+    AutomodActions(Vec<serenity::model::guild::automod::Action>),
 
     /// An automod rule id
-    AutomodRuleId(AutomodRuleId),
+    AutomodRuleIds(Vec<AutomodRuleId>),
+
+    // Trigger
+    AutomodTrigger(serenity::model::guild::automod::Trigger),
 }
 
-impl From<String> for FieldType {
-    fn from(s: String) -> Self {
-        Self::String(s)
-    }
+macro_rules! from_field_type {
+    ($($t:ty => $variant:ident),* $(,)?) => {
+        $(
+            impl From<$t> for FieldType {
+                fn from(s: $t) -> Self {
+                    Self::$variant(vec![s])
+                }
+            }
+            impl From<Vec<$t>> for FieldType {
+                fn from(s: Vec<$t>) -> Self {
+                    Self::$variant(s)
+                }
+            }
+        )*
+    };
 }
 
-impl From<FixedString<u32>> for FieldType {
-    fn from(s: FixedString<u32>) -> Self {
-        Self::String(s.to_string())
-    }
-}
-
-impl From<UserId> for FieldType {
-    fn from(s: UserId) -> Self {
-        Self::User(s)
-    }
-}
-
-impl From<ChannelId> for FieldType {
-    fn from(s: ChannelId) -> Self {
-        Self::Channel(s)
-    }
-}
-
-impl From<RoleId> for FieldType {
-    fn from(s: RoleId) -> Self {
-        Self::Role(s)
-    }
-}
-
-impl From<MessageId> for FieldType {
-    fn from(s: MessageId) -> Self {
-        Self::Message(s)
-    }
+from_field_type! {
+    String => Strings,
+    UserId => Users,
+    ChannelId => Channels,
+    RoleId => Roles,
+    MessageId => Messages,
+    EmojiId => Emojis,
+    GenericId => GenericIds,
+    Action => AutomodActions,
+    AutomodRuleId => AutomodRuleIds,
 }
 
 impl From<GuildId> for FieldType {
@@ -251,116 +252,123 @@ impl From<GuildId> for FieldType {
     }
 }
 
-impl From<EmojiId> for FieldType {
-    fn from(s: EmojiId) -> Self {
-        Self::Emoji(s)
+impl From<serenity::model::guild::automod::Trigger> for FieldType {
+    fn from(s: serenity::model::guild::automod::Trigger) -> Self {
+        Self::AutomodTrigger(s)
     }
 }
 
-impl From<GenericId> for FieldType {
-    fn from(s: GenericId) -> Self {
-        Self::GenericId(s)
+impl From<FixedString<u32>> for FieldType {
+    fn from(s: FixedString<u32>) -> Self {
+        Self::Strings(vec![s.to_string()])
     }
 }
-
-impl From<serenity::model::guild::automod::Action> for FieldType {
-    fn from(s: serenity::model::guild::automod::Action) -> Self {
-        Self::AutomodAction(s)
-    }
-} 
-
-impl From<AutomodRuleId> for FieldType {
-    fn from(s: AutomodRuleId) -> Self {
-        Self::AutomodRuleId(s)
-    }
-} 
 
 #[allow(dead_code)]
 pub struct Field {
     /// The value of the field
-    value: Option<FieldType>,
+    value: FieldType,
 }
 
 impl Field {
     /// Create a new field
-    pub fn new(value: Option<FieldType>) -> Self {
+    pub fn new(value: FieldType) -> Self {
         Self { value }
     }
 }
 
 /// Given an event, expand it to a hashmap of fields
 #[allow(dead_code)]
-pub fn expand_event(
-    event: &FullEvent,
-) -> Option<IndexMap<String, Field>> {
+pub fn expand_event(event: &FullEvent) -> Option<IndexMap<String, Field>> {
     let mut fields = IndexMap::new();
 
-            /*
-pub struct ActionExecution {
-    /// ID of the guild in which the action was executed.
-    pub guild_id: GuildId,
-    /// Action which was executed.
-    pub action: Action,
-    /// ID of the rule which action belongs to.
-    pub rule_id: RuleId,
-    /// Trigger type of rule which was triggered.
-    #[serde(rename = "rule_trigger_type")]
-    pub trigger_type: TriggerType,
-    /// ID of the user which generated the content which triggered the rule.
-    pub user_id: UserId,
-    /// ID of the channel in which user content was posted.
-    pub channel_id: Option<ChannelId>,
-    /// ID of any user message which content belongs to.
-    ///
-    /// Will be `None` if message was blocked by automod or content was not part of any message.
-    pub message_id: Option<MessageId>,
-    /// ID of any system auto moderation messages posted as a result of this action.
-    ///
-    /// Will be `None` if this event does not correspond to an action with type [`Action::Alert`].
-    pub alert_system_message_id: Option<MessageId>,
-    /// User generated text content.
-    ///
-    /// Requires [`GatewayIntents::MESSAGE_CONTENT`] to receive non-empty values.
-    ///
-    /// [`GatewayIntents::MESSAGE_CONTENT`]: crate::model::gateway::GatewayIntents::MESSAGE_CONTENT
-    pub content: FixedString,
-    /// Word or phrase configured in the rule that triggered the rule.
-    pub matched_keyword: Option<FixedString>,
-    /// Substring in content that triggered the rule.
-    ///
-    /// Requires [`GatewayIntents::MESSAGE_CONTENT`] to receive non-empty values.
-    ///
-    /// [`GatewayIntents::MESSAGE_CONTENT`]: crate::model::gateway::GatewayIntents::MESSAGE_CONTENT
-    pub matched_content: Option<FixedString>,
-}
-         */
+    fn insert_field<T: Into<FieldType>>(fields: &mut IndexMap<String, Field>, key: &str, value: T) {
+        fields.insert(key.to_string(), Field::new(value.into()));
+    }
+
+    fn insert_optional_field<T: Into<FieldType>>(
+        fields: &mut IndexMap<String, Field>,
+        key: &str,
+        option: Option<T>,
+    ) {
+        fields.insert(
+            key.to_string(),
+            Field::new(match option {
+                Some(value) => value.into(),
+                None => "None".to_string().into(),
+            }),
+        );
+    }
+
     fn expand_action_execution(fields: &mut IndexMap<String, Field>, execution: &ActionExecution) {
-        fields.insert("guild_id".to_string(), Field::new(Some(execution.guild_id.into())));
-        fields.insert("action".to_string(), Field::new(Some(execution.action.clone().into())));
-        fields.insert("rule_id".to_string(), Field::new(Some(execution.rule_id.into())));
-        fields.insert("trigger_type".to_string(), Field::new(Some(
+        insert_field(fields, "guild_id", execution.guild_id);
+        insert_field(fields, "action", execution.action.clone());
+        insert_field(fields, "rule_id", execution.rule_id);
+        insert_field(
+            fields,
+            "trigger_type",
             match execution.trigger_type {
                 serenity::model::guild::automod::TriggerType::Keyword => "Keyword".to_string(),
                 serenity::model::guild::automod::TriggerType::Spam => "Spam".to_string(),
-                serenity::model::guild::automod::TriggerType::KeywordPreset => "KeywordPreset".to_string(),
-                serenity::model::guild::automod::TriggerType::MentionSpam => "MentionSpam".to_string(),
-                serenity::model::guild::automod::TriggerType::Unknown(b) => format!("Unknown({})", b),
+                serenity::model::guild::automod::TriggerType::KeywordPreset => {
+                    "KeywordPreset".to_string()
+                }
+                serenity::model::guild::automod::TriggerType::MentionSpam => {
+                    "MentionSpam".to_string()
+                }
+                serenity::model::guild::automod::TriggerType::Unknown(b) => {
+                    format!("Unknown({})", b)
+                }
                 _ => "Unknown".to_string(),
-            }.into()
-        )));
-        fields.insert("user_id".to_string(), Field::new(Some(execution.user_id.into())));
-        fields.insert("channel_id".to_string(), Field::new(execution.channel_id.map(|x| x.into())));
-        fields.insert("message_id".to_string(), Field::new(execution.message_id.map(|x| x.into())));
-        fields.insert("alert_system_message_id".to_string(), Field::new(execution.alert_system_message_id.map(|x| x.into())));
-        fields.insert("content".to_string(), Field::new(Some(execution.content.clone().into())));
-        fields.insert("matched_keyword".to_string(), Field::new(execution.matched_keyword.clone().map(|x| x.into())));
-        fields.insert("matched_content".to_string(), Field::new(execution.matched_content.clone().map(|x| x.into())));
+            },
+        );
+        insert_field(fields, "content", execution.content.clone().into());
+        insert_field(fields, "user_id", execution.user_id);
+
+        insert_optional_field(fields, "channel_id", execution.channel_id);
+        insert_optional_field(fields, "message_id", execution.message_id);
+        insert_optional_field(
+            fields,
+            "alert_system_message_id",
+            execution.alert_system_message_id,
+        );
+        insert_optional_field(fields, "matched_keyword", execution.matched_keyword.clone().into());
+        insert_optional_field(fields, "matched_content", execution.matched_content.clone().into());
+    }
+
+    fn expand_rule(
+        fields: &mut IndexMap<String, Field>,
+        rule: &serenity::model::guild::automod::Rule,
+    ) {
+        insert_field(fields, "id", rule.id);
+        insert_field(fields, "guild_id", rule.guild_id);
+        insert_field(fields, "name", rule.name.clone());
+        insert_field(fields, "creator_id", rule.creator_id);
+        insert_field(
+            fields,
+            "event_type",
+            match rule.event_type {
+                serenity::model::guild::automod::EventType::MessageSend => {
+                    "MessageSend".to_string()
+                }
+                _ => "Unknown".to_string(),
+            },
+        );
+        insert_field(fields, "trigger", rule.trigger);  
+        insert_field(fields, "actions", rule.actions.clone().into_vec());
+
+        insert_field(fields, "enabled", rule.enabled.into());
+        insert_field(fields, "exempt_roles", rule.exempt_roles.clone().into());
+        insert_field(fields, "exempt_channels", rule.exempt_channels.clone().into());
     }
 
     match event {
         FullEvent::AutoModActionExecution { execution } => {
             expand_action_execution(&mut fields, execution);
-        },
+        }
+        FullEvent::AutoModRuleCreate { rule } => {
+            expand_rule(&mut fields, rule);
+        }
         _ => {
             return None;
         }
