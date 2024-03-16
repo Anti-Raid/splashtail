@@ -6,6 +6,61 @@ use sqlx::PgPool;
 use super::permissions::PermissionResult;
 use log::info;
 
+pub async fn get_perm_info(
+    guild_id: GuildId,
+    user_id: UserId,
+    cache_http: &CacheHttpImpl,
+    poise_ctx: &Option<crate::Context<'_>>
+) -> Result<(bool, serenity::all::Permissions, small_fixed_array::FixedArray<serenity::all::RoleId>), PermissionResult> {    
+    if let Some(cached_guild) = guild_id.to_guild_cached(&cache_http.cache) {
+        // OPTIMIZATION: if owner, we dont need to continue further
+        if user_id == cached_guild.owner_id {
+            return Ok((true, serenity::all::Permissions::all(), small_fixed_array::FixedArray::new()));
+        }
+
+        // OPTIMIZATION: If we have a poise_ctx which is also a ApplicationContext, we can directly use it
+        if let Some(poise::Context::Application(ref a)) = poise_ctx {
+            if let Some(ref mem) = a.interaction.member {
+                return Ok((mem.user.id == cached_guild.owner_id, cached_guild.member_permissions(mem), mem.roles.clone()));               
+            }
+        }
+        
+        // Now fetch the member, here calling member automatically tries to find in its cache first
+        if let Some(member) = cached_guild.members.get(&user_id) {
+            return Ok((member.user.id == cached_guild.owner_id, cached_guild.member_permissions(member), member.roles.clone()));
+        }
+    }
+
+    let guild = match guild_id.to_partial_guild(&cache_http).await {
+        Ok(guild) => guild,
+        Err(e) => {
+            return Err(PermissionResult::DiscordError { error: e.to_string() })
+        }
+    };
+
+    // OPTIMIZATION: if owner, we dont need to continue further
+    if user_id == guild.owner_id {
+        return Ok((true, serenity::all::Permissions::all(), small_fixed_array::FixedArray::new()));
+    }
+
+    // OPTIMIZATION: If we have a poise_ctx which is also a ApplicationContext, we can directly use it
+    if let Some(poise::Context::Application(ref a)) = poise_ctx {
+        if let Some(ref mem) = a.interaction.member {
+            return Ok((mem.user.id == guild.owner_id, guild.member_permissions(mem), mem.roles.clone()));               
+        }
+    }
+
+    let member = match guild.member(&cache_http, user_id).await {
+        Ok(member) => member,
+        Err(e) => {
+            return Err(PermissionResult::DiscordError { error: e.to_string() })
+        }
+    };
+
+    Ok((member.user.id == guild.owner_id, guild.member_permissions(&member), member.roles.clone()))
+}
+
+
 /// Check command checks whether or not a user has permission to run a command
 pub async fn check_command(
     base_command: &str,
@@ -87,61 +142,6 @@ pub async fn check_command(
         module: module.clone(),
         disabled: None,
     });
-
-    #[inline]
-    async fn get_perm_info(
-        guild_id: GuildId,
-        user_id: UserId,
-        cache_http: &CacheHttpImpl,
-        poise_ctx: &Option<crate::Context<'_>>
-    ) -> Result<(bool, serenity::all::Permissions, small_fixed_array::FixedArray<serenity::all::RoleId>), PermissionResult> {    
-        if let Some(cached_guild) = guild_id.to_guild_cached(&cache_http.cache) {
-            // OPTIMIZATION: if owner, we dont need to continue further
-            if user_id == cached_guild.owner_id {
-                return Ok((true, serenity::all::Permissions::all(), small_fixed_array::FixedArray::new()));
-            }
-
-            // OPTIMIZATION: If we have a poise_ctx which is also a ApplicationContext, we can directly use it
-            if let Some(poise::Context::Application(ref a)) = poise_ctx {
-                if let Some(ref mem) = a.interaction.member {
-                    return Ok((mem.user.id == cached_guild.owner_id, cached_guild.member_permissions(mem), mem.roles.clone()));               
-                }
-            }
-            
-            // Now fetch the member, here calling member automatically tries to find in its cache first
-            if let Some(member) = cached_guild.members.get(&user_id) {
-                return Ok((member.user.id == cached_guild.owner_id, cached_guild.member_permissions(member), member.roles.clone()));
-            }
-        }
-
-        let guild = match guild_id.to_partial_guild(&cache_http).await {
-            Ok(guild) => guild,
-            Err(e) => {
-                return Err(PermissionResult::DiscordError { error: e.to_string() })
-            }
-        };
-
-        // OPTIMIZATION: if owner, we dont need to continue further
-        if user_id == guild.owner_id {
-            return Ok((true, serenity::all::Permissions::all(), small_fixed_array::FixedArray::new()));
-        }
-
-        // OPTIMIZATION: If we have a poise_ctx which is also a ApplicationContext, we can directly use it
-        if let Some(poise::Context::Application(ref a)) = poise_ctx {
-            if let Some(ref mem) = a.interaction.member {
-                return Ok((mem.user.id == guild.owner_id, guild.member_permissions(mem), mem.roles.clone()));               
-            }
-        }
-    
-        let member = match guild.member(&cache_http, user_id).await {
-            Ok(member) => member,
-            Err(e) => {
-                return Err(PermissionResult::DiscordError { error: e.to_string() })
-            }
-        };
-
-        Ok((member.user.id == guild.owner_id, guild.member_permissions(&member), member.roles.clone()))
-    }
 
     // Try getting guild+member from cache to speed up response times first
     let (is_owner, member_perms, roles) = match get_perm_info(guild_id, user_id, cache_http, poise_ctx).await {

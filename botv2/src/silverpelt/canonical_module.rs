@@ -21,6 +21,9 @@ pub struct CanonicalModule {
     /// Whether or not individual commands in the module can be configured
     pub commands_configurable: bool,
 
+    /// Virtual module. These modules allow controlling certain functionality of the bot without being loaded into the actual bot
+    pub virtual_module: bool,
+
     /// Whether the module is enabled or disabled by default
     pub is_default_enabled: bool,
 
@@ -133,6 +136,7 @@ impl From<crate::silverpelt::Module> for CanonicalModule {
             description: module.description.to_string(),
             toggleable: module.toggleable,
             commands_configurable: module.commands_configurable,
+            virtual_module: module.virtual_module,
             web_hidden: module.web_hidden,
             is_default_enabled: module.is_default_enabled,
             commands: module

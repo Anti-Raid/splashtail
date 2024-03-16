@@ -44,9 +44,7 @@ impl SilverpeltCache {
             command_permission_cache: Cache::builder()
                 .time_to_live(std::time::Duration::from_secs(60))
                 .build(),
-            module_enabled_cache: Cache::builder()
-                .time_to_live(std::time::Duration::from_secs(300))
-                .build(),
+            module_enabled_cache: Cache::builder().build(),
             command_extra_data_map: {
                 let map = dashmap::DashMap::new();
 

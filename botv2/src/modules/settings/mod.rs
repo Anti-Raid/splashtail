@@ -10,6 +10,7 @@ pub fn module() -> crate::silverpelt::Module {
         description: "Configure the bot to your liking",
         toggleable: false,
         commands_configurable: true,
+        virtual_module: false,
         web_hidden: false,
         is_default_enabled: true,
         commands: vec![

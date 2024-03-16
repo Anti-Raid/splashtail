@@ -464,7 +464,7 @@ mod tests {
                 serenity::all::Permissions::empty(),
                 &["abc.test".into()],
             ),
-            "missing_any_perms"
+            "no_checks_succeeded"
         ));
 
         assert!(err_with_code(
@@ -490,7 +490,7 @@ mod tests {
                 serenity::all::Permissions::empty(),
                 &["abc.test".into()],
             ),
-            "missing_min_checks"
+            "no_checks_succeeded"
         ));
 
         assert!(err_with_code(
