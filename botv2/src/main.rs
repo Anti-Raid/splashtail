@@ -158,10 +158,7 @@ async fn event_listener<'a>(
 
             tokio::task::spawn(crate::tasks::taskcat::start_all_tasks(
                 user_data.pool.clone(),
-                CacheHttpImpl {
-                    cache: ctx.serenity_context.cache.clone(),
-                    http: ctx.serenity_context.http.clone(),
-                },
+                CacheHttpImpl::from_ctx(ctx.serenity_context),
                 ctx.serenity_context.clone(),
             ));
 
@@ -206,7 +203,7 @@ async fn event_listener<'a>(
                     crate::ipc::argparse::MEWLD_ARGS.mewld_redis_channel
                 );
             }
-        }
+        },
         _ => {}
     }
 
@@ -432,7 +429,8 @@ async fn main() {
                     guild_id,
                     ctx.author().id,
                     &data.pool,
-                    &CacheHttpImpl::from_ctx(ctx.serenity_context())
+                    &CacheHttpImpl::from_ctx(ctx.serenity_context()),
+                    &Some(ctx),
                 )
                 .await;
 

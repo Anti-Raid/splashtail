@@ -9,7 +9,7 @@ type CanonicalModule struct {
 	ID                   string             `json:"id"`
 	Name                 string             `json:"name"`
 	Description          string             `json:"description"`
-	Configurable         bool               `json:"configurable"`
+	Toggleable           bool               `json:"toggleable"`
 	CommandsConfigurable bool               `json:"commands_configurable"`
 	WebHidden            bool               `json:"web_hidden"`
 	IsDefaultEnabled     bool               `json:"is_default_enabled"`

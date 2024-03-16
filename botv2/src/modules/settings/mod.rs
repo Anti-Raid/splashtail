@@ -8,7 +8,7 @@ pub fn module() -> crate::silverpelt::Module {
         id: "settings",
         name: "Settings",
         description: "Configure the bot to your liking",
-        configurable: true,
+        toggleable: false,
         commands_configurable: true,
         web_hidden: false,
         is_default_enabled: true,

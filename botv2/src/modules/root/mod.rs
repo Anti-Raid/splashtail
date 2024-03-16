@@ -5,7 +5,7 @@ pub fn module() -> crate::silverpelt::Module {
         id: "root",
         name: "Root/Staff-Only Commands",
         description: "Commands that are only available to staff members.",
-        configurable: false,
+        toggleable: false,
         commands_configurable: false,
         web_hidden: true,
         is_default_enabled: true,
