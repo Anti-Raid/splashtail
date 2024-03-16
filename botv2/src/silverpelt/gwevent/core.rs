@@ -2,15 +2,16 @@ use crate::Error;
 use indexmap::IndexMap;
 use log::warn;
 use serenity::all::{
-    ActionExecution, ApplicationId, ChannelId, CommandId, EmojiId, EntitlementId, FullEvent,
-    GenericId, GuildChannel, GuildId, MessageId, RoleId, RuleId as AutomodRuleId, UserId, AuditLogEntryId
+    ActionExecution, ApplicationId, AuditLogEntryId, ChannelId, CommandId, EmojiId, EntitlementId,
+    FullEvent, GenericId, GuildChannel, GuildId, MessageId, RoleId, RuleId as AutomodRuleId,
+    UserId,
 };
 use serenity::model::guild::automod::Action;
 use serenity::model::timestamp::Timestamp;
-use serenity::nonmax::NonMaxU16;
+use serenity::nonmax::{NonMaxU16, NonMaxU8};
 use small_fixed_array::FixedString;
+use std::collections::HashMap;
 use strum::VariantNames;
-
 /// Returns all events
 #[allow(dead_code)]
 pub const fn event_list() -> &'static [&'static str] {
@@ -73,6 +74,7 @@ pub fn get_event_guild_id(event: &FullEvent) -> Result<GuildId, Option<Error>> {
         FullEvent::GuildRoleCreate { new, .. } => new.guild_id,
         FullEvent::GuildRoleDelete { guild_id, .. } => *guild_id,
         FullEvent::GuildRoleUpdate { new, .. } => new.guild_id,
+
         FullEvent::GuildScheduledEventCreate { event, .. } => event.guild_id,
         FullEvent::GuildScheduledEventDelete { event, .. } => event.guild_id,
         FullEvent::GuildScheduledEventUpdate { event, .. } => event.guild_id,
@@ -245,6 +247,9 @@ pub enum FieldType {
 
     // Options
     AuditLogOptions(Vec<serenity::model::guild::audit_log::Options>),
+
+    // Emoji Map
+    EmojiMap(Vec<serenity::model::guild::Emoji>),
 }
 
 macro_rules! from_field_type {
@@ -276,7 +281,8 @@ from_field_type! {
     AutomodRuleId => AutomodRuleIds,
     serenity::model::guild::audit_log::Action => AuditLogActions,
     serenity::model::guild::audit_log::Change => AuditLogActionsChanges,
-    serenity::model::guild::audit_log::Options => AuditLogOptions
+    serenity::model::guild::audit_log::Options => AuditLogOptions,
+    serenity::model::guild::Emoji => EmojiMap
 }
 
 impl From<GuildId> for FieldType {
@@ -336,9 +342,19 @@ impl From<FixedString<u16>> for FieldType {
         Self::Strings(vec![s.to_string()])
     }
 }
+impl From<FixedString<u8>> for FieldType {
+    fn from(s: FixedString<u8>) -> Self {
+        Self::Strings(vec![s.to_string()])
+    }
+}
 
 impl From<NonMaxU16> for FieldType {
     fn from(s: NonMaxU16) -> Self {
+        Self::Number(s.get().into())
+    }
+}
+impl From<NonMaxU8> for FieldType {
+    fn from(s: NonMaxU8) -> Self {
         Self::Number(s.get().into())
     }
 }
@@ -515,7 +531,6 @@ pub fn expand_event(event: &FullEvent) -> Option<IndexMap<String, Field>> {
         );
         insert_field(fields, "entitlement_deleted", entitlement.deleted);
 
-
         // Optional Fields
         insert_optional_field(fields, "guild_id", entitlement.guild_id);
         insert_optional_field(fields, "user_id", entitlement.user_id);
@@ -538,6 +553,53 @@ pub fn expand_event(event: &FullEvent) -> Option<IndexMap<String, Field>> {
         insert_optional_field(fields, "audit_log_options", entry.options.clone());
     }
 
+    fn expand_user(
+        fields: &mut IndexMap<String, Field>,
+        user: serenity::model::user::User,
+        guild_id: &GuildId,
+    ) {
+        insert_field(fields, "guild_id", *guild_id);
+        insert_field(fields, "user_id", user.id);
+        insert_field(fields, "username", user.name.clone());
+        insert_field(fields, "is_bot", user.bot());
+
+        //optional fields
+        insert_optional_field(fields, "global_username", user.global_name);
+    }
+
+    fn expand_emoji_map(
+        fields: &mut IndexMap<String, Field>,
+        emoji_map: &HashMap<EmojiId, serenity::model::guild::Emoji>,
+        guild_id: &GuildId,
+    ) {
+        insert_field(fields, "guild_id", *guild_id);
+
+        insert_field(
+            fields,
+            "emojis",
+            emoji_map.values().cloned().collect::<Vec<_>>(),
+        );
+    }
+
+    fn expand_member(fields: &mut IndexMap<String, Field>, member: serenity::model::guild::Member) {
+        expand_user(fields, member.user, &member.guild_id);
+        insert_field(fields, "roles", member.roles.clone().into_vec());
+        //optional fields
+        insert_optional_field(fields, "nick", member.nick);
+        insert_optional_field(fields, "joined_timestamp", member.joined_at);
+        insert_optional_field(fields, "premium_since", member.premium_since);
+    }
+
+    fn expand_role(fields: &mut IndexMap<String, Field>, role: serenity::model::guild::Role) {
+        insert_field(fields, "role_id", role.id);
+        insert_field(fields, "guild_id", role.guild_id);
+        insert_field(fields, "is_hoisted", role.hoist());
+        insert_field(fields, "is_managed", role.managed());
+        insert_field(fields, "is_mentionable", role.mentionable());
+        insert_field(fields, "role_name", role.name.clone());
+        // insert_field(fields, "role_position", role.position.into());
+    }
+
     match event {
         FullEvent::AutoModActionExecution { execution } => {
             expand_action_execution(&mut fields, execution);
@@ -549,7 +611,6 @@ pub fn expand_event(event: &FullEvent) -> Option<IndexMap<String, Field>> {
             expand_rule(&mut fields, rule);
         }
         FullEvent::AutoModRuleUpdate { rule } => {
-
             expand_rule(&mut fields, rule);
         }
         FullEvent::CacheReady { .. } => return None, // We don't want this to be propogated anyways and it's not a guild event
@@ -587,10 +648,78 @@ pub fn expand_event(event: &FullEvent) -> Option<IndexMap<String, Field>> {
         FullEvent::EntitlementUpdate { entitlement, .. } => {
             expand_entitlement(&mut fields, entitlement);
         }
-        FullEvent::GuildAuditLogEntryCreate { guild_id, entry, .. } => {
+        FullEvent::GuildAuditLogEntryCreate {
+            guild_id, entry, ..
+        } => {
             expand_audit_log_entry(&mut fields, entry, guild_id);
         }
-        
+        FullEvent::GuildBanAddition {
+            guild_id,
+            banned_user,
+        } => {
+            expand_user(&mut fields, banned_user.clone(), guild_id);
+        }
+        FullEvent::GuildBanRemoval {
+            guild_id,
+            unbanned_user,
+        } => {
+            expand_user(&mut fields, unbanned_user.clone(), guild_id);
+        }
+        FullEvent::GuildCreate { guild, is_new } => {
+            insert_field(&mut fields, "guild_id", guild.id);
+            insert_optional_field(&mut fields, "is_new", *is_new);
+        }
+        FullEvent::GuildDelete { incomplete, .. } => {
+            insert_field(&mut fields, "guild_id", incomplete.id);
+        }
+        FullEvent::GuildEmojisUpdate {
+            guild_id,
+            current_state,
+        } => {
+            expand_emoji_map(&mut fields, current_state, guild_id);
+        }
+        FullEvent::GuildIntegrationsUpdate { guild_id, .. } => {
+            insert_field(&mut fields, "guild_id", *guild_id);
+        }
+        FullEvent::GuildMemberAddition { new_member } => {
+            expand_member(&mut fields, new_member.clone());
+        }
+        FullEvent::GuildMemberRemoval { guild_id, user, .. } => {
+            expand_user(&mut fields, user.clone(), guild_id);
+        }
+        FullEvent::GuildMemberUpdate {
+            old_if_available,
+            new,
+            ..
+        } => {
+            if let Some(old) = old_if_available {
+                expand_member(&mut fields, old.clone());
+            }
+            if let Some(new) = new {
+                expand_member(&mut fields, new.clone());
+            };
+        }
+        FullEvent::GuildMembersChunk { .. } => return None,
+        FullEvent::GuildRoleCreate { new } => {
+            expand_role(&mut fields, new.clone());
+        }
+        FullEvent::GuildRoleDelete {
+            guild_id,
+            removed_role_id,
+            removed_role_data_if_available,
+        } => {
+            insert_field(&mut fields, "guild_id", *guild_id);
+            insert_field(&mut fields, "role_id", *removed_role_id);
+            if let Some(removed_role_data) = removed_role_data_if_available {
+                expand_role(&mut fields, removed_role_data.clone());
+            }
+        }
+        FullEvent::GuildRoleUpdate { old_data_if_available, new } => {
+            if let Some(old) = old_data_if_available {
+                expand_role(&mut fields, old.clone());
+            }
+            expand_role(&mut fields, new.clone());
+        }
         _ => {}
     }
 
