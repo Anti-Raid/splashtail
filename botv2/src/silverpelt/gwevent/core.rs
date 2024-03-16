@@ -2,12 +2,12 @@ use crate::Error;
 use indexmap::IndexMap;
 use log::warn;
 use serenity::all::{
-    ActionExecution, ChannelId, EmojiId, FullEvent, GenericId, GuildChannel, GuildId, MessageId,
-    RoleId, RuleId as AutomodRuleId, UserId, CommandId, ApplicationId
+    ActionExecution, ApplicationId, ChannelId, CommandId, EmojiId, EntitlementId, FullEvent,
+    GenericId, GuildChannel, GuildId, MessageId, RoleId, RuleId as AutomodRuleId, UserId, AuditLogEntryId
 };
-use serenity::nonmax::NonMaxU16;
 use serenity::model::guild::automod::Action;
 use serenity::model::timestamp::Timestamp;
+use serenity::nonmax::NonMaxU16;
 use small_fixed_array::FixedString;
 use strum::VariantNames;
 
@@ -206,12 +206,18 @@ pub enum FieldType {
 
     /// A guild id
     Guild(GuildId),
-    
+
     // Command Id
     Command(CommandId),
 
+    // Entitlement ID
+    Entitlement(EntitlementId),
+
     // Application Id
     Application(ApplicationId),
+
+    // Audit Log Id
+    AuditLogId(AuditLogEntryId),
 
     /// An emoji id
     Emojis(Vec<EmojiId>),
@@ -222,6 +228,9 @@ pub enum FieldType {
     /// An automod action
     AutomodActions(Vec<serenity::model::guild::automod::Action>),
 
+    // Audit log Actions
+    AuditLogActions(Vec<serenity::model::guild::audit_log::Action>),
+
     /// An automod rule id
     AutomodRuleIds(Vec<AutomodRuleId>),
 
@@ -230,6 +239,12 @@ pub enum FieldType {
 
     // TimeStamp
     TimeStamp(serenity::model::timestamp::Timestamp),
+
+    // Changes
+    AuditLogActionsChanges(Vec<serenity::model::guild::audit_log::Change>),
+
+    // Options
+    AuditLogOptions(Vec<serenity::model::guild::audit_log::Options>),
 }
 
 macro_rules! from_field_type {
@@ -259,11 +274,20 @@ from_field_type! {
     GenericId => GenericIds,
     Action => AutomodActions,
     AutomodRuleId => AutomodRuleIds,
+    serenity::model::guild::audit_log::Action => AuditLogActions,
+    serenity::model::guild::audit_log::Change => AuditLogActionsChanges,
+    serenity::model::guild::audit_log::Options => AuditLogOptions
 }
 
 impl From<GuildId> for FieldType {
     fn from(s: GuildId) -> Self {
         Self::Guild(s)
+    }
+}
+
+impl From<AuditLogEntryId> for FieldType {
+    fn from(s: AuditLogEntryId) -> Self {
+        Self::AuditLogId(s)
     }
 }
 
@@ -275,6 +299,11 @@ impl From<CommandId> for FieldType {
 impl From<ApplicationId> for FieldType {
     fn from(s: ApplicationId) -> Self {
         Self::Application(s)
+    }
+}
+impl From<EntitlementId> for FieldType {
+    fn from(s: EntitlementId) -> Self {
+        Self::Entitlement(s)
     }
 }
 
@@ -317,13 +346,13 @@ impl From<NonMaxU16> for FieldType {
 #[allow(dead_code)]
 pub struct Field {
     /// The value of the field
-    value: FieldType,
+    value: Vec<FieldType>,
 }
 
 impl Field {
     /// Create a new field
     pub fn new(value: FieldType) -> Self {
-        Self { value }
+        Self { value: vec![value] }
     }
 }
 
@@ -333,7 +362,15 @@ pub fn expand_event(event: &FullEvent) -> Option<IndexMap<String, Field>> {
     let mut fields = IndexMap::new();
 
     fn insert_field<T: Into<FieldType>>(fields: &mut IndexMap<String, Field>, key: &str, value: T) {
-        fields.insert(key.to_string(), Field::new(value.into()));
+        let value = value.into();
+        match fields.entry(key.to_string()) {
+            indexmap::map::Entry::Occupied(mut entry) => {
+                entry.get_mut().value.push(value);
+            }
+            indexmap::map::Entry::Vacant(entry) => {
+                entry.insert(Field::new(value));
+            }
+        }
     }
 
     fn insert_optional_field<T: Into<FieldType>>(
@@ -341,13 +378,22 @@ pub fn expand_event(event: &FullEvent) -> Option<IndexMap<String, Field>> {
         key: &str,
         option: Option<T>,
     ) {
-        fields.insert(
-            key.to_string(),
-            Field::new(match option {
-                Some(value) => value.into(),
-                None => "None".to_string().into(),
-            }),
-        );
+        match option {
+            Some(value) => {
+                let value = value.into();
+                match fields.entry(key.to_string()) {
+                    indexmap::map::Entry::Occupied(mut entry) => {
+                        entry.get_mut().value.push(value);
+                    }
+                    indexmap::map::Entry::Vacant(entry) => {
+                        entry.insert(Field::new(value));
+                    }
+                }
+            }
+            None => {
+                fields.insert(key.to_string(), Field::new("None".to_string().into()));
+            }
+        }
     }
 
     fn expand_action_execution(fields: &mut IndexMap<String, Field>, execution: &ActionExecution) {
@@ -390,9 +436,9 @@ pub fn expand_event(event: &FullEvent) -> Option<IndexMap<String, Field>> {
         fields: &mut IndexMap<String, Field>,
         rule: &serenity::model::guild::automod::Rule,
     ) {
-        insert_field(fields, "id", rule.id);
+        insert_field(fields, "rule_id", rule.id);
         insert_field(fields, "guild_id", rule.guild_id);
-        insert_field(fields, "name", rule.name.clone());
+        insert_field(fields, "rule_name", rule.name.clone());
         insert_field(fields, "creator_id", rule.creator_id);
         insert_field(
             fields,
@@ -407,7 +453,7 @@ pub fn expand_event(event: &FullEvent) -> Option<IndexMap<String, Field>> {
         insert_field(fields, "trigger", rule.trigger.clone());
         insert_field(fields, "actions", rule.actions.clone().into_vec());
 
-        insert_field(fields, "enabled", rule.enabled);
+        insert_field(fields, "rule_enabled", rule.enabled);
         insert_field(fields, "exempt_roles", rule.exempt_roles.clone().into_vec());
         insert_field(
             fields,
@@ -417,13 +463,13 @@ pub fn expand_event(event: &FullEvent) -> Option<IndexMap<String, Field>> {
     }
 
     fn expand_channel(fields: &mut IndexMap<String, Field>, channel: &GuildChannel) {
-        insert_field(fields, "id", channel.id);
+        insert_field(fields, "channel_id", channel.id);
         insert_field(fields, "guild_id", channel.guild_id);
-        insert_field(fields, "name", channel.name.clone());
+        insert_field(fields, "channel_name", channel.name.clone());
         insert_field(fields, "nsfw", channel.nsfw);
         insert_field(
             fields,
-            "kind",
+            "channel_type",
             match channel.kind {
                 serenity::model::channel::ChannelType::Text => "Text".to_string(),
                 serenity::model::channel::ChannelType::Voice => "Voice".to_string(),
@@ -441,7 +487,7 @@ pub fn expand_event(event: &FullEvent) -> Option<IndexMap<String, Field>> {
         );
 
         // Optional fields
-        insert_optional_field(fields, "topic", channel.topic.clone());
+        insert_optional_field(fields, "channel_topic", channel.topic.clone());
         insert_optional_field(fields, "rate_limit_per_user", channel.rate_limit_per_user);
         insert_optional_field(fields, "parent_id", channel.parent_id);
         insert_optional_field(fields, "user_limit", channel.user_limit);
@@ -456,6 +502,42 @@ pub fn expand_event(event: &FullEvent) -> Option<IndexMap<String, Field>> {
         // Continue from here
     }
 
+    fn expand_entitlement(
+        fields: &mut IndexMap<String, Field>,
+        entitlement: &serenity::model::monetization::Entitlement,
+    ) {
+        insert_field(fields, "entitlement_id", entitlement.id);
+        insert_field(fields, "application_id", entitlement.application_id);
+        insert_field(
+            fields,
+            "entitlement_type",
+            format!("{:?}", entitlement.kind).to_lowercase(),
+        );
+        insert_field(fields, "entitlement_deleted", entitlement.deleted);
+
+
+        // Optional Fields
+        insert_optional_field(fields, "guild_id", entitlement.guild_id);
+        insert_optional_field(fields, "user_id", entitlement.user_id);
+        insert_optional_field(fields, "entitlement_starts_at", entitlement.starts_at);
+        insert_optional_field(fields, "entitlement_ends_at", entitlement.ends_at);
+    }
+
+    fn expand_audit_log_entry(
+        fields: &mut IndexMap<String, Field>,
+        entry: &serenity::model::guild::audit_log::AuditLogEntry,
+        guild_id: &GuildId,
+    ) {
+        insert_field(fields, "guild_id", *guild_id);
+        insert_field(fields, "action", entry.action.clone());
+        insert_field(fields, "user_id", entry.user_id);
+        insert_field(fields, "audit_log_id", entry.id);
+        insert_optional_field(fields, "reason", entry.reason.clone());
+        insert_optional_field(fields, "audit_log_target_id", entry.target_id);
+        insert_optional_field(fields, "audit_log_chages", entry.changes.clone());
+        insert_optional_field(fields, "audit_log_options", entry.options.clone());
+    }
+
     match event {
         FullEvent::AutoModActionExecution { execution } => {
             expand_action_execution(&mut fields, execution);
@@ -467,6 +549,7 @@ pub fn expand_event(event: &FullEvent) -> Option<IndexMap<String, Field>> {
             expand_rule(&mut fields, rule);
         }
         FullEvent::AutoModRuleUpdate { rule } => {
+
             expand_rule(&mut fields, rule);
         }
         FullEvent::CacheReady { .. } => return None, // We don't want this to be propogated anyways and it's not a guild event
@@ -486,13 +569,28 @@ pub fn expand_event(event: &FullEvent) -> Option<IndexMap<String, Field>> {
             insert_field(&mut fields, "channel_id", pin.channel_id);
             insert_optional_field(&mut fields, "last_pin_timestamp", pin.last_pin_timestamp);
         }
-        FullEvent::ChannelUpdate { new, .. } => {
+        FullEvent::ChannelUpdate { old, new, .. } => {
+            if let Some(old) = old {
+                expand_channel(&mut fields, old);
+            }
             expand_channel(&mut fields, new);
         }
         FullEvent::CommandPermissionsUpdate { permission, .. } => {
             expand_command_permissions(&mut fields, permission);
         }
-
+        FullEvent::EntitlementCreate { entitlement, .. } => {
+            expand_entitlement(&mut fields, entitlement);
+        }
+        FullEvent::EntitlementDelete { entitlement, .. } => {
+            expand_entitlement(&mut fields, entitlement);
+        }
+        FullEvent::EntitlementUpdate { entitlement, .. } => {
+            expand_entitlement(&mut fields, entitlement);
+        }
+        FullEvent::GuildAuditLogEntryCreate { guild_id, entry, .. } => {
+            expand_audit_log_entry(&mut fields, entry, guild_id);
+        }
+        
         _ => {}
     }
 
