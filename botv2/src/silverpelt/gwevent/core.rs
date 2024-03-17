@@ -4,7 +4,7 @@ use log::warn;
 use serenity::all::{
     ActionExecution, ApplicationId, AuditLogEntryId, ChannelId, CommandId, EmojiId, EntitlementId,
     FullEvent, GenericId, GuildChannel, GuildId, MessageId, RoleId, RuleId as AutomodRuleId,
-    UserId,
+    ScheduledEventId, StickerId, UserId, IntegrationId
 };
 use serenity::model::guild::automod::Action;
 use serenity::model::timestamp::Timestamp;
@@ -74,7 +74,6 @@ pub fn get_event_guild_id(event: &FullEvent) -> Result<GuildId, Option<Error>> {
         FullEvent::GuildRoleCreate { new, .. } => new.guild_id,
         FullEvent::GuildRoleDelete { guild_id, .. } => *guild_id,
         FullEvent::GuildRoleUpdate { new, .. } => new.guild_id,
-
         FullEvent::GuildScheduledEventCreate { event, .. } => event.guild_id,
         FullEvent::GuildScheduledEventDelete { event, .. } => event.guild_id,
         FullEvent::GuildScheduledEventUpdate { event, .. } => event.guild_id,
@@ -195,7 +194,7 @@ pub enum FieldType {
     Number(u64),
 
     /// A user id
-    Users(Vec<UserId>),
+    UserIds(Vec<UserId>),
 
     /// A channel id
     Channels(Vec<ChannelId>),
@@ -220,6 +219,12 @@ pub enum FieldType {
 
     // Audit Log Id
     AuditLogId(AuditLogEntryId),
+
+    // Scheduled Event Id
+    ScheduledEventId(ScheduledEventId),
+
+    // Integration Id
+    IntegrationId(IntegrationId),
 
     /// An emoji id
     Emojis(Vec<EmojiId>),
@@ -250,7 +255,23 @@ pub enum FieldType {
 
     // Emoji Map
     EmojiMap(Vec<serenity::model::guild::Emoji>),
+
+    // Sticker Map
+    StickerMap(Vec<serenity::model::sticker::Sticker>),
+    
+    // Users
+    Users(Vec<serenity::model::user::User>),
+
+    //Embeds
+    Embeds(Vec<serenity::model::channel::Embed>),
+
+    // Attachments
+    Attachments(Vec<serenity::model::channel::Attachment>),
+
+    // Components
+    Components(Vec<serenity::model::application::ActionRow>),
 }
+
 
 macro_rules! from_field_type {
     ($($t:ty => $variant:ident),* $(,)?) => {
@@ -271,7 +292,7 @@ macro_rules! from_field_type {
 
 from_field_type! {
     String => Strings,
-    UserId => Users,
+    UserId => UserIds,
     ChannelId => Channels,
     RoleId => Roles,
     MessageId => Messages,
@@ -282,7 +303,12 @@ from_field_type! {
     serenity::model::guild::audit_log::Action => AuditLogActions,
     serenity::model::guild::audit_log::Change => AuditLogActionsChanges,
     serenity::model::guild::audit_log::Options => AuditLogOptions,
-    serenity::model::guild::Emoji => EmojiMap
+    serenity::model::guild::Emoji => EmojiMap,
+    serenity::model::sticker::Sticker => StickerMap,
+    serenity::model::user::User => Users,
+    serenity::model::channel::Embed => Embeds,
+    serenity::model::channel::Attachment => Attachments,
+    serenity::model::application::ActionRow => Components,
 }
 
 impl From<GuildId> for FieldType {
@@ -290,7 +316,11 @@ impl From<GuildId> for FieldType {
         Self::Guild(s)
     }
 }
-
+impl From<IntegrationId> for FieldType {
+    fn from(s: IntegrationId) -> Self {
+        Self::IntegrationId(s)
+    }
+}
 impl From<AuditLogEntryId> for FieldType {
     fn from(s: AuditLogEntryId) -> Self {
         Self::AuditLogId(s)
@@ -302,6 +332,12 @@ impl From<CommandId> for FieldType {
         Self::Command(s)
     }
 }
+impl From<ScheduledEventId> for FieldType {
+    fn from(s: ScheduledEventId) -> Self {
+        Self::ScheduledEventId(s)
+    }
+}
+
 impl From<ApplicationId> for FieldType {
     fn from(s: ApplicationId) -> Self {
         Self::Application(s)
@@ -356,6 +392,16 @@ impl From<NonMaxU16> for FieldType {
 impl From<NonMaxU8> for FieldType {
     fn from(s: NonMaxU8) -> Self {
         Self::Number(s.get().into())
+    }
+}
+impl From<u32> for FieldType {
+    fn from(s: u32) -> Self {
+        Self::Number(s.into())
+    }
+}
+impl From<u8> for FieldType {
+    fn from(s: u8) -> Self {
+        Self::Number(s.into())
     }
 }
 
@@ -508,6 +554,7 @@ pub fn expand_event(event: &FullEvent) -> Option<IndexMap<String, Field>> {
         insert_optional_field(fields, "parent_id", channel.parent_id);
         insert_optional_field(fields, "user_limit", channel.user_limit);
     }
+   
 
     fn expand_command_permissions(
         fields: &mut IndexMap<String, Field>,
@@ -600,6 +647,119 @@ pub fn expand_event(event: &FullEvent) -> Option<IndexMap<String, Field>> {
         // insert_field(fields, "role_position", role.position.into());
     }
 
+    fn expand_scheduled_event(
+        fields: &mut IndexMap<String, Field>,
+        event: serenity::model::guild::ScheduledEvent,
+    ) {
+        insert_field(fields, "event_id", event.id);
+        insert_field(fields, "guild_id", event.guild_id);
+        insert_field(fields, "event_name", event.name.clone());
+        insert_field(fields, "event_start_time", event.start_time);
+        insert_field(
+            fields,
+            "event_privacy_level",
+            format!("{:?}", event.privacy_level).to_lowercase(),
+        );
+        insert_field(
+            fields,
+            "event_type",
+            match event.kind {
+                serenity::model::guild::ScheduledEventType::StageInstance => {
+                    "StageInstance".to_string()
+                }
+                serenity::model::guild::ScheduledEventType::Voice => "VoiceChannel".to_string(),
+                serenity::model::guild::ScheduledEventType::External => "External".to_string(),
+                _ => "Unknown".to_string(),
+            },
+        );
+
+        //optional
+        insert_optional_field(fields, "event_channel_id", event.channel_id);
+        insert_optional_field(fields, "creator_id", event.creator_id);
+        insert_optional_field(fields, "event_description", event.description.clone());
+        insert_optional_field(fields, "event_end_time", event.end_time);
+    }
+    fn expand_sticker_map(
+        fields: &mut IndexMap<String, Field>,
+        sticker_map: &HashMap<StickerId, serenity::model::sticker::Sticker>,
+        guild_id: &GuildId,
+    ) {
+        insert_field(fields, "guild_id", *guild_id);
+
+        insert_field(
+            fields,
+            "stickers",
+            sticker_map.values().cloned().collect::<Vec<_>>(),
+        );
+    }
+
+    fn expand_guild(fields: &mut IndexMap<String, Field>, guild: serenity::model::guild::Guild) {
+        insert_field(fields, "guild_id", guild.id);
+        insert_field(fields, "guild_name", guild.name.clone());
+        insert_field(fields, "guild_owner_id", guild.owner_id);
+        // insert_field(fields, "guild_nsfw_level", guild.nsfw_level);
+        //optional fields
+        insert_optional_field(fields, "guild_description", guild.description.clone());
+
+    }
+
+    fn expand_partial_guild(
+        fields: &mut IndexMap<String, Field>,
+        guild: serenity::model::guild::PartialGuild,
+    ) {
+        insert_field(fields, "guild_id", guild.id);
+        insert_field(fields, "guild_name", guild.name.clone());
+        insert_field(fields, "guild_owner_id", guild.owner_id);
+        // insert_field(fields, "guild_nsfw_level", guild.nsfw_level.to_string());
+        //optional fields
+        insert_optional_field(fields, "guild_description", guild.description.clone());
+    }
+
+    fn expand_integration(fields: &mut IndexMap<String, Field>, integration: serenity::model::guild::Integration) {
+        insert_field(fields, "integration_id", integration.id);
+        insert_field(fields, "integration_name", integration.name.clone());
+        insert_field(fields, "integration_type", integration.kind.clone());
+        insert_field(fields, "integration_enabled", integration.enabled());
+        insert_field(fields, "integration_account_id", integration.account.id.clone());
+        insert_field(fields, "integration_account_name", integration.account.name.clone());
+
+        //optional fields
+        insert_optional_field(fields, "integration_syncing_status", integration.syncing());
+        insert_optional_field(fields, "integration_role_id", integration.role_id);
+        insert_optional_field(fields, "integration_guild_id", integration.guild_id);
+        if let Some(user) = integration.user {
+            insert_field(fields, "integration_user_id", user.id);
+        }
+    }
+
+    fn expand_invite_create(fields: &mut IndexMap<String, Field>, data: serenity::model::event::InviteCreateEvent) {
+        insert_field(fields, "invite_code", data.code);
+        insert_field(fields, "invite_channel_id", data.channel_id);
+        insert_field(fields, "invite_created_at", data.created_at);
+        insert_field(fields, "invite_max_age", data.max_age);
+        insert_field(fields, "invite_max_uses", data.max_uses);
+
+        //optional fields
+        insert_optional_field(fields, "invite_guild_id", data.guild_id);
+
+    }
+
+    fn expand_message(fields: &mut IndexMap<String, Field>, message: serenity::model::channel::Message) {
+        insert_field(fields, "message_id", message.id);
+        insert_field(fields, "message_channel_id", message.channel_id);
+        insert_field(fields, "message_author", message.author.clone());
+        insert_field(fields, "message_content", message.content.clone());
+        insert_field(fields, "message_created_at", message.timestamp);
+        insert_field(fields, "message_embeds", message.embeds.clone().into_vec());
+        insert_field(fields, "message_attachments", message.attachments.clone().into_vec());
+        insert_field(fields, "message_components", message.components.clone().into_vec());
+        insert_field(fields, "message_kind", format!("{:?}", message.kind).to_lowercase());
+
+
+        //optional fields
+        insert_optional_field(fields, "message_updated_at", message.edited_timestamp);
+        insert_optional_field(fields, "message_guild_id", message.guild_id);
+    }
     match event {
         FullEvent::AutoModActionExecution { execution } => {
             expand_action_execution(&mut fields, execution);
@@ -714,13 +874,132 @@ pub fn expand_event(event: &FullEvent) -> Option<IndexMap<String, Field>> {
                 expand_role(&mut fields, removed_role_data.clone());
             }
         }
-        FullEvent::GuildRoleUpdate { old_data_if_available, new } => {
+        FullEvent::GuildRoleUpdate {
+            old_data_if_available,
+            new,
+        } => {
             if let Some(old) = old_data_if_available {
                 expand_role(&mut fields, old.clone());
             }
             expand_role(&mut fields, new.clone());
         }
-        _ => {}
+        FullEvent::GuildScheduledEventCreate { event } => {
+            expand_scheduled_event(&mut fields, event.clone());
+        }
+        FullEvent::GuildScheduledEventDelete { event } => {
+            expand_scheduled_event(&mut fields, event.clone());
+        }
+        FullEvent::GuildScheduledEventUpdate { event } => {
+            expand_scheduled_event(&mut fields, event.clone());
+        }
+        FullEvent::GuildScheduledEventUserAdd { subscribed } => {
+            insert_field(&mut fields, "guild_id", subscribed.guild_id);
+            insert_field(&mut fields, "event_id", subscribed.scheduled_event_id);
+            insert_field(&mut fields, "user_id", subscribed.user_id);
+        }
+        FullEvent::GuildScheduledEventUserRemove { unsubscribed } => {
+            insert_field(&mut fields, "guild_id", unsubscribed.guild_id);
+            insert_field(&mut fields, "event_id", unsubscribed.scheduled_event_id);
+            insert_field(&mut fields, "user_id", unsubscribed.user_id);
+        }
+        FullEvent::GuildStickersUpdate {
+            guild_id,
+            current_state,
+        } => {
+            expand_sticker_map(&mut fields, current_state, guild_id);
+        }
+        FullEvent::GuildUpdate { old_data_if_available, new_data, .. } => {
+            expand_partial_guild(&mut fields, new_data.clone());
+            if let Some(old) = old_data_if_available {
+                expand_guild(&mut fields, old.clone());
+            }
+        }
+        FullEvent::IntegrationCreate { integration, .. } => {
+            expand_integration(&mut fields, integration.clone());
+        }
+        FullEvent::IntegrationDelete { guild_id, integration_id, application_id } => {
+            insert_field(&mut fields, "guild_id", *guild_id);
+            insert_field(&mut fields, "integration_id", *integration_id);
+            insert_optional_field(&mut fields, "integration_application_id", *application_id);
+        }
+        FullEvent::IntegrationUpdate { integration, .. } => {
+            expand_integration(&mut fields, integration.clone());
+        }
+        FullEvent::InteractionCreate { .. } => return None,
+        FullEvent::InviteCreate { data, .. } => {
+            expand_invite_create(&mut fields, data.clone());
+        }
+        FullEvent::InviteDelete { data, .. } => {
+            insert_field(&mut fields, "invite_code", data.code.clone());
+            insert_field(&mut fields, "invite_channel_id", data.channel_id);
+            insert_optional_field(&mut fields, "invite_guild_id", data.guild_id);
+        }
+        FullEvent::Message { new_message, .. } => {
+            expand_message(&mut fields, new_message.clone());
+        }
+        FullEvent::MessageDelete { guild_id, deleted_message_id, channel_id, .. } => {
+            insert_optional_field(&mut fields, "guild_id", *guild_id);
+            insert_field(&mut fields, "message_id", *deleted_message_id);
+            insert_field(&mut fields, "channel_id", *channel_id);
+        }
+        FullEvent::MessageDeleteBulk { guild_id, channel_id, multiple_deleted_messages_ids, .. } => {
+            insert_optional_field(&mut fields, "guild_id", *guild_id);
+            insert_field(&mut fields, "channel_id", *channel_id);
+            insert_field(&mut fields, "message_ids", multiple_deleted_messages_ids.clone());
+        }
+        FullEvent::MessageUpdate { old_if_available, new, .. } => {
+            if let Some(old) = old_if_available {
+                expand_message(&mut fields, old.clone());
+            }
+            if let Some(new) = new {
+                expand_message(&mut fields, new.clone());
+            }
+        }
+        FullEvent::PresenceReplace { .. } => return None,
+        FullEvent::PresenceUpdate { .. } => return None,
+        FullEvent::Ratelimit { .. } => return None,
+        FullEvent::ReactionAdd { .. } => return None,
+        FullEvent::ReactionRemove { .. } => return None,
+        FullEvent::ReactionRemoveAll { .. } => return None,
+        FullEvent::ReactionRemoveEmoji { .. } => return None,
+        FullEvent::Ready { .. } => return None,
+        FullEvent::Resume { .. } => return None,
+        FullEvent::ShardStageUpdate { .. } => return None,
+        FullEvent::ShardsReady { .. } => return None,
+        FullEvent::StageInstanceCreate { .. } => return None,
+        FullEvent::StageInstanceDelete { .. } => return None,
+        FullEvent::StageInstanceUpdate { .. } => return None,
+        FullEvent::ThreadCreate { thread, .. } => {
+            expand_channel(&mut fields, thread);
+        }
+        FullEvent::ThreadDelete { thread, .. } => {
+            expand_channel(&mut fields, thread);
+        }
+        FullEvent::ThreadListSync { thread_list_sync, .. } => {
+            // expand_channel(&mut fields, thread_list_sync);
+            // nO NEED TO HANDLE THIS...
+            return None
+        }
+        FullEvent::ThreadMemberUpdate { thread_member, .. } => {
+            insert_field(&mut fields, "guild_id", thread_member.guild_id);
+            insert_field(&mut fields, "channel_id", thread_member.channel_id);
+            insert_field(&mut fields, "user_id", thread_member.user_id);
+            insert_field(&mut fields, "thread_member_flags", thread_member.flags);
+        }
+        FullEvent::ThreadMembersUpdate { thread_members_update, .. } => {
+            insert_field(&mut fields, "guild_id", thread_members_update.guild_id);
+            insert_field(&mut fields, "channel_id", thread_members_update.channel_id);
+            insert_field(&mut fields, "thread_member_count", thread_members_update.member_count);
+        }
+        FullEvent::ThreadUpdate { new, .. } => {
+            expand_channel(&mut fields, new);
+        }
+        FullEvent::TypingStart { .. } => return None,
+        FullEvent::UserUpdate { .. } => return None,
+        FullEvent::VoiceChannelStatusUpdate { .. } => return None,
+        FullEvent::VoiceServerUpdate { .. } => return None,
+        FullEvent::VoiceStateUpdate { .. } => return None,
+        FullEvent::WebhookUpdate { .. } => return None,
     }
 
     Some(fields)
