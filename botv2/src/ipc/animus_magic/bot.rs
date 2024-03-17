@@ -14,7 +14,7 @@ use sqlx::PgPool;
 use serde::{Deserialize, Serialize};
 use serenity::all::{GuildId, Role, RoleId, UserId};
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone)]
 pub enum BotAnimusResponse {
     Ok {
         message: String,
@@ -42,7 +42,7 @@ pub enum BotAnimusResponse {
     },
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone)]
 pub enum BotAnimusMessage {
     /// Ask the bot for module data
     Modules {},
@@ -56,13 +56,13 @@ pub enum BotAnimusMessage {
     /// - The bots highest role
     BaseGuildUserInfo { guild_id: GuildId, user_id: UserId },
     /// Given a guild id, a user id and a command name, check if the user has permission to run the command
-    CheckCommandPermission { guild_id: GuildId, user_id: UserId, command: String },
+    CheckCommandPermission { guild_id: GuildId, user_id: UserId, command: String, custom_resolved_kittycat_perms: Option<Vec<String>> },
     /// Toggles a module within the bot clearing any cache in the process
-    ToggleModule { guild_id: GuildId, module: String, enabled: bool },
+    ToggleModule { guild_id: Option<GuildId>, module: String, enabled: bool },
 }
 
 impl BotAnimusMessage {
-    pub async fn response(&self, pool: &PgPool, cache_http: &CacheHttpImpl) -> Result<BotAnimusResponse, AnimusErrorResponse> {
+    pub async fn response(self, pool: &PgPool, cache_http: &CacheHttpImpl) -> Result<BotAnimusResponse, AnimusErrorResponse> {
         match self {
             Self::Modules {} => {
                 let mut modules = Vec::new();
@@ -79,7 +79,7 @@ impl BotAnimusMessage {
 
                 for guild in guilds {
                     guilds_exist.push({
-                        if cache_http.cache.guild(*guild).is_some() {
+                        if cache_http.cache.guild(guild).is_some() {
                             1
                         } else {
                             0
@@ -91,14 +91,14 @@ impl BotAnimusMessage {
             }
             Self::BaseGuildUserInfo { guild_id, user_id } => {
                 let (name, icon, owner, roles, user_roles, bot_roles) = {
-                    let guild = match cache_http.cache.guild(*guild_id) {
+                    let guild = match cache_http.cache.guild(guild_id) {
                         Some(guild) => guild,
                         None => return Err("Guild not found".into()),
                     }
                     .clone();
 
                     let user_roles = {
-                        let mem = match guild.member(cache_http, *user_id).await {
+                        let mem = match guild.member(cache_http, user_id).await {
                             Ok(member) => member,
                             Err(e) => return Err(format!("Failed to get member: {}", e).into()),
                         };
@@ -128,18 +128,19 @@ impl BotAnimusMessage {
                     bot_roles,
                 })
             },
-            Self::CheckCommandPermission { guild_id, user_id, command } => {
+            Self::CheckCommandPermission { guild_id, user_id, command, custom_resolved_kittycat_perms } => {
                 // Check COMMAND_ID_MODULE_MAP
                 let base_command = command.split_whitespace().next().unwrap();
                 
                 let perm_res = silverpelt::cmd::check_command(
                     base_command,
-                    command,
-                    *guild_id,
-                    *user_id,
+                    &command,
+                    guild_id,
+                    user_id,
                     pool,
                     cache_http,
                     &None,
+                    custom_resolved_kittycat_perms
                 )
                 .await;
 
@@ -151,28 +152,51 @@ impl BotAnimusMessage {
                 })
             },
             Self::ToggleModule { guild_id, module, enabled } => {
-                let guild_id = *guild_id;
-                if *enabled {
-                    SILVERPELT_CACHE
-                        .module_enabled_cache
-                        .insert((guild_id, module.clone()), true)
-                        .await;
-                } else {
-                    SILVERPELT_CACHE
-                        .module_enabled_cache
-                        .insert((guild_id, module.clone()), false)
-                        .await;
-                }
-
-                tokio::spawn(async move {
-                    if let Err(err) = SILVERPELT_CACHE.command_permission_cache.invalidate_entries_if(move |k, _| {
-                        k.0 == guild_id
-                    }) {
-                        log::error!("Failed to invalidate command permission cache for guild {}: {}", guild_id, err);
+                if let Some(guild_id) = guild_id {
+                    if enabled {
+                        SILVERPELT_CACHE
+                            .module_enabled_cache
+                            .insert((guild_id, module.clone()), true)
+                            .await;
                     } else {
-                        log::info!("Invalidated cache for guild {}", guild_id);
+                        SILVERPELT_CACHE
+                            .module_enabled_cache
+                            .insert((guild_id, module.clone()), false)
+                            .await;
                     }
-                });
+
+                    tokio::spawn(async move {
+                        if let Err(err) = SILVERPELT_CACHE.command_permission_cache.invalidate_entries_if(move |k, _| {
+                            k.0 == guild_id
+                        }) {
+                            log::error!("Failed to invalidate command permission cache for guild {}: {}", guild_id, err);
+                        } else {
+                            log::info!("Invalidated cache for guild {}", guild_id);
+                        }
+                    });
+                } else {
+                    // Global enable/disable the module by iterating the entire cache
+                    for (k, v) in SILVERPELT_CACHE.module_enabled_cache.iter() {
+                        if k.1 == *module && enabled != v {
+                            SILVERPELT_CACHE
+                                .module_enabled_cache
+                                .insert((k.0, module.clone()), enabled)
+                                .await;
+
+                            // Invalidate command permission cache entries here too
+                            let gid = k.0;
+                            tokio::spawn(async move {
+                                if let Err(err) = SILVERPELT_CACHE.command_permission_cache.invalidate_entries_if(move |g, _| {
+                                    g.0 == gid
+                                }) {
+                                    log::error!("Failed to invalidate command permission cache for guild {}: {}", k.0, err);
+                                } else {
+                                    log::info!("Invalidated cache for guild {}", k.0);
+                                }
+                            });
+                        }
+                    }
+                }
 
                 Ok(BotAnimusResponse::Ok {
                     message: "".to_string()

@@ -10,7 +10,7 @@ pub async fn get_perm_info(
     guild_id: GuildId,
     user_id: UserId,
     cache_http: &CacheHttpImpl,
-    poise_ctx: &Option<crate::Context<'_>>
+    poise_ctx: &Option<crate::Context<'_>>,
 ) -> Result<(bool, serenity::all::Permissions, small_fixed_array::FixedArray<serenity::all::RoleId>), PermissionResult> {    
     if let Some(cached_guild) = guild_id.to_guild_cached(&cache_http.cache) {
         // OPTIMIZATION: if owner, we dont need to continue further
@@ -62,6 +62,7 @@ pub async fn get_perm_info(
 
 
 /// Check command checks whether or not a user has permission to run a command
+#[allow(clippy::too_many_arguments)]
 pub async fn check_command(
     base_command: &str,
     command: &str,
@@ -69,7 +70,10 @@ pub async fn check_command(
     user_id: UserId,
     pool: &PgPool,
     cache_http: &CacheHttpImpl,
-    poise_ctx: &Option<crate::Context<'_>>
+    // If a poise::Context is available and originates from a Application Command, we can fetch the guild+member from cache itself
+    poise_ctx: &Option<crate::Context<'_>>,
+    // API needs this for limiting the permissions of a user, allows setting custom resolved perms
+    custom_resolved_kittycat_perms: Option<Vec<String>>,
 ) -> PermissionResult {
     if !SILVERPELT_CACHE
         .command_id_module_map
@@ -157,11 +161,17 @@ pub async fn check_command(
         };
     }
 
-    let kittycat_perms = match silverpelt::member_permission_calc::get_kittycat_perms(pool, guild_id, user_id, &roles).await {
-        Ok(v) => v,
-        Err(e) => {
-            return e.into();
-        }   
+    let kittycat_perms = {
+        if let Some(custom_resolved_kittycat_perms) = custom_resolved_kittycat_perms {
+            custom_resolved_kittycat_perms
+        } else {
+            match silverpelt::member_permission_calc::get_kittycat_perms(pool, guild_id, user_id, &roles).await {
+                Ok(v) => v,
+                Err(e) => {
+                    return e.into();
+                }   
+            }
+        }
     };
 
     info!(
