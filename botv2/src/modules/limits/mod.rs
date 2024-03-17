@@ -14,6 +14,7 @@ pub fn module() -> crate::silverpelt::Module {
             "Experimental server ratelimiting module. Not yet suitable for production use. Should be combined with anti-nuke bots for best efficacy",
         toggleable: true,
         commands_configurable: true,
+        virtual_module: false,
         web_hidden: false,
         is_default_enabled: false,
         commands: vec![
