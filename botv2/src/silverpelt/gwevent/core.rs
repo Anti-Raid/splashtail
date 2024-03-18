@@ -769,7 +769,40 @@ pub fn expand_event(event: &FullEvent) -> Option<IndexMap<String, Field>> {
         insert_field(fields, "message_embeds", message.embeds.clone().into_vec());
         insert_field(fields, "message_attachments", message.attachments.clone().into_vec());
         insert_field(fields, "message_components", message.components.clone().into_vec());
-        insert_field(fields, "message_kind", format!("{:?}", message.kind).to_lowercase());
+        insert_field(fields, "message_kind", match message.kind {
+            serenity::model::channel::MessageType::Regular => "Regular".to_string(),
+            serenity::model::channel::MessageType::GroupRecipientAddition => "GroupRecipientAddition".to_string(),
+            serenity::model::channel::MessageType::GroupRecipientRemoval => "GroupRecipientRemoval".to_string(),
+            serenity::model::channel::MessageType::GroupCallCreation => "GroupCallCreation".to_string(),
+            serenity::model::channel::MessageType::GroupNameUpdate => "GroupNameUpdate".to_string(),
+            serenity::model::channel::MessageType::GroupIconUpdate => "GroupIconUpdate".to_string(),
+            serenity::model::channel::MessageType::PinsAdd => "PinsAdd".to_string(),
+            serenity::model::channel::MessageType::MemberJoin => "MemberJoin".to_string(),
+            serenity::model::channel::MessageType::NitroBoost => "NitroBoost".to_string(),
+            serenity::model::channel::MessageType::NitroTier1 => "NitroTier1".to_string(),
+            serenity::model::channel::MessageType::NitroTier2 => "NitroTier2".to_string(),
+            serenity::model::channel::MessageType::NitroTier3 => "NitroTier3".to_string(),
+            serenity::model::channel::MessageType::ChannelFollowAdd => "ChannelFollowAdd".to_string(),
+            serenity::model::channel::MessageType::GuildDiscoveryDisqualified => "GuildDiscoveryDisqualified".to_string(),
+            serenity::model::channel::MessageType::GuildDiscoveryRequalified => "GuildDiscoveryRequalified".to_string(),
+            serenity::model::channel::MessageType::GuildDiscoveryGracePeriodInitialWarning => "GuildDiscoveryGracePeriodInitialWarning".to_string(),
+            serenity::model::channel::MessageType::GuildDiscoveryGracePeriodFinalWarning => "GuildDiscoveryGracePeriodFinalWarning".to_string(),
+            serenity::model::channel::MessageType::ThreadCreated => "ThreadCreated".to_string(),
+            serenity::model::channel::MessageType::InlineReply => "InlineReply".to_string(),
+            serenity::model::channel::MessageType::ChatInputCommand => "ChatInputCommand".to_string(),
+            serenity::model::channel::MessageType::ThreadStarterMessage => "ThreadStarterMessage".to_string(),
+            serenity::model::channel::MessageType::GuildInviteReminder => "GuildInviteReminder".to_string(),
+            serenity::model::channel::MessageType::ContextMenuCommand => "ContextMenuCommand".to_string(),
+            serenity::model::channel::MessageType::AutoModAction => "AutoModAction".to_string(),
+            serenity::model::channel::MessageType::RoleSubscriptionPurchase => "RoleSubscriptionPurchase".to_string(),
+            serenity::model::channel::MessageType::InteractionPremiumUpsell => "InteractionPremiumUpsell".to_string(),
+            serenity::model::channel::MessageType::StageStart => "StageStart".to_string(),
+            serenity::model::channel::MessageType::StageEnd => "StageEnd".to_string(),
+            serenity::model::channel::MessageType::StageSpeaker => "StageSpeaker".to_string(),
+            serenity::model::channel::MessageType::StageTopic => "StageTopic".to_string(),
+            serenity::model::channel::MessageType::GuildApplicationPremiumSubscription => "GuildApplicationPremiumSubscription".to_string(),
+            _ => "Unknown".to_string(),
+        });
 
 
         //optional fields
@@ -992,17 +1025,33 @@ pub fn expand_event(event: &FullEvent) -> Option<IndexMap<String, Field>> {
             insert_field(&mut fields, "guild_id", thread.guild_id);
             insert_field(&mut fields, "thread_id", thread.id);
             insert_field(&mut fields, "channel_id", thread.parent_id);
-            insert_field(&mut fields, "thread_type", format!("{:?}", thread.kind).to_lowercase());
-
+            insert_field(
+                &mut fields,
+                "channel_type",
+                match thread.kind {
+                    serenity::model::channel::ChannelType::Text => "Text".to_string(),
+                    serenity::model::channel::ChannelType::Voice => "Voice".to_string(),
+                    serenity::model::channel::ChannelType::Private => "PrivateChannel".to_string(),
+                    serenity::model::channel::ChannelType::GroupDm => "GroupDm".to_string(),
+                    serenity::model::channel::ChannelType::Category => "Category".to_string(),
+                    serenity::model::channel::ChannelType::News => "News".to_string(),
+                    serenity::model::channel::ChannelType::NewsThread => "NewsThread".to_string(),
+                    serenity::model::channel::ChannelType::PublicThread => "PublicThread".to_string(),
+                    serenity::model::channel::ChannelType::PrivateThread => "PrivateThread".to_string(),
+                    serenity::model::channel::ChannelType::Stage => "Stage".to_string(),
+                    serenity::model::channel::ChannelType::Directory => "Directory".to_string(),
+                    _ => "Unknown".to_string(),
+                },
+            );
         }
-        FullEvent::ThreadListSync { thread_list_sync, .. } => {
+        FullEvent::ThreadListSync { .. } => {
             // expand_channel(&mut fields, thread_list_sync);
             // NO NEED TO HANDLE THIS...
             return None
         }
         FullEvent::ThreadMemberUpdate { thread_member, .. } => {
 
-            if let Some(member) = thread_member.member {
+            if let Some(member) = thread_member.member.clone() {
                 expand_member(&mut fields, member);
             }
             insert_optional_field(&mut fields, "guild_id", thread_member.guild_id);
