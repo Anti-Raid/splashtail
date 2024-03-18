@@ -270,6 +270,9 @@ pub enum FieldType {
 
     // Components
     Components(Vec<serenity::model::application::ActionRow>),
+
+    // ThreadMembers
+    ThreadMembers(Vec<serenity::model::guild::ThreadMember>),
 }
 
 
@@ -309,6 +312,7 @@ from_field_type! {
     serenity::model::channel::Embed => Embeds,
     serenity::model::channel::Attachment => Attachments,
     serenity::model::application::ActionRow => Components,
+    serenity::model::guild::ThreadMember => ThreadMembers,
 }
 
 impl From<GuildId> for FieldType {
@@ -402,6 +406,11 @@ impl From<u32> for FieldType {
 impl From<u8> for FieldType {
     fn from(s: u8) -> Self {
         Self::Number(s.into())
+    }
+}
+impl From<i16> for FieldType {
+    fn from(s: i16) -> Self {
+        Self::Number(s as u64)
     }
 }
 
@@ -525,7 +534,6 @@ pub fn expand_event(event: &FullEvent) -> Option<IndexMap<String, Field>> {
     }
 
     fn expand_channel(fields: &mut IndexMap<String, Field>, channel: &GuildChannel) {
-        insert_field(fields, "channel_id", channel.id);
         insert_field(fields, "guild_id", channel.guild_id);
         insert_field(fields, "channel_name", channel.name.clone());
         insert_field(fields, "nsfw", channel.nsfw);
@@ -553,6 +561,14 @@ pub fn expand_event(event: &FullEvent) -> Option<IndexMap<String, Field>> {
         insert_optional_field(fields, "rate_limit_per_user", channel.rate_limit_per_user);
         insert_optional_field(fields, "parent_id", channel.parent_id);
         insert_optional_field(fields, "user_limit", channel.user_limit);
+
+        // Handle Thread IDs
+        if let Some(parent_id) = channel.parent_id {
+            insert_field(fields, "channel_id", parent_id);
+            insert_field(fields, "thread_id", channel.id);
+        } else {
+            insert_field(fields, "channel_id", channel.id);
+        }
     }
    
 
@@ -973,23 +989,31 @@ pub fn expand_event(event: &FullEvent) -> Option<IndexMap<String, Field>> {
             expand_channel(&mut fields, thread);
         }
         FullEvent::ThreadDelete { thread, .. } => {
-            expand_channel(&mut fields, thread);
+            insert_field(&mut fields, "guild_id", thread.guild_id);
+            insert_field(&mut fields, "thread_id", thread.id);
+            insert_field(&mut fields, "channel_id", thread.parent_id);
+            insert_field(&mut fields, "thread_type", format!("{:?}", thread.kind).to_lowercase());
+
         }
         FullEvent::ThreadListSync { thread_list_sync, .. } => {
             // expand_channel(&mut fields, thread_list_sync);
-            // nO NEED TO HANDLE THIS...
+            // NO NEED TO HANDLE THIS...
             return None
         }
         FullEvent::ThreadMemberUpdate { thread_member, .. } => {
-            insert_field(&mut fields, "guild_id", thread_member.guild_id);
-            insert_field(&mut fields, "channel_id", thread_member.channel_id);
+
+            if let Some(member) = thread_member.member {
+                expand_member(&mut fields, member);
+            }
+            insert_optional_field(&mut fields, "guild_id", thread_member.guild_id);
+            insert_field(&mut fields, "channel_id", thread_member.id);
             insert_field(&mut fields, "user_id", thread_member.user_id);
-            insert_field(&mut fields, "thread_member_flags", thread_member.flags);
         }
         FullEvent::ThreadMembersUpdate { thread_members_update, .. } => {
             insert_field(&mut fields, "guild_id", thread_members_update.guild_id);
-            insert_field(&mut fields, "channel_id", thread_members_update.channel_id);
+            insert_field(&mut fields, "channel_id", thread_members_update.id);
             insert_field(&mut fields, "thread_member_count", thread_members_update.member_count);
+            insert_field(&mut fields, "removed_member_ids", thread_members_update.removed_member_ids.clone().into_vec());
         }
         FullEvent::ThreadUpdate { new, .. } => {
             expand_channel(&mut fields, new);
