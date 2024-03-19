@@ -551,7 +551,7 @@ mod tests {
                 serenity::all::Permissions::ADMINISTRATOR,
                 &[],
             ),
-            "missing_min_checks"
+            "no_checks_succeeded"
         ));
 
         // Real-life example
