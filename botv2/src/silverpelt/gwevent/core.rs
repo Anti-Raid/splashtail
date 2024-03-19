@@ -315,6 +315,48 @@ macro_rules! from_field_type_multiple {
     };
 }
 
+macro_rules! from_field_type_tostring {
+    ($($t:ty => $variant:ident),* $(,)?) => {
+        $(
+            impl From<$t> for FieldType {
+                fn from(s: $t) -> Self {
+                    Self::$variant(vec![s.to_string()])
+                }
+            }
+
+            impl From<Vec<$t>> for FieldType {
+                fn from(s: Vec<$t>) -> Self {
+                    Self::$variant(s.into_iter().map(|s| s.to_string()).collect())
+                }
+            }
+        )*
+    };
+}
+
+macro_rules! from_field_type_nonmax {
+    ($($t:ty => $variant:ident),* $(,)?) => {
+        $(
+            impl From<$t> for FieldType {
+                fn from(s: $t) -> Self {
+                    Self::$variant(s.get().into())
+                }
+            }
+        )*
+    };
+}
+
+macro_rules! from_field_type_number {
+    ($($t:ty => $variant:ident),* $(,)?) => {
+        $(
+            impl From<$t> for FieldType {
+                fn from(s: $t) -> Self {
+                    Self::$variant(s as u64)
+                }
+            }
+        )*
+    };
+}
+
 from_field_type_multiple! {
     String => Strings,
     UserId => UserIds,
@@ -352,52 +394,25 @@ from_field_type! {
     serenity::model::guild::automod::Trigger => AutomodTrigger,
 }
 
-impl From<FixedString<u32>> for FieldType {
-    fn from(s: FixedString<u32>) -> Self {
-        Self::Strings(vec![s.to_string()])
-    }
+from_field_type_tostring! {
+    FixedString<u32> => Strings,
+    FixedString<u16> => Strings,
+    FixedString<u8> => Strings,
 }
 
-impl From<FixedString<u16>> for FieldType {
-    fn from(s: FixedString<u16>) -> Self {
-        Self::Strings(vec![s.to_string()])
-    }
-}
-impl From<FixedString<u8>> for FieldType {
-    fn from(s: FixedString<u8>) -> Self {
-        Self::Strings(vec![s.to_string()])
-    }
+from_field_type_nonmax! {
+    NonMaxU16 => Number,
+    NonMaxU8 => Number,
 }
 
-impl From<NonMaxU16> for FieldType {
-    fn from(s: NonMaxU16) -> Self {
-        Self::Number(s.get().into())
-    }
-}
-impl From<NonMaxU8> for FieldType {
-    fn from(s: NonMaxU8) -> Self {
-        Self::Number(s.get().into())
-    }
-}
-impl From<u32> for FieldType {
-    fn from(s: u32) -> Self {
-        Self::Number(s.into())
-    }
-}
-impl From<u8> for FieldType {
-    fn from(s: u8) -> Self {
-        Self::Number(s.into())
-    }
-}
-impl From<i16> for FieldType {
-    fn from(s: i16) -> Self {
-        Self::Number(s as u64)
-    }
-}
-impl From<usize> for FieldType {
-    fn from(s: usize) -> Self {
-        Self::Number(s as u64)
-    }
+from_field_type_number! {
+    u64 => Number,
+    u32 => Number,
+    i32 => Number,
+    u16 => Number,
+    i16 => Number,
+    u8 => Number,
+    usize => Number,
 }
 
 #[allow(dead_code)]
