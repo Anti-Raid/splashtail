@@ -4,32 +4,27 @@ type Error = crate::Error;
 type Context<'a> = crate::Context<'a>;
 
 #[poise::command(
-    prefix_command, 
-    slash_command, 
+    prefix_command,
+    slash_command,
     user_cooldown = 1,
     guild_cooldown = 1,
-    subcommands(
-        "modules_enable",
-        "modules_disable",
-    )
+    subcommands("modules_enable", "modules_disable",)
 )]
-pub async fn modules(
-    _ctx: Context<'_>,
-) -> Result<(), Error> {
+pub async fn modules(_ctx: Context<'_>) -> Result<(), Error> {
     Ok(())
 }
 
 /// Enables a module. Note that globally disabled modules cannot be used even if enabled
 #[poise::command(
-    prefix_command, 
-    slash_command, 
+    prefix_command,
+    slash_command,
     user_cooldown = 1,
     guild_cooldown = 1,
-    rename = "enable",
+    rename = "enable"
 )]
 pub async fn modules_enable(
     ctx: Context<'_>,
-    #[description = "The module to enable"] 
+    #[description = "The module to enable"]
     #[autocomplete = "crate::silverpelt::poise_ext::module_list::autocomplete"]
     module: String,
 ) -> Result<(), Error> {
@@ -37,14 +32,13 @@ pub async fn modules_enable(
         return Err("This command must be run in a guild".into());
     };
 
-   // Check that the module exists
-   let Some(module_data) = SILVERPELT_CACHE.module_id_cache.get(&module) else {
-        return Err(
-            format!(
-                "The module you are trying to disable ({}) does not exist",
-                module
-            ).into()
-        );
+    // Check that the module exists
+    let Some(module_data) = SILVERPELT_CACHE.module_id_cache.get(&module) else {
+        return Err(format!(
+            "The module you are trying to disable ({}) does not exist",
+            module
+        )
+        .into());
     };
 
     if !module_data.toggleable {
@@ -92,13 +86,21 @@ pub async fn modules_enable(
 
     tx.commit().await?;
 
-    SILVERPELT_CACHE.module_enabled_cache.remove(&(guild_id, module)).await;
+    SILVERPELT_CACHE
+        .module_enabled_cache
+        .remove(&(guild_id, module))
+        .await;
 
     tokio::spawn(async move {
-        if let Err(err) = SILVERPELT_CACHE.command_permission_cache.invalidate_entries_if(move |k, _| {
-            k.0 == guild_id
-        }) {
-            log::error!("Failed to invalidate command permission cache for guild {}: {}", guild_id, err);
+        if let Err(err) = SILVERPELT_CACHE
+            .command_permission_cache
+            .invalidate_entries_if(move |k, _| k.0 == guild_id)
+        {
+            log::error!(
+                "Failed to invalidate command permission cache for guild {}: {}",
+                guild_id,
+                err
+            );
         } else {
             log::info!("Invalidated cache for guild {}", guild_id);
         }
@@ -111,15 +113,15 @@ pub async fn modules_enable(
 
 /// Disables a module. Note that certain modules may not be disablable
 #[poise::command(
-    prefix_command, 
-    slash_command, 
+    prefix_command,
+    slash_command,
     user_cooldown = 1,
     guild_cooldown = 1,
-    rename = "disable",
+    rename = "disable"
 )]
 pub async fn modules_disable(
     ctx: Context<'_>,
-    #[description = "The module to disable"] 
+    #[description = "The module to disable"]
     #[autocomplete = "crate::silverpelt::poise_ext::module_list::autocomplete"]
     module: String,
 ) -> Result<(), Error> {
@@ -129,14 +131,13 @@ pub async fn modules_disable(
 
     // Check that the module exists
     let Some(module_data) = SILVERPELT_CACHE.module_id_cache.get(&module) else {
-        return Err(
-            format!(
-                "The module you are trying to disable ({}) does not exist",
-                module
-            ).into()
-        );
+        return Err(format!(
+            "The module you are trying to disable ({}) does not exist",
+            module
+        )
+        .into());
     };
-    
+
     if !module_data.toggleable {
         return Err("This module cannot be enabled/disabled".into());
     }
@@ -182,13 +183,21 @@ pub async fn modules_disable(
 
     tx.commit().await?;
 
-    SILVERPELT_CACHE.module_enabled_cache.remove(&(guild_id, module)).await;
+    SILVERPELT_CACHE
+        .module_enabled_cache
+        .remove(&(guild_id, module))
+        .await;
 
     tokio::spawn(async move {
-        if let Err(err) = SILVERPELT_CACHE.command_permission_cache.invalidate_entries_if(move |k, _| {
-            k.0 == guild_id
-        }) {
-            log::error!("Failed to invalidate command permission cache for guild {}: {}", guild_id, err);
+        if let Err(err) = SILVERPELT_CACHE
+            .command_permission_cache
+            .invalidate_entries_if(move |k, _| k.0 == guild_id)
+        {
+            log::error!(
+                "Failed to invalidate command permission cache for guild {}: {}",
+                guild_id,
+                err
+            );
         } else {
             log::info!("Invalidated cache for guild {}", guild_id);
         }

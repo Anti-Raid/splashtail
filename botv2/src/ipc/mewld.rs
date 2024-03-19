@@ -1,9 +1,9 @@
+use crate::impls::cache::CacheHttpImpl;
 #[allow(unused_imports)]
 use fred::clients::SubscriberClient;
 use fred::interfaces::{ClientLike, EventInterface, PubsubInterface};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
-use crate::impls::cache::CacheHttpImpl;
 
 /// This is the fundemental primitive for mewld IPC
 pub struct MewldIpcClient {

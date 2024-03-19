@@ -1,65 +1,99 @@
+use super::permissions::PermissionResult;
 use super::silverpelt_cache::SILVERPELT_CACHE;
 use crate::impls::cache::CacheHttpImpl;
 use crate::silverpelt;
+use log::info;
 use serenity::all::{GuildId, UserId};
 use sqlx::PgPool;
-use super::permissions::PermissionResult;
-use log::info;
 
 pub async fn get_perm_info(
     guild_id: GuildId,
     user_id: UserId,
     cache_http: &CacheHttpImpl,
     poise_ctx: &Option<crate::Context<'_>>,
-) -> Result<(bool, serenity::all::Permissions, small_fixed_array::FixedArray<serenity::all::RoleId>), PermissionResult> {    
+) -> Result<
+    (
+        bool,
+        serenity::all::Permissions,
+        small_fixed_array::FixedArray<serenity::all::RoleId>,
+    ),
+    PermissionResult,
+> {
     if let Some(cached_guild) = guild_id.to_guild_cached(&cache_http.cache) {
         // OPTIMIZATION: if owner, we dont need to continue further
         if user_id == cached_guild.owner_id {
-            return Ok((true, serenity::all::Permissions::all(), small_fixed_array::FixedArray::new()));
+            return Ok((
+                true,
+                serenity::all::Permissions::all(),
+                small_fixed_array::FixedArray::new(),
+            ));
         }
 
         // OPTIMIZATION: If we have a poise_ctx which is also a ApplicationContext, we can directly use it
         if let Some(poise::Context::Application(ref a)) = poise_ctx {
             if let Some(ref mem) = a.interaction.member {
-                return Ok((mem.user.id == cached_guild.owner_id, cached_guild.member_permissions(mem), mem.roles.clone()));               
+                return Ok((
+                    mem.user.id == cached_guild.owner_id,
+                    cached_guild.member_permissions(mem),
+                    mem.roles.clone(),
+                ));
             }
         }
-        
+
         // Now fetch the member, here calling member automatically tries to find in its cache first
         if let Some(member) = cached_guild.members.get(&user_id) {
-            return Ok((member.user.id == cached_guild.owner_id, cached_guild.member_permissions(member), member.roles.clone()));
+            return Ok((
+                member.user.id == cached_guild.owner_id,
+                cached_guild.member_permissions(member),
+                member.roles.clone(),
+            ));
         }
     }
 
     let guild = match guild_id.to_partial_guild(&cache_http).await {
         Ok(guild) => guild,
         Err(e) => {
-            return Err(PermissionResult::DiscordError { error: e.to_string() })
+            return Err(PermissionResult::DiscordError {
+                error: e.to_string(),
+            })
         }
     };
 
     // OPTIMIZATION: if owner, we dont need to continue further
     if user_id == guild.owner_id {
-        return Ok((true, serenity::all::Permissions::all(), small_fixed_array::FixedArray::new()));
+        return Ok((
+            true,
+            serenity::all::Permissions::all(),
+            small_fixed_array::FixedArray::new(),
+        ));
     }
 
     // OPTIMIZATION: If we have a poise_ctx which is also a ApplicationContext, we can directly use it
     if let Some(poise::Context::Application(ref a)) = poise_ctx {
         if let Some(ref mem) = a.interaction.member {
-            return Ok((mem.user.id == guild.owner_id, guild.member_permissions(mem), mem.roles.clone()));               
+            return Ok((
+                mem.user.id == guild.owner_id,
+                guild.member_permissions(mem),
+                mem.roles.clone(),
+            ));
         }
     }
 
     let member = match guild.member(&cache_http, user_id).await {
         Ok(member) => member,
         Err(e) => {
-            return Err(PermissionResult::DiscordError { error: e.to_string() })
+            return Err(PermissionResult::DiscordError {
+                error: e.to_string(),
+            })
         }
     };
 
-    Ok((member.user.id == guild.owner_id, guild.member_permissions(&member), member.roles.clone()))
+    Ok((
+        member.user.id == guild.owner_id,
+        guild.member_permissions(&member),
+        member.roles.clone(),
+    ))
 }
-
 
 /// Check command checks whether or not a user has permission to run a command
 #[allow(clippy::too_many_arguments)]
@@ -77,14 +111,15 @@ pub async fn check_command(
 ) -> PermissionResult {
     if !SILVERPELT_CACHE
         .command_id_module_map
-        .contains_key(base_command) {
-            return "This command is not registered in the database, please contact support".into();
-        }
+        .contains_key(base_command)
+    {
+        return "This command is not registered in the database, please contact support".into();
+    }
 
     let module = SILVERPELT_CACHE
-    .command_id_module_map
-    .get(base_command)
-    .unwrap();
+        .command_id_module_map
+        .get(base_command)
+        .unwrap();
 
     if module == "root" {
         if !crate::config::CONFIG
@@ -125,11 +160,10 @@ pub async fn check_command(
             guild_id.to_string().as_str(),
             command,
         )
-        .await {
+        .await
+        {
             Ok(v) => v,
-            Err(e) => { 
-                return e.into() 
-            }
+            Err(e) => return e.into(),
         };
 
     let command_config = command_config.unwrap_or(silverpelt::GuildCommandConfiguration {
@@ -148,12 +182,13 @@ pub async fn check_command(
     });
 
     // Try getting guild+member from cache to speed up response times first
-    let (is_owner, member_perms, roles) = match get_perm_info(guild_id, user_id, cache_http, poise_ctx).await {
-        Ok(v) => v,
-        Err(e) => {
-            return e;
-        }
-    };
+    let (is_owner, member_perms, roles) =
+        match get_perm_info(guild_id, user_id, cache_http, poise_ctx).await {
+            Ok(v) => v,
+            Err(e) => {
+                return e;
+            }
+        };
 
     if is_owner {
         return PermissionResult::OkWithMessage {
@@ -165,20 +200,22 @@ pub async fn check_command(
         if let Some(custom_resolved_kittycat_perms) = custom_resolved_kittycat_perms {
             custom_resolved_kittycat_perms
         } else {
-            match silverpelt::member_permission_calc::get_kittycat_perms(pool, guild_id, user_id, &roles).await {
+            match silverpelt::member_permission_calc::get_kittycat_perms(
+                pool, guild_id, user_id, &roles,
+            )
+            .await
+            {
                 Ok(v) => v,
                 Err(e) => {
                     return e.into();
-                }   
+                }
             }
         }
     };
 
     info!(
         "Checking if user {} can run command {} with permissions {:?}",
-        user_id,
-        command,
-        member_perms
+        user_id, command, member_perms
     );
 
     let perm_res = silverpelt::permissions::can_run_command(
@@ -191,21 +228,15 @@ pub async fn check_command(
     );
 
     let mut key = SILVERPELT_CACHE
-    .command_permission_cache
-    .get(&(guild_id, user_id))
-    .await;
-            
+        .command_permission_cache
+        .get(&(guild_id, user_id))
+        .await;
+
     if let Some(ref mut map) = key {
-        map.insert(
-            command.to_string(),
-            perm_res.clone(),
-        );
+        map.insert(command.to_string(), perm_res.clone());
     } else {
         let mut map = indexmap::IndexMap::new();
-        map.insert(
-            command.to_string(),
-            perm_res.clone(),
-        );
+        map.insert(command.to_string(), perm_res.clone());
         SILVERPELT_CACHE
             .command_permission_cache
             .insert((guild_id, user_id), map)

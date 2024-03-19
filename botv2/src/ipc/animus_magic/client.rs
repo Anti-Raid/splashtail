@@ -1,15 +1,7 @@
 use super::bot::{BotAnimusMessage, BotAnimusResponse};
 use super::jobserver::{JobserverAnimusMessage, JobserverAnimusResponse};
-use crate::{ipc::argparse::MEWLD_ARGS, Error, impls::cache::CacheHttpImpl};
-use splashcore_rs::animusmagic_protocol::{
-    AnimusOp, 
-    AnimusTarget, 
-    AnimusErrorResponse,
-    create_payload,
-    from_payload,
-    get_payload_meta,
-};
-use splashcore_rs::animusmagic_ext::{AnimusMagicClientExt, AnimusAnyResponse};
+use crate::{impls::cache::CacheHttpImpl, ipc::argparse::MEWLD_ARGS, Error};
+use dashmap::DashMap;
 use fred::{
     clients::{RedisClient, RedisPool},
     interfaces::{ClientLike, EventInterface, PubsubInterface},
@@ -17,8 +9,11 @@ use fred::{
     types::RedisValue,
 };
 use serde::{Deserialize, Serialize};
+use splashcore_rs::animusmagic_ext::{AnimusAnyResponse, AnimusMagicClientExt};
+use splashcore_rs::animusmagic_protocol::{
+    create_payload, from_payload, get_payload_meta, AnimusErrorResponse, AnimusOp, AnimusTarget,
+};
 use std::sync::Arc;
-use dashmap::DashMap;
 use tokio::sync::mpsc::Sender;
 
 #[derive(Serialize, Deserialize)]
@@ -165,7 +160,8 @@ impl AnimusMagicClient {
             match meta.op {
                 AnimusOp::Error => {
                     if meta.from == AnimusTarget::Bot
-                        && (meta.cluster_id_to != MEWLD_ARGS.cluster_id && meta.cluster_id_to != u16::MAX)
+                        && (meta.cluster_id_to != MEWLD_ARGS.cluster_id
+                            && meta.cluster_id_to != u16::MAX)
                     {
                         continue; // Not for us
                     }
@@ -198,10 +194,11 @@ impl AnimusMagicClient {
                             rx_map.remove(&meta.command_id);
                         }
                     });
-                },
+                }
                 AnimusOp::Response => {
                     if meta.from == AnimusTarget::Bot
-                        && (meta.cluster_id_to != MEWLD_ARGS.cluster_id && meta.cluster_id_to != u16::MAX)
+                        && (meta.cluster_id_to != MEWLD_ARGS.cluster_id
+                            && meta.cluster_id_to != u16::MAX)
                     {
                         continue; // Not for us
                     }
@@ -242,7 +239,8 @@ impl AnimusMagicClient {
                         continue; // Not for us, to != Bot and != wildcard
                     }
 
-                    if meta.cluster_id_to != MEWLD_ARGS.cluster_id && meta.cluster_id_to != u16::MAX {
+                    if meta.cluster_id_to != MEWLD_ARGS.cluster_id && meta.cluster_id_to != u16::MAX
+                    {
                         continue; // Not for us, cluster_id != ours and != wildcard
                     }
 
@@ -287,7 +285,7 @@ impl AnimusMagicClient {
                         redis_pool: self.redis_pool.clone(),
                         rx_map: self.rx_map.clone(),
                     };
-                    
+
                     tokio::spawn(async move {
                         let payload = &binary[meta.payload_offset..];
 
@@ -297,17 +295,18 @@ impl AnimusMagicClient {
                             Err(e) => {
                                 log::warn!("Invalid message recieved on channel {} [request extract error] {}", message.channel, e);
                                 // Send error
-                                if let Err(e) = client.error(
-                                    &meta.command_id,
-                                    AnimusErrorResponse {
-                                        message: "Invalid payload, failed to unmarshal message"
-                                            .to_string(),
-                                        context: e.to_string(),
-                                    },
-                                    meta.cluster_id_from,
-                                    meta.from,
-                                )
-                                .await
+                                if let Err(e) = client
+                                    .error(
+                                        &meta.command_id,
+                                        AnimusErrorResponse {
+                                            message: "Invalid payload, failed to unmarshal message"
+                                                .to_string(),
+                                            context: e.to_string(),
+                                        },
+                                        meta.cluster_id_from,
+                                        meta.from,
+                                    )
+                                    .await
                                 {
                                     log::warn!("Failed to send error response: {}", e);
                                 }
@@ -324,17 +323,18 @@ impl AnimusMagicClient {
                                     message.channel
                                 );
                                 // Send error
-                                if let Err(e) = client.error(
-                                    &meta.command_id,
-                                    AnimusErrorResponse {
-                                        message: "Invalid payload, failed to unmarshal message"
-                                            .to_string(),
-                                        context: "Invalid message type".to_string(),
-                                    },
-                                    meta.cluster_id_from,
-                                    meta.from,
-                                )
-                                .await
+                                if let Err(e) = client
+                                    .error(
+                                        &meta.command_id,
+                                        AnimusErrorResponse {
+                                            message: "Invalid payload, failed to unmarshal message"
+                                                .to_string(),
+                                            context: "Invalid message type".to_string(),
+                                        },
+                                        meta.cluster_id_from,
+                                        meta.from,
+                                    )
+                                    .await
                                 {
                                     log::warn!("Failed to send error response: {}", e);
                                 }
@@ -351,13 +351,9 @@ impl AnimusMagicClient {
                                     message.channel
                                 );
                                 // Send error
-                                if let Err(e) = client.error(
-                                    &meta.command_id,
-                                    e,
-                                    meta.cluster_id_from,
-                                    meta.from,
-                                )
-                                .await
+                                if let Err(e) = client
+                                    .error(&meta.command_id, e, meta.cluster_id_from, meta.from)
+                                    .await
                                 {
                                     log::warn!("Failed to send error response: {}", e);
                                 }
@@ -381,16 +377,17 @@ impl AnimusMagicClient {
                             );
 
                             // Send error
-                            if let Err(e) = client.error(
-                                &meta.command_id,
-                                AnimusErrorResponse {
-                                    message: "Failed to create response payload".to_string(),
-                                    context: "create_payload returned Err code".to_string(),
-                                },
-                                meta.cluster_id_from,
-                                meta.from,
-                            )
-                            .await
+                            if let Err(e) = client
+                                .error(
+                                    &meta.command_id,
+                                    AnimusErrorResponse {
+                                        message: "Failed to create response payload".to_string(),
+                                        context: "create_payload returned Err code".to_string(),
+                                    },
+                                    meta.cluster_id_from,
+                                    meta.from,
+                                )
+                                .await
                             {
                                 log::warn!("Failed to send error response: {}", e);
                             }
@@ -402,16 +399,17 @@ impl AnimusMagicClient {
                             log::warn!("Failed to publish response to redis: {}", e);
 
                             // Send error
-                            if let Err(e) = client.error(
-                                &meta.command_id,
-                                AnimusErrorResponse {
-                                    message: "Failed to publish response to redis".to_string(),
-                                    context: e.to_string(),
-                                },
-                                meta.cluster_id_from,
-                                meta.from,
-                            )
-                            .await
+                            if let Err(e) = client
+                                .error(
+                                    &meta.command_id,
+                                    AnimusErrorResponse {
+                                        message: "Failed to publish response to redis".to_string(),
+                                        context: e.to_string(),
+                                    },
+                                    meta.cluster_id_from,
+                                    meta.from,
+                                )
+                                .await
                             {
                                 log::warn!("Failed to send error response: {}", e);
                             }

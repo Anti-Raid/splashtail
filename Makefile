@@ -9,6 +9,8 @@ updatebot:
 	make buildbot && cp -v botv2/target/release/botv2 botv2
 updatebot_dbg:
 	make buildbot_dbg && cp -v botv2/target/debug/botv2 botv2
+formatbot:
+	cd botv2 && cargo fmt
 restartwebserver:
 	make stcore
 	make buildbot

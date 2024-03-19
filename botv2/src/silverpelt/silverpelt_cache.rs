@@ -1,8 +1,11 @@
+use super::{
+    canonical_module::CanonicalModule, permissions::PermissionResult, CommandExtendedDataMap,
+    Module, ModuleEventHandler,
+};
 use indexmap::IndexMap;
 use moka::future::Cache;
 use once_cell::sync::Lazy;
 use serenity::all::{GuildId, UserId};
-use super::{CommandExtendedDataMap, Module, ModuleEventHandler, canonical_module::CanonicalModule, permissions::PermissionResult};
 
 /// The silverpelt cache is a structure that contains the core state for the bot
 pub struct SilverpeltCache {
@@ -93,10 +96,7 @@ impl SilverpeltCache {
                 let map = dashmap::DashMap::new();
 
                 for module in crate::modules::modules() {
-                    map.insert(
-                        module.id.to_string(),
-                        CanonicalModule::from(module),
-                    );
+                    map.insert(module.id.to_string(), CanonicalModule::from(module));
                 }
 
                 map

@@ -3,10 +3,10 @@ mod core;
 mod gitlogs;
 mod limits;
 mod moderation;
+mod root;
 mod server_backups;
 mod server_member_backups;
 mod settings;
-mod root;
 
 /// List of modules available. Not all may be enabled
 pub fn modules() -> Vec<crate::silverpelt::Module> {

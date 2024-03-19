@@ -1,16 +1,16 @@
-use serenity::all::{GuildId, UserId, RoleId};
+use serenity::all::{GuildId, RoleId, UserId};
 
 /// Rederive permissions rederives the permissions given a member id and a list of roles
 ///
 /// Calling rederive_perms has some side-effects
-/// 
+///
 /// 0. The member will automatically be added to the guild_members table if they are not already in it
 /// 1. Resolved_perms_cache will be updated in the guild_members table
 pub async fn rederive_perms(
     pool: &sqlx::PgPool,
     guild_id: GuildId,
     user_id: UserId,
-    roles: &[RoleId]
+    roles: &[RoleId],
 ) -> Result<Vec<String>, crate::Error> {
     let roles_str = {
         let mut r = Vec::new();
@@ -24,15 +24,20 @@ pub async fn rederive_perms(
 
     if roles.is_empty() {
         // Special fast path
-        let rec = sqlx::query!("SELECT roles, perm_overrides FROM guild_members WHERE guild_id = $1 AND user_id = $2", guild_id.to_string(), user_id.to_string())
+        let rec = sqlx::query!(
+            "SELECT roles, perm_overrides FROM guild_members WHERE guild_id = $1 AND user_id = $2",
+            guild_id.to_string(),
+            user_id.to_string()
+        )
         .fetch_optional(pool)
         .await?;
 
         if let Some(rec) = rec {
             let resolved_perms = kittycat::perms::StaffPermissions {
                 user_positions: vec![],
-                perm_overrides: rec.perm_overrides
-            }.resolve();
+                perm_overrides: rec.perm_overrides,
+            }
+            .resolve();
 
             sqlx::query!(
                 "UPDATE guild_members SET roles = $1, resolved_perms_cache = $2 WHERE guild_id = $3 AND user_id = $4",
@@ -46,13 +51,17 @@ pub async fn rederive_perms(
 
             return Ok(resolved_perms);
         }
-        
+
         return Ok(Vec::new());
     }
 
-    let rec = sqlx::query!("SELECT perm_overrides FROM guild_members WHERE guild_id = $1 AND user_id = $2", guild_id.to_string(), user_id.to_string())
+    let rec = sqlx::query!(
+        "SELECT perm_overrides FROM guild_members WHERE guild_id = $1 AND user_id = $2",
+        guild_id.to_string(),
+        user_id.to_string()
+    )
     .fetch_optional(pool)
-    .await?;    
+    .await?;
 
     // Rederive permissions for the new perms
     let role_perms = sqlx::query!(
@@ -87,7 +96,8 @@ pub async fn rederive_perms(
     let resolved_perms = kittycat::perms::StaffPermissions {
         user_positions,
         perm_overrides,
-    }.resolve();
+    }
+    .resolve();
 
     if in_db {
         sqlx::query!(
@@ -127,7 +137,7 @@ pub async fn get_kittycat_perms(
 
     if let Some(rec) = rec {
         if rec.needs_perm_rederive {
-            return rederive_perms(pool, guild_id, user_id, roles).await
+            return rederive_perms(pool, guild_id, user_id, roles).await;
         }
 
         // Check user roles against db roles

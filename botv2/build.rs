@@ -67,7 +67,7 @@ pub fn modules() -> Vec<crate::silverpelt::Module> {
     }
 
     let module_func_list = module_dat_list.join("\n        ");
-    
+
     let mut module_ids_list = Vec::new();
 
     for module in &module_list {

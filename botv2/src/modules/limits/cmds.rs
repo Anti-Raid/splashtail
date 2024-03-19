@@ -280,11 +280,11 @@ pub async fn limitactions_view(
     }
 
     let mut reply = CreateReply::new();
-    
+
     for embed in embeds {
         reply = reply.embed(embed);
     }
-    
+
     ctx.send(reply).await?;
 
     Ok(())

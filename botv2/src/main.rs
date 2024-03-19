@@ -6,20 +6,18 @@ mod modules;
 mod silverpelt;
 mod tasks;
 
-use silverpelt::{
-    silverpelt_cache::SILVERPELT_CACHE,
-    EventHandlerContext,
-    module_config::is_module_enabled,
-    gwevent::core::get_event_guild_id,
-};
 use crate::impls::cache::CacheHttpImpl;
+use silverpelt::{
+    gwevent::core::get_event_guild_id, module_config::is_module_enabled,
+    silverpelt_cache::SILVERPELT_CACHE, EventHandlerContext,
+};
 
 use std::sync::Arc;
 
-use log::{error, warn, info};
-use serenity::all::HttpBuilder;
+use log::{error, info, warn};
 use poise::serenity_prelude::FullEvent;
 use poise::CreateReply;
+use serenity::all::HttpBuilder;
 use sqlx::postgres::PgPoolOptions;
 use std::io::Write;
 use surrealdb::engine::remote::ws::{Client, Ws};
@@ -68,7 +66,10 @@ async fn on_error(error: poise::FrameworkError<'_, Data, Error>) {
                 let err = ctx.say(format!("{}", error)).await;
 
                 if let Err(e) = err {
-                    error!("Message send error for FrameworkError::CommandCheckFailed: {}", e);
+                    error!(
+                        "Message send error for FrameworkError::CommandCheckFailed: {}",
+                        e
+                    );
                 }
             }
         }
@@ -162,9 +163,11 @@ async fn event_listener<'a>(
                 ctx.serenity_context.clone(),
             ));
 
-            if ctx.serenity_context.shard_id.0 == *crate::ipc::argparse::MEWLD_ARGS.shards.first().unwrap() {
+            if ctx.serenity_context.shard_id.0
+                == *crate::ipc::argparse::MEWLD_ARGS.shards.first().unwrap()
+            {
                 info!("Starting IPC");
-                
+
                 let data = ctx.serenity_context.data::<Data>();
                 let ipc_ref = data.mewld_ipc.clone();
                 let ch = CacheHttpImpl::from_ctx(ctx.serenity_context);
@@ -203,7 +206,7 @@ async fn event_listener<'a>(
                     crate::ipc::argparse::MEWLD_ARGS.mewld_redis_channel
                 );
             }
-        },
+        }
         _ => {}
     }
 
@@ -218,17 +221,9 @@ async fn event_listener<'a>(
     };
 
     let data = ctx.user_data();
-    
-    for (module, evts) in SILVERPELT_CACHE
-        .module_event_listeners_cache
-        .iter()
-    {
-        let module_enabled = match is_module_enabled(
-            &data.pool,
-            event_guild_id,
-            module,
-        )
-        .await {
+
+    for (module, evts) in SILVERPELT_CACHE.module_event_listeners_cache.iter() {
+        let module_enabled = match is_module_enabled(&data.pool, event_guild_id, module).await {
             Ok(enabled) => enabled,
             Err(e) => {
                 error!("Error getting module enabled status: {}", e);
@@ -243,12 +238,14 @@ async fn event_listener<'a>(
         log::debug!("Executing event handlers for {}", module);
         for evth in evts.iter() {
             if let Err(e) = evth(
-                ctx.serenity_context, 
+                ctx.serenity_context,
                 event,
                 EventHandlerContext {
                     guild_id: event_guild_id,
-                }
-            ).await {
+                },
+            )
+            .await
+            {
                 error!("Error in event handler: {}", e);
             }
         }
@@ -301,10 +298,12 @@ async fn main() {
 
     info!("Proxy URL: {}", proxy_url);
 
-    let http = Arc::new(HttpBuilder::new(&config::CONFIG.discord_auth.token)
-        .proxy(proxy_url)
-        .ratelimiter_disabled(true)
-        .build());
+    let http = Arc::new(
+        HttpBuilder::new(&config::CONFIG.discord_auth.token)
+            .proxy(proxy_url)
+            .ratelimiter_disabled(true)
+            .build(),
+    );
 
     info!("HttpBuilder done");
 
@@ -402,7 +401,7 @@ async fn main() {
                 }
 
                 let Some(guild_id) = ctx.guild_id() else {
-                    return Err("This command can only be run from servers".into())
+                    return Err("This command can only be run from servers".into());
                 };
 
                 let data = ctx.data();
@@ -431,7 +430,7 @@ async fn main() {
                     &data.pool,
                     &CacheHttpImpl::from_ctx(ctx.serenity_context()),
                     &Some(ctx),
-                    None
+                    None,
                 )
                 .await;
 
@@ -466,9 +465,7 @@ async fn main() {
         ..Default::default()
     };
 
-    let framework = poise::Framework::builder()
-        .options(framework_opts)
-        .build();
+    let framework = poise::Framework::builder().options(framework_opts).build();
 
     info!("Connecting to redis");
 

@@ -1,8 +1,8 @@
 use log::{error, info, warn};
 use poise::serenity_prelude::{GuildId, UserId};
+use splashcore_rs::crypto::gen_random;
 use sqlx::PgPool;
 use std::collections::HashMap;
-use splashcore_rs::crypto::gen_random;
 use surrealdb::engine::remote::ws::Client;
 use surrealdb::Surreal;
 

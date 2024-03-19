@@ -1,12 +1,9 @@
-use sqlx::PgPool;
-use serenity::all::GuildId;
 use super::{
-    CommandExtendedData, 
-    GuildCommandConfiguration, 
-    GuildModuleConfiguration, 
-    silverpelt_cache::SILVERPELT_CACHE,
-    utils::permute_command_names
+    silverpelt_cache::SILVERPELT_CACHE, utils::permute_command_names, CommandExtendedData,
+    GuildCommandConfiguration, GuildModuleConfiguration,
 };
+use serenity::all::GuildId;
+use sqlx::PgPool;
 
 /// Returns whether or not a module is enabled based on cache and/or database
 ///
@@ -17,10 +14,14 @@ use super::{
 #[allow(dead_code)] // This function is a useful utility function
 pub async fn is_module_enabled(
     pool: &PgPool,
-    guild_id: GuildId, 
-    module: &str
+    guild_id: GuildId,
+    module: &str,
 ) -> Result<bool, crate::Error> {
-    if let Some(state) = SILVERPELT_CACHE.module_enabled_cache.get(&(guild_id, module.to_string())).await {
+    if let Some(state) = SILVERPELT_CACHE
+        .module_enabled_cache
+        .get(&(guild_id, module.to_string()))
+        .await
+    {
         Ok(state)
     } else {
         // Fetch from database
@@ -34,24 +35,39 @@ pub async fn is_module_enabled(
 
         if let Some(disabled) = disabled {
             if let Some(disabled) = disabled.disabled {
-                SILVERPELT_CACHE.module_enabled_cache.insert((guild_id, module.to_string()), !disabled).await;
+                SILVERPELT_CACHE
+                    .module_enabled_cache
+                    .insert((guild_id, module.to_string()), !disabled)
+                    .await;
                 Ok(!disabled)
             } else {
                 // User wants to use the default value
-                let module = SILVERPELT_CACHE.module_id_cache.get(module).ok_or::<crate::Error>(
-                    format!("Could not find module {} in cache", module).into()
-                )?;
+                let module = SILVERPELT_CACHE
+                    .module_id_cache
+                    .get(module)
+                    .ok_or::<crate::Error>(
+                        format!("Could not find module {} in cache", module).into(),
+                    )?;
 
-                SILVERPELT_CACHE.module_enabled_cache.insert((guild_id, module.id.to_string()), module.is_default_enabled).await;
+                SILVERPELT_CACHE
+                    .module_enabled_cache
+                    .insert((guild_id, module.id.to_string()), module.is_default_enabled)
+                    .await;
                 Ok(module.is_default_enabled)
             }
         } else {
             // User wants to use the default value
-            let module = SILVERPELT_CACHE.module_id_cache.get(module).ok_or::<crate::Error>(
-                format!("Could not find module {} in cache", module).into()
-            )?;
+            let module = SILVERPELT_CACHE
+                .module_id_cache
+                .get(module)
+                .ok_or::<crate::Error>(
+                    format!("Could not find module {} in cache", module).into(),
+                )?;
 
-            SILVERPELT_CACHE.module_enabled_cache.insert((guild_id, module.id.to_string()), module.is_default_enabled).await;
+            SILVERPELT_CACHE
+                .module_enabled_cache
+                .insert((guild_id, module.id.to_string()), module.is_default_enabled)
+                .await;
             Ok(module.is_default_enabled)
         }
     }
@@ -83,7 +99,10 @@ pub async fn get_command_configuration(
         .into());
     };
 
-    let module = SILVERPELT_CACHE.command_id_module_map.get(root_cmd).ok_or::<crate::Error>("Unknown error determining module of command".into())?;
+    let module = SILVERPELT_CACHE
+        .command_id_module_map
+        .get(root_cmd)
+        .ok_or::<crate::Error>("Unknown error determining module of command".into())?;
 
     // Check if theres any module configuration
     let module_configuration = sqlx::query!(
@@ -102,9 +121,7 @@ pub async fn get_command_configuration(
 
     let mut cmd_data = root_cmd_data
         .get("")
-        .unwrap_or(
-            &CommandExtendedData::kittycat_or_admin(root_cmd, "*")
-        )
+        .unwrap_or(&CommandExtendedData::kittycat_or_admin(root_cmd, "*"))
         .clone();
 
     for command in permutations.iter() {

@@ -1,6 +1,8 @@
 pub mod taskpoll;
 
 use crate::Error;
+use crate::{config, impls::utils::get_icon_of_state};
+use indexmap::IndexMap;
 use object_store::path::Path;
 use object_store::signer::Signer;
 use reqwest::Method;
@@ -8,8 +10,6 @@ use sqlx::{types::uuid::Uuid, PgPool};
 use std::str::FromStr;
 use std::sync::Arc;
 use std::time::Duration;
-use indexmap::IndexMap;
-use crate::{config, impls::utils::get_icon_of_state};
 
 /// Rust internal/special type to better serialize/speed up task embed creation
 #[derive(serde::Deserialize, serde::Serialize, Clone, PartialEq)]
@@ -275,7 +275,9 @@ impl Task {
     pub fn get_file_path(&self) -> Option<String> {
         let path = self.get_path()?;
 
-        self.output.as_ref().map(|output| format!("{}/{}", path, output.filename))
+        self.output
+            .as_ref()
+            .map(|output| format!("{}/{}", path, output.filename))
     }
 
     #[allow(dead_code)]
@@ -292,13 +294,13 @@ impl Task {
 
         match **object_store {
             config::ObjectStore::S3(ref store) => {
-                let url = store.signed_url(Method::GET, &path, Duration::from_secs(600)).await?;
-                
+                let url = store
+                    .signed_url(Method::GET, &path, Duration::from_secs(600))
+                    .await?;
+
                 Ok(url.to_string())
-            },
-            config::ObjectStore::Local(_) => {
-                Ok(format!("file://{}", path))
             }
+            config::ObjectStore::Local(_) => Ok(format!("file://{}", path)),
         }
     }
 

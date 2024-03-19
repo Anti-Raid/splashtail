@@ -1,6 +1,6 @@
-use serenity::all::{UserId, ChannelId, RoleId, MessageId, GuildId, EmojiId};
-use small_fixed_array::FixedString;
 use serde::ser::SerializeStruct;
+use serenity::all::{ChannelId, EmojiId, GuildId, MessageId, RoleId, UserId};
+use small_fixed_array::FixedString;
 
 /// Contains variant with inner as default value
 /// Should be serde serialized as {"type": "String", "default": "value"}
@@ -34,14 +34,12 @@ pub enum WebFieldType {
 // Macro to simplify the serialization process
 #[macro_export]
 macro_rules! serialize_web_field_type {
-    ($serializer:expr, $variant:expr, $value:expr) => {
-        {
-            let mut state = $serializer.serialize_struct("WebFieldType", 2)?;
-            state.serialize_field("type", $variant)?;
-            state.serialize_field("default", $value)?;
-            state.end()
-        }
-    };
+    ($serializer:expr, $variant:expr, $value:expr) => {{
+        let mut state = $serializer.serialize_struct("WebFieldType", 2)?;
+        state.serialize_field("type", $variant)?;
+        state.serialize_field("default", $value)?;
+        state.end()
+    }};
 }
 
 // Custom serializer for WebFieldType
@@ -70,17 +68,33 @@ impl<'de> serde::Deserialize<'de> for WebFieldType {
     {
         let value = serde_json::Value::deserialize(deserializer)?;
 
-        let field_type = value["type"].as_str().ok_or(serde::de::Error::custom("Missing type field"))?;
-        let default = value["default"].as_str().ok_or(serde::de::Error::custom("Missing default field"))?;
+        let field_type = value["type"]
+            .as_str()
+            .ok_or(serde::de::Error::custom("Missing type field"))?;
+        let default = value["default"]
+            .as_str()
+            .ok_or(serde::de::Error::custom("Missing default field"))?;
 
         match field_type {
             "String" => Ok(WebFieldType::String(default.to_string())),
-            "User" => Ok(WebFieldType::User(default.parse().map_err(serde::de::Error::custom)?)),
-            "Channel" => Ok(WebFieldType::Channel(default.parse().map_err(serde::de::Error::custom)?)),
-            "Role" => Ok(WebFieldType::Role(default.parse().map_err(serde::de::Error::custom)?)),
-            "Message" => Ok(WebFieldType::Message(default.parse().map_err(serde::de::Error::custom)?)),
-            "Guild" => Ok(WebFieldType::Guild(default.parse().map_err(serde::de::Error::custom)?)),
-            "Emoji" => Ok(WebFieldType::Emoji(default.parse().map_err(serde::de::Error::custom)?)),
+            "User" => Ok(WebFieldType::User(
+                default.parse().map_err(serde::de::Error::custom)?,
+            )),
+            "Channel" => Ok(WebFieldType::Channel(
+                default.parse().map_err(serde::de::Error::custom)?,
+            )),
+            "Role" => Ok(WebFieldType::Role(
+                default.parse().map_err(serde::de::Error::custom)?,
+            )),
+            "Message" => Ok(WebFieldType::Message(
+                default.parse().map_err(serde::de::Error::custom)?,
+            )),
+            "Guild" => Ok(WebFieldType::Guild(
+                default.parse().map_err(serde::de::Error::custom)?,
+            )),
+            "Emoji" => Ok(WebFieldType::Emoji(
+                default.parse().map_err(serde::de::Error::custom)?,
+            )),
             _ => Err(serde::de::Error::custom("Invalid type field")),
         }
     }

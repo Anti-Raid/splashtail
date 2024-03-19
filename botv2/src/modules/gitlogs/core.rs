@@ -78,7 +78,9 @@ pub async fn list(ctx: Context<'_>) -> Result<(), Error> {
                             .field("Webhook ID", webhook_id.clone(), false)
                             .field(
                                 "Hook URL (visit for hook info, add to Github to recieve events)",
-                                api_url.clone() + "/integrations/gitlogs/kittycat?id=" + &webhook_id,
+                                api_url.clone()
+                                    + "/integrations/gitlogs/kittycat?id="
+                                    + &webhook_id,
                                 false,
                             )
                             .field("Created at", webhook.created_at.to_string(), false),
@@ -86,8 +88,7 @@ pub async fn list(ctx: Context<'_>) -> Result<(), Error> {
                 }
 
                 let mut cr =
-                    CreateReply::default()
-                    .content("Here are all the webhooks in this guild:");
+                    CreateReply::default().content("Here are all the webhooks in this guild:");
 
                 for embed in embeds {
                     cr = cr.embed(embed);

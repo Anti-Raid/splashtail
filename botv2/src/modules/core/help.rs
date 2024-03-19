@@ -6,10 +6,10 @@ use poise::serenity_prelude::{
 use poise::{Command, CreateReply};
 use std::fmt::Write;
 
+use crate::silverpelt::silverpelt_cache::SILVERPELT_CACHE;
 use crate::Context;
 use crate::Data;
 use crate::Error;
-use crate::silverpelt::silverpelt_cache::SILVERPELT_CACHE;
 use log::info;
 use std::sync::Arc;
 use std::time::Duration;
@@ -42,9 +42,7 @@ async fn _embed_help(
         let cat_name = {
             if let Some(cat_name) = category_id {
                 // Get the module from the name
-                let cat_module = SILVERPELT_CACHE
-                    .module_id_cache
-                    .get(&cat_name);
+                let cat_module = SILVERPELT_CACHE.module_id_cache.get(&cat_name);
 
                 if let Some(cat_module) = cat_module {
                     cat_module.name.to_string()

@@ -1,6 +1,6 @@
 use crate::{impls::cache::CacheHttpImpl, jobserver::Task};
-use serenity::all::{CreateActionRow, CreateButton, CreateEmbed};
 use serde_json::Value;
+use serenity::all::{CreateActionRow, CreateButton, CreateEmbed};
 use std::future::Future;
 use std::pin::Pin;
 use std::sync::Arc;
@@ -34,7 +34,11 @@ fn _to_string(v: &Option<&Value>) -> String {
     }
 }
 
-pub fn embed<'a>(task: &Task, pre_embeds: Vec<CreateEmbed<'a>>, show_status: bool) -> Result<poise::CreateReply<'a>, crate::Error> {
+pub fn embed<'a>(
+    task: &Task,
+    pre_embeds: Vec<CreateEmbed<'a>>,
+    show_status: bool,
+) -> Result<poise::CreateReply<'a>, crate::Error> {
     let mut task_statuses: Vec<String> = Vec::new();
     let mut task_statuses_length = 0;
     let mut components = Vec::new();
@@ -69,7 +73,8 @@ pub fn embed<'a>(task: &Task, pre_embeds: Vec<CreateEmbed<'a>>, show_status: boo
                 add += &format!(" {}", vs.join(", "));
             }
 
-            add = add.chars().take(500).collect::<String>() + if add.len() > 500 { "..." } else { "" };
+            add = add.chars().take(500).collect::<String>()
+                + if add.len() > 500 { "..." } else { "" };
 
             add += &format!(" | <t:{}:R>", status.ts.round());
 
@@ -95,11 +100,9 @@ pub fn embed<'a>(task: &Task, pre_embeds: Vec<CreateEmbed<'a>>, show_status: boo
             );
             description += &format!("\n\n:link: [Download {}]({})", output.filename, &furl);
 
-            components.push(CreateActionRow::Buttons(vec![
-                CreateButton::new_link(furl)
-                    .label("Download")
-                    .emoji('📥'),
-            ]));
+            components.push(CreateActionRow::Buttons(vec![CreateButton::new_link(furl)
+                .label("Download")
+                .emoji('📥')]));
         }
     }
 
@@ -114,9 +117,7 @@ pub fn embed<'a>(task: &Task, pre_embeds: Vec<CreateEmbed<'a>>, show_status: boo
         msg = msg.embed(pre_embed);
     }
 
-    msg = msg
-    .embed(embed)
-    .components(components);
+    msg = msg.embed(embed).components(components);
 
     Ok(msg)
 }

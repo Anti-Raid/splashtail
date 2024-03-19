@@ -1,13 +1,13 @@
 pub mod canonical_module;
 pub mod cmd;
-pub mod permissions;
+pub mod config_opt;
+pub mod gwevent;
 pub mod member_permission_calc;
 pub mod module_config;
+pub mod permissions;
 pub mod poise_ext;
 pub mod silverpelt_cache;
 pub mod utils;
-pub mod gwevent;
-pub mod config_opt;
 
 use futures::future::BoxFuture;
 use indexmap::IndexMap;
@@ -201,4 +201,3 @@ pub struct GuildModuleConfiguration {
     /// Whether ot not the module is disabled or not. None means to use the default module configuration
     pub disabled: Option<bool>,
 }
-

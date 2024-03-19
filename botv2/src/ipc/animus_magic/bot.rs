@@ -1,18 +1,17 @@
 use crate::impls::cache::CacheHttpImpl;
+use crate::silverpelt;
 /// Bot animus contains the request and response for a bot
 ///
 /// To edit/add responses, add them both to bot.rs and to splashcore/animusmagic/types.go
 use crate::silverpelt::{
-    canonical_module::CanonicalModule,
-    permissions::PermissionResult,
+    canonical_module::CanonicalModule, permissions::PermissionResult,
     silverpelt_cache::SILVERPELT_CACHE,
 };
 use splashcore_rs::animusmagic_protocol::AnimusErrorResponse;
-use crate::silverpelt;
 
-use sqlx::PgPool;
 use serde::{Deserialize, Serialize};
 use serenity::all::{GuildId, Role, RoleId, UserId};
+use sqlx::PgPool;
 
 #[derive(Serialize, Deserialize, Clone)]
 pub enum BotAnimusResponse {
@@ -20,9 +19,13 @@ pub enum BotAnimusResponse {
         message: String,
     },
     /// Modules event contains module related data
-    Modules { modules: Vec<CanonicalModule> },
+    Modules {
+        modules: Vec<CanonicalModule>,
+    },
     /// GuildsExist event contains a list of u8s, where 1 means the guild exists and 0 means it doesn't
-    GuildsExist { guilds_exist: Vec<u8> },
+    GuildsExist {
+        guilds_exist: Vec<u8>,
+    },
     /// BaseGuildUserInfo event is described in AnimusMessage
     BaseGuildUserInfo {
         owner_id: String,
@@ -36,7 +39,7 @@ pub enum BotAnimusResponse {
         bot_roles: Vec<RoleId>,
     },
     /// Returns the response of a command permission check
-    CheckCommandPermission { 
+    CheckCommandPermission {
         perm_res: PermissionResult,
         is_ok: bool,
     },
@@ -56,13 +59,26 @@ pub enum BotAnimusMessage {
     /// - The bots highest role
     BaseGuildUserInfo { guild_id: GuildId, user_id: UserId },
     /// Given a guild id, a user id and a command name, check if the user has permission to run the command
-    CheckCommandPermission { guild_id: GuildId, user_id: UserId, command: String, custom_resolved_kittycat_perms: Option<Vec<String>> },
+    CheckCommandPermission {
+        guild_id: GuildId,
+        user_id: UserId,
+        command: String,
+        custom_resolved_kittycat_perms: Option<Vec<String>>,
+    },
     /// Toggles a module within the bot clearing any cache in the process
-    ToggleModule { guild_id: Option<GuildId>, module: String, enabled: bool },
+    ToggleModule {
+        guild_id: Option<GuildId>,
+        module: String,
+        enabled: bool,
+    },
 }
 
 impl BotAnimusMessage {
-    pub async fn response(self, pool: &PgPool, cache_http: &CacheHttpImpl) -> Result<BotAnimusResponse, AnimusErrorResponse> {
+    pub async fn response(
+        self,
+        pool: &PgPool,
+        cache_http: &CacheHttpImpl,
+    ) -> Result<BotAnimusResponse, AnimusErrorResponse> {
         match self {
             Self::Modules {} => {
                 let mut modules = Vec::new();
@@ -127,11 +143,16 @@ impl BotAnimusMessage {
                     user_roles,
                     bot_roles,
                 })
-            },
-            Self::CheckCommandPermission { guild_id, user_id, command, custom_resolved_kittycat_perms } => {
+            }
+            Self::CheckCommandPermission {
+                guild_id,
+                user_id,
+                command,
+                custom_resolved_kittycat_perms,
+            } => {
                 // Check COMMAND_ID_MODULE_MAP
                 let base_command = command.split_whitespace().next().unwrap();
-                
+
                 let perm_res = silverpelt::cmd::check_command(
                     base_command,
                     &command,
@@ -140,18 +161,19 @@ impl BotAnimusMessage {
                     pool,
                     cache_http,
                     &None,
-                    custom_resolved_kittycat_perms
+                    custom_resolved_kittycat_perms,
                 )
                 .await;
 
                 let is_ok = perm_res.is_ok();
 
-                Ok(BotAnimusResponse::CheckCommandPermission {
-                    perm_res,
-                    is_ok,
-                })
-            },
-            Self::ToggleModule { guild_id, module, enabled } => {
+                Ok(BotAnimusResponse::CheckCommandPermission { perm_res, is_ok })
+            }
+            Self::ToggleModule {
+                guild_id,
+                module,
+                enabled,
+            } => {
                 if let Some(guild_id) = guild_id {
                     if enabled {
                         SILVERPELT_CACHE
@@ -166,10 +188,15 @@ impl BotAnimusMessage {
                     }
 
                     tokio::spawn(async move {
-                        if let Err(err) = SILVERPELT_CACHE.command_permission_cache.invalidate_entries_if(move |k, _| {
-                            k.0 == guild_id
-                        }) {
-                            log::error!("Failed to invalidate command permission cache for guild {}: {}", guild_id, err);
+                        if let Err(err) = SILVERPELT_CACHE
+                            .command_permission_cache
+                            .invalidate_entries_if(move |k, _| k.0 == guild_id)
+                        {
+                            log::error!(
+                                "Failed to invalidate command permission cache for guild {}: {}",
+                                guild_id,
+                                err
+                            );
                         } else {
                             log::info!("Invalidated cache for guild {}", guild_id);
                         }
@@ -186,9 +213,10 @@ impl BotAnimusMessage {
                             // Invalidate command permission cache entries here too
                             let gid = k.0;
                             tokio::spawn(async move {
-                                if let Err(err) = SILVERPELT_CACHE.command_permission_cache.invalidate_entries_if(move |g, _| {
-                                    g.0 == gid
-                                }) {
+                                if let Err(err) = SILVERPELT_CACHE
+                                    .command_permission_cache
+                                    .invalidate_entries_if(move |g, _| g.0 == gid)
+                                {
                                     log::error!("Failed to invalidate command permission cache for guild {}: {}", k.0, err);
                                 } else {
                                     log::info!("Invalidated cache for guild {}", k.0);
@@ -199,7 +227,7 @@ impl BotAnimusMessage {
                 }
 
                 Ok(BotAnimusResponse::Ok {
-                    message: "".to_string()
+                    message: "".to_string(),
                 })
             }
         }

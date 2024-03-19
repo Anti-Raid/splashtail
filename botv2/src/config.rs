@@ -86,20 +86,18 @@ impl ObjectStorage {
                 let endpoint = self.endpoint.as_ref().ok_or("Missing endpoint")?;
 
                 let store = object_store::aws::AmazonS3Builder::new()
-                    .with_endpoint(
-                        {
-                            if let Some(secure) = self.secure {
-                                if secure {
-                                    format!("https://{}", endpoint)
-                                } else {
-                                    format!("http://{}", endpoint)
-                                }
+                    .with_endpoint({
+                        if let Some(secure) = self.secure {
+                            if secure {
+                                format!("https://{}", endpoint)
                             } else {
-                                // Default is false
                                 format!("http://{}", endpoint)
                             }
+                        } else {
+                            // Default is false
+                            format!("http://{}", endpoint)
                         }
-                    )
+                    })
                     .with_allow_http(!self.secure.unwrap_or_default())
                     .with_bucket_name(self.path.clone())
                     .with_access_key_id(access_key)

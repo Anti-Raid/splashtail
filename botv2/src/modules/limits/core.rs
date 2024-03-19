@@ -139,9 +139,7 @@ impl UserLimitActionsChoices {
     }
 }
 
-#[derive(
-    EnumString, Display, PartialEq, VariantNames, Clone, Debug, Serialize, Deserialize,
-)]
+#[derive(EnumString, Display, PartialEq, VariantNames, Clone, Debug, Serialize, Deserialize)]
 #[strum(serialize_all = "snake_case")]
 pub enum UserLimitActions {
     RemoveAllRoles,

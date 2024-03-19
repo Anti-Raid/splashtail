@@ -23,7 +23,7 @@ pub fn module() -> crate::silverpelt::Module {
                 indexmap! {
                     "" => crate::silverpelt::CommandExtendedData::kittycat_or_admin("moderation", "ban"),
                 },
-            )
+            ),
         ],
         event_handlers: vec![],
     }

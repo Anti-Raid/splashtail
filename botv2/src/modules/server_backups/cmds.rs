@@ -1,35 +1,37 @@
+use crate::impls::utils::get_icon_of_state;
+use crate::impls::utils::{
+    create_special_allocation_from_str, parse_numeric_list, REPLACE_CHANNEL,
+};
 use crate::ipc::animus_magic::{
     client::{AnimusMessage, AnimusResponse},
     jobserver::{JobserverAnimusMessage, JobserverAnimusResponse},
 };
-use crate::impls::utils::{REPLACE_CHANNEL, create_special_allocation_from_str, parse_numeric_list};
 use crate::ipc::argparse::MEWLD_ARGS;
-use splashcore_rs::animusmagic_protocol::{AnimusTarget, default_request_timeout};
 use crate::{Context, Error};
 use futures_util::StreamExt;
-use serenity::all::{CreateEmbed, EditMessage, ChannelId};
+use serenity::all::{ChannelId, CreateEmbed, EditMessage};
 use serenity::small_fixed_array::TruncatingInto;
 use serenity::utils::shard_id;
+use splashcore_rs::animusmagic_ext::{AnimusAnyResponse, AnimusMagicClientExt};
+use splashcore_rs::animusmagic_protocol::{default_request_timeout, AnimusTarget};
+use sqlx::types::uuid::Uuid;
+use std::fmt::Display;
 use std::sync::Arc;
 use std::time::Duration;
-use std::fmt::Display;
-use splashcore_rs::animusmagic_ext::{AnimusAnyResponse, AnimusMagicClientExt};
-use sqlx::types::uuid::Uuid;
-use crate::impls::utils::get_icon_of_state;
 
 /*
 // Options that can be set when creatng a backup
 type BackupCreateOpts struct {
-	Channels                  []string       `description:"If set, the channels to prune messages from"`
-	PerChannel                int            `description:"The number of messages per channel"`
-	MaxMessages               int            `description:"The maximum number of messages to backup"`
-	BackupMessages            bool           `description:"Whether to backup messages or not"`
-	BackupAttachments         bool           `description:"Whether to backup attachments or not"`
-	BackupGuildAssets         []string       `description:"What assets to back up"`
-	IgnoreMessageBackupErrors bool           `description:"Whether to ignore errors while backing up messages or not and skip these channels"`
-	RolloverLeftovers         bool           `description:"Whether to attempt rollover of leftover message quota to another channels or not"`
-	SpecialAllocations        map[string]int `description:"Specific channel allocation overrides"`
-	Encrypt                   string         `description:"The key to encrypt backups with, if any"`
+    Channels                  []string       `description:"If set, the channels to prune messages from"`
+    PerChannel                int            `description:"The number of messages per channel"`
+    MaxMessages               int            `description:"The maximum number of messages to backup"`
+    BackupMessages            bool           `description:"Whether to backup messages or not"`
+    BackupAttachments         bool           `description:"Whether to backup attachments or not"`
+    BackupGuildAssets         []string       `description:"What assets to back up"`
+    IgnoreMessageBackupErrors bool           `description:"Whether to ignore errors while backing up messages or not and skip these channels"`
+    RolloverLeftovers         bool           `description:"Whether to attempt rollover of leftover message quota to another channels or not"`
+    SpecialAllocations        map[string]int `description:"Specific channel allocation overrides"`
+    Encrypt                   string         `description:"The key to encrypt backups with, if any"`
 }
 
 // Options that can be set when restoring a backup
@@ -65,7 +67,8 @@ pub async fn backups_create(
 
     #[description = "Whether to include messages in the backup (up to 500)"] messages: Option<bool>,
 
-    #[description = "Channels to backup messages from, otherwise all channels will have messages backed up"] channels: Option<String>,
+    #[description = "Channels to backup messages from, otherwise all channels will have messages backed up"]
+    channels: Option<String>,
 
     #[description = "Whether to include attachments in the backup. Requires 'messages' to be enabled"]
     attachments: Option<bool>,
@@ -90,7 +93,7 @@ pub async fn backups_create(
 
     #[description = "Password to encrypt the backup with. If not provided, the backup will not be encrypted"]
     password: Option<String>,
-) -> Result<(), Error> {    
+) -> Result<(), Error> {
     let Some(guild_id) = ctx.guild_id() else {
         return Err("This command can only be used in a guild".into());
     };
@@ -123,10 +126,7 @@ pub async fn backups_create(
     };
 
     let channels: Vec<ChannelId> = if let Some(channels) = channels {
-        parse_numeric_list(
-            &channels, 
-            &REPLACE_CHANNEL
-        )?
+        parse_numeric_list(&channels, &REPLACE_CHANNEL)?
     } else {
         vec![]
     };
@@ -161,7 +161,7 @@ pub async fn backups_create(
             "Encrypt": password
         }
     });
-    
+
     let data = ctx.data();
 
     let backup_task_id = match data
@@ -176,13 +176,17 @@ pub async fn backups_create(
                 execute: true,
                 task_id: None,
             }),
-            default_request_timeout()
+            default_request_timeout(),
         )
         .await
         .map_err(|e| format!("Failed to create backup task: {}", e))?
     {
-        AnimusAnyResponse::Response(AnimusResponse::Jobserver(JobserverAnimusResponse::SpawnTask { task_id })) => task_id,
-        AnimusAnyResponse::Error(e) => return Err(format!("Failed to create backup task: {}", e.message).into()),
+        AnimusAnyResponse::Response(AnimusResponse::Jobserver(
+            JobserverAnimusResponse::SpawnTask { task_id },
+        )) => task_id,
+        AnimusAnyResponse::Error(e) => {
+            return Err(format!("Failed to create backup task: {}", e.message).into())
+        }
         _ => return Err("Invalid response from jobserver".into()),
     };
 
@@ -579,11 +583,15 @@ impl Display for RoleRestoreMode {
 pub async fn backups_restore(
     ctx: Context<'_>,
 
-    #[description = "The backup attachment to restore"] backup_file: Option<serenity::all::Attachment>,
+    #[description = "The backup attachment to restore"] backup_file: Option<
+        serenity::all::Attachment,
+    >,
 
     #[description = "The task id of the backup to restore"] backup_id: Option<String>,
 
-    #[description = "Password to decrypt backup with. Should not be reused"] password: Option<String>,
+    #[description = "Password to decrypt backup with. Should not be reused"] password: Option<
+        String,
+    >,
 
     #[description = "Channel restore mode. Defaults to full. Use 'full' if unsure"]
     channel_restore_mode: Option<ChannelRestoreMode>,
@@ -622,10 +630,11 @@ pub async fn backups_restore(
             };
 
             // Get the task
-            let task = crate::jobserver::Task::from_id(backup_id.parse::<Uuid>()?, &ctx.data().pool)
-                .await
-                .map_err(|e| format!("Failed to get backup task: {}", e))?;
-            
+            let task =
+                crate::jobserver::Task::from_id(backup_id.parse::<Uuid>()?, &ctx.data().pool)
+                    .await
+                    .map_err(|e| format!("Failed to get backup task: {}", e))?;
+
             if task.format_task_for_simplex() != format!("g/{}", guild_id) {
                 return Err("Backup task is not for this guild".into());
             }
@@ -717,13 +726,17 @@ pub async fn backups_restore(
                 execute: true,
                 task_id: None,
             }),
-            default_request_timeout()
+            default_request_timeout(),
         )
         .await
         .map_err(|e| format!("Failed to create restore backup task: {}", e))?
     {
-        AnimusAnyResponse::Response(AnimusResponse::Jobserver(JobserverAnimusResponse::SpawnTask { task_id })) => task_id,
-        AnimusAnyResponse::Error(e) => return Err(format!("Failed to create backup task: {}", e.message).into()),
+        AnimusAnyResponse::Response(AnimusResponse::Jobserver(
+            JobserverAnimusResponse::SpawnTask { task_id },
+        )) => task_id,
+        AnimusAnyResponse::Error(e) => {
+            return Err(format!("Failed to create backup task: {}", e.message).into())
+        }
         _ => return Err("Invalid response from jobserver".into()),
     };
 

@@ -1,7 +1,6 @@
 use super::{
-    CommandExtendedData, CommandExtendedDataMap, GuildCommandConfiguration,
-    GuildModuleConfiguration, PermissionCheck, PermissionChecks, 
-    silverpelt_cache::SILVERPELT_CACHE,
+    silverpelt_cache::SILVERPELT_CACHE, CommandExtendedData, CommandExtendedDataMap,
+    GuildCommandConfiguration, GuildModuleConfiguration, PermissionCheck, PermissionChecks,
 };
 use indexmap::indexmap;
 use serde::{Deserialize, Serialize};
@@ -42,7 +41,7 @@ pub enum PermissionResult {
     },
     GenericError {
         error: String,
-    }
+    },
 }
 
 impl<T: core::fmt::Display> From<T> for PermissionResult {
@@ -72,7 +71,10 @@ impl PermissionResult {
     }
 
     pub fn is_ok(&self) -> bool {
-        matches!(self, PermissionResult::Ok { .. } | PermissionResult::OkWithMessage { .. })
+        matches!(
+            self,
+            PermissionResult::Ok { .. } | PermissionResult::OkWithMessage { .. }
+        )
     }
 
     pub fn to_markdown(&self) -> String {
@@ -107,7 +109,10 @@ impl PermissionResult {
                 format!("The module ``{}`` does not exist", module_config.module)
             }
             PermissionResult::ModuleDisabled { module_config } => {
-                format!("The module ``{}`` is disabled on this server", module_config.module)
+                format!(
+                    "The module ``{}`` is disabled on this server",
+                    module_config.module
+                )
             }
             PermissionResult::NoChecksSucceeded { checks } => {
                 format!(
@@ -196,9 +201,16 @@ pub fn can_run_command(
     member_native_perms: serenity::all::Permissions,
     member_kittycat_perms: &[String],
 ) -> PermissionResult {
-    log::debug!("Command config: {:?} [{}]", command_config, cmd_qualified_name);
+    log::debug!(
+        "Command config: {:?} [{}]",
+        command_config,
+        cmd_qualified_name
+    );
 
-    if command_config.disabled.unwrap_or(!cmd_data.is_default_enabled) {
+    if command_config
+        .disabled
+        .unwrap_or(!cmd_data.is_default_enabled)
+    {
         return PermissionResult::CommandDisabled {
             command_config: command_config.clone(),
         };
@@ -233,11 +245,7 @@ pub fn can_run_command(
 
     for check in &perms.checks {
         // Run the check
-        let res = check_perms_single(
-            check,
-            member_native_perms,
-            member_kittycat_perms,
-        );
+        let res = check_perms_single(check, member_native_perms, member_kittycat_perms);
 
         if outer_and {
             // Question mark needs cloning which may harm performance

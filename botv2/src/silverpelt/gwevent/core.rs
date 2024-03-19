@@ -3,13 +3,13 @@ use indexmap::IndexMap;
 use log::warn;
 use serenity::all::{
     ActionExecution, ApplicationId, AuditLogEntryId, ChannelId, CommandId, EmojiId, EntitlementId,
-    FullEvent, GenericId, GuildChannel, GuildId, MessageId, RoleId, RuleId as AutomodRuleId,
-    ScheduledEventId, StickerId, UserId, IntegrationId
+    FullEvent, GenericId, GuildChannel, GuildId, IntegrationId, MessageId, RoleId,
+    RuleId as AutomodRuleId, ScheduledEventId, StickerId, UserId,
 };
 use serenity::model::guild::automod::Action;
 use serenity::model::timestamp::Timestamp;
 use serenity::nonmax::{NonMaxU16, NonMaxU8};
-use small_fixed_array::FixedString;
+use serenity::small_fixed_array::FixedString;
 use std::collections::HashMap;
 use strum::VariantNames;
 /// Returns all events
@@ -189,15 +189,23 @@ pub enum FieldType {
     /// A string
     Strings(Vec<String>),
 
+    /// A boolean
     Bool(bool),
 
+    /// A number
     Number(u64),
+
+    /// Permission
+    Permissions(serenity::all::Permissions),
 
     /// A user id
     UserIds(Vec<UserId>),
 
     /// A channel id
     Channels(Vec<ChannelId>),
+
+    /// NSFW level
+    NsfwLevels(Vec<serenity::model::guild::NsfwLevel>),
 
     /// A role id
     Roles(Vec<RoleId>),
@@ -208,22 +216,22 @@ pub enum FieldType {
     /// A guild id
     Guild(GuildId),
 
-    // Command Id
+    /// Command Id
     Command(CommandId),
 
-    // Entitlement ID
+    /// Entitlement ID
     Entitlement(EntitlementId),
 
-    // Application Id
+    /// Application Id
     Application(ApplicationId),
 
-    // Audit Log Id
+    /// Audit Log Id
     AuditLogId(AuditLogEntryId),
 
-    // Scheduled Event Id
+    /// Scheduled Event Id
     ScheduledEventId(ScheduledEventId),
 
-    // Integration Id
+    /// Integration Id
     IntegrationId(IntegrationId),
 
     /// An emoji id
@@ -241,42 +249,56 @@ pub enum FieldType {
     /// An automod rule id
     AutomodRuleIds(Vec<AutomodRuleId>),
 
-    // Trigger
+    /// Trigger
     AutomodTrigger(serenity::model::guild::automod::Trigger),
 
-    // TimeStamp
-    TimeStamp(serenity::model::timestamp::Timestamp),
+    /// Timestamp
+    Timestamp(serenity::model::timestamp::Timestamp),
 
-    // Changes
+    /// Changes
     AuditLogActionsChanges(Vec<serenity::model::guild::audit_log::Change>),
 
-    // Options
+    /// Options
     AuditLogOptions(Vec<serenity::model::guild::audit_log::Options>),
 
-    // Emoji Map
+    /// Emoji Map
     EmojiMap(Vec<serenity::model::guild::Emoji>),
 
-    // Sticker Map
+    /// Sticker Map
     StickerMap(Vec<serenity::model::sticker::Sticker>),
-    
-    // Users
+
+    /// Users
     Users(Vec<serenity::model::user::User>),
 
-    //Embeds
+    /// Embeds
     Embeds(Vec<serenity::model::channel::Embed>),
 
-    // Attachments
+    /// Attachments
     Attachments(Vec<serenity::model::channel::Attachment>),
 
-    // Components
+    /// Components
     Components(Vec<serenity::model::application::ActionRow>),
 
-    // ThreadMembers
+    /// ThreadMembers
     ThreadMembers(Vec<serenity::model::guild::ThreadMember>),
+
+    /// None
+    None,
 }
 
-
 macro_rules! from_field_type {
+    ($($t:ty => $variant:ident),* $(,)?) => {
+        $(
+            impl From<$t> for FieldType {
+                fn from(s: $t) -> Self {
+                    Self::$variant(s)
+                }
+            }
+        )*
+    };
+}
+
+macro_rules! from_field_type_multiple {
     ($($t:ty => $variant:ident),* $(,)?) => {
         $(
             impl From<$t> for FieldType {
@@ -293,10 +315,11 @@ macro_rules! from_field_type {
     };
 }
 
-from_field_type! {
+from_field_type_multiple! {
     String => Strings,
     UserId => UserIds,
     ChannelId => Channels,
+    serenity::model::guild::NsfwLevel => NsfwLevels,
     RoleId => Roles,
     MessageId => Messages,
     EmojiId => Emojis,
@@ -315,60 +338,18 @@ from_field_type! {
     serenity::model::guild::ThreadMember => ThreadMembers,
 }
 
-impl From<GuildId> for FieldType {
-    fn from(s: GuildId) -> Self {
-        Self::Guild(s)
-    }
-}
-impl From<IntegrationId> for FieldType {
-    fn from(s: IntegrationId) -> Self {
-        Self::IntegrationId(s)
-    }
-}
-impl From<AuditLogEntryId> for FieldType {
-    fn from(s: AuditLogEntryId) -> Self {
-        Self::AuditLogId(s)
-    }
-}
-
-impl From<CommandId> for FieldType {
-    fn from(s: CommandId) -> Self {
-        Self::Command(s)
-    }
-}
-impl From<ScheduledEventId> for FieldType {
-    fn from(s: ScheduledEventId) -> Self {
-        Self::ScheduledEventId(s)
-    }
-}
-
-impl From<ApplicationId> for FieldType {
-    fn from(s: ApplicationId) -> Self {
-        Self::Application(s)
-    }
-}
-impl From<EntitlementId> for FieldType {
-    fn from(s: EntitlementId) -> Self {
-        Self::Entitlement(s)
-    }
-}
-
-impl From<Timestamp> for FieldType {
-    fn from(s: Timestamp) -> Self {
-        Self::TimeStamp(s)
-    }
-}
-
-impl From<bool> for FieldType {
-    fn from(s: bool) -> Self {
-        Self::Bool(s)
-    }
-}
-
-impl From<serenity::model::guild::automod::Trigger> for FieldType {
-    fn from(s: serenity::model::guild::automod::Trigger) -> Self {
-        Self::AutomodTrigger(s)
-    }
+from_field_type! {
+    GuildId => Guild,
+    serenity::all::Permissions => Permissions,
+    IntegrationId => IntegrationId,
+    AuditLogEntryId => AuditLogId,
+    CommandId => Command,
+    ScheduledEventId => ScheduledEventId,
+    ApplicationId => Application,
+    EntitlementId => Entitlement,
+    Timestamp => Timestamp,
+    bool => Bool,
+    serenity::model::guild::automod::Trigger => AutomodTrigger,
 }
 
 impl From<FixedString<u32>> for FieldType {
@@ -413,18 +394,19 @@ impl From<i16> for FieldType {
         Self::Number(s as u64)
     }
 }
+impl From<usize> for FieldType {
+    fn from(s: usize) -> Self {
+        Self::Number(s as u64)
+    }
+}
 
 #[allow(dead_code)]
 pub struct Field {
     /// The value of the field
     value: Vec<FieldType>,
-}
 
-impl Field {
-    /// Create a new field
-    pub fn new(value: FieldType) -> Self {
-        Self { value: vec![value] }
-    }
+    /// The category of the field
+    category: String,
 }
 
 /// Given an event, expand it to a hashmap of fields
@@ -432,20 +414,29 @@ impl Field {
 pub fn expand_event(event: &FullEvent) -> Option<IndexMap<String, Field>> {
     let mut fields = IndexMap::new();
 
-    fn insert_field<T: Into<FieldType>>(fields: &mut IndexMap<String, Field>, key: &str, value: T) {
+    fn insert_field<T: Into<FieldType>>(
+        fields: &mut IndexMap<String, Field>,
+        category: &str,
+        key: &str,
+        value: T,
+    ) {
         let value = value.into();
         match fields.entry(key.to_string()) {
             indexmap::map::Entry::Occupied(mut entry) => {
                 entry.get_mut().value.push(value);
             }
             indexmap::map::Entry::Vacant(entry) => {
-                entry.insert(Field::new(value));
+                entry.insert(Field {
+                    value: vec![value],
+                    category: category.to_string(),
+                });
             }
         }
     }
 
     fn insert_optional_field<T: Into<FieldType>>(
         fields: &mut IndexMap<String, Field>,
+        category: &str,
         key: &str,
         option: Option<T>,
     ) {
@@ -457,22 +448,37 @@ pub fn expand_event(event: &FullEvent) -> Option<IndexMap<String, Field>> {
                         entry.get_mut().value.push(value);
                     }
                     indexmap::map::Entry::Vacant(entry) => {
-                        entry.insert(Field::new(value));
+                        entry.insert(Field {
+                            value: vec![value],
+                            category: category.to_string(),
+                        });
                     }
                 }
             }
             None => {
-                fields.insert(key.to_string(), Field::new("None".to_string().into()));
+                fields.insert(
+                    key.to_string(),
+                    Field {
+                        value: vec![FieldType::None],
+                        category: category.to_string(),
+                    },
+                );
             }
         }
     }
 
     fn expand_action_execution(fields: &mut IndexMap<String, Field>, execution: &ActionExecution) {
-        insert_field(fields, "guild_id", execution.guild_id);
-        insert_field(fields, "action", execution.action.clone());
-        insert_field(fields, "rule_id", execution.rule_id);
+        insert_field(fields, "action_execution", "guild_id", execution.guild_id);
         insert_field(
             fields,
+            "action_execution",
+            "action",
+            execution.action.clone(),
+        );
+        insert_field(fields, "action_execution", "rule_id", execution.rule_id);
+        insert_field(
+            fields,
+            "action_execution",
             "trigger_type",
             match execution.trigger_type {
                 serenity::model::guild::automod::TriggerType::Keyword => "Keyword".to_string(),
@@ -489,30 +495,57 @@ pub fn expand_event(event: &FullEvent) -> Option<IndexMap<String, Field>> {
                 _ => "Unknown".to_string(),
             },
         );
-        insert_field(fields, "content", execution.content.clone().into_string());
-        insert_field(fields, "user_id", execution.user_id);
+        insert_field(
+            fields,
+            "action_execution",
+            "content",
+            execution.content.clone().into_string(),
+        );
+        insert_field(fields, "action_execution", "user_id", execution.user_id);
 
-        insert_optional_field(fields, "channel_id", execution.channel_id);
-        insert_optional_field(fields, "message_id", execution.message_id);
         insert_optional_field(
             fields,
+            "action_execution",
+            "channel_id",
+            execution.channel_id,
+        );
+        insert_optional_field(
+            fields,
+            "action_execution",
+            "message_id",
+            execution.message_id,
+        );
+        insert_optional_field(
+            fields,
+            "action_execution",
             "alert_system_message_id",
             execution.alert_system_message_id,
         );
-        insert_optional_field(fields, "matched_keyword", execution.matched_keyword.clone());
-        insert_optional_field(fields, "matched_content", execution.matched_content.clone());
+        insert_optional_field(
+            fields,
+            "action_execution",
+            "matched_keyword",
+            execution.matched_keyword.clone(),
+        );
+        insert_optional_field(
+            fields,
+            "action_execution",
+            "matched_content",
+            execution.matched_content.clone(),
+        );
     }
 
     fn expand_rule(
         fields: &mut IndexMap<String, Field>,
         rule: &serenity::model::guild::automod::Rule,
     ) {
-        insert_field(fields, "rule_id", rule.id);
-        insert_field(fields, "guild_id", rule.guild_id);
-        insert_field(fields, "rule_name", rule.name.clone());
-        insert_field(fields, "creator_id", rule.creator_id);
+        insert_field(fields, "automod_rule", "rule_id", rule.id);
+        insert_field(fields, "automod_rule", "guild_id", rule.guild_id);
+        insert_field(fields, "automod_rule", "rule_name", rule.name.clone());
+        insert_field(fields, "automod_rule", "creator_id", rule.creator_id);
         insert_field(
             fields,
+            "automod_rule",
             "event_type",
             match rule.event_type {
                 serenity::model::guild::automod::EventType::MessageSend => {
@@ -521,25 +554,37 @@ pub fn expand_event(event: &FullEvent) -> Option<IndexMap<String, Field>> {
                 _ => "Unknown".to_string(),
             },
         );
-        insert_field(fields, "trigger", rule.trigger.clone());
-        insert_field(fields, "actions", rule.actions.clone().into_vec());
-
-        insert_field(fields, "rule_enabled", rule.enabled);
-        insert_field(fields, "exempt_roles", rule.exempt_roles.clone().into_vec());
+        insert_field(fields, "automod_rule", "trigger", rule.trigger.clone());
         insert_field(
             fields,
+            "automod_rule",
+            "actions",
+            rule.actions.clone().into_vec(),
+        );
+
+        insert_field(fields, "automod_rule", "rule_enabled", rule.enabled);
+        insert_field(
+            fields,
+            "automod_rule",
+            "exempt_roles",
+            rule.exempt_roles.clone().into_vec(),
+        );
+        insert_field(
+            fields,
+            "automod_rule",
             "exempt_channels",
             rule.exempt_channels.clone().into_vec(),
         );
     }
 
     fn expand_channel(fields: &mut IndexMap<String, Field>, channel: &GuildChannel) {
-        insert_field(fields, "guild_id", channel.guild_id);
-        insert_field(fields, "channel_name", channel.name.clone());
-        insert_field(fields, "nsfw", channel.nsfw);
+        insert_field(fields, "channel", "guild_id", channel.guild_id);
+        insert_field(fields, "channel", "channel_name", channel.name.clone());
+        insert_field(fields, "channel", "nsfw", channel.nsfw);
         insert_field(
             fields,
-            "channel_type",
+            "channel",
+            "type",
             match channel.kind {
                 serenity::model::channel::ChannelType::Text => "Text".to_string(),
                 serenity::model::channel::ChannelType::Voice => "Voice".to_string(),
@@ -557,27 +602,63 @@ pub fn expand_event(event: &FullEvent) -> Option<IndexMap<String, Field>> {
         );
 
         // Optional fields
-        insert_optional_field(fields, "channel_topic", channel.topic.clone());
-        insert_optional_field(fields, "rate_limit_per_user", channel.rate_limit_per_user);
-        insert_optional_field(fields, "parent_id", channel.parent_id);
-        insert_optional_field(fields, "user_limit", channel.user_limit);
+        insert_optional_field(fields, "channel", "channel_topic", channel.topic.clone());
+        insert_optional_field(
+            fields,
+            "channel",
+            "rate_limit_per_user",
+            channel.rate_limit_per_user,
+        );
+        insert_optional_field(fields, "channel", "parent_id", channel.parent_id);
+        insert_optional_field(fields, "channel", "user_limit", channel.user_limit);
 
         // Handle Thread IDs
         if let Some(parent_id) = channel.parent_id {
-            insert_field(fields, "channel_id", parent_id);
-            insert_field(fields, "thread_id", channel.id);
-        } else {
-            insert_field(fields, "channel_id", channel.id);
+            insert_field(fields, "channel", "parent_id", parent_id);
         }
+
+        insert_field(fields, "channel", "channel_id", channel.id);
     }
-   
+
+    fn expand_partial_guild_channel(
+        fields: &mut IndexMap<String, Field>,
+        channel: &serenity::all::PartialGuildChannel,
+    ) {
+        insert_field(fields, "channel", "id", channel.id);
+        insert_field(fields, "channel", "parent_id", channel.parent_id);
+        insert_field(fields, "channel", "guild_id", channel.guild_id);
+        insert_field(
+            fields,
+            "channel",
+            "type",
+            match channel.kind {
+                serenity::model::channel::ChannelType::Text => "Text".to_string(),
+                serenity::model::channel::ChannelType::Voice => "Voice".to_string(),
+                serenity::model::channel::ChannelType::Private => "PrivateChannel".to_string(),
+                serenity::model::channel::ChannelType::GroupDm => "GroupDm".to_string(),
+                serenity::model::channel::ChannelType::Category => "Category".to_string(),
+                serenity::model::channel::ChannelType::News => "News".to_string(),
+                serenity::model::channel::ChannelType::NewsThread => "NewsThread".to_string(),
+                serenity::model::channel::ChannelType::PublicThread => "PublicThread".to_string(),
+                serenity::model::channel::ChannelType::PrivateThread => "PrivateThread".to_string(),
+                serenity::model::channel::ChannelType::Stage => "Stage".to_string(),
+                serenity::model::channel::ChannelType::Directory => "Directory".to_string(),
+                _ => "Unknown".to_string(),
+            },
+        );
+    }
 
     fn expand_command_permissions(
         fields: &mut IndexMap<String, Field>,
         permission: &serenity::model::application::CommandPermissions,
     ) {
-        insert_field(fields, "command_id", permission.id);
-        insert_field(fields, "application_id", permission.application_id);
+        insert_field(fields, "command_permissions", "command_id", permission.id);
+        insert_field(
+            fields,
+            "command_permissions",
+            "application_id",
+            permission.application_id,
+        );
         // Continue from here
     }
 
@@ -585,20 +666,41 @@ pub fn expand_event(event: &FullEvent) -> Option<IndexMap<String, Field>> {
         fields: &mut IndexMap<String, Field>,
         entitlement: &serenity::model::monetization::Entitlement,
     ) {
-        insert_field(fields, "entitlement_id", entitlement.id);
-        insert_field(fields, "application_id", entitlement.application_id);
+        insert_field(fields, "entitlement", "entitlement_id", entitlement.id);
         insert_field(
             fields,
+            "entitlement",
+            "application_id",
+            entitlement.application_id,
+        );
+        insert_field(
+            fields,
+            "entitlement",
             "entitlement_type",
             format!("{:?}", entitlement.kind).to_lowercase(),
         );
-        insert_field(fields, "entitlement_deleted", entitlement.deleted);
+        insert_field(
+            fields,
+            "entitlement",
+            "entitlement_deleted",
+            entitlement.deleted,
+        );
 
         // Optional Fields
-        insert_optional_field(fields, "guild_id", entitlement.guild_id);
-        insert_optional_field(fields, "user_id", entitlement.user_id);
-        insert_optional_field(fields, "entitlement_starts_at", entitlement.starts_at);
-        insert_optional_field(fields, "entitlement_ends_at", entitlement.ends_at);
+        insert_optional_field(fields, "entitlement", "guild_id", entitlement.guild_id);
+        insert_optional_field(fields, "entitlement", "user_id", entitlement.user_id);
+        insert_optional_field(
+            fields,
+            "entitlement",
+            "entitlement_starts_at",
+            entitlement.starts_at,
+        );
+        insert_optional_field(
+            fields,
+            "entitlement",
+            "entitlement_ends_at",
+            entitlement.ends_at,
+        );
     }
 
     fn expand_audit_log_entry(
@@ -606,28 +708,43 @@ pub fn expand_event(event: &FullEvent) -> Option<IndexMap<String, Field>> {
         entry: &serenity::model::guild::audit_log::AuditLogEntry,
         guild_id: &GuildId,
     ) {
-        insert_field(fields, "guild_id", *guild_id);
-        insert_field(fields, "action", entry.action.clone());
-        insert_field(fields, "user_id", entry.user_id);
-        insert_field(fields, "audit_log_id", entry.id);
-        insert_optional_field(fields, "reason", entry.reason.clone());
-        insert_optional_field(fields, "audit_log_target_id", entry.target_id);
-        insert_optional_field(fields, "audit_log_chages", entry.changes.clone());
-        insert_optional_field(fields, "audit_log_options", entry.options.clone());
+        insert_field(fields, "audit_log_entry", "guild_id", *guild_id);
+        insert_field(fields, "audit_log_entry", "action", entry.action);
+        insert_field(fields, "audit_log_entry", "user_id", entry.user_id);
+        insert_field(fields, "audit_log_entry", "audit_log_id", entry.id);
+        insert_optional_field(
+            fields,
+            "audit_log_entry",
+            "audit_log_entry",
+            entry.reason.clone(),
+        );
+        insert_optional_field(
+            fields,
+            "audit_log_entry",
+            "audit_log_target_id",
+            entry.target_id,
+        );
+        insert_optional_field(
+            fields,
+            "audit_log_entry",
+            "audit_log_chages",
+            entry.changes.clone(),
+        );
+        insert_optional_field(
+            fields,
+            "audit_log_entry",
+            "audit_log_options",
+            entry.options.clone(),
+        );
     }
 
-    fn expand_user(
-        fields: &mut IndexMap<String, Field>,
-        user: serenity::model::user::User,
-        guild_id: &GuildId,
-    ) {
-        insert_field(fields, "guild_id", *guild_id);
-        insert_field(fields, "user_id", user.id);
-        insert_field(fields, "username", user.name.clone());
-        insert_field(fields, "is_bot", user.bot());
+    fn expand_user(fields: &mut IndexMap<String, Field>, user: &serenity::model::user::User) {
+        insert_field(fields, "user", "user_id", user.id);
+        insert_field(fields, "user", "username", user.name.clone());
+        insert_field(fields, "user", "is_bot", user.bot());
 
         //optional fields
-        insert_optional_field(fields, "global_username", user.global_name);
+        insert_optional_field(fields, "user", "global_username", user.global_name.clone());
     }
 
     fn expand_emoji_map(
@@ -635,49 +752,74 @@ pub fn expand_event(event: &FullEvent) -> Option<IndexMap<String, Field>> {
         emoji_map: &HashMap<EmojiId, serenity::model::guild::Emoji>,
         guild_id: &GuildId,
     ) {
-        insert_field(fields, "guild_id", *guild_id);
+        insert_field(fields, "emoji_map", "guild_id", *guild_id);
 
         insert_field(
             fields,
+            "emoji_map",
             "emojis",
             emoji_map.values().cloned().collect::<Vec<_>>(),
         );
     }
 
-    fn expand_member(fields: &mut IndexMap<String, Field>, member: serenity::model::guild::Member) {
-        expand_user(fields, member.user, &member.guild_id);
-        insert_field(fields, "roles", member.roles.clone().into_vec());
+    fn expand_member(
+        fields: &mut IndexMap<String, Field>,
+        member: &serenity::model::guild::Member,
+    ) {
+        insert_field(fields, "guild", "guild_id", member.guild_id);
+        expand_user(fields, &member.user);
+        insert_field(fields, "member", "roles", member.roles.clone().into_vec());
         //optional fields
-        insert_optional_field(fields, "nick", member.nick);
-        insert_optional_field(fields, "joined_timestamp", member.joined_at);
-        insert_optional_field(fields, "premium_since", member.premium_since);
+        insert_optional_field(fields, "member", "nick", member.nick.clone());
+        insert_optional_field(fields, "member", "joined_timestamp", member.joined_at);
+        insert_optional_field(fields, "member", "premium_since", member.premium_since);
+        insert_optional_field(fields, "member", "permissions", member.permissions);
+        insert_optional_field(
+            fields,
+            "member",
+            "communication_disabled_until",
+            member.communication_disabled_until,
+        );
+        insert_optional_field(
+            fields,
+            "member",
+            "unusual_dm_activity_until",
+            member.unusual_dm_activity_until,
+        );
     }
 
     fn expand_role(fields: &mut IndexMap<String, Field>, role: serenity::model::guild::Role) {
-        insert_field(fields, "role_id", role.id);
-        insert_field(fields, "guild_id", role.guild_id);
-        insert_field(fields, "is_hoisted", role.hoist());
-        insert_field(fields, "is_managed", role.managed());
-        insert_field(fields, "is_mentionable", role.mentionable());
-        insert_field(fields, "role_name", role.name.clone());
-        // insert_field(fields, "role_position", role.position.into());
+        insert_field(fields, "role", "role_id", role.id);
+        insert_field(fields, "role", "guild_id", role.guild_id);
+        insert_field(fields, "role", "is_hoisted", role.hoist());
+        insert_field(fields, "role", "is_managed", role.managed());
+        insert_field(fields, "role", "is_mentionable", role.mentionable());
+        insert_field(fields, "role", "role_name", role.name.clone());
+        insert_field(fields, "role", "position", role.position);
     }
 
     fn expand_scheduled_event(
         fields: &mut IndexMap<String, Field>,
         event: serenity::model::guild::ScheduledEvent,
     ) {
-        insert_field(fields, "event_id", event.id);
-        insert_field(fields, "guild_id", event.guild_id);
-        insert_field(fields, "event_name", event.name.clone());
-        insert_field(fields, "event_start_time", event.start_time);
+        insert_field(fields, "scheduled_event", "event_id", event.id);
+        insert_field(fields, "scheduled_event", "guild_id", event.guild_id);
+        insert_field(fields, "scheduled_event", "event_name", event.name.clone());
         insert_field(
             fields,
+            "scheduled_event",
+            "event_start_time",
+            event.start_time,
+        );
+        insert_field(
+            fields,
+            "scheduled_event",
             "event_privacy_level",
             format!("{:?}", event.privacy_level).to_lowercase(),
         );
         insert_field(
             fields,
+            "scheduled_event",
             "event_type",
             match event.kind {
                 serenity::model::guild::ScheduledEventType::StageInstance => {
@@ -690,125 +832,289 @@ pub fn expand_event(event: &FullEvent) -> Option<IndexMap<String, Field>> {
         );
 
         //optional
-        insert_optional_field(fields, "event_channel_id", event.channel_id);
-        insert_optional_field(fields, "creator_id", event.creator_id);
-        insert_optional_field(fields, "event_description", event.description.clone());
-        insert_optional_field(fields, "event_end_time", event.end_time);
+        insert_optional_field(
+            fields,
+            "scheduled_event",
+            "event_channel_id",
+            event.channel_id,
+        );
+        insert_optional_field(fields, "scheduled_event", "creator_id", event.creator_id);
+        insert_optional_field(
+            fields,
+            "scheduled_event",
+            "event_description",
+            event.description.clone(),
+        );
+        insert_optional_field(fields, "scheduled_event", "event_end_time", event.end_time);
     }
+
     fn expand_sticker_map(
         fields: &mut IndexMap<String, Field>,
         sticker_map: &HashMap<StickerId, serenity::model::sticker::Sticker>,
         guild_id: &GuildId,
     ) {
-        insert_field(fields, "guild_id", *guild_id);
+        insert_field(fields, "sticker_map", "guild_id", *guild_id);
 
         insert_field(
             fields,
+            "sticker_map",
             "stickers",
             sticker_map.values().cloned().collect::<Vec<_>>(),
         );
     }
 
-    fn expand_guild(fields: &mut IndexMap<String, Field>, guild: serenity::model::guild::Guild) {
-        insert_field(fields, "guild_id", guild.id);
-        insert_field(fields, "guild_name", guild.name.clone());
-        insert_field(fields, "guild_owner_id", guild.owner_id);
-        // insert_field(fields, "guild_nsfw_level", guild.nsfw_level);
-        //optional fields
-        insert_optional_field(fields, "guild_description", guild.description.clone());
-
+    // to finish expanding
+    fn expand_guild(fields: &mut IndexMap<String, Field>, guild: &serenity::model::guild::Guild) {
+        insert_field(fields, "guild", "guild_id", guild.id);
+        insert_field(fields, "guild", "name", guild.name.clone());
+        insert_field(fields, "guild", "owner_id", guild.owner_id);
+        insert_field(fields, "guild", "nsfw_level", guild.nsfw_level);
+        insert_optional_field(fields, "guild", "description", guild.description.clone());
     }
 
     fn expand_partial_guild(
         fields: &mut IndexMap<String, Field>,
-        guild: serenity::model::guild::PartialGuild,
+        guild: &serenity::model::guild::PartialGuild,
     ) {
-        insert_field(fields, "guild_id", guild.id);
-        insert_field(fields, "guild_name", guild.name.clone());
-        insert_field(fields, "guild_owner_id", guild.owner_id);
-        // insert_field(fields, "guild_nsfw_level", guild.nsfw_level.to_string());
-        //optional fields
-        insert_optional_field(fields, "guild_description", guild.description.clone());
+        insert_field(fields, "guild", "guild_id", guild.id);
+        insert_field(fields, "guild", "name", guild.name.clone());
+        insert_field(fields, "guild", "owner_id", guild.owner_id);
+        insert_field(fields, "guild", "nsfw_level", guild.nsfw_level);
+        insert_optional_field(fields, "guild", "description", guild.description.clone());
     }
 
-    fn expand_integration(fields: &mut IndexMap<String, Field>, integration: serenity::model::guild::Integration) {
-        insert_field(fields, "integration_id", integration.id);
-        insert_field(fields, "integration_name", integration.name.clone());
-        insert_field(fields, "integration_type", integration.kind.clone());
-        insert_field(fields, "integration_enabled", integration.enabled());
-        insert_field(fields, "integration_account_id", integration.account.id.clone());
-        insert_field(fields, "integration_account_name", integration.account.name.clone());
+    fn expand_integration(
+        fields: &mut IndexMap<String, Field>,
+        integration: serenity::model::guild::Integration,
+    ) {
+        insert_field(fields, "integration", "id", integration.id);
+        insert_field(fields, "integration", "name", integration.name.clone());
+        insert_field(fields, "integration", "type", integration.kind.clone());
+        insert_field(fields, "integration", "enabled", integration.enabled());
+        insert_field(
+            fields,
+            "integration",
+            "account_id",
+            integration.account.id.clone(),
+        );
+        insert_field(
+            fields,
+            "integration",
+            "account_name",
+            integration.account.name.clone(),
+        );
 
         //optional fields
-        insert_optional_field(fields, "integration_syncing_status", integration.syncing());
-        insert_optional_field(fields, "integration_role_id", integration.role_id);
-        insert_optional_field(fields, "integration_guild_id", integration.guild_id);
+        insert_optional_field(
+            fields,
+            "integration",
+            "syncing_status",
+            integration.syncing(),
+        );
+        insert_optional_field(fields, "integration", "role_id", integration.role_id);
+        insert_optional_field(fields, "integration", "guild_id", integration.guild_id);
         if let Some(user) = integration.user {
-            insert_field(fields, "integration_user_id", user.id);
+            insert_field(fields, "integration", "user_id", user.id);
         }
     }
 
-    fn expand_invite_create(fields: &mut IndexMap<String, Field>, data: serenity::model::event::InviteCreateEvent) {
-        insert_field(fields, "invite_code", data.code);
-        insert_field(fields, "invite_channel_id", data.channel_id);
-        insert_field(fields, "invite_created_at", data.created_at);
-        insert_field(fields, "invite_max_age", data.max_age);
-        insert_field(fields, "invite_max_uses", data.max_uses);
+    fn expand_invite_create(
+        fields: &mut IndexMap<String, Field>,
+        data: &serenity::model::event::InviteCreateEvent,
+    ) {
+        insert_field(fields, "invite_create", "code", data.code.to_string());
+        insert_field(fields, "invite_create", "channel_id", data.channel_id);
+        insert_field(fields, "invite_create", "created_at", data.created_at);
+        insert_field(fields, "invite_create", "max_age", data.max_age);
+        insert_field(fields, "invite_create", "max_uses", data.max_uses);
 
-        //optional fields
-        insert_optional_field(fields, "invite_guild_id", data.guild_id);
-
+        // optional fields
+        insert_optional_field(fields, "invite_create", "guild_id", data.guild_id);
     }
 
-    fn expand_message(fields: &mut IndexMap<String, Field>, message: serenity::model::channel::Message) {
-        insert_field(fields, "message_id", message.id);
-        insert_field(fields, "message_channel_id", message.channel_id);
-        insert_field(fields, "message_author", message.author.clone());
-        insert_field(fields, "message_content", message.content.clone());
-        insert_field(fields, "message_created_at", message.timestamp);
-        insert_field(fields, "message_embeds", message.embeds.clone().into_vec());
-        insert_field(fields, "message_attachments", message.attachments.clone().into_vec());
-        insert_field(fields, "message_components", message.components.clone().into_vec());
-        insert_field(fields, "message_kind", match message.kind {
-            serenity::model::channel::MessageType::Regular => "Regular".to_string(),
-            serenity::model::channel::MessageType::GroupRecipientAddition => "GroupRecipientAddition".to_string(),
-            serenity::model::channel::MessageType::GroupRecipientRemoval => "GroupRecipientRemoval".to_string(),
-            serenity::model::channel::MessageType::GroupCallCreation => "GroupCallCreation".to_string(),
-            serenity::model::channel::MessageType::GroupNameUpdate => "GroupNameUpdate".to_string(),
-            serenity::model::channel::MessageType::GroupIconUpdate => "GroupIconUpdate".to_string(),
-            serenity::model::channel::MessageType::PinsAdd => "PinsAdd".to_string(),
-            serenity::model::channel::MessageType::MemberJoin => "MemberJoin".to_string(),
-            serenity::model::channel::MessageType::NitroBoost => "NitroBoost".to_string(),
-            serenity::model::channel::MessageType::NitroTier1 => "NitroTier1".to_string(),
-            serenity::model::channel::MessageType::NitroTier2 => "NitroTier2".to_string(),
-            serenity::model::channel::MessageType::NitroTier3 => "NitroTier3".to_string(),
-            serenity::model::channel::MessageType::ChannelFollowAdd => "ChannelFollowAdd".to_string(),
-            serenity::model::channel::MessageType::GuildDiscoveryDisqualified => "GuildDiscoveryDisqualified".to_string(),
-            serenity::model::channel::MessageType::GuildDiscoveryRequalified => "GuildDiscoveryRequalified".to_string(),
-            serenity::model::channel::MessageType::GuildDiscoveryGracePeriodInitialWarning => "GuildDiscoveryGracePeriodInitialWarning".to_string(),
-            serenity::model::channel::MessageType::GuildDiscoveryGracePeriodFinalWarning => "GuildDiscoveryGracePeriodFinalWarning".to_string(),
-            serenity::model::channel::MessageType::ThreadCreated => "ThreadCreated".to_string(),
-            serenity::model::channel::MessageType::InlineReply => "InlineReply".to_string(),
-            serenity::model::channel::MessageType::ChatInputCommand => "ChatInputCommand".to_string(),
-            serenity::model::channel::MessageType::ThreadStarterMessage => "ThreadStarterMessage".to_string(),
-            serenity::model::channel::MessageType::GuildInviteReminder => "GuildInviteReminder".to_string(),
-            serenity::model::channel::MessageType::ContextMenuCommand => "ContextMenuCommand".to_string(),
-            serenity::model::channel::MessageType::AutoModAction => "AutoModAction".to_string(),
-            serenity::model::channel::MessageType::RoleSubscriptionPurchase => "RoleSubscriptionPurchase".to_string(),
-            serenity::model::channel::MessageType::InteractionPremiumUpsell => "InteractionPremiumUpsell".to_string(),
-            serenity::model::channel::MessageType::StageStart => "StageStart".to_string(),
-            serenity::model::channel::MessageType::StageEnd => "StageEnd".to_string(),
-            serenity::model::channel::MessageType::StageSpeaker => "StageSpeaker".to_string(),
-            serenity::model::channel::MessageType::StageTopic => "StageTopic".to_string(),
-            serenity::model::channel::MessageType::GuildApplicationPremiumSubscription => "GuildApplicationPremiumSubscription".to_string(),
-            _ => "Unknown".to_string(),
-        });
+    fn expand_invite_delete(
+        fields: &mut IndexMap<String, Field>,
+        data: &serenity::model::event::InviteDeleteEvent,
+    ) {
+        insert_field(fields, "invite_delete", "code", data.code.to_string());
+        insert_field(fields, "invite_delete", "channel_id", data.channel_id);
 
+        // optional fields
+        insert_optional_field(fields, "invite_delete", "guild_id", data.guild_id);
+    }
+
+    fn expand_message(
+        fields: &mut IndexMap<String, Field>,
+        message: serenity::model::channel::Message,
+    ) {
+        insert_field(fields, "message", "id", message.id);
+        insert_field(fields, "message", "channel_id", message.channel_id);
+        insert_field(fields, "message", "author", message.author.clone());
+        insert_field(fields, "message", "content", message.content.clone());
+        insert_field(fields, "message", "created_at", message.timestamp);
+        insert_field(
+            fields,
+            "message",
+            "embeds",
+            message.embeds.clone().into_vec(),
+        );
+        insert_field(
+            fields,
+            "message",
+            "attachments",
+            message.attachments.clone().into_vec(),
+        );
+        insert_field(
+            fields,
+            "message",
+            "components",
+            message.components.clone().into_vec(),
+        );
+        insert_field(
+            fields,
+            "message",
+            "kind",
+            match message.kind {
+                serenity::model::channel::MessageType::Regular => "Regular".to_string(),
+                serenity::model::channel::MessageType::GroupRecipientAddition => {
+                    "GroupRecipientAddition".to_string()
+                }
+                serenity::model::channel::MessageType::GroupRecipientRemoval => {
+                    "GroupRecipientRemoval".to_string()
+                }
+                serenity::model::channel::MessageType::GroupCallCreation => {
+                    "GroupCallCreation".to_string()
+                }
+                serenity::model::channel::MessageType::GroupNameUpdate => {
+                    "GroupNameUpdate".to_string()
+                }
+                serenity::model::channel::MessageType::GroupIconUpdate => {
+                    "GroupIconUpdate".to_string()
+                }
+                serenity::model::channel::MessageType::PinsAdd => "PinsAdd".to_string(),
+                serenity::model::channel::MessageType::MemberJoin => "MemberJoin".to_string(),
+                serenity::model::channel::MessageType::NitroBoost => "NitroBoost".to_string(),
+                serenity::model::channel::MessageType::NitroTier1 => "NitroTier1".to_string(),
+                serenity::model::channel::MessageType::NitroTier2 => "NitroTier2".to_string(),
+                serenity::model::channel::MessageType::NitroTier3 => "NitroTier3".to_string(),
+                serenity::model::channel::MessageType::ChannelFollowAdd => {
+                    "ChannelFollowAdd".to_string()
+                }
+                serenity::model::channel::MessageType::GuildDiscoveryDisqualified => {
+                    "GuildDiscoveryDisqualified".to_string()
+                }
+                serenity::model::channel::MessageType::GuildDiscoveryRequalified => {
+                    "GuildDiscoveryRequalified".to_string()
+                }
+                serenity::model::channel::MessageType::GuildDiscoveryGracePeriodInitialWarning => {
+                    "GuildDiscoveryGracePeriodInitialWarning".to_string()
+                }
+                serenity::model::channel::MessageType::GuildDiscoveryGracePeriodFinalWarning => {
+                    "GuildDiscoveryGracePeriodFinalWarning".to_string()
+                }
+                serenity::model::channel::MessageType::ThreadCreated => "ThreadCreated".to_string(),
+                serenity::model::channel::MessageType::InlineReply => "InlineReply".to_string(),
+                serenity::model::channel::MessageType::ChatInputCommand => {
+                    "ChatInputCommand".to_string()
+                }
+                serenity::model::channel::MessageType::ThreadStarterMessage => {
+                    "ThreadStarterMessage".to_string()
+                }
+                serenity::model::channel::MessageType::GuildInviteReminder => {
+                    "GuildInviteReminder".to_string()
+                }
+                serenity::model::channel::MessageType::ContextMenuCommand => {
+                    "ContextMenuCommand".to_string()
+                }
+                serenity::model::channel::MessageType::AutoModAction => "AutoModAction".to_string(),
+                serenity::model::channel::MessageType::RoleSubscriptionPurchase => {
+                    "RoleSubscriptionPurchase".to_string()
+                }
+                serenity::model::channel::MessageType::InteractionPremiumUpsell => {
+                    "InteractionPremiumUpsell".to_string()
+                }
+                serenity::model::channel::MessageType::StageStart => "StageStart".to_string(),
+                serenity::model::channel::MessageType::StageEnd => "StageEnd".to_string(),
+                serenity::model::channel::MessageType::StageSpeaker => "StageSpeaker".to_string(),
+                serenity::model::channel::MessageType::StageTopic => "StageTopic".to_string(),
+                serenity::model::channel::MessageType::GuildApplicationPremiumSubscription => {
+                    "GuildApplicationPremiumSubscription".to_string()
+                }
+                _ => "Unknown".to_string(),
+            },
+        );
 
         //optional fields
-        insert_optional_field(fields, "message_updated_at", message.edited_timestamp);
-        insert_optional_field(fields, "message_guild_id", message.guild_id);
+        insert_optional_field(
+            fields,
+            "message",
+            "message_updated_at",
+            message.edited_timestamp,
+        );
+        insert_optional_field(fields, "message", "message_guild_id", message.guild_id);
     }
+
+    fn expand_channel_pins_update(
+        fields: &mut IndexMap<String, Field>,
+        pin: &serenity::model::event::ChannelPinsUpdateEvent,
+    ) {
+        insert_field(fields, "channel_pins_update", "channel_id", pin.channel_id);
+        insert_optional_field(
+            fields,
+            "channel_pins_update",
+            "last_pin_timestamp",
+            pin.last_pin_timestamp,
+        );
+    }
+
+    fn expand_guild_scheduled_event_user_add(
+        fields: &mut IndexMap<String, Field>,
+        subscribed: &serenity::all::GuildScheduledEventUserAddEvent,
+    ) {
+        insert_field(
+            fields,
+            "guild_scheduled_event_user_add",
+            "guild_id",
+            subscribed.guild_id,
+        );
+        insert_field(
+            fields,
+            "guild_scheduled_event_user_add",
+            "event_id",
+            subscribed.scheduled_event_id,
+        );
+        insert_field(
+            fields,
+            "guild_scheduled_event_user_add",
+            "user_id",
+            subscribed.user_id,
+        );
+    }
+
+    fn expand_guild_scheduled_event_user_remove(
+        fields: &mut IndexMap<String, Field>,
+        subscribed: &serenity::all::GuildScheduledEventUserRemoveEvent,
+    ) {
+        insert_field(
+            fields,
+            "guild_scheduled_event_user_remove",
+            "guild_id",
+            subscribed.guild_id,
+        );
+        insert_field(
+            fields,
+            "guild_scheduled_event_user_remove",
+            "event_id",
+            subscribed.scheduled_event_id,
+        );
+        insert_field(
+            fields,
+            "guild_scheduled_event_user_remove",
+            "user_id",
+            subscribed.user_id,
+        );
+    }
+
     match event {
         FullEvent::AutoModActionExecution { execution } => {
             expand_action_execution(&mut fields, execution);
@@ -832,29 +1138,37 @@ pub fn expand_event(event: &FullEvent) -> Option<IndexMap<String, Field>> {
         FullEvent::ChannelCreate { channel } => {
             expand_channel(&mut fields, channel);
         }
-        FullEvent::ChannelDelete { channel, .. } => {
+        FullEvent::ChannelDelete { channel, messages } => {
             expand_channel(&mut fields, channel);
+
+            if let Some(messages) = messages {
+                insert_field(
+                    &mut fields,
+                    "channel_delete_ext",
+                    "number_of_messages",
+                    messages.len(),
+                );
+            }
         }
         FullEvent::ChannelPinsUpdate { pin } => {
-            insert_field(&mut fields, "channel_id", pin.channel_id);
-            insert_optional_field(&mut fields, "last_pin_timestamp", pin.last_pin_timestamp);
+            expand_channel_pins_update(&mut fields, pin);
         }
-        FullEvent::ChannelUpdate { old, new, .. } => {
+        FullEvent::ChannelUpdate { old, new } => {
             if let Some(old) = old {
                 expand_channel(&mut fields, old);
             }
             expand_channel(&mut fields, new);
         }
-        FullEvent::CommandPermissionsUpdate { permission, .. } => {
+        FullEvent::CommandPermissionsUpdate { permission } => {
             expand_command_permissions(&mut fields, permission);
         }
-        FullEvent::EntitlementCreate { entitlement, .. } => {
+        FullEvent::EntitlementCreate { entitlement } => {
             expand_entitlement(&mut fields, entitlement);
         }
-        FullEvent::EntitlementDelete { entitlement, .. } => {
+        FullEvent::EntitlementDelete { entitlement } => {
             expand_entitlement(&mut fields, entitlement);
         }
-        FullEvent::EntitlementUpdate { entitlement, .. } => {
+        FullEvent::EntitlementUpdate { entitlement } => {
             expand_entitlement(&mut fields, entitlement);
         }
         FullEvent::GuildAuditLogEntryCreate {
@@ -866,20 +1180,26 @@ pub fn expand_event(event: &FullEvent) -> Option<IndexMap<String, Field>> {
             guild_id,
             banned_user,
         } => {
-            expand_user(&mut fields, banned_user.clone(), guild_id);
+            insert_field(&mut fields, "guild", "guild_id", *guild_id);
+            expand_user(&mut fields, banned_user);
         }
         FullEvent::GuildBanRemoval {
             guild_id,
             unbanned_user,
         } => {
-            expand_user(&mut fields, unbanned_user.clone(), guild_id);
+            insert_field(&mut fields, "guild", "guild_id", *guild_id);
+            expand_user(&mut fields, unbanned_user);
         }
         FullEvent::GuildCreate { guild, is_new } => {
-            insert_field(&mut fields, "guild_id", guild.id);
-            insert_optional_field(&mut fields, "is_new", *is_new);
+            expand_guild(&mut fields, guild);
+            insert_optional_field(&mut fields, "guild_ext", "is_new", *is_new);
         }
-        FullEvent::GuildDelete { incomplete, .. } => {
-            insert_field(&mut fields, "guild_id", incomplete.id);
+        FullEvent::GuildDelete { incomplete, full } => {
+            if let Some(full) = full {
+                expand_guild(&mut fields, full);
+            } else {
+                insert_field(&mut fields, "guild_ext", "guild_id", incomplete.id);
+            }
         }
         FullEvent::GuildEmojisUpdate {
             guild_id,
@@ -887,14 +1207,23 @@ pub fn expand_event(event: &FullEvent) -> Option<IndexMap<String, Field>> {
         } => {
             expand_emoji_map(&mut fields, current_state, guild_id);
         }
-        FullEvent::GuildIntegrationsUpdate { guild_id, .. } => {
-            insert_field(&mut fields, "guild_id", *guild_id);
+        FullEvent::GuildIntegrationsUpdate { guild_id } => {
+            insert_field(&mut fields, "guild_ext", "guild_id", *guild_id);
         }
         FullEvent::GuildMemberAddition { new_member } => {
-            expand_member(&mut fields, new_member.clone());
+            expand_member(&mut fields, new_member);
         }
-        FullEvent::GuildMemberRemoval { guild_id, user, .. } => {
-            expand_user(&mut fields, user.clone(), guild_id);
+        FullEvent::GuildMemberRemoval {
+            guild_id,
+            user,
+            member_data_if_available,
+        } => {
+            if let Some(member_data_if_available) = member_data_if_available {
+                expand_member(&mut fields, member_data_if_available);
+            } else {
+                insert_field(&mut fields, "guild", "guild_id", *guild_id);
+                expand_user(&mut fields, user);
+            }
         }
         FullEvent::GuildMemberUpdate {
             old_if_available,
@@ -902,10 +1231,10 @@ pub fn expand_event(event: &FullEvent) -> Option<IndexMap<String, Field>> {
             ..
         } => {
             if let Some(old) = old_if_available {
-                expand_member(&mut fields, old.clone());
+                expand_member(&mut fields, old);
             }
             if let Some(new) = new {
-                expand_member(&mut fields, new.clone());
+                expand_member(&mut fields, new);
             };
         }
         FullEvent::GuildMembersChunk { .. } => return None,
@@ -917,8 +1246,14 @@ pub fn expand_event(event: &FullEvent) -> Option<IndexMap<String, Field>> {
             removed_role_id,
             removed_role_data_if_available,
         } => {
-            insert_field(&mut fields, "guild_id", *guild_id);
-            insert_field(&mut fields, "role_id", *removed_role_id);
+            insert_field(&mut fields, "guild", "guild_id", *guild_id);
+            insert_field(
+                &mut fields,
+                "guild_role_delete",
+                "role_id",
+                *removed_role_id,
+            );
+
             if let Some(removed_role_data) = removed_role_data_if_available {
                 expand_role(&mut fields, removed_role_data.clone());
             }
@@ -942,14 +1277,10 @@ pub fn expand_event(event: &FullEvent) -> Option<IndexMap<String, Field>> {
             expand_scheduled_event(&mut fields, event.clone());
         }
         FullEvent::GuildScheduledEventUserAdd { subscribed } => {
-            insert_field(&mut fields, "guild_id", subscribed.guild_id);
-            insert_field(&mut fields, "event_id", subscribed.scheduled_event_id);
-            insert_field(&mut fields, "user_id", subscribed.user_id);
+            expand_guild_scheduled_event_user_add(&mut fields, subscribed);
         }
         FullEvent::GuildScheduledEventUserRemove { unsubscribed } => {
-            insert_field(&mut fields, "guild_id", unsubscribed.guild_id);
-            insert_field(&mut fields, "event_id", unsubscribed.scheduled_event_id);
-            insert_field(&mut fields, "user_id", unsubscribed.user_id);
+            expand_guild_scheduled_event_user_remove(&mut fields, unsubscribed);
         }
         FullEvent::GuildStickersUpdate {
             guild_id,
@@ -957,46 +1288,73 @@ pub fn expand_event(event: &FullEvent) -> Option<IndexMap<String, Field>> {
         } => {
             expand_sticker_map(&mut fields, current_state, guild_id);
         }
-        FullEvent::GuildUpdate { old_data_if_available, new_data, .. } => {
-            expand_partial_guild(&mut fields, new_data.clone());
+        FullEvent::GuildUpdate {
+            old_data_if_available,
+            new_data,
+        } => {
+            expand_partial_guild(&mut fields, new_data);
             if let Some(old) = old_data_if_available {
-                expand_guild(&mut fields, old.clone());
+                expand_guild(&mut fields, old);
             }
         }
-        FullEvent::IntegrationCreate { integration, .. } => {
+        FullEvent::IntegrationCreate { integration } => {
             expand_integration(&mut fields, integration.clone());
         }
-        FullEvent::IntegrationDelete { guild_id, integration_id, application_id } => {
-            insert_field(&mut fields, "guild_id", *guild_id);
-            insert_field(&mut fields, "integration_id", *integration_id);
-            insert_optional_field(&mut fields, "integration_application_id", *application_id);
+        FullEvent::IntegrationDelete {
+            guild_id,
+            integration_id,
+            application_id,
+        } => {
+            insert_field(&mut fields, "integration", "guild_id", *guild_id);
+            insert_field(&mut fields, "integration", "id", *integration_id);
+            insert_optional_field(
+                &mut fields,
+                "integration",
+                "application_id",
+                *application_id,
+            );
         }
-        FullEvent::IntegrationUpdate { integration, .. } => {
+        FullEvent::IntegrationUpdate { integration } => {
             expand_integration(&mut fields, integration.clone());
         }
-        FullEvent::InteractionCreate { .. } => return None,
-        FullEvent::InviteCreate { data, .. } => {
-            expand_invite_create(&mut fields, data.clone());
+        FullEvent::InteractionCreate { interaction: _ } => return None,
+        FullEvent::InviteCreate { data } => {
+            expand_invite_create(&mut fields, data);
         }
-        FullEvent::InviteDelete { data, .. } => {
-            insert_field(&mut fields, "invite_code", data.code.clone());
-            insert_field(&mut fields, "invite_channel_id", data.channel_id);
-            insert_optional_field(&mut fields, "invite_guild_id", data.guild_id);
+        FullEvent::InviteDelete { data } => {
+            expand_invite_delete(&mut fields, data);
         }
-        FullEvent::Message { new_message, .. } => {
+        FullEvent::Message { new_message } => {
             expand_message(&mut fields, new_message.clone());
         }
-        FullEvent::MessageDelete { guild_id, deleted_message_id, channel_id, .. } => {
-            insert_optional_field(&mut fields, "guild_id", *guild_id);
-            insert_field(&mut fields, "message_id", *deleted_message_id);
-            insert_field(&mut fields, "channel_id", *channel_id);
+        FullEvent::MessageDelete {
+            guild_id,
+            deleted_message_id,
+            channel_id,
+        } => {
+            insert_optional_field(&mut fields, "message", "guild_id", *guild_id);
+            insert_field(&mut fields, "message", "message_id", *deleted_message_id);
+            insert_field(&mut fields, "message", "channel_id", *channel_id);
         }
-        FullEvent::MessageDeleteBulk { guild_id, channel_id, multiple_deleted_messages_ids, .. } => {
-            insert_optional_field(&mut fields, "guild_id", *guild_id);
-            insert_field(&mut fields, "channel_id", *channel_id);
-            insert_field(&mut fields, "message_ids", multiple_deleted_messages_ids.clone());
+        FullEvent::MessageDeleteBulk {
+            guild_id,
+            channel_id,
+            multiple_deleted_messages_ids,
+        } => {
+            insert_optional_field(&mut fields, "message", "guild_id", *guild_id);
+            insert_field(&mut fields, "message", "channel_id", *channel_id);
+            insert_field(
+                &mut fields,
+                "message",
+                "message_ids",
+                multiple_deleted_messages_ids.clone(),
+            );
         }
-        FullEvent::MessageUpdate { old_if_available, new, .. } => {
+        FullEvent::MessageUpdate {
+            old_if_available,
+            new,
+            event: _,
+        } => {
             if let Some(old) = old_if_available {
                 expand_message(&mut fields, old.clone());
             }
@@ -1018,61 +1376,86 @@ pub fn expand_event(event: &FullEvent) -> Option<IndexMap<String, Field>> {
         FullEvent::StageInstanceCreate { .. } => return None,
         FullEvent::StageInstanceDelete { .. } => return None,
         FullEvent::StageInstanceUpdate { .. } => return None,
-        FullEvent::ThreadCreate { thread, .. } => {
+        FullEvent::ThreadCreate { thread } => {
             expand_channel(&mut fields, thread);
         }
-        FullEvent::ThreadDelete { thread, .. } => {
-            insert_field(&mut fields, "guild_id", thread.guild_id);
-            insert_field(&mut fields, "thread_id", thread.id);
-            insert_field(&mut fields, "channel_id", thread.parent_id);
-            insert_field(
-                &mut fields,
-                "channel_type",
-                match thread.kind {
-                    serenity::model::channel::ChannelType::Text => "Text".to_string(),
-                    serenity::model::channel::ChannelType::Voice => "Voice".to_string(),
-                    serenity::model::channel::ChannelType::Private => "PrivateChannel".to_string(),
-                    serenity::model::channel::ChannelType::GroupDm => "GroupDm".to_string(),
-                    serenity::model::channel::ChannelType::Category => "Category".to_string(),
-                    serenity::model::channel::ChannelType::News => "News".to_string(),
-                    serenity::model::channel::ChannelType::NewsThread => "NewsThread".to_string(),
-                    serenity::model::channel::ChannelType::PublicThread => "PublicThread".to_string(),
-                    serenity::model::channel::ChannelType::PrivateThread => "PrivateThread".to_string(),
-                    serenity::model::channel::ChannelType::Stage => "Stage".to_string(),
-                    serenity::model::channel::ChannelType::Directory => "Directory".to_string(),
-                    _ => "Unknown".to_string(),
-                },
-            );
+        FullEvent::ThreadDelete {
+            thread,
+            full_thread_data,
+        } => {
+            if let Some(ftd) = full_thread_data {
+                expand_channel(&mut fields, ftd);
+            } else {
+                expand_partial_guild_channel(&mut fields, thread);
+            }
         }
         FullEvent::ThreadListSync { .. } => {
-            // expand_channel(&mut fields, thread_list_sync);
-            // NO NEED TO HANDLE THIS...
-            return None
+            // We don't need to support this event tbrh
+            return None;
         }
-        FullEvent::ThreadMemberUpdate { thread_member, .. } => {
-
-            if let Some(member) = thread_member.member.clone() {
+        FullEvent::ThreadMemberUpdate { thread_member } => {
+            if let Some(ref member) = thread_member.member {
                 expand_member(&mut fields, member);
+            } else {
+                insert_field(&mut fields, "user", "user_id", thread_member.user_id);
             }
-            insert_optional_field(&mut fields, "guild_id", thread_member.guild_id);
-            insert_field(&mut fields, "channel_id", thread_member.id);
-            insert_field(&mut fields, "user_id", thread_member.user_id);
+
+            insert_optional_field(&mut fields, "thread", "guild_id", thread_member.guild_id);
+            insert_field(&mut fields, "thread", "channel_id", thread_member.id);
         }
-        FullEvent::ThreadMembersUpdate { thread_members_update, .. } => {
-            insert_field(&mut fields, "guild_id", thread_members_update.guild_id);
-            insert_field(&mut fields, "channel_id", thread_members_update.id);
-            insert_field(&mut fields, "thread_member_count", thread_members_update.member_count);
-            insert_field(&mut fields, "removed_member_ids", thread_members_update.removed_member_ids.clone().into_vec());
+        FullEvent::ThreadMembersUpdate {
+            thread_members_update,
+        } => {
+            insert_field(
+                &mut fields,
+                "thread_members",
+                "id",
+                thread_members_update.id,
+            );
+            insert_field(
+                &mut fields,
+                "thread_members",
+                "guild_id",
+                thread_members_update.guild_id,
+            );
+            insert_field(
+                &mut fields,
+                "thread_members",
+                "member_count",
+                thread_members_update.member_count,
+            );
+            insert_field(
+                &mut fields,
+                "thread_members",
+                "added_members",
+                thread_members_update.added_members.clone().into_vec(),
+            );
+            insert_field(
+                &mut fields,
+                "thread_members",
+                "removed_member_ids",
+                thread_members_update.removed_member_ids.clone().into_vec(),
+            );
         }
-        FullEvent::ThreadUpdate { new, .. } => {
+        FullEvent::ThreadUpdate { new, old } => {
             expand_channel(&mut fields, new);
+
+            if let Some(old) = old {
+                expand_channel(&mut fields, old);
+            }
         }
         FullEvent::TypingStart { .. } => return None,
         FullEvent::UserUpdate { .. } => return None,
         FullEvent::VoiceChannelStatusUpdate { .. } => return None,
         FullEvent::VoiceServerUpdate { .. } => return None,
         FullEvent::VoiceStateUpdate { .. } => return None,
-        FullEvent::WebhookUpdate { .. } => return None,
+        FullEvent::WebhookUpdate {
+            guild_id,
+            belongs_to_channel_id,
+        } => {
+            insert_field(&mut fields, "webhook", "guild_id", *guild_id);
+            insert_field(&mut fields, "webhook", "channel_id", *belongs_to_channel_id);
+        }
     }
 
     Some(fields)
