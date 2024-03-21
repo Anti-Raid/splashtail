@@ -40,7 +40,12 @@ func (d DefaultResponder) New(err string, ctx map[string]string) any {
 	}
 }
 
-func HandlePermissionCheck(userId, guildId, command string) (hresp uapi.HttpResponse, ok bool) {
+func HandlePermissionCheck(
+	userId,
+	guildId,
+	command string,
+	permLimits []string,
+) (hresp uapi.HttpResponse, ok bool) {
 	if guildId == "" {
 		state.Logger.Error("Guild ID is empty")
 		return uapi.HttpResponse{
@@ -76,6 +81,7 @@ func HandlePermissionCheck(userId, guildId, command string) (hresp uapi.HttpResp
 		guildId,
 		userId,
 		command,
+		permLimits,
 	)
 
 	if err != nil {
@@ -230,7 +236,7 @@ func Authorize(r uapi.Route, req *http.Request) (uapi.AuthData, uapi.HttpRespons
 				cmd := permCheck.Command(r, req)
 				guildId := permCheck.GuildID(r, req)
 
-				hresp, ok := HandlePermissionCheck(id.String, guildId, cmd)
+				hresp, ok := HandlePermissionCheck(id.String, guildId, cmd, permLimits)
 
 				if !ok {
 					return uapi.AuthData{}, hresp, false

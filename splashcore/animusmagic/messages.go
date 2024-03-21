@@ -18,11 +18,11 @@ type BotAnimusMessage struct {
 		UserID  string `json:"user_id"`
 	} `json:"BaseGuildUserInfo,omitempty"`
 	CheckCommandPermission *struct {
-		GuildID                     string   `json:"guild_id"`
-		UserID                      string   `json:"user_id"`
-		Command                     string   `json:"command"`
-		CustomResolvedKittycatPerms []string `json:"custom_resolved_kittycat_perms,omitempty"`
-		EnsureUserHasCustomResolved *bool    `json:"ensure_user_has_custom_resolved,omitempty"`
+		GuildID                     string    `json:"guild_id"`
+		UserID                      string    `json:"user_id"`
+		Command                     string    `json:"command"`
+		CustomResolvedKittycatPerms *[]string `json:"custom_resolved_kittycat_perms,omitempty"`
+		EnsureUserHasCustomResolved *bool     `json:"ensure_user_has_custom_resolved,omitempty"`
 	} `json:"CheckCommandPermission,omitempty"`
 	ToggleModule *struct {
 		GuildID string `json:"guild_id"`

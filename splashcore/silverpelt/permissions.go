@@ -5,12 +5,12 @@ import "fmt"
 
 type PermissionResult struct {
 	Var           string                     `json:"var"`
-	Message       string                     `json:"message"`
-	Check         *PermissionCheck           `json:"check"`
-	CommandConfig *GuildCommandConfiguration `json:"command_config"`
-	ModuleConfig  *GuildModuleConfiguration  `json:"module_config"`
-	Checks        *PermissionChecks          `json:"checks"`
-	Error         string                     `json:"error"`
+	Message       string                     `json:"message,omitempty"`
+	Check         *PermissionCheck           `json:"check,omitempty"`
+	CommandConfig *GuildCommandConfiguration `json:"command_config,omitempty"`
+	ModuleConfig  *GuildModuleConfiguration  `json:"module_config,omitempty"`
+	Checks        *PermissionChecks          `json:"checks,omitempty"`
+	Error         string                     `json:"error,omitempty"`
 }
 
 func NewPermissionResultFromError[T fmt.Stringer](e T) PermissionResult {
