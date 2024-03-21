@@ -24,6 +24,24 @@ pub fn module() -> crate::silverpelt::Module {
                     "" => crate::silverpelt::CommandExtendedData::kittycat_or_admin("moderation", "ban"),
                 },
             ),
+            (
+                cmd::tempban(),
+                indexmap! {
+                    "" => crate::silverpelt::CommandExtendedData::kittycat_or_admin("moderation", "tempban"),
+                },
+            ),
+            (
+                cmd::unban(),
+                indexmap! {
+                    "" => crate::silverpelt::CommandExtendedData::kittycat_or_admin("moderation", "unban"),
+                },
+            ),
+            (
+                cmd::timeout(),
+                indexmap! {
+                    "" => crate::silverpelt::CommandExtendedData::kittycat_or_admin("moderation", "timeout"),
+                },
+            )
         ],
         event_handlers: vec![],
     }
