@@ -8,9 +8,77 @@ type Context<'a> = crate::Context<'a>;
     slash_command,
     user_cooldown = 1,
     guild_cooldown = 1,
-    subcommands("modules_enable", "modules_disable",)
+    subcommands("modules_list", "modules_enable", "modules_disable",)
 )]
 pub async fn modules(_ctx: Context<'_>) -> Result<(), Error> {
+    Ok(())
+}
+
+/// Lists all module configurations currently setup
+#[poise::command(
+    prefix_command,
+    slash_command,
+    user_cooldown = 1,
+    guild_cooldown = 1,
+)]
+pub async fn modules_list(ctx: Context<'_>) -> Result<(), Error> {
+    let Some(guild_id) = ctx.guild_id() else {
+        return Err("This command must be run in a guild".into());
+    };
+
+    let data = ctx.data();
+
+    let module_configs = sqlx::query!(
+        "SELECT module, disabled FROM guild_module_configurations WHERE guild_id = $1",
+        guild_id.to_string()
+    )
+    .fetch_all(&data.pool)
+    .await?;
+
+    let mut msg = "**Module Configurations**\n\n".to_string();
+
+    let mut done_modules = Vec::new();
+    for module_config in module_configs {
+        let Some(module) = SILVERPELT_CACHE.module_id_cache.get(&module_config.module) else {
+            continue
+        };
+
+        let module_id = module_config.module;
+
+        if let Some(disabled) = module_config.disabled {
+            msg.push_str(&format!(
+                "**{}**: {} [module id = {}]\n",
+                module.name,
+                if disabled { "Disabled" } else { "Enabled" },
+                module_id
+            ));    
+        } else {
+            msg.push_str(&format!(
+                "**{}**: {} [default] [module id = {}]\n",
+                module.name,
+                if module.is_default_enabled { "Enabled" } else { "Disabled" },
+                module_id
+            ));
+        }
+
+        done_modules.push(module_id);
+    }
+
+    for module in SILVERPELT_CACHE.module_id_cache.iter() {
+        let module = module.value();
+
+        if done_modules.contains(&module.id.to_string()) {
+            continue;
+        }
+
+        msg.push_str(&format!(
+            "**{}**: {} [default, config not modified] [module id = {}]\n",
+            module.name,
+            if module.is_default_enabled { "Enabled" } else { "Disabled" },
+            module.id
+        ));
+    }
+    
     Ok(())
 }
 

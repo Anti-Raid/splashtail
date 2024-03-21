@@ -4,12 +4,15 @@ package api
 import (
 	"encoding/base64"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"strings"
 
 	"github.com/anti-raid/splashtail/splashcore/types"
+	"github.com/anti-raid/splashtail/splashcore/utils/mewext"
 	"github.com/anti-raid/splashtail/webserver/constants"
 	"github.com/anti-raid/splashtail/webserver/state"
+	"github.com/anti-raid/splashtail/webserver/webutils"
 	"github.com/go-chi/chi/v5"
 	"go.uber.org/zap"
 
@@ -18,7 +21,15 @@ import (
 	"golang.org/x/exp/slices"
 )
 
-const SESSION_EXPIRY = 60 * 30 // 30 minutes
+type PermissionCheck struct {
+	Command func(d uapi.Route, r *http.Request) string
+	GuildID func(d uapi.Route, r *http.Request) string
+}
+
+const (
+	PERMISSION_CHECK_KEY = "permissionCheck"
+	SESSION_EXPIRY       = 60 * 30 // 30 minutes
+)
 
 type DefaultResponder struct{}
 
@@ -145,6 +156,77 @@ func Authorize(r uapi.Route, req *http.Request) (uapi.AuthData, uapi.HttpRespons
 				continue
 			}
 
+			pc, ok := r.ExtData[PERMISSION_CHECK_KEY]
+
+			if !ok {
+				return uapi.AuthData{}, uapi.HttpResponse{
+					Status: http.StatusInternalServerError,
+					Json:   types.ApiError{Message: "Internal server error: permissionCheck not found in route.ExtData"},
+				}, false
+			}
+
+			permCheck, ok := pc.(PermissionCheck)
+
+			if ok {
+				cmd := permCheck.Command(r, req)
+				guildId := permCheck.GuildID(r, req)
+
+				if guildId == "" {
+					state.Logger.Error("Guild ID is empty")
+					return uapi.AuthData{}, uapi.HttpResponse{
+						Status: http.StatusInternalServerError,
+						Json:   types.ApiError{Message: "Guild ID in permissionCheck is empty"},
+					}, false
+				}
+
+				clusterId, err := mewext.GetClusterIDFromGuildID(guildId, state.MewldInstanceList.Map, int(state.MewldInstanceList.ShardCount))
+
+				if err != nil {
+					state.Logger.Error("Error getting cluster ID", zap.Error(err))
+					return uapi.AuthData{}, uapi.HttpResponse{
+						Status: http.StatusInternalServerError,
+						Json:   types.ApiError{Message: "Error getting cluster ID: " + err.Error()},
+						Headers: map[string]string{
+							"Retry-After": "10",
+						},
+					}, false
+				}
+
+				hresp, ok := webutils.ClusterCheck(clusterId)
+
+				if !ok {
+					return uapi.AuthData{}, hresp, false
+				}
+
+				permRes, ok, err := webutils.CheckCommandPermission(
+					state.AnimusMagicClient,
+					state.Context,
+					state.Rueidis,
+					uint16(clusterId),
+					guildId,
+					id.String,
+					cmd,
+				)
+
+				if err != nil {
+					state.Logger.Error("Error checking command permission", zap.Error(err))
+					return uapi.AuthData{}, uapi.HttpResponse{
+						Status: http.StatusInternalServerError,
+						Json:   types.ApiError{Message: "Error checking command permission: " + err.Error()},
+						Headers: map[string]string{
+							"Retry-After": "10",
+						},
+					}, false
+				}
+
+				if !ok {
+					return uapi.AuthData{}, uapi.HttpResponse{
+						Status: http.StatusForbidden,
+						Json:   permRes,
+					}, false
+				}
+			}
+
 			authData = uapi.AuthData{
 				TargetType: types.TargetTypeUser,
 				ID:         id.String,
@@ -202,5 +284,15 @@ func Setup() {
 			BodyRequired:        constants.BodyRequired,
 		},
 		DefaultResponder: DefaultResponder{},
+		BaseSanityCheck: func(r uapi.Route) error {
+			if len(r.Auth) > 0 {
+				// Check for permissionCheck
+				if _, ok := r.ExtData[PERMISSION_CHECK_KEY]; !ok {
+					return fmt.Errorf("%s not found in route.ExtData", PERMISSION_CHECK_KEY)
+				}
+			}
+
+			return nil
+		},
 	})
 }

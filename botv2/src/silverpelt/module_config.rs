@@ -26,7 +26,7 @@ pub async fn is_module_enabled(
     } else {
         // Fetch from database
         let disabled = sqlx::query!(
-            "SELECT disabled FROM guild_module_configurations WHERE guild_id = $1 AND module = $2 FOR UPDATE",
+            "SELECT disabled FROM guild_module_configurations WHERE guild_id = $1 AND module = $2",
             guild_id.to_string(),
             module
         )

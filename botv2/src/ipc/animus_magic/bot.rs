@@ -64,6 +64,7 @@ pub enum BotAnimusMessage {
         user_id: UserId,
         command: String,
         custom_resolved_kittycat_perms: Option<Vec<String>>,
+        ensure_user_has_custom_resolved: Option<bool>,
     },
     /// Toggles a module within the bot clearing any cache in the process
     ToggleModule {
@@ -149,9 +150,12 @@ impl BotAnimusMessage {
                 user_id,
                 command,
                 custom_resolved_kittycat_perms,
+                ensure_user_has_custom_resolved,
             } => {
                 // Check COMMAND_ID_MODULE_MAP
                 let base_command = command.split_whitespace().next().unwrap();
+
+                let custom_resolved_kittycat_perms = custom_resolved_kittycat_perms.map(|custom_resolved_kittycat_perms| (custom_resolved_kittycat_perms, ensure_user_has_custom_resolved.unwrap_or(true)));
 
                 let perm_res = silverpelt::cmd::check_command(
                     base_command,

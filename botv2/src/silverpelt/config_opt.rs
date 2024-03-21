@@ -100,6 +100,8 @@ impl<'de> serde::Deserialize<'de> for WebFieldType {
     }
 }
 
+
+
 impl From<String> for WebFieldType {
     fn from(s: String) -> Self {
         Self::String(s)
@@ -160,6 +162,8 @@ pub struct ConfigOption {
     /// The name of the option
     pub name: String,
     /// The description of the option
+    pub description: String,
+    /// The type of the option
     pub field_type: WebFieldType,
 }
 

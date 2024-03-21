@@ -107,7 +107,7 @@ pub async fn check_command(
     // If a poise::Context is available and originates from a Application Command, we can fetch the guild+member from cache itself
     poise_ctx: &Option<crate::Context<'_>>,
     // API needs this for limiting the permissions of a user, allows setting custom resolved perms
-    custom_resolved_kittycat_perms: Option<Vec<String>>,
+    custom_resolved_kittycat_perms: Option<(Vec<String>, bool)>,
 ) -> PermissionResult {
     if !SILVERPELT_CACHE
         .command_id_module_map
@@ -197,8 +197,30 @@ pub async fn check_command(
     }
 
     let kittycat_perms = {
-        if let Some(custom_resolved_kittycat_perms) = custom_resolved_kittycat_perms {
-            custom_resolved_kittycat_perms
+        if let Some((custom_resolved_kittycat_perms, ensure_user_has_custom_resolved)) = custom_resolved_kittycat_perms {
+            if ensure_user_has_custom_resolved {
+                let kc_perms = match silverpelt::member_permission_calc::get_kittycat_perms(
+                    pool, guild_id, user_id, &roles,
+                )
+                .await
+                {
+                    Ok(v) => v,
+                    Err(e) => {
+                        return e.into();
+                    }
+                };
+
+                let mut resolved_perms = Vec::new();
+                for perm in custom_resolved_kittycat_perms.into_iter() {
+                    if kittycat::perms::has_perm(&kc_perms, &perm) {
+                        resolved_perms.push(perm);
+                    }  
+                }
+
+                resolved_perms
+            } else {
+                custom_resolved_kittycat_perms
+            }
         } else {
             match silverpelt::member_permission_calc::get_kittycat_perms(
                 pool, guild_id, user_id, &roles,

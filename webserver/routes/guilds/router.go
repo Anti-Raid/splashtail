@@ -1,7 +1,10 @@
 package guilds
 
 import (
+	"net/http"
+
 	"github.com/anti-raid/splashtail/splashcore/types"
+	"github.com/anti-raid/splashtail/webserver/api"
 	"github.com/anti-raid/splashtail/webserver/routes/guilds/endpoints/get_module_configuration"
 	"github.com/go-chi/chi/v5"
 	"github.com/infinitybotlist/eureka/uapi"
@@ -27,6 +30,16 @@ func (b Router) Routes(r *chi.Mux) {
 				URLVar:       "user_id",
 				Type:         types.TargetTypeUser,
 				AllowedScope: "modules enable",
+			},
+		},
+		ExtData: map[string]any{
+			api.PERMISSION_CHECK_KEY: api.PermissionCheck{
+				Command: func(d uapi.Route, r *http.Request) string {
+					return "modules list"
+				},
+				GuildID: func(d uapi.Route, r *http.Request) string {
+					return chi.URLParam(r, "guild_id")
+				},
 			},
 		},
 	}.Route(r)

@@ -17,6 +17,7 @@ pub fn module() -> crate::silverpelt::Module {
             (
                 modules::modules(),
                 indexmap! {
+                    "list" => crate::silverpelt::CommandExtendedData::kittycat_or_admin("modules", "list"),
                     "enable" => crate::silverpelt::CommandExtendedData::kittycat_or_admin("modules", "enable"),
                     "disable" => crate::silverpelt::CommandExtendedData::kittycat_or_admin("modules", "disable"),
                 },

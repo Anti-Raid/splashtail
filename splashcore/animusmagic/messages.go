@@ -18,9 +18,11 @@ type BotAnimusMessage struct {
 		UserID  string `json:"user_id"`
 	} `json:"BaseGuildUserInfo,omitempty"`
 	CheckCommandPermission *struct {
-		GuildID string `json:"guild_id"`
-		UserID  string `json:"user_id"`
-		Command string `json:"command"`
+		GuildID                     string   `json:"guild_id"`
+		UserID                      string   `json:"user_id"`
+		Command                     string   `json:"command"`
+		CustomResolvedKittycatPerms []string `json:"custom_resolved_kittycat_perms,omitempty"`
+		EnsureUserHasCustomResolved *bool    `json:"ensure_user_has_custom_resolved,omitempty"`
 	} `json:"CheckCommandPermission,omitempty"`
 	ToggleModule *struct {
 		GuildID string `json:"guild_id"`
@@ -48,6 +50,12 @@ type BotAnimusResponse struct {
 	}
 
 	BaseGuildUserInfo *types.UserGuildBaseData
+
+	/// Returns the response of a command permission check
+	CheckCommandPermission *struct {
+		PermRes silverpelt.PermissionResult `json:"perm_res"`
+		IsOk    bool                        `json:"is_ok"`
+	}
 }
 
 func (b BotAnimusResponse) Response() {}
