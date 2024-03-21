@@ -20,6 +20,7 @@ pub async fn modules(_ctx: Context<'_>) -> Result<(), Error> {
     slash_command,
     user_cooldown = 1,
     guild_cooldown = 1,
+    rename = "list"
 )]
 pub async fn modules_list(ctx: Context<'_>) -> Result<(), Error> {
     let Some(guild_id) = ctx.guild_id() else {
