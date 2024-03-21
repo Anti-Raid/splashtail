@@ -1,4 +1,4 @@
-package set_module_configuration
+package toggle_module
 
 import (
 	"net/http"
@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/anti-raid/splashtail/splashcore/animusmagic"
-	"github.com/anti-raid/splashtail/splashcore/silverpelt"
 	"github.com/anti-raid/splashtail/splashcore/types"
 	"github.com/anti-raid/splashtail/splashcore/utils"
 	"github.com/anti-raid/splashtail/splashcore/utils/mewext"
@@ -21,10 +20,9 @@ import (
 
 func Docs() *docs.Doc {
 	return &docs.Doc{
-		Summary:     "Set Module Configuration",
-		Description: "Edit the configration for a specific module",
-		Req:         silverpelt.GuildModuleConfiguration{},
-		Resp:        silverpelt.GuildModuleConfiguration{},
+		Summary:     "Toggle Module",
+		Description: "Enable or disable a module for a specific guild",
+		Resp:        types.ApiError{},
 		Params: []docs.Parameter{
 			{
 				Name:        "user_id",
@@ -37,6 +35,20 @@ func Docs() *docs.Doc {
 				Name:        "guild_id",
 				Description: "Whether to refresh the user's guilds from discord",
 				In:          "path",
+				Required:    true,
+				Schema:      docs.IdSchema,
+			},
+			{
+				Name:        "module",
+				Description: "The module to enable/disable",
+				In:          "query",
+				Required:    true,
+				Schema:      docs.IdSchema,
+			},
+			{
+				Name:        "disabled",
+				Description: "Whether the module is disabled or not",
+				In:          "query",
 				Required:    true,
 				Schema:      docs.IdSchema,
 			},
@@ -94,30 +106,27 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 		return hresp
 	}
 
-	var gmc *silverpelt.GuildModuleConfiguration
-	resp, ok := uapi.MarshalReqWithHeaders(r, &gmc, limit.Headers())
+	module := r.URL.Query().Get("module")
 
-	if !ok {
-		return resp
-	}
-
-	if gmc.GuildID != guildId {
+	if module == "" {
 		return uapi.HttpResponse{
-			Json: types.ApiError{
-				Message: "Guild ID in body does not match guild ID in URL",
-			},
 			Status: http.StatusBadRequest,
+			Json: types.ApiError{
+				Message: "Query parameter `module` is required",
+			},
 		}
 	}
+
+	var disabled bool = r.URL.Query().Get("disabled") == "true"
 
 	// INSERT ON CONFLICT UPDATE RETURNING id
 	var id string
 	err = state.Pool.QueryRow(
 		d.Context,
 		"INSERT INTO guild_module_configurations (guild_id, module, disabled) VALUES ($1, $2, $3) ON CONFLICT (guild_id, module) DO UPDATE SET disabled = $3 RETURNING id",
-		gmc.GuildID,
-		gmc.Module,
-		gmc.Disabled,
+		guildId,
+		module,
+		disabled,
 	).Scan(&id)
 
 	if err != nil {
@@ -130,53 +139,48 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 		}
 	}
 
-	if gmc.Disabled != nil {
-		resps, err := state.AnimusMagicClient.Request(
-			d.Context,
-			state.Rueidis,
-			animusmagic.BotAnimusMessage{
-				ToggleModule: &struct {
-					GuildID string `json:"guild_id"`
-					Module  string `json:"module"`
-					Enabled bool   `json:"enabled"`
-				}{
-					GuildID: guildId,
-					Module:  gmc.Module,
-					Enabled: !*gmc.Disabled,
-				},
+	resps, err := state.AnimusMagicClient.Request(
+		d.Context,
+		state.Rueidis,
+		animusmagic.BotAnimusMessage{
+			ToggleModule: &struct {
+				GuildID string `json:"guild_id"`
+				Module  string `json:"module"`
+				Enabled bool   `json:"enabled"`
+			}{
+				GuildID: guildId,
+				Module:  module,
+				Enabled: !disabled,
 			},
-			&animusmagic.RequestOptions{
-				ClusterID: utils.Pointer(uint16(clusterId)),
+		},
+		&animusmagic.RequestOptions{
+			ClusterID: utils.Pointer(uint16(clusterId)),
+		},
+	)
+
+	if err != nil {
+		return uapi.HttpResponse{
+			Status: http.StatusInternalServerError,
+			Json: types.ApiError{
+				Message: "Error sending request to animus magic: " + err.Error(),
 			},
-		)
-
-		if err != nil {
-			return uapi.HttpResponse{
-				Status: http.StatusInternalServerError,
-				Json: types.ApiError{
-					Message: "Error sending request to animus magic: " + err.Error(),
-				},
-				Headers: map[string]string{
-					"Retry-After": "10",
-				},
-			}
-		}
-
-		if len(resps) != 1 {
-			return uapi.HttpResponse{
-				Status: http.StatusInternalServerError,
-				Json: types.ApiError{
-					Message: "Error sending request to animus magic: [unexpected response count of " + strconv.Itoa(len(resps)) + "]",
-				},
-				Headers: map[string]string{
-					"Retry-After": "10",
-				},
-			}
+			Headers: map[string]string{
+				"Retry-After": "10",
+			},
 		}
 	}
 
-	gmc.ID = id
-	return uapi.HttpResponse{
-		Json: gmc,
+	if len(resps) != 1 {
+		return uapi.HttpResponse{
+			Status: http.StatusInternalServerError,
+			Json: types.ApiError{
+				Message: "Error sending request to animus magic: [unexpected response count of " + strconv.Itoa(len(resps)) + "]",
+			},
+			Headers: map[string]string{
+				"Retry-After": "10",
+			},
+		}
 	}
+
+	return uapi.DefaultResponse(http.StatusNoContent)
 }

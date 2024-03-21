@@ -40,6 +40,65 @@ func (d DefaultResponder) New(err string, ctx map[string]string) any {
 	}
 }
 
+func HandlePermissionCheck(userId, guildId, command string) (hresp uapi.HttpResponse, ok bool) {
+	if guildId == "" {
+		state.Logger.Error("Guild ID is empty")
+		return uapi.HttpResponse{
+			Status: http.StatusInternalServerError,
+			Json:   types.ApiError{Message: "Guild ID in permissionCheck is empty"},
+		}, false
+	}
+
+	clusterId, err := mewext.GetClusterIDFromGuildID(guildId, state.MewldInstanceList.Map, int(state.MewldInstanceList.ShardCount))
+
+	if err != nil {
+		state.Logger.Error("Error getting cluster ID", zap.Error(err))
+		return uapi.HttpResponse{
+			Status: http.StatusInternalServerError,
+			Json:   types.ApiError{Message: "Error getting cluster ID: " + err.Error()},
+			Headers: map[string]string{
+				"Retry-After": "10",
+			},
+		}, false
+	}
+
+	hresp, ok = webutils.ClusterCheck(clusterId)
+
+	if !ok {
+		return hresp, false
+	}
+
+	permRes, ok, err := webutils.CheckCommandPermission(
+		state.AnimusMagicClient,
+		state.Context,
+		state.Rueidis,
+		uint16(clusterId),
+		guildId,
+		userId,
+		command,
+	)
+
+	if err != nil {
+		state.Logger.Error("Error checking command permission", zap.Error(err))
+		return uapi.HttpResponse{
+			Status: http.StatusInternalServerError,
+			Json:   types.ApiError{Message: "Error checking command permission: " + err.Error()},
+			Headers: map[string]string{
+				"Retry-After": "10",
+			},
+		}, false
+	}
+
+	if !ok {
+		return uapi.HttpResponse{
+			Status: http.StatusForbidden,
+			Json:   permRes,
+		}, false
+	}
+
+	return uapi.HttpResponse{}, true
+}
+
 // Authorizes a request
 func Authorize(r uapi.Route, req *http.Request) (uapi.AuthData, uapi.HttpResponse, bool) {
 	if len(r.ExtData) > 0 {
@@ -171,59 +230,10 @@ func Authorize(r uapi.Route, req *http.Request) (uapi.AuthData, uapi.HttpRespons
 				cmd := permCheck.Command(r, req)
 				guildId := permCheck.GuildID(r, req)
 
-				if guildId == "" {
-					state.Logger.Error("Guild ID is empty")
-					return uapi.AuthData{}, uapi.HttpResponse{
-						Status: http.StatusInternalServerError,
-						Json:   types.ApiError{Message: "Guild ID in permissionCheck is empty"},
-					}, false
-				}
-
-				clusterId, err := mewext.GetClusterIDFromGuildID(guildId, state.MewldInstanceList.Map, int(state.MewldInstanceList.ShardCount))
-
-				if err != nil {
-					state.Logger.Error("Error getting cluster ID", zap.Error(err))
-					return uapi.AuthData{}, uapi.HttpResponse{
-						Status: http.StatusInternalServerError,
-						Json:   types.ApiError{Message: "Error getting cluster ID: " + err.Error()},
-						Headers: map[string]string{
-							"Retry-After": "10",
-						},
-					}, false
-				}
-
-				hresp, ok := webutils.ClusterCheck(clusterId)
+				hresp, ok := HandlePermissionCheck(id.String, guildId, cmd)
 
 				if !ok {
 					return uapi.AuthData{}, hresp, false
-				}
-
-				permRes, ok, err := webutils.CheckCommandPermission(
-					state.AnimusMagicClient,
-					state.Context,
-					state.Rueidis,
-					uint16(clusterId),
-					guildId,
-					id.String,
-					cmd,
-				)
-
-				if err != nil {
-					state.Logger.Error("Error checking command permission", zap.Error(err))
-					return uapi.AuthData{}, uapi.HttpResponse{
-						Status: http.StatusInternalServerError,
-						Json:   types.ApiError{Message: "Error checking command permission: " + err.Error()},
-						Headers: map[string]string{
-							"Retry-After": "10",
-						},
-					}, false
-				}
-
-				if !ok {
-					return uapi.AuthData{}, uapi.HttpResponse{
-						Status: http.StatusForbidden,
-						Json:   permRes,
-					}, false
 				}
 			}
 
@@ -288,7 +298,7 @@ func Setup() {
 			if len(r.Auth) > 0 {
 				// Check for permissionCheck
 				if _, ok := r.ExtData[PERMISSION_CHECK_KEY]; !ok {
-					return fmt.Errorf("%s not found in route.ExtData", PERMISSION_CHECK_KEY)
+					return fmt.Errorf("%s not found in route.ExtData [%s]", PERMISSION_CHECK_KEY, r.OpId)
 				}
 			}
 

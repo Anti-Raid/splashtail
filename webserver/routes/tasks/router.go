@@ -2,6 +2,7 @@ package tasks
 
 import (
 	"github.com/anti-raid/splashtail/splashcore/types"
+	"github.com/anti-raid/splashtail/webserver/api"
 	"github.com/anti-raid/splashtail/webserver/routes/tasks/endpoints/create_task"
 	"github.com/anti-raid/splashtail/webserver/routes/tasks/endpoints/get_task"
 	"github.com/anti-raid/splashtail/webserver/routes/tasks/endpoints/get_task_list"
@@ -37,6 +38,9 @@ func (b Router) Routes(r *chi.Mux) {
 				Type:   types.TargetTypeUser,
 			},
 		},
+		ExtData: map[string]any{
+			api.PERMISSION_CHECK_KEY: nil,
+		},
 	}.Route(r)
 
 	uapi.Route{
@@ -56,6 +60,9 @@ func (b Router) Routes(r *chi.Mux) {
 				Type:   types.TargetTypeUser,
 			},
 		},
+		ExtData: map[string]any{
+			api.PERMISSION_CHECK_KEY: nil,
+		},
 	}.Route(r)
 
 	uapi.Route{
@@ -73,6 +80,9 @@ func (b Router) Routes(r *chi.Mux) {
 				URLVar: "id",
 				Type:   types.TargetTypeUser,
 			},
+		},
+		ExtData: map[string]any{
+			api.PERMISSION_CHECK_KEY: nil,
 		},
 	}.Route(r)
 

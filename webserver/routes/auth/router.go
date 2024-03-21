@@ -2,6 +2,7 @@ package auth
 
 import (
 	"github.com/anti-raid/splashtail/splashcore/types"
+	"github.com/anti-raid/splashtail/webserver/api"
 	"github.com/anti-raid/splashtail/webserver/routes/auth/endpoints/create_ioauth_login"
 	"github.com/anti-raid/splashtail/webserver/routes/auth/endpoints/create_oauth2_login"
 	"github.com/anti-raid/splashtail/webserver/routes/auth/endpoints/create_user_session"
@@ -59,6 +60,9 @@ func (m Router) Routes(r *chi.Mux) {
 				AllowedScope: "ban_exempt",
 			},
 		},
+		ExtData: map[string]any{
+			api.PERMISSION_CHECK_KEY: nil,
+		},
 	}.Route(r)
 
 	uapi.Route{
@@ -72,6 +76,9 @@ func (m Router) Routes(r *chi.Mux) {
 				URLVar: "user_id",
 				Type:   types.TargetTypeUser,
 			},
+		},
+		ExtData: map[string]any{
+			api.PERMISSION_CHECK_KEY: nil,
 		},
 	}.Route(r)
 
@@ -87,6 +94,9 @@ func (m Router) Routes(r *chi.Mux) {
 				Type:         types.TargetTypeUser,
 				AllowedScope: "ban_exempt",
 			},
+		},
+		ExtData: map[string]any{
+			api.PERMISSION_CHECK_KEY: nil,
 		},
 	}.Route(r)
 }
