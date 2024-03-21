@@ -2,16 +2,21 @@
 package silverpelt
 
 import (
-	"strconv"
 	"strings"
 )
 
+type NativePermission string
+
+func (np NativePermission) String() string {
+	return string(np) // TODO: Support discord permissions
+}
+
 // PermissionCheck represents the permissions needed to run a command.
 type PermissionCheck struct {
-	KittycatPerms []string `json:"kittycat_perms"` // The kittycat permissions needed to run the command
-	NativePerms   []int64  `json:"native_perms"`   // The native permissions needed to run the command (converted from serenity::all::Permissions)
-	OuterAnd      bool     `json:"outer_and"`      // Whether the next permission check should be ANDed (all needed) or OR'd (at least one) to the current
-	InnerAnd      bool     `json:"inner_and"`      // Whether or not the perms are ANDed (all needed) or OR'd (at least one)
+	KittycatPerms []string           `json:"kittycat_perms"` // The kittycat permissions needed to run the command
+	NativePerms   []NativePermission `json:"native_perms"`   // The native permissions needed to run the command (converted from serenity::all::Permissions)
+	OuterAnd      bool               `json:"outer_and"`      // Whether the next permission check should be ANDed (all needed) or OR'd (at least one) to the current
+	InnerAnd      bool               `json:"inner_and"`      // Whether or not the perms are ANDed (all needed) or OR'd (at least one)
 }
 
 func (pc PermissionCheck) String() string {
@@ -22,7 +27,7 @@ func (pc PermissionCheck) String() string {
 			if j != 0 {
 				sb.WriteString(" ")
 			}
-			sb.WriteString(strconv.FormatInt(perm, 10))
+			sb.WriteString(perm.String())
 			if j < len(pc.NativePerms)-1 {
 				if pc.InnerAnd {
 					sb.WriteString(" AND")
