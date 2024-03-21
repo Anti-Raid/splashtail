@@ -79,6 +79,8 @@ pub async fn modules_list(ctx: Context<'_>) -> Result<(), Error> {
             module.id
         ));
     }
+
+    ctx.say(msg).await?;
     
     Ok(())
 }
