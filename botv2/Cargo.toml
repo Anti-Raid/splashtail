@@ -30,8 +30,7 @@ dashmap = { version = "5", features = ["serde", "inline", "rayon"] }
 strum = "0.26"
 strum_macros = "0.26"
 rand = "0.8"
-ts-rs = { version = "7.0", features = ["chrono-impl"] }
-fred = { version = "8.0.1", features = ["enable-rustls", "serde-json", "subscriber-client", "mocks", "redis-json", "client-tracking", "unix-sockets"] }
+fred = { version = "8.0.1", features = ["enable-rustls", "serde-json", "subscriber-client", "client-tracking"] }
 moka = { version = "0.12.3", features = ["future", "futures-util"] }
 object_store = { version = "0.9.0", features = ["serde", "serde_json", "aws", "reqwest"] }
 serde_cbor = "0.11.2"
