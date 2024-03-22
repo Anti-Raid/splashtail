@@ -3,7 +3,7 @@ use poise::serenity_prelude::UserId;
 use serde::{Deserialize, Serialize};
 use sqlx::types::chrono;
 use std::fs::File;
-
+use splashcore_rs::objectstore::ObjectStore;
 use crate::Error;
 
 /// Global config object
@@ -41,7 +41,6 @@ pub struct DiscordAuth {
 }
 
 // Object storage code
-
 #[derive(Serialize, Deserialize)]
 pub enum ObjectStorageType {
     #[serde(rename = "s3-like")]
@@ -61,20 +60,6 @@ pub struct ObjectStorage {
     pub cdn_endpoint: String,
     pub access_key: Option<String>,
     pub secret_key: Option<String>,
-}
-
-pub enum ObjectStore {
-    S3(object_store::aws::AmazonS3),
-    Local(object_store::local::LocalFileSystem),
-}
-
-impl ObjectStore {
-    pub fn get(&self) -> &dyn object_store::ObjectStore {
-        match self {
-            ObjectStore::S3(store) => store,
-            ObjectStore::Local(store) => store,
-        }
-    }
 }
 
 impl ObjectStorage {

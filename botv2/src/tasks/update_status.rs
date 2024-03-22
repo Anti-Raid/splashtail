@@ -9,7 +9,7 @@ enum Status {
 
 pub async fn update_status(
     _pool: &sqlx::PgPool,
-    _cache_http: &crate::impls::cache::CacheHttpImpl,
+    _cache_http: &bothelpers::cache::CacheHttpImpl,
     ctx: &serenity::client::Context,
 ) -> Result<(), crate::Error> {
     let statuses = vec![

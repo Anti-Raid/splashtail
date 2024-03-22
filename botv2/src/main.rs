@@ -1,16 +1,19 @@
 mod config;
-mod impls;
 mod ipc;
-mod jobserver;
 mod modules;
 mod silverpelt;
 mod tasks;
 
-use crate::impls::cache::CacheHttpImpl;
+use ipc::{animus_magic::client::AnimusMagicClient, mewld::MewldIpcClient};
+
+use bothelpers::cache::CacheHttpImpl;
 use silverpelt::{
-    gwevent::core::get_event_guild_id, module_config::is_module_enabled,
-    silverpelt_cache::SILVERPELT_CACHE, EventHandlerContext,
+    module_config::is_module_enabled,
+    silverpelt_cache::SILVERPELT_CACHE, 
+    EventHandlerContext,
 };
+use splashcore_rs::objectstore::ObjectStore;
+use gwevent::core::get_event_guild_id;
 
 use std::sync::Arc;
 
@@ -30,9 +33,9 @@ type Context<'a> = poise::Context<'a, Data, Error>;
 // User data, which is stored and accessible in all command invocations
 pub struct Data {
     pub pool: sqlx::PgPool,
-    pub mewld_ipc: Arc<ipc::mewld::MewldIpcClient>,
-    pub object_store: Arc<config::ObjectStore>,
-    pub animus_magic_ipc: Arc<ipc::animus_magic::client::AnimusMagicClient>,
+    pub mewld_ipc: Arc<MewldIpcClient>,
+    pub object_store: Arc<ObjectStore>,
+    pub animus_magic_ipc: Arc<AnimusMagicClient>,
     pub shards_ready: Arc<dashmap::DashMap<u16, bool>>,
     pub surreal_cache: Surreal<Client>,
 }

@@ -5,10 +5,10 @@ use sqlx::PgPool;
 use std::collections::HashMap;
 use surrealdb::engine::remote::ws::Client;
 use surrealdb::Surreal;
-
+use bothelpers::cache::CacheHttpImpl;
 use super::core;
 use crate::modules::limits::core::{Limit, UserAction};
-use crate::{impls::cache::CacheHttpImpl, Error};
+use crate::Error;
 
 // Returns true if the same user+target combo has appeared in the time interval user_target_repeat_rate
 // TODO: This function needs to be rewritten as limits are handled in-memory

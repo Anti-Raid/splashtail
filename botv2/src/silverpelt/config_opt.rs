@@ -1,6 +1,8 @@
+/* This file causes slow compile times
+
 use serde::ser::SerializeStruct;
 use serenity::all::{ChannelId, EmojiId, GuildId, MessageId, RoleId, UserId};
-use small_fixed_array::FixedString;
+use serenity::small_fixed_array::FixedString;
 
 /// Contains variant with inner as default value
 /// Should be serde serialized as {"type": "String", "default": "value"}
@@ -184,3 +186,4 @@ mod test {
         assert_eq!(deserialized, WebFieldType::String("test".to_string()));
     }
 }
+*/

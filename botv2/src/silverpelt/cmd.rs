@@ -1,9 +1,10 @@
 use super::permissions::PermissionResult;
 use super::silverpelt_cache::SILVERPELT_CACHE;
-use crate::impls::cache::CacheHttpImpl;
+use bothelpers::cache::CacheHttpImpl;
 use crate::silverpelt;
 use log::info;
 use serenity::all::{GuildId, UserId};
+use serenity::small_fixed_array::FixedArray;
 use sqlx::PgPool;
 
 pub async fn get_perm_info(
@@ -15,7 +16,7 @@ pub async fn get_perm_info(
     (
         bool,
         serenity::all::Permissions,
-        small_fixed_array::FixedArray<serenity::all::RoleId>,
+        FixedArray<serenity::all::RoleId>,
     ),
     PermissionResult,
 > {
@@ -25,7 +26,7 @@ pub async fn get_perm_info(
             return Ok((
                 true,
                 serenity::all::Permissions::all(),
-                small_fixed_array::FixedArray::new(),
+                FixedArray::new(),
             ));
         }
 
@@ -64,7 +65,7 @@ pub async fn get_perm_info(
         return Ok((
             true,
             serenity::all::Permissions::all(),
-            small_fixed_array::FixedArray::new(),
+            FixedArray::new(),
         ));
     }
 

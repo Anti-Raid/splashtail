@@ -27,9 +27,10 @@ all:
 	make buildbot && make buildmewldwebui && make stcore 
 buildbot:
 	cd botv2 && cargo sqlx prepare && cd .. 
-	cd botv2 && cargo build --release
+	cd botv2 && SQLX_OFFLINE=true cargo build --release
 buildbot_dbg:
-	cd botv2 && cargo build
+	cd botv2 && cargo sqlx prepare && cd ..
+	cd botv2 && SQLX_OFFLINE=true cargo build --timings
 buildmewldwebui:
 	cd webserver/mewld_web/ui && npm i && npm run build && cd ../../
 tests:

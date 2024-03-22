@@ -1,4 +1,5 @@
-use crate::{impls::cache::CacheHttpImpl, jobserver::Task};
+use crate::Task;
+use bothelpers::cache::CacheHttpImpl;
 use serde_json::Value;
 use serenity::all::{CreateActionRow, CreateButton, CreateEmbed};
 use std::future::Future;
@@ -35,6 +36,7 @@ fn _to_string(v: &Option<&Value>) -> String {
 }
 
 pub fn embed<'a>(
+    base_api_url: &str,
     task: &Task,
     pre_embeds: Vec<CreateEmbed<'a>>,
     show_status: bool,
@@ -95,7 +97,7 @@ pub fn embed<'a>(
         if let Some(ref output) = task.output {
             let furl = format!(
                 "{}/tasks/{}/ioauth/download-link",
-                crate::config::CONFIG.sites.api.get(),
+                base_api_url,
                 task.task_id
             );
             description += &format!("\n\n:link: [Download {}]({})", output.filename, &furl);

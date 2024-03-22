@@ -40,7 +40,7 @@ impl Task {
     pub async fn run(
         &self,
         pool: &sqlx::PgPool,
-        cache_http: &crate::impls::cache::CacheHttpImpl,
+        cache_http: &bothelpers::cache::CacheHttpImpl,
         ctx: &serenity::client::Context,
     ) -> Result<(), crate::Error> {
         match self {
@@ -54,7 +54,7 @@ impl Task {
 /// Function to start all tasks
 pub async fn start_all_tasks(
     pool: sqlx::PgPool,
-    cache_http: crate::impls::cache::CacheHttpImpl,
+    cache_http: bothelpers::cache::CacheHttpImpl,
     ctx: serenity::client::Context,
 ) -> ! {
     // Start tasks
@@ -89,7 +89,7 @@ pub async fn start_all_tasks(
 /// Function that manages a task
 async fn taskcat(
     pool: sqlx::PgPool,
-    cache_http: crate::impls::cache::CacheHttpImpl,
+    cache_http: bothelpers::cache::CacheHttpImpl,
     ctx: serenity::client::Context,
     task: Task,
 ) -> ! {

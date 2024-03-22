@@ -1,4 +1,4 @@
-use crate::impls::utils::{
+use bothelpers::utils::{
     create_special_allocation_from_str, get_icon_of_state, parse_duration_string,
     parse_numeric_list_to_str, Unit, REPLACE_CHANNEL,
 };
@@ -242,7 +242,7 @@ pub async fn kick(
             .edit(&ctx.http(), EditMessage::new().embed(embed.clone()))
             .await?;
 
-        let ch = crate::impls::cache::CacheHttpImpl {
+        let ch = bothelpers::cache::CacheHttpImpl {
             cache: ctx.serenity_context().cache.clone(),
             http: ctx.serenity_context().http.clone(),
         };
@@ -250,11 +250,12 @@ pub async fn kick(
         async fn update_base_message(
             member: Arc<Member>,
             prune_debug: bool,
-            cache_http: crate::impls::cache::CacheHttpImpl,
+            cache_http: bothelpers::cache::CacheHttpImpl,
             mut base_message: Message,
-            task: Arc<crate::jobserver::Task>,
+            task: Arc<jobserver::Task>,
         ) -> Result<(), Error> {
-            let new_task_msg = crate::jobserver::taskpoll::embed(
+            let new_task_msg = jobserver::taskpoll::embed(
+                &crate::config::CONFIG.sites.api.get(),
                 &task,
                 vec![CreateEmbed::default()
                     .title("Kicking Member...")
@@ -277,7 +278,7 @@ pub async fn kick(
 
         // Use jobserver::reactive to keep updating the message
         let prune_debug = prune_debug.unwrap_or(false);
-        crate::jobserver::taskpoll::reactive(
+        jobserver::taskpoll::reactive(
             &ch,
             &ctx.data().pool,
             &task_id,
@@ -290,7 +291,7 @@ pub async fn kick(
                     task.clone(),
                 ))
             },
-            crate::jobserver::taskpoll::PollTaskOptions { interval: Some(1) },
+            jobserver::taskpoll::PollTaskOptions { interval: Some(1) },
         )
         .await?;
     } else {
@@ -466,7 +467,7 @@ pub async fn ban(
             .edit(&ctx.http(), EditMessage::new().embed(embed.clone()))
             .await?;
 
-        let ch = crate::impls::cache::CacheHttpImpl {
+        let ch = bothelpers::cache::CacheHttpImpl {
             cache: ctx.serenity_context().cache.clone(),
             http: ctx.serenity_context().http.clone(),
         };
@@ -474,11 +475,12 @@ pub async fn ban(
         async fn update_base_message(
             member: Arc<Member>,
             prune_debug: bool,
-            cache_http: crate::impls::cache::CacheHttpImpl,
+            cache_http: bothelpers::cache::CacheHttpImpl,
             mut base_message: Message,
-            task: Arc<crate::jobserver::Task>,
+            task: Arc<jobserver::Task>,
         ) -> Result<(), Error> {
-            let new_task_msg = crate::jobserver::taskpoll::embed(
+            let new_task_msg = jobserver::taskpoll::embed(
+                &crate::config::CONFIG.sites.api.get(),
                 &task,
                 vec![CreateEmbed::default()
                     .title("Banning Member...")
@@ -501,7 +503,7 @@ pub async fn ban(
 
         // Use jobserver::reactive to keep updating the message
         let prune_debug = prune_debug.unwrap_or(false);
-        crate::jobserver::taskpoll::reactive(
+        jobserver::taskpoll::reactive(
             &ch,
             &ctx.data().pool,
             &task_id,
@@ -514,7 +516,7 @@ pub async fn ban(
                     task.clone(),
                 ))
             },
-            crate::jobserver::taskpoll::PollTaskOptions { interval: Some(1) },
+            jobserver::taskpoll::PollTaskOptions { interval: Some(1) },
         )
         .await?;
     } else {
@@ -694,7 +696,7 @@ pub async fn tempban(
             .edit(&ctx.http(), EditMessage::new().embed(embed.clone()))
             .await?;
 
-        let ch = crate::impls::cache::CacheHttpImpl {
+        let ch = bothelpers::cache::CacheHttpImpl {
             cache: ctx.serenity_context().cache.clone(),
             http: ctx.serenity_context().http.clone(),
         };
@@ -702,11 +704,12 @@ pub async fn tempban(
         async fn update_base_message(
             member: Arc<Member>,
             prune_debug: bool,
-            cache_http: crate::impls::cache::CacheHttpImpl,
+            cache_http: bothelpers::cache::CacheHttpImpl,
             mut base_message: Message,
-            task: Arc<crate::jobserver::Task>,
+            task: Arc<jobserver::Task>,
         ) -> Result<(), Error> {
-            let new_task_msg = crate::jobserver::taskpoll::embed(
+            let new_task_msg = jobserver::taskpoll::embed(
+                &crate::config::CONFIG.sites.api.get(),
                 &task,
                 vec![CreateEmbed::default()
                     .title("(Temporarily) Banning Member...")
@@ -729,7 +732,7 @@ pub async fn tempban(
 
         // Use jobserver::reactive to keep updating the message
         let prune_debug = prune_debug.unwrap_or(false);
-        crate::jobserver::taskpoll::reactive(
+        jobserver::taskpoll::reactive(
             &ch,
             &ctx.data().pool,
             &task_id,
@@ -742,7 +745,7 @@ pub async fn tempban(
                     task.clone(),
                 ))
             },
-            crate::jobserver::taskpoll::PollTaskOptions { interval: Some(1) },
+            jobserver::taskpoll::PollTaskOptions { interval: Some(1) },
         )
         .await?;
     } else {
@@ -897,7 +900,7 @@ pub async fn unban(
             .edit(&ctx.http(), EditMessage::new().embed(embed.clone()))
             .await?;
 
-        let ch = crate::impls::cache::CacheHttpImpl {
+        let ch = bothelpers::cache::CacheHttpImpl {
             cache: ctx.serenity_context().cache.clone(),
             http: ctx.serenity_context().http.clone(),
         };
@@ -905,11 +908,12 @@ pub async fn unban(
         async fn update_base_message(
             member: Arc<Member>,
             prune_debug: bool,
-            cache_http: crate::impls::cache::CacheHttpImpl,
+            cache_http: bothelpers::cache::CacheHttpImpl,
             mut base_message: Message,
-            task: Arc<crate::jobserver::Task>,
+            task: Arc<jobserver::Task>,
         ) -> Result<(), Error> {
-            let new_task_msg = crate::jobserver::taskpoll::embed(
+            let new_task_msg = jobserver::taskpoll::embed(
+                &crate::config::CONFIG.sites.api.get(),
                 &task,
                 vec![CreateEmbed::default()
                     .title("Unbanning Member...")
@@ -932,7 +936,7 @@ pub async fn unban(
 
         // Use jobserver::reactive to keep updating the message
         let prune_debug = prune_debug.unwrap_or(false);
-        crate::jobserver::taskpoll::reactive(
+        jobserver::taskpoll::reactive(
             &ch,
             &ctx.data().pool,
             &task_id,
@@ -945,7 +949,7 @@ pub async fn unban(
                     task.clone(),
                 ))
             },
-            crate::jobserver::taskpoll::PollTaskOptions { interval: Some(1) },
+            jobserver::taskpoll::PollTaskOptions { interval: Some(1) },
         )
         .await?;
     } else {
@@ -1128,7 +1132,7 @@ pub async fn timeout(
             .edit(&ctx.http(), EditMessage::new().embed(embed.clone()))
             .await?;
 
-        let ch = crate::impls::cache::CacheHttpImpl {
+        let ch = bothelpers::cache::CacheHttpImpl {
             cache: ctx.serenity_context().cache.clone(),
             http: ctx.serenity_context().http.clone(),
         };
@@ -1136,11 +1140,12 @@ pub async fn timeout(
         async fn update_base_message(
             member: Arc<Member>,
             prune_debug: bool,
-            cache_http: crate::impls::cache::CacheHttpImpl,
+            cache_http: bothelpers::cache::CacheHttpImpl,
             mut base_message: Message,
-            task: Arc<crate::jobserver::Task>,
+            task: Arc<jobserver::Task>,
         ) -> Result<(), Error> {
-            let new_task_msg = crate::jobserver::taskpoll::embed(
+            let new_task_msg = jobserver::taskpoll::embed(
+                &crate::config::CONFIG.sites.api.get(),
                 &task,
                 vec![CreateEmbed::default()
                     .title("Timing Out Member...")
@@ -1163,7 +1168,7 @@ pub async fn timeout(
 
         // Use jobserver::reactive to keep updating the message
         let prune_debug = prune_debug.unwrap_or(false);
-        crate::jobserver::taskpoll::reactive(
+        jobserver::taskpoll::reactive(
             &ch,
             &ctx.data().pool,
             &task_id,
@@ -1176,7 +1181,7 @@ pub async fn timeout(
                     task.clone(),
                 ))
             },
-            crate::jobserver::taskpoll::PollTaskOptions { interval: Some(1) },
+            jobserver::taskpoll::PollTaskOptions { interval: Some(1) },
         )
         .await?;
     }

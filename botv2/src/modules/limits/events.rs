@@ -12,7 +12,7 @@ pub async fn event_listener(
 ) -> Result<(), Error> {
     let user_data = ctx.data::<Data>();
 
-    let cache_http = crate::impls::cache::CacheHttpImpl {
+    let cache_http = bothelpers::cache::CacheHttpImpl {
         cache: ctx.cache.clone(),
         http: ctx.http.clone(),
     };

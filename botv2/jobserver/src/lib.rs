@@ -1,7 +1,7 @@
 pub mod taskpoll;
 
-use crate::Error;
-use crate::{config, impls::utils::get_icon_of_state};
+use splashcore_rs::objectstore::ObjectStore;
+use bothelpers::utils::get_icon_of_state;
 use indexmap::IndexMap;
 use object_store::path::Path;
 use object_store::signer::Signer;
@@ -10,6 +10,8 @@ use sqlx::{types::uuid::Uuid, PgPool};
 use std::str::FromStr;
 use std::sync::Arc;
 use std::time::Duration;
+
+type Error = Box<dyn std::error::Error + Send + Sync>;
 
 /// Rust internal/special type to better serialize/speed up task embed creation
 #[derive(serde::Deserialize, serde::Serialize, Clone, PartialEq)]
@@ -281,7 +283,7 @@ impl Task {
     }
 
     #[allow(dead_code)]
-    pub async fn get_url(&self, object_store: &Arc<config::ObjectStore>) -> Result<String, Error> {
+    pub async fn get_url(&self, object_store: &Arc<ObjectStore>) -> Result<String, Error> {
         // Check if the task has an output
         let Some(path) = &self.get_file_path() else {
             return Err("Task has no output".into());
@@ -293,21 +295,21 @@ impl Task {
         };
 
         match **object_store {
-            config::ObjectStore::S3(ref store) => {
+            ObjectStore::S3(ref store) => {
                 let url = store
                     .signed_url(Method::GET, &path, Duration::from_secs(600))
                     .await?;
 
                 Ok(url.to_string())
             }
-            config::ObjectStore::Local(_) => Ok(format!("file://{}", path)),
+            ObjectStore::Local(_) => Ok(format!("file://{}", path)),
         }
     }
 
     /// Deletes the task from the object storage
     pub async fn delete_from_storage(
         &self,
-        object_store: &Arc<config::ObjectStore>,
+        object_store: &Arc<ObjectStore>,
     ) -> Result<(), Error> {
         // Check if the task has an output
         let Some(path) = self.get_path() else {
@@ -346,7 +348,7 @@ impl Task {
     pub async fn delete(
         self,
         pool: &PgPool,
-        object_store: &Arc<config::ObjectStore>,
+        object_store: &Arc<ObjectStore>,
     ) -> Result<(), Error> {
         self.delete_from_storage(object_store).await?;
         self.delete_from_db(pool).await?;

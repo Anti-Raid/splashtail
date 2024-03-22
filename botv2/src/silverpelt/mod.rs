@@ -1,7 +1,6 @@
 pub mod canonical_module;
 pub mod cmd;
 pub mod config_opt;
-pub mod gwevent;
 pub mod member_permission_calc;
 pub mod module_config;
 pub mod permissions;

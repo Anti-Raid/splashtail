@@ -1,6 +1,6 @@
 [package]
-name = "botv2"
-version = "6.0.0"
+name = "bothelpers"
+version = "0.0.1"
 edition = "2021"
 
 [profile.release]
@@ -16,32 +16,11 @@ opt-level = 1 # Optimize for faster compilation times.
 poise = { git = "https://github.com/serenity-rs/poise", branch = "serenity-next" }
 serde = "1.0"
 log = "0.4"
-env_logger = "0.9"
 sqlx = { version = "0.7", features = [ "runtime-tokio-rustls", "postgres", "chrono", "uuid", "bigdecimal", "json"] }
 chrono = { version = "0.4", features = ["serde"]}
-reqwest = { version = "0.11", default-features = false, features = ["json", "rustls-tls", "rustls-tls-native-roots"] }
 serde_json = "1.0"
-serde_yaml = "0.9"
 once_cell = "1.17"
-futures = "0.3"
-futures-util = "0.3"
-indexmap = { version = "2", features = ["serde"] }
-dashmap = { version = "5", features = ["serde", "inline", "rayon"] }
-strum = "0.26"
-strum_macros = "0.26"
-rand = "0.8"
 ts-rs = { version = "7.0", features = ["chrono-impl"] }
-fred = { version = "8.0.1", features = ["enable-rustls", "serde-json", "subscriber-client", "mocks", "redis-json", "client-tracking", "unix-sockets"] }
-moka = { version = "0.12.3", features = ["future", "futures-util"] }
-object_store = { version = "0.9.0", features = ["serde", "serde_json", "aws", "reqwest"] }
-serde_cbor = "0.11.2"
-surrealdb = { version = "1.2.0"}
-
-# Anti-Raid specific
-splashcore_rs = { path = "../splashcore_rs" }
-gwevent = { path = "./gwevent" }
-bothelpers = { path = "./bothelpers" }
-jobserver = { path = "./jobserver" }
 
 [dependencies.tokio]
 version = "1"
@@ -56,8 +35,3 @@ features = ["model", "http", "cache", "rustls_backend", "unstable"]
 [dependencies.kittycat]
 git = "https://github.com/infinitybotlist/kittycat"
 branch = "main"
-
-[build-dependencies]
-vergen = "7"
-anyhow = "1.0"
-indexmap = { version = "2", features = ["serde"] }

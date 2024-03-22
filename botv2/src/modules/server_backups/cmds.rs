@@ -1,5 +1,5 @@
-use crate::impls::utils::get_icon_of_state;
-use crate::impls::utils::{
+use bothelpers::utils::get_icon_of_state;
+use bothelpers::utils::{
     create_special_allocation_from_str, parse_numeric_list, REPLACE_CHANNEL,
 };
 use crate::ipc::animus_magic::{
@@ -204,17 +204,22 @@ pub async fn backups_create(
         )
         .await?;
 
-    let ch = crate::impls::cache::CacheHttpImpl {
+    let ch = bothelpers::cache::CacheHttpImpl {
         cache: ctx.serenity_context().cache.clone(),
         http: ctx.serenity_context().http.clone(),
     };
 
     async fn update_base_message(
-        cache_http: crate::impls::cache::CacheHttpImpl,
+        cache_http: bothelpers::cache::CacheHttpImpl,
         mut base_message: serenity::model::channel::Message,
-        task: Arc<crate::jobserver::Task>,
+        task: Arc<jobserver::Task>,
     ) -> Result<(), Error> {
-        let new_task_msg = crate::jobserver::taskpoll::embed(&task, vec![], true)?;
+        let new_task_msg = jobserver::taskpoll::embed(
+            &crate::config::CONFIG.sites.api.get(), 
+            &task, 
+            vec![], 
+            true
+        )?;
 
         base_message
             .edit(
@@ -227,7 +232,7 @@ pub async fn backups_create(
     }
 
     // Use jobserver::reactive to keep updating the message
-    crate::jobserver::taskpoll::reactive(
+    jobserver::taskpoll::reactive(
         &ch,
         &ctx.data().pool,
         &backup_task_id,
@@ -238,7 +243,7 @@ pub async fn backups_create(
                 task.clone(),
             ))
         },
-        crate::jobserver::taskpoll::PollTaskOptions { interval: Some(1) },
+        jobserver::taskpoll::PollTaskOptions { interval: Some(1) },
     )
     .await?;
 
@@ -258,7 +263,7 @@ pub async fn backups_list(ctx: Context<'_>) -> Result<(), Error> {
         return Err("This command can only be used in a guild".into());
     };
 
-    let mut backup_tasks = crate::jobserver::Task::from_guild_and_task_name(
+    let mut backup_tasks = jobserver::Task::from_guild_and_task_name(
         guild_id,
         "guild_create_backup",
         &ctx.data().pool,
@@ -271,7 +276,7 @@ pub async fn backups_list(ctx: Context<'_>) -> Result<(), Error> {
         return Ok(());
     }
 
-    fn create_embed_for_task<'a>(task: &crate::jobserver::Task) -> serenity::all::CreateEmbed<'a> {
+    fn create_embed_for_task<'a>(task: &jobserver::Task) -> serenity::all::CreateEmbed<'a> {
         let mut initial_desc = format!(
             "Task ID: {}\nTask Name: {}\nTask State: {}\n\n**Created At**: <t:{}:f> (<t:{}:R>)",
             task.task_id,
@@ -303,7 +308,7 @@ pub async fn backups_list(ctx: Context<'_>) -> Result<(), Error> {
 
     fn create_reply<'a>(
         index: usize,
-        backup_tasks: &[crate::jobserver::Task],
+        backup_tasks: &[jobserver::Task],
     ) -> Result<poise::CreateReply<'a>, Error> {
         if backup_tasks.is_empty() || index >= backup_tasks.len() {
             return Err("No backups found".into());
@@ -631,7 +636,7 @@ pub async fn backups_restore(
 
             // Get the task
             let task =
-                crate::jobserver::Task::from_id(backup_id.parse::<Uuid>()?, &ctx.data().pool)
+                jobserver::Task::from_id(backup_id.parse::<Uuid>()?, &ctx.data().pool)
                     .await
                     .map_err(|e| format!("Failed to get backup task: {}", e))?;
 
@@ -754,17 +759,22 @@ pub async fn backups_restore(
         )
         .await?;
 
-    let ch = crate::impls::cache::CacheHttpImpl {
+    let ch = bothelpers::cache::CacheHttpImpl {
         cache: ctx.serenity_context().cache.clone(),
         http: ctx.serenity_context().http.clone(),
     };
 
     async fn update_base_message(
-        cache_http: crate::impls::cache::CacheHttpImpl,
+        cache_http: bothelpers::cache::CacheHttpImpl,
         mut base_message: serenity::model::channel::Message,
-        task: Arc<crate::jobserver::Task>,
+        task: Arc<jobserver::Task>,
     ) -> Result<(), Error> {
-        let new_task_msg = crate::jobserver::taskpoll::embed(&task, vec![], true)?;
+        let new_task_msg = jobserver::taskpoll::embed(
+            &crate::config::CONFIG.sites.api.get(),
+            &task, 
+            vec![], 
+            true
+        )?;
 
         base_message
             .edit(
@@ -777,7 +787,7 @@ pub async fn backups_restore(
     }
 
     // Use jobserver::reactive to keep updating the message
-    crate::jobserver::taskpoll::reactive(
+    jobserver::taskpoll::reactive(
         &ch,
         &ctx.data().pool,
         restore_task_id.as_str(),
@@ -788,7 +798,7 @@ pub async fn backups_restore(
                 task.clone(),
             ))
         },
-        crate::jobserver::taskpoll::PollTaskOptions { interval: Some(1) },
+        jobserver::taskpoll::PollTaskOptions { interval: Some(1) },
     )
     .await?;
 

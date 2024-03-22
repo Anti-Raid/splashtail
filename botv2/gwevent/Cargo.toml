@@ -1,0 +1,24 @@
+[package]
+name = "gwevent"
+version = "0.0.1"
+edition = "2021"
+
+[profile.release]
+strip = true  # Automatically strip symbols from the binary.
+panic = "abort"  # Abort on panic. This is what we want for a bot.
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+log = "0.4"
+serde = "1.0"
+chrono = { version = "0.4", features = ["serde"]}
+indexmap = { version = "2.1", features = ["serde"] }
+strum = "0.26"
+strum_macros = "0.26"
+small-fixed-array = { version = "0.4", features = ["serde"] } # From serenity 
+
+[dependencies.serenity]
+git = "https://github.com/serenity-rs/serenity"
+branch = "next"
+features = ["model", "http", "cache", "rustls_backend", "unstable"]

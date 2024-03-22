@@ -1,4 +1,4 @@
-use crate::impls::cache::CacheHttpImpl;
+use bothelpers::cache::CacheHttpImpl;
 #[allow(unused_imports)]
 use fred::clients::SubscriberClient;
 use fred::interfaces::{ClientLike, EventInterface, PubsubInterface};

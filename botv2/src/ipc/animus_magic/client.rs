@@ -1,6 +1,7 @@
 use super::bot::{BotAnimusMessage, BotAnimusResponse};
 use super::jobserver::{JobserverAnimusMessage, JobserverAnimusResponse};
-use crate::{impls::cache::CacheHttpImpl, ipc::argparse::MEWLD_ARGS, Error};
+use bothelpers::cache::CacheHttpImpl;
+use crate::{ipc::argparse::MEWLD_ARGS, Error};
 use dashmap::DashMap;
 use fred::{
     clients::{RedisClient, RedisPool},
