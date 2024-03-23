@@ -13,6 +13,12 @@ pub fn module() -> crate::silverpelt::Module {
         is_default_enabled: true,
         commands: vec![
             (
+                cmd::prune_user(),
+                indexmap! {
+                    "" => crate::silverpelt::CommandExtendedData::kittycat_or_admin("moderation", "prune_user"),
+                },
+            ),
+            (
                 cmd::kick(),
                 indexmap! {
                     "" => crate::silverpelt::CommandExtendedData::kittycat_or_admin("moderation", "kick"),

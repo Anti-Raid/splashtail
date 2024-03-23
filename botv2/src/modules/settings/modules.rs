@@ -96,7 +96,7 @@ pub async fn modules_list(ctx: Context<'_>) -> Result<(), Error> {
 pub async fn modules_enable(
     ctx: Context<'_>,
     #[description = "The module to enable"]
-    #[autocomplete = "crate::silverpelt::poise_ext::module_list::autocomplete"]
+    #[autocomplete = "crate::silverpelt::poise_ext::module_list_autocomplete"]
     module: String,
 ) -> Result<(), Error> {
     let Some(guild_id) = ctx.guild_id() else {
@@ -193,7 +193,7 @@ pub async fn modules_enable(
 pub async fn modules_disable(
     ctx: Context<'_>,
     #[description = "The module to disable"]
-    #[autocomplete = "crate::silverpelt::poise_ext::module_list::autocomplete"]
+    #[autocomplete = "crate::silverpelt::poise_ext::module_list_autocomplete"]
     module: String,
 ) -> Result<(), Error> {
     let Some(guild_id) = ctx.guild_id() else {

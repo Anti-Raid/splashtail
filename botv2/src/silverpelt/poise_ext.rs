@@ -1,8 +1,8 @@
-use crate::silverpelt::silverpelt_cache::SILVERPELT_CACHE;
+use super::silverpelt_cache::SILVERPELT_CACHE;
 use crate::Context;
 use serenity::all::AutocompleteChoice;
 
-pub async fn autocomplete<'a>(_ctx: Context<'_>, partial: &'a str) -> Vec<AutocompleteChoice<'a>> {
+pub async fn module_list_autocomplete<'a>(_ctx: Context<'_>, partial: &'a str) -> Vec<AutocompleteChoice<'a>> {
     let mut ac = Vec::new();
 
     for mv in SILVERPELT_CACHE.module_id_cache.iter() {

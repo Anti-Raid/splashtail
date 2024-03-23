@@ -10,7 +10,7 @@ use crate::ipc::argparse::MEWLD_ARGS;
 use crate::{Context, Error};
 use poise::CreateReply;
 use serenity::all::{
-    ChannelId, CreateEmbed, EditMember, EditMessage, GuildId, Member, Mentionable, Message,
+    ChannelId, CreateEmbed, EditMember, EditMessage, GuildId, Mentionable, Message,
     Timestamp, User, UserId,
 };
 use serenity::utils::shard_id;
@@ -34,6 +34,7 @@ type MessagePruneOpts struct {
     SpecialAllocations map[string]int `description:"Specific channel allocation overrides"`
 }
 */
+
 #[allow(clippy::too_many_arguments)]
 fn create_message_prune_serde(
     user_id: UserId,
@@ -64,7 +65,7 @@ fn create_message_prune_serde(
         create_special_allocation_from_str(special_allocations)?
     } else {
         HashMap::new()
-    };
+    }; 
 
     Ok(serde_json::json!(
         {
@@ -100,7 +101,7 @@ fn to_log_format(moderator: &User, member: &User, reason: &str) -> String {
     )
 }
 
-/// Kicks a member from the server with optional purge/stinging abilities
+/// Prune messages from a user
 #[poise::command(
     prefix_command,
     slash_command,
@@ -109,28 +110,190 @@ fn to_log_format(moderator: &User, member: &User, reason: &str) -> String {
     required_bot_permissions = "KICK_MEMBERS | MANAGE_MESSAGES"
 )]
 #[allow(clippy::too_many_arguments)]
+pub async fn prune_user(
+    ctx: Context<'_>,
+    #[description = "The user to prune"] user: serenity::all::User,
+    #[description = "The reason for the prune"] reason: String,
+    #[description = "Number of stings to give. Defaults to configured base stings"] stings: Option<i32>,
+    #[description = "Whether or not to show prune status updates"] prune_debug: Option<bool>,
+    #[description = "Channels to prune from, otherwise will prune from all channels"] prune_channels: Option<String>,
+    #[description = "Whether or not to avoid errors while pruning"] prune_ignore_errors: Option<bool>,
+    #[description = "How many messages at maximum to prune"] prune_max_messages: Option<i32>,
+    #[description = "The duration to prune from. Format: <number> days/hours/minutes/seconds"] prune_from: Option<String>,
+    #[description = "The minimum number of messages to prune per channel"] prune_per_channel: Option<i32>,
+    #[description = "Whether to attempt rollover of leftover message quota to another channels or not"] prune_rollover_leftovers: Option<bool>,
+    #[description = "Specific channel allocation overrides"] prune_special_allocations: Option<String>,
+) -> Result<(), Error> {
+    let Some(guild_id) = ctx.guild_id() else {
+        return Err("This command can only be used in a guild".into());
+    };
+
+    let mut embed = CreateEmbed::new()
+        .title("Pruning User Messages...")
+        .description(format!(
+            "{} | Pruning User Messages {}",
+            get_icon_of_state("pending"),
+            user.mention()
+        ));
+
+    let mut base_message = ctx
+        .send(CreateReply::new().embed(embed))
+        .await?
+        .into_message()
+        .await?;
+
+    let Some(author) = ctx.author_member().await else {
+        return Err("This command can only be used in a guild".into());
+    };
+
+    let stings = stings.unwrap_or(1);
+
+    if stings < 0 {
+        return Err("Stings must be greater than or equal to 0".into());
+    }
+
+    let mut tx = ctx.data().pool.begin().await?;
+
+    sqlx::query!(
+        "INSERT INTO moderation__actions (guild_id, user_id, moderator, action, stings, reason) VALUES ($1, $2, $3, $4, $5, $6)",
+        guild_id.to_string(),
+        user.id.to_string(),
+        author.user.id.to_string(),
+        "prune",
+        stings,
+        reason,
+    )
+    .execute(&mut *tx)
+    .await?;
+
+    tx.commit().await?;
+
+    // If we're pruning messages, do that
+    let prune_opts = create_message_prune_serde(
+        user.id,
+        guild_id,
+        prune_channels,
+        prune_ignore_errors,
+        prune_max_messages,
+        prune_from,
+        prune_per_channel,
+        prune_rollover_leftovers,
+        prune_special_allocations,
+    )?;
+
+    let data = ctx.data();
+
+    let task_id = match data
+        .animus_magic_ipc
+        .request(
+            AnimusTarget::Jobserver,
+            shard_id(guild_id, MEWLD_ARGS.shard_count),
+            AnimusMessage::Jobserver(JobserverAnimusMessage::SpawnTask {
+                name: "message_prune".to_string(),
+                data: prune_opts,
+                create: true,
+                execute: true,
+                task_id: None,
+            }),
+            default_request_timeout(),
+        )
+        .await
+        .map_err(|e| format!("Failed to create backup task: {}", e))?
+    {
+        AnimusAnyResponse::Response(AnimusResponse::Jobserver(
+            JobserverAnimusResponse::SpawnTask { task_id },
+        )) => task_id,
+        AnimusAnyResponse::Error(e) => {
+            return Err(format!("Failed to create backup task: {}", e.message).into())
+        }
+        _ => return Err("Invalid response from jobserver".into()),
+    };
+
+    embed = CreateEmbed::new()
+        .title("Pruning User Messages...")
+        .description(format!(
+            "{} | Pruning User Messages...",
+            get_icon_of_state("pending")
+        ))
+        .field(
+            "Pruning Messages",
+            format!(":yellow_circle: Created task with Task ID of {}", task_id),
+            false,
+        );
+
+    base_message
+        .edit(&ctx.http(), EditMessage::new().embed(embed.clone()))
+        .await?;
+
+    let ch = bothelpers::cache::CacheHttpImpl {
+        cache: ctx.serenity_context().cache.clone(),
+        http: ctx.serenity_context().http.clone(),
+    };
+
+    async fn update_base_message(
+        user: Arc<User>,
+        prune_debug: bool,
+        cache_http: bothelpers::cache::CacheHttpImpl,
+        mut base_message: Message,
+        task: Arc<jobserver::Task>,
+    ) -> Result<(), Error> {
+        let new_task_msg = jobserver::taskpoll::embed(
+            &crate::config::CONFIG.sites.api.get(),
+            &task,
+            vec![CreateEmbed::default()
+                .title("Pruning User Messages...")
+                .description(format!(
+                    "{} | Pruning User Messages {}",
+                    get_icon_of_state(&task.state),
+                    user.mention()
+                ))],
+            prune_debug,
+        )?;
+
+        let prefix_msg = new_task_msg.to_prefix_edit(EditMessage::default());
+
+        base_message.edit(&cache_http, prefix_msg).await?;
+
+        Ok(())
+    }
+
+    let uarc = Arc::new(user);
+
+    // Use jobserver::reactive to keep updating the message
+    let prune_debug = prune_debug.unwrap_or(false);
+    jobserver::taskpoll::reactive(
+        &ch,
+        &ctx.data().pool,
+        &task_id,
+        |cache_http, task| {
+            Box::pin(update_base_message(
+                uarc.clone(),
+                prune_debug,
+                cache_http.clone(),
+                base_message.clone(),
+                task.clone(),
+            ))
+        },
+        jobserver::taskpoll::PollTaskOptions { interval: Some(1) },
+    )
+    .await?;
+
+    Ok(())
+}
+
+/// Kicks a member from the server with optional purge/stinging abilities
+#[poise::command(
+    prefix_command,
+    slash_command,
+    guild_only,
+    user_cooldown = "5",
+    required_bot_permissions = "KICK_MEMBERS | MANAGE_MESSAGES"
+)]
 pub async fn kick(
     ctx: Context<'_>,
     #[description = "The member to kick"] member: serenity::all::Member,
     #[description = "The reason for the kick"] reason: String,
     #[description = "Number of stings to give. Defaults to configured base stings"] stings: Option<i32>,
-    #[description = "Whether or not to prune messages"] prune_messages: Option<bool>,
-    #[description = "Whether or not to show prune status updates"] prune_debug: Option<bool>,
-    #[description = "Channels to prune from, otherwise will prune from all channels"]
-    prune_channels: Option<String>,
-    #[description = "Whether or not to avoid errors while pruning"] prune_ignore_errors: Option<
-        bool,
-    >,
-    #[description = "How many messages at maximum to prune"] prune_max_messages: Option<i32>,
-    #[description = "The duration to prune from. Format: <number> days/hours/minutes/seconds"]
-    prune_from: Option<String>,
-    #[description = "The minimum number of messages to prune per channel"]
-    prune_per_channel: Option<i32>,
-    #[description = "Whether to attempt rollover of leftover message quota to another channels or not"]
-    prune_rollover_leftovers: Option<bool>,
-    #[description = "Specific channel allocation overrides"] prune_special_allocations: Option<
-        String,
-    >,
 ) -> Result<(), Error> {
     let Some(guild_id) = ctx.guild_id() else {
         return Err("This command can only be used in a guild".into());
@@ -184,129 +347,17 @@ pub async fn kick(
 
     tx.commit().await?;
 
-    // If we're pruning messages, do that
-    if prune_messages.unwrap_or(false) {
-        let prune_opts = create_message_prune_serde(
-            member.user.id,
-            guild_id,
-            prune_channels,
-            prune_ignore_errors,
-            prune_max_messages,
-            prune_from,
-            prune_per_channel,
-            prune_rollover_leftovers,
-            prune_special_allocations,
-        )?;
+    embed = CreateEmbed::new()
+        .title("Kicking Member...")
+        .description(format!(
+            "{} | Kicking {}",
+            get_icon_of_state("completed"),
+            member.mention()
+        ));
 
-        let data = ctx.data();
-
-        let task_id = match data
-            .animus_magic_ipc
-            .request(
-                AnimusTarget::Jobserver,
-                shard_id(guild_id, MEWLD_ARGS.shard_count),
-                AnimusMessage::Jobserver(JobserverAnimusMessage::SpawnTask {
-                    name: "message_prune".to_string(),
-                    data: prune_opts,
-                    create: true,
-                    execute: true,
-                    task_id: None,
-                }),
-                default_request_timeout(),
-            )
-            .await
-            .map_err(|e| format!("Failed to create backup task: {}", e))?
-        {
-            AnimusAnyResponse::Response(AnimusResponse::Jobserver(
-                JobserverAnimusResponse::SpawnTask { task_id },
-            )) => task_id,
-            AnimusAnyResponse::Error(e) => {
-                return Err(format!("Failed to create backup task: {}", e.message).into())
-            }
-            _ => return Err("Invalid response from jobserver".into()),
-        };
-
-        embed = CreateEmbed::new()
-            .title("Kicking Member...")
-            .description(format!(
-                "{} | Kicking Member...",
-                get_icon_of_state("pending")
-            ))
-            .field(
-                "Pruning Messages",
-                format!(":yellow_circle: Created task with Task ID of {}", task_id),
-                false,
-            );
-
-        base_message
-            .edit(&ctx.http(), EditMessage::new().embed(embed.clone()))
-            .await?;
-
-        let ch = bothelpers::cache::CacheHttpImpl {
-            cache: ctx.serenity_context().cache.clone(),
-            http: ctx.serenity_context().http.clone(),
-        };
-
-        async fn update_base_message(
-            member: Arc<Member>,
-            prune_debug: bool,
-            cache_http: bothelpers::cache::CacheHttpImpl,
-            mut base_message: Message,
-            task: Arc<jobserver::Task>,
-        ) -> Result<(), Error> {
-            let new_task_msg = jobserver::taskpoll::embed(
-                &crate::config::CONFIG.sites.api.get(),
-                &task,
-                vec![CreateEmbed::default()
-                    .title("Kicking Member...")
-                    .description(format!(
-                        "{} | Kicking {}",
-                        get_icon_of_state(&task.state),
-                        member.mention()
-                    ))],
-                prune_debug,
-            )?;
-
-            let prefix_msg = new_task_msg.to_prefix_edit(EditMessage::default());
-
-            base_message.edit(&cache_http, prefix_msg).await?;
-
-            Ok(())
-        }
-
-        let marc = Arc::new(member);
-
-        // Use jobserver::reactive to keep updating the message
-        let prune_debug = prune_debug.unwrap_or(false);
-        jobserver::taskpoll::reactive(
-            &ch,
-            &ctx.data().pool,
-            &task_id,
-            |cache_http, task| {
-                Box::pin(update_base_message(
-                    marc.clone(),
-                    prune_debug,
-                    cache_http.clone(),
-                    base_message.clone(),
-                    task.clone(),
-                ))
-            },
-            jobserver::taskpoll::PollTaskOptions { interval: Some(1) },
-        )
+    base_message
+        .edit(&ctx.http(), EditMessage::new().embed(embed))
         .await?;
-    } else {
-        embed = CreateEmbed::new()
-            .title("Kicking Member...")
-            .description(format!(
-                "{} | Kicking {}",
-                get_icon_of_state("completed"),
-                member.mention()
-            ));
-
-        base_message
-            .edit(&ctx.http(), EditMessage::new().embed(embed))
-            .await?;
-    }
 
     Ok(())
 }
@@ -319,30 +370,12 @@ pub async fn kick(
     user_cooldown = "5",
     required_bot_permissions = "BAN_MEMBERS | MANAGE_MESSAGES"
 )]
-#[allow(clippy::too_many_arguments)]
 pub async fn ban(
     ctx: Context<'_>,
     #[description = "The member to ban"] member: serenity::all::Member,
     #[description = "The reason for the ban"] reason: String,
     #[description = "Number of stings to give. Defaults to configured base stings"] stings: Option<i32>,
-    #[description = "Whether or not to prune messages"] prune_messages: Option<bool>,
-    #[description = "Whether or not to show prune status updates"] prune_debug: Option<bool>,
     #[description = "How many messages to prune using discords autopruner [dmd] (days)"] prune_dmd: Option<u8>,
-    #[description = "Channels to prune from, otherwise will prune from all channels"]
-    prune_channels: Option<String>,
-    #[description = "Whether or not to avoid errors while pruning"] prune_ignore_errors: Option<
-        bool,
-    >,
-    #[description = "How many messages at maximum to prune"] prune_max_messages: Option<i32>,
-    #[description = "The duration to prune from. Format: <number> days/hours/minutes/seconds"]
-    prune_from: Option<String>,
-    #[description = "The minimum number of messages to prune per channel"]
-    prune_per_channel: Option<i32>,
-    #[description = "Whether to attempt rollover of leftover message quota to another channels or not"]
-    prune_rollover_leftovers: Option<bool>,
-    #[description = "Specific channel allocation overrides"] prune_special_allocations: Option<
-        String,
-    >,
 ) -> Result<(), Error> {
     let Some(guild_id) = ctx.guild_id() else {
         return Err("This command can only be used in a guild".into());
@@ -363,16 +396,10 @@ pub async fn ban(
         .await?;
 
     // Try banning them
-    let dmd = {
-        if prune_messages.unwrap_or(false) {
-            if let Some(prune_dmd) = prune_dmd {
-                prune_dmd
-            } else {
-                0
-            }
-        } else {
-            0
-        }
+    let dmd = if let Some(prune_dmd) = prune_dmd {
+        prune_dmd
+    } else {
+        0
     };
 
     let Some(author) = ctx.author_member().await else {
@@ -409,129 +436,17 @@ pub async fn ban(
 
     tx.commit().await?;
 
-    // If we're pruning messages, do that
-    if prune_messages.unwrap_or(false) {
-        let prune_opts = create_message_prune_serde(
-            member.user.id,
-            guild_id,
-            prune_channels,
-            prune_ignore_errors,
-            prune_max_messages,
-            prune_from,
-            prune_per_channel,
-            prune_rollover_leftovers,
-            prune_special_allocations,
-        )?;
+    embed = CreateEmbed::new()
+        .title("Banning Member...")
+        .description(format!(
+            "{} | Banned {}",
+            get_icon_of_state("completed"),
+            member.mention()
+        ));
 
-        let data = ctx.data();
-
-        let task_id = match data
-            .animus_magic_ipc
-            .request(
-                AnimusTarget::Jobserver,
-                shard_id(guild_id, MEWLD_ARGS.shard_count),
-                AnimusMessage::Jobserver(JobserverAnimusMessage::SpawnTask {
-                    name: "message_prune".to_string(),
-                    data: prune_opts,
-                    create: true,
-                    execute: true,
-                    task_id: None,
-                }),
-                default_request_timeout(),
-            )
-            .await
-            .map_err(|e| format!("Failed to create task: {}", e))?
-        {
-            AnimusAnyResponse::Response(AnimusResponse::Jobserver(
-                JobserverAnimusResponse::SpawnTask { task_id },
-            )) => task_id,
-            AnimusAnyResponse::Error(e) => {
-                return Err(format!("Failed to create task: {}", e.message).into())
-            }
-            _ => return Err("Invalid response from jobserver".into()),
-        };
-
-        embed = CreateEmbed::new()
-            .title("Banning Member...")
-            .description(format!(
-                "{} | Banning Member...",
-                get_icon_of_state("pending")
-            ))
-            .field(
-                "Pruning Messages",
-                format!(":yellow_circle: Created task with Task ID of {}", task_id),
-                false,
-            );
-
-        base_message
-            .edit(&ctx.http(), EditMessage::new().embed(embed.clone()))
-            .await?;
-
-        let ch = bothelpers::cache::CacheHttpImpl {
-            cache: ctx.serenity_context().cache.clone(),
-            http: ctx.serenity_context().http.clone(),
-        };
-
-        async fn update_base_message(
-            member: Arc<Member>,
-            prune_debug: bool,
-            cache_http: bothelpers::cache::CacheHttpImpl,
-            mut base_message: Message,
-            task: Arc<jobserver::Task>,
-        ) -> Result<(), Error> {
-            let new_task_msg = jobserver::taskpoll::embed(
-                &crate::config::CONFIG.sites.api.get(),
-                &task,
-                vec![CreateEmbed::default()
-                    .title("Banning Member...")
-                    .description(format!(
-                        "{} | Banning {}",
-                        get_icon_of_state(&task.state),
-                        member.mention()
-                    ))],
-                prune_debug,
-            )?;
-
-            let prefix_msg = new_task_msg.to_prefix_edit(EditMessage::default());
-
-            base_message.edit(&cache_http, prefix_msg).await?;
-
-            Ok(())
-        }
-
-        let marc = Arc::new(member);
-
-        // Use jobserver::reactive to keep updating the message
-        let prune_debug = prune_debug.unwrap_or(false);
-        jobserver::taskpoll::reactive(
-            &ch,
-            &ctx.data().pool,
-            &task_id,
-            |cache_http, task| {
-                Box::pin(update_base_message(
-                    marc.clone(),
-                    prune_debug,
-                    cache_http.clone(),
-                    base_message.clone(),
-                    task.clone(),
-                ))
-            },
-            jobserver::taskpoll::PollTaskOptions { interval: Some(1) },
-        )
+    base_message
+        .edit(&ctx.http(), EditMessage::new().embed(embed))
         .await?;
-    } else {
-        embed = CreateEmbed::new()
-            .title("Banning Member...")
-            .description(format!(
-                "{} | Banned {}",
-                get_icon_of_state("completed"),
-                member.mention()
-            ));
-
-        base_message
-            .edit(&ctx.http(), EditMessage::new().embed(embed))
-            .await?;
-    }
 
     Ok(())
 }
@@ -544,31 +459,13 @@ pub async fn ban(
     user_cooldown = "5",
     required_bot_permissions = "BAN_MEMBERS | MANAGE_MESSAGES"
 )]
-#[allow(clippy::too_many_arguments)]
 pub async fn tempban(
     ctx: Context<'_>,
     #[description = "The member to ban"] member: serenity::all::Member,
     #[description = "The reason for the ban"] reason: String,
     #[description = "Number of stings to give. Defaults to configured base stings"] stings: Option<i32>,
     #[description = "The duration of the ban"] duration: String,
-    #[description = "Whether or not to prune messages"] prune_messages: Option<bool>,
-    #[description = "Whether or not to show prune status updates"] prune_debug: Option<bool>,
     #[description = "How many messages to prune using discords autopruner [dmd] (days)"] prune_dmd: Option<u8>,
-    #[description = "Channels to prune from, otherwise will prune from all channels"]
-    prune_channels: Option<String>,
-    #[description = "Whether or not to avoid errors while pruning"] prune_ignore_errors: Option<
-        bool,
-    >,
-    #[description = "How many messages at maximum to prune"] prune_max_messages: Option<i32>,
-    #[description = "The duration to prune from. Format: <number> days/hours/minutes/seconds"]
-    prune_from: Option<String>,
-    #[description = "The minimum number of messages to prune per channel"]
-    prune_per_channel: Option<i32>,
-    #[description = "Whether to attempt rollover of leftover message quota to another channels or not"]
-    prune_rollover_leftovers: Option<bool>,
-    #[description = "Specific channel allocation overrides"] prune_special_allocations: Option<
-        String,
-    >,
 ) -> Result<(), Error> {
     let Some(guild_id) = ctx.guild_id() else {
         return Err("This command can only be used in a guild".into());
@@ -591,16 +488,10 @@ pub async fn tempban(
         .await?;
 
     // Try banning them
-    let dmd = {
-        if prune_messages.unwrap_or(false) {
-            if let Some(prune_dmd) = prune_dmd {
-                prune_dmd
-            } else {
-                0
-            }
-        } else {
-            0
-        }
+    let dmd = if let Some(prune_dmd) = prune_dmd {
+        prune_dmd
+    } else {
+        0
     };
 
     let Some(author) = ctx.author_member().await else {
@@ -638,129 +529,17 @@ pub async fn tempban(
 
     tx.commit().await?;
 
-    // If we're pruning messages, do that
-    if prune_messages.unwrap_or(false) {
-        let prune_opts = create_message_prune_serde(
-            member.user.id,
-            guild_id,
-            prune_channels,
-            prune_ignore_errors,
-            prune_max_messages,
-            prune_from,
-            prune_per_channel,
-            prune_rollover_leftovers,
-            prune_special_allocations,
-        )?;
+    embed = CreateEmbed::new()
+        .title("(Temporarily) Banned Member...")
+        .description(format!(
+            "{} | Banning {}",
+            get_icon_of_state("completed"),
+            member.mention()
+        ));
 
-        let data = ctx.data();
-
-        let task_id = match data
-            .animus_magic_ipc
-            .request(
-                AnimusTarget::Jobserver,
-                shard_id(guild_id, MEWLD_ARGS.shard_count),
-                AnimusMessage::Jobserver(JobserverAnimusMessage::SpawnTask {
-                    name: "message_prune".to_string(),
-                    data: prune_opts,
-                    create: true,
-                    execute: true,
-                    task_id: None,
-                }),
-                default_request_timeout(),
-            )
-            .await
-            .map_err(|e| format!("Failed to create task: {}", e))?
-        {
-            AnimusAnyResponse::Response(AnimusResponse::Jobserver(
-                JobserverAnimusResponse::SpawnTask { task_id },
-            )) => task_id,
-            AnimusAnyResponse::Error(e) => {
-                return Err(format!("Failed to create task: {}", e.message).into())
-            }
-            _ => return Err("Invalid response from jobserver".into()),
-        };
-
-        embed = CreateEmbed::new()
-            .title("(Temporarily) Banning Member...")
-            .description(format!(
-                "{} | Banning Member...",
-                get_icon_of_state("pending")
-            ))
-            .field(
-                "Pruning Messages",
-                format!(":yellow_circle: Created task with Task ID of {}", task_id),
-                false,
-            );
-
-        base_message
-            .edit(&ctx.http(), EditMessage::new().embed(embed.clone()))
-            .await?;
-
-        let ch = bothelpers::cache::CacheHttpImpl {
-            cache: ctx.serenity_context().cache.clone(),
-            http: ctx.serenity_context().http.clone(),
-        };
-
-        async fn update_base_message(
-            member: Arc<Member>,
-            prune_debug: bool,
-            cache_http: bothelpers::cache::CacheHttpImpl,
-            mut base_message: Message,
-            task: Arc<jobserver::Task>,
-        ) -> Result<(), Error> {
-            let new_task_msg = jobserver::taskpoll::embed(
-                &crate::config::CONFIG.sites.api.get(),
-                &task,
-                vec![CreateEmbed::default()
-                    .title("(Temporarily) Banning Member...")
-                    .description(format!(
-                        "{} | Banning {}",
-                        get_icon_of_state(&task.state),
-                        member.mention()
-                    ))],
-                prune_debug,
-            )?;
-
-            let prefix_msg = new_task_msg.to_prefix_edit(EditMessage::default());
-
-            base_message.edit(&cache_http, prefix_msg).await?;
-
-            Ok(())
-        }
-
-        let marc = Arc::new(member);
-
-        // Use jobserver::reactive to keep updating the message
-        let prune_debug = prune_debug.unwrap_or(false);
-        jobserver::taskpoll::reactive(
-            &ch,
-            &ctx.data().pool,
-            &task_id,
-            |cache_http, task| {
-                Box::pin(update_base_message(
-                    marc.clone(),
-                    prune_debug,
-                    cache_http.clone(),
-                    base_message.clone(),
-                    task.clone(),
-                ))
-            },
-            jobserver::taskpoll::PollTaskOptions { interval: Some(1) },
-        )
+    base_message
+        .edit(&ctx.http(), EditMessage::new().embed(embed))
         .await?;
-    } else {
-        embed = CreateEmbed::new()
-            .title("(Temporarily) Banned Member...")
-            .description(format!(
-                "{} | Banning {}",
-                get_icon_of_state("completed"),
-                member.mention()
-            ));
-
-        base_message
-            .edit(&ctx.http(), EditMessage::new().embed(embed))
-            .await?;
-    }
 
     Ok(())
 }
@@ -773,27 +552,11 @@ pub async fn tempban(
     user_cooldown = "5",
     required_bot_permissions = "BAN_MEMBERS | MANAGE_MESSAGES"
 )]
-#[allow(clippy::too_many_arguments)]
 pub async fn unban(
     ctx: Context<'_>,
     #[description = "The member to ban"] member: serenity::all::Member,
     #[description = "The reason for the ban"] reason: String,
     #[description = "Number of stings to give. Defaults to configured base stings"] stings: Option<i32>,
-    #[description = "Whether or not to prune messages"] prune_messages: Option<bool>,
-    #[description = "Whether or not to show prune status updates"] prune_debug: Option<bool>,
-    #[description = "Channels to prune from, otherwise will prune from all channels"]
-    prune_channels: Option<String>,
-    #[description = "Whether or not to avoid errors while pruning"] prune_ignore_errors: Option<
-        bool,
-    >,
-    #[description = "How many messages at maximum to prune"] prune_max_messages: Option<i32>,
-    #[description = "The duration to prune from. Format: <number> days/hours/minutes/seconds"]
-    prune_from: Option<String>,
-    #[description = "The minimum number of messages to prune per channel"]
-    prune_per_channel: Option<i32>,
-    #[description = "Whether to attempt rollover of leftover message quota to another channels or not"]
-    prune_rollover_leftovers: Option<bool>,
-    #[description = "Specific channel allocation overrides"] prune_special_allocations: Option<String>,
 ) -> Result<(), Error> {
     let Some(guild_id) = ctx.guild_id() else {
         return Err("This command can only be used in a guild".into());
@@ -842,129 +605,17 @@ pub async fn unban(
 
     tx.commit().await?;
 
-    // If we're pruning messages, do that
-    if prune_messages.unwrap_or(false) {
-        let prune_opts = create_message_prune_serde(
-            member.user.id,
-            guild_id,
-            prune_channels,
-            prune_ignore_errors,
-            prune_max_messages,
-            prune_from,
-            prune_per_channel,
-            prune_rollover_leftovers,
-            prune_special_allocations,
-        )?;
+    embed = CreateEmbed::new()
+        .title("Unbanned Member...")
+        .description(format!(
+            "{} | Unbanning {}",
+            get_icon_of_state("completed"),
+            member.mention()
+        ));
 
-        let data = ctx.data();
-
-        let task_id = match data
-            .animus_magic_ipc
-            .request(
-                AnimusTarget::Jobserver,
-                shard_id(guild_id, MEWLD_ARGS.shard_count),
-                AnimusMessage::Jobserver(JobserverAnimusMessage::SpawnTask {
-                    name: "message_prune".to_string(),
-                    data: prune_opts,
-                    create: true,
-                    execute: true,
-                    task_id: None,
-                }),
-                default_request_timeout(),
-            )
-            .await
-            .map_err(|e| format!("Failed to create task: {}", e))?
-        {
-            AnimusAnyResponse::Response(AnimusResponse::Jobserver(
-                JobserverAnimusResponse::SpawnTask { task_id },
-            )) => task_id,
-            AnimusAnyResponse::Error(e) => {
-                return Err(format!("Failed to create task: {}", e.message).into())
-            }
-            _ => return Err("Invalid response from jobserver".into()),
-        };
-
-        embed = CreateEmbed::new()
-            .title("Unbanning Member...")
-            .description(format!(
-                "{} | Unbanning Member...",
-                get_icon_of_state("pending")
-            ))
-            .field(
-                "Pruning Messages",
-                format!(":yellow_circle: Created task with Task ID of {}", task_id),
-                false,
-            );
-
-        base_message
-            .edit(&ctx.http(), EditMessage::new().embed(embed.clone()))
-            .await?;
-
-        let ch = bothelpers::cache::CacheHttpImpl {
-            cache: ctx.serenity_context().cache.clone(),
-            http: ctx.serenity_context().http.clone(),
-        };
-
-        async fn update_base_message(
-            member: Arc<Member>,
-            prune_debug: bool,
-            cache_http: bothelpers::cache::CacheHttpImpl,
-            mut base_message: Message,
-            task: Arc<jobserver::Task>,
-        ) -> Result<(), Error> {
-            let new_task_msg = jobserver::taskpoll::embed(
-                &crate::config::CONFIG.sites.api.get(),
-                &task,
-                vec![CreateEmbed::default()
-                    .title("Unbanning Member...")
-                    .description(format!(
-                        "{} | Unbanning {}",
-                        get_icon_of_state(&task.state),
-                        member.mention()
-                    ))],
-                prune_debug,
-            )?;
-
-            let prefix_msg = new_task_msg.to_prefix_edit(EditMessage::default());
-
-            base_message.edit(&cache_http, prefix_msg).await?;
-
-            Ok(())
-        }
-
-        let marc = Arc::new(member);
-
-        // Use jobserver::reactive to keep updating the message
-        let prune_debug = prune_debug.unwrap_or(false);
-        jobserver::taskpoll::reactive(
-            &ch,
-            &ctx.data().pool,
-            &task_id,
-            |cache_http, task| {
-                Box::pin(update_base_message(
-                    marc.clone(),
-                    prune_debug,
-                    cache_http.clone(),
-                    base_message.clone(),
-                    task.clone(),
-                ))
-            },
-            jobserver::taskpoll::PollTaskOptions { interval: Some(1) },
-        )
+    base_message
+        .edit(&ctx.http(), EditMessage::new().embed(embed))
         .await?;
-    } else {
-        embed = CreateEmbed::new()
-            .title("Unbanned Member...")
-            .description(format!(
-                "{} | Unbanning {}",
-                get_icon_of_state("completed"),
-                member.mention()
-            ));
-
-        base_message
-            .edit(&ctx.http(), EditMessage::new().embed(embed))
-            .await?;
-    }
 
     Ok(())
 }
@@ -977,30 +628,12 @@ pub async fn unban(
     user_cooldown = "5",
     required_bot_permissions = "MODERATE_MEMBERS | MANAGE_MESSAGES"
 )]
-#[allow(clippy::too_many_arguments)]
 pub async fn timeout(
     ctx: Context<'_>,
     #[description = "The member to timeout"] mut member: serenity::all::Member,
     #[description = "The duration of the timeout"] duration: String,
     #[description = "The reason for the timeout"] reason: String,
     #[description = "Number of stings to give. Defaults to configured base stings"] stings: Option<i32>,
-    #[description = "Whether or not to prune messages"] prune_messages: Option<bool>,
-    #[description = "Whether or not to show prune status updates"] prune_debug: Option<bool>,
-    #[description = "Channels to prune from, otherwise will prune from all channels"]
-    prune_channels: Option<String>,
-    #[description = "Whether or not to avoid errors while pruning"] prune_ignore_errors: Option<
-        bool,
-    >,
-    #[description = "How many messages at maximum to prune"] prune_max_messages: Option<i32>,
-    #[description = "The duration to prune from. Format: <number> days/hours/minutes/seconds"]
-    prune_from: Option<String>,
-    #[description = "The minimum number of messages to prune per channel"]
-    prune_per_channel: Option<i32>,
-    #[description = "Whether to attempt rollover of leftover message quota to another channels or not"]
-    prune_rollover_leftovers: Option<bool>,
-    #[description = "Specific channel allocation overrides"] prune_special_allocations: Option<
-        String,
-    >,
 ) -> Result<(), Error> {
     let Some(guild_id) = ctx.guild_id() else {
         return Err("This command can only be used in a guild".into());
@@ -1074,117 +707,19 @@ pub async fn timeout(
         )
         .await?;
 
-    // If we're pruning messages, do that
-    if prune_messages.unwrap_or(false) {
-        let prune_opts = create_message_prune_serde(
-            member.user.id,
-            guild_id,
-            prune_channels,
-            prune_ignore_errors,
-            prune_max_messages,
-            prune_from,
-            prune_per_channel,
-            prune_rollover_leftovers,
-            prune_special_allocations,
-        )?;
+    tx.commit().await?;
 
-        let data = ctx.data();
+    embed = CreateEmbed::new()
+    .title("Unbanned Member...")
+    .description(format!(
+        "{} | Unbanning {}",
+        get_icon_of_state("completed"),
+        member.mention()
+    ));
 
-        let task_id = match data
-            .animus_magic_ipc
-            .request(
-                AnimusTarget::Jobserver,
-                shard_id(guild_id, MEWLD_ARGS.shard_count),
-                AnimusMessage::Jobserver(JobserverAnimusMessage::SpawnTask {
-                    name: "message_prune".to_string(),
-                    data: prune_opts,
-                    create: true,
-                    execute: true,
-                    task_id: None,
-                }),
-                default_request_timeout(),
-            )
-            .await
-            .map_err(|e| format!("Failed to create backup task: {}", e))?
-        {
-            AnimusAnyResponse::Response(AnimusResponse::Jobserver(
-                JobserverAnimusResponse::SpawnTask { task_id },
-            )) => task_id,
-            AnimusAnyResponse::Error(e) => {
-                return Err(format!("Failed to create backup task: {}", e.message).into())
-            }
-            _ => return Err("Invalid response from jobserver".into()),
-        };
-
-        embed = CreateEmbed::new()
-            .title("Timing Out Member...")
-            .description(format!(
-                "{} | Timing Out Member...",
-                get_icon_of_state("pending")
-            ))
-            .field(
-                "Pruning Messages",
-                format!(":yellow_circle: Created task with Task ID of {}", task_id),
-                false,
-            );
-
-        base_message
-            .edit(&ctx.http(), EditMessage::new().embed(embed.clone()))
-            .await?;
-
-        let ch = bothelpers::cache::CacheHttpImpl {
-            cache: ctx.serenity_context().cache.clone(),
-            http: ctx.serenity_context().http.clone(),
-        };
-
-        async fn update_base_message(
-            member: Arc<Member>,
-            prune_debug: bool,
-            cache_http: bothelpers::cache::CacheHttpImpl,
-            mut base_message: Message,
-            task: Arc<jobserver::Task>,
-        ) -> Result<(), Error> {
-            let new_task_msg = jobserver::taskpoll::embed(
-                &crate::config::CONFIG.sites.api.get(),
-                &task,
-                vec![CreateEmbed::default()
-                    .title("Timing Out Member...")
-                    .description(format!(
-                        "{} | Timing Out {}",
-                        get_icon_of_state(&task.state),
-                        member.mention()
-                    ))],
-                prune_debug,
-            )?;
-
-            let prefix_msg = new_task_msg.to_prefix_edit(EditMessage::default());
-
-            base_message.edit(&cache_http, prefix_msg).await?;
-
-            Ok(())
-        }
-
-        let marc = Arc::new(member);
-
-        // Use jobserver::reactive to keep updating the message
-        let prune_debug = prune_debug.unwrap_or(false);
-        jobserver::taskpoll::reactive(
-            &ch,
-            &ctx.data().pool,
-            &task_id,
-            |cache_http, task| {
-                Box::pin(update_base_message(
-                    marc.clone(),
-                    prune_debug,
-                    cache_http.clone(),
-                    base_message.clone(),
-                    task.clone(),
-                ))
-            },
-            jobserver::taskpoll::PollTaskOptions { interval: Some(1) },
-        )
-        .await?;
-    }
+    base_message
+    .edit(&ctx.http(), EditMessage::new().embed(embed))
+    .await?;
 
     Ok(())
 }

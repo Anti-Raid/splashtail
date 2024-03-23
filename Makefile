@@ -25,11 +25,12 @@ reloadjobserver:
 	systemctl restart splashtail-staging-jobs
 all:
 	make buildbot && make buildmewldwebui && make stcore 
-buildbot:
-	cd botv2 && cargo sqlx prepare && cd .. 
+sqlx:
+	cd botv2/jobserver && cargo sqlx prepare
+	cd botv2 && cargo sqlx prepare
+buildbot: sqlx
 	cd botv2 && SQLX_OFFLINE=true cargo build --release
-buildbot_dbg:
-	cd botv2 && cargo sqlx prepare && cd ..
+buildbot_dbg: sqlx
 	cd botv2 && SQLX_OFFLINE=true cargo build --timings
 buildmewldwebui:
 	cd webserver/mewld_web/ui && npm i && npm run build && cd ../../
