@@ -192,6 +192,14 @@ pub async fn perms_modrole(
             .await?;
         }
     } else {
+        kittycat::perms::check_patch_changes(&author_kittycat_perms, &[], &perms_vec)
+            .map_err(|e| {
+                format!(
+                    "You do not have permission to add a role's with these permissions: {}",
+                    e
+                )
+            })?;
+
         let true_index = {
             if index.is_none() {
                 // First fetch highest index and add one to go to top
@@ -241,6 +249,14 @@ pub async fn perms_modrole(
         .execute(&mut *tx)
         .await?;
     }
+
+    sqlx::query!(
+        "UPDATE guild_members SET needs_perm_rederive = true WHERE guild_id = $1 AND $2 = ANY(roles)",
+        guild_id.to_string(),
+        role.id.to_string()
+    )
+    .execute(&mut *tx)
+    .await?;
 
     tx.commit().await?;
 
@@ -336,6 +352,14 @@ pub async fn perms_deleterole(
 
     sqlx::query!(
         "DELETE FROM guild_roles WHERE guild_id = $1 AND role_id = $2",
+        guild_id.to_string(),
+        role.id.to_string()
+    )
+    .execute(&mut *tx)
+    .await?;
+
+    sqlx::query!(
+        "UPDATE guild_members SET needs_perm_rederive = true WHERE guild_id = $1 AND $2 = ANY(roles)",
         guild_id.to_string(),
         role.id.to_string()
     )

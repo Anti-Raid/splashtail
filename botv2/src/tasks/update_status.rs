@@ -12,7 +12,7 @@ pub async fn update_status(
     _cache_http: &bothelpers::cache::CacheHttpImpl,
     ctx: &serenity::client::Context,
 ) -> Result<(), crate::Error> {
-    let statuses = vec![
+    let statuses = [
         (Status::Watch, "Development of Anti-Raid v6"),
         (Status::Play, "Development of Anti-Raid v6"),
         (Status::Listen, "Development of Anti-Raid v6"),
