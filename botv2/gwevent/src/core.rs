@@ -186,10 +186,10 @@ pub fn get_event_guild_id(event: &FullEvent) -> Result<GuildId, Option<Error>> {
 #[allow(dead_code)]
 pub struct Field {
     /// The value of the field
-    value: Vec<FieldType>,
+    pub value: Vec<FieldType>,
 
     /// The category of the field
-    category: String,
+    pub category: String,
 }
 
 /// Given an event, expand it to a hashmap of fields
