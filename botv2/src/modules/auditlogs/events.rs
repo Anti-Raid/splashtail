@@ -9,7 +9,7 @@ pub const fn not_audit_loggable_event() -> &'static [&'static str] {
     &[
         "CACHE_READY", // Internal
         "INTERACTION_CREATE", // Spams too much / is useless
-        "MESSAGE_CREATE", // Spams too much / is useless
+        "MESSAGE", // Spams too much / is useless
         "RATELIMIT", // Internal
     ]
 }
