@@ -898,6 +898,25 @@ pub fn expand_event(event: &FullEvent) -> Option<IndexMap<String, Field>> {
         );
     }
 
+    fn expand_message_update(
+        fields: &mut IndexMap<String, Field>,
+        update: &serenity::model::event::MessageUpdateEvent,
+    ) {
+        insert_field(fields, "message_update_event", "id", update.id);
+        insert_field(fields, "message_update_event", "channel_id", update.channel_id);
+
+        if let Some(user) = &update.author {
+            expand_user(fields, user);
+        }
+
+        insert_optional_field(fields, "message_update_event", "content", update.content.clone());
+        insert_optional_field(fields, "message_update_event", "timestamp", update.timestamp);
+        insert_optional_field(fields, "message_update_event", "edited_timestamp", update.edited_timestamp);
+        insert_optional_field(fields, "message_update_event", "tts", update.tts);
+    
+        // TODO: finish the rest
+    }
+
     match event {
         FullEvent::AutoModActionExecution { execution } => {
             expand_action_execution(&mut fields, execution);
@@ -1136,13 +1155,15 @@ pub fn expand_event(event: &FullEvent) -> Option<IndexMap<String, Field>> {
         FullEvent::MessageUpdate {
             old_if_available,
             new,
-            event: _,
+            event
         } => {
             if let Some(old) = old_if_available {
                 expand_message(&mut fields, old.clone());
             }
             if let Some(new) = new {
                 expand_message(&mut fields, new.clone());
+            } else {
+                expand_message_update(&mut fields, event);
             }
         }
         FullEvent::PresenceReplace { .. } => return None,

@@ -11,6 +11,8 @@ pub const fn not_audit_loggable_event() -> &'static [&'static str] {
         "INTERACTION_CREATE", // Spams too much / is useless
         "MESSAGE", // Spams too much / is useless
         "RATELIMIT", // Internal
+        "GUILD_CREATE", // Internal
+        "GUILD_MEMBERS_CHUNK" // Internal
     ]
 }
 
