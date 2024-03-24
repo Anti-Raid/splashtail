@@ -33,6 +33,7 @@ type Context<'a> = poise::Context<'a, Data, Error>;
 // User data, which is stored and accessible in all command invocations
 pub struct Data {
     pub pool: sqlx::PgPool,
+    pub reqwest: reqwest::Client,
     pub mewld_ipc: Arc<MewldIpcClient>,
     pub object_store: Arc<ObjectStore>,
     pub animus_magic_ipc: Arc<AnimusMagicClient>,
@@ -517,6 +518,11 @@ async fn main() {
             .connect(&config::CONFIG.meta.postgres_url)
             .await
             .expect("Could not initialize connection"),
+        reqwest: reqwest::Client::builder()
+        .connect_timeout(std::time::Duration::from_secs(30))
+        .timeout(std::time::Duration::from_secs(90))
+        .build()
+        .expect("Could not initialize reqwest client"),
         shards_ready: Arc::new(dashmap::DashMap::new()),
         surreal_cache: surreal_client,
     };

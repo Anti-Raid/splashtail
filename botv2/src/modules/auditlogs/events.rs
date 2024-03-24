@@ -1,15 +1,25 @@
 use poise::serenity_prelude::FullEvent;
 use crate::{silverpelt::EventHandlerContext, Data, Error};
 use gwevent::field_type::FieldType;
-use serenity::all::Mentionable;
-use bothelpers::cache::CacheHttpImpl;
+use serenity::all::{ChannelId, Mentionable, CreateMessage};
+use log::warn;
+
+#[inline]
+pub const fn not_audit_loggable_event() -> &'static [&'static str] {
+    &[
+        "CACHE_READY", // Internal
+        "INTERACTION_CREATE", // Spams too much / is useless
+        "MESSAGE_CREATE", // Spams too much / is useless
+        "RATELIMIT", // Internal
+    ]
+}
 
 pub fn can_audit_log_event(event: &FullEvent) -> bool {
-    match event {
-        FullEvent::InteractionCreate { .. } => false, // Spams too much
-        FullEvent::Message { .. } => false, // Spams too much
-        _ => true,
+    if not_audit_loggable_event().contains(&event.into()) {
+        return false;
     }
+    
+    true
 }
 
 /*
@@ -323,7 +333,7 @@ pub fn resolve_gwevent_field(field: &FieldType) -> String {
 pub async fn event_listener(
     ctx: &serenity::client::Context,
     event: &FullEvent,
-    _: EventHandlerContext,
+    ectx: EventHandlerContext,
 ) -> Result<(), Error> {
     if !can_audit_log_event(event) {
         return Ok(());
@@ -378,10 +388,108 @@ pub async fn event_listener(
 
     let user_data = ctx.data::<Data>();
 
-    let cache_http = bothelpers::cache::CacheHttpImpl {
-        cache: ctx.cache.clone(),
-        http: ctx.http.clone(),
-    };
+    let sinks = sqlx::query!("SELECT id, type AS typ, sink, events FROM auditlogs__sinks WHERE guild_id = $1 AND broken = false", ectx.guild_id.to_string())
+        .fetch_all(&user_data.pool)
+        .await?;
+
+    for sink in sinks {
+        match sink.typ.as_str() {
+            "channel" => {
+                let cache_http = bothelpers::cache::CacheHttpImpl {
+                    cache: ctx.cache.clone(),
+                    http: ctx.http.clone(),
+                };
+
+                let channel: ChannelId = sink.sink.parse()?;
+
+                match channel.send_message(
+                    &cache_http,
+                    CreateMessage::default()
+                    .embed(event_embed.clone())
+                )
+                .await {
+                    Ok(_) => {},
+                    Err(e) => {
+                        warn!("Failed to send audit log event to channel: {} [sink id: {}]", e, sink.id);
+                        
+                        if let serenity::Error::Http(serenity::http::HttpError::UnsuccessfulRequest(ref err)) = e {
+                            match err.status_code {
+                                reqwest::StatusCode::FORBIDDEN | reqwest::StatusCode::UNAUTHORIZED | reqwest::StatusCode::NOT_FOUND | reqwest::StatusCode::GONE => {
+                                    sqlx::query!(
+                                        "UPDATE auditlogs__sinks SET broken = true WHERE id = $1",
+                                        sink.id
+                                    )
+                                    .execute(&user_data.pool)
+                                    .await?;
+                                },
+                                _ => {},
+                            }
+                        }
+
+                        if let serenity::Error::Model(serenity::all::ModelError::InvalidPermissions { .. }) = e {
+                            sqlx::query!(
+                                "UPDATE auditlogs__sinks SET broken = true WHERE id = $1",
+                                sink.id
+                            )
+                            .execute(&user_data.pool)
+                            .await?;
+                        }
+                    }
+                };
+            },
+            "discord_webhook" => {
+                let parsed_sink = sink.sink.parse()?;
+                let Some((id, token)) = serenity::utils::parse_webhook(&parsed_sink) else {
+                    warn!("Failed to parse webhook URL: {} [sink id: {}]", sink.sink, sink.id);
+                    continue;
+                };
+
+                // TODO: make this use serenity ExecuteWebhook in the future
+                let webhook_proxyurl = format!(
+                    "{base_url}/api/v10/webhooks/{id}/{token}", 
+                    base_url = crate::config::CONFIG.meta.proxy, 
+                    id = id, 
+                    token = token
+                );
+
+                let req = match user_data.reqwest
+                    .post(&webhook_proxyurl)
+                    .json(&serde_json::json!({
+                        "embeds": [event_embed.clone()]
+                    }))
+                    .header("Content-Type", "application/json")
+                    .header("User-Agent", "DiscordBot/0.1 (Anti-Raid, https://github.com/anti-raid)")
+                    .send()
+                    .await {
+                        Ok(r) => r,
+                        Err(e) => {
+                            warn!("Failed to send audit log event to webhook: {} [sink id: {}]", e, sink.id);
+                            continue;
+                        }
+                    };
+
+                let status = req.status();
+                // reqwest::StatusCode::FORBIDDEN | reqwest::StatusCode::UNAUTHORIZED | reqwest::StatusCode::NOT_FOUND | reqwest::StatusCode::GONE
+                if status == reqwest::StatusCode::FORBIDDEN || status == reqwest::StatusCode::UNAUTHORIZED || status == reqwest::StatusCode::NOT_FOUND || status == reqwest::StatusCode::GONE {
+                    let text = req.text().await?;
+                    warn!("Failed to send audit log event to webhook ({} [broken]): {} [sink id: {}]", status, text, sink.id);
+
+                    sqlx::query!(
+                        "UPDATE auditlogs__sinks SET broken = true WHERE id = $1",
+                        sink.id
+                    )
+                    .execute(&user_data.pool)
+                    .await?;
+                } else if !status.is_success() {
+                    let text = req.text().await?;
+                    warn!("Failed to send audit log event to webhook ({}): {} [sink id: {}]", status, text, sink.id);
+                }
+            },
+            _ => {
+                warn!("Unknown sink type: {} [sink id: {}]", sink.typ, sink.id);
+            }
+        }
+    }
 
     Ok(())
 }
