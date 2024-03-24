@@ -17,6 +17,26 @@ pub fn module() -> crate::silverpelt::Module {
             (
                 cmds::auditlogs(),
                 indexmap! {
+                    "list_sinks" => crate::silverpelt::CommandExtendedData {
+                        default_perms: crate::silverpelt::PermissionChecks {
+                            checks: vec![
+                                crate::silverpelt::PermissionCheck {
+                                    kittycat_perms: vec!["auditlogs.listsinks".to_string()],
+                                    native_perms: vec![],
+                                    inner_and: false,
+                                    outer_and: false,
+                                },
+                                crate::silverpelt::PermissionCheck {
+                                    kittycat_perms: vec![],
+                                    native_perms: vec![serenity::model::permissions::Permissions::VIEW_AUDIT_LOG, serenity::model::permissions::Permissions::MANAGE_GUILD],
+                                    inner_and: true,
+                                    outer_and: false,
+                                }
+                            ],
+                            checks_needed: 1,
+                        },
+                        ..Default::default()
+                    },
                     "add_channel" => crate::silverpelt::CommandExtendedData {
                         default_perms: crate::silverpelt::PermissionChecks {
                             checks: vec![

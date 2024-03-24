@@ -5,7 +5,7 @@ use splashcore_rs::crypto::gen_random;
 use futures_util::StreamExt;
 use std::time::Duration;
 
-#[poise::command(prefix_command, slash_command, user_cooldown = 1, subcommands("add_channel", "add_discordhook"))]
+#[poise::command(prefix_command, slash_command, user_cooldown = 1, subcommands("list_sinks", "add_channel", "add_discordhook"))]
 pub async fn auditlogs(_ctx: Context<'_>) -> Result<(), Error> {
     Ok(())
 }
