@@ -186,12 +186,6 @@ pub async fn add_channel(
     };
 
     // Check if we have permissions in said channel
-    let user_perms = gc.permissions_for_user(ctx.cache(), ctx.author().id)?;
-
-    if !user_perms.view_channel() {
-        return Err("You do not have permission to view this channel".into());
-    }
-
     let bot_perms = gc.permissions_for_user(ctx.cache(), ctx.cache().current_user().id)?;
 
     if !bot_perms.view_channel() {
