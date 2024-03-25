@@ -4,6 +4,7 @@ use serenity::all::{Channel, ChannelType, CreateEmbed};
 use splashcore_rs::crypto::gen_random;
 use futures_util::StreamExt;
 use std::time::Duration;
+use secrecy::ExposeSecret;
 
 #[poise::command(prefix_command, slash_command, user_cooldown = 1, subcommands("list_sinks", "add_channel", "add_discordhook"))]
 pub async fn auditlogs(_ctx: Context<'_>) -> Result<(), Error> {
@@ -169,6 +170,7 @@ pub async fn add_channel(
     ctx: Context<'_>,
     #[description = "Channel to send logs to"] channel: Channel,
     #[description = "Specific events you want to filter by"] events: Option<String>,
+    #[description = "Whether or not to create a webhook or not. Default is true"] use_webhook: Option<bool>,
 ) -> Result<(), Error> {
     let Some(guild_id) = ctx.guild_id() else {
         return Err("This command can only be used in a guild".into());
@@ -240,19 +242,57 @@ pub async fn add_channel(
     };
 
     let sink_id = gen_random(24);
-    sqlx::query!(
-        "INSERT INTO auditlogs__sinks (id, guild_id, type, sink, events, broken, created_by, last_updated_by) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)",
-        sink_id,
-        guild_id.to_string(),
-        "channel",
-        gc.id.to_string(),
-        events_split.as_deref(),
-        false,
-        ctx.author().id.to_string(),
-        ctx.author().id.to_string(),
-    )
-    .execute(&ctx.data().pool)
-    .await?;
+
+    ctx.defer().await?;
+
+    if use_webhook.unwrap_or(true) {
+        if !bot_perms.manage_webhooks() {
+            return Err("I do not have permission to manage webhooks in this channel".into());
+        }
+
+        let webhook = gc.create_webhook(
+            ctx,
+            serenity::all::CreateWebhook::new("AntiRaid Audit Logs")
+        ).await?;
+
+        let webhook_url = {
+            if let Some(token) = webhook.token {
+                format!("https://discord.com/api/webhooks/{}/{}", webhook.id, token.expose_secret())
+            } else if let Some(url) = webhook.url {
+                url.expose_secret().to_string()
+            } else {
+                webhook.url()?
+            }
+        };
+
+        sqlx::query!(
+            "INSERT INTO auditlogs__sinks (id, guild_id, type, sink, events, broken, created_by, last_updated_by) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)",
+            sink_id,
+            guild_id.to_string(),
+            "discord_webhook",
+            webhook_url,
+            events_split.as_deref(),
+            false,
+            ctx.author().id.to_string(),
+            ctx.author().id.to_string(),
+        )
+        .execute(&ctx.data().pool)
+        .await?;
+    } else {
+        sqlx::query!(
+            "INSERT INTO auditlogs__sinks (id, guild_id, type, sink, events, broken, created_by, last_updated_by) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)",
+            sink_id,
+            guild_id.to_string(),
+            "channel",
+            gc.id.to_string(),
+            events_split.as_deref(),
+            false,
+            ctx.author().id.to_string(),
+            ctx.author().id.to_string(),
+        )
+        .execute(&ctx.data().pool)
+        .await?;
+    }
 
     ctx.say(
         format!("Successfully added a new Discord webhook sink for audit logs with ID `{}`", sink_id)

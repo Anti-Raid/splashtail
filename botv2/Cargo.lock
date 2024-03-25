@@ -483,6 +483,7 @@ dependencies = [
  "poise",
  "rand",
  "reqwest",
+ "secrecy",
  "serde",
  "serde_cbor",
  "serde_json",

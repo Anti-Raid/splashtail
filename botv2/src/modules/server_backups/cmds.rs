@@ -316,6 +316,7 @@ pub async fn backups_list(ctx: Context<'_>) -> Result<(), Error> {
 
         let cr = poise::CreateReply::default()
             .embed(create_embed_for_task(&backup_tasks[index]))
+            .ephemeral(true)
             .components(vec![serenity::all::CreateActionRow::Buttons(vec![
                 serenity::all::CreateButton::new("backups_previous")
                     .label("Previous")

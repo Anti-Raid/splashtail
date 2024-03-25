@@ -4,7 +4,7 @@ use log::warn;
 use serenity::all::{
     ActionExecution, EmojiId,
     FullEvent, GuildChannel, GuildId,
-    StickerId,
+    StickerId, UserId,
 };
 use std::collections::HashMap;
 use strum::VariantNames;
@@ -16,7 +16,7 @@ pub const fn event_list() -> &'static [&'static str] {
     FullEvent::VARIANTS
 }
 
-/// Given an event and a module, return whether or not to filter said event
+/// Given an event and a module, return its guild id (for filtering etc.)
 pub fn get_event_guild_id(event: &FullEvent) -> Result<GuildId, Option<Error>> {
     let guild_id = match event {
         FullEvent::AutoModActionExecution { execution } => execution.guild_id,
@@ -181,6 +181,163 @@ pub fn get_event_guild_id(event: &FullEvent) -> Result<GuildId, Option<Error>> {
     };
 
     Ok(guild_id)
+}
+
+/// Given an event and a module, return its user id
+pub fn get_event_user_id(event: &FullEvent) -> Result<UserId, Option<Error>> {
+    let user_id = match event {
+        FullEvent::AutoModActionExecution { execution } => execution.user_id,
+        FullEvent::AutoModRuleCreate { rule, .. } => rule.creator_id,
+        FullEvent::AutoModRuleDelete { rule, .. } => rule.creator_id,
+        FullEvent::AutoModRuleUpdate { rule, .. } => rule.creator_id,
+        FullEvent::CacheReady { .. } => return Err(None), // We don't want this to be propogated anyways and it's not a guild event
+        FullEvent::CategoryCreate { .. } => return Err(None), // Doesn't have a known user just from event
+        FullEvent::CategoryDelete { .. } => return Err(None), // Doesn't have a known user just from event
+        FullEvent::ChannelCreate { .. } => return Err(None), // Doesn't have a known user just from event
+        FullEvent::ChannelDelete { .. } => return Err(None), // Doesn't have a known user just from event
+        FullEvent::ChannelPinsUpdate { .. } => return Err(None), // Doesn't have a known user just from event
+        FullEvent::ChannelUpdate { .. } => return Err(None), // Doesn't have a known user just from event
+        FullEvent::CommandPermissionsUpdate { .. } => return Err(None), // Doesn't have a known user just from event,
+        FullEvent::EntitlementCreate { entitlement, .. } => {
+            if let Some(user_id) = entitlement.user_id {
+                user_id.to_owned()
+            } else {
+                return Err(None);
+            }
+        }
+        FullEvent::EntitlementDelete { entitlement, .. } => {
+            if let Some(user_id) = entitlement.user_id {
+                user_id.to_owned()
+            } else {
+                return Err(None);
+            }
+        }
+        FullEvent::EntitlementUpdate { entitlement, .. } => {
+            if let Some(user_id) = entitlement.user_id {
+                user_id.to_owned()
+            } else {
+                return Err(None);
+            }
+        }
+        FullEvent::GuildAuditLogEntryCreate { entry, .. } => entry.user_id,
+        FullEvent::GuildBanAddition { banned_user, .. } => banned_user.id,
+        FullEvent::GuildBanRemoval { unbanned_user, .. } => unbanned_user.id,
+        FullEvent::GuildCreate { guild, .. } => guild.owner_id,
+        FullEvent::GuildDelete { .. } => return Err(None), // Doesn't have a known user just from event
+        FullEvent::GuildEmojisUpdate { .. } => return Err(None), // Doesn't have a known user just from event
+        FullEvent::GuildIntegrationsUpdate { .. } => return Err(None), // Doesn't have a known user just from event,
+        FullEvent::GuildMemberAddition { new_member, .. } => new_member.user.id,
+        FullEvent::GuildMemberRemoval { user, .. } => user.id,
+        FullEvent::GuildMemberUpdate { event, .. } => event.user.id,
+        FullEvent::GuildMembersChunk { .. } => return Err(None), // Doesn't have a known user just from event,
+        FullEvent::GuildRoleCreate { .. } => return Err(None), // Doesn't have a known user just from event
+        FullEvent::GuildRoleDelete { .. } => return Err(None), // Doesn't have a known user just from event,
+        FullEvent::GuildRoleUpdate { .. } => return Err(None), // Doesn't have a known user just from event
+        FullEvent::GuildScheduledEventCreate { event, .. } => {
+            if let Some(ref creator) = event.creator {
+                creator.id.to_owned()
+            } else {
+                return Err(None);
+            }
+        },
+        FullEvent::GuildScheduledEventDelete { event, .. } => {
+            if let Some(ref creator) = event.creator {
+                creator.id.to_owned()
+            } else {
+                return Err(None);
+            }
+        },
+        FullEvent::GuildScheduledEventUpdate { event, .. } => {
+            if let Some(ref creator) = event.creator {
+                creator.id.to_owned()
+            } else {
+                return Err(None);
+            }
+        },
+        FullEvent::GuildScheduledEventUserAdd { subscribed, .. } => subscribed.user_id,
+        FullEvent::GuildScheduledEventUserRemove { unsubscribed, .. } => unsubscribed.user_id,
+        FullEvent::GuildStickersUpdate { .. } => return Err(None), // Doesn't have a known user just from event,
+        FullEvent::GuildUpdate { .. } => return Err(None), // Doesn't have a known user just from event
+        FullEvent::IntegrationCreate { integration, .. } => {
+            if let Some(ref user) = integration.user {
+                user.id.to_owned()
+            } else {
+                return Err(None);
+            }
+        }
+        FullEvent::IntegrationDelete { .. } => return Err(None), // Doesn't have a known user just from event,
+        FullEvent::IntegrationUpdate { integration, .. } => {
+            if let Some(ref user) = integration.user {
+                user.id.to_owned()
+            } else {
+                return Err(None);
+            }
+        }
+        FullEvent::InteractionCreate { .. } => return Err(None), // We dont handle interactions create events in event handlers
+        FullEvent::InviteCreate { data, .. } => {
+            if let Some(ref inviter) = data.inviter {
+                inviter.id.to_owned()
+            } else {
+                return Err(None);
+            }
+        }
+        FullEvent::InviteDelete { .. } => return Err(None), // Doesn't have a known user just from event
+        FullEvent::Message { new_message, .. } => new_message.author.id,
+        FullEvent::MessageDelete { .. } => return Err(None), // Doesn't have a known user just from event
+        FullEvent::MessageDeleteBulk { .. } => return Err(None), // Doesn't have a known user just from event
+        FullEvent::MessageUpdate { event, .. } => {
+            if let Some(author) = &event.author {
+                author.id.to_owned()
+            } else {
+                return Err(None);
+            }
+        }
+        FullEvent::PresenceReplace { .. } => return Err(None), // We dont handle precenses
+        FullEvent::PresenceUpdate { .. } => return Err(None),  // We dont handle precenses
+        FullEvent::Ratelimit { data, .. } => {
+            // Warn i guess
+            warn!("Ratelimit event recieved: {:?}", data);
+            return Err(None);
+        }
+        FullEvent::ReactionAdd { .. } => return Err(None), // We dont handle reactions right now
+        FullEvent::ReactionRemove { .. } => return Err(None), // We dont handle reactions right now
+        FullEvent::ReactionRemoveAll { .. } => return Err(None), // We dont handle reactions right now
+        FullEvent::ReactionRemoveEmoji { .. } => return Err(None), // We dont handle reactions right now
+        FullEvent::Ready { .. } => return Err(None),               // We dont handle ready events
+        FullEvent::Resume { .. } => return Err(None),              // We dont handle resume events
+        FullEvent::ShardStageUpdate { .. } => return Err(None), // We dont handle shard stage updates
+        FullEvent::ShardsReady { .. } => return Err(None),      // We dont handle shards ready
+        FullEvent::StageInstanceCreate { .. } => return Err(None), // We dont handle stage instances right now
+        FullEvent::StageInstanceDelete { .. } => return Err(None), // We dont handle stage instances right now
+        FullEvent::StageInstanceUpdate { .. } => return Err(None), // We dont handle stage instances right now
+        FullEvent::ThreadCreate { thread, .. } => {
+            if let Some(opener) = thread.owner_id {
+                opener.to_owned()
+            } else {
+                return Err(None);
+            }
+        },
+        FullEvent::ThreadDelete { .. } => return Err(None), // Doesn't have a known user just from event,
+        FullEvent::ThreadListSync { .. } => return Err(None), // Doesn't have a known user just from event
+        FullEvent::ThreadMemberUpdate { thread_member, .. } => thread_member.user_id,
+        FullEvent::ThreadMembersUpdate { .. } => return Err(None), // Doesn't have a known user just from event
+        FullEvent::ThreadUpdate { new, .. } => {
+            if let Some(opener) = new.owner_id {
+                opener.to_owned()
+            } else {
+                return Err(None);
+            }
+        
+        },
+        FullEvent::TypingStart { .. } => return Err(None), // We dont handle typing start
+        FullEvent::UserUpdate { .. } => return Err(None),  // We dont handle user updates
+        FullEvent::VoiceChannelStatusUpdate { .. } => return Err(None), // We dont handle voice right now
+        FullEvent::VoiceServerUpdate { .. } => return Err(None), // We dont handle voice right now
+        FullEvent::VoiceStateUpdate { .. } => return Err(None),  // We dont handle voice right now
+        FullEvent::WebhookUpdate { .. } => return Err(None), // Doesn't have a known user just from event
+    };
+
+    Ok(user_id)
 }
 
 #[allow(dead_code)]

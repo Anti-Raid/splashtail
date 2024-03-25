@@ -361,6 +361,10 @@ pub async fn event_listener(
 
     // Keep adding fields until length becomes > 6000
     for (k, v) in expanded_event {
+        if v.value.is_empty() {
+            continue;
+        }
+
         let kc = k.split('_').map(|s| {
             let mut c = s.chars();
             match c.next() {
@@ -369,11 +373,16 @@ pub async fn event_listener(
             }
         }).collect::<Vec<String>>().join(" ");
 
-        let vc = {
+        let (vc, inline) = {
             let mut vcs = Vec::new();
+            let mut inline = false;
 
             for ft in v.value {
                 vcs.push(resolve_gwevent_field(&ft));
+
+                if !inline {
+                    inline = !matches!(ft, FieldType::Strings(_));        
+                } 
             }
 
             // Check for duplicates
@@ -390,7 +399,7 @@ pub async fn event_listener(
                 }
             }
 
-            vcs.join(" -> ")
+            (vcs.join(" -> "), inline)
         };
 
         if vc.trim().is_empty() {
@@ -403,7 +412,8 @@ pub async fn event_listener(
         }
 
         event_embed_len += field_len;
-        event_embed = event_embed.field(kc, vc, false);
+
+        event_embed = event_embed.field(kc, vc, inline);
     }
 
     let user_data = ctx.data::<Data>();
