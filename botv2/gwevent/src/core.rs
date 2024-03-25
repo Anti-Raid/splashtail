@@ -902,6 +902,8 @@ pub fn expand_event(event: &FullEvent) -> Option<IndexMap<String, Field>> {
         fields: &mut IndexMap<String, Field>,
         update: &serenity::model::event::MessageUpdateEvent,
     ) {
+        insert_field(fields, "message_update_event", "warning", "This message has not been cached by Anti-Raid!".to_string());
+
         insert_field(fields, "message_update_event", "id", update.id);
         insert_field(fields, "message_update_event", "channel_id", update.channel_id);
 
@@ -913,8 +915,14 @@ pub fn expand_event(event: &FullEvent) -> Option<IndexMap<String, Field>> {
         insert_optional_field(fields, "message_update_event", "timestamp", update.timestamp);
         insert_optional_field(fields, "message_update_event", "edited_timestamp", update.edited_timestamp);
         insert_optional_field(fields, "message_update_event", "tts", update.tts);
-    
-        // TODO: finish the rest
+        insert_optional_field(fields, "message_update_event", "mention_everyone", update.mention_everyone);
+        insert_optional_field(fields, "message_update_event", "mentions", update.mentions.clone());
+        insert_optional_field(fields, "message_update_event", "mention_roles", update.mention_roles.clone());
+        //TODO: insert_optional_field(fields, "message_update_event", "mention_channels", update.mention_channels.clone());
+        insert_optional_field(fields, "message_update_event", "attachments", update.attachments.clone());
+        insert_optional_field(fields, "message_update_event", "embeds", update.embeds.clone());
+        //TODO: insert_optional_field(fields, "message_update_event", "reactions", update.reactions.clone());
+        insert_optional_field(fields, "message_update_event", "pinned", update.pinned);
     }
 
     match event {

@@ -535,6 +535,8 @@ async fn main() {
         .await
         .expect("Error creating client");
 
+    client.cache.set_max_messages(10000);
+
     let shard_range = std::ops::Range {
         start: shards[0],
         end: *shards.last().unwrap(),

@@ -376,8 +376,26 @@ pub async fn event_listener(
                 vcs.push(resolve_gwevent_field(&ft));
             }
 
+            // Check for duplicates
+            // If previous value is the same as the current value, skip
+            // If empty, also skip
+            if vcs.len() > 1 {
+                let mut i = 0;
+                while i < vcs.len() - 1 {
+                    if vcs[i] == vcs[i + 1] || vcs[i].is_empty() {
+                        vcs.remove(i);
+                    } else {
+                        i += 1;
+                    }
+                }
+            }
+
             vcs.join(" -> ")
         };
+
+        if vc.trim().is_empty() {
+            continue;
+        }
 
         let field_len = kc.len() + vc.len();
         if event_embed_len + field_len > 6000 {

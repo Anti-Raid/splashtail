@@ -6,7 +6,7 @@ use serenity::all::{
 use serenity::model::guild::automod::Action;
 use serenity::model::timestamp::Timestamp;
 use serenity::nonmax::{NonMaxU16, NonMaxU8};
-use serenity::small_fixed_array::FixedString;
+use serenity::small_fixed_array::{FixedArray, FixedString};
 
 pub enum FieldType {
     /// A string
@@ -132,6 +132,11 @@ macro_rules! from_field_type_multiple {
             impl From<Vec<$t>> for FieldType {
                 fn from(s: Vec<$t>) -> Self {
                     Self::$variant(s)
+                }
+            }
+            impl From<FixedArray<$t>> for FieldType {
+                fn from(s: FixedArray<$t>) -> Self {
+                    Self::$variant(s.into_vec())
                 }
             }
         )*
