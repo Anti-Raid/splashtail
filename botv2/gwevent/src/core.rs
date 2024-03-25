@@ -285,10 +285,13 @@ pub fn get_event_user_id(event: &FullEvent) -> Result<UserId, Option<Error>> {
         FullEvent::Message { new_message, .. } => new_message.author.id,
         FullEvent::MessageDelete { .. } => return Err(None), // Doesn't have a known user just from event
         FullEvent::MessageDeleteBulk { .. } => return Err(None), // Doesn't have a known user just from event
-        FullEvent::MessageUpdate { event, .. } => {
-            if let Some(author) = &event.author {
+        FullEvent::MessageUpdate { event, new, .. } => {
+            if let Some(new) = new {
+                new.author.id.to_owned()
+            } else if let Some(author) = &event.author {
                 author.id.to_owned()
             } else {
+                warn!("No author found in message update event: {:?}", event);
                 return Err(None);
             }
         }
