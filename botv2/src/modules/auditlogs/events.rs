@@ -341,6 +341,18 @@ pub async fn event_listener(
         return Ok(());
     }
 
+    match gwevent::core::get_event_user_id(event) {
+        Ok(user_id) => {
+            if user_id == ctx.cache.current_user().id {
+                return Ok(());
+            }
+        },
+        Err(Some(e)) => {
+            return Err(e);
+        },
+        Err(None) => {},
+    }
+
     let Some(expanded_event) = gwevent::core::expand_event(event) else {
         // Event cannot be expanded, ignore
         return Ok(());
@@ -355,6 +367,15 @@ pub async fn event_listener(
         }
     }).collect::<Vec<String>>().join(" ");
 
+    dispatch_audit_log(ctx, event_titlename, expanded_event, ectx.guild_id).await
+}
+
+pub async fn dispatch_audit_log(
+    ctx: &serenity::client::Context,
+    event_titlename: String,
+    expanded_event: indexmap::IndexMap<String, gwevent::core::Field>,
+    guild_id: serenity::model::id::GuildId,
+) -> Result<(), Error> {
     let mut event_embed_len = event_titlename.len();
     let mut event_embed = serenity::all::CreateEmbed::new()
     .title(&event_titlename);
@@ -418,7 +439,7 @@ pub async fn event_listener(
 
     let user_data = ctx.data::<Data>();
 
-    let sinks = sqlx::query!("SELECT id, type AS typ, sink, events FROM auditlogs__sinks WHERE guild_id = $1 AND broken = false", ectx.guild_id.to_string())
+    let sinks = sqlx::query!("SELECT id, type AS typ, sink, events FROM auditlogs__sinks WHERE guild_id = $1 AND broken = false", guild_id.to_string())
         .fetch_all(&user_data.pool)
         .await?;
 
