@@ -341,6 +341,7 @@ pub async fn event_listener(
         return Ok(());
     }
 
+    // (hopefully temporary) work around to reduce spam
     match gwevent::core::get_event_user_id(event) {
         Ok(user_id) => {
             if user_id == ctx.cache.current_user().id {
