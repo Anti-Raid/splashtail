@@ -54,7 +54,7 @@ pub fn modules() -> Vec<crate::silverpelt::Module> {
     let mut module_use_list = Vec::new();
 
     for module in &module_list {
-        module_use_list.push(format!("mod {};", module));
+        module_use_list.push(format!("pub mod {};", module));
     }
 
     let module_use_list = module_use_list.join("\n");

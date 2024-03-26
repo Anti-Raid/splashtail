@@ -105,6 +105,9 @@ pub enum FieldType {
     /// ThreadMembers
     ThreadMembers(Vec<serenity::model::guild::ThreadMember>),
 
+    /// Json Value
+    JsonValue(serde_json::Value),
+
     /// None
     None,
 }
@@ -220,6 +223,7 @@ from_field_type! {
     Timestamp => Timestamp,
     bool => Bool,
     serenity::model::guild::automod::Trigger => AutomodTrigger,
+    serde_json::Value => JsonValue
 }
 
 from_field_type_tostring! {

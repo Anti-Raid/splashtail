@@ -1,4 +1,4 @@
-mod events;
+pub mod events; // Events is a public interface
 mod cmds;
 
 use indexmap::indexmap;

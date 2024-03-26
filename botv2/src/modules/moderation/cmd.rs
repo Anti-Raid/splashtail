@@ -166,8 +166,6 @@ pub async fn prune_user(
     .execute(&mut *tx)
     .await?;
 
-    tx.commit().await?;
-
     // If we're pruning messages, do that
     let prune_opts = create_message_prune_serde(
         user.id,
@@ -190,7 +188,7 @@ pub async fn prune_user(
             shard_id(guild_id, MEWLD_ARGS.shard_count),
             AnimusMessage::Jobserver(JobserverAnimusMessage::SpawnTask {
                 name: "message_prune".to_string(),
-                data: prune_opts,
+                data: prune_opts.clone(),
                 create: true,
                 execute: true,
                 task_id: None,
@@ -208,6 +206,29 @@ pub async fn prune_user(
         }
         _ => return Err("Invalid response from jobserver".into()),
     };
+
+    tx.commit().await?;
+
+    // Send audit logs if Audit Logs module is enabled
+    if crate::silverpelt::module_config::is_module_enabled(&ctx.data().pool, guild_id, "auditlogs").await? {
+        let imap = indexmap::indexmap!{
+            "log".to_string() => gwevent::core::Field {
+                value: vec![to_log_format(&author.user, &user, &reason).into()],
+                category: "log".to_string(),
+            },
+            "prune_opts".to_string() => gwevent::core::Field {
+                value: vec![prune_opts.into()],
+                category: "log".to_string(),
+            },
+        };
+        crate::modules::auditlogs::events::dispatch_audit_log(
+            ctx.serenity_context(),
+            "(Anti-Raid) Prune Messages Begin",
+            imap,
+            guild_id
+        )
+        .await?;
+    }
 
     embed = CreateEmbed::new()
         .title("Pruning User Messages...")

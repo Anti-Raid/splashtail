@@ -24,115 +24,11 @@ pub fn can_audit_log_event(event: &FullEvent) -> bool {
     true
 }
 
-/*
-
-pub enum FieldType {
-    /// A string
-    Strings(Vec<String>),
-
-    /// A boolean
-    Bool(bool),
-
-    /// A number
-    Number(u64),
-
-    /// Permission
-    Permissions(serenity::all::Permissions),
-
-    /// A user id
-    UserIds(Vec<UserId>),
-
-    /// A channel id
-    Channels(Vec<ChannelId>),
-
-    /// NSFW level
-    NsfwLevels(Vec<serenity::model::guild::NsfwLevel>),
-
-    /// A role id
-    Roles(Vec<RoleId>),
-
-    /// A message id
-    Messages(Vec<MessageId>),
-
-    /// A guild id
-    Guild(GuildId),
-
-    /// Command Id
-    Command(CommandId),
-
-    /// Entitlement ID
-    Entitlement(EntitlementId),
-
-    /// Application Id
-    Application(ApplicationId),
-
-    /// Audit Log Id
-    AuditLogId(AuditLogEntryId),
-
-    /// Scheduled Event Id
-    ScheduledEventId(ScheduledEventId),
-
-    /// Integration Id
-    IntegrationId(IntegrationId),
-
-    /// An emoji id
-    Emojis(Vec<EmojiId>),
-
-    /// A generic id
-    GenericIds(Vec<GenericId>),
-
-    /// An automod action
-    AutomodActions(Vec<serenity::model::guild::automod::Action>),
-
-    // Audit log Actions
-    AuditLogActions(Vec<serenity::model::guild::audit_log::Action>),
-
-    /// An automod rule id
-    AutomodRuleIds(Vec<AutomodRuleId>),
-
-    /// Trigger
-    AutomodTrigger(serenity::model::guild::automod::Trigger),
-
-    /// Timestamp
-    Timestamp(serenity::model::timestamp::Timestamp),
-
-    /// Changes
-    AuditLogActionsChanges(Vec<serenity::model::guild::audit_log::Change>),
-
-    /// Options
-    AuditLogOptions(Vec<serenity::model::guild::audit_log::Options>),
-
-    /// Emoji Map
-    EmojiMap(Vec<serenity::model::guild::Emoji>),
-
-    /// Sticker Map
-    StickerMap(Vec<serenity::model::sticker::Sticker>),
-
-    /// Users
-    Users(Vec<serenity::model::user::User>),
-
-    /// Embeds
-    Embeds(Vec<serenity::model::channel::Embed>),
-
-    /// Attachments
-    Attachments(Vec<serenity::model::channel::Attachment>),
-
-    /// Components
-    Components(Vec<serenity::model::application::ActionRow>),
-
-    /// ThreadMembers
-    ThreadMembers(Vec<serenity::model::guild::ThreadMember>),
-
-    /// None
-    None,
-}
-*/
-
-pub fn resolve_gwevent_field(field: &FieldType) -> String {
+pub fn resolve_gwevent_field(field: &FieldType) -> Result<String, crate::Error> {
     match field {
-        FieldType::Strings(s) => s.join(", "),
-        FieldType::Bool(b) => if *b { "Yes" } else { "No" }.into(),
-        FieldType::Number(n) => n.to_string(),
+        FieldType::Strings(s) => Ok(s.join(", ")),
+        FieldType::Bool(b) => Ok(if *b { "Yes" } else { "No" }.into()),
+        FieldType::Number(n) => Ok(n.to_string()),
         FieldType::Permissions(p) => {
             let mut perms = Vec::new();
 
@@ -140,7 +36,7 @@ pub fn resolve_gwevent_field(field: &FieldType) -> String {
                 perms.push(format!("{} ({})", ip, ip.bits()));
             }
 
-            perms.join(", ")
+            Ok(perms.join(", "))
         },
         FieldType::UserIds(u) => {
             let mut users = Vec::new();
@@ -149,7 +45,7 @@ pub fn resolve_gwevent_field(field: &FieldType) -> String {
                 users.push(iu.mention().to_string());
             }
 
-            users.join(", ")
+            Ok(users.join(", "))
         },
         FieldType::Channels(c) => {
             let mut channels = Vec::new();
@@ -158,7 +54,7 @@ pub fn resolve_gwevent_field(field: &FieldType) -> String {
                 channels.push(ic.mention().to_string());
             }
 
-            channels.join(", ")
+            Ok(channels.join(", "))
         },
         FieldType::NsfwLevels(n) => {
             let mut nsfw_levels = Vec::new();
@@ -167,7 +63,7 @@ pub fn resolve_gwevent_field(field: &FieldType) -> String {
                 nsfw_levels.push(format!("{:#?}", inl));
             }
 
-            nsfw_levels.join(", ")
+            Ok(nsfw_levels.join(", "))
         },
         FieldType::Roles(r) => {
             let mut roles = Vec::new();
@@ -176,7 +72,7 @@ pub fn resolve_gwevent_field(field: &FieldType) -> String {
                 roles.push(ir.mention().to_string());
             }
 
-            roles.join(", ")
+            Ok(roles.join(", "))
         },
         FieldType::Messages(m) => {
             let mut messages = Vec::new();
@@ -185,15 +81,15 @@ pub fn resolve_gwevent_field(field: &FieldType) -> String {
                 messages.push(im.to_string()); // TODO: improve this if possible
             }
 
-            messages.join(", ")
+            Ok(messages.join(", "))
         },
-        FieldType::Guild(g) => g.to_string(),
-        FieldType::Command(c) => c.to_string(),
-        FieldType::Entitlement(e) => e.to_string(),
-        FieldType::Application(a) => a.to_string(),
-        FieldType::AuditLogId(a) => a.to_string(),
-        FieldType::ScheduledEventId(s) => s.to_string(),
-        FieldType::IntegrationId(i) => i.to_string(),
+        FieldType::Guild(g) => Ok(g.to_string()),
+        FieldType::Command(c) => Ok(c.to_string()),
+        FieldType::Entitlement(e) => Ok(e.to_string()),
+        FieldType::Application(a) => Ok(a.to_string()),
+        FieldType::AuditLogId(a) => Ok(a.to_string()),
+        FieldType::ScheduledEventId(s) => Ok(s.to_string()),
+        FieldType::IntegrationId(i) => Ok(i.to_string()),
         FieldType::Emojis(e) => {
             let mut emojis = Vec::new();
 
@@ -201,7 +97,7 @@ pub fn resolve_gwevent_field(field: &FieldType) -> String {
                 emojis.push(ie.to_string());
             }
 
-            emojis.join(", ")
+            Ok(emojis.join(", "))
         },
         FieldType::GenericIds(g) => {
             let mut generic_ids = Vec::new();
@@ -210,7 +106,7 @@ pub fn resolve_gwevent_field(field: &FieldType) -> String {
                 generic_ids.push(ig.to_string());
             }
 
-            generic_ids.join(", ")
+            Ok(generic_ids.join(", "))
         },
         FieldType::AutomodActions(a) => {
             let mut automod_actions = Vec::new();
@@ -219,7 +115,7 @@ pub fn resolve_gwevent_field(field: &FieldType) -> String {
                 automod_actions.push(format!("{:#?}", ia));
             }
 
-            automod_actions.join(", ")
+            Ok(automod_actions.join(", "))
         },
         FieldType::AuditLogActions(a) => {
             let mut audit_log_actions = Vec::new();
@@ -228,7 +124,7 @@ pub fn resolve_gwevent_field(field: &FieldType) -> String {
                 audit_log_actions.push(format!("{:#?}", ia));
             }
 
-            audit_log_actions.join(", ")
+            Ok(audit_log_actions.join(", "))
         },
         FieldType::AutomodRuleIds(a) => {
             let mut automod_rule_ids = Vec::new();
@@ -237,10 +133,10 @@ pub fn resolve_gwevent_field(field: &FieldType) -> String {
                 automod_rule_ids.push(ia.to_string());
             }
 
-            automod_rule_ids.join(", ")
+            Ok(automod_rule_ids.join(", "))
         },
-        FieldType::AutomodTrigger(a) => format!("{:#?}", a),
-        FieldType::Timestamp(t) => t.to_string(),
+        FieldType::AutomodTrigger(a) => Ok(format!("{:#?}", a)),
+        FieldType::Timestamp(t) => Ok(t.to_string()),
         FieldType::AuditLogActionsChanges(a) => {
             let mut audit_log_actions_changes = Vec::new();
 
@@ -248,7 +144,7 @@ pub fn resolve_gwevent_field(field: &FieldType) -> String {
                 audit_log_actions_changes.push(format!("{:#?}", ia));
             }
 
-            audit_log_actions_changes.join(", ")
+            Ok(audit_log_actions_changes.join(", "))
         },
         FieldType::AuditLogOptions(a) => {
             let mut audit_log_options = Vec::new();
@@ -257,7 +153,7 @@ pub fn resolve_gwevent_field(field: &FieldType) -> String {
                 audit_log_options.push(format!("{:#?}", ia));
             }
 
-            audit_log_options.join(", ")
+            Ok(audit_log_options.join(", "))
         },
         FieldType::EmojiMap(e) => {
             let mut emoji_map = Vec::new();
@@ -266,7 +162,7 @@ pub fn resolve_gwevent_field(field: &FieldType) -> String {
                 emoji_map.push(format!("{:#?}", ie)); // TODO: better formatting for emojis
             }
 
-            emoji_map.join(", ")
+            Ok(emoji_map.join(", "))
         },
         FieldType::StickerMap(s) => {
             let mut sticker_map = Vec::new();
@@ -275,7 +171,7 @@ pub fn resolve_gwevent_field(field: &FieldType) -> String {
                 sticker_map.push(format!("{:#?}", is)); // TODO: better formatting for stickers
             }
 
-            sticker_map.join(", ")
+            Ok(sticker_map.join(", "))
         },
         FieldType::Users(u) => {
             let mut users = Vec::new();
@@ -284,13 +180,13 @@ pub fn resolve_gwevent_field(field: &FieldType) -> String {
                 users.push(iu.mention().to_string());
             }
 
-            users.join(", ")
+            Ok(users.join(", "))
         },
         FieldType::Embeds(e) => {
             let mut embeds = Vec::new();
 
             for ie in e.iter() {
-                embeds.push(format!("<embed, title={:#?}, description={:#?}>", ie.title, ie.description.as_ref().map(|x| {
+                embeds.push(format!("``<embed, title={:#?}, description={:#?}>``", ie.title, ie.description.as_ref().map(|x| {
                     if x.len() > 100 {
                         format!("{}...", &x[..100])
                     } else {
@@ -299,7 +195,7 @@ pub fn resolve_gwevent_field(field: &FieldType) -> String {
                 }))); // TODO: better formatting for embeds
             }
 
-            embeds.join(", ")
+            Ok(embeds.join(", "))
         },
         FieldType::Attachments(a) => {
             let mut attachments = Vec::new();
@@ -308,7 +204,7 @@ pub fn resolve_gwevent_field(field: &FieldType) -> String {
                 attachments.push(ia.url.clone()); // TODO: better formatting for attachments
             }
 
-            attachments.join(", ")
+            Ok(attachments.join(", "))
         },
         FieldType::Components(c) => {
             let mut components = Vec::new();
@@ -317,7 +213,7 @@ pub fn resolve_gwevent_field(field: &FieldType) -> String {
                 components.push(format!("{:#?}", ic)); // TODO: better formatting for components
             }
 
-            components.join(", ")
+            Ok(components.join(", "))
         },
         FieldType::ThreadMembers(t) => {
             let mut thread_members = Vec::new();
@@ -326,9 +222,17 @@ pub fn resolve_gwevent_field(field: &FieldType) -> String {
                 thread_members.push(it.user_id.mention().to_string()); // TODO: better formatting for thread members
             }
 
-            thread_members.join(", ")
+            Ok(thread_members.join(", "))
         },
-        FieldType::None => "None".into(),
+        FieldType::JsonValue(v) => {
+            match serde_json::to_string(v) {
+                Ok(s) => Ok(format!("``{}``", s)),
+                Err(e) => {
+                    Err(e.into())                  
+                }
+            }
+        },
+        FieldType::None => Ok("None".into()),
     }
 }
 
@@ -368,18 +272,18 @@ pub async fn event_listener(
         }
     }).collect::<Vec<String>>().join(" ");
 
-    dispatch_audit_log(ctx, event_titlename, expanded_event, ectx.guild_id).await
+    dispatch_audit_log(ctx, &event_titlename, expanded_event, ectx.guild_id).await
 }
 
 pub async fn dispatch_audit_log(
     ctx: &serenity::client::Context,
-    event_titlename: String,
+    event_titlename: &str,
     expanded_event: indexmap::IndexMap<String, gwevent::core::Field>,
     guild_id: serenity::model::id::GuildId,
 ) -> Result<(), Error> {
     let mut event_embed_len = event_titlename.len();
     let mut event_embed = serenity::all::CreateEmbed::new()
-    .title(&event_titlename);
+    .title(event_titlename);
 
     // Keep adding fields until length becomes > 6000
     for (k, v) in expanded_event {
@@ -400,7 +304,7 @@ pub async fn dispatch_audit_log(
             let mut inline = false;
 
             for ft in v.value {
-                vcs.push(resolve_gwevent_field(&ft));
+                vcs.push(resolve_gwevent_field(&ft)?);
 
                 if !inline {
                     inline = !matches!(ft, FieldType::Strings(_));        
