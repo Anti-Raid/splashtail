@@ -871,7 +871,7 @@ func (t *ServerBackupRestoreTask) Exec(
 					// Get first channel
 					var fChan string
 
-					for fChan = range prevState.RestoredChannelsMap {
+					for _, fChan = range prevState.RestoredChannelsMap {
 						break
 					}
 
