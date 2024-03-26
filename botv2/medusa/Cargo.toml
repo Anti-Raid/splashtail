@@ -1,0 +1,25 @@
+[package]
+name = "medusa"
+version = "0.1.0"
+edition = "2021"
+
+[profile.release]
+strip = true  # Automatically strip symbols from the binary.
+panic = "abort"  # Abort on panic. This is what we want for a bot.
+
+[profile.dev]
+opt-level = 1 # Optimize for faster compilation times.
+
+[dependencies]
+moka = { version = "0.12.3", features = ["future", "futures-util"] }
+splashcore_rs = { path = "../../splashcore_rs" }
+
+[dependencies.serenity]
+git = "https://github.com/serenity-rs/serenity"
+branch = "next"
+features = ["model", "http", "cache", "rustls_backend", "unstable"]
+
+[dependencies.tokio]
+version = "1"
+default-features = true
+features = ["full", "macros", "rt-multi-thread"]

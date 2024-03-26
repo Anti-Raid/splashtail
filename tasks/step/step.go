@@ -132,7 +132,14 @@ func (s *Stepper[T]) Exec(
 					} else {
 						prog.State = "completed"
 					}
+				} else {
+					// Ensure the next step is valid
+					if _, ok := s.Step(prog.State); !ok {
+						return nil, fmt.Errorf("invalid step state")
+					}
 				}
+
+				curProg.State = prog.State // Update state
 
 				if prog.Data != nil {
 					// Prog is additive, add in all the elements from prog to curProg

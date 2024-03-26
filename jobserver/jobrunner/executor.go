@@ -95,10 +95,7 @@ type TaskProgress struct {
 
 func (ts TaskProgress) GetProgress() (*taskstate.Progress, error) {
 	if ts.CurrentTaskProgress == nil {
-		return &taskstate.Progress{
-			State: "",
-			Data:  map[string]any{},
-		}, nil
+		return GetPersistedTaskState(&ts)
 	}
 
 	return ts.CurrentTaskProgress, nil

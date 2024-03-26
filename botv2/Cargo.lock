@@ -477,6 +477,7 @@ dependencies = [
  "jobserver 0.0.1",
  "kittycat",
  "log",
+ "medusa",
  "moka",
  "object_store 0.9.1",
  "once_cell",
@@ -2026,6 +2027,16 @@ checksum = "d89e7ee0cfbedfc4da3340218492196241d89eefb6dab27de5df917a6d2e78cf"
 dependencies = [
  "cfg-if",
  "digest",
+]
+
+[[package]]
+name = "medusa"
+version = "0.1.0"
+dependencies = [
+ "moka",
+ "serenity",
+ "splashcore_rs",
+ "tokio",
 ]
 
 [[package]]

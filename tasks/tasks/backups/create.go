@@ -109,7 +109,7 @@ func backupChannelMessages(state taskstate.TaskState, constraints *BackupConstra
 
 		limit := min(100, allocation-len(finalMsgs))
 
-		messages, err := discord.ChannelMessages(channelID, limit, "", currentId, "", discordgo.WithContext(ctx))
+		messages, err := discord.ChannelMessages(channelID, limit, currentId, "", "", discordgo.WithContext(ctx))
 
 		if err != nil {
 			return nil, fmt.Errorf("error fetching messages: %w", err)

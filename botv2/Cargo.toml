@@ -42,6 +42,7 @@ splashcore_rs = { path = "../splashcore_rs" }
 gwevent = { path = "./gwevent" }
 bothelpers = { path = "./bothelpers" }
 jobserver = { path = "./jobserver" }
+medusa = { path = "./medusa" }
 
 [dependencies.tokio]
 version = "1"

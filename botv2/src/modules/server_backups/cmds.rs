@@ -243,7 +243,7 @@ pub async fn backups_create(
                 task.clone(),
             ))
         },
-        jobserver::taskpoll::PollTaskOptions { interval: Some(1) },
+        jobserver::taskpoll::PollTaskOptions::default(),
     )
     .await?;
 
@@ -799,7 +799,7 @@ pub async fn backups_restore(
                 task.clone(),
             ))
         },
-        jobserver::taskpoll::PollTaskOptions { interval: Some(1) },
+        jobserver::taskpoll::PollTaskOptions::default(),
     )
     .await?;
 

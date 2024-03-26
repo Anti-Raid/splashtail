@@ -317,6 +317,10 @@ func (t *ServerBackupRestoreTask) Exec(
 		return nil, fmt.Errorf("bot does not have 'Manage Roles' permissions")
 	}
 
+	if !utils.CheckPermission(basePerms, discordgo.PermissionManageWebhooks) {
+		return nil, fmt.Errorf("bot does not have 'Manage Webhooks' permissions")
+	}
+
 	// Get highest role
 	var tgtBotGuildHighestRole *discordgo.Role
 
@@ -842,30 +846,90 @@ func (t *ServerBackupRestoreTask) Exec(
 			},
 		},
 		step.Step[ServerBackupRestoreTask]{
+			State: "create_webhook_if_needed",
+			Exec: func(t *ServerBackupRestoreTask, l *zap.Logger, tcr *types.TaskCreateResponse, state taskstate.TaskState, progstate taskstate.TaskProgressState, progress *taskstate.Progress) (*types.TaskOutput, *taskstate.Progress, error) {
+				if bo.BackupMessages {
+					l.Info("Waiting 5 seconds to avoid API issues")
+
+					time.Sleep(5 * time.Second)
+
+					var prevState struct {
+						RestoredChannelsMap map[string]string `mapstructure:"restoredChannelsMap"`
+					}
+
+					err := mapstructure.Decode(progress.Data, &prevState)
+
+					if err != nil {
+						return nil, nil, fmt.Errorf("failed to decode progress data: %w", err)
+					}
+
+					// Get first restored channel
+					if len(prevState.RestoredChannelsMap) == 0 {
+						return nil, nil, fmt.Errorf("no restored channels")
+					}
+
+					// Get first channel
+					var fChan string
+
+					for fChan = range prevState.RestoredChannelsMap {
+						break
+					}
+
+					// Create webhook for sending messages to any channel
+					webhook, err := discord.WebhookCreate(fChan, "Anti-Raid Message Restore", "", discordgo.WithContext(ctx))
+
+					if err != nil {
+						return nil, nil, fmt.Errorf("failed to create message send webhook: %w", err)
+					}
+
+					return nil, &taskstate.Progress{
+						Data: map[string]any{
+							"webhook_id":    webhook.ID,
+							"webhook_token": webhook.Token,
+						},
+					}, nil
+				}
+
+				return nil, nil, nil
+			},
+		},
+		step.Step[ServerBackupRestoreTask]{
 			State: "restore_messages",
 			Exec: func(t *ServerBackupRestoreTask, l *zap.Logger, tcr *types.TaskCreateResponse, state taskstate.TaskState, progstate taskstate.TaskProgressState, progress *taskstate.Progress) (*types.TaskOutput, *taskstate.Progress, error) {
-				var prevState struct {
-					RestoredChannelsMap map[string]string `mapstructure:"restoredChannelsMap"`
-				}
-
-				err := mapstructure.Decode(progress.Data, &prevState)
-
-				if err != nil {
-					return nil, nil, fmt.Errorf("failed to decode progress data: %w", err)
-				}
-
-				restoredChannelsMap := prevState.RestoredChannelsMap
-
-				var currentChannelMap = make(map[string]*discordgo.Channel) // Map of current channel id to channel object
-				for _, channel := range tgtGuild.Channels {
-					currentChannelMap[channel.ID] = channel
-				}
-
-				l.Info("Waiting 5 seconds to avoid API issues")
-
-				time.Sleep(5 * time.Second)
-
 				if bo.BackupMessages {
+					l.Info("Waiting 5 seconds to avoid API issues")
+
+					var prevState struct {
+						RestoredChannelsMap map[string]string `mapstructure:"restoredChannelsMap"`
+						WebhookID           string            `mapstructure:"webhook_id"`
+						WebhookToken        string            `mapstructure:"webhook_token"`
+					}
+
+					err := mapstructure.Decode(progress.Data, &prevState)
+
+					if err != nil {
+						return nil, nil, fmt.Errorf("failed to decode progress data: %w", err)
+					}
+
+					if prevState.WebhookID != "" {
+						defer func() {
+							_, err := discord.WebhookDeleteWithToken(prevState.WebhookID, prevState.WebhookToken, discordgo.WithContext(ctx))
+
+							if err != nil {
+								l.Error("Failed to delete webhook", zap.Error(err))
+							}
+						}()
+					} else {
+						return nil, nil, fmt.Errorf("webhook is nil")
+					}
+
+					restoredChannelsMap := prevState.RestoredChannelsMap
+
+					var currentChannelMap = make(map[string]*discordgo.Channel) // Map of current channel id to channel object
+					for _, channel := range tgtGuild.Channels {
+						currentChannelMap[channel.ID] = channel
+					}
+
 					for backedUpChannelId, restoredChannelId := range restoredChannelsMap {
 						if _, ok := sections["messages/"+backedUpChannelId]; !ok {
 							continue
@@ -874,7 +938,12 @@ func (t *ServerBackupRestoreTask) Exec(
 						l.Info("Processing backed up channel messages", zap.String("backed_up_channel_id", backedUpChannelId), zap.String("restored_channel_id", restoredChannelId))
 
 						perms := utils.MemberChannelPerms(basePerms, tgtGuild, m, currentChannelMap[restoredChannelId])
-						//canManageWebhooks := perms&discordgo.PermissionManageWebhooks == discordgo.PermissionManageWebhooks
+						canManageWebhooks := perms&discordgo.PermissionManageWebhooks == discordgo.PermissionManageWebhooks
+
+						if !canManageWebhooks {
+							l.Error("Bot does not have 'Manage Webhooks' permissions in this channel, ignoring it...", zap.String("channel_id", restoredChannelId))
+							continue
+						}
 
 						// Fetch section
 						bmPtr, err := readMsgpackSection[[]*BackupMessage](f, "messages/"+backedUpChannelId)
@@ -905,117 +974,87 @@ func (t *ServerBackupRestoreTask) Exec(
 							return dtB.Compare(dtA)
 						})
 
-						// First batch messages to avoid spam
-						var messages = make([]*RestoreMessage, 0)
-						var msgIndex int
-						var contentLength int64
-						var currentMsgAuthor string
+						// Modify the webhook to this channel
+						_, err = discord.WebhookEdit(prevState.WebhookID, "Anti-Raid Message Restore", "", restoredChannelId, discordgo.WithContext(ctx))
 
-						// Grow messages if msgIndex > len(messages)
-						growMsgs := func(author *discordgo.User) {
-							for {
-								if len(messages) > msgIndex {
-									break
-								}
-
-								messages = append(messages, &RestoreMessage{
-									MessageSend: &discordgo.MessageSend{},
-									Author:      author,
-								})
+						if err != nil {
+							if t.Options.IgnoreRestoreErrors {
+								l.Warn("Failed to edit webhook", zap.Error(err))
+								continue
 							}
+
+							return nil, nil, fmt.Errorf("failed to edit webhook: %w", err)
 						}
 
+						// Now send the messages
 						for i := range bm {
-							if bm[i].Message.Author.ID != currentMsgAuthor {
-								currentMsgAuthor = bm[i].Message.Author.ID
-								msgIndex++
+							var rm = discordgo.WebhookParams{
+								Content:         bm[i].Message.Content,
+								Username:        bm[i].Message.Author.Username,
+								AvatarURL:       bm[i].Message.Author.AvatarURL(""),
+								Embeds:          bm[i].Message.Embeds,
+								TTS:             false, // Set later on
+								Components:      bm[i].Message.Components,
+								AllowedMentions: &discordgo.MessageAllowedMentions{},
 							}
 
-							if len(bm[i].Message.Content) > 1900 {
+							if len(rm.Content) > 2000 {
 								// Upload as file
-								content := bm[i].Message.Content
+								content := rm.Content
 
-								bm[i].Message.Content = ""
+								rm.Content = ""
 
-								growMsgs(bm[i].Message.Author)
-
-								messages[msgIndex].SmallFiles = append(messages[msgIndex].SmallFiles, &discordgo.File{
+								rm.Files = append(rm.Files, &discordgo.File{
 									Name:        "context.txt",
 									ContentType: "text/plain",
 									Reader:      strings.NewReader(content),
 								})
 							}
 
-							if contentLength+int64(len(bm[i].Message.Content)) > 1900 {
-								contentLength = 0
-								msgIndex++
+							if bm[i].Message.TTS && utils.CheckPermission(perms, discordgo.PermissionSendTTSMessages) {
+								rm.TTS = true
 							}
 
-							// Grow messages if msgIndex > len(messages)
-							growMsgs(bm[i].Message.Author)
+							// Add in the other attachments now. Note that only small attachments are supported for now
+							attachmentByteLength := 0
+							for _, attachment := range bm[i].AttachmentMetadata {
+								if attachmentByteLength < t.Constraints.Restore.TotalMaxAttachmentFileSize {
+									data, err := f.Get("attachments/" + attachment.ID)
 
-							l.Debug("Processing backed up message", zap.Int("index", i), zap.String("message_id", bm[i].Message.ID), zap.String("author_id", bm[i].Message.Author.ID))
-
-							if len(bm[i].Message.Embeds)+len(messages[msgIndex].MessageSend.Embeds) > 10 {
-								// Make the current message only have 10 embeds, then move to the next message and so on
-								embeds := bm[i].Message.Embeds
-
-								embedsPaged := [][]*discordgo.MessageEmbed{}
-
-								for len(embeds) > 10 {
-									embedsPaged = append(embedsPaged, embeds[:10])
-									embeds = embeds[10:]
-								}
-
-								embedsPaged = append(embedsPaged, embeds)
-
-								for mod, embeds := range embedsPaged {
-									for {
-										messages = append(messages, &RestoreMessage{
-											MessageSend: &discordgo.MessageSend{},
-											Author:      bm[i].Message.Author,
-										})
-
-										if len(messages) >= msgIndex+mod {
-											break
+									if err != nil {
+										if t.Options.IgnoreRestoreErrors {
+											continue
 										}
+										return nil, nil, fmt.Errorf("failed to get attachment: %w", err)
 									}
 
-									messages[msgIndex+mod].MessageSend.Embeds = embeds
+									if data.Bytes == nil {
+										continue
+									}
+
+									attachmentByteLength += data.Bytes.Len()
+
+									// Double check and add
+									if attachmentByteLength < t.Constraints.Restore.TotalMaxAttachmentFileSize {
+										rm.Files = append(rm.Files, &discordgo.File{
+											Name:        attachment.Name,
+											ContentType: attachment.ContentType,
+											Reader:      data.Bytes,
+										})
+									}
 								}
-							} else {
-								messages[msgIndex].MessageSend.Embeds = append(messages[msgIndex].MessageSend.Embeds, bm[i].Message.Embeds...)
 							}
 
-							messages[msgIndex].MessageSend.Content += bm[i].Message.Content + "\n"
-							contentLength += int64(len(bm[i].Message.Content))
+							//l.Info("Sending backed up messages", zap.String("channel_id", restoredChannelId), zap.Int("i", i))
 
-							if bm[i].Message.TTS && utils.CheckPermission(perms, discordgo.PermissionSendTTSMessages) {
-								messages[msgIndex].MessageSend.TTS = bm[i].Message.TTS
-							}
-
-							messages[msgIndex].MessageSend.AllowedMentions = &discordgo.MessageAllowedMentions{} // NOTE: We intentionally do not set allowed mentions to avoid spam
-						}
-
-						// Send messages
-						//
-						// NOTE/WIP: message_reference is not supported yet
-						// NOTE/WIP: StickerIDs and Components and Attachments/Files are not restored yet
-						l.Info("Sending backed up messages", zap.Int("message_count", len(messages)), zap.String("channel_id", restoredChannelId))
-						for i := range messages {
-							if messages[i].MessageSend.Content == "" &&
-								len(messages[i].MessageSend.Embeds) == 0 {
-								continue
-							}
-
-							messages[i].MessageSend.Content = fmt.Sprintf("**%s**\n%s", strings.ReplaceAll(messages[i].Author.Username+"("+messages[i].Author.ID+")", "*", ""), messages[i].MessageSend.Content)
-
-							_, err := discord.ChannelMessageSendComplex(restoredChannelId, messages[i].MessageSend, discordgo.WithContext(ctx))
+							_, err := discord.WebhookExecute(prevState.WebhookID, prevState.WebhookToken, false, &rm, discordgo.WithContext(ctx))
 
 							if err != nil {
 								if t.Options.IgnoreRestoreErrors {
+									l.Warn("Failed to send message", zap.Error(err))
 									continue
 								}
+
 								return nil, nil, fmt.Errorf("failed to send message: %w", err)
 							}
 

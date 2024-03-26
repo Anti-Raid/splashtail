@@ -39,7 +39,7 @@ type MessagePruneOpts struct {
 fn create_message_prune_serde(
     user_id: UserId,
     guild_id: GuildId,
-    channels: Option<String>,
+    channels: &Option<String>,
     ignore_errors: Option<bool>,
     max_messages: Option<i32>,
     prune_from: Option<String>,
@@ -170,7 +170,7 @@ pub async fn prune_user(
     let prune_opts = create_message_prune_serde(
         user.id,
         guild_id,
-        prune_channels,
+        &prune_channels,
         prune_ignore_errors,
         prune_max_messages,
         prune_from,
@@ -220,7 +220,18 @@ pub async fn prune_user(
                 value: vec![prune_opts.into()],
                 category: "log".to_string(),
             },
+            "channels".to_string() => gwevent::core::Field {
+                value: vec![
+                    if let Some(ref channels) = prune_channels {
+                        parse_numeric_list_to_str::<ChannelId>(channels, &REPLACE_CHANNEL)?.into()
+                    } else {
+                        gwevent::field_type::FieldType::None
+                    }
+                ],
+                category: "log".to_string(),
+            },
         };
+
         crate::modules::auditlogs::events::dispatch_audit_log(
             ctx.serenity_context(),
             "(Anti-Raid) Prune Messages Begin",
@@ -295,7 +306,7 @@ pub async fn prune_user(
                 task.clone(),
             ))
         },
-        jobserver::taskpoll::PollTaskOptions { interval: Some(1) },
+        jobserver::taskpoll::PollTaskOptions::default(),
     )
     .await?;
 

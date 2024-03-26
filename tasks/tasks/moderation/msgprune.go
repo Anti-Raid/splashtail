@@ -55,7 +55,7 @@ func (t *MessagePruneTask) Validate(state taskstate.TaskState) error {
 		return fmt.Errorf("invalid operation mode")
 	}
 
-	if t.Options.PruneFrom > 14*24*timex.Hour {
+	if t.Options.PruneFrom > 14*24*timex.Hour || t.Options.PruneFrom == 0 {
 		t.Options.PruneFrom = 14 * 24 * timex.Hour
 	}
 
@@ -201,8 +201,8 @@ func (t *MessagePruneTask) Exec(
 				messages, err := discord.ChannelMessages(
 					channelID,
 					limit,
-					"",
 					currentId,
+					"",
 					"",
 					discordgo.WithContext(ctx),
 				)
@@ -221,6 +221,10 @@ func (t *MessagePruneTask) Exec(
 				for _, m := range messages {
 					// Check that the message is under beyondPast
 					if m.Timestamp.Before(beyondPast) {
+						continue
+					}
+
+					if t.Options.UserID != "" && m.Author.ID != t.Options.UserID {
 						continue
 					}
 
@@ -243,6 +247,8 @@ func (t *MessagePruneTask) Exec(
 					// We've reached the end
 					break
 				}
+
+				currentId = messages[len(messages)-1].ID
 			}
 
 			finalMessagesEnd.Set(channelID, finalMsgs)

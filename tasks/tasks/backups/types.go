@@ -19,14 +19,15 @@ type BackupCreateConstraints struct {
 }
 
 type BackupRestoreConstraints struct {
-	RoleDeleteSleep    timex.Duration // How long to sleep between role deletes
-	RoleCreateSleep    timex.Duration // How long to sleep between role creates
-	ChannelDeleteSleep timex.Duration // How long to sleep between channel deletes
-	ChannelCreateSleep timex.Duration // How long to sleep between channel creates
-	ChannelEditSleep   timex.Duration // How long to sleep between channel edits
-	SendMessageSleep   timex.Duration // How long to sleep between message sends
-	HttpClientTimeout  timex.Duration // How long to wait for HTTP requests to complete
-	MaxBodySize        int64          // The maximum size of the backup file to download/use
+	RoleDeleteSleep            timex.Duration // How long to sleep between role deletes
+	RoleCreateSleep            timex.Duration // How long to sleep between role creates
+	ChannelDeleteSleep         timex.Duration // How long to sleep between channel deletes
+	ChannelCreateSleep         timex.Duration // How long to sleep between channel creates
+	ChannelEditSleep           timex.Duration // How long to sleep between channel edits
+	SendMessageSleep           timex.Duration // How long to sleep between message sends
+	HttpClientTimeout          timex.Duration // How long to wait for HTTP requests to complete
+	MaxBodySize                int64          // The maximum size of the backup file to download/use
+	TotalMaxAttachmentFileSize int            // The total maximum size of all attachments
 }
 
 type BackupConstraints struct {
@@ -47,14 +48,15 @@ var FreePlanBackupConstraints = &BackupConstraints{
 		GuildAssetReencodeQuality: 85,
 	},
 	Restore: &BackupRestoreConstraints{
-		RoleDeleteSleep:    2 * timex.Second,
-		RoleCreateSleep:    2 * timex.Second,
-		ChannelDeleteSleep: 2 * timex.Second,
-		ChannelCreateSleep: 2 * timex.Second,
-		ChannelEditSleep:   1 * timex.Second,
-		SendMessageSleep:   3 * timex.Second,
-		HttpClientTimeout:  10 * timex.Second,
-		MaxBodySize:        100_000_000, // 100MB
+		RoleDeleteSleep:            2 * timex.Second,
+		RoleCreateSleep:            2 * timex.Second,
+		ChannelDeleteSleep:         2 * timex.Second,
+		ChannelCreateSleep:         2 * timex.Second,
+		ChannelEditSleep:           1 * timex.Second,
+		SendMessageSleep:           3 * timex.Second,
+		HttpClientTimeout:          10 * timex.Second,
+		MaxBodySize:                100_000_000, // 100MB
+		TotalMaxAttachmentFileSize: 25_000_000,  // 25MB
 	},
 	MaxServerBackupTasks: 1,
 	FileType:             "backup.server",
@@ -128,13 +130,6 @@ type BackupMessage struct {
 	Message            *discordgo.Message       `json:"message"`
 	AttachmentMetadata []AttachmentMetadata     `json:"attachment_metadata"`
 	attachments        map[string]*bytes.Buffer `json:"-"`
-}
-
-// INTERNAL: Represents a message to be restored
-type RestoreMessage struct {
-	MessageSend *discordgo.MessageSend
-	Author      *discordgo.User
-	SmallFiles  []*discordgo.File
 }
 
 func init() {
