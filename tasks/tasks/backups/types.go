@@ -53,7 +53,7 @@ var FreePlanBackupConstraints = &BackupConstraints{
 		ChannelDeleteSleep:         2 * timex.Second,
 		ChannelCreateSleep:         2 * timex.Second,
 		ChannelEditSleep:           1 * timex.Second,
-		SendMessageSleep:           3 * timex.Second,
+		SendMessageSleep:           1 * timex.Second,
 		HttpClientTimeout:          10 * timex.Second,
 		MaxBodySize:                100_000_000, // 100MB
 		TotalMaxAttachmentFileSize: 25_000_000,  // 25MB

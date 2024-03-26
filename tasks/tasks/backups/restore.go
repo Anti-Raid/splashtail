@@ -1045,6 +1045,11 @@ func (t *ServerBackupRestoreTask) Exec(
 								}
 							}
 
+							// If no content, attachment, embeds or components, continue
+							if rm.Content == "" && len(rm.Files) == 0 && len(rm.Embeds) == 0 && len(rm.Components) == 0 {
+								continue
+							}
+
 							//l.Info("Sending backed up messages", zap.String("channel_id", restoredChannelId), zap.Int("i", i))
 
 							_, err := discord.WebhookExecute(prevState.WebhookID, prevState.WebhookToken, false, &rm, discordgo.WithContext(ctx))
