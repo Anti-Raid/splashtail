@@ -227,6 +227,12 @@ pub async fn add_channel(
                 continue;
             }
 
+            // All Anti-Raid events are filterable
+            if trimmed.starts_with("AR/") {
+                events_vec.push(trimmed.to_uppercase());
+                continue;
+            }
+
             let event = trimmed.to_uppercase();
 
             if !supported_events.contains(&event) {
@@ -334,6 +340,12 @@ pub async fn add_discordhook(
             let trimmed = event.trim().to_string();
 
             if trimmed.is_empty() {
+                continue;
+            }
+
+            // All Anti-Raid events are filterable
+            if trimmed.starts_with("AR/") {
+                events_vec.push(trimmed.to_uppercase());
                 continue;
             }
 

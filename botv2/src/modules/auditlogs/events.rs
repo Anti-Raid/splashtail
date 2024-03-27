@@ -272,11 +272,14 @@ pub async fn event_listener(
         }
     }).collect::<Vec<String>>().join(" ");
 
-    dispatch_audit_log(ctx, &event_titlename, expanded_event, ectx.guild_id).await
+    let event_name: &'static str = event.into();
+
+    dispatch_audit_log(ctx, event_name, &event_titlename, expanded_event, ectx.guild_id).await
 }
 
 pub async fn dispatch_audit_log(
     ctx: &serenity::client::Context,
+    event_name: &str,
     event_titlename: &str,
     expanded_event: indexmap::IndexMap<String, gwevent::core::Field>,
     guild_id: serenity::model::id::GuildId,
@@ -349,6 +352,13 @@ pub async fn dispatch_audit_log(
         .await?;
 
     for sink in sinks {
+        // Verify event in whitelisted event list, if events is set
+        if let Some(events) = sink.events {
+            if !events.is_empty() && !events.contains(&event_name.to_string()) {
+                continue;
+            }
+        }
+
         match sink.typ.as_str() {
             "channel" => {
                 let cache_http = bothelpers::cache::CacheHttpImpl {

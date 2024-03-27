@@ -235,6 +235,7 @@ pub async fn prune_user(
 
         crate::modules::auditlogs::events::dispatch_audit_log(
             ctx.serenity_context(),
+            "AR/PruneMessageBegin",
             "(Anti-Raid) Prune Messages Begin",
             imap,
             guild_id
@@ -371,6 +372,41 @@ pub async fn kick(
     .execute(&mut *tx)
     .await?;
 
+    // Send audit logs if Audit Logs module is enabled
+    if crate::silverpelt::module_config::is_module_enabled(&ctx.data().pool, guild_id, "auditlogs").await? {
+        let imap = indexmap::indexmap!{
+            "target".to_string() => gwevent::core::Field {
+                value: vec![member.user.clone().into()],
+                category: "user".to_string(),
+            },
+            "moderator".to_string() => gwevent::core::Field {
+                value: vec![author.user.clone().into()],
+                category: "moderator".to_string(),
+            },
+            "reason".to_string() => gwevent::core::Field {
+                value: vec![reason.clone().into()],
+                category: "reason".to_string(),
+            },
+            "stings".to_string() => gwevent::core::Field {
+                value: vec![stings.into()],
+                category: "punishment".to_string(),
+            },
+            "log".to_string() => gwevent::core::Field {
+                value: vec![to_log_format(&author.user, &member.user, &reason).into()],
+                category: "log".to_string(),
+            },
+        };
+
+        crate::modules::auditlogs::events::dispatch_audit_log(
+            ctx.serenity_context(),
+            "AR/KickMember",
+            "(Anti-Raid) Kick Member",
+            imap,
+            guild_id
+        )
+        .await?;
+    }
+
     member
         .kick_with_reason(
             &ctx.http(),
@@ -383,7 +419,7 @@ pub async fn kick(
     embed = CreateEmbed::new()
         .title("Kicking Member...")
         .description(format!(
-            "{} | Kicking {}",
+            "{} | Kicked {}",
             get_icon_of_state("completed"),
             member.mention()
         ));
@@ -405,7 +441,7 @@ pub async fn kick(
 )]
 pub async fn ban(
     ctx: Context<'_>,
-    #[description = "The member to ban"] member: serenity::all::Member,
+    #[description = "The member to ban"] member: serenity::all::User,
     #[description = "The reason for the ban"] reason: String,
     #[description = "Number of stings to give. Defaults to configured base stings"] stings: Option<i32>,
     #[description = "How many messages to prune using discords autopruner [dmd] (days)"] prune_dmd: Option<u8>,
@@ -450,7 +486,7 @@ pub async fn ban(
     sqlx::query!(
         "INSERT INTO moderation__actions (guild_id, user_id, moderator, action, stings, reason) VALUES ($1, $2, $3, $4, $5, $6)",
         guild_id.to_string(),
-        member.user.id.to_string(),
+        member.id.to_string(),
         author.user.id.to_string(),
         "ban",
         stings,
@@ -459,11 +495,51 @@ pub async fn ban(
     .execute(&mut *tx)
     .await?;
 
-    member
+    // Send audit logs if Audit Logs module is enabled
+    if crate::silverpelt::module_config::is_module_enabled(&ctx.data().pool, guild_id, "auditlogs").await? {
+        let imap = indexmap::indexmap!{
+            "target".to_string() => gwevent::core::Field {
+                value: vec![member.clone().into()],
+                category: "user".to_string(),
+            },
+            "moderator".to_string() => gwevent::core::Field {
+                value: vec![author.user.clone().into()],
+                category: "moderator".to_string(),
+            },
+            "reason".to_string() => gwevent::core::Field {
+                value: vec![reason.clone().into()],
+                category: "reason".to_string(),
+            },
+            "stings".to_string() => gwevent::core::Field {
+                value: vec![stings.into()],
+                category: "punishment".to_string(),
+            },
+            "prune_dmd".to_string() => gwevent::core::Field {
+                value: vec![dmd.into()],
+                category: "log".to_string(),
+            },
+            "log".to_string() => gwevent::core::Field {
+                value: vec![to_log_format(&author.user, &member, &reason).into()],
+                category: "log".to_string(),
+            },
+        };
+
+        crate::modules::auditlogs::events::dispatch_audit_log(
+            ctx.serenity_context(),
+            "AR/BanMember",
+            "(Anti-Raid) Ban Member",
+            imap,
+            guild_id
+        )
+        .await?;
+    }
+
+    guild_id
     .ban_with_reason(
         ctx.http(),
+        member.id,
         dmd,
-        &to_log_format(&author.user, &member.user, &reason),
+        &to_log_format(&author.user, &member, &reason),
     )
     .await?;
 
@@ -494,7 +570,7 @@ pub async fn ban(
 )]
 pub async fn tempban(
     ctx: Context<'_>,
-    #[description = "The member to ban"] member: serenity::all::Member,
+    #[description = "The member to ban"] member: serenity::all::User,
     #[description = "The reason for the ban"] reason: String,
     #[description = "Number of stings to give. Defaults to configured base stings"] stings: Option<i32>,
     #[description = "The duration of the ban"] duration: String,
@@ -542,7 +618,7 @@ pub async fn tempban(
     sqlx::query!(
         "INSERT INTO moderation__actions (guild_id, user_id, duration, moderator, action, stings, reason) VALUES ($1, $2, make_interval(secs => $3), $4, $5, $6, $7)",
         guild_id.to_string(),
-        member.user.id.to_string(),
+        member.id.to_string(),
         (duration.0 * duration.1.to_seconds()) as f64,
         author.user.id.to_string(),
         "ban",
@@ -552,11 +628,47 @@ pub async fn tempban(
     .execute(&mut *tx)
     .await?;
 
-    member
+    // Send audit logs if Audit Logs module is enabled
+    if crate::silverpelt::module_config::is_module_enabled(&ctx.data().pool, guild_id, "auditlogs").await? {
+        let imap = indexmap::indexmap!{
+            "target".to_string() => gwevent::core::Field {
+                value: vec![member.clone().into()],
+                category: "user".to_string(),
+            },
+            "moderator".to_string() => gwevent::core::Field {
+                value: vec![author.user.clone().into()],
+                category: "moderator".to_string(),
+            },
+            "reason".to_string() => gwevent::core::Field {
+                value: vec![reason.clone().into()],
+                category: "reason".to_string(),
+            },
+            "stings".to_string() => gwevent::core::Field {
+                value: vec![stings.into()],
+                category: "punishment".to_string(),
+            },
+            "log".to_string() => gwevent::core::Field {
+                value: vec![to_log_format(&author.user, &member, &reason).into()],
+                category: "log".to_string(),
+            },
+        };
+
+        crate::modules::auditlogs::events::dispatch_audit_log(
+            ctx.serenity_context(),
+            "AR/BanMemberTemporary",
+            "(Anti-Raid) Ban Member (Temporary)",
+            imap,
+            guild_id
+        )
+        .await?;
+    }
+
+    guild_id
     .ban_with_reason(
         ctx.http(),
+        member.id,
         dmd,
-        &to_log_format(&author.user, &member.user, &reason),
+        &to_log_format(&author.user, &member, &reason),
     )
     .await?;
 
@@ -565,7 +677,7 @@ pub async fn tempban(
     embed = CreateEmbed::new()
         .title("(Temporarily) Banned Member...")
         .description(format!(
-            "{} | Banning {}",
+            "{} | Banned {}",
             get_icon_of_state("completed"),
             member.mention()
         ));
@@ -587,9 +699,9 @@ pub async fn tempban(
 )]
 pub async fn unban(
     ctx: Context<'_>,
-    #[description = "The member to ban"] member: serenity::all::Member,
+    #[description = "The user to ban"] user: serenity::all::User,
     #[description = "The reason for the ban"] reason: String,
-    #[description = "Number of stings to give. Defaults to configured base stings"] stings: Option<i32>,
+    #[description = "Number of stings to give. Defaults to 0"] stings: Option<i32>,
 ) -> Result<(), Error> {
     let Some(guild_id) = ctx.guild_id() else {
         return Err("This command can only be used in a guild".into());
@@ -600,7 +712,7 @@ pub async fn unban(
         .description(format!(
             "{} | Unbanning {}",
             get_icon_of_state("pending"),
-            member.mention()
+            user.mention()
         ));
 
     let mut base_message = ctx
@@ -614,7 +726,7 @@ pub async fn unban(
         return Err("This command can only be used in a guild".into());
     };
 
-    let stings = stings.unwrap_or(1);
+    let stings = stings.unwrap_or(0);
 
     if stings < 0 {
         return Err("Stings must be greater than or equal to 0".into());
@@ -625,7 +737,7 @@ pub async fn unban(
     sqlx::query!(
         "INSERT INTO moderation__actions (guild_id, user_id, moderator, action, stings, reason) VALUES ($1, $2, $3, $4, $5, $6)",
         guild_id.to_string(),
-        member.user.id.to_string(),
+        user.id.to_string(),
         author.user.id.to_string(),
         "unban",
         stings,
@@ -634,16 +746,51 @@ pub async fn unban(
     .execute(&mut *tx)
     .await?;
 
-    ctx.http().remove_ban(guild_id, member.user.id, Some(&to_log_format(&author.user, &member.user, &reason))).await?;
+    // Send audit logs if Audit Logs module is enabled
+    if crate::silverpelt::module_config::is_module_enabled(&ctx.data().pool, guild_id, "auditlogs").await? {
+        let imap = indexmap::indexmap!{
+            "target".to_string() => gwevent::core::Field {
+                value: vec![user.clone().into()],
+                category: "user".to_string(),
+            },
+            "moderator".to_string() => gwevent::core::Field {
+                value: vec![author.user.clone().into()],
+                category: "moderator".to_string(),
+            },
+            "reason".to_string() => gwevent::core::Field {
+                value: vec![reason.clone().into()],
+                category: "reason".to_string(),
+            },
+            "stings".to_string() => gwevent::core::Field {
+                value: vec![stings.into()],
+                category: "punishment".to_string(),
+            },
+            "log".to_string() => gwevent::core::Field {
+                value: vec![to_log_format(&author.user, &user, &reason).into()],
+                category: "log".to_string(),
+            },
+        };
+
+        crate::modules::auditlogs::events::dispatch_audit_log(
+            ctx.serenity_context(),
+            "AR/UnbanMember",
+            "(Anti-Raid) Unban Member",
+            imap,
+            guild_id
+        )
+        .await?;
+    }
+
+    ctx.http().remove_ban(guild_id, user.id, Some(&to_log_format(&author.user, &user, &reason))).await?;
 
     tx.commit().await?;
 
     embed = CreateEmbed::new()
-        .title("Unbanned Member...")
+        .title("Unbanning Member...")
         .description(format!(
-            "{} | Unbanning {}",
+            "{} | Unbanned {}",
             get_icon_of_state("completed"),
-            member.mention()
+            user.mention()
         ));
 
     base_message
@@ -728,6 +875,41 @@ pub async fn timeout(
     )
     .execute(&mut *tx)
     .await?;
+
+    // Send audit logs if Audit Logs module is enabled
+    if crate::silverpelt::module_config::is_module_enabled(&ctx.data().pool, guild_id, "auditlogs").await? {
+        let imap = indexmap::indexmap!{
+            "target".to_string() => gwevent::core::Field {
+                value: vec![member.user.clone().into()],
+                category: "user".to_string(),
+            },
+            "moderator".to_string() => gwevent::core::Field {
+                value: vec![author.user.clone().into()],
+                category: "moderator".to_string(),
+            },
+            "reason".to_string() => gwevent::core::Field {
+                value: vec![reason.clone().into()],
+                category: "reason".to_string(),
+            },
+            "stings".to_string() => gwevent::core::Field {
+                value: vec![stings.into()],
+                category: "punishment".to_string(),
+            },
+            "log".to_string() => gwevent::core::Field {
+                value: vec![to_log_format(&author.user, &member.user, &reason).into()],
+                category: "log".to_string(),
+            },
+        };
+
+        crate::modules::auditlogs::events::dispatch_audit_log(
+            ctx.serenity_context(),
+            "AR/TimeoutMember",
+            "(Anti-Raid) Timeout Member",
+            imap,
+            guild_id
+        )
+        .await?;
+    }
 
     member
         .edit(
