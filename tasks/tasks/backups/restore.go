@@ -12,6 +12,7 @@ import (
 	"github.com/anti-raid/splashtail/splashcore/types"
 	"github.com/anti-raid/splashtail/splashcore/utils"
 	"github.com/anti-raid/splashtail/splashcore/utils/timex"
+	"github.com/anti-raid/splashtail/tasks/common"
 	"github.com/anti-raid/splashtail/tasks/step"
 	"github.com/anti-raid/splashtail/tasks/taskdef"
 	"github.com/anti-raid/splashtail/tasks/taskstate"
@@ -507,8 +508,24 @@ func (t *ServerBackupRestoreTask) Exec(
 		step.Step[ServerBackupRestoreTask]{
 			State: "create_new_roles",
 			Exec: func(t *ServerBackupRestoreTask, l *zap.Logger, tcr *types.TaskCreateResponse, state taskstate.TaskState, progstate taskstate.TaskProgressState, progress *taskstate.Progress) (*types.TaskOutput, *taskstate.Progress, error) {
+				var prevState struct {
+					RestoredRoleMap map[string]string `mapstructure:"restoredRoleMap,omitempty"`
+				}
+
+				err := mapstructure.Decode(progress.Data, &prevState)
+
+				if err != nil {
+					return nil, nil, fmt.Errorf("failed to decode progress data: %w", err)
+				}
+
 				// Map of backed up role id to restored role id
-				var restoredRolesMap = make(map[string]string)
+				var restoredRolesMap map[string]string
+
+				if len(prevState.RestoredRoleMap) > 0 {
+					restoredRolesMap = prevState.RestoredRoleMap
+				} else {
+					restoredRolesMap = make(map[string]string)
+				}
 
 				// Sort in descending order
 				slices.SortFunc(srcGuild.Roles, func(a, b *discordgo.Role) int {
@@ -574,6 +591,15 @@ func (t *ServerBackupRestoreTask) Exec(
 					}
 
 					restoredRolesMap[srcGuild.Roles[i].ID] = newRole.ID
+
+					// Save intermediare result of making the new role to allow better resumability
+					err = common.SaveIntermediateResult(progstate, progress, map[string]any{
+						"restoredRoleMap": restoredRolesMap,
+					})
+
+					if err != nil {
+						return nil, nil, fmt.Errorf("failed to save intermediate result: %w", err)
+					}
 
 					time.Sleep(time.Duration(t.Constraints.Restore.RoleCreateSleep))
 				}
@@ -644,8 +670,9 @@ func (t *ServerBackupRestoreTask) Exec(
 			State: "create_new_channels",
 			Exec: func(t *ServerBackupRestoreTask, l *zap.Logger, tcr *types.TaskCreateResponse, state taskstate.TaskState, progstate taskstate.TaskProgressState, progress *taskstate.Progress) (*types.TaskOutput, *taskstate.Progress, error) {
 				var prevState struct {
-					IgnoredChannels []string          `mapstructure:"ignoredChannels"`
-					RestoredRoleMap map[string]string `mapstructure:"restoredRoleMap"`
+					IgnoredChannels     []string          `mapstructure:"ignoredChannels"`
+					RestoredRoleMap     map[string]string `mapstructure:"restoredRoleMap"`
+					RestoredChannelsMap map[string]string `mapstructure:"restoredChannelsMap"`
 				}
 
 				err := mapstructure.Decode(progress.Data, &prevState)
@@ -658,7 +685,15 @@ func (t *ServerBackupRestoreTask) Exec(
 				restoredRolesMap := prevState.RestoredRoleMap
 
 				// Map of backed up channel id to restored channel id
-				var restoredChannelsMap = make(map[string]string)
+				var restoredChannelsMap map[string]string
+
+				// Restore it from previous state if available
+				if len(prevState.RestoredChannelsMap) > 0 {
+					l.Info("Restoring channels from previous state")
+					restoredChannelsMap = prevState.RestoredChannelsMap
+				} else {
+					restoredChannelsMap = make(map[string]string)
+				}
 
 				// Internal function. Given a channel, this fixes permission overwrites and then creates the channel from the old source channel
 				var createChannel = func(channel *discordgo.Channel) (*discordgo.Channel, error) {
@@ -709,8 +744,6 @@ func (t *ServerBackupRestoreTask) Exec(
 						return nil, fmt.Errorf("failed to create channel: %w", err)
 					}
 
-					time.Sleep(time.Duration(t.Constraints.Restore.ChannelCreateSleep))
-
 					return c, nil
 				}
 
@@ -720,6 +753,7 @@ func (t *ServerBackupRestoreTask) Exec(
 						continue
 					}
 
+					// Already done
 					if _, ok := restoredChannelsMap[srcGuild.Channels[i].ID]; ok {
 						continue
 					}
@@ -737,6 +771,17 @@ func (t *ServerBackupRestoreTask) Exec(
 					}
 
 					restoredChannelsMap[srcGuild.Channels[i].ID] = nc.ID
+
+					// Save intermediare result of making the new role to allow better resumability
+					err = common.SaveIntermediateResult(progstate, progress, map[string]any{
+						"restoredChannelsMap": restoredChannelsMap,
+					})
+
+					if err != nil {
+						return nil, nil, fmt.Errorf("failed to save intermediate result: %w", err)
+					}
+
+					time.Sleep(time.Duration(t.Constraints.Restore.ChannelCreateSleep))
 				}
 
 				// Next restore channels
@@ -772,6 +817,17 @@ func (t *ServerBackupRestoreTask) Exec(
 					}
 
 					restoredChannelsMap[srcGuild.Channels[i].ID] = nc.ID
+
+					// Save intermediare result of making the new role to allow better resumability
+					err = common.SaveIntermediateResult(progstate, progress, map[string]any{
+						"restoredChannelsMap": restoredChannelsMap,
+					})
+
+					if err != nil {
+						return nil, nil, fmt.Errorf("failed to save intermediate result: %w", err)
+					}
+
+					time.Sleep(time.Duration(t.Constraints.Restore.ChannelCreateSleep))
 				}
 
 				return nil, &taskstate.Progress{
@@ -957,23 +1013,6 @@ func (t *ServerBackupRestoreTask) Exec(
 
 						bm := *bmPtr
 
-						// Before doing anything else, sort the messages by timestamp
-						slices.SortFunc(bm, func(a, b *BackupMessage) int {
-							dtA, err := discordgo.SnowflakeTimestamp(a.Message.ID)
-
-							if err != nil {
-								panic(err)
-							}
-
-							dtB, err := discordgo.SnowflakeTimestamp(b.Message.ID)
-
-							if err != nil {
-								panic(err)
-							}
-
-							return dtB.Compare(dtA)
-						})
-
 						// Modify the webhook to this channel
 						_, err = discord.WebhookEdit(prevState.WebhookID, "Anti-Raid Message Restore", "", restoredChannelId, discordgo.WithContext(ctx))
 
@@ -986,8 +1025,8 @@ func (t *ServerBackupRestoreTask) Exec(
 							return nil, nil, fmt.Errorf("failed to edit webhook: %w", err)
 						}
 
-						// Now send the messages
-						for i := range bm {
+						// Now send the messages, reversing the order due to how Get Channel Messages works
+						for i := len(bm) - 1; i >= 0; i-- {
 							var rm = discordgo.WebhookParams{
 								Content:         bm[i].Message.Content,
 								Username:        bm[i].Message.Author.Username,

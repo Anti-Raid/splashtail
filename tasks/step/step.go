@@ -43,8 +43,6 @@ func NewStepper[T any](steps ...Step[T]) *Stepper[T] {
 			step.Index = i
 		}
 
-		fmt.Println(i, step.Index, step.State)
-
 		s.steps = append(s.steps, &step)
 		s.stepCache[step.State] = &step
 		s.stepIndexCache[step.State] = step.Index
@@ -92,8 +90,6 @@ func (s *Stepper[T]) Exec(
 		}
 	}
 
-	fmt.Println(curProg.State)
-
 	for i := range s.steps {
 		step := s.steps[i]
 
@@ -103,8 +99,6 @@ func (s *Stepper[T]) Exec(
 		default:
 			// Continue
 		}
-
-		fmt.Println(curProg.State)
 
 		// Conditions to run a step:
 		//

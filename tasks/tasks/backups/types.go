@@ -48,12 +48,12 @@ var FreePlanBackupConstraints = &BackupConstraints{
 		GuildAssetReencodeQuality: 85,
 	},
 	Restore: &BackupRestoreConstraints{
-		RoleDeleteSleep:            2 * timex.Second,
+		RoleDeleteSleep:            1 * timex.Second,
 		RoleCreateSleep:            2 * timex.Second,
-		ChannelDeleteSleep:         2 * timex.Second,
-		ChannelCreateSleep:         2 * timex.Second,
+		ChannelDeleteSleep:         500 * timex.Millisecond,
+		ChannelCreateSleep:         500 * timex.Millisecond,
 		ChannelEditSleep:           1 * timex.Second,
-		SendMessageSleep:           1 * timex.Second,
+		SendMessageSleep:           350 * timex.Millisecond,
 		HttpClientTimeout:          10 * timex.Second,
 		MaxBodySize:                100_000_000, // 100MB
 		TotalMaxAttachmentFileSize: 25_000_000,  // 25MB

@@ -19,7 +19,7 @@ import (
 	"go.uber.org/zap"
 )
 
-var DefaultTimeout = 15 * time.Minute
+var DefaultTimeout = 30 * time.Minute
 var ResumeOngoingTaskTimeoutSecs = 15 * 60
 var DefaultValidationTimeout = 5 * time.Second
 
