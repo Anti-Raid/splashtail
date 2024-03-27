@@ -57,10 +57,11 @@ type TaskOutput struct {
 
 // Information on a task
 type TaskInfo struct {
-	Name       string        `json:"name" description:"The task name."`
-	TaskFor    *TaskFor      `json:"task_for" description:"The entity this task is for."`
-	TaskFields any           `json:"task_fields" description:"The task fields."`
-	Expiry     time.Duration `json:"expiry" description:"The task expiry."`
-	Resumable  bool          `json:"resumable" description:"Whether the task is resumable."`
-	Valid      bool          `json:"valid" description:"Whether the task is valid."`
+	Name                    string        `json:"name" description:"The task name."`
+	TaskFor                 *TaskFor      `json:"task_for" description:"The entity this task is for."`
+	TaskFields              any           `json:"task_fields" description:"The task fields."`
+	Expiry                  time.Duration `json:"expiry" description:"The task expiry."`
+	Resumable               bool          `json:"resumable" description:"Whether the task is resumable."`
+	Valid                   bool          `json:"valid" description:"Whether the task is valid."`
+	CorrespondingBotCommand string        `json:"corresponding_bot_command" description:"The corresponding bot command for this task for permisison checking purposes"`
 }

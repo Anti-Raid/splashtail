@@ -2,6 +2,7 @@ use indexmap::indexmap;
 
 mod modules;
 mod perms;
+mod cmd;
 
 pub fn module() -> crate::silverpelt::Module {
     crate::silverpelt::Module {

@@ -1134,9 +1134,10 @@ func (t *ServerBackupRestoreTask) Info() *types.TaskInfo {
 			ID:         t.ServerID,
 			TargetType: types.TargetTypeServer,
 		},
-		TaskFields: t,
-		Resumable:  true,
-		Valid:      t.valid,
+		TaskFields:              t,
+		Resumable:               true,
+		Valid:                   t.valid,
+		CorrespondingBotCommand: "backups restore",
 	}
 }
 

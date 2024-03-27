@@ -183,7 +183,7 @@ pub async fn prune_user(
 
     let task_id = match data
         .animus_magic_ipc
-        .request(
+        .request( 
             AnimusTarget::Jobserver,
             shard_id(guild_id, MEWLD_ARGS.shard_count),
             AnimusMessage::Jobserver(JobserverAnimusMessage::SpawnTask {
@@ -192,6 +192,7 @@ pub async fn prune_user(
                 create: true,
                 execute: true,
                 task_id: None,
+                user_id: author.user.id.to_string(),
             }),
             default_request_timeout(),
         )

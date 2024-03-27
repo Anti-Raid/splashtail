@@ -105,6 +105,20 @@ func HandlePermissionCheck(
 	return uapi.HttpResponse{}, true
 }
 
+func PermLimits(d uapi.AuthData) []string {
+	if !d.Authorized {
+		return []string{}
+	}
+
+	permLimits, ok := d.Data["perm_limits"].([]string)
+
+	if !ok {
+		return []string{}
+	}
+
+	return permLimits
+}
+
 // Authorizes a request
 func Authorize(r uapi.Route, req *http.Request) (uapi.AuthData, uapi.HttpResponse, bool) {
 	if len(r.ExtData) > 0 {

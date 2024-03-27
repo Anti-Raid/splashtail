@@ -15,5 +15,6 @@ pub enum JobserverAnimusMessage {
         create: bool,
         execute: bool,
         task_id: Option<String>, // If create is false, this is required
+        user_id: String
     },
 }

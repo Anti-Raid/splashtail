@@ -17,6 +17,7 @@ pub fn module() -> crate::silverpelt::Module {
                 "" => crate::silverpelt::CommandExtendedData::kittycat_simple("server_backups", "*"),
                 "create" => crate::silverpelt::CommandExtendedData::kittycat_or_admin("server_backups", "create"),
                 "list" => crate::silverpelt::CommandExtendedData::kittycat_or_admin("server_backups", "list"),
+                "delete" => crate::silverpelt::CommandExtendedData::kittycat_or_admin("server_backups", "delete"),
                 "restore" => crate::silverpelt::CommandExtendedData::kittycat_or_admin("server_backups", "restore"),
             },
         )],

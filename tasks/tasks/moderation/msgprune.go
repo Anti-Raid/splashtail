@@ -291,8 +291,9 @@ func (t *MessagePruneTask) Info() *types.TaskInfo {
 			ID:         t.ServerID,
 			TargetType: types.TargetTypeServer,
 		},
-		TaskFields: t,
-		Valid:      t.valid,
+		TaskFields:              t,
+		Valid:                   t.valid,
+		CorrespondingBotCommand: "prune_user",
 	}
 }
 

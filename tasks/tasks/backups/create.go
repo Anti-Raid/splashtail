@@ -706,8 +706,9 @@ func (t *ServerBackupCreateTask) Info() *types.TaskInfo {
 			ID:         t.ServerID,
 			TargetType: types.TargetTypeServer,
 		},
-		TaskFields: t,
-		Valid:      t.valid,
+		TaskFields:              t,
+		Valid:                   t.valid,
+		CorrespondingBotCommand: "backups create",
 	}
 }
 

@@ -75,6 +75,9 @@ type JobserverMessage struct {
 
 		// If create is false, then task id must be set
 		TaskID string `json:"task_id"`
+
+		// The User ID who initiated the action
+		UserID string `json:"user_id"`
 	} `json:"SpawnTask,omitempty"`
 }
 

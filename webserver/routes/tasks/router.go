@@ -31,10 +31,6 @@ func (b Router) Routes(r *chi.Mux) {
 		Auth: []uapi.AuthType{
 			{
 				URLVar: "id",
-				Type:   types.TargetTypeServer,
-			},
-			{
-				URLVar: "id",
 				Type:   types.TargetTypeUser,
 			},
 		},
@@ -51,10 +47,6 @@ func (b Router) Routes(r *chi.Mux) {
 		Handler:      get_task_list.Route,
 		AuthOptional: true,
 		Auth: []uapi.AuthType{
-			{
-				URLVar: "id",
-				Type:   types.TargetTypeServer,
-			},
 			{
 				URLVar: "id",
 				Type:   types.TargetTypeUser,
@@ -74,15 +66,11 @@ func (b Router) Routes(r *chi.Mux) {
 		Auth: []uapi.AuthType{
 			{
 				URLVar: "id",
-				Type:   types.TargetTypeServer,
-			},
-			{
-				URLVar: "id",
 				Type:   types.TargetTypeUser,
 			},
 		},
 		ExtData: map[string]any{
-			api.PERMISSION_CHECK_KEY: nil,
+			api.PERMISSION_CHECK_KEY: nil, // The permission check is handled in the actual function
 		},
 	}.Route(r)
 

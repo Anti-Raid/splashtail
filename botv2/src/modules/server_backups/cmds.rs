@@ -53,7 +53,7 @@ type BackupRestoreOpts struct {
     guild_only,
     user_cooldown = "5",
     aliases("backup"),
-    subcommands("backups_create", "backups_list", "backups_restore")
+    subcommands("backups_create", "backups_list", "backups_delete", "backups_restore")
 )]
 pub async fn backups(_ctx: Context<'_>) -> Result<(), Error> {
     Ok(())
@@ -175,6 +175,7 @@ pub async fn backups_create(
                 create: true,
                 execute: true,
                 task_id: None,
+                user_id: ctx.author().id.to_string(),
             }),
             default_request_timeout(),
         )
@@ -250,7 +251,7 @@ pub async fn backups_create(
     Ok(())
 }
 
-/// List all currently made backups and allow for downloading them
+/// Lists all currently made backups + download/delete them
 #[poise::command(
     prefix_command,
     slash_command,
@@ -394,6 +395,32 @@ pub async fn backups_list(ctx: Context<'_>) -> Result<(), Error> {
                 index = 0;
             }
             "backups_delete" => {
+                // Check permission
+                let perm_res = crate::silverpelt::cmd::check_command(
+                    "backups",
+                    "backups delete",
+                    guild_id,
+                    ctx.author().id, 
+                    &ctx.data().pool, 
+                    &bothelpers::cache::CacheHttpImpl::from_ctx(ctx.serenity_context()), 
+                    &Some(ctx), 
+                    None
+                ).await;  
+
+                if !perm_res.is_ok() {
+                    item.create_response(
+                        &ctx.serenity_context().http,
+                        serenity::all::CreateInteractionResponse::Message(
+                            serenity::all::CreateInteractionResponseMessage::default()
+                            .ephemeral(true)
+                            .content(perm_res.to_markdown())
+                        )
+                    )
+                    .await?;
+
+                    continue;
+                }          
+
                 item.defer(&ctx.serenity_context().http).await?;
 
                 followup_done = true;
@@ -448,6 +475,7 @@ pub async fn backups_list(ctx: Context<'_>) -> Result<(), Error> {
                             &ctx.serenity_context().http,
                             serenity::all::CreateInteractionResponse::Message(
                                 serenity::all::CreateInteractionResponseMessage::default()
+                                .ephemeral(true)
                                 .embed(
                                     CreateEmbed::default()
                                     .title("Deleting Backup...")
@@ -511,7 +539,19 @@ pub async fn backups_list(ctx: Context<'_>) -> Result<(), Error> {
                         {
                             log::error!("Failed to edit message: {}", e);
                         }
-                    }
+                    },
+                    "backups_delete_cancel" => {
+                        // Respond to the interaction
+                        confirm_item.create_response(
+                            &ctx.serenity_context().http,
+                            serenity::all::CreateInteractionResponse::Message(
+                                serenity::all::CreateInteractionResponseMessage::default()
+                                .ephemeral(true)
+                                .content("Cancelled deletion of backup")
+                            )
+                        )
+                        .await?;                        
+                    },
                     _ => {
                         continue;
                     }
@@ -541,6 +581,142 @@ pub async fn backups_list(ctx: Context<'_>) -> Result<(), Error> {
 
     Ok(())
 }
+
+/// Deletes a backup given its Task ID
+#[poise::command(
+    prefix_command,
+    slash_command,
+    guild_only,
+    user_cooldown = "5",
+    rename = "delete"
+)]
+pub async fn backups_delete(ctx: Context<'_>, task_id: String) -> Result<(), Error> {
+    let task = jobserver::Task::from_id(task_id.parse::<Uuid>()?, &ctx.data().pool)
+        .await
+        .map_err(|e| format!("Failed to get backup task: {}", e))?;
+    
+    let mut confirm = ctx.send(
+        poise::reply::CreateReply::default()
+        .content("Are you sure you want to delete this backup?\n\n**This action is irreversible!**")
+        .components(
+            vec![
+                serenity::all::CreateActionRow::Buttons(
+                    vec![
+                        serenity::all::CreateButton::new("backups_delete_confirm")
+                        .label("Yes")
+                        .style(serenity::all::ButtonStyle::Success),
+                        serenity::all::CreateButton::new("backups_delete_cancel")
+                        .label("No")
+                        .style(serenity::all::ButtonStyle::Danger),
+                    ]
+                )
+            ]
+        )
+    )
+    .await?
+    .into_message()
+    .await?;
+
+    let confirm_collector = confirm
+        .await_component_interaction(ctx.serenity_context().shard.clone())
+        .author_id(ctx.author().id)
+        .timeout(Duration::from_secs(30))
+        .await;
+
+    if confirm_collector.is_none() {
+        // Edit the message to say that the user took too long to respond
+        confirm
+            .edit(
+                &ctx.serenity_context().http,
+                EditMessage::default().content("You took too long to respond"),
+            )
+            .await?;
+    }
+
+    let confirm_item = confirm_collector.unwrap();
+
+    match confirm_item.data.custom_id.as_str() {
+        "backups_delete_confirm" => {
+            // Respond to the interaction
+            confirm_item.create_response(
+                &ctx.serenity_context().http,
+                serenity::all::CreateInteractionResponse::Message(
+                    serenity::all::CreateInteractionResponseMessage::default()
+                    .embed(
+                        CreateEmbed::default()
+                        .title("Deleting Backup...")
+                        .description(":yellow_circle: Please wait while we delete this backup")
+                    )
+                )
+            )
+            .await?;
+
+            let mut status = Vec::new();
+
+            match task.delete_from_storage(&ctx.data().object_store).await {
+                Ok(_) => {
+                    status.push(":white_check_mark: Successfully deleted the backup from storage".to_string());
+                }
+                Err(e) => {
+                    status.push(format!(
+                        ":x: Failed to delete the backup from storage: {}",
+                        e
+                    ));
+                }
+            };
+
+            if let Err(e) = confirm_item
+                .edit_response(
+                    &ctx.serenity_context().http,
+                    serenity::all::EditInteractionResponse::default().embed(
+                        CreateEmbed::default()
+                            .title("Deleting Backup")
+                            .description(status.join("\n")),
+                    ),
+                )
+                .await
+            {
+                log::error!("Failed to edit message: {}", e);
+            }
+
+            // Lastly deleting the task from the database
+            match task.delete_from_db(&ctx.data().pool).await {
+                Ok(_) => {
+                    status.push(":white_check_mark: Successfully deleted the backup task from database".to_string());
+                }
+                Err(e) => {
+                    status.push(format!(
+                        ":x: Failed to delete the backup task from database: {}",
+                        e
+                    ));
+                }
+            };
+
+            if let Err(e) = confirm_item
+                .edit_response(
+                    &ctx.serenity_context().http,
+                    serenity::all::EditInteractionResponse::default().embed(
+                        CreateEmbed::default()
+                            .title("Deleting Backup")
+                            .description(status.join("\n")),
+                    ),
+                )
+                .await
+            {
+                log::error!("Failed to edit message: {}", e);
+            }
+        },
+        "backups_delete_cancel" => {
+            ctx.say("Cancelled deletion of backup").await?;
+        },
+        _ => {
+            return Err("Invalid interaction".into());
+        }
+    }
+
+    Ok(())
+}
+
 
 #[derive(poise::ChoiceParameter)]
 enum ChannelRestoreMode {
@@ -731,6 +907,7 @@ pub async fn backups_restore(
                 create: true,
                 execute: true,
                 task_id: None,
+                user_id: ctx.author().id.to_string(),
             }),
             default_request_timeout(),
         )

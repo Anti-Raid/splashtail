@@ -163,6 +163,12 @@ For future releases (or even initial if time permits):
 
 - Advanced Active Anti-Spam (maybe AI-based image classification blocks) []
 
+### Permissions
+
+- A command is the base unit for access control. This means that all operations with differing access controls must have commands associated with them.
+- This means that all operations (list backup, create/restore backup, delete backup) *MUST* have associated commands
+- Sometimes, an operation (such as a web-only operation) may not have a module/command associated with it. In such cases, a 'virtual' module should be used. Virtual modules are modules with commands that are not registered via Discord's API. They are used to group commands together for access control purposes and to ensure that each operation is tied to a command
+
 ### Development
 
 Run ``cargo sqlx prepare`` in the ``botv2`` folder before committing anything. This will regenerate the SQLX files used by the bot to interact with the database. Note that ``make buildbot`` will automatically run this now.
