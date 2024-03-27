@@ -154,7 +154,7 @@ For initial release:
 - Passive Anti-raid (lockserver/unlockserver/lockchannel/unlockchannel) []
 - Basic Active Anti-Spam (anti-invite) []
 - Audit Logs [X]
-- Integrating audit logs into moderation []
+- Integrating audit logs into moderation [WIPX]
 - Basic utility functions (if needed) [NOT NEEDED YET]
 - Stabilizing the `Limits` module [X]
 - Stabilizing the ``Server Backups`` module [X]
