@@ -236,6 +236,7 @@ pub fn resolve_gwevent_field(field: &FieldType) -> Result<String, crate::Error> 
     }
 }
 
+
 pub async fn event_listener(
     ctx: &serenity::client::Context,
     event: &FullEvent,
@@ -276,6 +277,38 @@ pub async fn event_listener(
 
     dispatch_audit_log(ctx, event_name, &event_titlename, expanded_event, ectx.guild_id).await
 }
+
+pub async fn check_event_matches(event_name: &str, filters: Vec<String>) -> Result<bool, Error> {
+    // If empty, always return Ok
+    if filters.is_empty() {
+        return Ok(true);
+    }
+
+    let mut regexes = Vec::new();
+
+    for filter in filters.iter() {
+        if filter.starts_with("R/") && filter.len() > 2 {
+            regexes.push(&filter[2..]);
+        }
+        
+        if event_name == filter {
+            return Ok(true);
+        }
+    }
+
+    for regex in regexes {
+        match crate::silverpelt::silverpelt_cache::SILVERPELT_CACHE.regex_match(regex, event_name).await {
+            Ok(true) => return Ok(true),
+            Ok(false) => {},
+            Err(e) => {
+                log::warn!("Failed to match regex: {}", e);
+            },
+        };
+    }
+
+    Ok(false)
+}
+
 
 pub async fn dispatch_audit_log(
     ctx: &serenity::client::Context,
@@ -354,7 +387,7 @@ pub async fn dispatch_audit_log(
     for sink in sinks {
         // Verify event in whitelisted event list, if events is set
         if let Some(events) = sink.events {
-            if !events.is_empty() && !events.contains(&event_name.to_string()) {
+            if !check_event_matches(event_name, events).await? {
                 continue;
             }
         }

@@ -483,6 +483,7 @@ dependencies = [
  "once_cell",
  "poise",
  "rand",
+ "regex",
  "reqwest",
  "secrecy",
  "serde",

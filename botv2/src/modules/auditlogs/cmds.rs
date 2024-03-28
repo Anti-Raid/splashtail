@@ -6,7 +6,7 @@ use futures_util::StreamExt;
 use std::time::Duration;
 use secrecy::ExposeSecret;
 
-#[poise::command(prefix_command, slash_command, user_cooldown = 1, subcommands("list_sinks", "add_channel", "add_discordhook"))]
+#[poise::command(prefix_command, slash_command, user_cooldown = 1, subcommands("list_sinks", "add_channel", "add_discordhook", "remove_sink"))]
 pub async fn auditlogs(_ctx: Context<'_>) -> Result<(), Error> {
     Ok(())
 }
@@ -165,6 +165,59 @@ pub async fn list_sinks(
     Ok(())
 }
 
+pub async fn check_all_events(events: Vec<String>) -> Result<Vec<String>, crate::Error> {
+    let res = tokio::time::timeout(
+        std::time::Duration::from_millis(1000),
+        tokio::task::spawn_blocking(
+            move || {
+                let mut supported_events = Vec::new();
+
+                for event in gwevent::core::event_list() {
+                    if super::events::not_audit_loggable_event().contains(event) {
+                        continue;
+                    }
+
+                    supported_events.push(event.to_string());
+                }
+
+                for event in events {
+                    let trimmed = event.trim().to_string();
+
+                    if trimmed.is_empty() {
+                        continue;
+                    }
+
+                    // All Anti-Raid events are filterable
+                    if trimmed.starts_with("AR/") {
+                        continue;
+                    }
+
+                    // Regex compile check
+                    if trimmed.starts_with("R/") {
+                        if let Err(e) = regex::Regex::new(&trimmed) {
+                            return Err(format!("Event `{}` is not a valid regex. Error: {}", trimmed, e));
+                        }
+                    }
+
+                    let event = trimmed.to_uppercase();
+
+                    if !supported_events.contains(&event) {
+                        return Err(format!("Event `{}` is not a valid event. Please pick one of the following: {}", trimmed, supported_events.join(", ")));
+                    }
+                }
+
+                Ok(supported_events)
+            }
+        )
+    )
+    .await??;
+
+    match res {
+        Ok(supported_events) => Ok(supported_events),
+        Err(e) => Err(e.into()),
+    }
+}
+
 #[poise::command(prefix_command, slash_command, user_cooldown = 1)]
 pub async fn add_channel(
     ctx: Context<'_>,
@@ -206,43 +259,8 @@ pub async fn add_channel(
         return Err("I do not have permission to manage messages in this channel".into());
     }
 
-    // Find the value in gwevents::core::event_list
-    let mut supported_events = Vec::new();
-
-    for event in gwevent::core::event_list() {
-        if super::events::not_audit_loggable_event().contains(event) {
-            continue;
-        }
-
-        supported_events.push(event.to_string());
-    }
-
-    let events_split = if let Some(events) = events {
-        let mut events_vec = Vec::new();
-
-        for event in events.split(',') {
-            let trimmed = event.trim().to_string();
-
-            if trimmed.is_empty() {
-                continue;
-            }
-
-            // All Anti-Raid events are filterable
-            if trimmed.starts_with("AR/") {
-                events_vec.push(trimmed.to_uppercase());
-                continue;
-            }
-
-            let event = trimmed.to_uppercase();
-
-            if !supported_events.contains(&event) {
-                return Err(format!("Event `{}` is not a valid event. Please pick one of the following: {}", trimmed, supported_events.join(", ")).into());
-            }
-
-            events_vec.push(event);
-        }
-
-        Some(events_vec)
+    let events = if let Some(events) = events {
+        Some(check_all_events(events.split(',').map(|x| x.to_string()).collect()).await?)
     } else {
         None
     };
@@ -277,7 +295,7 @@ pub async fn add_channel(
             guild_id.to_string(),
             "discord_webhook",
             webhook_url,
-            events_split.as_deref(),
+            events.as_deref(),
             false,
             ctx.author().id.to_string(),
             ctx.author().id.to_string(),
@@ -291,7 +309,7 @@ pub async fn add_channel(
             guild_id.to_string(),
             "channel",
             gc.id.to_string(),
-            events_split.as_deref(),
+            events.as_deref(),
             false,
             ctx.author().id.to_string(),
             ctx.author().id.to_string(),
@@ -322,43 +340,8 @@ pub async fn add_discordhook(
         return Err("Invalid webhook URL".into());
     }
     
-    // Find the value in gwevents::core::event_list
-    let mut supported_events = Vec::new();
-
-    for event in gwevent::core::event_list() {
-        if super::events::not_audit_loggable_event().contains(event) {
-            continue;
-        }
-
-        supported_events.push(event.to_string());
-    }
-
-    let events_split = if let Some(events) = events {
-        let mut events_vec = Vec::new();
-
-        for event in events.split(',') {
-            let trimmed = event.trim().to_string();
-
-            if trimmed.is_empty() {
-                continue;
-            }
-
-            // All Anti-Raid events are filterable
-            if trimmed.starts_with("AR/") {
-                events_vec.push(trimmed.to_uppercase());
-                continue;
-            }
-
-            let event = trimmed.to_uppercase();
-
-            if !supported_events.contains(&event) {
-                return Err(format!("Event `{}` is not a valid event. Please pick one of the following: {}", trimmed, supported_events.join(", ")).into());
-            }
-
-            events_vec.push(event);
-        }
-
-        Some(events_vec)
+    let events = if let Some(events) = events {
+        Some(check_all_events(events.split(',').map(|x| x.to_string()).collect()).await?)
     } else {
         None
     };
@@ -370,7 +353,7 @@ pub async fn add_discordhook(
         guild_id.to_string(),
         "discord_webhook",
         webhook,
-        events_split.as_deref(),
+        events.as_deref(),
         false,
         ctx.author().id.to_string(),
         ctx.author().id.to_string(),
@@ -382,6 +365,32 @@ pub async fn add_discordhook(
         format!("Successfully added a new Discord webhook sink for audit logs with ID `{}`", sink_id)
     )
     .await?;
+
+    Ok(())
+}
+
+#[poise::command(prefix_command, slash_command, user_cooldown = 1)]
+pub async fn remove_sink(
+    ctx: Context<'_>,
+    #[description = "Sink ID to remove"] sink_id: String,
+) -> Result<(), Error> {
+    let Some(guild_id) = ctx.guild_id() else {
+        return Err("This command can only be used in a guild".into());
+    };
+
+    let res = sqlx::query!(
+        "DELETE FROM auditlogs__sinks WHERE guild_id = $1 AND id = $2",
+        guild_id.to_string(),
+        sink_id,
+    )
+    .execute(&ctx.data().pool)
+    .await?;
+
+    if res.rows_affected() == 0 {
+        return Err("No sink found with that ID".into());
+    }
+
+    ctx.say("Successfully removed sink").await?;
 
     Ok(())
 }

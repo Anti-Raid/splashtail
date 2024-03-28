@@ -528,20 +528,7 @@ pub fn expand_event(event: &FullEvent) -> Option<IndexMap<String, Field>> {
             fields,
             "channel",
             "type",
-            match channel.kind {
-                serenity::model::channel::ChannelType::Text => "Text".to_string(),
-                serenity::model::channel::ChannelType::Voice => "Voice".to_string(),
-                serenity::model::channel::ChannelType::Private => "PrivateChannel".to_string(),
-                serenity::model::channel::ChannelType::GroupDm => "GroupDm".to_string(),
-                serenity::model::channel::ChannelType::Category => "Category".to_string(),
-                serenity::model::channel::ChannelType::News => "News".to_string(),
-                serenity::model::channel::ChannelType::NewsThread => "NewsThread".to_string(),
-                serenity::model::channel::ChannelType::PublicThread => "PublicThread".to_string(),
-                serenity::model::channel::ChannelType::PrivateThread => "PrivateThread".to_string(),
-                serenity::model::channel::ChannelType::Stage => "Stage".to_string(),
-                serenity::model::channel::ChannelType::Directory => "Directory".to_string(),
-                _ => "Unknown".to_string(),
-            },
+            format!("{:?}", channel.kind),
         );
 
         // Optional fields
@@ -670,7 +657,7 @@ pub fn expand_event(event: &FullEvent) -> Option<IndexMap<String, Field>> {
         insert_optional_field(
             fields,
             "audit_log_entry",
-            "audit_log_chages",
+            "audit_log_changes",
             entry.changes.clone(),
         );
         insert_optional_field(

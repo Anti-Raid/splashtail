@@ -81,12 +81,17 @@ type Sites struct {
 	API      Differs[string] `yaml:"api" default:"https://splashtail.antiraid.xyz" comment:"API URL" validate:"required"`
 	CDN      string          `yaml:"cdn" default:"https://cdn.antiraid.xyz" comment:"CDN URL" validate:"required"`
 	Instatus string          `yaml:"instatus" default:"https://status.antiraid.xyz" comment:"Instatus Status Page URL" validate:"required"`
+	Panel    string          `yaml:"panel" default:"https://panel.antiraid.xyz" comment:"Panel URL" validate:"required"`
 }
 
 type Roles struct {
+	Apps          string `yaml:"apps" default:"1222825827071426571" comment:"Apps Role" validate:"required"`
+	AwaitingStaff string `yaml:"awaiting_staff" default:"1222825827071426571" comment:"Awaiting Staff Role" validate:"required"`
 }
 
 type Channels struct {
+	Apps       string `yaml:"apps" default:"1216401068276060160" comment:"Apps Channel, should be a staff only channel" validate:"required"`
+	BanAppeals string `yaml:"ban_appeals" default:"1222823352771678249" comment:"Ban Appeals Channel" validate:"required"`
 }
 
 type JAPI struct {
