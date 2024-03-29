@@ -1,6 +1,7 @@
 mod help;
 mod ping;
 mod stats;
+mod update_status_task;
 
 pub fn module() -> crate::silverpelt::Module {
     crate::silverpelt::Module {
@@ -25,5 +26,21 @@ pub fn module() -> crate::silverpelt::Module {
             (ping::ping(), crate::silverpelt::CommandExtendedData::none()),
         ],
         event_handlers: vec![], // Core has no event listeners
+        background_tasks: vec![
+            crate::silverpelt::taskcat::Task {
+                name: "Update Bot Status".to_string(),
+                description: "Updates the bot status every 15 minutes".to_string(),
+                duration: std::time::Duration::from_secs(60 * 15),
+                enabled: true,
+                run: Box::new(
+                    move |_pool, _ch, ctx| {
+                        Box::pin(async move {
+                            update_status_task::update_status(ctx).await
+                        })
+                    }
+                )
+
+            }
+        ],
     }
 }

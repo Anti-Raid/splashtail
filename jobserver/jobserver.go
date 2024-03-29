@@ -1,6 +1,7 @@
 package jobserver
 
 import (
+	"github.com/anti-raid/splashtail/jobserver/bgtasks"
 	"github.com/anti-raid/splashtail/jobserver/core"
 	"github.com/anti-raid/splashtail/jobserver/state"
 )
@@ -24,4 +25,7 @@ func CreateJobServer() {
 
 	// Resume ongoing tasks
 	go core.Resume()
+
+	// Start all background tasks
+	go bgtasks.StartAllTasks()
 }

@@ -115,11 +115,19 @@ func main() {
 			panic(err)
 		}
 
+		killInstanceList := func() {
+			il.KillAll()
+
+			for _, instance := range il.Instances {
+				instance.Command.Wait()
+			}
+		}
+
 		defer func() {
 			a := recover()
 
 			if a != nil {
-				il.KillAll()
+				killInstanceList()
 			}
 		}()
 
@@ -150,7 +158,7 @@ func main() {
 			ln, err := upg.Listen("tcp", ":"+strconv.Itoa(webserverstate.Config.Meta.Port.Parse()))
 
 			if err != nil {
-				il.KillAll()
+				killInstanceList()
 				webserverstate.Logger.Fatal("Error binding to socket", zap.Error(err))
 			}
 
@@ -169,6 +177,7 @@ func main() {
 			}()
 
 			if err := upg.Ready(); err != nil {
+				killInstanceList()
 				webserverstate.Logger.Fatal("Error calling upg.Ready", zap.Error(err))
 			}
 
@@ -179,7 +188,7 @@ func main() {
 			err = http.ListenAndServe(":"+strconv.Itoa(webserverstate.Config.Meta.Port.Parse()), r)
 
 			if err != nil {
-				il.KillAll()
+				killInstanceList()
 				webserverstate.Logger.Fatal("Error binding to socket", zap.Error(err))
 			}
 		}

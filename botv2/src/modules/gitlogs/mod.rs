@@ -28,5 +28,6 @@ pub fn module() -> crate::silverpelt::Module {
             })
         ],
         event_handlers: vec![],
+        background_tasks: vec![], // No background tasks
     }
 }

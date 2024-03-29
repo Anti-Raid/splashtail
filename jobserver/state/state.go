@@ -173,7 +173,6 @@ func Setup() {
 
 	BotUser = bu
 
-	// Shouldnt be called yet as we don't start websocket
 	Discord.AddHandler(func(s *discordgo.Session, r *discordgo.Ready) {
 		Logger.Info("[DISCORD]", zap.String("note", "ready"))
 	})

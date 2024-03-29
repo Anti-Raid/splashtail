@@ -10,5 +10,6 @@ pub fn module() -> crate::silverpelt::Module {
         is_default_enabled: false,
         commands: vec![],
         event_handlers: vec![],
+        background_tasks: vec![], // No background tasks
     }
 }

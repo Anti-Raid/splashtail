@@ -6,6 +6,7 @@ pub mod module_config;
 pub mod permissions;
 pub mod poise_ext;
 pub mod silverpelt_cache;
+pub mod taskcat;
 pub mod utils;
 
 use futures::future::BoxFuture;
@@ -30,6 +31,7 @@ pub type ModuleEventHandler = Box<
 >;
 
 /// This structure defines a basic module
+#[derive(Default)]
 pub struct Module {
     /// The ID of the module
     pub id: &'static str,
@@ -60,6 +62,9 @@ pub struct Module {
 
     /// Event handlers (if any)
     pub event_handlers: Vec<ModuleEventHandler>,
+
+    /// Background tasks (if any)
+    pub background_tasks: Vec<taskcat::Task>,
 }
 
 #[derive(Default, Clone, PartialEq, serde::Serialize, serde::Deserialize, Debug)]

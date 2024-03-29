@@ -161,7 +161,16 @@ async fn event_listener<'a>(
                 data_about_bot.user.name, ctx.serenity_context.shard_id
             );
 
-            tokio::task::spawn(crate::tasks::taskcat::start_all_tasks(
+            // Get all tasks
+            let mut tasks = Vec::new();
+            for module in modules::modules() {
+                for task in module.background_tasks {
+                    tasks.push(task);
+                }
+            }
+
+            tokio::task::spawn(silverpelt::taskcat::start_all_tasks(
+                tasks,
                 user_data.pool.clone(),
                 CacheHttpImpl::from_ctx(ctx.serenity_context),
                 ctx.serenity_context.clone(),
