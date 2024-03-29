@@ -116,10 +116,15 @@ func main() {
 		}
 
 		killInstanceList := func() {
+			time.Sleep(5 * time.Second)
+
 			il.KillAll()
 
 			for _, instance := range il.Instances {
-				instance.Command.Wait()
+				if instance.Command != nil {
+					webserverstate.Logger.Info("Waiting for instance to exit", zap.Int("clusterId", instance.ClusterID))
+					instance.Command.Wait()
+				}
 			}
 		}
 

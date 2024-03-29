@@ -1,5 +1,9 @@
 mod cmd;
+mod core;
+mod temp_punishment_task;
+
 use indexmap::indexmap;
+use futures_util::FutureExt;
 
 pub fn module() -> crate::silverpelt::Module {
     crate::silverpelt::Module {
@@ -164,6 +168,16 @@ pub fn module() -> crate::silverpelt::Module {
             )
         ],
         event_handlers: vec![],
-        background_tasks: vec![], // No background tasks
+        background_tasks: vec![
+            crate::silverpelt::taskcat::Task {
+                name: "Temporary Punishment Task".to_string(),
+                description: "Handle expired punishments".to_string(),
+                duration: std::time::Duration::from_secs(60),
+                enabled: true,
+                run: Box::new(move |pool, _ch, ctx| {
+                    temp_punishment_task::temp_punishment(pool, ctx).boxed()
+                }),
+            }
+        ], // No background tasks
     }
 }

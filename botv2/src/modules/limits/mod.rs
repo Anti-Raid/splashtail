@@ -5,6 +5,7 @@ mod events;
 mod handler;
 
 use indexmap::indexmap;
+use futures_util::FutureExt;
 
 pub fn module() -> crate::silverpelt::Module {
     crate::silverpelt::Module {
@@ -35,7 +36,7 @@ pub fn module() -> crate::silverpelt::Module {
             ),
         ],
         event_handlers: vec![Box::new(move |ctx, fe, ectx| {
-            Box::pin(async move { events::event_listener(ctx, fe, ectx).await })
+            events::event_listener(ctx, fe, ectx).boxed()
         })],
         background_tasks: vec![], // No background tasks
     }

@@ -2,6 +2,7 @@ use bothelpers::utils::{
     create_special_allocation_from_str, get_icon_of_state, parse_duration_string,
     parse_numeric_list_to_str, Unit, REPLACE_CHANNEL,
 };
+use super::core::to_log_format;
 use crate::ipc::animus_magic::{
     client::{AnimusMessage, AnimusResponse},
     jobserver::{JobserverAnimusMessage, JobserverAnimusResponse},
@@ -82,23 +83,6 @@ fn create_message_prune_serde(
             }
         }
     ))
-}
-
-fn username(m: &User) -> String {
-    if let Some(ref global_name) = m.global_name {
-        global_name.to_string()
-    } else {
-        m.tag()
-    }
-}
-
-fn to_log_format(moderator: &User, member: &User, reason: &str) -> String {
-    format!(
-        "{} | Handled '{}' for reason '{}'",
-        username(moderator),
-        username(member),
-        reason
-    )
 }
 
 /// Prune messages from a user

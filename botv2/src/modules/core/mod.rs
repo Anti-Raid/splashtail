@@ -3,6 +3,8 @@ mod ping;
 mod stats;
 mod update_status_task;
 
+use futures_util::FutureExt;
+
 pub fn module() -> crate::silverpelt::Module {
     crate::silverpelt::Module {
         id: "core",
@@ -34,9 +36,7 @@ pub fn module() -> crate::silverpelt::Module {
                 enabled: true,
                 run: Box::new(
                     move |_pool, _ch, ctx| {
-                        Box::pin(async move {
-                            update_status_task::update_status(ctx).await
-                        })
+                        update_status_task::update_status(ctx).boxed()
                     }
                 )
 
