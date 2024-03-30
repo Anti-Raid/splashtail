@@ -247,16 +247,21 @@ pub async fn event_listener(
     }
 
     // (hopefully temporary) work around to reduce spam
-    match gwevent::core::get_event_user_id(event) {
-        Ok(user_id) => {
-            if user_id == ctx.cache.current_user().id {
-                return Ok(());
+    match event {
+        FullEvent::GuildAuditLogEntryCreate { .. } => {},
+        _ => {
+            match gwevent::core::get_event_user_id(event) {
+                Ok(user_id) => {
+                    if user_id == ctx.cache.current_user().id {
+                        return Ok(());
+                    }
+                },
+                Err(Some(e)) => {
+                    return Err(e);
+                },
+                Err(None) => {},
             }
-        },
-        Err(Some(e)) => {
-            return Err(e);
-        },
-        Err(None) => {},
+        }
     }
 
     let Some(expanded_event) = gwevent::core::expand_event(event) else {

@@ -145,6 +145,10 @@ pub fn parse_duration_string(s: &str) -> Result<(u64, Unit), Error> {
         if c.is_numeric() {
             number = number * 10 + c.to_digit(10).ok_or("Cannot convert to integer")? as u64;
         } else {
+            if c == ' ' {
+                continue;
+            }
+
             unit.push(c);
         }
     }
@@ -230,5 +234,12 @@ mod test {
             parse_numeric_list_to_str::<serenity::all::ChannelId>("1,2", &[(",", "")]).unwrap(),
             vec!["1", "2"]
         );
+    }
+
+    #[test]
+    fn test_parse_duration_string() {
+        assert_eq!(parse_duration_string("1d").unwrap(), (1, Unit::Days));
+        assert_eq!(parse_duration_string("1 day").unwrap(), (1, Unit::Days));
+        assert_eq!(parse_duration_string("1 days").unwrap(), (1, Unit::Days));
     }
 }

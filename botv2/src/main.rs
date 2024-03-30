@@ -161,24 +161,24 @@ async fn event_listener<'a>(
                 data_about_bot.user.name, ctx.serenity_context.shard_id
             );
 
-            // Get all tasks
-            let mut tasks = Vec::new();
-            for module in modules::modules() {
-                for task in module.background_tasks {
-                    tasks.push(task);
-                }
-            }
-
-            tokio::task::spawn(silverpelt::taskcat::start_all_tasks(
-                tasks,
-                user_data.pool.clone(),
-                CacheHttpImpl::from_ctx(ctx.serenity_context),
-                ctx.serenity_context.clone(),
-            ));
-
             if ctx.serenity_context.shard_id.0
                 == *crate::ipc::argparse::MEWLD_ARGS.shards.first().unwrap()
             {
+                // Get all tasks
+                let mut tasks = Vec::new();
+                for module in modules::modules() {
+                    for task in module.background_tasks {
+                        tasks.push(task);
+                    }
+                }
+
+                tokio::task::spawn(silverpelt::taskcat::start_all_tasks(
+                    tasks,
+                    user_data.pool.clone(),
+                    CacheHttpImpl::from_ctx(ctx.serenity_context),
+                    ctx.serenity_context.clone(),
+                ));
+
                 info!("Starting IPC");
 
                 let data = ctx.serenity_context.data::<Data>();

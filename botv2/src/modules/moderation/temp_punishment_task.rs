@@ -4,8 +4,9 @@ const MAX_CONCURRENT_UNBANS: usize = 3;
 
 #[derive(Debug)]
 enum UnbanError {
-    SerenityError(serenity::Error),
-    SqlxError(sqlx::Error),
+    Serenity(serenity::Error),
+    Sqlx(sqlx::Error),
+    Generic(String),
 }
 
 pub async fn temp_punishment(
@@ -13,7 +14,7 @@ pub async fn temp_punishment(
     ctx: &serenity::client::Context,
 ) -> Result<(), crate::Error> {
     let temp_punishments = sqlx::query!(
-        "SELECT id, guild_id, user_id, moderator, action, stings, reason, extract(epoch from duration) AS duration FROM moderation__actions WHERE handled = false AND duration IS NOT NULL"
+        "SELECT id, guild_id, user_id, moderator, action, stings, reason FROM moderation__actions WHERE handled = false AND duration IS NOT NULL AND duration + created_at < NOW()",
     )
     .fetch_all(pool)
     .await?;
@@ -48,8 +49,9 @@ pub async fn temp_punishment(
                 match res {
                     Err(e) => log::error!("Error while running unban [join]: {}", e),
                     Ok(Ok(_)) => {},
-                    Ok(Err(UnbanError::SerenityError(e))) => log::error!("Error while running unban [discord]: {}", e),
-                    Ok(Err(UnbanError::SqlxError(e))) => log::error!("Error while running unban [sqlx]: {}", e),
+                    Ok(Err(UnbanError::Serenity(e))) => log::error!("Error while running unban [discord]: {}", e),
+                    Ok(Err(UnbanError::Sqlx(e))) => log::error!("Error while running unban [sqlx]: {}", e),
+                    Ok(Err(UnbanError::Generic(e))) => log::error!("Error while running unban [generic]: {}", e),
                 }
             }
         }
@@ -63,21 +65,30 @@ pub async fn temp_punishment(
                 format!("Revert expired ban with stings={}", punishment.stings)
             };
 
-            match ctx.http.remove_ban(
-                guild_id, 
-                user_id,
-                Some(reason.as_str())
-            )
-            .await
-            .map_err(UnbanError::SerenityError) {
+            let result = match punishment.action.as_str() {
+                "ban" => {
+                    ctx.http.remove_ban(
+                        guild_id, 
+                        user_id,
+                        Some(reason.as_str())
+                    )
+                    .await
+                    .map_err(UnbanError::Serenity)
+                },
+                _ => Err(UnbanError::Generic(format!("Unsupported action: {}", punishment.action)))
+            };
+
+            match result {
                 Ok(_) => {
                     sqlx::query!(
-                        "UPDATE moderation__actions SET handled = true WHERE id = $1",
-                        punishment.id
+                        "UPDATE moderation__actions SET handled = true WHERE guild_id = $1 AND user_id = $2 AND action = $3",
+                        guild_id.to_string(),
+                        user_id.to_string(),
+                        punishment.action
                     )
                     .execute(&pool)
                     .await
-                    .map_err(UnbanError::SqlxError)
+                    .map_err(UnbanError::Sqlx)
                 },
                 Err(e) => Err(e)
             }
@@ -89,8 +100,9 @@ pub async fn temp_punishment(
         match res {
             Err(e) => log::error!("Error while running unban [join]: {}", e),
             Ok(Ok(_)) => {},
-            Ok(Err(UnbanError::SerenityError(e))) => log::error!("Error while running unban [discord]: {}", e),
-            Ok(Err(UnbanError::SqlxError(e))) => log::error!("Error while running unban [sqlx]: {}", e),
+            Ok(Err(UnbanError::Serenity(e))) => log::error!("Error while running unban [discord]: {}", e),
+            Ok(Err(UnbanError::Sqlx(e))) => log::error!("Error while running unban [sqlx]: {}", e),
+            Ok(Err(UnbanError::Generic(e))) => log::error!("Error while running unban [generic]: {}", e),
         }
     }
 

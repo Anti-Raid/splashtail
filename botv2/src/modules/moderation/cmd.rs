@@ -97,7 +97,7 @@ fn create_message_prune_serde(
 pub async fn prune_user(
     ctx: Context<'_>,
     #[description = "The user to prune"] user: serenity::all::User,
-    #[description = "The reason for the prune"] reason: String,
+    #[description = "The reason for the prune"] #[max_length = 512] reason: String,
     #[description = "Number of stings to give. Defaults to configured base stings"] stings: Option<i32>,
     #[description = "Whether or not to show prune status updates"] prune_debug: Option<bool>,
     #[description = "Channels to prune from, otherwise will prune from all channels"] prune_channels: Option<String>,
@@ -108,6 +108,10 @@ pub async fn prune_user(
     #[description = "Whether to attempt rollover of leftover message quota to another channels or not"] prune_rollover_leftovers: Option<bool>,
     #[description = "Specific channel allocation overrides"] prune_special_allocations: Option<String>,
 ) -> Result<(), Error> {
+    if reason.len() > 512 {
+        return Err("Reason must be less than/equal to 512 characters".into());
+    }
+
     let Some(guild_id) = ctx.guild_id() else {
         return Err("This command can only be used in a guild".into());
     };
@@ -310,9 +314,13 @@ pub async fn prune_user(
 pub async fn kick(
     ctx: Context<'_>,
     #[description = "The member to kick"] member: serenity::all::Member,
-    #[description = "The reason for the kick"] reason: String,
+    #[description = "The reason for the kick"] #[max_length = 384]  reason: String,
     #[description = "Number of stings to give. Defaults to configured base stings"] stings: Option<i32>,
 ) -> Result<(), Error> {
+    if reason.len() > 384 {
+        return Err("Reason must be less than/equal to 384 characters".into());
+    }
+
     let Some(guild_id) = ctx.guild_id() else {
         return Err("This command can only be used in a guild".into());
     };
@@ -426,10 +434,14 @@ pub async fn kick(
 pub async fn ban(
     ctx: Context<'_>,
     #[description = "The member to ban"] member: serenity::all::User,
-    #[description = "The reason for the ban"] reason: String,
+    #[description = "The reason for the ban"] #[max_length = 384] reason: String,
     #[description = "Number of stings to give. Defaults to configured base stings"] stings: Option<i32>,
     #[description = "How many messages to prune using discords autopruner [dmd] (days)"] prune_dmd: Option<u8>,
 ) -> Result<(), Error> {
+    if reason.len() > 384 {
+        return Err("Reason must be less than/equal to 384 characters".into());
+    }
+
     let Some(guild_id) = ctx.guild_id() else {
         return Err("This command can only be used in a guild".into());
     };
@@ -555,11 +567,15 @@ pub async fn ban(
 pub async fn tempban(
     ctx: Context<'_>,
     #[description = "The member to ban"] member: serenity::all::User,
-    #[description = "The reason for the ban"] reason: String,
+    #[description = "The reason for the ban"] #[max_length = 384] reason: String,
     #[description = "Number of stings to give. Defaults to configured base stings"] stings: Option<i32>,
     #[description = "The duration of the ban"] duration: String,
     #[description = "How many messages to prune using discords autopruner [dmd] (days)"] prune_dmd: Option<u8>,
 ) -> Result<(), Error> {
+    if reason.len() > 384 {
+        return Err("Reason must be less than/equal to 384 characters".into());
+    }
+
     let Some(guild_id) = ctx.guild_id() else {
         return Err("This command can only be used in a guild".into());
     };
@@ -684,9 +700,13 @@ pub async fn tempban(
 pub async fn unban(
     ctx: Context<'_>,
     #[description = "The user to ban"] user: serenity::all::User,
-    #[description = "The reason for the ban"] reason: String,
+    #[description = "The reason for the ban"] #[max_length = 384] reason: String,
     #[description = "Number of stings to give. Defaults to 0"] stings: Option<i32>,
 ) -> Result<(), Error> {
+    if reason.len() > 384 {
+        return Err("Reason must be less than/equal to 384 characters".into());
+    }
+
     let Some(guild_id) = ctx.guild_id() else {
         return Err("This command can only be used in a guild".into());
     };
@@ -796,9 +816,13 @@ pub async fn timeout(
     ctx: Context<'_>,
     #[description = "The member to timeout"] mut member: serenity::all::Member,
     #[description = "The duration of the timeout"] duration: String,
-    #[description = "The reason for the timeout"] reason: String,
+    #[description = "The reason for the timeout"] #[max_length = 384] reason: String,
     #[description = "Number of stings to give. Defaults to configured base stings"] stings: Option<i32>,
 ) -> Result<(), Error> {
+    if reason.len() > 384 {
+        return Err("Reason must be less than/equal to 384 characters".into());
+    }
+
     let Some(guild_id) = ctx.guild_id() else {
         return Err("This command can only be used in a guild".into());
     };

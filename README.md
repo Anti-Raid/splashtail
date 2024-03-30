@@ -148,11 +148,11 @@ Anti-Raid has 2 gateway proxies that can optionally be used to reduce the number
 For initial release:
 
 - Stabilizing the module+command permission system [X]
-- Add the ability to enable/disable modules [X] and commands [] and also override command permissions [WIP]
+- Add the ability to enable/disable modules [X] and commands [WIP] and also override command permissions [WIP]
 - Server Member Backup/Restore []
 - Basic Moderation (warn/kick/ban+tempban/unban) [X]
 - Passive Anti-raid (lockserver/unlockserver/lockchannel/unlockchannel) []
-- Basic Active Anti-Spam (anti-invite) []
+- Basic Active Anti-Spam (anti-invite, anti-everyone ping) []
 - Audit Logs [X]
 - Integrating audit logs into moderation [X]
 - Basic utility functions (if needed) [NOT NEEDED YET]

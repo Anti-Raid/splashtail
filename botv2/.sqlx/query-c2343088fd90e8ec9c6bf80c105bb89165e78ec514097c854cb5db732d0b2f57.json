@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT id, guild_id, user_id, moderator, action, stings, reason, extract(epoch from duration) AS duration FROM moderation__actions WHERE handled = false AND duration IS NOT NULL",
+  "query": "SELECT id, guild_id, user_id, moderator, action, stings, reason FROM moderation__actions WHERE handled = false AND duration IS NOT NULL AND duration + created_at < NOW()",
   "describe": {
     "columns": [
       {
@@ -37,11 +37,6 @@
         "ordinal": 6,
         "name": "reason",
         "type_info": "Text"
-      },
-      {
-        "ordinal": 7,
-        "name": "duration",
-        "type_info": "Numeric"
       }
     ],
     "parameters": {
@@ -54,9 +49,8 @@
       false,
       false,
       false,
-      true,
-      null
+      true
     ]
   },
-  "hash": "bae92b4d7bf3f404eeba3470b84c3a16641d9eab6afe94a5ae53adea4acb6f51"
+  "hash": "c2343088fd90e8ec9c6bf80c105bb89165e78ec514097c854cb5db732d0b2f57"
 }
