@@ -21,7 +21,6 @@ pub fn module() -> crate::silverpelt::Module {
                 "restore" => crate::silverpelt::CommandExtendedData::kittycat_or_admin("server_backups", "restore"),
             },
         )],
-        event_handlers: vec![], // Root has no event listeners
-        background_tasks: vec![], // No background tasks
+        ..Default::default()
     }
 }

@@ -52,7 +52,7 @@ pub async fn stats(ctx: Context<'_>) -> Result<(), Error> {
                     "{} ({} of {})",
                     crate::ipc::argparse::MEWLD_ARGS.cluster_name,
                     crate::ipc::argparse::MEWLD_ARGS.cluster_id,
-                    crate::ipc::argparse::MEWLD_ARGS.cluster_count,
+                    crate::ipc::argparse::MEWLD_ARGS.cluster_count - 1,
                 ),
                 true,
             )

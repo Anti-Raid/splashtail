@@ -548,6 +548,7 @@ pub fn expand_event(event: &FullEvent) -> Option<IndexMap<String, Field>> {
         }
 
         insert_field(fields, "channel", "channel_id", channel.id);
+        insert_field(fields, "channel", "position", channel.position);
     }
 
     fn expand_partial_guild_channel(

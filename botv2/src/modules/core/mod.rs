@@ -27,7 +27,6 @@ pub fn module() -> crate::silverpelt::Module {
             ),
             (ping::ping(), crate::silverpelt::CommandExtendedData::none()),
         ],
-        event_handlers: vec![], // Core has no event listeners
         background_tasks: vec![
             crate::silverpelt::taskcat::Task {
                 name: "Update Bot Status".to_string(),
@@ -42,5 +41,6 @@ pub fn module() -> crate::silverpelt::Module {
 
             }
         ],
+        ..Default::default()
     }
 }

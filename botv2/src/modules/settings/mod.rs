@@ -49,7 +49,6 @@ pub fn module() -> crate::silverpelt::Module {
                 },
             ),
         ],
-        event_handlers: vec![], // Settings has no event listeners
-        background_tasks: vec![], // No background tasks
+        ..Default::default()
     }
 }

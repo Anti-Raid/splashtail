@@ -167,7 +167,6 @@ pub fn module() -> crate::silverpelt::Module {
                 },
             )
         ],
-        event_handlers: vec![],
         background_tasks: vec![
             crate::silverpelt::taskcat::Task {
                 name: "Temporary Punishment Task".to_string(),
@@ -178,6 +177,7 @@ pub fn module() -> crate::silverpelt::Module {
                     temp_punishment_task::temp_punishment(pool, ctx).boxed()
                 }),
             }
-        ], // No background tasks
+        ],
+        ..Default::default()
     }
 }

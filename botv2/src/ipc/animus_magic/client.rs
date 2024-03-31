@@ -1,5 +1,6 @@
 use super::bot::{BotAnimusMessage, BotAnimusResponse};
 use super::jobserver::{JobserverAnimusMessage, JobserverAnimusResponse};
+use super::infra::{InfraAnimusMessage, InfraAnimusResponse};
 use bothelpers::cache::CacheHttpImpl;
 use crate::{ipc::argparse::MEWLD_ARGS, Error};
 use dashmap::DashMap;
@@ -22,6 +23,7 @@ use tokio::sync::mpsc::Sender;
 pub enum AnimusResponse {
     Bot(BotAnimusResponse),
     Jobserver(JobserverAnimusResponse),
+    Infra(InfraAnimusResponse),
 }
 
 impl AnimusResponse {
@@ -42,6 +44,14 @@ impl AnimusResponse {
                     Ok(jar) => Ok(AnimusResponse::Jobserver(jar)),
                     Err(e) => Err(format!("Failed to unmarshal message: {}", e).into()),
                 }
+            },
+            AnimusTarget::Infra => {
+                let iar = from_payload::<InfraAnimusResponse>(payload);
+
+                match iar {
+                    Ok(iar) => Ok(AnimusResponse::Infra(iar)),
+                    Err(e) => Err(format!("Failed to unmarshal message: {}", e).into()),
+                }
             }
             _ => Err("Invalid target".into()),
         }
@@ -53,6 +63,7 @@ impl AnimusResponse {
 pub enum AnimusMessage {
     Bot(BotAnimusMessage),
     Jobserver(JobserverAnimusMessage),
+    Infra(InfraAnimusMessage),
 }
 
 impl AnimusMessage {
@@ -318,7 +329,7 @@ impl AnimusMagicClient {
 
                         let msg = match resp {
                             AnimusMessage::Bot(msg) => msg,
-                            AnimusMessage::Jobserver(_) => {
+                            _ => {
                                 log::warn!(
                                     "Invalid message recieved on channel {} [invalid message type]",
                                     message.channel

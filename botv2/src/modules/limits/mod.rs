@@ -38,6 +38,6 @@ pub fn module() -> crate::silverpelt::Module {
         event_handlers: vec![Box::new(move |ctx, fe, ectx| {
             events::event_listener(ctx, fe, ectx).boxed()
         })],
-        background_tasks: vec![], // No background tasks
+        ..Default::default()
     }
 }

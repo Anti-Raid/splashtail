@@ -15,7 +15,6 @@ pub fn module() -> crate::silverpelt::Module {
             cmds::register(),
             crate::silverpelt::CommandExtendedData::none(),
         )],
-        event_handlers: vec![], // Root has no event listeners
-        background_tasks: vec![], // No background tasks
+        ..Default::default()
     }
 }

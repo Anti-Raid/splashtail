@@ -30,6 +30,14 @@ pub type ModuleEventHandler = Box<
         ) -> BoxFuture<'a, Result<(), crate::Error>>,
 >;
 
+pub type OnStartupFunction = Box<
+    dyn Send
+        + Sync
+        + for<'a> Fn(
+            &'a crate::Data,
+        ) -> BoxFuture<'a, Result<(), crate::Error>>,
+>;
+
 /// This structure defines a basic module
 #[derive(Default)]
 pub struct Module {
@@ -65,6 +73,9 @@ pub struct Module {
 
     /// Background tasks (if any)
     pub background_tasks: Vec<taskcat::Task>,
+
+    /// Extra init code
+    pub on_startup: Vec<OnStartupFunction>
 }
 
 #[derive(Default, Clone, PartialEq, serde::Serialize, serde::Deserialize, Debug)]

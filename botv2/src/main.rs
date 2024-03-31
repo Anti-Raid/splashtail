@@ -538,6 +538,15 @@ async fn main() {
 
     info!("Initializing bot state");
 
+    for module in modules::modules() {
+        for init in module.on_startup.iter() {
+            if let Err(e) = init(&data).await {
+                error!("Error initializing module: {}", e);
+                panic!("CRITICAL: Error initializing module: {}", e);
+            }
+        }
+    }
+
     let mut client = client_builder
         .framework(framework)
         .data(Arc::new(data))

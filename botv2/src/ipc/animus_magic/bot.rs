@@ -72,6 +72,12 @@ pub enum BotAnimusMessage {
         module: String,
         enabled: bool,
     },
+    /// Toggles a per-module cache toggle
+    TogglePerModuleCache {
+        module: String,
+        toggle: String,
+        options: indexmap::IndexMap<String, serde_cbor::Value>,
+    },
 }
 
 impl BotAnimusMessage {
@@ -233,7 +239,38 @@ impl BotAnimusMessage {
                 Ok(BotAnimusResponse::Ok {
                     message: "".to_string(),
                 })
-            }
+            },
+            Self::TogglePerModuleCache { module, toggle, options } => {
+                let Some(toggle) = dynamic::PERMODULE_CACHE_TOGGLES.get(&(module.clone(), toggle.clone())) else {
+                    return Err("Toggle not found".into());
+                };
+
+                (toggle)(&options).await?;
+
+                Ok(BotAnimusResponse::Ok {
+                    message: "".to_string(),
+                })
+            },
         }
     }
+}
+
+pub mod dynamic {
+    use once_cell::sync::Lazy;
+    use dashmap::DashMap;
+    use futures::future::BoxFuture;
+
+    pub type CacheToggleFunc = Box<
+    dyn Send
+        + Sync
+        + for<'a> Fn(
+            &'a indexmap::IndexMap<String, serde_cbor::Value>, // Options sent
+        ) -> BoxFuture<'a, Result<(), crate::Error>>,
+    >;
+
+    // In order to allow modules to implement their own internal caches without polluting silverpelt cache,
+    // we implement PERMODULE_CACHE_TOGGLES which any module can register/add on to
+    //
+    // Format of a permodule_cache_toggle is (module_name, toggle)
+    pub static PERMODULE_CACHE_TOGGLES: Lazy<DashMap<(String, String), CacheToggleFunc>> = Lazy::new(DashMap::new);
 }

@@ -27,7 +27,6 @@ pub fn module() -> crate::silverpelt::Module {
                 "eventmod" => crate::silverpelt::CommandExtendedData::kittycat_or_admin("gitlogs", "eventmod"),
             })
         ],
-        event_handlers: vec![],
-        background_tasks: vec![], // No background tasks
+        ..Default::default()
     }
 }

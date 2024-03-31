@@ -465,6 +465,7 @@ name = "botv2"
 version = "6.0.0"
 dependencies = [
  "anyhow",
+ "bitflags 2.4.2",
  "bothelpers",
  "chrono",
  "dashmap",
