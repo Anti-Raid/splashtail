@@ -1,0 +1,28 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT anti_invite, anti_everyone FROM basic_antispam__options WHERE guild_id = $1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "anti_invite",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 1,
+        "name": "anti_everyone",
+        "type_info": "Bool"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      false
+    ]
+  },
+  "hash": "eba0cc60da8b1116f99d72f0d8496b28379231fdf62d44c17127406bf6b00fe7"
+}
