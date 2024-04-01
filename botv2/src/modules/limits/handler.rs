@@ -66,7 +66,7 @@ pub async fn handle_mod_action(
 
     for (_limit_id, guild_limit) in guild_limits.into_iter() {
         // Check the limit type and user_id and guild to see if it is in the cache
-        let mut query = cache.query("select action_id from user_actions where guild_id=type::string($guild_id) and user_id=type::string($user_id) and limit_type=type::string($limit_type) and time::now() - created_at < duration::from::secs($limit_time)")
+        let mut query = cache.query("select action_id from user_actions where guild_id=type::string($guild_id) and user_id=type::string($user_id) and limit_type=type::string($limit_type) and type::datetime(created_at) + duration::from::secs($limit_time) > time::now()")
             .bind(("guild_id", guild_id))
             .bind(("user_id", user_id))
             .bind(("limit_type", limit))

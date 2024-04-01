@@ -346,7 +346,13 @@ pub async fn dispatch_audit_log(
             let mut inline = false;
 
             for ft in v.value {
-                vcs.push(resolve_gwevent_field(&ft)?);
+                let mut resolved_field = resolve_gwevent_field(&ft)?;
+
+                if resolved_field.len() > 1024 {
+                    resolved_field = format!("{}...", &resolved_field[..1021]);
+                }
+
+                vcs.push(resolved_field);
 
                 if !inline {
                     inline = !matches!(ft, FieldType::Strings(_));        
