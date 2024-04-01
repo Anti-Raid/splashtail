@@ -16,3 +16,4 @@ semver
 mewld-staging.yaml
 mewld-prod.yaml
 data/cache
+history.txt # surrealdb

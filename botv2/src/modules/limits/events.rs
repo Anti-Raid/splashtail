@@ -18,6 +18,21 @@ pub async fn event_listener(
     };
 
     match event {
+        FullEvent::GuildMemberAddition { new_member } => {
+            handle_mod_action(
+                &user_data.pool,
+                &user_data.surreal_cache,
+                &cache_http,
+                &super::handler::HandleModAction {
+                    guild_id: ectx.guild_id,
+                    limit: super::core::UserLimitTypes::MemberAdd,
+                    user_id: new_member.user.id,
+                    target: None,
+                    action_data: serde_json::json!({}),
+                },
+            )
+            .await
+        },
         FullEvent::GuildAuditLogEntryCreate { entry, guild_id } => {
             info!("Audit log created: {:?}. Guild: {}", entry, guild_id);
 
@@ -37,7 +52,7 @@ pub async fn event_listener(
                                     guild_id: *guild_id,
                                     limit: super::core::UserLimitTypes::ChannelAdd,
                                     user_id: entry.user_id,
-                                    target: ch_id.to_string(),
+                                    target: Some(ch_id.to_string()),
                                     action_data: serde_json::json!({}),
                                 },
                             )
@@ -54,7 +69,7 @@ pub async fn event_listener(
                                     guild_id: *guild_id,
                                     limit: super::core::UserLimitTypes::ChannelRemove,
                                     user_id: entry.user_id,
-                                    target: ch_id.to_string(),
+                                    target: Some(ch_id.to_string()),
                                     action_data: serde_json::json!({}),
                                 },
                             )
@@ -70,7 +85,7 @@ pub async fn event_listener(
                                     guild_id: *guild_id,
                                     limit: super::core::UserLimitTypes::ChannelUpdate,
                                     user_id: entry.user_id,
-                                    target: ch_id.to_string(),
+                                    target: Some(ch_id.to_string()),
                                     action_data: serde_json::json!({}),
                                 },
                             )
@@ -94,7 +109,7 @@ pub async fn event_listener(
                                     guild_id: *guild_id,
                                     limit: super::core::UserLimitTypes::RoleAdd,
                                     user_id: entry.user_id,
-                                    target: r_id.to_string(),
+                                    target: Some(r_id.to_string()),
                                     action_data: serde_json::json!({}),
                                 },
                             )
@@ -111,7 +126,7 @@ pub async fn event_listener(
                                     guild_id: *guild_id,
                                     limit: super::core::UserLimitTypes::RoleUpdate,
                                     user_id: entry.user_id,
-                                    target: r_id.to_string(),
+                                    target: Some(r_id.to_string()),
                                     action_data: serde_json::json!({}),
                                 },
                             )
@@ -128,7 +143,7 @@ pub async fn event_listener(
                                     guild_id: *guild_id,
                                     limit: super::core::UserLimitTypes::RoleRemove,
                                     user_id: entry.user_id,
-                                    target: r_id.to_string(),
+                                    target: Some(r_id.to_string()),
                                     action_data: serde_json::json!({}),
                                 },
                             )
@@ -137,7 +152,7 @@ pub async fn event_listener(
                         _ => Ok(()),
                     }
                 }
-                // DEAL WITH THIS HELL LATER.
+                // TODO: DEAL WITH THIS HELL LATER.
                 Action::Member(ma) => {
                     let Some(target) = entry.target_id else {
                         error!("MEMBER update: No target ID found");
@@ -216,7 +231,7 @@ pub async fn event_listener(
                                     guild_id: *guild_id,
                                     limit: super::core::UserLimitTypes::MemberRolesUpdated,
                                     user_id: entry.user_id,
-                                    target: target.to_string(),
+                                    target: Some(target.to_string()),
                                     action_data: serde_json::json!({
                                         "old": old_roles,
                                         "added": added,
@@ -237,7 +252,7 @@ pub async fn event_listener(
                                         guild_id: *guild_id,
                                         limit: super::core::UserLimitTypes::RoleGivenToMember,
                                         user_id: entry.user_id,
-                                        target: target.to_string(),
+                                        target: Some(target.to_string()),
                                         action_data: serde_json::json!({
                                             "old": old_roles,
                                             "added": added,
@@ -259,7 +274,7 @@ pub async fn event_listener(
                                         guild_id: *guild_id,
                                         limit: super::core::UserLimitTypes::RoleRemovedFromMember,
                                         user_id: entry.user_id,
-                                        target: target.to_string(),
+                                        target: Some(target.to_string()),
                                         action_data: serde_json::json!({
                                             "old": old_roles,
                                             "added": added,
@@ -279,7 +294,7 @@ pub async fn event_listener(
             };
 
             if let Err(res) = res {
-                error!("Error while handling audit log: {}", res);
+                error!("Error while handling events: {}", res);
                 return Err(res);
             }
 

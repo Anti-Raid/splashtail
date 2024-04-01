@@ -13,6 +13,8 @@ use crate::Error;
 
 #[derive(poise::ChoiceParameter)]
 pub enum UserLimitTypesChoices {
+    #[name = "Member Added to Server"]
+    MemberAdd,
     #[name = "Role Create"]
     RoleAdd,
     #[name = "Role Update"]
@@ -42,6 +44,7 @@ pub enum UserLimitTypesChoices {
 impl UserLimitTypesChoices {
     pub fn resolve(self) -> UserLimitTypes {
         match self {
+            Self::MemberAdd => UserLimitTypes::MemberAdd,
             Self::RoleAdd => UserLimitTypes::RoleAdd,
             Self::RoleUpdate => UserLimitTypes::RoleUpdate,
             Self::RoleRemove => UserLimitTypes::RoleRemove,
@@ -73,6 +76,7 @@ impl UserLimitTypesChoices {
 )]
 #[strum(serialize_all = "snake_case")]
 pub enum UserLimitTypes {
+    MemberAdd, 
     RoleAdd,               // set
     RoleUpdate,            // set
     RoleRemove,            // set
@@ -90,6 +94,7 @@ pub enum UserLimitTypes {
 impl UserLimitTypes {
     pub fn to_cond(self) -> String {
         match &self {
+            Self::MemberAdd => "Member Added to Server".to_string(),
             Self::RoleAdd => "Roles Created".to_string(),
             Self::RoleUpdate => "Roles Updated".to_string(),
             Self::RoleRemove => "Role Removed".to_string(),
@@ -102,19 +107,6 @@ impl UserLimitTypes {
             Self::Kick => "Kicks".to_string(),
             Self::Ban => "Bans".to_string(),
             Self::Unban => "Unbans".to_string(),
-        }
-    }
-
-    /// Returns the default repeat rate for a user-target pair
-    ///
-    /// Within this rate, limits will be ignored if the same user-target pair has already been handled
-    #[allow(dead_code)] // May be used in the future
-    pub fn default_user_target_repeat_rate(&self) -> i64 {
-        match self {
-            Self::RoleGivenToMember => 2,     // 2 seconds
-            Self::RoleRemovedFromMember => 2, // 2 seconds
-            Self::MemberRolesUpdated => 5,    // 5 seconds
-            _ => 0,                           // No repeat rate as other events are more accurate
         }
     }
 }
@@ -171,108 +163,53 @@ pub struct UserAction {
     pub guild_id: GuildId,
     /// The data associated with the action (extra data etc.)
     pub action_data: serde_json::Value,
-    /// The limits that have been hit for this action
+    /// The limits that have been hit for this action. DEPRECATED AND HIGHLY UNRELIABLE/MAY NOT BE SET
     pub limits_hit: Vec<String>,
     /// The target the action was intended for
-    pub target: String,
+    pub target: Option<String>,
 }
 
 impl UserAction {
     /// Fetch user actions for a action id
-    pub async fn by_id(pool: &PgPool, guild_id: GuildId, action_id: &str) -> Result<Self, Error> {
-        let r = sqlx::query!(
-            "
-                SELECT user_id, limit_type, created_at, action_data, 
-                limits_hit, target FROM limits__user_actions
-                WHERE guild_id = $1
-                AND action_id = $2
-            ",
-            guild_id.to_string(),
-            action_id.to_string()
-        )
-        .fetch_one(pool)
-        .await?;
+    pub async fn by_id(data: &crate::Data, guild_id: GuildId, action_id: &str) -> Result<Self, Error> {
+        let mut query = data.surreal_cache.query("select * from user_actions where guild_id=type::string($guild_id) and action_id=type::string($action_id)")
+            .bind(("guild_id", guild_id))
+            .bind(("action_id", action_id))
+            .await?;
 
-        let actions = Self {
-            guild_id,
-            action_id: action_id.to_string(),
-            user_id: r.user_id.parse()?,
-            limit_type: r.limit_type.parse()?,
-            created_at: r.created_at,
-            action_data: r.action_data,
-            limits_hit: r.limits_hit,
-            target: r.target,
-        };
-
-        Ok(actions)
+        let response: Option<UserAction> = query.take(0)?;
+        
+        match response {
+            Some(action) => Ok(action),
+            None => Err("No action found".into()),
+        }
     }
 
     /// Fetch actions for a user in a guild
     pub async fn user(
-        pool: &PgPool,
+        data: &crate::Data,
         guild_id: GuildId,
         user_id: UserId,
     ) -> Result<Vec<Self>, Error> {
-        let rec = sqlx::query!(
-            "
-                SELECT action_id, limit_type, created_at, action_data, 
-                limits_hit, target FROM limits__user_actions
-                WHERE guild_id = $1
-                AND user_id = $2
-            ",
-            guild_id.to_string(),
-            user_id.to_string()
-        )
-        .fetch_all(pool)
+        let mut query = data.surreal_cache.query("select * from user_actions where guild_id=type::string($guild_id) and user_id=type::string($user_id)")
+        .bind(("guild_id", guild_id))
+        .bind(("user_id", user_id))
         .await?;
 
-        let mut actions = Vec::new();
-
-        for r in rec {
-            actions.push(Self {
-                guild_id,
-                user_id,
-                action_id: r.action_id,
-                limit_type: r.limit_type.parse()?,
-                created_at: r.created_at,
-                action_data: r.action_data,
-                limits_hit: r.limits_hit,
-                target: r.target,
-            });
-        }
-
-        Ok(actions)
+        let response: Vec<UserAction> = query.take(0)?;
+        
+        Ok(response)
     }
 
     /// Fetch all user actions in a guild
-    pub async fn guild(pool: &PgPool, guild_id: GuildId) -> Result<Vec<Self>, Error> {
-        let rec = sqlx::query!(
-            "
-                SELECT action_id, limit_type, created_at, user_id, action_data, 
-                limits_hit, target FROM limits__user_actions
-                WHERE guild_id = $1
-            ",
-            guild_id.to_string()
-        )
-        .fetch_all(pool)
+    pub async fn guild(data: &crate::Data, guild_id: GuildId) -> Result<Vec<Self>, Error> {
+        let mut query = data.surreal_cache.query("select * from user_actions where guild_id=type::string($guild_id) and user_id=type::string($user_id)")
+        .bind(("guild_id", guild_id))
         .await?;
 
-        let mut actions = Vec::new();
-
-        for r in rec {
-            actions.push(Self {
-                guild_id,
-                action_id: r.action_id,
-                limit_type: r.limit_type.parse()?,
-                created_at: r.created_at,
-                user_id: r.user_id.parse()?,
-                action_data: r.action_data,
-                limits_hit: r.limits_hit,
-                target: r.target,
-            });
-        }
-
-        Ok(actions)
+        let response: Vec<UserAction> = query.take(0)?;
+        
+        Ok(response)
     }
 }
 
@@ -328,6 +265,7 @@ impl Limit {
         }
         Ok(limits)
     }
+
     pub async fn from_cache(
         cache: &Surreal<Client>,
         guild_id: GuildId,
@@ -368,7 +306,7 @@ pub struct PastHitLimits {
 
 impl PastHitLimits {
     /// Fetch actions for guild
-    pub async fn guild(pool: &PgPool, guild_id: GuildId) -> Result<Vec<Self>, Error> {
+    pub async fn guild(data: &crate::Data, guild_id: GuildId) -> Result<Vec<Self>, Error> {
         let rec = sqlx::query!(
             "
                 SELECT id, user_id, limit_id, cause, notes, created_at FROM limits__past_hit_limits
@@ -376,7 +314,7 @@ impl PastHitLimits {
             ",
             guild_id.to_string()
         )
-        .fetch_all(pool)
+        .fetch_all(&data.pool)
         .await?;
 
         let mut hits = Vec::new();
@@ -385,7 +323,7 @@ impl PastHitLimits {
             let mut cause = vec![];
 
             for action in r.cause {
-                cause.push(UserAction::by_id(pool, guild_id, &action).await?);
+                cause.push(UserAction::by_id(data, guild_id, &action).await?);
             }
 
             hits.push(Self {

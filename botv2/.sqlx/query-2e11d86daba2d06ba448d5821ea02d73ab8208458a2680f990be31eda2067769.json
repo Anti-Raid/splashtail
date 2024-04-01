@@ -1,0 +1,40 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT anti_invite, anti_everyone, minimum_account_age, maximum_account_age FROM basic_antispam__options WHERE guild_id = $1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "anti_invite",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 1,
+        "name": "anti_everyone",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 2,
+        "name": "minimum_account_age",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 3,
+        "name": "maximum_account_age",
+        "type_info": "Int8"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      true,
+      true
+    ]
+  },
+  "hash": "2e11d86daba2d06ba448d5821ea02d73ab8208458a2680f990be31eda2067769"
+}

@@ -96,18 +96,18 @@ async fn check_hierarchy(
 
     let author_id = ctx.author().id;
 
-    if let Some(higher_hierarchy) = guild.greater_member_hierarchy(&ctx.cache(), author_id, user_id) {
+    if let Some(higher_hierarchy) = guild.greater_member_hierarchy(ctx.cache(), author_id, user_id) {
         if higher_hierarchy != author_id {
-            return Err("You cannot moderate a user with a higher or equal hierarchy than you".into());
+            Err("You cannot moderate a user with a higher or equal hierarchy than you".into())
         } else {
-            return Ok(());
+            Ok(())
         }
     } else {
         // We have a None, if so, check if the user is in the server
         if guild.members.get(&user_id).is_none() {
-            return Ok(()); // User is not in the server, so yes, they're below us
+            Ok(()) // User is not in the server, so yes, they're below us
         } else {
-            return Err("You cannot moderate a user with equal hierarchy to you".into());
+            Err("You cannot moderate a user with equal hierarchy to you".into())
         }
     }
 }
