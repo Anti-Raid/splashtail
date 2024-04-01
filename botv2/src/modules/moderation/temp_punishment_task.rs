@@ -90,7 +90,44 @@ pub async fn temp_punishment(
                     .await
                     .map_err(UnbanError::Sqlx)
                 },
-                Err(e) => Err(e)
+                Err(e) => {
+                    if let UnbanError::Serenity(ref e) = e {
+                        // Check if we have a http error
+                        match e {
+                            serenity::Error::Http(serenity::all::HttpError::UnsuccessfulRequest(e)) => {
+                                if [serenity::http::StatusCode::BAD_REQUEST, serenity::http::StatusCode::FORBIDDEN, serenity::http::StatusCode::NOT_FOUND].contains(&e.status_code) {
+                                    // Ban already removed
+                                    sqlx::query!(
+                                        "UPDATE moderation__actions SET handled = true, handle_errors = $1 WHERE guild_id = $2 AND user_id = $3 AND action = $4",
+                                        format!("{}: {}", e.status_code, e.error.message),
+                                        guild_id.to_string(),
+                                        user_id.to_string(),
+                                        punishment.action
+                                    )
+                                    .execute(&pool)
+                                    .await
+                                    .map_err(UnbanError::Sqlx)?;
+                                }
+                            },
+                            serenity::Error::Model(e) => {
+                                // Bot doesn't have permissions to unban
+                                sqlx::query!(
+                                    "UPDATE moderation__actions SET handled = true, handle_errors = $1 WHERE guild_id = $2 AND user_id = $3 AND action = $4",
+                                    format!("{:#?}", e),
+                                    guild_id.to_string(),
+                                    user_id.to_string(),
+                                    punishment.action
+                                )
+                                .execute(&pool)
+                                .await
+                                .map_err(UnbanError::Sqlx)?;
+                            },
+                            _ => {}
+                        }
+                    }
+                    
+                    Err(e)
+                }
             }
         });
     }
