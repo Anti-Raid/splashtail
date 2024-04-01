@@ -35,8 +35,8 @@ pub fn module() -> crate::silverpelt::Module {
                 }
             ),
         ],
-        event_handlers: vec![Box::new(move |ctx, fe, ectx| {
-            events::event_listener(ctx, fe, ectx).boxed()
+        event_handlers: vec![Box::new(move |ectx| {
+            events::event_listener(ectx).boxed()
         })],
         ..Default::default()
     }

@@ -11,10 +11,11 @@ bitflags::bitflags! {
 }
 
 pub async fn event_listener(
-    ctx: &serenity::client::Context,
-    event: &FullEvent,
-    ectx: EventHandlerContext,
+    ectx: &EventHandlerContext,
 ) -> Result<(), Error> {
+    let ctx = &ectx.serenity_context;
+    let event = &ectx.full_event;
+
     match event {
         FullEvent::Message { new_message } => {
             let data = ctx.data::<crate::Data>();

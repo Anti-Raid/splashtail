@@ -12,21 +12,23 @@ pub mod utils;
 use futures::future::BoxFuture;
 use indexmap::IndexMap;
 use std::fmt::Display;
+use std::sync::Arc;
 
 pub type Command = poise::Command<crate::Data, crate::Error>;
 pub type CommandExtendedDataMap = IndexMap<&'static str, CommandExtendedData>;
 
 pub struct EventHandlerContext {
     pub guild_id: serenity::all::GuildId,
+    pub full_event: serenity::all::FullEvent,
+    pub data: Arc<crate::Data>,
+    pub serenity_context: serenity::all::Context,
 }
 
 pub type ModuleEventHandler = Box<
     dyn Send
         + Sync
         + for<'a> Fn(
-            &'a serenity::all::Context,
-            &'a serenity::all::FullEvent,
-            EventHandlerContext,
+            &'a EventHandlerContext,
         ) -> BoxFuture<'a, Result<(), crate::Error>>,
 >;
 

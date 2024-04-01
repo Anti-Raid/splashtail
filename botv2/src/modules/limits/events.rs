@@ -3,14 +3,14 @@ use poise::serenity_prelude::{Change, FullEvent, MemberAction, RoleAction};
 use serenity::model::guild::audit_log::{Action, ChannelAction};
 
 use super::handler::handle_mod_action;
-use crate::{silverpelt::EventHandlerContext, Data, Error};
+use crate::{silverpelt::EventHandlerContext, Error};
 
 pub async fn event_listener(
-    ctx: &serenity::client::Context,
-    event: &FullEvent,
-    _: EventHandlerContext,
+    ectx: &EventHandlerContext,
 ) -> Result<(), Error> {
-    let user_data = ctx.data::<Data>();
+    let ctx = &ectx.serenity_context;
+    let event = &ectx.full_event;
+    let user_data = &ectx.data;
 
     let cache_http = bothelpers::cache::CacheHttpImpl {
         cache: ctx.cache.clone(),

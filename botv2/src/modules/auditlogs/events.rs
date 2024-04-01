@@ -238,10 +238,11 @@ pub fn resolve_gwevent_field(field: &FieldType) -> Result<String, crate::Error> 
 
 
 pub async fn event_listener(
-    ctx: &serenity::client::Context,
-    event: &FullEvent,
-    ectx: EventHandlerContext,
+    ectx: &EventHandlerContext,
 ) -> Result<(), Error> {
+    let ctx = &ectx.serenity_context;
+    let event = &ectx.full_event;
+
     if !can_audit_log_event(event) {
         return Ok(());
     }

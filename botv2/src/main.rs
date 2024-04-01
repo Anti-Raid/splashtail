@@ -233,10 +233,17 @@ async fn event_listener<'a>(
         }
     };
 
-    let data = ctx.user_data();
+    // Create context for event handlers, this is done here and wrapped in an Arc to avoid useless clones
+    let event_handler_context = Arc::new(EventHandlerContext {
+        guild_id: event_guild_id,
+        full_event: event.clone(),
+        data: ctx.user_data(),
+        serenity_context: ctx.serenity_context.clone(),
+    });
 
+    let mut set = tokio::task::JoinSet::new();
     for (module, evts) in SILVERPELT_CACHE.module_event_listeners_cache.iter() {
-        let module_enabled = match is_module_enabled(&data.pool, event_guild_id, module).await {
+        let module_enabled = match is_module_enabled(&event_handler_context.data.pool, event_guild_id, module).await {
             Ok(enabled) => enabled,
             Err(e) => {
                 error!("Error getting module enabled status: {}", e);
@@ -249,17 +256,23 @@ async fn event_listener<'a>(
         }
 
         log::debug!("Executing event handlers for {}", module);
+
         for evth in evts.iter() {
-            if let Err(e) = evth(
-                ctx.serenity_context,
-                event,
-                EventHandlerContext {
-                    guild_id: event_guild_id,
-                },
-            )
-            .await
-            {
-                error!("Error in event handler: {}", e);
+            let event_handler_context = event_handler_context.clone();
+            set.spawn(async move {
+                evth(&event_handler_context).await
+            });
+        }
+    }
+
+    while let Some(res) = set.join_next().await {
+        match res {
+            Ok(Ok(_)) => {}
+            Ok(Err(e)) => {
+                error!("Error in event handler [task]: {}", e);
+            }
+            Err(e) => {
+                error!("Error in event handler [joinset]: {}", e);
             }
         }
     }
