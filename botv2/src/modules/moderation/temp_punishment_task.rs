@@ -98,11 +98,9 @@ pub async fn temp_punishment(
                                 if [serenity::http::StatusCode::BAD_REQUEST, serenity::http::StatusCode::FORBIDDEN, serenity::http::StatusCode::NOT_FOUND].contains(&e.status_code) {
                                     // Ban already removed
                                     sqlx::query!(
-                                        "UPDATE moderation__actions SET handled = true, handle_errors = $1 WHERE guild_id = $2 AND user_id = $3 AND action = $4",
+                                        "UPDATE moderation__actions SET handled = true, handle_errors = $1 WHERE id = $2",
                                         format!("{}: {}", e.status_code, e.error.message),
-                                        guild_id.to_string(),
-                                        user_id.to_string(),
-                                        punishment.action
+                                        punishment.id
                                     )
                                     .execute(&pool)
                                     .await
@@ -112,11 +110,9 @@ pub async fn temp_punishment(
                             serenity::Error::Model(e) => {
                                 // Bot doesn't have permissions to unban
                                 sqlx::query!(
-                                    "UPDATE moderation__actions SET handled = true, handle_errors = $1 WHERE guild_id = $2 AND user_id = $3 AND action = $4",
+                                    "UPDATE moderation__actions SET handled = true, handle_errors = $1 WHERE id = $2",
                                     format!("{:#?}", e),
-                                    guild_id.to_string(),
-                                    user_id.to_string(),
-                                    punishment.action
+                                    punishment.id
                                 )
                                 .execute(&pool)
                                 .await
