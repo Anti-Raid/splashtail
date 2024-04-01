@@ -85,6 +85,33 @@ fn create_message_prune_serde(
     ))
 }
 
+// Helper method to check the author of a user versus a target
+async fn check_hierarchy(
+    ctx: &Context<'_>,
+    user_id: UserId,
+) -> Result<(), Error> {
+    let Some(guild) = ctx.guild() else {
+        return Err("Guild is not currently cached! Please contact support if you recieve this!".into());
+    };
+
+    let author_id = ctx.author().id;
+
+    if let Some(higher_hierarchy) = guild.greater_member_hierarchy(&ctx.cache(), author_id, user_id) {
+        if higher_hierarchy != author_id {
+            return Err("You cannot moderate a user with a higher or equal hierarchy than you".into());
+        } else {
+            return Ok(());
+        }
+    } else {
+        // We have a None, if so, check if the user is in the server
+        if guild.members.get(&user_id).is_none() {
+            return Ok(()); // User is not in the server, so yes, they're below us
+        } else {
+            return Err("You cannot moderate a user with equal hierarchy to you".into());
+        }
+    }
+}
+
 /// Prune messages from a user
 #[poise::command(
     prefix_command,
@@ -115,6 +142,9 @@ pub async fn prune_user(
     let Some(guild_id) = ctx.guild_id() else {
         return Err("This command can only be used in a guild".into());
     };
+
+    // Check user hierarchy before performing moderative actions
+    check_hierarchy(&ctx, user.id).await?;
 
     let mut embed = CreateEmbed::new()
         .title("Pruning User Messages...")
@@ -325,6 +355,9 @@ pub async fn kick(
         return Err("This command can only be used in a guild".into());
     };
 
+    // Check user hierarchy before performing moderative actions
+    check_hierarchy(&ctx, member.user.id).await?;
+
     let mut embed = CreateEmbed::new()
         .title("Kicking Member...")
         .description(format!(
@@ -445,6 +478,10 @@ pub async fn ban(
     let Some(guild_id) = ctx.guild_id() else {
         return Err("This command can only be used in a guild".into());
     };
+
+    // Check user hierarchy before performing moderative actions
+    check_hierarchy(&ctx, member.id).await?;
+
 
     let mut embed = CreateEmbed::new()
         .title("Banning Member...")
@@ -579,6 +616,9 @@ pub async fn tempban(
     let Some(guild_id) = ctx.guild_id() else {
         return Err("This command can only be used in a guild".into());
     };
+
+    // Check user hierarchy before performing moderative actions
+    check_hierarchy(&ctx, member.id).await?;
 
     let duration = parse_duration_string(&duration)?;
 
@@ -826,6 +866,9 @@ pub async fn timeout(
     let Some(guild_id) = ctx.guild_id() else {
         return Err("This command can only be used in a guild".into());
     };
+
+    // Check user hierarchy before performing moderative actions
+    check_hierarchy(&ctx, member.user.id).await?;
 
     let mut embed = CreateEmbed::new()
         .title("Timing out Member...")

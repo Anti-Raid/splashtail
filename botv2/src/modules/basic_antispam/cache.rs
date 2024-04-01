@@ -6,6 +6,8 @@ use futures::future::FutureExt;
 pub struct BasicAntispamConfig {
     pub anti_invite: bool,
     pub anti_everyone: bool,
+    pub minimum_account_age: Option<i64>,
+    pub maximum_account_age: Option<i64>, // Not sure why you'd ever want this, but it's here
 }
 
 impl Default for BasicAntispamConfig {
@@ -13,6 +15,8 @@ impl Default for BasicAntispamConfig {
         Self {
             anti_invite: false,
             anti_everyone: true,
+            minimum_account_age: None,
+            maximum_account_age: None,
         }
     }
 }
@@ -22,7 +26,7 @@ pub static BASIC_ANTISPAM_CONFIG_CACHE: Lazy<Cache<serenity::all::GuildId, Basic
 
 pub async fn setup_cache_initial(data: &sqlx::PgPool) -> Result<(), crate::Error> {
     let config = sqlx::query!(
-        "SELECT guild_id, anti_invite, anti_everyone FROM basic_antispam__options",
+        "SELECT guild_id, anti_invite, anti_everyone, minimum_account_age, maximum_account_age FROM basic_antispam__options",
     )
     .fetch_all(data)
     .await?;
@@ -31,10 +35,14 @@ pub async fn setup_cache_initial(data: &sqlx::PgPool) -> Result<(), crate::Error
         let guild_id = row.guild_id.parse::<serenity::all::GuildId>()?;
         let anti_invite = row.anti_invite;
         let anti_everyone = row.anti_everyone;
+        let minimum_account_age = row.minimum_account_age;
+        let maximum_account_age = row.maximum_account_age;
 
         BASIC_ANTISPAM_CONFIG_CACHE.insert(guild_id, BasicAntispamConfig {
             anti_invite,
             anti_everyone,
+            minimum_account_age,
+            maximum_account_age,
         }).await;
     }
 
@@ -46,7 +54,7 @@ pub async fn get_config(pool: &sqlx::PgPool, guild_id: serenity::all::GuildId) -
         Ok(config.clone())
     } else {
         let config = sqlx::query!(
-            "SELECT anti_invite, anti_everyone FROM basic_antispam__options WHERE guild_id = $1",
+            "SELECT anti_invite, anti_everyone, minimum_account_age, maximum_account_age FROM basic_antispam__options WHERE guild_id = $1",
             guild_id.to_string(),
         )
         .fetch_optional(pool)
@@ -55,15 +63,21 @@ pub async fn get_config(pool: &sqlx::PgPool, guild_id: serenity::all::GuildId) -
         if let Some(config) = config {
             let anti_invite = config.anti_invite;
             let anti_everyone = config.anti_everyone;
+            let minimum_account_age = config.minimum_account_age;
+            let maximum_account_age = config.maximum_account_age;
 
             BASIC_ANTISPAM_CONFIG_CACHE.insert(guild_id, BasicAntispamConfig {
                 anti_invite,
                 anti_everyone,
+                minimum_account_age,
+                maximum_account_age,
             }).await;
 
             Ok(BasicAntispamConfig {
                 anti_invite,
                 anti_everyone,
+                minimum_account_age,
+                maximum_account_age,
             })
         } else {
             let bas_cfg = BasicAntispamConfig::default();

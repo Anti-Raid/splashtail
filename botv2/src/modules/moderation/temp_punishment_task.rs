@@ -59,6 +59,48 @@ pub async fn temp_punishment(
         let ctx = ctx.clone();
         let pool = pool.clone();
         set.spawn(async move {
+            let bot_id = ctx.cache.current_user().id;
+            let current_user = match guild_id.member(&ctx, bot_id).await {
+                Ok(user) => user,
+                Err(serenity::Error::Http(serenity::all::HttpError::UnsuccessfulRequest(e))) => {
+                    if e.status_code == serenity::http::StatusCode::NOT_FOUND {
+                        // Bot is not in the guild, mark as handled then return
+                        sqlx::query!(
+                            "UPDATE moderation__actions SET handled = true, handle_errors = $1 WHERE id = $2",
+                            format!("Bot is not in the guild"),
+                            punishment.id
+                        )
+                        .execute(&pool)
+                        .await
+                        .map_err(UnbanError::Sqlx)?;
+
+                        return Err(UnbanError::Generic("Bot is not in the guild".to_string()));
+                    }
+
+                    return Err(UnbanError::Serenity(serenity::Error::Http(serenity::all::HttpError::UnsuccessfulRequest(e))));
+                },
+                Err(e) => {
+                    log::error!("Error while getting bot member: {}", e);
+                    return Err(UnbanError::Serenity(e));
+                }
+            };
+
+            let permissions = current_user.permissions(&ctx.cache)
+                .map_err(UnbanError::Serenity)?;
+
+            if !permissions.ban_members() {
+                sqlx::query!(
+                    "UPDATE moderation__actions SET handled = true, handle_errors = $1 WHERE id = $2",
+                    "Bot doesn't have permissions to unban",
+                    punishment.id
+                )
+                .execute(&pool)
+                .await
+                .map_err(UnbanError::Sqlx)?;
+
+                return Err(UnbanError::Generic("Bot doesn't have permissions to unban".to_string()));
+            }
+
             let reason = if let Some(reason) = punishment.reason {
                 format!("Revert expired ban with reason={}, stings={}", reason, punishment.stings)
             } else {
