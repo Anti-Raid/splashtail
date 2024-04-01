@@ -73,7 +73,7 @@ pub async fn handle_mod_action(
             .bind(("limit_time", guild_limit.limit_time))
             .await?;
 
-        let action_ids: Vec<String> = query.take(0)?;
+        let action_ids: Vec<String> = query.take("action_id")?;
 
         if action_ids.len() >= guild_limit.limit_per as usize {
             hit_limits.push((action_ids, guild_limit));

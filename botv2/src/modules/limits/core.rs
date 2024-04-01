@@ -203,7 +203,7 @@ impl UserAction {
 
     /// Fetch all user actions in a guild
     pub async fn guild(data: &crate::Data, guild_id: GuildId) -> Result<Vec<Self>, Error> {
-        let mut query = data.surreal_cache.query("select * from user_actions where guild_id=type::string($guild_id) and user_id=type::string($user_id)")
+        let mut query = data.surreal_cache.query("select * from user_actions where guild_id=type::string($guild_id)")
         .bind(("guild_id", guild_id))
         .await?;
 
