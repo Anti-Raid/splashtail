@@ -63,14 +63,7 @@ pub enum BotAnimusMessage {
         guild_id: GuildId,
         user_id: UserId,
         command: String,
-        custom_resolved_kittycat_perms: Option<Vec<String>>,
-        ensure_user_has_custom_resolved: Option<bool>,
-    },
-    /// Toggles a module within the bot clearing any cache in the process
-    ToggleModule {
-        guild_id: Option<GuildId>,
-        module: String,
-        enabled: bool,
+        opts: silverpelt::cmd::CheckCommandOptions,
     },
     /// Toggles a per-module cache toggle
     TogglePerModuleCache {
@@ -155,13 +148,10 @@ impl BotAnimusMessage {
                 guild_id,
                 user_id,
                 command,
-                custom_resolved_kittycat_perms,
-                ensure_user_has_custom_resolved,
+                opts,
             } => {
                 // Check COMMAND_ID_MODULE_MAP
                 let base_command = command.split_whitespace().next().unwrap();
-
-                let custom_resolved_kittycat_perms = custom_resolved_kittycat_perms.map(|custom_resolved_kittycat_perms| (custom_resolved_kittycat_perms, ensure_user_has_custom_resolved.unwrap_or(true)));
 
                 let perm_res = silverpelt::cmd::check_command(
                     base_command,
@@ -171,7 +161,7 @@ impl BotAnimusMessage {
                     pool,
                     cache_http,
                     &None,
-                    custom_resolved_kittycat_perms,
+                    opts,
                 )
                 .await;
 
@@ -179,67 +169,6 @@ impl BotAnimusMessage {
 
                 Ok(BotAnimusResponse::CheckCommandPermission { perm_res, is_ok })
             }
-            Self::ToggleModule {
-                guild_id,
-                module,
-                enabled,
-            } => {
-                if let Some(guild_id) = guild_id {
-                    if enabled {
-                        SILVERPELT_CACHE
-                            .module_enabled_cache
-                            .insert((guild_id, module.clone()), true)
-                            .await;
-                    } else {
-                        SILVERPELT_CACHE
-                            .module_enabled_cache
-                            .insert((guild_id, module.clone()), false)
-                            .await;
-                    }
-
-                    tokio::spawn(async move {
-                        if let Err(err) = SILVERPELT_CACHE
-                            .command_permission_cache
-                            .invalidate_entries_if(move |k, _| k.0 == guild_id)
-                        {
-                            log::error!(
-                                "Failed to invalidate command permission cache for guild {}: {}",
-                                guild_id,
-                                err
-                            );
-                        } else {
-                            log::info!("Invalidated cache for guild {}", guild_id);
-                        }
-                    });
-                } else {
-                    // Global enable/disable the module by iterating the entire cache
-                    for (k, v) in SILVERPELT_CACHE.module_enabled_cache.iter() {
-                        if k.1 == *module && enabled != v {
-                            SILVERPELT_CACHE
-                                .module_enabled_cache
-                                .insert((k.0, module.clone()), enabled)
-                                .await;
-
-                            // Invalidate command permission cache entries here too
-                            let gid = k.0;
-                            tokio::spawn(async move {
-                                if let Err(err) = SILVERPELT_CACHE
-                                    .command_permission_cache
-                                    .invalidate_entries_if(move |g, _| g.0 == gid)
-                                {
-                                    log::error!("Failed to invalidate command permission cache for guild {}: {}", k.0, err);
-                                } else {
-                                    log::info!("Invalidated cache for guild {}", k.0);
-                                }
-                            });
-                        }
-                    }
-                }
-
-                Ok(BotAnimusResponse::Ok {
-                    message: "".to_string(),
-                })
-            },
             Self::TogglePerModuleCache { module, toggle, options } => {
                 let Some(toggle) = dynamic::PERMODULE_CACHE_TOGGLES.get(&(module.clone(), toggle.clone())) else {
                     return Err("Toggle not found".into());
@@ -268,7 +197,7 @@ pub mod dynamic {
         ) -> BoxFuture<'a, Result<(), crate::Error>>,
     >;
 
-    // In order to allow modules to implement their own internal caches without polluting silverpelt cache,
+    // In order to allow modules to implement their own internal caches without polluting the animus magic protocol,
     // we implement PERMODULE_CACHE_TOGGLES which any module can register/add on to
     //
     // Format of a permodule_cache_toggle is (module_name, toggle)

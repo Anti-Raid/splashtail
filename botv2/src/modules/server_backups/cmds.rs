@@ -404,7 +404,7 @@ pub async fn backups_list(ctx: Context<'_>) -> Result<(), Error> {
                     &ctx.data().pool, 
                     &bothelpers::cache::CacheHttpImpl::from_ctx(ctx.serenity_context()), 
                     &Some(ctx), 
-                    None
+                    crate::silverpelt::cmd::CheckCommandOptions::default(), // TODO: Maybe change this to allow backups delete to be disabled?
                 ).await;  
 
                 if !perm_res.is_ok() {

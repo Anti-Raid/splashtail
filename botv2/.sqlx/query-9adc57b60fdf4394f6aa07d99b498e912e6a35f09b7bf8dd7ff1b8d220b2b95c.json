@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO guild_command_configurations (guild_id, command, disabled) VALUES ($1, $2, false)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "9adc57b60fdf4394f6aa07d99b498e912e6a35f09b7bf8dd7ff1b8d220b2b95c"
+}

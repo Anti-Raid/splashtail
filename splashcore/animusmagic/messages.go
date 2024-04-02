@@ -18,17 +18,16 @@ type BotAnimusMessage struct {
 		UserID  string `json:"user_id"`
 	} `json:"BaseGuildUserInfo,omitempty"`
 	CheckCommandPermission *struct {
-		GuildID                     string    `json:"guild_id"`
-		UserID                      string    `json:"user_id"`
-		Command                     string    `json:"command"`
-		CustomResolvedKittycatPerms *[]string `json:"custom_resolved_kittycat_perms,omitempty"`
-		EnsureUserHasCustomResolved *bool     `json:"ensure_user_has_custom_resolved,omitempty"`
+		GuildID             string                         `json:"guild_id"`
+		UserID              string                         `json:"user_id"`
+		Command             string                         `json:"command"`
+		CheckCommandOptions silverpelt.CheckCommandOptions `json:"opts"`
 	} `json:"CheckCommandPermission,omitempty"`
-	ToggleModule *struct {
-		GuildID string `json:"guild_id"`
-		Module  string `json:"module"`
-		Enabled bool   `json:"enabled"`
-	} `json:"ToggleModule,omitempty"`
+	TogglePerModuleCache *struct {
+		Module  string         `json:"module"`
+		Toggle  string         `json:"toggle"`
+		Options map[string]any `json:"options,omitempty"`
+	} `json:"TogglePerModuleCache,omitempty"`
 }
 
 func (b BotAnimusMessage) Message() {}

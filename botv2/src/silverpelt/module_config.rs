@@ -129,6 +129,7 @@ pub async fn get_command_configuration(
             .replace(&root_cmd.to_string(), "")
             .trim()
             .to_string();
+        
         if let Some(data) = root_cmd_data.get(&cmd_replaced.as_str()) {
             cmd_data = data.clone();
         }

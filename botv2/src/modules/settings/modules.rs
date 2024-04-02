@@ -1,7 +1,5 @@
 use crate::silverpelt::silverpelt_cache::SILVERPELT_CACHE;
-
-type Error = crate::Error;
-type Context<'a> = crate::Context<'a>;
+use crate::{Error, Context};
 
 #[poise::command(
     prefix_command,

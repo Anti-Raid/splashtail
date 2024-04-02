@@ -456,7 +456,7 @@ async fn main() {
                     &data.pool,
                     &CacheHttpImpl::from_ctx(ctx.serenity_context()),
                     &Some(ctx),
-                    None,
+                    silverpelt::cmd::CheckCommandOptions::default(),
                 )
                 .await;
 

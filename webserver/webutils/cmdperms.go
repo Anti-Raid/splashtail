@@ -6,7 +6,6 @@ import (
 
 	"github.com/anti-raid/splashtail/splashcore/animusmagic"
 	"github.com/anti-raid/splashtail/splashcore/silverpelt"
-	"github.com/anti-raid/splashtail/splashcore/utils"
 	"github.com/redis/rueidis"
 )
 
@@ -21,10 +20,10 @@ func CheckCommandPermission(
 	command string,
 	permLimits []string,
 ) (res *silverpelt.PermissionResult, ok bool, err error) {
-	var permLimitsPtr *[]string
+	var permLimitsSend []string
 
-	if len(permLimits) > 0 {
-		permLimitsPtr = &permLimits
+	if len(permLimitsSend) > 0 {
+		permLimitsSend = permLimits
 	}
 
 	mlr, err := c.Request(
@@ -32,17 +31,18 @@ func CheckCommandPermission(
 		redis,
 		animusmagic.BotAnimusMessage{
 			CheckCommandPermission: &struct {
-				GuildID                     string    "json:\"guild_id\""
-				UserID                      string    "json:\"user_id\""
-				Command                     string    "json:\"command\""
-				CustomResolvedKittycatPerms *[]string "json:\"custom_resolved_kittycat_perms,omitempty\""
-				EnsureUserHasCustomResolved *bool     "json:\"ensure_user_has_custom_resolved,omitempty\""
+				GuildID             string                         "json:\"guild_id\""
+				UserID              string                         "json:\"user_id\""
+				Command             string                         "json:\"command\""
+				CheckCommandOptions silverpelt.CheckCommandOptions `json:"opts"`
 			}{
-				GuildID:                     guildID,
-				UserID:                      userID,
-				Command:                     command,
-				CustomResolvedKittycatPerms: permLimitsPtr,
-				EnsureUserHasCustomResolved: utils.Pointer(true),
+				GuildID: guildID,
+				UserID:  userID,
+				Command: command,
+				CheckCommandOptions: silverpelt.CheckCommandOptions{
+					CustomResolvedKittyCatPerms: permLimitsSend,
+					EnsureUserHasCustomResolved: true,
+				},
 			},
 		},
 		&animusmagic.RequestOptions{

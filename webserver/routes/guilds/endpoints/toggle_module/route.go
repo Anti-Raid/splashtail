@@ -143,14 +143,18 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 		d.Context,
 		state.Rueidis,
 		animusmagic.BotAnimusMessage{
-			ToggleModule: &struct {
-				GuildID string `json:"guild_id"`
-				Module  string `json:"module"`
-				Enabled bool   `json:"enabled"`
+			TogglePerModuleCache: &struct {
+				Module  string         `json:"module"`
+				Toggle  string         `json:"toggle"`
+				Options map[string]any `json:"options,omitempty"`
 			}{
-				GuildID: guildId,
-				Module:  module,
-				Enabled: !disabled,
+				Module: "settings",
+				Toggle: "toggle_module",
+				Options: map[string]any{
+					"guild_id": guildId,
+					"module":   module,
+					"enabled":  !disabled,
+				},
 			},
 		},
 		&animusmagic.RequestOptions{

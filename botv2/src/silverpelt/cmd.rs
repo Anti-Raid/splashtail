@@ -6,6 +6,7 @@ use log::info;
 use serenity::all::{GuildId, UserId};
 use serenity::small_fixed_array::FixedArray;
 use sqlx::PgPool;
+use serde::{Serialize, Deserialize};
 
 pub async fn get_perm_info(
     guild_id: GuildId,
@@ -96,6 +97,38 @@ pub async fn get_perm_info(
     ))
 }
 
+/// Extra options for checking a command
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CheckCommandOptions {
+    /// Whether or not to ignore the fact that the module is disabled in the guild
+    #[serde(default)]
+    pub ignore_module_disabled: bool,
+    
+    /// Whether or not to ignore the fact that the command is disabled in the guild
+    #[serde(default)]
+    pub ignore_command_disabled: bool,
+
+    /// What custom resolved permissions to use for the user. Note that ensure_user_has_custom_resolved must be true to ensure that the user has all the permissions in the custom_resolved_kittycat_perms
+    /// 
+    /// API needs this for limiting the permissions of a user, allows setting custom resolved perms
+    #[serde(default)]
+    pub custom_resolved_kittycat_perms: Option<Vec<String>>,
+    /// Whether or not to ensure that the user has all the permissions in the custom_resolved_kittycat_perms
+    #[serde(default)]
+    pub ensure_user_has_custom_resolved: bool,
+}
+
+impl Default for CheckCommandOptions {
+    fn default() -> Self {
+        Self {
+            ignore_module_disabled: false,
+            ignore_command_disabled: false,
+            custom_resolved_kittycat_perms: None,
+            ensure_user_has_custom_resolved: true,
+        }
+    }
+}
+
 /// Check command checks whether or not a user has permission to run a command
 #[allow(clippy::too_many_arguments)]
 pub async fn check_command(
@@ -107,8 +140,8 @@ pub async fn check_command(
     cache_http: &CacheHttpImpl,
     // If a poise::Context is available and originates from a Application Command, we can fetch the guild+member from cache itself
     poise_ctx: &Option<crate::Context<'_>>,
-    // API needs this for limiting the permissions of a user, allows setting custom resolved perms
-    custom_resolved_kittycat_perms: Option<(Vec<String>, bool)>,
+    // Needed for settings and the website (potentially)
+    opts: CheckCommandOptions,
 ) -> PermissionResult {
     if !SILVERPELT_CACHE
         .command_id_module_map
@@ -167,7 +200,7 @@ pub async fn check_command(
             Err(e) => return e.into(),
         };
 
-    let command_config = command_config.unwrap_or(silverpelt::GuildCommandConfiguration {
+    let mut command_config = command_config.unwrap_or(silverpelt::GuildCommandConfiguration {
         id: "".to_string(),
         guild_id: guild_id.to_string(),
         command: command.to_string(),
@@ -175,12 +208,20 @@ pub async fn check_command(
         disabled: None,
     });
 
-    let module_config = module_config.unwrap_or(silverpelt::GuildModuleConfiguration {
+    if opts.ignore_command_disabled {
+        command_config.disabled = Some(false);
+    }
+
+    let mut module_config = module_config.unwrap_or(silverpelt::GuildModuleConfiguration {
         id: "".to_string(),
         guild_id: guild_id.to_string(),
         module: module.clone(),
         disabled: None,
     });
+
+    if opts.ignore_module_disabled {
+        module_config.disabled = Some(false);
+    }
 
     // Try getting guild+member from cache to speed up response times first
     let (is_owner, member_perms, roles) =
@@ -198,8 +239,8 @@ pub async fn check_command(
     }
 
     let kittycat_perms = {
-        if let Some((custom_resolved_kittycat_perms, ensure_user_has_custom_resolved)) = custom_resolved_kittycat_perms {
-            if ensure_user_has_custom_resolved {
+        if let Some(custom_resolved_kittycat_perms) = opts.custom_resolved_kittycat_perms {
+            if opts.ensure_user_has_custom_resolved {
                 let kc_perms = match silverpelt::member_permission_calc::get_kittycat_perms(
                     pool, guild_id, user_id, &roles,
                 )

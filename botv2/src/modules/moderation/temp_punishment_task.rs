@@ -43,6 +43,11 @@ pub async fn temp_punishment(
             continue
         };
 
+        // Ensure moderation module is enabled
+        if !crate::silverpelt::module_config::is_module_enabled(pool, guild_id, "moderation").await? {
+            continue
+        }
+
         // If over MAX_CONCURRENT_UNBANS bans ongoing, wait for one to finish
         if set.len() >= MAX_CONCURRENT_UNBANS {
             if let Some(res) = set.join_next().await {

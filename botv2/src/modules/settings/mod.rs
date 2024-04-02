@@ -1,8 +1,10 @@
 use indexmap::indexmap;
+use futures::future::FutureExt;
 
 mod modules;
 mod perms;
-mod cmd;
+mod commands;
+mod am_toggles;
 
 pub fn module() -> crate::silverpelt::Module {
     crate::silverpelt::Module {
@@ -21,6 +23,13 @@ pub fn module() -> crate::silverpelt::Module {
                     "list" => crate::silverpelt::CommandExtendedData::kittycat_or_admin("modules", "list"),
                     "enable" => crate::silverpelt::CommandExtendedData::kittycat_or_admin("modules", "enable"),
                     "disable" => crate::silverpelt::CommandExtendedData::kittycat_or_admin("modules", "disable"),
+                },
+            ),
+            (
+                commands::commands(),
+                indexmap! {
+                    "enable" => crate::silverpelt::CommandExtendedData::kittycat_or_admin("commands", "enable"),
+                    "disable" => crate::silverpelt::CommandExtendedData::kittycat_or_admin("commands", "disable"),
                 },
             ),
             (
@@ -48,6 +57,11 @@ pub fn module() -> crate::silverpelt::Module {
                     },
                 },
             ),
+        ],
+        on_startup: vec![
+            Box::new(move |data| {
+                am_toggles::setup(data).boxed()
+            }),
         ],
         ..Default::default()
     }

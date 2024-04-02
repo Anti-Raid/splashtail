@@ -1,6 +1,7 @@
 use crate::silverpelt::member_permission_calc::get_kittycat_perms;
 use poise::CreateReply;
 use serenity::all::{Role, RoleId};
+use crate::{Error, Context};
 
 #[poise::command(
     prefix_command,
@@ -9,7 +10,7 @@ use serenity::all::{Role, RoleId};
     guild_cooldown = 1,
     subcommands("perms_modrole", "perms_list", "perms_deleterole")
 )]
-pub async fn perms(_ctx: crate::Context<'_>) -> Result<(), crate::Error> {
+pub async fn perms(_ctx: Context<'_>) -> Result<(), Error> {
     Ok(())
 }
 
@@ -21,7 +22,7 @@ pub async fn perms(_ctx: crate::Context<'_>) -> Result<(), crate::Error> {
     guild_cooldown = 1,
     rename = "list"
 )]
-pub async fn perms_list(ctx: crate::Context<'_>) -> Result<(), crate::Error> {
+pub async fn perms_list(ctx: Context<'_>) -> Result<(), Error> {
     let data = ctx.data();
 
     let Some(guild_id) = ctx.guild_id() else {
@@ -72,11 +73,11 @@ pub async fn perms_list(ctx: crate::Context<'_>) -> Result<(), crate::Error> {
     rename = "modrole"
 )]
 pub async fn perms_modrole(
-    ctx: crate::Context<'_>,
+    ctx: Context<'_>,
     #[description = "The role to edit"] role: Role,
     #[description = "The permissions to set, separated by commas"] perms: String,
     #[description = "The index of the role"] index: Option<i32>,
-) -> Result<(), crate::Error> {
+) -> Result<(), Error> {
     let mut perms_vec = Vec::new();
 
     for perm in perms.split(',') {
