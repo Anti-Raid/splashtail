@@ -40,6 +40,8 @@ pub async fn start_all_tasks(
             continue;
         }
 
+        info!("Starting task: {}", task.name);
+
         set.spawn(taskcat(
             pool.clone(),
             cache_http.clone(),

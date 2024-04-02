@@ -31,7 +31,7 @@ pub fn module() -> crate::silverpelt::Module {
             crate::silverpelt::taskcat::Task {
                 name: "Update Bot Status".to_string(),
                 description: "Updates the bot status every 15 minutes".to_string(),
-                duration: std::time::Duration::from_secs(60 * 15),
+                duration: std::time::Duration::from_secs(60 * 5),
                 enabled: true,
                 run: Box::new(
                     move |_pool, _ch, ctx| {
