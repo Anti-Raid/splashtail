@@ -148,7 +148,7 @@ Anti-Raid has 2 gateway proxies that can optionally be used to reduce the number
 For initial release:
 
 - **CRITICAL:** Ensure ``mewld`` correctly restarts clusters on db failure
-- Stabilizing the module+command permission system [X]
+- Stabilizing the module+command permission system [] AND/OR add a monitoring script to probe clusters []
 - Add the ability to enable/disable modules [X] and commands [WIP] and also override command permissions [WIP]
 - Server Member Backup/Restore []
 - Basic Moderation (warn/kick/ban+tempban/unban) [X]
