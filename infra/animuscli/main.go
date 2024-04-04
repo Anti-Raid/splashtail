@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"flag"
 	"fmt"
 	"os"
 	"strconv"
@@ -580,6 +581,25 @@ func main() {
 	}
 
 	root.AddCommand("help", root.Help())
+
+	// Handle --command args
+	flagSet := flag.NewFlagSet("animuscli", flag.ExitOnError)
+	command := flagSet.String("command", "", "Command to run. If unset, will run as shell")
+	if err := flagSet.Parse(os.Args); err != nil {
+		panic(err)
+	}
+
+	if command != nil && *command != "" {
+		for _, c := range strings.Split(*command, ";") {
+			ok, err := root.RunString(c)
+			if err != nil {
+				fmt.Println(err)
+			}
+			if !ok {
+				return
+			}
+		}
+	}
 
 	root.Run()
 }

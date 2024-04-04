@@ -13,7 +13,7 @@ pub struct SilverpeltCache {
     pub module_enabled_cache: Cache<(GuildId, String), bool>,
 
     /// Cache of whether a (GuildId, UserId) pair has the permission to run a command
-    pub command_permission_cache: Cache<(GuildId, UserId), IndexMap<String, PermissionResult>>,
+    pub command_permission_cache: Cache<(GuildId, UserId, super::cmd::CheckCommandOptions), IndexMap<String, PermissionResult>>,
 
     /// Cache of the extended data given a command (the extended data map stores the default base permissions and other data per command)
     pub command_extra_data_map: dashmap::DashMap<String, CommandExtendedDataMap>,
@@ -51,9 +51,10 @@ impl SilverpeltCache {
         log::info!("Making new SilverpeltCache");
         Self {
             command_permission_cache: Cache::builder()
+                .support_invalidation_closures()
                 .time_to_live(std::time::Duration::from_secs(60))
                 .build(),
-            module_enabled_cache: Cache::builder().build(),
+            module_enabled_cache: Cache::builder().support_invalidation_closures().build(),
             command_extra_data_map: {
                 let map = dashmap::DashMap::new();
 
@@ -107,8 +108,8 @@ impl SilverpeltCache {
 
                 map
             },
-            regex_cache: Cache::builder().build(),
-            regex_match_cache: Cache::builder().build(),
+            regex_cache: Cache::builder().support_invalidation_closures().build(),
+            regex_match_cache: Cache::builder().support_invalidation_closures().build(),
             module_event_listeners_cache: {
                 let mut map = indexmap::IndexMap::new();
 

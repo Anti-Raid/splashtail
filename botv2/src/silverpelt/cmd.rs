@@ -98,8 +98,12 @@ pub async fn get_perm_info(
 }
 
 /// Extra options for checking a command
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Hash, PartialEq, Eq)]
 pub struct CheckCommandOptions {
+    /// Whether or not to ignore the cache
+    #[serde(default)]
+    pub ignore_cache: bool,
+
     /// Whether or not to ignore the fact that the module is disabled in the guild
     #[serde(default)]
     pub ignore_module_disabled: bool,
@@ -121,6 +125,7 @@ pub struct CheckCommandOptions {
 impl Default for CheckCommandOptions {
     fn default() -> Self {
         Self {
+            ignore_cache: false,
             ignore_module_disabled: false,
             ignore_command_disabled: false,
             custom_resolved_kittycat_perms: None,
@@ -175,16 +180,18 @@ pub async fn check_command(
         };
     }
 
-    let key = SILVERPELT_CACHE
-        .command_permission_cache
-        .get(&(guild_id, user_id))
-        .await;
+    if !opts.ignore_cache {
+        let key = SILVERPELT_CACHE
+            .command_permission_cache
+            .get(&(guild_id, user_id, opts.clone()))
+            .await;
 
-    if let Some(ref map) = key {
-        let cpr = map.get(command);
+        if let Some(ref map) = key {
+            let cpr = map.get(command);
 
-        if let Some(cpr) = cpr {
-            return cpr.clone();
+            if let Some(cpr) = cpr {
+                return cpr.clone();
+            }
         }
     }
 
@@ -237,9 +244,9 @@ pub async fn check_command(
             message: "owner".to_string(),
         };
     }
-
+    
     let kittycat_perms = {
-        if let Some(custom_resolved_kittycat_perms) = opts.custom_resolved_kittycat_perms {
+        if let Some(ref custom_resolved_kittycat_perms) = opts.custom_resolved_kittycat_perms {
             if opts.ensure_user_has_custom_resolved {
                 let kc_perms = match silverpelt::member_permission_calc::get_kittycat_perms(
                     pool, guild_id, user_id, &roles,
@@ -253,15 +260,15 @@ pub async fn check_command(
                 };
 
                 let mut resolved_perms = Vec::new();
-                for perm in custom_resolved_kittycat_perms.into_iter() {
-                    if kittycat::perms::has_perm(&kc_perms, &perm) {
-                        resolved_perms.push(perm);
+                for perm in custom_resolved_kittycat_perms.iter() {
+                    if kittycat::perms::has_perm(&kc_perms, perm) {
+                        resolved_perms.push(perm.to_string());
                     }  
                 }
 
                 resolved_perms
             } else {
-                custom_resolved_kittycat_perms
+                custom_resolved_kittycat_perms.to_vec()
             }
         } else {
             match silverpelt::member_permission_calc::get_kittycat_perms(
@@ -293,7 +300,7 @@ pub async fn check_command(
 
     let mut key = SILVERPELT_CACHE
         .command_permission_cache
-        .get(&(guild_id, user_id))
+        .get(&(guild_id, user_id, opts.clone()))
         .await;
 
     if let Some(ref mut map) = key {
@@ -303,7 +310,7 @@ pub async fn check_command(
         map.insert(command.to_string(), perm_res.clone());
         SILVERPELT_CACHE
             .command_permission_cache
-            .insert((guild_id, user_id), map)
+            .insert((guild_id, user_id, opts), map)
             .await;
     }
 

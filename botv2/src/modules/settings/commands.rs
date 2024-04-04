@@ -59,6 +59,8 @@ pub async fn commands_check(
         return Err(format!("You do NOT have permission to use this command?\n{}", perm_res.to_markdown()).into());
     }
 
+    ctx.say("You have permission to use this command").await?;
+
     Ok(())
 }
 
@@ -158,6 +160,8 @@ pub async fn commands_enable(
         }
     });
 
+    ctx.say("Command enabled").await?;
+
     Ok(())
 }
 
@@ -256,6 +260,8 @@ pub async fn commands_disable(
             log::info!("Invalidated cache for guild {}", guild_id);
         }
     });
+
+    ctx.say("Command disabled").await?;
 
     Ok(())
 }

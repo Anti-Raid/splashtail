@@ -22,7 +22,7 @@ impl Default for BasicAntispamConfig {
 }
 
 pub static BASIC_ANTISPAM_CONFIG_CACHE: Lazy<Cache<serenity::all::GuildId, BasicAntispamConfig>> =
-    Lazy::new(|| Cache::builder().build());
+    Lazy::new(|| Cache::builder().support_invalidation_closures().build());
 
 pub async fn setup_cache_initial(data: &sqlx::PgPool) -> Result<(), crate::Error> {
     let config = sqlx::query!(
