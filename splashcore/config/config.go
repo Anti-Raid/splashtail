@@ -53,6 +53,11 @@ type Config struct {
 	ObjectStorage      ObjectStorageConfig `yaml:"object_storage" validate:"required"`
 	SimpleGatewayProxy SimpleGatewayProxy  `yaml:"simple_gateway_proxy" validate:"required"`
 	SurrealDB          SurrealDB           `yaml:"surreal" validate:"required"`
+	Wafflepaw          Wafflepaw           `yaml:"wafflepaw" validate:"required"`
+}
+
+type Wafflepaw struct {
+	StatusWebhook string `yaml:"status_webhook" default:"https://discord.com/api/webhooks/849331145862283275/8Z9J"`
 }
 
 type SimpleGatewayProxy struct {

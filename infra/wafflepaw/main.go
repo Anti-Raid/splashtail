@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
@@ -10,7 +11,9 @@ import (
 	"github.com/anti-raid/splashtail/splashcore/animusmagic"
 	"github.com/anti-raid/splashtail/splashcore/config"
 	"github.com/anti-raid/splashtail/splashcore/mewldresponder"
+	"github.com/bwmarrin/discordgo"
 	"github.com/go-playground/validator/v10"
+	"github.com/infinitybotlist/eureka/proxy"
 	"github.com/infinitybotlist/eureka/snippets"
 	"github.com/redis/rueidis"
 	"go.uber.org/zap"
@@ -23,6 +26,7 @@ var (
 	Logger            *zap.Logger
 	Config            *config.Config
 	Rueidis           rueidis.Client
+	Discord           *discordgo.Session
 	AnimusMagicClient *animusmagic.AnimusMagicClient
 	MewldResponder    *mewldresponder.MewldResponder
 	v                 = validator.New()
@@ -69,6 +73,17 @@ func main() {
 	if err != nil {
 		logPanic("error creating redis client", err)
 	}
+
+	// Discord
+	Discord, err = discordgo.New("Bot " + Config.DiscordAuth.Token)
+
+	if err != nil {
+		logPanic("error creating discord session", err)
+	}
+
+	Discord.Client.Transport = proxy.NewHostRewriter("localhost:3219", http.DefaultTransport, func(s string) {
+		Logger.Info("[PROXY]", zap.String("note", s))
+	})
 
 	err = StartMonitors()
 

@@ -9,6 +9,7 @@ use std::sync::Arc;
 pub struct MewldIpcClient {
     pub redis_pool: fred::clients::RedisPool,
     pub cache: Arc<MewldIpcCache>,
+    pub pool: sqlx::PgPool,
 }
 
 #[derive(Default)]

@@ -520,10 +520,17 @@ async fn main() {
         .await
         .expect("Couldnt use namespace and database");
 
+    let pg_pool = PgPoolOptions::new()
+    .max_connections(POSTGRES_MAX_CONNECTIONS)
+    .connect(&config::CONFIG.meta.postgres_url)
+    .await
+    .expect("Could not initialize connection");
+
     let data = Data {
         mewld_ipc: Arc::new(ipc::mewld::MewldIpcClient {
             redis_pool: pool.clone(),
             cache: Arc::new(ipc::mewld::MewldIpcCache::default()),
+            pool: pg_pool.clone()
         }),
         animus_magic_ipc: Arc::new(ipc::animus_magic::client::AnimusMagicClient {
             redis_pool: pool.clone(),
@@ -535,11 +542,7 @@ async fn main() {
                 .build()
                 .expect("Could not initialize object store"),
         ),
-        pool: PgPoolOptions::new()
-            .max_connections(POSTGRES_MAX_CONNECTIONS)
-            .connect(&config::CONFIG.meta.postgres_url)
-            .await
-            .expect("Could not initialize connection"),
+        pool: pg_pool,
         reqwest: reqwest::Client::builder()
         .connect_timeout(std::time::Duration::from_secs(30))
         .timeout(std::time::Duration::from_secs(90))
