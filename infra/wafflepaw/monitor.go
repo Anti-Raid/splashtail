@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -111,6 +112,7 @@ func StartMonitors() (err error) {
 		SystemdService:          "splashtail-" + config.CurrentEnv + "-webserver",
 		NoHandleInactiveSystemd: true,
 		RestartAfterFailed:      3,
+		ProcessName:             []string{"splashtail", "botv2"},
 	}
 
 	jobserverAmProbeTask = &AMProbeTask{
@@ -121,6 +123,7 @@ func StartMonitors() (err error) {
 		SystemdService:          "splashtail-" + config.CurrentEnv + "-jobs",
 		DelayStart:              10 * time.Second,
 		NoHandleInactiveSystemd: true,
+		ProcessName:             []string{"splashtail"},
 	}
 
 	bgtasks.BgTaskRegistry = append(bgtasks.BgTaskRegistry, botAmProbeTask)
@@ -129,11 +132,15 @@ func StartMonitors() (err error) {
 	return nil
 }
 
+// Internal animus magic state info
+
 // Internal task state. TaskMutex in bgtasks guarantees that only one task is running at a time.
 type probeTaskState struct {
 	LastProbeTime                       time.Time
 	LastSuccessfulProbeTime             time.Time
 	AttemptedMewldClusterRollingRestart bool
+	AttemptedTargettedKills             []string
+	AttemptedKillall                    bool
 	AttemptedSystemdRestart             bool
 	FailedCount                         int
 	BackoffExp                          int // Exponential backoff in restart
@@ -148,6 +155,7 @@ type AMProbeTask struct {
 	DelayStart              time.Duration
 	NoHandleInactiveSystemd bool
 	RestartAfterFailed      int // After how many failed checks should we restart the service
+	ProcessName             []string
 
 	// Internal state
 	state probeTaskState
@@ -213,17 +221,18 @@ func (p *AMProbeTask) Run() error {
 	}
 
 	// Wait for the response
-	waitForResponse := func() ([]uint16, error) {
-		var clusterIds []uint16
+	waitForResponse := func() (clusterIds map[uint16][]string, duplicates map[uint16][]string, err error) {
+		clusterIds = map[uint16][]string{}
+		duplicates = map[uint16][]string{}
 
 		ticker := time.NewTicker(time.Second*9 + time.Second*time.Duration(2^p.state.BackoffExp))
 		startTime := time.Now()
 		for {
 			select {
 			case <-Context.Done():
-				return nil, fmt.Errorf("context cancelled")
+				return nil, nil, fmt.Errorf("context cancelled")
 			case <-ticker.C:
-				return clusterIds, nil
+				return clusterIds, duplicates, nil
 			case response := <-notify:
 				since := time.Since(startTime)
 
@@ -231,32 +240,36 @@ func (p *AMProbeTask) Run() error {
 					Logger.Warn("AMProbe response took too longer than usual", zap.Duration("duration", since))
 				}
 
-				clusterIds = append(clusterIds, response.Meta.ClusterIDFrom)
+				// Parse message as animuserrorresponse
+				var resp animusmagic.AnimusErrorResponse
+				err := animusmagic.DeserializeData(response.RawPayload, &resp)
+
+				if err != nil {
+					Logger.Warn("Error parsing response", zap.Error(err))
+					continue
+				}
+
+				if _, ok := clusterIds[response.Meta.ClusterIDFrom]; !ok {
+					clusterIds[response.Meta.ClusterIDFrom] = []string{resp.Message}
+				} else {
+					clusterIds[response.Meta.ClusterIDFrom] = append(clusterIds[response.Meta.ClusterIDFrom], resp.Message)
+					duplicates[response.Meta.ClusterIDFrom] = clusterIds[response.Meta.ClusterIDFrom]
+				}
 			}
 		}
 	}
 
-	clusterIds, err := waitForResponse()
+	clusterIds, duplicateClusterIds, err := waitForResponse()
 
 	if err != nil {
 		return fmt.Errorf("error waiting for response: %s", err)
 	}
 
-	Logger.Debug("AMProbe response", zap.Any("clusterIds", clusterIds))
-
-	// Check that there are no duplicate cluster ids
-	clusterIdMap := make(map[uint16]struct{})
-
-	duplicateClusterIds := []uint16{}
-	for _, clusterId := range clusterIds {
-		if _, ok := clusterIdMap[clusterId]; ok {
-			duplicateClusterIds = append(duplicateClusterIds, clusterId)
-		}
-		clusterIdMap[clusterId] = struct{}{}
-	}
+	Logger.Debug("AMProbe response", zap.Any("clusterIds", clusterIds), zap.Any("duplicateClusterIds", duplicateClusterIds))
 
 	// If we have duplicate cluster ids, try to restart problematic clusters
 	if len(duplicateClusterIds) > 0 {
+		Logger.Error("Duplicate cluster ids detected", zap.Any("clusterIds", duplicateClusterIds))
 		return p.restart(tryRestartOptions{
 			ProblematicClusters: duplicateClusterIds,
 		})
@@ -275,13 +288,15 @@ func (p *AMProbeTask) Run() error {
 // resetAttempts resets the state of the task related to attempts
 func (p *AMProbeTask) resetAttempts() {
 	p.state.AttemptedMewldClusterRollingRestart = false
+	p.state.AttemptedTargettedKills = []string{}
+	p.state.AttemptedKillall = false
 	p.state.AttemptedSystemdRestart = false
 	p.state.FailedCount = 0
 	p.state.BackoffExp = 0
 }
 
 type tryRestartOptions struct {
-	ProblematicClusters []uint16 // Any specific problematic clusters
+	ProblematicClusters map[uint16][]string // Any specific problematic clusters
 }
 
 // restart tries to restart the service only when failedCount is greater than RestartAfterFailed
@@ -315,8 +330,7 @@ func (p *AMProbeTask) restart(opts tryRestartOptions) error {
 			return fmt.Errorf("error restarting service: %s", err)
 		}
 
-		p.state.FailedCount = 0 // Reset failed count
-		p.state.BackoffExp++    // Increment backoff
+		p.state.BackoffExp++ // Increment backoff
 	} else {
 		id, token, err := ParseURL(Config.Wafflepaw.StatusWebhook)
 
@@ -342,6 +356,33 @@ func (p *AMProbeTask) tryRestart(opts tryRestartOptions) error {
 	if len(opts.ProblematicClusters) > 0 {
 		// Just log for now, restarting individual clusters is not implemented yet
 		Logger.Debug("Problematic clusters detected", zap.Any("clusters", opts.ProblematicClusters))
+
+		var hasKilled bool
+		for cid, pids := range opts.ProblematicClusters {
+			for _, pid := range pids {
+				if !slices.Contains(p.state.AttemptedTargettedKills, pid) {
+					// try killing it
+					Logger.Debug("Attempting to kill problematic cluster", zap.Uint16("clusterId", cid))
+
+					err := p.tryKillPid(pid)
+
+					if err != nil {
+						Logger.Error("Error killing pid", zap.Error(err))
+					} else {
+						hasKilled = true
+					}
+
+					p.state.AttemptedTargettedKills = append(p.state.AttemptedTargettedKills, pid)
+				}
+			}
+		}
+
+		if hasKilled {
+			// Give some extra buffer time
+			time.Sleep(3 * time.Second)
+
+			return nil
+		}
 	}
 
 	if !p.state.AttemptedMewldClusterRollingRestart {
@@ -358,6 +399,22 @@ func (p *AMProbeTask) tryRestart(opts tryRestartOptions) error {
 		time.Sleep(3 * time.Second)
 
 		return nil
+	}
+
+	// Try tryRestartKillall
+	if !p.state.AttemptedKillall {
+		Logger.Debug("Attempting killall")
+
+		err := p.tryKillService()
+
+		if err != nil {
+			return fmt.Errorf("error killing service: %s", err)
+		}
+
+		p.state.AttemptedKillall = true
+
+		// Give some extra buffer time
+		time.Sleep(3 * time.Second)
 	}
 
 	// If we reach here, we have already tried restarting the mewld cluster
@@ -420,6 +477,19 @@ func (p *AMProbeTask) getServiceStatus() (string, error) {
 	return output, nil
 }
 
+// tryKillPid tries to kill a specific pid
+func (p *AMProbeTask) tryKillPid(pid string) error {
+	cmd := exec.Command("kill", "-9", pid)
+
+	err := cmd.Run()
+
+	if err != nil {
+		return fmt.Errorf("error killing pid: %s", err)
+	}
+
+	return nil
+}
+
 // tryRestartMewldCluster tries to restart a specific cluster with an id
 //
 // TODO: Implement this
@@ -448,6 +518,21 @@ func (p *AMProbeTask) tryRollingRestartMewldCluster() error {
 
 	if err != nil {
 		return fmt.Errorf("error publishing rolling restart command: %s", err)
+	}
+
+	return nil
+}
+
+// tryKillService tries to use the killall command on the process
+func (p *AMProbeTask) tryKillService() error {
+	for _, pname := range p.ProcessName {
+		cmd := exec.Command("killall", pname)
+
+		err := cmd.Run()
+
+		if err != nil {
+			return fmt.Errorf("error killing service: %s", err)
+		}
 	}
 
 	return nil

@@ -7,6 +7,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
+	"strconv"
 	"sync/atomic"
 	"time"
 
@@ -142,7 +144,7 @@ func (c *AnimusMagicClient) ListenOnce(ctx context.Context, r rueidis.Client, l 
 							meta.ClusterIDFrom,
 							OpError,
 							meta.CommandID,
-							&AnimusErrorResponse{Message: "Pong", Context: time.Now().String()},
+							&AnimusErrorResponse{Message: strconv.Itoa(os.Getpid()), Context: time.Now().String()},
 						)
 
 						if err != nil {

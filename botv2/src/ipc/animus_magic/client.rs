@@ -261,7 +261,8 @@ impl AnimusMagicClient {
                         let redis_pool = self.redis_pool.clone();
 
                         tokio::spawn(async move {
-                            // For probe, respond with the same cluster_id_from
+                            // For probe, respond with the same cluster_id_from and the process id
+                            let pid = std::process::id();
                             let Ok(payload) = create_payload::<AnimusErrorResponse>(
                                 &meta.command_id,
                                 AnimusTarget::Bot,
@@ -270,7 +271,7 @@ impl AnimusMagicClient {
                                 meta.from,
                                 AnimusOp::Response,
                                 &AnimusErrorResponse {
-                                    message: "Pong".to_string(),
+                                    message: pid.to_string(),
                                     context: "".to_string(),
                                 },
                             ) else {
