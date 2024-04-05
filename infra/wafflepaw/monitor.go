@@ -136,6 +136,7 @@ type probeTaskState struct {
 	AttemptedMewldClusterRollingRestart bool
 	AttemptedSystemdRestart             bool
 	FailedCount                         int
+	BackoffExp                          int // Exponential backoff in restart
 }
 
 type AMProbeTask struct {
@@ -215,7 +216,7 @@ func (p *AMProbeTask) Run() error {
 	waitForResponse := func() ([]uint16, error) {
 		var clusterIds []uint16
 
-		ticker := time.NewTicker(time.Second * 10)
+		ticker := time.NewTicker(time.Second*9 + time.Second*time.Duration(2^p.state.BackoffExp))
 		startTime := time.Now()
 		for {
 			select {
@@ -276,6 +277,7 @@ func (p *AMProbeTask) resetAttempts() {
 	p.state.AttemptedMewldClusterRollingRestart = false
 	p.state.AttemptedSystemdRestart = false
 	p.state.FailedCount = 0
+	p.state.BackoffExp = 0
 }
 
 type tryRestartOptions struct {
@@ -314,6 +316,7 @@ func (p *AMProbeTask) restart(opts tryRestartOptions) error {
 		}
 
 		p.state.FailedCount = 0 // Reset failed count
+		p.state.BackoffExp++    // Increment backoff
 	} else {
 		id, token, err := ParseURL(Config.Wafflepaw.StatusWebhook)
 
