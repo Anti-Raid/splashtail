@@ -157,7 +157,7 @@ func (p *AMProbeTask) Enabled() bool {
 }
 
 func (p *AMProbeTask) Duration() time.Duration {
-	return 30*time.Second + p.DelayStart
+	return 10*time.Second + p.DelayStart
 }
 
 func (p *AMProbeTask) Name() string {
@@ -241,6 +241,8 @@ func (p *AMProbeTask) Run() error {
 		return fmt.Errorf("error waiting for response: %s", err)
 	}
 
+	Logger.Debug("AMProbe response", zap.Any("clusterIds", clusterIds))
+
 	// Check that there are no duplicate cluster ids
 	clusterIdMap := make(map[uint16]struct{})
 
@@ -254,17 +256,15 @@ func (p *AMProbeTask) Run() error {
 
 	// If we have duplicate cluster ids, try to restart problematic clusters
 	if len(duplicateClusterIds) > 0 {
-		p.restart(tryRestartOptions{
+		return p.restart(tryRestartOptions{
 			ProblematicClusters: duplicateClusterIds,
 		})
 	}
 
 	// If we have less than half the expected clusters, try to restart all
 	if len(clusterIds) < len(p.ClusterMap)/2 {
-		p.restart(tryRestartOptions{})
+		return p.restart(tryRestartOptions{})
 	}
-
-	Logger.Debug("AMProbe response", zap.Any("clusterIds", clusterIds))
 
 	p.state.LastSuccessfulProbeTime = time.Now()
 	p.resetAttempts()
@@ -314,6 +314,18 @@ func (p *AMProbeTask) restart(opts tryRestartOptions) error {
 		}
 
 		p.state.FailedCount = 0 // Reset failed count
+	} else {
+		id, token, err := ParseURL(Config.Wafflepaw.StatusWebhook)
+
+		if err == nil {
+			_, err = Discord.WebhookExecute(id, token, false, &discordgo.WebhookParams{
+				Content: fmt.Sprintf("**Failed Probe:** Service %s failed probe check %d/%d failed probes", p.SystemdService, p.state.FailedCount, p.RestartAfterFailed),
+			})
+
+			if err != nil {
+				Logger.Error("Error sending webhook", zap.Error(err))
+			}
+		}
 	}
 	return nil
 }
