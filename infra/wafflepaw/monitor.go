@@ -286,6 +286,9 @@ type tryRestartOptions struct {
 // (with some other logic such as sending a webhook). Consumers should use restart over tryRestart hence.
 func (p *AMProbeTask) restart(opts tryRestartOptions) error {
 	p.state.FailedCount++
+
+	Logger.Error("Restart called", zap.Int("failedCount", p.state.FailedCount))
+
 	if p.state.FailedCount > p.RestartAfterFailed {
 		// Send a webhook to notify
 		var webhookContext = discordgo.WebhookParams{
