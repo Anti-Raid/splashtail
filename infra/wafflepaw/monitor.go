@@ -312,16 +312,10 @@ func (p *AMProbeTask) restart(opts tryRestartOptions) error {
 			Content: fmt.Sprintf("@everyone **CRITICAL ALERT** Restarting service %s due to failed probes (>%d failed probes)", p.SystemdService, p.RestartAfterFailed),
 		}
 
-		id, token, err := ParseURL(Config.Wafflepaw.StatusWebhook)
+		_, err := Discord.WebhookExecute(MonitorWebhook.ID, MonitorWebhook.Token, false, &webhookContext)
 
-		if err == nil {
-			_, err = Discord.WebhookExecute(id, token, false, &webhookContext)
-
-			if err != nil {
-				Logger.Error("Error sending webhook", zap.Error(err))
-			}
-		} else {
-			Logger.Error("Error parsing webhook URL", zap.Error(err))
+		if err != nil {
+			Logger.Error("Error sending webhook", zap.Error(err))
 		}
 
 		err = p.tryRestart(opts)
@@ -332,16 +326,12 @@ func (p *AMProbeTask) restart(opts tryRestartOptions) error {
 
 		p.state.BackoffExp++ // Increment backoff
 	} else {
-		id, token, err := ParseURL(Config.Wafflepaw.StatusWebhook)
+		_, err := Discord.WebhookExecute(MonitorWebhook.ID, MonitorWebhook.Token, false, &discordgo.WebhookParams{
+			Content: fmt.Sprintf("**Failed Probe:** Service %s failed probe check %d/%d failed probes", p.SystemdService, p.state.FailedCount, p.RestartAfterFailed),
+		})
 
-		if err == nil {
-			_, err = Discord.WebhookExecute(id, token, false, &discordgo.WebhookParams{
-				Content: fmt.Sprintf("**Failed Probe:** Service %s failed probe check %d/%d failed probes", p.SystemdService, p.state.FailedCount, p.RestartAfterFailed),
-			})
-
-			if err != nil {
-				Logger.Error("Error sending webhook", zap.Error(err))
-			}
+		if err != nil {
+			Logger.Error("Error sending webhook", zap.Error(err))
 		}
 	}
 	return nil
@@ -436,16 +426,12 @@ func (p *AMProbeTask) tryRestart(opts tryRestartOptions) error {
 	// This is the last resort
 	Logger.Error("Failed to restart service via mewld, attempting systemd restart")
 
-	id, token, err := ParseURL(Config.Wafflepaw.StatusWebhook)
+	_, err := Discord.WebhookExecute(MonitorWebhook.ID, MonitorWebhook.Token, false, &discordgo.WebhookParams{
+		Content: fmt.Sprintf("@everyone **CRITICAL ALERT** Failed to restart service %s via mewld, attempting systemd restart", p.SystemdService),
+	})
 
-	if err == nil {
-		_, err = Discord.WebhookExecute(id, token, false, &discordgo.WebhookParams{
-			Content: fmt.Sprintf("@everyone **CRITICAL ALERT** Failed to restart service %s via mewld, attempting systemd restart", p.SystemdService),
-		})
-
-		if err != nil {
-			Logger.Error("Error sending webhook", zap.Error(err))
-		}
+	if err != nil {
+		Logger.Error("Error sending webhook", zap.Error(err))
 	}
 
 	err = p.tryRestartServiceSystemd()

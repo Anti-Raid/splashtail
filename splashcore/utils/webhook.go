@@ -1,19 +1,27 @@
-package main
+package utils
 
 import (
 	"errors"
 	"regexp"
 )
 
+type ParsedWebhookUrl struct {
+	ID    string
+	Token string
+}
+
 // From https://github.com/diamondburned/arikawa/blob/v3.3.5/api/webhook/webhook.go#L29
 var webhookURLRe = regexp.MustCompile(`https://discord(?:app)?.com/api/webhooks/(\d+)/(.+)`)
 
 // ParseURL parses the given Discord webhook URL.
-func ParseURL(webhookURL string) (id string, token string, err error) {
+func ParseWebhookURL(webhookURL string) (pwUrl *ParsedWebhookUrl, err error) {
 	matches := webhookURLRe.FindStringSubmatch(webhookURL)
 	if matches == nil {
-		return "", "", errors.New("invalid webhook URL")
+		return nil, errors.New("invalid webhook URL")
 	}
 
-	return matches[1], matches[2], nil
+	return &ParsedWebhookUrl{
+		ID:    matches[1],
+		Token: matches[2],
+	}, nil
 }

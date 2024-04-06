@@ -11,6 +11,7 @@ import (
 	"github.com/anti-raid/splashtail/splashcore/animusmagic"
 	"github.com/anti-raid/splashtail/splashcore/config"
 	"github.com/anti-raid/splashtail/splashcore/mewldresponder"
+	"github.com/anti-raid/splashtail/splashcore/utils"
 	"github.com/bwmarrin/discordgo"
 	"github.com/go-playground/validator/v10"
 	"github.com/infinitybotlist/eureka/proxy"
@@ -29,6 +30,7 @@ var (
 	Discord           *discordgo.Session
 	AnimusMagicClient *animusmagic.AnimusMagicClient
 	MewldResponder    *mewldresponder.MewldResponder
+	MonitorWebhook    *utils.ParsedWebhookUrl
 	v                 = validator.New()
 )
 
@@ -59,6 +61,13 @@ func main() {
 
 	if err != nil {
 		panic("configError: " + err.Error())
+	}
+
+	// Parse webhook
+	MonitorWebhook, err = utils.ParseWebhookURL(Config.Wafflepaw.StatusWebhook)
+
+	if err != nil {
+		logPanic("error parsing webhook url", err)
 	}
 
 	// Reuidis

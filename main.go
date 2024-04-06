@@ -8,9 +8,11 @@ import (
 	"os/signal"
 	"runtime"
 	"strconv"
+	"strings"
 	"syscall"
 	"time"
 
+	"github.com/bwmarrin/discordgo"
 	mconfig "github.com/cheesycod/mewld/config"
 	mloader "github.com/cheesycod/mewld/loader"
 	mproc "github.com/cheesycod/mewld/proc"
@@ -24,6 +26,7 @@ import (
 	jobserverstate "github.com/anti-raid/splashtail/jobserver/state"
 	"github.com/anti-raid/splashtail/splashcore/config"
 	"github.com/anti-raid/splashtail/splashcore/mewldresponder"
+	"github.com/anti-raid/splashtail/splashcore/utils"
 	"github.com/anti-raid/splashtail/webserver"
 	"github.com/anti-raid/splashtail/webserver/mewld_web"
 	webserverstate "github.com/anti-raid/splashtail/webserver/state"
@@ -77,6 +80,12 @@ func main() {
 			webserverstate.Logger.Warn("Redis URL in mewld.yaml does not match the one in config.yaml")
 		}
 
+		webh, err := utils.ParseWebhookURL(webserverstate.Config.Wafflepaw.StatusWebhook)
+
+		if err != nil {
+			webserverstate.Logger.Fatal("Error parsing webhook URL", zap.Error(err))
+		}
+
 		il, rh, err := mloader.Load(&mldConfig, &mproc.LoaderData{
 			Start: func(l *mproc.InstanceList, i *mproc.Instance, cm *mproc.ClusterMap) error {
 				cmd := exec.Command(
@@ -108,6 +117,31 @@ func main() {
 
 				// Spawn process
 				return cmd.Start()
+			},
+			OnActionLog: func(payload map[string]any) error {
+				// Send webhook
+				go func() {
+					payloadStr := strings.Builder{}
+
+					for k, v := range payload {
+						payloadStr.WriteString(k + ": " + fmt.Sprint(v) + "\n")
+					}
+
+					_, err := webserverstate.Discord.WebhookExecute(
+						webh.ID,
+						webh.Token,
+						false,
+						&discordgo.WebhookParams{
+							Content: "@everyone **MEWLD ALERT [webserver]**\n" + payloadStr.String(),
+						},
+					)
+
+					if err != nil {
+						webserverstate.Logger.Error("Error sending webhook", zap.Error(err))
+					}
+				}()
+
+				return nil
 			},
 		})
 
@@ -254,6 +288,12 @@ func main() {
 			}
 		}
 
+		webh, err := utils.ParseWebhookURL(jobserverstate.Config.Wafflepaw.StatusWebhook)
+
+		if err != nil {
+			jobserverstate.Logger.Fatal("Error parsing webhook URL", zap.Error(err))
+		}
+
 		il, rh, err := mloader.Load(&mldConfig, &mproc.LoaderData{
 			Start: func(l *mproc.InstanceList, i *mproc.Instance, cm *mproc.ClusterMap) error {
 				cmd := exec.Command(
@@ -281,6 +321,31 @@ func main() {
 
 				// Spawn process
 				return cmd.Start()
+			},
+			OnActionLog: func(payload map[string]any) error {
+				// Send webhook
+				go func() {
+					payloadStr := strings.Builder{}
+
+					for k, v := range payload {
+						payloadStr.WriteString(k + ": " + fmt.Sprint(v) + "\n")
+					}
+
+					_, err := jobserverstate.Discord.WebhookExecute(
+						webh.ID,
+						webh.Token,
+						false,
+						&discordgo.WebhookParams{
+							Content: "@everyone **MEWLD ALERT [jobserver]**\n" + payloadStr.String(),
+						},
+					)
+
+					if err != nil {
+						jobserverstate.Logger.Error("Error sending webhook", zap.Error(err))
+					}
+				}()
+
+				return nil
 			},
 		})
 
