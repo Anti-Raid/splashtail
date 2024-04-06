@@ -98,6 +98,7 @@ func New(channel string, from AnimusTarget, clusterId uint16) *AnimusMagicClient
 //
 // This is *blocking* and should be run in a goroutine
 func (c *AnimusMagicClient) ListenOnce(ctx context.Context, r rueidis.Client, l *zap.Logger) error {
+	pid := strconv.Itoa(os.Getpid()) // Needed for probe
 	return r.Dedicated(
 		func(redis rueidis.DedicatedClient) error {
 			return redis.Receive(ctx, redis.B().Subscribe().Channel(c.Channel).Build(), func(msg rueidis.PubSubMessage) {
@@ -142,9 +143,9 @@ func (c *AnimusMagicClient) ListenOnce(ctx context.Context, r rueidis.Client, l 
 							meta.From,
 							c.ClusterID,
 							meta.ClusterIDFrom,
-							OpError,
+							OpResponse, // All Probes should use OpResponse
 							meta.CommandID,
-							&AnimusErrorResponse{Message: strconv.Itoa(os.Getpid()), Context: time.Now().String()},
+							&AnimusErrorResponse{Message: pid},
 						)
 
 						if err != nil {
@@ -230,6 +231,9 @@ func (c *AnimusMagicClient) ListenOnce(ctx context.Context, r rueidis.Client, l 
 						n, ok := c.Notify.Load(meta.CommandID)
 
 						if !ok {
+							if c.From == AnimusTargetInfra {
+								return // Infra doesn't need this warning, its just spam when there is so much infra (wafflepaw, animuscli)
+							}
 							l.Warn("[animus magic] received response for unknown command", zap.String("commandId", meta.CommandID))
 							return
 						}
