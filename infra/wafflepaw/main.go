@@ -90,7 +90,7 @@ func main() {
 		logPanic("error creating discord session", err)
 	}
 
-	Discord.Client.Transport = proxy.NewHostRewriter("localhost:3219", http.DefaultTransport, func(s string) {
+	Discord.Client.Transport = proxy.NewHostRewriter(Config.Meta.Proxy, http.DefaultTransport, func(s string) {
 		Logger.Info("[PROXY]", zap.String("note", s))
 	})
 
