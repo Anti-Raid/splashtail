@@ -23,11 +23,6 @@ pub struct SilverpeltCache {
     /// Module_id_cache is a cache of module id to module
     pub module_id_cache: dashmap::DashMap<String, Module>,
 
-    // A commonly needed operation is mapping the name of a module to its module id
-    //
-    // module_id_name_cache is a cache of module name to module id
-    pub module_id_name_cache: dashmap::DashMap<String, String>,
-
     /// Command ID to module map
     ///
     /// This uses an indexmap for now to avoid sending values over await point
@@ -71,15 +66,6 @@ impl SilverpeltCache {
 
                 for module in crate::modules::modules() {
                     map.insert(module.id.to_string(), module);
-                }
-
-                map
-            },
-            module_id_name_cache: {
-                let map = dashmap::DashMap::new();
-
-                for module in crate::modules::modules() {
-                    map.insert(module.name.to_string(), module.id.to_string());
                 }
 
                 map

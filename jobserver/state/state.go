@@ -157,7 +157,7 @@ func Setup() {
 		panic(err)
 	}
 
-	Discord.Client.Transport = proxy.NewHostRewriter(Config.Meta.Proxy, http.DefaultTransport, func(s string) {
+	Discord.Client.Transport = proxy.NewHostRewriter(strings.Replace(Config.Meta.Proxy, "http://", "", 1), http.DefaultTransport, func(s string) {
 		Logger.Info("[PROXY]", zap.String("note", s))
 	})
 

@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"strings"
 
 	"github.com/anti-raid/splashtail/cmd/wafflepaw/bgtasks"
 	"github.com/anti-raid/splashtail/splashcore/animusmagic"
@@ -90,7 +91,7 @@ func main() {
 		logPanic("error creating discord session", err)
 	}
 
-	Discord.Client.Transport = proxy.NewHostRewriter(Config.Meta.Proxy, http.DefaultTransport, func(s string) {
+	Discord.Client.Transport = proxy.NewHostRewriter(strings.Replace(Config.Meta.Proxy, "http://", "", 1), http.DefaultTransport, func(s string) {
 		Logger.Info("[PROXY]", zap.String("note", s))
 	})
 

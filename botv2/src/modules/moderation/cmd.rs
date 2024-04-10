@@ -104,7 +104,7 @@ async fn check_hierarchy(
         }
     } else {
         // We have a None, if so, check if the user is in the server
-        if guild.members.get(&user_id).is_none() {
+        if guild.members.contains_key(&user_id) {
             Ok(()) // User is not in the server, so yes, they're below us
         } else {
             Err("You cannot moderate a user with equal hierarchy to you".into())
@@ -498,11 +498,7 @@ pub async fn ban(
         .await?;
 
     // Try banning them
-    let dmd = if let Some(prune_dmd) = prune_dmd {
-        prune_dmd
-    } else {
-        0
-    };
+    let dmd = prune_dmd.unwrap_or_default();
 
     let Some(author) = ctx.author_member().await else {
         return Err("This command can only be used in a guild".into());
@@ -637,11 +633,7 @@ pub async fn tempban(
         .await?;
 
     // Try banning them
-    let dmd = if let Some(prune_dmd) = prune_dmd {
-        prune_dmd
-    } else {
-        0
-    };
+    let dmd = prune_dmd.unwrap_or_default();
 
     let Some(author) = ctx.author_member().await else {
         return Err("This command can only be used in a guild".into());

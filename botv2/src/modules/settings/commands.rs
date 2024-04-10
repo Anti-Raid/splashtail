@@ -1,7 +1,6 @@
 use bothelpers::cache::CacheHttpImpl;
 use crate::{Error, Context};
-
-use crate::silverpelt::silverpelt_cache::SILVERPELT_CACHE;
+use crate::silverpelt::{silverpelt_cache::SILVERPELT_CACHE, CommandExtendedData, GuildCommandConfiguration, GuildModuleConfiguration};
 
 /// Settings related to commands
 #[poise::command(
@@ -9,7 +8,7 @@ use crate::silverpelt::silverpelt_cache::SILVERPELT_CACHE;
     slash_command,
     user_cooldown = 1,
     guild_cooldown = 1,
-    subcommands("commands_check", "commands_enable", "commands_disable")
+    subcommands("commands_check", "commands_enable", "commands_disable", "commands_modperms")
 )]
 pub async fn commands(_ctx: Context<'_>) -> Result<(), Error> {
     Ok(())
@@ -33,11 +32,6 @@ pub async fn commands_check(
     };
 
     let base_command = command.split_whitespace().next().unwrap();
-
-    // Find associated module
-    /*let Some(module) = SILVERPELT_CACHE.command_id_module_map.get(base_command) else {
-        return Err("Command not found".into());
-    };*/
 
     // Check if the user has permission to use the command
     let cache_http = &CacheHttpImpl::from_ctx(ctx.serenity_context());
@@ -82,11 +76,6 @@ pub async fn commands_enable(
     };
 
     let base_command = command.split_whitespace().next().unwrap();
-
-    // Find associated module
-    /*let Some(module) = SILVERPELT_CACHE.command_id_module_map.get(base_command) else {
-        return Err("Command not found".into());
-    };*/
 
     // Check if the user has permission to use the command
     let cache_http = &CacheHttpImpl::from_ctx(ctx.serenity_context());
@@ -184,11 +173,6 @@ pub async fn commands_disable(
 
     let base_command = command.split_whitespace().next().unwrap();
 
-    // Find associated module
-    /*let Some(module) = SILVERPELT_CACHE.command_id_module_map.get(base_command) else {
-        return Err("Command not found".into());
-    };*/
-
     // Check if the user has permission to use the command
     let cache_http = &CacheHttpImpl::from_ctx(ctx.serenity_context());
     let perm_res = crate::silverpelt::cmd::check_command(
@@ -245,6 +229,99 @@ pub async fn commands_disable(
     }
 
     tx.commit().await?;
+
+    tokio::spawn(async move {
+        if let Err(err) = SILVERPELT_CACHE
+            .command_permission_cache
+            .invalidate_entries_if(move |k, _| k.0 == guild_id)
+        {
+            log::error!(
+                "Failed to invalidate command permission cache for guild {}: {}",
+                guild_id,
+                err
+            );
+        } else {
+            log::info!("Invalidated cache for guild {}", guild_id);
+        }
+    });
+
+    ctx.say("Command disabled").await?;
+
+    Ok(())
+}
+
+/// Enables a module. Note that globally disabled modules cannot be used even if enabled
+#[poise::command(
+    prefix_command,
+    slash_command,
+    user_cooldown = 1,
+    guild_cooldown = 1,
+    rename = "modperms"
+)]
+pub async fn commands_modperms(
+    ctx: Context<'_>,
+    #[description = "The command to disable"]
+    command: String,
+) -> Result<(), Error> {
+    let Some(guild_id) = ctx.guild_id() else {
+        return Err("This command must be run in a guild".into());
+    };
+
+    let base_command = command.split_whitespace().next().unwrap();
+
+    // Check if the user has permission to use the command
+    let cache_http = &CacheHttpImpl::from_ctx(ctx.serenity_context());
+    let perm_res = crate::silverpelt::cmd::check_command(
+        base_command,
+        &command,
+        guild_id,
+        ctx.author().id,
+        &ctx.data().pool,
+        cache_http,
+        &Some(ctx),
+        crate::silverpelt::cmd::CheckCommandOptions {
+            ignore_command_disabled: true,
+            ..Default::default()
+        },
+    ).await;
+
+    if !perm_res.is_ok() {
+        return Err(format!("You can only modify commands that you have permission to use?\n{}", perm_res.to_markdown()).into());
+    }
+
+    async fn get_current_permissions(pool: &sqlx::PgPool, guild_id: serenity::all::GuildId, command: &str) -> Result<
+        (
+            CommandExtendedData,
+            GuildCommandConfiguration,
+            Option<GuildModuleConfiguration>,
+        ),
+        crate::Error,
+    > {
+        let (cmd_data, command_config, module_config) = crate::silverpelt::module_config::get_command_configuration(
+            pool,
+            guild_id.to_string().as_str(),
+            command,
+        )
+        .await?;
+
+        let mut command_config = command_config.unwrap_or(GuildCommandConfiguration {
+            id: "".to_string(),
+            guild_id: guild_id.to_string(),
+            command: command.to_string(),
+            perms: None,
+            disabled: None,
+        });
+
+        if command_config.perms.is_none() {
+            command_config.perms = Some(cmd_data.default_perms.clone())
+        }
+
+        Ok((cmd_data, command_config, module_config))
+    }
+
+    let (cmd_data, command_config, module_config) = get_current_permissions(&ctx.data().pool, guild_id, &command).await?;
+
+    ctx.say(format!("Current permissions for command `{}`:\n{}", command, command_config.perms.unwrap_or(cmd_data.default_perms))).await?;
 
     tokio::spawn(async move {
         if let Err(err) = SILVERPELT_CACHE

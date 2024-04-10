@@ -154,7 +154,7 @@ impl Display for PermissionChecks {
                 write!(f, " ")?;
             }
 
-            write!(f, "{}", check)?; // The Display trait on PermissionCheck automatically formats individual permissions the correct way
+            write!(f, "{}. {}", i, check)?; // The Display trait on PermissionCheck automatically formats individual permissions the correct way
 
             let empty = check.kittycat_perms.is_empty() && check.native_perms.is_empty();
 

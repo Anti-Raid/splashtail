@@ -104,6 +104,10 @@ pub struct CheckCommandOptions {
     #[serde(default)]
     pub ignore_cache: bool,
 
+    /// Whether or not to cache the result at all
+    #[serde(default)]
+    pub cache_result: bool,
+
     /// Whether or not to ignore the fact that the module is disabled in the guild
     #[serde(default)]
     pub ignore_module_disabled: bool,
@@ -126,6 +130,7 @@ impl Default for CheckCommandOptions {
     fn default() -> Self {
         Self {
             ignore_cache: false,
+            cache_result: true,
             ignore_module_disabled: false,
             ignore_command_disabled: false,
             custom_resolved_kittycat_perms: None,
@@ -297,6 +302,10 @@ pub async fn check_command(
         member_perms,
         &kittycat_perms,
     );
+
+    if !opts.cache_result {
+        return perm_res;
+    }
 
     let mut key = SILVERPELT_CACHE
         .command_permission_cache
