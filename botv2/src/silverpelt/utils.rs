@@ -33,7 +33,7 @@ mod tests {
 
     #[test]
     fn test_permute_command_names() {
-        println!("{:?}", permute_command_names("limits hit view"));
+        assert_eq!(permute_command_names(""), vec![""]);
         assert_eq!(permute_command_names("limits"), vec!["limits"]);
         assert_eq!(
             permute_command_names("limits hit"),

@@ -1,13 +1,59 @@
 use super::permissions::PermissionResult;
 use super::silverpelt_cache::SILVERPELT_CACHE;
 use bothelpers::cache::CacheHttpImpl;
-use crate::silverpelt;
+use crate::silverpelt::{
+    self, 
+    utils::permute_command_names, 
+    CommandExtendedData, 
+    GuildCommandConfiguration, 
+    GuildModuleConfiguration,
+    module_config::{
+        get_module_configuration,
+        get_command_extended_data,
+        get_best_command_configuration,
+    }
+};
 use log::info;
 use serenity::all::{GuildId, UserId};
 use serenity::small_fixed_array::FixedArray;
 use sqlx::PgPool;
 use serde::{Serialize, Deserialize};
 
+/// Returns the effective configuration of a command
+///
+/// This is intentionally private as it is a helper function
+/// to avoid rewriting a ton of code
+#[inline]
+async fn get_effective_module_command_configuration(
+    pool: &PgPool,
+    guild_id: &str,
+    name: &str,
+) -> Result<
+    (
+        CommandExtendedData,
+        Option<GuildCommandConfiguration>,
+        Option<GuildModuleConfiguration>,
+    ),
+    crate::Error,
+> {
+    let permutations = permute_command_names(name);
+    let root_cmd = permutations.first().unwrap();
+
+    let module = SILVERPELT_CACHE
+        .command_id_module_map
+        .get(root_cmd)
+        .ok_or::<crate::Error>("Unknown error determining module of command".into())?;
+
+    // Check if theres any module configuration
+    let module_configuration = get_module_configuration(pool, guild_id, module.as_str()).await?;
+    let cmd_data = get_command_extended_data(&permutations)?;
+    let command_configuration = get_best_command_configuration(pool, guild_id, &permutations).await?;
+
+
+    Ok((cmd_data, command_configuration, module_configuration))
+}
+
+#[inline]
 pub async fn get_perm_info(
     guild_id: GuildId,
     user_id: UserId,
@@ -208,7 +254,7 @@ pub async fn check_command(
     }
 
     let (cmd_data, command_config, module_config) =
-        match silverpelt::module_config::get_command_configuration(
+        match get_effective_module_command_configuration(
             pool,
             guild_id.to_string().as_str(),
             command,

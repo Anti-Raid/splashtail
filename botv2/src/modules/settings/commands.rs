@@ -267,7 +267,8 @@ pub async fn commands_modperms(
         return Err("This command must be run in a guild".into());
     };
 
-    let base_command = command.split_whitespace().next().unwrap();
+    let cmd_permutations = crate::silverpelt::utils::permute_command_names(&command);
+    let base_command = cmd_permutations.first().unwrap();
 
     // Check if the user has permission to use the command
     let cache_http = &CacheHttpImpl::from_ctx(ctx.serenity_context());
@@ -289,39 +290,39 @@ pub async fn commands_modperms(
         return Err(format!("You can only modify commands that you have permission to use?\n{}", perm_res.to_markdown()).into());
     }
 
-    async fn get_current_permissions(pool: &sqlx::PgPool, guild_id: serenity::all::GuildId, command: &str) -> Result<
+    async fn get_current_permissions(
+        pool: &sqlx::PgPool, 
+        guild_id: serenity::all::GuildId, 
+        permutations: &[String],
+        command: &str
+    ) -> Result<
         (
             CommandExtendedData,
-            GuildCommandConfiguration,
+            Vec<GuildCommandConfiguration>,
             Option<GuildModuleConfiguration>,
         ),
         crate::Error,
     > {
-        let (cmd_data, command_config, module_config) = crate::silverpelt::module_config::get_command_configuration(
+        let guild_module_configuration = crate::silverpelt::module_config::get_module_configuration_from_command_name(
             pool,
             guild_id.to_string().as_str(),
             command,
         )
         .await?;
 
-        let mut command_config = command_config.unwrap_or(GuildCommandConfiguration {
-            id: "".to_string(),
-            guild_id: guild_id.to_string(),
-            command: command.to_string(),
-            perms: None,
-            disabled: None,
-        });
+        let cmd_data = crate::silverpelt::module_config::get_command_extended_data(permutations)?;
+        let command_configurations = crate::silverpelt::module_config::get_all_command_configurations(
+            pool,
+            guild_id.to_string().as_str(),
+            command,
+        )
+        .await?;
 
-        if command_config.perms.is_none() {
-            command_config.perms = Some(cmd_data.default_perms.clone())
-        }
-
-        Ok((cmd_data, command_config, module_config))
+        Ok((cmd_data, command_configurations, guild_module_configuration))
     }
 
-    let (cmd_data, command_config, module_config) = get_current_permissions(&ctx.data().pool, guild_id, &command).await?;
-
-    ctx.say(format!("Current permissions for command `{}`:\n{}", command, command_config.perms.unwrap_or(cmd_data.default_perms))).await?;
+    #[allow(unused_variables)] // WIP
+    let (cmd_data, command_config, module_config) = get_current_permissions(&ctx.data().pool, guild_id, &cmd_permutations, &command).await?;
 
     tokio::spawn(async move {
         if let Err(err) = SILVERPELT_CACHE

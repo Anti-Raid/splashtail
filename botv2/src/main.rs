@@ -355,11 +355,30 @@ async fn main() {
         commands: {
             let mut cmds = Vec::new();
 
-            for module in modules::modules() {
+            let mut _cmd_names = Vec::new();
+            for module in modules::modules() { 
                 log::info!("Loading module {}", module.id);
                 for cmd in module.commands {
                     let mut cmd = cmd.0;
                     cmd.category = Some(module.id.to_string());
+
+                    // Check for duplicate command names
+                    if _cmd_names.contains(&cmd.name) {
+                        panic!("Duplicate command name: {}", cmd.name);
+                    }
+
+                    _cmd_names.push(cmd.name.clone());
+
+                    // Check for duplicate command aliases
+                    for alias in cmd.aliases.iter() {
+                        if _cmd_names.contains(alias) {
+                            panic!("Duplicate command alias: {} from command {}", alias, cmd.name);
+                        }
+
+                        _cmd_names.push(alias.clone());
+                    }
+
+                    // Good to go
                     cmds.push(cmd);
                 }
             }

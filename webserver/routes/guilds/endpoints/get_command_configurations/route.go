@@ -1,33 +1,24 @@
-package get_module_configuration
+package get_command_configurations
 
 import (
-	"errors"
 	"net/http"
-	"strings"
 	"time"
 
 	"github.com/anti-raid/splashtail/splashcore/silverpelt"
-	"github.com/anti-raid/splashtail/splashcore/structparser/db"
 	"github.com/anti-raid/splashtail/splashcore/types"
 	"github.com/anti-raid/splashtail/webserver/state"
 	"github.com/go-chi/chi/v5"
 	docs "github.com/infinitybotlist/eureka/doclib"
 	"github.com/infinitybotlist/eureka/ratelimit"
 	"github.com/infinitybotlist/eureka/uapi"
-	"github.com/jackc/pgx/v5"
 	"go.uber.org/zap"
-)
-
-var (
-	gmcCols    = db.GetCols(silverpelt.GuildModuleConfiguration{})
-	gmcColsStr = strings.Join(gmcCols, ", ")
 )
 
 func Docs() *docs.Doc {
 	return &docs.Doc{
-		Summary:     "Get Module Configurations",
-		Description: "This endpoint returns the configuration for a specific module in a guild",
-		Resp:        []silverpelt.GuildModuleConfiguration{},
+		Summary:     "Get Command Configurations",
+		Description: "This endpoint returns all configurations for a specific command in a guild",
+		Resp:        []silverpelt.GuildCommandConfiguration{},
 		Params: []docs.Parameter{
 			{
 				Name:        "user_id",
@@ -43,19 +34,26 @@ func Docs() *docs.Doc {
 				Required:    true,
 				Schema:      docs.IdSchema,
 			},
+			{
+				Name:        "command",
+				Description: "The command to get the configuration of",
+				In:          "path",
+				Required:    true,
+				Schema:      docs.IdSchema,
+			},
 		},
 	}
 }
 
 func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 	limit, err := ratelimit.Ratelimit{
-		Expiry:      2 * time.Minute,
-		MaxRequests: 10,
-		Bucket:      "module_configuration",
+		Expiry:      1 * time.Minute,
+		MaxRequests: 20,
+		Bucket:      "command_configuration",
 	}.Limit(d.Context, r)
 
 	if err != nil {
-		state.Logger.Error("Error while ratelimiting", zap.Error(err), zap.String("bucket", "get_user_guild_base_info"))
+		state.Logger.Error("Error while ratelimiting", zap.Error(err), zap.String("bucket", "command_configuration"))
 		return uapi.DefaultResponse(http.StatusInternalServerError)
 	}
 
@@ -71,33 +69,26 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 
 	guildId := chi.URLParam(r, "guild_id")
 	userId := chi.URLParam(r, "user_id")
+	command := chi.URLParam(r, "command")
 
-	if guildId == "" || userId == "" {
+	if guildId == "" || userId == "" || command == "" {
 		return uapi.DefaultResponse(http.StatusBadRequest)
 	}
 
 	// Fetch row from guild_module_configuration
-	row, err := state.Pool.Query(d.Context, "SELECT "+gmcColsStr+" FROM guild_module_configurations WHERE guild_id = $1", guildId)
+	gcc, err := silverpelt.GetAllCommandConfigurations(d.Context, state.Pool, guildId, command)
 
 	if err != nil {
-		state.Logger.Error("Failed to query guild_module_configuration", zap.Error(err))
-		return uapi.DefaultResponse(http.StatusInternalServerError)
-	}
-
-	defer row.Close()
-
-	gmc, err := pgx.CollectRows(row, pgx.RowToAddrOfStructByName[silverpelt.GuildModuleConfiguration])
-
-	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
-		state.Logger.Error("Failed to collect guild_module_configuration", zap.Error(err))
-		return uapi.DefaultResponse(http.StatusInternalServerError)
-	}
-
-	if len(gmc) == 0 {
-		gmc = []*silverpelt.GuildModuleConfiguration{}
+		state.Logger.Error("Failed to query guild_command_configuration", zap.Error(err))
+		return uapi.HttpResponse{
+			Status: http.StatusInternalServerError,
+			Json: types.ApiError{
+				Message: "Failed to query guild_command_configuration: " + err.Error(),
+			},
+		}
 	}
 
 	return uapi.HttpResponse{
-		Json: gmc,
+		Json: gcc,
 	}
 }

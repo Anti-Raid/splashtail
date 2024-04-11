@@ -73,20 +73,47 @@ pub async fn is_module_enabled(
     }
 }
 
-/// Returns the configuration of a command
-pub async fn get_command_configuration(
+/// Returns the configuration for a module, if it exists
+pub async fn get_module_configuration(
+    pool: &PgPool,
+    guild_id: &str,
+    module: &str,
+) -> Result<Option<GuildModuleConfiguration>, crate::Error> {
+    let rec = sqlx::query!(
+        "SELECT id, guild_id, module, disabled FROM guild_module_configurations WHERE guild_id = $1 AND module = $2",
+        guild_id,
+        module,
+    )
+    .fetch_optional(pool)
+    .await?;
+
+    Ok(rec.map(|rec| GuildModuleConfiguration {
+        id: rec.id.hyphenated().to_string(),
+        guild_id: rec.guild_id,
+        module: rec.module,
+        disabled: rec.disabled,
+    }))
+}
+
+pub async fn get_module_configuration_from_command_name(
     pool: &PgPool,
     guild_id: &str,
     name: &str,
-) -> Result<
-    (
-        CommandExtendedData,
-        Option<GuildCommandConfiguration>,
-        Option<GuildModuleConfiguration>,
-    ),
-    crate::Error,
-> {
+) -> Result<Option<GuildModuleConfiguration>, crate::Error> {
     let permutations = permute_command_names(name);
+    let root_cmd = permutations.first().unwrap();
+
+    let module = SILVERPELT_CACHE
+        .command_id_module_map
+        .get(root_cmd)
+        .ok_or::<crate::Error>("Unknown error determining module of command".into())?;
+
+    get_module_configuration(pool, guild_id, module.as_str()).await
+}
+
+pub fn get_command_extended_data(
+    permutations: &[String],
+) -> Result<CommandExtendedData, crate::Error> {
     let root_cmd = permutations.first().unwrap();
 
     let root_cmd_data = SILVERPELT_CACHE.command_extra_data_map.get(root_cmd);
@@ -94,30 +121,10 @@ pub async fn get_command_configuration(
     let Some(root_cmd_data) = root_cmd_data else {
         return Err(format!(
             "The command ``{}`` does not exist [command not found in cache?]",
-            name
+            root_cmd
         )
         .into());
     };
-
-    let module = SILVERPELT_CACHE
-        .command_id_module_map
-        .get(root_cmd)
-        .ok_or::<crate::Error>("Unknown error determining module of command".into())?;
-
-    // Check if theres any module configuration
-    let module_configuration = sqlx::query!(
-        "SELECT id, guild_id, module, disabled FROM guild_module_configurations WHERE guild_id = $1 AND module = $2",
-        guild_id,
-        module,
-    )
-    .fetch_optional(pool)
-    .await?
-    .map(|rec| GuildModuleConfiguration {
-        id: rec.id.hyphenated().to_string(),
-        guild_id: rec.guild_id,
-        module: rec.module,
-        disabled: rec.disabled,
-    });
 
     let mut cmd_data = root_cmd_data
         .get("")
@@ -135,8 +142,16 @@ pub async fn get_command_configuration(
         }
     }
 
-    let mut command_configuration = None;
+    Ok(cmd_data)
+}
 
+// Gets the best possible command configuation to run a specific command
+pub async fn get_best_command_configuration(
+    pool: &PgPool,
+    guild_id: &str,
+    permutations: &[String],
+) -> Result<Option<GuildCommandConfiguration>, crate::Error> {
+    let mut command_configuration = None;
     for permutation in permutations.iter() {
         let rec = sqlx::query!(
             "SELECT id, guild_id, command, perms, disabled FROM guild_command_configurations WHERE guild_id = $1 AND command = $2",
@@ -166,5 +181,47 @@ pub async fn get_command_configuration(
         }
     }
 
-    Ok((cmd_data, command_configuration, module_configuration))
+    Ok(command_configuration)
+}
+
+/// Returns all configurations of a command
+pub async fn get_all_command_configurations(
+    pool: &PgPool,
+    guild_id: &str,
+    name: &str,
+) -> Result<
+    Vec<GuildCommandConfiguration>,
+    crate::Error,
+> {
+    let permutations = permute_command_names(name);
+
+    let mut command_configurations = Vec::new();
+
+    for permutation in permutations.iter() {
+        let rec = sqlx::query!(
+            "SELECT id, guild_id, command, perms, disabled FROM guild_command_configurations WHERE guild_id = $1 AND command = $2",
+            guild_id,
+            permutation,
+        )
+        .fetch_optional(pool)
+        .await?;
+
+        if let Some(rec) = rec {
+            command_configurations.push(GuildCommandConfiguration {
+                id: rec.id.hyphenated().to_string(),
+                guild_id: rec.guild_id,
+                command: rec.command,
+                perms: {
+                    if let Some(perms) = rec.perms {
+                        serde_json::from_value(perms).unwrap()
+                    } else {
+                        None
+                    }
+                },
+                disabled: rec.disabled,
+            });
+        }
+    }
+
+    Ok(command_configurations)
 }
