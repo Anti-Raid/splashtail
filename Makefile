@@ -1,5 +1,5 @@
 TEST__USER_ID := 728871946456137770
-CDN_PATH := /silverpelt/cdn/antiraid
+CDN_PATH := /silverpelt/purrquinox/cdn/antiraid
 
 stcore:
 	CGO_ENABLED=0 go build -v 
