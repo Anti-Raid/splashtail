@@ -28,6 +28,7 @@ pub fn module() -> crate::silverpelt::Module {
             (
                 commands::commands(),
                 indexmap! {
+                    "check" => crate::silverpelt::CommandExtendedData::kittycat_or_admin("commands", "check"),
                     "enable" => crate::silverpelt::CommandExtendedData::kittycat_or_admin("commands", "enable"),
                     "disable" => crate::silverpelt::CommandExtendedData::kittycat_or_admin("commands", "disable"),
                 },
@@ -35,6 +36,7 @@ pub fn module() -> crate::silverpelt::Module {
             (
                 perms::perms(),
                 indexmap! {
+                    "list" => crate::silverpelt::CommandExtendedData::kittycat_simple("perms", "list"),
                     "modrole" => crate::silverpelt::CommandExtendedData {
                         default_perms: crate::silverpelt::PermissionChecks {
                             checks: vec![
@@ -55,6 +57,7 @@ pub fn module() -> crate::silverpelt::Module {
                         },
                         ..Default::default()
                     },
+                    "delrole" => crate::silverpelt::CommandExtendedData::kittycat_simple("perms", "delrole"),
                 },
             ),
         ],

@@ -219,7 +219,7 @@ func ExecuteTask(
 	}, ts, prog)
 
 	if terr != nil {
-		l.Error("Failed to execute task", zap.Error(err))
+		l.Error("Failed to execute task [terr != nil]", zap.Error(terr))
 		taskState = "failed"
 	}
 

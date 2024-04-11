@@ -90,11 +90,16 @@ pub async fn perms_modrole(
 
     let data = ctx.data();
 
-    let Some(member) = ctx.author_member().await else {
+    let Some(guild_id) = ctx.guild_id() else {
         return Err("You must be in a server to run this command".into());
     };
 
-    {
+    let Some(member) = ctx.author_member().await else {
+        return Err("You must be in a server to run this command".into());
+    };
+    
+    // Perform more permission checks and get the guilds owner id at the same time
+    let guild_owner_id = {
         let Some(guild) = ctx.guild() else {
             return Err("You must be in a server to run this command".into());
         };
@@ -115,23 +120,22 @@ pub async fn perms_modrole(
                 let Some(r) = guild.roles.get(r) else {
                     continue;
                 };
-                if r.position > highest_role.position {
+
+                if r > highest_role {
                     highest_role = r;
                 }
             }
 
-            if highest_role.position < role.position {
+            if highest_role <= &role {
                 return Err("You do not have permission to edit this role's permissions as they are higher than you".into());
             }
         }
-    }
 
-    let Some(guild_id) = ctx.guild_id() else {
-        return Err("You must be in a server to run this command".into());
+        guild.owner_id
     };
 
     let author_kittycat_perms =
-        get_kittycat_perms(&data.pool, guild_id, member.user.id, &member.roles).await?;
+        get_kittycat_perms(&data.pool, guild_id, guild_owner_id, member.user.id, &member.roles).await?;
 
     let mut tx = data.pool.begin().await?;
 
@@ -284,7 +288,7 @@ pub async fn perms_deleterole(
         return Err("You must be in a server to run this command".into());
     };
 
-    {
+    let guild_owner_id = {
         let Some(guild) = ctx.guild() else {
             return Err("You must be in a server to run this command".into());
         };
@@ -305,23 +309,26 @@ pub async fn perms_deleterole(
                 let Some(r) = guild.roles.get(r) else {
                     continue;
                 };
-                if r.position > highest_role.position {
+
+                if r > highest_role {
                     highest_role = r;
                 }
             }
 
-            if highest_role.position < role.position {
+            if highest_role <= &role {
                 return Err("You do not have permission to edit this role's permissions as they are higher than you".into());
             }
         }
-    }
+
+        guild.owner_id
+    };
 
     let Some(guild_id) = ctx.guild_id() else {
         return Err("You must be in a server to run this command".into());
     };
 
     let author_kittycat_perms =
-        get_kittycat_perms(&data.pool, guild_id, member.user.id, &member.roles).await?;
+        get_kittycat_perms(&data.pool, guild_id, guild_owner_id, member.user.id, &member.roles).await?;
 
     let mut tx = data.pool.begin().await?;
 

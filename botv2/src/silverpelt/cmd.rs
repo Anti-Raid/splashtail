@@ -15,9 +15,10 @@ pub async fn get_perm_info(
     poise_ctx: &Option<crate::Context<'_>>,
 ) -> Result<
     (
-        bool,
-        serenity::all::Permissions,
-        FixedArray<serenity::all::RoleId>,
+        bool, // is_owner
+        UserId, // owner_id
+        serenity::all::Permissions, // member_perms
+        FixedArray<serenity::all::RoleId>, // roles
     ),
     PermissionResult,
 > {
@@ -25,9 +26,10 @@ pub async fn get_perm_info(
         // OPTIMIZATION: if owner, we dont need to continue further
         if user_id == cached_guild.owner_id {
             return Ok((
-                true,
-                serenity::all::Permissions::all(),
-                FixedArray::new(),
+                true, // is_owner
+                cached_guild.owner_id, // owner_id
+                serenity::all::Permissions::all(), // member_perms
+                FixedArray::new(), // OPTIMIZATION: no role data is needed for perm checks for owners
             ));
         }
 
@@ -36,6 +38,7 @@ pub async fn get_perm_info(
             if let Some(ref mem) = a.interaction.member {
                 return Ok((
                     mem.user.id == cached_guild.owner_id,
+                    cached_guild.owner_id,
                     cached_guild.member_permissions(mem),
                     mem.roles.clone(),
                 ));
@@ -46,6 +49,7 @@ pub async fn get_perm_info(
         if let Some(member) = cached_guild.members.get(&user_id) {
             return Ok((
                 member.user.id == cached_guild.owner_id,
+                cached_guild.owner_id,
                 cached_guild.member_permissions(member),
                 member.roles.clone(),
             ));
@@ -65,6 +69,7 @@ pub async fn get_perm_info(
     if user_id == guild.owner_id {
         return Ok((
             true,
+            guild.owner_id,
             serenity::all::Permissions::all(),
             FixedArray::new(),
         ));
@@ -75,6 +80,7 @@ pub async fn get_perm_info(
         if let Some(ref mem) = a.interaction.member {
             return Ok((
                 mem.user.id == guild.owner_id,
+                guild.owner_id,
                 guild.member_permissions(mem),
                 mem.roles.clone(),
             ));
@@ -92,6 +98,7 @@ pub async fn get_perm_info(
 
     Ok((
         member.user.id == guild.owner_id,
+        guild.owner_id,
         guild.member_permissions(&member),
         member.roles.clone(),
     ))
@@ -236,7 +243,7 @@ pub async fn check_command(
     }
 
     // Try getting guild+member from cache to speed up response times first
-    let (is_owner, member_perms, roles) =
+    let (is_owner, guild_owner_id, member_perms, roles) =
         match get_perm_info(guild_id, user_id, cache_http, poise_ctx).await {
             Ok(v) => v,
             Err(e) => {
@@ -254,7 +261,7 @@ pub async fn check_command(
         if let Some(ref custom_resolved_kittycat_perms) = opts.custom_resolved_kittycat_perms {
             if opts.ensure_user_has_custom_resolved {
                 let kc_perms = match silverpelt::member_permission_calc::get_kittycat_perms(
-                    pool, guild_id, user_id, &roles,
+                    pool, guild_id, guild_owner_id, user_id, &roles,
                 )
                 .await
                 {
@@ -277,7 +284,7 @@ pub async fn check_command(
             }
         } else {
             match silverpelt::member_permission_calc::get_kittycat_perms(
-                pool, guild_id, user_id, &roles,
+                pool, guild_id, guild_owner_id, user_id, &roles,
             )
             .await
             {

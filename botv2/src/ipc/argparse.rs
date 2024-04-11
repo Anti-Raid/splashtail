@@ -12,9 +12,7 @@ pub static MEWLD_ARGS: Lazy<MewldCmdArgs> = Lazy::new(|| {
    mutils.UInt64ToString(l.ShardCount),
    strconv.Itoa(i.ClusterID),
    cm.Name,
-   l.Dir,
    strconv.Itoa(len(l.Map)),
-   state.Config.Sites.API.Parse(),
    l.Config.RedisChannel,
    config.CurrentEnv,
    config.Meta.AnimusMagicChannel
@@ -33,7 +31,7 @@ pub struct MewldCmdArgs {
 
 impl MewldCmdArgs {
     pub fn parse_argv(args: &[String]) -> Result<Self, crate::Error> {
-        if args.len() != 10 {
+        if args.len() != 9 {
             return Err(r#"Invalid number of arguments
             
 Expected arguments: [program name] <shards> <shard_count> <cluster_id> <cluster_name> <cluster_count> <mewld_redis_channel> <env> <animus_magic_channel>

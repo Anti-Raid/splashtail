@@ -19,41 +19,10 @@ pub async fn rederive_perms(
             r.push(role.to_string());
         }
 
+        r.push(guild_id.everyone_role().to_string());
+
         r
     };
-
-    if roles.is_empty() {
-        // Special fast path
-        let rec = sqlx::query!(
-            "SELECT roles, perm_overrides FROM guild_members WHERE guild_id = $1 AND user_id = $2",
-            guild_id.to_string(),
-            user_id.to_string()
-        )
-        .fetch_optional(pool)
-        .await?;
-
-        if let Some(rec) = rec {
-            let resolved_perms = kittycat::perms::StaffPermissions {
-                user_positions: vec![],
-                perm_overrides: rec.perm_overrides,
-            }
-            .resolve();
-
-            sqlx::query!(
-                "UPDATE guild_members SET roles = $1, resolved_perms_cache = $2 WHERE guild_id = $3 AND user_id = $4",
-                &roles_str,
-                &resolved_perms,
-                guild_id.to_string(),
-                user_id.to_string()
-            )
-            .execute(pool)
-            .await?;
-
-            return Ok(resolved_perms);
-        }
-
-        return Ok(Vec::new());
-    }
 
     let rec = sqlx::query!(
         "SELECT perm_overrides FROM guild_members WHERE guild_id = $1 AND user_id = $2",
@@ -87,11 +56,6 @@ pub async fn rederive_perms(
     } else {
         (false, Vec::new())
     };
-
-    if user_positions.is_empty() && perm_overrides.is_empty() && !in_db {
-        // To avoid just spamming the db with new members, skip all future steps if the user has no roles, no perm overrides and is not in the db
-        return Ok(Vec::new());
-    }
 
     let resolved_perms = kittycat::perms::StaffPermissions {
         user_positions,
@@ -128,9 +92,17 @@ pub async fn rederive_perms(
 pub async fn get_kittycat_perms(
     pool: &sqlx::PgPool,
     guild_id: GuildId,
+    guild_owner_id: UserId,
     user_id: UserId,
     roles: &[RoleId],
 ) -> Result<Vec<String>, crate::Error> {
+    // For now, owners have full permission, this may change in the future (maybe??)
+    if guild_owner_id == user_id {
+        return Ok(vec!["global.*".to_string()]);
+    }
+
+    let everyone_role = guild_id.everyone_role();
+
     let rec = sqlx::query!("SELECT roles, needs_perm_rederive, resolved_perms_cache, perm_overrides FROM guild_members WHERE guild_id = $1 AND user_id = $2", guild_id.to_string(), user_id.to_string())
     .fetch_optional(pool)
     .await?;
@@ -152,18 +124,18 @@ pub async fn get_kittycat_perms(
             }
         }
 
+        // Check everyone role too
+        if !db_roles.contains(&everyone_role.to_string()) {
+            roles_changed = true;
+        }
+
         if !roles_changed {
             Ok(rec.resolved_perms_cache) // Then use the resolved perms cache
         } else {
             Ok(rederive_perms(pool, guild_id, user_id, roles).await?)
         }
     } else {
-        // They have no column in db
-        if roles.is_empty() {
-            // Special fast path, no roles means we don't need to care about them being in db
-            return Ok(Vec::new());
-        }
-
+        // They have no column in db, we cannot have a fast-path as the everyone role may have permissions
         Ok(rederive_perms(pool, guild_id, user_id, roles).await?)
     }
 }
