@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/anti-raid/splashtail/splashcore/animusmagic"
+	"github.com/anti-raid/splashtail/splashcore/silverpelt"
 	"github.com/anti-raid/splashtail/splashcore/types"
 	"github.com/anti-raid/splashtail/splashcore/utils"
 	"github.com/anti-raid/splashtail/splashcore/utils/mewext"
@@ -113,6 +114,45 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 			Status: http.StatusBadRequest,
 			Json: types.ApiError{
 				Message: "Query parameter `module` is required",
+			},
+		}
+	}
+
+	// Find module from cluster
+	modules, err := state.CachedAnimusMagicClient.GetClusterModules(d.Context, state.Rueidis, uint16(clusterId))
+
+	if err != nil {
+		return uapi.HttpResponse{
+			Status: http.StatusInternalServerError,
+			Json: types.ApiError{
+				Message: "Failed to fetch module list: " + err.Error(),
+			},
+		}
+	}
+
+	var moduleToToggle *silverpelt.CanonicalModule
+
+	for _, m := range modules {
+		if m.ID == module {
+			moduleToToggle = &m
+			break
+		}
+	}
+
+	if moduleToToggle == nil {
+		return uapi.HttpResponse{
+			Status: http.StatusBadRequest,
+			Json: types.ApiError{
+				Message: "Module not found",
+			},
+		}
+	}
+
+	if !moduleToToggle.Toggleable {
+		return uapi.HttpResponse{
+			Status: http.StatusBadRequest,
+			Json: types.ApiError{
+				Message: "Module cannot be enabled/disablable (is not toggleable)",
 			},
 		}
 	}
