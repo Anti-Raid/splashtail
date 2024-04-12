@@ -249,7 +249,7 @@ func (t *ServerBackupRestoreTask) Exec(
 	f, err := iblfile.OpenAutoEncryptedFile(resp.Body, aeSource)
 
 	if err != nil {
-		return nil, fmt.Errorf("error creating file: %w", err)
+		return nil, fmt.Errorf("error loading file: %w, is the password correct", err)
 	}
 
 	t2 := time.Now()

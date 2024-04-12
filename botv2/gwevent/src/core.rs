@@ -343,7 +343,7 @@ pub fn get_event_user_id(event: &FullEvent) -> Result<UserId, Option<Error>> {
     Ok(user_id)
 }
 
-#[allow(dead_code)]
+#[derive(serde::Serialize, serde::Deserialize)]
 pub struct Field {
     /// The value of the field
     pub value: Vec<FieldType>,
@@ -669,15 +669,6 @@ pub fn expand_event(event: &FullEvent) -> Option<IndexMap<String, Field>> {
         );
     }
 
-    fn expand_user(fields: &mut IndexMap<String, Field>, user: &serenity::model::user::User) {
-        insert_field(fields, "user", "user_id", user.id);
-        insert_field(fields, "user", "username", user.name.clone());
-        insert_field(fields, "user", "is_bot", user.bot());
-
-        //optional fields
-        insert_optional_field(fields, "user", "global_username", user.global_name.clone());
-    }
-
     fn expand_emoji_map(
         fields: &mut IndexMap<String, Field>,
         emoji_map: &HashMap<EmojiId, serenity::model::guild::Emoji>,
@@ -697,14 +688,16 @@ pub fn expand_event(event: &FullEvent) -> Option<IndexMap<String, Field>> {
         fields: &mut IndexMap<String, Field>,
         member: &serenity::model::guild::Member,
     ) {
-        insert_field(fields, "guild", "guild_id", member.guild_id);
-        expand_user(fields, &member.user);
+        insert_field(fields, "member", "guild_id", member.guild_id);
+        insert_field(fields, "member", "user", member.user.clone());
         insert_field(fields, "member", "roles", member.roles.clone().into_vec());
+        insert_field(fields, "member", "flags", member.flags);
         //optional fields
         insert_optional_field(fields, "member", "nick", member.nick.clone());
         insert_optional_field(fields, "member", "joined_timestamp", member.joined_at);
         insert_optional_field(fields, "member", "premium_since", member.premium_since);
         insert_optional_field(fields, "member", "permissions", member.permissions);
+        
         insert_optional_field(
             fields,
             "member",
@@ -717,6 +710,11 @@ pub fn expand_event(event: &FullEvent) -> Option<IndexMap<String, Field>> {
             "unusual_dm_activity_until",
             member.unusual_dm_activity_until,
         );
+
+        // Other fields
+        insert_field(fields, "member", "pending", member.pending());
+        insert_field(fields, "member", "deaf", member.deaf());
+        insert_field(fields, "member", "mute", member.mute());
     }
 
     fn expand_role(fields: &mut IndexMap<String, Field>, role: serenity::model::guild::Role) {
@@ -1056,7 +1054,7 @@ pub fn expand_event(event: &FullEvent) -> Option<IndexMap<String, Field>> {
         insert_field(fields, "message_update_event", "channel_id", update.channel_id);
 
         if let Some(user) = &update.author {
-            expand_user(fields, user);
+            insert_field(fields, "message_update_event", "user", user.clone());
         }
 
         insert_optional_field(fields, "message_update_event", "content", update.content.clone());
@@ -1139,14 +1137,14 @@ pub fn expand_event(event: &FullEvent) -> Option<IndexMap<String, Field>> {
             banned_user,
         } => {
             insert_field(&mut fields, "guild", "guild_id", *guild_id);
-            expand_user(&mut fields, banned_user);
+            insert_field(&mut fields, "user", "user", banned_user.clone());
         }
         FullEvent::GuildBanRemoval {
             guild_id,
             unbanned_user,
         } => {
             insert_field(&mut fields, "guild", "guild_id", *guild_id);
-            expand_user(&mut fields, unbanned_user);
+            insert_field(&mut fields, "user", "user", unbanned_user.clone());
         }
         FullEvent::GuildCreate { guild, is_new } => {
             expand_guild(&mut fields, guild);
@@ -1180,7 +1178,7 @@ pub fn expand_event(event: &FullEvent) -> Option<IndexMap<String, Field>> {
                 expand_member(&mut fields, member_data_if_available);
             } else {
                 insert_field(&mut fields, "guild", "guild_id", *guild_id);
-                expand_user(&mut fields, user);
+                insert_field(&mut fields, "user", "user", user.clone());
             }
         }
         FullEvent::GuildMemberUpdate {

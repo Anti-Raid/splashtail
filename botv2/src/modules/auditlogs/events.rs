@@ -38,6 +38,11 @@ pub fn resolve_gwevent_field(field: &FieldType) -> Result<String, crate::Error> 
 
             Ok(perms.join(", "))
         },
+        FieldType::GuildMemberFlags(p) => {
+            let p_vec = p.iter().map(|x| format!("{:#?}", x)).collect::<Vec<String>>();
+
+            Ok(p_vec.join(", "))
+        },
         FieldType::UserIds(u) => {
             let mut users = Vec::new();
 
@@ -177,7 +182,20 @@ pub fn resolve_gwevent_field(field: &FieldType) -> Result<String, crate::Error> 
             let mut users = Vec::new();
 
             for iu in u.iter() {
-                users.push(iu.mention().to_string());
+                users.push(
+                    format!(
+                        "{} ({}, bot={}, id={}, global_username={:#?})", 
+                        iu.mention(),
+                        iu.name,
+                        iu.bot(),
+                        iu.id,
+                        if let Some(global_name) = &iu.global_name {
+                            global_name.to_string()
+                        } else {
+                            "None".to_string()
+                        }
+                    )
+                );
             }
 
             Ok(users.join(", "))

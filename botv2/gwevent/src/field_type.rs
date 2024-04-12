@@ -8,6 +8,7 @@ use serenity::model::timestamp::Timestamp;
 use serenity::nonmax::{NonMaxU16, NonMaxU8};
 use serenity::small_fixed_array::{FixedArray, FixedString};
 
+#[derive(serde::Serialize, serde::Deserialize)]
 pub enum FieldType {
     /// A string
     Strings(Vec<String>),
@@ -17,6 +18,9 @@ pub enum FieldType {
 
     /// A number
     Number(u64),
+
+    /// Guild member flags
+    GuildMemberFlags(serenity::all::GuildMemberFlags),
 
     /// Permission
     Permissions(serenity::all::Permissions),
@@ -214,6 +218,7 @@ from_field_type_multiple! {
 from_field_type! {
     GuildId => Guild,
     serenity::all::Permissions => Permissions,
+    serenity::all::GuildMemberFlags => GuildMemberFlags,
     IntegrationId => IntegrationId,
     AuditLogEntryId => AuditLogId,
     CommandId => Command,

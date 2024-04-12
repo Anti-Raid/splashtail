@@ -6,9 +6,9 @@ toolchain go1.21.6
 
 require (
 	github.com/bwmarrin/discordgo v0.28.1
-	github.com/getkin/kin-openapi v0.123.0 // indirect
+	github.com/getkin/kin-openapi v0.124.0 // indirect
 	github.com/go-chi/chi/v5 v5.0.12
-	github.com/infinitybotlist/eureka v0.12.0
+	github.com/infinitybotlist/eureka v0.13.0
 	github.com/wk8/go-ordered-map/v2 v2.1.8
 	gopkg.in/yaml.v3 v3.0.1
 )
@@ -18,11 +18,12 @@ require (
 	github.com/cloudflare/tableflip v1.2.3
 	github.com/fxamacker/cbor/v2 v2.6.0
 	github.com/go-viper/mapstructure/v2 v2.0.0-alpha.1
-	github.com/infinitybotlist/iblfile v0.0.0-20231217062828-5a52f5049ee3
+	github.com/infinitybotlist/iblfile v0.0.0-20240412100019-309ae11bdca2
 	github.com/infinitybotlist/kittycat/go v0.0.0-20240229022404-eaef242cde70
 	github.com/minio/minio-go/v7 v7.0.69
-	github.com/redis/rueidis v1.0.33
+	github.com/redis/rueidis v1.0.34
 	github.com/sirupsen/logrus v1.9.3
+	github.com/stretchr/testify v1.9.0
 	github.com/vmihailenco/msgpack/v5 v5.4.1
 	golang.org/x/image v0.15.0
 )
@@ -31,7 +32,6 @@ require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/deckarep/golang-set/v2 v2.6.0 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
-	github.com/stretchr/testify v1.9.0 // indirect
 	github.com/x448/float16 v0.8.4 // indirect
 )
 
@@ -44,7 +44,7 @@ require (
 	github.com/go-playground/universal-translator v0.18.1 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/joho/godotenv v1.5.1 // indirect
-	github.com/klauspost/compress v1.17.7 // indirect
+	github.com/klauspost/compress v1.17.8 // indirect
 	github.com/klauspost/cpuid/v2 v2.2.7 // indirect
 	github.com/leodido/go-urn v1.4.0 // indirect
 	github.com/minio/md5-simd v1.1.2 // indirect
@@ -68,7 +68,7 @@ require (
 	github.com/go-openapi/jsonpointer v0.21.0 // indirect
 	github.com/go-openapi/swag v0.23.0 // indirect
 	github.com/gorilla/websocket v1.5.1 // indirect
-	github.com/invopop/yaml v0.2.0 // indirect
+	github.com/invopop/yaml v0.3.1 // indirect
 	github.com/jackc/pgpassfile v1.0.0 // indirect
 	github.com/jackc/pgservicefile v0.0.0-20231201235250-de7065d80cb9 // indirect
 	github.com/jackc/puddle/v2 v2.2.1 // indirect
@@ -85,6 +85,6 @@ require (
 	github.com/json-iterator/go v1.1.12
 	github.com/redis/go-redis/v9 v9.5.1 // indirect
 	go.uber.org/zap v1.27.0
-	golang.org/x/exp v0.0.0-20240404231335-c0f41cb1a7a0
+	golang.org/x/exp v0.0.0-20240409090435-93d18d7e34b8
 	golang.org/x/sys v0.19.0 // indirect
 )
