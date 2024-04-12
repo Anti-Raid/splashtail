@@ -63,6 +63,8 @@ github.com/infinitybotlist/eureka v0.13.0 h1:Zqkcloemf5ACx/Zo0paIwFZSVOCaSt0nPKX
 github.com/infinitybotlist/eureka v0.13.0/go.mod h1:UDE+dtNFMKDw9gIxD7/y3MHIKE+Hot8cC1Eopar/bXc=
 github.com/infinitybotlist/iblfile v0.0.0-20240412100019-309ae11bdca2 h1:7J2GZ7IEgwI93kYCv0u7YSV7XkrTZZZPdnYEC+RREH4=
 github.com/infinitybotlist/iblfile v0.0.0-20240412100019-309ae11bdca2/go.mod h1:j214HiwMfNCQ/udfZR33O5zv2/FPdSKIEYkMIm7tOjc=
+github.com/infinitybotlist/iblfile v0.0.0-20240412110927-7d02b1ba186e h1:Scsa+LwybyD4DBhYc7jeSg/fwx93rCOvQjkSb64F4Nk=
+github.com/infinitybotlist/iblfile v0.0.0-20240412110927-7d02b1ba186e/go.mod h1:j214HiwMfNCQ/udfZR33O5zv2/FPdSKIEYkMIm7tOjc=
 github.com/infinitybotlist/kittycat/go v0.0.0-20240229022404-eaef242cde70 h1:5IZ1PSaXRVnlPDaP4tlKbKFh4n1YF5HrwEZ8oKH90vA=
 github.com/infinitybotlist/kittycat/go v0.0.0-20240229022404-eaef242cde70/go.mod h1:AYyGvOSsNrb8mBFQnWi8D+Z84PClkglpK+DqzC1NRB8=
 github.com/invopop/yaml v0.3.1 h1:f0+ZpmhfBSS4MhG+4HYseMdJhoeeopbSKbq5Rpeelso=

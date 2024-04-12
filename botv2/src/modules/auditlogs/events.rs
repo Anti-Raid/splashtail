@@ -41,6 +41,10 @@ pub fn resolve_gwevent_field(field: &FieldType) -> Result<String, crate::Error> 
         FieldType::GuildMemberFlags(p) => {
             let p_vec = p.iter().map(|x| format!("{:#?}", x)).collect::<Vec<String>>();
 
+            if p_vec.is_empty() {
+                return Ok("None".into());
+            }
+
             Ok(p_vec.join(", "))
         },
         FieldType::UserIds(u) => {
