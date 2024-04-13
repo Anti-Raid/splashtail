@@ -20,13 +20,13 @@ import (
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/infinitybotlist/iblfile"
-	"github.com/infinitybotlist/iblfile/autoencryptedencoders/aes256"
-	"github.com/infinitybotlist/iblfile/autoencryptedencoders/noencryption"
+	"github.com/infinitybotlist/iblfile/encryptors/aes256"
+	"github.com/infinitybotlist/iblfile/encryptors/noencryption"
 	"github.com/vmihailenco/msgpack/v5"
 	"go.uber.org/zap"
 )
 
-func getImageAsDataUri(state taskstate.TaskState, constraints *BackupConstraints, l *zap.Logger, f *iblfile.AutoEncryptedFile, name, endpoint string, bo *BackupCreateOpts) (string, error) {
+func getImageAsDataUri(state taskstate.TaskState, constraints *BackupConstraints, l *zap.Logger, f *iblfile.AutoEncryptedFile_FullFile, name, endpoint string, bo *BackupCreateOpts) (string, error) {
 	if slices.Contains(bo.BackupGuildAssets, name) {
 		l.Info("Fetching guild asset", zap.String("name", name))
 		iconBytes, err := f.Get("assets/" + name)
@@ -35,7 +35,7 @@ func getImageAsDataUri(state taskstate.TaskState, constraints *BackupConstraints
 			return "", fmt.Errorf("failed to get guild asset: %w", err)
 		}
 
-		return convertToDataUri("image/jpeg", iconBytes.Bytes.Bytes()), nil
+		return convertToDataUri("image/jpeg", iconBytes.Bytes()), nil
 	} else {
 		// Try fetching still, it might work
 		client := http.Client{
@@ -77,14 +77,14 @@ func getImageAsDataUri(state taskstate.TaskState, constraints *BackupConstraints
 	}
 }
 
-func readMsgpackSection[T any](f *iblfile.AutoEncryptedFile, name string) (*T, error) {
+func readMsgpackSection[T any](f *iblfile.AutoEncryptedFile_FullFile, name string) (*T, error) {
 	section, err := f.Get(name)
 
 	if err != nil {
 		return nil, fmt.Errorf("failed to get section %s: %w", name, err)
 	}
 
-	dec := msgpack.NewDecoder(section.Bytes)
+	dec := msgpack.NewDecoder(section)
 	dec.UseInternedStrings(true)
 	dec.SetCustomStructTag("json")
 
@@ -234,7 +234,7 @@ func (t *ServerBackupRestoreTask) Exec(
 	// Parse backup
 	t1 := time.Now()
 
-	var aeSource iblfile.AEDataSource
+	var aeSource iblfile.AutoEncryptor
 
 	if t.Options.Decrypt == "" {
 		aeSource = noencryption.NoEncryptionSource{}
@@ -246,7 +246,7 @@ func (t *ServerBackupRestoreTask) Exec(
 
 	t.Options.Decrypt = "" // Clear encryption key
 
-	f, err := iblfile.OpenAutoEncryptedFile(resp.Body, aeSource)
+	f, err := iblfile.OpenAutoEncryptedFile_FullFile(resp.Body, aeSource)
 
 	if err != nil {
 		return nil, fmt.Errorf("error loading file: %w, is the password correct", err)
@@ -258,7 +258,11 @@ func (t *ServerBackupRestoreTask) Exec(
 
 	t1 = time.Now()
 
-	sections := f.Source.Sections()
+	sections, err := f.Sections()
+
+	if err != nil {
+		return nil, fmt.Errorf("error getting sections: %w", err)
+	}
 
 	keys := make([]string, 0, len(sections))
 	for name := range sections {
@@ -1067,18 +1071,18 @@ func (t *ServerBackupRestoreTask) Exec(
 										return nil, nil, fmt.Errorf("failed to get attachment: %w", err)
 									}
 
-									if data.Bytes == nil {
+									if data.Len() == 0 {
 										continue
 									}
 
-									attachmentByteLength += data.Bytes.Len()
+									attachmentByteLength += data.Len()
 
 									// Double check and add
 									if attachmentByteLength < t.Constraints.Restore.TotalMaxAttachmentFileSize {
 										rm.Files = append(rm.Files, &discordgo.File{
 											Name:        attachment.Name,
 											ContentType: attachment.ContentType,
-											Reader:      data.Bytes,
+											Reader:      data,
 										})
 									}
 								}

@@ -23,14 +23,14 @@ import (
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/infinitybotlist/iblfile"
-	"github.com/infinitybotlist/iblfile/autoencryptedencoders/aes256"
-	"github.com/infinitybotlist/iblfile/autoencryptedencoders/noencryption"
+	"github.com/infinitybotlist/iblfile/encryptors/aes256"
+	"github.com/infinitybotlist/iblfile/encryptors/noencryption"
 	"github.com/vmihailenco/msgpack/v5"
 	"go.uber.org/zap"
 )
 
 // Backs up image data to a file
-func backupGuildAsset(state taskstate.TaskState, constraints *BackupConstraints, l *zap.Logger, f *iblfile.AutoEncryptedFile, name, url string) error {
+func backupGuildAsset(state taskstate.TaskState, constraints *BackupConstraints, l *zap.Logger, f *iblfile.AutoEncryptedFile_FullFile, name, url string) error {
 	l.Info("Backing up guild asset", zap.String("name", name))
 	ctx := state.Context()
 	client := http.Client{
@@ -94,7 +94,7 @@ func backupGuildAsset(state taskstate.TaskState, constraints *BackupConstraints,
 // Note that attachments are only backed up if withAttachments is true and f.Size() < fileSizeWarningThreshold
 //
 // Note that this function does not write the messages to the file, it only returns them
-func backupChannelMessages(state taskstate.TaskState, constraints *BackupConstraints, logger *zap.Logger, f *iblfile.AutoEncryptedFile, channelID string, allocation int, withAttachments bool) ([]*BackupMessage, error) {
+func backupChannelMessages(state taskstate.TaskState, constraints *BackupConstraints, logger *zap.Logger, f *iblfile.AutoEncryptedFile_FullFile, channelID string, allocation int, withAttachments bool) ([]*BackupMessage, error) {
 	discord, _, _ := state.Discord()
 	ctx := state.Context()
 
@@ -313,7 +313,7 @@ func createAttachmentBlob(state taskstate.TaskState, constraints *BackupConstrai
 	return attachments, bufs, nil
 }
 
-func writeMsgpack(f *iblfile.AutoEncryptedFile, section string, data any) error {
+func writeMsgpack(f *iblfile.AutoEncryptedFile_FullFile, section string, data any) error {
 	var buf bytes.Buffer
 	enc := msgpack.NewEncoder(&buf)
 	enc.SetCustomStructTag("json")
@@ -428,7 +428,7 @@ func (t *ServerBackupCreateTask) Exec(
 
 	t1 := time.Now()
 
-	var aeSource iblfile.AEDataSource
+	var aeSource iblfile.AutoEncryptor
 
 	if t.Options.Encrypt == "" {
 		aeSource = noencryption.NoEncryptionSource{}
@@ -440,16 +440,13 @@ func (t *ServerBackupCreateTask) Exec(
 
 	t.Options.Encrypt = "" // Clear encryption key
 
-	f, err := iblfile.NewAutoEncryptedFile(aeSource)
+	f := iblfile.NewAutoEncryptedFile_FullFile(aeSource)
 
-	if err != nil {
-		return nil, fmt.Errorf("error creating file: %w", err)
-	}
 	t2 := time.Now()
 
 	l.Info("STATISTICS: newautoencryptedfile", zap.Float64("duration", t2.Sub(t1).Seconds()))
 
-	err = writeMsgpack(f, "backup_opts", t.Options)
+	err := writeMsgpack(f, "backup_opts", t.Options)
 
 	if err != nil {
 		return nil, fmt.Errorf("error writing backup options: %w", err)
@@ -694,7 +691,7 @@ func (t *ServerBackupCreateTask) Exec(
 	}
 
 	return &types.TaskOutput{
-		Filename: "antiraid-backup.iblfile",
+		Filename: fmt.Sprintf("antiraid-backup-%s.iblfile", time.Now().Format("2006-01-02-15-04-05")),
 		Buffer:   &outputBuf,
 	}, nil
 }

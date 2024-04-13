@@ -18,7 +18,7 @@ require (
 	github.com/cloudflare/tableflip v1.2.3
 	github.com/fxamacker/cbor/v2 v2.6.0
 	github.com/go-viper/mapstructure/v2 v2.0.0-alpha.1
-	github.com/infinitybotlist/iblfile v0.0.0-20240412110927-7d02b1ba186e
+	github.com/infinitybotlist/iblfile v0.0.0-20240413073551-e2a8b13b7806
 	github.com/infinitybotlist/kittycat/go v0.0.0-20240229022404-eaef242cde70
 	github.com/minio/minio-go/v7 v7.0.69
 	github.com/redis/rueidis v1.0.34
