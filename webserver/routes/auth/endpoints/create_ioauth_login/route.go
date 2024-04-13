@@ -223,12 +223,12 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 
 		iot.Scopes = strings.Split(iot.Scope, " ")
 
-		if len(iot.Scopes) != len(rd.Scopes) {
+		/*if len(iot.Scopes) != len(rd.Scopes) {
 			return uapi.HttpResponse{
 				Status: http.StatusBadRequest,
 				Json:   types.ApiError{Message: fmt.Sprintf("Invalid scopes. Expected %s, got %s (%s)", strings.Join(rd.Scopes, ", "), strings.Join(iot.Scopes, ", "), iot.Scope)},
 			}
-		}
+		}*/
 
 		// Ensure that all scopes in rd.Scopes are in iot.Scopes
 		for _, scope := range rd.Scopes {

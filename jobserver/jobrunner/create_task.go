@@ -30,9 +30,15 @@ func CreateTask(ctx context.Context, pool *pgxpool.Pool, task taskdef.TaskDefini
 
 	defer tx.Rollback(ctx)
 
+	taskForStr, err := tasks.FormatTaskFor(taskFor)
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to format task_for: %w", err)
+	}
+
 	err = tx.QueryRow(ctx, "INSERT INTO tasks (task_name, task_for, expiry, output, task_fields, resumable) VALUES ($1, $2, $3, $4, $5, $6) RETURNING task_id",
 		taskName,
-		taskFor,
+		taskForStr,
 		task.Expiry(),
 		nil,
 		task.TaskFields(),

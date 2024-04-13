@@ -191,7 +191,7 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 			}
 		} else if task.TaskFor.TargetType == types.TargetTypeServer {
 			// Check permissions
-			resp, ok := api.HandlePermissionCheck(d.Auth.ID, task.TaskFor.ID, taskDef.CorrespondingBotCommand_Download(), []string{})
+			resp, ok := api.HandlePermissionCheck(iot.DiscordUser.ID, task.TaskFor.ID, taskDef.CorrespondingBotCommand_Download(), []string{})
 
 			if !ok {
 				return resp
