@@ -7,6 +7,7 @@ import (
 
 	"github.com/anti-raid/splashtail/splashcore/types"
 	"github.com/anti-raid/splashtail/splashcore/utils"
+	"github.com/anti-raid/splashtail/tasks/taskdef"
 
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
@@ -65,9 +66,9 @@ func FormatTaskForSimplex(fu *types.TaskFor) string {
 	return cases.Lower(language.English).String(fu.TargetType) + "/" + fu.ID
 }
 
-func GetPathFromOutput(taskId string, tInfo *types.TaskInfo, outp *types.TaskOutput) string {
+func GetPathFromOutput(taskId string, taskdef taskdef.TaskDefinition, outp *types.TaskOutput) string {
 	if outp.Segregated {
-		return fmt.Sprintf("%s/%s/%s/%s", FormatTaskForSimplex(tInfo.TaskFor), tInfo.Name, taskId, outp.Filename)
+		return fmt.Sprintf("%s/%s/%s/%s", FormatTaskForSimplex(taskdef.TaskFor()), taskdef.Name(), taskId, outp.Filename)
 	} else {
 		return fmt.Sprintf("tasks/%s", taskId)
 	}

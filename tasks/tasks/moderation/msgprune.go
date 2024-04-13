@@ -35,8 +35,24 @@ type MessagePruneTask struct {
 
 	// Backup options
 	Options MessagePruneOpts
+}
 
-	valid bool
+// As tasks often deal with sensitive data such as secrets, the TaskFields method returns
+// a map of fields that can be stored in the database
+func (t *MessagePruneTask) TaskFields() map[string]any {
+	return map[string]any{
+		"ServerID":    t.ServerID,
+		"Constraints": t.Constraints,
+		"Options":     t.Options,
+	}
+}
+
+func (t *MessagePruneTask) Expiry() *time.Duration {
+	return nil
+}
+
+func (t *MessagePruneTask) Resumable() bool {
+	return true
 }
 
 func (t *MessagePruneTask) Validate(state taskstate.TaskState) error {
@@ -86,14 +102,11 @@ func (t *MessagePruneTask) Validate(state taskstate.TaskState) error {
 		return fmt.Errorf("you already have more than %d moderation tasks in progress, please wait for it to finish", t.Constraints.MaxServerModerationTasks)
 	}
 
-	t.valid = true
-
 	return nil
 }
 
 func (t *MessagePruneTask) Exec(
 	l *zap.Logger,
-	tcr *types.TaskCreateResponse,
 	state taskstate.TaskState,
 	progstate taskstate.TaskProgressState,
 ) (*types.TaskOutput, error) {
@@ -284,16 +297,22 @@ func (t *MessagePruneTask) Exec(
 	}, nil
 }
 
-func (t *MessagePruneTask) Info() *types.TaskInfo {
-	return &types.TaskInfo{
-		Name: "message_prune",
-		TaskFor: &types.TaskFor{
-			ID:         t.ServerID,
-			TargetType: types.TargetTypeServer,
-		},
-		TaskFields:              t,
-		Valid:                   t.valid,
-		CorrespondingBotCommand: "prune_user",
+func (t *MessagePruneTask) CorrespondingBotCommand_Create() string {
+	return "prune_user"
+}
+
+func (t *MessagePruneTask) CorrespondingBotCommand_Download() string {
+	return "prune_user"
+}
+
+func (t *MessagePruneTask) Name() string {
+	return "message_prune"
+}
+
+func (t *MessagePruneTask) TaskFor() *types.TaskFor {
+	return &types.TaskFor{
+		ID:         t.ServerID,
+		TargetType: types.TargetTypeServer,
 	}
 }
 

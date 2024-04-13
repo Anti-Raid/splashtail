@@ -81,7 +81,7 @@ func (b Router) Routes(r *chi.Mux) {
 		Docs:    ioauth_download_task.Docs,
 		Handler: ioauth_download_task.Route,
 		ExtData: map[string]any{
-			"ioauth": []string{"identify", "guilds"},
+			"ioauth": []string{"identify"},
 		},
 	}.Route(r)
 }

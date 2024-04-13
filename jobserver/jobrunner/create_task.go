@@ -3,39 +3,24 @@ package jobrunner
 import (
 	"context"
 	"fmt"
-	"time"
 
-	"github.com/anti-raid/splashtail/splashcore/types"
 	"github.com/anti-raid/splashtail/tasks"
 	"github.com/anti-raid/splashtail/tasks/taskdef"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 // Sets up a task
-func CreateTask(ctx context.Context, pool *pgxpool.Pool, task taskdef.TaskDefinition) (*types.TaskCreateResponse, error) {
-	tInfo := task.Info()
+func CreateTask(ctx context.Context, pool *pgxpool.Pool, task taskdef.TaskDefinition) (*string, error) {
+	taskName := task.Name()
+	taskFor := task.TaskFor()
 
-	if !tInfo.Valid {
-		return nil, fmt.Errorf("invalid task info")
-	}
-
-	_, ok := tasks.TaskDefinitionRegistry[tInfo.Name]
+	_, ok := tasks.TaskDefinitionRegistry[task.Name()]
 
 	if !ok {
-		return nil, fmt.Errorf("task %s does not exist on registry", tInfo.Name)
+		return nil, fmt.Errorf("task %s does not exist on registry", task.Name())
 	}
 
 	var taskId string
-	var taskFor *string
-	var err error
-
-	if tInfo.TaskFor != nil {
-		taskFor, err = tasks.FormatTaskFor(tInfo.TaskFor)
-
-		if err != nil {
-			return nil, err
-		}
-	}
 
 	tx, err := pool.Begin(ctx)
 
@@ -45,18 +30,13 @@ func CreateTask(ctx context.Context, pool *pgxpool.Pool, task taskdef.TaskDefini
 
 	defer tx.Rollback(ctx)
 
-	err = tx.QueryRow(ctx, "INSERT INTO tasks (task_name, task_for, expiry, output, task_info) VALUES ($1, $2, $3, $4, $5) RETURNING task_id",
-		tInfo.Name,
+	err = tx.QueryRow(ctx, "INSERT INTO tasks (task_name, task_for, expiry, output, task_fields, resumable) VALUES ($1, $2, $3, $4, $5, $6) RETURNING task_id",
+		taskName,
 		taskFor,
-		func() *time.Duration {
-			if tInfo.Expiry == 0 {
-				return nil
-			}
-
-			return &tInfo.Expiry
-		}(),
+		task.Expiry(),
 		nil,
-		tInfo,
+		task.TaskFields(),
+		task.Resumable(),
 	).Scan(&taskId)
 
 	if err != nil {
@@ -66,9 +46,8 @@ func CreateTask(ctx context.Context, pool *pgxpool.Pool, task taskdef.TaskDefini
 	// Add to ongoing_tasks
 	_, err = tx.Exec(
 		ctx,
-		"INSERT INTO ongoing_tasks (task_id, state, data, initial_opts) VALUES ($1, $2, $3, $4)",
+		"INSERT INTO ongoing_tasks (task_id, data, initial_opts) VALUES ($1, $2, $3)",
 		taskId,
-		"",
 		map[string]any{},
 		task,
 	)
@@ -83,8 +62,5 @@ func CreateTask(ctx context.Context, pool *pgxpool.Pool, task taskdef.TaskDefini
 		return nil, fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
-	return &types.TaskCreateResponse{
-		TaskID:   taskId,
-		TaskInfo: tInfo,
-	}, nil
+	return &taskId, nil
 }

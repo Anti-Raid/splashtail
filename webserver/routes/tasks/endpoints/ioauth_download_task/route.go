@@ -12,9 +12,9 @@ import (
 	"github.com/anti-raid/splashtail/splashcore/structparser/db"
 	types "github.com/anti-raid/splashtail/splashcore/types"
 	"github.com/anti-raid/splashtail/tasks"
+	"github.com/anti-raid/splashtail/webserver/api"
 	"github.com/anti-raid/splashtail/webserver/state"
 
-	"github.com/bwmarrin/discordgo"
 	"github.com/go-chi/chi/v5"
 	docs "github.com/infinitybotlist/eureka/doclib"
 	"github.com/infinitybotlist/eureka/uapi"
@@ -25,14 +25,6 @@ import (
 var (
 	taskColsArr = db.GetCols(types.Task{})
 	taskColsStr = strings.Join(taskColsArr, ", ")
-
-	// TODO: Change once we have a proper perms system
-	//
-	// At least one of these perms is required to download a task
-	neededPerms = []int64{
-		discordgo.PermissionManageServer,
-		discordgo.PermissionAdministrator,
-	}
 )
 
 var downloadTemplate = template.Must(template.New("download").Parse(`<!DOCTYPE html>
@@ -128,7 +120,6 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 		}
 	}
 
-	// Fetch the task
 	// Delete expired tasks first
 	_, err = state.Pool.Exec(d.Context, "DELETE FROM tasks WHERE created_at + expiry < NOW()")
 
@@ -158,17 +149,19 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 		return uapi.DefaultResponse(http.StatusInternalServerError)
 	}
 
-	if task.TaskInfo == nil {
-		return uapi.HttpResponse{
-			Status: http.StatusNotFound,
-			Json:   types.ApiError{Message: "Task info not found"},
-		}
-	}
-
 	if task.Output == nil {
 		return uapi.HttpResponse{
 			Status: http.StatusNotFound,
 			Json:   types.ApiError{Message: "Task output not found"},
+		}
+	}
+
+	taskDef, ok := tasks.TaskDefinitionRegistry[task.TaskName]
+
+	if !ok {
+		return uapi.HttpResponse{
+			Status: http.StatusInternalServerError,
+			Json:   types.ApiError{Message: "Task definition not found"},
 		}
 	}
 
@@ -197,43 +190,13 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 				}
 			}
 		} else if task.TaskFor.TargetType == types.TargetTypeServer {
-			if iot.UserGuilds == nil {
-				return uapi.HttpResponse{
-					Status: http.StatusForbidden,
-					Json:   types.ApiError{Message: "You are not authorized to fetch this task [UserGuilds is nil]!"},
-				}
+			// Check permissions
+			resp, ok := api.HandlePermissionCheck(d.Auth.ID, task.TaskFor.ID, taskDef.CorrespondingBotCommand_Download(), []string{})
+
+			if !ok {
+				return resp
 			}
 
-			found := false
-
-			for _, guild := range iot.UserGuilds {
-				if guild.ID == task.TaskFor.ID {
-					var hasPerms bool
-					for _, perm := range neededPerms {
-						if guild.Permissions&perm == perm {
-							hasPerms = true
-							break
-						}
-					}
-
-					if !hasPerms {
-						return uapi.HttpResponse{
-							Status: http.StatusForbidden,
-							Json:   types.ApiError{Message: "You are not authorized to fetch this task [Missing perms]!"},
-						}
-					}
-
-					found = true
-					break
-				}
-			}
-
-			if !found {
-				return uapi.HttpResponse{
-					Status: http.StatusForbidden,
-					Json:   types.ApiError{Message: "You are not authorized to fetch this task [TargetType = Server, not in server]!"},
-				}
-			}
 		} else {
 			return uapi.HttpResponse{
 				Status: http.StatusNotImplemented,
@@ -243,7 +206,7 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 	}
 
 	// Now get URL
-	url, err := state.ObjectStorage.GetUrl(d.Context, tasks.GetPathFromOutput(task.TaskID, task.TaskInfo, task.Output), task.Output.Filename, 10*time.Minute)
+	url, err := state.ObjectStorage.GetUrl(d.Context, tasks.GetPathFromOutput(task.TaskID, taskDef, task.Output), task.Output.Filename, 10*time.Minute)
 
 	if err != nil {
 		state.Logger.Error("Failed to get url for task", zap.Error(err))

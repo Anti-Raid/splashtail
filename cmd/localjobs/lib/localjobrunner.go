@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/anti-raid/splashtail/splashcore/types"
 	"github.com/anti-raid/splashtail/tasks"
 	"github.com/anti-raid/splashtail/tasks/taskdef"
 	"github.com/anti-raid/splashtail/tasks/taskstate"
@@ -33,16 +32,10 @@ func ExecuteTaskLocal(prefix, taskId string, l *zap.Logger, task taskdef.TaskDef
 		return fmt.Errorf("failed to validate task: %w", err)
 	}
 
-	tInfo := task.Info()
-
-	if !tInfo.Valid {
-		return fmt.Errorf("invalid task info")
-	}
-
-	_, ok := tasks.TaskDefinitionRegistry[tInfo.Name]
+	_, ok := tasks.TaskDefinitionRegistry[task.Name()]
 
 	if !ok {
-		return fmt.Errorf("task %s does not exist on registry", tInfo.Name)
+		return fmt.Errorf("task %s does not exist on registry", task.Name())
 	}
 
 	currentTaskState = "running"
@@ -53,10 +46,7 @@ func ExecuteTaskLocal(prefix, taskId string, l *zap.Logger, task taskdef.TaskDef
 		return fmt.Errorf("failed to update task state: %w", err)
 	}
 
-	outp, terr := task.Exec(l, &types.TaskCreateResponse{
-		TaskID:   taskId,
-		TaskInfo: tInfo,
-	}, taskState, TaskProgress{})
+	outp, terr := task.Exec(l, taskState, TaskProgress{})
 
 	// Save output to object storage
 	if outp != nil {
@@ -65,7 +55,7 @@ func ExecuteTaskLocal(prefix, taskId string, l *zap.Logger, task taskdef.TaskDef
 		}
 
 		if outp.Buffer == nil {
-			l.Error("Task output buffer is nil", zap.Any("data", tInfo.TaskFields))
+			l.Error("Task output buffer is nil", zap.Any("data", task))
 			currentTaskState = "failed"
 
 			err = opts.OnStateChange(currentTaskState)

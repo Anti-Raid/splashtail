@@ -339,8 +339,25 @@ type ServerBackupCreateTask struct {
 
 	// Backup options
 	Options BackupCreateOpts
+}
 
-	valid bool
+func (t *ServerBackupCreateTask) TaskFields() map[string]any {
+	opts := t.Options
+	opts.Encrypt = "" // Clear encryption key
+
+	return map[string]any{
+		"ServerID":    t.ServerID,
+		"Constraints": t.Constraints,
+		"Options":     opts,
+	}
+}
+
+func (t *ServerBackupCreateTask) Expiry() *time.Duration {
+	return nil
+}
+
+func (t *ServerBackupCreateTask) Resumable() bool {
+	return false
 }
 
 func (t *ServerBackupCreateTask) Validate(state taskstate.TaskState) error {
@@ -394,14 +411,11 @@ func (t *ServerBackupCreateTask) Validate(state taskstate.TaskState) error {
 		return fmt.Errorf("you already have more than %d backup-related tasks in progress, please wait for it to finish", t.Constraints.MaxServerBackupTasks)
 	}
 
-	t.valid = true
-
 	return nil
 }
 
 func (t *ServerBackupCreateTask) Exec(
 	l *zap.Logger,
-	tcr *types.TaskCreateResponse,
 	state taskstate.TaskState,
 	progstate taskstate.TaskProgressState,
 ) (*types.TaskOutput, error) {
@@ -696,16 +710,22 @@ func (t *ServerBackupCreateTask) Exec(
 	}, nil
 }
 
-func (t *ServerBackupCreateTask) Info() *types.TaskInfo {
-	return &types.TaskInfo{
-		Name: "guild_create_backup",
-		TaskFor: &types.TaskFor{
-			ID:         t.ServerID,
-			TargetType: types.TargetTypeServer,
-		},
-		TaskFields:              t,
-		Valid:                   t.valid,
-		CorrespondingBotCommand: "backups create",
+func (t *ServerBackupCreateTask) CorrespondingBotCommand_Create() string {
+	return "backups create"
+}
+
+func (t *ServerBackupCreateTask) CorrespondingBotCommand_Download() string {
+	return "backups list"
+}
+
+func (t *ServerBackupCreateTask) Name() string {
+	return "guild_create_backup"
+}
+
+func (t *ServerBackupCreateTask) TaskFor() *types.TaskFor {
+	return &types.TaskFor{
+		ID:         t.ServerID,
+		TargetType: types.TargetTypeServer,
 	}
 }
 

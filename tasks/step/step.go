@@ -73,7 +73,6 @@ func (s *Stepper[T]) StepIndex(state string) int {
 func (s *Stepper[T]) Exec(
 	task *T,
 	l *zap.Logger,
-	tcr *types.TaskCreateResponse,
 	state taskstate.TaskState,
 	progstate taskstate.TaskProgressState,
 ) (*types.TaskOutput, error) {
@@ -108,7 +107,7 @@ func (s *Stepper[T]) Exec(
 		if curProg.State == "" || curProg.State == step.State || step.Index >= s.StepIndex(curProg.State) {
 			l.Info("[" + strconv.Itoa(step.Index) + "] Executing step '" + step.State + "'")
 
-			outp, prog, err := step.Exec(task, l, tcr, state, progstate, curProg)
+			outp, prog, err := step.Exec(task, l, state, progstate, curProg)
 
 			if err != nil {
 				return nil, err
@@ -176,7 +175,6 @@ type Step[T any] struct {
 	Exec func(
 		t *T,
 		l *zap.Logger,
-		tcr *types.TaskCreateResponse,
 		state taskstate.TaskState,
 		progstate taskstate.TaskProgressState,
 		progress *taskstate.Progress,

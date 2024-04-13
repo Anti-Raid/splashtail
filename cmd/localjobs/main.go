@@ -134,12 +134,12 @@ func main() {
 
 	for _, task := range tasks.TaskDefinitionRegistry {
 		// Stat localjobs/presets/preset.Name()
-		s, err := os.Stat(prefixDir + "/presets/" + task.Info().Name + ".yaml")
+		s, err := os.Stat(prefixDir + "/presets/" + task.Name() + ".yaml")
 
 		var isNotExist bool
 		if err == nil && s.IsDir() {
-			fmt.Println("INFO: Removing invalid preset", task.Info().Name+".yaml")
-			err = os.Remove(prefixDir + "/presets/" + task.Info().Name + ".yaml")
+			fmt.Println("INFO: Removing invalid preset", task.Name()+".yaml")
+			err = os.Remove(prefixDir + "/presets/" + task.Name() + ".yaml")
 
 			if err != nil {
 				fmt.Println("ERROR: Failed to remove preset:", err.Error())
@@ -163,7 +163,7 @@ func main() {
 
 		// WARN if not runnable
 		if !localPresets.Runnable {
-			fmt.Println("WARNING: Task", task.Info().Name, "is not officially runnable yet")
+			fmt.Println("WARNING: Task", task.Name(), "is not officially runnable yet")
 		}
 
 		// Because yaml doesnt properly handle presets, we have to use reflection to convert it to a map then yaml it
@@ -192,7 +192,7 @@ func main() {
 			os.Exit(1)
 		}
 
-		f, err := os.Create(prefixDir + "/presets/" + task.Info().Name + ".yaml")
+		f, err := os.Create(prefixDir + "/presets/" + task.Name() + ".yaml")
 
 		if err != nil {
 			fmt.Println("ERROR: Failed to create preset:", err.Error())
@@ -235,7 +235,7 @@ func main() {
 			os.Exit(1)
 		}
 
-		fmt.Printf("INFO: Wrote preset %s (%d bytes [preset])\n", task.Info().Name, len(pBytes))
+		fmt.Printf("INFO: Wrote preset %s (%d bytes [preset])\n", task.Name(), len(pBytes))
 
 		err = f.Close()
 

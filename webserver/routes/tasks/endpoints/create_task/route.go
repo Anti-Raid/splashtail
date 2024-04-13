@@ -146,10 +146,8 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 		}
 	}
 
-	taskInfo := task.Info()
-
 	// Check permissions
-	resp, ok := api.HandlePermissionCheck(d.Auth.ID, guildId, taskInfo.CorrespondingBotCommand, api.PermLimits(d.Auth))
+	resp, ok := api.HandlePermissionCheck(d.Auth.ID, guildId, task.CorrespondingBotCommand_Create(), api.PermLimits(d.Auth))
 
 	if !ok {
 		return resp
@@ -238,9 +236,8 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 	}
 
 	return uapi.HttpResponse{
-		Json: types.TaskCreateResponse{
-			TaskID:   parsedAnimusResp.Resp.SpawnTask.TaskID,
-			TaskInfo: taskInfo,
+		Json: types.PartialTask{
+			TaskID: parsedAnimusResp.Resp.SpawnTask.TaskID,
 		},
 	}
 }

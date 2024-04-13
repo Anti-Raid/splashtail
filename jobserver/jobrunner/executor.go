@@ -9,7 +9,6 @@ import (
 	"runtime/debug"
 
 	"github.com/anti-raid/splashtail/jobserver/state"
-	"github.com/anti-raid/splashtail/splashcore/types"
 	"github.com/anti-raid/splashtail/tasks"
 	"github.com/anti-raid/splashtail/tasks/taskdef"
 	"github.com/anti-raid/splashtail/tasks/taskstate"
@@ -135,8 +134,6 @@ func ExecuteTask(
 		panic("cannot execute task outside of job server")
 	}
 
-	tInfo := task.Info()
-
 	l, _ := NewTaskLogger(taskId, state.Pool, ctx, state.Logger)
 	erl, _ := NewTaskLogger(taskId, state.Pool, state.Context, state.Logger)
 
@@ -148,13 +145,13 @@ func ExecuteTask(
 		err := recover()
 
 		if err != nil {
-			erl.Error("Panic", zap.Any("err", err), zap.Any("data", tInfo.TaskFields))
-			state.Logger.Error("Panic", zap.Any("err", err), zap.Any("data", tInfo.TaskFields))
+			erl.Error("Panic", zap.Any("err", err))
+			state.Logger.Error("Panic", zap.Any("err", err))
 
 			_, err := state.Pool.Exec(state.Context, "UPDATE tasks SET state = $1 WHERE task_id = $2", "failed", taskId)
 
 			if err != nil {
-				l.Error("Failed to update task", zap.Error(err), zap.Any("data", tInfo.TaskFields))
+				l.Error("Failed to update task", zap.Error(err))
 			}
 		}
 
@@ -162,7 +159,7 @@ func ExecuteTask(
 			_, err := state.Pool.Exec(state.Context, "UPDATE tasks SET state = $1 WHERE task_id = $2", "failed", taskId)
 
 			if err != nil {
-				l.Error("Failed to update task", zap.Error(err), zap.Any("data", tInfo.TaskFields))
+				l.Error("Failed to update task", zap.Error(err))
 			}
 		}
 
@@ -173,7 +170,7 @@ func ExecuteTask(
 		_, err2 := state.Pool.Exec(state.Context, "DELETE FROM ongoing_tasks WHERE task_id = $1", taskId)
 
 		if err != nil {
-			l.Error("Failed to delete task from ongoing tasks", zap.Error(err2), zap.Any("data", tInfo.TaskFields))
+			l.Error("Failed to delete task from ongoing tasks", zap.Error(err2))
 			return
 		}
 
@@ -197,7 +194,7 @@ func ExecuteTask(
 	_, err := state.Pool.Exec(state.Context, "UPDATE tasks SET state = $1 WHERE task_id = $2", "running", taskId)
 
 	if err != nil {
-		l.Error("Failed to update task", zap.Error(err), zap.Any("data", tInfo.TaskFields))
+		l.Error("Failed to update task", zap.Error(err))
 		return
 	}
 
@@ -213,10 +210,7 @@ func ExecuteTask(
 
 	var taskState = "completed"
 
-	outp, terr := task.Exec(l, &types.TaskCreateResponse{
-		TaskID:   taskId,
-		TaskInfo: tInfo,
-	}, ts, prog)
+	outp, terr := task.Exec(l, ts, prog)
 
 	if terr != nil {
 		l.Error("Failed to execute task [terr != nil]", zap.Error(terr))
@@ -230,14 +224,14 @@ func ExecuteTask(
 		}
 
 		if outp.Buffer == nil {
-			l.Error("Task output buffer is nil", zap.Any("data", tInfo.TaskFields))
+			l.Error("Task output buffer is nil")
 			taskState = "failed"
 		} else {
 			l.Info("Saving task output", zap.String("filename", outp.Filename))
 
 			err = state.ObjectStorage.Save(
 				state.Context,
-				tasks.GetPathFromOutput(taskId, tInfo, outp),
+				tasks.GetPathFromOutput(taskId, task, outp),
 				outp.Filename,
 				outp.Buffer,
 				0,
@@ -253,7 +247,7 @@ func ExecuteTask(
 	_, err = state.Pool.Exec(state.Context, "UPDATE tasks SET output = $1, state = $2 WHERE task_id = $3", outp, taskState, taskId)
 
 	if err != nil {
-		l.Error("Failed to update task", zap.Error(err), zap.Any("data", tInfo.TaskFields))
+		l.Error("Failed to update task", zap.Error(err))
 		return
 	}
 

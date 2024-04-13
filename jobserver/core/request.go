@@ -82,13 +82,13 @@ func AnimusOnRequest(c *animusmagic.ClientRequest) (animusmagic.AnimusResponse, 
 			return nil, fmt.Errorf("error unmarshalling task args: %w", err)
 		}
 
-		taskInfo := task.Info()
+		taskFor := task.TaskFor()
 
 		// Check if task pertains to this clusters shard
-		if taskInfo.TaskFor.TargetType == types.TargetTypeUser && state.Shard != 0 {
+		if taskFor.TargetType == types.TargetTypeUser && state.Shard != 0 {
 			return nil, fmt.Errorf("task is not for this shard [user tasks must run on shard 0]")
 		} else {
-			taskShard, err := mewext.GetShardIDFromGuildID(taskInfo.TaskFor.ID, int(state.ShardCount))
+			taskShard, err := mewext.GetShardIDFromGuildID(taskFor.ID, int(state.ShardCount))
 
 			if err != nil {
 				state.Logger.Error("Failed to get shard id from guild id", zap.Error(err))
@@ -115,13 +115,13 @@ func AnimusOnRequest(c *animusmagic.ClientRequest) (animusmagic.AnimusResponse, 
 		// Create task
 		var taskId string
 		if data.SpawnTask.Create {
-			tcr, err := jobrunner.CreateTask(state.Context, state.Pool, task)
+			tid, err := jobrunner.CreateTask(state.Context, state.Pool, task)
 
 			if err != nil {
 				return nil, fmt.Errorf("error creating task: %w", err)
 			}
 
-			taskId = tcr.TaskID
+			taskId = *tid
 		} else {
 			if data.SpawnTask.TaskID == "" {
 				return nil, fmt.Errorf("task id must be set if SpawnTask.Create is false")
@@ -161,12 +161,11 @@ func Resume() {
 	state.Logger.Info("Looking for tasks to resume")
 
 	var taskId string
-	var taskState string
 	var data map[string]any
 	var initialOpts map[string]any
 	var createdAt time.Time
 
-	rows, err := state.Pool.Query(state.Context, "SELECT task_id, state, data, initial_opts, created_at FROM ongoing_tasks")
+	rows, err := state.Pool.Query(state.Context, "SELECT task_id, data, initial_opts, created_at FROM ongoing_tasks")
 
 	if err != nil {
 		state.Logger.Error("Failed to query tasks", zap.Error(err))
@@ -176,7 +175,7 @@ func Resume() {
 	defer rows.Close()
 
 	for rows.Next() {
-		err = rows.Scan(&taskId, &taskState, &data, &initialOpts, &createdAt)
+		err = rows.Scan(&taskId, &data, &initialOpts, &createdAt)
 
 		if err != nil {
 			state.Logger.Error("Failed to scan task", zap.Error(err))
@@ -210,7 +209,7 @@ func Resume() {
 			continue
 		}
 
-		if !t.TaskInfo.Resumable {
+		if !t.Resumable {
 			continue
 		}
 
@@ -218,7 +217,7 @@ func Resume() {
 			continue
 		}
 
-		baseTaskDef, ok := tasks.TaskDefinitionRegistry[t.TaskInfo.Name]
+		baseTaskDef, ok := tasks.TaskDefinitionRegistry[t.TaskName]
 
 		if !ok {
 			state.Logger.Error("Task not found in registry", zap.String("task_id", taskId))
@@ -241,13 +240,13 @@ func Resume() {
 			continue
 		}
 
-		taskInfo := task.Info()
+		taskFor := task.TaskFor()
 
 		// Check if task pertains to this clusters shard
-		if taskInfo.TaskFor.TargetType == types.TargetTypeUser && state.Shard != 0 {
+		if taskFor.TargetType == types.TargetTypeUser && state.Shard != 0 {
 			continue
 		} else {
-			taskShard, err := mewext.GetShardIDFromGuildID(taskInfo.TaskFor.ID, int(state.ShardCount))
+			taskShard, err := mewext.GetShardIDFromGuildID(taskFor.ID, int(state.ShardCount))
 
 			if err != nil {
 				state.Logger.Error("Failed to get shard id from guild id", zap.Error(err))

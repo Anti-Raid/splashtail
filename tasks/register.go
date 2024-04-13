@@ -10,7 +10,7 @@ import (
 var TaskDefinitionRegistry = map[string]taskdef.TaskDefinition{}
 
 func RegisterTaskDefinition(task taskdef.TaskDefinition) {
-	TaskDefinitionRegistry[task.Info().Name] = task
+	TaskDefinitionRegistry[task.Name()] = task
 }
 
 // Add all tasks here

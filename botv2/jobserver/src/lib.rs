@@ -30,11 +30,12 @@ pub struct Task {
     pub task_id: Uuid,
     pub task_name: String,
     pub output: Option<TaskOutput>,
-    pub task_info: TaskInfo,
+    pub task_fields: IndexMap<String, serde_json::Value>,
     pub statuses: Vec<TaskStatuses>,
     pub task_for: Option<TaskFor>,
     pub expiry: Option<chrono::Duration>,
     pub state: String,
+    pub resumable: bool,
     pub created_at: chrono::NaiveDateTime,
 }
 
@@ -71,22 +72,11 @@ pub struct TaskOutput {
     pub segregated: bool,
 }
 
-#[derive(serde::Deserialize, serde::Serialize, Clone)]
-pub struct TaskInfo {
-    pub name: String,
-    pub task_for: Option<TaskFor>,
-    pub task_fields: serde_json::Value,
-    pub expiry: Option<u64>,
-    pub valid: bool,
-}
-
 /// TaskCreateResponse is the response upon creating a task
 #[derive(serde::Deserialize, serde::Serialize, Clone)]
 pub struct TaskCreateResponse {
     /// The ID of the newly created task
     pub task_id: String,
-    /// The task info
-    pub task_info: TaskInfo,
 }
 
 /// WrappedTaskCreateResponse is the response upon creating a task
@@ -99,7 +89,7 @@ impl Task {
     /// Fetches a task from the database based on id
     pub async fn from_id(task_id: Uuid, pool: &PgPool) -> Result<Self, crate::Error> {
         let rec = sqlx::query!(
-            "SELECT task_id, task_name, output, task_info, statuses, task_for, expiry, state, created_at FROM tasks WHERE task_id = $1 ORDER BY created_at DESC",
+            "SELECT task_id, task_name, output, statuses, task_for, expiry, state, created_at, task_fields, resumable FROM tasks WHERE task_id = $1 ORDER BY created_at DESC",
             task_id,
         )
         .fetch_one(pool)
@@ -119,7 +109,7 @@ impl Task {
                 .output
                 .map(serde_json::from_value::<TaskOutput>)
                 .transpose()?,
-            task_info: serde_json::from_value::<TaskInfo>(rec.task_info)?,
+            task_fields: serde_json::from_value::<IndexMap<String, serde_json::Value>>(rec.task_fields)?,
             statuses,
             task_for: rec.task_for.map(|task_for| task_for.into()),
             expiry: {
@@ -135,6 +125,7 @@ impl Task {
             },
             state: rec.state,
             created_at: rec.created_at,
+            resumable: rec.resumable,
         };
 
         Ok(task)
@@ -147,7 +138,7 @@ impl Task {
         pool: &sqlx::PgPool,
     ) -> Result<Vec<Self>, crate::Error> {
         let recs = sqlx::query!(
-            "SELECT task_id, task_name, output, task_info, statuses, task_for, expiry, state, created_at FROM tasks WHERE task_for = $1",
+            "SELECT task_id, task_name, output, statuses, task_for, expiry, state, created_at, task_fields, resumable FROM tasks WHERE task_for = $1",
             format!("g/{}", guild_id)
         )
         .fetch_all(pool)
@@ -170,7 +161,7 @@ impl Task {
                     .output
                     .map(serde_json::from_value::<TaskOutput>)
                     .transpose()?,
-                task_info: serde_json::from_value::<TaskInfo>(rec.task_info)?,
+                task_fields: serde_json::from_value::<IndexMap<String, serde_json::Value>>(rec.task_fields)?,
                 statuses,
                 task_for: rec.task_for.map(|task_for| task_for.into()),
                 expiry: {
@@ -186,6 +177,7 @@ impl Task {
                 },
                 state: rec.state,
                 created_at: rec.created_at,
+                resumable: rec.resumable,
             };
 
             tasks.push(task);
@@ -201,7 +193,7 @@ impl Task {
         pool: &sqlx::PgPool,
     ) -> Result<Vec<Self>, crate::Error> {
         let recs = sqlx::query!(
-            "SELECT task_id, task_name, output, task_info, statuses, task_for, expiry, state, created_at FROM tasks WHERE task_for = $1 AND task_name = $2",
+            "SELECT task_id, task_name, output, statuses, task_for, expiry, state, created_at, task_fields, resumable FROM tasks WHERE task_for = $1 AND task_name = $2",
             format!("g/{}", guild_id),
             task_name,
         )
@@ -225,7 +217,7 @@ impl Task {
                     .output
                     .map(serde_json::from_value::<TaskOutput>)
                     .transpose()?,
-                task_info: serde_json::from_value::<TaskInfo>(rec.task_info)?,
+                task_fields: serde_json::from_value::<IndexMap<String, serde_json::Value>>(rec.task_fields)?,
                 statuses,
                 task_for: rec.task_for.map(|task_for| task_for.into()),
                 expiry: {
@@ -241,6 +233,7 @@ impl Task {
                 },
                 state: rec.state,
                 created_at: rec.created_at,
+                resumable: rec.resumable,
             };
 
             tasks.push(task);
@@ -263,7 +256,7 @@ impl Task {
                 Some(format!(
                     "{}/{}/{}",
                     self.format_task_for_simplex(),
-                    self.task_info.name,
+                    self.task_name,
                     self.task_id,
                 ))
             } else {
