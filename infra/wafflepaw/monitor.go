@@ -309,7 +309,7 @@ func (p *AMProbeTask) restart(opts tryRestartOptions) error {
 	if p.state.FailedCount > p.RestartAfterFailed {
 		// Send a webhook to notify
 		var webhookContext = discordgo.WebhookParams{
-			Content: fmt.Sprintf("@everyone **CRITICAL ALERT** Restarting service %s due to failed probes (>%d failed probes)", p.SystemdService, p.RestartAfterFailed),
+			Content: fmt.Sprintf("%s **CRITICAL ALERT** Restarting service %s due to failed probes (>%d failed probes)", Config.Wafflepaw.RolePing, p.SystemdService, p.RestartAfterFailed),
 		}
 
 		_, err := Discord.WebhookExecute(MonitorWebhook.ID, MonitorWebhook.Token, false, &webhookContext)
@@ -427,7 +427,7 @@ func (p *AMProbeTask) tryRestart(opts tryRestartOptions) error {
 	Logger.Error("Failed to restart service via mewld, attempting systemd restart")
 
 	_, err := Discord.WebhookExecute(MonitorWebhook.ID, MonitorWebhook.Token, false, &discordgo.WebhookParams{
-		Content: fmt.Sprintf("@everyone **CRITICAL ALERT** Failed to restart service %s via mewld, attempting systemd restart", p.SystemdService),
+		Content: fmt.Sprintf("%s **CRITICAL ALERT** Failed to restart service %s via mewld, attempting systemd restart", Config.Wafflepaw.RolePing, p.SystemdService),
 	})
 
 	if err != nil {

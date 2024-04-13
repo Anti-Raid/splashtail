@@ -58,6 +58,7 @@ type Config struct {
 
 type Wafflepaw struct {
 	StatusWebhook string `yaml:"status_webhook" default:"https://discord.com/api/webhooks/849331145862283275/8Z9J"`
+	RolePing      string `yaml:"role_ping" default:"<@&1226087657541730364> <@728871946456137770>"`
 }
 
 type SimpleGatewayProxy struct {
