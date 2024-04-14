@@ -24,11 +24,56 @@ pub fn can_audit_log_event(event: &FullEvent) -> bool {
     true
 }
 
-pub fn resolve_gwevent_field(field: &FieldType) -> Result<String, crate::Error> {
+#[derive(Default)]
+enum FieldFormat {
+    /// Old -> New
+    #[default]
+    Arrow,
+    /// **Before:** Old
+    /// **After:** New
+    BeforeAfter,
+}
+
+#[derive(Default)]
+struct ResolvedField {
+    pub value: String,
+    pub inline: bool,
+    pub update_format: FieldFormat
+}
+
+impl From<String> for ResolvedField {
+    fn from(s: String) -> Self {
+        ResolvedField {
+            value: s,
+            inline: true,
+            update_format: FieldFormat::Arrow
+        }
+    }
+}
+
+impl From<&str> for ResolvedField {
+    fn from(s: &str) -> Self {
+        ResolvedField {
+            value: s.to_string(),
+            inline: true,
+            update_format: FieldFormat::Arrow
+        }
+    }
+}
+
+fn resolve_gwevent_field(field: &FieldType) -> Result<ResolvedField, crate::Error> {
     match field {
-        FieldType::Strings(s) => Ok(s.join(", ")),
+        FieldType::Strings(s) => {
+            Ok(
+                ResolvedField {
+                    value: s.join(", "),
+                    inline: true,
+                    update_format: FieldFormat::Arrow
+                }
+            )
+        },
         FieldType::Bool(b) => Ok(if *b { "Yes" } else { "No" }.into()),
-        FieldType::Number(n) => Ok(n.to_string()),
+        FieldType::Number(n) => Ok(n.to_string().into()),
         FieldType::Permissions(p) => {
             let mut perms = Vec::new();
 
@@ -36,7 +81,7 @@ pub fn resolve_gwevent_field(field: &FieldType) -> Result<String, crate::Error> 
                 perms.push(format!("{} ({})", ip, ip.bits()));
             }
 
-            Ok(perms.join(", "))
+            Ok(perms.join(", ").into())
         },
         FieldType::PermissionOverwrites(p) => {
             let mut perms = Vec::new();
@@ -45,7 +90,7 @@ pub fn resolve_gwevent_field(field: &FieldType) -> Result<String, crate::Error> 
                 perms.push(format!("Allow={}, Deny={}", ip.allow, ip.deny));
             }
 
-            Ok(perms.join(", "))
+            Ok(perms.join(", ").into())
         },
         FieldType::GuildMemberFlags(p) => {
             let p_vec = p.iter().map(|x| format!("{:#?}", x)).collect::<Vec<String>>();
@@ -54,7 +99,7 @@ pub fn resolve_gwevent_field(field: &FieldType) -> Result<String, crate::Error> 
                 return Ok("None".into());
             }
 
-            Ok(p_vec.join(", "))
+            Ok(p_vec.join(", ").into())
         },
         FieldType::UserIds(u) => {
             let mut users = Vec::new();
@@ -63,7 +108,7 @@ pub fn resolve_gwevent_field(field: &FieldType) -> Result<String, crate::Error> 
                 users.push(iu.mention().to_string());
             }
 
-            Ok(users.join(", "))
+            Ok(users.join(", ").into())
         },
         FieldType::Channels(c) => {
             let mut channels = Vec::new();
@@ -72,7 +117,7 @@ pub fn resolve_gwevent_field(field: &FieldType) -> Result<String, crate::Error> 
                 channels.push(ic.mention().to_string());
             }
 
-            Ok(channels.join(", "))
+            Ok(channels.join(", ").into())
         },
         FieldType::NsfwLevels(n) => {
             let mut nsfw_levels = Vec::new();
@@ -81,7 +126,7 @@ pub fn resolve_gwevent_field(field: &FieldType) -> Result<String, crate::Error> 
                 nsfw_levels.push(format!("{:#?}", inl));
             }
 
-            Ok(nsfw_levels.join(", "))
+            Ok(nsfw_levels.join(", ").into())
         },
         FieldType::Roles(r) => {
             let mut roles = Vec::new();
@@ -90,7 +135,7 @@ pub fn resolve_gwevent_field(field: &FieldType) -> Result<String, crate::Error> 
                 roles.push(ir.mention().to_string());
             }
 
-            Ok(roles.join(", "))
+            Ok(roles.join(", ").into())
         },
         FieldType::Messages(m) => {
             let mut messages = Vec::new();
@@ -99,15 +144,15 @@ pub fn resolve_gwevent_field(field: &FieldType) -> Result<String, crate::Error> 
                 messages.push(im.to_string()); // TODO: improve this if possible
             }
 
-            Ok(messages.join(", "))
+            Ok(messages.join(", ").into())
         },
-        FieldType::Guild(g) => Ok(g.to_string()),
-        FieldType::Command(c) => Ok(c.to_string()),
-        FieldType::Entitlement(e) => Ok(e.to_string()),
-        FieldType::Application(a) => Ok(a.to_string()),
-        FieldType::AuditLogId(a) => Ok(a.to_string()),
-        FieldType::ScheduledEventId(s) => Ok(s.to_string()),
-        FieldType::IntegrationId(i) => Ok(i.to_string()),
+        FieldType::Guild(g) => Ok(g.to_string().into()),
+        FieldType::Command(c) => Ok(c.to_string().into()),
+        FieldType::Entitlement(e) => Ok(e.to_string().into()),
+        FieldType::Application(a) => Ok(a.to_string().into()),
+        FieldType::AuditLogId(a) => Ok(a.to_string().into()),
+        FieldType::ScheduledEventId(s) => Ok(s.to_string().into()),
+        FieldType::IntegrationId(i) => Ok(i.to_string().into()),
         FieldType::Emojis(e) => {
             let mut emojis = Vec::new();
 
@@ -115,7 +160,7 @@ pub fn resolve_gwevent_field(field: &FieldType) -> Result<String, crate::Error> 
                 emojis.push(ie.to_string());
             }
 
-            Ok(emojis.join(", "))
+            Ok(emojis.join(", ").into())
         },
         FieldType::GenericIds(g) => {
             let mut generic_ids = Vec::new();
@@ -124,7 +169,7 @@ pub fn resolve_gwevent_field(field: &FieldType) -> Result<String, crate::Error> 
                 generic_ids.push(ig.to_string());
             }
 
-            Ok(generic_ids.join(", "))
+            Ok(generic_ids.join(", ").into())
         },
         FieldType::AutomodActions(a) => {
             let mut automod_actions = Vec::new();
@@ -133,7 +178,7 @@ pub fn resolve_gwevent_field(field: &FieldType) -> Result<String, crate::Error> 
                 automod_actions.push(format!("{:#?}", ia));
             }
 
-            Ok(automod_actions.join(", "))
+            Ok(automod_actions.join(", ").into())
         },
         FieldType::AuditLogActions(a) => {
             let mut audit_log_actions = Vec::new();
@@ -142,7 +187,7 @@ pub fn resolve_gwevent_field(field: &FieldType) -> Result<String, crate::Error> 
                 audit_log_actions.push(format!("``{:#?}``", ia).replace('\n', "").replace('\t', ""));
             }
 
-            Ok(audit_log_actions.join(", "))
+            Ok(audit_log_actions.join(", ").into())
         },
         FieldType::AutomodRuleIds(a) => {
             let mut automod_rule_ids = Vec::new();
@@ -151,10 +196,10 @@ pub fn resolve_gwevent_field(field: &FieldType) -> Result<String, crate::Error> 
                 automod_rule_ids.push(ia.to_string());
             }
 
-            Ok(automod_rule_ids.join(", "))
+            Ok(automod_rule_ids.join(", ").into())
         },
-        FieldType::AutomodTrigger(a) => Ok(format!("{:#?}", a)),
-        FieldType::Timestamp(t) => Ok(t.to_string()),
+        FieldType::AutomodTrigger(a) => Ok(format!("{:#?}", a).into()),
+        FieldType::Timestamp(t) => Ok(t.to_string().into()),
         FieldType::AuditLogActionsChanges(a) => {
             let mut audit_log_actions_changes = Vec::new();
 
@@ -162,7 +207,7 @@ pub fn resolve_gwevent_field(field: &FieldType) -> Result<String, crate::Error> 
                 audit_log_actions_changes.push(format!("``{:#?}``", ia).replace('\n', "").replace('\t', ""));
             }
 
-            Ok(audit_log_actions_changes.join(", "))
+            Ok(audit_log_actions_changes.join(", ").into())
         },
         FieldType::AuditLogOptions(a) => {
             let mut audit_log_options = Vec::new();
@@ -171,7 +216,7 @@ pub fn resolve_gwevent_field(field: &FieldType) -> Result<String, crate::Error> 
                 audit_log_options.push(format!("``{:#?}``", ia).replace('\n', "").replace('\t', ""));
             }
 
-            Ok(audit_log_options.join(", "))
+            Ok(audit_log_options.join(", ").into())
         },
         FieldType::EmojiMap(e) => {
             let mut emoji_map = Vec::new();
@@ -180,7 +225,7 @@ pub fn resolve_gwevent_field(field: &FieldType) -> Result<String, crate::Error> 
                 emoji_map.push(format!("``{:#?}``", ie).replace('\n', "").replace('\t', "")); // TODO: better formatting for emojis
             }
 
-            Ok(emoji_map.join(", "))
+            Ok(emoji_map.join(", ").into())
         },
         FieldType::StickerMap(s) => {
             let mut sticker_map = Vec::new();
@@ -189,7 +234,7 @@ pub fn resolve_gwevent_field(field: &FieldType) -> Result<String, crate::Error> 
                 sticker_map.push(format!("``{:#?}``", is).replace('\n', "").replace('\t', "")); // TODO: better formatting for stickers
             }
 
-            Ok(sticker_map.join(", "))
+            Ok(sticker_map.join(", ").into())
         },
         FieldType::Users(u) => {
             let mut users = Vec::new();
@@ -211,7 +256,7 @@ pub fn resolve_gwevent_field(field: &FieldType) -> Result<String, crate::Error> 
                 );
             }
 
-            Ok(users.join(", "))
+            Ok(users.join(", ").into())
         },
         FieldType::Embeds(e) => {
             let mut embeds = Vec::new();
@@ -234,7 +279,7 @@ pub fn resolve_gwevent_field(field: &FieldType) -> Result<String, crate::Error> 
                 ))); // TODO: better formatting for embeds
             }
 
-            Ok(embeds.join(", "))
+            Ok(embeds.join(", ").into())
         },
         FieldType::Attachments(a) => {
             let mut attachments = Vec::new();
@@ -243,7 +288,7 @@ pub fn resolve_gwevent_field(field: &FieldType) -> Result<String, crate::Error> 
                 attachments.push(ia.url.clone()); // TODO: better formatting for attachments
             }
 
-            Ok(attachments.join(", "))
+            Ok(attachments.join(", ").into())
         },
         FieldType::Components(c) => {
             let mut components = Vec::new();
@@ -252,7 +297,7 @@ pub fn resolve_gwevent_field(field: &FieldType) -> Result<String, crate::Error> 
                 components.push(format!("{:#?}", ic)); // TODO: better formatting for components
             }
 
-            Ok(components.join(", "))
+            Ok(components.join(", ").into())
         },
         FieldType::ThreadMembers(t) => {
             let mut thread_members = Vec::new();
@@ -261,17 +306,17 @@ pub fn resolve_gwevent_field(field: &FieldType) -> Result<String, crate::Error> 
                 thread_members.push(it.user_id.mention().to_string()); // TODO: better formatting for thread members
             }
 
-            Ok(thread_members.join(", "))
+            Ok(thread_members.join(", ").into())
         },
         FieldType::JsonValue(v) => {
             match serde_json::to_string(v) {
-                Ok(s) => Ok(format!("``{}``", s)),
+                Ok(s) => Ok(format!("``{}``", s).into()),
                 Err(e) => {
                     Err(e.into())                  
                 }
             }
         },
-        FieldType::None => Ok("None".into()),
+        FieldType::None => Ok("None".to_string().into()),
     }
 }
 
@@ -387,14 +432,14 @@ pub async fn dispatch_audit_log(
             for ft in v.value {
                 let mut resolved_field = resolve_gwevent_field(&ft)?;
 
-                if resolved_field.len() > 1024 {
-                    resolved_field = format!("{}...", &resolved_field[..1021]);
+                if resolved_field.value.len() > 1024 {
+                    resolved_field.value = format!("{}...", &resolved_field.value[..1021]);
                 }
 
-                vcs.push(resolved_field);
+                vcs.push(resolved_field.value);
 
                 if !inline {
-                    inline = !matches!(ft, FieldType::Strings(_));        
+                    inline = resolved_field.inline;   
                 } 
             }
 
