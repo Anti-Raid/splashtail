@@ -178,7 +178,7 @@ For initial release:
 
 - Stabilizing the module+command permission system [X]  
 - Add a monitoring script to probe clusters [X]
-- Add the ability to enable/disable modules [X] and commands [WIP, WNU] and also override command permissions [WIP]
+- Add the ability to enable/disable modules [X] and commands [WIP, WU] and also override command permissions [WIP]
 - Server Member Backup/Restore []
 - Basic Moderation (warn/kick/ban+tempban/unban) [X]
 - Basic Anti-Raid (lockserver/unlockserver/lockchannel/unlockchannel) []
