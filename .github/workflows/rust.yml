@@ -29,6 +29,8 @@ jobs:
           workspaces: "botv2 -> target"
       - name: Install lld
         run: sudo apt-get install -y lld
+      - name: Install mold
+        run: sudo apt-get install -y mold
       - run: rustup update ${{ matrix.toolchain }} && rustup default ${{ matrix.toolchain }}
       - run: cargo build --verbose
       - run: cargo test --verbose
