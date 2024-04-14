@@ -84,7 +84,7 @@ In some cases, the internal representation of a type is not suitable for externa
 - ``lld``
 - ``mold``
 
-On Ubuntu, you can use ``sudo apt install pkg-config openssl libssl-dev build-essential sqlx-cli clangd clang libclang-14-dev lld mold``.
+On Ubuntu, you can use ``sudo apt install pkg-config openssl libssl-dev build-essential  clangd clang libclang-14-dev lld mold`` to install most of the dependencies. ``sqlx-cli`` is a bit special as it is tied to the version of ``sqlx`` used on the project (??). Use ``cargo install --version 0.7.4 sqlx-cli`` to install ``sqlx-cli``.
 
 ### Database Seeding
 
