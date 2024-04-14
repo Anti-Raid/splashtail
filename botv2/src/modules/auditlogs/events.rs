@@ -38,6 +38,15 @@ pub fn resolve_gwevent_field(field: &FieldType) -> Result<String, crate::Error> 
 
             Ok(perms.join(", "))
         },
+        FieldType::PermissionOverwrites(p) => {
+            let mut perms = Vec::new();
+
+            for ip in p.iter() {
+                perms.push(format!("Allow={}, Deny={}", ip.allow, ip.deny));
+            }
+
+            Ok(perms.join(", "))
+        },
         FieldType::GuildMemberFlags(p) => {
             let p_vec = p.iter().map(|x| format!("{:#?}", x)).collect::<Vec<String>>();
 
@@ -130,7 +139,7 @@ pub fn resolve_gwevent_field(field: &FieldType) -> Result<String, crate::Error> 
             let mut audit_log_actions = Vec::new();
 
             for ia in a.iter() {
-                audit_log_actions.push(format!("{:#?}", ia));
+                audit_log_actions.push(format!("``{:#?}``", ia).replace('\n', "").replace('\t', ""));
             }
 
             Ok(audit_log_actions.join(", "))
@@ -150,7 +159,7 @@ pub fn resolve_gwevent_field(field: &FieldType) -> Result<String, crate::Error> 
             let mut audit_log_actions_changes = Vec::new();
 
             for ia in a.iter() {
-                audit_log_actions_changes.push(format!("{:#?}", ia));
+                audit_log_actions_changes.push(format!("``{:#?}``", ia).replace('\n', "").replace('\t', ""));
             }
 
             Ok(audit_log_actions_changes.join(", "))
@@ -159,7 +168,7 @@ pub fn resolve_gwevent_field(field: &FieldType) -> Result<String, crate::Error> 
             let mut audit_log_options = Vec::new();
 
             for ia in a.iter() {
-                audit_log_options.push(format!("{:#?}", ia));
+                audit_log_options.push(format!("``{:#?}``", ia).replace('\n', "").replace('\t', ""));
             }
 
             Ok(audit_log_options.join(", "))
@@ -168,7 +177,7 @@ pub fn resolve_gwevent_field(field: &FieldType) -> Result<String, crate::Error> 
             let mut emoji_map = Vec::new();
 
             for ie in e.iter() {
-                emoji_map.push(format!("{:#?}", ie)); // TODO: better formatting for emojis
+                emoji_map.push(format!("``{:#?}``", ie).replace('\n', "").replace('\t', "")); // TODO: better formatting for emojis
             }
 
             Ok(emoji_map.join(", "))
@@ -177,7 +186,7 @@ pub fn resolve_gwevent_field(field: &FieldType) -> Result<String, crate::Error> 
             let mut sticker_map = Vec::new();
 
             for is in s.iter() {
-                sticker_map.push(format!("{:#?}", is)); // TODO: better formatting for stickers
+                sticker_map.push(format!("``{:#?}``", is).replace('\n', "").replace('\t', "")); // TODO: better formatting for stickers
             }
 
             Ok(sticker_map.join(", "))
@@ -208,13 +217,21 @@ pub fn resolve_gwevent_field(field: &FieldType) -> Result<String, crate::Error> 
             let mut embeds = Vec::new();
 
             for ie in e.iter() {
-                embeds.push(format!("``<embed, title={:#?}, description={:#?}>``", ie.title, ie.description.as_ref().map(|x| {
-                    if x.len() > 100 {
-                        format!("{}...", &x[..100])
-                    } else {
+                embeds.push(format!(
+                    "``<embed, title={}, description={:#?}>``", 
+                    if let Some(ref x) = ie.title {
                         x.to_string()
+                    } else { 
+                        "None".to_string() 
+                    }, 
+                    ie.description.as_ref().map(|x| {
+                        if x.len() > 100 {
+                            format!("{}...", &x[..100])
+                        } else {
+                            x.to_string()
+                        }
                     }
-                }))); // TODO: better formatting for embeds
+                ))); // TODO: better formatting for embeds
             }
 
             Ok(embeds.join(", "))

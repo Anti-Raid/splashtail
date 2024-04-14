@@ -25,6 +25,9 @@ pub enum FieldType {
     /// Permission
     Permissions(serenity::all::Permissions),
 
+    // Permission Overwrites
+    PermissionOverwrites(Vec<serenity::all::PermissionOverwrite>),
+
     /// A user id
     UserIds(Vec<UserId>),
 
@@ -213,6 +216,7 @@ from_field_type_multiple! {
     serenity::model::channel::Attachment => Attachments,
     serenity::model::application::ActionRow => Components,
     serenity::model::guild::ThreadMember => ThreadMembers,
+    serenity::all::PermissionOverwrite => PermissionOverwrites,
 }
 
 from_field_type! {
