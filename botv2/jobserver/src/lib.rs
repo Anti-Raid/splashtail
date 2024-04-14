@@ -32,7 +32,7 @@ pub struct Task {
     pub output: Option<TaskOutput>,
     pub task_fields: IndexMap<String, serde_json::Value>,
     pub statuses: Vec<TaskStatuses>,
-    pub task_for: Option<TaskFor>,
+    pub task_for: TaskFor,
     pub expiry: Option<chrono::Duration>,
     pub state: String,
     pub resumable: bool,
@@ -111,7 +111,7 @@ impl Task {
                 .transpose()?,
             task_fields: serde_json::from_value::<IndexMap<String, serde_json::Value>>(rec.task_fields)?,
             statuses,
-            task_for: rec.task_for.map(|task_for| task_for.into()),
+            task_for: rec.task_for.into(),
             expiry: {
                 if let Some(expiry) = rec.expiry {
                     let t = expiry.microseconds
@@ -163,7 +163,7 @@ impl Task {
                     .transpose()?,
                 task_fields: serde_json::from_value::<IndexMap<String, serde_json::Value>>(rec.task_fields)?,
                 statuses,
-                task_for: rec.task_for.map(|task_for| task_for.into()),
+                task_for: rec.task_for.into(),
                 expiry: {
                     if let Some(expiry) = rec.expiry {
                         let t = expiry.microseconds
@@ -219,7 +219,7 @@ impl Task {
                     .transpose()?,
                 task_fields: serde_json::from_value::<IndexMap<String, serde_json::Value>>(rec.task_fields)?,
                 statuses,
-                task_for: rec.task_for.map(|task_for| task_for.into()),
+                task_for: rec.task_for.into(),
                 expiry: {
                     if let Some(expiry) = rec.expiry {
                         let t = expiry.microseconds
@@ -243,11 +243,7 @@ impl Task {
     }
 
     pub fn format_task_for_simplex(&self) -> String {
-        if let Some(fu) = &self.task_for {
-            format!("{}/{}", fu.target_type.to_lowercase(), fu.id)
-        } else {
-            "".to_string()
-        }
+        format!("{}/{}", self.task_for.target_type.to_lowercase(), self.task_for.id)
     }
 
     pub fn get_path(&self) -> Option<String> {

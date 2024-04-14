@@ -71,6 +71,21 @@ In some cases, the internal representation of a type is not suitable for externa
 
 ## Self-Hosting and Deployment
 
+### Prerequisites
+
+- ``pkg-config``
+- ``openssl``
+- ``libssl-dev``
+- ``build-essential``
+- ``sqlx-cli``
+- ``clangd``
+- ``clang``
+- ``libclang-14-dev`` 
+- ``lld``
+- ``mold``
+
+On Ubuntu, you can use ``sudo apt install pkg-config openssl libssl-dev build-essential sqlx-cli clangd clang libclang-14-dev lld mold``.
+
 ### Database Seeding
 
 To load the database seed, follow the following steps:
