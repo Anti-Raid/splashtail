@@ -16,14 +16,6 @@ pub const fn not_audit_loggable_event() -> &'static [&'static str] {
     ]
 }
 
-pub fn can_audit_log_event(event: &FullEvent) -> bool {
-    if not_audit_loggable_event().contains(&event.into()) {
-        return false;
-    }
-    
-    true
-}
-
 #[derive(Default)]
 enum FieldFormat {
     /// Old -> New
@@ -327,7 +319,7 @@ pub async fn event_listener(
     let ctx = &ectx.serenity_context;
     let event = &ectx.full_event;
 
-    if !can_audit_log_event(event) {
+    if not_audit_loggable_event().contains(&event.into()) {
         return Ok(());
     }
 
