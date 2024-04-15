@@ -165,20 +165,12 @@ pub async fn list_sinks(
     Ok(())
 }
 
-pub async fn check_all_events(events: Vec<String>) -> Result<Vec<String>, crate::Error> {
+pub async fn check_all_events(events: Vec<String>) -> Result<(), crate::Error> {
     let res = tokio::time::timeout(
         std::time::Duration::from_millis(1000),
         tokio::task::spawn_blocking(
             move || {
-                let mut supported_events = Vec::new();
-
-                for event in gwevent::core::event_list() {
-                    if super::events::not_audit_loggable_event().contains(event) {
-                        continue;
-                    }
-
-                    supported_events.push(event.to_string());
-                }
+                let supported_events = gwevent::core::event_list();
 
                 for event in events {
                     let trimmed = event.trim().to_string();
@@ -201,21 +193,18 @@ pub async fn check_all_events(events: Vec<String>) -> Result<Vec<String>, crate:
 
                     let event = trimmed.to_uppercase();
 
-                    if !supported_events.contains(&event) {
+                    if !supported_events.contains(&event.as_str()) {
                         return Err(format!("Event `{}` is not a valid event. Please pick one of the following: {}", trimmed, supported_events.join(", ")));
                     }
                 }
 
-                Ok(supported_events)
+                Ok(())
             }
         )
     )
     .await??;
 
-    match res {
-        Ok(supported_events) => Ok(supported_events),
-        Err(e) => Err(e.into()),
-    }
+    res.map_err(|e| e.into())
 }
 
 #[poise::command(prefix_command, slash_command, user_cooldown = 1)]
@@ -260,7 +249,9 @@ pub async fn add_channel(
     }
 
     let events = if let Some(events) = events {
-        Some(check_all_events(events.split(',').map(|x| x.to_string()).collect()).await?)
+        let events: Vec<String> = events.split(',').map(|x| x.to_string()).collect();
+        check_all_events(events.clone()).await?;
+        Some(events)
     } else {
         None
     };
@@ -341,7 +332,9 @@ pub async fn add_discordhook(
     }
     
     let events = if let Some(events) = events {
-        Some(check_all_events(events.split(',').map(|x| x.to_string()).collect()).await?)
+        let events: Vec<String> = events.split(',').map(|x| x.to_string()).collect();
+        check_all_events(events.clone()).await?;
+        Some(events)
     } else {
         None
     };
