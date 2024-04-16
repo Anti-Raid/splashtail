@@ -10,7 +10,7 @@ import (
 	"github.com/anti-raid/splashtail/splashcore/types"
 	"github.com/anti-raid/splashtail/splashcore/utils"
 	"github.com/anti-raid/splashtail/splashcore/utils/mewext"
-	"github.com/anti-raid/splashtail/tasks"
+	"github.com/anti-raid/splashtail/jobs/tasks"
 	"github.com/anti-raid/splashtail/webserver/api"
 	"github.com/anti-raid/splashtail/webserver/state"
 	jsoniter "github.com/json-iterator/go"

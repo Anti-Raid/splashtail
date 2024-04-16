@@ -4,7 +4,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/anti-raid/splashtail/jobserver/state"
+	"github.com/anti-raid/splashtail/jobs/jobserver/state"
 
 	"go.uber.org/zap"
 )

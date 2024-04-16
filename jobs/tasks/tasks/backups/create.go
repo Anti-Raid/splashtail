@@ -15,9 +15,9 @@ import (
 
 	"github.com/anti-raid/splashtail/splashcore/types"
 	"github.com/anti-raid/splashtail/splashcore/utils"
-	"github.com/anti-raid/splashtail/tasks/common"
-	"github.com/anti-raid/splashtail/tasks/taskdef"
-	"github.com/anti-raid/splashtail/tasks/taskstate"
+	"github.com/anti-raid/splashtail/jobs/tasks/common"
+	"github.com/anti-raid/splashtail/jobs/tasks/taskdef"
+	"github.com/anti-raid/splashtail/jobs/tasks/taskstate"
 
 	_ "golang.org/x/image/webp"
 

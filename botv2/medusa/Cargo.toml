@@ -12,7 +12,7 @@ opt-level = 1 # Optimize for faster compilation times.
 
 [dependencies]
 moka = { version = "0.12.3", features = ["future", "futures-util"] }
-splashcore_rs = { path = "../../splashcore_rs" }
+splashcore_rs = { path = "../splashcore_rs" }
 
 [dependencies.serenity]
 git = "https://github.com/serenity-rs/serenity"

@@ -2,6 +2,7 @@ package state
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"os"
 	"reflect"
@@ -13,6 +14,7 @@ import (
 	"github.com/anti-raid/splashtail/splashcore/objectstorage"
 	"github.com/anti-raid/splashtail/webserver/state/animusmagiccache"
 	"github.com/anti-raid/splashtail/webserver/state/redishotcache"
+	jsoniter "github.com/json-iterator/go"
 
 	"github.com/bwmarrin/discordgo"
 	mproc "github.com/cheesycod/mewld/proc"
@@ -31,6 +33,7 @@ import (
 )
 
 var (
+	json                    = jsoniter.ConfigCompatibleWithStandardLibrary
 	Pool                    *pgxpool.Pool
 	Rueidis                 rueidis.Client // where perf is needed
 	AnimusMagicClient       *animusmagic.AnimusMagicClient
@@ -46,6 +49,26 @@ var (
 	Config                  *config.Config
 	MewldInstanceList       *mproc.InstanceList
 )
+
+func fetchMewldInstanceList() (*mproc.InstanceList, error) {
+	var mc *mproc.InstanceList
+
+	resp, err := http.Get(fmt.Sprintf("http://localhost:%d/getMewldInstanceList", Config.Meta.BotPort.Parse()))
+
+	if err != nil {
+		return nil, err
+	}
+
+	defer resp.Body.Close()
+
+	err = json.NewDecoder(resp.Body).Decode(&mc)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return mc, nil
+}
 
 func nonVulgar(fl validator.FieldLevel) bool {
 	// get the field value
@@ -92,6 +115,35 @@ func Setup() {
 	}
 
 	Logger = snippets.CreateZap()
+
+	for {
+		mil, err := fetchMewldInstanceList()
+
+		if err != nil {
+			Logger.Error("Error fetching mewld instance list, waiting", zap.Error(err))
+			time.Sleep(5 * time.Second)
+			continue
+		}
+
+		MewldInstanceList = mil
+		break
+	}
+
+	go func() {
+		// Keep updating instance list every 5 seconds
+		for {
+			mil, err := fetchMewldInstanceList()
+
+			if err != nil {
+				Logger.Error("Error fetching mewld instance list, waiting", zap.Error(err))
+			} else {
+				MewldInstanceList = mil
+				Logger.Debug("Updated mewld instance list")
+			}
+
+			time.Sleep(5 * time.Second)
+		}
+	}()
 
 	// Postgres
 	Pool, err = pgxpool.New(Context, Config.Meta.PostgresURL)

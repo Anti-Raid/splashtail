@@ -9,7 +9,7 @@ import (
 	"strconv"
 
 	"github.com/anti-raid/splashtail/splashcore/types"
-	"github.com/anti-raid/splashtail/tasks/taskstate"
+	"github.com/anti-raid/splashtail/jobs/tasks/taskstate"
 	"go.uber.org/zap"
 )
 

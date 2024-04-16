@@ -20,7 +20,7 @@ import (
 	"github.com/anti-raid/splashtail/cmd/localjobs/easyconfig"
 	"github.com/anti-raid/splashtail/cmd/localjobs/lib"
 	"github.com/anti-raid/splashtail/cmd/localjobs/ljstate"
-	"github.com/anti-raid/splashtail/tasks"
+	"github.com/anti-raid/splashtail/jobs/tasks"
 	"github.com/bwmarrin/discordgo"
 	"github.com/infinitybotlist/eureka/cmd"
 	"github.com/infinitybotlist/eureka/crypto"

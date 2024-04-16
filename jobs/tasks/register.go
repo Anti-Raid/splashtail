@@ -1,9 +1,9 @@
 package tasks
 
 import (
-	"github.com/anti-raid/splashtail/tasks/taskdef"
-	"github.com/anti-raid/splashtail/tasks/tasks/backups"
-	"github.com/anti-raid/splashtail/tasks/tasks/moderation"
+	"github.com/anti-raid/splashtail/jobs/tasks/taskdef"
+	"github.com/anti-raid/splashtail/jobs/tasks/tasks/backups"
+	"github.com/anti-raid/splashtail/jobs/tasks/tasks/moderation"
 )
 
 // Task management core

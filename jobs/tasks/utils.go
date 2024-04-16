@@ -7,7 +7,7 @@ import (
 
 	"github.com/anti-raid/splashtail/splashcore/types"
 	"github.com/anti-raid/splashtail/splashcore/utils"
-	"github.com/anti-raid/splashtail/tasks/taskdef"
+	"github.com/anti-raid/splashtail/jobs/tasks/taskdef"
 
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"

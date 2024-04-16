@@ -12,10 +12,10 @@ import (
 	"github.com/anti-raid/splashtail/splashcore/types"
 	"github.com/anti-raid/splashtail/splashcore/utils"
 	"github.com/anti-raid/splashtail/splashcore/utils/timex"
-	"github.com/anti-raid/splashtail/tasks/common"
-	"github.com/anti-raid/splashtail/tasks/step"
-	"github.com/anti-raid/splashtail/tasks/taskdef"
-	"github.com/anti-raid/splashtail/tasks/taskstate"
+	"github.com/anti-raid/splashtail/jobs/tasks/common"
+	"github.com/anti-raid/splashtail/jobs/tasks/step"
+	"github.com/anti-raid/splashtail/jobs/tasks/taskdef"
+	"github.com/anti-raid/splashtail/jobs/tasks/taskstate"
 	"github.com/go-viper/mapstructure/v2"
 
 	"github.com/bwmarrin/discordgo"
@@ -1080,11 +1080,10 @@ func (t *ServerBackupRestoreTask) Exec(
 								if attachmentByteLength < t.Constraints.Restore.TotalMaxAttachmentFileSize {
 									data, err := f.Get("attachments/" + attachment.ID)
 
+									// This is sadly common because discord
 									if err != nil {
-										if t.Options.IgnoreRestoreErrors {
-											continue
-										}
-										return nil, nil, fmt.Errorf("failed to get attachment: %w", err)
+										l.Warn("Failed to find attachment, ignoring", zap.Error(err), zap.String("attachmentId", attachment.ID))
+										continue
 									}
 
 									if data.Len() == 0 {

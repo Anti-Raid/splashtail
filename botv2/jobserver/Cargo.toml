@@ -22,7 +22,7 @@ chrono = { version = "0.4", features = ["serde"]}
 serde_json = "1.0"
 indexmap = { version = "2", features = ["serde"] }
 object_store = { version = "0.9.0", features = ["serde", "serde_json", "aws", "reqwest"] }
-splashcore_rs = { path = "../../splashcore_rs" }
+splashcore_rs = { path = "../splashcore_rs" }
 gwevent = { path = "../gwevent" }
 bothelpers = { path = "../bothelpers" }
 

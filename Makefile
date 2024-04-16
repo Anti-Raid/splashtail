@@ -1,7 +1,7 @@
 TEST__USER_ID := 728871946456137770
 CDN_PATH := /silverpelt/purrquinox/cdn/antiraid
 
-stcore:
+buildwebserver:
 	CGO_ENABLED=0 go build -v 
 reloadwebserver:
 	systemctl restart splashtail-staging-webserver
@@ -11,31 +11,39 @@ updatebot_dbg:
 	make buildbot_dbg && cp -v botv2/target/debug/botv2 botv2
 formatbot:
 	cd botv2 && cargo fmt
-restartwebserver:
-	make stcore
-	make buildbot
-	make restartwebserver_nobuild
 
-restartwebserver_nobuild:
+restartbot:
+	make buildbot
+	make restartbot_nobuild
+
+restartbot_nobuild:
 	sudo systemctl stop splashtail-staging-webserver
 	sleep 3 # Give time for the webserver to stop
 	cp -v botv2/target/release/botv2 botv2
 	sudo systemctl start splashtail-staging-webserver
+
 reloadjobserver:
 	systemctl restart splashtail-staging-jobs
+
 all:
-	make buildbot && make buildmewldwebui && make stcore 
+	make buildmewldwebui && make buildwebserver && make buildbot 
+
 sqlx:
 	cd botv2/jobserver && cargo sqlx prepare
 	cd botv2 && cargo sqlx prepare
+
 buildbot: sqlx
 	cd botv2 && SQLX_OFFLINE=true cargo build --release
+
 buildbot_dbg: sqlx
 	cd botv2 && SQLX_OFFLINE=true cargo build --timings
+
 buildmewldwebui:
 	cd webserver/mewld_web/ui && npm i && npm run build && cd ../../
+
 tests:
 	CGO_ENABLED=0 go test -v -coverprofile=coverage.out ./...
+
 ts:
 	rm -rvf $(CDN_PATH)/dev/bindings/splashtail
 	~/go/bin/tygo generate

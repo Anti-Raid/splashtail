@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/anti-raid/splashtail/tasks"
-	"github.com/anti-raid/splashtail/tasks/taskdef"
+	"github.com/anti-raid/splashtail/jobs/tasks"
+	"github.com/anti-raid/splashtail/jobs/tasks/taskdef"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 

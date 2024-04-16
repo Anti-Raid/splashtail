@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"runtime/debug"
 
-	"github.com/anti-raid/splashtail/tasks/taskstate"
+	"github.com/anti-raid/splashtail/jobs/tasks/taskstate"
 	"github.com/bwmarrin/discordgo"
 )
 

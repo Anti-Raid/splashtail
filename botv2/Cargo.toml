@@ -40,7 +40,7 @@ regex = "1"
 bitflags = "2"
 
 # Anti-Raid specific
-splashcore_rs = { path = "../splashcore_rs" }
+splashcore_rs = { path = "./splashcore_rs" }
 gwevent = { path = "./gwevent" }
 bothelpers = { path = "./bothelpers" }
 jobserver = { path = "./jobserver" }

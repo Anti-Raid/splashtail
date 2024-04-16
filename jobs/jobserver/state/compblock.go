@@ -10,5 +10,5 @@ import (
 	_ "github.com/anti-raid/splashtail/splashcore/types"
 	_ "github.com/anti-raid/splashtail/splashcore/utils"
 	_ "github.com/anti-raid/splashtail/splashcore/utils/mewext"
-	_ "github.com/anti-raid/splashtail/tasks"
+	_ "github.com/anti-raid/splashtail/jobs/tasks"
 )

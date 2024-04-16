@@ -1,9 +1,9 @@
 package jobserver
 
 import (
-	"github.com/anti-raid/splashtail/jobserver/bgtasks"
-	"github.com/anti-raid/splashtail/jobserver/core"
-	"github.com/anti-raid/splashtail/jobserver/state"
+	"github.com/anti-raid/splashtail/jobs/jobserver/bgtasks"
+	"github.com/anti-raid/splashtail/jobs/jobserver/core"
+	"github.com/anti-raid/splashtail/jobs/jobserver/state"
 )
 
 func CreateJobServer() {
