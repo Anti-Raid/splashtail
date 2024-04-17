@@ -297,10 +297,11 @@ async fn main() {
         .format(move |buf, record| {
             writeln!(
                 buf,
-                "[{} ({} of {})] {} - {}",
+                "[{} ({} of {})] ({}) {} - {}",
                 cluster_name,
                 cluster_id,
                 cluster_count - 1,
+                record.target(),
                 record.level(),
                 record.args()
             )
