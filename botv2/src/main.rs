@@ -305,7 +305,8 @@ async fn main() {
                 record.args()
             )
         })
-        .filter(Some("botv2"), log::LevelFilter::Info);
+        .filter(Some("botv2"), log::LevelFilter::Info)
+        .filter(Some("botox"), log::LevelFilter::Info);
 
     if debug_mode {
         env_builder.filter(None, log::LevelFilter::Debug);
