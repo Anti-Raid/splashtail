@@ -171,7 +171,7 @@ pub fn module() -> crate::silverpelt::Module {
             botox::taskman::Task {
                 name: "Temporary Punishment Task",
                 description: "Handle expired punishments",
-                duration: std::time::Duration::from_secs(1),
+                duration: std::time::Duration::from_secs(60),
                 enabled: true,
                 run: Box::new(move |ctx| {
                     temp_punishment_task::temp_punishment(ctx).boxed()
