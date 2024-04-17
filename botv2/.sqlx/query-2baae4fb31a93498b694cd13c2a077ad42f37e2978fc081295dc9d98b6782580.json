@@ -1,0 +1,40 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT id, type AS typ, sink, events FROM auditlogs__sinks WHERE guild_id = $1 AND broken = false",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 1,
+        "name": "typ",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "sink",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "events",
+        "type_info": "TextArray"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      true
+    ]
+  },
+  "hash": "2baae4fb31a93498b694cd13c2a077ad42f37e2978fc081295dc9d98b6782580"
+}
