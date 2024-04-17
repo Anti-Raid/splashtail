@@ -1,7 +1,7 @@
 use crate::{Context, Error};
 use poise::CreateReply;
 use serenity::all::{Channel, ChannelType, CreateEmbed};
-use splashcore_rs::crypto::gen_random;
+use botox::crypto::gen_random;
 use futures_util::StreamExt;
 use std::time::Duration;
 use secrecy::ExposeSecret;

@@ -1,6 +1,6 @@
 use super::permissions::PermissionResult;
 use super::silverpelt_cache::SILVERPELT_CACHE;
-use bothelpers::cache::CacheHttpImpl;
+use botox::cache::CacheHttpImpl;
 use crate::silverpelt::{
     self, 
     utils::permute_command_names, 

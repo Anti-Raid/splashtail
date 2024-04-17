@@ -17,10 +17,10 @@ restartbot:
 	make restartbot_nobuild
 
 restartbot_nobuild:
-	sudo systemctl stop splashtail-staging-webserver
+	sudo systemctl stop splashtail-staging-bot
 	sleep 3 # Give time for the webserver to stop
 	cp -v botv2/target/release/botv2 botv2
-	sudo systemctl start splashtail-staging-webserver
+	sudo systemctl start splashtail-staging-bot
 
 reloadjobserver:
 	systemctl restart splashtail-staging-jobs

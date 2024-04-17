@@ -12,7 +12,7 @@ pub async fn event_listener(
     let event = &ectx.full_event;
     let user_data = &ectx.data;
 
-    let cache_http = bothelpers::cache::CacheHttpImpl {
+    let cache_http = botox::cache::CacheHttpImpl {
         cache: ctx.cache.clone(),
         http: ctx.http.clone(),
     };

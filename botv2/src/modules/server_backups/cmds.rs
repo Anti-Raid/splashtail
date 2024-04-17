@@ -1,5 +1,5 @@
-use bothelpers::utils::get_icon_of_state;
-use bothelpers::utils::{
+use splashcore_rs::utils::get_icon_of_state;
+use splashcore_rs::utils::{
     create_special_allocation_from_str, parse_numeric_list, REPLACE_CHANNEL,
 };
 use crate::ipc::animus_magic::{
@@ -205,13 +205,13 @@ pub async fn backups_create(
         )
         .await?;
 
-    let ch = bothelpers::cache::CacheHttpImpl {
+    let ch = botox::cache::CacheHttpImpl {
         cache: ctx.serenity_context().cache.clone(),
         http: ctx.serenity_context().http.clone(),
     };
 
     async fn update_base_message(
-        cache_http: bothelpers::cache::CacheHttpImpl,
+        cache_http: botox::cache::CacheHttpImpl,
         mut base_message: serenity::model::channel::Message,
         task: Arc<jobserver::Task>,
     ) -> Result<(), Error> {
@@ -402,7 +402,7 @@ pub async fn backups_list(ctx: Context<'_>) -> Result<(), Error> {
                     guild_id,
                     ctx.author().id, 
                     &ctx.data().pool, 
-                    &bothelpers::cache::CacheHttpImpl::from_ctx(ctx.serenity_context()), 
+                    &botox::cache::CacheHttpImpl::from_ctx(ctx.serenity_context()), 
                     &Some(ctx), 
                     crate::silverpelt::cmd::CheckCommandOptions::default(), // TODO: Maybe change this to allow backups delete to be disabled?
                 ).await;  
@@ -937,13 +937,13 @@ pub async fn backups_restore(
         )
         .await?;
 
-    let ch = bothelpers::cache::CacheHttpImpl {
+    let ch = botox::cache::CacheHttpImpl {
         cache: ctx.serenity_context().cache.clone(),
         http: ctx.serenity_context().http.clone(),
     };
 
     async fn update_base_message(
-        cache_http: bothelpers::cache::CacheHttpImpl,
+        cache_http: botox::cache::CacheHttpImpl,
         mut base_message: serenity::model::channel::Message,
         task: Arc<jobserver::Task>,
     ) -> Result<(), Error> {

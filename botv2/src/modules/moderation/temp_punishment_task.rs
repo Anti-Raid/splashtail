@@ -1,5 +1,3 @@
-use sqlx::PgPool;
-
 const MAX_CONCURRENT_UNBANS: usize = 3;
 
 #[derive(Debug)]
@@ -10,9 +8,11 @@ enum UnbanError {
 }
 
 pub async fn temp_punishment(
-    pool: &PgPool,
     ctx: &serenity::client::Context,
 ) -> Result<(), crate::Error> {
+    let data = ctx.data::<crate::Data>();
+    let pool = &data.pool;
+
     let temp_punishments = sqlx::query!(
         "SELECT id, guild_id, user_id, moderator, action, stings, reason FROM moderation__actions WHERE handled = false AND duration IS NOT NULL AND duration + created_at < NOW()",
     )

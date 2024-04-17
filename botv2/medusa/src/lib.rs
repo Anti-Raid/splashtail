@@ -28,7 +28,7 @@ impl MedusaClient {
         let (tx, rx) = mpsc::channel(buffer_size);
         
         let notification = MedusaNotification {
-            id: splashcore_rs::crypto::gen_random(32),
+            id: botox::crypto::gen_random(32),
             events_needed: events_needed.to_vec(),
             chan: tx,
         };

@@ -56,11 +56,19 @@ impl From<&str> for ResolvedField {
 fn resolve_gwevent_field(field: &FieldType) -> Result<ResolvedField, crate::Error> {
     match field {
         FieldType::Strings(s) => {
+            let joined = s.join(", ");
+            let joined_len = joined.len();
             Ok(
                 ResolvedField {
-                    value: s.join(", "),
+                    value: joined,
                     inline: true,
-                    update_format: FieldFormat::Arrow
+                    update_format: {
+                        if joined_len < 300 {
+                            FieldFormat::BeforeAfter
+                        } else {
+                            FieldFormat::Arrow
+                        }
+                    }
                 }
             )
         },
@@ -420,6 +428,7 @@ pub async fn dispatch_audit_log(
         let (vc, inline) = {
             let mut vcs = Vec::new();
             let mut inline = false;
+            let mut update_format = FieldFormat::Arrow;
 
             for ft in v.value {
                 let mut resolved_field = resolve_gwevent_field(&ft)?;
@@ -433,6 +442,8 @@ pub async fn dispatch_audit_log(
                 if !inline {
                     inline = resolved_field.inline;   
                 } 
+
+                update_format = resolved_field.update_format;
             }
 
             // Check for duplicates
@@ -449,7 +460,13 @@ pub async fn dispatch_audit_log(
                 }
             }
 
-            (vcs.join(" -> "), inline)
+            (
+                match update_format {
+                    FieldFormat::Arrow => vcs.join(" -> "),
+                    FieldFormat::BeforeAfter => format!("**Before:** {}\n**After:** {}", vcs[0], vcs[1]),
+                }, 
+                inline
+            )
         };
 
         if vc.trim().is_empty() {
@@ -482,7 +499,7 @@ pub async fn dispatch_audit_log(
 
         match sink.typ.as_str() {
             "channel" => {
-                let cache_http = bothelpers::cache::CacheHttpImpl {
+                let cache_http = botox::cache::CacheHttpImpl {
                     cache: ctx.cache.clone(),
                     http: ctx.http.clone(),
                 };

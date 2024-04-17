@@ -23,3 +23,7 @@ features = ["model", "http", "cache", "rustls_backend", "unstable"]
 version = "1"
 default-features = true
 features = ["full", "macros", "rt-multi-thread"]
+
+[dependencies.botox]
+git = "https://github.com/infinitybotlist/botox"
+branch = "main"

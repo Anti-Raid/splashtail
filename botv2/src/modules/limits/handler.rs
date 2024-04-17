@@ -1,11 +1,11 @@
 use log::{error, info, warn};
 use poise::serenity_prelude::{GuildId, UserId};
-use splashcore_rs::crypto::gen_random;
+use botox::crypto::gen_random;
 use sqlx::PgPool;
 use std::collections::HashMap;
 use surrealdb::engine::remote::ws::Client;
 use surrealdb::Surreal;
-use bothelpers::cache::CacheHttpImpl;
+use botox::cache::CacheHttpImpl;
 use super::core;
 use crate::modules::limits::core::{Limit, UserAction};
 use crate::Error;

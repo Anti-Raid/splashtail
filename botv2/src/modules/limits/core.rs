@@ -8,7 +8,7 @@ use strum_macros::{Display, EnumString, VariantNames};
 use surrealdb::engine::remote::ws::Client;
 use surrealdb::Surreal;
 
-use bothelpers::utils::pg_interval_to_secs;
+use splashcore_rs::utils::pg_interval_to_secs;
 use crate::Error;
 
 #[derive(poise::ChoiceParameter)]

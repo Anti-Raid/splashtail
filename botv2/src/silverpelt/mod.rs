@@ -6,7 +6,6 @@ pub mod module_config;
 pub mod permissions;
 pub mod poise_ext;
 pub mod silverpelt_cache;
-pub mod taskcat;
 pub mod utils;
 
 use futures::future::BoxFuture;
@@ -74,7 +73,7 @@ pub struct Module {
     pub event_handlers: Vec<ModuleEventHandler>,
 
     /// Background tasks (if any)
-    pub background_tasks: Vec<taskcat::Task>,
+    pub background_tasks: Vec<botox::taskman::Task>,
 
     /// Extra init code
     pub on_startup: Vec<OnStartupFunction>

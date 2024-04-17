@@ -1,4 +1,4 @@
-use bothelpers::cache::CacheHttpImpl;
+use botox::cache::CacheHttpImpl;
 use crate::silverpelt;
 /// Bot animus contains the request and response for a bot
 ///

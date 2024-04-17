@@ -2,11 +2,10 @@ mod config;
 mod ipc;
 mod modules;
 mod silverpelt;
-mod tasks;
 
 use ipc::{animus_magic::client::AnimusMagicClient, mewld::MewldIpcClient};
 
-use bothelpers::cache::CacheHttpImpl;
+use botox::cache::CacheHttpImpl;
 use silverpelt::{
     module_config::is_module_enabled,
     silverpelt_cache::SILVERPELT_CACHE, 
@@ -172,10 +171,8 @@ async fn event_listener<'a>(
                     }
                 }
 
-                tokio::task::spawn(silverpelt::taskcat::start_all_tasks(
+                tokio::task::spawn(botox::taskman::start_all_tasks(
                     tasks,
-                    user_data.pool.clone(),
-                    CacheHttpImpl::from_ctx(ctx.serenity_context),
                     ctx.serenity_context.clone(),
                 ));
 

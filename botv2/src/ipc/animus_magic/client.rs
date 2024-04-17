@@ -1,7 +1,7 @@
 use super::bot::{BotAnimusMessage, BotAnimusResponse};
 use super::jobserver::{JobserverAnimusMessage, JobserverAnimusResponse};
 use super::infra::{InfraAnimusMessage, InfraAnimusResponse};
-use bothelpers::cache::CacheHttpImpl;
+use botox::cache::CacheHttpImpl;
 use crate::{ipc::argparse::MEWLD_ARGS, Error};
 use dashmap::DashMap;
 use fred::{

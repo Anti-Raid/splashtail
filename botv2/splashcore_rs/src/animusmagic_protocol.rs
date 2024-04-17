@@ -2,7 +2,7 @@
 ///
 /// Format of payloads: <target [from]: u8><target [to]: u8><cluster id from: u16><cluster id to: u16><op: 8 bits><command id: alphanumeric string>/<cbor payload>
 use serde::{Deserialize, Serialize};
-use crate::crypto::gen_random;
+use botox::crypto::gen_random;
 use std::time::Duration;
 
 pub struct AnimusMessageMetadata {

@@ -1,7 +1,7 @@
 pub mod taskpoll;
 
 use splashcore_rs::objectstore::ObjectStore;
-use bothelpers::utils::get_icon_of_state;
+use splashcore_rs::utils::get_icon_of_state;
 use indexmap::IndexMap;
 use object_store::path::Path;
 use object_store::signer::Signer;

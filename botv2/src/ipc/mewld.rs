@@ -1,4 +1,4 @@
-use bothelpers::cache::CacheHttpImpl;
+use botox::cache::CacheHttpImpl;
 #[allow(unused_imports)]
 use fred::clients::SubscriberClient;
 use fred::interfaces::{ClientLike, EventInterface, PubsubInterface};

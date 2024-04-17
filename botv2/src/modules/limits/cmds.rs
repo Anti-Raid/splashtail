@@ -1,4 +1,4 @@
-use bothelpers::utils::{parse_pg_interval, secs_to_pg_interval};
+use splashcore_rs::utils::{parse_pg_interval, secs_to_pg_interval};
 use crate::modules::limits::core::Limit;
 use crate::{Context, Error};
 use poise::{serenity_prelude::CreateEmbed, CreateReply};
@@ -28,7 +28,7 @@ pub async fn limits_add(
     #[description = "The amount of times the limit can be hit"] limit_per: i32,
     #[description = "The time interval infractions are counted in"] limit_time: i64,
     #[description = "The time unit for the time interval [seconds/minutes/hours/days]"]
-    limit_time_unit: bothelpers::utils::Unit,
+    limit_time_unit: splashcore_rs::utils::Unit,
     #[description = "The action to take when the limit is hit"]
     limit_action: crate::modules::limits::core::UserLimitActionsChoices,
 ) -> Result<(), Error> {

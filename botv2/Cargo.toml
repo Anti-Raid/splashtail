@@ -42,7 +42,6 @@ bitflags = "2"
 # Anti-Raid specific
 splashcore_rs = { path = "./splashcore_rs" }
 gwevent = { path = "./gwevent" }
-bothelpers = { path = "./bothelpers" }
 jobserver = { path = "./jobserver" }
 medusa = { path = "./medusa" }
 
@@ -58,6 +57,10 @@ features = ["model", "http", "cache", "temp_cache", "rustls_backend", "unstable"
 
 [dependencies.kittycat]
 git = "https://github.com/infinitybotlist/kittycat"
+branch = "main"
+
+[dependencies.botox]
+git = "https://github.com/infinitybotlist/botox"
 branch = "main"
 
 [build-dependencies]

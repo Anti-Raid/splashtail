@@ -28,13 +28,13 @@ pub fn module() -> crate::silverpelt::Module {
             (ping::ping(), crate::silverpelt::CommandExtendedData::none()),
         ],
         background_tasks: vec![
-            crate::silverpelt::taskcat::Task {
-                name: "Update Bot Status".to_string(),
-                description: "Updates the bot status every 15 minutes".to_string(),
+            botox::taskman::Task {
+                name: "Update Bot Status",
+                description: "Updates the bot status every 15 minutes",
                 duration: std::time::Duration::from_secs(60 * 5),
                 enabled: true,
                 run: Box::new(
-                    move |_pool, _ch, ctx| {
+                    move |ctx| {
                         update_status_task::update_status(ctx).boxed()
                     }
                 )

@@ -1,4 +1,4 @@
-use bothelpers::utils::{
+use splashcore_rs::utils::{
     create_special_allocation_from_str, get_icon_of_state, parse_duration_string,
     parse_numeric_list_to_str, Unit, REPLACE_CHANNEL,
 };
@@ -277,7 +277,7 @@ pub async fn prune_user(
         .edit(&ctx.http(), EditMessage::new().embed(embed.clone()))
         .await?;
 
-    let ch = bothelpers::cache::CacheHttpImpl {
+    let ch = botox::cache::CacheHttpImpl {
         cache: ctx.serenity_context().cache.clone(),
         http: ctx.serenity_context().http.clone(),
     };
@@ -285,7 +285,7 @@ pub async fn prune_user(
     async fn update_base_message(
         user: Arc<User>,
         prune_debug: bool,
-        cache_http: bothelpers::cache::CacheHttpImpl,
+        cache_http: botox::cache::CacheHttpImpl,
         mut base_message: Message,
         task: Arc<jobserver::Task>,
     ) -> Result<(), Error> {

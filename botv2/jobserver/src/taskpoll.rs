@@ -1,5 +1,5 @@
 use crate::Task;
-use bothelpers::cache::CacheHttpImpl;
+use botox::cache::CacheHttpImpl;
 use serde_json::Value;
 use serenity::all::{CreateActionRow, CreateButton, CreateEmbed};
 use std::future::Future;

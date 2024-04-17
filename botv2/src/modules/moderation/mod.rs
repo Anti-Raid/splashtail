@@ -168,13 +168,13 @@ pub fn module() -> crate::silverpelt::Module {
             )
         ],
         background_tasks: vec![
-            crate::silverpelt::taskcat::Task {
-                name: "Temporary Punishment Task".to_string(),
-                description: "Handle expired punishments".to_string(),
+            botox::taskman::Task {
+                name: "Temporary Punishment Task",
+                description: "Handle expired punishments",
                 duration: std::time::Duration::from_secs(60),
                 enabled: true,
-                run: Box::new(move |pool, _ch, ctx| {
-                    temp_punishment_task::temp_punishment(pool, ctx).boxed()
+                run: Box::new(move |ctx| {
+                    temp_punishment_task::temp_punishment(ctx).boxed()
                 }),
             }
         ],

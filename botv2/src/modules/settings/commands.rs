@@ -1,4 +1,4 @@
-use bothelpers::cache::CacheHttpImpl;
+use botox::cache::CacheHttpImpl;
 use crate::{Error, Context};
 use crate::silverpelt::{silverpelt_cache::SILVERPELT_CACHE, CommandExtendedData, GuildCommandConfiguration, GuildModuleConfiguration};
 
