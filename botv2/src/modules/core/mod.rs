@@ -1,9 +1,6 @@
 mod help;
 mod ping;
 mod stats;
-mod update_status_task;
-
-use futures_util::FutureExt;
 
 pub fn module() -> crate::silverpelt::Module {
     crate::silverpelt::Module {
@@ -26,20 +23,6 @@ pub fn module() -> crate::silverpelt::Module {
                 crate::silverpelt::CommandExtendedData::none(),
             ),
             (ping::ping(), crate::silverpelt::CommandExtendedData::none()),
-        ],
-        background_tasks: vec![
-            botox::taskman::Task {
-                name: "Update Bot Status",
-                description: "Updates the bot status every 15 minutes",
-                duration: std::time::Duration::from_secs(60 * 5),
-                enabled: true,
-                run: Box::new(
-                    move |ctx| {
-                        update_status_task::update_status(ctx).boxed()
-                    }
-                )
-
-            }
         ],
         ..Default::default()
     }
