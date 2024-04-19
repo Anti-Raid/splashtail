@@ -29,6 +29,7 @@ var (
 	jobserverClusterMap  []mproc.ClusterMap
 	botAmProbeTask       *AMProbeTask
 	jobserverAmProbeTask *AMProbeTask
+	webserverAmProbeTask *AMProbeTask
 )
 
 func StartMonitors() (err error) {
@@ -109,7 +110,7 @@ func StartMonitors() (err error) {
 		Target:                  animusmagic.AnimusTargetBot,
 		ClusterMap:              botClusterMap,
 		MewldChannel:            botMldConfig.RedisChannel,
-		SystemdService:          "splashtail-" + config.CurrentEnv + "-webserver",
+		SystemdService:          "splashtail-" + config.CurrentEnv + "-bot",
 		NoHandleInactiveSystemd: true,
 		RestartAfterFailed:      3,
 		ProcessName:             []string{"splashtail", "botv2"},
@@ -126,8 +127,24 @@ func StartMonitors() (err error) {
 		ProcessName:             []string{"splashtail"},
 	}
 
+	webserverAmProbeTask = &AMProbeTask{
+		AnimusMagicClient: AnimusMagicClient,
+		Target:            animusmagic.AnimusTargetWebserver,
+		ClusterMap: []mproc.ClusterMap{
+			{
+				ID: 0,
+			},
+		},
+		MewldChannel:            botMldConfig.RedisChannel,
+		SystemdService:          "splashtail-" + config.CurrentEnv + "-webserver",
+		NoHandleInactiveSystemd: true,
+		RestartAfterFailed:      3,
+		ProcessName:             []string{"splashtail", "webserver"},
+	}
+
 	bgtasks.BgTaskRegistry = append(bgtasks.BgTaskRegistry, botAmProbeTask)
 	bgtasks.BgTaskRegistry = append(bgtasks.BgTaskRegistry, jobserverAmProbeTask)
+	bgtasks.BgTaskRegistry = append(bgtasks.BgTaskRegistry, webserverAmProbeTask)
 
 	return nil
 }

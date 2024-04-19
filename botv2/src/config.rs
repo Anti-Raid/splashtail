@@ -115,19 +115,11 @@ pub struct Sites {
     pub api: Differs<String>,
 }
 
-#[derive(Serialize, Deserialize, Clone)]
-pub struct Surreal {
-    pub url: String,
-    pub username: String,
-    pub password: String,
-}
-
 #[derive(Serialize, Deserialize)]
 pub struct Config {
     pub discord_auth: DiscordAuth,
     pub meta: Meta,
     pub sites: Sites,
-    pub surreal: Surreal,
     pub object_storage: ObjectStorage,
 
     #[serde(skip)]
