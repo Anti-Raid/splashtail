@@ -128,21 +128,6 @@ To load the database seed, follow the following steps:
 
 ``cargo install sqlx-cli``
 
-### SurrealDB setup
-
-AntiRaid internally uses SurrealDB for certain bot modules such as limits. To setup the external surreal server, use the following command:
-
-``surreal start --bind 127.0.0.1;6318 --log info --auth --user splashtail --pass PASSWORD --deny-net --deny-guests file:antiraid-development.db``
-
-Then, in config.yaml, set the following
-```
-surreal: 
-      url: 127.0.0.1:6318
-      username: splashtail
-      password: PASSWORD
-```
-
-
 ### Building Bot/API
 
 - Run ``make buildbot`` to build the bot

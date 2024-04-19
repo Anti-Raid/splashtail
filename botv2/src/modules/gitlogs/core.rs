@@ -158,7 +158,7 @@ pub async fn newhook(
     let webh_secret = Alphanumeric.sample_string(&mut rand::thread_rng(), 256);
 
     // Create a new dm channel with the user if not slash command
-    let dm_channel = ctx.author().create_dm_channel(&ctx.http()).await;
+    let dm_channel = ctx.author().create_dm_channel(ctx.http()).await;
 
     let dm = match dm_channel {
         Ok(dm) => dm,
@@ -460,7 +460,7 @@ pub async fn resetsecret(
 
     // Try to DM the user
     // Create a new dm channel with the user if not slash command
-    let dm_channel = ctx.author().create_dm_channel(&ctx.http()).await;
+    let dm_channel = ctx.author().create_dm_channel(ctx.http()).await;
 
     let dm = match dm_channel {
         Ok(dm) => dm,

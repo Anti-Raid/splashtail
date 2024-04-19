@@ -116,7 +116,7 @@ impl BotAnimusMessage {
                     let user_roles = {
                         let mem = match guild.members.get(&user_id) {
                             Some(member) => member,
-                            None => return Err(format!("Failed to get member").into()),
+                            None => return Err("Failed to get member".into()),
                         };
 
                         mem.roles.to_vec()
@@ -125,7 +125,7 @@ impl BotAnimusMessage {
                     let bot_user_id = cache_http.cache.current_user().id;
                     let bot_roles = match guild.members.get(&bot_user_id) {
                         Some(member) => member.roles.to_vec(),
-                        None => return Err(format!("Failed to get bot member").into()),
+                        None => return Err("Failed to get bot member".into()),
                     };
 
                     (
