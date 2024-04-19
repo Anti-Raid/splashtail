@@ -463,7 +463,13 @@ pub async fn dispatch_audit_log(
             (
                 match update_format {
                     FieldFormat::Arrow => vcs.join(" -> "),
-                    FieldFormat::BeforeAfter => format!("**Before:** {}\n**After:** {}", vcs[0], vcs[1]),
+                    FieldFormat::BeforeAfter => {
+                        if vcs.len() == 2 {
+                            format!("**Before:** {}\n**After:** {}", vcs[0], vcs[1])                    
+                        } else {
+                            vcs.join(" -> ")
+                        }
+                    },
                 }, 
                 inline
             )

@@ -22,9 +22,6 @@ use poise::CreateReply;
 use serenity::all::HttpBuilder;
 use sqlx::postgres::PgPoolOptions;
 use std::io::Write;
-use surrealdb::engine::remote::ws::{Client, Ws};
-use surrealdb::opt::auth::Root;
-use surrealdb::Surreal;
 
 type Error = Box<dyn std::error::Error + Send + Sync>;
 type Context<'a> = poise::Context<'a, Data, Error>;
@@ -37,7 +34,6 @@ pub struct Data {
     pub object_store: Arc<ObjectStore>,
     pub animus_magic_ipc: Arc<AnimusMagicClient>,
     pub shards_ready: Arc<dashmap::DashMap<u16, bool>>,
-    pub surreal_cache: Surreal<Client>,
 }
 
 async fn on_error(error: poise::FrameworkError<'_, Data, Error>) {
@@ -520,24 +516,6 @@ async fn main() {
     .build_pool(REDIS_MAX_CONNECTIONS.try_into().unwrap())
     .expect("Could not initialize Redis pool");
 
-    info!("Connecting to surreal");
-
-    let surreal_config = config::CONFIG.surreal.clone();
-    let surreal_client = Surreal::new::<Ws>(surreal_config.url)
-        .await
-        .expect("Couldnt initialize surreal");
-    let _ = surreal_client
-        .signin(Root {
-            username: surreal_config.username.as_str(),
-            password: surreal_config.password.as_str(),
-        })
-        .await;
-    surreal_client
-        .use_ns("antiraid")
-        .use_db("splashtail")
-        .await
-        .expect("Couldnt use namespace and database");
-
     let pg_pool = PgPoolOptions::new()
     .max_connections(POSTGRES_MAX_CONNECTIONS)
     .connect(&config::CONFIG.meta.postgres_url)
@@ -567,7 +545,6 @@ async fn main() {
         .build()
         .expect("Could not initialize reqwest client"),
         shards_ready: Arc::new(dashmap::DashMap::new()),
-        surreal_cache: surreal_client,
     };
 
     info!("Initializing bot state");

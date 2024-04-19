@@ -5,9 +5,6 @@ use sqlx::{
     PgPool,
 };
 use strum_macros::{Display, EnumString, VariantNames};
-use surrealdb::engine::remote::ws::Client;
-use surrealdb::Surreal;
-
 use splashcore_rs::utils::pg_interval_to_secs;
 use crate::Error;
 
@@ -172,15 +169,25 @@ pub struct UserAction {
 impl UserAction {
     /// Fetch user actions for a action id
     pub async fn by_id(data: &crate::Data, guild_id: GuildId, action_id: &str) -> Result<Self, Error> {
-        let mut query = data.surreal_cache.query("select * from user_actions where guild_id=type::string($guild_id) and action_id=type::string($action_id)")
-            .bind(("guild_id", guild_id))
-            .bind(("action_id", action_id))
-            .await?;
+        let res = sqlx::query!(
+            "SELECT action_id, limit_type, created_at, user_id, guild_id, action_data, limits_hit, target FROM user_actions WHERE guild_id = $1 AND action_id = $2",
+            guild_id.to_string(),
+            action_id
+        )
+        .fetch_optional(&data.pool)
+        .await?;
 
-        let response: Option<UserAction> = query.take(0)?;
-        
-        match response {
-            Some(action) => Ok(action),
+        match res {
+            Some(action) => Ok(UserAction {
+                action_id: action.action_id,
+                limit_type: action.limit_type.parse()?,
+                created_at: action.created_at,
+                user_id: action.user_id.parse()?,
+                guild_id: action.guild_id.parse()?,
+                action_data: action.action_data,
+                limits_hit: action.limits_hit,
+                target: action.target,
+            }),
             None => Err("No action found".into()),
         }
     }
@@ -191,25 +198,55 @@ impl UserAction {
         guild_id: GuildId,
         user_id: UserId,
     ) -> Result<Vec<Self>, Error> {
-        let mut query = data.surreal_cache.query("select * from user_actions where guild_id=type::string($guild_id) and user_id=type::string($user_id)")
-        .bind(("guild_id", guild_id))
-        .bind(("user_id", user_id))
+        let res = sqlx::query!(
+            "SELECT action_id, limit_type, created_at, user_id, guild_id, action_data, limits_hit, target FROM user_actions WHERE guild_id = $1 AND user_id = $2",
+            guild_id.to_string(),
+            user_id.to_string()
+        )
+        .fetch_all(&data.pool)
         .await?;
 
-        let response: Vec<UserAction> = query.take(0)?;
+        let mut actions = Vec::new();
+        for action in res {
+            actions.push(UserAction {
+                action_id: action.action_id,
+                limit_type: action.limit_type.parse()?,
+                created_at: action.created_at,
+                user_id,
+                guild_id,
+                action_data: action.action_data,
+                limits_hit: action.limits_hit,
+                target: action.target,
+            });
+        }
         
-        Ok(response)
+        Ok(actions)
     }
 
     /// Fetch all user actions in a guild
     pub async fn guild(data: &crate::Data, guild_id: GuildId) -> Result<Vec<Self>, Error> {
-        let mut query = data.surreal_cache.query("select * from user_actions where guild_id=type::string($guild_id)")
-        .bind(("guild_id", guild_id))
+        let res = sqlx::query!(
+            "SELECT action_id, limit_type, created_at, user_id, guild_id, action_data, limits_hit, target FROM user_actions WHERE guild_id = $1",
+            guild_id.to_string(),
+        )
+        .fetch_all(&data.pool)
         .await?;
 
-        let response: Vec<UserAction> = query.take(0)?;
+        let mut actions = Vec::new();
+        for action in res {
+            actions.push(UserAction {
+                action_id: action.action_id,
+                limit_type: action.limit_type.parse()?,
+                created_at: action.created_at,
+                user_id: action.user_id.parse()?,
+                guild_id,
+                action_data: action.action_data,
+                limits_hit: action.limits_hit,
+                target: action.target,
+            });
+        }
         
-        Ok(response)
+        Ok(actions)
     }
 }
 
@@ -232,7 +269,7 @@ pub struct Limit {
 }
 
 impl Limit {
-    pub async fn from_database(pool: &PgPool, guild_id: GuildId) -> Result<Vec<Self>, Error> {
+    pub async fn guild(pool: &PgPool, guild_id: GuildId) -> Result<Vec<Self>, Error> {
         let rec = sqlx::query!(
             "
                 SELECT limit_id, limit_name, limit_type, limit_action, limit_per, 
@@ -264,32 +301,6 @@ impl Limit {
             });
         }
         Ok(limits)
-    }
-
-    pub async fn from_cache(
-        cache: &Surreal<Client>,
-        guild_id: GuildId,
-    ) -> Result<Vec<Self>, Error> {
-        let mut request = cache
-            .query("select guild_id, limit_id, limit_name, limit_type, limit_action, limit_per, limit_time from guild_limits where guild_id = type::string($guild_id)")
-            .bind(("guild_id", guild_id.to_string()))
-            .await?;
-
-        let records: Vec<Limit> = request.take(0)?;
-        Ok(records)
-    }
-
-    pub async fn fetch(
-        cache: &Surreal<Client>,
-        pool: &PgPool,
-        guild_id: GuildId,
-    ) -> Result<Vec<Self>, Error> {
-        let cache = Self::from_cache(cache, guild_id).await?;
-        if cache.is_empty() {
-            let db = Self::from_database(pool, guild_id).await?;
-            return Ok(db);
-        }
-        Ok(cache)
     }
 }
 

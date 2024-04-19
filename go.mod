@@ -18,7 +18,7 @@ require (
 	github.com/cloudflare/tableflip v1.2.3
 	github.com/fxamacker/cbor/v2 v2.6.0
 	github.com/go-viper/mapstructure/v2 v2.0.0-alpha.1
-	github.com/infinitybotlist/iblfile v0.0.0-20240413073551-e2a8b13b7806
+	github.com/infinitybotlist/iblfile v0.0.0-20240419035652-05c007b1bebe
 	github.com/infinitybotlist/kittycat/go v0.0.0-20240229022404-eaef242cde70
 	github.com/minio/minio-go/v7 v7.0.69
 	github.com/redis/rueidis v1.0.34
@@ -39,7 +39,7 @@ require (
 	github.com/buger/jsonparser v1.1.1 // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/gabriel-vasile/mimetype v1.4.3 // indirect
-	github.com/git-logs/client/webserver v0.0.0-20240225060655-d669ec3da5a9
+	github.com/git-logs/client/webserver v0.0.0-20240417181637-d6af9523c8b1
 	github.com/go-playground/locales v0.14.1 // indirect
 	github.com/go-playground/universal-translator v0.18.1 // indirect
 	github.com/google/uuid v1.6.0 // indirect
@@ -85,6 +85,6 @@ require (
 	github.com/json-iterator/go v1.1.12
 	github.com/redis/go-redis/v9 v9.5.1 // indirect
 	go.uber.org/zap v1.27.0
-	golang.org/x/exp v0.0.0-20240409090435-93d18d7e34b8
+	golang.org/x/exp v0.0.0-20240416160154-fe59bbe5cc7f
 	golang.org/x/sys v0.19.0 // indirect
 )

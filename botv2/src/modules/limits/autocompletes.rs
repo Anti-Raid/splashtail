@@ -16,7 +16,7 @@ pub async fn limits_autocomplete<'a>(
 
     let guild_id = guild_id.unwrap();
 
-    let limits = Limit::fetch(&data.surreal_cache, &data.pool, guild_id).await;
+    let limits = Limit::guild(&data.pool, guild_id).await;
 
     if let Ok(limits) = limits {
         let mut choices = Vec::new();

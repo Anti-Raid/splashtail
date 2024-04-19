@@ -21,7 +21,6 @@ pub async fn event_listener(
         FullEvent::GuildMemberAddition { new_member } => {
             handle_mod_action(
                 &user_data.pool,
-                &user_data.surreal_cache,
                 &cache_http,
                 &super::handler::HandleModAction {
                     guild_id: ectx.guild_id,
@@ -46,7 +45,6 @@ pub async fn event_listener(
 
                             handle_mod_action(
                                 &user_data.pool,
-                                &user_data.surreal_cache,
                                 &cache_http,
                                 &super::handler::HandleModAction {
                                     guild_id: *guild_id,
@@ -63,7 +61,6 @@ pub async fn event_listener(
 
                             handle_mod_action(
                                 &user_data.pool,
-                                &user_data.surreal_cache,
                                 &cache_http,
                                 &super::handler::HandleModAction {
                                     guild_id: *guild_id,
@@ -79,7 +76,6 @@ pub async fn event_listener(
                             info!("Channel updated: {}", ch_id);
                             handle_mod_action(
                                 &user_data.pool,
-                                &user_data.surreal_cache,
                                 &cache_http,
                                 &super::handler::HandleModAction {
                                     guild_id: *guild_id,
@@ -103,7 +99,6 @@ pub async fn event_listener(
 
                             handle_mod_action(
                                 &user_data.pool,
-                                &user_data.surreal_cache,
                                 &cache_http,
                                 &super::handler::HandleModAction {
                                     guild_id: *guild_id,
@@ -120,7 +115,6 @@ pub async fn event_listener(
 
                             handle_mod_action(
                                 &user_data.pool,
-                                &user_data.surreal_cache,
                                 &cache_http,
                                 &super::handler::HandleModAction {
                                     guild_id: *guild_id,
@@ -137,7 +131,6 @@ pub async fn event_listener(
 
                             handle_mod_action(
                                 &user_data.pool,
-                                &user_data.surreal_cache,
                                 &cache_http,
                                 &super::handler::HandleModAction {
                                     guild_id: *guild_id,
@@ -225,7 +218,6 @@ pub async fn event_listener(
 
                             handle_mod_action(
                                 &user_data.pool,
-                                &user_data.surreal_cache,
                                 &cache_http,
                                 &super::handler::HandleModAction {
                                     guild_id: *guild_id,
@@ -246,7 +238,6 @@ pub async fn event_listener(
 
                                 handle_mod_action(
                                     &user_data.pool,
-                                    &user_data.surreal_cache,
                                     &cache_http,
                                     &super::handler::HandleModAction {
                                         guild_id: *guild_id,
@@ -268,7 +259,6 @@ pub async fn event_listener(
 
                                 handle_mod_action(
                                     &user_data.pool,
-                                    &user_data.surreal_cache,
                                     &cache_http,
                                     &super::handler::HandleModAction {
                                         guild_id: *guild_id,

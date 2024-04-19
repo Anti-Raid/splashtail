@@ -3,11 +3,9 @@ use poise::serenity_prelude::{GuildId, UserId};
 use botox::crypto::gen_random;
 use sqlx::PgPool;
 use std::collections::HashMap;
-use surrealdb::engine::remote::ws::Client;
-use surrealdb::Surreal;
 use botox::cache::CacheHttpImpl;
 use super::core;
-use crate::modules::limits::core::{Limit, UserAction};
+use crate::modules::limits::core::Limit;
 use crate::Error;
 
 pub struct HandleModAction {
@@ -25,7 +23,6 @@ pub struct HandleModAction {
 
 pub async fn handle_mod_action(
     pool: &PgPool,
-    cache: &Surreal<Client>,
     cache_http: &CacheHttpImpl,
     ha: &HandleModAction,
 ) -> Result<(), Error> {
@@ -36,7 +33,7 @@ pub async fn handle_mod_action(
     let action_data = &ha.action_data;
 
     // Check limits cache
-    let guild_limits: HashMap<String, Limit> = Limit::fetch(cache, pool, guild_id)
+    let guild_limits: HashMap<String, Limit> = Limit::guild(pool, guild_id)
         .await?
         .into_iter()
         .filter(|a| a.limit_type == limit)
@@ -48,35 +45,36 @@ pub async fn handle_mod_action(
         return Ok(());
     }
 
-    let _ = cache
-        .create::<Vec<UserAction>>("user_actions")
-        .content(UserAction {
-            action_id: gen_random(48),
-            guild_id,
-            user_id,
-            target,
-            limit_type: limit,
-            action_data: action_data.clone(),
-            created_at: sqlx::types::chrono::Utc::now(),
-            limits_hit: Vec::new(),
-        })
-        .await?;
+    sqlx::query!(
+        "INSERT INTO user_actions (action_id, guild_id, user_id, target, limit_type, action_data, created_at, limits_hit) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)",
+        gen_random(48),
+        guild_id.to_string(),
+        user_id.to_string(),
+        target,
+        limit.to_string(),
+        action_data,
+        sqlx::types::chrono::Utc::now(),
+        &[],
+    )
+    .execute(pool)
+    .await?;
 
     let mut hit_limits = Vec::new();
 
     for (_limit_id, guild_limit) in guild_limits.into_iter() {
         // Check the limit type and user_id and guild to see if it is in the cache
-        let mut query = cache.query("select action_id from user_actions where guild_id=type::string($guild_id) and user_id=type::string($user_id) and limit_type=type::string($limit_type) and type::datetime(created_at) + duration::from::secs($limit_time) > time::now()")
-            .bind(("guild_id", guild_id))
-            .bind(("user_id", user_id))
-            .bind(("limit_type", limit))
-            .bind(("limit_time", guild_limit.limit_time))
-            .await?;
-
-        let action_ids: Vec<String> = query.take("action_id")?;
-
-        if action_ids.len() >= guild_limit.limit_per as usize {
-            hit_limits.push((action_ids, guild_limit));
+        let infringing_actions = sqlx::query!(
+            "select action_id from user_actions where guild_id = $1 and user_id=  $2 and limit_type = $3 and created_at + make_interval(secs => $4) > now()",
+            guild_id.to_string(),
+            user_id.to_string(),
+            limit.to_string(),
+            guild_limit.limit_time as f64,
+        )
+        .fetch_all(pool)
+        .await?;
+        
+        if infringing_actions.len() >= guild_limit.limit_per as usize {
+            hit_limits.push((infringing_actions.into_iter().map(|v| v.action_id).collect::<Vec<String>>(), guild_limit));
         }
     }
 

@@ -68,23 +68,7 @@ pub async fn limits_add(
     .fetch_one(&ctx.data().pool)
     .await?;
 
-    let limit_id = limit.limit_id;
-
-    let _ = &ctx
-        .data()
-        .surreal_cache
-        .create::<Vec<Limit>>("guild_limits")
-        .content(Limit {
-            limit_id,
-            guild_id,
-            limit_name,
-            limit_type,
-            limit_action,
-            limit_per,
-            limit_time: (limit_time * limit_time_unit.to_seconds_i64()),
-        })
-        .await?;
-    ctx.say("Added limit successfully").await?;
+    ctx.say(format!("Added limit successfully with id ``{}``", limit.limit_id)).await?;
 
     Ok(())
 }
@@ -92,8 +76,7 @@ pub async fn limits_add(
 /// View the limits setup for this server
 #[poise::command(prefix_command, slash_command, guild_only, rename = "view")]
 pub async fn limits_view(ctx: Context<'_>) -> Result<(), Error> {
-    let limits = Limit::fetch(
-        &ctx.data().surreal_cache,
+    let limits = Limit::guild(
         &ctx.data().pool,
         ctx.guild_id().ok_or("Could not get guild id")?,
     )
@@ -185,10 +168,6 @@ pub async fn limits_remove(
     .execute(&ctx.data().pool)
     .await?;
 
-    let _ = &ctx.data().surreal_cache.query("delete guild_limits where guild_id=type::string($guild_id) and limit_id=type::string($limit_id) return none")
-        .bind(("guild_id", ctx.guild_id().ok_or("Could not get guild id")?.to_string()))
-        .bind(("limit_id", limit_id))
-        .await?;
     ctx.say("Removed limit successfully").await?;
 
     Ok(())
