@@ -84,7 +84,7 @@ pub async fn handle_mod_action(
         let can_mod = {
             let guild = cache_http.cache.guild(guild_id).ok_or("Guild not found")?;
 
-            guild.greater_member_hierarchy(&cache_http.cache, cur_uid, user_id)
+            guild.greater_member_hierarchy(cur_uid, user_id)
         }
         .unwrap_or(cur_uid);
 
@@ -101,7 +101,7 @@ pub async fn handle_mod_action(
                             let mut errors = Vec::new();
                             for role in roles.iter() {
                                 if let Err(e) =
-                                    member.remove_role(&cache_http.http, *role).await
+                                    member.remove_role(&cache_http.http, *role, Some("Removing roles due to preconfigured limits")).await
                                 {
                                     errors.push(format!("Failed to remove role: {}", e));
                                 }
@@ -124,7 +124,7 @@ pub async fn handle_mod_action(
                         }
                     }
                     core::UserLimitActions::KickUser => {
-                        if let Err(e) = guild_id.kick(&cache_http.http, user_id).await {
+                        if let Err(e) = guild_id.kick(&cache_http.http, user_id, Some("Kicking user due to preconfigured limits")).await {
                             error!("Failed to kick user: {}", e);
 
                             sqlx::query!(
@@ -160,7 +160,7 @@ pub async fn handle_mod_action(
                         return Ok(());
                     }
                     core::UserLimitActions::BanUser => {
-                        if let Err(e) = guild_id.ban(&cache_http.http, user_id, 0).await {
+                        if let Err(e) = guild_id.ban(&cache_http.http, user_id, 0, Some("Banning user due to preconfigured limits")).await {
                             error!("Failed to kick user: {}", e);
 
                             sqlx::query!(

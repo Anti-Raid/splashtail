@@ -266,7 +266,7 @@ pub async fn add_channel(
         }
 
         let webhook = gc.create_webhook(
-            ctx,
+            ctx.http(),
             serenity::all::CreateWebhook::new("AntiRaid Audit Logs")
         ).await?;
 

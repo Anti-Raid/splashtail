@@ -18,6 +18,7 @@ indexmap = { version = "2.1", features = ["serde"] }
 strum = "0.26"
 strum_macros = "0.26"
 small-fixed-array = { version = "0.4", features = ["serde"] } # From serenity 
+extract_map = { version = "0.1", features = ["serde", "iter_mut"] }
 
 [dependencies.serenity]
 git = "https://github.com/serenity-rs/serenity"

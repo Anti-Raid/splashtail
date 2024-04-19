@@ -96,7 +96,7 @@ async fn check_hierarchy(
 
     let author_id = ctx.author().id;
 
-    if let Some(higher_hierarchy) = guild.greater_member_hierarchy(ctx.cache(), author_id, user_id) {
+    if let Some(higher_hierarchy) = guild.greater_member_hierarchy(author_id, user_id) {
         if higher_hierarchy != author_id {
             Err("You cannot moderate a user with a higher or equal hierarchy than you".into())
         } else {
@@ -203,7 +203,7 @@ pub async fn prune_user(
         .animus_magic_ipc
         .request( 
             AnimusTarget::Jobserver,
-            shard_id(guild_id, MEWLD_ARGS.shard_count),
+            shard_id(guild_id, MEWLD_ARGS.shard_count_nonzero),
             AnimusMessage::Jobserver(JobserverAnimusMessage::SpawnTask {
                 name: "message_prune".to_string(),
                 data: prune_opts.clone(),
@@ -433,9 +433,9 @@ pub async fn kick(
     }
 
     member
-        .kick_with_reason(
+        .kick(
             &ctx.http(),
-            &to_log_format(&author.user, &member.user, &reason),
+            Some(&to_log_format(&author.user, &member.user, &reason)),
         )
         .await?;
 
@@ -564,11 +564,11 @@ pub async fn ban(
     }
 
     guild_id
-    .ban_with_reason(
+    .ban(
         ctx.http(),
         member.id,
         dmd,
-        &to_log_format(&author.user, &member, &reason),
+        Some(&to_log_format(&author.user, &member, &reason)),
     )
     .await?;
 
@@ -696,11 +696,11 @@ pub async fn tempban(
     }
 
     guild_id
-    .ban_with_reason(
+    .ban(
         ctx.http(),
         member.id,
         dmd,
-        &to_log_format(&author.user, &member, &reason),
+        Some(&to_log_format(&author.user, &member, &reason)),
     )
     .await?;
 

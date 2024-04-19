@@ -39,7 +39,17 @@ pub async fn event_listener(
 
             if triggered_flags != TriggeredFlags::NONE {
                 // For now, don't do anything, punishment support is coming soon
-                new_message.delete(&ctx).await?;
+                new_message.delete(&ctx, Some(
+                    &format!("Message triggered flags: {:?}", {
+                        let mut tf = vec![];
+
+                        for (name, _) in triggered_flags.iter_names() {
+                            tf.push(name);
+                        }
+
+                        tf.join(", ")
+                    })
+                )).await?;
             }
 
             Ok(())
@@ -78,7 +88,7 @@ pub async fn event_listener(
 
             if triggered_flags != TriggeredFlags::NONE {
                 // For now, don't do anything, punishment support is coming soon
-                new_member.kick_with_reason(&ctx, "Below configured minimum/maximum account age").await?;
+                new_member.kick(&ctx, Some("Below configured minimum/maximum account age")).await?;
             }
 
             Ok(())

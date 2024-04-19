@@ -33,7 +33,7 @@ pub async fn temp_punishment(
         };
 
         // Ensure shard id
-        let shard_id = serenity::utils::shard_id(guild_id, crate::ipc::argparse::MEWLD_ARGS.shard_count);
+        let shard_id = serenity::utils::shard_id(guild_id, crate::ipc::argparse::MEWLD_ARGS.shard_count_nonzero);
 
         if !crate::ipc::argparse::MEWLD_ARGS.shards.contains(&shard_id) {
             continue

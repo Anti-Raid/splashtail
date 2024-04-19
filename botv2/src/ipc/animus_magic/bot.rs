@@ -32,7 +32,7 @@ pub enum BotAnimusResponse {
         name: String,
         icon: Option<String>,
         /// List of all roles in the server
-        roles: std::collections::HashMap<RoleId, Role>,
+        roles: extract_map::ExtractMap<RoleId, Role>,
         /// List of roles the user has
         user_roles: Vec<RoleId>,
         /// List of roles the bot has
@@ -105,7 +105,7 @@ impl BotAnimusMessage {
 
                 Ok(BotAnimusResponse::GuildsExist { guilds_exist })
             }
-            Self::BaseGuildUserInfo { guild_id, user_id } => {
+            Self::BaseGuildUserInfo { guild_id, user_id } => {                
                 let (name, icon, owner, roles, user_roles, bot_roles) = {
                     let guild = match cache_http.cache.guild(guild_id) {
                         Some(guild) => guild,
@@ -114,16 +114,19 @@ impl BotAnimusMessage {
                     .clone();
 
                     let user_roles = {
-                        let mem = match guild.member(cache_http, user_id).await {
-                            Ok(member) => member,
-                            Err(e) => return Err(format!("Failed to get member: {}", e).into()),
+                        let mem = match guild.members.get(&user_id) {
+                            Some(member) => member,
+                            None => return Err(format!("Failed to get member").into()),
                         };
 
                         mem.roles.to_vec()
                     };
 
                     let bot_user_id = cache_http.cache.current_user().id;
-                    let bot_roles = guild.member(&cache_http, bot_user_id).await?.roles.to_vec();
+                    let bot_roles = match guild.members.get(&bot_user_id) {
+                        Some(member) => member.roles.to_vec(),
+                        None => return Err(format!("Failed to get bot member").into()),
+                    };
 
                     (
                         guild.name.to_string(),

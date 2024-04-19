@@ -6,7 +6,6 @@ use serenity::all::{
     FullEvent, GuildChannel, GuildId,
     StickerId, UserId,
 };
-use std::collections::HashMap;
 use strum::VariantNames;
 use super::field_type::FieldType;
 
@@ -672,7 +671,7 @@ pub fn expand_event(event: &FullEvent) -> Option<IndexMap<String, Field>> {
 
     fn expand_emoji_map(
         fields: &mut IndexMap<String, Field>,
-        emoji_map: &HashMap<EmojiId, serenity::model::guild::Emoji>,
+        emoji_map: &extract_map::ExtractMap<EmojiId, serenity::all::Emoji>,
         guild_id: &GuildId,
     ) {
         insert_field(fields, "emoji_map", "guild_id", *guild_id);
@@ -681,7 +680,13 @@ pub fn expand_event(event: &FullEvent) -> Option<IndexMap<String, Field>> {
             fields,
             "emoji_map",
             "emojis",
-            emoji_map.values().cloned().collect::<Vec<_>>(),
+            {
+                let mut emojis = Vec::new();
+                for emoji in emoji_map.iter() {
+                    emojis.push(emoji.clone());
+                }
+                emojis
+            },
         );
     }
 
@@ -780,7 +785,7 @@ pub fn expand_event(event: &FullEvent) -> Option<IndexMap<String, Field>> {
 
     fn expand_sticker_map(
         fields: &mut IndexMap<String, Field>,
-        sticker_map: &HashMap<StickerId, serenity::model::sticker::Sticker>,
+        sticker_map: &extract_map::ExtractMap<StickerId, serenity::all::Sticker>,
         guild_id: &GuildId,
     ) {
         insert_field(fields, "sticker_map", "guild_id", *guild_id);
@@ -789,7 +794,13 @@ pub fn expand_event(event: &FullEvent) -> Option<IndexMap<String, Field>> {
             fields,
             "sticker_map",
             "stickers",
-            sticker_map.values().cloned().collect::<Vec<_>>(),
+            {
+                let mut stickers = Vec::new();
+                for sticker in sticker_map.iter() {
+                    stickers.push(sticker.clone());
+                }
+                stickers
+            },
         );
     }
 

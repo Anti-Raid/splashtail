@@ -21,6 +21,7 @@ pub static MEWLD_ARGS: Lazy<MewldCmdArgs> = Lazy::new(|| {
 pub struct MewldCmdArgs {
     pub shards: Vec<u16>,
     pub shard_count: u16,
+    pub shard_count_nonzero: std::num::NonZeroU16,
     pub cluster_id: u16,
     pub cluster_name: String,
     pub cluster_count: u16,
@@ -50,6 +51,7 @@ Expected arguments: [program name] <shards> <shard_count> <cluster_id> <cluster_
         Ok(Self {
             shards,
             shard_count,
+            shard_count_nonzero: std::num::NonZeroU16::new(shard_count).expect("Shard count is zero"),
             cluster_id,
             cluster_name,
             cluster_count,

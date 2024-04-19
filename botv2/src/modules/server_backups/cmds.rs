@@ -168,7 +168,7 @@ pub async fn backups_create(
         .animus_magic_ipc
         .request(
             AnimusTarget::Jobserver,
-            shard_id(guild_id, MEWLD_ARGS.shard_count),
+            shard_id(guild_id, MEWLD_ARGS.shard_count_nonzero),
             AnimusMessage::Jobserver(JobserverAnimusMessage::SpawnTask {
                 name: "guild_create_backup".to_string(),
                 data: backup_args,
@@ -900,7 +900,7 @@ pub async fn backups_restore(
         .animus_magic_ipc
         .request(
             AnimusTarget::Jobserver,
-            shard_id(guild_id, MEWLD_ARGS.shard_count),
+            shard_id(guild_id, MEWLD_ARGS.shard_count_nonzero),
             AnimusMessage::Jobserver(JobserverAnimusMessage::SpawnTask {
                 name: "guild_restore_backup".to_string(),
                 data: json,
