@@ -71,8 +71,10 @@ impl ObjectStorage {
                 let endpoint = self.endpoint.as_ref().ok_or("Missing endpoint")?;
 
                 let bucket = rusty_s3::Bucket::new(
-                    endpoint.parse().map_err(|e| format!("Failed to parse endpoint: {}", e))?,
-                   rusty_s3::UrlStyle::Path,
+                    format!("{}://{}", if self.secure.unwrap_or(false) { "https" } else { "http" }, endpoint)
+                    .parse()
+                    .map_err(|e| format!("Failed to parse cdn endpoint: {}", e))?,
+                    rusty_s3::UrlStyle::Path,
                     self.path.clone(),
                     "us-east-1",
                 )?;
