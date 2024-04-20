@@ -32,7 +32,7 @@ pub enum BotAnimusResponse {
         name: String,
         icon: Option<String>,
         /// List of all roles in the server
-        roles: extract_map::ExtractMap<RoleId, Role>,
+        roles: std::collections::HashMap<RoleId, Role>,
         /// List of roles the user has
         user_roles: Vec<RoleId>,
         /// List of roles the bot has
@@ -149,7 +149,7 @@ impl BotAnimusMessage {
                     name,
                     icon,
                     owner_id: owner.to_string(),
-                    roles,
+                    roles: roles.into_iter().map(|role| (role.id, role)).collect(),
                     user_roles,
                     bot_roles,
                 })
