@@ -286,6 +286,7 @@ async fn main() {
     let shard_count = ipc::argparse::MEWLD_ARGS.shard_count;
 
     let debug_mode = std::env::var("DEBUG").unwrap_or_default() == "true";
+    let debug_opts = std::env::var("DEBUG_OPTS").unwrap_or_default();
 
     let mut env_builder = env_logger::builder();
 
@@ -304,6 +305,38 @@ async fn main() {
         })
         .filter(Some("botv2"), log::LevelFilter::Info)
         .filter(Some("botox"), log::LevelFilter::Info);
+
+    // Set custom log levels
+    for opt in debug_opts.split(',') {
+        let opt = opt.trim();
+
+        if opt.is_empty() {
+            continue
+        }
+
+        let (target, level) = if opt.contains('=') {
+            let mut split = opt.split('=');
+            let target = split.next().unwrap();
+            let level = split.next().unwrap();
+            (target, level)
+        } else {
+            (opt, "debug")
+        };
+
+        let level = match level {
+            "trace" => log::LevelFilter::Trace,
+            "debug" => log::LevelFilter::Debug,
+            "info" => log::LevelFilter::Info,
+            "warn" => log::LevelFilter::Warn,
+            "error" => log::LevelFilter::Error,
+            _ => {
+                error!("Invalid log level: {}", level);
+                continue;
+            }
+        };
+
+        env_builder.filter(Some(target), level);
+    }
 
     if debug_mode {
         env_builder.filter(None, log::LevelFilter::Debug);

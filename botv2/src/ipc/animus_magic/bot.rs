@@ -105,36 +105,43 @@ impl BotAnimusMessage {
 
                 Ok(BotAnimusResponse::GuildsExist { guilds_exist })
             }
-            Self::BaseGuildUserInfo { guild_id, user_id } => {                
+            Self::BaseGuildUserInfo { guild_id, user_id } => {      
+                let bot_user_id = cache_http.cache.current_user().id;          
                 let (name, icon, owner, roles, user_roles, bot_roles) = {
-                    let guild = match cache_http.cache.guild(guild_id) {
-                        Some(guild) => guild,
+                    let (name, icon, owner_id, roles) = match cache_http.cache.guild(guild_id) {
+                        Some(guild) => {
+                            (guild.name.to_string(), guild.icon_url(), guild.owner_id, guild.roles.clone())
+                        },
                         None => return Err("Guild not found".into()),
-                    }
-                    .clone();
-
-                    let user_roles = {
-                        let mem = match guild.members.get(&user_id) {
-                            Some(member) => member,
-                            None => return Err("Failed to get member".into()),
-                        };
-
-                        mem.roles.to_vec()
                     };
 
-                    let bot_user_id = cache_http.cache.current_user().id;
-                    let bot_roles = match guild.members.get(&bot_user_id) {
-                        Some(member) => member.roles.to_vec(),
-                        None => return Err("Failed to get bot member".into()),
+                    let Some(member) = botox::cache::member_on_guild(
+                        cache_http,
+                        guild_id,
+                        user_id,
+                        true
+                    )
+                    .await? else {
+                        return Err("Failed to get member".into());
+                    };
+
+                    let Some(bot_user) = botox::cache::member_on_guild(
+                        cache_http,
+                        guild_id,
+                        bot_user_id,
+                        true
+                    )
+                    .await? else {
+                        return Err("Failed to get bot member".into());
                     };
 
                     (
-                        guild.name.to_string(),
-                        guild.icon_url(),
-                        guild.owner_id,
-                        guild.roles,
-                        user_roles,
-                        bot_roles,
+                        name,
+                        icon,
+                        owner_id,
+                        roles,
+                        member.roles.to_vec(),
+                        bot_user.roles.to_vec(),
                     )
                 };
 

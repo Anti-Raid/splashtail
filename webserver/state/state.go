@@ -141,7 +141,7 @@ func Setup() {
 				Logger.Debug("Updated mewld instance list")
 			}
 
-			time.Sleep(5 * time.Second)
+			time.Sleep(20 * time.Second)
 		}
 	}()
 
