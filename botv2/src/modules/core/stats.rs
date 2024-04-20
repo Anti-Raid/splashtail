@@ -6,12 +6,12 @@ type Context<'a> = crate::Context<'a>;
 
 // Various statistics
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
-pub const GIT_SHA: &str = env!("VERGEN_GIT_SHA");
-pub const GIT_SEMVER: &str = env!("VERGEN_GIT_SEMVER");
-pub const GIT_COMMIT_MSG: &str = env!("VERGEN_GIT_COMMIT_MESSAGE");
-pub const BUILD_CPU: &str = env!("VERGEN_SYSINFO_CPU_BRAND");
-pub const CARGO_PROFILE: &str = env!("VERGEN_CARGO_PROFILE");
-pub const RUSTC_VERSION: &str = env!("VERGEN_RUSTC_SEMVER");
+pub const GIT_SHA: &str = env!("GIT_COMMIT_HASH");
+pub const GIT_REPO: &str = env!("GIT_REPO");
+pub const GIT_COMMIT_MSG: &str = env!("GIT_COMMIT_MESSAGE");
+pub const BUILD_CPU: &str = env!("CPU_MODEL");
+pub const CARGO_PROFILE: &str = env!("CARGO_PROFILE");
+pub const RUSTC_VERSION: &str = env!("RUSTC_VERSION");
 
 #[poise::command(category = "Stats", prefix_command, slash_command, user_cooldown = 1)]
 pub async fn stats(ctx: Context<'_>) -> Result<(), Error> {
@@ -27,7 +27,12 @@ pub async fn stats(ctx: Context<'_>) -> Result<(), Error> {
             .field("rustc", RUSTC_VERSION, true)
             .field(
                 "Git Commit",
-                GIT_SHA.to_string() + "(semver=" + GIT_SEMVER + ")",
+                format!(
+                    "[{}]({}/commit/{})",
+                    GIT_SHA,
+                    GIT_REPO,
+                    GIT_SHA
+                ),
                 true,
             )
             .field(

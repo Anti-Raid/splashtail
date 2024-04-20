@@ -61,8 +61,3 @@ branch = "main"
 [dependencies.botox]
 git = "https://github.com/infinitybotlist/botox"
 branch = "main"
-
-[build-dependencies]
-vergen = "7"
-anyhow = "1.0"
-indexmap = { version = "2", features = ["serde"] }

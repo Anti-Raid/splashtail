@@ -3,10 +3,13 @@ CDN_PATH := /silverpelt/purrquinox/cdn/antiraid
 
 buildwebserver:
 	CGO_ENABLED=0 go build -v 
+
 reloadwebserver:
 	systemctl restart splashtail-staging-webserver
+
 updatebot:
 	make buildbot && cp -v botv2/target/release/botv2 botv2
+
 updatebot_dbg:
 	make buildbot_dbg && cp -v botv2/target/debug/botv2 botv2
 formatbot:
