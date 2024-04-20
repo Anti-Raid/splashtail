@@ -32,12 +32,12 @@ strum_macros = "0.26"
 rand = "0.8"
 fred = { version = "8.0.1", features = ["enable-rustls", "serde-json", "subscriber-client"] }
 moka = { version = "0.12.3", features = ["future", "futures-util"] }
-object_store = { version = "0.9.0", features = ["serde", "serde_json", "aws", "reqwest"] }
 serde_cbor = "0.11.2"
 secrecy = "0.8"
 regex = "1"
 bitflags = "2"
 extract_map = { version = "0.1", features = ["serde", "iter_mut"] }
+rusty-s3 = "0.5"
 
 # Anti-Raid specific
 splashcore_rs = { path = "./splashcore_rs" }

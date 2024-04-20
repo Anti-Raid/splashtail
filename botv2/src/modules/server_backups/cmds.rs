@@ -487,7 +487,8 @@ pub async fn backups_list(ctx: Context<'_>) -> Result<(), Error> {
 
                         let mut status = Vec::new();
 
-                        match task.delete_from_storage(&ctx.data().object_store).await {
+                        let data = &ctx.data();
+                        match task.delete_from_storage(&data.reqwest, &data.object_store).await {
                             Ok(_) => {
                                 status.push(":white_check_mark: Successfully deleted the backup from storage".to_string());
                             }
@@ -653,7 +654,8 @@ pub async fn backups_delete(ctx: Context<'_>, task_id: String) -> Result<(), Err
 
             let mut status = Vec::new();
 
-            match task.delete_from_storage(&ctx.data().object_store).await {
+            let data = &ctx.data();
+            match task.delete_from_storage(&data.reqwest, &data.object_store).await {
                 Ok(_) => {
                     status.push(":white_check_mark: Successfully deleted the backup from storage".to_string());
                 }

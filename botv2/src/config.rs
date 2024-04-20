@@ -70,33 +70,23 @@ impl ObjectStorage {
                 let secret_key = self.secret_key.as_ref().ok_or("Missing secret key")?;
                 let endpoint = self.endpoint.as_ref().ok_or("Missing endpoint")?;
 
-                let store = object_store::aws::AmazonS3Builder::new()
-                    .with_endpoint({
-                        if let Some(secure) = self.secure {
-                            if secure {
-                                format!("https://{}", endpoint)
-                            } else {
-                                format!("http://{}", endpoint)
-                            }
-                        } else {
-                            // Default is false
-                            format!("http://{}", endpoint)
-                        }
-                    })
-                    .with_allow_http(!self.secure.unwrap_or_default())
-                    .with_bucket_name(self.path.clone())
-                    .with_access_key_id(access_key)
-                    .with_secret_access_key(secret_key)
-                    .build()
-                    .map_err(|e| format!("Failed to build S3 object store: {}", e))?;
+                let bucket = rusty_s3::Bucket::new(
+                    endpoint.parse().map_err(|e| format!("Failed to parse endpoint: {}", e))?,
+                   rusty_s3::UrlStyle::Path,
+                    self.path.clone(),
+                    "us-east-1",
+                )?;
 
-                Ok(ObjectStore::S3(store))
-            }
+                let credentials = rusty_s3::Credentials::new(access_key, secret_key);
+                Ok(ObjectStore::S3 {
+                    credentials,
+                    bucket,
+                })
+            },
             ObjectStorageType::Local => {
-                let store =
-                    object_store::local::LocalFileSystem::new_with_prefix(self.path.clone())?;
-
-                Ok(ObjectStore::Local(store))
+                Ok(ObjectStore::Local {
+                    prefix: self.path.clone(),
+                })
             }
         }
     }

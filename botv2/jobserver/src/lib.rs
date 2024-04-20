@@ -3,9 +3,6 @@ pub mod taskpoll;
 use splashcore_rs::objectstore::ObjectStore;
 use splashcore_rs::utils::get_icon_of_state;
 use indexmap::IndexMap;
-use object_store::path::Path;
-use object_store::signer::Signer;
-use reqwest::Method;
 use sqlx::{types::uuid::Uuid, PgPool};
 use std::str::FromStr;
 use std::sync::Arc;
@@ -278,26 +275,13 @@ impl Task {
             return Err("Task has no output".into());
         };
 
-        let path = match Path::parse(path) {
-            Ok(p) => p,
-            Err(e) => return Err(format!("Failed to parse path: {}", e).into()),
-        };
-
-        match **object_store {
-            ObjectStore::S3(ref store) => {
-                let url = store
-                    .signed_url(Method::GET, &path, Duration::from_secs(600))
-                    .await?;
-
-                Ok(url.to_string())
-            }
-            ObjectStore::Local(_) => Ok(format!("file://{}", path)),
-        }
+        Ok(object_store.get_url(&path, Duration::from_secs(600)))
     }
 
     /// Deletes the task from the object storage
     pub async fn delete_from_storage(
         &self,
+        client: &reqwest::Client,
         object_store: &Arc<ObjectStore>,
     ) -> Result<(), Error> {
         // Check if the task has an output
@@ -309,15 +293,12 @@ impl Task {
             return Err("Task has no output".into());
         };
 
-        for path in [format!("{}/{}", path, outp.filename), path].iter() {
-            let path = match Path::parse(path) {
-                Ok(p) => p,
-                Err(e) => return Err(format!("Failed to parse path: {}", e).into()),
-            };
-
-            // If the task has an output, delete it from the object store
-            object_store.get().delete(&path).await?;
-        }
+        object_store
+            .delete(
+                client,
+                &format!("{}/{}", path, outp.filename),
+            )
+            .await?;
 
         Ok(())
     }
@@ -337,9 +318,10 @@ impl Task {
     pub async fn delete(
         self,
         pool: &PgPool,
+        client: &reqwest::Client,
         object_store: &Arc<ObjectStore>,
     ) -> Result<(), Error> {
-        self.delete_from_storage(object_store).await?;
+        self.delete_from_storage(client, object_store).await?;
         self.delete_from_db(pool).await?;
 
         Ok(())
