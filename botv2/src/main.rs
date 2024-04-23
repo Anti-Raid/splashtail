@@ -15,6 +15,8 @@ use splashcore_rs::objectstore::ObjectStore;
 use gwevent::core::get_event_guild_id;
 
 use std::sync::Arc;
+use once_cell::sync::Lazy;
+use tokio::sync::RwLock;
 
 use log::{error, info, warn};
 use poise::serenity_prelude::FullEvent;
@@ -25,6 +27,16 @@ use std::io::Write;
 
 type Error = Box<dyn std::error::Error + Send + Sync>;
 type Context<'a> = poise::Context<'a, Data, Error>;
+
+pub struct ConnectState {
+    pub has_started_bgtasks: bool,
+    pub has_started_ipc: bool,
+}
+
+pub static CONNECT_STATE: Lazy<RwLock<ConnectState>> = Lazy::new(|| RwLock::new(ConnectState {
+    has_started_bgtasks: false,
+    has_started_ipc: false,
+}));
 
 // User data, which is stored and accessible in all command invocations
 pub struct Data {
@@ -159,39 +171,48 @@ async fn event_listener<'a>(
             if ctx.serenity_context.shard_id.0
                 == *crate::ipc::argparse::MEWLD_ARGS.shards.first().unwrap()
             {
-                // Get all tasks
-                let mut tasks = Vec::new();
-                for module in modules::modules() {
-                    for task in module.background_tasks {
-                        tasks.push(task);
+                if !CONNECT_STATE.read().await.has_started_bgtasks {
+                    info!("Starting background tasks");
+                    // Get all tasks
+                    let mut tasks = Vec::new();
+                    for module in modules::modules() {
+                        for task in module.background_tasks {
+                            tasks.push(task);
+                        }
                     }
+
+                    tokio::task::spawn(botox::taskman::start_all_tasks(
+                        tasks,
+                        ctx.serenity_context.clone(),
+                    ));
                 }
 
-                tokio::task::spawn(botox::taskman::start_all_tasks(
-                    tasks,
-                    ctx.serenity_context.clone(),
-                ));
+                CONNECT_STATE.write().await.has_started_bgtasks = true;
 
-                info!("Starting IPC");
+                if !CONNECT_STATE.read().await.has_started_ipc {
+                    info!("Starting IPC");
 
-                let data = ctx.serenity_context.data::<Data>();
-                let ipc_ref = data.mewld_ipc.clone();
-                let ch = CacheHttpImpl::from_ctx(ctx.serenity_context);
-                let sm = ctx.shard_manager().clone();
-                tokio::task::spawn(async move {
-                    let ipc_ref = ipc_ref;
-                    ipc_ref.start_ipc_listener(&ch, &sm).await;
-                });
+                    let data = ctx.serenity_context.data::<Data>();
+                    let ipc_ref = data.mewld_ipc.clone();
+                    let ch = CacheHttpImpl::from_ctx(ctx.serenity_context);
+                    let sm = ctx.shard_manager().clone();
+                    tokio::task::spawn(async move {
+                        let ipc_ref = ipc_ref;
+                        ipc_ref.start_ipc_listener(&ch, &sm).await;
+                    });
 
-                // And for animus magic
-                let pool = data.pool.clone();
-                let ch = CacheHttpImpl::from_ctx(ctx.serenity_context);
-                let sm = ctx.shard_manager().clone();
-                let am_ref = data.animus_magic_ipc.clone();
-                tokio::task::spawn(async move {
-                    let am_ref = am_ref;
-                    am_ref.start_ipc_listener(pool, ch, sm).await;
-                });
+                    // And for animus magic
+                    let pool = data.pool.clone();
+                    let ch = CacheHttpImpl::from_ctx(ctx.serenity_context);
+                    let sm = ctx.shard_manager().clone();
+                    let am_ref = data.animus_magic_ipc.clone();
+                    tokio::task::spawn(async move {
+                        let am_ref = am_ref;
+                        am_ref.start_ipc_listener(pool, ch, sm).await;
+                    });
+                }
+
+                CONNECT_STATE.write().await.has_started_ipc = true;
             }
 
             if ctx.serenity_context.shard_id.0
