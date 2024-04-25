@@ -100,6 +100,7 @@ pub struct Meta {
     pub bot_redis_url: String,
     pub proxy: String,
     pub support_server: String,
+    pub sandwich_http_api: Option<String>,
 }
 
 #[derive(Serialize, Deserialize)]

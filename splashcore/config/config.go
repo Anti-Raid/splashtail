@@ -122,6 +122,7 @@ type Meta struct {
 	DPSecret             string          `yaml:"dp_secret" comment:"DeployProxy Auth URL for super-sensitive pages" validate:"required"`
 	DebugTaskLogger      bool            `yaml:"debug_task_logger" comment:"Debug the task logger"`
 	SupportServer        string          `yaml:"support_server" comment:"Discord Support Server Link" default:"https://discord.gg/u78NFAXm" validate:"required"`
+	SandwichHttpApi      string          `yaml:"sandwich_http_api" comment:"(optional) Sandwich HTTP API (if using sandwich for proxy)" default:""`
 }
 
 type BotList struct {

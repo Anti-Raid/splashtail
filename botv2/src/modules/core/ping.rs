@@ -5,7 +5,7 @@ type Error = crate::Error;
 type Context<'a> = crate::Context<'a>;
 
 #[poise::command(category = "Stats", prefix_command, slash_command, user_cooldown = 1)]
-pub async fn ping(ctx: Context<'_>) -> Result<(), Error> {
+pub async fn ping(ctx: Context<'_>) -> Result<(), Error> {    
     let msg = CreateReply::default().embed(
         CreateEmbed::default()
             .title("Pong")
@@ -14,8 +14,18 @@ pub async fn ping(ctx: Context<'_>) -> Result<(), Error> {
                 format!("{}μs", ctx.ping().await.as_micros()),
                 true,
             )
-            .field("Edit Latency", "Calculating...", true),
+            .field("Edit Latency", "Calculating...", true)
+            .field("Real WS Latency", "Finding...", true),
     );
+
+    let real_ws_latency = {
+        if let Some(psd) = ctx.data().proxy_support_data.read().await.as_ref() {
+            let sid = ctx.serenity_context().shard_id.0 as i64;
+            psd.shard_conns.get(&sid).map(|sc| sc.real_latency)
+        } else {
+            None
+        }
+    };
 
     let st = std::time::Instant::now();
 
@@ -37,6 +47,13 @@ pub async fn ping(ctx: Context<'_>) -> Result<(), Error> {
                     "Local Edit Ping",
                     format!("{}ms", new_st.duration_since(st).as_millis()),
                     true,
+                )
+                .field(
+                    "Real WS Latency",
+                    real_ws_latency
+                        .map(|latency| format!("{}ms", latency))
+                        .unwrap_or_else(|| "Unknown".to_string()),
+                    true
                 ),
         ),
     )

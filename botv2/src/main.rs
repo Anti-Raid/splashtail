@@ -9,6 +9,7 @@ use botox::cache::CacheHttpImpl;
 use silverpelt::{
     module_config::is_module_enabled,
     silverpelt_cache::SILVERPELT_CACHE, 
+    proxysupport::ProxySupportData,
     EventHandlerContext,
 };
 use splashcore_rs::objectstore::ObjectStore;
@@ -38,7 +39,7 @@ pub static CONNECT_STATE: Lazy<RwLock<ConnectState>> = Lazy::new(|| RwLock::new(
     has_started_ipc: false,
 }));
 
-// User data, which is stored and accessible in all command invocations
+/// User data, which is stored and accessible in all command invocations
 pub struct Data {
     pub pool: sqlx::PgPool,
     pub reqwest: reqwest::Client,
@@ -46,6 +47,7 @@ pub struct Data {
     pub object_store: Arc<ObjectStore>,
     pub animus_magic_ipc: Arc<AnimusMagicClient>,
     pub shards_ready: Arc<dashmap::DashMap<u16, bool>>,
+    pub proxy_support_data: RwLock<Option<ProxySupportData>> // Shard ID, WebsocketConfiguration
 }
 
 async fn on_error(error: poise::FrameworkError<'_, Data, Error>) {
@@ -599,6 +601,7 @@ async fn main() {
         .build()
         .expect("Could not initialize reqwest client"),
         shards_ready: Arc::new(dashmap::DashMap::new()),
+        proxy_support_data: RwLock::new(None)
     };
 
     info!("Initializing bot state");
