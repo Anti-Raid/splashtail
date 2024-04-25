@@ -27,6 +27,7 @@ pub struct StatusEndpointManager {
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct StatusEndpointShardGroup {
+    #[serde(rename = "id")]
     pub shard_group_id: i32,
     pub shards: Vec<[i64; 6]>, // // ShardID, Status, Latency (in milliseconds), Guilds, Uptime (in seconds), Total Uptime (in seconds)
     pub status: ShardGroupStatus,
