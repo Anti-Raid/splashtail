@@ -5,6 +5,7 @@ pub mod core;
 pub mod gitlogs;
 pub mod limits;
 pub mod moderation;
+pub mod punishments;
 pub mod server_backups;
 pub mod server_member_backups;
 pub mod settings;
@@ -19,6 +20,7 @@ pub fn modules() -> Vec<crate::silverpelt::Module> {
         gitlogs::module(),
         limits::module(),
         moderation::module(),
+        punishments::module(),
         server_backups::module(),
         server_member_backups::module(),
         settings::module(),
