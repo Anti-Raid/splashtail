@@ -443,7 +443,7 @@ pub async fn commands_modperms(
 
                 let perms_str = &resp.inputs[0];
 
-                let perms = serde_json::from_str(perms_str);
+                let perms = serde_json::from_str::<crate::silverpelt::PermissionChecks>(perms_str);
 
                 match perms {
                     Ok(perms) => {
@@ -451,7 +451,7 @@ pub async fn commands_modperms(
                             ctx.say("You can only have up to 10 checks in a PermissionCheck").await?;
                             continue
                         }
-                        new_command_config.perms = perms;
+                        new_command_config.perms = Some(perms);
                     },
                     Err(err) => {
                         ctx.say(format!("Failed to parse permissions: {}", err)).await?;
