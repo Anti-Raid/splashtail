@@ -24,12 +24,14 @@ pub async fn rederive_perms(
         r
     };
 
+    let mut tx = pool.begin().await?;
+
     let rec = sqlx::query!(
         "SELECT perm_overrides FROM guild_members WHERE guild_id = $1 AND user_id = $2",
         guild_id.to_string(),
         user_id.to_string()
     )
-    .fetch_optional(pool)
+    .fetch_optional(&mut *tx)
     .await?;
 
     // Rederive permissions for the new perms
@@ -38,7 +40,7 @@ pub async fn rederive_perms(
         guild_id.to_string(),
         &roles_str
     )
-    .fetch_all(pool)
+    .fetch_all(&mut *tx)
     .await?;
 
     let mut user_positions = Vec::new();
@@ -71,9 +73,20 @@ pub async fn rederive_perms(
             guild_id.to_string(),
             user_id.to_string()
         )
-        .execute(pool)
+        .execute(&mut *tx)
         .await?;
     } else {
+        // Check if guild is in the guilds table
+        let guild_exists = sqlx::query!("SELECT COUNT(*) FROM guilds WHERE id = $1", guild_id.to_string())
+        .fetch_one(&mut *tx)
+        .await?;
+
+        if guild_exists.count.unwrap_or_default() == 0 {
+            sqlx::query!("INSERT INTO guilds (id) VALUES ($1)", guild_id.to_string())
+            .execute(&mut *tx)
+            .await?;
+        }
+
         sqlx::query!(
             "INSERT INTO guild_members (guild_id, user_id, roles, resolved_perms_cache) VALUES ($1, $2, $3, $4)",
             guild_id.to_string(),
@@ -81,9 +94,11 @@ pub async fn rederive_perms(
             &roles_str,
             &resolved_perms
         )
-        .execute(pool)
+        .execute(&mut *tx)
         .await?;
     }
+
+    tx.commit().await?;
 
     Ok(resolved_perms)
 }
