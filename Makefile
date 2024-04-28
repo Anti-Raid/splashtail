@@ -5,7 +5,11 @@ buildwebserver:
 	CGO_ENABLED=0 go build -v 
 
 reloadwebserver:
-	systemctl restart splashtail-staging-webserver
+	sudo systemctl restart splashtail-staging-webserver
+
+restartwebserver:
+	make buildwebserver
+	make reloadwebserver
 
 updatebot:
 	make buildbot && cp -v botv2/target/release/botv2 botv2
