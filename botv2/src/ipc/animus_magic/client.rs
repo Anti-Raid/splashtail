@@ -90,25 +90,6 @@ impl AnimusMessage {
     }
 }
 
-#[derive(Serialize, Deserialize)]
-#[serde(untagged)]
-pub enum AnimusPayload {
-    Message(AnimusMessage),
-    Response(AnimusResponse),
-}
-
-impl From<AnimusMessage> for AnimusPayload {
-    fn from(msg: AnimusMessage) -> Self {
-        Self::Message(msg)
-    }
-}
-
-impl From<AnimusResponse> for AnimusPayload {
-    fn from(resp: AnimusResponse) -> Self {
-        Self::Response(resp)
-    }
-}
-
 pub struct AnimusMagicClient {
     pub redis_pool: RedisPool,
     pub rx_map: Arc<DashMap<String, Sender<AnimusAnyResponse<AnimusResponse>>>>,

@@ -1,3 +1,5 @@
+
+pub mod canonical_config_opt;
 pub mod canonical_module;
 pub mod cmd;
 pub mod config_opt;
@@ -77,7 +79,10 @@ pub struct Module {
     pub background_tasks: Vec<botox::taskman::Task>,
 
     /// Extra init code
-    pub on_startup: Vec<OnStartupFunction>
+    pub on_startup: Vec<OnStartupFunction>,
+
+    /// This stores any extra configuration option for the module
+    pub config_options: Vec<config_opt::ConfigOption>,
 }
 
 #[derive(Default, Clone, PartialEq, serde::Serialize, serde::Deserialize, Debug)]
