@@ -403,7 +403,6 @@ pub async fn commands_modperms(
 
     let mut collect_stream = collector.stream();
 
-    let mut allow_saving = false;
     while let Some(item) = collect_stream.next().await {
         let item_id = item.data.custom_id.as_str();
 
@@ -481,7 +480,69 @@ pub async fn commands_modperms(
                     return Err(format!("You can only modify commands to something that you have permission to use!\n{}", perm_res.to_markdown()).into());
                 }
 
-                allow_saving = true;
+                let mut tx = ctx.data().pool.begin().await?;
+
+                // Check if guild command config exists now
+                let count = sqlx::query!(
+                    "SELECT COUNT(*) FROM guild_command_configurations WHERE guild_id = $1 AND command = $2",
+                    guild_id.to_string(),
+                    command
+                )
+                .fetch_one(&mut *tx)
+                .await?
+                .count
+                .unwrap_or_default();
+            
+                let new_perms = serde_json::to_value(new_command_config.perms)?;
+            
+                if count > 0 {
+                    sqlx::query!(
+                        "UPDATE guild_command_configurations SET perms = $1, disabled = $2 WHERE guild_id = $3 AND command = $4",
+                        new_perms,
+                        new_command_config.disabled,
+                        guild_id.to_string(),
+                        command
+                    )
+                    .execute(&mut *tx)
+                    .await?;
+                } else {
+                    sqlx::query!(
+                        "INSERT INTO guild_command_configurations (guild_id, command, perms, disabled) VALUES ($1, $2, $3, $4)",
+                        guild_id.to_string(),
+                        command,
+                        new_perms,
+                        new_command_config.disabled
+                    )
+                    .execute(&mut *tx)
+                    .await?;
+                }
+            
+                item.create_response(
+                    &ctx.serenity_context().http,
+                    poise::serenity_prelude::CreateInteractionResponse::Message(
+                        poise::CreateReply::new().content("Command configuration saved")
+                        .to_slash_initial_response(serenity::all::CreateInteractionResponseMessage::default())
+                    )
+                )
+                .await?;
+            
+                tx.commit().await?;
+
+                tokio::spawn(async move {
+                    if let Err(err) = SILVERPELT_CACHE
+                        .command_permission_cache
+                        .invalidate_entries_if(move |k, _| k.0 == guild_id)
+                    {
+                        log::error!(
+                            "Failed to invalidate command permission cache for guild {}: {}",
+                            guild_id,
+                            err
+                        );
+                    } else {
+                        log::info!("Invalidated cache for guild {}", guild_id);
+                    }
+                });            
+            
                 break
             },
             _ => {}
@@ -499,63 +560,6 @@ pub async fn commands_modperms(
         )
         .await?;
     } 
-
-    // User did not allow saving/was not allowed to save
-    if !allow_saving {
-        return Ok(())
-    }
-
-    let mut tx = ctx.data().pool.begin().await?;
-
-    // Check if guild command config exists now
-    let count = sqlx::query!(
-        "SELECT COUNT(*) FROM guild_command_configurations WHERE guild_id = $1 AND command = $2",
-        guild_id.to_string(),
-        command
-    )
-    .fetch_one(&mut *tx)
-    .await?
-    .count
-    .unwrap_or_default();
-
-    let new_perms = serde_json::to_value(new_command_config.perms)?;
-
-    if count > 0 {
-        sqlx::query!(
-            "UPDATE guild_command_configurations SET perms = $1, disabled = $2 WHERE guild_id = $3 AND command = $4",
-            new_perms,
-            new_command_config.disabled,
-            guild_id.to_string(),
-            command
-        )
-        .execute(&mut *tx)
-        .await?;
-    } else {
-        sqlx::query!(
-            "INSERT INTO guild_command_configurations (guild_id, command, perms, disabled) VALUES ($1, $2, $3, $4)",
-            guild_id.to_string(),
-            command,
-            new_perms,
-            new_command_config.disabled
-        )
-        .execute(&mut *tx)
-        .await?;
-    }
-
-    tokio::spawn(async move {
-        if let Err(err) = SILVERPELT_CACHE
-            .command_permission_cache
-            .invalidate_entries_if(move |k, _| k.0 == guild_id)
-        {
-            log::error!(
-                "Failed to invalidate command permission cache for guild {}: {}",
-                guild_id,
-                err
-            );
-        } else {
-            log::info!("Invalidated cache for guild {}", guild_id);
-        }
-    });
 
     Ok(())
 }
