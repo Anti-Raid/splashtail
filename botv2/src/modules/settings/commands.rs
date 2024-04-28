@@ -423,7 +423,7 @@ pub async fn commands_modperms(
                     perms_json = perms_json.chars().take(97).collect::<String>() + "...";
                 }
 
-                let modal = serenity::all::CreateQuickModal::new("About you")
+                let modal = serenity::all::CreateQuickModal::new("Edit Permissions")
                 .timeout(std::time::Duration::from_secs(300))
                 .field(
                     serenity::all::CreateInputText::new(serenity::all::InputTextStyle::Short, "Permissions", "")
