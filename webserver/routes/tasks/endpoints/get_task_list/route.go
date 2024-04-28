@@ -5,10 +5,12 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/anti-raid/splashtail/jobs/tasks"
 	"github.com/anti-raid/splashtail/splashcore/structparser/db"
 	"github.com/anti-raid/splashtail/splashcore/types"
-	"github.com/anti-raid/splashtail/jobs/tasks"
+	"github.com/anti-raid/splashtail/webserver/api"
 	"github.com/anti-raid/splashtail/webserver/state"
+	"github.com/go-chi/chi/v5"
 	docs "github.com/infinitybotlist/eureka/doclib"
 	"github.com/infinitybotlist/eureka/uapi"
 	"github.com/jackc/pgx/v5"
@@ -27,9 +29,30 @@ func Docs() *docs.Doc {
 		Params: []docs.Parameter{
 			{
 				Name:        "id",
-				Description: "User/Server ID",
+				Description: "User ID",
 				Required:    true,
 				In:          "path",
+				Schema:      docs.IdSchema,
+			},
+			{
+				Name:        "guild_id",
+				Description: "Guild ID",
+				Required:    true,
+				In:          "path",
+				Schema:      docs.IdSchema,
+			},
+			{
+				Name:        "error_if_no_permissions",
+				Description: "Whether or not to return an error if the user does not have permission to view a task on the task list",
+				Required:    true,
+				In:          "query",
+				Schema:      docs.IdSchema,
+			},
+			{
+				Name:        "error_on_unknown_task",
+				Description: "Whether or not to return an error if a task on the task list is unknown. Otherwise, the task will simply not be returned",
+				Required:    true,
+				In:          "query",
 				Schema:      docs.IdSchema,
 			},
 		},
@@ -38,6 +61,18 @@ func Docs() *docs.Doc {
 }
 
 func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
+	guildId := chi.URLParam(r, "id")
+
+	if guildId == "" {
+		return uapi.HttpResponse{
+			Status: http.StatusBadRequest,
+			Json:   types.ApiError{Message: "Guild ID is required"},
+		}
+	}
+
+	errorIfNoPermissions := r.URL.Query().Get("error_if_no_permissions") == "true"
+	errorOnUnknownTask := r.URL.Query().Get("error_on_unknown_task") == "true"
+
 	// Delete expired tasks first
 	_, err := state.Pool.Exec(d.Context, "DELETE FROM tasks WHERE created_at + expiry < NOW()")
 
@@ -46,31 +81,14 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 		return uapi.DefaultResponse(http.StatusInternalServerError)
 	}
 
-	var taskForStr *string
-
-	if d.Auth.ID != "" {
-		taskForStr, err = tasks.FormatTaskFor(&types.TaskFor{
-			ID:         d.Auth.ID,
-			TargetType: d.Auth.TargetType,
-		})
-
-		if err != nil {
-			state.Logger.Error("Failed to format task for [task format]", zap.Error(err))
-			return uapi.HttpResponse{
-				Status: http.StatusInternalServerError,
-				Json:   types.ApiError{Message: "Internal server error: Failed to format task for: " + err.Error()},
-			}
-		}
-	}
-
-	row, err := state.Pool.Query(d.Context, "SELECT "+taskColsStr+" FROM tasks WHERE task_for IS NULL OR task_for = $1", taskForStr)
+	row, err := state.Pool.Query(d.Context, "SELECT "+taskColsStr+" FROM tasks WHERE guild_id = $1", guildId)
 
 	if err != nil {
 		state.Logger.Error("Failed to fetch task [db fetch]", zap.Error(err))
 		return uapi.DefaultResponse(http.StatusInternalServerError)
 	}
 
-	tasks, err := pgx.CollectRows(row, pgx.RowToStructByName[types.PartialTask])
+	tasksFetched, err := pgx.CollectRows(row, pgx.RowToStructByName[types.PartialTask])
 
 	if errors.Is(err, pgx.ErrNoRows) {
 		return uapi.HttpResponse{
@@ -84,8 +102,47 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 		return uapi.DefaultResponse(http.StatusInternalServerError)
 	}
 
+	var checksDone = map[string]bool{}
+	var parsedTasks = []types.PartialTask{}
+	for _, task := range tasksFetched {
+		// NOTE/WARNING: This is a fastpath that depends on the assumption that the corresponding bot command
+		// does not change for a task. If this assumption is broken, this code will break if the corresponding
+		// command changes while in this loop
+		if _, ok := checksDone[task.TaskName]; ok {
+			parsedTasks = append(parsedTasks, task)
+		}
+
+		baseTaskDef, ok := tasks.TaskDefinitionRegistry[task.TaskName]
+
+		if !ok {
+			if errorOnUnknownTask {
+				return uapi.HttpResponse{
+					Json: types.ApiError{
+						Message: "Internal Error: Unknown task name",
+					},
+					Status: http.StatusInternalServerError,
+				}
+			} else {
+				continue
+			}
+		}
+
+		// Check permissions
+		resp, ok := api.HandlePermissionCheck(d.Auth.ID, guildId, baseTaskDef.CorrespondingBotCommand_View(), api.PermLimits(d.Auth))
+
+		if !ok {
+			if errorIfNoPermissions {
+				return resp
+			}
+			continue
+		}
+
+		checksDone[task.TaskName] = true
+		parsedTasks = append(parsedTasks, task)
+	}
+
 	return uapi.HttpResponse{
 		Status: http.StatusOK,
-		Json:   types.TaskListResponse{Tasks: tasks},
+		Json:   types.TaskListResponse{Tasks: parsedTasks},
 	}
 }

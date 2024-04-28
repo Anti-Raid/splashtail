@@ -24,8 +24,8 @@ func (b Router) Tag() (string, string) {
 
 func (b Router) Routes(r *chi.Mux) {
 	uapi.Route{
-		Pattern:      "/entities/{id}/tasks/{tid}",
-		OpId:         "get_task",
+		Pattern:      "/users/{id}/guilds/{guild_id}/tasks/{tid}",
+		OpId:         "get_guild_task",
 		Method:       uapi.GET,
 		Docs:         get_guild_task.Docs,
 		Handler:      get_guild_task.Route,
@@ -49,7 +49,7 @@ func (b Router) Routes(r *chi.Mux) {
 	}.Route(r)
 
 	uapi.Route{
-		Pattern:      "/users/{id}/guilds/{guild_id}/tasks/{tid}",
+		Pattern:      "/users/{id}/guilds/{guild_id}/tasks",
 		OpId:         "get_task_list",
 		Method:       uapi.GET,
 		Docs:         get_task_list.Docs,
@@ -62,7 +62,14 @@ func (b Router) Routes(r *chi.Mux) {
 			},
 		},
 		ExtData: map[string]any{
-			api.PERMISSION_CHECK_KEY: nil,
+			api.PERMISSION_CHECK_KEY: api.PermissionCheck{
+				Command: func(d uapi.Route, r *http.Request) string {
+					return "" // The command permission check happens inside the endpoint
+				},
+				GuildID: func(d uapi.Route, r *http.Request) string {
+					return chi.URLParam(r, "guild_id")
+				},
+			},
 		},
 	}.Route(r)
 
