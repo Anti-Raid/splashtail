@@ -409,7 +409,7 @@ pub async fn commands_modperms(
 
         let mut response_deferred = false;
         match item_id {
-            "perms/edit" => {
+            "perms/editraw" => {
                 // Open a modal in response
                 let perms = new_command_config.perms.clone().unwrap_or_default();
 
