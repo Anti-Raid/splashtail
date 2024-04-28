@@ -1,4 +1,4 @@
-package create_task
+package create_guild_task
 
 import (
 	"fmt"
@@ -6,11 +6,11 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/anti-raid/splashtail/jobs/tasks"
 	"github.com/anti-raid/splashtail/splashcore/animusmagic"
 	"github.com/anti-raid/splashtail/splashcore/types"
 	"github.com/anti-raid/splashtail/splashcore/utils"
 	"github.com/anti-raid/splashtail/splashcore/utils/mewext"
-	"github.com/anti-raid/splashtail/jobs/tasks"
 	"github.com/anti-raid/splashtail/webserver/api"
 	"github.com/anti-raid/splashtail/webserver/state"
 	jsoniter "github.com/json-iterator/go"
@@ -26,12 +26,19 @@ var json = jsoniter.ConfigFastest
 
 func Docs() *docs.Doc {
 	return &docs.Doc{
-		Summary:     "Create Task",
-		Description: "Creates a task. Returns the task data if this is successful",
+		Summary:     "Create Guild Task",
+		Description: "Creates a task for a guild. Returns the task data if this is successful",
 		Params: []docs.Parameter{
 			{
 				Name:        "id",
 				Description: "User ID",
+				Required:    true,
+				In:          "path",
+				Schema:      docs.IdSchema,
+			},
+			{
+				Name:        "guild_id",
+				Description: "Guild ID",
 				Required:    true,
 				In:          "path",
 				Schema:      docs.IdSchema,
@@ -92,7 +99,7 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 		}
 	}
 
-	guildId := r.URL.Query().Get("guild_id")
+	guildId := chi.URLParam(r, "guild_id")
 
 	if guildId == "" {
 		return uapi.HttpResponse{

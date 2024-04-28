@@ -9,9 +9,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/anti-raid/splashtail/jobs/tasks"
 	"github.com/anti-raid/splashtail/splashcore/structparser/db"
 	types "github.com/anti-raid/splashtail/splashcore/types"
-	"github.com/anti-raid/splashtail/jobs/tasks"
 	"github.com/anti-raid/splashtail/webserver/api"
 	"github.com/anti-raid/splashtail/webserver/state"
 
@@ -200,7 +200,7 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 		} else {
 			return uapi.HttpResponse{
 				Status: http.StatusNotImplemented,
-				Json:   types.ApiError{Message: "Downloading is not supported for this target type [TargetType = Server]"},
+				Json:   types.ApiError{Message: "Downloading is not supported for this target type [TargetType = " + task.TaskFor.TargetType + "]"},
 			}
 		}
 	}

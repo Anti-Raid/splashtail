@@ -9,13 +9,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/anti-raid/splashtail/splashcore/types"
-	"github.com/anti-raid/splashtail/splashcore/utils"
-	"github.com/anti-raid/splashtail/splashcore/utils/timex"
 	"github.com/anti-raid/splashtail/jobs/tasks/common"
 	"github.com/anti-raid/splashtail/jobs/tasks/step"
 	"github.com/anti-raid/splashtail/jobs/tasks/taskdef"
 	"github.com/anti-raid/splashtail/jobs/tasks/taskstate"
+	"github.com/anti-raid/splashtail/splashcore/types"
+	"github.com/anti-raid/splashtail/splashcore/utils"
+	"github.com/anti-raid/splashtail/splashcore/utils/timex"
 	"github.com/go-viper/mapstructure/v2"
 
 	"github.com/bwmarrin/discordgo"
@@ -1147,6 +1147,10 @@ func (t *ServerBackupRestoreTask) Exec(
 
 func (t *ServerBackupRestoreTask) CorrespondingBotCommand_Create() string {
 	return "backups restore"
+}
+
+func (t *ServerBackupRestoreTask) CorrespondingBotCommand_View() string {
+	return "backups list"
 }
 
 func (t *ServerBackupRestoreTask) CorrespondingBotCommand_Download() string {

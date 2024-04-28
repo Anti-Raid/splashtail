@@ -13,11 +13,11 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/anti-raid/splashtail/splashcore/types"
-	"github.com/anti-raid/splashtail/splashcore/utils"
 	"github.com/anti-raid/splashtail/jobs/tasks/common"
 	"github.com/anti-raid/splashtail/jobs/tasks/taskdef"
 	"github.com/anti-raid/splashtail/jobs/tasks/taskstate"
+	"github.com/anti-raid/splashtail/splashcore/types"
+	"github.com/anti-raid/splashtail/splashcore/utils"
 
 	_ "golang.org/x/image/webp"
 
@@ -712,6 +712,10 @@ func (t *ServerBackupCreateTask) Exec(
 
 func (t *ServerBackupCreateTask) CorrespondingBotCommand_Create() string {
 	return "backups create"
+}
+
+func (t *ServerBackupCreateTask) CorrespondingBotCommand_View() string {
+	return "backups list"
 }
 
 func (t *ServerBackupCreateTask) CorrespondingBotCommand_Download() string {

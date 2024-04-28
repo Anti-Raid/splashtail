@@ -63,7 +63,7 @@ pub struct Module {
     /// Whether or not individual commands in the module can be configured
     pub commands_configurable: bool,
 
-    /// Virtual module. These modules allow controlling certain functionality of the bot without being loaded into the actual bot
+    /// Virtual module. These modules allow controlling functionality of the bot without having its commands loaded into the bot
     pub virtual_module: bool,
 
     /// Whether the module is enabled or disabled by default

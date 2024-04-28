@@ -247,13 +247,23 @@ func Authorize(r uapi.Route, req *http.Request) (uapi.AuthData, uapi.HttpRespons
 			permCheck, ok := pc.(PermissionCheck)
 
 			if ok {
-				cmd := permCheck.Command(r, req)
 				guildId := permCheck.GuildID(r, req)
 
-				hresp, ok := HandlePermissionCheck(id.String, guildId, cmd, permLimits)
+				// First check for web use permissions
+				hresp, ok := HandlePermissionCheck(id.String, guildId, "web use", permLimits)
 
 				if !ok {
 					return uapi.AuthData{}, hresp, false
+				}
+
+				cmd := permCheck.Command(r, req)
+
+				if cmd != "" {
+					hresp, ok = HandlePermissionCheck(id.String, guildId, cmd, permLimits)
+
+					if !ok {
+						return uapi.AuthData{}, hresp, false
+					}
 				}
 			}
 

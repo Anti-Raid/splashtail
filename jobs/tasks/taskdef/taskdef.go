@@ -4,8 +4,8 @@ package taskdef
 import (
 	"time"
 
-	"github.com/anti-raid/splashtail/splashcore/types"
 	"github.com/anti-raid/splashtail/jobs/tasks/taskstate"
+	"github.com/anti-raid/splashtail/splashcore/types"
 	"go.uber.org/zap"
 )
 
@@ -32,6 +32,9 @@ type TaskDefinition interface {
 
 	// Resumable returns whether or not the task is resumable
 	Resumable() bool
+
+	// CorrespondingBotCommand_View returns the bot command that should be checked for ACL purposes to list/view such a task
+	CorrespondingBotCommand_View() string
 
 	// CorrespondingBotCommand_Create returns the bot command that should be checked for ACL purposes to create such a task
 	CorrespondingBotCommand_Create() string

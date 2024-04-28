@@ -5,12 +5,12 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/anti-raid/splashtail/splashcore/types"
-	"github.com/anti-raid/splashtail/splashcore/utils"
-	"github.com/anti-raid/splashtail/splashcore/utils/timex"
 	"github.com/anti-raid/splashtail/jobs/tasks/common"
 	"github.com/anti-raid/splashtail/jobs/tasks/taskdef"
 	"github.com/anti-raid/splashtail/jobs/tasks/taskstate"
+	"github.com/anti-raid/splashtail/splashcore/types"
+	"github.com/anti-raid/splashtail/splashcore/utils"
+	"github.com/anti-raid/splashtail/splashcore/utils/timex"
 	"github.com/bwmarrin/discordgo"
 	jsoniter "github.com/json-iterator/go"
 	orderedmap "github.com/wk8/go-ordered-map/v2"
@@ -298,6 +298,10 @@ func (t *MessagePruneTask) Exec(
 }
 
 func (t *MessagePruneTask) CorrespondingBotCommand_Create() string {
+	return "prune_user"
+}
+
+func (t *MessagePruneTask) CorrespondingBotCommand_View() string {
 	return "prune_user"
 }
 

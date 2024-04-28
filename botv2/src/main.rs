@@ -409,6 +409,11 @@ async fn main() {
             let mut _cmd_names = Vec::new();
             for module in modules::modules() { 
                 log::info!("Loading module {}", module.id);
+
+                if module.virtual_module {
+                    continue
+                }
+                
                 for cmd in module.commands {
                     let mut cmd = cmd.0;
                     cmd.category = Some(module.id.to_string());

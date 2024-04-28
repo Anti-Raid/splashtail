@@ -12,6 +12,7 @@ type CanonicalModule struct {
 	Toggleable           bool                    `json:"toggleable"`
 	CommandsConfigurable bool                    `json:"commands_configurable"`
 	WebHidden            bool                    `json:"web_hidden"`
+	VirtualModule        bool                    `json:"virtual_module"`
 	IsDefaultEnabled     bool                    `json:"is_default_enabled"`
 	Commands             []CanonicalCommand      `json:"commands"`
 	ConfigOptions        []CanonicalConfigOption `json:"config_options"`

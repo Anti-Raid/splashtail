@@ -29,7 +29,7 @@ func (b Router) Routes(r *chi.Mux) {
 
 	uapi.Route{
 		Pattern: "/users/{id}/guilds",
-		OpId:    "get_user",
+		OpId:    "get_user_guilds",
 		Method:  uapi.GET,
 		Docs:    get_user_guilds.Docs,
 		Handler: get_user_guilds.Route,

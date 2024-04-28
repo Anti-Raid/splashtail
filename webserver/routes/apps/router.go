@@ -27,7 +27,7 @@ func (b Router) Routes(r *chi.Mux) {
 		Docs:    get_apps_meta.Docs,
 		Handler: get_apps_meta.Route,
 		ExtData: map[string]any{
-			api.PERMISSION_CHECK_KEY: nil, // The permission check is handled in the actual function
+			api.PERMISSION_CHECK_KEY: nil,
 		},
 	}.Route(r)
 	uapi.Route{
@@ -44,7 +44,7 @@ func (b Router) Routes(r *chi.Mux) {
 			},
 		},
 		ExtData: map[string]any{
-			api.PERMISSION_CHECK_KEY: nil, // The permission check is handled in the actual function
+			api.PERMISSION_CHECK_KEY: nil,
 		},
 	}.Route(r)
 	uapi.Route{
@@ -61,7 +61,7 @@ func (b Router) Routes(r *chi.Mux) {
 			},
 		},
 		ExtData: map[string]any{
-			api.PERMISSION_CHECK_KEY: nil, // The permission check is handled in the actual function
+			api.PERMISSION_CHECK_KEY: nil,
 		},
 	}.Route(r)
 }
