@@ -85,7 +85,7 @@ pub struct Module {
     pub config_options: Vec<config_opt::ConfigOption>,
 }
 
-#[derive(Default, Clone, PartialEq, serde::Serialize, serde::Deserialize, Debug)]
+#[derive(Default, Clone, Hash, Eq, PartialEq, serde::Serialize, serde::Deserialize, Debug)]
 pub struct PermissionCheck {
     /// The kittycat permissions needed to run the command
     pub kittycat_perms: Vec<String>,
@@ -143,7 +143,7 @@ impl Display for PermissionCheck {
     }
 }
 
-#[derive(Default, Clone, PartialEq, serde::Serialize, serde::Deserialize, Debug)]
+#[derive(Default, Clone, Hash, Eq, PartialEq, serde::Serialize, serde::Deserialize, Debug)]
 pub struct PermissionChecks {
     /// The list of permission checks
     pub checks: Vec<PermissionCheck>,
@@ -197,7 +197,7 @@ impl Default for CommandExtendedData {
 }
 
 /// Guild command configuration data
-#[derive(Clone, PartialEq, serde::Serialize, serde::Deserialize, Debug)]
+#[derive(Clone, Hash, Eq, PartialEq, serde::Serialize, serde::Deserialize, Debug)]
 pub struct GuildCommandConfiguration {
     /// The ID
     pub id: String,

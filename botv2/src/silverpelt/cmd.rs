@@ -174,9 +174,14 @@ pub struct CheckCommandOptions {
     /// API needs this for limiting the permissions of a user, allows setting custom resolved perms
     #[serde(default)]
     pub custom_resolved_kittycat_perms: Option<Vec<String>>,
+    
     /// Whether or not to ensure that the user has all the permissions in the custom_resolved_kittycat_perms
     #[serde(default)]
     pub ensure_user_has_custom_resolved: bool,
+
+    /// Custom permission checks to use
+    #[serde(default)]
+    pub custom_command_configuration: Option<GuildCommandConfiguration>,
 }
 
 impl Default for CheckCommandOptions {
@@ -188,6 +193,7 @@ impl Default for CheckCommandOptions {
             ignore_command_disabled: false,
             custom_resolved_kittycat_perms: None,
             ensure_user_has_custom_resolved: true,
+            custom_command_configuration: None,
         }
     }
 }
@@ -265,13 +271,19 @@ pub async fn check_command(
             Err(e) => return e.into(),
         };
 
-    let mut command_config = command_config.unwrap_or(silverpelt::GuildCommandConfiguration {
-        id: "".to_string(),
-        guild_id: guild_id.to_string(),
-        command: command.to_string(),
-        perms: None,
-        disabled: None,
-    });
+    let mut command_config = {
+        if let Some(ref custom_command_configuration) = opts.custom_command_configuration {
+            custom_command_configuration.clone()
+        } else {
+            command_config.unwrap_or(silverpelt::GuildCommandConfiguration {
+                id: "".to_string(),
+                guild_id: guild_id.to_string(),
+                command: command.to_string(),
+                perms: None,
+                disabled: None,
+            })
+        }
+    };
 
     if opts.ignore_command_disabled {
         command_config.disabled = Some(false);
@@ -288,14 +300,14 @@ pub async fn check_command(
         module_config.disabled = Some(false);
     }
 
-    // Try getting guild+member from cache to speed up response times first
-    let (is_owner, guild_owner_id, member_perms, roles) =
-        match get_perm_info(guild_id, user_id, cache_http, poise_ctx).await {
-            Ok(v) => v,
-            Err(e) => {
-                return e;
-            }
-        };
+        // Try getting guild+member from cache to speed up response times first
+        let (is_owner, guild_owner_id, member_perms, roles) =
+            match get_perm_info(guild_id, user_id, cache_http, poise_ctx).await {
+                Ok(v) => v,
+                Err(e) => {
+                    return e;
+                }
+            };
 
     if is_owner {
         return PermissionResult::OkWithMessage {

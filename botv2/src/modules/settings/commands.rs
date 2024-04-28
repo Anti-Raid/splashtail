@@ -1,6 +1,8 @@
 use botox::cache::CacheHttpImpl;
 use crate::{Error, Context};
 use crate::silverpelt::{silverpelt_cache::SILVERPELT_CACHE, CommandExtendedData, GuildCommandConfiguration, GuildModuleConfiguration};
+use futures_util::StreamExt;
+use std::time::Duration;
 
 /// Settings related to commands
 #[poise::command(
@@ -272,7 +274,7 @@ pub async fn commands_modperms(
 
     // Check if the user has permission to use the command
     let cache_http = &CacheHttpImpl::from_ctx(ctx.serenity_context());
-    let perm_res = crate::silverpelt::cmd::check_command(
+    let perm_res: crate::silverpelt::permissions::PermissionResult = crate::silverpelt::cmd::check_command(
         base_command,
         &command,
         guild_id,
@@ -298,7 +300,7 @@ pub async fn commands_modperms(
     ) -> Result<
         (
             CommandExtendedData,
-            Vec<GuildCommandConfiguration>,
+            Option<GuildCommandConfiguration>,
             Option<GuildModuleConfiguration>,
         ),
         crate::Error,
@@ -311,7 +313,7 @@ pub async fn commands_modperms(
         .await?;
 
         let cmd_data = crate::silverpelt::module_config::get_command_extended_data(permutations)?;
-        let command_configurations = crate::silverpelt::module_config::get_all_command_configurations(
+        let command_configurations = crate::silverpelt::module_config::get_exact_command_configuration(
             pool,
             guild_id.to_string().as_str(),
             command,
@@ -323,6 +325,218 @@ pub async fn commands_modperms(
 
     #[allow(unused_variables)] // WIP
     let (cmd_data, command_config, module_config) = get_current_permissions(&ctx.data().pool, guild_id, &cmd_permutations, &command).await?;
+
+    let mut new_command_config = {
+        if let Some(command_config) = command_config {
+            command_config
+        } else {
+            GuildCommandConfiguration {
+                id: "".to_string(),
+                guild_id: guild_id.to_string(),
+                command: command.clone(),
+                disabled: None,
+                perms: None,
+            }
+        }
+    };
+
+    fn command_config_to_edit_message<'a>(
+        command_config: &GuildCommandConfiguration,
+    ) -> poise::CreateReply<'a> {
+        let mut msg = format!("**`{}`**\n\n", command_config.command);
+
+        if let Some(ref perms) = command_config.perms {
+            msg.push_str(&format!("Permissions:\n{}\n", perms));
+        } else {
+            msg.push_str("Permissions: None (using default permissions)\n");
+        }
+
+        if let Some(disabled) = command_config.disabled {
+            msg.push_str(&format!("Disabled: {}\n", disabled));
+        } else {
+            msg.push_str("Disabled: None (using default configuration)\n");
+        }
+        
+        poise::CreateReply::new()
+        .content(msg)
+        .components(
+            vec![
+                serenity::all::CreateActionRow::Buttons(
+                    vec![
+                        serenity::all::CreateButton::new("perms/editraw")
+                        .style(serenity::all::ButtonStyle::Primary)
+                        .label("Open Raw Permission Editor"),
+                        
+                        if command_config.disabled.unwrap_or_default() {
+                            serenity::all::CreateButton::new("cmd/enable")
+                            .style(serenity::all::ButtonStyle::Success)
+                            .label("Enable Command")
+                        } else {
+                            serenity::all::CreateButton::new("cmd/disable")
+                            .style(serenity::all::ButtonStyle::Danger)
+                            .label("Disable Command")
+                        },
+                        serenity::all::CreateButton::new("cmd/disable/reset")
+                        .style(serenity::all::ButtonStyle::Danger)
+                        .label("Reset Command Disable"),
+                        serenity::all::CreateButton::new("perms/disable/reset")
+                        .style(serenity::all::ButtonStyle::Danger)
+                        .label("Reset Command Perms"),
+                        serenity::all::CreateButton::new("cmd/save")
+                        .style(serenity::all::ButtonStyle::Secondary)
+                        .label("Save Command Configuration"),
+                    ]
+                )
+            ]
+        )   
+    }
+
+    let msg = ctx.send(command_config_to_edit_message(&new_command_config))
+    .await?
+    .into_message()
+    .await?;
+
+    let collector = msg
+    .await_component_interactions(ctx.serenity_context().shard.clone())
+    .author_id(ctx.author().id)
+    .timeout(Duration::from_secs(600));
+
+    let mut collect_stream = collector.stream();
+
+    let mut allow_saving = false;
+    while let Some(item) = collect_stream.next().await {
+        let item_id = item.data.custom_id.as_str();
+
+        let mut response_deferred = false;
+        match item_id {
+            "perms/edit" => {
+                // Open a modal in response
+                let perms = new_command_config.perms.clone().unwrap_or_default();
+
+                let mut perms_json = serde_json::to_string(&perms).unwrap_or_default();
+
+                if perms_json.is_empty() {
+                    perms_json = "{}".to_string();
+                }
+
+                if perms_json.len() > 100 {
+                    perms_json = perms_json.chars().take(97).collect::<String>() + "...";
+                }
+
+                let modal = serenity::all::CreateQuickModal::new("About you")
+                .timeout(std::time::Duration::from_secs(300))
+                .field(
+                    serenity::all::CreateInputText::new(serenity::all::InputTextStyle::Short, "Permissions", "")
+                    .placeholder(perms_json)
+                );
+
+                let resp = item.quick_modal(ctx.serenity_context(), modal).await?;
+                response_deferred = true;
+
+                let Some(resp) = resp else {
+                    continue
+                };
+
+                if resp.inputs.is_empty() {
+                    continue
+                }
+
+                let perms_str = &resp.inputs[0];
+
+                let perms = serde_json::from_str(perms_str);
+
+                match perms {
+                    Ok(perms) => {
+                        new_command_config.perms = perms;
+                    },
+                    Err(err) => {
+                        ctx.say(format!("Failed to parse permissions: {}", err)).await?;
+                        continue
+                    }
+                }
+            },
+            "cmd/save" => {
+                let perm_res: crate::silverpelt::permissions::PermissionResult = crate::silverpelt::cmd::check_command(
+                    base_command,
+                    &command,
+                    guild_id,
+                    ctx.author().id,
+                    &ctx.data().pool,
+                    cache_http,
+                    &Some(ctx),
+                    crate::silverpelt::cmd::CheckCommandOptions {
+                        ignore_command_disabled: true,
+                        ignore_cache: true,
+                        cache_result: false,
+                        custom_command_configuration: Some(new_command_config.clone()),
+                        ..Default::default()
+                    },
+                ).await;
+            
+                if !perm_res.is_ok() {
+                    return Err(format!("You can only modify commands to something that you have permission to use!\n{}", perm_res.to_markdown()).into());
+                }
+
+                allow_saving = true;
+                break
+            },
+            _ => {}
+        }
+
+        if !response_deferred {
+            item.defer(&ctx.serenity_context().http).await?;
+        }
+
+        // Send the updated message
+        item.edit_response(
+            &ctx.serenity_context().http,
+            command_config_to_edit_message(&new_command_config)
+            .to_slash_initial_response_edit(serenity::all::EditInteractionResponse::default())
+        )
+        .await?;
+    } 
+
+    // User did not allow saving/was not allowed to save
+    if !allow_saving {
+        return Ok(())
+    }
+
+    let mut tx = ctx.data().pool.begin().await?;
+
+    // Check if guild command config exists now
+    let count = sqlx::query!(
+        "SELECT COUNT(*) FROM guild_command_configurations WHERE guild_id = $1 AND command = $2",
+        guild_id.to_string(),
+        command
+    )
+    .fetch_one(&mut *tx)
+    .await?
+    .count
+    .unwrap_or_default();
+
+    let new_perms = serde_json::to_value(new_command_config.perms)?;
+
+    if count > 0 {
+        sqlx::query!(
+            "UPDATE guild_command_configurations SET perms = $1, disabled = $2 WHERE guild_id = $3 AND command = $4",
+            new_perms,
+            new_command_config.disabled,
+            guild_id.to_string(),
+            command
+        )
+        .execute(&mut *tx)
+        .await?;
+    } else {
+        sqlx::query!(
+            "INSERT INTO guild_command_configurations (guild_id, command, perms, disabled) VALUES ($1, $2, $3, $4)",
+            guild_id.to_string(),
+            command,
+            new_perms,
+            new_command_config.disabled
+        )
+        .execute(&mut *tx)
+        .await?;
+    }
 
     tokio::spawn(async move {
         if let Err(err) = SILVERPELT_CACHE
@@ -338,8 +552,6 @@ pub async fn commands_modperms(
             log::info!("Invalidated cache for guild {}", guild_id);
         }
     });
-
-    ctx.say("Command disabled").await?;
 
     Ok(())
 }

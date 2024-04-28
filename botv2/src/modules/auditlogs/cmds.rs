@@ -147,6 +147,8 @@ pub async fn list_sinks(
             _ => {}
         }
 
+        item.defer(&ctx.serenity_context().http).await?;
+
         let cr = CreateReply::new()
         .embed(create_sink_list_embed(&sink_lister[index]))
         .components(

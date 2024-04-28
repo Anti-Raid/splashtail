@@ -184,7 +184,42 @@ pub async fn get_best_command_configuration(
     Ok(command_configuration)
 }
 
+// Gets the exact command configuation for a specific command
+pub async fn get_exact_command_configuration(
+    pool: &PgPool,
+    guild_id: &str,
+    command: &str,
+) -> Result<Option<GuildCommandConfiguration>, crate::Error> {
+    let mut command_configuration = None;
+    let rec = sqlx::query!(
+        "SELECT id, guild_id, command, perms, disabled FROM guild_command_configurations WHERE guild_id = $1 AND command = $2",
+        guild_id,
+        command
+    )
+    .fetch_optional(pool)
+    .await?;
+
+    if let Some(rec) = rec {
+        command_configuration = Some(GuildCommandConfiguration {
+            id: rec.id.hyphenated().to_string(),
+            guild_id: rec.guild_id,
+            command: rec.command,
+            perms: {
+                if let Some(perms) = rec.perms {
+                    serde_json::from_value(perms).unwrap()
+                } else {
+                    None
+                }
+            },
+            disabled: rec.disabled,
+        });
+    }
+
+    Ok(command_configuration)
+}
+
 /// Returns all configurations of a command
+#[allow(dead_code)]
 pub async fn get_all_command_configurations(
     pool: &PgPool,
     guild_id: &str,
