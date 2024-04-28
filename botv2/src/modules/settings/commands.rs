@@ -426,7 +426,7 @@ pub async fn commands_modperms(
                 let modal = serenity::all::CreateQuickModal::new("Edit Permissions")
                 .timeout(std::time::Duration::from_secs(300))
                 .field(
-                    serenity::all::CreateInputText::new(serenity::all::InputTextStyle::Short, "Permissions", "")
+                    serenity::all::CreateInputText::new(serenity::all::InputTextStyle::Short, "Permissions", "permissions")
                     .placeholder(perms_json)
                 );
 
@@ -447,6 +447,10 @@ pub async fn commands_modperms(
 
                 match perms {
                     Ok(perms) => {
+                        if perms.checks.len() > 10 {
+                            ctx.say("You can only have up to 10 checks in a PermissionCheck").await?;
+                            continue
+                        }
                         new_command_config.perms = perms;
                     },
                     Err(err) => {
