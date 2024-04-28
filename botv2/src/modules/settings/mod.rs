@@ -91,7 +91,7 @@ pub fn module() -> crate::silverpelt::Module {
                         name: "Channel ID",
                         column_type: ColumnType::Channel,
                         nullable: false,
-                        unique: true,
+                        unique: false,
                         array: false,
                         hint: Some("channel_id".to_string()),
                     },

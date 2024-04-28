@@ -4,6 +4,7 @@ package animusmagic
 import (
 	"github.com/anti-raid/splashtail/splashcore/silverpelt"
 	"github.com/anti-raid/splashtail/splashcore/types"
+	orderedmap "github.com/wk8/go-ordered-map/v2"
 )
 
 type ClusterModules = []silverpelt.CanonicalModule
@@ -28,6 +29,7 @@ type BotAnimusMessage struct {
 		Toggle  string         `json:"toggle"`
 		Options map[string]any `json:"options,omitempty"`
 	} `json:"TogglePerModuleCache,omitempty"`
+	GetSerenityPermissionList *struct{} `json:"GetSerenityPermissionList,omitempty"`
 }
 
 func (b BotAnimusMessage) Message() {}
@@ -55,6 +57,9 @@ type BotAnimusResponse struct {
 		PermRes silverpelt.PermissionResult `json:"perm_res"`
 		IsOk    bool                        `json:"is_ok"`
 	}
+	GetSerenityPermissionList *struct {
+		Permissions orderedmap.OrderedMap[string, uint64] `json:"perms"`
+	} `json:"GetSerenityPermissionList,omitempty"`
 }
 
 func (b BotAnimusResponse) Response() {}

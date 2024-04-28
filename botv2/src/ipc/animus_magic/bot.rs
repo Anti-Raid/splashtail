@@ -43,6 +43,10 @@ pub enum BotAnimusResponse {
         perm_res: PermissionResult,
         is_ok: bool,
     },
+    /// Returns the list of all permissions present within serenity
+    GetSerenityPermissionList {
+        perms: indexmap::IndexMap<String, u64>,
+    }
 }
 
 #[derive(Serialize, Deserialize, Clone)]
@@ -71,6 +75,8 @@ pub enum BotAnimusMessage {
         toggle: String,
         options: indexmap::IndexMap<String, serde_cbor::Value>,
     },
+    /// Returns the list of all permissions present within serenity
+    GetSerenityPermissionList {},
 }
 
 impl BotAnimusMessage {
@@ -190,6 +196,11 @@ impl BotAnimusMessage {
                     message: "".to_string(),
                 })
             },
+            Self::GetSerenityPermissionList { } => {
+                Ok(BotAnimusResponse::GetSerenityPermissionList {
+                    perms: serenity::model::permissions::Permissions::all().iter().map(|p| (p.to_string(), p.bits())).collect()
+                })
+            }
         }
     }
 }
