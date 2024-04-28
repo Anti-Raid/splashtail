@@ -1,6 +1,8 @@
 package users
 
 import (
+	"net/http"
+
 	"github.com/anti-raid/splashtail/splashcore/types"
 	"github.com/anti-raid/splashtail/webserver/api"
 	"github.com/anti-raid/splashtail/webserver/routes/users/endpoints/get_user"
@@ -57,7 +59,14 @@ func (b Router) Routes(r *chi.Mux) {
 			},
 		},
 		ExtData: map[string]any{
-			api.PERMISSION_CHECK_KEY: nil,
+			api.PERMISSION_CHECK_KEY: api.PermissionCheck{
+				Command: func(d uapi.Route, r *http.Request) string {
+					return "" // No extra permissions are needed
+				},
+				GuildID: func(d uapi.Route, r *http.Request) string {
+					return chi.URLParam(r, "guild_id")
+				},
+			},
 		},
 	}.Route(r)
 }
