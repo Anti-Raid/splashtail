@@ -102,6 +102,7 @@ impl AnimusMagicClient {
     pub async fn start_ipc_listener(
         &self,
         pool: sqlx::PgPool,
+        data: Arc<crate::Data>,
         cache_http: CacheHttpImpl,
 
         #[allow(unused_variables)] // To be used in the future
@@ -280,6 +281,7 @@ impl AnimusMagicClient {
                         rx_map: self.rx_map.clone(),
                     };
 
+                    let data = data.clone();
                     tokio::spawn(async move {
                         let payload = &binary[meta.payload_offset..];
 
@@ -337,7 +339,7 @@ impl AnimusMagicClient {
                             }
                         };
 
-                        let data = match msg.response(&pool, &cache_http).await {
+                        let data = match msg.response(&pool, &cache_http, &data).await {
                             Ok(data) => data,
                             Err(e) => {
                                 log::warn!(

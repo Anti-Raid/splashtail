@@ -83,25 +83,25 @@ impl PermissionResult {
             PermissionResult::OkWithMessage { message } => message.clone(),
             PermissionResult::MissingKittycatPerms { check } => {
                 format!(
-                    "You do not have the required permissions to run this command. Try checking that you have the below permissions: {}",
+                    "You do not have the required permissions to perform this action. Try checking that you have the below permissions: {}",
                     check
                 )
             }
             PermissionResult::MissingNativePerms { check } => {
                 format!(
-                    "You do not have the required permissions to run this command. Try checking that you have the below permissions: {}",
+                    "You do not have the required permissions to perform this action. Try checking that you have the below permissions: {}",
                     check
                 )
             }
             PermissionResult::MissingAnyPerms { check } => {
                 format!(
-                    "You do not have the required permissions to run this command. Try checking that you have the below permissions: {}",
+                    "You do not have the required permissions to perform this action. Try checking that you have the below permissions: {}",
                     check
                 )
             }
             PermissionResult::CommandDisabled { command_config } => {
                 format!(
-                    "The command ``{}`` (inherited from ``{}``) is disabled on this server",
+                    "You cannot perform this action because the command ``{}`` (inherited from ``{}``) is disabled on this server",
                     command_config.command, command_config.command
                 )
             }
@@ -116,13 +116,13 @@ impl PermissionResult {
             }
             PermissionResult::NoChecksSucceeded { checks } => {
                 format!(
-                    "You do not have the required permissions to run this command. You need at least one of the following permissions to execute this command:\n\n**Required Permissions**: {}",
+                    "You do not have the required permissions to perform this action. You need at least one of the following permissions to perform this action:\n\n**Required Permissions**: {}",
                     checks
                 )
             }
             PermissionResult::MissingMinChecks { checks } => {
                 format!(
-                    "You do not have the required permissions to run this command. You need at least {} of the following permissions to execute this command:\n\n**Required Permissions**: {}",
+                    "You do not have the required permissions to perform this action. You need at least {} of the following permissions to perform this action:\n\n**Required Permissions**: {}",
                     checks.checks_needed, checks
                 )
             }

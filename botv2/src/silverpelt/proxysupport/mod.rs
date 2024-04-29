@@ -2,6 +2,82 @@ use std::collections::HashMap;
 
 pub mod sandwich;
 
+
+/// Faster version of botox member in guild that also takes into account the sandwich proxy layer
+pub async fn member_in_guild(
+    ctx: &botox::cache::CacheHttpImpl,
+    reqwest_client: &reqwest::Client,
+    guild_id: serenity::model::id::GuildId,
+    user_id: serenity::model::id::UserId,
+) -> Result<serenity::all::Member, crate::Error> {
+    if crate::config::CONFIG.meta.sandwich_http_api.is_none() {
+        let res = botox::cache::member_on_guild(ctx, guild_id, user_id, true).await?;
+    
+        let Some(res) = res else {
+            return Err("Member not found".into());
+        };
+
+        return Ok(res);
+    }
+
+    let res = botox::cache::member_on_guild(ctx, guild_id, user_id, false).await?;
+
+    if let Some(res) = res {
+        return Ok(res);
+    }
+
+    // Part 2, try sandwich state
+    let Some(ref proxy_url) = crate::config::CONFIG.meta.sandwich_http_api else {
+        return Err("Sandwich proxy not configured".into());
+    };
+
+    let url = format!("{}/api/state?col=members&id={}&guild_id={}", proxy_url, user_id, guild_id);
+
+    #[derive(serde::Serialize, serde::Deserialize)]
+    struct Resp {
+        ok: bool,
+        data: Option<serenity::all::Member>,
+        error: Option<String>,
+    }
+    
+    let resp = reqwest_client
+    .get(&url)
+    .send()
+    .await?
+    .json::<Resp>()
+    .await?;
+
+    if resp.ok {
+        let Some(member) = resp.data else {
+           return Err("Member not found".into());
+        };
+
+        return Ok(member);
+    } else {
+        log::warn!("Sandwich proxy returned error: {:?}", resp.error);
+    }
+
+    // Last resort, use botox to fetch from http and then update sandwich as well
+    let res = botox::cache::member_on_guild(ctx, guild_id, user_id, true).await?;
+
+    let Some(res) = res else {
+        return Err("Member not found".into());
+    };
+
+    // Update sandwich with a POST
+    let resp = reqwest_client
+    .post(&url)
+    .json(&res)
+    .send()
+    .await?;
+
+    if !resp.status().is_success() {
+        log::warn!("Failed to update sandwich proxy with member data: {:?}", resp.text().await);
+    }
+
+    Ok(res)
+}
+
 pub enum ProxyResponse {
     Sandwich(sandwich::StatusEndpointResponse)
 }

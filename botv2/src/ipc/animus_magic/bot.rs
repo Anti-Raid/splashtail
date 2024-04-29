@@ -84,6 +84,7 @@ impl BotAnimusMessage {
         self,
         pool: &PgPool,
         cache_http: &CacheHttpImpl,
+        data: &crate::Data,
     ) -> Result<BotAnimusResponse, AnimusErrorResponse> {
         match self {
             Self::Modules {} => {
@@ -121,15 +122,13 @@ impl BotAnimusMessage {
                         None => return Err("Guild not found".into()),
                     };
 
-                    let Some(member) = botox::cache::member_on_guild(
+                    let member = silverpelt::proxysupport::member_in_guild(
                         cache_http,
+                        &data.reqwest,
                         guild_id,
                         user_id,
-                        true
                     )
-                    .await? else {
-                        return Err("Failed to get member".into());
-                    };
+                    .await?;
 
                     let Some(bot_user) = botox::cache::member_on_guild(
                         cache_http,

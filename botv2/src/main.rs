@@ -205,12 +205,13 @@ async fn event_listener<'a>(
 
                     // And for animus magic
                     let pool = data.pool.clone();
+                    let data = data.clone();
                     let ch = CacheHttpImpl::from_ctx(ctx.serenity_context);
                     let sm = ctx.shard_manager().clone();
                     let am_ref = data.animus_magic_ipc.clone();
                     tokio::task::spawn(async move {
                         let am_ref = am_ref;
-                        am_ref.start_ipc_listener(pool, ch, sm).await;
+                        am_ref.start_ipc_listener(pool, data, ch, sm).await;
                     });
                 }
 
