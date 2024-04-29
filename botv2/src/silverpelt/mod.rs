@@ -10,6 +10,7 @@ pub mod poise_ext;
 pub mod proxysupport;
 pub mod silverpelt_cache;
 pub mod utils;
+pub mod ext_generate;
 
 use futures::future::BoxFuture;
 use indexmap::IndexMap;

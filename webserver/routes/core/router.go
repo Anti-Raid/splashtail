@@ -3,6 +3,7 @@ package core
 import (
 	"github.com/anti-raid/splashtail/webserver/routes/core/endpoints/get_cluster_modules"
 	"github.com/anti-raid/splashtail/webserver/routes/core/endpoints/get_clusters_health"
+	"github.com/anti-raid/splashtail/webserver/routes/core/endpoints/get_serenity_permissions"
 	"github.com/go-chi/chi/v5"
 	"github.com/infinitybotlist/eureka/uapi"
 )
@@ -22,6 +23,14 @@ func (b Router) Routes(r *chi.Mux) {
 		Method:  uapi.GET,
 		Docs:    get_clusters_health.Docs,
 		Handler: get_clusters_health.Route,
+	}.Route(r)
+
+	uapi.Route{
+		Pattern: "/permissions/serenity",
+		OpId:    "get_serenity_permissions",
+		Method:  uapi.GET,
+		Docs:    get_serenity_permissions.Docs,
+		Handler: get_serenity_permissions.Route,
 	}.Route(r)
 
 	uapi.Route{

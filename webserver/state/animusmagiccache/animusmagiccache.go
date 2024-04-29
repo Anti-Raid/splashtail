@@ -15,6 +15,8 @@ type CachedAnimusMagicClient struct {
 
 	// ClusterModule cache
 	ClusterModuleCache syncmap.Map[uint16, animusmagic.ClusterModules]
+
+	SerenityPermissionsList syncmap.Map[uint16, map[string]uint64]
 }
 
 // New returns a new CachedAnimusMagicClient
@@ -75,4 +77,58 @@ func (c *CachedAnimusMagicClient) GetClusterModules(ctx context.Context, redis r
 	c.ClusterModuleCache.Store(clusterId, modules)
 
 	return modules, nil
+}
+
+// GetSerenityPermissionList returns all available serenity permissions from a random cluster.
+func (c *CachedAnimusMagicClient) GetSerenityPermissionList(ctx context.Context, redis rueidis.Client, clusterId uint16) (map[string]uint64, error) {
+	if v, ok := c.SerenityPermissionsList.Load(clusterId); ok {
+		if len(v) > 0 {
+			return v, nil
+		}
+	}
+
+	mlr, err := c.Request(
+		ctx,
+		redis,
+		animusmagic.BotAnimusMessage{
+			GetSerenityPermissionList: &struct{}{},
+		},
+		&animusmagic.RequestOptions{
+			ClusterID: &clusterId,
+		},
+	)
+
+	if err != nil {
+		return nil, err
+	}
+
+	if len(mlr) == 0 {
+		return nil, animusmagic.ErrNilMessage
+	}
+
+	if len(mlr) > 1 {
+		return nil, fmt.Errorf("expected 1 response, got %d", len(mlr))
+	}
+
+	upr := mlr[0]
+
+	resp, err := animusmagic.ParseClientResponse[animusmagic.BotAnimusResponse](upr)
+
+	if err != nil {
+		return nil, err
+	}
+
+	if resp.ClientResp.Meta.Op == animusmagic.OpError {
+		return nil, animusmagic.ErrOpError
+	}
+
+	if resp.Resp == nil || resp.Resp.GetSerenityPermissionList == nil || len(resp.Resp.GetSerenityPermissionList.Permissions) == 0 {
+		return nil, animusmagic.ErrNilMessage
+	}
+
+	spl := resp.Resp.GetSerenityPermissionList
+
+	c.SerenityPermissionsList.Store(clusterId, spl.Permissions)
+
+	return spl.Permissions, nil
 }
