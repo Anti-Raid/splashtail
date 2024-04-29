@@ -17,25 +17,25 @@ pub async fn guild(
 
     drop(res);
 
+    #[derive(serde::Serialize, serde::Deserialize, Debug)]
+    struct Resp {
+        ok: bool,
+        data: Option<serenity::all::PartialGuild>,
+        error: Option<String>,
+    }
+
     // Check sandwich, it may be there
     if let Some(ref proxy_url) = crate::config::CONFIG.meta.sandwich_http_api {
         let url = format!("{}/api/state?col=guilds&id={}", proxy_url, guild_id);
-
-        #[derive(serde::Serialize, serde::Deserialize)]
-        struct Resp {
-            ok: bool,
-            data: Option<serenity::all::PartialGuild>,
-            error: Option<String>,
-        }
         
-        {
-            let resp = reqwest_client
-            .get(&url)
-            .send()
-            .await?
-            .json::<Resp>()
-            .await?;
+        let resp = reqwest_client
+        .get(&url)
+        .send()
+        .await?
+        .json::<Resp>()
+        .await;
 
+        if let Ok(resp) = resp {
             if resp.ok {
                 let Some(guild) = resp.data else {
                     return Err("Guild not found".into());
@@ -45,6 +45,8 @@ pub async fn guild(
             } else {
                 log::warn!("Sandwich proxy returned error: {:?}", resp.error);
             }
+        } else {
+            log::warn!("Sandwich proxy returned invalid resp: {:?}", resp);
         }
     }
 
@@ -94,7 +96,7 @@ pub async fn member_in_guild(
 
     // Part 2, try sandwich state
     let Some(ref proxy_url) = crate::config::CONFIG.meta.sandwich_http_api else {
-        return Err("Sandwich proxy not configured".into());
+        return Err("Sandwich proxy not configured, not proceeding".into());
     };
 
     let url = format!("{}/api/state?col=members&id={}&guild_id={}", proxy_url, user_id, guild_id);

@@ -123,16 +123,23 @@ impl BotAnimusMessage {
                         Ok(guild) => {
                             (guild.name.to_string(), guild.icon_url(), guild.owner_id, guild.roles.clone())
                         },
-                        Err(e) => return Err(e.into()),
+                        Err(e) => return Err(
+                            format!("Failed to get guild: {:#?}", e).into()
+                        ),
                     };
 
-                    let member = silverpelt::proxysupport::member_in_guild(
+                    let member = match silverpelt::proxysupport::member_in_guild(
                         cache_http,
                         &data.reqwest,
                         guild_id,
                         user_id,
                     )
-                    .await?;
+                    .await {
+                        Ok(member) => member,
+                        Err(e) => return Err(
+                            format!("Failed to get member: {:#?}", e).into()
+                        ),
+                    };
 
                     let Some(bot_user) = botox::cache::member_on_guild(
                         cache_http,
