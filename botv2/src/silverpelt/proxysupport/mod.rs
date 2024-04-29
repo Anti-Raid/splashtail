@@ -2,6 +2,72 @@ use std::collections::HashMap;
 
 pub mod sandwich;
 
+/// Fetches a guild while handling all the pesky errors serenity normally has
+/// with caching
+pub async fn guild(
+    ctx: &botox::cache::CacheHttpImpl,
+    reqwest_client: &reqwest::Client,
+    guild_id: serenity::model::id::GuildId,
+) -> Result<serenity::all::PartialGuild, crate::Error> {
+    let res = ctx.cache.guild(guild_id);
+
+    if let Some(res) = res {
+        return Ok(res.clone().into());
+    }
+
+    drop(res);
+
+    // Check sandwich, it may be there
+    if let Some(ref proxy_url) = crate::config::CONFIG.meta.sandwich_http_api {
+        let url = format!("{}/api/state?col=guilds&id={}", proxy_url, guild_id);
+
+        #[derive(serde::Serialize, serde::Deserialize)]
+        struct Resp {
+            ok: bool,
+            data: Option<serenity::all::PartialGuild>,
+            error: Option<String>,
+        }
+        
+        {
+            let resp = reqwest_client
+            .get(&url)
+            .send()
+            .await?
+            .json::<Resp>()
+            .await?;
+
+            if resp.ok {
+                let Some(guild) = resp.data else {
+                    return Err("Guild not found".into());
+                };
+
+                return Ok(guild);
+            } else {
+                log::warn!("Sandwich proxy returned error: {:?}", resp.error);
+            }
+        }
+    }
+
+    // Last resore: make the http call
+    let res = ctx.http.get_guild(guild_id).await?;
+    
+    // Save to sandwich
+    if let Some(ref proxy_url) = crate::config::CONFIG.meta.sandwich_http_api {
+        let url = format!("{}/api/state?col=guilds&id={}", proxy_url, guild_id);
+
+        let resp = reqwest_client
+        .post(&url)
+        .json(&res)
+        .send()
+        .await?;
+
+        if !resp.status().is_success() {
+            log::warn!("Failed to update sandwich proxy with guild data: {:?}", resp.text().await);
+        }
+    }
+
+    Ok(res)
+}
 
 /// Faster version of botox member in guild that also takes into account the sandwich proxy layer
 pub async fn member_in_guild(

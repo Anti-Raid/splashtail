@@ -102,7 +102,7 @@ impl BotAnimusMessage {
 
                 for guild in guilds {
                     guilds_exist.push({
-                        if cache_http.cache.guild(guild).is_some() {
+                        if cache_http.cache.guilds().contains(&guild) {
                             1
                         } else {
                             0
@@ -115,11 +115,15 @@ impl BotAnimusMessage {
             Self::BaseGuildUserInfo { guild_id, user_id } => {      
                 let bot_user_id = cache_http.cache.current_user().id;          
                 let (name, icon, owner, roles, user_roles, bot_roles) = {
-                    let (name, icon, owner_id, roles) = match cache_http.cache.guild(guild_id) {
-                        Some(guild) => {
+                    let (name, icon, owner_id, roles) = match silverpelt::proxysupport::guild(
+                        cache_http,
+                        &data.reqwest,
+                        guild_id
+                    ).await {
+                        Ok(guild) => {
                             (guild.name.to_string(), guild.icon_url(), guild.owner_id, guild.roles.clone())
                         },
-                        None => return Err("Guild not found".into()),
+                        Err(e) => return Err(e.into()),
                     };
 
                     let member = silverpelt::proxysupport::member_in_guild(
