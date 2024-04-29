@@ -33,6 +33,9 @@ var json = jsoniter.ConfigCompatibleWithStandardLibrary
 //go:embed docs/docs.html
 var docsHTML string
 
+//go:embed docs/desc.md
+var descMd string
+
 var openapi []byte
 
 // Simple middleware to handle CORS
@@ -59,7 +62,7 @@ func corsMiddleware(next http.Handler) http.Handler {
 
 		w.Header().Set("Access-Control-Allow-Origin", r.Header.Get("Origin"))
 		w.Header().Set("Access-Control-Allow-Credentials", "true")
-		w.Header().Set("Access-Control-Allow-Headers", "X-Client, Content-Type, Authorization, User-Auth, Server-Auth")
+		w.Header().Set("Access-Control-Allow-Headers", "X-Client, Content-Type, Authorization, User-Auth, Server-Auth, X-Error-Type")
 		w.Header().Set("access-control-expose-headers", "Bucket, Retry-After, Req-Limit, Req-Made")
 		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE")
 
@@ -82,7 +85,7 @@ func CreateWebserver() *chi.Mux {
 			Title:          "Antiraid API",
 			TermsOfService: "https://antiraid.xyz/terms",
 			Version:        "7.0",
-			Description:    "",
+			Description:    descMd,
 			Contact: docs.Contact{
 				Name:  "Anti Raid Development",
 				URL:   "https://antiraid.xyz",

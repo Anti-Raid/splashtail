@@ -99,6 +99,9 @@ func HandlePermissionCheck(
 		return uapi.HttpResponse{
 			Status: http.StatusForbidden,
 			Json:   permRes,
+			Headers: map[string]string{
+				"X-Error-Type": "permission_check",
+			},
 		}, false
 	}
 
