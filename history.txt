@@ -1,9 +1,0 @@
-#V2
-select * from user_actions where guild_id=type::string($guild_id) and user_id=type::string($user_id) and limit_type=type::string($limit_type) order by created_at
-select time::now() from a;
-select * from user_actions where guild_id=type::string($guild_id) and user_id=type::string($user_id) and limit_type=type::string($limit_type) and time::now() - created < duration::from::secs($limit_per) order by created_at desc
-select * from user_actions where guild_id=type::string($guild_id) and user_id=type::string($user_id) and limit_type=type::string($limit_type) and time::now() - created < duration::from::secs($limit_per) order by created_at desc;
-select * from user_actions where guild_id=type::string($guild_id) and user_id=type::string($user_id) and limit_type=type::string($limit_type) and time::now() - created < duration::from::secs(type::int($limit_per)) order by created_at desc;
-select * from user_actions where guild_id=type::string($guild_id) and user_id=type::string($user_id) and limit_type=type::string($limit_type) and time::now() - created < duration::from::secs($limit_per) order by created_at desc
-select * from user_actions where guild_id=type::string("123") and user_id=type::string($user_id) and limit_type=type::string($limit_type) and time::now() - created < duration::from::secs(100) order by created_at desc
-select action_id from user_actions where guild_id=type::string($guild_id) and user_id=type::string($user_id) and limit_type=type::string($limit_type) and time::now() - created_at < duration::from::secs($limit_per)
