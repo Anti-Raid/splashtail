@@ -171,6 +171,17 @@ fn set_stats() -> Result<(), Error> {
 }
 
 fn main() -> Result<(), Error> {
+    // CI means we probably dont want to do extensive checks
+    if std::env::var("CI_BUILD").unwrap_or_default() == "true" {
+        println!("cargo:rustc-env=GIT_COMMIT_HASH=Unknown");
+        println!("cargo:rustc-env=GIT_COMMIT_MESSAGE=Unknown");
+        println!("cargo:rustc-env=GIT_REPO=Unknown");
+        println!("cargo:rustc-env=CPU_MODEL=CI");
+        println!("cargo:rustc-env=RUSTC_VERSION=CI");
+        println!("cargo:rustc-env=CARGO_PROFILE={}", std::env::var("PROFILE").unwrap_or("unknown".to_string()));
+        return Ok(());
+    }
+
     set_stats()?;
 
     // Run the autogen stuff
