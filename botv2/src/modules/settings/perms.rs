@@ -1,7 +1,7 @@
 use crate::silverpelt::member_permission_calc::get_kittycat_perms;
+use crate::{Context, Error};
 use poise::CreateReply;
 use serenity::all::{Role, RoleId};
-use crate::{Error, Context};
 
 #[poise::command(
     prefix_command,
@@ -97,7 +97,7 @@ pub async fn perms_modrole(
     let Some(member) = ctx.author_member().await else {
         return Err("You must be in a server to run this command".into());
     };
-    
+
     // Perform more permission checks and get the guilds owner id at the same time
     let guild_owner_id = {
         let Some(guild) = ctx.guild() else {
@@ -134,8 +134,14 @@ pub async fn perms_modrole(
         guild.owner_id
     };
 
-    let author_kittycat_perms =
-        get_kittycat_perms(&data.pool, guild_id, guild_owner_id, member.user.id, &member.roles).await?;
+    let author_kittycat_perms = get_kittycat_perms(
+        &data.pool,
+        guild_id,
+        guild_owner_id,
+        member.user.id,
+        &member.roles,
+    )
+    .await?;
 
     let mut tx = data.pool.begin().await?;
 
@@ -197,13 +203,14 @@ pub async fn perms_modrole(
             .await?;
         }
     } else {
-        kittycat::perms::check_patch_changes(&author_kittycat_perms, &[], &perms_vec)
-            .map_err(|e| {
+        kittycat::perms::check_patch_changes(&author_kittycat_perms, &[], &perms_vec).map_err(
+            |e| {
                 format!(
                     "You do not have permission to add a role's with these permissions: {}",
                     e
                 )
-            })?;
+            },
+        )?;
 
         let true_index = {
             if index.is_none() {
@@ -327,8 +334,14 @@ pub async fn perms_deleterole(
         return Err("You must be in a server to run this command".into());
     };
 
-    let author_kittycat_perms =
-        get_kittycat_perms(&data.pool, guild_id, guild_owner_id, member.user.id, &member.roles).await?;
+    let author_kittycat_perms = get_kittycat_perms(
+        &data.pool,
+        guild_id,
+        guild_owner_id,
+        member.user.id,
+        &member.roles,
+    )
+    .await?;
 
     let mut tx = data.pool.begin().await?;
 

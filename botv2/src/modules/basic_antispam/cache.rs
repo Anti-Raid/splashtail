@@ -1,6 +1,6 @@
-use once_cell::sync::Lazy;
-use moka::future::Cache;
 use futures::future::FutureExt;
+use moka::future::Cache;
+use once_cell::sync::Lazy;
 
 #[derive(Debug, Clone)]
 pub struct BasicAntispamConfig {
@@ -38,18 +38,26 @@ pub async fn setup_cache_initial(data: &sqlx::PgPool) -> Result<(), crate::Error
         let minimum_account_age = row.minimum_account_age;
         let maximum_account_age = row.maximum_account_age;
 
-        BASIC_ANTISPAM_CONFIG_CACHE.insert(guild_id, BasicAntispamConfig {
-            anti_invite,
-            anti_everyone,
-            minimum_account_age,
-            maximum_account_age,
-        }).await;
+        BASIC_ANTISPAM_CONFIG_CACHE
+            .insert(
+                guild_id,
+                BasicAntispamConfig {
+                    anti_invite,
+                    anti_everyone,
+                    minimum_account_age,
+                    maximum_account_age,
+                },
+            )
+            .await;
     }
 
     Ok(())
 }
 
-pub async fn get_config(pool: &sqlx::PgPool, guild_id: serenity::all::GuildId) -> Result<BasicAntispamConfig, crate::Error> {
+pub async fn get_config(
+    pool: &sqlx::PgPool,
+    guild_id: serenity::all::GuildId,
+) -> Result<BasicAntispamConfig, crate::Error> {
     if let Some(config) = BASIC_ANTISPAM_CONFIG_CACHE.get(&guild_id).await {
         Ok(config.clone())
     } else {
@@ -66,12 +74,17 @@ pub async fn get_config(pool: &sqlx::PgPool, guild_id: serenity::all::GuildId) -
             let minimum_account_age = config.minimum_account_age;
             let maximum_account_age = config.maximum_account_age;
 
-            BASIC_ANTISPAM_CONFIG_CACHE.insert(guild_id, BasicAntispamConfig {
-                anti_invite,
-                anti_everyone,
-                minimum_account_age,
-                maximum_account_age,
-            }).await;
+            BASIC_ANTISPAM_CONFIG_CACHE
+                .insert(
+                    guild_id,
+                    BasicAntispamConfig {
+                        anti_invite,
+                        anti_everyone,
+                        minimum_account_age,
+                        maximum_account_age,
+                    },
+                )
+                .await;
 
             Ok(BasicAntispamConfig {
                 anti_invite,
@@ -82,7 +95,9 @@ pub async fn get_config(pool: &sqlx::PgPool, guild_id: serenity::all::GuildId) -
         } else {
             let bas_cfg = BasicAntispamConfig::default();
 
-            BASIC_ANTISPAM_CONFIG_CACHE.insert(guild_id, bas_cfg.clone()).await;
+            BASIC_ANTISPAM_CONFIG_CACHE
+                .insert(guild_id, bas_cfg.clone())
+                .await;
 
             Ok(bas_cfg)
         }
@@ -90,7 +105,9 @@ pub async fn get_config(pool: &sqlx::PgPool, guild_id: serenity::all::GuildId) -
 }
 
 pub async fn setup_am_toggle(_data: &sqlx::PgPool) -> Result<(), crate::Error> {
-    async fn clear(options: &indexmap::IndexMap<String, serde_cbor::Value>) -> Result<(), crate::Error> {
+    async fn clear(
+        options: &indexmap::IndexMap<String, serde_cbor::Value>,
+    ) -> Result<(), crate::Error> {
         let Some(serde_cbor::Value::Text(guild_id)) = options.get("gulld_id") else {
             return Err("No guild_id provided".into());
         };
@@ -102,10 +119,10 @@ pub async fn setup_am_toggle(_data: &sqlx::PgPool) -> Result<(), crate::Error> {
         Ok(())
     }
 
-    crate::ipc::animus_magic::bot::dynamic::PERMODULE_CACHE_TOGGLES
-        .insert(("basic_antispam".to_string(), "clear".to_string()), Box::new(
-            move |options| clear(options).boxed()
-        ));
+    crate::ipc::animus_magic::bot::dynamic::PERMODULE_CACHE_TOGGLES.insert(
+        ("basic_antispam".to_string(), "clear".to_string()),
+        Box::new(move |options| clear(options).boxed()),
+    );
 
     Ok(())
 }

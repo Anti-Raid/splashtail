@@ -27,12 +27,7 @@ pub async fn stats(ctx: Context<'_>) -> Result<(), Error> {
             .field("rustc", RUSTC_VERSION, true)
             .field(
                 "Git Commit",
-                format!(
-                    "[{}]({}/commit/{})",
-                    GIT_SHA,
-                    GIT_REPO,
-                    GIT_SHA
-                ),
+                format!("[{}]({}/commit/{})", GIT_SHA, GIT_REPO, GIT_SHA),
                 true,
             )
             .field(
@@ -63,7 +58,11 @@ pub async fn stats(ctx: Context<'_>) -> Result<(), Error> {
             )
             .field(
                 "Clusters Available",
-                format!("{}/{}", ctx.data().mewld_ipc.cache.cluster_healths.len(), crate::ipc::argparse::MEWLD_ARGS.cluster_count),
+                format!(
+                    "{}/{}",
+                    ctx.data().mewld_ipc.cache.cluster_healths.len(),
+                    crate::ipc::argparse::MEWLD_ARGS.cluster_count
+                ),
                 true,
             )
             .field(

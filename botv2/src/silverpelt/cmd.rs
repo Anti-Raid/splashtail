@@ -1,23 +1,19 @@
 use super::permissions::PermissionResult;
 use super::silverpelt_cache::SILVERPELT_CACHE;
-use botox::cache::CacheHttpImpl;
 use crate::silverpelt::{
-    self, 
-    utils::permute_command_names, 
-    CommandExtendedData, 
-    GuildCommandConfiguration, 
-    GuildModuleConfiguration,
+    self,
     module_config::{
-        get_module_configuration,
-        get_command_extended_data,
-        get_best_command_configuration,
-    }
+        get_best_command_configuration, get_command_extended_data, get_module_configuration,
+    },
+    utils::permute_command_names,
+    CommandExtendedData, GuildCommandConfiguration, GuildModuleConfiguration,
 };
+use botox::cache::CacheHttpImpl;
 use log::info;
+use serde::{Deserialize, Serialize};
 use serenity::all::{GuildId, UserId};
 use serenity::small_fixed_array::FixedArray;
 use sqlx::PgPool;
-use serde::{Serialize, Deserialize};
 
 /// Returns the effective configuration of a command
 ///
@@ -47,8 +43,8 @@ async fn get_effective_module_command_configuration(
     // Check if theres any module configuration
     let module_configuration = get_module_configuration(pool, guild_id, module.as_str()).await?;
     let cmd_data = get_command_extended_data(&permutations)?;
-    let command_configuration = get_best_command_configuration(pool, guild_id, &permutations).await?;
-
+    let command_configuration =
+        get_best_command_configuration(pool, guild_id, &permutations).await?;
 
     Ok((cmd_data, command_configuration, module_configuration))
 }
@@ -61,9 +57,9 @@ pub async fn get_perm_info(
     poise_ctx: &Option<crate::Context<'_>>,
 ) -> Result<
     (
-        bool, // is_owner
-        UserId, // owner_id
-        serenity::all::Permissions, // member_perms
+        bool,                              // is_owner
+        UserId,                            // owner_id
+        serenity::all::Permissions,        // member_perms
         FixedArray<serenity::all::RoleId>, // roles
     ),
     PermissionResult,
@@ -72,8 +68,8 @@ pub async fn get_perm_info(
         // OPTIMIZATION: if owner, we dont need to continue further
         if user_id == cached_guild.owner_id {
             return Ok((
-                true, // is_owner
-                cached_guild.owner_id, // owner_id
+                true,                              // is_owner
+                cached_guild.owner_id,             // owner_id
                 serenity::all::Permissions::all(), // member_perms
                 FixedArray::new(), // OPTIMIZATION: no role data is needed for perm checks for owners
             ));
@@ -164,17 +160,17 @@ pub struct CheckCommandOptions {
     /// Whether or not to ignore the fact that the module is disabled in the guild
     #[serde(default)]
     pub ignore_module_disabled: bool,
-    
+
     /// Whether or not to ignore the fact that the command is disabled in the guild
     #[serde(default)]
     pub ignore_command_disabled: bool,
 
     /// What custom resolved permissions to use for the user. Note that ensure_user_has_custom_resolved must be true to ensure that the user has all the permissions in the custom_resolved_kittycat_perms
-    /// 
+    ///
     /// API needs this for limiting the permissions of a user, allows setting custom resolved perms
     #[serde(default)]
     pub custom_resolved_kittycat_perms: Option<Vec<String>>,
-    
+
     /// Whether or not to ensure that the user has all the permissions in the custom_resolved_kittycat_perms
     #[serde(default)]
     pub ensure_user_has_custom_resolved: bool,
@@ -300,26 +296,30 @@ pub async fn check_command(
         module_config.disabled = Some(false);
     }
 
-        // Try getting guild+member from cache to speed up response times first
-        let (is_owner, guild_owner_id, member_perms, roles) =
-            match get_perm_info(guild_id, user_id, cache_http, poise_ctx).await {
-                Ok(v) => v,
-                Err(e) => {
-                    return e;
-                }
-            };
+    // Try getting guild+member from cache to speed up response times first
+    let (is_owner, guild_owner_id, member_perms, roles) =
+        match get_perm_info(guild_id, user_id, cache_http, poise_ctx).await {
+            Ok(v) => v,
+            Err(e) => {
+                return e;
+            }
+        };
 
     if is_owner {
         return PermissionResult::OkWithMessage {
             message: "owner".to_string(),
         };
     }
-    
+
     let kittycat_perms = {
         if let Some(ref custom_resolved_kittycat_perms) = opts.custom_resolved_kittycat_perms {
             if opts.ensure_user_has_custom_resolved {
                 let kc_perms = match silverpelt::member_permission_calc::get_kittycat_perms(
-                    pool, guild_id, guild_owner_id, user_id, &roles,
+                    pool,
+                    guild_id,
+                    guild_owner_id,
+                    user_id,
+                    &roles,
                 )
                 .await
                 {
@@ -333,7 +333,7 @@ pub async fn check_command(
                 for perm in custom_resolved_kittycat_perms.iter() {
                     if kittycat::perms::has_perm(&kc_perms, perm) {
                         resolved_perms.push(perm.to_string());
-                    }  
+                    }
                 }
 
                 resolved_perms
@@ -342,7 +342,11 @@ pub async fn check_command(
             }
         } else {
             match silverpelt::member_permission_calc::get_kittycat_perms(
-                pool, guild_id, guild_owner_id, user_id, &roles,
+                pool,
+                guild_id,
+                guild_owner_id,
+                user_id,
+                &roles,
             )
             .await
             {

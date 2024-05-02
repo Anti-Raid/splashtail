@@ -1,8 +1,8 @@
 use super::bot::{BotAnimusMessage, BotAnimusResponse};
-use super::jobserver::{JobserverAnimusMessage, JobserverAnimusResponse};
 use super::infra::{InfraAnimusMessage, InfraAnimusResponse};
-use botox::cache::CacheHttpImpl;
+use super::jobserver::{JobserverAnimusMessage, JobserverAnimusResponse};
 use crate::{ipc::argparse::MEWLD_ARGS, Error};
+use botox::cache::CacheHttpImpl;
 use dashmap::DashMap;
 use fred::{
     clients::{RedisClient, RedisPool},
@@ -44,7 +44,7 @@ impl AnimusResponse {
                     Ok(jar) => Ok(AnimusResponse::Jobserver(jar)),
                     Err(e) => Err(format!("Failed to unmarshal message: {}", e).into()),
                 }
-            },
+            }
             AnimusTarget::Infra => {
                 let iar = from_payload::<InfraAnimusResponse>(payload);
 

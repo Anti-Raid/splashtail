@@ -1,6 +1,9 @@
+use crate::silverpelt::{
+    silverpelt_cache::SILVERPELT_CACHE, CommandExtendedData, GuildCommandConfiguration,
+    GuildModuleConfiguration,
+};
+use crate::{Context, Error};
 use botox::cache::CacheHttpImpl;
-use crate::{Error, Context};
-use crate::silverpelt::{silverpelt_cache::SILVERPELT_CACHE, CommandExtendedData, GuildCommandConfiguration, GuildModuleConfiguration};
 use futures_util::StreamExt;
 use std::time::Duration;
 
@@ -10,7 +13,12 @@ use std::time::Duration;
     slash_command,
     user_cooldown = 1,
     guild_cooldown = 1,
-    subcommands("commands_check", "commands_enable", "commands_disable", "commands_modperms")
+    subcommands(
+        "commands_check",
+        "commands_enable",
+        "commands_disable",
+        "commands_modperms"
+    )
 )]
 pub async fn commands(_ctx: Context<'_>) -> Result<(), Error> {
     Ok(())
@@ -26,8 +34,7 @@ pub async fn commands(_ctx: Context<'_>) -> Result<(), Error> {
 )]
 pub async fn commands_check(
     ctx: Context<'_>,
-    #[description = "The command to check"]
-    command: String,
+    #[description = "The command to check"] command: String,
 ) -> Result<(), Error> {
     let Some(guild_id) = ctx.guild_id() else {
         return Err("This command must be run in a guild".into());
@@ -49,10 +56,15 @@ pub async fn commands_check(
             ignore_command_disabled: true,
             ..Default::default()
         },
-    ).await;
+    )
+    .await;
 
     if !perm_res.is_ok() {
-        return Err(format!("You do NOT have permission to use this command?\n{}", perm_res.to_markdown()).into());
+        return Err(format!(
+            "You do NOT have permission to use this command?\n{}",
+            perm_res.to_markdown()
+        )
+        .into());
     }
 
     ctx.say("You have permission to use this command").await?;
@@ -70,8 +82,7 @@ pub async fn commands_check(
 )]
 pub async fn commands_enable(
     ctx: Context<'_>,
-    #[description = "The command to enable"]
-    command: String,
+    #[description = "The command to enable"] command: String,
 ) -> Result<(), Error> {
     let Some(guild_id) = ctx.guild_id() else {
         return Err("This command must be run in a guild".into());
@@ -93,10 +104,15 @@ pub async fn commands_enable(
             ignore_command_disabled: true,
             ..Default::default()
         },
-    ).await;
+    )
+    .await;
 
     if !perm_res.is_ok() {
-        return Err(format!("You can only modify commands that you have permission to use?\n{}", perm_res.to_markdown()).into());
+        return Err(format!(
+            "You can only modify commands that you have permission to use?\n{}",
+            perm_res.to_markdown()
+        )
+        .into());
     }
 
     // Check if command is already enabled
@@ -166,8 +182,7 @@ pub async fn commands_enable(
 )]
 pub async fn commands_disable(
     ctx: Context<'_>,
-    #[description = "The command to disable"]
-    command: String,
+    #[description = "The command to disable"] command: String,
 ) -> Result<(), Error> {
     let Some(guild_id) = ctx.guild_id() else {
         return Err("This command must be run in a guild".into());
@@ -189,10 +204,15 @@ pub async fn commands_disable(
             ignore_command_disabled: true,
             ..Default::default()
         },
-    ).await;
+    )
+    .await;
 
     if !perm_res.is_ok() {
-        return Err(format!("You can only modify commands that you have permission to use?\n{}", perm_res.to_markdown()).into());
+        return Err(format!(
+            "You can only modify commands that you have permission to use?\n{}",
+            perm_res.to_markdown()
+        )
+        .into());
     }
 
     // Check if command is already enabled
@@ -262,8 +282,7 @@ pub async fn commands_disable(
 )]
 pub async fn commands_modperms(
     ctx: Context<'_>,
-    #[description = "The command to disable"]
-    command: String,
+    #[description = "The command to disable"] command: String,
 ) -> Result<(), Error> {
     let Some(guild_id) = ctx.guild_id() else {
         return Err("This command must be run in a guild".into());
@@ -274,29 +293,35 @@ pub async fn commands_modperms(
 
     // Check if the user has permission to use the command
     let cache_http = &CacheHttpImpl::from_ctx(ctx.serenity_context());
-    let perm_res: crate::silverpelt::permissions::PermissionResult = crate::silverpelt::cmd::check_command(
-        base_command,
-        &command,
-        guild_id,
-        ctx.author().id,
-        &ctx.data().pool,
-        cache_http,
-        &Some(ctx),
-        crate::silverpelt::cmd::CheckCommandOptions {
-            ignore_command_disabled: true,
-            ..Default::default()
-        },
-    ).await;
+    let perm_res: crate::silverpelt::permissions::PermissionResult =
+        crate::silverpelt::cmd::check_command(
+            base_command,
+            &command,
+            guild_id,
+            ctx.author().id,
+            &ctx.data().pool,
+            cache_http,
+            &Some(ctx),
+            crate::silverpelt::cmd::CheckCommandOptions {
+                ignore_command_disabled: true,
+                ..Default::default()
+            },
+        )
+        .await;
 
     if !perm_res.is_ok() {
-        return Err(format!("You can only modify commands that you have permission to use?\n{}", perm_res.to_markdown()).into());
+        return Err(format!(
+            "You can only modify commands that you have permission to use?\n{}",
+            perm_res.to_markdown()
+        )
+        .into());
     }
 
     async fn get_current_permissions(
-        pool: &sqlx::PgPool, 
-        guild_id: serenity::all::GuildId, 
+        pool: &sqlx::PgPool,
+        guild_id: serenity::all::GuildId,
         permutations: &[String],
-        command: &str
+        command: &str,
     ) -> Result<
         (
             CommandExtendedData,
@@ -305,26 +330,29 @@ pub async fn commands_modperms(
         ),
         crate::Error,
     > {
-        let guild_module_configuration = crate::silverpelt::module_config::get_module_configuration_from_command_name(
-            pool,
-            guild_id.to_string().as_str(),
-            command,
-        )
-        .await?;
+        let guild_module_configuration =
+            crate::silverpelt::module_config::get_module_configuration_from_command_name(
+                pool,
+                guild_id.to_string().as_str(),
+                command,
+            )
+            .await?;
 
         let cmd_data = crate::silverpelt::module_config::get_command_extended_data(permutations)?;
-        let command_configurations = crate::silverpelt::module_config::get_exact_command_configuration(
-            pool,
-            guild_id.to_string().as_str(),
-            command,
-        )
-        .await?;
+        let command_configurations =
+            crate::silverpelt::module_config::get_exact_command_configuration(
+                pool,
+                guild_id.to_string().as_str(),
+                command,
+            )
+            .await?;
 
         Ok((cmd_data, command_configurations, guild_module_configuration))
     }
 
     #[allow(unused_variables)] // WIP
-    let (cmd_data, command_config, module_config) = get_current_permissions(&ctx.data().pool, guild_id, &cmd_permutations, &command).await?;
+    let (cmd_data, command_config, module_config) =
+        get_current_permissions(&ctx.data().pool, guild_id, &cmd_permutations, &command).await?;
 
     let mut new_command_config = {
         if let Some(command_config) = command_config {
@@ -356,50 +384,44 @@ pub async fn commands_modperms(
         } else {
             msg.push_str("Disabled: None (using default configuration)\n");
         }
-        
-        poise::CreateReply::new()
-        .content(msg)
-        .components(
-            vec![
-                serenity::all::CreateActionRow::Buttons(
-                    vec![
-                        serenity::all::CreateButton::new("perms/editraw")
-                        .style(serenity::all::ButtonStyle::Primary)
-                        .label("Open Raw Permission Editor"),
-                        
-                        if command_config.disabled.unwrap_or_default() {
-                            serenity::all::CreateButton::new("cmd/enable")
-                            .style(serenity::all::ButtonStyle::Success)
-                            .label("Enable Command")
-                        } else {
-                            serenity::all::CreateButton::new("cmd/disable")
-                            .style(serenity::all::ButtonStyle::Danger)
-                            .label("Disable Command")
-                        },
-                        serenity::all::CreateButton::new("cmd/disable/reset")
+
+        poise::CreateReply::new().content(msg).components(vec![
+            serenity::all::CreateActionRow::Buttons(vec![
+                serenity::all::CreateButton::new("perms/editraw")
+                    .style(serenity::all::ButtonStyle::Primary)
+                    .label("Open Raw Permission Editor"),
+                if command_config.disabled.unwrap_or_default() {
+                    serenity::all::CreateButton::new("cmd/enable")
+                        .style(serenity::all::ButtonStyle::Success)
+                        .label("Enable Command")
+                } else {
+                    serenity::all::CreateButton::new("cmd/disable")
                         .style(serenity::all::ButtonStyle::Danger)
-                        .label("Reset Command Disable"),
-                        serenity::all::CreateButton::new("perms/disable/reset")
-                        .style(serenity::all::ButtonStyle::Danger)
-                        .label("Reset Command Perms"),
-                        serenity::all::CreateButton::new("cmd/save")
-                        .style(serenity::all::ButtonStyle::Secondary)
-                        .label("Save Command Configuration"),
-                    ]
-                )
-            ]
-        )   
+                        .label("Disable Command")
+                },
+                serenity::all::CreateButton::new("cmd/disable/reset")
+                    .style(serenity::all::ButtonStyle::Danger)
+                    .label("Reset Command Disable"),
+                serenity::all::CreateButton::new("perms/disable/reset")
+                    .style(serenity::all::ButtonStyle::Danger)
+                    .label("Reset Command Perms"),
+                serenity::all::CreateButton::new("cmd/save")
+                    .style(serenity::all::ButtonStyle::Secondary)
+                    .label("Save Command Configuration"),
+            ]),
+        ])
     }
 
-    let msg = ctx.send(command_config_to_edit_message(&new_command_config))
-    .await?
-    .into_message()
-    .await?;
+    let msg = ctx
+        .send(command_config_to_edit_message(&new_command_config))
+        .await?
+        .into_message()
+        .await?;
 
     let collector = msg
-    .await_component_interactions(ctx.serenity_context().shard.clone())
-    .author_id(ctx.author().id)
-    .timeout(Duration::from_secs(600));
+        .await_component_interactions(ctx.serenity_context().shard.clone())
+        .author_id(ctx.author().id)
+        .timeout(Duration::from_secs(600));
 
     let mut collect_stream = collector.stream();
 
@@ -423,21 +445,23 @@ pub async fn commands_modperms(
                 }
 
                 let modal = serenity::all::CreateQuickModal::new("Edit Permissions")
-                .timeout(std::time::Duration::from_secs(300))
-                .field(
-                    serenity::all::CreateInputText::new(serenity::all::InputTextStyle::Short, "Permissions", "permissions")
-                    .placeholder(perms_json)
-                );
+                    .timeout(std::time::Duration::from_secs(300))
+                    .field(
+                        serenity::all::CreateInputText::new(
+                            serenity::all::InputTextStyle::Short,
+                            "Permissions",
+                            "permissions",
+                        )
+                        .placeholder(perms_json),
+                    );
 
                 let resp = item.quick_modal(ctx.serenity_context(), modal).await?;
                 response_deferred = true;
 
-                let Some(resp) = resp else {
-                    continue
-                };
+                let Some(resp) = resp else { continue };
 
                 if resp.inputs.is_empty() {
-                    continue
+                    continue;
                 }
 
                 let perms_str = &resp.inputs[0];
@@ -447,35 +471,39 @@ pub async fn commands_modperms(
                 match perms {
                     Ok(perms) => {
                         if perms.checks.len() > 10 {
-                            ctx.say("You can only have up to 10 checks in a PermissionCheck").await?;
-                            continue
+                            ctx.say("You can only have up to 10 checks in a PermissionCheck")
+                                .await?;
+                            continue;
                         }
                         new_command_config.perms = Some(perms);
-                    },
+                    }
                     Err(err) => {
-                        ctx.say(format!("Failed to parse permissions: {}", err)).await?;
-                        continue
+                        ctx.say(format!("Failed to parse permissions: {}", err))
+                            .await?;
+                        continue;
                     }
                 }
-            },
+            }
             "cmd/save" => {
-                let perm_res: crate::silverpelt::permissions::PermissionResult = crate::silverpelt::cmd::check_command(
-                    base_command,
-                    &command,
-                    guild_id,
-                    ctx.author().id,
-                    &ctx.data().pool,
-                    cache_http,
-                    &Some(ctx),
-                    crate::silverpelt::cmd::CheckCommandOptions {
-                        ignore_command_disabled: true,
-                        ignore_cache: true,
-                        cache_result: false,
-                        custom_command_configuration: Some(new_command_config.clone()),
-                        ..Default::default()
-                    },
-                ).await;
-            
+                let perm_res: crate::silverpelt::permissions::PermissionResult =
+                    crate::silverpelt::cmd::check_command(
+                        base_command,
+                        &command,
+                        guild_id,
+                        ctx.author().id,
+                        &ctx.data().pool,
+                        cache_http,
+                        &Some(ctx),
+                        crate::silverpelt::cmd::CheckCommandOptions {
+                            ignore_command_disabled: true,
+                            ignore_cache: true,
+                            cache_result: false,
+                            custom_command_configuration: Some(new_command_config.clone()),
+                            ..Default::default()
+                        },
+                    )
+                    .await;
+
                 if !perm_res.is_ok() {
                     return Err(format!("You can only modify commands to something that you have permission to use!\n{}", perm_res.to_markdown()).into());
                 }
@@ -492,9 +520,9 @@ pub async fn commands_modperms(
                 .await?
                 .count
                 .unwrap_or_default();
-            
+
                 let new_perms = serde_json::to_value(new_command_config.perms)?;
-            
+
                 if count > 0 {
                     sqlx::query!(
                         "UPDATE guild_command_configurations SET perms = $1, disabled = $2 WHERE guild_id = $3 AND command = $4",
@@ -516,16 +544,19 @@ pub async fn commands_modperms(
                     .execute(&mut *tx)
                     .await?;
                 }
-            
+
                 item.create_response(
                     &ctx.serenity_context().http,
                     poise::serenity_prelude::CreateInteractionResponse::Message(
-                        poise::CreateReply::new().content("Command configuration saved")
-                        .to_slash_initial_response(serenity::all::CreateInteractionResponseMessage::default())
-                    )
+                        poise::CreateReply::new()
+                            .content("Command configuration saved")
+                            .to_slash_initial_response(
+                                serenity::all::CreateInteractionResponseMessage::default(),
+                            ),
+                    ),
                 )
                 .await?;
-            
+
                 tx.commit().await?;
 
                 tokio::spawn(async move {
@@ -541,10 +572,10 @@ pub async fn commands_modperms(
                     } else {
                         log::info!("Invalidated cache for guild {}", guild_id);
                     }
-                });            
-            
-                break
-            },
+                });
+
+                break;
+            }
             _ => {}
         }
 
@@ -556,10 +587,10 @@ pub async fn commands_modperms(
         item.edit_response(
             &ctx.serenity_context().http,
             command_config_to_edit_message(&new_command_config)
-            .to_slash_initial_response_edit(serenity::all::EditInteractionResponse::default())
+                .to_slash_initial_response_edit(serenity::all::EditInteractionResponse::default()),
         )
         .await?;
-    } 
+    }
 
     Ok(())
 }

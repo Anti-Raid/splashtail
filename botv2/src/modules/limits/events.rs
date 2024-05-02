@@ -5,9 +5,7 @@ use serenity::model::guild::audit_log::{Action, ChannelAction};
 use super::handler::handle_mod_action;
 use crate::{silverpelt::EventHandlerContext, Error};
 
-pub async fn event_listener(
-    ectx: &EventHandlerContext,
-) -> Result<(), Error> {
+pub async fn event_listener(ectx: &EventHandlerContext) -> Result<(), Error> {
     let ctx = &ectx.serenity_context;
     let event = &ectx.full_event;
     let user_data = &ectx.data;
@@ -31,7 +29,7 @@ pub async fn event_listener(
                 },
             )
             .await
-        },
+        }
         FullEvent::GuildAuditLogEntryCreate { entry, guild_id } => {
             info!("Audit log created: {:?}. Guild: {}", entry, guild_id);
 

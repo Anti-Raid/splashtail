@@ -161,6 +161,12 @@ pub fn parse_duration_string(s: &str) -> Result<(u64, Unit), Error> {
 pub static REPLACE_CHANNEL: Lazy<Vec<(&'static str, &'static str)>> =
     Lazy::new(|| vec![("<#", ""), (">", "")]);
 
+pub static REPLACE_USER: Lazy<Vec<(&'static str, &'static str)>> =
+    Lazy::new(|| vec![("<@", ""), ("!", ""), (">", "")]);
+
+pub static REPLACE_ROLE: Lazy<Vec<(&'static str, &'static str)>> =
+    Lazy::new(|| vec![("<@", ""), ("&", ""), (">", "")]);
+
 /// Parse a numeric list from a string without knowing its separator
 pub fn parse_numeric_list<T: std::str::FromStr + Send + Sync>(
     s: &str,

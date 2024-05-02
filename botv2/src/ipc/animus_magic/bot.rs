@@ -1,4 +1,3 @@
-use botox::cache::CacheHttpImpl;
 use crate::silverpelt;
 /// Bot animus contains the request and response for a bot
 ///
@@ -7,6 +6,7 @@ use crate::silverpelt::{
     canonical_module::CanonicalModule, permissions::PermissionResult,
     silverpelt_cache::SILVERPELT_CACHE,
 };
+use botox::cache::CacheHttpImpl;
 use splashcore_rs::animusmagic_protocol::AnimusErrorResponse;
 
 use serde::{Deserialize, Serialize};
@@ -46,7 +46,7 @@ pub enum BotAnimusResponse {
     /// Returns the list of all permissions present within serenity
     GetSerenityPermissionList {
         perms: indexmap::IndexMap<String, u64>,
-    }
+    },
 }
 
 #[derive(Serialize, Deserialize, Clone)]
@@ -112,21 +112,21 @@ impl BotAnimusMessage {
 
                 Ok(BotAnimusResponse::GuildsExist { guilds_exist })
             }
-            Self::BaseGuildUserInfo { guild_id, user_id } => {      
-                let bot_user_id = cache_http.cache.current_user().id;          
+            Self::BaseGuildUserInfo { guild_id, user_id } => {
+                let bot_user_id = cache_http.cache.current_user().id;
                 let (name, icon, owner, roles, user_roles, bot_roles) = {
-                    let (name, icon, owner_id, roles) = match silverpelt::proxysupport::guild(
-                        cache_http,
-                        &data.reqwest,
-                        guild_id
-                    ).await {
-                        Ok(guild) => {
-                            (guild.name.to_string(), guild.icon_url(), guild.owner_id, guild.roles.clone())
-                        },
-                        Err(e) => return Err(
-                            format!("Failed to get guild: {:#?}", e).into()
-                        ),
-                    };
+                    let (name, icon, owner_id, roles) =
+                        match silverpelt::proxysupport::guild(cache_http, &data.reqwest, guild_id)
+                            .await
+                        {
+                            Ok(guild) => (
+                                guild.name.to_string(),
+                                guild.icon_url(),
+                                guild.owner_id,
+                                guild.roles.clone(),
+                            ),
+                            Err(e) => return Err(format!("Failed to get guild: {:#?}", e).into()),
+                        };
 
                     let member = match silverpelt::proxysupport::member_in_guild(
                         cache_http,
@@ -134,20 +134,16 @@ impl BotAnimusMessage {
                         guild_id,
                         user_id,
                     )
-                    .await {
+                    .await
+                    {
                         Ok(member) => member,
-                        Err(e) => return Err(
-                            format!("Failed to get member: {:#?}", e).into()
-                        ),
+                        Err(e) => return Err(format!("Failed to get member: {:#?}", e).into()),
                     };
 
-                    let Some(bot_user) = botox::cache::member_on_guild(
-                        cache_http,
-                        guild_id,
-                        bot_user_id,
-                        true
-                    )
-                    .await? else {
+                    let Some(bot_user) =
+                        botox::cache::member_on_guild(cache_http, guild_id, bot_user_id, true)
+                            .await?
+                    else {
                         return Err("Failed to get bot member".into());
                     };
 
@@ -195,8 +191,14 @@ impl BotAnimusMessage {
 
                 Ok(BotAnimusResponse::CheckCommandPermission { perm_res, is_ok })
             }
-            Self::TogglePerModuleCache { module, toggle, options } => {
-                let Some(toggle) = dynamic::PERMODULE_CACHE_TOGGLES.get(&(module.clone(), toggle.clone())) else {
+            Self::TogglePerModuleCache {
+                module,
+                toggle,
+                options,
+            } => {
+                let Some(toggle) =
+                    dynamic::PERMODULE_CACHE_TOGGLES.get(&(module.clone(), toggle.clone()))
+                else {
                     return Err("Toggle not found".into());
                 };
 
@@ -205,10 +207,13 @@ impl BotAnimusMessage {
                 Ok(BotAnimusResponse::Ok {
                     message: "".to_string(),
                 })
-            },
-            Self::GetSerenityPermissionList { } => {
+            }
+            Self::GetSerenityPermissionList {} => {
                 Ok(BotAnimusResponse::GetSerenityPermissionList {
-                    perms: serenity::model::permissions::Permissions::all().iter().map(|p| (p.to_string(), p.bits())).collect()
+                    perms: serenity::model::permissions::Permissions::all()
+                        .iter()
+                        .map(|p| (p.to_string(), p.bits()))
+                        .collect(),
                 })
             }
         }
@@ -216,21 +221,22 @@ impl BotAnimusMessage {
 }
 
 pub mod dynamic {
-    use once_cell::sync::Lazy;
     use dashmap::DashMap;
     use futures::future::BoxFuture;
+    use once_cell::sync::Lazy;
 
     pub type CacheToggleFunc = Box<
-    dyn Send
-        + Sync
-        + for<'a> Fn(
-            &'a indexmap::IndexMap<String, serde_cbor::Value>, // Options sent
-        ) -> BoxFuture<'a, Result<(), crate::Error>>,
+        dyn Send
+            + Sync
+            + for<'a> Fn(
+                &'a indexmap::IndexMap<String, serde_cbor::Value>, // Options sent
+            ) -> BoxFuture<'a, Result<(), crate::Error>>,
     >;
 
     // In order to allow modules to implement their own internal caches without polluting the animus magic protocol,
     // we implement PERMODULE_CACHE_TOGGLES which any module can register/add on to
     //
     // Format of a permodule_cache_toggle is (module_name, toggle)
-    pub static PERMODULE_CACHE_TOGGLES: Lazy<DashMap<(String, String), CacheToggleFunc>> = Lazy::new(DashMap::new);
+    pub static PERMODULE_CACHE_TOGGLES: Lazy<DashMap<(String, String), CacheToggleFunc>> =
+        Lazy::new(DashMap::new);
 }

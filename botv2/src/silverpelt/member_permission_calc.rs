@@ -77,14 +77,17 @@ pub async fn rederive_perms(
         .await?;
     } else {
         // Check if guild is in the guilds table
-        let guild_exists = sqlx::query!("SELECT COUNT(*) FROM guilds WHERE id = $1", guild_id.to_string())
+        let guild_exists = sqlx::query!(
+            "SELECT COUNT(*) FROM guilds WHERE id = $1",
+            guild_id.to_string()
+        )
         .fetch_one(&mut *tx)
         .await?;
 
         if guild_exists.count.unwrap_or_default() == 0 {
             sqlx::query!("INSERT INTO guilds (id) VALUES ($1)", guild_id.to_string())
-            .execute(&mut *tx)
-            .await?;
+                .execute(&mut *tx)
+                .await?;
         }
 
         sqlx::query!(

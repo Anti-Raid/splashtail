@@ -6,17 +6,15 @@ mod silverpelt;
 use ipc::{animus_magic::client::AnimusMagicClient, mewld::MewldIpcClient};
 
 use botox::cache::CacheHttpImpl;
+use gwevent::core::get_event_guild_id;
 use silverpelt::{
-    module_config::is_module_enabled,
-    silverpelt_cache::SILVERPELT_CACHE, 
-    proxysupport::ProxySupportData,
-    EventHandlerContext,
+    module_config::is_module_enabled, proxysupport::ProxySupportData,
+    silverpelt_cache::SILVERPELT_CACHE, EventHandlerContext,
 };
 use splashcore_rs::objectstore::ObjectStore;
-use gwevent::core::get_event_guild_id;
 
-use std::sync::Arc;
 use once_cell::sync::Lazy;
+use std::sync::Arc;
 use tokio::sync::RwLock;
 
 use log::{error, info, warn};
@@ -34,10 +32,12 @@ pub struct ConnectState {
     pub has_started_ipc: bool,
 }
 
-pub static CONNECT_STATE: Lazy<RwLock<ConnectState>> = Lazy::new(|| RwLock::new(ConnectState {
-    has_started_bgtasks: false,
-    has_started_ipc: false,
-}));
+pub static CONNECT_STATE: Lazy<RwLock<ConnectState>> = Lazy::new(|| {
+    RwLock::new(ConnectState {
+        has_started_bgtasks: false,
+        has_started_ipc: false,
+    })
+});
 
 /// User data, which is stored and accessible in all command invocations
 pub struct Data {
@@ -47,7 +47,7 @@ pub struct Data {
     pub object_store: Arc<ObjectStore>,
     pub animus_magic_ipc: Arc<AnimusMagicClient>,
     pub shards_ready: Arc<dashmap::DashMap<u16, bool>>,
-    pub proxy_support_data: RwLock<Option<ProxySupportData>> // Shard ID, WebsocketConfiguration
+    pub proxy_support_data: RwLock<Option<ProxySupportData>>, // Shard ID, WebsocketConfiguration
 }
 
 async fn on_error(error: poise::FrameworkError<'_, Data, Error>) {
@@ -260,13 +260,15 @@ async fn event_listener<'a>(
 
     let mut set = tokio::task::JoinSet::new();
     for (module, evts) in SILVERPELT_CACHE.module_event_listeners_cache.iter() {
-        let module_enabled = match is_module_enabled(&event_handler_context.data.pool, event_guild_id, module).await {
-            Ok(enabled) => enabled,
-            Err(e) => {
-                error!("Error getting module enabled status: {}", e);
-                continue;
-            }
-        };
+        let module_enabled =
+            match is_module_enabled(&event_handler_context.data.pool, event_guild_id, module).await
+            {
+                Ok(enabled) => enabled,
+                Err(e) => {
+                    error!("Error getting module enabled status: {}", e);
+                    continue;
+                }
+            };
 
         if !module_enabled {
             continue;
@@ -276,9 +278,7 @@ async fn event_listener<'a>(
 
         for evth in evts.iter() {
             let event_handler_context = event_handler_context.clone();
-            set.spawn(async move {
-                evth(&event_handler_context).await
-            });
+            set.spawn(async move { evth(&event_handler_context).await });
         }
     }
 
@@ -335,7 +335,7 @@ async fn main() {
         let opt = opt.trim();
 
         if opt.is_empty() {
-            continue
+            continue;
         }
 
         let (target, level) = if opt.contains('=') {
@@ -408,13 +408,13 @@ async fn main() {
             let mut cmds = Vec::new();
 
             let mut _cmd_names = Vec::new();
-            for module in modules::modules() { 
+            for module in modules::modules() {
                 log::info!("Loading module {}", module.id);
 
                 if module.virtual_module {
-                    continue
+                    continue;
                 }
-                
+
                 for cmd in module.commands {
                     let mut cmd = cmd.0;
                     cmd.category = Some(module.id.to_string());
@@ -429,7 +429,10 @@ async fn main() {
                     // Check for duplicate command aliases
                     for alias in cmd.aliases.iter() {
                         if _cmd_names.contains(alias) {
-                            panic!("Duplicate command alias: {} from command {}", alias, cmd.name);
+                            panic!(
+                                "Duplicate command alias: {} from command {}",
+                                alias, cmd.name
+                            );
                         }
 
                         _cmd_names.push(alias.clone());
@@ -579,16 +582,16 @@ async fn main() {
     .expect("Could not initialize Redis pool");
 
     let pg_pool = PgPoolOptions::new()
-    .max_connections(POSTGRES_MAX_CONNECTIONS)
-    .connect(&config::CONFIG.meta.postgres_url)
-    .await
-    .expect("Could not initialize connection");
+        .max_connections(POSTGRES_MAX_CONNECTIONS)
+        .connect(&config::CONFIG.meta.postgres_url)
+        .await
+        .expect("Could not initialize connection");
 
     let data = Data {
         mewld_ipc: Arc::new(ipc::mewld::MewldIpcClient {
             redis_pool: pool.clone(),
             cache: Arc::new(ipc::mewld::MewldIpcCache::default()),
-            pool: pg_pool.clone()
+            pool: pg_pool.clone(),
         }),
         animus_magic_ipc: Arc::new(ipc::animus_magic::client::AnimusMagicClient {
             redis_pool: pool.clone(),
@@ -602,12 +605,12 @@ async fn main() {
         ),
         pool: pg_pool,
         reqwest: reqwest::Client::builder()
-        .connect_timeout(std::time::Duration::from_secs(30))
-        .timeout(std::time::Duration::from_secs(90))
-        .build()
-        .expect("Could not initialize reqwest client"),
+            .connect_timeout(std::time::Duration::from_secs(30))
+            .timeout(std::time::Duration::from_secs(90))
+            .build()
+            .expect("Could not initialize reqwest client"),
         shards_ready: Arc::new(dashmap::DashMap::new()),
-        proxy_support_data: RwLock::new(None)
+        proxy_support_data: RwLock::new(None),
     };
 
     info!("Initializing bot state");

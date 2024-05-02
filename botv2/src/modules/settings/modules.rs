@@ -1,5 +1,5 @@
 use crate::silverpelt::silverpelt_cache::SILVERPELT_CACHE;
-use crate::{Error, Context};
+use crate::{Context, Error};
 
 #[poise::command(
     prefix_command,
@@ -39,7 +39,7 @@ pub async fn modules_list(ctx: Context<'_>) -> Result<(), Error> {
     let mut done_modules = Vec::new();
     for module_config in module_configs {
         let Some(module) = SILVERPELT_CACHE.module_id_cache.get(&module_config.module) else {
-            continue
+            continue;
         };
 
         let module_id = module_config.module;
@@ -50,12 +50,16 @@ pub async fn modules_list(ctx: Context<'_>) -> Result<(), Error> {
                 module.name,
                 if disabled { "Disabled" } else { "Enabled" },
                 module_id
-            ));    
+            ));
         } else {
             msg.push_str(&format!(
                 "**{}**: {} [default] [module id = {}]\n",
                 module.name,
-                if module.is_default_enabled { "Enabled" } else { "Disabled" },
+                if module.is_default_enabled {
+                    "Enabled"
+                } else {
+                    "Disabled"
+                },
                 module_id
             ));
         }
@@ -73,13 +77,17 @@ pub async fn modules_list(ctx: Context<'_>) -> Result<(), Error> {
         msg.push_str(&format!(
             "**{}**: {} [default, config not modified] [module id = {}]\n",
             module.name,
-            if module.is_default_enabled { "Enabled" } else { "Disabled" },
+            if module.is_default_enabled {
+                "Enabled"
+            } else {
+                "Disabled"
+            },
             module.id
         ));
     }
 
     ctx.say(msg).await?;
-    
+
     Ok(())
 }
 

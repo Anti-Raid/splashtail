@@ -13,7 +13,10 @@ pub struct SilverpeltCache {
     pub module_enabled_cache: Cache<(GuildId, String), bool>,
 
     /// Cache of whether a (GuildId, UserId) pair has the permission to run a command
-    pub command_permission_cache: Cache<(GuildId, UserId, super::cmd::CheckCommandOptions), IndexMap<String, PermissionResult>>,
+    pub command_permission_cache: Cache<
+        (GuildId, UserId, super::cmd::CheckCommandOptions),
+        IndexMap<String, PermissionResult>,
+    >,
 
     /// Cache of the extended data given a command (the extended data map stores the default base permissions and other data per command)
     pub command_extra_data_map: dashmap::DashMap<String, CommandExtendedDataMap>,
@@ -110,7 +113,11 @@ impl SilverpeltCache {
 
     // This method attempts to match on a regex while using the cache where possible
     pub async fn regex_match(&self, regex: &str, pat: &str) -> Result<bool, crate::Error> {
-        if let Some(m) = self.regex_match_cache.get(&(regex.to_string(), pat.to_string())).await {
+        if let Some(m) = self
+            .regex_match_cache
+            .get(&(regex.to_string(), pat.to_string()))
+            .await
+        {
             return Ok(m);
         }
 
@@ -119,7 +126,8 @@ impl SilverpeltCache {
         } else {
             let regex_compiled = regex::Regex::new(regex)?;
             self.regex_cache
-                .insert(regex.to_string(), regex_compiled.clone()).await;
+                .insert(regex.to_string(), regex_compiled.clone())
+                .await;
 
             regex_compiled
         };
@@ -127,7 +135,8 @@ impl SilverpeltCache {
         let result = compiled_regex.is_match(pat);
 
         self.regex_match_cache
-            .insert((regex.to_string(), pat.to_string()), result).await;
+            .insert((regex.to_string(), pat.to_string()), result)
+            .await;
 
         Ok(result)
     }

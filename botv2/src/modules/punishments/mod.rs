@@ -1,7 +1,8 @@
-pub mod sting_source;
 pub mod core;
+pub mod cmd;
+pub mod sting_source;
 
-use futures::future::FutureExt;
+use indexmap::indexmap;
 
 pub fn module() -> crate::silverpelt::Module {
     crate::silverpelt::Module {
@@ -13,7 +14,14 @@ pub fn module() -> crate::silverpelt::Module {
         virtual_module: false,
         web_hidden: false,
         is_default_enabled: false,
-        commands: vec![],
+        commands: vec![
+            (
+                cmd::punishments(),
+                indexmap! {
+                    "add" => crate::silverpelt::CommandExtendedData::kittycat_or_admin("punishments", "add"),
+                },
+            ),
+        ],
         on_startup: vec![],
         ..Default::default()
     }

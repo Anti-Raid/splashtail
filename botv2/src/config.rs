@@ -1,10 +1,10 @@
+use crate::Error;
 use once_cell::sync::Lazy;
 use poise::serenity_prelude::UserId;
 use serde::{Deserialize, Serialize};
+use splashcore_rs::objectstore::ObjectStore;
 use sqlx::types::chrono;
 use std::fs::File;
-use splashcore_rs::objectstore::ObjectStore;
-use crate::Error;
 
 /// Global config object
 pub static CONFIG: Lazy<Config> = Lazy::new(|| Config::load().expect("Failed to load config"));
@@ -71,7 +71,15 @@ impl ObjectStorage {
                 let endpoint = self.endpoint.as_ref().ok_or("Missing endpoint")?;
 
                 let bucket = rusty_s3::Bucket::new(
-                    format!("{}://{}", if self.secure.unwrap_or(false) { "https" } else { "http" }, endpoint)
+                    format!(
+                        "{}://{}",
+                        if self.secure.unwrap_or(false) {
+                            "https"
+                        } else {
+                            "http"
+                        },
+                        endpoint
+                    )
                     .parse()
                     .map_err(|e| format!("Failed to parse cdn endpoint: {}", e))?,
                     rusty_s3::UrlStyle::Path,
@@ -84,12 +92,10 @@ impl ObjectStorage {
                     credentials,
                     bucket,
                 })
-            },
-            ObjectStorageType::Local => {
-                Ok(ObjectStore::Local {
-                    prefix: self.path.clone(),
-                })
             }
+            ObjectStorageType::Local => Ok(ObjectStore::Local {
+                prefix: self.path.clone(),
+            }),
         }
     }
 }

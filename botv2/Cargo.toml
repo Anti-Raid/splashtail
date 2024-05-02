@@ -16,7 +16,7 @@ opt-level = 1 # Optimize for faster compilation times.
 poise = { git = "https://github.com/serenity-rs/poise", branch = "serenity-next" }
 serde = "1.0"
 log = "0.4"
-env_logger = "0.9"
+env_logger = "0.11"
 sqlx = { version = "0.7", features = [ "runtime-tokio-rustls", "postgres", "chrono", "uuid", "json"] }
 chrono = { version = "0.4", features = ["serde"]}
 reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls", "rustls-tls-native-roots"] }
@@ -31,7 +31,7 @@ dashmap = { version = "5", features = ["serde", "inline", "rayon"] }
 strum = "0.26"
 strum_macros = "0.26"
 rand = "0.8"
-fred = { version = "8.0.1", features = ["enable-rustls", "serde-json", "subscriber-client"] }
+fred = { version = "9.0.3", features = ["enable-rustls", "enable-rustls-ring", "serde-json", "subscriber-client"] }
 moka = { version = "0.12.3", features = ["future", "futures-util"] }
 serde_cbor = "0.11.2"
 secrecy = "0.8"

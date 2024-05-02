@@ -7,14 +7,12 @@ enum UnbanError {
     Generic(String),
 }
 
-pub async fn temp_punishment(
-    ctx: &serenity::client::Context,
-) -> Result<(), crate::Error> {
+pub async fn temp_punishment(ctx: &serenity::client::Context) -> Result<(), crate::Error> {
     let data = ctx.data::<crate::Data>();
     let pool = &data.pool;
 
     let temp_punishments = sqlx::query!(
-        "SELECT id, guild_id, user_id, moderator, action, stings, reason FROM moderation__actions WHERE handled = false AND duration IS NOT NULL AND duration + created_at < NOW()",
+        "SELECT id, guild_id, user_id, moderator, action, stings, reason FROM moderation__actions WHERE handled = false AND expired = true OR (duration IS NOT NULL AND duration + created_at < NOW())",
     )
     .fetch_all(pool)
     .await?;
@@ -24,28 +22,33 @@ pub async fn temp_punishment(
     for punishment in temp_punishments {
         // Supported punishments for temp are: 'ban'
         match punishment.action.as_str() {
-            "ban" => {},
-            _ => continue
+            "ban" => {}
+            _ => continue,
         }
 
         let Ok(guild_id) = punishment.guild_id.parse::<serenity::all::GuildId>() else {
-            continue
+            continue;
         };
 
         // Ensure shard id
-        let shard_id = serenity::utils::shard_id(guild_id, crate::ipc::argparse::MEWLD_ARGS.shard_count_nonzero);
+        let shard_id = serenity::utils::shard_id(
+            guild_id,
+            crate::ipc::argparse::MEWLD_ARGS.shard_count_nonzero,
+        );
 
         if !crate::ipc::argparse::MEWLD_ARGS.shards.contains(&shard_id) {
-            continue
+            continue;
         }
 
         let Ok(user_id) = punishment.user_id.parse::<serenity::all::UserId>() else {
-            continue
+            continue;
         };
 
         // Ensure moderation module is enabled
-        if !crate::silverpelt::module_config::is_module_enabled(pool, guild_id, "moderation").await? {
-            continue
+        if !crate::silverpelt::module_config::is_module_enabled(pool, guild_id, "moderation")
+            .await?
+        {
+            continue;
         }
 
         // If over MAX_CONCURRENT_UNBANS bans ongoing, wait for one to finish
@@ -53,10 +56,16 @@ pub async fn temp_punishment(
             if let Some(res) = set.join_next().await {
                 match res {
                     Err(e) => log::error!("Error while running unban [join]: {}", e),
-                    Ok(Ok(_)) => {},
-                    Ok(Err(UnbanError::Serenity(e))) => log::error!("Error while running unban [discord]: {}", e),
-                    Ok(Err(UnbanError::Sqlx(e))) => log::error!("Error while running unban [sqlx]: {}", e),
-                    Ok(Err(UnbanError::Generic(e))) => log::error!("Error while running unban [generic]: {}", e),
+                    Ok(Ok(_)) => {}
+                    Ok(Err(UnbanError::Serenity(e))) => {
+                        log::error!("Error while running unban [discord]: {}", e)
+                    }
+                    Ok(Err(UnbanError::Sqlx(e))) => {
+                        log::error!("Error while running unban [sqlx]: {}", e)
+                    }
+                    Ok(Err(UnbanError::Generic(e))) => {
+                        log::error!("Error while running unban [generic]: {}", e)
+                    }
                 }
             }
         }
@@ -179,10 +188,14 @@ pub async fn temp_punishment(
     while let Some(res) = set.join_next().await {
         match res {
             Err(e) => log::error!("Error while running unban [join]: {}", e),
-            Ok(Ok(_)) => {},
-            Ok(Err(UnbanError::Serenity(e))) => log::error!("Error while running unban [discord]: {}", e),
+            Ok(Ok(_)) => {}
+            Ok(Err(UnbanError::Serenity(e))) => {
+                log::error!("Error while running unban [discord]: {}", e)
+            }
             Ok(Err(UnbanError::Sqlx(e))) => log::error!("Error while running unban [sqlx]: {}", e),
-            Ok(Err(UnbanError::Generic(e))) => log::error!("Error while running unban [generic]: {}", e),
+            Ok(Err(UnbanError::Generic(e))) => {
+                log::error!("Error while running unban [generic]: {}", e)
+            }
         }
     }
 

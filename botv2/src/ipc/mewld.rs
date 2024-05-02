@@ -235,12 +235,15 @@ impl MewldIpcClient {
                 }
 
                 // Collect shard health
-                let mut guild_counts_per_shard: std::collections::HashMap<u16, u64> = std::collections::HashMap::new();
+                let mut guild_counts_per_shard: std::collections::HashMap<u16, u64> =
+                    std::collections::HashMap::new();
                 let mut user_counts_per_shard = std::collections::HashMap::new();
 
                 for guild in serenity_cache.cache.guilds() {
-                    let shard_id =
-                        serenity::utils::shard_id(guild, super::argparse::MEWLD_ARGS.shard_count_nonzero);
+                    let shard_id = serenity::utils::shard_id(
+                        guild,
+                        super::argparse::MEWLD_ARGS.shard_count_nonzero,
+                    );
 
                     let count = guild_counts_per_shard.entry(shard_id).or_insert(0);
                     *count += 1;

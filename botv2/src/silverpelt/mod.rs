@@ -1,8 +1,8 @@
-
 pub mod canonical_config_opt;
 pub mod canonical_module;
 pub mod cmd;
 pub mod config_opt;
+pub mod ext_generate;
 pub mod member_permission_calc;
 pub mod module_config;
 pub mod permissions;
@@ -10,7 +10,6 @@ pub mod poise_ext;
 pub mod proxysupport;
 pub mod silverpelt_cache;
 pub mod utils;
-pub mod ext_generate;
 
 use futures::future::BoxFuture;
 use indexmap::IndexMap;
@@ -30,18 +29,11 @@ pub struct EventHandlerContext {
 pub type ModuleEventHandler = Box<
     dyn Send
         + Sync
-        + for<'a> Fn(
-            &'a EventHandlerContext,
-        ) -> BoxFuture<'a, Result<(), crate::Error>>,
+        + for<'a> Fn(&'a EventHandlerContext) -> BoxFuture<'a, Result<(), crate::Error>>,
 >;
 
-pub type OnStartupFunction = Box<
-    dyn Send
-        + Sync
-        + for<'a> Fn(
-            &'a crate::Data,
-        ) -> BoxFuture<'a, Result<(), crate::Error>>,
->;
+pub type OnStartupFunction =
+    Box<dyn Send + Sync + for<'a> Fn(&'a crate::Data) -> BoxFuture<'a, Result<(), crate::Error>>>;
 
 /// This structure defines a basic module
 #[derive(Default)]

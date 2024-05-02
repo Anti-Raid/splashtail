@@ -1,7 +1,3 @@
-use splashcore_rs::utils::{
-    create_special_allocation_from_str, get_icon_of_state, parse_duration_string,
-    parse_numeric_list_to_str, Unit, REPLACE_CHANNEL,
-};
 use super::core::to_log_format;
 use crate::ipc::animus_magic::{
     client::{AnimusMessage, AnimusResponse},
@@ -11,12 +7,16 @@ use crate::ipc::argparse::MEWLD_ARGS;
 use crate::{Context, Error};
 use poise::CreateReply;
 use serenity::all::{
-    ChannelId, CreateEmbed, EditMember, EditMessage, GuildId, Mentionable, Message,
-    Timestamp, User, UserId,
+    ChannelId, CreateEmbed, EditMember, EditMessage, GuildId, Mentionable, Message, Timestamp,
+    User, UserId,
 };
 use serenity::utils::shard_id;
 use splashcore_rs::animusmagic_ext::{AnimusAnyResponse, AnimusMagicClientExt};
 use splashcore_rs::animusmagic_protocol::{default_request_timeout, AnimusTarget};
+use splashcore_rs::utils::{
+    create_special_allocation_from_str, get_icon_of_state, parse_duration_string,
+    parse_numeric_list_to_str, Unit, REPLACE_CHANNEL,
+};
 use std::collections::HashMap;
 use std::sync::Arc;
 
@@ -66,7 +66,7 @@ fn create_message_prune_serde(
         create_special_allocation_from_str(special_allocations)?
     } else {
         HashMap::new()
-    }; 
+    };
 
     Ok(serde_json::json!(
         {
@@ -86,12 +86,11 @@ fn create_message_prune_serde(
 }
 
 // Helper method to check the author of a user versus a target
-async fn check_hierarchy(
-    ctx: &Context<'_>,
-    user_id: UserId,
-) -> Result<(), Error> {
+async fn check_hierarchy(ctx: &Context<'_>, user_id: UserId) -> Result<(), Error> {
     let Some(guild) = ctx.guild() else {
-        return Err("Guild is not currently cached! Please contact support if you recieve this!".into());
+        return Err(
+            "Guild is not currently cached! Please contact support if you recieve this!".into(),
+        );
     };
 
     let author_id = ctx.author().id;
@@ -124,16 +123,28 @@ async fn check_hierarchy(
 pub async fn prune_user(
     ctx: Context<'_>,
     #[description = "The user to prune"] user: serenity::all::User,
-    #[description = "The reason for the prune"] #[max_length = 512] reason: String,
-    #[description = "Number of stings to give. Defaults to configured base stings"] stings: Option<i32>,
+    #[description = "The reason for the prune"]
+    #[max_length = 512]
+    reason: String,
+    #[description = "Number of stings to give. Defaults to configured base stings"] stings: Option<
+        i32,
+    >,
     #[description = "Whether or not to show prune status updates"] prune_debug: Option<bool>,
-    #[description = "Channels to prune from, otherwise will prune from all channels"] prune_channels: Option<String>,
-    #[description = "Whether or not to avoid errors while pruning"] prune_ignore_errors: Option<bool>,
+    #[description = "Channels to prune from, otherwise will prune from all channels"]
+    prune_channels: Option<String>,
+    #[description = "Whether or not to avoid errors while pruning"] prune_ignore_errors: Option<
+        bool,
+    >,
     #[description = "How many messages at maximum to prune"] prune_max_messages: Option<i32>,
-    #[description = "The duration to prune from. Format: <number> days/hours/minutes/seconds"] prune_from: Option<String>,
-    #[description = "The minimum number of messages to prune per channel"] prune_per_channel: Option<i32>,
-    #[description = "Whether to attempt rollover of leftover message quota to another channels or not"] prune_rollover_leftovers: Option<bool>,
-    #[description = "Specific channel allocation overrides"] prune_special_allocations: Option<String>,
+    #[description = "The duration to prune from. Format: <number> days/hours/minutes/seconds"]
+    prune_from: Option<String>,
+    #[description = "The minimum number of messages to prune per channel"]
+    prune_per_channel: Option<i32>,
+    #[description = "Whether to attempt rollover of leftover message quota to another channels or not"]
+    prune_rollover_leftovers: Option<bool>,
+    #[description = "Specific channel allocation overrides"] prune_special_allocations: Option<
+        String,
+    >,
 ) -> Result<(), Error> {
     if reason.len() > 512 {
         return Err("Reason must be less than/equal to 512 characters".into());
@@ -201,7 +212,7 @@ pub async fn prune_user(
 
     let task_id = match data
         .animus_magic_ipc
-        .request( 
+        .request(
             AnimusTarget::Jobserver,
             shard_id(guild_id, MEWLD_ARGS.shard_count_nonzero),
             AnimusMessage::Jobserver(JobserverAnimusMessage::SpawnTask {
@@ -229,8 +240,10 @@ pub async fn prune_user(
     tx.commit().await?;
 
     // Send audit logs if Audit Logs module is enabled
-    if crate::silverpelt::module_config::is_module_enabled(&ctx.data().pool, guild_id, "auditlogs").await? {
-        let imap = indexmap::indexmap!{
+    if crate::silverpelt::module_config::is_module_enabled(&ctx.data().pool, guild_id, "auditlogs")
+        .await?
+    {
+        let imap = indexmap::indexmap! {
             "log".to_string() => gwevent::core::Field {
                 value: vec![to_log_format(&author.user, &user, &reason).into()],
                 category: "log".to_string(),
@@ -256,7 +269,7 @@ pub async fn prune_user(
             "AR/PruneMessageBegin",
             "(Anti-Raid) Prune Messages Begin",
             imap,
-            guild_id
+            guild_id,
         )
         .await?;
     }
@@ -344,8 +357,12 @@ pub async fn prune_user(
 pub async fn kick(
     ctx: Context<'_>,
     #[description = "The member to kick"] member: serenity::all::Member,
-    #[description = "The reason for the kick"] #[max_length = 384]  reason: String,
-    #[description = "Number of stings to give. Defaults to configured base stings"] stings: Option<i32>,
+    #[description = "The reason for the kick"]
+    #[max_length = 384]
+    reason: String,
+    #[description = "Number of stings to give. Defaults to configured base stings"] stings: Option<
+        i32,
+    >,
 ) -> Result<(), Error> {
     if reason.len() > 384 {
         return Err("Reason must be less than/equal to 384 characters".into());
@@ -398,8 +415,10 @@ pub async fn kick(
     .await?;
 
     // Send audit logs if Audit Logs module is enabled
-    if crate::silverpelt::module_config::is_module_enabled(&ctx.data().pool, guild_id, "auditlogs").await? {
-        let imap = indexmap::indexmap!{
+    if crate::silverpelt::module_config::is_module_enabled(&ctx.data().pool, guild_id, "auditlogs")
+        .await?
+    {
+        let imap = indexmap::indexmap! {
             "target".to_string() => gwevent::core::Field {
                 value: vec![member.user.clone().into()],
                 category: "user".to_string(),
@@ -427,7 +446,7 @@ pub async fn kick(
             "AR/KickMember",
             "(Anti-Raid) Kick Member",
             imap,
-            guild_id
+            guild_id,
         )
         .await?;
     }
@@ -467,8 +486,12 @@ pub async fn kick(
 pub async fn ban(
     ctx: Context<'_>,
     #[description = "The member to ban"] member: serenity::all::User,
-    #[description = "The reason for the ban"] #[max_length = 384] reason: String,
-    #[description = "Number of stings to give. Defaults to configured base stings"] stings: Option<i32>,
+    #[description = "The reason for the ban"]
+    #[max_length = 384]
+    reason: String,
+    #[description = "Number of stings to give. Defaults to configured base stings"] stings: Option<
+        i32,
+    >,
     #[description = "How many messages to prune using discords autopruner [dmd] (days)"] prune_dmd: Option<u8>,
 ) -> Result<(), Error> {
     if reason.len() > 384 {
@@ -481,7 +504,6 @@ pub async fn ban(
 
     // Check user hierarchy before performing moderative actions
     check_hierarchy(&ctx, member.id).await?;
-
 
     let mut embed = CreateEmbed::new()
         .title("Banning Member...")
@@ -525,8 +547,10 @@ pub async fn ban(
     .await?;
 
     // Send audit logs if Audit Logs module is enabled
-    if crate::silverpelt::module_config::is_module_enabled(&ctx.data().pool, guild_id, "auditlogs").await? {
-        let imap = indexmap::indexmap!{
+    if crate::silverpelt::module_config::is_module_enabled(&ctx.data().pool, guild_id, "auditlogs")
+        .await?
+    {
+        let imap = indexmap::indexmap! {
             "target".to_string() => gwevent::core::Field {
                 value: vec![member.clone().into()],
                 category: "user".to_string(),
@@ -558,19 +582,19 @@ pub async fn ban(
             "AR/BanMember",
             "(Anti-Raid) Ban Member",
             imap,
-            guild_id
+            guild_id,
         )
         .await?;
     }
 
     guild_id
-    .ban(
-        ctx.http(),
-        member.id,
-        dmd,
-        Some(&to_log_format(&author.user, &member, &reason)),
-    )
-    .await?;
+        .ban(
+            ctx.http(),
+            member.id,
+            dmd,
+            Some(&to_log_format(&author.user, &member, &reason)),
+        )
+        .await?;
 
     tx.commit().await?;
 
@@ -600,8 +624,12 @@ pub async fn ban(
 pub async fn tempban(
     ctx: Context<'_>,
     #[description = "The member to ban"] member: serenity::all::User,
-    #[description = "The reason for the ban"] #[max_length = 384] reason: String,
-    #[description = "Number of stings to give. Defaults to configured base stings"] stings: Option<i32>,
+    #[description = "The reason for the ban"]
+    #[max_length = 384]
+    reason: String,
+    #[description = "Number of stings to give. Defaults to configured base stings"] stings: Option<
+        i32,
+    >,
     #[description = "The duration of the ban"] duration: String,
     #[description = "How many messages to prune using discords autopruner [dmd] (days)"] prune_dmd: Option<u8>,
 ) -> Result<(), Error> {
@@ -661,8 +689,10 @@ pub async fn tempban(
     .await?;
 
     // Send audit logs if Audit Logs module is enabled
-    if crate::silverpelt::module_config::is_module_enabled(&ctx.data().pool, guild_id, "auditlogs").await? {
-        let imap = indexmap::indexmap!{
+    if crate::silverpelt::module_config::is_module_enabled(&ctx.data().pool, guild_id, "auditlogs")
+        .await?
+    {
+        let imap = indexmap::indexmap! {
             "target".to_string() => gwevent::core::Field {
                 value: vec![member.clone().into()],
                 category: "user".to_string(),
@@ -690,19 +720,19 @@ pub async fn tempban(
             "AR/BanMemberTemporary",
             "(Anti-Raid) Ban Member (Temporary)",
             imap,
-            guild_id
+            guild_id,
         )
         .await?;
     }
 
     guild_id
-    .ban(
-        ctx.http(),
-        member.id,
-        dmd,
-        Some(&to_log_format(&author.user, &member, &reason)),
-    )
-    .await?;
+        .ban(
+            ctx.http(),
+            member.id,
+            dmd,
+            Some(&to_log_format(&author.user, &member, &reason)),
+        )
+        .await?;
 
     tx.commit().await?;
 
@@ -732,7 +762,9 @@ pub async fn tempban(
 pub async fn unban(
     ctx: Context<'_>,
     #[description = "The user to ban"] user: serenity::all::User,
-    #[description = "The reason for the ban"] #[max_length = 384] reason: String,
+    #[description = "The reason for the ban"]
+    #[max_length = 384]
+    reason: String,
     #[description = "Number of stings to give. Defaults to 0"] stings: Option<i32>,
 ) -> Result<(), Error> {
     if reason.len() > 384 {
@@ -756,7 +788,6 @@ pub async fn unban(
         .await?
         .into_message()
         .await?;
-
 
     let Some(author) = ctx.author_member().await else {
         return Err("This command can only be used in a guild".into());
@@ -783,8 +814,10 @@ pub async fn unban(
     .await?;
 
     // Send audit logs if Audit Logs module is enabled
-    if crate::silverpelt::module_config::is_module_enabled(&ctx.data().pool, guild_id, "auditlogs").await? {
-        let imap = indexmap::indexmap!{
+    if crate::silverpelt::module_config::is_module_enabled(&ctx.data().pool, guild_id, "auditlogs")
+        .await?
+    {
+        let imap = indexmap::indexmap! {
             "target".to_string() => gwevent::core::Field {
                 value: vec![user.clone().into()],
                 category: "user".to_string(),
@@ -812,12 +845,18 @@ pub async fn unban(
             "AR/UnbanMember",
             "(Anti-Raid) Unban Member",
             imap,
-            guild_id
+            guild_id,
         )
         .await?;
     }
 
-    ctx.http().remove_ban(guild_id, user.id, Some(&to_log_format(&author.user, &user, &reason))).await?;
+    ctx.http()
+        .remove_ban(
+            guild_id,
+            user.id,
+            Some(&to_log_format(&author.user, &user, &reason)),
+        )
+        .await?;
 
     tx.commit().await?;
 
@@ -848,8 +887,12 @@ pub async fn timeout(
     ctx: Context<'_>,
     #[description = "The member to timeout"] mut member: serenity::all::Member,
     #[description = "The duration of the timeout"] duration: String,
-    #[description = "The reason for the timeout"] #[max_length = 384] reason: String,
-    #[description = "Number of stings to give. Defaults to configured base stings"] stings: Option<i32>,
+    #[description = "The reason for the timeout"]
+    #[max_length = 384]
+    reason: String,
+    #[description = "Number of stings to give. Defaults to configured base stings"] stings: Option<
+        i32,
+    >,
 ) -> Result<(), Error> {
     if reason.len() > 384 {
         return Err("Reason must be less than/equal to 384 characters".into());
@@ -920,8 +963,10 @@ pub async fn timeout(
     .await?;
 
     // Send audit logs if Audit Logs module is enabled
-    if crate::silverpelt::module_config::is_module_enabled(&ctx.data().pool, guild_id, "auditlogs").await? {
-        let imap = indexmap::indexmap!{
+    if crate::silverpelt::module_config::is_module_enabled(&ctx.data().pool, guild_id, "auditlogs")
+        .await?
+    {
+        let imap = indexmap::indexmap! {
             "target".to_string() => gwevent::core::Field {
                 value: vec![member.user.clone().into()],
                 category: "user".to_string(),
@@ -949,7 +994,7 @@ pub async fn timeout(
             "AR/TimeoutMember",
             "(Anti-Raid) Timeout Member",
             imap,
-            guild_id
+            guild_id,
         )
         .await?;
     }
@@ -968,16 +1013,16 @@ pub async fn timeout(
     tx.commit().await?;
 
     embed = CreateEmbed::new()
-    .title("Unbanned Member...")
-    .description(format!(
-        "{} | Unbanning {}",
-        get_icon_of_state("completed"),
-        member.mention()
-    ));
+        .title("Unbanned Member...")
+        .description(format!(
+            "{} | Unbanning {}",
+            get_icon_of_state("completed"),
+            member.mention()
+        ));
 
     base_message
-    .edit(&ctx.http(), EditMessage::new().embed(embed))
-    .await?;
+        .edit(&ctx.http(), EditMessage::new().embed(embed))
+        .await?;
 
     Ok(())
 }

@@ -5,7 +5,7 @@ type Error = crate::Error;
 type Context<'a> = crate::Context<'a>;
 
 #[poise::command(category = "Stats", prefix_command, slash_command, user_cooldown = 1)]
-pub async fn ping(ctx: Context<'_>) -> Result<(), Error> {    
+pub async fn ping(ctx: Context<'_>) -> Result<(), Error> {
     let msg = CreateReply::default().embed(
         CreateEmbed::default()
             .title("Pong")
@@ -53,7 +53,7 @@ pub async fn ping(ctx: Context<'_>) -> Result<(), Error> {
                     real_ws_latency
                         .map(|latency| format!("{}ms", latency))
                         .unwrap_or_else(|| "Unknown".to_string()),
-                    true
+                    true,
                 ),
         ),
     )

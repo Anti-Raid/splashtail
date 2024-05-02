@@ -128,12 +128,10 @@ fn set_stats() -> Result<(), Error> {
     let proc_cpuinfo_exists = std::path::Path::new("/proc/cpuinfo").exists();
 
     if proc_cpuinfo_exists {
-        let cpu_model = Command::new("cat")
-            .args(["/proc/cpuinfo"])
-            .output()?;
+        let cpu_model = Command::new("cat").args(["/proc/cpuinfo"]).output()?;
 
         let cpu_model = String::from_utf8(cpu_model.stdout)?;
-        
+
         let mut model_found = false;
         for line in cpu_model.lines().take(13) {
             if line.starts_with("model name") {
@@ -154,21 +152,19 @@ fn set_stats() -> Result<(), Error> {
     }
 
     // rustc version
-    let rustc_version = Command::new("rustc")
-    .args(["-V"])
-    .output()?;
+    let rustc_version = Command::new("rustc").args(["-V"]).output()?;
 
     let rustc_version = String::from_utf8(rustc_version.stdout)?.replace('\n', "");
 
     // Strip out extra data from rustc version by splitting by ( and taking the first part
     // E.g. rustc 1.79.0-nightly (ab5bda1aa 2024-04-08) becomes rustc 1.79.0-nightly
     let rustc_version = rustc_version.split('(').next().unwrap().to_string();
-    
+
     println!("cargo:rustc-env=RUSTC_VERSION={}", rustc_version);
 
     // Get profile
     let profile = std::env::var("PROFILE").unwrap_or("unknown".to_string());
-    
+
     println!("cargo:rustc-env=CARGO_PROFILE={}", profile);
 
     Ok(())

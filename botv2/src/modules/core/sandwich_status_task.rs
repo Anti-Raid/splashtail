@@ -1,7 +1,4 @@
-use crate::silverpelt::proxysupport::{
-    ProxyResponse,
-    sandwich::StatusEndpointResponse
-};
+use crate::silverpelt::proxysupport::{sandwich::StatusEndpointResponse, ProxyResponse};
 
 use serde::{Deserialize, Serialize};
 
@@ -11,18 +8,18 @@ struct Resp {
     data: Option<StatusEndpointResponse>,
 }
 
-pub async fn sandwich_status_task(
-    ctx: &serenity::client::Context,
-) -> Result<(), crate::Error> {
+pub async fn sandwich_status_task(ctx: &serenity::client::Context) -> Result<(), crate::Error> {
     let data = ctx.data::<crate::Data>();
 
     let Some(ref sandwich_url) = crate::config::CONFIG.meta.sandwich_http_api else {
         return Ok(());
     };
 
-    let res = reqwest::get(&format!("{}/api/status", sandwich_url)).await?
+    let res = reqwest::get(&format!("{}/api/status", sandwich_url))
+        .await?
         .error_for_status()?
-        .json::<Resp>().await?;
+        .json::<Resp>()
+        .await?;
 
     if !res.ok {
         return Err("Sandwich API returned not ok".into());

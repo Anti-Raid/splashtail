@@ -1,12 +1,12 @@
-use log::{error, info, warn};
-use poise::serenity_prelude::{GuildId, UserId};
-use botox::crypto::gen_random;
-use sqlx::PgPool;
-use std::collections::HashMap;
-use botox::cache::CacheHttpImpl;
 use super::core;
 use crate::modules::limits::core::Limit;
 use crate::Error;
+use botox::cache::CacheHttpImpl;
+use botox::crypto::gen_random;
+use log::{error, info, warn};
+use poise::serenity_prelude::{GuildId, UserId};
+use sqlx::PgPool;
+use std::collections::HashMap;
 
 pub struct HandleModAction {
     /// Guild ID
@@ -72,9 +72,15 @@ pub async fn handle_mod_action(
         )
         .fetch_all(pool)
         .await?;
-        
+
         if infringing_actions.len() >= guild_limit.limit_per as usize {
-            hit_limits.push((infringing_actions.into_iter().map(|v| v.action_id).collect::<Vec<String>>(), guild_limit));
+            hit_limits.push((
+                infringing_actions
+                    .into_iter()
+                    .map(|v| v.action_id)
+                    .collect::<Vec<String>>(),
+                guild_limit,
+            ));
         }
     }
 
@@ -97,11 +103,16 @@ pub async fn handle_mod_action(
                         // Get all user roles
                         if let Ok(member) = guild_id.member(cache_http, user_id).await {
                             let roles = member.roles.clone();
-                            
+
                             let mut errors = Vec::new();
                             for role in roles.iter() {
-                                if let Err(e) =
-                                    member.remove_role(&cache_http.http, *role, Some("Removing roles due to preconfigured limits")).await
+                                if let Err(e) = member
+                                    .remove_role(
+                                        &cache_http.http,
+                                        *role,
+                                        Some("Removing roles due to preconfigured limits"),
+                                    )
+                                    .await
                                 {
                                     errors.push(format!("Failed to remove role: {}", e));
                                 }
@@ -120,11 +131,18 @@ pub async fn handle_mod_action(
                                 &errors
                             )
                             .execute(pool)
-                            .await?;                
+                            .await?;
                         }
                     }
                     core::UserLimitActions::KickUser => {
-                        if let Err(e) = guild_id.kick(&cache_http.http, user_id, Some("Kicking user due to preconfigured limits")).await {
+                        if let Err(e) = guild_id
+                            .kick(
+                                &cache_http.http,
+                                user_id,
+                                Some("Kicking user due to preconfigured limits"),
+                            )
+                            .await
+                        {
                             error!("Failed to kick user: {}", e);
 
                             sqlx::query!(
@@ -140,7 +158,7 @@ pub async fn handle_mod_action(
                                 &vec![format!("Failed to kick user: {}", e)]
                             )
                             .execute(pool)
-                            .await?;                
+                            .await?;
                         } else {
                             sqlx::query!(
                                 "
@@ -160,7 +178,15 @@ pub async fn handle_mod_action(
                         return Ok(());
                     }
                     core::UserLimitActions::BanUser => {
-                        if let Err(e) = guild_id.ban(&cache_http.http, user_id, 0, Some("Banning user due to preconfigured limits")).await {
+                        if let Err(e) = guild_id
+                            .ban(
+                                &cache_http.http,
+                                user_id,
+                                0,
+                                Some("Banning user due to preconfigured limits"),
+                            )
+                            .await
+                        {
                             error!("Failed to kick user: {}", e);
 
                             sqlx::query!(

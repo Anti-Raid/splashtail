@@ -4,8 +4,8 @@ mod core;
 mod events;
 mod handler;
 
-use indexmap::indexmap;
 use futures_util::FutureExt;
+use indexmap::indexmap;
 
 pub fn module() -> crate::silverpelt::Module {
     crate::silverpelt::Module {

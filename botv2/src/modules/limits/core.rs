@@ -1,12 +1,12 @@
+use crate::Error;
 use poise::serenity_prelude::{GuildId, UserId};
 use serde::{Deserialize, Serialize};
+use splashcore_rs::utils::pg_interval_to_secs;
 use sqlx::{
     types::chrono::{DateTime, Utc},
     PgPool,
 };
 use strum_macros::{Display, EnumString, VariantNames};
-use splashcore_rs::utils::pg_interval_to_secs;
-use crate::Error;
 
 #[derive(poise::ChoiceParameter)]
 pub enum UserLimitTypesChoices {
@@ -73,7 +73,7 @@ impl UserLimitTypesChoices {
 )]
 #[strum(serialize_all = "snake_case")]
 pub enum UserLimitTypes {
-    MemberAdd, 
+    MemberAdd,
     RoleAdd,               // set
     RoleUpdate,            // set
     RoleRemove,            // set
@@ -168,7 +168,11 @@ pub struct UserAction {
 
 impl UserAction {
     /// Fetch user actions for a action id
-    pub async fn by_id(data: &crate::Data, guild_id: GuildId, action_id: &str) -> Result<Self, Error> {
+    pub async fn by_id(
+        data: &crate::Data,
+        guild_id: GuildId,
+        action_id: &str,
+    ) -> Result<Self, Error> {
         let res = sqlx::query!(
             "SELECT action_id, limit_type, created_at, user_id, guild_id, action_data, limits_hit, target FROM user_actions WHERE guild_id = $1 AND action_id = $2",
             guild_id.to_string(),
@@ -219,7 +223,7 @@ impl UserAction {
                 target: action.target,
             });
         }
-        
+
         Ok(actions)
     }
 
@@ -245,7 +249,7 @@ impl UserAction {
                 target: action.target,
             });
         }
-        
+
         Ok(actions)
     }
 }

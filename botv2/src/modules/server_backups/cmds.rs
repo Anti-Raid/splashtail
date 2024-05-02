@@ -1,7 +1,3 @@
-use splashcore_rs::utils::get_icon_of_state;
-use splashcore_rs::utils::{
-    create_special_allocation_from_str, parse_numeric_list, REPLACE_CHANNEL,
-};
 use crate::ipc::animus_magic::{
     client::{AnimusMessage, AnimusResponse},
     jobserver::{JobserverAnimusMessage, JobserverAnimusResponse},
@@ -14,6 +10,10 @@ use serenity::small_fixed_array::TruncatingInto;
 use serenity::utils::shard_id;
 use splashcore_rs::animusmagic_ext::{AnimusAnyResponse, AnimusMagicClientExt};
 use splashcore_rs::animusmagic_protocol::{default_request_timeout, AnimusTarget};
+use splashcore_rs::utils::get_icon_of_state;
+use splashcore_rs::utils::{
+    create_special_allocation_from_str, parse_numeric_list, REPLACE_CHANNEL,
+};
 use sqlx::types::uuid::Uuid;
 use std::fmt::Display;
 use std::sync::Arc;
@@ -216,10 +216,10 @@ pub async fn backups_create(
         task: Arc<jobserver::Task>,
     ) -> Result<(), Error> {
         let new_task_msg = jobserver::taskpoll::embed(
-            &crate::config::CONFIG.sites.api.get(), 
-            &task, 
-            vec![], 
-            true
+            &crate::config::CONFIG.sites.api.get(),
+            &task,
+            vec![],
+            true,
         )?;
 
         base_message
@@ -400,26 +400,27 @@ pub async fn backups_list(ctx: Context<'_>) -> Result<(), Error> {
                     "backups",
                     "backups delete",
                     guild_id,
-                    ctx.author().id, 
-                    &ctx.data().pool, 
-                    &botox::cache::CacheHttpImpl::from_ctx(ctx.serenity_context()), 
-                    &Some(ctx), 
+                    ctx.author().id,
+                    &ctx.data().pool,
+                    &botox::cache::CacheHttpImpl::from_ctx(ctx.serenity_context()),
+                    &Some(ctx),
                     crate::silverpelt::cmd::CheckCommandOptions::default(), // TODO: Maybe change this to allow backups delete to be disabled?
-                ).await;  
+                )
+                .await;
 
                 if !perm_res.is_ok() {
                     item.create_response(
                         &ctx.serenity_context().http,
                         serenity::all::CreateInteractionResponse::Message(
                             serenity::all::CreateInteractionResponseMessage::default()
-                            .ephemeral(true)
-                            .content(perm_res.to_markdown())
-                        )
+                                .ephemeral(true)
+                                .content(perm_res.to_markdown()),
+                        ),
                     )
                     .await?;
 
                     continue;
-                }          
+                }
 
                 item.defer(&ctx.serenity_context().http).await?;
 
@@ -488,7 +489,10 @@ pub async fn backups_list(ctx: Context<'_>) -> Result<(), Error> {
                         let mut status = Vec::new();
 
                         let data = &ctx.data();
-                        match task.delete_from_storage(&data.reqwest, &data.object_store).await {
+                        match task
+                            .delete_from_storage(&data.reqwest, &data.object_store)
+                            .await
+                        {
                             Ok(_) => {
                                 status.push(":white_check_mark: Successfully deleted the backup from storage".to_string());
                             }
@@ -540,19 +544,20 @@ pub async fn backups_list(ctx: Context<'_>) -> Result<(), Error> {
                         {
                             log::error!("Failed to edit message: {}", e);
                         }
-                    },
+                    }
                     "backups_delete_cancel" => {
                         // Respond to the interaction
-                        confirm_item.create_response(
-                            &ctx.serenity_context().http,
-                            serenity::all::CreateInteractionResponse::Message(
-                                serenity::all::CreateInteractionResponseMessage::default()
-                                .ephemeral(true)
-                                .content("Cancelled deletion of backup")
+                        confirm_item
+                            .create_response(
+                                &ctx.serenity_context().http,
+                                serenity::all::CreateInteractionResponse::Message(
+                                    serenity::all::CreateInteractionResponseMessage::default()
+                                        .ephemeral(true)
+                                        .content("Cancelled deletion of backup"),
+                                ),
                             )
-                        )
-                        .await?;                        
-                    },
+                            .await?;
+                    }
                     _ => {
                         continue;
                     }
@@ -595,7 +600,7 @@ pub async fn backups_delete(ctx: Context<'_>, task_id: String) -> Result<(), Err
     let task = jobserver::Task::from_id(task_id.parse::<Uuid>()?, &ctx.data().pool)
         .await
         .map_err(|e| format!("Failed to get backup task: {}", e))?;
-    
+
     let mut confirm = ctx.send(
         poise::reply::CreateReply::default()
         .content("Are you sure you want to delete this backup?\n\n**This action is irreversible!**")
@@ -639,25 +644,33 @@ pub async fn backups_delete(ctx: Context<'_>, task_id: String) -> Result<(), Err
     match confirm_item.data.custom_id.as_str() {
         "backups_delete_confirm" => {
             // Respond to the interaction
-            confirm_item.create_response(
-                &ctx.serenity_context().http,
-                serenity::all::CreateInteractionResponse::Message(
-                    serenity::all::CreateInteractionResponseMessage::default()
-                    .embed(
-                        CreateEmbed::default()
-                        .title("Deleting Backup...")
-                        .description(":yellow_circle: Please wait while we delete this backup")
-                    )
+            confirm_item
+                .create_response(
+                    &ctx.serenity_context().http,
+                    serenity::all::CreateInteractionResponse::Message(
+                        serenity::all::CreateInteractionResponseMessage::default().embed(
+                            CreateEmbed::default()
+                                .title("Deleting Backup...")
+                                .description(
+                                    ":yellow_circle: Please wait while we delete this backup",
+                                ),
+                        ),
+                    ),
                 )
-            )
-            .await?;
+                .await?;
 
             let mut status = Vec::new();
 
             let data = &ctx.data();
-            match task.delete_from_storage(&data.reqwest, &data.object_store).await {
+            match task
+                .delete_from_storage(&data.reqwest, &data.object_store)
+                .await
+            {
                 Ok(_) => {
-                    status.push(":white_check_mark: Successfully deleted the backup from storage".to_string());
+                    status.push(
+                        ":white_check_mark: Successfully deleted the backup from storage"
+                            .to_string(),
+                    );
                 }
                 Err(e) => {
                     status.push(format!(
@@ -684,7 +697,10 @@ pub async fn backups_delete(ctx: Context<'_>, task_id: String) -> Result<(), Err
             // Lastly deleting the task from the database
             match task.delete_from_db(&ctx.data().pool).await {
                 Ok(_) => {
-                    status.push(":white_check_mark: Successfully deleted the backup task from database".to_string());
+                    status.push(
+                        ":white_check_mark: Successfully deleted the backup task from database"
+                            .to_string(),
+                    );
                 }
                 Err(e) => {
                     status.push(format!(
@@ -707,10 +723,10 @@ pub async fn backups_delete(ctx: Context<'_>, task_id: String) -> Result<(), Err
             {
                 log::error!("Failed to edit message: {}", e);
             }
-        },
+        }
         "backups_delete_cancel" => {
             ctx.say("Cancelled deletion of backup").await?;
-        },
+        }
         _ => {
             return Err("Invalid interaction".into());
         }
@@ -718,7 +734,6 @@ pub async fn backups_delete(ctx: Context<'_>, task_id: String) -> Result<(), Err
 
     Ok(())
 }
-
 
 #[derive(poise::ChoiceParameter)]
 enum ChannelRestoreMode {
@@ -814,10 +829,9 @@ pub async fn backups_restore(
             };
 
             // Get the task
-            let task =
-                jobserver::Task::from_id(backup_id.parse::<Uuid>()?, &ctx.data().pool)
-                    .await
-                    .map_err(|e| format!("Failed to get backup task: {}", e))?;
+            let task = jobserver::Task::from_id(backup_id.parse::<Uuid>()?, &ctx.data().pool)
+                .await
+                .map_err(|e| format!("Failed to get backup task: {}", e))?;
 
             if task.format_task_for_simplex() != format!("g/{}", guild_id) {
                 return Err("Backup task is not for this guild".into());
@@ -951,9 +965,9 @@ pub async fn backups_restore(
     ) -> Result<(), Error> {
         let new_task_msg = jobserver::taskpoll::embed(
             &crate::config::CONFIG.sites.api.get(),
-            &task, 
-            vec![], 
-            true
+            &task,
+            vec![],
+            true,
         )?;
 
         base_message

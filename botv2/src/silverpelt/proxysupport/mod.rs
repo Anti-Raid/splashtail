@@ -27,13 +27,8 @@ pub async fn guild(
     // Check sandwich, it may be there
     if let Some(ref proxy_url) = crate::config::CONFIG.meta.sandwich_http_api {
         let url = format!("{}/api/state?col=guilds&id={}", proxy_url, guild_id);
-        
-        let resp = reqwest_client
-        .get(&url)
-        .send()
-        .await?
-        .json::<Resp>()
-        .await;
+
+        let resp = reqwest_client.get(&url).send().await?.json::<Resp>().await;
 
         if let Ok(resp) = resp {
             if resp.ok {
@@ -52,19 +47,18 @@ pub async fn guild(
 
     // Last resore: make the http call
     let res = ctx.http.get_guild(guild_id).await?;
-    
+
     // Save to sandwich
     if let Some(ref proxy_url) = crate::config::CONFIG.meta.sandwich_http_api {
         let url = format!("{}/api/state?col=guilds&id={}", proxy_url, guild_id);
 
-        let resp = reqwest_client
-        .post(&url)
-        .json(&res)
-        .send()
-        .await?;
+        let resp = reqwest_client.post(&url).json(&res).send().await?;
 
         if !resp.status().is_success() {
-            log::warn!("Failed to update sandwich proxy with guild data: {:?}", resp.text().await);
+            log::warn!(
+                "Failed to update sandwich proxy with guild data: {:?}",
+                resp.text().await
+            );
         }
     }
 
@@ -80,7 +74,7 @@ pub async fn member_in_guild(
 ) -> Result<serenity::all::Member, crate::Error> {
     if crate::config::CONFIG.meta.sandwich_http_api.is_none() {
         let res = botox::cache::member_on_guild(ctx, guild_id, user_id, true).await?;
-    
+
         let Some(res) = res else {
             return Err("Member not found".into());
         };
@@ -99,7 +93,10 @@ pub async fn member_in_guild(
         return Err("Sandwich proxy not configured, not proceeding".into());
     };
 
-    let url = format!("{}/api/state?col=members&id={}&guild_id={}", proxy_url, user_id, guild_id);
+    let url = format!(
+        "{}/api/state?col=members&id={}&guild_id={}",
+        proxy_url, user_id, guild_id
+    );
 
     #[derive(serde::Serialize, serde::Deserialize)]
     struct Resp {
@@ -107,17 +104,17 @@ pub async fn member_in_guild(
         data: Option<serenity::all::Member>,
         error: Option<String>,
     }
-    
+
     let resp = reqwest_client
-    .get(&url)
-    .send()
-    .await?
-    .json::<Resp>()
-    .await?;
+        .get(&url)
+        .send()
+        .await?
+        .json::<Resp>()
+        .await?;
 
     if resp.ok {
         let Some(member) = resp.data else {
-           return Err("Member not found".into());
+            return Err("Member not found".into());
         };
 
         return Ok(member);
@@ -133,27 +130,26 @@ pub async fn member_in_guild(
     };
 
     // Update sandwich with a POST
-    let resp = reqwest_client
-    .post(&url)
-    .json(&res)
-    .send()
-    .await?;
+    let resp = reqwest_client.post(&url).json(&res).send().await?;
 
     if !resp.status().is_success() {
-        log::warn!("Failed to update sandwich proxy with member data: {:?}", resp.text().await);
+        log::warn!(
+            "Failed to update sandwich proxy with member data: {:?}",
+            resp.text().await
+        );
     }
 
     Ok(res)
 }
 
 pub enum ProxyResponse {
-    Sandwich(sandwich::StatusEndpointResponse)
+    Sandwich(sandwich::StatusEndpointResponse),
 }
 
 impl ProxyResponse {
     pub fn to_support_data(&self) -> ProxySupportData {
         match self {
-            ProxyResponse::Sandwich (data) => {
+            ProxyResponse::Sandwich(data) => {
                 let mut shards = HashMap::new();
                 for manager in data.managers.iter() {
                     if manager.display_name != *"Anti Raid" {
@@ -169,26 +165,29 @@ impl ProxyResponse {
                             let uptime = shard[4];
                             let total_uptime = shard[5];
 
-                            shards.insert(shard_id, ShardConn {
-                                status: match status {
-                                    0 => "Idle".to_string(),
-                                    1 => "Connecting".to_string(),
-                                    2 => "Connected".to_string(),
-                                    3 => "MarkedForClosure".to_string(),
-                                    4 => "Closing".to_string(),
-                                    5 => "Closed".to_string(),
-                                    6 => "Erroring".to_string(),
-                                    _ => "Unknown".to_string(),
+                            shards.insert(
+                                shard_id,
+                                ShardConn {
+                                    status: match status {
+                                        0 => "Idle".to_string(),
+                                        1 => "Connecting".to_string(),
+                                        2 => "Connected".to_string(),
+                                        3 => "MarkedForClosure".to_string(),
+                                        4 => "Closing".to_string(),
+                                        5 => "Closed".to_string(),
+                                        6 => "Erroring".to_string(),
+                                        _ => "Unknown".to_string(),
+                                    },
+                                    real_latency: latency,
+                                    guilds,
+                                    uptime,
+                                    total_uptime,
                                 },
-                                real_latency: latency,
-                                guilds,
-                                uptime,
-                                total_uptime,
-                            });
+                            );
                         }
                     }
                 }
-                
+
                 ProxySupportData {
                     resp: ProxyResponse::Sandwich(data.clone()),
                     shard_conns: shards,

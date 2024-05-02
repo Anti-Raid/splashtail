@@ -51,7 +51,8 @@ Expected arguments: [program name] <shards> <shard_count> <cluster_id> <cluster_
         Ok(Self {
             shards,
             shard_count,
-            shard_count_nonzero: std::num::NonZeroU16::new(shard_count).expect("Shard count is zero"),
+            shard_count_nonzero: std::num::NonZeroU16::new(shard_count)
+                .expect("Shard count is zero"),
             cluster_id,
             cluster_name,
             cluster_count,

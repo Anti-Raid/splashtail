@@ -136,7 +136,7 @@ pub fn get_command_extended_data(
             .replace(&root_cmd.to_string(), "")
             .trim()
             .to_string();
-        
+
         if let Some(data) = root_cmd_data.get(&cmd_replaced.as_str()) {
             cmd_data = data.clone();
         }
@@ -224,10 +224,7 @@ pub async fn get_all_command_configurations(
     pool: &PgPool,
     guild_id: &str,
     name: &str,
-) -> Result<
-    Vec<GuildCommandConfiguration>,
-    crate::Error,
-> {
+) -> Result<Vec<GuildCommandConfiguration>, crate::Error> {
     let permutations = permute_command_names(name);
 
     let mut command_configurations = Vec::new();

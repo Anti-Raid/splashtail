@@ -18,9 +18,15 @@ pub fn get_category(category_id: Option<String>) -> Option<String> {
 
 #[poise::command(track_edits, prefix_command, slash_command)]
 pub async fn help(ctx: Context<'_>, command: Option<String>) -> Result<(), Error> {
-    botox::help::help(ctx, command, "%", botox::help::HelpOptions {
-        get_category: Some(Box::new(get_category)),
-    }).await
+    botox::help::help(
+        ctx,
+        command,
+        "%",
+        botox::help::HelpOptions {
+            get_category: Some(Box::new(get_category)),
+        },
+    )
+    .await
 }
 
 #[poise::command(category = "Help", prefix_command, slash_command, user_cooldown = 1)]

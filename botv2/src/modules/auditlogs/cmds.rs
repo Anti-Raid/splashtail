@@ -1,20 +1,23 @@
 use crate::{Context, Error};
-use poise::CreateReply;
-use serenity::all::{Channel, ChannelType, CreateEmbed};
 use botox::crypto::gen_random;
 use futures_util::StreamExt;
-use std::time::Duration;
+use poise::CreateReply;
 use secrecy::ExposeSecret;
+use serenity::all::{Channel, ChannelType, CreateEmbed};
+use std::time::Duration;
 
-#[poise::command(prefix_command, slash_command, user_cooldown = 1, subcommands("list_sinks", "add_channel", "add_discordhook", "remove_sink"))]
+#[poise::command(
+    prefix_command,
+    slash_command,
+    user_cooldown = 1,
+    subcommands("list_sinks", "add_channel", "add_discordhook", "remove_sink")
+)]
 pub async fn auditlogs(_ctx: Context<'_>) -> Result<(), Error> {
     Ok(())
 }
 
 #[poise::command(prefix_command, slash_command, user_cooldown = 1)]
-pub async fn list_sinks(
-    ctx: Context<'_>,
-) -> Result<(), Error> {
+pub async fn list_sinks(ctx: Context<'_>) -> Result<(), Error> {
     let Some(guild_id) = ctx.guild_id() else {
         return Err("This command can only be used in a guild".into());
     };
@@ -54,9 +57,7 @@ pub async fn list_sinks(
         });
     }
 
-    fn create_sink_list_embed(
-        sink: &SinkLister,
-    ) -> CreateEmbed {
+    fn create_sink_list_embed(sink: &SinkLister) -> CreateEmbed {
         let mut embed = CreateEmbed::default();
         embed = embed.title(format!("Sink ID: {}", sink.id));
         embed = embed.field("Type", sink.typ.clone(), false);
@@ -73,53 +74,43 @@ pub async fn list_sinks(
         embed
     }
 
-    fn create_action_row<'a>(
-        index: usize,
-        total: usize,
-    ) -> serenity::all::CreateActionRow<'a> {
-        serenity::all::CreateActionRow::Buttons(
-            vec![
-                serenity::all::CreateButton::new(
-                    "previous",
-                )
+    fn create_action_row<'a>(index: usize, total: usize) -> serenity::all::CreateActionRow<'a> {
+        serenity::all::CreateActionRow::Buttons(vec![
+            serenity::all::CreateButton::new("previous")
                 .style(serenity::all::ButtonStyle::Primary)
                 .label("Previous")
                 .disabled(index == 0),
-                serenity::all::CreateButton::new(
-                    "next",
-                )
+            serenity::all::CreateButton::new("next")
                 .style(serenity::all::ButtonStyle::Primary)
                 .label("Next")
                 .disabled(index >= total - 1),
-                serenity::all::CreateButton::new(
-                    "first",
-                )
+            serenity::all::CreateButton::new("first")
                 .style(serenity::all::ButtonStyle::Primary)
                 .label("First")
                 .disabled(false),
-            ]
-        )
+            serenity::all::CreateButton::new("close")
+                .style(serenity::all::ButtonStyle::Danger)
+                .label("Close")
+                .disabled(false),
+        ])
     }
 
     let mut index = 0;
 
-    let msg = ctx.send(
-        CreateReply::new()
-        .embed(create_sink_list_embed(&sink_lister[index]))
-        .components(
-            vec![
-                create_action_row(index, sink_lister.len())
-            ]
+    let msg = ctx
+        .send(
+            CreateReply::new()
+                .embed(create_sink_list_embed(&sink_lister[index]))
+                .components(vec![create_action_row(index, sink_lister.len())]),
         )
-    )
-    .await?
-    .into_message()
-    .await?;
+        .await?
+        .into_message()
+        .await?;
 
     let collector = msg
-    .await_component_interactions(ctx.serenity_context().shard.clone())
-    .author_id(ctx.author().id)
-    .timeout(Duration::from_secs(180));
+        .await_component_interactions(ctx.serenity_context().shard.clone())
+        .author_id(ctx.author().id)
+        .timeout(Duration::from_secs(180));
 
     let mut collect_stream = collector.stream();
 
@@ -128,21 +119,18 @@ pub async fn list_sinks(
 
         match item_id {
             "previous" => {
-                if index == 0 {
-                    continue;
-                }
-
-                index -= 1;
+                index = index.saturating_sub(1);
             }
             "next" => {
-                if index >= sink_lister.len() - 1 {
-                    continue;
-                }
-
-                index += 1;
+                index = usize::min(index+1, sink_lister.len() - 1);
             }
             "first" => {
                 index = 0;
+            }
+            "close" => {
+                item.defer(&ctx.serenity_context().http).await?;
+                item.delete_response(&ctx.serenity_context().http).await?;
+                break;
             }
             _ => {}
         }
@@ -150,12 +138,8 @@ pub async fn list_sinks(
         item.defer(&ctx.serenity_context().http).await?;
 
         let cr = CreateReply::new()
-        .embed(create_sink_list_embed(&sink_lister[index]))
-        .components(
-            vec![
-                create_action_row(index, sink_lister.len())
-            ]
-        );
+            .embed(create_sink_list_embed(&sink_lister[index]))
+            .components(vec![create_action_row(index, sink_lister.len())]);
 
         item.edit_response(
             &ctx.serenity_context().http,
@@ -170,39 +154,44 @@ pub async fn list_sinks(
 pub async fn check_all_events(events: Vec<String>) -> Result<(), crate::Error> {
     let res = tokio::time::timeout(
         std::time::Duration::from_millis(1000),
-        tokio::task::spawn_blocking(
-            move || {
-                let supported_events = gwevent::core::event_list();
+        tokio::task::spawn_blocking(move || {
+            let supported_events = gwevent::core::event_list();
 
-                for event in events {
-                    let trimmed = event.trim().to_string();
+            for event in events {
+                let trimmed = event.trim().to_string();
 
-                    if trimmed.is_empty() {
-                        continue;
-                    }
+                if trimmed.is_empty() {
+                    continue;
+                }
 
-                    // All Anti-Raid events are filterable
-                    if trimmed.starts_with("AR/") {
-                        continue;
-                    }
+                // All Anti-Raid events are filterable
+                if trimmed.starts_with("AR/") {
+                    continue;
+                }
 
-                    // Regex compile check
-                    if trimmed.starts_with("R/") {
-                        if let Err(e) = regex::Regex::new(&trimmed) {
-                            return Err(format!("Event `{}` is not a valid regex. Error: {}", trimmed, e));
-                        }
-                    }
-
-                    let event = trimmed.to_uppercase();
-
-                    if !supported_events.contains(&event.as_str()) {
-                        return Err(format!("Event `{}` is not a valid event. Please pick one of the following: {}", trimmed, supported_events.join(", ")));
+                // Regex compile check
+                if trimmed.starts_with("R/") {
+                    if let Err(e) = regex::Regex::new(&trimmed) {
+                        return Err(format!(
+                            "Event `{}` is not a valid regex. Error: {}",
+                            trimmed, e
+                        ));
                     }
                 }
 
-                Ok(())
+                let event = trimmed.to_uppercase();
+
+                if !supported_events.contains(&event.as_str()) {
+                    return Err(format!(
+                        "Event `{}` is not a valid event. Please pick one of the following: {}",
+                        trimmed,
+                        supported_events.join(", ")
+                    ));
+                }
             }
-        )
+
+            Ok(())
+        }),
     )
     .await??;
 
@@ -214,7 +203,8 @@ pub async fn add_channel(
     ctx: Context<'_>,
     #[description = "Channel to send logs to"] channel: Channel,
     #[description = "Specific events you want to filter by"] events: Option<String>,
-    #[description = "Whether or not to create a webhook or not. Default is true"] use_webhook: Option<bool>,
+    #[description = "Whether or not to create a webhook or not. Default is true"]
+    use_webhook: Option<bool>,
 ) -> Result<(), Error> {
     let Some(guild_id) = ctx.guild_id() else {
         return Err("This command can only be used in a guild".into());
@@ -267,14 +257,20 @@ pub async fn add_channel(
             return Err("I do not have permission to manage webhooks in this channel".into());
         }
 
-        let webhook = gc.create_webhook(
-            ctx.http(),
-            serenity::all::CreateWebhook::new("AntiRaid Audit Logs")
-        ).await?;
+        let webhook = gc
+            .create_webhook(
+                ctx.http(),
+                serenity::all::CreateWebhook::new("AntiRaid Audit Logs"),
+            )
+            .await?;
 
         let webhook_url = {
             if let Some(token) = webhook.token {
-                format!("https://discord.com/api/webhooks/{}/{}", webhook.id, token.expose_secret())
+                format!(
+                    "https://discord.com/api/webhooks/{}/{}",
+                    webhook.id,
+                    token.expose_secret()
+                )
             } else if let Some(url) = webhook.url {
                 url.expose_secret().to_string()
             } else {
@@ -311,9 +307,10 @@ pub async fn add_channel(
         .await?;
     }
 
-    ctx.say(
-        format!("Successfully added a new Discord webhook sink for audit logs with ID `{}`", sink_id)
-    )
+    ctx.say(format!(
+        "Successfully added a new Discord webhook sink for audit logs with ID `{}`",
+        sink_id
+    ))
     .await?;
 
     Ok(())
@@ -332,7 +329,7 @@ pub async fn add_discordhook(
     if serenity::utils::parse_webhook(&webhook.parse()?).is_none() {
         return Err("Invalid webhook URL".into());
     }
-    
+
     let events = if let Some(events) = events {
         let events: Vec<String> = events.split(',').map(|x| x.to_string()).collect();
         check_all_events(events.clone()).await?;
@@ -356,9 +353,10 @@ pub async fn add_discordhook(
     .execute(&ctx.data().pool)
     .await?;
 
-    ctx.say(
-        format!("Successfully added a new Discord webhook sink for audit logs with ID `{}`", sink_id)
-    )
+    ctx.say(format!(
+        "Successfully added a new Discord webhook sink for audit logs with ID `{}`",
+        sink_id
+    ))
     .await?;
 
     Ok(())

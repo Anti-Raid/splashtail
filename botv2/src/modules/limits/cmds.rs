@@ -1,4 +1,3 @@
-use splashcore_rs::utils::{parse_pg_interval, secs_to_pg_interval};
 use crate::modules::limits::core::Limit;
 use crate::{Context, Error};
 use poise::{serenity_prelude::CreateEmbed, CreateReply};
@@ -6,6 +5,7 @@ use serenity::{
     all::{Mentionable, UserId},
     builder::CreateAttachment,
 };
+use splashcore_rs::utils::{parse_pg_interval, secs_to_pg_interval};
 
 /// Limits base command
 #[poise::command(
@@ -68,7 +68,11 @@ pub async fn limits_add(
     .fetch_one(&ctx.data().pool)
     .await?;
 
-    ctx.say(format!("Added limit successfully with id ``{}``", limit.limit_id)).await?;
+    ctx.say(format!(
+        "Added limit successfully with id ``{}``",
+        limit.limit_id
+    ))
+    .await?;
 
     Ok(())
 }
