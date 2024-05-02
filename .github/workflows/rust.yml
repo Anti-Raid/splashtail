@@ -18,9 +18,7 @@ jobs:
     strategy:
       matrix:
         toolchain:
-          - stable
-          - beta
-          - nightly
+          - nightly # Only nightly is guaranteed to work so don't bother with anything else for now
     steps:
       - uses: actions/checkout@v3
       - uses: Swatinem/rust-cache@v2
