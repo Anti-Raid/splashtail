@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT id, guild_id, user_id, moderator, action, stings, reason FROM moderation__actions WHERE handled = false AND duration IS NOT NULL AND duration + created_at < NOW()",
+  "query": "SELECT id, guild_id, user_id, moderator, action, stings, reason FROM moderation__actions WHERE handled = false AND expired = true OR (duration IS NOT NULL AND duration + created_at < NOW())",
   "describe": {
     "columns": [
       {
@@ -52,5 +52,5 @@
       true
     ]
   },
-  "hash": "c2343088fd90e8ec9c6bf80c105bb89165e78ec514097c854cb5db732d0b2f57"
+  "hash": "32e4c1321859d62639e8ce45876a76edc9cb1a98ac2f0b3cf21f34349de33ec7"
 }

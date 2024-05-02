@@ -1,0 +1,18 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO punishments__guild_punishment_list (guild_id, creator, stings, action, modifiers) VALUES ($1, $2, $3, $4, $5)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text",
+        "Int4",
+        "Text",
+        "TextArray"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "f9d5e2837461f996f93d8f059764a18e317ad7be28b55db9fcce1209f9a41a86"
+}
