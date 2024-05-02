@@ -372,7 +372,7 @@ async fn main() {
 
     info!("{:#?}", ipc::argparse::MEWLD_ARGS);
 
-    let proxy_url = config::CONFIG.meta.proxy.clone();
+    let proxy_url = config::CONFIG.meta.proxy.get().clone();
 
     info!("Proxy URL: {}", proxy_url);
 

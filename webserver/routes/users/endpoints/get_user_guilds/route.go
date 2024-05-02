@@ -112,7 +112,7 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 	var dashguilds []*types.DashboardGuild
 	if refresh {
 		// Refresh guilds
-		httpReq, err := http.NewRequestWithContext(d.Context, "GET", state.Config.Meta.Proxy+"/api/v10/users/@me/guilds", nil)
+		httpReq, err := http.NewRequestWithContext(d.Context, "GET", state.Config.Meta.Proxy.Parse()+"/api/v10/users/@me/guilds", nil)
 
 		if err != nil {
 			state.Logger.Error("Failed to create oauth2 request to discord", zap.Error(err))

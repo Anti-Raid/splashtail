@@ -6,3 +6,6 @@
 	path = infra/nirn-proxy
 	url = https://github.com/Anti-Raid/nirn-proxy
         branch = production
+[submodule "infra/Sandwich-Daemon"]
+	path = infra/Sandwich-Daemon
+	url = https://github.com/anti-raid/Sandwich-Daemon

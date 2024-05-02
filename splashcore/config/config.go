@@ -51,18 +51,12 @@ type Config struct {
 	Servers            Servers             `yaml:"servers" validate:"required"`
 	Meta               Meta                `yaml:"meta" validate:"required"`
 	ObjectStorage      ObjectStorageConfig `yaml:"object_storage" validate:"required"`
-	SimpleGatewayProxy SimpleGatewayProxy  `yaml:"simple_gateway_proxy" validate:"required"`
 	Wafflepaw          Wafflepaw           `yaml:"wafflepaw" validate:"required"`
 }
 
 type Wafflepaw struct {
 	StatusWebhook string `yaml:"status_webhook" default:"https://discord.com/api/webhooks/849331145862283275/8Z9J"`
 	RolePing      string `yaml:"role_ping" default:"<@&1226087657541730364> <@728871946456137770>"`
-}
-
-type SimpleGatewayProxy struct {
-	Port int    `yaml:"port" default:"3220" comment:"Port to run the proxy on" validate:"required"`
-	Url  string `yaml:"url" default:"http://localhost:3220" comment:"Url proxy is accessible on" validate:"required"`
 }
 
 type DiscordAuth struct {
@@ -118,7 +112,7 @@ type Meta struct {
 	CDNPath              string          `yaml:"cdn_path" default:"/failuremgmt/cdn/antiraid" comment:"CDN Path" validate:"required"`
 	VulgarList           []string        `yaml:"vulgar_list" default:"fuck,suck,shit,kill" validate:"required"`
 	UrgentMentions       string          `yaml:"urgent_mentions" default:"<@&1061643797315993701>" comment:"Urgent mentions" validate:"required"`
-	Proxy                string          `yaml:"proxy" default:"http://127.0.0.1:3219" comment:"Popplio Proxy URL" validate:"required"`
+	Proxy                Differs[string]          `yaml:"proxy" default:"http://127.0.0.1:3221,http://127.0.0.1:3222" comment:"Popplio Proxy URL" validate:"required"`
 	DPSecret             string          `yaml:"dp_secret" comment:"DeployProxy Auth URL for super-sensitive pages" validate:"required"`
 	DebugTaskLogger      bool            `yaml:"debug_task_logger" comment:"Debug the task logger"`
 	SupportServer        string          `yaml:"support_server" comment:"Discord Support Server Link" default:"https://discord.gg/u78NFAXm" validate:"required"`

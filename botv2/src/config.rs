@@ -98,7 +98,7 @@ impl ObjectStorage {
 pub struct Meta {
     pub postgres_url: String,
     pub bot_redis_url: String,
-    pub proxy: String,
+    pub proxy: Differs<String>,
     pub support_server: String,
     pub sandwich_http_api: Option<String>,
 }

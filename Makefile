@@ -1,11 +1,11 @@
 TEST__USER_ID := 728871946456137770
-CDN_PATH := /silverpelt/purrquinox/cdn/antiraid
+CDN_PATH := /silverpelt/cdn/antiraid
 
 buildwebserver:
 	CGO_ENABLED=0 go build -v 
 
 reloadwebserver:
-	sudo systemctl restart splashtail-staging-webserver
+	systemctl restart splashtail-staging-webserver
 
 restartwebserver:
 	make buildwebserver
@@ -24,10 +24,10 @@ restartbot:
 	make restartbot_nobuild
 
 restartbot_nobuild:
-	sudo systemctl stop splashtail-staging-bot
+	systemctl stop splashtail-staging-bot
 	sleep 3 # Give time for the webserver to stop
 	cp -v botv2/target/release/botv2 botv2
-	sudo systemctl start splashtail-staging-bot
+	systemctl start splashtail-staging-bot
 
 reloadjobserver:
 	systemctl restart splashtail-staging-jobs

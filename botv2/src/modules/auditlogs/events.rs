@@ -557,7 +557,7 @@ pub async fn dispatch_audit_log(
                 // TODO: make this use serenity ExecuteWebhook in the future
                 let webhook_proxyurl = format!(
                     "{base_url}/api/v10/webhooks/{id}/{token}", 
-                    base_url = crate::config::CONFIG.meta.proxy, 
+                    base_url = crate::config::CONFIG.meta.proxy.get(), 
                     id = id, 
                     token = token
                 );
