@@ -28,6 +28,8 @@ jobs:
       - name: Install dependencies
         run: sudo apt install pkg-config openssl libssl-dev build-essential clangd clang libclang-14-dev lld mold 
       - run: rustup update ${{ matrix.toolchain }} && rustup default ${{ matrix.toolchain }}
+      - name: Fetch all submodules
+        run: git submodule update --init --recursive
       - run: make buildall
         env:
           CI_BUILD: true
