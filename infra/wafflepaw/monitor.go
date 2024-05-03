@@ -22,17 +22,14 @@ import (
 )
 
 var (
-	getGatewayBot        *discordgo.GatewayBotResponse
-	botMldConfig         *mconfig.CoreConfig
-	botClusterMap        []mproc.ClusterMap
-	jobserverMldConfig   *mconfig.CoreConfig
-	jobserverClusterMap  []mproc.ClusterMap
-	botAmProbeTask       *AMProbeTask
-	jobserverAmProbeTask *AMProbeTask
-	webserverAmProbeTask *AMProbeTask
+	getGatewayBot       *discordgo.GatewayBotResponse
+	botMldConfig        *mconfig.CoreConfig
+	botClusterMap       []mproc.ClusterMap
+	jobserverMldConfig  *mconfig.CoreConfig
+	jobserverClusterMap []mproc.ClusterMap
 )
 
-func StartMonitors() (err error) {
+func StartMonitors(monitors []AMProbeTask) (err error) {
 	Logger.Info("Starting animus magic client for monitoring main bot")
 
 	// First check number of shards recommended
@@ -105,46 +102,42 @@ func StartMonitors() (err error) {
 
 	go AnimusMagicClient.Listen(Context, Rueidis, Logger)
 
-	botAmProbeTask = &AMProbeTask{
-		AnimusMagicClient:       AnimusMagicClient,
-		Target:                  animusmagic.AnimusTargetBot,
-		ClusterMap:              botClusterMap,
-		MewldChannel:            botMldConfig.RedisChannel,
-		SystemdService:          "splashtail-" + config.CurrentEnv + "-bot",
-		NoHandleInactiveSystemd: true,
-		RestartAfterFailed:      3,
-		ProcessName:             []string{"splashtail", "botv2"},
+	var clusterMaps = map[animusmagic.AnimusTarget][]mproc.ClusterMap{
+		animusmagic.AnimusTargetBot:       botClusterMap,
+		animusmagic.AnimusTargetJobserver: jobserverClusterMap,
+		animusmagic.AnimusTargetWebserver: {{ID: 0}},
 	}
 
-	jobserverAmProbeTask = &AMProbeTask{
-		AnimusMagicClient:       AnimusMagicClient,
-		Target:                  animusmagic.AnimusTargetJobserver,
-		ClusterMap:              jobserverClusterMap,
-		MewldChannel:            jobserverMldConfig.RedisChannel,
-		SystemdService:          "splashtail-" + config.CurrentEnv + "-jobs",
-		DelayStart:              10 * time.Second,
-		NoHandleInactiveSystemd: true,
-		ProcessName:             []string{"splashtail"},
+	var mewldChanMap = map[animusmagic.AnimusTarget]string{
+		animusmagic.AnimusTargetBot:       botMldConfig.RedisChannel,
+		animusmagic.AnimusTargetJobserver: jobserverMldConfig.RedisChannel,
 	}
 
-	webserverAmProbeTask = &AMProbeTask{
-		AnimusMagicClient: AnimusMagicClient,
-		Target:            animusmagic.AnimusTargetWebserver,
-		ClusterMap: []mproc.ClusterMap{
-			{
-				ID: 0,
-			},
-		},
-		MewldChannel:            botMldConfig.RedisChannel,
-		SystemdService:          "splashtail-" + config.CurrentEnv + "-webserver",
-		NoHandleInactiveSystemd: true,
-		RestartAfterFailed:      3,
-		ProcessName:             []string{"splashtail", "webserver"},
-	}
+	for i := range monitors {
+		monitors[i].AnimusMagicClient = AnimusMagicClient
 
-	bgtasks.BgTaskRegistry = append(bgtasks.BgTaskRegistry, botAmProbeTask)
-	bgtasks.BgTaskRegistry = append(bgtasks.BgTaskRegistry, jobserverAmProbeTask)
-	bgtasks.BgTaskRegistry = append(bgtasks.BgTaskRegistry, webserverAmProbeTask)
+		if len(monitors[i].ClusterMap) == 0 {
+			cmap, ok := clusterMaps[monitors[i].Target]
+
+			if !ok {
+				return fmt.Errorf("unsupported target due to lacking clustermap: %s", monitors[i].Target)
+			}
+
+			monitors[i].ClusterMap = cmap
+		}
+
+		// Set mewld channel if unset and supported, otherwise ignore
+		if monitors[i].MewldChannel == "" {
+			if ch, ok := mewldChanMap[monitors[i].Target]; ok {
+				monitors[i].MewldChannel = ch
+			}
+		}
+
+		monitors[i].SystemdService = strings.ReplaceAll(monitors[i].SystemdService, "{env}", config.CurrentEnv)
+
+		Logger.Info("Added monitor", zap.Any("monitor", monitors[i]))
+		bgtasks.BgTaskRegistry = append(bgtasks.BgTaskRegistry, &monitors[i])
+	}
 
 	return nil
 }
@@ -164,18 +157,20 @@ type probeTaskState struct {
 }
 
 type AMProbeTask struct {
-	AnimusMagicClient       *animusmagic.AnimusMagicClient
-	Target                  animusmagic.AnimusTarget
-	ClusterMap              []mproc.ClusterMap
-	MewldChannel            string
-	SystemdService          string
-	DelayStart              time.Duration
-	NoHandleInactiveSystemd bool
-	RestartAfterFailed      int // After how many failed checks should we restart the service
-	ProcessName             []string
+	AnimusMagicClient *animusmagic.AnimusMagicClient `json:"-" yaml:"-"`
+
+	// Only the below fields are exposed for monitors in monitor.yaml
+	ClusterMap              []mproc.ClusterMap       `json:"cluster_map" yaml:"cluster_map"`                               // Cluster map
+	Target                  animusmagic.AnimusTarget `json:"target" yaml:"target"`                                         // Target to probe
+	MewldChannel            string                   `json:"mewld_channel" yaml:"mewld_channel"`                           // Mewld channel to send pings to
+	SystemdService          string                   `json:"systemd_service" yaml:"systemd_service"`                       // Corresponding Systemd service to restart
+	DelayStart              time.Duration            `json:"delay_start" yaml:"delay_start"`                               // Delay start
+	NoHandleInactiveSystemd bool                     `json:"no_handle_inactive_systemd" yaml:"no_handle_inactive_systemd"` // Do not handle inactive systemd services
+	RestartAfterFailed      int                      `json:"restart_after_failed" yaml:"restart_after_failed"`             // After how many failed checks should we restart the service
+	ProcessName             []string                 `json:"process_name" yaml:"process_name"`                             // Process names to kill
 
 	// Internal state
-	state probeTaskState
+	state probeTaskState `yaml:"-"`
 }
 
 func (p *AMProbeTask) Enabled() bool {
@@ -503,6 +498,10 @@ func (p *AMProbeTask) tryKillPid(pid string) error {
 // tryRollingRestartMewldCluster tries to restart the mewld cluster
 // using a rolling restart
 func (p *AMProbeTask) tryRollingRestartMewldCluster() error {
+	if p.MewldChannel == "" {
+		return nil // This strategy does not work
+	}
+
 	rr := mredis.LauncherCmd{
 		Scope:     "launcher",
 		Action:    "rollingrestart",
@@ -528,8 +527,10 @@ func (p *AMProbeTask) tryRollingRestartMewldCluster() error {
 
 // tryKillService tries to use the killall command on the process
 func (p *AMProbeTask) tryKillService() error {
-	for _, pname := range p.ProcessName {
-		cmd := exec.Command("killall", pname)
+	for _, processName := range p.ProcessName {
+		processSplit := strings.Split(processName, " ")
+
+		cmd := exec.Command("killall", processSplit...)
 
 		err := cmd.Run()
 

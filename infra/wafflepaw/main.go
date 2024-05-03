@@ -5,8 +5,8 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
-	"syscall"
 	"strings"
+	"syscall"
 
 	"github.com/anti-raid/splashtail/cmd/wafflepaw/bgtasks"
 	"github.com/anti-raid/splashtail/splashcore/animusmagic"
@@ -44,6 +44,20 @@ func main() {
 	Context, ContextClose = context.WithCancel(context.Background())
 
 	Logger = snippets.CreateZap()
+
+	// Load monitors.yaml
+	var monitors []AMProbeTask
+	monitorFile, err := os.ReadFile("infra/wafflepaw/monitors.yaml")
+
+	if err != nil {
+		panic(err)
+	}
+
+	err = yaml.Unmarshal(monitorFile, &monitors)
+
+	if err != nil {
+		panic(err)
+	}
 
 	// Load config.yaml
 	cfgFile, err := os.ReadFile("config.yaml")
@@ -95,7 +109,7 @@ func main() {
 		Logger.Info("[PROXY]", zap.String("note", s))
 	})
 
-	err = StartMonitors()
+	err = StartMonitors(monitors)
 
 	if err != nil {
 		logPanic("error starting monitors", err)

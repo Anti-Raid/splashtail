@@ -1,0 +1,19 @@
+- target: bot
+  systemd_service:  splashtail-{env}-bot
+  delay_start: 0s
+  no_handle_inactive_systemd: true
+  restart_after_failed: 3
+  process_name: 
+    - botv2
+
+- target: jobs
+  systemd_service:  splashtail-{env}-jobs
+  delay_start: 10s
+  no_handle_inactive_systemd: true
+  restart_after_failed: 3
+
+- target: webserver
+  systemd_service:  splashtail-{env}-webserver
+  delay_start: 20s
+  no_handle_inactive_systemd: true
+  restart_after_failed: 3

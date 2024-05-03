@@ -3,6 +3,8 @@ package animusmagic
 import (
 	"errors"
 	"strings"
+
+	"gopkg.in/yaml.v3"
 )
 
 var ErrNilRequestData = errors.New("request validation error: nil request data")
@@ -22,6 +24,22 @@ const (
 	AnimusTargetInfra     AnimusTarget = 0x3
 	AnimusTargetWildcard  AnimusTarget = 0xFF
 )
+
+// UnmarshalJSON implements the json.Unmarshaler interface
+// for an AnimusTarget
+func (a *AnimusTarget) UnmarshalJSON(b []byte) error {
+	s := strings.Trim(string(b), "\"")
+	if val, ok := StringToAnimusTarget(s); ok {
+		*a = val
+		return nil
+	}
+	return errors.New("invalid AnimusTarget")
+}
+
+// YAML is same as JSON
+func (a *AnimusTarget) UnmarshalYAML(value *yaml.Node) error {
+	return a.UnmarshalJSON([]byte(value.Value))
+}
 
 func (a AnimusTarget) String() string {
 	switch a {
@@ -88,6 +106,22 @@ const (
 	OpError    AnimusOp = 0x2
 	OpProbe    AnimusOp = 0x3
 )
+
+// UnmarshalJSON implements the json.Unmarshaler interface
+// for an AnimusOp
+func (a *AnimusOp) UnmarshalJSON(b []byte) error {
+	s := strings.Trim(string(b), "\"")
+	if val, ok := StringToAnimusOp(s); ok {
+		*a = val
+		return nil
+	}
+	return errors.New("invalid AnimusOp")
+}
+
+// YAML is same as JSON
+func (a *AnimusOp) UnmarshalYAML(value *yaml.Node) error {
+	return a.UnmarshalJSON([]byte(value.Value))
+}
 
 func (a AnimusOp) String() string {
 	switch a {

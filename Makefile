@@ -1,6 +1,18 @@
 TEST__USER_ID := 728871946456137770
 CDN_PATH := /silverpelt/cdn/antiraid
 
+# This target builds all of Anti-Raid's components
+buildall:
+	# Core infra
+	cd infra/nirn-proxy && make
+	cd infra/Sandwich-Daemon && make
+
+	# Other infra
+	cd infra/animuscli && make
+	cd infra/wafflepaw && make
+	make buildbot
+	make buildwebserver
+
 buildwebserver:
 	CGO_ENABLED=0 go build -v 
 
@@ -36,8 +48,10 @@ all:
 	make buildmewldwebui && make buildwebserver && make buildbot 
 
 sqlx:
+ifndef CI_BUILD
 	cd botv2/jobserver && cargo sqlx prepare
 	cd botv2 && cargo sqlx prepare
+endif
 
 buildbot: sqlx
 	cd botv2 && SQLX_OFFLINE=true cargo build --release
