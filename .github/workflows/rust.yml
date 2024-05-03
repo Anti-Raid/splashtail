@@ -25,6 +25,11 @@ jobs:
         with:
           prefix-key: ${{ matrix.toolchain }}
           workspaces: "botv2 -> target"
+      
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.22.2' # The Go version to download (if necessary) and use.
+      
       - name: Install dependencies
         run: sudo apt install pkg-config openssl libssl-dev build-essential clangd clang libclang-14-dev lld mold 
       - run: rustup update ${{ matrix.toolchain }} && rustup default ${{ matrix.toolchain }}
