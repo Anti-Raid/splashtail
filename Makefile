@@ -1,5 +1,10 @@
+.PHONY: default $(MAKECMDGOALS)
+
 TEST__USER_ID := 728871946456137770
 CDN_PATH := /silverpelt/cdn/antiraid
+
+default:
+	$(error No target provided. Please see README.md for more information)
 
 # This target builds all of Anti-Raid's components
 buildall:
@@ -11,7 +16,12 @@ buildall:
 	cd infra/animuscli && make
 	cd infra/wafflepaw && make
 	make buildbot
+	make buildmewldwebui
 	make buildwebserver
+
+# Alias for buildall
+all:
+	make buildall
 
 buildwebserver:
 	CGO_ENABLED=0 go build -v 
@@ -43,9 +53,6 @@ restartbot_nobuild:
 
 reloadjobserver:
 	systemctl restart splashtail-staging-jobs
-
-all:
-	make buildmewldwebui && make buildwebserver && make buildbot 
 
 sqlx:
 ifndef CI_BUILD
