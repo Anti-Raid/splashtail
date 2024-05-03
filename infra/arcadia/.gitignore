@@ -1,7 +1,0 @@
-target
-**/.vscode
-bot/bot 
-bot/bot.new
-**/config.yaml
-**/config.yaml.sample
-.generated
