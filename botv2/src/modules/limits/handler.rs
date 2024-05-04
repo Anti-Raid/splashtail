@@ -108,6 +108,16 @@ pub async fn handle_mod_action(
         )
         .execute(&mut *tx)
         .await?;
+
+        // Delete older user actions
+        sqlx::query!(
+            "DELETE FROM limits__user_actions WHERE user_id = $1 AND guild_id = $2 AND created_at < now() - make_interval(secs => $3)",
+            user_id.to_string(),
+            guild_id.to_string(),
+            largest_expiry as f64,
+        )
+        .execute(&mut *tx)
+        .await?;
     }
 
     tx.commit().await?;
