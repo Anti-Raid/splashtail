@@ -102,7 +102,8 @@ pub async fn handle_mod_action(
 
     tx.commit().await?;
 
-    if !hit_limits.is_empty() && crate::silverpelt::module_config::is_module_enabled(&data.pool, guild_id, "punishments").await? {
+    if stings > 0 && crate::silverpelt::module_config::is_module_enabled(&data.pool, guild_id, "punishments").await? {
+        log::info!("Triggering punishment for user_id: {}", user_id);
         match crate::modules::punishments::core::trigger_punishment(ctx, guild_id, user_id, HashSet::new()).await {
             Ok(()) => {
                 let mut action_ids = Vec::new();

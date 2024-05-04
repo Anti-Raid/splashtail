@@ -257,7 +257,7 @@ impl Action {
     }
 
     pub fn is_dominant_to(&self, other: &Action) -> bool {
-        self.standing() < other.standing()
+        self.standing() <= other.standing()
     }
 
     /// Attempts to carry out the given action on a given user (ID)
@@ -378,6 +378,8 @@ pub async fn trigger_punishment(
 ) -> Result<(), crate::Error> {
     let mut sting_entries = ConsolidatedStingEntries::get_entries_for_guild_user(ctx, guild_id, user_id).await?;
     let sting_count = sting_entries.sting_count();
+
+    log::debug!("User {} has {} stings", user_id, sting_count);
 
     let punishments = GuildPunishmentList::guild(ctx, guild_id).await?.filter(sting_count);
     let apply_punishments = punishments.get_punishments_to_apply();

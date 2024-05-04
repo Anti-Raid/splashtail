@@ -274,7 +274,7 @@ async fn event_listener<'a>(
             continue;
         }
 
-        log::debug!("Executing event handlers for {}", module);
+        log::trace!("Executing event handlers for {}", module);
 
         for evth in evts.iter() {
             let event_handler_context = event_handler_context.clone();
