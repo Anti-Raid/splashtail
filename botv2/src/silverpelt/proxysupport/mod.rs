@@ -38,10 +38,16 @@ pub async fn guild(
 
                 return Ok(guild);
             } else {
-                log::warn!("Sandwich proxy returned error [get guild]: {:?}", resp.error);
+                log::warn!(
+                    "Sandwich proxy returned error [get guild]: {:?}",
+                    resp.error
+                );
             }
         } else {
-            log::warn!("Sandwich proxy returned invalid resp [get guild]: {:?}", resp);
+            log::warn!(
+                "Sandwich proxy returned invalid resp [get guild]: {:?}",
+                resp
+            );
         }
     }
 
@@ -83,6 +89,13 @@ pub async fn member_in_guild(
         return Ok(Some(res));
     }
 
+    // Check serenity cache
+    if let Some(guild) = ctx.cache.guild(guild_id) {
+        if let Some(member) = guild.members.get(&user_id).cloned() {
+            return Ok(Some(member));
+        }
+    }
+
     // Part 2, try sandwich state
     let Some(ref proxy_url) = crate::config::CONFIG.meta.sandwich_http_api else {
         return Err("Sandwich proxy not configured, not proceeding".into());
@@ -114,52 +127,34 @@ pub async fn member_in_guild(
 
         return Ok(Some(member));
     } else {
-        log::warn!("Sandwich proxy returned error [get member]: {:?}", resp.error);
+        log::warn!(
+            "Sandwich proxy returned error [get member]: {:?}",
+            resp.error
+        );
     }
 
-
-    /*
-    Serenity cache is too unreliable and inaccurate, so we will not use it
-    // Check serenity cache
-    if let Some(guild) = ctx.cache.guild(guild_id) {
-        if let Some(member) = guild.members.get(&user_id).cloned() {
-            return Ok(Some(member));
-        }
-    }*/
-
     // Last resort, use botox to fetch from http and then update sandwich as well
-    let member = match ctx
-    .http
-    .get_member(guild_id, user_id)
-    .await {
+    let member = match ctx.http.get_member(guild_id, user_id).await {
         Ok(mem) => mem,
-        Err(e) => {
-            match e {
-                serenity::Error::Http(e) => {
-                    match e {
-                        serenity::all::HttpError::UnsuccessfulRequest(er) => {
-                            if er.status_code == reqwest::StatusCode::NOT_FOUND {
-                                return Ok(None);
-                            } else {
-                                return Err(
-                                    format!("Failed to fetch member (http, non-404): {:?}", er).into()
-                                );
-                            }
-                        },
-                        _ => {
-                            return Err(
-                                format!("Failed to fetch member (http): {:?}", e).into()
-                            );
-                        }
+        Err(e) => match e {
+            serenity::Error::Http(e) => match e {
+                serenity::all::HttpError::UnsuccessfulRequest(er) => {
+                    if er.status_code == reqwest::StatusCode::NOT_FOUND {
+                        return Ok(None);
+                    } else {
+                        return Err(
+                            format!("Failed to fetch member (http, non-404): {:?}", er).into()
+                        );
                     }
                 }
                 _ => {
-                    return Err(
-                        format!("Failed to fetch member: {:?}", e).into()
-                    );
+                    return Err(format!("Failed to fetch member (http): {:?}", e).into());
                 }
+            },
+            _ => {
+                return Err(format!("Failed to fetch member: {:?}", e).into());
             }
-        }
+        },
     };
 
     // Update sandwich with a POST
