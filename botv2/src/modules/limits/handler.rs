@@ -43,8 +43,6 @@ pub async fn handle_mod_action(
         return Ok(());
     }
 
-    let mut total_stings = 0;
-
     let mut tx = data.pool.begin().await?;
 
     let action_id = gen_random(48);
