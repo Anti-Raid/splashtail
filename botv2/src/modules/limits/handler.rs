@@ -83,7 +83,56 @@ pub async fn handle_mod_action(
     }
 
     if !hit_limits.is_empty() && crate::silverpelt::module_config::is_module_enabled(&data.pool, guild_id, "auditlogs").await? {
-        crate::modules::punishments::core::trigger_punishment(ctx, guild_id, user_id, HashSet::new()).await?;
+        match crate::modules::punishments::core::trigger_punishment(ctx, guild_id, user_id, HashSet::new()).await {
+            Ok(()) => {
+                let mut action_ids = Vec::new();
+
+                for (id, _) in hit_limits.iter() {
+                    action_ids.extend(id.clone());
+                }
+
+                for (_, limit) in hit_limits {
+                    sqlx::query!(
+                        "
+                        INSERT INTO limits__past_hit_limits
+                        (id, guild_id, user_id, limit_id, cause, notes)
+                        VALUES ($1, $2, $3, $4, $5, $6)",
+                        gen_random(16),
+                        guild_id.to_string(),
+                        user_id.to_string(),
+                        limit.limit_id,
+                        &action_ids,
+                        &vec![]
+                    )
+                    .execute(&data.pool)
+                    .await?;
+                }
+            },
+            Err(e) => {
+                let mut action_ids = Vec::new();
+
+                for (id, _) in hit_limits.iter() {
+                    action_ids.extend(id.clone());
+                }
+
+                for (_, limit) in hit_limits {
+                    sqlx::query!(
+                        "
+                        INSERT INTO limits__past_hit_limits
+                        (id, guild_id, user_id, limit_id, cause, notes)
+                        VALUES ($1, $2, $3, $4, $5, $6)",
+                        gen_random(16),
+                        guild_id.to_string(),
+                        user_id.to_string(),
+                        limit.limit_id,
+                        &action_ids,
+                        &vec![e.to_string()]
+                    )
+                    .execute(&data.pool)
+                    .await?;
+                }
+            }
+        }
     }
 
     Ok(())
