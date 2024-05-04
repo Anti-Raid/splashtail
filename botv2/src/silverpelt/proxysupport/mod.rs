@@ -83,13 +83,6 @@ pub async fn member_in_guild(
         return Ok(Some(res));
     }
 
-    // Check serenity cache
-    if let Some(guild) = ctx.cache.guild(guild_id) {
-        if let Some(member) = guild.members.get(&user_id).cloned() {
-            return Ok(Some(member));
-        }
-    }
-
     // Part 2, try sandwich state
     let Some(ref proxy_url) = crate::config::CONFIG.meta.sandwich_http_api else {
         return Err("Sandwich proxy not configured, not proceeding".into());
@@ -123,6 +116,16 @@ pub async fn member_in_guild(
     } else {
         log::warn!("Sandwich proxy returned error [get member]: {:?}", resp.error);
     }
+
+
+    /*
+    Serenity cache is too unreliable and inaccurate, so we will not use it
+    // Check serenity cache
+    if let Some(guild) = ctx.cache.guild(guild_id) {
+        if let Some(member) = guild.members.get(&user_id).cloned() {
+            return Ok(Some(member));
+        }
+    }*/
 
     // Last resort, use botox to fetch from http and then update sandwich as well
     let member = match ctx
