@@ -129,6 +129,8 @@ pub async fn handle_mod_action(
                 }
             },
             Err(e) => {
+                log::error!("Failed to trigger punishment: {:?}", e);
+
                 let mut action_ids = Vec::new();
 
                 for (id, _) in hit_limits.iter() {
