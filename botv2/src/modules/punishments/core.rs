@@ -280,19 +280,23 @@ impl Action {
         ).await?;
 
         let bot_userid = ctx.cache.current_user().id;
-        let bot = member_in_guild(
+        let Some(bot) = member_in_guild(
             &cache_http, 
             &data.reqwest,
             guild_id, 
             bot_userid
-        ).await?;
+        ).await? else {
+            return Err("Bot not found".into());
+        };
 
-        let mut user = member_in_guild(
+        let Some(mut user) = member_in_guild(
             &cache_http, 
             &data.reqwest,
             guild_id, 
             user_id
-        ).await?;
+        ).await? else {
+            return Err("User not found".into());
+        };
 
         for modifier in &punishment.modifiers {
             if modifier.is_empty() {

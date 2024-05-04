@@ -71,21 +71,23 @@ pub async fn member_in_guild(
     reqwest_client: &reqwest::Client,
     guild_id: serenity::model::id::GuildId,
     user_id: serenity::model::id::UserId,
-) -> Result<serenity::all::Member, crate::Error> {
+) -> Result<Option<serenity::all::Member>, crate::Error> {
+    // No sandwich case
     if crate::config::CONFIG.meta.sandwich_http_api.is_none() {
         let res = botox::cache::member_on_guild(ctx, guild_id, user_id, true).await?;
 
         let Some(res) = res else {
-            return Err("Member not found".into());
+            return Ok(None);
         };
 
-        return Ok(res);
+        return Ok(Some(res));
     }
 
-    let res = botox::cache::member_on_guild(ctx, guild_id, user_id, false).await?;
-
-    if let Some(res) = res {
-        return Ok(res);
+    // Check serenity cache
+    if let Some(guild) = ctx.cache.guild(guild_id) {
+        if let Some(member) = guild.members.get(&user_id).cloned() {
+            return Ok(Some(member));
+        }
     }
 
     // Part 2, try sandwich state
@@ -114,23 +116,51 @@ pub async fn member_in_guild(
 
     if resp.ok {
         let Some(member) = resp.data else {
-            return Err("Member not found".into());
+            return Ok(None);
         };
 
-        return Ok(member);
+        return Ok(Some(member));
     } else {
         log::warn!("Sandwich proxy returned error: {:?}", resp.error);
     }
 
     // Last resort, use botox to fetch from http and then update sandwich as well
-    let res = botox::cache::member_on_guild(ctx, guild_id, user_id, true).await?;
-
-    let Some(res) = res else {
-        return Err("Member not found".into());
+    let member = match ctx
+    .http
+    .get_member(guild_id, user_id)
+    .await {
+        Ok(mem) => mem,
+        Err(e) => {
+            match e {
+                serenity::Error::Http(e) => {
+                    match e {
+                        serenity::all::HttpError::UnsuccessfulRequest(er) => {
+                            if er.status_code == reqwest::StatusCode::NOT_FOUND {
+                                return Ok(None);
+                            } else {
+                                return Err(
+                                    format!("Failed to fetch member (http, non-404): {:?}", er).into()
+                                );
+                            }
+                        },
+                        _ => {
+                            return Err(
+                                format!("Failed to fetch member (http): {:?}", e).into()
+                            );
+                        }
+                    }
+                }
+                _ => {
+                    return Err(
+                        format!("Failed to fetch member: {:?}", e).into()
+                    );
+                }
+            }
+        }
     };
 
     // Update sandwich with a POST
-    let resp = reqwest_client.post(&url).json(&res).send().await?;
+    let resp = reqwest_client.post(&url).json(&member).send().await?;
 
     if !resp.status().is_success() {
         log::warn!(
@@ -139,7 +169,7 @@ pub async fn member_in_guild(
         );
     }
 
-    Ok(res)
+    Ok(Some(member))
 }
 
 pub enum ProxyResponse {

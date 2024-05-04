@@ -136,7 +136,10 @@ impl BotAnimusMessage {
                     )
                     .await
                     {
-                        Ok(member) => member,
+                        Ok(Some(member)) => member,
+                        Ok(None) => {
+                            return Err("Member not found".into());
+                        },
                         Err(e) => return Err(format!("Failed to get member: {:#?}", e).into()),
                     };
 

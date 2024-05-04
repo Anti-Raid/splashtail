@@ -82,7 +82,7 @@ pub async fn handle_mod_action(
         }
     }
 
-    if !hit_limits.is_empty() && crate::silverpelt::module_config::is_module_enabled(&data.pool, guild_id, "auditlogs").await? {
+    if !hit_limits.is_empty() && crate::silverpelt::module_config::is_module_enabled(&data.pool, guild_id, "punishments").await? {
         match crate::modules::punishments::core::trigger_punishment(ctx, guild_id, user_id, HashSet::new()).await {
             Ok(()) => {
                 let mut action_ids = Vec::new();

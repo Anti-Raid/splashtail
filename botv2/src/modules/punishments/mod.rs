@@ -8,12 +8,12 @@ pub fn module() -> crate::silverpelt::Module {
     crate::silverpelt::Module {
         id: "punishments",
         name: "Punishments",
-        description: "Customizable setting of punishments based on number of stings.",
+        description: "Customizable setting and executing of punishments based on stings.",
         toggleable: true,
         commands_configurable: true,
         virtual_module: false,
         web_hidden: false,
-        is_default_enabled: false,
+        is_default_enabled: true,
         commands: vec![
             (
                 cmd::punishments(),

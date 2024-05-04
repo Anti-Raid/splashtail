@@ -19,6 +19,8 @@ use splashcore_rs::utils::{
 };
 use std::collections::HashMap;
 use std::sync::Arc;
+use crate::silverpelt::utils::serenity_utils::greater_member_hierarchy;
+use crate::silverpelt::proxysupport::{guild, member_in_guild};
 
 /*
 // Options that can be set when pruning a message
@@ -87,27 +89,67 @@ fn create_message_prune_serde(
 
 // Helper method to check the author of a user versus a target
 async fn check_hierarchy(ctx: &Context<'_>, user_id: UserId) -> Result<(), Error> {
-    let Some(guild) = ctx.guild() else {
-        return Err(
-            "Guild is not currently cached! Please contact support if you recieve this!".into(),
-        );
+    let data = ctx.data();
+    let sctx = ctx.serenity_context();
+    let cache_http = botox::cache::CacheHttpImpl::from_ctx(sctx);
+
+    let Some(guild_id) = ctx.guild_id() else {
+        return Err("This command can only be used in a guild".into());
     };
+
+    let guild = guild(
+        &cache_http, 
+        &data.reqwest,
+        guild_id
+    ).await?;
 
     let author_id = ctx.author().id;
 
-    if let Some(higher_hierarchy) = guild.greater_member_hierarchy(author_id, user_id) {
+    let bot_userid = sctx.cache.current_user().id;
+    let Some(bot) = member_in_guild(
+        &cache_http,
+        &data.reqwest,
+        guild_id,
+        bot_userid,
+    ).await? else {
+        return Err("Bot member not found".into());
+    };
+
+    let Some(author) = member_in_guild(
+        &cache_http,
+        &data.reqwest,
+        guild_id,
+        author_id,
+    ).await? else {
+        return Err("Message author not found".into());
+    };
+    
+    let Some(user) = member_in_guild(
+        &cache_http,
+        &data.reqwest,
+        guild_id,
+        user_id,
+    ).await? else {
+        // User is not in the server, so yes, they're below us
+        return Ok(())
+    };
+
+    if let Some(higher_hierarchy) = greater_member_hierarchy(&guild, &bot, &user) {
+        if higher_hierarchy != author_id {
+            return Err("You cannot moderate a user with a higher or equal hierarchy to the bot".into());
+        }
+    } else {
+        return Err("You cannot moderate a user with equal hierarchy to the bot".into());
+    }
+
+    if let Some(higher_hierarchy) = greater_member_hierarchy(&guild, &author, &user) {
         if higher_hierarchy != author_id {
             Err("You cannot moderate a user with a higher or equal hierarchy than you".into())
         } else {
             Ok(())
         }
     } else {
-        // We have a None, if so, check if the user is in the server
-        if guild.members.contains_key(&user_id) {
-            Ok(()) // User is not in the server, so yes, they're below us
-        } else {
-            Err("You cannot moderate a user with equal hierarchy to you".into())
-        }
+        Err("You cannot moderate a user with equal hierarchy to you".into())
     }
 }
 
@@ -238,6 +280,22 @@ pub async fn prune_user(
     };
 
     tx.commit().await?;
+
+    // Trigger punishments as a tokio task
+    if crate::silverpelt::module_config::is_module_enabled(&ctx.data().pool, guild_id, "punishments")
+    .await?
+    {
+        let sctx = ctx.serenity_context().clone();
+        tokio::spawn(async move {
+            crate::modules::punishments::core::trigger_punishment(
+                &sctx,
+                guild_id,
+                user.id,
+                std::collections::HashSet::new(),
+            )
+            .await
+        });
+    }
 
     // Send audit logs if Audit Logs module is enabled
     if crate::silverpelt::module_config::is_module_enabled(&ctx.data().pool, guild_id, "auditlogs")
@@ -460,6 +518,22 @@ pub async fn kick(
 
     tx.commit().await?;
 
+    // Trigger punishments as a tokio task
+    if crate::silverpelt::module_config::is_module_enabled(&ctx.data().pool, guild_id, "punishments")
+    .await?
+    {
+        let sctx = ctx.serenity_context().clone();
+        tokio::spawn(async move {
+            crate::modules::punishments::core::trigger_punishment(
+                &sctx,
+                guild_id,
+                member.user.id,
+                std::collections::HashSet::new(),
+            )
+            .await
+        });
+    }
+
     embed = CreateEmbed::new()
         .title("Kicking Member...")
         .description(format!(
@@ -597,6 +671,22 @@ pub async fn ban(
         .await?;
 
     tx.commit().await?;
+
+    // Trigger punishments as a tokio task
+    if crate::silverpelt::module_config::is_module_enabled(&ctx.data().pool, guild_id, "punishments")
+    .await?
+    {
+        let sctx = ctx.serenity_context().clone();
+        tokio::spawn(async move {
+            crate::modules::punishments::core::trigger_punishment(
+                &sctx,
+                guild_id,
+                member.id,
+                std::collections::HashSet::new(),
+            )
+            .await
+        });
+    }
 
     embed = CreateEmbed::new()
         .title("Banning Member...")
@@ -736,6 +826,22 @@ pub async fn tempban(
 
     tx.commit().await?;
 
+    // Trigger punishments as a tokio task
+    if crate::silverpelt::module_config::is_module_enabled(&ctx.data().pool, guild_id, "punishments")
+    .await?
+    {
+        let sctx = ctx.serenity_context().clone();
+        tokio::spawn(async move {
+            crate::modules::punishments::core::trigger_punishment(
+                &sctx,
+                guild_id,
+                member.id,
+                std::collections::HashSet::new(),
+            )
+            .await
+        });
+    }
+
     embed = CreateEmbed::new()
         .title("(Temporarily) Banned Member...")
         .description(format!(
@@ -761,8 +867,8 @@ pub async fn tempban(
 )]
 pub async fn unban(
     ctx: Context<'_>,
-    #[description = "The user to ban"] user: serenity::all::User,
-    #[description = "The reason for the ban"]
+    #[description = "The user to unban"] user: serenity::all::User,
+    #[description = "The reason/justification for unbanning"]
     #[max_length = 384]
     reason: String,
     #[description = "Number of stings to give. Defaults to 0"] stings: Option<i32>,
@@ -859,6 +965,22 @@ pub async fn unban(
         .await?;
 
     tx.commit().await?;
+
+    // Trigger punishments as a tokio task
+    if crate::silverpelt::module_config::is_module_enabled(&ctx.data().pool, guild_id, "punishments")
+    .await?
+    {
+        let sctx = ctx.serenity_context().clone();
+        tokio::spawn(async move {
+            crate::modules::punishments::core::trigger_punishment(
+                &sctx,
+                guild_id,
+                user.id,
+                std::collections::HashSet::new(),
+            )
+            .await
+        });
+    }
 
     embed = CreateEmbed::new()
         .title("Unbanning Member...")
@@ -1011,6 +1133,22 @@ pub async fn timeout(
         .await?;
 
     tx.commit().await?;
+
+    // Trigger punishments as a tokio task
+    if crate::silverpelt::module_config::is_module_enabled(&ctx.data().pool, guild_id, "punishments")
+    .await?
+    {
+        let sctx = ctx.serenity_context().clone();
+        tokio::spawn(async move {
+            crate::modules::punishments::core::trigger_punishment(
+                &sctx,
+                guild_id,
+                member.user.id,
+                std::collections::HashSet::new(),
+            )
+            .await
+        });
+    }
 
     embed = CreateEmbed::new()
         .title("Unbanned Member...")
