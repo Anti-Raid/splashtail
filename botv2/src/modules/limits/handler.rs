@@ -43,9 +43,15 @@ pub async fn handle_mod_action(
         return Ok(());
     }
 
+    let mut total_stings = 0;
+
+    let mut tx = data.pool.begin().await?;
+
+    let action_id = gen_random(48);
+    
     sqlx::query!(
-        "INSERT INTO limits__user_actions (action_id, guild_id, user_id, target, limit_type, action_data, created_at, limits_hit) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)",
-        gen_random(48),
+        "INSERT INTO limits__user_actions (action_id, guild_id, user_id, target, limit_type, action_data, created_at, limits_hit, stings) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)",
+        action_id,
         guild_id.to_string(),
         user_id.to_string(),
         target,
@@ -53,13 +59,16 @@ pub async fn handle_mod_action(
         action_data,
         sqlx::types::chrono::Utc::now(),
         &[],
+        0
     )
-    .execute(&data.pool)
+    .execute(&mut *tx)
     .await?;
 
     let mut hit_limits = Vec::new();
 
+    let mut stings = 0;
     for (_limit_id, guild_limit) in guild_limits.into_iter() {
+        let stings_from_limit = guild_limit.stings;
         // Check the limit type and user_id and guild to see if it is in the cache
         let infringing_actions = sqlx::query!(
             "select action_id from limits__user_actions where guild_id = $1 and user_id=  $2 and limit_type = $3 and created_at + make_interval(secs => $4) > now()",
@@ -68,7 +77,7 @@ pub async fn handle_mod_action(
             limit.to_string(),
             guild_limit.limit_time as f64,
         )
-        .fetch_all(&data.pool)
+        .fetch_all(&mut *tx)
         .await?;
 
         if infringing_actions.len() >= guild_limit.limit_per as usize {
@@ -79,8 +88,21 @@ pub async fn handle_mod_action(
                     .collect::<Vec<String>>(),
                 guild_limit,
             ));
+            stings += stings_from_limit;
         }
     }
+
+    if stings > 0 {
+        sqlx::query!(
+            "UPDATE limits__user_actions SET stings = $1 WHERE action_id = $2",
+            stings,
+            action_id
+        )
+        .execute(&mut *tx)
+        .await?;
+    }
+
+    tx.commit().await?;
 
     if !hit_limits.is_empty() && crate::silverpelt::module_config::is_module_enabled(&data.pool, guild_id, "punishments").await? {
         match crate::modules::punishments::core::trigger_punishment(ctx, guild_id, user_id, HashSet::new()).await {
