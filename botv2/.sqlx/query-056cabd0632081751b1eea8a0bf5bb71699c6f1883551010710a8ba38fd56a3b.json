@@ -1,0 +1,58 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT id, guild_id, creator, stings, action, modifiers, created_at FROM punishments__guild_punishment_list WHERE guild_id = $1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "guild_id",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "creator",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "stings",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 4,
+        "name": "action",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 5,
+        "name": "modifiers",
+        "type_info": "TextArray"
+      },
+      {
+        "ordinal": 6,
+        "name": "created_at",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "056cabd0632081751b1eea8a0bf5bb71699c6f1883551010710a8ba38fd56a3b"
+}

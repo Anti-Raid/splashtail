@@ -168,7 +168,7 @@ For initial release:
 - Add the ability to enable/disable modules [X] and commands [WIP, WU] and also override command permissions [WIP]
 - Server Member Backup/Restore []
 - Basic Moderation (warn/kick/ban+tempban/unban) [X]
-- Punishment module (give punishment based on stings)
+- Punishment module (give punishment based on stings) [X]
 - Basic Anti-Raid (lockserver/unlockserver/lockchannel/unlockchannel) []
 - Basic Anti-Spam (anti-invite, anti-everyone ping) [X]
 - Basic Anti-Spam Punishment integration []

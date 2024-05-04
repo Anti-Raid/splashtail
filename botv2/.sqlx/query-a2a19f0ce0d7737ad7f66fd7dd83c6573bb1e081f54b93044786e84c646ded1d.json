@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n                SELECT limit_id, limit_name, limit_type, limit_action, limit_per, \n                limit_time AS limit_time FROM limits__guild_limits\n                WHERE guild_id = $1\n            ",
+  "query": "\n                SELECT limit_id, limit_name, limit_type, stings, limit_per, \n                limit_time AS limit_time FROM limits__guild_limits\n                WHERE guild_id = $1\n            ",
   "describe": {
     "columns": [
       {
@@ -20,8 +20,8 @@
       },
       {
         "ordinal": 3,
-        "name": "limit_action",
-        "type_info": "Text"
+        "name": "stings",
+        "type_info": "Int4"
       },
       {
         "ordinal": 4,
@@ -48,5 +48,5 @@
       false
     ]
   },
-  "hash": "f0227ab9d909e3b6a32a0d0bfb5854792520851ee0133ab70ada6da8b76ecce8"
+  "hash": "a2a19f0ce0d7737ad7f66fd7dd83c6573bb1e081f54b93044786e84c646ded1d"
 }

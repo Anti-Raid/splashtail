@@ -1,0 +1,27 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            INSERT INTO limits__guild_limits (\n                guild_id,\n                limit_name,\n                limit_type,\n                stings,\n                limit_per,\n                limit_time\n            )\n            VALUES (\n                $1, \n                $2, \n                $3, \n                $4, \n                $5,\n                make_interval(secs => $6)\n            )\n            RETURNING limit_id\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "limit_id",
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text",
+        "Text",
+        "Int4",
+        "Int4",
+        "Float8"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "d0a7ed8688a1b96b1649a4e124a82f162319f02644b19632835112da3b80a551"
+}
