@@ -90,6 +90,8 @@ pub enum UserLimitTypesChoices {
     Ban,
     #[name = "Unban"]
     Unban,
+    #[name = "Message Create"]
+    MessageCreate,
 }
 
 impl UserLimitTypesChoices {
@@ -108,6 +110,7 @@ impl UserLimitTypesChoices {
             Self::Kick => UserLimitTypes::Kick,
             Self::Ban => UserLimitTypes::Ban,
             Self::Unban => UserLimitTypes::Unban,
+            Self::MessageCreate => UserLimitTypes::MessageCreate,
         }
     }
 }
@@ -140,6 +143,7 @@ pub enum UserLimitTypes {
     Kick,
     Ban,
     Unban,
+    MessageCreate,
 }
 
 impl UserLimitTypes {
@@ -158,6 +162,7 @@ impl UserLimitTypes {
             Self::Kick => "Kicks".to_string(),
             Self::Ban => "Bans".to_string(),
             Self::Unban => "Unbans".to_string(),
+            Self::MessageCreate => "Messages Created".to_string(),
         }
     }
 }

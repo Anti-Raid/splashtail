@@ -22,6 +22,19 @@ pub async fn event_listener(ectx: &EventHandlerContext) -> Result<(), Error> {
                 },
             )
             .await
+        },
+        FullEvent::Message { new_message } => {
+            handle_mod_action(
+                ctx,
+                &super::handler::HandleModAction {
+                    guild_id: ectx.guild_id,
+                    limit: super::core::UserLimitTypes::MessageCreate,
+                    user_id: new_message.author.id,
+                    target: Some(new_message.id.to_string()),
+                    action_data: serde_json::json!({}),
+                },
+            )
+            .await
         }
         FullEvent::GuildAuditLogEntryCreate { entry, guild_id } => {
             info!("Audit log created: {:?}. Guild: {}", entry, guild_id);
