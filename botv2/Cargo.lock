@@ -2395,7 +2395,6 @@ dependencies = [
  "futures",
  "fxhash",
  "mime_guess",
- "mini-moka",
  "nonmax",
  "parking_lot",
  "percent-encoding",
