@@ -65,7 +65,12 @@ pub async fn handle_mod_action(
     let mut hit_limits = Vec::new();
 
     let mut stings = 0;
+    let mut largest_expiry = 0;
     for (_limit_id, guild_limit) in guild_limits.into_iter() {
+        if guild_limit.limit_time > largest_expiry {
+            largest_expiry = guild_limit.limit_time;
+        }
+
         let stings_from_limit = guild_limit.stings;
         // Check the limit type and user_id and guild to see if it is in the cache
         let infringing_actions = sqlx::query!(
@@ -90,10 +95,11 @@ pub async fn handle_mod_action(
         }
     }
 
-    if stings > 0 {
+    if stings > 0 || largest_expiry > 0 {
         sqlx::query!(
-            "UPDATE limits__user_actions SET stings = $1 WHERE action_id = $2",
+            "UPDATE limits__user_actions SET stings = $1, expiry = $2 WHERE action_id = $3",
             stings,
+            sqlx::types::chrono::Utc::now() + chrono::Duration::seconds(largest_expiry),
             action_id
         )
         .execute(&mut *tx)

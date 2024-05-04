@@ -23,7 +23,7 @@ pub async fn register_punishment_sting_source(_data: &crate::Data) -> Result<(),
 
         // Fetch all moderation actions of the user in moderation__actions
         let moderation_entries = sqlx::query!(
-                "SELECT stings, created_at FROM limits__user_actions WHERE user_id = $1 AND guild_id = $2",
+                "SELECT stings, (NOW() > expiry) AS expired, created_at FROM limits__user_actions WHERE user_id = $1 AND guild_id = $2",
                 user_id.to_string(),
                 guild_id.to_string(),
             )
@@ -37,15 +37,7 @@ pub async fn register_punishment_sting_source(_data: &crate::Data) -> Result<(),
                 stings: entry.stings,
                 reason: None, // TODO: Add reason
                 created_at: entry.created_at,
-                expired: {
-                    // TODO: Allow customizing this
-                    
-                    // Right now, a sting is considered expired after 1 hour
-                    let now = Utc::now();
-                    let diff = now - entry.created_at;
-
-                    diff.num_seconds() > 3600
-                },
+                expired: entry.expired.unwrap_or(false),
             });
         }
 

@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT stings, created_at FROM limits__user_actions WHERE user_id = $1 AND guild_id = $2",
+  "query": "SELECT stings, (NOW() > expiry) AS expired, created_at FROM limits__user_actions WHERE user_id = $1 AND guild_id = $2",
   "describe": {
     "columns": [
       {
@@ -10,6 +10,11 @@
       },
       {
         "ordinal": 1,
+        "name": "expired",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 2,
         "name": "created_at",
         "type_info": "Timestamptz"
       }
@@ -22,8 +27,9 @@
     },
     "nullable": [
       false,
+      null,
       false
     ]
   },
-  "hash": "ac1e3e37fa76c8652d3b7211a1f99830fbe0416b2f0d6de62d6a56a35d2d2224"
+  "hash": "a0f76ef043b0333c3f33d1c682b50f977035ac4a62a02f50e9152fd20a599e63"
 }

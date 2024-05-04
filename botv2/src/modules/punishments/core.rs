@@ -36,6 +36,10 @@ impl ConsolidatedStingEntries {
 
         let mut total_count: i32 = 0;
         for entry in &self.entries {
+            if entry.entry.expired {
+                continue;
+            }
+
             let count = entry.entry.stings;
             total_count += count;
         }
