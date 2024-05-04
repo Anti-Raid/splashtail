@@ -23,7 +23,7 @@ pub async fn register_punishment_sting_source(_data: &crate::Data) -> Result<(),
 
         // Fetch all moderation actions of the user in moderation__actions
         let moderation_entries = sqlx::query!(
-                "SELECT stings, (NOW() > expiry) AS expired, created_at FROM limits__user_actions WHERE user_id = $1 AND guild_id = $2",
+                "SELECT stings, (NOW() > stings_expiry) AS expired, created_at FROM limits__user_actions WHERE user_id = $1 AND guild_id = $2",
                 user_id.to_string(),
                 guild_id.to_string(),
             )

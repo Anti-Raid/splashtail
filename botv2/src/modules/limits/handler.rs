@@ -69,10 +69,10 @@ pub async fn handle_mod_action(
     for (_limit_id, guild_limit) in guild_limits.into_iter() {
         let stings_from_limit = guild_limit.stings;
         let limit_time_from_limit = guild_limit.limit_time;
-        
+
         // Check the limit type and user_id and guild to see if it is in the cache
         let infringing_actions = sqlx::query!(
-            "select action_id from limits__user_actions where guild_id = $1 and user_id=  $2 and limit_type = $3 and created_at + make_interval(secs => $4) > now()",
+            "select action_id from limits__user_actions where guild_id = $1 and user_id = $2 and limit_type = $3 and created_at + make_interval(secs => $4) > now()",
             guild_id.to_string(),
             user_id.to_string(),
             limit.to_string(),
@@ -89,6 +89,7 @@ pub async fn handle_mod_action(
                     .collect::<Vec<String>>(),
                 guild_limit,
             ));
+
             stings += stings_from_limit;
 
             if limit_time_from_limit > largest_expiry {
@@ -99,7 +100,7 @@ pub async fn handle_mod_action(
 
     if stings > 0 || largest_expiry > 0 {
         sqlx::query!(
-            "UPDATE limits__user_actions SET stings = $1, expiry = $2 WHERE action_id = $3",
+            "UPDATE limits__user_actions SET stings = $1, stings_expiry = $2 WHERE action_id = $3",
             stings,
             sqlx::types::chrono::Utc::now() + chrono::Duration::seconds(largest_expiry),
             action_id
