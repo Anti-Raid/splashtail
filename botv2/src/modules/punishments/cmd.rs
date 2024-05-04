@@ -2,8 +2,33 @@ use crate::{Context, Error};
 use splashcore_rs::utils::{parse_numeric_list, REPLACE_ROLE, REPLACE_USER};
 
 /// Punishment list  base command
-#[poise::command(prefix_command, slash_command, subcommands("punishments_add"))]
+#[poise::command(prefix_command, slash_command, subcommands("punishments_add", "punishments_viewsources"))]
 pub async fn punishments(_ctx: Context<'_>) -> Result<(), Error> {
+    Ok(())
+}
+
+/// List all sources that stings can come from
+#[poise::command(
+    prefix_command,
+    slash_command,
+    guild_only,
+    user_cooldown = "5",
+    rename = "viewsources"
+)]
+#[allow(clippy::too_many_arguments)]
+pub async fn punishments_viewsources(ctx: Context<'_>) -> Result<(), Error> {
+    let mut embed = serenity::all::CreateEmbed::new();
+
+    embed = embed.title("Sting Sources");
+
+    for source in super::sting_source::STING_SOURCES.iter() {
+        let id = source.key();
+        let source = source.value();
+        embed = embed.field(id.clone(), format!("{} {}", source.id, source.description), false);
+    }
+
+    ctx.send(poise::CreateReply::new().embed(embed)).await?;
+
     Ok(())
 }
 
@@ -19,7 +44,7 @@ pub async fn punishments(_ctx: Context<'_>) -> Result<(), Error> {
 pub async fn punishments_add(
     ctx: Context<'_>,
     #[description = "The number of stings that must be reached"] stings: i32,
-    #[description = "What action to take"] action: super::core::ActionsChoices,
+    #[description = "What action to take"] action: super::core::ActionChoices,
     #[description = "Ignored Roles, comma seperated"] ignored_roles: Option<String>,
     #[description = "Ignored Users, comma seperated"] ignored_users: Option<String>,
     #[description = "Specify custom modifiers, this is an advanced feature"] modifiers: Option<String>,

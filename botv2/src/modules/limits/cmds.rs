@@ -29,11 +29,10 @@ pub async fn limits_add(
     #[description = "The time interval infractions are counted in"] limit_time: i64,
     #[description = "The time unit for the time interval [seconds/minutes/hours/days]"]
     limit_time_unit: splashcore_rs::utils::Unit,
-    #[description = "The action to take when the limit is hit"]
-    limit_action: crate::modules::limits::core::UserLimitActionsChoices,
+    #[description = "The number of stings to give on hitting the limit"]
+    stings: i32,
 ) -> Result<(), Error> {
     let limit_type = limit_type.resolve();
-    let limit_action = limit_action.resolve();
 
     let guild_id = ctx.guild_id().ok_or("Could not get guild id")?;
 
@@ -44,7 +43,7 @@ pub async fn limits_add(
                 guild_id,
                 limit_name,
                 limit_type,
-                limit_action,
+                stings,
                 limit_per,
                 limit_time
             )
@@ -61,7 +60,7 @@ pub async fn limits_add(
         guild_id.to_string(),
         limit_name,
         limit_type.to_string(),
-        limit_action.to_string(),
+        stings,
         limit_per,
         (limit_time * limit_time_unit.to_seconds_i64()) as f64
     )
@@ -112,11 +111,11 @@ pub async fn limits_view(ctx: Context<'_>) -> Result<(), Error> {
         embeds[i] = embeds[i].clone().field(
             limit.limit_name,
             format!(
-                "If over {amount} ``{cond}`` triggered between {time} interval: ``{then}`` [{id}]",
+                "If over {amount} ``{cond}`` triggered between {time} interval: give ``{no_stings}`` stings [{id}]",
                 amount = limit.limit_per,
                 cond = limit.limit_type.to_cond(),
                 time = parse_pg_interval(secs_to_pg_interval(limit.limit_time)),
-                then = limit.limit_action.to_cond(),
+                no_stings = limit.stings,
                 id = limit.limit_id
             ),
             false,
@@ -255,12 +254,13 @@ pub async fn limitactions_view(
         embeds[i] = embeds[i].clone().field(
             action_id.clone(),
             format!(
-                "``{limit_type}`` by {user_id} on {target} at <t:{timestamp}:R> | {action_data} [{id}]\n**Hit Limits:** {limits_hit:#?}",
+                "``{limit_type}`` by {user_id} on {target} at <t:{timestamp}:R> (for {no_stings} stings) | {action_data} [{id}]\n**Hit Limits:** {limits_hit:#?}",
                 limit_type = action.limit_type,
                 action_data = serde_json::to_string(&action.action_data).map_err(|_| "Could not serialize action_data")?,
                 user_id = action.user_id.mention().to_string() + " (" + &action.user_id.to_string() + ")",
                 target = target,
                 timestamp = action.created_at.timestamp(),
+                no_stings = action.stings,
                 id = action_id,
                 limits_hit = action.limits_hit
             ),

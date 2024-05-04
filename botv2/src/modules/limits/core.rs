@@ -7,6 +7,60 @@ use sqlx::{
     PgPool,
 };
 use strum_macros::{Display, EnumString, VariantNames};
+use futures_util::FutureExt;
+
+/// Punishment sting source
+pub async fn register_punishment_sting_source(_data: &crate::Data) -> Result<(), crate::Error> {
+    async fn sting_entries(
+        ctx: &serenity::all::Context,
+        guild_id: serenity::all::GuildId,
+        user_id: serenity::all::UserId,
+    ) -> Result<Vec<crate::modules::punishments::sting_source::StingEntry>, crate::Error> {
+        let data = ctx.data::<crate::Data>();
+        let pool = &data.pool;
+
+        let mut entries = vec![];
+
+        // Fetch all moderation actions of the user in moderation__actions
+        let moderation_entries = sqlx::query!(
+                "SELECT stings, created_at FROM limits__user_actions WHERE user_id = $1 AND guild_id = $2",
+                user_id.to_string(),
+                guild_id.to_string(),
+            )
+            .fetch_all(pool)
+            .await?;
+
+        for entry in moderation_entries {
+            entries.push(crate::modules::punishments::sting_source::StingEntry {
+                user_id,
+                guild_id,
+                stings: entry.stings,
+                reason: None, // TODO: Add reason
+                created_at: entry.created_at,
+                expired: {
+                    // TODO: Allow customizing this
+                    
+                    // Right now, a sting is considered expired after 1 hour
+                    let now = Utc::now();
+                    let diff = now - entry.created_at;
+
+                    diff.num_seconds() > 3600
+                },
+            });
+        }
+
+        Ok(entries)
+    }
+
+    let source = crate::modules::punishments::sting_source::StingSource {
+        id: "limits__user_actions".to_string(),
+        description: "User Action Punishments".to_string(),
+        fetch: Box::new(|ctx, guild_id, user_id| sting_entries(ctx, *guild_id, *user_id).boxed()),
+    };
+
+    crate::modules::punishments::sting_source::add_sting_source(source);
+    Ok(())
+}
 
 #[derive(poise::ChoiceParameter)]
 pub enum UserLimitTypesChoices {
@@ -108,44 +162,6 @@ impl UserLimitTypes {
     }
 }
 
-#[derive(poise::ChoiceParameter)]
-pub enum UserLimitActionsChoices {
-    #[name = "Remove All Roles"]
-    RemoveAllRoles,
-    #[name = "Kick User"]
-    KickUser,
-    #[name = "Ban User"]
-    BanUser,
-}
-
-impl UserLimitActionsChoices {
-    pub fn resolve(self) -> UserLimitActions {
-        match self {
-            Self::RemoveAllRoles => UserLimitActions::RemoveAllRoles,
-            Self::KickUser => UserLimitActions::KickUser,
-            Self::BanUser => UserLimitActions::BanUser,
-        }
-    }
-}
-
-#[derive(EnumString, Display, PartialEq, VariantNames, Clone, Debug, Serialize, Deserialize)]
-#[strum(serialize_all = "snake_case")]
-pub enum UserLimitActions {
-    RemoveAllRoles,
-    KickUser,
-    BanUser,
-}
-
-impl UserLimitActions {
-    pub fn to_cond(&self) -> String {
-        match &self {
-            Self::RemoveAllRoles => "Remove All Roles".to_string(),
-            Self::KickUser => "Kick User".to_string(),
-            Self::BanUser => "Ban User".to_string(),
-        }
-    }
-}
-
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct UserAction {
     /// The ID of the action
@@ -164,6 +180,8 @@ pub struct UserAction {
     pub limits_hit: Vec<String>,
     /// The target the action was intended for
     pub target: Option<String>,
+    /// The number of stings the user has procured from this action
+    pub stings: i32,
 }
 
 impl UserAction {
@@ -174,7 +192,7 @@ impl UserAction {
         action_id: &str,
     ) -> Result<Self, Error> {
         let res = sqlx::query!(
-            "SELECT action_id, limit_type, created_at, user_id, guild_id, action_data, limits_hit, target FROM user_actions WHERE guild_id = $1 AND action_id = $2",
+            "SELECT action_id, limit_type, created_at, user_id, guild_id, action_data, limits_hit, target, stings FROM limits__user_actions WHERE guild_id = $1 AND action_id = $2",
             guild_id.to_string(),
             action_id
         )
@@ -191,6 +209,7 @@ impl UserAction {
                 action_data: action.action_data,
                 limits_hit: action.limits_hit,
                 target: action.target,
+                stings: action.stings,
             }),
             None => Err("No action found".into()),
         }
@@ -203,7 +222,7 @@ impl UserAction {
         user_id: UserId,
     ) -> Result<Vec<Self>, Error> {
         let res = sqlx::query!(
-            "SELECT action_id, limit_type, created_at, user_id, guild_id, action_data, limits_hit, target FROM user_actions WHERE guild_id = $1 AND user_id = $2",
+            "SELECT action_id, limit_type, created_at, user_id, guild_id, action_data, limits_hit, target, stings FROM limits__user_actions WHERE guild_id = $1 AND user_id = $2",
             guild_id.to_string(),
             user_id.to_string()
         )
@@ -221,6 +240,7 @@ impl UserAction {
                 action_data: action.action_data,
                 limits_hit: action.limits_hit,
                 target: action.target,
+                stings: action.stings,
             });
         }
 
@@ -230,7 +250,7 @@ impl UserAction {
     /// Fetch all user actions in a guild
     pub async fn guild(data: &crate::Data, guild_id: GuildId) -> Result<Vec<Self>, Error> {
         let res = sqlx::query!(
-            "SELECT action_id, limit_type, created_at, user_id, guild_id, action_data, limits_hit, target FROM user_actions WHERE guild_id = $1",
+            "SELECT action_id, limit_type, created_at, user_id, guild_id, action_data, limits_hit, target, stings FROM limits__user_actions WHERE guild_id = $1",
             guild_id.to_string(),
         )
         .fetch_all(&data.pool)
@@ -247,6 +267,7 @@ impl UserAction {
                 action_data: action.action_data,
                 limits_hit: action.limits_hit,
                 target: action.target,
+                stings: action.stings,
             });
         }
 
@@ -265,7 +286,7 @@ pub struct Limit {
     /// The type of limit
     pub limit_type: UserLimitTypes,
     /// The action to take when the limit is hit
-    pub limit_action: UserLimitActions,
+    pub stings: i32,
     /// The number of times the limit can be hit
     pub limit_per: i32,
     /// The time frame, in seconds the limit can be hit in
@@ -276,7 +297,7 @@ impl Limit {
     pub async fn guild(pool: &PgPool, guild_id: GuildId) -> Result<Vec<Self>, Error> {
         let rec = sqlx::query!(
             "
-                SELECT limit_id, limit_name, limit_type, limit_action, limit_per, 
+                SELECT limit_id, limit_name, limit_type, stings, limit_per, 
                 limit_time AS limit_time FROM limits__guild_limits
                 WHERE guild_id = $1
             ",
@@ -299,7 +320,7 @@ impl Limit {
                 limit_id: r.limit_id,
                 limit_name: r.limit_name,
                 limit_type: r.limit_type.parse()?,
-                limit_action: r.limit_action.parse()?,
+                stings: r.stings,
                 limit_per: r.limit_per,
                 limit_time: pg_interval_to_secs(r.limit_time),
             });

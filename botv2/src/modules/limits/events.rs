@@ -8,18 +8,11 @@ use crate::{silverpelt::EventHandlerContext, Error};
 pub async fn event_listener(ectx: &EventHandlerContext) -> Result<(), Error> {
     let ctx = &ectx.serenity_context;
     let event = &ectx.full_event;
-    let user_data = &ectx.data;
-
-    let cache_http = botox::cache::CacheHttpImpl {
-        cache: ctx.cache.clone(),
-        http: ctx.http.clone(),
-    };
 
     match event {
         FullEvent::GuildMemberAddition { new_member } => {
             handle_mod_action(
-                &user_data.pool,
-                &cache_http,
+                ctx,
                 &super::handler::HandleModAction {
                     guild_id: ectx.guild_id,
                     limit: super::core::UserLimitTypes::MemberAdd,
@@ -42,8 +35,7 @@ pub async fn event_listener(ectx: &EventHandlerContext) -> Result<(), Error> {
                             info!("Channel created: {}", ch_id);
 
                             handle_mod_action(
-                                &user_data.pool,
-                                &cache_http,
+                                ctx,
                                 &super::handler::HandleModAction {
                                     guild_id: *guild_id,
                                     limit: super::core::UserLimitTypes::ChannelAdd,
@@ -58,8 +50,7 @@ pub async fn event_listener(ectx: &EventHandlerContext) -> Result<(), Error> {
                             info!("Channel deleted: {}", ch_id);
 
                             handle_mod_action(
-                                &user_data.pool,
-                                &cache_http,
+                                ctx,
                                 &super::handler::HandleModAction {
                                     guild_id: *guild_id,
                                     limit: super::core::UserLimitTypes::ChannelRemove,
@@ -73,8 +64,7 @@ pub async fn event_listener(ectx: &EventHandlerContext) -> Result<(), Error> {
                         ChannelAction::Update => {
                             info!("Channel updated: {}", ch_id);
                             handle_mod_action(
-                                &user_data.pool,
-                                &cache_http,
+                                ctx,
                                 &super::handler::HandleModAction {
                                     guild_id: *guild_id,
                                     limit: super::core::UserLimitTypes::ChannelUpdate,
@@ -96,8 +86,7 @@ pub async fn event_listener(ectx: &EventHandlerContext) -> Result<(), Error> {
                             info!("Role created: {}", r_id);
 
                             handle_mod_action(
-                                &user_data.pool,
-                                &cache_http,
+                                ctx,
                                 &super::handler::HandleModAction {
                                     guild_id: *guild_id,
                                     limit: super::core::UserLimitTypes::RoleAdd,
@@ -112,8 +101,7 @@ pub async fn event_listener(ectx: &EventHandlerContext) -> Result<(), Error> {
                             info!("Role updated: {}", r_id);
 
                             handle_mod_action(
-                                &user_data.pool,
-                                &cache_http,
+                                ctx,
                                 &super::handler::HandleModAction {
                                     guild_id: *guild_id,
                                     limit: super::core::UserLimitTypes::RoleUpdate,
@@ -128,8 +116,7 @@ pub async fn event_listener(ectx: &EventHandlerContext) -> Result<(), Error> {
                             info!("Role deleted: {}", r_id);
 
                             handle_mod_action(
-                                &user_data.pool,
-                                &cache_http,
+                                ctx,
                                 &super::handler::HandleModAction {
                                     guild_id: *guild_id,
                                     limit: super::core::UserLimitTypes::RoleRemove,
@@ -215,8 +202,7 @@ pub async fn event_listener(ectx: &EventHandlerContext) -> Result<(), Error> {
                             }
 
                             handle_mod_action(
-                                &user_data.pool,
-                                &cache_http,
+                                ctx,
                                 &super::handler::HandleModAction {
                                     guild_id: *guild_id,
                                     limit: super::core::UserLimitTypes::MemberRolesUpdated,
@@ -235,8 +221,7 @@ pub async fn event_listener(ectx: &EventHandlerContext) -> Result<(), Error> {
                                 info!("Added roles: {:?}", added);
 
                                 handle_mod_action(
-                                    &user_data.pool,
-                                    &cache_http,
+                                    ctx,
                                     &super::handler::HandleModAction {
                                         guild_id: *guild_id,
                                         limit: super::core::UserLimitTypes::RoleGivenToMember,
@@ -256,8 +241,7 @@ pub async fn event_listener(ectx: &EventHandlerContext) -> Result<(), Error> {
                                 info!("Removed roles: {:?}", removed);
 
                                 handle_mod_action(
-                                    &user_data.pool,
-                                    &cache_http,
+                                    ctx,
                                     &super::handler::HandleModAction {
                                         guild_id: *guild_id,
                                         limit: super::core::UserLimitTypes::RoleRemovedFromMember,

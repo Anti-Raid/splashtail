@@ -19,6 +19,7 @@ pub fn module() -> crate::silverpelt::Module {
                 cmd::punishments(),
                 indexmap! {
                     "add" => crate::silverpelt::CommandExtendedData::kittycat_or_admin("punishments", "add"),
+                    "viewsources" => crate::silverpelt::CommandExtendedData::kittycat_or_admin("punishments", "viewsources"),
                 },
             ),
         ],

@@ -38,6 +38,9 @@ pub fn module() -> crate::silverpelt::Module {
         event_handlers: vec![Box::new(move |ectx| {
             events::event_listener(ectx).boxed()
         })],
+        on_startup: vec![Box::new(move |data| {
+            core::register_punishment_sting_source(data).boxed()
+        })],
         ..Default::default()
     }
 }
