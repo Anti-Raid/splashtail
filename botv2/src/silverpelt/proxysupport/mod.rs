@@ -38,10 +38,10 @@ pub async fn guild(
 
                 return Ok(guild);
             } else {
-                log::warn!("Sandwich proxy returned error: {:?}", resp.error);
+                log::warn!("Sandwich proxy returned error [get guild]: {:?}", resp.error);
             }
         } else {
-            log::warn!("Sandwich proxy returned invalid resp: {:?}", resp);
+            log::warn!("Sandwich proxy returned invalid resp [get guild]: {:?}", resp);
         }
     }
 
@@ -121,7 +121,7 @@ pub async fn member_in_guild(
 
         return Ok(Some(member));
     } else {
-        log::warn!("Sandwich proxy returned error: {:?}", resp.error);
+        log::warn!("Sandwich proxy returned error [get member]: {:?}", resp.error);
     }
 
     // Last resort, use botox to fetch from http and then update sandwich as well

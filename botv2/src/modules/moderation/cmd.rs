@@ -135,7 +135,7 @@ async fn check_hierarchy(ctx: &Context<'_>, user_id: UserId) -> Result<(), Error
     };
 
     if let Some(higher_hierarchy) = greater_member_hierarchy(&guild, &bot, &user) {
-        if higher_hierarchy != author_id {
+        if higher_hierarchy != bot_userid {
             return Err("You cannot moderate a user with a higher or equal hierarchy to the bot".into());
         }
     } else {
