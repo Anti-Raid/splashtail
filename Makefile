@@ -13,8 +13,8 @@ buildall:
 	cd infra/Sandwich-Daemon && make
 
 	# Other infra
-	cd infra/animuscli && make
-	cd infra/wafflepaw && make
+	buildanimuscli
+	make buildwafflepaw
 	make buildbot
 	make buildmewldwebui
 	make buildwebserver
@@ -22,6 +22,12 @@ buildall:
 # Alias for buildall
 all:
 	make buildall
+
+buildanimuscli:
+	cd infra/animuscli && make
+
+buildwafflepaw:
+	cd infra/wafflepaw && make
 
 buildwebserver:
 	CGO_ENABLED=0 go build -v 

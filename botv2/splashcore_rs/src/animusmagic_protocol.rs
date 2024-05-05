@@ -1,8 +1,6 @@
-/// Animus Magic is the internal redis IPC system for internal communications between the bot and the server
-///
-/// Format of payloads: <target [from]: u8><target [to]: u8><cluster id from: u16><cluster id to: u16><op: 8 bits><command id: alphanumeric string>/<cbor payload>
-use serde::{Deserialize, Serialize};
 use botox::crypto::gen_random;
+/// Animus Magic is the internal redis IPC system for internal communications between the bot and the server
+use serde::{Deserialize, Serialize};
 use std::time::Duration;
 
 pub struct AnimusMessageMetadata {
@@ -113,7 +111,7 @@ pub fn create_payload<T: Serialize>(
     cmd_id: &str,
     from: AnimusTarget,
     cluster_id_from: u16, // From which cluster the message is coming from
-    cluster_id_to: u16, // To which cluster the message is is going to
+    cluster_id_to: u16,   // To which cluster the message is is going to
     to: AnimusTarget,
     op: AnimusOp,
     data: &T,
@@ -175,8 +173,12 @@ pub fn get_payload_meta(payload: &[u8]) -> Result<AnimusMessageMetadata, crate::
     let to = AnimusTarget::from_byte(payload[TO_BYTE]).ok_or("Invalid type byte")?;
 
     // Take out cluster id
-    let cluster_id_from = u16::from_be_bytes([payload[CLUSTER_ID_FROM_BYTE], payload[CLUSTER_ID_FROM_BYTE+1]]);
-    let cluster_id_to = u16::from_be_bytes([payload[CLUSTER_ID_TO_BYTE], payload[CLUSTER_ID_TO_BYTE+1]]);
+    let cluster_id_from = u16::from_be_bytes([
+        payload[CLUSTER_ID_FROM_BYTE],
+        payload[CLUSTER_ID_FROM_BYTE + 1],
+    ]);
+    let cluster_id_to =
+        u16::from_be_bytes([payload[CLUSTER_ID_TO_BYTE], payload[CLUSTER_ID_TO_BYTE + 1]]);
 
     let op = AnimusOp::from_byte(payload[OP_BYTE]).ok_or("Invalid op byte")?;
 

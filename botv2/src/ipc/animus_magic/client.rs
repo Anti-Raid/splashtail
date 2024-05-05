@@ -245,17 +245,14 @@ impl AnimusMagicClient {
                         tokio::spawn(async move {
                             // For probe, respond with the same cluster_id_from and the process id
                             let pid = std::process::id();
-                            let Ok(payload) = create_payload::<AnimusErrorResponse>(
+                            let Ok(payload) = create_payload::<String>(
                                 &meta.command_id,
                                 AnimusTarget::Bot,
                                 MEWLD_ARGS.cluster_id,
                                 meta.cluster_id_from,
                                 meta.from,
                                 AnimusOp::Response,
-                                &AnimusErrorResponse {
-                                    message: pid.to_string(),
-                                    context: "".to_string(),
-                                },
+                                &pid.to_string(),
                             ) else {
                                 log::warn!(
                                     "Failed to create payload for message on channel {}",

@@ -253,7 +253,7 @@ func (p *AMProbeTask) Run() error {
 				}
 
 				// Parse message as animuserrorresponse
-				var resp animusmagic.AnimusErrorResponse
+				var resp string
 				err := animusmagic.DeserializeData(response.RawPayload, &resp)
 
 				if err != nil {
@@ -262,9 +262,9 @@ func (p *AMProbeTask) Run() error {
 				}
 
 				if _, ok := clusterIds[response.Meta.ClusterIDFrom]; !ok {
-					clusterIds[response.Meta.ClusterIDFrom] = []string{resp.Message}
+					clusterIds[response.Meta.ClusterIDFrom] = []string{resp}
 				} else {
-					clusterIds[response.Meta.ClusterIDFrom] = append(clusterIds[response.Meta.ClusterIDFrom], resp.Message)
+					clusterIds[response.Meta.ClusterIDFrom] = append(clusterIds[response.Meta.ClusterIDFrom], resp)
 					duplicates[response.Meta.ClusterIDFrom] = clusterIds[response.Meta.ClusterIDFrom]
 				}
 			}

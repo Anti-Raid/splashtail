@@ -239,7 +239,7 @@ func main() {
 									prettyPrintAnimusMessageMetadata(response.Meta),
 									"\nElapsed Time: ", since,
 									"\nResponse: ", resp,
-									"\nDeserializeErrors:", err,
+									"\n[DeserializeErrors]:", err,
 									"\n\n",
 								)
 							}()

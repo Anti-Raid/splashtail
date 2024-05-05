@@ -3,6 +3,7 @@ pub mod auditlogs;
 pub mod basic_antispam;
 pub mod core;
 pub mod gitlogs;
+pub mod info;
 pub mod limits;
 pub mod moderation;
 pub mod punishments;
@@ -19,6 +20,7 @@ pub fn modules() -> Vec<crate::silverpelt::Module> {
         basic_antispam::module(),
         core::module(),
         gitlogs::module(),
+        info::module(),
         limits::module(),
         moderation::module(),
         punishments::module(),

@@ -2,64 +2,88 @@
 
 Splashtail is a monorepo containing all the code needed to run and setup Anti-Raid.
 
-## Components
+# Components
 
-- **infra** => Core infrastructure for the bot
-- **botv2** => The core bot interface for AntiRaid
-- **jobserver** => The jobserver is the component of AntiRaid responsible for handling tasks concurrently to ensure that Bot/API restarts/issues/outages does not affect ongoing backup creations/backup restores/member restores etc. The jobserver also allows code related to core functionality to be shared between the Bot (rust) and the API/website
+## Current
+
+- **infra** => Core infrastructure for the bot such as `animuscli` (animus magic intro), `wafflepaw` (monitoring service) our fork of [`nirn-proxy`](https://github.com/anti-raid/nirn-proxy) and our fork of [`Sandwich-Daemon`](https://github.com/anti-raid/Sandwich-Daemon).
+- **botv2** => The core bot interface for AntiRaid, written in Serenity+Poise and Rust
+- **jobserver** => The jobserver is the component of AntiRaid responsible for handling tasks concurrently to ensure that Bot/API restarts/issues/outages does not affect ongoing backup creations/backup restores/member restores etc. The jobserver also allows code related to core functionality to be shared between the Bot (rust) and the API/website while also being isolated and easily restartable with resumable tasks allowing for greater reliability and scalability.
 - **webserver** (API) => The API interface for AntiRaid used for third-party integrations and the website
 - **website** => The website for AntiRaid 
-- **misc** => Miscellaneous code such as code used to test the WIP simpleproxy2
-- **simpleproxy2** => Simple WIP gateway proxy to allow AntiRaid to be freely restarted/run multiple gateway sessions without needing to worry about IDENTITY's or compatibility with serenity/discordgo
-- **arcadia** => Staff management bot for AntiRaid
+- **data** => Miscellaneous stuff such as code used to test the WIP simpleproxy2 as well as database seeds
+
+## Former
+
+- **simpleproxy2** => Simple WIP gateway proxy to allow AntiRaid to be freely restarted/run multiple gateway sessions without needing to worry about IDENTITY's or compatibility with serenity/discordgo like twilight-gateway-proxy forces us to be.
+    - **Replaced by:** [`Sandwich-Daemon`](https://github.com/anti-raid/Sandwich-Daemon)
+    - **Reason:** Sandwich-Daemon is a more stable and scalable long-term solution
+- **arcadia** => Staff management bot for AntiRaid.
+    - **Replaced by:** None
+    - **Reason:** Removed for now as the bot's internals are still rapidly changing
     - **Forked from:** https://github.com/infinitybotlist/arcadia
     - **Commit:** 5554dadbd98ed4bd2a9594ac7af8d9ff06108322
     - **Permalink:** https://github.com/InfinityBotList/Arcadia/commit/5554dadbd98ed4bd2a9594ac7af8d9ff06108322
     - **License:** AGPLv3
     - **Affidavits:** Licensed under the AGPLv3
-- **arcadia-panel** => Internal staff website to manage Anti-Raid
+- **arcadia-panel** => Internal staff website to manage Anti-Raid.
+    - **Replaced by:** None
+    - **Reason:** Removed for now as the bot's internals are still rapidly changing
     - **Forked from:** https://github.com/infinitybotlist/panelv2
     - **Commit:** 61c626e5bf383fc8b277e836a9fcb9f02250bcb6
     - **Permalink:** https://github.com/InfinityBotList/panelv2/commit/61c626e5bf383fc8b277e836a9fcb9f02250bcb6
     - **License:** AGPLv3
     - **Affidavits:** Licensed under the AGPLv3
 
-### Integration
+# Integration
 
-To increase our feature set and to popularize these bots, AntiRaid includes several integrations (forked/taken from other AGPL3-licensed projects that we either have permission to use or... owned/made the code for in the first place):
+To increase our feature set and to ensure that we are synced with upstream, AntiRaid includes several integrations (forked/taken from other AGPL3-licensed projects that we either have permission to use or owned/made in the first place):
+
+## Current
 
 - **Git Logs** 
     - **Folders:** ``webserver/integration/gitlogs`` and ``botv2/src/modules/gitlogs``
     - Website: [https://gitlogs.xyz](https://gitlogs.xyz)
     - Github: [https://github.com/Git-Logs](https://github.com/Git-Logs)
 
-## Communication
+# Communication
 
 Communication between the bot, jobserver, server and the ``mewld`` clusterer (used to run multiple clusters of the bot with each cluster responsible for a set of shards) happens in 3 primary ways.
 
-### Mewld IPC
+## Mewld IPC
 
 For ``mewld``-``bot`` communication, core state such as Cluster ID, Cluster Name, Shard List, Redis Channel etc. are given as command-line arguments and are parsed by the ``argparse`` module of botv2's IPC subsystem.
 
 The ``mredis.LauncherCmd`` type from ``mewld`` (``import mredis "github.com/cheesycod/mewld/redis"``) is the primary type used for communication. ``Args`` should be used to send arguments for the IPC command and ``Output`` should be used to send arbitrary data to IPC. Diagnostic payloads (used to check uptimes and gather the guild/user count per cluster) are a special case and use ``mredis.LauncherCmd`` for the request and a ``diagPayload`` (renamed to ``MewldDiagResponse`` in the bot).
 
-### Jobserver HTTP
+## Animus Magic
 
-Jobserver provides an HTTP API for all communication with the jobserver. Individual clients must be provided a Client Name and Client Secret to both identify them and to protect against unauthorized access to the jobserver. These secrets must be placed under ``jobserver_secrets`` in the ``config.yaml`` file (``meta`` section) and *must be cryptographically secure and unique per client*. E.g:
+Due to the need for N-directional (webserver+bot+jobserver+infra) communication, AntiRaid uses an unstable (constantly changing not crashing-type unstable) Redis PubSub API for communication. The documentation for Animus Magic is given below:
 
-```yaml
-jobserver_secrets:
-staging:
-    api: SECRET_1
-    bot: SECRET_2
-prod:
-    api: SECRET_3
-    bot: SECRET_$
+### Basic structure
+
+All payloads will formatted as per the following: ``<target [from]: u8><target [to]: u8><cluster id from: u16><cluster id to: u16><op: u8><command_id: alphanumeric string>/<cbor payload>``
+
+- ``u8``: Unsigned 8-bit integer. This should just be sent as a byte in Go and Rust
+- ``u16``: Unsigned 16-bit integer. This should be sent as 2 bytes in big-endian (network) byte order. In rust, this is `u16.to_be_bytes()` and in Go, this is either ``byte(N>>8) & 0xFF, byte(N) & 0xFF`` or `binary.BigEndian.PutUint16()`.
+
+Note that ``command_id`` and ``cbor_payload`` must be separated by a ``/`` character. The ``command_id`` is a unique string that is used to identify the command and the ``cbor_payload`` is the payload of the command encoded in CBOR.
+
+### Basic operations
+
+```rust
+#[derive(Serialize, Deserialize, PartialEq)]
+pub enum AnimusOp {
+    Request,
+    Response,
+    Error,
+    Probe,
+}
 ```
 
-### Animus Magic
+As seen above, the basic operations are ``Request``, ``Response``, ``Error`` and ``Probe``. ``Probe`` is used to check if a cluster is alive and is not used for any other purpose. ``Request`` is used to send a command to a cluster and ``Response`` is used to send a response to a command. ``Error`` is used to send an error response to a command.
 
-Due to the need for bidirectional server-bot communication, AntiRaid uses an unstable (constantly changing not crashing-type unstable) Redis PubSub API for communication
+When sending a ``Probe``, the service should respond with a ``Response`` whose response is the PID of the process (`string`) to allow for quick/easy monitoring.
 
 ## Serializing/Deserializing for external usage
 
