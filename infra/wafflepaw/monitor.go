@@ -81,6 +81,9 @@ func StartMonitors(monitors []AMProbeTask) (err error) {
 		Logger.Warn("Redis URL in mewld.yaml does not match the one in config.yaml")
 	}
 
+	mldConfig.Proxy = Config.Meta.Proxy.Parse()
+	wmldConfig.Proxy = Config.Meta.Proxy.Parse()
+
 	for _, clusterName := range wmldConfig.Names {
 		var i uint64
 		for i < wmldConfig.PerCluster {
