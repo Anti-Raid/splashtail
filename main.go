@@ -147,6 +147,7 @@ func main() {
 			panic(err)
 		}
 
+		mldConfig.Proxy = cfg.Meta.Proxy.Parse()
 		mldConfig.Token = cfg.DiscordAuth.Token
 		mldConfig.Oauth = mconfig.Oauth{
 			ClientID:     cfg.DiscordAuth.ClientID,

@@ -164,6 +164,7 @@ type AMProbeTask struct {
 	Target                  animusmagic.AnimusTarget `json:"target" yaml:"target"`                                         // Target to probe
 	MewldChannel            string                   `json:"mewld_channel" yaml:"mewld_channel"`                           // Mewld channel to send pings to
 	SystemdService          string                   `json:"systemd_service" yaml:"systemd_service"`                       // Corresponding Systemd service to restart
+	AuxillaryServices       []string                 `json:"auxillary_services" yaml:"auxillary_services"`                 // Auxillary services to restart if needed
 	DelayStart              time.Duration            `json:"delay_start" yaml:"delay_start"`                               // Delay start
 	NoHandleInactiveSystemd bool                     `json:"no_handle_inactive_systemd" yaml:"no_handle_inactive_systemd"` // Do not handle inactive systemd services
 	RestartAfterFailed      int                      `json:"restart_after_failed" yaml:"restart_after_failed"`             // After how many failed checks should we restart the service
