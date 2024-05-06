@@ -315,6 +315,7 @@ func main() {
 
 		jobserverstate.Logger.Info("Setting up mewld")
 
+		mldConfig.Proxy = jobserverstate.Config.Meta.Proxy.Parse()
 		mldConfig.Token = jobserverstate.Config.DiscordAuth.Token
 		mldConfig.Oauth = mconfig.Oauth{
 			ClientID:     jobserverstate.Config.DiscordAuth.ClientID,
