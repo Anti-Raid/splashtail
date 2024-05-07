@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT id, guild_id, creator, stings, action, modifiers, created_at FROM punishments__guild_punishment_list WHERE guild_id = $1",
+  "query": "SELECT id, creator, stings, action, modifiers, created_at, duration FROM punishments__guild_punishment_list WHERE guild_id = $1",
   "describe": {
     "columns": [
       {
@@ -10,33 +10,33 @@
       },
       {
         "ordinal": 1,
-        "name": "guild_id",
-        "type_info": "Text"
-      },
-      {
-        "ordinal": 2,
         "name": "creator",
         "type_info": "Text"
       },
       {
-        "ordinal": 3,
+        "ordinal": 2,
         "name": "stings",
         "type_info": "Int4"
       },
       {
-        "ordinal": 4,
+        "ordinal": 3,
         "name": "action",
         "type_info": "Text"
       },
       {
-        "ordinal": 5,
+        "ordinal": 4,
         "name": "modifiers",
         "type_info": "TextArray"
       },
       {
-        "ordinal": 6,
+        "ordinal": 5,
         "name": "created_at",
         "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 6,
+        "name": "duration",
+        "type_info": "Interval"
       }
     ],
     "parameters": {
@@ -51,8 +51,8 @@
       false,
       false,
       false,
-      false
+      true
     ]
   },
-  "hash": "056cabd0632081751b1eea8a0bf5bb71699c6f1883551010710a8ba38fd56a3b"
+  "hash": "c0ec92f7baa039338314572db290875cc6b9f00becd262c2befd4f4753015b97"
 }

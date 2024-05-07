@@ -244,14 +244,15 @@ impl<T: Clone> UnderlyingClient<T> {
         #[allow(unreachable_patterns)]
         match meta.op {
             AnimusOp::Probe => {
-                let payload = self.create_payload::<String>(
-                    &meta.command_id,
-                    meta.cluster_id_from,
-                    meta.from,
-                    AnimusOp::Response,
-                    &self.pid,
-                )
-                .map_err(|e| format!("Failed to create payload for probe response: {}", e))?;
+                let payload = self
+                    .create_payload::<String>(
+                        &meta.command_id,
+                        meta.cluster_id_from,
+                        meta.from,
+                        AnimusOp::Response,
+                        &self.pid,
+                    )
+                    .map_err(|e| format!("Failed to create payload for probe response: {}", e))?;
 
                 (self.publish)(self.state.clone(), payload)
                     .await
@@ -407,11 +408,9 @@ impl<T: Clone> UnderlyingClient<T> {
     ) -> Result<Vec<ClientResponse>, Error> {
         let mut responses = Vec::new();
 
-        let mut ticker = tokio::time::interval(timeout);
-
         loop {
             tokio::select! {
-                _ = ticker.tick() => {
+                _ = tokio::time::sleep(timeout) => {
                     self.close_notifier(&request_opts.command_id);
                     return Err(ClientError::Timeout.into())
                 }
