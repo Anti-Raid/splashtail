@@ -114,12 +114,16 @@ impl AnimusMagicClient {
             };
 
             // Parse the payload
-            let Ok(meta) = get_payload_meta(&binary) else {
-                log::warn!(
-                    "Invalid message recieved on channel {} [metadata extract error]",
-                    message.channel
-                );
-                continue;
+            let meta = match get_payload_meta(&binary) {
+                Ok(meta) => meta,
+                Err(e) => {
+                    log::warn!(
+                        "Invalid message recieved on channel {} [metadata extract error: {}]",
+                        message.channel,
+                        e
+                    );
+                    continue;
+                }
             };
 
             if !self.allow_all && !self.underlying_client.filter(&meta) {

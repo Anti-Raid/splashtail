@@ -244,7 +244,7 @@ impl<T: Clone> UnderlyingClient<T> {
         #[allow(unreachable_patterns)]
         match meta.op {
             AnimusOp::Probe => {
-                self.create_payload::<String>(
+                let payload = self.create_payload::<String>(
                     &meta.command_id,
                     meta.cluster_id_from,
                     meta.from,
