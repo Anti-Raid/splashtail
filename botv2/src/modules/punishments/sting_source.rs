@@ -11,7 +11,6 @@ use serenity::all::{GuildId, UserId};
 pub static STING_SOURCES: Lazy<DashMap<String, StingSource>> = Lazy::new(DashMap::new);
 
 /// Allows a module to add a new sting source
-#[allow(dead_code)]
 pub fn add_sting_source(source: StingSource) {
     STING_SOURCES.insert(source.id.clone(), source);
 }

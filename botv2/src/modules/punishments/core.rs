@@ -1,11 +1,11 @@
 use super::sting_source::StingEntry;
 use crate::silverpelt::module_config::is_module_enabled;
-use serenity::all::{GuildId, UserId, RoleId, EditMember, Timestamp};
-use strum_macros::{Display, EnumString, VariantNames};
-use serde::{Deserialize, Serialize};
-use crate::silverpelt::utils::serenity_utils::greater_member_hierarchy;
 use crate::silverpelt::proxysupport::{guild, member_in_guild};
+use crate::silverpelt::utils::serenity_utils::greater_member_hierarchy;
+use serde::{Deserialize, Serialize};
+use serenity::all::{EditMember, GuildId, RoleId, Timestamp, UserId};
 use std::collections::HashSet;
+use strum_macros::{Display, EnumString, VariantNames};
 
 /// This struct is a wrapper around a sting entry that has been consolidated
 #[allow(dead_code)]
@@ -84,7 +84,7 @@ impl ConsolidatedStingEntries {
 }
 
 /// This struct stores a guild punishment that can then be used to trigger punishments
-/// on a user through the bot 
+/// on a user through the bot
 #[derive(Serialize, Deserialize, Clone)]
 pub struct GuildPunishment {
     pub id: String,
@@ -92,19 +92,17 @@ pub struct GuildPunishment {
     pub creator: UserId,
     pub stings: i32,
     pub action: Action,
+    pub duration: Option<i32>,
     pub modifiers: Vec<String>,
     pub created_at: chrono::DateTime<chrono::Utc>,
 }
 
 /// A guild punishment list is internally a Vec<GuildPunishment> but has special methods
 /// to make things easier when coding punishments
-/// 
+///
 /// Note that the guild punishment list should not be modified directly
 pub struct GuildPunishmentList {
     punishments: Vec<GuildPunishment>,
-    
-    /// dominant_action is a cached value that is calculated when calling get_dominant_action
-    dominant_action: Option<Action>,
 }
 
 impl GuildPunishmentList {
@@ -115,7 +113,7 @@ impl GuildPunishmentList {
     ) -> Result<Self, crate::Error> {
         let data = ctx.data::<crate::Data>();
         let rec = sqlx::query!(
-            "SELECT id, guild_id, creator, stings, action, modifiers, created_at FROM punishments__guild_punishment_list WHERE guild_id = $1",
+            "SELECT id, guild_id, creator, stings, action, modifiers, created_at, EXTRACT(seconds FROM duration)::integer AS duration FROM punishments__guild_punishment_list WHERE guild_id = $1",
             guild_id.to_string(),
         )
         .fetch_all(&data.pool)
@@ -131,18 +129,16 @@ impl GuildPunishmentList {
                 stings: row.stings,
                 action: row.action.parse()?,
                 modifiers: row.modifiers,
+                duration: row.duration,
                 created_at: row.created_at,
             });
         }
 
-        Ok(Self {
-            punishments,
-            dominant_action: None,
-        })
+        Ok(Self { punishments })
     }
 
     /// Returns the list of punishments
-    /// 
+    ///
     /// This is a method to ensure that the returned list is not modified (is immutable)
     #[allow(dead_code)]
     pub fn punishments(&self) -> &Vec<GuildPunishment> {
@@ -150,7 +146,7 @@ impl GuildPunishmentList {
     }
 
     /// Filter returns a new GuildPunishmentList with only the punishments that match the set of filters
-    /// 
+    ///
     /// Note that this drops the existing punishment list
     pub fn filter(self, stings: i32) -> Self {
         let mut punishments = vec![];
@@ -161,50 +157,34 @@ impl GuildPunishmentList {
             }
         }
 
-        Self {
-            punishments,
-            dominant_action: None,
-        }
+        Self { punishments }
     }
 
-    /// `get_dominant_action` returns the dominant action in the list
-    pub fn get_dominant_action(&mut self) -> Option<Action> {
-        if let Some(dominant_action) = self.dominant_action {
-            return Some(dominant_action);
-        }
-
+    /// `get_dominant` returns the dominat punishments in the list
+    ///
+    /// Dominant punishments are the punishments with the highest standing and the highest duration
+    pub fn get_dominating(&self) -> Vec<&GuildPunishment> {
         if self.punishments.is_empty() {
-            return None;
+            return Vec::new();
         }
 
-        let mut dominant_action = self.punishments[0].action;
+        let mut curr_dominant_punishment = &self.punishments[0];
+        let mut dominant_punishments = vec![]; // Start with empty list, the iteration with handle the rest (including the first punishment)
 
         for punishment in &self.punishments {
-            if punishment.action.is_dominant_to(&dominant_action) {
-                dominant_action = punishment.action;
+            if punishment
+                .action
+                .is_dominant_to(&curr_dominant_punishment.action)
+                && punishment.duration.unwrap_or_default()
+                    > curr_dominant_punishment.duration.unwrap_or_default()
+            {
+                curr_dominant_punishment = punishment;
+                dominant_punishments.clear();
+                dominant_punishments.push(punishment);
             }
         }
 
-        self.dominant_action = Some(dominant_action);
-
-        Some(dominant_action)
-    }
-
-    /// `get_punishments_to_apply` returns a list of punishments that should be applied to a user
-    /// based on their dominance
-    pub fn get_punishments_to_apply(mut self) -> Vec<GuildPunishment> {
-        let mut punishments = Vec::new();
-        let Some(dominant_action) = self.get_dominant_action() else {
-            return punishments;
-        };
-
-        for punishment in self.punishments {
-            if punishment.action.is_dominant_to(&dominant_action) {
-                punishments.push(punishment);
-            }
-        }
-
-        punishments
+        dominant_punishments
     }
 }
 
@@ -232,25 +212,39 @@ impl ActionChoices {
     }
 }
 
-#[derive(EnumString, Display, PartialEq, VariantNames, Copy, Clone, Debug, Serialize, Deserialize, Hash, Eq)]
+#[derive(
+    EnumString,
+    Display,
+    PartialEq,
+    VariantNames,
+    Copy,
+    Clone,
+    Debug,
+    Serialize,
+    Deserialize,
+    Hash,
+    Eq,
+)]
 #[strum(serialize_all = "snake_case")]
 pub enum Action {
     Timeout,
     Kick,
     Ban,
     RemoveAllRoles,
+    Unknown,
 }
 
 impl Action {
     /// Returns the 'standing' for a action
-    /// 
+    ///
     /// An action with higher stading is considered as dominant
-    /// 
+    ///
     /// Non-dominant actions should be ignored in favor of dominant actions
-    /// 
+    ///
     /// This stops cases where a user is kicked and then banned for example
     pub fn standing(&self) -> i32 {
         match self {
+            Self::Unknown => 0,
             Self::Ban => 1,
             Self::Kick => 2,
 
@@ -265,8 +259,8 @@ impl Action {
     }
 
     /// Attempts to carry out the given action on a given user (ID)
-    /// TODO: Allow customizing the timeout duration in the future
-    /// TODO: Allow showing kick reason (which punishment was hit)
+    /// TODO: Improve audit log reasons
+    /// TODO: Allow duration on ban/removeallroles as well
     pub async fn execute(
         &self,
         ctx: &serenity::all::Context,
@@ -277,34 +271,22 @@ impl Action {
         let data = ctx.data::<crate::Data>();
         let cache_http = botox::cache::CacheHttpImpl::from_ctx(ctx);
 
-        let guild = guild(
-            &cache_http, 
-            &data.reqwest,
-            guild_id
-        ).await?;
+        let guild = guild(&cache_http, &data.reqwest, guild_id).await?;
 
         let bot_userid = ctx.cache.current_user().id;
-        let Some(bot) = member_in_guild(
-            &cache_http, 
-            &data.reqwest,
-            guild_id, 
-            bot_userid
-        ).await? else {
+        let Some(bot) = member_in_guild(&cache_http, &data.reqwest, guild_id, bot_userid).await?
+        else {
             return Err("Bot not found".into());
         };
 
-        let Some(mut user) = member_in_guild(
-            &cache_http, 
-            &data.reqwest,
-            guild_id, 
-            user_id
-        ).await? else {
+        let Some(mut user) = member_in_guild(&cache_http, &data.reqwest, guild_id, user_id).await?
+        else {
             return Err("User not found".into());
         };
 
         for modifier in &punishment.modifiers {
             if modifier.is_empty() {
-                continue
+                continue;
             }
 
             let negator = modifier.chars().nth(0).unwrap_or('-') == '-';
@@ -320,55 +302,76 @@ impl Action {
                 "r" => {
                     let role_id = modifier_id.parse::<RoleId>().unwrap_or(RoleId::new(0));
                     user.roles.contains(&role_id)
-                },
+                }
                 "u" => {
                     let user_id = modifier_id.parse::<UserId>().unwrap_or(UserId::new(0));
                     user.user.id == user_id
-                },
+                }
                 _ => false,
             };
 
             if negator && matches_modifier {
-                return Ok(Some("User matches a negated modifier".to_string()))
+                return Ok(Some("User matches a negated modifier".to_string()));
             } else if !negator && !matches_modifier {
-                return Ok(Some("User does not match a specified modifier".to_string()))
+                return Ok(Some("User does not match a specified modifier".to_string()));
             }
         }
 
         if greater_member_hierarchy(&guild, &bot, &user).unwrap_or(user.user.id) == user.user.id {
-            return Err("Bot does not have the required permissions to carry out this action".into());
+            return Err(
+                "Bot does not have the required permissions to carry out this action".into(),
+            );
         }
 
         match self {
+            Action::Unknown => {
+                // Do nothing
+                return Ok(None);
+            }
             Action::Timeout => {
-                // TODO: Allow customizing the timeout duration in the future
-                let new_time = chrono::Utc::now() + chrono::Duration::minutes(5);
+                let timeout_duration = if let Some(duration) = punishment.duration {
+                    chrono::Duration::seconds(duration as i64)
+                } else {
+                    chrono::Duration::minutes(5)
+                };
+
+                let new_time = chrono::Utc::now() + timeout_duration;
 
                 user.edit(
                     &ctx.http,
                     EditMember::new()
-                    .disable_communication_until(Timestamp::from(new_time))
+                        .disable_communication_until(Timestamp::from(new_time))
+                        .audit_log_reason(
+                            format!("Punishment applied to user: {}", punishment.id).as_str(),
+                        ),
                 )
                 .await?;
-            },
+            }
             Action::Kick => {
-                user.kick(&ctx.http, Some(
-                    "Punishment applied to user"
-                )).await?;
-            },
+                user.kick(
+                    &ctx.http,
+                    Some(format!("Punishment applied to user: {}", punishment.id).as_str()),
+                )
+                .await?;
+            }
             Action::Ban => {
-                user.ban(&ctx.http, 0, Some("Punishment applied to user")).await?;
-            },
+                user.ban(
+                    &ctx.http,
+                    0,
+                    Some(format!("Punishment applied to user: {}", punishment.id).as_str()),
+                )
+                .await?;
+            }
             Action::RemoveAllRoles => {
                 user.edit(
-                    &ctx.http, 
-                    EditMember::new()
-                    .roles(Vec::new())
-                ).await?;
-            },
+                    &ctx.http,
+                    EditMember::new().roles(Vec::new()).audit_log_reason(
+                        format!("Punishment applied to user: {}", punishment.id).as_str(),
+                    ),
+                )
+                .await?;
+            }
         }
-
-        // TODO: Implement the actual action
 
         Ok(None)
     }
@@ -380,20 +383,26 @@ pub async fn trigger_punishment(
     user_id: UserId,
     ignore_actions: HashSet<Action>,
 ) -> Result<(), crate::Error> {
-    let mut sting_entries = ConsolidatedStingEntries::get_entries_for_guild_user(ctx, guild_id, user_id).await?;
+    let mut sting_entries =
+        ConsolidatedStingEntries::get_entries_for_guild_user(ctx, guild_id, user_id).await?;
     let sting_count = sting_entries.sting_count();
 
     log::debug!("User {} has {} stings", user_id, sting_count);
 
-    let punishments = GuildPunishmentList::guild(ctx, guild_id).await?.filter(sting_count);
-    let apply_punishments = punishments.get_punishments_to_apply();
+    let punishments = GuildPunishmentList::guild(ctx, guild_id)
+        .await?
+        .filter(sting_count);
+    let apply_punishments = punishments.get_dominating();
 
     for punishment in apply_punishments {
         if ignore_actions.contains(&punishment.action) {
             continue;
         }
 
-        punishment.action.execute(ctx, &punishment, guild_id, user_id).await?;
+        punishment
+            .action
+            .execute(ctx, punishment, guild_id, user_id)
+            .await?;
     }
 
     Ok(())
