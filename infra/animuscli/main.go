@@ -191,7 +191,7 @@ func main() {
 
 					commandId := animusmagic.NewCommandId()
 					payload, err := a.Data.AnimusMagicClient.CreatePayload(
-						a.Data.AnimusMagicClient.From,
+						a.Data.AnimusMagicClient.Identify,
 						toTarget,
 						a.Data.AnimusMagicClient.ClusterID,
 						animusmagic.WildcardClusterID,
@@ -519,7 +519,7 @@ func main() {
 						key: data,
 					}
 					payload, err := a.Data.AnimusMagicClient.CreatePayload(
-						a.Data.AnimusMagicClient.From,
+						a.Data.AnimusMagicClient.Identify,
 						toTarget,
 						a.Data.AnimusMagicClient.ClusterID,
 						uint16(clusterIdToInt),

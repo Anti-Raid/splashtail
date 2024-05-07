@@ -3,6 +3,9 @@ use botox::crypto::gen_random;
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
 
+pub const WILDCARD_CLUSTER_ID: u16 = u16::MAX; // top means wildcard/all clusters
+
+#[derive(Clone)]
 pub struct AnimusMessageMetadata {
     pub from: AnimusTarget,
     pub to: AnimusTarget,
@@ -13,8 +16,9 @@ pub struct AnimusMessageMetadata {
     pub payload_offset: usize,
 }
 
-#[derive(Serialize, Deserialize, PartialEq, Clone, Copy)]
+#[derive(Serialize, Deserialize, PartialEq, Clone, Copy, Default)]
 pub enum AnimusTarget {
+    #[default]
     Bot,
     Jobserver,
     Webserver,
@@ -45,8 +49,10 @@ impl AnimusTarget {
     }
 }
 
-#[derive(Serialize, Deserialize, PartialEq)]
+#[derive(Serialize, Deserialize, PartialEq, Default, Copy, Clone)]
+#[non_exhaustive]
 pub enum AnimusOp {
+    #[default]
     Request,
     Response,
     Error,
@@ -90,8 +96,14 @@ impl<T: core::fmt::Display> From<T> for AnimusErrorResponse {
     }
 }
 
+/// Wrapper to parse a struct T to bytes
+pub fn serialize_data<T: Serialize>(payload: &T) -> Result<Vec<u8>, crate::Error> {
+    let bytes = serde_cbor::to_vec(payload)?;
+    Ok(bytes)
+}
+
 /// Wrapper to parse a payload to a struct T
-pub fn from_payload<T: for<'a> Deserialize<'a>>(payload: &[u8]) -> Result<T, crate::Error> {
+pub fn deserialize_data<T: for<'a> Deserialize<'a>>(payload: &[u8]) -> Result<T, crate::Error> {
     let msg = serde_cbor::from_slice::<T>(payload)?;
     Ok(msg)
 }
@@ -107,15 +119,15 @@ pub fn default_request_timeout() -> Duration {
 }
 
 /// Creates a payload
-pub fn create_payload<T: Serialize>(
+pub fn create_payload(
     cmd_id: &str,
     from: AnimusTarget,
     cluster_id_from: u16, // From which cluster the message is coming from
     cluster_id_to: u16,   // To which cluster the message is is going to
     to: AnimusTarget,
     op: AnimusOp,
-    data: &T,
-) -> Result<Vec<u8>, crate::Error> {
+    data: Vec<u8>,
+) -> Vec<u8> {
     let mut payload = Vec::new();
 
     // Push from as 1 u8
@@ -148,14 +160,11 @@ pub fn create_payload<T: Serialize>(
     // Push seperator of '/'
     payload.push(0x2f);
 
-    // Push the cbor payload
-    let v = serde_cbor::to_vec(data)?;
-
-    for byte in v {
+    for byte in data {
         payload.push(byte);
     }
 
-    Ok(payload)
+    payload
 }
 
 // Parses the metadata of a payload

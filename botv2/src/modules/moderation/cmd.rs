@@ -1,9 +1,8 @@
 use super::core::to_log_format;
-use crate::ipc::animus_magic::{
-    client::{AnimusMessage, AnimusResponse},
-    jobserver::{JobserverAnimusMessage, JobserverAnimusResponse},
-};
+use crate::ipc::animus_magic::jobserver::{JobserverAnimusMessage, JobserverAnimusResponse};
 use crate::ipc::argparse::MEWLD_ARGS;
+use crate::silverpelt::proxysupport::{guild, member_in_guild};
+use crate::silverpelt::utils::serenity_utils::greater_member_hierarchy;
 use crate::{Context, Error};
 use poise::CreateReply;
 use serenity::all::{
@@ -11,16 +10,14 @@ use serenity::all::{
     User, UserId,
 };
 use serenity::utils::shard_id;
-use splashcore_rs::animusmagic_ext::{AnimusAnyResponse, AnimusMagicClientExt};
-use splashcore_rs::animusmagic_protocol::{default_request_timeout, AnimusTarget};
+use splashcore_rs::animusmagic::client::RequestOptions;
+use splashcore_rs::animusmagic::protocol::{default_request_timeout, AnimusOp, AnimusTarget};
 use splashcore_rs::utils::{
     create_special_allocation_from_str, get_icon_of_state, parse_duration_string,
     parse_numeric_list_to_str, Unit, REPLACE_CHANNEL,
 };
 use std::collections::HashMap;
 use std::sync::Arc;
-use crate::silverpelt::utils::serenity_utils::greater_member_hierarchy;
-use crate::silverpelt::proxysupport::{guild, member_in_guild};
 
 /*
 // Options that can be set when pruning a message
@@ -97,41 +94,23 @@ async fn check_hierarchy(ctx: &Context<'_>, user_id: UserId) -> Result<(), Error
         return Err("This command can only be used in a guild".into());
     };
 
-    let guild = guild(
-        &cache_http, 
-        &data.reqwest,
-        guild_id
-    ).await?;
+    let guild = guild(&cache_http, &data.reqwest, guild_id).await?;
 
     let author_id = ctx.author().id;
 
     let bot_userid = sctx.cache.current_user().id;
-    let Some(bot) = member_in_guild(
-        &cache_http,
-        &data.reqwest,
-        guild_id,
-        bot_userid,
-    ).await? else {
+    let Some(bot) = member_in_guild(&cache_http, &data.reqwest, guild_id, bot_userid).await? else {
         return Err("Bot member not found".into());
     };
 
-    let Some(author) = member_in_guild(
-        &cache_http,
-        &data.reqwest,
-        guild_id,
-        author_id,
-    ).await? else {
+    let Some(author) = member_in_guild(&cache_http, &data.reqwest, guild_id, author_id).await?
+    else {
         return Err("Message author not found".into());
     };
-    
-    let Some(user) = member_in_guild(
-        &cache_http,
-        &data.reqwest,
-        guild_id,
-        user_id,
-    ).await? else {
+
+    let Some(user) = member_in_guild(&cache_http, &data.reqwest, guild_id, user_id).await? else {
         // User is not in the server, so yes, they're below us
-        return Ok(())
+        return Ok(());
     };
 
     if let Some(higher_hierarchy) = greater_member_hierarchy(&guild, &bot, &user) {
@@ -254,37 +233,46 @@ pub async fn prune_user(
 
     let data = ctx.data();
 
-    let task_id = match data
-        .animus_magic_ipc
-        .request(
-            AnimusTarget::Jobserver,
-            shard_id(guild_id, MEWLD_ARGS.shard_count_nonzero),
-            AnimusMessage::Jobserver(JobserverAnimusMessage::SpawnTask {
+    let am = data.get_animus_magic().await?;
+    let Some(resp) = am
+        .underlying_client
+        .request_one::<_, JobserverAnimusResponse>(
+            RequestOptions {
+                cluster_id: shard_id(guild_id, MEWLD_ARGS.shard_count_nonzero),
+                expected_response_count: 1,
+                to: AnimusTarget::Jobserver,
+                op: AnimusOp::Request,
+                ..Default::default()
+            },
+            default_request_timeout(),
+            JobserverAnimusMessage::SpawnTask {
                 name: "message_prune".to_string(),
                 data: prune_opts.clone(),
                 create: true,
                 execute: true,
                 task_id: None,
                 user_id: author.user.id.to_string(),
-            }),
-            default_request_timeout(),
+            },
         )
         .await
         .map_err(|e| format!("Failed to create backup task: {}", e))?
-    {
-        AnimusAnyResponse::Response(AnimusResponse::Jobserver(
-            JobserverAnimusResponse::SpawnTask { task_id },
-        )) => task_id,
-        AnimusAnyResponse::Error(e) => {
-            return Err(format!("Failed to create backup task: {}", e.message).into())
-        }
-        _ => return Err("Invalid response from jobserver".into()),
+        .resp
+    else {
+        return Err("Failed to create backup task".into());
+    };
+
+    let task_id = match resp {
+        JobserverAnimusResponse::SpawnTask { task_id } => task_id,
     };
 
     tx.commit().await?;
 
     // Trigger punishments as a tokio task
-    if crate::silverpelt::module_config::is_module_enabled(&ctx.data().pool, guild_id, "punishments")
+    if crate::silverpelt::module_config::is_module_enabled(
+        &ctx.data().pool,
+        guild_id,
+        "punishments",
+    )
     .await?
     {
         let sctx = ctx.serenity_context().clone();
@@ -521,7 +509,11 @@ pub async fn kick(
     tx.commit().await?;
 
     // Trigger punishments as a tokio task
-    if crate::silverpelt::module_config::is_module_enabled(&ctx.data().pool, guild_id, "punishments")
+    if crate::silverpelt::module_config::is_module_enabled(
+        &ctx.data().pool,
+        guild_id,
+        "punishments",
+    )
     .await?
     {
         let sctx = ctx.serenity_context().clone();
@@ -675,7 +667,11 @@ pub async fn ban(
     tx.commit().await?;
 
     // Trigger punishments as a tokio task
-    if crate::silverpelt::module_config::is_module_enabled(&ctx.data().pool, guild_id, "punishments")
+    if crate::silverpelt::module_config::is_module_enabled(
+        &ctx.data().pool,
+        guild_id,
+        "punishments",
+    )
     .await?
     {
         let sctx = ctx.serenity_context().clone();
@@ -829,7 +825,11 @@ pub async fn tempban(
     tx.commit().await?;
 
     // Trigger punishments as a tokio task
-    if crate::silverpelt::module_config::is_module_enabled(&ctx.data().pool, guild_id, "punishments")
+    if crate::silverpelt::module_config::is_module_enabled(
+        &ctx.data().pool,
+        guild_id,
+        "punishments",
+    )
     .await?
     {
         let sctx = ctx.serenity_context().clone();
@@ -969,7 +969,11 @@ pub async fn unban(
     tx.commit().await?;
 
     // Trigger punishments as a tokio task
-    if crate::silverpelt::module_config::is_module_enabled(&ctx.data().pool, guild_id, "punishments")
+    if crate::silverpelt::module_config::is_module_enabled(
+        &ctx.data().pool,
+        guild_id,
+        "punishments",
+    )
     .await?
     {
         let sctx = ctx.serenity_context().clone();
@@ -1137,7 +1141,11 @@ pub async fn timeout(
     tx.commit().await?;
 
     // Trigger punishments as a tokio task
-    if crate::silverpelt::module_config::is_module_enabled(&ctx.data().pool, guild_id, "punishments")
+    if crate::silverpelt::module_config::is_module_enabled(
+        &ctx.data().pool,
+        guild_id,
+        "punishments",
+    )
     .await?
     {
         let sctx = ctx.serenity_context().clone();

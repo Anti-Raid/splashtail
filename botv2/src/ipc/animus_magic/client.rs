@@ -1,122 +1,94 @@
-use super::bot::{BotAnimusMessage, BotAnimusResponse};
-use super::infra::{InfraAnimusMessage, InfraAnimusResponse};
-use super::jobserver::{JobserverAnimusMessage, JobserverAnimusResponse};
+use super::bot::BotAnimusMessage;
 use crate::{ipc::argparse::MEWLD_ARGS, Error};
 use botox::cache::CacheHttpImpl;
-use dashmap::DashMap;
 use fred::{
-    clients::{RedisClient, RedisPool},
     interfaces::{ClientLike, EventInterface, PubsubInterface},
     prelude::Builder,
     types::RedisValue,
 };
-use serde::{Deserialize, Serialize};
-use splashcore_rs::animusmagic_ext::{AnimusAnyResponse, AnimusMagicClientExt};
-use splashcore_rs::animusmagic_protocol::{
-    create_payload, from_payload, get_payload_meta, AnimusErrorResponse, AnimusOp, AnimusTarget,
+use futures::future::FutureExt;
+use splashcore_rs::animusmagic::client::{ClientRequest, UnderlyingClient};
+use splashcore_rs::animusmagic::protocol::{
+    get_payload_meta, serialize_data, AnimusErrorResponse, AnimusTarget,
 };
 use std::sync::Arc;
-use tokio::sync::mpsc::Sender;
 
-#[derive(Serialize, Deserialize)]
-#[serde(untagged)]
-pub enum AnimusResponse {
-    Bot(BotAnimusResponse),
-    Jobserver(JobserverAnimusResponse),
-    Infra(InfraAnimusResponse),
-}
-
-impl AnimusResponse {
-    pub fn from_payload(payload: &[u8], target: AnimusTarget) -> Result<Self, crate::Error> {
-        match target {
-            AnimusTarget::Bot => {
-                let bar = from_payload::<BotAnimusResponse>(payload);
-
-                match bar {
-                    Ok(bar) => Ok(AnimusResponse::Bot(bar)),
-                    Err(e) => Err(format!("Failed to unmarshal message: {}", e).into()),
-                }
-            }
-            AnimusTarget::Jobserver => {
-                let jar = from_payload::<JobserverAnimusResponse>(payload);
-
-                match jar {
-                    Ok(jar) => Ok(AnimusResponse::Jobserver(jar)),
-                    Err(e) => Err(format!("Failed to unmarshal message: {}", e).into()),
-                }
-            }
-            AnimusTarget::Infra => {
-                let iar = from_payload::<InfraAnimusResponse>(payload);
-
-                match iar {
-                    Ok(iar) => Ok(AnimusResponse::Infra(iar)),
-                    Err(e) => Err(format!("Failed to unmarshal message: {}", e).into()),
-                }
-            }
-            _ => Err("Invalid target".into()),
-        }
-    }
-}
-
-#[derive(Serialize, Deserialize)]
-#[serde(untagged)]
-pub enum AnimusMessage {
-    Bot(BotAnimusMessage),
-    Jobserver(JobserverAnimusMessage),
-    Infra(InfraAnimusMessage),
-}
-
-impl AnimusMessage {
-    pub fn from_payload(payload: &[u8], target: AnimusTarget) -> Result<Self, crate::Error> {
-        match target {
-            AnimusTarget::Bot => {
-                let bar = from_payload::<BotAnimusMessage>(payload);
-
-                match bar {
-                    Ok(bar) => Ok(AnimusMessage::Bot(bar)),
-                    Err(e) => Err(format!("Failed to unmarshal message: {}", e).into()),
-                }
-            }
-            AnimusTarget::Jobserver => {
-                let jar = from_payload::<JobserverAnimusMessage>(payload);
-
-                match jar {
-                    Ok(jar) => Ok(AnimusMessage::Jobserver(jar)),
-                    Err(e) => Err(format!("Failed to unmarshal message: {}", e).into()),
-                }
-            }
-            _ => Err("Invalid target".into()),
-        }
-    }
+pub struct ClientData {
+    pub pool: sqlx::PgPool,
+    pub redis_pool: fred::prelude::RedisPool,
+    pub reqwest: reqwest::Client,
+    pub cache_http: CacheHttpImpl,
 }
 
 pub struct AnimusMagicClient {
-    pub redis_pool: RedisPool,
-    pub rx_map: Arc<DashMap<String, Sender<AnimusAnyResponse<AnimusResponse>>>>,
+    pub underlying_client: Arc<UnderlyingClient<Arc<ClientData>>>,
+    pub allow_all: bool,
+}
+
+async fn publish(data: Arc<ClientData>, payload: Vec<u8>) -> Result<(), Error> {
+    // Convert payload to redis value
+    let payload = RedisValue::Bytes(payload.into());
+
+    match data
+        .redis_pool
+        .next()
+        .publish(MEWLD_ARGS.animus_magic_channel.as_str(), payload)
+        .await
+    {
+        Ok(()) => Ok(()),
+        Err(e) => Err(format!("Failed to publish response to redis: {}", e).into()),
+    }
+}
+
+async fn on_request(
+    state: Arc<ClientData>,
+    resp: ClientRequest,
+) -> Result<Vec<u8>, AnimusErrorResponse> {
+    let parsed_resp = resp
+        .parse::<BotAnimusMessage>()
+        .map_err(|e| AnimusErrorResponse {
+            message: e.to_string(),
+            context: "on_request [resp.parse]".to_string(),
+        })?;
+
+    let resp = parsed_resp.response(state).await?;
+
+    Ok(serialize_data(&resp)?)
 }
 
 impl AnimusMagicClient {
-    /// Starts listening to mewld IPC messages
-    ///
-    /// This function never quits once executed
-    pub async fn start_ipc_listener(
-        &self,
-        pool: sqlx::PgPool,
-        data: Arc<crate::Data>,
-        cache_http: CacheHttpImpl,
+    pub fn new(data: Arc<ClientData>) -> Self {
+        let underlying_client = Arc::new(UnderlyingClient::new(
+            AnimusTarget::Bot,
+            MEWLD_ARGS.cluster_id,
+            data.clone(),
+            Box::new(move |data, payload| publish(data, payload).boxed()),
+            Some(Box::new(move |data, payload| {
+                on_request(data, payload).boxed()
+            })),
+            None,
+            None,
+        ));
 
-        #[allow(unused_variables)] // To be used in the future
-        shard_manager: Arc<serenity::all::ShardManager>,
-    ) -> ! {
+        Self {
+            underlying_client,
+            allow_all: false,
+        }
+    }
+
+    /// Starts listening to animus magic messages
+    ///
+    /// These messages will then be passed on to the underlying client
+    pub async fn listen(&self) -> ! {
         // Subscribes to the redis IPC channels we need to subscribe to
-        let cfg = self.redis_pool.client_config();
+        let cfg = self.underlying_client.state.redis_pool.client_config();
 
         let subscriber = Builder::from_config(cfg).build_subscriber_client().unwrap();
 
         subscriber.connect();
         subscriber.wait_for_connect().await.unwrap();
 
-        self.redis_pool.connect_pool();
+        self.underlying_client.state.redis_pool.connect_pool();
 
         let mut message_stream = subscriber.message_rx();
 
@@ -150,300 +122,20 @@ impl AnimusMagicClient {
                 continue;
             };
 
-            // Case of response
-            match meta.op {
-                AnimusOp::Error => {
-                    if meta.from == AnimusTarget::Bot
-                        && (meta.cluster_id_to != MEWLD_ARGS.cluster_id
-                            && meta.cluster_id_to != u16::MAX)
-                    {
-                        continue; // Not for us
-                    }
-
-                    let rx_map = self.rx_map.clone();
-
-                    tokio::task::spawn(async move {
-                        let sender = rx_map.get(&meta.command_id).map(|s| s.value().clone());
-
-                        if let Some(sender) = sender {
-                            let payload = &binary[meta.payload_offset..];
-
-                            let resp = match from_payload::<AnimusErrorResponse>(payload) {
-                                Ok(resp) => resp,
-                                Err(e) => {
-                                    log::warn!(
-                                        "Invalid message recieved on channel {} [response extract error] {}",
-                                        message.channel,
-                                        e
-                                    );
-                                    return;
-                                }
-                            };
-
-                            if let Err(e) = sender.send(AnimusAnyResponse::Error(resp)).await {
-                                rx_map.remove(&meta.command_id);
-                                log::warn!("Failed to send response to receiver: {}", e);
-                            }
-
-                            rx_map.remove(&meta.command_id);
-                        }
-                    });
-                }
-                AnimusOp::Response => {
-                    if meta.from == AnimusTarget::Bot
-                        && (meta.cluster_id_to != MEWLD_ARGS.cluster_id
-                            && meta.cluster_id_to != u16::MAX)
-                    {
-                        continue; // Not for us
-                    }
-
-                    let rx_map = self.rx_map.clone();
-
-                    tokio::task::spawn(async move {
-                        let sender = rx_map.get(&meta.command_id).map(|s| s.value().clone());
-
-                        if let Some(sender) = sender {
-                            let payload = &binary[meta.payload_offset..];
-
-                            let resp = match AnimusResponse::from_payload(payload, meta.from) {
-                                Ok(resp) => resp,
-                                Err(e) => {
-                                    log::warn!(
-                                        "Invalid message recieved on channel {} [response extract error] {}",
-                                        message.channel,
-                                        e
-                                    );
-                                    return;
-                                }
-                            };
-
-                            if let Err(e) = sender.send(AnimusAnyResponse::Response(resp)).await {
-                                rx_map.remove(&meta.command_id);
-                                log::warn!("Failed to send response to receiver: {}", e);
-                            }
-
-                            rx_map.remove(&meta.command_id);
-                        }
-                    });
-                }
-
-                AnimusOp::Request | AnimusOp::Probe => {
-                    // Ensure requeest op, and that the cluster id is either the same as ours or the wildcard u16::MAX
-                    if meta.to != AnimusTarget::Bot && meta.to != AnimusTarget::Wildcard {
-                        continue; // Not for us, to != Bot and != wildcard
-                    }
-
-                    if meta.cluster_id_to != MEWLD_ARGS.cluster_id && meta.cluster_id_to != u16::MAX
-                    {
-                        continue; // Not for us, cluster_id != ours and != wildcard
-                    }
-
-                    if meta.op == AnimusOp::Probe {
-                        // Send probe response
-                        let redis_pool = self.redis_pool.clone();
-
-                        tokio::spawn(async move {
-                            // For probe, respond with the same cluster_id_from and the process id
-                            let pid = std::process::id();
-                            let Ok(payload) = create_payload::<String>(
-                                &meta.command_id,
-                                AnimusTarget::Bot,
-                                MEWLD_ARGS.cluster_id,
-                                meta.cluster_id_from,
-                                meta.from,
-                                AnimusOp::Response,
-                                &pid.to_string(),
-                            ) else {
-                                log::warn!(
-                                    "Failed to create payload for message on channel {}",
-                                    message.channel
-                                );
-                                return;
-                            };
-
-                            if let Err(e) = Self::publish(redis_pool.next(), payload).await {
-                                log::warn!("Failed to publish response to redis: {}", e);
-                            }
-                        });
-
-                        continue;
-                    }
-
-                    let cache_http = cache_http.clone();
-                    let pool = pool.clone();
-                    let redis_pool = self.redis_pool.clone();
-
-                    let client = AnimusMagicClient {
-                        redis_pool: self.redis_pool.clone(),
-                        rx_map: self.rx_map.clone(),
-                    };
-
-                    let data = data.clone();
-                    tokio::spawn(async move {
-                        let payload = &binary[meta.payload_offset..];
-
-                        // Pluck out json
-                        let resp = match AnimusMessage::from_payload(payload, AnimusTarget::Bot) {
-                            Ok(resp) => resp,
-                            Err(e) => {
-                                log::warn!("Invalid message recieved on channel {} [request extract error] {}", message.channel, e);
-                                // Send error
-                                if let Err(e) = client
-                                    .error(
-                                        &meta.command_id,
-                                        AnimusErrorResponse {
-                                            message: "Invalid payload, failed to unmarshal message"
-                                                .to_string(),
-                                            context: e.to_string(),
-                                        },
-                                        meta.cluster_id_from,
-                                        meta.from,
-                                    )
-                                    .await
-                                {
-                                    log::warn!("Failed to send error response: {}", e);
-                                }
-
-                                return;
-                            }
-                        };
-
-                        let msg = match resp {
-                            AnimusMessage::Bot(msg) => msg,
-                            _ => {
-                                log::warn!(
-                                    "Invalid message recieved on channel {} [invalid message type]",
-                                    message.channel
-                                );
-                                // Send error
-                                if let Err(e) = client
-                                    .error(
-                                        &meta.command_id,
-                                        AnimusErrorResponse {
-                                            message: "Invalid payload, failed to unmarshal message"
-                                                .to_string(),
-                                            context: "Invalid message type".to_string(),
-                                        },
-                                        meta.cluster_id_from,
-                                        meta.from,
-                                    )
-                                    .await
-                                {
-                                    log::warn!("Failed to send error response: {}", e);
-                                }
-
-                                return;
-                            }
-                        };
-
-                        let data = match msg.response(&pool, &cache_http, &data).await {
-                            Ok(data) => data,
-                            Err(e) => {
-                                log::warn!(
-                                    "Failed to get response for message on channel {}",
-                                    message.channel
-                                );
-                                // Send error
-                                if let Err(e) = client
-                                    .error(&meta.command_id, e, meta.cluster_id_from, meta.from)
-                                    .await
-                                {
-                                    log::warn!("Failed to send error response: {}", e);
-                                }
-
-                                return;
-                            }
-                        };
-
-                        let Ok(payload) = create_payload::<AnimusResponse>(
-                            &meta.command_id,
-                            AnimusTarget::Bot,
-                            MEWLD_ARGS.cluster_id,
-                            meta.cluster_id_from,
-                            meta.from,
-                            AnimusOp::Response,
-                            &AnimusResponse::Bot(data),
-                        ) else {
-                            log::warn!(
-                                "Failed to create payload for message on channel {}",
-                                message.channel
-                            );
-
-                            // Send error
-                            if let Err(e) = client
-                                .error(
-                                    &meta.command_id,
-                                    AnimusErrorResponse {
-                                        message: "Failed to create response payload".to_string(),
-                                        context: "create_payload returned Err code".to_string(),
-                                    },
-                                    meta.cluster_id_from,
-                                    meta.from,
-                                )
-                                .await
-                            {
-                                log::warn!("Failed to send error response: {}", e);
-                            }
-
-                            return;
-                        };
-
-                        if let Err(e) = Self::publish(redis_pool.next(), payload).await {
-                            log::warn!("Failed to publish response to redis: {}", e);
-
-                            // Send error
-                            if let Err(e) = client
-                                .error(
-                                    &meta.command_id,
-                                    AnimusErrorResponse {
-                                        message: "Failed to publish response to redis".to_string(),
-                                        context: e.to_string(),
-                                    },
-                                    meta.cluster_id_from,
-                                    meta.from,
-                                )
-                                .await
-                            {
-                                log::warn!("Failed to send error response: {}", e);
-                            }
-                        }
-                    });
-                }
+            if !self.allow_all && !self.underlying_client.filter(&meta) {
+                continue;
             }
+
+            let payload = binary[meta.payload_offset..].to_vec();
+            let underlying_client = self.underlying_client.clone();
+            tokio::spawn(async move {
+                let underlying_client = underlying_client;
+                if let Err(e) = underlying_client.handle(meta, payload).await {
+                    log::error!("Error handling animus magic message: {}", e);
+                };
+            });
         }
 
         unreachable!("IPC listener exited");
-    }
-
-    /// Helper method to send a response
-    pub async fn publish(redis_conn: &RedisClient, payload: Vec<u8>) -> Result<(), Error> {
-        // Convert payload to redis value
-        let payload = RedisValue::Bytes(payload.into());
-
-        match redis_conn
-            .publish(MEWLD_ARGS.animus_magic_channel.as_str(), payload)
-            .await
-        {
-            Ok(()) => Ok(()),
-            Err(e) => Err(format!("Failed to publish response to redis: {}", e).into()),
-        }
-    }
-}
-
-impl AnimusMagicClientExt<AnimusResponse> for AnimusMagicClient {
-    fn rx_map(&self) -> Arc<DashMap<String, Sender<AnimusAnyResponse<AnimusResponse>>>> {
-        self.rx_map.clone()
-    }
-
-    fn from(&self) -> AnimusTarget {
-        AnimusTarget::Bot
-    }
-
-    fn cluster_id(&self) -> u16 {
-        MEWLD_ARGS.cluster_id
-    }
-
-    async fn publish_next(&self, payload: Vec<u8>) -> Result<(), Error> {
-        Self::publish(self.redis_pool.next(), payload).await
     }
 }

@@ -3,7 +3,10 @@ mod ipc;
 mod modules;
 mod silverpelt;
 
-use ipc::{animus_magic::client::AnimusMagicClient, mewld::MewldIpcClient};
+use ipc::{
+    animus_magic::client::{AnimusMagicClient, ClientData},
+    mewld::MewldIpcClient,
+};
 
 use botox::cache::CacheHttpImpl;
 use gwevent::core::get_event_guild_id;
@@ -42,12 +45,25 @@ pub static CONNECT_STATE: Lazy<RwLock<ConnectState>> = Lazy::new(|| {
 /// User data, which is stored and accessible in all command invocations
 pub struct Data {
     pub pool: sqlx::PgPool,
+    pub redis_pool: fred::prelude::RedisPool,
     pub reqwest: reqwest::Client,
     pub mewld_ipc: Arc<MewldIpcClient>,
+    pub animus_magic_ipc: RwLock<Option<Arc<AnimusMagicClient>>>, // a rwlock is needed as the cachehttp is only available after the client is started
     pub object_store: Arc<ObjectStore>,
-    pub animus_magic_ipc: Arc<AnimusMagicClient>,
     pub shards_ready: Arc<dashmap::DashMap<u16, bool>>,
     pub proxy_support_data: RwLock<Option<ProxySupportData>>, // Shard ID, WebsocketConfiguration
+}
+
+impl Data {
+    /// Helper method to get the animus magic client
+    async fn get_animus_magic(&self) -> Result<Arc<AnimusMagicClient>, crate::Error> {
+        let am = self.animus_magic_ipc.read().await;
+
+        match am.as_ref() {
+            Some(am) => Ok(am.clone()),
+            None => Err("Animus Magic IPC not initialized".into()),
+        }
+    }
 }
 
 async fn on_error(error: poise::FrameworkError<'_, Data, Error>) {
@@ -204,14 +220,20 @@ async fn event_listener<'a>(
                     });
 
                     // And for animus magic
-                    let pool = data.pool.clone();
-                    let data = data.clone();
-                    let ch = CacheHttpImpl::from_ctx(ctx.serenity_context);
-                    let sm = ctx.shard_manager().clone();
-                    let am_ref = data.animus_magic_ipc.clone();
+                    let am = Arc::new(AnimusMagicClient::new(Arc::new(ClientData {
+                        pool: data.pool.clone(),
+                        redis_pool: data.redis_pool.clone(),
+                        reqwest: data.reqwest.clone(),
+                        cache_http: CacheHttpImpl::from_ctx(ctx.serenity_context),
+                    })));
+
+                    let mut am_ref = data.animus_magic_ipc.write().await;
+                    *am_ref = Some(am.clone());
+                    drop(am_ref);
+
                     tokio::task::spawn(async move {
-                        let am_ref = am_ref;
-                        am_ref.start_ipc_listener(pool, data, ch, sm).await;
+                        let am_ref = am.clone();
+                        am_ref.listen().await;
                     });
                 }
 
@@ -587,16 +609,20 @@ async fn main() {
         .await
         .expect("Could not initialize connection");
 
+    let reqwest = reqwest::Client::builder()
+        .connect_timeout(std::time::Duration::from_secs(30))
+        .timeout(std::time::Duration::from_secs(90))
+        .build()
+        .expect("Could not initialize reqwest client");
+
     let data = Data {
         mewld_ipc: Arc::new(ipc::mewld::MewldIpcClient {
             redis_pool: pool.clone(),
             cache: Arc::new(ipc::mewld::MewldIpcCache::default()),
             pool: pg_pool.clone(),
         }),
-        animus_magic_ipc: Arc::new(ipc::animus_magic::client::AnimusMagicClient {
-            redis_pool: pool.clone(),
-            rx_map: Arc::new(dashmap::DashMap::new()),
-        }),
+        redis_pool: pool.clone(),
+        animus_magic_ipc: RwLock::new(None),
         object_store: Arc::new(
             config::CONFIG
                 .object_storage
@@ -604,11 +630,7 @@ async fn main() {
                 .expect("Could not initialize object store"),
         ),
         pool: pg_pool,
-        reqwest: reqwest::Client::builder()
-            .connect_timeout(std::time::Duration::from_secs(30))
-            .timeout(std::time::Duration::from_secs(90))
-            .build()
-            .expect("Could not initialize reqwest client"),
+        reqwest,
         shards_ready: Arc::new(dashmap::DashMap::new()),
         proxy_support_data: RwLock::new(None),
     };

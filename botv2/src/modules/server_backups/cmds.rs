@@ -1,18 +1,17 @@
-use crate::ipc::animus_magic::{
-    client::{AnimusMessage, AnimusResponse},
-    jobserver::{JobserverAnimusMessage, JobserverAnimusResponse},
-};
+use crate::ipc::animus_magic::jobserver::{JobserverAnimusMessage, JobserverAnimusResponse};
 use crate::ipc::argparse::MEWLD_ARGS;
 use crate::{Context, Error};
 use futures_util::StreamExt;
 use serenity::all::{ChannelId, CreateEmbed, EditMessage};
 use serenity::small_fixed_array::TruncatingInto;
 use serenity::utils::shard_id;
-use splashcore_rs::animusmagic_ext::{AnimusAnyResponse, AnimusMagicClientExt};
-use splashcore_rs::animusmagic_protocol::{default_request_timeout, AnimusTarget};
 use splashcore_rs::utils::get_icon_of_state;
 use splashcore_rs::utils::{
     create_special_allocation_from_str, parse_numeric_list, REPLACE_CHANNEL,
+};
+use splashcore_rs::{
+    animusmagic::client::RequestOptions,
+    animusmagic::protocol::{default_request_timeout, AnimusOp, AnimusTarget},
 };
 use sqlx::types::uuid::Uuid;
 use std::fmt::Display;
@@ -164,31 +163,36 @@ pub async fn backups_create(
 
     let data = ctx.data();
 
-    let backup_task_id = match data
-        .animus_magic_ipc
-        .request(
-            AnimusTarget::Jobserver,
-            shard_id(guild_id, MEWLD_ARGS.shard_count_nonzero),
-            AnimusMessage::Jobserver(JobserverAnimusMessage::SpawnTask {
+    let am = data.get_animus_magic().await?;
+    let Some(resp) = am
+        .underlying_client
+        .request_one::<_, JobserverAnimusResponse>(
+            RequestOptions {
+                cluster_id: shard_id(guild_id, MEWLD_ARGS.shard_count_nonzero),
+                expected_response_count: 1,
+                to: AnimusTarget::Jobserver,
+                op: AnimusOp::Request,
+                ..Default::default()
+            },
+            default_request_timeout(),
+            JobserverAnimusMessage::SpawnTask {
                 name: "guild_create_backup".to_string(),
                 data: backup_args,
                 create: true,
                 execute: true,
                 task_id: None,
                 user_id: ctx.author().id.to_string(),
-            }),
-            default_request_timeout(),
+            },
         )
         .await
         .map_err(|e| format!("Failed to create backup task: {}", e))?
-    {
-        AnimusAnyResponse::Response(AnimusResponse::Jobserver(
-            JobserverAnimusResponse::SpawnTask { task_id },
-        )) => task_id,
-        AnimusAnyResponse::Error(e) => {
-            return Err(format!("Failed to create backup task: {}", e.message).into())
-        }
-        _ => return Err("Invalid response from jobserver".into()),
+        .resp
+    else {
+        return Err("Failed to create backup task".into());
+    };
+
+    let backup_task_id = match resp {
+        JobserverAnimusResponse::SpawnTask { task_id } => task_id,
     };
 
     base_message
@@ -808,6 +812,8 @@ pub async fn backups_restore(
     #[description = "Whether to ignore errors while restoring or not"]
     ignore_restore_errors: Option<bool>,
 ) -> Result<(), Error> {
+    let data = ctx.data();
+
     let Some(guild_id) = ctx.guild_id() else {
         return Err("This command can only be used in a guild".into());
     };
@@ -911,32 +917,36 @@ pub async fn backups_restore(
     });
 
     // Restore backup
-    let restore_task_id = match ctx
-        .data()
-        .animus_magic_ipc
-        .request(
-            AnimusTarget::Jobserver,
-            shard_id(guild_id, MEWLD_ARGS.shard_count_nonzero),
-            AnimusMessage::Jobserver(JobserverAnimusMessage::SpawnTask {
+    let am = data.get_animus_magic().await?;
+    let Some(res) = am
+        .underlying_client
+        .request_one(
+            RequestOptions {
+                cluster_id: shard_id(guild_id, MEWLD_ARGS.shard_count_nonzero),
+                expected_response_count: 1,
+                to: AnimusTarget::Jobserver,
+                op: AnimusOp::Request,
+                ..Default::default()
+            },
+            default_request_timeout(),
+            JobserverAnimusMessage::SpawnTask {
                 name: "guild_restore_backup".to_string(),
                 data: json,
                 create: true,
                 execute: true,
                 task_id: None,
                 user_id: ctx.author().id.to_string(),
-            }),
-            default_request_timeout(),
+            },
         )
         .await
         .map_err(|e| format!("Failed to create restore backup task: {}", e))?
-    {
-        AnimusAnyResponse::Response(AnimusResponse::Jobserver(
-            JobserverAnimusResponse::SpawnTask { task_id },
-        )) => task_id,
-        AnimusAnyResponse::Error(e) => {
-            return Err(format!("Failed to create backup task: {}", e.message).into())
-        }
-        _ => return Err("Invalid response from jobserver".into()),
+        .resp
+    else {
+        return Err("Failed to create restore backup task".into());
+    };
+
+    let restore_task_id = match res {
+        JobserverAnimusResponse::SpawnTask { task_id } => task_id,
     };
 
     base_message

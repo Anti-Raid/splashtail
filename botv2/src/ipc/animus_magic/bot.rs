@@ -6,12 +6,14 @@ use crate::silverpelt::{
     canonical_module::CanonicalModule, permissions::PermissionResult,
     silverpelt_cache::SILVERPELT_CACHE,
 };
-use botox::cache::CacheHttpImpl;
-use splashcore_rs::animusmagic_protocol::AnimusErrorResponse;
+use splashcore_rs::animusmagic::client::{
+    AnimusMessage, AnimusResponse, SerializableAnimusMessage, SerializableAnimusResponse,
+};
+use splashcore_rs::animusmagic::protocol::{AnimusErrorResponse, AnimusTarget};
 
 use serde::{Deserialize, Serialize};
 use serenity::all::{GuildId, Role, RoleId, UserId};
-use sqlx::PgPool;
+use std::sync::Arc;
 
 #[derive(Serialize, Deserialize, Clone)]
 pub enum BotAnimusResponse {
@@ -49,6 +51,13 @@ pub enum BotAnimusResponse {
     },
 }
 
+impl AnimusResponse for BotAnimusResponse {
+    fn target(&self) -> AnimusTarget {
+        AnimusTarget::Bot
+    }
+}
+impl SerializableAnimusResponse for BotAnimusResponse {}
+
 #[derive(Serialize, Deserialize, Clone)]
 pub enum BotAnimusMessage {
     /// Ask the bot for module data
@@ -79,13 +88,22 @@ pub enum BotAnimusMessage {
     GetSerenityPermissionList {},
 }
 
+impl AnimusMessage for BotAnimusMessage {
+    fn target(&self) -> AnimusTarget {
+        AnimusTarget::Bot
+    }
+}
+impl SerializableAnimusMessage for BotAnimusMessage {}
+
 impl BotAnimusMessage {
     pub async fn response(
         self,
-        pool: &PgPool,
-        cache_http: &CacheHttpImpl,
-        data: &crate::Data,
+        state: Arc<super::client::ClientData>,
     ) -> Result<BotAnimusResponse, AnimusErrorResponse> {
+        let cache_http = &state.cache_http;
+        let pool = &state.pool;
+        let reqwest = &state.reqwest;
+
         match self {
             Self::Modules {} => {
                 let mut modules = Vec::new();
@@ -115,31 +133,29 @@ impl BotAnimusMessage {
             Self::BaseGuildUserInfo { guild_id, user_id } => {
                 let bot_user_id = cache_http.cache.current_user().id;
                 let (name, icon, owner, roles, user_roles, bot_roles) = {
-                    let (name, icon, owner_id, roles) =
-                        match silverpelt::proxysupport::guild(cache_http, &data.reqwest, guild_id)
-                            .await
-                        {
-                            Ok(guild) => (
-                                guild.name.to_string(),
-                                guild.icon_url(),
-                                guild.owner_id,
-                                guild.roles.clone(),
-                            ),
-                            Err(e) => return Err(format!("Failed to get guild: {:#?}", e).into()),
-                        };
+                    let (name, icon, owner_id, roles) = match silverpelt::proxysupport::guild(
+                        cache_http, reqwest, guild_id,
+                    )
+                    .await
+                    {
+                        Ok(guild) => (
+                            guild.name.to_string(),
+                            guild.icon_url(),
+                            guild.owner_id,
+                            guild.roles.clone(),
+                        ),
+                        Err(e) => return Err(format!("Failed to get guild: {:#?}", e).into()),
+                    };
 
                     let member = match silverpelt::proxysupport::member_in_guild(
-                        cache_http,
-                        &data.reqwest,
-                        guild_id,
-                        user_id,
+                        cache_http, reqwest, guild_id, user_id,
                     )
                     .await
                     {
                         Ok(Some(member)) => member,
                         Ok(None) => {
                             return Err("Member not found".into());
-                        },
+                        }
                         Err(e) => return Err(format!("Failed to get member: {:#?}", e).into()),
                     };
 

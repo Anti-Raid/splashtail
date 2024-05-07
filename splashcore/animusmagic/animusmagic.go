@@ -56,8 +56,8 @@ type NotifyWrapper struct {
 }
 
 type AnimusMagicClient struct {
-	// Target / who the client is for
-	From AnimusTarget
+	// Target / the identity the client is for
+	Identify AnimusTarget
 
 	// The cluster id
 	ClusterID uint16
@@ -81,14 +81,18 @@ type AnimusMagicClient struct {
 
 	// The redis channel to use
 	Channel string
+
+	// The process id
+	pid string
 }
 
 // New returns a new AnimusMagicClient
-func New(channel string, from AnimusTarget, clusterId uint16) *AnimusMagicClient {
+func New(channel string, identity AnimusTarget, clusterId uint16) *AnimusMagicClient {
 	return &AnimusMagicClient{
 		Channel:   channel,
-		From:      from,
+		Identify:  identity,
 		ClusterID: clusterId,
+		pid:       strconv.Itoa(os.Getpid()),
 	}
 }
 
@@ -96,7 +100,9 @@ func New(channel string, from AnimusTarget, clusterId uint16) *AnimusMagicClient
 //
 // This is *blocking* and should be run in a goroutine
 func (c *AnimusMagicClient) ListenOnce(ctx context.Context, r rueidis.Client, l *zap.Logger) error {
-	pid := strconv.Itoa(os.Getpid()) // Needed for probe
+	if c.pid == "" {
+		panic("pid is not set")
+	}
 	return r.Dedicated(
 		func(redis rueidis.DedicatedClient) error {
 			return redis.Receive(ctx, redis.B().Subscribe().Channel(c.Channel).Build(), func(msg rueidis.PubSubMessage) {
@@ -109,158 +115,172 @@ func (c *AnimusMagicClient) ListenOnce(ctx context.Context, r rueidis.Client, l 
 					return
 				}
 
-				// If the target of the message is not us or not wildcard, ignore it
+				// Filter message if required
 				if !c.AllowAll {
-					if meta.To != c.From && meta.To != AnimusTargetWildcard {
-						return
-					}
-
-					if meta.ClusterIDTo != c.ClusterID && meta.ClusterIDTo != WildcardClusterID {
+					if !c.Filter(meta) {
 						return
 					}
 				}
 
-				go func() {
-					if c.OnMiddleware != nil {
-						ok, err := c.OnMiddleware(meta, bytesData[meta.PayloadOffset:])
-
-						if err != nil {
-							l.Error("[animus magic] error in middleware", zap.Error(err))
-							return
-						}
-
-						if !ok {
-							return
-						}
-					}
-
-					switch meta.Op {
-					case OpProbe:
-						cp, err := c.CreatePayload(
-							c.From,
-							meta.From,
-							c.ClusterID,
-							meta.ClusterIDFrom,
-							OpResponse, // All Probes should use OpResponse
-							meta.CommandID,
-							pid,
-						)
-
-						if err != nil {
-							l.Error("[animus magic] error creating error payload", zap.Error(err))
-							return
-						}
-
-						err = c.Publish(ctx, r, cp)
-
-						if err != nil {
-							l.Error("[animus magic] error publishing error payload", zap.Error(err))
-							return
-						}
-					case OpRequest:
-						if c.OnRequest != nil {
-							resp, err := c.OnRequest(&ClientRequest{
-								Meta:       meta,
-								RawPayload: bytesData[meta.PayloadOffset:],
-							})
-
-							if err != nil {
-								cp, err := c.CreatePayload(
-									c.From,
-									meta.From,
-									c.ClusterID,
-									meta.ClusterIDFrom,
-									OpError,
-									meta.CommandID,
-									&AnimusErrorResponse{Message: err.Error(), Context: fmt.Sprint(resp)},
-								)
-
-								if err != nil {
-									l.Error("[animus magic] error creating error payload", zap.Error(err))
-									return
-								}
-
-								err = c.Publish(ctx, r, cp)
-
-								if err != nil {
-									l.Error("[animus magic] error publishing error payload", zap.Error(err))
-									return
-								}
-							} else if resp != nil {
-								cp, err := c.CreatePayload(
-									c.From,
-									meta.From,
-									c.ClusterID,
-									meta.ClusterIDFrom,
-									OpResponse,
-									meta.CommandID,
-									resp,
-								)
-
-								if err != nil {
-									l.Error("[animus magic] error creating response payload", zap.Error(err))
-									return
-								}
-
-								err = c.Publish(ctx, r, cp)
-
-								if err != nil {
-									l.Error("[animus magic] error publishing response payload", zap.Error(err))
-									return
-								}
-							}
-						}
-					case OpError:
-						fallthrough // Both response and error are handled the same way
-					case OpResponse:
-						if c.OnResponse != nil {
-							go func() {
-								err := c.OnResponse(&ClientResponse{
-									Meta:       meta,
-									RawPayload: bytesData[meta.PayloadOffset:],
-								})
-
-								if err != nil {
-									l.Error("[animus magic] error handling response", zap.Error(err))
-								}
-							}()
-						}
-
-						n, ok := c.Notify.Load(meta.CommandID)
-
-						if !ok {
-							if c.From == AnimusTargetInfra {
-								return // Infra doesn't need this warning, its just spam when there is so much infra (wafflepaw, animuscli)
-							}
-							l.Warn("[animus magic] received response for unknown command", zap.String("commandId", meta.CommandID))
-							return
-						}
-
-						newCount := n.ResponseCount.Add(1)
-
-						if n.ExpectedCount != 0 {
-							if newCount > n.ExpectedCount {
-								l.Warn("[animus magic] received more responses than expected", zap.String("commandId", meta.CommandID))
-								c.CloseNotifier(meta.CommandID) // Close the notifier
-								return
-							}
-						}
-
-						n.Chan <- &ClientResponse{
-							Meta:       meta,
-							RawPayload: bytesData[meta.PayloadOffset:],
-						}
-
-						if n.ExpectedCount != 0 && newCount == n.ExpectedCount {
-							c.CloseNotifier(meta.CommandID)
-						}
-					default:
-						l.Warn("[animus magic] received unknown op", zap.Uint8("op", uint8(meta.Op)))
-					}
-				}()
+				go c.Handle(ctx, r, l, meta, bytesData[meta.PayloadOffset:])
 			})
 		},
 	)
+}
+
+// Filter filters a message
+func (c *AnimusMagicClient) Filter(meta *AnimusMessageMetadata) bool {
+	// If the message is not to us, ignore it
+	if meta.To != c.Identify && meta.To != AnimusTargetWildcard {
+		return false
+	}
+
+	// If the target cluster id
+	if meta.ClusterIDTo != c.ClusterID && meta.ClusterIDTo != WildcardClusterID {
+		return false
+	}
+
+	return true
+}
+
+// Handle handles a message
+func (c *AnimusMagicClient) Handle(ctx context.Context, redis rueidis.Client, l *zap.Logger, meta *AnimusMessageMetadata, payload []byte) {
+	if c.OnMiddleware != nil {
+		ok, err := c.OnMiddleware(meta, payload)
+
+		if err != nil {
+			l.Error("[animus magic] error in middleware", zap.Error(err))
+			return
+		}
+
+		if !ok {
+			return
+		}
+	}
+
+	switch meta.Op {
+	case OpProbe:
+		cp, err := c.CreatePayload(
+			c.Identify,
+			meta.From,
+			c.ClusterID,
+			meta.ClusterIDFrom,
+			OpResponse, // All Probes should use OpResponse
+			meta.CommandID,
+			c.pid,
+		)
+
+		if err != nil {
+			l.Error("[animus magic] error creating error payload", zap.Error(err))
+			return
+		}
+
+		err = c.Publish(ctx, redis, cp)
+
+		if err != nil {
+			l.Error("[animus magic] error publishing error payload", zap.Error(err))
+			return
+		}
+	case OpRequest:
+		if c.OnRequest != nil {
+			resp, err := c.OnRequest(&ClientRequest{
+				Meta:       meta,
+				RawPayload: payload,
+			})
+
+			if err != nil {
+				cp, err := c.CreatePayload(
+					c.Identify,
+					meta.From,
+					c.ClusterID,
+					meta.ClusterIDFrom,
+					OpError,
+					meta.CommandID,
+					&AnimusErrorResponse{Message: err.Error(), Context: fmt.Sprint(resp)},
+				)
+
+				if err != nil {
+					l.Error("[animus magic] error creating error payload", zap.Error(err))
+					return
+				}
+
+				err = c.Publish(ctx, redis, cp)
+
+				if err != nil {
+					l.Error("[animus magic] error publishing error payload", zap.Error(err))
+					return
+				}
+			} else if resp != nil {
+				cp, err := c.CreatePayload(
+					c.Identify,
+					meta.From,
+					c.ClusterID,
+					meta.ClusterIDFrom,
+					OpResponse,
+					meta.CommandID,
+					resp,
+				)
+
+				if err != nil {
+					l.Error("[animus magic] error creating response payload", zap.Error(err))
+					return
+				}
+
+				err = c.Publish(ctx, redis, cp)
+
+				if err != nil {
+					l.Error("[animus magic] error publishing response payload", zap.Error(err))
+					return
+				}
+			}
+		}
+	case OpError:
+		fallthrough // Both response and error are handled the same way
+	case OpResponse:
+		if c.OnResponse != nil {
+			go func() {
+				err := c.OnResponse(&ClientResponse{
+					Meta:       meta,
+					RawPayload: payload,
+				})
+
+				if err != nil {
+					l.Error("[animus magic] error handling response", zap.Error(err))
+				}
+			}()
+		}
+
+		n, ok := c.Notify.Load(meta.CommandID)
+
+		if !ok {
+			if c.Identify == AnimusTargetInfra {
+				return // Infra doesn't need this warning, its just spam when there is so much infra (wafflepaw, animuscli)
+			}
+			l.Warn("[animus magic] received response for unknown command", zap.String("commandId", meta.CommandID))
+			return
+		}
+
+		newCount := n.ResponseCount.Add(1)
+
+		if n.ExpectedCount != 0 {
+			if newCount > n.ExpectedCount {
+				l.Warn("[animus magic] received more responses than expected", zap.String("commandId", meta.CommandID))
+				c.CloseNotifier(meta.CommandID) // Close the notifier
+				return
+			}
+		}
+
+		n.Chan <- &ClientResponse{
+			Meta:       meta,
+			RawPayload: payload,
+		}
+
+		if n.ExpectedCount != 0 && newCount == n.ExpectedCount {
+			c.CloseNotifier(meta.CommandID)
+		}
+	default:
+		l.Warn("[animus magic] received unknown op", zap.Uint8("op", uint8(meta.Op)))
+	}
 }
 
 // Listen starts listening for messages from redis
@@ -363,13 +383,13 @@ func (c *AnimusMagicClient) Publish(ctx context.Context, redis rueidis.Client, p
 	return redis.Do(ctx, redis.B().Publish().Channel(c.Channel).Message(rueidis.BinaryString(payload)).Build()).Error()
 }
 
-// RequestOptions stores the data for a request
+// RequestOptions stores the options for a request
 type RequestOptions struct {
 	ClusterID             *uint16      // the cluster id to send to, must be set, also ExpectedResponseCount must be set if wildcard
 	ExpectedResponseCount uint32       // must be set if wildcard. this is the number of responses expected
 	CommandID             string       // if unset, will be randomly generated
-	To                    AnimusTarget // if unset, is set to AnimusTargetBot
-	Op                    AnimusOp     // if unset is OpRequest
+	To                    AnimusTarget // must be set
+	Op                    AnimusOp     // must be set
 	IgnoreOpError         bool         // if true, will ignore OpError responses
 }
 
@@ -459,43 +479,6 @@ func (c *AnimusMagicClient) GatherResponses(
 	}
 }
 
-// RawRequest sends a raw request to the given cluster id and waits for a response
-func (c *AnimusMagicClient) RawRequest(
-	ctx context.Context,
-	redis rueidis.Client,
-	msg []byte,
-	data *RequestOptions,
-) ([]*ClientResponse, error) {
-	if msg == nil {
-		return nil, ErrNilMessage
-	}
-
-	if data == nil {
-		return nil, ErrNilRequestData
-	}
-
-	err := data.Parse()
-
-	if err != nil {
-		return nil, err
-	}
-
-	// Create a channel to receive the response
-	notify := c.CreateNotifier(data.CommandID, data.ExpectedResponseCount)
-
-	// Publish the payload
-	err = c.Publish(ctx, redis, msg)
-
-	if err != nil {
-		// Remove the notifier
-		c.CloseNotifier(data.CommandID)
-		return nil, err
-	}
-
-	// Wait for the response
-	return c.GatherResponses(ctx, data, notify)
-}
-
 // Request sends a request to the given cluster id and waits for a response
 func (c *AnimusMagicClient) Request(
 	ctx context.Context,
@@ -551,6 +534,7 @@ func (c *AnimusMagicClient) Request(
 	return c.GatherResponses(ctx, data, notify)
 }
 
+// Parsed client response, contains the response and the error if any
 type ParsedClientResponse[T AnimusResponse] struct {
 	Err        *AnimusErrorResponse
 	Resp       *T

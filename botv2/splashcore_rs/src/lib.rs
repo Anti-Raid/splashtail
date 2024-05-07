@@ -1,5 +1,4 @@
-pub mod animusmagic_protocol;
-pub mod animusmagic_ext;
+pub mod animusmagic;
 pub mod objectstore;
 pub mod utils;
 

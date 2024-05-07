@@ -211,7 +211,7 @@ func (p *AMProbeTask) Run() error {
 
 	commandId := animusmagic.NewCommandId()
 	payload, err := p.AnimusMagicClient.CreatePayload(
-		p.AnimusMagicClient.From,
+		p.AnimusMagicClient.Identify,
 		p.Target,
 		p.AnimusMagicClient.ClusterID,
 		animusmagic.WildcardClusterID,
