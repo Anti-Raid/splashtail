@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT guild_id, anti_invite, anti_everyone, minimum_account_age, maximum_account_age FROM basic_antispam__options",
+  "query": "SELECT guild_id, anti_invite, anti_everyone, minimum_account_age, maximum_account_age, sting_retention FROM basic_antispam__options",
   "describe": {
     "columns": [
       {
@@ -11,12 +11,12 @@
       {
         "ordinal": 1,
         "name": "anti_invite",
-        "type_info": "Bool"
+        "type_info": "Int4"
       },
       {
         "ordinal": 2,
         "name": "anti_everyone",
-        "type_info": "Bool"
+        "type_info": "Int4"
       },
       {
         "ordinal": 3,
@@ -27,6 +27,11 @@
         "ordinal": 4,
         "name": "maximum_account_age",
         "type_info": "Int8"
+      },
+      {
+        "ordinal": 5,
+        "name": "sting_retention",
+        "type_info": "Int4"
       }
     ],
     "parameters": {
@@ -34,11 +39,12 @@
     },
     "nullable": [
       false,
-      false,
-      false,
       true,
-      true
+      true,
+      true,
+      true,
+      false
     ]
   },
-  "hash": "e1d9caeaac08e84db7558bde5cc5f9505bc3dfd35e8ef4f256952316cf7cc647"
+  "hash": "2b3567702488e2563812a84c7a944d8eaf8dbc2abd36577a6c69f91a54f52400"
 }

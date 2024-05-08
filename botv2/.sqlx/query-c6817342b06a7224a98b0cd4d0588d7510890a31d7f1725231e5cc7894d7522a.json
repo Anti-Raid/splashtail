@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "DELETE FROM basic_antispam__punishments WHERE created_at < $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Timestamptz"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "c6817342b06a7224a98b0cd4d0588d7510890a31d7f1725231e5cc7894d7522a"
+}

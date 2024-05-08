@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n                SELECT id, user_id, limit_id, cause, notes, created_at FROM limits__past_hit_limits\n                WHERE guild_id = $1\n            ",
+  "query": "\n                SELECT id, user_id, limit_ids, cause, notes, created_at FROM limits__past_hit_limits\n                WHERE guild_id = $1\n            ",
   "describe": {
     "columns": [
       {
@@ -15,8 +15,8 @@
       },
       {
         "ordinal": 2,
-        "name": "limit_id",
-        "type_info": "Text"
+        "name": "limit_ids",
+        "type_info": "TextArray"
       },
       {
         "ordinal": 3,
@@ -48,5 +48,5 @@
       false
     ]
   },
-  "hash": "128201cddcff994a48c6a4571dee9a14045d4e3942646c90bd4afc3526d3dbea"
+  "hash": "c458fc9bb9ff7f2ac6c36cc353a4b449c06fb6cb84689270d3647feb825a51a3"
 }

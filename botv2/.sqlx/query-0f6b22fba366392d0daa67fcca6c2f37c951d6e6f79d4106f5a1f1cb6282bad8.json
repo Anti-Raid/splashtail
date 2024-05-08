@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT action_id, limit_type, created_at, user_id, guild_id, action_data, limits_hit, target, stings FROM limits__user_actions WHERE guild_id = $1",
+  "query": "SELECT action_id, limit_type, created_at, user_id, guild_id, action_data, target, stings FROM limits__user_actions WHERE guild_id = $1 AND action_id = $2",
   "describe": {
     "columns": [
       {
@@ -35,22 +35,18 @@
       },
       {
         "ordinal": 6,
-        "name": "limits_hit",
-        "type_info": "TextArray"
-      },
-      {
-        "ordinal": 7,
         "name": "target",
         "type_info": "Text"
       },
       {
-        "ordinal": 8,
+        "ordinal": 7,
         "name": "stings",
         "type_info": "Int4"
       }
     ],
     "parameters": {
       "Left": [
+        "Text",
         "Text"
       ]
     },
@@ -61,10 +57,9 @@
       false,
       false,
       false,
-      false,
       true,
       false
     ]
   },
-  "hash": "a3643fbc86d596430fb788b174b159f6096edbc1877cf30eb9de224b6de58ba6"
+  "hash": "0f6b22fba366392d0daa67fcca6c2f37c951d6e6f79d4106f5a1f1cb6282bad8"
 }
