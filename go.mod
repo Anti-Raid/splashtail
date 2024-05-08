@@ -1,8 +1,8 @@
 module github.com/anti-raid/splashtail
 
-go 1.21.5
+go 1.22
 
-toolchain go1.21.6
+toolchain go1.22
 
 require (
 	github.com/bwmarrin/discordgo v0.28.1
@@ -49,7 +49,6 @@ require (
 	github.com/klauspost/cpuid/v2 v2.2.7 // indirect
 	github.com/leodido/go-urn v1.4.0 // indirect
 	github.com/minio/md5-simd v1.1.2 // indirect
-	github.com/minio/sha256-simd v1.0.1 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
 	github.com/mohae/deepcopy v0.0.0-20170929034955-c48cc78d4826 // indirect

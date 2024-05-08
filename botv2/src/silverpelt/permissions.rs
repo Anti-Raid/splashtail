@@ -53,6 +53,7 @@ impl<T: core::fmt::Display> From<T> for PermissionResult {
 }
 
 impl PermissionResult {
+    #[allow(dead_code)]
     pub fn code(&self) -> &'static str {
         match self {
             PermissionResult::Ok { .. } => "ok",

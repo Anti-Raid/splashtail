@@ -1,10 +1,11 @@
-go 1.22
+go 1.22.2
 
 use (
 	.
 	./cmd/localjobs
 	./infra/Sandwich-Daemon
 	./infra/animuscli
+	./infra/animusweb
 	./infra/nirn-proxy
 	./infra/wafflepaw
 )

@@ -1,7 +1,4 @@
-use crate::silverpelt::{
-    silverpelt_cache::SILVERPELT_CACHE, CommandExtendedData, GuildCommandConfiguration,
-    GuildModuleConfiguration,
-};
+use crate::silverpelt::{silverpelt_cache::SILVERPELT_CACHE, GuildCommandConfiguration};
 use crate::{Context, Error};
 use botox::cache::CacheHttpImpl;
 use futures_util::StreamExt;
@@ -40,7 +37,12 @@ pub async fn commands_check(
         return Err("This command must be run in a guild".into());
     };
 
-    let base_command = command.split_whitespace().next().unwrap();
+    // Find command in cache
+    let Some(base_command) = command.split_whitespace().next() else {
+        return Err("No command provided".into());
+    };
+
+    let data = ctx.data();
 
     // Check if the user has permission to use the command
     let cache_http = &CacheHttpImpl::from_ctx(ctx.serenity_context());
@@ -49,7 +51,7 @@ pub async fn commands_check(
         &command,
         guild_id,
         ctx.author().id,
-        &ctx.data().pool,
+        &data.pool,
         cache_http,
         &Some(ctx),
         crate::silverpelt::cmd::CheckCommandOptions {
@@ -88,7 +90,31 @@ pub async fn commands_enable(
         return Err("This command must be run in a guild".into());
     };
 
-    let base_command = command.split_whitespace().next().unwrap();
+    // Find command in cache
+    let Some(base_command) = command.split_whitespace().next() else {
+        return Err("No command provided".into());
+    };
+
+    let Some(module) = crate::SILVERPELT_CACHE
+        .command_id_module_map
+        .get(base_command)
+    else {
+        return Err("Command not found".into());
+    };
+
+    let Some(module) = crate::SILVERPELT_CACHE.module_id_cache.get(module) else {
+        return Err("Module not found".into());
+    };
+
+    if !module.commands_configurable {
+        return Err(format!(
+            "The module `{}` does not allow command configuration",
+            module.name
+        )
+        .into());
+    }
+
+    let data = ctx.data();
 
     // Check if the user has permission to use the command
     let cache_http = &CacheHttpImpl::from_ctx(ctx.serenity_context());
@@ -97,7 +123,7 @@ pub async fn commands_enable(
         &command,
         guild_id,
         ctx.author().id,
-        &ctx.data().pool,
+        &data.pool,
         cache_http,
         &Some(ctx),
         crate::silverpelt::cmd::CheckCommandOptions {
@@ -116,7 +142,7 @@ pub async fn commands_enable(
     }
 
     // Check if command is already enabled
-    let mut tx = ctx.data().pool.begin().await?;
+    let mut tx = data.pool.begin().await?;
 
     let disabled = sqlx::query!(
         "SELECT disabled FROM guild_command_configurations WHERE guild_id = $1 AND command = $2",
@@ -188,7 +214,29 @@ pub async fn commands_disable(
         return Err("This command must be run in a guild".into());
     };
 
-    let base_command = command.split_whitespace().next().unwrap();
+    // Find command in cache
+    let Some(base_command) = command.split_whitespace().next() else {
+        return Err("No command provided".into());
+    };
+
+    let Some(module) = crate::SILVERPELT_CACHE
+        .command_id_module_map
+        .get(base_command)
+    else {
+        return Err("Command not found".into());
+    };
+
+    let Some(module) = crate::SILVERPELT_CACHE.module_id_cache.get(module) else {
+        return Err("Module not found".into());
+    };
+
+    if !module.commands_configurable {
+        return Err(format!(
+            "The module `{}` does not allow command configuration",
+            module.name
+        )
+        .into());
+    }
 
     // Check if the user has permission to use the command
     let cache_http = &CacheHttpImpl::from_ctx(ctx.serenity_context());
@@ -272,7 +320,7 @@ pub async fn commands_disable(
     Ok(())
 }
 
-/// Enables a module. Note that globally disabled modules cannot be used even if enabled
+/// Modifies the permissions and state of a command
 #[poise::command(
     prefix_command,
     slash_command,
@@ -288,26 +336,48 @@ pub async fn commands_modperms(
         return Err("This command must be run in a guild".into());
     };
 
-    let cmd_permutations = crate::silverpelt::utils::permute_command_names(&command);
-    let base_command = cmd_permutations.first().unwrap();
+    let data = ctx.data();
+
+    // Find command in cache
+    let Some(base_command) = command.split_whitespace().next() else {
+        return Err("No command provided".into());
+    };
+
+    let Some(module) = crate::SILVERPELT_CACHE
+        .command_id_module_map
+        .get(base_command)
+    else {
+        return Err("Command not found".into());
+    };
+
+    let Some(module) = crate::SILVERPELT_CACHE.module_id_cache.get(module) else {
+        return Err("Module not found".into());
+    };
+
+    if !module.commands_configurable {
+        return Err(format!(
+            "The module `{}` does not allow command configuration",
+            module.name
+        )
+        .into());
+    }
 
     // Check if the user has permission to use the command
     let cache_http = &CacheHttpImpl::from_ctx(ctx.serenity_context());
-    let perm_res: crate::silverpelt::permissions::PermissionResult =
-        crate::silverpelt::cmd::check_command(
-            base_command,
-            &command,
-            guild_id,
-            ctx.author().id,
-            &ctx.data().pool,
-            cache_http,
-            &Some(ctx),
-            crate::silverpelt::cmd::CheckCommandOptions {
-                ignore_command_disabled: true,
-                ..Default::default()
-            },
-        )
-        .await;
+    let perm_res = crate::silverpelt::cmd::check_command(
+        base_command,
+        &command,
+        guild_id,
+        ctx.author().id,
+        &data.pool,
+        cache_http,
+        &Some(ctx),
+        crate::silverpelt::cmd::CheckCommandOptions {
+            ignore_command_disabled: true,
+            ..Default::default()
+        },
+    )
+    .await;
 
     if !perm_res.is_ok() {
         return Err(format!(
@@ -317,42 +387,12 @@ pub async fn commands_modperms(
         .into());
     }
 
-    async fn get_current_permissions(
-        pool: &sqlx::PgPool,
-        guild_id: serenity::all::GuildId,
-        permutations: &[String],
-        command: &str,
-    ) -> Result<
-        (
-            CommandExtendedData,
-            Option<GuildCommandConfiguration>,
-            Option<GuildModuleConfiguration>,
-        ),
-        crate::Error,
-    > {
-        let guild_module_configuration =
-            crate::silverpelt::module_config::get_module_configuration_from_command_name(
-                pool,
-                guild_id.to_string().as_str(),
-                command,
-            )
-            .await?;
-
-        let cmd_data = crate::silverpelt::module_config::get_command_extended_data(permutations)?;
-        let command_configurations =
-            crate::silverpelt::module_config::get_exact_command_configuration(
-                pool,
-                guild_id.to_string().as_str(),
-                command,
-            )
-            .await?;
-
-        Ok((cmd_data, command_configurations, guild_module_configuration))
-    }
-
-    #[allow(unused_variables)] // WIP
-    let (cmd_data, command_config, module_config) =
-        get_current_permissions(&ctx.data().pool, guild_id, &cmd_permutations, &command).await?;
+    let command_config = crate::silverpelt::module_config::get_exact_command_configuration(
+        &data.pool,
+        guild_id.to_string().as_str(),
+        base_command,
+    )
+    .await?;
 
     let mut new_command_config = {
         if let Some(command_config) = command_config {
@@ -503,7 +543,7 @@ pub async fn commands_modperms(
                         &command,
                         guild_id,
                         ctx.author().id,
-                        &ctx.data().pool,
+                        &data.pool,
                         cache_http,
                         &Some(ctx),
                         crate::silverpelt::cmd::CheckCommandOptions {
@@ -520,7 +560,7 @@ pub async fn commands_modperms(
                     return Err(format!("You can only modify commands to something that you have permission to use!\n{}", perm_res.to_markdown()).into());
                 }
 
-                let mut tx = ctx.data().pool.begin().await?;
+                let mut tx = data.pool.begin().await?;
 
                 // Check if guild command config exists now
                 let count = sqlx::query!(

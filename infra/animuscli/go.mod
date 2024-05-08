@@ -1,4 +1,4 @@
-module github.com/anti-raid/splashtail/cmd/animuscli
+module github.com/anti-raid/splashtail/infra/animuscli
 
 go 1.21.5
 

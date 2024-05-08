@@ -76,7 +76,7 @@ pub async fn punishments_list(ctx: Context<'_>) -> Result<(), Error> {
 
     embed = embed.title("Punishments");
 
-    for (fields, punishment) in punishments.iter().enumerate() {
+    for (fields, punishment) in punishments.into_iter().enumerate() {
         if fields > 5 {
             embeds.push(embed);
             embed = serenity::all::CreateEmbed::default();
@@ -84,6 +84,15 @@ pub async fn punishments_list(ctx: Context<'_>) -> Result<(), Error> {
 
         let action = super::core::Action::from_str(punishment.action.as_str())
             .unwrap_or(super::core::Action::Unknown);
+
+        let mut modifiers = Vec::new();
+
+        for modifier in punishment.modifiers {
+            if modifier.is_empty() {
+                continue;
+            }
+            modifiers.push(modifier)
+        }
 
         embed = embed.field(
             format!("At {} stings...", punishment.stings),
@@ -96,7 +105,7 @@ pub async fn punishments_list(ctx: Context<'_>) -> Result<(), Error> {
                         format!("{}", action)
                     }
                 },
-                punishment.modifiers.join(", "),
+                modifiers.join(", "),
                 punishment.creator,
                 punishment.created_at.timestamp(),
                 punishment.id,
@@ -146,6 +155,9 @@ pub async fn punishments_add(
     let mut modifiers = vec![];
 
     for m in modifiers_str.split(',') {
+        if m.is_empty() {
+            continue;
+        }
         modifiers.push(m.trim().to_string());
     }
 

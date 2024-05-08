@@ -95,22 +95,6 @@ pub async fn get_module_configuration(
     }))
 }
 
-pub async fn get_module_configuration_from_command_name(
-    pool: &PgPool,
-    guild_id: &str,
-    name: &str,
-) -> Result<Option<GuildModuleConfiguration>, crate::Error> {
-    let permutations = permute_command_names(name);
-    let root_cmd = permutations.first().unwrap();
-
-    let module = SILVERPELT_CACHE
-        .command_id_module_map
-        .get(root_cmd)
-        .ok_or::<crate::Error>("Unknown error determining module of command".into())?;
-
-    get_module_configuration(pool, guild_id, module.as_str()).await
-}
-
 pub fn get_command_extended_data(
     permutations: &[String],
 ) -> Result<CommandExtendedData, crate::Error> {
