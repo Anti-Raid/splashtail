@@ -165,6 +165,8 @@ impl Display for PermissionChecks {
             }
         }
 
+        write!(f, "\nChecks needed: {}", self.checks_needed)?;
+
         Ok(())
     }
 }

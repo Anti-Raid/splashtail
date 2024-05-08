@@ -1,4 +1,5 @@
 #[derive(Default, Debug, Clone, PartialEq)]
+#[allow(dead_code)]
 pub enum ColumnType {
     #[default]
     String,
