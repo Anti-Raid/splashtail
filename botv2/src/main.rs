@@ -73,11 +73,16 @@ async fn on_error(error: poise::FrameworkError<'_, Data, Error>) {
     match error {
         poise::FrameworkError::Command { error, ctx, .. } => {
             error!("Error in command `{}`: {:?}", ctx.command().name, error,);
+
             let err = ctx
-                .say(format!(
-                    "There was an error running this command: {}",
-                    error
-                ))
+                .send(
+                    poise::CreateReply::new().embed(
+                        serenity::all::CreateEmbed::new()
+                            .color(serenity::all::Color::RED)
+                            .title("An error has occurred")
+                            .description(error.to_string()),
+                    ),
+                )
                 .await;
 
             if let Err(e) = err {

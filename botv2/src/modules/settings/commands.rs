@@ -109,7 +109,7 @@ pub async fn commands_enable(
     if !module.commands_configurable {
         return Err(format!(
             "The module `{}` does not allow command configuration",
-            module.name
+            module.id
         )
         .into());
     }
@@ -233,7 +233,7 @@ pub async fn commands_disable(
     if !module.commands_configurable {
         return Err(format!(
             "The module `{}` does not allow command configuration",
-            module.name
+            module.id
         )
         .into());
     }
@@ -357,7 +357,7 @@ pub async fn commands_modperms(
     if !module.commands_configurable {
         return Err(format!(
             "The module `{}` does not allow command configuration",
-            module.name
+            module.id
         )
         .into());
     }
