@@ -7,7 +7,6 @@ use futures::future::BoxFuture;
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
 use std::sync::atomic::AtomicUsize;
-use std::sync::Arc;
 use std::time::Duration;
 
 #[derive(Debug)]
@@ -17,6 +16,7 @@ pub enum ClientError {
     RecievedMoreResponsesThanExpected,
     UnknownOp,
     NoResponse,
+    NotifierClosedBeforeResponse,
 }
 
 impl Display for ClientError {
@@ -29,6 +29,9 @@ impl Display for ClientError {
             }
             ClientError::UnknownOp => write!(f, "Received an unknown op type"),
             ClientError::NoResponse => write!(f, "Received no response"),
+            ClientError::NotifierClosedBeforeResponse => {
+                write!(f, "Notifier closed before response")
+            }
         }
     }
 }
@@ -167,7 +170,7 @@ pub type Publisher<T> =
 pub struct UnderlyingClient<T: Clone> {
     pub state: T,
 
-    pub rx_map: Arc<dashmap::DashMap<String, NotifyWrapper>>,
+    pub rx_map: dashmap::DashMap<String, NotifyWrapper>,
     pub identity: AnimusTarget,
     pub cluster_id: u16,
 
@@ -202,7 +205,7 @@ impl<T: Clone> UnderlyingClient<T> {
     ) -> Self {
         Self {
             state,
-            rx_map: Arc::new(dashmap::DashMap::new()),
+            rx_map: dashmap::DashMap::new(),
             identity,
             cluster_id,
             publish,
@@ -301,22 +304,36 @@ impl<T: Clone> UnderlyingClient<T> {
                     .await?;
                 }
 
+                log::info!("Got response for command id: {}", meta.command_id);
+
                 if let Some(notifier) = self.rx_map.get(&meta.command_id) {
+                    log::info!(
+                        "Received response for rxmap with command id: {}",
+                        meta.command_id
+                    );
+
                     let wrapper = notifier.value();
 
                     let new_count = wrapper
                         .response_count
                         .fetch_add(1, std::sync::atomic::Ordering::SeqCst);
 
-                    if wrapper.expected_count != 0 && new_count >= wrapper.expected_count {
+                    if wrapper.expected_count != 0 && new_count > wrapper.expected_count {
                         self.close_notifier(&meta.command_id);
                         return Err(ClientError::RecievedMoreResponsesThanExpected.into());
                     }
 
-                    let _ = wrapper.chan.send(ClientResponse {
-                        meta: meta.clone(),
-                        raw_payload: payload,
-                    });
+                    log::info!(
+                        "Sending response to notifier for command id: {}",
+                        meta.command_id
+                    );
+                    wrapper
+                        .chan
+                        .send(ClientResponse {
+                            meta: meta.clone(),
+                            raw_payload: payload,
+                        })
+                        .await?;
 
                     if wrapper.expected_count != 0 && new_count == wrapper.expected_count {
                         self.close_notifier(&meta.command_id);
@@ -409,23 +426,32 @@ impl<T: Clone> UnderlyingClient<T> {
         let mut responses = Vec::new();
 
         loop {
-            tokio::select! {
-                _ = tokio::time::sleep(timeout) => {
+            match tokio::time::timeout(timeout, notifier.recv()).await {
+                Err(_) => {
                     self.close_notifier(&request_opts.command_id);
-                    return Err(ClientError::Timeout.into())
+                    return Err(ClientError::Timeout.into());
                 }
-                Some(resp) = notifier.recv() => {
+                Ok(resp) => {
+                    log::info!("Got response");
+                    let Some(resp) = resp else {
+                        self.close_notifier(&request_opts.command_id);
+                        return Err(ClientError::NotifierClosedBeforeResponse.into());
+                    };
+
                     if resp.meta.op == AnimusOp::Error && !request_opts.ignore_op_error {
                         responses.push(resp);
                         self.close_notifier(&request_opts.command_id);
-                        return Err(ClientError::OpError.into())
+                        return Err(ClientError::OpError.into());
                     }
 
-                    if responses.len() >= request_opts.expected_response_count {
+                    if responses.len() + 1 >= request_opts.expected_response_count {
                         responses.push(resp);
                         self.close_notifier(&request_opts.command_id);
-                        return Ok(responses)
+                        return Ok(responses);
                     }
+
+                    // Push it all the same
+                    responses.push(resp);
                 }
             }
         }

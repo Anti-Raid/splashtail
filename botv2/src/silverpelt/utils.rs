@@ -47,12 +47,12 @@ mod tests {
 }
 
 pub mod serenity_utils {
-    use serenity::all::{PartialGuild, UserId, Member, Role, RoleId};
+    use serenity::all::{Member, PartialGuild, Role, RoleId, UserId};
 
     /// Gets the highest role a [`Member`] of this Guild has.
     ///
     /// Returns None if the member has no roles or the member from this guild.
-    /// 
+    ///
     /// Taken from https://serenity-rs.github.io/serenity/next/src/serenity/model/guild/mod.rs.html#1233-1278
     /// with patches to accept a partialguild
     pub fn member_highest_role<'a>(pg: &'a PartialGuild, member: &Member) -> Option<&'a Role> {
@@ -91,9 +91,13 @@ pub mod serenity_utils {
     ///
     /// [`position`]: Role::position
     ///
-    /// Taken from https://serenity-rs.github.io/serenity/next/src/serenity/model/guild/mod.rs.html#1233-1278 
+    /// Taken from https://serenity-rs.github.io/serenity/next/src/serenity/model/guild/mod.rs.html#1233-1278
     /// with changes to use a `Member` object for lhs/rhs
-    pub fn greater_member_hierarchy(pg: &PartialGuild, lhs: &Member, rhs: &Member) -> Option<UserId> {
+    pub fn greater_member_hierarchy(
+        pg: &PartialGuild,
+        lhs: &Member,
+        rhs: &Member,
+    ) -> Option<UserId> {
         // Check that the IDs are the same. If they are, neither is greater.
         if lhs.user.id == rhs.user.id {
             return None;
@@ -106,11 +110,11 @@ pub mod serenity_utils {
             return Some(rhs.user.id);
         }
 
-        let lhs_role = member_highest_role(pg, lhs)
-            .map_or((RoleId::new(1), 0), |r| (r.id, r.position));
+        let lhs_role =
+            member_highest_role(pg, lhs).map_or((RoleId::new(1), 0), |r| (r.id, r.position));
 
-        let rhs_role = member_highest_role(pg, rhs)
-            .map_or((RoleId::new(1), 0), |r| (r.id, r.position));
+        let rhs_role =
+            member_highest_role(pg, rhs).map_or((RoleId::new(1), 0), |r| (r.id, r.position));
 
         // If LHS and RHS both have no top position or have the same role ID, then no one wins.
         if (lhs_role.1 == 0 && rhs_role.1 == 0) || (lhs_role.0 == rhs_role.0) {

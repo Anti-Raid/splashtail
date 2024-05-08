@@ -22,7 +22,7 @@ pub async fn event_listener(ectx: &EventHandlerContext) -> Result<(), Error> {
                 },
             )
             .await
-        },
+        }
         FullEvent::Message { new_message } => {
             handle_mod_action(
                 ctx,

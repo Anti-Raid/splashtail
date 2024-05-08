@@ -350,7 +350,8 @@ async fn main() {
             )
         })
         .filter(Some("botv2"), log::LevelFilter::Info)
-        .filter(Some("botox"), log::LevelFilter::Info);
+        .filter(Some("botox"), log::LevelFilter::Info)
+        .filter(Some("splashcore_rs"), log::LevelFilter::Info);
 
     // Set custom log levels
     for opt in debug_opts.split(',') {

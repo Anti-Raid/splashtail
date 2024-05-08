@@ -178,7 +178,10 @@ fn main() -> Result<(), Error> {
         println!("cargo:rustc-env=GIT_REPO=Unknown");
         println!("cargo:rustc-env=CPU_MODEL=CI");
         println!("cargo:rustc-env=RUSTC_VERSION=CI");
-        println!("cargo:rustc-env=CARGO_PROFILE={}", std::env::var("PROFILE").unwrap_or("unknown".to_string()));
+        println!(
+            "cargo:rustc-env=CARGO_PROFILE={}",
+            std::env::var("PROFILE").unwrap_or("unknown".to_string())
+        );
         return Ok(());
     }
 

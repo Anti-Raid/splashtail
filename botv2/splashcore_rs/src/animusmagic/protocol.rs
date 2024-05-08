@@ -16,7 +16,7 @@ pub struct AnimusMessageMetadata {
     pub payload_offset: usize,
 }
 
-#[derive(Serialize, Deserialize, PartialEq, Clone, Copy, Default)]
+#[derive(Serialize, Deserialize, PartialEq, Clone, Copy, Default, Debug)]
 pub enum AnimusTarget {
     #[default]
     Bot,
@@ -49,7 +49,7 @@ impl AnimusTarget {
     }
 }
 
-#[derive(Serialize, Deserialize, PartialEq, Default, Copy, Clone)]
+#[derive(Serialize, Deserialize, PartialEq, Default, Copy, Clone, Debug)]
 #[non_exhaustive]
 pub enum AnimusOp {
     #[default]

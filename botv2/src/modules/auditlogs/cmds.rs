@@ -122,7 +122,7 @@ pub async fn list_sinks(ctx: Context<'_>) -> Result<(), Error> {
                 index = index.saturating_sub(1);
             }
             "next" => {
-                index = usize::min(index+1, sink_lister.len() - 1);
+                index = usize::min(index + 1, sink_lister.len() - 1);
             }
             "first" => {
                 index = 0;

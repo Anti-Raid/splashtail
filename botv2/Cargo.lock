@@ -2543,6 +2543,7 @@ dependencies = [
  "botox",
  "dashmap",
  "futures",
+ "log",
  "once_cell",
  "poise",
  "rand",

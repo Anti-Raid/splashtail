@@ -29,8 +29,7 @@ pub async fn limits_add(
     #[description = "The time interval infractions are counted in"] limit_time: i64,
     #[description = "The time unit for the time interval [seconds/minutes/hours/days]"]
     limit_time_unit: splashcore_rs::utils::Unit,
-    #[description = "The number of stings to give on hitting the limit"]
-    stings: i32,
+    #[description = "The number of stings to give on hitting the limit"] stings: i32,
 ) -> Result<(), Error> {
     let limit_type = limit_type.resolve();
 

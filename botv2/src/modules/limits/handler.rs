@@ -3,7 +3,7 @@ use crate::modules::limits::core::Limit;
 use crate::Error;
 use botox::crypto::gen_random;
 use poise::serenity_prelude::{GuildId, UserId};
-use std::collections::{HashSet, HashMap};
+use std::collections::{HashMap, HashSet};
 
 pub struct HandleModAction {
     /// Guild ID
@@ -46,7 +46,7 @@ pub async fn handle_mod_action(
     let mut tx = data.pool.begin().await?;
 
     let action_id = gen_random(48);
-    
+
     sqlx::query!(
         "INSERT INTO limits__user_actions (action_id, guild_id, user_id, target, limit_type, action_data, created_at, limits_hit, stings) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)",
         action_id,
@@ -73,7 +73,7 @@ pub async fn handle_mod_action(
         // Ensure the expiry is based on all limits, not just infringing
         if limit_time_from_limit > largest_expiry {
             largest_expiry = limit_time_from_limit;
-        }    
+        }
 
         // Check the limit type and user_id and guild to see if it is in the cache
         let infringing_actions = sqlx::query!(
@@ -122,9 +122,19 @@ pub async fn handle_mod_action(
 
     tx.commit().await?;
 
-    if stings > 0 && crate::silverpelt::module_config::is_module_enabled(&data.pool, guild_id, "punishments").await? {
+    if stings > 0
+        && crate::silverpelt::module_config::is_module_enabled(&data.pool, guild_id, "punishments")
+            .await?
+    {
         log::info!("Triggering punishment for user_id: {}", user_id);
-        match crate::modules::punishments::core::trigger_punishment(ctx, guild_id, user_id, HashSet::new()).await {
+        match crate::modules::punishments::core::trigger_punishment(
+            ctx,
+            guild_id,
+            user_id,
+            HashSet::new(),
+        )
+        .await
+        {
             Ok(()) => {
                 let mut action_ids = Vec::new();
 
@@ -148,7 +158,7 @@ pub async fn handle_mod_action(
                     .execute(&data.pool)
                     .await?;
                 }
-            },
+            }
             Err(e) => {
                 log::error!("Failed to trigger punishment: {:?}", e);
 

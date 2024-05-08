@@ -1,4 +1,5 @@
 use crate::Error;
+use futures_util::FutureExt;
 use poise::serenity_prelude::{GuildId, UserId};
 use serde::{Deserialize, Serialize};
 use splashcore_rs::utils::pg_interval_to_secs;
@@ -7,7 +8,6 @@ use sqlx::{
     PgPool,
 };
 use strum_macros::{Display, EnumString, VariantNames};
-use futures_util::FutureExt;
 
 /// Punishment sting source
 pub async fn register_punishment_sting_source(_data: &crate::Data) -> Result<(), crate::Error> {
