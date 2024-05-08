@@ -37,7 +37,7 @@ pub async fn event_listener(ectx: &EventHandlerContext) -> Result<(), Error> {
                         err
                     );
                 } else {
-                    log::info!(
+                    log::debug!(
                         "Invalidated cache for guild {} and user {}",
                         guild_id,
                         user_id
