@@ -517,16 +517,11 @@ pub async fn dispatch_audit_log(
 
         match sink.typ.as_str() {
             "channel" => {
-                let cache_http = botox::cache::CacheHttpImpl {
-                    cache: ctx.cache.clone(),
-                    http: ctx.http.clone(),
-                };
-
                 let channel: ChannelId = sink.sink.parse()?;
 
                 match channel
                     .send_message(
-                        &cache_http,
+                        &ctx.http,
                         CreateMessage::default().embed(event_embed.clone()),
                     )
                     .await
@@ -556,18 +551,6 @@ pub async fn dispatch_audit_log(
                                 }
                                 _ => {}
                             }
-                        }
-
-                        if let serenity::Error::Model(
-                            serenity::all::ModelError::InvalidPermissions { .. },
-                        ) = e
-                        {
-                            sqlx::query!(
-                                "UPDATE auditlogs__sinks SET broken = true WHERE id = $1",
-                                sink.id
-                            )
-                            .execute(&user_data.pool)
-                            .await?;
                         }
                     }
                 };

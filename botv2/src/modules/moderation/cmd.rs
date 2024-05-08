@@ -2,7 +2,6 @@ use super::core::to_log_format;
 use crate::ipc::animus_magic::jobserver::{JobserverAnimusMessage, JobserverAnimusResponse};
 use crate::ipc::argparse::MEWLD_ARGS;
 use crate::silverpelt::proxysupport::{guild, member_in_guild};
-use crate::silverpelt::utils::serenity_utils::greater_member_hierarchy;
 use crate::{Context, Error};
 use poise::CreateReply;
 use serenity::all::{
@@ -113,7 +112,7 @@ async fn check_hierarchy(ctx: &Context<'_>, user_id: UserId) -> Result<(), Error
         return Ok(());
     };
 
-    if let Some(higher_hierarchy) = greater_member_hierarchy(&guild, &bot, &user) {
+    if let Some(higher_hierarchy) = guild.greater_member_hierarchy(&bot, &user) {
         if higher_hierarchy != bot_userid {
             log::info!("Roles of lhs: {:?}", bot.roles);
             log::info!("Roles of rhs: {:?}", user.roles);
@@ -123,7 +122,7 @@ async fn check_hierarchy(ctx: &Context<'_>, user_id: UserId) -> Result<(), Error
         return Err("You cannot moderate a user with equal hierarchy to the bot".into());
     }
 
-    if let Some(higher_hierarchy) = greater_member_hierarchy(&guild, &author, &user) {
+    if let Some(higher_hierarchy) = guild.greater_member_hierarchy(&author, &user) {
         if higher_hierarchy != author_id {
             Err("You cannot moderate a user with a higher or equal hierarchy than you".into())
         } else {
@@ -501,7 +500,7 @@ pub async fn kick(
 
     member
         .kick(
-            &ctx.http(),
+            ctx.http(),
             Some(&to_log_format(&author.user, &member.user, &reason)),
         )
         .await?;

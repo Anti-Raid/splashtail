@@ -430,6 +430,18 @@ pub async fn commands_modperms(
 
         let mut response_deferred = false;
         match item_id {
+            "cmd/enable" => {
+                new_command_config.disabled = Some(false);
+            }
+            "cmd/disable" => {
+                new_command_config.disabled = Some(true);
+            }
+            "cmd/disable/reset" => {
+                new_command_config.disabled = None;
+            }
+            "perms/disable/reset" => {
+                new_command_config.perms = None;
+            }
             "perms/editraw" => {
                 // Open a modal in response
                 let perms = new_command_config.perms.clone().unwrap_or_default();

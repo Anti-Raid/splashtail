@@ -21,7 +21,7 @@ pub async fn register_punishment_sting_source(_data: &crate::Data) -> Result<(),
 
         let mut entries = vec![];
 
-        // Fetch all moderation actions of the user in moderation__actions
+        // Fetch all entries
         let moderation_entries = sqlx::query!(
                 "SELECT stings, (NOW() > stings_expiry) AS expired, created_at FROM limits__user_actions WHERE user_id = $1 AND guild_id = $2",
                 user_id.to_string(),
@@ -35,7 +35,7 @@ pub async fn register_punishment_sting_source(_data: &crate::Data) -> Result<(),
                 user_id,
                 guild_id,
                 stings: entry.stings,
-                reason: None, // TODO: Add reason
+                reason: None, // TODO: Add reason (if possible)
                 created_at: entry.created_at,
                 expired: entry.expired.unwrap_or(false),
             });
@@ -46,7 +46,7 @@ pub async fn register_punishment_sting_source(_data: &crate::Data) -> Result<(),
 
     let source = crate::modules::punishments::sting_source::StingSource {
         id: "limits__user_actions".to_string(),
-        description: "User Action Punishments".to_string(),
+        description: "Limits (User Action) Punishments".to_string(),
         fetch: Box::new(|ctx, guild_id, user_id| sting_entries(ctx, *guild_id, *user_id).boxed()),
     };
 
@@ -173,8 +173,6 @@ pub struct UserAction {
     pub guild_id: GuildId,
     /// The data associated with the action (extra data etc.)
     pub action_data: serde_json::Value,
-    /// The limits that have been hit for this action. DEPRECATED AND HIGHLY UNRELIABLE/MAY NOT BE SET
-    pub limits_hit: Vec<String>,
     /// The target the action was intended for
     pub target: Option<String>,
     /// The number of stings the user has procured from this action
@@ -189,7 +187,7 @@ impl UserAction {
         action_id: &str,
     ) -> Result<Self, Error> {
         let res = sqlx::query!(
-            "SELECT action_id, limit_type, created_at, user_id, guild_id, action_data, limits_hit, target, stings FROM limits__user_actions WHERE guild_id = $1 AND action_id = $2",
+            "SELECT action_id, limit_type, created_at, user_id, guild_id, action_data, target, stings FROM limits__user_actions WHERE guild_id = $1 AND action_id = $2",
             guild_id.to_string(),
             action_id
         )
@@ -204,7 +202,6 @@ impl UserAction {
                 user_id: action.user_id.parse()?,
                 guild_id: action.guild_id.parse()?,
                 action_data: action.action_data,
-                limits_hit: action.limits_hit,
                 target: action.target,
                 stings: action.stings,
             }),
@@ -219,7 +216,7 @@ impl UserAction {
         user_id: UserId,
     ) -> Result<Vec<Self>, Error> {
         let res = sqlx::query!(
-            "SELECT action_id, limit_type, created_at, user_id, guild_id, action_data, limits_hit, target, stings FROM limits__user_actions WHERE guild_id = $1 AND user_id = $2",
+            "SELECT action_id, limit_type, created_at, user_id, guild_id, action_data, target, stings FROM limits__user_actions WHERE guild_id = $1 AND user_id = $2",
             guild_id.to_string(),
             user_id.to_string()
         )
@@ -235,7 +232,6 @@ impl UserAction {
                 user_id,
                 guild_id,
                 action_data: action.action_data,
-                limits_hit: action.limits_hit,
                 target: action.target,
                 stings: action.stings,
             });
@@ -247,7 +243,7 @@ impl UserAction {
     /// Fetch all user actions in a guild
     pub async fn guild(data: &crate::Data, guild_id: GuildId) -> Result<Vec<Self>, Error> {
         let res = sqlx::query!(
-            "SELECT action_id, limit_type, created_at, user_id, guild_id, action_data, limits_hit, target, stings FROM limits__user_actions WHERE guild_id = $1",
+            "SELECT action_id, limit_type, created_at, user_id, guild_id, action_data, target, stings FROM limits__user_actions WHERE guild_id = $1",
             guild_id.to_string(),
         )
         .fetch_all(&data.pool)
@@ -262,7 +258,6 @@ impl UserAction {
                 user_id: action.user_id.parse()?,
                 guild_id,
                 action_data: action.action_data,
-                limits_hit: action.limits_hit,
                 target: action.target,
                 stings: action.stings,
             });
@@ -328,12 +323,19 @@ impl Limit {
 
 #[derive(Debug, Serialize)]
 pub struct PastHitLimits {
+    /// The ID of the past hit limits object
     pub id: String,
+    /// The ID of the user who hit the limits
     pub user_id: UserId,
+    /// The ID of the guild the limits were hit in
     pub guild_id: GuildId,
-    pub limit_id: String,
-    pub cause: Vec<UserAction>,
+    /// The IDs of the limits that were hit
+    pub limit_ids: Vec<String>,
+    /// The action IDs responsible
+    pub cause: Vec<String>,
+    /// Any extra staff-given notes
     pub notes: Vec<String>,
+    /// The time the limits were hit
     pub created_at: DateTime<Utc>,
 }
 
@@ -342,7 +344,7 @@ impl PastHitLimits {
     pub async fn guild(data: &crate::Data, guild_id: GuildId) -> Result<Vec<Self>, Error> {
         let rec = sqlx::query!(
             "
-                SELECT id, user_id, limit_id, cause, notes, created_at FROM limits__past_hit_limits
+                SELECT id, user_id, limit_ids, cause, notes, created_at FROM limits__past_hit_limits
                 WHERE guild_id = $1
             ",
             guild_id.to_string()
@@ -353,20 +355,14 @@ impl PastHitLimits {
         let mut hits = Vec::new();
 
         for r in rec {
-            let mut cause = vec![];
-
-            for action in r.cause {
-                cause.push(UserAction::by_id(data, guild_id, &action).await?);
-            }
-
             hits.push(Self {
                 guild_id,
                 id: r.id,
-                limit_id: r.limit_id,
+                limit_ids: r.limit_ids,
                 created_at: r.created_at,
                 user_id: r.user_id.parse()?,
                 notes: r.notes,
-                cause,
+                cause: r.cause,
             });
         }
 

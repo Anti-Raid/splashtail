@@ -185,7 +185,7 @@ pub async fn newhook(
         .await?;
 
     dm.id.send_message(
-        &ctx,
+        ctx.http(),
         CreateMessage::new()
         .content(
             format!(
@@ -483,7 +483,7 @@ pub async fn resetsecret(
     .await?;
 
     dm.id.send_message(
-        &ctx,
+        ctx.http(),
         CreateMessage::new()
         .content(
             format!(

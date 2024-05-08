@@ -39,6 +39,10 @@ pub async fn event_listener(ectx: &EventHandlerContext) -> Result<(), Error> {
         FullEvent::GuildAuditLogEntryCreate { entry, guild_id } => {
             info!("Audit log created: {:?}. Guild: {}", entry, guild_id);
 
+            let Some(user_id) = entry.user_id else {
+                return Ok(());
+            };
+
             let res = match entry.action {
                 Action::Channel(ch) => {
                     let ch_id = entry.target_id.ok_or("No channel ID found")?;
@@ -52,9 +56,11 @@ pub async fn event_listener(ectx: &EventHandlerContext) -> Result<(), Error> {
                                 &super::handler::HandleModAction {
                                     guild_id: *guild_id,
                                     limit: super::core::UserLimitTypes::ChannelAdd,
-                                    user_id: entry.user_id,
+                                    user_id,
                                     target: Some(ch_id.to_string()),
-                                    action_data: serde_json::json!({}),
+                                    action_data: serde_json::json!({
+                                        "changes": entry.changes.clone(),
+                                    }),
                                 },
                             )
                             .await
@@ -67,23 +73,28 @@ pub async fn event_listener(ectx: &EventHandlerContext) -> Result<(), Error> {
                                 &super::handler::HandleModAction {
                                     guild_id: *guild_id,
                                     limit: super::core::UserLimitTypes::ChannelRemove,
-                                    user_id: entry.user_id,
+                                    user_id,
                                     target: Some(ch_id.to_string()),
-                                    action_data: serde_json::json!({}),
+                                    action_data: serde_json::json!({
+                                        "changes": entry.changes.clone(),
+                                    }),
                                 },
                             )
                             .await
                         }
                         ChannelAction::Update => {
                             info!("Channel updated: {}", ch_id);
+
                             handle_mod_action(
                                 ctx,
                                 &super::handler::HandleModAction {
                                     guild_id: *guild_id,
                                     limit: super::core::UserLimitTypes::ChannelUpdate,
-                                    user_id: entry.user_id,
+                                    user_id,
                                     target: Some(ch_id.to_string()),
-                                    action_data: serde_json::json!({}),
+                                    action_data: serde_json::json!({
+                                        "changes": entry.changes.clone(),
+                                    }),
                                 },
                             )
                             .await
@@ -103,9 +114,11 @@ pub async fn event_listener(ectx: &EventHandlerContext) -> Result<(), Error> {
                                 &super::handler::HandleModAction {
                                     guild_id: *guild_id,
                                     limit: super::core::UserLimitTypes::RoleAdd,
-                                    user_id: entry.user_id,
+                                    user_id,
                                     target: Some(r_id.to_string()),
-                                    action_data: serde_json::json!({}),
+                                    action_data: serde_json::json!({
+                                        "changes": entry.changes.clone(),
+                                    }),
                                 },
                             )
                             .await
@@ -118,9 +131,11 @@ pub async fn event_listener(ectx: &EventHandlerContext) -> Result<(), Error> {
                                 &super::handler::HandleModAction {
                                     guild_id: *guild_id,
                                     limit: super::core::UserLimitTypes::RoleUpdate,
-                                    user_id: entry.user_id,
+                                    user_id,
                                     target: Some(r_id.to_string()),
-                                    action_data: serde_json::json!({}),
+                                    action_data: serde_json::json!({
+                                        "changes": entry.changes.clone(),
+                                    }),
                                 },
                             )
                             .await
@@ -133,9 +148,11 @@ pub async fn event_listener(ectx: &EventHandlerContext) -> Result<(), Error> {
                                 &super::handler::HandleModAction {
                                     guild_id: *guild_id,
                                     limit: super::core::UserLimitTypes::RoleRemove,
-                                    user_id: entry.user_id,
+                                    user_id,
                                     target: Some(r_id.to_string()),
-                                    action_data: serde_json::json!({}),
+                                    action_data: serde_json::json!({
+                                        "changes": entry.changes.clone(),
+                                    }),
                                 },
                             )
                             .await
@@ -153,16 +170,11 @@ pub async fn event_listener(ectx: &EventHandlerContext) -> Result<(), Error> {
                     #[allow(clippy::single_match)] // Plans to add further events are coming
                     match ma {
                         MemberAction::RoleUpdate => {
-                            let Some(ref changes) = entry.changes else {
-                                error!("MEMBER update: No changes found");
-                                return Err("No changes found".into());
-                            };
-
                             let mut added = Vec::new();
                             let mut removed = Vec::new();
                             let mut old_roles = Vec::new();
 
-                            for change in changes {
+                            for change in entry.changes.iter() {
                                 match change {
                                     Change::RolesAdded { old, new } => {
                                         let Some(old) = old else {
@@ -219,7 +231,7 @@ pub async fn event_listener(ectx: &EventHandlerContext) -> Result<(), Error> {
                                 &super::handler::HandleModAction {
                                     guild_id: *guild_id,
                                     limit: super::core::UserLimitTypes::MemberRolesUpdated,
-                                    user_id: entry.user_id,
+                                    user_id,
                                     target: Some(target.to_string()),
                                     action_data: serde_json::json!({
                                         "old": old_roles,
@@ -238,7 +250,7 @@ pub async fn event_listener(ectx: &EventHandlerContext) -> Result<(), Error> {
                                     &super::handler::HandleModAction {
                                         guild_id: *guild_id,
                                         limit: super::core::UserLimitTypes::RoleGivenToMember,
-                                        user_id: entry.user_id,
+                                        user_id,
                                         target: Some(target.to_string()),
                                         action_data: serde_json::json!({
                                             "old": old_roles,
@@ -258,7 +270,7 @@ pub async fn event_listener(ectx: &EventHandlerContext) -> Result<(), Error> {
                                     &super::handler::HandleModAction {
                                         guild_id: *guild_id,
                                         limit: super::core::UserLimitTypes::RoleRemovedFromMember,
-                                        user_id: entry.user_id,
+                                        user_id,
                                         target: Some(target.to_string()),
                                         action_data: serde_json::json!({
                                             "old": old_roles,

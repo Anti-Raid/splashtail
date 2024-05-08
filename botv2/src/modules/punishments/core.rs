@@ -1,7 +1,6 @@
 use super::sting_source::StingEntry;
 use crate::silverpelt::module_config::is_module_enabled;
 use crate::silverpelt::proxysupport::{guild, member_in_guild};
-use crate::silverpelt::utils::serenity_utils::greater_member_hierarchy;
 use serde::{Deserialize, Serialize};
 use serenity::all::{EditMember, GuildId, RoleId, Timestamp, UserId};
 use std::collections::HashSet;
@@ -317,7 +316,11 @@ impl Action {
             }
         }
 
-        if greater_member_hierarchy(&guild, &bot, &user).unwrap_or(user.user.id) == user.user.id {
+        if guild
+            .greater_member_hierarchy(&bot, &user)
+            .unwrap_or(user.user.id)
+            == user.user.id
+        {
             return Err(
                 "Bot does not have the required permissions to carry out this action".into(),
             );

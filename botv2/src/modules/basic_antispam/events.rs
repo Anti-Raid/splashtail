@@ -1,5 +1,11 @@
-use crate::{silverpelt::EventHandlerContext, Error};
+use crate::{
+    silverpelt::{module_config::is_module_enabled, EventHandlerContext},
+    Error,
+};
 use serenity::all::FullEvent;
+
+/// The maximum number of mentions before the anti-everyone trigger is activated
+const MAX_MENTIONS: u32 = 10;
 
 bitflags::bitflags! {
     #[derive(PartialEq)]
@@ -22,8 +28,9 @@ pub async fn event_listener(ectx: &EventHandlerContext) -> Result<(), Error> {
             let config = super::cache::get_config(&data.pool, ectx.guild_id).await?;
 
             let mut triggered_flags = TriggeredFlags::NONE;
+            let mut triggered_stings = 0;
 
-            if config.anti_invite {
+            if let Some(ai_stings) = config.anti_invite {
                 let trimmed_msg = new_message
                     .content
                     .trim()
@@ -36,20 +43,25 @@ pub async fn event_listener(ectx: &EventHandlerContext) -> Result<(), Error> {
                     || trimmed_msg.contains("discord.com/invite")
                 {
                     triggered_flags |= TriggeredFlags::ANTI_INVITE;
+                    triggered_stings += ai_stings;
                 }
             }
 
-            if config.anti_everyone
-                && (new_message.content.contains("@everyone") || new_message.mention_everyone())
-            {
-                triggered_flags |= TriggeredFlags::ANTI_EVERYONE;
+            if let Some(ae_stings) = config.anti_everyone {
+                if new_message.content.contains("@everyone")
+                    || new_message.mention_everyone()
+                    || new_message.mentions.len() > MAX_MENTIONS
+                {
+                    triggered_flags |= TriggeredFlags::ANTI_EVERYONE;
+                    triggered_stings += ae_stings;
+                }
             }
 
             if triggered_flags != TriggeredFlags::NONE {
                 // For now, don't do anything, punishment support is coming soon
                 new_message
                     .delete(
-                        &ctx,
+                        &ctx.http,
                         Some(&format!("Message triggered flags: {:?}", {
                             let mut tf = vec![];
 
@@ -61,6 +73,21 @@ pub async fn event_listener(ectx: &EventHandlerContext) -> Result<(), Error> {
                         })),
                     )
                     .await?;
+
+                // Apply stings
+                if triggered_stings > 0
+                    && is_module_enabled(&data.pool, ectx.guild_id, "punishments").await?
+                {
+                    sqlx::query!(
+                        "INSERT INTO basic_antispam__punishments (user_id, guild_id, stings, triggered_flags) VALUES ($1, $2, $3, $4)",
+                        new_message.author.id.to_string(),
+                        ectx.guild_id.to_string(),
+                        triggered_stings as i32,
+                        i64::from(triggered_flags.bits())
+                    )
+                    .execute(&data.pool)
+                    .await?;
+                }
             }
 
             Ok(())
@@ -98,9 +125,11 @@ pub async fn event_listener(ectx: &EventHandlerContext) -> Result<(), Error> {
             }
 
             if triggered_flags != TriggeredFlags::NONE {
-                // For now, don't do anything, punishment support is coming soon
                 new_member
-                    .kick(&ctx, Some("Below configured minimum/maximum account age"))
+                    .kick(
+                        &ctx.http,
+                        Some("Below configured minimum/maximum account age"),
+                    )
                     .await?;
             }
 

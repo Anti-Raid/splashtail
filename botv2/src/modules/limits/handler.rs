@@ -48,7 +48,7 @@ pub async fn handle_mod_action(
     let action_id = gen_random(48);
 
     sqlx::query!(
-        "INSERT INTO limits__user_actions (action_id, guild_id, user_id, target, limit_type, action_data, created_at, limits_hit, stings) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)",
+        "INSERT INTO limits__user_actions (action_id, guild_id, user_id, target, limit_type, action_data, created_at, stings) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)",
         action_id,
         guild_id.to_string(),
         user_id.to_string(),
@@ -56,7 +56,6 @@ pub async fn handle_mod_action(
         limit.to_string(),
         action_data,
         sqlx::types::chrono::Utc::now(),
-        &[],
         0
     )
     .execute(&mut *tx)
@@ -137,53 +136,53 @@ pub async fn handle_mod_action(
         {
             Ok(()) => {
                 let mut action_ids = Vec::new();
+                let mut limit_ids = Vec::new();
 
-                for (id, _) in hit_limits.iter() {
+                for (id, limit) in hit_limits.iter() {
                     action_ids.extend(id.clone());
+                    limit_ids.push(limit.limit_id.clone());
                 }
 
-                for (_, limit) in hit_limits {
-                    sqlx::query!(
-                        "
-                        INSERT INTO limits__past_hit_limits
-                        (id, guild_id, user_id, limit_id, cause, notes)
-                        VALUES ($1, $2, $3, $4, $5, $6)",
-                        gen_random(16),
-                        guild_id.to_string(),
-                        user_id.to_string(),
-                        limit.limit_id,
-                        &action_ids,
-                        &vec![]
-                    )
-                    .execute(&data.pool)
-                    .await?;
-                }
+                sqlx::query!(
+                    "
+                    INSERT INTO limits__past_hit_limits
+                    (id, guild_id, user_id, limit_ids, cause, notes)
+                    VALUES ($1, $2, $3, $4, $5, $6)",
+                    gen_random(16),
+                    guild_id.to_string(),
+                    user_id.to_string(),
+                    &limit_ids,
+                    &action_ids,
+                    &vec![]
+                )
+                .execute(&data.pool)
+                .await?;
             }
             Err(e) => {
                 log::error!("Failed to trigger punishment: {:?}", e);
 
                 let mut action_ids = Vec::new();
+                let mut limit_ids = Vec::new();
 
-                for (id, _) in hit_limits.iter() {
+                for (id, limit) in hit_limits.iter() {
                     action_ids.extend(id.clone());
+                    limit_ids.push(limit.limit_id.clone());
                 }
 
-                for (_, limit) in hit_limits {
-                    sqlx::query!(
-                        "
-                        INSERT INTO limits__past_hit_limits
-                        (id, guild_id, user_id, limit_id, cause, notes)
-                        VALUES ($1, $2, $3, $4, $5, $6)",
-                        gen_random(16),
-                        guild_id.to_string(),
-                        user_id.to_string(),
-                        limit.limit_id,
-                        &action_ids,
-                        &vec![e.to_string()]
-                    )
-                    .execute(&data.pool)
-                    .await?;
-                }
+                sqlx::query!(
+                    "
+                    INSERT INTO limits__past_hit_limits
+                    (id, guild_id, user_id, limit_ids, cause, notes)
+                    VALUES ($1, $2, $3, $4, $5, $6)",
+                    gen_random(16),
+                    guild_id.to_string(),
+                    user_id.to_string(),
+                    &limit_ids,
+                    &action_ids,
+                    &vec![e.to_string()]
+                )
+                .execute(&data.pool)
+                .await?;
             }
         }
     }

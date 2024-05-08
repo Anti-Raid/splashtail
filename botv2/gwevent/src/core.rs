@@ -1,13 +1,11 @@
+use super::field_type::FieldType;
 use crate::Error;
 use indexmap::IndexMap;
 use log::warn;
 use serenity::all::{
-    ActionExecution, EmojiId,
-    FullEvent, GuildChannel, GuildId,
-    StickerId, UserId,
+    ActionExecution, EmojiId, FullEvent, GuildChannel, GuildId, StickerId, UserId,
 };
 use strum::VariantNames;
-use super::field_type::FieldType;
 
 /// Returns all events
 #[allow(dead_code)]
@@ -218,7 +216,13 @@ pub fn get_event_user_id(event: &FullEvent) -> Result<UserId, Option<Error>> {
                 return Err(None);
             }
         }
-        FullEvent::GuildAuditLogEntryCreate { entry, .. } => entry.user_id,
+        FullEvent::GuildAuditLogEntryCreate { entry, .. } => {
+            if let Some(user_id) = entry.user_id {
+                user_id.to_owned()
+            } else {
+                return Err(None);
+            }
+        }
         FullEvent::GuildBanAddition { banned_user, .. } => banned_user.id,
         FullEvent::GuildBanRemoval { unbanned_user, .. } => unbanned_user.id,
         FullEvent::GuildCreate { guild, .. } => guild.owner_id,
@@ -238,21 +242,21 @@ pub fn get_event_user_id(event: &FullEvent) -> Result<UserId, Option<Error>> {
             } else {
                 return Err(None);
             }
-        },
+        }
         FullEvent::GuildScheduledEventDelete { event, .. } => {
             if let Some(ref creator) = event.creator {
                 creator.id.to_owned()
             } else {
                 return Err(None);
             }
-        },
+        }
         FullEvent::GuildScheduledEventUpdate { event, .. } => {
             if let Some(ref creator) = event.creator {
                 creator.id.to_owned()
             } else {
                 return Err(None);
             }
-        },
+        }
         FullEvent::GuildScheduledEventUserAdd { subscribed, .. } => subscribed.user_id,
         FullEvent::GuildScheduledEventUserRemove { unsubscribed, .. } => unsubscribed.user_id,
         FullEvent::GuildStickersUpdate { .. } => return Err(None), // Doesn't have a known user just from event,
@@ -318,7 +322,7 @@ pub fn get_event_user_id(event: &FullEvent) -> Result<UserId, Option<Error>> {
             } else {
                 return Err(None);
             }
-        },
+        }
         FullEvent::ThreadDelete { .. } => return Err(None), // Doesn't have a known user just from event,
         FullEvent::ThreadListSync { .. } => return Err(None), // Doesn't have a known user just from event
         FullEvent::ThreadMemberUpdate { thread_member, .. } => thread_member.user_id,
@@ -329,8 +333,7 @@ pub fn get_event_user_id(event: &FullEvent) -> Result<UserId, Option<Error>> {
             } else {
                 return Err(None);
             }
-        
-        },
+        }
         FullEvent::TypingStart { .. } => return Err(None), // We dont handle typing start
         FullEvent::UserUpdate { .. } => return Err(None),  // We dont handle user updates
         FullEvent::VoiceChannelStatusUpdate { .. } => return Err(None), // We dont handle voice right now
@@ -523,12 +526,7 @@ pub fn expand_event(event: &FullEvent) -> Option<IndexMap<String, Field>> {
         insert_field(fields, "channel", "guild_id", channel.guild_id);
         insert_field(fields, "channel", "channel_name", channel.name.clone());
         insert_field(fields, "channel", "nsfw", channel.nsfw);
-        insert_field(
-            fields,
-            "channel",
-            "type",
-            format!("{:?}", channel.kind),
-        );
+        insert_field(fields, "channel", "type", format!("{:?}", channel.kind));
 
         // Optional fields
         insert_optional_field(fields, "channel", "channel_topic", channel.topic.clone());
@@ -548,7 +546,12 @@ pub fn expand_event(event: &FullEvent) -> Option<IndexMap<String, Field>> {
 
         insert_field(fields, "channel", "channel_id", channel.id);
         insert_field(fields, "channel", "position", channel.position);
-        insert_field(fields, "channel", "permission_overwrites", channel.permission_overwrites.clone());
+        insert_field(
+            fields,
+            "channel",
+            "permission_overwrites",
+            channel.permission_overwrites.clone(),
+        );
     }
 
     fn expand_partial_guild_channel(
@@ -641,7 +644,7 @@ pub fn expand_event(event: &FullEvent) -> Option<IndexMap<String, Field>> {
     ) {
         insert_field(fields, "audit_log_entry", "guild_id", *guild_id);
         insert_field(fields, "audit_log_entry", "action", entry.action);
-        insert_field(fields, "audit_log_entry", "user_id", entry.user_id);
+        insert_optional_field(fields, "audit_log_entry", "user_id", entry.user_id);
         insert_field(fields, "audit_log_entry", "audit_log_id", entry.id);
         insert_optional_field(
             fields,
@@ -655,7 +658,7 @@ pub fn expand_event(event: &FullEvent) -> Option<IndexMap<String, Field>> {
             "audit_log_target_id",
             entry.target_id,
         );
-        insert_optional_field(
+        insert_field(
             fields,
             "audit_log_entry",
             "audit_log_changes",
@@ -676,18 +679,13 @@ pub fn expand_event(event: &FullEvent) -> Option<IndexMap<String, Field>> {
     ) {
         insert_field(fields, "emoji_map", "guild_id", *guild_id);
 
-        insert_field(
-            fields,
-            "emoji_map",
-            "emojis",
-            {
-                let mut emojis = Vec::new();
-                for emoji in emoji_map.iter() {
-                    emojis.push(emoji.clone());
-                }
-                emojis
-            },
-        );
+        insert_field(fields, "emoji_map", "emojis", {
+            let mut emojis = Vec::new();
+            for emoji in emoji_map.iter() {
+                emojis.push(emoji.clone());
+            }
+            emojis
+        });
     }
 
     fn expand_member(
@@ -703,7 +701,7 @@ pub fn expand_event(event: &FullEvent) -> Option<IndexMap<String, Field>> {
         insert_optional_field(fields, "member", "joined_timestamp", member.joined_at);
         insert_optional_field(fields, "member", "premium_since", member.premium_since);
         insert_optional_field(fields, "member", "permissions", member.permissions);
-        
+
         insert_optional_field(
             fields,
             "member",
@@ -790,18 +788,13 @@ pub fn expand_event(event: &FullEvent) -> Option<IndexMap<String, Field>> {
     ) {
         insert_field(fields, "sticker_map", "guild_id", *guild_id);
 
-        insert_field(
-            fields,
-            "sticker_map",
-            "stickers",
-            {
-                let mut stickers = Vec::new();
-                for sticker in sticker_map.iter() {
-                    stickers.push(sticker.clone());
-                }
-                stickers
-            },
-        );
+        insert_field(fields, "sticker_map", "stickers", {
+            let mut stickers = Vec::new();
+            for sticker in sticker_map.iter() {
+                stickers.push(sticker.clone());
+            }
+            stickers
+        });
     }
 
     // to finish expanding
@@ -1060,25 +1053,75 @@ pub fn expand_event(event: &FullEvent) -> Option<IndexMap<String, Field>> {
         fields: &mut IndexMap<String, Field>,
         update: &serenity::model::event::MessageUpdateEvent,
     ) {
-        insert_field(fields, "message_update_event", "warning", "This message has not been cached by Anti-Raid!".to_string());
+        insert_field(
+            fields,
+            "message_update_event",
+            "warning",
+            "This message has not been cached by Anti-Raid!".to_string(),
+        );
 
         insert_field(fields, "message_update_event", "id", update.id);
-        insert_field(fields, "message_update_event", "channel_id", update.channel_id);
+        insert_field(
+            fields,
+            "message_update_event",
+            "channel_id",
+            update.channel_id,
+        );
 
         if let Some(user) = &update.author {
             insert_field(fields, "message_update_event", "user", user.clone());
         }
 
-        insert_optional_field(fields, "message_update_event", "content", update.content.clone());
-        insert_optional_field(fields, "message_update_event", "timestamp", update.timestamp);
-        insert_optional_field(fields, "message_update_event", "edited_timestamp", update.edited_timestamp);
+        insert_optional_field(
+            fields,
+            "message_update_event",
+            "content",
+            update.content.clone(),
+        );
+        insert_optional_field(
+            fields,
+            "message_update_event",
+            "timestamp",
+            update.timestamp,
+        );
+        insert_optional_field(
+            fields,
+            "message_update_event",
+            "edited_timestamp",
+            update.edited_timestamp,
+        );
         insert_optional_field(fields, "message_update_event", "tts", update.tts);
-        insert_optional_field(fields, "message_update_event", "mention_everyone", update.mention_everyone);
-        insert_optional_field(fields, "message_update_event", "mentions", update.mentions.clone());
-        insert_optional_field(fields, "message_update_event", "mention_roles", update.mention_roles.clone());
+        insert_optional_field(
+            fields,
+            "message_update_event",
+            "mention_everyone",
+            update.mention_everyone,
+        );
+        insert_optional_field(
+            fields,
+            "message_update_event",
+            "mentions",
+            update.mentions.clone(),
+        );
+        insert_optional_field(
+            fields,
+            "message_update_event",
+            "mention_roles",
+            update.mention_roles.clone(),
+        );
         //TODO: insert_optional_field(fields, "message_update_event", "mention_channels", update.mention_channels.clone());
-        insert_optional_field(fields, "message_update_event", "attachments", update.attachments.clone());
-        insert_optional_field(fields, "message_update_event", "embeds", update.embeds.clone());
+        insert_optional_field(
+            fields,
+            "message_update_event",
+            "attachments",
+            update.attachments.clone(),
+        );
+        insert_optional_field(
+            fields,
+            "message_update_event",
+            "embeds",
+            update.embeds.clone(),
+        );
         //TODO: insert_optional_field(fields, "message_update_event", "reactions", update.reactions.clone());
         insert_optional_field(fields, "message_update_event", "pinned", update.pinned);
     }
@@ -1321,7 +1364,7 @@ pub fn expand_event(event: &FullEvent) -> Option<IndexMap<String, Field>> {
         FullEvent::MessageUpdate {
             old_if_available,
             new,
-            event
+            event,
         } => {
             if let Some(old) = old_if_available {
                 expand_message(&mut fields, old.clone());

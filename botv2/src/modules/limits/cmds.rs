@@ -1,4 +1,4 @@
-use crate::modules::limits::core::Limit;
+use super::core::Limit;
 use crate::{Context, Error};
 use poise::{serenity_prelude::CreateEmbed, CreateReply};
 use serenity::{
@@ -24,7 +24,7 @@ pub async fn limits_add(
     ctx: Context<'_>,
     #[description = "The name of the limit"] limit_name: String,
     #[description = "The type of limit to impose on moderators"]
-    limit_type: crate::modules::limits::core::UserLimitTypesChoices,
+    limit_type: super::core::UserLimitTypesChoices,
     #[description = "The amount of times the limit can be hit"] limit_per: i32,
     #[description = "The time interval infractions are counted in"] limit_time: i64,
     #[description = "The time unit for the time interval [seconds/minutes/hours/days]"]
@@ -194,14 +194,14 @@ pub async fn limitactions_view(
 ) -> Result<(), Error> {
     let actions = {
         if let Some(user_id) = user_id {
-            crate::modules::limits::core::UserAction::user(
+            super::core::UserAction::user(
                 &ctx.data(),
                 ctx.guild_id().ok_or("Could not get guild id")?,
                 user_id,
             )
             .await?
         } else {
-            crate::modules::limits::core::UserAction::guild(
+            super::core::UserAction::guild(
                 &ctx.data(),
                 ctx.guild_id().ok_or("Could not get guild id")?,
             )
@@ -230,6 +230,13 @@ pub async fn limitactions_view(
     let mut added: i32 = 0;
     let mut i = 0;
 
+    // TODO: Support sending past hit limits pertaining to action ids in attachments as well
+    let past_hit_limits = super::core::PastHitLimits::guild(
+        &ctx.data(),
+        ctx.guild_id().ok_or("Could not get guild id")?,
+    )
+    .await?;
+
     for action in actions {
         added += 1;
 
@@ -250,6 +257,13 @@ pub async fn limitactions_view(
             "None".to_string()
         };
 
+        let mut limits_hit = vec![];
+        for past_hit_limit in &past_hit_limits {
+            if past_hit_limit.cause.iter().any(|cause| *cause == action_id) {
+                limits_hit.push(past_hit_limit.id.clone());
+            }
+        }
+
         embeds[i] = embeds[i].clone().field(
             action_id.clone(),
             format!(
@@ -261,7 +275,7 @@ pub async fn limitactions_view(
                 timestamp = action.created_at.timestamp(),
                 no_stings = action.stings,
                 id = action_id,
-                limits_hit = action.limits_hit
+                limits_hit = limits_hit
             ),
             false,
         );
@@ -281,7 +295,7 @@ pub async fn limitactions_view(
 /// View hit limits
 #[poise::command(prefix_command, slash_command, guild_only, rename = "hit")]
 pub async fn limits_hit(ctx: Context<'_>) -> Result<(), Error> {
-    let hit_limits = crate::modules::limits::core::PastHitLimits::guild(
+    let hit_limits = super::core::PastHitLimits::guild(
         &ctx.data(),
         ctx.guild_id().ok_or("Could not get guild id")?,
     )
@@ -335,24 +349,30 @@ pub async fn limits_hit(ctx: Context<'_>) -> Result<(), Error> {
         let mut causes = String::new();
 
         for cause in hit_limit.cause {
-            causes.push_str(
-                &format!(
-                    "``{limit_type}`` by {user_id} at <t:{timestamp}:R> [{id}] | {action_data} \n**Hit Limits:** {limits_hit:#?}",
-                    limit_type = cause.limit_type,
-                    action_data = serde_json::to_string(&cause.action_data).map_err(|_| "Could not serialize action_data")?,
-                    user_id = cause.user_id.mention().to_string() + " (" + &cause.user_id.to_string() + ")",
-                    timestamp = cause.created_at.timestamp(),
-                    id = cause.action_id,
-                    limits_hit = cause.limits_hit
-                ),
-            );
+            let cause = super::core::UserAction::by_id(
+                &ctx.data(),
+                ctx.guild_id().ok_or("Could not get guild id")?,
+                &cause,
+            )
+            .await?;
+
+            causes.push_str(&format!(
+                "``{limit_type}`` by {user_id} at <t:{timestamp}:R> [{id}] | {action_data}",
+                limit_type = cause.limit_type,
+                action_data = serde_json::to_string(&cause.action_data)
+                    .map_err(|_| "Could not serialize action_data")?,
+                user_id =
+                    cause.user_id.mention().to_string() + " (" + &cause.user_id.to_string() + ")",
+                timestamp = cause.created_at.timestamp(),
+                id = cause.action_id,
+            ));
         }
 
         embeds[i] = embeds[i].clone().field(
             hit_limit.id.clone(),
             format!(
-                "Limit ``{limit_id}`` reached by ``{user_id}`` at <t:{timestamp}:R> [{id}]\n**Notes:** {notes}\n**Causes:** {causes}",
-                limit_id = hit_limit.limit_id,
+                "Limits ``{limit_ids}`` reached by ``{user_id}`` at <t:{timestamp}:R> [{id}]\n**Notes:** {notes}\n**Causes:** {causes}",
+                limit_ids = hit_limit.limit_ids.join(", "),
                 user_id = hit_limit.user_id.mention().to_string() + " (" + &hit_limit.user_id.to_string() + ")",
                 timestamp = hit_limit.created_at.timestamp(),
                 id = hit_limit.id,

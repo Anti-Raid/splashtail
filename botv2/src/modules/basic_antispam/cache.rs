@@ -4,19 +4,21 @@ use once_cell::sync::Lazy;
 
 #[derive(Debug, Clone)]
 pub struct BasicAntispamConfig {
-    pub anti_invite: bool,
-    pub anti_everyone: bool,
+    pub anti_invite: Option<i32>, // None = disabled, Some(<stings>) othersise
+    pub anti_everyone: Option<i32>, // None = disabled, Some(<stings>) othersise
     pub minimum_account_age: Option<i64>,
     pub maximum_account_age: Option<i64>, // Not sure why you'd ever want this, but it's here
+    pub sting_retention: i32,             // Number of seconds to keep stings for
 }
 
 impl Default for BasicAntispamConfig {
     fn default() -> Self {
         Self {
-            anti_invite: false,
-            anti_everyone: true,
+            anti_invite: Some(0),
+            anti_everyone: Some(0),
             minimum_account_age: None,
             maximum_account_age: None,
+            sting_retention: 60 * 60, // one hour retention
         }
     }
 }
@@ -26,7 +28,7 @@ pub static BASIC_ANTISPAM_CONFIG_CACHE: Lazy<Cache<serenity::all::GuildId, Basic
 
 pub async fn setup_cache_initial(data: &sqlx::PgPool) -> Result<(), crate::Error> {
     let config = sqlx::query!(
-        "SELECT guild_id, anti_invite, anti_everyone, minimum_account_age, maximum_account_age FROM basic_antispam__options",
+        "SELECT guild_id, anti_invite, anti_everyone, minimum_account_age, maximum_account_age, sting_retention FROM basic_antispam__options",
     )
     .fetch_all(data)
     .await?;
@@ -37,6 +39,7 @@ pub async fn setup_cache_initial(data: &sqlx::PgPool) -> Result<(), crate::Error
         let anti_everyone = row.anti_everyone;
         let minimum_account_age = row.minimum_account_age;
         let maximum_account_age = row.maximum_account_age;
+        let sting_retention = row.sting_retention;
 
         BASIC_ANTISPAM_CONFIG_CACHE
             .insert(
@@ -46,6 +49,7 @@ pub async fn setup_cache_initial(data: &sqlx::PgPool) -> Result<(), crate::Error
                     anti_everyone,
                     minimum_account_age,
                     maximum_account_age,
+                    sting_retention,
                 },
             )
             .await;
@@ -62,7 +66,7 @@ pub async fn get_config(
         Ok(config.clone())
     } else {
         let config = sqlx::query!(
-            "SELECT anti_invite, anti_everyone, minimum_account_age, maximum_account_age FROM basic_antispam__options WHERE guild_id = $1",
+            "SELECT anti_invite, anti_everyone, minimum_account_age, maximum_account_age, sting_retention FROM basic_antispam__options WHERE guild_id = $1",
             guild_id.to_string(),
         )
         .fetch_optional(pool)
@@ -73,6 +77,7 @@ pub async fn get_config(
             let anti_everyone = config.anti_everyone;
             let minimum_account_age = config.minimum_account_age;
             let maximum_account_age = config.maximum_account_age;
+            let sting_retention = config.sting_retention;
 
             BASIC_ANTISPAM_CONFIG_CACHE
                 .insert(
@@ -82,6 +87,7 @@ pub async fn get_config(
                         anti_everyone,
                         minimum_account_age,
                         maximum_account_age,
+                        sting_retention,
                     },
                 )
                 .await;
@@ -91,6 +97,7 @@ pub async fn get_config(
                 anti_everyone,
                 minimum_account_age,
                 maximum_account_age,
+                sting_retention,
             })
         } else {
             let bas_cfg = BasicAntispamConfig::default();

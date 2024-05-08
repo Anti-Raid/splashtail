@@ -1,0 +1,56 @@
+use futures::future::FutureExt;
+
+/// Punishment sting source
+pub async fn register_punishment_sting_source(_data: &crate::Data) -> Result<(), crate::Error> {
+    async fn sting_entries(
+        ctx: &serenity::all::Context,
+        guild_id: serenity::all::GuildId,
+        user_id: serenity::all::UserId,
+    ) -> Result<Vec<crate::modules::punishments::sting_source::StingEntry>, crate::Error> {
+        let data = ctx.data::<crate::Data>();
+        let pool = &data.pool;
+
+        let mut entries = vec![];
+
+        let opts = super::cache::get_config(pool, guild_id).await?;
+
+        // Delete old entries
+        sqlx::query!(
+            "DELETE FROM basic_antispam__punishments WHERE created_at < $1",
+            chrono::Utc::now() - chrono::Duration::seconds(opts.sting_retention as i64),
+        )
+        .execute(pool)
+        .await?;
+
+        // Fetch all entries
+        let ba_entries = sqlx::query!(
+                "SELECT stings, created_at FROM basic_antispam__punishments WHERE user_id = $1 AND guild_id = $2",
+                user_id.to_string(),
+                guild_id.to_string(),
+            )
+            .fetch_all(pool)
+            .await?;
+
+        for entry in ba_entries {
+            entries.push(crate::modules::punishments::sting_source::StingEntry {
+                user_id,
+                guild_id,
+                stings: entry.stings,
+                reason: None, // TODO: Add reason (if possible)
+                created_at: entry.created_at,
+                expired: false,
+            });
+        }
+
+        Ok(entries)
+    }
+
+    let source = crate::modules::punishments::sting_source::StingSource {
+        id: "basic_antispam__punishments".to_string(),
+        description: "Basic Antispam Punishments".to_string(),
+        fetch: Box::new(|ctx, guild_id, user_id| sting_entries(ctx, *guild_id, *user_id).boxed()),
+    };
+
+    crate::modules::punishments::sting_source::add_sting_source(source);
+    Ok(())
+}
