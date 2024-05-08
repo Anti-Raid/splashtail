@@ -571,7 +571,18 @@ async fn main() {
                     return Ok(true);
                 }
 
-                Err(res.to_markdown().into())
+                ctx.send(
+                    poise::CreateReply::new().embed(
+                        serenity::all::CreateEmbed::new()
+                            .color(serenity::all::Color::RED)
+                            .title("You don't have permission to use this command?")
+                            .description(res.to_markdown())
+                            .field("Code", format!("`{}`", res.code()), false),
+                    ),
+                )
+                .await?;
+
+                Ok(false)
             })
         }),
         pre_command: |ctx| {

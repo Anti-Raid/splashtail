@@ -4,6 +4,7 @@ use indexmap::indexmap;
 
 mod am_toggles;
 mod commands;
+mod events;
 mod modules;
 mod perms;
 
@@ -63,6 +64,7 @@ pub fn module() -> crate::silverpelt::Module {
             ),
         ],
         on_startup: vec![Box::new(move |data| am_toggles::setup(data).boxed())],
+        event_handlers: vec![Box::new(move |ectx| events::event_listener(ectx).boxed())],
         config_options: vec![ConfigOption {
             id: "guild_channels",
             name: "Guild Channels",
