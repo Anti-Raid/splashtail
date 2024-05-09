@@ -213,6 +213,8 @@ pub async fn event_listener(ectx: &EventHandlerContext) -> Result<(), Error> {
                     return Err("Bot member not found".into());
                 };
 
+                // TODO: Check for hierarchy here too
+
                 let bp = bot.permissions(&ectx.serenity_context.cache)?;
 
                 if !bp.kick_members() {
@@ -250,6 +252,8 @@ pub async fn event_listener(ectx: &EventHandlerContext) -> Result<(), Error> {
                     else {
                         return Err("Bot member not found".into());
                     };
+
+                    // TODO: Check for hierarchy here too
 
                     let bp = bot.permissions(&ectx.serenity_context.cache)?;
 
@@ -306,6 +310,8 @@ pub async fn event_listener(ectx: &EventHandlerContext) -> Result<(), Error> {
                     };
 
                     let bp = bot.permissions(&ectx.serenity_context.cache)?;
+
+                    // TODO: Check for hierarchy here too
 
                     if !bp.manage_nicknames() {
                         return Err(format!(
