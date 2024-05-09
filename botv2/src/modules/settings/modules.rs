@@ -1,5 +1,25 @@
 use crate::silverpelt::silverpelt_cache::SILVERPELT_CACHE;
 use crate::{Context, Error};
+use serenity::all::AutocompleteChoice;
+
+async fn module_list_autocomplete<'a>(
+    _ctx: Context<'_>,
+    partial: &'a str,
+) -> Vec<AutocompleteChoice<'a>> {
+    let mut ac = Vec::new();
+
+    for mv in SILVERPELT_CACHE.module_id_cache.iter() {
+        let module = mv.value();
+
+        if module.name.to_lowercase().contains(&partial.to_lowercase())
+            || module.id.to_lowercase().contains(&partial.to_lowercase())
+        {
+            ac.push(AutocompleteChoice::new(module.name, module.id));
+        }
+    }
+
+    ac
+}
 
 #[poise::command(
     prefix_command,
@@ -102,7 +122,7 @@ pub async fn modules_list(ctx: Context<'_>) -> Result<(), Error> {
 pub async fn modules_enable(
     ctx: Context<'_>,
     #[description = "The module to enable"]
-    #[autocomplete = "crate::silverpelt::poise_ext::module_list_autocomplete"]
+    #[autocomplete = "module_list_autocomplete"]
     module: String,
 ) -> Result<(), Error> {
     let Some(guild_id) = ctx.guild_id() else {
@@ -199,7 +219,7 @@ pub async fn modules_enable(
 pub async fn modules_disable(
     ctx: Context<'_>,
     #[description = "The module to disable"]
-    #[autocomplete = "crate::silverpelt::poise_ext::module_list_autocomplete"]
+    #[autocomplete = "module_list_autocomplete"]
     module: String,
 ) -> Result<(), Error> {
     let Some(guild_id) = ctx.guild_id() else {

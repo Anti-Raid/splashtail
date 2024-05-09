@@ -10,6 +10,7 @@ pub mod punishments;
 pub mod server_backups;
 pub mod server_member_backups;
 pub mod settings;
+pub mod temporary_punishments;
 pub mod web;
 pub mod root;
 
@@ -27,6 +28,7 @@ pub fn modules() -> Vec<crate::silverpelt::Module> {
         server_backups::module(),
         server_member_backups::module(),
         settings::module(),
+        temporary_punishments::module(),
         web::module(),
         root::module(),
     ]

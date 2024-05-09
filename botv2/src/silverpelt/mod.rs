@@ -6,7 +6,6 @@ pub mod ext_generate;
 pub mod member_permission_calc;
 pub mod module_config;
 pub mod permissions;
-pub mod poise_ext;
 pub mod proxysupport;
 pub mod silverpelt_cache;
 pub mod utils;
