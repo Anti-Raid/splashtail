@@ -7,20 +7,20 @@ pub mod inspector;
 pub mod limits;
 pub mod moderation;
 pub mod punishments;
+pub mod root;
 pub mod server_backups;
 pub mod server_member_backups;
 pub mod settings;
 pub mod web;
-pub mod root;
 
 /// List of modules available. Not all may be enabled
 pub fn modules() -> Vec<crate::silverpelt::Module> {
     vec![
         auditlogs::module(),
+        inspector::module(),
         core::module(),
         gitlogs::module(),
         info::module(),
-        inspector::module(),
         limits::module(),
         moderation::module(),
         punishments::module(),
