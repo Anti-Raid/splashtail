@@ -651,6 +651,10 @@ async fn main() {
         }
     }
 
+    for root_user in config::CONFIG.discord_auth.root_users.iter() {
+        cub.users.push(*root_user);
+    }
+
     drop(cub);
 
     let reqwest = reqwest::Client::builder()

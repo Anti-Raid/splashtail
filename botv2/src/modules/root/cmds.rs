@@ -17,9 +17,14 @@ pub async fn cub(ctx: Context<'_>) -> Result<(), Error> {
 
     for r in rec {
         cub_list.push_str(&format!(
-            "Name: {}, Type: {}, ID: {}, Protected: {}",
+            "Name: {}, Type: {}, ID: {}, Protected: {}\n",
             r.name, r.r#type, r.id, r.protected
         ));
+    }
+
+    cub_list.push_str("**Root Users**\n");
+    for root_user in crate::config::CONFIG.discord_auth.root_users.iter() {
+        cub_list.push_str(&format!("- {} [<@{}>]", root_user, root_user));
     }
 
     ctx.say(cub_list).await?;

@@ -66,7 +66,7 @@ type DiscordAuth struct {
 	AllowedRedirects []string `yaml:"allowed_redirects" default:"http://localhost:3000/auth" validate:"required"`
 	MewldRedirect    string   `yaml:"mewld_redirect" default:"https://mewld.antiraid.xyz/login" validate:"required"`
 	RootUsers        []string `yaml:"root_users" default:"728871946456137770,564164277251080208,775855009421066262" validate:"required"`
-	PublicBot        bool     `yaml:"public_bot" default:"false" comment:"Whether the bot needs whitelisting in order to use" validate:"required"`
+	PublicBot        bool     `yaml:"public_bot" default:"false" comment:"Whether the bot needs whitelisting in order to use"`
 }
 
 type Sites struct {
