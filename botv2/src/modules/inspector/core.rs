@@ -16,7 +16,7 @@ pub async fn register_punishment_sting_source(_data: &crate::Data) -> Result<(),
 
         // Delete old entries
         sqlx::query!(
-            "DELETE FROM basic_antispam__punishments WHERE created_at < $1",
+            "DELETE FROM inspector__punishments WHERE created_at < $1",
             chrono::Utc::now() - chrono::Duration::seconds(opts.sting_retention as i64),
         )
         .execute(pool)
@@ -24,7 +24,7 @@ pub async fn register_punishment_sting_source(_data: &crate::Data) -> Result<(),
 
         // Fetch all entries
         let ba_entries = sqlx::query!(
-                "SELECT stings, created_at FROM basic_antispam__punishments WHERE user_id = $1 AND guild_id = $2",
+                "SELECT stings, created_at FROM inspector__punishments WHERE user_id = $1 AND guild_id = $2",
                 user_id.to_string(),
                 guild_id.to_string(),
             )
@@ -46,8 +46,8 @@ pub async fn register_punishment_sting_source(_data: &crate::Data) -> Result<(),
     }
 
     let source = crate::modules::punishments::sting_source::StingSource {
-        id: "basic_antispam__punishments".to_string(),
-        description: "Basic Antispam Punishments".to_string(),
+        id: "inspector__punishments".to_string(),
+        description: "Inspector Punishments".to_string(),
         fetch: Box::new(|ctx, guild_id, user_id| sting_entries(ctx, *guild_id, *user_id).boxed()),
     };
 

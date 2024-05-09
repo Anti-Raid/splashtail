@@ -6,8 +6,8 @@ use futures::future::FutureExt;
 
 pub fn module() -> crate::silverpelt::Module {
     crate::silverpelt::Module {
-        id: "basic_antispam",
-        name: "Basic Antispam",
+        id: "inspector",
+        name: "Inspector",
         description:
             "Provides basic anti-spam options (currently only anti-invite and anti-everyone pings)",
         toggleable: true,
