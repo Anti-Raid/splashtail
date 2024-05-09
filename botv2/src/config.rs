@@ -36,8 +36,8 @@ pub struct DiscordAuth {
     pub token: String,
     pub client_id: String,
     pub client_secret: String,
-    pub can_use_bot: Vec<UserId>,
     pub root_users: Vec<UserId>,
+    pub public_bot: bool,
 }
 
 // Object storage code

@@ -1,11 +1,55 @@
+use dashmap::DashMap;
 use futures::future::FutureExt;
 use moka::future::Cache;
 use once_cell::sync::Lazy;
+use serenity::all::UserId;
+
+#[derive(Debug, Clone)]
+#[allow(dead_code)]
+pub struct FakeBots {
+    pub bot_id: UserId,
+    pub name: String,
+    pub official_bot_ids: Vec<UserId>,
+}
+
+pub static FAKE_BOTS_CACHE: Lazy<DashMap<UserId, FakeBots>> = Lazy::new(DashMap::new);
+
+pub async fn setup_fake_bots(data: &crate::Data) -> Result<(), crate::Error> {
+    // Clear the cache
+    FAKE_BOTS_CACHE.clear();
+
+    let fake_bots =
+        sqlx::query!("SELECT bot_id, name, official_bot_ids FROM basic_antispam__fake_bots",)
+            .fetch_all(&data.pool)
+            .await?;
+
+    for row in fake_bots {
+        let bot_id = row.bot_id.parse::<UserId>()?;
+        let name = row.name.to_lowercase();
+        let official_bot_ids = row
+            .official_bot_ids
+            .iter()
+            .map(|id| id.parse::<UserId>())
+            .collect::<Result<Vec<UserId>, _>>()?;
+
+        FAKE_BOTS_CACHE.insert(
+            bot_id,
+            FakeBots {
+                bot_id,
+                name,
+                official_bot_ids,
+            },
+        );
+    }
+
+    Ok(())
+}
 
 #[derive(Debug, Clone)]
 pub struct BasicAntispamConfig {
     pub anti_invite: Option<i32>, // None = disabled, Some(<stings>) othersise
     pub anti_everyone: Option<i32>, // None = disabled, Some(<stings>) othersise
+    pub fake_bot_detection: bool,
     pub minimum_account_age: Option<i64>,
     pub maximum_account_age: Option<i64>, // Not sure why you'd ever want this, but it's here
     pub sting_retention: i32,             // Number of seconds to keep stings for
@@ -16,6 +60,7 @@ impl Default for BasicAntispamConfig {
         Self {
             anti_invite: Some(0),
             anti_everyone: Some(0),
+            fake_bot_detection: true,
             minimum_account_age: None,
             maximum_account_age: None,
             sting_retention: 60 * 60, // one hour retention
@@ -28,7 +73,7 @@ pub static BASIC_ANTISPAM_CONFIG_CACHE: Lazy<Cache<serenity::all::GuildId, Basic
 
 pub async fn setup_cache_initial(data: &sqlx::PgPool) -> Result<(), crate::Error> {
     let config = sqlx::query!(
-        "SELECT guild_id, anti_invite, anti_everyone, minimum_account_age, maximum_account_age, sting_retention FROM basic_antispam__options",
+        "SELECT guild_id, anti_invite, anti_everyone, fake_bot_detection, minimum_account_age, maximum_account_age, sting_retention FROM basic_antispam__options",
     )
     .fetch_all(data)
     .await?;
@@ -37,6 +82,7 @@ pub async fn setup_cache_initial(data: &sqlx::PgPool) -> Result<(), crate::Error
         let guild_id = row.guild_id.parse::<serenity::all::GuildId>()?;
         let anti_invite = row.anti_invite;
         let anti_everyone = row.anti_everyone;
+        let fake_bot_detection = row.fake_bot_detection;
         let minimum_account_age = row.minimum_account_age;
         let maximum_account_age = row.maximum_account_age;
         let sting_retention = row.sting_retention;
@@ -47,6 +93,7 @@ pub async fn setup_cache_initial(data: &sqlx::PgPool) -> Result<(), crate::Error
                 BasicAntispamConfig {
                     anti_invite,
                     anti_everyone,
+                    fake_bot_detection,
                     minimum_account_age,
                     maximum_account_age,
                     sting_retention,
@@ -66,7 +113,7 @@ pub async fn get_config(
         Ok(config.clone())
     } else {
         let config = sqlx::query!(
-            "SELECT anti_invite, anti_everyone, minimum_account_age, maximum_account_age, sting_retention FROM basic_antispam__options WHERE guild_id = $1",
+            "SELECT anti_invite, anti_everyone, fake_bot_detection, minimum_account_age, maximum_account_age, sting_retention FROM basic_antispam__options WHERE guild_id = $1",
             guild_id.to_string(),
         )
         .fetch_optional(pool)
@@ -75,6 +122,7 @@ pub async fn get_config(
         if let Some(config) = config {
             let anti_invite = config.anti_invite;
             let anti_everyone = config.anti_everyone;
+            let fake_bot_detection = config.fake_bot_detection;
             let minimum_account_age = config.minimum_account_age;
             let maximum_account_age = config.maximum_account_age;
             let sting_retention = config.sting_retention;
@@ -85,6 +133,7 @@ pub async fn get_config(
                     BasicAntispamConfig {
                         anti_invite,
                         anti_everyone,
+                        fake_bot_detection,
                         minimum_account_age,
                         maximum_account_age,
                         sting_retention,
@@ -95,6 +144,7 @@ pub async fn get_config(
             Ok(BasicAntispamConfig {
                 anti_invite,
                 anti_everyone,
+                fake_bot_detection,
                 minimum_account_age,
                 maximum_account_age,
                 sting_retention,

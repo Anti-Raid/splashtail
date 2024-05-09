@@ -15,6 +15,7 @@ bitflags::bitflags! {
         const ANTI_EVERYONE = 1 << 1;
         const MINIMUM_ACCOUNT_AGE = 1 << 2;
         const MAXIMUM_ACCOUNT_AGE = 1 << 3;
+        const FAKE_BOT_DETECTION = 1 << 4;
     }
 }
 
@@ -121,6 +122,36 @@ pub async fn event_listener(ectx: &EventHandlerContext) -> Result<(), Error> {
                     if diff > duration {
                         triggered_flags |= TriggeredFlags::MAXIMUM_ACCOUNT_AGE;
                     }
+                }
+            }
+
+            if config.fake_bot_detection && new_member.user.bot() {
+                // Normalize the bots name
+                let normalized_name = plsfix::fix_text(&new_member.user.name.to_lowercase(), None);
+
+                let mut found = false;
+                for fb in super::cache::FAKE_BOTS_CACHE.iter() {
+                    let val = fb.value();
+
+                    if val.official_bot_ids.contains(&new_member.user.id) {
+                        continue;
+                    }
+
+                    if normalized_name.contains(&val.name) {
+                        found = true;
+                        break;
+                    }
+
+                    let (diff, _) = text_diff::diff(&normalized_name, &val.name, "");
+
+                    if diff < 2 {
+                        found = true;
+                        break;
+                    }
+                }
+
+                if found {
+                    triggered_flags |= TriggeredFlags::FAKE_BOT_DETECTION;
                 }
             }
 

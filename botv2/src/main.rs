@@ -21,9 +21,7 @@ use std::sync::Arc;
 use tokio::sync::RwLock;
 
 use log::{error, info, warn};
-use poise::serenity_prelude::FullEvent;
-use poise::CreateReply;
-use serenity::all::HttpBuilder;
+use serenity::all::{FullEvent, GuildId, HttpBuilder, UserId};
 use sqlx::postgres::PgPoolOptions;
 use std::io::Write;
 
@@ -39,6 +37,18 @@ pub static CONNECT_STATE: Lazy<RwLock<ConnectState>> = Lazy::new(|| {
     RwLock::new(ConnectState {
         has_started_bgtasks: false,
         has_started_ipc: false,
+    })
+});
+
+pub struct CanUseBotList {
+    pub users: Vec<UserId>,
+    pub guilds: Vec<GuildId>,
+}
+
+pub static CAN_USE_BOT_CACHE: Lazy<RwLock<CanUseBotList>> = Lazy::new(|| {
+    RwLock::new(CanUseBotList {
+        users: Vec::new(),
+        guilds: Vec::new(),
     })
 });
 
@@ -64,6 +74,52 @@ impl Data {
             None => Err("Animus Magic IPC not initialized".into()),
         }
     }
+}
+
+// TODO: allow root users to customize/set this in database later
+pub fn maint_message<'a>(user_data: &crate::Data) -> poise::CreateReply<'a> {
+    let primary = poise::serenity_prelude::CreateEmbed::default()
+    .color(0xff0000)
+    .title("AntiRaid")
+    .url(&config::CONFIG.meta.support_server)
+    .description(
+        format!("Unfortunately, AntiRaid is currently unavailable due to poor code management and changes with the Discord API. We are currently in the works of V6, and hope to have it out by next month. All use of our services will not be available, and updates will be pushed here. We are extremely sorry for the inconvenience.\nFor more information you can also join our [Support Server]({})!", config::CONFIG.meta.support_server)
+    );
+
+    let changes = [
+        "We are working extremely hard on Antiraid v6, and have completed working on half of the bot. We should have this update out by Q1/Q2 2024! Delays may occur due to the sheer scope of the unique features we want to provide!",
+        "Yet another update: we are in the process of adding some MASSIVE new features including advanced permission management, server member limits, AI image classification, server member backups and custom customizable github webhook support (for developers)"
+    ];
+
+    let updates = poise::serenity_prelude::CreateEmbed::default()
+        .color(0x0000ff)
+        .title("Updates")
+        .description(changes.join("\t-"));
+
+    let statistics = poise::serenity_prelude::CreateEmbed::default()
+    .color(0xff0000)
+    .description(format!(
+        "**Server Count:** {}\n**Shard Count:** {}\n**Cluster Count:** {}\n**Cluster ID:** {}\n**Cluster Name:** {}\n**Uptime:** {}",
+        user_data.mewld_ipc.cache.total_guilds(),
+        ipc::argparse::MEWLD_ARGS.shard_count,
+        ipc::argparse::MEWLD_ARGS.cluster_count,
+        ipc::argparse::MEWLD_ARGS.cluster_id,
+        ipc::argparse::MEWLD_ARGS.cluster_name,
+        {
+            let duration: std::time::Duration = std::time::Duration::from_secs((chrono::Utc::now().timestamp() - crate::config::CONFIG.bot_start_time) as u64);
+            let seconds = duration.as_secs() % 60;
+            let minutes = (duration.as_secs() / 60) % 60;
+            let hours = (duration.as_secs() / 60) / 60;
+            format!("{}h{}m{}s", hours, minutes, seconds)
+        }
+    ));
+
+    poise::CreateReply::new()
+        .ephemeral(true)
+        .content(&config::CONFIG.meta.support_server)
+        .embed(primary)
+        .embed(updates)
+        .embed(statistics)
 }
 
 async fn on_error(error: poise::FrameworkError<'_, Data, Error>) {
@@ -129,56 +185,22 @@ async fn event_listener<'a>(
                 _ => return Ok(()),
             };
 
-            if !config::CONFIG
-                .discord_auth
-                .can_use_bot
-                .contains(&ic.user.id)
-            {
-                let primary = poise::serenity_prelude::CreateEmbed::default()
-                    .color(0xff0000)
-                    .title("AntiRaid")
-                    .url(&config::CONFIG.meta.support_server)
-                    .description(
-                        format!("Unfortunately, AntiRaid is currently unavailable due to poor code management and changes with the Discord API. We are currently in the works of V6, and hope to have it out by next month. All use of our services will not be available, and updates will be pushed here. We are extremely sorry for the inconvenience.\nFor more information you can also join our [Support Server]({})!", config::CONFIG.meta.support_server)
-                    );
+            let allowed = config::CONFIG.discord_auth.public_bot || {
+                let cub_cache = CAN_USE_BOT_CACHE.read().await;
+                if let Some(ref guild_id) = ic.guild_id {
+                    cub_cache.guilds.contains(guild_id) && cub_cache.users.contains(&ic.user.id)
+                } else {
+                    cub_cache.users.contains(&ic.user.id)
+                }
+            };
 
-                let changes = [
-                    "We are working extremely hard on Antiraid v6, and have completed working on half of the bot. We should have this update out by Q1/Q2 2024! Delays may occur due to the sheer scope of the unique features we want to provide!",
-                    "Yet another update: we are in the process of adding some MASSIVE new features including advanced permission management, server member limits, AI image classification, server member backups and custom customizable github webhook support (for developers"
-                ];
-
-                let updates = poise::serenity_prelude::CreateEmbed::default()
-                    .color(0x0000ff)
-                    .title("Updates")
-                    .description(changes.join("\t-"));
-
-                let statistics = poise::serenity_prelude::CreateEmbed::default()
-                    .color(0xff0000)
-                    .description(format!(
-                        "**Server Count:** {}\n**Shard Count:** {}\n**Cluster Count:** {}\n**Cluster ID:** {}\n**Cluster Name:** {}\n**Uptime:** {}",
-                        user_data.mewld_ipc.cache.total_guilds(),
-                        ipc::argparse::MEWLD_ARGS.shard_count,
-                        ipc::argparse::MEWLD_ARGS.cluster_count,
-                        ipc::argparse::MEWLD_ARGS.cluster_id,
-                        ipc::argparse::MEWLD_ARGS.cluster_name,
-                        {
-                            let duration: std::time::Duration = std::time::Duration::from_secs((chrono::Utc::now().timestamp() - crate::config::CONFIG.bot_start_time) as u64);
-                            let seconds = duration.as_secs() % 60;
-                            let minutes = (duration.as_secs() / 60) % 60;
-                            let hours = (duration.as_secs() / 60) / 60;
-                            format!("{}h{}m{}s", hours, minutes, seconds)
-                        }
-                    ));
-
+            if !allowed {
                 ic.create_response(
                     &ctx.serenity_context.http,
                     serenity::all::CreateInteractionResponse::Message(
-                        serenity::all::CreateInteractionResponseMessage::default()
-                            .flags(serenity::all::InteractionResponseFlags::EPHEMERAL)
-                            .content(&config::CONFIG.meta.support_server)
-                            .add_embed(primary)
-                            .add_embed(updates)
-                            .add_embed(statistics),
+                        maint_message(&user_data).to_slash_initial_response(
+                            serenity::all::CreateInteractionResponseMessage::default(),
+                        ),
                     ),
                 )
                 .await
@@ -276,6 +298,16 @@ async fn event_listener<'a>(
             return Err(e);
         }
     };
+
+    // Check if whitelisted
+    let allowed = config::CONFIG.discord_auth.public_bot || {
+        let cub = CAN_USE_BOT_CACHE.read().await;
+        cub.guilds.contains(&event_guild_id)
+    };
+
+    if !allowed {
+        return Ok(()); // Ignore the event
+    }
 
     // Create context for event handlers, this is done here and wrapped in an Arc to avoid useless clones
     let event_handler_context = Arc::new(EventHandlerContext {
@@ -475,60 +507,25 @@ async fn main() {
         },
         command_check: Some(|ctx| {
             Box::pin(async move {
-                if !config::CONFIG
-                    .discord_auth
-                    .can_use_bot
-                    .contains(&ctx.author().id)
-                {
+                let allowed = config::CONFIG.discord_auth.public_bot || {
+                    let cub_cache = CAN_USE_BOT_CACHE.read().await;
+                    if let Some(ref guild_id) = ctx.guild_id() {
+                        cub_cache.guilds.contains(guild_id)
+                            && cub_cache.users.contains(&ctx.author().id)
+                    } else {
+                        cub_cache.users.contains(&ctx.author().id)
+                    }
+                };
+
+                if !allowed {
                     // We already send in the event handler
                     if let poise::Context::Application(_) = ctx {
                         return Ok(false);
                     }
 
-                    let data = ctx.data();
-                    let primary = poise::serenity_prelude::CreateEmbed::default()
-                        .color(0xff0000)
-                        .title("AntiRaid")
-                        .url(&config::CONFIG.meta.support_server)
-                        .description(
-                            format!(
-                                "Unfortunately, AntiRaid is currently unavailable due to poor code management and changes with the Discord API. We are currently in the works of V6, and hope to have it out by next month. All use of our services will not be available, and updates will be pushed here. We are extremely sorry for the inconvenience.\nFor more information you can also join our [Support Server]({})!", config::CONFIG.meta.support_server
-                            )
-                        );
-
-                    let changes = ["We are working extremely hard on Antiraid v6, and have completed working on half of the bot. We should have this update out by Q1/Q2 2024! Delays may occur due to the sheer scope of the unique features we want to provide!"];
-
-                    let updates = poise::serenity_prelude::CreateEmbed::default()
-                        .color(0x0000ff)
-                        .title("Updates")
-                        .description(changes.join("\t-"));
-
-                    let statistics = poise::serenity_prelude::CreateEmbed::default()
-                        .color(0xff0000)
-                        .description(format!(
-                            "**Server Count:** {}\n**Shard Count:** {}\n**Cluster Count:** {}\n**Cluster ID:** {}\n**Cluster Name:** {}\n**Uptime:** {}",
-                            data.mewld_ipc.cache.total_guilds(),
-                            ipc::argparse::MEWLD_ARGS.shard_count,
-                            ipc::argparse::MEWLD_ARGS.cluster_count,
-                            ipc::argparse::MEWLD_ARGS.cluster_id,
-                            ipc::argparse::MEWLD_ARGS.cluster_name,
-                            {
-                                let duration: std::time::Duration = std::time::Duration::from_secs((chrono::Utc::now().timestamp() - crate::config::CONFIG.bot_start_time) as u64);
-                                let seconds = duration.as_secs() % 60;
-                                let minutes = (duration.as_secs() / 60) % 60;
-                                let hours = (duration.as_secs() / 60) / 60;
-                                format!("{}h{}m{}s", hours, minutes, seconds)
-                            }
-                        ));
-                    ctx.send(
-                        CreateReply::default()
-                            .content(&config::CONFIG.meta.support_server)
-                            .embed(primary)
-                            .embed(updates)
-                            .embed(statistics),
-                    )
-                    .await
-                    .map_err(|e| format!("Error sending reply: {}", e))?;
+                    ctx.send(maint_message(&ctx.data()))
+                        .await
+                        .map_err(|e| format!("Error sending reply: {}", e))?;
 
                     return Ok(false);
                 }
@@ -625,6 +622,36 @@ async fn main() {
         .connect(&config::CONFIG.meta.postgres_url)
         .await
         .expect("Could not initialize connection");
+
+    // Fetch can_use_bot list
+    let rec = sqlx::query!("SELECT id, type FROM can_use_bot")
+        .fetch_all(&pg_pool)
+        .await
+        .expect("Could not fetch the users who are allowed to use the bot");
+
+    // Save to CAN_USE_BOT_CACHE
+    let mut cub = CAN_USE_BOT_CACHE.write().await;
+    for item in rec {
+        match item.r#type.as_str() {
+            "user" => {
+                let id = item
+                    .id
+                    .parse::<UserId>()
+                    .unwrap_or_else(|_| panic!("Failed to parse user id: {}", item.id));
+                cub.users.push(id);
+            }
+            "guild" => {
+                let id = item
+                    .id
+                    .parse::<GuildId>()
+                    .unwrap_or_else(|_| panic!("Failed to parse guild id: {}", item.id));
+                cub.guilds.push(id);
+            }
+            _ => panic!("Unsupported type: {}", item.r#type),
+        }
+    }
+
+    drop(cub);
 
     let reqwest = reqwest::Client::builder()
         .connect_timeout(std::time::Duration::from_secs(30))

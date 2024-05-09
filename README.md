@@ -220,12 +220,65 @@ For future releases (or even initial if time permits):
 
 - Advanced Active Anti-Spam (maybe AI-based image classification blocks) []
 
-### Permissions
+# Permissions
 
 - A command is the base unit for access control. This means that all operations with differing access controls must have commands associated with them.
 - This means that all operations (list backup, create/restore backup, delete backup) *MUST* have associated commands
 - Sometimes, an operation (such as a web-only operation) may not have a module/command associated with it. In such cases, a 'virtual' module should be used. Virtual modules are modules with commands that are not registered via Discord's API. They are used to group commands together for access control purposes and to ensure that each operation is tied to a command
 
-### Development
+# Development
 
 Run ``cargo sqlx prepare`` in the ``botv2`` folder before committing anything. This will regenerate the SQLX files used by the bot to interact with the database. Note that ``make buildbot`` will automatically run this now.
+
+-------------------------------------------------------------------------------------------
+
+# Anti-Nuke Methods
+
+A nuke on a Discord server is defined as the following:
+
+## Bans/Kicks
+
+- A. Small Server (1 < m < 100): At least 10% of the server has been banned in a period of 10 minutes
+- B. Medium Server (100 < m < 500): At least 5% of the server has been banned in a period of 15 minutes
+- C. Large Server (500 < m < 1000): At least 2% of the server has been banned in a period of 17 minutes
+- D. Very Large Server (m > 1000): At least 1% of the server has been banned in a period of 17 minutes
+
+## Channel Mods
+
+- A. Small Server (1 < m < 1000): At least 10% of the server's channels have been created/editted/deleted in a period of 10 minutes
+- B. Large Server (m > 1000): At least 1% of the server's channels have been created/editted/deleted in a period of 17 minutes
+
+## Role Mods
+
+- A. Small Server (1 < m < 1000): At least 10% of the server's roles have been created/editted/deleted in a period of 10 minutes
+- B. Large Server (m > 1000): At least 1% of the server's roles have been created/editted/deleted in a period of 17 minutes
+
+**Note that the above set of constraints should be easy to change and should be stored in a database.**
+
+Once a nuke has been detected, all users with the capability to perform the nuke should be temporarily neutered. Then, investigation should be performed prior to giving back permissions.
+
+## Neutering
+
+TODO
+
+## Investigation
+
+Multiple strategies should be launched in parallel to try and determine who were involved in the nuke.
+
+A. Audit logs: This is the most reliable method to determine who was involved in the nuke. However, Discord's implementation tends to stall when a large number of actions are performed in a short period of time.
+B. Deduction: This is a more manual method of determining who was involved in the nuke but may not be reliable:
+
+- Check the roles of the banned users and see who could have performed it. Such users should be marked as suspect
+- Check the channels that were created/editted/deleted and see who could have performed it. Such users should be marked as suspect
+- Check the roles that were created/editted/deleted and see who could have performed it. Such users should be marked as suspect
+- Moderator reports: Moderators should be allowed to volunteer information on who they suspect was involved in the nuke which can then be crowdsourced among all moderators.
+
+## Reversal
+
+Once the investigation has been completed, the nuke should be reversed. This involves:
+
+- Unbanning all users who were banned
+- Restoring all channels that were deleted if possible
+- Restoring all roles that were deleted if possible
+- Restoring all roles that were editted if possible
+- Unneutering all moderators who were neutered

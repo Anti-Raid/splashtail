@@ -42,16 +42,16 @@ func (d *Differs[T]) Production() T {
 }
 
 type Config struct {
-	DiscordAuth        DiscordAuth         `yaml:"discord_auth" validate:"required"`
-	Sites              Sites               `yaml:"sites" validate:"required"`
-	Channels           Channels            `yaml:"channels" validate:"required"`
-	Roles              Roles               `yaml:"roles" validate:"required"`
-	JAPI               JAPI                `yaml:"japi" validate:"required"`
-	Notifications      Notifications       `yaml:"notifications" validate:"required"`
-	Servers            Servers             `yaml:"servers" validate:"required"`
-	Meta               Meta                `yaml:"meta" validate:"required"`
-	ObjectStorage      ObjectStorageConfig `yaml:"object_storage" validate:"required"`
-	Wafflepaw          Wafflepaw           `yaml:"wafflepaw" validate:"required"`
+	DiscordAuth   DiscordAuth         `yaml:"discord_auth" validate:"required"`
+	Sites         Sites               `yaml:"sites" validate:"required"`
+	Channels      Channels            `yaml:"channels" validate:"required"`
+	Roles         Roles               `yaml:"roles" validate:"required"`
+	JAPI          JAPI                `yaml:"japi" validate:"required"`
+	Notifications Notifications       `yaml:"notifications" validate:"required"`
+	Servers       Servers             `yaml:"servers" validate:"required"`
+	Meta          Meta                `yaml:"meta" validate:"required"`
+	ObjectStorage ObjectStorageConfig `yaml:"object_storage" validate:"required"`
+	Wafflepaw     Wafflepaw           `yaml:"wafflepaw" validate:"required"`
 }
 
 type Wafflepaw struct {
@@ -65,8 +65,8 @@ type DiscordAuth struct {
 	ClientSecret     string   `yaml:"client_secret" comment:"Discord Client Secret" validate:"required"`
 	AllowedRedirects []string `yaml:"allowed_redirects" default:"http://localhost:3000/auth" validate:"required"`
 	MewldRedirect    string   `yaml:"mewld_redirect" default:"https://mewld.antiraid.xyz/login" validate:"required"`
-	CanUseBot        []string `yaml:"can_use_bot" default:"728871946456137770,564164277251080208,775855009421066262" validate:"required"`
 	RootUsers        []string `yaml:"root_users" default:"728871946456137770,564164277251080208,775855009421066262" validate:"required"`
+	PublicBot        bool     `yaml:"public_bot" default:"false" comment:"Whether the bot needs whitelisting in order to use" validate:"required"`
 }
 
 type Sites struct {
@@ -112,7 +112,7 @@ type Meta struct {
 	CDNPath              string          `yaml:"cdn_path" default:"/failuremgmt/cdn/antiraid" comment:"CDN Path" validate:"required"`
 	VulgarList           []string        `yaml:"vulgar_list" default:"fuck,suck,shit,kill" validate:"required"`
 	UrgentMentions       string          `yaml:"urgent_mentions" default:"<@&1061643797315993701>" comment:"Urgent mentions" validate:"required"`
-	Proxy                Differs[string]          `yaml:"proxy" default:"http://127.0.0.1:3221,http://127.0.0.1:3222" comment:"Popplio Proxy URL" validate:"required"`
+	Proxy                Differs[string] `yaml:"proxy" default:"http://127.0.0.1:3221,http://127.0.0.1:3222" comment:"Popplio Proxy URL" validate:"required"`
 	DPSecret             string          `yaml:"dp_secret" comment:"DeployProxy Auth URL for super-sensitive pages" validate:"required"`
 	DebugTaskLogger      bool            `yaml:"debug_task_logger" comment:"Debug the task logger"`
 	SupportServer        string          `yaml:"support_server" comment:"Discord Support Server Link" default:"https://discord.gg/u78NFAXm" validate:"required"`
