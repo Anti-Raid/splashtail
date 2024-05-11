@@ -2,8 +2,6 @@ module github.com/anti-raid/splashtail
 
 go 1.22
 
-toolchain go1.22
-
 require (
 	github.com/bwmarrin/discordgo v0.28.1
 	github.com/getkin/kin-openapi v0.124.0 // indirect
@@ -19,7 +17,7 @@ require (
 	github.com/fxamacker/cbor/v2 v2.6.0
 	github.com/go-viper/mapstructure/v2 v2.0.0-alpha.1
 	github.com/infinitybotlist/iblfile v0.0.0-20240419035652-05c007b1bebe
-	github.com/infinitybotlist/kittycat/go v0.0.0-20240229022404-eaef242cde70
+	github.com/infinitybotlist/kittycat/go v0.0.0-20240511134831-9656e5216715
 	github.com/minio/minio-go/v7 v7.0.70
 	github.com/redis/rueidis v1.0.36
 	github.com/sirupsen/logrus v1.9.3
@@ -56,7 +54,7 @@ require (
 	github.com/rs/xid v1.5.0 // indirect
 	github.com/ugorji/go/codec v1.2.12 // indirect
 	github.com/vmihailenco/tagparser/v2 v2.0.0 // indirect
-	golang.org/x/net v0.24.0 // indirect
+	golang.org/x/net v0.25.0 // indirect
 	golang.org/x/sync v0.7.0 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
 )
@@ -75,7 +73,7 @@ require (
 	github.com/josharian/intern v1.0.0 // indirect
 	github.com/mailru/easyjson v0.7.7 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
-	golang.org/x/crypto v0.22.0 // indirect
+	golang.org/x/crypto v0.23.0 // indirect
 	golang.org/x/text v0.15.0
 )
 
@@ -85,6 +83,6 @@ require (
 	github.com/json-iterator/go v1.1.12
 	github.com/redis/go-redis/v9 v9.5.1 // indirect
 	go.uber.org/zap v1.27.0
-	golang.org/x/exp v0.0.0-20240416160154-fe59bbe5cc7f
+	golang.org/x/exp v0.0.0-20240506185415-9bf2ced13842
 	golang.org/x/sys v0.20.0 // indirect
 )

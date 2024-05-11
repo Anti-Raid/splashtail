@@ -40,13 +40,13 @@ func GetUserPermi(ctx context.Context, pool *pgxpool.Pool, guildId, userId strin
 	}
 
 	var sp = perms.StaffPermissions{
-		PermOverrides: permOverrides,
+		PermOverrides: perms.PFSS(permOverrides),
 		UserPositions: make([]perms.PartialStaffPosition, len(posFull)),
 	}
 	for _, pos := range posFull {
 		sp.UserPositions = append(sp.UserPositions, perms.PartialStaffPosition{
 			ID:    pos.ID,
-			Perms: pos.Perms,
+			Perms: perms.PFSS(pos.Perms),
 			Index: pos.Index,
 		})
 	}
