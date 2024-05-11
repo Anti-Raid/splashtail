@@ -1,5 +1,10 @@
 use crate::{Context, Error};
 
+#[poise::command(prefix_command, subcommands("register", "cub"))]
+pub async fn sudo(_ctx: Context<'_>) -> Result<(), Error> {
+    Ok(())
+}
+
 #[poise::command(prefix_command)]
 pub async fn register(ctx: Context<'_>) -> Result<(), Error> {
     poise::builtins::register_application_commands_buttons(ctx).await?;
@@ -13,7 +18,7 @@ pub async fn cub(ctx: Context<'_>) -> Result<(), Error> {
         .fetch_all(&ctx.data().pool)
         .await?;
 
-    let mut cub_list = "**Can Use Bot List**".to_string();
+    let mut cub_list = "**Can Use Bot List**\n".to_string();
 
     for r in rec {
         cub_list.push_str(&format!(
@@ -24,7 +29,7 @@ pub async fn cub(ctx: Context<'_>) -> Result<(), Error> {
 
     cub_list.push_str("**Root Users**\n");
     for root_user in crate::config::CONFIG.discord_auth.root_users.iter() {
-        cub_list.push_str(&format!("- {} [<@{}>]", root_user, root_user));
+        cub_list.push_str(&format!("- {} [<@{}>]\n", root_user, root_user));
     }
 
     ctx.say(cub_list).await?;

@@ -477,6 +477,11 @@ async fn main() {
                     let mut cmd = cmd.0;
                     cmd.category = Some(module.id.to_string());
 
+                    // Ensure subcommands are also linked to a category
+                    for subcommand in cmd.subcommands.iter_mut() {
+                        subcommand.category = Some(module.id.to_string());
+                    }
+
                     // Check for duplicate command names
                     if _cmd_names.contains(&cmd.name) {
                         panic!("Duplicate command name: {}", cmd.name);
