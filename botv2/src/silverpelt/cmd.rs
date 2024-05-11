@@ -332,7 +332,7 @@ pub async fn check_command(
 
                 let mut resolved_perms = Vec::new();
                 for perm in custom_resolved_kittycat_perms {
-                    if kittycat::perms::has_perm(&kc_perms, &perm) {
+                    if kittycat::perms::has_perm(&kc_perms, perm) {
                         resolved_perms.push(perm.clone());
                     }
                 }

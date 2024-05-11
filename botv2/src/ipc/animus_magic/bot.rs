@@ -58,6 +58,44 @@ impl AnimusResponse for BotAnimusResponse {
 }
 impl SerializableAnimusResponse for BotAnimusResponse {}
 
+/// Extra options for checking a command
+///
+/// This is seperate from the actual internal stuff to both avoid exposing
+/// internals which may change as well as to remove more dangerous settings
+/// not suitable for IPC
+#[derive(Debug, Clone, Serialize, Deserialize, Hash, PartialEq, Eq)]
+pub struct AmCheckCommandOptions {
+    /// Whether or not to ignore the cache
+    #[serde(default)]
+    pub ignore_cache: bool,
+
+    /// Whether or not to cache the result at all
+    #[serde(default)]
+    pub cache_result: bool,
+
+    /// Whether or not to ignore the fact that the module is disabled in the guild
+    #[serde(default)]
+    pub ignore_module_disabled: bool,
+
+    /// Whether or not to ignore the fact that the command is disabled in the guild
+    #[serde(default)]
+    pub ignore_command_disabled: bool,
+
+    /// What custom resolved permissions to use for the user. Note that ensure_user_has_custom_resolved must be true to ensure that the user has all the permissions in the custom_resolved_kittycat_perms
+    ///
+    /// API needs this for limiting the permissions of a user, allows setting custom resolved perms
+    #[serde(default)]
+    pub custom_resolved_kittycat_perms: Option<Vec<String>>,
+
+    /// Whether or not to ensure that the user has all the permissions in the custom_resolved_kittycat_perms
+    #[serde(default)]
+    pub ensure_user_has_custom_resolved: bool,
+
+    /// Custom permission checks to use
+    #[serde(default)]
+    pub custom_command_configuration: Option<silverpelt::GuildCommandConfiguration>,
+}
+
 #[derive(Serialize, Deserialize, Clone)]
 pub enum BotAnimusMessage {
     /// Ask the bot for module data
@@ -76,7 +114,7 @@ pub enum BotAnimusMessage {
         guild_id: GuildId,
         user_id: UserId,
         command: String,
-        opts: silverpelt::cmd::CheckCommandOptions,
+        opts: AmCheckCommandOptions,
     },
     /// Toggles a per-module cache toggle
     TogglePerModuleCache {
@@ -202,7 +240,21 @@ impl BotAnimusMessage {
                     pool,
                     cache_http,
                     &None,
-                    opts,
+                    silverpelt::cmd::CheckCommandOptions {
+                        ignore_cache: opts.ignore_cache,
+                        cache_result: opts.cache_result,
+                        ignore_module_disabled: opts.ignore_module_disabled,
+                        ignore_command_disabled: opts.ignore_command_disabled,
+                        custom_resolved_kittycat_perms: opts.custom_resolved_kittycat_perms.map(
+                            |crkp| {
+                                crkp.iter()
+                                    .map(|x| kittycat::perms::Permission::from_string(x))
+                                    .collect::<Vec<kittycat::perms::Permission>>()
+                            },
+                        ),
+                        custom_command_configuration: opts.custom_command_configuration,
+                        ensure_user_has_custom_resolved: opts.ensure_user_has_custom_resolved,
+                    },
                 )
                 .await;
 
