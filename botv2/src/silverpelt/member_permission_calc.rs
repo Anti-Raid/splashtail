@@ -1,3 +1,4 @@
+use kittycat::perms::Permission;
 use serenity::all::{GuildId, RoleId, UserId};
 
 /// Rederive permissions rederives the permissions given a member id and a list of roles
@@ -11,7 +12,7 @@ pub async fn rederive_perms(
     guild_id: GuildId,
     user_id: UserId,
     roles: &[RoleId],
-) -> Result<Vec<String>, crate::Error> {
+) -> Result<Vec<Permission>, crate::Error> {
     let roles_str = {
         let mut r = Vec::new();
 
@@ -48,13 +49,23 @@ pub async fn rederive_perms(
     for role in role_perms {
         user_positions.push(kittycat::perms::PartialStaffPosition {
             id: role.role_id,
-            perms: role.perms,
+            perms: role
+                .perms
+                .iter()
+                .map(|x| Permission::from_string(x))
+                .collect(),
             index: role.index,
         })
     }
 
     let (in_db, perm_overrides) = if let Some(rec) = rec {
-        (true, rec.perm_overrides)
+        (
+            true,
+            rec.perm_overrides
+                .iter()
+                .map(|x| Permission::from_string(x))
+                .collect(),
+        )
     } else {
         (false, Vec::new())
     };
@@ -65,11 +76,16 @@ pub async fn rederive_perms(
     }
     .resolve();
 
+    let resolved_perms_str = resolved_perms
+        .iter()
+        .map(|x| x.to_string())
+        .collect::<Vec<String>>();
+
     if in_db {
         sqlx::query!(
             "UPDATE guild_members SET roles = $1, resolved_perms_cache = $2, needs_perm_rederive = false WHERE guild_id = $3 AND user_id = $4",
             &roles_str,
-            &resolved_perms,
+            &resolved_perms_str,
             guild_id.to_string(),
             user_id.to_string()
         )
@@ -95,7 +111,7 @@ pub async fn rederive_perms(
             guild_id.to_string(),
             user_id.to_string(),
             &roles_str,
-            &resolved_perms
+            &resolved_perms_str
         )
         .execute(&mut *tx)
         .await?;
@@ -113,10 +129,10 @@ pub async fn get_kittycat_perms(
     guild_owner_id: UserId,
     user_id: UserId,
     roles: &[RoleId],
-) -> Result<Vec<String>, crate::Error> {
+) -> Result<Vec<Permission>, crate::Error> {
     // For now, owners have full permission, this may change in the future (maybe??)
     if guild_owner_id == user_id {
-        return Ok(vec!["global.*".to_string()]);
+        return Ok(vec!["global.*".into()]);
     }
 
     let everyone_role = guild_id.everyone_role();
@@ -148,7 +164,11 @@ pub async fn get_kittycat_perms(
         }
 
         if !roles_changed {
-            Ok(rec.resolved_perms_cache) // Then use the resolved perms cache
+            Ok(rec
+                .resolved_perms_cache
+                .iter()
+                .map(|x| Permission::from_string(x))
+                .collect::<Vec<Permission>>()) // Then use the resolved perms cache
         } else {
             Ok(rederive_perms(pool, guild_id, user_id, roles).await?)
         }

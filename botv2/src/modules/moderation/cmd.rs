@@ -232,7 +232,7 @@ pub async fn prune_user(
 
     let data = ctx.data();
 
-    let am = data.get_animus_magic().await?;
+    let am = data.get_animus_magic()?;
     let Some(resp) = am
         .underlying_client
         .request_one::<_, JobserverAnimusResponse>(

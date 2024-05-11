@@ -140,7 +140,7 @@ impl PermissionResult {
 pub fn check_perms_single(
     check: &PermissionCheck,
     member_native_perms: serenity::all::Permissions,
-    member_kittycat_perms: &[String],
+    member_kittycat_perms: &[kittycat::perms::Permission],
 ) -> PermissionResult {
     if check.kittycat_perms.is_empty() && check.native_perms.is_empty() {
         return PermissionResult::Ok {}; // Short-circuit if we don't have any permissions to check
@@ -153,7 +153,10 @@ pub fn check_perms_single(
     if check.inner_and {
         // inner AND, short-circuit if we don't have the permission
         for perm in &check.kittycat_perms {
-            if !kittycat::perms::has_perm(member_kittycat_perms, perm) {
+            if !kittycat::perms::has_perm(
+                member_kittycat_perms,
+                &kittycat::perms::Permission::from_string(perm),
+            ) {
                 return PermissionResult::MissingKittycatPerms {
                     check: check.clone(),
                 };
@@ -177,10 +180,19 @@ pub fn check_perms_single(
             .any(|perm| is_discord_admin || member_native_perms.contains(*perm));
 
         if !has_any_np {
-            let has_any_kc = check
-                .kittycat_perms
-                .iter()
-                .any(|perm| kittycat::perms::has_perm(member_kittycat_perms, perm));
+            let has_any_kc = {
+                let mut has_kc = false;
+                for perm in check.kittycat_perms.iter() {
+                    let kc = kittycat::perms::Permission::from_string(perm);
+
+                    if kittycat::perms::has_perm(member_kittycat_perms, &kc) {
+                        has_kc = true;
+                        break;
+                    }
+                }
+
+                has_kc
+            };
 
             if !has_any_kc {
                 return PermissionResult::MissingAnyPerms {
@@ -199,7 +211,7 @@ pub fn can_run_command(
     module_config: &GuildModuleConfiguration,
     cmd_qualified_name: &str,
     member_native_perms: serenity::all::Permissions,
-    member_kittycat_perms: &[String],
+    member_kittycat_perms: &[kittycat::perms::Permission],
 ) -> PermissionResult {
     log::debug!(
         "Command config: {:?} [{}]",

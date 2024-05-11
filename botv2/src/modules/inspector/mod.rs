@@ -1,6 +1,8 @@
 mod cache;
 mod core;
+mod dehoist;
 pub mod events; // Events is a public interface
+pub mod types;
 
 use futures::future::FutureExt;
 

@@ -163,7 +163,7 @@ pub async fn backups_create(
 
     let data = ctx.data();
 
-    let am = data.get_animus_magic().await?;
+    let am = data.get_animus_magic()?;
     let Some(resp) = am
         .underlying_client
         .request_one::<_, JobserverAnimusResponse>(
@@ -917,7 +917,7 @@ pub async fn backups_restore(
     });
 
     // Restore backup
-    let am = data.get_animus_magic().await?;
+    let am = data.get_animus_magic()?;
     let Some(res) = am
         .underlying_client
         .request_one(

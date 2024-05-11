@@ -9,6 +9,7 @@ use crate::silverpelt::{
     CommandExtendedData, GuildCommandConfiguration, GuildModuleConfiguration,
 };
 use botox::cache::CacheHttpImpl;
+use kittycat::perms::Permission;
 use log::info;
 use serde::{Deserialize, Serialize};
 use serenity::all::{GuildId, UserId};
@@ -169,7 +170,7 @@ pub struct CheckCommandOptions {
     ///
     /// API needs this for limiting the permissions of a user, allows setting custom resolved perms
     #[serde(default)]
-    pub custom_resolved_kittycat_perms: Option<Vec<String>>,
+    pub custom_resolved_kittycat_perms: Option<Vec<Permission>>,
 
     /// Whether or not to ensure that the user has all the permissions in the custom_resolved_kittycat_perms
     #[serde(default)]
@@ -330,9 +331,9 @@ pub async fn check_command(
                 };
 
                 let mut resolved_perms = Vec::new();
-                for perm in custom_resolved_kittycat_perms.iter() {
-                    if kittycat::perms::has_perm(&kc_perms, perm) {
-                        resolved_perms.push(perm.to_string());
+                for perm in custom_resolved_kittycat_perms {
+                    if kittycat::perms::has_perm(&kc_perms, &perm) {
+                        resolved_perms.push(perm.clone());
                     }
                 }
 
@@ -363,7 +364,7 @@ pub async fn check_command(
         user_id, command, member_perms
     );
 
-    let perm_res = silverpelt::permissions::can_run_command(
+    let perm_res = super::permissions::can_run_command(
         &cmd_data,
         &command_config,
         &module_config,

@@ -1,3 +1,5 @@
+use super::dehoist::dehoist_user;
+use super::types::{DehoistOptions, TriggeredFlags, MAX_MENTIONS};
 use crate::{
     silverpelt::{
         module_config::is_module_enabled, proxysupport::member_in_guild, EventHandlerContext,
@@ -5,69 +7,6 @@ use crate::{
     Error,
 };
 use serenity::all::FullEvent;
-
-/// The maximum number of mentions before the anti-everyone trigger is activated
-const MAX_MENTIONS: u32 = 10;
-
-bitflags::bitflags! {
-    #[derive(PartialEq)]
-    pub struct TriggeredFlags: u32 {
-        const NONE = 0;
-        const ANTI_INVITE = 1 << 0;
-        const ANTI_EVERYONE = 1 << 1;
-        const MINIMUM_ACCOUNT_AGE = 1 << 2;
-        const MAXIMUM_ACCOUNT_AGE = 1 << 3;
-        const FAKE_BOT_DETECTION = 1 << 4;
-    }
-}
-
-// Credits to https://github.com/getbeaned/GetBeaned-DiscordBot/blob/dc664828a74efb8e26710d1597faafd3fd68542a/cogs/dehoister.py#L138
-//
-// Legal note: both antiraid and getbeaned are AGPL3 so there should be no legal issue
-fn dehoist_member(display_name: &str, intensity: i32) -> (String, String) {
-    let previous_nickname = display_name.to_string();
-    let mut new_nickname = previous_nickname.clone();
-
-    if intensity >= 1 {
-        let mut nn = "".to_string();
-        for char in new_nickname.chars() {
-            let mut allowed = ![
-                '!', '"', '#', '$', '%', '&', '\'', '(', ')', '*', '+', ',', '-', '.', '/',
-            ]
-            .contains(&char);
-
-            if intensity >= 2 && allowed {
-                // Intensity of 2 includes ASCII letters
-                allowed = char.is_ascii_alphabetic();
-            }
-
-            if allowed {
-                nn.push(char);
-            }
-        }
-
-        new_nickname = nn;
-    }
-
-    // Intensity of 3 handles all of the above and also attempts to hoist using 'aa'
-    if intensity >= 3 {
-        let mut nn = new_nickname + "zz";
-
-        while nn.to_lowercase().get(0..2) == Some("aa") {
-            nn = nn.chars().skip(2).collect();
-        }
-
-        nn.truncate(nn.len() - 2);
-
-        new_nickname = nn;
-    }
-
-    if new_nickname.is_empty() {
-        new_nickname = "z_Nickname_DeHoisted".to_string();
-    }
-
-    (previous_nickname, new_nickname)
-}
 
 pub async fn event_listener(ectx: &EventHandlerContext) -> Result<(), Error> {
     let ctx = &ectx.serenity_context;
@@ -240,10 +179,11 @@ pub async fn event_listener(ectx: &EventHandlerContext) -> Result<(), Error> {
             }
 
             // Lastly, check for hoisting attempts
-            if config.hoist_detection > 0 {
-                let (prev, new) = dehoist_member(new_member.display_name(), config.hoist_detection);
+            if !config.hoist_detection.contains(DehoistOptions::DISABLED) {
+                let display_name = new_member.display_name().to_string();
+                let new = dehoist_user(&display_name, config.hoist_detection);
 
-                if prev != new {
+                if display_name != new {
                     let bot_userid = ectx.serenity_context.cache.current_user().id;
                     let cache_http = botox::cache::CacheHttpImpl::from_ctx(&ectx.serenity_context);
                     let Some(bot) =
@@ -290,16 +230,17 @@ pub async fn event_listener(ectx: &EventHandlerContext) -> Result<(), Error> {
             let config = super::cache::get_config(&data.pool, ectx.guild_id).await?;
 
             // Hoist detection
-            let display_name = event
-                .nick
-                .as_ref()
-                .or(event.user.global_name.as_ref())
-                .unwrap_or(&event.user.name);
+            if !config.hoist_detection.contains(DehoistOptions::DISABLED) {
+                let display_name = event
+                    .nick
+                    .as_ref()
+                    .or(event.user.global_name.as_ref())
+                    .unwrap_or(&event.user.name)
+                    .to_string();
 
-            if config.hoist_detection > 0 {
-                let (prev, new) = dehoist_member(display_name, config.hoist_detection);
+                let new = dehoist_user(&display_name, config.hoist_detection);
 
-                if prev != new {
+                if display_name != new {
                     let bot_userid = ectx.serenity_context.cache.current_user().id;
                     let cache_http = botox::cache::CacheHttpImpl::from_ctx(&ectx.serenity_context);
                     let Some(bot) =

@@ -17,7 +17,7 @@ use silverpelt::{
 use splashcore_rs::objectstore::ObjectStore;
 
 use once_cell::sync::Lazy;
-use std::sync::Arc;
+use std::sync::{Arc, OnceLock};
 use tokio::sync::RwLock;
 
 use log::{error, info, warn};
@@ -58,7 +58,7 @@ pub struct Data {
     pub redis_pool: fred::prelude::RedisPool,
     pub reqwest: reqwest::Client,
     pub mewld_ipc: Arc<MewldIpcClient>,
-    pub animus_magic_ipc: RwLock<Option<Arc<AnimusMagicClient>>>, // a rwlock is needed as the cachehttp is only available after the client is started
+    pub animus_magic_ipc: OnceLock<Arc<AnimusMagicClient>>, // a rwlock is needed as the cachehttp is only available after the client is started
     pub object_store: Arc<ObjectStore>,
     pub shards_ready: Arc<dashmap::DashMap<u16, bool>>,
     pub proxy_support_data: RwLock<Option<ProxySupportData>>, // Shard ID, WebsocketConfiguration
@@ -66,10 +66,10 @@ pub struct Data {
 
 impl Data {
     /// Helper method to get the animus magic client
-    async fn get_animus_magic(&self) -> Result<Arc<AnimusMagicClient>, crate::Error> {
-        let am = self.animus_magic_ipc.read().await;
+    fn get_animus_magic(&self) -> Result<Arc<AnimusMagicClient>, crate::Error> {
+        let am = self.animus_magic_ipc.get();
 
-        match am.as_ref() {
+        match am {
             Some(am) => Ok(am.clone()),
             None => Err("Animus Magic IPC not initialized".into()),
         }
@@ -254,9 +254,7 @@ async fn event_listener<'a>(
                         cache_http: CacheHttpImpl::from_ctx(ctx.serenity_context),
                     })));
 
-                    let mut am_ref = data.animus_magic_ipc.write().await;
-                    *am_ref = Some(am.clone());
-                    drop(am_ref);
+                    data.animus_magic_ipc.get_or_init(|| am.clone());
 
                     tokio::task::spawn(async move {
                         let am_ref = am.clone();
@@ -670,7 +668,7 @@ async fn main() {
             pool: pg_pool.clone(),
         }),
         redis_pool: pool.clone(),
-        animus_magic_ipc: RwLock::new(None),
+        animus_magic_ipc: OnceLock::new(),
         object_store: Arc::new(
             config::CONFIG
                 .object_storage

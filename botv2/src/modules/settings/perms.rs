@@ -1,5 +1,6 @@
 use crate::silverpelt::member_permission_calc::get_kittycat_perms;
 use crate::{Context, Error};
+use kittycat::perms::Permission;
 use poise::CreateReply;
 use serenity::all::{Role, RoleId};
 
@@ -154,13 +155,24 @@ pub async fn perms_modrole(
     .await?;
 
     if let Some(current) = current {
-        kittycat::perms::check_patch_changes(&author_kittycat_perms, &current.perms, &perms_vec)
-            .map_err(|e| {
-                format!(
-                    "You do not have permission to edit this role's permissions: {}",
-                    e
-                )
-            })?;
+        kittycat::perms::check_patch_changes(
+            &author_kittycat_perms,
+            &current
+                .perms
+                .iter()
+                .map(|x| Permission::from_string(x))
+                .collect::<Vec<Permission>>(),
+            &perms_vec
+                .iter()
+                .map(|x| Permission::from_string(x))
+                .collect::<Vec<Permission>>(),
+        )
+        .map_err(|e| {
+            format!(
+                "You do not have permission to edit this role's permissions: {}",
+                e
+            )
+        })?;
 
         sqlx::query!(
             "UPDATE guild_roles SET perms = $1 WHERE guild_id = $2 AND role_id = $3",
@@ -203,14 +215,20 @@ pub async fn perms_modrole(
             .await?;
         }
     } else {
-        kittycat::perms::check_patch_changes(&author_kittycat_perms, &[], &perms_vec).map_err(
-            |e| {
-                format!(
-                    "You do not have permission to add a role's with these permissions: {}",
-                    e
-                )
-            },
-        )?;
+        kittycat::perms::check_patch_changes(
+            &author_kittycat_perms,
+            &[],
+            &perms_vec
+                .iter()
+                .map(|x| Permission::from_string(x))
+                .collect::<Vec<Permission>>(),
+        )
+        .map_err(|e| {
+            format!(
+                "You do not have permission to add a role's with these permissions: {}",
+                e
+            )
+        })?;
 
         let true_index = {
             if index.is_none() {
@@ -345,30 +363,34 @@ pub async fn perms_deleterole(
 
     let mut tx = data.pool.begin().await?;
 
-    let current = sqlx::query!(
+    let Some(current) = sqlx::query!(
         "SELECT perms FROM guild_roles WHERE guild_id = $1 AND role_id = $2",
         guild_id.to_string(),
         role.id.to_string()
     )
     .fetch_optional(&mut *tx)
-    .await?;
-
-    if current.is_none() {
+    .await?
+    else {
         return Err("Role has not been configured yet!".into());
-    }
-
-    let current = current.unwrap();
+    };
 
     // Check if the user has permission to delete the role (that is, permissions to remove all permissions)
     if !current.perms.is_empty() {
-        kittycat::perms::check_patch_changes(&author_kittycat_perms, &current.perms, &[]).map_err(
-            |e| {
-                format!(
-                    "You do not have permission to delete this role's permissions: {}",
-                    e
-                )
-            },
-        )?;
+        kittycat::perms::check_patch_changes(
+            &author_kittycat_perms,
+            &current
+                .perms
+                .iter()
+                .map(|x| Permission::from_string(x))
+                .collect::<Vec<Permission>>(),
+            &[],
+        )
+        .map_err(|e| {
+            format!(
+                "You do not have permission to delete this role's permissions: {}",
+                e
+            )
+        })?;
     }
 
     sqlx::query!(

@@ -1,3 +1,4 @@
+use super::types::DehoistOptions;
 use dashmap::DashMap;
 use futures::future::FutureExt;
 use moka::future::Cache;
@@ -50,7 +51,7 @@ pub struct BasicAntispamConfig {
     pub anti_invite: Option<i32>, // None = disabled, Some(<stings>) othersise
     pub anti_everyone: Option<i32>, // None = disabled, Some(<stings>) othersise
     pub fake_bot_detection: bool,
-    pub hoist_detection: i32, // Level of 'intensity' we should attempt dehoisting
+    pub hoist_detection: DehoistOptions, // Level of 'intensity' we should attempt dehoisting
     pub minimum_account_age: Option<i64>,
     pub maximum_account_age: Option<i64>, // Not sure why you'd ever want this, but it's here
     pub sting_retention: i32,             // Number of seconds to keep stings for
@@ -62,7 +63,7 @@ impl Default for BasicAntispamConfig {
             anti_invite: Some(0),
             anti_everyone: Some(0),
             fake_bot_detection: true,
-            hoist_detection: 1,
+            hoist_detection: DehoistOptions::STRIP_NON_ASCII,
             minimum_account_age: None,
             maximum_account_age: None,
             sting_retention: 60 * 60, // one hour retention
@@ -90,7 +91,7 @@ pub async fn setup_cache_initial(data: &sqlx::PgPool) -> Result<(), crate::Error
                     anti_invite: row.anti_invite,
                     anti_everyone: row.anti_everyone,
                     fake_bot_detection: row.fake_bot_detection,
-                    hoist_detection: row.hoist_detection,
+                    hoist_detection: DehoistOptions::from_bits_truncate(row.hoist_detection),
                     minimum_account_age: row.minimum_account_age,
                     maximum_account_age: row.maximum_account_age,
                     sting_retention: row.sting_retention,
@@ -121,7 +122,7 @@ pub async fn get_config(
                 anti_invite: row.anti_invite,
                 anti_everyone: row.anti_everyone,
                 fake_bot_detection: row.fake_bot_detection,
-                hoist_detection: row.hoist_detection,
+                hoist_detection: DehoistOptions::from_bits_truncate(row.hoist_detection),
                 minimum_account_age: row.minimum_account_age,
                 maximum_account_age: row.maximum_account_age,
                 sting_retention: row.sting_retention,
