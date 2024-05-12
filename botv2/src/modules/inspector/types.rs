@@ -21,3 +21,12 @@ bitflags::bitflags! {
         const STRIP_SIMILAR_REPEATING = 1 << 2;
     }
 }
+
+bitflags::bitflags! {
+    #[derive(PartialEq, Debug, Clone, Copy)]
+    pub struct GuildProtectionOptions: i32 {
+        const DISABLED = 1 << 0;
+        const NAME = 1 << 1;
+        const ICON = 1 << 2;
+    }
+}

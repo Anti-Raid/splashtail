@@ -34,6 +34,15 @@ pub type ModuleEventHandler = Box<
 pub type OnStartupFunction =
     Box<dyn Send + Sync + for<'a> Fn(&'a crate::Data) -> BoxFuture<'a, Result<(), crate::Error>>>;
 
+pub type OnReadyFunction = Box<
+    dyn Send
+        + Sync
+        + for<'a> Fn(
+            serenity::all::Context,
+            &'a crate::Data,
+        ) -> BoxFuture<'a, Result<(), crate::Error>>,
+>;
+
 /// This structure defines a basic module
 #[derive(Default)]
 pub struct Module {
@@ -70,11 +79,22 @@ pub struct Module {
     /// Background tasks (if any)
     pub background_tasks: Vec<botox::taskman::Task>,
 
-    /// Extra init code
+    /// Function to be run on startup
+    ///
+    /// To run code involving serenity context, consider ``on_ready`` instead
     pub on_startup: Vec<OnStartupFunction>,
+
+    /// Function to be run on ready
+    ///
+    /// This function will only be called once, when the shard is first ready
+    pub on_first_ready: Vec<OnReadyFunction>,
 
     /// This stores any extra configuration option for the module
     pub config_options: Vec<config_opt::ConfigOption>,
+
+    /// Modules may store files on seaweed, in order to allow for usage tracking,
+    /// s3_paths should be set to the paths of the files on seaweed
+    pub s3_paths: Vec<String>,
 }
 
 #[derive(Default, Clone, Hash, Eq, PartialEq, serde::Serialize, serde::Deserialize, Debug)]

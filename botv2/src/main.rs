@@ -31,12 +31,14 @@ type Context<'a> = poise::Context<'a, Data, Error>;
 pub struct ConnectState {
     pub has_started_bgtasks: bool,
     pub has_started_ipc: bool,
+    pub have_called_firstready: bool,
 }
 
 pub static CONNECT_STATE: Lazy<RwLock<ConnectState>> = Lazy::new(|| {
     RwLock::new(ConnectState {
         has_started_bgtasks: false,
         has_started_ipc: false,
+        have_called_firstready: false,
     })
 });
 
@@ -282,6 +284,22 @@ async fn event_listener<'a>(
                     "Published IPC launch next to channel {}",
                     crate::ipc::argparse::MEWLD_ARGS.mewld_redis_channel
                 );
+            }
+
+            if !CONNECT_STATE.read().await.have_called_firstready {
+                for module in modules::modules() {
+                    for on_ready in module.on_first_ready.iter() {
+                        if let Err(e) = on_ready(ctx.serenity_context.clone(), &user_data).await {
+                            error!("Error initializing module [on_first_ready]: {}", e);
+                            panic!(
+                                "CRITICAL: Error initializing module [on_first_ready]: {}",
+                                e
+                            );
+                        }
+                    }
+                }
+
+                CONNECT_STATE.write().await.have_called_firstready = true;
             }
         }
         _ => {}

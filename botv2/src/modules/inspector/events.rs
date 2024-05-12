@@ -1,5 +1,5 @@
 use super::dehoist::dehoist_user;
-use super::types::{DehoistOptions, TriggeredFlags, MAX_MENTIONS};
+use super::types::{DehoistOptions, GuildProtectionOptions, TriggeredFlags, MAX_MENTIONS};
 use crate::{
     silverpelt::{
         module_config::is_module_enabled, proxysupport::member_in_guild, EventHandlerContext,
@@ -217,6 +217,70 @@ pub async fn event_listener(ectx: &EventHandlerContext) -> Result<(), Error> {
                         )
                         .await?;
                 }
+            }
+
+            Ok(())
+        }
+        FullEvent::GuildUpdate {
+            old_data_if_available,
+            new_data,
+        } => {
+            let name_changed = {
+                if let Some(old_data) = old_data_if_available {
+                    old_data.name != new_data.name
+                } else {
+                    true // Be safe here
+                }
+            };
+
+            let icon_changed = {
+                if let Some(old_data) = old_data_if_available {
+                    old_data.icon != new_data.icon
+                } else {
+                    true // Be safe here
+                }
+            };
+
+            let config = super::cache::get_config(&ectx.data.pool, ectx.guild_id).await?;
+
+            if !config
+                .guild_protection
+                .contains(GuildProtectionOptions::DISABLED)
+            {
+                let bot_userid = ectx.serenity_context.cache.current_user().id;
+                let cache_http = botox::cache::CacheHttpImpl::from_ctx(&ectx.serenity_context);
+                let Some(bot) =
+                    member_in_guild(&cache_http, &ectx.data.reqwest, ectx.guild_id, bot_userid)
+                        .await?
+                else {
+                    return Err("Bot member not found".into());
+                };
+
+                let bp = bot.permissions(&ectx.serenity_context.cache)?;
+
+                if !bp.manage_guild() {
+                    return Err(
+                        format!("Cannot manage guild on this guild: {}", ectx.guild_id).into(),
+                    );
+                }
+
+                let Some(row) = sqlx::query!(
+                    "SELECT name, icon FROM inspector__guilds WHERE guild_id = $1",
+                    ectx.guild_id.to_string(),
+                )
+                .fetch_optional(&ectx.data.pool)
+                .await?
+                else {
+                    return Ok(()); // No row to revert to
+                };
+
+                super::guildprotect::Snapshot {
+                    guild_id: ectx.guild_id,
+                    name: row.name.clone(),
+                    icon: row.icon.clone(),
+                }
+                .revert(&ctx.http, &ectx.data, name_changed, icon_changed)
+                .await?;
             }
 
             Ok(())
