@@ -29,7 +29,7 @@ fn resolve_gwevent_field(field: &FieldType) -> Result<String, crate::Error> {
 
                 for (k, v) in o.iter() {
                     resolved.push(format!(
-                        "{} => {}",
+                        "{} => {}\n",
                         k.split('_')
                             .map(|s| {
                                 let mut c = s.chars();
@@ -273,13 +273,19 @@ pub async fn dispatch_audit_log(
 
         let resolved_field = resolve_gwevent_field(&v)?;
 
-        let value = resolved_field.trim();
+        let mut value = resolved_field.trim();
 
         if value.is_empty() {
             continue;
         }
 
-        let field_len = kc.len() + value.len();
+        let mut field_len = kc.len() + value.len();
+
+        if field_len > 1024 {
+            value = &value[..1024 - kc.len()];
+            field_len = 1024;
+        }
+
         if event_embed_len + field_len > 6000 {
             break;
         }
@@ -293,43 +299,9 @@ pub async fn dispatch_audit_log(
 
     // Now create the embed
     for (category, fields) in compiled_fields {
-        let mut category_map: indexmap::IndexMap<String, String> = indexmap::IndexMap::new();
-
-        for (mut k, mut v) in fields {
-            if k == "new" {
-                // Look for a matching "old" field
-                if let Some(old) = category_map.get("old") {
-                    if v.len() + old.len() < 300 {
-                        v = format!("{} -> {}", v, *old);
-                    } else {
-                        v = format!("**Before:** {}\n**After:** {}", v, *old);
-                    }
-
-                    k = "change".to_string();
-                    category_map.shift_remove("old");
-                }
-            }
-
-            if k == "old" {
-                // Look for a matching "new" field
-                if let Some(new) = category_map.get("new") {
-                    if v.len() + new.len() < 300 {
-                        v = format!("{} -> {}", *new, v);
-                    } else {
-                        v = format!("**Before:** {}\n**After:** {}", *new, v);
-                    }
-
-                    k = "change".to_string();
-                    category_map.shift_remove("new");
-                }
-            }
-
-            category_map.insert(k, v);
-        }
-
         let mut category_str = String::new();
 
-        for (k, v) in category_map {
+        for (k, v) in fields {
             category_str.push_str(&format!("**{}:** {}\n", k, v));
         }
 
