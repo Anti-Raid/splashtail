@@ -29,7 +29,7 @@ fn resolve_gwevent_field(field: &FieldType) -> Result<String, crate::Error> {
 
                 for (k, v) in o.iter() {
                     resolved.push(format!(
-                        "{} => {}\n",
+                        "{} => {}",
                         k.split('_')
                             .map(|s| {
                                 let mut c = s.chars();
@@ -44,7 +44,7 @@ fn resolve_gwevent_field(field: &FieldType) -> Result<String, crate::Error> {
                     ));
                 }
 
-                Ok(resolved.join(", "))
+                Ok(resolved.join("\n"))
             }
             serde_json::Value::Array(v) => {
                 let mut resolved = Vec::new();
@@ -279,6 +279,11 @@ pub async fn dispatch_audit_log(
             continue;
         }
 
+        // TODO: Support/handle embed limits better
+        if value.len() > 512 {
+            value = &value[..512];
+        }
+
         let mut field_len = kc.len() + value.len();
 
         if field_len > 1024 {
@@ -302,7 +307,8 @@ pub async fn dispatch_audit_log(
         let mut category_str = String::new();
 
         for (k, v) in fields {
-            category_str.push_str(&format!("**{}:** {}\n", k, v));
+            let v = format!("**{}:** {}\n", k, v);
+            category_str.push_str(&v);
         }
 
         event_embed = event_embed.field(category, category_str, false);
