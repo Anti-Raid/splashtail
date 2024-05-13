@@ -280,8 +280,8 @@ pub async fn dispatch_audit_log(
         }
 
         // TODO: Support/handle embed limits better
-        if value.len() > 512 {
-            value = &value[..512];
+        if value.len() > 490 {
+            value = &value[..490];
         }
 
         let mut field_len = kc.len() + value.len();
