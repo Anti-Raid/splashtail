@@ -30,3 +30,14 @@ bitflags::bitflags! {
         const ICON = 1 << 2;
     }
 }
+
+bitflags::bitflags! {
+    #[derive(PartialEq, Debug, Clone, Copy)]
+    pub struct FakeBotDetectionOptions: i32 {
+        const DISABLED = 1 << 0;
+        const BLOCK_ALL_BOTS = 1 << 1;
+        const NORMALIZE_NAMES = 1 << 2;
+        const EXACT_NAME_CHECK = 1 << 3;
+        const SIMILAR_NAME_CHECK = 1 << 4;
+    }
+}

@@ -16,6 +16,7 @@ type CanonicalModule struct {
 	IsDefaultEnabled     bool                    `json:"is_default_enabled"`
 	Commands             []CanonicalCommand      `json:"commands"`
 	ConfigOptions        []CanonicalConfigOption `json:"config_options"`
+	S3Paths              []string                `json:"s3_paths"`
 }
 
 type CanonicalCommand struct {

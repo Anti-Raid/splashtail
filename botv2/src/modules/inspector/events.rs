@@ -1,5 +1,7 @@
 use super::dehoist::dehoist_user;
-use super::types::{DehoistOptions, GuildProtectionOptions, TriggeredFlags, MAX_MENTIONS};
+use super::types::{
+    DehoistOptions, FakeBotDetectionOptions, GuildProtectionOptions, TriggeredFlags, MAX_MENTIONS,
+};
 use crate::{
     silverpelt::{
         module_config::is_module_enabled, proxysupport::member_in_guild, EventHandlerContext,
@@ -113,28 +115,58 @@ pub async fn event_listener(ectx: &EventHandlerContext) -> Result<(), Error> {
                 }
             }
 
-            if config.fake_bot_detection && new_member.user.bot() {
+            if !config
+                .fake_bot_detection
+                .contains(FakeBotDetectionOptions::DISABLED)
+                && new_member.user.bot()
+            {
                 // Normalize the bots name
-                let normalized_name = plsfix::fix_text(&new_member.user.name.to_lowercase(), None);
+                let normalized_name = if config
+                    .fake_bot_detection
+                    .contains(FakeBotDetectionOptions::NORMALIZE_NAMES)
+                {
+                    plsfix::fix_text(&new_member.user.name.to_lowercase(), None)
+                } else {
+                    new_member.user.name.to_lowercase()
+                };
 
                 let mut found = false;
-                for fb in super::cache::FAKE_BOTS_CACHE.iter() {
-                    let val = fb.value();
 
-                    if val.official_bot_ids.contains(&new_member.user.id) {
-                        continue;
-                    }
+                if config
+                    .fake_bot_detection
+                    .contains(FakeBotDetectionOptions::BLOCK_ALL_BOTS)
+                {
+                    // Doesn't matter if its official or not, the server wants to block all bots
+                    found = true;
+                } else {
+                    for fb in super::cache::FAKE_BOTS_CACHE.iter() {
+                        let val = fb.value();
 
-                    if normalized_name.contains(&val.name) {
-                        found = true;
-                        break;
-                    }
+                        if val.official_bot_ids.contains(&new_member.user.id) {
+                            found = false; // Official bot
+                            break;
+                        }
 
-                    let (diff, _) = text_diff::diff(&normalized_name, &val.name, "");
+                        if config
+                            .fake_bot_detection
+                            .contains(FakeBotDetectionOptions::EXACT_NAME_CHECK)
+                            && normalized_name.contains(&val.name)
+                        {
+                            found = true;
+                            break;
+                        }
 
-                    if diff < 2 {
-                        found = true;
-                        break;
+                        if config
+                            .fake_bot_detection
+                            .contains(FakeBotDetectionOptions::SIMILAR_NAME_CHECK)
+                        {
+                            let (diff, _) = text_diff::diff(&normalized_name, &val.name, "");
+
+                            if diff < 2 {
+                                found = true;
+                                break;
+                            }
+                        }
                     }
                 }
 

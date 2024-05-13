@@ -243,13 +243,10 @@ pub async fn check_event_matches(event_name: &str, filters: Vec<String>) -> Resu
     Ok(false)
 }
 
-pub async fn dispatch_audit_log(
-    ctx: &serenity::client::Context,
-    event_name: &str,
-    event_titlename: &str,
-    expanded_event: indexmap::IndexMap<(String, String), FieldType>,
-    guild_id: serenity::model::id::GuildId,
-) -> Result<(), Error> {
+fn create_audit_log_embed<'a>(
+    event_titlename: &'a str,
+    expanded_event: &'a indexmap::IndexMap<(String, String), FieldType>,
+) -> Result<serenity::all::CreateEmbed<'a>, crate::Error> {
     let mut event_embed_len = event_titlename.len();
     let mut event_embed = serenity::all::CreateEmbed::new().title(event_titlename);
 
@@ -257,7 +254,7 @@ pub async fn dispatch_audit_log(
         indexmap::IndexMap::new();
 
     // Keep adding fields until length becomes > 6000
-    // TODO: Avoid field compiling if the event will not be sent to any discord-related sinks
+    // TODO: Improve embed display
     for ((category, k), v) in expanded_event {
         let kc = k
             .split('_')
@@ -271,7 +268,7 @@ pub async fn dispatch_audit_log(
             .collect::<Vec<String>>()
             .join(" ");
 
-        let resolved_field = resolve_gwevent_field(&v)?;
+        let resolved_field = resolve_gwevent_field(v)?;
 
         let mut value = resolved_field.trim();
 
@@ -314,6 +311,18 @@ pub async fn dispatch_audit_log(
         event_embed = event_embed.field(category, category_str, false);
     }
 
+    Ok(event_embed)
+}
+
+pub async fn dispatch_audit_log(
+    ctx: &serenity::client::Context,
+    event_name: &str,
+    event_titlename: &str,
+    expanded_event: indexmap::IndexMap<(String, String), FieldType>,
+    guild_id: serenity::model::id::GuildId,
+) -> Result<(), Error> {
+    let mut event_embed: Option<serenity::all::CreateEmbed<'_>> = None;
+
     let user_data = ctx.data::<Data>();
 
     let sinks = sqlx::query!("SELECT id, type AS typ, sink, events FROM auditlogs__sinks WHERE guild_id = $1 AND broken = false", guild_id.to_string())
@@ -330,13 +339,19 @@ pub async fn dispatch_audit_log(
 
         match sink.typ.as_str() {
             "channel" => {
+                let embed = if let Some(ref e) = event_embed {
+                    e.clone()
+                } else {
+                    let e = create_audit_log_embed(event_titlename, &expanded_event)?;
+                    event_embed = Some(e.clone());
+
+                    e
+                };
+
                 let channel: ChannelId = sink.sink.parse()?;
 
                 match channel
-                    .send_message(
-                        &ctx.http,
-                        CreateMessage::default().embed(event_embed.clone()),
-                    )
+                    .send_message(&ctx.http, CreateMessage::default().embed(embed.clone()))
                     .await
                 {
                     Ok(_) => {}
@@ -369,6 +384,15 @@ pub async fn dispatch_audit_log(
                 };
             }
             "discord_webhook" => {
+                let embed = if let Some(ref e) = event_embed {
+                    e.clone()
+                } else {
+                    let e = create_audit_log_embed(event_titlename, &expanded_event)?;
+
+                    event_embed = Some(e.clone());
+                    e
+                };
+
                 let parsed_sink = sink.sink.parse()?;
                 let Some((id, token)) = serenity::utils::parse_webhook(&parsed_sink) else {
                     warn!(
@@ -390,7 +414,7 @@ pub async fn dispatch_audit_log(
                     .reqwest
                     .post(&webhook_proxyurl)
                     .json(&serde_json::json!({
-                        "embeds": [event_embed.clone()]
+                        "embeds": [embed.clone()]
                     }))
                     .header("Content-Type", "application/json")
                     .header(
