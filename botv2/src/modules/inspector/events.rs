@@ -176,6 +176,29 @@ pub async fn event_listener(ectx: &EventHandlerContext) -> Result<(), Error> {
                         })),
                     )
                     .await?;
+
+                // Send audit logs if Audit Logs module is enabled
+                if crate::silverpelt::module_config::is_module_enabled(
+                    &data.pool,
+                    ectx.guild_id,
+                    "auditlogs",
+                )
+                .await?
+                {
+                    let imap = indexmap::indexmap! {
+                        ("new_info".to_string(), "member".to_string()) => new_member.user.clone().into(),
+                        ("triggers".to_string(), "triggered_flags".to_string()) => triggered_flags.iter_names().map(|(flag, _)| flag.to_string()).collect::<Vec<String>>().join(", ").into(),
+                    };
+
+                    crate::modules::auditlogs::events::dispatch_audit_log(
+                        ctx,
+                        "AR/MemberJoinInspectionFailed",
+                        "(Anti-Raid) Member Join Inspection Failed",
+                        imap,
+                        ectx.guild_id,
+                    )
+                    .await?;
+                }
             }
 
             // Lastly, check for hoisting attempts
@@ -279,7 +302,7 @@ pub async fn event_listener(ectx: &EventHandlerContext) -> Result<(), Error> {
                     name: row.name.clone(),
                     icon: row.icon.clone(),
                 }
-                .revert(&ctx.http, &ectx.data, name_changed, icon_changed)
+                .revert(ctx, &ectx.data, name_changed, icon_changed)
                 .await?;
             }
 

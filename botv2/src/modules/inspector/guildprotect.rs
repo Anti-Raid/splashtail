@@ -125,7 +125,7 @@ pub async fn save_all_guilds_initial(
                 name: guild_row.name.clone(),
                 icon: guild_row.icon.clone(),
             }
-            .revert(&ctx.http, data, guild_row.name != guild.name, {
+            .revert(&ctx, data, guild_row.name != guild.name, {
                 if guild_row.icon.is_some() {
                     guild_row.icon != guild.icon.map(|x| x.to_string())
                 } else {
@@ -215,7 +215,7 @@ impl Snapshot {
     /// Reverts a guild to the snapshot
     pub async fn revert(
         &self,
-        http: &serenity::all::Http,
+        ctx: &serenity::all::Context,
         data: &crate::Data,
         change_name: bool,
         change_icon: bool,
@@ -265,11 +265,35 @@ impl Snapshot {
             let reason = format!("Reverting guild changes: {}", tg.join(", "));
 
             edit_guild = edit_guild.audit_log_reason(&reason);
-            match self.guild_id.edit(http, edit_guild).await {
+            match self.guild_id.edit(&ctx.http, edit_guild).await {
                 Ok(_) => {}
                 Err(e) => {
                     return Err(format!("Error while reverting guild changes: {}", e).into());
                 }
+            }
+
+            // Create audit log
+            // Send audit logs if Audit Logs module is enabled
+            if crate::silverpelt::module_config::is_module_enabled(
+                &data.pool,
+                self.guild_id,
+                "auditlogs",
+            )
+            .await?
+            {
+                let imap = indexmap::indexmap! {
+                    ("new_info".to_string(), "name".to_string()) => self.name.clone().into(),
+                    ("triggers".to_string(), "triggered_flags".to_string()) => triggered_protections.iter_names().map(|(flag, _)| flag.to_string()).collect::<Vec<String>>().join(", ").into(),
+                };
+
+                crate::modules::auditlogs::events::dispatch_audit_log(
+                    ctx,
+                    "AR/GuildProtectRevert",
+                    "(Anti-Raid) Guild Protection: Revert Changes",
+                    imap,
+                    self.guild_id,
+                )
+                .await?;
             }
         }
 

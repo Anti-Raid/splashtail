@@ -291,23 +291,12 @@ pub async fn prune_user(
         .await?
     {
         let imap = indexmap::indexmap! {
-            "log".to_string() => gwevent::core::Field {
-                value: vec![to_log_format(&author.user, &user, &reason).into()],
-                category: "log".to_string(),
-            },
-            "prune_opts".to_string() => gwevent::core::Field {
-                value: vec![prune_opts.into()],
-                category: "log".to_string(),
-            },
-            "channels".to_string() => gwevent::core::Field {
-                value: vec![
-                    if let Some(ref channels) = prune_channels {
-                        parse_numeric_list_to_str::<ChannelId>(channels, &REPLACE_CHANNEL)?.into()
-                    } else {
-                        gwevent::field_type::FieldType::None
-                    }
-                ],
-                category: "log".to_string(),
+            ("log".to_string(), "log".to_string()) => to_log_format(&author.user, &user, &reason).into(),
+            ("prune_opts".to_string(), "prune_opts".to_string()) => prune_opts.into(),
+            ("channels".to_string(), "channels".to_string()) => if let Some(ref channels) = prune_channels {
+                parse_numeric_list_to_str::<ChannelId>(channels, &REPLACE_CHANNEL)?.into()
+            } else {
+                gwevent::field_type::FieldType::None
             },
         };
 
@@ -466,26 +455,11 @@ pub async fn kick(
         .await?
     {
         let imap = indexmap::indexmap! {
-            "target".to_string() => gwevent::core::Field {
-                value: vec![member.user.clone().into()],
-                category: "user".to_string(),
-            },
-            "moderator".to_string() => gwevent::core::Field {
-                value: vec![author.user.clone().into()],
-                category: "moderator".to_string(),
-            },
-            "reason".to_string() => gwevent::core::Field {
-                value: vec![reason.clone().into()],
-                category: "reason".to_string(),
-            },
-            "stings".to_string() => gwevent::core::Field {
-                value: vec![stings.into()],
-                category: "punishment".to_string(),
-            },
-            "log".to_string() => gwevent::core::Field {
-                value: vec![to_log_format(&author.user, &member.user, &reason).into()],
-                category: "log".to_string(),
-            },
+            ("user".to_string(), "target".to_string()) => member.user.clone().into(),
+            ("moderator".to_string(), "moderator".to_string()) => author.user.clone().into(),
+            ("reason".to_string(), "reason".to_string()) => reason.clone().into(),
+            ("punishment".to_string(), "stings".to_string()) => stings.into(),
+            ("log".to_string(), "author".to_string()) => to_log_format(&author.user, &member.user, &reason).into(),
         };
 
         crate::modules::auditlogs::events::dispatch_audit_log(
@@ -618,30 +592,12 @@ pub async fn ban(
         .await?
     {
         let imap = indexmap::indexmap! {
-            "target".to_string() => gwevent::core::Field {
-                value: vec![member.clone().into()],
-                category: "user".to_string(),
-            },
-            "moderator".to_string() => gwevent::core::Field {
-                value: vec![author.user.clone().into()],
-                category: "moderator".to_string(),
-            },
-            "reason".to_string() => gwevent::core::Field {
-                value: vec![reason.clone().into()],
-                category: "reason".to_string(),
-            },
-            "stings".to_string() => gwevent::core::Field {
-                value: vec![stings.into()],
-                category: "punishment".to_string(),
-            },
-            "prune_dmd".to_string() => gwevent::core::Field {
-                value: vec![dmd.into()],
-                category: "log".to_string(),
-            },
-            "log".to_string() => gwevent::core::Field {
-                value: vec![to_log_format(&author.user, &member, &reason).into()],
-                category: "log".to_string(),
-            },
+            ("user".to_string(), "target".to_string()) => member.clone().into(),
+            ("moderator".to_string(), "moderator".to_string()) => author.user.clone().into(),
+            ("reason".to_string(), "reason".to_string()) => reason.clone().into(),
+            ("punishment".to_string(), "stings".to_string()) => stings.into(),
+            ("log".to_string(), "log".to_string()) => to_log_format(&author.user, &member, &reason).into(),
+            ("log".to_string(), "prune_dmd".to_string()) => dmd.into(),
         };
 
         crate::modules::auditlogs::events::dispatch_audit_log(
@@ -780,26 +736,12 @@ pub async fn tempban(
         .await?
     {
         let imap = indexmap::indexmap! {
-            "target".to_string() => gwevent::core::Field {
-                value: vec![member.clone().into()],
-                category: "user".to_string(),
-            },
-            "moderator".to_string() => gwevent::core::Field {
-                value: vec![author.user.clone().into()],
-                category: "moderator".to_string(),
-            },
-            "reason".to_string() => gwevent::core::Field {
-                value: vec![reason.clone().into()],
-                category: "reason".to_string(),
-            },
-            "stings".to_string() => gwevent::core::Field {
-                value: vec![stings.into()],
-                category: "punishment".to_string(),
-            },
-            "log".to_string() => gwevent::core::Field {
-                value: vec![to_log_format(&author.user, &member, &reason).into()],
-                category: "log".to_string(),
-            },
+            ("user".to_string(), "target".to_string()) => member.clone().into(),
+            ("moderator".to_string(), "moderator".to_string()) => author.user.clone().into(),
+            ("reason".to_string(), "reason".to_string()) => reason.clone().into(),
+            ("punishment".to_string(), "stings".to_string()) => stings.into(),
+            ("log".to_string(), "log".to_string()) => to_log_format(&author.user, &member, &reason).into(),
+            ("log".to_string(), "prune_dmd".to_string()) => dmd.into(),
         };
 
         crate::modules::auditlogs::events::dispatch_audit_log(
@@ -925,26 +867,11 @@ pub async fn unban(
         .await?
     {
         let imap = indexmap::indexmap! {
-            "target".to_string() => gwevent::core::Field {
-                value: vec![user.clone().into()],
-                category: "user".to_string(),
-            },
-            "moderator".to_string() => gwevent::core::Field {
-                value: vec![author.user.clone().into()],
-                category: "moderator".to_string(),
-            },
-            "reason".to_string() => gwevent::core::Field {
-                value: vec![reason.clone().into()],
-                category: "reason".to_string(),
-            },
-            "stings".to_string() => gwevent::core::Field {
-                value: vec![stings.into()],
-                category: "punishment".to_string(),
-            },
-            "log".to_string() => gwevent::core::Field {
-                value: vec![to_log_format(&author.user, &user, &reason).into()],
-                category: "log".to_string(),
-            },
+            ("user".to_string(), "target".to_string()) => user.clone().into(),
+            ("moderator".to_string(), "moderator".to_string()) => author.user.clone().into(),
+            ("reason".to_string(), "reason".to_string()) => reason.clone().into(),
+            ("punishment".to_string(), "stings".to_string()) => stings.into(),
+            ("log".to_string(), "log".to_string()) => to_log_format(&author.user, &user, &reason).into(),
         };
 
         crate::modules::auditlogs::events::dispatch_audit_log(
@@ -1094,26 +1021,11 @@ pub async fn timeout(
         .await?
     {
         let imap = indexmap::indexmap! {
-            "target".to_string() => gwevent::core::Field {
-                value: vec![member.user.clone().into()],
-                category: "user".to_string(),
-            },
-            "moderator".to_string() => gwevent::core::Field {
-                value: vec![author.user.clone().into()],
-                category: "moderator".to_string(),
-            },
-            "reason".to_string() => gwevent::core::Field {
-                value: vec![reason.clone().into()],
-                category: "reason".to_string(),
-            },
-            "stings".to_string() => gwevent::core::Field {
-                value: vec![stings.into()],
-                category: "punishment".to_string(),
-            },
-            "log".to_string() => gwevent::core::Field {
-                value: vec![to_log_format(&author.user, &member.user, &reason).into()],
-                category: "log".to_string(),
-            },
+            ("user".to_string(), "target".to_string()) => member.user.clone().into(),
+            ("moderator".to_string(), "moderator".to_string()) => author.user.clone().into(),
+            ("reason".to_string(), "reason".to_string()) => reason.clone().into(),
+            ("punishment".to_string(), "stings".to_string()) => stings.into(),
+            ("log".to_string(), "log".to_string()) => to_log_format(&author.user, &member.user, &reason).into(),
         };
 
         crate::modules::auditlogs::events::dispatch_audit_log(

@@ -16,62 +16,55 @@ pub const fn not_audit_loggable_event() -> &'static [&'static str] {
     ]
 }
 
-#[derive(Default)]
-enum FieldFormat {
-    /// Old -> New
-    #[default]
-    Arrow,
-    /// **Before:** Old
-    /// **After:** New
-    BeforeAfter,
-}
+fn resolve_gwevent_field(field: &FieldType) -> Result<String, crate::Error> {
+    // Given a serde_json::Value, loop over all keys and resolve them (recursively if needed)
+    fn serde_resolver(v: &serde_json::Value) -> Result<String, crate::Error> {
+        match v {
+            serde_json::Value::Null => Ok("None".to_string()),
+            serde_json::Value::Bool(b) => Ok(if *b { "Yes" } else { "No" }.to_string()),
+            serde_json::Value::Number(n) => Ok(n.to_string()),
+            serde_json::Value::String(s) => Ok(s.to_string()),
+            serde_json::Value::Object(o) => {
+                let mut resolved = Vec::new();
 
-#[derive(Default)]
-struct ResolvedField {
-    pub value: String,
-    pub inline: bool,
-    pub update_format: FieldFormat,
-}
+                for (k, v) in o.iter() {
+                    resolved.push(format!(
+                        "{} => {}",
+                        k.split('_')
+                            .map(|s| {
+                                let mut c = s.chars();
+                                match c.next() {
+                                    None => String::new(),
+                                    Some(f) => f.to_uppercase().chain(c).collect(),
+                                }
+                            })
+                            .collect::<Vec<String>>()
+                            .join(" "),
+                        serde_resolver(v)?
+                    ));
+                }
 
-impl From<String> for ResolvedField {
-    fn from(s: String) -> Self {
-        ResolvedField {
-            value: s,
-            inline: true,
-            update_format: FieldFormat::Arrow,
+                Ok(resolved.join(", "))
+            }
+            serde_json::Value::Array(v) => {
+                let mut resolved = Vec::new();
+
+                for i in v.iter() {
+                    resolved.push(serde_resolver(i)?);
+                }
+
+                Ok(resolved.join("\n\n"))
+            }
         }
     }
-}
 
-impl From<&str> for ResolvedField {
-    fn from(s: &str) -> Self {
-        ResolvedField {
-            value: s.to_string(),
-            inline: true,
-            update_format: FieldFormat::Arrow,
-        }
-    }
-}
-
-fn resolve_gwevent_field(field: &FieldType) -> Result<ResolvedField, crate::Error> {
     match field {
         FieldType::Strings(s) => {
             let joined = s.join(", ");
-            let joined_len = joined.len();
-            Ok(ResolvedField {
-                value: joined,
-                inline: true,
-                update_format: {
-                    if joined_len < 300 {
-                        FieldFormat::BeforeAfter
-                    } else {
-                        FieldFormat::Arrow
-                    }
-                },
-            })
+            Ok(joined)
         }
-        FieldType::Bool(b) => Ok(if *b { "Yes" } else { "No" }.into()),
-        FieldType::Number(n) => Ok(n.to_string().into()),
+        FieldType::Bool(b) => Ok(if *b { "Yes" } else { "No" }.to_string()),
+        FieldType::Number(n) => Ok(n.to_string()),
         FieldType::Permissions(p) => {
             let mut perms = Vec::new();
 
@@ -79,7 +72,7 @@ fn resolve_gwevent_field(field: &FieldType) -> Result<ResolvedField, crate::Erro
                 perms.push(format!("{} ({})", ip, ip.bits()));
             }
 
-            Ok(perms.join(", ").into())
+            Ok(perms.join(", "))
         }
         FieldType::PermissionOverwrites(p) => {
             let mut perms = Vec::new();
@@ -88,7 +81,7 @@ fn resolve_gwevent_field(field: &FieldType) -> Result<ResolvedField, crate::Erro
                 perms.push(format!("Allow={}, Deny={}", ip.allow, ip.deny));
             }
 
-            Ok(perms.join(", ").into())
+            Ok(perms.join(", "))
         }
         FieldType::GuildMemberFlags(p) => {
             let p_vec = p
@@ -97,10 +90,10 @@ fn resolve_gwevent_field(field: &FieldType) -> Result<ResolvedField, crate::Erro
                 .collect::<Vec<String>>();
 
             if p_vec.is_empty() {
-                return Ok("None".into());
+                return Ok("None".to_string());
             }
 
-            Ok(p_vec.join(", ").into())
+            Ok(p_vec.join(", "))
         }
         FieldType::UserIds(u) => {
             let mut users = Vec::new();
@@ -109,7 +102,7 @@ fn resolve_gwevent_field(field: &FieldType) -> Result<ResolvedField, crate::Erro
                 users.push(iu.mention().to_string());
             }
 
-            Ok(users.join(", ").into())
+            Ok(users.join(", "))
         }
         FieldType::Channels(c) => {
             let mut channels = Vec::new();
@@ -118,7 +111,7 @@ fn resolve_gwevent_field(field: &FieldType) -> Result<ResolvedField, crate::Erro
                 channels.push(ic.mention().to_string());
             }
 
-            Ok(channels.join(", ").into())
+            Ok(channels.join(", "))
         }
         FieldType::NsfwLevels(n) => {
             let mut nsfw_levels = Vec::new();
@@ -127,7 +120,7 @@ fn resolve_gwevent_field(field: &FieldType) -> Result<ResolvedField, crate::Erro
                 nsfw_levels.push(format!("{:#?}", inl));
             }
 
-            Ok(nsfw_levels.join(", ").into())
+            Ok(nsfw_levels.join(", "))
         }
         FieldType::Roles(r) => {
             let mut roles = Vec::new();
@@ -136,32 +129,7 @@ fn resolve_gwevent_field(field: &FieldType) -> Result<ResolvedField, crate::Erro
                 roles.push(ir.mention().to_string());
             }
 
-            Ok(roles.join(", ").into())
-        }
-        FieldType::Messages(m) => {
-            let mut messages = Vec::new();
-
-            for im in m.iter() {
-                messages.push(im.to_string()); // TODO: improve this if possible
-            }
-
-            Ok(messages.join(", ").into())
-        }
-        FieldType::Guild(g) => Ok(g.to_string().into()),
-        FieldType::Command(c) => Ok(c.to_string().into()),
-        FieldType::Entitlement(e) => Ok(e.to_string().into()),
-        FieldType::Application(a) => Ok(a.to_string().into()),
-        FieldType::AuditLogId(a) => Ok(a.to_string().into()),
-        FieldType::ScheduledEventId(s) => Ok(s.to_string().into()),
-        FieldType::IntegrationId(i) => Ok(i.to_string().into()),
-        FieldType::Emojis(e) => {
-            let mut emojis = Vec::new();
-
-            for ie in e.iter() {
-                emojis.push(ie.to_string());
-            }
-
-            Ok(emojis.join(", ").into())
+            Ok(roles.join(", "))
         }
         FieldType::GenericIds(g) => {
             let mut generic_ids = Vec::new();
@@ -170,153 +138,19 @@ fn resolve_gwevent_field(field: &FieldType) -> Result<ResolvedField, crate::Erro
                 generic_ids.push(ig.to_string());
             }
 
-            Ok(generic_ids.join(", ").into())
+            Ok(generic_ids.join(", "))
         }
-        FieldType::AutomodActions(a) => {
-            let mut automod_actions = Vec::new();
-
-            for ia in a.iter() {
-                automod_actions.push(format!("{:#?}", ia));
-            }
-
-            Ok(automod_actions.join(", ").into())
-        }
-        FieldType::AuditLogActions(a) => {
-            let mut audit_log_actions = Vec::new();
-
-            for ia in a.iter() {
-                audit_log_actions
-                    .push(format!("``{:#?}``", ia).replace('\n', "").replace('\t', ""));
-            }
-
-            Ok(audit_log_actions.join(", ").into())
-        }
-        FieldType::AutomodRuleIds(a) => {
-            let mut automod_rule_ids = Vec::new();
-
-            for ia in a.iter() {
-                automod_rule_ids.push(ia.to_string());
-            }
-
-            Ok(automod_rule_ids.join(", ").into())
-        }
-        FieldType::AutomodTrigger(a) => Ok(format!("{:#?}", a).into()),
-        FieldType::Timestamp(t) => Ok(t.to_string().into()),
-        FieldType::AuditLogActionsChanges(a) => {
-            let mut audit_log_actions_changes = Vec::new();
-
-            for ia in a.iter() {
-                audit_log_actions_changes
-                    .push(format!("``{:#?}``", ia).replace('\n', "").replace('\t', ""));
-            }
-
-            Ok(audit_log_actions_changes.join(", ").into())
-        }
-        FieldType::AuditLogOptions(a) => {
-            let mut audit_log_options = Vec::new();
-
-            for ia in a.iter() {
-                audit_log_options
-                    .push(format!("``{:#?}``", ia).replace('\n', "").replace('\t', ""));
-            }
-
-            Ok(audit_log_options.join(", ").into())
-        }
-        FieldType::EmojiMap(e) => {
-            let mut emoji_map = Vec::new();
-
-            for ie in e.iter() {
-                emoji_map.push(format!("``{:#?}``", ie).replace('\n', "").replace('\t', ""));
-                // TODO: better formatting for emojis
-            }
-
-            Ok(emoji_map.join(", ").into())
-        }
-        FieldType::StickerMap(s) => {
-            let mut sticker_map = Vec::new();
-
-            for is in s.iter() {
-                sticker_map.push(format!("``{:#?}``", is).replace('\n', "").replace('\t', ""));
-                // TODO: better formatting for stickers
-            }
-
-            Ok(sticker_map.join(", ").into())
-        }
-        FieldType::Users(u) => {
-            let mut users = Vec::new();
-
-            for iu in u.iter() {
-                users.push(format!(
-                    "{} ({}, bot={}, id={}, global_username={:#?})",
-                    iu.mention(),
-                    iu.name,
-                    iu.bot(),
-                    iu.id,
-                    if let Some(global_name) = &iu.global_name {
-                        global_name.to_string()
-                    } else {
-                        "None".to_string()
-                    }
-                ));
-            }
-
-            Ok(users.join(", ").into())
-        }
-        FieldType::Embeds(e) => {
-            let mut embeds = Vec::new();
-
-            for ie in e.iter() {
-                embeds.push(format!(
-                    "``<embed, title={}, description={:#?}>``",
-                    if let Some(ref x) = ie.title {
-                        x.to_string()
-                    } else {
-                        "None".to_string()
-                    },
-                    ie.description.as_ref().map(|x| {
-                        if x.len() > 100 {
-                            format!("{}...", &x[..100])
-                        } else {
-                            x.to_string()
-                        }
-                    })
-                )); // TODO: better formatting for embeds
-            }
-
-            Ok(embeds.join(", ").into())
-        }
-        FieldType::Attachments(a) => {
-            let mut attachments = Vec::new();
-
-            for ia in a.iter() {
-                attachments.push(ia.url.clone()); // TODO: better formatting for attachments
-            }
-
-            Ok(attachments.join(", ").into())
-        }
-        FieldType::Components(c) => {
-            let mut components = Vec::new();
-
-            for ic in c.iter() {
-                components.push(format!("{:#?}", ic)); // TODO: better formatting for components
-            }
-
-            Ok(components.join(", ").into())
-        }
-        FieldType::ThreadMembers(t) => {
-            let mut thread_members = Vec::new();
-
-            for it in t.iter() {
-                thread_members.push(it.user_id.mention().to_string()); // TODO: better formatting for thread members
-            }
-
-            Ok(thread_members.join(", ").into())
-        }
+        FieldType::Timestamp(t) => Ok(t.to_string()),
+        FieldType::Attachment(a) => Ok(a.url.to_string()),
         FieldType::JsonValue(v) => match serde_json::to_string(v) {
-            Ok(s) => Ok(format!("``{}``", s).into()),
+            Ok(s) => Ok(format!("``{}``", s)),
             Err(e) => Err(e.into()),
         },
-        FieldType::None => Ok("None".to_string().into()),
+        FieldType::None => Ok("None".to_string()),
+        _ => {
+            let s = serde_resolver(&serde_json::to_value(field)?)?;
+            Ok(s)
+        }
     }
 }
 
@@ -344,7 +178,7 @@ pub async fn event_listener(ectx: &EventHandlerContext) -> Result<(), Error> {
         },
     }
 
-    let Some(expanded_event) = gwevent::core::expand_event(event) else {
+    let Some(expanded_event) = gwevent::core::expand_event(event.clone()) else {
         // Event cannot be expanded, ignore
         return Ok(());
     };
@@ -413,18 +247,18 @@ pub async fn dispatch_audit_log(
     ctx: &serenity::client::Context,
     event_name: &str,
     event_titlename: &str,
-    expanded_event: indexmap::IndexMap<String, gwevent::core::Field>,
+    expanded_event: indexmap::IndexMap<(String, String), FieldType>,
     guild_id: serenity::model::id::GuildId,
 ) -> Result<(), Error> {
     let mut event_embed_len = event_titlename.len();
     let mut event_embed = serenity::all::CreateEmbed::new().title(event_titlename);
 
-    // Keep adding fields until length becomes > 6000
-    for (k, v) in expanded_event {
-        if v.value.is_empty() {
-            continue;
-        }
+    let mut compiled_fields: indexmap::IndexMap<String, indexmap::IndexMap<String, String>> =
+        indexmap::IndexMap::new();
 
+    // Keep adding fields until length becomes > 6000
+    // TODO: Avoid field compiling if the event will not be sent to any discord-related sinks
+    for ((category, k), v) in expanded_event {
         let kc = k
             .split('_')
             .map(|s| {
@@ -437,68 +271,69 @@ pub async fn dispatch_audit_log(
             .collect::<Vec<String>>()
             .join(" ");
 
-        let (vc, inline) = {
-            let mut vcs = Vec::new();
-            let mut inline = false;
-            let mut update_format = FieldFormat::Arrow;
+        let resolved_field = resolve_gwevent_field(&v)?;
 
-            for ft in v.value {
-                let mut resolved_field = resolve_gwevent_field(&ft)?;
+        let value = resolved_field.trim();
 
-                if resolved_field.value.len() > 1024 {
-                    resolved_field.value = format!("{}...", &resolved_field.value[..1021]);
-                }
-
-                vcs.push(resolved_field.value);
-
-                if !inline {
-                    inline = resolved_field.inline;
-                }
-
-                update_format = resolved_field.update_format;
-            }
-
-            // Check for duplicates
-            // If previous value is the same as the current value, skip
-            // If empty, also skip
-            if vcs.len() > 1 {
-                let mut i = 0;
-                while i < vcs.len() - 1 {
-                    if vcs[i] == vcs[i + 1] || vcs[i].is_empty() {
-                        vcs.remove(i);
-                    } else {
-                        i += 1;
-                    }
-                }
-            }
-
-            (
-                match update_format {
-                    FieldFormat::Arrow => vcs.join(" -> "),
-                    FieldFormat::BeforeAfter => {
-                        if vcs.len() == 2 {
-                            format!("**Before:** {}\n**After:** {}", vcs[0], vcs[1])
-                        } else {
-                            vcs.join(" -> ")
-                        }
-                    }
-                },
-                inline,
-            )
-        };
-
-        if vc.trim().is_empty() {
+        if value.is_empty() {
             continue;
         }
 
-        let field_len = kc.len() + vc.len();
+        let field_len = kc.len() + value.len();
         if event_embed_len + field_len > 6000 {
             break;
         }
 
         event_embed_len += field_len;
 
-        event_embed = event_embed.field(kc, vc, inline);
+        // Use the indexmap entry api to insert the field
+        let entry = compiled_fields.entry(category.clone()).or_default();
+        entry.insert(kc, value.to_string());
+    }
+
+    // Now create the embed
+    for (category, fields) in compiled_fields {
+        let mut category_map: indexmap::IndexMap<String, String> = indexmap::IndexMap::new();
+
+        for (mut k, mut v) in fields {
+            if k == "new" {
+                // Look for a matching "old" field
+                if let Some(old) = category_map.get("old") {
+                    if v.len() + old.len() < 300 {
+                        v = format!("{} -> {}", v, *old);
+                    } else {
+                        v = format!("**Before:** {}\n**After:** {}", v, *old);
+                    }
+
+                    k = "change".to_string();
+                    category_map.shift_remove("old");
+                }
+            }
+
+            if k == "old" {
+                // Look for a matching "new" field
+                if let Some(new) = category_map.get("new") {
+                    if v.len() + new.len() < 300 {
+                        v = format!("{} -> {}", *new, v);
+                    } else {
+                        v = format!("**Before:** {}\n**After:** {}", *new, v);
+                    }
+
+                    k = "change".to_string();
+                    category_map.shift_remove("new");
+                }
+            }
+
+            category_map.insert(k, v);
+        }
+
+        let mut category_str = String::new();
+
+        for (k, v) in category_map {
+            category_str.push_str(&format!("**{}:** {}\n", k, v));
+        }
+
+        event_embed = event_embed.field(category, category_str, false);
     }
 
     let user_data = ctx.data::<Data>();
