@@ -183,7 +183,7 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 		d.Context,
 		state.Rueidis,
 		animusmagic.BotAnimusMessage{
-			TogglePerModuleCache: &struct {
+			ExecutePerModuleFunction: &struct {
 				Module  string         `json:"module"`
 				Toggle  string         `json:"toggle"`
 				Options map[string]any `json:"options,omitempty"`

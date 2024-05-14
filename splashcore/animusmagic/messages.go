@@ -23,11 +23,11 @@ type BotAnimusMessage struct {
 		Command             string                         `json:"command"`
 		CheckCommandOptions silverpelt.CheckCommandOptions `json:"opts"`
 	} `json:"CheckCommandPermission,omitempty"`
-	TogglePerModuleCache *struct {
+	ExecutePerModuleFunction *struct {
 		Module  string         `json:"module"`
 		Toggle  string         `json:"toggle"`
 		Options map[string]any `json:"options,omitempty"`
-	} `json:"TogglePerModuleCache,omitempty"`
+	} `json:"ExecutePerModuleFunction,omitempty"`
 	GetSerenityPermissionList *struct{} `json:"GetSerenityPermissionList,omitempty"`
 }
 
