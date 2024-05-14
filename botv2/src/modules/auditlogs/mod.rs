@@ -1,4 +1,6 @@
+mod am_toggles;
 mod cmds;
+mod core;
 pub mod events; // Events is a public interface
 
 use futures_util::FutureExt;
@@ -100,6 +102,7 @@ pub fn module() -> crate::silverpelt::Module {
                 },
             },
         )],
+        on_startup: vec![Box::new(move |data| am_toggles::setup(data).boxed())],
         event_handlers: vec![Box::new(move |ectx| events::event_listener(ectx).boxed())],
         ..Default::default()
     }

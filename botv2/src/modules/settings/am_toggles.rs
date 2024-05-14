@@ -3,7 +3,7 @@ use futures::future::FutureExt;
 use serenity::all::GuildId;
 
 pub async fn setup(_data: &crate::Data) -> Result<(), crate::Error> {
-    crate::ipc::animus_magic::bot::dynamic::PERMODULE_CACHE_TOGGLES.insert(
+    crate::ipc::animus_magic::bot::dynamic::PERMODULE_FUNCTIONS.insert(
         ("settings".to_string(), "toggle_module".to_string()),
         Box::new(move |options| toggle_module(options).boxed()),
     );

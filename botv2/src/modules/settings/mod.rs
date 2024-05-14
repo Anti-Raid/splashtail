@@ -1,4 +1,3 @@
-use crate::silverpelt::config_opt::{Column, ColumnType, ConfigOption};
 use futures::future::FutureExt;
 use indexmap::indexmap;
 
@@ -65,35 +64,6 @@ pub fn module() -> crate::silverpelt::Module {
         ],
         on_startup: vec![Box::new(move |data| am_toggles::setup(data).boxed())],
         event_handlers: vec![Box::new(move |ectx| events::event_listener(ectx).boxed())],
-        config_options: vec![ConfigOption {
-            id: "guild_channels",
-            name: "Guild Channels",
-            description: "Channel configuration for this guild",
-            table: "guild_channels",
-            guild_id: "guild_id",
-            row_must_exist: false,
-            hint: Some("guild_channels".to_string()),
-            columns: vec![
-                Column {
-                    id: "channel_type",
-                    name: "Channel Type",
-                    column_type: ColumnType::String,
-                    nullable: false,
-                    unique: true,
-                    array: false,
-                    hint: Some("channel_type".to_string()),
-                },
-                Column {
-                    id: "channel_id",
-                    name: "Channel ID",
-                    column_type: ColumnType::Channel,
-                    nullable: false,
-                    unique: false,
-                    array: false,
-                    hint: Some("channel_id".to_string()),
-                },
-            ],
-        }],
         ..Default::default()
     }
 }

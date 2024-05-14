@@ -1,5 +1,5 @@
+use super::core::check_all_events;
 use crate::{Context, Error};
-use botox::crypto::gen_random;
 use futures_util::StreamExt;
 use poise::CreateReply;
 use secrecy::ExposeSecret;
@@ -47,7 +47,7 @@ pub async fn list_sinks(ctx: Context<'_>) -> Result<(), Error> {
 
     for sink in sinks {
         sink_lister.push(SinkLister {
-            id: sink.id,
+            id: sink.id.to_string(),
             typ: sink.typ,
             events: sink.events,
             broken: sink.broken,
@@ -151,53 +151,6 @@ pub async fn list_sinks(ctx: Context<'_>) -> Result<(), Error> {
     Ok(())
 }
 
-pub async fn check_all_events(events: Vec<String>) -> Result<(), crate::Error> {
-    let res = tokio::time::timeout(
-        std::time::Duration::from_millis(1000),
-        tokio::task::spawn_blocking(move || {
-            let supported_events = gwevent::core::event_list();
-
-            for event in events {
-                let trimmed = event.trim().to_string();
-
-                if trimmed.is_empty() {
-                    continue;
-                }
-
-                // All Anti-Raid events are filterable
-                if trimmed.starts_with("AR/") {
-                    continue;
-                }
-
-                // Regex compile check
-                if trimmed.starts_with("R/") {
-                    if let Err(e) = regex::Regex::new(&trimmed) {
-                        return Err(format!(
-                            "Event `{}` is not a valid regex. Error: {}",
-                            trimmed, e
-                        ));
-                    }
-                }
-
-                let event = trimmed.to_uppercase();
-
-                if !supported_events.contains(&event.as_str()) {
-                    return Err(format!(
-                        "Event `{}` is not a valid event. Please pick one of the following: {}",
-                        trimmed,
-                        supported_events.join(", ")
-                    ));
-                }
-            }
-
-            Ok(())
-        }),
-    )
-    .await??;
-
-    res.map_err(|e| e.into())
-}
-
 #[poise::command(prefix_command, slash_command, user_cooldown = 1)]
 pub async fn add_channel(
     ctx: Context<'_>,
@@ -248,11 +201,9 @@ pub async fn add_channel(
         None
     };
 
-    let sink_id = gen_random(24);
-
     ctx.defer().await?;
 
-    if use_webhook.unwrap_or(true) {
+    let sink_id = if use_webhook.unwrap_or(true) {
         if !bot_perms.manage_webhooks() {
             return Err("I do not have permission to manage webhooks in this channel".into());
         }
@@ -279,8 +230,7 @@ pub async fn add_channel(
         };
 
         sqlx::query!(
-            "INSERT INTO auditlogs__sinks (id, guild_id, type, sink, events, broken, created_by, last_updated_by) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)",
-            sink_id,
+            "INSERT INTO auditlogs__sinks (guild_id, type, sink, events, broken, created_by, last_updated_by) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id",
             guild_id.to_string(),
             "discord_webhook",
             webhook_url,
@@ -289,12 +239,13 @@ pub async fn add_channel(
             ctx.author().id.to_string(),
             ctx.author().id.to_string(),
         )
-        .execute(&ctx.data().pool)
-        .await?;
+        .fetch_one(&ctx.data().pool)
+        .await?
+        .id
+        .to_string()
     } else {
         sqlx::query!(
-            "INSERT INTO auditlogs__sinks (id, guild_id, type, sink, events, broken, created_by, last_updated_by) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)",
-            sink_id,
+            "INSERT INTO auditlogs__sinks (guild_id, type, sink, events, broken, created_by, last_updated_by) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id",
             guild_id.to_string(),
             "channel",
             gc.id.to_string(),
@@ -303,9 +254,11 @@ pub async fn add_channel(
             ctx.author().id.to_string(),
             ctx.author().id.to_string(),
         )
-        .execute(&ctx.data().pool)
-        .await?;
-    }
+        .fetch_one(&ctx.data().pool)
+        .await?
+        .id
+        .to_string()
+    };
 
     ctx.say(format!(
         "Successfully added a new Discord webhook sink for audit logs with ID `{}`",
@@ -338,10 +291,8 @@ pub async fn add_discordhook(
         None
     };
 
-    let sink_id = gen_random(24);
-    sqlx::query!(
-        "INSERT INTO auditlogs__sinks (id, guild_id, type, sink, events, broken, created_by, last_updated_by) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)",
-        sink_id,
+    let sink_id = sqlx::query!(
+        "INSERT INTO auditlogs__sinks (guild_id, type, sink, events, broken, created_by, last_updated_by) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id",
         guild_id.to_string(),
         "discord_webhook",
         webhook,
@@ -350,8 +301,10 @@ pub async fn add_discordhook(
         ctx.author().id.to_string(),
         ctx.author().id.to_string(),
     )
-    .execute(&ctx.data().pool)
-    .await?;
+    .fetch_one(&ctx.data().pool)
+    .await?
+    .id
+    .to_string();
 
     ctx.say(format!(
         "Successfully added a new Discord webhook sink for audit logs with ID `{}`",
@@ -374,7 +327,7 @@ pub async fn remove_sink(
     let res = sqlx::query!(
         "DELETE FROM auditlogs__sinks WHERE guild_id = $1 AND id = $2",
         guild_id.to_string(),
-        sink_id,
+        sink_id.parse::<sqlx::types::Uuid>()?,
     )
     .execute(&ctx.data().pool)
     .await?;

@@ -117,7 +117,7 @@ pub enum BotAnimusMessage {
         opts: AmCheckCommandOptions,
     },
     /// Toggles a per-module cache toggle
-    TogglePerModuleCache {
+    ExecutePerModuleFunction {
         module: String,
         toggle: String,
         options: indexmap::IndexMap<String, serde_cbor::Value>,
@@ -262,13 +262,13 @@ impl BotAnimusMessage {
 
                 Ok(BotAnimusResponse::CheckCommandPermission { perm_res, is_ok })
             }
-            Self::TogglePerModuleCache {
+            Self::ExecutePerModuleFunction {
                 module,
                 toggle,
                 options,
             } => {
                 let Some(toggle) =
-                    dynamic::PERMODULE_CACHE_TOGGLES.get(&(module.clone(), toggle.clone()))
+                    dynamic::PERMODULE_FUNCTIONS.get(&(module.clone(), toggle.clone()))
                 else {
                     return Err("Toggle not found".into());
                 };
@@ -296,7 +296,7 @@ pub mod dynamic {
     use futures::future::BoxFuture;
     use once_cell::sync::Lazy;
 
-    pub type CacheToggleFunc = Box<
+    pub type ToggleFunc = Box<
         dyn Send
             + Sync
             + for<'a> Fn(
@@ -304,10 +304,10 @@ pub mod dynamic {
             ) -> BoxFuture<'a, Result<(), crate::Error>>,
     >;
 
-    // In order to allow modules to implement their own internal caches without polluting the animus magic protocol,
-    // we implement PERMODULE_CACHE_TOGGLES which any module can register/add on to
+    // In order to allow modules to implement their own internal caches/logic without polluting the animus magic protocol,
+    // we implement PERMODULE_FUNCTIONS which any module can register/add on to
     //
-    // Format of a permodule_cache_toggle is (module_name, toggle)
-    pub static PERMODULE_CACHE_TOGGLES: Lazy<DashMap<(String, String), CacheToggleFunc>> =
+    // Format of a permodule toggle is (module_name, toggle)
+    pub static PERMODULE_FUNCTIONS: Lazy<DashMap<(String, String), ToggleFunc>> =
         Lazy::new(DashMap::new);
 }

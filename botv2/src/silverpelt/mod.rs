@@ -1,7 +1,5 @@
-pub mod canonical_config_opt;
 pub mod canonical_module;
 pub mod cmd;
-pub mod config_opt;
 pub mod ext_generate;
 pub mod member_permission_calc;
 pub mod module_config;
@@ -88,9 +86,6 @@ pub struct Module {
     ///
     /// This function will only be called once, when the shard is first ready
     pub on_first_ready: Vec<OnReadyFunction>,
-
-    /// This stores any extra configuration option for the module
-    pub config_options: Vec<config_opt::ConfigOption>,
 
     /// Modules may store files on seaweed, in order to allow for usage tracking,
     /// s3_paths should be set to the paths of the files on seaweed
