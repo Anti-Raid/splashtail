@@ -1,5 +1,7 @@
+pub mod canonical_config_opts;
 pub mod canonical_module;
 pub mod cmd;
+pub mod config_opts;
 pub mod ext_generate;
 pub mod member_permission_calc;
 pub mod module_config;
