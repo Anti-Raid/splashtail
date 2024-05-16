@@ -16,7 +16,7 @@
       {
         "ordinal": 2,
         "name": "fake_bot_detection",
-        "type_info": "Bool"
+        "type_info": "Int4"
       },
       {
         "ordinal": 3,
