@@ -37,6 +37,36 @@ pub enum ColumnSuggestion {
 }
 
 #[derive(Debug, Clone, PartialEq)]
+pub enum ColumnAction {
+    /// Adds a row to the state map
+    CollectRowToMap {
+        /// The table to use
+        table: &'static str,
+
+        /// The columns to fetch
+        columns: &'static str,
+
+        /// The key to store the row under
+        key: &'static str,
+
+        /// Whether to fetch all or only one rows
+        fetch_all: bool,
+    },
+    IpcPerModuleFunction {
+        /// The module to use
+        module: &'static str,
+
+        /// The function to execute
+        function: &'static str,
+
+        /// The arguments to pass to the function
+        ///
+        /// In syntax: {key_on_function} -> {key_on_map}
+        arguments: indexmap::IndexMap<&'static str, &'static str>,
+    },
+}
+
+#[derive(Debug, Clone, PartialEq)]
 pub struct Column {
     /// The ID of the column
     pub id: &'static str,
@@ -58,6 +88,12 @@ pub struct Column {
 
     /// Whether or not the column is an array
     pub array: bool,
+
+    /// The read-only status of each operation
+    pub readonly: indexmap::IndexMap<OperationType, bool>,
+
+    /// Pre-execute checks
+    pub pre_checks: indexmap::IndexMap<OperationType, Vec<ColumnAction>>,
 }
 
 #[derive(Debug, Clone, PartialEq)]

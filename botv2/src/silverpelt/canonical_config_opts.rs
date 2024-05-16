@@ -97,6 +97,66 @@ impl From<super::config_opts::ColumnSuggestion> for CanonicalColumnSuggestion {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub enum CanonicalColumnAction {
+    /// Adds a row to the state map
+    CollectRowToMap {
+        /// The table to use
+        table: String,
+
+        /// The columns to fetch
+        columns: String,
+
+        /// The key to store the row under
+        key: String,
+
+        /// Whether to fetch all or only one rows
+        fetch_all: bool,
+    },
+    IpcPerModuleFunction {
+        /// The module to use
+        module: String,
+
+        /// The function to execute
+        function: String,
+
+        /// The arguments to pass to the function
+        ///
+        /// In syntax: {key_on_function} -> {key_on_map}
+        arguments: indexmap::IndexMap<String, String>,
+    },
+}
+
+impl From<super::config_opts::ColumnAction> for CanonicalColumnAction {
+    fn from(column_action: super::config_opts::ColumnAction) -> Self {
+        match column_action {
+            super::config_opts::ColumnAction::CollectRowToMap {
+                table,
+                columns,
+                key,
+                fetch_all,
+            } => CanonicalColumnAction::CollectRowToMap {
+                table: table.to_string(),
+                columns: columns.to_string(),
+                key: key.to_string(),
+                fetch_all,
+            },
+            super::config_opts::ColumnAction::IpcPerModuleFunction {
+                module,
+                function,
+                arguments,
+            } => CanonicalColumnAction::IpcPerModuleFunction {
+                module: module.to_string(),
+                function: function.to_string(),
+                arguments: arguments
+                    .into_iter()
+                    .map(|(k, v)| (k.to_string(), v.to_string()))
+                    .collect(),
+            },
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct CanonicalColumn {
     /// The ID of the column
     pub id: String,
@@ -118,6 +178,12 @@ pub struct CanonicalColumn {
 
     /// Whether or not the column is an array
     pub array: bool,
+
+    /// The read-only status of each operation
+    pub readonly: indexmap::IndexMap<CanonicalOperationType, bool>,
+
+    /// Pre-execute checks
+    pub pre_checks: indexmap::IndexMap<CanonicalOperationType, Vec<CanonicalColumnAction>>,
 }
 
 impl From<super::config_opts::Column> for CanonicalColumn {
@@ -130,6 +196,16 @@ impl From<super::config_opts::Column> for CanonicalColumn {
             suggestions: column.suggestions.into(),
             unique: column.unique,
             array: column.array,
+            readonly: column
+                .readonly
+                .into_iter()
+                .map(|(k, v)| (k.into(), v))
+                .collect(),
+            pre_checks: column
+                .pre_checks
+                .into_iter()
+                .map(|(k, v)| (k.into(), v.into_iter().map(|c| c.into()).collect()))
+                .collect(),
         }
     }
 }
