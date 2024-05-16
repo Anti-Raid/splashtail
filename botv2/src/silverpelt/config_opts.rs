@@ -1,6 +1,7 @@
 #[derive(Debug, Clone, PartialEq)]
 #[allow(dead_code)]
 pub enum ColumnType {
+    Uuid {},
     String {
         min_length: Option<usize>,
         max_length: Option<usize>,
@@ -37,20 +38,56 @@ pub enum ColumnSuggestion {
 }
 
 #[derive(Debug, Clone, PartialEq)]
+pub enum ColumnComparison {
+    EqualsNumber {
+        /// The number to compare against
+        number: u64,
+    },
+    EqualsString {
+        /// The string to compare against
+        string: &'static str,
+    },
+    LessThan {
+        /// The number to compare against
+        number: u64,
+    },
+    GreaterThan {
+        /// The number to compare against
+        number: u64,
+    },
+    LessThanOrEqual {
+        /// The number to compare against
+        number: u64,
+    },
+    GreaterThanOrEqual {
+        /// The number to compare against
+        number: u64,
+    },
+}
+
+#[derive(Debug, Clone, PartialEq)]
 pub enum ColumnAction {
-    /// Adds a row to the state map
-    CollectRowToMap {
+    /// Adds a column/row to the state map
+    CollectColumnToMap {
         /// The table to use
         table: &'static str,
 
-        /// The columns to fetch
-        columns: &'static str,
+        /// The column to fetch
+        column: &'static str,
 
-        /// The key to store the row under
+        /// The key to store the record under
         key: &'static str,
 
         /// Whether to fetch all or only one rows
         fetch_all: bool,
+    },
+    // Compares a key based on a comparison
+    CompareKey {
+        /// The key to compare
+        key: &'static str,
+
+        /// The comparison to use
+        comparison: ColumnComparison,
     },
     IpcPerModuleFunction {
         /// The module to use
@@ -90,6 +127,8 @@ pub struct Column {
     pub array: bool,
 
     /// The read-only status of each operation
+    ///
+    /// Only applies to create and update
     pub readonly: indexmap::IndexMap<OperationType, bool>,
 
     /// Pre-execute checks
@@ -104,6 +143,8 @@ pub struct OperationSpecific {
     /// Which column ids should be usable for this operation
     ///
     /// E.g, create does not need to show created_at or id while view should
+    ///
+    /// If empty, all columns are usable
     pub column_ids: Vec<&'static str>,
 
     /// Any columns to set. For example, a last_updated column should be set on update

@@ -33,6 +33,9 @@ pub struct CanonicalModule {
     /// Modules may store files on seaweed, in order to allow for usage tracking,
     /// s3_paths should be set to the paths of the files on seaweed
     pub s3_paths: Vec<String>,
+
+    /// Config options for this module
+    pub config_options: Vec<super::canonical_config_opts::CanonicalConfigOption>,
 }
 
 /// Canonical representation of a command (data section) for external use
@@ -149,6 +152,11 @@ impl From<crate::silverpelt::Module> for CanonicalModule {
                 .map(|(cmd, perms)| CanonicalCommand::from_repr(&cmd, perms))
                 .collect(),
             s3_paths: module.s3_paths,
+            config_options: module
+                .config_options
+                .into_iter()
+                .map(super::canonical_config_opts::CanonicalConfigOption::from)
+                .collect(),
         }
     }
 }

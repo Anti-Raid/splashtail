@@ -3,6 +3,7 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[allow(dead_code)]
 pub enum CanonicalColumnType {
+    Uuid {},
     String {
         min_length: Option<usize>,
         max_length: Option<usize>,
@@ -23,6 +24,7 @@ pub enum CanonicalColumnType {
 impl From<super::config_opts::ColumnType> for CanonicalColumnType {
     fn from(column_type: super::config_opts::ColumnType) -> Self {
         match column_type {
+            super::config_opts::ColumnType::Uuid {} => CanonicalColumnType::Uuid {},
             super::config_opts::ColumnType::String {
                 min_length,
                 max_length,
@@ -97,20 +99,83 @@ impl From<super::config_opts::ColumnSuggestion> for CanonicalColumnSuggestion {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub enum CanonicalColumnComparison {
+    EqualsNumber {
+        /// The number to compare against
+        number: u64,
+    },
+    EqualsString {
+        /// The string to compare against
+        string: String,
+    },
+    LessThan {
+        /// The number to compare against
+        number: u64,
+    },
+    GreaterThan {
+        /// The number to compare against
+        number: u64,
+    },
+    LessThanOrEqual {
+        /// The number to compare against
+        number: u64,
+    },
+    GreaterThanOrEqual {
+        /// The number to compare against
+        number: u64,
+    },
+}
+
+impl From<super::config_opts::ColumnComparison> for CanonicalColumnComparison {
+    fn from(column_comparison: super::config_opts::ColumnComparison) -> Self {
+        match column_comparison {
+            super::config_opts::ColumnComparison::EqualsNumber { number } => {
+                CanonicalColumnComparison::EqualsNumber { number }
+            }
+            super::config_opts::ColumnComparison::EqualsString { string } => {
+                CanonicalColumnComparison::EqualsString {
+                    string: string.to_string(),
+                }
+            }
+            super::config_opts::ColumnComparison::LessThan { number } => {
+                CanonicalColumnComparison::LessThan { number }
+            }
+            super::config_opts::ColumnComparison::GreaterThan { number } => {
+                CanonicalColumnComparison::GreaterThan { number }
+            }
+            super::config_opts::ColumnComparison::LessThanOrEqual { number } => {
+                CanonicalColumnComparison::LessThanOrEqual { number }
+            }
+            super::config_opts::ColumnComparison::GreaterThanOrEqual { number } => {
+                CanonicalColumnComparison::GreaterThanOrEqual { number }
+            }
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum CanonicalColumnAction {
-    /// Adds a row to the state map
-    CollectRowToMap {
+    /// Adds a column/row to the state map
+    CollectColumnToMap {
         /// The table to use
         table: String,
 
-        /// The columns to fetch
-        columns: String,
+        /// The column to fetch
+        column: String,
 
         /// The key to store the row under
         key: String,
 
         /// Whether to fetch all or only one rows
         fetch_all: bool,
+    },
+    // Compares a key based on a comparison
+    CompareKey {
+        /// The key to compare
+        key: String,
+
+        /// The comparison to use
+        comparison: CanonicalColumnComparison,
     },
     IpcPerModuleFunction {
         /// The module to use
@@ -129,17 +194,23 @@ pub enum CanonicalColumnAction {
 impl From<super::config_opts::ColumnAction> for CanonicalColumnAction {
     fn from(column_action: super::config_opts::ColumnAction) -> Self {
         match column_action {
-            super::config_opts::ColumnAction::CollectRowToMap {
+            super::config_opts::ColumnAction::CollectColumnToMap {
                 table,
-                columns,
+                column,
                 key,
                 fetch_all,
-            } => CanonicalColumnAction::CollectRowToMap {
+            } => CanonicalColumnAction::CollectColumnToMap {
                 table: table.to_string(),
-                columns: columns.to_string(),
+                column: column.to_string(),
                 key: key.to_string(),
                 fetch_all,
             },
+            super::config_opts::ColumnAction::CompareKey { key, comparison } => {
+                CanonicalColumnAction::CompareKey {
+                    key: key.to_string(),
+                    comparison: comparison.into(),
+                }
+            }
             super::config_opts::ColumnAction::IpcPerModuleFunction {
                 module,
                 function,
@@ -180,6 +251,8 @@ pub struct CanonicalColumn {
     pub array: bool,
 
     /// The read-only status of each operation
+    ///
+    /// Only applies to create and update
     pub readonly: indexmap::IndexMap<CanonicalOperationType, bool>,
 
     /// Pre-execute checks
@@ -218,6 +291,8 @@ pub struct CanonicalOperationSpecific {
     /// Which column ids should be usable for this operation
     ///
     /// E.g, create does not need to show created_at or id while view should
+    ///
+    /// If empty, all columns are usable
     pub column_ids: Vec<String>,
 
     /// Any columns to set. For example, a last_updated column should be set on update

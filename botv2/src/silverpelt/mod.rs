@@ -92,6 +92,9 @@ pub struct Module {
     /// Modules may store files on seaweed, in order to allow for usage tracking,
     /// s3_paths should be set to the paths of the files on seaweed
     pub s3_paths: Vec<String>,
+
+    /// Config options for this module
+    pub config_options: Vec<config_opts::ConfigOption>,
 }
 
 #[derive(Default, Clone, Hash, Eq, PartialEq, serde::Serialize, serde::Deserialize, Debug)]
