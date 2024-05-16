@@ -163,6 +163,20 @@ pub fn module() -> crate::silverpelt::Module {
                                 }
                             ]
                         }
+                    },
+                    Column {
+                        id: "type",
+                        name: "Sink Type",
+                        column_type: ColumnType::String { min_length: None, max_length: None, allowed_values: vec!["channel", "discordhook"] },
+                        nullable: false,
+                        unique: false,
+                        array: false,
+                        suggestions: ColumnSuggestion::Static { suggestions: vec!["channel", "discordhook"] },
+                        readonly: indexmap::indexmap! {
+                            OperationType::Create => false,
+                            OperationType::Update => true,
+                        },
+                        pre_checks: indexmap::indexmap! {}
                     }
                 ],
                 operations: indexmap::indexmap! {

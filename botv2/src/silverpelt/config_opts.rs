@@ -5,6 +5,7 @@ pub enum ColumnType {
     String {
         min_length: Option<usize>,
         max_length: Option<usize>,
+        allowed_values: Vec<&'static str>, // If empty, all values are allowed
     },
     Integer {},
     BitFlag {
@@ -43,9 +44,10 @@ pub enum ColumnComparison {
         /// The number to compare against
         number: u64,
     },
-    EqualsString {
-        /// The string to compare against
-        string: &'static str,
+    /// Checks that the key is in a set of strings
+    InStrings {
+        /// The strings to compare against
+        strings: Vec<&'static str>,
     },
     LessThan {
         /// The number to compare against

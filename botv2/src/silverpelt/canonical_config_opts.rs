@@ -7,6 +7,7 @@ pub enum CanonicalColumnType {
     String {
         min_length: Option<usize>,
         max_length: Option<usize>,
+        allowed_values: Vec<String>,
     },
     Integer {},
     BitFlag {
@@ -28,9 +29,11 @@ impl From<super::config_opts::ColumnType> for CanonicalColumnType {
             super::config_opts::ColumnType::String {
                 min_length,
                 max_length,
+                allowed_values,
             } => CanonicalColumnType::String {
                 min_length,
                 max_length,
+                allowed_values: allowed_values.iter().map(|s| s.to_string()).collect(),
             },
             super::config_opts::ColumnType::Integer {} => CanonicalColumnType::Integer {},
             super::config_opts::ColumnType::BitFlag { values } => CanonicalColumnType::BitFlag {
@@ -104,9 +107,10 @@ pub enum CanonicalColumnComparison {
         /// The number to compare against
         number: u64,
     },
-    EqualsString {
-        /// The string to compare against
-        string: String,
+    /// Checks that the key is in a set of strings
+    InStrings {
+        /// The strings to compare against
+        strings: Vec<String>,
     },
     LessThan {
         /// The number to compare against
@@ -132,9 +136,9 @@ impl From<super::config_opts::ColumnComparison> for CanonicalColumnComparison {
             super::config_opts::ColumnComparison::EqualsNumber { number } => {
                 CanonicalColumnComparison::EqualsNumber { number }
             }
-            super::config_opts::ColumnComparison::EqualsString { string } => {
-                CanonicalColumnComparison::EqualsString {
-                    string: string.to_string(),
+            super::config_opts::ColumnComparison::InStrings { strings } => {
+                CanonicalColumnComparison::InStrings {
+                    strings: strings.iter().map(|s| s.to_string()).collect(),
                 }
             }
             super::config_opts::ColumnComparison::LessThan { number } => {
