@@ -102,62 +102,6 @@ impl From<super::config_opts::ColumnSuggestion> for CanonicalColumnSuggestion {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub enum CanonicalColumnComparison {
-    EqualsNumber {
-        /// The number to compare against
-        number: u64,
-    },
-    /// Checks that the key is in a set of strings
-    InStrings {
-        /// The strings to compare against
-        strings: Vec<String>,
-    },
-    LessThan {
-        /// The number to compare against
-        number: u64,
-    },
-    GreaterThan {
-        /// The number to compare against
-        number: u64,
-    },
-    LessThanOrEqual {
-        /// The number to compare against
-        number: u64,
-    },
-    GreaterThanOrEqual {
-        /// The number to compare against
-        number: u64,
-    },
-}
-
-impl From<super::config_opts::ColumnComparison> for CanonicalColumnComparison {
-    fn from(column_comparison: super::config_opts::ColumnComparison) -> Self {
-        match column_comparison {
-            super::config_opts::ColumnComparison::EqualsNumber { number } => {
-                CanonicalColumnComparison::EqualsNumber { number }
-            }
-            super::config_opts::ColumnComparison::InStrings { strings } => {
-                CanonicalColumnComparison::InStrings {
-                    strings: strings.iter().map(|s| s.to_string()).collect(),
-                }
-            }
-            super::config_opts::ColumnComparison::LessThan { number } => {
-                CanonicalColumnComparison::LessThan { number }
-            }
-            super::config_opts::ColumnComparison::GreaterThan { number } => {
-                CanonicalColumnComparison::GreaterThan { number }
-            }
-            super::config_opts::ColumnComparison::LessThanOrEqual { number } => {
-                CanonicalColumnComparison::LessThanOrEqual { number }
-            }
-            super::config_opts::ColumnComparison::GreaterThanOrEqual { number } => {
-                CanonicalColumnComparison::GreaterThanOrEqual { number }
-            }
-        }
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum CanonicalColumnAction {
     /// Adds a column/row to the state map
     CollectColumnToMap {
@@ -173,13 +117,13 @@ pub enum CanonicalColumnAction {
         /// Whether to fetch all or only one rows
         fetch_all: bool,
     },
-    // Compares a key based on a comparison
-    CompareKey {
-        /// The key to compare
-        key: String,
-
-        /// The comparison to use
-        comparison: CanonicalColumnComparison,
+    /// Executes a lua script, the *last* result will be stored in result
+    ///
+    /// Note that the lua script must return true or false
+    ExecLuaScript {
+        script: String,
+        on_success: Vec<CanonicalColumnAction>,
+        on_failure: Vec<CanonicalColumnAction>,
     },
     IpcPerModuleFunction {
         /// The module to use
@@ -192,6 +136,11 @@ pub enum CanonicalColumnAction {
         ///
         /// In syntax: {key_on_function} -> {key_on_map}
         arguments: indexmap::IndexMap<String, String>,
+    },
+    /// Return an error thus failing the configuration view/create/update/delete
+    Error {
+        /// The error message to return, {key_on_map} can be used here in the message
+        message: String,
     },
 }
 
@@ -209,12 +158,15 @@ impl From<super::config_opts::ColumnAction> for CanonicalColumnAction {
                 key: key.to_string(),
                 fetch_all,
             },
-            super::config_opts::ColumnAction::CompareKey { key, comparison } => {
-                CanonicalColumnAction::CompareKey {
-                    key: key.to_string(),
-                    comparison: comparison.into(),
-                }
-            }
+            super::config_opts::ColumnAction::ExecLuaScript {
+                script,
+                on_success,
+                on_failure,
+            } => CanonicalColumnAction::ExecLuaScript {
+                script: script.to_string(),
+                on_success: on_success.into_iter().map(|c| c.into()).collect(),
+                on_failure: on_failure.into_iter().map(|c| c.into()).collect(),
+            },
             super::config_opts::ColumnAction::IpcPerModuleFunction {
                 module,
                 function,
@@ -226,6 +178,9 @@ impl From<super::config_opts::ColumnAction> for CanonicalColumnAction {
                     .into_iter()
                     .map(|(k, v)| (k.to_string(), v.to_string()))
                     .collect(),
+            },
+            super::config_opts::ColumnAction::Error { message } => CanonicalColumnAction::Error {
+                message: message.to_string(),
             },
         }
     }
@@ -261,6 +216,9 @@ pub struct CanonicalColumn {
 
     /// Pre-execute checks
     pub pre_checks: indexmap::IndexMap<CanonicalOperationType, Vec<CanonicalColumnAction>>,
+
+    /// Default pre-execute checks to fallback to if the operation specific ones are not set
+    pub default_pre_checks: Vec<CanonicalColumnAction>,
 }
 
 impl From<super::config_opts::Column> for CanonicalColumn {
@@ -282,6 +240,11 @@ impl From<super::config_opts::Column> for CanonicalColumn {
                 .pre_checks
                 .into_iter()
                 .map(|(k, v)| (k.into(), v.into_iter().map(|c| c.into()).collect()))
+                .collect(),
+            default_pre_checks: column
+                .default_pre_checks
+                .into_iter()
+                .map(|c| c.into())
                 .collect(),
         }
     }

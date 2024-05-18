@@ -39,35 +39,6 @@ pub enum ColumnSuggestion {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub enum ColumnComparison {
-    EqualsNumber {
-        /// The number to compare against
-        number: u64,
-    },
-    /// Checks that the key is in a set of strings
-    InStrings {
-        /// The strings to compare against
-        strings: Vec<&'static str>,
-    },
-    LessThan {
-        /// The number to compare against
-        number: u64,
-    },
-    GreaterThan {
-        /// The number to compare against
-        number: u64,
-    },
-    LessThanOrEqual {
-        /// The number to compare against
-        number: u64,
-    },
-    GreaterThanOrEqual {
-        /// The number to compare against
-        number: u64,
-    },
-}
-
-#[derive(Debug, Clone, PartialEq)]
 pub enum ColumnAction {
     /// Adds a column/row to the state map
     CollectColumnToMap {
@@ -83,13 +54,13 @@ pub enum ColumnAction {
         /// Whether to fetch all or only one rows
         fetch_all: bool,
     },
-    // Compares a key based on a comparison
-    CompareKey {
-        /// The key to compare
-        key: &'static str,
-
-        /// The comparison to use
-        comparison: ColumnComparison,
+    /// Executes a lua script, the *last* result will be stored in result
+    ///
+    /// Note that the lua script must return true or false
+    ExecLuaScript {
+        script: &'static str,
+        on_success: Vec<ColumnAction>,
+        on_failure: Vec<ColumnAction>,
     },
     IpcPerModuleFunction {
         /// The module to use
@@ -102,6 +73,11 @@ pub enum ColumnAction {
         ///
         /// In syntax: {key_on_function} -> {key_on_map}
         arguments: indexmap::IndexMap<&'static str, &'static str>,
+    },
+    /// Return an error thus failing the configuration view/create/update/delete
+    Error {
+        /// The error message to return, {key_on_map} can be used here in the message
+        message: &'static str,
     },
 }
 
@@ -135,6 +111,9 @@ pub struct Column {
 
     /// Pre-execute checks
     pub pre_checks: indexmap::IndexMap<OperationType, Vec<ColumnAction>>,
+
+    /// Default pre-execute checks to fallback to if the operation specific ones are not set
+    pub default_pre_checks: Vec<ColumnAction>,
 }
 
 #[derive(Debug, Clone, PartialEq)]

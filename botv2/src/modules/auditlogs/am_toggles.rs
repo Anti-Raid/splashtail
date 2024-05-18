@@ -3,7 +3,7 @@ use futures::future::FutureExt;
 pub async fn setup(_data: &crate::Data) -> Result<(), crate::Error> {
     crate::ipc::animus_magic::bot::dynamic::PERMODULE_FUNCTIONS.insert(
         ("audit_logs".to_string(), "check_all_events".to_string()),
-        Box::new(move |options| check_all_events(options).boxed()),
+        Box::new(move |_, options| check_all_events(options).boxed()),
     );
 
     Ok(())

@@ -209,6 +209,11 @@ func (p *AMProbeTask) Run() error {
 		return nil
 	}
 
+	if serviceStatus == "failed" {
+		Logger.Error("Service is in failed state, restarting")
+		return p.tryRestartServiceSystemd()
+	}
+
 	commandId := animusmagic.NewCommandId()
 	payload, err := p.AnimusMagicClient.CreatePayload(
 		p.AnimusMagicClient.Identify,
@@ -407,22 +412,6 @@ func (p *AMProbeTask) tryRestart(opts tryRestartOptions) error {
 		return nil
 	}
 
-	// Try tryRestartKillall
-	if !p.state.AttemptedKillall {
-		Logger.Debug("Attempting killall")
-
-		err := p.tryKillService()
-
-		if err != nil {
-			return fmt.Errorf("error killing service: %s", err)
-		}
-
-		p.state.AttemptedKillall = true
-
-		// Give some extra buffer time
-		time.Sleep(3 * time.Second)
-	}
-
 	// If we reach here, we have already tried restarting the mewld cluster
 	if !p.state.AttemptedSystemdRestart {
 		Logger.Debug("Attempting service restart")
@@ -436,11 +425,11 @@ func (p *AMProbeTask) tryRestart(opts tryRestartOptions) error {
 
 		// Give some extra buffer time
 		time.Sleep(3 * time.Second)
+
+		return nil
 	}
 
-	// Fallback to tryRestartServiceSystemd
-	// This is the last resort
-	Logger.Error("Failed to restart service via mewld, attempting systemd restart")
+	Logger.Error("Failed to restart service via mewld and systemd")
 
 	_, err := Discord.WebhookExecute(MonitorWebhook.ID, MonitorWebhook.Token, false, &discordgo.WebhookParams{
 		Content: fmt.Sprintf("%s **CRITICAL ALERT** Failed to restart service %s via mewld, attempting systemd restart", Config.Wafflepaw.RolePing, p.SystemdService),
@@ -448,12 +437,6 @@ func (p *AMProbeTask) tryRestart(opts tryRestartOptions) error {
 
 	if err != nil {
 		Logger.Error("Error sending webhook", zap.Error(err))
-	}
-
-	err = p.tryRestartServiceSystemd()
-
-	if err != nil {
-		return fmt.Errorf("error restarting service: %s", err)
 	}
 
 	// Give some extra buffer time
@@ -529,23 +512,6 @@ func (p *AMProbeTask) tryRollingRestartMewldCluster() error {
 	return nil
 }
 
-// tryKillService tries to use the killall command on the process
-func (p *AMProbeTask) tryKillService() error {
-	for _, processName := range p.ProcessName {
-		processSplit := strings.Split(processName, " ")
-
-		cmd := exec.Command("killall", processSplit...)
-
-		err := cmd.Run()
-
-		if err != nil {
-			return fmt.Errorf("error killing service: %s", err)
-		}
-	}
-
-	return nil
-}
-
 // tryRestartServiceSystemd tries to restart the entire service using systemd
 func (p *AMProbeTask) tryRestartServiceSystemd() error {
 	Logger.Debug("Restarting service", zap.String("service", p.SystemdService))
@@ -554,7 +520,7 @@ func (p *AMProbeTask) tryRestartServiceSystemd() error {
 	err := cmd.Run()
 
 	if err != nil {
-		return fmt.Errorf("error restarting service: %s", err)
+		return fmt.Errorf("error restarting service [systemd]: %s", err)
 	}
 
 	return nil

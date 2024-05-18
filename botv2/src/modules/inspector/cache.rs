@@ -174,7 +174,7 @@ pub async fn setup_am_toggle(_pool: &sqlx::PgPool) -> Result<(), crate::Error> {
 
     crate::ipc::animus_magic::bot::dynamic::PERMODULE_FUNCTIONS.insert(
         ("basic_antispam".to_string(), "clear".to_string()),
-        Box::new(move |options| clear(options).boxed()),
+        Box::new(move |_, options| clear(options).boxed()),
     );
 
     Ok(())

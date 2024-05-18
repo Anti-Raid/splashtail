@@ -5,7 +5,7 @@ pub mod events; // Events is a public interface
 
 use crate::silverpelt::config_opts::{
     Column, ColumnAction, ColumnSuggestion, ColumnType, ConfigOption, OperationSpecific,
-    OperationType, OptionType, ColumnComparison
+    OperationType, OptionType
 };
 use futures_util::FutureExt;
 use indexmap::indexmap;
@@ -129,21 +129,23 @@ pub fn module() -> crate::silverpelt::Module {
                             table_name: "auditlogs__sinks", 
                             column_name: "id"
                         },
-                        readonly: indexmap::indexmap! {
-                            OperationType::Create => true,
-                            OperationType::Update => true,
-                        },
+                        readonly: indexmap::indexmap! {},
                         pre_checks: indexmap::indexmap! {
                             OperationType::Create => vec![
                                 ColumnAction::CollectColumnToMap { 
                                     table: "auditlogs__sinks", 
                                     column: "id", 
-                                    key: "id_count", 
+                                    key: "ids", 
                                     fetch_all: true 
                                 },
-                                ColumnAction::CompareKey { 
-                                    key: "id_count", 
-                                    comparison: ColumnComparison::LessThanOrEqual { number: 5 } 
+                                ColumnAction::ExecLuaScript { 
+                                    script: "return #data.ids < 10",
+                                    on_success: vec![],
+                                    on_failure: vec![
+                                        ColumnAction::Error { 
+                                            message: "You have reached the maximum number of sinks allowed. Please remove a sink before adding a new one." 
+                                        }
+                                    ],
                                 },
                                 ColumnAction::IpcPerModuleFunction {
                                     module: "auditlogs",
@@ -162,7 +164,8 @@ pub fn module() -> crate::silverpelt::Module {
                                     }
                                 }
                             ]
-                        }
+                        },
+                        default_pre_checks: vec![],
                     },
                     Column {
                         id: "type",
@@ -173,10 +176,39 @@ pub fn module() -> crate::silverpelt::Module {
                         array: false,
                         suggestions: ColumnSuggestion::Static { suggestions: vec!["channel", "discordhook"] },
                         readonly: indexmap::indexmap! {
-                            OperationType::Create => false,
                             OperationType::Update => true,
                         },
-                        pre_checks: indexmap::indexmap! {}
+                        pre_checks: indexmap::indexmap! {},
+                        default_pre_checks: vec![],
+                    },
+                    Column {
+                        id: "sink",
+                        name: "Sink",
+                        column_type: ColumnType::String { min_length: None, max_length: None, allowed_values: vec![] },
+                        nullable: false,
+                        unique: false,
+                        array: false,
+                        suggestions: ColumnSuggestion::Static { suggestions: vec![] },
+                        readonly: indexmap::indexmap! {},
+                        pre_checks: indexmap::indexmap! {},
+                        default_pre_checks: vec![
+                            // If discordhook, must be a webhook
+                            ColumnAction::ExecLuaScript {
+                                script: r#"
+                                    if data.type == "discordhook" then
+                                        return data.sink:startswith("https://discord.com/api/webhooks") or
+                                            data.sink:startswith("https://discord.com/api/v9/webhooks") or
+                                            data.sink:startswith("https://discord.com/api/v10/webhooks")
+                                    else
+                                        return true -- TODO: Check channels
+                                    end
+                                "#,
+                                on_success: vec![],
+                                on_failure: vec![
+                                    ColumnAction::Error { message: "Discord webhooks sinks must be a webhook." }
+                                ],
+                            }
+                        ]
                     }
                 ],
                 operations: indexmap::indexmap! {

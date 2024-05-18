@@ -273,7 +273,7 @@ impl BotAnimusMessage {
                     return Err("Toggle not found".into());
                 };
 
-                (toggle)(&options).await?;
+                (toggle)(cache_http, &options).await?;
 
                 Ok(BotAnimusResponse::Ok {
                     message: "".to_string(),
@@ -300,6 +300,7 @@ pub mod dynamic {
         dyn Send
             + Sync
             + for<'a> Fn(
+                &'a botox::cache::CacheHttpImpl,
                 &'a indexmap::IndexMap<String, serde_cbor::Value>, // Options sent
             ) -> BoxFuture<'a, Result<(), crate::Error>>,
     >;
