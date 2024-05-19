@@ -1,10 +1,7 @@
 use super::core::check_all_events;
 use crate::{Context, Error};
-use futures_util::StreamExt;
-use poise::CreateReply;
 use secrecy::ExposeSecret;
-use serenity::all::{Channel, ChannelType, CreateEmbed};
-use std::time::Duration;
+use serenity::all::{Channel, ChannelType};
 
 #[poise::command(
     prefix_command,
@@ -18,137 +15,7 @@ pub async fn auditlogs(_ctx: Context<'_>) -> Result<(), Error> {
 
 #[poise::command(prefix_command, slash_command, user_cooldown = 1)]
 pub async fn list_sinks(ctx: Context<'_>) -> Result<(), Error> {
-    let Some(guild_id) = ctx.guild_id() else {
-        return Err("This command can only be used in a guild".into());
-    };
-
-    let sinks = sqlx::query!(
-        "SELECT id, type AS typ, events, broken, created_at, created_by, last_updated_by FROM auditlogs__sinks WHERE guild_id = $1",
-        guild_id.to_string(),
-    )
-    .fetch_all(&ctx.data().pool)
-    .await?;
-
-    if sinks.is_empty() {
-        return Err("No sinks found. You can create a sink (a channel/webhook that will recieve logged events) using `/auditlogs addchannel` or `/auditlogs add_discordhook`".into());
-    }
-
-    struct SinkLister {
-        id: String,
-        typ: String,
-        events: Option<Vec<String>>,
-        broken: bool,
-        created_at: String,
-        created_by: String,
-        last_updated_by: String,
-    }
-
-    let mut sink_lister = Vec::new();
-
-    for sink in sinks {
-        sink_lister.push(SinkLister {
-            id: sink.id.to_string(),
-            typ: sink.typ,
-            events: sink.events,
-            broken: sink.broken,
-            created_at: format!("<t:{}:F>", sink.created_at),
-            created_by: sink.created_by,
-            last_updated_by: sink.last_updated_by,
-        });
-    }
-
-    fn create_sink_list_embed(sink: &SinkLister) -> CreateEmbed {
-        let mut embed = CreateEmbed::default();
-        embed = embed.title(format!("Sink ID: {}", sink.id));
-        embed = embed.field("Type", sink.typ.clone(), false);
-
-        if let Some(events) = &sink.events {
-            embed = embed.field("Events", events.join(", "), false);
-        }
-
-        embed = embed.field("Broken", sink.broken.to_string(), false);
-        embed = embed.field("Created At", sink.created_at.clone(), false);
-        embed = embed.field("Created By", sink.created_by.clone(), false);
-        embed = embed.field("Last Updated By", sink.last_updated_by.clone(), false);
-
-        embed
-    }
-
-    fn create_action_row<'a>(index: usize, total: usize) -> serenity::all::CreateActionRow<'a> {
-        serenity::all::CreateActionRow::Buttons(vec![
-            serenity::all::CreateButton::new("previous")
-                .style(serenity::all::ButtonStyle::Primary)
-                .label("Previous")
-                .disabled(index == 0),
-            serenity::all::CreateButton::new("next")
-                .style(serenity::all::ButtonStyle::Primary)
-                .label("Next")
-                .disabled(index >= total - 1),
-            serenity::all::CreateButton::new("first")
-                .style(serenity::all::ButtonStyle::Primary)
-                .label("First")
-                .disabled(false),
-            serenity::all::CreateButton::new("close")
-                .style(serenity::all::ButtonStyle::Danger)
-                .label("Close")
-                .disabled(false),
-        ])
-    }
-
-    let mut index = 0;
-
-    let msg = ctx
-        .send(
-            CreateReply::new()
-                .embed(create_sink_list_embed(&sink_lister[index]))
-                .components(vec![create_action_row(index, sink_lister.len())]),
-        )
-        .await?
-        .into_message()
-        .await?;
-
-    let collector = msg
-        .await_component_interactions(ctx.serenity_context().shard.clone())
-        .author_id(ctx.author().id)
-        .timeout(Duration::from_secs(180));
-
-    let mut collect_stream = collector.stream();
-
-    while let Some(item) = collect_stream.next().await {
-        let item_id = item.data.custom_id.as_str();
-
-        match item_id {
-            "previous" => {
-                index = index.saturating_sub(1);
-            }
-            "next" => {
-                index = usize::min(index + 1, sink_lister.len() - 1);
-            }
-            "first" => {
-                index = 0;
-            }
-            "close" => {
-                item.defer(&ctx.serenity_context().http).await?;
-                item.delete_response(&ctx.serenity_context().http).await?;
-                break;
-            }
-            _ => {}
-        }
-
-        item.defer(&ctx.serenity_context().http).await?;
-
-        let cr = CreateReply::new()
-            .embed(create_sink_list_embed(&sink_lister[index]))
-            .components(vec![create_action_row(index, sink_lister.len())]);
-
-        item.edit_response(
-            &ctx.serenity_context().http,
-            cr.to_slash_initial_response_edit(serenity::all::EditInteractionResponse::default()),
-        )
-        .await?;
-    }
-
-    Ok(())
+    crate::silverpelt::settings::cfg::settings_viewer(&ctx, &super::sinks::sink()).await
 }
 
 #[poise::command(prefix_command, slash_command, user_cooldown = 1)]

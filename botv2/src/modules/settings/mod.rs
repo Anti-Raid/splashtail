@@ -3,7 +3,6 @@ use indexmap::indexmap;
 
 mod am_toggles;
 mod commands;
-mod configset;
 mod events;
 mod modules;
 mod perms;

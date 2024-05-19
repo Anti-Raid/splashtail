@@ -2,6 +2,7 @@ use super::state::State;
 use super::value::Value;
 use crate::silverpelt::config_opts::ColumnAction;
 use async_recursion::async_recursion;
+use mlua::LuaSerdeExt;
 use sqlx::Row;
 
 fn _getluavm() -> mlua::Lua {
@@ -47,10 +48,6 @@ end
     lua.load(string_extrafuncs).exec().unwrap();
 
     lua
-}
-
-thread_local! {
-    static LUA_VM: mlua::Lua = _getluavm();
 }
 
 #[allow(dead_code)]
@@ -133,17 +130,26 @@ pub async fn execute_actions(
                 on_failure,
             } => {
                 let script = state.template_to_string(script);
-                let is_success = match LUA_VM.try_with(|x| x.load(&script).eval::<bool>()) {
-                    Ok(b) => match b {
-                        Ok(b) => b,
-                        Err(e) => return Err(format!("Internal error: Lua Error: {}", e).into()),
-                    },
-                    Err(e) => {
-                        return Err(format!("Internal error: Thread AccessError: {}", e).into())
+
+                let res = {
+                    let vm = _getluavm();
+
+                    // Load in the state
+                    let globals = vm.globals();
+
+                    for (key, value) in state.state.iter() {
+                        let v = value.to_json();
+
+                        // Convert serde_json::Value to mlua::Value using serde
+                        let v: mlua::Value = vm.to_value(&v)?;
+
+                        globals.set(key.to_string(), v)?;
                     }
+
+                    vm.load(&script).eval::<bool>()?
                 };
 
-                if is_success {
+                if res {
                     execute_actions(state, on_success, ctx).await?;
                 } else {
                     execute_actions(state, on_failure, ctx).await?;
@@ -160,15 +166,14 @@ mod test {
 
     #[test]
     fn test_luavm() {
-        assert!(LUA_VM.with(|x| {
-            x.load(
+        assert!(_getluavm()
+            .load(
                 r#"
                             s = "Hello, world!"
                             return s:contains("world")
                         "#,
             )
             .eval::<bool>()
-            .unwrap()
-        }));
+            .unwrap());
     }
 }

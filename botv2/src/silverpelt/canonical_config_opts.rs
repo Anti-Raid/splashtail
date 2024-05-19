@@ -9,6 +9,7 @@ pub enum CanonicalColumnType {
         max_length: Option<usize>,
         allowed_values: Vec<String>,
     },
+    Timestamp {},
     Integer {},
     BitFlag {
         /// The bit flag values
@@ -35,6 +36,7 @@ impl From<super::config_opts::ColumnType> for CanonicalColumnType {
                 max_length,
                 allowed_values: allowed_values.iter().map(|s| s.to_string()).collect(),
             },
+            super::config_opts::ColumnType::Timestamp {} => CanonicalColumnType::Timestamp {},
             super::config_opts::ColumnType::Integer {} => CanonicalColumnType::Integer {},
             super::config_opts::ColumnType::BitFlag { values } => CanonicalColumnType::BitFlag {
                 values: values
@@ -48,23 +50,6 @@ impl From<super::config_opts::ColumnType> for CanonicalColumnType {
             super::config_opts::ColumnType::Role {} => CanonicalColumnType::Role {},
             super::config_opts::ColumnType::Emoji {} => CanonicalColumnType::Emoji {},
             super::config_opts::ColumnType::Message {} => CanonicalColumnType::Message {},
-        }
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Hash)]
-pub enum CanonicalOptionType {
-    #[serde(rename = "Single")]
-    Single,
-    #[serde(rename = "Multiple")]
-    Multiple,
-}
-
-impl From<super::config_opts::OptionType> for CanonicalOptionType {
-    fn from(option_type: super::config_opts::OptionType) -> Self {
-        match option_type {
-            super::config_opts::OptionType::Single => CanonicalOptionType::Single,
-            super::config_opts::OptionType::Multiple => CanonicalOptionType::Multiple,
         }
     }
 }
@@ -339,9 +324,6 @@ pub struct CanonicalConfigOption {
     /// The columns for this option
     pub columns: Vec<CanonicalColumn>,
 
-    /// The type of the option
-    pub option_type: CanonicalOptionType,
-
     /// Operation specific data
     pub operations: indexmap::IndexMap<CanonicalOperationType, CanonicalOperationSpecific>,
 }
@@ -357,7 +339,6 @@ impl From<super::config_opts::ConfigOption> for CanonicalConfigOption {
             description: module.description.to_string(),
             columns: module.columns.into_iter().map(|c| c.into()).collect(),
             primary_key: module.primary_key.to_string(),
-            option_type: module.option_type.into(),
             operations: module
                 .operations
                 .into_iter()

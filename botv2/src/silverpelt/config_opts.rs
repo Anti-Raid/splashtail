@@ -7,6 +7,7 @@ pub enum ColumnType {
         max_length: Option<usize>,
         allowed_values: Vec<&'static str>, // If empty, all values are allowed
     },
+    Timestamp {},
     Integer {},
     BitFlag {
         /// The bit flag values
@@ -18,12 +19,6 @@ pub enum ColumnType {
     Role {},
     Emoji {},
     Message {},
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub enum OptionType {
-    Single,
-    Multiple,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -171,9 +166,6 @@ pub struct ConfigOption {
 
     /// The columns for this option
     pub columns: Vec<Column>,
-
-    /// The type of the option
-    pub option_type: OptionType,
 
     /// Operation specific data
     pub operations: indexmap::IndexMap<OperationType, OperationSpecific>,
