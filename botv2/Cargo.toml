@@ -39,13 +39,17 @@ regex = "1"
 bitflags = "2"
 extract_map = { version = "0.1", features = ["serde", "iter_mut"] }
 rusty-s3 = "0.5"
+mlua = { version = "0.9", features = ["async", "lua54", "send", "vendored"] }
+
+# Module: inspector
+plsfix = "0.1.7"
+text-diff = "0.4.0"
 
 # Anti-Raid specific
 splashcore_rs = { path = "./splashcore_rs" }
 gwevent = { path = "./gwevent" }
 jobserver = { path = "./jobserver" }
-plsfix = "0.1.7"
-text-diff = "0.4.0"
+async-recursion = "1.1.1"
 
 [dependencies.tokio]
 version = "1"

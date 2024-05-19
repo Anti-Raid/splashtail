@@ -1,8 +1,60 @@
 use super::state::State;
 use super::value::Value;
 use crate::silverpelt::config_opts::ColumnAction;
+use async_recursion::async_recursion;
 use sqlx::Row;
 
+fn _getluavm() -> mlua::Lua {
+    let lua = mlua::Lua::new();
+
+    let string_extrafuncs = r#"
+function string:contains(sub)
+    return self:find(sub, 1, true) ~= nil
+end
+
+function string:startswith(start)
+    return self:sub(1, #start) == start
+end
+
+function string:endswith(ending)
+    return ending == "" or self:sub(-#ending) == ending
+end
+
+function string:replace(old, new)
+    local s = self
+    local search_start_idx = 1
+
+    while true do
+        local start_idx, end_idx = s:find(old, search_start_idx, true)
+        if (not start_idx) then
+            break
+        end
+
+        local postfix = s:sub(end_idx + 1)
+        s = s:sub(1, (start_idx - 1)) .. new .. postfix
+
+        search_start_idx = -1 * postfix:len()
+    end
+
+    return s
+end
+
+function string:insert(pos, text)
+    return self:sub(1, pos - 1) .. text .. self:sub(pos)
+end
+    "#;
+
+    lua.load(string_extrafuncs).exec().unwrap();
+
+    lua
+}
+
+thread_local! {
+    static LUA_VM: mlua::Lua = _getluavm();
+}
+
+#[allow(dead_code)]
+#[async_recursion]
 pub async fn execute_actions(
     state: &mut State,
     actions: &[ColumnAction],
@@ -80,9 +132,43 @@ pub async fn execute_actions(
                 on_success,
                 on_failure,
             } => {
-                // TODO
+                let script = state.template_to_string(script);
+                let is_success = match LUA_VM.try_with(|x| x.load(&script).eval::<bool>()) {
+                    Ok(b) => match b {
+                        Ok(b) => b,
+                        Err(e) => return Err(format!("Internal error: Lua Error: {}", e).into()),
+                    },
+                    Err(e) => {
+                        return Err(format!("Internal error: Thread AccessError: {}", e).into())
+                    }
+                };
+
+                if is_success {
+                    execute_actions(state, on_success, ctx).await?;
+                } else {
+                    execute_actions(state, on_failure, ctx).await?;
+                }
             }
         }
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn test_luavm() {
+        assert!(LUA_VM.with(|x| {
+            x.load(
+                r#"
+                            s = "Hello, world!"
+                            return s:contains("world")
+                        "#,
+            )
+            .eval::<bool>()
+            .unwrap()
+        }));
+    }
 }
