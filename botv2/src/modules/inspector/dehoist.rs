@@ -55,7 +55,12 @@ pub fn dehoist_user(nickname: &str, intensity: DehoistOptions) -> String {
         .chars()
         .filter(|c| {
             // Are naturally sorted highly
-            let mut allowed = !disallowed_characters().contains(c);
+            let mut allowed = true;
+
+            // Special character checks are higher priority
+            if intensity.contains(DehoistOptions::STRIP_SPECIAL_CHARS) {
+                allowed = disallowed_characters().contains(c);
+            }
 
             // Non-ASCII characters are higher priority
             if intensity.contains(DehoistOptions::STRIP_NON_ASCII) && allowed {
