@@ -19,6 +19,8 @@ github.com/gorilla/websocket v1.5.1 h1:gmztn0JnHVt9JZquRuzLw3g4wouNVzKL15iLr/zn/
 github.com/gorilla/websocket v1.5.1/go.mod h1:x3kM2JMyaluk02fnUJpQuwD2dCS5NDG2ZHL0uE0tcaY=
 github.com/infinitybotlist/eureka v0.10.0 h1:Kv7xyuAp7IPJMZIcJFBWJZUY09jRMN1NQ4HASA9toC8=
 github.com/infinitybotlist/eureka v0.10.0/go.mod h1:E5Ik8qDAfCpdwwI64I5iPsEiyolDg32H0YiLxv3X0u8=
+github.com/infinitybotlist/eureka v1.1.0 h1:N+8yMs7AySxBTgDauyBRi+pYkc8/uQboQIRmSNr4ERM=
+github.com/infinitybotlist/eureka v1.1.0/go.mod h1:+XpKNt78xfvzOLdakj1CLt4Fn6wIaQ6L3Cq0X2luIPY=
 github.com/jackc/pgpassfile v1.0.0 h1:/6Hmqy13Ss2zCq62VdNG8tM1wchn8zjSGOBJ6icpsIM=
 github.com/jackc/pgpassfile v1.0.0/go.mod h1:CEx0iS5ambNFdcRtxPj5JhEz+xB6uRky5eyVu/W2HEg=
 github.com/jackc/pgservicefile v0.0.0-20231201235250-de7065d80cb9 h1:L0QtFUgDarD7Fpv9jeVMgy/+Ec0mtnmYuImjTz6dtDA=

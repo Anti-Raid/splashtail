@@ -13,7 +13,7 @@ buildall:
 	cd infra/Sandwich-Daemon && make
 
 	# Other infra
-	buildanimuscli
+	make buildanimuscli
 	make buildwafflepaw
 	make buildbot
 	make buildmewldwebui

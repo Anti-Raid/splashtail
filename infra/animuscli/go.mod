@@ -5,7 +5,7 @@ go 1.21.5
 require (
 	github.com/anti-raid/splashtail v0.0.0-20240313102422-183acf67fdb5
 	github.com/davecgh/go-spew v1.1.1
-	github.com/infinitybotlist/eureka v0.10.0
+	github.com/infinitybotlist/eureka v1.1.0
 	github.com/redis/rueidis v1.0.31
 	go.uber.org/zap v1.27.0
 )
@@ -14,6 +14,7 @@ require (
 	github.com/bahlo/generic-list-go v0.2.0 // indirect
 	github.com/buger/jsonparser v1.1.1 // indirect
 	github.com/bwmarrin/discordgo v0.27.2-0.20240307155122-202785c50b9e // indirect
+	github.com/fxamacker/cbor/v2 v2.6.0 // indirect
 	github.com/go-andiamo/splitter v1.2.5 // indirect
 	github.com/gorilla/websocket v1.5.1 // indirect
 	github.com/jackc/pgx/v5 v5.5.5 // indirect
