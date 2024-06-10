@@ -1,4 +1,5 @@
-use super::config_opts::ConfigOption;
+use super::config_opts::{ConfigOption, OperationType};
+use super::state::State;
 use super::value::Value;
 use futures_util::StreamExt;
 use std::time::Duration;
@@ -13,10 +14,11 @@ fn _getcols(setting: &ConfigOption) -> Vec<String> {
     cols
 }
 
-fn _parse_row(
+async fn _parse_row(
     setting: &ConfigOption,
     row: &sqlx::postgres::PgRow,
-    value: &mut indexmap::IndexMap<String, Value>,
+    state: &mut State,
+    ctx: &serenity::all::Context,
 ) -> Result<(), crate::Error> {
     for (i, col) in setting.columns.iter().enumerate() {
         // Fetch and validate the value itself
@@ -25,7 +27,14 @@ fn _parse_row(
             .map_err(|e| format!("Error validating value for column {}: {}", col.id, e))?;
 
         // Insert the value into the map
-        value.insert(col.id.to_string(), val);
+        state.state.insert(col.id.to_string(), val);
+
+        let actions = col
+            .pre_checks
+            .get(&OperationType::View)
+            .unwrap_or(&col.default_pre_checks);
+
+        crate::silverpelt::settings::action_executor::execute_actions(state, actions, ctx).await?;
     }
 
     Ok(())
@@ -33,7 +42,7 @@ fn _parse_row(
 
 fn _create_reply<'a>(
     setting: &ConfigOption,
-    values: &'a [indexmap::IndexMap<String, Value>],
+    values: &'a [State],
     index: usize,
 ) -> poise::CreateReply<'a> {
     fn create_action_row<'a>(index: usize, total: usize) -> serenity::all::CreateActionRow<'a> {
@@ -66,7 +75,7 @@ fn _create_reply<'a>(
         values.len()
     ));
 
-    for (key, value) in values[index].iter() {
+    for (key, value) in values[index].state.iter() {
         embed = embed.field(key, value.to_string(), true);
     }
 
@@ -87,6 +96,7 @@ pub async fn settings_viewer(
     let cols = _getcols(setting);
 
     let data = ctx.data();
+    let serenity_ctx = ctx.serenity_context();
 
     let row = sqlx::query(
         format!(
@@ -109,12 +119,12 @@ pub async fn settings_viewer(
         .into());
     }
 
-    let mut values: Vec<indexmap::IndexMap<String, Value>> = Vec::new();
+    let mut values: Vec<State> = Vec::new();
 
     for row in row {
-        let mut map = indexmap::IndexMap::new();
-        _parse_row(setting, &row, &mut map)?;
-        values.push(map);
+        let mut state = State::new();
+        _parse_row(setting, &row, &mut state, serenity_ctx).await?;
+        values.push(state);
     }
 
     let mut index = 0;

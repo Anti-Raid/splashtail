@@ -14,4 +14,11 @@ impl State {
         }
         result
     }
+
+    // Creates a new state
+    pub fn new() -> Self {
+        State {
+            state: indexmap::IndexMap::new(),
+        }
+    }
 }
