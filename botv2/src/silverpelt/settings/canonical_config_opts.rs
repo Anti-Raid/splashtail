@@ -3,6 +3,34 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[allow(dead_code)]
 pub enum CanonicalColumnType {
+    /// A single valued column (scalar)
+    Scalar {
+        /// The value type
+        column_type: CanonicalInnerColumnType,
+    },
+    /// An array column
+    Array {
+        /// The inner type of the array
+        inner: CanonicalInnerColumnType,
+    },
+}
+
+impl From<super::config_opts::ColumnType> for CanonicalColumnType {
+    fn from(column_type: super::config_opts::ColumnType) -> Self {
+        match column_type {
+            super::config_opts::ColumnType::Scalar { column_type } => CanonicalColumnType::Scalar {
+                column_type: column_type.into(),
+            },
+            super::config_opts::ColumnType::Array { inner } => CanonicalColumnType::Array {
+                inner: inner.into(),
+            },
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[allow(dead_code)]
+pub enum CanonicalInnerColumnType {
     Uuid {},
     String {
         min_length: Option<usize>,
@@ -11,6 +39,7 @@ pub enum CanonicalColumnType {
     },
     Timestamp {},
     Integer {},
+    Float {},
     BitFlag {
         /// The bit flag values
         values: indexmap::IndexMap<String, u64>,
@@ -21,35 +50,42 @@ pub enum CanonicalColumnType {
     Role {},
     Emoji {},
     Message {},
+    Json {},
 }
 
-impl From<super::config_opts::ColumnType> for CanonicalColumnType {
-    fn from(column_type: super::config_opts::ColumnType) -> Self {
+impl From<super::config_opts::InnerColumnType> for CanonicalInnerColumnType {
+    fn from(column_type: super::config_opts::InnerColumnType) -> Self {
         match column_type {
-            super::config_opts::ColumnType::Uuid {} => CanonicalColumnType::Uuid {},
-            super::config_opts::ColumnType::String {
+            super::config_opts::InnerColumnType::Uuid {} => CanonicalInnerColumnType::Uuid {},
+            super::config_opts::InnerColumnType::String {
                 min_length,
                 max_length,
                 allowed_values,
-            } => CanonicalColumnType::String {
+            } => CanonicalInnerColumnType::String {
                 min_length,
                 max_length,
                 allowed_values: allowed_values.iter().map(|s| s.to_string()).collect(),
             },
-            super::config_opts::ColumnType::Timestamp {} => CanonicalColumnType::Timestamp {},
-            super::config_opts::ColumnType::Integer {} => CanonicalColumnType::Integer {},
-            super::config_opts::ColumnType::BitFlag { values } => CanonicalColumnType::BitFlag {
-                values: values
-                    .into_iter()
-                    .map(|(k, v)| (k.to_string(), v))
-                    .collect::<indexmap::IndexMap<String, u64>>(),
-            },
-            super::config_opts::ColumnType::Boolean {} => CanonicalColumnType::Boolean {},
-            super::config_opts::ColumnType::User {} => CanonicalColumnType::User {},
-            super::config_opts::ColumnType::Channel {} => CanonicalColumnType::Channel {},
-            super::config_opts::ColumnType::Role {} => CanonicalColumnType::Role {},
-            super::config_opts::ColumnType::Emoji {} => CanonicalColumnType::Emoji {},
-            super::config_opts::ColumnType::Message {} => CanonicalColumnType::Message {},
+            super::config_opts::InnerColumnType::Timestamp {} => {
+                CanonicalInnerColumnType::Timestamp {}
+            }
+            super::config_opts::InnerColumnType::Integer {} => CanonicalInnerColumnType::Integer {},
+            super::config_opts::InnerColumnType::Float {} => CanonicalInnerColumnType::Float {},
+            super::config_opts::InnerColumnType::BitFlag { values } => {
+                CanonicalInnerColumnType::BitFlag {
+                    values: values
+                        .into_iter()
+                        .map(|(k, v)| (k.to_string(), v))
+                        .collect::<indexmap::IndexMap<String, u64>>(),
+                }
+            }
+            super::config_opts::InnerColumnType::Boolean {} => CanonicalInnerColumnType::Boolean {},
+            super::config_opts::InnerColumnType::User {} => CanonicalInnerColumnType::User {},
+            super::config_opts::InnerColumnType::Channel {} => CanonicalInnerColumnType::Channel {},
+            super::config_opts::InnerColumnType::Role {} => CanonicalInnerColumnType::Role {},
+            super::config_opts::InnerColumnType::Emoji {} => CanonicalInnerColumnType::Emoji {},
+            super::config_opts::InnerColumnType::Message {} => CanonicalInnerColumnType::Message {},
+            super::config_opts::InnerColumnType::Json {} => CanonicalInnerColumnType::Json {},
         }
     }
 }
@@ -191,9 +227,6 @@ pub struct CanonicalColumn {
     /// Whether or not the column is unique
     pub unique: bool,
 
-    /// Whether or not the column is an array
-    pub array: bool,
-
     /// The read-only status of each operation
     ///
     /// Only applies to create and update
@@ -215,7 +248,6 @@ impl From<super::config_opts::Column> for CanonicalColumn {
             nullable: column.nullable,
             suggestions: column.suggestions.into(),
             unique: column.unique,
-            array: column.array,
             readonly: column
                 .readonly
                 .into_iter()

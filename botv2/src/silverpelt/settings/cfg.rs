@@ -1,5 +1,5 @@
+use super::config_opts::ConfigOption;
 use super::value::Value;
-use crate::silverpelt::config_opts::ConfigOption;
 use futures_util::StreamExt;
 use std::time::Duration;
 
@@ -19,7 +19,12 @@ fn _parse_row(
     value: &mut indexmap::IndexMap<String, Value>,
 ) -> Result<(), crate::Error> {
     for (i, col) in setting.columns.iter().enumerate() {
-        value.insert(col.id.to_string(), Value::from_sqlx(row, i)?);
+        // Fetch and validate the value itself
+        let val = Value::from_sqlx(row, i)?;
+        val.validate_value(&col.column_type, col.nullable, false)?;
+
+        // Insert the value into the map
+        value.insert(col.id.to_string(), val);
     }
 
     Ok(())

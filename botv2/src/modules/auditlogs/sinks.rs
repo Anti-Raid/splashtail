@@ -1,5 +1,5 @@
-use crate::silverpelt::config_opts::{
-    Column, ColumnAction, ColumnSuggestion, ColumnType, ConfigOption, OperationSpecific,
+use crate::silverpelt::settings::config_opts::{
+    Column, ColumnAction, ColumnSuggestion, ColumnType, InnerColumnType, ConfigOption, OperationSpecific,
     OperationType
 };
 
@@ -15,10 +15,9 @@ pub(crate) fn sink() -> ConfigOption {
             Column {
                 id: "id",
                 name: "Sink ID",
-                column_type: ColumnType::Uuid {},
+                column_type: ColumnType::new_scalar(InnerColumnType::Uuid {}),
                 nullable: false,
                 unique: true,
-                array: false,
                 suggestions: ColumnSuggestion::Dynamic { 
                     table_name: "auditlogs__sinks", 
                     column_name: "id"
@@ -48,10 +47,9 @@ pub(crate) fn sink() -> ConfigOption {
             Column {
                 id: "type",
                 name: "Sink Type",
-                column_type: ColumnType::String { min_length: None, max_length: None, allowed_values: vec!["channel", "discordhook"] },
+                column_type: ColumnType::new_scalar(InnerColumnType::String { min_length: None, max_length: None, allowed_values: vec!["channel", "discordhook"] }),
                 nullable: false,
                 unique: false,
-                array: false,
                 suggestions: ColumnSuggestion::Static { suggestions: vec!["channel", "discordhook"] },
                 readonly: indexmap::indexmap! {
                     OperationType::Update => true,
@@ -62,11 +60,10 @@ pub(crate) fn sink() -> ConfigOption {
             Column {
                 id: "sink",
                 name: "Sink",
-                column_type: ColumnType::String { min_length: None, max_length: None, allowed_values: vec![] },
+                column_type: ColumnType::new_scalar(InnerColumnType::String { min_length: None, max_length: None, allowed_values: vec![] }),
                 nullable: false,
                 unique: false,
-                array: false,
-                suggestions: ColumnSuggestion::Static { suggestions: vec![] },
+                suggestions: ColumnSuggestion::None,
                 readonly: indexmap::indexmap! {},
                 pre_checks: indexmap::indexmap! {
                     OperationType::View => vec![]
@@ -92,10 +89,9 @@ pub(crate) fn sink() -> ConfigOption {
             Column {
                 id: "events",
                 name: "Events",
-                column_type: ColumnType::String { min_length: None, max_length: None, allowed_values: vec![] },
+                column_type: ColumnType::new_array(InnerColumnType::String { min_length: None, max_length: None, allowed_values: vec![] }),
                 nullable: false,
                 unique: false,
-                array: true,
                 suggestions: ColumnSuggestion::Static { suggestions: gwevent::core::event_list().to_vec() },
                 readonly: indexmap::indexmap! {},
                 pre_checks: indexmap::indexmap! {
@@ -114,11 +110,10 @@ pub(crate) fn sink() -> ConfigOption {
             Column {
                 id: "created_at",
                 name: "Created At",
-                column_type: ColumnType::Timestamp {},
+                column_type: ColumnType::new_scalar(InnerColumnType::Timestamp {}),
                 nullable: false,
                 unique: false,
-                array: false,
-                suggestions: ColumnSuggestion::Static { suggestions: vec![] },
+                suggestions: ColumnSuggestion::None,
                 readonly: indexmap::indexmap! {
                     OperationType::Create => true,
                     OperationType::Update => true,
@@ -129,11 +124,10 @@ pub(crate) fn sink() -> ConfigOption {
             Column {
                 id: "created_by",
                 name: "Created By",
-                column_type: ColumnType::User {},
+                column_type: ColumnType::new_scalar(InnerColumnType::User {}),
                 nullable: false,
                 unique: false,
-                array: false,
-                suggestions: ColumnSuggestion::Static { suggestions: vec![] },
+                suggestions: ColumnSuggestion::None,
                 readonly: indexmap::indexmap! {
                     OperationType::Create => true,
                     OperationType::Update => true,
@@ -144,11 +138,10 @@ pub(crate) fn sink() -> ConfigOption {
             Column {
                 id: "last_updated_by",
                 name: "Last Updated By",
-                column_type: ColumnType::User {},
+                column_type: ColumnType::new_scalar(InnerColumnType::User {}),
                 nullable: false,
                 unique: false,
-                array: false,
-                suggestions: ColumnSuggestion::Static { suggestions: vec![] },
+                suggestions: ColumnSuggestion::None,
                 readonly: indexmap::indexmap! {
                     OperationType::Create => true,
                     OperationType::Update => true,
@@ -159,11 +152,10 @@ pub(crate) fn sink() -> ConfigOption {
             Column {
                 id: "broken",
                 name: "Marked as Broken",
-                column_type: ColumnType::Boolean {},
+                column_type: ColumnType::new_scalar(InnerColumnType::Boolean {}),
                 nullable: false,
                 unique: false,
-                array: false,
-                suggestions: ColumnSuggestion::Static { suggestions: vec![] },
+                suggestions: ColumnSuggestion::None,
                 readonly: indexmap::indexmap! {},
                 pre_checks: indexmap::indexmap! {},
                 default_pre_checks: vec![]

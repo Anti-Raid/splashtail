@@ -1,7 +1,5 @@
-pub mod canonical_config_opts;
 pub mod canonical_module;
 pub mod cmd;
-pub mod config_opts;
 pub mod ext_generate;
 pub mod member_permission_calc;
 pub mod module_config;
@@ -95,7 +93,7 @@ pub struct Module {
     pub s3_paths: Vec<String>,
 
     /// Config options for this module
-    pub config_options: Vec<config_opts::ConfigOption>,
+    pub config_options: Vec<settings::config_opts::ConfigOption>,
 }
 
 #[derive(Default, Clone, Hash, Eq, PartialEq, serde::Serialize, serde::Deserialize, Debug)]

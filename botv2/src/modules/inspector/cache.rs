@@ -67,7 +67,8 @@ impl Default for BasicAntispamConfig {
                 | FakeBotDetectionOptions::EXACT_NAME_CHECK
                 | FakeBotDetectionOptions::SIMILAR_NAME_CHECK, // The default checks should protect against most case of scam 'dyno' bot nukes
             guild_protection: GuildProtectionOptions::DISABLED, // Many people dont want antiraid constantly monitoring their servers name
-            hoist_detection: DehoistOptions::STRIP_SPECIAL_CHARS | DehoistOptions::STRIP_NON_ASCII,
+            hoist_detection: DehoistOptions::STRIP_SPECIAL_CHARS_STARTSWITH
+                | DehoistOptions::STRIP_NON_ASCII,
             minimum_account_age: None,
             maximum_account_age: None,
             sting_retention: 60 * 60, // one hour retention

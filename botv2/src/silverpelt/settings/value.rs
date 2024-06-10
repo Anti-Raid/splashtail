@@ -1,3 +1,4 @@
+use super::config_opts::{ColumnType, InnerColumnType};
 use sqlx::{postgres::PgRow, postgres::PgTypeKind, Column, Row, TypeInfo};
 use std::hash::{Hash, Hasher};
 
@@ -279,6 +280,254 @@ impl Value {
             }
             _ => Err("Unsupported type".into()),
         }
+    }
+
+    /// Validates the value against the schema's column type
+    #[allow(dead_code)]
+    pub fn validate_value(
+        &self,
+        column_type: &ColumnType,
+        is_nullable: bool,
+        perform_schema_checks: bool,
+    ) -> Result<(), crate::Error> {
+        match column_type {
+            ColumnType::Scalar { column_type } => {
+                if matches!(self, Value::List(_)) {
+                    return Err(format!("Expected scalar, got list {}", self).into());
+                }
+
+                if matches!(self, Value::None) {
+                    if is_nullable {
+                        return Ok(());
+                    } else {
+                        return Err("Value is null, but column is not nullable".into());
+                    }
+                }
+
+                match column_type {
+                    InnerColumnType::Uuid {} => {
+                        if !matches!(self, Value::Uuid(_)) {
+                            return Err(format!("Expected Uuid, got {}", self).into());
+                        }
+                    }
+                    InnerColumnType::String {
+                        min_length,
+                        max_length,
+                        allowed_values,
+                    } => {
+                        if !matches!(self, Value::String(_) | Value::Uuid(_)) {
+                            return Err(format!("Expected String, got {}", self).into());
+                        }
+
+                        if perform_schema_checks {
+                            let s = match self {
+                                Value::String(s) => s,
+                                _ => unreachable!(),
+                            };
+
+                            if let Some(min) = min_length {
+                                if s.len() < *min {
+                                    return Err(format!(
+                                        "String is too short, min length is {}",
+                                        min
+                                    )
+                                    .into());
+                                }
+                            }
+
+                            if let Some(max) = max_length {
+                                if s.len() > *max {
+                                    return Err(format!(
+                                        "String is too long, max length is {}",
+                                        max
+                                    )
+                                    .into());
+                                }
+                            }
+
+                            if !allowed_values.is_empty() && !allowed_values.contains(&s.as_str()) {
+                                return Err("String is not in the allowed values".into());
+                            }
+                        }
+                    }
+                    InnerColumnType::Timestamp {} => {
+                        if !matches!(self, Value::String(_)) {
+                            return Err(format!("Expected Timestamp, got {}", self).into());
+                        }
+
+                        if perform_schema_checks {
+                            let s = match self {
+                                Value::String(s) => s,
+                                _ => unreachable!(),
+                            };
+
+                            if chrono::NaiveDateTime::parse_from_str(s, "%Y-%m-%d %H:%M:%S")
+                                .is_err()
+                            {
+                                return Err("Invalid timestamp format".into());
+                            }
+                        }
+                    }
+                    InnerColumnType::Integer {} => {
+                        if !matches!(self, Value::Integer(_)) {
+                            return Err(format!("Expected Integer, got {}", self).into());
+                        }
+                    }
+                    InnerColumnType::Float {} => {
+                        if !matches!(self, Value::Float(_)) {
+                            return Err(format!("Expected Float, got {}", self).into());
+                        }
+                    }
+                    InnerColumnType::BitFlag { .. } => {
+                        if !matches!(self, Value::Integer(_)) {
+                            return Err(format!("Expected Integer, got {}", self).into());
+                        }
+
+                        // TODO: Add value parsing for bit flags
+                    }
+                    InnerColumnType::Boolean {} => {
+                        if !matches!(self, Value::Boolean(_)) {
+                            return Err(format!("Expected Boolean, got {}", self).into());
+                        }
+                    }
+                    InnerColumnType::User {} => {
+                        if !matches!(self, Value::String(_)) {
+                            return Err(format!("Expected a user id (string), got {}", self).into());
+                        }
+
+                        if perform_schema_checks {
+                            let s = match self {
+                                Value::String(s) => s,
+                                _ => unreachable!(),
+                            };
+
+                            // Try parsing to a UserId
+                            if s.parse::<serenity::all::UserId>().is_err() {
+                                return Err("Invalid user id".into());
+                            }
+                        }
+                    }
+                    InnerColumnType::Channel {} => {
+                        if !matches!(self, Value::String(_)) {
+                            return Err(
+                                format!("Expected a channel id (string), got {}", self).into()
+                            );
+                        }
+
+                        if perform_schema_checks {
+                            let s = match self {
+                                Value::String(s) => s,
+                                _ => unreachable!(),
+                            };
+
+                            // Try parsing to a ChannelId
+                            if s.parse::<serenity::all::ChannelId>().is_err() {
+                                return Err("Invalid channel id".into());
+                            }
+                        }
+                    }
+                    InnerColumnType::Role {} => {
+                        if !matches!(self, Value::String(_)) {
+                            return Err(format!("Expected a role id (string), got {}", self).into());
+                        }
+
+                        if perform_schema_checks {
+                            let s = match self {
+                                Value::String(s) => s,
+                                _ => unreachable!(),
+                            };
+
+                            // Try parsing to a RoleId
+                            if s.parse::<serenity::all::RoleId>().is_err() {
+                                return Err("Invalid role id".into());
+                            }
+                        }
+                    }
+                    InnerColumnType::Emoji {} => {
+                        if !matches!(self, Value::String(_)) {
+                            return Err(
+                                format!("Expected an emoji id (string), got {}", self).into()
+                            );
+                        }
+
+                        if perform_schema_checks {
+                            let s = match self {
+                                Value::String(s) => s,
+                                _ => unreachable!(),
+                            };
+
+                            // Try parsing to an EmojiId
+                            if s.parse::<serenity::all::EmojiId>().is_err() {
+                                return Err("Invalid emoji id".into());
+                            }
+                        }
+                    }
+                    InnerColumnType::Message {} => {
+                        if !matches!(self, Value::String(_)) {
+                            return Err(
+                                format!("Expected a message id (string), got {}", self).into()
+                            );
+                        }
+
+                        if perform_schema_checks {
+                            let s = match self {
+                                Value::String(s) => s,
+                                _ => unreachable!(),
+                            };
+
+                            // The format of a message on db should be channel_id/message_id
+                            //
+                            // So, split by '/' and check if the first part is a valid channel id
+                            // and the second part is a valid message id
+                            let parts: Vec<&str> = s.split('/').collect();
+
+                            if parts.len() != 2 {
+                                return Err("Invalid message id".into());
+                            }
+
+                            // Try parsing to a ChannelId
+                            if parts[0].parse::<serenity::all::ChannelId>().is_err() {
+                                return Err("Invalid channel id".into());
+                            }
+
+                            if parts[1].parse::<serenity::all::MessageId>().is_err() {
+                                return Err("Invalid message id".into());
+                            }
+                        }
+                    }
+                    InnerColumnType::Json {} => {
+                        if !matches!(self, Value::Map(_)) {
+                            return Err(format!("Expected a map (json), got {}", self).into());
+                        }
+                    }
+                }
+            }
+            ColumnType::Array { inner } => {
+                if !matches!(self, Value::List(_)) {
+                    return Err(format!("Expected list, got scalar {}", self).into());
+                }
+
+                if matches!(self, Value::None) {
+                    if is_nullable {
+                        return Ok(());
+                    } else {
+                        return Err("Value is null, but column is not nullable".into());
+                    }
+                }
+
+                let l = match self {
+                    Value::List(l) => l,
+                    _ => unreachable!(),
+                };
+
+                let column_type = ColumnType::new_scalar(inner.clone());
+                for v in l {
+                    v.validate_value(&column_type, is_nullable, perform_schema_checks)?;
+                }
+            }
+        }
+
+        Ok(())
     }
 }
 

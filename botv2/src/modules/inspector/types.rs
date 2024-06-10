@@ -17,9 +17,10 @@ bitflags::bitflags! {
     #[derive(PartialEq, Debug, Clone, Copy)]
     pub struct DehoistOptions: i32 {
         const DISABLED = 1 << 0;
-        const STRIP_SPECIAL_CHARS = 1 << 1;
-        const STRIP_NON_ASCII = 1 << 2;
-        const STRIP_SIMILAR_REPEATING = 1 << 3;
+        const STRIP_SPECIAL_CHARS_STARTSWITH = 1 << 1;
+        const STRIP_SPECIAL_CHARS_CONTAINS = 1 << 2;
+        const STRIP_NON_ASCII = 1 << 3;
+        const STRIP_SIMILAR_REPEATING = 1 << 4;
     }
 }
 

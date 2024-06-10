@@ -1,6 +1,52 @@
 #[derive(Debug, Clone, PartialEq)]
 #[allow(dead_code)]
 pub enum ColumnType {
+    /// A single valued column (scalar)
+    Scalar {
+        /// The value type
+        column_type: InnerColumnType,
+    },
+    /// An array column
+    Array {
+        /// The inner type of the array
+        inner: InnerColumnType,
+    },
+}
+
+impl ColumnType {
+    /// Returns whether the column type is an array
+    #[allow(dead_code)]
+    pub fn is_array(&self) -> bool {
+        matches!(self, ColumnType::Array { .. })
+    }
+
+    /// Returns whether the column type is a scalar
+    #[allow(dead_code)]
+    pub fn is_scalar(&self) -> bool {
+        matches!(self, ColumnType::Scalar { .. })
+    }
+
+    pub fn new_scalar(inner: InnerColumnType) -> Self {
+        ColumnType::Scalar { column_type: inner }
+    }
+
+    pub fn new_array(inner: InnerColumnType) -> Self {
+        ColumnType::Array { inner }
+    }
+}
+
+impl std::fmt::Display for ColumnType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ColumnType::Scalar { column_type } => write!(f, "{}", column_type),
+            ColumnType::Array { inner } => write!(f, "Array<{}>", inner),
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+#[allow(dead_code)]
+pub enum InnerColumnType {
     Uuid {},
     String {
         min_length: Option<usize>,
@@ -9,6 +55,7 @@ pub enum ColumnType {
     },
     Timestamp {},
     Integer {},
+    Float {},
     BitFlag {
         /// The bit flag values
         values: indexmap::IndexMap<&'static str, u64>,
@@ -19,6 +66,52 @@ pub enum ColumnType {
     Role {},
     Emoji {},
     Message {},
+    Json {},
+}
+
+impl std::fmt::Display for InnerColumnType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            InnerColumnType::Uuid {} => write!(f, "Uuid"),
+            InnerColumnType::String {
+                min_length,
+                max_length,
+                allowed_values,
+            } => {
+                write!(f, "String")?;
+                if let Some(min) = min_length {
+                    write!(f, " (min length: {})", min)?;
+                }
+                if let Some(max) = max_length {
+                    write!(f, " (max length: {})", max)?;
+                }
+                if !allowed_values.is_empty() {
+                    write!(f, " (allowed values: {:?})", allowed_values)?;
+                }
+                Ok(())
+            }
+            InnerColumnType::Timestamp {} => write!(f, "Timestamp"),
+            InnerColumnType::Integer {} => write!(f, "Integer"),
+            InnerColumnType::Float {} => write!(f, "Float"),
+            InnerColumnType::BitFlag { values } => {
+                write!(f, "BitFlag (values: ")?;
+                for (i, (key, value)) in values.iter().enumerate() {
+                    if i != 0 {
+                        write!(f, ", ")?;
+                    }
+                    write!(f, "{}: {}", key, value)?;
+                }
+                write!(f, ")")
+            }
+            InnerColumnType::Boolean {} => write!(f, "Boolean"),
+            InnerColumnType::User {} => write!(f, "User"),
+            InnerColumnType::Channel {} => write!(f, "Channel"),
+            InnerColumnType::Role {} => write!(f, "Role"),
+            InnerColumnType::Emoji {} => write!(f, "Emoji"),
+            InnerColumnType::Message {} => write!(f, "Message"),
+            InnerColumnType::Json {} => write!(f, "Json"),
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -95,9 +188,6 @@ pub struct Column {
 
     /// Whether or not the column is unique
     pub unique: bool,
-
-    /// Whether or not the column is an array
-    pub array: bool,
 
     /// The read-only status of each operation
     ///

@@ -51,25 +51,33 @@ fn count_similar_leading(s: &str) -> usize {
 }
 
 pub fn dehoist_user(nickname: &str, intensity: DehoistOptions) -> String {
-    let mut filtered = nickname
-        .chars()
-        .filter(|c| {
-            // Are naturally sorted highly
-            let mut allowed = true;
+    let mut filtered = String::new();
 
-            // Special character checks are higher priority
-            if intensity.contains(DehoistOptions::STRIP_SPECIAL_CHARS) {
-                allowed = disallowed_characters().contains(c);
-            }
+    for (i, c) in nickname.chars().enumerate() {
+        // Are naturally sorted highly
+        let mut allowed = true;
 
-            // Non-ASCII characters are higher priority
-            if intensity.contains(DehoistOptions::STRIP_NON_ASCII) && allowed {
-                allowed = c.is_ascii_alphanumeric();
-            }
+        // Special character checks are higher priority
 
-            allowed
-        })
-        .collect::<String>();
+        // StartsWith check should only occur on the first character
+        if i == 0 && intensity.contains(DehoistOptions::STRIP_SPECIAL_CHARS_STARTSWITH) {
+            allowed = disallowed_characters().contains(&c);
+        }
+
+        // Contains check should occur on all characters
+        if intensity.contains(DehoistOptions::STRIP_SPECIAL_CHARS_CONTAINS) {
+            allowed = disallowed_characters().contains(&c);
+        }
+
+        // Non-ASCII characters are higher priority
+        if intensity.contains(DehoistOptions::STRIP_NON_ASCII) && allowed {
+            allowed = c.is_ascii_alphanumeric();
+        }
+
+        if allowed {
+            filtered.push(c);
+        }
+    }
 
     if intensity.contains(DehoistOptions::STRIP_SIMILAR_REPEATING) {
         filtered = strip_similar_leading(&filtered).to_string();
