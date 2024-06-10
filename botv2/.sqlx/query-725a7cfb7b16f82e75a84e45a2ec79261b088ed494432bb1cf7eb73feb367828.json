@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE guild_command_configurations SET disabled = true WHERE guild_id = $1 AND command = $2",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "725a7cfb7b16f82e75a84e45a2ec79261b088ed494432bb1cf7eb73feb367828"
+}

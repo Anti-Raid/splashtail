@@ -161,12 +161,12 @@ pub async fn settings_viewer(
             _ => {}
         }
 
-        item.defer(&ctx.serenity_context().http).await?;
+        item.defer(&serenity_ctx.http).await?;
 
         let reply = _create_reply(setting, &values, index);
 
         item.edit_response(
-            &ctx.serenity_context().http,
+            &serenity_ctx.http,
             reply.to_slash_initial_response_edit(serenity::all::EditInteractionResponse::default()),
         )
         .await?;
