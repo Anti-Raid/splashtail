@@ -98,13 +98,13 @@ impl<T: core::fmt::Display> From<T> for AnimusErrorResponse {
 
 /// Wrapper to parse a struct T to bytes
 pub fn serialize_data<T: Serialize>(payload: &T) -> Result<Vec<u8>, crate::Error> {
-    let bytes = serde_cbor::to_vec(payload)?;
+    let bytes = serde_json::to_vec(payload)?;
     Ok(bytes)
 }
 
 /// Wrapper to parse a payload to a struct T
 pub fn deserialize_data<T: for<'a> Deserialize<'a>>(payload: &[u8]) -> Result<T, crate::Error> {
-    let msg = serde_cbor::from_slice::<T>(payload)?;
+    let msg = serde_json::from_slice::<T>(payload)?;
     Ok(msg)
 }
 

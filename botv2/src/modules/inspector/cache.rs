@@ -4,6 +4,7 @@ use futures::future::FutureExt;
 use moka::future::Cache;
 use once_cell::sync::Lazy;
 use serenity::all::UserId;
+use crate::silverpelt::value::Value;
 
 #[derive(Debug, Clone)]
 #[allow(dead_code)]
@@ -160,9 +161,9 @@ pub async fn get_config(
 
 pub async fn setup_am_toggle(_pool: &sqlx::PgPool) -> Result<(), crate::Error> {
     async fn clear(
-        options: &indexmap::IndexMap<String, serde_cbor::Value>,
+        options: &indexmap::IndexMap<String, Value>,
     ) -> Result<(), crate::Error> {
-        let Some(serde_cbor::Value::Text(guild_id)) = options.get("gulld_id") else {
+        let Some(Value::String(guild_id)) = options.get("gulld_id") else {
             return Err("No guild_id provided".into());
         };
 

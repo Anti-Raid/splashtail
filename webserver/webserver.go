@@ -23,12 +23,10 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	docs "github.com/infinitybotlist/eureka/doclib"
+	"github.com/infinitybotlist/eureka/jsonimpl"
 	"github.com/infinitybotlist/eureka/uapi"
 	"github.com/infinitybotlist/eureka/zapchi"
-	jsoniter "github.com/json-iterator/go"
 )
-
-var json = jsoniter.ConfigCompatibleWithStandardLibrary
 
 //go:embed docs/docs.html
 var docsHTML string
@@ -179,7 +177,7 @@ func CreateWebserver() *chi.Mux {
 
 	// Load openapi here to avoid large marshalling in every request
 	var err error
-	openapi, err = json.Marshal(docs.GetSchema())
+	openapi, err = jsonimpl.Marshal(docs.GetSchema())
 
 	if err != nil {
 		panic(err)

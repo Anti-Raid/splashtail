@@ -1,6 +1,6 @@
 use super::config_opts::ColumnAction;
 use super::state::State;
-use super::value::Value;
+use crate::silverpelt::value::Value;
 use async_recursion::async_recursion;
 use mlua::LuaSerdeExt;
 use sqlx::Row;
@@ -87,7 +87,7 @@ pub async fn execute_actions(
                         return Err(format!("State variable {} not found", key).into());
                     };
 
-                    args.insert(key, state_value.to_cbor());
+                    args.insert(key, state_value.clone());
                 }
 
                 toggle(&cache_http, &args).await?;

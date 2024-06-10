@@ -14,7 +14,6 @@ require (
 	github.com/bahlo/generic-list-go v0.2.0 // indirect
 	github.com/buger/jsonparser v1.1.1 // indirect
 	github.com/bwmarrin/discordgo v0.27.2-0.20240307155122-202785c50b9e // indirect
-	github.com/fxamacker/cbor/v2 v2.6.0 // indirect
 	github.com/go-andiamo/splitter v1.2.5 // indirect
 	github.com/gorilla/websocket v1.5.1 // indirect
 	github.com/jackc/pgx/v5 v5.5.5 // indirect

@@ -123,7 +123,7 @@ pub enum ColumnSuggestion {
         table_name: &'static str,
         column_name: &'static str,
     },
-    None,
+    None {},
 }
 
 #[derive(Debug, Clone, PartialEq)]

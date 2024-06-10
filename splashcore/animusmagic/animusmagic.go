@@ -11,20 +11,20 @@ import (
 	"time"
 
 	"github.com/anti-raid/splashtail/splashcore/utils/syncmap"
-	"github.com/fxamacker/cbor/v2"
 	"github.com/infinitybotlist/eureka/crypto"
+	"github.com/infinitybotlist/eureka/jsonimpl"
 	"github.com/redis/rueidis"
 	"go.uber.org/zap"
 )
 
 // Helper function to serialize data to the correct/current format
 func SerializeData[T any](data T) ([]byte, error) {
-	return cbor.Marshal(data)
+	return jsonimpl.Marshal(data)
 }
 
 // Helper function to deserialize data from the correct/current format
 func DeserializeData[T any](data []byte, d *T) error {
-	return cbor.Unmarshal(data, d)
+	return jsonimpl.Unmarshal(data, d)
 }
 
 // A ClientResponse contains the response from animus magic

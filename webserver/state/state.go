@@ -14,7 +14,6 @@ import (
 	"github.com/anti-raid/splashtail/splashcore/objectstorage"
 	"github.com/anti-raid/splashtail/webserver/state/animusmagiccache"
 	"github.com/anti-raid/splashtail/webserver/state/redishotcache"
-	jsoniter "github.com/json-iterator/go"
 
 	"github.com/bwmarrin/discordgo"
 	mproc "github.com/cheesycod/mewld/proc"
@@ -23,6 +22,7 @@ import (
 	"github.com/infinitybotlist/eureka/dovewing"
 	"github.com/infinitybotlist/eureka/dovewing/dovetypes"
 	"github.com/infinitybotlist/eureka/genconfig"
+	"github.com/infinitybotlist/eureka/jsonimpl"
 	"github.com/infinitybotlist/eureka/proxy"
 	"github.com/infinitybotlist/eureka/ratelimit"
 	"github.com/infinitybotlist/eureka/snippets"
@@ -33,7 +33,6 @@ import (
 )
 
 var (
-	json                    = jsoniter.ConfigCompatibleWithStandardLibrary
 	Pool                    *pgxpool.Pool
 	Rueidis                 rueidis.Client // where perf is needed
 	AnimusMagicClient       *animusmagic.AnimusMagicClient
@@ -61,7 +60,7 @@ func fetchMewldInstanceList() (*mproc.InstanceList, error) {
 
 	defer resp.Body.Close()
 
-	err = json.NewDecoder(resp.Body).Decode(&mc)
+	err = jsonimpl.UnmarshalReader(resp.Body, &mc)
 
 	if err != nil {
 		return nil, err

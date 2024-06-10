@@ -1,8 +1,256 @@
-use super::config_opts::{ConfigOption, OperationType};
+use super::config_opts::{ColumnType, ConfigOption, InnerColumnType, OperationType};
 use super::state::State;
-use super::value::Value;
+use crate::silverpelt::value::Value;
 use futures_util::StreamExt;
 use std::time::Duration;
+
+/// Validates the value against the schema's column type
+#[allow(dead_code)]
+fn _validate_value(
+    v: &Value,
+    column_type: &ColumnType,
+    is_nullable: bool,
+    perform_schema_checks: bool,
+) -> Result<(), crate::Error> {
+    match column_type {
+        ColumnType::Scalar { column_type } => {
+            if matches!(v, Value::None) {
+                if is_nullable {
+                    return Ok(());
+                } else {
+                    return Err("Value is null, but column is not nullable".into());
+                }
+            }
+
+            if matches!(v, Value::List(_)) {
+                return Err(format!("Expected scalar, got list {}", v).into());
+            }
+
+            match column_type {
+                InnerColumnType::Uuid {} => {
+                    if !matches!(v, Value::Uuid(_)) {
+                        return Err(format!("Expected Uuid, got {}", v).into());
+                    }
+                }
+                InnerColumnType::String {
+                    min_length,
+                    max_length,
+                    allowed_values,
+                } => {
+                    if !matches!(v, Value::String(_) | Value::Uuid(_)) {
+                        return Err(format!("Expected String, got {}", v).into());
+                    }
+
+                    if perform_schema_checks {
+                        let s = match v {
+                            Value::String(s) => s,
+                            _ => unreachable!(),
+                        };
+
+                        if let Some(min) = min_length {
+                            if s.len() < *min {
+                                return Err(format!(
+                                    "String is too short, min length is {}",
+                                    min
+                                )
+                                .into());
+                            }
+                        }
+
+                        if let Some(max) = max_length {
+                            if s.len() > *max {
+                                return Err(format!(
+                                    "String is too long, max length is {}",
+                                    max
+                                )
+                                .into());
+                            }
+                        }
+
+                        if !allowed_values.is_empty() && !allowed_values.contains(&s.as_str()) {
+                            return Err("String is not in the allowed values".into());
+                        }
+                    }
+                }
+                InnerColumnType::Timestamp {} => {
+                    if !matches!(v, Value::String(_)) {
+                        return Err(format!("Expected Timestamp, got {}", v).into());
+                    }
+
+                    if perform_schema_checks {
+                        let s = match v {
+                            Value::String(s) => s,
+                            _ => unreachable!(),
+                        };
+
+                        if chrono::NaiveDateTime::parse_from_str(s, "%Y-%m-%d %H:%M:%S")
+                            .is_err()
+                        {
+                            return Err("Invalid timestamp format".into());
+                        }
+                    }
+                }
+                InnerColumnType::Integer {} => {
+                    if !matches!(v, Value::Integer(_)) {
+                        return Err(format!("Expected Integer, got {}", v).into());
+                    }
+                }
+                InnerColumnType::Float {} => {
+                    if !matches!(v, Value::Float(_)) {
+                        return Err(format!("Expected Float, got {}", v).into());
+                    }
+                }
+                InnerColumnType::BitFlag { .. } => {
+                    if !matches!(v, Value::Integer(_)) {
+                        return Err(format!("Expected Integer, got {}", v).into());
+                    }
+
+                    // TODO: Add value parsing for bit flags
+                }
+                InnerColumnType::Boolean {} => {
+                    if !matches!(v, Value::Boolean(_)) {
+                        return Err(format!("Expected Boolean, got {}", v).into());
+                    }
+                }
+                InnerColumnType::User {} => {
+                    if !matches!(v, Value::String(_)) {
+                        return Err(format!("Expected a user id (string), got {}", v).into());
+                    }
+
+                    if perform_schema_checks {
+                        let s = match v {
+                            Value::String(s) => s,
+                            _ => unreachable!(),
+                        };
+
+                        // Try parsing to a UserId
+                        if s.parse::<serenity::all::UserId>().is_err() {
+                            return Err("Invalid user id".into());
+                        }
+                    }
+                }
+                InnerColumnType::Channel {} => {
+                    if !matches!(v, Value::String(_)) {
+                        return Err(
+                            format!("Expected a channel id (string), got {}", v).into()
+                        );
+                    }
+
+                    if perform_schema_checks {
+                        let s = match v {
+                            Value::String(s) => s,
+                            _ => unreachable!(),
+                        };
+
+                        // Try parsing to a ChannelId
+                        if s.parse::<serenity::all::ChannelId>().is_err() {
+                            return Err("Invalid channel id".into());
+                        }
+                    }
+                }
+                InnerColumnType::Role {} => {
+                    if !matches!(v, Value::String(_)) {
+                        return Err(format!("Expected a role id (string), got {}", v).into());
+                    }
+
+                    if perform_schema_checks {
+                        let s = match v {
+                            Value::String(s) => s,
+                            _ => unreachable!(),
+                        };
+
+                        // Try parsing to a RoleId
+                        if s.parse::<serenity::all::RoleId>().is_err() {
+                            return Err("Invalid role id".into());
+                        }
+                    }
+                }
+                InnerColumnType::Emoji {} => {
+                    if !matches!(v, Value::String(_)) {
+                        return Err(
+                            format!("Expected an emoji id (string), got {}", v).into()
+                        );
+                    }
+
+                    if perform_schema_checks {
+                        let s = match v {
+                            Value::String(s) => s,
+                            _ => unreachable!(),
+                        };
+
+                        // Try parsing to an EmojiId
+                        if s.parse::<serenity::all::EmojiId>().is_err() {
+                            return Err("Invalid emoji id".into());
+                        }
+                    }
+                }
+                InnerColumnType::Message {} => {
+                    if !matches!(v, Value::String(_)) {
+                        return Err(
+                            format!("Expected a message id (string), got {}", v).into()
+                        );
+                    }
+
+                    if perform_schema_checks {
+                        let s = match v {
+                            Value::String(s) => s,
+                            _ => unreachable!(),
+                        };
+
+                        // The format of a message on db should be channel_id/message_id
+                        //
+                        // So, split by '/' and check if the first part is a valid channel id
+                        // and the second part is a valid message id
+                        let parts: Vec<&str> = s.split('/').collect();
+
+                        if parts.len() != 2 {
+                            return Err("Invalid message id".into());
+                        }
+
+                        // Try parsing to a ChannelId
+                        if parts[0].parse::<serenity::all::ChannelId>().is_err() {
+                            return Err("Invalid channel id".into());
+                        }
+
+                        if parts[1].parse::<serenity::all::MessageId>().is_err() {
+                            return Err("Invalid message id".into());
+                        }
+                    }
+                }
+                InnerColumnType::Json {} => {
+                    if !matches!(v, Value::Map(_)) {
+                        return Err(format!("Expected a map (json), got {}", v).into());
+                    }
+                }
+            }
+        }
+        ColumnType::Array { inner } => {
+            if matches!(v, Value::None) {
+                if is_nullable {
+                    return Ok(());
+                } else {
+                    return Err("Value is null, but column is not nullable".into());
+                }
+            }
+
+            if !matches!(v, Value::List(_)) {
+                return Err(format!("Expected list, got scalar {}", v).into());
+            }
+
+            let l = match v {
+                Value::List(l) => l,
+                _ => unreachable!(),
+            };
+
+            let column_type = ColumnType::new_scalar(inner.clone());
+            for v in l {
+                _validate_value(v, &column_type, is_nullable, perform_schema_checks)?;
+            }
+        }
+    }
+
+    Ok(())
+}
 
 fn _getcols(setting: &ConfigOption) -> Vec<String> {
     let mut cols = vec![];
@@ -21,9 +269,9 @@ async fn _parse_row(
     ctx: &serenity::all::Context,
 ) -> Result<(), crate::Error> {
     for (i, col) in setting.columns.iter().enumerate() {
-        // Fetch and validate the value itself
+        // Fetch and validate the value itv
         let val = Value::from_sqlx(row, i)?;
-        val.validate_value(&col.column_type, col.nullable, false)
+        _validate_value(&val, &col.column_type, col.nullable, false)
             .map_err(|e| format!("Error validating value for column {}: {}", col.id, e))?;
 
         // Insert the value into the map

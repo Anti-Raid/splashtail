@@ -63,7 +63,7 @@ pub(crate) fn sink() -> ConfigOption {
                 column_type: ColumnType::new_scalar(InnerColumnType::String { min_length: None, max_length: None, allowed_values: vec![] }),
                 nullable: false,
                 unique: false,
-                suggestions: ColumnSuggestion::None,
+                suggestions: ColumnSuggestion::None {},
                 readonly: indexmap::indexmap! {},
                 pre_checks: indexmap::indexmap! {
                     OperationType::View => vec![]
@@ -113,7 +113,7 @@ pub(crate) fn sink() -> ConfigOption {
                 column_type: ColumnType::new_scalar(InnerColumnType::Timestamp {}),
                 nullable: false,
                 unique: false,
-                suggestions: ColumnSuggestion::None,
+                suggestions: ColumnSuggestion::None {},
                 readonly: indexmap::indexmap! {
                     OperationType::Create => true,
                     OperationType::Update => true,
@@ -127,7 +127,7 @@ pub(crate) fn sink() -> ConfigOption {
                 column_type: ColumnType::new_scalar(InnerColumnType::User {}),
                 nullable: false,
                 unique: false,
-                suggestions: ColumnSuggestion::None,
+                suggestions: ColumnSuggestion::None {},
                 readonly: indexmap::indexmap! {
                     OperationType::Create => true,
                     OperationType::Update => true,
@@ -141,7 +141,7 @@ pub(crate) fn sink() -> ConfigOption {
                 column_type: ColumnType::new_scalar(InnerColumnType::User {}),
                 nullable: false,
                 unique: false,
-                suggestions: ColumnSuggestion::None,
+                suggestions: ColumnSuggestion::None {},
                 readonly: indexmap::indexmap! {
                     OperationType::Create => true,
                     OperationType::Update => true,
@@ -155,7 +155,7 @@ pub(crate) fn sink() -> ConfigOption {
                 column_type: ColumnType::new_scalar(InnerColumnType::Boolean {}),
                 nullable: false,
                 unique: false,
-                suggestions: ColumnSuggestion::None,
+                suggestions: ColumnSuggestion::None {},
                 readonly: indexmap::indexmap! {},
                 pre_checks: indexmap::indexmap! {},
                 default_pre_checks: vec![]

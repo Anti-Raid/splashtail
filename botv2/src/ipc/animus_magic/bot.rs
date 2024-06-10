@@ -5,6 +5,7 @@ use crate::silverpelt;
 use crate::silverpelt::{
     canonical_module::CanonicalModule, permissions::PermissionResult,
     silverpelt_cache::SILVERPELT_CACHE,
+    value::Value
 };
 use splashcore_rs::animusmagic::client::{
     AnimusMessage, AnimusResponse, SerializableAnimusMessage, SerializableAnimusResponse,
@@ -120,7 +121,7 @@ pub enum BotAnimusMessage {
     ExecutePerModuleFunction {
         module: String,
         toggle: String,
-        options: indexmap::IndexMap<String, serde_cbor::Value>,
+        options: indexmap::IndexMap<String, serde_json::Value>,
     },
     /// Returns the list of all permissions present within serenity
     GetSerenityPermissionList {},
@@ -273,7 +274,13 @@ impl BotAnimusMessage {
                     return Err("Toggle not found".into());
                 };
 
-                (toggle)(cache_http, &options).await?;
+                let mut n_options = indexmap::IndexMap::new();
+
+                for (k, v) in options {
+                    n_options.insert(k, Value::from_json(&v));
+                }
+
+                (toggle)(cache_http, &n_options).await?;
 
                 Ok(BotAnimusResponse::Ok {
                     message: "".to_string(),
@@ -295,13 +302,14 @@ pub mod dynamic {
     use dashmap::DashMap;
     use futures::future::BoxFuture;
     use once_cell::sync::Lazy;
+    use crate::silverpelt::value::Value;
 
     pub type ToggleFunc = Box<
         dyn Send
             + Sync
             + for<'a> Fn(
                 &'a botox::cache::CacheHttpImpl,
-                &'a indexmap::IndexMap<String, serde_cbor::Value>, // Options sent
+                &'a indexmap::IndexMap<String, Value>, // Options sent
             ) -> BoxFuture<'a, Result<(), crate::Error>>,
     >;
 

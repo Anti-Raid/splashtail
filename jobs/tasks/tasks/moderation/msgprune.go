@@ -12,7 +12,7 @@ import (
 	"github.com/anti-raid/splashtail/splashcore/utils"
 	"github.com/anti-raid/splashtail/splashcore/utils/timex"
 	"github.com/bwmarrin/discordgo"
-	jsoniter "github.com/json-iterator/go"
+	"github.com/infinitybotlist/eureka/jsonimpl"
 	orderedmap "github.com/wk8/go-ordered-map/v2"
 	"go.uber.org/zap"
 )
@@ -285,7 +285,7 @@ func (t *MessagePruneTask) Exec(
 	var outputBuf bytes.Buffer
 
 	// Write to buffer
-	err = jsoniter.ConfigFastest.NewEncoder(&outputBuf).Encode(finalMessagesEnd)
+	err = jsonimpl.MarshalToWriter(&outputBuf, finalMessagesEnd)
 
 	if err != nil {
 		return nil, fmt.Errorf("error encoding final messages: %w", err)

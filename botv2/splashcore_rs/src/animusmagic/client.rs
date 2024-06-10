@@ -1,5 +1,5 @@
 use super::protocol::{
-    create_payload, new_command_id, serialize_data, AnimusErrorResponse, AnimusMessageMetadata,
+    create_payload, new_command_id, serialize_data, deserialize_data, AnimusErrorResponse, AnimusMessageMetadata,
     AnimusOp, AnimusTarget, WILDCARD_CLUSTER_ID,
 };
 use crate::Error;
@@ -71,14 +71,14 @@ impl ClientResponse {
         match self.meta.op {
             AnimusOp::Error => {
                 Ok(ParsedClientResponse {
-                    err: Some(serde_cbor::from_slice(&self.raw_payload)?),
+                    err: Some(deserialize_data(&self.raw_payload)?),
                     resp: None, // We may support error + response in the future
                     client_resp: Some(self),
                 })
             }
             AnimusOp::Response => Ok(ParsedClientResponse {
                 err: None,
-                resp: Some(serde_cbor::from_slice(&self.raw_payload)?),
+                resp: Some(deserialize_data(&self.raw_payload)?),
                 client_resp: Some(self),
             }),
             _ => Err(ClientError::UnknownOp.into()),
@@ -97,7 +97,7 @@ pub struct ClientRequest {
 
 impl ClientRequest {
     pub fn parse<T: Serialize + for<'a> Deserialize<'a>>(&self) -> Result<T, crate::Error> {
-        Ok(serde_cbor::from_slice(&self.raw_payload)?)
+        Ok(deserialize_data(&self.raw_payload)?)
     }
 }
 

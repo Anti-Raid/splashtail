@@ -8,6 +8,7 @@ pub mod proxysupport;
 pub mod settings;
 pub mod silverpelt_cache;
 pub mod utils;
+pub mod value;
 
 use futures::future::BoxFuture;
 use indexmap::IndexMap;

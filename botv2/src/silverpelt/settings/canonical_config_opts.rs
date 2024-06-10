@@ -99,7 +99,7 @@ pub enum CanonicalColumnSuggestion {
         table_name: String,
         column_name: String,
     },
-    None,
+    None {},
 }
 
 impl From<super::config_opts::ColumnSuggestion> for CanonicalColumnSuggestion {
@@ -117,7 +117,7 @@ impl From<super::config_opts::ColumnSuggestion> for CanonicalColumnSuggestion {
                 table_name: table_name.to_string(),
                 column_name: column_name.to_string(),
             },
-            super::config_opts::ColumnSuggestion::None => CanonicalColumnSuggestion::None,
+            super::config_opts::ColumnSuggestion::None {} => CanonicalColumnSuggestion::None {},
         }
     }
 }

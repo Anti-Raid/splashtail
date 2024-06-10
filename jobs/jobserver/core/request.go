@@ -14,16 +14,14 @@ import (
 	"github.com/anti-raid/splashtail/splashcore/structparser/db"
 	"github.com/anti-raid/splashtail/splashcore/types"
 	"github.com/anti-raid/splashtail/splashcore/utils/mewext"
+	"github.com/infinitybotlist/eureka/jsonimpl"
 	"github.com/jackc/pgx/v5"
-	jsoniter "github.com/json-iterator/go"
 	"go.uber.org/zap"
 )
 
 var DefaultTimeout = 30 * time.Minute
 var ResumeOngoingTaskTimeoutSecs = 15 * 60
 var DefaultValidationTimeout = 5 * time.Second
-
-var json = jsoniter.ConfigFastest
 
 var (
 	taskCols    = db.GetCols(types.Task{})
@@ -68,7 +66,7 @@ func AnimusOnRequest(c *animusmagic.ClientRequest) (animusmagic.AnimusResponse, 
 			return nil, fmt.Errorf("invalid task data provided")
 		}
 
-		tBytes, err := json.Marshal(data.SpawnTask.Data)
+		tBytes, err := jsonimpl.Marshal(data.SpawnTask.Data)
 
 		if err != nil {
 			return nil, fmt.Errorf("error marshalling task args: %w", err)
@@ -76,7 +74,7 @@ func AnimusOnRequest(c *animusmagic.ClientRequest) (animusmagic.AnimusResponse, 
 
 		task := baseTaskDef // Copy task
 
-		err = json.Unmarshal(tBytes, &task)
+		err = jsonimpl.Unmarshal(tBytes, &task)
 
 		if err != nil {
 			return nil, fmt.Errorf("error unmarshalling task args: %w", err)
@@ -224,7 +222,7 @@ func Resume() {
 			continue
 		}
 
-		tBytes, err := json.Marshal(initialOpts)
+		tBytes, err := jsonimpl.Marshal(initialOpts)
 
 		if err != nil {
 			state.Logger.Error("Failed to marshal task create opts", zap.Error(err))
@@ -233,7 +231,7 @@ func Resume() {
 
 		task := baseTaskDef // Copy task
 
-		err = json.Unmarshal(tBytes, &task)
+		err = jsonimpl.Unmarshal(tBytes, &task)
 
 		if err != nil {
 			state.Logger.Error("Failed to unmarshal task create opts", zap.Error(err))

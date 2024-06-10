@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"os"
@@ -22,8 +21,8 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-playground/validator/v10"
 	"github.com/infinitybotlist/eureka/genconfig"
+	"github.com/infinitybotlist/eureka/jsonimpl"
 	"github.com/infinitybotlist/eureka/snippets"
-	jsoniter "github.com/json-iterator/go"
 	"gopkg.in/yaml.v3"
 
 	"github.com/anti-raid/splashtail/jobs/jobserver"
@@ -260,7 +259,7 @@ func main() {
 		)
 
 		r.Get("/getMewldInstanceList", func(w http.ResponseWriter, r *http.Request) {
-			bytes, err := json.Marshal(il)
+			bytes, err := jsonimpl.Marshal(il)
 
 			if err != nil {
 				w.WriteHeader(http.StatusInternalServerError)
@@ -428,8 +427,6 @@ func main() {
 			jobserverstate.Logger.Fatal("Error binding to socket", zap.Error(err))
 		}
 	case "jobs.node":
-		json := jsoniter.ConfigFastest
-
 		jobserverstate.CurrentOperationMode = "jobs"
 
 		// Read cmd args
@@ -441,7 +438,7 @@ func main() {
 
 		var shards []uint16
 
-		err := json.Unmarshal([]byte(shardsStr), &shards)
+		err := jsonimpl.Unmarshal([]byte(shardsStr), &shards)
 		if err != nil {
 			panic(err)
 		}

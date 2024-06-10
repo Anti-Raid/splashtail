@@ -1,6 +1,7 @@
 use crate::silverpelt::silverpelt_cache::SILVERPELT_CACHE;
 use futures::future::FutureExt;
 use serenity::all::GuildId;
+use crate::silverpelt::value::Value;
 
 pub async fn setup(_data: &crate::Data) -> Result<(), crate::Error> {
     crate::ipc::animus_magic::bot::dynamic::PERMODULE_FUNCTIONS.insert(
@@ -17,15 +18,15 @@ pub async fn setup(_data: &crate::Data) -> Result<(), crate::Error> {
 /// - `enabled` - Whether the module is enabled or not [bool]
 /// - `guild_id` - The guild ID to clear the cache for. If not provided, the cache will be cleared globally [Option<String>]
 pub async fn toggle_module(
-    value: &indexmap::IndexMap<String, serde_cbor::Value>,
+    value: &indexmap::IndexMap<String, Value>,
 ) -> Result<(), crate::Error> {
     let module = match value.get("module") {
-        Some(serde_cbor::Value::Text(s)) => s,
+        Some(Value::String(s)) => s,
         _ => return Err("`module` could not be parsed".into()),
     };
 
     let enabled = match value.get("enabled") {
-        Some(serde_cbor::Value::Bool(b)) => *b,
+        Some(Value::Boolean(b)) => *b,
         _ => return Err("`enabled` could not be parsed".into()),
     };
 
@@ -33,7 +34,7 @@ pub async fn toggle_module(
 
     if let Some(guild_id) = guild_id {
         let guild_id = match guild_id {
-            serde_cbor::Value::Text(s) => s.parse::<GuildId>()?,
+            Value::String(s) => s.parse::<GuildId>()?,
             _ => return Err("`guild_id` could not be parsed".into()),
         };
 

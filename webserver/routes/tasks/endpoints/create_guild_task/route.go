@@ -13,16 +13,14 @@ import (
 	"github.com/anti-raid/splashtail/splashcore/utils/mewext"
 	"github.com/anti-raid/splashtail/webserver/api"
 	"github.com/anti-raid/splashtail/webserver/state"
-	jsoniter "github.com/json-iterator/go"
 
 	"github.com/go-chi/chi/v5"
 	docs "github.com/infinitybotlist/eureka/doclib"
+	"github.com/infinitybotlist/eureka/jsonimpl"
 	"github.com/infinitybotlist/eureka/ratelimit"
 	"github.com/infinitybotlist/eureka/uapi"
 	"go.uber.org/zap"
 )
-
-var json = jsoniter.ConfigFastest
 
 func Docs() *docs.Doc {
 	return &docs.Doc{
@@ -142,7 +140,7 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 
 	task := baseTaskDef // Copy task
 
-	err = json.Unmarshal(tBytes, &task)
+	err = jsonimpl.Unmarshal(tBytes, &task)
 
 	if err != nil {
 		return uapi.HttpResponse{
@@ -162,7 +160,7 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 
 	var data map[string]any
 
-	err = json.Unmarshal(tBytes, &data)
+	err = jsonimpl.Unmarshal(tBytes, &data)
 
 	if err != nil {
 		return uapi.HttpResponse{

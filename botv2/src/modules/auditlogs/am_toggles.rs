@@ -1,4 +1,5 @@
 use futures::future::FutureExt;
+use crate::silverpelt::value::Value;
 
 pub async fn setup(_data: &crate::Data) -> Result<(), crate::Error> {
     crate::ipc::animus_magic::bot::dynamic::PERMODULE_FUNCTIONS.insert(
@@ -13,10 +14,10 @@ pub async fn setup(_data: &crate::Data) -> Result<(), crate::Error> {
 ///
 /// - events: Vec<String>
 pub async fn check_all_events(
-    value: &indexmap::IndexMap<String, serde_cbor::Value>,
+    value: &indexmap::IndexMap<String, Value>,
 ) -> Result<(), crate::Error> {
     let events = match value.get("events") {
-        Some(serde_cbor::Value::Array(a)) => a,
+        Some(Value::List(a)) => a,
         _ => return Err("`events` could not be parsed".into()),
     };
 
@@ -24,7 +25,7 @@ pub async fn check_all_events(
     let events: Vec<String> = events
         .iter()
         .map(|v| match v {
-            serde_cbor::Value::Text(s) => Ok(s.clone()),
+            Value::String(s) => Ok(s.clone()),
             _ => Err("`events` could not be parsed".into()),
         })
         .collect::<Result<Vec<String>, crate::Error>>()?;

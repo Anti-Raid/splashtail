@@ -62,7 +62,7 @@ Due to the need for N-directional (webserver+bot+jobserver+infra) communication,
 
 ### Basic structure
 
-All payloads will formatted as per the following: ``<target [from]: u8><target [to]: u8><cluster id [from]: u16><cluster id [to]: u16><op: u8><command_id: alphanumeric string>/<cbor payload>``
+All payloads will formatted as per the following: ``<target [from]: u8><target [to]: u8><cluster id [from]: u16><cluster id [to]: u16><op: u8><command_id: alphanumeric string>/<payload>``
 
 - `target`: The target of the message (`Bot`, `Webserver`, `Jobserver`, `Infra` etc each have a byte for themselves)
 - `cluster id`: The cluster's ID. Each cluster of a service is assigned a number. Non-clustered services must use `0` for this field
@@ -71,7 +71,7 @@ All payloads will formatted as per the following: ``<target [from]: u8><target [
 - ``u8``: Unsigned 8-bit integer (or `byte`). This should just be sent as a byte in Go and Rust
 - ``u16``: Unsigned 16-bit integer. This should be sent as 2 bytes in big-endian (network) byte order. In rust, this is `u16.to_be_bytes()` and in Go, this is either ``byte(N>>8) & 0xFF, byte(N) & 0xFF`` or `binary.BigEndian.PutUint16()`.
 
-Note that ``command_id`` and ``cbor_payload`` must be separated by a ``/`` character. The ``command_id`` is a unique string that is used to identify the command and the ``cbor_payload`` is the payload of the command encoded in CBOR.
+Note that ``command_id`` and ``payload`` must be separated by a ``/`` character. The ``command_id`` is a unique string that is used to identify the command and the ``payload`` is the payload of the command encoded in JSON.
 
 ### Basic operations
 

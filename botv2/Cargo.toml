@@ -33,7 +33,6 @@ strum_macros = "0.26"
 rand = "0.8"
 fred = { version = "9.0.3", features = ["enable-rustls", "enable-rustls-ring", "serde-json", "subscriber-client"] }
 moka = { version = "0.12.3", features = ["future", "futures-util"] }
-serde_cbor = "0.11.2"
 secrecy = "0.8"
 regex = "1"
 bitflags = "2"

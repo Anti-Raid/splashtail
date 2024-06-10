@@ -8,12 +8,10 @@ import (
 	"time"
 
 	mredis "github.com/cheesycod/mewld/redis"
-	jsoniter "github.com/json-iterator/go"
+	"github.com/infinitybotlist/eureka/jsonimpl"
 	"github.com/redis/rueidis"
 	"go.uber.org/zap"
 )
-
-var json = jsoniter.ConfigFastest
 
 type MewldResponder struct {
 	ClusterID             uint16
@@ -45,7 +43,7 @@ func (c *MewldResponder) ListenOnce(ctx context.Context, r rueidis.Client, l *za
 					// Hack but its performant
 					var payload MewldDiagPayload
 
-					err := json.Unmarshal([]byte(msg.Message), &payload)
+					err := jsonimpl.Unmarshal([]byte(msg.Message), &payload)
 
 					if err != nil {
 						l.Error("[mewld] error unmarshalling diag message", zap.Error(err))
@@ -66,7 +64,7 @@ func (c *MewldResponder) ListenOnce(ctx context.Context, r rueidis.Client, l *za
 							return
 						}
 
-						bytes, err := json.Marshal(resp)
+						bytes, err := jsonimpl.Marshal(resp)
 
 						if err != nil {
 							l.Error("[mewld] error marshalling diag response", zap.Error(err))
@@ -79,7 +77,7 @@ func (c *MewldResponder) ListenOnce(ctx context.Context, r rueidis.Client, l *za
 							Output: string(bytes),
 						}
 
-						bytes, err = json.Marshal(lcmd)
+						bytes, err = jsonimpl.Marshal(lcmd)
 
 						if err != nil {
 							l.Error("[mewld] error marshalling diag response", zap.Error(err))
@@ -103,7 +101,7 @@ func (c *MewldResponder) ListenOnce(ctx context.Context, r rueidis.Client, l *za
 
 				var launcherData mredis.LauncherCmd
 
-				err := json.Unmarshal(bytesData, &launcherData)
+				err := jsonimpl.Unmarshal(bytesData, &launcherData)
 
 				if err != nil {
 					l.Error("[mewld] error unmarshalling message", zap.Error(err))
@@ -173,7 +171,7 @@ func (c *MewldResponder) LaunchNext(ctx context.Context, redis rueidis.Client, l
 		},
 	}
 
-	bytes, err := json.Marshal(launchNextCmd)
+	bytes, err := jsonimpl.Marshal(launchNextCmd)
 
 	if err != nil {
 		return fmt.Errorf("error marshalling launch_next command: %w", err)
