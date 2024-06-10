@@ -292,16 +292,16 @@ impl Value {
     ) -> Result<(), crate::Error> {
         match column_type {
             ColumnType::Scalar { column_type } => {
-                if matches!(self, Value::List(_)) {
-                    return Err(format!("Expected scalar, got list {}", self).into());
-                }
-
                 if matches!(self, Value::None) {
                     if is_nullable {
                         return Ok(());
                     } else {
                         return Err("Value is null, but column is not nullable".into());
                     }
+                }
+
+                if matches!(self, Value::List(_)) {
+                    return Err(format!("Expected scalar, got list {}", self).into());
                 }
 
                 match column_type {
@@ -503,16 +503,16 @@ impl Value {
                 }
             }
             ColumnType::Array { inner } => {
-                if !matches!(self, Value::List(_)) {
-                    return Err(format!("Expected list, got scalar {}", self).into());
-                }
-
                 if matches!(self, Value::None) {
                     if is_nullable {
                         return Ok(());
                     } else {
                         return Err("Value is null, but column is not nullable".into());
                     }
+                }
+
+                if !matches!(self, Value::List(_)) {
+                    return Err(format!("Expected list, got scalar {}", self).into());
                 }
 
                 let l = match self {
