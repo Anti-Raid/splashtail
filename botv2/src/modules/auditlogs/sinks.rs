@@ -90,7 +90,7 @@ pub(crate) fn sink() -> ConfigOption {
                 id: "events",
                 name: "Events",
                 column_type: ColumnType::new_array(InnerColumnType::String { min_length: None, max_length: None, allowed_values: vec![] }),
-                nullable: false,
+                nullable: true,
                 unique: false,
                 suggestions: ColumnSuggestion::Static { suggestions: gwevent::core::event_list().to_vec() },
                 readonly: indexmap::indexmap! {},
