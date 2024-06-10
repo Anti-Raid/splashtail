@@ -21,7 +21,8 @@ fn _parse_row(
     for (i, col) in setting.columns.iter().enumerate() {
         // Fetch and validate the value itself
         let val = Value::from_sqlx(row, i)?;
-        val.validate_value(&col.column_type, col.nullable, false)?;
+        val.validate_value(&col.column_type, col.nullable, false)
+            .map_err(|e| format!("Error validating value for column {}: {}", col.id, e))?;
 
         // Insert the value into the map
         value.insert(col.id.to_string(), val);
