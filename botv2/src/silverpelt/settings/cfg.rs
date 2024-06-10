@@ -154,8 +154,8 @@ pub async fn settings_viewer(
                 index = 0;
             }
             "close" => {
-                item.defer(&ctx.serenity_context().http).await?;
-                item.delete_response(&ctx.serenity_context().http).await?;
+                item.defer(&serenity_ctx.http).await?;
+                item.delete_response(&serenity_ctx.http).await?;
                 break;
             }
             _ => {}
