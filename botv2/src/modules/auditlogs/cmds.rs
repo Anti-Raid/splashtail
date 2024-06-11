@@ -152,7 +152,7 @@ pub async fn add_discordhook(
         &ctx,
         &super::sinks::sink(),
         indexmap::indexmap! {
-            "type".to_string() => Value::String("webhook".to_string()),
+            "type".to_string() => Value::String("discordhook".to_string()),
             "sink".to_string() => Value::String(webhook),
             "events".to_string() => {
                 match events {
