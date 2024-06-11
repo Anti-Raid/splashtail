@@ -13,3 +13,7 @@ Lots of changes to Settings API (which will be finished before moving on with th
 - settings_view has been split into the database bit which handles collecting the values, running everything and the poise display bit which displays the values
 - Poise display code now uses column names for the display key and tries to format the value for the user instead of simply using the column id and raw value. This should improve UX significantly for the user
 - Timestamp and Timestamptz have been added as native types to Value, when collecting from database using sqlx, these will be used instead of String, likewise, query binding against them has also been added
+
+## Animus Magic
+
+- Animus Magic now uses JSON instead of CBOR for payloads due to issues on the Go side with deserializing CBOR data on external structs (such as ordered maps etc.). This may be temporary or permanent. To compensate for performance (and because stdlib json serde on Go is slow), the ``github.com/bytedance/sonic`` library is now used on the go side instead of stdlib (`encoding/json`). Likewise, the ``eureka`` library used by the Anti-Raid webserver for handling requests + responding to them etc. has also been updated to use ``github.com/bytedance/sonic``. **This change also applies to the webserver**
