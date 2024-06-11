@@ -852,7 +852,7 @@ pub async fn settings_create(
 
         if let Some(table_colsets) = table_colsets {
             for (column, _) in table_colsets.iter() {
-                n_params.push_str(&format!(",${}", i + 2));
+                n_params.push_str(&format!("${}", i + 2));
                 col_params.push_str(column);
 
                 n_params.push(',');
