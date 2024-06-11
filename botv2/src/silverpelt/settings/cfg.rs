@@ -444,10 +444,6 @@ async fn _post_op_colset(
         return Ok(()); // No operation specific data
     };
 
-    state
-        .state
-        .insert("now".to_string(), Value::TimestampTz(chrono::Utc::now()));
-
     for ((table_name, column_name), value) in op_specific.columns_to_set.iter() {
         let value = state.template_to_string(author, guild_id, value);
 
