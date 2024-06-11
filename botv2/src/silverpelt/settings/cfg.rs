@@ -794,7 +794,7 @@ pub async fn settings_create(
 
     // Ensure that a field with the same primary key doesn't exist
     if let Some(v) = state.state.get(setting.primary_key) {
-        // Value::None means that we can assume the db creates the primary key
+        // Value::None means that we can assume the db creates the primary key uniquely, otherwise, we have to check the uniqueness here
         match v {
             Value::None => {}
             _ => {
