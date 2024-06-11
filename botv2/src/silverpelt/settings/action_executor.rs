@@ -42,7 +42,9 @@ pub async fn execute_actions(
                     args.insert(key, value);
                 }
 
-                toggle(&cache_http, &args).await?;
+                toggle(&cache_http, &args).await.map_err(|e| {
+                    format!("Error running IPC function: {} [args: {:#?}]", e, args)
+                })?;
             }
             ColumnAction::Error { message } => {
                 return Err(state

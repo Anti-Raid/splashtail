@@ -124,7 +124,7 @@ pub(crate) fn sink() -> ConfigOption {
                         module: "auditlogs",
                         function: "check_all_events",
                         arguments: indexmap::indexmap! {
-                            "events" => "events"
+                            "events" => "{events}"
                         }
                     }
                 ]
