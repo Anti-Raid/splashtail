@@ -14,6 +14,8 @@ Lots of changes to Settings API (which will be finished before moving on with th
 - Poise display code now uses column names for the display key and tries to format the value for the user instead of simply using the column id and raw value. This should improve UX significantly for the user
 - Timestamp and TimestampTz have been added as native types to Value, when collecting from database using sqlx, these will be used instead of String, likewise, query binding against them has also been added
 - Likewise, the canonical typings for config options now includes both Timestamp and TimestampTz as opposed to just Timestamp to avoid confusion and mixing incompatible types
+- Variables have been improved. Instead of storing system variables like ``user_id`` and ``now`` in the state map, they are now special-cased and prefixed with ``__``. This both improves performance, reduces the chance of collision with user-defined variables and avoids display errors (e.g. with the poise layer)
+- For display purposes, the special case variable {[__column_id]_displaytype} can be set to allow displaying in a different format. This is useful in cases like sinks where the display type can be changed based on a condition
 
 ## Animus Magic
 

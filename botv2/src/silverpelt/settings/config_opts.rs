@@ -1,6 +1,13 @@
 /// Common state variables:
 ///
-/// - {user_id} => the user id of the user running the operation
+/// - {__author} => the user id of the user running the operation
+/// - {__guild_id} => the guild id of the guild the operation is being run in
+///
+/// {__now} always returns the current timestamp (TimestampTz), {__now_naive} returns the current timestamp in naive form (Timestamp)
+///
+/// Note that these special variables do not need to live in state and may instead be special cased
+///
+/// For display purposes, the special case variable {[__column_id]_displaytype} can be set to allow displaying in a different form
 
 #[derive(Debug, Clone, PartialEq)]
 #[allow(dead_code)]
@@ -155,6 +162,13 @@ pub enum ColumnAction {
         script: &'static str,
         on_success: Vec<ColumnAction>,
         on_failure: Vec<ColumnAction>,
+    },
+    SetVariable {
+        /// The key to set
+        key: &'static str,
+
+        /// The value to set
+        value: serde_json::Value,
     },
     IpcPerModuleFunction {
         /// The module to use

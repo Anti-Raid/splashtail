@@ -56,6 +56,8 @@ pub async fn execute_actions(
     state: &mut State,
     actions: &[ColumnAction],
     ctx: &serenity::all::Context,
+    author: serenity::all::UserId,
+    guild_id: serenity::all::GuildId,
 ) -> Result<(), crate::Error> {
     let cache_http = botox::cache::CacheHttpImpl::from_ctx(ctx);
     let data = &ctx.data::<crate::Data>();
@@ -122,7 +124,10 @@ pub async fn execute_actions(
                 }
             }
             ColumnAction::Error { message } => {
-                return Err(state.template_to_string(message).to_string().into());
+                return Err(state
+                    .template_to_string(author, guild_id, message)
+                    .to_string()
+                    .into());
             }
             ColumnAction::ExecLuaScript {
                 script,
@@ -130,7 +135,7 @@ pub async fn execute_actions(
                 on_failure,
             } => {
                 // Load the script, if template, ensure its a string, otherwise fallback to the script itself
-                let script = match state.template_to_string(script) {
+                let script = match state.template_to_string(author, guild_id, script) {
                     Value::String(s) => s,
                     _ => script.to_string(),
                 };
@@ -154,10 +159,13 @@ pub async fn execute_actions(
                 };
 
                 if res {
-                    execute_actions(state, on_success, ctx).await?;
+                    execute_actions(state, on_success, ctx, author, guild_id).await?;
                 } else {
-                    execute_actions(state, on_failure, ctx).await?;
+                    execute_actions(state, on_failure, ctx, author, guild_id).await?;
                 }
+            }
+            ColumnAction::SetVariable { key, value } => {
+                state.state.insert(key.to_string(), Value::from_json(value));
             }
         }
     }

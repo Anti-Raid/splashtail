@@ -150,6 +150,13 @@ pub enum CanonicalColumnAction {
         on_success: Vec<CanonicalColumnAction>,
         on_failure: Vec<CanonicalColumnAction>,
     },
+    SetVariable {
+        /// The key to set
+        key: String,
+
+        /// The value to set
+        value: serde_json::Value,
+    },
     IpcPerModuleFunction {
         /// The module to use
         module: String,
@@ -192,6 +199,12 @@ impl From<super::config_opts::ColumnAction> for CanonicalColumnAction {
                 on_success: on_success.into_iter().map(|c| c.into()).collect(),
                 on_failure: on_failure.into_iter().map(|c| c.into()).collect(),
             },
+            super::config_opts::ColumnAction::SetVariable { key, value } => {
+                CanonicalColumnAction::SetVariable {
+                    key: key.to_string(),
+                    value,
+                }
+            }
             super::config_opts::ColumnAction::IpcPerModuleFunction {
                 module,
                 function,

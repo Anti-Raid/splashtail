@@ -272,6 +272,8 @@ async fn _parse_row(
     row: &sqlx::postgres::PgRow,
     state: &mut State,
     ctx: &serenity::all::Context,
+    author: serenity::all::UserId,
+    guild_id: serenity::all::GuildId,
 ) -> Result<(), crate::Error> {
     for (i, col) in setting.columns.iter().enumerate() {
         // Fetch and validate the value itv
@@ -287,7 +289,10 @@ async fn _parse_row(
             .get(&OperationType::View)
             .unwrap_or(&col.default_pre_checks);
 
-        crate::silverpelt::settings::action_executor::execute_actions(state, actions, ctx).await?;
+        crate::silverpelt::settings::action_executor::execute_actions(
+            state, actions, ctx, author, guild_id,
+        )
+        .await?;
     }
 
     Ok(())
@@ -433,6 +438,7 @@ async fn _post_op_colset(
     setting: &ConfigOption,
     state: &mut State,
     pool: &sqlx::PgPool,
+    author: serenity::all::UserId,
     guild_id: serenity::all::GuildId,
     op: OperationType,
 ) -> Result<(), crate::Error> {
@@ -445,7 +451,7 @@ async fn _post_op_colset(
         .insert("now".to_string(), Value::TimestampTz(chrono::Utc::now()));
 
     for ((table_name, column_name), value) in op_specific.columns_to_set.iter() {
-        let value = state.template_to_string(value);
+        let value = state.template_to_string(author, guild_id, value);
 
         let sql_stmt = format!(
             "UPDATE {} SET {} = $1 WHERE {} = $2",
@@ -492,13 +498,16 @@ pub async fn settings_view(
 
     for row in row {
         let mut state = State::new();
-
-        state
-            .state
-            .insert("user_id".to_string(), Value::String(author.to_string()));
-
-        _parse_row(setting, &row, &mut state, ctx).await?;
-        _post_op_colset(setting, &mut state, pool, guild_id, OperationType::View).await?;
+        _parse_row(setting, &row, &mut state, ctx, author, guild_id).await?;
+        _post_op_colset(
+            setting,
+            &mut state,
+            pool,
+            author,
+            guild_id,
+            OperationType::View,
+        )
+        .await?;
         values.push(state);
     }
 

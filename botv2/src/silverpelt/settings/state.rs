@@ -5,17 +5,39 @@ pub struct State {
 }
 
 impl State {
+    pub fn get_variable_value(
+        &self,
+        author: serenity::all::UserId,
+        guild_id: serenity::all::GuildId,
+        variable: &str,
+    ) -> Value {
+        match variable {
+            "__author" => Value::String(author.to_string()),
+            "__guild_id" => Value::String(guild_id.to_string()),
+            "__now" => Value::TimestampTz(chrono::Utc::now()),
+            "__now_naive" => Value::Timestamp(chrono::Utc::now().naive_utc()),
+            _ => self.state.get(variable).cloned().unwrap_or(Value::None),
+        }
+    }
+
     /// Given a template string, where state variables are surrounded by curly braces, return the
     /// template value (if a single variable) or a string if not
-    pub fn template_to_string(&self, template: &str) -> Value {
+    pub fn template_to_string(
+        &self,
+        author: serenity::all::UserId,
+        guild_id: serenity::all::GuildId,
+        template: &str,
+    ) -> Value {
         let mut result = template.to_string();
 
         if result.starts_with("{") && result.ends_with("}") {
-            return self
-                .state
-                .get(&template[1..template.len() - 1])
-                .cloned()
-                .unwrap_or(Value::String(result));
+            let var = template
+                .chars()
+                .skip(1)
+                .take(template.len() - 2)
+                .collect::<String>();
+
+            return self.get_variable_value(author, guild_id, &var);
         }
 
         for (key, value) in &self.state {

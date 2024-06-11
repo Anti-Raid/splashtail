@@ -66,15 +66,27 @@ pub(crate) fn sink() -> ConfigOption {
                 suggestions: ColumnSuggestion::None {},
                 readonly: indexmap::indexmap! {},
                 pre_checks: indexmap::indexmap! {
-                    OperationType::View => vec![]
+                    OperationType::View => vec![
+                        ColumnAction::ExecLuaScript {
+                            script: r#"return type == "discordhook""#,
+                            on_success: vec![
+                                // Use channel as the display type
+                                ColumnAction::SetVariable {
+                                    key: "__sink_displaytype",
+                                    value: serde_json::Value::String("channel".to_string())
+                                }
+                            ],
+                            on_failure: vec![]
+                        }
+                    ]
                 },
                 default_pre_checks: vec![
                     ColumnAction::ExecLuaScript {
                         script: r#"
-                            if data.type == "discordhook" then
-                                return data.sink:startswith("https://discord.com/api/webhooks") or
-                                    data.sink:startswith("https://discord.com/api/v9/webhooks") or
-                                    data.sink:startswith("https://discord.com/api/v10/webhooks")
+                            if type == "discordhook" then
+                                return sink:startswith("https://discord.com/api/webhooks") or
+                                    sink:startswith("https://discord.com/api/v9/webhooks") or
+                                    sink:startswith("https://discord.com/api/v10/webhooks")
                             else
                                 return true -- TODO: Check channels
                             end
@@ -166,6 +178,15 @@ pub(crate) fn sink() -> ConfigOption {
                 corresponding_command: "list_sinks",
                 column_ids: vec![],
                 columns_to_set: indexmap::indexmap! {},
+            },
+            OperationType::Create => OperationSpecific {
+                corresponding_command: "add_sink",
+                column_ids: vec![],
+                columns_to_set: indexmap::indexmap! {
+                    ("auditlogs__sinks", "created_at") => "{__now}",
+                    ("auditlogs__sinks", "created_by") => "{__author}",
+                    ("auditlogs__sinks", "last_updated_by") => "{__author}",
+                },
             },
         }
     }

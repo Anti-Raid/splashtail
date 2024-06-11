@@ -10,10 +10,29 @@ pub async fn settings_viewer(
     ctx: &crate::Context<'_>,
     setting: &ConfigOption,
 ) -> Result<(), crate::Error> {
-    fn _get_display_value(column_type: &ColumnType, value: &Value) -> String {
+    fn _get_display_value(
+        author: serenity::all::UserId,
+        guild_id: serenity::all::GuildId,
+        column_type: &ColumnType,
+        column_id: &str,
+        value: &Value,
+        state: &State,
+    ) -> String {
+        // Check for special formattings in the __column_id_displaytype variable
+        if let Value::String(v) =
+            state.get_variable_value(author, guild_id, &format!("{}__displaytype", column_id))
+        {
+            match v.as_str() {
+                "channel" => return format!("<#{}>", value),
+                "role" => return format!("<@&{}>", value),
+                _ => {}
+            }
+        }
+
         match column_type {
             ColumnType::Scalar { column_type } => match column_type {
                 InnerColumnType::Channel {} => format!("<#{}>", value),
+                InnerColumnType::Role {} => format!("<@&{}>", value),
                 InnerColumnType::BitFlag { values } => {
                     let v = match value {
                         Value::Integer(v) => *v,
@@ -43,16 +62,33 @@ pub async fn settings_viewer(
                 match value {
                     Value::List(values) => values
                         .iter()
-                        .map(|v| _get_display_value(&ColumnType::new_scalar(inner.clone()), v))
+                        .map(|v| {
+                            _get_display_value(
+                                author,
+                                guild_id,
+                                &ColumnType::new_scalar(inner.clone()),
+                                column_id,
+                                v,
+                                state,
+                            )
+                        })
                         .collect::<Vec<String>>()
                         .join(", "),
-                    _ => _get_display_value(&ColumnType::new_scalar(inner.clone()), value),
+                    _ => _get_display_value(
+                        author,
+                        guild_id,
+                        &ColumnType::new_scalar(inner.clone()),
+                        column_id,
+                        value,
+                        state,
+                    ),
                 }
             }
         }
     }
 
     fn _create_reply<'a>(
+        ctx: &crate::Context<'_>,
         setting: &ConfigOption,
         values: &'a [State],
         index: usize,
@@ -88,6 +124,10 @@ pub async fn settings_viewer(
         ));
 
         for (key, value) in values[index].state.iter() {
+            if key.starts_with("__") {
+                continue; // Skip internal variables
+            }
+
             // Find the key in the schema
             let column = setting.columns.iter().find(|c| c.id == key);
 
@@ -97,8 +137,18 @@ pub async fn settings_viewer(
                 key.clone()
             };
 
+            let author = ctx.author().id;
+            let guild_id = ctx.guild_id().unwrap();
+
             let display_value = if let Some(column) = column {
-                _get_display_value(&column.column_type, value)
+                _get_display_value(
+                    author,
+                    guild_id,
+                    &column.column_type,
+                    column.id,
+                    value,
+                    &values[index],
+                )
             } else {
                 value.to_string()
             };
@@ -139,7 +189,7 @@ pub async fn settings_viewer(
 
     let mut index = 0;
 
-    let reply = _create_reply(setting, &values, index);
+    let reply = _create_reply(ctx, setting, &values, index);
 
     let msg = ctx.send(reply).await?.into_message().await?;
 
@@ -173,7 +223,7 @@ pub async fn settings_viewer(
 
         item.defer(&serenity_ctx.http).await?;
 
-        let reply = _create_reply(setting, &values, index);
+        let reply = _create_reply(ctx, setting, &values, index);
 
         item.edit_response(
             &serenity_ctx.http,
