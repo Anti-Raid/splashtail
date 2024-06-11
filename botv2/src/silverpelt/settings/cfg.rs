@@ -793,27 +793,37 @@ pub async fn settings_create(
     }
 
     // Ensure that a field with the same primary key doesn't exist
-    let row = sqlx::query(
-        format!(
-            "SELECT {} FROM {} WHERE {} = $1",
-            setting.primary_key, setting.table, setting.guild_id
-        )
-        .as_str(),
-    )
-    .bind(guild_id.to_string())
-    .fetch_all(pool)
-    .await
-    .map_err(|e| SettingsError::Generic {
-        message: e.to_string(),
-        src: "settings_create [query fetch_all]".to_string(),
-        typ: "internal".to_string(),
-    })?;
+    if let Some(v) = state.state.get(setting.primary_key) {
+        // Value::None means that we can assume the db creates the primary key
+        match v {
+            Value::None => {}
+            _ => {
+                let sql_stmt = format!(
+                    "SELECT {} FROM {} WHERE {} = $1 AND {} = $2",
+                    setting.primary_key, setting.table, setting.guild_id, setting.primary_key
+                );
 
-    if !row.is_empty() {
-        return Err(SettingsError::RowExists {
-            primary_key: setting.primary_key.to_string(),
-            count: row.len(),
-        });
+                let mut query = sqlx::query(sql_stmt.as_str()).bind(guild_id.to_string());
+
+                query = _query_bind_value(query, v.clone());
+
+                let row = query
+                    .fetch_all(pool)
+                    .await
+                    .map_err(|e| SettingsError::Generic {
+                        message: e.to_string(),
+                        src: "settings_create [query fetch_all]".to_string(),
+                        typ: "internal".to_string(),
+                    })?;
+
+                if !row.is_empty() {
+                    return Err(SettingsError::RowExists {
+                        primary_key: setting.primary_key.to_string(),
+                        count: row.len(),
+                    });
+                }
+            }
+        }
     }
 
     // Add table_colsets for our table to state as well, as the actual insert uses state as well, this should just work TM
