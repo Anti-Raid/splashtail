@@ -1,8 +1,7 @@
-use super::core::check_all_events;
+use crate::silverpelt::value::Value;
 use crate::{Context, Error};
 use secrecy::ExposeSecret;
 use serenity::all::{Channel, ChannelType};
-use crate::silverpelt::value::Value;
 
 #[poise::command(
     prefix_command,
@@ -63,7 +62,6 @@ pub async fn add_channel(
 
     let events = if let Some(events) = events {
         let events: Vec<String> = events.split(',').map(|x| x.to_string()).collect();
-        check_all_events(events.clone()).await?;
         Some(events)
     } else {
         None
@@ -143,24 +141,37 @@ pub async fn add_discordhook(
     #[description = "Webhook URL to send logs to"] webhook: String,
     #[description = "Specific events you want to filter by"] events: Option<String>,
 ) -> Result<(), Error> {
-    let Some(guild_id) = ctx.guild_id() else {
-        return Err("This command can only be used in a guild".into());
-    };
-
     let events = if let Some(events) = events {
         let events: Vec<String> = events.split(',').map(|x| x.to_string()).collect();
-        check_all_events(events.clone()).await?;
         Some(events)
     } else {
         None
     };
 
-    crate::silverpelt::settings::poise::settings_creator(&ctx, &super::sinks::sink(), indexmap::indexmap! {
-        "type".to_string() => Value::String("webhook".to_string()),
-        "sink".to_string() => Value::String(webhook),
-        "events".to_string() => Value::List(events.iter().map(|x| Value::String(x.clone())).collect()),
-        "broken".to_string() => Value::Boolean(false),
-    }).await?;
+    crate::silverpelt::settings::poise::settings_creator(
+        &ctx,
+        &super::sinks::sink(),
+        indexmap::indexmap! {
+            "type".to_string() => Value::String("webhook".to_string()),
+            "sink".to_string() => Value::String(webhook),
+            "events".to_string() => {
+                match events {
+                    Some(events) => {
+                        let mut value_events = Vec::new();
+
+                        for evt in events {
+                            value_events.push(Value::String(evt));
+                        }
+
+                        Value::List(value_events)
+                    }
+                    None => Value::None
+                }
+            },
+            "broken".to_string() => Value::Boolean(false),
+        },
+    )
+    .await?;
 
     Ok(())
 }
