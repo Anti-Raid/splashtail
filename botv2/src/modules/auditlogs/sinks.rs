@@ -154,7 +154,7 @@ pub(crate) fn sink() -> ConfigOption {
             Column {
                 id: "last_updated_at",
                 name: "Last Updated At",
-                column_type: ColumnType::new_scalar(InnerColumnType::User {}),
+                column_type: ColumnType::new_scalar(InnerColumnType::TimestampTz {}),
                 ignored_for: vec![OperationType::Create, OperationType::Update],
                 nullable: false,
                 unique: false,
