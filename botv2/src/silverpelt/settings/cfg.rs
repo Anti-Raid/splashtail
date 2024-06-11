@@ -770,6 +770,9 @@ pub async fn settings_create(
                 column.nullable,
                 true,
             )?;
+
+            // Insert the value into the state
+            state.state.insert(col.to_string(), value.clone());
         }
 
         // Execute actions
@@ -784,7 +787,7 @@ pub async fn settings_create(
         .await
         .map_err(|e| SettingsError::Generic {
             message: e.to_string(),
-            src: "_parse_row [execute_actions]".to_string(),
+            src: "settings_create [execute_actions]".to_string(),
             typ: "internal".to_string(),
         })?;
     }
