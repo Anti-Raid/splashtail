@@ -1,13 +1,15 @@
-/// Common state variables:
-///
-/// - {__author} => the user id of the user running the operation
-/// - {__guild_id} => the guild id of the guild the operation is being run in
-///
-/// {__now} always returns the current timestamp (TimestampTz), {__now_naive} returns the current timestamp in naive form (Timestamp)
-///
-/// Note that these special variables do not need to live in state and may instead be special cased
-///
-/// For display purposes, the special case variable {[__column_id]_displaytype} can be set to allow displaying in a different form
+use futures::future::BoxFuture;
+
+// Common state variables:
+//
+// - {__author} => the user id of the user running the operation
+// - {__guild_id} => the guild id of the guild the operation is being run in
+//
+// {__now} always returns the current timestamp (TimestampTz), {__now_naive} returns the current timestamp in naive form (Timestamp)
+//
+// Note that these special variables do not need to live in state and may instead be special cased
+//
+// For display purposes, the special case variable {[__column_id]_displaytype} can be set to allow displaying in a different form
 
 #[derive(Debug, Clone, PartialEq)]
 #[allow(dead_code)]
@@ -139,29 +141,27 @@ pub enum ColumnSuggestion {
     None {},
 }
 
-#[derive(Debug, Clone, PartialEq)]
+pub struct NativeActionContext {
+    pub author: serenity::all::UserId,
+    pub guild_id: serenity::all::GuildId,
+    pub pool: sqlx::PgPool,
+}
+
+pub type NativeActionFunc = Box<
+    dyn Send
+        + Sync
+        + for<'a> Fn(
+            NativeActionContext,
+            &'a mut super::state::State,
+        ) -> BoxFuture<'a, Result<(), crate::Error>>,
+>;
+
+#[allow(dead_code)]
 pub enum ColumnAction {
-    /// Adds a column/row to the state map
-    CollectColumnToMap {
-        /// The table to use
-        table: &'static str,
-
-        /// The column to fetch
-        column: &'static str,
-
-        /// The key to store the record under
-        key: &'static str,
-
-        /// Whether to fetch all or only one rows
-        fetch_all: bool,
-    },
-    /// Executes a lua script, the *last* result will be stored in result
-    ///
-    /// Note that the lua script must return true or false
-    ExecLuaScript {
-        script: &'static str,
-        on_success: Vec<ColumnAction>,
-        on_failure: Vec<ColumnAction>,
+    /// Run a rust (native) action
+    NativeAction {
+        /// The action to run
+        action: NativeActionFunc,
     },
     SetVariable {
         /// The key to set
@@ -189,7 +189,28 @@ pub enum ColumnAction {
     },
 }
 
-#[derive(Debug, Clone, PartialEq)]
+impl std::fmt::Debug for ColumnAction {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ColumnAction::NativeAction { .. } => write!(f, "NativeAction {{ action: <function> "),
+            ColumnAction::SetVariable { key, value } => {
+                write!(f, "SetVariable {{ key: {}, value: {:?} }}", key, value)
+            }
+            ColumnAction::IpcPerModuleFunction {
+                module,
+                function,
+                arguments,
+            } => write!(
+                f,
+                "IpcPerModuleFunction {{ module: {}, function: {}, arguments: {:?} }}",
+                module, function, arguments
+            ),
+            ColumnAction::Error { message } => write!(f, "Error {{ message: {} }}", message),
+        }
+    }
+}
+
+#[derive(Debug)]
 pub struct Column {
     /// The ID of the column
     pub id: &'static str,
@@ -219,6 +240,12 @@ pub struct Column {
 
     /// Default pre-execute checks to fallback to if the operation specific ones are not set
     pub default_pre_checks: Vec<ColumnAction>,
+}
+
+impl PartialEq for Column {
+    fn eq(&self, other: &Self) -> bool {
+        self.id == other.id
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -251,7 +278,7 @@ pub enum OperationType {
     Delete,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, PartialEq)]
 pub struct ConfigOption {
     /// The ID of the option
     pub id: &'static str,

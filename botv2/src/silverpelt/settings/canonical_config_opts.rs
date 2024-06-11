@@ -127,104 +127,6 @@ impl From<super::config_opts::ColumnSuggestion> for CanonicalColumnSuggestion {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub enum CanonicalColumnAction {
-    /// Adds a column/row to the state map
-    CollectColumnToMap {
-        /// The table to use
-        table: String,
-
-        /// The column to fetch
-        column: String,
-
-        /// The key to store the row under
-        key: String,
-
-        /// Whether to fetch all or only one rows
-        fetch_all: bool,
-    },
-    /// Executes a lua script, the *last* result will be stored in result
-    ///
-    /// Note that the lua script must return true or false
-    ExecLuaScript {
-        script: String,
-        on_success: Vec<CanonicalColumnAction>,
-        on_failure: Vec<CanonicalColumnAction>,
-    },
-    SetVariable {
-        /// The key to set
-        key: String,
-
-        /// The value to set
-        value: serde_json::Value,
-    },
-    IpcPerModuleFunction {
-        /// The module to use
-        module: String,
-
-        /// The function to execute
-        function: String,
-
-        /// The arguments to pass to the function
-        ///
-        /// In syntax: {key_on_function} -> {key_on_map}
-        arguments: indexmap::IndexMap<String, String>,
-    },
-    /// Return an error thus failing the configuration view/create/update/delete
-    Error {
-        /// The error message to return, {key_on_map} can be used here in the message
-        message: String,
-    },
-}
-
-impl From<super::config_opts::ColumnAction> for CanonicalColumnAction {
-    fn from(column_action: super::config_opts::ColumnAction) -> Self {
-        match column_action {
-            super::config_opts::ColumnAction::CollectColumnToMap {
-                table,
-                column,
-                key,
-                fetch_all,
-            } => CanonicalColumnAction::CollectColumnToMap {
-                table: table.to_string(),
-                column: column.to_string(),
-                key: key.to_string(),
-                fetch_all,
-            },
-            super::config_opts::ColumnAction::ExecLuaScript {
-                script,
-                on_success,
-                on_failure,
-            } => CanonicalColumnAction::ExecLuaScript {
-                script: script.to_string(),
-                on_success: on_success.into_iter().map(|c| c.into()).collect(),
-                on_failure: on_failure.into_iter().map(|c| c.into()).collect(),
-            },
-            super::config_opts::ColumnAction::SetVariable { key, value } => {
-                CanonicalColumnAction::SetVariable {
-                    key: key.to_string(),
-                    value,
-                }
-            }
-            super::config_opts::ColumnAction::IpcPerModuleFunction {
-                module,
-                function,
-                arguments,
-            } => CanonicalColumnAction::IpcPerModuleFunction {
-                module: module.to_string(),
-                function: function.to_string(),
-                arguments: arguments
-                    .into_iter()
-                    .map(|(k, v)| (k.to_string(), v.to_string()))
-                    .collect(),
-            },
-            super::config_opts::ColumnAction::Error { message } => CanonicalColumnAction::Error {
-                message: message.to_string(),
-            },
-        }
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct CanonicalColumn {
     /// The ID of the column
     pub id: String,
@@ -248,12 +150,6 @@ pub struct CanonicalColumn {
     ///
     /// Only applies to create and update
     pub readonly: indexmap::IndexMap<CanonicalOperationType, bool>,
-
-    /// Pre-execute checks
-    pub pre_checks: indexmap::IndexMap<CanonicalOperationType, Vec<CanonicalColumnAction>>,
-
-    /// Default pre-execute checks to fallback to if the operation specific ones are not set
-    pub default_pre_checks: Vec<CanonicalColumnAction>,
 }
 
 impl From<super::config_opts::Column> for CanonicalColumn {
@@ -269,16 +165,6 @@ impl From<super::config_opts::Column> for CanonicalColumn {
                 .readonly
                 .into_iter()
                 .map(|(k, v)| (k.into(), v))
-                .collect(),
-            pre_checks: column
-                .pre_checks
-                .into_iter()
-                .map(|(k, v)| (k.into(), v.into_iter().map(|c| c.into()).collect()))
-                .collect(),
-            default_pre_checks: column
-                .default_pre_checks
-                .into_iter()
-                .map(|c| c.into())
                 .collect(),
         }
     }

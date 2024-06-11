@@ -38,7 +38,6 @@ regex = "1"
 bitflags = "2"
 extract_map = { version = "0.1", features = ["serde", "iter_mut"] }
 rusty-s3 = "0.5"
-mlua = { version = "0.9", features = ["lua54", "send", "vendored", "serialize"] }
 
 # Module: inspector
 plsfix = "0.1.7"

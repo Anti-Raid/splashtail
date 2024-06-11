@@ -1,7 +1,9 @@
+use futures_util::FutureExt;
 use crate::silverpelt::settings::config_opts::{
     Column, ColumnAction, ColumnSuggestion, ColumnType, InnerColumnType, ConfigOption, OperationSpecific,
     OperationType
 };
+use crate::silverpelt::value::Value;
 
 pub(crate) fn sink() -> ConfigOption {
     ConfigOption {
@@ -25,20 +27,23 @@ pub(crate) fn sink() -> ConfigOption {
                 readonly: indexmap::indexmap! {},
                 pre_checks: indexmap::indexmap! {
                     OperationType::Create => vec![
-                        ColumnAction::CollectColumnToMap { 
-                            table: "auditlogs__sinks", 
-                            column: "COUNT(*)", 
-                            key: "ids", 
-                            fetch_all: true 
-                        },
-                        ColumnAction::ExecLuaScript { 
-                            script: "return #ids < 10",
-                            on_success: vec![],
-                            on_failure: vec![
-                                ColumnAction::Error { 
-                                    message: "You have reached the maximum number of sinks allowed. Please remove a sink before adding a new one." 
+                        ColumnAction::NativeAction {
+                            action: Box::new(|ctx, _state| async move {
+                                let ids = sqlx::query!(
+                                    "SELECT COUNT(*) FROM auditlogs__sinks WHERE guild_id = $1",
+                                    ctx.guild_id.to_string()
+                                )
+                                .fetch_one(&ctx.pool)
+                                .await?
+                                .count
+                                .unwrap_or(0);
+
+                                if ids >= 10 {
+                                    return Err("You have reached the maximum number of sinks allowed (10). Please remove a sink before adding a new one.".into());
                                 }
-                            ],
+
+                                Ok(())
+                            }.boxed())
                         },
                     ],
                 },
@@ -67,35 +72,44 @@ pub(crate) fn sink() -> ConfigOption {
                 readonly: indexmap::indexmap! {},
                 pre_checks: indexmap::indexmap! {
                     OperationType::View => vec![
-                        ColumnAction::ExecLuaScript {
-                            script: r#"return type == "discordhook""#,
-                            on_success: vec![
-                                // Use channel as the display type
-                                ColumnAction::SetVariable {
-                                    key: "__sink_displaytype",
-                                    value: serde_json::Value::String("channel".to_string())
+                        ColumnAction::NativeAction {
+                            action: Box::new(|_ctx, state| async move {
+                                if let Some(Value::String(v)) = state.state.get("type") {
+                                    if v == "channel" {
+                                        state.state.insert("__sink_displaytype".to_string(), Value::String("channel".to_string()));
+                                    }
                                 }
-                            ],
-                            on_failure: vec![]
+                                Ok(())
+                            }.boxed())
                         }
                     ]
                 },
                 default_pre_checks: vec![
-                    ColumnAction::ExecLuaScript {
-                        script: r#"
-                            if type == "discordhook" then
-                                return sink:startswith("https://discord.com/api/webhooks") or
-                                    sink:startswith("https://discord.com/api/v9/webhooks") or
-                                    sink:startswith("https://discord.com/api/v10/webhooks")
-                            else
-                                return true -- TODO: Check channels
-                            end
-                        "#,
-                        on_success: vec![],
-                        on_failure: vec![
-                            ColumnAction::Error { message: "Discord webhooks sinks must be a webhook." }
-                        ],
-                    }
+                    ColumnAction::NativeAction {
+                        action: Box::new(|_ctx, state| async move {
+                            let Some(Value::String(sink)) = state.state.get("sink") else {
+                                return Err("Sink must be set.".into());
+                            };
+
+                            let Some(Value::String(typ)) = state.state.get("type") else {
+                                return Err("Sink type must be set.".into());
+                            };
+
+                            if typ == "discordhook" {
+                                if !sink.starts_with("https://discord.com/api/webhooks") &&
+                                    !sink.starts_with("https://discord.com/api/v9/webhooks") &&
+                                    !sink.starts_with("https://discord.com/api/v10/webhooks") {
+                                    return Err("Discord webhooks sinks must be a webhook.".into());
+                                    }
+                            } else if typ == "channel" {
+                                sink.parse::<serenity::all::ChannelId>().map_err(|e| format!("Invalid channel ID: {}", e))?;
+                            } else {
+                                return Err("Invalid sink type.".into());
+                            }
+
+                            Ok(())
+                        }.boxed())
+                    },
                 ]
             },
             Column {
