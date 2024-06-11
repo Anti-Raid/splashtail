@@ -20,10 +20,11 @@ type CanonicalInnerColumnType struct {
 		MaxLength     *int     `json:"max_length,omitempty"`
 		AllowedValues []string `json:"allowed_values,omitempty"`
 	} `json:"String,omitempty"`
-	Timestamp *struct{} `json:"Timestamp,omitempty"`
-	Integer   *struct{} `json:"Integer,omitempty"`
-	Float     *struct{} `json:"Float,omitempty"`
-	BitFlag   *struct {
+	Timestamp   *struct{} `json:"Timestamp,omitempty"`
+	TimestampTz *struct{} `json:"TimestampTz,omitempty"`
+	Integer     *struct{} `json:"Integer,omitempty"`
+	Float       *struct{} `json:"Float,omitempty"`
+	BitFlag     *struct {
 		Values orderedmap.OrderedMap[string, int64] `json:"values"`
 	} `json:"BitFlag,omitempty"`
 	Boolean *struct{} `json:"Boolean,omitempty"`

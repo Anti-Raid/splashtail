@@ -12,7 +12,8 @@ Lots of changes to Settings API (which will be finished before moving on with th
 - _post_op_colset has been added to run post operation column sets (like ``last_updated``, ``updated_by`` etc)
 - settings_view has been split into the database bit which handles collecting the values, running everything and the poise display bit which displays the values
 - Poise display code now uses column names for the display key and tries to format the value for the user instead of simply using the column id and raw value. This should improve UX significantly for the user
-- Timestamp and Timestamptz have been added as native types to Value, when collecting from database using sqlx, these will be used instead of String, likewise, query binding against them has also been added
+- Timestamp and TimestampTz have been added as native types to Value, when collecting from database using sqlx, these will be used instead of String, likewise, query binding against them has also been added
+- Likewise, the canonical typings for config options now includes both Timestamp and TimestampTz as opposed to just Timestamp to avoid confusion and mixing incompatible types
 
 ## Animus Magic
 

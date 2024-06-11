@@ -58,6 +58,7 @@ pub enum InnerColumnType {
         allowed_values: Vec<&'static str>, // If empty, all values are allowed
     },
     Timestamp {},
+    TimestampTz {},
     Integer {},
     Float {},
     BitFlag {
@@ -95,6 +96,7 @@ impl std::fmt::Display for InnerColumnType {
                 Ok(())
             }
             InnerColumnType::Timestamp {} => write!(f, "Timestamp"),
+            InnerColumnType::TimestampTz {} => write!(f, "TimestampTz"),
             InnerColumnType::Integer {} => write!(f, "Integer"),
             InnerColumnType::Float {} => write!(f, "Float"),
             InnerColumnType::BitFlag { values } => {

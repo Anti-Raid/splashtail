@@ -110,7 +110,7 @@ pub(crate) fn sink() -> ConfigOption {
             Column {
                 id: "created_at",
                 name: "Created At",
-                column_type: ColumnType::new_scalar(InnerColumnType::Timestamp {}),
+                column_type: ColumnType::new_scalar(InnerColumnType::TimestampTz {}),
                 nullable: false,
                 unique: false,
                 suggestions: ColumnSuggestion::None {},

@@ -67,20 +67,18 @@ fn _validate_value(
                     }
                 }
                 InnerColumnType::Timestamp {} => {
-                    if !matches!(v, Value::String(_)) {
+                    if !matches!(v, Value::Timestamp(_)) {
                         return Err(format!("Expected Timestamp, got {}", v).into());
                     }
 
-                    if perform_schema_checks {
-                        let s = match v {
-                            Value::String(s) => s,
-                            _ => unreachable!(),
-                        };
-
-                        if chrono::NaiveDateTime::parse_from_str(s, "%Y-%m-%dT%X%.f%z").is_err() {
-                            return Err("Invalid timestamp format".into());
-                        }
+                    // No further checks needed
+                }
+                InnerColumnType::TimestampTz {} => {
+                    if !matches!(v, Value::TimestampTz(_)) {
+                        return Err(format!("Expected TimestampTz, got {}", v).into());
                     }
+
+                    // No further checks needed
                 }
                 InnerColumnType::Integer {} => {
                     if !matches!(v, Value::Integer(_)) {

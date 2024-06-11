@@ -38,6 +38,7 @@ pub enum CanonicalInnerColumnType {
         allowed_values: Vec<String>,
     },
     Timestamp {},
+    TimestampTz {},
     Integer {},
     Float {},
     BitFlag {
@@ -68,6 +69,9 @@ impl From<super::config_opts::InnerColumnType> for CanonicalInnerColumnType {
             },
             super::config_opts::InnerColumnType::Timestamp {} => {
                 CanonicalInnerColumnType::Timestamp {}
+            }
+            super::config_opts::InnerColumnType::TimestampTz {} => {
+                CanonicalInnerColumnType::TimestampTz {}
             }
             super::config_opts::InnerColumnType::Integer {} => CanonicalInnerColumnType::Integer {},
             super::config_opts::InnerColumnType::Float {} => CanonicalInnerColumnType::Float {},
