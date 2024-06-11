@@ -42,7 +42,7 @@ pub enum CanonicalInnerColumnType {
     Float {},
     BitFlag {
         /// The bit flag values
-        values: indexmap::IndexMap<String, u64>,
+        values: indexmap::IndexMap<String, i64>,
     },
     Boolean {},
     User {},
@@ -76,7 +76,7 @@ impl From<super::config_opts::InnerColumnType> for CanonicalInnerColumnType {
                     values: values
                         .into_iter()
                         .map(|(k, v)| (k.to_string(), v))
-                        .collect::<indexmap::IndexMap<String, u64>>(),
+                        .collect::<indexmap::IndexMap<String, i64>>(),
                 }
             }
             super::config_opts::InnerColumnType::Boolean {} => CanonicalInnerColumnType::Boolean {},
@@ -303,7 +303,7 @@ impl From<super::config_opts::OperationSpecific> for CanonicalOperationSpecific 
             columns_to_set: operation_specific
                 .columns_to_set
                 .iter()
-                .map(|(k, v)| (k.to_string(), v.to_string()))
+                .map(|(k, v)| (format!("{}.{}", k.0, k.1), v.to_string()))
                 .collect(),
         }
     }

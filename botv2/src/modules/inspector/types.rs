@@ -3,7 +3,7 @@ pub const MAX_MENTIONS: u32 = 10;
 
 bitflags::bitflags! {
     #[derive(PartialEq, Debug, Clone, Copy)]
-    pub struct TriggeredFlags: u32 {
+    pub struct TriggeredFlags: i32 {
         const NONE = 0;
         const ANTI_INVITE = 1 << 0;
         const ANTI_EVERYONE = 1 << 1;

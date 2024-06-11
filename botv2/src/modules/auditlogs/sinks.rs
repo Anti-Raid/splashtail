@@ -27,12 +27,12 @@ pub(crate) fn sink() -> ConfigOption {
                     OperationType::Create => vec![
                         ColumnAction::CollectColumnToMap { 
                             table: "auditlogs__sinks", 
-                            column: "id", 
+                            column: "COUNT(*)", 
                             key: "ids", 
                             fetch_all: true 
                         },
                         ColumnAction::ExecLuaScript { 
-                            script: "return #data.ids < 10",
+                            script: "return #ids < 10",
                             on_success: vec![],
                             on_failure: vec![
                                 ColumnAction::Error { 

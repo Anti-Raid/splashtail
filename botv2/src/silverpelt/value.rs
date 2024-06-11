@@ -6,42 +6,52 @@ use std::hash::{Hash, Hasher};
 /// Represents a supported value type
 pub enum Value {
     /// A uuid value
-    /// 
+    ///
     /// Safe for animus magic toggles: NO
     Uuid(sqlx::types::Uuid),
 
     /// A string value
-    /// 
+    ///
     /// Safe for animus magic toggles: YES
     String(String),
 
+    /// A timestamp value
+    ///
+    /// Safe for animus magic toggles: NO
+    Timestamp(chrono::NaiveDateTime),
+
+    /// A timestamp value with timezone
+    ///
+    /// Safe for animus magic toggles: NO
+    TimestampTz(chrono::DateTime<chrono::Utc>),
+
     /// An integer value
-    /// 
+    ///
     /// Safe for animus magic toggles: PARTIAL (ensure both Integer and Float are handled)
     Integer(i64),
 
     /// A float value
-    /// 
+    ///
     /// Safe for animus magic toggles: PARTIAL (ensure both Integer and Float are handled)
     Float(f64),
 
     /// A boolean value
-    /// 
+    ///
     /// Safe for animus magic toggles: YES
     Boolean(bool),
 
     /// A list of values
-    /// 
+    ///
     /// Safe for animus magic toggles: YES
     List(Vec<Value>),
 
     /// A (indexmap) of values
-    /// 
+    ///
     /// Safe for animus magic toggles: YES
     Map(indexmap::IndexMap<String, Value>),
 
     /// None
-    /// 
+    ///
     /// Safe for animus magic toggles: YES
     None,
 }
@@ -51,6 +61,8 @@ impl Hash for Value {
         match self {
             Value::Uuid(u) => u.hash(state),
             Value::String(s) => s.hash(state),
+            Value::Timestamp(t) => t.hash(state),
+            Value::TimestampTz(t) => t.hash(state),
             Value::Integer(i) => i.hash(state),
             Value::Float(f) => f.to_bits().hash(state),
             Value::Boolean(b) => b.hash(state),
@@ -73,6 +85,8 @@ impl Value {
         match self {
             Value::Uuid(u) => serde_json::Value::String(u.to_string()),
             Value::String(s) => serde_json::Value::String(s.clone()),
+            Value::Timestamp(t) => serde_json::Value::String(t.to_string()),
+            Value::TimestampTz(t) => serde_json::Value::String(t.to_string()),
             Value::Integer(i) => serde_json::Value::Number(serde_json::Number::from(*i)),
             Value::Float(f) => serde_json::Value::Number(
                 serde_json::Number::from_f64(*f).unwrap_or(serde_json::Number::from(0)),
@@ -171,7 +185,7 @@ impl Value {
                     else {
                         return Ok(Value::None);
                     };
-                    Ok(Value::String(v.to_string()))
+                    Ok(Value::Timestamp(v))
                 }
                 "timestamptz" => {
                     let Some(v) = row
@@ -179,7 +193,7 @@ impl Value {
                     else {
                         return Ok(Value::None);
                     };
-                    Ok(Value::String(v.to_string()))
+                    Ok(Value::TimestampTz(v))
                 }
                 _ => Err("Unsupported type".into()),
             },
@@ -247,7 +261,7 @@ impl Value {
                         let mut m: Vec<Value> = Vec::new();
 
                         for i in v {
-                            m.push(Value::String(i.to_string()));
+                            m.push(Value::Timestamp(i));
                         }
 
                         Ok(Value::List(m))
@@ -264,7 +278,7 @@ impl Value {
                         let mut m: Vec<Value> = Vec::new();
 
                         for i in v {
-                            m.push(Value::String(i.to_string()));
+                            m.push(Value::TimestampTz(i));
                         }
 
                         Ok(Value::List(m))
@@ -282,6 +296,8 @@ impl std::fmt::Display for Value {
         match self {
             Value::Uuid(u) => write!(f, "{}", u),
             Value::String(s) => write!(f, "{}", s),
+            Value::Timestamp(t) => write!(f, "{}", t),
+            Value::TimestampTz(t) => write!(f, "{}", t),
             Value::Integer(i) => write!(f, "{}", i),
             Value::Float(fl) => write!(f, "{}", fl),
             Value::Boolean(b) => write!(f, "{}", b),

@@ -1,10 +1,8 @@
 use super::config_opts::{ColumnType, ConfigOption, InnerColumnType, OperationType};
 use super::state::State;
 use crate::silverpelt::value::Value;
-use futures_util::StreamExt;
-use std::time::Duration;
 
-/// Validates the value against the schema's column type
+/// Validates the value against the schema's column type handling schema checks if `perform_schema_checks` is true
 #[allow(dead_code)]
 fn _validate_value(
     v: &Value,
@@ -49,21 +47,17 @@ fn _validate_value(
 
                         if let Some(min) = min_length {
                             if s.len() < *min {
-                                return Err(format!(
-                                    "String is too short, min length is {}",
-                                    min
-                                )
-                                .into());
+                                return Err(
+                                    format!("String is too short, min length is {}", min).into()
+                                );
                             }
                         }
 
                         if let Some(max) = max_length {
                             if s.len() > *max {
-                                return Err(format!(
-                                    "String is too long, max length is {}",
-                                    max
-                                )
-                                .into());
+                                return Err(
+                                    format!("String is too long, max length is {}", max).into()
+                                );
                             }
                         }
 
@@ -83,9 +77,7 @@ fn _validate_value(
                             _ => unreachable!(),
                         };
 
-                        if chrono::NaiveDateTime::parse_from_str(s, "%Y-%m-%d %H:%M:%S")
-                            .is_err()
-                        {
+                        if chrono::NaiveDateTime::parse_from_str(s, "%Y-%m-%dT%X%.f%z").is_err() {
                             return Err("Invalid timestamp format".into());
                         }
                     }
@@ -131,9 +123,7 @@ fn _validate_value(
                 }
                 InnerColumnType::Channel {} => {
                     if !matches!(v, Value::String(_)) {
-                        return Err(
-                            format!("Expected a channel id (string), got {}", v).into()
-                        );
+                        return Err(format!("Expected a channel id (string), got {}", v).into());
                     }
 
                     if perform_schema_checks {
@@ -167,9 +157,7 @@ fn _validate_value(
                 }
                 InnerColumnType::Emoji {} => {
                     if !matches!(v, Value::String(_)) {
-                        return Err(
-                            format!("Expected an emoji id (string), got {}", v).into()
-                        );
+                        return Err(format!("Expected an emoji id (string), got {}", v).into());
                     }
 
                     if perform_schema_checks {
@@ -186,9 +174,7 @@ fn _validate_value(
                 }
                 InnerColumnType::Message {} => {
                     if !matches!(v, Value::String(_)) {
-                        return Err(
-                            format!("Expected a message id (string), got {}", v).into()
-                        );
+                        return Err(format!("Expected a message id (string), got {}", v).into());
                     }
 
                     if perform_schema_checks {
@@ -252,16 +238,30 @@ fn _validate_value(
     Ok(())
 }
 
-fn _getcols(setting: &ConfigOption) -> Vec<String> {
+/// Returns the column ids for the given operation given the config option (setting) and the operation type
+///
+/// This also handles operation specific data as well
+fn _getcols(setting: &ConfigOption, op: OperationType) -> Vec<String> {
     let mut cols = vec![];
 
-    for col in &setting.columns {
-        cols.push(col.id.to_string());
-    }
+    if let Some(op_specific) = setting.operations.get(&op) {
+        let mut cols = Vec::new();
 
-    cols
+        for col in &op_specific.column_ids {
+            cols.push(col.to_string());
+        }
+
+        cols
+    } else {
+        for col in &setting.columns {
+            cols.push(col.id.to_string());
+        }
+
+        cols
+    }
 }
 
+/// Parses a row, handling its actions and adding the converted/created silverpelt Value to the state
 async fn _parse_row(
     setting: &ConfigOption,
     row: &sqlx::postgres::PgRow,
@@ -288,63 +288,183 @@ async fn _parse_row(
     Ok(())
 }
 
-fn _create_reply<'a>(
-    setting: &ConfigOption,
-    values: &'a [State],
-    index: usize,
-) -> poise::CreateReply<'a> {
-    fn create_action_row<'a>(index: usize, total: usize) -> serenity::all::CreateActionRow<'a> {
-        serenity::all::CreateActionRow::Buttons(vec![
-            serenity::all::CreateButton::new("previous")
-                .style(serenity::all::ButtonStyle::Primary)
-                .label("Previous")
-                .disabled(index == 0),
-            serenity::all::CreateButton::new("next")
-                .style(serenity::all::ButtonStyle::Primary)
-                .label("Next")
-                .disabled(index >= total - 1),
-            serenity::all::CreateButton::new("first")
-                .style(serenity::all::ButtonStyle::Primary)
-                .label("First")
-                .disabled(false),
-            serenity::all::CreateButton::new("close")
-                .style(serenity::all::ButtonStyle::Danger)
-                .label("Close")
-                .disabled(false),
-        ])
+/// Binds a value to a query
+///
+/// Note that Maps are binded as JSONs
+fn _query_bind_value(
+    query: sqlx::query::Query<'_, sqlx::Postgres, sqlx::postgres::PgArguments>,
+    value: Value,
+) -> sqlx::query::Query<'_, sqlx::Postgres, sqlx::postgres::PgArguments> {
+    match value {
+        Value::Uuid(value) => query.bind(value),
+        Value::String(value) => query.bind(value),
+        Value::Timestamp(value) => query.bind(value),
+        Value::TimestampTz(value) => query.bind(value),
+        Value::Integer(value) => query.bind(value),
+        Value::Float(value) => query.bind(value),
+        Value::Boolean(value) => query.bind(value),
+        Value::List(values) => {
+            // Get the type of the first element
+            let first = values.first();
+
+            if let Some(first) = first {
+                // This is hacky and long but sqlx doesn't support binding lists
+                //
+                // Loop over all values to make a Vec<T> then bind that
+                match first {
+                    Value::Uuid(_) => {
+                        let mut vec = Vec::new();
+
+                        for value in values {
+                            if let Value::Uuid(value) = value {
+                                vec.push(value);
+                            }
+                        }
+
+                        query.bind(vec)
+                    }
+                    Value::String(_) => {
+                        let mut vec = Vec::new();
+
+                        for value in values {
+                            if let Value::String(value) = value {
+                                vec.push(value);
+                            }
+                        }
+
+                        query.bind(vec)
+                    }
+                    Value::Timestamp(_) => {
+                        let mut vec = Vec::new();
+
+                        for value in values {
+                            if let Value::Timestamp(value) = value {
+                                vec.push(value);
+                            }
+                        }
+
+                        query.bind(vec)
+                    }
+                    Value::TimestampTz(_) => {
+                        let mut vec = Vec::new();
+
+                        for value in values {
+                            if let Value::TimestampTz(value) = value {
+                                vec.push(value);
+                            }
+                        }
+
+                        query.bind(vec)
+                    }
+                    Value::Integer(_) => {
+                        let mut vec = Vec::new();
+
+                        for value in values {
+                            if let Value::Integer(value) = value {
+                                vec.push(value);
+                            }
+                        }
+
+                        query.bind(vec)
+                    }
+                    Value::Float(_) => {
+                        let mut vec = Vec::new();
+
+                        for value in values {
+                            if let Value::Float(value) = value {
+                                vec.push(value);
+                            }
+                        }
+
+                        query.bind(vec)
+                    }
+                    Value::Boolean(_) => {
+                        let mut vec = Vec::new();
+
+                        for value in values {
+                            if let Value::Boolean(value) = value {
+                                vec.push(value);
+                            }
+                        }
+
+                        query.bind(vec)
+                    }
+                    // In all other cases (list/map)
+                    Value::Map(_) => {
+                        let mut vec = Vec::new();
+
+                        for value in values {
+                            vec.push(value.to_json());
+                        }
+
+                        query.bind(vec)
+                    }
+                    // TODO: Improve this, right now, we fallback to string
+                    Value::List(_) => {
+                        let mut vec = Vec::new();
+
+                        for value in values {
+                            vec.push(value.to_json());
+                        }
+
+                        query.bind(vec)
+                    }
+                    Value::None => {
+                        let vec: Vec<String> = Vec::new();
+                        query.bind(vec)
+                    }
+                }
+            } else {
+                let vec: Vec<String> = Vec::new();
+                query.bind(vec)
+            }
+        }
+        Value::Map(_) => query.bind(value.to_json()),
+        Value::None => query.bind(None::<String>),
     }
-
-    let mut embed = serenity::all::CreateEmbed::default();
-
-    embed = embed.title(format!(
-        "{} ({} of {})",
-        setting.name,
-        index + 1,
-        values.len()
-    ));
-
-    for (key, value) in values[index].state.iter() {
-        embed = embed.field(key, value.to_string(), true);
-    }
-
-    poise::CreateReply::new()
-        .embed(embed)
-        .components(vec![create_action_row(index, values.len())])
 }
 
-// Common settings viewer for poise, sends an embed, all that stuff
-pub async fn settings_viewer(
-    ctx: &crate::Context<'_>,
+async fn _post_op_colset(
     setting: &ConfigOption,
+    state: &mut State,
+    pool: &sqlx::PgPool,
+    guild_id: serenity::all::GuildId,
+    op: OperationType,
 ) -> Result<(), crate::Error> {
-    let Some(guild_id) = ctx.guild_id() else {
-        return Err("This command must be run in a server".into());
+    let Some(op_specific) = setting.operations.get(&op) else {
+        return Ok(()); // No operation specific data
     };
 
-    let cols = _getcols(setting);
+    state
+        .state
+        .insert("now".to_string(), Value::TimestampTz(chrono::Utc::now()));
 
-    let data = ctx.data();
-    let serenity_ctx = ctx.serenity_context();
+    for ((table_name, column_name), value) in op_specific.columns_to_set.iter() {
+        let value = state.template_to_string(value);
+
+        let sql_stmt = format!(
+            "UPDATE {} SET {} = $1 WHERE {} = $2",
+            table_name, column_name, setting.guild_id
+        );
+
+        let query = sqlx::query(sql_stmt.as_str());
+
+        let query = _query_bind_value(query, value);
+
+        query.bind(guild_id.to_string()).execute(pool).await?;
+    }
+
+    Ok(())
+}
+
+pub async fn settings_view(
+    setting: &ConfigOption,
+    ctx: &serenity::all::Context,
+    pool: &sqlx::PgPool,
+    guild_id: serenity::all::GuildId,
+    author: serenity::all::UserId,
+) -> Result<Vec<State>, crate::Error> {
+    let cols = _getcols(setting, OperationType::View);
 
     let row = sqlx::query(
         format!(
@@ -356,69 +476,26 @@ pub async fn settings_viewer(
         .as_str(),
     )
     .bind(guild_id.to_string())
-    .fetch_all(&data.pool)
+    .fetch_all(pool)
     .await?;
 
     if row.is_empty() {
-        return Err(format!(
-            "Whoa there! There seems to be no {}",
-            setting.name.to_lowercase()
-        )
-        .into());
+        return Ok(Vec::new());
     }
 
     let mut values: Vec<State> = Vec::new();
 
     for row in row {
         let mut state = State::new();
-        _parse_row(setting, &row, &mut state, serenity_ctx).await?;
+
+        state
+            .state
+            .insert("user_id".to_string(), Value::String(author.to_string()));
+
+        _parse_row(setting, &row, &mut state, ctx).await?;
+        _post_op_colset(setting, &mut state, pool, guild_id, OperationType::View).await?;
         values.push(state);
     }
 
-    let mut index = 0;
-
-    let reply = _create_reply(setting, &values, index);
-
-    let msg = ctx.send(reply).await?.into_message().await?;
-
-    let collector = msg
-        .await_component_interactions(ctx.serenity_context().shard.clone())
-        .author_id(ctx.author().id)
-        .timeout(Duration::from_secs(180));
-
-    let mut collect_stream = collector.stream();
-
-    while let Some(item) = collect_stream.next().await {
-        let item_id = item.data.custom_id.as_str();
-
-        match item_id {
-            "previous" => {
-                index = index.saturating_sub(1);
-            }
-            "next" => {
-                index = usize::min(index + 1, values.len() - 1);
-            }
-            "first" => {
-                index = 0;
-            }
-            "close" => {
-                item.defer(&serenity_ctx.http).await?;
-                item.delete_response(&serenity_ctx.http).await?;
-                break;
-            }
-            _ => {}
-        }
-
-        item.defer(&serenity_ctx.http).await?;
-
-        let reply = _create_reply(setting, &values, index);
-
-        item.edit_response(
-            &serenity_ctx.http,
-            reply.to_slash_initial_response_edit(serenity::all::EditInteractionResponse::default()),
-        )
-        .await?;
-    }
-
-    Ok(())
+    Ok(values)
 }

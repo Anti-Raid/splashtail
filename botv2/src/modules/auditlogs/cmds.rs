@@ -15,7 +15,7 @@ pub async fn auditlogs(_ctx: Context<'_>) -> Result<(), Error> {
 
 #[poise::command(prefix_command, slash_command, user_cooldown = 1)]
 pub async fn list_sinks(ctx: Context<'_>) -> Result<(), Error> {
-    crate::silverpelt::settings::cfg::settings_viewer(&ctx, &super::sinks::sink()).await
+    crate::silverpelt::settings::poise::settings_viewer(&ctx, &super::sinks::sink()).await
 }
 
 #[poise::command(prefix_command, slash_command, user_cooldown = 1)]

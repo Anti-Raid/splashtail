@@ -1,3 +1,7 @@
+/// Common state variables:
+///
+/// - {user_id} => the user id of the user running the operation
+
 #[derive(Debug, Clone, PartialEq)]
 #[allow(dead_code)]
 pub enum ColumnType {
@@ -58,7 +62,7 @@ pub enum InnerColumnType {
     Float {},
     BitFlag {
         /// The bit flag values
-        values: indexmap::IndexMap<&'static str, u64>,
+        values: indexmap::IndexMap<&'static str, i64>,
     },
     Boolean {},
     User {},
@@ -216,13 +220,10 @@ pub struct OperationSpecific {
     /// Any columns to set. For example, a last_updated column should be set on update
     ///
     /// Variables:
-    /// - {user_id} => the user id of the user running the operation
     /// - {now} => the current timestamp
     ///
-    /// Note: only applies to create, update and delete
-    ///
-    /// Key should be of form `table_name.column_name` and value should be the value to set
-    pub columns_to_set: indexmap::IndexMap<&'static str, &'static str>,
+    /// Key should be of form (`table_name`, `column_name`) and value should be the value to set
+    pub columns_to_set: indexmap::IndexMap<(&'static str, &'static str), &'static str>,
 }
 
 #[derive(Debug, Clone, PartialEq, Hash, Eq)]

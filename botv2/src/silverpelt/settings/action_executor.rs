@@ -122,14 +122,18 @@ pub async fn execute_actions(
                 }
             }
             ColumnAction::Error { message } => {
-                return Err(state.template_to_string(message).into());
+                return Err(state.template_to_string(message).to_string().into());
             }
             ColumnAction::ExecLuaScript {
                 script,
                 on_success,
                 on_failure,
             } => {
-                let script = state.template_to_string(script);
+                // Load the script, if template, ensure its a string, otherwise fallback to the script itself
+                let script = match state.template_to_string(script) {
+                    Value::String(s) => s,
+                    _ => script.to_string(),
+                };
 
                 let res = {
                     let vm = _getluavm();
