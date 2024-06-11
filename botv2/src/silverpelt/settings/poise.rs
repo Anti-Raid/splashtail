@@ -25,6 +25,7 @@ pub async fn settings_viewer(
             match v.as_str() {
                 "channel" => return format!("<#{}>", value),
                 "role" => return format!("<@&{}>", value),
+                "user" => return format!("<@{}>", value),
                 _ => {}
             }
         }
@@ -33,6 +34,7 @@ pub async fn settings_viewer(
             ColumnType::Scalar { column_type } => match column_type {
                 InnerColumnType::Channel {} => format!("<#{}>", value),
                 InnerColumnType::Role {} => format!("<@&{}>", value),
+                InnerColumnType::User {} => format!("<@{}>", value),
                 InnerColumnType::BitFlag { values } => {
                     let v = match value {
                         Value::Integer(v) => *v,
