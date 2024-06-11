@@ -462,6 +462,7 @@ fn _getcols(setting: &ConfigOption) -> Vec<String> {
 fn _query_bind_value(
     query: sqlx::query::Query<'_, sqlx::Postgres, sqlx::postgres::PgArguments>,
     value: Value,
+    column_type_hint: Option<ColumnType>,
 ) -> sqlx::query::Query<'_, sqlx::Postgres, sqlx::postgres::PgArguments> {
     match value {
         Value::Uuid(value) => query.bind(value),
@@ -588,7 +589,49 @@ fn _query_bind_value(
             }
         }
         Value::Map(_) => query.bind(value.to_json()),
-        Value::None => query.bind(None::<String>),
+        Value::None => match column_type_hint {
+            Some(ColumnType::Scalar {
+                column_type: column_type_hint,
+            }) => match column_type_hint {
+                InnerColumnType::Uuid {} => query.bind(None::<sqlx::types::uuid::Uuid>),
+                InnerColumnType::String { .. } => query.bind(None::<String>),
+                InnerColumnType::Timestamp {} => query.bind(None::<chrono::NaiveDateTime>),
+                InnerColumnType::TimestampTz {} => {
+                    query.bind(None::<chrono::DateTime<chrono::Utc>>)
+                }
+                InnerColumnType::Integer {} => query.bind(None::<i64>),
+                InnerColumnType::Float {} => query.bind(None::<f64>),
+                InnerColumnType::BitFlag { .. } => query.bind(None::<i64>),
+                InnerColumnType::Boolean {} => query.bind(None::<bool>),
+                InnerColumnType::User {} => query.bind(None::<String>),
+                InnerColumnType::Channel {} => query.bind(None::<String>),
+                InnerColumnType::Role {} => query.bind(None::<String>),
+                InnerColumnType::Emoji {} => query.bind(None::<String>),
+                InnerColumnType::Message {} => query.bind(None::<String>),
+                InnerColumnType::Json {} => query.bind(None::<serde_json::Value>),
+            },
+            Some(ColumnType::Array {
+                inner: column_type_hint,
+            }) => match column_type_hint {
+                InnerColumnType::Uuid {} => query.bind(None::<Vec<sqlx::types::uuid::Uuid>>),
+                InnerColumnType::String { .. } => query.bind(None::<Vec<String>>),
+                InnerColumnType::Timestamp {} => query.bind(None::<Vec<chrono::NaiveDateTime>>),
+                InnerColumnType::TimestampTz {} => {
+                    query.bind(None::<Vec<chrono::DateTime<chrono::Utc>>>)
+                }
+                InnerColumnType::Integer {} => query.bind(None::<Vec<i64>>),
+                InnerColumnType::Float {} => query.bind(None::<Vec<f64>>),
+                InnerColumnType::BitFlag { .. } => query.bind(None::<Vec<i64>>),
+                InnerColumnType::Boolean {} => query.bind(None::<Vec<bool>>),
+                InnerColumnType::User {} => query.bind(None::<Vec<String>>),
+                InnerColumnType::Channel {} => query.bind(None::<Vec<String>>),
+                InnerColumnType::Role {} => query.bind(None::<Vec<String>>),
+                InnerColumnType::Emoji {} => query.bind(None::<Vec<String>>),
+                InnerColumnType::Message {} => query.bind(None::<Vec<String>>),
+                InnerColumnType::Json {} => query.bind(None::<Vec<serde_json::Value>>),
+            },
+            None => query.bind(None::<String>),
+        },
     }
 }
 
@@ -691,7 +734,7 @@ pub async fn settings_view(
                 let mut query = sqlx::query(sql_stmt.as_str());
 
                 for value in values {
-                    query = _query_bind_value(query, value);
+                    query = _query_bind_value(query, value, None);
                 }
 
                 query
@@ -805,7 +848,7 @@ pub async fn settings_create(
 
                 let mut query = sqlx::query(sql_stmt.as_str()).bind(guild_id.to_string());
 
-                query = _query_bind_value(query, v.clone());
+                query = _query_bind_value(query, v.clone(), None);
 
                 let row = query
                     .fetch_all(pool)
@@ -885,7 +928,11 @@ pub async fn settings_create(
             continue;
         }
 
-        query = _query_bind_value(query, value.clone());
+        // Get column type from schema for db query hinting
+        // TODO: Optimize this bit
+        let column = setting.columns.iter().find(|c| c.id == col).unwrap();
+
+        query = _query_bind_value(query, value.clone(), Some(column.column_type.clone()));
     }
 
     // Insert table_colsets
@@ -895,7 +942,7 @@ pub async fn settings_create(
         if let Some(table_colsets) = table_colsets {
             for (column, value) in table_colsets.iter() {
                 let value = state.template_to_string(author, guild_id, value);
-                query = _query_bind_value(query, value.clone());
+                query = _query_bind_value(query, value.clone(), None);
 
                 // For auditing/state checking purposes, add to state as __{tablename}_{columnname}_postop
                 state.state.insert(
@@ -954,7 +1001,7 @@ pub async fn settings_create(
             let mut query = sqlx::query(sql_stmt.as_str());
 
             for value in values {
-                query = _query_bind_value(query, value);
+                query = _query_bind_value(query, value, None);
             }
 
             query
