@@ -47,38 +47,14 @@ type CanonicalColumnSuggestion struct {
 	None *struct{} `json:",omitempty"`
 }
 
-type CanonicalColumnAction struct {
-	CollectColumnToMap *struct {
-		Table    string `json:"table"`
-		Column   string `json:"column"`
-		Key      string `json:"key"`
-		FetchAll bool   `json:"fetch_all"`
-	} `json:"CollectColumnToMap,omitempty"`
-	ExecLuaScript *struct {
-		Script    string                  `json:"script"`
-		OnSuccess []CanonicalColumnAction `json:"on_success,omitempty"`
-		OnFailure []CanonicalColumnAction `json:"on_failure,omitempty"`
-	} `json:"ExecLuaScript,omitempty"`
-	IpcPerModuleFunction *struct {
-		Module    string            `json:"module"`
-		Function  string            `json:"function"`
-		Arguments map[string]string `json:"arguments"`
-	} `json:"IpcPerModuleFunction,omitempty"`
-	Error *struct {
-		Message string `json:"message"`
-	} `json:"Error,omitempty"`
-}
-
 type CanonicalColumn struct {
-	ID               string                                                                 `json:"id"`
-	Name             string                                                                 `json:"name"`
-	ColumnType       CanonicalColumnType                                                    `json:"column_type"`
-	Nullable         bool                                                                   `json:"nullable"`
-	Suggestions      CanonicalColumnSuggestion                                              `json:"suggestions"`
-	Unique           bool                                                                   `json:"unique"`
-	Readonly         orderedmap.OrderedMap[CanonicalOperationType, bool]                    `json:"readonly"`
-	PreChecks        orderedmap.OrderedMap[CanonicalOperationType, []CanonicalColumnAction] `json:"pre_checks"`
-	DefaultPreChecks []CanonicalColumnAction                                                `json:"default_pre_checks"`
+	ID          string                                              `json:"id"`
+	Name        string                                              `json:"name"`
+	ColumnType  CanonicalColumnType                                 `json:"column_type"`
+	Nullable    bool                                                `json:"nullable"`
+	Suggestions CanonicalColumnSuggestion                           `json:"suggestions"`
+	Unique      bool                                                `json:"unique"`
+	Readonly    orderedmap.OrderedMap[CanonicalOperationType, bool] `json:"readonly"`
 }
 
 type CanonicalOperationSpecific struct {

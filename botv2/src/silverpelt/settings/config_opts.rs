@@ -141,6 +141,7 @@ pub enum ColumnSuggestion {
     None {},
 }
 
+#[allow(dead_code)]
 pub struct NativeActionContext {
     pub author: serenity::all::UserId,
     pub guild_id: serenity::all::GuildId,
