@@ -717,7 +717,7 @@ pub async fn settings_view(
                     let value = state.template_to_string(author, guild_id, value);
                     values.push(value.clone());
 
-                    if table_name.to_string() == setting.table.to_string() {
+                    if *table_name == setting.table {
                         // Add directly to state
                         state.state.insert(column.to_string(), value);
                     } else {
