@@ -929,7 +929,6 @@ pub async fn settings_create(
         }
 
         // Get column type from schema for db query hinting, this is the only real place (other than update) where we need to hint the db
-        // TODO: Optimize this bit
         let column = setting.columns.iter().find(|c| c.id == col).unwrap();
 
         query = _query_bind_value(query, value.clone(), Some(column.column_type.clone()));
