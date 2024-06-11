@@ -146,10 +146,16 @@ pub struct CanonicalColumn {
     /// Whether or not the column is unique
     pub unique: bool,
 
-    /// The read-only status of each operation
+    /// For which operations should the field be ignored for (essentially, read only)
     ///
-    /// Only applies to create and update
-    pub readonly: indexmap::IndexMap<CanonicalOperationType, bool>,
+    /// Note that checks for this column will still be applied (use an empty array in pre_checks to disable checks)
+    ///
+    /// Semantics:
+    /// View => The column is removed from the list of columns sent to the consumer. The key is set to its current value when executing the actions
+    /// Create => The column is not handled on the client however actions are still executed. The key itself is set to None when executing the actions
+    /// Update => The column is not handled on the client however actions are still executed. The key itself is set to None when executing the actions
+    /// Delete => The column is not handled on the client however actions are still executed. The key itself is set to None when executing the actions
+    pub ignored_for: Vec<CanonicalOperationType>,
 }
 
 impl From<super::config_opts::Column> for CanonicalColumn {
@@ -161,11 +167,7 @@ impl From<super::config_opts::Column> for CanonicalColumn {
             nullable: column.nullable,
             suggestions: column.suggestions.into(),
             unique: column.unique,
-            readonly: column
-                .readonly
-                .into_iter()
-                .map(|(k, v)| (k.into(), v))
-                .collect(),
+            ignored_for: column.ignored_for.into_iter().map(|o| o.into()).collect(),
         }
     }
 }
@@ -175,38 +177,28 @@ pub struct CanonicalOperationSpecific {
     /// The corresponding command for ACL purposes
     pub corresponding_command: String,
 
-    /// Which column ids should be usable for this operation
-    ///
-    /// E.g, create does not need to show created_at or id while view should
-    ///
-    /// If empty, all columns are usable
-    pub column_ids: Vec<String>,
-
     /// Any columns to set. For example, a last_updated column should be set on update
     ///
     /// Variables:
-    /// - {user_id} => the user id of the user running the operation
     /// - {now} => the current timestamp
-    ///
-    /// Note: only applies to create, update and delete
-    ///
-    /// Key should be of form `table_name.column_name` and value should be the value to set
-    pub columns_to_set: indexmap::IndexMap<String, String>,
+    pub columns_to_set: indexmap::IndexMap<String, indexmap::IndexMap<String, String>>,
 }
 
 impl From<super::config_opts::OperationSpecific> for CanonicalOperationSpecific {
     fn from(operation_specific: super::config_opts::OperationSpecific) -> Self {
         Self {
             corresponding_command: operation_specific.corresponding_command.to_string(),
-            column_ids: operation_specific
-                .column_ids
-                .iter()
-                .map(|c| c.to_string())
-                .collect(),
             columns_to_set: operation_specific
                 .columns_to_set
-                .iter()
-                .map(|(k, v)| (format!("{}.{}", k.0, k.1), v.to_string()))
+                .into_iter()
+                .map(|(k, v)| {
+                    (
+                        k.to_string(),
+                        v.into_iter()
+                            .map(|(k, v)| (k.to_string(), v.to_string()))
+                            .collect(),
+                    )
+                })
                 .collect(),
         }
     }

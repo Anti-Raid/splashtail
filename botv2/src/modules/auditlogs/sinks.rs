@@ -24,7 +24,7 @@ pub(crate) fn sink() -> ConfigOption {
                     table_name: "auditlogs__sinks", 
                     column_name: "id"
                 },
-                readonly: indexmap::indexmap! {},
+                ignored_for: vec![OperationType::Create],
                 pre_checks: indexmap::indexmap! {
                     OperationType::Create => vec![
                         ColumnAction::NativeAction {
@@ -56,9 +56,7 @@ pub(crate) fn sink() -> ConfigOption {
                 nullable: false,
                 unique: false,
                 suggestions: ColumnSuggestion::Static { suggestions: vec!["channel", "discordhook"] },
-                readonly: indexmap::indexmap! {
-                    OperationType::Update => true,
-                },
+                ignored_for: vec![OperationType::Update],
                 pre_checks: indexmap::indexmap! {},
                 default_pre_checks: vec![],
             },
@@ -69,7 +67,7 @@ pub(crate) fn sink() -> ConfigOption {
                 nullable: false,
                 unique: false,
                 suggestions: ColumnSuggestion::None {},
-                readonly: indexmap::indexmap! {},
+                ignored_for: vec![],
                 pre_checks: indexmap::indexmap! {
                     OperationType::View => vec![
                         ColumnAction::NativeAction {
@@ -96,11 +94,9 @@ pub(crate) fn sink() -> ConfigOption {
                             };
 
                             if typ == "discordhook" {
-                                if !sink.starts_with("https://discord.com/api/webhooks") &&
-                                    !sink.starts_with("https://discord.com/api/v9/webhooks") &&
-                                    !sink.starts_with("https://discord.com/api/v10/webhooks") {
+                                if serenity::utils::parse_webhook(&sink.parse()?).is_none() {
                                     return Err("Discord webhooks sinks must be a webhook.".into());
-                                    }
+                                }
                             } else if typ == "channel" {
                                 sink.parse::<serenity::all::ChannelId>().map_err(|e| format!("Invalid channel ID: {}", e))?;
                             } else {
@@ -119,7 +115,7 @@ pub(crate) fn sink() -> ConfigOption {
                 nullable: true,
                 unique: false,
                 suggestions: ColumnSuggestion::Static { suggestions: gwevent::core::event_list().to_vec() },
-                readonly: indexmap::indexmap! {},
+                ignored_for: vec![],
                 pre_checks: indexmap::indexmap! {
                     OperationType::View => vec![]
                 },
@@ -139,11 +135,8 @@ pub(crate) fn sink() -> ConfigOption {
                 column_type: ColumnType::new_scalar(InnerColumnType::TimestampTz {}),
                 nullable: false,
                 unique: false,
+                ignored_for: vec![OperationType::Create, OperationType::Update],
                 suggestions: ColumnSuggestion::None {},
-                readonly: indexmap::indexmap! {
-                    OperationType::Create => true,
-                    OperationType::Update => true,
-                },
                 pre_checks: indexmap::indexmap! {},
                 default_pre_checks: vec![]
             },
@@ -151,13 +144,21 @@ pub(crate) fn sink() -> ConfigOption {
                 id: "created_by",
                 name: "Created By",
                 column_type: ColumnType::new_scalar(InnerColumnType::User {}),
+                ignored_for: vec![OperationType::Create, OperationType::Update],
                 nullable: false,
                 unique: false,
                 suggestions: ColumnSuggestion::None {},
-                readonly: indexmap::indexmap! {
-                    OperationType::Create => true,
-                    OperationType::Update => true,
-                },
+                pre_checks: indexmap::indexmap! {},
+                default_pre_checks: vec![]
+            },
+            Column {
+                id: "last_updated_at",
+                name: "Last Updated At",
+                column_type: ColumnType::new_scalar(InnerColumnType::User {}),
+                ignored_for: vec![OperationType::Create, OperationType::Update],
+                nullable: false,
+                unique: false,
+                suggestions: ColumnSuggestion::None {},
                 pre_checks: indexmap::indexmap! {},
                 default_pre_checks: vec![]
             },
@@ -165,13 +166,10 @@ pub(crate) fn sink() -> ConfigOption {
                 id: "last_updated_by",
                 name: "Last Updated By",
                 column_type: ColumnType::new_scalar(InnerColumnType::User {}),
+                ignored_for: vec![OperationType::Create, OperationType::Update],
                 nullable: false,
                 unique: false,
                 suggestions: ColumnSuggestion::None {},
-                readonly: indexmap::indexmap! {
-                    OperationType::Create => true,
-                    OperationType::Update => true,
-                },
                 pre_checks: indexmap::indexmap! {},
                 default_pre_checks: vec![]
             },
@@ -179,10 +177,10 @@ pub(crate) fn sink() -> ConfigOption {
                 id: "broken",
                 name: "Marked as Broken",
                 column_type: ColumnType::new_scalar(InnerColumnType::Boolean {}),
+                ignored_for: vec![],
                 nullable: false,
                 unique: false,
                 suggestions: ColumnSuggestion::None {},
-                readonly: indexmap::indexmap! {},
                 pre_checks: indexmap::indexmap! {},
                 default_pre_checks: vec![]
             },
@@ -190,16 +188,26 @@ pub(crate) fn sink() -> ConfigOption {
         operations: indexmap::indexmap! {
             OperationType::View => OperationSpecific {
                 corresponding_command: "list_sinks",
-                column_ids: vec![],
                 columns_to_set: indexmap::indexmap! {},
             },
             OperationType::Create => OperationSpecific {
                 corresponding_command: "add_sink",
-                column_ids: vec![],
                 columns_to_set: indexmap::indexmap! {
-                    ("auditlogs__sinks", "created_at") => "{__now}",
-                    ("auditlogs__sinks", "created_by") => "{__author}",
-                    ("auditlogs__sinks", "last_updated_by") => "{__author}",
+                    "auditlogs__sinks" => indexmap::indexmap! {
+                        "created_at" => "{__now}",
+                        "created_by" => "{__author}",
+                        "last_updated_at" => "{__now}",
+                        "last_updated_by" => "{__author}",
+                    },
+                },
+            },
+            OperationType::Update => OperationSpecific {
+                corresponding_command: "add_sink",
+                columns_to_set: indexmap::indexmap! {
+                    "auditlogs__sinks" => indexmap::indexmap! {
+                        "last_updated_at" => "{__now}",
+                        "last_updated_by" => "{__author}",
+                    },
                 },
             },
         }

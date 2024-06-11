@@ -2,6 +2,7 @@ use super::core::check_all_events;
 use crate::{Context, Error};
 use secrecy::ExposeSecret;
 use serenity::all::{Channel, ChannelType};
+use crate::silverpelt::value::Value;
 
 #[poise::command(
     prefix_command,
@@ -146,10 +147,6 @@ pub async fn add_discordhook(
         return Err("This command can only be used in a guild".into());
     };
 
-    if serenity::utils::parse_webhook(&webhook.parse()?).is_none() {
-        return Err("Invalid webhook URL".into());
-    }
-
     let events = if let Some(events) = events {
         let events: Vec<String> = events.split(',').map(|x| x.to_string()).collect();
         check_all_events(events.clone()).await?;
@@ -158,26 +155,12 @@ pub async fn add_discordhook(
         None
     };
 
-    let sink_id = sqlx::query!(
-        "INSERT INTO auditlogs__sinks (guild_id, type, sink, events, broken, created_by, last_updated_by) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id",
-        guild_id.to_string(),
-        "discord_webhook",
-        webhook,
-        events.as_deref(),
-        false,
-        ctx.author().id.to_string(),
-        ctx.author().id.to_string(),
-    )
-    .fetch_one(&ctx.data().pool)
-    .await?
-    .id
-    .to_string();
-
-    ctx.say(format!(
-        "Successfully added a new Discord webhook sink for audit logs with ID `{}`",
-        sink_id
-    ))
-    .await?;
+    crate::silverpelt::settings::poise::settings_creator(&ctx, &super::sinks::sink(), indexmap::indexmap! {
+        "type".to_string() => Value::String("webhook".to_string()),
+        "sink".to_string() => Value::String(webhook),
+        "events".to_string() => Value::List(events.iter().map(|x| Value::String(x.clone())).collect()),
+        "broken".to_string() => Value::Boolean(false),
+    }).await?;
 
     Ok(())
 }

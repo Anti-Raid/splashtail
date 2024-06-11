@@ -17,6 +17,7 @@ Lots of changes to Settings API (which will be finished before moving on with th
 - Variables have been improved. Instead of storing system variables like ``user_id`` and ``now`` in the state map, they are now special-cased and prefixed with ``__``. This both improves performance, reduces the chance of collision with user-defined variables and avoids display errors (e.g. with the poise layer)
 - For display purposes, the special case variable {[__column_id]_displaytype} can be set to allow displaying in a different format. This is useful in cases like sinks where the display type can be changed based on a condition
 - **Lua has been removed entirely in favor of native Rust async functions due to both performance and implementation reasons (extra dependencies, relying on ``mlua`` and `C` code). A microservice can be spun out if needed for performance/load reasons**
+- The readonly and column_ids options have been removed in favor of ``ignored_for``. Post operation column sets have been optimized as well.
 
 ## Animus Magic
 

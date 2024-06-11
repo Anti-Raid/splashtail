@@ -231,10 +231,16 @@ pub struct Column {
     /// Whether or not the column is unique
     pub unique: bool,
 
-    /// The read-only status of each operation
+    /// For which operations should the field be ignored for (essentially, read only)
     ///
-    /// Only applies to create and update
-    pub readonly: indexmap::IndexMap<OperationType, bool>,
+    /// Note that checks for this column will still be applied (use an empty array in pre_checks to disable checks)
+    ///
+    /// Semantics:
+    /// View => The column is removed from the list of columns sent to the consumer. The key is set to its current value when executing the actions
+    /// Create => The column is not handled on the client however actions are still executed. The key itself is set to None when executing the actions
+    /// Update => The column is not handled on the client however actions are still executed. The key itself is set to None when executing the actions
+    /// Delete => The column is not handled on the client however actions are still executed. The key itself is set to None when executing the actions
+    pub ignored_for: Vec<OperationType>,
 
     /// Pre-execute checks
     pub pre_checks: indexmap::IndexMap<OperationType, Vec<ColumnAction>>,
@@ -254,20 +260,12 @@ pub struct OperationSpecific {
     /// The corresponding command for ACL purposes
     pub corresponding_command: &'static str,
 
-    /// Which column ids should be usable for this operation
-    ///
-    /// E.g, create does not need to show created_at or id while view should
-    ///
-    /// If empty, all columns are usable
-    pub column_ids: Vec<&'static str>,
-
     /// Any columns to set. For example, a last_updated column should be set on update
     ///
     /// Variables:
     /// - {now} => the current timestamp
-    ///
-    /// Key should be of form (`table_name`, `column_name`) and value should be the value to set
-    pub columns_to_set: indexmap::IndexMap<(&'static str, &'static str), &'static str>,
+    pub columns_to_set:
+        indexmap::IndexMap<&'static str, indexmap::IndexMap<&'static str, &'static str>>,
 }
 
 #[derive(Debug, Clone, PartialEq, Hash, Eq)]

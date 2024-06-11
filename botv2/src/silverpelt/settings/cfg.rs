@@ -1,33 +1,115 @@
 use super::config_opts::{ColumnType, ConfigOption, InnerColumnType, OperationType};
 use super::state::State;
 use crate::silverpelt::value::Value;
+use serde::{Deserialize, Serialize};
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub enum SettingsError {
+    Generic {
+        message: String,
+        src: String,
+        typ: String,
+    },
+    SchemaTypeValidationError {
+        column: String,
+        expected_type: String,
+        got_type: String,
+    },
+    SchemaNullValueValidationError {
+        column: String,
+    },
+    SchemaCheckValidationError {
+        column: String,
+        check: String,
+        value: serde_json::Value,
+        accepted_range: String,
+    },
+    MissingField {
+        field: String,
+    },
+    RowExists {
+        primary_key: String,
+        count: usize,
+    },
+}
+
+impl std::fmt::Display for SettingsError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            SettingsError::Generic { message, src, typ } => {
+                write!(f, "{} from src `{}` of type `{}`", message, src, typ)
+            }
+            SettingsError::SchemaTypeValidationError {
+                column,
+                expected_type,
+                got_type,
+            } => write!(
+                f,
+                "Column `{}` expected type `{}`, got type `{}`",
+                column, expected_type, got_type
+            ),
+            SettingsError::SchemaNullValueValidationError { column } => {
+                write!(f, "Column `{}` is not nullable, yet value is null", column)
+            }
+            SettingsError::SchemaCheckValidationError {
+                column,
+                check,
+                value,
+                accepted_range,
+            } => {
+                write!(
+                    f,
+                    "Column `{}` failed check `{}` with value `{}`, accepted range: `{}`",
+                    column, check, value, accepted_range
+                )
+            }
+            SettingsError::MissingField { field } => write!(f, "Missing field `{}`", field),
+            SettingsError::RowExists { primary_key, count } => write!(
+                f,
+                "A row with the same primary key `{}` already exists. Count: {}",
+                primary_key, count
+            ),
+        }
+    }
+}
 
 /// Validates the value against the schema's column type handling schema checks if `perform_schema_checks` is true
 #[allow(dead_code)]
 fn _validate_value(
     v: &Value,
     column_type: &ColumnType,
+    column_id: &str,
     is_nullable: bool,
     perform_schema_checks: bool,
-) -> Result<(), crate::Error> {
+) -> Result<(), SettingsError> {
     match column_type {
         ColumnType::Scalar { column_type } => {
             if matches!(v, Value::None) {
                 if is_nullable {
                     return Ok(());
                 } else {
-                    return Err("Value is null, but column is not nullable".into());
+                    return Err(SettingsError::SchemaNullValueValidationError {
+                        column: column_id.to_string(),
+                    });
                 }
             }
 
             if matches!(v, Value::List(_)) {
-                return Err(format!("Expected scalar, got list {}", v).into());
+                return Err(SettingsError::SchemaTypeValidationError {
+                    column: column_id.to_string(),
+                    expected_type: "Scalar".to_string(),
+                    got_type: "Array".to_string(),
+                });
             }
 
             match column_type {
                 InnerColumnType::Uuid {} => {
                     if !matches!(v, Value::Uuid(_)) {
-                        return Err(format!("Expected Uuid, got {}", v).into());
+                        return Err(SettingsError::SchemaTypeValidationError {
+                            column: column_id.to_string(),
+                            expected_type: "Uuid".to_string(),
+                            got_type: format!("{:?}", v),
+                        });
                     }
                 }
                 InnerColumnType::String {
@@ -36,7 +118,11 @@ fn _validate_value(
                     allowed_values,
                 } => {
                     if !matches!(v, Value::String(_) | Value::Uuid(_)) {
-                        return Err(format!("Expected String, got {}", v).into());
+                        return Err(SettingsError::SchemaTypeValidationError {
+                            column: column_id.to_string(),
+                            expected_type: "String".to_string(),
+                            got_type: format!("{:?}", v),
+                        });
                     }
 
                     if perform_schema_checks {
@@ -47,64 +133,103 @@ fn _validate_value(
 
                         if let Some(min) = min_length {
                             if s.len() < *min {
-                                return Err(
-                                    format!("String is too short, min length is {}", min).into()
-                                );
+                                return Err(SettingsError::SchemaCheckValidationError {
+                                    column: column_id.to_string(),
+                                    check: "minlength".to_string(),
+                                    value: v.to_json(),
+                                    accepted_range: format!(">{}", min),
+                                });
                             }
                         }
 
                         if let Some(max) = max_length {
                             if s.len() > *max {
-                                return Err(
-                                    format!("String is too long, max length is {}", max).into()
-                                );
+                                return Err(SettingsError::SchemaCheckValidationError {
+                                    column: column_id.to_string(),
+                                    check: "maxlength".to_string(),
+                                    value: v.to_json(),
+                                    accepted_range: format!("<{}", max),
+                                });
                             }
                         }
 
                         if !allowed_values.is_empty() && !allowed_values.contains(&s.as_str()) {
-                            return Err("String is not in the allowed values".into());
+                            return Err(SettingsError::SchemaCheckValidationError {
+                                column: column_id.to_string(),
+                                check: "allowed_values".to_string(),
+                                value: v.to_json(),
+                                accepted_range: format!("{:?}", allowed_values),
+                            });
                         }
                     }
                 }
                 InnerColumnType::Timestamp {} => {
                     if !matches!(v, Value::Timestamp(_)) {
-                        return Err(format!("Expected Timestamp, got {}", v).into());
+                        return Err(SettingsError::SchemaTypeValidationError {
+                            column: column_id.to_string(),
+                            expected_type: "Timestamp".to_string(),
+                            got_type: format!("{:?}", v),
+                        });
                     }
 
                     // No further checks needed
                 }
                 InnerColumnType::TimestampTz {} => {
                     if !matches!(v, Value::TimestampTz(_)) {
-                        return Err(format!("Expected TimestampTz, got {}", v).into());
+                        return Err(SettingsError::SchemaTypeValidationError {
+                            column: column_id.to_string(),
+                            expected_type: "TimestampTz".to_string(),
+                            got_type: format!("{:?}", v),
+                        });
                     }
 
                     // No further checks needed
                 }
                 InnerColumnType::Integer {} => {
                     if !matches!(v, Value::Integer(_)) {
-                        return Err(format!("Expected Integer, got {}", v).into());
+                        return Err(SettingsError::SchemaTypeValidationError {
+                            column: column_id.to_string(),
+                            expected_type: "Integer".to_string(),
+                            got_type: format!("{:?}", v),
+                        });
                     }
                 }
                 InnerColumnType::Float {} => {
                     if !matches!(v, Value::Float(_)) {
-                        return Err(format!("Expected Float, got {}", v).into());
+                        return Err(SettingsError::SchemaTypeValidationError {
+                            column: column_id.to_string(),
+                            expected_type: "Float".to_string(),
+                            got_type: format!("{:?}", v),
+                        });
                     }
                 }
                 InnerColumnType::BitFlag { .. } => {
                     if !matches!(v, Value::Integer(_)) {
-                        return Err(format!("Expected Integer, got {}", v).into());
+                        return Err(SettingsError::SchemaTypeValidationError {
+                            column: column_id.to_string(),
+                            expected_type: "Integer".to_string(),
+                            got_type: format!("{:?}", v),
+                        });
                     }
 
                     // TODO: Add value parsing for bit flags
                 }
                 InnerColumnType::Boolean {} => {
                     if !matches!(v, Value::Boolean(_)) {
-                        return Err(format!("Expected Boolean, got {}", v).into());
+                        return Err(SettingsError::SchemaTypeValidationError {
+                            column: column_id.to_string(),
+                            expected_type: "Boolean".to_string(),
+                            got_type: format!("{:?}", v),
+                        });
                     }
                 }
                 InnerColumnType::User {} => {
                     if !matches!(v, Value::String(_)) {
-                        return Err(format!("Expected a user id (string), got {}", v).into());
+                        return Err(SettingsError::SchemaTypeValidationError {
+                            column: column_id.to_string(),
+                            expected_type: "User (string)".to_string(),
+                            got_type: format!("{:?}", v),
+                        });
                     }
 
                     if perform_schema_checks {
@@ -115,13 +240,22 @@ fn _validate_value(
 
                         // Try parsing to a UserId
                         if s.parse::<serenity::all::UserId>().is_err() {
-                            return Err("Invalid user id".into());
+                            return Err(SettingsError::SchemaCheckValidationError {
+                                column: column_id.to_string(),
+                                check: "snowflake_parse".to_string(),
+                                value: v.to_json(),
+                                accepted_range: "Valid user id".to_string(),
+                            });
                         }
                     }
                 }
                 InnerColumnType::Channel {} => {
                     if !matches!(v, Value::String(_)) {
-                        return Err(format!("Expected a channel id (string), got {}", v).into());
+                        return Err(SettingsError::SchemaTypeValidationError {
+                            column: column_id.to_string(),
+                            expected_type: "Channel (string)".to_string(),
+                            got_type: format!("{:?}", v),
+                        });
                     }
 
                     if perform_schema_checks {
@@ -132,13 +266,22 @@ fn _validate_value(
 
                         // Try parsing to a ChannelId
                         if s.parse::<serenity::all::ChannelId>().is_err() {
-                            return Err("Invalid channel id".into());
+                            return Err(SettingsError::SchemaCheckValidationError {
+                                column: column_id.to_string(),
+                                check: "snowflake_parse".to_string(),
+                                value: v.to_json(),
+                                accepted_range: "Valid channel id".to_string(),
+                            });
                         }
                     }
                 }
                 InnerColumnType::Role {} => {
                     if !matches!(v, Value::String(_)) {
-                        return Err(format!("Expected a role id (string), got {}", v).into());
+                        return Err(SettingsError::SchemaTypeValidationError {
+                            column: column_id.to_string(),
+                            expected_type: "Role (string)".to_string(),
+                            got_type: format!("{:?}", v),
+                        });
                     }
 
                     if perform_schema_checks {
@@ -149,13 +292,22 @@ fn _validate_value(
 
                         // Try parsing to a RoleId
                         if s.parse::<serenity::all::RoleId>().is_err() {
-                            return Err("Invalid role id".into());
+                            return Err(SettingsError::SchemaCheckValidationError {
+                                column: column_id.to_string(),
+                                check: "snowflake_parse".to_string(),
+                                value: v.to_json(),
+                                accepted_range: "Valid role id".to_string(),
+                            });
                         }
                     }
                 }
                 InnerColumnType::Emoji {} => {
                     if !matches!(v, Value::String(_)) {
-                        return Err(format!("Expected an emoji id (string), got {}", v).into());
+                        return Err(SettingsError::SchemaTypeValidationError {
+                            column: column_id.to_string(),
+                            expected_type: "Emoji (string)".to_string(),
+                            got_type: format!("{:?}", v),
+                        });
                     }
 
                     if perform_schema_checks {
@@ -166,13 +318,22 @@ fn _validate_value(
 
                         // Try parsing to an EmojiId
                         if s.parse::<serenity::all::EmojiId>().is_err() {
-                            return Err("Invalid emoji id".into());
+                            return Err(SettingsError::SchemaCheckValidationError {
+                                column: column_id.to_string(),
+                                check: "snowflake_parse".to_string(),
+                                value: v.to_json(),
+                                accepted_range: "Valid emoji id".to_string(),
+                            });
                         }
                     }
                 }
                 InnerColumnType::Message {} => {
                     if !matches!(v, Value::String(_)) {
-                        return Err(format!("Expected a message id (string), got {}", v).into());
+                        return Err(SettingsError::SchemaTypeValidationError {
+                            column: column_id.to_string(),
+                            expected_type: "Message (string)".to_string(),
+                            got_type: format!("{:?}", v),
+                        });
                     }
 
                     if perform_schema_checks {
@@ -188,22 +349,47 @@ fn _validate_value(
                         let parts: Vec<&str> = s.split('/').collect();
 
                         if parts.len() != 2 {
-                            return Err("Invalid message id".into());
+                            return Err(SettingsError::SchemaCheckValidationError {
+                                column: column_id.to_string(),
+                                check: "message_parse_plength".to_string(),
+                                value: v.to_json(),
+                                accepted_range:
+                                    "Valid message id in format <channel_id>/<message_id>"
+                                        .to_string(),
+                            });
                         }
 
                         // Try parsing to a ChannelId
                         if parts[0].parse::<serenity::all::ChannelId>().is_err() {
-                            return Err("Invalid channel id".into());
+                            return Err(SettingsError::SchemaCheckValidationError {
+                                column: column_id.to_string(),
+                                check: "message_parse_0".to_string(),
+                                value: v.to_json(),
+                                accepted_range:
+                                    "Valid message id in format <channel_id>/<message_id>"
+                                        .to_string(),
+                            });
                         }
 
                         if parts[1].parse::<serenity::all::MessageId>().is_err() {
-                            return Err("Invalid message id".into());
+                            return Err(SettingsError::SchemaCheckValidationError {
+                                column: column_id.to_string(),
+                                check: "message_parse_1".to_string(),
+                                value: v.to_json(),
+                                accepted_range:
+                                    "Valid message id in format <channel_id>/<message_id>"
+                                        .to_string(),
+                            });
                         }
                     }
                 }
                 InnerColumnType::Json {} => {
                     if !matches!(v, Value::Map(_)) {
-                        return Err(format!("Expected a map (json), got {}", v).into());
+                        return Err(SettingsError::SchemaTypeValidationError {
+                            column: column_id.to_string(),
+                            expected_type: "Json".to_string(),
+                            got_type: format!("{:?}", v),
+                        });
                     }
                 }
             }
@@ -213,12 +399,18 @@ fn _validate_value(
                 if is_nullable {
                     return Ok(());
                 } else {
-                    return Err("Value is null, but column is not nullable".into());
+                    return Err(SettingsError::SchemaNullValueValidationError {
+                        column: column_id.to_string(),
+                    });
                 }
             }
 
             if !matches!(v, Value::List(_)) {
-                return Err(format!("Expected list, got scalar {}", v).into());
+                return Err(SettingsError::SchemaTypeValidationError {
+                    column: column_id.to_string(),
+                    expected_type: "Array".to_string(),
+                    got_type: format!("{:?}", v),
+                });
             }
 
             let l = match v {
@@ -228,7 +420,13 @@ fn _validate_value(
 
             let column_type = ColumnType::new_scalar(inner.clone());
             for v in l {
-                _validate_value(v, &column_type, is_nullable, perform_schema_checks)?;
+                _validate_value(
+                    v,
+                    &column_type,
+                    column_id,
+                    is_nullable,
+                    perform_schema_checks,
+                )?;
             }
         }
     }
@@ -236,64 +434,26 @@ fn _validate_value(
     Ok(())
 }
 
-/// Returns the column ids for the given operation given the config option (setting) and the operation type
+/// Returns the column ids for the given operation given the config option (setting) and the operation type.
+/// The returned column ids are sorted based on the order of the columns in the setting.
 ///
-/// This also handles operation specific data as well
-fn _getcols(setting: &ConfigOption, op: OperationType) -> Vec<String> {
+/// Note that fields like ``ignored_for`` are not handled here as they are operation specific
+fn _getcols(setting: &ConfigOption) -> Vec<String> {
     let mut cols = vec![];
 
-    if let Some(op_specific) = setting.operations.get(&op) {
-        let mut cols = Vec::new();
-
-        if op_specific.column_ids.is_empty() {
-            // No column ids, use setting.columns
-            for col in &setting.columns {
-                cols.push(col.id.to_string());
-            }
-        } else {
-            for col in &op_specific.column_ids {
-                cols.push(col.to_string());
-            }
-        }
-
-        cols
-    } else {
-        for col in &setting.columns {
-            cols.push(col.id.to_string());
-        }
-
-        cols
-    }
-}
-
-/// Parses a row, handling its actions and adding the converted/created silverpelt Value to the state
-async fn _parse_row(
-    setting: &ConfigOption,
-    row: &sqlx::postgres::PgRow,
-    state: &mut State,
-    ctx: &serenity::all::Context,
-    author: serenity::all::UserId,
-    guild_id: serenity::all::GuildId,
-    op: OperationType,
-) -> Result<(), crate::Error> {
-    for (i, col) in setting.columns.iter().enumerate() {
-        // Fetch and validate the value itv
-        let val = Value::from_sqlx(row, i)?;
-        _validate_value(&val, &col.column_type, col.nullable, false)
-            .map_err(|e| format!("Error validating value for column {}: {}", col.id, e))?;
-
-        // Insert the value into the map
-        state.state.insert(col.id.to_string(), val);
-
-        let actions = col.pre_checks.get(&op).unwrap_or(&col.default_pre_checks);
-
-        crate::silverpelt::settings::action_executor::execute_actions(
-            state, actions, ctx, author, guild_id,
-        )
-        .await?;
+    for col in &setting.columns {
+        cols.push(col.id.to_string());
     }
 
-    Ok(())
+    // Sort the cols vec based on the setting.columns order
+    cols.sort_by(|a, b| {
+        let a = setting.columns.iter().position(|c| c.id == a);
+        let b = setting.columns.iter().position(|c| c.id == b);
+
+        a.cmp(&b)
+    });
+
+    cols
 }
 
 /// Binds a value to a query
@@ -432,44 +592,15 @@ fn _query_bind_value(
     }
 }
 
-async fn _post_op_colset(
-    setting: &ConfigOption,
-    state: &mut State,
-    pool: &sqlx::PgPool,
-    author: serenity::all::UserId,
-    guild_id: serenity::all::GuildId,
-    op: OperationType,
-) -> Result<(), crate::Error> {
-    let Some(op_specific) = setting.operations.get(&op) else {
-        return Ok(()); // No operation specific data
-    };
-
-    for ((table_name, column_name), value) in op_specific.columns_to_set.iter() {
-        let value = state.template_to_string(author, guild_id, value);
-
-        let sql_stmt = format!(
-            "UPDATE {} SET {} = $1 WHERE {} = $2",
-            table_name, column_name, setting.guild_id
-        );
-
-        let query = sqlx::query(sql_stmt.as_str());
-
-        let query = _query_bind_value(query, value);
-
-        query.bind(guild_id.to_string()).execute(pool).await?;
-    }
-
-    Ok(())
-}
-
+/// Settings API: View implementation
 pub async fn settings_view(
     setting: &ConfigOption,
     ctx: &serenity::all::Context,
     pool: &sqlx::PgPool,
     guild_id: serenity::all::GuildId,
     author: serenity::all::UserId,
-) -> Result<Vec<State>, crate::Error> {
-    let cols = _getcols(setting, OperationType::View);
+) -> Result<Vec<State>, SettingsError> {
+    let cols = _getcols(setting);
 
     let row = sqlx::query(
         format!(
@@ -482,7 +613,12 @@ pub async fn settings_view(
     )
     .bind(guild_id.to_string())
     .fetch_all(pool)
-    .await?;
+    .await
+    .map_err(|e| SettingsError::Generic {
+        message: e.to_string(),
+        src: "settings_view [query fetch_all]".to_string(),
+        typ: "internal".to_string(),
+    })?;
 
     if row.is_empty() {
         return Ok(Vec::new());
@@ -492,27 +628,307 @@ pub async fn settings_view(
 
     for row in row {
         let mut state = State::new();
-        _parse_row(
-            setting,
-            &row,
-            &mut state,
-            ctx,
-            author,
-            guild_id,
-            OperationType::View,
-        )
-        .await?;
-        _post_op_colset(
-            setting,
-            &mut state,
-            pool,
-            author,
-            guild_id,
-            OperationType::View,
-        )
-        .await?;
+
+        for (i, col) in setting.columns.iter().enumerate() {
+            // Fetch and validate the value
+            let val = Value::from_sqlx(&row, i).map_err(|e| SettingsError::Generic {
+                message: e.to_string(),
+                src: "_parse_row [Value::from_sqlx]".to_string(),
+                typ: "internal".to_string(),
+            })?;
+            _validate_value(&val, &col.column_type, col.id, col.nullable, false)?;
+
+            let actions = col
+                .pre_checks
+                .get(&OperationType::View)
+                .unwrap_or(&col.default_pre_checks);
+
+            // Insert the value into the map
+            state.state.insert(col.id.to_string(), val);
+
+            crate::silverpelt::settings::action_executor::execute_actions(
+                &mut state, actions, ctx, author, guild_id,
+            )
+            .await
+            .map_err(|e| SettingsError::Generic {
+                message: e.to_string(),
+                src: "_parse_row [execute_actions]".to_string(),
+                typ: "internal".to_string(),
+            })?;
+        }
+
+        // Post operation column set
+        //
+        // We optimize this to perform one query per table
+        if let Some(op_specific) = setting.operations.get(&OperationType::View) {
+            for (table_name, col_values) in op_specific.columns_to_set.iter() {
+                let mut set_stmt = "".to_string();
+                let mut values = Vec::new();
+                for (i, (column, value)) in col_values.iter().enumerate() {
+                    set_stmt.push_str(&format!("{} = ${}", column, i + 1));
+
+                    if i != col_values.len() - 1 {
+                        set_stmt.push(',');
+                    }
+
+                    let value = state.template_to_string(author, guild_id, value);
+                    values.push(value.clone());
+
+                    // For auditing/state checking purposes, add to state as __{tablename}_{columnname}_postop
+                    state
+                        .state
+                        .insert(format!("__{}_{}_postop", table_name, column), value);
+                }
+
+                let sql_stmt = format!(
+                    "UPDATE {} SET {} WHERE {} = ${}",
+                    table_name,
+                    set_stmt,
+                    setting.guild_id,
+                    cols.len() + 1
+                );
+
+                let mut query = sqlx::query(sql_stmt.as_str());
+
+                for value in values {
+                    query = _query_bind_value(query, value);
+                }
+
+                query
+                    .bind(guild_id.to_string())
+                    .execute(pool)
+                    .await
+                    .map_err(|e| SettingsError::Generic {
+                        message: e.to_string(),
+                        src: "_parse_row [query execute]".to_string(),
+                        typ: "internal".to_string(),
+                    })?;
+            }
+        }
+
+        // Remove ignored columns now that the actions have been executed +
+        for col in &setting.columns {
+            if col.ignored_for.contains(&OperationType::View) {
+                state.state.shift_remove(col.id);
+            }
+        }
+
         values.push(state);
     }
 
     Ok(values)
+}
+
+pub async fn settings_create(
+    setting: &ConfigOption,
+    ctx: &serenity::all::Context,
+    pool: &sqlx::PgPool,
+    guild_id: serenity::all::GuildId,
+    author: serenity::all::UserId,
+    fields: indexmap::IndexMap<String, Value>,
+) -> Result<State, SettingsError> {
+    let cols = _getcols(setting);
+
+    // Ensure all columns exist in fields, note that we can ignore extra fields so this one single loop is enough
+    let mut ignored_for = Vec::new();
+    let mut state: State = State::new();
+    for col in cols.iter() {
+        // Get the column from the setting
+        let Some(column) = setting.columns.iter().find(|c| c.id == col) else {
+            return Err(SettingsError::Generic {
+                message: format!("Column `{}` not found in setting", col),
+                src: "settings_create [column not found]".to_string(),
+                typ: "internal/backend".to_string(), // internal/backend as this is a clear backend error
+            });
+        };
+
+        // If the column is ignored for create, skip
+        if column.ignored_for.contains(&OperationType::Create) {
+            // Add to ignore_for and set null placeholder for actions
+            ignored_for.push(col.clone());
+            state.state.insert(col.to_string(), Value::None);
+        } else {
+            // Find value and validate it
+            let value = match fields.get(col) {
+                Some(val) => val.clone(),
+                None => {
+                    // Check if the column is nullable
+                    if !column.nullable {
+                        return Err(SettingsError::MissingField {
+                            field: col.to_string(),
+                        });
+                    }
+
+                    Value::None
+                }
+            };
+
+            _validate_value(
+                &value,
+                &column.column_type,
+                column.id,
+                column.nullable,
+                true,
+            )?;
+        }
+
+        // Execute actions
+        let actions = column
+            .pre_checks
+            .get(&OperationType::Create)
+            .unwrap_or(&column.default_pre_checks);
+
+        crate::silverpelt::settings::action_executor::execute_actions(
+            &mut state, actions, ctx, author, guild_id,
+        )
+        .await
+        .map_err(|e| SettingsError::Generic {
+            message: e.to_string(),
+            src: "_parse_row [execute_actions]".to_string(),
+            typ: "internal".to_string(),
+        })?;
+    }
+
+    // Ensure that a field with the same primary key doesn't exist
+    let row = sqlx::query(
+        format!(
+            "SELECT {} FROM {} WHERE {} = $1",
+            setting.primary_key, setting.table, setting.guild_id
+        )
+        .as_str(),
+    )
+    .bind(guild_id.to_string())
+    .fetch_all(pool)
+    .await
+    .map_err(|e| SettingsError::Generic {
+        message: e.to_string(),
+        src: "settings_create [query fetch_all]".to_string(),
+        typ: "internal".to_string(),
+    })?;
+
+    if !row.is_empty() {
+        return Err(SettingsError::RowExists {
+            primary_key: setting.primary_key.to_string(),
+            count: row.len(),
+        });
+    }
+
+    // Add table_colsets for our table to state as well, as the actual insert uses state as well, this should just work TM
+    //
+    // Note that we only add the columns for our own table here, the rest happen after the initial update
+    if let Some(op_specific) = setting.operations.get(&OperationType::Create) {
+        let table_colsets = op_specific.columns_to_set.get(&setting.table);
+
+        if let Some(table_colsets) = table_colsets {
+            for (column, value) in table_colsets.iter() {
+                state.state.insert(
+                    column.to_string(),
+                    state.template_to_string(author, guild_id, value),
+                );
+            }
+        }
+    }
+
+    // Create the row
+
+    // First create the $N's from the cols starting with 2 as 1 is the guild_id
+    let mut n_params = "".to_string();
+    let mut col_params = "".to_string();
+    for (i, (col, _)) in state.state.iter().enumerate() {
+        if ignored_for.contains(col) {
+            continue;
+        }
+
+        n_params.push_str(&format!("${}", i + 2));
+        col_params.push_str(col);
+
+        if i != cols.len() - 1 {
+            n_params.push(',');
+            col_params.push(',');
+        }
+    }
+
+    // Execute the SQL statement
+    let sql_stmt = format!(
+        "INSERT INTO {} ({}, {}) VALUES ($1, {})",
+        setting.table, setting.guild_id, col_params, n_params
+    );
+
+    let mut query = sqlx::query(sql_stmt.as_str());
+
+    // Bind the sql query arguments
+    query = query.bind(guild_id.to_string());
+
+    for (col, value) in state.state.iter() {
+        if ignored_for.contains(col) {
+            continue;
+        }
+
+        query = _query_bind_value(query, value.clone());
+    }
+
+    // Execute the query
+    query
+        .execute(pool)
+        .await
+        .map_err(|e| SettingsError::Generic {
+            message: e.to_string(),
+            src: "settings_create [query execute]".to_string(),
+            typ: "internal".to_string(),
+        })?;
+
+    // Post operation column set
+    //
+    // We optimize this to perform one query per table
+    if let Some(op_specific) = setting.operations.get(&OperationType::Create) {
+        for (table_name, col_values) in op_specific.columns_to_set.iter() {
+            if table_name == &setting.table {
+                continue; // Skip the table we just inserted into
+            }
+
+            let mut set_stmt = "".to_string();
+            let mut values = Vec::new();
+            for (i, (column, value)) in col_values.iter().enumerate() {
+                set_stmt.push_str(&format!("{} = ${}", column, i + 1));
+
+                if i != col_values.len() - 1 {
+                    set_stmt.push(',');
+                }
+
+                let value = state.template_to_string(author, guild_id, value);
+                values.push(value.clone());
+
+                // For auditing/state checking purposes, add to state as __{tablename}_{columnname}_postop
+                state
+                    .state
+                    .insert(format!("__{}_{}_postop", table_name, column), value);
+            }
+
+            let sql_stmt = format!(
+                "UPDATE {} SET {} WHERE {} = ${}",
+                table_name,
+                set_stmt,
+                setting.guild_id,
+                cols.len() + 1
+            );
+
+            let mut query = sqlx::query(sql_stmt.as_str());
+
+            for value in values {
+                query = _query_bind_value(query, value);
+            }
+
+            query
+                .bind(guild_id.to_string())
+                .execute(pool)
+                .await
+                .map_err(|e| SettingsError::Generic {
+                    message: e.to_string(),
+                    src: "_parse_row [query execute]".to_string(),
+                    typ: "internal".to_string(),
+                })?;
+        }
+    }
+
+    Ok(state)
 }
