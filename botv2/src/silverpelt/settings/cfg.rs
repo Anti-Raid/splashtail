@@ -934,7 +934,7 @@ pub async fn settings_create(
         query = _query_bind_value(query, value.clone(), Some(column.column_type.clone()));
     }
 
-    // Insert table_colsets
+    // Insert table_colsets seperately as we need to bypass ignored_for
     if let Some(op_specific) = setting.operations.get(&OperationType::Create) {
         let table_colsets = op_specific.columns_to_set.get(&setting.table);
 
