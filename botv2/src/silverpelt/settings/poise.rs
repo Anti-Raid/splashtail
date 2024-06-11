@@ -20,7 +20,7 @@ pub async fn settings_viewer(
     ) -> String {
         // Check for special formattings in the __column_id_displaytype variable
         if let Value::String(v) =
-            state.get_variable_value(author, guild_id, &format!("{}__displaytype", column_id))
+            state.get_variable_value(author, guild_id, &format!("__{}_displaytype", column_id))
         {
             match v.as_str() {
                 "channel" => return format!("<#{}>", value),

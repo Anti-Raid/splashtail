@@ -274,6 +274,7 @@ async fn _parse_row(
     ctx: &serenity::all::Context,
     author: serenity::all::UserId,
     guild_id: serenity::all::GuildId,
+    op: OperationType,
 ) -> Result<(), crate::Error> {
     for (i, col) in setting.columns.iter().enumerate() {
         // Fetch and validate the value itv
@@ -284,10 +285,7 @@ async fn _parse_row(
         // Insert the value into the map
         state.state.insert(col.id.to_string(), val);
 
-        let actions = col
-            .pre_checks
-            .get(&OperationType::View)
-            .unwrap_or(&col.default_pre_checks);
+        let actions = col.pre_checks.get(&op).unwrap_or(&col.default_pre_checks);
 
         crate::silverpelt::settings::action_executor::execute_actions(
             state, actions, ctx, author, guild_id,
@@ -498,7 +496,16 @@ pub async fn settings_view(
 
     for row in row {
         let mut state = State::new();
-        _parse_row(setting, &row, &mut state, ctx, author, guild_id).await?;
+        _parse_row(
+            setting,
+            &row,
+            &mut state,
+            ctx,
+            author,
+            guild_id,
+            OperationType::View,
+        )
+        .await?;
         _post_op_colset(
             setting,
             &mut state,
