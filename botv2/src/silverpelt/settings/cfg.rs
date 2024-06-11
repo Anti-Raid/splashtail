@@ -717,10 +717,15 @@ pub async fn settings_view(
                     let value = state.template_to_string(author, guild_id, value);
                     values.push(value.clone());
 
-                    // For auditing/state checking purposes, add to state as __{tablename}_{columnname}_postop
-                    state
-                        .state
-                        .insert(format!("__{}_{}_postop", table_name, column), value);
+                    if table_name.to_string() == setting.table.to_string() {
+                        // Add directly to state
+                        state.state.insert(column.to_string(), value);
+                    } else {
+                        // For auditing/state checking purposes, add to state as __{tablename}_{columnname}_postop
+                        state
+                            .state
+                            .insert(format!("__{}_{}_postop", table_name, column), value);
+                    }
                 }
 
                 let sql_stmt = format!(
@@ -912,11 +917,9 @@ pub async fn settings_create(
 
     // Execute the SQL statement
     let sql_stmt = format!(
-        "INSERT INTO {} ({},{}) VALUES ($1,{})",
-        setting.table, setting.guild_id, col_params, n_params
+        "INSERT INTO {} ({},{}) VALUES ($1,{}) RETURNING {}",
+        setting.table, setting.guild_id, col_params, n_params, setting.primary_key
     );
-
-    log::info!("SQL Statement: {}", sql_stmt);
 
     let mut query = sqlx::query(sql_stmt.as_str());
 
@@ -943,24 +946,31 @@ pub async fn settings_create(
                 let value = state.template_to_string(author, guild_id, value);
                 query = _query_bind_value(query, value.clone(), None);
 
-                // For auditing/state checking purposes, add to state as __{tablename}_{columnname}_postop
-                state.state.insert(
-                    format!("__{}_{}_postop", setting.table, column),
-                    value.clone(),
-                );
+                // We need to add these properly to state as they are on our table itself
+                state.state.insert(column.to_string(), value.clone());
             }
         }
     }
 
     // Execute the query
-    query
-        .execute(pool)
+    let pkey_row = query
+        .fetch_one(pool)
         .await
         .map_err(|e| SettingsError::Generic {
             message: e.to_string(),
             src: "settings_create [query execute]".to_string(),
             typ: "internal".to_string(),
         })?;
+
+    // Save pkey to state
+    state.state.insert(
+        setting.primary_key.to_string(),
+        Value::from_sqlx(&pkey_row, 0).map_err(|e| SettingsError::Generic {
+            message: e.to_string(),
+            src: "settings_create [Value::from_sqlx]".to_string(),
+            typ: "internal".to_string(),
+        })?,
+    );
 
     // Post operation column set
     //
