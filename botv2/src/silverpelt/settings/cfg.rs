@@ -826,28 +826,13 @@ pub async fn settings_create(
         }
     }
 
-    // Add table_colsets for our table to state as well, as the actual insert uses state as well, this should just work TM
-    //
-    // Note that we only add the columns for our own table here, the rest happen after the initial update
-    if let Some(op_specific) = setting.operations.get(&OperationType::Create) {
-        let table_colsets = op_specific.columns_to_set.get(&setting.table);
-
-        if let Some(table_colsets) = table_colsets {
-            for (column, value) in table_colsets.iter() {
-                state.state.insert(
-                    column.to_string(),
-                    state.template_to_string(author, guild_id, value),
-                );
-            }
-        }
-    }
-
     // Create the row
 
     // First create the $N's from the cols starting with 2 as 1 is the guild_id
     let mut n_params = "".to_string();
     let mut col_params = "".to_string();
-    for (i, (col, _)) in state.state.iter().enumerate() {
+    let mut i = 0;
+    for (col, _) in state.state.iter() {
         if ignored_for.contains(col) {
             continue;
         }
@@ -855,17 +840,40 @@ pub async fn settings_create(
         n_params.push_str(&format!("${}", i + 2));
         col_params.push_str(col);
 
-        if i != cols.len() - 1 {
-            n_params.push(',');
-            col_params.push(',');
+        n_params.push(',');
+        col_params.push(',');
+
+        i += 1;
+    }
+
+    // Insert table_colsets
+    if let Some(op_specific) = setting.operations.get(&OperationType::Create) {
+        let table_colsets = op_specific.columns_to_set.get(&setting.table);
+
+        if let Some(table_colsets) = table_colsets {
+            for (column, _) in table_colsets.iter() {
+                n_params.push_str(&format!(",${}", i + 2));
+                col_params.push_str(column);
+
+                n_params.push(',');
+                col_params.push(',');
+
+                i += 1;
+            }
         }
     }
 
+    // Remove the trailing comma
+    n_params.pop();
+    col_params.pop();
+
     // Execute the SQL statement
     let sql_stmt = format!(
-        "INSERT INTO {} ({}, {}) VALUES ($1, {})",
+        "INSERT INTO {} ({},{}) VALUES ($1,{})",
         setting.table, setting.guild_id, col_params, n_params
     );
+
+    log::info!("SQL Statement: {}", sql_stmt);
 
     let mut query = sqlx::query(sql_stmt.as_str());
 
@@ -878,6 +886,24 @@ pub async fn settings_create(
         }
 
         query = _query_bind_value(query, value.clone());
+    }
+
+    // Insert table_colsets
+    if let Some(op_specific) = setting.operations.get(&OperationType::Create) {
+        let table_colsets = op_specific.columns_to_set.get(&setting.table);
+
+        if let Some(table_colsets) = table_colsets {
+            for (column, value) in table_colsets.iter() {
+                let value = state.template_to_string(author, guild_id, value);
+                query = _query_bind_value(query, value.clone());
+
+                // For auditing/state checking purposes, add to state as __{tablename}_{columnname}_postop
+                state.state.insert(
+                    format!("__{}_{}_postop", setting.table, column),
+                    value.clone(),
+                );
+            }
+        }
     }
 
     // Execute the query
