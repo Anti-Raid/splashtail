@@ -247,8 +247,15 @@ fn _getcols(setting: &ConfigOption, op: OperationType) -> Vec<String> {
     if let Some(op_specific) = setting.operations.get(&op) {
         let mut cols = Vec::new();
 
-        for col in &op_specific.column_ids {
-            cols.push(col.to_string());
+        if op_specific.column_ids.is_empty() {
+            // No column ids, use setting.columns
+            for col in &setting.columns {
+                cols.push(col.id.to_string());
+            }
+        } else {
+            for col in &op_specific.column_ids {
+                cols.push(col.to_string());
+            }
         }
 
         cols
