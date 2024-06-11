@@ -37,12 +37,9 @@ pub async fn execute_actions(
 
                 for (key, value) in arguments {
                     let key = key.to_string();
-                    let value = value.to_string();
-                    let Some(state_value) = state.state.get(&value) else {
-                        return Err(format!("State variable {} not found", key).into());
-                    };
+                    let value = state.template_to_string(author, guild_id, value);
 
-                    args.insert(key, state_value.clone());
+                    args.insert(key, value);
                 }
 
                 toggle(&cache_http, &args).await?;
