@@ -54,7 +54,10 @@ pub async fn execute_actions(
                     format!(
                         "Error running IPC function: {} [args: {}]",
                         e,
-                        args.iter().map(|(k, v)| format!("{}: {}", k, v)).collect::<Vec<_>>().join(", ")
+                        args.iter()
+                            .map(|(k, v)| format!("{}: {:#?}", k, v))
+                            .collect::<Vec<_>>()
+                            .join(", ")
                     )
                 })?;
             }
