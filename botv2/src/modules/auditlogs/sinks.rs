@@ -43,7 +43,8 @@ pub(crate) fn sink() -> ConfigOption {
                                 }
 
                                 Ok(())
-                            }.boxed())
+                            }.boxed()),
+                            on_condition: None
                         },
                     ],
                 },
@@ -78,9 +79,10 @@ pub(crate) fn sink() -> ConfigOption {
                                     }
                                 }
                                 Ok(())
-                            }.boxed())
+                            }.boxed()),
+                            on_condition: None
                         }
-                    ]
+                    ],
                 },
                 default_pre_checks: vec![
                     ColumnAction::NativeAction {
@@ -104,7 +106,24 @@ pub(crate) fn sink() -> ConfigOption {
                             }
 
                             Ok(())
-                        }.boxed())
+                        }.boxed()),
+                        on_condition: None
+                    },
+                    // If a channel, execute the check_channel IPC function
+                    ColumnAction::IpcPerModuleFunction {
+                        module: "auditlogs",
+                        function: "check_channel",
+                        arguments: indexmap::indexmap! {
+                            "channel_id" => "{sink}",
+                            "guild_id" => "{__guild_id}"
+                        },
+                        on_condition: Some(|_acc, state| {
+                            let Some(Value::String(typ)) = state.state.get("type") else {
+                                return Err("Sink type must be set.".into());
+                            };
+
+                            Ok(typ == "channel")
+                        })
                     },
                 ]
             },
@@ -125,7 +144,8 @@ pub(crate) fn sink() -> ConfigOption {
                         function: "check_all_events",
                         arguments: indexmap::indexmap! {
                             "events" => "{events}"
-                        }
+                        },
+                        on_condition: None
                     }
                 ]
             },
@@ -193,21 +213,17 @@ pub(crate) fn sink() -> ConfigOption {
             OperationType::Create => OperationSpecific {
                 corresponding_command: "add_sink",
                 columns_to_set: indexmap::indexmap! {
-                    "auditlogs__sinks" => indexmap::indexmap! {
-                        "created_at" => "{__now}",
-                        "created_by" => "{__author}",
-                        "last_updated_at" => "{__now}",
-                        "last_updated_by" => "{__author}",
-                    },
+                    "created_at" => "{__now}",
+                    "created_by" => "{__author}",
+                    "last_updated_at" => "{__now}",
+                    "last_updated_by" => "{__author}",
                 },
             },
             OperationType::Update => OperationSpecific {
                 corresponding_command: "add_sink",
                 columns_to_set: indexmap::indexmap! {
-                    "auditlogs__sinks" => indexmap::indexmap! {
-                        "last_updated_at" => "{__now}",
-                        "last_updated_by" => "{__author}",
-                    },
+                    "last_updated_at" => "{__now}",
+                    "last_updated_by" => "{__author}",
                 },
             },
         }

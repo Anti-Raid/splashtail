@@ -1,6 +1,6 @@
 mod am_toggles;
+mod checks;
 mod cmds;
-mod core;
 pub mod events;
 mod sinks;
 

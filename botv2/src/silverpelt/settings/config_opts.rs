@@ -141,6 +141,8 @@ pub enum ColumnSuggestion {
     None {},
 }
 
+/// This is the context provided to all NativeAction's. Note that on_conditions have a slightly different structure
+/// as they are synchronous functions and thus cannot use certain fields
 #[allow(dead_code)]
 pub struct NativeActionContext {
     pub author: serenity::all::UserId,
@@ -158,11 +160,22 @@ pub type NativeActionFunc = Box<
 >;
 
 #[allow(dead_code)]
+pub struct ActionConditionContext {
+    pub author: serenity::all::UserId,
+    pub guild_id: serenity::all::GuildId,
+}
+
+pub type ActionCondition =
+    fn(ActionConditionContext, &super::state::State) -> Result<bool, crate::Error>;
+
+#[allow(dead_code)]
 pub enum ColumnAction {
     /// Run a rust (native) action
     NativeAction {
         /// The action to run
         action: NativeActionFunc,
+        /// Under what circumstance should the action be run
+        on_condition: Option<ActionCondition>,
     },
     SetVariable {
         /// The key to set
@@ -170,6 +183,9 @@ pub enum ColumnAction {
 
         /// The value to set
         value: serde_json::Value,
+
+        /// Under what circumstance should the action be run
+        on_condition: Option<ActionCondition>,
     },
     IpcPerModuleFunction {
         /// The module to use
@@ -182,31 +198,51 @@ pub enum ColumnAction {
         ///
         /// In syntax: {key_on_function} -> {key_on_map}
         arguments: indexmap::IndexMap<&'static str, &'static str>,
+
+        /// Under what circumstance should the action be run
+        on_condition: Option<ActionCondition>,
     },
     /// Return an error thus failing the configuration view/create/update/delete
     Error {
         /// The error message to return, {key_on_map} can be used here in the message
         message: &'static str,
+
+        /// Under what circumstance should the action be run
+        on_condition: Option<ActionCondition>,
     },
 }
 
 impl std::fmt::Debug for ColumnAction {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            ColumnAction::NativeAction { .. } => write!(f, "NativeAction {{ action: <function> "),
-            ColumnAction::SetVariable { key, value } => {
-                write!(f, "SetVariable {{ key: {}, value: {:?} }}", key, value)
+            ColumnAction::NativeAction { .. } => {
+                write!(f, "NativeAction {{ action: <function> ")
+            }
+            ColumnAction::SetVariable {
+                key,
+                value,
+                on_condition,
+            } => {
+                write!(
+                    f,
+                    "SetVariable {{ key: {}, value: {:?}, on_condition: {:?} }}",
+                    key, value, on_condition
+                )
             }
             ColumnAction::IpcPerModuleFunction {
                 module,
                 function,
                 arguments,
+                on_condition
             } => write!(
                 f,
-                "IpcPerModuleFunction {{ module: {}, function: {}, arguments: {:?} }}",
-                module, function, arguments
+                "IpcPerModuleFunction {{ module: {}, function: {}, arguments: {:?}, on_condition: {:?} }}",
+                module, function, arguments, on_condition
             ),
-            ColumnAction::Error { message } => write!(f, "Error {{ message: {} }}", message),
+            ColumnAction::Error {
+                message,
+                on_condition
+            } => write!(f, "Error {{ message: {}, on_condition: {:?} }}", message, on_condition),
         }
     }
 }
@@ -264,8 +300,13 @@ pub struct OperationSpecific {
     ///
     /// Variables:
     /// - {now} => the current timestamp
-    pub columns_to_set:
-        indexmap::IndexMap<&'static str, indexmap::IndexMap<&'static str, &'static str>>,
+    ///
+    /// Format: {column_name} => {value}
+    ///
+    /// Note: updating columns outside of the table itself
+    ///
+    /// In Create/Update, these columns are directly included in the create/update itself
+    pub columns_to_set: indexmap::IndexMap<&'static str, &'static str>,
 }
 
 #[derive(Debug, Clone, PartialEq, Hash, Eq)]

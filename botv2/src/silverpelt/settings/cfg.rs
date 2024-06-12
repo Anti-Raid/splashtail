@@ -700,40 +700,35 @@ pub async fn settings_view(
             })?;
         }
 
-        // Post operation column set
-        //
-        // We optimize this to perform one query per table
+        // Apply columns_to_set in operation specific data
         if let Some(op_specific) = setting.operations.get(&OperationType::View) {
-            for (table_name, col_values) in op_specific.columns_to_set.iter() {
+            // Only apply if there are columns to set
+            if !op_specific.columns_to_set.is_empty() {
                 let mut set_stmt = "".to_string();
                 let mut values = Vec::new();
-                for (i, (column, value)) in col_values.iter().enumerate() {
-                    set_stmt.push_str(&format!("{} = ${}", column, i + 1));
 
-                    if i != col_values.len() - 1 {
-                        set_stmt.push(',');
-                    }
+                let mut i = 0;
+                for (column, value) in op_specific.columns_to_set.iter() {
+                    set_stmt.push_str(&format!("{} = ${}, ", column, i + 1));
 
                     let value = state.template_to_string(author, guild_id, value);
                     values.push(value.clone());
 
-                    if *table_name == setting.table {
-                        // Add directly to state
-                        state.state.insert(column.to_string(), value);
-                    } else {
-                        // For auditing/state checking purposes, add to state as __{tablename}_{columnname}_postop
-                        state
-                            .state
-                            .insert(format!("__{}_{}_postop", table_name, column), value);
-                    }
+                    // Add directly to state
+                    state.state.insert(column.to_string(), value);
+
+                    i += 1;
                 }
+
+                // Remove the trailing comma
+                set_stmt.pop();
 
                 let sql_stmt = format!(
                     "UPDATE {} SET {} WHERE {} = ${}",
-                    table_name,
+                    setting.table,
                     set_stmt,
                     setting.guild_id,
-                    cols.len() + 1
+                    i + 1
                 );
 
                 let mut query = sqlx::query(sql_stmt.as_str());
@@ -754,7 +749,7 @@ pub async fn settings_view(
             }
         }
 
-        // Remove ignored columns now that the actions have been executed +
+        // Remove ignored columns now that the actions have been executed
         for col in &setting.columns {
             if col.ignored_for.contains(&OperationType::View) {
                 state.state.shift_remove(col.id);
@@ -778,7 +773,6 @@ pub async fn settings_create(
     let cols = _getcols(setting);
 
     // Ensure all columns exist in fields, note that we can ignore extra fields so this one single loop is enough
-    let mut ignored_for = Vec::new();
     let mut state: State = State::new();
     for col in cols.iter() {
         // Get the column from the setting
@@ -793,7 +787,6 @@ pub async fn settings_create(
         // If the column is ignored for create, skip
         if column.ignored_for.contains(&OperationType::Create) {
             // Add to ignore_for and set null placeholder for actions
-            ignored_for.push(col.clone());
             state.state.insert(col.to_string(), Value::None);
         } else {
             // Find value and validate it
@@ -874,41 +867,34 @@ pub async fn settings_create(
         }
     }
 
+    // Remove ignored columns now that the actions have been executed
+    for col in &setting.columns {
+        if col.ignored_for.contains(&OperationType::Create) {
+            state.state.shift_remove(col.id);
+        }
+    }
+
+    // Now insert all the columns_to_set into state
+    // As we have removed the ignored columns, we can just directly insert the columns_to_set into the state
+    // Insert columns_to_set seperately as we need to bypass ignored_for
+    if let Some(op_specific) = setting.operations.get(&OperationType::Create) {
+        for (column, value) in op_specific.columns_to_set.iter() {
+            let value = state.template_to_string(author, guild_id, value);
+            state.state.insert(column.to_string(), value);
+        }
+    }
+
     // Create the row
 
     // First create the $N's from the cols starting with 2 as 1 is the guild_id
     let mut n_params = "".to_string();
     let mut col_params = "".to_string();
-    let mut i = 0;
-    for (col, _) in state.state.iter() {
-        if ignored_for.contains(col) {
-            continue;
-        }
-
+    for (i, (col, _)) in state.state.iter().enumerate() {
         n_params.push_str(&format!("${}", i + 2));
         col_params.push_str(col);
 
         n_params.push(',');
         col_params.push(',');
-
-        i += 1;
-    }
-
-    // Insert table_colsets
-    if let Some(op_specific) = setting.operations.get(&OperationType::Create) {
-        let table_colsets = op_specific.columns_to_set.get(&setting.table);
-
-        if let Some(table_colsets) = table_colsets {
-            for (column, _) in table_colsets.iter() {
-                n_params.push_str(&format!("${}", i + 2));
-                col_params.push_str(column);
-
-                n_params.push(',');
-                col_params.push(',');
-
-                i += 1;
-            }
-        }
     }
 
     // Remove the trailing comma
@@ -927,29 +913,14 @@ pub async fn settings_create(
     query = query.bind(guild_id.to_string());
 
     for (col, value) in state.state.iter() {
-        if ignored_for.contains(col) {
-            continue;
-        }
-
         // Get column type from schema for db query hinting, this is the only real place (other than update) where we need to hint the db
-        let column = setting.columns.iter().find(|c| c.id == col).unwrap();
+        let column_type = setting
+            .columns
+            .iter()
+            .find(|c| c.id == col)
+            .map(|c| c.column_type.clone());
 
-        query = _query_bind_value(query, value.clone(), Some(column.column_type.clone()));
-    }
-
-    // Insert table_colsets seperately as we need to bypass ignored_for
-    if let Some(op_specific) = setting.operations.get(&OperationType::Create) {
-        let table_colsets = op_specific.columns_to_set.get(&setting.table);
-
-        if let Some(table_colsets) = table_colsets {
-            for (column, value) in table_colsets.iter() {
-                let value = state.template_to_string(author, guild_id, value);
-                query = _query_bind_value(query, value.clone(), None);
-
-                // We need to add these properly to state as they are on our table itself
-                state.state.insert(column.to_string(), value.clone());
-            }
-        }
+        query = _query_bind_value(query, value.clone(), column_type);
     }
 
     // Execute the query
@@ -971,59 +942,6 @@ pub async fn settings_create(
             typ: "internal".to_string(),
         })?,
     );
-
-    // Post operation column set
-    //
-    // We optimize this to perform one query per table
-    if let Some(op_specific) = setting.operations.get(&OperationType::Create) {
-        for (table_name, col_values) in op_specific.columns_to_set.iter() {
-            if table_name == &setting.table {
-                continue; // Skip the table we just inserted into
-            }
-
-            let mut set_stmt = "".to_string();
-            let mut values = Vec::new();
-            for (i, (column, value)) in col_values.iter().enumerate() {
-                set_stmt.push_str(&format!("{} = ${}", column, i + 1));
-
-                if i != col_values.len() - 1 {
-                    set_stmt.push(',');
-                }
-
-                let value = state.template_to_string(author, guild_id, value);
-                values.push(value.clone());
-
-                // For auditing/state checking purposes, add to state as __{tablename}_{columnname}_postop
-                state
-                    .state
-                    .insert(format!("__{}_{}_postop", table_name, column), value);
-            }
-
-            let sql_stmt = format!(
-                "UPDATE {} SET {} WHERE {} = ${}",
-                table_name,
-                set_stmt,
-                setting.guild_id,
-                cols.len() + 1
-            );
-
-            let mut query = sqlx::query(sql_stmt.as_str());
-
-            for value in values {
-                query = _query_bind_value(query, value, None);
-            }
-
-            query
-                .bind(guild_id.to_string())
-                .execute(pool)
-                .await
-                .map_err(|e| SettingsError::Generic {
-                    message: e.to_string(),
-                    src: "_parse_row [query execute]".to_string(),
-                    typ: "internal".to_string(),
-                })?;
-        }
-    }
 
     Ok(state)
 }

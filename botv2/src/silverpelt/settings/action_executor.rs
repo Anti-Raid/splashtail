@@ -1,4 +1,4 @@
-use super::config_opts::{ColumnAction, NativeActionContext};
+use super::config_opts::{ActionConditionContext, ColumnAction, NativeActionContext};
 use super::state::State;
 use crate::silverpelt::value::Value;
 use async_recursion::async_recursion;
@@ -20,7 +20,15 @@ pub async fn execute_actions(
                 module,
                 function,
                 arguments,
+                on_condition,
             } => {
+                if let Some(on_condition) = on_condition {
+                    let acc = ActionConditionContext { author, guild_id };
+                    if !(on_condition)(acc, state)? {
+                        continue;
+                    }
+                }
+
                 // Get the toggle
                 let toggle = crate::ipc::animus_magic::bot::dynamic::PERMODULE_FUNCTIONS
                     .get(&(module.to_string(), function.to_string()));
@@ -43,16 +51,40 @@ pub async fn execute_actions(
                 }
 
                 toggle(&cache_http, &args).await.map_err(|e| {
-                    format!("Error running IPC function: {} [args: {:#?}]", e, args)
+                    format!(
+                        "Error running IPC function: {} [args: {}]",
+                        e,
+                        args.iter().map(|(k, v)| format!("{}: {}", k, v)).collect::<Vec<_>>().join(", ")
+                    )
                 })?;
             }
-            ColumnAction::Error { message } => {
+            ColumnAction::Error {
+                message,
+                on_condition,
+            } => {
+                if let Some(on_condition) = on_condition {
+                    let acc = ActionConditionContext { author, guild_id };
+                    if !(on_condition)(acc, state)? {
+                        continue;
+                    }
+                }
+
                 return Err(state
                     .template_to_string(author, guild_id, message)
                     .to_string()
                     .into());
             }
-            ColumnAction::NativeAction { action } => {
+            ColumnAction::NativeAction {
+                action,
+                on_condition,
+            } => {
+                if let Some(on_condition) = on_condition {
+                    let acc = ActionConditionContext { author, guild_id };
+                    if !(on_condition)(acc, state)? {
+                        continue;
+                    }
+                }
+
                 let nac = NativeActionContext {
                     author,
                     guild_id,
@@ -60,7 +92,18 @@ pub async fn execute_actions(
                 };
                 action(nac, state).await?;
             }
-            ColumnAction::SetVariable { key, value } => {
+            ColumnAction::SetVariable {
+                key,
+                value,
+                on_condition,
+            } => {
+                if let Some(on_condition) = on_condition {
+                    let acc = ActionConditionContext { author, guild_id };
+                    if !(on_condition)(acc, state)? {
+                        continue;
+                    }
+                }
+
                 state.state.insert(key.to_string(), Value::from_json(value));
             }
         }

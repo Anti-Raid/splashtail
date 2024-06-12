@@ -181,7 +181,13 @@ pub struct CanonicalOperationSpecific {
     ///
     /// Variables:
     /// - {now} => the current timestamp
-    pub columns_to_set: indexmap::IndexMap<String, indexmap::IndexMap<String, String>>,
+    ///
+    /// Format: {column_name} => {value}
+    ///
+    /// Note: updating columns outside of the table itself
+    ///
+    /// In Create/Update, these columns are directly included in the create/update itself
+    pub columns_to_set: indexmap::IndexMap<String, String>,
 }
 
 impl From<super::config_opts::OperationSpecific> for CanonicalOperationSpecific {
@@ -191,14 +197,7 @@ impl From<super::config_opts::OperationSpecific> for CanonicalOperationSpecific 
             columns_to_set: operation_specific
                 .columns_to_set
                 .into_iter()
-                .map(|(k, v)| {
-                    (
-                        k.to_string(),
-                        v.into_iter()
-                            .map(|(k, v)| (k.to_string(), v.to_string()))
-                            .collect(),
-                    )
-                })
+                .map(|(k, v)| (k.to_string(), v.to_string()))
                 .collect(),
         }
     }

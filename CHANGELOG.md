@@ -1,3 +1,16 @@
+# Wednesday, June 12th 2024
+
+## Botv2
+
+### Internal changes 
+
+Lots of changes to Settings API (which will be finished before moving on with the rest of the bot to allow for easier testing and configuring of the bot)
+
+- ``columns_to_set`` no longer supports cross table column sets as this took way too much code and made the entire settings API a clunky and spaghetti code mess
+- Significant code improvements to the ``settings_view`` and ``settings_create`` API's in general.
+- ``on_condition`` has been added to the settings action API to allow for conditional actions. This is useful for cases where different checks need to be performed based on the value of a field (such as channel checks for when the sink type is ``channel``)
+- Both ``add_channel`` and ``add_webhook`` from the Audit Logs module has been moved to the new settings API. This marks a key milestone for the settings API and further suggests that using audit log sinks as a guinea pig and starting point was in fact a good decision.
+
 # Tuesday, June 11th 2024
 
 ## Botv2
