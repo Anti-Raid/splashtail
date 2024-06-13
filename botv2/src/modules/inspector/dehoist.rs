@@ -61,12 +61,12 @@ pub fn dehoist_user(nickname: &str, intensity: DehoistOptions) -> String {
 
         // StartsWith check should only occur on the first character
         if i == 0 && intensity.contains(DehoistOptions::STRIP_SPECIAL_CHARS_STARTSWITH) {
-            allowed = disallowed_characters().contains(&c);
+            allowed = !disallowed_characters().contains(&c);
         }
 
         // Contains check should occur on all characters
         if intensity.contains(DehoistOptions::STRIP_SPECIAL_CHARS_CONTAINS) {
-            allowed = disallowed_characters().contains(&c);
+            allowed = !disallowed_characters().contains(&c);
         }
 
         // Non-ASCII characters are higher priority
