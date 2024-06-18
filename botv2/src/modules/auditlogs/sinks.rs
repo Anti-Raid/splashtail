@@ -106,16 +106,16 @@ pub(crate) fn sink() -> ConfigOption {
                                 });
                             };
 
-                            let sink_url = url::Url::parse(sink)
-                            .map_err(|e| SettingsError::SchemaCheckValidationError { 
-                                column: "sink".to_string(),
-                                check: "parse_webhook.parse_sink_to_url".to_string(),
-                                error: e.to_string(),
-                                value: serde_json::Value::String(sink.clone()),
-                                accepted_range: "Valid Discord webhook URL".to_string()
-                            })?;
-
                             if typ == "discordhook" {
+                                let sink_url = url::Url::parse(sink)
+                                .map_err(|e| SettingsError::SchemaCheckValidationError { 
+                                    column: "sink".to_string(),
+                                    check: "parse_webhook.parse_sink_to_url".to_string(),
+                                    error: e.to_string(),
+                                    value: serde_json::Value::String(sink.clone()),
+                                    accepted_range: "Valid Discord webhook URL".to_string()
+                                })?;    
+
                                 if serenity::utils::parse_webhook(
                                     &sink_url
                                 ).is_none() {
