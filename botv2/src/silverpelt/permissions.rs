@@ -5,6 +5,7 @@ use super::{
 use indexmap::indexmap;
 use serde::{Deserialize, Serialize};
 
+// @ci go=PermissionResult
 #[derive(Clone, Serialize, Deserialize)]
 #[serde(tag = "var")]
 pub enum PermissionResult {

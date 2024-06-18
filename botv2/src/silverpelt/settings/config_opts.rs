@@ -1,5 +1,3 @@
-use futures::future::BoxFuture;
-
 // Common state variables:
 //
 // - {__author} => the user id of the user running the operation
@@ -10,6 +8,95 @@ use futures::future::BoxFuture;
 // Note that these special variables do not need to live in state and may instead be special cased
 //
 // For display purposes, the special case variable {[__column_id]_displaytype} can be set to allow displaying in a different form
+
+use futures::future::BoxFuture;
+use serde::{Deserialize, Serialize};
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub enum SettingsError {
+    /// Generic error
+    Generic {
+        message: String,
+        src: String,
+        typ: String,
+    },
+    /// Schema type validation error
+    SchemaTypeValidationError {
+        column: String,
+        expected_type: String,
+        got_type: String,
+    },
+    /// Schema null value validation error
+    SchemaNullValueValidationError {
+        column: String,
+    },
+    /// Schema check validation error
+    SchemaCheckValidationError {
+        column: String,
+        check: String,
+        error: String,
+        value: serde_json::Value,
+        accepted_range: String,
+    },
+    /// Missing or invalid field
+    MissingOrInvalidField {
+        field: String,
+    },
+    RowExists {
+        column_id: String,
+        count: i64,
+    },
+    MaximumCountReached {
+        max: i64,
+        current: i64,
+    },
+}
+
+impl std::fmt::Display for SettingsError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            SettingsError::Generic { message, src, typ } => {
+                write!(f, "{} from src `{}` of type `{}`", message, src, typ)
+            }
+            SettingsError::SchemaTypeValidationError {
+                column,
+                expected_type,
+                got_type,
+            } => write!(
+                f,
+                "Column `{}` expected type `{}`, got type `{}`",
+                column, expected_type, got_type
+            ),
+            SettingsError::SchemaNullValueValidationError { column } => {
+                write!(f, "Column `{}` is not nullable, yet value is null", column)
+            }
+            SettingsError::SchemaCheckValidationError {
+                column,
+                check,
+                error,
+                value,
+                accepted_range,
+            } => {
+                write!(
+                    f,
+                    "Column `{}` failed check `{}` with value `{}`, accepted range: `{}`, error: `{}`",
+                    column, check, value, accepted_range, error
+                )
+            }
+            SettingsError::MissingOrInvalidField { field } => write!(f, "Missing (or invalid) field `{}`", field),
+            SettingsError::RowExists { column_id, count } => write!(
+                f,
+                "A row with the same (unique) column `{}` already exists. Count: {}",
+                column_id, count
+            ),
+            SettingsError::MaximumCountReached { max, current } => write!(
+                f,
+                "The maximum number of entities this server may have ({}) has been reached. This server currently has {}.",
+                max, current
+            ),
+        }
+    }
+}
 
 #[derive(Debug, Clone, PartialEq)]
 #[allow(dead_code)]
@@ -156,7 +243,7 @@ pub type NativeActionFunc = Box<
         + for<'a> Fn(
             NativeActionContext,
             &'a mut super::state::State,
-        ) -> BoxFuture<'a, Result<(), crate::Error>>,
+        ) -> BoxFuture<'a, Result<(), SettingsError>>,
 >;
 
 #[allow(dead_code)]
@@ -166,7 +253,7 @@ pub struct ActionConditionContext {
 }
 
 pub type ActionCondition =
-    fn(ActionConditionContext, &super::state::State) -> Result<bool, crate::Error>;
+    fn(ActionConditionContext, &super::state::State) -> Result<bool, SettingsError>;
 
 #[allow(dead_code)]
 pub enum ColumnAction {
@@ -202,14 +289,6 @@ pub enum ColumnAction {
         /// Under what circumstance should the action be run
         on_condition: Option<ActionCondition>,
     },
-    /// Return an error thus failing the configuration view/create/update/delete
-    Error {
-        /// The error message to return, {key_on_map} can be used here in the message
-        message: &'static str,
-
-        /// Under what circumstance should the action be run
-        on_condition: Option<ActionCondition>,
-    },
 }
 
 impl std::fmt::Debug for ColumnAction {
@@ -239,17 +318,13 @@ impl std::fmt::Debug for ColumnAction {
                 "IpcPerModuleFunction {{ module: {}, function: {}, arguments: {:?}, on_condition: {:?} }}",
                 module, function, arguments, on_condition
             ),
-            ColumnAction::Error {
-                message,
-                on_condition
-            } => write!(f, "Error {{ message: {}, on_condition: {:?} }}", message, on_condition),
         }
     }
 }
 
 #[derive(Debug)]
 pub struct Column {
-    /// The ID of the column
+    /// The ID of the column on the database
     pub id: &'static str,
 
     /// The friendly name of the column
@@ -259,12 +334,16 @@ pub struct Column {
     pub column_type: ColumnType,
 
     /// Whether or not the column is nullable
+    ///
+    /// Note that the point where nullability is checked may vary but will occur after pre_checks are executed
     pub nullable: bool,
 
     /// Suggestions to display
     pub suggestions: ColumnSuggestion,
 
     /// Whether or not the column is unique
+    ///
+    /// Note that the point where uniqueness is checked may vary but will occur after pre_checks are executed
     pub unique: bool,
 
     /// For which operations should the field be ignored for (essentially, read only)

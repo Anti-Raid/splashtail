@@ -190,6 +190,7 @@ impl Display for PermissionChecks {
     }
 }
 
+// @ci go=CommandExtendedData
 #[derive(Clone, PartialEq, serde::Serialize, serde::Deserialize, Debug)]
 pub struct CommandExtendedData {
     /// The default permissions needed to run this command

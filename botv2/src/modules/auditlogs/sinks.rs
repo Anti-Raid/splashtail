@@ -1,7 +1,6 @@
 use futures_util::FutureExt;
 use crate::silverpelt::settings::config_opts::{
-    Column, ColumnAction, ColumnSuggestion, ColumnType, InnerColumnType, ConfigOption, OperationSpecific,
-    OperationType
+    Column, ColumnAction, ColumnSuggestion, ColumnType, ConfigOption, InnerColumnType, OperationSpecific, OperationType, SettingsError
 };
 use crate::silverpelt::value::Value;
 
@@ -34,12 +33,20 @@ pub(crate) fn sink() -> ConfigOption {
                                     ctx.guild_id.to_string()
                                 )
                                 .fetch_one(&ctx.pool)
-                                .await?
+                                .await
+                                .map_err(|e| SettingsError::Generic {
+                                    message: format!("Failed to fetch sink count: {}", e),
+                                    src: "fetch_sinks_count".to_string(),
+                                    typ: "internal".to_string(),
+                                })?
                                 .count
                                 .unwrap_or(0);
 
                                 if ids >= 10 {
-                                    return Err("You have reached the maximum number of sinks allowed (10). Please remove a sink before adding a new one.".into());
+                                    return Err(SettingsError::MaximumCountReached { 
+                                        max: 10,
+                                        current: ids,
+                                    });
                                 }
 
                                 Ok(())
@@ -88,21 +95,54 @@ pub(crate) fn sink() -> ConfigOption {
                     ColumnAction::NativeAction {
                         action: Box::new(|_ctx, state| async move {
                             let Some(Value::String(sink)) = state.state.get("sink") else {
-                                return Err("Sink must be set.".into());
+                                return Err(SettingsError::MissingOrInvalidField { 
+                                    field: "sink".to_string(),
+                                });
                             };
 
                             let Some(Value::String(typ)) = state.state.get("type") else {
-                                return Err("Sink type must be set.".into());
+                                return Err(SettingsError::MissingOrInvalidField { 
+                                    field: "type".to_string(),
+                                });
                             };
 
+                            let sink_url = url::Url::parse(&sink)
+                            .map_err(|e| SettingsError::SchemaCheckValidationError { 
+                                column: "sink".to_string(),
+                                check: format!("parse_webhook.parse_sink_to_url"),
+                                error: e.to_string(),
+                                value: serde_json::Value::String(sink.clone()),
+                                accepted_range: "Valid Discord webhook URL".to_string()
+                            })?;
+
                             if typ == "discordhook" {
-                                if serenity::utils::parse_webhook(&sink.parse()?).is_none() {
-                                    return Err("Discord webhooks sinks must be a webhook.".into());
+                                if serenity::utils::parse_webhook(
+                                    &sink_url
+                                ).is_none() {
+                                    return Err(SettingsError::SchemaCheckValidationError { 
+                                        column: "sink".to_string(),
+                                        check: format!("parse_webhook.parse"),
+                                        error: "Discord webhook sinks must be a valid webhook URL".to_string(),
+                                        value: serde_json::Value::String(sink.clone()),
+                                        accepted_range: "Valid Discord webhook URL".to_string()
+                                    });
                                 }
                             } else if typ == "channel" {
-                                sink.parse::<serenity::all::ChannelId>().map_err(|e| format!("Invalid channel ID: {}", e))?;
+                                sink.parse::<serenity::all::ChannelId>().map_err(|e| SettingsError::SchemaCheckValidationError {
+                                    column: "sink".to_string(),
+                                    check: "snowflake_parse".to_string(),
+                                    value: serde_json::Value::String(sink.clone()),
+                                    accepted_range: "Valid channel id".to_string(),
+                                    error: e.to_string(),
+                                })?;
                             } else {
-                                return Err("Invalid sink type.".into());
+                                return Err(SettingsError::SchemaCheckValidationError { 
+                                    column: "type".to_string(),
+                                    check: format!("parse_webhook.parse"),
+                                    error: "Invalid sink type".to_string(),
+                                    value: serde_json::Value::String(sink.clone()),
+                                    accepted_range: "Valid Discord webhook URL".to_string()
+                                });
                             }
 
                             Ok(())
@@ -119,7 +159,9 @@ pub(crate) fn sink() -> ConfigOption {
                         },
                         on_condition: Some(|_acc, state| {
                             let Some(Value::String(typ)) = state.state.get("type") else {
-                                return Err("Sink type must be set.".into());
+                                return Err(SettingsError::MissingOrInvalidField { 
+                                    field: "type".to_string(),
+                                });
                             };
 
                             Ok(typ == "channel")

@@ -1,77 +1,8 @@
+use super::config_opts::SettingsError;
 use super::config_opts::{ColumnType, ConfigOption, InnerColumnType, OperationType};
 use super::state::State;
 use crate::silverpelt::value::Value;
-use serde::{Deserialize, Serialize};
-
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub enum SettingsError {
-    Generic {
-        message: String,
-        src: String,
-        typ: String,
-    },
-    SchemaTypeValidationError {
-        column: String,
-        expected_type: String,
-        got_type: String,
-    },
-    SchemaNullValueValidationError {
-        column: String,
-    },
-    SchemaCheckValidationError {
-        column: String,
-        check: String,
-        value: serde_json::Value,
-        accepted_range: String,
-    },
-    MissingField {
-        field: String,
-    },
-    RowExists {
-        primary_key: String,
-        count: usize,
-    },
-}
-
-impl std::fmt::Display for SettingsError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            SettingsError::Generic { message, src, typ } => {
-                write!(f, "{} from src `{}` of type `{}`", message, src, typ)
-            }
-            SettingsError::SchemaTypeValidationError {
-                column,
-                expected_type,
-                got_type,
-            } => write!(
-                f,
-                "Column `{}` expected type `{}`, got type `{}`",
-                column, expected_type, got_type
-            ),
-            SettingsError::SchemaNullValueValidationError { column } => {
-                write!(f, "Column `{}` is not nullable, yet value is null", column)
-            }
-            SettingsError::SchemaCheckValidationError {
-                column,
-                check,
-                value,
-                accepted_range,
-            } => {
-                write!(
-                    f,
-                    "Column `{}` failed check `{}` with value `{}`, accepted range: `{}`",
-                    column, check, value, accepted_range
-                )
-            }
-            SettingsError::MissingField { field } => write!(f, "Missing field `{}`", field),
-            SettingsError::RowExists { primary_key, count } => write!(
-                f,
-                "A row with the same primary key `{}` already exists. Count: {}",
-                primary_key, count
-            ),
-        }
-    }
-}
+use sqlx::Row;
 
 /// Validates the value against the schema's column type handling schema checks if `perform_schema_checks` is true
 #[allow(dead_code)]
@@ -138,6 +69,7 @@ fn _validate_value(
                                     check: "minlength".to_string(),
                                     value: v.to_json(),
                                     accepted_range: format!(">{}", min),
+                                    error: "s.len() < *min".to_string(),
                                 });
                             }
                         }
@@ -149,6 +81,7 @@ fn _validate_value(
                                     check: "maxlength".to_string(),
                                     value: v.to_json(),
                                     accepted_range: format!("<{}", max),
+                                    error: "s.len() > *max".to_string(),
                                 });
                             }
                         }
@@ -159,6 +92,7 @@ fn _validate_value(
                                 check: "allowed_values".to_string(),
                                 value: v.to_json(),
                                 accepted_range: format!("{:?}", allowed_values),
+                                error: "!allowed_values.is_empty() && !allowed_values.contains(&s.as_str())".to_string()
                             });
                         }
                     }
@@ -239,12 +173,13 @@ fn _validate_value(
                         };
 
                         // Try parsing to a UserId
-                        if s.parse::<serenity::all::UserId>().is_err() {
+                        if let Err(err) = s.parse::<serenity::all::UserId>() {
                             return Err(SettingsError::SchemaCheckValidationError {
                                 column: column_id.to_string(),
                                 check: "snowflake_parse".to_string(),
                                 value: v.to_json(),
                                 accepted_range: "Valid user id".to_string(),
+                                error: err.to_string(),
                             });
                         }
                     }
@@ -265,12 +200,13 @@ fn _validate_value(
                         };
 
                         // Try parsing to a ChannelId
-                        if s.parse::<serenity::all::ChannelId>().is_err() {
+                        if let Err(err) = s.parse::<serenity::all::ChannelId>() {
                             return Err(SettingsError::SchemaCheckValidationError {
                                 column: column_id.to_string(),
                                 check: "snowflake_parse".to_string(),
                                 value: v.to_json(),
                                 accepted_range: "Valid channel id".to_string(),
+                                error: err.to_string(),
                             });
                         }
                     }
@@ -291,12 +227,13 @@ fn _validate_value(
                         };
 
                         // Try parsing to a RoleId
-                        if s.parse::<serenity::all::RoleId>().is_err() {
+                        if let Err(err) = s.parse::<serenity::all::RoleId>() {
                             return Err(SettingsError::SchemaCheckValidationError {
                                 column: column_id.to_string(),
                                 check: "snowflake_parse".to_string(),
                                 value: v.to_json(),
                                 accepted_range: "Valid role id".to_string(),
+                                error: err.to_string(),
                             });
                         }
                     }
@@ -317,12 +254,13 @@ fn _validate_value(
                         };
 
                         // Try parsing to an EmojiId
-                        if s.parse::<serenity::all::EmojiId>().is_err() {
+                        if let Err(err) = s.parse::<serenity::all::EmojiId>() {
                             return Err(SettingsError::SchemaCheckValidationError {
                                 column: column_id.to_string(),
                                 check: "snowflake_parse".to_string(),
                                 value: v.to_json(),
                                 accepted_range: "Valid emoji id".to_string(),
+                                error: err.to_string(),
                             });
                         }
                     }
@@ -356,11 +294,12 @@ fn _validate_value(
                                 accepted_range:
                                     "Valid message id in format <channel_id>/<message_id>"
                                         .to_string(),
+                                error: "parts.len() != 2".to_string(),
                             });
                         }
 
                         // Try parsing to a ChannelId
-                        if parts[0].parse::<serenity::all::ChannelId>().is_err() {
+                        if let Err(err) = parts[0].parse::<serenity::all::ChannelId>() {
                             return Err(SettingsError::SchemaCheckValidationError {
                                 column: column_id.to_string(),
                                 check: "message_parse_0".to_string(),
@@ -368,10 +307,12 @@ fn _validate_value(
                                 accepted_range:
                                     "Valid message id in format <channel_id>/<message_id>"
                                         .to_string(),
+                                error: format!("p1: {}", err),
                             });
                         }
 
-                        if parts[1].parse::<serenity::all::MessageId>().is_err() {
+                        // Try parsing to a MessageId
+                        if let Err(err) = parts[1].parse::<serenity::all::MessageId>() {
                             return Err(SettingsError::SchemaCheckValidationError {
                                 column: column_id.to_string(),
                                 check: "message_parse_1".to_string(),
@@ -379,6 +320,7 @@ fn _validate_value(
                                 accepted_range:
                                     "Valid message id in format <channel_id>/<message_id>"
                                         .to_string(),
+                                error: format!("p2: {}", err),
                             });
                         }
                     }
@@ -432,28 +374,6 @@ fn _validate_value(
     }
 
     Ok(())
-}
-
-/// Returns the column ids for the given operation given the config option (setting) and the operation type.
-/// The returned column ids are sorted based on the order of the columns in the setting.
-///
-/// Note that fields like ``ignored_for`` are not handled here as they are operation specific
-fn _getcols(setting: &ConfigOption) -> Vec<String> {
-    let mut cols = vec![];
-
-    for col in &setting.columns {
-        cols.push(col.id.to_string());
-    }
-
-    // Sort the cols vec based on the setting.columns order
-    cols.sort_by(|a, b| {
-        let a = setting.columns.iter().position(|c| c.id == a);
-        let b = setting.columns.iter().position(|c| c.id == b);
-
-        a.cmp(&b)
-    });
-
-    cols
 }
 
 /// Binds a value to a query
@@ -643,7 +563,11 @@ pub async fn settings_view(
     guild_id: serenity::all::GuildId,
     author: serenity::all::UserId,
 ) -> Result<Vec<State>, SettingsError> {
-    let cols = _getcols(setting);
+    let cols = setting
+        .columns
+        .iter()
+        .map(|c| c.id.to_string())
+        .collect::<Vec<String>>();
 
     let row = sqlx::query(
         format!(
@@ -672,6 +596,7 @@ pub async fn settings_view(
     for row in row {
         let mut state = State::new();
 
+        // We know that the columns are in the same order as the row
         for (i, col) in setting.columns.iter().enumerate() {
             // Fetch and validate the value
             let val = Value::from_sqlx(&row, i).map_err(|e| SettingsError::Generic {
@@ -679,6 +604,7 @@ pub async fn settings_view(
                 src: "_parse_row [Value::from_sqlx]".to_string(),
                 typ: "internal".to_string(),
             })?;
+
             _validate_value(&val, &col.column_type, col.id, col.nullable, false)?;
 
             let actions = col
@@ -692,12 +618,7 @@ pub async fn settings_view(
             crate::silverpelt::settings::action_executor::execute_actions(
                 &mut state, actions, ctx, author, guild_id,
             )
-            .await
-            .map_err(|e| SettingsError::Generic {
-                message: e.to_string(),
-                src: "_parse_row [execute_actions]".to_string(),
-                typ: "internal".to_string(),
-            })?;
+            .await?;
         }
 
         // Apply columns_to_set in operation specific data
@@ -770,51 +691,33 @@ pub async fn settings_create(
     author: serenity::all::UserId,
     fields: indexmap::IndexMap<String, Value>,
 ) -> Result<State, SettingsError> {
-    let cols = _getcols(setting);
-
     // Ensure all columns exist in fields, note that we can ignore extra fields so this one single loop is enough
     let mut state: State = State::new();
-    for col in cols.iter() {
-        // Get the column from the setting
-        let Some(column) = setting.columns.iter().find(|c| c.id == col) else {
-            return Err(SettingsError::Generic {
-                message: format!("Column `{}` not found in setting", col),
-                src: "settings_create [column not found]".to_string(),
-                typ: "internal/backend".to_string(), // internal/backend as this is a clear backend error
-            });
+    for column in setting.columns.iter() {
+        // If the column is ignored for create, skip
+        let value = {
+            if column.ignored_for.contains(&OperationType::Create) {
+                Value::None
+            } else {
+                match fields.get(column.id) {
+                    Some(val) => {
+                        _validate_value(
+                            val,
+                            &column.column_type,
+                            column.id,
+                            column.nullable,
+                            true,
+                        )?;
+
+                        val.clone()
+                    }
+                    None => Value::None,
+                }
+            }
         };
 
-        // If the column is ignored for create, skip
-        if column.ignored_for.contains(&OperationType::Create) {
-            // Add to ignore_for and set null placeholder for actions
-            state.state.insert(col.to_string(), Value::None);
-        } else {
-            // Find value and validate it
-            let value = match fields.get(col) {
-                Some(val) => val.clone(),
-                None => {
-                    // Check if the column is nullable
-                    if !column.nullable {
-                        return Err(SettingsError::MissingField {
-                            field: col.to_string(),
-                        });
-                    }
-
-                    Value::None
-                }
-            };
-
-            _validate_value(
-                &value,
-                &column.column_type,
-                column.id,
-                column.nullable,
-                true,
-            )?;
-
-            // Insert the value into the state
-            state.state.insert(col.to_string(), value.clone());
-        }
+        // Insert the value into the state
+        state.state.insert(column.id.to_string(), value.clone());
 
         // Execute actions
         let actions = column
@@ -825,43 +728,88 @@ pub async fn settings_create(
         crate::silverpelt::settings::action_executor::execute_actions(
             &mut state, actions, ctx, author, guild_id,
         )
-        .await
-        .map_err(|e| SettingsError::Generic {
-            message: e.to_string(),
-            src: "settings_create [execute_actions]".to_string(),
-            typ: "internal".to_string(),
-        })?;
-    }
+        .await?;
 
-    // Ensure that a field with the same primary key doesn't exist
-    if let Some(v) = state.state.get(setting.primary_key) {
-        // Value::None means that we can assume the db creates the primary key uniquely, otherwise, we have to check the uniqueness here
-        match v {
-            Value::None => {}
-            _ => {
-                let sql_stmt = format!(
-                    "SELECT {} FROM {} WHERE {} = $1 AND {} = $2",
-                    setting.primary_key, setting.table, setting.guild_id, setting.primary_key
-                );
+        // Check if the column is nullable
+        if !column.nullable && matches!(value, Value::None) {
+            return Err(SettingsError::MissingOrInvalidField {
+                field: column.id.to_string(),
+            });
+        }
 
-                let mut query = sqlx::query(sql_stmt.as_str()).bind(guild_id.to_string());
+        // Handle cases of uniqueness
+        if column.unique || column.id == setting.primary_key {
+            match value {
+                Value::None => {
+                    let sql_stmt = format!(
+                        "SELECT COUNT(*) FROM {} WHERE {} = $1 AND {} IS NULL",
+                        setting.table, setting.guild_id, column.id
+                    );
 
-                query = _query_bind_value(query, v.clone(), None);
+                    let query = sqlx::query(sql_stmt.as_str()).bind(guild_id.to_string());
 
-                let row = query
-                    .fetch_all(pool)
+                    let row = query
+                    .fetch_one(pool)
                     .await
                     .map_err(|e| SettingsError::Generic {
                         message: e.to_string(),
-                        src: "settings_create [query fetch_all]".to_string(),
+                        src: format!("settings_create [unique check (null value), query.fetch_one] for column `{}`", column.id),
                         typ: "internal".to_string(),
                     })?;
 
-                if !row.is_empty() {
-                    return Err(SettingsError::RowExists {
-                        primary_key: setting.primary_key.to_string(),
-                        count: row.len(),
-                    });
+                    let count = row.try_get::<i64, _>(0)
+                    .map_err(|e| SettingsError::Generic {
+                        message: e.to_string(),
+                        src: format!("settings_create [unique check (null value), row.try_get] for column `{}`", column.id),
+                        typ: "internal".to_string(),
+                    })?;
+
+                    if count > 0 {
+                        return Err(SettingsError::RowExists {
+                            column_id: column.id.to_string(),
+                            count,
+                        });
+                    }
+                }
+                _ => {
+                    let sql_stmt = format!(
+                        "SELECT COUNT(*) FROM {} WHERE {} = $1 AND {} = $2",
+                        setting.table, setting.guild_id, column.id
+                    );
+
+                    let mut query = sqlx::query(sql_stmt.as_str()).bind(guild_id.to_string());
+
+                    query = _query_bind_value(query, value, None);
+
+                    let row = query
+                        .fetch_one(pool)
+                        .await
+                        .map_err(|e| SettingsError::Generic {
+                            message: e.to_string(),
+                            src: format!(
+                                "settings_create [unique check, query.fetch_one] for column `{}`",
+                                column.id
+                            ),
+                            typ: "internal".to_string(),
+                        })?;
+
+                    let count = row
+                        .try_get::<i64, _>(0)
+                        .map_err(|e| SettingsError::Generic {
+                            message: e.to_string(),
+                            src: format!(
+                                "settings_create [unique check, row.try_get] for column `{}`",
+                                column.id
+                            ),
+                            typ: "internal".to_string(),
+                        })?;
+
+                    if count > 0 {
+                        return Err(SettingsError::RowExists {
+                            column_id: column.id.to_string(),
+                            count,
+                        });
+                    }
                 }
             }
         }

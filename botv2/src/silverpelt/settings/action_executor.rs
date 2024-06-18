@@ -1,4 +1,6 @@
-use super::config_opts::{ActionConditionContext, ColumnAction, NativeActionContext};
+use super::config_opts::{
+    ActionConditionContext, ColumnAction, NativeActionContext, SettingsError,
+};
 use super::state::State;
 use crate::silverpelt::value::Value;
 use async_recursion::async_recursion;
@@ -11,7 +13,7 @@ pub async fn execute_actions(
     ctx: &serenity::all::Context,
     author: serenity::all::UserId,
     guild_id: serenity::all::GuildId,
-) -> Result<(), crate::Error> {
+) -> Result<(), SettingsError> {
     let cache_http = botox::cache::CacheHttpImpl::from_ctx(ctx);
     let data = &ctx.data::<crate::Data>();
     for action in actions {
@@ -24,8 +26,11 @@ pub async fn execute_actions(
             } => {
                 if let Some(on_condition) = on_condition {
                     let acc = ActionConditionContext { author, guild_id };
-                    if !(on_condition)(acc, state)? {
-                        continue;
+
+                    match (on_condition)(acc, state) {
+                        Ok(true) => (),          // Go ahead
+                        Ok(false) => continue,   // Skip execution
+                        Err(e) => return Err(e), // Return error
                     }
                 }
 
@@ -34,11 +39,11 @@ pub async fn execute_actions(
                     .get(&(module.to_string(), function.to_string()));
 
                 let Some(toggle) = toggle else {
-                    return Err(format!(
-                        "No IPC function found for module {} and function {}",
-                        module, function
-                    )
-                    .into());
+                    return Err(SettingsError::Generic {
+                        message: "IPC function not found".to_string(),
+                        src: "execute_actions".to_string(),
+                        typ: "internal".to_string(),
+                    });
                 };
 
                 let mut args = indexmap::IndexMap::new();
@@ -50,32 +55,23 @@ pub async fn execute_actions(
                     args.insert(key, value);
                 }
 
-                toggle(&cache_http, &args).await.map_err(|e| {
-                    format!(
-                        "Error running IPC function: {} [args: {}]",
-                        e,
-                        args.iter()
-                            .map(|(k, v)| format!("{}: {}", k, v))
-                            .collect::<Vec<_>>()
-                            .join(", ")
-                    )
-                })?;
-            }
-            ColumnAction::Error {
-                message,
-                on_condition,
-            } => {
-                if let Some(on_condition) = on_condition {
-                    let acc = ActionConditionContext { author, guild_id };
-                    if !(on_condition)(acc, state)? {
-                        continue;
+                match toggle(&cache_http, &args).await {
+                    Ok(()) => (),
+                    Err(e) => {
+                        return Err(SettingsError::Generic {
+                            message: format!(
+                                "Error running IPC function: {} [args: {}]",
+                                e,
+                                args.iter()
+                                    .map(|(k, v)| format!("{}: {}", k, v))
+                                    .collect::<Vec<_>>()
+                                    .join(", ")
+                            ),
+                            src: format!("execute_actions/{}::{}", module, function),
+                            typ: "internal".to_string(),
+                        });
                     }
                 }
-
-                return Err(state
-                    .template_to_string(author, guild_id, message)
-                    .to_string()
-                    .into());
             }
             ColumnAction::NativeAction {
                 action,
@@ -83,8 +79,11 @@ pub async fn execute_actions(
             } => {
                 if let Some(on_condition) = on_condition {
                     let acc = ActionConditionContext { author, guild_id };
-                    if !(on_condition)(acc, state)? {
-                        continue;
+
+                    match (on_condition)(acc, state) {
+                        Ok(true) => (),          // Go ahead
+                        Ok(false) => continue,   // Skip execution
+                        Err(e) => return Err(e), // Return error
                     }
                 }
 
@@ -102,8 +101,10 @@ pub async fn execute_actions(
             } => {
                 if let Some(on_condition) = on_condition {
                     let acc = ActionConditionContext { author, guild_id };
-                    if !(on_condition)(acc, state)? {
-                        continue;
+                    match (on_condition)(acc, state) {
+                        Ok(true) => (),          // Go ahead
+                        Ok(false) => continue,   // Skip execution
+                        Err(e) => return Err(e), // Return error
                     }
                 }
 

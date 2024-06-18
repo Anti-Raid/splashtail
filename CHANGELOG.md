@@ -1,3 +1,11 @@
+# Tuesday, June 18th, 2024
+
+- ``settings_create`` has been significantly optimized to reduce the number of needed hash maps. The ``SettingsError`` enum has been moved to ``config_opts.rs`` with the other type definitions. General bug fixes and improvements. Notably, unique constaints on columns are now enforced.
+- **All native functions and conditions must now return SettingsError. Previously, they were free to return crate::Error**. This is to ensure that all errors are reported in a consistent manner
+- ``ColumnAction::Check`` has been removed. Native actions are way more powerful and the performance difference between async and sync functions on rust are close to negligible. This also reduces the maintainence burden of the codebase.
+- ``MissingField`` has been renamed to ``MissingOrInvalidField`` to better reflect the error type. This is a breaking change. ``SchemaCheckValidationError`` now contains a ``error`` field to better communicate exact errors.
+- Several misc refactors throughout the Settings API.
+
 # Wednesday, June 12th 2024
 
 ## Botv2
