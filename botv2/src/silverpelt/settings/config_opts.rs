@@ -46,6 +46,9 @@ pub enum SettingsError {
         column_id: String,
         count: i64,
     },
+    RowDoesNotExist {
+        column_id: String,
+    },
     MaximumCountReached {
         max: i64,
         current: i64,
@@ -86,9 +89,12 @@ impl std::fmt::Display for SettingsError {
             SettingsError::MissingOrInvalidField { field } => write!(f, "Missing (or invalid) field `{}`", field),
             SettingsError::RowExists { column_id, count } => write!(
                 f,
-                "A row with the same (unique) column `{}` already exists. Count: {}",
+                "A row with the same column `{}` already exists. Count: {}",
                 column_id, count
             ),
+            SettingsError::RowDoesNotExist { column_id } => {
+                write!(f, "A row with the same column `{}` does not exist", column_id)
+            }
             SettingsError::MaximumCountReached { max, current } => write!(
                 f,
                 "The maximum number of entities this server may have ({}) has been reached. This server currently has {}.",
