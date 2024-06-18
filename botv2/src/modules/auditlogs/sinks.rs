@@ -106,10 +106,10 @@ pub(crate) fn sink() -> ConfigOption {
                                 });
                             };
 
-                            let sink_url = url::Url::parse(&sink)
+                            let sink_url = url::Url::parse(sink)
                             .map_err(|e| SettingsError::SchemaCheckValidationError { 
                                 column: "sink".to_string(),
-                                check: format!("parse_webhook.parse_sink_to_url"),
+                                check: "parse_webhook.parse_sink_to_url".to_string(),
                                 error: e.to_string(),
                                 value: serde_json::Value::String(sink.clone()),
                                 accepted_range: "Valid Discord webhook URL".to_string()
@@ -121,7 +121,7 @@ pub(crate) fn sink() -> ConfigOption {
                                 ).is_none() {
                                     return Err(SettingsError::SchemaCheckValidationError { 
                                         column: "sink".to_string(),
-                                        check: format!("parse_webhook.parse"),
+                                        check: "parse_webhook.parse".to_string(),
                                         error: "Discord webhook sinks must be a valid webhook URL".to_string(),
                                         value: serde_json::Value::String(sink.clone()),
                                         accepted_range: "Valid Discord webhook URL".to_string()
@@ -138,7 +138,7 @@ pub(crate) fn sink() -> ConfigOption {
                             } else {
                                 return Err(SettingsError::SchemaCheckValidationError { 
                                     column: "type".to_string(),
-                                    check: format!("parse_webhook.parse"),
+                                    check: "parse_webhook.parse".to_string(),
                                     error: "Invalid sink type".to_string(),
                                     value: serde_json::Value::String(sink.clone()),
                                     accepted_range: "Valid Discord webhook URL".to_string()

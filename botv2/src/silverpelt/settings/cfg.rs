@@ -730,85 +730,88 @@ pub async fn settings_create(
         )
         .await?;
 
-        // Check if the column is nullable
-        if !column.nullable && matches!(value, Value::None) {
-            return Err(SettingsError::MissingOrInvalidField {
-                field: column.id.to_string(),
-            });
-        }
+        // Nullability and unique checks should only happen if the column is not being intentionally ignored
+        if !column.ignored_for.contains(&OperationType::Create) {
+            // Check if the column is nullable
+            if !column.nullable && matches!(value, Value::None) {
+                return Err(SettingsError::MissingOrInvalidField {
+                    field: column.id.to_string(),
+                });
+            }
 
-        // Handle cases of uniqueness
-        if column.unique || column.id == setting.primary_key {
-            match value {
-                Value::None => {
-                    let sql_stmt = format!(
-                        "SELECT COUNT(*) FROM {} WHERE {} = $1 AND {} IS NULL",
-                        setting.table, setting.guild_id, column.id
-                    );
+            // Handle cases of uniqueness
+            if column.unique || column.id == setting.primary_key {
+                match value {
+                    Value::None => {
+                        let sql_stmt = format!(
+                            "SELECT COUNT(*) FROM {} WHERE {} = $1 AND {} IS NULL",
+                            setting.table, setting.guild_id, column.id
+                        );
 
-                    let query = sqlx::query(sql_stmt.as_str()).bind(guild_id.to_string());
+                        let query = sqlx::query(sql_stmt.as_str()).bind(guild_id.to_string());
 
-                    let row = query
-                    .fetch_one(pool)
-                    .await
-                    .map_err(|e| SettingsError::Generic {
-                        message: e.to_string(),
-                        src: format!("settings_create [unique check (null value), query.fetch_one] for column `{}`", column.id),
-                        typ: "internal".to_string(),
-                    })?;
-
-                    let count = row.try_get::<i64, _>(0)
-                    .map_err(|e| SettingsError::Generic {
-                        message: e.to_string(),
-                        src: format!("settings_create [unique check (null value), row.try_get] for column `{}`", column.id),
-                        typ: "internal".to_string(),
-                    })?;
-
-                    if count > 0 {
-                        return Err(SettingsError::RowExists {
-                            column_id: column.id.to_string(),
-                            count,
-                        });
-                    }
-                }
-                _ => {
-                    let sql_stmt = format!(
-                        "SELECT COUNT(*) FROM {} WHERE {} = $1 AND {} = $2",
-                        setting.table, setting.guild_id, column.id
-                    );
-
-                    let mut query = sqlx::query(sql_stmt.as_str()).bind(guild_id.to_string());
-
-                    query = _query_bind_value(query, value, None);
-
-                    let row = query
+                        let row = query
                         .fetch_one(pool)
                         .await
                         .map_err(|e| SettingsError::Generic {
                             message: e.to_string(),
-                            src: format!(
-                                "settings_create [unique check, query.fetch_one] for column `{}`",
-                                column.id
-                            ),
+                            src: format!("settings_create [unique check (null value), query.fetch_one] for column `{}`", column.id),
                             typ: "internal".to_string(),
                         })?;
 
-                    let count = row
-                        .try_get::<i64, _>(0)
+                        let count = row.try_get::<i64, _>(0)
                         .map_err(|e| SettingsError::Generic {
                             message: e.to_string(),
-                            src: format!(
-                                "settings_create [unique check, row.try_get] for column `{}`",
-                                column.id
-                            ),
+                            src: format!("settings_create [unique check (null value), row.try_get] for column `{}`", column.id),
                             typ: "internal".to_string(),
                         })?;
 
-                    if count > 0 {
-                        return Err(SettingsError::RowExists {
-                            column_id: column.id.to_string(),
-                            count,
-                        });
+                        if count > 0 {
+                            return Err(SettingsError::RowExists {
+                                column_id: column.id.to_string(),
+                                count,
+                            });
+                        }
+                    }
+                    _ => {
+                        let sql_stmt = format!(
+                            "SELECT COUNT(*) FROM {} WHERE {} = $1 AND {} = $2",
+                            setting.table, setting.guild_id, column.id
+                        );
+
+                        let mut query = sqlx::query(sql_stmt.as_str()).bind(guild_id.to_string());
+
+                        query = _query_bind_value(query, value, None);
+
+                        let row = query
+                            .fetch_one(pool)
+                            .await
+                            .map_err(|e| SettingsError::Generic {
+                                message: e.to_string(),
+                                src: format!(
+                                    "settings_create [unique check, query.fetch_one] for column `{}`",
+                                    column.id
+                                ),
+                                typ: "internal".to_string(),
+                            })?;
+
+                        let count =
+                            row.try_get::<i64, _>(0)
+                                .map_err(|e| SettingsError::Generic {
+                                    message: e.to_string(),
+                                    src: format!(
+                                    "settings_create [unique check, row.try_get] for column `{}`",
+                                    column.id
+                                ),
+                                    typ: "internal".to_string(),
+                                })?;
+
+                        if count > 0 {
+                            return Err(SettingsError::RowExists {
+                                column_id: column.id.to_string(),
+                                count,
+                            });
+                        }
                     }
                 }
             }
@@ -824,7 +827,6 @@ pub async fn settings_create(
 
     // Now insert all the columns_to_set into state
     // As we have removed the ignored columns, we can just directly insert the columns_to_set into the state
-    // Insert columns_to_set seperately as we need to bypass ignored_for
     if let Some(op_specific) = setting.operations.get(&OperationType::Create) {
         for (column, value) in op_specific.columns_to_set.iter() {
             let value = state.template_to_string(author, guild_id, value);

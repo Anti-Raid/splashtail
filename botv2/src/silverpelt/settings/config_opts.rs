@@ -351,10 +351,14 @@ pub struct Column {
     /// Note that checks for this column will still be applied (use an empty array in pre_checks to disable checks)
     ///
     /// Semantics:
+    ///
     /// View => The column is removed from the list of columns sent to the consumer. The key is set to its current value when executing the actions
-    /// Create => The column is not handled on the client however actions are still executed. The key itself is set to None when executing the actions
-    /// Update => The column is not handled on the client however actions are still executed. The key itself is set to None when executing the actions
-    /// Delete => The column is not handled on the client however actions are still executed. The key itself is set to None when executing the actions
+    ///
+    /// Create => All column checks other than actions are ignored. The value itself will be set to None. The key itself is set to None in state
+    ///
+    /// Update => All column checks other than actions are ignored. The value itself will be set to None. The key itself is set to None in state
+    ///
+    /// Delete => All column checks other than actions are ignored. The value itself will be set to None. The key itself is set to None in state
     pub ignored_for: Vec<OperationType>,
 
     /// Pre-execute checks
