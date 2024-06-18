@@ -238,7 +238,7 @@ pub async fn event_listener(ectx: &EventHandlerContext) -> Result<(), Error> {
                 let display_name = new_member.display_name().to_string();
                 let new = dehoist_user(&display_name, config.hoist_detection);
 
-                if display_name != new {
+                if new != display_name {
                     let bot_userid = ectx.serenity_context.cache.current_user().id;
                     let cache_http = botox::cache::CacheHttpImpl::from_ctx(&ectx.serenity_context);
                     let Some(bot) =

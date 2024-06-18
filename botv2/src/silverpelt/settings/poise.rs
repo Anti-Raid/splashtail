@@ -84,101 +84,101 @@ fn _get_display_value(
     }
 }
 
-fn _create_reply<'a>(
-    ctx: &crate::Context<'_>,
-    setting: &ConfigOption,
-    values: &'a [State],
-    index: usize,
-) -> poise::CreateReply<'a> {
-    fn create_action_row<'a>(index: usize, total: usize) -> serenity::all::CreateActionRow<'a> {
-        serenity::all::CreateActionRow::Buttons(vec![
-            serenity::all::CreateButton::new("previous")
-                .style(serenity::all::ButtonStyle::Primary)
-                .label("Previous")
-                .disabled(index == 0),
-            serenity::all::CreateButton::new("next")
-                .style(serenity::all::ButtonStyle::Primary)
-                .label("Next")
-                .disabled(index >= total - 1),
-            serenity::all::CreateButton::new("first")
-                .style(serenity::all::ButtonStyle::Primary)
-                .label("First")
-                .disabled(false),
-            serenity::all::CreateButton::new("close")
-                .style(serenity::all::ButtonStyle::Danger)
-                .label("Close")
-                .disabled(false),
-        ])
-    }
-
-    let mut embed = serenity::all::CreateEmbed::default();
-
-    embed = embed.title(format!(
-        "{} ({} of {})",
-        setting.name,
-        index + 1,
-        values.len()
-    ));
-
-    for (key, value) in values[index].state.iter() {
-        if key.starts_with("__") {
-            continue; // Skip internal variables
-        }
-
-        // Find the key in the schema
-        let column = setting.columns.iter().find(|c| c.id == key);
-
-        let display_key = if let Some(column) = column {
-            column.name.to_string()
-        } else {
-            key.clone()
-        };
-
-        let author = ctx.author().id;
-        let guild_id = ctx.guild_id().unwrap();
-
-        let display_value = if let Some(column) = column {
-            _get_display_value(
-                author,
-                guild_id,
-                &column.column_type,
-                column.id,
-                value,
-                &values[index],
-            )
-        } else {
-            value.to_string()
-        };
-
-        if display_value.len() > 1024 {
-            // Discord embed fields have a 1024 character limit
-            // Split the value into multiple fields
-            let mut len = 0;
-
-            while display_value.len() >= len {
-                // Take the next 1024 characters
-                let next: String = display_value.chars().skip(len).take(1024).collect();
-                let next_len = next.len();
-                embed = embed.field(display_key.clone(), next, true);
-                len += next_len;
-            }
-
-            continue;
-        }
-
-        embed = embed.field(display_key, display_value, true);
-    }
-
-    poise::CreateReply::new()
-        .embed(embed)
-        .components(vec![create_action_row(index, values.len())])
-}
-
 /// Common settings viewer for poise, sends an embed, all that stuff
 pub async fn settings_viewer(
     ctx: &crate::Context<'_>,
     setting: &ConfigOption,
 ) -> Result<(), crate::Error> {
+    fn _create_reply<'a>(
+        ctx: &crate::Context<'_>,
+        setting: &ConfigOption,
+        values: &'a [State],
+        index: usize,
+    ) -> poise::CreateReply<'a> {
+        fn create_action_row<'a>(index: usize, total: usize) -> serenity::all::CreateActionRow<'a> {
+            serenity::all::CreateActionRow::Buttons(vec![
+                serenity::all::CreateButton::new("previous")
+                    .style(serenity::all::ButtonStyle::Primary)
+                    .label("Previous")
+                    .disabled(index == 0),
+                serenity::all::CreateButton::new("next")
+                    .style(serenity::all::ButtonStyle::Primary)
+                    .label("Next")
+                    .disabled(index >= total - 1),
+                serenity::all::CreateButton::new("first")
+                    .style(serenity::all::ButtonStyle::Primary)
+                    .label("First")
+                    .disabled(false),
+                serenity::all::CreateButton::new("close")
+                    .style(serenity::all::ButtonStyle::Danger)
+                    .label("Close")
+                    .disabled(false),
+            ])
+        }
+
+        let mut embed = serenity::all::CreateEmbed::default();
+
+        embed = embed.title(format!(
+            "{} ({} of {})",
+            setting.name,
+            index + 1,
+            values.len()
+        ));
+
+        for (key, value) in values[index].state.iter() {
+            if key.starts_with("__") {
+                continue; // Skip internal variables
+            }
+
+            // Find the key in the schema
+            let column = setting.columns.iter().find(|c| c.id == key);
+
+            let display_key = if let Some(column) = column {
+                column.name.to_string()
+            } else {
+                key.clone()
+            };
+
+            let author = ctx.author().id;
+            let guild_id = ctx.guild_id().unwrap();
+
+            let display_value = if let Some(column) = column {
+                _get_display_value(
+                    author,
+                    guild_id,
+                    &column.column_type,
+                    column.id,
+                    value,
+                    &values[index],
+                )
+            } else {
+                value.to_string()
+            };
+
+            if display_value.len() > 1024 {
+                // Discord embed fields have a 1024 character limit
+                // Split the value into multiple fields
+                let mut len = 0;
+
+                while display_value.len() >= len {
+                    // Take the next 1024 characters
+                    let next: String = display_value.chars().skip(len).take(1024).collect();
+                    let next_len = next.len();
+                    embed = embed.field(display_key.clone(), next, true);
+                    len += next_len;
+                }
+
+                continue;
+            }
+
+            embed = embed.field(display_key, display_value, true);
+        }
+
+        poise::CreateReply::new()
+            .embed(embed)
+            .components(vec![create_action_row(index, values.len())])
+    }
+
     let Some(guild_id) = ctx.guild_id() else {
         return Err("This command must be run in a server".into());
     };
@@ -244,6 +244,60 @@ pub async fn settings_creator(
     setting: &ConfigOption,
     fields: indexmap::IndexMap<String, Value>,
 ) -> Result<(), crate::Error> {
+    fn _create_reply<'a>(
+        ctx: &crate::Context<'_>,
+        setting: &ConfigOption,
+        value: &State,
+    ) -> poise::CreateReply<'a> {
+        let mut embed = serenity::all::CreateEmbed::default();
+
+        embed = embed.title(format!("Created {}", setting.name));
+
+        for (key, v) in value.state.iter() {
+            if key.starts_with("__") {
+                continue; // Skip internal variables
+            }
+
+            // Find the key in the schema
+            let column = setting.columns.iter().find(|c| c.id == key);
+
+            let display_key = if let Some(column) = column {
+                column.name.to_string()
+            } else {
+                key.clone()
+            };
+
+            let author = ctx.author().id;
+            let guild_id = ctx.guild_id().unwrap();
+
+            let display_value = if let Some(column) = column {
+                _get_display_value(author, guild_id, &column.column_type, column.id, v, value)
+            } else {
+                v.to_string()
+            };
+
+            if display_value.len() > 1024 {
+                // Discord embed fields have a 1024 character limit
+                // Split the value into multiple fields
+                let mut len = 0;
+
+                while display_value.len() >= len {
+                    // Take the next 1024 characters
+                    let next: String = display_value.chars().skip(len).take(1024).collect();
+                    let next_len = next.len();
+                    embed = embed.field(display_key.clone(), next, true);
+                    len += next_len;
+                }
+
+                continue;
+            }
+
+            embed = embed.field(display_key, display_value, true);
+        }
+
+        poise::CreateReply::new().embed(embed)
+    }
+
     let Some(guild_id) = ctx.guild_id() else {
         return Err("This command must be run in a server".into());
     };
@@ -262,9 +316,7 @@ pub async fn settings_creator(
     .await
     .map_err(|e| format!("Error fetching settings: {}", e))?;
 
-    let values = vec![value];
-
-    let reply = _create_reply(ctx, setting, &values, 0);
+    let reply = _create_reply(ctx, setting, &value);
 
     ctx.send(reply).await?;
 
