@@ -299,18 +299,25 @@ fn _validate_and_parse_value(
                         got_type: format!("{:?}", v),
                     }),
                 },
-                InnerColumnType::BitFlag { .. } => {
-                    match v {
-                        Value::Integer(v) => Ok(Value::Integer(*v)),
-                        _ => Err(SettingsError::SchemaTypeValidationError {
-                            column: column_id.to_string(),
-                            expected_type: "Integer".to_string(),
-                            got_type: format!("{:?}", v),
-                        }),
-                    }
+                InnerColumnType::BitFlag { values } => match v {
+                    Value::Integer(v) => {
+                        let mut final_value = 0;
 
-                    // TODO: Add value parsing for bit flags
-                }
+                        // Set all the valid bits in final_value to ensure no unknown bits are being set
+                        for (_, bit) in values.iter() {
+                            if *bit & *v == *bit {
+                                final_value |= *bit;
+                            }
+                        }
+
+                        Ok(Value::Integer(final_value))
+                    }
+                    _ => Err(SettingsError::SchemaTypeValidationError {
+                        column: column_id.to_string(),
+                        expected_type: "Integer".to_string(),
+                        got_type: format!("{:?}", v),
+                    }),
+                },
                 InnerColumnType::Boolean {} => match v {
                     Value::String(s) => {
                         let value = s.parse::<bool>().map_err(|e| {
@@ -494,7 +501,6 @@ fn _query_bind_value(
 
                         query.bind(vec)
                     }
-                    // TODO: Improve this, right now, we fallback to string
                     Value::List(_) => {
                         let mut vec = Vec::new();
 
