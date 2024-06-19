@@ -394,6 +394,9 @@ pub struct Column {
     ///
     /// Note that these may run either during or after all fields are validated however the current (and all previous) columns
     /// are guaranteed to be set
+    ///
+    /// Note: pre_checks/default_pre_checks for a column will still execute if ignored_for is set for the operation however the value
+    /// may be unset or Value::None
     pub pre_checks: indexmap::IndexMap<OperationType, Vec<ColumnAction>>,
 
     /// Default pre-execute checks to fallback to if the operation specific ones are not set
