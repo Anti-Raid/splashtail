@@ -64,7 +64,7 @@ pub(crate) fn sink() -> ConfigOption {
                 nullable: false,
                 unique: false,
                 suggestions: ColumnSuggestion::Static { suggestions: vec!["channel", "discordhook"] },
-                ignored_for: vec![OperationType::Update],
+                ignored_for: vec![],
                 pre_checks: indexmap::indexmap! {},
                 default_pre_checks: vec![],
             },
@@ -97,12 +97,14 @@ pub(crate) fn sink() -> ConfigOption {
                             let Some(Value::String(sink)) = state.state.get("sink") else {
                                 return Err(SettingsError::MissingOrInvalidField { 
                                     field: "sink".to_string(),
+                                    src: "sink->NativeAction [default_pre_checks]".to_string(),
                                 });
                             };
 
                             let Some(Value::String(typ)) = state.state.get("type") else {
                                 return Err(SettingsError::MissingOrInvalidField { 
                                     field: "type".to_string(),
+                                    src: "sink->NativeAction [default_pre_checks]".to_string(),
                                 });
                             };
 
@@ -161,6 +163,7 @@ pub(crate) fn sink() -> ConfigOption {
                             let Some(Value::String(typ)) = state.state.get("type") else {
                                 return Err(SettingsError::MissingOrInvalidField { 
                                     field: "type".to_string(),
+                                    src: "sink->IpcPerModuleFunction [default_pre_checks]".to_string(),
                                 });
                             };
 
@@ -239,7 +242,7 @@ pub(crate) fn sink() -> ConfigOption {
                 id: "broken",
                 name: "Marked as Broken",
                 column_type: ColumnType::new_scalar(InnerColumnType::Boolean {}),
-                ignored_for: vec![],
+                ignored_for: vec![OperationType::Create],
                 nullable: false,
                 unique: false,
                 suggestions: ColumnSuggestion::None {},

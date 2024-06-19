@@ -41,6 +41,7 @@ pub enum SettingsError {
     /// Missing or invalid field
     MissingOrInvalidField {
         field: String,
+        src: String,
     },
     RowExists {
         column_id: String,
@@ -86,7 +87,7 @@ impl std::fmt::Display for SettingsError {
                     column, check, value, accepted_range, error
                 )
             }
-            SettingsError::MissingOrInvalidField { field } => write!(f, "Missing (or invalid) field `{}`", field),
+            SettingsError::MissingOrInvalidField { field, src } => write!(f, "Missing (or invalid) field `{}` with src: {}", field, src),
             SettingsError::RowExists { column_id, count } => write!(
                 f,
                 "A row with the same column `{}` already exists. Count: {}",

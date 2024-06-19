@@ -753,6 +753,7 @@ pub async fn settings_create(
         if !column.nullable && matches!(value, Value::None) {
             return Err(SettingsError::MissingOrInvalidField {
                 field: column.id.to_string(),
+                src: "settings_create [null check]".to_string(),
             });
         }
 
@@ -956,6 +957,7 @@ pub async fn settings_update(
     let Some(pkey) = state.state.get(setting.primary_key) else {
         return Err(SettingsError::MissingOrInvalidField {
             field: setting.primary_key.to_string(),
+            src: "settings_update [pkey_let]".to_string(),
         });
     };
 
@@ -1032,13 +1034,12 @@ pub async fn settings_update(
         };
 
         // Nullability checks should only happen if the column is not being intentionally ignored
-        if !column.ignored_for.contains(&OperationType::Update) {
-            // Check if the column is nullable
-            if (!column.nullable) && matches!(value, Value::None) {
-                return Err(SettingsError::MissingOrInvalidField {
-                    field: column.id.to_string(),
-                });
-            }
+        // Check if the column is nullable
+        if !column.nullable && matches!(value, Value::None) {
+            return Err(SettingsError::MissingOrInvalidField {
+                field: column.id.to_string(),
+                src: "settings_update [nullability check]".to_string(),
+            });
         }
 
         // Handle cases of uniqueness

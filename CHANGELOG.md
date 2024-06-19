@@ -2,6 +2,7 @@
 
 - ``_validate_value`` has been removed in favor of ``_validate_and_parse_value``. The ``_validate_and_parse_value`` API also handles parsing types to take into account user/developer error and returns the parsed type (hence why ``validate_value`` was renamed). This is a breaking change.
 - The ``User``/``Message``/``Channel``/``Role``/``Emoji`` column types have been removed in favor of a new ``kind`` property inside of the ``string`` inner type. This is how they were parsed/used internally as well and it makes things easier to maintain. This is a breaking change.
+- Added ``src`` to ``SettingsError::MissingOrInvalidField`` to improve debugging and better communicate the source of such an error.
 
 # Tuesday, June 18th, 2024
 
