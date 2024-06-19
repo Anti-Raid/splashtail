@@ -603,7 +603,7 @@ pub async fn settings_view(
             // Fetch and validate the value
             let mut val = Value::from_sqlx(&row, i).map_err(|e| SettingsError::Generic {
                 message: e.to_string(),
-                src: "_parse_row [Value::from_sqlx]".to_string(),
+                src: "settings_view [Value::from_sqlx]".to_string(),
                 typ: "internal".to_string(),
             })?;
 
@@ -623,6 +623,24 @@ pub async fn settings_view(
             )
             .await?;
         }
+
+        // Get out the pkey and pkey_column data here as we need it for the rest of the update
+        let Some(pkey) = state.state.get(setting.primary_key) else {
+            return Err(SettingsError::MissingOrInvalidField {
+                field: setting.primary_key.to_string(),
+                src: "settings_update [pkey_let]".to_string(),
+            });
+        };
+
+        let pkey = pkey.clone(); // Clone to avoid immutable borrow
+
+        let Some(pkey_column) = setting.columns.iter().find(|c| c.id == setting.primary_key) else {
+            return Err(SettingsError::Generic {
+                message: "Primary key column not found".to_string(),
+                src: "settings_update [pkey_column_let_else]".to_string(),
+                typ: "internal".to_string(),
+            });
+        };
 
         // Apply columns_to_set in operation specific data
         if let Some(op_specific) = setting.operations.get(&OperationType::View) {
@@ -648,11 +666,13 @@ pub async fn settings_view(
                 set_stmt.pop();
 
                 let sql_stmt = format!(
-                    "UPDATE {} SET {} WHERE {} = ${}",
+                    "UPDATE {} SET {} WHERE {} = ${} AND {} = ${}",
                     setting.table,
                     set_stmt,
                     setting.guild_id,
-                    i + 1
+                    i + 1,
+                    setting.primary_key,
+                    i + 2
                 );
 
                 let mut query = sqlx::query(sql_stmt.as_str());
@@ -661,13 +681,15 @@ pub async fn settings_view(
                     query = _query_bind_value(query, value, None);
                 }
 
+                query = query.bind(guild_id.to_string());
+                query = _query_bind_value(query, pkey, Some(pkey_column.column_type.clone()));
+
                 query
-                    .bind(guild_id.to_string())
                     .execute(pool)
                     .await
                     .map_err(|e| SettingsError::Generic {
                         message: e.to_string(),
-                        src: "_parse_row [query execute]".to_string(),
+                        src: "settings_view [query execute]".to_string(),
                         typ: "internal".to_string(),
                     })?;
             }
@@ -720,6 +742,13 @@ pub async fn settings_create(
         state.state.insert(column.id.to_string(), value.clone());
     }
 
+    // Start the transaction now that basic validation is done
+    let mut tx = pool.begin().await.map_err(|e| SettingsError::Generic {
+        message: e.to_string(),
+        src: "settings_create [pool.begin]".to_string(),
+        typ: "internal".to_string(),
+    })?;
+
     // Now execute all actions and handle null/unique/pkey checks
     for column in setting.columns.iter() {
         // Execute actions
@@ -771,7 +800,7 @@ pub async fn settings_create(
                     let query = sqlx::query(sql_stmt.as_str()).bind(guild_id.to_string());
 
                     let row = query
-                        .fetch_one(pool)
+                        .fetch_one(&mut *tx)
                         .await
                         .map_err(|e| SettingsError::Generic {
                             message: e.to_string(),
@@ -803,17 +832,18 @@ pub async fn settings_create(
 
                     query = _query_bind_value(query, value.clone(), None);
 
-                    let row = query
-                        .fetch_one(pool)
-                        .await
-                        .map_err(|e| SettingsError::Generic {
-                            message: e.to_string(),
-                            src: format!(
+                    let row =
+                        query
+                            .fetch_one(&mut *tx)
+                            .await
+                            .map_err(|e| SettingsError::Generic {
+                                message: e.to_string(),
+                                src: format!(
                                 "settings_create [unique check, query.fetch_one] for column `{}`",
                                 column.id
                             ),
-                            typ: "internal".to_string(),
-                        })?;
+                                typ: "internal".to_string(),
+                            })?;
 
                     let count = row
                         .try_get::<i64, _>(0)
@@ -894,7 +924,7 @@ pub async fn settings_create(
 
     // Execute the query
     let pkey_row = query
-        .fetch_one(pool)
+        .fetch_one(&mut *tx)
         .await
         .map_err(|e| SettingsError::Generic {
             message: e.to_string(),
@@ -911,6 +941,13 @@ pub async fn settings_create(
             typ: "internal".to_string(),
         })?,
     );
+
+    // Commit the transaction
+    tx.commit().await.map_err(|e| SettingsError::Generic {
+        message: e.to_string(),
+        src: "settings_create [tx.commit]".to_string(),
+        typ: "internal".to_string(),
+    })?;
 
     Ok(state)
 }
@@ -971,6 +1008,13 @@ pub async fn settings_update(
         });
     };
 
+    // Start the transaction now that basic validation is done
+    let mut tx = pool.begin().await.map_err(|e| SettingsError::Generic {
+        message: e.to_string(),
+        src: "settings_create [pool.begin]".to_string(),
+        typ: "internal".to_string(),
+    })?;
+
     // Now retrieve all the unchanged fields
     if !unchanged_fields.is_empty() {
         let sql_stmt = format!(
@@ -986,7 +1030,7 @@ pub async fn settings_update(
         query = _query_bind_value(query, pkey.clone(), Some(pkey_column.column_type.clone()));
 
         let row = query
-            .fetch_one(pool)
+            .fetch_one(&mut *tx)
             .await
             .map_err(|e| SettingsError::Generic {
                 message: e.to_string(),
@@ -997,7 +1041,7 @@ pub async fn settings_update(
         for (i, col) in unchanged_fields.iter().enumerate() {
             let val = Value::from_sqlx(&row, i).map_err(|e| SettingsError::Generic {
                 message: e.to_string(),
-                src: "_parse_row [retrieve_unchanged, Value::from_sqlx]".to_string(),
+                src: "settings_update [retrieve_unchanged, Value::from_sqlx]".to_string(),
                 typ: "internal".to_string(),
             })?;
 
@@ -1062,7 +1106,7 @@ pub async fn settings_update(
                     );
 
                     let row = query
-                        .fetch_one(pool)
+                        .fetch_one(&mut *tx)
                         .await
                         .map_err(|e| SettingsError::Generic {
                             message: e.to_string(),
@@ -1099,17 +1143,18 @@ pub async fn settings_update(
                         Some(pkey_column.column_type.clone()),
                     );
 
-                    let row = query
-                        .fetch_one(pool)
-                        .await
-                        .map_err(|e| SettingsError::Generic {
-                            message: e.to_string(),
-                            src: format!(
+                    let row =
+                        query
+                            .fetch_one(&mut *tx)
+                            .await
+                            .map_err(|e| SettingsError::Generic {
+                                message: e.to_string(),
+                                src: format!(
                                 "settings_update [unique check, query.fetch_one] for column `{}`",
                                 column.id
                             ),
-                            typ: "internal".to_string(),
-                        })?;
+                                typ: "internal".to_string(),
+                            })?;
 
                     let count = row
                         .try_get::<i64, _>(0)
@@ -1145,7 +1190,7 @@ pub async fn settings_update(
                     let query = sqlx::query(sql_stmt.as_str()).bind(guild_id.to_string());
 
                     let row = query
-                        .fetch_one(pool)
+                        .fetch_one(&mut *tx)
                         .await
                         .map_err(|e| SettingsError::Generic {
                             message: e.to_string(),
@@ -1176,17 +1221,18 @@ pub async fn settings_update(
 
                     query = _query_bind_value(query, value.clone(), None);
 
-                    let row = query
-                        .fetch_one(pool)
-                        .await
-                        .map_err(|e| SettingsError::Generic {
-                            message: e.to_string(),
-                            src: format!(
+                    let row =
+                        query
+                            .fetch_one(&mut *tx)
+                            .await
+                            .map_err(|e| SettingsError::Generic {
+                                message: e.to_string(),
+                                src: format!(
                                 "settings_update [unique check, query.fetch_one] for column `{}`",
                                 column.id
                             ),
-                            typ: "internal".to_string(),
-                        })?;
+                                typ: "internal".to_string(),
+                            })?;
 
                     let count = row
                         .try_get::<i64, _>(0)
@@ -1259,13 +1305,138 @@ pub async fn settings_update(
 
     // Execute the query
     query
-        .execute(pool)
+        .execute(&mut *tx)
         .await
         .map_err(|e| SettingsError::Generic {
             message: e.to_string(),
             src: "settings_update [query execute]".to_string(),
             typ: "internal".to_string(),
         })?;
+
+    // Commit the transaction
+    tx.commit().await.map_err(|e| SettingsError::Generic {
+        message: e.to_string(),
+        src: "settings_update [tx.commit]".to_string(),
+        typ: "internal".to_string(),
+    })?;
+
+    Ok(state)
+}
+
+/// Settings API: Delete implementation
+pub async fn settings_delete(
+    setting: &ConfigOption,
+    ctx: &serenity::all::Context,
+    pool: &sqlx::PgPool,
+    guild_id: serenity::all::GuildId,
+    author: serenity::all::UserId,
+    pkey: Value,
+) -> Result<State, SettingsError> {
+    let mut state = State::new();
+
+    let Some(pkey_column) = setting.columns.iter().find(|c| c.id == setting.primary_key) else {
+        return Err(SettingsError::Generic {
+            message: "Primary key column not found".to_string(),
+            src: "settings_update [pkey_column_let_else]".to_string(),
+            typ: "internal".to_string(),
+        });
+    };
+
+    let mut tx = pool.begin().await.map_err(|e| SettingsError::Generic {
+        message: e.to_string(),
+        src: "settings_delete [pool.begin]".to_string(),
+        typ: "internal".to_string(),
+    })?;
+
+    // Fetch entire row to execute actions on before deleting
+    let mut cols = Vec::new();
+
+    for col in &setting.columns {
+        if col.ignored_for.contains(&OperationType::Delete) {
+            continue;
+        }
+
+        cols.push(col.id.to_string());
+    }
+
+    if !cols.is_empty() {
+        let sql_stmt = format!(
+            "SELECT {} FROM {} WHERE {} = $1 AND {} = $2",
+            cols.join(", "),
+            setting.table,
+            setting.guild_id,
+            setting.primary_key
+        );
+
+        let mut query = sqlx::query(sql_stmt.as_str()).bind(guild_id.to_string());
+
+        query = _query_bind_value(query, pkey.clone(), Some(pkey_column.column_type.clone()));
+
+        let Some(row) =
+            query
+                .fetch_optional(&mut *tx)
+                .await
+                .map_err(|e| SettingsError::Generic {
+                    message: e.to_string(),
+                    src: "settings_delete [retrieve_unchanged, query.fetch_one]".to_string(),
+                    typ: "internal".to_string(),
+                })?
+        else {
+            return Err(SettingsError::RowDoesNotExist {
+                column_id: setting.primary_key.to_string(),
+            });
+        };
+
+        for (i, col) in cols.iter().enumerate() {
+            let val = Value::from_sqlx(&row, i).map_err(|e| SettingsError::Generic {
+                message: e.to_string(),
+                src: "settings_delete [retrieve_unchanged, Value::from_sqlx]".to_string(),
+                typ: "internal".to_string(),
+            })?;
+
+            state.state.insert(col.to_string(), val);
+        }
+    }
+
+    // Execute all actions
+    for column in setting.columns.iter() {
+        // Execute actions
+        let actions = column
+            .pre_checks
+            .get(&OperationType::Delete)
+            .unwrap_or(&column.default_pre_checks);
+
+        crate::silverpelt::settings::action_executor::execute_actions(
+            &mut state, actions, ctx, author, guild_id,
+        )
+        .await?;
+    }
+
+    // Now delete the entire row, the ignored_for does not matter here as we are deleting the entire row
+    let sql_stmt = format!(
+        "DELETE FROM {} WHERE {} = $1 AND {} = $2",
+        setting.table, setting.guild_id, setting.primary_key
+    );
+
+    let mut query = sqlx::query(sql_stmt.as_str());
+
+    query = query.bind(guild_id.to_string());
+    query = _query_bind_value(query, pkey.clone(), Some(pkey_column.column_type.clone()));
+
+    let res = query
+        .execute(&mut *tx)
+        .await
+        .map_err(|e| SettingsError::Generic {
+            message: e.to_string(),
+            src: "settings_delete [query execute]".to_string(),
+            typ: "internal".to_string(),
+        })?;
+
+    if res.rows_affected() == 0 {
+        return Err(SettingsError::RowDoesNotExist {
+            column_id: setting.primary_key.to_string(),
+        });
+    }
 
     Ok(state)
 }

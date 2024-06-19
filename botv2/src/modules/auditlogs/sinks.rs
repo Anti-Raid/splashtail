@@ -250,11 +250,11 @@ pub(crate) fn sink() -> ConfigOption {
         ],
         operations: indexmap::indexmap! {
             OperationType::View => OperationSpecific {
-                corresponding_command: "list_sinks",
+                corresponding_command: "auditlogs list_sinks",
                 columns_to_set: indexmap::indexmap! {},
             },
             OperationType::Create => OperationSpecific {
-                corresponding_command: "add_sink",
+                corresponding_command: "auditlogs add_sink",
                 columns_to_set: indexmap::indexmap! {
                     "created_at" => "{__now}",
                     "created_by" => "{__author}",
@@ -263,11 +263,15 @@ pub(crate) fn sink() -> ConfigOption {
                 },
             },
             OperationType::Update => OperationSpecific {
-                corresponding_command: "add_sink",
+                corresponding_command: "auditlogs edit_sink",
                 columns_to_set: indexmap::indexmap! {
                     "last_updated_at" => "{__now}",
                     "last_updated_by" => "{__author}",
                 },
+            },
+            OperationType::Delete => OperationSpecific {
+                corresponding_command: "auditlogs remove_sink",
+                columns_to_set: indexmap::indexmap! {},
             },
         }
     }

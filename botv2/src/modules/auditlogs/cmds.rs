@@ -24,6 +24,49 @@ pub async fn list_sinks(ctx: Context<'_>) -> Result<(), Error> {
 }
 
 #[poise::command(prefix_command, slash_command, user_cooldown = 1)]
+pub async fn add_sink(
+    ctx: Context<'_>,
+    #[description = "Sink type to set"] r#type: String,
+    #[description = "Sink to set"] sink: String,
+    #[description = "Specific events you want to filter by"] events: Option<String>,
+    #[description = "Mark as broken (temporarily disables the webhook)"] broken: bool,
+) -> Result<(), Error> {
+    crate::silverpelt::settings::poise::settings_creator(
+        &ctx,
+        &super::sinks::sink(),
+        indexmap::indexmap! {
+            "type".to_string() => Value::String(r#type),
+            "sink".to_string() => Value::String(sink),
+            "events".to_string() => {
+                let events = if let Some(events) = events {
+                    let events: Vec<String> = events.split(',').map(|x| x.to_string()).collect();
+                    Some(events)
+                } else {
+                    None
+                };
+
+                match events {
+                    Some(events) => {
+                        let mut value_events = Vec::new();
+
+                        for evt in events {
+                            value_events.push(Value::String(evt));
+                        }
+
+                        Value::List(value_events)
+                    }
+                    None => Value::None
+                }
+            },
+            "broken".to_string() => Value::Boolean(broken),
+        },
+    )
+    .await?;
+
+    Ok(())
+}
+
+#[poise::command(prefix_command, slash_command, user_cooldown = 1)]
 pub async fn add_channel(
     ctx: Context<'_>,
     #[description = "Channel to send logs to"] channel: ChannelId,
@@ -155,23 +198,12 @@ pub async fn remove_sink(
     ctx: Context<'_>,
     #[description = "Sink ID to remove"] sink_id: String,
 ) -> Result<(), Error> {
-    let Some(guild_id) = ctx.guild_id() else {
-        return Err("This command can only be used in a guild".into());
-    };
-
-    let res = sqlx::query!(
-        "DELETE FROM auditlogs__sinks WHERE guild_id = $1 AND id = $2",
-        guild_id.to_string(),
-        sink_id.parse::<sqlx::types::Uuid>()?,
+    crate::silverpelt::settings::poise::settings_deleter(
+        &ctx,
+        &super::sinks::sink(),
+        Value::String(sink_id),
     )
-    .execute(&ctx.data().pool)
     .await?;
-
-    if res.rows_affected() == 0 {
-        return Err("No sink found with that ID".into());
-    }
-
-    ctx.say("Successfully removed sink").await?;
 
     Ok(())
 }
