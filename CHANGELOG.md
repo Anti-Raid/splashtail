@@ -1,3 +1,8 @@
+# Wednesday, June 19th 2024
+
+- ``_validate_value`` has been removed in favor of ``_validate_and_parse_value``. The ``_validate_and_parse_value`` API also handles parsing types to take into account user/developer error and returns the parsed type (hence why ``validate_value`` was renamed). This is a breaking change.
+- The ``User``/``Message``/``Channel``/``Role``/``Emoji`` column types have been removed in favor of a new ``kind`` property inside of the ``string`` inner type. This is how they were parsed/used internally as well and it makes things easier to maintain. This is a breaking change.
+
 # Tuesday, June 18th, 2024
 
 - ``settings_create`` has been significantly optimized to reduce the number of needed hash maps. The ``SettingsError`` enum has been moved to ``config_opts.rs`` with the other type definitions. General bug fixes and improvements. Notably, unique constaints on columns are now enforced.

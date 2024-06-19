@@ -1,6 +1,6 @@
 use futures_util::FutureExt;
 use crate::silverpelt::settings::config_opts::{
-    Column, ColumnAction, ColumnSuggestion, ColumnType, ConfigOption, InnerColumnType, OperationSpecific, OperationType, SettingsError
+    Column, ColumnAction, ColumnSuggestion, ColumnType, ConfigOption, InnerColumnType, InnerColumnTypeStringKind, OperationSpecific, OperationType, SettingsError
 };
 use crate::silverpelt::value::Value;
 
@@ -60,7 +60,7 @@ pub(crate) fn sink() -> ConfigOption {
             Column {
                 id: "type",
                 name: "Sink Type",
-                column_type: ColumnType::new_scalar(InnerColumnType::String { min_length: None, max_length: None, allowed_values: vec!["channel", "discordhook"] }),
+                column_type: ColumnType::new_scalar(InnerColumnType::String { min_length: None, max_length: None, allowed_values: vec!["channel", "discordhook"], kind: InnerColumnTypeStringKind::Normal }),
                 nullable: false,
                 unique: false,
                 suggestions: ColumnSuggestion::Static { suggestions: vec!["channel", "discordhook"] },
@@ -71,7 +71,7 @@ pub(crate) fn sink() -> ConfigOption {
             Column {
                 id: "sink",
                 name: "Sink",
-                column_type: ColumnType::new_scalar(InnerColumnType::String { min_length: None, max_length: None, allowed_values: vec![] }),
+                column_type: ColumnType::new_scalar(InnerColumnType::String { min_length: None, max_length: None, allowed_values: vec![], kind: InnerColumnTypeStringKind::Normal }),
                 nullable: false,
                 unique: false,
                 suggestions: ColumnSuggestion::None {},
@@ -172,7 +172,7 @@ pub(crate) fn sink() -> ConfigOption {
             Column {
                 id: "events",
                 name: "Events",
-                column_type: ColumnType::new_array(InnerColumnType::String { min_length: None, max_length: None, allowed_values: vec![] }),
+                column_type: ColumnType::new_array(InnerColumnType::String { min_length: None, max_length: None, allowed_values: vec![], kind: InnerColumnTypeStringKind::Normal }),
                 nullable: true,
                 unique: false,
                 suggestions: ColumnSuggestion::Static { suggestions: gwevent::core::event_list().to_vec() },
@@ -205,7 +205,7 @@ pub(crate) fn sink() -> ConfigOption {
             Column {
                 id: "created_by",
                 name: "Created By",
-                column_type: ColumnType::new_scalar(InnerColumnType::User {}),
+                column_type: ColumnType::new_scalar(InnerColumnType::String { min_length: None, max_length: None, allowed_values: vec![], kind: InnerColumnTypeStringKind::User }),
                 ignored_for: vec![OperationType::Create, OperationType::Update],
                 nullable: false,
                 unique: false,
@@ -227,7 +227,7 @@ pub(crate) fn sink() -> ConfigOption {
             Column {
                 id: "last_updated_by",
                 name: "Last Updated By",
-                column_type: ColumnType::new_scalar(InnerColumnType::User {}),
+                column_type: ColumnType::new_scalar(InnerColumnType::String { min_length: None, max_length: None, allowed_values: vec![], kind: InnerColumnTypeStringKind::User }),
                 ignored_for: vec![OperationType::Create, OperationType::Update],
                 nullable: false,
                 unique: false,

@@ -152,12 +152,43 @@ impl std::fmt::Display for ColumnType {
 
 #[derive(Debug, Clone, PartialEq)]
 #[allow(dead_code)]
+pub enum InnerColumnTypeStringKind {
+    /// Normal string
+    Normal,
+    /// User
+    User,
+    /// Channel
+    Channel,
+    /// Role
+    Role,
+    /// Emoji
+    Emoji,
+    /// Message
+    Message,
+}
+
+impl std::fmt::Display for InnerColumnTypeStringKind {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            InnerColumnTypeStringKind::Normal => write!(f, "Normal"),
+            InnerColumnTypeStringKind::User => write!(f, "User"),
+            InnerColumnTypeStringKind::Channel => write!(f, "Channel"),
+            InnerColumnTypeStringKind::Role => write!(f, "Role"),
+            InnerColumnTypeStringKind::Emoji => write!(f, "Emoji"),
+            InnerColumnTypeStringKind::Message => write!(f, "Message"),
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+#[allow(dead_code)]
 pub enum InnerColumnType {
     Uuid {},
     String {
         min_length: Option<usize>,
         max_length: Option<usize>,
         allowed_values: Vec<&'static str>, // If empty, all values are allowed
+        kind: InnerColumnTypeStringKind,
     },
     Timestamp {},
     TimestampTz {},
@@ -168,11 +199,6 @@ pub enum InnerColumnType {
         values: indexmap::IndexMap<&'static str, i64>,
     },
     Boolean {},
-    User {},
-    Channel {},
-    Role {},
-    Emoji {},
-    Message {},
     Json {},
 }
 
@@ -184,8 +210,9 @@ impl std::fmt::Display for InnerColumnType {
                 min_length,
                 max_length,
                 allowed_values,
+                kind,
             } => {
-                write!(f, "String")?;
+                write!(f, "String {}", kind)?;
                 if let Some(min) = min_length {
                     write!(f, " (min length: {})", min)?;
                 }
@@ -212,11 +239,6 @@ impl std::fmt::Display for InnerColumnType {
                 write!(f, ")")
             }
             InnerColumnType::Boolean {} => write!(f, "Boolean"),
-            InnerColumnType::User {} => write!(f, "User"),
-            InnerColumnType::Channel {} => write!(f, "Channel"),
-            InnerColumnType::Role {} => write!(f, "Role"),
-            InnerColumnType::Emoji {} => write!(f, "Emoji"),
-            InnerColumnType::Message {} => write!(f, "Message"),
             InnerColumnType::Json {} => write!(f, "Json"),
         }
     }
@@ -368,9 +390,14 @@ pub struct Column {
     pub ignored_for: Vec<OperationType>,
 
     /// Pre-execute checks
+    ///
+    /// Note that these may run either during or after all fields are validated however the current (and all previous) columns
+    /// are guaranteed to be set
     pub pre_checks: indexmap::IndexMap<OperationType, Vec<ColumnAction>>,
 
     /// Default pre-execute checks to fallback to if the operation specific ones are not set
+    ///
+    /// Same rules as pre_checks apply
     pub default_pre_checks: Vec<ColumnAction>,
 }
 

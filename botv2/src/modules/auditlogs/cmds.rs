@@ -6,7 +6,13 @@ use serenity::all::ChannelId;
     prefix_command,
     slash_command,
     user_cooldown = 1,
-    subcommands("list_sinks", "add_channel", "add_discordhook", "remove_sink")
+    subcommands(
+        "list_sinks",
+        "add_channel",
+        "add_discordhook",
+        "edit_sink",
+        "remove_sink"
+    )
 )]
 pub async fn auditlogs(_ctx: Context<'_>) -> Result<(), Error> {
     Ok(())
@@ -92,6 +98,51 @@ pub async fn add_discordhook(
                 }
             },
             "broken".to_string() => Value::Boolean(false),
+        },
+    )
+    .await?;
+
+    Ok(())
+}
+
+#[poise::command(prefix_command, slash_command, user_cooldown = 1)]
+pub async fn edit_sink(
+    ctx: Context<'_>,
+    #[description = "Sink ID to edit"] id: String,
+    #[description = "Sink type to set"] r#type: String,
+    #[description = "Sink to set"] sink: String,
+    #[description = "Specific events you want to filter by"] events: Option<String>,
+    #[description = "Mark as broken (temporarily disables the webhook)"] broken: bool,
+) -> Result<(), Error> {
+    crate::silverpelt::settings::poise::settings_updater(
+        &ctx,
+        &super::sinks::sink(),
+        indexmap::indexmap! {
+            "id".to_string() => Value::String(id),
+            "type".to_string() => Value::String(r#type),
+            "sink".to_string() => Value::String(sink),
+            "events".to_string() => {
+                let events = if let Some(events) = events {
+                    let events: Vec<String> = events.split(',').map(|x| x.to_string()).collect();
+                    Some(events)
+                } else {
+                    None
+                };
+
+                match events {
+                    Some(events) => {
+                        let mut value_events = Vec::new();
+
+                        for evt in events {
+                            value_events.push(Value::String(evt));
+                        }
+
+                        Value::List(value_events)
+                    }
+                    None => Value::None
+                }
+            },
+            "broken".to_string() => Value::Boolean(broken),
         },
     )
     .await?;

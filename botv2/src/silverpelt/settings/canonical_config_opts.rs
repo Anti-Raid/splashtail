@@ -30,12 +30,55 @@ impl From<super::config_opts::ColumnType> for CanonicalColumnType {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[allow(dead_code)]
+pub enum CanonicalInnerColumnTypeStringKind {
+    /// Normal string
+    Normal,
+    /// User
+    User,
+    /// Channel
+    Channel,
+    /// Role
+    Role,
+    /// Emoji
+    Emoji,
+    /// Message
+    Message,
+}
+
+impl From<super::config_opts::InnerColumnTypeStringKind> for CanonicalInnerColumnTypeStringKind {
+    fn from(kind: super::config_opts::InnerColumnTypeStringKind) -> Self {
+        match kind {
+            super::config_opts::InnerColumnTypeStringKind::Normal => {
+                CanonicalInnerColumnTypeStringKind::Normal
+            }
+            super::config_opts::InnerColumnTypeStringKind::User => {
+                CanonicalInnerColumnTypeStringKind::User
+            }
+            super::config_opts::InnerColumnTypeStringKind::Channel => {
+                CanonicalInnerColumnTypeStringKind::Channel
+            }
+            super::config_opts::InnerColumnTypeStringKind::Role => {
+                CanonicalInnerColumnTypeStringKind::Role
+            }
+            super::config_opts::InnerColumnTypeStringKind::Emoji => {
+                CanonicalInnerColumnTypeStringKind::Emoji
+            }
+            super::config_opts::InnerColumnTypeStringKind::Message => {
+                CanonicalInnerColumnTypeStringKind::Message
+            }
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[allow(dead_code)]
 pub enum CanonicalInnerColumnType {
     Uuid {},
     String {
         min_length: Option<usize>,
         max_length: Option<usize>,
         allowed_values: Vec<String>,
+        kind: CanonicalInnerColumnTypeStringKind,
     },
     Timestamp {},
     TimestampTz {},
@@ -46,11 +89,6 @@ pub enum CanonicalInnerColumnType {
         values: indexmap::IndexMap<String, i64>,
     },
     Boolean {},
-    User {},
-    Channel {},
-    Role {},
-    Emoji {},
-    Message {},
     Json {},
 }
 
@@ -62,10 +100,12 @@ impl From<super::config_opts::InnerColumnType> for CanonicalInnerColumnType {
                 min_length,
                 max_length,
                 allowed_values,
+                kind,
             } => CanonicalInnerColumnType::String {
                 min_length,
                 max_length,
                 allowed_values: allowed_values.iter().map(|s| s.to_string()).collect(),
+                kind: kind.into(),
             },
             super::config_opts::InnerColumnType::Timestamp {} => {
                 CanonicalInnerColumnType::Timestamp {}
@@ -84,11 +124,6 @@ impl From<super::config_opts::InnerColumnType> for CanonicalInnerColumnType {
                 }
             }
             super::config_opts::InnerColumnType::Boolean {} => CanonicalInnerColumnType::Boolean {},
-            super::config_opts::InnerColumnType::User {} => CanonicalInnerColumnType::User {},
-            super::config_opts::InnerColumnType::Channel {} => CanonicalInnerColumnType::Channel {},
-            super::config_opts::InnerColumnType::Role {} => CanonicalInnerColumnType::Role {},
-            super::config_opts::InnerColumnType::Emoji {} => CanonicalInnerColumnType::Emoji {},
-            super::config_opts::InnerColumnType::Message {} => CanonicalInnerColumnType::Message {},
             super::config_opts::InnerColumnType::Json {} => CanonicalInnerColumnType::Json {},
         }
     }
