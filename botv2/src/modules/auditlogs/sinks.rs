@@ -76,22 +76,20 @@ pub(crate) fn sink() -> ConfigOption {
                 unique: false,
                 suggestions: ColumnSuggestion::None {},
                 ignored_for: vec![],
-                pre_checks: indexmap::indexmap! {
-                    OperationType::View => vec![
-                        ColumnAction::NativeAction {
-                            action: Box::new(|_ctx, state| async move {
-                                if let Some(Value::String(v)) = state.state.get("type") {
-                                    if v == "channel" {
-                                        state.state.insert("__sink_displaytype".to_string(), Value::String("channel".to_string()));
-                                    }
-                                }
-                                Ok(())
-                            }.boxed()),
-                            on_condition: None
-                        }
-                    ],
-                },
+                pre_checks: indexmap::indexmap! {},
                 default_pre_checks: vec![
+                    // Set sink display type
+                    ColumnAction::NativeAction {
+                        action: Box::new(|_ctx, state| async move {
+                            if let Some(Value::String(v)) = state.state.get("type") {
+                                if v == "channel" {
+                                    state.state.insert("__sink_displaytype".to_string(), Value::String("channel".to_string()));
+                                }
+                            }
+                            Ok(())
+                        }.boxed()),
+                        on_condition: None
+                    },
                     ColumnAction::NativeAction {
                         action: Box::new(|_ctx, state| async move {
                             let Some(Value::String(sink)) = state.state.get("sink") else {
