@@ -9,11 +9,15 @@
 //
 // For display purposes, the special case variable {[__column_id]_displaytype} can be set to allow displaying in a different form
 
+use crate::silverpelt::value::Value;
 use futures::future::BoxFuture;
-use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum SettingsError {
+    /// Operation not supported
+    OperationNotSupported {
+        operation: OperationType,
+    },
     /// Generic error
     Generic {
         message: String,
@@ -35,7 +39,7 @@ pub enum SettingsError {
         column: String,
         check: String,
         error: String,
-        value: serde_json::Value,
+        value: Value,
         accepted_range: String,
     },
     /// Missing or invalid field
@@ -61,6 +65,9 @@ impl std::fmt::Display for SettingsError {
         match self {
             SettingsError::Generic { message, src, typ } => {
                 write!(f, "{} from src `{}` of type `{}`", message, src, typ)
+            }
+            SettingsError::OperationNotSupported { operation } => {
+                write!(f, "Operation `{}` is not supported", operation)
             }
             SettingsError::SchemaTypeValidationError {
                 column,
@@ -436,6 +443,17 @@ pub enum OperationType {
     Create,
     Update,
     Delete,
+}
+
+impl std::fmt::Display for OperationType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            OperationType::View => write!(f, "View"),
+            OperationType::Create => write!(f, "Create"),
+            OperationType::Update => write!(f, "Update"),
+            OperationType::Delete => write!(f, "Delete"),
+        }
+    }
 }
 
 #[derive(Debug, PartialEq)]

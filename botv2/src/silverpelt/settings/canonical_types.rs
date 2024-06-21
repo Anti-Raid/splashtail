@@ -1,5 +1,133 @@
 use serde::{Deserialize, Serialize};
 
+#[derive(Clone, Serialize, Deserialize)]
+
+pub enum CanonicalSettingsResult {
+    Ok {
+        fields: Vec<indexmap::IndexMap<String, serde_json::Value>>,
+    },
+    PermissionError {
+        res: crate::silverpelt::permissions::PermissionResult,
+    },
+    Err {
+        error: CanonicalSettingsError,
+    },
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub enum CanonicalSettingsError {
+    /// Operation not supported
+    OperationNotSupported {
+        operation: CanonicalOperationType,
+    },
+    /// Generic error
+    Generic {
+        message: String,
+        src: String,
+        typ: String,
+    },
+    /// Schema type validation error
+    SchemaTypeValidationError {
+        column: String,
+        expected_type: String,
+        got_type: String,
+    },
+    /// Schema null value validation error
+    SchemaNullValueValidationError {
+        column: String,
+    },
+    /// Schema check validation error
+    SchemaCheckValidationError {
+        column: String,
+        check: String,
+        error: String,
+        value: serde_json::Value,
+        accepted_range: String,
+    },
+    /// Missing or invalid field
+    MissingOrInvalidField {
+        field: String,
+        src: String,
+    },
+    RowExists {
+        column_id: String,
+        count: i64,
+    },
+    RowDoesNotExist {
+        column_id: String,
+    },
+    MaximumCountReached {
+        max: i64,
+        current: i64,
+    },
+}
+
+impl From<super::types::SettingsError> for CanonicalSettingsError {
+    fn from(error: super::types::SettingsError) -> Self {
+        match error {
+            super::types::SettingsError::OperationNotSupported { operation } => {
+                CanonicalSettingsError::OperationNotSupported {
+                    operation: operation.into(),
+                }
+            }
+            super::types::SettingsError::Generic { message, src, typ } => {
+                CanonicalSettingsError::Generic {
+                    message: message.to_string(),
+                    src: src.to_string(),
+                    typ: typ.to_string(),
+                }
+            }
+            super::types::SettingsError::SchemaTypeValidationError {
+                column,
+                expected_type,
+                got_type,
+            } => CanonicalSettingsError::SchemaTypeValidationError {
+                column: column.to_string(),
+                expected_type: expected_type.to_string(),
+                got_type: got_type.to_string(),
+            },
+            super::types::SettingsError::SchemaNullValueValidationError { column } => {
+                CanonicalSettingsError::SchemaNullValueValidationError {
+                    column: column.to_string(),
+                }
+            }
+            super::types::SettingsError::SchemaCheckValidationError {
+                column,
+                check,
+                error,
+                value,
+                accepted_range,
+            } => CanonicalSettingsError::SchemaCheckValidationError {
+                column: column.to_string(),
+                check: check.to_string(),
+                error: error.to_string(),
+                value: value.to_json(),
+                accepted_range: accepted_range.to_string(),
+            },
+            super::types::SettingsError::MissingOrInvalidField { field, src } => {
+                CanonicalSettingsError::MissingOrInvalidField {
+                    field: field.to_string(),
+                    src: src.to_string(),
+                }
+            }
+            super::types::SettingsError::RowExists { column_id, count } => {
+                CanonicalSettingsError::RowExists {
+                    column_id: column_id.to_string(),
+                    count,
+                }
+            }
+            super::types::SettingsError::RowDoesNotExist { column_id } => {
+                CanonicalSettingsError::RowDoesNotExist {
+                    column_id: column_id.to_string(),
+                }
+            }
+            super::types::SettingsError::MaximumCountReached { max, current } => {
+                CanonicalSettingsError::MaximumCountReached { max, current }
+            }
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[allow(dead_code)]
 pub enum CanonicalColumnType {
@@ -15,13 +143,13 @@ pub enum CanonicalColumnType {
     },
 }
 
-impl From<super::config_opts::ColumnType> for CanonicalColumnType {
-    fn from(column_type: super::config_opts::ColumnType) -> Self {
+impl From<super::types::ColumnType> for CanonicalColumnType {
+    fn from(column_type: super::types::ColumnType) -> Self {
         match column_type {
-            super::config_opts::ColumnType::Scalar { column_type } => CanonicalColumnType::Scalar {
+            super::types::ColumnType::Scalar { column_type } => CanonicalColumnType::Scalar {
                 column_type: column_type.into(),
             },
-            super::config_opts::ColumnType::Array { inner } => CanonicalColumnType::Array {
+            super::types::ColumnType::Array { inner } => CanonicalColumnType::Array {
                 inner: inner.into(),
             },
         }
@@ -45,25 +173,25 @@ pub enum CanonicalInnerColumnTypeStringKind {
     Message,
 }
 
-impl From<super::config_opts::InnerColumnTypeStringKind> for CanonicalInnerColumnTypeStringKind {
-    fn from(kind: super::config_opts::InnerColumnTypeStringKind) -> Self {
+impl From<super::types::InnerColumnTypeStringKind> for CanonicalInnerColumnTypeStringKind {
+    fn from(kind: super::types::InnerColumnTypeStringKind) -> Self {
         match kind {
-            super::config_opts::InnerColumnTypeStringKind::Normal => {
+            super::types::InnerColumnTypeStringKind::Normal => {
                 CanonicalInnerColumnTypeStringKind::Normal
             }
-            super::config_opts::InnerColumnTypeStringKind::User => {
+            super::types::InnerColumnTypeStringKind::User => {
                 CanonicalInnerColumnTypeStringKind::User
             }
-            super::config_opts::InnerColumnTypeStringKind::Channel => {
+            super::types::InnerColumnTypeStringKind::Channel => {
                 CanonicalInnerColumnTypeStringKind::Channel
             }
-            super::config_opts::InnerColumnTypeStringKind::Role => {
+            super::types::InnerColumnTypeStringKind::Role => {
                 CanonicalInnerColumnTypeStringKind::Role
             }
-            super::config_opts::InnerColumnTypeStringKind::Emoji => {
+            super::types::InnerColumnTypeStringKind::Emoji => {
                 CanonicalInnerColumnTypeStringKind::Emoji
             }
-            super::config_opts::InnerColumnTypeStringKind::Message => {
+            super::types::InnerColumnTypeStringKind::Message => {
                 CanonicalInnerColumnTypeStringKind::Message
             }
         }
@@ -92,11 +220,11 @@ pub enum CanonicalInnerColumnType {
     Json {},
 }
 
-impl From<super::config_opts::InnerColumnType> for CanonicalInnerColumnType {
-    fn from(column_type: super::config_opts::InnerColumnType) -> Self {
+impl From<super::types::InnerColumnType> for CanonicalInnerColumnType {
+    fn from(column_type: super::types::InnerColumnType) -> Self {
         match column_type {
-            super::config_opts::InnerColumnType::Uuid {} => CanonicalInnerColumnType::Uuid {},
-            super::config_opts::InnerColumnType::String {
+            super::types::InnerColumnType::Uuid {} => CanonicalInnerColumnType::Uuid {},
+            super::types::InnerColumnType::String {
                 min_length,
                 max_length,
                 allowed_values,
@@ -107,15 +235,13 @@ impl From<super::config_opts::InnerColumnType> for CanonicalInnerColumnType {
                 allowed_values: allowed_values.iter().map(|s| s.to_string()).collect(),
                 kind: kind.into(),
             },
-            super::config_opts::InnerColumnType::Timestamp {} => {
-                CanonicalInnerColumnType::Timestamp {}
-            }
-            super::config_opts::InnerColumnType::TimestampTz {} => {
+            super::types::InnerColumnType::Timestamp {} => CanonicalInnerColumnType::Timestamp {},
+            super::types::InnerColumnType::TimestampTz {} => {
                 CanonicalInnerColumnType::TimestampTz {}
             }
-            super::config_opts::InnerColumnType::Integer {} => CanonicalInnerColumnType::Integer {},
-            super::config_opts::InnerColumnType::Float {} => CanonicalInnerColumnType::Float {},
-            super::config_opts::InnerColumnType::BitFlag { values } => {
+            super::types::InnerColumnType::Integer {} => CanonicalInnerColumnType::Integer {},
+            super::types::InnerColumnType::Float {} => CanonicalInnerColumnType::Float {},
+            super::types::InnerColumnType::BitFlag { values } => {
                 CanonicalInnerColumnType::BitFlag {
                     values: values
                         .into_iter()
@@ -123,8 +249,8 @@ impl From<super::config_opts::InnerColumnType> for CanonicalInnerColumnType {
                         .collect::<indexmap::IndexMap<String, i64>>(),
                 }
             }
-            super::config_opts::InnerColumnType::Boolean {} => CanonicalInnerColumnType::Boolean {},
-            super::config_opts::InnerColumnType::Json {} => CanonicalInnerColumnType::Json {},
+            super::types::InnerColumnType::Boolean {} => CanonicalInnerColumnType::Boolean {},
+            super::types::InnerColumnType::Json {} => CanonicalInnerColumnType::Json {},
         }
     }
 }
@@ -141,22 +267,22 @@ pub enum CanonicalColumnSuggestion {
     None {},
 }
 
-impl From<super::config_opts::ColumnSuggestion> for CanonicalColumnSuggestion {
-    fn from(column_suggestion: super::config_opts::ColumnSuggestion) -> Self {
+impl From<super::types::ColumnSuggestion> for CanonicalColumnSuggestion {
+    fn from(column_suggestion: super::types::ColumnSuggestion) -> Self {
         match column_suggestion {
-            super::config_opts::ColumnSuggestion::Static { suggestions } => {
+            super::types::ColumnSuggestion::Static { suggestions } => {
                 CanonicalColumnSuggestion::Static {
                     suggestions: suggestions.iter().map(|s| s.to_string()).collect(),
                 }
             }
-            super::config_opts::ColumnSuggestion::Dynamic {
+            super::types::ColumnSuggestion::Dynamic {
                 table_name,
                 column_name,
             } => CanonicalColumnSuggestion::Dynamic {
                 table_name: table_name.to_string(),
                 column_name: column_name.to_string(),
             },
-            super::config_opts::ColumnSuggestion::None {} => CanonicalColumnSuggestion::None {},
+            super::types::ColumnSuggestion::None {} => CanonicalColumnSuggestion::None {},
         }
     }
 }
@@ -193,8 +319,8 @@ pub struct CanonicalColumn {
     pub ignored_for: Vec<CanonicalOperationType>,
 }
 
-impl From<super::config_opts::Column> for CanonicalColumn {
-    fn from(column: super::config_opts::Column) -> Self {
+impl From<super::types::Column> for CanonicalColumn {
+    fn from(column: super::types::Column) -> Self {
         Self {
             id: column.id.to_string(),
             name: column.name.to_string(),
@@ -225,8 +351,8 @@ pub struct CanonicalOperationSpecific {
     pub columns_to_set: indexmap::IndexMap<String, String>,
 }
 
-impl From<super::config_opts::OperationSpecific> for CanonicalOperationSpecific {
-    fn from(operation_specific: super::config_opts::OperationSpecific) -> Self {
+impl From<super::types::OperationSpecific> for CanonicalOperationSpecific {
+    fn from(operation_specific: super::types::OperationSpecific) -> Self {
         Self {
             corresponding_command: operation_specific.corresponding_command.to_string(),
             columns_to_set: operation_specific
@@ -251,13 +377,24 @@ pub enum CanonicalOperationType {
     Delete,
 }
 
-impl From<super::config_opts::OperationType> for CanonicalOperationType {
-    fn from(operation_type: super::config_opts::OperationType) -> Self {
+impl From<super::types::OperationType> for CanonicalOperationType {
+    fn from(operation_type: super::types::OperationType) -> Self {
         match operation_type {
-            super::config_opts::OperationType::View => CanonicalOperationType::View,
-            super::config_opts::OperationType::Create => CanonicalOperationType::Create,
-            super::config_opts::OperationType::Update => CanonicalOperationType::Update,
-            super::config_opts::OperationType::Delete => CanonicalOperationType::Delete,
+            super::types::OperationType::View => CanonicalOperationType::View,
+            super::types::OperationType::Create => CanonicalOperationType::Create,
+            super::types::OperationType::Update => CanonicalOperationType::Update,
+            super::types::OperationType::Delete => CanonicalOperationType::Delete,
+        }
+    }
+}
+
+impl From<CanonicalOperationType> for super::types::OperationType {
+    fn from(operation_type: CanonicalOperationType) -> super::types::OperationType {
+        match operation_type {
+            CanonicalOperationType::View => super::types::OperationType::View,
+            CanonicalOperationType::Create => super::types::OperationType::Create,
+            CanonicalOperationType::Update => super::types::OperationType::Update,
+            CanonicalOperationType::Delete => super::types::OperationType::Delete,
         }
     }
 }
@@ -290,8 +427,8 @@ pub struct CanonicalConfigOption {
 }
 
 /// Given a module, return its canonical representation
-impl From<super::config_opts::ConfigOption> for CanonicalConfigOption {
-    fn from(module: super::config_opts::ConfigOption) -> Self {
+impl From<super::types::ConfigOption> for CanonicalConfigOption {
+    fn from(module: super::types::ConfigOption) -> Self {
         Self {
             id: module.id.to_string(),
             table: module.table.to_string(),

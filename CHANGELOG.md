@@ -1,3 +1,9 @@
+# Friday, June 21st 2024
+
+- The presense of operation specific data is now used to determine if an operation is supported or not.
+- ``module_id_cache`` has been renamed to ``module_cache`` in consistency with ``canonical_module_cache``
+- The Settings API has been integrated into animus magic through the ``SettingsOperation`` op. This is a work in progress and may not be fully optimal yet.
+
 # Wednesday, June 19th 2024
 
 - ``_validate_value`` has been removed in favor of ``_validate_and_parse_value``. The ``_validate_and_parse_value`` API also handles parsing types to take into account user/developer error and returns the parsed type (hence why ``validate_value`` was renamed). This is a breaking change.

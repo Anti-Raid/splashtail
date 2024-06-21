@@ -102,7 +102,7 @@ pub async fn commands_enable(
         return Err("Command not found".into());
     };
 
-    let Some(module) = crate::SILVERPELT_CACHE.module_id_cache.get(module) else {
+    let Some(module) = crate::SILVERPELT_CACHE.module_cache.get(module) else {
         return Err("Module not found".into());
     };
 
@@ -226,7 +226,7 @@ pub async fn commands_disable(
         return Err("Command not found".into());
     };
 
-    let Some(module) = crate::SILVERPELT_CACHE.module_id_cache.get(module) else {
+    let Some(module) = crate::SILVERPELT_CACHE.module_cache.get(module) else {
         return Err("Module not found".into());
     };
 
@@ -350,7 +350,7 @@ pub async fn commands_modperms(
         return Err("Command not found".into());
     };
 
-    let Some(module) = crate::SILVERPELT_CACHE.module_id_cache.get(module) else {
+    let Some(module) = crate::SILVERPELT_CACHE.module_cache.get(module) else {
         return Err("Module not found".into());
     };
 

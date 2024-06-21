@@ -94,7 +94,7 @@ pub struct Module {
     pub s3_paths: Vec<String>,
 
     /// Config options for this module
-    pub config_options: Vec<settings::config_opts::ConfigOption>,
+    pub config_options: Vec<settings::types::ConfigOption>,
 }
 
 #[derive(Default, Clone, Hash, Eq, PartialEq, serde::Serialize, serde::Deserialize, Debug)]

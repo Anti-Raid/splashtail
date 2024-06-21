@@ -1,5 +1,5 @@
 use futures_util::FutureExt;
-use crate::silverpelt::settings::config_opts::{
+use crate::silverpelt::settings::types::{
     Column, ColumnAction, ColumnSuggestion, ColumnType, ConfigOption, InnerColumnType, InnerColumnTypeStringKind, OperationSpecific, OperationType, SettingsError
 };
 use crate::silverpelt::value::Value;
@@ -112,7 +112,7 @@ pub(crate) fn sink() -> ConfigOption {
                                     column: "sink".to_string(),
                                     check: "parse_webhook.parse_sink_to_url".to_string(),
                                     error: e.to_string(),
-                                    value: serde_json::Value::String(sink.clone()),
+                                    value: Value::String(sink.clone()),
                                     accepted_range: "Valid Discord webhook URL".to_string()
                                 })?;    
 
@@ -123,7 +123,7 @@ pub(crate) fn sink() -> ConfigOption {
                                         column: "sink".to_string(),
                                         check: "parse_webhook.parse".to_string(),
                                         error: "Discord webhook sinks must be a valid webhook URL".to_string(),
-                                        value: serde_json::Value::String(sink.clone()),
+                                        value: Value::String(sink.clone()),
                                         accepted_range: "Valid Discord webhook URL".to_string()
                                     });
                                 }
@@ -131,7 +131,7 @@ pub(crate) fn sink() -> ConfigOption {
                                 sink.parse::<serenity::all::ChannelId>().map_err(|e| SettingsError::SchemaCheckValidationError {
                                     column: "sink".to_string(),
                                     check: "snowflake_parse".to_string(),
-                                    value: serde_json::Value::String(sink.clone()),
+                                    value: Value::String(sink.clone()),
                                     accepted_range: "Valid channel id".to_string(),
                                     error: e.to_string(),
                                 })?;
@@ -140,7 +140,7 @@ pub(crate) fn sink() -> ConfigOption {
                                     column: "type".to_string(),
                                     check: "parse_webhook.parse".to_string(),
                                     error: "Invalid sink type".to_string(),
-                                    value: serde_json::Value::String(sink.clone()),
+                                    value: Value::String(sink.clone()),
                                     accepted_range: "Valid Discord webhook URL".to_string()
                                 });
                             }

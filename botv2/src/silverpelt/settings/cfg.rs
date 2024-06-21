@@ -1,8 +1,8 @@
-use super::config_opts::SettingsError;
-use super::config_opts::{
+use super::state::State;
+use super::types::SettingsError;
+use super::types::{
     ColumnType, ConfigOption, InnerColumnType, InnerColumnTypeStringKind, OperationType,
 };
-use super::state::State;
 use crate::silverpelt::value::Value;
 use sqlx::Row;
 
@@ -42,7 +42,7 @@ fn _validate_and_parse_value(
                             SettingsError::SchemaCheckValidationError {
                                 column: column_id.to_string(),
                                 check: "uuid_parse".to_string(),
-                                value: v.to_json(),
+                                value: v.clone(),
                                 accepted_range: "Valid UUID".to_string(),
                                 error: e.to_string(),
                             }
@@ -70,7 +70,7 @@ fn _validate_and_parse_value(
                                     return Err(SettingsError::SchemaCheckValidationError {
                                         column: column_id.to_string(),
                                         check: "minlength".to_string(),
-                                        value: v.to_json(),
+                                        value: v.clone(),
                                         accepted_range: format!(">{}", min),
                                         error: "s.len() < *min".to_string(),
                                     });
@@ -82,7 +82,7 @@ fn _validate_and_parse_value(
                                     return Err(SettingsError::SchemaCheckValidationError {
                                         column: column_id.to_string(),
                                         check: "maxlength".to_string(),
-                                        value: v.to_json(),
+                                        value: v.clone(),
                                         accepted_range: format!("<{}", max),
                                         error: "s.len() > *max".to_string(),
                                     });
@@ -93,7 +93,7 @@ fn _validate_and_parse_value(
                                 return Err(SettingsError::SchemaCheckValidationError {
                                     column: column_id.to_string(),
                                     check: "allowed_values".to_string(),
-                                    value: v.to_json(),
+                                    value: v.clone(),
                                     accepted_range: format!("{:?}", allowed_values),
                                     error: "!allowed_values.is_empty() && !allowed_values.contains(&s.as_str())".to_string()
                                 });
@@ -107,7 +107,7 @@ fn _validate_and_parse_value(
                                         return Err(SettingsError::SchemaCheckValidationError {
                                             column: column_id.to_string(),
                                             check: "snowflake_parse".to_string(),
-                                            value: v.to_json(),
+                                            value: v.clone(),
                                             accepted_range: "Valid user id".to_string(),
                                             error: err.to_string(),
                                         });
@@ -119,7 +119,7 @@ fn _validate_and_parse_value(
                                         return Err(SettingsError::SchemaCheckValidationError {
                                             column: column_id.to_string(),
                                             check: "snowflake_parse".to_string(),
-                                            value: v.to_json(),
+                                            value: v.clone(),
                                             accepted_range: "Valid channel id".to_string(),
                                             error: err.to_string(),
                                         });
@@ -131,7 +131,7 @@ fn _validate_and_parse_value(
                                         return Err(SettingsError::SchemaCheckValidationError {
                                             column: column_id.to_string(),
                                             check: "snowflake_parse".to_string(),
-                                            value: v.to_json(),
+                                            value: v.clone(),
                                             accepted_range: "Valid role id".to_string(),
                                             error: err.to_string(),
                                         });
@@ -143,7 +143,7 @@ fn _validate_and_parse_value(
                                         return Err(SettingsError::SchemaCheckValidationError {
                                             column: column_id.to_string(),
                                             check: "snowflake_parse".to_string(),
-                                            value: v.to_json(),
+                                            value: v.clone(),
                                             accepted_range: "Valid emoji id".to_string(),
                                             error: err.to_string(),
                                         });
@@ -160,7 +160,7 @@ fn _validate_and_parse_value(
                                         return Err(SettingsError::SchemaCheckValidationError {
                                             column: column_id.to_string(),
                                             check: "message_parse_plength".to_string(),
-                                            value: v.to_json(),
+                                            value: v.clone(),
                                             accepted_range:
                                                 "Valid message id in format <channel_id>/<message_id>"
                                                     .to_string(),
@@ -173,7 +173,7 @@ fn _validate_and_parse_value(
                                         return Err(SettingsError::SchemaCheckValidationError {
                                             column: column_id.to_string(),
                                             check: "message_parse_0".to_string(),
-                                            value: v.to_json(),
+                                            value: v.clone(),
                                             accepted_range:
                                                 "Valid message id in format <channel_id>/<message_id>"
                                                     .to_string(),
@@ -186,7 +186,7 @@ fn _validate_and_parse_value(
                                         return Err(SettingsError::SchemaCheckValidationError {
                                             column: column_id.to_string(),
                                             check: "message_parse_1".to_string(),
-                                            value: v.to_json(),
+                                            value: v.clone(),
                                             accepted_range:
                                                 "Valid message id in format <channel_id>/<message_id>"
                                                     .to_string(),
@@ -211,7 +211,7 @@ fn _validate_and_parse_value(
                             .map_err(|e| SettingsError::SchemaCheckValidationError {
                             column: column_id.to_string(),
                             check: "timestamp_parse".to_string(),
-                            value: v.to_json(),
+                            value: v.clone(),
                             accepted_range: "Valid timestamp".to_string(),
                             error: e.to_string(),
                         })?;
@@ -232,7 +232,7 @@ fn _validate_and_parse_value(
                             SettingsError::SchemaCheckValidationError {
                                 column: column_id.to_string(),
                                 check: "timestamp_tz_parse".to_string(),
-                                value: v.to_json(),
+                                value: v.clone(),
                                 accepted_range: "Valid timestamp with timezone".to_string(),
                                 error: e.to_string(),
                             }
@@ -263,7 +263,7 @@ fn _validate_and_parse_value(
                             SettingsError::SchemaCheckValidationError {
                                 column: column_id.to_string(),
                                 check: "integer_parse".to_string(),
-                                value: v.to_json(),
+                                value: v.clone(),
                                 accepted_range: "Valid integer".to_string(),
                                 error: e.to_string(),
                             }
@@ -284,7 +284,7 @@ fn _validate_and_parse_value(
                             SettingsError::SchemaCheckValidationError {
                                 column: column_id.to_string(),
                                 check: "float_parse".to_string(),
-                                value: v.to_json(),
+                                value: v.clone(),
                                 accepted_range: "Valid float".to_string(),
                                 error: e.to_string(),
                             }
@@ -324,7 +324,7 @@ fn _validate_and_parse_value(
                             SettingsError::SchemaCheckValidationError {
                                 column: column_id.to_string(),
                                 check: "boolean_parse".to_string(),
-                                value: v.to_json(),
+                                value: v.clone(),
                                 accepted_range: "Valid boolean".to_string(),
                                 error: e.to_string(),
                             }
@@ -560,11 +560,17 @@ fn _query_bind_value(
 /// Settings API: View implementation
 pub async fn settings_view(
     setting: &ConfigOption,
-    ctx: &serenity::all::Context,
+    cache_http: &botox::cache::CacheHttpImpl,
     pool: &sqlx::PgPool,
     guild_id: serenity::all::GuildId,
     author: serenity::all::UserId,
 ) -> Result<Vec<State>, SettingsError> {
+    let Some(operation_specific) = setting.operations.get(&OperationType::View) else {
+        return Err(SettingsError::OperationNotSupported {
+            operation: OperationType::View,
+        });
+    };
+
     let cols = setting
         .columns
         .iter()
@@ -619,7 +625,7 @@ pub async fn settings_view(
             state.state.insert(col.id.to_string(), val);
 
             crate::silverpelt::settings::action_executor::execute_actions(
-                &mut state, actions, ctx, author, guild_id,
+                &mut state, actions, cache_http, pool, author, guild_id,
             )
             .await?;
         }
@@ -642,57 +648,54 @@ pub async fn settings_view(
             });
         };
 
-        // Apply columns_to_set in operation specific data
-        if let Some(op_specific) = setting.operations.get(&OperationType::View) {
-            // Only apply if there are columns to set
-            if !op_specific.columns_to_set.is_empty() {
-                let mut set_stmt = "".to_string();
-                let mut values = Vec::new();
+        // Apply columns_to_set in operation specific data if there are columns to set
+        if !operation_specific.columns_to_set.is_empty() {
+            let mut set_stmt = "".to_string();
+            let mut values = Vec::new();
 
-                let mut i = 0;
-                for (column, value) in op_specific.columns_to_set.iter() {
-                    set_stmt.push_str(&format!("{} = ${}, ", column, i + 1));
+            let mut i = 0;
+            for (column, value) in operation_specific.columns_to_set.iter() {
+                set_stmt.push_str(&format!("{} = ${}, ", column, i + 1));
 
-                    let value = state.template_to_string(author, guild_id, value);
-                    values.push(value.clone());
+                let value = state.template_to_string(author, guild_id, value);
+                values.push(value.clone());
 
-                    // Add directly to state
-                    state.state.insert(column.to_string(), value);
+                // Add directly to state
+                state.state.insert(column.to_string(), value);
 
-                    i += 1;
-                }
-
-                // Remove the trailing comma
-                set_stmt.pop();
-
-                let sql_stmt = format!(
-                    "UPDATE {} SET {} WHERE {} = ${} AND {} = ${}",
-                    setting.table,
-                    set_stmt,
-                    setting.guild_id,
-                    i + 1,
-                    setting.primary_key,
-                    i + 2
-                );
-
-                let mut query = sqlx::query(sql_stmt.as_str());
-
-                for value in values {
-                    query = _query_bind_value(query, value, None);
-                }
-
-                query = query.bind(guild_id.to_string());
-                query = _query_bind_value(query, pkey, Some(pkey_column.column_type.clone()));
-
-                query
-                    .execute(pool)
-                    .await
-                    .map_err(|e| SettingsError::Generic {
-                        message: e.to_string(),
-                        src: "settings_view [query execute]".to_string(),
-                        typ: "internal".to_string(),
-                    })?;
+                i += 1;
             }
+
+            // Remove the trailing comma
+            set_stmt.pop();
+
+            let sql_stmt = format!(
+                "UPDATE {} SET {} WHERE {} = ${} AND {} = ${}",
+                setting.table,
+                set_stmt,
+                setting.guild_id,
+                i + 1,
+                setting.primary_key,
+                i + 2
+            );
+
+            let mut query = sqlx::query(sql_stmt.as_str());
+
+            for value in values {
+                query = _query_bind_value(query, value, None);
+            }
+
+            query = query.bind(guild_id.to_string());
+            query = _query_bind_value(query, pkey, Some(pkey_column.column_type.clone()));
+
+            query
+                .execute(pool)
+                .await
+                .map_err(|e| SettingsError::Generic {
+                    message: e.to_string(),
+                    src: "settings_view [query execute]".to_string(),
+                    typ: "internal".to_string(),
+                })?;
         }
 
         // Remove ignored columns now that the actions have been executed
@@ -711,12 +714,18 @@ pub async fn settings_view(
 /// Settings API: Create implementation
 pub async fn settings_create(
     setting: &ConfigOption,
-    ctx: &serenity::all::Context,
+    cache_http: &botox::cache::CacheHttpImpl,
     pool: &sqlx::PgPool,
     guild_id: serenity::all::GuildId,
     author: serenity::all::UserId,
     fields: indexmap::IndexMap<String, Value>,
 ) -> Result<State, SettingsError> {
+    let Some(operation_specific) = setting.operations.get(&OperationType::Create) else {
+        return Err(SettingsError::OperationNotSupported {
+            operation: OperationType::Create,
+        });
+    };
+
     // Ensure all columns exist in fields, note that we can ignore extra fields so this one single loop is enough
     let mut state: State = State::new();
     for column in setting.columns.iter() {
@@ -758,7 +767,7 @@ pub async fn settings_create(
             .unwrap_or(&column.default_pre_checks);
 
         crate::silverpelt::settings::action_executor::execute_actions(
-            &mut state, actions, ctx, author, guild_id,
+            &mut state, actions, cache_http, pool, author, guild_id,
         )
         .await?;
 
@@ -876,15 +885,12 @@ pub async fn settings_create(
 
     // Now insert all the columns_to_set into state
     // As we have removed the ignored columns, we can just directly insert the columns_to_set into the state
-    if let Some(op_specific) = setting.operations.get(&OperationType::Create) {
-        for (column, value) in op_specific.columns_to_set.iter() {
-            let value = state.template_to_string(author, guild_id, value);
-            state.state.insert(column.to_string(), value);
-        }
+    for (column, value) in operation_specific.columns_to_set.iter() {
+        let value = state.template_to_string(author, guild_id, value);
+        state.state.insert(column.to_string(), value);
     }
 
     // Create the row
-
     // First create the $N's from the cols starting with 2 as 1 is the guild_id
     let mut n_params = "".to_string();
     let mut col_params = "".to_string();
@@ -955,12 +961,18 @@ pub async fn settings_create(
 /// Settings API: Update implementation
 pub async fn settings_update(
     setting: &ConfigOption,
-    ctx: &serenity::all::Context,
+    cache_http: &botox::cache::CacheHttpImpl,
     pool: &sqlx::PgPool,
     guild_id: serenity::all::GuildId,
     author: serenity::all::UserId,
     fields: indexmap::IndexMap<String, Value>,
 ) -> Result<State, SettingsError> {
+    let Some(operation_specific) = setting.operations.get(&OperationType::Update) else {
+        return Err(SettingsError::OperationNotSupported {
+            operation: OperationType::Update,
+        });
+    };
+
     // Ensure all columns exist in fields, note that we can ignore extra fields so this one single loop is enough
     let mut state: State = State::new();
     let mut unchanged_fields = Vec::new();
@@ -1058,7 +1070,7 @@ pub async fn settings_update(
             .unwrap_or(&column.default_pre_checks);
 
         crate::silverpelt::settings::action_executor::execute_actions(
-            &mut state, actions, ctx, author, guild_id,
+            &mut state, actions, cache_http, pool, author, guild_id,
         )
         .await?;
 
@@ -1264,11 +1276,9 @@ pub async fn settings_update(
 
     // Now insert all the columns_to_set into state
     // As we have removed the ignored columns, we can just directly insert the columns_to_set into the state
-    if let Some(op_specific) = setting.operations.get(&OperationType::Update) {
-        for (column, value) in op_specific.columns_to_set.iter() {
-            let value = state.template_to_string(author, guild_id, value);
-            state.state.insert(column.to_string(), value);
-        }
+    for (column, value) in operation_specific.columns_to_set.iter() {
+        let value = state.template_to_string(author, guild_id, value);
+        state.state.insert(column.to_string(), value);
     }
 
     // Create the row
@@ -1326,12 +1336,18 @@ pub async fn settings_update(
 /// Settings API: Delete implementation
 pub async fn settings_delete(
     setting: &ConfigOption,
-    ctx: &serenity::all::Context,
+    cache_http: &botox::cache::CacheHttpImpl,
     pool: &sqlx::PgPool,
     guild_id: serenity::all::GuildId,
     author: serenity::all::UserId,
     pkey: Value,
 ) -> Result<State, SettingsError> {
+    let Some(_operation_specific) = setting.operations.get(&OperationType::Delete) else {
+        return Err(SettingsError::OperationNotSupported {
+            operation: OperationType::Delete,
+        });
+    };
+
     let mut state = State::new();
 
     let Some(pkey_column) = setting.columns.iter().find(|c| c.id == setting.primary_key) else {
@@ -1407,7 +1423,7 @@ pub async fn settings_delete(
             .unwrap_or(&column.default_pre_checks);
 
         crate::silverpelt::settings::action_executor::execute_actions(
-            &mut state, actions, ctx, author, guild_id,
+            &mut state, actions, cache_http, pool, author, guild_id,
         )
         .await?;
     }

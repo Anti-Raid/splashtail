@@ -230,7 +230,7 @@ pub fn can_run_command(
     }
 
     {
-        let Some(module) = SILVERPELT_CACHE.module_id_cache.get(&module_config.module) else {
+        let Some(module) = SILVERPELT_CACHE.module_cache.get(&module_config.module) else {
             return PermissionResult::UnknownModule {
                 module_config: module_config.clone(),
             };

@@ -4,8 +4,7 @@ use crate::silverpelt;
 /// To edit/add responses, add them both to bot.rs and to splashcore/animusmagic/types.go
 use crate::silverpelt::{
     canonical_module::CanonicalModule, permissions::PermissionResult,
-    silverpelt_cache::SILVERPELT_CACHE,
-    value::Value
+    silverpelt_cache::SILVERPELT_CACHE, value::Value,
 };
 use splashcore_rs::animusmagic::client::{
     AnimusMessage, AnimusResponse, SerializableAnimusMessage, SerializableAnimusResponse,
@@ -14,6 +13,11 @@ use splashcore_rs::animusmagic::protocol::{AnimusErrorResponse, AnimusTarget};
 
 use serde::{Deserialize, Serialize};
 use serenity::all::{GuildId, Role, RoleId, UserId};
+use silverpelt::settings::{
+    self,
+    canonical_types::{CanonicalSettingsError, CanonicalSettingsResult},
+    types::OperationType,
+};
 use std::sync::Arc;
 
 #[derive(Serialize, Deserialize, Clone)]
@@ -49,6 +53,9 @@ pub enum BotAnimusResponse {
     /// Returns the list of all permissions present within serenity
     GetSerenityPermissionList {
         perms: indexmap::IndexMap<String, u64>,
+    },
+    SettingsOperation {
+        res: CanonicalSettingsResult,
     },
 }
 
@@ -125,6 +132,15 @@ pub enum BotAnimusMessage {
     },
     /// Returns the list of all permissions present within serenity
     GetSerenityPermissionList {},
+    /// Executes an operation on a setting
+    SettingsOperation {
+        fields: indexmap::IndexMap<String, serde_json::Value>,
+        op: crate::silverpelt::settings::canonical_types::CanonicalOperationType,
+        module: String,
+        setting: String,
+        guild_id: GuildId,
+        user_id: UserId,
+    },
 }
 
 impl AnimusMessage for BotAnimusMessage {
@@ -294,15 +310,188 @@ impl BotAnimusMessage {
                         .collect(),
                 })
             }
+            Self::SettingsOperation {
+                fields,
+                op,
+                module,
+                setting,
+                guild_id,
+                user_id,
+            } => {
+                let op: OperationType = op.into();
+
+                // Find the setting
+                let Some(module) = SILVERPELT_CACHE.module_cache.get(&module) else {
+                    return Ok(BotAnimusResponse::SettingsOperation {
+                        res: CanonicalSettingsResult::Err {
+                            error: CanonicalSettingsError::Generic {
+                                message: "Module not found".to_string(),
+                                src: "SettingsOperation".to_string(),
+                                typ: "badRequest".to_string(),
+                            },
+                        },
+                    });
+                };
+
+                let Some(opt) = module.config_options.iter().find(|x| x.id == setting) else {
+                    return Ok(BotAnimusResponse::SettingsOperation {
+                        res: CanonicalSettingsResult::Err {
+                            error: CanonicalSettingsError::Generic {
+                                message: "Setting not found".to_string(),
+                                src: "SettingsOperation".to_string(),
+                                typ: "badRequest".to_string(),
+                            },
+                        },
+                    });
+                };
+
+                let mut p_fields = indexmap::IndexMap::new();
+
+                for (key, value) in fields {
+                    p_fields.insert(key, Value::from_json(&value));
+                }
+
+                let Some(operation_specific) = opt.operations.get(&op) else {
+                    return Ok(BotAnimusResponse::SettingsOperation {
+                        res: CanonicalSettingsResult::Err {
+                            error: CanonicalSettingsError::OperationNotSupported {
+                                operation: op.into(),
+                            },
+                        },
+                    });
+                };
+
+                // Check COMMAND_ID_MODULE_MAP
+                let base_command = operation_specific
+                    .corresponding_command
+                    .split_whitespace()
+                    .next()
+                    .unwrap();
+
+                let perm_res = crate::silverpelt::cmd::check_command(
+                    base_command,
+                    operation_specific.corresponding_command,
+                    guild_id,
+                    user_id,
+                    pool,
+                    cache_http,
+                    &None,
+                    crate::silverpelt::cmd::CheckCommandOptions::default(),
+                )
+                .await;
+
+                if !perm_res.is_ok() {
+                    return Ok(BotAnimusResponse::SettingsOperation {
+                        res: CanonicalSettingsResult::PermissionError { res: perm_res },
+                    });
+                }
+
+                match op {
+                    OperationType::View => {
+                        match settings::cfg::settings_view(
+                            opt,
+                            &state.cache_http,
+                            pool,
+                            guild_id,
+                            user_id,
+                        )
+                        .await
+                        {
+                            Ok(res) => Ok(BotAnimusResponse::SettingsOperation {
+                                res: CanonicalSettingsResult::Ok {
+                                    fields: res.into_iter().map(|x| x.into()).collect(),
+                                },
+                            }),
+                            Err(e) => Ok(BotAnimusResponse::SettingsOperation {
+                                res: CanonicalSettingsResult::Err { error: e.into() },
+                            }),
+                        }
+                    }
+                    OperationType::Create => {
+                        match settings::cfg::settings_create(
+                            opt,
+                            &state.cache_http,
+                            pool,
+                            guild_id,
+                            user_id,
+                            p_fields,
+                        )
+                        .await
+                        {
+                            Ok(res) => Ok(BotAnimusResponse::SettingsOperation {
+                                res: CanonicalSettingsResult::Ok {
+                                    fields: vec![res.into()],
+                                },
+                            }),
+                            Err(e) => Ok(BotAnimusResponse::SettingsOperation {
+                                res: CanonicalSettingsResult::Err { error: e.into() },
+                            }),
+                        }
+                    }
+                    OperationType::Update => {
+                        match settings::cfg::settings_update(
+                            opt,
+                            &state.cache_http,
+                            pool,
+                            guild_id,
+                            user_id,
+                            p_fields,
+                        )
+                        .await
+                        {
+                            Ok(res) => Ok(BotAnimusResponse::SettingsOperation {
+                                res: CanonicalSettingsResult::Ok {
+                                    fields: vec![res.into()],
+                                },
+                            }),
+                            Err(e) => Ok(BotAnimusResponse::SettingsOperation {
+                                res: CanonicalSettingsResult::Err { error: e.into() },
+                            }),
+                        }
+                    }
+                    OperationType::Delete => {
+                        let Some(pkey) = p_fields.get(opt.primary_key) else {
+                            return Ok(BotAnimusResponse::SettingsOperation {
+                                res: CanonicalSettingsResult::Err {
+                                    error: CanonicalSettingsError::MissingOrInvalidField {
+                                        field: opt.primary_key.to_string(),
+                                        src: "SettingsOperation".to_string(),
+                                    },
+                                },
+                            });
+                        };
+
+                        match settings::cfg::settings_delete(
+                            opt,
+                            &state.cache_http,
+                            pool,
+                            guild_id,
+                            user_id,
+                            pkey.clone(),
+                        )
+                        .await
+                        {
+                            Ok(res) => Ok(BotAnimusResponse::SettingsOperation {
+                                res: CanonicalSettingsResult::Ok {
+                                    fields: vec![res.into()],
+                                },
+                            }),
+                            Err(e) => Ok(BotAnimusResponse::SettingsOperation {
+                                res: CanonicalSettingsResult::Err { error: e.into() },
+                            }),
+                        }
+                    }
+                }
+            }
         }
     }
 }
 
 pub mod dynamic {
+    use crate::silverpelt::value::Value;
     use dashmap::DashMap;
     use futures::future::BoxFuture;
     use once_cell::sync::Lazy;
-    use crate::silverpelt::value::Value;
 
     pub type ToggleFunc = Box<
         dyn Send

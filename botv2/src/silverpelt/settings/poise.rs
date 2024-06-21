@@ -1,8 +1,8 @@
 use super::cfg::{settings_create, settings_delete, settings_update, settings_view};
-use super::config_opts::{
+use super::state::State;
+use super::types::{
     ColumnType, ConfigOption, InnerColumnType, InnerColumnTypeStringKind, OperationType,
 };
-use super::state::State;
 use crate::silverpelt::value::Value;
 use futures_util::StreamExt;
 use std::time::Duration;
@@ -189,25 +189,27 @@ pub async fn settings_viewer(
     };
 
     let data = ctx.data();
-    let serenity_ctx = ctx.serenity_context();
+    let cache_http = botox::cache::CacheHttpImpl::from_ctx(ctx.serenity_context());
+
+    let Some(operation_specific) = setting.operations.get(&OperationType::Update) else {
+        return Err("Unsupported operation (Update) for setting".into());
+    };
 
     {
-        // Check if the user has the required permissions
-        let op = setting
-            .operations
-            .get(&OperationType::View)
-            .ok_or_else(|| format!("Unsupported operation for setting: {}", setting.name))?;
-
         // Check COMMAND_ID_MODULE_MAP
-        let base_command = op.corresponding_command.split_whitespace().next().unwrap();
+        let base_command = operation_specific
+            .corresponding_command
+            .split_whitespace()
+            .next()
+            .unwrap();
 
         let perm_res = crate::silverpelt::cmd::check_command(
             base_command,
-            op.corresponding_command,
+            operation_specific.corresponding_command,
             guild_id,
             ctx.author().id,
             &data.pool,
-            &botox::cache::CacheHttpImpl::from_ctx(ctx.serenity_context()),
+            &cache_http,
             &Some(*ctx),
             crate::silverpelt::cmd::CheckCommandOptions::default(),
         )
@@ -231,7 +233,7 @@ pub async fn settings_viewer(
         }
     }
 
-    let values = settings_view(setting, serenity_ctx, &data.pool, guild_id, ctx.author().id)
+    let values = settings_view(setting, &cache_http, &data.pool, guild_id, ctx.author().id)
         .await
         .map_err(|e| format!("Error fetching settings: {}", e))?;
 
@@ -262,19 +264,19 @@ pub async fn settings_viewer(
                 index = 0;
             }
             "close" => {
-                item.defer(&serenity_ctx.http).await?;
-                item.delete_response(&serenity_ctx.http).await?;
+                item.defer(ctx.http()).await?;
+                item.delete_response(ctx.http()).await?;
                 break;
             }
             _ => {}
         }
 
-        item.defer(&serenity_ctx.http).await?;
+        item.defer(ctx.http()).await?;
 
         let reply = _create_reply(ctx, setting, &values, index);
 
         item.edit_response(
-            &serenity_ctx.http,
+            ctx.http(),
             reply.to_slash_initial_response_edit(serenity::all::EditInteractionResponse::default()),
         )
         .await?;
@@ -348,25 +350,27 @@ pub async fn settings_creator(
     };
 
     let data = ctx.data();
-    let serenity_ctx = ctx.serenity_context();
+    let cache_http = botox::cache::CacheHttpImpl::from_ctx(ctx.serenity_context());
+
+    let Some(operation_specific) = setting.operations.get(&OperationType::Update) else {
+        return Err("Unsupported operation (Update) for setting".into());
+    };
 
     {
-        // Check if the user has the required permissions
-        let op = setting
-            .operations
-            .get(&OperationType::Create)
-            .ok_or_else(|| format!("Unsupported operation for setting: {}", setting.name))?;
-
         // Check COMMAND_ID_MODULE_MAP
-        let base_command = op.corresponding_command.split_whitespace().next().unwrap();
+        let base_command = operation_specific
+            .corresponding_command
+            .split_whitespace()
+            .next()
+            .unwrap();
 
         let perm_res = crate::silverpelt::cmd::check_command(
             base_command,
-            op.corresponding_command,
+            operation_specific.corresponding_command,
             guild_id,
             ctx.author().id,
             &data.pool,
-            &botox::cache::CacheHttpImpl::from_ctx(ctx.serenity_context()),
+            &cache_http,
             &Some(*ctx),
             crate::silverpelt::cmd::CheckCommandOptions::default(),
         )
@@ -392,7 +396,7 @@ pub async fn settings_creator(
 
     let value = settings_create(
         setting,
-        serenity_ctx,
+        &cache_http,
         &data.pool,
         guild_id,
         ctx.author().id,
@@ -473,25 +477,27 @@ pub async fn settings_updater(
     };
 
     let data = ctx.data();
-    let serenity_ctx = ctx.serenity_context();
+    let cache_http = botox::cache::CacheHttpImpl::from_ctx(ctx.serenity_context());
+
+    let Some(operation_specific) = setting.operations.get(&OperationType::Update) else {
+        return Err("Unsupported operation (Update) for setting".into());
+    };
 
     {
-        // Check if the user has the required permissions
-        let op = setting
-            .operations
-            .get(&OperationType::Update)
-            .ok_or_else(|| format!("Unsupported operation for setting: {}", setting.name))?;
-
         // Check COMMAND_ID_MODULE_MAP
-        let base_command = op.corresponding_command.split_whitespace().next().unwrap();
+        let base_command = operation_specific
+            .corresponding_command
+            .split_whitespace()
+            .next()
+            .unwrap();
 
         let perm_res = crate::silverpelt::cmd::check_command(
             base_command,
-            op.corresponding_command,
+            operation_specific.corresponding_command,
             guild_id,
             ctx.author().id,
             &data.pool,
-            &botox::cache::CacheHttpImpl::from_ctx(ctx.serenity_context()),
+            &cache_http,
             &Some(*ctx),
             crate::silverpelt::cmd::CheckCommandOptions::default(),
         )
@@ -517,7 +523,7 @@ pub async fn settings_updater(
 
     let value = settings_update(
         setting,
-        serenity_ctx,
+        &cache_http,
         &data.pool,
         guild_id,
         ctx.author().id,
@@ -599,26 +605,28 @@ pub async fn settings_deleter(
         return Err("This command must be run in a server".into());
     };
 
+    let Some(operation_specific) = setting.operations.get(&OperationType::Delete) else {
+        return Err("Unsupported operation (Delete) for setting".into());
+    };
+
     let data = ctx.data();
-    let serenity_ctx = ctx.serenity_context();
+    let cache_http = botox::cache::CacheHttpImpl::from_ctx(ctx.serenity_context());
 
     {
-        // Check if the user has the required permissions
-        let op = setting
-            .operations
-            .get(&OperationType::Delete)
-            .ok_or_else(|| format!("Unsupported operation for setting: {}", setting.name))?;
-
         // Check COMMAND_ID_MODULE_MAP
-        let base_command = op.corresponding_command.split_whitespace().next().unwrap();
+        let base_command = operation_specific
+            .corresponding_command
+            .split_whitespace()
+            .next()
+            .unwrap();
 
         let perm_res = crate::silverpelt::cmd::check_command(
             base_command,
-            op.corresponding_command,
+            operation_specific.corresponding_command,
             guild_id,
             ctx.author().id,
             &data.pool,
-            &botox::cache::CacheHttpImpl::from_ctx(ctx.serenity_context()),
+            &cache_http,
             &Some(*ctx),
             crate::silverpelt::cmd::CheckCommandOptions::default(),
         )
@@ -644,7 +652,7 @@ pub async fn settings_deleter(
 
     let value = settings_delete(
         setting,
-        serenity_ctx,
+        &cache_http,
         &data.pool,
         guild_id,
         ctx.author().id,

@@ -5,7 +5,7 @@ use futures::future::FutureExt;
 pub fn get_category(category_id: Option<String>) -> Option<String> {
     if let Some(cat_name) = category_id {
         // Get the module from the name
-        let cat_module = crate::SILVERPELT_CACHE.module_id_cache.get(&cat_name);
+        let cat_module = crate::SILVERPELT_CACHE.module_cache.get(&cat_name);
 
         if let Some(cat_module) = cat_module {
             Some(cat_module.name.to_string())

@@ -35,7 +35,7 @@ pub struct CanonicalModule {
     pub s3_paths: Vec<String>,
 
     /// Config options for this module
-    pub config_options: Vec<super::settings::canonical_config_opts::CanonicalConfigOption>,
+    pub config_options: Vec<super::settings::canonical_types::CanonicalConfigOption>,
 }
 
 /// Canonical representation of a command (data section) for external use
@@ -155,7 +155,7 @@ impl From<crate::silverpelt::Module> for CanonicalModule {
             config_options: module
                 .config_options
                 .into_iter()
-                .map(super::settings::canonical_config_opts::CanonicalConfigOption::from)
+                .map(super::settings::canonical_types::CanonicalConfigOption::from)
                 .collect(),
         }
     }

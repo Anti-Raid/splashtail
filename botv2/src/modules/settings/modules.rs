@@ -8,7 +8,7 @@ async fn module_list_autocomplete<'a>(
 ) -> Vec<AutocompleteChoice<'a>> {
     let mut ac = Vec::new();
 
-    for mv in SILVERPELT_CACHE.module_id_cache.iter() {
+    for mv in SILVERPELT_CACHE.module_cache.iter() {
         let module = mv.value();
 
         if module.name.to_lowercase().contains(&partial.to_lowercase())
@@ -58,7 +58,7 @@ pub async fn modules_list(ctx: Context<'_>) -> Result<(), Error> {
 
     let mut done_modules = Vec::new();
     for module_config in module_configs {
-        let Some(module) = SILVERPELT_CACHE.module_id_cache.get(&module_config.module) else {
+        let Some(module) = SILVERPELT_CACHE.module_cache.get(&module_config.module) else {
             continue;
         };
 
@@ -87,7 +87,7 @@ pub async fn modules_list(ctx: Context<'_>) -> Result<(), Error> {
         done_modules.push(module_id);
     }
 
-    for module in SILVERPELT_CACHE.module_id_cache.iter() {
+    for module in SILVERPELT_CACHE.module_cache.iter() {
         let module = module.value();
 
         if done_modules.contains(&module.id.to_string()) {
@@ -130,7 +130,7 @@ pub async fn modules_enable(
     };
 
     // Check that the module exists
-    let Some(module_data) = SILVERPELT_CACHE.module_id_cache.get(&module) else {
+    let Some(module_data) = SILVERPELT_CACHE.module_cache.get(&module) else {
         return Err(format!(
             "The module you are trying to disable ({}) does not exist",
             module
@@ -227,7 +227,7 @@ pub async fn modules_disable(
     };
 
     // Check that the module exists
-    let Some(module_data) = SILVERPELT_CACHE.module_id_cache.get(&module) else {
+    let Some(module_data) = SILVERPELT_CACHE.module_cache.get(&module) else {
         return Err(format!(
             "The module you are trying to disable ({}) does not exist",
             module

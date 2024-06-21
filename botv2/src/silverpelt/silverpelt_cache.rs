@@ -23,8 +23,8 @@ pub struct SilverpeltCache {
 
     /// A commonly needed operation is mapping a module id to its respective module
     ///
-    /// Module_id_cache is a cache of module id to module
-    pub module_id_cache: dashmap::DashMap<String, Module>,
+    /// module_cache is a cache of module id to module
+    pub module_cache: dashmap::DashMap<String, Module>,
 
     /// Command ID to module map
     ///
@@ -64,7 +64,7 @@ impl SilverpeltCache {
 
                 map
             },
-            module_id_cache: {
+            module_cache: {
                 let map = dashmap::DashMap::new();
 
                 for module in crate::modules::modules() {

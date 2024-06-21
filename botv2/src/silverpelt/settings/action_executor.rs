@@ -1,7 +1,5 @@
-use super::config_opts::{
-    ActionConditionContext, ColumnAction, NativeActionContext, SettingsError,
-};
 use super::state::State;
+use super::types::{ActionConditionContext, ColumnAction, NativeActionContext, SettingsError};
 use crate::silverpelt::value::Value;
 use async_recursion::async_recursion;
 
@@ -10,12 +8,11 @@ use async_recursion::async_recursion;
 pub async fn execute_actions(
     state: &mut State,
     actions: &[ColumnAction],
-    ctx: &serenity::all::Context,
+    cache_http: &botox::cache::CacheHttpImpl,
+    pool: &sqlx::PgPool,
     author: serenity::all::UserId,
     guild_id: serenity::all::GuildId,
 ) -> Result<(), SettingsError> {
-    let cache_http = botox::cache::CacheHttpImpl::from_ctx(ctx);
-    let data = &ctx.data::<crate::Data>();
     for action in actions {
         match action {
             ColumnAction::IpcPerModuleFunction {
@@ -55,7 +52,7 @@ pub async fn execute_actions(
                     args.insert(key, value);
                 }
 
-                match toggle(&cache_http, &args).await {
+                match toggle(cache_http, &args).await {
                     Ok(()) => (),
                     Err(e) => {
                         return Err(SettingsError::Generic {
@@ -90,7 +87,7 @@ pub async fn execute_actions(
                 let nac = NativeActionContext {
                     author,
                     guild_id,
-                    pool: data.pool.clone(),
+                    pool: pool.clone(),
                 };
                 action(nac, state).await?;
             }

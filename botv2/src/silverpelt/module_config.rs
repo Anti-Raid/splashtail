@@ -43,7 +43,7 @@ pub async fn is_module_enabled(
             } else {
                 // User wants to use the default value
                 let module = SILVERPELT_CACHE
-                    .module_id_cache
+                    .module_cache
                     .get(module)
                     .ok_or::<crate::Error>(
                         format!("Could not find module {} in cache", module).into(),
@@ -58,7 +58,7 @@ pub async fn is_module_enabled(
         } else {
             // User wants to use the default value
             let module = SILVERPELT_CACHE
-                .module_id_cache
+                .module_cache
                 .get(module)
                 .ok_or::<crate::Error>(
                     format!("Could not find module {} in cache", module).into(),

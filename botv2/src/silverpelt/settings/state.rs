@@ -4,6 +4,21 @@ pub struct State {
     pub state: indexmap::IndexMap<String, Value>,
 }
 
+impl From<State> for indexmap::IndexMap<String, Value> {
+    fn from(val: State) -> Self {
+        val.state
+    }
+}
+
+impl From<State> for indexmap::IndexMap<String, serde_json::Value> {
+    fn from(val: State) -> Self {
+        val.state
+            .into_iter()
+            .map(|(k, v)| (k, v.to_json()))
+            .collect()
+    }
+}
+
 impl State {
     pub fn get_variable_value(
         &self,
@@ -52,5 +67,11 @@ impl State {
         State {
             state: indexmap::IndexMap::new(),
         }
+    }
+}
+
+impl Default for State {
+    fn default() -> Self {
+        Self::new()
     }
 }
