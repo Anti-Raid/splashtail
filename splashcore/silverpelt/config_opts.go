@@ -4,6 +4,70 @@ import (
 	orderedmap "github.com/wk8/go-ordered-map/v2"
 )
 
+type CanonicalSettingsResult struct {
+	Ok *struct {
+		Fields []map[string]any `json:"fields"`
+	} `json:"Ok"`
+	PermissionError *struct {
+		Res PermissionResult `json:"res"`
+	} `json:"PermissionError"`
+	Err *struct {
+		Error CanonicalSettingsError `json:"error"`
+	} `json:"Err"`
+}
+
+type CanonicalSettingsError struct {
+	OperationNotSupported *struct {
+		Operation CanonicalOperationType `json:"operation"`
+	} `json:"OperationNotSupported"`
+	Generic *struct {
+		Message string `json:"message"`
+		Src     string `json:"src"`
+		Typ     string `json:"typ"`
+	} `json:"Generic"`
+	SchemaTypeValidationError *struct {
+		Column       string `json:"column"`
+		ExpectedType string `json:"expected_type"`
+		GotType      string `json:"got_type"`
+	} `json:"SchemaTypeValidationError"`
+	SchemaNullValueValidationError *struct {
+		Column string `json:"column"`
+	} `json:"SchemaNullValueValidationError"`
+	SchemaCheckValidationError *struct {
+		Column        string      `json:"column"`
+		Check         string      `json:"check"`
+		Error         string      `json:"error"`
+		Value         interface{} `json:"value"`
+		AcceptedRange string      `json:"accepted_range"`
+	} `json:"SchemaCheckValidationError"`
+	MissingOrInvalidField *struct {
+		Field string `json:"field"`
+		Src   string `json:"src"`
+	} `json:"MissingOrInvalidField"`
+	RowExists *struct {
+		ColumnId string `json:"column_id"`
+		Count    int64  `json:"count"`
+	} `json:"RowExists"`
+	RowDoesNotExist *struct {
+		ColumnId string `json:"column_id"`
+	} `json:"RowDoesNotExist"`
+	MaximumCountReached *struct {
+		Max     int64 `json:"max"`
+		Current int64 `json:"current"`
+	} `json:"MaximumCountReached"`
+}
+
+type CanonicalInnerColumnTypeStringKind string
+
+const (
+	CanonicalInnerColumnTypeStringKindNormal  CanonicalInnerColumnTypeStringKind = "Normal"
+	CanonicalInnerColumnTypeStringKindUser    CanonicalInnerColumnTypeStringKind = "User"
+	CanonicalInnerColumnTypeStringKindChannel CanonicalInnerColumnTypeStringKind = "Channel"
+	CanonicalInnerColumnTypeStringKindRole    CanonicalInnerColumnTypeStringKind = "Role"
+	CanonicalInnerColumnTypeStringKindEmoji   CanonicalInnerColumnTypeStringKind = "Emoji"
+	CanonicalInnerColumnTypeStringKindMessage CanonicalInnerColumnTypeStringKind = "Message"
+)
+
 type CanonicalColumnType struct {
 	Scalar *struct {
 		ColumnType CanonicalInnerColumnType `json:"column_type"`
@@ -16,9 +80,10 @@ type CanonicalColumnType struct {
 type CanonicalInnerColumnType struct {
 	Uuid   *struct{} `json:"Uuid,omitempty"`
 	String *struct {
-		MinLength     *int     `json:"min_length,omitempty"`
-		MaxLength     *int     `json:"max_length,omitempty"`
-		AllowedValues []string `json:"allowed_values,omitempty"`
+		MinLength     *int                               `json:"min_length,omitempty"`
+		MaxLength     *int                               `json:"max_length,omitempty"`
+		AllowedValues []string                           `json:"allowed_values,omitempty"`
+		Kind          CanonicalInnerColumnTypeStringKind `json:"kind,omitempty"`
 	} `json:"String,omitempty"`
 	Timestamp   *struct{} `json:"Timestamp,omitempty"`
 	TimestampTz *struct{} `json:"TimestampTz,omitempty"`
@@ -28,11 +93,6 @@ type CanonicalInnerColumnType struct {
 		Values orderedmap.OrderedMap[string, int64] `json:"values"`
 	} `json:"BitFlag,omitempty"`
 	Boolean *struct{} `json:"Boolean,omitempty"`
-	User    *struct{} `json:"User,omitempty"`
-	Channel *struct{} `json:"Channel,omitempty"`
-	Role    *struct{} `json:"Role,omitempty"`
-	Emoji   *struct{} `json:"Emoji,omitempty"`
-	Message *struct{} `json:"Message,omitempty"`
 	Json    *struct{} `json:"Json,omitempty"`
 }
 
@@ -48,13 +108,13 @@ type CanonicalColumnSuggestion struct {
 }
 
 type CanonicalColumn struct {
-	ID          string                                              `json:"id"`
-	Name        string                                              `json:"name"`
-	ColumnType  CanonicalColumnType                                 `json:"column_type"`
-	Nullable    bool                                                `json:"nullable"`
-	Suggestions CanonicalColumnSuggestion                           `json:"suggestions"`
-	Unique      bool                                                `json:"unique"`
-	Readonly    orderedmap.OrderedMap[CanonicalOperationType, bool] `json:"readonly"`
+	ID          string                    `json:"id"`
+	Name        string                    `json:"name"`
+	ColumnType  CanonicalColumnType       `json:"column_type"`
+	Nullable    bool                      `json:"nullable"`
+	Suggestions CanonicalColumnSuggestion `json:"suggestions"`
+	Unique      bool                      `json:"unique"`
+	IgnoredFor  []CanonicalOperationType  `json:"ignored_for"`
 }
 
 type CanonicalOperationSpecific struct {

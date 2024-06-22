@@ -35,7 +35,6 @@ require (
 	github.com/goccy/go-json v0.10.3 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/twitchyliquid64/golang-asm v0.15.1 // indirect
-	github.com/x448/float16 v0.8.4 // indirect
 	golang.org/x/arch v0.8.0 // indirect
 )
 
@@ -85,7 +84,7 @@ require (
 require (
 	github.com/go-playground/validator/v10 v10.21.0
 	github.com/jackc/pgx/v5 v5.6.0
-	github.com/json-iterator/go v1.1.12
+	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/redis/go-redis/v9 v9.5.3 // indirect
 	go.uber.org/zap v1.27.0
 	golang.org/x/exp v0.0.0-20240604190554-fc45aab8b7f8
