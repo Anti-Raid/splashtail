@@ -103,7 +103,7 @@ type GuildCommandConfiguration struct {
 	ID       string            `db:"id" json:"id" description:"ID of the command configuration entry"`                                                           // The ID
 	GuildID  string            `db:"guild_id" json:"guild_id" description:"Guild ID the command configuration entry pertains to"`                                // The guild id (from db)
 	Command  string            `db:"command" json:"command" description:"The name of the command"`                                                               // The command name
-	Perms    *PermissionChecks `db:"perms" json:"commands" description:"Any custom permission settings"`                                                         // The permission method (kittycat)
+	Perms    *PermissionChecks `db:"perms" json:"perms" description:"Any custom permission settings"`                                                            // The permission method (kittycat)
 	Disabled *bool             `db:"disabled" json:"disabled,omitempty" description:"Whether the command is disabled or not.  If null, use default for command"` // Whether or not the command is disabled
 }
 
