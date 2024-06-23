@@ -6,12 +6,13 @@
 
 ## API
 
-- The ``toggle_module`` endpoint has been replaced by ``patch_module_configuration`` to allow for future proofing. One feature we want to add is a whole module permission check which would allow providing a base set of permissions for all commands in a module.
+- The ``toggle_module`` endpoint has been replaced by ``patch_module_configuration``. This is needed for default permissions on modules
 
 ## Bot
 
 - Renamed the ``web`` virtual module to ``acl`` to better reflect its purpose.
 - Module modperms permissions can now be granularly controlled through the ``acl__modules_modperms {module}`` command on the ``acl`` virtual module.
+- Modules can now have a set of default permissions defined by the ``default_perms`` field in the module configuration. This is useful for setting a base set of permissions for all commands in a module. Note that if a command has an explicit set of permissions defined/overriden for it in the command configuration, the commands permissions are used. This ensures both broad and specific control over permissions while avoiding cascading effects between ``default_perms`` inherited from the module and the command's set permissions.
 
 # Friday, June 21st 2024
 

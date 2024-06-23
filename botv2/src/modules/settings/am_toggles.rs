@@ -1,12 +1,20 @@
 use crate::silverpelt::silverpelt_cache::SILVERPELT_CACHE;
+use crate::silverpelt::value::Value;
 use futures::future::FutureExt;
 use serenity::all::GuildId;
-use crate::silverpelt::value::Value;
 
 pub async fn setup(_data: &crate::Data) -> Result<(), crate::Error> {
     crate::ipc::animus_magic::bot::dynamic::PERMODULE_FUNCTIONS.insert(
         ("settings".to_string(), "toggle_module".to_string()),
         Box::new(move |_, options| toggle_module(options).boxed()),
+    );
+
+    crate::ipc::animus_magic::bot::dynamic::PERMODULE_FUNCTIONS.insert(
+        (
+            "settings".to_string(),
+            "clear_command_permission_cache".to_string(),
+        ),
+        Box::new(move |_, options| clear_command_permission_cache(options).boxed()),
     );
 
     Ok(())
@@ -17,9 +25,7 @@ pub async fn setup(_data: &crate::Data) -> Result<(), crate::Error> {
 /// - `module` - The module to toggle [String]
 /// - `enabled` - Whether the module is enabled or not [bool]
 /// - `guild_id` - The guild ID to clear the cache for. If not provided, the cache will be cleared globally [Option<String>]
-pub async fn toggle_module(
-    value: &indexmap::IndexMap<String, Value>,
-) -> Result<(), crate::Error> {
+pub async fn toggle_module(value: &indexmap::IndexMap<String, Value>) -> Result<(), crate::Error> {
     let module = match value.get("module") {
         Some(Value::String(s)) => s,
         _ => return Err("`module` could not be parsed".into()),
@@ -61,7 +67,10 @@ pub async fn toggle_module(
                     err
                 );
             } else {
-                log::info!("Invalidated cache for guild {}", guild_id);
+                log::info!(
+                    "Invalidated command permission cache for guild {}",
+                    guild_id
+                );
             }
         });
     } else {
@@ -86,11 +95,52 @@ pub async fn toggle_module(
                             err
                         );
                     } else {
-                        log::info!("Invalidated cache for guild {}", k.0);
+                        log::info!("Invalidated command permission cache for guild {}", k.0);
                     }
                 });
             }
         }
+    }
+
+    Ok(())
+}
+
+/// Arguments:
+///
+/// - `guild_id` - The guild ID to clear the cache for. If not provided, the cache will be cleared globally [Option<String>]
+pub async fn clear_command_permission_cache(
+    value: &indexmap::IndexMap<String, Value>,
+) -> Result<(), crate::Error> {
+    let guild_id = value.get("guild_id");
+
+    if let Some(guild_id) = guild_id {
+        let guild_id = match guild_id {
+            Value::String(s) => s.parse::<GuildId>()?,
+            _ => return Err("`guild_id` could not be parsed".into()),
+        };
+
+        tokio::spawn(async move {
+            if let Err(err) = SILVERPELT_CACHE
+                .command_permission_cache
+                .invalidate_entries_if(move |k, _| k.0 == guild_id)
+            {
+                log::error!(
+                    "Failed to invalidate command permission cache for guild {}: {}",
+                    guild_id,
+                    err
+                );
+            } else {
+                log::info!(
+                    "Invalidated command permission cache for guild {}",
+                    guild_id
+                );
+            }
+        });
+    } else {
+        tokio::spawn(async move {
+            SILVERPELT_CACHE.command_permission_cache.invalidate_all();
+            log::info!("Invalidated the entire command permission cache");
+        });
     }
 
     Ok(())

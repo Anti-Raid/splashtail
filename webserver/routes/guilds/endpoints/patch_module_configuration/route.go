@@ -3,6 +3,7 @@ package patch_module_configuration
 import (
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/anti-raid/splashtail/splashcore/animusmagic"
@@ -18,6 +19,12 @@ import (
 	"github.com/infinitybotlist/eureka/ratelimit"
 	"github.com/infinitybotlist/eureka/uapi"
 	"go.uber.org/zap"
+)
+
+const (
+	CACHE_FLUSH_NONE                           = 0      // No cache flush operation
+	CACHE_FLUSH_MODULE_TOGGLE                  = 1 << 1 // Must trigger a module trigger
+	CACHE_FLUSH_COMMAND_PERMISSION_CACHE_CLEAR = 1 << 2 // Must trigger a command permission cache clear
 )
 
 func Docs() *docs.Doc {
@@ -142,8 +149,11 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 		return hresp
 	}
 
-	var disabled *bool
+	var updateCols []string
+	var updateArgs []any
+	var cacheFlushFlag = CACHE_FLUSH_NONE
 
+	// Perm check area
 	if body.Disabled != nil {
 		if !moduleData.Toggleable {
 			return uapi.HttpResponse{
@@ -169,30 +179,73 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 			}
 		}
 
-		disabled = body.Disabled
+		updateCols = append(updateCols, "disabled")
+		updateArgs = append(updateArgs, *body.Disabled)
+
+		if cacheFlushFlag&CACHE_FLUSH_MODULE_TOGGLE != CACHE_FLUSH_MODULE_TOGGLE {
+			cacheFlushFlag |= CACHE_FLUSH_MODULE_TOGGLE
+		}
 	}
 
-	if disabled != nil {
-		// INSERT ON CONFLICT UPDATE RETURNING id
-		var id string
-		err = state.Pool.QueryRow(
-			d.Context,
-			"INSERT INTO guild_module_configurations (guild_id, module, disabled) VALUES ($1, $2, $3) ON CONFLICT (guild_id, module) DO UPDATE SET disabled = $3 RETURNING id",
-			guildId,
-			module,
-			*disabled,
-		).Scan(&id)
+	if body.DefaultPerms != nil {
+		// Check for permissions next
+		hresp, ok = api.HandlePermissionCheck(d.Auth.ID, guildId, "modules modperms", api.PermLimits(d.Auth))
 
-		if err != nil {
-			state.Logger.Error("Failed to insert guild_module_configuration", zap.Error(err))
-			return uapi.HttpResponse{
-				Json: types.ApiError{
-					Message: "Failed to insert guild_module_configuration: " + err.Error(),
-				},
-				Status: http.StatusInternalServerError,
-			}
+		if !ok {
+			return hresp
 		}
 
+		hresp, ok = api.HandlePermissionCheck(d.Auth.ID, guildId, "acl__modules_modperms "+module, api.PermLimits(d.Auth))
+
+		if !ok {
+			return hresp
+		}
+
+		updateCols = append(updateCols, "default_perms")
+		updateArgs = append(updateArgs, *body.DefaultPerms)
+
+		cacheFlushFlag = CACHE_FLUSH_COMMAND_PERMISSION_CACHE_CLEAR
+
+		if cacheFlushFlag&CACHE_FLUSH_MODULE_TOGGLE != CACHE_FLUSH_MODULE_TOGGLE && cacheFlushFlag&CACHE_FLUSH_COMMAND_PERMISSION_CACHE_CLEAR != CACHE_FLUSH_COMMAND_PERMISSION_CACHE_CLEAR {
+			cacheFlushFlag |= CACHE_FLUSH_COMMAND_PERMISSION_CACHE_CLEAR
+		}
+	}
+
+	if len(updateCols) == 0 {
+		return uapi.DefaultResponse(http.StatusNotModified)
+	}
+
+	// Create sql, insertParams is $N, $N+1... while updateParams are <col> = $N, <col2> = $N+1...
+	var insertParams = make([]string, 0, len(updateCols)-2)
+	var updateParams = make([]string, 0, len(updateCols)-2)
+	var paramNo = 3 // 1 and 2 are guild_id and module
+	for _, col := range updateCols {
+		insertParams = append(insertParams, "$"+strconv.Itoa(paramNo))
+		updateParams = append(updateParams, col+" = $"+strconv.Itoa(paramNo))
+		paramNo++
+	}
+
+	var sqlString = "INSERT INTO guild_module_configurations (guild_id, module, " + strings.Join(updateCols, ", ") + ") VALUES ($1, $2, " + strings.Join(insertParams, ",") + ") ON CONFLICT (guild_id, module) DO UPDATE SET " + strings.Join(updateParams, ", ") + " RETURNING id"
+
+	// Execute sql
+	updateArgs = append([]any{guildId, module}, updateArgs...) // $1 and $2
+	var id string
+	err = state.Pool.QueryRow(
+		d.Context,
+		sqlString,
+		updateArgs...,
+	).Scan(&id)
+
+	if err != nil {
+		return uapi.HttpResponse{
+			Status: http.StatusInternalServerError,
+			Json: types.ApiError{
+				Message: "Error updating module configuration: " + err.Error(),
+			},
+		}
+	}
+
+	if cacheFlushFlag&CACHE_FLUSH_MODULE_TOGGLE == CACHE_FLUSH_MODULE_TOGGLE && body.Disabled != nil {
 		resps, err := state.AnimusMagicClient.Request(
 			d.Context,
 			state.Rueidis,
@@ -207,7 +260,54 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 					Options: map[string]any{
 						"guild_id": guildId,
 						"module":   module,
-						"enabled":  !*disabled,
+						"enabled":  !*body.Disabled,
+					},
+				},
+			},
+			&animusmagic.RequestOptions{
+				ClusterID: utils.Pointer(uint16(clusterId)),
+			},
+		)
+
+		if err != nil {
+			return uapi.HttpResponse{
+				Status: http.StatusInternalServerError,
+				Json: types.ApiError{
+					Message: "Error sending request to animus magic: " + err.Error(),
+				},
+				Headers: map[string]string{
+					"Retry-After": "10",
+				},
+			}
+		}
+
+		if len(resps) != 1 {
+			return uapi.HttpResponse{
+				Status: http.StatusInternalServerError,
+				Json: types.ApiError{
+					Message: "Error sending request to animus magic: [unexpected response count of " + strconv.Itoa(len(resps)) + "]",
+				},
+				Headers: map[string]string{
+					"Retry-After": "10",
+				},
+			}
+		}
+	}
+
+	if cacheFlushFlag&CACHE_FLUSH_COMMAND_PERMISSION_CACHE_CLEAR == CACHE_FLUSH_COMMAND_PERMISSION_CACHE_CLEAR {
+		resps, err := state.AnimusMagicClient.Request(
+			d.Context,
+			state.Rueidis,
+			animusmagic.BotAnimusMessage{
+				ExecutePerModuleFunction: &struct {
+					Module  string         `json:"module"`
+					Toggle  string         `json:"toggle"`
+					Options map[string]any `json:"options,omitempty"`
+				}{
+					Module: "settings",
+					Toggle: "clear_command_permission_cache",
+					Options: map[string]any{
+						"guild_id": guildId,
 					},
 				},
 			},

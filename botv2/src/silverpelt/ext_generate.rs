@@ -11,11 +11,13 @@ mod test {
             std::env::current_dir().unwrap().display()
         );
 
-        let perms: indexmap::IndexMap<String, u64> =
+        let mut perms: indexmap::IndexMap<String, u64> =
             serenity::model::permissions::Permissions::all()
                 .iter()
                 .map(|p| (p.to_string(), p.bits()))
                 .collect();
+
+        perms.sort_by(|_ka, va, _kb, vb| va.cmp(vb));
 
         let perms_json = serde_json::to_string_pretty(&perms).unwrap();
 
