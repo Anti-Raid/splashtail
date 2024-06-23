@@ -47,7 +47,7 @@ updatebot_dbg:
 formatbot:
 	cd botv2 && cargo fmt
 
-restartbot:
+restartbot: sqlx
 	make buildbot
 	make restartbot_nobuild
 
