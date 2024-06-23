@@ -80,19 +80,30 @@ pub async fn get_module_configuration(
     module: &str,
 ) -> Result<Option<GuildModuleConfiguration>, crate::Error> {
     let rec = sqlx::query!(
-        "SELECT id, guild_id, module, disabled FROM guild_module_configurations WHERE guild_id = $1 AND module = $2",
+        "SELECT id, guild_id, module, disabled, default_perms FROM guild_module_configurations WHERE guild_id = $1 AND module = $2",
         guild_id,
         module,
     )
     .fetch_optional(pool)
     .await?;
 
-    Ok(rec.map(|rec| GuildModuleConfiguration {
-        id: rec.id.hyphenated().to_string(),
-        guild_id: rec.guild_id,
-        module: rec.module,
-        disabled: rec.disabled,
-    }))
+    if let Some(rec) = rec {
+        Ok(Some(GuildModuleConfiguration {
+            id: rec.id.hyphenated().to_string(),
+            guild_id: rec.guild_id,
+            module: rec.module,
+            disabled: rec.disabled,
+            default_perms: {
+                if let Some(perms) = rec.default_perms {
+                    serde_json::from_value(perms)?
+                } else {
+                    None
+                }
+            },
+        }))
+    } else {
+        Ok(None)
+    }
 }
 
 pub fn get_command_extended_data(
@@ -155,7 +166,7 @@ pub async fn get_best_command_configuration(
                 perms: {
                     if let Some(perms) = rec.perms {
                         _cmd_perms_overriden = true;
-                        serde_json::from_value(perms).unwrap()
+                        serde_json::from_value(perms)?
                     } else {
                         None
                     }
@@ -190,7 +201,7 @@ pub async fn get_exact_command_configuration(
             command: rec.command,
             perms: {
                 if let Some(perms) = rec.perms {
-                    serde_json::from_value(perms).unwrap()
+                    serde_json::from_value(perms)?
                 } else {
                     None
                 }
@@ -229,7 +240,7 @@ pub async fn get_all_command_configurations(
                 command: rec.command,
                 perms: {
                     if let Some(perms) = rec.perms {
-                        serde_json::from_value(perms).unwrap()
+                        serde_json::from_value(perms)?
                     } else {
                         None
                     }

@@ -1,3 +1,13 @@
+# Sunday, June 23rd 2024
+
+## Website
+
+- The website has been redesigned slightly to use tab buttons to switch between different sections of a module. Command editting has been improved to use a dedicated component to avoid rendering issues. Command configurations are now properly parsed from the base command and the command configuration list itself
+
+## API
+
+- The ``toggle_module`` endpoint has been replaced by ``patch_module_configuration`` to allow for future proofing. One feature we want to add is a whole module permission check which would allow providing a base set of permissions for all commands in a module.
+
 # Friday, June 21st 2024
 
 - The presense of operation specific data is now used to determine if an operation is supported or not.

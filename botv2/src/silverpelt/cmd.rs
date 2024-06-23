@@ -291,6 +291,7 @@ pub async fn check_command(
         guild_id: guild_id.to_string(),
         module: module.clone(),
         disabled: None,
+        default_perms: None,
     });
 
     if opts.ignore_module_disabled {

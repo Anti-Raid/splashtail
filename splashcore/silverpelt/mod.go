@@ -100,17 +100,18 @@ func NewCommandExtendedData() CommandExtendedData {
 
 // GuildCommandConfiguration represents guild command configuration data.
 type GuildCommandConfiguration struct {
-	ID       string            `db:"id" json:"id" description:"ID of the command configuration entry"`                                                           // The ID
-	GuildID  string            `db:"guild_id" json:"guild_id" description:"Guild ID the command configuration entry pertains to"`                                // The guild id (from db)
-	Command  string            `db:"command" json:"command" description:"The name of the command"`                                                               // The command name
-	Perms    *PermissionChecks `db:"perms" json:"perms" description:"Any custom permission settings"`                                                            // The permission method (kittycat)
-	Disabled *bool             `db:"disabled" json:"disabled,omitempty" description:"Whether the command is disabled or not.  If null, use default for command"` // Whether or not the command is disabled
+	ID       string            `db:"id" json:"id" description:"ID of the command configuration entry"`                                                                                                                                   // The ID
+	GuildID  string            `db:"guild_id" json:"guild_id" description:"Guild ID the command configuration entry pertains to"`                                                                                                        // The guild id (from db)
+	Command  string            `db:"command" json:"command" description:"The name of the command"`                                                                                                                                       // The command name
+	Perms    *PermissionChecks `db:"perms" json:"perms" description:"The permission checks on the command, if unset, will revert to either the modules default_perms and if that is unset, the default perms set on the command itself"` // The permission checks on the command, if unset, will revert to either the modules default_perms and if that is unset, the default perms set on the command itself
+	Disabled *bool             `db:"disabled" json:"disabled,omitempty" description:"Whether the command is disabled or not.  If null, use default for command"`                                                                         // Whether or not the command is disabled
 }
 
 // GuildModuleConfiguration represents guild module configuration data.
 type GuildModuleConfiguration struct {
-	ID       string `db:"id" json:"id" description:"ID of the command configuration entry"`                                                               // The ID
-	GuildID  string `db:"guild_id" json:"guild_id" description:"Guild ID the module configuration entry pertains to"`                                     // The guild id (from db)
-	Module   string `db:"module" json:"module" description:"The module's name ('id')"`                                                                    // The module id
-	Disabled *bool  `db:"disabled" json:"disabled,omitempty" description:"Whether or not the module is disabled or not. If null, use default for module"` // Whether or not the module is disabled or not. None means to use the default module configuration
+	ID           string            `db:"id" json:"id" description:"ID of the command configuration entry"`                                                                                      // The ID
+	GuildID      string            `db:"guild_id" json:"guild_id" description:"Guild ID the module configuration entry pertains to"`                                                            // The guild id (from db)
+	Module       string            `db:"module" json:"module" description:"The module's name ('id')"`                                                                                           // The module id
+	Disabled     *bool             `db:"disabled" json:"disabled,omitempty" description:"Whether or not the module is disabled or not. If null, use default for module"`                        // Whether or not the module is disabled or not. None means to use the default module configuration
+	DefaultPerms *PermissionChecks `db:"default_perms" json:"default_perms,omitempty" description:"The default permission checks of the module, can be overrided by the command configuration"` // The default permission checks of the module, can be overrided by the command configuration
 }

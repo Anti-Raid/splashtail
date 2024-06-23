@@ -1,4 +1,4 @@
-package toggle_module
+package patch_module_configuration
 
 import (
 	"net/http"
@@ -10,6 +10,7 @@ import (
 	"github.com/anti-raid/splashtail/splashcore/types"
 	"github.com/anti-raid/splashtail/splashcore/utils"
 	"github.com/anti-raid/splashtail/splashcore/utils/mewext"
+	"github.com/anti-raid/splashtail/webserver/api"
 	"github.com/anti-raid/splashtail/webserver/state"
 	"github.com/anti-raid/splashtail/webserver/webutils"
 	"github.com/go-chi/chi/v5"
@@ -21,8 +22,9 @@ import (
 
 func Docs() *docs.Doc {
 	return &docs.Doc{
-		Summary:     "Toggle Module",
-		Description: "Enable or disable a module for a specific guild",
+		Summary:     "Patch Module Configuration",
+		Description: "Updates the module configuration for a specific guild",
+		Req:         types.PatchGuildModuleConfiguration{},
 		Resp:        types.ApiError{},
 		Params: []docs.Parameter{
 			{
@@ -42,14 +44,7 @@ func Docs() *docs.Doc {
 			{
 				Name:        "module",
 				Description: "The module to enable/disable",
-				In:          "query",
-				Required:    true,
-				Schema:      docs.IdSchema,
-			},
-			{
-				Name:        "disabled",
-				Description: "Whether the module is disabled or not",
-				In:          "query",
+				In:          "path",
 				Required:    true,
 				Schema:      docs.IdSchema,
 			},
@@ -81,8 +76,9 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 
 	guildId := chi.URLParam(r, "guild_id")
 	userId := chi.URLParam(r, "user_id")
+	module := chi.URLParam(r, "module")
 
-	if guildId == "" || userId == "" {
+	if guildId == "" || userId == "" || module == "" {
 		return uapi.DefaultResponse(http.StatusBadRequest)
 	}
 
@@ -107,17 +103,6 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 		return hresp
 	}
 
-	module := r.URL.Query().Get("module")
-
-	if module == "" {
-		return uapi.HttpResponse{
-			Status: http.StatusBadRequest,
-			Json: types.ApiError{
-				Message: "Query parameter `module` is required",
-			},
-		}
-	}
-
 	// Find module from cluster
 	modules, err := state.CachedAnimusMagicClient.GetClusterModules(d.Context, state.Rueidis, uint16(clusterId))
 
@@ -130,16 +115,16 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 		}
 	}
 
-	var moduleToToggle *silverpelt.CanonicalModule
+	var moduleData *silverpelt.CanonicalModule
 
 	for _, m := range modules {
 		if m.ID == module {
-			moduleToToggle = &m
+			moduleData = &m
 			break
 		}
 	}
 
-	if moduleToToggle == nil {
+	if moduleData == nil {
 		return uapi.HttpResponse{
 			Status: http.StatusBadRequest,
 			Json: types.ApiError{
@@ -148,81 +133,111 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 		}
 	}
 
-	if !moduleToToggle.Toggleable {
-		return uapi.HttpResponse{
-			Status: http.StatusBadRequest,
-			Json: types.ApiError{
-				Message: "Module cannot be enabled/disablable (is not toggleable)",
-			},
-		}
+	// Read body
+	var body types.PatchGuildModuleConfiguration
+
+	hresp, ok = uapi.MarshalReqWithHeaders(r, &body, limit.Headers())
+
+	if !ok {
+		return hresp
 	}
 
-	var disabled bool = r.URL.Query().Get("disabled") == "true"
+	var disabled *bool
 
-	// INSERT ON CONFLICT UPDATE RETURNING id
-	var id string
-	err = state.Pool.QueryRow(
-		d.Context,
-		"INSERT INTO guild_module_configurations (guild_id, module, disabled) VALUES ($1, $2, $3) ON CONFLICT (guild_id, module) DO UPDATE SET disabled = $3 RETURNING id",
-		guildId,
-		module,
-		disabled,
-	).Scan(&id)
-
-	if err != nil {
-		state.Logger.Error("Failed to insert guild_module_configuration", zap.Error(err))
-		return uapi.HttpResponse{
-			Json: types.ApiError{
-				Message: "Failed to insert guild_module_configuration: " + err.Error(),
-			},
-			Status: http.StatusInternalServerError,
+	if body.Disabled != nil {
+		if !moduleData.Toggleable {
+			return uapi.HttpResponse{
+				Status: http.StatusBadRequest,
+				Json: types.ApiError{
+					Message: "Module cannot be enabled/disablable (is not toggleable)",
+				},
+			}
 		}
+
+		// Check for permissions next
+		if *body.Disabled {
+			hresp, ok = api.HandlePermissionCheck(d.Auth.ID, guildId, "modules disable", api.PermLimits(d.Auth))
+
+			if !ok {
+				return hresp
+			}
+		} else {
+			hresp, ok = api.HandlePermissionCheck(d.Auth.ID, guildId, "modules enable", api.PermLimits(d.Auth))
+
+			if !ok {
+				return hresp
+			}
+		}
+
+		disabled = body.Disabled
 	}
 
-	resps, err := state.AnimusMagicClient.Request(
-		d.Context,
-		state.Rueidis,
-		animusmagic.BotAnimusMessage{
-			ExecutePerModuleFunction: &struct {
-				Module  string         `json:"module"`
-				Toggle  string         `json:"toggle"`
-				Options map[string]any `json:"options,omitempty"`
-			}{
-				Module: "settings",
-				Toggle: "toggle_module",
-				Options: map[string]any{
-					"guild_id": guildId,
-					"module":   module,
-					"enabled":  !disabled,
+	if disabled != nil {
+		// INSERT ON CONFLICT UPDATE RETURNING id
+		var id string
+		err = state.Pool.QueryRow(
+			d.Context,
+			"INSERT INTO guild_module_configurations (guild_id, module, disabled) VALUES ($1, $2, $3) ON CONFLICT (guild_id, module) DO UPDATE SET disabled = $3 RETURNING id",
+			guildId,
+			module,
+			*disabled,
+		).Scan(&id)
+
+		if err != nil {
+			state.Logger.Error("Failed to insert guild_module_configuration", zap.Error(err))
+			return uapi.HttpResponse{
+				Json: types.ApiError{
+					Message: "Failed to insert guild_module_configuration: " + err.Error(),
+				},
+				Status: http.StatusInternalServerError,
+			}
+		}
+
+		resps, err := state.AnimusMagicClient.Request(
+			d.Context,
+			state.Rueidis,
+			animusmagic.BotAnimusMessage{
+				ExecutePerModuleFunction: &struct {
+					Module  string         `json:"module"`
+					Toggle  string         `json:"toggle"`
+					Options map[string]any `json:"options,omitempty"`
+				}{
+					Module: "settings",
+					Toggle: "toggle_module",
+					Options: map[string]any{
+						"guild_id": guildId,
+						"module":   module,
+						"enabled":  !*disabled,
+					},
 				},
 			},
-		},
-		&animusmagic.RequestOptions{
-			ClusterID: utils.Pointer(uint16(clusterId)),
-		},
-	)
+			&animusmagic.RequestOptions{
+				ClusterID: utils.Pointer(uint16(clusterId)),
+			},
+		)
 
-	if err != nil {
-		return uapi.HttpResponse{
-			Status: http.StatusInternalServerError,
-			Json: types.ApiError{
-				Message: "Error sending request to animus magic: " + err.Error(),
-			},
-			Headers: map[string]string{
-				"Retry-After": "10",
-			},
+		if err != nil {
+			return uapi.HttpResponse{
+				Status: http.StatusInternalServerError,
+				Json: types.ApiError{
+					Message: "Error sending request to animus magic: " + err.Error(),
+				},
+				Headers: map[string]string{
+					"Retry-After": "10",
+				},
+			}
 		}
-	}
 
-	if len(resps) != 1 {
-		return uapi.HttpResponse{
-			Status: http.StatusInternalServerError,
-			Json: types.ApiError{
-				Message: "Error sending request to animus magic: [unexpected response count of " + strconv.Itoa(len(resps)) + "]",
-			},
-			Headers: map[string]string{
-				"Retry-After": "10",
-			},
+		if len(resps) != 1 {
+			return uapi.HttpResponse{
+				Status: http.StatusInternalServerError,
+				Json: types.ApiError{
+					Message: "Error sending request to animus magic: [unexpected response count of " + strconv.Itoa(len(resps)) + "]",
+				},
+				Headers: map[string]string{
+					"Retry-After": "10",
+				},
+			}
 		}
 	}
 

@@ -220,7 +220,7 @@ pub struct GuildCommandConfiguration {
     pub guild_id: String,
     /// The command name
     pub command: String,
-    /// The permission method (kittycat)
+    /// The permission checks on the command, if unset, will revert to either the modules default_perms and if that is unset, the default perms set on the command itself
     pub perms: Option<PermissionChecks>,
     /// Whether or not the command is disabled. None means to use the default command configuration
     pub disabled: Option<bool>,
@@ -237,4 +237,6 @@ pub struct GuildModuleConfiguration {
     pub module: String,
     /// Whether ot not the module is disabled or not. None means to use the default module configuration
     pub disabled: Option<bool>,
+    /// The default permission checks of the module, can be overrided by the command configuration
+    pub default_perms: Option<PermissionChecks>,
 }

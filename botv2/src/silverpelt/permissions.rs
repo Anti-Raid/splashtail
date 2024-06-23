@@ -243,10 +243,20 @@ pub fn can_run_command(
         }
     }
 
-    let perms = command_config
-        .perms
-        .as_ref()
-        .unwrap_or(&cmd_data.default_perms);
+    // Check:
+    // - command_config.perms
+    // - module_config.default_perms
+    // - cmd_data.default_perms
+
+    let perms = {
+        if let Some(perms) = &command_config.perms {
+            perms
+        } else if let Some(perms) = &module_config.default_perms {
+            perms
+        } else {
+            &cmd_data.default_perms
+        }
+    };
 
     if perms.checks.is_empty() {
         return PermissionResult::Ok {};
@@ -285,7 +295,7 @@ pub fn can_run_command(
         outer_and = check.outer_and;
     }
 
-    // Check the OR now
+    // If we have no successful checks, return the error
     if success == 0 {
         return PermissionResult::NoChecksSucceeded {
             checks: perms.clone(),
@@ -357,6 +367,7 @@ mod tests {
             guild_id: "testing".into(),
             module: name.into(),
             disabled: None,
+            default_perms: None,
         }
     }
 
@@ -614,6 +625,44 @@ mod tests {
             serenity::all::Permissions::BAN_MEMBERS,
             &["abc.test".into()],
         )
+        .is_ok());
+
+        // Check: module default_perms
+        // Real-life example
+        assert!({
+            let r = can_run_command(
+                &CommandExtendedData::kittycat_or_admin("test", "abc"),
+                &GuildCommandConfiguration {
+                    id: "test".into(),
+                    guild_id: "test".into(),
+                    command: "test".into(),
+                    perms: None,
+                    disabled: None,
+                },
+                &GuildModuleConfiguration {
+                    id: "".to_string(),
+                    guild_id: "testing".into(),
+                    module: "auditlogs".to_string(),
+                    disabled: Some(false),
+                    default_perms: Some(PermissionChecks {
+                        checks: vec![PermissionCheck {
+                            kittycat_perms: vec![],
+                            native_perms: vec![serenity::all::Permissions::VIEW_AUDIT_LOG],
+                            outer_and: false,
+                            inner_and: false,
+                        }],
+                        checks_needed: 1,
+                    }),
+                },
+                "test abc",
+                serenity::all::Permissions::VIEW_AUDIT_LOG,
+                &[],
+            );
+
+            println!("{}", r.code());
+
+            r
+        }
         .is_ok());
     }
 }
