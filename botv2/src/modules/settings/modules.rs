@@ -1,5 +1,9 @@
+use std::time::Duration;
+
 use crate::silverpelt::silverpelt_cache::SILVERPELT_CACHE;
+use crate::silverpelt::GuildModuleConfiguration;
 use crate::{Context, Error};
+use futures_util::StreamExt;
 use serenity::all::AutocompleteChoice;
 
 async fn module_list_autocomplete<'a>(
@@ -26,7 +30,12 @@ async fn module_list_autocomplete<'a>(
     slash_command,
     user_cooldown = 1,
     guild_cooldown = 1,
-    subcommands("modules_list", "modules_enable", "modules_disable",)
+    subcommands(
+        "modules_list",
+        "modules_enable",
+        "modules_disable",
+        "modules_modperms"
+    )
 )]
 pub async fn modules(_ctx: Context<'_>) -> Result<(), Error> {
     Ok(())
@@ -305,7 +314,6 @@ pub async fn modules_disable(
     Ok(())
 }
 
-/*
 /// Modifies the permissions and state of a module
 #[poise::command(
     prefix_command,
@@ -324,17 +332,18 @@ pub async fn modules_modperms(
 
     let data = ctx.data();
 
-    let Some(module) = crate::SILVERPELT_CACHE.module_cache.get(module) else {
+    let Some(module) = crate::SILVERPELT_CACHE.module_cache.get(&module) else {
         return Err("Module not found".into());
     };
 
+    let cache_http = botox::cache::CacheHttpImpl::from_ctx(ctx.serenity_context());
     let perm_res = crate::silverpelt::cmd::check_command(
         "acl__modules_modperms",
-        &format!("acl__modules_modperms {}", module),
+        &format!("acl__modules_modperms {}", module.id),
         guild_id,
         ctx.author().id,
         &data.pool,
-        cache_http,
+        &cache_http,
         &Some(ctx),
         crate::silverpelt::cmd::CheckCommandOptions::default(),
     )
@@ -348,39 +357,39 @@ pub async fn modules_modperms(
         .into());
     }
 
-    let command_config = crate::silverpelt::module_config::get_exact_command_configuration(
+    let module_config = crate::silverpelt::module_config::get_module_configuration(
         &data.pool,
         guild_id.to_string().as_str(),
-        base_command,
+        module.id,
     )
     .await?;
 
-    let mut new_command_config = {
-        if let Some(command_config) = command_config {
-            command_config
+    let mut new_module_config = {
+        if let Some(module_config) = module_config {
+            module_config
         } else {
-            GuildCommandConfiguration {
+            GuildModuleConfiguration {
                 id: "".to_string(),
                 guild_id: guild_id.to_string(),
-                command: command.clone(),
+                module: module.id.to_string(),
                 disabled: None,
-                perms: None,
+                default_perms: None,
             }
         }
     };
 
-    fn command_config_to_edit_message<'a>(
-        command_config: &GuildCommandConfiguration,
+    fn module_config_to_edit_message<'a>(
+        module_config: &GuildModuleConfiguration,
     ) -> poise::CreateReply<'a> {
-        let mut msg = format!("**`{}`**\n\n", command_config.command);
+        let mut msg = format!("**`{}`**\n\n", module_config.module);
 
-        if let Some(ref perms) = command_config.perms {
-            msg.push_str(&format!("Permissions:\n{}\n", perms));
+        if let Some(ref default_perms) = module_config.default_perms {
+            msg.push_str(&format!("Default Permissions:\n{}\n", default_perms));
         } else {
-            msg.push_str("Permissions: None (using default permissions)\n");
+            msg.push_str("Default Permissions: None (set these to allow broad control over the permissions of a module)\n");
         }
 
-        if let Some(disabled) = command_config.disabled {
+        if let Some(disabled) = module_config.disabled {
             msg.push_str(&format!("Disabled: {}\n", disabled));
         } else {
             msg.push_str("Disabled: None (using default configuration)\n");
@@ -388,33 +397,33 @@ pub async fn modules_modperms(
 
         poise::CreateReply::new().content(msg).components(vec![
             serenity::all::CreateActionRow::Buttons(vec![
-                serenity::all::CreateButton::new("perms/editraw")
+                serenity::all::CreateButton::new("default-perms/editraw")
                     .style(serenity::all::ButtonStyle::Primary)
                     .label("Open Raw Permission Editor"),
-                if command_config.disabled.unwrap_or_default() {
-                    serenity::all::CreateButton::new("cmd/enable")
+                if module_config.disabled.unwrap_or_default() {
+                    serenity::all::CreateButton::new("module/enable")
                         .style(serenity::all::ButtonStyle::Success)
-                        .label("Enable Command")
+                        .label("Enable Module")
                 } else {
-                    serenity::all::CreateButton::new("cmd/disable")
+                    serenity::all::CreateButton::new("module/disable")
                         .style(serenity::all::ButtonStyle::Danger)
-                        .label("Disable Command")
+                        .label("Disable Module")
                 },
-                serenity::all::CreateButton::new("cmd/disable/reset")
+                serenity::all::CreateButton::new("module/disable/reset")
                     .style(serenity::all::ButtonStyle::Danger)
-                    .label("Reset Command Disable"),
-                serenity::all::CreateButton::new("perms/disable/reset")
+                    .label("Reset Module Disable"),
+                serenity::all::CreateButton::new("module/default-perms/reset")
                     .style(serenity::all::ButtonStyle::Danger)
-                    .label("Reset Command Perms"),
-                serenity::all::CreateButton::new("cmd/save")
+                    .label("Reset Default Perms"),
+                serenity::all::CreateButton::new("module/save")
                     .style(serenity::all::ButtonStyle::Secondary)
-                    .label("Save Command Configuration"),
+                    .label("Save Module Configuration"),
             ]),
         ])
     }
 
     let msg = ctx
-        .send(command_config_to_edit_message(&new_command_config))
+        .send(module_config_to_edit_message(&new_module_config))
         .await?
         .into_message()
         .await?;
@@ -431,21 +440,29 @@ pub async fn modules_modperms(
 
         let mut response_deferred = false;
         match item_id {
-            "cmd/enable" => {
-                new_command_config.disabled = Some(false);
+            "module/enable" => {
+                if !module.toggleable {
+                    ctx.say("This module cannot be enabled/disabled").await?;
+                    continue;
+                }
+                new_module_config.disabled = Some(false);
             }
-            "cmd/disable" => {
-                new_command_config.disabled = Some(true);
+            "module/disable" => {
+                if !module.toggleable {
+                    ctx.say("This module cannot be enabled/disabled").await?;
+                    continue;
+                }
+                new_module_config.disabled = Some(true);
             }
-            "cmd/disable/reset" => {
-                new_command_config.disabled = None;
+            "module/disable/reset" => {
+                new_module_config.disabled = None;
             }
-            "perms/disable/reset" => {
-                new_command_config.perms = None;
+            "module/default-perms/reset" => {
+                new_module_config.default_perms = None;
             }
-            "perms/editraw" => {
+            "default-perms/editraw" => {
                 // Open a modal in response
-                let perms = new_command_config.perms.clone().unwrap_or_default();
+                let perms = new_module_config.default_perms.clone().unwrap_or_default();
 
                 let mut perms_json = serde_json::to_string(&perms).unwrap_or_default();
 
@@ -488,7 +505,7 @@ pub async fn modules_modperms(
                                 .await?;
                             continue;
                         }
-                        new_command_config.perms = Some(perms);
+                        new_module_config.default_perms = Some(perms);
                     }
                     Err(err) => {
                         ctx.say(format!("Failed to parse permissions: {}", err))
@@ -497,8 +514,8 @@ pub async fn modules_modperms(
                     }
                 }
             }
-            "cmd/save" => {
-                let perm_res: crate::silverpelt::permissions::PermissionResult =
+            "module/save" => {
+                /*let perm_res: crate::silverpelt::permissions::PermissionResult =
                     crate::silverpelt::cmd::check_command(
                         base_command,
                         &command,
@@ -519,40 +536,40 @@ pub async fn modules_modperms(
 
                 if !perm_res.is_ok() {
                     return Err(format!("You can only modify commands to something that you have permission to use!\n{}", perm_res.to_markdown()).into());
-                }
+                }*/
 
                 let mut tx = data.pool.begin().await?;
 
-                // Check if guild command config exists now
+                // Check if guild module config exists now
                 let count = sqlx::query!(
-                    "SELECT COUNT(*) FROM guild_command_configurations WHERE guild_id = $1 AND command = $2",
+                    "SELECT COUNT(*) FROM guild_module_configurations WHERE guild_id = $1 AND module = $2",
                     guild_id.to_string(),
-                    command
+                    module.id
                 )
                 .fetch_one(&mut *tx)
                 .await?
                 .count
                 .unwrap_or_default();
 
-                let new_perms = serde_json::to_value(new_command_config.perms)?;
+                let new_perms = serde_json::to_value(new_module_config.default_perms)?;
 
                 if count > 0 {
                     sqlx::query!(
-                        "UPDATE guild_command_configurations SET perms = $1, disabled = $2 WHERE guild_id = $3 AND command = $4",
+                        "UPDATE guild_module_configurations SET default_perms = $1, disabled = $2 WHERE guild_id = $3 AND module = $4",
                         new_perms,
-                        new_command_config.disabled,
+                        new_module_config.disabled,
                         guild_id.to_string(),
-                        command
+                        module.id
                     )
                     .execute(&mut *tx)
                     .await?;
                 } else {
                     sqlx::query!(
-                        "INSERT INTO guild_command_configurations (guild_id, command, perms, disabled) VALUES ($1, $2, $3, $4)",
+                        "INSERT INTO guild_module_configurations (guild_id, module, default_perms, disabled) VALUES ($1, $2, $3, $4)",
                         guild_id.to_string(),
-                        command,
+                        module.id,
                         new_perms,
-                        new_command_config.disabled
+                        new_module_config.disabled
                     )
                     .execute(&mut *tx)
                     .await?;
@@ -599,7 +616,7 @@ pub async fn modules_modperms(
         // Send the updated message
         item.edit_response(
             &ctx.serenity_context().http,
-            command_config_to_edit_message(&new_command_config)
+            module_config_to_edit_message(&new_module_config)
                 .to_slash_initial_response_edit(serenity::all::EditInteractionResponse::default()),
         )
         .await?;
@@ -607,4 +624,3 @@ pub async fn modules_modperms(
 
     Ok(())
 }
-*/
