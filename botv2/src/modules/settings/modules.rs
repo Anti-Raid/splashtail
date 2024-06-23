@@ -515,29 +515,6 @@ pub async fn modules_modperms(
                 }
             }
             "module/save" => {
-                /*let perm_res: crate::silverpelt::permissions::PermissionResult =
-                    crate::silverpelt::cmd::check_command(
-                        base_command,
-                        &command,
-                        guild_id,
-                        ctx.author().id,
-                        &data.pool,
-                        cache_http,
-                        &Some(ctx),
-                        crate::silverpelt::cmd::CheckCommandOptions {
-                            ignore_command_disabled: true,
-                            ignore_cache: true,
-                            cache_result: false,
-                            custom_command_configuration: Some(new_command_config.clone()),
-                            ..Default::default()
-                        },
-                    )
-                    .await;
-
-                if !perm_res.is_ok() {
-                    return Err(format!("You can only modify commands to something that you have permission to use!\n{}", perm_res.to_markdown()).into());
-                }*/
-
                 let mut tx = data.pool.begin().await?;
 
                 // Check if guild module config exists now
