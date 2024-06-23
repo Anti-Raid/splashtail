@@ -32,6 +32,7 @@ pub fn module() -> crate::silverpelt::Module {
                     "check" => crate::silverpelt::CommandExtendedData::kittycat_or_admin("commands", "check"),
                     "enable" => crate::silverpelt::CommandExtendedData::kittycat_or_admin("commands", "enable"),
                     "disable" => crate::silverpelt::CommandExtendedData::kittycat_or_admin("commands", "disable"),
+                    "modperms" => crate::silverpelt::CommandExtendedData::kittycat_or_admin("commands", "modperms"),
                 },
             ),
             (

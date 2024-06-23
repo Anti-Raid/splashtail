@@ -8,6 +8,11 @@
 
 - The ``toggle_module`` endpoint has been replaced by ``patch_module_configuration`` to allow for future proofing. One feature we want to add is a whole module permission check which would allow providing a base set of permissions for all commands in a module.
 
+## Bot
+
+- Renamed the ``web`` virtual module to ``acl`` to better reflect its purpose.
+- Module modperms permissions can now be granularly controlled through the ``acl__modules_modperms {module}`` command on the ``acl`` virtual module.
+
 # Friday, June 21st 2024
 
 - The presense of operation specific data is now used to determine if an operation is supported or not.

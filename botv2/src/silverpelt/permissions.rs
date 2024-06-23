@@ -206,6 +206,61 @@ pub fn check_perms_single(
     PermissionResult::Ok {}
 }
 
+/// Executes `PermissionChecks` against the member's native permissions and kittycat permissions
+pub fn run_permission_checks(
+    perms: &PermissionChecks,
+    member_native_perms: serenity::all::Permissions,
+    member_kittycat_perms: &[kittycat::perms::Permission],
+) -> PermissionResult {
+    // This stores whether or not we need to check the next permission AND the current one or OR the current one
+    let mut outer_and = false;
+    let mut success: usize = 0;
+
+    for check in &perms.checks {
+        // Run the check
+        let res = check_perms_single(check, member_native_perms, member_kittycat_perms);
+
+        if outer_and {
+            // Question mark needs cloning which may harm performance
+            if !res.is_ok() {
+                return res;
+            }
+
+            // AND yet check_perms_single returned an error, so we can short-circuit and checks_needed
+            if success >= perms.checks_needed {
+                return res;
+            }
+        } else {
+            // OR, so we can short-circuit if we have the permission and checks_needed
+            if res.is_ok() && success >= perms.checks_needed {
+                return res;
+            }
+        }
+
+        if res.is_ok() {
+            success += 1;
+        }
+
+        // Set the outer AND to the new outer AND
+        outer_and = check.outer_and;
+    }
+
+    // If we have no successful checks, return the error
+    if success == 0 {
+        return PermissionResult::NoChecksSucceeded {
+            checks: perms.clone(),
+        };
+    }
+
+    if success < perms.checks_needed {
+        return PermissionResult::MissingMinChecks {
+            checks: perms.clone(),
+        };
+    }
+
+    PermissionResult::Ok {}
+}
+
 pub fn can_run_command(
     cmd_data: &CommandExtendedData,
     command_config: &GuildCommandConfiguration,
@@ -262,53 +317,7 @@ pub fn can_run_command(
         return PermissionResult::Ok {};
     }
 
-    // This stores whether or not we need to check the next permission AND the current one or OR the current one
-    let mut outer_and = false;
-    let mut success: usize = 0;
-
-    for check in &perms.checks {
-        // Run the check
-        let res = check_perms_single(check, member_native_perms, member_kittycat_perms);
-
-        if outer_and {
-            // Question mark needs cloning which may harm performance
-            if !res.is_ok() {
-                return res;
-            }
-
-            // AND yet check_perms_single returned an error, so we can short-circuit and checks_needed
-            if success >= perms.checks_needed {
-                return res;
-            }
-        } else {
-            // OR, so we can short-circuit if we have the permission and checks_needed
-            if res.is_ok() && success >= perms.checks_needed {
-                return res;
-            }
-        }
-
-        if res.is_ok() {
-            success += 1;
-        }
-
-        // Set the outer AND to the new outer AND
-        outer_and = check.outer_and;
-    }
-
-    // If we have no successful checks, return the error
-    if success == 0 {
-        return PermissionResult::NoChecksSucceeded {
-            checks: perms.clone(),
-        };
-    }
-
-    if success < perms.checks_needed {
-        return PermissionResult::MissingMinChecks {
-            checks: perms.clone(),
-        };
-    }
-
-    PermissionResult::Ok {}
+    run_permission_checks(perms, member_native_perms, member_kittycat_perms)
 }
 
 impl CommandExtendedData {

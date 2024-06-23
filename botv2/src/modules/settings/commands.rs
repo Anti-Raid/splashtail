@@ -330,7 +330,7 @@ pub async fn commands_disable(
 )]
 pub async fn commands_modperms(
     ctx: Context<'_>,
-    #[description = "The command to disable"] command: String,
+    #[description = "The command to modify"] command: String,
 ) -> Result<(), Error> {
     let Some(guild_id) = ctx.guild_id() else {
         return Err("This command must be run in a guild".into());
