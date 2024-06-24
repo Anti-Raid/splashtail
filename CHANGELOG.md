@@ -1,3 +1,14 @@
+# Monday, June 24th 2024
+
+## Bot
+
+- Commands now also support ``web_hidden``
+
+## Website
+
+- Refactored theming
+- Command related code has been moved to its own library (`$lib/ui/commands`)
+
 # Sunday, June 23rd 2024
 
 ## Website
