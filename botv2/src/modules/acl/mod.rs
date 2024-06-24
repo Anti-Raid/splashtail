@@ -30,8 +30,8 @@ fn acl__modules_modperms() -> poise::Command<crate::Data, crate::Error> {
             "This command controls if a user can edit the {} module.",
             module
         ));
-        subcmd.name = format!("acl__modules_modperm {}", module);
-        subcmd.qualified_name = format!("acl__modules_modperm {}", module);
+        subcmd.name = module.to_string();
+        subcmd.qualified_name = module.to_string();
         cmd.subcommands.push(subcmd);
     }
 

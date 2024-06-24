@@ -329,6 +329,7 @@ impl CommandExtendedData {
                     checks_needed: 0,
                 },
                 is_default_enabled: true,
+                web_hidden: false,
             },
         }
     }
@@ -345,6 +346,7 @@ impl CommandExtendedData {
                 checks_needed: 1,
             },
             is_default_enabled: true,
+            web_hidden: false,
         }
     }
 
@@ -360,6 +362,7 @@ impl CommandExtendedData {
                 checks_needed: 1,
             },
             is_default_enabled: true,
+            web_hidden: false,
         }
     }
 }

@@ -195,8 +195,10 @@ impl Display for PermissionChecks {
 pub struct CommandExtendedData {
     /// The default permissions needed to run this command
     pub default_perms: PermissionChecks,
-    /// Whether the command is enabeld by default or not
+    /// Whether the command is enabled by default or not
     pub is_default_enabled: bool,
+    /// Whether the command should be hidden on the website or not
+    pub web_hidden: bool,
 }
 
 impl Default for CommandExtendedData {
@@ -207,6 +209,7 @@ impl Default for CommandExtendedData {
                 checks_needed: 0,
             },
             is_default_enabled: true,
+            web_hidden: false,
         }
     }
 }
