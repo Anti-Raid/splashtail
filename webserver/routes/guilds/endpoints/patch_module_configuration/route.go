@@ -216,8 +216,8 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 	}
 
 	// Create sql, insertParams is $N, $N+1... while updateParams are <col> = $N, <col2> = $N+1...
-	var insertParams = make([]string, 0, len(updateCols)-2)
-	var updateParams = make([]string, 0, len(updateCols)-2)
+	var insertParams = make([]string, 0, len(updateCols))
+	var updateParams = make([]string, 0, len(updateCols))
 	var paramNo = 3 // 1 and 2 are guild_id and module
 	for _, col := range updateCols {
 		insertParams = append(insertParams, "$"+strconv.Itoa(paramNo))
