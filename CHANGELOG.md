@@ -7,6 +7,9 @@
 ## Bot And Webserver
 
 - Permission checks are now validated through a standardized function: ``crate::silverpelt::validators::parse_permission_checks`` (botv2) and ``webutils.ParsePermissionChecks`` (webserver). These functions provide a consistent and standardized data validation system for permission checks that also limit abusive use of Anti-Raid services. In the Webserver, a new ``bigint`` type was added directly to ``splashcore`` in preparation for Discord increasing the permission bits beyond 64 which is something serenity is also looking into handling.
+- ``PermissionChecks::ModuleNotFound`` has been added to avoid an unwrap in can_run_command. While this invariant should not actually happen, it is better to be safe than sorry.
+- ``PermissionCheck::SudoNotGranted`` has also been added for removing the genericerror previously used for the root module.
+- The ``commands_configurable`` option for modules has been renamed to ``commands_toggleable`` and has been changed to only apply to toggling commands. Other cases are safe anyways as owners can always bypass permissions anyways.
 
 ## Animus Magic
 

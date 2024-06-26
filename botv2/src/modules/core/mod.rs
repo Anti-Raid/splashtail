@@ -11,7 +11,7 @@ pub fn module() -> crate::silverpelt::Module {
         name: "Core Commands",
         description: "Core commands for the bot",
         toggleable: false,
-        commands_configurable: false,
+        commands_toggleable: false,
         virtual_module: false,
         web_hidden: false,
         is_default_enabled: true,

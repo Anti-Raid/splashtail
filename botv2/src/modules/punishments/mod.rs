@@ -10,7 +10,7 @@ pub fn module() -> crate::silverpelt::Module {
         name: "Punishments",
         description: "Customizable setting and executing of punishments based on stings.",
         toggleable: true,
-        commands_configurable: true,
+        commands_toggleable: true,
         virtual_module: false,
         web_hidden: false,
         is_default_enabled: true,

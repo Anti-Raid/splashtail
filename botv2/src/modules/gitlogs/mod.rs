@@ -10,7 +10,7 @@ pub fn module() -> crate::silverpelt::Module {
         name: "Git Logs",
         description: "Advanced github logging for your development-related servers! Complete with event whitelists and redirecting specific events to different channels and other customizability.",
         toggleable: true,
-        commands_configurable: true,
+        commands_toggleable: true,
         virtual_module: false,
         web_hidden: false,
         is_default_enabled: false,

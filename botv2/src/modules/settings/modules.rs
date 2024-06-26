@@ -409,9 +409,9 @@ pub async fn modules_modperms(
                         .style(serenity::all::ButtonStyle::Danger)
                         .label("Disable Module")
                 },
-                serenity::all::CreateButton::new("module/disable/reset")
+                serenity::all::CreateButton::new("module/reset-toggle")
                     .style(serenity::all::ButtonStyle::Danger)
-                    .label("Reset Module Disable"),
+                    .label("Reset Module Toggle"),
                 serenity::all::CreateButton::new("module/default-perms/reset")
                     .style(serenity::all::ButtonStyle::Danger)
                     .label("Reset Default Perms"),
@@ -445,6 +445,28 @@ pub async fn modules_modperms(
                     ctx.say("This module cannot be enabled/disabled").await?;
                     continue;
                 }
+
+                let perm_res = crate::silverpelt::cmd::check_command(
+                    "modules",
+                    "modules enable",
+                    guild_id,
+                    ctx.author().id,
+                    &data.pool,
+                    &cache_http,
+                    &Some(ctx),
+                    crate::silverpelt::cmd::CheckCommandOptions::default(),
+                )
+                .await;
+
+                if !perm_res.is_ok() {
+                    ctx.say(format!(
+                        "Enabling modules requires permission to use the ``modules enable`` command!\n{}",
+                        perm_res.to_markdown()
+                    ))
+                    .await?;
+                    continue;
+                }
+
                 new_module_config.disabled = Some(false);
             }
             "module/disable" => {
@@ -452,9 +474,32 @@ pub async fn modules_modperms(
                     ctx.say("This module cannot be enabled/disabled").await?;
                     continue;
                 }
+
+                let perm_res = crate::silverpelt::cmd::check_command(
+                    "modules",
+                    "modules disable",
+                    guild_id,
+                    ctx.author().id,
+                    &data.pool,
+                    &cache_http,
+                    &Some(ctx),
+                    crate::silverpelt::cmd::CheckCommandOptions::default(),
+                )
+                .await;
+
+                if !perm_res.is_ok() {
+                    ctx.say(format!(
+                        "Disabling modules requires permission to use the ``modules disable`` command!\n{}",
+                        perm_res.to_markdown()
+                    ))
+                    .await?;
+                    continue;
+                }
+
                 new_module_config.disabled = Some(true);
             }
-            "module/disable/reset" => {
+            "module/reset-toggle" => {
+                // TODO: Handle permission checks here
                 new_module_config.disabled = None;
             }
             "module/default-perms/reset" => {

@@ -10,7 +10,7 @@ use crate::silverpelt::{
 };
 use botox::cache::CacheHttpImpl;
 use kittycat::perms::Permission;
-use log::info;
+use log::debug;
 use serde::{Deserialize, Serialize};
 use serenity::all::{GuildId, UserId};
 use serenity::small_fixed_array::FixedArray;
@@ -216,10 +216,12 @@ pub async fn check_command(
         return "This command is not registered in the database, please contact support".into();
     }
 
-    let module = SILVERPELT_CACHE
-        .command_id_module_map
-        .get(base_command)
-        .unwrap();
+    let module = match SILVERPELT_CACHE.command_id_module_map.get(base_command) {
+        Some(module) => module,
+        None => {
+            return PermissionResult::ModuleNotFound {};
+        }
+    };
 
     if module == "root" {
         if !crate::config::CONFIG
@@ -227,7 +229,7 @@ pub async fn check_command(
             .root_users
             .contains(&user_id)
         {
-            return "Root commands are off-limits unless you are a bot owner or otherwise have been granted authorization!".into();
+            return PermissionResult::SudoNotGranted {};
         }
 
         return PermissionResult::OkWithMessage {
@@ -360,7 +362,7 @@ pub async fn check_command(
         }
     };
 
-    info!(
+    debug!(
         "Checking if user {} can run command {} with permissions {:?}",
         user_id, command, member_perms
     );

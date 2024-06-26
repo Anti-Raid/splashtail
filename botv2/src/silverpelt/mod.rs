@@ -62,8 +62,8 @@ pub struct Module {
     /// Whether or the module can be enabled and/or disabled
     pub toggleable: bool,
 
-    /// Whether or not individual commands in the module can be configured
-    pub commands_configurable: bool,
+    /// Whether or not individual commands in the module can be toggled
+    pub commands_toggleable: bool,
 
     /// Virtual module. These modules allow controlling functionality of the bot without having its commands loaded into the bot
     pub virtual_module: bool,

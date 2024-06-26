@@ -6,17 +6,17 @@ import orderedmap "github.com/wk8/go-ordered-map/v2"
 type CommandExtendedDataMap = orderedmap.OrderedMap[string, CommandExtendedData]
 
 type CanonicalModule struct {
-	ID                   string                  `json:"id"`
-	Name                 string                  `json:"name"`
-	Description          string                  `json:"description"`
-	Toggleable           bool                    `json:"toggleable"`
-	CommandsConfigurable bool                    `json:"commands_configurable"`
-	WebHidden            bool                    `json:"web_hidden"`
-	VirtualModule        bool                    `json:"virtual_module"`
-	IsDefaultEnabled     bool                    `json:"is_default_enabled"`
-	Commands             []CanonicalCommand      `json:"commands"`
-	S3Paths              []string                `json:"s3_paths"`
-	ConfigOptions        []CanonicalConfigOption `json:"config_options"`
+	ID                 string                  `json:"id"`
+	Name               string                  `json:"name"`
+	Description        string                  `json:"description"`
+	Toggleable         bool                    `json:"toggleable"`
+	CommandsToggleable bool                    `json:"commands_toggleable"`
+	WebHidden          bool                    `json:"web_hidden"`
+	VirtualModule      bool                    `json:"virtual_module"`
+	IsDefaultEnabled   bool                    `json:"is_default_enabled"`
+	Commands           []CanonicalCommand      `json:"commands"`
+	S3Paths            []string                `json:"s3_paths"`
+	ConfigOptions      []CanonicalConfigOption `json:"config_options"`
 }
 
 type CanonicalCommand struct {

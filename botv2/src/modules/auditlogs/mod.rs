@@ -14,7 +14,7 @@ pub fn module() -> crate::silverpelt::Module {
         description:
             "Customizable and comprehensive audit logging module supporting 72+ discord events",
         toggleable: true,
-        commands_configurable: true,
+        commands_toggleable: true,
         virtual_module: false,
         web_hidden: false,
         is_default_enabled: false,

@@ -36,6 +36,8 @@ func (p PermissionResult) Code() string {
 		return "command_disabled"
 	case "UnknownModule":
 		return "unknown_module"
+	case "ModuleNotFound":
+		return "module_not_found"
 	case "ModuleDisabled":
 		return "module_disabled"
 	case "NoChecksSucceeded":
@@ -44,6 +46,8 @@ func (p PermissionResult) Code() string {
 		return "missing_min_checks"
 	case "DiscordError":
 		return "discord_error"
+	case "SudoNotGranted":
+		return "sudo_not_granted"
 	case "GenericError":
 		return "generic_error"
 	}

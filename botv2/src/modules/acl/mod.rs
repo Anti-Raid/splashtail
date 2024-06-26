@@ -44,7 +44,7 @@ pub fn module() -> crate::silverpelt::Module {
         name: "Access Control",
         description: "Access Control virtual module. Used for permission controlling the web dashboard and other permission checks",
         toggleable: false,
-        commands_configurable: true,
+        commands_toggleable: true,
         virtual_module: true,
         web_hidden: false,
         is_default_enabled: true,

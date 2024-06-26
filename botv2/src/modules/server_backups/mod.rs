@@ -7,7 +7,7 @@ pub fn module() -> crate::silverpelt::Module {
         name: "Server Backups",
         description: "Customizable advanced server backup system for your server",
         toggleable: true,
-        commands_configurable: true,
+        commands_toggleable: true,
         virtual_module: false,
         web_hidden: false,
         is_default_enabled: true,

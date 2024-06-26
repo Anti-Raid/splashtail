@@ -6,7 +6,7 @@ pub fn module() -> crate::silverpelt::Module {
         name: "Info Commands",
         description: "Get information about the server/guilds etc. Useful for diagnostics",
         toggleable: true,
-        commands_configurable: true,
+        commands_toggleable: true,
         virtual_module: false,
         web_hidden: false,
         is_default_enabled: true,

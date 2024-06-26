@@ -106,9 +106,9 @@ pub async fn commands_enable(
         return Err("Module not found".into());
     };
 
-    if !module.commands_configurable {
+    if !module.commands_toggleable {
         return Err(format!(
-            "The module `{}` does not allow command configuration",
+            "Commands within the module `{}` cannot be toggled (enabled/disable) at this time!",
             module.id
         )
         .into());
@@ -230,9 +230,9 @@ pub async fn commands_disable(
         return Err("Module not found".into());
     };
 
-    if !module.commands_configurable {
+    if !module.commands_toggleable {
         return Err(format!(
-            "The module `{}` does not allow command configuration",
+            "Commands within the module `{}` cannot be toggled (enabled/disable) at this time!",
             module.id
         )
         .into());
@@ -354,14 +354,6 @@ pub async fn commands_modperms(
         return Err("Module not found".into());
     };
 
-    if !module.commands_configurable {
-        return Err(format!(
-            "The module `{}` does not allow command configuration",
-            module.id
-        )
-        .into());
-    }
-
     // Check if the user has permission to use the command
     let cache_http = &CacheHttpImpl::from_ctx(ctx.serenity_context());
     let perm_res = crate::silverpelt::cmd::check_command(
@@ -439,10 +431,10 @@ pub async fn commands_modperms(
                         .style(serenity::all::ButtonStyle::Danger)
                         .label("Disable Command")
                 },
-                serenity::all::CreateButton::new("cmd/disable/reset")
+                serenity::all::CreateButton::new("cmd/reset-toggle")
                     .style(serenity::all::ButtonStyle::Danger)
-                    .label("Reset Command Disable"),
-                serenity::all::CreateButton::new("perms/disable/reset")
+                    .label("Reset Command Toggle"),
+                serenity::all::CreateButton::new("perms/reset")
                     .style(serenity::all::ButtonStyle::Danger)
                     .label("Reset Command Perms"),
                 serenity::all::CreateButton::new("cmd/save")
@@ -471,15 +463,112 @@ pub async fn commands_modperms(
         let mut response_deferred = false;
         match item_id {
             "cmd/enable" => {
+                if !module.commands_toggleable {
+                    item.create_response(
+                        &ctx.serenity_context().http,
+                        poise::serenity_prelude::CreateInteractionResponse::Message(
+                            poise::CreateReply::new()
+                                .content(format!(
+                                    "Commands within the module `{}` cannot be toggled (enabled/disable) at this time!",
+                                    module.id
+                                ))
+                                .to_slash_initial_response(
+                                    serenity::all::CreateInteractionResponseMessage::default(),
+                                ),
+                        ),
+                    )
+                    .await?;
+                    continue;
+                }
+
+                let perm_res = crate::silverpelt::cmd::check_command(
+                    "commands",
+                    "commands enable",
+                    guild_id,
+                    ctx.author().id,
+                    &data.pool,
+                    cache_http,
+                    &Some(ctx),
+                    crate::silverpelt::cmd::CheckCommandOptions::default(),
+                )
+                .await;
+
+                if !perm_res.is_ok() {
+                    item.create_response(
+                        &ctx.serenity_context().http,
+                        poise::serenity_prelude::CreateInteractionResponse::Message(
+                            poise::CreateReply::new()
+                                .content(format!(
+                                    "Enabling commands requires permission to use the ``commands enable`` command!\n{}",
+                                    perm_res.to_markdown()
+                                ))
+                                .to_slash_initial_response(
+                                    serenity::all::CreateInteractionResponseMessage::default(),
+                                ),
+                        ),
+                    )
+                    .await?;
+                    continue;
+                }
+
                 new_command_config.disabled = Some(false);
             }
             "cmd/disable" => {
+                if !module.commands_toggleable {
+                    item.create_response(
+                        &ctx.serenity_context().http,
+                        poise::serenity_prelude::CreateInteractionResponse::Message(
+                            poise::CreateReply::new()
+                                .content(format!(
+                                    "Commands within the module `{}` cannot be toggled (enabled/disable) at this time!",
+                                    module.id
+                                ))
+                                .to_slash_initial_response(
+                                    serenity::all::CreateInteractionResponseMessage::default(),
+                                ),
+                        ),
+                    )
+                    .await?;
+                    continue;
+                }
+
+                let perm_res = crate::silverpelt::cmd::check_command(
+                    "commands",
+                    "commands disable",
+                    guild_id,
+                    ctx.author().id,
+                    &data.pool,
+                    cache_http,
+                    &Some(ctx),
+                    crate::silverpelt::cmd::CheckCommandOptions::default(),
+                )
+                .await;
+
+                if !perm_res.is_ok() {
+                    item.create_response(
+                        &ctx.serenity_context().http,
+                        poise::serenity_prelude::CreateInteractionResponse::Message(
+                            poise::CreateReply::new()
+                                .content(format!(
+                                    "Disabling commands requires permission to use the ``commands enable`` command!\n{}",
+                                    perm_res.to_markdown()
+                                ))
+                                .to_slash_initial_response(
+                                    serenity::all::CreateInteractionResponseMessage::default(),
+                                ),
+                        ),
+                    )
+                    .await?;
+                    continue;
+                }
+
                 new_command_config.disabled = Some(true);
             }
-            "cmd/disable/reset" => {
+            "cmd/reset-toggle" => {
+                // TODO: Handle permission checks here
                 new_command_config.disabled = None;
             }
-            "perms/disable/reset" => {
+            "perms/reset" => {
                 new_command_config.perms = None;
             }
             "perms/editraw" => {

@@ -28,6 +28,7 @@ pub enum PermissionResult {
     UnknownModule {
         module_config: GuildModuleConfiguration,
     },
+    ModuleNotFound {},
     ModuleDisabled {
         module_config: GuildModuleConfiguration,
     },
@@ -40,6 +41,7 @@ pub enum PermissionResult {
     DiscordError {
         error: String,
     },
+    SudoNotGranted {},
     GenericError {
         error: String,
     },
@@ -63,10 +65,12 @@ impl PermissionResult {
             PermissionResult::MissingAnyPerms { .. } => "missing_any_perms",
             PermissionResult::CommandDisabled { .. } => "command_disabled",
             PermissionResult::UnknownModule { .. } => "unknown_module",
+            PermissionResult::ModuleNotFound { .. } => "module_not_found",
             PermissionResult::ModuleDisabled { .. } => "module_disabled",
             PermissionResult::NoChecksSucceeded { .. } => "no_checks_succeeded",
             PermissionResult::MissingMinChecks { .. } => "missing_min_checks",
             PermissionResult::DiscordError { .. } => "discord_error",
+            PermissionResult::SudoNotGranted { .. } => "sudo_not_granted",
             PermissionResult::GenericError { .. } => "generic_error",
         }
     }
@@ -109,6 +113,9 @@ impl PermissionResult {
             PermissionResult::UnknownModule { module_config } => {
                 format!("The module ``{}`` does not exist", module_config.module)
             }
+            PermissionResult::ModuleNotFound {} => {
+                "The module corresponding to this command could not be determined".to_string()
+            }
             PermissionResult::ModuleDisabled { module_config } => {
                 format!(
                     "The module ``{}`` is disabled on this server",
@@ -129,6 +136,10 @@ impl PermissionResult {
             }
             PermissionResult::DiscordError { error } => {
                 format!("A Discord-related error seems to have occurred: {}.\n\nPlease try again later, it might work!", error)
+            }
+            PermissionResult::SudoNotGranted {} => {
+                "This module is only available for root (staff) and/or developers of the bot"
+                    .to_string()
             }
             PermissionResult::GenericError { error } => error.clone(),
         }
