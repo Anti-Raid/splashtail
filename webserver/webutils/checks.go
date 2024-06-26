@@ -21,7 +21,7 @@ func ParseBitFlag(flags map[string]bigint.BigInt, flag bigint.BigInt) bigint.Big
 
 	for _, v := range flags {
 		tempFlag := big.Int{}
-		if tempFlag.And(&v.Int, &flag.Int).Cmp(&parsedFlag.Int) == 0 {
+		if tempFlag.And(&v.Int, &flag.Int).Cmp(&v.Int) == 0 {
 			parsedFlag.Or(&parsedFlag.Int, &v.Int)
 		}
 	}
@@ -64,8 +64,10 @@ func ParsePermissionChecks(pc *silverpelt.PermissionChecks) (*silverpelt.Permiss
 			return nil, fmt.Errorf("too many native perms: %d", len(parsedChecks[i].NativePerms))
 		}
 
-		for j, perm := range parsedChecks[i].NativePerms {
-			parsedChecks[i].NativePerms[j] = ParseBitFlag(state.SerenityPermissions, perm)
+		for j := range parsedChecks[i].NativePerms {
+			fmt.Println(parsedChecks[i].NativePerms[j].String())
+			parsedChecks[i].NativePerms[j] = ParseBitFlag(state.SerenityPermissions, parsedChecks[i].NativePerms[j])
+			fmt.Println(parsedChecks[i].NativePerms[j].String())
 		}
 	}
 

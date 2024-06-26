@@ -15,7 +15,7 @@ type sp struct {
 	Perms []string `db:"perms"`
 }
 
-func GetUserPermi(ctx context.Context, pool *pgxpool.Pool, guildId, userId string) (*perms.StaffPermissions, error) {
+func GetUserPermissions(ctx context.Context, pool *pgxpool.Pool, guildId, userId string) (*perms.StaffPermissions, error) {
 	var roles []string
 	var permOverrides []string
 

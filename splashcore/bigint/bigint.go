@@ -10,7 +10,7 @@ type BigInt struct {
 }
 
 func (b BigInt) MarshalJSON() ([]byte, error) {
-	return []byte(b.String()), nil
+	return []byte("\"" + b.String() + "\""), nil
 }
 
 func (b *BigInt) UnmarshalJSON(p []byte) error {
