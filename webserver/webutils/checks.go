@@ -10,9 +10,10 @@ import (
 )
 
 const (
-	maxPermCheck     = 10
-	maxKittycatPerms = 10
-	maxNativePerms   = 10
+	maxPermCheck                  = 10
+	maxKittycatPerms              = 10
+	maxIndividualKittycatPermSize = 128
+	maxNativePerms                = 10
 )
 
 // ParseBitFlag returns a new bitfield with the flags that are set in the given flags map.
@@ -65,9 +66,13 @@ func ParsePermissionChecks(pc *silverpelt.PermissionChecks) (*silverpelt.Permiss
 		}
 
 		for j := range parsedChecks[i].NativePerms {
-			fmt.Println(parsedChecks[i].NativePerms[j].String())
 			parsedChecks[i].NativePerms[j] = ParseBitFlag(state.SerenityPermissions, parsedChecks[i].NativePerms[j])
-			fmt.Println(parsedChecks[i].NativePerms[j].String())
+		}
+
+		for _, perm := range parsedChecks[i].KittycatPerms {
+			if len(perm) > maxIndividualKittycatPermSize {
+				return nil, fmt.Errorf("kittycat perm too long: max=%d", maxIndividualKittycatPermSize)
+			}
 		}
 	}
 
