@@ -206,6 +206,19 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 			defaultPerms = nil
 		}
 
+		if defaultPerms != nil {
+			defaultPerms, err = webutils.ParsePermissionChecks(defaultPerms)
+
+			if err != nil {
+				return uapi.HttpResponse{
+					Status: http.StatusBadRequest,
+					Json: types.ApiError{
+						Message: "Error parsing permission checks: " + err.Error(),
+					},
+				}
+			}
+		}
+
 		updateCols = append(updateCols, "default_perms")
 		updateArgs = append(updateArgs, defaultPerms)
 

@@ -16,6 +16,7 @@ import (
 	"github.com/anti-raid/splashtail/webserver/state/animusmagiccache"
 	"github.com/anti-raid/splashtail/webserver/state/redishotcache"
 
+	"github.com/anti-raid/splashtail/splashcore/bigint"
 	"github.com/bwmarrin/discordgo"
 	mproc "github.com/cheesycod/mewld/proc"
 	"github.com/go-playground/validator/v10"
@@ -48,7 +49,7 @@ var (
 	CurrentOperationMode    string // Current mode splashtail is operating in
 	Config                  *config.Config
 	MewldInstanceList       *mproc.InstanceList
-	SerenityPermissions     map[string]uint64
+	SerenityPermissions     map[string]bigint.BigInt
 )
 
 func fetchMewldInstanceList() (*mproc.InstanceList, error) {

@@ -3,20 +3,16 @@ package silverpelt
 
 import (
 	"strings"
+
+	"github.com/anti-raid/splashtail/splashcore/bigint"
 )
-
-type NativePermission string
-
-func (np NativePermission) String() string {
-	return string(np) // TODO: Support discord permissions
-}
 
 // PermissionCheck represents the permissions needed to run a command.
 type PermissionCheck struct {
-	KittycatPerms []string           `json:"kittycat_perms"` // The kittycat permissions needed to run the command
-	NativePerms   []NativePermission `json:"native_perms"`   // The native permissions needed to run the command (converted from serenity::all::Permissions)
-	OuterAnd      bool               `json:"outer_and"`      // Whether the next permission check should be ANDed (all needed) or OR'd (at least one) to the current
-	InnerAnd      bool               `json:"inner_and"`      // Whether or not the perms are ANDed (all needed) or OR'd (at least one)
+	KittycatPerms []string        `json:"kittycat_perms"` // The kittycat permissions needed to run the command
+	NativePerms   []bigint.BigInt `json:"native_perms"`   // The native permissions needed to run the command (converted from serenity::all::Permissions)
+	OuterAnd      bool            `json:"outer_and"`      // Whether the next permission check should be ANDed (all needed) or OR'd (at least one) to the current
+	InnerAnd      bool            `json:"inner_and"`      // Whether or not the perms are ANDed (all needed) or OR'd (at least one)
 }
 
 func (pc PermissionCheck) String() string {
