@@ -37,7 +37,7 @@ func ParsePermissionChecks(pc *silverpelt.PermissionChecks) (*silverpelt.Permiss
 	}
 
 	if pc.ChecksNeeded < 1 {
-		pc.ChecksNeeded = 1
+		return nil, fmt.Errorf("checks_needed must be at least 1")
 	}
 
 	if len(pc.Checks) > maxPermCheck {

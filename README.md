@@ -230,6 +230,11 @@ For future releases (or even initial if time permits):
 
 Run ``cargo sqlx prepare`` in the ``botv2`` folder before committing anything. This will regenerate the SQLX files used by the bot to interact with the database. Note that ``make buildbot`` will automatically run this now.
 
+When changing `PermissionChecks` validation rules, be sure to edit the following locations and keep them up to date:
+
+- ``botv2 [crate::silverpelt::validators::parse_permission_checks]`` (the consts)
+- ``webserver/webutils/checks.go`` (the consts)
+
 -------------------------------------------------------------------------------------------
 
 # Anti-Nuke Methods

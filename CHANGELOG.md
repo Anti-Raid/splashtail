@@ -1,3 +1,17 @@
+# Wednesday, June 26th 2024
+
+## Website
+
+- Several website updates. ``commandLookup`` now properly uses ``full_name`` like the rest of the command handling code. Module info editting has also been significantly improved with better TypeScript typing and a more consistent UI. Several other UI/UX changes have also been made including a footer including version information for debugging as well as a new logger that provides more details to developers.
+
+## Bot And Webserver
+
+- Permission checks are now validated through a standardized function: ``crate::silverpelt::validators::parse_permission_checks`` (botv2) and ``webutils.ParsePermissionChecks`` (webserver). These functions provide a consistent and standardized data validation system for permission checks that also limit abusive use of Anti-Raid services. In the Webserver, a new ``bigint`` type was added directly to ``splashcore`` in preparation for Discord increasing the permission bits beyond 64 which is something serenity is also looking into handling.
+
+## Animus Magic
+
+- The ``GetSerenityPermissionList`` endpoint has been removed. The already generated ``serenity_perms.json`` should be used instead and embedded into the compiled binaries/any other place using them. This also avoids several useless Animus Magic calls which may improve performance.
+
 # Monday, June 24th 2024
 
 ## Bot

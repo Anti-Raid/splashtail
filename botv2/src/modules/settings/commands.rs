@@ -522,12 +522,9 @@ pub async fn commands_modperms(
 
                 match perms {
                     Ok(perms) => {
-                        if perms.checks.len() > 10 {
-                            ctx.say("You can only have up to 10 checks in a PermissionCheck")
-                                .await?;
-                            continue;
-                        }
-                        new_command_config.perms = Some(perms);
+                        let parsed =
+                            crate::silverpelt::validators::parse_permission_checks(&perms)?;
+                        new_command_config.perms = Some(parsed);
                     }
                     Err(err) => {
                         ctx.say(format!("Failed to parse permissions: {}", err))
