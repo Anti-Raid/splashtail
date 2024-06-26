@@ -201,8 +201,13 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 			return hresp
 		}
 
+		defaultPerms := body.DefaultPerms
+		if len(defaultPerms.Checks) == 0 && defaultPerms.ChecksNeeded < 2 {
+			defaultPerms = nil
+		}
+
 		updateCols = append(updateCols, "default_perms")
-		updateArgs = append(updateArgs, *body.DefaultPerms)
+		updateArgs = append(updateArgs, defaultPerms)
 
 		cacheFlushFlag = CACHE_FLUSH_COMMAND_PERMISSION_CACHE_CLEAR
 
