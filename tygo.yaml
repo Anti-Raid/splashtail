@@ -11,7 +11,7 @@ packages:
       pgtype.UUID: "string /* uuid */"
       dovetypes.PlatformUser: PlatformUser /* from eureka-dovewing.ts */
       pgtype.Timestamptz: "string | null /* RFC3339, nullable */"
-      bigint.BigInt: "string | number /* bigint */"
+      bigint.BigInt: "string /* bigint */"
         
   - path: "github.com/infinitybotlist/eureka/dovewing/dovetypes"
     output_path: "/silverpelt/cdn/antiraid/dev/bindings/splashtail/eureka-dovewing.ts"
@@ -25,6 +25,7 @@ packages:
       dovetypes.PlatformUser: PlatformUser /* from eureka-dovewing.ts */
       pgtype.Timestamptz: "string | null /* RFC3339, nullable */"
       orderedmap.OrderedMap: "Record"
+      bigint.BigInt: "string /* bigint */"
 
   - path: "github.com/anti-raid/splashtail/splashcore/types/ext"
     output_path: "/silverpelt/cdn/antiraid/dev/bindings/splashtail/ext.ts"
@@ -35,6 +36,7 @@ packages:
       dovetypes.PlatformUser: PlatformUser /* from eureka-dovewing.ts */
       pgtype.Timestamptz: "string | null /* RFC3339, nullable */"
       orderedmap.OrderedMap: "Record"
+      bigint.BigInt: "string /* bigint */"
 
   - path: "github.com/cheesycod/mewld/proc"
     output_path: "/silverpelt/cdn/antiraid/dev/bindings/splashtail/mewld/proc.ts"

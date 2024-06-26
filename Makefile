@@ -87,7 +87,7 @@ ts:
 	cp -rf splashcore/types $(CDN_PATH)/dev/bindings/splashtail/go
 
 	# Patch to change package name to 'splashtail_types'
-	sed -i 's:package types:package splashtail_types:g' $(CDN_PATH)/dev/bindings/splashtail/go/types/{*.go,*.ts}
+	#sed -i 's:package types:package splashtail_types:g' $(CDN_PATH)/dev/bindings/splashtail/go/types/{*.go,*.ts}
 	
 	cd botv2 && cargo test
 	cp -rf botv2/.generated $(CDN_PATH)/dev/bindings/splashtail/rust
