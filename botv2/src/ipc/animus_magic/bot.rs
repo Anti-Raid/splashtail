@@ -50,10 +50,6 @@ pub enum BotAnimusResponse {
         perm_res: PermissionResult,
         is_ok: bool,
     },
-    /// Returns the list of all permissions present within serenity
-    GetSerenityPermissionList {
-        perms: indexmap::IndexMap<String, u64>,
-    },
     SettingsOperation {
         res: CanonicalSettingsResult,
     },
@@ -130,8 +126,6 @@ pub enum BotAnimusMessage {
         toggle: String,
         options: indexmap::IndexMap<String, serde_json::Value>,
     },
-    /// Returns the list of all permissions present within serenity
-    GetSerenityPermissionList {},
     /// Executes an operation on a setting
     SettingsOperation {
         fields: indexmap::IndexMap<String, serde_json::Value>,
@@ -300,14 +294,6 @@ impl BotAnimusMessage {
 
                 Ok(BotAnimusResponse::Ok {
                     message: "".to_string(),
-                })
-            }
-            Self::GetSerenityPermissionList {} => {
-                Ok(BotAnimusResponse::GetSerenityPermissionList {
-                    perms: serenity::model::permissions::Permissions::all()
-                        .iter()
-                        .map(|p| (p.to_string(), p.bits()))
-                        .collect(),
                 })
             }
             Self::SettingsOperation {

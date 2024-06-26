@@ -11,6 +11,7 @@ import (
 
 	"github.com/anti-raid/splashtail/splashcore/animusmagic"
 	"github.com/anti-raid/splashtail/splashcore/config"
+	"github.com/anti-raid/splashtail/splashcore/data"
 	"github.com/anti-raid/splashtail/splashcore/objectstorage"
 	"github.com/anti-raid/splashtail/webserver/state/animusmagiccache"
 	"github.com/anti-raid/splashtail/webserver/state/redishotcache"
@@ -47,6 +48,7 @@ var (
 	CurrentOperationMode    string // Current mode splashtail is operating in
 	Config                  *config.Config
 	MewldInstanceList       *mproc.InstanceList
+	SerenityPermissions     map[string]uint64
 )
 
 func fetchMewldInstanceList() (*mproc.InstanceList, error) {
@@ -114,6 +116,18 @@ func Setup() {
 	}
 
 	Logger = snippets.CreateZap()
+
+	serenityJsonFile, err := data.Embedded.ReadFile("serenity_perms.json")
+
+	if err != nil {
+		panic(err)
+	}
+
+	err = jsonimpl.Unmarshal(serenityJsonFile, &SerenityPermissions)
+
+	if err != nil {
+		panic(err)
+	}
 
 	for {
 		mil, err := fetchMewldInstanceList()

@@ -28,7 +28,6 @@ type BotAnimusMessage struct {
 		Toggle  string         `json:"toggle"`
 		Options map[string]any `json:"options,omitempty"`
 	} `json:"ExecutePerModuleFunction,omitempty"`
-	GetSerenityPermissionList *struct{} `json:"GetSerenityPermissionList,omitempty"`
 }
 
 func (b BotAnimusMessage) Message() {}
@@ -56,9 +55,6 @@ type BotAnimusResponse struct {
 		PermRes silverpelt.PermissionResult `json:"perm_res"`
 		IsOk    bool                        `json:"is_ok"`
 	}
-	GetSerenityPermissionList *struct {
-		Permissions map[string]uint64 `json:"perms"`
-	} `json:"GetSerenityPermissionList,omitempty"`
 }
 
 func (b BotAnimusResponse) Response() {}

@@ -47,7 +47,7 @@ updatebot_dbg:
 formatbot:
 	cd botv2 && cargo fmt
 
-restartbot: sqlx
+restartbot: sqlx ts
 	make buildbot
 	make restartbot_nobuild
 
@@ -87,10 +87,11 @@ ts:
 	cp -rf splashcore/types $(CDN_PATH)/dev/bindings/splashtail/go
 
 	# Patch to change package name to 'splashtail_types'
-	#sed -i 's:package types:package splashtail_types:g' $(CDN_PATH)/dev/bindings/splashtail/go/types/{*.go,*.ts}
+	sed -i 's:package types:package splashtail_types:g' $(CDN_PATH)/dev/bindings/splashtail/go/types/{*.go,*.ts}
 	
 	cd botv2 && cargo test
 	cp -rf botv2/.generated $(CDN_PATH)/dev/bindings/splashtail/rust
+	cp -rf botv2/.generated/serenity_perms.json splashcore/data/serenity_perms.json
 
 	cp -rf $(CDN_PATH)/dev/bindings/splashtail/* website/src/lib/generated
 	rm -rf website/src/lib/generated/go	
