@@ -562,37 +562,21 @@ pub async fn modules_modperms(
                     continue;
                 }
 
-                let Some(current_disabled) = new_module_config.disabled else {
-                    item.create_response(
-                        &ctx.serenity_context().http,
-                        poise::serenity_prelude::CreateInteractionResponse::Message(
-                            poise::CreateReply::new()
-                                .content("Module toggle has already been reset!")
-                                .to_slash_initial_response(
-                                    serenity::all::CreateInteractionResponseMessage::default(),
-                                ),
-                        ),
+                if module.is_default_enabled {
+                    let perm_res = crate::silverpelt::cmd::check_command(
+                        "modules",
+                        "modules enable",
+                        guild_id,
+                        ctx.author().id,
+                        &data.pool,
+                        &cache_http,
+                        &Some(ctx),
+                        crate::silverpelt::cmd::CheckCommandOptions::default(),
                     )
-                    .await?;
-                    continue;
-                };
+                    .await;
 
-                if current_disabled != module.is_default_enabled {
-                    if module.is_default_enabled {
-                        let perm_res = crate::silverpelt::cmd::check_command(
-                            "modules",
-                            "modules enable",
-                            guild_id,
-                            ctx.author().id,
-                            &data.pool,
-                            &cache_http,
-                            &Some(ctx),
-                            crate::silverpelt::cmd::CheckCommandOptions::default(),
-                        )
-                        .await;
-
-                        if !perm_res.is_ok() {
-                            item.create_response(
+                    if !perm_res.is_ok() {
+                        item.create_response(
                                 &ctx.serenity_context().http,
                                 poise::serenity_prelude::CreateInteractionResponse::Message(
                                     poise::CreateReply::new()
@@ -606,23 +590,23 @@ pub async fn modules_modperms(
                                 ),
                             )
                             .await?;
-                            continue;
-                        }
-                    } else {
-                        let perm_res = crate::silverpelt::cmd::check_command(
-                            "modules",
-                            "modules disable",
-                            guild_id,
-                            ctx.author().id,
-                            &data.pool,
-                            &cache_http,
-                            &Some(ctx),
-                            crate::silverpelt::cmd::CheckCommandOptions::default(),
-                        )
-                        .await;
+                        continue;
+                    }
+                } else {
+                    let perm_res = crate::silverpelt::cmd::check_command(
+                        "modules",
+                        "modules disable",
+                        guild_id,
+                        ctx.author().id,
+                        &data.pool,
+                        &cache_http,
+                        &Some(ctx),
+                        crate::silverpelt::cmd::CheckCommandOptions::default(),
+                    )
+                    .await;
 
-                        if !perm_res.is_ok() {
-                            item.create_response(
+                    if !perm_res.is_ok() {
+                        item.create_response(
                                 &ctx.serenity_context().http,
                                 poise::serenity_prelude::CreateInteractionResponse::Message(
                                     poise::CreateReply::new()
@@ -636,8 +620,7 @@ pub async fn modules_modperms(
                                 ),
                             )
                             .await?;
-                            continue;
-                        }
+                        continue;
                     }
                 }
 
@@ -671,7 +654,7 @@ pub async fn modules_modperms(
                         poise::serenity_prelude::CreateInteractionResponse::Message(
                             poise::CreateReply::new()
                                 .content(format!(
-                                    "You must have permission to use `acl__{}_defaultperms_check` with the new module config: {}",
+                                    "You must have permission to use `acl__{}_defaultperms_check` with the permissions you have provided: {}",
                                     module.id,
                                     perm_res.to_markdown()
                                 ))
@@ -756,7 +739,7 @@ pub async fn modules_modperms(
                                 poise::serenity_prelude::CreateInteractionResponse::Message(
                                     poise::CreateReply::new()
                                         .content(format!(
-                                            "You must have permission to use `acl__{}_defaultperms_check` with the new module config: {}",
+                                            "You must have permission to use `acl__{}_defaultperms_check` with the permissions you have provided: {}",
                                             module.id,
                                             perm_res.to_markdown()
                                         ))
