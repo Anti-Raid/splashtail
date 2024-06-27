@@ -636,10 +636,10 @@ pub async fn modules_modperms(
                     &cache_http,
                     &Some(ctx),
                     crate::silverpelt::cmd::CheckCommandOptions {
-                        ignore_command_disabled: true,
                         custom_module_configuration: Some(
                             crate::silverpelt::GuildModuleConfiguration {
                                 default_perms: None,
+                                disabled: Some(false),
                                 ..new_module_config.clone()
                             },
                         ),
@@ -721,9 +721,9 @@ pub async fn modules_modperms(
                             &cache_http,
                             &Some(ctx),
                             crate::silverpelt::cmd::CheckCommandOptions {
-                                ignore_command_disabled: true,
                                 custom_module_configuration: Some(
                                     crate::silverpelt::GuildModuleConfiguration {
+                                        disabled: Some(false),
                                         default_perms: Some(parsed.clone()),
                                         ..new_module_config.clone()
                                     },

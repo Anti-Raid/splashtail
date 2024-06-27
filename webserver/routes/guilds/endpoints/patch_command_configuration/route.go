@@ -1,4 +1,4 @@
-package patch_module_configuration
+package patch_command_configuration
 
 import (
 	"net/http"
@@ -29,9 +29,9 @@ const (
 
 func Docs() *docs.Doc {
 	return &docs.Doc{
-		Summary:     "Patch Module Configuration",
-		Description: "Updates the configuration of a specific module for a specific guild",
-		Req:         types.PatchGuildModuleConfiguration{},
+		Summary:     "Patch Command Configuration",
+		Description: "Updates the configuration of a specific command for a specific guild. The user must have permission to use said command",
+		Req:         types.PatchGuildCommandConfiguration{},
 		Resp:        types.ApiError{},
 		Params: []docs.Parameter{
 			{
@@ -96,29 +96,31 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 		}
 	}
 
-	// Read body
-	var body types.PatchGuildModuleConfiguration
-
-	hresp, ok := uapi.MarshalReqWithHeaders(r, &body, limit.Headers())
+	hresp, ok := webutils.ClusterCheck(clusterId)
 
 	if !ok {
 		return hresp
 	}
 
-	if body.Module == "" {
+	// Read body
+	var body types.PatchGuildCommandConfiguration
+
+	hresp, ok = uapi.MarshalReqWithHeaders(r, &body, limit.Headers())
+
+	if !ok {
+		return hresp
+	}
+
+	if body.Command == "" {
 		return uapi.HttpResponse{
 			Status: http.StatusBadRequest,
 			Json: types.ApiError{
-				Message: "Module is required",
+				Message: "Command is required",
 			},
 		}
 	}
 
-	hresp, ok = webutils.ClusterCheck(clusterId)
-
-	if !ok {
-		return hresp
-	}
+	baseCommand := strings.Split(body.Command, " ")[0]
 
 	// Find module from cluster
 	modules, err := state.CachedAnimusMagicClient.GetClusterModules(d.Context, state.Rueidis, uint16(clusterId))
@@ -133,19 +135,35 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 	}
 
 	var moduleData *silverpelt.CanonicalModule
+	var commandData *silverpelt.CanonicalCommand
 
 	for _, m := range modules {
-		if m.ID == body.Module {
-			moduleData = &m
-			break
+		for _, cmd := range m.Commands {
+			if cmd.Command.Name == baseCommand || cmd.Command.QualifiedName == baseCommand {
+				moduleData = &m
+				commandData = &cmd
+				break
+			}
 		}
 	}
 
-	if moduleData == nil {
+	if moduleData == nil || commandData == nil {
 		return uapi.HttpResponse{
 			Status: http.StatusBadRequest,
 			Json: types.ApiError{
-				Message: "Module not found",
+				Message: "Command not found",
+			},
+		}
+
+	}
+
+	commandExtendedData := silverpelt.GetCommandExtendedData(silverpelt.PermuteCommandNames(body.Command), commandData.ExtendedData)
+
+	if commandExtendedData == nil {
+		return uapi.HttpResponse{
+			Status: http.StatusBadRequest,
+			Json: types.ApiError{
+				Message: "Command extended data not found",
 			},
 		}
 	}
@@ -153,11 +171,19 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 	// Fetch permission limits
 	permLimits := api.PermLimits(d.Auth)
 
+	// Ensure user has permission to use the command
+	hresp, ok = api.HandlePermissionCheck(d.Auth.ID, guildId, body.Command, animusmagic.AmCheckCommandOptions{
+		CustomResolvedKittycatPerms: &permLimits,
+		Flags:                       animusmagic.AmCheckCommandOptionsFlagIgnoreCommandDisabled,
+	})
+
+	if !ok {
+		return hresp
+	}
+
 	var updateCols []string
 	var updateArgs []any
 	var cacheFlushFlag = CACHE_FLUSH_NONE
-
-	var isDisabled bool // This must be set to ensure cache flushes are done correctly
 
 	// Perm check area
 	if body.Disabled != nil {
@@ -172,18 +198,18 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 			}
 		}
 
-		if !moduleData.Toggleable {
+		if !moduleData.CommandsToggleable {
 			return uapi.HttpResponse{
 				Status: http.StatusBadRequest,
 				Json: types.ApiError{
-					Message: "Module cannot be enabled/disablable (is not toggleable)",
+					Message: "Commands on this module cannot be enabled/disablable (is not toggleable)",
 				},
 			}
 		}
 
 		if clear {
-			if moduleData.IsDefaultEnabled {
-				hresp, ok = api.HandlePermissionCheck(d.Auth.ID, guildId, "modules enable", animusmagic.AmCheckCommandOptions{
+			if commandExtendedData.IsDefaultEnabled {
+				hresp, ok = api.HandlePermissionCheck(d.Auth.ID, guildId, "commands enable", animusmagic.AmCheckCommandOptions{
 					CustomResolvedKittycatPerms: &permLimits,
 				})
 
@@ -191,7 +217,7 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 					return hresp
 				}
 			} else {
-				hresp, ok = api.HandlePermissionCheck(d.Auth.ID, guildId, "modules disable", animusmagic.AmCheckCommandOptions{
+				hresp, ok = api.HandlePermissionCheck(d.Auth.ID, guildId, "commands disable", animusmagic.AmCheckCommandOptions{
 					CustomResolvedKittycatPerms: &permLimits,
 				})
 
@@ -199,16 +225,13 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 					return hresp
 				}
 			}
-
-			// Set isDisabled to ensure cache flushes are done correctly
-			isDisabled = !moduleData.IsDefaultEnabled
 
 			updateCols = append(updateCols, "disabled")
 			updateArgs = append(updateArgs, nil)
 		} else {
 			// Check for permissions next
 			if *value {
-				hresp, ok = api.HandlePermissionCheck(d.Auth.ID, guildId, "modules enable", animusmagic.AmCheckCommandOptions{
+				hresp, ok = api.HandlePermissionCheck(d.Auth.ID, guildId, "commands enable", animusmagic.AmCheckCommandOptions{
 					CustomResolvedKittycatPerms: &permLimits,
 				})
 
@@ -216,7 +239,7 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 					return hresp
 				}
 			} else {
-				hresp, ok = api.HandlePermissionCheck(d.Auth.ID, guildId, "modules disable", animusmagic.AmCheckCommandOptions{
+				hresp, ok = api.HandlePermissionCheck(d.Auth.ID, guildId, "commands disable", animusmagic.AmCheckCommandOptions{
 					CustomResolvedKittycatPerms: &permLimits,
 				})
 
@@ -224,9 +247,6 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 					return hresp
 				}
 			}
-
-			// Set isDisabled to ensure cache flushes are done correctly
-			isDisabled = *value
 
 			updateCols = append(updateCols, "disabled")
 			updateArgs = append(updateArgs, *value)
@@ -237,8 +257,8 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 		}
 	}
 
-	if body.DefaultPerms != nil {
-		value, clear, err := body.DefaultPerms.Get()
+	if body.Perms != nil {
+		value, clear, err := body.Perms.Get()
 
 		if err != nil {
 			return uapi.HttpResponse{
@@ -250,15 +270,7 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 		}
 
 		// Check for permissions next
-		hresp, ok = api.HandlePermissionCheck(d.Auth.ID, guildId, "modules modperms", animusmagic.AmCheckCommandOptions{
-			CustomResolvedKittycatPerms: &permLimits,
-		})
-
-		if !ok {
-			return hresp
-		}
-
-		hresp, ok = api.HandlePermissionCheck(d.Auth.ID, guildId, "acl__modules_modperms "+body.Module, animusmagic.AmCheckCommandOptions{
+		hresp, ok = api.HandlePermissionCheck(d.Auth.ID, guildId, "commands modperms", animusmagic.AmCheckCommandOptions{
 			CustomResolvedKittycatPerms: &permLimits,
 		})
 
@@ -267,13 +279,15 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 		}
 
 		if clear {
-			hresp, ok = api.HandlePermissionCheck(d.Auth.ID, guildId, "acl__"+body.Module+"_defaultperms_check", animusmagic.AmCheckCommandOptions{
+			// Ensure user has permission to use the command
+			hresp, ok = api.HandlePermissionCheck(d.Auth.ID, guildId, body.Command, animusmagic.AmCheckCommandOptions{
 				CustomResolvedKittycatPerms: &permLimits,
-				CustomModuleConfiguration: silverpelt.GuildModuleConfiguration{
-					Disabled:     utils.Pointer(false),
-					Module:       body.Module,
-					DefaultPerms: nil,
-				}.Fill(),
+				CustomCommandConfiguration: &silverpelt.GuildCommandConfiguration{
+					Command:  body.Command,
+					Perms:    nil,
+					Disabled: utils.Pointer(false),
+				},
+				Flags: animusmagic.AmCheckCommandOptionsFlagIgnoreCommandDisabled,
 			})
 
 			if !ok {
@@ -295,13 +309,15 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 			}
 
 			if len(value.Checks) > 0 {
-				hresp, ok = api.HandlePermissionCheck(d.Auth.ID, guildId, "acl__"+body.Module+"_defaultperms_check", animusmagic.AmCheckCommandOptions{
+				// Ensure user has permission to use the command
+				hresp, ok = api.HandlePermissionCheck(d.Auth.ID, guildId, body.Command, animusmagic.AmCheckCommandOptions{
 					CustomResolvedKittycatPerms: &permLimits,
-					CustomModuleConfiguration: silverpelt.GuildModuleConfiguration{
-						Disabled:     utils.Pointer(false),
-						Module:       body.Module,
-						DefaultPerms: parsedValue,
-					}.Fill(),
+					CustomCommandConfiguration: &silverpelt.GuildCommandConfiguration{
+						Command:  body.Command,
+						Perms:    parsedValue,
+						Disabled: utils.Pointer(false),
+					},
+					Flags: animusmagic.AmCheckCommandOptionsFlagIgnoreCommandDisabled,
 				})
 
 				if !ok {
@@ -337,10 +353,10 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 		paramNo++
 	}
 
-	var sqlString = "INSERT INTO guild_module_configurations (guild_id, module, " + strings.Join(updateCols, ", ") + ") VALUES ($1, $2, " + strings.Join(insertParams, ",") + ") ON CONFLICT (guild_id, module) DO UPDATE SET " + strings.Join(updateParams, ", ") + " RETURNING id"
+	var sqlString = "INSERT INTO guild_command_configurations (guild_id, command, " + strings.Join(updateCols, ", ") + ") VALUES ($1, $2, " + strings.Join(insertParams, ",") + ") ON CONFLICT (guild_id, module) DO UPDATE SET " + strings.Join(updateParams, ", ") + " RETURNING id"
 
 	// Execute sql
-	updateArgs = append([]any{guildId, body.Module}, updateArgs...) // $1 and $2
+	updateArgs = append([]any{guildId, body.Command}, updateArgs...) // $1 and $2
 	var id string
 	err = state.Pool.QueryRow(
 		d.Context,
@@ -368,11 +384,9 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 					Options map[string]any `json:"options,omitempty"`
 				}{
 					Module: "settings",
-					Toggle: "toggle_module",
+					Toggle: "clear_command_permission_cache",
 					Options: map[string]any{
 						"guild_id": guildId,
-						"module":   body.Module,
-						"enabled":  isDisabled,
 					},
 				},
 			},

@@ -10,6 +10,7 @@
 - The `AmCheckCommandOptions` struct used for permission checks has been changed significantly. It now uses a ``flags`` bitfield (`u8`) instead of 5-6 bool fields to save memory. **These changes have also been ported to the webserver as well**
 - Added ``Module.parse`` to allow performing some checks on the modules before starting up the bot in an invalid state
 - ``ensure_custom_kittycat_perms`` has been replaced with ``SKIP_CUSTOM_RESOLVED_FIT_CHECKS``. The new API is opt-in hence ensuring that all permission limits are checked by default unless explicitly overriden instead of the less secure opt-out approach of `ensure_custom_kittycat_perms`.
+- Several bug fixes including the removal of ``ignore_module/command_disabled`` in several useless places.
 
 ## Website
 

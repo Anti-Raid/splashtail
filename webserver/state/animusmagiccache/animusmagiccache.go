@@ -13,10 +13,7 @@ import (
 type CachedAnimusMagicClient struct {
 	*animusmagic.AnimusMagicClient
 
-	// ClusterModule cache
 	ClusterModuleCache syncmap.Map[uint16, animusmagic.ClusterModules]
-
-	SerenityPermissionsList syncmap.Map[uint16, map[string]uint64]
 }
 
 // New returns a new CachedAnimusMagicClient

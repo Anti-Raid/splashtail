@@ -590,38 +590,22 @@ pub async fn commands_modperms(
                     continue;
                 }
 
-                let Some(current_disabled) = new_command_config.disabled else {
-                    item.create_response(
-                        &ctx.serenity_context().http,
-                        poise::serenity_prelude::CreateInteractionResponse::Message(
-                            poise::CreateReply::new()
-                                .content("Command toggle has already been reset!")
-                                .to_slash_initial_response(
-                                    serenity::all::CreateInteractionResponseMessage::default(),
-                                ),
-                        ),
-                    )
-                    .await?;
-                    continue;
-                };
-
                 // If there is no change, then only do permission checking
-                if cmd_extended_data.is_default_enabled != current_disabled {
-                    if cmd_extended_data.is_default_enabled {
-                        let perm_res = crate::silverpelt::cmd::check_command(
-                            "commands",
-                            "commands enable",
-                            guild_id,
-                            ctx.author().id,
-                            &data.pool,
-                            cache_http,
-                            &Some(ctx),
-                            crate::silverpelt::cmd::CheckCommandOptions::default(),
-                        )
-                        .await;
+                if cmd_extended_data.is_default_enabled {
+                    let perm_res = crate::silverpelt::cmd::check_command(
+                        "commands",
+                        "commands enable",
+                        guild_id,
+                        ctx.author().id,
+                        &data.pool,
+                        cache_http,
+                        &Some(ctx),
+                        crate::silverpelt::cmd::CheckCommandOptions::default(),
+                    )
+                    .await;
 
-                        if !perm_res.is_ok() {
-                            item.create_response(
+                    if !perm_res.is_ok() {
+                        item.create_response(
                                 &ctx.serenity_context().http,
                                 poise::serenity_prelude::CreateInteractionResponse::Message(
                                     poise::CreateReply::new()
@@ -635,23 +619,23 @@ pub async fn commands_modperms(
                                 ),
                             )
                             .await?;
-                            continue;
-                        }
-                    } else {
-                        let perm_res = crate::silverpelt::cmd::check_command(
-                            "commands",
-                            "commands disable",
-                            guild_id,
-                            ctx.author().id,
-                            &data.pool,
-                            cache_http,
-                            &Some(ctx),
-                            crate::silverpelt::cmd::CheckCommandOptions::default(),
-                        )
-                        .await;
+                        continue;
+                    }
+                } else {
+                    let perm_res = crate::silverpelt::cmd::check_command(
+                        "commands",
+                        "commands disable",
+                        guild_id,
+                        ctx.author().id,
+                        &data.pool,
+                        cache_http,
+                        &Some(ctx),
+                        crate::silverpelt::cmd::CheckCommandOptions::default(),
+                    )
+                    .await;
 
-                        if !perm_res.is_ok() {
-                            item.create_response(
+                    if !perm_res.is_ok() {
+                        item.create_response(
                                 &ctx.serenity_context().http,
                                 poise::serenity_prelude::CreateInteractionResponse::Message(
                                     poise::CreateReply::new()
@@ -665,14 +649,51 @@ pub async fn commands_modperms(
                                 ),
                             )
                             .await?;
-                            continue;
-                        }
+                        continue;
                     }
                 }
 
                 new_command_config.disabled = None;
             }
             "perms/reset" => {
+                let perm_res = crate::silverpelt::cmd::check_command(
+                    base_command,
+                    &command,
+                    guild_id,
+                    ctx.author().id,
+                    &data.pool,
+                    cache_http,
+                    &Some(ctx),
+                    crate::silverpelt::cmd::CheckCommandOptions {
+                        custom_command_configuration: Some(
+                            crate::silverpelt::GuildCommandConfiguration {
+                                perms: None,
+                                ..new_command_config.clone()
+                            },
+                        ),
+                        ..Default::default()
+                    },
+                )
+                .await;
+
+                if !perm_res.is_ok() {
+                    item.create_response(
+                            &ctx.serenity_context().http,
+                            poise::serenity_prelude::CreateInteractionResponse::Message(
+                                poise::CreateReply::new()
+                                    .content(format!(
+                                        "You must have permission to use the command with the permissions you have provided: {}",
+                                        perm_res.to_markdown()
+                                    ))
+                                    .to_slash_initial_response(
+                                        serenity::all::CreateInteractionResponseMessage::default(),
+                                    ),
+                            ),
+                        )
+                        .await?;
+                    continue;
+                }
+
                 new_command_config.perms = None;
             }
             "perms/editraw" => {
@@ -717,6 +738,44 @@ pub async fn commands_modperms(
                     Ok(perms) => {
                         let parsed =
                             crate::silverpelt::validators::parse_permission_checks(&perms)?;
+
+                        let perm_res = crate::silverpelt::cmd::check_command(
+                            base_command,
+                            &command,
+                            guild_id,
+                            ctx.author().id,
+                            &data.pool,
+                            cache_http,
+                            &Some(ctx),
+                            crate::silverpelt::cmd::CheckCommandOptions {
+                                custom_command_configuration: Some(
+                                    crate::silverpelt::GuildCommandConfiguration {
+                                        perms: Some(parsed.clone()),
+                                        ..new_command_config.clone()
+                                    },
+                                ),
+                                ..Default::default()
+                            },
+                        )
+                        .await;
+
+                        if !perm_res.is_ok() {
+                            item.create_response(
+                                    &ctx.serenity_context().http,
+                                    poise::serenity_prelude::CreateInteractionResponse::Message(
+                                        poise::CreateReply::new()
+                                            .content(format!(
+                                                "You must have permission to use the command with the permissions you have provided: {}",
+                                                perm_res.to_markdown()
+                                            ))
+                                            .to_slash_initial_response(
+                                                serenity::all::CreateInteractionResponseMessage::default(),
+                                            ),
+                                    ),
+                                )
+                                .await?;
+                            continue;
+                        }
 
                         new_command_config.perms = Some(parsed);
                     }

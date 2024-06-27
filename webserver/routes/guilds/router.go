@@ -8,6 +8,7 @@ import (
 	"github.com/anti-raid/splashtail/webserver/routes/guilds/endpoints/get_all_command_configurations"
 	"github.com/anti-raid/splashtail/webserver/routes/guilds/endpoints/get_command_configurations"
 	"github.com/anti-raid/splashtail/webserver/routes/guilds/endpoints/get_module_configurations"
+	"github.com/anti-raid/splashtail/webserver/routes/guilds/endpoints/patch_command_configuration"
 	"github.com/anti-raid/splashtail/webserver/routes/guilds/endpoints/patch_module_configuration"
 	"github.com/go-chi/chi/v5"
 	"github.com/infinitybotlist/eureka/uapi"
@@ -47,6 +48,23 @@ func (b Router) Routes(r *chi.Mux) {
 	}.Route(r)
 
 	uapi.Route{
+		Pattern: "/users/{user_id}/guilds/{guild_id}/module-configurations",
+		OpId:    "patch_module_configuration",
+		Method:  uapi.PATCH,
+		Docs:    patch_module_configuration.Docs,
+		Handler: patch_module_configuration.Route,
+		Auth: []uapi.AuthType{
+			{
+				URLVar: "user_id",
+				Type:   types.TargetTypeUser,
+			},
+		},
+		ExtData: map[string]any{
+			api.PERMISSION_CHECK_KEY: nil, // Authz is performed in the handler itself
+		},
+	}.Route(r)
+
+	uapi.Route{
 		Pattern: "/users/{user_id}/guilds/{guild_id}/command-configurations",
 		OpId:    "get_all_command_configurations",
 		Method:  uapi.GET,
@@ -71,6 +89,23 @@ func (b Router) Routes(r *chi.Mux) {
 	}.Route(r)
 
 	uapi.Route{
+		Pattern: "/users/{user_id}/guilds/{guild_id}/command-configurations",
+		OpId:    "patch_command_configuration",
+		Method:  uapi.PATCH,
+		Docs:    patch_command_configuration.Docs,
+		Handler: patch_command_configuration.Route,
+		Auth: []uapi.AuthType{
+			{
+				URLVar: "user_id",
+				Type:   types.TargetTypeUser,
+			},
+		},
+		ExtData: map[string]any{
+			api.PERMISSION_CHECK_KEY: nil, // Authz is performed in the handler itself
+		},
+	}.Route(r)
+
+	uapi.Route{
 		Pattern: "/users/{user_id}/guilds/{guild_id}/commands/{command}/configurations",
 		OpId:    "get_command_configurations",
 		Method:  uapi.GET,
@@ -91,23 +126,6 @@ func (b Router) Routes(r *chi.Mux) {
 					return chi.URLParam(r, "guild_id")
 				},
 			},
-		},
-	}.Route(r)
-
-	uapi.Route{
-		Pattern: "/users/{user_id}/guilds/{guild_id}/modules/{module}/configurations",
-		OpId:    "patch_module_configuration",
-		Method:  uapi.PATCH,
-		Docs:    patch_module_configuration.Docs,
-		Handler: patch_module_configuration.Route,
-		Auth: []uapi.AuthType{
-			{
-				URLVar: "user_id",
-				Type:   types.TargetTypeUser,
-			},
-		},
-		ExtData: map[string]any{
-			api.PERMISSION_CHECK_KEY: nil, // Authz is performed in the handler itself
 		},
 	}.Route(r)
 }
