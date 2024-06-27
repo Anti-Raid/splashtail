@@ -80,7 +80,12 @@ pub async fn member_in_guild(
 ) -> Result<Option<serenity::all::Member>, crate::Error> {
     // No sandwich case
     if crate::config::CONFIG.meta.sandwich_http_api.is_none() {
-        let res = botox::cache::member_on_guild(ctx, guild_id, user_id, true).await?;
+        let res = match botox::cache::member_on_guild(ctx, guild_id, user_id, true).await {
+            Ok(res) => res,
+            Err(e) => {
+                return Err(format!("Failed to fetch member: {:?}", e).into());
+            }
+        };
 
         let Some(res) = res else {
             return Ok(None);
@@ -119,19 +124,26 @@ pub async fn member_in_guild(
         .send()
         .await?
         .json::<Resp>()
-        .await?;
+        .await;
 
-    if resp.ok {
-        let Some(member) = resp.data else {
-            return Ok(None);
-        };
+    match resp {
+        Ok(resp) => {
+            if resp.ok {
+                let Some(member) = resp.data else {
+                    return Ok(None);
+                };
 
-        return Ok(Some(member));
-    } else {
-        log::warn!(
-            "Sandwich proxy returned error [get member]: {:?}",
-            resp.error
-        );
+                return Ok(Some(member));
+            } else {
+                log::warn!(
+                    "Sandwich proxy returned error [get member]: {:?}",
+                    resp.error
+                );
+            }
+        }
+        Err(e) => {
+            log::warn!("Failed to fetch member (http): {:?}", e);
+        }
     }
 
     // Last resort, use botox to fetch from http and then update sandwich as well

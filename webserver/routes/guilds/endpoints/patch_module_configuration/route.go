@@ -272,7 +272,7 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 			updateCols = append(updateCols, "default_perms")
 			updateArgs = append(updateArgs, nil)
 		} else {
-			value, err = webutils.ParsePermissionChecks(value)
+			parsedValue, err := webutils.ParsePermissionChecks(value)
 
 			if err != nil {
 				return uapi.HttpResponse{
@@ -285,7 +285,7 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 
 			if len(value.Checks) > 0 {
 				updateCols = append(updateCols, "default_perms")
-				updateArgs = append(updateArgs, value)
+				updateArgs = append(updateArgs, parsedValue)
 			}
 		}
 

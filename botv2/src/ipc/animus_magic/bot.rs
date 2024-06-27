@@ -242,6 +242,8 @@ impl BotAnimusMessage {
                 command,
                 opts,
             } => {
+                log::info!("Checking command permission: {}", command);
+
                 // Check COMMAND_ID_MODULE_MAP
                 let base_command = command.split_whitespace().next().unwrap();
 

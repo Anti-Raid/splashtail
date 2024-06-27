@@ -13,7 +13,10 @@ pub fn module() -> crate::silverpelt::Module {
         // These commands do not follow the typical permission system anyways
         commands: vec![(
             cmds::sudo(),
-            crate::silverpelt::CommandExtendedData::none_map(),
+            indexmap::indexmap! {
+                "register" => crate::silverpelt::CommandExtendedData::none(),
+                "cub" => crate::silverpelt::CommandExtendedData::none(),
+            },
         )],
         ..Default::default()
     }

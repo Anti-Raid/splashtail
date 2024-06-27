@@ -97,13 +97,21 @@ pub async fn get_user_discord_info(
     }
 
     let member = {
-        let member = super::proxysupport::member_in_guild(
+        let member = match super::proxysupport::member_in_guild(
             cache_http,
             &reqwest::Client::new(),
             guild_id,
             user_id,
         )
-        .await?;
+        .await
+        {
+            Ok(member) => member,
+            Err(e) => {
+                return Err(PermissionResult::DiscordError {
+                    error: e.to_string(),
+                });
+            }
+        };
 
         let Some(member) = member else {
             return Err(PermissionResult::DiscordError {

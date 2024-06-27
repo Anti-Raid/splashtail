@@ -60,7 +60,7 @@ pub fn module() -> crate::silverpelt::Module {
                         },
                         ..Default::default()
                     },
-                    "delrole" => crate::silverpelt::CommandExtendedData::kittycat_simple("perms", "delrole"),
+                    "deleterole" => crate::silverpelt::CommandExtendedData::kittycat_simple("perms", "deleterole"),
                 },
             ),
         ],

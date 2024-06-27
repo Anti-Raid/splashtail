@@ -44,36 +44,50 @@ func ParsePermissionChecks(pc *silverpelt.PermissionChecks) (*silverpelt.Permiss
 		return nil, fmt.Errorf("too many checks: %d", len(pc.Checks))
 	}
 
-	var parsedChecks = make([]silverpelt.PermissionCheck, len(pc.Checks))
-	for i, check := range pc.Checks {
+	var parsedChecks = make([]silverpelt.PermissionCheck, 0, len(pc.Checks))
+	for _, check := range pc.Checks {
 		if len(check.KittycatPerms) == 0 && len(check.NativePerms) == 0 {
 			continue
 		}
 
-		parsedChecks[i] = silverpelt.PermissionCheck{
-			KittycatPerms: check.KittycatPerms,
-			NativePerms:   check.NativePerms,
-			OuterAnd:      check.OuterAnd,
-			InnerAnd:      check.InnerAnd,
+		parsedCheck := silverpelt.PermissionCheck{
+			KittycatPerms: func() []string {
+				if len(check.KittycatPerms) == 0 {
+					return make([]string, 0)
+				}
+
+				return check.KittycatPerms
+			}(),
+			NativePerms: func() []bigint.BigInt {
+				if len(check.NativePerms) == 0 {
+					return make([]bigint.BigInt, 0)
+				}
+
+				return check.NativePerms
+			}(),
+			OuterAnd: check.OuterAnd,
+			InnerAnd: check.InnerAnd,
 		}
 
-		if len(parsedChecks[i].KittycatPerms) > maxKittycatPerms {
-			return nil, fmt.Errorf("too many kittycat perms: %d", len(parsedChecks[i].KittycatPerms))
+		if len(parsedCheck.KittycatPerms) > maxKittycatPerms {
+			return nil, fmt.Errorf("too many kittycat perms: %d", len(parsedCheck.KittycatPerms))
 		}
 
-		if len(parsedChecks[i].NativePerms) > maxNativePerms {
-			return nil, fmt.Errorf("too many native perms: %d", len(parsedChecks[i].NativePerms))
+		if len(parsedCheck.NativePerms) > maxNativePerms {
+			return nil, fmt.Errorf("too many native perms: %d", len(parsedCheck.NativePerms))
 		}
 
-		for j := range parsedChecks[i].NativePerms {
-			parsedChecks[i].NativePerms[j] = ParseBitFlag(state.SerenityPermissions, parsedChecks[i].NativePerms[j])
+		for j := range parsedCheck.NativePerms {
+			parsedCheck.NativePerms[j] = ParseBitFlag(state.SerenityPermissions, parsedCheck.NativePerms[j])
 		}
 
-		for _, perm := range parsedChecks[i].KittycatPerms {
+		for _, perm := range parsedCheck.KittycatPerms {
 			if len(perm) > maxIndividualKittycatPermSize {
 				return nil, fmt.Errorf("kittycat perm too long: max=%d", maxIndividualKittycatPermSize)
 			}
 		}
+
+		parsedChecks = append(parsedChecks, parsedCheck)
 	}
 
 	return &silverpelt.PermissionChecks{
