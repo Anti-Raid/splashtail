@@ -1,6 +1,7 @@
 package types
 
 import (
+	"errors"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgtype"
@@ -50,4 +51,21 @@ type Vanity struct {
 	TargetType string      `db:"target_type" json:"target_type" description:"The type of the entity"`
 	Code       string      `db:"code" json:"code" description:"The code of the vanity"`
 	CreatedAt  time.Time   `db:"created_at" json:"created_at" description:"The time the vanity was created"`
+}
+
+// A clearable is a value that can be either cleared or set
+type Clearable[T any] struct {
+	Clear bool `json:"clear" description:"Whether or not to clear the value"`
+	Value *T   `json:"value" description:"The value to set. Note that clear must be false for this to be used"`
+}
+
+// Checks a Clearable for errors
+func (c *Clearable[T]) Get() (*T, bool, error) {
+	if c.Clear && c.Value != nil {
+		return nil, false, errors.New("cannot clear and set a value at the same time")
+	}
+	if !c.Clear && c.Value == nil {
+		return nil, false, errors.New("value must be set if clear is false")
+	}
+	return c.Value, c.Clear, nil
 }

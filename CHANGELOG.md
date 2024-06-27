@@ -1,3 +1,13 @@
+# Thursday, June 27th 2024
+
+## Bot
+
+- The bot now runs permission checks for reset toggle on both commands and modules based on the default state of the command/module. In addition, commands/modules must be toggleable to be able to reset toggles.
+
+## Website
+
+- The ``patch_module_configuration`` API now supports clearing toggles and default permissions of modules. This brings it up-to-speed / inline with the equivalent bot command ``modules modperms``
+
 # Wednesday, June 26th 2024
 
 ## Website

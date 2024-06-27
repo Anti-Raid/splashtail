@@ -153,8 +153,21 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 	var updateArgs []any
 	var cacheFlushFlag = CACHE_FLUSH_NONE
 
+	var isDisabled bool // This must be set to ensure cache flushes are done correctly
+
 	// Perm check area
 	if body.Disabled != nil {
+		value, clear, err := body.Disabled.Get()
+
+		if err != nil {
+			return uapi.HttpResponse{
+				Status: http.StatusBadRequest,
+				Json: types.ApiError{
+					Message: "Error parsing disabled value: " + err.Error(),
+				},
+			}
+		}
+
 		if !moduleData.Toggleable {
 			return uapi.HttpResponse{
 				Status: http.StatusBadRequest,
@@ -164,23 +177,51 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 			}
 		}
 
-		// Check for permissions next
-		if *body.Disabled {
-			hresp, ok = api.HandlePermissionCheck(d.Auth.ID, guildId, "modules disable", api.PermLimits(d.Auth))
+		if clear {
+			// Differences from bot: we do not have the existing state of the module beforehand for simplicity
+			//
+			// This means that all the fast-path optimization used by the bot are not available to us
+			if moduleData.IsDefaultEnabled {
+				hresp, ok = api.HandlePermissionCheck(d.Auth.ID, guildId, "modules enable", api.PermLimits(d.Auth))
 
-			if !ok {
-				return hresp
+				if !ok {
+					return hresp
+				}
+			} else {
+				hresp, ok = api.HandlePermissionCheck(d.Auth.ID, guildId, "modules disable", api.PermLimits(d.Auth))
+
+				if !ok {
+					return hresp
+				}
 			}
+
+			// Set isDisabled to ensure cache flushes are done correctly
+			isDisabled = !moduleData.IsDefaultEnabled
+
+			updateCols = append(updateCols, "disabled")
+			updateArgs = append(updateArgs, nil)
 		} else {
-			hresp, ok = api.HandlePermissionCheck(d.Auth.ID, guildId, "modules enable", api.PermLimits(d.Auth))
+			// Check for permissions next
+			if *value {
+				hresp, ok = api.HandlePermissionCheck(d.Auth.ID, guildId, "modules disable", api.PermLimits(d.Auth))
 
-			if !ok {
-				return hresp
+				if !ok {
+					return hresp
+				}
+			} else {
+				hresp, ok = api.HandlePermissionCheck(d.Auth.ID, guildId, "modules enable", api.PermLimits(d.Auth))
+
+				if !ok {
+					return hresp
+				}
 			}
-		}
 
-		updateCols = append(updateCols, "disabled")
-		updateArgs = append(updateArgs, *body.Disabled)
+			// Set isDisabled to ensure cache flushes are done correctly
+			isDisabled = *value
+
+			updateCols = append(updateCols, "disabled")
+			updateArgs = append(updateArgs, *value)
+		}
 
 		if cacheFlushFlag&CACHE_FLUSH_MODULE_TOGGLE != CACHE_FLUSH_MODULE_TOGGLE {
 			cacheFlushFlag |= CACHE_FLUSH_MODULE_TOGGLE
@@ -188,6 +229,17 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 	}
 
 	if body.DefaultPerms != nil {
+		value, clear, err := body.DefaultPerms.Get()
+
+		if err != nil {
+			return uapi.HttpResponse{
+				Status: http.StatusBadRequest,
+				Json: types.ApiError{
+					Message: "Error parsing default_perms value: " + err.Error(),
+				},
+			}
+		}
+
 		// Check for permissions next
 		hresp, ok = api.HandlePermissionCheck(d.Auth.ID, guildId, "modules modperms", api.PermLimits(d.Auth))
 
@@ -201,13 +253,11 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 			return hresp
 		}
 
-		defaultPerms := body.DefaultPerms
-		if len(defaultPerms.Checks) == 0 && defaultPerms.ChecksNeeded < 2 {
-			defaultPerms = nil
-		}
-
-		if defaultPerms != nil {
-			defaultPerms, err = webutils.ParsePermissionChecks(defaultPerms)
+		if clear {
+			updateCols = append(updateCols, "default_perms")
+			updateArgs = append(updateArgs, nil)
+		} else {
+			value, err = webutils.ParsePermissionChecks(value)
 
 			if err != nil {
 				return uapi.HttpResponse{
@@ -217,12 +267,12 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 					},
 				}
 			}
+
+			if len(value.Checks) > 0 {
+				updateCols = append(updateCols, "default_perms")
+				updateArgs = append(updateArgs, value)
+			}
 		}
-
-		updateCols = append(updateCols, "default_perms")
-		updateArgs = append(updateArgs, defaultPerms)
-
-		cacheFlushFlag = CACHE_FLUSH_COMMAND_PERMISSION_CACHE_CLEAR
 
 		if cacheFlushFlag&CACHE_FLUSH_MODULE_TOGGLE != CACHE_FLUSH_MODULE_TOGGLE && cacheFlushFlag&CACHE_FLUSH_COMMAND_PERMISSION_CACHE_CLEAR != CACHE_FLUSH_COMMAND_PERMISSION_CACHE_CLEAR {
 			cacheFlushFlag |= CACHE_FLUSH_COMMAND_PERMISSION_CACHE_CLEAR
@@ -230,7 +280,12 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 	}
 
 	if len(updateCols) == 0 {
-		return uapi.DefaultResponse(http.StatusNotModified)
+		return uapi.HttpResponse{
+			Status: http.StatusBadRequest,
+			Json: types.ApiError{
+				Message: "No valid fields to update",
+			},
+		}
 	}
 
 	// Create sql, insertParams is $N, $N+1... while updateParams are <col> = $N, <col2> = $N+1...
@@ -278,7 +333,7 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 					Options: map[string]any{
 						"guild_id": guildId,
 						"module":   module,
-						"enabled":  !*body.Disabled,
+						"enabled":  isDisabled,
 					},
 				},
 			},

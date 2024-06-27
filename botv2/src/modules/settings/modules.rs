@@ -395,8 +395,10 @@ pub async fn modules_modperms(
             msg.push_str("Disabled: None (using default configuration)\n");
         }
 
-        poise::CreateReply::new().content(msg).components(vec![
-            serenity::all::CreateActionRow::Buttons(vec![
+        poise::CreateReply::new()
+            .content(msg)
+            .ephemeral(true)
+            .components(vec![serenity::all::CreateActionRow::Buttons(vec![
                 serenity::all::CreateButton::new("default-perms/editraw")
                     .style(serenity::all::ButtonStyle::Primary)
                     .label("Open Raw Permission Editor"),
@@ -418,8 +420,7 @@ pub async fn modules_modperms(
                 serenity::all::CreateButton::new("module/save")
                     .style(serenity::all::ButtonStyle::Secondary)
                     .label("Save Module Configuration"),
-            ]),
-        ])
+            ])])
     }
 
     let msg = ctx
@@ -442,7 +443,20 @@ pub async fn modules_modperms(
         match item_id {
             "module/enable" => {
                 if !module.toggleable {
-                    ctx.say("This module cannot be enabled/disabled").await?;
+                    item.create_response(
+                        &ctx.serenity_context().http,
+                        poise::serenity_prelude::CreateInteractionResponse::Message(
+                            poise::CreateReply::new()
+                                .content(format!(
+                                    "The module `{}` cannot be toggled (enabled/disable) at this time!",
+                                    module.id
+                                ))
+                                .to_slash_initial_response(
+                                    serenity::all::CreateInteractionResponseMessage::default(),
+                                ),
+                        ),
+                    )
+                    .await?;
                     continue;
                 }
 
@@ -459,10 +473,19 @@ pub async fn modules_modperms(
                 .await;
 
                 if !perm_res.is_ok() {
-                    ctx.say(format!(
-                        "Enabling modules requires permission to use the ``modules enable`` command!\n{}",
-                        perm_res.to_markdown()
-                    ))
+                    item.create_response(
+                        &ctx.serenity_context().http,
+                        poise::serenity_prelude::CreateInteractionResponse::Message(
+                            poise::CreateReply::new()
+                                .content(format!(
+                                    "Enabling modules requires permission to use the ``modules enable`` command!\n{}",
+                                    perm_res.to_markdown()
+                                ))
+                                .to_slash_initial_response(
+                                    serenity::all::CreateInteractionResponseMessage::default(),
+                                ),
+                        ),
+                    )
                     .await?;
                     continue;
                 }
@@ -471,7 +494,20 @@ pub async fn modules_modperms(
             }
             "module/disable" => {
                 if !module.toggleable {
-                    ctx.say("This module cannot be enabled/disabled").await?;
+                    item.create_response(
+                        &ctx.serenity_context().http,
+                        poise::serenity_prelude::CreateInteractionResponse::Message(
+                            poise::CreateReply::new()
+                                .content(format!(
+                                    "The module `{}` cannot be toggled (enabled/disable) at this time!",
+                                    module.id
+                                ))
+                                .to_slash_initial_response(
+                                    serenity::all::CreateInteractionResponseMessage::default(),
+                                ),
+                        ),
+                    )
+                    .await?;
                     continue;
                 }
 
@@ -488,10 +524,19 @@ pub async fn modules_modperms(
                 .await;
 
                 if !perm_res.is_ok() {
-                    ctx.say(format!(
-                        "Disabling modules requires permission to use the ``modules disable`` command!\n{}",
-                        perm_res.to_markdown()
-                    ))
+                    item.create_response(
+                        &ctx.serenity_context().http,
+                        poise::serenity_prelude::CreateInteractionResponse::Message(
+                            poise::CreateReply::new()
+                                .content(format!(
+                                    "Disabling modules requires permission to use the ``modules disable`` command!\n{}",
+                                    perm_res.to_markdown()
+                                ))
+                                .to_slash_initial_response(
+                                    serenity::all::CreateInteractionResponseMessage::default(),
+                                ),
+                        ),
+                    )
                     .await?;
                     continue;
                 }
@@ -499,7 +544,103 @@ pub async fn modules_modperms(
                 new_module_config.disabled = Some(true);
             }
             "module/reset-toggle" => {
-                // TODO: Handle permission checks here
+                if !module.toggleable {
+                    item.create_response(
+                        &ctx.serenity_context().http,
+                        poise::serenity_prelude::CreateInteractionResponse::Message(
+                            poise::CreateReply::new()
+                                .content(format!(
+                                    "The module `{}` cannot be toggled (enabled/disable) at this time!",
+                                    module.id
+                                ))
+                                .to_slash_initial_response(
+                                    serenity::all::CreateInteractionResponseMessage::default(),
+                                ),
+                        ),
+                    )
+                    .await?;
+                    continue;
+                }
+
+                let Some(current_disabled) = new_module_config.disabled else {
+                    item.create_response(
+                        &ctx.serenity_context().http,
+                        poise::serenity_prelude::CreateInteractionResponse::Message(
+                            poise::CreateReply::new()
+                                .content("Module toggle has already been reset!")
+                                .to_slash_initial_response(
+                                    serenity::all::CreateInteractionResponseMessage::default(),
+                                ),
+                        ),
+                    )
+                    .await?;
+                    continue;
+                };
+
+                if current_disabled != module.is_default_enabled {
+                    if module.is_default_enabled {
+                        let perm_res = crate::silverpelt::cmd::check_command(
+                            "modules",
+                            "modules enable",
+                            guild_id,
+                            ctx.author().id,
+                            &data.pool,
+                            &cache_http,
+                            &Some(ctx),
+                            crate::silverpelt::cmd::CheckCommandOptions::default(),
+                        )
+                        .await;
+
+                        if !perm_res.is_ok() {
+                            item.create_response(
+                                &ctx.serenity_context().http,
+                                poise::serenity_prelude::CreateInteractionResponse::Message(
+                                    poise::CreateReply::new()
+                                        .content(format!(
+                                            "Enabling modules requires permission to use the ``modules enable`` command!\n{}",
+                                            perm_res.to_markdown()
+                                        ))
+                                        .to_slash_initial_response(
+                                            serenity::all::CreateInteractionResponseMessage::default(),
+                                        ),
+                                ),
+                            )
+                            .await?;
+                            continue;
+                        }
+                    } else {
+                        let perm_res = crate::silverpelt::cmd::check_command(
+                            "modules",
+                            "modules disable",
+                            guild_id,
+                            ctx.author().id,
+                            &data.pool,
+                            &cache_http,
+                            &Some(ctx),
+                            crate::silverpelt::cmd::CheckCommandOptions::default(),
+                        )
+                        .await;
+
+                        if !perm_res.is_ok() {
+                            item.create_response(
+                                &ctx.serenity_context().http,
+                                poise::serenity_prelude::CreateInteractionResponse::Message(
+                                    poise::CreateReply::new()
+                                        .content(format!(
+                                            "Disabling modules requires permission to use the ``modules disable`` command!\n{}",
+                                            perm_res.to_markdown()
+                                        ))
+                                        .to_slash_initial_response(
+                                            serenity::all::CreateInteractionResponseMessage::default(),
+                                        ),
+                                ),
+                            )
+                            .await?;
+                            continue;
+                        }
+                    }
+                }
+
                 new_module_config.disabled = None;
             }
             "module/default-perms/reset" => {

@@ -237,12 +237,6 @@ pub async fn check_command(
         };
     }
 
-    if ["register"].contains(&base_command) {
-        return PermissionResult::OkWithMessage {
-            message: "register_cmd".to_string(),
-        };
-    }
-
     if !opts.ignore_cache {
         let key = SILVERPELT_CACHE
             .command_permission_cache

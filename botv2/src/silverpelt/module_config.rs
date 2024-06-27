@@ -106,6 +106,7 @@ pub async fn get_module_configuration(
     }
 }
 
+/// Returns the extended data for a command
 pub fn get_command_extended_data(
     permutations: &[String],
 ) -> Result<CommandExtendedData, crate::Error> {
