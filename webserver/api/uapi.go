@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/anti-raid/splashtail/splashcore/animusmagic"
 	"github.com/anti-raid/splashtail/splashcore/types"
 	"github.com/anti-raid/splashtail/splashcore/utils/mewext"
 	"github.com/anti-raid/splashtail/webserver/constants"
@@ -44,7 +45,7 @@ func HandlePermissionCheck(
 	userId,
 	guildId,
 	command string,
-	permLimits []string,
+	checkCommandOptions animusmagic.AmCheckCommandOptions,
 ) (hresp uapi.HttpResponse, ok bool) {
 	if guildId == "" {
 		state.Logger.Error("Guild ID is empty")
@@ -81,7 +82,7 @@ func HandlePermissionCheck(
 		guildId,
 		userId,
 		command,
-		permLimits,
+		checkCommandOptions,
 	)
 
 	if err != nil {
@@ -253,7 +254,9 @@ func Authorize(r uapi.Route, req *http.Request) (uapi.AuthData, uapi.HttpRespons
 				guildId := permCheck.GuildID(r, req)
 
 				// First check for web use permissions
-				hresp, ok := HandlePermissionCheck(id.String, guildId, "web use", permLimits)
+				hresp, ok := HandlePermissionCheck(id.String, guildId, "web use", animusmagic.AmCheckCommandOptions{
+					CustomResolvedKittycatPerms: &permLimits,
+				})
 
 				if !ok {
 					return uapi.AuthData{}, hresp, false
@@ -262,7 +265,9 @@ func Authorize(r uapi.Route, req *http.Request) (uapi.AuthData, uapi.HttpRespons
 				cmd := permCheck.Command(r, req)
 
 				if cmd != "" {
-					hresp, ok = HandlePermissionCheck(id.String, guildId, cmd, permLimits)
+					hresp, ok = HandlePermissionCheck(id.String, guildId, cmd, animusmagic.AmCheckCommandOptions{
+						CustomResolvedKittycatPerms: &permLimits,
+					})
 
 					if !ok {
 						return uapi.AuthData{}, hresp, false

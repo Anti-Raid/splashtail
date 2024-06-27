@@ -11,7 +11,10 @@ pub fn module() -> crate::silverpelt::Module {
         web_hidden: true,
         is_default_enabled: true,
         // These commands do not follow the typical permission system anyways
-        commands: vec![(cmds::sudo(), crate::silverpelt::CommandExtendedData::none())],
+        commands: vec![(
+            cmds::sudo(),
+            crate::silverpelt::CommandExtendedData::none_map(),
+        )],
         ..Default::default()
     }
 }

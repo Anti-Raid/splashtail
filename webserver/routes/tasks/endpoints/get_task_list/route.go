@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/anti-raid/splashtail/jobs/tasks"
+	"github.com/anti-raid/splashtail/splashcore/animusmagic"
 	"github.com/anti-raid/splashtail/splashcore/structparser/db"
 	"github.com/anti-raid/splashtail/splashcore/types"
 	"github.com/anti-raid/splashtail/webserver/api"
@@ -128,7 +129,10 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 		}
 
 		// Check permissions
-		resp, ok := api.HandlePermissionCheck(d.Auth.ID, guildId, baseTaskDef.CorrespondingBotCommand_View(), api.PermLimits(d.Auth))
+		permLimits := api.PermLimits(d.Auth)
+		resp, ok := api.HandlePermissionCheck(d.Auth.ID, guildId, baseTaskDef.CorrespondingBotCommand_View(), animusmagic.AmCheckCommandOptions{
+			CustomResolvedKittycatPerms: &permLimits,
+		})
 
 		if !ok {
 			if errorIfNoPermissions {

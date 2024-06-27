@@ -6,7 +6,7 @@ use crate::silverpelt::{
         get_best_command_configuration, get_command_extended_data, get_module_configuration,
     },
     utils::permute_command_names,
-    CommandExtendedData, GuildCommandConfiguration, GuildModuleConfiguration,
+    GuildCommandConfiguration, GuildModuleConfiguration,
 };
 use botox::cache::CacheHttpImpl;
 use kittycat::perms::Permission;
@@ -16,42 +16,8 @@ use serenity::all::{GuildId, UserId};
 use serenity::small_fixed_array::FixedArray;
 use sqlx::PgPool;
 
-/// Returns the effective configuration of a command
-///
-/// This is intentionally private as it is a helper function
-/// to avoid rewriting a ton of code
 #[inline]
-async fn get_effective_module_command_configuration(
-    pool: &PgPool,
-    guild_id: &str,
-    name: &str,
-) -> Result<
-    (
-        CommandExtendedData,
-        Option<GuildCommandConfiguration>,
-        Option<GuildModuleConfiguration>,
-    ),
-    crate::Error,
-> {
-    let permutations = permute_command_names(name);
-    let root_cmd = permutations.first().unwrap();
-
-    let module = SILVERPELT_CACHE
-        .command_id_module_map
-        .get(root_cmd)
-        .ok_or::<crate::Error>("Unknown error determining module of command".into())?;
-
-    // Check if theres any module configuration
-    let module_configuration = get_module_configuration(pool, guild_id, module.as_str()).await?;
-    let cmd_data = get_command_extended_data(&permutations)?;
-    let command_configuration =
-        get_best_command_configuration(pool, guild_id, &permutations).await?;
-
-    Ok((cmd_data, command_configuration, module_configuration))
-}
-
-#[inline]
-pub async fn get_perm_info(
+pub async fn get_user_discord_info(
     guild_id: GuildId,
     user_id: UserId,
     cache_http: &CacheHttpImpl,
@@ -130,13 +96,22 @@ pub async fn get_perm_info(
         }
     }
 
-    let member = match guild.member(&cache_http, user_id).await {
-        Ok(member) => member,
-        Err(e) => {
+    let member = {
+        let member = super::proxysupport::member_in_guild(
+            cache_http,
+            &reqwest::Client::new(),
+            guild_id,
+            user_id,
+        )
+        .await?;
+
+        let Some(member) = member else {
             return Err(PermissionResult::DiscordError {
-                error: e.to_string(),
-            })
-        }
+                error: "Member could not fetched".to_string(),
+            });
+        };
+
+        member
     };
 
     Ok((
@@ -145,6 +120,48 @@ pub async fn get_perm_info(
         guild.member_permissions(&member),
         member.roles.clone(),
     ))
+}
+
+pub async fn get_user_kittycat_perms(
+    opts: &CheckCommandOptions,
+    pool: &PgPool,
+    guild_id: GuildId,
+    guild_owner_id: UserId,
+    user_id: UserId,
+    roles: &FixedArray<serenity::all::RoleId>,
+) -> Result<Vec<kittycat::perms::Permission>, crate::Error> {
+    if let Some(ref custom_resolved_kittycat_perms) = opts.custom_resolved_kittycat_perms {
+        if !opts.skip_custom_resolved_fit_checks {
+            let kc_perms = silverpelt::member_permission_calc::get_kittycat_perms(
+                pool,
+                guild_id,
+                guild_owner_id,
+                user_id,
+                roles,
+            )
+            .await?;
+
+            let mut resolved_perms = Vec::new();
+            for perm in custom_resolved_kittycat_perms {
+                if kittycat::perms::has_perm(&kc_perms, perm) {
+                    resolved_perms.push(perm.clone());
+                }
+            }
+
+            Ok(resolved_perms)
+        } else {
+            Ok(custom_resolved_kittycat_perms.to_vec())
+        }
+    } else {
+        Ok(silverpelt::member_permission_calc::get_kittycat_perms(
+            pool,
+            guild_id,
+            guild_owner_id,
+            user_id,
+            roles,
+        )
+        .await?)
+    }
 }
 
 /// Extra options for checking a command
@@ -166,19 +183,21 @@ pub struct CheckCommandOptions {
     #[serde(default)]
     pub ignore_command_disabled: bool,
 
-    /// What custom resolved permissions to use for the user. Note that ensure_user_has_custom_resolved must be true to ensure that the user has all the permissions in the custom_resolved_kittycat_perms
-    ///
-    /// API needs this for limiting the permissions of a user, allows setting custom resolved perms
+    /// Skip custom resolved kittycat permission fit 'checks' (AKA does the user have the actual permissions ofthe custom resolved permissions)
+    #[serde(default)]
+    pub skip_custom_resolved_fit_checks: bool,
+
+    /// What custom resolved permissions to use for the user. API needs this for limiting the permissions of a user
     #[serde(default)]
     pub custom_resolved_kittycat_perms: Option<Vec<Permission>>,
 
-    /// Whether or not to ensure that the user has all the permissions in the custom_resolved_kittycat_perms
-    #[serde(default)]
-    pub ensure_user_has_custom_resolved: bool,
-
-    /// Custom permission checks to use
+    /// Custom command configuration to use
     #[serde(default)]
     pub custom_command_configuration: Option<GuildCommandConfiguration>,
+
+    /// Custom module configuration to use
+    #[serde(default)]
+    pub custom_module_configuration: Option<GuildModuleConfiguration>,
 }
 
 impl Default for CheckCommandOptions {
@@ -189,8 +208,9 @@ impl Default for CheckCommandOptions {
             ignore_module_disabled: false,
             ignore_command_disabled: false,
             custom_resolved_kittycat_perms: None,
-            ensure_user_has_custom_resolved: true,
+            skip_custom_resolved_fit_checks: false,
             custom_command_configuration: None,
+            custom_module_configuration: None,
         }
     }
 }
@@ -252,23 +272,53 @@ pub async fn check_command(
         }
     }
 
-    let (cmd_data, command_config, module_config) =
-        match get_effective_module_command_configuration(
-            pool,
-            guild_id.to_string().as_str(),
-            command,
-        )
-        .await
-        {
-            Ok(v) => v,
-            Err(e) => return e.into(),
-        };
+    let permutations = permute_command_names(command);
+
+    let mut module_config = {
+        if let Some(ref custom_module_configuration) = opts.custom_module_configuration {
+            custom_module_configuration.clone()
+        } else {
+            let gmc = match get_module_configuration(pool, &guild_id.to_string(), module.as_str())
+                .await
+            {
+                Ok(v) => v,
+                Err(e) => {
+                    return e.into();
+                }
+            };
+
+            gmc.unwrap_or(silverpelt::GuildModuleConfiguration {
+                id: "".to_string(),
+                guild_id: guild_id.to_string(),
+                module: module.clone(),
+                disabled: None,
+                default_perms: None,
+            })
+        }
+    };
+
+    let cmd_data = match get_command_extended_data(&permutations) {
+        Ok(v) => v,
+        Err(e) => {
+            return e.into();
+        }
+    };
 
     let mut command_config = {
         if let Some(ref custom_command_configuration) = opts.custom_command_configuration {
             custom_command_configuration.clone()
         } else {
-            command_config.unwrap_or(silverpelt::GuildCommandConfiguration {
+            let gcc =
+                match get_best_command_configuration(pool, &guild_id.to_string(), &permutations)
+                    .await
+                {
+                    Ok(v) => v,
+                    Err(e) => {
+                        return e.into();
+                    }
+                };
+
+            gcc.unwrap_or(silverpelt::GuildCommandConfiguration {
                 id: "".to_string(),
                 guild_id: guild_id.to_string(),
                 command: command.to_string(),
@@ -282,21 +332,13 @@ pub async fn check_command(
         command_config.disabled = Some(false);
     }
 
-    let mut module_config = module_config.unwrap_or(silverpelt::GuildModuleConfiguration {
-        id: "".to_string(),
-        guild_id: guild_id.to_string(),
-        module: module.clone(),
-        disabled: None,
-        default_perms: None,
-    });
-
     if opts.ignore_module_disabled {
         module_config.disabled = Some(false);
     }
 
     // Try getting guild+member from cache to speed up response times first
     let (is_owner, guild_owner_id, member_perms, roles) =
-        match get_perm_info(guild_id, user_id, cache_http, poise_ctx).await {
+        match get_user_discord_info(guild_id, user_id, cache_http, poise_ctx).await {
             Ok(v) => v,
             Err(e) => {
                 return e;
@@ -309,52 +351,14 @@ pub async fn check_command(
         };
     }
 
-    let kittycat_perms = {
-        if let Some(ref custom_resolved_kittycat_perms) = opts.custom_resolved_kittycat_perms {
-            if opts.ensure_user_has_custom_resolved {
-                let kc_perms = match silverpelt::member_permission_calc::get_kittycat_perms(
-                    pool,
-                    guild_id,
-                    guild_owner_id,
-                    user_id,
-                    &roles,
-                )
-                .await
-                {
-                    Ok(v) => v,
-                    Err(e) => {
-                        return e.into();
-                    }
-                };
-
-                let mut resolved_perms = Vec::new();
-                for perm in custom_resolved_kittycat_perms {
-                    if kittycat::perms::has_perm(&kc_perms, perm) {
-                        resolved_perms.push(perm.clone());
-                    }
-                }
-
-                resolved_perms
-            } else {
-                custom_resolved_kittycat_perms.to_vec()
+    let kittycat_perms =
+        match get_user_kittycat_perms(&opts, pool, guild_id, guild_owner_id, user_id, &roles).await
+        {
+            Ok(v) => v,
+            Err(e) => {
+                return e.into();
             }
-        } else {
-            match silverpelt::member_permission_calc::get_kittycat_perms(
-                pool,
-                guild_id,
-                guild_owner_id,
-                user_id,
-                &roles,
-            )
-            .await
-            {
-                Ok(v) => v,
-                Err(e) => {
-                    return e.into();
-                }
-            }
-        }
-    };
+        };
 
     debug!(
         "Checking if user {} can run command {} with permissions {:?}",

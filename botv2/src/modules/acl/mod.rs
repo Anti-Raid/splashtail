@@ -14,8 +14,7 @@ pub async fn web_use(_ctx: crate::Context<'_>) -> Result<(), crate::Error> {
 
 #[allow(non_snake_case)]
 fn acl__modules_modperms() -> poise::Command<crate::Data, crate::Error> {
-    /// This command controls if a user can edit a module.
-    #[poise::command(prefix_command, slash_command, rename = "acl__modules_modperms")]
+    #[poise::command(prefix_command, slash_command)]
     pub async fn base_cmd(_ctx: crate::Context<'_>) -> Result<(), crate::Error> {
         Ok(())
     }
@@ -23,6 +22,8 @@ fn acl__modules_modperms() -> poise::Command<crate::Data, crate::Error> {
     let mut cmd = base_cmd();
     cmd.name = "acl__modules_modperms".to_string();
     cmd.qualified_name = "acl__modules_modperms".to_string();
+    cmd.description =
+        Some("This command controls if a user can edit module permissions.".to_string());
 
     for module in crate::modules::module_ids() {
         let mut subcmd = base_cmd();
@@ -42,7 +43,7 @@ pub fn module() -> crate::silverpelt::Module {
     crate::silverpelt::Module {
         id: "access_control",
         name: "Access Control",
-        description: "Access Control virtual module. Used for permission controlling the web dashboard and other permission checks",
+        description: "Access Control virtual module. Used for permission controlling the web dashboard and other common ACL's",
         toggleable: false,
         commands_toggleable: true,
         virtual_module: true,
@@ -63,7 +64,7 @@ pub fn module() -> crate::silverpelt::Module {
                     for module in crate::modules::module_ids() {
                         imap.insert(
                             module,
-                            crate::silverpelt::CommandExtendedData::kittycat_or_admin("modules", "modperm"),
+                            crate::silverpelt::CommandExtendedData::none(),
                         );
                     }
 

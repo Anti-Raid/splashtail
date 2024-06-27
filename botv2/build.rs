@@ -68,7 +68,7 @@ pub fn module_ids() -> Vec<&'static str> {
     let mut module_dat_list = Vec::new();
 
     for module in &module_list {
-        module_dat_list.push(format!("{}::module(),", module));
+        module_dat_list.push(format!("{}::module().parse(),", module));
     }
 
     let module_func_list = module_dat_list.join("\n        ");

@@ -18,31 +18,22 @@ func CheckCommandPermission(
 	guildID string,
 	userID string,
 	command string,
-	permLimits []string,
+	checkCommandOptions animusmagic.AmCheckCommandOptions,
 ) (res *silverpelt.PermissionResult, ok bool, err error) {
-	var permLimitsSend []string
-
-	if len(permLimitsSend) > 0 {
-		permLimitsSend = permLimits
-	}
-
 	mlr, err := c.Request(
 		ctx,
 		redis,
 		animusmagic.BotAnimusMessage{
 			CheckCommandPermission: &struct {
-				GuildID             string                         "json:\"guild_id\""
-				UserID              string                         "json:\"user_id\""
-				Command             string                         "json:\"command\""
-				CheckCommandOptions silverpelt.CheckCommandOptions `json:"opts"`
+				GuildID             string                            "json:\"guild_id\""
+				UserID              string                            "json:\"user_id\""
+				Command             string                            "json:\"command\""
+				CheckCommandOptions animusmagic.AmCheckCommandOptions `json:"opts"`
 			}{
-				GuildID: guildID,
-				UserID:  userID,
-				Command: command,
-				CheckCommandOptions: silverpelt.CheckCommandOptions{
-					CustomResolvedKittyCatPerms: permLimitsSend,
-					EnsureUserHasCustomResolved: true,
-				},
+				GuildID:             guildID,
+				UserID:              userID,
+				Command:             command,
+				CheckCommandOptions: checkCommandOptions,
 			},
 		},
 		&animusmagic.RequestOptions{

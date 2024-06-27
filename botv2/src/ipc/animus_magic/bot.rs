@@ -62,42 +62,44 @@ impl AnimusResponse for BotAnimusResponse {
 }
 impl SerializableAnimusResponse for BotAnimusResponse {}
 
+bitflags::bitflags! {
+    pub struct AmCheckCommandOptionsFlags: u8 {
+        /// Whether or not to ignore the cache
+        const IGNORE_CACHE = 1 << 0;
+        /// Whether or not to cache the result at all
+        const CACHE_RESULT = 1 << 1;
+        /// Whether or not to ignore the fact that the module is disabled in the guild
+        const IGNORE_MODULE_DISABLED = 1 << 2;
+        /// Whether or not to ignore the fact that the command is disabled in the guild
+        const IGNORE_COMMAND_DISABLED = 1 << 3;
+        /// Skip custom resolved kittycat permission fit 'checks' (AKA does the user have the actual permissions ofthe custom resolved permissions)
+        const SKIP_CUSTOM_RESOLVED_FIT_CHECKS = 1 << 4;
+    }
+}
+
 /// Extra options for checking a command
 ///
 /// This is seperate from the actual internal stuff to both avoid exposing
-/// internals which may change as well as to remove more dangerous settings
-/// not suitable for IPC
+/// internals and to optimize data flow
 #[derive(Debug, Clone, Serialize, Deserialize, Hash, PartialEq, Eq)]
 pub struct AmCheckCommandOptions {
-    /// Whether or not to ignore the cache
+    /// Flags of type AmCheckCommandOptionsFlags
     #[serde(default)]
-    pub ignore_cache: bool,
+    pub flags: u8,
 
-    /// Whether or not to cache the result at all
-    #[serde(default)]
-    pub cache_result: bool,
-
-    /// Whether or not to ignore the fact that the module is disabled in the guild
-    #[serde(default)]
-    pub ignore_module_disabled: bool,
-
-    /// Whether or not to ignore the fact that the command is disabled in the guild
-    #[serde(default)]
-    pub ignore_command_disabled: bool,
-
-    /// What custom resolved permissions to use for the user. Note that ensure_user_has_custom_resolved must be true to ensure that the user has all the permissions in the custom_resolved_kittycat_perms
+    /// What custom resolved permissions to use for the user.
     ///
     /// API needs this for limiting the permissions of a user, allows setting custom resolved perms
     #[serde(default)]
     pub custom_resolved_kittycat_perms: Option<Vec<String>>,
 
-    /// Whether or not to ensure that the user has all the permissions in the custom_resolved_kittycat_perms
+    /// Custom permission checks to use
     #[serde(default)]
-    pub ensure_user_has_custom_resolved: bool,
+    pub custom_command_configuration: Option<Box<silverpelt::GuildCommandConfiguration>>,
 
     /// Custom permission checks to use
     #[serde(default)]
-    pub custom_command_configuration: Option<silverpelt::GuildCommandConfiguration>,
+    pub custom_module_configuration: Option<Box<silverpelt::GuildModuleConfiguration>>,
 }
 
 #[derive(Serialize, Deserialize, Clone)]
@@ -243,6 +245,8 @@ impl BotAnimusMessage {
                 // Check COMMAND_ID_MODULE_MAP
                 let base_command = command.split_whitespace().next().unwrap();
 
+                let flags = AmCheckCommandOptionsFlags::from_bits_truncate(opts.flags);
+
                 let perm_res = silverpelt::cmd::check_command(
                     base_command,
                     &command,
@@ -252,10 +256,12 @@ impl BotAnimusMessage {
                     cache_http,
                     &None,
                     silverpelt::cmd::CheckCommandOptions {
-                        ignore_cache: opts.ignore_cache,
-                        cache_result: opts.cache_result,
-                        ignore_module_disabled: opts.ignore_module_disabled,
-                        ignore_command_disabled: opts.ignore_command_disabled,
+                        ignore_cache: flags.contains(AmCheckCommandOptionsFlags::IGNORE_CACHE),
+                        cache_result: flags.contains(AmCheckCommandOptionsFlags::CACHE_RESULT),
+                        ignore_module_disabled: flags
+                            .contains(AmCheckCommandOptionsFlags::IGNORE_MODULE_DISABLED),
+                        ignore_command_disabled: flags
+                            .contains(AmCheckCommandOptionsFlags::IGNORE_COMMAND_DISABLED),
                         custom_resolved_kittycat_perms: opts.custom_resolved_kittycat_perms.map(
                             |crkp| {
                                 crkp.iter()
@@ -263,8 +269,10 @@ impl BotAnimusMessage {
                                     .collect::<Vec<kittycat::perms::Permission>>()
                             },
                         ),
-                        custom_command_configuration: opts.custom_command_configuration,
-                        ensure_user_has_custom_resolved: opts.ensure_user_has_custom_resolved,
+                        custom_command_configuration: opts.custom_command_configuration.map(|x| *x),
+                        custom_module_configuration: opts.custom_module_configuration.map(|x| *x),
+                        skip_custom_resolved_fit_checks: flags
+                            .contains(AmCheckCommandOptionsFlags::SKIP_CUSTOM_RESOLVED_FIT_CHECKS),
                     },
                 )
                 .await;

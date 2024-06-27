@@ -82,6 +82,7 @@ type CommandExtendedData struct {
 	DefaultPerms     PermissionChecks `json:"default_perms"`      // The default permissions needed to run this command
 	IsDefaultEnabled bool             `json:"is_default_enabled"` // Whether or not the command is enabled by default
 	WebHidden        bool             `json:"web_hidden"`         // Whether or not the command is hidden from the web interface
+	VirtualCommand   bool             `json:"virtual_command"`    // Whether or not the command is a virtual command or not
 }
 
 // NewCommandExtendedData creates a new CommandExtendedData with default values.

@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/anti-raid/splashtail/jobs/tasks"
+	"github.com/anti-raid/splashtail/splashcore/animusmagic"
 	"github.com/anti-raid/splashtail/splashcore/structparser/db"
 	types "github.com/anti-raid/splashtail/splashcore/types"
 	"github.com/anti-raid/splashtail/webserver/api"
@@ -191,7 +192,7 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 			}
 		} else if task.TaskFor.TargetType == types.TargetTypeServer {
 			// Check permissions
-			resp, ok := api.HandlePermissionCheck(iot.DiscordUser.ID, task.TaskFor.ID, taskDef.CorrespondingBotCommand_Download(), []string{})
+			resp, ok := api.HandlePermissionCheck(iot.DiscordUser.ID, task.TaskFor.ID, taskDef.CorrespondingBotCommand_Download(), animusmagic.AmCheckCommandOptions{})
 
 			if !ok {
 				return resp

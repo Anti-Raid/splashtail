@@ -96,8 +96,53 @@ pub struct Module {
 
     /// Config options for this module
     pub config_options: Vec<settings::types::ConfigOption>,
+
+    pub __parsed: bool,
 }
 
+impl Module {
+    /// Parses a module, while this doesnt really do anything right now, it may be used in the future
+    pub fn parse(self) -> Module {
+        #[poise::command(prefix_command, slash_command, rename = "")]
+        pub async fn base_cmd(_ctx: crate::Context<'_>) -> Result<(), crate::Error> {
+            Ok(())
+        }
+
+        let mut parsed = self;
+
+        // If virtual module, all commands must also be virtual, if root command is virtual, all subcommands must be virtual
+        for command in &mut parsed.commands {
+            let root_is_virtual = {
+                match command.1.get("") {
+                    Some(root) => root.virtual_command,
+                    None => false,
+                }
+            };
+            for (_, extended_data) in command.1.iter_mut() {
+                if parsed.virtual_module || root_is_virtual {
+                    extended_data.virtual_command = true;
+                }
+            }
+        }
+
+        // acl__{module}_defaultperms_check is a special command that is added to all modules
+        let mut acl_module_defaultperms_check = base_cmd();
+        acl_module_defaultperms_check.name = format!("acl__{}_defaultperms_check", parsed.id);
+        acl_module_defaultperms_check.qualified_name =
+            format!("acl__{}_defaultperms_check", parsed.id);
+        parsed.commands.push((
+            acl_module_defaultperms_check,
+            CommandExtendedData::none_map(),
+        ));
+
+        parsed.__parsed = true;
+        parsed
+    }
+
+    pub fn is_parsed(&self) -> bool {
+        self.__parsed
+    }
+}
 #[derive(Default, Clone, Hash, Eq, PartialEq, serde::Serialize, serde::Deserialize, Debug)]
 pub struct PermissionCheck {
     /// The kittycat permissions needed to run the command
@@ -200,6 +245,8 @@ pub struct CommandExtendedData {
     pub is_default_enabled: bool,
     /// Whether the command should be hidden on the website or not
     pub web_hidden: bool,
+    /// Whether the command is a virtual command or not (virtual commands are not loaded into the bot, but can be used for permission checks etc)
+    pub virtual_command: bool,
 }
 
 impl Default for CommandExtendedData {
@@ -211,6 +258,7 @@ impl Default for CommandExtendedData {
             },
             is_default_enabled: true,
             web_hidden: false,
+            virtual_command: false,
         }
     }
 }
@@ -231,7 +279,7 @@ pub struct GuildCommandConfiguration {
 }
 
 /// Guild module configuration data
-#[derive(Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, Hash, Eq, PartialEq, serde::Serialize, serde::Deserialize, Debug)]
 pub struct GuildModuleConfiguration {
     /// The ID
     pub id: String,

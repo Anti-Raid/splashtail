@@ -332,7 +332,19 @@ pub fn can_run_command(
 }
 
 impl CommandExtendedData {
-    pub fn none() -> CommandExtendedDataMap {
+    pub fn none() -> Self {
+        CommandExtendedData {
+            default_perms: PermissionChecks {
+                checks: vec![],
+                checks_needed: 0,
+            },
+            is_default_enabled: true,
+            web_hidden: false,
+            virtual_command: false,
+        }
+    }
+
+    pub fn none_map() -> CommandExtendedDataMap {
         indexmap! {
             "" => CommandExtendedData {
                 default_perms: PermissionChecks {
@@ -341,6 +353,7 @@ impl CommandExtendedData {
                 },
                 is_default_enabled: true,
                 web_hidden: false,
+                virtual_command: false,
             },
         }
     }
@@ -358,6 +371,7 @@ impl CommandExtendedData {
             },
             is_default_enabled: true,
             web_hidden: false,
+            virtual_command: false,
         }
     }
 
@@ -374,6 +388,7 @@ impl CommandExtendedData {
             },
             is_default_enabled: true,
             web_hidden: false,
+            virtual_command: false,
         }
     }
 }
@@ -480,7 +495,7 @@ mod tests {
     fn test_can_run_command() {
         // Basic test
         assert!(can_run_command(
-            &CommandExtendedData::none().get("").unwrap().clone(),
+            &CommandExtendedData::none_map().get("").unwrap().clone(),
             &GuildCommandConfiguration {
                 id: "test".into(),
                 guild_id: "test".into(),
@@ -498,7 +513,7 @@ mod tests {
         // With a native permission
         assert!(err_with_code(
             can_run_command(
-                &CommandExtendedData::none().get("").unwrap().clone(),
+                &CommandExtendedData::none_map().get("").unwrap().clone(),
                 &GuildCommandConfiguration {
                     id: "test".into(),
                     guild_id: "test".into(),
@@ -524,7 +539,7 @@ mod tests {
 
         assert!(err_with_code(
             can_run_command(
-                &CommandExtendedData::none().get("").unwrap().clone(),
+                &CommandExtendedData::none_map().get("").unwrap().clone(),
                 &GuildCommandConfiguration {
                     id: "test".into(),
                     guild_id: "test".into(),
@@ -550,7 +565,7 @@ mod tests {
 
         assert!(err_with_code(
             can_run_command(
-                &CommandExtendedData::none().get("").unwrap().clone(),
+                &CommandExtendedData::none_map().get("").unwrap().clone(),
                 &GuildCommandConfiguration {
                     id: "test".into(),
                     guild_id: "test".into(),
@@ -619,7 +634,7 @@ mod tests {
         .is_ok());
 
         assert!(can_run_command(
-            &CommandExtendedData::none().get("").unwrap().clone(),
+            &CommandExtendedData::none_map().get("").unwrap().clone(),
             &GuildCommandConfiguration {
                 id: "test".into(),
                 guild_id: "test".into(),

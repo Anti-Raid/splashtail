@@ -16,16 +16,22 @@ pub fn module() -> crate::silverpelt::Module {
         web_hidden: false,
         is_default_enabled: true,
         commands: vec![
-            (help::help(), crate::silverpelt::CommandExtendedData::none()),
+            (
+                help::help(),
+                crate::silverpelt::CommandExtendedData::none_map(),
+            ),
             (
                 help::simplehelp(),
-                crate::silverpelt::CommandExtendedData::none(),
+                crate::silverpelt::CommandExtendedData::none_map(),
             ),
             (
                 stats::stats(),
-                crate::silverpelt::CommandExtendedData::none(),
+                crate::silverpelt::CommandExtendedData::none_map(),
             ),
-            (ping::ping(), crate::silverpelt::CommandExtendedData::none()),
+            (
+                ping::ping(),
+                crate::silverpelt::CommandExtendedData::none_map(),
+            ),
         ],
         background_tasks: vec![botox::taskman::Task {
             name: "Sandwich Status Task",

@@ -149,6 +149,9 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 		return hresp
 	}
 
+	// Fetch permission limits
+	permLimits := api.PermLimits(d.Auth)
+
 	var updateCols []string
 	var updateArgs []any
 	var cacheFlushFlag = CACHE_FLUSH_NONE
@@ -182,13 +185,17 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 			//
 			// This means that all the fast-path optimization used by the bot are not available to us
 			if moduleData.IsDefaultEnabled {
-				hresp, ok = api.HandlePermissionCheck(d.Auth.ID, guildId, "modules enable", api.PermLimits(d.Auth))
+				hresp, ok = api.HandlePermissionCheck(d.Auth.ID, guildId, "modules enable", animusmagic.AmCheckCommandOptions{
+					CustomResolvedKittycatPerms: &permLimits,
+				})
 
 				if !ok {
 					return hresp
 				}
 			} else {
-				hresp, ok = api.HandlePermissionCheck(d.Auth.ID, guildId, "modules disable", api.PermLimits(d.Auth))
+				hresp, ok = api.HandlePermissionCheck(d.Auth.ID, guildId, "modules disable", animusmagic.AmCheckCommandOptions{
+					CustomResolvedKittycatPerms: &permLimits,
+				})
 
 				if !ok {
 					return hresp
@@ -203,13 +210,17 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 		} else {
 			// Check for permissions next
 			if *value {
-				hresp, ok = api.HandlePermissionCheck(d.Auth.ID, guildId, "modules disable", api.PermLimits(d.Auth))
+				hresp, ok = api.HandlePermissionCheck(d.Auth.ID, guildId, "modules disable", animusmagic.AmCheckCommandOptions{
+					CustomResolvedKittycatPerms: &permLimits,
+				})
 
 				if !ok {
 					return hresp
 				}
 			} else {
-				hresp, ok = api.HandlePermissionCheck(d.Auth.ID, guildId, "modules enable", api.PermLimits(d.Auth))
+				hresp, ok = api.HandlePermissionCheck(d.Auth.ID, guildId, "modules enable", animusmagic.AmCheckCommandOptions{
+					CustomResolvedKittycatPerms: &permLimits,
+				})
 
 				if !ok {
 					return hresp
@@ -241,13 +252,17 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 		}
 
 		// Check for permissions next
-		hresp, ok = api.HandlePermissionCheck(d.Auth.ID, guildId, "modules modperms", api.PermLimits(d.Auth))
+		hresp, ok = api.HandlePermissionCheck(d.Auth.ID, guildId, "modules modperms", animusmagic.AmCheckCommandOptions{
+			CustomResolvedKittycatPerms: &permLimits,
+		})
 
 		if !ok {
 			return hresp
 		}
 
-		hresp, ok = api.HandlePermissionCheck(d.Auth.ID, guildId, "acl__modules_modperms "+module, api.PermLimits(d.Auth))
+		hresp, ok = api.HandlePermissionCheck(d.Auth.ID, guildId, "acl__modules_modperms "+module, animusmagic.AmCheckCommandOptions{
+			CustomResolvedKittycatPerms: &permLimits,
+		})
 
 		if !ok {
 			return hresp

@@ -487,22 +487,55 @@ async fn main() {
             for module in modules::modules() {
                 log::info!("Loading module {}", module.id);
 
+                if !module.is_parsed() {
+                    panic!("Module {} is not parsed", module.id);
+                }
+
                 if module.virtual_module {
                     continue;
                 }
 
-                for cmd in module.commands {
-                    let mut cmd = cmd.0;
+                for (mut cmd, extended_data) in module.commands {
+                    let root_is_virtual = match extended_data.get("") {
+                        Some(root) => root.virtual_command,
+                        None => false,
+                    };
+
+                    if root_is_virtual {
+                        continue;
+                    }
+
                     cmd.category = Some(module.id.to_string());
 
+                    let mut subcommands = Vec::new();
                     // Ensure subcommands are also linked to a category
-                    for subcommand in cmd.subcommands.iter_mut() {
-                        subcommand.category = Some(module.id.to_string());
+                    for subcommand in cmd.subcommands {
+                        let ext_data =
+                            extended_data
+                                .get(subcommand.name.as_str())
+                                .unwrap_or_else(|| {
+                                    panic!(
+                                        "Subcommand {} does not have extended data",
+                                        subcommand.name
+                                    )
+                                });
+
+                        if ext_data.virtual_command {
+                            continue;
+                        }
+
+                        subcommands.push(poise::Command {
+                            category: Some(module.id.to_string()),
+                            ..subcommand
+                        });
                     }
+
+                    cmd.subcommands = subcommands;
 
                     // Check for duplicate command names
                     if _cmd_names.contains(&cmd.name) {
-                        panic!("Duplicate command name: {}", cmd.name);
+                        error!("Duplicate command name: {:#?}", cmd);
+                        panic!("Duplicate command name: {}", cmd.qualified_name);
                     }
 
                     _cmd_names.push(cmd.name.clone());

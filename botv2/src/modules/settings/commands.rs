@@ -717,6 +717,7 @@ pub async fn commands_modperms(
                     Ok(perms) => {
                         let parsed =
                             crate::silverpelt::validators::parse_permission_checks(&perms)?;
+
                         new_command_config.perms = Some(parsed);
                     }
                     Err(err) => {

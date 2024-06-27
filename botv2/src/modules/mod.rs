@@ -17,20 +17,20 @@ pub mod root;
 /// List of modules available. Not all may be enabled
 pub fn modules() -> Vec<crate::silverpelt::Module> {
     vec![
-        acl::module(),
-        auditlogs::module(),
-        core::module(),
-        gitlogs::module(),
-        info::module(),
-        inspector::module(),
-        limits::module(),
-        moderation::module(),
-        punishments::module(),
-        server_backups::module(),
-        server_member_backups::module(),
-        settings::module(),
-        temporary_punishments::module(),
-        root::module(),
+        acl::module().parse(),
+        auditlogs::module().parse(),
+        core::module().parse(),
+        gitlogs::module().parse(),
+        info::module().parse(),
+        inspector::module().parse(),
+        limits::module().parse(),
+        moderation::module().parse(),
+        punishments::module().parse(),
+        server_backups::module().parse(),
+        server_member_backups::module().parse(),
+        settings::module().parse(),
+        temporary_punishments::module().parse(),
+        root::module().parse(),
     ]
 }
 

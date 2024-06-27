@@ -644,6 +644,46 @@ pub async fn modules_modperms(
                 new_module_config.disabled = None;
             }
             "module/default-perms/reset" => {
+                let perm_res = crate::silverpelt::cmd::check_command(
+                    &format!("acl__{}_defaultperms_check", module.id),
+                    &format!("acl__{}_defaultperms_check", module.id),
+                    guild_id,
+                    ctx.author().id,
+                    &data.pool,
+                    &cache_http,
+                    &Some(ctx),
+                    crate::silverpelt::cmd::CheckCommandOptions {
+                        ignore_command_disabled: true,
+                        custom_module_configuration: Some(
+                            crate::silverpelt::GuildModuleConfiguration {
+                                default_perms: None,
+                                ..new_module_config.clone()
+                            },
+                        ),
+                        ..Default::default()
+                    },
+                )
+                .await;
+
+                if !perm_res.is_ok() {
+                    item.create_response(
+                        &ctx.serenity_context().http,
+                        poise::serenity_prelude::CreateInteractionResponse::Message(
+                            poise::CreateReply::new()
+                                .content(format!(
+                                    "You must have permission to use `acl__{}_defaultperms_check` with the new module config: {}",
+                                    module.id,
+                                    perm_res.to_markdown()
+                                ))
+                                .to_slash_initial_response(
+                                    serenity::all::CreateInteractionResponseMessage::default(),
+                                ),
+                        ),
+                    )
+                    .await?;
+                    continue;
+                }
+
                 new_module_config.default_perms = None;
             }
             "default-perms/editraw" => {
@@ -688,6 +728,47 @@ pub async fn modules_modperms(
                     Ok(perms) => {
                         let parsed =
                             crate::silverpelt::validators::parse_permission_checks(&perms)?;
+
+                        let perm_res = crate::silverpelt::cmd::check_command(
+                            &format!("acl__{}_defaultperms_check", module.id),
+                            &format!("acl__{}_defaultperms_check", module.id),
+                            guild_id,
+                            ctx.author().id,
+                            &data.pool,
+                            &cache_http,
+                            &Some(ctx),
+                            crate::silverpelt::cmd::CheckCommandOptions {
+                                ignore_command_disabled: true,
+                                custom_module_configuration: Some(
+                                    crate::silverpelt::GuildModuleConfiguration {
+                                        default_perms: Some(parsed.clone()),
+                                        ..new_module_config.clone()
+                                    },
+                                ),
+                                ..Default::default()
+                            },
+                        )
+                        .await;
+
+                        if !perm_res.is_ok() {
+                            item.create_response(
+                                &ctx.serenity_context().http,
+                                poise::serenity_prelude::CreateInteractionResponse::Message(
+                                    poise::CreateReply::new()
+                                        .content(format!(
+                                            "You must have permission to use `acl__{}_defaultperms_check` with the new module config: {}",
+                                            module.id,
+                                            perm_res.to_markdown()
+                                        ))
+                                        .to_slash_initial_response(
+                                            serenity::all::CreateInteractionResponseMessage::default(),
+                                        ),
+                                ),
+                            )
+                            .await?;
+                            continue;
+                        }
+
                         new_module_config.default_perms = Some(parsed);
                     }
                     Err(err) => {

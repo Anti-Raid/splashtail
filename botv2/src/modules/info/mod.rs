@@ -12,7 +12,7 @@ pub fn module() -> crate::silverpelt::Module {
         is_default_enabled: true,
         commands: vec![(
             whois::whois(),
-            crate::silverpelt::CommandExtendedData::none(),
+            crate::silverpelt::CommandExtendedData::none_map(),
         )],
         ..Default::default()
     }

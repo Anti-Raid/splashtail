@@ -115,6 +115,7 @@ pub async fn member_in_guild(
 
     let resp = reqwest_client
         .get(&url)
+        .timeout(std::time::Duration::from_secs(5))
         .send()
         .await?
         .json::<Resp>()
