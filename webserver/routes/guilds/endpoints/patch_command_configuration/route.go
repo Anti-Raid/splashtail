@@ -172,7 +172,7 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 
 	// Ensure user has permission to use the command
 	hresp, ok = api.HandlePermissionCheck(d.Auth.ID, guildId, body.Command, animusmagic.AmCheckCommandOptions{
-		CustomResolvedKittycatPerms: &permLimits,
+		CustomResolvedKittycatPerms: permLimits,
 		Flags:                       animusmagic.AmCheckCommandOptionsFlagIgnoreCommandDisabled,
 	})
 
@@ -209,7 +209,7 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 		if clear {
 			if commandExtendedData.IsDefaultEnabled {
 				hresp, ok = api.HandlePermissionCheck(d.Auth.ID, guildId, "commands enable", animusmagic.AmCheckCommandOptions{
-					CustomResolvedKittycatPerms: &permLimits,
+					CustomResolvedKittycatPerms: permLimits,
 				})
 
 				if !ok {
@@ -217,7 +217,7 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 				}
 			} else {
 				hresp, ok = api.HandlePermissionCheck(d.Auth.ID, guildId, "commands disable", animusmagic.AmCheckCommandOptions{
-					CustomResolvedKittycatPerms: &permLimits,
+					CustomResolvedKittycatPerms: permLimits,
 				})
 
 				if !ok {
@@ -232,7 +232,7 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 			if *value {
 				// Enable
 				hresp, ok = api.HandlePermissionCheck(d.Auth.ID, guildId, "commands enable", animusmagic.AmCheckCommandOptions{
-					CustomResolvedKittycatPerms: &permLimits,
+					CustomResolvedKittycatPerms: permLimits,
 				})
 
 				if !ok {
@@ -241,7 +241,7 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 			} else {
 				// Disable
 				hresp, ok = api.HandlePermissionCheck(d.Auth.ID, guildId, "commands disable", animusmagic.AmCheckCommandOptions{
-					CustomResolvedKittycatPerms: &permLimits,
+					CustomResolvedKittycatPerms: permLimits,
 				})
 
 				if !ok {
@@ -272,7 +272,7 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 
 		// Check for permissions next
 		hresp, ok = api.HandlePermissionCheck(d.Auth.ID, guildId, "commands modperms", animusmagic.AmCheckCommandOptions{
-			CustomResolvedKittycatPerms: &permLimits,
+			CustomResolvedKittycatPerms: permLimits,
 		})
 
 		if !ok {
@@ -282,7 +282,7 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 		if clear {
 			// Ensure user has permission to use the command
 			hresp, ok = api.HandlePermissionCheck(d.Auth.ID, guildId, body.Command, animusmagic.AmCheckCommandOptions{
-				CustomResolvedKittycatPerms: &permLimits,
+				CustomResolvedKittycatPerms: permLimits,
 				CustomCommandConfiguration: &silverpelt.GuildCommandConfiguration{
 					Command:  body.Command,
 					Perms:    nil,
@@ -312,7 +312,7 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 			if len(value.Checks) > 0 {
 				// Ensure user has permission to use the command
 				hresp, ok = api.HandlePermissionCheck(d.Auth.ID, guildId, body.Command, animusmagic.AmCheckCommandOptions{
-					CustomResolvedKittycatPerms: &permLimits,
+					CustomResolvedKittycatPerms: permLimits,
 					CustomCommandConfiguration: &silverpelt.GuildCommandConfiguration{
 						Command:  body.Command,
 						Perms:    parsedValue,

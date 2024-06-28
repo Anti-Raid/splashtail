@@ -373,6 +373,7 @@ func main() {
 							fmt.Println(
 								prettyPrintAnimusMessageMetadata(response.Meta),
 								"\nTime since last message: ", response.TimeSince,
+								"\nPayload: ", string(response.RawPayload),
 							)
 						}
 					}

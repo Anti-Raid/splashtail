@@ -109,15 +109,20 @@ func HandlePermissionCheck(
 	return uapi.HttpResponse{}, true
 }
 
-func PermLimits(d uapi.AuthData) []string {
+func PermLimits(d uapi.AuthData) *[]string {
 	if !d.Authorized {
-		return []string{}
+		return nil
 	}
 
-	permLimits, ok := d.Data["perm_limits"].([]string)
+	permLimits, ok := d.Data["perm_limits"].(*[]string)
 
 	if !ok {
-		return []string{}
+		p := []string{}
+		return &p
+	}
+
+	if permLimits == nil || len(*permLimits) == 0 {
+		return nil
 	}
 
 	return permLimits
@@ -211,7 +216,7 @@ func Authorize(r uapi.Route, req *http.Request) (uapi.AuthData, uapi.HttpRespons
 			// Check if the user exists with said API token
 			var id pgtype.Text
 			var sessId string
-			var permLimits []string
+			var permLimits *[]string
 
 			err = state.Pool.QueryRow(state.Context, "SELECT id, user_id, perm_limits FROM web_api_tokens WHERE token = $1", strings.Replace(authHeader, "User ", "", 1)).Scan(&sessId, &id, &permLimits)
 
@@ -222,6 +227,10 @@ func Authorize(r uapi.Route, req *http.Request) (uapi.AuthData, uapi.HttpRespons
 
 			if !id.Valid {
 				continue
+			}
+
+			if permLimits == nil || len(*permLimits) == 0 {
+				permLimits = nil
 			}
 
 			// Check if the user is banned
@@ -255,7 +264,7 @@ func Authorize(r uapi.Route, req *http.Request) (uapi.AuthData, uapi.HttpRespons
 
 				// First check for web use permissions
 				hresp, ok := HandlePermissionCheck(id.String, guildId, "web use", animusmagic.AmCheckCommandOptions{
-					CustomResolvedKittycatPerms: &permLimits,
+					CustomResolvedKittycatPerms: permLimits,
 				})
 
 				if !ok {
@@ -266,7 +275,7 @@ func Authorize(r uapi.Route, req *http.Request) (uapi.AuthData, uapi.HttpRespons
 
 				if cmd != "" {
 					hresp, ok = HandlePermissionCheck(id.String, guildId, cmd, animusmagic.AmCheckCommandOptions{
-						CustomResolvedKittycatPerms: &permLimits,
+						CustomResolvedKittycatPerms: permLimits,
 					})
 
 					if !ok {

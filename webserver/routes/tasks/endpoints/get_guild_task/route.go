@@ -110,7 +110,7 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 	// Check permissions
 	permLimits := api.PermLimits(d.Auth)
 	resp, ok := api.HandlePermissionCheck(d.Auth.ID, guildId, baseTaskDef.CorrespondingBotCommand_View(), animusmagic.AmCheckCommandOptions{
-		CustomResolvedKittycatPerms: &permLimits,
+		CustomResolvedKittycatPerms: permLimits,
 	})
 
 	if !ok {
