@@ -265,7 +265,7 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 			return uapi.HttpResponse{
 				Status: http.StatusBadRequest,
 				Json: types.ApiError{
-					Message: "Error parsing default_perms value: " + err.Error(),
+					Message: "Error parsing perms value: " + err.Error(),
 				},
 			}
 		}
@@ -295,7 +295,7 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 				return hresp
 			}
 
-			updateCols = append(updateCols, "default_perms")
+			updateCols = append(updateCols, "perms")
 			updateArgs = append(updateArgs, nil)
 		} else {
 			parsedValue, err := webutils.ParsePermissionChecks(value)
@@ -325,7 +325,7 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 					return hresp
 				}
 
-				updateCols = append(updateCols, "default_perms")
+				updateCols = append(updateCols, "perms")
 				updateArgs = append(updateArgs, parsedValue)
 			}
 		}
@@ -354,7 +354,7 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 		paramNo++
 	}
 
-	var sqlString = "INSERT INTO guild_command_configurations (guild_id, command, " + strings.Join(updateCols, ", ") + ") VALUES ($1, $2, " + strings.Join(insertParams, ",") + ") ON CONFLICT (guild_id, module) DO UPDATE SET " + strings.Join(updateParams, ", ") + " RETURNING id"
+	var sqlString = "INSERT INTO guild_command_configurations (guild_id, command, " + strings.Join(updateCols, ", ") + ") VALUES ($1, $2, " + strings.Join(insertParams, ",") + ") ON CONFLICT (guild_id, command) DO UPDATE SET " + strings.Join(updateParams, ", ") + " RETURNING id"
 
 	// Execute sql
 	updateArgs = append([]any{guildId, body.Command}, updateArgs...) // $1 and $2
@@ -369,7 +369,7 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 		return uapi.HttpResponse{
 			Status: http.StatusInternalServerError,
 			Json: types.ApiError{
-				Message: "Error updating module configuration: " + err.Error(),
+				Message: "Error updating command configuration: " + err.Error(),
 			},
 		}
 	}
