@@ -8,6 +8,7 @@ import (
 
 	"github.com/anti-raid/splashtail/splashcore/animusmagic"
 	"github.com/anti-raid/splashtail/splashcore/silverpelt"
+	"github.com/anti-raid/splashtail/splashcore/structparser/db"
 	"github.com/anti-raid/splashtail/splashcore/types"
 	"github.com/anti-raid/splashtail/splashcore/utils"
 	"github.com/anti-raid/splashtail/splashcore/utils/mewext"
@@ -18,7 +19,13 @@ import (
 	docs "github.com/infinitybotlist/eureka/doclib"
 	"github.com/infinitybotlist/eureka/ratelimit"
 	"github.com/infinitybotlist/eureka/uapi"
+	"github.com/jackc/pgx/v5"
 	"go.uber.org/zap"
+)
+
+var (
+	guildModuleConfigurationColsArr = db.GetCols(silverpelt.GuildModuleConfiguration{})
+	guildModuleConfigurationCols    = strings.Join(guildModuleConfigurationColsArr, ", ")
 )
 
 const (
@@ -339,12 +346,26 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 		paramNo++
 	}
 
+	// Start a transaction
+	tx, err := state.Pool.Begin(d.Context)
+
+	if err != nil {
+		return uapi.HttpResponse{
+			Status: http.StatusInternalServerError,
+			Json: types.ApiError{
+				Message: "Error starting transaction: " + err.Error(),
+			},
+		}
+	}
+
+	defer tx.Rollback(d.Context)
+
 	var sqlString = "INSERT INTO guild_module_configurations (guild_id, module, " + strings.Join(updateCols, ", ") + ") VALUES ($1, $2, " + strings.Join(insertParams, ",") + ") ON CONFLICT (guild_id, module) DO UPDATE SET " + strings.Join(updateParams, ", ") + " RETURNING id"
 
 	// Execute sql
 	updateArgs = append([]any{guildId, body.Module}, updateArgs...) // $1 and $2
 	var id string
-	err = state.Pool.QueryRow(
+	err = tx.QueryRow(
 		d.Context,
 		sqlString,
 		updateArgs...,
@@ -355,6 +376,41 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 			Status: http.StatusInternalServerError,
 			Json: types.ApiError{
 				Message: "Error updating module configuration: " + err.Error(),
+			},
+		}
+	}
+
+	// Fetch the gmc
+	row, err := tx.Query(d.Context, "SELECT "+guildModuleConfigurationCols+" FROM guild_module_configurations WHERE id = $1", id)
+
+	if err != nil {
+		return uapi.HttpResponse{
+			Status: http.StatusInternalServerError,
+			Json: types.ApiError{
+				Message: "Error fetching updated module configuration: " + err.Error(),
+			},
+		}
+	}
+
+	gmc, err := pgx.CollectOneRow(row, pgx.RowToStructByName[silverpelt.GuildModuleConfiguration])
+
+	if err != nil {
+		return uapi.HttpResponse{
+			Status: http.StatusInternalServerError,
+			Json: types.ApiError{
+				Message: "Error collecting updated module configuration: " + err.Error(),
+			},
+		}
+	}
+
+	// Commit transaction
+	err = tx.Commit(d.Context)
+
+	if err != nil {
+		return uapi.HttpResponse{
+			Status: http.StatusInternalServerError,
+			Json: types.ApiError{
+				Message: "Error committing transaction: " + err.Error(),
 			},
 		}
 	}
@@ -455,5 +511,7 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 		}
 	}
 
-	return uapi.DefaultResponse(http.StatusNoContent)
+	return uapi.HttpResponse{
+		Json: gmc,
+	}
 }

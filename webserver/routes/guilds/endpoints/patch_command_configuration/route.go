@@ -29,7 +29,7 @@ const (
 func Docs() *docs.Doc {
 	return &docs.Doc{
 		Summary:     "Patch Command Configuration",
-		Description: "Updates the configuration of a specific command for a specific guild. The user must have permission to use said command",
+		Description: "Updates the configuration of a specific command for a specific guild.",
 		Req:         types.PatchGuildCommandConfiguration{},
 		Resp:        types.ApiError{},
 		Params: []docs.Parameter{
@@ -354,16 +354,15 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 		paramNo++
 	}
 
-	var sqlString = "INSERT INTO guild_command_configurations (guild_id, command, " + strings.Join(updateCols, ", ") + ") VALUES ($1, $2, " + strings.Join(insertParams, ",") + ") ON CONFLICT (guild_id, command) DO UPDATE SET " + strings.Join(updateParams, ", ") + " RETURNING id"
+	var sqlString = "INSERT INTO guild_command_configurations (guild_id, command, " + strings.Join(updateCols, ", ") + ") VALUES ($1, $2, " + strings.Join(insertParams, ",") + ") ON CONFLICT (guild_id, command) DO UPDATE SET " + strings.Join(updateParams, ", ")
 
 	// Execute sql
 	updateArgs = append([]any{guildId, body.Command}, updateArgs...) // $1 and $2
-	var id string
-	err = state.Pool.QueryRow(
+	_, err = state.Pool.Exec(
 		d.Context,
 		sqlString,
 		updateArgs...,
-	).Scan(&id)
+	)
 
 	if err != nil {
 		return uapi.HttpResponse{
