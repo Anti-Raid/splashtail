@@ -23,7 +23,6 @@ import (
 
 const (
 	CACHE_FLUSH_NONE                           = 0      // No cache flush operation
-	CACHE_FLUSH_MODULE_TOGGLE                  = 1 << 1 // Must trigger a module trigger
 	CACHE_FLUSH_COMMAND_PERMISSION_CACHE_CLEAR = 1 << 2 // Must trigger a command permission cache clear
 )
 
@@ -231,6 +230,7 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 		} else {
 			// Check for permissions next
 			if *value {
+				// Enable
 				hresp, ok = api.HandlePermissionCheck(d.Auth.ID, guildId, "commands enable", animusmagic.AmCheckCommandOptions{
 					CustomResolvedKittycatPerms: &permLimits,
 				})
@@ -239,6 +239,7 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 					return hresp
 				}
 			} else {
+				// Disable
 				hresp, ok = api.HandlePermissionCheck(d.Auth.ID, guildId, "commands disable", animusmagic.AmCheckCommandOptions{
 					CustomResolvedKittycatPerms: &permLimits,
 				})
@@ -252,8 +253,8 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 			updateArgs = append(updateArgs, *value)
 		}
 
-		if cacheFlushFlag&CACHE_FLUSH_MODULE_TOGGLE != CACHE_FLUSH_MODULE_TOGGLE {
-			cacheFlushFlag |= CACHE_FLUSH_MODULE_TOGGLE
+		if cacheFlushFlag&CACHE_FLUSH_COMMAND_PERMISSION_CACHE_CLEAR != CACHE_FLUSH_COMMAND_PERMISSION_CACHE_CLEAR {
+			cacheFlushFlag |= CACHE_FLUSH_COMMAND_PERMISSION_CACHE_CLEAR
 		}
 	}
 
@@ -329,7 +330,7 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 			}
 		}
 
-		if cacheFlushFlag&CACHE_FLUSH_MODULE_TOGGLE != CACHE_FLUSH_MODULE_TOGGLE && cacheFlushFlag&CACHE_FLUSH_COMMAND_PERMISSION_CACHE_CLEAR != CACHE_FLUSH_COMMAND_PERMISSION_CACHE_CLEAR {
+		if cacheFlushFlag&CACHE_FLUSH_COMMAND_PERMISSION_CACHE_CLEAR != CACHE_FLUSH_COMMAND_PERMISSION_CACHE_CLEAR {
 			cacheFlushFlag |= CACHE_FLUSH_COMMAND_PERMISSION_CACHE_CLEAR
 		}
 	}
@@ -370,53 +371,6 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 			Json: types.ApiError{
 				Message: "Error updating module configuration: " + err.Error(),
 			},
-		}
-	}
-
-	if cacheFlushFlag&CACHE_FLUSH_MODULE_TOGGLE == CACHE_FLUSH_MODULE_TOGGLE && body.Disabled != nil {
-		resps, err := state.AnimusMagicClient.Request(
-			d.Context,
-			state.Rueidis,
-			animusmagic.BotAnimusMessage{
-				ExecutePerModuleFunction: &struct {
-					Module  string         `json:"module"`
-					Toggle  string         `json:"toggle"`
-					Options map[string]any `json:"options,omitempty"`
-				}{
-					Module: "settings",
-					Toggle: "clear_command_permission_cache",
-					Options: map[string]any{
-						"guild_id": guildId,
-					},
-				},
-			},
-			&animusmagic.RequestOptions{
-				ClusterID: utils.Pointer(uint16(clusterId)),
-			},
-		)
-
-		if err != nil {
-			return uapi.HttpResponse{
-				Status: http.StatusInternalServerError,
-				Json: types.ApiError{
-					Message: "Error sending request to animus magic: " + err.Error(),
-				},
-				Headers: map[string]string{
-					"Retry-After": "10",
-				},
-			}
-		}
-
-		if len(resps) != 1 {
-			return uapi.HttpResponse{
-				Status: http.StatusInternalServerError,
-				Json: types.ApiError{
-					Message: "Error sending request to animus magic: [unexpected response count of " + strconv.Itoa(len(resps)) + "]",
-				},
-				Headers: map[string]string{
-					"Retry-After": "10",
-				},
-			}
 		}
 	}
 

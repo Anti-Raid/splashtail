@@ -208,7 +208,8 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 		} else {
 			// Check for permissions next
 			if *value {
-				hresp, ok = api.HandlePermissionCheck(d.Auth.ID, guildId, "modules enable", animusmagic.AmCheckCommandOptions{
+				// Disable
+				hresp, ok = api.HandlePermissionCheck(d.Auth.ID, guildId, "modules disable", animusmagic.AmCheckCommandOptions{
 					CustomResolvedKittycatPerms: &permLimits,
 				})
 
@@ -216,7 +217,8 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 					return hresp
 				}
 			} else {
-				hresp, ok = api.HandlePermissionCheck(d.Auth.ID, guildId, "modules disable", animusmagic.AmCheckCommandOptions{
+				// Enable
+				hresp, ok = api.HandlePermissionCheck(d.Auth.ID, guildId, "modules enable", animusmagic.AmCheckCommandOptions{
 					CustomResolvedKittycatPerms: &permLimits,
 				})
 
