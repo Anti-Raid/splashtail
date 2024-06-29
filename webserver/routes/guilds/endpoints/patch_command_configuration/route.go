@@ -8,6 +8,7 @@ import (
 
 	"github.com/anti-raid/splashtail/splashcore/animusmagic"
 	"github.com/anti-raid/splashtail/splashcore/silverpelt"
+	"github.com/anti-raid/splashtail/splashcore/structparser/db"
 	"github.com/anti-raid/splashtail/splashcore/types"
 	"github.com/anti-raid/splashtail/splashcore/utils"
 	"github.com/anti-raid/splashtail/splashcore/utils/mewext"
@@ -18,7 +19,13 @@ import (
 	docs "github.com/infinitybotlist/eureka/doclib"
 	"github.com/infinitybotlist/eureka/ratelimit"
 	"github.com/infinitybotlist/eureka/uapi"
+	"github.com/jackc/pgx/v5"
 	"go.uber.org/zap"
+)
+
+var (
+	guildCommandConfigurationColsArr = db.GetCols(silverpelt.GuildCommandConfiguration{})
+	guildCommandConfigurationCols    = strings.Join(guildCommandConfigurationColsArr, ", ")
 )
 
 const (
@@ -31,7 +38,7 @@ func Docs() *docs.Doc {
 		Summary:     "Patch Command Configuration",
 		Description: "Updates the configuration of a specific command for a specific guild.",
 		Req:         types.PatchGuildCommandConfiguration{},
-		Resp:        types.ApiError{},
+		Resp:        silverpelt.GuildCommandConfiguration{},
 		Params: []docs.Parameter{
 			{
 				Name:        "user_id",
@@ -354,21 +361,69 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 		paramNo++
 	}
 
-	var sqlString = "INSERT INTO guild_command_configurations (guild_id, command, " + strings.Join(updateCols, ", ") + ") VALUES ($1, $2, " + strings.Join(insertParams, ",") + ") ON CONFLICT (guild_id, command) DO UPDATE SET " + strings.Join(updateParams, ", ")
-
-	// Execute sql
-	updateArgs = append([]any{guildId, body.Command}, updateArgs...) // $1 and $2
-	_, err = state.Pool.Exec(
-		d.Context,
-		sqlString,
-		updateArgs...,
-	)
+	// Start a transaction
+	tx, err := state.Pool.Begin(d.Context)
 
 	if err != nil {
 		return uapi.HttpResponse{
 			Status: http.StatusInternalServerError,
 			Json: types.ApiError{
-				Message: "Error updating command configuration: " + err.Error(),
+				Message: "Error starting transaction: " + err.Error(),
+			},
+		}
+	}
+
+	defer tx.Rollback(d.Context)
+
+	var sqlString = "INSERT INTO guild_command_configurations (guild_id, command, " + strings.Join(updateCols, ", ") + ") VALUES ($1, $2, " + strings.Join(insertParams, ",") + ") ON CONFLICT (guild_id, command) DO UPDATE SET " + strings.Join(updateParams, ", ") + " RETURNING id"
+
+	var id string
+	err = tx.QueryRow(
+		d.Context,
+		sqlString,
+		updateArgs...,
+	).Scan(&id)
+
+	if err != nil {
+		return uapi.HttpResponse{
+			Status: http.StatusInternalServerError,
+			Json: types.ApiError{
+				Message: "Error updating module configuration: " + err.Error(),
+			},
+		}
+	}
+
+	// Fetch the gcc
+	row, err := tx.Query(d.Context, "SELECT "+guildCommandConfigurationCols+" FROM guild_command_configurations WHERE id = $1", id)
+
+	if err != nil {
+		return uapi.HttpResponse{
+			Status: http.StatusInternalServerError,
+			Json: types.ApiError{
+				Message: "Error fetching updated command configuration: " + err.Error(),
+			},
+		}
+	}
+
+	gcc, err := pgx.CollectOneRow(row, pgx.RowToStructByName[silverpelt.GuildCommandConfiguration])
+
+	if err != nil {
+		return uapi.HttpResponse{
+			Status: http.StatusInternalServerError,
+			Json: types.ApiError{
+				Message: "Error collecting updated module configuration: " + err.Error(),
+			},
+		}
+	}
+
+	// Commit transaction
+	err = tx.Commit(d.Context)
+
+	if err != nil {
+		return uapi.HttpResponse{
+			Status: http.StatusInternalServerError,
+			Json: types.ApiError{
+				Message: "Error committing transaction: " + err.Error(),
 			},
 		}
 	}
@@ -420,5 +475,7 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 		}
 	}
 
-	return uapi.DefaultResponse(http.StatusNoContent)
+	return uapi.HttpResponse{
+		Json: gcc,
+	}
 }

@@ -39,7 +39,7 @@ func Docs() *docs.Doc {
 		Summary:     "Patch Module Configuration",
 		Description: "Updates the configuration of a specific module for a specific guild",
 		Req:         types.PatchGuildModuleConfiguration{},
-		Resp:        types.ApiError{},
+		Resp:        silverpelt.GuildModuleConfiguration{},
 		Params: []docs.Parameter{
 			{
 				Name:        "user_id",

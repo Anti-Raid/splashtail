@@ -1,3 +1,9 @@
+## Saturday, June 29th 2024
+
+## Webserver
+
+- ``Patch Module Configuration`` and ``Patch Command Configuration`` now returns the updated configuration. This is needed for properly updating the website after a successful update.
+
 # Thursday, June 27th 2024
 
 ## Bot
