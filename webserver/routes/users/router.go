@@ -37,8 +37,7 @@ func (b Router) Routes(r *chi.Mux) {
 		Handler: get_user_guilds.Route,
 		Auth: []uapi.AuthType{
 			{
-				URLVar: "id",
-				Type:   types.TargetTypeUser,
+				Type: types.TargetTypeUser,
 			},
 		},
 		ExtData: map[string]any{
@@ -54,8 +53,7 @@ func (b Router) Routes(r *chi.Mux) {
 		Handler: get_user_guild_base_info.Route,
 		Auth: []uapi.AuthType{
 			{
-				URLVar: "user_id",
-				Type:   types.TargetTypeUser,
+				Type: types.TargetTypeUser,
 			},
 		},
 		ExtData: map[string]any{
