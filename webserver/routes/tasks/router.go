@@ -24,7 +24,7 @@ func (b Router) Tag() (string, string) {
 
 func (b Router) Routes(r *chi.Mux) {
 	uapi.Route{
-		Pattern:      "/users/{id}/guilds/{guild_id}/tasks/{tid}",
+		Pattern:      "/guilds/{guild_id}/tasks/{tid}",
 		OpId:         "get_guild_task",
 		Method:       uapi.GET,
 		Docs:         get_guild_task.Docs,
@@ -32,8 +32,7 @@ func (b Router) Routes(r *chi.Mux) {
 		AuthOptional: true,
 		Auth: []uapi.AuthType{
 			{
-				URLVar: "id",
-				Type:   types.TargetTypeUser,
+				Type: types.TargetTypeUser,
 			},
 		},
 		ExtData: map[string]any{
@@ -49,7 +48,7 @@ func (b Router) Routes(r *chi.Mux) {
 	}.Route(r)
 
 	uapi.Route{
-		Pattern:      "/users/{id}/guilds/{guild_id}/tasks",
+		Pattern:      "/guilds/{guild_id}/tasks",
 		OpId:         "get_task_list",
 		Method:       uapi.GET,
 		Docs:         get_task_list.Docs,
@@ -57,8 +56,7 @@ func (b Router) Routes(r *chi.Mux) {
 		AuthOptional: true,
 		Auth: []uapi.AuthType{
 			{
-				URLVar: "id",
-				Type:   types.TargetTypeUser,
+				Type: types.TargetTypeUser,
 			},
 		},
 		ExtData: map[string]any{
@@ -74,15 +72,14 @@ func (b Router) Routes(r *chi.Mux) {
 	}.Route(r)
 
 	uapi.Route{
-		Pattern: "/users/{id}/guilds/{guild_id}/tasks/{name}",
+		Pattern: "/guilds/{guild_id}/tasks/{name}",
 		OpId:    "create_task",
 		Method:  uapi.POST,
 		Docs:    create_guild_task.Docs,
 		Handler: create_guild_task.Route,
 		Auth: []uapi.AuthType{
 			{
-				URLVar: "id",
-				Type:   types.TargetTypeUser,
+				Type: types.TargetTypeUser,
 			},
 		},
 		ExtData: map[string]any{

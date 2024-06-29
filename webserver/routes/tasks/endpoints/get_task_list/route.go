@@ -29,13 +29,6 @@ func Docs() *docs.Doc {
 		Description: "Gets the list of all tasks as a PartialTask object",
 		Params: []docs.Parameter{
 			{
-				Name:        "id",
-				Description: "User ID",
-				Required:    true,
-				In:          "path",
-				Schema:      docs.IdSchema,
-			},
-			{
 				Name:        "guild_id",
 				Description: "Guild ID",
 				Required:    true,

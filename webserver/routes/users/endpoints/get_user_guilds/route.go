@@ -21,17 +21,10 @@ import (
 
 func Docs() *docs.Doc {
 	return &docs.Doc{
-		Summary:     "Get User",
+		Summary:     "Get User Guilds",
 		Description: "This endpoint will return user information given their ID",
 		Resp:        types.DashboardGuildData{},
 		Params: []docs.Parameter{
-			{
-				Name:        "id",
-				Description: "The ID of the user to get information about",
-				In:          "path",
-				Required:    true,
-				Schema:      docs.IdSchema,
-			},
 			{
 				Name:        "refresh",
 				Description: "Whether to refresh the user's guilds from discord",

@@ -21,13 +21,6 @@ func Docs() *docs.Doc {
 		Resp:        types.UserSessionList{},
 		Params: []docs.Parameter{
 			{
-				Name:        "user_id",
-				Description: "The ID of the user to revoke sessions for",
-				In:          "path",
-				Required:    true,
-				Schema:      docs.IdSchema,
-			},
-			{
 				Name:        "session_id",
 				Description: "The ID of the session to revoke",
 				In:          "path",

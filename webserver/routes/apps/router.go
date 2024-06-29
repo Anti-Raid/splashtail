@@ -31,14 +31,13 @@ func (b Router) Routes(r *chi.Mux) {
 		},
 	}.Route(r)
 	uapi.Route{
-		Pattern: "/users/{user_id}/apps",
+		Pattern: "/apps",
 		OpId:    "get_apps_list",
 		Method:  uapi.GET,
 		Docs:    get_apps_list.Docs,
 		Handler: get_apps_list.Route,
 		Auth: []uapi.AuthType{
 			{
-				URLVar:       "user_id",
 				Type:         types.TargetTypeUser,
 				AllowedScope: "ban_exempt", // Ensure banned users can view their own apps
 			},
@@ -48,14 +47,13 @@ func (b Router) Routes(r *chi.Mux) {
 		},
 	}.Route(r)
 	uapi.Route{
-		Pattern: "/users/{user_id}/apps",
+		Pattern: "/apps",
 		OpId:    "create_app",
 		Method:  uapi.POST,
 		Docs:    create_app.Docs,
 		Handler: create_app.Route,
 		Auth: []uapi.AuthType{
 			{
-				URLVar:       "user_id",
 				Type:         types.TargetTypeUser,
 				AllowedScope: "ban_exempt", // Ensure banned users can create apps
 			},

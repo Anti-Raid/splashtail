@@ -28,13 +28,6 @@ func Docs() *docs.Doc {
 		Description: "Creates a task for a guild. Returns the task data if this is successful",
 		Params: []docs.Parameter{
 			{
-				Name:        "id",
-				Description: "User ID",
-				Required:    true,
-				In:          "path",
-				Schema:      docs.IdSchema,
-			},
-			{
 				Name:        "guild_id",
 				Description: "Guild ID",
 				Required:    true,

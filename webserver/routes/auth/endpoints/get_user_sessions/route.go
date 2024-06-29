@@ -24,15 +24,7 @@ func Docs() *docs.Doc {
 		Summary:     "Get User Sessions",
 		Description: "Gets all session tokens of a user",
 		Resp:        types.UserSessionList{},
-		Params: []docs.Parameter{
-			{
-				Name:        "user_id",
-				Description: "The ID of the user to get sessions for",
-				In:          "path",
-				Required:    true,
-				Schema:      docs.IdSchema,
-			},
-		},
+		Params:      []docs.Parameter{},
 	}
 }
 

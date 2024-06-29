@@ -30,7 +30,7 @@ func (b Router) Routes(r *chi.Mux) {
 	}.Route(r)
 
 	uapi.Route{
-		Pattern: "/users/{id}/guilds",
+		Pattern: "/guilds",
 		OpId:    "get_user_guilds",
 		Method:  uapi.GET,
 		Docs:    get_user_guilds.Docs,
@@ -47,7 +47,7 @@ func (b Router) Routes(r *chi.Mux) {
 	}.Route(r)
 
 	uapi.Route{
-		Pattern: "/users/{user_id}/guilds/{guild_id}",
+		Pattern: "/guilds/{guild_id}",
 		OpId:    "get_user_guild_base_info",
 		Method:  uapi.GET,
 		Docs:    get_user_guild_base_info.Docs,

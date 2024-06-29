@@ -45,7 +45,7 @@ var downloadTemplate = template.Must(template.New("download").Parse(`<!DOCTYPE h
 func Docs() *docs.Doc {
 	return &docs.Doc{
 		Summary:     "Get IOAuth Download Link",
-		Description: "Gets the download link to a tasks output. Note that this endpoint, like most other IOAuth flows, is *not* meant to be used outside of the bot.",
+		Description: "Gets the download link to a tasks output.",
 		Params: []docs.Parameter{
 			{
 				Name:        "id",

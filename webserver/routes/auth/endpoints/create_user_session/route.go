@@ -24,15 +24,7 @@ func Docs() *docs.Doc {
 		Description: "Creates a user session returning the session token. The session token cannot be read after creation.",
 		Req:         types.CreateUserSession{},
 		Resp:        types.UserSessionList{},
-		Params: []docs.Parameter{
-			{
-				Name:        "user_id",
-				Description: "The ID of the user to get sessions for",
-				In:          "path",
-				Required:    true,
-				Schema:      docs.IdSchema,
-			},
-		},
+		Params:      []docs.Parameter{},
 	}
 }
 

@@ -29,16 +29,8 @@ func Docs() *docs.Doc {
 		Summary:     "Create App For Position",
 		Description: "Creates an application for a position. Returns a 204 on success.",
 		Req:         CreateApp{},
-		Params: []docs.Parameter{
-			{
-				Name:        "user_id",
-				Description: "The ID of the user to create the application for.",
-				Required:    true,
-				In:          "path",
-				Schema:      docs.IdSchema,
-			},
-		},
-		Resp: types.ApiError{},
+		Params:      []docs.Parameter{},
+		Resp:        types.ApiError{},
 	}
 }
 

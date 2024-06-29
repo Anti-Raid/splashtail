@@ -24,15 +24,14 @@ func (b Router) Tag() (string, string) {
 
 func (b Router) Routes(r *chi.Mux) {
 	uapi.Route{
-		Pattern: "/users/{user_id}/guilds/{guild_id}/module-configurations",
+		Pattern: "/guilds/{guild_id}/module-configurations",
 		OpId:    "get_module_configurations",
 		Method:  uapi.GET,
 		Docs:    get_module_configurations.Docs,
 		Handler: get_module_configurations.Route,
 		Auth: []uapi.AuthType{
 			{
-				URLVar: "user_id",
-				Type:   types.TargetTypeUser,
+				Type: types.TargetTypeUser,
 			},
 		},
 		ExtData: map[string]any{
@@ -48,15 +47,14 @@ func (b Router) Routes(r *chi.Mux) {
 	}.Route(r)
 
 	uapi.Route{
-		Pattern: "/users/{user_id}/guilds/{guild_id}/module-configurations",
+		Pattern: "/guilds/{guild_id}/module-configurations",
 		OpId:    "patch_module_configuration",
 		Method:  uapi.PATCH,
 		Docs:    patch_module_configuration.Docs,
 		Handler: patch_module_configuration.Route,
 		Auth: []uapi.AuthType{
 			{
-				URLVar: "user_id",
-				Type:   types.TargetTypeUser,
+				Type: types.TargetTypeUser,
 			},
 		},
 		ExtData: map[string]any{
@@ -65,15 +63,14 @@ func (b Router) Routes(r *chi.Mux) {
 	}.Route(r)
 
 	uapi.Route{
-		Pattern: "/users/{user_id}/guilds/{guild_id}/command-configurations",
+		Pattern: "/guilds/{guild_id}/command-configurations",
 		OpId:    "get_all_command_configurations",
 		Method:  uapi.GET,
 		Docs:    get_all_command_configurations.Docs,
 		Handler: get_all_command_configurations.Route,
 		Auth: []uapi.AuthType{
 			{
-				URLVar: "user_id",
-				Type:   types.TargetTypeUser,
+				Type: types.TargetTypeUser,
 			},
 		},
 		ExtData: map[string]any{
@@ -89,15 +86,14 @@ func (b Router) Routes(r *chi.Mux) {
 	}.Route(r)
 
 	uapi.Route{
-		Pattern: "/users/{user_id}/guilds/{guild_id}/command-configurations",
+		Pattern: "/guilds/{guild_id}/command-configurations",
 		OpId:    "patch_command_configuration",
 		Method:  uapi.PATCH,
 		Docs:    patch_command_configuration.Docs,
 		Handler: patch_command_configuration.Route,
 		Auth: []uapi.AuthType{
 			{
-				URLVar: "user_id",
-				Type:   types.TargetTypeUser,
+				Type: types.TargetTypeUser,
 			},
 		},
 		ExtData: map[string]any{
@@ -106,15 +102,14 @@ func (b Router) Routes(r *chi.Mux) {
 	}.Route(r)
 
 	uapi.Route{
-		Pattern: "/users/{user_id}/guilds/{guild_id}/commands/{command}/configurations",
+		Pattern: "/guilds/{guild_id}/commands/{command}/configurations",
 		OpId:    "get_command_configurations",
 		Method:  uapi.GET,
 		Docs:    get_command_configurations.Docs,
 		Handler: get_command_configurations.Route,
 		Auth: []uapi.AuthType{
 			{
-				URLVar: "user_id",
-				Type:   types.TargetTypeUser,
+				Type: types.TargetTypeUser,
 			},
 		},
 		ExtData: map[string]any{

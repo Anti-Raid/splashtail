@@ -24,16 +24,8 @@ func Docs() *docs.Doc {
 	return &docs.Doc{
 		Summary:     "Get Application List",
 		Description: "Gets all applications of the user returning a list of apps.",
-		Params: []docs.Parameter{
-			{
-				Name:        "user_id",
-				Description: "The ID of the user to use.",
-				Required:    true,
-				In:          "path",
-				Schema:      docs.IdSchema,
-			},
-		},
-		Resp: types.AppListResponse{},
+		Params:      []docs.Parameter{},
+		Resp:        types.AppListResponse{},
 	}
 }
 

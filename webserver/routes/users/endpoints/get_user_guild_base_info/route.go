@@ -26,13 +26,6 @@ func Docs() *docs.Doc {
 		Resp:        types.UserGuildBaseData{},
 		Params: []docs.Parameter{
 			{
-				Name:        "user_id",
-				Description: "The ID of the user to get information about",
-				In:          "path",
-				Required:    true,
-				Schema:      docs.IdSchema,
-			},
-			{
 				Name:        "guild_id",
 				Description: "Whether to refresh the user's guilds from discord",
 				In:          "path",
@@ -66,9 +59,8 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 	}
 
 	guildId := chi.URLParam(r, "guild_id")
-	userId := chi.URLParam(r, "user_id")
 
-	if guildId == "" || userId == "" {
+	if guildId == "" {
 		return uapi.DefaultResponse(http.StatusBadRequest)
 	}
 
@@ -102,7 +94,7 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 				UserID  string `json:"user_id"`
 			}{
 				GuildID: guildId,
-				UserID:  userId,
+				UserID:  d.Auth.ID,
 			},
 		},
 		&animusmagic.RequestOptions{

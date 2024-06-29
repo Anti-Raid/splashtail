@@ -48,14 +48,13 @@ func (m Router) Routes(r *chi.Mux) {
 	}.Route(r)
 
 	uapi.Route{
-		Pattern: "/users/{user_id}/sessions",
+		Pattern: "/sessions",
 		OpId:    "get_user_sessions",
 		Method:  uapi.GET,
 		Docs:    get_user_sessions.Docs,
 		Handler: get_user_sessions.Route,
 		Auth: []uapi.AuthType{
 			{
-				URLVar:       "user_id",
 				Type:         types.TargetTypeUser,
 				AllowedScope: "ban_exempt",
 			},
@@ -66,15 +65,14 @@ func (m Router) Routes(r *chi.Mux) {
 	}.Route(r)
 
 	uapi.Route{
-		Pattern: "/users/{user_id}/sessions",
+		Pattern: "/sessions",
 		OpId:    "create_user_session",
 		Method:  uapi.POST,
 		Docs:    create_user_session.Docs,
 		Handler: create_user_session.Route,
 		Auth: []uapi.AuthType{
 			{
-				URLVar: "user_id",
-				Type:   types.TargetTypeUser,
+				Type: types.TargetTypeUser,
 			},
 		},
 		ExtData: map[string]any{
@@ -83,14 +81,13 @@ func (m Router) Routes(r *chi.Mux) {
 	}.Route(r)
 
 	uapi.Route{
-		Pattern: "/users/{user_id}/sessions/{session_id}",
+		Pattern: "/sessions/{session_id}",
 		OpId:    "revoke_user_session",
 		Method:  uapi.DELETE,
 		Docs:    revoke_user_session.Docs,
 		Handler: revoke_user_session.Route,
 		Auth: []uapi.AuthType{
 			{
-				URLVar:       "user_id",
 				Type:         types.TargetTypeUser,
 				AllowedScope: "ban_exempt",
 			},

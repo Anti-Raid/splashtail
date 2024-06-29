@@ -21,13 +21,6 @@ func Docs() *docs.Doc {
 		Resp:        []silverpelt.GuildCommandConfiguration{},
 		Params: []docs.Parameter{
 			{
-				Name:        "user_id",
-				Description: "The ID of the user to get information about",
-				In:          "path",
-				Required:    true,
-				Schema:      docs.IdSchema,
-			},
-			{
 				Name:        "guild_id",
 				Description: "Whether to refresh the user's guilds from discord",
 				In:          "path",
@@ -68,10 +61,9 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 	}
 
 	guildId := chi.URLParam(r, "guild_id")
-	userId := chi.URLParam(r, "user_id")
 	command := chi.URLParam(r, "command")
 
-	if guildId == "" || userId == "" || command == "" {
+	if guildId == "" || command == "" {
 		return uapi.DefaultResponse(http.StatusBadRequest)
 	}
 
