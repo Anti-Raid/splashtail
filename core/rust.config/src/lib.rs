@@ -136,7 +136,7 @@ pub struct Config {
 impl Config {
     pub fn load() -> Result<Self, Error> {
         // Open config.yaml from parent directory
-        let file = File::open("../config.yaml");
+        let file = File::open("config.yaml");
 
         match file {
             Ok(file) => {
