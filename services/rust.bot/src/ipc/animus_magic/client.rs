@@ -20,8 +20,10 @@ pub struct ClientData {
     pub cache_http: CacheHttpImpl,
 }
 
+pub struct ClientDataWrapper(pub Arc<ClientData>);
+
 pub struct AnimusMagicClient {
-    pub underlying_client: Arc<UnderlyingClient<Arc<ClientData>>>,
+    pub underlying_client: Arc<UnderlyingClient<ClientDataWrapper>>,
     pub allow_all: bool,
 }
 
@@ -57,14 +59,14 @@ async fn on_request(
 }
 
 impl AnimusMagicClient {
-    pub fn new(data: Arc<ClientData>) -> Self {
+    pub fn new(data: ClientData) -> Self {
         let underlying_client = Arc::new(UnderlyingClient::new(
             AnimusTarget::Bot,
             MEWLD_ARGS.cluster_id,
-            data.clone(),
-            Box::new(move |data, payload| publish(data, payload).boxed()),
+            ClientDataWrapper(Arc::new(data)),
+            Box::new(move |data, payload| publish(data.0.clone(), payload).boxed()),
             Some(Box::new(move |data, payload| {
-                on_request(data, payload).boxed()
+                on_request(data.0.clone(), payload).boxed()
             })),
             None,
             None,
@@ -81,14 +83,14 @@ impl AnimusMagicClient {
     /// These messages will then be passed on to the underlying client
     pub async fn listen(&self) -> ! {
         // Subscribes to the redis IPC channels we need to subscribe to
-        let cfg = self.underlying_client.state.redis_pool.client_config();
+        let cfg = self.underlying_client.state.0.redis_pool.client_config();
 
         let subscriber = Builder::from_config(cfg).build_subscriber_client().unwrap();
 
         subscriber.connect();
         subscriber.wait_for_connect().await.unwrap();
 
-        self.underlying_client.state.redis_pool.connect_pool();
+        self.underlying_client.state.0.redis_pool.connect_pool();
 
         let mut message_stream = subscriber.message_rx();
 

@@ -1,5 +1,5 @@
-use module_settings::cfg::{settings_create, settings_delete, settings_update, settings_view};
 use futures_util::StreamExt;
+use module_settings::cfg::{settings_create, settings_delete, settings_update, settings_view};
 use module_settings::state::State;
 use module_settings::types::{
     ColumnType, ConfigOption, InnerColumnType, InnerColumnTypeStringKind, OperationType,
@@ -239,7 +239,7 @@ pub async fn settings_viewer(
         &data.pool,
         guild_id,
         ctx.author().id,
-        data.props.permodule_executor(),
+        &*data.props.permodule_executor(),
     )
     .await
     .map_err(|e| format!("Error fetching settings: {}", e))?;
@@ -408,7 +408,7 @@ pub async fn settings_creator(
         guild_id,
         ctx.author().id,
         fields,
-        data.props.permodule_executor(),
+        &*data.props.permodule_executor(),
     )
     .await
     .map_err(|e| format!("Error creating new setting: {}", e))?;
@@ -536,7 +536,7 @@ pub async fn settings_updater(
         guild_id,
         ctx.author().id,
         fields,
-        data.props.permodule_executor(),
+        &*data.props.permodule_executor(),
     )
     .await
     .map_err(|e| format!("Error updating setting: {}", e))?;
@@ -666,7 +666,7 @@ pub async fn settings_deleter(
         guild_id,
         ctx.author().id,
         pkey,
-        data.props.permodule_executor(),
+        &*data.props.permodule_executor(),
     )
     .await
     .map_err(|e| format!("Error deleting setting: {}", e))?;

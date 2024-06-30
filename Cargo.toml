@@ -1,6 +1,7 @@
 [workspace]
 members = [
     "core/rust.*",
+    "services/rust.*"
 ]
 resolver = "2"
 

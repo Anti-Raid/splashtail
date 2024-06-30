@@ -8,7 +8,9 @@ use serenity::all::{
 };
 use serenity::utils::shard_id;
 use splashcore_rs::animusmagic::client::RequestOptions;
-use splashcore_rs::animusmagic::protocol::{default_request_timeout, AnimusOp, AnimusTarget};
+use splashcore_rs::animusmagic::protocol::{
+    default_request_timeout, serialize_data, AnimusOp, AnimusTarget,
+};
 use splashcore_rs::animusmagic::responses::jobserver::{
     JobserverAnimusMessage, JobserverAnimusResponse,
 };
@@ -237,7 +239,7 @@ pub async fn prune_user(
 
     let am = data.props.underlying_am_client();
     let Some(resp) = am
-        .request_one::<_, JobserverAnimusResponse>(
+        .request_one(
             RequestOptions {
                 cluster_id: shard_id(guild_id, stats.shard_count_nonzero),
                 expected_response_count: 1,
@@ -246,17 +248,18 @@ pub async fn prune_user(
                 ..Default::default()
             },
             default_request_timeout(),
-            JobserverAnimusMessage::SpawnTask {
+            serialize_data(&JobserverAnimusMessage::SpawnTask {
                 name: "message_prune".to_string(),
                 data: prune_opts.clone(),
                 create: true,
                 execute: true,
                 task_id: None,
                 user_id: author.user.id.to_string(),
-            },
+            })?,
         )
         .await
         .map_err(|e| format!("Failed to create backup task: {}", e))?
+        .parse::<JobserverAnimusResponse>()?
         .resp
     else {
         return Err("Failed to create backup task".into());

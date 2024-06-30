@@ -3,10 +3,12 @@ use super::protocol::{
     AnimusMessageMetadata, AnimusOp, AnimusTarget, WILDCARD_CLUSTER_ID,
 };
 use crate::Error;
+use async_trait::async_trait;
 use futures::future::BoxFuture;
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
 use std::sync::atomic::AtomicUsize;
+use std::sync::Arc;
 use std::time::Duration;
 
 #[derive(Debug)]
@@ -46,8 +48,8 @@ pub trait AnimusMessage {
     fn target(&self) -> AnimusTarget;
 }
 
-pub trait SerializableAnimusResponse: AnimusResponse + Serialize {}
-pub trait SerializableAnimusMessage: AnimusMessage + Serialize {}
+pub trait SerializableAnimusResponse: AnimusResponse + Serialize + Send {}
+pub trait SerializableAnimusMessage: AnimusMessage + Serialize + Send {}
 
 /// A ClientResponse contains the response from animus magic
 pub struct ClientResponse {
@@ -124,20 +126,21 @@ pub struct RequestOptions {
 }
 
 impl RequestOptions {
-    pub fn parse(&mut self) -> Result<(), crate::Error> {
-        if self.expected_response_count == 0 {
-            if self.cluster_id == WILDCARD_CLUSTER_ID {
+    pub fn parse(self) -> Result<RequestOptions, crate::Error> {
+        let mut new = self;
+        if new.expected_response_count == 0 {
+            if new.cluster_id == WILDCARD_CLUSTER_ID {
                 return Err("Expected response count is not set".into());
             } else {
-                self.expected_response_count = 1;
+                new.expected_response_count = 1;
             }
         }
 
-        if self.command_id.is_empty() {
-            self.command_id = new_command_id();
+        if new.command_id.is_empty() {
+            new.command_id = new_command_id();
         }
 
-        Ok(())
+        Ok(new)
     }
 }
 
@@ -150,25 +153,25 @@ pub struct NotifyWrapper {
 pub type OnRequest<T> = Box<
     dyn Send
         + Sync
-        + Fn(T, ClientRequest) -> BoxFuture<'static, Result<Vec<u8>, AnimusErrorResponse>>,
+        + Fn(&T, ClientRequest) -> BoxFuture<'static, Result<Vec<u8>, AnimusErrorResponse>>,
 >;
 
 pub type OnResponse<T> =
-    Box<dyn Send + Sync + Fn(T, ClientResponse) -> BoxFuture<'static, Result<(), Error>>>;
+    Box<dyn Send + Sync + Fn(&T, ClientResponse) -> BoxFuture<'static, Result<(), Error>>>;
 
 pub type OnMiddleware<T> = Box<
     dyn Send
         + Sync
-        + for<'a> Fn(T, &'a AnimusMessageMetadata, &[u8]) -> BoxFuture<'a, Result<bool, Error>>,
+        + for<'a> Fn(&T, &'a AnimusMessageMetadata, &[u8]) -> BoxFuture<'a, Result<bool, Error>>,
 >;
 
 /// Publisher is a function that publishes a message to the next available connection
 pub type Publisher<T> =
-    Box<dyn Send + Sync + Fn(T, Vec<u8>) -> BoxFuture<'static, Result<(), crate::Error>>>;
+    Box<dyn Send + Sync + Fn(&T, Vec<u8>) -> BoxFuture<'static, Result<(), crate::Error>>>;
 
 /// This is the underlying client for all animus magic applications
-pub struct UnderlyingClient<T: Clone> {
-    pub state: T,
+pub struct UnderlyingClient<T: Send + Sync> {
+    pub state: Arc<T>,
 
     pub rx_map: dashmap::DashMap<String, NotifyWrapper>,
     pub identity: AnimusTarget,
@@ -192,7 +195,50 @@ pub struct UnderlyingClient<T: Clone> {
     pub pid: String,
 }
 
-impl<T: Clone> UnderlyingClient<T> {
+#[async_trait]
+
+/// A AnimusMagicRequestClient is a client that can send requests via animus magic
+pub trait AnimusMagicRequestClient: Send + Sync {
+    /// Creates a payload based on the clients and returns a byte vector
+    ///
+    /// Unlike create_payload, this accepts a raw Vec<u8> instead of a serializable object
+    fn create_payload_raw(
+        &self,
+        cmd_id: &str,
+        cluster_id_to: u16,
+        to: AnimusTarget,
+        op: AnimusOp,
+        msg: Vec<u8>,
+    ) -> Vec<u8>;
+
+    /// Request creates a new request and waits for a response until either timeout or response
+    async fn request(
+        &self,
+        opts: RequestOptions,
+        timeout: Duration,
+        msg: Vec<u8>,
+    ) -> Result<Vec<ClientResponse>, crate::Error>;
+
+    /// request_one is a helper function that sends a request and waits for a single response
+    /// parsing it afterwards
+    async fn request_one(
+        &self,
+        opts: RequestOptions,
+        timeout: Duration,
+        msg: Vec<u8>,
+    ) -> Result<ClientResponse, crate::Error> {
+        let responses = self.request(opts, timeout, msg).await?;
+
+        if responses.len() != 1 {
+            return Err(ClientError::NoResponse.into());
+        }
+
+        let first_response = responses.into_iter().next().unwrap();
+        Ok(first_response)
+    }
+}
+
+impl<T: Send + Sync> UnderlyingClient<T> {
     /// New creates a new client
     pub fn new(
         identity: AnimusTarget,
@@ -204,7 +250,7 @@ impl<T: Clone> UnderlyingClient<T> {
         on_middleware: Option<OnMiddleware<T>>,
     ) -> Self {
         Self {
-            state,
+            state: Arc::new(state),
             rx_map: dashmap::DashMap::new(),
             identity,
             cluster_id,
@@ -239,7 +285,7 @@ impl<T: Clone> UnderlyingClient<T> {
     ) -> Result<(), crate::Error> {
         // First, check for and run any middleware
         if let Some(on_middleware) = &self.on_middleware {
-            if !on_middleware(self.state.clone(), &meta, &payload).await? {
+            if !on_middleware(&self.state, &meta, &payload).await? {
                 return Ok(());
             }
         }
@@ -248,7 +294,7 @@ impl<T: Clone> UnderlyingClient<T> {
         match meta.op {
             AnimusOp::Probe => {
                 let payload = self
-                    .create_payload::<String>(
+                    .create_payload_struct::<String>(
                         &meta.command_id,
                         meta.cluster_id_from,
                         meta.from,
@@ -257,14 +303,14 @@ impl<T: Clone> UnderlyingClient<T> {
                     )
                     .map_err(|e| format!("Failed to create payload for probe response: {}", e))?;
 
-                (self.publish)(self.state.clone(), payload)
+                (self.publish)(&self.state, payload)
                     .await
                     .map_err(|e| format!("Failed to publish probe response: {}", e))?;
             }
             AnimusOp::Request => {
                 if let Some(on_request) = &self.on_request {
                     match on_request(
-                        self.state.clone(),
+                        &self.state,
                         ClientRequest {
                             meta: meta.clone(),
                             raw_payload: payload,
@@ -281,7 +327,7 @@ impl<T: Clone> UnderlyingClient<T> {
                                 resp,
                             );
 
-                            (self.publish)(self.state.clone(), payload)
+                            (self.publish)(&self.state, payload)
                                 .await
                                 .map_err(|e| format!("Failed to publish response: {}", e))?;
                         }
@@ -295,7 +341,7 @@ impl<T: Clone> UnderlyingClient<T> {
             AnimusOp::Response | AnimusOp::Error => {
                 if let Some(on_response) = &self.on_response {
                     on_response(
-                        self.state.clone(),
+                        &self.state,
                         ClientResponse {
                             meta: meta.clone(),
                             raw_payload: payload.clone(),
@@ -348,48 +394,6 @@ impl<T: Clone> UnderlyingClient<T> {
         Ok(())
     }
 
-    /// Creates a payload based on the clients and returns a byte vector
-    pub fn create_payload<U: Serialize>(
-        &self,
-        cmd_id: &str,
-        cluster_id_to: u16,
-        to: AnimusTarget,
-        op: AnimusOp,
-        msg: &U,
-    ) -> Result<Vec<u8>, Error> {
-        Ok(create_payload(
-            cmd_id,
-            self.identity,
-            self.cluster_id,
-            cluster_id_to,
-            to,
-            op,
-            serialize_data(msg)?,
-        ))
-    }
-
-    /// Creates a payload based on the clients and returns a byte vector
-    ///
-    /// Unlike create_payload, this accepts a raw Vec<u8> instead of a serializable object
-    pub fn create_payload_raw(
-        &self,
-        cmd_id: &str,
-        cluster_id_to: u16,
-        to: AnimusTarget,
-        op: AnimusOp,
-        msg: Vec<u8>,
-    ) -> Vec<u8> {
-        create_payload(
-            cmd_id,
-            self.identity,
-            self.cluster_id,
-            cluster_id_to,
-            to,
-            op,
-            msg,
-        )
-    }
-
     /// CreateNotifier adds a notifier to the map and returns a `Reciever` for the notifier
     ///
     /// This channel will receive the response for the given command id
@@ -432,7 +436,6 @@ impl<T: Clone> UnderlyingClient<T> {
                     return Err(ClientError::Timeout.into());
                 }
                 Ok(resp) => {
-                    log::info!("Got response");
                     let Some(resp) = resp else {
                         self.close_notifier(&request_opts.command_id);
                         return Err(ClientError::NotifierClosedBeforeResponse.into());
@@ -457,52 +460,28 @@ impl<T: Clone> UnderlyingClient<T> {
         }
     }
 
-    /// Request creates a new request and waits for a response until either timeout or response
-    pub async fn request<U: SerializableAnimusMessage>(
+    /// Creates a payload based on the clients and returns a byte vector
+    fn create_payload_struct<U: Serialize>(
         &self,
-        mut opts: RequestOptions,
-        timeout: Duration,
-        msg: U,
-    ) -> Result<Vec<ClientResponse>, crate::Error> {
-        opts.parse()?;
-
-        let payload = match self.create_payload::<U>(
-            &opts.command_id,
-            opts.cluster_id,
-            opts.to,
-            opts.op,
-            &msg,
-        ) {
-            Ok(payload) => payload,
-            Err(e) => return Err(e),
-        };
-
-        let rx = self.create_notifier(&opts.command_id, opts.expected_response_count)?;
-
-        (self.publish)(self.state.clone(), payload).await?;
-
-        self.gather_responses(&opts, timeout, rx).await
+        cmd_id: &str,
+        cluster_id_to: u16,
+        to: AnimusTarget,
+        op: AnimusOp,
+        msg: &U,
+    ) -> Result<Vec<u8>, Error> {
+        Ok(self.create_payload_raw(cmd_id, cluster_id_to, to, op, serialize_data(msg)?))
     }
 
-    /// request_one is a helper function that sends a request and waits for a single response
-    /// parsing it afterwards
-    pub async fn request_one<
-        U: SerializableAnimusMessage,
-        R: SerializableAnimusResponse + for<'a> Deserialize<'a>,
-    >(
+    /// request_struct creates a new request and waits for a response until either timeout or response
+    pub async fn request_struct<U: SerializableAnimusMessage>(
         &self,
         opts: RequestOptions,
         timeout: Duration,
         msg: U,
-    ) -> Result<ParsedClientResponse<R>, crate::Error> {
-        let responses = self.request(opts, timeout, msg).await?;
+    ) -> Result<Vec<ClientResponse>, crate::Error> {
+        let msg = serialize_data(&msg)?;
 
-        if responses.len() != 1 {
-            return Err(ClientError::NoResponse.into());
-        }
-
-        let first_response = responses.into_iter().next().unwrap();
-        first_response.parse()
+        self.request(opts, timeout, msg).await
     }
 
     /// Helper method to send an error response
@@ -513,7 +492,7 @@ impl<T: Clone> UnderlyingClient<T> {
         cluster_id_to: u16,
         to: AnimusTarget,
     ) -> Result<(), crate::Error> {
-        let Ok(payload) = self.create_payload::<AnimusErrorResponse>(
+        let Ok(payload) = self.create_payload_struct::<AnimusErrorResponse>(
             command_id,
             cluster_id_to,
             to,
@@ -523,6 +502,46 @@ impl<T: Clone> UnderlyingClient<T> {
             return Err("Failed to create payload for error message".into());
         };
 
-        (self.publish)(self.state.clone(), payload).await
+        (self.publish)(&self.state, payload).await
+    }
+}
+
+#[async_trait]
+impl<T: Send + Sync> AnimusMagicRequestClient for UnderlyingClient<T> {
+    fn create_payload_raw(
+        &self,
+        cmd_id: &str,
+        cluster_id_to: u16,
+        to: AnimusTarget,
+        op: AnimusOp,
+        msg: Vec<u8>,
+    ) -> Vec<u8> {
+        create_payload(
+            cmd_id,
+            self.identity,
+            self.cluster_id,
+            cluster_id_to,
+            to,
+            op,
+            msg,
+        )
+    }
+
+    async fn request(
+        &self,
+        opts: RequestOptions,
+        timeout: Duration,
+        msg: Vec<u8>,
+    ) -> Result<Vec<ClientResponse>, crate::Error> {
+        let opts = opts.parse()?;
+
+        let payload =
+            self.create_payload_raw(&opts.command_id, opts.cluster_id, opts.to, opts.op, msg);
+
+        let rx = self.create_notifier(&opts.command_id, opts.expected_response_count)?;
+
+        (self.publish)(&self.state, payload).await?;
+
+        self.gather_responses(&opts, timeout, rx).await
     }
 }

@@ -1,11 +1,10 @@
-use crate::silverpelt;
+use modules::silverpelt::canonical_module::CanonicalModule;
 /// Bot animus contains the request and response for a bot
 ///
 /// To edit/add responses, add them both to bot.rs and to go.std/animusmagic/types.go
-use crate::silverpelt::{
-    canonical_module::CanonicalModule, permissions::PermissionResult,
-    silverpelt_cache::SILVERPELT_CACHE, value::Value,
-};
+use modules::silverpelt::silverpelt_cache::SILVERPELT_CACHE;
+use splashcore_rs::types::silverpelt::PermissionResult;
+
 use splashcore_rs::animusmagic::client::{
     AnimusMessage, AnimusResponse, SerializableAnimusMessage, SerializableAnimusResponse,
 };
@@ -14,6 +13,7 @@ use splashcore_rs::animusmagic::protocol::{AnimusErrorResponse, AnimusTarget};
 use module_settings::{self, canonical_types::CanonicalSettingsError, types::OperationType};
 use serde::{Deserialize, Serialize};
 use serenity::all::{GuildId, Role, RoleId, UserId};
+use splashcore_rs::value::Value;
 use std::sync::Arc;
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -23,7 +23,7 @@ pub enum CanonicalSettingsResult {
         fields: Vec<indexmap::IndexMap<String, serde_json::Value>>,
     },
     PermissionError {
-        res: crate::silverpelt::permissions::PermissionResult,
+        res: splashcore_rs::types::silverpelt::PermissionResult,
     },
     Err {
         error: CanonicalSettingsError,
@@ -105,11 +105,13 @@ pub struct AmCheckCommandOptions {
 
     /// Custom permission checks to use
     #[serde(default)]
-    pub custom_command_configuration: Option<Box<silverpelt::GuildCommandConfiguration>>,
+    pub custom_command_configuration:
+        Option<Box<splashcore_rs::types::silverpelt::GuildCommandConfiguration>>,
 
     /// Custom permission checks to use
     #[serde(default)]
-    pub custom_module_configuration: Option<Box<silverpelt::GuildModuleConfiguration>>,
+    pub custom_module_configuration:
+        Option<Box<splashcore_rs::types::silverpelt::GuildModuleConfiguration>>,
 }
 
 #[derive(Serialize, Deserialize, Clone)]
@@ -141,7 +143,7 @@ pub enum BotAnimusMessage {
     /// Executes an operation on a setting
     SettingsOperation {
         fields: indexmap::IndexMap<String, serde_json::Value>,
-        op: crate::silverpelt::settings::canonical_types::CanonicalOperationType,
+        op: module_settings::canonical_types::CanonicalOperationType,
         module: String,
         setting: String,
         guild_id: GuildId,
@@ -194,21 +196,18 @@ impl BotAnimusMessage {
             Self::BaseGuildUserInfo { guild_id, user_id } => {
                 let bot_user_id = cache_http.cache.current_user().id;
                 let (name, icon, owner, roles, user_roles, bot_roles) = {
-                    let (name, icon, owner_id, roles) = match silverpelt::proxysupport::guild(
-                        cache_http, reqwest, guild_id,
-                    )
-                    .await
-                    {
-                        Ok(guild) => (
-                            guild.name.to_string(),
-                            guild.icon_url(),
-                            guild.owner_id,
-                            guild.roles.clone(),
-                        ),
-                        Err(e) => return Err(format!("Failed to get guild: {:#?}", e).into()),
-                    };
+                    let (name, icon, owner_id, roles) =
+                        match proxy_support::guild(cache_http, reqwest, guild_id).await {
+                            Ok(guild) => (
+                                guild.name.to_string(),
+                                guild.icon_url(),
+                                guild.owner_id,
+                                guild.roles.clone(),
+                            ),
+                            Err(e) => return Err(format!("Failed to get guild: {:#?}", e).into()),
+                        };
 
-                    let member = match silverpelt::proxysupport::member_in_guild(
+                    let member = match proxy_support::member_in_guild(
                         cache_http, reqwest, guild_id, user_id,
                     )
                     .await
@@ -259,7 +258,7 @@ impl BotAnimusMessage {
 
                 let flags = AmCheckCommandOptionsFlags::from_bits_truncate(opts.flags);
 
-                let perm_res = silverpelt::cmd::check_command(
+                let perm_res = modules::silverpelt::cmd::check_command(
                     base_command,
                     &command,
                     guild_id,
@@ -267,7 +266,7 @@ impl BotAnimusMessage {
                     pool,
                     cache_http,
                     &None,
-                    silverpelt::cmd::CheckCommandOptions {
+                    modules::silverpelt::cmd::CheckCommandOptions {
                         ignore_cache: flags.contains(AmCheckCommandOptionsFlags::IGNORE_CACHE),
                         cache_result: flags.contains(AmCheckCommandOptionsFlags::CACHE_RESULT),
                         ignore_module_disabled: flags
@@ -299,7 +298,7 @@ impl BotAnimusMessage {
                 options,
             } => {
                 let Some(toggle) =
-                    dynamic::PERMODULE_FUNCTIONS.get(&(module.clone(), toggle.clone()))
+                    crate::PERMODULE_FUNCTIONS.get(&(module.clone(), toggle.clone()))
                 else {
                     return Err("Toggle not found".into());
                 };
@@ -374,7 +373,7 @@ impl BotAnimusMessage {
                     .next()
                     .unwrap();
 
-                let perm_res = crate::silverpelt::cmd::check_command(
+                let perm_res = modules::silverpelt::cmd::check_command(
                     base_command,
                     operation_specific.corresponding_command,
                     guild_id,
@@ -382,7 +381,7 @@ impl BotAnimusMessage {
                     pool,
                     cache_http,
                     &None,
-                    crate::silverpelt::cmd::CheckCommandOptions::default(),
+                    modules::silverpelt::cmd::CheckCommandOptions::default(),
                 )
                 .await;
 
@@ -394,12 +393,13 @@ impl BotAnimusMessage {
 
                 match op {
                     OperationType::View => {
-                        match settings::cfg::settings_view(
+                        match module_settings::cfg::settings_view(
                             opt,
                             &state.cache_http,
                             pool,
                             guild_id,
                             user_id,
+                            &crate::PermoduleFunctionExecutor {},
                         )
                         .await
                         {
@@ -414,13 +414,14 @@ impl BotAnimusMessage {
                         }
                     }
                     OperationType::Create => {
-                        match settings::cfg::settings_create(
+                        match module_settings::cfg::settings_create(
                             opt,
                             &state.cache_http,
                             pool,
                             guild_id,
                             user_id,
                             p_fields,
+                            &crate::PermoduleFunctionExecutor {},
                         )
                         .await
                         {
@@ -435,13 +436,14 @@ impl BotAnimusMessage {
                         }
                     }
                     OperationType::Update => {
-                        match settings::cfg::settings_update(
+                        match module_settings::cfg::settings_update(
                             opt,
                             &state.cache_http,
                             pool,
                             guild_id,
                             user_id,
                             p_fields,
+                            &crate::PermoduleFunctionExecutor {},
                         )
                         .await
                         {
@@ -467,13 +469,14 @@ impl BotAnimusMessage {
                             });
                         };
 
-                        match settings::cfg::settings_delete(
+                        match module_settings::cfg::settings_delete(
                             opt,
                             &state.cache_http,
                             pool,
                             guild_id,
                             user_id,
                             pkey.clone(),
+                            &crate::PermoduleFunctionExecutor {},
                         )
                         .await
                         {
@@ -491,27 +494,4 @@ impl BotAnimusMessage {
             }
         }
     }
-}
-
-pub mod dynamic {
-    use dashmap::DashMap;
-    use futures::future::BoxFuture;
-    use once_cell::sync::Lazy;
-    use splashcore_rs::value::Value;
-
-    pub type ToggleFunc = Box<
-        dyn Send
-            + Sync
-            + for<'a> Fn(
-                &'a botox::cache::CacheHttpImpl,
-                &'a indexmap::IndexMap<String, Value>, // Options sent
-            ) -> BoxFuture<'a, Result<(), crate::Error>>,
-    >;
-
-    // In order to allow modules to implement their own internal caches/logic without polluting the animus magic protocol,
-    // we implement PERMODULE_FUNCTIONS which any module can register/add on to
-    //
-    // Format of a permodule toggle is (module_name, toggle)
-    pub static PERMODULE_FUNCTIONS: Lazy<DashMap<(String, String), ToggleFunc>> =
-        Lazy::new(DashMap::new);
 }

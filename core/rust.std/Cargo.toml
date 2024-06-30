@@ -19,6 +19,7 @@ sqlx = { version = "0.7", features = [ "runtime-tokio-rustls", "postgres", "chro
 rusty-s3 = "0.5"
 reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls", "rustls-tls-native-roots"] }
 log = "0.4"
+async-trait = "0.1.80"
 
 [dependencies.tokio]
 version = "1"

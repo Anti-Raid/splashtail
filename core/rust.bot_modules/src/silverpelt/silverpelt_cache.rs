@@ -142,4 +142,11 @@ impl SilverpeltCache {
     }
 }
 
+// Clippy asks for this so why not
+impl Default for SilverpeltCache {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 pub static SILVERPELT_CACHE: Lazy<SilverpeltCache> = Lazy::new(SilverpeltCache::new);

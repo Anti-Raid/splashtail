@@ -1,20 +1,20 @@
 pub mod permissions;
 pub mod permodule;
 
-use splashcore_rs::objectstore::ObjectStore;
+use splashcore_rs::{animusmagic::client::AnimusMagicRequestClient, objectstore::ObjectStore};
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
 pub type Error = Box<dyn std::error::Error + Send + Sync>; // This is constant and should be copy pasted
 pub type Context<'a> = poise::Context<'a, Data, Error>;
 
-#[derive(Clone)]
+/*#[derive(Clone)]
 pub struct AnimusMagicBaseData {
     pub pool: sqlx::PgPool,
     pub redis_pool: fred::prelude::RedisPool,
     pub reqwest: reqwest::Client,
     pub cache_http: botox::cache::CacheHttpImpl,
-}
+}*/
 
 /// This struct stores base/standard command data, which is stored and accessible in all command invocations
 pub struct Data {
@@ -27,7 +27,7 @@ pub struct Data {
     pub props: Box<dyn Props>,
 
     /// Any extra data
-    extra_data: Arc<dyn std::any::Any + Send + Sync>,
+    pub extra_data: Arc<dyn std::any::Any + Send + Sync>,
 }
 
 impl Data {
@@ -81,9 +81,7 @@ where
     Self: Send + Sync,
 {
     /// Returns the underlying client for animus magic
-    fn underlying_am_client(
-        &self,
-    ) -> Arc<splashcore_rs::animusmagic::client::UnderlyingClient<AnimusMagicBaseData>>;
+    fn underlying_am_client(&self) -> Box<dyn AnimusMagicRequestClient>;
 
     /// Returns the per module executor of the context
     fn permodule_executor(&self) -> Box<dyn permodule::PermoduleFunctionExecutor>;

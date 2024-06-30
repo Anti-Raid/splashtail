@@ -564,7 +564,7 @@ pub async fn settings_view(
     pool: &sqlx::PgPool,
     guild_id: serenity::all::GuildId,
     author: serenity::all::UserId,
-    permodule_executor: Box<dyn base_data::permodule::PermoduleFunctionExecutor>,
+    permodule_executor: &dyn base_data::permodule::PermoduleFunctionExecutor,
 ) -> Result<Vec<State>, SettingsError> {
     let Some(operation_specific) = setting.operations.get(&OperationType::View) else {
         return Err(SettingsError::OperationNotSupported {
@@ -632,7 +632,7 @@ pub async fn settings_view(
                 pool,
                 author,
                 guild_id,
-                &*permodule_executor,
+                permodule_executor,
             )
             .await?;
         }
@@ -726,7 +726,7 @@ pub async fn settings_create(
     guild_id: serenity::all::GuildId,
     author: serenity::all::UserId,
     fields: indexmap::IndexMap<String, Value>,
-    permodule_executor: Box<dyn base_data::permodule::PermoduleFunctionExecutor>,
+    permodule_executor: &dyn base_data::permodule::PermoduleFunctionExecutor,
 ) -> Result<State, SettingsError> {
     let Some(operation_specific) = setting.operations.get(&OperationType::Create) else {
         return Err(SettingsError::OperationNotSupported {
@@ -781,7 +781,7 @@ pub async fn settings_create(
             pool,
             author,
             guild_id,
-            &*permodule_executor,
+            permodule_executor,
         )
         .await?;
 
@@ -980,7 +980,7 @@ pub async fn settings_update(
     guild_id: serenity::all::GuildId,
     author: serenity::all::UserId,
     fields: indexmap::IndexMap<String, Value>,
-    permodule_executor: Box<dyn base_data::permodule::PermoduleFunctionExecutor>,
+    permodule_executor: &dyn base_data::permodule::PermoduleFunctionExecutor,
 ) -> Result<State, SettingsError> {
     let Some(operation_specific) = setting.operations.get(&OperationType::Update) else {
         return Err(SettingsError::OperationNotSupported {
@@ -1091,7 +1091,7 @@ pub async fn settings_update(
             pool,
             author,
             guild_id,
-            &*permodule_executor,
+            permodule_executor,
         )
         .await?;
 
@@ -1362,7 +1362,7 @@ pub async fn settings_delete(
     guild_id: serenity::all::GuildId,
     author: serenity::all::UserId,
     pkey: Value,
-    permodule_executor: Box<dyn base_data::permodule::PermoduleFunctionExecutor>,
+    permodule_executor: &dyn base_data::permodule::PermoduleFunctionExecutor,
 ) -> Result<State, SettingsError> {
     let Some(_operation_specific) = setting.operations.get(&OperationType::Delete) else {
         return Err(SettingsError::OperationNotSupported {
@@ -1451,7 +1451,7 @@ pub async fn settings_delete(
             pool,
             author,
             guild_id,
-            &*permodule_executor,
+            permodule_executor,
         )
         .await?;
     }
