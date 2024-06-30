@@ -1,5 +1,5 @@
 [submodule "website"]
-	path = website
+	path = services/website
 	url = https://github.com/Anti-Raid/website
         branch = production
 [submodule "nirn-proxy"]
