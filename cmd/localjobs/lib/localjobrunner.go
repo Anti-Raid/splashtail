@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/anti-raid/splashtail/jobs/tasks"
-	"github.com/anti-raid/splashtail/jobs/tasks/taskdef"
-	"github.com/anti-raid/splashtail/jobs/tasks/taskstate"
+	jobs "github.com/anti-raid/splashtail/core/go.jobs"
+	"github.com/anti-raid/splashtail/core/go.jobs/taskdef"
+	"github.com/anti-raid/splashtail/core/go.jobs/taskstate"
 
 	"github.com/infinitybotlist/eureka/crypto"
 	"go.uber.org/zap"
@@ -32,7 +32,7 @@ func ExecuteTaskLocal(prefix, taskId string, l *zap.Logger, task taskdef.TaskDef
 		return fmt.Errorf("failed to validate task: %w", err)
 	}
 
-	_, ok := tasks.TaskDefinitionRegistry[task.Name()]
+	_, ok := jobs.TaskDefinitionRegistry[task.Name()]
 
 	if !ok {
 		return fmt.Errorf("task %s does not exist on registry", task.Name())

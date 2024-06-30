@@ -1,5 +1,5 @@
 packages:
-  - path: "github.com/anti-raid/splashtail/splashcore/types"
+  - path: "github.com/anti-raid/splashtail/core/go.std/types"
     output_path: "/silverpelt/cdn/antiraid/dev/bindings/splashtail/types.ts"
     frontmatter: |
       import { PlatformUser } from "./eureka-dovewing"
@@ -16,7 +16,7 @@ packages:
   - path: "github.com/infinitybotlist/eureka/dovewing/dovetypes"
     output_path: "/silverpelt/cdn/antiraid/dev/bindings/splashtail/eureka-dovewing.ts"
 
-  - path: "github.com/anti-raid/splashtail/splashcore/silverpelt"
+  - path: "github.com/anti-raid/splashtail/core/go.std/silverpelt"
     output_path: "/silverpelt/cdn/antiraid/dev/bindings/splashtail/silverpelt.ts"
     type_mappings:
       time.Time: "string /* RFC3339 */"
@@ -27,7 +27,7 @@ packages:
       orderedmap.OrderedMap: "Record"
       bigint.BigInt: "string /* bigint */"
 
-  - path: "github.com/anti-raid/splashtail/splashcore/types/ext"
+  - path: "github.com/anti-raid/splashtail/core/go.std/types/ext"
     output_path: "/silverpelt/cdn/antiraid/dev/bindings/splashtail/ext.ts"
     type_mappings:
       time.Time: "string /* RFC3339 */"

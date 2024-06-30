@@ -1,8 +1,8 @@
 pub mod taskpoll;
 
+use indexmap::IndexMap;
 use splashcore_rs::objectstore::ObjectStore;
 use splashcore_rs::utils::get_icon_of_state;
-use indexmap::IndexMap;
 use sqlx::{types::uuid::Uuid, PgPool};
 use std::str::FromStr;
 use std::sync::Arc;
@@ -106,7 +106,9 @@ impl Task {
                 .output
                 .map(serde_json::from_value::<TaskOutput>)
                 .transpose()?,
-            task_fields: serde_json::from_value::<IndexMap<String, serde_json::Value>>(rec.task_fields)?,
+            task_fields: serde_json::from_value::<IndexMap<String, serde_json::Value>>(
+                rec.task_fields,
+            )?,
             statuses,
             task_for: rec.task_for.into(),
             expiry: {
@@ -158,7 +160,9 @@ impl Task {
                     .output
                     .map(serde_json::from_value::<TaskOutput>)
                     .transpose()?,
-                task_fields: serde_json::from_value::<IndexMap<String, serde_json::Value>>(rec.task_fields)?,
+                task_fields: serde_json::from_value::<IndexMap<String, serde_json::Value>>(
+                    rec.task_fields,
+                )?,
                 statuses,
                 task_for: rec.task_for.into(),
                 expiry: {
@@ -214,7 +218,9 @@ impl Task {
                     .output
                     .map(serde_json::from_value::<TaskOutput>)
                     .transpose()?,
-                task_fields: serde_json::from_value::<IndexMap<String, serde_json::Value>>(rec.task_fields)?,
+                task_fields: serde_json::from_value::<IndexMap<String, serde_json::Value>>(
+                    rec.task_fields,
+                )?,
                 statuses,
                 task_for: rec.task_for.into(),
                 expiry: {
@@ -240,7 +246,11 @@ impl Task {
     }
 
     pub fn format_task_for_simplex(&self) -> String {
-        format!("{}/{}", self.task_for.target_type.to_lowercase(), self.task_for.id)
+        format!(
+            "{}/{}",
+            self.task_for.target_type.to_lowercase(),
+            self.task_for.id
+        )
     }
 
     pub fn get_path(&self) -> Option<String> {
@@ -294,10 +304,7 @@ impl Task {
         };
 
         object_store
-            .delete(
-                client,
-                &format!("{}/{}", path, outp.filename),
-            )
+            .delete(client, &format!("{}/{}", path, outp.filename))
             .await?;
 
         Ok(())

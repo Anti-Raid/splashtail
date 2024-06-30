@@ -20,7 +20,7 @@ import (
 	"github.com/anti-raid/splashtail/cmd/localjobs/easyconfig"
 	"github.com/anti-raid/splashtail/cmd/localjobs/lib"
 	"github.com/anti-raid/splashtail/cmd/localjobs/ljstate"
-	"github.com/anti-raid/splashtail/jobs/tasks"
+	jobs "github.com/anti-raid/splashtail/core/go.jobs"
 	"github.com/bwmarrin/discordgo"
 	"github.com/infinitybotlist/eureka/cmd"
 	"github.com/infinitybotlist/eureka/crypto"
@@ -132,7 +132,7 @@ func main() {
 		}
 	}
 
-	for _, task := range tasks.TaskDefinitionRegistry {
+	for _, task := range jobs.TaskDefinitionRegistry {
 		// Stat localjobs/presets/preset.Name()
 		s, err := os.Stat(prefixDir + "/presets/" + task.Name() + ".yaml")
 
@@ -341,7 +341,7 @@ func main() {
 					fmt.Println("Task:", taskName)
 
 					// Find in task registry
-					taskDef, ok := tasks.TaskDefinitionRegistry[taskName]
+					taskDef, ok := jobs.TaskDefinitionRegistry[taskName]
 
 					if !ok {
 						fmt.Println("ERROR: Task not found!")

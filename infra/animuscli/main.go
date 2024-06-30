@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/anti-raid/splashtail/splashcore/animusmagic"
+	"github.com/anti-raid/splashtail/core/go.std/animusmagic"
 	"github.com/davecgh/go-spew/spew"
 	"github.com/infinitybotlist/eureka/shellcli"
 	"github.com/redis/rueidis"

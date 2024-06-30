@@ -2,7 +2,7 @@ module github.com/anti-raid/splashtail/cmd/localjobs
 
 go 1.22
 
-toolchain go1.22.2
+toolchain go1.22.3
 
 require (
 	github.com/anti-raid/splashtail v0.0.0-20240514124006-22f72776e3a0

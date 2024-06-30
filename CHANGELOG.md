@@ -1,3 +1,9 @@
+## Sunday, June 30th 2024
+
+- Fully restructuring the bot. Here is the new structure:
+
+``core/{lang}.{module}`` contains all core data
+
 ## Saturday, June 29th 2024
 
 ## Webserver

@@ -1,7 +1,7 @@
 use crate::silverpelt;
 /// Bot animus contains the request and response for a bot
 ///
-/// To edit/add responses, add them both to bot.rs and to splashcore/animusmagic/types.go
+/// To edit/add responses, add them both to bot.rs and to go.std/animusmagic/types.go
 use crate::silverpelt::{
     canonical_module::CanonicalModule, permissions::PermissionResult,
     silverpelt_cache::SILVERPELT_CACHE, value::Value,
