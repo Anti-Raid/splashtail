@@ -167,7 +167,7 @@ pub async fn backups_create(
     let data = ctx.data();
     let stats = data.props.statistics();
 
-    let am = data.props.underlying_am_client();
+    let am = data.props.underlying_am_client()?;
     let Some(resp) = am
         .request_one(
             RequestOptions {
@@ -919,7 +919,7 @@ pub async fn backups_restore(
     let stats = data.props.statistics();
 
     // Restore backup
-    let am = data.props.underlying_am_client();
+    let am = data.props.underlying_am_client()?;
     let Some(res) = am
         .request_one(
             RequestOptions {

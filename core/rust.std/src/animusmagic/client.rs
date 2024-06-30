@@ -545,3 +545,27 @@ impl<T: Send + Sync> AnimusMagicRequestClient for UnderlyingClient<T> {
         self.gather_responses(&opts, timeout, rx).await
     }
 }
+
+#[async_trait]
+impl<T: AnimusMagicRequestClient> AnimusMagicRequestClient for Arc<T> {
+    fn create_payload_raw(
+        &self,
+        cmd_id: &str,
+        cluster_id_to: u16,
+        to: AnimusTarget,
+        op: AnimusOp,
+        msg: Vec<u8>,
+    ) -> Vec<u8> {
+        self.as_ref()
+            .create_payload_raw(cmd_id, cluster_id_to, to, op, msg)
+    }
+
+    async fn request(
+        &self,
+        opts: RequestOptions,
+        timeout: Duration,
+        msg: Vec<u8>,
+    ) -> Result<Vec<ClientResponse>, crate::Error> {
+        self.as_ref().request(opts, timeout, msg).await
+    }
+}

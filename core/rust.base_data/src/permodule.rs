@@ -1,3 +1,4 @@
+use async_trait::async_trait;
 use dashmap::DashMap;
 use futures::future::BoxFuture;
 use splashcore_rs::value::Value;
@@ -17,15 +18,13 @@ pub type ToggleFunc = Box<
 /// Format of a permodule toggle is (module_name, toggle)
 pub type PermoduleFunctionMap = DashMap<(String, String), ToggleFunc>;
 
-pub trait PermoduleFunctionExecutor
-where
-    Self: Send + Sync,
-{
-    fn execute_permodule_function(
+#[async_trait]
+pub trait PermoduleFunctionExecutor: Send + Sync {
+    async fn execute_permodule_function(
         &self,
         cache_http: &botox::cache::CacheHttpImpl,
         module: &str,
         function: &str,
         arguments: &indexmap::IndexMap<String, Value>,
-    ) -> BoxFuture<'_, Result<(), crate::Error>>;
+    ) -> Result<(), crate::Error>;
 }

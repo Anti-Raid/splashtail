@@ -237,7 +237,7 @@ pub async fn prune_user(
     let data = ctx.data();
     let stats = data.props.statistics();
 
-    let am = data.props.underlying_am_client();
+    let am = data.props.underlying_am_client()?;
     let Some(resp) = am
         .request_one(
             RequestOptions {

@@ -58,7 +58,7 @@ pub async fn stats(ctx: Context<'_>) -> Result<(), Error> {
             )
             .field(
                 "Clusters Available",
-                format!("{}/{}", stats.available_clusters.len(), stats.cluster_count),
+                format!("{}/{}", stats.available_clusters, stats.cluster_count),
                 true,
             )
             .field("Servers", stats.total_guilds.to_string(), true)

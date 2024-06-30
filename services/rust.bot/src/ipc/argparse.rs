@@ -48,7 +48,7 @@ Expected arguments: [program name] <shards> <shard_count> <cluster_id> <cluster_
         let current_env: String = args[7].clone();
         let animus_magic_channel: String = args[8].clone();
 
-        Ok(Self {
+        let args = Self {
             shards,
             shard_count,
             shard_count_nonzero: std::num::NonZeroU16::new(shard_count)
@@ -59,6 +59,17 @@ Expected arguments: [program name] <shards> <shard_count> <cluster_id> <cluster_
             mewld_redis_channel,
             current_env,
             animus_magic_channel,
-        })
+        };
+
+        if args.current_env != config::CURRENT_ENV.to_string() {
+            return Err(format!(
+                "Invalid environment, expected: {}, got: {}",
+                *config::CURRENT_ENV,
+                args.current_env
+            )
+            .into());
+        }
+
+        Ok(args)
     }
 }

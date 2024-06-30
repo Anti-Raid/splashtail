@@ -1,7 +1,6 @@
 mod ext_generate;
 mod ipc;
 
-use futures::future::BoxFuture;
 use ipc::{
     animus_magic::client::{AnimusMagicClient, ClientData},
     mewld::MewldIpcClient,
@@ -9,18 +8,16 @@ use ipc::{
 
 use botox::cache::CacheHttpImpl;
 use gwevent::core::get_event_guild_id;
-use silverpelt::{
-    module_config::is_module_enabled, proxysupport::ProxySupportData,
-    silverpelt_cache::SILVERPELT_CACHE, EventHandlerContext,
+use modules::silverpelt::{
+    module_config::is_module_enabled, silverpelt_cache::SILVERPELT_CACHE, EventHandlerContext,
 };
-use splashcore_rs::objectstore::ObjectStore;
 use splashcore_rs::value::Value;
 
 use once_cell::sync::Lazy;
 use std::sync::{Arc, OnceLock};
 use tokio::sync::RwLock;
 
-use base_data::{Context, Data, Error};
+use base_data::{Data, Error};
 use log::{error, info, warn};
 use serenity::all::{FullEvent, GuildId, HttpBuilder, UserId};
 use sqlx::postgres::PgPoolOptions;
@@ -53,10 +50,57 @@ pub static CONNECT_STATE: Lazy<RwLock<ConnectState>> = Lazy::new(|| {
    extra_data: Arc<dyn std::any::Any + Send + Sync>,
 */
 
-/// Extra data, which is stored and accessible in all command invocations
-pub struct ExtraData {
+/// Props
+pub struct Props {
     pub mewld_ipc: Arc<MewldIpcClient>,
     pub animus_magic_ipc: OnceLock<Arc<AnimusMagicClient>>, // a rwlock is needed as the cachehttp is only available after the client is started
+}
+
+impl base_data::Props for Props {
+    fn underlying_am_client(
+        &self,
+    ) -> Result<
+        Box<dyn splashcore_rs::animusmagic::client::AnimusMagicRequestClient>,
+        base_data::Error,
+    > {
+        let am = self.animus_magic_ipc.get();
+
+        match am {
+            Some(am) => Ok(Box::new(am.underlying_client.clone())),
+            None => Err("Animus Magic IPC not initialized".into()),
+        }
+    }
+
+    fn permodule_executor(&self) -> Box<dyn base_data::permodule::PermoduleFunctionExecutor> {
+        Box::new(PermoduleFunctionExecutor {})
+    }
+
+    fn add_permodule_function(
+        &self,
+        module: &str,
+        function: &str,
+        func: base_data::permodule::ToggleFunc,
+    ) {
+        PERMODULE_FUNCTIONS.insert((module.to_string(), function.to_string()), func);
+    }
+
+    fn statistics(&self) -> base_data::Statistics {
+        base_data::Statistics {
+            name: "bot".to_string(),
+            shards: crate::ipc::argparse::MEWLD_ARGS.shards.clone(),
+            shard_count: crate::ipc::argparse::MEWLD_ARGS.shard_count,
+            shard_count_nonzero: std::num::NonZeroU16::new(
+                crate::ipc::argparse::MEWLD_ARGS.shard_count,
+            )
+            .unwrap(),
+            cluster_id: crate::ipc::argparse::MEWLD_ARGS.cluster_id,
+            cluster_name: crate::ipc::argparse::MEWLD_ARGS.cluster_name.clone(),
+            cluster_count: crate::ipc::argparse::MEWLD_ARGS.cluster_count,
+            available_clusters: self.mewld_ipc.cache.cluster_healths.len(),
+            total_guilds: self.mewld_ipc.cache.total_guilds(),
+            total_users: self.mewld_ipc.cache.total_users(),
+        }
+    }
 }
 
 pub struct CanUseBotList {
@@ -81,35 +125,23 @@ pub static PERMODULE_FUNCTIONS: Lazy<
 
 pub struct PermoduleFunctionExecutor {}
 
+#[async_trait::async_trait]
 impl base_data::permodule::PermoduleFunctionExecutor for PermoduleFunctionExecutor {
-    fn execute_permodule_function(
+    async fn execute_permodule_function(
         &self,
         cache_http: &botox::cache::CacheHttpImpl,
         module: &str,
         function: &str,
         arguments: &indexmap::IndexMap<String, Value>,
-    ) -> BoxFuture<'_, Result<(), crate::Error>> {
-        async fn _exec(
-            cache_http: &botox::cache::CacheHttpImpl,
-            module: &str,
-            function: &str,
-            arguments: &indexmap::IndexMap<String, Value>,
-        ) -> Result<(), crate::Error> {
-            let key = (module.to_string(), function.to_string());
-            let func = PERMODULE_FUNCTIONS.get(&key);
+    ) -> Result<(), crate::Error> {
+        let key = (module.to_string(), function.to_string());
+        let func = PERMODULE_FUNCTIONS.get(&key);
 
-            let Some(func) = func else {
-                return Err(
-                    format!("Function {} not found for module {}", function, module).into(),
-                );
-            };
+        let Some(func) = func else {
+            return Err(format!("Function {} not found for module {}", function, module).into());
+        };
 
-            func(cache_http, arguments).await
-        }
-
-        Box::new(move |cache_http, module, function, arguments| {
-            _exec(cache_http, module, function, arguments).boxed()
-        })
+        func(cache_http, arguments).await
     }
 }
 
@@ -137,13 +169,13 @@ pub fn maint_message<'a>(user_data: &crate::Data) -> poise::CreateReply<'a> {
     .color(0xff0000)
     .description(format!(
         "**Server Count:** {}\n**Shard Count:** {}\n**Cluster Count:** {}\n**Cluster ID:** {}\n**Cluster Name:** {}\n**Uptime:** {}",
-        user_data.mewld_ipc.cache.total_guilds(),
+        user_data.props.statistics().total_guilds,
         ipc::argparse::MEWLD_ARGS.shard_count,
         ipc::argparse::MEWLD_ARGS.cluster_count,
         ipc::argparse::MEWLD_ARGS.cluster_id,
         ipc::argparse::MEWLD_ARGS.cluster_name,
         {
-            let duration: std::time::Duration = std::time::Duration::from_secs((chrono::Utc::now().timestamp() - crate::config::CONFIG.bot_start_time) as u64);
+            let duration: std::time::Duration = std::time::Duration::from_secs((chrono::Utc::now().timestamp() - config::CONFIG.start_time) as u64);
             let seconds = duration.as_secs() % 60;
             let minutes = (duration.as_secs() / 60) % 60;
             let hours = (duration.as_secs() / 60) / 60;
@@ -257,7 +289,7 @@ async fn event_listener<'a>(
                     info!("Starting background tasks");
                     // Get all tasks
                     let mut tasks = Vec::new();
-                    for module in modules::modules() {
+                    for module in modules::modules::modules() {
                         for task in module.background_tasks {
                             tasks.push(task);
                         }
@@ -275,7 +307,8 @@ async fn event_listener<'a>(
                     info!("Starting IPC");
 
                     let data = ctx.serenity_context.data::<Data>();
-                    let ipc_ref = data.mewld_ipc.clone();
+                    let props = data.extra_data::<Props>();
+                    let ipc_ref = props.mewld_ipc.clone();
                     let ch = CacheHttpImpl::from_ctx(ctx.serenity_context);
                     let sm = ctx.shard_manager().clone();
                     tokio::task::spawn(async move {
@@ -284,14 +317,14 @@ async fn event_listener<'a>(
                     });
 
                     // And for animus magic
-                    let am = Arc::new(AnimusMagicClient::new(Arc::new(ClientData {
+                    let am = Arc::new(AnimusMagicClient::new(ClientData {
                         pool: data.pool.clone(),
                         redis_pool: data.redis_pool.clone(),
                         reqwest: data.reqwest.clone(),
                         cache_http: CacheHttpImpl::from_ctx(ctx.serenity_context),
-                    })));
+                    }));
 
-                    data.animus_magic_ipc.get_or_init(|| am.clone());
+                    props.animus_magic_ipc.get_or_init(|| am.clone());
 
                     tokio::task::spawn(async move {
                         let am_ref = am.clone();
@@ -306,7 +339,8 @@ async fn event_listener<'a>(
                 == *crate::ipc::argparse::MEWLD_ARGS.shards.last().unwrap()
             {
                 info!("All shards ready, launching next cluster");
-                if let Err(e) = user_data.mewld_ipc.publish_ipc_launch_next().await {
+                let props = user_data.extra_data::<Props>();
+                if let Err(e) = props.mewld_ipc.publish_ipc_launch_next().await {
                     error!("Error publishing IPC launch next: {}", e);
                     return Err(e);
                 }
@@ -322,7 +356,7 @@ async fn event_listener<'a>(
             }
 
             if !CONNECT_STATE.read().await.have_called_firstready {
-                for module in modules::modules() {
+                for module in modules::modules::modules() {
                     for on_ready in module.on_first_ready.iter() {
                         if let Err(e) = on_ready(ctx.serenity_context.clone(), &user_data).await {
                             error!("Error initializing module [on_first_ready]: {}", e);
@@ -519,7 +553,7 @@ async fn main() {
             let mut cmds = Vec::new();
 
             let mut _cmd_names = Vec::new();
-            for module in modules::modules() {
+            for module in modules::modules::modules() {
                 log::info!("Loading module {}", module.id);
 
                 if !module.is_parsed() {
@@ -641,7 +675,7 @@ async fn main() {
 
                 let command = ctx.command();
 
-                let res = silverpelt::cmd::check_command(
+                let res = modules::silverpelt::cmd::check_command(
                     command.name.as_str(),
                     &command.qualified_name,
                     guild_id,
@@ -649,7 +683,7 @@ async fn main() {
                     &data.pool,
                     &CacheHttpImpl::from_ctx(ctx.serenity_context()),
                     &Some(ctx),
-                    silverpelt::cmd::CheckCommandOptions::default(),
+                    modules::silverpelt::cmd::CheckCommandOptions::default(),
                 )
                 .await;
 
@@ -752,6 +786,15 @@ async fn main() {
         .build()
         .expect("Could not initialize reqwest client");
 
+    let props = Arc::new(Props {
+        mewld_ipc: Arc::new(ipc::mewld::MewldIpcClient {
+            redis_pool: pool.clone(),
+            cache: Arc::new(ipc::mewld::MewldIpcCache::default()),
+            pool: pg_pool.clone(),
+        }),
+        animus_magic_ipc: OnceLock::new(),
+    });
+
     let data = Data {
         redis_pool: pool.clone(),
         object_store: Arc::new(
@@ -760,23 +803,17 @@ async fn main() {
                 .build()
                 .expect("Could not initialize object store"),
         ),
-        pool: pg_pool,
+        pool: pg_pool.clone(),
         reqwest,
         shards_ready: Arc::new(dashmap::DashMap::new()),
         proxy_support_data: RwLock::new(None),
-        extra_data: ExtraData {
-            mewld_ipc: Arc::new(ipc::mewld::MewldIpcClient {
-                redis_pool: pool.clone(),
-                cache: Arc::new(ipc::mewld::MewldIpcCache::default()),
-                pool: pg_pool.clone(),
-            }),
-            animus_magic_ipc: OnceLock::new(),
-        },
+        extra_data: props.clone(),
+        props: props.clone(),
     };
 
     info!("Initializing bot state");
 
-    for module in modules::modules() {
+    for module in modules::modules::modules() {
         for init in module.on_startup.iter() {
             if let Err(e) = init(&data).await {
                 error!("Error initializing module: {}", e);

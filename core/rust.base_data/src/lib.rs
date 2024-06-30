@@ -24,7 +24,7 @@ pub struct Data {
     pub object_store: Arc<ObjectStore>,
     pub shards_ready: Arc<dashmap::DashMap<u16, bool>>,
     pub proxy_support_data: RwLock<Option<proxy_support::ProxySupportData>>, // Shard ID, WebsocketConfiguration
-    pub props: Box<dyn Props>,
+    pub props: Arc<dyn Props>,
 
     /// Any extra data
     pub extra_data: Arc<dyn std::any::Any + Send + Sync>,
@@ -65,7 +65,7 @@ pub struct Statistics {
     /// The total number of clusters
     pub cluster_count: u16,
     /// The number of available clusters
-    pub available_clusters: Vec<u16>,
+    pub available_clusters: usize,
     /// Total number of guilds
     ///
     /// Note that this statistic may not always be available, in such cases, 0 will be returned
@@ -81,7 +81,7 @@ where
     Self: Send + Sync,
 {
     /// Returns the underlying client for animus magic
-    fn underlying_am_client(&self) -> Box<dyn AnimusMagicRequestClient>;
+    fn underlying_am_client(&self) -> Result<Box<dyn AnimusMagicRequestClient>, Error>;
 
     /// Returns the per module executor of the context
     fn permodule_executor(&self) -> Box<dyn permodule::PermoduleFunctionExecutor>;
