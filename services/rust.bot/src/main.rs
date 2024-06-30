@@ -471,9 +471,8 @@ async fn main() {
                 record.args()
             )
         })
-        .filter(Some("botv2"), log::LevelFilter::Info)
-        .filter(Some("botox"), log::LevelFilter::Info)
-        .filter(Some("splashcore_rs"), log::LevelFilter::Info);
+        .parse_filters("serenity=error,fred=error,bot=info,modules=info")
+        .filter(None, log::LevelFilter::Info);
 
     // Set custom log levels
     for opt in debug_opts.split(',') {
