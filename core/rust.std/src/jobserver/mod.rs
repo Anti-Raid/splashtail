@@ -285,7 +285,7 @@ impl Task {
             return Err("Task has no output".into());
         };
 
-        Ok(object_store.get_url(&path, Duration::from_secs(600)))
+        Ok(object_store.get_url(path, Duration::from_secs(600)))
     }
 
     /// Deletes the task from the object storage

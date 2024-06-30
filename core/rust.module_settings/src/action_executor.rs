@@ -12,7 +12,7 @@ pub async fn execute_actions(
     pool: &sqlx::PgPool,
     author: serenity::all::UserId,
     guild_id: serenity::all::GuildId,
-    permodule_executor: &Box<dyn base_data::permodule::PermoduleFunctionExecutor>,
+    permodule_executor: &dyn base_data::permodule::PermoduleFunctionExecutor,
 ) -> Result<(), SettingsError> {
     for action in actions {
         match action {

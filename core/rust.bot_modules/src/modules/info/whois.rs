@@ -71,13 +71,9 @@ pub async fn whois(ctx: Context<'_>, user: Option<User>) -> Result<(), Error> {
 
     let embed = {
         if let Some(guild_id) = ctx.guild_id() {
-            let member = crate::silverpelt::proxysupport::member_in_guild(
-                &cache_http,
-                &data.reqwest,
-                guild_id,
-                user.id,
-            )
-            .await?;
+            let member =
+                proxy_support::member_in_guild(&cache_http, &data.reqwest, guild_id, user.id)
+                    .await?;
 
             if let Some(member) = member {
                 whois_member(&member)

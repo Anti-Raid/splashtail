@@ -2,13 +2,15 @@ use std::collections::HashMap;
 
 pub mod sandwich;
 
+type Error = Box<dyn std::error::Error + Send + Sync>;
+
 /// Fetches a guild while handling all the pesky errors serenity normally has
 /// with caching
 pub async fn guild(
     ctx: &botox::cache::CacheHttpImpl,
     reqwest_client: &reqwest::Client,
     guild_id: serenity::model::id::GuildId,
-) -> Result<serenity::all::PartialGuild, crate::Error> {
+) -> Result<serenity::all::PartialGuild, Error> {
     let res = ctx.cache.guild(guild_id);
 
     if let Some(res) = res {
@@ -25,7 +27,7 @@ pub async fn guild(
     }
 
     // Check sandwich, it may be there
-    if let Some(ref proxy_url) = crate::config::CONFIG.meta.sandwich_http_api {
+    if let Some(ref proxy_url) = config::CONFIG.meta.sandwich_http_api {
         let url = format!("{}/api/state?col=guilds&id={}", proxy_url, guild_id);
 
         let resp = reqwest_client.get(&url).send().await?.json::<Resp>().await;
@@ -55,7 +57,7 @@ pub async fn guild(
     let res = ctx.http.get_guild(guild_id).await?;
 
     // Save to sandwich
-    if let Some(ref proxy_url) = crate::config::CONFIG.meta.sandwich_http_api {
+    if let Some(ref proxy_url) = config::CONFIG.meta.sandwich_http_api {
         let url = format!("{}/api/state?col=guilds&id={}", proxy_url, guild_id);
 
         let resp = reqwest_client.post(&url).json(&res).send().await?;
@@ -77,9 +79,9 @@ pub async fn member_in_guild(
     reqwest_client: &reqwest::Client,
     guild_id: serenity::model::id::GuildId,
     user_id: serenity::model::id::UserId,
-) -> Result<Option<serenity::all::Member>, crate::Error> {
+) -> Result<Option<serenity::all::Member>, Error> {
     // No sandwich case
-    if crate::config::CONFIG.meta.sandwich_http_api.is_none() {
+    if config::CONFIG.meta.sandwich_http_api.is_none() {
         let res = match botox::cache::member_on_guild(ctx, guild_id, user_id, true).await {
             Ok(res) => res,
             Err(e) => {
@@ -102,7 +104,7 @@ pub async fn member_in_guild(
     }
 
     // Part 2, try sandwich state
-    let Some(ref proxy_url) = crate::config::CONFIG.meta.sandwich_http_api else {
+    let Some(ref proxy_url) = config::CONFIG.meta.sandwich_http_api else {
         return Err("Sandwich proxy not configured, not proceeding".into());
     };
 

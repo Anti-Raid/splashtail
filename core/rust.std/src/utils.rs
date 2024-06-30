@@ -64,7 +64,7 @@ pub fn parse_pg_interval(i: PgInterval) -> String {
     format!("{:?}", dur)
 }
 
-#[derive(poise::ChoiceParameter, PartialEq)]
+#[derive(poise::ChoiceParameter, PartialEq, Debug)]
 pub enum Unit {
     #[name = "Seconds"]
     Seconds,

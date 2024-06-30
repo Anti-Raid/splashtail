@@ -1,11 +1,11 @@
-pub mod config;
 pub mod permissions;
 pub mod permodule;
 
 use splashcore_rs::objectstore::ObjectStore;
 use std::sync::Arc;
+use tokio::sync::RwLock;
 
-pub type Error = Box<dyn std::error::Error + Send + Sync>;
+pub type Error = Box<dyn std::error::Error + Send + Sync>; // This is constant and should be copy pasted
 pub type Context<'a> = poise::Context<'a, Data, Error>;
 
 #[derive(Clone)]
@@ -21,11 +21,9 @@ pub struct Data {
     pub pool: sqlx::PgPool,
     pub redis_pool: fred::prelude::RedisPool,
     pub reqwest: reqwest::Client,
-    //pub mewld_ipc: Arc<MewldIpcClient>,
-    //pub animus_magic_ipc: OnceLock<Arc<AnimusMagicClient>>, // a rwlock is needed as the cachehttp is only available after the client is started
     pub object_store: Arc<ObjectStore>,
     pub shards_ready: Arc<dashmap::DashMap<u16, bool>>,
-    //pub proxy_support_data: RwLock<Option<ProxySupportData>>, // Shard ID, WebsocketConfiguration
+    pub proxy_support_data: RwLock<Option<proxy_support::ProxySupportData>>, // Shard ID, WebsocketConfiguration
     pub props: Box<dyn Props>,
 
     /// Any extra data
@@ -64,8 +62,18 @@ pub struct Statistics {
     pub cluster_id: u16,
     /// The cluster name
     pub cluster_name: String,
-    /// The number of clusters
+    /// The total number of clusters
     pub cluster_count: u16,
+    /// The number of available clusters
+    pub available_clusters: Vec<u16>,
+    /// Total number of guilds
+    ///
+    /// Note that this statistic may not always be available, in such cases, 0 will be returned
+    pub total_guilds: u64,
+    /// Total number of users
+    ///
+    /// Note that this statistic may not always be available, in such cases, 0 will be returned
+    pub total_users: u64,
 }
 
 pub trait Props

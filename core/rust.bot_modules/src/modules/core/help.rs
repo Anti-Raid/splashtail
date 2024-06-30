@@ -28,7 +28,7 @@ pub async fn filter(
 
     // TODO: Actually handle checking command permissions
     if module == "root"
-        && !crate::config::CONFIG
+        && !config::CONFIG
             .discord_auth
             .root_users
             .contains(&ctx.author().id)
@@ -54,12 +54,12 @@ pub async fn filter(
         .await;
 
         return match res {
-            crate::silverpelt::permissions::PermissionResult::Ok {} => Ok(true),
-            crate::silverpelt::permissions::PermissionResult::OkWithMessage { .. } => Ok(true),
-            crate::silverpelt::permissions::PermissionResult::DiscordError { error } => {
+            splashcore_rs::types::silverpelt::PermissionResult::Ok {} => Ok(true),
+            splashcore_rs::types::silverpelt::PermissionResult::OkWithMessage { .. } => Ok(true),
+            splashcore_rs::types::silverpelt::PermissionResult::DiscordError { error } => {
                 Err(error.into())
             }
-            crate::silverpelt::permissions::PermissionResult::GenericError { error } => {
+            splashcore_rs::types::silverpelt::PermissionResult::GenericError { error } => {
                 Err(error.into())
             }
             _ => Ok(false),

@@ -15,6 +15,7 @@ pub const RUSTC_VERSION: &str = env!("RUSTC_VERSION");
 
 #[poise::command(category = "Stats", prefix_command, slash_command, user_cooldown = 1)]
 pub async fn stats(ctx: Context<'_>) -> Result<(), Error> {
+    let stats = ctx.data().props.statistics();
     let msg = CreateReply::default().embed(
         CreateEmbed::default()
             .title("Bot Stats")
@@ -34,8 +35,7 @@ pub async fn stats(ctx: Context<'_>) -> Result<(), Error> {
                 "Uptime",
                 {
                     let duration: std::time::Duration = std::time::Duration::from_secs(
-                        (chrono::Utc::now().timestamp() - base_data::config::CONFIG.start_time)
-                            as u64,
+                        (chrono::Utc::now().timestamp() - config::CONFIG.start_time) as u64,
                     );
 
                     let seconds = duration.as_secs() % 60;
@@ -50,31 +50,19 @@ pub async fn stats(ctx: Context<'_>) -> Result<(), Error> {
                 "Cluster",
                 format!(
                     "{} ({} of {})",
-                    ctx.data().props.statistics().cluster_name,
-                    ctx.data().props.statistics().cluster_id,
-                    ctx.data().props.statistics().cluster_count - 1,
+                    stats.cluster_name,
+                    stats.cluster_id,
+                    stats.cluster_count - 1,
                 ),
                 true,
             )
             .field(
                 "Clusters Available",
-                format!(
-                    "{}/{}",
-                    ctx.data().mewld_ipc.cache.cluster_healths.len(),
-                    ctx.data().props.statistics().cluster_count
-                ),
+                format!("{}/{}", stats.available_clusters.len(), stats.cluster_count),
                 true,
             )
-            .field(
-                "Servers",
-                ctx.data().mewld_ipc.cache.total_guilds().to_string(),
-                true,
-            )
-            .field(
-                "Users",
-                ctx.data().mewld_ipc.cache.total_users().to_string(),
-                true,
-            )
+            .field("Servers", stats.total_guilds.to_string(), true)
+            .field("Users", stats.total_users.to_string(), true)
             .field("Commit Message", GIT_COMMIT_MSG, true)
             .field("Built On", BUILD_CPU, true)
             .field("Cargo Profile", CARGO_PROFILE, true),

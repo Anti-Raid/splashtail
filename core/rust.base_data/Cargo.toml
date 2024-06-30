@@ -30,6 +30,7 @@ url = "2"
 
 # Anti-Raid specific
 splashcore_rs = { path = "../rust.std" }
+proxy_support = { path = "../rust.proxy_support" }
 
 [dependencies.tokio]
 version = "1"

@@ -78,7 +78,7 @@ impl ObjectStore {
                     let mut parts = vec![];
                     loop {
                         let action =
-                            bucket.upload_part(Some(credentials), key, 1, &multipart.upload_id());
+                            bucket.upload_part(Some(credentials), key, 1, multipart.upload_id());
                         let url = action.sign(MULTIPART_SIGN_DURATION);
 
                         // Split into 5 mb parts
@@ -121,17 +121,14 @@ impl ObjectStore {
                                 break;
                             }
 
-                            let etag_header = match response
-                                .headers()
-                                .get("ETag")
-                                .ok_or_else(|| "Missing ETag header")
-                            {
-                                Ok(etag) => etag,
-                                Err(e) => {
-                                    error = Some(e.into());
-                                    break;
-                                }
-                            };
+                            let etag_header =
+                                match response.headers().get("ETag").ok_or("Missing ETag header") {
+                                    Ok(etag) => etag,
+                                    Err(e) => {
+                                        error = Some(e.into());
+                                        break;
+                                    }
+                                };
 
                             let etag_str = match etag_header.to_str() {
                                 Ok(etag_str) => etag_str,
@@ -156,7 +153,7 @@ impl ObjectStore {
                         let action = bucket.abort_multipart_upload(
                             Some(credentials),
                             key,
-                            &multipart.upload_id(),
+                            multipart.upload_id(),
                         );
 
                         let url = action.sign(std::time::Duration::from_secs(30));
@@ -180,7 +177,7 @@ impl ObjectStore {
                     let action = bucket.complete_multipart_upload(
                         Some(credentials),
                         key,
-                        &multipart.upload_id(),
+                        multipart.upload_id(),
                         parts_str.into_iter(),
                     );
 

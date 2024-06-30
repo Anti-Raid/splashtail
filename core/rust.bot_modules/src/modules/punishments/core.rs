@@ -1,6 +1,6 @@
 use super::sting_source::StingEntry;
 use crate::silverpelt::module_config::is_module_enabled;
-use crate::silverpelt::proxysupport::{guild, member_in_guild};
+use proxy_support::{guild, member_in_guild};
 use serde::{Deserialize, Serialize};
 use serenity::all::{EditMember, GuildId, RoleId, Timestamp, UserId};
 use std::collections::HashSet;

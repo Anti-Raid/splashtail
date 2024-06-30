@@ -1,9 +1,11 @@
-use splashcore_rs::animusmagic::responses::jobserver::{JobserverAnimusMessage, JobserverAnimusResponse};
 use crate::{Context, Error};
 use futures_util::StreamExt;
 use serenity::all::{ChannelId, CreateEmbed, EditMessage};
 use serenity::small_fixed_array::TruncatingInto;
 use serenity::utils::shard_id;
+use splashcore_rs::animusmagic::responses::jobserver::{
+    JobserverAnimusMessage, JobserverAnimusResponse,
+};
 use splashcore_rs::jobserver;
 use splashcore_rs::utils::get_icon_of_state;
 use splashcore_rs::utils::{
@@ -164,9 +166,8 @@ pub async fn backups_create(
     let data = ctx.data();
     let stats = data.props.statistics();
 
-    let am = data.get_animus_magic()?;
+    let am = data.props.underlying_am_client();
     let Some(resp) = am
-        .underlying_client
         .request_one::<_, JobserverAnimusResponse>(
             RequestOptions {
                 cluster_id: shard_id(guild_id, stats.shard_count_nonzero),
@@ -220,12 +221,8 @@ pub async fn backups_create(
         mut base_message: serenity::model::channel::Message,
         task: Arc<jobserver::Task>,
     ) -> Result<(), Error> {
-        let new_task_msg = jobserver::taskpoll::embed(
-            &crate::config::CONFIG.sites.api.get(),
-            &task,
-            vec![],
-            true,
-        )?;
+        let new_task_msg =
+            jobserver::taskpoll::embed(&config::CONFIG.sites.api.get(), &task, vec![], true)?;
 
         base_message
             .edit(
@@ -300,7 +297,7 @@ pub async fn backups_list(ctx: Context<'_>) -> Result<(), Error> {
         if let Some(ref output) = task.output {
             let furl = format!(
                 "{}/tasks/{}/ioauth/download-link",
-                crate::config::CONFIG.sites.api.get(),
+                config::CONFIG.sites.api.get(),
                 task.task_id
             );
 
@@ -917,13 +914,14 @@ pub async fn backups_restore(
         },
     });
 
+    let stats = data.props.statistics();
+
     // Restore backup
-    let am = data.get_animus_magic()?;
+    let am = data.props.underlying_am_client();
     let Some(res) = am
-        .underlying_client
         .request_one(
             RequestOptions {
-                cluster_id: shard_id(guild_id, MEWLD_ARGS.shard_count_nonzero),
+                cluster_id: shard_id(guild_id, stats.shard_count_nonzero),
                 expected_response_count: 1,
                 to: AnimusTarget::Jobserver,
                 op: AnimusOp::Request,
@@ -974,12 +972,8 @@ pub async fn backups_restore(
         mut base_message: serenity::model::channel::Message,
         task: Arc<jobserver::Task>,
     ) -> Result<(), Error> {
-        let new_task_msg = jobserver::taskpoll::embed(
-            &crate::config::CONFIG.sites.api.get(),
-            &task,
-            vec![],
-            true,
-        )?;
+        let new_task_msg =
+            jobserver::taskpoll::embed(&config::CONFIG.sites.api.get(), &task, vec![], true)?;
 
         base_message
             .edit(

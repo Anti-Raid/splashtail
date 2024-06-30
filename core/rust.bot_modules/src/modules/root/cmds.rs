@@ -28,7 +28,7 @@ pub async fn cub(ctx: Context<'_>) -> Result<(), Error> {
     }
 
     cub_list.push_str("**Root Users**\n");
-    for root_user in crate::config::CONFIG.discord_auth.root_users.iter() {
+    for root_user in config::CONFIG.discord_auth.root_users.iter() {
         cub_list.push_str(&format!("- {} [<@{}>]\n", root_user, root_user));
     }
 

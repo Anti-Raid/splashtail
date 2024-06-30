@@ -1,8 +1,7 @@
 use super::core::to_log_format;
-use splashcore_rs::animusmagic::responses::jobserver::{JobserverAnimusMessage, JobserverAnimusResponse};
-use crate::silverpelt::proxysupport::{guild, member_in_guild};
 use crate::{Context, Error};
 use poise::CreateReply;
+use proxy_support::{guild, member_in_guild};
 use serenity::all::{
     ChannelId, CreateEmbed, EditMember, EditMessage, GuildId, Mentionable, Message, Timestamp,
     User, UserId,
@@ -10,6 +9,9 @@ use serenity::all::{
 use serenity::utils::shard_id;
 use splashcore_rs::animusmagic::client::RequestOptions;
 use splashcore_rs::animusmagic::protocol::{default_request_timeout, AnimusOp, AnimusTarget};
+use splashcore_rs::animusmagic::responses::jobserver::{
+    JobserverAnimusMessage, JobserverAnimusResponse,
+};
 use splashcore_rs::jobserver;
 use splashcore_rs::utils::{
     create_special_allocation_from_str, get_icon_of_state, parse_duration_string,
@@ -233,9 +235,8 @@ pub async fn prune_user(
     let data = ctx.data();
     let stats = data.props.statistics();
 
-    let am = data.get_animus_magic()?;
+    let am = data.props.underlying_am_client();
     let Some(resp) = am
-        .underlying_client
         .request_one::<_, JobserverAnimusResponse>(
             RequestOptions {
                 cluster_id: shard_id(guild_id, stats.shard_count_nonzero),
@@ -340,7 +341,7 @@ pub async fn prune_user(
         task: Arc<jobserver::Task>,
     ) -> Result<(), Error> {
         let new_task_msg = jobserver::taskpoll::embed(
-            &crate::config::CONFIG.sites.api.get(),
+            &config::CONFIG.sites.api.get(),
             &task,
             vec![CreateEmbed::default()
                 .title("Pruning User Messages...")

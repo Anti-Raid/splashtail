@@ -53,10 +53,8 @@ pub async fn save_all_guilds_initial(
 
     for guild_id in ctx.cache.guilds() {
         // Ensure shard id
-        let shard_id = serenity::utils::shard_id(
-            guild_id,
-            data.props.statistics().shard_count_nonzero,
-        );
+        let shard_id =
+            serenity::utils::shard_id(guild_id, data.props.statistics().shard_count_nonzero);
 
         if ctx.shard_id.0 != shard_id {
             continue;
@@ -94,16 +92,13 @@ pub async fn save_all_guilds_initial(
         }
 
         // We anyways need to fetch the guild anyways, so do that
-        let guild =
-            match crate::silverpelt::proxysupport::guild(&cache_http, reqwest_client, guild_id)
-                .await
-            {
-                Ok(guild) => guild,
-                Err(e) => {
-                    log::error!("Error while fetching guild: {}", e);
-                    continue;
-                }
-            };
+        let guild = match proxy_support::guild(&cache_http, reqwest_client, guild_id).await {
+            Ok(guild) => guild,
+            Err(e) => {
+                log::error!("Error while fetching guild: {}", e);
+                continue;
+            }
+        };
 
         let guild_row = match sqlx::query!(
             "SELECT name, icon FROM inspector__guilds WHERE guild_id = $1",

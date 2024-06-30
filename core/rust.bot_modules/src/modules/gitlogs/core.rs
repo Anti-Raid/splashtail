@@ -5,7 +5,7 @@ use poise::{
 };
 use rand::distributions::{Alphanumeric, DistString};
 
-use crate::{config, Context, Error};
+use crate::{Context, Error};
 
 /// Gitlogs base command
 #[poise::command(

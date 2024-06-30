@@ -3,11 +3,10 @@ use super::types::{
     DehoistOptions, FakeBotDetectionOptions, GuildProtectionOptions, TriggeredFlags, MAX_MENTIONS,
 };
 use crate::{
-    silverpelt::{
-        module_config::is_module_enabled, proxysupport::member_in_guild, EventHandlerContext,
-    },
+    silverpelt::{module_config::is_module_enabled, EventHandlerContext},
     Error,
 };
+use proxy_support::member_in_guild;
 use serenity::all::FullEvent;
 
 pub async fn event_listener(ectx: &EventHandlerContext) -> Result<(), Error> {

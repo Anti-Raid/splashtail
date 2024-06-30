@@ -37,7 +37,7 @@ pub fn module() -> crate::silverpelt::Module {
             name: "Sandwich Status Task",
             description: "Checks the status of the sandwich http server",
             duration: std::time::Duration::from_secs(30),
-            enabled: crate::config::CONFIG.meta.sandwich_http_api.is_some(),
+            enabled: config::CONFIG.meta.sandwich_http_api.is_some(),
             run: Box::new(move |ctx| sandwich_status_task::sandwich_status_task(ctx).boxed()),
         }],
         ..Default::default()

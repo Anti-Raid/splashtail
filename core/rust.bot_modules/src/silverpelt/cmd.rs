@@ -1,4 +1,3 @@
-use super::permissions::PermissionResult;
 use super::silverpelt_cache::SILVERPELT_CACHE;
 use crate::silverpelt::{
     self,
@@ -14,6 +13,7 @@ use log::debug;
 use serde::{Deserialize, Serialize};
 use serenity::all::{GuildId, UserId};
 use serenity::small_fixed_array::FixedArray;
+use splashcore_rs::types::silverpelt::PermissionResult;
 use sqlx::PgPool;
 
 #[inline]
@@ -97,7 +97,7 @@ pub async fn get_user_discord_info(
     }
 
     let member = {
-        let member = match super::proxysupport::member_in_guild(
+        let member = match proxy_support::member_in_guild(
             cache_http,
             &reqwest::Client::new(),
             guild_id,
@@ -252,11 +252,7 @@ pub async fn check_command(
     };
 
     if module == "root" {
-        if !crate::config::CONFIG
-            .discord_auth
-            .root_users
-            .contains(&user_id)
-        {
+        if !config::CONFIG.discord_auth.root_users.contains(&user_id) {
             return PermissionResult::SudoNotGranted {};
         }
 

@@ -404,7 +404,7 @@ pub async fn dispatch_audit_log(
 
                 let webhook_proxyurl = format!(
                     "{base_url}/api/v10/webhooks/{id}/{token}",
-                    base_url = crate::config::CONFIG.meta.proxy.get(),
+                    base_url = config::CONFIG.meta.proxy.get(),
                     id = id,
                     token = token
                 );

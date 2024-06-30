@@ -632,7 +632,7 @@ pub async fn settings_view(
                 pool,
                 author,
                 guild_id,
-                &permodule_executor,
+                &*permodule_executor,
             )
             .await?;
         }
@@ -781,7 +781,7 @@ pub async fn settings_create(
             pool,
             author,
             guild_id,
-            &permodule_executor,
+            &*permodule_executor,
         )
         .await?;
 
@@ -1091,7 +1091,7 @@ pub async fn settings_update(
             pool,
             author,
             guild_id,
-            &permodule_executor,
+            &*permodule_executor,
         )
         .await?;
 
@@ -1451,7 +1451,7 @@ pub async fn settings_delete(
             pool,
             author,
             guild_id,
-            &permodule_executor,
+            &*permodule_executor,
         )
         .await?;
     }

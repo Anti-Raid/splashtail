@@ -1,6 +1,0 @@
-[workspace]
-
-members = [
-    "botv2",
-    "core/rust.std",
-]

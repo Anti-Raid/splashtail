@@ -1,6 +1,6 @@
 use super::protocol::{
-    create_payload, new_command_id, serialize_data, deserialize_data, AnimusErrorResponse, AnimusMessageMetadata,
-    AnimusOp, AnimusTarget, WILDCARD_CLUSTER_ID,
+    create_payload, deserialize_data, new_command_id, serialize_data, AnimusErrorResponse,
+    AnimusMessageMetadata, AnimusOp, AnimusTarget, WILDCARD_CLUSTER_ID,
 };
 use crate::Error;
 use futures::future::BoxFuture;
@@ -97,7 +97,7 @@ pub struct ClientRequest {
 
 impl ClientRequest {
     pub fn parse<T: Serialize + for<'a> Deserialize<'a>>(&self) -> Result<T, crate::Error> {
-        Ok(deserialize_data(&self.raw_payload)?)
+        deserialize_data(&self.raw_payload)
     }
 }
 

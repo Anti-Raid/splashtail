@@ -1,11 +1,11 @@
 use super::{
-    canonical_module::CanonicalModule, permissions::PermissionResult, CommandExtendedDataMap,
-    Module, ModuleEventHandler,
+    canonical_module::CanonicalModule, CommandExtendedDataMap, Module, ModuleEventHandler,
 };
 use indexmap::IndexMap;
 use moka::future::Cache;
 use once_cell::sync::Lazy;
 use serenity::all::{GuildId, UserId};
+use splashcore_rs::types::silverpelt::PermissionResult;
 
 /// The silverpelt cache is a structure that contains the core state for the bot
 pub struct SilverpeltCache {
