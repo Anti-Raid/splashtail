@@ -1507,5 +1507,12 @@ pub async fn settings_delete(
         });
     }
 
+    // Commit the transaction
+    tx.commit().await.map_err(|e| SettingsError::Generic {
+        message: e.to_string(),
+        src: "settings_delete [tx.commit]".to_string(),
+        typ: "internal".to_string(),
+    })?;
+
     Ok(state)
 }
