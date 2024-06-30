@@ -1025,8 +1025,6 @@ pub async fn settings_update(
         });
     };
 
-    let pkey = pkey.clone(); // Ensure we do not have a immutable borrow
-
     let Some(pkey_column) = setting.columns.iter().find(|c| c.id == setting.primary_key) else {
         return Err(SettingsError::Generic {
             message: "Primary key column not found".to_string(),
@@ -1034,6 +1032,14 @@ pub async fn settings_update(
             typ: "internal".to_string(),
         });
     };
+
+    let pkey = _validate_and_parse_value(
+        pkey,
+        &pkey_column.column_type,
+        setting.primary_key,
+        false,
+        true,
+    )?;
 
     // Start the transaction now that basic validation is done
     let mut tx = pool.begin().await.map_err(|e| SettingsError::Generic {
@@ -1380,6 +1386,14 @@ pub async fn settings_delete(
         });
     };
 
+    let pkey = _validate_and_parse_value(
+        &pkey,
+        &pkey_column.column_type,
+        setting.primary_key,
+        false,
+        true,
+    )?;
+
     let mut tx = pool.begin().await.map_err(|e| SettingsError::Generic {
         message: e.to_string(),
         src: "settings_delete [pool.begin]".to_string(),
@@ -1388,6 +1402,7 @@ pub async fn settings_delete(
 
     // Fetch entire row to execute actions on before deleting
     let mut cols = Vec::new();
+    let mut column_types = Vec::new();
 
     for col in &setting.columns {
         if col.ignored_for.contains(&OperationType::Delete) {
@@ -1395,6 +1410,7 @@ pub async fn settings_delete(
         }
 
         cols.push(col.id.to_string());
+        column_types.push(col.column_type.clone());
     }
 
     if !cols.is_empty() {
@@ -1431,6 +1447,15 @@ pub async fn settings_delete(
                 src: "settings_delete [retrieve_unchanged, Value::from_sqlx]".to_string(),
                 typ: "internal".to_string(),
             })?;
+
+            // Validate the actual value
+            let val = _validate_and_parse_value(
+                &val,
+                &column_types[i],
+                setting.primary_key,
+                false,
+                false,
+            )?;
 
             state.state.insert(col.to_string(), val);
         }
