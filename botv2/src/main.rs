@@ -1,4 +1,5 @@
 mod config;
+mod ext_generate;
 mod ipc;
 mod modules;
 mod silverpelt;

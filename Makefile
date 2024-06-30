@@ -1,3 +1,5 @@
+include .env
+
 .PHONY: default $(MAKECMDGOALS)
 
 TEST__USER_ID := 728871946456137770
@@ -62,7 +64,7 @@ reloadjobserver:
 
 sqlx:
 ifndef CI_BUILD
-	cd botv2/jobserver && cargo sqlx prepare
+	cd core/rust.std && cargo sqlx prepare
 	cd botv2 && cargo sqlx prepare
 endif
 

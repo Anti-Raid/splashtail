@@ -294,3 +294,8 @@ Once the investigation has been completed, the nuke should be reversed. This inv
 - Restoring all roles that were deleted if possible
 - Restoring all roles that were editted if possible
 - Unneutering all moderators who were neutered
+
+## Env files
+
+- ``core/go.std/data/current-env`
+- ``core/rust.base_data/current-env`

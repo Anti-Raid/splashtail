@@ -11,14 +11,24 @@ use splashcore_rs::animusmagic::client::{
 };
 use splashcore_rs::animusmagic::protocol::{AnimusErrorResponse, AnimusTarget};
 
+use module_settings::{self, canonical_types::CanonicalSettingsError, types::OperationType};
 use serde::{Deserialize, Serialize};
 use serenity::all::{GuildId, Role, RoleId, UserId};
-use silverpelt::settings::{
-    self,
-    canonical_types::{CanonicalSettingsError, CanonicalSettingsResult},
-    types::OperationType,
-};
 use std::sync::Arc;
+
+#[derive(Clone, Serialize, Deserialize)]
+
+pub enum CanonicalSettingsResult {
+    Ok {
+        fields: Vec<indexmap::IndexMap<String, serde_json::Value>>,
+    },
+    PermissionError {
+        res: crate::silverpelt::permissions::PermissionResult,
+    },
+    Err {
+        error: CanonicalSettingsError,
+    },
+}
 
 #[derive(Serialize, Deserialize, Clone)]
 pub enum BotAnimusResponse {
@@ -484,10 +494,10 @@ impl BotAnimusMessage {
 }
 
 pub mod dynamic {
-    use crate::silverpelt::value::Value;
     use dashmap::DashMap;
     use futures::future::BoxFuture;
     use once_cell::sync::Lazy;
+    use splashcore_rs::value::Value;
 
     pub type ToggleFunc = Box<
         dyn Send
