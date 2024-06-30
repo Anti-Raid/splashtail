@@ -42,21 +42,31 @@ restartwebserver:
 	make reloadwebserver
 
 updatebot:
-	make buildbot && cp -v botv2/target/release/botv2 botv2
+	make buildbot && cp -v target/release/botv2 botv2
 
 updatebot_dbg:
-	make buildbot_dbg && cp -v botv2/target/debug/botv2 botv2
-formatbot:
-	cd botv2 && cargo fmt
+	make buildbot_dbg && cp -v target/debug/botv2 botv2
+	
+format_rust:
+	# For every project in core/rust.*, run cargo sqlx prepare
+	for d in core/rust.*; do \
+		cd $$d && cargo fmt && cd ../..; \
+	done
 
-restartbot: sqlx ts
+	# For every project in services/rust.*, run cargo sqlx prepare
+	for d in services/rust.*; do \
+		cd $$d && cargo fmt && cd ../..; \
+	done
+
+
+restartbot:
 	make buildbot
 	make restartbot_nobuild
 
 restartbot_nobuild:
 	systemctl stop splashtail-staging-bot
 	sleep 3 # Give time for the webserver to stop
-	cp -v botv2/target/release/botv2 botv2
+	cp -v target/release/bot botv2
 	systemctl start splashtail-staging-bot
 
 reloadjobserver:
@@ -64,15 +74,22 @@ reloadjobserver:
 
 sqlx:
 ifndef CI_BUILD
-	cd core/rust.std && cargo sqlx prepare
-	cd botv2 && cargo sqlx prepare
+	# For every project in core/rust.*, run cargo sqlx prepare
+	for d in core/rust.*; do \
+		cd $$d && cargo sqlx prepare && cd ../..; \
+	done
+
+	# For every project in services/rust.*, run cargo sqlx prepare
+	for d in services/rust.*; do \
+		cd $$d && cargo sqlx prepare && cd ../..; \
+	done
 endif
 
 buildbot: sqlx
-	cd botv2 && SQLX_OFFLINE=true cargo build --release
+	cd services/rust.bot && SQLX_OFFLINE=true cargo build --release
 
 buildbot_dbg: sqlx
-	cd botv2 && SQLX_OFFLINE=true cargo build --timings
+	cd services/rust.bot && SQLX_OFFLINE=true cargo build --timings
 
 buildmewldwebui:
 	cd webserver/mewld_web/ui && npm i && npm run build && cd ../../
@@ -86,17 +103,20 @@ ts:
 
 	# Copy over go types
 	mkdir -p $(CDN_PATH)/dev/bindings/splashtail/go
-	cp -rf go.std/types $(CDN_PATH)/dev/bindings/splashtail/go
+	cp -rf core/go.std/types $(CDN_PATH)/dev/bindings/splashtail/go
 
 	# Patch to change package name to 'splashtail_types'
 	#sed -i 's:package types:package splashtail_types:g' $(CDN_PATH)/dev/bindings/splashtail/go/types/{*.go,*.ts}
 	
-	cd botv2 && cargo test
-	cp -rf botv2/.generated $(CDN_PATH)/dev/bindings/splashtail/rust
-	cp -rf botv2/.generated/serenity_perms.json go.std/data/serenity_perms.json
+	# For every project in services/rust.*, run cargo sqlx prepare
+	for d in services/rust.*; do \
+		cd $$d && cargo test && cp -rf .generated $(CDN_PATH)/dev/bindings/splashtail/rust && cd ../..; \
+	done
 
-	cp -rf $(CDN_PATH)/dev/bindings/splashtail/* website/src/lib/generated
-	rm -rf website/src/lib/generated/go	
+	cp -rf services/rust.bot/.generated/serenity_perms.json core/go.std/data/serenity_perms.json
+
+	cp -rf $(CDN_PATH)/dev/bindings/splashtail/* services/website/src/lib/generated
+	rm -rf services/website/src/lib/generated/go	
 
 promoteprod:
 	rm -rf ../prod2

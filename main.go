@@ -171,7 +171,12 @@ func main() {
 		il, rh, err := mloader.Load(&mldConfig, &mproc.LoaderData{
 			Start: func(l *mproc.InstanceList, i *mproc.Instance, cm *mproc.ClusterMap) error {
 				cmd := exec.Command(
-					l.Dir+"/"+l.Config.Module,
+					func() string {
+						if l.Dir == "" {
+							return l.Dir + "/" + l.Config.Module
+						}
+						return "./" + l.Config.Module
+					}(),
 					mutils.ToPyListUInt64(i.Shards),
 					mutils.UInt64ToString(l.ShardCount),
 					strconv.Itoa(i.ClusterID),

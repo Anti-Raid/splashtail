@@ -1,0 +1,76 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT task_id, task_name, output, statuses, task_for, expiry, state, created_at, task_fields, resumable FROM tasks WHERE task_id = $1 ORDER BY created_at DESC",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "task_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "task_name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "output",
+        "type_info": "Jsonb"
+      },
+      {
+        "ordinal": 3,
+        "name": "statuses",
+        "type_info": "JsonbArray"
+      },
+      {
+        "ordinal": 4,
+        "name": "task_for",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 5,
+        "name": "expiry",
+        "type_info": "Interval"
+      },
+      {
+        "ordinal": 6,
+        "name": "state",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 7,
+        "name": "created_at",
+        "type_info": "Timestamp"
+      },
+      {
+        "ordinal": 8,
+        "name": "task_fields",
+        "type_info": "Jsonb"
+      },
+      {
+        "ordinal": 9,
+        "name": "resumable",
+        "type_info": "Bool"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      true,
+      false,
+      false,
+      true,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "a709e8d0ac7536a2ef50e0fc6553487f66ed390e8937e52ddb88314757cc4cd5"
+}

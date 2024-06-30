@@ -1,0 +1,47 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT id, guild_id, module, disabled, default_perms FROM guild_module_configurations WHERE guild_id = $1 AND module = $2",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "guild_id",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "module",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "disabled",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 4,
+        "name": "default_perms",
+        "type_info": "Jsonb"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      true,
+      true
+    ]
+  },
+  "hash": "bb562be84a7462bcc1a7ffe346355458adf3e1f399f2da0c22f0849fc23eb801"
+}

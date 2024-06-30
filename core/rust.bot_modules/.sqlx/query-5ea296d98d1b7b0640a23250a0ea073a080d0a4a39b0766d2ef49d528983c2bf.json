@@ -1,0 +1,17 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO inspector__punishments (user_id, guild_id, stings, triggered_flags) VALUES ($1, $2, $3, $4)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text",
+        "Int4",
+        "Int8"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "5ea296d98d1b7b0640a23250a0ea073a080d0a4a39b0766d2ef49d528983c2bf"
+}

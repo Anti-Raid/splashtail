@@ -1,4 +1,4 @@
-dir: botv2
+dir:
 override_dir:
 use_current_directory: true
 use_custom_webui: true
