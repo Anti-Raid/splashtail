@@ -65,7 +65,7 @@ impl std::fmt::Display for SettingsError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             SettingsError::Generic { message, src, typ } => {
-                write!(f, "{} from src `{}` of type `{}`", message, src, typ)
+                write!(f, "`{}` from src `{}` of type `{}`", message, src, typ)
             }
             SettingsError::OperationNotSupported { operation } => {
                 write!(f, "Operation `{}` is not supported", operation)
@@ -95,10 +95,10 @@ impl std::fmt::Display for SettingsError {
                     column, check, value, accepted_range, error
                 )
             }
-            SettingsError::MissingOrInvalidField { field, src } => write!(f, "Missing (or invalid) field `{}` with src: {}", field, src),
+            SettingsError::MissingOrInvalidField { field, src } => write!(f, "Missing (or invalid) field `{}` with src: `{}`", field, src),
             SettingsError::RowExists { column_id, count } => write!(
                 f,
-                "A row with the same column `{}` already exists. Count: {}",
+                "A row with the same column `{}` already exists. Count: `{}`",
                 column_id, count
             ),
             SettingsError::RowDoesNotExist { column_id } => {
@@ -106,7 +106,7 @@ impl std::fmt::Display for SettingsError {
             }
             SettingsError::MaximumCountReached { max, current } => write!(
                 f,
-                "The maximum number of entities this server may have ({}) has been reached. This server currently has {}.",
+                "The maximum number of entities this server may have (`{}`) has been reached. This server currently has `{}`.",
                 max, current
             ),
         }

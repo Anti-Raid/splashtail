@@ -708,6 +708,7 @@ pub async fn settings_view(
         // Remove ignored columns + secret columns now that the actions have been executed
         for col in &setting.columns {
             if col.secret.is_some() {
+                state.state.shift_remove(col.id);
                 continue; // Skip secret columns in view. **this applies to view and update only as create is creating a new object**
             }
 
@@ -755,13 +756,23 @@ pub async fn settings_create(
                 }
             } else {
                 match fields.get(column.id) {
-                    Some(val) => _validate_and_parse_value(
-                        val,
-                        &column.column_type,
-                        column.id,
-                        column.nullable,
-                        true,
-                    )?,
+                    Some(val) => {
+                        if matches!(val, Value::None) {
+                            // If the value is None, then it should be treated as if omitted (null)
+                            match column.secret {
+                                Some(length) => Value::String(botox::crypto::gen_random(length)),
+                                None => Value::None,
+                            }
+                        } else {
+                            _validate_and_parse_value(
+                                val,
+                                &column.column_type,
+                                column.id,
+                                column.nullable,
+                                true,
+                            )?
+                        }
+                    }
                     None => match column.secret {
                         Some(length) => Value::String(botox::crypto::gen_random(length)),
                         None => Value::None,
@@ -788,7 +799,7 @@ pub async fn settings_create(
     // Get all ids we currently have to check max_entries and uniqueness of the primary key in one shot
     let sql_stmt = format!(
         "SELECT {} FROM {} WHERE {} = $1",
-        setting.table, setting.primary_key, setting.guild_id
+        setting.primary_key, setting.table, setting.guild_id
     );
 
     let query = sqlx::query(sql_stmt.as_str()).bind(guild_id.to_string());
@@ -976,7 +987,7 @@ pub async fn settings_create(
     // First create the $N's from the cols starting with 2 as 1 is the guild_id
     let mut n_params = "".to_string();
     let mut col_params = "".to_string();
-    for (i, (col, _)) in state.state.iter().enumerate() {
+    for (i, (col, _)) in state.get_public().iter().enumerate() {
         n_params.push_str(&format!("${}", i + 2));
         col_params.push_str(col);
 
@@ -999,7 +1010,7 @@ pub async fn settings_create(
     // Bind the sql query arguments
     query = query.bind(guild_id.to_string());
 
-    for (col, value) in state.state.iter() {
+    for (col, value) in state.get_public().iter() {
         // Get column type from schema for db query hinting
         let column_type = setting
             .columns
@@ -1067,13 +1078,19 @@ pub async fn settings_update(
                 Value::None
             } else {
                 match fields.get(column.id) {
-                    Some(val) => _validate_and_parse_value(
-                        val,
-                        &column.column_type,
-                        column.id,
-                        column.nullable,
-                        true,
-                    )?,
+                    Some(val) => {
+                        if matches!(val, Value::None) {
+                            Value::None // If the value is None, then it should be treated as if omitted (null)
+                        } else {
+                            _validate_and_parse_value(
+                                val,
+                                &column.column_type,
+                                column.id,
+                                column.nullable,
+                                true,
+                            )?
+                        }
+                    }
                     None => {
                         unchanged_fields.push(column.id.to_string());
                         Value::None
@@ -1370,6 +1387,7 @@ pub async fn settings_update(
     // Remove ignored columns now that the actions have been executed
     for col in &setting.columns {
         if col.secret.is_some() {
+            state.state.shift_remove(col.id);
             continue; // Skip secret columns in update. **this applies to view and update only as create is creating a new object**
         }
 
@@ -1391,7 +1409,7 @@ pub async fn settings_update(
 
     // Create the row
     let mut col_params = "".to_string();
-    for (i, (col, _)) in state.state.iter().enumerate() {
+    for (i, (col, _)) in state.get_public().iter().enumerate() {
         col_params.push_str(&format!("{}=${},", col, i + 3));
     }
 
@@ -1410,7 +1428,7 @@ pub async fn settings_update(
     query = query.bind(guild_id.to_string());
     query = _query_bind_value(query, pkey.clone(), Some(pkey_column.column_type.clone()));
 
-    for (col, value) in state.state.iter() {
+    for (col, value) in state.get_public().iter() {
         // Get column type from schema for db query hinting
         let column_type = setting
             .columns
@@ -1472,7 +1490,7 @@ pub async fn settings_delete(
         &pkey_column.column_type,
         setting.primary_key,
         false,
-        true,
+        false,
     )?;
 
     let mut tx = pool.begin().await.map_err(|e| SettingsError::Generic {

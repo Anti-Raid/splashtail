@@ -244,6 +244,12 @@ pub async fn settings_viewer(
     .await
     .map_err(|e| format!("Error fetching settings: {}", e))?;
 
+    if values.is_empty() {
+        ctx.say(format!("No settings found for `{}`", setting.name))
+            .await?;
+        return Ok(());
+    }
+
     let mut index = 0;
 
     let reply = _create_reply(ctx, setting, &values, index);

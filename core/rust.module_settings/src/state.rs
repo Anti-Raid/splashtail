@@ -66,6 +66,15 @@ impl State {
         Value::String(result)
     }
 
+    /// A public version of the internal state map, excluding any variables that start with __
+    pub fn get_public(&self) -> indexmap::IndexMap<String, Value> {
+        self.state
+            .iter()
+            .filter(|(k, _)| !k.starts_with("__"))
+            .map(|(k, v)| (k.clone(), v.clone()))
+            .collect()
+    }
+
     // Creates a new state
     pub fn new() -> Self {
         State {

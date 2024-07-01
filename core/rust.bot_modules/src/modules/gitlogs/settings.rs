@@ -19,7 +19,7 @@ pub(crate) fn webhooks() -> ConfigOption {
             Column {
                 id: "id",
                 name: "Webhook ID",
-                column_type: ColumnType::new_scalar(InnerColumnType::Uuid {}),
+                column_type: ColumnType::new_scalar(InnerColumnType::String { min_length: None, max_length: None, allowed_values: vec![], kind: InnerColumnTypeStringKind::Normal }),
                 nullable: false,
                 unique: true,
                 suggestions: ColumnSuggestion::None {},
@@ -56,7 +56,7 @@ pub(crate) fn webhooks() -> ConfigOption {
             Column {
                 id: "secret",
                 name: "Secret",
-                column_type: ColumnType::new_scalar(InnerColumnType::String { min_length: None, max_length: Some(256), allowed_values: vec![], kind: InnerColumnTypeStringKind::Channel }),
+                column_type: ColumnType::new_scalar(InnerColumnType::String { min_length: None, max_length: Some(256), allowed_values: vec![], kind: InnerColumnTypeStringKind::Normal }),
                 nullable: false,
                 unique: false,
                 suggestions: ColumnSuggestion::None {},
@@ -156,7 +156,7 @@ pub(crate) fn repos() -> ConfigOption {
             Column {
                 id: "id",
                 name: "Repo ID",
-                column_type: ColumnType::new_scalar(InnerColumnType::Uuid {}),
+                column_type: ColumnType::new_scalar(InnerColumnType::String { min_length: None, max_length: None, allowed_values: vec![], kind: InnerColumnTypeStringKind::Normal }),
                 nullable: false,
                 unique: true,
                 suggestions: ColumnSuggestion::None {},
@@ -364,7 +364,7 @@ pub(crate) fn event_modifiers() -> ConfigOption {
             Column {
                 id: "id",
                 name: "Modifier ID",
-                column_type: ColumnType::new_scalar(InnerColumnType::Uuid {}),
+                column_type: ColumnType::new_scalar(InnerColumnType::String { min_length: None, max_length: None, allowed_values: vec![], kind: InnerColumnTypeStringKind::Normal }),
                 nullable: false,
                 unique: true,
                 suggestions: ColumnSuggestion::None {},

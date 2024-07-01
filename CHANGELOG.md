@@ -1,8 +1,30 @@
+## Monday, July 1st 2024
+
+## Settings
+
+- Added support for secret fields. Fields marked with ``secret: Some(length)`` will be hidden in ``view`` operations and if null/unset, will be set to a random string of the specified length. This is useful for API keys, webhook secrets etc. that should not be disclosed where possible. 
+- Fixed several bugs throughout the codebase. Specifically, internal fields are no longer considered in ``settings_create`` and ``settings_update``. Primary key schema checks are no longer applied on ``settings_delete`` to allow deleting invalid data that may have been added prior to a more stricter schema etc.
+- Common fields such as created_at/created_by/last_updated_at/last_updated_by have been added to the ``column_columns.rs`` module of settings.
+
+## Bot
+
+- The ``gitlogs`` module has been moved entirely to settings. In addition, many fields such as created_at/created_by/last_updated_at/last_updated_by have been added to all ``gitlogs`` structures.
+- ``auditlogs`` settings schemas have been improved slightly
+- Module parsing now also validates the ``CommandExtendedDataMap`` to ensure that all submodules are also present in the map. A test has been added for module parsing to allow testing this without running the bot.
+
 ## Sunday, June 30th 2024
 
 - Fully restructuring the bot. Here is the new structure:
 
-``core/{lang}.{module}`` contains all core data
+=> ``core/{lang}.{module}`` contains all core data
+=> ``services/{lang}.{module}`` contains all services
+
+In particular, the rust side has changed significantly. AnimusMagicClient has been refactored using traits to clone less and allow returning an opaque trait object for use in modules. This also allows for other services (such as a premium only bot) to also make use of the same base modules.
+
+- Fields linked to ``mewld`` have been moved to the ``props.statistics()`` function (``Statistics`` struct).
+- Cargo workspaces now work properly :D
+
+*Note that build times have increased temporarily as our Makefiles are not very efficient. This should be resolved later*
 
 ## Saturday, June 29th 2024
 
