@@ -12,6 +12,7 @@ pub(crate) fn sink() -> ConfigOption {
         table: "auditlogs__sinks",
         guild_id: "guild_id",
         primary_key: "id",
+        max_entries: 10,
         columns: vec![
             Column {
                 id: "id",
@@ -19,42 +20,9 @@ pub(crate) fn sink() -> ConfigOption {
                 column_type: ColumnType::new_scalar(InnerColumnType::Uuid {}),
                 nullable: false,
                 unique: true,
-                suggestions: ColumnSuggestion::Dynamic { 
-                    table_name: "auditlogs__sinks", 
-                    column_name: "id"
-                },
+                suggestions: ColumnSuggestion::None {},
                 ignored_for: vec![OperationType::Create],
-                pre_checks: indexmap::indexmap! {
-                    OperationType::Create => vec![
-                        ColumnAction::NativeAction {
-                            action: Box::new(|ctx, _state| async move {
-                                let ids = sqlx::query!(
-                                    "SELECT COUNT(*) FROM auditlogs__sinks WHERE guild_id = $1",
-                                    ctx.guild_id.to_string()
-                                )
-                                .fetch_one(&ctx.pool)
-                                .await
-                                .map_err(|e| SettingsError::Generic {
-                                    message: format!("Failed to fetch sink count: {}", e),
-                                    src: "fetch_sinks_count".to_string(),
-                                    typ: "internal".to_string(),
-                                })?
-                                .count
-                                .unwrap_or(0);
-
-                                if ids >= 10 {
-                                    return Err(SettingsError::MaximumCountReached { 
-                                        max: 10,
-                                        current: ids,
-                                    });
-                                }
-
-                                Ok(())
-                            }.boxed()),
-                            on_condition: None
-                        },
-                    ],
-                },
+                pre_checks: indexmap::indexmap! {},
                 default_pre_checks: vec![],
             },
             Column {
@@ -192,50 +160,10 @@ pub(crate) fn sink() -> ConfigOption {
                     }
                 ]
             },
-            Column {
-                id: "created_at",
-                name: "Created At",
-                column_type: ColumnType::new_scalar(InnerColumnType::TimestampTz {}),
-                nullable: false,
-                unique: false,
-                ignored_for: vec![OperationType::Create, OperationType::Update],
-                suggestions: ColumnSuggestion::None {},
-                pre_checks: indexmap::indexmap! {},
-                default_pre_checks: vec![]
-            },
-            Column {
-                id: "created_by",
-                name: "Created By",
-                column_type: ColumnType::new_scalar(InnerColumnType::String { min_length: None, max_length: None, allowed_values: vec![], kind: InnerColumnTypeStringKind::User }),
-                ignored_for: vec![OperationType::Create, OperationType::Update],
-                nullable: false,
-                unique: false,
-                suggestions: ColumnSuggestion::None {},
-                pre_checks: indexmap::indexmap! {},
-                default_pre_checks: vec![]
-            },
-            Column {
-                id: "last_updated_at",
-                name: "Last Updated At",
-                column_type: ColumnType::new_scalar(InnerColumnType::TimestampTz {}),
-                ignored_for: vec![OperationType::Create, OperationType::Update],
-                nullable: false,
-                unique: false,
-                suggestions: ColumnSuggestion::None {},
-                pre_checks: indexmap::indexmap! {},
-                default_pre_checks: vec![]
-            },
-            Column {
-                id: "last_updated_by",
-                name: "Last Updated By",
-                column_type: ColumnType::new_scalar(InnerColumnType::String { min_length: None, max_length: None, allowed_values: vec![], kind: InnerColumnTypeStringKind::User }),
-                ignored_for: vec![OperationType::Create, OperationType::Update],
-                nullable: false,
-                unique: false,
-                suggestions: ColumnSuggestion::None {},
-                pre_checks: indexmap::indexmap! {},
-                default_pre_checks: vec![]
-            },
+            module_settings::common_columns::created_at(),
+            module_settings::common_columns::created_by(),
+            module_settings::common_columns::last_updated_at(),
+            module_settings::common_columns::last_updated_by(),
             Column {
                 id: "broken",
                 name: "Marked as Broken",

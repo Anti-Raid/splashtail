@@ -4,6 +4,7 @@ use poise::{
     CreateReply,
 };
 use rand::distributions::{Alphanumeric, DistString};
+use splashcore_rs::value::Value;
 
 use crate::{Context, Error};
 
@@ -12,16 +13,7 @@ use crate::{Context, Error};
     prefix_command,
     slash_command,
     guild_cooldown = 10,
-    subcommands(
-        "list",
-        "newhook",
-        "delhook",
-        "newrepo",
-        "delrepo",
-        "super::backups::backup",
-        "super::backups::restore",
-        "super::eventmods::eventmod",
-    )
+    subcommands("list", "newhook", "delhook")
 )]
 pub async fn gitlogs(_ctx: Context<'_>) -> Result<(), Error> {
     Ok(())
@@ -221,88 +213,84 @@ When creating repositories, use `{id}` as the ID.
     guild_cooldown = 60,
     required_permissions = "MANAGE_GUILD"
 )]
-pub async fn newrepo(
+pub async fn repo_list(ctx: Context<'_>) -> Result<(), Error> {
+    crate::silverpelt::settings_poise::settings_viewer(&ctx, &super::settings::repos()).await
+}
+
+/// Creates a new repository for a webhook
+#[poise::command(
+    slash_command,
+    prefix_command,
+    guild_only,
+    guild_cooldown = 60,
+    required_permissions = "MANAGE_GUILD"
+)]
+pub async fn repo_create(
     ctx: Context<'_>,
     #[description = "The webhook ID to use"] webhook_id: String,
     #[description = "The repo owner or organization"] owner: String,
     #[description = "The repo name"] name: String,
     #[description = "The channel to send to"] channel: ChannelId,
 ) -> Result<(), Error> {
-    let data = ctx.data();
-
-    // Check if the guild exists on our DB
-    let guild = sqlx::query!(
-        "SELECT COUNT(1) FROM gitlogs__guilds WHERE guild_id = $1",
-        ctx.guild_id().unwrap().to_string()
+    crate::silverpelt::settings_poise::settings_creator(
+        &ctx,
+        &super::settings::repos(),
+        indexmap::indexmap! {
+            "webhook_id".to_string() => Value::String(webhook_id),
+            "repo_name".to_string() => Value::String((owner + "/" + &name).to_lowercase()),
+            "channel_id".to_string() => Value::String(channel.to_string()),
+        },
     )
-    .fetch_one(&data.pool)
-    .await?;
+    .await
+}
 
-    if guild.count.unwrap_or_default() == 0 {
-        // If it doesn't, return a error
-        return Err("You don't have any webhooks in this guild! Use ``/newhook`` (or ``git!newhook``) to create one".into());
-    }
-
-    // Check webhook count
-    let webhook_count = sqlx::query!(
-        "SELECT COUNT(1) FROM gitlogs__webhooks WHERE guild_id = $1",
-        ctx.guild_id().unwrap().to_string()
+/// Updates an existing repository for a webhook
+#[poise::command(
+    slash_command,
+    prefix_command,
+    guild_only,
+    guild_cooldown = 60,
+    required_permissions = "MANAGE_GUILD"
+)]
+pub async fn repo_update(
+    ctx: Context<'_>,
+    #[description = "The repo ID"] id: String,
+    #[description = "The webhook ID to use"] webhook_id: String,
+    #[description = "The repo owner or organization"] owner: String,
+    #[description = "The repo name"] name: String,
+    #[description = "The channel to send to"] channel: ChannelId,
+) -> Result<(), Error> {
+    crate::silverpelt::settings_poise::settings_updater(
+        &ctx,
+        &super::settings::repos(),
+        indexmap::indexmap! {
+            "id".to_string() => Value::String(id),
+            "webhook_id".to_string() => Value::String(webhook_id),
+            "repo_name".to_string() => Value::String((owner + "/" + &name).to_lowercase()),
+            "channel_id".to_string() => Value::String(channel.to_string()),
+        },
     )
-    .fetch_one(&data.pool)
-    .await?;
+    .await
+}
 
-    let count = webhook_count.count.unwrap_or_default();
-
-    if count == 0 {
-        Err("You don't have any webhooks in this guild! Use ``/gitlogs newhook`` (or ``%gitlogs newhook``) to create one".into())
-    } else {
-        // Check if the webhook exists
-        let webhook = sqlx::query!(
-            "SELECT COUNT(1) FROM gitlogs__webhooks WHERE id = $1 AND guild_id = $2",
-            webhook_id,
-            ctx.guild_id().unwrap().to_string()
-        )
-        .fetch_one(&data.pool)
-        .await?;
-
-        if webhook.count.unwrap_or_default() == 0 {
-            return Err("That webhook doesn't exist! Use ``/gitlogs newhook`` (or ``%gitlogs newhook``) to create one".into());
-        }
-
-        let repo_name = (owner + "/" + &name).to_lowercase();
-
-        // Check if the repo exists
-        let repo = sqlx::query!(
-            "SELECT COUNT(1) FROM gitlogs__repos WHERE lower(repo_name) = $1 AND webhook_id = $2",
-            &repo_name,
-            webhook_id
-        )
-        .fetch_one(&data.pool)
-        .await?;
-
-        if repo.count.unwrap_or_default() == 0 {
-            // If it doesn't, create it
-            let id = Alphanumeric.sample_string(&mut rand::thread_rng(), 32);
-
-            sqlx::query!(
-                "INSERT INTO gitlogs__repos (id, webhook_id, repo_name, channel_id, guild_id) VALUES ($1, $2, $3, $4, $5)",
-                id,
-                webhook_id,
-                &repo_name,
-                channel.to_string(),
-                ctx.guild_id().unwrap().to_string()
-            )
-            .execute(&data.pool)
-            .await?;
-
-            ctx.say(format!("Repository created with ID of ``{id}``!", id = id))
-                .await?;
-
-            Ok(())
-        } else {
-            Err("That repo already exists! Use ``/gitlogs delrepo`` (or ``%gitlogs delrepo``) to delete it".into())
-        }
-    }
+/// Deletes a repo of a webhook
+#[poise::command(
+    slash_command,
+    prefix_command,
+    guild_only,
+    guild_cooldown = 60,
+    required_permissions = "MANAGE_GUILD"
+)]
+pub async fn repo_delete(
+    ctx: Context<'_>,
+    #[description = "The repo ID"] id: String,
+) -> Result<(), Error> {
+    crate::silverpelt::settings_poise::settings_deleter(
+        &ctx,
+        &super::settings::repos(),
+        Value::String(id),
+    )
+    .await
 }
 
 /// Deletes a webhook
@@ -341,77 +329,6 @@ pub async fn delhook(
     .await?;
 
     ctx.say("Webhook deleted if it exists!").await?;
-
-    Ok(())
-}
-
-/// Deletes a repository
-#[poise::command(
-    slash_command,
-    prefix_command,
-    guild_only,
-    guild_cooldown = 60,
-    required_permissions = "MANAGE_GUILD"
-)]
-pub async fn delrepo(
-    ctx: Context<'_>,
-    #[description = "The repo ID"] id: String,
-) -> Result<(), Error> {
-    let data = ctx.data();
-
-    sqlx::query!(
-        "DELETE FROM gitlogs__repos WHERE id = $1 AND guild_id = $2",
-        id,
-        ctx.guild_id().unwrap().to_string()
-    )
-    .execute(&data.pool)
-    .await?;
-
-    ctx.say("Repo deleted!").await?;
-
-    Ok(())
-}
-
-/// Updates the channel for a repository
-#[poise::command(
-    slash_command,
-    prefix_command,
-    guild_only,
-    guild_cooldown = 60,
-    required_permissions = "MANAGE_GUILD"
-)]
-pub async fn setrepochannel(
-    ctx: Context<'_>,
-    #[description = "The repo ID"] id: String,
-    #[description = "The new channel ID"] channel: ChannelId,
-) -> Result<(), Error> {
-    let data = ctx.data();
-
-    // Check if the repo exists
-    let repo = sqlx::query!(
-        "SELECT COUNT(1) FROM gitlogs__repos WHERE id = $1 AND guild_id = $2",
-        id,
-        ctx.guild_id().unwrap().to_string()
-    )
-    .fetch_one(&data.pool)
-    .await?;
-
-    if repo.count.unwrap_or_default() == 0 {
-        return Err(
-            "That repo doesn't exist! Use ``/newrepo`` (or ``git!newrepo``) to create one".into(),
-        );
-    }
-
-    sqlx::query!(
-        "UPDATE gitlogs__repos SET channel_id = $1 WHERE id = $2 AND guild_id = $3",
-        channel.to_string(),
-        id,
-        ctx.guild_id().unwrap().to_string()
-    )
-    .execute(&data.pool)
-    .await?;
-
-    ctx.say("Channel updated!").await?;
 
     Ok(())
 }

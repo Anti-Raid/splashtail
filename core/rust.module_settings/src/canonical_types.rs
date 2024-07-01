@@ -43,8 +43,8 @@ pub enum CanonicalSettingsError {
         column_id: String,
     },
     MaximumCountReached {
-        max: i64,
-        current: i64,
+        max: usize,
+        current: usize,
     },
 }
 
@@ -247,8 +247,12 @@ pub enum CanonicalColumnSuggestion {
         suggestions: Vec<String>,
     },
     Dynamic {
+        /// The table name to query
         table_name: String,
-        column_name: String,
+        /// The column name to query for the user-displayed value
+        value_column: String,
+        /// The column name to query for the id
+        id_column: String,
     },
     None {},
 }
@@ -263,10 +267,12 @@ impl From<super::types::ColumnSuggestion> for CanonicalColumnSuggestion {
             }
             super::types::ColumnSuggestion::Dynamic {
                 table_name,
-                column_name,
+                value_column,
+                id_column,
             } => CanonicalColumnSuggestion::Dynamic {
                 table_name: table_name.to_string(),
-                column_name: column_name.to_string(),
+                value_column: value_column.to_string(),
+                id_column: id_column.to_string(),
             },
             super::types::ColumnSuggestion::None {} => CanonicalColumnSuggestion::None {},
         }
@@ -408,6 +414,9 @@ pub struct CanonicalConfigOption {
     /// The columns for this option
     pub columns: Vec<CanonicalColumn>,
 
+    /// Maximum number of entries a server may have
+    pub max_entries: usize,
+
     /// Operation specific data
     pub operations: indexmap::IndexMap<CanonicalOperationType, CanonicalOperationSpecific>,
 }
@@ -423,6 +432,7 @@ impl From<super::types::ConfigOption> for CanonicalConfigOption {
             description: module.description.to_string(),
             columns: module.columns.into_iter().map(|c| c.into()).collect(),
             primary_key: module.primary_key.to_string(),
+            max_entries: module.max_entries,
             operations: module
                 .operations
                 .into_iter()

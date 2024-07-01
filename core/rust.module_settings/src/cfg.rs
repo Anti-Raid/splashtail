@@ -707,6 +707,10 @@ pub async fn settings_view(
 
         // Remove ignored columns now that the actions have been executed
         for col in &setting.columns {
+            if state.bypass_ignore_for.contains(col.id) {
+                continue;
+            }
+
             if col.ignored_for.contains(&OperationType::View) {
                 state.state.shift_remove(col.id);
             }
@@ -759,12 +763,61 @@ pub async fn settings_create(
         state.state.insert(column.id.to_string(), value.clone());
     }
 
+    drop(fields); // Drop fields to avoid accidental use of user data
+    #[allow(unused_variables)]
+    let fields = (); // Reset fields to avoid accidental use of user data
+
     // Start the transaction now that basic validation is done
     let mut tx = pool.begin().await.map_err(|e| SettingsError::Generic {
         message: e.to_string(),
         src: "settings_create [pool.begin]".to_string(),
         typ: "internal".to_string(),
     })?;
+
+    // Get all ids we currently have to check max_entries and uniqueness of the primary key in one shot
+    let sql_stmt = format!(
+        "SELECT {} FROM {} WHERE {} = $1",
+        setting.table, setting.primary_key, setting.guild_id
+    );
+
+    let query = sqlx::query(sql_stmt.as_str()).bind(guild_id.to_string());
+
+    let row = query
+        .fetch_all(&mut *tx)
+        .await
+        .map_err(|e| SettingsError::Generic {
+            message: e.to_string(),
+            src: "settings_create [query fetch_all]".to_string(),
+            typ: "internal".to_string(),
+        })?;
+
+    if row.len() > setting.max_entries {
+        return Err(SettingsError::MaximumCountReached {
+            max: setting.max_entries,
+            current: row.len(),
+        });
+    }
+
+    // Check pkey uniqueness here
+    let mut ids: Vec<Value> = Vec::with_capacity(row.len());
+
+    for (i, row) in row.iter().enumerate() {
+        let id = Value::from_sqlx(row, i).map_err(|e| SettingsError::Generic {
+            message: e.to_string(),
+            src: "settings_create [Value::from_sqlx]".to_string(),
+            typ: "internal".to_string(),
+        })?;
+
+        // Check if the pkey is unique
+        if state.state.get(setting.primary_key) == Some(&id) {
+            return Err(SettingsError::RowExists {
+                column_id: setting.primary_key.to_string(),
+                count: 1,
+            });
+        }
+
+        ids.push(id);
+    }
 
     // Now execute all actions and handle null/unique/pkey checks
     for column in setting.columns.iter() {
@@ -812,7 +865,7 @@ pub async fn settings_create(
         // Handle cases of uniqueness
         //
         // In the case of create, we can do this directly within the column validation
-        if column.unique || column.id == setting.primary_key {
+        if column.unique {
             match value {
                 Value::None => {
                     let sql_stmt = format!(
@@ -892,6 +945,10 @@ pub async fn settings_create(
 
     // Remove ignored columns now that the actions have been executed
     for col in &setting.columns {
+        if state.bypass_ignore_for.contains(col.id) {
+            continue;
+        }
+
         if col.ignored_for.contains(&OperationType::Create) {
             state.state.shift_remove(col.id);
         }
@@ -995,6 +1052,7 @@ pub async fn settings_update(
         // If the column is ignored for create, skip
         let value = {
             if column.ignored_for.contains(&OperationType::Update) {
+                unchanged_fields.push(column.id.to_string()); // Ensure that ignored_for columns are still seen as unchanged
                 Value::None
             } else {
                 match fields.get(column.id) {
@@ -1016,6 +1074,10 @@ pub async fn settings_update(
         // Insert the value into the state
         state.state.insert(column.id.to_string(), value.clone());
     }
+
+    drop(fields); // Drop fields to avoid accidental use of user data
+    #[allow(unused_variables)]
+    let fields = (); // Reset fields to avoid accidental use of user data
 
     // Get out the pkey and pkey_column data here as we need it for the rest of the update
     let Some(pkey) = state.state.get(setting.primary_key) else {
@@ -1296,6 +1358,10 @@ pub async fn settings_update(
 
     // Remove ignored columns now that the actions have been executed
     for col in &setting.columns {
+        if state.bypass_ignore_for.contains(col.id) {
+            continue;
+        }
+
         if col.ignored_for.contains(&OperationType::Update) {
             state.state.shift_remove(col.id);
         }

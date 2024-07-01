@@ -3,3 +3,4 @@ pub mod canonical_types;
 pub mod cfg;
 pub mod state;
 pub mod types;
+pub mod common_columns;

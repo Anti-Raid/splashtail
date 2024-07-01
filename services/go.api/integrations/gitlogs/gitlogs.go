@@ -22,8 +22,18 @@ func Setup() *chi.Mux {
 	state.Config = &config.Config{
 		PostgresURL: webserverstate.Config.Meta.PostgresURL,
 		APIUrl:      webserverstate.Config.Sites.API.Parse() + "/integrations/gitlogs",
-		DBPrefix:    "gitlogs__",
+		GetTable: func(table string) string {
+			if table == state.TableGuilds {
+				return "guilds"
+			}
+			return "gitlogs__" + table
+		},
 	}
+
+	// Prepare for embedding
+	state.PrepareForEmbedding()
+
+	state.ApplyMigrations()
 
 	r := chi.NewMux()
 

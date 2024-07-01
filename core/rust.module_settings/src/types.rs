@@ -55,8 +55,8 @@ pub enum SettingsError {
         column_id: String,
     },
     MaximumCountReached {
-        max: i64,
-        current: i64,
+        max: usize,
+        current: usize,
     },
 }
 
@@ -258,8 +258,12 @@ pub enum ColumnSuggestion {
         suggestions: Vec<&'static str>,
     },
     Dynamic {
+        /// The table name to query
         table_name: &'static str,
-        column_name: &'static str,
+        /// The column name to query for the user-displayed value
+        value_column: &'static str,
+        /// The column name to query for the id
+        id_column: &'static str,
     },
     None {},
 }
@@ -478,6 +482,9 @@ pub struct ConfigOption {
 
     /// The columns for this option
     pub columns: Vec<Column>,
+
+    /// Maximum number of entries a server may have
+    pub max_entries: usize,
 
     /// Operation specific data
     pub operations: indexmap::IndexMap<OperationType, OperationSpecific>,

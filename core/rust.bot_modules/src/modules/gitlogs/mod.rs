@@ -1,8 +1,8 @@
 use indexmap::indexmap;
 
-mod backups;
 mod core;
 mod eventmods;
+mod settings;
 
 pub fn module() -> crate::silverpelt::Module {
     crate::silverpelt::Module {
@@ -20,12 +20,59 @@ pub fn module() -> crate::silverpelt::Module {
                 "list" => crate::silverpelt::CommandExtendedData::kittycat_or_admin("gitlogs", "list"),
                 "newhook" => crate::silverpelt::CommandExtendedData::kittycat_or_admin("gitlogs", "hooks"),
                 "delhook" => crate::silverpelt::CommandExtendedData::kittycat_or_admin("gitlogs", "hooks"),
-                "newrepo" => crate::silverpelt::CommandExtendedData::kittycat_or_admin("gitlogs", "repos"),
-                "delrepo" => crate::silverpelt::CommandExtendedData::kittycat_or_admin("gitlogs", "repos"),
-                "backup" => crate::silverpelt::CommandExtendedData::kittycat_or_admin("gitlogs", "backup_create"),
-                "restore" => crate::silverpelt::CommandExtendedData::kittycat_or_admin("gitlogs", "backup_restore"),
-                "eventmod" => crate::silverpelt::CommandExtendedData::kittycat_or_admin("gitlogs", "eventmod"),
-            })
+            }),
+            (
+                eventmods::eventmods_list(),
+                indexmap! {
+                    "" => crate::silverpelt::CommandExtendedData::kittycat_or_admin("gitlogs", "eventmods_list"),
+                },
+            ),
+            (
+                eventmods::eventmods_create(),
+                indexmap! {
+                    "" => crate::silverpelt::CommandExtendedData::kittycat_or_admin("gitlogs", "eventmods_create"),
+                },
+            ),
+            (
+                eventmods::eventmods_update(),
+                indexmap! {
+                    "" => crate::silverpelt::CommandExtendedData::kittycat_or_admin("gitlogs", "eventmods_update"),
+                },
+            ),
+            (
+                eventmods::eventmods_delete(),
+                indexmap! {
+                    "" => crate::silverpelt::CommandExtendedData::kittycat_or_admin("gitlogs", "eventmods_delete"),
+                },
+            ),
+            (
+                core::repo_list(),
+                indexmap! {
+                    "" => crate::silverpelt::CommandExtendedData::kittycat_or_admin("gitlogs", "repo_list"),
+                },
+            ),
+            (
+                core::repo_create(),
+                indexmap! {
+                    "" => crate::silverpelt::CommandExtendedData::kittycat_or_admin("gitlogs", "repo_create"),
+                },
+            ),
+            (
+                core::repo_update(),
+                indexmap! {
+                    "" => crate::silverpelt::CommandExtendedData::kittycat_or_admin("gitlogs", "repo_update"),
+                },
+            ),
+            (
+                core::repo_delete(),
+                indexmap! {
+                    "" => crate::silverpelt::CommandExtendedData::kittycat_or_admin("gitlogs", "repo_delete"),
+                },
+            ),
+        ],
+        config_options: vec![
+            settings::repos(),
+            settings::event_modifiers(),
         ],
         ..Default::default()
     }

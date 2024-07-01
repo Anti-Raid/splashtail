@@ -1,7 +1,11 @@
 use splashcore_rs::value::Value;
 
 pub struct State {
+    /// The state of the module
     pub state: indexmap::IndexMap<String, Value>,
+    /// Columns that should not be ignore_for'd for a specific operation
+    /// even if they are in the ignore_for list
+    pub bypass_ignore_for: std::collections::HashSet<String>,
 }
 
 impl From<State> for indexmap::IndexMap<String, Value> {
@@ -66,6 +70,7 @@ impl State {
     pub fn new() -> Self {
         State {
             state: indexmap::IndexMap::new(),
+            bypass_ignore_for: std::collections::HashSet::new(),
         }
     }
 }
