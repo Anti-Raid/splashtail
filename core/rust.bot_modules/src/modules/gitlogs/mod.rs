@@ -1,7 +1,6 @@
 use indexmap::indexmap;
 
 mod core;
-mod eventmods;
 mod settings;
 
 pub fn module() -> crate::silverpelt::Module {
@@ -17,60 +16,22 @@ pub fn module() -> crate::silverpelt::Module {
         commands: vec![
             (core::gitlogs(), indexmap! {
                 "" => crate::silverpelt::CommandExtendedData::kittycat_or_admin("gitlogs", "*"),
-                "list" => crate::silverpelt::CommandExtendedData::kittycat_or_admin("gitlogs", "list"),
-                "newhook" => crate::silverpelt::CommandExtendedData::kittycat_or_admin("gitlogs", "hooks"),
-                "delhook" => crate::silverpelt::CommandExtendedData::kittycat_or_admin("gitlogs", "hooks"),
+                "webhooks_list" => crate::silverpelt::CommandExtendedData::kittycat_or_admin("gitlogs", "webhooks_list"),
+                "webhooks_create" => crate::silverpelt::CommandExtendedData::kittycat_or_admin("gitlogs", "webhooks_create"),
+                "webhooks_update" => crate::silverpelt::CommandExtendedData::kittycat_or_admin("gitlogs", "webhooks_update"),
+                "webhooks_delete" => crate::silverpelt::CommandExtendedData::kittycat_or_admin("gitlogs", "webhooks_delete"),
+                "repo_list" => crate::silverpelt::CommandExtendedData::kittycat_or_admin("gitlogs", "repo_list"),
+                "repo_create" => crate::silverpelt::CommandExtendedData::kittycat_or_admin("gitlogs", "repo_create"),
+                "repo_update" => crate::silverpelt::CommandExtendedData::kittycat_or_admin("gitlogs", "repo_update"),
+                "repo_delete" => crate::silverpelt::CommandExtendedData::kittycat_or_admin("gitlogs", "repo_delete"),
+                "eventmods_list" => crate::silverpelt::CommandExtendedData::kittycat_or_admin("gitlogs", "eventmods_list"),
+                "eventmods_create" => crate::silverpelt::CommandExtendedData::kittycat_or_admin("gitlogs", "eventmods_create"),
+                "eventmods_update" => crate::silverpelt::CommandExtendedData::kittycat_or_admin("gitlogs", "eventmods_update"),
+                "eventmods_delete" => crate::silverpelt::CommandExtendedData::kittycat_or_admin("gitlogs", "eventmods_delete"),
             }),
-            (
-                eventmods::eventmods_list(),
-                indexmap! {
-                    "" => crate::silverpelt::CommandExtendedData::kittycat_or_admin("gitlogs", "eventmods_list"),
-                },
-            ),
-            (
-                eventmods::eventmods_create(),
-                indexmap! {
-                    "" => crate::silverpelt::CommandExtendedData::kittycat_or_admin("gitlogs", "eventmods_create"),
-                },
-            ),
-            (
-                eventmods::eventmods_update(),
-                indexmap! {
-                    "" => crate::silverpelt::CommandExtendedData::kittycat_or_admin("gitlogs", "eventmods_update"),
-                },
-            ),
-            (
-                eventmods::eventmods_delete(),
-                indexmap! {
-                    "" => crate::silverpelt::CommandExtendedData::kittycat_or_admin("gitlogs", "eventmods_delete"),
-                },
-            ),
-            (
-                core::repo_list(),
-                indexmap! {
-                    "" => crate::silverpelt::CommandExtendedData::kittycat_or_admin("gitlogs", "repo_list"),
-                },
-            ),
-            (
-                core::repo_create(),
-                indexmap! {
-                    "" => crate::silverpelt::CommandExtendedData::kittycat_or_admin("gitlogs", "repo_create"),
-                },
-            ),
-            (
-                core::repo_update(),
-                indexmap! {
-                    "" => crate::silverpelt::CommandExtendedData::kittycat_or_admin("gitlogs", "repo_update"),
-                },
-            ),
-            (
-                core::repo_delete(),
-                indexmap! {
-                    "" => crate::silverpelt::CommandExtendedData::kittycat_or_admin("gitlogs", "repo_delete"),
-                },
-            ),
         ],
         config_options: vec![
+            settings::webhooks(),
             settings::repos(),
             settings::event_modifiers(),
         ],

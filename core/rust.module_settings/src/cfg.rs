@@ -705,8 +705,12 @@ pub async fn settings_view(
                 })?;
         }
 
-        // Remove ignored columns now that the actions have been executed
+        // Remove ignored columns + secret columns now that the actions have been executed
         for col in &setting.columns {
+            if col.secret.is_some() {
+                continue; // Skip secret columns in view. **this applies to view and update only as create is creating a new object**
+            }
+
             if state.bypass_ignore_for.contains(col.id) {
                 continue;
             }
@@ -742,9 +746,13 @@ pub async fn settings_create(
     let mut state: State = State::new();
     for column in setting.columns.iter() {
         // If the column is ignored for create, skip
+        // If the column is a secret column, then ensure we set it to something random as this is a create operation
         let value = {
             if column.ignored_for.contains(&OperationType::Create) {
-                Value::None
+                match column.secret {
+                    Some(length) => Value::String(botox::crypto::gen_random(length)),
+                    None => Value::None,
+                }
             } else {
                 match fields.get(column.id) {
                     Some(val) => _validate_and_parse_value(
@@ -754,7 +762,10 @@ pub async fn settings_create(
                         column.nullable,
                         true,
                     )?,
-                    None => Value::None,
+                    None => match column.secret {
+                        Some(length) => Value::String(botox::crypto::gen_random(length)),
+                        None => Value::None,
+                    },
                 }
             }
         };
@@ -1358,6 +1369,10 @@ pub async fn settings_update(
 
     // Remove ignored columns now that the actions have been executed
     for col in &setting.columns {
+        if col.secret.is_some() {
+            continue; // Skip secret columns in update. **this applies to view and update only as create is creating a new object**
+        }
+
         if state.bypass_ignore_for.contains(col.id) {
             continue;
         }

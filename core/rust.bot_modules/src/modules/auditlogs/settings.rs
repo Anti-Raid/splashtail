@@ -22,6 +22,7 @@ pub(crate) fn sink() -> ConfigOption {
                 unique: true,
                 suggestions: ColumnSuggestion::None {},
                 ignored_for: vec![OperationType::Create],
+                secret: None,
                 pre_checks: indexmap::indexmap! {},
                 default_pre_checks: vec![],
             },
@@ -33,6 +34,7 @@ pub(crate) fn sink() -> ConfigOption {
                 unique: false,
                 suggestions: ColumnSuggestion::Static { suggestions: vec!["channel", "discordhook"] },
                 ignored_for: vec![],
+                secret: None,
                 pre_checks: indexmap::indexmap! {},
                 default_pre_checks: vec![],
             },
@@ -44,6 +46,7 @@ pub(crate) fn sink() -> ConfigOption {
                 unique: false,
                 suggestions: ColumnSuggestion::None {},
                 ignored_for: vec![],
+                secret: None,
                 pre_checks: indexmap::indexmap! {},
                 default_pre_checks: vec![
                     // Set sink display type
@@ -146,6 +149,7 @@ pub(crate) fn sink() -> ConfigOption {
                 unique: false,
                 suggestions: ColumnSuggestion::Static { suggestions: gwevent::core::event_list().to_vec() },
                 ignored_for: vec![],
+                secret: None,
                 pre_checks: indexmap::indexmap! {
                     OperationType::View => vec![]
                 },
@@ -169,6 +173,7 @@ pub(crate) fn sink() -> ConfigOption {
                 name: "Marked as Broken",
                 column_type: ColumnType::new_scalar(InnerColumnType::Boolean {}),
                 ignored_for: vec![OperationType::Create],
+                secret: None,
                 nullable: false,
                 unique: false,
                 suggestions: ColumnSuggestion::None {},

@@ -309,6 +309,9 @@ pub struct CanonicalColumn {
     /// Update => The column is not handled on the client however actions are still executed. The key itself is set to None when executing the actions
     /// Delete => The column is not handled on the client however actions are still executed. The key itself is set to None when executing the actions
     pub ignored_for: Vec<CanonicalOperationType>,
+
+    /// Whether or not the column is a secret, if so, usize stores the length of the secret that should be generated in reset
+    pub secret: Option<usize>,
 }
 
 impl From<super::types::Column> for CanonicalColumn {
@@ -321,6 +324,7 @@ impl From<super::types::Column> for CanonicalColumn {
             suggestions: column.suggestions.into(),
             unique: column.unique,
             ignored_for: column.ignored_for.into_iter().map(|o| o.into()).collect(),
+            secret: column.secret,
         }
     }
 }

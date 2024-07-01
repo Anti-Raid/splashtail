@@ -1,101 +1,41 @@
-use log::error;
-use poise::{
-    serenity_prelude::{ChannelId, CreateEmbed, CreateMessage},
-    CreateReply,
-};
-use rand::distributions::{Alphanumeric, DistString};
-use splashcore_rs::value::Value;
-
 use crate::{Context, Error};
+use poise::serenity_prelude::ChannelId;
+use splashcore_rs::value::Value;
 
 /// Gitlogs base command
 #[poise::command(
     prefix_command,
     slash_command,
     guild_cooldown = 10,
-    subcommands("list", "newhook", "delhook")
+    subcommands(
+        "webhooks_list",
+        "webhooks_create",
+        "webhooks_update",
+        "webhooks_delete",
+        "repo_list",
+        "repo_create",
+        "repo_update",
+        "repo_delete",
+        "eventmods_list",
+        "eventmods_create",
+        "eventmods_update",
+        "eventmods_delete"
+    )
 )]
 pub async fn gitlogs(_ctx: Context<'_>) -> Result<(), Error> {
     Ok(())
 }
 
-/// Lsts all webhooks in a guild with their respective repos and channel IDs
+/// Lists all webhooks in a guild
 #[poise::command(
     slash_command,
     prefix_command,
     guild_only,
+    guild_cooldown = 60,
     required_permissions = "MANAGE_GUILD"
 )]
-pub async fn list(ctx: Context<'_>) -> Result<(), Error> {
-    let data = ctx.data();
-
-    // Check if the guild exists on our DB
-    let guild = sqlx::query!(
-        "SELECT COUNT(1) FROM gitlogs__guilds WHERE guild_id = $1",
-        ctx.guild_id().unwrap().to_string()
-    )
-    .fetch_one(&data.pool)
-    .await?;
-
-    if guild.count.unwrap_or_default() == 0 {
-        // If it doesn't, return an error
-        sqlx::query!(
-            "INSERT INTO gitlogs__guilds (guild_id) VALUES ($1)",
-            ctx.guild_id().unwrap().to_string()
-        )
-        .execute(&data.pool)
-        .await?;
-
-        ctx.say("This guild doesn't have any webhooks yet. Get started with ``/gitlogs newhook`` (or ``%gitlogs newhook``)").await?;
-    } else {
-        // Get all webhooks
-        let webhooks = sqlx::query!(
-            "SELECT id, comment, created_at FROM gitlogs__webhooks WHERE guild_id = $1",
-            ctx.guild_id().unwrap().to_string()
-        )
-        .fetch_all(&data.pool)
-        .await;
-
-        match webhooks {
-            Ok(webhooks) => {
-                let mut embeds = Vec::new();
-
-                let api_url = config::CONFIG.sites.api.get();
-
-                for webhook in webhooks {
-                    let webhook_id = webhook.id;
-                    embeds.push(
-                        CreateEmbed::new()
-                            .title(format!("Webhook \"{}\"", webhook.comment))
-                            .field("Webhook ID", webhook_id.clone(), false)
-                            .field(
-                                "Hook URL (visit for hook info, add to Github to recieve events)",
-                                api_url.clone()
-                                    + "/integrations/gitlogs/kittycat?id="
-                                    + &webhook_id,
-                                false,
-                            )
-                            .field("Created at", webhook.created_at.to_string(), false),
-                    );
-                }
-
-                let mut cr =
-                    CreateReply::default().content("Here are all the webhooks in this guild:");
-
-                for embed in embeds {
-                    cr = cr.embed(embed);
-                }
-
-                ctx.send(cr).await?;
-            }
-            Err(e) => {
-                error!("Error fetching webhooks: {:?}", e);
-                ctx.say("This guild doesn't have any webhooks yet. Get started with ``/gitlogs newhook`` (or ``%gitlogs newhook``)").await?;
-            }
-        }
-    }
-
-    Ok(())
+pub async fn webhooks_list(ctx: Context<'_>) -> Result<(), Error> {
+    crate::silverpelt::settings_poise::settings_viewer(&ctx, &super::settings::webhooks()).await
 }
 
 /// Creates a new webhook in a guild for sending Github notifications
@@ -106,103 +46,78 @@ pub async fn list(ctx: Context<'_>) -> Result<(), Error> {
     guild_cooldown = 60,
     required_permissions = "MANAGE_GUILD"
 )]
-pub async fn newhook(
+pub async fn webhooks_create(
     ctx: Context<'_>,
     #[description = "The comment for the webhook"] comment: String,
+    #[description = "Custom secret for the webhook"] secret: Option<String>,
 ) -> Result<(), Error> {
-    let data = ctx.data();
-
-    // Check if the guild exists on our DB
-    let guild = sqlx::query!(
-        "SELECT COUNT(1) FROM gitlogs__guilds WHERE guild_id = $1",
-        ctx.guild_id().unwrap().to_string()
+    crate::silverpelt::settings_poise::settings_creator(
+        &ctx,
+        &super::settings::webhooks(),
+        indexmap::indexmap! {
+            "comment".to_string() => Value::String(comment),
+            "secret".to_string() => {
+                if let Some(secret) = secret {
+                    Value::String(secret)
+                } else {
+                    Value::None // Settings_creator will autogenerate a secret if this is None
+                }
+            },
+        },
     )
-    .fetch_one(&data.pool)
-    .await?;
+    .await
+}
 
-    if guild.count.unwrap_or_default() == 0 {
-        // If it doesn't, create it
-        sqlx::query!(
-            "INSERT INTO gitlogs__guilds (guild_id) VALUES ($1)",
-            ctx.guild_id().unwrap().to_string()
-        )
-        .execute(&data.pool)
-        .await?;
-    }
-
-    // Check webhook count
-    let webhook_count = sqlx::query!(
-        "SELECT COUNT(1) FROM gitlogs__webhooks WHERE guild_id = $1",
-        ctx.guild_id().unwrap().to_string()
+/// Updates a webhook in a guild
+#[poise::command(
+    slash_command,
+    prefix_command,
+    guild_only,
+    guild_cooldown = 60,
+    required_permissions = "MANAGE_GUILD"
+)]
+pub async fn webhooks_update(
+    ctx: Context<'_>,
+    #[description = "The webhook ID"] id: String,
+    #[description = "The comment for the webhook"] comment: String,
+    #[description = "Custom secret for the webhook"] secret: Option<String>,
+) -> Result<(), Error> {
+    crate::silverpelt::settings_poise::settings_updater(
+        &ctx,
+        &super::settings::webhooks(),
+        indexmap::indexmap! {
+            "id".to_string() => Value::String(id),
+            "comment".to_string() => Value::String(comment),
+            "secret".to_string() => {
+                if let Some(secret) = secret {
+                    Value::String(secret)
+                } else {
+                    Value::None // Settings_creator will autogenerate a secret if this is None
+                }
+            },
+        },
     )
-    .fetch_one(&data.pool)
-    .await?;
+    .await
+}
 
-    if webhook_count.count.unwrap_or_default() >= 5 {
-        ctx.say("You can't have more than 5 webhooks per guild")
-            .await?;
-        return Ok(());
-    }
-
-    // Create the webhook
-    let id = Alphanumeric.sample_string(&mut rand::thread_rng(), 32);
-
-    let webh_secret = Alphanumeric.sample_string(&mut rand::thread_rng(), 256);
-
-    // Create a new dm channel with the user if not slash command
-    let dm_channel = ctx.author().create_dm_channel(ctx.http()).await;
-
-    let dm = match dm_channel {
-        Ok(dm) => dm,
-        Err(_) => {
-            ctx.say(
-                "I couldn't create a DM channel with you, please enable DMs from server members",
-            )
-            .await?;
-            return Ok(());
-        }
-    };
-
-    sqlx::query!(
-        "INSERT INTO gitlogs__webhooks (id, guild_id, comment, secret) VALUES ($1, $2, $3, $4)",
-        id,
-        ctx.guild_id().unwrap().to_string(),
-        comment,
-        webh_secret
+/// Updates a webhook in a guild
+#[poise::command(
+    slash_command,
+    prefix_command,
+    guild_only,
+    guild_cooldown = 60,
+    required_permissions = "MANAGE_GUILD"
+)]
+pub async fn webhooks_delete(
+    ctx: Context<'_>,
+    #[description = "The webhook ID"] id: String,
+) -> Result<(), Error> {
+    crate::silverpelt::settings_poise::settings_deleter(
+        &ctx,
+        &super::settings::webhooks(),
+        Value::String(id),
     )
-    .execute(&data.pool)
-    .await?;
-
-    ctx.say("Webhook created! Trying to DM you the credentials...")
-        .await?;
-
-    dm.id.send_message(
-        ctx.http(),
-        CreateMessage::new()
-        .content(
-            format!(
-                "
-Next, add the following webhook to your Github repositories (or organizations): `{api_url}/integrations/gitlogs/kittycat?id={id}`
-
-Set the `Secret` field to `{webh_secret}` and ensure that Content Type is set to `application/json`. 
-
-When creating repositories, use `{id}` as the ID.
-            
-**Note that the above URL and secret is unique and should not be shared with others**
-
-**Delete this message after you're done!**
-                ",
-                api_url=config::CONFIG.sites.api.get(),
-                id=id,
-                webh_secret=webh_secret
-            )
-        )
-    ).await?;
-
-    ctx.say("Webhook created! Check your DMs for the webhook information.")
-        .await?;
-
-    Ok(())
+    .await
 }
 
 /// Creates a new repository for a webhook
@@ -293,7 +208,7 @@ pub async fn repo_delete(
     .await
 }
 
-/// Deletes a webhook
+/// Lists all event modifiers
 #[poise::command(
     slash_command,
     prefix_command,
@@ -301,39 +216,12 @@ pub async fn repo_delete(
     guild_cooldown = 60,
     required_permissions = "MANAGE_GUILD"
 )]
-pub async fn delhook(
-    ctx: Context<'_>,
-    #[description = "The webhook ID"] id: String,
-) -> Result<(), Error> {
-    let data = ctx.data();
-
-    // Check if the guild exists on our DB
-    let guild = sqlx::query!(
-        "SELECT COUNT(1) FROM gitlogs__guilds WHERE guild_id = $1",
-        ctx.guild_id().unwrap().to_string()
-    )
-    .fetch_one(&data.pool)
-    .await?;
-
-    if guild.count.unwrap_or_default() == 0 {
-        // If it doesn't, return a error
-        return Err("You don't have any webhooks in this guild! Use ``/newhook`` (or ``git!newhook``) to create one".into());
-    }
-
-    sqlx::query!(
-        "DELETE FROM gitlogs__webhooks WHERE id = $1 AND guild_id = $2",
-        id,
-        ctx.guild_id().unwrap().to_string()
-    )
-    .execute(&data.pool)
-    .await?;
-
-    ctx.say("Webhook deleted if it exists!").await?;
-
-    Ok(())
+pub async fn eventmods_list(ctx: Context<'_>) -> Result<(), Error> {
+    crate::silverpelt::settings_poise::settings_viewer(&ctx, &super::settings::event_modifiers())
+        .await
 }
 
-/// Resets a webhook secret. DMs must be open
+/// Creates a event modifier on a webhook
 #[poise::command(
     slash_command,
     prefix_command,
@@ -341,82 +229,136 @@ pub async fn delhook(
     guild_cooldown = 60,
     required_permissions = "MANAGE_GUILD"
 )]
-pub async fn resetsecret(
+#[allow(clippy::too_many_arguments)]
+pub async fn eventmods_create(
     ctx: Context<'_>,
-    #[description = "The webhook ID"] id: String,
+    #[description = "The webhook ID"] webhook_id: String,
+    #[description = "The events to match against, comma/space seperated"] events: String,
+    #[description = "Blacklist the events"] blacklisted: bool,
+    #[description = "Whitelist the events. Other events will not be allowed"] whitelisted: bool,
+    #[description = "Priority. Use 0 for normal priority"] priority: Option<i32>,
+    // Lazy = "prefer to parse the current argument as the other params first"
+    #[description = "Repository ID, will match all if unset"]
+    #[lazy]
+    repo_id: Option<String>,
+    #[description = "Redirect channel ID"] redirect_channel: Option<ChannelId>,
 ) -> Result<(), Error> {
-    let data = ctx.data();
+    crate::silverpelt::settings_poise::settings_creator(
+        &ctx,
+        &super::settings::event_modifiers(),
+        indexmap::indexmap! {
+            "webhook_id".to_string() => Value::String(webhook_id),
+            "events".to_string() => {
+                let events: Vec<String> = events.split(',').map(|x| x.to_string()).collect();
 
-    // Check if the guild exists on our DB
-    let guild = sqlx::query!(
-        "SELECT COUNT(1) FROM gitlogs__guilds WHERE guild_id = $1",
-        ctx.guild_id().unwrap().to_string()
+                let mut value_events = Vec::new();
+
+                for evt in events {
+                    value_events.push(Value::String(evt));
+                }
+
+                Value::List(value_events)
+            },
+            "blacklisted".to_string() => Value::Boolean(blacklisted),
+            "whitelisted".to_string() => Value::Boolean(whitelisted),
+            "priority".to_string() => Value::Integer(priority.unwrap_or_default() as i64),
+            "repo_id".to_string() => {
+                if let Some(repo_id) = repo_id {
+                    Value::String(repo_id)
+                } else {
+                    Value::None
+                }
+            },
+            "redirect_channel".to_string() => {
+                if let Some(redirect_channel) = redirect_channel {
+                    Value::String(redirect_channel.to_string())
+                } else {
+                    Value::None
+                }
+            }
+        },
     )
-    .fetch_one(&data.pool)
-    .await?;
+    .await
+}
 
-    if guild.count.unwrap_or_default() == 0 {
-        // If it doesn't, return a error
-        return Err("You don't have any webhooks in this guild! Use ``/gitlogs newhook`` (or ``%gitlogs newhook``) to create one".into());
-    }
+/// Updates a event modifier on a webhook
+#[poise::command(
+    slash_command,
+    prefix_command,
+    guild_only,
+    guild_cooldown = 60,
+    required_permissions = "MANAGE_GUILD"
+)]
+#[allow(clippy::too_many_arguments)]
+pub async fn eventmods_update(
+    ctx: Context<'_>,
+    #[description = "The modifier ID"] modifier_id: String,
+    #[description = "The webhook ID"] webhook_id: String,
+    #[description = "The events to match against, comma/space seperated"] events: String,
+    #[description = "Blacklist the events"] blacklisted: bool,
+    #[description = "Whitelist the events. Other events will not be allowed"] whitelisted: bool,
+    #[description = "Priority. Use 0 for normal priority"] priority: Option<i32>,
+    // Lazy = "prefer to parse the current argument as the other params first"
+    #[description = "Repository ID, will match all if unset"]
+    #[lazy]
+    repo_id: Option<String>,
+    #[description = "Redirect channel ID"] redirect_channel: Option<ChannelId>,
+) -> Result<(), Error> {
+    crate::silverpelt::settings_poise::settings_updater(
+        &ctx,
+        &super::settings::event_modifiers(),
+        indexmap::indexmap! {
+            "id".to_string() => Value::String(modifier_id),
+            "webhook_id".to_string() => Value::String(webhook_id),
+            "events".to_string() => {
+                let events: Vec<String> = events.split(',').map(|x| x.to_string()).collect();
 
-    // Check if the webhook exists
-    let webhook = sqlx::query!(
-        "SELECT COUNT(1) FROM gitlogs__webhooks WHERE id = $1 AND guild_id = $2",
-        id,
-        ctx.guild_id().unwrap().to_string()
+                let mut value_events = Vec::new();
+
+                for evt in events {
+                    value_events.push(Value::String(evt));
+                }
+
+                Value::List(value_events)
+            },
+            "blacklisted".to_string() => Value::Boolean(blacklisted),
+            "whitelisted".to_string() => Value::Boolean(whitelisted),
+            "priority".to_string() => Value::Integer(priority.unwrap_or_default() as i64),
+            "repo_id".to_string() => {
+                if let Some(repo_id) = repo_id {
+                    Value::String(repo_id)
+                } else {
+                    Value::None
+                }
+            },
+            "redirect_channel".to_string() => {
+                if let Some(redirect_channel) = redirect_channel {
+                    Value::String(redirect_channel.to_string())
+                } else {
+                    Value::None
+                }
+            }
+        },
     )
-    .fetch_one(&data.pool)
-    .await?;
+    .await
+}
 
-    if webhook.count.unwrap_or_default() == 0 {
-        return Err("That webhook doesn't exist! Use ``/gitlogs newhook`` (or ``git!newhook``) to create one".into());
-    }
-
-    let webh_secret = Alphanumeric.sample_string(&mut rand::thread_rng(), 256);
-
-    // Try to DM the user
-    // Create a new dm channel with the user if not slash command
-    let dm_channel = ctx.author().create_dm_channel(ctx.http()).await;
-
-    let dm = match dm_channel {
-        Ok(dm) => dm,
-        Err(_) => {
-            ctx.say(
-                "I couldn't create a DM channel with you, please enable DMs from server members",
-            )
-            .await?;
-            return Ok(());
-        }
-    };
-
-    sqlx::query!(
-        "UPDATE gitlogs__webhooks SET secret = $1 WHERE id = $2 AND guild_id = $3",
-        webh_secret,
-        id,
-        ctx.guild_id().unwrap().to_string()
+/// Deletes a event modifier by id
+#[poise::command(
+    slash_command,
+    prefix_command,
+    guild_only,
+    guild_cooldown = 60,
+    required_permissions = "MANAGE_GUILD"
+)]
+pub async fn eventmods_delete(
+    ctx: Context<'_>,
+    #[description = "The modifier ID"] modifier_id: String,
+) -> Result<(), Error> {
+    crate::silverpelt::settings_poise::settings_deleter(
+        &ctx,
+        &super::settings::event_modifiers(),
+        Value::String(modifier_id),
     )
-    .execute(&data.pool)
-    .await?;
-
-    dm.id.send_message(
-        ctx.http(),
-        CreateMessage::new()
-        .content(
-            format!(
-                "Your new webhook secret is `{webh_secret}`. 
-
-Update this webhooks information in GitHub settings now. Your webhook will not accept messages from GitHub unless you do so!
-
-**Delete this message after you're done!**
-                ",
-                webh_secret=webh_secret
-            )
-        )
-    ).await?;
-
-    ctx.say("Webhook secret updated! Check your DMs for the webhook information.")
-        .await?;
-
-    Ok(())
+    .await
 }

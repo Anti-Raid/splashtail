@@ -5,6 +5,143 @@ use module_settings::types::{
 };
 use splashcore_rs::value::Value;
 
+pub(crate) fn webhooks() -> ConfigOption {
+    ConfigOption {
+        id: "webhooks",
+        name: "Webhooks",
+        description:
+            "Stores a list of webhooks to which Github can post events to.",
+        table: "gitlogs__webhooks",
+        guild_id: "guild_id",
+        primary_key: "id",
+        max_entries: 5,
+        columns: vec![
+            Column {
+                id: "id",
+                name: "Webhook ID",
+                column_type: ColumnType::new_scalar(InnerColumnType::Uuid {}),
+                nullable: false,
+                unique: true,
+                suggestions: ColumnSuggestion::None {},
+                ignored_for: vec![OperationType::Create],
+                secret: None,
+                pre_checks: indexmap::indexmap! {
+                    OperationType::Create => vec![
+                        // Set sink display type
+                        ColumnAction::NativeAction {
+                            action: Box::new(|_ctx, state| async move {
+                                let id = botox::crypto::gen_random(128);
+                                state.state.insert("id".to_string(), Value::String(id.to_string()));
+                                state.bypass_ignore_for.insert("id".to_string());
+                                Ok(())
+                            }.boxed()),
+                            on_condition: None
+                        },
+                    ],
+                },
+                default_pre_checks: vec![],
+            },
+            Column {
+                id: "comment",
+                name: "Comment",
+                column_type: ColumnType::new_scalar(InnerColumnType::String { min_length: None, max_length: Some(64), allowed_values: vec![], kind: InnerColumnTypeStringKind::Normal }),
+                nullable: false,
+                unique: false,
+                suggestions: ColumnSuggestion::None {},
+                ignored_for: vec![],
+                secret: None,
+                pre_checks: indexmap::indexmap! {},
+                default_pre_checks: vec![],
+            },
+            Column {
+                id: "secret",
+                name: "Secret",
+                column_type: ColumnType::new_scalar(InnerColumnType::String { min_length: None, max_length: Some(256), allowed_values: vec![], kind: InnerColumnTypeStringKind::Channel }),
+                nullable: false,
+                unique: false,
+                suggestions: ColumnSuggestion::None {},
+                ignored_for: vec![],
+                secret: Some(256),
+                pre_checks: indexmap::indexmap! {
+                    OperationType::Create => vec![
+                        // Set sink display type
+                        ColumnAction::NativeAction {
+                            action: Box::new(|_ctx, state| async move {
+                                let Some(Value::String(secret)) = state.state.get("secret") else {
+                                    return Err(SettingsError::MissingOrInvalidField { 
+                                        field: "secret".to_string(),
+                                        src: "secret->NativeActon [pre_checks]".to_string(),
+                                    });
+                                };
+
+                                let Some(Value::String(id)) = state.state.get("id") else {
+                                    return Err(SettingsError::MissingOrInvalidField { 
+                                        field: "id".to_string(),
+                                        src: "id->NativeActon [pre_checks]".to_string(),
+                                    });
+                                };
+
+                                // Insert message
+                                state.state.insert(
+                                    "__id_message".to_string(), 
+                                    Value::String(format!(
+                                        "
+Next, add the following webhook to your Github repositories (or organizations): `{api_url}/integrations/gitlogs/kittycat?id={id}`
+
+Set the `Secret` field to `{webh_secret}` and ensure that Content Type is set to `application/json`. 
+
+When creating repositories, use `{id}` as the ID.
+            
+**Note that the above URL and secret is unique and should not be shared with others**
+                                        ",
+                                        api_url=config::CONFIG.sites.api.get(),
+                                        id=id,
+                                        webh_secret=secret
+                                    )
+                                ));
+
+                                Ok(())
+                            }.boxed()),
+                            on_condition: None
+                        },
+                    ],
+                },
+                default_pre_checks: vec![],
+            },
+            module_settings::common_columns::created_at(),
+            module_settings::common_columns::created_by(),
+            module_settings::common_columns::last_updated_at(),
+            module_settings::common_columns::last_updated_by(),
+        ],
+        operations: indexmap::indexmap! {
+            OperationType::View => OperationSpecific {
+                corresponding_command: "gitlogs webhooks_list",
+                columns_to_set: indexmap::indexmap! {},
+            },
+            OperationType::Create => OperationSpecific {
+                corresponding_command: "gitlogs webhooks_create",
+                columns_to_set: indexmap::indexmap! {
+                    "created_at" => "{__now}",
+                    "created_by" => "{__author}",
+                    "last_updated_at" => "{__now}",
+                    "last_updated_by" => "{__author}",
+                },
+            },
+            OperationType::Update => OperationSpecific {
+                corresponding_command: "gitlogs webhooks_update",
+                columns_to_set: indexmap::indexmap! {
+                    "last_updated_at" => "{__now}",
+                    "last_updated_by" => "{__author}",
+                },
+            },
+            OperationType::Delete => OperationSpecific {
+                corresponding_command: "gitlogs webhooks_delete",
+                columns_to_set: indexmap::indexmap! {},
+            },
+        },
+    }
+}
+
 pub(crate) fn repos() -> ConfigOption {
     ConfigOption {
         id: "repos",
@@ -24,6 +161,7 @@ pub(crate) fn repos() -> ConfigOption {
                 unique: true,
                 suggestions: ColumnSuggestion::None {},
                 ignored_for: vec![OperationType::Create],
+                secret: None,
                 pre_checks: indexmap::indexmap! {
                     OperationType::Create => vec![
                         // Set sink display type
@@ -52,6 +190,7 @@ pub(crate) fn repos() -> ConfigOption {
                     id_column: "id",
                 },
                 ignored_for: vec![],
+                secret: None,
                 pre_checks: indexmap::indexmap! {},
                 default_pre_checks: vec![
                     // Set sink display type
@@ -102,6 +241,7 @@ pub(crate) fn repos() -> ConfigOption {
                 unique: false,
                 suggestions: ColumnSuggestion::None {},
                 ignored_for: vec![],
+                secret: None,
                 pre_checks: indexmap::indexmap! {
                     OperationType::Create => vec![
                         // Set sink display type
@@ -172,6 +312,7 @@ pub(crate) fn repos() -> ConfigOption {
                 unique: false,
                 suggestions: ColumnSuggestion::None {},
                 ignored_for: vec![],
+                secret: None,
                 pre_checks: indexmap::indexmap! {},
                 default_pre_checks: vec![],
             },
@@ -228,6 +369,7 @@ pub(crate) fn event_modifiers() -> ConfigOption {
                 unique: true,
                 suggestions: ColumnSuggestion::None {},
                 ignored_for: vec![OperationType::Create],
+                secret: None,
                 pre_checks: indexmap::indexmap! {
                     OperationType::Create => vec![
                         // Set sink display type
@@ -256,6 +398,7 @@ pub(crate) fn event_modifiers() -> ConfigOption {
                     id_column: "id",
                 },
                 ignored_for: vec![],
+                secret: None,
                 pre_checks: indexmap::indexmap! {},
                 default_pre_checks: vec![
                     // Set sink display type
@@ -310,6 +453,7 @@ pub(crate) fn event_modifiers() -> ConfigOption {
                     id_column: "id",
                 },
                 ignored_for: vec![],
+                secret: None,
                 pre_checks: indexmap::indexmap! {},
                 default_pre_checks: vec![
                     // Set sink display type
@@ -358,6 +502,7 @@ pub(crate) fn event_modifiers() -> ConfigOption {
                 unique: false,
                 suggestions: ColumnSuggestion::None {},
                 ignored_for: vec![],
+                secret: None,
                 pre_checks: indexmap::indexmap! {},
                 default_pre_checks: vec![],
             },
@@ -369,6 +514,7 @@ pub(crate) fn event_modifiers() -> ConfigOption {
                 unique: false,
                 suggestions: ColumnSuggestion::None {},
                 ignored_for: vec![],
+                secret: None,
                 pre_checks: indexmap::indexmap! {},
                 default_pre_checks: vec![],
             },
@@ -380,6 +526,7 @@ pub(crate) fn event_modifiers() -> ConfigOption {
                 unique: false,
                 suggestions: ColumnSuggestion::None {},
                 ignored_for: vec![],
+                secret: None,
                 pre_checks: indexmap::indexmap! {},
                 default_pre_checks: vec![],
             },
@@ -391,6 +538,7 @@ pub(crate) fn event_modifiers() -> ConfigOption {
                 unique: false,
                 suggestions: ColumnSuggestion::None {},
                 ignored_for: vec![],
+                secret: None,
                 pre_checks: indexmap::indexmap! {},
                 default_pre_checks: vec![],
             },
@@ -402,6 +550,7 @@ pub(crate) fn event_modifiers() -> ConfigOption {
                 unique: false,
                 suggestions: ColumnSuggestion::None {},
                 ignored_for: vec![],
+                secret: None,
                 pre_checks: indexmap::indexmap! {},
                 default_pre_checks: vec![
                     ColumnAction::NativeAction {

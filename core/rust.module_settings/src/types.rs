@@ -8,6 +8,7 @@
 // Note that these special variables do not need to live in state and may instead be special cased
 //
 // For display purposes, the special case variable {[__column_id]_displaytype} can be set to allow displaying in a different form
+// For sending a info message etc on save, the {[__column_id]_message} can be set
 
 use futures::future::BoxFuture;
 use splashcore_rs::value::Value;
@@ -400,6 +401,18 @@ pub struct Column {
     ///
     /// Delete => All column checks other than actions are ignored. The value itself will be set to None. The key itself is set to None in state
     pub ignored_for: Vec<OperationType>,
+
+    /// Whether or not the column is a secret, if so, usize stores the length of the secret that should be generated in reset
+    ///
+    /// Note that secret columns are not present in view actions. ignored_for rules continue to apply.
+    ///
+    /// Semantically:
+    ///
+    /// View: field is omitted from final results
+    /// Create: field is set to a random value of passed length if not explicitly provided (e.g. ignored_for, client not providing it)
+    /// Update: Semantics similar to view. The client is free to reset secret by providing its own secret however.
+    /// Delete: no real effect here
+    pub secret: Option<usize>,
 
     /// Pre-execute checks
     ///

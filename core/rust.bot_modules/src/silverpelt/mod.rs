@@ -137,6 +137,39 @@ impl Module {
             CommandExtendedData::none_map(),
         ));
 
+        // Check: Ensure all command extended data's have valid subcommands listed
+        for (command, extended_data) in &parsed.commands {
+            let mut listed_subcommands = Vec::new();
+            let mut actual_subcommands = Vec::new();
+
+            for (subcommand, _) in extended_data.iter() {
+                listed_subcommands.push(subcommand.to_string());
+            }
+
+            for subcommand in &command.subcommands {
+                actual_subcommands.push(subcommand.name.clone());
+            }
+
+            // We don't care about omission of "" (rootcmd) here
+            if !listed_subcommands.contains(&"".to_string()) {
+                listed_subcommands.push("".to_string());
+            }
+
+            if !actual_subcommands.contains(&"".to_string()) {
+                actual_subcommands.push("".to_string());
+            }
+
+            if listed_subcommands != actual_subcommands {
+                panic!(
+                    "Module {} has a command {} with subcommands that do not match the actual subcommands [{} != {}]",
+                    parsed.id,
+                    command.name,
+                    listed_subcommands.join(", "),
+                    actual_subcommands.join(", ")
+                );
+            }
+        }
+
         parsed.__parsed = true;
         parsed
     }
