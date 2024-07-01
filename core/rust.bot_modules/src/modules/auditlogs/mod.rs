@@ -41,7 +41,7 @@ pub fn module() -> crate::silverpelt::Module {
                     },
                     ..Default::default()
                 },
-                "add_sink" => crate::silverpelt::CommandExtendedData {
+                "add_channel" => crate::silverpelt::CommandExtendedData {
                     default_perms: crate::silverpelt::PermissionChecks {
                         checks: vec![
                             crate::silverpelt::PermissionCheck {
@@ -61,7 +61,7 @@ pub fn module() -> crate::silverpelt::Module {
                     },
                     ..Default::default()
                 },
-                "add_channel" => crate::silverpelt::CommandExtendedData {
+                "add_sink" => crate::silverpelt::CommandExtendedData {
                     default_perms: crate::silverpelt::PermissionChecks {
                         checks: vec![
                             crate::silverpelt::PermissionCheck {

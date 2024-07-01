@@ -26,7 +26,7 @@ pub async fn gitlogs(_ctx: Context<'_>) -> Result<(), Error> {
     Ok(())
 }
 
-/// Lists all webhooks in a guild
+/// Lists all webhooks
 #[poise::command(
     slash_command,
     prefix_command,
@@ -38,7 +38,7 @@ pub async fn webhooks_list(ctx: Context<'_>) -> Result<(), Error> {
     crate::silverpelt::settings_poise::settings_viewer(&ctx, &super::settings::webhooks()).await
 }
 
-/// Creates a new webhook in a guild for sending Github notifications
+/// Creates a new webhook in a guild
 #[poise::command(
     slash_command,
     prefix_command,
@@ -100,7 +100,7 @@ pub async fn webhooks_update(
     .await
 }
 
-/// Updates a webhook in a guild
+/// Deletes a webhook in a guild
 #[poise::command(
     slash_command,
     prefix_command,
@@ -221,7 +221,7 @@ pub async fn eventmods_list(ctx: Context<'_>) -> Result<(), Error> {
         .await
 }
 
-/// Creates a event modifier on a webhook
+/// Creates a event modifier
 #[poise::command(
     slash_command,
     prefix_command,
@@ -281,7 +281,7 @@ pub async fn eventmods_create(
     .await
 }
 
-/// Updates a event modifier on a webhook
+/// Updates a event modifier
 #[poise::command(
     slash_command,
     prefix_command,
@@ -343,7 +343,7 @@ pub async fn eventmods_update(
     .await
 }
 
-/// Deletes a event modifier by id
+/// Deletes a event modifier
 #[poise::command(
     slash_command,
     prefix_command,

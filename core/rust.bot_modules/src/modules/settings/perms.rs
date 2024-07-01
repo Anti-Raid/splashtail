@@ -9,7 +9,7 @@ use serenity::all::{Role, RoleId};
     slash_command,
     user_cooldown = 1,
     guild_cooldown = 1,
-    subcommands("perms_modrole", "perms_list", "perms_deleterole")
+    subcommands("perms_list", "perms_modrole", "perms_deleterole")
 )]
 pub async fn perms(_ctx: Context<'_>) -> Result<(), Error> {
     Ok(())

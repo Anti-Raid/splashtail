@@ -6,7 +6,7 @@ require (
 	github.com/bwmarrin/discordgo v0.28.1
 	github.com/cheesycod/mewld v0.0.0-20240506045451-d25a175505ee
 	github.com/cloudflare/tableflip v1.2.3
-	github.com/git-logs/client/webserver v0.0.0-20240701070340-cafc5947cb5a
+	github.com/git-logs/client/webserver v0.0.0-20240701104950-5b0d085cabea
 	github.com/go-chi/chi/v5 v5.1.0
 	github.com/go-playground/validator/v10 v10.22.0
 	github.com/go-viper/mapstructure/v2 v2.0.0

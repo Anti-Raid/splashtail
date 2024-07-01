@@ -134,7 +134,12 @@ impl Module {
             format!("acl__{}_defaultperms_check", parsed.id);
         parsed.commands.push((
             acl_module_defaultperms_check,
-            CommandExtendedData::none_map(),
+            indexmap::indexmap! {
+                "" => CommandExtendedData {
+                    virtual_command: true,
+                    ..Default::default()
+                },
+            },
         ));
 
         // Check: Ensure all command extended data's have valid subcommands listed
@@ -152,11 +157,11 @@ impl Module {
 
             // We don't care about omission of "" (rootcmd) here
             if !listed_subcommands.contains(&"".to_string()) {
-                listed_subcommands.push("".to_string());
+                listed_subcommands.insert(0, "".to_string());
             }
 
             if !actual_subcommands.contains(&"".to_string()) {
-                actual_subcommands.push("".to_string());
+                actual_subcommands.insert(0, "".to_string());
             }
 
             if listed_subcommands != actual_subcommands {
@@ -176,5 +181,14 @@ impl Module {
 
     pub fn is_parsed(&self) -> bool {
         self.__parsed
+    }
+}
+
+/// This test ensures that all modules can be parsed
+#[cfg(test)]
+pub mod test_module_parse {
+    #[test]
+    fn test_module_parse() {
+        let _ = crate::modules::modules();
     }
 }

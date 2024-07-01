@@ -9,6 +9,7 @@ use splashcore_rs::value::Value;
     subcommands(
         "list_sinks",
         "add_channel",
+        "add_sink",
         "add_discordhook",
         "edit_sink",
         "remove_sink"
