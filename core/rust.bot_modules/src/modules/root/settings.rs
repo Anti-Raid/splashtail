@@ -122,11 +122,11 @@ pub(crate) fn maintenance() -> ConfigOption {
         ],
         operations: indexmap::indexmap! {
             OperationType::View => OperationSpecific {
-                corresponding_command: "auditlogs list_sinks",
+                corresponding_command: "sudo maintenance_list",
                 columns_to_set: indexmap::indexmap! {},
             },
             OperationType::Create => OperationSpecific {
-                corresponding_command: "auditlogs add_sink",
+                corresponding_command: "sudo maintenance_create",
                 columns_to_set: indexmap::indexmap! {
                     "created_at" => "{__now}",
                     "created_by" => "{__author}",
@@ -135,14 +135,14 @@ pub(crate) fn maintenance() -> ConfigOption {
                 },
             },
             OperationType::Update => OperationSpecific {
-                corresponding_command: "auditlogs edit_sink",
+                corresponding_command: "sudo maintenance_update",
                 columns_to_set: indexmap::indexmap! {
                     "last_updated_at" => "{__now}",
                     "last_updated_by" => "{__author}",
                 },
             },
             OperationType::Delete => OperationSpecific {
-                corresponding_command: "auditlogs remove_sink",
+                corresponding_command: "sudo maintenance_delete",
                 columns_to_set: indexmap::indexmap! {},
             },
         },

@@ -17,6 +17,10 @@ pub fn module() -> crate::silverpelt::Module {
             indexmap::indexmap! {
                 "register" => crate::silverpelt::CommandExtendedData::none(),
                 "cub" => crate::silverpelt::CommandExtendedData::none(),
+                "maintenance_list" => crate::silverpelt::CommandExtendedData::none(),
+                "maintenance_create" => crate::silverpelt::CommandExtendedData::none(),
+                "maintenance_update" => crate::silverpelt::CommandExtendedData::none(),
+                "maintenance_delete" => crate::silverpelt::CommandExtendedData::none(),
             },
         )],
         config_options: vec![settings::maintenance()],
