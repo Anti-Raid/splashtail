@@ -229,7 +229,7 @@ func Setup() {
 
 	DovewingPlatformDiscord, err = dovewing.DiscordStateConfig{
 		Session:        Discord,
-		PreferredGuild: Config.Servers.Main,
+		PreferredGuild: Config.Servers.Main.Parse(),
 		BaseState:      &baseDovewingState,
 	}.New()
 

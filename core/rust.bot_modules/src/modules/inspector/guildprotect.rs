@@ -53,8 +53,7 @@ pub async fn save_all_guilds_initial(
 
     for guild_id in ctx.cache.guilds() {
         // Ensure shard id
-        let shard_id =
-            serenity::utils::shard_id(guild_id, data.props.statistics().shard_count_nonzero);
+        let shard_id = serenity::utils::shard_id(guild_id, data.props.shard_count().try_into()?);
 
         if ctx.shard_id.0 != shard_id {
             continue;

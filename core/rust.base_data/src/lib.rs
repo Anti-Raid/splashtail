@@ -48,34 +48,6 @@ impl Data {
     }
 }
 
-/// Core statistics about the service
-pub struct Statistics {
-    /// The name of the service
-    pub name: String,
-    /// If applicable, the shards associated with the service
-    pub shards: Vec<u16>,
-    /// If applicable, the shard count
-    pub shard_count: u16,
-    /// If applicable, the shard count as a NonZeroU16
-    pub shard_count_nonzero: std::num::NonZeroU16,
-    /// The cluster ID
-    pub cluster_id: u16,
-    /// The cluster name
-    pub cluster_name: String,
-    /// The total number of clusters
-    pub cluster_count: u16,
-    /// The number of available clusters
-    pub available_clusters: usize,
-    /// Total number of guilds
-    ///
-    /// Note that this statistic may not always be available, in such cases, 0 will be returned
-    pub total_guilds: u64,
-    /// Total number of users
-    ///
-    /// Note that this statistic may not always be available, in such cases, 0 will be returned
-    pub total_users: u64,
-}
-
 pub trait Props
 where
     Self: Send + Sync,
@@ -89,6 +61,34 @@ where
     /// Adds a permodule function to the executor
     fn add_permodule_function(&self, module: &str, function: &str, func: permodule::ToggleFunc);
 
-    /// Returns the statistics of the service
-    fn statistics(&self) -> Statistics;
+    /// The name of the service
+    fn name(&self) -> String;
+
+    /// If applicable, the shards associated with the service
+    fn shards(&self) -> Vec<u16>;
+
+    /// If applicable, the shard count
+    fn shard_count(&self) -> u16;
+
+    /// The cluster ID
+    fn cluster_id(&self) -> u16;
+
+    /// The cluster name
+    fn cluster_name(&self) -> String;
+
+    /// The total number of clusters
+    fn cluster_count(&self) -> u16;
+
+    /// The number of available clusters
+    fn available_clusters(&self) -> usize;
+
+    /// Total number of guilds
+    ///
+    /// Note that this statistic may not always be available, in such cases, 0 will be returned
+    fn total_guilds(&self) -> u64;
+
+    /// Total number of users
+    ///
+    /// Note that this statistic may not always be available, in such cases, 0 will be returned
+    fn total_users(&self) -> u64;
 }

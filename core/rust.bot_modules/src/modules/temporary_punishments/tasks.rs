@@ -28,22 +28,21 @@ pub async fn temporary_punishment_task(
     ctx: &serenity::client::Context,
 ) -> Result<(), crate::Error> {
     let data = ctx.data::<crate::Data>();
-    let stats = data.props.statistics();
     let pool = &data.pool;
 
     let temp_punishments = get_all_temp_punishments(ctx).await?;
 
     let mut set = tokio::task::JoinSet::new();
 
+    let shard_count = data.props.shard_count().try_into()?;
+    let shards = data.props.shards();
+
     for (source, punishments) in temp_punishments {
         for punishment in punishments {
             // Ensure shard id
-            let shard_id = serenity::utils::shard_id(
-                punishment.guild_id,
-                stats.shard_count_nonzero,
-            );
+            let shard_id = serenity::utils::shard_id(punishment.guild_id, shard_count);
 
-            if !stats.shards.contains(&shard_id) {
+            if !shards.contains(&shard_id) {
                 continue;
             }
 

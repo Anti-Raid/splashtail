@@ -15,7 +15,6 @@ pub const RUSTC_VERSION: &str = env!("RUSTC_VERSION");
 
 #[poise::command(category = "Stats", prefix_command, slash_command, user_cooldown = 1)]
 pub async fn stats(ctx: Context<'_>) -> Result<(), Error> {
-    let stats = ctx.data().props.statistics();
     let msg = CreateReply::default().embed(
         CreateEmbed::default()
             .title("Bot Stats")
@@ -50,19 +49,23 @@ pub async fn stats(ctx: Context<'_>) -> Result<(), Error> {
                 "Cluster",
                 format!(
                     "{} ({} of {})",
-                    stats.cluster_name,
-                    stats.cluster_id,
-                    stats.cluster_count - 1,
+                    ctx.data().props.cluster_name(),
+                    ctx.data().props.cluster_id(),
+                    ctx.data().props.cluster_count() - 1,
                 ),
                 true,
             )
             .field(
                 "Clusters Available",
-                format!("{}/{}", stats.available_clusters, stats.cluster_count),
+                format!(
+                    "{}/{}",
+                    ctx.data().props.available_clusters(),
+                    ctx.data().props.cluster_count()
+                ),
                 true,
             )
-            .field("Servers", stats.total_guilds.to_string(), true)
-            .field("Users", stats.total_users.to_string(), true)
+            .field("Servers", ctx.data().props.total_guilds().to_string(), true)
+            .field("Users", ctx.data().props.total_users().to_string(), true)
             .field("Commit Message", GIT_COMMIT_MSG, true)
             .field("Built On", BUILD_CPU, true)
             .field("Cargo Profile", CARGO_PROFILE, true),

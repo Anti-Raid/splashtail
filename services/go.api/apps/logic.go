@@ -24,7 +24,7 @@ func reviewLogicBanAppeal(d uapi.RouteData, resp types.AppResponse, reason strin
 		}
 
 		err := state.Discord.GuildBanDelete(
-			state.Config.Servers.Main,
+			state.Config.Servers.Main.Parse(),
 			resp.UserID,
 			discordgo.WithAuditLogReason("Ban appeal accepted by "+d.Auth.ID+" | "+reason),
 		)
@@ -42,7 +42,7 @@ func reviewLogicBanAppeal(d uapi.RouteData, resp types.AppResponse, reason strin
 
 func reviewLogicStaff(d uapi.RouteData, resp types.AppResponse, reason string, approve bool) error {
 	if approve {
-		err := state.Discord.GuildMemberRoleAdd(state.Config.Servers.Main, resp.UserID, state.Config.Roles.AwaitingStaff)
+		err := state.Discord.GuildMemberRoleAdd(state.Config.Servers.Main.Parse(), resp.UserID, state.Config.Roles.AwaitingStaff)
 
 		if err != nil {
 			return err

@@ -98,7 +98,7 @@ type Notifications struct {
 }
 
 type Servers struct {
-	Main string `yaml:"main" default:"1064135068928454766" comment:"Main Server ID" validate:"required"`
+	Main Differs[string] `yaml:"main" default:"1064135068928454766" comment:"Main Server ID" validate:"required"`
 }
 
 type Meta struct {

@@ -122,10 +122,16 @@ pub struct Sites {
 }
 
 #[derive(Serialize, Deserialize)]
+pub struct Servers {
+    pub main: Differs<serenity::all::GuildId>,
+}
+
+#[derive(Serialize, Deserialize)]
 pub struct Config {
     pub discord_auth: DiscordAuth,
     pub meta: Meta,
     pub sites: Sites,
+    pub servers: Servers,
     pub object_storage: ObjectStorage,
 
     #[serde(skip)]

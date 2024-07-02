@@ -235,13 +235,12 @@ pub async fn prune_user(
     )?;
 
     let data = ctx.data();
-    let stats = data.props.statistics();
 
     let am = data.props.underlying_am_client()?;
     let Some(resp) = am
         .request_one(
             RequestOptions {
-                cluster_id: shard_id(guild_id, stats.shard_count_nonzero),
+                cluster_id: shard_id(guild_id, data.props.shard_count().try_into()?),
                 expected_response_count: 1,
                 to: AnimusTarget::Jobserver,
                 op: AnimusOp::Request,

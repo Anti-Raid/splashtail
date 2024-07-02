@@ -1,4 +1,5 @@
 mod cmds;
+mod settings;
 
 pub fn module() -> crate::silverpelt::Module {
     crate::silverpelt::Module {
@@ -18,6 +19,7 @@ pub fn module() -> crate::silverpelt::Module {
                 "cub" => crate::silverpelt::CommandExtendedData::none(),
             },
         )],
+        config_options: vec![settings::maintenance()],
         ..Default::default()
     }
 }

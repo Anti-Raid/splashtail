@@ -84,22 +84,40 @@ impl base_data::Props for Props {
         PERMODULE_FUNCTIONS.insert((module.to_string(), function.to_string()), func);
     }
 
-    fn statistics(&self) -> base_data::Statistics {
-        base_data::Statistics {
-            name: "bot".to_string(),
-            shards: crate::ipc::argparse::MEWLD_ARGS.shards.clone(),
-            shard_count: crate::ipc::argparse::MEWLD_ARGS.shard_count,
-            shard_count_nonzero: std::num::NonZeroU16::new(
-                crate::ipc::argparse::MEWLD_ARGS.shard_count,
-            )
-            .unwrap(),
-            cluster_id: crate::ipc::argparse::MEWLD_ARGS.cluster_id,
-            cluster_name: crate::ipc::argparse::MEWLD_ARGS.cluster_name.clone(),
-            cluster_count: crate::ipc::argparse::MEWLD_ARGS.cluster_count,
-            available_clusters: self.mewld_ipc.cache.cluster_healths.len(),
-            total_guilds: self.mewld_ipc.cache.total_guilds(),
-            total_users: self.mewld_ipc.cache.total_users(),
-        }
+    fn name(&self) -> String {
+        "bot".to_string()
+    }
+
+    fn shards(&self) -> Vec<u16> {
+        crate::ipc::argparse::MEWLD_ARGS.shards.clone()
+    }
+
+    fn shard_count(&self) -> u16 {
+        crate::ipc::argparse::MEWLD_ARGS.shard_count
+    }
+
+    fn cluster_id(&self) -> u16 {
+        crate::ipc::argparse::MEWLD_ARGS.cluster_id
+    }
+
+    fn cluster_name(&self) -> String {
+        crate::ipc::argparse::MEWLD_ARGS.cluster_name.clone()
+    }
+
+    fn cluster_count(&self) -> u16 {
+        crate::ipc::argparse::MEWLD_ARGS.cluster_count
+    }
+
+    fn available_clusters(&self) -> usize {
+        self.mewld_ipc.cache.cluster_healths.len()
+    }
+
+    fn total_guilds(&self) -> u64 {
+        self.mewld_ipc.cache.total_guilds()
+    }
+
+    fn total_users(&self) -> u64 {
+        self.mewld_ipc.cache.total_users()
     }
 }
 
@@ -155,9 +173,10 @@ pub fn maint_message<'a>(user_data: &crate::Data) -> poise::CreateReply<'a> {
         format!("Unfortunately, AntiRaid is currently unavailable due to poor code management and changes with the Discord API. We are currently in the works of V6, and hope to have it out by next month. All use of our services will not be available, and updates will be pushed here. We are extremely sorry for the inconvenience.\nFor more information you can also join our [Support Server]({})!", config::CONFIG.meta.support_server)
     );
 
-    let changes = [
+    let changes: [&str; 3] = [
         "We are working extremely hard on Antiraid v6, and have completed working on half of the bot. We should have this update out by Q1/Q2 2024! Delays may occur due to the sheer scope of the unique features we want to provide!",
-        "Yet another update: we are in the process of adding some MASSIVE new features including advanced permission management, server member limits, AI image classification, server member backups and custom customizable github webhook support (for developers)"
+        "Yet another update: we are in the process of adding some MASSIVE new features including advanced permission management, server member limits, AI image classification, server member backups and custom customizable github webhook support (for developers)",
+        "Update (Tuesday, July 2nd 2024 Edition): We are still working on the bot. It is taking longer than expected due to the large amount of new features being added. You can also request specific features you want in Anti-Raid on our Discord Server!",
     ];
 
     let updates = poise::serenity_prelude::CreateEmbed::default()
@@ -169,7 +188,7 @@ pub fn maint_message<'a>(user_data: &crate::Data) -> poise::CreateReply<'a> {
     .color(0xff0000)
     .description(format!(
         "**Server Count:** {}\n**Shard Count:** {}\n**Cluster Count:** {}\n**Cluster ID:** {}\n**Cluster Name:** {}\n**Uptime:** {}",
-        user_data.props.statistics().total_guilds,
+        user_data.props.total_guilds(),
         ipc::argparse::MEWLD_ARGS.shard_count,
         ipc::argparse::MEWLD_ARGS.cluster_count,
         ipc::argparse::MEWLD_ARGS.cluster_id,
