@@ -1,10 +1,11 @@
 use futures_util::FutureExt;
 use module_settings::types::{
-    Column, ColumnAction, ColumnSuggestion, ColumnType, ConfigOption, InnerColumnType, InnerColumnTypeStringKind, OperationSpecific, OperationType, SettingsError
+    settings_wrap_precheck, Column, ColumnAction, ColumnSuggestion, ColumnType, ConfigOption, InnerColumnType, InnerColumnTypeStringKind, OperationSpecific, OperationType, SettingsError
 };
+use once_cell::sync::Lazy;
 use splashcore_rs::value::Value;
 
-pub(crate) fn sink() -> ConfigOption {
+pub static SINK: Lazy<ConfigOption> = Lazy::new(|| {
     ConfigOption {
         id: "sinks",
         name: "Audit Log Sinks",
@@ -23,8 +24,8 @@ pub(crate) fn sink() -> ConfigOption {
                 suggestions: ColumnSuggestion::None {},
                 ignored_for: vec![OperationType::Create],
                 secret: None,
-                pre_checks: indexmap::indexmap! {},
-                default_pre_checks: vec![],
+                pre_checks: settings_wrap_precheck(indexmap::indexmap! {}),
+                default_pre_checks: settings_wrap_precheck(vec![]),
             },
             Column {
                 id: "type",
@@ -35,8 +36,8 @@ pub(crate) fn sink() -> ConfigOption {
                 suggestions: ColumnSuggestion::Static { suggestions: vec!["channel", "discordhook"] },
                 ignored_for: vec![],
                 secret: None,
-                pre_checks: indexmap::indexmap! {},
-                default_pre_checks: vec![],
+                pre_checks: settings_wrap_precheck(indexmap::indexmap! {}),
+                default_pre_checks: settings_wrap_precheck(vec![]),
             },
             Column {
                 id: "sink",
@@ -47,8 +48,8 @@ pub(crate) fn sink() -> ConfigOption {
                 suggestions: ColumnSuggestion::None {},
                 ignored_for: vec![],
                 secret: None,
-                pre_checks: indexmap::indexmap! {},
-                default_pre_checks: vec![
+                pre_checks: settings_wrap_precheck(indexmap::indexmap! {}),
+                default_pre_checks: settings_wrap_precheck(vec![
                     // Set sink display type
                     ColumnAction::NativeAction {
                         action: Box::new(|_ctx, state| async move {
@@ -69,14 +70,14 @@ pub(crate) fn sink() -> ConfigOption {
                                     src: "sink->NativeAction [default_pre_checks]".to_string(),
                                 });
                             };
-
+    
                             let Some(Value::String(typ)) = state.state.get("type") else {
                                 return Err(SettingsError::MissingOrInvalidField { 
                                     field: "type".to_string(),
                                     src: "sink->NativeAction [default_pre_checks]".to_string(),
                                 });
                             };
-
+    
                             if typ == "discordhook" {
                                 let sink_url = url::Url::parse(sink)
                                 .map_err(|e| SettingsError::SchemaCheckValidationError { 
@@ -86,7 +87,7 @@ pub(crate) fn sink() -> ConfigOption {
                                     value: Value::String(sink.clone()),
                                     accepted_range: "Valid Discord webhook URL".to_string()
                                 })?;    
-
+    
                                 if serenity::utils::parse_webhook(
                                     &sink_url
                                 ).is_none() {
@@ -115,7 +116,7 @@ pub(crate) fn sink() -> ConfigOption {
                                     accepted_range: "Valid Discord webhook URL".to_string()
                                 });
                             }
-
+    
                             Ok(())
                         }.boxed()),
                         on_condition: None
@@ -135,11 +136,11 @@ pub(crate) fn sink() -> ConfigOption {
                                     src: "sink->IpcPerModuleFunction [default_pre_checks]".to_string(),
                                 });
                             };
-
+    
                             Ok(typ == "channel")
                         })
                     },
-                ]
+                ])
             },
             Column {
                 id: "events",
@@ -150,10 +151,10 @@ pub(crate) fn sink() -> ConfigOption {
                 suggestions: ColumnSuggestion::Static { suggestions: gwevent::core::event_list().to_vec() },
                 ignored_for: vec![],
                 secret: None,
-                pre_checks: indexmap::indexmap! {
+                pre_checks: settings_wrap_precheck(indexmap::indexmap! {
                     OperationType::View => vec![]
-                },
-                default_pre_checks: vec![
+                }),
+                default_pre_checks: settings_wrap_precheck(vec![
                     ColumnAction::IpcPerModuleFunction {
                         module: "auditlogs",
                         function: "check_all_events",
@@ -162,7 +163,7 @@ pub(crate) fn sink() -> ConfigOption {
                         },
                         on_condition: None
                     }
-                ]
+                ])
             },
             module_settings::common_columns::created_at(),
             module_settings::common_columns::created_by(),
@@ -177,8 +178,8 @@ pub(crate) fn sink() -> ConfigOption {
                 nullable: false,
                 unique: false,
                 suggestions: ColumnSuggestion::None {},
-                pre_checks: indexmap::indexmap! {},
-                default_pre_checks: vec![]
+                pre_checks: settings_wrap_precheck(indexmap::indexmap! {}),
+                default_pre_checks: settings_wrap_precheck(vec![])
             },
         ],
         operations: indexmap::indexmap! {
@@ -208,4 +209,4 @@ pub(crate) fn sink() -> ConfigOption {
             },
         }
     }
-}
+});

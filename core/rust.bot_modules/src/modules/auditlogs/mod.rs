@@ -145,7 +145,7 @@ pub fn module() -> crate::silverpelt::Module {
         )],
         on_startup: vec![Box::new(move |data| am_toggles::setup(data).boxed())],
         event_handlers: vec![Box::new(move |ectx| events::event_listener(ectx).boxed())],
-        config_options: vec![settings::sink()],
+        config_options: vec![(*settings::SINK).clone()],
         ..Default::default()
     }
 }

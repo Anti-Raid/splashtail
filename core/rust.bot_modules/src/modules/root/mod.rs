@@ -23,7 +23,7 @@ pub fn module() -> crate::silverpelt::Module {
                 "maintenance_delete" => crate::silverpelt::CommandExtendedData::none(),
             },
         )],
-        config_options: vec![settings::maintenance()],
+        config_options: vec![(*settings::MAINTENANCE).clone()],
         ..Default::default()
     }
 }

@@ -12,6 +12,7 @@
 
 use futures::future::BoxFuture;
 use splashcore_rs::value::Value;
+use std::sync::Arc;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum SettingsError {
@@ -363,7 +364,14 @@ impl std::fmt::Debug for ColumnAction {
     }
 }
 
-#[derive(Debug)]
+/// Wraps column actions in the currently used wrapper
+///
+/// Currently, this is an Arc for now
+pub fn settings_wrap_precheck<T>(action: T) -> Arc<T> {
+    Arc::new(action)
+}
+
+#[derive(Debug, Clone)]
 pub struct Column {
     /// The ID of the column on the database
     pub id: &'static str,
@@ -421,12 +429,12 @@ pub struct Column {
     ///
     /// Note: pre_checks/default_pre_checks for a column will still execute if ignored_for is set for the operation however the value
     /// may be unset or Value::None
-    pub pre_checks: indexmap::IndexMap<OperationType, Vec<ColumnAction>>,
+    pub pre_checks: Arc<indexmap::IndexMap<OperationType, Vec<ColumnAction>>>,
 
     /// Default pre-execute checks to fallback to if the operation specific ones are not set
     ///
     /// Same rules as pre_checks apply
-    pub default_pre_checks: Vec<ColumnAction>,
+    pub default_pre_checks: Arc<Vec<ColumnAction>>,
 }
 
 impl PartialEq for Column {
@@ -473,7 +481,7 @@ impl std::fmt::Display for OperationType {
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct ConfigOption {
     /// The ID of the option
     pub id: &'static str,

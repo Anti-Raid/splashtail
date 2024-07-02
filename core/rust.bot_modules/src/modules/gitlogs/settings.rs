@@ -1,11 +1,11 @@
 use futures_util::FutureExt;
 use module_settings::types::{
-    Column, ColumnAction, ColumnSuggestion, ColumnType, ConfigOption, InnerColumnType,
-    InnerColumnTypeStringKind, OperationSpecific, OperationType, SettingsError,
+    settings_wrap_precheck, Column, ColumnAction, ColumnSuggestion, ColumnType, ConfigOption, InnerColumnType, InnerColumnTypeStringKind, OperationSpecific, OperationType, SettingsError
 };
 use splashcore_rs::value::Value;
+use once_cell::sync::Lazy;
 
-pub(crate) fn webhooks() -> ConfigOption {
+pub static WEBHOOKS: Lazy<ConfigOption> = Lazy::new(|| {
     ConfigOption {
         id: "webhooks",
         name: "Webhooks",
@@ -25,7 +25,7 @@ pub(crate) fn webhooks() -> ConfigOption {
                 suggestions: ColumnSuggestion::None {},
                 ignored_for: vec![OperationType::Create],
                 secret: None,
-                pre_checks: indexmap::indexmap! {
+                pre_checks: settings_wrap_precheck(indexmap::indexmap! {
                     OperationType::Create => vec![
                         // Set sink display type
                         ColumnAction::NativeAction {
@@ -38,8 +38,8 @@ pub(crate) fn webhooks() -> ConfigOption {
                             on_condition: None
                         },
                     ],
-                },
-                default_pre_checks: vec![],
+                }),
+                default_pre_checks: settings_wrap_precheck(vec![]),
             },
             Column {
                 id: "comment",
@@ -50,8 +50,8 @@ pub(crate) fn webhooks() -> ConfigOption {
                 suggestions: ColumnSuggestion::None {},
                 ignored_for: vec![],
                 secret: None,
-                pre_checks: indexmap::indexmap! {},
-                default_pre_checks: vec![],
+                pre_checks: settings_wrap_precheck(indexmap::indexmap! {}),
+                default_pre_checks: settings_wrap_precheck(vec![]),
             },
             Column {
                 id: "secret",
@@ -62,7 +62,7 @@ pub(crate) fn webhooks() -> ConfigOption {
                 suggestions: ColumnSuggestion::None {},
                 ignored_for: vec![],
                 secret: Some(256),
-                pre_checks: indexmap::indexmap! {
+                pre_checks: settings_wrap_precheck(indexmap::indexmap! {
                     OperationType::Create => vec![
                         // Set sink display type
                         ColumnAction::NativeAction {
@@ -105,8 +105,8 @@ When creating repositories, use `{id}` as the ID.
                             on_condition: None
                         },
                     ],
-                },
-                default_pre_checks: vec![],
+                }),
+                default_pre_checks: settings_wrap_precheck(vec![]),
             },
             module_settings::common_columns::created_at(),
             module_settings::common_columns::created_by(),
@@ -140,9 +140,9 @@ When creating repositories, use `{id}` as the ID.
             },
         },
     }
-}
+});
 
-pub(crate) fn repos() -> ConfigOption {
+pub static REPOS: Lazy<ConfigOption> = Lazy::new(|| {
     ConfigOption {
         id: "repos",
         name: "Repositories",
@@ -162,7 +162,7 @@ pub(crate) fn repos() -> ConfigOption {
                 suggestions: ColumnSuggestion::None {},
                 ignored_for: vec![OperationType::Create],
                 secret: None,
-                pre_checks: indexmap::indexmap! {
+                pre_checks: settings_wrap_precheck(indexmap::indexmap! {
                     OperationType::Create => vec![
                         // Set sink display type
                         ColumnAction::NativeAction {
@@ -175,8 +175,8 @@ pub(crate) fn repos() -> ConfigOption {
                             on_condition: None
                         },
                     ],
-                },
-                default_pre_checks: vec![],
+                }),
+                default_pre_checks: settings_wrap_precheck(vec![]),
             },
             Column {
                 id: "webhook_id",
@@ -191,8 +191,8 @@ pub(crate) fn repos() -> ConfigOption {
                 },
                 ignored_for: vec![],
                 secret: None,
-                pre_checks: indexmap::indexmap! {},
-                default_pre_checks: vec![
+                pre_checks: settings_wrap_precheck(indexmap::indexmap! {}),
+                default_pre_checks: settings_wrap_precheck(vec![
                     // Set sink display type
                     ColumnAction::NativeAction {
                         action: Box::new(|ctx, state| async move { 
@@ -231,7 +231,7 @@ pub(crate) fn repos() -> ConfigOption {
                         }.boxed()),
                         on_condition: None,
                     },
-                ],
+                ]),
             },
             Column {
                 id: "repo_name",
@@ -242,7 +242,7 @@ pub(crate) fn repos() -> ConfigOption {
                 suggestions: ColumnSuggestion::None {},
                 ignored_for: vec![],
                 secret: None,
-                pre_checks: indexmap::indexmap! {
+                pre_checks: settings_wrap_precheck(indexmap::indexmap! {
                     OperationType::Create => vec![
                         // Set sink display type
                         ColumnAction::NativeAction {
@@ -301,8 +301,8 @@ pub(crate) fn repos() -> ConfigOption {
                             on_condition: None,
                         },
                     ]
-                },
-                default_pre_checks: vec![],
+                }),
+                default_pre_checks: settings_wrap_precheck(vec![]),
             },
             Column {
                 id: "channel_id",
@@ -313,8 +313,8 @@ pub(crate) fn repos() -> ConfigOption {
                 suggestions: ColumnSuggestion::None {},
                 ignored_for: vec![],
                 secret: None,
-                pre_checks: indexmap::indexmap! {},
-                default_pre_checks: vec![],
+                pre_checks: settings_wrap_precheck(indexmap::indexmap! {}),
+                default_pre_checks: settings_wrap_precheck(vec![]),
             },
             module_settings::common_columns::created_at(),
             module_settings::common_columns::created_by(),
@@ -348,9 +348,9 @@ pub(crate) fn repos() -> ConfigOption {
             },
         },
     }
-}
+});
 
-pub(crate) fn event_modifiers() -> ConfigOption {
+pub static EVENT_MODIFIERS: Lazy<ConfigOption> = Lazy::new(|| {
     ConfigOption {
         id: "event_modifiers",
         name: "Event Modifiers",
@@ -370,7 +370,7 @@ pub(crate) fn event_modifiers() -> ConfigOption {
                 suggestions: ColumnSuggestion::None {},
                 ignored_for: vec![OperationType::Create],
                 secret: None,
-                pre_checks: indexmap::indexmap! {
+                pre_checks: settings_wrap_precheck(indexmap::indexmap! {
                     OperationType::Create => vec![
                         // Set sink display type
                         ColumnAction::NativeAction {
@@ -383,8 +383,8 @@ pub(crate) fn event_modifiers() -> ConfigOption {
                             on_condition: None
                         },
                     ],
-                },
-                default_pre_checks: vec![],
+                }),
+                default_pre_checks: settings_wrap_precheck(vec![]),
             },
             Column {
                 id: "webhook_id",
@@ -399,8 +399,8 @@ pub(crate) fn event_modifiers() -> ConfigOption {
                 },
                 ignored_for: vec![],
                 secret: None,
-                pre_checks: indexmap::indexmap! {},
-                default_pre_checks: vec![
+                pre_checks: settings_wrap_precheck(indexmap::indexmap! {}),
+                default_pre_checks: settings_wrap_precheck(vec![
                     // Set sink display type
                     ColumnAction::NativeAction {
                         action: Box::new(|ctx, state| async move { 
@@ -439,7 +439,7 @@ pub(crate) fn event_modifiers() -> ConfigOption {
                         }.boxed()),
                         on_condition: None,
                     },
-                ],
+                ]),
             },
             Column {
                 id: "repo_id",
@@ -454,8 +454,8 @@ pub(crate) fn event_modifiers() -> ConfigOption {
                 },
                 ignored_for: vec![],
                 secret: None,
-                pre_checks: indexmap::indexmap! {},
-                default_pre_checks: vec![
+                pre_checks: settings_wrap_precheck(indexmap::indexmap! {}),
+                default_pre_checks: settings_wrap_precheck(vec![
                     // Set sink display type
                     ColumnAction::NativeAction {
                         action: Box::new(|ctx, state| async move { 
@@ -492,7 +492,7 @@ pub(crate) fn event_modifiers() -> ConfigOption {
                         }.boxed()),
                         on_condition: None,
                     },
-                ],
+                ]),
             },
             Column {
                 id: "events",
@@ -503,8 +503,8 @@ pub(crate) fn event_modifiers() -> ConfigOption {
                 suggestions: ColumnSuggestion::None {},
                 ignored_for: vec![],
                 secret: None,
-                pre_checks: indexmap::indexmap! {},
-                default_pre_checks: vec![],
+                pre_checks: settings_wrap_precheck(indexmap::indexmap! {}),
+                default_pre_checks: settings_wrap_precheck(vec![]),
             },
             Column {
                 id: "blacklisted",
@@ -515,8 +515,8 @@ pub(crate) fn event_modifiers() -> ConfigOption {
                 suggestions: ColumnSuggestion::None {},
                 ignored_for: vec![],
                 secret: None,
-                pre_checks: indexmap::indexmap! {},
-                default_pre_checks: vec![],
+                pre_checks: settings_wrap_precheck(indexmap::indexmap! {}),
+                default_pre_checks: settings_wrap_precheck(vec![]),
             },
             Column {
                 id: "whitelisted",
@@ -527,8 +527,8 @@ pub(crate) fn event_modifiers() -> ConfigOption {
                 suggestions: ColumnSuggestion::None {},
                 ignored_for: vec![],
                 secret: None,
-                pre_checks: indexmap::indexmap! {},
-                default_pre_checks: vec![],
+                pre_checks: settings_wrap_precheck(indexmap::indexmap! {}),
+                default_pre_checks: settings_wrap_precheck(vec![]),
             },
             Column {
                 id: "redirect_channel",
@@ -539,8 +539,8 @@ pub(crate) fn event_modifiers() -> ConfigOption {
                 suggestions: ColumnSuggestion::None {},
                 ignored_for: vec![],
                 secret: None,
-                pre_checks: indexmap::indexmap! {},
-                default_pre_checks: vec![],
+                pre_checks: settings_wrap_precheck(indexmap::indexmap! {}),
+                default_pre_checks: settings_wrap_precheck(vec![]),
             },
             Column {
                 id: "priority",
@@ -551,8 +551,8 @@ pub(crate) fn event_modifiers() -> ConfigOption {
                 suggestions: ColumnSuggestion::None {},
                 ignored_for: vec![],
                 secret: None,
-                pre_checks: indexmap::indexmap! {},
-                default_pre_checks: vec![
+                pre_checks: settings_wrap_precheck(indexmap::indexmap! {}),
+                default_pre_checks: settings_wrap_precheck(vec![
                     ColumnAction::NativeAction {
                         action: Box::new(|_ctx, state| async move {
                             if let Some(Value::Integer(priority)) = state.state.get("priority") {
@@ -571,7 +571,7 @@ pub(crate) fn event_modifiers() -> ConfigOption {
                         }.boxed()),
                         on_condition: None,
                     },
-                ],
+                ]),
             },
             module_settings::common_columns::created_at(),
             module_settings::common_columns::created_by(),
@@ -605,4 +605,4 @@ pub(crate) fn event_modifiers() -> ConfigOption {
             },
         },
     }
-}
+});

@@ -31,9 +31,9 @@ pub fn module() -> crate::silverpelt::Module {
             }),
         ],
         config_options: vec![
-            settings::webhooks(),
-            settings::repos(),
-            settings::event_modifiers(),
+            (*settings::WEBHOOKS).clone(),
+            (*settings::REPOS).clone(),
+            (*settings::EVENT_MODIFIERS).clone(),
         ],
         ..Default::default()
     }

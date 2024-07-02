@@ -50,7 +50,7 @@ pub async fn cub(ctx: Context<'_>) -> Result<(), Error> {
 
 #[poise::command(prefix_command)]
 pub async fn maintenance_list(ctx: Context<'_>) -> Result<(), crate::Error> {
-    crate::silverpelt::settings_poise::settings_viewer(&ctx, &super::settings::maintenance()).await
+    crate::silverpelt::settings_poise::settings_viewer(&ctx, &super::settings::MAINTENANCE).await
 }
 
 #[poise::command(prefix_command)]
@@ -62,7 +62,7 @@ pub async fn maintenance_create(
 ) -> Result<(), crate::Error> {
     crate::silverpelt::settings_poise::settings_creator(
         &ctx,
-        &super::settings::maintenance(),
+        &super::settings::MAINTENANCE,
         indexmap::indexmap! {
             "title".to_string() => Value::String(title),
             "description".to_string() => Value::String(description),
@@ -86,7 +86,7 @@ pub async fn maintenance_update(
 ) -> Result<(), crate::Error> {
     crate::silverpelt::settings_poise::settings_updater(
         &ctx,
-        &super::settings::maintenance(),
+        &super::settings::MAINTENANCE,
         indexmap::indexmap! {
             "id".to_string() => Value::String(id),
             "title".to_string() => Value::String(title),
@@ -108,7 +108,7 @@ pub async fn maintenance_delete(
 ) -> Result<(), crate::Error> {
     crate::silverpelt::settings_poise::settings_deleter(
         &ctx,
-        &super::settings::maintenance(),
+        &super::settings::MAINTENANCE,
         Value::String(id),
     )
     .await

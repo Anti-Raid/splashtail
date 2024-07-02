@@ -21,7 +21,7 @@ pub async fn auditlogs(_ctx: Context<'_>) -> Result<(), Error> {
 
 #[poise::command(prefix_command, slash_command, user_cooldown = 1)]
 pub async fn list_sinks(ctx: Context<'_>) -> Result<(), Error> {
-    crate::silverpelt::settings_poise::settings_viewer(&ctx, &super::settings::sink()).await
+    crate::silverpelt::settings_poise::settings_viewer(&ctx, &super::settings::SINK).await
 }
 
 #[poise::command(prefix_command, slash_command, user_cooldown = 1)]
@@ -34,7 +34,7 @@ pub async fn add_sink(
 ) -> Result<(), Error> {
     crate::silverpelt::settings_poise::settings_creator(
         &ctx,
-        &super::settings::sink(),
+        &super::settings::SINK,
         indexmap::indexmap! {
             "type".to_string() => Value::String(r#type),
             "sink".to_string() => Value::String(sink),
@@ -75,7 +75,7 @@ pub async fn add_channel(
 ) -> Result<(), Error> {
     crate::silverpelt::settings_poise::settings_creator(
         &ctx,
-        &super::settings::sink(),
+        &super::settings::SINK,
         indexmap::indexmap! {
             "type".to_string() => Value::String("channel".to_string()),
             "sink".to_string() => Value::String(channel.to_string()),
@@ -116,7 +116,7 @@ pub async fn add_discordhook(
 ) -> Result<(), Error> {
     crate::silverpelt::settings_poise::settings_creator(
         &ctx,
-        &super::settings::sink(),
+        &super::settings::SINK,
         indexmap::indexmap! {
             "type".to_string() => Value::String("discordhook".to_string()),
             "sink".to_string() => Value::String(webhook),
@@ -160,7 +160,7 @@ pub async fn edit_sink(
 ) -> Result<(), Error> {
     crate::silverpelt::settings_poise::settings_updater(
         &ctx,
-        &super::settings::sink(),
+        &super::settings::SINK,
         indexmap::indexmap! {
             "id".to_string() => Value::String(id),
             "type".to_string() => Value::String(r#type),
@@ -201,7 +201,7 @@ pub async fn remove_sink(
 ) -> Result<(), Error> {
     crate::silverpelt::settings_poise::settings_deleter(
         &ctx,
-        &super::settings::sink(),
+        &super::settings::SINK,
         Value::String(sink_id),
     )
     .await?;

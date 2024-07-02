@@ -35,7 +35,7 @@ pub async fn gitlogs(_ctx: Context<'_>) -> Result<(), Error> {
     required_permissions = "MANAGE_GUILD"
 )]
 pub async fn webhooks_list(ctx: Context<'_>) -> Result<(), Error> {
-    crate::silverpelt::settings_poise::settings_viewer(&ctx, &super::settings::webhooks()).await
+    crate::silverpelt::settings_poise::settings_viewer(&ctx, &super::settings::WEBHOOKS).await
 }
 
 /// Creates a new webhook in a guild
@@ -53,7 +53,7 @@ pub async fn webhooks_create(
 ) -> Result<(), Error> {
     crate::silverpelt::settings_poise::settings_creator(
         &ctx,
-        &super::settings::webhooks(),
+        &super::settings::WEBHOOKS,
         indexmap::indexmap! {
             "comment".to_string() => Value::String(comment),
             "secret".to_string() => {
@@ -84,7 +84,7 @@ pub async fn webhooks_update(
 ) -> Result<(), Error> {
     crate::silverpelt::settings_poise::settings_updater(
         &ctx,
-        &super::settings::webhooks(),
+        &super::settings::WEBHOOKS,
         indexmap::indexmap! {
             "id".to_string() => Value::String(id),
             "comment".to_string() => Value::String(comment),
@@ -114,7 +114,7 @@ pub async fn webhooks_delete(
 ) -> Result<(), Error> {
     crate::silverpelt::settings_poise::settings_deleter(
         &ctx,
-        &super::settings::webhooks(),
+        &super::settings::WEBHOOKS,
         Value::String(id),
     )
     .await
@@ -129,7 +129,7 @@ pub async fn webhooks_delete(
     required_permissions = "MANAGE_GUILD"
 )]
 pub async fn repo_list(ctx: Context<'_>) -> Result<(), Error> {
-    crate::silverpelt::settings_poise::settings_viewer(&ctx, &super::settings::repos()).await
+    crate::silverpelt::settings_poise::settings_viewer(&ctx, &super::settings::REPOS).await
 }
 
 /// Creates a new repository for a webhook
@@ -149,7 +149,7 @@ pub async fn repo_create(
 ) -> Result<(), Error> {
     crate::silverpelt::settings_poise::settings_creator(
         &ctx,
-        &super::settings::repos(),
+        &super::settings::REPOS,
         indexmap::indexmap! {
             "webhook_id".to_string() => Value::String(webhook_id),
             "repo_name".to_string() => Value::String((owner + "/" + &name).to_lowercase()),
@@ -177,7 +177,7 @@ pub async fn repo_update(
 ) -> Result<(), Error> {
     crate::silverpelt::settings_poise::settings_updater(
         &ctx,
-        &super::settings::repos(),
+        &super::settings::REPOS,
         indexmap::indexmap! {
             "id".to_string() => Value::String(id),
             "webhook_id".to_string() => Value::String(webhook_id),
@@ -202,7 +202,7 @@ pub async fn repo_delete(
 ) -> Result<(), Error> {
     crate::silverpelt::settings_poise::settings_deleter(
         &ctx,
-        &super::settings::repos(),
+        &super::settings::REPOS,
         Value::String(id),
     )
     .await
@@ -217,7 +217,7 @@ pub async fn repo_delete(
     required_permissions = "MANAGE_GUILD"
 )]
 pub async fn eventmods_list(ctx: Context<'_>) -> Result<(), Error> {
-    crate::silverpelt::settings_poise::settings_viewer(&ctx, &super::settings::event_modifiers())
+    crate::silverpelt::settings_poise::settings_viewer(&ctx, &super::settings::EVENT_MODIFIERS)
         .await
 }
 
@@ -245,7 +245,7 @@ pub async fn eventmods_create(
 ) -> Result<(), Error> {
     crate::silverpelt::settings_poise::settings_creator(
         &ctx,
-        &super::settings::event_modifiers(),
+        &super::settings::EVENT_MODIFIERS,
         indexmap::indexmap! {
             "webhook_id".to_string() => Value::String(webhook_id),
             "events".to_string() => {
@@ -306,7 +306,7 @@ pub async fn eventmods_update(
 ) -> Result<(), Error> {
     crate::silverpelt::settings_poise::settings_updater(
         &ctx,
-        &super::settings::event_modifiers(),
+        &super::settings::EVENT_MODIFIERS,
         indexmap::indexmap! {
             "id".to_string() => Value::String(modifier_id),
             "webhook_id".to_string() => Value::String(webhook_id),
@@ -357,7 +357,7 @@ pub async fn eventmods_delete(
 ) -> Result<(), Error> {
     crate::silverpelt::settings_poise::settings_deleter(
         &ctx,
-        &super::settings::event_modifiers(),
+        &super::settings::EVENT_MODIFIERS,
         Value::String(modifier_id),
     )
     .await

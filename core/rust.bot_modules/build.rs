@@ -177,6 +177,129 @@ fn set_stats() -> Result<(), Error> {
     Ok(())
 }
 
+fn validate_config_opts() -> Result<(), Error> {
+    let mut module_list = Vec::new();
+
+    let folder_list = std::fs::read_dir("src/modules")?;
+
+    for folder in folder_list {
+        let folder = folder?;
+
+        if !folder.file_type().unwrap().is_dir() {
+            continue;
+        }
+
+        // Check that a mod.rs file exists in the folder
+        let mod_rs_path = folder.path().join("mod.rs");
+
+        // A TOCTOU here isn't important as this is just a one-of build script
+        if !mod_rs_path.exists() {
+            continue;
+        }
+
+        // Check that a settings.rs file exists in the folder to check config_opts
+        let settings_rs_path = folder.path().join("settings.rs");
+
+        let folder_name = folder.file_name().into_string().unwrap();
+
+        module_list.push((folder_name, settings_rs_path.exists()));
+    }
+
+    for (module, settings_exists) in module_list {
+        // Open its mod.rs
+        let mod_rs_path = format!("src/modules/{}/mod.rs", module);
+
+        let mod_rs = std::fs::read_to_string(mod_rs_path)?;
+
+        // If !settings_exists, then config_options: should not be found as a string
+        if !settings_exists {
+            if mod_rs.contains("config_options:") {
+                return Err("config_options: found in module without settings.rs".into());
+            }
+        } else if !mod_rs.contains("config_options: vec![") {
+            return Err("config_options: not found in module with settings.rs".into());
+        }
+
+        if !settings_exists {
+            continue;
+        }
+
+        // Now go to the line containing config_options and keep reading until an ending ]
+        let mut config_opts = String::new();
+
+        let mut found_config_opts = false;
+
+        for line in mod_rs.lines() {
+            if found_config_opts {
+                if line.contains("]") {
+                    break;
+                }
+
+                config_opts.push_str(line);
+            }
+
+            if line.contains("config_options: vec![") {
+                found_config_opts = true;
+                config_opts.push_str(line.replace("config_options: vec![", "").as_str());
+
+                if line.contains("]") {
+                    break;
+                }
+            }
+        }
+
+        // Now we have the config_opts string, remove newlines, parentheses, .clone() and split by comma
+        let config_opts = config_opts
+            .replace("\n", "")
+            .replace("*", "")
+            .replace("(", "")
+            .replace(")", "")
+            .replace("[", "")
+            .replace("]", "")
+            .replace("\"", "")
+            .replace(".clone", "")
+            .replace("settings::", "");
+
+        let config_opts = config_opts.split(',').map(|x| x.trim()).collect::<Vec<_>>();
+
+        // Remove empty elements from the vec [fixes] [\"WEBHOOKS\", \"REPOS\", \"EVENT_MODIFIERS\"] != [\"WEBHOOKS.clone\", \"REPOS.clone\", \"EVENT_MODIFIERS.clone\", \"\"]"
+        let config_opts = config_opts
+            .iter()
+            .filter(|x| !x.is_empty())
+            .map(|x| x.to_string())
+            .collect::<Vec<_>>();
+
+        // Now open settings.rs and find all pub static's
+        let settings_rs = std::fs::read_to_string(format!("src/modules/{}/settings.rs", module))?;
+
+        let mut settings_statics = Vec::new();
+
+        for line in settings_rs.lines() {
+            if line.contains("pub static") {
+                let variable_name = line
+                    .split(' ')
+                    .nth(2)
+                    .unwrap()
+                    .replace(":", "")
+                    .replace("[", "")
+                    .replace("]", "");
+                settings_statics.push(variable_name);
+            }
+        }
+
+        // Compare the two
+        if settings_statics != config_opts {
+            return Err(format!(
+                "Mismatch between settings.rs and config_options in module {}, {:?} != {:?}",
+                module, settings_statics, config_opts
+            )
+            .into());
+        }
+    }
+
+    Ok(())
+}
+
 fn main() -> Result<(), Error> {
     // CI means we probably dont want to do extensive checks
     if std::env::var("CI_BUILD").unwrap_or_default() == "true" {
@@ -196,6 +319,9 @@ fn main() -> Result<(), Error> {
 
     // Run the autogen stuff
     autogen_modules_mod_rs()?;
+
+    // Validate config_opts
+    validate_config_opts()?;
 
     Ok(())
 }

@@ -1,11 +1,12 @@
 use futures_util::FutureExt;
 use module_settings::types::{
-    Column, ColumnAction, ColumnSuggestion, ColumnType, ConfigOption, InnerColumnType,
-    InnerColumnTypeStringKind, OperationSpecific, OperationType, SettingsError,
+    settings_wrap_precheck, Column, ColumnAction, ColumnSuggestion, ColumnType, ConfigOption,
+    InnerColumnType, InnerColumnTypeStringKind, OperationSpecific, OperationType, SettingsError,
 };
+use once_cell::sync::Lazy;
 use splashcore_rs::value::Value;
 
-pub(crate) fn maintenance() -> ConfigOption {
+pub static MAINTENANCE: Lazy<ConfigOption> = Lazy::new(|| {
     ConfigOption {
         id: "maintenance",
         name: "Maintenance",
@@ -24,7 +25,7 @@ pub(crate) fn maintenance() -> ConfigOption {
                 suggestions: ColumnSuggestion::None {},
                 ignored_for: vec![OperationType::Create],
                 secret: None,
-                pre_checks: indexmap::indexmap! {
+                pre_checks: settings_wrap_precheck(indexmap::indexmap! {
                     OperationType::Create => vec![
                         // Set sink display type
                         ColumnAction::NativeAction {
@@ -49,8 +50,8 @@ pub(crate) fn maintenance() -> ConfigOption {
                             on_condition: None
                         },
                     ],
-                },
-                default_pre_checks: vec![],
+                }),
+                default_pre_checks: settings_wrap_precheck(vec![]),
             },
             Column {
                 id: "title",
@@ -66,8 +67,8 @@ pub(crate) fn maintenance() -> ConfigOption {
                 suggestions: ColumnSuggestion::None {},
                 ignored_for: vec![],
                 secret: None,
-                pre_checks: indexmap::indexmap! {},
-                default_pre_checks: vec![],
+                pre_checks: settings_wrap_precheck(indexmap::indexmap! {}),
+                default_pre_checks: settings_wrap_precheck(vec![]),
             },
             Column {
                 id: "description",
@@ -83,8 +84,8 @@ pub(crate) fn maintenance() -> ConfigOption {
                 suggestions: ColumnSuggestion::None {},
                 ignored_for: vec![],
                 secret: None,
-                pre_checks: indexmap::indexmap! {},
-                default_pre_checks: vec![],
+                pre_checks: settings_wrap_precheck(indexmap::indexmap! {}),
+                default_pre_checks: settings_wrap_precheck(vec![]),
             },
             Column {
                 id: "entries",
@@ -100,8 +101,8 @@ pub(crate) fn maintenance() -> ConfigOption {
                 suggestions: ColumnSuggestion::None {},
                 ignored_for: vec![],
                 secret: None,
-                pre_checks: indexmap::indexmap! {},
-                default_pre_checks: vec![],
+                pre_checks: settings_wrap_precheck(indexmap::indexmap! {}),
+                default_pre_checks: settings_wrap_precheck(vec![]),
             },
             module_settings::common_columns::created_at(),
             module_settings::common_columns::created_by(),
@@ -116,8 +117,8 @@ pub(crate) fn maintenance() -> ConfigOption {
                 nullable: false,
                 unique: false,
                 suggestions: ColumnSuggestion::None {},
-                pre_checks: indexmap::indexmap! {},
-                default_pre_checks: vec![],
+                pre_checks: settings_wrap_precheck(indexmap::indexmap! {}),
+                default_pre_checks: settings_wrap_precheck(vec![]),
             },
         ],
         operations: indexmap::indexmap! {
@@ -147,4 +148,4 @@ pub(crate) fn maintenance() -> ConfigOption {
             },
         },
     }
-}
+});

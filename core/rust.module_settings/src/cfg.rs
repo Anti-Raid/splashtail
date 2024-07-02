@@ -1,3 +1,5 @@
+use crate::types::Column;
+
 use super::state::State;
 use super::types::SettingsError;
 use super::types::{
@@ -5,6 +7,21 @@ use super::types::{
 };
 use splashcore_rs::value::Value;
 use sqlx::Row;
+
+/// Optimization: Creates a column type map from a config option
+///
+/// This is useful to avoid having to loop over the columns every time we need to get the column type
+pub fn _column_map_from_config_option(
+    setting: &ConfigOption,
+) -> indexmap::IndexMap<String, Column> {
+    let mut map = indexmap::IndexMap::new();
+
+    for column in &setting.columns {
+        map.insert(column.id.to_string(), column.clone());
+    }
+
+    map
+}
 
 /// Validates the value against the schema's column type handling schema checks if `perform_schema_checks` is true
 #[allow(dead_code)]
