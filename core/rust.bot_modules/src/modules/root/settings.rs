@@ -1,7 +1,8 @@
 use futures_util::FutureExt;
 use module_settings::types::{
-    settings_wrap_precheck, Column, ColumnAction, ColumnSuggestion, ColumnType, ConfigOption,
-    InnerColumnType, InnerColumnTypeStringKind, OperationSpecific, OperationType, SettingsError,
+    settings_wrap_columns, settings_wrap_precheck, Column, ColumnAction, ColumnSuggestion,
+    ColumnType, ConfigOption, InnerColumnType, InnerColumnTypeStringKind, OperationSpecific,
+    OperationType, SettingsError,
 };
 use once_cell::sync::Lazy;
 use splashcore_rs::value::Value;
@@ -15,7 +16,7 @@ pub static MAINTENANCE: Lazy<ConfigOption> = Lazy::new(|| {
         guild_id: "published_from",
         primary_key: "id",
         max_entries: 1024,
-        columns: vec![
+        columns: settings_wrap_columns(vec![
             Column {
                 id: "id",
                 name: "Maintenance ID",
@@ -41,7 +42,6 @@ pub static MAINTENANCE: Lazy<ConfigOption> = Lazy::new(|| {
                                         column: "published_from".to_string(),
                                         check: "maintenance.published_from".to_string(),
                                         error: "Maintenances must be published from the official support server".to_string(),
-                                        value: Value::String(ctx.guild_id.to_string()),
                                         accepted_range: config::CONFIG.servers.main.get().to_string()
                                     });
                                 }
@@ -120,7 +120,7 @@ pub static MAINTENANCE: Lazy<ConfigOption> = Lazy::new(|| {
                 pre_checks: settings_wrap_precheck(indexmap::indexmap! {}),
                 default_pre_checks: settings_wrap_precheck(vec![]),
             },
-        ],
+        ]),
         operations: indexmap::indexmap! {
             OperationType::View => OperationSpecific {
                 corresponding_command: "sudo maintenance_list",

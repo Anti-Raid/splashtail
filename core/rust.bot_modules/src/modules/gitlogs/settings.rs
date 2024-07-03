@@ -1,6 +1,6 @@
 use futures_util::FutureExt;
 use module_settings::types::{
-    settings_wrap_precheck, Column, ColumnAction, ColumnSuggestion, ColumnType, ConfigOption, InnerColumnType, InnerColumnTypeStringKind, OperationSpecific, OperationType, SettingsError
+    settings_wrap_columns, settings_wrap_precheck, Column, ColumnAction, ColumnSuggestion, ColumnType, ConfigOption, InnerColumnType, InnerColumnTypeStringKind, OperationSpecific, OperationType, SettingsError
 };
 use splashcore_rs::value::Value;
 use once_cell::sync::Lazy;
@@ -15,7 +15,7 @@ pub static WEBHOOKS: Lazy<ConfigOption> = Lazy::new(|| {
         guild_id: "guild_id",
         primary_key: "id",
         max_entries: 5,
-        columns: vec![
+        columns: settings_wrap_columns(vec![
             Column {
                 id: "id",
                 name: "Webhook ID",
@@ -83,7 +83,7 @@ pub static WEBHOOKS: Lazy<ConfigOption> = Lazy::new(|| {
 
                                 // Insert message
                                 state.state.insert(
-                                    "__id_message".to_string(), 
+                                    "__message".to_string(), 
                                     Value::String(format!(
                                         "
 Next, add the following webhook to your Github repositories (or organizations): `{api_url}/integrations/gitlogs/kittycat?id={id}`
@@ -112,7 +112,7 @@ When creating repositories, use `{id}` as the ID.
             module_settings::common_columns::created_by(),
             module_settings::common_columns::last_updated_at(),
             module_settings::common_columns::last_updated_by(),
-        ],
+        ]),
         operations: indexmap::indexmap! {
             OperationType::View => OperationSpecific {
                 corresponding_command: "gitlogs webhooks_list",
@@ -152,7 +152,7 @@ pub static REPOS: Lazy<ConfigOption> = Lazy::new(|| {
         guild_id: "guild_id",
         primary_key: "id",
         max_entries: 10,
-        columns: vec![
+        columns: settings_wrap_columns(vec![
             Column {
                 id: "id",
                 name: "Repo ID",
@@ -222,7 +222,6 @@ pub static REPOS: Lazy<ConfigOption> = Lazy::new(|| {
                                     column: "webhook_id".to_string(),
                                     check: "webhook_id->NativeAction [default_pre_checks]".to_string(),
                                     error: "The specified webhook doesn't exist!".to_string(),
-                                    value: Value::String(webhook_id.to_string()),
                                     accepted_range: "Valid webhook ID".to_string(),
                                 });
                             }
@@ -262,7 +261,6 @@ pub static REPOS: Lazy<ConfigOption> = Lazy::new(|| {
                                             column: "repo_name".to_string(),
                                             check: "repo_name->NativeAction [default_pre_checks]".to_string(),
                                             error: "Repository name must be in the format org/repo".to_string(),
-                                            value: Value::String(repo_name.to_string()),
                                             accepted_range: "Valid repository name".to_string(),
                                         });
                                     }
@@ -287,7 +285,6 @@ pub static REPOS: Lazy<ConfigOption> = Lazy::new(|| {
                                             column: "repo_id".to_string(),
                                             check: "repo_id->NativeAction [default_pre_checks]".to_string(),
                                             error: "The specified repository already exists".to_string(),
-                                            value: Value::String(repo_name.to_string()),
                                             accepted_range: "Valid repository ID".to_string(),
                                         });
                                     }
@@ -320,7 +317,7 @@ pub static REPOS: Lazy<ConfigOption> = Lazy::new(|| {
             module_settings::common_columns::created_by(),
             module_settings::common_columns::last_updated_at(),
             module_settings::common_columns::last_updated_by(),
-        ],
+        ]),
         operations: indexmap::indexmap! {
             OperationType::View => OperationSpecific {
                 corresponding_command: "gitlogs repo_list",
@@ -360,7 +357,7 @@ pub static EVENT_MODIFIERS: Lazy<ConfigOption> = Lazy::new(|| {
         guild_id: "guild_id",
         primary_key: "id",
         max_entries: 50,
-        columns: vec![
+        columns: settings_wrap_columns(vec![
             Column {
                 id: "id",
                 name: "Modifier ID",
@@ -430,7 +427,6 @@ pub static EVENT_MODIFIERS: Lazy<ConfigOption> = Lazy::new(|| {
                                     column: "webhook_id".to_string(),
                                     check: "webhook_id->NativeAction [default_pre_checks]".to_string(),
                                     error: "The specified webhook doesn't exist!".to_string(),
-                                    value: Value::String(webhook_id.to_string()),
                                     accepted_range: "Valid webhook ID".to_string(),
                                 });
                             }
@@ -479,7 +475,6 @@ pub static EVENT_MODIFIERS: Lazy<ConfigOption> = Lazy::new(|| {
                                         column: "repo_id".to_string(),
                                         check: "repo_id->NativeAction [default_pre_checks]".to_string(),
                                         error: "The specified repository does not exist".to_string(),
-                                        value: Value::String(repo_id.to_string()),
                                         accepted_range: "Valid repository ID".to_string(),
                                     });
                                 }
@@ -561,7 +556,6 @@ pub static EVENT_MODIFIERS: Lazy<ConfigOption> = Lazy::new(|| {
                                         column: "priority".to_string(),
                                         check: "priority->NativeAction [default_pre_checks]".to_string(),
                                         error: "Priority must be greater than or equal to 0".to_string(),
-                                        value: Value::Integer(*priority),
                                         accepted_range: "Priority >= 0".to_string(),
                                     });
                                 }
@@ -577,7 +571,7 @@ pub static EVENT_MODIFIERS: Lazy<ConfigOption> = Lazy::new(|| {
             module_settings::common_columns::created_by(),
             module_settings::common_columns::last_updated_at(),
             module_settings::common_columns::last_updated_by(),
-        ],
+        ]),
         operations: indexmap::indexmap! {
             OperationType::View => OperationSpecific {
                 corresponding_command: "gitlogs eventmods_list",

@@ -11,7 +11,6 @@
 // For sending a info message etc on save, the {[__column_id]_message} can be set
 
 use futures::future::BoxFuture;
-use splashcore_rs::value::Value;
 use std::sync::Arc;
 
 #[derive(Debug, Clone, PartialEq)]
@@ -41,7 +40,6 @@ pub enum SettingsError {
         column: String,
         check: String,
         error: String,
-        value: Value,
         accepted_range: String,
     },
     /// Missing or invalid field
@@ -87,13 +85,12 @@ impl std::fmt::Display for SettingsError {
                 column,
                 check,
                 error,
-                value,
                 accepted_range,
             } => {
                 write!(
                     f,
-                    "Column `{}` failed check `{}` with value `{}`, accepted range: `{}`, error: `{}`",
-                    column, check, value, accepted_range, error
+                    "Column `{}` failed check `{}`, accepted range: `{}`, error: `{}`",
+                    column, check, accepted_range, error
                 )
             }
             SettingsError::MissingOrInvalidField { field, src } => write!(f, "Missing (or invalid) field `{}` with src: `{}`", field, src),
@@ -364,13 +361,6 @@ impl std::fmt::Debug for ColumnAction {
     }
 }
 
-/// Wraps column actions in the currently used wrapper
-///
-/// Currently, this is an Arc for now
-pub fn settings_wrap_precheck<T>(action: T) -> Arc<T> {
-    Arc::new(action)
-}
-
 #[derive(Debug, Clone)]
 pub struct Column {
     /// The ID of the column on the database
@@ -502,11 +492,23 @@ pub struct ConfigOption {
     pub primary_key: &'static str,
 
     /// The columns for this option
-    pub columns: Vec<Column>,
+    pub columns: Arc<Vec<Column>>,
 
     /// Maximum number of entries a server may have
     pub max_entries: usize,
 
     /// Operation specific data
     pub operations: indexmap::IndexMap<OperationType, OperationSpecific>,
+}
+
+/// Wraps column actions in the currently used wrapper
+///
+/// Currently, this is an Arc for now
+pub fn settings_wrap_precheck<T>(action: T) -> Arc<T> {
+    Arc::new(action)
+}
+
+/// Wraps a column
+pub fn settings_wrap_columns(columns: Vec<Column>) -> Arc<Vec<Column>> {
+    Arc::new(columns)
 }

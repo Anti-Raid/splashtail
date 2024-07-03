@@ -27,7 +27,6 @@ pub enum CanonicalSettingsError {
         column: String,
         check: String,
         error: String,
-        value: serde_json::Value,
         accepted_range: String,
     },
     /// Missing or invalid field
@@ -81,13 +80,11 @@ impl From<super::types::SettingsError> for CanonicalSettingsError {
                 column,
                 check,
                 error,
-                value,
                 accepted_range,
             } => CanonicalSettingsError::SchemaCheckValidationError {
                 column: column.to_string(),
                 check: check.to_string(),
                 error: error.to_string(),
-                value: value.to_json(),
                 accepted_range: accepted_range.to_string(),
             },
             super::types::SettingsError::MissingOrInvalidField { field, src } => {
@@ -314,16 +311,20 @@ pub struct CanonicalColumn {
     pub secret: Option<usize>,
 }
 
-impl From<super::types::Column> for CanonicalColumn {
-    fn from(column: super::types::Column) -> Self {
+impl From<&super::types::Column> for CanonicalColumn {
+    fn from(column: &super::types::Column) -> Self {
         Self {
             id: column.id.to_string(),
             name: column.name.to_string(),
-            column_type: column.column_type.into(),
+            column_type: column.column_type.clone().into(),
             nullable: column.nullable,
-            suggestions: column.suggestions.into(),
+            suggestions: column.suggestions.clone().into(),
             unique: column.unique,
-            ignored_for: column.ignored_for.into_iter().map(|o| o.into()).collect(),
+            ignored_for: column
+                .ignored_for
+                .iter()
+                .map(|o| o.clone().into())
+                .collect(),
             secret: column.secret,
         }
     }
@@ -434,7 +435,7 @@ impl From<super::types::ConfigOption> for CanonicalConfigOption {
             guild_id: module.guild_id.to_string(),
             name: module.name.to_string(),
             description: module.description.to_string(),
-            columns: module.columns.into_iter().map(|c| c.into()).collect(),
+            columns: module.columns.iter().map(|c| c.into()).collect(),
             primary_key: module.primary_key.to_string(),
             max_entries: module.max_entries,
             operations: module

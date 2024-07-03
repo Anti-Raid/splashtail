@@ -1,3 +1,11 @@
+## Wednesday, July 3rd 2024
+
+## Settings
+
+- Made ``ConfigOptions.columns`` an ``Arc<Vec<Column>>`` from ``Vec<Column>`` to make cloning cheaper
+- Removed lots of useless clones by making `_query_bind_value` accept a reference versus a value and changing `validate_and_parse_value` to consume the `Value` versus taking a reference to it.
+- The settings API no longer guarantees that the state returned will be in any particular order.
+
 ## Monday, July 1st 2024
 
 ## Settings

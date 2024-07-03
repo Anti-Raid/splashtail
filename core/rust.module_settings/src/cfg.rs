@@ -1,5 +1,3 @@
-use crate::types::Column;
-
 use super::state::State;
 use super::types::SettingsError;
 use super::types::{
@@ -8,25 +6,10 @@ use super::types::{
 use splashcore_rs::value::Value;
 use sqlx::Row;
 
-/// Optimization: Creates a column type map from a config option
-///
-/// This is useful to avoid having to loop over the columns every time we need to get the column type
-pub fn _column_map_from_config_option(
-    setting: &ConfigOption,
-) -> indexmap::IndexMap<String, Column> {
-    let mut map = indexmap::IndexMap::new();
-
-    for column in &setting.columns {
-        map.insert(column.id.to_string(), column.clone());
-    }
-
-    map
-}
-
 /// Validates the value against the schema's column type handling schema checks if `perform_schema_checks` is true
 #[allow(dead_code)]
 fn _validate_and_parse_value(
-    v: &Value,
+    v: Value,
     column_type: &ColumnType,
     column_id: &str,
     is_nullable: bool,
@@ -59,7 +42,6 @@ fn _validate_and_parse_value(
                             SettingsError::SchemaCheckValidationError {
                                 column: column_id.to_string(),
                                 check: "uuid_parse".to_string(),
-                                value: v.clone(),
                                 accepted_range: "Valid UUID".to_string(),
                                 error: e.to_string(),
                             }
@@ -67,7 +49,7 @@ fn _validate_and_parse_value(
 
                         Ok(Value::Uuid(value))
                     }
-                    Value::Uuid(_) => Ok(v.clone()),
+                    Value::Uuid(_) => Ok(v),
                     _ => Err(SettingsError::SchemaTypeValidationError {
                         column: column_id.to_string(),
                         expected_type: "Uuid".to_string(),
@@ -80,14 +62,13 @@ fn _validate_and_parse_value(
                     allowed_values,
                     kind,
                 } => match v {
-                    Value::String(s) => {
+                    Value::String(ref s) => {
                         if perform_schema_checks {
                             if let Some(min) = min_length {
                                 if s.len() < *min {
                                     return Err(SettingsError::SchemaCheckValidationError {
                                         column: column_id.to_string(),
                                         check: "minlength".to_string(),
-                                        value: v.clone(),
                                         accepted_range: format!(">{}", min),
                                         error: "s.len() < *min".to_string(),
                                     });
@@ -99,7 +80,6 @@ fn _validate_and_parse_value(
                                     return Err(SettingsError::SchemaCheckValidationError {
                                         column: column_id.to_string(),
                                         check: "maxlength".to_string(),
-                                        value: v.clone(),
                                         accepted_range: format!("<{}", max),
                                         error: "s.len() > *max".to_string(),
                                     });
@@ -110,7 +90,6 @@ fn _validate_and_parse_value(
                                 return Err(SettingsError::SchemaCheckValidationError {
                                     column: column_id.to_string(),
                                     check: "allowed_values".to_string(),
-                                    value: v.clone(),
                                     accepted_range: format!("{:?}", allowed_values),
                                     error: "!allowed_values.is_empty() && !allowed_values.contains(&s.as_str())".to_string()
                                 });
@@ -124,7 +103,6 @@ fn _validate_and_parse_value(
                                         return Err(SettingsError::SchemaCheckValidationError {
                                             column: column_id.to_string(),
                                             check: "snowflake_parse".to_string(),
-                                            value: v.clone(),
                                             accepted_range: "Valid user id".to_string(),
                                             error: err.to_string(),
                                         });
@@ -136,7 +114,6 @@ fn _validate_and_parse_value(
                                         return Err(SettingsError::SchemaCheckValidationError {
                                             column: column_id.to_string(),
                                             check: "snowflake_parse".to_string(),
-                                            value: v.clone(),
                                             accepted_range: "Valid channel id".to_string(),
                                             error: err.to_string(),
                                         });
@@ -148,7 +125,6 @@ fn _validate_and_parse_value(
                                         return Err(SettingsError::SchemaCheckValidationError {
                                             column: column_id.to_string(),
                                             check: "snowflake_parse".to_string(),
-                                            value: v.clone(),
                                             accepted_range: "Valid role id".to_string(),
                                             error: err.to_string(),
                                         });
@@ -160,7 +136,6 @@ fn _validate_and_parse_value(
                                         return Err(SettingsError::SchemaCheckValidationError {
                                             column: column_id.to_string(),
                                             check: "snowflake_parse".to_string(),
-                                            value: v.clone(),
                                             accepted_range: "Valid emoji id".to_string(),
                                             error: err.to_string(),
                                         });
@@ -177,7 +152,6 @@ fn _validate_and_parse_value(
                                         return Err(SettingsError::SchemaCheckValidationError {
                                             column: column_id.to_string(),
                                             check: "message_parse_plength".to_string(),
-                                            value: v.clone(),
                                             accepted_range:
                                                 "Valid message id in format <channel_id>/<message_id>"
                                                     .to_string(),
@@ -190,7 +164,6 @@ fn _validate_and_parse_value(
                                         return Err(SettingsError::SchemaCheckValidationError {
                                             column: column_id.to_string(),
                                             check: "message_parse_0".to_string(),
-                                            value: v.clone(),
                                             accepted_range:
                                                 "Valid message id in format <channel_id>/<message_id>"
                                                     .to_string(),
@@ -203,7 +176,6 @@ fn _validate_and_parse_value(
                                         return Err(SettingsError::SchemaCheckValidationError {
                                             column: column_id.to_string(),
                                             check: "message_parse_1".to_string(),
-                                            value: v.clone(),
                                             accepted_range:
                                                 "Valid message id in format <channel_id>/<message_id>"
                                                     .to_string(),
@@ -213,7 +185,7 @@ fn _validate_and_parse_value(
                                 }
                             }
                         }
-                        Ok(v.clone())
+                        Ok(v)
                     }
                     Value::Uuid(v) => Ok(Value::String(v.to_string())),
                     _ => Err(SettingsError::SchemaTypeValidationError {
@@ -224,18 +196,17 @@ fn _validate_and_parse_value(
                 },
                 InnerColumnType::Timestamp {} => match v {
                     Value::String(s) => {
-                        let value = chrono::NaiveDateTime::parse_from_str(s, "%Y-%m-%d %H:%M:%S")
+                        let value = chrono::NaiveDateTime::parse_from_str(&s, "%Y-%m-%d %H:%M:%S")
                             .map_err(|e| SettingsError::SchemaCheckValidationError {
-                            column: column_id.to_string(),
-                            check: "timestamp_parse".to_string(),
-                            value: v.clone(),
-                            accepted_range: "Valid timestamp".to_string(),
-                            error: e.to_string(),
-                        })?;
+                                column: column_id.to_string(),
+                                check: "timestamp_parse".to_string(),
+                                accepted_range: "Valid timestamp".to_string(),
+                                error: e.to_string(),
+                            })?;
 
                         Ok(Value::Timestamp(value))
                     }
-                    Value::Timestamp(_) => Ok(v.clone()),
+                    Value::Timestamp(_) => Ok(v),
                     Value::TimestampTz(v) => Ok(Value::Timestamp(v.naive_utc())),
                     _ => Err(SettingsError::SchemaTypeValidationError {
                         column: column_id.to_string(),
@@ -245,11 +216,10 @@ fn _validate_and_parse_value(
                 },
                 InnerColumnType::TimestampTz {} => match v {
                     Value::String(s) => {
-                        let value = chrono::DateTime::parse_from_rfc3339(s).map_err(|e| {
+                        let value = chrono::DateTime::parse_from_rfc3339(&s).map_err(|e| {
                             SettingsError::SchemaCheckValidationError {
                                 column: column_id.to_string(),
                                 check: "timestamp_tz_parse".to_string(),
-                                value: v.clone(),
                                 accepted_range: "Valid timestamp with timezone".to_string(),
                                 error: e.to_string(),
                             }
@@ -265,9 +235,9 @@ fn _validate_and_parse_value(
                         Ok(Value::TimestampTz(value))
                     }
                     Value::Timestamp(v) => Ok(Value::TimestampTz(
-                        chrono::DateTime::from_naive_utc_and_offset(*v, chrono::Utc),
+                        chrono::DateTime::from_naive_utc_and_offset(v, chrono::Utc),
                     )),
-                    Value::TimestampTz(_) => Ok(v.clone()),
+                    Value::TimestampTz(_) => Ok(v),
                     _ => Err(SettingsError::SchemaTypeValidationError {
                         column: column_id.to_string(),
                         expected_type: "TimestampTz".to_string(),
@@ -280,7 +250,6 @@ fn _validate_and_parse_value(
                             SettingsError::SchemaCheckValidationError {
                                 column: column_id.to_string(),
                                 check: "integer_parse".to_string(),
-                                value: v.clone(),
                                 accepted_range: "Valid integer".to_string(),
                                 error: e.to_string(),
                             }
@@ -288,7 +257,7 @@ fn _validate_and_parse_value(
 
                         Ok(Value::Integer(value))
                     }
-                    Value::Integer(v) => Ok(Value::Integer(*v)),
+                    Value::Integer(v) => Ok(Value::Integer(v)),
                     _ => Err(SettingsError::SchemaTypeValidationError {
                         column: column_id.to_string(),
                         expected_type: "Integer".to_string(),
@@ -301,7 +270,6 @@ fn _validate_and_parse_value(
                             SettingsError::SchemaCheckValidationError {
                                 column: column_id.to_string(),
                                 check: "float_parse".to_string(),
-                                value: v.clone(),
                                 accepted_range: "Valid float".to_string(),
                                 error: e.to_string(),
                             }
@@ -309,7 +277,7 @@ fn _validate_and_parse_value(
 
                         Ok(Value::Float(value))
                     }
-                    Value::Float(v) => Ok(Value::Float(*v)),
+                    Value::Float(v) => Ok(Value::Float(v)),
                     _ => Err(SettingsError::SchemaTypeValidationError {
                         column: column_id.to_string(),
                         expected_type: "Float".to_string(),
@@ -322,7 +290,7 @@ fn _validate_and_parse_value(
 
                         // Set all the valid bits in final_value to ensure no unknown bits are being set
                         for (_, bit) in values.iter() {
-                            if *bit & *v == *bit {
+                            if *bit & v == *bit {
                                 final_value |= *bit;
                             }
                         }
@@ -341,7 +309,6 @@ fn _validate_and_parse_value(
                             SettingsError::SchemaCheckValidationError {
                                 column: column_id.to_string(),
                                 check: "boolean_parse".to_string(),
-                                value: v.clone(),
                                 accepted_range: "Valid boolean".to_string(),
                                 error: e.to_string(),
                             }
@@ -349,7 +316,7 @@ fn _validate_and_parse_value(
 
                         Ok(Value::Boolean(value))
                     }
-                    Value::Boolean(v) => Ok(Value::Boolean(*v)),
+                    Value::Boolean(v) => Ok(Value::Boolean(v)),
                     _ => Err(SettingsError::SchemaTypeValidationError {
                         column: column_id.to_string(),
                         expected_type: "Boolean".to_string(),
@@ -357,7 +324,7 @@ fn _validate_and_parse_value(
                     }),
                 },
                 InnerColumnType::Json {} => match v {
-                    Value::Map(_) => Ok(v.clone()),
+                    Value::Map(_) => Ok(v),
                     _ => Err(SettingsError::SchemaTypeValidationError {
                         column: column_id.to_string(),
                         expected_type: "Json".to_string(),
@@ -409,11 +376,13 @@ fn _validate_and_parse_value(
 /// Binds a value to a query
 ///
 /// Note that Maps are binded as JSONs
-fn _query_bind_value(
-    query: sqlx::query::Query<'_, sqlx::Postgres, sqlx::postgres::PgArguments>,
+///
+/// `default_column_type` - The (default) column type to use if the value is None. This should be the column_type
+fn _query_bind_value<'a>(
+    query: sqlx::query::Query<'a, sqlx::Postgres, sqlx::postgres::PgArguments>,
     value: Value,
-    column_type_hint: Option<ColumnType>,
-) -> sqlx::query::Query<'_, sqlx::Postgres, sqlx::postgres::PgArguments> {
+    default_column_type: &ColumnType,
+) -> sqlx::query::Query<'a, sqlx::Postgres, sqlx::postgres::PgArguments> {
     match value {
         Value::Uuid(value) => query.bind(value),
         Value::String(value) => query.bind(value),
@@ -538,10 +507,10 @@ fn _query_bind_value(
             }
         }
         Value::Map(_) => query.bind(value.to_json()),
-        Value::None => match column_type_hint {
-            Some(ColumnType::Scalar {
+        Value::None => match default_column_type {
+            ColumnType::Scalar {
                 column_type: column_type_hint,
-            }) => match column_type_hint {
+            } => match column_type_hint {
                 InnerColumnType::Uuid {} => query.bind(None::<sqlx::types::uuid::Uuid>),
                 InnerColumnType::String { .. } => query.bind(None::<String>),
                 InnerColumnType::Timestamp {} => query.bind(None::<chrono::NaiveDateTime>),
@@ -554,9 +523,9 @@ fn _query_bind_value(
                 InnerColumnType::Boolean {} => query.bind(None::<bool>),
                 InnerColumnType::Json {} => query.bind(None::<serde_json::Value>),
             },
-            Some(ColumnType::Array {
+            ColumnType::Array {
                 inner: column_type_hint,
-            }) => match column_type_hint {
+            } => match column_type_hint {
                 InnerColumnType::Uuid {} => query.bind(None::<Vec<sqlx::types::uuid::Uuid>>),
                 InnerColumnType::String { .. } => query.bind(None::<Vec<String>>),
                 InnerColumnType::Timestamp {} => query.bind(None::<Vec<chrono::NaiveDateTime>>),
@@ -569,7 +538,6 @@ fn _query_bind_value(
                 InnerColumnType::Boolean {} => query.bind(None::<Vec<bool>>),
                 InnerColumnType::Json {} => query.bind(None::<Vec<serde_json::Value>>),
             },
-            None => query.bind(None::<String>),
         },
     }
 }
@@ -632,7 +600,7 @@ pub async fn settings_view(
             })?;
 
             // Validate the value. returning the parsed value
-            val = _validate_and_parse_value(&val, &col.column_type, col.id, col.nullable, false)?;
+            val = _validate_and_parse_value(val, &col.column_type, col.id, col.nullable, false)?;
 
             let actions = col
                 .pre_checks
@@ -678,14 +646,23 @@ pub async fn settings_view(
             let mut values = Vec::new();
 
             let mut i = 0;
-            for (column, value) in operation_specific.columns_to_set.iter() {
-                set_stmt.push_str(&format!("{} = ${}, ", column, i + 1));
+            for (col, value) in operation_specific.columns_to_set.iter() {
+                // Get column type from schema for db query hinting
+                let Some(column) = setting.columns.iter().find(|c| c.id == *col) else {
+                    return Err(SettingsError::Generic {
+                        message: format!("Column `{}` not found in schema", col),
+                        src: "settings_create [column_type_let_else]".to_string(),
+                        typ: "internal".to_string(),
+                    });
+                };
+
+                set_stmt.push_str(&format!("{} = ${}, ", col, i + 1));
 
                 let value = state.template_to_string(author, guild_id, value);
-                values.push(value.clone());
+                values.push((value.clone(), &column.column_type));
 
                 // Add directly to state
-                state.state.insert(column.to_string(), value);
+                state.state.insert(col.to_string(), value);
 
                 i += 1;
             }
@@ -705,12 +682,12 @@ pub async fn settings_view(
 
             let mut query = sqlx::query(sql_stmt.as_str());
 
-            for value in values {
-                query = _query_bind_value(query, value, None);
+            for (value, column_type) in values {
+                query = _query_bind_value(query, value, column_type);
             }
 
             query = query.bind(guild_id.to_string());
-            query = _query_bind_value(query, pkey, Some(pkey_column.column_type.clone()));
+            query = _query_bind_value(query, pkey, &pkey_column.column_type);
 
             query
                 .execute(pool)
@@ -723,9 +700,9 @@ pub async fn settings_view(
         }
 
         // Remove ignored columns + secret columns now that the actions have been executed
-        for col in &setting.columns {
+        for col in setting.columns.iter() {
             if col.secret.is_some() {
-                state.state.shift_remove(col.id);
+                state.state.swap_remove(col.id);
                 continue; // Skip secret columns in view. **this applies to view and update only as create is creating a new object**
             }
 
@@ -734,7 +711,7 @@ pub async fn settings_view(
             }
 
             if col.ignored_for.contains(&OperationType::View) {
-                state.state.shift_remove(col.id);
+                state.state.swap_remove(col.id);
             }
         }
 
@@ -760,6 +737,8 @@ pub async fn settings_create(
         });
     };
 
+    let mut fields = fields; // Make fields mutable, consuming the input
+
     // Ensure all columns exist in fields, note that we can ignore extra fields so this one single loop is enough
     let mut state: State = State::new();
     for column in setting.columns.iter() {
@@ -772,7 +751,7 @@ pub async fn settings_create(
                     None => Value::None,
                 }
             } else {
-                match fields.get(column.id) {
+                match fields.swap_remove(column.id) {
                     Some(val) => {
                         if matches!(val, Value::None) {
                             // If the value is None, then it should be treated as if omitted (null)
@@ -799,7 +778,7 @@ pub async fn settings_create(
         };
 
         // Insert the value into the state
-        state.state.insert(column.id.to_string(), value.clone());
+        state.state.insert(column.id.to_string(), value);
     }
 
     drop(fields); // Drop fields to avoid accidental use of user data
@@ -945,7 +924,7 @@ pub async fn settings_create(
 
                     let mut query = sqlx::query(sql_stmt.as_str()).bind(guild_id.to_string());
 
-                    query = _query_bind_value(query, value.clone(), None);
+                    query = _query_bind_value(query, value.clone(), &column.column_type);
 
                     let row =
                         query
@@ -983,13 +962,13 @@ pub async fn settings_create(
     }
 
     // Remove ignored columns now that the actions have been executed
-    for col in &setting.columns {
+    for col in setting.columns.iter() {
         if state.bypass_ignore_for.contains(col.id) {
             continue;
         }
 
         if col.ignored_for.contains(&OperationType::Create) {
-            state.state.shift_remove(col.id);
+            state.state.swap_remove(col.id);
         }
     }
 
@@ -1029,13 +1008,15 @@ pub async fn settings_create(
 
     for (col, value) in state.get_public().iter() {
         // Get column type from schema for db query hinting
-        let column_type = setting
-            .columns
-            .iter()
-            .find(|c| c.id == col)
-            .map(|c| c.column_type.clone());
+        let Some(column) = setting.columns.iter().find(|c| c.id == col) else {
+            return Err(SettingsError::Generic {
+                message: format!("Column `{}` not found in schema", col),
+                src: "settings_create [column_type_let_else]".to_string(),
+                typ: "internal".to_string(),
+            });
+        };
 
-        query = _query_bind_value(query, value.clone(), column_type);
+        query = _query_bind_value(query, value.clone(), &column.column_type);
     }
 
     // Execute the query
@@ -1084,9 +1065,12 @@ pub async fn settings_update(
         });
     };
 
+    let mut fields = fields; // Make fields mutable, consuming the input
+
     // Ensure all columns exist in fields, note that we can ignore extra fields so this one single loop is enough
     let mut state: State = State::new();
     let mut unchanged_fields = Vec::new();
+    let mut pkey = None;
     for column in setting.columns.iter() {
         // If the column is ignored for create, skip
         let value = {
@@ -1094,7 +1078,7 @@ pub async fn settings_update(
                 unchanged_fields.push(column.id.to_string()); // Ensure that ignored_for columns are still seen as unchanged
                 Value::None
             } else {
-                match fields.get(column.id) {
+                match fields.swap_remove(column.id) {
                     Some(val) => {
                         if matches!(val, Value::None) {
                             Value::None // If the value is None, then it should be treated as if omitted (null)
@@ -1116,8 +1100,12 @@ pub async fn settings_update(
             }
         };
 
+        if column.id == setting.primary_key {
+            pkey = Some((column, value.clone()));
+        }
+
         // Insert the value into the state
-        state.state.insert(column.id.to_string(), value.clone());
+        state.state.insert(column.id.to_string(), value);
     }
 
     drop(fields); // Drop fields to avoid accidental use of user data
@@ -1125,18 +1113,10 @@ pub async fn settings_update(
     let fields = (); // Reset fields to avoid accidental use of user data
 
     // Get out the pkey and pkey_column data here as we need it for the rest of the update
-    let Some(pkey) = state.state.get(setting.primary_key) else {
+    let Some((pkey_column, pkey)) = pkey else {
         return Err(SettingsError::MissingOrInvalidField {
             field: setting.primary_key.to_string(),
             src: "settings_update [pkey_let]".to_string(),
-        });
-    };
-
-    let Some(pkey_column) = setting.columns.iter().find(|c| c.id == setting.primary_key) else {
-        return Err(SettingsError::Generic {
-            message: "Primary key column not found".to_string(),
-            src: "settings_update [pkey_column_let_else]".to_string(),
-            typ: "internal".to_string(),
         });
     };
 
@@ -1167,7 +1147,7 @@ pub async fn settings_update(
 
         let mut query = sqlx::query(sql_stmt.as_str()).bind(guild_id.to_string());
 
-        query = _query_bind_value(query, pkey.clone(), Some(pkey_column.column_type.clone()));
+        query = _query_bind_value(query, pkey.clone(), &pkey_column.column_type);
 
         let row = query
             .fetch_one(&mut *tx)
@@ -1245,11 +1225,7 @@ pub async fn settings_update(
 
                     let mut query = sqlx::query(sql_stmt.as_str()).bind(guild_id.to_string());
 
-                    query = _query_bind_value(
-                        query,
-                        pkey.clone(),
-                        Some(pkey_column.column_type.clone()),
-                    );
+                    query = _query_bind_value(query, pkey.clone(), &pkey_column.column_type);
 
                     let row = query
                         .fetch_one(&mut *tx)
@@ -1282,12 +1258,8 @@ pub async fn settings_update(
 
                     let mut query = sqlx::query(sql_stmt.as_str()).bind(guild_id.to_string());
 
-                    query = _query_bind_value(query, value.clone(), None);
-                    query = _query_bind_value(
-                        query,
-                        pkey.clone(),
-                        Some(pkey_column.column_type.clone()),
-                    );
+                    query = _query_bind_value(query, value.clone(), &column.column_type);
+                    query = _query_bind_value(query, pkey.clone(), &pkey_column.column_type);
 
                     let row =
                         query
@@ -1365,7 +1337,7 @@ pub async fn settings_update(
 
                     let mut query = sqlx::query(sql_stmt.as_str()).bind(guild_id.to_string());
 
-                    query = _query_bind_value(query, value.clone(), None);
+                    query = _query_bind_value(query, value.clone(), &column.column_type);
 
                     let row =
                         query
@@ -1402,9 +1374,9 @@ pub async fn settings_update(
     }
 
     // Remove ignored columns now that the actions have been executed
-    for col in &setting.columns {
+    for col in setting.columns.iter() {
         if col.secret.is_some() {
-            state.state.shift_remove(col.id);
+            state.state.swap_remove(col.id);
             continue; // Skip secret columns in update. **this applies to view and update only as create is creating a new object**
         }
 
@@ -1413,7 +1385,7 @@ pub async fn settings_update(
         }
 
         if col.ignored_for.contains(&OperationType::Update) {
-            state.state.shift_remove(col.id);
+            state.state.swap_remove(col.id);
         }
     }
 
@@ -1443,17 +1415,19 @@ pub async fn settings_update(
 
     // Bind the sql query arguments
     query = query.bind(guild_id.to_string());
-    query = _query_bind_value(query, pkey.clone(), Some(pkey_column.column_type.clone()));
+    query = _query_bind_value(query, pkey.clone(), &pkey_column.column_type);
 
     for (col, value) in state.get_public().iter() {
         // Get column type from schema for db query hinting
-        let column_type = setting
-            .columns
-            .iter()
-            .find(|c| c.id == col)
-            .map(|c| c.column_type.clone());
+        let Some(column) = setting.columns.iter().find(|c| c.id == col) else {
+            return Err(SettingsError::Generic {
+                message: format!("Column `{}` not found in schema", col),
+                src: "settings_update [column_type_let_else]".to_string(),
+                typ: "internal".to_string(),
+            });
+        };
 
-        query = _query_bind_value(query, value.clone(), column_type);
+        query = _query_bind_value(query, value.clone(), &column.column_type);
     }
 
     // Execute the query
@@ -1503,7 +1477,7 @@ pub async fn settings_delete(
     };
 
     let pkey = _validate_and_parse_value(
-        &pkey,
+        pkey,
         &pkey_column.column_type,
         setting.primary_key,
         false,
@@ -1520,13 +1494,13 @@ pub async fn settings_delete(
     let mut cols = Vec::new();
     let mut column_types = Vec::new();
 
-    for col in &setting.columns {
+    for col in setting.columns.iter() {
         if col.ignored_for.contains(&OperationType::Delete) {
             continue;
         }
 
         cols.push(col.id.to_string());
-        column_types.push(col.column_type.clone());
+        column_types.push(&col.column_type);
     }
 
     if !cols.is_empty() {
@@ -1540,7 +1514,7 @@ pub async fn settings_delete(
 
         let mut query = sqlx::query(sql_stmt.as_str()).bind(guild_id.to_string());
 
-        query = _query_bind_value(query, pkey.clone(), Some(pkey_column.column_type.clone()));
+        query = _query_bind_value(query, pkey.clone(), &pkey_column.column_type);
 
         let Some(row) =
             query
@@ -1564,14 +1538,9 @@ pub async fn settings_delete(
                 typ: "internal".to_string(),
             })?;
 
-            // Validate the actual value
-            let val = _validate_and_parse_value(
-                &val,
-                &column_types[i],
-                setting.primary_key,
-                false,
-                false,
-            )?;
+            // Validate the actual value, note that as this is a delete operation, we don't care about nullability
+            let val =
+                _validate_and_parse_value(val, column_types[i], setting.primary_key, true, false)?;
 
             state.state.insert(col.to_string(), val);
         }
@@ -1606,7 +1575,7 @@ pub async fn settings_delete(
     let mut query = sqlx::query(sql_stmt.as_str());
 
     query = query.bind(guild_id.to_string());
-    query = _query_bind_value(query, pkey.clone(), Some(pkey_column.column_type.clone()));
+    query = _query_bind_value(query, pkey, &pkey_column.column_type);
 
     let res = query
         .execute(&mut *tx)

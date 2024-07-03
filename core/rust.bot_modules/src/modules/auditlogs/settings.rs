@@ -1,6 +1,6 @@
 use futures_util::FutureExt;
 use module_settings::types::{
-    settings_wrap_precheck, Column, ColumnAction, ColumnSuggestion, ColumnType, ConfigOption, InnerColumnType, InnerColumnTypeStringKind, OperationSpecific, OperationType, SettingsError
+    settings_wrap_columns, settings_wrap_precheck, Column, ColumnAction, ColumnSuggestion, ColumnType, ConfigOption, InnerColumnType, InnerColumnTypeStringKind, OperationSpecific, OperationType, SettingsError
 };
 use once_cell::sync::Lazy;
 use splashcore_rs::value::Value;
@@ -14,7 +14,7 @@ pub static SINK: Lazy<ConfigOption> = Lazy::new(|| {
         guild_id: "guild_id",
         primary_key: "id",
         max_entries: 10,
-        columns: vec![
+        columns: settings_wrap_columns(vec![
             Column {
                 id: "id",
                 name: "Sink ID",
@@ -84,7 +84,6 @@ pub static SINK: Lazy<ConfigOption> = Lazy::new(|| {
                                     column: "sink".to_string(),
                                     check: "parse_webhook.parse_sink_to_url".to_string(),
                                     error: e.to_string(),
-                                    value: Value::String(sink.clone()),
                                     accepted_range: "Valid Discord webhook URL".to_string()
                                 })?;    
     
@@ -95,7 +94,6 @@ pub static SINK: Lazy<ConfigOption> = Lazy::new(|| {
                                         column: "sink".to_string(),
                                         check: "parse_webhook.parse".to_string(),
                                         error: "Discord webhook sinks must be a valid webhook URL".to_string(),
-                                        value: Value::String(sink.clone()),
                                         accepted_range: "Valid Discord webhook URL".to_string()
                                     });
                                 }
@@ -103,7 +101,6 @@ pub static SINK: Lazy<ConfigOption> = Lazy::new(|| {
                                 sink.parse::<serenity::all::ChannelId>().map_err(|e| SettingsError::SchemaCheckValidationError {
                                     column: "sink".to_string(),
                                     check: "snowflake_parse".to_string(),
-                                    value: Value::String(sink.clone()),
                                     accepted_range: "Valid channel id".to_string(),
                                     error: e.to_string(),
                                 })?;
@@ -112,7 +109,6 @@ pub static SINK: Lazy<ConfigOption> = Lazy::new(|| {
                                     column: "type".to_string(),
                                     check: "parse_webhook.parse".to_string(),
                                     error: "Invalid sink type".to_string(),
-                                    value: Value::String(sink.clone()),
                                     accepted_range: "Valid Discord webhook URL".to_string()
                                 });
                             }
@@ -181,7 +177,7 @@ pub static SINK: Lazy<ConfigOption> = Lazy::new(|| {
                 pre_checks: settings_wrap_precheck(indexmap::indexmap! {}),
                 default_pre_checks: settings_wrap_precheck(vec![])
             },
-        ],
+        ]),
         operations: indexmap::indexmap! {
             OperationType::View => OperationSpecific {
                 corresponding_command: "auditlogs list_sinks",
