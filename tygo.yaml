@@ -12,6 +12,7 @@ packages:
       dovetypes.PlatformUser: PlatformUser /* from eureka-dovewing.ts */
       pgtype.Timestamptz: "string | null /* RFC3339, nullable */"
       bigint.BigInt: "string /* bigint */"
+      orderedmap.OrderedMap: "Record"
         
   - path: "github.com/infinitybotlist/eureka/dovewing/dovetypes"
     output_path: "/silverpelt/cdn/antiraid/dev/bindings/splashtail/eureka-dovewing.ts"
@@ -46,3 +47,4 @@ packages:
       pgtype.UUID: "string /* uuid */"
       dovetypes.PlatformUser: PlatformUser /* from eureka-dovewing.ts */
       pgtype.Timestamptz: "string | null /* RFC3339, nullable */"
+      orderedmap.OrderedMap: "Record"

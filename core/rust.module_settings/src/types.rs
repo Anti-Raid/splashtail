@@ -8,7 +8,7 @@
 // Note that these special variables do not need to live in state and may instead be special cased
 //
 // For display purposes, the special case variable {[__column_id]_displaytype} can be set to allow displaying in a different form
-// For sending a info message etc on save, the {[__column_id]_message} can be set
+// For sending a info message etc on save, the {__message} can be set
 
 use futures::future::BoxFuture;
 use std::sync::Arc;
