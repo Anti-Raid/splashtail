@@ -55,11 +55,11 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 	limit, err := ratelimit.Ratelimit{
 		Expiry:      2 * time.Minute,
 		MaxRequests: 10,
-		Bucket:      "module_configuration",
+		Bucket:      "command_configuration",
 	}.Limit(d.Context, r)
 
 	if err != nil {
-		state.Logger.Error("Error while ratelimiting", zap.Error(err), zap.String("bucket", "get_user_guild_base_info"))
+		state.Logger.Error("Error while ratelimiting", zap.Error(err), zap.String("bucket", "command_configuration"))
 		return uapi.DefaultResponse(http.StatusInternalServerError)
 	}
 
@@ -439,6 +439,8 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 			},
 			&animusmagic.RequestOptions{
 				ClusterID: utils.Pointer(uint16(clusterId)),
+				To:        animusmagic.AnimusTargetBot,
+				Op:        animusmagic.OpRequest,
 			},
 		)
 

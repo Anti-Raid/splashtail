@@ -34,11 +34,10 @@ type CanonicalSettingsError struct {
 		Column string `json:"column"`
 	} `json:"SchemaNullValueValidationError"`
 	SchemaCheckValidationError *struct {
-		Column        string      `json:"column"`
-		Check         string      `json:"check"`
-		Error         string      `json:"error"`
-		Value         interface{} `json:"value"`
-		AcceptedRange string      `json:"accepted_range"`
+		Column        string `json:"column"`
+		Check         string `json:"check"`
+		Error         string `json:"error"`
+		AcceptedRange string `json:"accepted_range"`
 	} `json:"SchemaCheckValidationError"`
 	MissingOrInvalidField *struct {
 		Field string `json:"field"`
@@ -52,8 +51,8 @@ type CanonicalSettingsError struct {
 		ColumnId string `json:"column_id"`
 	} `json:"RowDoesNotExist"`
 	MaximumCountReached *struct {
-		Max     int64 `json:"max"`
-		Current int64 `json:"current"`
+		Max     uint64 `json:"max"`
+		Current uint64 `json:"current"`
 	} `json:"MaximumCountReached"`
 }
 
@@ -131,6 +130,24 @@ const (
 	Update CanonicalOperationType = "Update"
 	Delete CanonicalOperationType = "Delete"
 )
+
+func (c CanonicalOperationType) List() []string {
+	return []string{
+		"View",
+		"Create",
+		"Update",
+		"Delete",
+	}
+}
+
+func (c CanonicalOperationType) Parse() bool {
+	for _, v := range c.List() {
+		if v == string(c) {
+			return true
+		}
+	}
+	return false
+}
 
 type CanonicalConfigOption struct {
 	ID          string                                                                    `json:"id"`

@@ -4,6 +4,7 @@ package animusmagic
 import (
 	"github.com/anti-raid/splashtail/core/go.std/silverpelt"
 	"github.com/anti-raid/splashtail/core/go.std/types"
+	orderedmap "github.com/wk8/go-ordered-map/v2"
 )
 
 /*
@@ -79,6 +80,15 @@ type BotAnimusMessage struct {
 		Toggle  string         `json:"toggle"`
 		Options map[string]any `json:"options,omitempty"`
 	} `json:"ExecutePerModuleFunction,omitempty"`
+	/// Executes an operation on a setting
+	SettingsOperation *struct {
+		Fields  orderedmap.OrderedMap[string, any] `json:"fields"`
+		Op      silverpelt.CanonicalOperationType  `json:"op"`
+		Module  string                             `json:"module"`
+		Setting string                             `json:"setting"`
+		GuildID string                             `json:"guild_id"`
+		UserID  string                             `json:"user_id"`
+	}
 }
 
 func (b BotAnimusMessage) Message() {}
@@ -97,15 +107,19 @@ type BotAnimusResponse struct {
 
 	GuildsExist *struct {
 		GuildsExist []uint8 `json:"guilds_exist"`
-	}
+	} `json:"GuildsExist,omitempty"`
 
-	BaseGuildUserInfo *types.UserGuildBaseData
+	BaseGuildUserInfo *types.UserGuildBaseData `json:"BaseGuildUserInfo,omitempty"`
 
 	/// Returns the response of a command permission check
 	CheckCommandPermission *struct {
 		PermRes silverpelt.PermissionResult `json:"perm_res"`
 		IsOk    bool                        `json:"is_ok"`
-	}
+	} `json:"CheckCommandPermission,omitempty"`
+
+	SettingsOperation *struct {
+		Res silverpelt.CanonicalSettingsResult `json:"res"`
+	} `json:"SettingsOperation,omitempty"`
 }
 
 func (b BotAnimusResponse) Response() {}

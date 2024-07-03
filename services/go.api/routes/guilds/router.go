@@ -10,6 +10,7 @@ import (
 	"github.com/anti-raid/splashtail/services/go.api/routes/guilds/endpoints/get_module_configurations"
 	"github.com/anti-raid/splashtail/services/go.api/routes/guilds/endpoints/patch_command_configuration"
 	"github.com/anti-raid/splashtail/services/go.api/routes/guilds/endpoints/patch_module_configuration"
+	"github.com/anti-raid/splashtail/services/go.api/routes/guilds/endpoints/settings_execute"
 	"github.com/go-chi/chi/v5"
 	"github.com/infinitybotlist/eureka/uapi"
 )
@@ -91,6 +92,22 @@ func (b Router) Routes(r *chi.Mux) {
 		Method:  uapi.PATCH,
 		Docs:    patch_command_configuration.Docs,
 		Handler: patch_command_configuration.Route,
+		Auth: []uapi.AuthType{
+			{
+				Type: types.TargetTypeUser,
+			},
+		},
+		ExtData: map[string]any{
+			api.PERMISSION_CHECK_KEY: nil, // Authz is performed in the handler itself
+		},
+	}.Route(r)
+
+	uapi.Route{
+		Pattern: "/guilds/{guild_id}/settings",
+		OpId:    "settings_execute",
+		Method:  uapi.POST,
+		Docs:    settings_execute.Docs,
+		Handler: settings_execute.Route,
 		Auth: []uapi.AuthType{
 			{
 				Type: types.TargetTypeUser,

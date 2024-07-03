@@ -38,6 +38,8 @@ func (c *CachedAnimusMagicClient) GetClusterModules(ctx context.Context, redis r
 		},
 		&animusmagic.RequestOptions{
 			ClusterID: &clusterId,
+			To:        animusmagic.AnimusTargetBot,
+			Op:        animusmagic.OpRequest,
 		},
 	)
 

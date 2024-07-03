@@ -60,7 +60,7 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 	}.Limit(d.Context, r)
 
 	if err != nil {
-		state.Logger.Error("Error while ratelimiting", zap.Error(err), zap.String("bucket", "get_user_guild_base_info"))
+		state.Logger.Error("Error while ratelimiting", zap.Error(err), zap.String("bucket", "module_configuration"))
 		return uapi.DefaultResponse(http.StatusInternalServerError)
 	}
 
@@ -95,10 +95,16 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 		}
 	}
 
+	hresp, ok := webutils.ClusterCheck(clusterId)
+
+	if !ok {
+		return hresp
+	}
+
 	// Read body
 	var body types.PatchGuildModuleConfiguration
 
-	hresp, ok := uapi.MarshalReqWithHeaders(r, &body, limit.Headers())
+	hresp, ok = uapi.MarshalReqWithHeaders(r, &body, limit.Headers())
 
 	if !ok {
 		return hresp
@@ -111,12 +117,6 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 				Message: "Module is required",
 			},
 		}
-	}
-
-	hresp, ok = webutils.ClusterCheck(clusterId)
-
-	if !ok {
-		return hresp
 	}
 
 	// Find module from cluster
@@ -428,6 +428,8 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 			},
 			&animusmagic.RequestOptions{
 				ClusterID: utils.Pointer(uint16(clusterId)),
+				To:        animusmagic.AnimusTargetBot,
+				Op:        animusmagic.OpRequest,
 			},
 		)
 
@@ -475,6 +477,8 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 			},
 			&animusmagic.RequestOptions{
 				ClusterID: utils.Pointer(uint16(clusterId)),
+				To:        animusmagic.AnimusTargetBot,
+				Op:        animusmagic.OpRequest,
 			},
 		)
 
