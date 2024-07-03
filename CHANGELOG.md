@@ -5,6 +5,8 @@
 - Made ``ConfigOptions.columns`` an ``Arc<Vec<Column>>`` from ``Vec<Column>`` to make cloning cheaper
 - Removed lots of useless clones by making `_query_bind_value` accept a reference versus a value and changing `validate_and_parse_value` to consume the `Value` versus taking a reference to it.
 - The settings API no longer guarantees that the state returned will be in any particular order.
+- Fixed a bug in which delete checked nullability incorrectly. This is now hardcoded to `false` to better acommodate invalid data deletions
+- Fixed a bug where delete called `validate_and_parse_value` with the primary key column name instead of the actual column name being parsed. This led to inproper errors being returned
 
 ## Monday, July 1st 2024
 

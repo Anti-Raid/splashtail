@@ -1539,8 +1539,7 @@ pub async fn settings_delete(
             })?;
 
             // Validate the actual value, note that as this is a delete operation, we don't care about nullability
-            let val =
-                _validate_and_parse_value(val, column_types[i], setting.primary_key, true, false)?;
+            let val = _validate_and_parse_value(val, column_types[i], col, true, false)?;
 
             state.state.insert(col.to_string(), val);
         }
