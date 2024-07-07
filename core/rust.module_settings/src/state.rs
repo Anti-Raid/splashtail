@@ -1,10 +1,12 @@
 use splashcore_rs::value::Value;
 
 pub struct State {
-    /// The state of the module
+    /// The state of the module. This will be exposed to the client
     pub state: indexmap::IndexMap<String, Value>,
     /// Columns that should not be ignore_for'd for a specific operation
     /// even if they are in the ignore_for list
+    ///
+    /// This does not affect the client or anything beyond the internal state
     pub bypass_ignore_for: std::collections::HashSet<String>,
 }
 

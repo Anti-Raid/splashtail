@@ -26,7 +26,7 @@ func Docs() *docs.Doc {
 		Summary:     "Settings Execute",
 		Description: "Execute a settings operation (list/create/update/delete)",
 		Req:         types.SettingsExecute{},
-		Resp:        map[string]any{},
+		Resp:        types.SettingsExecuteResponse{},
 		Params: []docs.Parameter{
 			{
 				Name:        "guild_id",
@@ -198,7 +198,9 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 
 	if resp.Resp.SettingsOperation.Res.Ok != nil {
 		return uapi.HttpResponse{
-			Json: resp.Resp.SettingsOperation.Res.Ok,
+			Json: types.SettingsExecuteResponse{
+				Fields: resp.Resp.SettingsOperation.Res.Ok.Fields,
+			},
 		}
 	}
 

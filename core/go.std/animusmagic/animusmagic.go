@@ -19,7 +19,11 @@ import (
 
 // Helper function to serialize data to the correct/current format
 func SerializeData[T any](data T) ([]byte, error) {
-	return jsonimpl.Marshal(data)
+	//fmt.Println("Data to serialize:", spew.Sdump(data))
+	bytes, err := jsonimpl.Marshal(data)
+	//fmt.Println("Serialized data:", string(bytes))
+
+	return bytes, err
 }
 
 // Helper function to deserialize data from the correct/current format

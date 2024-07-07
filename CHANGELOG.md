@@ -1,3 +1,15 @@
+## Sunday, July 7th 2024
+
+## Bot
+
+- ``get_best_command_configuration`` now makes use of the parents permissions/disabled status if explicitly set on parent but not explicitly set on the command itself. This means that if ``web`` is disabled explicitly but ``web use`` does not have an explicit override for disabled, it will be disabled as well. This is useful for setting a base state for all commands in a module.
+- Simplified the CommandDisabled error to no longer include the useless ``inherited from`` as it is useless and confusing to boot.
+
+## Website
+
+- Improved command extended data logic to properly handle the lack of permission checks etc. This has been achieved through the use of a new API ``(parsedCommands: ParsedCanonicalCommandData[], command: string): CommandExtendedData`` in the website ``commands.ts`` library. All callers should switch their use of ``commands.find()`` to this new API to ensure proper handling of command extended data.
+- Begun working on the settings section of the site
+
 ## Wednesday, July 3rd 2024
 
 ## Settings

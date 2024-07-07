@@ -88,7 +88,7 @@ type BotAnimusMessage struct {
 		Setting string                             `json:"setting"`
 		GuildID string                             `json:"guild_id"`
 		UserID  string                             `json:"user_id"`
-	}
+	} `json:"SettingsOperation,omitempty"`
 }
 
 func (b BotAnimusMessage) Message() {}

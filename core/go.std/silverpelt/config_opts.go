@@ -6,7 +6,7 @@ import (
 
 type CanonicalSettingsResult struct {
 	Ok *struct {
-		Fields []map[string]any `json:"fields"`
+		Fields []orderedmap.OrderedMap[string, any] `json:"fields"`
 	} `json:"Ok"`
 	PermissionError *struct {
 		Res PermissionResult `json:"res"`

@@ -141,13 +141,20 @@ pub fn get_command_extended_data(
     Ok(cmd_data)
 }
 
-// Gets the best possible command configuation to run a specific command
+/// Gets the best possible command configuation to run a specific command
+///
+/// This assumes the base command is the first element in the permutations
+///
+/// Note that disabled+perms are inherited from parent commands if explicitly set on parent but not explicitly set on the command itself
+///
+/// @returns
+///  Option<GuildCommandConfiguration> - The best command configuration to use
 pub async fn get_best_command_configuration(
     pool: &PgPool,
     guild_id: &str,
     permutations: &[String],
 ) -> Result<Option<GuildCommandConfiguration>, crate::Error> {
-    let mut command_configuration = None;
+    let mut command_configuration: Option<GuildCommandConfiguration> = None;
     for permutation in permutations.iter() {
         let rec = sqlx::query!(
             "SELECT id, guild_id, command, perms, disabled FROM guild_command_configurations WHERE guild_id = $1 AND command = $2",
@@ -158,22 +165,40 @@ pub async fn get_best_command_configuration(
         .await?;
 
         // We are deeper in the tree, so we can overwrite the command configuration
-        let mut _cmd_perms_overriden = false; // Not used currently but will be used in the future for module no_admin etc.
         if let Some(rec) = rec {
-            command_configuration = Some(GuildCommandConfiguration {
+            let new_command_configuration = GuildCommandConfiguration {
                 id: rec.id.hyphenated().to_string(),
                 guild_id: rec.guild_id,
                 command: rec.command,
                 perms: {
                     if let Some(perms) = rec.perms {
-                        _cmd_perms_overriden = true;
                         serde_json::from_value(perms)?
                     } else {
-                        None
+                        // Check parent command for perms
+                        if let Some(ref bcc) = command_configuration {
+                            bcc.perms.clone()
+                        } else {
+                            // No perms found, return None (no perms
+                            None
+                        }
                     }
                 },
-                disabled: rec.disabled,
-            });
+                disabled: {
+                    if rec.disabled.is_some() {
+                        rec.disabled
+                    } else {
+                        // Check parent command for disabled
+                        if let Some(ref bcc) = command_configuration {
+                            bcc.disabled
+                        } else {
+                            // No disabled found, return None
+                            None
+                        }
+                    }
+                },
+            };
+
+            command_configuration = Some(new_command_configuration);
         }
     }
 

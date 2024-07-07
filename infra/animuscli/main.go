@@ -476,6 +476,14 @@ func main() {
 								fallthrough
 							case "str":
 								valueParsed = value
+							case "string[]":
+								fallthrough
+							case "str[]":
+								valueParsed = strings.Split(value, ",")
+
+								for i, v := range valueParsed.([]string) {
+									valueParsed.([]string)[i] = strings.TrimSpace(v)
+								}
 							case "int":
 								valueParsedInt, err := strconv.Atoi(value)
 

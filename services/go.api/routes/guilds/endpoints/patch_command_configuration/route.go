@@ -369,6 +369,8 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 
 	var sqlString = "INSERT INTO guild_command_configurations (guild_id, command, " + strings.Join(updateCols, ", ") + ") VALUES ($1, $2, " + strings.Join(insertParams, ",") + ") ON CONFLICT (guild_id, command) DO UPDATE SET " + strings.Join(updateParams, ", ") + " RETURNING id"
 
+	// Execute sql
+	updateArgs = append([]any{guildId, body.Command}, updateArgs...) // $1 and $2
 	var id string
 	err = tx.QueryRow(
 		d.Context,
@@ -380,7 +382,7 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 		return uapi.HttpResponse{
 			Status: http.StatusInternalServerError,
 			Json: types.ApiError{
-				Message: "Error updating module configuration: " + err.Error(),
+				Message: "Error updating command configuration: " + err.Error(),
 			},
 		}
 	}

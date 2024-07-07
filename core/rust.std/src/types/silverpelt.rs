@@ -317,8 +317,8 @@ impl PermissionResult {
             }
             PermissionResult::CommandDisabled { command_config } => {
                 format!(
-                    "You cannot perform this action because the command ``{}`` (inherited from ``{}``) is disabled on this server",
-                    command_config.command, command_config.command
+                    "You cannot perform this action because the command ``{}`` is disabled on this server",
+                    command_config.command
                 )
             }
             PermissionResult::UnknownModule { module_config } => {
