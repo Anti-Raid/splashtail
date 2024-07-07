@@ -6,15 +6,15 @@ require (
 	github.com/bwmarrin/discordgo v0.28.1
 	github.com/cheesycod/mewld v0.0.0-20240506045451-d25a175505ee
 	github.com/cloudflare/tableflip v1.2.3
-	github.com/git-logs/client/webserver v0.0.0-20240701104950-5b0d085cabea
+	github.com/git-logs/client/webserver v0.0.0-20240702031221-67addd05a54a
 	github.com/go-chi/chi/v5 v5.1.0
 	github.com/go-playground/validator/v10 v10.22.0
 	github.com/go-viper/mapstructure/v2 v2.0.0
-	github.com/infinitybotlist/eureka v1.2.0
+	github.com/infinitybotlist/eureka v1.3.0
 	github.com/infinitybotlist/iblfile v0.0.0-20240609122654-f388ed492b00
 	github.com/infinitybotlist/kittycat/go v0.0.0-20240526051606-6574fb343539
 	github.com/jackc/pgx/v5 v5.6.0
-	github.com/minio/minio-go/v7 v7.0.72
+	github.com/minio/minio-go/v7 v7.0.73
 	github.com/redis/rueidis v1.0.40
 	github.com/sirupsen/logrus v1.9.3
 	github.com/stretchr/testify v1.9.0
@@ -40,7 +40,8 @@ require (
 	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/gabriel-vasile/mimetype v1.4.4 // indirect
-	github.com/getkin/kin-openapi v0.125.0 // indirect
+	github.com/getkin/kin-openapi v0.126.0 // indirect
+	github.com/go-ini/ini v1.67.0 // indirect
 	github.com/go-openapi/jsonpointer v0.21.0 // indirect
 	github.com/go-openapi/swag v0.23.0 // indirect
 	github.com/go-playground/locales v0.14.1 // indirect
@@ -71,9 +72,9 @@ require (
 	github.com/vmihailenco/tagparser/v2 v2.0.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	golang.org/x/arch v0.8.0 // indirect
-	golang.org/x/crypto v0.24.0 // indirect
-	golang.org/x/net v0.26.0 // indirect
+	golang.org/x/crypto v0.25.0 // indirect
+	golang.org/x/net v0.27.0 // indirect
 	golang.org/x/sync v0.7.0 // indirect
-	golang.org/x/sys v0.21.0 // indirect
+	golang.org/x/sys v0.22.0 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
 )

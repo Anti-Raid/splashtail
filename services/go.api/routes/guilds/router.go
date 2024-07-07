@@ -11,6 +11,7 @@ import (
 	"github.com/anti-raid/splashtail/services/go.api/routes/guilds/endpoints/patch_command_configuration"
 	"github.com/anti-raid/splashtail/services/go.api/routes/guilds/endpoints/patch_module_configuration"
 	"github.com/anti-raid/splashtail/services/go.api/routes/guilds/endpoints/settings_execute"
+	"github.com/anti-raid/splashtail/services/go.api/routes/guilds/endpoints/settings_get_suggestions"
 	"github.com/go-chi/chi/v5"
 	"github.com/infinitybotlist/eureka/uapi"
 )
@@ -108,6 +109,22 @@ func (b Router) Routes(r *chi.Mux) {
 		Method:  uapi.POST,
 		Docs:    settings_execute.Docs,
 		Handler: settings_execute.Route,
+		Auth: []uapi.AuthType{
+			{
+				Type: types.TargetTypeUser,
+			},
+		},
+		ExtData: map[string]any{
+			api.PERMISSION_CHECK_KEY: nil, // Authz is performed in the handler itself
+		},
+	}.Route(r)
+
+	uapi.Route{
+		Pattern: "/guilds/{guild_id}/settings/suggestions",
+		OpId:    "settings_get_suggestions",
+		Method:  uapi.POST,
+		Docs:    settings_get_suggestions.Docs,
+		Handler: settings_get_suggestions.Route,
 		Auth: []uapi.AuthType{
 			{
 				Type: types.TargetTypeUser,

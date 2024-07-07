@@ -30,7 +30,7 @@ func Docs() *docs.Doc {
 		Params: []docs.Parameter{
 			{
 				Name:        "guild_id",
-				Description: "Whether to refresh the user's guilds from discord",
+				Description: "The guild ID to execute the operation in",
 				In:          "path",
 				Required:    true,
 				Schema:      docs.IdSchema,

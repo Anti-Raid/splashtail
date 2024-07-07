@@ -263,6 +263,8 @@ pub enum ColumnSuggestion {
         value_column: &'static str,
         /// The column name to query for the id
         id_column: &'static str,
+        /// The column name containing the guild id
+        guild_id_column: &'static str,
     },
     None {},
 }

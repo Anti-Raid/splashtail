@@ -250,6 +250,8 @@ pub enum CanonicalColumnSuggestion {
         value_column: String,
         /// The column name to query for the id
         id_column: String,
+        /// The column name to query for the guild id
+        guild_id_column: String,
     },
     None {},
 }
@@ -266,10 +268,12 @@ impl From<super::types::ColumnSuggestion> for CanonicalColumnSuggestion {
                 table_name,
                 value_column,
                 id_column,
+                guild_id_column,
             } => CanonicalColumnSuggestion::Dynamic {
                 table_name: table_name.to_string(),
                 value_column: value_column.to_string(),
                 id_column: id_column.to_string(),
+                guild_id_column: guild_id_column.to_string(),
             },
             super::types::ColumnSuggestion::None {} => CanonicalColumnSuggestion::None {},
         }
