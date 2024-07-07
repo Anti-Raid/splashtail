@@ -8,7 +8,8 @@
 ## Website
 
 - Improved command extended data logic to properly handle the lack of permission checks etc. This has been achieved through the use of a new API ``(parsedCommands: ParsedCanonicalCommandData[], command: string): CommandExtendedData`` in the website ``commands.ts`` library. All callers should switch their use of ``commands.find()`` to this new API to ensure proper handling of command extended data.
-- Begun working on the settings section of the site
+- The ``settings_get_suggestions`` API has been added to the webserver to allow the site to provide column suggestions
+- Begun working on the settings section of the site. Currently only column suggestions are supported.
 
 ## Wednesday, July 3rd 2024
 
