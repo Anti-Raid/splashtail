@@ -144,6 +144,8 @@ impl From<super::types::ColumnType> for CanonicalColumnType {
 pub enum CanonicalInnerColumnTypeStringKind {
     /// Normal string
     Normal,
+    /// A template string
+    Template,
     /// User
     User,
     /// Channel
@@ -161,6 +163,9 @@ impl From<super::types::InnerColumnTypeStringKind> for CanonicalInnerColumnTypeS
         match kind {
             super::types::InnerColumnTypeStringKind::Normal => {
                 CanonicalInnerColumnTypeStringKind::Normal
+            }
+            super::types::InnerColumnTypeStringKind::Template => {
+                CanonicalInnerColumnTypeStringKind::Template
             }
             super::types::InnerColumnTypeStringKind::User => {
                 CanonicalInnerColumnTypeStringKind::User
@@ -288,6 +293,9 @@ pub struct CanonicalColumn {
     /// The friendly name of the column
     pub name: String,
 
+    /// The description of the column
+    pub description: String,
+
     /// The type of the column
     pub column_type: CanonicalColumnType,
 
@@ -320,6 +328,7 @@ impl From<&super::types::Column> for CanonicalColumn {
         Self {
             id: column.id.to_string(),
             name: column.name.to_string(),
+            description: column.description.to_string(),
             column_type: column.column_type.clone().into(),
             nullable: column.nullable,
             suggestions: column.suggestions.clone().into(),

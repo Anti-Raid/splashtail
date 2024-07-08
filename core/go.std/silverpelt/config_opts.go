@@ -59,12 +59,13 @@ type CanonicalSettingsError struct {
 type CanonicalInnerColumnTypeStringKind string
 
 const (
-	CanonicalInnerColumnTypeStringKindNormal  CanonicalInnerColumnTypeStringKind = "Normal"
-	CanonicalInnerColumnTypeStringKindUser    CanonicalInnerColumnTypeStringKind = "User"
-	CanonicalInnerColumnTypeStringKindChannel CanonicalInnerColumnTypeStringKind = "Channel"
-	CanonicalInnerColumnTypeStringKindRole    CanonicalInnerColumnTypeStringKind = "Role"
-	CanonicalInnerColumnTypeStringKindEmoji   CanonicalInnerColumnTypeStringKind = "Emoji"
-	CanonicalInnerColumnTypeStringKindMessage CanonicalInnerColumnTypeStringKind = "Message"
+	CanonicalInnerColumnTypeStringKindNormal   CanonicalInnerColumnTypeStringKind = "Normal"
+	CanonicalInnerColumnTypeStringKindTemplate CanonicalInnerColumnTypeStringKind = "Template"
+	CanonicalInnerColumnTypeStringKindUser     CanonicalInnerColumnTypeStringKind = "User"
+	CanonicalInnerColumnTypeStringKindChannel  CanonicalInnerColumnTypeStringKind = "Channel"
+	CanonicalInnerColumnTypeStringKindRole     CanonicalInnerColumnTypeStringKind = "Role"
+	CanonicalInnerColumnTypeStringKindEmoji    CanonicalInnerColumnTypeStringKind = "Emoji"
+	CanonicalInnerColumnTypeStringKindMessage  CanonicalInnerColumnTypeStringKind = "Message"
 )
 
 type CanonicalColumnType struct {
@@ -115,6 +116,7 @@ type CanonicalColumnSuggestion struct {
 type CanonicalColumn struct {
 	ID          string                    `json:"id"`
 	Name        string                    `json:"name"`
+	Description string                    `json:"description"`
 	ColumnType  CanonicalColumnType       `json:"column_type"`
 	Nullable    bool                      `json:"nullable"`
 	Suggestions CanonicalColumnSuggestion `json:"suggestions"`

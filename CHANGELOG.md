@@ -1,3 +1,9 @@
+## Monday, July 8th 2024
+
+## Bot
+
+- Added support for custom templating. The templating engine used is ``tera``. The ``rust.templating`` helper crate has been added to allow unified and consistent handling of templating. In particular, the ``field`` function is a builtin function to custom templating allowing for setting embed fields
+
 ## Sunday, July 7th 2024
 
 ## Bot

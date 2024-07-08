@@ -1,0 +1,17 @@
+[package]
+name = "templating"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+base_data = { path = "../rust.base_data" }
+tera = { version = "1", default-features = false, features = ["builtins", "preserve_order"] }
+once_cell = "1"
+moka = { version = "0.12", features = ["future", "futures-util"] }
+dashmap = { version = "5", features = ["serde", "inline", "rayon"] }
+indexmap = { version = "2", features = ["serde"] }
+
+[dependencies.tokio]
+version = "1"
+default-features = true
+features = ["full", "macros", "rt-multi-thread"]

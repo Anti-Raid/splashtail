@@ -18,6 +18,7 @@ pub static SINK: Lazy<ConfigOption> = Lazy::new(|| {
             Column {
                 id: "id",
                 name: "Sink ID",
+                description: "The unique identifier for the sink.",
                 column_type: ColumnType::new_scalar(InnerColumnType::Uuid {}),
                 nullable: false,
                 unique: true,
@@ -30,6 +31,7 @@ pub static SINK: Lazy<ConfigOption> = Lazy::new(|| {
             Column {
                 id: "type",
                 name: "Sink Type",
+                description: "The type of sink. This can be a sink that sends messages to a channel (`channel`) or a discord webhook (`discordhook`).",
                 column_type: ColumnType::new_scalar(InnerColumnType::String { min_length: None, max_length: None, allowed_values: vec!["channel", "discordhook"], kind: InnerColumnTypeStringKind::Normal }),
                 nullable: false,
                 unique: false,
@@ -42,6 +44,7 @@ pub static SINK: Lazy<ConfigOption> = Lazy::new(|| {
             Column {
                 id: "sink",
                 name: "Sink",
+                description: "The sink where the logs are sent to. This can be a channel ID (if `channel`) or a discord webhook URL (if `discordhook`).",
                 column_type: ColumnType::new_scalar(InnerColumnType::String { min_length: None, max_length: None, allowed_values: vec![], kind: InnerColumnTypeStringKind::Normal }),
                 nullable: false,
                 unique: false,
@@ -141,6 +144,7 @@ pub static SINK: Lazy<ConfigOption> = Lazy::new(|| {
             Column {
                 id: "events",
                 name: "Events",
+                description: "The events that are sent to the sink. If empty, all events are sent. Prefix with R/ for regex (rust style regex) matching.",
                 column_type: ColumnType::new_array(InnerColumnType::String { min_length: None, max_length: None, allowed_values: vec![], kind: InnerColumnTypeStringKind::Normal }),
                 nullable: true,
                 unique: false,
@@ -161,6 +165,19 @@ pub static SINK: Lazy<ConfigOption> = Lazy::new(|| {
                     }
                 ])
             },
+            Column {
+                id: "embed_template",
+                name: "Template",
+                description: "The custom template for the embed. This is a tera template that is executed when an event is sent to the sink. If empty, falls back to default handling",
+                column_type: ColumnType::new_scalar(InnerColumnType::String { min_length: None, max_length: None, allowed_values: vec![], kind: InnerColumnTypeStringKind::Template }),
+                ignored_for: vec![],
+                secret: None,
+                nullable: true,
+                unique: false,
+                suggestions: ColumnSuggestion::None {},
+                pre_checks: settings_wrap_precheck(indexmap::indexmap! {}),
+                default_pre_checks: settings_wrap_precheck(vec![])
+            },
             module_settings::common_columns::created_at(),
             module_settings::common_columns::created_by(),
             module_settings::common_columns::last_updated_at(),
@@ -168,6 +185,7 @@ pub static SINK: Lazy<ConfigOption> = Lazy::new(|| {
             Column {
                 id: "broken",
                 name: "Marked as Broken",
+                description: "If the sink is marked as broken, it will not be used for sending logs. This can be useful in debugging too!",
                 column_type: ColumnType::new_scalar(InnerColumnType::Boolean {}),
                 ignored_for: vec![OperationType::Create],
                 secret: None,

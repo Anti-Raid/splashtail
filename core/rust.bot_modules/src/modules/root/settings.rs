@@ -20,6 +20,7 @@ pub static MAINTENANCE: Lazy<ConfigOption> = Lazy::new(|| {
             Column {
                 id: "id",
                 name: "Maintenance ID",
+                description: "The unique ID of the maintenance",
                 column_type: ColumnType::new_scalar(InnerColumnType::Uuid {}),
                 nullable: false,
                 unique: true,
@@ -56,6 +57,7 @@ pub static MAINTENANCE: Lazy<ConfigOption> = Lazy::new(|| {
             Column {
                 id: "title",
                 name: "Title",
+                description: "The title of the maintenance",
                 column_type: ColumnType::new_scalar(InnerColumnType::String {
                     min_length: None,
                     max_length: None,
@@ -73,6 +75,7 @@ pub static MAINTENANCE: Lazy<ConfigOption> = Lazy::new(|| {
             Column {
                 id: "description",
                 name: "Description",
+                description: "The description of the maintenance",
                 column_type: ColumnType::new_scalar(InnerColumnType::String {
                     min_length: None,
                     max_length: None,
@@ -90,6 +93,7 @@ pub static MAINTENANCE: Lazy<ConfigOption> = Lazy::new(|| {
             Column {
                 id: "entries",
                 name: "Entries",
+                description: "The entries of the maintenance",
                 column_type: ColumnType::new_array(InnerColumnType::String {
                     min_length: None,
                     max_length: None,
@@ -111,6 +115,7 @@ pub static MAINTENANCE: Lazy<ConfigOption> = Lazy::new(|| {
             Column {
                 id: "current",
                 name: "Currently Running",
+                description: "Whether the maintenance is currently running",
                 column_type: ColumnType::new_scalar(InnerColumnType::Boolean {}),
                 ignored_for: vec![OperationType::Create],
                 secret: None,

@@ -76,5 +76,4 @@ require (
 	golang.org/x/net v0.27.0 // indirect
 	golang.org/x/sync v0.7.0 // indirect
 	golang.org/x/sys v0.22.0 // indirect
-	gopkg.in/ini.v1 v1.67.0 // indirect
 )

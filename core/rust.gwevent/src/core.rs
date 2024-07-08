@@ -588,7 +588,7 @@ pub fn expand_event(event: FullEvent) -> Option<IndexMap<(String, String), Field
             insert_field(
                 &mut fields,
                 "guild_scheduled_event_user_remove",
-                "event_id",
+                "scheduled_event_id",
                 unsubscribed.scheduled_event_id,
             );
             insert_field(

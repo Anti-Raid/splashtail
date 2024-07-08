@@ -2,7 +2,7 @@ use serenity::all::{Channel, ChannelType};
 
 pub async fn check_all_events(events: Vec<String>) -> Result<(), crate::Error> {
     let res = tokio::time::timeout(
-        std::time::Duration::from_millis(1000),
+        std::time::Duration::from_millis(250),
         tokio::task::spawn_blocking(move || {
             let supported_events = gwevent::core::event_list();
 

@@ -8,7 +8,8 @@ use sqlx::Row;
 
 /// Validates the value against the schema's column type handling schema checks if `perform_schema_checks` is true
 #[allow(dead_code)]
-fn _validate_and_parse_value(
+#[async_recursion::async_recursion]
+async fn _validate_and_parse_value(
     v: Value,
     column_type: &ColumnType,
     column_id: &str,
@@ -97,6 +98,25 @@ fn _validate_and_parse_value(
 
                             match kind {
                                 InnerColumnTypeStringKind::Normal => {}
+                                InnerColumnTypeStringKind::Template => {
+                                    let compiled = templating::compile_template(
+                                        s,
+                                        templating::CompileTemplateOptions {
+                                            cache_result: false, // Don't uselessly cache the template to decrease memory footprint
+                                            ignore_cache: false, // Don't ignore the cache to avoid recompiling the same template over and over
+                                        },
+                                    )
+                                    .await;
+
+                                    if let Err(err) = compiled {
+                                        return Err(SettingsError::SchemaCheckValidationError {
+                                            column: column_id.to_string(),
+                                            check: "template_compile".to_string(),
+                                            accepted_range: "Valid tera template".to_string(),
+                                            error: err.to_string(),
+                                        });
+                                    }
+                                }
                                 InnerColumnTypeStringKind::User => {
                                     // Try parsing to a UserId
                                     if let Err(err) = s.parse::<serenity::all::UserId>() {
@@ -356,7 +376,8 @@ fn _validate_and_parse_value(
                             column_id,
                             is_nullable,
                             perform_schema_checks,
-                        )?;
+                        )
+                        .await?;
 
                         values.push(new_v);
                     }
@@ -600,7 +621,8 @@ pub async fn settings_view(
             })?;
 
             // Validate the value. returning the parsed value
-            val = _validate_and_parse_value(val, &col.column_type, col.id, col.nullable, false)?;
+            val = _validate_and_parse_value(val, &col.column_type, col.id, col.nullable, false)
+                .await?;
 
             let actions = col
                 .pre_checks
@@ -766,7 +788,8 @@ pub async fn settings_create(
                                 column.id,
                                 column.nullable,
                                 true,
-                            )?
+                            )
+                            .await?
                         }
                     }
                     None => match column.secret {
@@ -1089,7 +1112,8 @@ pub async fn settings_update(
                                 column.id,
                                 column.nullable,
                                 true,
-                            )?
+                            )
+                            .await?
                         }
                     }
                     None => {
@@ -1126,7 +1150,8 @@ pub async fn settings_update(
         setting.primary_key,
         false,
         true,
-    )?;
+    )
+    .await?;
 
     // Start the transaction now that basic validation is done
     let mut tx = pool.begin().await.map_err(|e| SettingsError::Generic {
@@ -1482,7 +1507,8 @@ pub async fn settings_delete(
         setting.primary_key,
         false,
         false,
-    )?;
+    )
+    .await?;
 
     let mut tx = pool.begin().await.map_err(|e| SettingsError::Generic {
         message: e.to_string(),
@@ -1539,7 +1565,7 @@ pub async fn settings_delete(
             })?;
 
             // Validate the actual value, note that as this is a delete operation, we don't care about nullability
-            let val = _validate_and_parse_value(val, column_types[i], col, true, false)?;
+            let val = _validate_and_parse_value(val, column_types[i], col, true, false).await?;
 
             state.state.insert(col.to_string(), val);
         }

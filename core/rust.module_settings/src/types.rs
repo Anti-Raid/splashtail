@@ -162,6 +162,8 @@ impl std::fmt::Display for ColumnType {
 pub enum InnerColumnTypeStringKind {
     /// Normal string
     Normal,
+    /// A template string
+    Template,
     /// User
     User,
     /// Channel
@@ -178,6 +180,7 @@ impl std::fmt::Display for InnerColumnTypeStringKind {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             InnerColumnTypeStringKind::Normal => write!(f, "Normal"),
+            InnerColumnTypeStringKind::Template => write!(f, "Template"),
             InnerColumnTypeStringKind::User => write!(f, "User"),
             InnerColumnTypeStringKind::Channel => write!(f, "Channel"),
             InnerColumnTypeStringKind::Role => write!(f, "Role"),
@@ -370,6 +373,9 @@ pub struct Column {
 
     /// The friendly name of the column
     pub name: &'static str,
+
+    /// The description of the column
+    pub description: &'static str,
 
     /// The type of the column
     pub column_type: ColumnType,

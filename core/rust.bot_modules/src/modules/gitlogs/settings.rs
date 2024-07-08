@@ -19,6 +19,7 @@ pub static WEBHOOKS: Lazy<ConfigOption> = Lazy::new(|| {
             Column {
                 id: "id",
                 name: "Webhook ID",
+                description: "Unique identifier for the webhook",
                 column_type: ColumnType::new_scalar(InnerColumnType::String { min_length: None, max_length: None, allowed_values: vec![], kind: InnerColumnTypeStringKind::Normal }),
                 nullable: false,
                 unique: true,
@@ -44,6 +45,7 @@ pub static WEBHOOKS: Lazy<ConfigOption> = Lazy::new(|| {
             Column {
                 id: "comment",
                 name: "Comment",
+                description: "A comment to describe the webhook. Not used for any purpose beyond documentation.",
                 column_type: ColumnType::new_scalar(InnerColumnType::String { min_length: None, max_length: Some(64), allowed_values: vec![], kind: InnerColumnTypeStringKind::Normal }),
                 nullable: false,
                 unique: false,
@@ -56,6 +58,7 @@ pub static WEBHOOKS: Lazy<ConfigOption> = Lazy::new(|| {
             Column {
                 id: "secret",
                 name: "Secret",
+                description: "A secret to verify the authenticity of the webhook. This is used to ensure that the webhook is from Github and not a malicious actor.",
                 column_type: ColumnType::new_scalar(InnerColumnType::String { min_length: None, max_length: Some(256), allowed_values: vec![], kind: InnerColumnTypeStringKind::Normal }),
                 nullable: false,
                 unique: false,
@@ -156,6 +159,7 @@ pub static REPOS: Lazy<ConfigOption> = Lazy::new(|| {
             Column {
                 id: "id",
                 name: "Repo ID",
+                description: "Unique identifier for the repository",
                 column_type: ColumnType::new_scalar(InnerColumnType::String { min_length: None, max_length: None, allowed_values: vec![], kind: InnerColumnTypeStringKind::Normal }),
                 nullable: false,
                 unique: true,
@@ -181,6 +185,7 @@ pub static REPOS: Lazy<ConfigOption> = Lazy::new(|| {
             Column {
                 id: "webhook_id",
                 name: "Webhook ID",
+                description: "The webhook to which the repository will post events to.",
                 column_type: ColumnType::new_scalar(InnerColumnType::String { min_length: None, max_length: None, allowed_values: vec![], kind: InnerColumnTypeStringKind::Normal }),
                 nullable: false,
                 unique: false,
@@ -236,6 +241,7 @@ pub static REPOS: Lazy<ConfigOption> = Lazy::new(|| {
             Column {
                 id: "repo_name",
                 name: "Repository Name [format: org/repo]",
+                description: "The name of the repository in the format of org/repo.\n\n**Example**: Anti-Raid/splashtail",
                 column_type: ColumnType::new_scalar(InnerColumnType::String { min_length: None, max_length: None, allowed_values: vec![], kind: InnerColumnTypeStringKind::Normal }),
                 nullable: false,
                 unique: false,
@@ -305,6 +311,7 @@ pub static REPOS: Lazy<ConfigOption> = Lazy::new(|| {
             Column {
                 id: "channel_id",
                 name: "Channel ID",
+                description: "The channel to which the repository will post events to.",
                 column_type: ColumnType::new_scalar(InnerColumnType::String { min_length: None, max_length: Some(64), allowed_values: vec![], kind: InnerColumnTypeStringKind::Channel }),
                 nullable: false,
                 unique: false,
@@ -362,6 +369,7 @@ pub static EVENT_MODIFIERS: Lazy<ConfigOption> = Lazy::new(|| {
             Column {
                 id: "id",
                 name: "Modifier ID",
+                description: "Unique identifier for the event modifier",
                 column_type: ColumnType::new_scalar(InnerColumnType::String { min_length: None, max_length: None, allowed_values: vec![], kind: InnerColumnTypeStringKind::Normal }),
                 nullable: false,
                 unique: true,
@@ -387,6 +395,7 @@ pub static EVENT_MODIFIERS: Lazy<ConfigOption> = Lazy::new(|| {
             Column {
                 id: "webhook_id",
                 name: "Webhook ID",
+                description: "The webhook to which the repository will post events to.",
                 column_type: ColumnType::new_scalar(InnerColumnType::String { min_length: None, max_length: None, allowed_values: vec![], kind: InnerColumnTypeStringKind::Normal }),
                 nullable: false,
                 unique: false,
@@ -442,6 +451,7 @@ pub static EVENT_MODIFIERS: Lazy<ConfigOption> = Lazy::new(|| {
             Column {
                 id: "repo_id",
                 name: "Repo ID",
+                description: "The repository to which the modifier will apply. If not set, the modifier will apply to all repositories.",
                 column_type: ColumnType::new_scalar(InnerColumnType::String { min_length: None, max_length: None, allowed_values: vec![], kind: InnerColumnTypeStringKind::Normal }),
                 nullable: true,
                 unique: false,
@@ -495,6 +505,7 @@ pub static EVENT_MODIFIERS: Lazy<ConfigOption> = Lazy::new(|| {
             Column {
                 id: "events",
                 name: "Events",
+                description: "The events to which the modifier will apply. If not set, the modifier will apply to all events.",
                 column_type: ColumnType::new_array(InnerColumnType::String { min_length: None, max_length: None, allowed_values: vec![], kind: InnerColumnTypeStringKind::Normal }),
                 nullable: false,
                 unique: false,
@@ -507,6 +518,7 @@ pub static EVENT_MODIFIERS: Lazy<ConfigOption> = Lazy::new(|| {
             Column {
                 id: "blacklisted",
                 name: "Blacklisted",
+                description: "If set to true, the modifier will block the event from being posted to the webhook.",
                 column_type: ColumnType::new_scalar(InnerColumnType::Boolean {}),
                 nullable: false,
                 unique: false,
@@ -519,6 +531,7 @@ pub static EVENT_MODIFIERS: Lazy<ConfigOption> = Lazy::new(|| {
             Column {
                 id: "whitelisted",
                 name: "Whitelisted [Other events will not be allowed]",
+                description: "If set to true, the modifier will only allow the specified events to be posted to the webhook.",
                 column_type: ColumnType::new_scalar(InnerColumnType::Boolean {}),
                 nullable: false,
                 unique: false,
@@ -531,6 +544,7 @@ pub static EVENT_MODIFIERS: Lazy<ConfigOption> = Lazy::new(|| {
             Column {
                 id: "redirect_channel",
                 name: "Redirect Channel",
+                description: "If set, the modifier will redirect the events to the specified channel.",
                 column_type: ColumnType::new_scalar(InnerColumnType::String { min_length: None, max_length: None, allowed_values: vec![], kind: InnerColumnTypeStringKind::Channel }),
                 nullable: true,
                 unique: false,
@@ -543,6 +557,7 @@ pub static EVENT_MODIFIERS: Lazy<ConfigOption> = Lazy::new(|| {
             Column {
                 id: "priority",
                 name: "Priority",
+                description: "The priority of the modifier. The modifier with the highest priority will be applied first.",
                 column_type: ColumnType::new_scalar(InnerColumnType::Integer {}),
                 nullable: false,
                 unique: false,
