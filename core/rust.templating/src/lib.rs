@@ -52,6 +52,25 @@ pub async fn compile_template(
         }
     }
 
+    // Every 3 nodes, insert a check_time Node
+    // This is to prevent long-running templates
+    for (_, t) in tera.templates.iter_mut() {
+        for j in 0..t.ast.len() {
+            if j % 3 == 0 {
+                t.ast.insert(
+                    j,
+                    tera::ast::Node::VariableBlock(
+                        tera::ast::WS {
+                            left: true,
+                            right: true,
+                        },
+                        tera::ast::Expr::new(tera::ast::ExprVal::String("check_time".to_string())),
+                    ),
+                );
+            }
+        }
+    }
+
     if opts.cache_result {
         // Store the template in the cache
         TEMPLATE_CACHE
