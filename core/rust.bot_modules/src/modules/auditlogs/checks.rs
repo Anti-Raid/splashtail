@@ -1,12 +1,19 @@
 use serenity::all::{Channel, ChannelType};
 
 pub async fn check_all_events(events: Vec<String>) -> Result<(), crate::Error> {
+    let is_killed = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
+
+    let res_killed = is_killed.clone();
     let res = tokio::time::timeout(
         std::time::Duration::from_millis(250),
         tokio::task::spawn_blocking(move || {
             let supported_events = gwevent::core::event_list();
 
             for event in events {
+                if res_killed.load(std::sync::atomic::Ordering::SeqCst) {
+                    return Err("Killed".to_string());
+                }
+
                 let trimmed = event.trim().to_string();
 
                 if trimmed.is_empty() {
@@ -43,6 +50,8 @@ pub async fn check_all_events(events: Vec<String>) -> Result<(), crate::Error> {
         }),
     )
     .await??;
+
+    is_killed.store(true, std::sync::atomic::Ordering::SeqCst); // Kill the task when possible
 
     res.map_err(|e| e.into())
 }

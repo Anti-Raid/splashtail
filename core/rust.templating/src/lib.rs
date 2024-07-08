@@ -4,6 +4,12 @@ use std::sync::{Arc, RwLock};
 use std::time::Duration;
 use tera::Tera;
 
+/// Maximum number of AST nodes in a template
+pub const MAX_TEMPLATE_NODES: usize = 512;
+
+/// Timeout for template execution
+pub const TEMPLATE_EXECUTION_TIMEOUT: Duration = Duration::from_millis(300);
+
 /// Stores a cache of templates with the template content as key
 static TEMPLATE_CACHE: Lazy<Cache<String, Tera>> = Lazy::new(|| {
     Cache::builder()
@@ -32,8 +38,19 @@ pub async fn compile_template(
     // Compile a new template
     let mut tera = Tera::default();
 
+    tera.autoescape_on(vec![]);
+
     // Add main template
     tera.add_raw_template("main", template)?;
+
+    let mut total_nodes = 0;
+    for (_, t) in tera.templates.iter() {
+        total_nodes += t.ast.len();
+
+        if total_nodes > MAX_TEMPLATE_NODES {
+            return Err("Template has too many nodes".into());
+        }
+    }
 
     if opts.cache_result {
         // Store the template in the cache
@@ -98,7 +115,7 @@ pub struct ExecutedTemplate {
 }
 
 /// Executes a template with the given context
-pub fn execute_template(
+pub async fn execute_template(
     tera: &mut Tera,
     context: &tera::Context,
 ) -> Result<ExecutedTemplate, base_data::Error> {
@@ -125,14 +142,4 @@ pub fn execute_template(
         description: rendered,
         fields: (*fields_reader).clone(),
     })
-}
-
-/// Spawns execute template with the given context using ``tokio::task::spawn_blocking``
-pub async fn spawn_execute_template(
-    mut tera: Tera,
-    context: tera::Context,
-) -> Result<ExecutedTemplate, base_data::Error> {
-    tokio::task::spawn_blocking(move || execute_template(&mut tera, &context))
-        .await
-        .map_err(base_data::Error::from)?
 }
