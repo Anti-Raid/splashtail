@@ -97,6 +97,10 @@ github.com/infinitybotlist/eureka v1.4.0 h1:ccTwc9j2Ofa1BREGW868O73rFEg57oPZStCM
 github.com/infinitybotlist/eureka v1.4.0/go.mod h1:+XpKNt78xfvzOLdakj1CLt4Fn6wIaQ6L3Cq0X2luIPY=
 github.com/infinitybotlist/eureka v1.5.1 h1:KYrc843FeUUO/ttLPO5p6aori676ohjP3IaXmjAL5oY=
 github.com/infinitybotlist/eureka v1.5.1/go.mod h1:+XpKNt78xfvzOLdakj1CLt4Fn6wIaQ6L3Cq0X2luIPY=
+github.com/infinitybotlist/eureka v1.6.0 h1:+jCthiOvlMUScMuZZan+br5Nfj31+hPl6VBtUPDAHvg=
+github.com/infinitybotlist/eureka v1.6.0/go.mod h1:+XpKNt78xfvzOLdakj1CLt4Fn6wIaQ6L3Cq0X2luIPY=
+github.com/infinitybotlist/eureka v1.6.1 h1:Mj7aUzCVF0ps/JrqZgBTY9EyQnEnLEDcu+hFtQC/9rs=
+github.com/infinitybotlist/eureka v1.6.1/go.mod h1:+XpKNt78xfvzOLdakj1CLt4Fn6wIaQ6L3Cq0X2luIPY=
 github.com/infinitybotlist/iblfile v0.0.0-20240609122654-f388ed492b00 h1:HFF6dT0JXDyoxAEHj2rDDh2WLTll75t4Gu5ahQusvrQ=
 github.com/infinitybotlist/iblfile v0.0.0-20240609122654-f388ed492b00/go.mod h1:2+IsRbfsQ79wG2sbIuNVKMHzyhDf+iaxn/GXdnBJO6c=
 github.com/infinitybotlist/kittycat/go v0.0.0-20240526051606-6574fb343539 h1:u3NLosYX7PgcMp5CNByNOkoDKEAJFXdfBQOOp/7XX0s=

@@ -603,9 +603,14 @@ func main() {
 			os.Exit(1)
 		}
 
-		cancel := root.ExecuteCommands(*command)
+		cancel, err := root.ExecuteCommands(*command)
+
+		if err != nil {
+			fmt.Println("Error:", err)
+		}
+
 		if cancel {
-			fmt.Println("Exiting")
+			fmt.Println("Exiting...")
 		}
 
 		return

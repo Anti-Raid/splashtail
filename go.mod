@@ -10,7 +10,7 @@ require (
 	github.com/go-chi/chi/v5 v5.1.0
 	github.com/go-playground/validator/v10 v10.22.0
 	github.com/go-viper/mapstructure/v2 v2.0.0
-	github.com/infinitybotlist/eureka v1.5.1
+	github.com/infinitybotlist/eureka v1.6.1
 	github.com/infinitybotlist/iblfile v0.0.0-20240609122654-f388ed492b00
 	github.com/infinitybotlist/kittycat/go v0.0.0-20240526051606-6574fb343539
 	github.com/jackc/pgx/v5 v5.6.0
