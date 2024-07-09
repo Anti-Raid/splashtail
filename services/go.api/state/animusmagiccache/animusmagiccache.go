@@ -6,6 +6,7 @@ import (
 
 	"github.com/anti-raid/splashtail/core/go.std/animusmagic"
 	"github.com/anti-raid/splashtail/core/go.std/utils/syncmap"
+	"github.com/anti-raid/splashtail/services/go.api/animusmagic_messages"
 	"github.com/redis/rueidis"
 )
 
@@ -13,19 +14,19 @@ import (
 type CachedAnimusMagicClient struct {
 	*animusmagic.AnimusMagicClient
 
-	ClusterModuleCache syncmap.Map[uint16, animusmagic.ClusterModules]
+	ClusterModuleCache syncmap.Map[uint16, animusmagic_messages.ClusterModules]
 }
 
 // New returns a new CachedAnimusMagicClient
 func New(c *animusmagic.AnimusMagicClient) *CachedAnimusMagicClient {
 	return &CachedAnimusMagicClient{
 		AnimusMagicClient:  c,
-		ClusterModuleCache: syncmap.Map[uint16, animusmagic.ClusterModules]{},
+		ClusterModuleCache: syncmap.Map[uint16, animusmagic_messages.ClusterModules]{},
 	}
 }
 
 // GetClusterModules returns the modules that are currently running on the cluster.
-func (c *CachedAnimusMagicClient) GetClusterModules(ctx context.Context, redis rueidis.Client, clusterId uint16) (animusmagic.ClusterModules, error) {
+func (c *CachedAnimusMagicClient) GetClusterModules(ctx context.Context, redis rueidis.Client, clusterId uint16) (animusmagic_messages.ClusterModules, error) {
 	if v, ok := c.ClusterModuleCache.Load(clusterId); ok {
 		return v, nil
 	}
@@ -33,7 +34,7 @@ func (c *CachedAnimusMagicClient) GetClusterModules(ctx context.Context, redis r
 	mlr, err := c.Request(
 		ctx,
 		redis,
-		animusmagic.BotAnimusMessage{
+		animusmagic_messages.BotAnimusMessage{
 			Modules: &struct{}{},
 		},
 		&animusmagic.RequestOptions{
@@ -57,7 +58,7 @@ func (c *CachedAnimusMagicClient) GetClusterModules(ctx context.Context, redis r
 
 	upr := mlr[0]
 
-	resp, err := animusmagic.ParseClientResponse[animusmagic.BotAnimusResponse](upr)
+	resp, err := animusmagic.ParseClientResponse[animusmagic_messages.BotAnimusResponse](upr)
 
 	if err != nil {
 		return nil, err

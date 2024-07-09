@@ -9,6 +9,7 @@ import (
 	"github.com/anti-raid/splashtail/core/go.std/types"
 	"github.com/anti-raid/splashtail/core/go.std/utils"
 	"github.com/anti-raid/splashtail/core/go.std/utils/mewext"
+	"github.com/anti-raid/splashtail/services/go.api/animusmagic_messages"
 	"github.com/anti-raid/splashtail/services/go.api/state"
 	"github.com/anti-raid/splashtail/services/go.api/webutils"
 	"github.com/go-chi/chi/v5"
@@ -88,7 +89,7 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 	resps, err := state.AnimusMagicClient.Request(
 		d.Context,
 		state.Rueidis,
-		animusmagic.BotAnimusMessage{
+		animusmagic_messages.BotAnimusMessage{
 			BaseGuildUserInfo: &struct {
 				GuildID string `json:"guild_id"`
 				UserID  string `json:"user_id"`
@@ -106,7 +107,7 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 		state.Logger.Error("Error sending request to animus magic", zap.Error(err))
 
 		if errors.Is(err, animusmagic.ErrOpError) && len(resps) > 0 {
-			p, err := animusmagic.ParseClientResponse[animusmagic.BotAnimusResponse](resps[0])
+			p, err := animusmagic.ParseClientResponse[animusmagic_messages.BotAnimusResponse](resps[0])
 
 			if err != nil {
 				state.Logger.Error("Error parsing response", zap.Error(err))
@@ -149,7 +150,7 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 
 	resp := resps[0]
 
-	pr, err := animusmagic.ParseClientResponse[animusmagic.BotAnimusResponse](resp)
+	pr, err := animusmagic.ParseClientResponse[animusmagic_messages.BotAnimusResponse](resp)
 
 	if err != nil {
 		state.Logger.Error("Error parsing response", zap.Error(err))

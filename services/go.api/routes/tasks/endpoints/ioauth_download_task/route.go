@@ -9,10 +9,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/anti-raid/splashtail/core/go.jobs"
-	"github.com/anti-raid/splashtail/core/go.std/animusmagic"
+	jobs "github.com/anti-raid/splashtail/core/go.jobs"
 	"github.com/anti-raid/splashtail/core/go.std/structparser/db"
 	types "github.com/anti-raid/splashtail/core/go.std/types"
+	"github.com/anti-raid/splashtail/services/go.api/animusmagic_messages"
 	"github.com/anti-raid/splashtail/services/go.api/api"
 	"github.com/anti-raid/splashtail/services/go.api/state"
 
@@ -192,7 +192,7 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 			}
 		} else if task.TaskFor.TargetType == types.TargetTypeServer {
 			// Check permissions
-			resp, ok := api.HandlePermissionCheck(iot.DiscordUser.ID, task.TaskFor.ID, taskDef.CorrespondingBotCommand_Download(), animusmagic.AmCheckCommandOptions{})
+			resp, ok := api.HandlePermissionCheck(iot.DiscordUser.ID, task.TaskFor.ID, taskDef.CorrespondingBotCommand_Download(), animusmagic_messages.AmCheckCommandOptions{})
 
 			if !ok {
 				return resp

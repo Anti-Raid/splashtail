@@ -24,6 +24,14 @@ pub struct CompileTemplateOptions {
     pub ignore_cache: bool,
 }
 
+pub fn make_templating_context() -> tera::Context {
+    let mut context = tera::Context::new();
+
+    context.insert("__ar_templating", &0);
+
+    context
+}
+
 pub async fn compile_template(
     template: &str,
     opts: CompileTemplateOptions,

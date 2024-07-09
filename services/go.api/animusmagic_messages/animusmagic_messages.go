@@ -1,7 +1,7 @@
-// This package defines all possible responses to an action
-package animusmagic
+package animusmagic_messages
 
 import (
+	"github.com/anti-raid/splashtail/core/go.std/animusmagic"
 	"github.com/anti-raid/splashtail/core/go.std/silverpelt"
 	"github.com/anti-raid/splashtail/core/go.std/types"
 	orderedmap "github.com/wk8/go-ordered-map/v2"
@@ -93,8 +93,8 @@ type BotAnimusMessage struct {
 
 func (b BotAnimusMessage) Message() {}
 
-func (b BotAnimusMessage) Target() AnimusTarget {
-	return AnimusTargetBot
+func (b BotAnimusMessage) Target() animusmagic.AnimusTarget {
+	return animusmagic.AnimusTargetBot
 }
 
 type BotAnimusResponse struct {
@@ -124,8 +124,8 @@ type BotAnimusResponse struct {
 
 func (b BotAnimusResponse) Response() {}
 
-func (b BotAnimusResponse) Target() AnimusTarget {
-	return AnimusTargetBot
+func (b BotAnimusResponse) Target() animusmagic.AnimusTarget {
+	return animusmagic.AnimusTargetBot
 }
 
 type JobserverMessage struct {
@@ -147,8 +147,8 @@ type JobserverMessage struct {
 
 func (b JobserverMessage) Message() {}
 
-func (b JobserverMessage) Target() AnimusTarget {
-	return AnimusTargetBot
+func (b JobserverMessage) Target() animusmagic.AnimusTarget {
+	return animusmagic.AnimusTargetBot
 }
 
 type JobserverResponse struct {
@@ -159,6 +159,6 @@ type JobserverResponse struct {
 
 func (b JobserverResponse) Response() {}
 
-func (b JobserverResponse) Target() AnimusTarget {
-	return AnimusTargetBot
+func (b JobserverResponse) Target() animusmagic.AnimusTarget {
+	return animusmagic.AnimusTargetJobserver
 }

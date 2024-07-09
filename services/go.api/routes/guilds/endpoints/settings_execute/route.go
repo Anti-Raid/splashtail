@@ -11,6 +11,7 @@ import (
 	"github.com/anti-raid/splashtail/core/go.std/types"
 	"github.com/anti-raid/splashtail/core/go.std/utils"
 	"github.com/anti-raid/splashtail/core/go.std/utils/mewext"
+	"github.com/anti-raid/splashtail/services/go.api/animusmagic_messages"
 	"github.com/anti-raid/splashtail/services/go.api/state"
 	"github.com/anti-raid/splashtail/services/go.api/webutils"
 	"github.com/go-chi/chi/v5"
@@ -117,7 +118,7 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 	resps, err := state.AnimusMagicClient.Request(
 		d.Context,
 		state.Rueidis,
-		animusmagic.BotAnimusMessage{
+		animusmagic_messages.BotAnimusMessage{
 			SettingsOperation: &struct {
 				Fields  orderedmap.OrderedMap[string, any] `json:"fields"`
 				Op      silverpelt.CanonicalOperationType  `json:"op"`
@@ -167,7 +168,7 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 
 	upr := resps[0]
 
-	resp, err := animusmagic.ParseClientResponse[animusmagic.BotAnimusResponse](upr)
+	resp, err := animusmagic.ParseClientResponse[animusmagic_messages.BotAnimusResponse](upr)
 
 	if err != nil {
 		return uapi.HttpResponse{

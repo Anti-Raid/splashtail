@@ -12,6 +12,7 @@ import (
 	"github.com/anti-raid/splashtail/core/go.std/structparser/db"
 	"github.com/anti-raid/splashtail/core/go.std/types"
 	"github.com/anti-raid/splashtail/core/go.std/utils/mewext"
+	"github.com/anti-raid/splashtail/services/go.jobserver/animusmagic_messages"
 	"github.com/anti-raid/splashtail/services/go.jobserver/jobrunner"
 	"github.com/anti-raid/splashtail/services/go.jobserver/state"
 	"github.com/infinitybotlist/eureka/jsonimpl"
@@ -37,7 +38,7 @@ func AnimusOnRequest(c *animusmagic.ClientRequest) (animusmagic.AnimusResponse, 
 
 	state.Logger.Info("Recieved request", zap.String("from", c.Meta.From.String()), zap.String("to", c.Meta.To.String()), zap.String("commandId", c.Meta.CommandID))
 
-	data, err := animusmagic.ParseClientRequest[animusmagic.JobserverMessage](c)
+	data, err := animusmagic.ParseClientRequest[animusmagic_messages.JobserverMessage](c)
 
 	if err != nil {
 		return nil, err
@@ -134,7 +135,7 @@ func AnimusOnRequest(c *animusmagic.ClientRequest) (animusmagic.AnimusResponse, 
 			go jobrunner.ExecuteTask(ctx, cancel, taskId, task, nil)
 		}
 
-		return &animusmagic.JobserverResponse{
+		return &animusmagic_messages.JobserverResponse{
 			SpawnTask: &struct {
 				TaskID string "json:\"task_id\""
 			}{

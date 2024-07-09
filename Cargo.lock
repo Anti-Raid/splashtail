@@ -2316,6 +2316,7 @@ dependencies = [
  "sqlx",
  "strum",
  "strum_macros",
+ "templating",
  "text-diff",
  "tokio",
  "url",

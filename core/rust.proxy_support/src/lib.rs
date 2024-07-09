@@ -4,6 +4,92 @@ pub mod sandwich;
 
 type Error = Box<dyn std::error::Error + Send + Sync>;
 
+/// Checks if anti-raid is in a server or not
+/// Fetches a guild while handling all the pesky errors serenity normally has
+/// with caching
+pub async fn has_guild(
+    ctx: &botox::cache::CacheHttpImpl,
+    reqwest_client: &reqwest::Client,
+    guild_id: serenity::model::id::GuildId,
+) -> Result<bool, Error> {
+    if ctx.cache.guilds().contains(&guild_id) {
+        return Ok(true);
+    }
+
+    #[derive(serde::Serialize, serde::Deserialize, Debug)]
+    struct Resp {
+        ok: bool,
+        data: Option<bool>,
+        error: Option<String>,
+    }
+
+    // Check sandwich, it may be there
+    if let Some(ref proxy_url) = config::CONFIG.meta.sandwich_http_api {
+        let url = format!(
+            "{}/antiraid/api/state?col=derived.has_guild_id&id={}",
+            proxy_url, guild_id
+        );
+
+        let resp = reqwest_client.get(&url).send().await?.json::<Resp>().await;
+
+        if let Ok(resp) = resp {
+            if resp.ok {
+                let Some(has_guild_id) = resp.data else {
+                    return Err("Could not derive has_guild_id prop".into());
+                };
+
+                return Ok(has_guild_id);
+            } else {
+                log::warn!(
+                    "Sandwich proxy returned error [has guild id]: {:?}",
+                    resp.error
+                );
+            }
+        } else {
+            log::warn!(
+                "Sandwich proxy returned invalid resp [has guild id]: {:?}",
+                resp
+            );
+        }
+    }
+
+    let guild_id_immediately_preceding = serenity::all::GuildId::new(guild_id.get() - 1);
+
+    // Last resort, fetch from http
+    let gi = match ctx
+        .http
+        .get_guilds(
+            Some(serenity::all::GuildPagination::After(
+                guild_id_immediately_preceding,
+            )),
+            serenity::nonmax::NonMaxU8::new(3),
+        )
+        .await
+    {
+        Ok(gi) => gi,
+        Err(e) => match e {
+            serenity::Error::Http(e) => match e {
+                serenity::all::HttpError::UnsuccessfulRequest(er) => {
+                    return Err(format!("Failed to fetch guild info (http): {:?}", er).into());
+                }
+                _ => {
+                    return Err(
+                        format!("Failed to fetch guild info (non-http error): {:?}", e).into(),
+                    );
+                }
+            },
+            _ => {
+                return Err(format!("Failed to fetch member: {:?}", e).into());
+            }
+        },
+    };
+
+    // Check if the guild is in the list
+    let has_guild_id = gi.iter().any(|g| g.id == guild_id);
+
+    Ok(has_guild_id)
+}
+
 /// Fetches a guild while handling all the pesky errors serenity normally has
 /// with caching
 pub async fn guild(
@@ -28,7 +114,10 @@ pub async fn guild(
 
     // Check sandwich, it may be there
     if let Some(ref proxy_url) = config::CONFIG.meta.sandwich_http_api {
-        let url = format!("{}/api/state?col=guilds&id={}", proxy_url, guild_id);
+        let url = format!(
+            "{}/antiraid/api/state?col=guilds&id={}",
+            proxy_url, guild_id
+        );
 
         let resp = reqwest_client.get(&url).send().await?.json::<Resp>().await;
 
@@ -58,7 +147,10 @@ pub async fn guild(
 
     // Save to sandwich
     if let Some(ref proxy_url) = config::CONFIG.meta.sandwich_http_api {
-        let url = format!("{}/api/state?col=guilds&id={}", proxy_url, guild_id);
+        let url = format!(
+            "{}/antiraid/api/state?col=guilds&id={}",
+            proxy_url, guild_id
+        );
 
         let resp = reqwest_client.post(&url).json(&res).send().await?;
 
@@ -109,7 +201,7 @@ pub async fn member_in_guild(
     };
 
     let url = format!(
-        "{}/api/state?col=members&id={}&guild_id={}",
+        "{}/antiraid/api/state?col=members&id={}&guild_id={}",
         proxy_url, user_id, guild_id
     );
 
@@ -183,6 +275,131 @@ pub async fn member_in_guild(
     }
 
     Ok(Some(member))
+}
+
+/// Faster version of serenity guild_channels that also takes into account the sandwich proxy layer
+pub async fn guild_channels(
+    ctx: &botox::cache::CacheHttpImpl,
+    reqwest_client: &reqwest::Client,
+    guild_id: serenity::model::id::GuildId,
+) -> Result<Vec<serenity::all::GuildChannel>, Error> {
+    // Try serenity cache first
+    {
+        if let Some(guild) = ctx.cache.guild(guild_id) {
+            let channels = guild.channels.clone();
+            return Ok(channels.into_iter().collect());
+        };
+    }
+
+    let Some(ref proxy_url) = config::CONFIG.meta.sandwich_http_api else {
+        // Last resort, fetch from http and then update sandwich as well
+        let channels = match ctx.http.get_channels(guild_id).await {
+            Ok(mem) => mem,
+            Err(e) => match e {
+                serenity::Error::Http(e) => match e {
+                    serenity::all::HttpError::UnsuccessfulRequest(er) => {
+                        if er.status_code == reqwest::StatusCode::NOT_FOUND {
+                            return Err("No channels found".into());
+                        } else {
+                            return Err(format!(
+                                "Failed to fetch channels (http, non-404): {:?}",
+                                er
+                            )
+                            .into());
+                        }
+                    }
+                    _ => {
+                        return Err(format!("Failed to fetch channels (http): {:?}", e).into());
+                    }
+                },
+                _ => {
+                    return Err(format!("Failed to fetch channels: {:?}", e).into());
+                }
+            },
+        };
+
+        let channels = channels.into_iter().collect();
+
+        return Ok(channels);
+    };
+
+    let url = format!(
+        "{}/antiraid/api/state?col=channels&id={}",
+        proxy_url, guild_id
+    );
+
+    #[derive(serde::Serialize, serde::Deserialize)]
+    struct Resp {
+        ok: bool,
+        data: Option<Vec<serenity::all::GuildChannel>>,
+        error: Option<String>,
+    }
+
+    let resp = reqwest_client
+        .get(&url)
+        .timeout(std::time::Duration::from_secs(5))
+        .send()
+        .await?
+        .json::<Resp>()
+        .await;
+
+    match resp {
+        Ok(resp) => {
+            if resp.ok {
+                let Some(channels) = resp.data else {
+                    return Err("No channels found".into());
+                };
+
+                return Ok(channels);
+            } else {
+                log::warn!(
+                    "Sandwich proxy returned error [get guild channels]: {:?}",
+                    resp.error
+                );
+            }
+        }
+        Err(e) => {
+            log::warn!("Failed to fetch member (http): {:?}", e);
+        }
+    }
+
+    // Last resort, fetch from http and then update sandwich as well
+    let channels = match ctx.http.get_channels(guild_id).await {
+        Ok(mem) => mem,
+        Err(e) => match e {
+            serenity::Error::Http(e) => match e {
+                serenity::all::HttpError::UnsuccessfulRequest(er) => {
+                    if er.status_code == reqwest::StatusCode::NOT_FOUND {
+                        return Err("No channels found".into());
+                    } else {
+                        return Err(
+                            format!("Failed to fetch channels (http, non-404): {:?}", er).into(),
+                        );
+                    }
+                }
+                _ => {
+                    return Err(format!("Failed to fetch channels (http): {:?}", e).into());
+                }
+            },
+            _ => {
+                return Err(format!("Failed to fetch channels: {:?}", e).into());
+            }
+        },
+    };
+
+    let channels = channels.into_iter().collect();
+
+    // Update sandwich with a POST
+    let resp = reqwest_client.post(&url).json(&channels).send().await?;
+
+    if !resp.status().is_success() {
+        log::warn!(
+            "Failed to update sandwich proxy with channel data: {:?}",
+            resp.text().await
+        );
+    }
+
+    Ok(channels)
 }
 
 pub enum ProxyResponse {

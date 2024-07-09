@@ -12,7 +12,7 @@ use splashcore_rs::animusmagic::protocol::{AnimusErrorResponse, AnimusTarget};
 
 use module_settings::{self, canonical_types::CanonicalSettingsError, types::OperationType};
 use serde::{Deserialize, Serialize};
-use serenity::all::{GuildId, Role, RoleId, UserId};
+use serenity::all::{GuildChannel, GuildId, Role, RoleId, UserId};
 use splashcore_rs::value::Value;
 use std::sync::Arc;
 
@@ -54,6 +54,8 @@ pub enum BotAnimusResponse {
         user_roles: Vec<RoleId>,
         /// List of roles the bot has
         bot_roles: Vec<RoleId>,
+        /// List of all channels in the server
+        channels: Vec<GuildChannel>,
     },
     /// Returns the response of a command permission check
     CheckCommandPermission {
@@ -182,8 +184,10 @@ impl BotAnimusMessage {
                 let mut guilds_exist = Vec::with_capacity(guilds.len());
 
                 for guild in guilds {
+                    let has_guild = proxy_support::has_guild(cache_http, reqwest, guild).await?;
+
                     guilds_exist.push({
-                        if cache_http.cache.guilds().contains(&guild) {
+                        if has_guild {
                             1
                         } else {
                             0
@@ -195,14 +199,16 @@ impl BotAnimusMessage {
             }
             Self::BaseGuildUserInfo { guild_id, user_id } => {
                 let bot_user_id = cache_http.cache.current_user().id;
-                let (name, icon, owner, roles, user_roles, bot_roles) = {
-                    let (name, icon, owner_id, roles) =
+                let (name, icon, owner, roles, user_roles, bot_roles, channels) = {
+                    let (name, icon, owner_id, roles, channels) =
                         match proxy_support::guild(cache_http, reqwest, guild_id).await {
                             Ok(guild) => (
                                 guild.name.to_string(),
                                 guild.icon_url(),
                                 guild.owner_id,
                                 guild.roles.clone(),
+                                proxy_support::guild_channels(cache_http, reqwest, guild_id)
+                                    .await?,
                             ),
                             Err(e) => return Err(format!("Failed to get guild: {:#?}", e).into()),
                         };
@@ -233,6 +239,7 @@ impl BotAnimusMessage {
                         roles,
                         member.roles.to_vec(),
                         bot_user.roles.to_vec(),
+                        channels,
                     )
                 };
 
@@ -243,6 +250,7 @@ impl BotAnimusMessage {
                     roles: roles.into_iter().map(|role| (role.id, role)).collect(),
                     user_roles,
                     bot_roles,
+                    channels,
                 })
             }
             Self::CheckCommandPermission {
@@ -251,8 +259,6 @@ impl BotAnimusMessage {
                 command,
                 opts,
             } => {
-                log::info!("Checking command permission: {}", command);
-
                 // Check COMMAND_ID_MODULE_MAP
                 let base_command = command.split_whitespace().next().unwrap();
 

@@ -325,7 +325,7 @@ pub async fn dispatch_audit_log(
 
     let user_data = ctx.data::<Data>();
 
-    let sinks = sqlx::query!("SELECT id, type AS typ, sink, events FROM auditlogs__sinks WHERE guild_id = $1 AND broken = false", guild_id.to_string())
+    let sinks = sqlx::query!("SELECT id, type AS typ, sink, events, embed_template FROM auditlogs__sinks WHERE guild_id = $1 AND broken = false", guild_id.to_string())
         .fetch_all(&user_data.pool)
         .await?;
 
@@ -342,7 +342,28 @@ pub async fn dispatch_audit_log(
                 let embed = if let Some(ref e) = event_embed {
                     e.clone()
                 } else {
-                    let e = create_audit_log_embed(event_titlename, &expanded_event)?;
+                    let e = {
+                        if let Some(ref embed_template) = sink.embed_template {
+                            let mut tera = templating::compile_template(
+                                embed_template,
+                                templating::CompileTemplateOptions {
+                                    ignore_cache: false,
+                                    cache_result: true,
+                                },
+                            )
+                            .await?;
+
+                            let mut ctx = templating::make_templating_context();
+                            ctx.insert("event_titlename", event_titlename);
+                            ctx.insert("event", &expanded_event);
+
+                            let templated = templating::execute_template(&mut tera, &ctx).await?;
+
+                            serenity::all::CreateEmbed::default().description("TODO")
+                        } else {
+                            create_audit_log_embed(event_titlename, &expanded_event)?
+                        }
+                    };
                     event_embed = Some(e.clone());
 
                     e

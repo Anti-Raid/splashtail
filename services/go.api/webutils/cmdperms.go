@@ -6,6 +6,7 @@ import (
 
 	"github.com/anti-raid/splashtail/core/go.std/animusmagic"
 	"github.com/anti-raid/splashtail/core/go.std/silverpelt"
+	"github.com/anti-raid/splashtail/services/go.api/animusmagic_messages"
 	"github.com/redis/rueidis"
 )
 
@@ -18,17 +19,17 @@ func CheckCommandPermission(
 	guildID string,
 	userID string,
 	command string,
-	checkCommandOptions animusmagic.AmCheckCommandOptions,
+	checkCommandOptions animusmagic_messages.AmCheckCommandOptions,
 ) (res *silverpelt.PermissionResult, ok bool, err error) {
 	mlr, err := c.Request(
 		ctx,
 		redis,
-		animusmagic.BotAnimusMessage{
+		animusmagic_messages.BotAnimusMessage{
 			CheckCommandPermission: &struct {
-				GuildID             string                            "json:\"guild_id\""
-				UserID              string                            "json:\"user_id\""
-				Command             string                            "json:\"command\""
-				CheckCommandOptions animusmagic.AmCheckCommandOptions `json:"opts"`
+				GuildID             string                                     "json:\"guild_id\""
+				UserID              string                                     "json:\"user_id\""
+				Command             string                                     "json:\"command\""
+				CheckCommandOptions animusmagic_messages.AmCheckCommandOptions `json:"opts"`
 			}{
 				GuildID:             guildID,
 				UserID:              userID,
@@ -55,7 +56,7 @@ func CheckCommandPermission(
 
 	upr := mlr[0]
 
-	resp, err := animusmagic.ParseClientResponse[animusmagic.BotAnimusResponse](upr)
+	resp, err := animusmagic.ParseClientResponse[animusmagic_messages.BotAnimusResponse](upr)
 
 	if err != nil {
 		return nil, false, err

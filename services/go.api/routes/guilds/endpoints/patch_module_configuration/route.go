@@ -12,6 +12,7 @@ import (
 	"github.com/anti-raid/splashtail/core/go.std/types"
 	"github.com/anti-raid/splashtail/core/go.std/utils"
 	"github.com/anti-raid/splashtail/core/go.std/utils/mewext"
+	"github.com/anti-raid/splashtail/services/go.api/animusmagic_messages"
 	"github.com/anti-raid/splashtail/services/go.api/api"
 	"github.com/anti-raid/splashtail/services/go.api/state"
 	"github.com/anti-raid/splashtail/services/go.api/webutils"
@@ -182,7 +183,7 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 
 		if clear {
 			if moduleData.IsDefaultEnabled {
-				hresp, ok = api.HandlePermissionCheck(d.Auth.ID, guildId, "modules enable", animusmagic.AmCheckCommandOptions{
+				hresp, ok = api.HandlePermissionCheck(d.Auth.ID, guildId, "modules enable", animusmagic_messages.AmCheckCommandOptions{
 					CustomResolvedKittycatPerms: permLimits,
 				})
 
@@ -190,7 +191,7 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 					return hresp
 				}
 			} else {
-				hresp, ok = api.HandlePermissionCheck(d.Auth.ID, guildId, "modules disable", animusmagic.AmCheckCommandOptions{
+				hresp, ok = api.HandlePermissionCheck(d.Auth.ID, guildId, "modules disable", animusmagic_messages.AmCheckCommandOptions{
 					CustomResolvedKittycatPerms: permLimits,
 				})
 
@@ -208,7 +209,7 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 			// Check for permissions next
 			if *value {
 				// Disable
-				hresp, ok = api.HandlePermissionCheck(d.Auth.ID, guildId, "modules disable", animusmagic.AmCheckCommandOptions{
+				hresp, ok = api.HandlePermissionCheck(d.Auth.ID, guildId, "modules disable", animusmagic_messages.AmCheckCommandOptions{
 					CustomResolvedKittycatPerms: permLimits,
 				})
 
@@ -217,7 +218,7 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 				}
 			} else {
 				// Enable
-				hresp, ok = api.HandlePermissionCheck(d.Auth.ID, guildId, "modules enable", animusmagic.AmCheckCommandOptions{
+				hresp, ok = api.HandlePermissionCheck(d.Auth.ID, guildId, "modules enable", animusmagic_messages.AmCheckCommandOptions{
 					CustomResolvedKittycatPerms: permLimits,
 				})
 
@@ -251,7 +252,7 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 		}
 
 		// Check for permissions next
-		hresp, ok = api.HandlePermissionCheck(d.Auth.ID, guildId, "modules modperms", animusmagic.AmCheckCommandOptions{
+		hresp, ok = api.HandlePermissionCheck(d.Auth.ID, guildId, "modules modperms", animusmagic_messages.AmCheckCommandOptions{
 			CustomResolvedKittycatPerms: permLimits,
 		})
 
@@ -259,7 +260,7 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 			return hresp
 		}
 
-		hresp, ok = api.HandlePermissionCheck(d.Auth.ID, guildId, "acl__modules_modperms "+body.Module, animusmagic.AmCheckCommandOptions{
+		hresp, ok = api.HandlePermissionCheck(d.Auth.ID, guildId, "acl__modules_modperms "+body.Module, animusmagic_messages.AmCheckCommandOptions{
 			CustomResolvedKittycatPerms: permLimits,
 		})
 
@@ -268,7 +269,7 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 		}
 
 		if clear {
-			hresp, ok = api.HandlePermissionCheck(d.Auth.ID, guildId, "acl__"+body.Module+"_defaultperms_check", animusmagic.AmCheckCommandOptions{
+			hresp, ok = api.HandlePermissionCheck(d.Auth.ID, guildId, "acl__"+body.Module+"_defaultperms_check", animusmagic_messages.AmCheckCommandOptions{
 				CustomResolvedKittycatPerms: permLimits,
 				CustomModuleConfiguration: silverpelt.GuildModuleConfiguration{
 					Disabled:     utils.Pointer(false),
@@ -296,7 +297,7 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 			}
 
 			if len(value.Checks) > 0 {
-				hresp, ok = api.HandlePermissionCheck(d.Auth.ID, guildId, "acl__"+body.Module+"_defaultperms_check", animusmagic.AmCheckCommandOptions{
+				hresp, ok = api.HandlePermissionCheck(d.Auth.ID, guildId, "acl__"+body.Module+"_defaultperms_check", animusmagic_messages.AmCheckCommandOptions{
 					CustomResolvedKittycatPerms: permLimits,
 					CustomModuleConfiguration: silverpelt.GuildModuleConfiguration{
 						Disabled:     utils.Pointer(false),
@@ -411,7 +412,7 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 		resps, err := state.AnimusMagicClient.Request(
 			d.Context,
 			state.Rueidis,
-			animusmagic.BotAnimusMessage{
+			animusmagic_messages.BotAnimusMessage{
 				ExecutePerModuleFunction: &struct {
 					Module  string         `json:"module"`
 					Toggle  string         `json:"toggle"`
@@ -462,7 +463,7 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 		resps, err := state.AnimusMagicClient.Request(
 			d.Context,
 			state.Rueidis,
-			animusmagic.BotAnimusMessage{
+			animusmagic_messages.BotAnimusMessage{
 				ExecutePerModuleFunction: &struct {
 					Module  string         `json:"module"`
 					Toggle  string         `json:"toggle"`

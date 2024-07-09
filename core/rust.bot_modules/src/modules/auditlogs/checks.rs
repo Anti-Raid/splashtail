@@ -8,6 +8,7 @@ pub async fn check_all_events(events: Vec<String>) -> Result<(), crate::Error> {
         std::time::Duration::from_millis(250),
         tokio::task::spawn_blocking(move || {
             let supported_events = gwevent::core::event_list();
+            let not_audit_loggable = super::events::not_audit_loggable_event();
 
             for event in events {
                 if res_killed.load(std::sync::atomic::Ordering::SeqCst) {
@@ -42,6 +43,13 @@ pub async fn check_all_events(events: Vec<String>) -> Result<(), crate::Error> {
                         "Event `{}` is not a valid event. Please pick one of the following: {}",
                         trimmed,
                         supported_events.join(", ")
+                    ));
+                }
+
+                if not_audit_loggable.contains(&event.as_str()) {
+                    return Err(format!(
+                        "Event `{}` is explicitly not audit loggable yet!",
+                        trimmed,
                     ));
                 }
             }

@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT id, type AS typ, sink, events FROM auditlogs__sinks WHERE guild_id = $1 AND broken = false",
+  "query": "SELECT id, type AS typ, sink, events, embed_template FROM auditlogs__sinks WHERE guild_id = $1 AND broken = false",
   "describe": {
     "columns": [
       {
@@ -22,6 +22,11 @@
         "ordinal": 3,
         "name": "events",
         "type_info": "TextArray"
+      },
+      {
+        "ordinal": 4,
+        "name": "embed_template",
+        "type_info": "Text"
       }
     ],
     "parameters": {
@@ -33,8 +38,9 @@
       false,
       false,
       false,
+      true,
       true
     ]
   },
-  "hash": "2baae4fb31a93498b694cd13c2a077ad42f37e2978fc081295dc9d98b6782580"
+  "hash": "359ab55ba72b74460d96322e79fd3ccd1e70fec438d8737591c8b0a1946b4f54"
 }

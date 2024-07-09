@@ -37,6 +37,7 @@ config = { path = "../rust.config" }
 module_settings = { path = "../rust.module_settings" }
 gwevent = { path = "../rust.gwevent" }
 proxy_support = { path = "../rust.proxy_support" }
+templating = { path = "../rust.templating" }
 
 [dependencies.tokio]
 version = "1"

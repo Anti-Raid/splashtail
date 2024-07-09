@@ -5,10 +5,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/anti-raid/splashtail/core/go.std/animusmagic"
 	"github.com/anti-raid/splashtail/core/go.std/silverpelt"
 	"github.com/anti-raid/splashtail/core/go.std/types"
 	"github.com/anti-raid/splashtail/core/go.std/utils/mewext"
+	"github.com/anti-raid/splashtail/services/go.api/animusmagic_messages"
 	"github.com/anti-raid/splashtail/services/go.api/api"
 	"github.com/anti-raid/splashtail/services/go.api/state"
 	"github.com/anti-raid/splashtail/services/go.api/webutils"
@@ -232,7 +232,7 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 			}
 		}
 
-		hresp, ok := api.HandlePermissionCheck(d.Auth.ID, guildId, opSpecific.CorrespondingCommand, animusmagic.AmCheckCommandOptions{
+		hresp, ok := api.HandlePermissionCheck(d.Auth.ID, guildId, opSpecific.CorrespondingCommand, animusmagic_messages.AmCheckCommandOptions{
 			CustomResolvedKittycatPerms: api.PermLimits(d.Auth),
 		})
 

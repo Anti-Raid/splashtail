@@ -6,11 +6,12 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/anti-raid/splashtail/core/go.jobs"
+	jobs "github.com/anti-raid/splashtail/core/go.jobs"
 	"github.com/anti-raid/splashtail/core/go.std/animusmagic"
 	"github.com/anti-raid/splashtail/core/go.std/types"
 	"github.com/anti-raid/splashtail/core/go.std/utils"
 	"github.com/anti-raid/splashtail/core/go.std/utils/mewext"
+	"github.com/anti-raid/splashtail/services/go.api/animusmagic_messages"
 	"github.com/anti-raid/splashtail/services/go.api/api"
 	"github.com/anti-raid/splashtail/services/go.api/state"
 
@@ -146,7 +147,7 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 
 	// Check permissions
 	permLimits := api.PermLimits(d.Auth)
-	resp, ok := api.HandlePermissionCheck(d.Auth.ID, guildId, task.CorrespondingBotCommand_Create(), animusmagic.AmCheckCommandOptions{
+	resp, ok := api.HandlePermissionCheck(d.Auth.ID, guildId, task.CorrespondingBotCommand_Create(), animusmagic_messages.AmCheckCommandOptions{
 		CustomResolvedKittycatPerms: permLimits,
 	})
 
@@ -171,7 +172,7 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 	animusResp, err := state.AnimusMagicClient.Request(
 		d.Context,
 		state.Rueidis,
-		animusmagic.JobserverMessage{
+		animusmagic_messages.JobserverMessage{
 			SpawnTask: &struct {
 				Name    string                 `json:"name"`
 				Data    map[string]interface{} `json:"data"`
@@ -215,7 +216,7 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 
 	acr := animusResp[0]
 
-	parsedAnimusResp, err := animusmagic.ParseClientResponse[animusmagic.JobserverResponse](acr)
+	parsedAnimusResp, err := animusmagic.ParseClientResponse[animusmagic_messages.JobserverResponse](acr)
 
 	if err != nil {
 		state.Logger.Error("Error while parsing animus response", zap.Error(err))
