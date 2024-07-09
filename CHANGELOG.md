@@ -1,3 +1,15 @@
+## Wednesday, July 10th 2024
+
+## GWEvent
+
+- A ``name`` property was added to field type for template formatting support
+- A CI check was added to GWEvent through ``build.rs`` to ensure all fields (events only for now) are expanded and that none are omitted
+
+## Website
+
+- Major bug fixes to website. Specifically, a bug was fixed in which ``getCommandConfigurations`` continued to use a hack that was needed before for older API but is no longer needed and now instead causes crashes when executing a command outside of the first/second modules in the bot.
+
+
 ## Monday, July 8th 2024
 
 ## Bot

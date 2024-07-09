@@ -345,6 +345,7 @@ pub fn get_event_user_id(event: &FullEvent) -> Result<UserId, Option<Error>> {
 
 /// Given an event, expand it to a hashmap of fields
 #[allow(dead_code)]
+// @ci.expand_event_check.start
 pub fn expand_event(event: FullEvent) -> Option<IndexMap<(String, String), FieldType>> {
     let mut fields = IndexMap::new();
 
@@ -380,28 +381,37 @@ pub fn expand_event(event: FullEvent) -> Option<IndexMap<(String, String), Field
     }
 
     match event {
+        // @ci.expand_event_check AutoModActionExecution none
         FullEvent::AutoModActionExecution { execution } => {
             insert_field(&mut fields, "execution", "execution", execution);
         }
+        // @ci.expand_event_check AutoModRuleCreate none
         FullEvent::AutoModRuleCreate { rule } => {
             insert_field(&mut fields, "rule", "rule", rule);
         }
+        // @ci.expand_event_check AutoModRuleDelete none
         FullEvent::AutoModRuleDelete { rule } => {
             insert_field(&mut fields, "rule", "rule", rule);
         }
+        // @ci.expand_event_check AutoModRuleUpdate none
         FullEvent::AutoModRuleUpdate { rule } => {
             insert_field(&mut fields, "rule", "rule", rule);
         }
+        // @ci.expand_event_check CacheReady none
         FullEvent::CacheReady { .. } => return None, // We don't want this to be propogated anyways and it's not a guild event
+        // @ci.expand_event_check CategoryCreate none
         FullEvent::CategoryCreate { category } => {
             insert_field(&mut fields, "category", "category", category);
         }
+        // @ci.expand_event_check CategoryDelete none
         FullEvent::CategoryDelete { category } => {
             insert_field(&mut fields, "category", "category", category);
         }
+        // @ci.expand_event_check ChannelCreate none
         FullEvent::ChannelCreate { channel } => {
             insert_field(&mut fields, "channel", "channel", channel);
         }
+        // @ci.expand_event_check ChannelDelete none
         FullEvent::ChannelDelete { channel, messages } => {
             insert_field(&mut fields, "channel", "channel", channel);
 
@@ -414,6 +424,7 @@ pub fn expand_event(event: FullEvent) -> Option<IndexMap<(String, String), Field
                 );
             }
         }
+        // @ci.expand_event_check ChannelPinsUpdate event:pin,ChannelPinsUpdateEvent
         FullEvent::ChannelPinsUpdate { pin } => {
             insert_optional_field(&mut fields, "guild", "guild_id", pin.guild_id);
             insert_field(&mut fields, "channel", "channel_id", pin.channel_id);
@@ -424,30 +435,37 @@ pub fn expand_event(event: FullEvent) -> Option<IndexMap<(String, String), Field
                 pin.last_pin_timestamp,
             );
         }
+        // @ci.expand_event_check ChannelUpdate none
         FullEvent::ChannelUpdate { old, new } => {
             if let Some(old) = old {
                 insert_field(&mut fields, "channel", "old", old);
             }
             insert_field(&mut fields, "channel", "new", new);
         }
+        // @ci.expand_event_check CommandPermissionsUpdate none
         FullEvent::CommandPermissionsUpdate { permission } => {
             insert_field(&mut fields, "permission", "permission", permission);
         }
+        // @ci.expand_event_check EntitlementCreate none
         FullEvent::EntitlementCreate { entitlement } => {
             insert_field(&mut fields, "entitlement", "entitlement", entitlement);
         }
+        // @ci.expand_event_check EntitlementDelete none
         FullEvent::EntitlementDelete { entitlement } => {
             insert_field(&mut fields, "entitlement", "entitlement", entitlement);
         }
+        // @ci.expand_event_check EntitlementUpdate none
         FullEvent::EntitlementUpdate { entitlement } => {
             insert_field(&mut fields, "entitlement", "entitlement", entitlement);
         }
+        // @ci.expand_event_check GuildAuditLogEntryCreate none
         FullEvent::GuildAuditLogEntryCreate {
             guild_id, entry, ..
         } => {
             insert_field(&mut fields, "guild", "guild_id", guild_id);
             insert_field(&mut fields, "entry", "entry", entry);
         }
+        // @ci.expand_event_check GuildBanAddition none
         FullEvent::GuildBanAddition {
             guild_id,
             banned_user,
@@ -455,6 +473,7 @@ pub fn expand_event(event: FullEvent) -> Option<IndexMap<(String, String), Field
             insert_field(&mut fields, "guild", "guild_id", guild_id);
             insert_field(&mut fields, "user", "user", banned_user.clone());
         }
+        // @ci.expand_event_check GuildBanRemoval none
         FullEvent::GuildBanRemoval {
             guild_id,
             unbanned_user,
@@ -462,17 +481,27 @@ pub fn expand_event(event: FullEvent) -> Option<IndexMap<(String, String), Field
             insert_field(&mut fields, "guild", "guild_id", guild_id);
             insert_field(&mut fields, "user", "user", unbanned_user.clone());
         }
+        // @ci.expand_event_check GuildCreate none
         FullEvent::GuildCreate { guild, is_new } => {
             insert_field(&mut fields, "guild", "guild", guild);
             insert_optional_field(&mut fields, "guild_ext", "is_new", is_new);
         }
+        // @ci.expand_event_check GuildDelete none
         FullEvent::GuildDelete { incomplete, full } => {
+            insert_field(
+                &mut fields,
+                "is_full_available",
+                "is_full_available",
+                full.is_some(),
+            );
+
             if let Some(full) = full {
                 insert_field(&mut fields, "guild", "guild", full);
             } else {
                 insert_field(&mut fields, "guild", "guild_id", incomplete.id);
             }
         }
+        // @ci.expand_event_check GuildEmojisUpdate none
         FullEvent::GuildEmojisUpdate {
             guild_id,
             current_state,
@@ -487,12 +516,15 @@ pub fn expand_event(event: FullEvent) -> Option<IndexMap<(String, String), Field
                 emojis
             });
         }
+        // @ci.expand_event_check GuildIntegrationsUpdate none
         FullEvent::GuildIntegrationsUpdate { guild_id } => {
             insert_field(&mut fields, "guild_ext", "guild_id", guild_id);
         }
+        // @ci.expand_event_check GuildMemberAddition none
         FullEvent::GuildMemberAddition { new_member } => {
             insert_field(&mut fields, "member", "new_member", new_member.clone());
         }
+        // @ci.expand_event_check GuildMemberRemoval none
         FullEvent::GuildMemberRemoval {
             guild_id,
             user,
@@ -510,6 +542,7 @@ pub fn expand_event(event: FullEvent) -> Option<IndexMap<(String, String), Field
                 insert_field(&mut fields, "user", "user", user);
             }
         }
+        // @ci.expand_event_check GuildMemberUpdate none
         FullEvent::GuildMemberUpdate {
             old_if_available,
             new,
@@ -522,10 +555,13 @@ pub fn expand_event(event: FullEvent) -> Option<IndexMap<(String, String), Field
                 insert_field(&mut fields, "member", "new", new);
             };
         }
+        // @ci.expand_event_check GuildMembersChunk none
         FullEvent::GuildMembersChunk { .. } => return None,
+        // @ci.expand_event_check GuildRoleCreate none
         FullEvent::GuildRoleCreate { new } => {
             insert_field(&mut fields, "role", "role", new);
         }
+        // @ci.expand_event_check GuildRoleDelete none
         FullEvent::GuildRoleDelete {
             guild_id,
             removed_role_id,
@@ -539,6 +575,7 @@ pub fn expand_event(event: FullEvent) -> Option<IndexMap<(String, String), Field
                 insert_field(&mut fields, "role", "role", removed_role_data.clone());
             }
         }
+        // @ci.expand_event_check GuildRoleUpdate none
         FullEvent::GuildRoleUpdate {
             old_data_if_available,
             new,
@@ -549,15 +586,19 @@ pub fn expand_event(event: FullEvent) -> Option<IndexMap<(String, String), Field
 
             insert_field(&mut fields, "role", "new", new.clone());
         }
+        // @ci.expand_event_check GuildScheduledEventCreate none
         FullEvent::GuildScheduledEventCreate { event } => {
             insert_field(&mut fields, "event", "event", event.clone());
         }
+        // @ci.expand_event_check GuildScheduledEventDelete none
         FullEvent::GuildScheduledEventDelete { event } => {
             insert_field(&mut fields, "event", "event", event.clone());
         }
+        // @ci.expand_event_check GuildScheduledEventUpdate none
         FullEvent::GuildScheduledEventUpdate { event } => {
             insert_field(&mut fields, "event", "event", event.clone());
         }
+        // @ci.expand_event_check GuildScheduledEventUserAdd event:subscribed,GuildScheduledEventUserAddEvent
         FullEvent::GuildScheduledEventUserAdd { subscribed } => {
             insert_field(
                 &mut fields,
@@ -578,6 +619,7 @@ pub fn expand_event(event: FullEvent) -> Option<IndexMap<(String, String), Field
                 subscribed.user_id,
             );
         }
+        // @ci.expand_event_check GuildScheduledEventUserRemove event:unsubscribed,GuildScheduledEventUserRemoveEvent
         FullEvent::GuildScheduledEventUserRemove { unsubscribed } => {
             insert_field(
                 &mut fields,
@@ -598,13 +640,14 @@ pub fn expand_event(event: FullEvent) -> Option<IndexMap<(String, String), Field
                 unsubscribed.user_id,
             );
         }
+        // @ci.expand_event_check GuildStickersUpdate none
         FullEvent::GuildStickersUpdate {
             guild_id,
             current_state,
         } => {
             insert_field(&mut fields, "guild", "guild_id", guild_id);
 
-            insert_field(&mut fields, "map", "stickets", {
+            insert_field(&mut fields, "map", "stickers", {
                 let mut stickers = Vec::new();
                 for sticker in current_state.iter() {
                     stickers.push(sticker.clone());
@@ -612,6 +655,7 @@ pub fn expand_event(event: FullEvent) -> Option<IndexMap<(String, String), Field
                 stickers
             });
         }
+        // @ci.expand_event_check GuildUpdate none
         FullEvent::GuildUpdate {
             old_data_if_available,
             new_data,
@@ -622,38 +666,68 @@ pub fn expand_event(event: FullEvent) -> Option<IndexMap<(String, String), Field
 
             insert_field(&mut fields, "guild", "new", new_data);
         }
+        // @ci.expand_event_check IntegrationCreate none
         FullEvent::IntegrationCreate { integration } => {
             insert_field(&mut fields, "integration", "integration", integration);
         }
+        // @ci.expand_event_check IntegrationDelete none
         FullEvent::IntegrationDelete {
             guild_id,
             integration_id,
             application_id,
         } => {
             insert_field(&mut fields, "integration", "guild_id", guild_id);
-            insert_field(&mut fields, "integration", "id", integration_id);
+            insert_field(&mut fields, "integration", "integration_id", integration_id);
             insert_optional_field(&mut fields, "integration", "application_id", application_id);
         }
+        // @ci.expand_event_check IntegrationUpdate none
         FullEvent::IntegrationUpdate { integration } => {
             insert_field(&mut fields, "integration", "integration", integration);
         }
-        FullEvent::InteractionCreate { interaction: _ } => return None,
+        // @ci.expand_event_check InteractionCreate none
+        FullEvent::InteractionCreate { interaction: _ } => return None, // We dont handle interactions create events in expand_events
+        // @ci.expand_event_check InviteCreate event:data,InviteCreateEvent
         FullEvent::InviteCreate { data } => {
-            insert_field(&mut fields, "invite", "code", data.code.to_string());
             insert_field(&mut fields, "invite", "channel_id", data.channel_id);
-            insert_field(&mut fields, "timestamp", "created_at", data.created_at);
+            insert_field(&mut fields, "invite", "code", data.code.to_string());
+            insert_field(&mut fields, "invite", "created_at", data.created_at);
+            insert_optional_field(&mut fields, "invite", "guild_id", data.guild_id);
+            insert_optional_field(&mut fields, "invite", "inviter", data.inviter);
             insert_field(&mut fields, "expiry", "max_age", data.max_age);
             insert_field(&mut fields, "expiry", "max_uses", data.max_uses);
-            insert_optional_field(&mut fields, "invite", "guild_id", data.guild_id);
+            insert_optional_field(
+                &mut fields,
+                "invite",
+                "target_type",
+                data.target_type.map(|x| match x {
+                    serenity::all::InviteTargetType::Stream => "Stream".to_string(),
+                    serenity::all::InviteTargetType::EmbeddedApplication => {
+                        "EmbeddedApplication".to_string()
+                    }
+                    _ => "Unknown".to_string(),
+                }),
+            );
+            insert_optional_field(&mut fields, "invite", "target_user", data.target_user);
+            insert_optional_field(
+                &mut fields,
+                "invite",
+                "target_application",
+                data.target_application,
+            );
+            insert_field(&mut fields, "invite", "temporary", data.temporary);
+            insert_field(&mut fields, "invite", "uses", data.uses);
         }
+        // @ci.expand_event_check InviteDelete event:data,InviteDeleteEvent
         FullEvent::InviteDelete { data } => {
-            insert_field(&mut fields, "invite_delete", "code", data.code.to_string());
             insert_field(&mut fields, "invite_delete", "channel_id", data.channel_id);
             insert_optional_field(&mut fields, "invite_delete", "guild_id", data.guild_id);
+            insert_field(&mut fields, "invite_delete", "code", data.code.to_string());
         }
+        // @ci.expand_event_check Message none
         FullEvent::Message { new_message } => {
             insert_field(&mut fields, "message", "message", new_message.clone());
         }
+        // @ci.expand_event_check MessageDelete none
         FullEvent::MessageDelete {
             guild_id,
             deleted_message_id,
@@ -663,6 +737,7 @@ pub fn expand_event(event: FullEvent) -> Option<IndexMap<(String, String), Field
             insert_field(&mut fields, "message", "message_id", deleted_message_id);
             insert_field(&mut fields, "message", "channel_id", channel_id);
         }
+        // @ci.expand_event_check MessageDeleteBulk none
         FullEvent::MessageDeleteBulk {
             guild_id,
             channel_id,
@@ -677,6 +752,7 @@ pub fn expand_event(event: FullEvent) -> Option<IndexMap<(String, String), Field
                 multiple_deleted_messages_ids,
             );
         }
+        // @ci.expand_event_check MessageUpdate none
         FullEvent::MessageUpdate {
             old_if_available,
             new,
@@ -709,6 +785,7 @@ pub fn expand_event(event: FullEvent) -> Option<IndexMap<(String, String), Field
         FullEvent::Resume { .. } => return None,
         FullEvent::ShardStageUpdate { .. } => return None,
         FullEvent::ShardsReady { .. } => return None,
+        // @ci.expand_event_check StageInstanceCreate none
         FullEvent::StageInstanceCreate { stage_instance } => {
             insert_field(
                 &mut fields,
@@ -717,6 +794,7 @@ pub fn expand_event(event: FullEvent) -> Option<IndexMap<(String, String), Field
                 stage_instance,
             );
         }
+        // @ci.expand_event_check StageInstanceDelete none
         FullEvent::StageInstanceDelete { stage_instance } => {
             insert_field(
                 &mut fields,
@@ -725,6 +803,7 @@ pub fn expand_event(event: FullEvent) -> Option<IndexMap<(String, String), Field
                 stage_instance,
             );
         }
+        // @ci.expand_event_check StageInstanceUpdate none
         FullEvent::StageInstanceUpdate { stage_instance } => {
             insert_field(
                 &mut fields,
@@ -733,9 +812,11 @@ pub fn expand_event(event: FullEvent) -> Option<IndexMap<(String, String), Field
                 stage_instance,
             );
         }
+        // @ci.expand_event_check ThreadCreate none
         FullEvent::ThreadCreate { thread } => {
             insert_field(&mut fields, "thread", "thread", thread);
         }
+        // @ci.expand_event_check ThreadDelete none
         FullEvent::ThreadDelete {
             thread,
             full_thread_data,
@@ -746,6 +827,7 @@ pub fn expand_event(event: FullEvent) -> Option<IndexMap<(String, String), Field
                 insert_field(&mut fields, "thread", "thread", thread);
             }
         }
+        // @ci.expand_event_check ThreadListSync event:thread_list_sync,ThreadListSyncEvent
         FullEvent::ThreadListSync { thread_list_sync } => {
             insert_optional_field(
                 &mut fields,
@@ -773,6 +855,7 @@ pub fn expand_event(event: FullEvent) -> Option<IndexMap<(String, String), Field
                 thread_list_sync.members,
             );
         }
+        // @ci.expand_event_check ThreadMemberUpdate none
         FullEvent::ThreadMemberUpdate { thread_member } => {
             if let Some(ref member) = thread_member.member {
                 insert_field(&mut fields, "user", "member", member.clone());
@@ -783,6 +866,7 @@ pub fn expand_event(event: FullEvent) -> Option<IndexMap<(String, String), Field
             insert_optional_field(&mut fields, "thread", "guild_id", thread_member.guild_id);
             insert_field(&mut fields, "thread", "channel_id", thread_member.id);
         }
+        // @ci.expand_event_check ThreadMembersUpdate event:thread_members_update,ThreadMembersUpdateEvent
         FullEvent::ThreadMembersUpdate {
             thread_members_update,
         } => {
@@ -817,6 +901,7 @@ pub fn expand_event(event: FullEvent) -> Option<IndexMap<(String, String), Field
                 thread_members_update.removed_member_ids.into_vec(),
             );
         }
+        // @ci.expand_event_check ThreadUpdate none
         FullEvent::ThreadUpdate { new, old } => {
             if let Some(old) = old {
                 insert_field(&mut fields, "thread", "old", old);
@@ -829,14 +914,21 @@ pub fn expand_event(event: FullEvent) -> Option<IndexMap<(String, String), Field
         FullEvent::VoiceChannelStatusUpdate { .. } => return None,
         FullEvent::VoiceServerUpdate { .. } => return None,
         FullEvent::VoiceStateUpdate { .. } => return None,
+        // @ci.expand_event_check WebhookUpdate none
         FullEvent::WebhookUpdate {
             guild_id,
             belongs_to_channel_id,
         } => {
             insert_field(&mut fields, "webhook", "guild_id", guild_id);
-            insert_field(&mut fields, "webhook", "channel_id", belongs_to_channel_id);
+            insert_field(
+                &mut fields,
+                "webhook",
+                "belongs_to_channel_id",
+                belongs_to_channel_id,
+            );
         }
     }
 
     Some(fields)
 }
+// @ci.expand_event_check.end

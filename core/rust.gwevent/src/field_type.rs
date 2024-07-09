@@ -63,6 +63,61 @@ pub enum FieldType {
     None,
 }
 
+impl FieldType {
+    pub fn name(&self) -> &'static str {
+        match self {
+            FieldType::Bool(_) => "Bool",
+            FieldType::Number(_) => "Number",
+            FieldType::Strings(_) => "Strings",
+            FieldType::CommandPermissions(_) => "CommandPermissions",
+            FieldType::GuildMemberFlags(_) => "GuildMemberFlags",
+            FieldType::NsfwLevels(_) => "NsfwLevels",
+            FieldType::Permissions(_) => "Permissions",
+            FieldType::PermissionOverwrites(_) => "PermissionOverwrites",
+            FieldType::ApplicationId(_) => "ApplicationId",
+            FieldType::AuditLogId(_) => "AuditLogId",
+            FieldType::ChannelIds(_) => "ChannelIds",
+            FieldType::GenericIds(_) => "GenericIds",
+            FieldType::GuildId(_) => "GuildId",
+            FieldType::IntegrationId(_) => "IntegrationId",
+            FieldType::MessageIds(_) => "MessageIds",
+            FieldType::RoleIds(_) => "RoleIds",
+            FieldType::ScheduledEventId(_) => "ScheduledEventId",
+            FieldType::UserIds(_) => "UserIds",
+            FieldType::ActionRows(_) => "ActionRows",
+            FieldType::Attachment(_) => "Attachment",
+            FieldType::AuditLogAction(_) => "AuditLogAction",
+            FieldType::AuditLogActionsChanges(_) => "AuditLogActionsChanges",
+            FieldType::AuditLogEntry(_) => "AuditLogEntry",
+            FieldType::AuditLogOptions(_) => "AuditLogOptions",
+            FieldType::AutomodActions(_) => "AutomodActions",
+            FieldType::AutomodActionExecutions(_) => "AutomodActionExecutions",
+            FieldType::AutomodRules(_) => "AutomodRules",
+            FieldType::AutomodTrigger(_) => "AutomodTrigger",
+            FieldType::Channels(_) => "Channels",
+            FieldType::Embeds(_) => "Embeds",
+            FieldType::Emojis(_) => "Emojis",
+            FieldType::Entitlements(_) => "Entitlements",
+            FieldType::Guild(_) => "Guild",
+            FieldType::Integrations(_) => "Integrations",
+            FieldType::Member(_) => "Member",
+            FieldType::Messages(_) => "Messages",
+            FieldType::MessageUpdateEvent(_) => "MessageUpdateEvent",
+            FieldType::PartialGuildChannels(_) => "PartialGuildChannels",
+            FieldType::PartialGuild(_) => "PartialGuild",
+            FieldType::Roles(_) => "Roles",
+            FieldType::ScheduledEvents(_) => "ScheduledEvents",
+            FieldType::StageInstances(_) => "StageInstances",
+            FieldType::Stickers(_) => "Stickers",
+            FieldType::ThreadMembers(_) => "ThreadMembers",
+            FieldType::Timestamp(_) => "Timestamp",
+            FieldType::Users(_) => "Users",
+            FieldType::JsonValue(_) => "JsonValue",
+            FieldType::None => "None",
+        }
+    }
+}
+
 macro_rules! from_field_type {
     ($($t:ty => $variant:ident),* $(,)?) => {
         $(

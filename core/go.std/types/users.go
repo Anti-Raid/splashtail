@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/anti-raid/splashtail/core/go.std/types/ext"
+	"github.com/bwmarrin/discordgo"
 	"github.com/infinitybotlist/eureka/dovewing/dovetypes"
 )
 
@@ -26,6 +27,8 @@ roles: std::collections::HashMap<RoleId, Role>,
 user_roles: Vec<RoleId>,
 /// List of roles the bot has
 bot_roles: Vec<RoleId>,
+/// List of all channels in the server
+channels: Vec<GuildChannel>,
 */
 
 type UserGuildBaseData struct {
@@ -35,4 +38,5 @@ type UserGuildBaseData struct {
 	Roles     map[string]*ext.SerenityRole `json:"roles"`
 	UserRoles []string                     `json:"user_roles"`
 	BotRoles  []string                     `json:"bot_roles"`
+	Channels  []*discordgo.Channel         `json:"channels"`
 }
