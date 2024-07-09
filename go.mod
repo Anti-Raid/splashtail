@@ -10,18 +10,18 @@ require (
 	github.com/go-chi/chi/v5 v5.1.0
 	github.com/go-playground/validator/v10 v10.22.0
 	github.com/go-viper/mapstructure/v2 v2.0.0
-	github.com/infinitybotlist/eureka v1.3.0
+	github.com/infinitybotlist/eureka v1.5.1
 	github.com/infinitybotlist/iblfile v0.0.0-20240609122654-f388ed492b00
 	github.com/infinitybotlist/kittycat/go v0.0.0-20240526051606-6574fb343539
 	github.com/jackc/pgx/v5 v5.6.0
 	github.com/minio/minio-go/v7 v7.0.73
-	github.com/redis/rueidis v1.0.40
+	github.com/redis/rueidis v1.0.41
 	github.com/sirupsen/logrus v1.9.3
 	github.com/stretchr/testify v1.9.0
 	github.com/vmihailenco/msgpack/v5 v5.4.1
 	github.com/wk8/go-ordered-map/v2 v2.1.8
 	go.uber.org/zap v1.27.0
-	golang.org/x/exp v0.0.0-20240613232115-7f521ea00fb8
+	golang.org/x/exp v0.0.0-20240707233637-46b078467d37
 	golang.org/x/image v0.18.0
 	golang.org/x/text v0.16.0
 	gopkg.in/yaml.v3 v3.0.1
