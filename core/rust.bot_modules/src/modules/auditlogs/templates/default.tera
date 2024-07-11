@@ -1,5 +1,8 @@
 {{ title(title=(event_titlename)) }}
 
 {% for key, value in event %}
+{%-set formatted_value = value|formatter__gwevent_field -%}
+{%-if formatted_value and formatted_value != "None" -%}
 **{{- key -}}**: {{- value|formatter__gwevent_field -}}
+{% endif %}
 {% endfor %}
