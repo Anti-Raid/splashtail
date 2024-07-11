@@ -217,8 +217,8 @@ pub async fn event_listener(ectx: &EventHandlerContext) -> Result<(), Error> {
                 .await?
                 {
                     let imap = indexmap::indexmap! {
-                        ("new_info".to_string(), "member".to_string()) => new_member.user.clone().into(),
-                        ("triggers".to_string(), "triggered_flags".to_string()) => triggered_flags.iter_names().map(|(flag, _)| flag.to_string()).collect::<Vec<String>>().join(", ").into(),
+                        "member".to_string() => gwevent::field::CategorizedField { category: "summary".to_string(), field: new_member.user.clone().into() },
+                        "triggered_flags".to_string() => gwevent::field::CategorizedField { category: "summary".to_string(), field: triggered_flags.iter_names().map(|(flag, _)| flag.to_string()).collect::<Vec<String>>().join(", ").into() },
                     };
 
                     crate::modules::auditlogs::events::dispatch_audit_log(

@@ -1,3 +1,9 @@
+## Thursday, July 11th 2024
+
+## Audit Logs
+
+- Audit Logs now support template-based embeds. Note that this is still a work in progress and may not be fully functional yet.
+
 ## Wednesday, July 10th 2024
 
 ## GWEvent

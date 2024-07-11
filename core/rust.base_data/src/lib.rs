@@ -1,3 +1,4 @@
+pub mod limits;
 pub mod permissions;
 pub mod permodule;
 

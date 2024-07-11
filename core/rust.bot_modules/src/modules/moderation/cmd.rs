@@ -1,5 +1,6 @@
 use super::core::to_log_format;
 use crate::{Context, Error};
+use gwevent::field::CategorizedField;
 use poise::CreateReply;
 use proxy_support::{guild, member_in_guild};
 use serenity::all::{
@@ -295,12 +296,24 @@ pub async fn prune_user(
         .await?
     {
         let imap = indexmap::indexmap! {
-            ("log".to_string(), "log".to_string()) => to_log_format(&author.user, &user, &reason).into(),
-            ("prune_opts".to_string(), "prune_opts".to_string()) => prune_opts.into(),
-            ("channels".to_string(), "channels".to_string()) => if let Some(ref channels) = prune_channels {
-                parse_numeric_list_to_str::<ChannelId>(channels, &REPLACE_CHANNEL)?.into()
+            "log".to_string() => CategorizedField {
+                category: "context".to_string(),
+                field: to_log_format(&author.user, &user, &reason).into(),
+            },
+            "prune_opts".to_string() => CategorizedField {
+                category: "config".to_string(),
+                field: prune_opts.clone().into(),
+            },
+            "channels".to_string() => if let Some(ref channels) = prune_channels {
+                CategorizedField {
+                    category: "config".to_string(),
+                    field: parse_numeric_list_to_str::<ChannelId>(channels, &REPLACE_CHANNEL)?.into()
+                }
             } else {
-                gwevent::field_type::FieldType::None
+                CategorizedField {
+                    category: "config".to_string(),
+                    field: gwevent::field::Field::None
+                }
             },
         };
 
@@ -459,11 +472,11 @@ pub async fn kick(
         .await?
     {
         let imap = indexmap::indexmap! {
-            ("user".to_string(), "target".to_string()) => member.user.clone().into(),
-            ("moderator".to_string(), "moderator".to_string()) => author.user.clone().into(),
-            ("reason".to_string(), "reason".to_string()) => reason.clone().into(),
-            ("punishment".to_string(), "stings".to_string()) => stings.into(),
-            ("log".to_string(), "author".to_string()) => to_log_format(&author.user, &member.user, &reason).into(),
+            "target".to_string() => CategorizedField { category: "action".to_string(), field: member.user.clone().into() },
+            "moderator".to_string() => CategorizedField { category: "action".to_string(), field: author.user.clone().into() },
+            "reason".to_string() => CategorizedField { category: "context".to_string(), field: reason.clone().into() },
+            "stings".to_string() => CategorizedField { category: "punishment".to_string(), field: stings.into() },
+            "log".to_string() => CategorizedField { category: "context".to_string(), field: to_log_format(&author.user, &member.user, &reason).into() },
         };
 
         crate::modules::auditlogs::events::dispatch_audit_log(
@@ -596,12 +609,12 @@ pub async fn ban(
         .await?
     {
         let imap = indexmap::indexmap! {
-            ("user".to_string(), "target".to_string()) => member.clone().into(),
-            ("moderator".to_string(), "moderator".to_string()) => author.user.clone().into(),
-            ("reason".to_string(), "reason".to_string()) => reason.clone().into(),
-            ("punishment".to_string(), "stings".to_string()) => stings.into(),
-            ("log".to_string(), "log".to_string()) => to_log_format(&author.user, &member, &reason).into(),
-            ("log".to_string(), "prune_dmd".to_string()) => dmd.into(),
+            "target".to_string() => CategorizedField { category: "action".to_string(), field: member.clone().into() },
+            "moderator".to_string() => CategorizedField { category: "action".to_string(), field: author.user.clone().into() },
+            "reason".to_string() => CategorizedField { category: "context".to_string(), field: reason.clone().into() },
+            "stings".to_string() => CategorizedField { category: "punishment".to_string(), field: stings.into() },
+            "prune_dmd".to_string() => CategorizedField { category: "punishment".to_string(), field: dmd.into() },
+            "log".to_string() => CategorizedField { category: "context".to_string(), field: to_log_format(&author.user, &member, &reason).into() },
         };
 
         crate::modules::auditlogs::events::dispatch_audit_log(
@@ -740,12 +753,13 @@ pub async fn tempban(
         .await?
     {
         let imap = indexmap::indexmap! {
-            ("user".to_string(), "target".to_string()) => member.clone().into(),
-            ("moderator".to_string(), "moderator".to_string()) => author.user.clone().into(),
-            ("reason".to_string(), "reason".to_string()) => reason.clone().into(),
-            ("punishment".to_string(), "stings".to_string()) => stings.into(),
-            ("log".to_string(), "log".to_string()) => to_log_format(&author.user, &member, &reason).into(),
-            ("log".to_string(), "prune_dmd".to_string()) => dmd.into(),
+            "target".to_string() => CategorizedField { category: "action".to_string(), field: member.clone().into() },
+            "moderator".to_string() => CategorizedField { category: "action".to_string(), field: author.user.clone().into() },
+            "reason".to_string() => CategorizedField { category: "context".to_string(), field: reason.clone().into() },
+            "stings".to_string() => CategorizedField { category: "punishment".to_string(), field: stings.into() },
+            "prune_dmd".to_string() => CategorizedField { category: "punishment".to_string(), field: dmd.into() },
+            "log".to_string() => CategorizedField { category: "context".to_string(), field: to_log_format(&author.user, &member, &reason).into() },
+            "duration".to_string() => CategorizedField { category: "context".to_string(), field: (duration.0 * duration.1.to_seconds()).into() },
         };
 
         crate::modules::auditlogs::events::dispatch_audit_log(
@@ -871,11 +885,11 @@ pub async fn unban(
         .await?
     {
         let imap = indexmap::indexmap! {
-            ("user".to_string(), "target".to_string()) => user.clone().into(),
-            ("moderator".to_string(), "moderator".to_string()) => author.user.clone().into(),
-            ("reason".to_string(), "reason".to_string()) => reason.clone().into(),
-            ("punishment".to_string(), "stings".to_string()) => stings.into(),
-            ("log".to_string(), "log".to_string()) => to_log_format(&author.user, &user, &reason).into(),
+            "target".to_string() => CategorizedField { category: "action".to_string(), field: user.clone().into() },
+            "moderator".to_string() => CategorizedField { category: "action".to_string(), field: author.user.clone().into() },
+            "reason".to_string() => CategorizedField { category: "context".to_string(), field: reason.clone().into() },
+            "stings".to_string() => CategorizedField { category: "punishment".to_string(), field: stings.into() },
+            "log".to_string() => CategorizedField { category: "context".to_string(), field: to_log_format(&author.user, &user, &reason).into() },
         };
 
         crate::modules::auditlogs::events::dispatch_audit_log(
@@ -978,18 +992,18 @@ pub async fn timeout(
         .await?;
 
     // Try timing them out
-    let (duration, unit) = parse_duration_string(&duration)?;
+    let duration = parse_duration_string(&duration)?;
 
     // Ensure less than 28 days = 4 weeks = 672 hours = 40320 minutes = 2419200 seconds
-    if duration > 7 && unit == Unit::Weeks {
+    if duration.0 > 7 && duration.1 == Unit::Weeks {
         return Err("Timeout duration must be less than 28 days (4 weeks)".into());
-    } else if duration > 28 && unit == Unit::Days {
+    } else if duration.0 > 28 && duration.1 == Unit::Days {
         return Err("Timeout duration must be less than 28 days".into());
-    } else if duration > 672 && unit == Unit::Hours {
+    } else if duration.0 > 672 && duration.1 == Unit::Hours {
         return Err("Timeout duration must be less than 28 days (672 hours)".into());
-    } else if duration > 40320 && unit == Unit::Minutes {
+    } else if duration.0 > 40320 && duration.1 == Unit::Minutes {
         return Err("Timeout duration must be less than 28 days (40320 minutes)".into());
-    } else if duration > 2419200 && unit == Unit::Seconds {
+    } else if duration.0 > 2419200 && duration.1 == Unit::Seconds {
         return Err("Timeout duration must be less than 28 days (2419200 seconds)".into());
     }
 
@@ -997,7 +1011,7 @@ pub async fn timeout(
         return Err("This command can only be used in a guild".into());
     };
 
-    let time = (duration * unit.to_seconds() * 1000) as i64;
+    let time = (duration.0 * duration.1.to_seconds() * 1000) as i64;
 
     let stings = stings.unwrap_or(1);
 
@@ -1025,11 +1039,12 @@ pub async fn timeout(
         .await?
     {
         let imap = indexmap::indexmap! {
-            ("user".to_string(), "target".to_string()) => member.user.clone().into(),
-            ("moderator".to_string(), "moderator".to_string()) => author.user.clone().into(),
-            ("reason".to_string(), "reason".to_string()) => reason.clone().into(),
-            ("punishment".to_string(), "stings".to_string()) => stings.into(),
-            ("log".to_string(), "log".to_string()) => to_log_format(&author.user, &member.user, &reason).into(),
+            "target".to_string() => CategorizedField { category: "action".to_string(), field: member.clone().into() },
+            "moderator".to_string() => CategorizedField { category: "action".to_string(), field: author.user.clone().into() },
+            "reason".to_string() => CategorizedField { category: "context".to_string(), field: reason.clone().into() },
+            "stings".to_string() => CategorizedField { category: "punishment".to_string(), field: stings.into() },
+            "log".to_string() => CategorizedField { category: "context".to_string(), field: to_log_format(&author.user, &member.user, &reason).into() },
+            "duration".to_string() => CategorizedField { category: "context".to_string(), field: (duration.0 * duration.1.to_seconds()).into() },
         };
 
         crate::modules::auditlogs::events::dispatch_audit_log(

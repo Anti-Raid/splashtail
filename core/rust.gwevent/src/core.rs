@@ -1,5 +1,5 @@
-use super::field_type::FieldType;
-use crate::Error;
+use crate::field::{CategorizedField, Field};
+use base_data::Error;
 use indexmap::IndexMap;
 use log::warn;
 use serenity::all::{FullEvent, GuildId, UserId};
@@ -346,25 +346,31 @@ pub fn get_event_user_id(event: &FullEvent) -> Result<UserId, Option<Error>> {
 /// Given an event, expand it to a hashmap of fields
 #[allow(dead_code)]
 // @ci.expand_event_check.start
-pub fn expand_event(event: FullEvent) -> Option<IndexMap<(String, String), FieldType>> {
+pub fn expand_event(event: FullEvent) -> Option<IndexMap<String, CategorizedField>> {
     let mut fields = IndexMap::new();
 
     /// Inserts a field to the fields hashmap
     ///
     /// Note that existing fields will be replaced, to avoid this, use the old-new pattern
     /// which is also handled by audit logs
-    fn insert_field<T: Into<FieldType>>(
-        fields: &mut IndexMap<(String, String), FieldType>,
+    fn insert_field<T: Into<Field>>(
+        fields: &mut IndexMap<String, CategorizedField>,
         category: &str,
         key: &str,
         value: T,
     ) {
         let value = value.into();
-        fields.insert((category.to_string(), key.to_string()), value);
+        fields.insert(
+            key.to_string(),
+            CategorizedField {
+                category: category.to_string(),
+                field: value,
+            },
+        );
     }
 
-    fn insert_optional_field<T: Into<FieldType>>(
-        fields: &mut IndexMap<(String, String), FieldType>,
+    fn insert_optional_field<T: Into<Field>>(
+        fields: &mut IndexMap<String, CategorizedField>,
         category: &str,
         key: &str,
         option: Option<T>,
@@ -372,10 +378,22 @@ pub fn expand_event(event: FullEvent) -> Option<IndexMap<(String, String), Field
         match option {
             Some(value) => {
                 let value = value.into();
-                fields.insert((category.to_string(), key.to_string()), value);
+                fields.insert(
+                    key.to_string(),
+                    CategorizedField {
+                        category: category.to_string(),
+                        field: value,
+                    },
+                );
             }
             None => {
-                fields.insert((category.to_string(), key.to_string()), FieldType::None);
+                fields.insert(
+                    key.to_string(),
+                    CategorizedField {
+                        category: category.to_string(),
+                        field: Field::None,
+                    },
+                );
             }
         }
     }

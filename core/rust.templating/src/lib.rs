@@ -1,14 +1,24 @@
+use base_data::limits::embed_limits;
 use moka::future::Cache;
 use once_cell::sync::Lazy;
 use std::sync::{Arc, RwLock};
 use std::time::Duration;
 use tera::Tera;
 
+// Re-export Tera as Engine
+pub mod engine {
+    pub use tera::Filter;
+    pub use tera::Function;
+    pub use tera::Result;
+    pub use tera::Tera as Engine;
+    pub use tera::Value;
+}
+
 /// Maximum number of AST nodes in a template
-pub const MAX_TEMPLATE_NODES: usize = 512;
+pub const MAX_TEMPLATE_NODES: usize = 1024;
 
 /// Timeout for template execution
-pub const TEMPLATE_EXECUTION_TIMEOUT: Duration = Duration::from_millis(300);
+pub const TEMPLATE_EXECUTION_TIMEOUT: Duration = Duration::from_millis(600);
 
 /// Stores a cache of templates with the template content as key
 static TEMPLATE_CACHE: Lazy<Cache<String, Tera>> = Lazy::new(|| {
@@ -25,11 +35,7 @@ pub struct CompileTemplateOptions {
 }
 
 pub fn make_templating_context() -> tera::Context {
-    let mut context = tera::Context::new();
-
-    context.insert("__ar_templating", &0);
-
-    context
+    tera::Context::new()
 }
 
 pub async fn compile_template(
@@ -60,27 +66,6 @@ pub async fn compile_template(
         }
     }
 
-    // TODO: Enable this if required
-    // Every 3 nodes, insert a check_time Node
-    // This is to prevent long-running templates
-
-    /*for (_, t) in tera.templates.iter_mut() {
-        for j in 0..t.ast.len() {
-            if j % 3 == 0 {
-                t.ast.insert(
-                    j,
-                    tera::ast::Node::VariableBlock(
-                        tera::ast::WS {
-                            left: true,
-                            right: true,
-                        },
-                        tera::ast::Expr::new(tera::ast::ExprVal::String("check_time".to_string())),
-                    ),
-                );
-            }
-        }
-    }*/
-
     if opts.cache_result {
         // Store the template in the cache
         TEMPLATE_CACHE
@@ -93,11 +78,42 @@ pub async fn compile_template(
 
 #[derive(Debug, Default)]
 struct InternalTemplateExecuteState {
+    /// The title set by the template
+    title: RwLock<Option<String>>,
     /// The fields that were set by the template
-    fields: RwLock<indexmap::IndexMap<String, String>>,
-    // TODO: Add more properties
+    fields: RwLock<indexmap::IndexMap<String, (String, bool)>>,
 }
 
+// Set title of embed
+struct TitleFunction {
+    state: Arc<InternalTemplateExecuteState>,
+}
+
+impl tera::Function for TitleFunction {
+    fn call(
+        &self,
+        args: &std::collections::HashMap<String, tera::Value>,
+    ) -> tera::Result<tera::Value> {
+        let title = args.get("title").ok_or("Title not provided")?;
+
+        // Lock title for writing
+        let mut title_writer = self
+            .state
+            .title
+            .write()
+            .map_err(|_| "Failed to write to title")?;
+
+        // Insert the title
+        *title_writer = Some(title.to_string());
+
+        // Drop the lock
+        drop(title_writer);
+
+        Ok(tera::Value::Null)
+    }
+}
+
+// Set fields of embeds
 struct FieldFunction {
     state: Arc<InternalTemplateExecuteState>,
 }
@@ -110,6 +126,11 @@ impl tera::Function for FieldFunction {
         let field_name = args.get("name").ok_or("Field name not provided")?;
         let field_value = args.get("value").ok_or("Field not found")?;
 
+        // Inline defaults to false if unset
+        let field_is_inline = args
+            .get("inline")
+            .map_or(false, |v| v.as_bool().unwrap_or(false));
+
         // Lock fields for writing
         let mut fields_writer = self
             .state
@@ -118,7 +139,10 @@ impl tera::Function for FieldFunction {
             .map_err(|_| "Failed to write to fields")?;
 
         // Insert the field
-        fields_writer.insert(field_name.to_string(), field_value.to_string());
+        fields_writer.insert(
+            field_name.to_string(),
+            (field_value.to_string(), field_is_inline),
+        );
 
         // Drop the lock
         drop(fields_writer);
@@ -127,6 +151,7 @@ impl tera::Function for FieldFunction {
     }
 }
 
+#[allow(dead_code)]
 struct StubFunction {}
 
 impl tera::Function for StubFunction {
@@ -138,17 +163,55 @@ impl tera::Function for StubFunction {
     }
 }
 
+/// Better title filter
+struct BetterTitleFilter {}
+
+impl tera::Filter for BetterTitleFilter {
+    fn filter(
+        &self,
+        val: &tera::Value,
+        _args: &std::collections::HashMap<String, tera::Value>,
+    ) -> tera::Result<tera::Value> {
+        let val = val.as_str().ok_or("Title not a string")?;
+
+        let title = val
+            .split('_')
+            .map(|s| {
+                let mut c = s.chars();
+                match c.next() {
+                    None => String::new(),
+                    Some(f) => f.to_uppercase().chain(c).collect(),
+                }
+            })
+            .collect::<Vec<String>>()
+            .join(" ");
+
+        Ok(tera::Value::String(
+            title.to_string().to_uppercase().replace("_", " "),
+        ))
+    }
+}
+
 pub struct ExecutedTemplate {
+    pub title: Option<String>,
     pub description: String,
-    pub fields: indexmap::IndexMap<String, String>,
+    pub fields: indexmap::IndexMap<String, (String, bool)>,
 }
 
 /// Executes a template with the given context
 pub async fn execute_template(
     tera: &mut Tera,
-    context: &tera::Context,
+    context: Arc<tera::Context>,
 ) -> Result<ExecutedTemplate, base_data::Error> {
     let ites = Arc::new(InternalTemplateExecuteState::default());
+
+    // Add title function
+    tera.register_function(
+        "title",
+        TitleFunction {
+            state: ites.clone(),
+        },
+    );
 
     // Add field function
     tera.register_function(
@@ -158,17 +221,95 @@ pub async fn execute_template(
         },
     );
 
-    // Stub out dangerous functions
-    tera.register_function("get_env", StubFunction {});
+    // Add bettertitle filter
+    tera.register_filter("bettertitle", BetterTitleFilter {});
 
     // Render the template
-    let rendered = tera.render("main", context)?;
+    let rendered = tokio::time::timeout(
+        TEMPLATE_EXECUTION_TIMEOUT,
+        tera.render_async("main", &context),
+    )
+    .await
+    .map_err(|_| "Template execution timed out")??;
 
-    // Read the fields now
+    // Read the outputted template specials
+    let title_reader = ites.title.read().map_err(|_| "Failed to read title")?;
     let fields_reader = ites.fields.read().map_err(|_| "Failed to read fields")?;
 
     Ok(ExecutedTemplate {
+        title: (*title_reader).clone(),
         description: rendered,
         fields: (*fields_reader).clone(),
     })
+}
+
+pub fn to_embed<'a>(
+    executed_template: ExecutedTemplate,
+) -> Result<serenity::all::CreateEmbed<'a>, base_data::Error> {
+    let mut embed = serenity::all::CreateEmbed::default();
+
+    let mut total_chars: usize = 0;
+
+    fn _get_char_limit(total_chars: usize, limit: usize, max_chars: usize) -> usize {
+        if max_chars <= total_chars {
+            return 0;
+        }
+
+        // If limit is 6000 and max_chars - total_chars is 1000, return 1000 etc.
+        std::cmp::min(limit, max_chars - total_chars)
+    }
+
+    fn _slice_chars(s: &str, total_chars: &mut usize, limit: usize, max_chars: usize) -> String {
+        let char_limit = _get_char_limit(*total_chars, limit, max_chars);
+
+        if char_limit == 0 {
+            return String::new();
+        }
+
+        *total_chars += char_limit;
+
+        s.chars().take(char_limit).collect()
+    }
+
+    if let Some(title) = &executed_template.title {
+        // Slice title to EMBED_TITLE_LIMIT
+        embed = embed.title(_slice_chars(
+            title,
+            &mut total_chars,
+            embed_limits::EMBED_TITLE_LIMIT,
+            embed_limits::EMBED_TOTAL_LIMIT,
+        ));
+    }
+
+    embed = embed.description(
+        _slice_chars(
+            &executed_template.description,
+            &mut total_chars,
+            embed_limits::EMBED_DESCRIPTION_LIMIT,
+            embed_limits::EMBED_TOTAL_LIMIT,
+        )
+        .to_string(),
+    );
+
+    for (name, (value, inline)) in executed_template.fields {
+        // Slice field name to EMBED_FIELD_NAME_LIMIT
+        let name = _slice_chars(
+            &name,
+            &mut total_chars,
+            embed_limits::EMBED_FIELD_NAME_LIMIT,
+            embed_limits::EMBED_TOTAL_LIMIT,
+        );
+
+        // Slice field value to EMBED_FIELD_VALUE_LIMIT
+        let value = _slice_chars(
+            &value,
+            &mut total_chars,
+            embed_limits::EMBED_FIELD_VALUE_LIMIT,
+            embed_limits::EMBED_TOTAL_LIMIT,
+        );
+
+        embed = embed.field(name, value, inline);
+    }
+
+    Ok(embed)
 }

@@ -276,8 +276,8 @@ impl Snapshot {
             .await?
             {
                 let imap = indexmap::indexmap! {
-                    ("new_info".to_string(), "name".to_string()) => self.name.clone().into(),
-                    ("triggers".to_string(), "triggered_flags".to_string()) => triggered_protections.iter_names().map(|(flag, _)| flag.to_string()).collect::<Vec<String>>().join(", ").into(),
+                    "name".to_string() => gwevent::field::CategorizedField { category: "summary".to_string(), field: self.name.clone().into() },
+                    "triggered_flags".to_string() => gwevent::field::CategorizedField { category: "summary".to_string(), field: triggered_protections.iter_names().map(|(flag, _)| flag.to_string()).collect::<Vec<String>>().join(", ").into() },
                 };
 
                 crate::modules::auditlogs::events::dispatch_audit_log(

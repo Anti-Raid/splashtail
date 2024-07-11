@@ -325,3 +325,88 @@ impl std::fmt::Display for Value {
         }
     }
 }
+
+// serde_json as_TYPE methods
+impl Value {
+    pub fn as_u64(&self) -> Option<u64> {
+        match self {
+            Value::Integer(i) => Some(*i as u64),
+            Value::Float(f) => Some(*f as u64),
+            _ => None,
+        }
+    }
+
+    pub fn as_i64(&self) -> Option<i64> {
+        match self {
+            Value::Integer(i) => Some(*i),
+            Value::Float(f) => Some(*f as i64),
+            _ => None,
+        }
+    }
+
+    pub fn as_f64(&self) -> Option<f64> {
+        match self {
+            Value::Integer(i) => Some(*i as f64),
+            Value::Float(f) => Some(*f),
+            _ => None,
+        }
+    }
+
+    pub fn as_bool(&self) -> Option<bool> {
+        match self {
+            Value::Boolean(b) => Some(*b),
+            _ => None,
+        }
+    }
+
+    pub fn as_string(&self) -> Option<&str> {
+        match self {
+            Value::String(s) => Some(s),
+            _ => None,
+        }
+    }
+
+    pub fn as_array(&self) -> Option<&Vec<Value>> {
+        match self {
+            Value::List(l) => Some(l),
+            _ => None,
+        }
+    }
+
+    pub fn as_map(&self) -> Option<&indexmap::IndexMap<String, Value>> {
+        match self {
+            Value::Map(m) => Some(m),
+            _ => None,
+        }
+    }
+
+    /// as_object is an alias to as_map
+    pub fn as_object(&self) -> Option<&indexmap::IndexMap<String, Value>> {
+        self.as_map()
+    }
+
+    pub fn as_uuid(&self) -> Option<&sqlx::types::Uuid> {
+        match self {
+            Value::Uuid(u) => Some(u),
+            _ => None,
+        }
+    }
+
+    pub fn as_timestamp(&self) -> Option<&chrono::NaiveDateTime> {
+        match self {
+            Value::Timestamp(t) => Some(t),
+            _ => None,
+        }
+    }
+
+    pub fn as_timestamp_tz(&self) -> Option<&chrono::DateTime<chrono::Utc>> {
+        match self {
+            Value::TimestampTz(t) => Some(t),
+            _ => None,
+        }
+    }
+
+    pub fn as_none(&self) -> bool {
+        matches!(self, Value::None)
+    }
+}
