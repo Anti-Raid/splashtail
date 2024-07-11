@@ -126,7 +126,7 @@ impl Field {
                         resolved.push(serde_resolver(i)?);
                     }
 
-                    Ok(resolved.join("\n\n"))
+                    Ok(resolved.join(" | "))
                 }
             }
         }
@@ -159,7 +159,7 @@ impl Field {
             Field::GuildMemberFlags(p) => {
                 let p_vec = p
                     .iter()
-                    .map(|x| format!("{:#?}", x))
+                    .map(|x| format!("{:?}", x))
                     .collect::<Vec<String>>();
 
                 if p_vec.is_empty() {
@@ -208,7 +208,7 @@ impl Field {
                 let mut nsfw_levels = Vec::new();
 
                 for inl in n.iter() {
-                    nsfw_levels.push(format!("{:#?}", inl));
+                    nsfw_levels.push(format!("{:?}", inl));
                 }
 
                 Ok(nsfw_levels.join(", "))
