@@ -133,8 +133,6 @@ pub async fn dispatch_audit_log(
     expanded_event: indexmap::IndexMap<String, CategorizedField>,
     guild_id: serenity::model::id::GuildId,
 ) -> Result<(), Error> {
-    let mut event_embed: Option<serenity::all::CreateEmbed<'_>> = None;
-
     let user_data = ctx.data::<Data>();
 
     let sinks = sqlx::query!("SELECT id, type AS typ, sink, events, embed_template FROM auditlogs__sinks WHERE guild_id = $1 AND broken = false", guild_id.to_string())
@@ -145,6 +143,8 @@ pub async fn dispatch_audit_log(
         return Ok(());
     }
 
+    let mut event_view_data: Option<String> = None;
+
     for sink in sinks {
         // Verify event in whitelisted event list, if events is set
         if let Some(events) = sink.events {
@@ -153,67 +153,87 @@ pub async fn dispatch_audit_log(
             }
         }
 
-        let embed = if let Some(ref e) = event_embed {
-            e.clone()
-        } else {
-            let mut tera = {
-                if let Some(ref embed_template) = sink.embed_template {
-                    templating::compile_template(
-                        embed_template,
-                        templating::CompileTemplateOptions {
-                            ignore_cache: false,
-                            cache_result: true,
-                        },
-                    )
-                    .await?
-                } else {
-                    let template_str = load_embedded_event_template(event_name)?;
+        let mut tera = {
+            if let Some(ref embed_template) = sink.embed_template {
+                templating::compile_template(
+                    embed_template,
+                    templating::CompileTemplateOptions {
+                        ignore_cache: false,
+                        cache_result: true,
+                    },
+                )
+                .await?
+            } else {
+                let template_str = load_embedded_event_template(event_name)?;
 
-                    templating::compile_template(
-                        &template_str,
-                        templating::CompileTemplateOptions {
-                            ignore_cache: false,
-                            cache_result: true,
-                        },
-                    )
-                    .await?
-                }
-            };
+                templating::compile_template(
+                    &template_str,
+                    templating::CompileTemplateOptions {
+                        ignore_cache: false,
+                        cache_result: true,
+                    },
+                )
+                .await?
+            }
+        };
 
-            // Add gwevent templater
-            tera.register_filter(
-                "formatter__gwevent_field",
-                gwevent::templating::FieldFormatter {
-                    is_categorized_default: true,
-                },
-            );
+        // Add gwevent templater
+        tera.register_filter(
+            "formatter__gwevent_field",
+            gwevent::templating::FieldFormatter {
+                is_categorized_default: true,
+            },
+        );
 
-            let mut ctx = templating::make_templating_context();
-            ctx.insert("event_name", event_name)?;
-            ctx.insert("event_titlename", event_titlename)?;
-            ctx.insert("event", &expanded_event)?;
+        let mut tera_ctx = templating::make_templating_context();
+        tera_ctx.insert("event_name", event_name)?;
+        tera_ctx.insert("event_titlename", event_titlename)?;
+        tera_ctx.insert("event", &expanded_event)?;
 
-            let templated = templating::execute_template(&mut tera, Arc::new(ctx)).await;
+        let templated = templating::execute_template(&mut tera, Arc::new(tera_ctx)).await;
 
-            let e = match templated {
-                Ok(templated) => templating::to_embed(templated),
-                Err(e) => serenity::all::CreateEmbed::default()
+        let (disable_external_styling, embed) = match templated {
+            Ok(templated) => (
+                templated.disable_external_styling,
+                templating::to_embed(templated),
+            ),
+            Err(e) => (
+                false,
+                serenity::all::CreateEmbed::default()
                     .description(format!("Failed to render template: {}", e)),
-            };
+            ),
+        };
 
-            event_embed = Some(e.clone());
+        let view_data = if let Some(event_view_data) = &event_view_data {
+            event_view_data.clone()
+        } else {
+            let view_data = serde_json::to_string_pretty(&serde_json::json! {
+                {
+                    "event": expanded_event,
+                    "event_name": event_name,
+                    "event_titlename": event_titlename,
+                }
+            })?;
 
-            e
+            event_view_data = Some(view_data.clone());
+
+            view_data
         };
 
         match sink.typ.as_str() {
             "channel" => {
                 let channel: ChannelId = sink.sink.parse()?;
 
-                match channel
-                    .send_message(&ctx.http, CreateMessage::default().embed(embed.clone()))
-                    .await
-                {
+                let mut message = CreateMessage::default().embed(embed);
+
+                if !disable_external_styling {
+                    message = message.add_file(serenity::all::CreateAttachment::bytes(
+                        view_data.into_bytes(),
+                        "event_data.json",
+                    ))
+                }
+
+                match channel.send_message(&ctx.http, message).await {
                     Ok(_) => {}
                     Err(e) => {
                         warn!(
@@ -253,62 +273,42 @@ pub async fn dispatch_audit_log(
                     continue;
                 };
 
-                let webhook_proxyurl = format!(
-                    "{base_url}/api/v10/webhooks/{id}/{token}",
-                    base_url = config::CONFIG.meta.proxy.get(),
-                    id = id,
-                    token = token
-                );
+                let mut files = Vec::new();
+                if !disable_external_styling {
+                    files.push(serenity::all::CreateAttachment::bytes(
+                        view_data.into_bytes(),
+                        "event_data.json",
+                    ));
+                }
 
-                let req = match user_data
-                    .reqwest
-                    .post(&webhook_proxyurl)
-                    .json(&serde_json::json!({
-                        "embeds": [embed.clone()]
-                    }))
-                    .header("Content-Type", "application/json")
-                    .header(
-                        "User-Agent",
-                        "DiscordBot/0.1 (Anti-Raid, https://github.com/anti-raid)",
+                if let Err(serenity::Error::Http(serenity::http::HttpError::UnsuccessfulRequest(
+                    ref err,
+                ))) = ctx
+                    .http
+                    .execute_webhook(
+                        id,
+                        None,
+                        token,
+                        false,
+                        files,
+                        &serde_json::json!({"embeds": vec![embed.clone()]}),
                     )
-                    .send()
                     .await
                 {
-                    Ok(r) => r,
-                    Err(e) => {
-                        warn!(
-                            "Failed to send audit log event to webhook: {} [sink id: {}]",
-                            e, sink.id
-                        );
-                        continue;
+                    match err.status_code {
+                        reqwest::StatusCode::FORBIDDEN
+                        | reqwest::StatusCode::UNAUTHORIZED
+                        | reqwest::StatusCode::NOT_FOUND
+                        | reqwest::StatusCode::GONE => {
+                            sqlx::query!(
+                                "UPDATE auditlogs__sinks SET broken = true WHERE id = $1",
+                                sink.id
+                            )
+                            .execute(&user_data.pool)
+                            .await?;
+                        }
+                        _ => {}
                     }
-                };
-
-                let status = req.status();
-                // reqwest::StatusCode::FORBIDDEN | reqwest::StatusCode::UNAUTHORIZED | reqwest::StatusCode::NOT_FOUND | reqwest::StatusCode::GONE
-                if status == reqwest::StatusCode::FORBIDDEN
-                    || status == reqwest::StatusCode::UNAUTHORIZED
-                    || status == reqwest::StatusCode::NOT_FOUND
-                    || status == reqwest::StatusCode::GONE
-                {
-                    let text = req.text().await?;
-                    warn!(
-                        "Failed to send audit log event to webhook ({} [broken]): {} [sink id: {}]",
-                        status, text, sink.id
-                    );
-
-                    sqlx::query!(
-                        "UPDATE auditlogs__sinks SET broken = true WHERE id = $1",
-                        sink.id
-                    )
-                    .execute(&user_data.pool)
-                    .await?;
-                } else if !status.is_success() {
-                    let text = req.text().await?;
-                    warn!(
-                        "Failed to send audit log event to webhook ({}): {} [sink id: {}]",
-                        status, text, sink.id
-                    );
                 }
             }
             _ => {

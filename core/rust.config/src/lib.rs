@@ -119,6 +119,7 @@ pub struct Meta {
 #[derive(Serialize, Deserialize)]
 pub struct Sites {
     pub api: Differs<String>,
+    pub frontend: Differs<String>,
 }
 
 #[derive(Serialize, Deserialize)]

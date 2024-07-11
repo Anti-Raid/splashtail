@@ -17,6 +17,7 @@ To do so, Anti-Raid uses [tera](https://keats.github.io/tera/docs/). See its doc
 
 - The ``title(title=TITLE)`` function can be used to set the title of an embed.
 - The ``field(name=NAME, value=VALUE, inline=INLINE [default: false])`` function can be used to add fields to embeds.
+- The ``disable_external_styling(state=STATE)`` function can be used to disable external styling in embeds.
 
 ## Situational Functions and Filters
 

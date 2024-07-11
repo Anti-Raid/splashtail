@@ -26,6 +26,7 @@ regex = "1"
 bitflags = "2"
 url = "2"
 include_dir = "0.7.3" # Needed to load templates etc.
+data-encoding = "2" # Hex-encoding
 
 # Module: inspector
 plsfix = "0.1.7"

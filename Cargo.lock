@@ -2316,6 +2316,7 @@ dependencies = [
  "chrono",
  "config",
  "dashmap",
+ "data-encoding",
  "futures",
  "futures-util",
  "gwevent",
