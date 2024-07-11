@@ -177,6 +177,24 @@ impl Field {
 
                 Ok(users.join(", "))
             }
+            Field::Users(u) => {
+                let mut users = Vec::new();
+
+                for iu in u.iter() {
+                    users.push(format!("{} [{}]", iu.mention(), iu.name));
+                }
+
+                Ok(users.join(", "))
+            }
+            Field::ChannelIds(c) => {
+                let mut channels = Vec::new();
+
+                for ic in c.iter() {
+                    channels.push(ic.mention().to_string());
+                }
+
+                Ok(channels.join(", "))
+            }
             Field::Channels(c) => {
                 let mut channels = Vec::new();
 
