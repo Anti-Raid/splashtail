@@ -291,7 +291,7 @@ pub async fn dispatch_audit_log(
                         token,
                         false,
                         files,
-                        &serde_json::json!({"embeds": vec![embed.clone()]}),
+                        &serde_json::json!({"embeds": vec![embed]}),
                     )
                     .await
                 {
