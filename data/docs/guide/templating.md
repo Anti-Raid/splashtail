@@ -5,6 +5,7 @@ To allow further customizing the bot. Anti-Raid supports templating. Templating 
 To do so, Anti-Raid uses [tera](https://keats.github.io/tera/docs/). See its docs for the full list of features. Note that the following extra changes apply in Anti-Raid:
 
 - Dangerous functions such as ``get_env`` do not exist.
+- ``__tera_context_raw`` provides the Tera context as an object. This complements ``__tera_context`` which provides the context as a string for debugging.
 
 ## Common Functions And Filters
 

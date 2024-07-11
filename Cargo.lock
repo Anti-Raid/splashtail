@@ -3887,7 +3887,7 @@ dependencies = [
 [[package]]
 name = "tera"
 version = "1.20.0"
-source = "git+https://github.com/anti-raid/tera?branch=master#18df908ac1ccac5f2ad2a8771cd5bcc7aa1ce343"
+source = "git+https://github.com/anti-raid/tera?branch=master#10823e280ee03455b0388e059424173778a0a4c3"
 dependencies = [
  "chrono",
  "chrono-tz",

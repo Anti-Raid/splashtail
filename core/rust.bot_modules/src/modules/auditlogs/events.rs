@@ -193,8 +193,13 @@ pub async fn dispatch_audit_log(
             ctx.insert("event_titlename", event_titlename)?;
             ctx.insert("event", &expanded_event)?;
 
-            let templated = templating::execute_template(&mut tera, Arc::new(ctx)).await?;
-            let e = templating::to_embed(templated)?;
+            let templated = templating::execute_template(&mut tera, Arc::new(ctx)).await;
+
+            let e = match templated {
+                Ok(templated) => templating::to_embed(templated),
+                Err(e) => serenity::all::CreateEmbed::default()
+                    .description(format!("Failed to render template: {}", e)),
+            };
 
             event_embed = Some(e.clone());
 

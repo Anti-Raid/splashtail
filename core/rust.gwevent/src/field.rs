@@ -23,7 +23,7 @@ pub enum Field {
     // Discord Primitives
     CommandPermissions(serenity::all::CommandPermissions),
     GuildMemberFlags(serenity::all::GuildMemberFlags),
-    NsfwLevels(Vec<serenity::model::guild::NsfwLevel>),
+    NsfwLevels(Vec<serenity::all::NsfwLevel>),
     Permissions(serenity::all::Permissions),
     PermissionOverwrites(Vec<serenity::all::PermissionOverwrite>),
 
@@ -38,36 +38,49 @@ pub enum Field {
     RoleIds(Vec<serenity::all::RoleId>),
     ScheduledEventId(serenity::all::ScheduledEventId),
     UserIds(Vec<serenity::all::UserId>),
+    WebhookIds(Vec<serenity::all::WebhookId>),
 
     // Discord Structures
     ActionRows(Vec<serenity::model::application::ActionRow>),
-    Attachment(serenity::model::channel::Attachment),
-    AuditLogAction(serenity::model::guild::audit_log::Action),
-    AuditLogActionsChanges(Vec<serenity::model::guild::audit_log::Change>),
-    AuditLogEntry(serenity::model::guild::audit_log::AuditLogEntry),
-    AuditLogOptions(Vec<serenity::model::guild::audit_log::Options>),
-    AutomodActions(Vec<serenity::model::guild::automod::Action>),
-    AutomodActionExecutions(Vec<serenity::model::guild::automod::ActionExecution>),
-    AutomodRules(Vec<serenity::model::guild::automod::Rule>),
-    AutomodTrigger(serenity::model::guild::automod::Trigger),
-    Channels(Vec<serenity::model::channel::Channel>),
-    Embeds(Vec<serenity::model::channel::Embed>),
-    Emojis(Vec<serenity::model::guild::Emoji>),
+    Attachments(Vec<serenity::all::Attachment>),
+    AuditLogAction(serenity::all::audit_log::Action),
+    AuditLogActionsChanges(Vec<serenity::all::audit_log::Change>),
+    AuditLogEntry(serenity::all::audit_log::AuditLogEntry),
+    AuditLogOptions(Vec<serenity::all::audit_log::Options>),
+    AutomodActions(Vec<serenity::all::automod::Action>),
+    AutomodActionExecutions(Vec<serenity::all::automod::ActionExecution>),
+    AutomodRules(Vec<serenity::all::automod::Rule>),
+    AutomodTrigger(serenity::all::automod::Trigger),
+    Channels(Vec<serenity::all::Channel>),
+    Embeds(Vec<serenity::all::Embed>),
+    Emojis(Vec<serenity::all::Emoji>),
     Entitlements(Vec<serenity::all::Entitlement>),
-    Guild(serenity::model::guild::Guild),
-    Integrations(Vec<serenity::model::guild::Integration>),
-    Member(serenity::model::guild::Member),
-    Messages(Vec<serenity::model::channel::Message>),
-    MessageUpdateEvent(serenity::model::event::MessageUpdateEvent),
+    Guild(serenity::all::Guild),
+    Integrations(Vec<serenity::all::Integration>),
+    Member(serenity::all::Member),
+    PartialMember(serenity::all::PartialMember),
+    Messages(Vec<serenity::all::Message>),
     PartialGuildChannels(Vec<serenity::all::PartialGuildChannel>),
-    PartialGuild(serenity::model::guild::PartialGuild),
-    Roles(Vec<serenity::model::guild::Role>),
-    ScheduledEvents(Vec<serenity::model::guild::ScheduledEvent>),
+    PartialGuild(serenity::all::PartialGuild),
+    Roles(Vec<serenity::all::Role>),
+    RoleSubscriptionData(serenity::all::RoleSubscriptionData),
+    ScheduledEvents(Vec<serenity::all::ScheduledEvent>),
     StageInstances(Vec<serenity::all::StageInstance>),
     Stickers(Vec<serenity::model::sticker::Sticker>),
-    ThreadMembers(Vec<serenity::model::guild::ThreadMember>),
+    StickerItems(Vec<serenity::model::sticker::StickerItem>),
+    ThreadMembers(Vec<serenity::all::ThreadMember>),
     Timestamp(Timestamp),
     Users(Vec<serenity::model::user::User>),
+
+    // Discord Message Structures
+    ChannelMentions(Vec<serenity::all::ChannelMention>),
+    MessageReactions(Vec<serenity::all::MessageReaction>),
+    MessageType(serenity::all::MessageType),
+    MessageActivity(serenity::all::MessageActivity),
+    MessageApplication(serenity::all::MessageApplication),
+    MessageReference(serenity::all::MessageReference),
+    MessageFlags(serenity::all::MessageFlags),
+    MessageInteraction(serenity::all::MessageInteraction),
 
     // Special Types
     JsonValue(serde_json::Value),
@@ -75,59 +88,6 @@ pub enum Field {
 }
 
 impl Field {
-    pub fn name(&self) -> &'static str {
-        match self {
-            Field::Bool(_) => "Bool",
-            Field::Number(_) => "Number",
-            Field::Strings(_) => "Strings",
-            Field::CommandPermissions(_) => "CommandPermissions",
-            Field::GuildMemberFlags(_) => "GuildMemberFlags",
-            Field::NsfwLevels(_) => "NsfwLevels",
-            Field::Permissions(_) => "Permissions",
-            Field::PermissionOverwrites(_) => "PermissionOverwrites",
-            Field::ApplicationId(_) => "ApplicationId",
-            Field::AuditLogId(_) => "AuditLogId",
-            Field::ChannelIds(_) => "ChannelIds",
-            Field::GenericIds(_) => "GenericIds",
-            Field::GuildId(_) => "GuildId",
-            Field::IntegrationId(_) => "IntegrationId",
-            Field::MessageIds(_) => "MessageIds",
-            Field::RoleIds(_) => "RoleIds",
-            Field::ScheduledEventId(_) => "ScheduledEventId",
-            Field::UserIds(_) => "UserIds",
-            Field::ActionRows(_) => "ActionRows",
-            Field::Attachment(_) => "Attachment",
-            Field::AuditLogAction(_) => "AuditLogAction",
-            Field::AuditLogActionsChanges(_) => "AuditLogActionsChanges",
-            Field::AuditLogEntry(_) => "AuditLogEntry",
-            Field::AuditLogOptions(_) => "AuditLogOptions",
-            Field::AutomodActions(_) => "AutomodActions",
-            Field::AutomodActionExecutions(_) => "AutomodActionExecutions",
-            Field::AutomodRules(_) => "AutomodRules",
-            Field::AutomodTrigger(_) => "AutomodTrigger",
-            Field::Channels(_) => "Channels",
-            Field::Embeds(_) => "Embeds",
-            Field::Emojis(_) => "Emojis",
-            Field::Entitlements(_) => "Entitlements",
-            Field::Guild(_) => "Guild",
-            Field::Integrations(_) => "Integrations",
-            Field::Member(_) => "Member",
-            Field::Messages(_) => "Messages",
-            Field::MessageUpdateEvent(_) => "MessageUpdateEvent",
-            Field::PartialGuildChannels(_) => "PartialGuildChannels",
-            Field::PartialGuild(_) => "PartialGuild",
-            Field::Roles(_) => "Roles",
-            Field::ScheduledEvents(_) => "ScheduledEvents",
-            Field::StageInstances(_) => "StageInstances",
-            Field::Stickers(_) => "Stickers",
-            Field::ThreadMembers(_) => "ThreadMembers",
-            Field::Timestamp(_) => "Timestamp",
-            Field::Users(_) => "Users",
-            Field::JsonValue(_) => "JsonValue",
-            Field::None => "None",
-        }
-    }
-
     /// Format the field into a string for use in templates
     pub fn template_format(&self) -> Result<String, Error> {
         // Given a serde_json::Value, loop over all keys and resolve them (recursively if needed)
@@ -254,11 +214,52 @@ impl Field {
                 Ok(generic_ids.join(", "))
             }
             Field::Timestamp(t) => Ok(t.to_string()),
-            Field::Attachment(a) => Ok(a.url.to_string()),
+            Field::Attachments(a) => {
+                let mut attachments = Vec::new();
+
+                for ia in a.iter() {
+                    attachments.push(ia.url.clone());
+                }
+
+                Ok(attachments.join(", "))
+            }
+            Field::MessageFlags(f) => {
+                let mut flags = Vec::new();
+
+                for ip in f.iter() {
+                    flags.push(format!("{:?} ({})", ip, ip.bits()));
+                }
+
+                Ok(flags.join(", "))
+            }
             Field::JsonValue(v) => match serde_json::to_string(v) {
                 Ok(s) => Ok(format!("``{}``", s)),
                 Err(e) => Err(e.into()),
             },
+            Field::StickerItems(s) => {
+                let mut sticker_items = Vec::new();
+
+                for isi in s.iter() {
+                    sticker_items.push(
+                        isi.image_url()
+                            .unwrap_or(format!("{} {} (unknown image)", isi.id, isi.name)),
+                    );
+                }
+
+                Ok(sticker_items.join(", "))
+            }
+            Field::Stickers(s) => {
+                let mut stickers = Vec::new();
+
+                for isi in s.iter() {
+                    stickers.push(
+                        isi.image_url()
+                            .unwrap_or(format!("{} {} (unknown image)", isi.id, isi.name)),
+                    );
+                }
+
+                Ok(stickers.join(", "))
+            }
             Field::None => Ok("None".to_string()),
             _ => {
                 let s = serde_resolver(&serde_json::to_value(self)?)?;
@@ -276,6 +277,12 @@ macro_rules! from_field {
                     Self::$variant(s)
                 }
             }
+
+            impl From<Box<$t>> for Field {
+                fn from(s: Box<$t>) -> Self {
+                    Self::$variant(*s)
+                }
+            }
         )*
     };
 }
@@ -286,6 +293,11 @@ macro_rules! from_field_multiple {
             impl From<$t> for Field {
                 fn from(s: $t) -> Self {
                     Self::$variant(vec![s])
+                }
+            }
+            impl From<Box<$t>> for Field {
+                fn from(s: Box<$t>) -> Self {
+                    Self::$variant(vec![*s])
                 }
             }
             impl From<Vec<$t>> for Field {
@@ -355,7 +367,7 @@ from_field_multiple! {
     String => Strings,
 
     // Discord Primitives
-    serenity::model::guild::NsfwLevel => NsfwLevels,
+    serenity::all::NsfwLevel => NsfwLevels,
     serenity::all::PermissionOverwrite => PermissionOverwrites,
 
     // Discord ID Types
@@ -364,27 +376,34 @@ from_field_multiple! {
     serenity::all::MessageId => MessageIds,
     serenity::all::RoleId => RoleIds,
     serenity::all::UserId => UserIds,
+    serenity::all::WebhookId => WebhookIds,
 
     // Discord Structures
+    serenity::all::Attachment => Attachments,
     serenity::model::application::ActionRow => ActionRows,
-    serenity::model::guild::audit_log::Change => AuditLogActionsChanges,
-    serenity::model::guild::audit_log::Options => AuditLogOptions,
-    serenity::model::guild::automod::Action => AutomodActions,
-    serenity::model::guild::automod::ActionExecution => AutomodActionExecutions,
-    serenity::model::guild::automod::Rule => AutomodRules,
-    serenity::model::channel::Channel => Channels,
-    serenity::model::channel::Embed => Embeds,
-    serenity::model::guild::Emoji => Emojis,
+    serenity::all::audit_log::Change => AuditLogActionsChanges,
+    serenity::all::audit_log::Options => AuditLogOptions,
+    serenity::all::automod::Action => AutomodActions,
+    serenity::all::automod::ActionExecution => AutomodActionExecutions,
+    serenity::all::automod::Rule => AutomodRules,
+    serenity::all::Channel => Channels,
+    serenity::all::Embed => Embeds,
+    serenity::all::Emoji => Emojis,
     serenity::all::Entitlement => Entitlements,
     serenity::all::Integration => Integrations,
-    serenity::model::channel::Message => Messages,
+    serenity::all::Message => Messages,
     serenity::all::PartialGuildChannel => PartialGuildChannels,
-    serenity::model::guild::Role => Roles,
-    serenity::model::guild::ScheduledEvent => ScheduledEvents,
+    serenity::all::Role => Roles,
+    serenity::all::ScheduledEvent => ScheduledEvents,
     serenity::all::StageInstance => StageInstances,
     serenity::model::sticker::Sticker => Stickers,
-    serenity::model::guild::ThreadMember => ThreadMembers,
+    serenity::model::sticker::StickerItem => StickerItems,
+    serenity::all::ThreadMember => ThreadMembers,
     serenity::model::user::User => Users,
+
+    // Discord Message Structures
+    serenity::all::ChannelMention => ChannelMentions,
+    serenity::all::MessageReaction => MessageReactions,
 }
 
 from_field! {
@@ -404,15 +423,23 @@ from_field! {
     serenity::all::ScheduledEventId => ScheduledEventId,
 
     // Discord Structures
-    serenity::all::Attachment => Attachment,
-    serenity::model::guild::audit_log::Action => AuditLogAction,
-    serenity::model::guild::audit_log::AuditLogEntry => AuditLogEntry,
-    serenity::model::guild::automod::Trigger => AutomodTrigger,
+    serenity::all::audit_log::Action => AuditLogAction,
+    serenity::all::audit_log::AuditLogEntry => AuditLogEntry,
+    serenity::all::automod::Trigger => AutomodTrigger,
     serenity::all::Guild => Guild,
-    serenity::model::event::MessageUpdateEvent => MessageUpdateEvent,
     serenity::all::Member => Member,
-    serenity::model::guild::PartialGuild => PartialGuild,
+    serenity::all::PartialMember => PartialMember,
+    serenity::all::PartialGuild => PartialGuild,
+    serenity::all::RoleSubscriptionData => RoleSubscriptionData,
     serenity::all::Timestamp => Timestamp,
+
+    // Discord Message Structures
+    serenity::all::MessageType => MessageType,
+    serenity::all::MessageActivity => MessageActivity,
+    serenity::all::MessageApplication => MessageApplication,
+    serenity::all::MessageReference => MessageReference,
+    serenity::all::MessageFlags => MessageFlags,
+    serenity::all::MessageInteraction => MessageInteraction,
 
     // Special Types
     serde_json::Value => JsonValue
@@ -440,28 +467,20 @@ from_field_number! {
 }
 
 // Special case: Channel and guild channel
-impl From<serenity::model::channel::GuildChannel> for Field {
-    fn from(s: serenity::model::channel::GuildChannel) -> Self {
-        Self::Channels(vec![serenity::model::channel::Channel::Guild(s)])
+impl From<serenity::all::GuildChannel> for Field {
+    fn from(s: serenity::all::GuildChannel) -> Self {
+        Self::Channels(vec![serenity::all::Channel::Guild(s)])
     }
 }
 
-impl From<Vec<serenity::model::channel::GuildChannel>> for Field {
-    fn from(s: Vec<serenity::model::channel::GuildChannel>) -> Self {
-        Self::Channels(
-            s.into_iter()
-                .map(serenity::model::channel::Channel::Guild)
-                .collect(),
-        )
+impl From<Vec<serenity::all::GuildChannel>> for Field {
+    fn from(s: Vec<serenity::all::GuildChannel>) -> Self {
+        Self::Channels(s.into_iter().map(serenity::all::Channel::Guild).collect())
     }
 }
 
-impl From<FixedArray<serenity::model::channel::GuildChannel>> for Field {
-    fn from(s: FixedArray<serenity::model::channel::GuildChannel>) -> Self {
-        Self::Channels(
-            s.into_iter()
-                .map(serenity::model::channel::Channel::Guild)
-                .collect(),
-        )
+impl From<FixedArray<serenity::all::GuildChannel>> for Field {
+    fn from(s: FixedArray<serenity::all::GuildChannel>) -> Self {
+        Self::Channels(s.into_iter().map(serenity::all::Channel::Guild).collect())
     }
 }

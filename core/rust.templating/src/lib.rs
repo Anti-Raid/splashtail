@@ -1,6 +1,7 @@
 use base_data::limits::embed_limits;
 use moka::future::Cache;
 use once_cell::sync::Lazy;
+use std::error::Error;
 use std::sync::{Arc, RwLock};
 use std::time::Duration;
 use tera::Tera;
@@ -103,8 +104,11 @@ impl tera::Function for TitleFunction {
             .write()
             .map_err(|_| "Failed to write to title")?;
 
-        // Insert the title
-        *title_writer = Some(title.to_string());
+        // Insert the title, use a match to avoid quoting the string given
+        *title_writer = Some(match title {
+            tera::Value::String(s) => s.to_string(),
+            _ => title.to_string(),
+        });
 
         // Drop the lock
         drop(title_writer);
@@ -138,11 +142,13 @@ impl tera::Function for FieldFunction {
             .write()
             .map_err(|_| "Failed to write to fields")?;
 
+        let field_value_str = match field_value {
+            tera::Value::String(s) => s.to_string(),
+            _ => field_value.to_string(),
+        };
+
         // Insert the field
-        fields_writer.insert(
-            field_name.to_string(),
-            (field_value.to_string(), field_is_inline),
-        );
+        fields_writer.insert(field_name.to_string(), (field_value_str, field_is_inline));
 
         // Drop the lock
         drop(fields_writer);
@@ -230,7 +236,13 @@ pub async fn execute_template(
         tera.render_async("main", &context),
     )
     .await
-    .map_err(|_| "Template execution timed out")??;
+    .map_err(|_| "Template execution timed out")?;
+
+    if let Err(e) = rendered {
+        return Err(format!("Error: {}, Source: {:?}", e, e.source()).into());
+    }
+
+    let rendered = rendered.unwrap();
 
     // Read the outputted template specials
     let title_reader = ites.title.read().map_err(|_| "Failed to read title")?;
@@ -243,9 +255,7 @@ pub async fn execute_template(
     })
 }
 
-pub fn to_embed<'a>(
-    executed_template: ExecutedTemplate,
-) -> Result<serenity::all::CreateEmbed<'a>, base_data::Error> {
+pub fn to_embed<'a>(executed_template: ExecutedTemplate) -> serenity::all::CreateEmbed<'a> {
     let mut embed = serenity::all::CreateEmbed::default();
 
     let mut total_chars: usize = 0;
@@ -311,5 +321,5 @@ pub fn to_embed<'a>(
         embed = embed.field(name, value, inline);
     }
 
-    Ok(embed)
+    embed
 }

@@ -770,7 +770,7 @@ pub fn expand_event(event: FullEvent) -> Option<IndexMap<String, CategorizedFiel
                 multiple_deleted_messages_ids,
             );
         }
-        // @ci.expand_event_check MessageUpdate none
+        // @ci.expand_event_check MessageUpdate event:event,MessageUpdateEvent
         FullEvent::MessageUpdate {
             old_if_available,
             new,
@@ -780,7 +780,7 @@ pub fn expand_event(event: FullEvent) -> Option<IndexMap<String, CategorizedFiel
                 insert_field(&mut fields, "message", "old", old.clone());
             }
             if let Some(new) = new {
-                insert_field(&mut fields, "message", "old", new.clone());
+                insert_field(&mut fields, "message", "new", new.clone());
             } else {
                 insert_field(
                     &mut fields,
@@ -788,9 +788,109 @@ pub fn expand_event(event: FullEvent) -> Option<IndexMap<String, CategorizedFiel
                     "warning",
                     "This message has not been cached by Anti-Raid!".to_string(),
                 );
-
-                insert_field(&mut fields, "message_update_event", "id", event.clone());
             }
+
+            insert_field(&mut fields, "event", "id", event.id);
+            insert_field(&mut fields, "event", "channel_id", event.channel_id);
+            insert_optional_field(&mut fields, "event", "author", event.author);
+            insert_optional_field(&mut fields, "event", "content", event.content);
+            insert_optional_field(&mut fields, "event", "timestamp", event.timestamp);
+            insert_optional_field(
+                &mut fields,
+                "event",
+                "edited_timestamp",
+                event.edited_timestamp,
+            );
+            insert_optional_field(&mut fields, "event", "tts", event.tts);
+            insert_optional_field(
+                &mut fields,
+                "event",
+                "mention_everyone",
+                event.mention_everyone,
+            );
+            insert_optional_field(&mut fields, "event", "mentions", event.mentions);
+            insert_optional_field(&mut fields, "event", "mention_roles", event.mention_roles);
+            insert_optional_field(
+                &mut fields,
+                "event",
+                "mention_channels",
+                event.mention_channels,
+            );
+            insert_optional_field(&mut fields, "event", "attachments", event.attachments);
+            insert_optional_field(&mut fields, "event", "embeds", event.embeds);
+            insert_optional_field(&mut fields, "event", "reactions", event.reactions);
+            insert_optional_field(&mut fields, "event", "pinned", event.pinned);
+            insert_optional_field(
+                &mut fields,
+                "event",
+                "webhook_id",
+                event.webhook_id.and_then(|x| x),
+            );
+            insert_optional_field(&mut fields, "event", "kind", event.kind);
+            insert_optional_field(
+                &mut fields,
+                "event",
+                "activity",
+                event.activity.and_then(|x| x),
+            );
+            insert_optional_field(
+                &mut fields,
+                "event",
+                "application",
+                event.application.and_then(|x| x),
+            );
+            insert_optional_field(
+                &mut fields,
+                "event",
+                "application_id",
+                event.application_id.and_then(|x| x),
+            );
+            insert_optional_field(
+                &mut fields,
+                "event",
+                "message_reference",
+                event.message_reference.and_then(|x| x),
+            );
+            insert_optional_field(&mut fields, "event", "flags", event.flags.and_then(|x| x));
+            insert_optional_field(
+                &mut fields,
+                "event",
+                "referenced_message",
+                event.referenced_message.and_then(|x| x.map(|x| *x)),
+            );
+            insert_optional_field(
+                &mut fields,
+                "event",
+                "interaction",
+                event.interaction.and_then(|x| x.map(|x| *x)),
+            );
+            insert_optional_field(
+                &mut fields,
+                "event",
+                "thread",
+                event.thread.and_then(|x| x.map(|x| *x)),
+            );
+            insert_optional_field(&mut fields, "event", "components", event.components);
+            insert_optional_field(&mut fields, "event", "sticker_items", event.sticker_items);
+            insert_optional_field(
+                &mut fields,
+                "event",
+                "position",
+                event.position.and_then(|x| x.map(|x| x.get())),
+            );
+            insert_optional_field(
+                &mut fields,
+                "event",
+                "role_subscription_data",
+                event.role_subscription_data.and_then(|x| x),
+            );
+            insert_optional_field(&mut fields, "event", "guild_id", event.guild_id);
+            insert_optional_field(
+                &mut fields,
+                "event",
+                "member",
+                event.member.and_then(|x| x.map(|x| (*x))),
+            );
         }
         FullEvent::PresenceReplace { .. } => return None,
         FullEvent::PresenceUpdate { .. } => return None,
