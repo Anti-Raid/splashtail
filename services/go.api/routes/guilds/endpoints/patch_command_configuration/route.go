@@ -372,7 +372,7 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 	updateCols = append(updateCols, "last_updated_at", "last_updated_by")
 	updateArgs = append(updateArgs, time.Now(), d.Auth.ID)
 
-	var sqlString = "INSERT INTO guild_command_configurations (guild_id, command, created_by, " + strings.Join(updateCols, ", ") + ") VALUES ($1, $2, " + strings.Join(insertParams, ",") + ") ON CONFLICT (guild_id, command) DO UPDATE SET " + strings.Join(updateParams, ", ") + " RETURNING id"
+	var sqlString = "INSERT INTO guild_command_configurations (guild_id, command, created_by, " + strings.Join(updateCols, ", ") + ") VALUES ($1, $2, $3, " + strings.Join(insertParams, ",") + ") ON CONFLICT (guild_id, command) DO UPDATE SET " + strings.Join(updateParams, ", ") + " RETURNING id"
 
 	// Execute sql
 	updateArgs = append([]any{guildId, body.Command, d.Auth.ID}, updateArgs...) // $1 and $2
