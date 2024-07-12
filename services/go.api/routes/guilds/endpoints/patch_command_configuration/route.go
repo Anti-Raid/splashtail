@@ -344,10 +344,14 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 		}
 	}
 
+	// Update audit fields
+	updateCols = append(updateCols, "last_updated_at", "last_updated_by")
+	updateArgs = append(updateArgs, time.Now(), d.Auth.ID)
+
 	// Create sql, insertParams is $N, $N+1... while updateParams are <col> = $N, <col2> = $N+1...
 	var insertParams = make([]string, 0, len(updateCols))
 	var updateParams = make([]string, 0, len(updateCols))
-	var paramNo = 3 // 1 and 2 are guild_id and module
+	var paramNo = 4 // 1, 2 and 3 are guild_id, command and created_by
 	for _, col := range updateCols {
 		insertParams = append(insertParams, "$"+strconv.Itoa(paramNo))
 		updateParams = append(updateParams, col+" = $"+strconv.Itoa(paramNo))
@@ -367,10 +371,6 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 	}
 
 	defer tx.Rollback(d.Context)
-
-	// Update audit fields
-	updateCols = append(updateCols, "last_updated_at", "last_updated_by")
-	updateArgs = append(updateArgs, time.Now(), d.Auth.ID)
 
 	var sqlString = "INSERT INTO guild_command_configurations (guild_id, command, created_by, " + strings.Join(updateCols, ", ") + ") VALUES ($1, $2, $3, " + strings.Join(insertParams, ",") + ") ON CONFLICT (guild_id, command) DO UPDATE SET " + strings.Join(updateParams, ", ") + " RETURNING id"
 
