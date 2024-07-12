@@ -159,18 +159,20 @@ pub async fn commands_enable(
         }
 
         sqlx::query!(
-            "UPDATE guild_command_configurations SET disabled = false WHERE guild_id = $1 AND command = $2",
+            "UPDATE guild_command_configurations SET disabled = false, last_updated_by = $3, last_updated_at = NOW() WHERE guild_id = $1 AND command = $2",
             guild_id.to_string(),
-            command
+            command,
+            ctx.author().id.to_string()
         )
         .execute(&mut *tx)
         .await?;
     } else {
         // No module, create it
         sqlx::query!(
-            "INSERT INTO guild_command_configurations (guild_id, command, disabled) VALUES ($1, $2, false)",
+            "INSERT INTO guild_command_configurations (guild_id, command, disabled, created_by) VALUES ($1, $2, false, $3)",
             guild_id.to_string(),
-            command
+            command,
+            ctx.author().id.to_string()
         )
         .execute(&mut *tx)
         .await?;
@@ -281,18 +283,20 @@ pub async fn commands_disable(
         }
 
         sqlx::query!(
-            "UPDATE guild_command_configurations SET disabled = true WHERE guild_id = $1 AND command = $2",
+            "UPDATE guild_command_configurations SET disabled = true, last_updated_by = $3, last_updated_at = NOW() WHERE guild_id = $1 AND command = $2",
             guild_id.to_string(),
-            command
+            command,
+            ctx.author().id.to_string()
         )
         .execute(&mut *tx)
         .await?;
     } else {
         // No module, create it
         sqlx::query!(
-            "INSERT INTO guild_command_configurations (guild_id, command, disabled) VALUES ($1, $2, true)",
+            "INSERT INTO guild_command_configurations (guild_id, command, disabled, created_by) VALUES ($1, $2, true, $3)",
             guild_id.to_string(),
-            command
+            command,
+            ctx.author().id.to_string()
         )
         .execute(&mut *tx)
         .await?;
@@ -826,9 +830,10 @@ pub async fn commands_modperms(
 
                 if count > 0 {
                     sqlx::query!(
-                        "UPDATE guild_command_configurations SET perms = $1, disabled = $2 WHERE guild_id = $3 AND command = $4",
+                        "UPDATE guild_command_configurations SET perms = $1, disabled = $2, last_updated_by = $3, last_updated_at = NOW() WHERE guild_id = $4 AND command = $5",
                         new_perms,
                         new_command_config.disabled,
+                        ctx.author().id.to_string(),
                         guild_id.to_string(),
                         command
                     )
@@ -836,11 +841,12 @@ pub async fn commands_modperms(
                     .await?;
                 } else {
                     sqlx::query!(
-                        "INSERT INTO guild_command_configurations (guild_id, command, perms, disabled) VALUES ($1, $2, $3, $4)",
+                        "INSERT INTO guild_command_configurations (guild_id, command, perms, disabled, created_by) VALUES ($1, $2, $3, $4, $5)",
                         guild_id.to_string(),
                         command,
                         new_perms,
-                        new_command_config.disabled
+                        new_command_config.disabled,
+                        ctx.author().id.to_string()
                     )
                     .execute(&mut *tx)
                     .await?;

@@ -1,24 +1,33 @@
 package get_all_command_configurations
 
 import (
+	"errors"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/anti-raid/splashtail/core/go.std/silverpelt"
+	"github.com/anti-raid/splashtail/core/go.std/structparser/db"
 	"github.com/anti-raid/splashtail/core/go.std/types"
 	"github.com/anti-raid/splashtail/services/go.api/state"
 	"github.com/go-chi/chi/v5"
 	docs "github.com/infinitybotlist/eureka/doclib"
 	"github.com/infinitybotlist/eureka/ratelimit"
 	"github.com/infinitybotlist/eureka/uapi"
+	"github.com/jackc/pgx/v5"
 	"go.uber.org/zap"
+)
+
+var (
+	fullCommandConfigurationColsArr = db.GetCols(silverpelt.FullGuildCommandConfiguration{})
+	fullCommandConfigurationCols    = strings.Join(fullCommandConfigurationColsArr, ", ")
 )
 
 func Docs() *docs.Doc {
 	return &docs.Doc{
 		Summary:     "Get All Command Configurations",
 		Description: "This endpoint returns all configurations for all commands in a guild",
-		Resp:        []silverpelt.GuildCommandConfiguration{},
+		Resp:        []silverpelt.FullGuildCommandConfiguration{},
 		Params: []docs.Parameter{
 			{
 				Name:        "guild_id",
@@ -59,8 +68,17 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 		return uapi.DefaultResponse(http.StatusBadRequest)
 	}
 
-	// Fetch row from guild_module_configuration
-	gcc, err := silverpelt.GetAllCommandConfigurationsForGuild(d.Context, state.Pool, guildId)
+	rows, err := state.Pool.Query(
+		d.Context,
+		"SELECT "+fullCommandConfigurationCols+" FROM guild_command_configurations WHERE guild_id = $1",
+		guildId,
+	)
+
+	if errors.Is(err, pgx.ErrNoRows) {
+		return uapi.HttpResponse{
+			Json: []silverpelt.FullGuildCommandConfiguration{},
+		}
+	}
 
 	if err != nil {
 		state.Logger.Error("Failed to query guild_command_configuration", zap.Error(err))
@@ -72,7 +90,25 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 		}
 	}
 
+	recs, err := pgx.CollectRows(rows, pgx.RowToStructByName[silverpelt.FullGuildCommandConfiguration])
+
+	if errors.Is(err, pgx.ErrNoRows) {
+		return uapi.HttpResponse{
+			Json: []silverpelt.FullGuildCommandConfiguration{},
+		}
+	}
+
+	if err != nil {
+		state.Logger.Error("Failed to collect rows", zap.Error(err))
+		return uapi.HttpResponse{
+			Status: http.StatusInternalServerError,
+			Json: types.ApiError{
+				Message: "Failed to collect rows: " + err.Error(),
+			},
+		}
+	}
+
 	return uapi.HttpResponse{
-		Json: gcc,
+		Json: recs,
 	}
 }

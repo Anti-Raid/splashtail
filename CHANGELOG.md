@@ -1,10 +1,25 @@
-## Thursday, July 11th 2024
+# Friday, July 12th 2024
+
+## Templating
+
+- Templating has been improved and should now handle template timeout across for-loops/if-statements correctly
+
+## Bot
+
+- ``guild_command_configurations`` now stores audit information (`created_at`, `created_by`, `last_updated_at`, `last_updated_by`) for each command configuration. This is useful for auditing purposes and tracking changes to command configurations. Note that to avoid unneeded data retrievals and to preserve backwards compatibility, this audit info has been spun out into ``FullGuildCommandConfiguration``.
+
+## Webserver
+
+- The ``get_all_command_configurations`` API now returns a ``FullGuildCommandConfiguration`` inline with the change to the bot. Similarly, the `patch_command_configuration` API now also returns a `FullGuildCommandConfiguration`. This is needed for the website to properly display audit information for command configurations.
+- The ``get_command_configuration`` API has been removed in favor of the ``get_all_command_configurations`` API. This endpoint was redundant anyways.
+
+# Thursday, July 11th 2024
 
 ## Audit Logs
 
 - Audit Logs now support template-based embeds. Note that this is still a work in progress and may not be fully functional yet.
 
-## Wednesday, July 10th 2024
+# Wednesday, July 10th 2024
 
 ## GWEvent
 
@@ -16,13 +31,13 @@
 - Major bug fixes to website. Specifically, a bug was fixed in which ``getCommandConfigurations`` continued to use a hack that was needed before for older API but is no longer needed and now instead causes crashes when executing a command outside of the first/second modules in the bot.
 
 
-## Monday, July 8th 2024
+# Monday, July 8th 2024
 
 ## Bot
 
 - Added support for custom templating. The templating engine used is ``tera``. The ``rust.templating`` helper crate has been added to allow unified and consistent handling of templating. In particular, the ``field`` function is a builtin function to custom templating allowing for setting embed fields
 
-## Sunday, July 7th 2024
+# Sunday, July 7th 2024
 
 ## Bot
 
@@ -35,7 +50,7 @@
 - The ``settings_get_suggestions`` API has been added to the webserver to allow the site to provide column suggestions
 - Begun working on the settings section of the site. Currently only column suggestions are supported.
 
-## Wednesday, July 3rd 2024
+# Wednesday, July 3rd 2024
 
 ## Settings
 
@@ -45,7 +60,7 @@
 - Fixed a bug in which delete checked nullability incorrectly. This is now hardcoded to `false` to better acommodate invalid data deletions
 - Fixed a bug where delete called `validate_and_parse_value` with the primary key column name instead of the actual column name being parsed. This led to inproper errors being returned
 
-## Monday, July 1st 2024
+# Monday, July 1st 2024
 
 ## Settings
 
@@ -59,7 +74,7 @@
 - ``auditlogs`` settings schemas have been improved slightly
 - Module parsing now also validates the ``CommandExtendedDataMap`` to ensure that all submodules are also present in the map. A test has been added for module parsing to allow testing this without running the bot.
 
-## Sunday, June 30th 2024
+# Sunday, June 30th 2024
 
 - Fully restructuring the bot. Here is the new structure:
 
@@ -73,7 +88,7 @@ In particular, the rust side has changed significantly. AnimusMagicClient has be
 
 *Note that build times have increased temporarily as our Makefiles are not very efficient. This should be resolved later*
 
-## Saturday, June 29th 2024
+# Saturday, June 29th 2024
 
 ## Webserver
 

@@ -2,7 +2,9 @@
 package silverpelt
 
 import (
+	"context"
 	"strings"
+	"time"
 
 	"github.com/anti-raid/splashtail/core/go.std/bigint"
 )
@@ -103,6 +105,54 @@ type GuildCommandConfiguration struct {
 	Command  string            `db:"command" json:"command" description:"The name of the command"`                                                                                                                                       // The command name
 	Perms    *PermissionChecks `db:"perms" json:"perms" description:"The permission checks on the command, if unset, will revert to either the modules default_perms and if that is unset, the default perms set on the command itself"` // The permission checks on the command, if unset, will revert to either the modules default_perms and if that is unset, the default perms set on the command itself
 	Disabled *bool             `db:"disabled" json:"disabled,omitempty" description:"Whether the command is disabled or not.  If null, use default for command"`                                                                         // Whether or not the command is disabled
+}
+
+func (gcc GuildCommandConfiguration) ToFullGuildCommandConfiguration(ctx context.Context, c DbConn) (*FullGuildCommandConfiguration, error) {
+	var createdAt time.Time
+	var createdBy string
+	var lastUpdatedAt time.Time
+	var lastUpdatedBy string
+
+	err := c.QueryRow(ctx, "SELECT created_at, created_by, last_updated_at, last_updated_by FROM guild_command_configurations WHERE id = $1", gcc.ID).Scan(&createdAt, &createdBy, &lastUpdatedAt, &lastUpdatedBy)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return &FullGuildCommandConfiguration{
+		ID:            gcc.ID,
+		GuildID:       gcc.GuildID,
+		Command:       gcc.Command,
+		Perms:         gcc.Perms,
+		Disabled:      gcc.Disabled,
+		CreatedAt:     createdAt,
+		CreatedBy:     createdBy,
+		LastUpdatedAt: lastUpdatedAt,
+		LastUpdatedBy: lastUpdatedBy,
+	}, nil
+}
+
+// FullGuildCommandConfiguration represents the full guild command configuration data including audit info etc.
+type FullGuildCommandConfiguration struct {
+	ID            string            `db:"id" json:"id" description:"ID of the command configuration entry"`                                                                                                                                   // The ID
+	GuildID       string            `db:"guild_id" json:"guild_id" description:"Guild ID the command configuration entry pertains to"`                                                                                                        // The guild id (from db)
+	Command       string            `db:"command" json:"command" description:"The name of the command"`                                                                                                                                       // The command name
+	Perms         *PermissionChecks `db:"perms" json:"perms" description:"The permission checks on the command, if unset, will revert to either the modules default_perms and if that is unset, the default perms set on the command itself"` // The permission checks on the command, if unset, will revert to either the modules default_perms and if that is unset, the default perms set on the command itself
+	Disabled      *bool             `db:"disabled" json:"disabled,omitempty" description:"Whether the command is disabled or not.  If null, use default for command"`                                                                         // Whether or not the command is disabled
+	CreatedAt     time.Time         `db:"created_at" json:"created_at" description:"The time the command configuration was created"`                                                                                                          // The time the command configuration was created
+	CreatedBy     string            `db:"created_by" json:"created_by" description:"The user who created the command configuration"`                                                                                                          // The user who created the command configuration
+	LastUpdatedAt time.Time         `db:"last_updated_at" json:"last_updated_at" description:"The time the command configuration was last updated"`                                                                                           // The time the command configuration was last updated
+	LastUpdatedBy string            `db:"last_updated_by" json:"last_updated_by" description:"The user who last updated the command configuration"`                                                                                           // The user who last updated the command configuration
+}
+
+func (f *FullGuildCommandConfiguration) ToGuildCommandConfiguration() *GuildCommandConfiguration {
+	return &GuildCommandConfiguration{
+		ID:       f.ID,
+		GuildID:  f.GuildID,
+		Command:  f.Command,
+		Perms:    f.Perms,
+		Disabled: f.Disabled,
+	}
 }
 
 // GuildModuleConfiguration represents guild module configuration data.

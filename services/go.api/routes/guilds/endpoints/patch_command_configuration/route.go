@@ -25,8 +25,8 @@ import (
 )
 
 var (
-	guildCommandConfigurationColsArr = db.GetCols(silverpelt.GuildCommandConfiguration{})
-	guildCommandConfigurationCols    = strings.Join(guildCommandConfigurationColsArr, ", ")
+	fullGuildCommandConfigurationColsArr = db.GetCols(silverpelt.FullGuildCommandConfiguration{})
+	fullGuildCommandConfigurationCols    = strings.Join(fullGuildCommandConfigurationColsArr, ", ")
 )
 
 const (
@@ -39,7 +39,7 @@ func Docs() *docs.Doc {
 		Summary:     "Patch Command Configuration",
 		Description: "Updates the configuration of a specific command for a specific guild.",
 		Req:         types.PatchGuildCommandConfiguration{},
-		Resp:        silverpelt.GuildCommandConfiguration{},
+		Resp:        silverpelt.FullGuildCommandConfiguration{},
 		Params: []docs.Parameter{
 			{
 				Name:        "guild_id",
@@ -368,10 +368,14 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 
 	defer tx.Rollback(d.Context)
 
-	var sqlString = "INSERT INTO guild_command_configurations (guild_id, command, " + strings.Join(updateCols, ", ") + ") VALUES ($1, $2, " + strings.Join(insertParams, ",") + ") ON CONFLICT (guild_id, command) DO UPDATE SET " + strings.Join(updateParams, ", ") + " RETURNING id"
+	// Update audit fields
+	updateCols = append(updateCols, "last_updated_at", "last_updated_by")
+	updateArgs = append(updateArgs, time.Now(), d.Auth.ID)
+
+	var sqlString = "INSERT INTO guild_command_configurations (guild_id, command, created_by, " + strings.Join(updateCols, ", ") + ") VALUES ($1, $2, " + strings.Join(insertParams, ",") + ") ON CONFLICT (guild_id, command) DO UPDATE SET " + strings.Join(updateParams, ", ") + " RETURNING id"
 
 	// Execute sql
-	updateArgs = append([]any{guildId, body.Command}, updateArgs...) // $1 and $2
+	updateArgs = append([]any{guildId, body.Command, d.Auth.ID}, updateArgs...) // $1 and $2
 	var id string
 	err = tx.QueryRow(
 		d.Context,
@@ -389,7 +393,7 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 	}
 
 	// Fetch the gcc
-	row, err := tx.Query(d.Context, "SELECT "+guildCommandConfigurationCols+" FROM guild_command_configurations WHERE id = $1", id)
+	row, err := tx.Query(d.Context, "SELECT "+fullGuildCommandConfigurationCols+" FROM guild_command_configurations WHERE id = $1", id)
 
 	if err != nil {
 		return uapi.HttpResponse{
@@ -400,7 +404,7 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 		}
 	}
 
-	gcc, err := pgx.CollectOneRow(row, pgx.RowToStructByName[silverpelt.GuildCommandConfiguration])
+	gcc, err := pgx.CollectOneRow(row, pgx.RowToStructByName[silverpelt.FullGuildCommandConfiguration])
 
 	if err != nil {
 		return uapi.HttpResponse{

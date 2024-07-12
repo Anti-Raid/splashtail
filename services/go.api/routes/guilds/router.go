@@ -6,7 +6,6 @@ import (
 	"github.com/anti-raid/splashtail/core/go.std/types"
 	"github.com/anti-raid/splashtail/services/go.api/api"
 	"github.com/anti-raid/splashtail/services/go.api/routes/guilds/endpoints/get_all_command_configurations"
-	"github.com/anti-raid/splashtail/services/go.api/routes/guilds/endpoints/get_command_configurations"
 	"github.com/anti-raid/splashtail/services/go.api/routes/guilds/endpoints/get_module_configurations"
 	"github.com/anti-raid/splashtail/services/go.api/routes/guilds/endpoints/patch_command_configuration"
 	"github.com/anti-raid/splashtail/services/go.api/routes/guilds/endpoints/patch_module_configuration"
@@ -132,29 +131,6 @@ func (b Router) Routes(r *chi.Mux) {
 		},
 		ExtData: map[string]any{
 			api.PERMISSION_CHECK_KEY: nil, // Authz is performed in the handler itself
-		},
-	}.Route(r)
-
-	uapi.Route{
-		Pattern: "/guilds/{guild_id}/commands/{command}/configurations",
-		OpId:    "get_command_configurations",
-		Method:  uapi.GET,
-		Docs:    get_command_configurations.Docs,
-		Handler: get_command_configurations.Route,
-		Auth: []uapi.AuthType{
-			{
-				Type: types.TargetTypeUser,
-			},
-		},
-		ExtData: map[string]any{
-			api.PERMISSION_CHECK_KEY: api.PermissionCheck{
-				Command: func(d uapi.Route, r *http.Request) string {
-					return "commands list"
-				},
-				GuildID: func(d uapi.Route, r *http.Request) string {
-					return chi.URLParam(r, "guild_id")
-				},
-			},
 		},
 	}.Route(r)
 }

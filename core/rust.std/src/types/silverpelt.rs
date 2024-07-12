@@ -201,6 +201,78 @@ pub struct GuildCommandConfiguration {
     pub disabled: Option<bool>,
 }
 
+impl GuildCommandConfiguration {
+    pub async fn to_full_guild_command_configuration(
+        self,
+        pool: &sqlx::PgPool,
+    ) -> Result<FullGuildCommandConfiguration, crate::Error> {
+        let id = self.id.parse::<sqlx::types::uuid::Uuid>()?;
+        let audit_info = sqlx::query!(
+            r#"
+            SELECT created_at, created_by, last_updated_at, last_updated_by
+            FROM guild_command_configurations
+            WHERE id = $1
+            "#,
+            id
+        )
+        .fetch_one(pool)
+        .await?;
+
+        Ok(FullGuildCommandConfiguration {
+            id: self.id,
+            guild_id: self.guild_id,
+            command: self.command,
+            perms: self.perms,
+            disabled: self.disabled,
+            created_at: audit_info.created_at,
+            created_by: audit_info.created_by,
+            last_updated_at: audit_info.last_updated_at,
+            last_updated_by: audit_info.last_updated_by,
+        })
+    }
+}
+
+/// Full guild command configuration data including audit info etc.
+#[derive(Clone, Hash, Eq, PartialEq, serde::Serialize, serde::Deserialize, Debug)]
+pub struct FullGuildCommandConfiguration {
+    /// The ID
+    pub id: String,
+    /// The guild id (from db)
+    pub guild_id: String,
+    /// The command name
+    pub command: String,
+    /// The permission checks on the command, if unset, will revert to either the modules default_perms and if that is unset, the default perms set on the command itself
+    pub perms: Option<PermissionChecks>,
+    /// Whether or not the command is disabled. None means to use the default command configuration
+    pub disabled: Option<bool>,
+    /// The time the command configuration was created
+    pub created_at: chrono::DateTime<chrono::Utc>,
+    /// The user who created the command configuration
+    pub created_by: String,
+    /// The time the command configuration was last updated
+    pub last_updated_at: chrono::DateTime<chrono::Utc>,
+    /// The user who last updated the command configuration
+    pub last_updated_by: String,
+}
+
+impl FullGuildCommandConfiguration {
+    fn to_guild_command_configuration(&self) -> GuildCommandConfiguration {
+        GuildCommandConfiguration {
+            id: self.id.clone(),
+            guild_id: self.guild_id.clone(),
+            command: self.command.clone(),
+            perms: self.perms.clone(),
+            disabled: self.disabled,
+        }
+    }
+}
+
+impl From<FullGuildCommandConfiguration> for GuildCommandConfiguration {
+    fn from(f: FullGuildCommandConfiguration) -> Self {
+        f.to_guild_command_configuration()
+    }
+}
+
 /// Guild module configuration data
 #[derive(Clone, Hash, Eq, PartialEq, serde::Serialize, serde::Deserialize, Debug)]
 pub struct GuildModuleConfiguration {
