@@ -83,8 +83,6 @@ struct InternalTemplateExecuteState {
     title: RwLock<Option<String>>,
     /// The fields that were set by the template
     fields: RwLock<indexmap::IndexMap<String, (String, bool)>>,
-    /// Disable external styling (such as 'View Online' buttons)
-    disable_external_styling: RwLock<bool>,
 }
 
 // Set title of embed
@@ -159,37 +157,6 @@ impl tera::Function for FieldFunction {
     }
 }
 
-struct DisableExternalStylingFunction {
-    state: Arc<InternalTemplateExecuteState>,
-}
-
-impl tera::Function for DisableExternalStylingFunction {
-    fn call(
-        &self,
-        args: &std::collections::HashMap<String, tera::Value>,
-    ) -> tera::Result<tera::Value> {
-        // State defaults to true if unset
-        let state = args
-            .get("inline")
-            .map_or(true, |v| v.as_bool().unwrap_or(true));
-
-        // Lock title for writing
-        let mut des_writer = self
-            .state
-            .disable_external_styling
-            .write()
-            .map_err(|_| "Failed to write to disable_external_styling")?;
-
-        // Insert the title, use a match to avoid quoting the string given
-        *des_writer = state;
-
-        // Drop the lock
-        drop(des_writer);
-
-        Ok(tera::Value::Null)
-    }
-}
-
 #[allow(dead_code)]
 struct StubFunction {}
 
@@ -235,7 +202,6 @@ pub struct ExecutedTemplate {
     pub title: Option<String>,
     pub description: String,
     pub fields: indexmap::IndexMap<String, (String, bool)>,
-    pub disable_external_styling: bool,
 }
 
 /// Executes a template with the given context
@@ -261,14 +227,6 @@ pub async fn execute_template(
         },
     );
 
-    // Add field function
-    tera.register_function(
-        "disable_external_styling",
-        DisableExternalStylingFunction {
-            state: ites.clone(),
-        },
-    );
-
     // Add bettertitle filter
     tera.register_filter("bettertitle", BetterTitleFilter {});
 
@@ -289,16 +247,10 @@ pub async fn execute_template(
     // Read the outputted template specials
     let title_reader = ites.title.read().map_err(|_| "Failed to read title")?;
     let fields_reader = ites.fields.read().map_err(|_| "Failed to read fields")?;
-    let des_reader = ites
-        .disable_external_styling
-        .read()
-        .map_err(|_| "Failed to read disable_external_styling")?;
-
     Ok(ExecutedTemplate {
         title: (*title_reader).clone(),
         description: rendered,
         fields: (*fields_reader).clone(),
-        disable_external_styling: *des_reader,
     })
 }
 

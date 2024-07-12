@@ -6,6 +6,7 @@ To do so, Anti-Raid uses [tera](https://keats.github.io/tera/docs/). See its doc
 
 - Dangerous functions such as ``get_env`` do not exist.
 - ``__tera_context_raw`` provides the Tera context as an object. This complements ``__tera_context`` which provides the context as a string for debugging.
+- All templates have a (reasonable) time limit for execution to protect against abuse and DDOS attacks.
 
 ## Common Functions And Filters
 
@@ -17,7 +18,6 @@ To do so, Anti-Raid uses [tera](https://keats.github.io/tera/docs/). See its doc
 
 - The ``title(title=TITLE)`` function can be used to set the title of an embed.
 - The ``field(name=NAME, value=VALUE, inline=INLINE [default: false])`` function can be used to add fields to embeds.
-- The ``disable_external_styling(state=STATE)`` function can be used to disable external styling in embeds.
 
 ## Situational Functions and Filters
 

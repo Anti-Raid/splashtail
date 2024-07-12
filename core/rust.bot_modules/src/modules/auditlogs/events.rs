@@ -135,7 +135,7 @@ pub async fn dispatch_audit_log(
 ) -> Result<(), Error> {
     let user_data = ctx.data::<Data>();
 
-    let sinks = sqlx::query!("SELECT id, type AS typ, sink, events, embed_template FROM auditlogs__sinks WHERE guild_id = $1 AND broken = false", guild_id.to_string())
+    let sinks = sqlx::query!("SELECT id, type AS typ, sink, events, embed_template, send_json_context FROM auditlogs__sinks WHERE guild_id = $1 AND broken = false", guild_id.to_string())
         .fetch_all(&user_data.pool)
         .await?;
 
@@ -143,7 +143,13 @@ pub async fn dispatch_audit_log(
         return Ok(());
     }
 
-    let mut event_view_data: Option<String> = None;
+    let event_json = serde_json::to_string(&serde_json::json! {
+        {
+            "event": expanded_event,
+            "event_name": event_name,
+            "event_titlename": event_titlename,
+        }
+    })?;
 
     for sink in sinks {
         // Verify event in whitelisted event list, if events is set
@@ -192,32 +198,10 @@ pub async fn dispatch_audit_log(
 
         let templated = templating::execute_template(&mut tera, Arc::new(tera_ctx)).await;
 
-        let (disable_external_styling, embed) = match templated {
-            Ok(templated) => (
-                templated.disable_external_styling,
-                templating::to_embed(templated),
-            ),
-            Err(e) => (
-                false,
-                serenity::all::CreateEmbed::default()
-                    .description(format!("Failed to render template: {}", e)),
-            ),
-        };
-
-        let view_data = if let Some(event_view_data) = &event_view_data {
-            event_view_data.clone()
-        } else {
-            let view_data = serde_json::to_string_pretty(&serde_json::json! {
-                {
-                    "event": expanded_event,
-                    "event_name": event_name,
-                    "event_titlename": event_titlename,
-                }
-            })?;
-
-            event_view_data = Some(view_data.clone());
-
-            view_data
+        let embed = match templated {
+            Ok(templated) => templating::to_embed(templated),
+            Err(e) => serenity::all::CreateEmbed::default()
+                .description(format!("Failed to render template: {}", e)),
         };
 
         match sink.typ.as_str() {
@@ -226,9 +210,9 @@ pub async fn dispatch_audit_log(
 
                 let mut message = CreateMessage::default().embed(embed);
 
-                if !disable_external_styling {
+                if sink.send_json_context {
                     message = message.add_file(serenity::all::CreateAttachment::bytes(
-                        view_data.into_bytes(),
+                        event_json.clone().into_bytes(),
                         "event_data.json",
                     ))
                 }
@@ -274,9 +258,9 @@ pub async fn dispatch_audit_log(
                 };
 
                 let mut files = Vec::new();
-                if !disable_external_styling {
+                if sink.send_json_context {
                     files.push(serenity::all::CreateAttachment::bytes(
-                        view_data.into_bytes(),
+                        event_json.clone().into_bytes(),
                         "event_data.json",
                     ));
                 }

@@ -30,6 +30,7 @@ pub async fn add_sink(
     #[description = "Sink type to set"] r#type: String,
     #[description = "Sink to set"] sink: String,
     #[description = "Specific events you want to filter by"] events: Option<String>,
+    #[description = "Template for embeds (optional)"] embed_template: Option<String>,
     #[description = "Mark as broken (temporarily disables the webhook)"] broken: bool,
 ) -> Result<(), Error> {
     crate::silverpelt::settings_poise::settings_creator(
@@ -57,6 +58,13 @@ pub async fn add_sink(
                         Value::List(value_events)
                     }
                     None => Value::None
+                }
+            },
+            "embed_template".to_string() => {
+                if let Some(embed_template) = embed_template {
+                    Value::String(embed_template)
+                } else {
+                    Value::None
                 }
             },
             "broken".to_string() => Value::Boolean(broken),
@@ -156,6 +164,7 @@ pub async fn edit_sink(
     #[description = "Sink type to set"] r#type: String,
     #[description = "Sink to set"] sink: String,
     #[description = "Specific events you want to filter by"] events: Option<String>,
+    #[description = "Template for embeds (optional)"] embed_template: Option<String>,
     #[description = "Mark as broken (temporarily disables the webhook)"] broken: bool,
 ) -> Result<(), Error> {
     crate::silverpelt::settings_poise::settings_updater(
@@ -184,6 +193,13 @@ pub async fn edit_sink(
                         Value::List(value_events)
                     }
                     None => Value::None
+                }
+            },
+            "embed_template".to_string() => {
+                if let Some(embed_template) = embed_template {
+                    Value::String(embed_template)
+                } else {
+                    Value::None
                 }
             },
             "broken".to_string() => Value::Boolean(broken),

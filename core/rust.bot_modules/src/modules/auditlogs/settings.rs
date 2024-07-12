@@ -178,6 +178,19 @@ pub static SINK: Lazy<ConfigOption> = Lazy::new(|| {
                 pre_checks: settings_wrap_precheck(indexmap::indexmap! {}),
                 default_pre_checks: settings_wrap_precheck(vec![])
             },
+            Column {
+                id: "send_json_context",
+                name: "Send JSON Context",
+                description: "Whether to send the JSON context of the event to the sink. This can be useful for seeing exactly what happened to your server.",
+                column_type: ColumnType::new_scalar(InnerColumnType::Boolean {}),
+                ignored_for: vec![],
+                secret: None,
+                nullable: false,
+                unique: false,
+                suggestions: ColumnSuggestion::None {},
+                pre_checks: settings_wrap_precheck(indexmap::indexmap! {}),
+                default_pre_checks: settings_wrap_precheck(vec![])
+            },
             module_settings::common_columns::created_at(),
             module_settings::common_columns::created_by(),
             module_settings::common_columns::last_updated_at(),

@@ -3888,8 +3888,9 @@ dependencies = [
 [[package]]
 name = "tera"
 version = "1.20.0"
-source = "git+https://github.com/anti-raid/tera?branch=master#10823e280ee03455b0388e059424173778a0a4c3"
+source = "git+https://github.com/anti-raid/tera?branch=master#7ec148c64ad86e4420fe411cf0b7db04d7af4f86"
 dependencies = [
+ "async-recursion",
  "chrono",
  "chrono-tz",
  "globwalk",

@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT id, type AS typ, sink, events, embed_template FROM auditlogs__sinks WHERE guild_id = $1 AND broken = false",
+  "query": "SELECT id, type AS typ, sink, events, embed_template, send_json_context FROM auditlogs__sinks WHERE guild_id = $1 AND broken = false",
   "describe": {
     "columns": [
       {
@@ -27,6 +27,11 @@
         "ordinal": 4,
         "name": "embed_template",
         "type_info": "Text"
+      },
+      {
+        "ordinal": 5,
+        "name": "send_json_context",
+        "type_info": "Bool"
       }
     ],
     "parameters": {
@@ -39,8 +44,9 @@
       false,
       false,
       true,
-      true
+      true,
+      false
     ]
   },
-  "hash": "359ab55ba72b74460d96322e79fd3ccd1e70fec438d8737591c8b0a1946b4f54"
+  "hash": "1a2dc88f70d789c9602842e3394d63d9732c9c53e3d75ddbf8e4e27e106ccb76"
 }
