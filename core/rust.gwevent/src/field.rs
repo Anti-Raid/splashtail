@@ -90,47 +90,6 @@ pub enum Field {
 impl Field {
     /// Format the field into a string for use in templates
     pub fn template_format(&self) -> Result<String, Error> {
-        // Given a serde_json::Value, loop over all keys and resolve them (recursively if needed)
-        fn serde_resolver(v: &serde_json::Value) -> Result<String, Error> {
-            match v {
-                serde_json::Value::Null => Ok("None".to_string()),
-                serde_json::Value::Bool(b) => Ok(if *b { "Yes" } else { "No" }.to_string()),
-                serde_json::Value::Number(n) => Ok(n.to_string()),
-                serde_json::Value::String(s) => Ok(s.to_string()),
-                serde_json::Value::Object(o) => {
-                    let mut resolved = Vec::new();
-
-                    for (k, v) in o.iter() {
-                        resolved.push(format!(
-                            "{} => {}",
-                            k.split('_')
-                                .map(|s| {
-                                    let mut c = s.chars();
-                                    match c.next() {
-                                        None => String::new(),
-                                        Some(f) => f.to_uppercase().chain(c).collect(),
-                                    }
-                                })
-                                .collect::<Vec<String>>()
-                                .join(" "),
-                            serde_resolver(v)?
-                        ));
-                    }
-
-                    Ok(resolved.join("\n"))
-                }
-                serde_json::Value::Array(v) => {
-                    let mut resolved = Vec::new();
-
-                    for i in v.iter() {
-                        resolved.push(serde_resolver(i)?);
-                    }
-
-                    Ok(resolved.join(" | "))
-                }
-            }
-        }
-
         match self {
             Field::Strings(s) => {
                 let joined = s.join(", ");
@@ -181,10 +140,34 @@ impl Field {
                 let mut users = Vec::new();
 
                 for iu in u.iter() {
-                    users.push(format!("{} [{}]", iu.mention(), iu.name));
+                    users.push(format!(
+                        "{} [{}], avatar={}",
+                        iu.mention(),
+                        iu.name,
+                        iu.face()
+                    ));
                 }
 
                 Ok(users.join(", "))
+            }
+            Field::Member(m) => {
+                let roles = m
+                    .roles
+                    .iter()
+                    .map(|r| r.mention().to_string())
+                    .collect::<Vec<String>>();
+                Ok(format!(
+                    "{} [{}], roles={} pending={}, timeout={}, nick={}, avatar={}",
+                    m.user.mention(),
+                    m.user.name,
+                    roles.join(", "),
+                    m.pending(),
+                    m.communication_disabled_until
+                        .map(|t| t.to_string())
+                        .unwrap_or_else(|| "None".to_string()),
+                    m.nick.as_deref().unwrap_or("None"),
+                    m.face(),
+                ))
             }
             Field::ChannelIds(c) => {
                 let mut channels = Vec::new();
@@ -279,10 +262,79 @@ impl Field {
                 Ok(stickers.join(", "))
             }
             Field::None => Ok("None".to_string()),
-            _ => {
-                let s = serde_resolver(&serde_json::to_value(self)?)?;
-                Ok(s)
+            Field::ChannelMentions(c) => {
+                let mut channels = Vec::new();
+
+                for ic in c.iter() {
+                    channels.push(format!("{} [{}, {:?}]", ic.id.mention(), ic.name, ic.kind));
+                }
+
+                Ok(channels.join(", "))
             }
+            Field::StageInstances(s) => {
+                let mut stage_instances = Vec::new();
+
+                for isi in s.iter() {
+                    stage_instances.push(format!(
+                        "Stage instance {}, privacy={:?}, topic={}",
+                        isi.channel_id.mention(),
+                        isi.privacy_level,
+                        isi.topic
+                    ));
+                }
+
+                Ok(stage_instances.join(", "))
+            }
+            Field::Messages(m) => {
+                let mut messages = Vec::new();
+
+                for im in m.iter() {
+                    messages.push(format!(
+                        "{}, channel={}, author={} ({}), content={}",
+                        im.link(),
+                        im.channel_id.mention(),
+                        im.author.mention(),
+                        im.author.name,
+                        {
+                            if im.content.len() > 50 {
+                                format!("{}...", &im.content[..50])
+                            } else {
+                                im.content.to_string()
+                            }
+                        }
+                    ));
+                }
+
+                Ok(messages.join(", "))
+            }
+            Field::Emojis(e) => {
+                let mut emojis = Vec::new();
+
+                for ie in e.iter() {
+                    emojis.push(ie.to_string());
+                }
+
+                Ok(emojis.join(", "))
+            }
+            Field::AutomodActions(a) => {
+                let mut actions = Vec::new();
+
+                for ia in a.iter() {
+                    actions.push(format!("{:?}", ia));
+                }
+
+                Ok(actions.join(", "))
+            }
+            Field::ActionRows(a) => {
+                let mut action_rows = Vec::new();
+
+                for ia in a.iter() {
+                    action_rows.push(format!("{:?}", ia));
+                }
+
+                Ok(action_rows.join(", "))
+            }
+            _ => serde_json::to_string(self).map_err(Into::into),
         }
     }
 }
