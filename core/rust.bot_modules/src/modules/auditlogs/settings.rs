@@ -35,7 +35,7 @@ pub static SINK: Lazy<ConfigOption> = Lazy::new(|| {
                 column_type: ColumnType::new_scalar(InnerColumnType::String { min_length: None, max_length: None, allowed_values: vec!["channel", "discordhook"], kind: InnerColumnTypeStringKind::Normal }),
                 nullable: false,
                 unique: false,
-                suggestions: ColumnSuggestion::Static { suggestions: vec!["channel", "discordhook"] },
+                suggestions: ColumnSuggestion::None {},
                 ignored_for: vec![],
                 secret: None,
                 pre_checks: settings_wrap_precheck(indexmap::indexmap! {}),
