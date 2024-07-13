@@ -7,7 +7,6 @@
 //
 // Note that these special variables do not need to live in state and may instead be special cased
 //
-// For display purposes, the special case variable {[__column_id]_displaytype} can be set to allow displaying in a different form
 // For sending a info message etc on save, the {__message} can be set
 
 use futures::future::BoxFuture;
@@ -113,6 +112,17 @@ impl std::fmt::Display for SettingsError {
 
 #[derive(Debug, Clone, PartialEq)]
 #[allow(dead_code)]
+pub struct ColumnTypeDynamicClause {
+    /// The field to check in state (lite templating [only variable substitution] is allowed)
+    pub field: &'static str,
+    /// The value to check for
+    pub value: splashcore_rs::value::Value,
+    /// The column type to set if the value matches
+    pub column_type: ColumnType,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+#[allow(dead_code)]
 pub enum ColumnType {
     /// A single valued column (scalar)
     Scalar {
@@ -123,6 +133,13 @@ pub enum ColumnType {
     Array {
         /// The inner type of the array
         inner: InnerColumnType,
+    },
+    /// Dynamic type that changes based on the value of another field
+    ///
+    /// Dynamic types are the one case where the field order matters.
+    Dynamic {
+        /// The clauses to check for setting the actual kind
+        clauses: Vec<ColumnTypeDynamicClause>,
     },
 }
 
@@ -146,6 +163,10 @@ impl ColumnType {
     pub fn new_array(inner: InnerColumnType) -> Self {
         ColumnType::Array { inner }
     }
+
+    pub fn new_dynamic(clauses: Vec<ColumnTypeDynamicClause>) -> Self {
+        ColumnType::Dynamic { clauses }
+    }
 }
 
 impl std::fmt::Display for ColumnType {
@@ -153,6 +174,20 @@ impl std::fmt::Display for ColumnType {
         match self {
             ColumnType::Scalar { column_type } => write!(f, "{}", column_type),
             ColumnType::Array { inner } => write!(f, "Array<{}>", inner),
+            ColumnType::Dynamic { clauses } => {
+                write!(f, "Dynamic (possible clauses: ")?;
+                for (i, clause) in clauses.iter().enumerate() {
+                    if i != 0 {
+                        write!(f, ", ")?;
+                    }
+                    write!(
+                        f,
+                        "{}: {} -> {}",
+                        clause.field, clause.value, clause.column_type
+                    )?;
+                }
+                write!(f, ")")
+            }
         }
     }
 }
@@ -498,6 +533,9 @@ pub struct ConfigOption {
 
     /// The primary key of the table
     pub primary_key: &'static str,
+
+    /// Title template, used for the title of the embed
+    pub title_template: &'static str,
 
     /// The columns for this option
     pub columns: Arc<Vec<Column>>,

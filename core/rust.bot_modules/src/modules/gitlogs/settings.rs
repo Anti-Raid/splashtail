@@ -116,6 +116,7 @@ When creating repositories, use `{id}` as the ID.
             module_settings::common_columns::last_updated_at(),
             module_settings::common_columns::last_updated_by(),
         ]),
+        title_template: "{comment} - {id}",
         operations: indexmap::indexmap! {
             OperationType::View => OperationSpecific {
                 corresponding_command: "gitlogs webhooks_list",
@@ -326,6 +327,7 @@ pub static REPOS: Lazy<ConfigOption> = Lazy::new(|| {
             module_settings::common_columns::last_updated_at(),
             module_settings::common_columns::last_updated_by(),
         ]),
+        title_template: "{repo_name} - {id}",
         operations: indexmap::indexmap! {
             OperationType::View => OperationSpecific {
                 corresponding_command: "gitlogs repo_list",
@@ -590,6 +592,7 @@ pub static EVENT_MODIFIERS: Lazy<ConfigOption> = Lazy::new(|| {
             module_settings::common_columns::last_updated_at(),
             module_settings::common_columns::last_updated_by(),
         ]),
+        title_template: "{id}",
         operations: indexmap::indexmap! {
             OperationType::View => OperationSpecific {
                 corresponding_command: "gitlogs eventmods_list",

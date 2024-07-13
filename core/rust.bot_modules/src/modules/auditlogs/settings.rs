@@ -1,6 +1,6 @@
 use futures_util::FutureExt;
 use module_settings::types::{
-    settings_wrap_columns, settings_wrap_precheck, Column, ColumnAction, ColumnSuggestion, ColumnType, ConfigOption, InnerColumnType, InnerColumnTypeStringKind, OperationSpecific, OperationType, SettingsError
+    settings_wrap_columns, settings_wrap_precheck, Column, ColumnAction, ColumnSuggestion, ColumnType, ConfigOption, InnerColumnType, InnerColumnTypeStringKind, ColumnTypeDynamicClause, OperationSpecific, OperationType, SettingsError
 };
 use once_cell::sync::Lazy;
 use splashcore_rs::value::Value;
@@ -45,7 +45,20 @@ pub static SINK: Lazy<ConfigOption> = Lazy::new(|| {
                 id: "sink",
                 name: "Sink",
                 description: "The sink where the logs are sent to. This can be a channel ID (if `channel`) or a discord webhook URL (if `discordhook`).",
-                column_type: ColumnType::new_scalar(InnerColumnType::String { min_length: None, max_length: None, allowed_values: vec![], kind: InnerColumnTypeStringKind::Normal }),
+                column_type: ColumnType::new_dynamic(
+                    vec![
+                        ColumnTypeDynamicClause {
+                            field: "{type}",
+                            value: Value::String("discordhook".to_string()),
+                            column_type: ColumnType::new_scalar(InnerColumnType::String { min_length: None, max_length: None, allowed_values: vec![], kind: InnerColumnTypeStringKind::Normal })
+                        },
+                        ColumnTypeDynamicClause {
+                            field: "{type}",
+                            value: Value::String("channel".to_string()),
+                            column_type: ColumnType::new_scalar(InnerColumnType::String { min_length: None, max_length: None, allowed_values: vec![], kind: InnerColumnTypeStringKind::Channel })
+                        }
+                    ]
+                ),
                 nullable: false,
                 unique: false,
                 suggestions: ColumnSuggestion::None {},
@@ -53,18 +66,6 @@ pub static SINK: Lazy<ConfigOption> = Lazy::new(|| {
                 secret: None,
                 pre_checks: settings_wrap_precheck(indexmap::indexmap! {}),
                 default_pre_checks: settings_wrap_precheck(vec![
-                    // Set sink display type
-                    ColumnAction::NativeAction {
-                        action: Box::new(|_ctx, state| async move {
-                            if let Some(Value::String(v)) = state.state.get("type") {
-                                if v == "channel" {
-                                    state.state.insert("__sink_displaytype".to_string(), Value::String("channel".to_string()));
-                                }
-                            }
-                            Ok(())
-                        }.boxed()),
-                        on_condition: None
-                    },
                     ColumnAction::NativeAction {
                         action: Box::new(|_ctx, state| async move {
                             let Some(Value::String(sink)) = state.state.get("sink") else {
@@ -209,6 +210,7 @@ pub static SINK: Lazy<ConfigOption> = Lazy::new(|| {
                 default_pre_checks: settings_wrap_precheck(vec![])
             },
         ]),
+        title_template: "{type} {sink} [{id}]",
         operations: indexmap::indexmap! {
             OperationType::View => OperationSpecific {
                 corresponding_command: "auditlogs list_sinks",

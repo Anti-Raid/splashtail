@@ -1,3 +1,10 @@
+# Saturday, July 13th 2024
+
+## Settings
+
+- Website now supports basic listing of inputs with some reliability although this is still a work in progress
+- ``__[column_id]_displaytype`` has been replaced with a proper `Dynamic` column type. This improves website UX and makes it easier to handle different display types for different columns. **This is a breaking change however as dynamic field types must be sent after the `clause` it relies on**
+
 # Friday, July 12th 2024
 
 ## Templating

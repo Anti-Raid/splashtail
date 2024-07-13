@@ -68,6 +68,12 @@ const (
 	CanonicalInnerColumnTypeStringKindMessage  CanonicalInnerColumnTypeStringKind = "Message"
 )
 
+type CanonicalColumnTypeDynamicClause struct {
+	Field      string              `json:"field"`
+	Value      any                 `json:"value"`
+	ColumnType CanonicalColumnType `json:"column_type"`
+}
+
 type CanonicalColumnType struct {
 	Scalar *struct {
 		ColumnType CanonicalInnerColumnType `json:"column_type"`
@@ -75,6 +81,9 @@ type CanonicalColumnType struct {
 	Array *struct {
 		Inner CanonicalInnerColumnType `json:"inner"`
 	} `json:"Array,omitempty"`
+	Dynamic *struct {
+		Clauses []CanonicalColumnTypeDynamicClause `json:"clauses"`
+	}
 }
 
 type CanonicalInnerColumnType struct {
@@ -158,12 +167,13 @@ func (c CanonicalOperationType) Parse() bool {
 }
 
 type CanonicalConfigOption struct {
-	ID          string                                                                    `json:"id"`
-	Name        string                                                                    `json:"name"`
-	Description string                                                                    `json:"description"`
-	Table       string                                                                    `json:"table"`
-	GuildID     string                                                                    `json:"guild_id"`
-	PrimaryKey  string                                                                    `json:"primary_key"`
-	Columns     []CanonicalColumn                                                         `json:"columns"`
-	Operations  orderedmap.OrderedMap[CanonicalOperationType, CanonicalOperationSpecific] `json:"operations"`
+	ID            string                                                                    `json:"id"`
+	Name          string                                                                    `json:"name"`
+	Description   string                                                                    `json:"description"`
+	Table         string                                                                    `json:"table"`
+	GuildID       string                                                                    `json:"guild_id"`
+	PrimaryKey    string                                                                    `json:"primary_key"`
+	TitleTemplate string                                                                    `json:"title_template"`
+	Columns       []CanonicalColumn                                                         `json:"columns"`
+	Operations    orderedmap.OrderedMap[CanonicalOperationType, CanonicalOperationSpecific] `json:"operations"`
 }

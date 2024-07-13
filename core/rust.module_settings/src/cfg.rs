@@ -11,6 +11,7 @@ use sqlx::Row;
 #[async_recursion::async_recursion]
 async fn _validate_and_parse_value(
     v: Value,
+    state: &State,
     column_type: &ColumnType,
     column_id: &str,
     is_nullable: bool,
@@ -372,6 +373,7 @@ async fn _validate_and_parse_value(
                     for v in l {
                         let new_v = _validate_and_parse_value(
                             v,
+                            state,
                             &column_type,
                             column_id,
                             is_nullable,
@@ -391,6 +393,31 @@ async fn _validate_and_parse_value(
                 }),
             }
         }
+        ColumnType::Dynamic { clauses } => {
+            for clause in clauses {
+                let value = state.template_to_string(clause.field);
+
+                if value == clause.value {
+                    // We got the kind
+                    return _validate_and_parse_value(
+                        v,
+                        state,
+                        &clause.column_type,
+                        column_id,
+                        is_nullable,
+                        perform_schema_checks,
+                    )
+                    .await;
+                }
+            }
+
+            Err(SettingsError::SchemaCheckValidationError {
+                column: column_id.to_string(),
+                check: "dynamic_clause".to_string(),
+                accepted_range: "Valid dynamic clause".to_string(),
+                error: "No valid dynamic clause matched".to_string(),
+            })
+        }
     }
 }
 
@@ -403,6 +430,7 @@ fn _query_bind_value<'a>(
     query: sqlx::query::Query<'a, sqlx::Postgres, sqlx::postgres::PgArguments>,
     value: Value,
     default_column_type: &ColumnType,
+    state: &State,
 ) -> sqlx::query::Query<'a, sqlx::Postgres, sqlx::postgres::PgArguments> {
     match value {
         Value::Uuid(value) => query.bind(value),
@@ -559,6 +587,17 @@ fn _query_bind_value<'a>(
                 InnerColumnType::Boolean {} => query.bind(None::<Vec<bool>>),
                 InnerColumnType::Json {} => query.bind(None::<Vec<serde_json::Value>>),
             },
+            ColumnType::Dynamic { clauses } => {
+                for clause in clauses {
+                    let _value = state.template_to_string(clause.field);
+
+                    if _value == clause.value {
+                        return _query_bind_value(query, value, &clause.column_type, state);
+                    }
+                }
+
+                query.bind(None::<String>) // Default to string
+            }
         },
     }
 }
@@ -609,7 +648,7 @@ pub async fn settings_view(
     let mut values: Vec<State> = Vec::new();
 
     for row in row {
-        let mut state = State::new();
+        let mut state = State::new_with_special_variables(author, guild_id);
 
         // We know that the columns are in the same order as the row
         for (i, col) in setting.columns.iter().enumerate() {
@@ -621,8 +660,15 @@ pub async fn settings_view(
             })?;
 
             // Validate the value. returning the parsed value
-            val = _validate_and_parse_value(val, &col.column_type, col.id, col.nullable, false)
-                .await?;
+            val = _validate_and_parse_value(
+                val,
+                &state,
+                &col.column_type,
+                col.id,
+                col.nullable,
+                false,
+            )
+            .await?;
 
             let actions = col
                 .pre_checks
@@ -680,7 +726,7 @@ pub async fn settings_view(
 
                 set_stmt.push_str(&format!("{} = ${}, ", col, i + 1));
 
-                let value = state.template_to_string(author, guild_id, value);
+                let value = state.template_to_string(value);
                 values.push((value.clone(), &column.column_type));
 
                 // Add directly to state
@@ -705,11 +751,11 @@ pub async fn settings_view(
             let mut query = sqlx::query(sql_stmt.as_str());
 
             for (value, column_type) in values {
-                query = _query_bind_value(query, value, column_type);
+                query = _query_bind_value(query, value, column_type, &state);
             }
 
             query = query.bind(guild_id.to_string());
-            query = _query_bind_value(query, pkey, &pkey_column.column_type);
+            query = _query_bind_value(query, pkey, &pkey_column.column_type, &state);
 
             query
                 .execute(pool)
@@ -762,7 +808,7 @@ pub async fn settings_create(
     let mut fields = fields; // Make fields mutable, consuming the input
 
     // Ensure all columns exist in fields, note that we can ignore extra fields so this one single loop is enough
-    let mut state: State = State::new();
+    let mut state: State = State::new_with_special_variables(author, guild_id);
     for column in setting.columns.iter() {
         // If the column is ignored for create, skip
         // If the column is a secret column, then ensure we set it to something random as this is a create operation
@@ -784,6 +830,7 @@ pub async fn settings_create(
                         } else {
                             _validate_and_parse_value(
                                 val,
+                                &state,
                                 &column.column_type,
                                 column.id,
                                 column.nullable,
@@ -947,7 +994,7 @@ pub async fn settings_create(
 
                     let mut query = sqlx::query(sql_stmt.as_str()).bind(guild_id.to_string());
 
-                    query = _query_bind_value(query, value.clone(), &column.column_type);
+                    query = _query_bind_value(query, value.clone(), &column.column_type, &state);
 
                     let row =
                         query
@@ -998,7 +1045,7 @@ pub async fn settings_create(
     // Now insert all the columns_to_set into state
     // As we have removed the ignored columns, we can just directly insert the columns_to_set into the state
     for (column, value) in operation_specific.columns_to_set.iter() {
-        let value = state.template_to_string(author, guild_id, value);
+        let value = state.template_to_string(value);
         state.state.insert(column.to_string(), value);
     }
 
@@ -1039,7 +1086,7 @@ pub async fn settings_create(
             });
         };
 
-        query = _query_bind_value(query, value.clone(), &column.column_type);
+        query = _query_bind_value(query, value.clone(), &column.column_type, &state);
     }
 
     // Execute the query
@@ -1091,7 +1138,7 @@ pub async fn settings_update(
     let mut fields = fields; // Make fields mutable, consuming the input
 
     // Ensure all columns exist in fields, note that we can ignore extra fields so this one single loop is enough
-    let mut state: State = State::new();
+    let mut state: State = State::new_with_special_variables(author, guild_id);
     let mut unchanged_fields = Vec::new();
     let mut pkey = None;
     for column in setting.columns.iter() {
@@ -1108,6 +1155,7 @@ pub async fn settings_update(
                         } else {
                             _validate_and_parse_value(
                                 val,
+                                &state,
                                 &column.column_type,
                                 column.id,
                                 column.nullable,
@@ -1146,6 +1194,7 @@ pub async fn settings_update(
 
     let pkey = _validate_and_parse_value(
         pkey,
+        &state,
         &pkey_column.column_type,
         setting.primary_key,
         false,
@@ -1172,7 +1221,7 @@ pub async fn settings_update(
 
         let mut query = sqlx::query(sql_stmt.as_str()).bind(guild_id.to_string());
 
-        query = _query_bind_value(query, pkey.clone(), &pkey_column.column_type);
+        query = _query_bind_value(query, pkey.clone(), &pkey_column.column_type, &state);
 
         let row = query
             .fetch_one(&mut *tx)
@@ -1250,7 +1299,8 @@ pub async fn settings_update(
 
                     let mut query = sqlx::query(sql_stmt.as_str()).bind(guild_id.to_string());
 
-                    query = _query_bind_value(query, pkey.clone(), &pkey_column.column_type);
+                    query =
+                        _query_bind_value(query, pkey.clone(), &pkey_column.column_type, &state);
 
                     let row = query
                         .fetch_one(&mut *tx)
@@ -1283,8 +1333,9 @@ pub async fn settings_update(
 
                     let mut query = sqlx::query(sql_stmt.as_str()).bind(guild_id.to_string());
 
-                    query = _query_bind_value(query, value.clone(), &column.column_type);
-                    query = _query_bind_value(query, pkey.clone(), &pkey_column.column_type);
+                    query = _query_bind_value(query, value.clone(), &column.column_type, &state);
+                    query =
+                        _query_bind_value(query, pkey.clone(), &pkey_column.column_type, &state);
 
                     let row =
                         query
@@ -1362,7 +1413,7 @@ pub async fn settings_update(
 
                     let mut query = sqlx::query(sql_stmt.as_str()).bind(guild_id.to_string());
 
-                    query = _query_bind_value(query, value.clone(), &column.column_type);
+                    query = _query_bind_value(query, value.clone(), &column.column_type, &state);
 
                     let row =
                         query
@@ -1417,7 +1468,7 @@ pub async fn settings_update(
     // Now insert all the columns_to_set into state
     // As we have removed the ignored columns, we can just directly insert the columns_to_set into the state
     for (column, value) in operation_specific.columns_to_set.iter() {
-        let value = state.template_to_string(author, guild_id, value);
+        let value = state.template_to_string(value);
         state.state.insert(column.to_string(), value);
     }
 
@@ -1440,7 +1491,7 @@ pub async fn settings_update(
 
     // Bind the sql query arguments
     query = query.bind(guild_id.to_string());
-    query = _query_bind_value(query, pkey.clone(), &pkey_column.column_type);
+    query = _query_bind_value(query, pkey.clone(), &pkey_column.column_type, &state);
 
     for (col, value) in state.get_public().iter() {
         // Get column type from schema for db query hinting
@@ -1452,7 +1503,7 @@ pub async fn settings_update(
             });
         };
 
-        query = _query_bind_value(query, value.clone(), &column.column_type);
+        query = _query_bind_value(query, value.clone(), &column.column_type, &state);
     }
 
     // Execute the query
@@ -1491,7 +1542,7 @@ pub async fn settings_delete(
         });
     };
 
-    let mut state = State::new();
+    let mut state = State::new_with_special_variables(author, guild_id);
 
     let Some(pkey_column) = setting.columns.iter().find(|c| c.id == setting.primary_key) else {
         return Err(SettingsError::Generic {
@@ -1503,6 +1554,7 @@ pub async fn settings_delete(
 
     let pkey = _validate_and_parse_value(
         pkey,
+        &state,
         &pkey_column.column_type,
         setting.primary_key,
         false,
@@ -1540,7 +1592,7 @@ pub async fn settings_delete(
 
         let mut query = sqlx::query(sql_stmt.as_str()).bind(guild_id.to_string());
 
-        query = _query_bind_value(query, pkey.clone(), &pkey_column.column_type);
+        query = _query_bind_value(query, pkey.clone(), &pkey_column.column_type, &state);
 
         let Some(row) =
             query
@@ -1565,7 +1617,8 @@ pub async fn settings_delete(
             })?;
 
             // Validate the actual value, note that as this is a delete operation, we don't care about nullability
-            let val = _validate_and_parse_value(val, column_types[i], col, true, false).await?;
+            let val =
+                _validate_and_parse_value(val, &state, column_types[i], col, true, false).await?;
 
             state.state.insert(col.to_string(), val);
         }
@@ -1600,7 +1653,7 @@ pub async fn settings_delete(
     let mut query = sqlx::query(sql_stmt.as_str());
 
     query = query.bind(guild_id.to_string());
-    query = _query_bind_value(query, pkey, &pkey_column.column_type);
+    query = _query_bind_value(query, pkey, &pkey_column.column_type, &state);
 
     let res = query
         .execute(&mut *tx)

@@ -126,6 +126,7 @@ pub static MAINTENANCE: Lazy<ConfigOption> = Lazy::new(|| {
                 default_pre_checks: settings_wrap_precheck(vec![]),
             },
         ]),
+        title_template: "{title} - {id}",
         operations: indexmap::indexmap! {
             OperationType::View => OperationSpecific {
                 corresponding_command: "sudo maintenance_list",

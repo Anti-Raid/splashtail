@@ -60,6 +60,7 @@ pub async fn add_sink(
                     None => Value::None
                 }
             },
+            "send_json_context".to_string() => Value::Boolean(false),
             "embed_template".to_string() => {
                 if let Some(embed_template) = embed_template {
                     Value::String(embed_template)
@@ -108,6 +109,7 @@ pub async fn add_channel(
                     None => Value::None
                 }
             },
+            "send_json_context".to_string() => Value::Boolean(false),
             "broken".to_string() => Value::Boolean(false),
         },
     )
@@ -149,6 +151,7 @@ pub async fn add_discordhook(
                     None => Value::None
                 }
             },
+            "send_json_context".to_string() => Value::Boolean(false),
             "broken".to_string() => Value::Boolean(false),
         },
     )

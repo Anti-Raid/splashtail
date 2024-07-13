@@ -37,7 +37,7 @@ pub async fn execute_actions(
 
                 for (key, value) in arguments {
                     let key = key.to_string();
-                    let value = state.template_to_string(author, guild_id, value);
+                    let value = state.template_to_string(value);
 
                     args.insert(key, value);
                 }

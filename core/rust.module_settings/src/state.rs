@@ -26,15 +26,8 @@ impl From<State> for indexmap::IndexMap<String, serde_json::Value> {
 }
 
 impl State {
-    pub fn get_variable_value(
-        &self,
-        author: serenity::all::UserId,
-        guild_id: serenity::all::GuildId,
-        variable: &str,
-    ) -> Value {
+    pub fn get_variable_value(&self, variable: &str) -> Value {
         match variable {
-            "__author" => Value::String(author.to_string()),
-            "__guild_id" => Value::String(guild_id.to_string()),
             "__now" => Value::TimestampTz(chrono::Utc::now()),
             "__now_naive" => Value::Timestamp(chrono::Utc::now().naive_utc()),
             _ => self.state.get(variable).cloned().unwrap_or(Value::None),
@@ -43,12 +36,7 @@ impl State {
 
     /// Given a template string, where state variables are surrounded by curly braces, return the
     /// template value (if a single variable) or a string if not
-    pub fn template_to_string(
-        &self,
-        author: serenity::all::UserId,
-        guild_id: serenity::all::GuildId,
-        template: &str,
-    ) -> Value {
+    pub fn template_to_string(&self, template: &str) -> Value {
         let mut result = template.to_string();
 
         if result.starts_with("{") && result.ends_with("}") {
@@ -58,7 +46,7 @@ impl State {
                 .take(template.len() - 2)
                 .collect::<String>();
 
-            return self.get_variable_value(author, guild_id, &var);
+            return self.get_variable_value(&var);
         }
 
         for (key, value) in &self.state {
@@ -81,6 +69,20 @@ impl State {
     pub fn new() -> Self {
         State {
             state: indexmap::IndexMap::new(),
+            bypass_ignore_for: std::collections::HashSet::new(),
+        }
+    }
+
+    // Creates a new state with all expected static special variables (user_id, guild_id)
+    pub fn new_with_special_variables(
+        author: serenity::all::UserId,
+        guild_id: serenity::all::GuildId,
+    ) -> Self {
+        State {
+            state: indexmap::indexmap! {
+                "__author".to_string() => Value::String(author.to_string()),
+                "__guild_id".to_string() => Value::String(guild_id.to_string()),
+            },
             bypass_ignore_for: std::collections::HashSet::new(),
         }
     }

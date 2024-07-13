@@ -7,26 +7,7 @@ use module_settings::types::{
 use splashcore_rs::value::Value;
 use std::time::Duration;
 
-fn _get_display_value(
-    author: serenity::all::UserId,
-    guild_id: serenity::all::GuildId,
-    column_type: &ColumnType,
-    column_id: &str,
-    value: &Value,
-    state: &State,
-) -> String {
-    // Check for special formattings in the __column_id_displaytype variable
-    if let Value::String(v) =
-        state.get_variable_value(author, guild_id, &format!("__{}_displaytype", column_id))
-    {
-        match v.as_str() {
-            "channel" => return format!("<#{}>", value),
-            "role" => return format!("<@&{}>", value),
-            "user" => return format!("<@{}>", value),
-            _ => {}
-        }
-    }
-
+fn _get_display_value(column_type: &ColumnType, value: &Value, state: &State) -> String {
     match column_type {
         ColumnType::Scalar { column_type } => match column_type {
             InnerColumnType::String { kind, .. } => match kind {
@@ -64,27 +45,22 @@ fn _get_display_value(
             match value {
                 Value::List(values) => values
                     .iter()
-                    .map(|v| {
-                        _get_display_value(
-                            author,
-                            guild_id,
-                            &ColumnType::new_scalar(inner.clone()),
-                            column_id,
-                            v,
-                            state,
-                        )
-                    })
+                    .map(|v| _get_display_value(&ColumnType::new_scalar(inner.clone()), v, state))
                     .collect::<Vec<String>>()
                     .join(", "),
-                _ => _get_display_value(
-                    author,
-                    guild_id,
-                    &ColumnType::new_scalar(inner.clone()),
-                    column_id,
-                    value,
-                    state,
-                ),
+                _ => _get_display_value(&ColumnType::new_scalar(inner.clone()), value, state),
             }
+        }
+        ColumnType::Dynamic { clauses } => {
+            for clause in clauses {
+                let _value = state.template_to_string(clause.field);
+
+                if _value == clause.value {
+                    return _get_display_value(&clause.column_type, value, state);
+                }
+            }
+
+            value.to_string()
         }
     }
 }
@@ -95,7 +71,6 @@ pub async fn settings_viewer(
     setting: &ConfigOption,
 ) -> Result<(), crate::Error> {
     fn _create_reply<'a>(
-        ctx: &crate::Context<'_>,
         setting: &ConfigOption,
         values: &'a [State],
         index: usize,
@@ -144,18 +119,8 @@ pub async fn settings_viewer(
                 key.clone()
             };
 
-            let author = ctx.author().id;
-            let guild_id = ctx.guild_id().unwrap();
-
             let display_value = if let Some(column) = column {
-                _get_display_value(
-                    author,
-                    guild_id,
-                    &column.column_type,
-                    column.id,
-                    value,
-                    &values[index],
-                )
+                _get_display_value(&column.column_type, value, &values[index])
             } else {
                 value.to_string()
             };
@@ -252,7 +217,7 @@ pub async fn settings_viewer(
 
     let mut index = 0;
 
-    let reply = _create_reply(ctx, setting, &values, index);
+    let reply = _create_reply(setting, &values, index);
 
     let msg = ctx.send(reply).await?.into_message().await?;
 
@@ -286,7 +251,7 @@ pub async fn settings_viewer(
 
         item.defer(ctx.http()).await?;
 
-        let reply = _create_reply(ctx, setting, &values, index);
+        let reply = _create_reply(setting, &values, index);
 
         item.edit_response(
             ctx.http(),
@@ -304,11 +269,7 @@ pub async fn settings_creator(
     setting: &ConfigOption,
     fields: indexmap::IndexMap<String, Value>,
 ) -> Result<(), crate::Error> {
-    fn _create_reply<'a>(
-        ctx: &crate::Context<'_>,
-        setting: &ConfigOption,
-        value: &State,
-    ) -> poise::CreateReply<'a> {
+    fn _create_reply<'a>(setting: &ConfigOption, value: &State) -> poise::CreateReply<'a> {
         let mut embed = serenity::all::CreateEmbed::default();
 
         embed = embed.title(format!("Created {}", setting.name));
@@ -327,11 +288,8 @@ pub async fn settings_creator(
                 key.clone()
             };
 
-            let author = ctx.author().id;
-            let guild_id = ctx.guild_id().unwrap();
-
             let display_value = if let Some(column) = column {
-                _get_display_value(author, guild_id, &column.column_type, column.id, v, value)
+                _get_display_value(&column.column_type, v, value)
             } else {
                 v.to_string()
             };
@@ -407,7 +365,7 @@ pub async fn settings_creator(
         }
     }
 
-    let value = settings_create(
+    let mut value = settings_create(
         setting,
         &cache_http,
         &data.pool,
@@ -419,7 +377,12 @@ pub async fn settings_creator(
     .await
     .map_err(|e| format!("Error creating new setting: {}", e))?;
 
-    let reply = _create_reply(ctx, setting, &value);
+    value.state.insert(
+        "key".to_string(),
+        value.template_to_string(setting.title_template),
+    );
+
+    let reply = _create_reply(setting, &value);
 
     ctx.send(reply).await?;
 
@@ -432,11 +395,7 @@ pub async fn settings_updater(
     setting: &ConfigOption,
     fields: indexmap::IndexMap<String, Value>,
 ) -> Result<(), crate::Error> {
-    fn _create_reply<'a>(
-        ctx: &crate::Context<'_>,
-        setting: &ConfigOption,
-        value: &State,
-    ) -> poise::CreateReply<'a> {
+    fn _create_reply<'a>(setting: &ConfigOption, value: &State) -> poise::CreateReply<'a> {
         let mut embed = serenity::all::CreateEmbed::default();
 
         embed = embed.title(format!("Updated {}", setting.name));
@@ -455,11 +414,8 @@ pub async fn settings_updater(
                 key.clone()
             };
 
-            let author = ctx.author().id;
-            let guild_id = ctx.guild_id().unwrap();
-
             let display_value = if let Some(column) = column {
-                _get_display_value(author, guild_id, &column.column_type, column.id, v, value)
+                _get_display_value(&column.column_type, v, value)
             } else {
                 v.to_string()
             };
@@ -535,7 +491,7 @@ pub async fn settings_updater(
         }
     }
 
-    let value = settings_update(
+    let mut value = settings_update(
         setting,
         &cache_http,
         &data.pool,
@@ -547,7 +503,12 @@ pub async fn settings_updater(
     .await
     .map_err(|e| format!("Error updating setting: {}", e))?;
 
-    let reply = _create_reply(ctx, setting, &value);
+    value.state.insert(
+        "key".to_string(),
+        value.template_to_string(setting.title_template),
+    );
+
+    let reply = _create_reply(setting, &value);
 
     ctx.send(reply).await?;
 
@@ -560,11 +521,7 @@ pub async fn settings_deleter(
     setting: &ConfigOption,
     pkey: Value,
 ) -> Result<(), crate::Error> {
-    fn _create_reply<'a>(
-        ctx: &crate::Context<'_>,
-        setting: &ConfigOption,
-        value: &State,
-    ) -> poise::CreateReply<'a> {
+    fn _create_reply<'a>(setting: &ConfigOption, value: &State) -> poise::CreateReply<'a> {
         let mut embed = serenity::all::CreateEmbed::default();
 
         embed = embed
@@ -585,11 +542,8 @@ pub async fn settings_deleter(
                 key.clone()
             };
 
-            let author = ctx.author().id;
-            let guild_id = ctx.guild_id().unwrap();
-
             let display_value = if let Some(column) = column {
-                _get_display_value(author, guild_id, &column.column_type, column.id, v, value)
+                _get_display_value(&column.column_type, v, value)
             } else {
                 v.to_string()
             };
@@ -665,7 +619,7 @@ pub async fn settings_deleter(
         }
     }
 
-    let value = settings_delete(
+    let mut value = settings_delete(
         setting,
         &cache_http,
         &data.pool,
@@ -677,7 +631,12 @@ pub async fn settings_deleter(
     .await
     .map_err(|e| format!("Error deleting setting: {}", e))?;
 
-    let reply = _create_reply(ctx, setting, &value);
+    value.state.insert(
+        "key".to_string(),
+        value.template_to_string(setting.title_template),
+    );
+
+    let reply = _create_reply(setting, &value);
 
     ctx.send(reply).await?;
 
