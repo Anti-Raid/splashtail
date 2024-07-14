@@ -299,6 +299,8 @@ pub async fn dispatch_audit_log(
                 warn!("Unknown sink type: {} [sink id: {}]", sink.typ, sink.id);
             }
         }
+
+        log::info!("Dispatched audit log event: {}", event_name);
     }
 
     Ok(())

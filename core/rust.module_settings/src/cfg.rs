@@ -819,31 +819,34 @@ pub async fn settings_create(
                     None => Value::None,
                 }
             } else {
-                match fields.swap_remove(column.id) {
+                // Get the value, taking secret into account
+                let val = match fields.swap_remove(column.id) {
                     Some(val) => {
                         if matches!(val, Value::None) {
-                            // If the value is None, then it should be treated as if omitted (null)
                             match column.secret {
                                 Some(length) => Value::String(botox::crypto::gen_random(length)),
                                 None => Value::None,
                             }
                         } else {
-                            _validate_and_parse_value(
-                                val,
-                                &state,
-                                &column.column_type,
-                                column.id,
-                                column.nullable,
-                                true,
-                            )
-                            .await?
+                            val
                         }
                     }
                     None => match column.secret {
                         Some(length) => Value::String(botox::crypto::gen_random(length)),
                         None => Value::None,
                     },
-                }
+                };
+
+                // Validate and parse the value
+                _validate_and_parse_value(
+                    val,
+                    &state,
+                    &column.column_type,
+                    column.id,
+                    column.nullable,
+                    true,
+                )
+                .await?
             }
         };
 
@@ -1145,27 +1148,27 @@ pub async fn settings_update(
         // If the column is ignored for create, skip
         let value = {
             if column.ignored_for.contains(&OperationType::Update) {
-                unchanged_fields.push(column.id.to_string()); // Ensure that ignored_for columns are still seen as unchanged
+                if column.secret.is_none() {
+                    unchanged_fields.push(column.id.to_string()); // Ensure that ignored_for columns are still seen as unchanged but only if not secret
+                }
                 Value::None
             } else {
                 match fields.swap_remove(column.id) {
                     Some(val) => {
-                        if matches!(val, Value::None) {
-                            Value::None // If the value is None, then it should be treated as if omitted (null)
-                        } else {
-                            _validate_and_parse_value(
-                                val,
-                                &state,
-                                &column.column_type,
-                                column.id,
-                                column.nullable,
-                                true,
-                            )
-                            .await?
-                        }
+                        _validate_and_parse_value(
+                            val,
+                            &state,
+                            &column.column_type,
+                            column.id,
+                            column.nullable,
+                            true,
+                        )
+                        .await?
                     }
                     None => {
-                        unchanged_fields.push(column.id.to_string());
+                        if column.secret.is_none() {
+                            unchanged_fields.push(column.id.to_string()); // Don't retrieve the value if it's a secret column
+                        }
                         Value::None
                     }
                 }
@@ -1450,18 +1453,16 @@ pub async fn settings_update(
     }
 
     // Remove ignored columns now that the actions have been executed
+    //
+    // Note that we cannot mutate state here
+    let mut columns_to_set = State::from_indexmap(state.get_public()); // Start with current public state
     for col in setting.columns.iter() {
-        if col.secret.is_some() {
-            state.state.swap_remove(col.id);
-            continue; // Skip secret columns in update. **this applies to view and update only as create is creating a new object**
-        }
-
         if state.bypass_ignore_for.contains(col.id) {
             continue;
         }
 
         if col.ignored_for.contains(&OperationType::Update) {
-            state.state.swap_remove(col.id);
+            columns_to_set.state.swap_remove(col.id);
         }
     }
 
@@ -1469,12 +1470,13 @@ pub async fn settings_update(
     // As we have removed the ignored columns, we can just directly insert the columns_to_set into the state
     for (column, value) in operation_specific.columns_to_set.iter() {
         let value = state.template_to_string(value);
-        state.state.insert(column.to_string(), value);
+        state.state.insert(column.to_string(), value.clone()); // Ensure its in returned state
+        columns_to_set.state.insert(column.to_string(), value); // And in the columns to set
     }
 
     // Create the row
     let mut col_params = "".to_string();
-    for (i, (col, _)) in state.get_public().iter().enumerate() {
+    for (i, (col, _)) in columns_to_set.state.iter().enumerate() {
         col_params.push_str(&format!("{}=${},", col, i + 3));
     }
 
@@ -1491,9 +1493,14 @@ pub async fn settings_update(
 
     // Bind the sql query arguments
     query = query.bind(guild_id.to_string());
-    query = _query_bind_value(query, pkey.clone(), &pkey_column.column_type, &state);
+    query = _query_bind_value(
+        query,
+        pkey.clone(),
+        &pkey_column.column_type,
+        &columns_to_set,
+    );
 
-    for (col, value) in state.get_public().iter() {
+    for (col, value) in columns_to_set.state.iter() {
         // Get column type from schema for db query hinting
         let Some(column) = setting.columns.iter().find(|c| c.id == col) else {
             return Err(SettingsError::Generic {
@@ -1503,7 +1510,7 @@ pub async fn settings_update(
             });
         };
 
-        query = _query_bind_value(query, value.clone(), &column.column_type, &state);
+        query = _query_bind_value(query, value.clone(), &column.column_type, &columns_to_set);
     }
 
     // Execute the query

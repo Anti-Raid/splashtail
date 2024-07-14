@@ -358,7 +358,21 @@ impl BotAnimusMessage {
 
                 let mut p_fields = indexmap::IndexMap::new();
 
+                // As the order of fields may not be guaranteed, we need to add the fields in the order of the columns
+                //
+                // We then add the rest of the fields not in columns as well
+                for column in opt.columns.iter() {
+                    if let Some(value) = fields.get(column.id) {
+                        p_fields.insert(column.id.to_string(), Value::from_json(value));
+                    }
+                }
+
+                // Add the rest of the fields
                 for (key, value) in fields {
+                    if p_fields.contains_key(&key) {
+                        continue;
+                    }
+
                     p_fields.insert(key, Value::from_json(&value));
                 }
 

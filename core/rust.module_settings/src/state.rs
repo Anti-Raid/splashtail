@@ -73,6 +73,13 @@ impl State {
         }
     }
 
+    pub fn from_indexmap(state: indexmap::IndexMap<String, Value>) -> Self {
+        State {
+            state,
+            bypass_ignore_for: std::collections::HashSet::new(),
+        }
+    }
+
     // Creates a new state with all expected static special variables (user_id, guild_id)
     pub fn new_with_special_variables(
         author: serenity::all::UserId,

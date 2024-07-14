@@ -1,3 +1,12 @@
+# Sunday, July 14th 2024
+
+## Settings
+
+- The settings animus magic interface now processes fields based on column order instead of field order to allow older browsers to properly handle the data. 
+- ``settings_create`` no longer treats ``null`` values as being omitted from validation.
+- ``settings_update`` no longer treats ``null`` values as the weird special case where it was omitted from validation yet also not an ``unchanged_field``
+- `settings_update` now correctly handles ``ignored_for`` by ensuring that it returns in the output while also not being updated itself. This also fixes a potential bug where secrets may not be updated correctly.
+
 # Saturday, July 13th 2024
 
 ## Settings
