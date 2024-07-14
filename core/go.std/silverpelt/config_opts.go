@@ -175,5 +175,6 @@ type CanonicalConfigOption struct {
 	PrimaryKey    string                                                                    `json:"primary_key"`
 	TitleTemplate string                                                                    `json:"title_template"`
 	Columns       []CanonicalColumn                                                         `json:"columns"`
+	MaxEntries    uint64                                                                    `json:"max_entries"`
 	Operations    orderedmap.OrderedMap[CanonicalOperationType, CanonicalOperationSpecific] `json:"operations"`
 }

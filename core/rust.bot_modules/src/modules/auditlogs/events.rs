@@ -161,14 +161,28 @@ pub async fn dispatch_audit_log(
 
         let mut tera = {
             if let Some(ref embed_template) = sink.embed_template {
-                templating::compile_template(
-                    embed_template,
-                    templating::CompileTemplateOptions {
-                        ignore_cache: false,
-                        cache_result: true,
-                    },
-                )
-                .await?
+                if !embed_template.is_empty() {
+                    templating::compile_template(
+                        embed_template,
+                        templating::CompileTemplateOptions {
+                            ignore_cache: false,
+                            cache_result: true,
+                        },
+                    )
+                    .await?
+                } else {
+                    // Load default template
+                    let template_str = load_embedded_event_template(event_name)?;
+
+                    templating::compile_template(
+                        &template_str,
+                        templating::CompileTemplateOptions {
+                            ignore_cache: false,
+                            cache_result: true,
+                        },
+                    )
+                    .await?
+                }
             } else {
                 let template_str = load_embedded_event_template(event_name)?;
 
