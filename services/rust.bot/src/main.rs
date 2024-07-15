@@ -163,8 +163,13 @@ impl base_data::permodule::PermoduleFunctionExecutor for PermoduleFunctionExecut
     }
 }
 
-// TODO: allow root users to customize/set this in database later
-pub fn maint_message<'a>(user_data: &crate::Data) -> poise::CreateReply<'a> {
+pub async fn maint_message<'a>(
+    user_data: &crate::Data,
+) -> Result<poise::CreateReply<'a>, crate::Error> {
+    let maint_msg = sqlx::query!("SELECT id, title, description, entries, created_at, created_by, last_updated_at, last_updated_by, current FROM maintenance")
+        .fetch_optional(&user_data.pool)
+        .await;
+
     let primary = poise::serenity_prelude::CreateEmbed::default()
     .color(0xff0000)
     .title("AntiRaid")

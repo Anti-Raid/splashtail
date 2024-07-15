@@ -1,3 +1,14 @@
+# Sunday, July 15th 2024
+
+## Settings
+
+- Several ``sqlx`` bugs have been fixed including an error where int4 was decoded to i64 instead of i32 and ``columns()`` being used over ``try_columns()``
+
+## Bot
+
+- Maintenances have been moved to the database officially
+- Guild Limits have been moved to settings. Note that other subsystems within limits will be moved later on.
+
 # Sunday, July 14th 2024
 
 ## Settings

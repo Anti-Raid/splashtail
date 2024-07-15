@@ -197,6 +197,8 @@ impl std::fmt::Display for ColumnType {
 pub enum InnerColumnTypeStringKind {
     /// Normal string
     Normal,
+    /// A textarea
+    Textarea,
     /// A template string
     Template,
     /// User
@@ -215,6 +217,7 @@ impl std::fmt::Display for InnerColumnTypeStringKind {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             InnerColumnTypeStringKind::Normal => write!(f, "Normal"),
+            InnerColumnTypeStringKind::Textarea => write!(f, "Textarea"),
             InnerColumnTypeStringKind::Template => write!(f, "Template"),
             InnerColumnTypeStringKind::User => write!(f, "User"),
             InnerColumnTypeStringKind::Channel => write!(f, "Channel"),

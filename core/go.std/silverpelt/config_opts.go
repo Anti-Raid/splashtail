@@ -60,6 +60,7 @@ type CanonicalInnerColumnTypeStringKind string
 
 const (
 	CanonicalInnerColumnTypeStringKindNormal   CanonicalInnerColumnTypeStringKind = "Normal"
+	CanonicalInnerColumnTypeStringKindTextarea CanonicalInnerColumnTypeStringKind = "Textarea"
 	CanonicalInnerColumnTypeStringKindTemplate CanonicalInnerColumnTypeStringKind = "Template"
 	CanonicalInnerColumnTypeStringKindUser     CanonicalInnerColumnTypeStringKind = "User"
 	CanonicalInnerColumnTypeStringKindChannel  CanonicalInnerColumnTypeStringKind = "Channel"

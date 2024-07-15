@@ -175,6 +175,8 @@ impl From<super::types::ColumnType> for CanonicalColumnType {
 pub enum CanonicalInnerColumnTypeStringKind {
     /// Normal string
     Normal,
+    /// A textarea
+    Textarea,
     /// A template string
     Template,
     /// User
@@ -194,6 +196,9 @@ impl From<super::types::InnerColumnTypeStringKind> for CanonicalInnerColumnTypeS
         match kind {
             super::types::InnerColumnTypeStringKind::Normal => {
                 CanonicalInnerColumnTypeStringKind::Normal
+            }
+            super::types::InnerColumnTypeStringKind::Textarea => {
+                CanonicalInnerColumnTypeStringKind::Textarea
             }
             super::types::InnerColumnTypeStringKind::Template => {
                 CanonicalInnerColumnTypeStringKind::Template

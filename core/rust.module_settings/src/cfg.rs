@@ -99,6 +99,7 @@ async fn _validate_and_parse_value(
 
                             match kind {
                                 InnerColumnTypeStringKind::Normal => {}
+                                InnerColumnTypeStringKind::Textarea => {}
                                 InnerColumnTypeStringKind::Template => {
                                     let compiled = templating::compile_template(
                                         s,
