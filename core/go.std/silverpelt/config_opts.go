@@ -19,41 +19,41 @@ type CanonicalSettingsResult struct {
 type CanonicalSettingsError struct {
 	OperationNotSupported *struct {
 		Operation CanonicalOperationType `json:"operation"`
-	} `json:"OperationNotSupported"`
+	} `json:"OperationNotSupported,omitempty"`
 	Generic *struct {
 		Message string `json:"message"`
 		Src     string `json:"src"`
 		Typ     string `json:"typ"`
-	} `json:"Generic"`
+	} `json:"Generic,omitempty"`
 	SchemaTypeValidationError *struct {
 		Column       string `json:"column"`
 		ExpectedType string `json:"expected_type"`
 		GotType      string `json:"got_type"`
-	} `json:"SchemaTypeValidationError"`
+	} `json:"SchemaTypeValidationError,omitempty"`
 	SchemaNullValueValidationError *struct {
 		Column string `json:"column"`
-	} `json:"SchemaNullValueValidationError"`
+	} `json:"SchemaNullValueValidationError,omitempty"`
 	SchemaCheckValidationError *struct {
 		Column        string `json:"column"`
 		Check         string `json:"check"`
 		Error         string `json:"error"`
 		AcceptedRange string `json:"accepted_range"`
-	} `json:"SchemaCheckValidationError"`
+	} `json:"SchemaCheckValidationError,omitempty"`
 	MissingOrInvalidField *struct {
 		Field string `json:"field"`
 		Src   string `json:"src"`
-	} `json:"MissingOrInvalidField"`
+	} `json:"MissingOrInvalidField,omitempty"`
 	RowExists *struct {
 		ColumnId string `json:"column_id"`
 		Count    int64  `json:"count"`
-	} `json:"RowExists"`
+	} `json:"RowExists,omitempty"`
 	RowDoesNotExist *struct {
 		ColumnId string `json:"column_id"`
-	} `json:"RowDoesNotExist"`
+	} `json:"RowDoesNotExist,omitempty"`
 	MaximumCountReached *struct {
 		Max     uint64 `json:"max"`
 		Current uint64 `json:"current"`
-	} `json:"MaximumCountReached"`
+	} `json:"MaximumCountReached,omitempty"`
 }
 
 type CanonicalInnerColumnTypeStringKind string
@@ -96,6 +96,7 @@ type CanonicalInnerColumnType struct {
 	} `json:"String,omitempty"`
 	Timestamp   *struct{} `json:"Timestamp,omitempty"`
 	TimestampTz *struct{} `json:"TimestampTz,omitempty"`
+	Interval    *struct{} `json:"Interval,omitempty"`
 	Integer     *struct{} `json:"Integer,omitempty"`
 	Float       *struct{} `json:"Float,omitempty"`
 	BitFlag     *struct {

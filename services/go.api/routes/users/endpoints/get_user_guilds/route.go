@@ -13,6 +13,7 @@ import (
 	"github.com/anti-raid/splashtail/services/go.api/animusmagic_messages"
 	"github.com/anti-raid/splashtail/services/go.api/state"
 	"github.com/bwmarrin/discordgo"
+	"github.com/jackc/pgx/v5/pgtype"
 	"go.uber.org/zap"
 
 	docs "github.com/infinitybotlist/eureka/doclib"
@@ -105,6 +106,24 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 	// Fetch guild list of user
 	var dashguilds []*types.DashboardGuild
 	if refresh {
+		var accesstoken pgtype.Text
+
+		err = state.Pool.QueryRow(d.Context, "SELECT access_token FROM users WHERE user_id = $1", d.Auth.ID).Scan(&accesstoken)
+
+		if err != nil {
+			state.Logger.Error("Failed to query database", zap.Error(err))
+			return uapi.DefaultResponse(http.StatusInternalServerError)
+		}
+
+		if !accesstoken.Valid {
+			return uapi.HttpResponse{
+				Status: http.StatusBadRequest,
+				Json: types.ApiError{
+					Message: "User has not authorized via oauth2 yet!",
+				},
+			}
+		}
+
 		// Refresh guilds
 		httpReq, err := http.NewRequestWithContext(d.Context, "GET", state.Config.Meta.Proxy.Parse()+"/api/v10/users/@me/guilds", nil)
 
@@ -119,16 +138,7 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 			}
 		}
 
-		var accesstoken string
-
-		err = state.Pool.QueryRow(d.Context, "SELECT access_token FROM users WHERE user_id = $1", d.Auth.ID).Scan(&accesstoken)
-
-		if err != nil {
-			state.Logger.Error("Failed to query database", zap.Error(err))
-			return uapi.DefaultResponse(http.StatusInternalServerError)
-		}
-
-		httpReq.Header.Set("Authorization", "Bearer "+accesstoken)
+		httpReq.Header.Set("Authorization", "Bearer "+accesstoken.String)
 
 		cli := &http.Client{}
 

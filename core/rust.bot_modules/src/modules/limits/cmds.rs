@@ -1,135 +1,89 @@
-use super::core::Limit;
 use crate::{Context, Error};
 use poise::{serenity_prelude::CreateEmbed, CreateReply};
 use serenity::{
     all::{Mentionable, UserId},
     builder::CreateAttachment,
 };
-use splashcore_rs::utils::{parse_pg_interval, secs_to_pg_interval};
+use splashcore_rs::value::Value;
 
 /// Limits base command
 #[poise::command(
     prefix_command,
     slash_command,
     guild_only,
-    subcommands("limits_add", "limits_view", "limits_remove", "limits_hit")
+    subcommands(
+        "limits_view",
+        "limits_add",
+        "limits_update",
+        "limits_remove",
+        "limits_hit"
+    )
 )]
 pub async fn limits(_ctx: Context<'_>) -> Result<(), Error> {
-    Ok(())
-}
-
-/// Add a limit to the server
-#[poise::command(prefix_command, slash_command, guild_only, rename = "add")]
-pub async fn limits_add(
-    ctx: Context<'_>,
-    #[description = "The name of the limit"] limit_name: String,
-    #[description = "The type of limit to impose on moderators"]
-    limit_type: super::core::UserLimitTypesChoices,
-    #[description = "The amount of times the limit can be hit"] limit_per: i32,
-    #[description = "The time interval infractions are counted in"] limit_time: i64,
-    #[description = "The time unit for the time interval [seconds/minutes/hours/days]"]
-    limit_time_unit: splashcore_rs::utils::Unit,
-    #[description = "The number of stings to give on hitting the limit"] stings: i32,
-) -> Result<(), Error> {
-    let limit_type = limit_type.resolve();
-
-    let guild_id = ctx.guild_id().ok_or("Could not get guild id")?;
-
-    // Add limit to db
-    let limit = sqlx::query!(
-        "
-            INSERT INTO limits__guild_limits (
-                guild_id,
-                limit_name,
-                limit_type,
-                stings,
-                limit_per,
-                limit_time
-            )
-            VALUES (
-                $1, 
-                $2, 
-                $3, 
-                $4, 
-                $5,
-                make_interval(secs => $6)
-            )
-            RETURNING limit_id
-        ",
-        guild_id.to_string(),
-        limit_name,
-        limit_type.to_string(),
-        stings,
-        limit_per,
-        (limit_time * limit_time_unit.to_seconds_i64()) as f64
-    )
-    .fetch_one(&ctx.data().pool)
-    .await?;
-
-    ctx.say(format!(
-        "Added limit successfully with id ``{}``",
-        limit.limit_id
-    ))
-    .await?;
-
     Ok(())
 }
 
 /// View the limits setup for this server
 #[poise::command(prefix_command, slash_command, guild_only, rename = "view")]
 pub async fn limits_view(ctx: Context<'_>) -> Result<(), Error> {
-    let limits = Limit::guild(
-        &ctx.data().pool,
-        ctx.guild_id().ok_or("Could not get guild id")?,
+    crate::silverpelt::settings_poise::settings_viewer(&ctx, &super::settings::GUILD_LIMITS).await
+}
+
+/// Add a limit
+#[poise::command(prefix_command, slash_command, guild_only, rename = "add")]
+pub async fn limits_add(
+    ctx: Context<'_>,
+    #[description = "The name of the limit"] limit_name: String,
+    #[description = "The type of limit to impose on moderators"]
+    limit_type: super::core::LimitTypesChoices,
+    #[description = "The amount of times the limit can be hit"] limit_per: i32,
+    #[description = "The time interval infractions are counted in"] limit_time: i64,
+    #[description = "The time unit for the time interval [seconds/minutes/hours/days]"]
+    limit_time_unit: splashcore_rs::utils::Unit,
+    #[description = "The number of stings to give on hitting the limit"] stings: i32,
+) -> Result<(), Error> {
+    crate::silverpelt::settings_poise::settings_creator(
+        &ctx,
+        &super::settings::GUILD_LIMITS,
+        indexmap::indexmap! {
+            "limit_name".to_string() => Value::String(limit_name),
+            "limit_type".to_string() => Value::String(limit_type.resolve().to_string()),
+            "limit_per".to_string() => Value::Integer(limit_per.into()),
+            "limit_time".to_string() => Value::Interval(chrono::Duration::seconds(limit_time * limit_time_unit.to_seconds_i64())),
+            "stings".to_string() => Value::Integer(stings.into()),
+        },
     )
-    .await?;
+    .await
+}
 
-    if limits.is_empty() {
-        ctx.say("No limits setup for this server, use ``/limits add`` to add one!")
-            .await?;
-        return Ok(());
-    }
-
-    let mut embeds = vec![];
-
-    let mut added: i32 = 0;
-    let mut i = 0;
-
-    for limit in limits {
-        added += 1;
-
-        if added >= 15 {
-            added = 0;
-            i += 1;
-        }
-
-        if embeds.len() <= i {
-            embeds.push(CreateEmbed::default().title("Limits").color(0x00ff00));
-        }
-
-        embeds[i] = embeds[i].clone().field(
-            limit.limit_name,
-            format!(
-                "If over {amount} ``{cond}`` triggered between {time} interval: give ``{no_stings}`` stings [{id}]",
-                amount = limit.limit_per,
-                cond = limit.limit_type.to_cond(),
-                time = parse_pg_interval(secs_to_pg_interval(limit.limit_time)),
-                no_stings = limit.stings,
-                id = limit.limit_id
-            ),
-            false,
-        );
-    }
-
-    let mut reply = CreateReply::new();
-
-    for embed in embeds {
-        reply = reply.embed(embed);
-    }
-
-    ctx.send(reply).await?;
-
-    Ok(())
+/// Update an existing limit
+#[poise::command(prefix_command, slash_command, guild_only, rename = "update")]
+#[allow(clippy::too_many_arguments)]
+pub async fn limits_update(
+    ctx: Context<'_>,
+    #[description = "The ID of the limit"] limit_id: String,
+    #[description = "The name of the limit"] limit_name: String,
+    #[description = "The type of limit to impose on moderators"]
+    limit_type: super::core::LimitTypesChoices,
+    #[description = "The amount of times the limit can be hit"] limit_per: i32,
+    #[description = "The time interval infractions are counted in"] limit_time: i64,
+    #[description = "The time unit for the time interval [seconds/minutes/hours/days]"]
+    limit_time_unit: splashcore_rs::utils::Unit,
+    #[description = "The number of stings to give on hitting the limit"] stings: i32,
+) -> Result<(), Error> {
+    crate::silverpelt::settings_poise::settings_updater(
+        &ctx,
+        &super::settings::GUILD_LIMITS,
+        indexmap::indexmap! {
+            "limit_id".to_string() => Value::String(limit_id),
+            "limit_name".to_string() => Value::String(limit_name),
+            "limit_type".to_string() => Value::String(limit_type.resolve().to_string()),
+            "limit_per".to_string() => Value::Integer(limit_per.into()),
+            "limit_time".to_string() => Value::Interval(chrono::Duration::seconds(limit_time * limit_time_unit.to_seconds_i64())),
+            "stings".to_string() => Value::Integer(stings.into()),
+        },
+    )
+    .await
 }
 
 /// Remove a limit from the server
@@ -140,39 +94,12 @@ pub async fn limits_remove(
     #[autocomplete = "super::autocompletes::limits_autocomplete"]
     limit_id: String,
 ) -> Result<(), Error> {
-    // Look for limit using COUNT
-    let count = sqlx::query!(
-        "
-            SELECT COUNT(*) FROM limits__guild_limits
-            WHERE guild_id = $1
-            AND limit_id = $2
-        ",
-        ctx.guild_id().ok_or("Could not get guild id")?.to_string(),
-        limit_id
+    crate::silverpelt::settings_poise::settings_deleter(
+        &ctx,
+        &super::settings::GUILD_LIMITS,
+        Value::String(limit_id),
     )
-    .fetch_one(&ctx.data().pool)
-    .await?;
-
-    if count.count.unwrap_or_default() == 0 {
-        return Err("Could not find limit".into());
-    }
-
-    // Remove limit
-    sqlx::query!(
-        "
-            DELETE FROM limits__guild_limits
-            WHERE guild_id = $1
-            AND limit_id = $2
-        ",
-        ctx.guild_id().ok_or("Could not get guild id")?.to_string(),
-        limit_id
-    )
-    .execute(&ctx.data().pool)
-    .await?;
-
-    ctx.say("Removed limit successfully").await?;
-
-    Ok(())
+    .await
 }
 
 /// Action management

@@ -3,6 +3,7 @@ mod cmds;
 mod core;
 mod events;
 mod handler;
+mod settings;
 
 use futures_util::FutureExt;
 use indexmap::indexmap;
@@ -22,8 +23,9 @@ pub fn module() -> crate::silverpelt::Module {
             (
                 cmds::limits(),
                 indexmap! {
-                    "add" => crate::silverpelt::CommandExtendedData::kittycat_or_admin("limits", "add"),
                     "view" => crate::silverpelt::CommandExtendedData::kittycat_or_admin("limits", "view"),
+                    "add" => crate::silverpelt::CommandExtendedData::kittycat_or_admin("limits", "add"),
+                    "update" => crate::silverpelt::CommandExtendedData::kittycat_or_admin("limits", "update"),
                     "remove" => crate::silverpelt::CommandExtendedData::kittycat_or_admin("limits", "remove"),
                     "hit" => crate::silverpelt::CommandExtendedData::kittycat_or_admin("limits", "hit"),
                 },
@@ -41,6 +43,7 @@ pub fn module() -> crate::silverpelt::Module {
         on_startup: vec![Box::new(move |data| {
             core::register_punishment_sting_source(data).boxed()
         })],
+        config_options: vec![(*settings::GUILD_LIMITS).clone()],
         ..Default::default()
     }
 }

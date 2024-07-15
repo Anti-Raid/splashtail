@@ -11,7 +11,7 @@ pub struct HandleModAction {
     /// User ID
     pub user_id: UserId,
     /// Limit to handle for the User ID in question
-    pub limit: core::UserLimitTypes,
+    pub limit: core::LimitTypes,
     /// Target of the action
     pub target: Option<String>,
     /// Extra data for the action

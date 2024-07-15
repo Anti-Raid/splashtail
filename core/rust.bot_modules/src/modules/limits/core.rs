@@ -55,7 +55,7 @@ pub async fn register_punishment_sting_source(_data: &crate::Data) -> Result<(),
 }
 
 #[derive(poise::ChoiceParameter)]
-pub enum UserLimitTypesChoices {
+pub enum LimitTypesChoices {
     #[name = "Member Added to Server"]
     MemberAdd,
     #[name = "Role Create"]
@@ -86,23 +86,23 @@ pub enum UserLimitTypesChoices {
     MessageCreate,
 }
 
-impl UserLimitTypesChoices {
-    pub fn resolve(self) -> UserLimitTypes {
+impl LimitTypesChoices {
+    pub fn resolve(self) -> LimitTypes {
         match self {
-            Self::MemberAdd => UserLimitTypes::MemberAdd,
-            Self::RoleAdd => UserLimitTypes::RoleAdd,
-            Self::RoleUpdate => UserLimitTypes::RoleUpdate,
-            Self::RoleRemove => UserLimitTypes::RoleRemove,
-            Self::RoleGivenToMember => UserLimitTypes::RoleGivenToMember,
-            Self::RoleRemovedFromMember => UserLimitTypes::RoleRemovedFromMember,
-            Self::MemberRolesUpdated => UserLimitTypes::MemberRolesUpdated,
-            Self::ChannelAdd => UserLimitTypes::ChannelAdd,
-            Self::ChannelUpdate => UserLimitTypes::ChannelUpdate,
-            Self::ChannelRemove => UserLimitTypes::ChannelRemove,
-            Self::Kick => UserLimitTypes::Kick,
-            Self::Ban => UserLimitTypes::Ban,
-            Self::Unban => UserLimitTypes::Unban,
-            Self::MessageCreate => UserLimitTypes::MessageCreate,
+            Self::MemberAdd => LimitTypes::MemberAdd,
+            Self::RoleAdd => LimitTypes::RoleAdd,
+            Self::RoleUpdate => LimitTypes::RoleUpdate,
+            Self::RoleRemove => LimitTypes::RoleRemove,
+            Self::RoleGivenToMember => LimitTypes::RoleGivenToMember,
+            Self::RoleRemovedFromMember => LimitTypes::RoleRemovedFromMember,
+            Self::MemberRolesUpdated => LimitTypes::MemberRolesUpdated,
+            Self::ChannelAdd => LimitTypes::ChannelAdd,
+            Self::ChannelUpdate => LimitTypes::ChannelUpdate,
+            Self::ChannelRemove => LimitTypes::ChannelRemove,
+            Self::Kick => LimitTypes::Kick,
+            Self::Ban => LimitTypes::Ban,
+            Self::Unban => LimitTypes::Unban,
+            Self::MessageCreate => LimitTypes::MessageCreate,
         }
     }
 }
@@ -121,7 +121,7 @@ impl UserLimitTypesChoices {
     Deserialize,
 )]
 #[strum(serialize_all = "snake_case")]
-pub enum UserLimitTypes {
+pub enum LimitTypes {
     MemberAdd,
     RoleAdd,               // set
     RoleUpdate,            // set
@@ -138,7 +138,7 @@ pub enum UserLimitTypes {
     MessageCreate,
 }
 
-impl UserLimitTypes {
+impl LimitTypes {
     pub fn to_cond(self) -> String {
         match &self {
             Self::MemberAdd => "Member Added to Server".to_string(),
@@ -164,7 +164,7 @@ pub struct UserAction {
     /// The ID of the action
     pub action_id: String,
     /// The limit type associated with this action performed
-    pub limit_type: UserLimitTypes,
+    pub limit_type: LimitTypes,
     /// The time the action was performed
     pub created_at: DateTime<Utc>,
     /// The ID of the user who performed the action
@@ -276,7 +276,7 @@ pub struct Limit {
     /// The name of the limit
     pub limit_name: String,
     /// The type of limit
-    pub limit_type: UserLimitTypes,
+    pub limit_type: LimitTypes,
     /// The action to take when the limit is hit
     pub stings: i32,
     /// The number of times the limit can be hit
@@ -309,7 +309,7 @@ impl Limit {
         for r in rec {
             limits.push(Self {
                 guild_id,
-                limit_id: r.limit_id,
+                limit_id: r.limit_id.to_string(),
                 limit_name: r.limit_name,
                 limit_type: r.limit_type.parse()?,
                 stings: r.stings,

@@ -48,6 +48,7 @@ pub fn create_special_allocation_from_str(
 pub fn pg_interval_to_secs(i: PgInterval) -> i64 {
     i.microseconds / 1000000 + ((i.days * 86400) as i64) + ((i.months * 2628000) as i64)
 }
+
 pub fn secs_to_pg_interval(secs: i64) -> PgInterval {
     PgInterval {
         microseconds: secs * 1000000,
@@ -156,6 +157,17 @@ pub fn parse_duration_string(s: &str) -> Result<(u64, Unit), Error> {
     let unit = Unit::try_from(unit.as_str())?;
 
     Ok((number, unit))
+}
+
+/// Given a string of the format <number> days/hours/minutes/seconds, parse it into a chrono::Duration
+///
+/// This is a wrapper around parse_duration_string that converts the result into a chrono::Duration
+pub fn parse_duration_string_to_chrono_duration(s: &str) -> Result<chrono::Duration, Error> {
+    let (number, unit) = parse_duration_string(s)?;
+
+    Ok(chrono::Duration::from_std(std::time::Duration::from_secs(
+        number * unit.to_seconds(),
+    ))?)
 }
 
 pub static REPLACE_CHANNEL: Lazy<Vec<(&'static str, &'static str)>> =

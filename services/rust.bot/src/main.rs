@@ -648,13 +648,13 @@ async fn main() {
         },
         command_check: Some(|ctx| {
             Box::pin(async move {
+                let user_id = ctx.author().id;
                 let allowed = config::CONFIG.discord_auth.public_bot || {
                     let cub_cache = CAN_USE_BOT_CACHE.read().await;
                     if let Some(ref guild_id) = ctx.guild_id() {
-                        cub_cache.guilds.contains(guild_id)
-                            && cub_cache.users.contains(&ctx.author().id)
+                        cub_cache.guilds.contains(guild_id) && cub_cache.users.contains(&user_id)
                     } else {
-                        cub_cache.users.contains(&ctx.author().id)
+                        cub_cache.users.contains(&user_id)
                     }
                 };
 
@@ -689,6 +689,23 @@ async fn main() {
                     sqlx::query!("INSERT INTO guilds (id) VALUES ($1)", guild_id.to_string())
                         .execute(&data.pool)
                         .await?;
+                }
+
+                let user = sqlx::query!(
+                    "SELECT COUNT(*) FROM users WHERE user_id = $1",
+                    guild_id.to_string()
+                )
+                .fetch_one(&data.pool)
+                .await?;
+
+                if user.count.unwrap_or_default() == 0 {
+                    // User not found, create it
+                    sqlx::query!(
+                        "INSERT INTO users (user_id) VALUES ($1)",
+                        guild_id.to_string()
+                    )
+                    .execute(&data.pool)
+                    .await?;
                 }
 
                 let command = ctx.command();

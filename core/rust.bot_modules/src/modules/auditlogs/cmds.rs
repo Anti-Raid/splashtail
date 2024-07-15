@@ -71,9 +71,7 @@ pub async fn add_sink(
             "broken".to_string() => Value::Boolean(broken),
         },
     )
-    .await?;
-
-    Ok(())
+    .await
 }
 
 #[poise::command(prefix_command, slash_command, user_cooldown = 1)]
@@ -113,9 +111,7 @@ pub async fn add_channel(
             "broken".to_string() => Value::Boolean(false),
         },
     )
-    .await?;
-
-    Ok(())
+    .await
 }
 
 #[poise::command(prefix_command, slash_command, user_cooldown = 1)]
@@ -155,9 +151,7 @@ pub async fn add_discordhook(
             "broken".to_string() => Value::Boolean(false),
         },
     )
-    .await?;
-
-    Ok(())
+    .await
 }
 
 #[poise::command(prefix_command, slash_command, user_cooldown = 1)]
@@ -208,9 +202,7 @@ pub async fn edit_sink(
             "broken".to_string() => Value::Boolean(broken),
         },
     )
-    .await?;
-
-    Ok(())
+    .await
 }
 
 #[poise::command(prefix_command, slash_command, user_cooldown = 1)]
@@ -223,7 +215,5 @@ pub async fn remove_sink(
         &super::settings::SINK,
         Value::String(sink_id),
     )
-    .await?;
-
-    Ok(())
+    .await
 }

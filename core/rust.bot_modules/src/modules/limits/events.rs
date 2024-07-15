@@ -15,7 +15,7 @@ pub async fn event_listener(ectx: &EventHandlerContext) -> Result<(), Error> {
                 ctx,
                 &super::handler::HandleModAction {
                     guild_id: ectx.guild_id,
-                    limit: super::core::UserLimitTypes::MemberAdd,
+                    limit: super::core::LimitTypes::MemberAdd,
                     user_id: new_member.user.id,
                     target: None,
                     action_data: serde_json::json!({}),
@@ -28,7 +28,7 @@ pub async fn event_listener(ectx: &EventHandlerContext) -> Result<(), Error> {
                 ctx,
                 &super::handler::HandleModAction {
                     guild_id: ectx.guild_id,
-                    limit: super::core::UserLimitTypes::MessageCreate,
+                    limit: super::core::LimitTypes::MessageCreate,
                     user_id: new_message.author.id,
                     target: Some(new_message.id.to_string()),
                     action_data: serde_json::json!({}),
@@ -55,7 +55,7 @@ pub async fn event_listener(ectx: &EventHandlerContext) -> Result<(), Error> {
                                 ctx,
                                 &super::handler::HandleModAction {
                                     guild_id: *guild_id,
-                                    limit: super::core::UserLimitTypes::ChannelAdd,
+                                    limit: super::core::LimitTypes::ChannelAdd,
                                     user_id,
                                     target: Some(ch_id.to_string()),
                                     action_data: serde_json::json!({
@@ -72,7 +72,7 @@ pub async fn event_listener(ectx: &EventHandlerContext) -> Result<(), Error> {
                                 ctx,
                                 &super::handler::HandleModAction {
                                     guild_id: *guild_id,
-                                    limit: super::core::UserLimitTypes::ChannelRemove,
+                                    limit: super::core::LimitTypes::ChannelRemove,
                                     user_id,
                                     target: Some(ch_id.to_string()),
                                     action_data: serde_json::json!({
@@ -89,7 +89,7 @@ pub async fn event_listener(ectx: &EventHandlerContext) -> Result<(), Error> {
                                 ctx,
                                 &super::handler::HandleModAction {
                                     guild_id: *guild_id,
-                                    limit: super::core::UserLimitTypes::ChannelUpdate,
+                                    limit: super::core::LimitTypes::ChannelUpdate,
                                     user_id,
                                     target: Some(ch_id.to_string()),
                                     action_data: serde_json::json!({
@@ -113,7 +113,7 @@ pub async fn event_listener(ectx: &EventHandlerContext) -> Result<(), Error> {
                                 ctx,
                                 &super::handler::HandleModAction {
                                     guild_id: *guild_id,
-                                    limit: super::core::UserLimitTypes::RoleAdd,
+                                    limit: super::core::LimitTypes::RoleAdd,
                                     user_id,
                                     target: Some(r_id.to_string()),
                                     action_data: serde_json::json!({
@@ -130,7 +130,7 @@ pub async fn event_listener(ectx: &EventHandlerContext) -> Result<(), Error> {
                                 ctx,
                                 &super::handler::HandleModAction {
                                     guild_id: *guild_id,
-                                    limit: super::core::UserLimitTypes::RoleUpdate,
+                                    limit: super::core::LimitTypes::RoleUpdate,
                                     user_id,
                                     target: Some(r_id.to_string()),
                                     action_data: serde_json::json!({
@@ -147,7 +147,7 @@ pub async fn event_listener(ectx: &EventHandlerContext) -> Result<(), Error> {
                                 ctx,
                                 &super::handler::HandleModAction {
                                     guild_id: *guild_id,
-                                    limit: super::core::UserLimitTypes::RoleRemove,
+                                    limit: super::core::LimitTypes::RoleRemove,
                                     user_id,
                                     target: Some(r_id.to_string()),
                                     action_data: serde_json::json!({
@@ -230,7 +230,7 @@ pub async fn event_listener(ectx: &EventHandlerContext) -> Result<(), Error> {
                                 ctx,
                                 &super::handler::HandleModAction {
                                     guild_id: *guild_id,
-                                    limit: super::core::UserLimitTypes::MemberRolesUpdated,
+                                    limit: super::core::LimitTypes::MemberRolesUpdated,
                                     user_id,
                                     target: Some(target.to_string()),
                                     action_data: serde_json::json!({
@@ -249,7 +249,7 @@ pub async fn event_listener(ectx: &EventHandlerContext) -> Result<(), Error> {
                                     ctx,
                                     &super::handler::HandleModAction {
                                         guild_id: *guild_id,
-                                        limit: super::core::UserLimitTypes::RoleGivenToMember,
+                                        limit: super::core::LimitTypes::RoleGivenToMember,
                                         user_id,
                                         target: Some(target.to_string()),
                                         action_data: serde_json::json!({
@@ -269,7 +269,7 @@ pub async fn event_listener(ectx: &EventHandlerContext) -> Result<(), Error> {
                                     ctx,
                                     &super::handler::HandleModAction {
                                         guild_id: *guild_id,
-                                        limit: super::core::UserLimitTypes::RoleRemovedFromMember,
+                                        limit: super::core::LimitTypes::RoleRemovedFromMember,
                                         user_id,
                                         target: Some(target.to_string()),
                                         action_data: serde_json::json!({

@@ -237,6 +237,7 @@ pub enum InnerColumnType {
     },
     Timestamp {},
     TimestampTz {},
+    Interval {},
     Integer {},
     Float {},
     BitFlag {
@@ -271,6 +272,7 @@ impl std::fmt::Display for InnerColumnType {
             }
             InnerColumnType::Timestamp {} => write!(f, "Timestamp"),
             InnerColumnType::TimestampTz {} => write!(f, "TimestampTz"),
+            InnerColumnType::Interval {} => write!(f, "Interval"),
             InnerColumnType::Integer {} => write!(f, "Integer"),
             InnerColumnType::Float {} => write!(f, "Float"),
             InnerColumnType::BitFlag { values } => {

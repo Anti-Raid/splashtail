@@ -265,6 +265,30 @@ async fn _validate_and_parse_value(
                         got_type: format!("{:?}", v),
                     }),
                 },
+                InnerColumnType::Interval {} => match v {
+                    Value::String(s) => {
+                        let dur =
+                            splashcore_rs::utils::parse_duration_string_to_chrono_duration(&s)
+                                .map_err(|e| SettingsError::SchemaCheckValidationError {
+                                    column: column_id.to_string(),
+                                    check: "interval_parse".to_string(),
+                                    accepted_range: "Valid interval".to_string(),
+                                    error: e.to_string(),
+                                })?;
+
+                        Ok(Value::Interval(dur))
+                    }
+                    Value::Integer(v) => {
+                        let duration = chrono::Duration::seconds(v);
+                        Ok(Value::Interval(duration))
+                    }
+                    Value::Interval(_) => Ok(v),
+                    _ => Err(SettingsError::SchemaTypeValidationError {
+                        column: column_id.to_string(),
+                        expected_type: "Interval".to_string(),
+                        got_type: format!("{:?}", v),
+                    }),
+                },
                 InnerColumnType::Integer {} => match v {
                     Value::String(s) => {
                         let value = s.parse::<i64>().map_err(|e| {
@@ -437,6 +461,7 @@ fn _query_bind_value<'a>(
         Value::String(value) => query.bind(value),
         Value::Timestamp(value) => query.bind(value),
         Value::TimestampTz(value) => query.bind(value),
+        Value::Interval(value) => query.bind(value),
         Value::Integer(value) => query.bind(value),
         Value::Float(value) => query.bind(value),
         Value::Boolean(value) => query.bind(value),
@@ -487,6 +512,17 @@ fn _query_bind_value<'a>(
 
                         for value in values {
                             if let Value::TimestampTz(value) = value {
+                                vec.push(value);
+                            }
+                        }
+
+                        query.bind(vec)
+                    }
+                    Value::Interval(_) => {
+                        let mut vec = Vec::new();
+
+                        for value in values {
+                            if let Value::Interval(value) = value {
                                 vec.push(value);
                             }
                         }
@@ -566,6 +602,7 @@ fn _query_bind_value<'a>(
                 InnerColumnType::TimestampTz {} => {
                     query.bind(None::<chrono::DateTime<chrono::Utc>>)
                 }
+                InnerColumnType::Interval {} => query.bind(None::<chrono::Duration>),
                 InnerColumnType::Integer {} => query.bind(None::<i64>),
                 InnerColumnType::Float {} => query.bind(None::<f64>),
                 InnerColumnType::BitFlag { .. } => query.bind(None::<i64>),
@@ -581,6 +618,7 @@ fn _query_bind_value<'a>(
                 InnerColumnType::TimestampTz {} => {
                     query.bind(None::<Vec<chrono::DateTime<chrono::Utc>>>)
                 }
+                InnerColumnType::Interval {} => query.bind(None::<Vec<chrono::Duration>>),
                 InnerColumnType::Integer {} => query.bind(None::<Vec<i64>>),
                 InnerColumnType::Float {} => query.bind(None::<Vec<f64>>),
                 InnerColumnType::BitFlag { .. } => query.bind(None::<Vec<i64>>),

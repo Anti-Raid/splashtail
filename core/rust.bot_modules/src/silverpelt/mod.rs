@@ -102,7 +102,7 @@ pub struct Module {
 }
 
 impl Module {
-    /// Parses a module, while this doesnt really do anything right now, it may be used in the future
+    /// Parses a module and performs basic checks before starting the bot to ensure a proper module setup
     pub fn parse(self) -> Module {
         #[poise::command(prefix_command, slash_command, rename = "")]
         pub async fn base_cmd(_ctx: crate::Context<'_>) -> Result<(), crate::Error> {
@@ -172,6 +172,20 @@ impl Module {
                     actual_subcommands.join(", ")
                 );
             }
+        }
+
+        // Check that all config_opts have unique ids
+        let mut config_ids = Vec::new();
+
+        for config_opt in &parsed.config_options {
+            if config_ids.contains(&config_opt.id) {
+                panic!(
+                    "Module {} has a duplicate config option id: {}",
+                    parsed.id, config_opt.id
+                );
+            }
+
+            config_ids.push(config_opt.id);
         }
 
         parsed.__parsed = true;

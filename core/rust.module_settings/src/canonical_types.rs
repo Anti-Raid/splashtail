@@ -229,6 +229,7 @@ pub enum CanonicalInnerColumnType {
     },
     Timestamp {},
     TimestampTz {},
+    Interval {},
     Integer {},
     Float {},
     BitFlag {
@@ -258,6 +259,7 @@ impl From<super::types::InnerColumnType> for CanonicalInnerColumnType {
             super::types::InnerColumnType::TimestampTz {} => {
                 CanonicalInnerColumnType::TimestampTz {}
             }
+            super::types::InnerColumnType::Interval {} => CanonicalInnerColumnType::Interval {},
             super::types::InnerColumnType::Integer {} => CanonicalInnerColumnType::Integer {},
             super::types::InnerColumnType::Float {} => CanonicalInnerColumnType::Float {},
             super::types::InnerColumnType::BitFlag { values } => {

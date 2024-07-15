@@ -25,6 +25,9 @@ pub enum Value {
     /// Safe for animus magic toggles: NO
     TimestampTz(chrono::DateTime<chrono::Utc>),
 
+    /// An interval value
+    Interval(chrono::Duration),
+
     /// An integer value
     ///
     /// Safe for animus magic toggles: PARTIAL (ensure both Integer and Float are handled)
@@ -63,6 +66,7 @@ impl Hash for Value {
             Value::String(s) => s.hash(state),
             Value::Timestamp(t) => t.hash(state),
             Value::TimestampTz(t) => t.hash(state),
+            Value::Interval(i) => i.hash(state),
             Value::Integer(i) => i.hash(state),
             Value::Float(f) => f.to_bits().hash(state),
             Value::Boolean(b) => b.hash(state),
@@ -88,6 +92,9 @@ impl Value {
             Value::Timestamp(t) => serde_json::Value::String(t.to_string()),
             Value::TimestampTz(t) => serde_json::Value::String(t.to_string()),
             Value::Integer(i) => serde_json::Value::Number(serde_json::Number::from(*i)),
+            Value::Interval(i) => {
+                serde_json::Value::Number(serde_json::Number::from(i.num_seconds()))
+            }
             Value::Float(f) => serde_json::Value::Number(
                 serde_json::Number::from_f64(*f).unwrap_or(serde_json::Number::from(0)),
             ),
@@ -143,7 +150,13 @@ impl Value {
                     };
                     Ok(Value::String(v))
                 }
-                "int4" | "int8" => {
+                "int4" => {
+                    let Some(v) = row.try_get::<Option<i32>, _>(index)? else {
+                        return Ok(Value::None);
+                    };
+                    Ok(Value::Integer(v.into()))
+                }
+                "int8" => {
                     let Some(v) = row.try_get::<Option<i64>, _>(index)? else {
                         return Ok(Value::None);
                     };
@@ -195,6 +208,15 @@ impl Value {
                     };
                     Ok(Value::TimestampTz(v))
                 }
+                "interval" => {
+                    let Some(v) =
+                        row.try_get::<Option<sqlx::postgres::types::PgInterval>, _>(index)?
+                    else {
+                        return Ok(Value::None);
+                    };
+                    let secs = crate::utils::pg_interval_to_secs(v);
+                    Ok(Value::Interval(chrono::Duration::seconds(secs)))
+                }
                 _ => Err("Unsupported type".into()),
             },
             PgTypeKind::Array(ar) => {
@@ -206,7 +228,15 @@ impl Value {
                         };
                         Ok(Value::List(v.into_iter().map(Value::String).collect()))
                     }
-                    "int4" | "int8" => {
+                    "int4" => {
+                        let Some(v) = row.try_get::<Option<Vec<i32>>, _>(index)? else {
+                            return Ok(Value::None);
+                        };
+                        Ok(Value::List(
+                            v.into_iter().map(|x| Value::Integer(x.into())).collect(),
+                        ))
+                    }
+                    "int8" => {
                         let Some(v) = row.try_get::<Option<Vec<i64>>, _>(index)? else {
                             return Ok(Value::None);
                         };
@@ -283,6 +313,22 @@ impl Value {
 
                         Ok(Value::List(m))
                     }
+                    "interval" => {
+                        let Some(v) = row
+                            .try_get::<Option<Vec<sqlx::postgres::types::PgInterval>>, _>(index)?
+                        else {
+                            return Ok(Value::None);
+                        };
+
+                        let mut m: Vec<Value> = Vec::new();
+
+                        for i in v {
+                            let secs = crate::utils::pg_interval_to_secs(i);
+                            m.push(Value::Interval(chrono::Duration::seconds(secs)));
+                        }
+
+                        Ok(Value::List(m))
+                    }
                     _ => Err("Unsupported type".into()),
                 }
             }
@@ -299,6 +345,34 @@ impl std::fmt::Display for Value {
             Value::Timestamp(t) => write!(f, "{}", t),
             Value::TimestampTz(t) => write!(f, "{}", t),
             Value::Integer(i) => write!(f, "{}", i),
+            Value::Interval(i) => {
+                // We format to a string in the format of "1d 2h 3m 4s"
+                let mut secs = i.num_seconds();
+                let mut mins = secs / 60;
+                secs %= 60;
+                let mut hours = mins / 60;
+                mins %= 60;
+                let days = hours / 24;
+                hours %= 24;
+
+                if days > 0 {
+                    write!(f, "{}d ", days)?;
+                }
+
+                if hours > 0 {
+                    write!(f, "{}h ", hours)?;
+                }
+
+                if mins > 0 {
+                    write!(f, "{}m ", mins)?;
+                }
+
+                if secs > 0 {
+                    write!(f, "{}s", secs)?;
+                }
+
+                Ok(())
+            }
             Value::Float(fl) => write!(f, "{}", fl),
             Value::Boolean(b) => write!(f, "{}", b),
             Value::List(l) => {
@@ -402,6 +476,13 @@ impl Value {
     pub fn as_timestamp_tz(&self) -> Option<&chrono::DateTime<chrono::Utc>> {
         match self {
             Value::TimestampTz(t) => Some(t),
+            _ => None,
+        }
+    }
+
+    pub fn as_interval(&self) -> Option<&chrono::Duration> {
+        match self {
+            Value::Interval(i) => Some(i),
             _ => None,
         }
     }
