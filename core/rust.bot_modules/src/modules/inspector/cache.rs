@@ -173,7 +173,8 @@ pub async fn setup_am_toggle(data: &crate::Data) -> Result<(), crate::Error> {
     }
 
     data.props.add_permodule_function(
-        "basic_antispam", "clear",
+        "basic_antispam",
+        "clear",
         Box::new(move |_, options| clear(options).boxed()),
     );
 

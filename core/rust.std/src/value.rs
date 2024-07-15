@@ -132,7 +132,7 @@ impl Value {
     /// Converts a PgColumn to a Value
     #[allow(dead_code)]
     pub fn from_sqlx(row: &PgRow, index: usize) -> Result<Self, crate::Error> {
-        let typ_info = row.column(index).type_info();
+        let typ_info = row.try_column(index)?.type_info();
         let typ = typ_info.name().to_lowercase();
 
         match typ_info.kind() {

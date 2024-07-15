@@ -119,16 +119,6 @@ pub async fn event_listener(ectx: &EventHandlerContext) -> Result<(), Error> {
                 .contains(FakeBotDetectionOptions::DISABLED)
                 && new_member.user.bot()
             {
-                // Normalize the bots name
-                let normalized_name = if config
-                    .fake_bot_detection
-                    .contains(FakeBotDetectionOptions::NORMALIZE_NAMES)
-                {
-                    plsfix::fix_text(&new_member.user.name.to_lowercase(), None)
-                } else {
-                    new_member.user.name.to_lowercase()
-                };
-
                 let mut found = false;
 
                 if config
@@ -137,7 +127,51 @@ pub async fn event_listener(ectx: &EventHandlerContext) -> Result<(), Error> {
                 {
                     // Doesn't matter if its official or not, the server wants to block all bots
                     found = true;
+                } else if config
+                    .fake_bot_detection
+                    .contains(FakeBotDetectionOptions::BLOCK_ALL_UNKNOWN_BOTS)
+                {
+                    // Check if the bot is an official bot or not
+                    let is_an_official_bot = super::cache::FAKE_BOTS_CACHE
+                        .iter()
+                        .any(|fb| fb.value().official_bot_ids.contains(&new_member.user.id));
+
+                    if !is_an_official_bot {
+                        found = true;
+                    }
                 } else {
+                    // Normalize the bots name
+                    let normalized_name = if config
+                        .fake_bot_detection
+                        .contains(FakeBotDetectionOptions::NORMALIZE_NAMES)
+                    {
+                        let mut normalized_name =
+                            plsfix::fix_text(&new_member.user.name.to_lowercase(), None);
+
+                        // Handle prefixes people add to the bot name for scamming by removing them
+                        for prefixes in ["premium", "vip", "prime", "pro", "official", "bot"].iter()
+                        {
+                            if normalized_name.starts_with(prefixes) {
+                                normalized_name = normalized_name[prefixes.len()..].to_string();
+                            }
+                        }
+
+                        // Handle suffixes people add to the bot name for scamming by removing them
+                        for suffixes in ["premium", "vip", "prime", "pro", "official", "bot"].iter()
+                        {
+                            if normalized_name.starts_with(suffixes) {
+                                normalized_name = normalized_name[suffixes.len()..].to_string();
+                            }
+                        }
+
+                        // Trim the name
+                        normalized_name = normalized_name.trim().to_string();
+
+                        normalized_name
+                    } else {
+                        new_member.user.name.to_lowercase()
+                    };
+
                     for fb in super::cache::FAKE_BOTS_CACHE.iter() {
                         let val = fb.value();
 
@@ -161,7 +195,7 @@ pub async fn event_listener(ectx: &EventHandlerContext) -> Result<(), Error> {
                         {
                             let (diff, _) = text_diff::diff(&normalized_name, &val.name, "");
 
-                            if diff < 2 {
+                            if diff <= 2 {
                                 found = true;
                                 break;
                             }

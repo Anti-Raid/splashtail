@@ -892,8 +892,8 @@ pub async fn settings_create(
     // Check pkey uniqueness here
     let mut ids: Vec<Value> = Vec::with_capacity(row.len());
 
-    for (i, row) in row.iter().enumerate() {
-        let id = Value::from_sqlx(row, i).map_err(|e| SettingsError::Generic {
+    for row in row.iter() {
+        let id = Value::from_sqlx(row, 0).map_err(|e| SettingsError::Generic {
             message: e.to_string(),
             src: "settings_create [Value::from_sqlx]".to_string(),
             typ: "internal".to_string(),

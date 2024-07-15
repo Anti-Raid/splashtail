@@ -38,8 +38,9 @@ bitflags::bitflags! {
     pub struct FakeBotDetectionOptions: i32 {
         const DISABLED = 1 << 0;
         const BLOCK_ALL_BOTS = 1 << 1;
-        const NORMALIZE_NAMES = 1 << 2;
-        const EXACT_NAME_CHECK = 1 << 3;
-        const SIMILAR_NAME_CHECK = 1 << 4;
+        const BLOCK_ALL_UNKNOWN_BOTS = 1 << 2; // An unknown bot is one that is not on the whitelist nor is registered on fake bot database with official ids
+        const NORMALIZE_NAMES = 1 << 3;
+        const EXACT_NAME_CHECK = 1 << 4;
+        const SIMILAR_NAME_CHECK = 1 << 5;
     }
 }

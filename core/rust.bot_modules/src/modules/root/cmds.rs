@@ -9,7 +9,11 @@ use splashcore_rs::value::Value;
         "maintenance_list",
         "maintenance_create",
         "maintenance_update",
-        "maintenance_delete"
+        "maintenance_delete",
+        "inspector__fake_bots_list",
+        "inspector__fake_bots_add",
+        "inspector__fake_bots_update",
+        "inspector__fake_bots_delete"
     )
 )]
 pub async fn sudo(_ctx: Context<'_>) -> Result<(), Error> {
@@ -109,6 +113,69 @@ pub async fn maintenance_delete(
     crate::silverpelt::settings_poise::settings_deleter(
         &ctx,
         &super::settings::MAINTENANCE,
+        Value::String(id),
+    )
+    .await
+}
+
+#[poise::command(prefix_command)]
+pub async fn inspector__fake_bots_list(ctx: Context<'_>) -> Result<(), crate::Error> {
+    crate::silverpelt::settings_poise::settings_viewer(&ctx, &super::settings::INSPECTOR_FAKE_BOTS)
+        .await
+}
+
+#[poise::command(prefix_command)]
+pub async fn inspector__fake_bots_add(
+    ctx: Context<'_>,
+    #[description = "ID of the bot"] id: String,
+    #[description = "Name of the bot"] name: String,
+    #[description = "Official bot IDs, comma-seperated"] official_ids: String,
+) -> Result<(), crate::Error> {
+    crate::silverpelt::settings_poise::settings_creator(
+        &ctx,
+        &super::settings::INSPECTOR_FAKE_BOTS,
+        indexmap::indexmap! {
+            "bot_id".to_string() => Value::String(id),
+            "name".to_string() => Value::String(name),
+            "official_bot_ids".to_string() => {
+                let official_ids = official_ids.split(',').map(|x| Value::String(x.trim().to_string())).collect::<Vec<Value>>();
+                Value::List(official_ids)
+            },
+        },
+    )
+    .await
+}
+
+#[poise::command(prefix_command)]
+pub async fn inspector__fake_bots_update(
+    ctx: Context<'_>,
+    #[description = "ID of the bot"] id: String,
+    #[description = "Name of the bot"] name: String,
+    #[description = "Official bot IDs, comma-seperated"] official_ids: String,
+) -> Result<(), crate::Error> {
+    crate::silverpelt::settings_poise::settings_updater(
+        &ctx,
+        &super::settings::INSPECTOR_FAKE_BOTS,
+        indexmap::indexmap! {
+            "bot_id".to_string() => Value::String(id),
+            "name".to_string() => Value::String(name),
+            "official_bot_ids".to_string() => {
+                let official_ids = official_ids.split(',').map(|x| Value::String(x.trim().to_string())).collect::<Vec<Value>>();
+                Value::List(official_ids)
+            },
+        },
+    )
+    .await
+}
+
+#[poise::command(prefix_command)]
+pub async fn inspector__fake_bots_delete(
+    ctx: Context<'_>,
+    #[description = "ID of the bot"] id: String,
+) -> Result<(), crate::Error> {
+    crate::silverpelt::settings_poise::settings_deleter(
+        &ctx,
+        &super::settings::INSPECTOR_FAKE_BOTS,
         Value::String(id),
     )
     .await
