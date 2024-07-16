@@ -371,10 +371,11 @@ impl MewldIpcClient {
         let conn = self.redis_pool.next();
         conn.connect();
         conn.wait_for_connect().await?;
-        conn.publish(super::argparse::MEWLD_ARGS.mewld_redis_channel.clone(), cmd)
+        let p: () = conn
+            .publish(super::argparse::MEWLD_ARGS.mewld_redis_channel.clone(), cmd)
             .await?;
 
-        Ok(())
+        Ok(p)
     }
 
     /// Publishes a launch_next command

@@ -92,7 +92,7 @@ buildbot_dbg: sqlx
 	cd services/rust.bot && SQLX_OFFLINE=true cargo build --timings
 
 buildmewldwebui:
-	cd webserver/mewld_web/ui && npm i && npm run build && cd ../../
+	cd services/go.api/mewld_web/ui && npm i && npm run build && cd ../../
 
 tests:
 	CGO_ENABLED=0 go test -v -coverprofile=coverage.out ./...
