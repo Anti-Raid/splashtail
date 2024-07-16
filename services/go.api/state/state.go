@@ -11,8 +11,8 @@ import (
 
 	"github.com/anti-raid/splashtail/core/go.std/animusmagic"
 	"github.com/anti-raid/splashtail/core/go.std/config"
-	"github.com/anti-raid/splashtail/core/go.std/data"
 	"github.com/anti-raid/splashtail/core/go.std/objectstorage"
+	"github.com/anti-raid/splashtail/data"
 	"github.com/anti-raid/splashtail/services/go.api/state/animusmagiccache"
 	"github.com/anti-raid/splashtail/services/go.api/state/redishotcache"
 
@@ -118,7 +118,7 @@ func Setup() {
 
 	Logger = snippets.CreateZap()
 
-	serenityJsonFile, err := data.Embedded.ReadFile("serenity_perms.json")
+	serenityJsonFile, err := data.Data.ReadFile("generated/build_assets/rust.bot/serenity_perms.json")
 
 	if err != nil {
 		panic(err)

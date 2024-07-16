@@ -3,19 +3,18 @@ package config
 import (
 	_ "embed"
 	"strings"
-
-	"github.com/anti-raid/splashtail/core/go.std/data"
 )
+
+//go:embed current-env
+var CurrentEnv string
 
 const (
 	CurrentEnvProd    = "prod"
 	CurrentEnvStaging = "staging"
 )
 
-var CurrentEnv string
-
 func init() {
-	CurrentEnv = strings.TrimSpace(data.CurrentEnv)
+	CurrentEnv = strings.TrimSpace(CurrentEnv)
 
 	if CurrentEnv != CurrentEnvProd && CurrentEnv != CurrentEnvStaging {
 		panic("invalid environment")

@@ -88,6 +88,18 @@ endif
 buildbot: sqlx
 	cd services/rust.bot && SQLX_OFFLINE=true cargo build --release
 
+ifndef CI_BUILD
+	# For every project in core/* and services/*, copy .generated/* to data/generated/{project_name} and to the website (services/website/lib/generated)
+	mkdir -p data/generated/build_assets
+	for d in core/* services/*; do \
+		[ -d $$d/.generated ] || continue; \
+		mkdir -p data/generated/build_assets/$$(basename $$d); \
+		mkdir -p services/website/src/lib/generated/build_assets; \
+		cp -rf $$d/.generated/* data/generated/build_assets/$$(basename $$d); \
+		cp -rf $$d/.generated/* services/website/src/lib/generated/build_assets; \
+	done
+endif
+
 buildbot_dbg: sqlx
 	cd services/rust.bot && SQLX_OFFLINE=true cargo build --timings
 
@@ -107,13 +119,6 @@ ts:
 
 	# Patch to change package name to 'splashtail_types'
 	#sed -i 's:package types:package splashtail_types:g' $(CDN_PATH)/dev/bindings/splashtail/go/types/{*.go,*.ts}
-	
-	# For every project in services/rust.*, run cargo sqlx prepare
-	for d in services/rust.*; do \
-		cd $$d && cargo test && cp -rf .generated $(CDN_PATH)/dev/bindings/splashtail/rust && cd ../..; \
-	done
-
-	cp -rf services/rust.bot/.generated/serenity_perms.json core/go.std/data/serenity_perms.json
 
 	cp -rf $(CDN_PATH)/dev/bindings/splashtail/* services/website/src/lib/generated
 	rm -rf services/website/src/lib/generated/go	
