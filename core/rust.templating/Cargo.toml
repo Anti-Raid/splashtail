@@ -4,6 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+serde = { version = "1", features = ["derive"] }
 base_data = { path = "../rust.base_data" }
 once_cell = "1"
 moka = { version = "0.12", features = ["future", "futures-util"] }

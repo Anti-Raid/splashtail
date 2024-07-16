@@ -1,7 +1,6 @@
-use base_data::limits::embed_limits;
+use base_data::limits::{embed_limits, message_limits};
 use moka::future::Cache;
 use once_cell::sync::Lazy;
-use std::error::Error;
 use std::sync::{Arc, RwLock};
 use std::time::Duration;
 use tera::Tera;
@@ -78,51 +77,71 @@ pub async fn compile_template(
 }
 
 #[derive(Debug, Default)]
-struct InternalTemplateExecuteState {
+struct InternalTemplateEmbedsState {
     /// The title set by the template
-    title: RwLock<Option<String>>,
+    title: Option<String>,
+    /// The description set by the template
+    description: Option<String>,
     /// The fields that were set by the template
-    fields: RwLock<indexmap::IndexMap<String, (String, bool)>>,
+    fields: indexmap::IndexMap<String, (String, bool)>,
 }
 
+#[derive(Debug, Default)]
+struct InternalTemplateExecuteState {
+    /// Embeds [current_index, embeds]
+    embeds: RwLock<(usize, Vec<InternalTemplateEmbedsState>)>,
+    /// What content to set on the message
+    content: RwLock<Option<String>>,
+}
 // Set title of embed
-struct TitleFunction {
+struct EmbedTitleFunction {
     state: Arc<InternalTemplateExecuteState>,
 }
 
-impl tera::Function for TitleFunction {
+// title(title="title")
+impl tera::Function for EmbedTitleFunction {
     fn call(
         &self,
         args: &std::collections::HashMap<String, tera::Value>,
     ) -> tera::Result<tera::Value> {
         let title = args.get("title").ok_or("Title not provided")?;
 
-        // Lock title for writing
-        let mut title_writer = self
+        let mut embeds = self
             .state
-            .title
+            .embeds
             .write()
-            .map_err(|_| "Failed to write to title")?;
+            .map_err(|_| "Failed to read embeds")?;
+
+        if embeds.1.is_empty() {
+            embeds.1.push(InternalTemplateEmbedsState::default()); // We do not increment the current embed here as it will be zero initially
+        }
+
+        let current_idx = embeds.0;
+        let current_embed = embeds
+            .1
+            .get_mut(current_idx)
+            .ok_or("Failed to get current embed")?;
 
         // Insert the title, use a match to avoid quoting the string given
-        *title_writer = Some(match title {
+        current_embed.title = Some(match title {
             tera::Value::String(s) => s.to_string(),
             _ => title.to_string(),
         });
 
         // Drop the lock
-        drop(title_writer);
+        drop(embeds);
 
         Ok(tera::Value::Null)
     }
 }
 
 /// Set fields of embeds
-struct FieldFunction {
+struct EmbedFieldFunction {
     state: Arc<InternalTemplateExecuteState>,
 }
 
-impl tera::Function for FieldFunction {
+// field(name="name", value="value", inline=true/false)
+impl tera::Function for EmbedFieldFunction {
     fn call(
         &self,
         args: &std::collections::HashMap<String, tera::Value>,
@@ -135,12 +154,21 @@ impl tera::Function for FieldFunction {
             .get("inline")
             .map_or(false, |v| v.as_bool().unwrap_or(false));
 
-        // Lock fields for writing
-        let mut fields_writer = self
+        let mut embeds = self
             .state
-            .fields
+            .embeds
             .write()
-            .map_err(|_| "Failed to write to fields")?;
+            .map_err(|_| "Failed to read embeds")?;
+
+        if embeds.1.is_empty() {
+            embeds.1.push(InternalTemplateEmbedsState::default()); // We do not increment the current embed here as it will be zero initially
+        }
+
+        let current_idx = embeds.0;
+        let current_embed = embeds
+            .1
+            .get_mut(current_idx)
+            .ok_or("Failed to get current embed")?;
 
         let field_value_str = match field_value {
             tera::Value::String(s) => s.to_string(),
@@ -148,10 +176,138 @@ impl tera::Function for FieldFunction {
         };
 
         // Insert the field
-        fields_writer.insert(field_name.to_string(), (field_value_str, field_is_inline));
+        current_embed
+            .fields
+            .insert(field_name.to_string(), (field_value_str, field_is_inline));
+
+        Ok(tera::Value::Null)
+    }
+}
+
+/// Set embed description, we use a filter here to make multiline embed descriptions easier
+struct EmbedDescriptionFilter {
+    state: Arc<InternalTemplateExecuteState>,
+}
+
+/// {% filter description %}
+/// My description here
+/// {% endfilter %}
+impl tera::Filter for EmbedDescriptionFilter {
+    fn filter(
+        &self,
+        value: &tera::Value,
+        _args: &std::collections::HashMap<String, tera::Value>,
+    ) -> tera::Result<tera::Value> {
+        let text = match value {
+            tera::Value::String(s) => Some(s.to_string()),
+            tera::Value::Bool(true) => return Ok(tera::Value::Null), // Ignore true
+            tera::Value::Bool(false) => None,
+            tera::Value::Null => None,
+            _ => Some(value.to_string()),
+        };
+
+        // Lock fields for writing
+        let mut embeds_writer = self
+            .state
+            .embeds
+            .write()
+            .map_err(|_| "Failed to write to use_embed")?;
+
+        // Set the state
+        if embeds_writer.1.is_empty() {
+            embeds_writer.1.push(InternalTemplateEmbedsState::default()); // We do not increment the current embed here as it will be zero initially
+        }
+
+        let current_idx = embeds_writer.0;
+        let current_embed = embeds_writer
+            .1
+            .get_mut(current_idx)
+            .ok_or("Failed to get current embed")?;
+
+        // Insert the description
+        current_embed.description = text;
 
         // Drop the lock
-        drop(fields_writer);
+        drop(embeds_writer);
+
+        Ok(tera::Value::Null)
+    }
+}
+
+/// Set content of message, we use a filter here to make multiline content easier
+struct ContentFilter {
+    state: Arc<InternalTemplateExecuteState>,
+}
+
+/// {% filter content %}
+/// My content here
+/// {% endfilter %}
+impl tera::Filter for ContentFilter {
+    fn filter(
+        &self,
+        value: &tera::Value,
+        _args: &std::collections::HashMap<String, tera::Value>,
+    ) -> tera::Result<tera::Value> {
+        let text = match value {
+            tera::Value::String(s) => Some(s.to_string()),
+            tera::Value::Bool(true) => return Ok(tera::Value::Null), // Ignore true
+            tera::Value::Bool(false) => None,
+            tera::Value::Null => None,
+            _ => Some(value.to_string()),
+        };
+
+        // Lock fields for writing
+        let mut content_writer = self
+            .state
+            .content
+            .write()
+            .map_err(|_| "Failed to write to use_embed")?;
+
+        // Set the state
+        *content_writer = text;
+
+        // Drop the lock
+        drop(content_writer);
+
+        Ok(tera::Value::Null)
+    }
+}
+
+// Add a new embed to the template
+struct NewEmbedFunction {
+    state: Arc<InternalTemplateExecuteState>,
+}
+
+// new_embed(title="" [optional], description="" [optional])
+impl tera::Function for NewEmbedFunction {
+    fn call(
+        &self,
+        args: &std::collections::HashMap<String, tera::Value>,
+    ) -> tera::Result<tera::Value> {
+        let title = args.get("title");
+        let description = args.get("description");
+
+        let mut embeds = self
+            .state
+            .embeds
+            .write()
+            .map_err(|_| "Failed to read embeds")?;
+
+        // Add a new embed
+        embeds.1.push(InternalTemplateEmbedsState {
+            title: match title {
+                Some(tera::Value::String(s)) => Some(s.to_string()),
+                _ => None,
+            },
+            description: match description {
+                Some(tera::Value::String(s)) => Some(s.to_string()),
+                _ => None,
+            },
+            fields: indexmap::IndexMap::new(),
+        });
+
+        // Set the current embed index to embeds.len() - 1
+        embeds.0 += embeds.1.len() - 1;
 
         Ok(tera::Value::Null)
     }
@@ -198,10 +354,20 @@ impl tera::Filter for BetterTitleFilter {
     }
 }
 
-pub struct ExecutedTemplate {
+#[derive(Debug, Default)]
+pub struct TemplateEmbed {
+    /// The title set by the template
     pub title: Option<String>,
-    pub description: String,
+    /// The description set by the template
+    pub description: Option<String>,
+    /// The fields that were set by the template
     pub fields: indexmap::IndexMap<String, (String, bool)>,
+}
+
+pub struct ExecutedTemplate {
+    embeds: Vec<TemplateEmbed>,
+    /// What content to set on the message
+    content: Option<String>,
 }
 
 /// Executes a template with the given context
@@ -211,18 +377,42 @@ pub async fn execute_template(
 ) -> Result<ExecutedTemplate, base_data::Error> {
     let ites = Arc::new(InternalTemplateExecuteState::default());
 
-    // Add title function
+    // Add embed_title function
     tera.register_function(
-        "title",
-        TitleFunction {
+        "embed_title",
+        EmbedTitleFunction {
             state: ites.clone(),
         },
     );
 
-    // Add field function
+    // Add embed_field function
     tera.register_function(
-        "field",
-        FieldFunction {
+        "embed_field",
+        EmbedFieldFunction {
+            state: ites.clone(),
+        },
+    );
+
+    // Add embed_description filter
+    tera.register_filter(
+        "embed_description",
+        EmbedDescriptionFilter {
+            state: ites.clone(),
+        },
+    );
+
+    // Add new_embed function
+    tera.register_function(
+        "new_embed",
+        NewEmbedFunction {
+            state: ites.clone(),
+        },
+    );
+
+    // Add content filter
+    tera.register_filter(
+        "content",
+        ContentFilter {
             state: ites.clone(),
         },
     );
@@ -231,33 +421,45 @@ pub async fn execute_template(
     tera.register_filter("bettertitle", BetterTitleFilter {});
 
     // Render the template
-    let rendered = tokio::time::timeout(
+    tokio::time::timeout(
         TEMPLATE_EXECUTION_TIMEOUT,
         tera.render_async("main", &context),
     )
     .await
-    .map_err(|_| "Template execution timed out")?;
+    .map_err(|_| "Template execution timed out")??;
 
-    if let Err(e) = rendered {
-        return Err(format!("Error: {}, Source: {:?}", e, e.source()).into());
+    // Read the outputted template embeds
+    let embeds_reader = ites.embeds.read().map_err(|_| "Failed to read embeds")?;
+    let mut template_embeds = Vec::new();
+
+    for embed in embeds_reader.1.iter() {
+        template_embeds.push(TemplateEmbed {
+            title: embed.title.clone(),
+            description: embed.description.clone(),
+            fields: embed.fields.clone(),
+        });
     }
 
-    let rendered = rendered.unwrap();
+    // Add the rendered content to the content
+    let content_reader = ites.content.read().map_err(|_| "Failed to read content")?;
 
-    // Read the outputted template specials
-    let title_reader = ites.title.read().map_err(|_| "Failed to read title")?;
-    let fields_reader = ites.fields.read().map_err(|_| "Failed to read fields")?;
     Ok(ExecutedTemplate {
-        title: (*title_reader).clone(),
-        description: rendered,
-        fields: (*fields_reader).clone(),
+        embeds: template_embeds,
+        content: (*content_reader).clone(),
     })
 }
 
-pub fn to_embed<'a>(executed_template: ExecutedTemplate) -> serenity::all::CreateEmbed<'a> {
-    let mut embed = serenity::all::CreateEmbed::default();
+#[derive(Default, serde::Serialize)]
+/// A DiscordReply is guaranteed to map 1-1 to discords API
+pub struct DiscordReply<'a> {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub content: Option<String>,
+    pub embeds: Vec<serenity::all::CreateEmbed<'a>>,
+}
 
+pub fn to_discord_reply<'a>(executed_template: ExecutedTemplate) -> DiscordReply<'a> {
     let mut total_chars: usize = 0;
+    let mut total_content_chars = 0;
 
     fn _get_char_limit(total_chars: usize, limit: usize, max_chars: usize) -> usize {
         if max_chars <= total_chars {
@@ -280,49 +482,69 @@ pub fn to_embed<'a>(executed_template: ExecutedTemplate) -> serenity::all::Creat
         s.chars().take(char_limit).collect()
     }
 
-    if let Some(title) = &executed_template.title {
-        // Slice title to EMBED_TITLE_LIMIT
-        embed = embed.title(_slice_chars(
-            title,
-            &mut total_chars,
-            embed_limits::EMBED_TITLE_LIMIT,
-            embed_limits::EMBED_TOTAL_LIMIT,
-        ));
-    }
+    let mut embeds = Vec::new();
+    for template_embed in executed_template.embeds {
+        let mut embed = serenity::all::CreateEmbed::default();
 
-    embed = embed.description(
-        _slice_chars(
-            &executed_template.description,
-            &mut total_chars,
-            embed_limits::EMBED_DESCRIPTION_LIMIT,
-            embed_limits::EMBED_TOTAL_LIMIT,
-        )
-        .to_string(),
-    );
-
-    for (count, (name, (value, inline))) in executed_template.fields.into_iter().enumerate() {
-        if count >= embed_limits::EMBED_FIELDS_MAX_COUNT {
-            break;
+        if let Some(title) = &template_embed.title {
+            // Slice title to EMBED_TITLE_LIMIT
+            embed = embed.title(_slice_chars(
+                title,
+                &mut total_chars,
+                embed_limits::EMBED_TITLE_LIMIT,
+                embed_limits::EMBED_TOTAL_LIMIT,
+            ));
         }
 
-        // Slice field name to EMBED_FIELD_NAME_LIMIT
-        let name = _slice_chars(
-            &name,
-            &mut total_chars,
-            embed_limits::EMBED_FIELD_NAME_LIMIT,
-            embed_limits::EMBED_TOTAL_LIMIT,
-        );
+        if let Some(description) = &template_embed.description {
+            // Slice description to EMBED_DESCRIPTION_LIMIT
+            embed = embed.description(
+                _slice_chars(
+                    description,
+                    &mut total_chars,
+                    embed_limits::EMBED_DESCRIPTION_LIMIT,
+                    embed_limits::EMBED_TOTAL_LIMIT,
+                )
+                .to_string(),
+            );
+        }
 
-        // Slice field value to EMBED_FIELD_VALUE_LIMIT
-        let value = _slice_chars(
-            &value,
-            &mut total_chars,
-            embed_limits::EMBED_FIELD_VALUE_LIMIT,
-            embed_limits::EMBED_TOTAL_LIMIT,
-        );
+        for (count, (name, (value, inline))) in template_embed.fields.into_iter().enumerate() {
+            if count >= embed_limits::EMBED_FIELDS_MAX_COUNT {
+                break;
+            }
 
-        embed = embed.field(name, value, inline);
+            // Slice field name to EMBED_FIELD_NAME_LIMIT
+            let name = _slice_chars(
+                &name,
+                &mut total_chars,
+                embed_limits::EMBED_FIELD_NAME_LIMIT,
+                embed_limits::EMBED_TOTAL_LIMIT,
+            );
+
+            // Slice field value to EMBED_FIELD_VALUE_LIMIT
+            let value = _slice_chars(
+                &value,
+                &mut total_chars,
+                embed_limits::EMBED_FIELD_VALUE_LIMIT,
+                embed_limits::EMBED_TOTAL_LIMIT,
+            );
+
+            embed = embed.field(name, value, inline);
+        }
+
+        embeds.push(embed);
     }
 
-    embed
+    // Now handle content
+    let content = executed_template.content.map(|c| {
+        _slice_chars(
+            &c,
+            &mut total_content_chars,
+            message_limits::MESSAGE_CONTENT_LIMIT,
+            message_limits::MESSAGE_CONTENT_LIMIT,
+        )
+    });
+
+    DiscordReply { embeds, content }
 }

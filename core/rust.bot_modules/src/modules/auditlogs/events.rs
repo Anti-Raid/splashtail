@@ -212,17 +212,28 @@ pub async fn dispatch_audit_log(
 
         let templated = templating::execute_template(&mut tera, Arc::new(tera_ctx)).await;
 
-        let embed = match templated {
-            Ok(templated) => templating::to_embed(templated),
-            Err(e) => serenity::all::CreateEmbed::default()
-                .description(format!("Failed to render template: {}", e)),
+        let discord_reply = match templated {
+            Ok(templated) => templating::to_discord_reply(templated),
+            Err(e) => {
+                let embed = serenity::all::CreateEmbed::default()
+                    .description(format!("Failed to render template: {}", e));
+
+                templating::DiscordReply {
+                    embeds: vec![embed],
+                    ..Default::default()
+                }
+            }
         };
 
         match sink.typ.as_str() {
             "channel" => {
                 let channel: ChannelId = sink.sink.parse()?;
 
-                let mut message = CreateMessage::default().embed(embed);
+                let mut message = CreateMessage::default().embeds(discord_reply.embeds);
+
+                if let Some(content) = discord_reply.content {
+                    message = message.content(content);
+                }
 
                 if sink.send_json_context {
                     message = message.add_file(serenity::all::CreateAttachment::bytes(
@@ -283,14 +294,7 @@ pub async fn dispatch_audit_log(
                     ref err,
                 ))) = ctx
                     .http
-                    .execute_webhook(
-                        id,
-                        None,
-                        token,
-                        false,
-                        files,
-                        &serde_json::json!({"embeds": vec![embed]}),
-                    )
+                    .execute_webhook(id, None, token, false, files, &discord_reply)
                     .await
                 {
                     match err.status_code {

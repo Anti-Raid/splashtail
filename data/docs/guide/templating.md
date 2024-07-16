@@ -7,6 +7,7 @@ To do so, Anti-Raid uses [tera](https://keats.github.io/tera/docs/). See its doc
 - Dangerous functions such as ``get_env`` do not exist.
 - ``__tera_context_raw`` provides the Tera context as an object. This complements ``__tera_context`` which provides the context as a string for debugging.
 - All templates have a (reasonable) time limit for execution to protect against abuse and DDOS attacks.
+- The output of the template itself is ignored. You must use ``Message Helpers`` to construct the message
 
 ## Common Functions And Filters
 
@@ -14,10 +15,35 @@ To do so, Anti-Raid uses [tera](https://keats.github.io/tera/docs/). See its doc
 
 - The ``bettertitle`` filter provides a potentially better title-ing filter than the ``title`` filter pre-provided by Tera
 
-### Embed helpers
+### Message Helpers
 
-- The ``title(title=TITLE)`` function can be used to set the title of an embed.
-- The ``field(name=NAME, value=VALUE, inline=INLINE [default: false])`` function can be used to add fields to embeds.
+- The ``embed_title(title=TITLE)`` function can be used to set the title of an embed.
+- The ``embed_field(name=NAME, value=VALUE, inline=INLINE [default: false])`` function can be used to add fields to embeds.
+- The ``embed_description`` filter can be used to set the description of an embed. This uses a filter to make multi-line descriptions easier.
+- The ``content`` filter can be used to set the content of a message. This uses a filter to make multi-line content easier.
+- The ``new_embed(title=TITLE [optional], description=DESCRIPTION [optional])`` function can be used to create a new embed.
+
+
+**Note that not calling ``new_embed`` before calling ``embed_title`` or ``embed_field`` will automatically make a new embed in state.**
+
+**Example**
+
+```
+{{ embed_title(title="My cool embed") }}
+{{ embed_field(name="Field 1", value="Value 1") }}
+{{ embed_field(name="Field 2", value="Value 2") }}
+{{ embed_field(name="Field 3", value="Value 3", inline=true) }}
+
+{% filter embed_description %}
+This is a cool embed
+{% endfilter %}
+
+{% filter content %}
+# Hello world
+
+This is message content
+{% endfilter %}
+```
 
 ## Situational Functions and Filters
 

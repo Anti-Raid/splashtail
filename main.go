@@ -138,6 +138,12 @@ func main() {
 			panic(err)
 		}
 
+		discordSess, err := discordgo.New("Bot " + cfg.DiscordAuth.Token)
+
+		if err != nil {
+			panic(err)
+		}
+
 		var mldConfig mconfig.CoreConfig
 
 		err = yaml.Unmarshal(mldF, &mldConfig)
@@ -159,7 +165,7 @@ func main() {
 		}
 
 		if mldConfig.Redis != cfg.Meta.RedisURL.Parse() {
-			webserverstate.Logger.Warn("Redis URL in mewld.yaml does not match the one in config.yaml")
+			logger.Warn("Redis URL in mewld.yaml does not match the one in config.yaml")
 		}
 
 		webh, err := utils.ParseWebhookURL(cfg.Wafflepaw.StatusWebhook)
@@ -212,7 +218,7 @@ func main() {
 						payloadStr.WriteString(k + ": " + fmt.Sprint(v) + "\n")
 					}
 
-					_, err := webserverstate.Discord.WebhookExecute(
+					_, err := discordSess.WebhookExecute(
 						webh.ID,
 						webh.Token,
 						false,

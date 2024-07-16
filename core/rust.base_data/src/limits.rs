@@ -8,3 +8,7 @@ pub mod embed_limits {
     pub const EMBED_AUTHOR_NAME_LIMIT: usize = 256;
     pub const EMBED_TOTAL_LIMIT: usize = 6000;
 }
+
+pub mod message_limits {
+    pub const MESSAGE_CONTENT_LIMIT: usize = 4096;
+}

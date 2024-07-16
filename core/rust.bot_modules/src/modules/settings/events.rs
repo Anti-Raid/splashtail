@@ -45,6 +45,30 @@ pub async fn event_listener(ectx: &EventHandlerContext) -> Result<(), Error> {
                 }
             }
         }
+        FullEvent::GuildRoleUpdate {
+            old_data_if_available,
+            new,
+        } => {
+            if let Some(old) = old_data_if_available {
+                if old.permissions == new.permissions {
+                    return Ok(());
+                }
+            }
+
+            let guild_id = ectx.guild_id;
+            if let Err(err) = SILVERPELT_CACHE
+                .command_permission_cache
+                .invalidate_entries_if(move |k, _| k.0 == guild_id)
+            {
+                log::error!(
+                    "Failed to invalidate command permission cache for guild {}: {}",
+                    guild_id,
+                    err
+                );
+            } else {
+                log::debug!("Invalidated cache for guild {}", guild_id);
+            }
+        }
         _ => {}
     }
 

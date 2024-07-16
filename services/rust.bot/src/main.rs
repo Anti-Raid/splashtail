@@ -163,13 +163,8 @@ impl base_data::permodule::PermoduleFunctionExecutor for PermoduleFunctionExecut
     }
 }
 
-pub async fn maint_message<'a>(
-    user_data: &crate::Data,
-) -> Result<poise::CreateReply<'a>, crate::Error> {
-    let maint_msg = sqlx::query!("SELECT id, title, description, entries, created_at, created_by, last_updated_at, last_updated_by, current FROM maintenance")
-        .fetch_optional(&user_data.pool)
-        .await;
-
+// TODO: allow root users to customize/set this in database later
+pub fn maint_message<'a>(user_data: &crate::Data) -> poise::CreateReply<'a> {
     let primary = poise::serenity_prelude::CreateEmbed::default()
     .color(0xff0000)
     .title("AntiRaid")
@@ -178,10 +173,11 @@ pub async fn maint_message<'a>(
         format!("Unfortunately, AntiRaid is currently unavailable due to poor code management and changes with the Discord API. We are currently in the works of V6, and hope to have it out by next month. All use of our services will not be available, and updates will be pushed here. We are extremely sorry for the inconvenience.\nFor more information you can also join our [Support Server]({})!", config::CONFIG.meta.support_server)
     );
 
-    let changes: [&str; 3] = [
+    let changes: [&str; 4] = [
         "We are working extremely hard on Antiraid v6, and have completed working on half of the bot. We should have this update out by Q1/Q2 2024! Delays may occur due to the sheer scope of the unique features we want to provide!",
         "Yet another update: we are in the process of adding some MASSIVE new features including advanced permission management, server member limits, AI image classification, server member backups and custom customizable github webhook support (for developers)",
         "Update (Tuesday, July 2nd 2024 Edition): We are still working on the bot. It is taking longer than expected due to the large amount of new features being added. You can also request specific features you want in Anti-Raid on our Discord Server!",
+        "Update (July 15th): Our developers want feedback on what we should add to the bot! Please join our support server and give your wishlist now!"
     ];
 
     let updates = poise::serenity_prelude::CreateEmbed::default()

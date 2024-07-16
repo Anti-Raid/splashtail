@@ -1,5 +1,7 @@
-{{ title(title=(event_titlename)) }}
+{{ embed_title(title=(event_titlename)) }}
 
+{% filter embed_description %}
 {% for key, value in event %}
 **{{- key|bettertitle -}}**: {{- value|formatter__gwevent_field -}}
 {% endfor %}
+{% endfilter %}

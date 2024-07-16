@@ -19,20 +19,13 @@ pub fn module() -> crate::silverpelt::Module {
             indexmap::indexmap! {
                 "register" => crate::silverpelt::CommandExtendedData::none(),
                 "cub" => crate::silverpelt::CommandExtendedData::none(),
-                "maintenance_list" => crate::silverpelt::CommandExtendedData::none(),
-                "maintenance_create" => crate::silverpelt::CommandExtendedData::none(),
-                "maintenance_update" => crate::silverpelt::CommandExtendedData::none(),
-                "maintenance_delete" => crate::silverpelt::CommandExtendedData::none(),
                 "inspector__fake_bots_list" => crate::silverpelt::CommandExtendedData::none(),
                 "inspector__fake_bots_add" => crate::silverpelt::CommandExtendedData::none(),
                 "inspector__fake_bots_update" => crate::silverpelt::CommandExtendedData::none(),
                 "inspector__fake_bots_delete" => crate::silverpelt::CommandExtendedData::none(),
             },
         )],
-        config_options: vec![
-            (*settings::MAINTENANCE).clone(),
-            (*settings::INSPECTOR_FAKE_BOTS).clone(),
-        ],
+        config_options: vec![(*settings::INSPECTOR_FAKE_BOTS).clone()],
         ..Default::default()
     }
 }
