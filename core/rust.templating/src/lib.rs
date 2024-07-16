@@ -83,7 +83,7 @@ struct InternalTemplateEmbedsState {
     /// The description set by the template
     description: Option<String>,
     /// The fields that were set by the template
-    fields: indexmap::IndexMap<String, (String, bool)>,
+    fields: Vec<(String, String, bool)>,
 }
 
 #[derive(Debug, Default)]
@@ -170,6 +170,11 @@ impl tera::Function for EmbedFieldFunction {
             .get_mut(current_idx)
             .ok_or("Failed to get current embed")?;
 
+        let field_name_str = match field_name {
+            tera::Value::String(s) => s.to_string(),
+            _ => field_name.to_string(),
+        };
+
         let field_value_str = match field_value {
             tera::Value::String(s) => s.to_string(),
             _ => field_value.to_string(),
@@ -178,7 +183,7 @@ impl tera::Function for EmbedFieldFunction {
         // Insert the field
         current_embed
             .fields
-            .insert(field_name.to_string(), (field_value_str, field_is_inline));
+            .push((field_name_str, field_value_str, field_is_inline));
 
         Ok(tera::Value::Null)
     }
@@ -303,7 +308,7 @@ impl tera::Function for NewEmbedFunction {
                 Some(tera::Value::String(s)) => Some(s.to_string()),
                 _ => None,
             },
-            fields: indexmap::IndexMap::new(),
+            fields: Vec::new(),
         });
 
         // Set the current embed index to embeds.len() - 1
@@ -361,7 +366,7 @@ pub struct TemplateEmbed {
     /// The description set by the template
     pub description: Option<String>,
     /// The fields that were set by the template
-    pub fields: indexmap::IndexMap<String, (String, bool)>,
+    pub fields: Vec<(String, String, bool)>,
 }
 
 pub struct ExecutedTemplate {
@@ -397,9 +402,13 @@ impl ExecutedTemplate {
                 return String::new();
             }
 
-            *total_chars += char_limit;
-
-            s.chars().take(char_limit).collect()
+            if s.len() > char_limit {
+                *total_chars += char_limit;
+                s.chars().take(char_limit).collect()
+            } else {
+                *total_chars += s.len();
+                s.to_string()
+            }
         }
 
         let mut embeds = Vec::new();
@@ -436,7 +445,7 @@ impl ExecutedTemplate {
                 set = true;
             }
 
-            for (count, (name, (value, inline))) in template_embed.fields.into_iter().enumerate() {
+            for (count, (name, value, inline)) in template_embed.fields.into_iter().enumerate() {
                 if count >= embed_limits::EMBED_FIELDS_MAX_COUNT {
                     break;
                 }

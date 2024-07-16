@@ -1,4 +1,10 @@
-# Sunday, July 15th 2024
+# Tuesday, July 16th 2024
+
+## Templating
+- Have begun working on new TemplateBuilder component on the website
+- Support for multiple embed + message content has been added
+
+# Monday, July 15th 2024
 
 ## Settings
 
