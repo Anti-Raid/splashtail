@@ -705,7 +705,7 @@ fn create_template_docs() -> Result<(), Error> {
             let var_name = var_name.replace(['"', '(', ')', ';'], "");
             let var_name = var_name.trim();
 
-            println!("cargo:warning=var_name: {}", var_name);
+            //println!("cargo:warning=var_name: {}", var_name);
 
             inserted_vars.push(var_name.to_string());
         }
