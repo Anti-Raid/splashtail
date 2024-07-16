@@ -431,7 +431,7 @@ pub fn expand_event(event: FullEvent) -> Option<IndexMap<String, CategorizedFiel
         // @ci.expand_event_check ChannelDelete none
         FullEvent::ChannelDelete { channel, messages } => {
             insert_field(&mut fields, "channel", "channel", channel);
-            insert_field(&mut fields, "channel", "messages", {
+            insert_optional_field(&mut fields, "channel", "messages", {
                 if let Some(messages) = messages {
                     let mut m = Vec::new();
 
@@ -439,9 +439,9 @@ pub fn expand_event(event: FullEvent) -> Option<IndexMap<String, CategorizedFiel
                         m.push(message.clone());
                     }
 
-                    m
+                    Some(m)
                 } else {
-                    Vec::new()
+                    None
                 }
             });
         }
@@ -458,9 +458,7 @@ pub fn expand_event(event: FullEvent) -> Option<IndexMap<String, CategorizedFiel
         }
         // @ci.expand_event_check ChannelUpdate none
         FullEvent::ChannelUpdate { old, new } => {
-            if let Some(old) = old {
-                insert_field(&mut fields, "channel", "old", old);
-            }
+            insert_optional_field(&mut fields, "channel", "old", old);
             insert_field(&mut fields, "channel", "new", new);
         }
         // @ci.expand_event_check CommandPermissionsUpdate none
@@ -507,7 +505,7 @@ pub fn expand_event(event: FullEvent) -> Option<IndexMap<String, CategorizedFiel
             insert_field(&mut fields, "guild", "guild", guild);
             insert_optional_field(&mut fields, "guild_ext", "is_new", is_new);
         }
-        // @ci.expand_event_check GuildDelete none/create_template_docs.add is_full_available: bool
+        // @ci.expand_event_check GuildDelete none/create_template_docs.add is_full_available: bool/create_template_docs.remove incomplete/create_template_docs.add guild_id: GuildId/create_template_docs.rename full guild
         FullEvent::GuildDelete { incomplete, full } => {
             insert_field(
                 &mut fields,
@@ -516,13 +514,10 @@ pub fn expand_event(event: FullEvent) -> Option<IndexMap<String, CategorizedFiel
                 full.is_some(),
             );
 
-            if let Some(full) = full {
-                insert_field(&mut fields, "guild", "guild", full);
-            } else {
-                insert_field(&mut fields, "guild", "guild_id", incomplete.id);
-            }
+            insert_field(&mut fields, "guild", "guild_id", incomplete.id);
+            insert_optional_field(&mut fields, "guild", "guild", full);
         }
-        // @ci.expand_event_check GuildEmojisUpdate none
+        // @ci.expand_event_check GuildEmojisUpdate none/create_template_docs.remove current_state/create_template_docs.add emojis: Vec<Emoji>
         FullEvent::GuildEmojisUpdate {
             guild_id,
             current_state,
@@ -551,50 +546,61 @@ pub fn expand_event(event: FullEvent) -> Option<IndexMap<String, CategorizedFiel
             user,
             member_data_if_available,
         } => {
-            if let Some(member_data_if_available) = member_data_if_available {
-                insert_field(
-                    &mut fields,
-                    "member",
-                    "member",
-                    member_data_if_available.clone(),
-                );
-            } else {
-                insert_field(&mut fields, "guild", "guild_id", guild_id);
-                insert_field(&mut fields, "user", "user", user);
-            }
+            insert_field(&mut fields, "guild", "guild_id", guild_id);
+            insert_field(&mut fields, "user", "user", user);
+            insert_optional_field(
+                &mut fields,
+                "member",
+                "member_data_if_available",
+                member_data_if_available.clone(),
+            );
         }
-        // @ci.expand_event_check GuildMemberUpdate none
+        // @ci.expand_event_check GuildMemberUpdate event:event,GuildMemberUpdateEvent/create_template_docs.rename old_if_available old
         FullEvent::GuildMemberUpdate {
             old_if_available,
             new,
-            ..
+            event,
         } => {
-            if let Some(old) = old_if_available {
-                insert_field(&mut fields, "member", "old", old);
-            }
-            if let Some(new) = new {
-                insert_field(&mut fields, "member", "new", new);
-            };
+            insert_optional_field(&mut fields, "member", "old", old_if_available);
+            insert_optional_field(&mut fields, "member", "new", new);
+            insert_field(&mut fields, "event", "guild_id", event.guild_id);
+            insert_optional_field(&mut fields, "event", "nick", event.nick);
+            insert_field(&mut fields, "event", "joined_at", event.joined_at);
+            insert_field(&mut fields, "event", "roles", event.roles);
+            insert_field(&mut fields, "event", "user", event.user);
+            insert_optional_field(&mut fields, "event", "premium_since", event.premium_since);
+            insert_field(&mut fields, "event", "pending", event.pending());
+            insert_field(&mut fields, "event", "deaf", event.deaf());
+            insert_field(&mut fields, "event", "mute", event.mute());
+            insert_optional_field(&mut fields, "event", "avatar", event.avatar);
+            insert_optional_field(
+                &mut fields,
+                "event",
+                "communication_disabled_until",
+                event.communication_disabled_until,
+            );
+            insert_optional_field(
+                &mut fields,
+                "event",
+                "unusual_dm_activity_until",
+                event.unusual_dm_activity_until,
+            );
         }
         // @ci.expand_event_check GuildMembersChunk none
         FullEvent::GuildMembersChunk { .. } => return None,
-        // @ci.expand_event_check GuildRoleCreate none
+        // @ci.expand_event_check GuildRoleCreate none/create_template_docs.rename new role
         FullEvent::GuildRoleCreate { new } => {
             insert_field(&mut fields, "role", "role", new);
         }
-        // @ci.expand_event_check GuildRoleDelete none
+        // @ci.expand_event_check GuildRoleDelete none/create_template_docs.rename removed_role_data_if_available role
         FullEvent::GuildRoleDelete {
             guild_id,
             removed_role_id,
             removed_role_data_if_available,
         } => {
             insert_field(&mut fields, "guild", "guild_id", guild_id);
-
-            insert_field(&mut fields, "guild_role_delete", "role_id", removed_role_id);
-
-            if let Some(removed_role_data) = removed_role_data_if_available {
-                insert_field(&mut fields, "role", "role", removed_role_data.clone());
-            }
+            insert_field(&mut fields, "role", "removed_role_id", removed_role_id);
+            insert_optional_field(&mut fields, "role", "role", removed_role_data_if_available);
         }
         // @ci.expand_event_check GuildRoleUpdate none
         FullEvent::GuildRoleUpdate {

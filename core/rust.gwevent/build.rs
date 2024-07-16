@@ -1,3 +1,5 @@
+use std::io::Write;
+
 type Error = Box<dyn std::error::Error + Send + Sync>;
 
 fn _get_serenity_path() -> Result<String, Error> {
@@ -134,6 +136,7 @@ impl ExpandEventsCiEventCheck {
         let args = args_split[1..]
             .iter()
             .map(|x| x.trim().to_string())
+            .filter(|x| !x.is_empty())
             .collect::<Vec<String>>();
 
         // Simple case of none
@@ -169,7 +172,7 @@ struct ExpandEventsCurrentWorkingCiEvent {
     insert_field_calls: Vec<String>,
 }
 
-fn ci_expand_events_parse() -> Result<Vec<ExpandEventsCurrentWorkingCiEvent>, Error> {
+fn _parse_ci_expand_event_checks() -> Result<Vec<ExpandEventsCurrentWorkingCiEvent>, Error> {
     let core_rs = std::fs::read_to_string("src/core.rs")?;
     let core_rs = core_rs.lines().collect::<Vec<&str>>();
 
@@ -244,6 +247,14 @@ fn ci_expand_events_parse() -> Result<Vec<ExpandEventsCurrentWorkingCiEvent>, Er
                 }
 
                 continue;
+            }
+
+            if line.contains("if let") && !current_working_ci_event.in_insert_field_call.0 {
+                return Err(format!(
+                    "if let found in ci event: {}",
+                    current_working_ci_event.variant_name
+                )
+                .into());
             }
 
             // If we see an insert_field or insert_optional_field call, set the flag
@@ -321,7 +332,7 @@ fn ci_expand_events_parse() -> Result<Vec<ExpandEventsCurrentWorkingCiEvent>, Er
             let line_split = line.split_whitespace().collect::<Vec<&str>>();
 
             let variant_name = line_split[0].to_string();
-            let tag = ExpandEventsCiEventCheck::parse(line_split[1]);
+            let tag = ExpandEventsCiEventCheck::parse(line_split[1..].join(" ").as_str());
 
             working_ci_events.push(ExpandEventsCurrentWorkingCiEvent {
                 check: tag,
@@ -340,13 +351,7 @@ fn ci_expand_events_parse() -> Result<Vec<ExpandEventsCurrentWorkingCiEvent>, Er
 /// CI to check expand_events
 fn ci_expand_events() -> Result<(), Error> {
     let serenity_event_struct_fields = _get_serenity_events()?;
-
-    println!(
-        "cargo:warning=serenity_event_struct_fields: {:?}",
-        serenity_event_struct_fields
-    );
-
-    let working_ci_events = ci_expand_events_parse()?;
+    let working_ci_events = _parse_ci_expand_event_checks()?;
 
     let serenity_event_struct_fields = serenity_event_struct_fields
         .into_iter()
@@ -379,8 +384,6 @@ fn ci_expand_events() -> Result<(), Error> {
 
                     // Split by comma
                     let insert_field = insert_field.split(',').collect::<Vec<&str>>();
-
-                    //println!("cargo:warning=var_name: {:?}", insert_field);
 
                     // From the last element, keep looping until we find an element starting with var[.]
                     let var_name = insert_field
@@ -417,7 +420,7 @@ fn ci_expand_events() -> Result<(), Error> {
 
                 if !missing_fields.is_empty() {
                     return Err(format!(
-                        "Fields missing in event struct {}: {:?} (of {:?}) {:?}",
+                        "Fields missing in event struct {}: {:?} (of {:?}), IFC calls {:?}",
                         event_struct, missing_fields, needed_fields, event.insert_field_calls
                     )
                     .into());
@@ -488,8 +491,8 @@ fn _unflatten_args(fields: &str) -> indexmap::IndexMap<String, String> {
     event_field_map
 }
 
-// CI to create template documentation
-fn create_template_docs() -> Result<(), Error> {
+fn _parse_full_events(
+) -> Result<indexmap::IndexMap<String, indexmap::IndexMap<String, String>>, Error> {
     let serenity_path = _get_serenity_path()?;
 
     // Read src/client/event_handler.rs
@@ -498,7 +501,7 @@ fn create_template_docs() -> Result<(), Error> {
     // Remove out all lines preceding event_handler! macro
     let event_handler = event_handler.lines().collect::<Vec<&str>>();
 
-    let mut event_handler = event_handler
+    let event_handler = event_handler
         .iter()
         .skip_while(|x| !x.contains("event_handler!"))
         .collect::<Vec<&&str>>();
@@ -516,6 +519,7 @@ fn create_template_docs() -> Result<(), Error> {
     // Find all events
     for line in event_handler.iter() {
         let line = line.trim();
+
         //println!("cargo:warning=event_handler: {:?}", line);
         if line.contains("=>") {
             let line_split = line.split("=>").collect::<Vec<&str>>();
@@ -536,23 +540,104 @@ fn create_template_docs() -> Result<(), Error> {
         }
     }
 
-    // Special case: if our event matches ExpandEventsCiEventCheck::Event, we need to add the fields to the event_fields map and remove the raw event struct
-    let working_ci_events = ci_expand_events_parse()?;
+    Ok(event_fields)
+}
+
+// CI to create template documentation
+fn create_template_docs() -> Result<(), Error> {
+    let mut event_fields = _parse_full_events()?;
+
+    // Special case 1: if our event matches ExpandEventsCiEventCheck::Event, we need to add the fields to the event_fields map and remove the raw event struct
+    // Special case 2: A variant may specify in its args statements such as create_template_docs.add ARGS or create_template_docs.remove FIELD
+    fn _handle_args(
+        event_fields: &mut indexmap::IndexMap<String, indexmap::IndexMap<String, String>>,
+        variant_name: &str,
+        args: Vec<String>,
+    ) {
+        for arg in args.iter() {
+            let arg = arg.trim();
+
+            if arg.starts_with("create_template_docs.add") {
+                let arg = arg.replace("create_template_docs.add", "");
+                let arg = arg.trim();
+
+                // Add the fields to the event_fields map
+                let fields = event_fields.get_mut(variant_name).unwrap();
+
+                let args = _unflatten_args(arg);
+
+                for (k, v) in args.iter() {
+                    fields.insert(k.clone(), v.clone());
+                }
+            } else if arg.starts_with("create_template_docs.remove") {
+                let arg = arg.replace("create_template_docs.remove", "");
+                let arg = arg.trim();
+
+                // Remove the field from the event_fields map
+                let fields = event_fields.get_mut(variant_name).unwrap();
+                fields.shift_remove(arg).unwrap();
+            } else if arg.starts_with("create_template_docs.rename") {
+                let arg = arg.replace("create_template_docs.rename", "");
+                let arg = arg.trim();
+
+                let arg = arg.split_whitespace().collect::<Vec<&str>>();
+
+                let old = arg[0];
+                let new = arg[1];
+
+                // Rename the field in the event_fields map
+                let fields = event_fields.get_mut(variant_name).unwrap();
+
+                let idx = fields.iter().position(|(k, _)| k == old).unwrap();
+                let value = fields.shift_remove(old).unwrap();
+                fields.shift_insert(idx, new.to_string(), value);
+            } else if arg.starts_with("create_template_docs") {
+                panic!("Invalid create_template_docs arg: {}", arg);
+            }
+        }
+    }
+
+    let working_ci_events = _parse_ci_expand_event_checks()?;
+
+    // Step 1: Remove all events not in working_ci_event_variant_names from event_fields
+    let working_ci_event_variant_names = working_ci_events
+        .iter()
+        .map(|x| &x.variant_name)
+        .collect::<Vec<&String>>();
+
+    let mut to_remove = Vec::new();
+    for (k, _) in event_fields.iter() {
+        if !working_ci_event_variant_names.contains(&k) {
+            to_remove.push(k.clone());
+        }
+    }
+
+    for k in to_remove.iter() {
+        event_fields.shift_remove(k);
+    }
+
     let serenity_event_struct_fields = _get_serenity_events()?;
     for working_ci_event in working_ci_events.iter() {
         match &working_ci_event.check {
-            ExpandEventsCiEventCheck::None { .. } => {}
+            ExpandEventsCiEventCheck::None { args } => {
+                // Handle args
+                _handle_args(
+                    &mut event_fields,
+                    &working_ci_event.variant_name,
+                    args.clone(),
+                );
+            }
             ExpandEventsCiEventCheck::Event {
                 var,
                 event_struct,
                 args,
             } => {
-                println!("cargo:warning=var: {:?}", var);
-                println!("cargo:warning=event_struct: {:?}", event_struct);
-                println!(
-                    "cargo:warning=event_struct: {:?}",
-                    working_ci_event.variant_name
-                );
+                //println!("cargo:warning=var: {:?}", var);
+                //println!("cargo:warning=event_struct: {:?}", event_struct);
+                //println!(
+                //    "cargo:warning=event_struct: {:?}",
+                //    working_ci_event.variant_name
+                //);
                 // Add the fields to the event_fields map
                 let fields = event_fields
                     .get_mut(&working_ci_event.variant_name)
@@ -571,21 +656,81 @@ fn create_template_docs() -> Result<(), Error> {
                 for (k, v) in serenity_event_struct_fields.iter() {
                     fields.insert(k.clone(), v.clone());
                 }
+
+                // Handle args
+                _handle_args(
+                    &mut event_fields,
+                    &working_ci_event.variant_name,
+                    args.clone(),
+                );
+            }
+        }
+    }
+
+    // Sanity check, make sure our event_fields map is correct
+    for event in working_ci_events {
+        // Open corresponding event on event_fields
+        let event_fields = event_fields.get(&event.variant_name).unwrap();
+
+        let mut inserted_vars = vec![];
+        let event_vars = event_fields
+            .iter()
+            .map(|(k, _)| k.to_string())
+            .collect::<Vec<String>>();
+        for insert_field in event.insert_field_calls.iter() {
+            let insert_field = insert_field.trim();
+
+            if insert_field.is_empty() {
+                continue;
+            }
+
+            // Split by comma
+            let insert_field = insert_field.split(',').collect::<Vec<&str>>();
+
+            // From the last element, keep looping until we find an element starting with quotation marks
+            let var_name = insert_field
+                .iter()
+                .rev()
+                .find(|x| x.trim().starts_with("\""));
+
+            let Some(var_name) = var_name else {
+                return Err(format!(
+                    "No var name found in insert_field: {}",
+                    insert_field.join(",")
+                )
+                .into());
+            };
+
+            // Get rid of quotes
+            let var_name = var_name.replace(['"', '(', ')', ';'], "");
+            let var_name = var_name.trim();
+
+            println!("cargo:warning=var_name: {}", var_name);
+
+            inserted_vars.push(var_name.to_string());
+        }
+
+        // Check if all inserted vars are in event_vars
+        for var in inserted_vars.iter() {
+            if !event_vars.contains(&var.to_string()) {
+                return Err(format!(
+                    "Inserted var {} not found in event_vars {:?} in variant {}",
+                    var, event_vars, event.variant_name
+                )
+                .into());
             }
         }
     }
 
     println!("cargo:warning=event_fields: {:?}", event_fields);
 
-    #[derive(serde::Serialize)]
-    pub struct EventFieldLocator {
-        pub field: String,
-        pub serenity_filename: String,
-    }
+    // Make .generated directory if it doesn't exist
+    std::fs::create_dir_all(".generated")?;
 
-    // Stores the event fields for each event, this is used in the website + for documenting the fields that events have
-    let mut event_fields: indexmap::IndexMap<String, Vec<EventFieldLocator>> =
-        indexmap::IndexMap::new();
+    let mut file = std::fs::File::create(".generated/event_fields.json")?;
+    let event_fields_json = serde_json::to_string_pretty(&event_fields)?;
+
+    file.write_all(event_fields_json.as_bytes())?;
 
     Ok(())
 }
