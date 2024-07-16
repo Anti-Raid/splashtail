@@ -365,6 +365,7 @@ pub struct TemplateEmbed {
 }
 
 pub struct ExecutedTemplate {
+    /// The embeds that were set by the template
     embeds: Vec<TemplateEmbed>,
     /// What content to set on the message
     content: Option<String>,
@@ -403,6 +404,7 @@ impl ExecutedTemplate {
 
         let mut embeds = Vec::new();
         for template_embed in self.embeds {
+            let mut set = false; // Is something set on the embed?
             let mut embed = serenity::all::CreateEmbed::default();
 
             if let Some(title) = &template_embed.title {
@@ -413,6 +415,7 @@ impl ExecutedTemplate {
                     embed_limits::EMBED_TITLE_LIMIT,
                     embed_limits::EMBED_TOTAL_LIMIT,
                 ));
+                set = true;
             }
 
             if let Some(description) = &template_embed.description {
@@ -426,6 +429,11 @@ impl ExecutedTemplate {
                     )
                     .to_string(),
                 );
+                set = true;
+            }
+
+            if !template_embed.fields.is_empty() {
+                set = true;
             }
 
             for (count, (name, (value, inline))) in template_embed.fields.into_iter().enumerate() {
@@ -433,9 +441,16 @@ impl ExecutedTemplate {
                     break;
                 }
 
+                let name = name.trim();
+                let value = value.trim();
+
+                if name.is_empty() || value.is_empty() {
+                    continue;
+                }
+
                 // Slice field name to EMBED_FIELD_NAME_LIMIT
                 let name = _slice_chars(
-                    &name,
+                    name,
                     &mut total_chars,
                     embed_limits::EMBED_FIELD_NAME_LIMIT,
                     embed_limits::EMBED_TOTAL_LIMIT,
@@ -443,7 +458,7 @@ impl ExecutedTemplate {
 
                 // Slice field value to EMBED_FIELD_VALUE_LIMIT
                 let value = _slice_chars(
-                    &value,
+                    value,
                     &mut total_chars,
                     embed_limits::EMBED_FIELD_VALUE_LIMIT,
                     embed_limits::EMBED_TOTAL_LIMIT,
@@ -452,7 +467,9 @@ impl ExecutedTemplate {
                 embed = embed.field(name, value, inline);
             }
 
-            embeds.push(embed);
+            if set {
+                embeds.push(embed);
+            }
         }
 
         // Now handle content
