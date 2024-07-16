@@ -564,15 +564,20 @@ pub fn expand_event(event: FullEvent) -> Option<IndexMap<String, CategorizedFiel
             insert_optional_field(&mut fields, "member", "old", old_if_available);
             insert_optional_field(&mut fields, "member", "new", new);
             insert_field(&mut fields, "event", "guild_id", event.guild_id);
+            insert_field(&mut fields, "event", "pending", event.pending());
+            insert_field(&mut fields, "event", "deaf", event.deaf());
+            insert_field(&mut fields, "event", "mute", event.mute());
             insert_optional_field(&mut fields, "event", "nick", event.nick);
             insert_field(&mut fields, "event", "joined_at", event.joined_at);
             insert_field(&mut fields, "event", "roles", event.roles);
             insert_field(&mut fields, "event", "user", event.user);
             insert_optional_field(&mut fields, "event", "premium_since", event.premium_since);
-            insert_field(&mut fields, "event", "pending", event.pending());
-            insert_field(&mut fields, "event", "deaf", event.deaf());
-            insert_field(&mut fields, "event", "mute", event.mute());
-            insert_optional_field(&mut fields, "event", "avatar", event.avatar);
+            insert_optional_field(
+                &mut fields,
+                "event",
+                "avatar",
+                event.avatar.map(|a| a.to_string()),
+            );
             insert_optional_field(
                 &mut fields,
                 "event",
@@ -602,16 +607,13 @@ pub fn expand_event(event: FullEvent) -> Option<IndexMap<String, CategorizedFiel
             insert_field(&mut fields, "role", "removed_role_id", removed_role_id);
             insert_optional_field(&mut fields, "role", "role", removed_role_data_if_available);
         }
-        // @ci.expand_event_check GuildRoleUpdate none
+        // @ci.expand_event_check GuildRoleUpdate none/create_template_docs.rename old_data_if_available old
         FullEvent::GuildRoleUpdate {
             old_data_if_available,
             new,
         } => {
-            if let Some(old) = old_data_if_available {
-                insert_field(&mut fields, "role", "old", old.clone());
-            }
-
-            insert_field(&mut fields, "role", "new", new.clone());
+            insert_optional_field(&mut fields, "role", "old", old_data_if_available);
+            insert_field(&mut fields, "role", "new", new);
         }
         // @ci.expand_event_check GuildScheduledEventCreate none
         FullEvent::GuildScheduledEventCreate { event } => {
@@ -636,7 +638,7 @@ pub fn expand_event(event: FullEvent) -> Option<IndexMap<String, CategorizedFiel
             insert_field(
                 &mut fields,
                 "guild_scheduled_event_user_add",
-                "event_id",
+                "scheduled_event_id",
                 subscribed.scheduled_event_id,
             );
             insert_field(
@@ -667,7 +669,7 @@ pub fn expand_event(event: FullEvent) -> Option<IndexMap<String, CategorizedFiel
                 unsubscribed.user_id,
             );
         }
-        // @ci.expand_event_check GuildStickersUpdate none
+        // @ci.expand_event_check GuildStickersUpdate none//create_template_docs.remove current_state/create_template_docs.add stickers: Vec<Sticker>
         FullEvent::GuildStickersUpdate {
             guild_id,
             current_state,
@@ -682,15 +684,12 @@ pub fn expand_event(event: FullEvent) -> Option<IndexMap<String, CategorizedFiel
                 stickers
             });
         }
-        // @ci.expand_event_check GuildUpdate none
+        // @ci.expand_event_check GuildUpdate none/create_template_docs.rename old_data_if_available old/create_template_docs.rename new_data new
         FullEvent::GuildUpdate {
             old_data_if_available,
             new_data,
         } => {
-            if let Some(old) = old_data_if_available {
-                insert_field(&mut fields, "guild", "old", old);
-            }
-
+            insert_optional_field(&mut fields, "guild", "old", old_data_if_available);
             insert_field(&mut fields, "guild", "new", new_data);
         }
         // @ci.expand_event_check IntegrationCreate none
@@ -752,7 +751,7 @@ pub fn expand_event(event: FullEvent) -> Option<IndexMap<String, CategorizedFiel
         }
         // @ci.expand_event_check Message none
         FullEvent::Message { new_message } => {
-            insert_field(&mut fields, "message", "message", new_message.clone());
+            insert_field(&mut fields, "message", "new_message", new_message.clone());
         }
         // @ci.expand_event_check MessageDelete none
         FullEvent::MessageDelete {
@@ -761,10 +760,15 @@ pub fn expand_event(event: FullEvent) -> Option<IndexMap<String, CategorizedFiel
             channel_id,
         } => {
             insert_optional_field(&mut fields, "message", "guild_id", guild_id);
-            insert_field(&mut fields, "message", "message_id", deleted_message_id);
+            insert_field(
+                &mut fields,
+                "message",
+                "deleted_message_id",
+                deleted_message_id,
+            );
             insert_field(&mut fields, "message", "channel_id", channel_id);
         }
-        // @ci.expand_event_check MessageDeleteBulk none
+        // @ci.expand_event_check MessageDeleteBulk none/create_template_docs.rename multiple_deleted_messages_ids message_ids
         FullEvent::MessageDeleteBulk {
             guild_id,
             channel_id,
@@ -779,25 +783,14 @@ pub fn expand_event(event: FullEvent) -> Option<IndexMap<String, CategorizedFiel
                 multiple_deleted_messages_ids,
             );
         }
-        // @ci.expand_event_check MessageUpdate event:event,MessageUpdateEvent
+        // @ci.expand_event_check MessageUpdate event:event,MessageUpdateEvent/create_template_docs.rename old_if_available old
         FullEvent::MessageUpdate {
             old_if_available,
             new,
             event,
         } => {
-            if let Some(old) = old_if_available {
-                insert_field(&mut fields, "message", "old", old.clone());
-            }
-            if let Some(new) = new {
-                insert_field(&mut fields, "message", "new", new.clone());
-            } else {
-                insert_field(
-                    &mut fields,
-                    "warning",
-                    "warning",
-                    "This message has not been cached by Anti-Raid!".to_string(),
-                );
-            }
+            insert_optional_field(&mut fields, "message", "old", old_if_available);
+            insert_optional_field(&mut fields, "message", "new", new);
 
             insert_field(&mut fields, "event", "id", event.id);
             insert_field(&mut fields, "event", "channel_id", event.channel_id);
@@ -948,18 +941,15 @@ pub fn expand_event(event: FullEvent) -> Option<IndexMap<String, CategorizedFiel
             thread,
             full_thread_data,
         } => {
-            if let Some(ftd) = full_thread_data {
-                insert_field(&mut fields, "thread", "thread", ftd);
-            } else {
-                insert_field(&mut fields, "thread", "thread", thread);
-            }
+            insert_field(&mut fields, "thread", "thread", thread);
+            insert_optional_field(&mut fields, "thread", "full_thread_data", full_thread_data);
         }
         // @ci.expand_event_check ThreadListSync event:thread_list_sync,ThreadListSyncEvent
         FullEvent::ThreadListSync { thread_list_sync } => {
             insert_optional_field(
                 &mut fields,
                 "channel",
-                "channel_id",
+                "channel_ids",
                 thread_list_sync.channel_ids,
             );
             insert_field(
@@ -984,14 +974,7 @@ pub fn expand_event(event: FullEvent) -> Option<IndexMap<String, CategorizedFiel
         }
         // @ci.expand_event_check ThreadMemberUpdate none
         FullEvent::ThreadMemberUpdate { thread_member } => {
-            if let Some(ref member) = thread_member.member {
-                insert_field(&mut fields, "user", "member", member.clone());
-            } else {
-                insert_field(&mut fields, "user", "user_id", thread_member.user_id);
-            }
-
-            insert_optional_field(&mut fields, "thread", "guild_id", thread_member.guild_id);
-            insert_field(&mut fields, "thread", "channel_id", thread_member.id);
+            insert_field(&mut fields, "user", "thread_member", thread_member.clone());
         }
         // @ci.expand_event_check ThreadMembersUpdate event:thread_members_update,ThreadMembersUpdateEvent
         FullEvent::ThreadMembersUpdate {
@@ -1030,10 +1013,7 @@ pub fn expand_event(event: FullEvent) -> Option<IndexMap<String, CategorizedFiel
         }
         // @ci.expand_event_check ThreadUpdate none
         FullEvent::ThreadUpdate { new, old } => {
-            if let Some(old) = old {
-                insert_field(&mut fields, "thread", "old", old);
-            }
-
+            insert_optional_field(&mut fields, "thread", "old", old);
             insert_field(&mut fields, "thread", "new", new);
         }
         FullEvent::TypingStart { .. } => return None,
