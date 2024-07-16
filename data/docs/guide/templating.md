@@ -15,7 +15,25 @@ To do so, Anti-Raid uses [tera](https://keats.github.io/tera/docs/). See its doc
 
 - The ``bettertitle`` filter provides a potentially better title-ing filter than the ``title`` filter pre-provided by Tera
 
+## Situational Functions and Filters
+
+These functions and filters are only available in certain contexts listed by the "Works on" section.
+
+### Gateway Event Helpers
+
+The following functions can be used on Gateway Event related templates.
+
+Works on:
+- Audit Log Sink Embeds
+
+- The ``{gwevent::field::Field} | formatter__gwevent_field`` filter can be used to format a gateway event field
+
 ### Message Helpers
+
+The following functions can be used to create embeds/messages.
+
+Works on:
+- Audit Log Sink Embeds
 
 - The ``embed_title(title=TITLE)`` function can be used to set the title of an embed.
 - The ``embed_field(name=NAME, value=VALUE, inline=INLINE [default: false])`` function can be used to add fields to embeds.
@@ -44,16 +62,3 @@ This is a cool embed
 This is message content
 {% endfilter %}
 ```
-
-## Situational Functions and Filters
-
-These functions and filters are only available in certain contexts listed by the "Works on" section.
-
-### Gateway Event Helpers
-
-The following functions can be used on Gateway Event related templates.
-
-Works on:
-- Audit Log Sink Embeds
-
-- The ``{gwevent::field::Field} | formatter__gwevent_field`` filter can be used to format a gateway event field

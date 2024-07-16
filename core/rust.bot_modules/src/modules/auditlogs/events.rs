@@ -210,10 +210,11 @@ pub async fn dispatch_audit_log(
         tera_ctx.insert("event_titlename", event_titlename)?;
         tera_ctx.insert("event", &expanded_event)?;
 
-        let templated = templating::execute_template(&mut tera, Arc::new(tera_ctx)).await;
+        let templated =
+            templating::execute_template_for_message(&mut tera, Arc::new(tera_ctx)).await;
 
         let discord_reply = match templated {
-            Ok(templated) => templating::to_discord_reply(templated),
+            Ok(templated) => templated.to_discord_reply(),
             Err(e) => {
                 let embed = serenity::all::CreateEmbed::default()
                     .description(format!("Failed to render template: {}", e));

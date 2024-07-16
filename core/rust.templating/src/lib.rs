@@ -370,8 +370,123 @@ pub struct ExecutedTemplate {
     content: Option<String>,
 }
 
-/// Executes a template with the given context
+impl ExecutedTemplate {
+    pub fn to_discord_reply<'a>(self) -> DiscordReply<'a> {
+        let mut total_chars: usize = 0;
+        let mut total_content_chars = 0;
+
+        fn _get_char_limit(total_chars: usize, limit: usize, max_chars: usize) -> usize {
+            if max_chars <= total_chars {
+                return 0;
+            }
+
+            // If limit is 6000 and max_chars - total_chars is 1000, return 1000 etc.
+            std::cmp::min(limit, max_chars - total_chars)
+        }
+
+        fn _slice_chars(
+            s: &str,
+            total_chars: &mut usize,
+            limit: usize,
+            max_chars: usize,
+        ) -> String {
+            let char_limit = _get_char_limit(*total_chars, limit, max_chars);
+
+            if char_limit == 0 {
+                return String::new();
+            }
+
+            *total_chars += char_limit;
+
+            s.chars().take(char_limit).collect()
+        }
+
+        let mut embeds = Vec::new();
+        for template_embed in self.embeds {
+            let mut embed = serenity::all::CreateEmbed::default();
+
+            if let Some(title) = &template_embed.title {
+                // Slice title to EMBED_TITLE_LIMIT
+                embed = embed.title(_slice_chars(
+                    title,
+                    &mut total_chars,
+                    embed_limits::EMBED_TITLE_LIMIT,
+                    embed_limits::EMBED_TOTAL_LIMIT,
+                ));
+            }
+
+            if let Some(description) = &template_embed.description {
+                // Slice description to EMBED_DESCRIPTION_LIMIT
+                embed = embed.description(
+                    _slice_chars(
+                        description,
+                        &mut total_chars,
+                        embed_limits::EMBED_DESCRIPTION_LIMIT,
+                        embed_limits::EMBED_TOTAL_LIMIT,
+                    )
+                    .to_string(),
+                );
+            }
+
+            for (count, (name, (value, inline))) in template_embed.fields.into_iter().enumerate() {
+                if count >= embed_limits::EMBED_FIELDS_MAX_COUNT {
+                    break;
+                }
+
+                // Slice field name to EMBED_FIELD_NAME_LIMIT
+                let name = _slice_chars(
+                    &name,
+                    &mut total_chars,
+                    embed_limits::EMBED_FIELD_NAME_LIMIT,
+                    embed_limits::EMBED_TOTAL_LIMIT,
+                );
+
+                // Slice field value to EMBED_FIELD_VALUE_LIMIT
+                let value = _slice_chars(
+                    &value,
+                    &mut total_chars,
+                    embed_limits::EMBED_FIELD_VALUE_LIMIT,
+                    embed_limits::EMBED_TOTAL_LIMIT,
+                );
+
+                embed = embed.field(name, value, inline);
+            }
+
+            embeds.push(embed);
+        }
+
+        // Now handle content
+        let content = self.content.map(|c| {
+            _slice_chars(
+                &c,
+                &mut total_content_chars,
+                message_limits::MESSAGE_CONTENT_LIMIT,
+                message_limits::MESSAGE_CONTENT_LIMIT,
+            )
+        });
+
+        DiscordReply { embeds, content }
+    }
+}
+
+/// Executes a template with the given context returning the resultant string
+///
+/// Note that for message templates, the `execute_template_for_message` function should be used instead
 pub async fn execute_template(
+    tera: &mut Tera,
+    context: Arc<tera::Context>,
+) -> Result<String, base_data::Error> {
+    // Render the template
+    Ok(tokio::time::timeout(
+        TEMPLATE_EXECUTION_TIMEOUT,
+        tera.render_async("main", &context),
+    )
+    .await
+    .map_err(|_| "Template execution timed out")??)
+}
+
+/// Executes a template with the given context with the expectation that the template returns a message
+pub async fn execute_template_for_message(
     tera: &mut Tera,
     context: Arc<tera::Context>,
 ) -> Result<ExecutedTemplate, base_data::Error> {
@@ -420,13 +535,8 @@ pub async fn execute_template(
     // Add bettertitle filter
     tera.register_filter("bettertitle", BetterTitleFilter {});
 
-    // Render the template
-    tokio::time::timeout(
-        TEMPLATE_EXECUTION_TIMEOUT,
-        tera.render_async("main", &context),
-    )
-    .await
-    .map_err(|_| "Template execution timed out")??;
+    // Execute the template
+    execute_template(tera, context).await?;
 
     // Read the outputted template embeds
     let embeds_reader = ites.embeds.read().map_err(|_| "Failed to read embeds")?;
@@ -455,96 +565,4 @@ pub struct DiscordReply<'a> {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub content: Option<String>,
     pub embeds: Vec<serenity::all::CreateEmbed<'a>>,
-}
-
-pub fn to_discord_reply<'a>(executed_template: ExecutedTemplate) -> DiscordReply<'a> {
-    let mut total_chars: usize = 0;
-    let mut total_content_chars = 0;
-
-    fn _get_char_limit(total_chars: usize, limit: usize, max_chars: usize) -> usize {
-        if max_chars <= total_chars {
-            return 0;
-        }
-
-        // If limit is 6000 and max_chars - total_chars is 1000, return 1000 etc.
-        std::cmp::min(limit, max_chars - total_chars)
-    }
-
-    fn _slice_chars(s: &str, total_chars: &mut usize, limit: usize, max_chars: usize) -> String {
-        let char_limit = _get_char_limit(*total_chars, limit, max_chars);
-
-        if char_limit == 0 {
-            return String::new();
-        }
-
-        *total_chars += char_limit;
-
-        s.chars().take(char_limit).collect()
-    }
-
-    let mut embeds = Vec::new();
-    for template_embed in executed_template.embeds {
-        let mut embed = serenity::all::CreateEmbed::default();
-
-        if let Some(title) = &template_embed.title {
-            // Slice title to EMBED_TITLE_LIMIT
-            embed = embed.title(_slice_chars(
-                title,
-                &mut total_chars,
-                embed_limits::EMBED_TITLE_LIMIT,
-                embed_limits::EMBED_TOTAL_LIMIT,
-            ));
-        }
-
-        if let Some(description) = &template_embed.description {
-            // Slice description to EMBED_DESCRIPTION_LIMIT
-            embed = embed.description(
-                _slice_chars(
-                    description,
-                    &mut total_chars,
-                    embed_limits::EMBED_DESCRIPTION_LIMIT,
-                    embed_limits::EMBED_TOTAL_LIMIT,
-                )
-                .to_string(),
-            );
-        }
-
-        for (count, (name, (value, inline))) in template_embed.fields.into_iter().enumerate() {
-            if count >= embed_limits::EMBED_FIELDS_MAX_COUNT {
-                break;
-            }
-
-            // Slice field name to EMBED_FIELD_NAME_LIMIT
-            let name = _slice_chars(
-                &name,
-                &mut total_chars,
-                embed_limits::EMBED_FIELD_NAME_LIMIT,
-                embed_limits::EMBED_TOTAL_LIMIT,
-            );
-
-            // Slice field value to EMBED_FIELD_VALUE_LIMIT
-            let value = _slice_chars(
-                &value,
-                &mut total_chars,
-                embed_limits::EMBED_FIELD_VALUE_LIMIT,
-                embed_limits::EMBED_TOTAL_LIMIT,
-            );
-
-            embed = embed.field(name, value, inline);
-        }
-
-        embeds.push(embed);
-    }
-
-    // Now handle content
-    let content = executed_template.content.map(|c| {
-        _slice_chars(
-            &c,
-            &mut total_content_chars,
-            message_limits::MESSAGE_CONTENT_LIMIT,
-            message_limits::MESSAGE_CONTENT_LIMIT,
-        )
-    });
-
-    DiscordReply { embeds, content }
 }
