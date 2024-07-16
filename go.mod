@@ -6,7 +6,7 @@ require (
 	github.com/bwmarrin/discordgo v0.28.1
 	github.com/cheesycod/mewld v0.0.0-20240506045451-d25a175505ee
 	github.com/cloudflare/tableflip v1.2.3
-	github.com/git-logs/client/webserver v0.0.0-20240702031221-67addd05a54a
+	github.com/git-logs/client/webserver v0.0.0-20240716163116-da2da8d6a952
 	github.com/go-chi/chi/v5 v5.1.0
 	github.com/go-playground/validator/v10 v10.22.0
 	github.com/go-viper/mapstructure/v2 v2.0.0
@@ -14,14 +14,14 @@ require (
 	github.com/infinitybotlist/iblfile v0.0.0-20240609122654-f388ed492b00
 	github.com/infinitybotlist/kittycat/go v0.0.0-20240526051606-6574fb343539
 	github.com/jackc/pgx/v5 v5.6.0
-	github.com/minio/minio-go/v7 v7.0.73
+	github.com/minio/minio-go/v7 v7.0.74
 	github.com/redis/rueidis v1.0.41
 	github.com/sirupsen/logrus v1.9.3
 	github.com/stretchr/testify v1.9.0
 	github.com/vmihailenco/msgpack/v5 v5.4.1
 	github.com/wk8/go-ordered-map/v2 v2.1.8
 	go.uber.org/zap v1.27.0
-	golang.org/x/exp v0.0.0-20240707233637-46b078467d37
+	golang.org/x/exp v0.0.0-20240716160929-1d5bc16f04a8
 	golang.org/x/image v0.18.0
 	golang.org/x/text v0.16.0
 	gopkg.in/yaml.v3 v3.0.1
@@ -66,7 +66,7 @@ require (
 	github.com/mohae/deepcopy v0.0.0-20170929034955-c48cc78d4826 // indirect
 	github.com/perimeterx/marshmallow v1.1.5 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
-	github.com/redis/go-redis/v9 v9.5.3 // indirect
+	github.com/redis/go-redis/v9 v9.5.4 // indirect
 	github.com/rs/xid v1.5.0 // indirect
 	github.com/twitchyliquid64/golang-asm v0.15.1 // indirect
 	github.com/vmihailenco/tagparser/v2 v2.0.0 // indirect
