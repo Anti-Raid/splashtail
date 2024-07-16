@@ -26,3 +26,4 @@ features = ["model", "http", "cache", "rustls_backend", "unstable"]
 [build-dependencies]
 glob = "0.3.1"
 indexmap = { version = "2", features = ["serde"] }
+serde = { version = "1.0", features = ["derive"] }

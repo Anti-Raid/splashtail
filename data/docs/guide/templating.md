@@ -7,7 +7,25 @@ To do so, Anti-Raid uses [tera](https://keats.github.io/tera/docs/). See its doc
 - Dangerous functions such as ``get_env`` do not exist.
 - ``__tera_context_raw`` provides the Tera context as an object. This complements ``__tera_context`` which provides the context as a string for debugging.
 - All templates have a (reasonable) time limit for execution to protect against abuse and DDOS attacks.
-- The output of the template itself is ignored. You must use ``Message Helpers`` to construct the message
+- **When using templates to construct a message, the output of the template itself is ignored. For messages, you must use ``Message Helpers`` to construct the message. See example 1 below:**
+
+## Example 1:
+
+The below second template will have no effect when constructing a message
+
+```
+Hello world
+```
+
+However, the below second template will construct a message with the content "Hello world"
+
+```
+{% filter content %}
+Hello world
+{% endfilter %}
+```
+
+Note that this only applies to templates used to construct messages such as ``Audit Long Sink`` templates.
 
 ## Common Functions And Filters
 

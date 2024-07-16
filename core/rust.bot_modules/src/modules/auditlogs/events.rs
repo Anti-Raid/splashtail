@@ -214,7 +214,20 @@ pub async fn dispatch_audit_log(
             templating::execute_template_for_message(&mut tera, Arc::new(tera_ctx)).await;
 
         let discord_reply = match templated {
-            Ok(templated) => templated.to_discord_reply(),
+            Ok(templated) => match templated.to_discord_reply() {
+                Ok(reply) => reply, // Templated message is valid
+                Err(e) => {
+                    let embed = serenity::all::CreateEmbed::default().description(format!(
+                        "Failed to convert templated message to discord reply: {}",
+                        e
+                    ));
+
+                    templating::DiscordReply {
+                        embeds: vec![embed],
+                        ..Default::default()
+                    }
+                }
+            },
             Err(e) => {
                 let embed = serenity::all::CreateEmbed::default()
                     .description(format!("Failed to render template: {}", e));

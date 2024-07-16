@@ -415,7 +415,6 @@ pub fn expand_event(event: FullEvent) -> Option<IndexMap<String, CategorizedFiel
         FullEvent::AutoModRuleUpdate { rule } => {
             insert_field(&mut fields, "rule", "rule", rule);
         }
-        // @ci.expand_event_check CacheReady none
         FullEvent::CacheReady { .. } => return None, // We don't want this to be propogated anyways and it's not a guild event
         // @ci.expand_event_check CategoryCreate none
         FullEvent::CategoryCreate { category } => {
@@ -432,15 +431,19 @@ pub fn expand_event(event: FullEvent) -> Option<IndexMap<String, CategorizedFiel
         // @ci.expand_event_check ChannelDelete none
         FullEvent::ChannelDelete { channel, messages } => {
             insert_field(&mut fields, "channel", "channel", channel);
+            insert_field(&mut fields, "channel", "messages", {
+                if let Some(messages) = messages {
+                    let mut m = Vec::new();
 
-            if let Some(messages) = messages {
-                insert_field(
-                    &mut fields,
-                    "channel_delete_ext",
-                    "number_of_messages",
-                    messages.len(),
-                );
-            }
+                    for message in messages {
+                        m.push(message.clone());
+                    }
+
+                    m
+                } else {
+                    Vec::new()
+                }
+            });
         }
         // @ci.expand_event_check ChannelPinsUpdate event:pin,ChannelPinsUpdateEvent
         FullEvent::ChannelPinsUpdate { pin } => {
@@ -489,7 +492,7 @@ pub fn expand_event(event: FullEvent) -> Option<IndexMap<String, CategorizedFiel
             banned_user,
         } => {
             insert_field(&mut fields, "guild", "guild_id", guild_id);
-            insert_field(&mut fields, "user", "user", banned_user.clone());
+            insert_field(&mut fields, "user", "banned_user", banned_user.clone());
         }
         // @ci.expand_event_check GuildBanRemoval none
         FullEvent::GuildBanRemoval {
@@ -497,14 +500,14 @@ pub fn expand_event(event: FullEvent) -> Option<IndexMap<String, CategorizedFiel
             unbanned_user,
         } => {
             insert_field(&mut fields, "guild", "guild_id", guild_id);
-            insert_field(&mut fields, "user", "user", unbanned_user.clone());
+            insert_field(&mut fields, "user", "unbanned_user", unbanned_user.clone());
         }
         // @ci.expand_event_check GuildCreate none
         FullEvent::GuildCreate { guild, is_new } => {
             insert_field(&mut fields, "guild", "guild", guild);
             insert_optional_field(&mut fields, "guild_ext", "is_new", is_new);
         }
-        // @ci.expand_event_check GuildDelete none
+        // @ci.expand_event_check GuildDelete none/create_template_docs.add is_full_available: bool
         FullEvent::GuildDelete { incomplete, full } => {
             insert_field(
                 &mut fields,

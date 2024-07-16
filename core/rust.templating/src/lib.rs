@@ -372,7 +372,7 @@ pub struct ExecutedTemplate {
 }
 
 impl ExecutedTemplate {
-    pub fn to_discord_reply<'a>(self) -> DiscordReply<'a> {
+    pub fn to_discord_reply<'a>(self) -> Result<DiscordReply<'a>, base_data::Error> {
         let mut total_chars: usize = 0;
         let mut total_content_chars = 0;
 
@@ -482,7 +482,11 @@ impl ExecutedTemplate {
             )
         });
 
-        DiscordReply { embeds, content }
+        if content.is_none() && embeds.is_empty() {
+            return Err("No content or embeds set".into());
+        }
+
+        Ok(DiscordReply { embeds, content })
     }
 }
 

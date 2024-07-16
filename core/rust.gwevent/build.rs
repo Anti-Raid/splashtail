@@ -61,7 +61,9 @@ fn _get_serenity_path() -> Result<String, Error> {
     Ok(base_path)
 }
 
-fn _get_serenity_events() -> Result<indexmap::IndexMap<String, Vec<String>>, Error> {
+// EventStruct -> unflattened args
+fn _get_serenity_events(
+) -> Result<indexmap::IndexMap<String, indexmap::IndexMap<String, String>>, Error> {
     let base_path = _get_serenity_path()?;
     // Find enum FullEvent
     let models_file = std::fs::read_to_string(base_path + "/src/model/event.rs")?;
@@ -71,31 +73,23 @@ fn _get_serenity_events() -> Result<indexmap::IndexMap<String, Vec<String>>, Err
     let mut events = indexmap::IndexMap::new();
 
     let mut current_event_marker: Option<String> = None;
+    let mut current_event_fields: String = String::new();
 
     for line in models_file.iter() {
         if let Some(ref current_event) = current_event_marker {
             if line.contains("}") {
+                let args = _unflatten_args(&current_event_fields);
+                current_event_fields.clear();
+
+                events.insert(current_event.clone(), args);
+
                 current_event_marker = None;
             } else {
                 if !line.contains("pub") {
                     continue;
                 }
 
-                // Split by `colon`
-                let event = line.split(':').collect::<Vec<&str>>();
-
-                // Get the first element
-                let event = event[0].trim().to_string();
-
-                // Remove the `pub` keyword
-                let event = event.replace("pub", "").trim().to_string();
-
-                // Trim whitespace
-                let event = event.trim().to_string();
-
-                let event_list: &mut Vec<String> = events.get_mut(current_event).unwrap();
-
-                event_list.push(event);
+                current_event_fields.push_str(line.replace("pub", "").trim());
             }
 
             continue;
@@ -109,13 +103,11 @@ fn _get_serenity_events() -> Result<indexmap::IndexMap<String, Vec<String>>, Err
 
             let event = line.iter().find(|x| x.contains("Event")).unwrap();
 
-            events.insert(event.to_string(), vec![]);
+            events.insert(event.to_string(), indexmap::IndexMap::new());
 
             current_event_marker = Some(event.to_string());
         }
     }
-
-    //println!("cargo:warning=events: {:?}", events);
 
     Ok(events)
 }
@@ -126,17 +118,27 @@ enum ExpandEventsCiEventCheck {
     Event {
         var: String,
         event_struct: String,
+        args: Vec<String>,
     },
-    None,
+    None {
+        args: Vec<String>,
+    },
 }
 
 impl ExpandEventsCiEventCheck {
     fn parse(s: &str) -> Self {
         let s = s.trim();
 
+        let args_split = s.split("/").collect::<Vec<&str>>();
+        let s = args_split[0].trim();
+        let args = args_split[1..]
+            .iter()
+            .map(|x| x.trim().to_string())
+            .collect::<Vec<String>>();
+
         // Simple case of none
         if s == "none" {
-            return Self::None;
+            return Self::None { args };
         }
 
         if s.starts_with("event:") {
@@ -147,7 +149,11 @@ impl ExpandEventsCiEventCheck {
             let var = s[0].to_string();
             let event_struct = s[1].to_string();
 
-            return Self::Event { var, event_struct };
+            return Self::Event {
+                var,
+                event_struct,
+                args,
+            };
         }
 
         panic!("Invalid tagged ci event: {}", s);
@@ -334,12 +340,25 @@ fn ci_expand_events_parse() -> Result<Vec<ExpandEventsCurrentWorkingCiEvent>, Er
 /// CI to check expand_events
 fn ci_expand_events() -> Result<(), Error> {
     let serenity_event_struct_fields = _get_serenity_events()?;
+
+    println!(
+        "cargo:warning=serenity_event_struct_fields: {:?}",
+        serenity_event_struct_fields
+    );
+
     let working_ci_events = ci_expand_events_parse()?;
+
+    let serenity_event_struct_fields = serenity_event_struct_fields
+        .into_iter()
+        .map(|(k, v)| (k, v.keys().map(|k| k.to_string()).collect::<Vec<String>>()))
+        .collect::<indexmap::IndexMap<String, Vec<String>>>();
 
     for event in working_ci_events.iter() {
         match &event.check {
-            ExpandEventsCiEventCheck::None => {}
-            ExpandEventsCiEventCheck::Event { var, event_struct } => {
+            ExpandEventsCiEventCheck::None { .. } => {}
+            ExpandEventsCiEventCheck::Event {
+                var, event_struct, ..
+            } => {
                 // An insert check is of the form insert_field/insert_optional_field(&mut fields, CATEGORY, VAR_STR, VAR_NAME)
                 // We need to check that all VAR_NAME's starting with var[.] is present in the serenity_event_struct_fields
                 let needed_fields: Vec<String> = serenity_event_struct_fields
@@ -410,8 +429,170 @@ fn ci_expand_events() -> Result<(), Error> {
     Ok(())
 }
 
+fn _unflatten_args(fields: &str) -> indexmap::IndexMap<String, String> {
+    // Store the fields in the event_fields map
+    let mut event_field_map: indexmap::IndexMap<String, String> = indexmap::IndexMap::new();
+
+    let mut in_key: bool = true;
+    let mut in_generic: usize = 0;
+
+    // Parse fields character by character
+    // Ex. guild_id: GuildId, current_state: ExtractMap<EmojiId, Emoji>
+    // should become guild_id -> GuildId, current_state -> ExtractMap<EmojiId, Emoji>
+    let mut key = String::new();
+    let mut value = String::new();
+    for c in fields.chars() {
+        //println!("cargo:warning=c: {:?}, in_key: {:?}", c, in_key);
+        if c == ':' {
+            in_key = false;
+            continue;
+        } else if c == '<' {
+            in_generic += 1;
+        } else if c == '>' {
+            in_generic -= 1;
+        }
+
+        if c == ',' && in_generic == 0 {
+            in_key = true;
+
+            // Insert the key-value pair into the map
+            event_field_map.insert(key, value);
+
+            // Reset key and value
+            key = String::new();
+            value = String::new();
+
+            continue;
+        }
+
+        if in_key {
+            if c == ' ' {
+                continue;
+            }
+
+            key.push(c);
+        } else {
+            if c == ' ' && in_generic == 0 {
+                continue;
+            }
+
+            value.push(c);
+        }
+    }
+
+    // Insert the last key-value pair
+    if !key.is_empty() {
+        event_field_map.insert(key, value);
+    }
+
+    event_field_map
+}
+
+// CI to create template documentation
+fn create_template_docs() -> Result<(), Error> {
+    let serenity_path = _get_serenity_path()?;
+
+    // Read src/client/event_handler.rs
+    let event_handler = std::fs::read_to_string(serenity_path + "/src/client/event_handler.rs")?;
+
+    // Remove out all lines preceding event_handler! macro
+    let event_handler = event_handler.lines().collect::<Vec<&str>>();
+
+    let mut event_handler = event_handler
+        .iter()
+        .skip_while(|x| !x.contains("event_handler!"))
+        .collect::<Vec<&&str>>();
+
+    if event_handler.is_empty() {
+        return Err("event_handler! macro not found in event_handler.rs".into());
+    }
+
+    // Next, store all the fields of an event in an indexmap of [EventName] -> HashMap<Field, Type>
+    //
+    // A field is of the form: <EventName> { field_name: Type } ...
+    let mut event_fields: indexmap::IndexMap<String, indexmap::IndexMap<String, String>> =
+        indexmap::IndexMap::new();
+
+    // Find all events
+    for line in event_handler.iter() {
+        let line = line.trim();
+        //println!("cargo:warning=event_handler: {:?}", line);
+        if line.contains("=>") {
+            let line_split = line.split("=>").collect::<Vec<&str>>();
+            let line = line_split[0].trim();
+
+            // Get the event name
+            let event_name = line.split_whitespace().collect::<Vec<&str>>()[0].to_string();
+
+            // Get the fields
+            let fields = line.split('{').collect::<Vec<&str>>()[1];
+            let fields = fields.split('}').collect::<Vec<&str>>()[0];
+            let fields = fields.trim();
+
+            //println!("cargo:warning=fields: {:?}", fields);
+            let event_field_map = _unflatten_args(fields);
+
+            event_fields.insert(event_name, event_field_map);
+        }
+    }
+
+    // Special case: if our event matches ExpandEventsCiEventCheck::Event, we need to add the fields to the event_fields map and remove the raw event struct
+    let working_ci_events = ci_expand_events_parse()?;
+    let serenity_event_struct_fields = _get_serenity_events()?;
+    for working_ci_event in working_ci_events.iter() {
+        match &working_ci_event.check {
+            ExpandEventsCiEventCheck::None { .. } => {}
+            ExpandEventsCiEventCheck::Event {
+                var,
+                event_struct,
+                args,
+            } => {
+                println!("cargo:warning=var: {:?}", var);
+                println!("cargo:warning=event_struct: {:?}", event_struct);
+                println!(
+                    "cargo:warning=event_struct: {:?}",
+                    working_ci_event.variant_name
+                );
+                // Add the fields to the event_fields map
+                let fields = event_fields
+                    .get_mut(&working_ci_event.variant_name)
+                    .unwrap();
+
+                // Get the fields from serenity_event_struct_fields
+                let serenity_event_struct_fields = serenity_event_struct_fields
+                    .get(event_struct)
+                    .unwrap()
+                    .clone();
+
+                // Remove the `var`
+                fields.shift_remove(var).unwrap();
+
+                // Insert the serenity_event_struct_fields
+                for (k, v) in serenity_event_struct_fields.iter() {
+                    fields.insert(k.clone(), v.clone());
+                }
+            }
+        }
+    }
+
+    println!("cargo:warning=event_fields: {:?}", event_fields);
+
+    #[derive(serde::Serialize)]
+    pub struct EventFieldLocator {
+        pub field: String,
+        pub serenity_filename: String,
+    }
+
+    // Stores the event fields for each event, this is used in the website + for documenting the fields that events have
+    let mut event_fields: indexmap::IndexMap<String, Vec<EventFieldLocator>> =
+        indexmap::IndexMap::new();
+
+    Ok(())
+}
+
 fn main() -> Result<(), Error> {
     ci_expand_events()?;
+    create_template_docs()?;
 
     Ok(())
 }
