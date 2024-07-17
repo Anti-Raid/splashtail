@@ -1361,6 +1361,7 @@ dependencies = [
  "strum",
  "strum_macros",
  "templating",
+ "walkdir",
 ]
 
 [[package]]

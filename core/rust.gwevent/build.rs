@@ -613,6 +613,13 @@ fn _get_inner_type_and_apply_normalize(typ: &str) -> Vec<String> {
         // Take the first element from the queue
         let (k, generic_level) = normalization_queue.pop_front().unwrap();
 
+        let k = k
+            .split("::")
+            .collect::<Vec<&str>>()
+            .last()
+            .unwrap()
+            .to_string(); // Normalize std::collections::$a to $a etc.
+
         // FixedString
         if k == "FixedString" {
             normalized_inner_typ.push("String".to_string());
@@ -641,14 +648,22 @@ fn _get_inner_type_and_apply_normalize(typ: &str) -> Vec<String> {
                 // Add next element back to queue
                 normalization_queue.push_front((next_k, next_generic_level));
             }
-        } else if k == "VecDeque" {
+        } else if k == "VecDeque" || k == "LinkedList" || k == "BTreeSet" {
             normalized_inner_typ.push("Vec".to_string()); // Insert Vec in place of VecDeque
+        } else if k == "BTreeMap" || k == "IndexMap" {
+            normalized_inner_typ.push("IndexMap".to_string()); // Insert IndexMap in place of BTreeMap as no one cares about BTreeMap vs IndexMap in templates
+        } else if k == "ExtractMap" {
+            normalized_inner_typ.push("HashMap".to_string()); // Insert HashMap in place of ExtractMap
+        } else if k == "HashSet" {
+            normalized_inner_typ.push("Set".to_string()); // Insert Set in place of HashSet
         } else if k == "Box" || k == "Cow" {
             continue; // We want to ignore Box/Cow since we dont care about borrows or heap/stack
-        } else if k == "&str" {
+        } else if k == "&str" || k == "Url" {
             normalized_inner_typ.push("String".to_string());
         } else if k.starts_with("NonMax") {
             normalized_inner_typ.push(k.replace("NonMax", "").to_lowercase());
+        } else if k.starts_with("NonZero") {
+            normalized_inner_typ.push(k.replace("NonZero", "").to_lowercase());
         } else if k == "Option" {
             normalized_inner_typ.push("Option".to_string()); // Insert the option so we have one there
 
@@ -668,12 +683,421 @@ fn _get_inner_type_and_apply_normalize(typ: &str) -> Vec<String> {
                     break;
                 }
             }
+        } else if k.starts_with("[") && k.contains(";") {
+            // Handle X; Y as Vec<X>
+            let k = k.replace(['[', ']'], "");
+            let k = k.split(';').collect::<Vec<&str>>()[0].trim();
+            normalized_inner_typ.push("Vec".to_string());
+            normalization_queue.push_front((k.to_string(), generic_level));
         } else {
             normalized_inner_typ.push(k);
         }
     }
 
     normalized_inner_typ
+}
+
+#[derive(serde::Serialize, Clone, Debug)]
+pub struct MissingSerenityReference {
+    /// Name of the missing reference
+    pub name: String,
+    /// Description from doc comment
+    pub description: String,
+    /// Fields
+    pub fields: MissingSerenityReferenceField,
+}
+
+#[derive(serde::Serialize, Clone, Debug)]
+pub enum MissingSerenityReferenceField {
+    StructFields {
+        fields: Vec<MissingSerenityReferenceStructField>,
+    },
+    BitFlag {
+        /// The type of the bitflag (pub ChannelFlags: u64 would have u64 here)
+        typ: String,
+        values: Vec<MissingSerenityReferenceBitFlag>,
+    },
+    EnumVariants {
+        variants: Vec<MissingSerenityReferenceEnumVariant>,
+    },
+}
+
+#[derive(serde::Serialize, Clone, Debug)]
+pub struct MissingSerenityReferenceStructField {
+    /// Name of the missing reference
+    pub name: String,
+    /// Description from doc comment
+    pub description: String,
+    /// The normalized type of the field
+    pub normalized_type: Vec<String>,
+}
+
+#[derive(serde::Serialize, Clone, Debug)]
+pub struct MissingSerenityReferenceBitFlag {
+    /// Name of the bitflag value
+    pub name: String,
+    /// Description from doc comment
+    pub description: String,
+    /// The value of the bitflag
+    pub value: String,
+}
+
+#[derive(serde::Serialize, Clone, Debug)]
+pub struct MissingSerenityReferenceEnumVariant {
+    /// Description from doc comment
+    pub description: String,
+    /// Name of the variant
+    pub variant_name: String,
+    /// The normalized type of the variant, if any
+    pub normalized_type: Vec<String>,
+}
+
+/// Gets the inner type and normalizes all the serenity refs returning them
+fn _resolve_missing_references(
+    normalized_type: Vec<String>,
+    refs: &mut indexmap::IndexMap<String, MissingSerenityReference>,
+    serenity_files: &[String],
+) -> Result<(), Error> {
+    // These are refs we can't process yet
+    let ref_overrides: indexmap::IndexMap<String, MissingSerenityReference> =
+        indexmap::indexmap! {};
+
+    let mut remaining_type_queue = std::collections::VecDeque::from(normalized_type);
+
+    loop {
+        if remaining_type_queue.is_empty() {
+            break;
+        }
+
+        // Take the first element from the queue
+        let typ = remaining_type_queue.pop_front().unwrap();
+
+        // Base collection types
+        if ["Option", "Vec", "HashMap", "IndexMap", "Set"].contains(&typ.as_str()) {
+            continue;
+        }
+
+        // Base primitives
+        if [
+            "bool",
+            "char",
+            "f8",
+            "f16",
+            "f32",
+            "f64",
+            "i8",
+            "i16",
+            "i32",
+            "i64",
+            "i128",
+            "isize",
+            "u8",
+            "u16",
+            "u32",
+            "u64",
+            "u128",
+            "usize",
+            "String",
+            "str",
+            "char",
+            "DateTime<Utc>",
+            "Timestamp",
+            "Duration",
+            "Instant",
+            "DateTime<Local>",
+            "DateTime<FixedOffset>",
+            "DateTime<LocalResult>",
+            "DateTime<FixedOffsetResult>",
+            "Value",
+        ]
+        .contains(&typ.as_str())
+        {
+            continue;
+        }
+
+        // Ref already resolved
+        if refs.contains_key(&typ) {
+            continue;
+        }
+
+        if ref_overrides.contains_key(&typ) {
+            refs.insert(typ.clone(), ref_overrides.get(&typ).unwrap().clone());
+        }
+
+        // Find which serenity file contains the type and get the doc comment by going backwards
+        let mut struct_content = String::new();
+        let mut struct_description = String::new();
+
+        let mut found = false;
+        for serenity_file in serenity_files.iter() {
+            if found {
+                break;
+            }
+
+            let serenity_file = std::fs::read_to_string(serenity_file)?;
+
+            let serenity_file = serenity_file.lines().collect::<Vec<&str>>();
+
+            for (i, line) in serenity_file.iter().enumerate() {
+                let line = line.trim();
+
+                if line.is_empty() {
+                    continue;
+                }
+
+                if line.contains(&("pub struct ".to_string() + &typ + " {"))
+                    || line.contains(&("pub enum ".to_string() + &typ + " {"))
+                    || line.contains(&("pub struct ".to_string() + &typ + "("))
+                    || line.contains(&("pub enum ".to_string() + &typ + "("))
+                    || line.contains(&("pub struct ".to_string() + &typ + ":"))
+                // Bitflag
+                {
+                    found = true;
+
+                    // Get all doc comments of the struct by going backwards
+                    for j in (0..i).rev() {
+                        let line = serenity_file[j].trim();
+
+                        if line.starts_with("///") {
+                            struct_description.push_str(line.replace("///", "").trim());
+                            struct_description.push('\n');
+                        } else if line.is_empty() {
+                            break;
+                        }
+                    }
+
+                    // Reverse the struct description
+                    struct_description = struct_description
+                        .lines()
+                        .rev()
+                        .collect::<Vec<&str>>()
+                        .join("\n");
+
+                    struct_content.push_str(line);
+                    struct_content.push('\n');
+
+                    continue;
+                }
+
+                if found
+                    && (line.contains("pub struct ")
+                        || line.contains("pub enum ")
+                        || line.contains("}"))
+                {
+                    break;
+                }
+
+                if found {
+                    struct_content.push_str(line);
+                    struct_content.push('\n');
+                }
+            }
+        }
+
+        if !found {
+            return Err(format!("Type {} not found in serenity", typ).into());
+        }
+
+        let struct_content = struct_content.trim();
+
+        enum StructType {
+            Struct,
+            Enum,
+            BitFlag,
+        }
+
+        let struct_type = {
+            if struct_content.starts_with(&("pub struct ".to_string() + &typ + " {")) {
+                StructType::Struct
+            } else if struct_content.starts_with(&("pub enum ".to_string() + &typ + " {")) {
+                StructType::Enum
+            } else if struct_content.starts_with(&("pub struct ".to_string() + &typ + ":")) {
+                StructType::BitFlag
+            } else {
+                StructType::Enum
+            }
+        };
+
+        let fields = {
+            match struct_type {
+                StructType::Struct => {
+                    // Get rid of the first line containing the struct declaration
+                    let struct_content = struct_content
+                        .lines()
+                        .skip(1)
+                        .collect::<Vec<&str>>()
+                        .join("\n");
+
+                    let mut struct_fields = Vec::new();
+                    let mut current_field: Option<MissingSerenityReferenceStructField> = None;
+                    for line in struct_content.lines().rev() {
+                        let line = line.trim();
+
+                        if line.starts_with("pub ") {
+                            if let Some(ref current_field) = current_field {
+                                let mut current_field = current_field.clone();
+
+                                // Reverse the description
+                                current_field.description = current_field
+                                    .description
+                                    .lines()
+                                    .rev()
+                                    .collect::<Vec<&str>>()
+                                    .join("\n");
+
+                                struct_fields.push(current_field);
+                            }
+
+                            let line = line.replace("pub ", "");
+
+                            let line = line.trim();
+
+                            let line = line.split(':').collect::<Vec<&str>>();
+
+                            let name = line[0].trim();
+                            let typ = line[1].trim();
+
+                            let typ = typ.split("//").collect::<Vec<&str>>()[0].trim();
+
+                            let normalized_type = _get_inner_type_and_apply_normalize(typ);
+
+                            for typ in normalized_type.iter() {
+                                remaining_type_queue.push_back(typ.clone()); // Add all normalized type to the queue
+                            }
+
+                            current_field = Some(MissingSerenityReferenceStructField {
+                                description: String::new(),
+                                name: name.to_string(),
+                                normalized_type,
+                            });
+                        }
+
+                        // Handle doc-comments and serde
+                        if let Some(ref mut ref_current_field) = current_field {
+                            if line.starts_with("///") {
+                                ref_current_field
+                                    .description
+                                    .push_str(line.replace("///", "").trim());
+                                ref_current_field.description.push('\n');
+                            } else if line.contains("serde(rename") {
+                                let split = line.split('=').collect::<Vec<&str>>();
+                                let split = split[1].split('"').collect::<Vec<&str>>();
+                                let value = split[1];
+                                ref_current_field.name = value.to_string();
+                            } else if line.contains("#[serde(skip)]") {
+                                current_field = None;
+                            } else if line.contains("#[serde(skip_serializing_if")
+                                && !ref_current_field
+                                    .normalized_type
+                                    .contains(&"Option".to_string())
+                            {
+                                ref_current_field
+                                    .normalized_type
+                                    .insert(0, "Option".to_string());
+                            }
+                        }
+                    }
+
+                    // Add the last element
+                    if let Some(ref current_field) = current_field {
+                        let mut current_field = current_field.clone();
+
+                        // Reverse the description
+                        current_field.description = current_field
+                            .description
+                            .lines()
+                            .rev()
+                            .collect::<Vec<&str>>()
+                            .join("\n");
+
+                        struct_fields.push(current_field);
+                    }
+
+                    // Reverse the fields
+                    struct_fields.reverse();
+
+                    MissingSerenityReferenceField::StructFields {
+                        fields: struct_fields,
+                    }
+                }
+                StructType::BitFlag => {
+                    let first_line = struct_content.lines().next().unwrap().trim();
+
+                    let typ = first_line.split(':').collect::<Vec<&str>>()[1].trim();
+
+                    // Remove any brackets
+                    let typ = typ.replace(['(', ')', '{', '}'], "");
+
+                    let mut values = Vec::new();
+
+                    for (i, line) in struct_content.lines().rev().enumerate() {
+                        let line = line.trim();
+
+                        if line.starts_with("const ") {
+                            let line = line.replace("const ", "");
+                            let line = line.trim();
+
+                            let line = line.split('=').collect::<Vec<&str>>();
+
+                            let name = line[0].trim();
+                            let value = line[1].trim();
+                            let value = value.replace([';', ','], ""); // Remove any trailing semicolons or commas
+
+                            let mut description = String::new();
+
+                            // Get the description by going backwards
+                            for j in (0..i).rev() {
+                                let line = struct_content.lines().nth(j).unwrap().trim();
+
+                                if line.starts_with("///") {
+                                    description.push_str(line.replace("///", "").trim());
+                                    description.push('\n');
+                                } else if line.is_empty() || line.contains("const") {
+                                    break;
+                                }
+                            }
+
+                            // Reverse the description
+                            description =
+                                description.lines().rev().collect::<Vec<&str>>().join("\n");
+
+                            values.push(MissingSerenityReferenceBitFlag {
+                                name: name.to_string(),
+                                description,
+                                value: value.to_string(),
+                            });
+                        }
+                    }
+
+                    // Reverse the fields
+                    values.reverse();
+
+                    MissingSerenityReferenceField::BitFlag {
+                        typ: typ.to_string(),
+                        values,
+                    }
+                }
+                StructType::Enum => {
+                    // TODO: Implement
+                    MissingSerenityReferenceField::EnumVariants {
+                        variants: Vec::new(),
+                    }
+                }
+            }
+        };
+
+        let new_ref = MissingSerenityReference {
+            description: struct_description,
+            name: typ.clone(),
+            fields,
+        };
+
+        //println!("cargo:warning=missing ref: {:?}", new_ref);
+
+        refs.insert(typ, new_ref);
+    }
+
+    Ok(())
 }
 
 // CI to create template documentation
@@ -883,6 +1307,49 @@ fn create_template_docs() -> Result<(), Error> {
     let mut file = std::fs::File::create(".generated/event_fields_stage2.json")?;
     let normalized_event_fields_json = serde_json::to_string_pretty(&normalized_event_fields)?;
     file.write_all(normalized_event_fields_json.as_bytes())?;
+
+    // Stage 3: Resolve missing references
+    let serenity_path = _get_serenity_path()?;
+    let mut serenity_files = Vec::new();
+    for entry in walkdir::WalkDir::new(&(serenity_path + "/src/model")) {
+        let entry = entry?;
+
+        let name = entry.path().to_string_lossy();
+
+        /*if name.contains("target")
+            || name.contains("examples")
+            || name.contains("tests")
+            || name.contains("benches")
+            || name.contains("src/builder")
+        // This may break some refs but we don't care about builder
+        {
+            continue;
+        }*/
+
+        if !name.ends_with(".rs") {
+            continue;
+        }
+
+        serenity_files.push(entry.path().to_string_lossy().to_string());
+    }
+
+    let mut resolved_refs: indexmap::IndexMap<String, MissingSerenityReference> =
+        indexmap::IndexMap::new();
+
+    for (_, v) in normalized_event_fields.iter() {
+        for (_, v) in v.iter() {
+            _resolve_missing_references(v.to_vec(), &mut resolved_refs, &serenity_files)?;
+        }
+    }
+
+    let mut file = std::fs::File::create(".generated/event_fields_stage3.json")?;
+
+    let resolved_refs_json = serde_json::to_string_pretty(&serde_json::json!({
+        "resolved_refs": resolved_refs,
+        "normalized_event_fields": normalized_event_fields
+    }))?;
+
+    file.write_all(resolved_refs_json.as_bytes())?;
 
     Ok(())
 }
