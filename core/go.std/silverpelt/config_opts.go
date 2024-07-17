@@ -56,19 +56,6 @@ type CanonicalSettingsError struct {
 	} `json:"MaximumCountReached,omitempty"`
 }
 
-type CanonicalInnerColumnTypeStringKind string
-
-const (
-	CanonicalInnerColumnTypeStringKindNormal   CanonicalInnerColumnTypeStringKind = "Normal"
-	CanonicalInnerColumnTypeStringKindTextarea CanonicalInnerColumnTypeStringKind = "Textarea"
-	CanonicalInnerColumnTypeStringKindTemplate CanonicalInnerColumnTypeStringKind = "Template"
-	CanonicalInnerColumnTypeStringKindUser     CanonicalInnerColumnTypeStringKind = "User"
-	CanonicalInnerColumnTypeStringKindChannel  CanonicalInnerColumnTypeStringKind = "Channel"
-	CanonicalInnerColumnTypeStringKindRole     CanonicalInnerColumnTypeStringKind = "Role"
-	CanonicalInnerColumnTypeStringKindEmoji    CanonicalInnerColumnTypeStringKind = "Emoji"
-	CanonicalInnerColumnTypeStringKindMessage  CanonicalInnerColumnTypeStringKind = "Message"
-)
-
 type CanonicalColumnTypeDynamicClause struct {
 	Field      string              `json:"field"`
 	Value      any                 `json:"value"`
@@ -85,6 +72,24 @@ type CanonicalColumnType struct {
 	Dynamic *struct {
 		Clauses []CanonicalColumnTypeDynamicClause `json:"clauses"`
 	}
+}
+
+type CanonicalInnerColumnTypeStringKindTemplateKind struct {
+	// Template for formatting messages
+	Message *struct{} `json:"Message,omitempty"`
+}
+
+type CanonicalInnerColumnTypeStringKind struct {
+	Normal   *struct{} `json:"Normal,omitempty"`
+	Textarea *struct{} `json:"Textarea,omitempty"`
+	Template *struct {
+		Kind CanonicalInnerColumnTypeStringKindTemplateKind `json:"kind"`
+	} `json:"Template,omitempty"`
+	User    *struct{} `json:"User,omitempty"`
+	Channel *struct{} `json:"Channel,omitempty"`
+	Role    *struct{} `json:"Role,omitempty"`
+	Emoji   *struct{} `json:"Emoji,omitempty"`
+	Message *struct{} `json:"Message,omitempty"`
 }
 
 type CanonicalInnerColumnType struct {

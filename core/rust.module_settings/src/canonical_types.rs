@@ -172,51 +172,73 @@ impl From<super::types::ColumnType> for CanonicalColumnType {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[allow(dead_code)]
+pub enum CanonicalInnerColumnTypeStringKindTemplateKind {
+    /// Template for formatting messages
+    Message {},
+}
+
+impl From<super::types::InnerColumnTypeStringKindTemplateKind>
+    for CanonicalInnerColumnTypeStringKindTemplateKind
+{
+    fn from(kind: super::types::InnerColumnTypeStringKindTemplateKind) -> Self {
+        match kind {
+            super::types::InnerColumnTypeStringKindTemplateKind::Message {} => {
+                CanonicalInnerColumnTypeStringKindTemplateKind::Message {}
+            }
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[allow(dead_code)]
 pub enum CanonicalInnerColumnTypeStringKind {
     /// Normal string
-    Normal,
+    Normal {},
     /// A textarea
-    Textarea,
+    Textarea {},
     /// A template string
-    Template,
+    Template {
+        /// The kind of template
+        kind: CanonicalInnerColumnTypeStringKindTemplateKind,
+    },
     /// User
-    User,
+    User {},
     /// Channel
-    Channel,
+    Channel {},
     /// Role
-    Role,
+    Role {},
     /// Emoji
-    Emoji,
+    Emoji {},
     /// Message
-    Message,
+    Message {},
 }
 
 impl From<super::types::InnerColumnTypeStringKind> for CanonicalInnerColumnTypeStringKind {
     fn from(kind: super::types::InnerColumnTypeStringKind) -> Self {
         match kind {
             super::types::InnerColumnTypeStringKind::Normal => {
-                CanonicalInnerColumnTypeStringKind::Normal
+                CanonicalInnerColumnTypeStringKind::Normal {}
             }
             super::types::InnerColumnTypeStringKind::Textarea => {
-                CanonicalInnerColumnTypeStringKind::Textarea
+                CanonicalInnerColumnTypeStringKind::Textarea {}
             }
-            super::types::InnerColumnTypeStringKind::Template => {
-                CanonicalInnerColumnTypeStringKind::Template
+            super::types::InnerColumnTypeStringKind::Template { kind } => {
+                CanonicalInnerColumnTypeStringKind::Template { kind: kind.into() }
             }
             super::types::InnerColumnTypeStringKind::User => {
-                CanonicalInnerColumnTypeStringKind::User
+                CanonicalInnerColumnTypeStringKind::User {}
             }
             super::types::InnerColumnTypeStringKind::Channel => {
-                CanonicalInnerColumnTypeStringKind::Channel
+                CanonicalInnerColumnTypeStringKind::Channel {}
             }
             super::types::InnerColumnTypeStringKind::Role => {
-                CanonicalInnerColumnTypeStringKind::Role
+                CanonicalInnerColumnTypeStringKind::Role {}
             }
             super::types::InnerColumnTypeStringKind::Emoji => {
-                CanonicalInnerColumnTypeStringKind::Emoji
+                CanonicalInnerColumnTypeStringKind::Emoji {}
             }
             super::types::InnerColumnTypeStringKind::Message => {
-                CanonicalInnerColumnTypeStringKind::Message
+                CanonicalInnerColumnTypeStringKind::Message {}
             }
         }
     }

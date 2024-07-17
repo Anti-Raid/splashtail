@@ -1,6 +1,6 @@
 use futures_util::FutureExt;
 use module_settings::types::{
-    settings_wrap_columns, settings_wrap_precheck, Column, ColumnAction, ColumnSuggestion, ColumnType, ConfigOption, InnerColumnType, InnerColumnTypeStringKind, ColumnTypeDynamicClause, OperationSpecific, OperationType, SettingsError
+    settings_wrap_columns, settings_wrap_precheck, Column, ColumnAction, ColumnSuggestion, ColumnType, ConfigOption, InnerColumnType, InnerColumnTypeStringKind, InnerColumnTypeStringKindTemplateKind, ColumnTypeDynamicClause, OperationSpecific, OperationType, SettingsError
 };
 use once_cell::sync::Lazy;
 use splashcore_rs::value::Value;
@@ -170,7 +170,8 @@ pub static SINK: Lazy<ConfigOption> = Lazy::new(|| {
                 id: "embed_template",
                 name: "Template",
                 description: "The custom template for the embed. This is a tera template that is executed when an event is sent to the sink. If empty, falls back to default handling",
-                column_type: ColumnType::new_scalar(InnerColumnType::String { min_length: None, max_length: None, allowed_values: vec![], kind: InnerColumnTypeStringKind::Template }),
+                column_type: ColumnType::new_scalar(InnerColumnType::String { min_length: None, max_length: None, allowed_values: vec![], kind: InnerColumnTypeStringKind::Template { kind: InnerColumnTypeStringKindTemplateKind::Message {
+                } } }),
                 ignored_for: vec![],
                 secret: None,
                 nullable: true,

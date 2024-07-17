@@ -194,13 +194,22 @@ impl std::fmt::Display for ColumnType {
 
 #[derive(Debug, Clone, PartialEq)]
 #[allow(dead_code)]
+pub enum InnerColumnTypeStringKindTemplateKind {
+    /// Template for formatting messages
+    Message {},
+}
+
+#[derive(Debug, Clone, PartialEq)]
+#[allow(dead_code)]
 pub enum InnerColumnTypeStringKind {
     /// Normal string
     Normal,
     /// A textarea
     Textarea,
     /// A template string
-    Template,
+    Template {
+        kind: InnerColumnTypeStringKindTemplateKind,
+    },
     /// User
     User,
     /// Channel
@@ -218,7 +227,7 @@ impl std::fmt::Display for InnerColumnTypeStringKind {
         match self {
             InnerColumnTypeStringKind::Normal => write!(f, "Normal"),
             InnerColumnTypeStringKind::Textarea => write!(f, "Textarea"),
-            InnerColumnTypeStringKind::Template => write!(f, "Template"),
+            InnerColumnTypeStringKind::Template { kind } => write!(f, "Template {:?}", kind),
             InnerColumnTypeStringKind::User => write!(f, "User"),
             InnerColumnTypeStringKind::Channel => write!(f, "Channel"),
             InnerColumnTypeStringKind::Role => write!(f, "Role"),

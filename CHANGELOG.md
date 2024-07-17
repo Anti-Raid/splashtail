@@ -1,3 +1,13 @@
+# Wednesday, July 17th 2024
+
+## GWEvents
+
+- Begun working on CI for automatically generating the template docs and data for gateway events. This will, in the future, allow for interactive documentation of gateway events and their fields in the website
+
+## Settings
+
+- Added ``TemplateKind`` to ``StringKind::Template`` to allow displaying message template builder in the site
+
 # Tuesday, July 16th 2024
 
 ## Templating
