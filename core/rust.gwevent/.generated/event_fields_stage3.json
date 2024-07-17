@@ -633,8 +633,133 @@
     "Action": {
       "description": "Determines the action that was done on a target.\n\n[Discord docs](https://discord.com/developers/docs/resources/audit-log#audit-log-entry-object-audit-log-events).",
       "fields": {
-        "EnumVariants": {
-          "variants": []
+        "EnumWithTuples": {
+          "variants": [
+            {
+              "description": "",
+              "normalized_type": [],
+              "variant_name": "GuildUpdate"
+            },
+            {
+              "description": "",
+              "normalized_type": [
+                "ChannelAction"
+              ],
+              "variant_name": "Channel"
+            },
+            {
+              "description": "",
+              "normalized_type": [
+                "ChannelOverwriteAction"
+              ],
+              "variant_name": "ChannelOverwrite"
+            },
+            {
+              "description": "",
+              "normalized_type": [
+                "MemberAction"
+              ],
+              "variant_name": "Member"
+            },
+            {
+              "description": "",
+              "normalized_type": [
+                "RoleAction"
+              ],
+              "variant_name": "Role"
+            },
+            {
+              "description": "",
+              "normalized_type": [
+                "InviteAction"
+              ],
+              "variant_name": "Invite"
+            },
+            {
+              "description": "",
+              "normalized_type": [
+                "WebhookAction"
+              ],
+              "variant_name": "Webhook"
+            },
+            {
+              "description": "",
+              "normalized_type": [
+                "EmojiAction"
+              ],
+              "variant_name": "Emoji"
+            },
+            {
+              "description": "",
+              "normalized_type": [
+                "MessageAction"
+              ],
+              "variant_name": "Message"
+            },
+            {
+              "description": "",
+              "normalized_type": [
+                "IntegrationAction"
+              ],
+              "variant_name": "Integration"
+            },
+            {
+              "description": "",
+              "normalized_type": [
+                "StageInstanceAction"
+              ],
+              "variant_name": "StageInstance"
+            },
+            {
+              "description": "",
+              "normalized_type": [
+                "StickerAction"
+              ],
+              "variant_name": "Sticker"
+            },
+            {
+              "description": "",
+              "normalized_type": [
+                "ScheduledEventAction"
+              ],
+              "variant_name": "ScheduledEvent"
+            },
+            {
+              "description": "",
+              "normalized_type": [
+                "ThreadAction"
+              ],
+              "variant_name": "Thread"
+            },
+            {
+              "description": "",
+              "normalized_type": [
+                "AutoModAction"
+              ],
+              "variant_name": "AutoMod"
+            },
+            {
+              "description": "",
+              "normalized_type": [
+                "CreatorMonetizationAction"
+              ],
+              "variant_name": "CreatorMonetization"
+            },
+            {
+              "description": "",
+              "normalized_type": [
+                "VoiceChannelStatusAction"
+              ],
+              "variant_name": "VoiceChannelStatus"
+            },
+            {
+              "description": "",
+              "normalized_type": [
+                "u8"
+              ],
+              "variant_name": "Unknown"
+            }
+          ]
         }
       },
       "name": "Action"
@@ -758,8 +883,30 @@
     "ActionRowComponent": {
       "description": "A component which can be inside of an [`ActionRow`].\n\n[Discord docs](https://discord.com/developers/docs/interactions/message-components#component-object-component-types).",
       "fields": {
-        "EnumVariants": {
-          "variants": []
+        "EnumWithTuples": {
+          "variants": [
+            {
+              "description": "",
+              "normalized_type": [
+                "Button"
+              ],
+              "variant_name": "Button"
+            },
+            {
+              "description": "",
+              "normalized_type": [
+                "SelectMenu"
+              ],
+              "variant_name": "SelectMenu"
+            },
+            {
+              "description": "",
+              "normalized_type": [
+                "InputText"
+              ],
+              "variant_name": "InputText"
+            }
+          ]
         }
       },
       "name": "ActionRowComponent"
@@ -1012,47 +1159,47 @@
           "typ": "u64 ",
           "values": [
             {
-              "description": "Whether the activity party is in a voice channel.",
+              "description": "Whether the activity is an instance activity.",
               "name": "INSTANCE",
               "value": "1 << 0"
             },
             {
-              "description": "Whether the activity party is friend only.",
+              "description": "Whether the activity is joinable.",
               "name": "JOIN",
               "value": "1 << 1"
             },
             {
-              "description": "Whether the activity can be played.",
+              "description": "Whether the activity can be spectated.",
               "name": "SPECTATE",
               "value": "1 << 2"
             },
             {
-              "description": "Whether the activity can be synced.",
+              "description": "Whether a request can be sent to join the user's party.",
               "name": "JOIN_REQUEST",
               "value": "1 << 3"
             },
             {
-              "description": "Whether a request can be sent to join the user's party.",
+              "description": "Whether the activity can be synced.",
               "name": "SYNC",
               "value": "1 << 4"
             },
             {
-              "description": "Whether the activity can be spectated.",
+              "description": "Whether the activity can be played.",
               "name": "PLAY",
               "value": "1 << 5"
             },
             {
-              "description": "Whether the activity is joinable.",
+              "description": "Whether the activity party is friend only.",
               "name": "PARTY_PRIVACY_FRIENDS",
               "value": "1 << 6"
             },
             {
-              "description": "Whether the activity is an instance activity.",
+              "description": "Whether the activity party is in a voice channel.",
               "name": "PARTY_PRIVACY_VOICE_CHANNEL",
               "value": "1 << 7"
             },
             {
-              "description": "",
+              "description": "Whether the activity can be embedded.",
               "name": "EMBEDDED",
               "value": "1 << 8"
             }
@@ -1151,8 +1298,39 @@
     "ActivityType": {
       "description": "[Discord docs](https://discord.com/developers/docs/topics/gateway-events#activity-object-activity-types).",
       "fields": {
-        "EnumVariants": {
-          "variants": []
+        "EnumWithVariants": {
+          "variants": [
+            {
+              "description": "An indicator that the user is playing a game.",
+              "value": "0",
+              "variant_name": "Playing"
+            },
+            {
+              "description": "An indicator that the user is streaming to a service.",
+              "value": "1",
+              "variant_name": "Streaming"
+            },
+            {
+              "description": "An indicator that the user is listening to something.",
+              "value": "2",
+              "variant_name": "Listening"
+            },
+            {
+              "description": "An indicator that the user is watching something.",
+              "value": "3",
+              "variant_name": "Watching"
+            },
+            {
+              "description": "An indicator that the user uses custom statuses",
+              "value": "4",
+              "variant_name": "Custom"
+            },
+            {
+              "description": "An indicator that the user is competing somewhere.",
+              "value": "5",
+              "variant_name": "Competing"
+            }
+          ]
         }
       },
       "name": "ActivityType"
@@ -1184,20 +1362,37 @@
     "AfkTimeout": {
       "description": "The [`Guild`] AFK timeout length.\n\nSee [AfkMetadata::afk_timeout].",
       "fields": {
-        "EnumVariants": {
-          "variants": []
+        "EnumWithVariants": {
+          "variants": [
+            {
+              "description": "",
+              "value": "60",
+              "variant_name": "OneMinute"
+            },
+            {
+              "description": "",
+              "value": "300",
+              "variant_name": "FiveMinutes"
+            },
+            {
+              "description": "",
+              "value": "900",
+              "variant_name": "FifteenMinutes"
+            },
+            {
+              "description": "",
+              "value": "1800",
+              "variant_name": "ThirtyMinutes"
+            },
+            {
+              "description": "",
+              "value": "3600",
+              "variant_name": "OneHour"
+            }
+          ]
         }
       },
       "name": "AfkTimeout"
-    },
-    "ApplicationId": {
-      "description": "An identifier for an Application.",
-      "fields": {
-        "EnumVariants": {
-          "variants": []
-        }
-      },
-      "name": "ApplicationId"
     },
     "Attachment": {
       "description": "A file uploaded with a message. Not to be confused with [`Embed`]s.\n\n[Discord docs](https://discord.com/developers/docs/resources/channel#attachment-object).\n\n[`Embed`]: super::Embed",
@@ -1300,15 +1495,6 @@
       },
       "name": "Attachment"
     },
-    "AttachmentId": {
-      "description": "An identifier for an attachment.",
-      "fields": {
-        "EnumVariants": {
-          "variants": []
-        }
-      },
-      "name": "AttachmentId"
-    },
     "AuditLogEntry": {
       "description": "[Discord docs](https://discord.com/developers/docs/resources/audit-log#audit-log-entry-object).",
       "fields": {
@@ -1373,32 +1559,181 @@
       },
       "name": "AuditLogEntry"
     },
-    "AuditLogEntryId": {
-      "description": "An identifier for an audit log entry.",
-      "fields": {
-        "EnumVariants": {
-          "variants": []
-        }
-      },
-      "name": "AuditLogEntryId"
-    },
     "AutoArchiveDuration": {
       "description": "See [`ThreadMetadata::auto_archive_duration`].\n\n[Discord docs](https://discord.com/developers/docs/resources/channel#thread-metadata-object)",
       "fields": {
-        "EnumVariants": {
-          "variants": []
+        "EnumWithVariants": {
+          "variants": [
+            {
+              "description": "",
+              "value": "0",
+              "variant_name": "None"
+            },
+            {
+              "description": "",
+              "value": "60",
+              "variant_name": "OneHour"
+            },
+            {
+              "description": "",
+              "value": "1440",
+              "variant_name": "OneDay"
+            },
+            {
+              "description": "",
+              "value": "4320",
+              "variant_name": "ThreeDays"
+            },
+            {
+              "description": "",
+              "value": "10080",
+              "variant_name": "OneWeek"
+            }
+          ]
         }
       },
       "name": "AutoArchiveDuration"
     },
-    "Change": {
+    "AutoModAction": {
+      "description": "[Discord docs](https://discord.com/developers/docs/resources/audit-log#audit-log-entry-object-audit-log-events).",
+      "fields": {
+        "EnumWithVariants": {
+          "variants": [
+            {
+              "description": "",
+              "value": "140",
+              "variant_name": "RuleCreate"
+            },
+            {
+              "description": "",
+              "value": "141",
+              "variant_name": "RuleUpdate"
+            },
+            {
+              "description": "",
+              "value": "142",
+              "variant_name": "RuleDelete"
+            },
+            {
+              "description": "",
+              "value": "143",
+              "variant_name": "BlockMessage"
+            },
+            {
+              "description": "",
+              "value": "144",
+              "variant_name": "FlagToChannel"
+            },
+            {
+              "description": "",
+              "value": "145",
+              "variant_name": "UserCommunicationDisabled"
+            }
+          ]
+        }
+      },
+      "name": "AutoModAction"
+    },
+    "Button": {
+      "description": "A button component.\n\n[Discord docs](https://discord.com/developers/docs/interactions/message-components#button-object-button-structure).",
+      "fields": {
+        "StructFields": {
+          "fields": [
+            {
+              "description": "The component type, it will always be [`ComponentType::Button`].",
+              "name": "type",
+              "normalized_type": [
+                "ComponentType"
+              ]
+            },
+            {
+              "description": "The button kind and style.",
+              "name": "data",
+              "normalized_type": [
+                "ButtonKind"
+              ]
+            },
+            {
+              "description": "The text which appears on the button.",
+              "name": "label",
+              "normalized_type": [
+                "Option",
+                "String"
+              ]
+            },
+            {
+              "description": "The emoji of this button, if there is one.",
+              "name": "emoji",
+              "normalized_type": [
+                "Option",
+                "ReactionType"
+              ]
+            },
+            {
+              "description": "Whether the button is disabled.",
+              "name": "disabled",
+              "normalized_type": [
+                "bool"
+              ]
+            }
+          ]
+        }
+      },
+      "name": "Button"
+    },
+    "ButtonKind": {
       "description": "",
       "fields": {
-        "EnumVariants": {
+        "EnumWithVariants": {
           "variants": []
         }
       },
+      "name": "ButtonKind"
+    },
+    "Change": {
+      "description": "",
+      "fields": {
+        "EnumWithVariants": {
+          "variants": [
+            {
+              "description": "",
+              "value": null,
+              "variant_name": "old_value"
+            },
+            {
+              "description": "",
+              "value": null,
+              "variant_name": "new_value"
+            }
+          ]
+        }
+      },
       "name": "Change"
+    },
+    "ChannelAction": {
+      "description": "[Discord docs](https://discord.com/developers/docs/resources/audit-log#audit-log-entry-object-audit-log-events).",
+      "fields": {
+        "EnumWithVariants": {
+          "variants": [
+            {
+              "description": "",
+              "value": "10",
+              "variant_name": "Create"
+            },
+            {
+              "description": "",
+              "value": "11",
+              "variant_name": "Update"
+            },
+            {
+              "description": "",
+              "value": "12",
+              "variant_name": "Delete"
+            }
+          ]
+        }
+      },
+      "name": "ChannelAction"
     },
     "ChannelFlags": {
       "description": "Describes extra features of the channel.\n\n[Discord docs](https://discord.com/developers/docs/resources/channel#channel-object-channel-flags).",
@@ -1407,12 +1742,12 @@
           "typ": "u64 ",
           "values": [
             {
-              "description": "",
+              "description": "This thread is pinned to the top of its parent GUILD_FORUM channel",
               "name": "PINNED",
               "value": "1 << 1"
             },
             {
-              "description": "",
+              "description": "Whether a tag is required to be specified when creating a\nthread in a GUILD_FORUM channel. Tags are specified in the applied_tags field.",
               "name": "REQUIRE_TAG",
               "value": "1 << 4"
             }
@@ -1420,15 +1755,6 @@
         }
       },
       "name": "ChannelFlags"
-    },
-    "ChannelId": {
-      "description": "An identifier for a Channel",
-      "fields": {
-        "EnumVariants": {
-          "variants": []
-        }
-      },
-      "name": "ChannelId"
     },
     "ChannelMention": {
       "description": "[Discord docs](https://discord.com/developers/docs/resources/channel#channel-mention-object).",
@@ -1468,11 +1794,97 @@
       },
       "name": "ChannelMention"
     },
+    "ChannelOverwriteAction": {
+      "description": "[Discord docs](https://discord.com/developers/docs/resources/audit-log#audit-log-entry-object-audit-log-events).",
+      "fields": {
+        "EnumWithVariants": {
+          "variants": [
+            {
+              "description": "",
+              "value": "13",
+              "variant_name": "Create"
+            },
+            {
+              "description": "",
+              "value": "14",
+              "variant_name": "Update"
+            },
+            {
+              "description": "",
+              "value": "15",
+              "variant_name": "Delete"
+            }
+          ]
+        }
+      },
+      "name": "ChannelOverwriteAction"
+    },
     "ChannelType": {
       "description": "A representation of a type of channel.\n\n[Discord docs](https://discord.com/developers/docs/resources/channel#channel-object-channel-types).",
       "fields": {
-        "EnumVariants": {
-          "variants": []
+        "EnumWithVariants": {
+          "variants": [
+            {
+              "description": "An indicator that the channel is a text [`GuildChannel`].",
+              "value": "0",
+              "variant_name": "Text"
+            },
+            {
+              "description": "An indicator that the channel is a [`PrivateChannel`].",
+              "value": "1",
+              "variant_name": "Private"
+            },
+            {
+              "description": "An indicator that the channel is a voice [`GuildChannel`].",
+              "value": "2",
+              "variant_name": "Voice"
+            },
+            {
+              "description": "An indicator that the channel is a group DM.",
+              "value": "3",
+              "variant_name": "GroupDm"
+            },
+            {
+              "description": "An indicator that the channel is a channel category.",
+              "value": "4",
+              "variant_name": "Category"
+            },
+            {
+              "description": "An indicator that the channel is a `NewsChannel`.\n\nNote: `NewsChannel` is serialized into a [`GuildChannel`]",
+              "value": "5",
+              "variant_name": "News"
+            },
+            {
+              "description": "An indicator that the channel is a news thread [`GuildChannel`].",
+              "value": "10",
+              "variant_name": "NewsThread"
+            },
+            {
+              "description": "An indicator that the channel is a public thread [`GuildChannel`].",
+              "value": "11",
+              "variant_name": "PublicThread"
+            },
+            {
+              "description": "An indicator that the channel is a private thread [`GuildChannel`].",
+              "value": "12",
+              "variant_name": "PrivateThread"
+            },
+            {
+              "description": "An indicator that the channel is a stage [`GuildChannel`].",
+              "value": "13",
+              "variant_name": "Stage"
+            },
+            {
+              "description": "An indicator that the channel is a directory [`GuildChannel`] in a [hub].\n\n[hub]: https://support.discord.com/hc/en-us/articles/4406046651927-Discord-Student-Hubs-FAQ",
+              "value": "14",
+              "variant_name": "Directory"
+            },
+            {
+              "description": "An indicator that the channel is a forum [`GuildChannel`].",
+              "value": "15",
+              "variant_name": "Forum"
+            }
+          ]
         }
       },
       "name": "ChannelType"
@@ -1514,20 +1926,281 @@
     "Colour": {
       "description": "A utility struct to help with working with the basic representation of a colour. This is\nparticularly useful when working with a [`Role`]'s colour, as the API works with an integer\nvalue instead of an RGB value.\n\nInstances can be created by using the struct's associated functions. These produce presets\nequivalent to those found in the official client's colour picker.\n\n# Examples\n\nPassing in a role's colour, and then retrieving its green component via [`Self::g`]:\n\n```rust\n# use serde_json::{json, from_value};\n# use serenity::model::guild::Role;\n# use serenity::model::id::RoleId;\n# use serenity::model::id::GuildId;\n# use serenity::model::permissions;\n#\n# fn main() {\n# let role = from_value::<Role>(json!({\n#     \"color\": Colour::BLURPLE,\n#     \"hoist\": false,\n#     \"id\": RoleId::new(1),\n#     \"guild_id\": GuildId::new(2),\n#     \"managed\": false,\n#     \"mentionable\": false,\n#     \"name\": \"test\",\n#     \"permissions\": permissions::PRESET_GENERAL,\n#     \"position\": 7,\n# })).unwrap();\n#\nuse serenity::model::Colour;\n\n// assuming a `role` has already been bound\n\nlet green = role.colour.g();\n\nprintln!(\"The green component is: {}\", green);\n# }\n```\n\nCreating an instance with the [`Self::DARK_TEAL`] preset:\n\n```rust\nuse serenity::model::Colour;\n\nlet colour = Colour::DARK_TEAL;\n\nassert_eq!(colour.tuple(), (17, 128, 106));\n```\n\nColours can also be directly compared for equivalence:\n\n```rust\nuse serenity::model::Colour;\n\nlet blitz_blue = Colour::BLITZ_BLUE;\nlet fooyoo = Colour::FOOYOO;\nlet fooyoo2 = Colour::FOOYOO;\nassert!(blitz_blue != fooyoo);\nassert_eq!(fooyoo, fooyoo2);\nassert!(blitz_blue > fooyoo);\n```\n\n[`Role`]: crate::model::guild::Role",
       "fields": {
-        "EnumVariants": {
-          "variants": []
-        }
+        "Unknown": {}
       },
       "name": "Colour"
     },
-    "CommandId": {
-      "description": "An identifier for a slash command.",
+    "CommandData": {
+      "description": "The command data payload.\n\n[Discord docs](https://discord.com/developers/docs/interactions/receiving-and-responding#interaction-object-interaction-data-structure).",
       "fields": {
-        "EnumVariants": {
+        "StructFields": {
+          "fields": [
+            {
+              "description": "The Id of the invoked command.",
+              "name": "id",
+              "normalized_type": [
+                "CommandId"
+              ]
+            },
+            {
+              "description": "The name of the invoked command.",
+              "name": "name",
+              "normalized_type": [
+                "String"
+              ]
+            },
+            {
+              "description": "The application command type of the triggered application command.",
+              "name": "type",
+              "normalized_type": [
+                "CommandType"
+              ]
+            },
+            {
+              "description": "The parameters and the given values. The converted objects from the given options.",
+              "name": "resolved",
+              "normalized_type": [
+                "CommandDataResolved"
+              ]
+            },
+            {
+              "description": "",
+              "name": "options",
+              "normalized_type": [
+                "CommandDataOption"
+              ]
+            },
+            {
+              "description": "The Id of the guild the command is registered to.",
+              "name": "guild_id",
+              "normalized_type": [
+                "Option",
+                "GuildId"
+              ]
+            },
+            {
+              "description": "The targeted user or message, if the triggered application command type is [`User`] or\n[`Message`].\n\nIts object data can be found in the [`resolved`] field.\n\n[`resolved`]: Self::resolved\n[`User`]: CommandType::User\n[`Message`]: CommandType::Message",
+              "name": "target_id",
+              "normalized_type": [
+                "Option",
+                "TargetId"
+              ]
+            }
+          ]
+        }
+      },
+      "name": "CommandData"
+    },
+    "CommandDataOption": {
+      "description": "A set of a parameter and a value from the user.\n\nAll options have names and an option can either be a parameter and input `value` or it can\ndenote a sub-command or group, in which case it will contain a top-level key and another vector\nof `options`.\n\nTheir resolved objects can be found on [`CommandData::resolved`].\n\n[Discord docs](https://discord.com/developers/docs/interactions/receiving-and-responding#interaction-object-application-command-interaction-data-option-structure).",
+      "fields": {
+        "StructFields": {
+          "fields": [
+            {
+              "description": "The name of the parameter.",
+              "name": "name",
+              "normalized_type": [
+                "String"
+              ]
+            },
+            {
+              "description": "The given value.",
+              "name": "value",
+              "normalized_type": [
+                "CommandDataOptionValue"
+              ]
+            }
+          ]
+        }
+      },
+      "name": "CommandDataOption"
+    },
+    "CommandDataOptionValue": {
+      "description": "The value of an [`CommandDataOption`].\n\n[Discord docs](https://discord.com/developers/docs/interactions/application-commands#application-command-object-application-command-option-type).",
+      "fields": {
+        "EnumWithVariants": {
           "variants": []
         }
       },
-      "name": "CommandId"
+      "name": "CommandDataOptionValue"
+    },
+    "CommandDataResolved": {
+      "description": "The resolved data of a command data interaction payload. It contains the objects of\n[`CommandDataOption`]s.\n\n[Discord docs](https://discord.com/developers/docs/interactions/receiving-and-responding#interaction-object-resolved-data-structure).",
+      "fields": {
+        "StructFields": {
+          "fields": [
+            {
+              "description": "The resolved users.",
+              "name": "users",
+              "normalized_type": [
+                "HashMap",
+                "UserId",
+                "User"
+              ]
+            },
+            {
+              "description": "The resolved partial members.",
+              "name": "members",
+              "normalized_type": [
+                "HashMap",
+                "UserId",
+                "PartialMember"
+              ]
+            },
+            {
+              "description": "The resolved roles.",
+              "name": "roles",
+              "normalized_type": [
+                "HashMap",
+                "RoleId",
+                "Role"
+              ]
+            },
+            {
+              "description": "The resolved partial channels.",
+              "name": "channels",
+              "normalized_type": [
+                "HashMap",
+                "ChannelId",
+                "PartialChannel"
+              ]
+            },
+            {
+              "description": "The resolved messages.",
+              "name": "messages",
+              "normalized_type": [
+                "HashMap",
+                "MessageId",
+                "Message"
+              ]
+            },
+            {
+              "description": "The resolved attachments.",
+              "name": "attachments",
+              "normalized_type": [
+                "HashMap",
+                "AttachmentId",
+                "Attachment"
+              ]
+            }
+          ]
+        }
+      },
+      "name": "CommandDataResolved"
+    },
+    "CommandInteraction": {
+      "description": "An interaction when a user invokes a slash command.\n\n[Discord docs](https://discord.com/developers/docs/interactions/receiving-and-responding#interaction-object).",
+      "fields": {
+        "StructFields": {
+          "fields": [
+            {
+              "description": "Id of the interaction.",
+              "name": "id",
+              "normalized_type": [
+                "InteractionId"
+              ]
+            },
+            {
+              "description": "Id of the application this interaction is for.",
+              "name": "application_id",
+              "normalized_type": [
+                "ApplicationId"
+              ]
+            },
+            {
+              "description": "The data of the interaction which was triggered.",
+              "name": "data",
+              "normalized_type": [
+                "CommandData"
+              ]
+            },
+            {
+              "description": "The guild Id this interaction was sent from, if there is one.",
+              "name": "guild_id",
+              "normalized_type": [
+                "Option",
+                "GuildId"
+              ]
+            },
+            {
+              "description": "Channel that the interaction was sent from.",
+              "name": "channel",
+              "normalized_type": [
+                "Option",
+                "PartialChannel"
+              ]
+            },
+            {
+              "description": "The channel Id this interaction was sent from.",
+              "name": "channel_id",
+              "normalized_type": [
+                "ChannelId"
+              ]
+            },
+            {
+              "description": "The `member` data for the invoking user.\n\n**Note**: It is only present if the interaction is triggered in a guild.",
+              "name": "member",
+              "normalized_type": [
+                "Option",
+                "Member"
+              ]
+            },
+            {
+              "description": "The `user` object for the invoking user.",
+              "name": "user",
+              "normalized_type": [
+                "User"
+              ]
+            },
+            {
+              "description": "A continuation token for responding to the interaction.",
+              "name": "token",
+              "normalized_type": [
+                "String"
+              ]
+            },
+            {
+              "description": "Always `1`.",
+              "name": "version",
+              "normalized_type": [
+                "u8"
+              ]
+            },
+            {
+              "description": "Permissions the app or bot has within the channel the interaction was sent from.",
+              "name": "app_permissions",
+              "normalized_type": [
+                "Option",
+                "Permissions"
+              ]
+            },
+            {
+              "description": "The selected language of the invoking user.",
+              "name": "locale",
+              "normalized_type": [
+                "String"
+              ]
+            },
+            {
+              "description": "The guild's preferred locale.",
+              "name": "guild_locale",
+              "normalized_type": [
+                "Option",
+                "String"
+              ]
+            },
+            {
+              "description": "For monetized applications, any entitlements of the invoking user.",
+              "name": "entitlements",
+              "normalized_type": [
+                "Vec",
+                "Entitlement"
+              ]
+            }
+          ]
+        }
+      },
+      "name": "CommandInteraction"
     },
     "CommandPermission": {
       "description": "The [`CommandPermission`] data.\n\n[Discord docs](https://discord.com/developers/docs/interactions/application-commands#application-command-permissions-object-application-command-permissions-structure).",
@@ -1560,20 +2233,27 @@
       },
       "name": "CommandPermission"
     },
-    "CommandPermissionId": {
-      "description": "An identifier for a slash command permission Id. Can contain\na [`RoleId`] or [`UserId`].",
-      "fields": {
-        "EnumVariants": {
-          "variants": []
-        }
-      },
-      "name": "CommandPermissionId"
-    },
     "CommandPermissionType": {
       "description": "The type of a [`CommandPermission`].\n\n[Discord docs](https://discord.com/developers/docs/interactions/application-commands#application-command-permissions-object-application-command-permission-type).",
       "fields": {
-        "EnumVariants": {
-          "variants": []
+        "EnumWithVariants": {
+          "variants": [
+            {
+              "description": "",
+              "value": "1",
+              "variant_name": "Role"
+            },
+            {
+              "description": "",
+              "value": "2",
+              "variant_name": "User"
+            },
+            {
+              "description": "",
+              "value": "3",
+              "variant_name": "Channel"
+            }
+          ]
         }
       },
       "name": "CommandPermissionType"
@@ -1616,20 +2296,317 @@
       },
       "name": "CommandPermissions"
     },
+    "CommandType": {
+      "description": "The type of an application command.\n\n[Discord docs](https://discord.com/developers/docs/interactions/application-commands#application-command-object-application-command-types).",
+      "fields": {
+        "EnumWithVariants": {
+          "variants": [
+            {
+              "description": "",
+              "value": "1",
+              "variant_name": "ChatInput"
+            },
+            {
+              "description": "",
+              "value": "2",
+              "variant_name": "User"
+            },
+            {
+              "description": "",
+              "value": "3",
+              "variant_name": "Message"
+            }
+          ]
+        }
+      },
+      "name": "CommandType"
+    },
+    "ComponentInteraction": {
+      "description": "An interaction triggered by a message component.\n\n[Discord docs](https://discord.com/developers/docs/interactions/receiving-and-responding#interaction-object-interaction-structure).",
+      "fields": {
+        "StructFields": {
+          "fields": [
+            {
+              "description": "Id of the interaction.",
+              "name": "id",
+              "normalized_type": [
+                "InteractionId"
+              ]
+            },
+            {
+              "description": "Id of the application this interaction is for.",
+              "name": "application_id",
+              "normalized_type": [
+                "ApplicationId"
+              ]
+            },
+            {
+              "description": "The data of the interaction which was triggered.",
+              "name": "data",
+              "normalized_type": [
+                "ComponentInteractionData"
+              ]
+            },
+            {
+              "description": "The guild Id this interaction was sent from, if there is one.",
+              "name": "guild_id",
+              "normalized_type": [
+                "Option",
+                "GuildId"
+              ]
+            },
+            {
+              "description": "Channel that the interaction was sent from.",
+              "name": "channel",
+              "normalized_type": [
+                "Option",
+                "PartialChannel"
+              ]
+            },
+            {
+              "description": "The channel Id this interaction was sent from.",
+              "name": "channel_id",
+              "normalized_type": [
+                "ChannelId"
+              ]
+            },
+            {
+              "description": "The `member` data for the invoking user.\n\n**Note**: It is only present if the interaction is triggered in a guild.",
+              "name": "member",
+              "normalized_type": [
+                "Option",
+                "Member"
+              ]
+            },
+            {
+              "description": "The `user` object for the invoking user.",
+              "name": "user",
+              "normalized_type": [
+                "User"
+              ]
+            },
+            {
+              "description": "A continuation token for responding to the interaction.",
+              "name": "token",
+              "normalized_type": [
+                "String"
+              ]
+            },
+            {
+              "description": "Always `1`.",
+              "name": "version",
+              "normalized_type": [
+                "u8"
+              ]
+            },
+            {
+              "description": "The message this interaction was triggered by, if it is a component.",
+              "name": "message",
+              "normalized_type": [
+                "Message"
+              ]
+            },
+            {
+              "description": "Permissions the app or bot has within the channel the interaction was sent from.",
+              "name": "app_permissions",
+              "normalized_type": [
+                "Option",
+                "Permissions"
+              ]
+            },
+            {
+              "description": "The selected language of the invoking user.",
+              "name": "locale",
+              "normalized_type": [
+                "String"
+              ]
+            },
+            {
+              "description": "The guild's preferred locale.",
+              "name": "guild_locale",
+              "normalized_type": [
+                "Option",
+                "String"
+              ]
+            },
+            {
+              "description": "For monetized applications, any entitlements of the invoking user.",
+              "name": "entitlements",
+              "normalized_type": [
+                "Vec",
+                "Entitlement"
+              ]
+            }
+          ]
+        }
+      },
+      "name": "ComponentInteraction"
+    },
+    "ComponentInteractionData": {
+      "description": "A message component interaction data, provided by [`ComponentInteraction::data`]\n\n[Discord docs](https://discord.com/developers/docs/interactions/receiving-and-responding#interaction-object-message-component-data-structure).",
+      "fields": {
+        "StructFields": {
+          "fields": [
+            {
+              "description": "The custom id of the component.",
+              "name": "custom_id",
+              "normalized_type": [
+                "String"
+              ]
+            },
+            {
+              "description": "Type and type-specific data of this component interaction.",
+              "name": "kind",
+              "normalized_type": [
+                "ComponentInteractionDataKind"
+              ]
+            }
+          ]
+        }
+      },
+      "name": "ComponentInteractionData"
+    },
+    "ComponentInteractionDataKind": {
+      "description": "",
+      "fields": {
+        "EnumWithTuples": {
+          "variants": [
+            {
+              "description": "",
+              "normalized_type": [],
+              "variant_name": "Button"
+            },
+            {
+              "description": "",
+              "normalized_type": [
+                "Vec",
+                "String"
+              ],
+              "variant_name": "StringSelect"
+            },
+            {
+              "description": "",
+              "normalized_type": [
+                "Vec",
+                "UserId"
+              ],
+              "variant_name": "UserSelect"
+            },
+            {
+              "description": "",
+              "normalized_type": [
+                "Vec",
+                "RoleId"
+              ],
+              "variant_name": "RoleSelect"
+            },
+            {
+              "description": "",
+              "normalized_type": [
+                "Vec",
+                "GenericId"
+              ],
+              "variant_name": "MentionableSelect"
+            },
+            {
+              "description": "",
+              "normalized_type": [
+                "Vec",
+                "ChannelId"
+              ],
+              "variant_name": "ChannelSelect"
+            }
+          ]
+        }
+      },
+      "name": "ComponentInteractionDataKind"
+    },
     "ComponentType": {
       "description": "The type of a component",
       "fields": {
-        "EnumVariants": {
-          "variants": []
+        "EnumWithVariants": {
+          "variants": [
+            {
+              "description": "",
+              "value": "1",
+              "variant_name": "ActionRow"
+            },
+            {
+              "description": "",
+              "value": "2",
+              "variant_name": "Button"
+            },
+            {
+              "description": "",
+              "value": "3",
+              "variant_name": "StringSelect"
+            },
+            {
+              "description": "",
+              "value": "4",
+              "variant_name": "InputText"
+            },
+            {
+              "description": "",
+              "value": "5",
+              "variant_name": "UserSelect"
+            },
+            {
+              "description": "",
+              "value": "6",
+              "variant_name": "RoleSelect"
+            },
+            {
+              "description": "",
+              "value": "7",
+              "variant_name": "MentionableSelect"
+            },
+            {
+              "description": "",
+              "value": "8",
+              "variant_name": "ChannelSelect"
+            }
+          ]
         }
       },
       "name": "ComponentType"
     },
+    "CreatorMonetizationAction": {
+      "description": "[Discord docs](https://discord.com/developers/docs/resources/audit-log#audit-log-entry-object-audit-log-events).",
+      "fields": {
+        "EnumWithVariants": {
+          "variants": [
+            {
+              "description": "",
+              "value": "150",
+              "variant_name": "RequestCreated"
+            },
+            {
+              "description": "",
+              "value": "151",
+              "variant_name": "TermsAccepted"
+            }
+          ]
+        }
+      },
+      "name": "CreatorMonetizationAction"
+    },
     "DefaultMessageNotificationLevel": {
       "description": "Default message notification level for a guild.\n\n[Discord docs](https://discord.com/developers/docs/resources/guild#guild-object-default-message-notification-level).",
       "fields": {
-        "EnumVariants": {
-          "variants": []
+        "EnumWithVariants": {
+          "variants": [
+            {
+              "description": "Receive notifications for everything.",
+              "value": "0",
+              "variant_name": "All"
+            },
+            {
+              "description": "Receive only mentions.",
+              "value": "1",
+              "variant_name": "Mentions"
+            }
+          ]
         }
       },
       "name": "DefaultMessageNotificationLevel"
@@ -2070,14 +3047,30 @@
       },
       "name": "Emoji"
     },
-    "EmojiId": {
-      "description": "An identifier for an Emoji",
+    "EmojiAction": {
+      "description": "[Discord docs](https://discord.com/developers/docs/resources/audit-log#audit-log-entry-object-audit-log-events).",
       "fields": {
-        "EnumVariants": {
-          "variants": []
+        "EnumWithVariants": {
+          "variants": [
+            {
+              "description": "",
+              "value": "60",
+              "variant_name": "Create"
+            },
+            {
+              "description": "",
+              "value": "61",
+              "variant_name": "Update"
+            },
+            {
+              "description": "",
+              "value": "62",
+              "variant_name": "Delete"
+            }
+          ]
         }
       },
-      "name": "EmojiId"
+      "name": "EmojiAction"
     },
     "Entitlement": {
       "description": "Represents that a user or guild has access to a premium offering in the application.\n\n[Discord docs](https://discord.com/developers/docs/monetization/entitlements#entitlement-object-entitlement-structure).",
@@ -2156,20 +3149,17 @@
       },
       "name": "Entitlement"
     },
-    "EntitlementId": {
-      "description": "An identifier for an entitlement.",
-      "fields": {
-        "EnumVariants": {
-          "variants": []
-        }
-      },
-      "name": "EntitlementId"
-    },
     "EntitlementKind": {
       "description": "Differentiates between Entitlement types.\n\n[Discord docs](https://discord.com/developers/docs/monetization/entitlements#entitlement-object-entitlement-types).",
       "fields": {
-        "EnumVariants": {
-          "variants": []
+        "EnumWithVariants": {
+          "variants": [
+            {
+              "description": "Entitlement was purchased as an app subscription.",
+              "value": "8",
+              "variant_name": "ApplicationSubscription"
+            }
+          ]
         }
       },
       "name": "EntitlementKind"
@@ -2177,8 +3167,21 @@
     "EventType": {
       "description": "Indicates in what event context a rule should be checked.\n\n[Discord docs](https://discord.com/developers/docs/resources/auto-moderation#auto-moderation-rule-object-event-types).",
       "fields": {
-        "EnumVariants": {
-          "variants": []
+        "EnumWithTuples": {
+          "variants": [
+            {
+              "description": "",
+              "normalized_type": [],
+              "variant_name": "MessageSend"
+            },
+            {
+              "description": "",
+              "normalized_type": [
+                "u8"
+              ],
+              "variant_name": "Unknown"
+            }
+          ]
         }
       },
       "name": "EventType"
@@ -2186,8 +3189,24 @@
     "ExplicitContentFilter": {
       "description": "Setting used to filter explicit messages from members.\n\n[Discord docs](https://discord.com/developers/docs/resources/guild#guild-object-explicit-content-filter-level).",
       "fields": {
-        "EnumVariants": {
-          "variants": []
+        "EnumWithVariants": {
+          "variants": [
+            {
+              "description": "Don't scan any messages.",
+              "value": "0",
+              "variant_name": "None"
+            },
+            {
+              "description": "Scan messages from members without a role.",
+              "value": "1",
+              "variant_name": "WithoutRole"
+            },
+            {
+              "description": "Scan messages sent by all members.",
+              "value": "2",
+              "variant_name": "All"
+            }
+          ]
         }
       },
       "name": "ExplicitContentFilter"
@@ -2195,8 +3214,23 @@
     "ForumEmoji": {
       "description": "An object that specifies the emoji to use for Forum related emoji parameters.\n\nSee [Discord](https://discord.com/developers/docs/resources/channel#default-reaction-object)\n[docs]()",
       "fields": {
-        "EnumVariants": {
-          "variants": []
+        "EnumWithTuples": {
+          "variants": [
+            {
+              "description": "The id of a guild's custom emoji.",
+              "normalized_type": [
+                "EmojiId"
+              ],
+              "variant_name": "Id"
+            },
+            {
+              "description": "The unicode character of the emoji.",
+              "normalized_type": [
+                "String"
+              ],
+              "variant_name": "Name"
+            }
+          ]
         }
       },
       "name": "ForumEmoji"
@@ -2204,8 +3238,24 @@
     "ForumLayoutType": {
       "description": "See [`GuildChannel::default_forum_layout`].\n\n[Discord docs](https://discord.com/developers/docs/resources/channel#channel-object-forum-layout-types).",
       "fields": {
-        "EnumVariants": {
-          "variants": []
+        "EnumWithVariants": {
+          "variants": [
+            {
+              "description": "No default has been set for forum channel.",
+              "value": "0",
+              "variant_name": "NotSet"
+            },
+            {
+              "description": "Display posts as a list.",
+              "value": "1",
+              "variant_name": "ListView"
+            },
+            {
+              "description": "Display posts as a collection of tiles.",
+              "value": "2",
+              "variant_name": "GalleryView"
+            }
+          ]
         }
       },
       "name": "ForumLayoutType"
@@ -2248,24 +3298,6 @@
         }
       },
       "name": "ForumTag"
-    },
-    "ForumTagId": {
-      "description": "An identifier for a forum tag.",
-      "fields": {
-        "EnumVariants": {
-          "variants": []
-        }
-      },
-      "name": "ForumTagId"
-    },
-    "GenericId": {
-      "description": "An identifier for an unspecific entity.",
-      "fields": {
-        "EnumVariants": {
-          "variants": []
-        }
-      },
-      "name": "GenericId"
     },
     "Guild": {
       "description": "Information about a Discord guild, such as channels, emojis, etc.\n\n[Discord docs](https://discord.com/developers/docs/resources/guild#guild-object) plus\n[extension](https://discord.com/developers/docs/topics/gateway-events#guild-create).",
@@ -2912,15 +3944,6 @@
       },
       "name": "GuildChannel"
     },
-    "GuildId": {
-      "description": "An identifier for a Guild",
-      "fields": {
-        "EnumVariants": {
-          "variants": []
-        }
-      },
-      "name": "GuildId"
-    },
     "GuildMemberFlags": {
       "description": "Flags for a guild member.\n\n[Discord docs](https://discord.com/developers/docs/resources/guild#guild-member-object-guild-member-flags).",
       "fields": {
@@ -2928,7 +3951,7 @@
           "typ": "u32 ",
           "values": [
             {
-              "description": "Member is exempt from guild verification requirements. Editable",
+              "description": "Member has left and rejoined the guild. Not editable",
               "name": "DID_REJOIN",
               "value": "1 << 0"
             },
@@ -2938,12 +3961,12 @@
               "value": "1 << 1"
             },
             {
-              "description": "Member has left and rejoined the guild. Not editable",
+              "description": "Member is exempt from guild verification requirements. Editable",
               "name": "BYPASSES_VERIFICATION",
               "value": "1 << 2"
             },
             {
-              "description": "",
+              "description": "Member has started onboarding. Not editable",
               "name": "STARTED_ONBOARDING",
               "value": "1 << 3"
             }
@@ -3051,7 +4074,7 @@
     "GuildWelcomeChannelEmoji": {
       "description": "A [`GuildWelcomeScreen`] emoji.\n\n[Discord docs](https://discord.com/developers/docs/resources/guild#welcome-screen-object-welcome-screen-channel-structure).",
       "fields": {
-        "EnumVariants": {
+        "EnumWithVariants": {
           "variants": []
         }
       },
@@ -3085,11 +4108,108 @@
     "ImageHash": {
       "description": "",
       "fields": {
-        "EnumVariants": {
-          "variants": []
-        }
+        "Unknown": {}
       },
       "name": "ImageHash"
+    },
+    "InputText": {
+      "description": "An input text component for modal interactions\n\n[Discord docs](https://discord.com/developers/docs/interactions/message-components#text-inputs-text-input-structure).",
+      "fields": {
+        "StructFields": {
+          "fields": [
+            {
+              "description": "The component type, it will always be [`ComponentType::InputText`].",
+              "name": "type",
+              "normalized_type": [
+                "ComponentType"
+              ]
+            },
+            {
+              "description": "Developer-defined identifier for the input; max 100 characters",
+              "name": "custom_id",
+              "normalized_type": [
+                "String"
+              ]
+            },
+            {
+              "description": "The [`InputTextStyle`]. Required when sending modal data.\n\nDiscord docs are wrong here; it says the field is always sent in modal submit interactions\nbut it's not. It's only required when _sending_ modal data to Discord.\n<https://github.com/discord/discord-api-docs/issues/6141>",
+              "name": "style",
+              "normalized_type": [
+                "Option",
+                "InputTextStyle"
+              ]
+            },
+            {
+              "description": "Label for this component; max 45 characters. Required when sending modal data.\n\nDiscord docs are wrong here; it says the field is always sent in modal submit interactions\nbut it's not. It's only required when _sending_ modal data to Discord.\n<https://github.com/discord/discord-api-docs/issues/6141>",
+              "name": "label",
+              "normalized_type": [
+                "Option",
+                "String"
+              ]
+            },
+            {
+              "description": "Minimum input length for a text input; min 0, max 4000",
+              "name": "min_length",
+              "normalized_type": [
+                "Option",
+                "u16"
+              ]
+            },
+            {
+              "description": "Maximum input length for a text input; min 1, max 4000",
+              "name": "max_length",
+              "normalized_type": [
+                "Option",
+                "u16"
+              ]
+            },
+            {
+              "description": "Whether this component is required to be filled (defaults to true)",
+              "name": "required",
+              "normalized_type": [
+                "bool"
+              ]
+            },
+            {
+              "description": "When sending: Pre-filled value for this component; max 4000 characters (may be None).\n\nWhen receiving: The input from the user (always Some)",
+              "name": "value",
+              "normalized_type": [
+                "Option",
+                "String"
+              ]
+            },
+            {
+              "description": "Custom placeholder text if the input is empty; max 100 characters",
+              "name": "placeholder",
+              "normalized_type": [
+                "Option",
+                "String"
+              ]
+            }
+          ]
+        }
+      },
+      "name": "InputText"
+    },
+    "InputTextStyle": {
+      "description": "The style of the input text\n\n[Discord docs](https://discord.com/developers/docs/interactions/message-components#text-inputs-text-input-styles).",
+      "fields": {
+        "EnumWithVariants": {
+          "variants": [
+            {
+              "description": "",
+              "value": "1",
+              "variant_name": "Short"
+            },
+            {
+              "description": "",
+              "value": "2",
+              "variant_name": "Paragraph"
+            }
+          ]
+        }
+      },
+      "name": "InputTextStyle"
     },
     "Integration": {
       "description": "Various information about integrations.\n\n[Discord docs](https://discord.com/developers/docs/resources/guild#integration-object),\n[extra fields 1](https://discord.com/developers/docs/topics/gateway-events#integration-create),\n[extra fields 2](https://discord.com/developers/docs/topics/gateway-events#integration-update),",
@@ -3257,6 +4377,31 @@
       },
       "name": "IntegrationAccount"
     },
+    "IntegrationAction": {
+      "description": "[Discord docs](https://discord.com/developers/docs/resources/audit-log#audit-log-entry-object-audit-log-events).",
+      "fields": {
+        "EnumWithVariants": {
+          "variants": [
+            {
+              "description": "",
+              "value": "80",
+              "variant_name": "Create"
+            },
+            {
+              "description": "",
+              "value": "81",
+              "variant_name": "Update"
+            },
+            {
+              "description": "",
+              "value": "82",
+              "variant_name": "Delete"
+            }
+          ]
+        }
+      },
+      "name": "IntegrationAction"
+    },
     "IntegrationApplication": {
       "description": "Integration application object.\n\n[Discord docs](https://discord.com/developers/docs/resources/guild#integration-application-object).",
       "fields": {
@@ -3307,53 +4452,144 @@
     "IntegrationExpireBehaviour": {
       "description": "The behavior once the integration expires.\n\n[Discord docs](https://discord.com/developers/docs/resources/guild#integration-object-integration-expire-behaviors).",
       "fields": {
-        "EnumVariants": {
-          "variants": []
+        "EnumWithVariants": {
+          "variants": [
+            {
+              "description": "",
+              "value": "0",
+              "variant_name": "RemoveRole"
+            },
+            {
+              "description": "",
+              "value": "1",
+              "variant_name": "Kick"
+            }
+          ]
         }
       },
       "name": "IntegrationExpireBehaviour"
     },
-    "IntegrationId": {
-      "description": "An identifier for an Integration",
-      "fields": {
-        "EnumVariants": {
-          "variants": []
-        }
-      },
-      "name": "IntegrationId"
-    },
     "Interaction": {
       "description": "[Discord docs](https://discord.com/developers/docs/interactions/receiving-and-responding#interaction-object)",
       "fields": {
-        "EnumVariants": {
-          "variants": []
+        "EnumWithTuples": {
+          "variants": [
+            {
+              "description": "",
+              "normalized_type": [
+                "PingInteraction"
+              ],
+              "variant_name": "Ping"
+            },
+            {
+              "description": "",
+              "normalized_type": [
+                "CommandInteraction"
+              ],
+              "variant_name": "Command"
+            },
+            {
+              "description": "",
+              "normalized_type": [
+                "CommandInteraction"
+              ],
+              "variant_name": "Autocomplete"
+            },
+            {
+              "description": "",
+              "normalized_type": [
+                "ComponentInteraction"
+              ],
+              "variant_name": "Component"
+            },
+            {
+              "description": "",
+              "normalized_type": [
+                "ModalInteraction"
+              ],
+              "variant_name": "Modal"
+            }
+          ]
         }
       },
       "name": "Interaction"
     },
-    "InteractionId": {
-      "description": "An identifier for an interaction.",
-      "fields": {
-        "EnumVariants": {
-          "variants": []
-        }
-      },
-      "name": "InteractionId"
-    },
     "InteractionType": {
       "description": "The type of an Interaction.\n\n[Discord docs](https://discord.com/developers/docs/interactions/receiving-and-responding#interaction-object-interaction-type).",
       "fields": {
-        "EnumVariants": {
-          "variants": []
+        "EnumWithVariants": {
+          "variants": [
+            {
+              "description": "",
+              "value": "1",
+              "variant_name": "Ping"
+            },
+            {
+              "description": "",
+              "value": "2",
+              "variant_name": "Command"
+            },
+            {
+              "description": "",
+              "value": "3",
+              "variant_name": "Component"
+            },
+            {
+              "description": "",
+              "value": "4",
+              "variant_name": "Autocomplete"
+            },
+            {
+              "description": "",
+              "value": "5",
+              "variant_name": "Modal"
+            }
+          ]
         }
       },
       "name": "InteractionType"
     },
+    "InviteAction": {
+      "description": "[Discord docs](https://discord.com/developers/docs/resources/audit-log#audit-log-entry-object-audit-log-events).",
+      "fields": {
+        "EnumWithVariants": {
+          "variants": [
+            {
+              "description": "",
+              "value": "40",
+              "variant_name": "Create"
+            },
+            {
+              "description": "",
+              "value": "41",
+              "variant_name": "Update"
+            },
+            {
+              "description": "",
+              "value": "42",
+              "variant_name": "Delete"
+            }
+          ]
+        }
+      },
+      "name": "InviteAction"
+    },
     "InviteTargetType": {
       "description": "Type of target for a voice channel invite.\n\n[Discord docs](https://discord.com/developers/docs/resources/invite#invite-object-invite-target-types).",
       "fields": {
-        "EnumVariants": {
-          "variants": []
+        "EnumWithVariants": {
+          "variants": [
+            {
+              "description": "",
+              "value": "1",
+              "variant_name": "Stream"
+            },
+            {
+              "description": "",
+              "value": "2",
+              "variant_name": "EmbeddedApplication"
+            }
+          ]
         }
       },
       "name": "InviteTargetType"
@@ -3472,6 +4708,61 @@
         }
       },
       "name": "Member"
+    },
+    "MemberAction": {
+      "description": "[Discord docs](https://discord.com/developers/docs/resources/audit-log#audit-log-entry-object-audit-log-events).",
+      "fields": {
+        "EnumWithVariants": {
+          "variants": [
+            {
+              "description": "",
+              "value": "20",
+              "variant_name": "Kick"
+            },
+            {
+              "description": "",
+              "value": "21",
+              "variant_name": "Prune"
+            },
+            {
+              "description": "",
+              "value": "22",
+              "variant_name": "BanAdd"
+            },
+            {
+              "description": "",
+              "value": "23",
+              "variant_name": "BanRemove"
+            },
+            {
+              "description": "",
+              "value": "24",
+              "variant_name": "Update"
+            },
+            {
+              "description": "",
+              "value": "25",
+              "variant_name": "RoleUpdate"
+            },
+            {
+              "description": "",
+              "value": "26",
+              "variant_name": "MemberMove"
+            },
+            {
+              "description": "",
+              "value": "27",
+              "variant_name": "MemberDisconnect"
+            },
+            {
+              "description": "",
+              "value": "28",
+              "variant_name": "BotAdd"
+            }
+          ]
+        }
+      },
+      "name": "MemberAction"
     },
     "Message": {
       "description": "A representation of a message over a guild's text channel, a group, or a private channel.\n\n[Discord docs](https://discord.com/developers/docs/resources/channel#message-object) with some\n[extra fields](https://discord.com/developers/docs/topics/gateway-events#message-create-message-create-extra-fields).",
@@ -3706,6 +4997,36 @@
       },
       "name": "Message"
     },
+    "MessageAction": {
+      "description": "[Discord docs](https://discord.com/developers/docs/resources/audit-log#audit-log-entry-object-audit-log-events).",
+      "fields": {
+        "EnumWithVariants": {
+          "variants": [
+            {
+              "description": "",
+              "value": "72",
+              "variant_name": "Delete"
+            },
+            {
+              "description": "",
+              "value": "73",
+              "variant_name": "BulkDelete"
+            },
+            {
+              "description": "",
+              "value": "74",
+              "variant_name": "Pin"
+            },
+            {
+              "description": "",
+              "value": "75",
+              "variant_name": "Unpin"
+            }
+          ]
+        }
+      },
+      "name": "MessageAction"
+    },
     "MessageActivity": {
       "description": "Rich Presence activity information.\n\n[Discord docs](https://discord.com/developers/docs/resources/channel#message-object-message-activity-structure).",
       "fields": {
@@ -3734,8 +5055,29 @@
     "MessageActivityKind": {
       "description": "[Discord docs](https://discord.com/developers/docs/resources/channel#message-object-message-activity-types).",
       "fields": {
-        "EnumVariants": {
-          "variants": []
+        "EnumWithVariants": {
+          "variants": [
+            {
+              "description": "",
+              "value": "1",
+              "variant_name": "Join"
+            },
+            {
+              "description": "",
+              "value": "2",
+              "variant_name": "Spectate"
+            },
+            {
+              "description": "",
+              "value": "3",
+              "variant_name": "Listen"
+            },
+            {
+              "description": "",
+              "value": "5",
+              "variant_name": "JoinRequest"
+            }
+          ]
         }
       },
       "name": "MessageActivityKind"
@@ -3794,57 +5136,57 @@
           "typ": "u64 ",
           "values": [
             {
-              "description": "This message is a voice message.\n\nVoice messages have the following properties:\n- They cannot be edited.\n- Only a single audio attachment is allowed. No content, stickers, etc...\n- The [`Attachment`] has additional fields: `duration_secs` and `waveform`.\n\nAs of 2023-04-14, clients upload a 1 channel, 48000 Hz, 32kbps Opus stream in an OGG container.\nThe encoding is a Discord implementation detail and may change without warning or documentation.\n",
+              "description": "This message has been published to subscribed channels (via Channel Following).",
               "name": "CROSSPOSTED",
               "value": "1 << 0"
             },
             {
-              "description": "This message is a voice message.\n\nVoice messages have the following properties:\n- They cannot be edited.\n- Only a single audio attachment is allowed. No content, stickers, etc...\n- The [`Attachment`] has additional fields: `duration_secs` and `waveform`.\n\nAs of 2023-04-14, clients upload a 1 channel, 48000 Hz, 32kbps Opus stream in an OGG container.",
+              "description": "This message originated from a message in another channel (via Channel Following).",
               "name": "IS_CROSSPOST",
               "value": "1 << 1"
             },
             {
-              "description": "This message is a voice message.\n\nVoice messages have the following properties:\n- They cannot be edited.\n- Only a single audio attachment is allowed. No content, stickers, etc...\n- The [`Attachment`] has additional fields: `duration_secs` and `waveform`.",
+              "description": "Do not include any embeds when serializing this message.",
               "name": "SUPPRESS_EMBEDS",
               "value": "1 << 2"
             },
             {
-              "description": "This message is a voice message.\n\nVoice messages have the following properties:\n- They cannot be edited.",
+              "description": "The source message for this crosspost has been deleted (via Channel Following).",
               "name": "SOURCE_MESSAGE_DELETED",
               "value": "1 << 3"
             },
             {
-              "description": "This message is a voice message.\n",
+              "description": "This message came from the urgent message system.",
               "name": "URGENT",
               "value": "1 << 4"
             },
             {
-              "description": "",
+              "description": "This message has an associated thread, with the same id as the message.",
               "name": "HAS_THREAD",
               "value": "1 << 5"
             },
             {
-              "description": "",
+              "description": "This message is only visible to the user who invoked the Interaction.",
               "name": "EPHEMERAL",
               "value": "1 << 6"
             },
             {
-              "description": "",
+              "description": "This message is an Interaction Response and the bot is \"thinking\".",
               "name": "LOADING",
               "value": "1 << 7"
             },
             {
-              "description": "",
+              "description": "This message failed to mention some roles and add their members to the thread.",
               "name": "FAILED_TO_MENTION_SOME_ROLES_IN_THREAD",
               "value": "1 << 8"
             },
             {
-              "description": "",
+              "description": "This message will not trigger push and desktop notifications.",
               "name": "SUPPRESS_NOTIFICATIONS",
               "value": "1 << 12"
             },
             {
-              "description": "",
+              "description": "This message is a voice message.\n\nVoice messages have the following properties:\n- They cannot be edited.\n- Only a single audio attachment is allowed. No content, stickers, etc...\n- The [`Attachment`] has additional fields: `duration_secs` and `waveform`.\n\nAs of 2023-04-14, clients upload a 1 channel, 48000 Hz, 32kbps Opus stream in an OGG container.\nThe encoding is a Discord implementation detail and may change without warning or documentation.\n\nAs of 2023-04-20, bots are currently not able to send voice messages\n([source](https://github.com/discord/discord-api-docs/pull/6082)).",
               "name": "IS_VOICE_MESSAGE",
               "value": "1 << 13"
             }
@@ -3852,15 +5194,6 @@
         }
       },
       "name": "MessageFlags"
-    },
-    "MessageId": {
-      "description": "An identifier for a Message",
-      "fields": {
-        "EnumVariants": {
-          "variants": []
-        }
-      },
-      "name": "MessageId"
     },
     "MessageInteraction": {
       "description": "Sent when a [`Message`] is a response to an [`Interaction`].\n\n[`Message`]: crate::model::channel::Message\n\n[Discord docs](https://discord.com/developers/docs/interactions/receiving-and-responding#message-interaction-object).",
@@ -3983,8 +5316,164 @@
     "MessageType": {
       "description": "Differentiates between regular and different types of system messages.\n\n[Discord docs](https://discord.com/developers/docs/resources/channel#message-object-message-types).",
       "fields": {
-        "EnumVariants": {
-          "variants": []
+        "EnumWithVariants": {
+          "variants": [
+            {
+              "description": "A regular message.",
+              "value": "0",
+              "variant_name": "Regular"
+            },
+            {
+              "description": "An indicator that a recipient was added by the author.",
+              "value": "1",
+              "variant_name": "GroupRecipientAddition"
+            },
+            {
+              "description": "An indicator that a recipient was removed by the author.",
+              "value": "2",
+              "variant_name": "GroupRecipientRemoval"
+            },
+            {
+              "description": "An indicator that a call was started by the author.",
+              "value": "3",
+              "variant_name": "GroupCallCreation"
+            },
+            {
+              "description": "An indicator that the group name was modified by the author.",
+              "value": "4",
+              "variant_name": "GroupNameUpdate"
+            },
+            {
+              "description": "An indicator that the group icon was modified by the author.",
+              "value": "5",
+              "variant_name": "GroupIconUpdate"
+            },
+            {
+              "description": "An indicator that a message was pinned by the author.",
+              "value": "6",
+              "variant_name": "PinsAdd"
+            },
+            {
+              "description": "An indicator that a member joined the guild.",
+              "value": "7",
+              "variant_name": "MemberJoin"
+            },
+            {
+              "description": "An indicator that someone has boosted the guild.",
+              "value": "8",
+              "variant_name": "NitroBoost"
+            },
+            {
+              "description": "An indicator that the guild has reached nitro tier 1",
+              "value": "9",
+              "variant_name": "NitroTier1"
+            },
+            {
+              "description": "An indicator that the guild has reached nitro tier 2",
+              "value": "10",
+              "variant_name": "NitroTier2"
+            },
+            {
+              "description": "An indicator that the guild has reached nitro tier 3",
+              "value": "11",
+              "variant_name": "NitroTier3"
+            },
+            {
+              "description": "An indicator that the channel is now following a news channel",
+              "value": "12",
+              "variant_name": "ChannelFollowAdd"
+            },
+            {
+              "description": "An indicator that the guild is disqualified for Discovery Feature",
+              "value": "14",
+              "variant_name": "GuildDiscoveryDisqualified"
+            },
+            {
+              "description": "An indicator that the guild is requalified for Discovery Feature",
+              "value": "15",
+              "variant_name": "GuildDiscoveryRequalified"
+            },
+            {
+              "description": "The first warning before guild discovery removal.",
+              "value": "16",
+              "variant_name": "GuildDiscoveryGracePeriodInitialWarning"
+            },
+            {
+              "description": "The last warning before guild discovery removal.",
+              "value": "17",
+              "variant_name": "GuildDiscoveryGracePeriodFinalWarning"
+            },
+            {
+              "description": "Message sent to inform users that a thread was created.",
+              "value": "18",
+              "variant_name": "ThreadCreated"
+            },
+            {
+              "description": "A message reply.",
+              "value": "19",
+              "variant_name": "InlineReply"
+            },
+            {
+              "description": "A slash command.",
+              "value": "20",
+              "variant_name": "ChatInputCommand"
+            },
+            {
+              "description": "A thread start message.",
+              "value": "21",
+              "variant_name": "ThreadStarterMessage"
+            },
+            {
+              "description": "Server setup tips.",
+              "value": "22",
+              "variant_name": "GuildInviteReminder"
+            },
+            {
+              "description": "A context menu command.",
+              "value": "23",
+              "variant_name": "ContextMenuCommand"
+            },
+            {
+              "description": "A message from an auto moderation action.",
+              "value": "24",
+              "variant_name": "AutoModAction"
+            },
+            {
+              "description": "",
+              "value": "25",
+              "variant_name": "RoleSubscriptionPurchase"
+            },
+            {
+              "description": "",
+              "value": "26",
+              "variant_name": "InteractionPremiumUpsell"
+            },
+            {
+              "description": "",
+              "value": "27",
+              "variant_name": "StageStart"
+            },
+            {
+              "description": "",
+              "value": "28",
+              "variant_name": "StageEnd"
+            },
+            {
+              "description": "",
+              "value": "29",
+              "variant_name": "StageSpeaker"
+            },
+            {
+              "description": "",
+              "value": "31",
+              "variant_name": "StageTopic"
+            },
+            {
+              "description": "",
+              "value": "32",
+              "variant_name": "GuildApplicationPremiumSubscription"
+            }
+          ]
         }
       },
       "name": "MessageType"
@@ -3992,17 +5481,189 @@
     "MfaLevel": {
       "description": "Multi-Factor Authentication level for guild moderators.\n\n[Discord docs](https://discord.com/developers/docs/resources/guild#guild-object-mfa-level).",
       "fields": {
-        "EnumVariants": {
-          "variants": []
+        "EnumWithVariants": {
+          "variants": [
+            {
+              "description": "MFA is disabled.",
+              "value": "0",
+              "variant_name": "None"
+            },
+            {
+              "description": "MFA is enabled.",
+              "value": "1",
+              "variant_name": "Elevated"
+            }
+          ]
         }
       },
       "name": "MfaLevel"
     },
+    "ModalInteraction": {
+      "description": "An interaction triggered by a modal submit.\n\n[Discord docs](https://discord.com/developers/docs/interactions/receiving-and-responding#interaction-object).",
+      "fields": {
+        "StructFields": {
+          "fields": [
+            {
+              "description": "Id of the interaction.",
+              "name": "id",
+              "normalized_type": [
+                "InteractionId"
+              ]
+            },
+            {
+              "description": "Id of the application this interaction is for.",
+              "name": "application_id",
+              "normalized_type": [
+                "ApplicationId"
+              ]
+            },
+            {
+              "description": "The data of the interaction which was triggered.",
+              "name": "data",
+              "normalized_type": [
+                "ModalInteractionData"
+              ]
+            },
+            {
+              "description": "The guild Id this interaction was sent from, if there is one.",
+              "name": "guild_id",
+              "normalized_type": [
+                "Option",
+                "GuildId"
+              ]
+            },
+            {
+              "description": "Channel that the interaction was sent from.",
+              "name": "channel",
+              "normalized_type": [
+                "Option",
+                "PartialChannel"
+              ]
+            },
+            {
+              "description": "The channel Id this interaction was sent from.",
+              "name": "channel_id",
+              "normalized_type": [
+                "ChannelId"
+              ]
+            },
+            {
+              "description": "The `member` data for the invoking user.\n\n**Note**: It is only present if the interaction is triggered in a guild.",
+              "name": "member",
+              "normalized_type": [
+                "Option",
+                "Member"
+              ]
+            },
+            {
+              "description": "The `user` object for the invoking user.",
+              "name": "user",
+              "normalized_type": [
+                "User"
+              ]
+            },
+            {
+              "description": "A continuation token for responding to the interaction.",
+              "name": "token",
+              "normalized_type": [
+                "String"
+              ]
+            },
+            {
+              "description": "Always `1`.",
+              "name": "version",
+              "normalized_type": [
+                "u8"
+              ]
+            },
+            {
+              "description": "The message this interaction was triggered by\n\n**Note**: Does not exist if the modal interaction originates from an application command\ninteraction",
+              "name": "message",
+              "normalized_type": [
+                "Option",
+                "Message"
+              ]
+            },
+            {
+              "description": "Permissions the app or bot has within the channel the interaction was sent from.",
+              "name": "app_permissions",
+              "normalized_type": [
+                "Option",
+                "Permissions"
+              ]
+            },
+            {
+              "description": "The selected language of the invoking user.",
+              "name": "locale",
+              "normalized_type": [
+                "String"
+              ]
+            },
+            {
+              "description": "The guild's preferred locale.",
+              "name": "guild_locale",
+              "normalized_type": [
+                "Option",
+                "String"
+              ]
+            },
+            {
+              "description": "For monetized applications, any entitlements of the invoking user.",
+              "name": "entitlements",
+              "normalized_type": [
+                "Vec",
+                "Entitlement"
+              ]
+            }
+          ]
+        }
+      },
+      "name": "ModalInteraction"
+    },
+    "ModalInteractionData": {
+      "description": "A modal submit interaction data, provided by [`ModalInteraction::data`]\n\n[Discord docs](https://discord.com/developers/docs/interactions/receiving-and-responding#interaction-object-interaction-data-structure).",
+      "fields": {
+        "StructFields": {
+          "fields": [
+            {
+              "description": "The custom id of the modal",
+              "name": "custom_id",
+              "normalized_type": [
+                "String"
+              ]
+            },
+            {
+              "description": "The components.",
+              "name": "components",
+              "normalized_type": [
+                "ActionRow"
+              ]
+            }
+          ]
+        }
+      },
+      "name": "ModalInteractionData"
+    },
     "Nonce": {
       "description": "",
       "fields": {
-        "EnumVariants": {
-          "variants": []
+        "EnumWithTuples": {
+          "variants": [
+            {
+              "description": "",
+              "normalized_type": [
+                "String"
+              ],
+              "variant_name": "String"
+            },
+            {
+              "description": "",
+              "normalized_type": [
+                "u64"
+              ],
+              "variant_name": "Number"
+            }
+          ]
         }
       },
       "name": "Nonce"
@@ -4010,8 +5671,29 @@
     "NsfwLevel": {
       "description": "The [`Guild`] nsfw level.\n\n[Discord docs](https://discord.com/developers/docs/resources/guild#guild-object-guild-nsfw-level).",
       "fields": {
-        "EnumVariants": {
-          "variants": []
+        "EnumWithVariants": {
+          "variants": [
+            {
+              "description": "The nsfw level is not specified.",
+              "value": "0",
+              "variant_name": "Default"
+            },
+            {
+              "description": "The guild is considered as explicit.",
+              "value": "1",
+              "variant_name": "Explicit"
+            },
+            {
+              "description": "The guild is considered as safe.",
+              "value": "2",
+              "variant_name": "Safe"
+            },
+            {
+              "description": "The guild is age restricted.",
+              "value": "3",
+              "variant_name": "AgeRestricted"
+            }
+          ]
         }
       },
       "name": "NsfwLevel"
@@ -4019,8 +5701,34 @@
     "OnlineStatus": {
       "description": "The representation of a user's status.\n\n[Discord docs](https://discord.com/developers/docs/topics/gateway-events#update-presence-status-types).",
       "fields": {
-        "EnumVariants": {
-          "variants": []
+        "EnumWithVariants": {
+          "variants": [
+            {
+              "description": "",
+              "value": null,
+              "variant_name": "dnd"
+            },
+            {
+              "description": "",
+              "value": null,
+              "variant_name": "idle"
+            },
+            {
+              "description": "",
+              "value": null,
+              "variant_name": "invisible"
+            },
+            {
+              "description": "",
+              "value": null,
+              "variant_name": "offline"
+            },
+            {
+              "description": "",
+              "value": null,
+              "variant_name": "online"
+            }
+          ]
         }
       },
       "name": "OnlineStatus"
@@ -4130,6 +5838,62 @@
         }
       },
       "name": "Options"
+    },
+    "PartialChannel": {
+      "description": "A container for any partial channel.\n\n[Discord docs](https://discord.com/developers/docs/resources/channel#channel-object),\n[subset specification](https://discord.com/developers/docs/interactions/receiving-and-responding#interaction-object-resolved-data-structure).",
+      "fields": {
+        "StructFields": {
+          "fields": [
+            {
+              "description": "The channel Id.",
+              "name": "id",
+              "normalized_type": [
+                "ChannelId"
+              ]
+            },
+            {
+              "description": "The channel name.",
+              "name": "name",
+              "normalized_type": [
+                "Option",
+                "String"
+              ]
+            },
+            {
+              "description": "The channel type.",
+              "name": "type",
+              "normalized_type": [
+                "ChannelType"
+              ]
+            },
+            {
+              "description": "The channel permissions.",
+              "name": "permissions",
+              "normalized_type": [
+                "Option",
+                "Permissions"
+              ]
+            },
+            {
+              "description": "The thread metadata.\n\n**Note**: This is only available on thread channels.",
+              "name": "thread_metadata",
+              "normalized_type": [
+                "Option",
+                "ThreadMetadata"
+              ]
+            },
+            {
+              "description": "The Id of the parent category for a channel, or of the parent text channel for a thread.\n\n**Note**: This is only available on thread channels.",
+              "name": "parent_id",
+              "normalized_type": [
+                "Option",
+                "ChannelId"
+              ]
+            }
+          ]
+        }
+      },
+      "name": "PartialChannel"
     },
     "PartialGuild": {
       "description": "Partial information about a [`Guild`]. This does not include information like member data.\n\n[Discord docs](https://discord.com/developers/docs/resources/guild#guild-object).",
@@ -4625,8 +6389,23 @@
     "PermissionOverwriteType": {
       "description": "The type of edit being made to a Channel's permissions.\n\nThis is for use with methods such as [`GuildChannel::create_permission`].\n\nIf you would like to modify the default permissions of a channel, you can get its [`RoleId`]\nfrom [`GuildId::everyone_role`].\n\n[Discord docs](https://discord.com/developers/docs/resources/channel#overwrite-object-overwrite-structure) (field `type`).",
       "fields": {
-        "EnumVariants": {
-          "variants": []
+        "EnumWithTuples": {
+          "variants": [
+            {
+              "description": "A member which is having its permission overwrites edited.",
+              "normalized_type": [
+                "UserId"
+              ],
+              "variant_name": "Member"
+            },
+            {
+              "description": "A role which is having its permission overwrites edited.",
+              "normalized_type": [
+                "RoleId"
+              ],
+              "variant_name": "Role"
+            }
+          ]
         }
       },
       "name": "PermissionOverwriteType"
@@ -4634,17 +6413,74 @@
     "Permissions": {
       "description": "A set of permissions that can be assigned to [`User`]s and [`Role`]s via\n[`PermissionOverwrite`]s, roles globally in a [`Guild`], and to [`GuildChannel`]s.\n\n[Discord docs](https://discord.com/developers/docs/topics/permissions#permissions-bitwise-permission-flags).\n\n[`Guild`]: super::guild::Guild\n[`GuildChannel`]: super::channel::GuildChannel\n[`PermissionOverwrite`]: super::channel::PermissionOverwrite\n[`Role`]: super::guild::Role\n[`User`]: super::user::User",
       "fields": {
-        "EnumVariants": {
-          "variants": []
-        }
+        "Unknown": {}
       },
       "name": "Permissions"
+    },
+    "PingInteraction": {
+      "description": "A ping interaction, which can only be received through an endpoint url.\n\n[Discord docs](https://discord.com/developers/docs/interactions/receiving-and-responding#interaction-object-interaction-structure).",
+      "fields": {
+        "StructFields": {
+          "fields": [
+            {
+              "description": "Id of the interaction.",
+              "name": "id",
+              "normalized_type": [
+                "InteractionId"
+              ]
+            },
+            {
+              "description": "Id of the application this interaction is for.",
+              "name": "application_id",
+              "normalized_type": [
+                "ApplicationId"
+              ]
+            },
+            {
+              "description": "A continuation token for responding to the interaction.",
+              "name": "token",
+              "normalized_type": [
+                "String"
+              ]
+            },
+            {
+              "description": "Always `1`.",
+              "name": "version",
+              "normalized_type": [
+                "u8"
+              ]
+            }
+          ]
+        }
+      },
+      "name": "PingInteraction"
     },
     "PremiumTier": {
       "description": "The guild's premium tier, depends on the amount of users boosting the guild currently\n\n[Discord docs](https://discord.com/developers/docs/resources/guild#guild-object-premium-tier).",
       "fields": {
-        "EnumVariants": {
-          "variants": []
+        "EnumWithVariants": {
+          "variants": [
+            {
+              "description": "Guild has not unlocked any Server Boost perks",
+              "value": "0",
+              "variant_name": "Tier0"
+            },
+            {
+              "description": "Guild has unlocked Server Boost level 1 perks",
+              "value": "1",
+              "variant_name": "Tier1"
+            },
+            {
+              "description": "Guild has unlocked Server Boost level 2 perks",
+              "value": "2",
+              "variant_name": "Tier2"
+            },
+            {
+              "description": "Guild has unlocked Server Boost level 3 perks",
+              "value": "3",
+              "variant_name": "Tier3"
+            }
+          ]
         }
       },
       "name": "PremiumTier"
@@ -4652,8 +6488,29 @@
     "PremiumType": {
       "description": "Premium types denote the level of premium a user has. Visit the [Nitro](https://discord.com/nitro)\npage to learn more about the premium plans Discord currently offers.\n\n[Discord docs](https://discord.com/developers/docs/resources/user#user-object-premium-types).",
       "fields": {
-        "EnumVariants": {
-          "variants": []
+        "EnumWithVariants": {
+          "variants": [
+            {
+              "description": "",
+              "value": "0",
+              "variant_name": "None"
+            },
+            {
+              "description": "",
+              "value": "1",
+              "variant_name": "NitroClassic"
+            },
+            {
+              "description": "",
+              "value": "2",
+              "variant_name": "Nitro"
+            },
+            {
+              "description": "",
+              "value": "3",
+              "variant_name": "NitroBasic"
+            }
+          ]
         }
       },
       "name": "PremiumType"
@@ -4789,8 +6646,29 @@
     "ReactionType": {
       "description": "The type of a [`Reaction`] sent.",
       "fields": {
-        "EnumVariants": {
-          "variants": []
+        "EnumWithVariants": {
+          "variants": [
+            {
+              "description": "A reaction with a [`Guild`]s custom [`Emoji`], which is unique to the guild.",
+              "value": null,
+              "variant_name": "Custom "
+            },
+            {
+              "description": "Whether the emoji is animated.",
+              "value": null,
+              "variant_name": "animated: bool"
+            },
+            {
+              "description": "The Id of the custom [`Emoji`].",
+              "value": null,
+              "variant_name": "id: EmojiId"
+            },
+            {
+              "description": "The name of the custom emoji. This is primarily used for decoration and distinguishing\nthe emoji client-side.",
+              "value": null,
+              "variant_name": "name: Option<FixedString>"
+            }
+          ]
         }
       },
       "name": "ReactionType"
@@ -4891,14 +6769,30 @@
       },
       "name": "Role"
     },
-    "RoleId": {
-      "description": "An identifier for a Role",
+    "RoleAction": {
+      "description": "[Discord docs](https://discord.com/developers/docs/resources/audit-log#audit-log-entry-object-audit-log-events).",
       "fields": {
-        "EnumVariants": {
-          "variants": []
+        "EnumWithVariants": {
+          "variants": [
+            {
+              "description": "",
+              "value": "30",
+              "variant_name": "Create"
+            },
+            {
+              "description": "",
+              "value": "31",
+              "variant_name": "Update"
+            },
+            {
+              "description": "",
+              "value": "32",
+              "variant_name": "Delete"
+            }
+          ]
         }
       },
-      "name": "RoleId"
+      "name": "RoleAction"
     },
     "RoleSubscriptionData": {
       "description": "[Discord docs](https://discord.com/developers/docs/resources/channel#role-subscription-data-object)",
@@ -5075,15 +6969,6 @@
       },
       "name": "Rule"
     },
-    "RuleId": {
-      "description": "An identifier for an auto moderation rule",
-      "fields": {
-        "EnumVariants": {
-          "variants": []
-        }
-      },
-      "name": "RuleId"
-    },
     "ScheduledEvent": {
       "description": "Information about a guild scheduled event.\n\n[Discord docs](https://discord.com/developers/docs/resources/guild-scheduled-event#guild-scheduled-event-object).",
       "fields": {
@@ -5215,14 +7100,30 @@
       },
       "name": "ScheduledEvent"
     },
-    "ScheduledEventId": {
-      "description": "An identifier for a Scheduled Event",
+    "ScheduledEventAction": {
+      "description": "[Discord docs](https://discord.com/developers/docs/resources/audit-log#audit-log-entry-object-audit-log-events).",
       "fields": {
-        "EnumVariants": {
-          "variants": []
+        "EnumWithVariants": {
+          "variants": [
+            {
+              "description": "",
+              "value": "100",
+              "variant_name": "Create"
+            },
+            {
+              "description": "",
+              "value": "101",
+              "variant_name": "Update"
+            },
+            {
+              "description": "",
+              "value": "102",
+              "variant_name": "Delete"
+            }
+          ]
         }
       },
-      "name": "ScheduledEventId"
+      "name": "ScheduledEventAction"
     },
     "ScheduledEventMetadata": {
       "description": "[Discord docs](https://discord.com/developers/docs/resources/guild-scheduled-event#guild-scheduled-event-object-guild-scheduled-event-entity-metadata).",
@@ -5245,8 +7146,14 @@
     "ScheduledEventPrivacyLevel": {
       "description": "See [`ScheduledEvent::privacy_level`].\n\n[Discord docs](https://discord.com/developers/docs/resources/guild-scheduled-event#guild-scheduled-event-object-guild-scheduled-event-privacy-level).",
       "fields": {
-        "EnumVariants": {
-          "variants": []
+        "EnumWithVariants": {
+          "variants": [
+            {
+              "description": "",
+              "value": "2",
+              "variant_name": "GuildOnly"
+            }
+          ]
         }
       },
       "name": "ScheduledEventPrivacyLevel"
@@ -5254,8 +7161,29 @@
     "ScheduledEventStatus": {
       "description": "[Discord docs](https://discord.com/developers/docs/resources/guild-scheduled-event#guild-scheduled-event-object-guild-scheduled-event-status).",
       "fields": {
-        "EnumVariants": {
-          "variants": []
+        "EnumWithVariants": {
+          "variants": [
+            {
+              "description": "",
+              "value": "1",
+              "variant_name": "Scheduled"
+            },
+            {
+              "description": "",
+              "value": "2",
+              "variant_name": "Active"
+            },
+            {
+              "description": "",
+              "value": "3",
+              "variant_name": "Completed"
+            },
+            {
+              "description": "",
+              "value": "4",
+              "variant_name": "Canceled"
+            }
+          ]
         }
       },
       "name": "ScheduledEventStatus"
@@ -5263,8 +7191,24 @@
     "ScheduledEventType": {
       "description": "[Discord docs](https://discord.com/developers/docs/resources/guild-scheduled-event#guild-scheduled-event-object-guild-scheduled-event-entity-types).",
       "fields": {
-        "EnumVariants": {
-          "variants": []
+        "EnumWithVariants": {
+          "variants": [
+            {
+              "description": "",
+              "value": "1",
+              "variant_name": "StageInstance"
+            },
+            {
+              "description": "",
+              "value": "2",
+              "variant_name": "Voice"
+            },
+            {
+              "description": "",
+              "value": "3",
+              "variant_name": "External"
+            }
+          ]
         }
       },
       "name": "ScheduledEventType"
@@ -5272,26 +7216,186 @@
     "Scope": {
       "description": "The available OAuth2 Scopes.\n\n[Discord docs](https://discord.com/developers/docs/topics/oauth2#shared-resources-oauth2-scopes).",
       "fields": {
-        "EnumVariants": {
-          "variants": []
+        "EnumWithVariants": {
+          "variants": [
+            {
+              "description": "For oauth2 bots, this puts the bot in the user's selected guild by default.",
+              "value": null,
+              "variant_name": "bot"
+            },
+            {
+              "description": "Allows your app to use Slash Commands in a guild.",
+              "value": null,
+              "variant_name": "applications.commands"
+            },
+            {
+              "description": "Allows your app to update its Slash Commands via this bearer token - client credentials\ngrant only.",
+              "value": null,
+              "variant_name": "applications.commands.update"
+            },
+            {
+              "description": "Allows your app to update permissions for its commands in a guild a user has permissions\nto.",
+              "value": null,
+              "variant_name": "applications.commands.permissions.update"
+            },
+            {
+              "description": "Allows `/users/@me` without [`Self::Email`].",
+              "value": null,
+              "variant_name": "identify"
+            },
+            {
+              "description": "Enables `/users/@me` to return an `email` field.",
+              "value": null,
+              "variant_name": "email"
+            },
+            {
+              "description": "Allows `/users/@me/connections` to return linked third-party accounts.",
+              "value": null,
+              "variant_name": "connections"
+            },
+            {
+              "description": "Allows `/users/@me/guilds` to return basic information about all of a user's guilds.",
+              "value": null,
+              "variant_name": "guilds"
+            }
+          ]
         }
       },
       "name": "Scope"
     },
-    "SkuId": {
-      "description": "An identifier for a SKU.",
+    "SelectMenu": {
+      "description": "A select menu component.\n\n[Discord docs](https://discord.com/developers/docs/interactions/message-components#select-menu-object-select-menu-structure).",
       "fields": {
-        "EnumVariants": {
-          "variants": []
+        "StructFields": {
+          "fields": [
+            {
+              "description": "The component type, which may either be [`ComponentType::StringSelect`],\n[`ComponentType::UserSelect`], [`ComponentType::RoleSelect`],\n[`ComponentType::MentionableSelect`], or [`ComponentType::ChannelSelect`].",
+              "name": "type",
+              "normalized_type": [
+                "ComponentType"
+              ]
+            },
+            {
+              "description": "An identifier defined by the developer for the select menu.",
+              "name": "custom_id",
+              "normalized_type": [
+                "Option",
+                "String"
+              ]
+            },
+            {
+              "description": "The options of this select menu.\n\nRequired for [`ComponentType::StringSelect`] and unavailable for all others.",
+              "name": "options",
+              "normalized_type": [
+                "SelectMenuOption"
+              ]
+            },
+            {
+              "description": "List of channel types to include in the [`ComponentType::ChannelSelect`].",
+              "name": "channel_types",
+              "normalized_type": [
+                "ChannelType"
+              ]
+            },
+            {
+              "description": "The placeholder shown when nothing is selected.",
+              "name": "placeholder",
+              "normalized_type": [
+                "Option",
+                "String"
+              ]
+            },
+            {
+              "description": "The minimum number of selections allowed.",
+              "name": "min_values",
+              "normalized_type": [
+                "Option",
+                "u8"
+              ]
+            },
+            {
+              "description": "The maximum number of selections allowed.",
+              "name": "max_values",
+              "normalized_type": [
+                "Option",
+                "u8"
+              ]
+            },
+            {
+              "description": "Whether select menu is disabled.",
+              "name": "disabled",
+              "normalized_type": [
+                "bool"
+              ]
+            }
+          ]
         }
       },
-      "name": "SkuId"
+      "name": "SelectMenu"
+    },
+    "SelectMenuOption": {
+      "description": "A select menu component options.\n\n[Discord docs](https://discord.com/developers/docs/interactions/message-components#select-menu-object-select-option-structure).",
+      "fields": {
+        "StructFields": {
+          "fields": [
+            {
+              "description": "The text displayed on this option.",
+              "name": "label",
+              "normalized_type": [
+                "String"
+              ]
+            },
+            {
+              "description": "The value to be sent for this option.",
+              "name": "value",
+              "normalized_type": [
+                "String"
+              ]
+            },
+            {
+              "description": "The description shown for this option.",
+              "name": "description",
+              "normalized_type": [
+                "Option",
+                "String"
+              ]
+            },
+            {
+              "description": "The emoji displayed on this option.",
+              "name": "emoji",
+              "normalized_type": [
+                "Option",
+                "ReactionType"
+              ]
+            },
+            {
+              "description": "Render this option as the default selection.",
+              "name": "default",
+              "normalized_type": [
+                "bool"
+              ]
+            }
+          ]
+        }
+      },
+      "name": "SelectMenuOption"
     },
     "SortOrder": {
       "description": "The sort order for threads in a forum.\n\n[Discord docs](https://discord.com/developers/docs/resources/channel#channel-object-sort-order-types).",
       "fields": {
-        "EnumVariants": {
-          "variants": []
+        "EnumWithVariants": {
+          "variants": [
+            {
+              "description": "Sort forum posts by activity.",
+              "value": "0",
+              "variant_name": "LatestActivity"
+            },
+            {
+              "description": "Sort forum posts by creation time (from most recent to oldest).",
+              "value": "1",
+              "variant_name": "CreationDate"
+            }
+          ]
         }
       },
       "name": "SortOrder"
@@ -5356,20 +7460,47 @@
       },
       "name": "StageInstance"
     },
-    "StageInstanceId": {
-      "description": "An identifier for a stage channel instance.",
+    "StageInstanceAction": {
+      "description": "[Discord docs](https://discord.com/developers/docs/resources/audit-log#audit-log-entry-object-audit-log-events).",
       "fields": {
-        "EnumVariants": {
-          "variants": []
+        "EnumWithVariants": {
+          "variants": [
+            {
+              "description": "",
+              "value": "83",
+              "variant_name": "Create"
+            },
+            {
+              "description": "",
+              "value": "84",
+              "variant_name": "Update"
+            },
+            {
+              "description": "",
+              "value": "85",
+              "variant_name": "Delete"
+            }
+          ]
         }
       },
-      "name": "StageInstanceId"
+      "name": "StageInstanceAction"
     },
     "StageInstancePrivacyLevel": {
       "description": "See [`StageInstance::privacy_level`].\n\n[Discord docs](https://discord.com/developers/docs/resources/stage-instance#stage-instance-object-privacy-level).",
       "fields": {
-        "EnumVariants": {
-          "variants": []
+        "EnumWithVariants": {
+          "variants": [
+            {
+              "description": "The Stage instance is visible publicly. (deprecated)",
+              "value": "1",
+              "variant_name": "Public"
+            },
+            {
+              "description": "The Stage instance is visible to only guild members.",
+              "value": "2",
+              "variant_name": "GuildOnly"
+            }
+          ]
         }
       },
       "name": "StageInstancePrivacyLevel"
@@ -5466,23 +7597,60 @@
       },
       "name": "Sticker"
     },
+    "StickerAction": {
+      "description": "[Discord docs](https://discord.com/developers/docs/resources/audit-log#audit-log-entry-object-audit-log-events).",
+      "fields": {
+        "EnumWithVariants": {
+          "variants": [
+            {
+              "description": "",
+              "value": "90",
+              "variant_name": "Create"
+            },
+            {
+              "description": "",
+              "value": "91",
+              "variant_name": "Update"
+            },
+            {
+              "description": "",
+              "value": "92",
+              "variant_name": "Delete"
+            }
+          ]
+        }
+      },
+      "name": "StickerAction"
+    },
     "StickerFormatType": {
       "description": "Differentiates between sticker formats.\n\n[Discord docs](https://discord.com/developers/docs/resources/sticker#sticker-object-sticker-format-types).",
       "fields": {
-        "EnumVariants": {
-          "variants": []
+        "EnumWithVariants": {
+          "variants": [
+            {
+              "description": "A PNG format sticker.",
+              "value": "1",
+              "variant_name": "Png"
+            },
+            {
+              "description": "An APNG format animated sticker.",
+              "value": "2",
+              "variant_name": "Apng"
+            },
+            {
+              "description": "A LOTTIE format animated sticker.",
+              "value": "3",
+              "variant_name": "Lottie"
+            },
+            {
+              "description": "A GIF format animated sticker.",
+              "value": "4",
+              "variant_name": "Gif"
+            }
+          ]
         }
       },
       "name": "StickerFormatType"
-    },
-    "StickerId": {
-      "description": "An identifier for a sticker.",
-      "fields": {
-        "EnumVariants": {
-          "variants": []
-        }
-      },
-      "name": "StickerId"
     },
     "StickerItem": {
       "description": "The smallest amount of data required to render a sticker.\n\n[Discord docs](https://discord.com/developers/docs/resources/sticker#sticker-item-object).",
@@ -5515,20 +7683,22 @@
       },
       "name": "StickerItem"
     },
-    "StickerPackId": {
-      "description": "An identifier for a sticker pack.",
-      "fields": {
-        "EnumVariants": {
-          "variants": []
-        }
-      },
-      "name": "StickerPackId"
-    },
     "StickerType": {
       "description": "Differentiates between sticker types.\n\n[Discord docs](https://discord.com/developers/docs/resources/sticker#sticker-object-sticker-types).",
       "fields": {
-        "EnumVariants": {
-          "variants": []
+        "EnumWithVariants": {
+          "variants": [
+            {
+              "description": "An official sticker in a pack, part of Nitro or in a removed purchasable pack.",
+              "value": "1",
+              "variant_name": "Standard"
+            },
+            {
+              "description": "A sticker uploaded to a Boosted guild for the guild's members.",
+              "value": "2",
+              "variant_name": "Guild"
+            }
+          ]
         }
       },
       "name": "StickerType"
@@ -5540,12 +7710,12 @@
           "typ": "u64 ",
           "values": [
             {
-              "description": "Suppress role subscription purchase and renewal notifications.",
+              "description": "Suppress member join notifications.",
               "name": "SUPPRESS_JOIN_NOTIFICATIONS",
               "value": "1 << 0"
             },
             {
-              "description": "Hide member join sticker reply buttons.",
+              "description": "Suppress server boost notifications.",
               "name": "SUPPRESS_PREMIUM_SUBSCRIPTIONS",
               "value": "1 << 1"
             },
@@ -5555,17 +7725,17 @@
               "value": "1 << 2"
             },
             {
-              "description": "Suppress server boost notifications.",
+              "description": "Hide member join sticker reply buttons.",
               "name": "SUPPRESS_JOIN_NOTIFICATION_REPLIES",
               "value": "1 << 3"
             },
             {
-              "description": "Suppress member join notifications.",
+              "description": "Suppress role subscription purchase and renewal notifications.",
               "name": "SUPPRESS_ROLE_SUBSCRIPTION_PURCHASE_NOTIFICATIONS",
               "value": "1 << 4"
             },
             {
-              "description": "",
+              "description": "Hide role subscription sticker reply buttons.",
               "name": "SUPPRESS_ROLE_SUBSCRIPTION_PURCHASE_NOTIFICATION_REPLIES",
               "value": "1 << 5"
             }
@@ -5573,6 +7743,31 @@
         }
       },
       "name": "SystemChannelFlags"
+    },
+    "ThreadAction": {
+      "description": "[Discord docs](https://discord.com/developers/docs/resources/audit-log#audit-log-entry-object-audit-log-events).",
+      "fields": {
+        "EnumWithVariants": {
+          "variants": [
+            {
+              "description": "",
+              "value": "110",
+              "variant_name": "Create"
+            },
+            {
+              "description": "",
+              "value": "111",
+              "variant_name": "Update"
+            },
+            {
+              "description": "",
+              "value": "112",
+              "variant_name": "Delete"
+            }
+          ]
+        }
+      },
+      "name": "ThreadAction"
     },
     "ThreadMember": {
       "description": "[Discord docs](https://discord.com/developers/docs/resources/channel#thread-member-object),\n[extra fields](https://discord.com/developers/docs/topics/gateway-events#thread-member-update-thread-member-update-event-extra-fields).",
@@ -5694,8 +7889,29 @@
     "Trigger": {
       "description": "Characterizes the type of content which can trigger the rule.\n\nDiscord docs:\n[type](https://discord.com/developers/docs/resources/auto-moderation#auto-moderation-rule-object-trigger-types),\n[metadata](https://discord.com/developers/docs/resources/auto-moderation#auto-moderation-rule-object-trigger-metadata)",
       "fields": {
-        "EnumVariants": {
-          "variants": []
+        "EnumWithVariants": {
+          "variants": [
+            {
+              "description": "",
+              "value": null,
+              "variant_name": "Keyword "
+            },
+            {
+              "description": "Substrings which will be searched for in content (Maximum of 1000)\n\nA keyword can be a phrase which contains multiple words.\n[Wildcard symbols](https://discord.com/developers/docs/resources/auto-moderation#auto-moderation-rule-object-keyword-matching-strategies)\ncan be used to customize how each keyword will be matched. Each keyword must be 60\ncharacters or less.",
+              "value": null,
+              "variant_name": "strings: Vec<String>"
+            },
+            {
+              "description": "Regular expression patterns which will be matched against content (Maximum of 10)",
+              "value": null,
+              "variant_name": "regex_patterns: Vec<String>"
+            },
+            {
+              "description": "Substrings which should not trigger the rule (Maximum of 100 or 1000)",
+              "value": null,
+              "variant_name": "allow_list: Vec<String>"
+            }
+          ]
         }
       },
       "name": "Trigger"
@@ -5703,8 +7919,36 @@
     "TriggerType": {
       "description": "Type of [`Trigger`].\n\n[Discord docs](https://discord.com/developers/docs/resources/auto-moderation#auto-moderation-rule-object-trigger-types).",
       "fields": {
-        "EnumVariants": {
-          "variants": []
+        "EnumWithTuples": {
+          "variants": [
+            {
+              "description": "",
+              "normalized_type": [],
+              "variant_name": "Keyword"
+            },
+            {
+              "description": "",
+              "normalized_type": [],
+              "variant_name": "Spam"
+            },
+            {
+              "description": "",
+              "normalized_type": [],
+              "variant_name": "KeywordPreset"
+            },
+            {
+              "description": "",
+              "normalized_type": [],
+              "variant_name": "MentionSpam"
+            },
+            {
+              "description": "",
+              "normalized_type": [
+                "u8"
+              ],
+              "variant_name": "Unknown"
+            }
+          ]
         }
       },
       "name": "TriggerType"
@@ -5848,15 +8092,6 @@
       },
       "name": "User"
     },
-    "UserId": {
-      "description": "An identifier for a User",
-      "fields": {
-        "EnumVariants": {
-          "variants": []
-        }
-      },
-      "name": "UserId"
-    },
     "UserPublicFlags": {
       "description": "User's public flags\n\n[Discord docs](https://discord.com/developers/docs/resources/user#user-object-user-flags).",
       "fields": {
@@ -5864,87 +8099,87 @@
           "typ": "u32 ",
           "values": [
             {
-              "description": "User's flag for suspected spam activity.",
+              "description": "User's flag as discord employee",
               "name": "DISCORD_EMPLOYEE",
               "value": "1 << 0"
             },
             {
-              "description": "",
+              "description": "User's flag as partnered server owner",
               "name": "PARTNERED_SERVER_OWNER",
               "value": "1 << 1"
             },
             {
-              "description": "",
+              "description": "User's flag as hypesquad events",
               "name": "HYPESQUAD_EVENTS",
               "value": "1 << 2"
             },
             {
-              "description": "",
+              "description": "User's flag as bug hunter level 1",
               "name": "BUG_HUNTER_LEVEL_1",
               "value": "1 << 3"
             },
             {
-              "description": "",
+              "description": "User's flag as house bravery",
               "name": "HOUSE_BRAVERY",
               "value": "1 << 6"
             },
             {
-              "description": "",
+              "description": "User's flag as house brilliance",
               "name": "HOUSE_BRILLIANCE",
               "value": "1 << 7"
             },
             {
-              "description": "",
+              "description": "User's flag as house balance",
               "name": "HOUSE_BALANCE",
               "value": "1 << 8"
             },
             {
-              "description": "",
+              "description": "User's flag as early supporter",
               "name": "EARLY_SUPPORTER",
               "value": "1 << 9"
             },
             {
-              "description": "",
+              "description": "User's flag as team user",
               "name": "TEAM_USER",
               "value": "1 << 10"
             },
             {
-              "description": "",
+              "description": "User's flag as system",
               "name": "SYSTEM",
               "value": "1 << 12"
             },
             {
-              "description": "",
+              "description": "User's flag as bug hunter level 2",
               "name": "BUG_HUNTER_LEVEL_2",
               "value": "1 << 14"
             },
             {
-              "description": "",
+              "description": "User's flag as verified bot",
               "name": "VERIFIED_BOT",
               "value": "1 << 16"
             },
             {
-              "description": "",
+              "description": "User's flag as early verified bot developer",
               "name": "EARLY_VERIFIED_BOT_DEVELOPER",
               "value": "1 << 17"
             },
             {
-              "description": "",
+              "description": "User's flag as discord certified moderator",
               "name": "DISCORD_CERTIFIED_MODERATOR",
               "value": "1 << 18"
             },
             {
-              "description": "",
+              "description": "Bot's running with HTTP interactions",
               "name": "BOT_HTTP_INTERACTIONS",
               "value": "1 << 19"
             },
             {
-              "description": "User's flag as discord employee",
+              "description": "User's flag for suspected spam activity.",
               "name": "SPAMMER",
               "value": "1 << 20"
             },
             {
-              "description": "",
+              "description": "User's flag as active developer",
               "name": "ACTIVE_DEVELOPER",
               "value": "1 << 22"
             }
@@ -5956,8 +8191,34 @@
     "VerificationLevel": {
       "description": "The level to set as criteria prior to a user being able to send\nmessages in a [`Guild`].\n\n[Discord docs](https://discord.com/developers/docs/resources/guild#guild-object-verification-level).",
       "fields": {
-        "EnumVariants": {
-          "variants": []
+        "EnumWithVariants": {
+          "variants": [
+            {
+              "description": "Does not require any verification.",
+              "value": "0",
+              "variant_name": "None"
+            },
+            {
+              "description": "Must have a verified email on the user's Discord account.",
+              "value": "1",
+              "variant_name": "Low"
+            },
+            {
+              "description": "Must also be a registered user on Discord for longer than 5 minutes.",
+              "value": "2",
+              "variant_name": "Medium"
+            },
+            {
+              "description": "Must also be a member of the guild for longer than 10 minutes.",
+              "value": "3",
+              "variant_name": "High"
+            },
+            {
+              "description": "Must have a verified phone on the user's Discord account.",
+              "value": "4",
+              "variant_name": "Higher"
+            }
+          ]
         }
       },
       "name": "VerificationLevel"
@@ -5965,11 +8226,42 @@
     "VideoQualityMode": {
       "description": "The video quality mode for a voice channel.\n\n[Discord docs](https://discord.com/developers/docs/resources/channel#channel-object-video-quality-modes).",
       "fields": {
-        "EnumVariants": {
-          "variants": []
+        "EnumWithVariants": {
+          "variants": [
+            {
+              "description": "An indicator that the video quality is chosen by Discord for optimal\nperformance.",
+              "value": "1",
+              "variant_name": "Auto"
+            },
+            {
+              "description": "An indicator that the video quality is 720p.",
+              "value": "2",
+              "variant_name": "Full"
+            }
+          ]
         }
       },
       "name": "VideoQualityMode"
+    },
+    "VoiceChannelStatusAction": {
+      "description": "[Incomplete documentation](https://github.com/discord/discord-api-docs/pull/6398)",
+      "fields": {
+        "EnumWithVariants": {
+          "variants": [
+            {
+              "description": "",
+              "value": "192",
+              "variant_name": "StatusUpdate"
+            },
+            {
+              "description": "",
+              "value": "193",
+              "variant_name": "StatusDelete"
+            }
+          ]
+        }
+      },
+      "name": "VoiceChannelStatusAction"
     },
     "VoiceState": {
       "description": "A user's state within a voice channel.\n\n[Discord docs](https://discord.com/developers/docs/resources/voice#voice-state-object).",
@@ -6077,14 +8369,30 @@
       },
       "name": "VoiceState"
     },
-    "WebhookId": {
-      "description": "An identifier for a [`Webhook`][super::webhook::Webhook]",
+    "WebhookAction": {
+      "description": "[Discord docs](https://discord.com/developers/docs/resources/audit-log#audit-log-entry-object-audit-log-events).",
       "fields": {
-        "EnumVariants": {
-          "variants": []
+        "EnumWithVariants": {
+          "variants": [
+            {
+              "description": "",
+              "value": "50",
+              "variant_name": "Create"
+            },
+            {
+              "description": "",
+              "value": "51",
+              "variant_name": "Update"
+            },
+            {
+              "description": "",
+              "value": "52",
+              "variant_name": "Delete"
+            }
+          ]
         }
       },
-      "name": "WebhookId"
+      "name": "WebhookAction"
     }
   }
 }

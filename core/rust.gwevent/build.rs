@@ -717,9 +717,13 @@ pub enum MissingSerenityReferenceField {
         typ: String,
         values: Vec<MissingSerenityReferenceBitFlag>,
     },
-    EnumVariants {
-        variants: Vec<MissingSerenityReferenceEnumVariant>,
+    EnumWithVariants {
+        variants: Vec<MissingSerenityReferenceEnumWithVariants>,
     },
+    EnumWithTuples {
+        variants: Vec<MissingSerenityReferenceEnumWithTuples>,
+    },
+    Unknown {},
 }
 
 #[derive(serde::Serialize, Clone, Debug)]
@@ -743,7 +747,17 @@ pub struct MissingSerenityReferenceBitFlag {
 }
 
 #[derive(serde::Serialize, Clone, Debug)]
-pub struct MissingSerenityReferenceEnumVariant {
+pub struct MissingSerenityReferenceEnumWithVariants {
+    /// Description from doc comment
+    pub description: String,
+    /// Name of the variant
+    pub variant_name: String,
+    /// Value of the variant if any
+    pub value: Option<String>,
+}
+
+#[derive(serde::Serialize, Clone, Debug)]
+pub struct MissingSerenityReferenceEnumWithTuples {
     /// Description from doc comment
     pub description: String,
     /// Name of the variant
@@ -759,8 +773,46 @@ fn _resolve_missing_references(
     serenity_files: &[String],
 ) -> Result<(), Error> {
     // These are refs we can't process yet
-    let ref_overrides: indexmap::IndexMap<String, MissingSerenityReference> =
-        indexmap::indexmap! {};
+    let ref_overrides: indexmap::IndexMap<String, MissingSerenityReference> = indexmap::indexmap! {
+        "ComponentInteractionDataKind".to_string() => MissingSerenityReference {
+            name: "ComponentInteractionDataKind".to_string(),
+            description: "".to_string(),
+            fields: MissingSerenityReferenceField::EnumWithTuples {
+                variants: vec![
+                    MissingSerenityReferenceEnumWithTuples {
+                        description: "".to_string(),
+                        variant_name: "Button".to_string(),
+                        normalized_type: vec![]
+                    },
+                    MissingSerenityReferenceEnumWithTuples {
+                        description: "".to_string(),
+                        variant_name: "StringSelect".to_string(),
+                        normalized_type: vec!["Vec".to_string(), "String".to_string()]
+                    },
+                    MissingSerenityReferenceEnumWithTuples {
+                        description: "".to_string(),
+                        variant_name: "UserSelect".to_string(),
+                        normalized_type: vec!["Vec".to_string(), "UserId".to_string()]
+                    },
+                    MissingSerenityReferenceEnumWithTuples {
+                        description: "".to_string(),
+                        variant_name: "RoleSelect".to_string(),
+                        normalized_type: vec!["Vec".to_string(), "RoleId".to_string()]
+                    },
+                    MissingSerenityReferenceEnumWithTuples {
+                        description: "".to_string(),
+                        variant_name: "MentionableSelect".to_string(),
+                        normalized_type: vec!["Vec".to_string(), "GenericId".to_string()]
+                    },
+                    MissingSerenityReferenceEnumWithTuples {
+                        description: "".to_string(),
+                        variant_name: "ChannelSelect".to_string(),
+                        normalized_type: vec!["Vec".to_string(), "ChannelId".to_string()]
+                    }
+                ]
+            }
+        }
+    };
 
     let mut remaining_type_queue = std::collections::VecDeque::from(normalized_type);
 
@@ -815,6 +867,11 @@ fn _resolve_missing_references(
             continue;
         }
 
+        // Marker types such as GuildId, ChannelId, etc.
+        if typ.ends_with("Id") {
+            continue;
+        }
+
         // Ref already resolved
         if refs.contains_key(&typ) {
             continue;
@@ -822,6 +879,7 @@ fn _resolve_missing_references(
 
         if ref_overrides.contains_key(&typ) {
             refs.insert(typ.clone(), ref_overrides.get(&typ).unwrap().clone());
+            continue;
         }
 
         // Find which serenity file contains the type and get the doc comment by going backwards
@@ -902,19 +960,38 @@ fn _resolve_missing_references(
 
         enum StructType {
             Struct,
-            Enum,
+            EnumWithVariants,
+            EnumWithTuples,
             BitFlag,
+            Unknown,
         }
 
         let struct_type = {
             if struct_content.starts_with(&("pub struct ".to_string() + &typ + " {")) {
                 StructType::Struct
             } else if struct_content.starts_with(&("pub enum ".to_string() + &typ + " {")) {
-                StructType::Enum
+                // Loop over all lines to find a line starting with an alphanumeric character and has parentheses
+                let mut found = false;
+                for line in struct_content.lines() {
+                    let line = line.trim();
+
+                    let line_startswith_alphanum = line.chars().next().unwrap().is_alphanumeric();
+
+                    if line_startswith_alphanum && line.contains('(') {
+                        found = true;
+                        break;
+                    }
+                }
+
+                if found {
+                    StructType::EnumWithTuples
+                } else {
+                    StructType::EnumWithVariants
+                }
             } else if struct_content.starts_with(&("pub struct ".to_string() + &typ + ":")) {
                 StructType::BitFlag
             } else {
-                StructType::Enum
+                StructType::Unknown
             }
         };
 
@@ -962,7 +1039,8 @@ fn _resolve_missing_references(
                             let normalized_type = _get_inner_type_and_apply_normalize(typ);
 
                             for typ in normalized_type.iter() {
-                                remaining_type_queue.push_back(typ.clone()); // Add all normalized type to the queue
+                                remaining_type_queue.push_back(typ.clone());
+                                // Add all normalized type to the queue
                             }
 
                             current_field = Some(MissingSerenityReferenceStructField {
@@ -1028,12 +1106,34 @@ fn _resolve_missing_references(
                     // Remove any brackets
                     let typ = typ.replace(['(', ')', '{', '}'], "");
 
-                    let mut values = Vec::new();
+                    // Get rid of the first line containing the enum declaration
+                    let struct_content = struct_content
+                        .lines()
+                        .skip(1)
+                        .collect::<Vec<&str>>()
+                        .join("\n");
 
-                    for (i, line) in struct_content.lines().rev().enumerate() {
+                    let mut values = Vec::new();
+                    let mut current_field: Option<MissingSerenityReferenceBitFlag> = None;
+
+                    for line in struct_content.lines().rev() {
                         let line = line.trim();
 
                         if line.starts_with("const ") {
+                            if let Some(ref current_field) = current_field {
+                                let mut current_field = current_field.clone();
+
+                                // Reverse the description
+                                current_field.description = current_field
+                                    .description
+                                    .lines()
+                                    .rev()
+                                    .collect::<Vec<&str>>()
+                                    .join("\n");
+
+                                values.push(current_field);
+                            }
+
                             let line = line.replace("const ", "");
                             let line = line.trim();
 
@@ -1043,30 +1143,37 @@ fn _resolve_missing_references(
                             let value = line[1].trim();
                             let value = value.replace([';', ','], ""); // Remove any trailing semicolons or commas
 
-                            let mut description = String::new();
-
-                            // Get the description by going backwards
-                            for j in (0..i).rev() {
-                                let line = struct_content.lines().nth(j).unwrap().trim();
-
-                                if line.starts_with("///") {
-                                    description.push_str(line.replace("///", "").trim());
-                                    description.push('\n');
-                                } else if line.is_empty() || line.contains("const") {
-                                    break;
-                                }
-                            }
-
-                            // Reverse the description
-                            description =
-                                description.lines().rev().collect::<Vec<&str>>().join("\n");
-
-                            values.push(MissingSerenityReferenceBitFlag {
+                            current_field = Some(MissingSerenityReferenceBitFlag {
                                 name: name.to_string(),
-                                description,
+                                description: String::new(),
                                 value: value.to_string(),
                             });
                         }
+
+                        // Handle doc-comments. Serde is not required as these are bitflags
+                        if let Some(ref mut ref_current_field) = current_field {
+                            if line.starts_with("///") {
+                                ref_current_field
+                                    .description
+                                    .push_str(line.replace("///", "").trim());
+                                ref_current_field.description.push('\n');
+                            }
+                        }
+                    }
+
+                    // Add the last element
+                    if let Some(ref current_field) = current_field {
+                        let mut current_field = current_field.clone();
+
+                        // Reverse the description
+                        current_field.description = current_field
+                            .description
+                            .lines()
+                            .rev()
+                            .collect::<Vec<&str>>()
+                            .join("\n");
+
+                        values.push(current_field);
                     }
 
                     // Reverse the fields
@@ -1077,12 +1184,193 @@ fn _resolve_missing_references(
                         values,
                     }
                 }
-                StructType::Enum => {
-                    // TODO: Implement
-                    MissingSerenityReferenceField::EnumVariants {
-                        variants: Vec::new(),
+                StructType::EnumWithVariants => {
+                    // Get rid of the first line containing the enum declaration
+                    let struct_content = struct_content
+                        .lines()
+                        .skip(1)
+                        .collect::<Vec<&str>>()
+                        .join("\n");
+
+                    let mut variants = Vec::new();
+                    let mut current_field: Option<MissingSerenityReferenceEnumWithVariants> = None;
+
+                    for line in struct_content.lines().rev() {
+                        let line = line.trim();
+
+                        if line.chars().next().unwrap().is_alphanumeric() {
+                            if let Some(ref current_field) = current_field {
+                                let mut current_field = current_field.clone();
+
+                                // Reverse the description
+                                current_field.description = current_field
+                                    .description
+                                    .lines()
+                                    .rev()
+                                    .collect::<Vec<&str>>()
+                                    .join("\n");
+
+                                variants.push(current_field);
+                            }
+
+                            let line = line.split('=').collect::<Vec<&str>>();
+
+                            let variant_name = line[0].trim();
+                            let variant_name = variant_name.replace(['{', '}', ','], "");
+
+                            let variant_value = {
+                                if line.len() > 1 {
+                                    let variant_value = line[1].trim();
+                                    let variant_value = variant_value.replace([';', ','], "");
+                                    Some(variant_value.to_string())
+                                } else {
+                                    None
+                                }
+                            };
+
+                            current_field = Some(MissingSerenityReferenceEnumWithVariants {
+                                description: String::new(),
+                                variant_name: variant_name.to_string(),
+                                value: variant_value,
+                            });
+                        }
+
+                        // Handle doc-comments and serde
+                        if let Some(ref mut ref_current_field) = current_field {
+                            if line.starts_with("///") {
+                                ref_current_field
+                                    .description
+                                    .push_str(line.replace("///", "").trim());
+                                ref_current_field.description.push('\n');
+                            } else if line.contains("serde(rename") {
+                                let split = line.split('=').collect::<Vec<&str>>();
+                                let split = split[1].split('"').collect::<Vec<&str>>();
+                                let value = split[1];
+                                ref_current_field.variant_name = value.to_string();
+                            } else if line.contains("#[serde(skip)]") {
+                                current_field = None;
+                            }
+                        }
                     }
+
+                    // Add the last element
+                    if let Some(ref current_field) = current_field {
+                        let mut current_field = current_field.clone();
+
+                        // Reverse the description
+                        current_field.description = current_field
+                            .description
+                            .lines()
+                            .rev()
+                            .collect::<Vec<&str>>()
+                            .join("\n");
+
+                        variants.push(current_field);
+                    }
+
+                    // Reverse the fields
+                    variants.reverse();
+
+                    MissingSerenityReferenceField::EnumWithVariants { variants }
                 }
+                StructType::EnumWithTuples => {
+                    // Get rid of the first line containing the enum declaration
+                    let struct_content = struct_content
+                        .lines()
+                        .skip(1)
+                        .collect::<Vec<&str>>()
+                        .join("\n");
+
+                    let mut variants = Vec::new();
+                    let mut current_field: Option<MissingSerenityReferenceEnumWithTuples> = None;
+
+                    for line in struct_content.lines().rev() {
+                        let line = line.trim();
+
+                        if line.chars().next().unwrap().is_alphanumeric() {
+                            if let Some(ref current_field) = current_field {
+                                let mut current_field = current_field.clone();
+
+                                // Reverse the description
+                                current_field.description = current_field
+                                    .description
+                                    .lines()
+                                    .rev()
+                                    .collect::<Vec<&str>>()
+                                    .join("\n");
+
+                                variants.push(current_field);
+                            }
+
+                            let line = line.split('(').collect::<Vec<&str>>();
+
+                            let variant_name = line[0].trim();
+                            let variant_name = variant_name.replace(['{', '}', ','], "");
+
+                            let normalized_type = {
+                                if line.len() > 1 {
+                                    let variant_type = line[1].trim();
+                                    let variant_type =
+                                        variant_type.split('(').collect::<Vec<&str>>()[0];
+                                    let variant_type =
+                                        variant_type.split(')').collect::<Vec<&str>>()[0];
+
+                                    _get_inner_type_and_apply_normalize(variant_type)
+                                } else {
+                                    Vec::new()
+                                }
+                            };
+
+                            for typ in normalized_type.iter() {
+                                remaining_type_queue.push_back(typ.clone());
+                                // Add all normalized type to the queue
+                            }
+
+                            current_field = Some(MissingSerenityReferenceEnumWithTuples {
+                                description: String::new(),
+                                variant_name: variant_name.to_string(),
+                                normalized_type,
+                            });
+                        }
+
+                        // Handle doc-comments and serde
+                        if let Some(ref mut ref_current_field) = current_field {
+                            if line.starts_with("///") {
+                                ref_current_field
+                                    .description
+                                    .push_str(line.replace("///", "").trim());
+                                ref_current_field.description.push('\n');
+                            } else if line.contains("serde(rename") {
+                                let split = line.split('=').collect::<Vec<&str>>();
+                                let split = split[1].split('"').collect::<Vec<&str>>();
+                                let value = split[1];
+                                ref_current_field.variant_name = value.to_string();
+                            } else if line.contains("#[serde(skip)]") {
+                                current_field = None;
+                            }
+                        }
+                    }
+
+                    if let Some(ref current_field) = current_field {
+                        let mut current_field = current_field.clone();
+
+                        // Reverse the description
+                        current_field.description = current_field
+                            .description
+                            .lines()
+                            .rev()
+                            .collect::<Vec<&str>>()
+                            .join("\n");
+
+                        variants.push(current_field);
+                    }
+
+                    // Reverse the fields
+                    variants.reverse();
+
+                    MissingSerenityReferenceField::EnumWithTuples { variants }
+                }
+                StructType::Unknown => MissingSerenityReferenceField::Unknown {},
             }
         };
 
