@@ -543,6 +543,120 @@ fn _parse_full_events(
     Ok(event_fields)
 }
 
+/// Given a type Vec<Option<T> or Option<T> or Anything<T> or T, return the inner type [Generic1, Generic2, T]
+///
+/// Special case, if we come across a lifetime (&.* Struct), we ignore the lifetime bit
+///
+/// Returns <types, Generic Level for each type>
+fn _get_inner_type(typ: &str) -> Vec<(String, usize)> {
+    // Parse the type character by character
+    let mut types: Vec<(String, usize)> = Vec::new();
+    let mut inner_type = String::new();
+
+    let mut generic_index = 0;
+    for c in typ.chars() {
+        if c == '<' {
+            types.push((inner_type, generic_index));
+            inner_type = String::new();
+            generic_index += 1;
+        } else if c == '>' {
+            types.push((inner_type, generic_index));
+            inner_type = String::new();
+            generic_index -= 1;
+        } else if c == ',' {
+            types.push((inner_type, generic_index));
+            inner_type = String::new();
+        } else {
+            inner_type.push(c);
+        }
+    }
+
+    if !inner_type.is_empty() {
+        types.push((inner_type, generic_index));
+    }
+
+    // Strip out the lifetimes from the types
+    types = types
+        .iter()
+        .map(|(x, i)| (x.trim(), i))
+        .filter(|(x, _)| !x.is_empty())
+        .map(|(x, i)| {
+            let x = x.split_whitespace().collect::<Vec<&str>>();
+
+            let mut new_x = Vec::new();
+
+            for x in x.iter() {
+                if x.contains("&'") || x.contains("&mut") {
+                    continue;
+                }
+
+                new_x.push(*x);
+            }
+
+            (new_x.join(" "), *i)
+        })
+        .collect::<Vec<(String, usize)>>();
+
+    types
+}
+
+/// Gets the inner type and normalizes it
+fn _get_inner_type_and_apply_normalize(typ: &str) -> Vec<String> {
+    let mut normalization_queue = std::collections::VecDeque::from(_get_inner_type(typ));
+    let mut normalized_inner_typ = Vec::new();
+
+    loop {
+        if normalization_queue.is_empty() {
+            break;
+        }
+
+        // Take the first element from the queue
+        let (k, generic_level) = normalization_queue.pop_front().unwrap();
+
+        // FixedString
+        if k == "FixedString" {
+            normalized_inner_typ.push("String".to_string());
+            // Look at the next element
+            let Some((next_k, next_generic_level)) = normalization_queue.pop_front() else {
+                continue;
+            };
+
+            if generic_level > next_generic_level {
+                // Case: XYZ<FixedString>, u32 etc.
+                // Add next element back to queue
+                normalization_queue.push_front((next_k, next_generic_level));
+            }
+        } else if k == "FixedArray" {
+            // Look at the next element
+            let (next_k, next_generic_level) = normalization_queue.pop_front().unwrap(); // Next element must exist
+
+            if next_generic_level > generic_level {
+                // Case: FixedArray<Type>
+                // Sometimes, serenity uses a fixed string length, so type signature becomes FixedString<String, u8>.
+                // When calling _get_inner_type, we get ["FixedString", "ChannelId, u8"]
+                let split = next_k.split(',').collect::<Vec<&str>>();
+                normalization_queue.push_front((split[0].to_string(), next_generic_level));
+            } else {
+                // Case: XYZ<FixedArray>, u32 etc.
+                // Add next element back to queue
+                normalization_queue.push_front((next_k, next_generic_level));
+            }
+        } else if k == "VecDeque" {
+            normalized_inner_typ.push("Vec".to_string()); // Insert Vec in place of VecDeque
+        } else if k == "Box" || k == "Cow" {
+            continue; // We want to ignore Box/Cow since we dont care about borrows or heap/stack
+        } else if k == "&str" {
+            normalized_inner_typ.push("String".to_string());
+        } else if k.starts_with("NonMax") {
+            normalized_inner_typ.push(k.replace("NonMax", "").to_lowercase());
+        } else {
+            normalized_inner_typ.push(k);
+        }
+    }
+
+    normalized_inner_typ
+}
+
 // CI to create template documentation
 fn create_template_docs() -> Result<(), Error> {
     let mut event_fields = _parse_full_events()?;
@@ -722,15 +836,34 @@ fn create_template_docs() -> Result<(), Error> {
         }
     }
 
-    println!("cargo:warning=event_fields: {:?}", event_fields);
-
-    // Make .generated directory if it doesn't exist
+    // Make .generated directory if it doesn't exist and save stage1
     std::fs::create_dir_all(".generated")?;
 
-    let mut file = std::fs::File::create(".generated/event_fields.json")?;
+    let mut file = std::fs::File::create(".generated/event_fields_stage1.json")?;
     let event_fields_json = serde_json::to_string_pretty(&event_fields)?;
 
     file.write_all(event_fields_json.as_bytes())?;
+
+    // Stage 2: Type normalization
+    let mut normalized_event_fields: indexmap::IndexMap<
+        String,
+        indexmap::IndexMap<String, Vec<String>>,
+    > = indexmap::IndexMap::new();
+
+    for (k, v) in event_fields.iter() {
+        let mut normalized_fields = indexmap::IndexMap::new();
+
+        for (k, v) in v.iter() {
+            let normalized_inner_type = _get_inner_type_and_apply_normalize(v);
+            normalized_fields.insert(k.clone(), normalized_inner_type);
+        }
+
+        normalized_event_fields.insert(k.clone(), normalized_fields);
+    }
+
+    let mut file = std::fs::File::create(".generated/event_fields_stage2.json")?;
+    let normalized_event_fields_json = serde_json::to_string_pretty(&normalized_event_fields)?;
+    file.write_all(normalized_event_fields_json.as_bytes())?;
 
     Ok(())
 }
