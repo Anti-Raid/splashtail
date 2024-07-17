@@ -649,6 +649,17 @@ fn _get_inner_type_and_apply_normalize(typ: &str) -> Vec<String> {
             normalized_inner_typ.push("String".to_string());
         } else if k.starts_with("NonMax") {
             normalized_inner_typ.push(k.replace("NonMax", "").to_lowercase());
+        } else if k == "Option" {
+            normalized_inner_typ.push("Option".to_string()); // Insert the option so we have one there
+
+            // We dont want an Option<Option so get out the next element too
+            // Look at the next element
+            let (next_k, next_generic_level) = normalization_queue.pop_front().unwrap(); // Next element must exist
+
+            if next_k != "Option" {
+                // Push back to front
+                normalization_queue.push_front((next_k, next_generic_level));
+            }
         } else {
             normalized_inner_typ.push(k);
         }

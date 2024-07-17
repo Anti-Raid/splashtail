@@ -401,7 +401,6 @@
     ],
     "webhook_id": [
       "Option",
-      "Option",
       "WebhookId"
     ],
     "kind": [
@@ -410,41 +409,33 @@
     ],
     "activity": [
       "Option",
-      "Option",
       "MessageActivity"
     ],
     "application": [
-      "Option",
       "Option",
       "MessageApplication"
     ],
     "application_id": [
       "Option",
-      "Option",
       "ApplicationId"
     ],
     "message_reference": [
-      "Option",
       "Option",
       "MessageReference"
     ],
     "flags": [
       "Option",
-      "Option",
       "MessageFlags"
     ],
     "referenced_message": [
-      "Option",
       "Option",
       "Message"
     ],
     "interaction": [
       "Option",
-      "Option",
       "MessageInteraction"
     ],
     "thread": [
-      "Option",
       "Option",
       "GuildChannel"
     ],
@@ -458,11 +449,9 @@
     ],
     "position": [
       "Option",
-      "Option",
       "u64"
     ],
     "role_subscription_data": [
-      "Option",
       "Option",
       "RoleSubscriptionData"
     ],
@@ -471,7 +460,6 @@
       "GuildId"
     ],
     "member": [
-      "Option",
       "Option",
       "PartialMember"
     ]
