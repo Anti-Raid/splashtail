@@ -652,13 +652,21 @@ fn _get_inner_type_and_apply_normalize(typ: &str) -> Vec<String> {
         } else if k == "Option" {
             normalized_inner_typ.push("Option".to_string()); // Insert the option so we have one there
 
-            // We dont want an Option<Option so get out the next element too
-            // Look at the next element
-            let (next_k, next_generic_level) = normalization_queue.pop_front().unwrap(); // Next element must exist
+            // We dont want an Option<Option<Option<...
+            loop {
+                if normalization_queue.is_empty() {
+                    break;
+                }
 
-            if next_k != "Option" {
-                // Push back to front
-                normalization_queue.push_front((next_k, next_generic_level));
+                // Look at the next element
+                let (next_k, next_generic_level) = normalization_queue.pop_front().unwrap(); // Next element must exist
+
+                // Is it option
+                if next_k != "Option" {
+                    // Push back to front
+                    normalization_queue.push_front((next_k, next_generic_level));
+                    break;
+                }
             }
         } else {
             normalized_inner_typ.push(k);
