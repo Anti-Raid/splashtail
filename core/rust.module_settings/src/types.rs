@@ -213,7 +213,10 @@ pub enum InnerColumnTypeStringKind {
     /// User
     User,
     /// Channel
-    Channel,
+    Channel {
+        allowed_types: Vec<serenity::all::ChannelType>,
+        needed_bot_permissions: serenity::model::permissions::Permissions,
+    },
     /// Role
     Role,
     /// Emoji
@@ -229,7 +232,16 @@ impl std::fmt::Display for InnerColumnTypeStringKind {
             InnerColumnTypeStringKind::Textarea => write!(f, "Textarea"),
             InnerColumnTypeStringKind::Template { kind } => write!(f, "Template {:?}", kind),
             InnerColumnTypeStringKind::User => write!(f, "User"),
-            InnerColumnTypeStringKind::Channel => write!(f, "Channel"),
+            InnerColumnTypeStringKind::Channel {
+                allowed_types,
+                needed_bot_permissions,
+            } => {
+                write!(
+                    f,
+                    "Channel: {:?}, with needed bot permissions: {:?}",
+                    allowed_types, needed_bot_permissions
+                )
+            }
             InnerColumnTypeStringKind::Role => write!(f, "Role"),
             InnerColumnTypeStringKind::Emoji => write!(f, "Emoji"),
             InnerColumnTypeStringKind::Message => write!(f, "Message"),

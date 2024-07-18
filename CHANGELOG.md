@@ -1,3 +1,9 @@
+# Thursday, July 18th 2024
+
+## Settings
+
+- Added ``allowed_types`` and ``needed_bot_permissions`` to StringKind::Channel to allow for more granular control over the type of channel that can be selected complete with parsing and unified permission checks.
+
 # Wednesday, July 17th 2024
 
 ## GWEvents
@@ -7,6 +13,10 @@
 ## Settings
 
 - Added ``TemplateKind`` to ``StringKind::Template`` to allow displaying message template builder in the site
+
+## Website
+
+- Added support for displaying message template builder in site settings. This is a work in progress and may not be fully functional yet.
 
 # Tuesday, July 16th 2024
 

@@ -7,11 +7,17 @@ use splashcore_rs::value::Value;
 use sqlx::Row;
 
 /// Validates the value against the schema's column type handling schema checks if `perform_schema_checks` is true
+///
+/// NOTE: This may make HTTP/Discord API requests to parse values such as channels etc.
 #[allow(dead_code)]
+#[allow(clippy::too_many_arguments)]
 #[async_recursion::async_recursion]
 async fn _validate_and_parse_value(
     v: Value,
     state: &State,
+    guild_id: serenity::all::GuildId,
+    cache_http: &botox::cache::CacheHttpImpl,
+    reqwest_client: &reqwest::Client,
     column_type: &ColumnType,
     column_id: &str,
     is_nullable: bool,
@@ -130,19 +136,123 @@ async fn _validate_and_parse_value(
                                         });
                                     }
                                 }
-                                InnerColumnTypeStringKind::Channel => {
+                                InnerColumnTypeStringKind::Channel {
+                                    allowed_types,
+                                    needed_bot_permissions,
+                                } => {
                                     // Try parsing to a ChannelId
-                                    if let Err(err) = s.parse::<serenity::all::ChannelId>() {
-                                        return Err(SettingsError::SchemaCheckValidationError {
+                                    let channel_id = s
+                                        .parse::<serenity::all::ChannelId>()
+                                        .map_err(|e| SettingsError::SchemaCheckValidationError {
                                             column: column_id.to_string(),
                                             check: "snowflake_parse".to_string(),
                                             accepted_range: "Valid channel id".to_string(),
-                                            error: err.to_string(),
+                                            error: e.to_string(),
+                                        })?;
+
+                                    // Get the channel
+                                    let channel = proxy_support::channel(
+                                        cache_http,
+                                        reqwest_client,
+                                        Some(guild_id),
+                                        channel_id,
+                                    )
+                                    .await
+                                    .map_err(|e| SettingsError::SchemaCheckValidationError {
+                                        column: column_id.to_string(),
+                                        check: "channel_get".to_string(),
+                                        accepted_range: "Valid channel id".to_string(),
+                                        error: e.to_string(),
+                                    })?;
+
+                                    let Some(channel) = channel else {
+                                        return Err(SettingsError::SchemaCheckValidationError {
+                                            column: column_id.to_string(),
+                                            check: "channel_get".to_string(),
+                                            accepted_range: "Valid channel id".to_string(),
+                                            error: "Channel not found".to_string(),
                                         });
+                                    };
+
+                                    if !allowed_types.is_empty() {
+                                        match channel {
+                                            serenity::all::Channel::Guild(gc) => {
+                                                if !allowed_types.contains(&gc.kind) {
+                                                    return Err(
+                                                        SettingsError::SchemaCheckValidationError {
+                                                            column: column_id.to_string(),
+                                                            check: "channel_type".to_string(),
+                                                            accepted_range: "Text channel"
+                                                                .to_string(),
+                                                            error: format!(
+                                                                "Channel type is not text: {:?}",
+                                                                gc.kind
+                                                            ),
+                                                        },
+                                                    );
+                                                }
+
+                                                if gc.guild_id != guild_id {
+                                                    return Err(SettingsError::SchemaCheckValidationError {
+                                                        column: column_id.to_string(),
+                                                        check: "channel_guild".to_string(),
+                                                        accepted_range: "Valid channel id".to_string(),
+                                                        error: "Channel is not in the guild specified".to_string(),
+                                                    });
+                                                }
+
+                                                if !needed_bot_permissions.is_empty() {
+                                                    let perms = gc.permissions_for_user(&cache_http.cache, cache_http.cache.current_user().id).map_err(|e| SettingsError::SchemaCheckValidationError {
+                                                        column: column_id.to_string(),
+                                                        check: "channel_perms".to_string(),
+                                                        accepted_range: "Valid channel id".to_string(),
+                                                        error: e.to_string(),
+                                                    })?;
+
+                                                    for perm in needed_bot_permissions.iter() {
+                                                        if !perms.contains(perm) {
+                                                            return Err(SettingsError::SchemaCheckValidationError {
+                                                                column: column_id.to_string(),
+                                                                check: "channel_perms".to_string(),
+                                                                accepted_range: "Valid channel id".to_string(),
+                                                                error: format!("Missing permission: {}", perm),
+                                                            });
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            serenity::all::Channel::Private(pc) => {
+                                                if !allowed_types.contains(&pc.kind) {
+                                                    return Err(
+                                                        SettingsError::SchemaCheckValidationError {
+                                                            column: column_id.to_string(),
+                                                            check: "channel_type".to_string(),
+                                                            accepted_range: "Text channel"
+                                                                .to_string(),
+                                                            error: format!(
+                                                                "Channel type is not text: {:?}",
+                                                                pc.kind
+                                                            ),
+                                                        },
+                                                    );
+                                                }
+                                            }
+                                            _ => {
+                                                return Err(
+                                                    SettingsError::SchemaCheckValidationError {
+                                                        column: column_id.to_string(),
+                                                        check: "channel_type".to_string(),
+                                                        accepted_range: "Valid channel".to_string(),
+                                                        error: "Channel type is unknown"
+                                                            .to_string(),
+                                                    },
+                                                );
+                                            }
+                                        }
                                     }
                                 }
                                 InnerColumnTypeStringKind::Role => {
-                                    // Try parsing to a ChannelId
+                                    // Try parsing to a RoleId
                                     if let Err(err) = s.parse::<serenity::all::RoleId>() {
                                         return Err(SettingsError::SchemaCheckValidationError {
                                             column: column_id.to_string(),
@@ -399,6 +509,9 @@ async fn _validate_and_parse_value(
                         let new_v = _validate_and_parse_value(
                             v,
                             state,
+                            guild_id,
+                            cache_http,
+                            reqwest_client,
                             &column_type,
                             column_id,
                             is_nullable,
@@ -427,6 +540,9 @@ async fn _validate_and_parse_value(
                     return _validate_and_parse_value(
                         v,
                         state,
+                        guild_id,
+                        cache_http,
+                        reqwest_client,
                         &clause.column_type,
                         column_id,
                         is_nullable,
@@ -645,6 +761,7 @@ fn _query_bind_value<'a>(
 pub async fn settings_view(
     setting: &ConfigOption,
     cache_http: &botox::cache::CacheHttpImpl,
+    reqwest_client: &reqwest::Client,
     pool: &sqlx::PgPool,
     guild_id: serenity::all::GuildId,
     author: serenity::all::UserId,
@@ -702,6 +819,9 @@ pub async fn settings_view(
             val = _validate_and_parse_value(
                 val,
                 &state,
+                guild_id,
+                cache_http,
+                reqwest_client,
                 &col.column_type,
                 col.id,
                 col.nullable,
@@ -829,9 +949,11 @@ pub async fn settings_view(
 }
 
 /// Settings API: Create implementation
+#[allow(clippy::too_many_arguments)]
 pub async fn settings_create(
     setting: &ConfigOption,
     cache_http: &botox::cache::CacheHttpImpl,
+    reqwest_client: &reqwest::Client,
     pool: &sqlx::PgPool,
     guild_id: serenity::all::GuildId,
     author: serenity::all::UserId,
@@ -880,6 +1002,9 @@ pub async fn settings_create(
                 _validate_and_parse_value(
                     val,
                     &state,
+                    guild_id,
+                    cache_http,
+                    reqwest_client,
                     &column.column_type,
                     column.id,
                     column.nullable,
@@ -1162,9 +1287,11 @@ pub async fn settings_create(
 }
 
 /// Settings API: Update implementation
+#[allow(clippy::too_many_arguments)]
 pub async fn settings_update(
     setting: &ConfigOption,
     cache_http: &botox::cache::CacheHttpImpl,
+    reqwest_client: &reqwest::Client,
     pool: &sqlx::PgPool,
     guild_id: serenity::all::GuildId,
     author: serenity::all::UserId,
@@ -1197,6 +1324,9 @@ pub async fn settings_update(
                         _validate_and_parse_value(
                             val,
                             &state,
+                            guild_id,
+                            cache_http,
+                            reqwest_client,
                             &column.column_type,
                             column.id,
                             column.nullable,
@@ -1234,15 +1364,13 @@ pub async fn settings_update(
         });
     };
 
-    let pkey = _validate_and_parse_value(
-        pkey,
-        &state,
-        &pkey_column.column_type,
-        setting.primary_key,
-        false,
-        true,
-    )
-    .await?;
+    // PKEY should already have passed the validation checks
+    if matches!(pkey, Value::None) {
+        return Err(SettingsError::MissingOrInvalidField {
+            field: setting.primary_key.to_string(),
+            src: "settings_update [pkey_none]".to_string(),
+        });
+    }
 
     // Start the transaction now that basic validation is done
     let mut tx = pool.begin().await.map_err(|e| SettingsError::Generic {
@@ -1573,9 +1701,11 @@ pub async fn settings_update(
 }
 
 /// Settings API: Delete implementation
+#[allow(clippy::too_many_arguments)]
 pub async fn settings_delete(
     setting: &ConfigOption,
     cache_http: &botox::cache::CacheHttpImpl,
+    reqwest_client: &reqwest::Client,
     pool: &sqlx::PgPool,
     guild_id: serenity::all::GuildId,
     author: serenity::all::UserId,
@@ -1601,6 +1731,9 @@ pub async fn settings_delete(
     let pkey = _validate_and_parse_value(
         pkey,
         &state,
+        guild_id,
+        cache_http,
+        reqwest_client,
         &pkey_column.column_type,
         setting.primary_key,
         false,
@@ -1661,10 +1794,6 @@ pub async fn settings_delete(
                 src: "settings_delete [retrieve_unchanged, Value::from_sqlx]".to_string(),
                 typ: "internal".to_string(),
             })?;
-
-            // Validate the actual value, note that as this is a delete operation, we don't care about nullability
-            let val =
-                _validate_and_parse_value(val, &state, column_types[i], col, true, false).await?;
 
             state.state.insert(col.to_string(), val);
         }

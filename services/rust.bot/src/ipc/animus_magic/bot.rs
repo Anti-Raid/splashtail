@@ -416,6 +416,7 @@ impl BotAnimusMessage {
                         match module_settings::cfg::settings_view(
                             opt,
                             &state.cache_http,
+                            &state.reqwest,
                             pool,
                             guild_id,
                             user_id,
@@ -437,6 +438,7 @@ impl BotAnimusMessage {
                         match module_settings::cfg::settings_create(
                             opt,
                             &state.cache_http,
+                            &state.reqwest,
                             pool,
                             guild_id,
                             user_id,
@@ -459,6 +461,7 @@ impl BotAnimusMessage {
                         match module_settings::cfg::settings_update(
                             opt,
                             &state.cache_http,
+                            &state.reqwest,
                             pool,
                             guild_id,
                             user_id,
@@ -492,6 +495,7 @@ impl BotAnimusMessage {
                         match module_settings::cfg::settings_delete(
                             opt,
                             &state.cache_http,
+                            &state.reqwest,
                             pool,
                             guild_id,
                             user_id,

@@ -324,7 +324,7 @@ pub async fn guild_channels(
     };
 
     let url = format!(
-        "{}/antiraid/api/state?col=channels&id={}",
+        "{}/antiraid/api/state?col=guild_channels&id={}",
         proxy_url, guild_id
     );
 
@@ -400,6 +400,138 @@ pub async fn guild_channels(
     }
 
     Ok(channels)
+}
+
+pub async fn channel(
+    ctx: &botox::cache::CacheHttpImpl,
+    reqwest_client: &reqwest::Client,
+    guild_id: Option<serenity::model::id::GuildId>,
+    channel_id: serenity::model::id::ChannelId,
+) -> Result<Option<serenity::all::Channel>, Error> {
+    // No sandwich case
+    if config::CONFIG.meta.sandwich_http_api.is_none() {
+        // Check for guild channel
+        if let Some(guild_id) = guild_id {
+            {
+                let guild = ctx.cache.guild(guild_id);
+
+                if let Some(guild) = guild {
+                    if let Some(channel) = guild.channels.get(&channel_id) {
+                        return Ok(Some(serenity::all::Channel::Guild(channel.clone())));
+                    }
+                }
+            }
+        }
+
+        // Make http query
+        let channel = match channel_id.to_channel(&ctx).await {
+            Ok(channel) => channel,
+            Err(e) => match e {
+                serenity::Error::Http(e) => match e {
+                    serenity::all::HttpError::UnsuccessfulRequest(er) => {
+                        if er.status_code == reqwest::StatusCode::NOT_FOUND {
+                            return Ok(None);
+                        } else {
+                            return Err(format!(
+                                "Failed to fetch channels (http, non-404): {:?}",
+                                er
+                            )
+                            .into());
+                        }
+                    }
+                    _ => {
+                        return Err(format!("Failed to fetch channels (http): {:?}", e).into());
+                    }
+                },
+                _ => {
+                    return Err(format!("Failed to fetch channels: {:?}", e).into());
+                }
+            },
+        };
+
+        return Ok(Some(channel));
+    }
+
+    let proxy_url = config::CONFIG.meta.sandwich_http_api.as_ref().unwrap();
+
+    let url = match guild_id {
+        Some(guild_id) => format!(
+            "{}/antiraid/api/state?col=channels&id={}&guild_id={}",
+            proxy_url, channel_id, guild_id
+        ),
+        None => format!(
+            "{}/antiraid/api/state?col=channels&id={}",
+            proxy_url, channel_id
+        ),
+    };
+
+    #[derive(serde::Serialize, serde::Deserialize)]
+    struct Resp {
+        ok: bool,
+        data: Option<serenity::all::Channel>,
+        error: Option<String>,
+    }
+
+    let resp = reqwest_client
+        .get(&url)
+        .timeout(std::time::Duration::from_secs(5))
+        .send()
+        .await?;
+
+    let status = resp.status();
+
+    let json = resp.json::<Resp>().await?;
+
+    if json.ok {
+        return Ok(json.data);
+    } else {
+        log::warn!(
+            "Sandwich proxy returned error [get channel]: {:?}, status: {:?}",
+            json.error,
+            status
+        );
+    }
+
+    // Last resort, fetch from http and then update sandwich as well
+    let channel = match channel_id.to_channel(&ctx).await {
+        Ok(channel) => channel,
+        Err(e) => match e {
+            serenity::Error::Http(e) => match e {
+                serenity::all::HttpError::UnsuccessfulRequest(er) => {
+                    if er.status_code == reqwest::StatusCode::NOT_FOUND {
+                        return Ok(None);
+                    } else {
+                        return Err(
+                            format!("Failed to fetch channels (http, non-404): {:?}", er).into(),
+                        );
+                    }
+                }
+                _ => {
+                    return Err(format!("Failed to fetch channels (http): {:?}", e).into());
+                }
+            },
+            _ => {
+                return Err(format!("Failed to fetch channels: {:?}", e).into());
+            }
+        },
+    };
+
+    // Update sandwich with a POST
+    let resp = reqwest_client
+        .post(&url)
+        .timeout(std::time::Duration::from_secs(10))
+        .json(&channel)
+        .send()
+        .await?;
+
+    if !resp.status().is_success() {
+        log::warn!(
+            "Failed to update sandwich proxy with channel data: {:?}",
+            resp.text().await
+        );
+    }
+
+    Ok(Some(channel))
 }
 
 pub enum ProxyResponse {

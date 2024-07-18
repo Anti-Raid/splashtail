@@ -1,7 +1,7 @@
 use splashcore_rs::value::Value;
 
 pub struct State {
-    /// The state of the module. This will be exposed to the client
+    /// The state of the settings operation. This will be exposed to the client
     pub state: indexmap::IndexMap<String, Value>,
     /// Columns that should not be ignore_for'd for a specific operation
     /// even if they are in the ignore_for list

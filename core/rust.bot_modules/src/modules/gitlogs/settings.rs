@@ -2,6 +2,7 @@ use futures_util::FutureExt;
 use module_settings::types::{
     settings_wrap_columns, settings_wrap_precheck, Column, ColumnAction, ColumnSuggestion, ColumnType, ConfigOption, InnerColumnType, InnerColumnTypeStringKind, OperationSpecific, OperationType, SettingsError
 };
+use serenity::all::{Permissions, ChannelType};
 use splashcore_rs::value::Value;
 use once_cell::sync::Lazy;
 
@@ -313,7 +314,10 @@ pub static REPOS: Lazy<ConfigOption> = Lazy::new(|| {
                 id: "channel_id",
                 name: "Channel ID",
                 description: "The channel to which the repository will post events to.",
-                column_type: ColumnType::new_scalar(InnerColumnType::String { min_length: None, max_length: Some(64), allowed_values: vec![], kind: InnerColumnTypeStringKind::Channel }),
+                column_type: ColumnType::new_scalar(InnerColumnType::String { min_length: None, max_length: Some(64), allowed_values: vec![], kind: InnerColumnTypeStringKind::Channel {
+                    allowed_types: vec![ChannelType::Text, ChannelType::Voice, ChannelType::PublicThread, ChannelType::PrivateThread, ChannelType::News],
+                    needed_bot_permissions: Permissions::VIEW_CHANNEL | Permissions::SEND_MESSAGES | Permissions::EMBED_LINKS | Permissions::READ_MESSAGE_HISTORY,
+                } }),
                 nullable: false,
                 unique: false,
                 suggestions: ColumnSuggestion::None {},
@@ -547,7 +551,10 @@ pub static EVENT_MODIFIERS: Lazy<ConfigOption> = Lazy::new(|| {
                 id: "redirect_channel",
                 name: "Redirect Channel",
                 description: "If set, the modifier will redirect the events to the specified channel.",
-                column_type: ColumnType::new_scalar(InnerColumnType::String { min_length: None, max_length: None, allowed_values: vec![], kind: InnerColumnTypeStringKind::Channel }),
+                column_type: ColumnType::new_scalar(InnerColumnType::String { min_length: None, max_length: None, allowed_values: vec![], kind: InnerColumnTypeStringKind::Channel {
+                    allowed_types: vec![ChannelType::Text, ChannelType::Voice, ChannelType::PublicThread, ChannelType::PrivateThread, ChannelType::News],
+                    needed_bot_permissions: Permissions::VIEW_CHANNEL | Permissions::SEND_MESSAGES | Permissions::EMBED_LINKS | Permissions::READ_MESSAGE_HISTORY,
+                } }),
                 nullable: true,
                 unique: false,
                 suggestions: ColumnSuggestion::None {},

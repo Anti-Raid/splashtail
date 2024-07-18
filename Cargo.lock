@@ -2289,6 +2289,7 @@ dependencies = [
  "log",
  "once_cell",
  "poise",
+ "proxy_support",
  "rand",
  "regex",
  "reqwest",

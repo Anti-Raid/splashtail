@@ -3,6 +3,7 @@ use module_settings::types::{
     settings_wrap_columns, settings_wrap_precheck, Column, ColumnAction, ColumnSuggestion, ColumnType, ConfigOption, InnerColumnType, InnerColumnTypeStringKind, InnerColumnTypeStringKindTemplateKind, ColumnTypeDynamicClause, OperationSpecific, OperationType, SettingsError
 };
 use once_cell::sync::Lazy;
+use serenity::all::{ChannelType, Permissions};
 use splashcore_rs::value::Value;
 
 pub static SINK: Lazy<ConfigOption> = Lazy::new(|| {
@@ -55,7 +56,10 @@ pub static SINK: Lazy<ConfigOption> = Lazy::new(|| {
                         ColumnTypeDynamicClause {
                             field: "{type}",
                             value: Value::String("channel".to_string()),
-                            column_type: ColumnType::new_scalar(InnerColumnType::String { min_length: None, max_length: None, allowed_values: vec![], kind: InnerColumnTypeStringKind::Channel })
+                            column_type: ColumnType::new_scalar(InnerColumnType::String { min_length: None, max_length: None, allowed_values: vec![], kind: InnerColumnTypeStringKind::Channel {
+                                allowed_types: vec![ChannelType::Text, ChannelType::Voice, ChannelType::PublicThread, ChannelType::PrivateThread, ChannelType::News],
+                                needed_bot_permissions: Permissions::VIEW_CHANNEL | Permissions::SEND_MESSAGES | Permissions::EMBED_LINKS | Permissions::READ_MESSAGE_HISTORY | Permissions::MANAGE_MESSAGES,
+                            } })
                         }
                     ]
                 ),
@@ -120,25 +124,6 @@ pub static SINK: Lazy<ConfigOption> = Lazy::new(|| {
                             Ok(())
                         }.boxed()),
                         on_condition: None
-                    },
-                    // If a channel, execute the check_channel IPC function
-                    ColumnAction::IpcPerModuleFunction {
-                        module: "auditlogs",
-                        function: "check_channel",
-                        arguments: indexmap::indexmap! {
-                            "channel_id" => "{sink}",
-                            "guild_id" => "{__guild_id}"
-                        },
-                        on_condition: Some(|_acc, state| {
-                            let Some(Value::String(typ)) = state.state.get("type") else {
-                                return Err(SettingsError::MissingOrInvalidField { 
-                                    field: "type".to_string(),
-                                    src: "sink->IpcPerModuleFunction [default_pre_checks]".to_string(),
-                                });
-                            };
-    
-                            Ok(typ == "channel")
-                        })
                     },
                 ])
             },

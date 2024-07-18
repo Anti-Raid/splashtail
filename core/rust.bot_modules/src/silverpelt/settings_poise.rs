@@ -11,7 +11,7 @@ fn _get_display_value(column_type: &ColumnType, value: &Value, state: &State) ->
     match column_type {
         ColumnType::Scalar { column_type } => match column_type {
             InnerColumnType::String { kind, .. } => match kind {
-                InnerColumnTypeStringKind::Channel => format!("<#{}>", value),
+                InnerColumnTypeStringKind::Channel { .. } => format!("<#{}>", value),
                 InnerColumnTypeStringKind::Role => format!("<@&{}>", value),
                 InnerColumnTypeStringKind::User => format!("<@{}>", value),
                 _ => value.to_string(),
@@ -201,6 +201,7 @@ pub async fn settings_viewer(
     let values = settings_view(
         setting,
         &cache_http,
+        &data.reqwest,
         &data.pool,
         guild_id,
         ctx.author().id,
@@ -368,6 +369,7 @@ pub async fn settings_creator(
     let mut value = settings_create(
         setting,
         &cache_http,
+        &data.reqwest,
         &data.pool,
         guild_id,
         ctx.author().id,
@@ -494,6 +496,7 @@ pub async fn settings_updater(
     let mut value = settings_update(
         setting,
         &cache_http,
+        &data.reqwest,
         &data.pool,
         guild_id,
         ctx.author().id,
@@ -622,6 +625,7 @@ pub async fn settings_deleter(
     let mut value = settings_delete(
         setting,
         &cache_http,
+        &data.reqwest,
         &data.pool,
         guild_id,
         ctx.author().id,
