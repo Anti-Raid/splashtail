@@ -1,7 +1,8 @@
 use futures_util::FutureExt;
 use module_settings::types::{
-    settings_wrap_columns, settings_wrap_precheck, Column, ColumnAction, ColumnSuggestion, ColumnType, ConfigOption, InnerColumnType, InnerColumnTypeStringKind, InnerColumnTypeStringKindTemplateKind, ColumnTypeDynamicClause, OperationSpecific, OperationType, SettingsError
+    settings_wrap_columns, settings_wrap_precheck, settings_wrap_datastore, Column, ColumnAction, ColumnSuggestion, ColumnType, ConfigOption, InnerColumnType, InnerColumnTypeStringKind, InnerColumnTypeStringKindTemplateKind, ColumnTypeDynamicClause, OperationSpecific, OperationType, SettingsError
 };
+use module_settings::data_stores::PostgresDataStore;
 use once_cell::sync::Lazy;
 use serenity::all::{ChannelType, Permissions};
 use splashcore_rs::value::Value;
@@ -15,6 +16,7 @@ pub static SINK: Lazy<ConfigOption> = Lazy::new(|| {
         guild_id: "guild_id",
         primary_key: "id",
         max_entries: 10,
+        data_store: settings_wrap_datastore(PostgresDataStore {}),
         columns: settings_wrap_columns(vec![
             Column {
                 id: "id",

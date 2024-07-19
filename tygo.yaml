@@ -17,6 +17,17 @@ packages:
   - path: "github.com/infinitybotlist/eureka/dovewing/dovetypes"
     output_path: "/silverpelt/cdn/antiraid/dev/bindings/splashtail/eureka-dovewing.ts"
 
+  - path: "github.com/bwmarrin/discordgo"
+    output_path: "/silverpelt/cdn/antiraid/dev/bindings/splashtail/discordgo.ts"
+    type_mappings:
+      time.Time: "string /* RFC3339 */"
+      time.Second: "1"
+      time.Minute: "60"
+      time.Hour: "3600"
+      time.Millisecond: "0.001"
+      time.Microsecond: "0.000001"
+      time.Nanosecond: "0.000000001"
+
   - path: "github.com/anti-raid/splashtail/core/go.std/silverpelt"
     output_path: "/silverpelt/cdn/antiraid/dev/bindings/splashtail/silverpelt.ts"
     type_mappings:

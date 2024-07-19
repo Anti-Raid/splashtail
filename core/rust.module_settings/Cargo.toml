@@ -36,6 +36,7 @@ base_data = { path = "../rust.base_data" }
 templating = { path = "../rust.templating" }
 proxy_support = { path = "../rust.proxy_support" }
 async-recursion = "1.1.1"
+async-trait = "0.1"
 
 [dependencies.tokio]
 version = "1"

@@ -9,6 +9,7 @@
 //
 // For sending a info message etc on save, the {__message} can be set
 
+use async_trait::async_trait;
 use futures::future::BoxFuture;
 use std::sync::Arc;
 
@@ -460,7 +461,7 @@ pub struct Column {
     ///
     /// Semantics:
     ///
-    /// View => The column is removed from the list of columns sent to the consumer. The key is set to its current value when executing the actions
+    /// View => The column is removed from the list of columns sent to the consumer. The value is set to its current value when executing the actions
     ///
     /// Create => All column checks other than actions are ignored. The value itself will be set to None. The key itself is set to None in state
     ///
@@ -540,7 +541,7 @@ impl std::fmt::Display for OperationType {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone)]
 pub struct ConfigOption {
     /// The ID of the option
     pub id: &'static str,
@@ -571,6 +572,17 @@ pub struct ConfigOption {
 
     /// Operation specific data
     pub operations: indexmap::IndexMap<OperationType, OperationSpecific>,
+
+    /// The underlying data store to use for fetch operations
+    ///
+    /// This can be useful in cases where postgres/etc. is not the main underlying storage (for example, seaweedfs etc.)
+    pub data_store: Arc<dyn CreateDataStore>,
+}
+
+impl PartialEq for ConfigOption {
+    fn eq(&self, other: &Self) -> bool {
+        self.id == other.id
+    }
 }
 
 /// Wraps column actions in the currently used wrapper
@@ -583,4 +595,160 @@ pub fn settings_wrap_precheck<T>(action: T) -> Arc<T> {
 /// Wraps a column
 pub fn settings_wrap_columns(columns: Vec<Column>) -> Arc<Vec<Column>> {
     Arc::new(columns)
+}
+
+/// Wraps datastore in the currently used wrapper
+///
+/// Currently, this is an Arc for now
+pub fn settings_wrap_datastore<T>(datastore: T) -> Arc<T> {
+    Arc::new(datastore)
+}
+
+/// Trait to create a new data store
+#[async_trait]
+pub trait CreateDataStore: Send + Sync {
+    /// Create a datastore performing any needed setup
+    #[allow(clippy::too_many_arguments)]
+    async fn create(
+        &self,
+        setting: &ConfigOption,
+        cache_http: &botox::cache::CacheHttpImpl,
+        reqwest_client: &reqwest::Client,
+        pool: &sqlx::PgPool,
+        guild_id: serenity::all::GuildId,
+        author: serenity::all::UserId,
+        permodule_executor: &dyn base_data::permodule::PermoduleFunctionExecutor,
+    ) -> Result<Box<dyn DataStore>, SettingsError>;
+}
+
+impl std::fmt::Debug for dyn CreateDataStore {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "CreateDataStore")
+    }
+}
+
+/// How should data be fetched
+#[async_trait]
+pub trait DataStore: Send + Sync {
+    /// Start a transaction
+    #[allow(clippy::too_many_arguments)]
+    async fn start_transaction(
+        &mut self,
+        setting: &ConfigOption,
+        cache_http: &botox::cache::CacheHttpImpl,
+        reqwest_client: &reqwest::Client,
+        pool: &sqlx::PgPool,
+        guild_id: serenity::all::GuildId,
+        author: serenity::all::UserId,
+        permodule_executor: &dyn base_data::permodule::PermoduleFunctionExecutor,
+    ) -> Result<(), SettingsError>;
+
+    /// Commit the changes to the data store
+    #[allow(clippy::too_many_arguments)]
+    async fn commit(
+        &mut self,
+        setting: &ConfigOption,
+        cache_http: &botox::cache::CacheHttpImpl,
+        reqwest_client: &reqwest::Client,
+        pool: &sqlx::PgPool,
+        guild_id: serenity::all::GuildId,
+        author: serenity::all::UserId,
+        permodule_executor: &dyn base_data::permodule::PermoduleFunctionExecutor,
+    ) -> Result<(), SettingsError>;
+
+    /// Fetches all requested fields of a setting for a given guild matching filters
+    #[allow(clippy::too_many_arguments)]
+    async fn fetch_all(
+        &self,
+        setting: &ConfigOption,
+        cache_http: &botox::cache::CacheHttpImpl,
+        reqwest_client: &reqwest::Client,
+        pool: &sqlx::PgPool,
+        guild_id: serenity::all::GuildId,
+        author: serenity::all::UserId,
+        permodule_executor: &dyn base_data::permodule::PermoduleFunctionExecutor,
+        fields: &[String],
+        filters: indexmap::IndexMap<String, splashcore_rs::value::Value>,
+    ) -> Result<Vec<super::state::State>, SettingsError>;
+
+    /// Fetch the count of all entries matching filters
+    #[allow(clippy::too_many_arguments)]
+    async fn matching_entry_count(
+        &self,
+        setting: &ConfigOption,
+        cache_http: &botox::cache::CacheHttpImpl,
+        reqwest_client: &reqwest::Client,
+        pool: &sqlx::PgPool,
+        guild_id: serenity::all::GuildId,
+        author: serenity::all::UserId,
+        permodule_executor: &dyn base_data::permodule::PermoduleFunctionExecutor,
+        filters: indexmap::IndexMap<String, splashcore_rs::value::Value>,
+    ) -> Result<usize, SettingsError> {
+        let data = self
+            .fetch_all(
+                setting,
+                cache_http,
+                reqwest_client,
+                pool,
+                guild_id,
+                author,
+                permodule_executor,
+                &[setting.primary_key.to_string()],
+                filters,
+            )
+            .await?;
+
+        Ok(data.len())
+    }
+
+    /// Creates a new entry given a set of columns to set returning the newly created entry
+    #[allow(clippy::too_many_arguments)]
+    async fn create_entry(
+        &self,
+        setting: &ConfigOption,
+        cache_http: &botox::cache::CacheHttpImpl,
+        reqwest_client: &reqwest::Client,
+        pool: &sqlx::PgPool,
+        guild_id: serenity::all::GuildId,
+        author: serenity::all::UserId,
+        permodule_executor: &dyn base_data::permodule::PermoduleFunctionExecutor,
+        entry: indexmap::IndexMap<String, splashcore_rs::value::Value>,
+    ) -> Result<super::state::State, SettingsError>;
+
+    /// Updates all matching entry given a set of columns to set and a set of filters
+    #[allow(clippy::too_many_arguments)]
+    async fn update_matching_entries(
+        &self,
+        setting: &ConfigOption,
+        cache_http: &botox::cache::CacheHttpImpl,
+        reqwest_client: &reqwest::Client,
+        pool: &sqlx::PgPool,
+        guild_id: serenity::all::GuildId,
+        author: serenity::all::UserId,
+        permodule_executor: &dyn base_data::permodule::PermoduleFunctionExecutor,
+        filters: indexmap::IndexMap<String, splashcore_rs::value::Value>,
+        entry: indexmap::IndexMap<String, splashcore_rs::value::Value>,
+    ) -> Result<(), SettingsError>;
+
+    /// Deletes entries given a set of filters
+    ///
+    /// NOTE: Data stores should return an error if no rows are deleted
+    #[allow(clippy::too_many_arguments)]
+    async fn delete_matching_entries(
+        &self,
+        setting: &ConfigOption,
+        cache_http: &botox::cache::CacheHttpImpl,
+        reqwest_client: &reqwest::Client,
+        pool: &sqlx::PgPool,
+        guild_id: serenity::all::GuildId,
+        author: serenity::all::UserId,
+        permodule_executor: &dyn base_data::permodule::PermoduleFunctionExecutor,
+        filters: indexmap::IndexMap<String, splashcore_rs::value::Value>,
+    ) -> Result<(), SettingsError>;
+}
+
+impl std::fmt::Debug for dyn DataStore {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "DataStore")
+    }
 }

@@ -1,6 +1,10 @@
-use module_settings::types::{
-    settings_wrap_columns, settings_wrap_precheck, Column, ColumnSuggestion, ColumnType,
-    ConfigOption, InnerColumnType, InnerColumnTypeStringKind, OperationSpecific, OperationType,
+use module_settings::{
+    data_stores::PostgresDataStore,
+    types::{
+        settings_wrap_columns, settings_wrap_datastore, settings_wrap_precheck, Column,
+        ColumnSuggestion, ColumnType, ConfigOption, InnerColumnType, InnerColumnTypeStringKind,
+        OperationSpecific, OperationType,
+    },
 };
 use once_cell::sync::Lazy;
 use strum::VariantNames;
@@ -14,6 +18,7 @@ pub static GUILD_LIMITS: Lazy<ConfigOption> = Lazy::new(|| {
         guild_id: "guild_id",
         primary_key: "limit_id",
         max_entries: 10,
+        data_store: settings_wrap_datastore(PostgresDataStore {}),
         columns: settings_wrap_columns(vec![
             Column {
                 id: "limit_id",

@@ -120,6 +120,9 @@ ts:
 	# Patch to change package name to 'splashtail_types'
 	#sed -i 's:package types:package splashtail_types:g' $(CDN_PATH)/dev/bindings/splashtail/go/types/{*.go,*.ts}
 
+	# Patch to change all "SelectMenu = any;" to "SelectMenu = undefined /*tygo workaround*/;" to work around tygo issue
+	sed -i 's:SelectMenu = any;:SelectMenu = undefined /*tygo workaround*/;:g' $(CDN_PATH)/dev/bindings/splashtail/discordgo.ts
+
 	cp -rf $(CDN_PATH)/dev/bindings/splashtail/* services/website/src/lib/generated
 	rm -rf services/website/src/lib/generated/go	
 

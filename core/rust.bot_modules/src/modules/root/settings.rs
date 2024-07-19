@@ -1,6 +1,10 @@
-use module_settings::types::{
-    settings_wrap_columns, settings_wrap_precheck, Column, ColumnSuggestion, ColumnType,
-    ConfigOption, InnerColumnType, InnerColumnTypeStringKind, OperationSpecific, OperationType,
+use module_settings::{
+    data_stores::PostgresDataStore,
+    types::{
+        settings_wrap_columns, settings_wrap_datastore, settings_wrap_precheck, Column,
+        ColumnSuggestion, ColumnType, ConfigOption, InnerColumnType, InnerColumnTypeStringKind,
+        OperationSpecific, OperationType,
+    },
 };
 use once_cell::sync::Lazy;
 
@@ -12,6 +16,7 @@ pub static INSPECTOR_FAKE_BOTS: Lazy<ConfigOption> = Lazy::new(|| ConfigOption {
     guild_id: "published_from",
     primary_key: "bot_id",
     max_entries: 1024,
+    data_store: settings_wrap_datastore(PostgresDataStore {}),
     columns: settings_wrap_columns(vec![
         Column {
             id: "bot_id",

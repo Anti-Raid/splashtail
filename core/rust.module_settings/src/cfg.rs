@@ -4,7 +4,6 @@ use super::types::{
     ColumnType, ConfigOption, InnerColumnType, InnerColumnTypeStringKind, OperationType,
 };
 use splashcore_rs::value::Value;
-use sqlx::Row;
 
 /// Validates the value against the schema's column type handling schema checks if `perform_schema_checks` is true
 ///
@@ -562,201 +561,6 @@ async fn _validate_and_parse_value(
     }
 }
 
-/// Binds a value to a query
-///
-/// Note that Maps are binded as JSONs
-///
-/// `default_column_type` - The (default) column type to use if the value is None. This should be the column_type
-fn _query_bind_value<'a>(
-    query: sqlx::query::Query<'a, sqlx::Postgres, sqlx::postgres::PgArguments>,
-    value: Value,
-    default_column_type: &ColumnType,
-    state: &State,
-) -> sqlx::query::Query<'a, sqlx::Postgres, sqlx::postgres::PgArguments> {
-    match value {
-        Value::Uuid(value) => query.bind(value),
-        Value::String(value) => query.bind(value),
-        Value::Timestamp(value) => query.bind(value),
-        Value::TimestampTz(value) => query.bind(value),
-        Value::Interval(value) => query.bind(value),
-        Value::Integer(value) => query.bind(value),
-        Value::Float(value) => query.bind(value),
-        Value::Boolean(value) => query.bind(value),
-        Value::List(values) => {
-            // Get the type of the first element
-            let first = values.first();
-
-            if let Some(first) = first {
-                // This is hacky and long but sqlx doesn't support binding lists
-                //
-                // Loop over all values to make a Vec<T> then bind that
-                match first {
-                    Value::Uuid(_) => {
-                        let mut vec = Vec::new();
-
-                        for value in values {
-                            if let Value::Uuid(value) = value {
-                                vec.push(value);
-                            }
-                        }
-
-                        query.bind(vec)
-                    }
-                    Value::String(_) => {
-                        let mut vec = Vec::new();
-
-                        for value in values {
-                            if let Value::String(value) = value {
-                                vec.push(value);
-                            }
-                        }
-
-                        query.bind(vec)
-                    }
-                    Value::Timestamp(_) => {
-                        let mut vec = Vec::new();
-
-                        for value in values {
-                            if let Value::Timestamp(value) = value {
-                                vec.push(value);
-                            }
-                        }
-
-                        query.bind(vec)
-                    }
-                    Value::TimestampTz(_) => {
-                        let mut vec = Vec::new();
-
-                        for value in values {
-                            if let Value::TimestampTz(value) = value {
-                                vec.push(value);
-                            }
-                        }
-
-                        query.bind(vec)
-                    }
-                    Value::Interval(_) => {
-                        let mut vec = Vec::new();
-
-                        for value in values {
-                            if let Value::Interval(value) = value {
-                                vec.push(value);
-                            }
-                        }
-
-                        query.bind(vec)
-                    }
-                    Value::Integer(_) => {
-                        let mut vec = Vec::new();
-
-                        for value in values {
-                            if let Value::Integer(value) = value {
-                                vec.push(value);
-                            }
-                        }
-
-                        query.bind(vec)
-                    }
-                    Value::Float(_) => {
-                        let mut vec = Vec::new();
-
-                        for value in values {
-                            if let Value::Float(value) = value {
-                                vec.push(value);
-                            }
-                        }
-
-                        query.bind(vec)
-                    }
-                    Value::Boolean(_) => {
-                        let mut vec = Vec::new();
-
-                        for value in values {
-                            if let Value::Boolean(value) = value {
-                                vec.push(value);
-                            }
-                        }
-
-                        query.bind(vec)
-                    }
-                    // In all other cases (list/map)
-                    Value::Map(_) => {
-                        let mut vec = Vec::new();
-
-                        for value in values {
-                            vec.push(value.to_json());
-                        }
-
-                        query.bind(vec)
-                    }
-                    Value::List(_) => {
-                        let mut vec = Vec::new();
-
-                        for value in values {
-                            vec.push(value.to_json());
-                        }
-
-                        query.bind(vec)
-                    }
-                    Value::None => {
-                        let vec: Vec<String> = Vec::new();
-                        query.bind(vec)
-                    }
-                }
-            } else {
-                let vec: Vec<String> = Vec::new();
-                query.bind(vec)
-            }
-        }
-        Value::Map(_) => query.bind(value.to_json()),
-        Value::None => match default_column_type {
-            ColumnType::Scalar {
-                column_type: column_type_hint,
-            } => match column_type_hint {
-                InnerColumnType::Uuid {} => query.bind(None::<sqlx::types::uuid::Uuid>),
-                InnerColumnType::String { .. } => query.bind(None::<String>),
-                InnerColumnType::Timestamp {} => query.bind(None::<chrono::NaiveDateTime>),
-                InnerColumnType::TimestampTz {} => {
-                    query.bind(None::<chrono::DateTime<chrono::Utc>>)
-                }
-                InnerColumnType::Interval {} => query.bind(None::<chrono::Duration>),
-                InnerColumnType::Integer {} => query.bind(None::<i64>),
-                InnerColumnType::Float {} => query.bind(None::<f64>),
-                InnerColumnType::BitFlag { .. } => query.bind(None::<i64>),
-                InnerColumnType::Boolean {} => query.bind(None::<bool>),
-                InnerColumnType::Json {} => query.bind(None::<serde_json::Value>),
-            },
-            ColumnType::Array {
-                inner: column_type_hint,
-            } => match column_type_hint {
-                InnerColumnType::Uuid {} => query.bind(None::<Vec<sqlx::types::uuid::Uuid>>),
-                InnerColumnType::String { .. } => query.bind(None::<Vec<String>>),
-                InnerColumnType::Timestamp {} => query.bind(None::<Vec<chrono::NaiveDateTime>>),
-                InnerColumnType::TimestampTz {} => {
-                    query.bind(None::<Vec<chrono::DateTime<chrono::Utc>>>)
-                }
-                InnerColumnType::Interval {} => query.bind(None::<Vec<chrono::Duration>>),
-                InnerColumnType::Integer {} => query.bind(None::<Vec<i64>>),
-                InnerColumnType::Float {} => query.bind(None::<Vec<f64>>),
-                InnerColumnType::BitFlag { .. } => query.bind(None::<Vec<i64>>),
-                InnerColumnType::Boolean {} => query.bind(None::<Vec<bool>>),
-                InnerColumnType::Json {} => query.bind(None::<Vec<serde_json::Value>>),
-            },
-            ColumnType::Dynamic { clauses } => {
-                for clause in clauses {
-                    let _value = state.template_to_string(clause.field);
-
-                    if _value == clause.value {
-                        return _query_bind_value(query, value, &clause.column_type, state);
-                    }
-                }
-
-                query.bind(None::<String>) // Default to string
-            }
-        },
-    }
-}
-
 /// Settings API: View implementation
 pub async fn settings_view(
     setting: &ConfigOption,
@@ -773,47 +577,49 @@ pub async fn settings_view(
         });
     };
 
+    let data_store = setting
+        .data_store
+        .create(
+            setting,
+            cache_http,
+            reqwest_client,
+            pool,
+            guild_id,
+            author,
+            permodule_executor,
+        )
+        .await?;
+
     let cols = setting
         .columns
         .iter()
         .map(|c| c.id.to_string())
         .collect::<Vec<String>>();
 
-    let row = sqlx::query(
-        format!(
-            "SELECT {} FROM {} WHERE {} = $1",
-            cols.join(", "),
-            setting.table,
-            setting.guild_id
+    let states = data_store
+        .fetch_all(
+            setting,
+            cache_http,
+            reqwest_client,
+            pool,
+            guild_id,
+            author,
+            permodule_executor,
+            &cols,
+            indexmap::IndexMap::new(),
         )
-        .as_str(),
-    )
-    .bind(guild_id.to_string())
-    .fetch_all(pool)
-    .await
-    .map_err(|e| SettingsError::Generic {
-        message: e.to_string(),
-        src: "settings_view [query fetch_all]".to_string(),
-        typ: "internal".to_string(),
-    })?;
+        .await?;
 
-    if row.is_empty() {
+    if states.is_empty() {
         return Ok(Vec::new());
     }
 
     let mut values: Vec<State> = Vec::new();
 
-    for row in row {
-        let mut state = State::new_with_special_variables(author, guild_id);
-
+    for mut state in states {
         // We know that the columns are in the same order as the row
-        for (i, col) in setting.columns.iter().enumerate() {
-            // Fetch and validate the value
-            let mut val = Value::from_sqlx(&row, i).map_err(|e| SettingsError::Generic {
-                message: e.to_string(),
-                src: "settings_view [Value::from_sqlx]".to_string(),
-                typ: "internal".to_string(),
-            })?;
+        for col in setting.columns.iter() {
+            let mut val = state.state.swap_remove(col.id).unwrap_or(Value::None);
 
             // Validate the value. returning the parsed value
             val = _validate_and_parse_value(
@@ -829,13 +635,13 @@ pub async fn settings_view(
             )
             .await?;
 
+            // Reinsert
+            state.state.insert(col.id.to_string(), val);
+
             let actions = col
                 .pre_checks
                 .get(&OperationType::View)
                 .unwrap_or(&col.default_pre_checks);
-
-            // Insert the value into the map
-            state.state.insert(col.id.to_string(), val);
 
             super::action_executor::execute_actions(
                 &mut state,
@@ -857,73 +663,34 @@ pub async fn settings_view(
             });
         };
 
-        let pkey = pkey.clone(); // Clone to avoid immutable borrow
-
-        let Some(pkey_column) = setting.columns.iter().find(|c| c.id == setting.primary_key) else {
-            return Err(SettingsError::Generic {
-                message: "Primary key column not found".to_string(),
-                src: "settings_update [pkey_column_let_else]".to_string(),
-                typ: "internal".to_string(),
-            });
-        };
-
         // Apply columns_to_set in operation specific data if there are columns to set
         if !operation_specific.columns_to_set.is_empty() {
-            let mut set_stmt = "".to_string();
-            let mut values = Vec::new();
+            let filters = indexmap::indexmap! {
+                setting.primary_key.to_string() => pkey.clone(),
+            };
+            let mut update = indexmap::IndexMap::new();
 
-            let mut i = 0;
             for (col, value) in operation_specific.columns_to_set.iter() {
-                // Get column type from schema for db query hinting
-                let Some(column) = setting.columns.iter().find(|c| c.id == *col) else {
-                    return Err(SettingsError::Generic {
-                        message: format!("Column `{}` not found in schema", col),
-                        src: "settings_create [column_type_let_else]".to_string(),
-                        typ: "internal".to_string(),
-                    });
-                };
-
-                set_stmt.push_str(&format!("{} = ${}, ", col, i + 1));
-
                 let value = state.template_to_string(value);
-                values.push((value.clone(), &column.column_type));
 
                 // Add directly to state
-                state.state.insert(col.to_string(), value);
-
-                i += 1;
+                state.state.insert(col.to_string(), value.clone());
+                update.insert(col.to_string(), value);
             }
 
-            // Remove the trailing comma
-            set_stmt.pop();
-
-            let sql_stmt = format!(
-                "UPDATE {} SET {} WHERE {} = ${} AND {} = ${}",
-                setting.table,
-                set_stmt,
-                setting.guild_id,
-                i + 1,
-                setting.primary_key,
-                i + 2
-            );
-
-            let mut query = sqlx::query(sql_stmt.as_str());
-
-            for (value, column_type) in values {
-                query = _query_bind_value(query, value, column_type, &state);
-            }
-
-            query = query.bind(guild_id.to_string());
-            query = _query_bind_value(query, pkey, &pkey_column.column_type, &state);
-
-            query
-                .execute(pool)
-                .await
-                .map_err(|e| SettingsError::Generic {
-                    message: e.to_string(),
-                    src: "settings_view [query execute]".to_string(),
-                    typ: "internal".to_string(),
-                })?;
+            data_store
+                .update_matching_entries(
+                    setting,
+                    cache_http,
+                    reqwest_client,
+                    pool,
+                    guild_id,
+                    author,
+                    permodule_executor,
+                    filters,
+                    update,
+                )
+                .await?;
         }
 
         // Remove ignored columns + secret columns now that the actions have been executed
@@ -1023,56 +790,65 @@ pub async fn settings_create(
     let fields = (); // Reset fields to avoid accidental use of user data
 
     // Start the transaction now that basic validation is done
-    let mut tx = pool.begin().await.map_err(|e| SettingsError::Generic {
-        message: e.to_string(),
-        src: "settings_create [pool.begin]".to_string(),
-        typ: "internal".to_string(),
-    })?;
+    let mut data_store = setting
+        .data_store
+        .create(
+            setting,
+            cache_http,
+            reqwest_client,
+            pool,
+            guild_id,
+            author,
+            permodule_executor,
+        )
+        .await?;
+
+    data_store
+        .start_transaction(
+            setting,
+            cache_http,
+            reqwest_client,
+            pool,
+            guild_id,
+            author,
+            permodule_executor,
+        )
+        .await?;
 
     // Get all ids we currently have to check max_entries and uniqueness of the primary key in one shot
-    let sql_stmt = format!(
-        "SELECT {} FROM {} WHERE {} = $1",
-        setting.primary_key, setting.table, setting.guild_id
-    );
+    let ids = data_store
+        .fetch_all(
+            setting,
+            cache_http,
+            reqwest_client,
+            pool,
+            guild_id,
+            author,
+            permodule_executor,
+            &[setting.primary_key.to_string()],
+            indexmap::IndexMap::new(),
+        )
+        .await?;
 
-    let query = sqlx::query(sql_stmt.as_str()).bind(guild_id.to_string());
-
-    let row = query
-        .fetch_all(&mut *tx)
-        .await
-        .map_err(|e| SettingsError::Generic {
-            message: e.to_string(),
-            src: "settings_create [query fetch_all]".to_string(),
-            typ: "internal".to_string(),
-        })?;
-
-    if row.len() > setting.max_entries {
+    if ids.len() > setting.max_entries {
         return Err(SettingsError::MaximumCountReached {
             max: setting.max_entries,
-            current: row.len(),
+            current: ids.len(),
         });
     }
 
-    // Check pkey uniqueness here
-    let mut ids: Vec<Value> = Vec::with_capacity(row.len());
-
-    for row in row.iter() {
-        let id = Value::from_sqlx(row, 0).map_err(|e| SettingsError::Generic {
-            message: e.to_string(),
-            src: "settings_create [Value::from_sqlx]".to_string(),
-            typ: "internal".to_string(),
-        })?;
-
+    for id in ids.iter() {
+        let id = id.state.get(setting.primary_key).unwrap_or(&Value::None);
         // Check if the pkey is unique
-        if state.state.get(setting.primary_key) == Some(&id) {
+        if state.state.get(setting.primary_key) == Some(id) {
             return Err(SettingsError::RowExists {
                 column_id: setting.primary_key.to_string(),
                 count: 1,
             });
         }
-
-        ids.push(id);
     }
+
+    drop(ids); // Drop ids as it is no longer needed
 
     // Now execute all actions and handle null/unique/pkey checks
     for column in setting.columns.iter() {
@@ -1121,79 +897,26 @@ pub async fn settings_create(
         //
         // In the case of create, we can do this directly within the column validation
         if column.unique {
-            match value {
-                Value::None => {
-                    let sql_stmt = format!(
-                        "SELECT COUNT(*) FROM {} WHERE {} = $1 AND {} IS NULL",
-                        setting.table, setting.guild_id, column.id
-                    );
+            let count = data_store
+                .matching_entry_count(
+                    setting,
+                    cache_http,
+                    reqwest_client,
+                    pool,
+                    guild_id,
+                    author,
+                    permodule_executor,
+                    indexmap::indexmap! {
+                        column.id.to_string() => value.clone()
+                    },
+                )
+                .await?;
 
-                    let query = sqlx::query(sql_stmt.as_str()).bind(guild_id.to_string());
-
-                    let row = query
-                        .fetch_one(&mut *tx)
-                        .await
-                        .map_err(|e| SettingsError::Generic {
-                            message: e.to_string(),
-                            src: format!("settings_create [unique check (null value), query.fetch_one] for column `{}`", column.id),
-                            typ: "internal".to_string(),
-                        })?;
-
-                    let count = row.try_get::<i64, _>(0)
-                        .map_err(|e| SettingsError::Generic {
-                            message: e.to_string(),
-                            src: format!("settings_create [unique check (null value), row.try_get] for column `{}`", column.id),
-                            typ: "internal".to_string(),
-                        })?;
-
-                    if count > 0 {
-                        return Err(SettingsError::RowExists {
-                            column_id: column.id.to_string(),
-                            count,
-                        });
-                    }
-                }
-                _ => {
-                    let sql_stmt = format!(
-                        "SELECT COUNT(*) FROM {} WHERE {} = $1 AND {} = $2",
-                        setting.table, setting.guild_id, column.id
-                    );
-
-                    let mut query = sqlx::query(sql_stmt.as_str()).bind(guild_id.to_string());
-
-                    query = _query_bind_value(query, value.clone(), &column.column_type, &state);
-
-                    let row =
-                        query
-                            .fetch_one(&mut *tx)
-                            .await
-                            .map_err(|e| SettingsError::Generic {
-                                message: e.to_string(),
-                                src: format!(
-                                "settings_create [unique check, query.fetch_one] for column `{}`",
-                                column.id
-                            ),
-                                typ: "internal".to_string(),
-                            })?;
-
-                    let count = row
-                        .try_get::<i64, _>(0)
-                        .map_err(|e| SettingsError::Generic {
-                            message: e.to_string(),
-                            src: format!(
-                                "settings_create [unique check, row.try_get] for column `{}`",
-                                column.id
-                            ),
-                            typ: "internal".to_string(),
-                        })?;
-
-                    if count > 0 {
-                        return Err(SettingsError::RowExists {
-                            column_id: column.id.to_string(),
-                            count,
-                        });
-                    }
-                }
+            if count > 0 {
+                return Err(SettingsError::RowExists {
+                    column_id: column.id.to_string(),
+                    count: count.try_into().unwrap_or(i64::MAX),
+                });
             }
         }
     }
@@ -1217,71 +940,31 @@ pub async fn settings_create(
     }
 
     // Create the row
-    // First create the $N's from the cols starting with 2 as 1 is the guild_id
-    let mut n_params = "".to_string();
-    let mut col_params = "".to_string();
-    for (i, (col, _)) in state.get_public().iter().enumerate() {
-        n_params.push_str(&format!("${}", i + 2));
-        col_params.push_str(col);
-
-        n_params.push(',');
-        col_params.push(',');
-    }
-
-    // Remove the trailing comma
-    n_params.pop();
-    col_params.pop();
-
-    // Execute the SQL statement
-    let sql_stmt = format!(
-        "INSERT INTO {} ({},{}) VALUES ($1,{}) RETURNING {}",
-        setting.table, setting.guild_id, col_params, n_params, setting.primary_key
-    );
-
-    let mut query = sqlx::query(sql_stmt.as_str());
-
-    // Bind the sql query arguments
-    query = query.bind(guild_id.to_string());
-
-    for (col, value) in state.get_public().iter() {
-        // Get column type from schema for db query hinting
-        let Some(column) = setting.columns.iter().find(|c| c.id == col) else {
-            return Err(SettingsError::Generic {
-                message: format!("Column `{}` not found in schema", col),
-                src: "settings_create [column_type_let_else]".to_string(),
-                typ: "internal".to_string(),
-            });
-        };
-
-        query = _query_bind_value(query, value.clone(), &column.column_type, &state);
-    }
-
-    // Execute the query
-    let pkey_row = query
-        .fetch_one(&mut *tx)
-        .await
-        .map_err(|e| SettingsError::Generic {
-            message: e.to_string(),
-            src: "settings_create [query execute]".to_string(),
-            typ: "internal".to_string(),
-        })?;
-
-    // Save pkey to state
-    state.state.insert(
-        setting.primary_key.to_string(),
-        Value::from_sqlx(&pkey_row, 0).map_err(|e| SettingsError::Generic {
-            message: e.to_string(),
-            src: "settings_create [Value::from_sqlx]".to_string(),
-            typ: "internal".to_string(),
-        })?,
-    );
+    let state = data_store
+        .create_entry(
+            setting,
+            cache_http,
+            reqwest_client,
+            pool,
+            guild_id,
+            author,
+            permodule_executor,
+            state.get_public(),
+        )
+        .await?;
 
     // Commit the transaction
-    tx.commit().await.map_err(|e| SettingsError::Generic {
-        message: e.to_string(),
-        src: "settings_create [tx.commit]".to_string(),
-        typ: "internal".to_string(),
-    })?;
+    data_store
+        .commit(
+            setting,
+            cache_http,
+            reqwest_client,
+            pool,
+            guild_id,
+            author,
+            permodule_executor,
+        )
+        .await?;
 
     Ok(state)
 }
@@ -1357,7 +1040,7 @@ pub async fn settings_update(
     let fields = (); // Reset fields to avoid accidental use of user data
 
     // Get out the pkey and pkey_column data here as we need it for the rest of the update
-    let Some((pkey_column, pkey)) = pkey else {
+    let Some((_pkey_column, pkey)) = pkey else {
         return Err(SettingsError::MissingOrInvalidField {
             field: setting.primary_key.to_string(),
             src: "settings_update [pkey_let]".to_string(),
@@ -1372,44 +1055,60 @@ pub async fn settings_update(
         });
     }
 
+    let mut data_store = setting
+        .data_store
+        .create(
+            setting,
+            cache_http,
+            reqwest_client,
+            pool,
+            guild_id,
+            author,
+            permodule_executor,
+        )
+        .await?;
+
     // Start the transaction now that basic validation is done
-    let mut tx = pool.begin().await.map_err(|e| SettingsError::Generic {
-        message: e.to_string(),
-        src: "settings_create [pool.begin]".to_string(),
-        typ: "internal".to_string(),
-    })?;
+    data_store
+        .start_transaction(
+            setting,
+            cache_http,
+            reqwest_client,
+            pool,
+            guild_id,
+            author,
+            permodule_executor,
+        )
+        .await?;
 
     // Now retrieve all the unchanged fields
     if !unchanged_fields.is_empty() {
-        let sql_stmt = format!(
-            "SELECT {} FROM {} WHERE {} = $1 AND {} = $2",
-            unchanged_fields.join(", "),
-            setting.table,
-            setting.guild_id,
-            setting.primary_key
-        );
+        let mut data = data_store
+            .fetch_all(
+                setting,
+                cache_http,
+                reqwest_client,
+                pool,
+                guild_id,
+                author,
+                permodule_executor,
+                &unchanged_fields,
+                indexmap::indexmap! {
+                    setting.primary_key.to_string() => pkey.clone(),
+                },
+            )
+            .await?;
 
-        let mut query = sqlx::query(sql_stmt.as_str()).bind(guild_id.to_string());
+        if data.is_empty() {
+            return Err(SettingsError::RowDoesNotExist {
+                column_id: setting.primary_key.to_string(),
+            });
+        }
 
-        query = _query_bind_value(query, pkey.clone(), &pkey_column.column_type, &state);
+        let unchanged_state = data.pop().unwrap(); // We know there is only one row
 
-        let row = query
-            .fetch_one(&mut *tx)
-            .await
-            .map_err(|e| SettingsError::Generic {
-                message: e.to_string(),
-                src: "settings_update [retrieve_unchanged, query.fetch_one]".to_string(),
-                typ: "internal".to_string(),
-            })?;
-
-        for (i, col) in unchanged_fields.iter().enumerate() {
-            let val = Value::from_sqlx(&row, i).map_err(|e| SettingsError::Generic {
-                message: e.to_string(),
-                src: "settings_update [retrieve_unchanged, Value::from_sqlx]".to_string(),
-                typ: "internal".to_string(),
-            })?;
-
-            state.state.insert(col.to_string(), val);
+        for (k, v) in unchanged_state.state.into_iter() {
+            state.state.insert(k.to_string(), v);
         }
     }
 
@@ -1460,161 +1159,60 @@ pub async fn settings_update(
         //
         // ** Difference from create: We can't treat unique and primary key the same as the unique check must take into account the existing row **
         if column.unique {
-            match value {
-                Value::None => {
-                    let sql_stmt = format!(
-                        "SELECT COUNT(*) FROM {} WHERE {} = $1 AND {} IS NULL AND {} != $2",
-                        setting.table, setting.guild_id, column.id, setting.primary_key
-                    );
+            let ids = data_store
+                .fetch_all(
+                    setting,
+                    cache_http,
+                    reqwest_client,
+                    pool,
+                    guild_id,
+                    author,
+                    permodule_executor,
+                    &[setting.primary_key.to_string()],
+                    indexmap::indexmap! {
+                        column.id.to_string() => value.clone(),
+                    },
+                )
+                .await?;
 
-                    let mut query = sqlx::query(sql_stmt.as_str()).bind(guild_id.to_string());
+            let ids = ids
+                .into_iter()
+                .filter(|id| {
+                    let id = id.state.get(column.id).unwrap_or(&Value::None);
+                    id != &pkey
+                })
+                .collect::<Vec<State>>();
 
-                    query =
-                        _query_bind_value(query, pkey.clone(), &pkey_column.column_type, &state);
-
-                    let row = query
-                        .fetch_one(&mut *tx)
-                        .await
-                        .map_err(|e| SettingsError::Generic {
-                            message: e.to_string(),
-                            src: format!("settings_update [unique check (null value), query.fetch_one] for column `{}`", column.id),
-                            typ: "internal".to_string(),
-                        })?;
-
-                    let count = row.try_get::<i64, _>(0)
-                        .map_err(|e| SettingsError::Generic {
-                            message: e.to_string(),
-                            src: format!("settings_update [unique check (null value), row.try_get] for column `{}`", column.id),
-                            typ: "internal".to_string(),
-                        })?;
-
-                    if count > 0 {
-                        return Err(SettingsError::RowExists {
-                            column_id: column.id.to_string(),
-                            count,
-                        });
-                    }
-                }
-                _ => {
-                    let sql_stmt = format!(
-                        "SELECT COUNT(*) FROM {} WHERE {} = $1 AND {} = $2 AND {} != $3",
-                        setting.table, setting.guild_id, column.id, setting.primary_key
-                    );
-
-                    let mut query = sqlx::query(sql_stmt.as_str()).bind(guild_id.to_string());
-
-                    query = _query_bind_value(query, value.clone(), &column.column_type, &state);
-                    query =
-                        _query_bind_value(query, pkey.clone(), &pkey_column.column_type, &state);
-
-                    let row =
-                        query
-                            .fetch_one(&mut *tx)
-                            .await
-                            .map_err(|e| SettingsError::Generic {
-                                message: e.to_string(),
-                                src: format!(
-                                "settings_update [unique check, query.fetch_one] for column `{}`",
-                                column.id
-                            ),
-                                typ: "internal".to_string(),
-                            })?;
-
-                    let count = row
-                        .try_get::<i64, _>(0)
-                        .map_err(|e| SettingsError::Generic {
-                            message: e.to_string(),
-                            src: format!(
-                                "settings_update [unique check, row.try_get] for column `{}`",
-                                column.id
-                            ),
-                            typ: "internal".to_string(),
-                        })?;
-
-                    if count > 0 {
-                        return Err(SettingsError::RowExists {
-                            column_id: column.id.to_string(),
-                            count,
-                        });
-                    }
-                }
+            if !ids.is_empty() {
+                return Err(SettingsError::RowExists {
+                    column_id: column.id.to_string(),
+                    count: ids.len().try_into().unwrap_or(i64::MAX),
+                });
             }
         }
 
         // Handle cases of primary key next
         // ** This is unique to updates **
         if column.id == setting.primary_key {
-            match value {
-                Value::None => {
-                    let sql_stmt = format!(
-                        "SELECT COUNT(*) FROM {} WHERE {} = $1 AND {} IS NULL",
-                        setting.table, setting.guild_id, column.id
-                    );
+            let count = data_store
+                .matching_entry_count(
+                    setting,
+                    cache_http,
+                    reqwest_client,
+                    pool,
+                    guild_id,
+                    author,
+                    permodule_executor,
+                    indexmap::indexmap! {
+                        column.id.to_string() => value.clone(),
+                    },
+                )
+                .await?;
 
-                    let query = sqlx::query(sql_stmt.as_str()).bind(guild_id.to_string());
-
-                    let row = query
-                        .fetch_one(&mut *tx)
-                        .await
-                        .map_err(|e| SettingsError::Generic {
-                            message: e.to_string(),
-                            src: format!("settings_update [unique check (null value), query.fetch_one] for column `{}`", column.id),
-                            typ: "internal".to_string(),
-                        })?;
-
-                    let count = row.try_get::<i64, _>(0)
-                        .map_err(|e| SettingsError::Generic {
-                            message: e.to_string(),
-                            src: format!("settings_update [unique check (null value), row.try_get] for column `{}`", column.id),
-                            typ: "internal".to_string(),
-                        })?;
-
-                    if count == 0 {
-                        return Err(SettingsError::RowDoesNotExist {
-                            column_id: column.id.to_string(),
-                        });
-                    }
-                }
-                _ => {
-                    let sql_stmt = format!(
-                        "SELECT COUNT(*) FROM {} WHERE {} = $1 AND {} = $2",
-                        setting.table, setting.guild_id, column.id
-                    );
-
-                    let mut query = sqlx::query(sql_stmt.as_str()).bind(guild_id.to_string());
-
-                    query = _query_bind_value(query, value.clone(), &column.column_type, &state);
-
-                    let row =
-                        query
-                            .fetch_one(&mut *tx)
-                            .await
-                            .map_err(|e| SettingsError::Generic {
-                                message: e.to_string(),
-                                src: format!(
-                                "settings_update [unique check, query.fetch_one] for column `{}`",
-                                column.id
-                            ),
-                                typ: "internal".to_string(),
-                            })?;
-
-                    let count = row
-                        .try_get::<i64, _>(0)
-                        .map_err(|e| SettingsError::Generic {
-                            message: e.to_string(),
-                            src: format!(
-                                "settings_update [unique check, row.try_get] for column `{}`",
-                                column.id
-                            ),
-                            typ: "internal".to_string(),
-                        })?;
-
-                    if count == 0 {
-                        return Err(SettingsError::RowDoesNotExist {
-                            column_id: column.id.to_string(),
-                        });
-                    }
-                }
+            if count == 0 {
+                return Err(SettingsError::RowDoesNotExist {
+                    column_id: column.id.to_string(),
+                });
             }
         }
     }
@@ -1642,60 +1240,34 @@ pub async fn settings_update(
     }
 
     // Create the row
-    let mut col_params = "".to_string();
-    for (i, (col, _)) in columns_to_set.state.iter().enumerate() {
-        col_params.push_str(&format!("{}=${},", col, i + 3));
-    }
-
-    // Remove the trailing comma
-    col_params.pop();
-
-    // Execute the SQL statement
-    let sql_stmt = format!(
-        "UPDATE {} SET {} WHERE {} = $1 AND {} = $2",
-        setting.table, col_params, setting.guild_id, setting.primary_key
-    );
-
-    let mut query = sqlx::query(sql_stmt.as_str());
-
-    // Bind the sql query arguments
-    query = query.bind(guild_id.to_string());
-    query = _query_bind_value(
-        query,
-        pkey.clone(),
-        &pkey_column.column_type,
-        &columns_to_set,
-    );
-
-    for (col, value) in columns_to_set.state.iter() {
-        // Get column type from schema for db query hinting
-        let Some(column) = setting.columns.iter().find(|c| c.id == col) else {
-            return Err(SettingsError::Generic {
-                message: format!("Column `{}` not found in schema", col),
-                src: "settings_update [column_type_let_else]".to_string(),
-                typ: "internal".to_string(),
-            });
-        };
-
-        query = _query_bind_value(query, value.clone(), &column.column_type, &columns_to_set);
-    }
-
-    // Execute the query
-    query
-        .execute(&mut *tx)
-        .await
-        .map_err(|e| SettingsError::Generic {
-            message: e.to_string(),
-            src: "settings_update [query execute]".to_string(),
-            typ: "internal".to_string(),
-        })?;
+    data_store
+        .update_matching_entries(
+            setting,
+            cache_http,
+            reqwest_client,
+            pool,
+            guild_id,
+            author,
+            permodule_executor,
+            indexmap::indexmap! {
+                setting.primary_key.to_string() => pkey.clone(),
+            },
+            columns_to_set.state,
+        )
+        .await?;
 
     // Commit the transaction
-    tx.commit().await.map_err(|e| SettingsError::Generic {
-        message: e.to_string(),
-        src: "settings_update [tx.commit]".to_string(),
-        typ: "internal".to_string(),
-    })?;
+    data_store
+        .commit(
+            setting,
+            cache_http,
+            reqwest_client,
+            pool,
+            guild_id,
+            author,
+            permodule_executor,
+        )
+        .await?;
 
     Ok(state)
 }
@@ -1718,7 +1290,7 @@ pub async fn settings_delete(
         });
     };
 
-    let mut state = State::new_with_special_variables(author, guild_id);
+    let state = State::new_with_special_variables(author, guild_id);
 
     let Some(pkey_column) = setting.columns.iter().find(|c| c.id == setting.primary_key) else {
         return Err(SettingsError::Generic {
@@ -1741,63 +1313,62 @@ pub async fn settings_delete(
     )
     .await?;
 
-    let mut tx = pool.begin().await.map_err(|e| SettingsError::Generic {
-        message: e.to_string(),
-        src: "settings_delete [pool.begin]".to_string(),
-        typ: "internal".to_string(),
-    })?;
+    let mut data_store = setting
+        .data_store
+        .create(
+            setting,
+            cache_http,
+            reqwest_client,
+            pool,
+            guild_id,
+            author,
+            permodule_executor,
+        )
+        .await?;
+
+    // Start the transaction now that basic validation is done
+    data_store
+        .start_transaction(
+            setting,
+            cache_http,
+            reqwest_client,
+            pool,
+            guild_id,
+            author,
+            permodule_executor,
+        )
+        .await?;
 
     // Fetch entire row to execute actions on before deleting
-    let mut cols = Vec::new();
-    let mut column_types = Vec::new();
+    let cols = setting
+        .columns
+        .iter()
+        .map(|c| c.id.to_string())
+        .collect::<Vec<String>>();
 
-    for col in setting.columns.iter() {
-        if col.ignored_for.contains(&OperationType::Delete) {
-            continue;
-        }
+    let mut state = data_store
+        .fetch_all(
+            setting,
+            cache_http,
+            reqwest_client,
+            pool,
+            guild_id,
+            author,
+            permodule_executor,
+            &cols,
+            indexmap::indexmap! {
+                setting.primary_key.to_string() => pkey.clone(),
+            },
+        )
+        .await?;
 
-        cols.push(col.id.to_string());
-        column_types.push(&col.column_type);
+    if state.is_empty() {
+        return Err(SettingsError::RowDoesNotExist {
+            column_id: setting.primary_key.to_string(),
+        });
     }
 
-    if !cols.is_empty() {
-        let sql_stmt = format!(
-            "SELECT {} FROM {} WHERE {} = $1 AND {} = $2",
-            cols.join(", "),
-            setting.table,
-            setting.guild_id,
-            setting.primary_key
-        );
-
-        let mut query = sqlx::query(sql_stmt.as_str()).bind(guild_id.to_string());
-
-        query = _query_bind_value(query, pkey.clone(), &pkey_column.column_type, &state);
-
-        let Some(row) =
-            query
-                .fetch_optional(&mut *tx)
-                .await
-                .map_err(|e| SettingsError::Generic {
-                    message: e.to_string(),
-                    src: "settings_delete [retrieve_unchanged, query.fetch_one]".to_string(),
-                    typ: "internal".to_string(),
-                })?
-        else {
-            return Err(SettingsError::RowDoesNotExist {
-                column_id: setting.primary_key.to_string(),
-            });
-        };
-
-        for (i, col) in cols.iter().enumerate() {
-            let val = Value::from_sqlx(&row, i).map_err(|e| SettingsError::Generic {
-                message: e.to_string(),
-                src: "settings_delete [retrieve_unchanged, Value::from_sqlx]".to_string(),
-                typ: "internal".to_string(),
-            })?;
-
-            state.state.insert(col.to_string(), val);
-        }
-    }
+    let mut state = state.pop().unwrap(); // We know there is only one row
 
     // Execute all actions
     for column in setting.columns.iter() {
@@ -1820,37 +1391,33 @@ pub async fn settings_delete(
     }
 
     // Now delete the entire row, the ignored_for does not matter here as we are deleting the entire row
-    let sql_stmt = format!(
-        "DELETE FROM {} WHERE {} = $1 AND {} = $2",
-        setting.table, setting.guild_id, setting.primary_key
-    );
-
-    let mut query = sqlx::query(sql_stmt.as_str());
-
-    query = query.bind(guild_id.to_string());
-    query = _query_bind_value(query, pkey, &pkey_column.column_type, &state);
-
-    let res = query
-        .execute(&mut *tx)
-        .await
-        .map_err(|e| SettingsError::Generic {
-            message: e.to_string(),
-            src: "settings_delete [query execute]".to_string(),
-            typ: "internal".to_string(),
-        })?;
-
-    if res.rows_affected() == 0 {
-        return Err(SettingsError::RowDoesNotExist {
-            column_id: setting.primary_key.to_string(),
-        });
-    }
+    data_store
+        .delete_matching_entries(
+            setting,
+            cache_http,
+            reqwest_client,
+            pool,
+            guild_id,
+            author,
+            permodule_executor,
+            indexmap::indexmap! {
+                setting.primary_key.to_string() => pkey.clone(),
+            },
+        )
+        .await?;
 
     // Commit the transaction
-    tx.commit().await.map_err(|e| SettingsError::Generic {
-        message: e.to_string(),
-        src: "settings_delete [tx.commit]".to_string(),
-        typ: "internal".to_string(),
-    })?;
+    data_store
+        .commit(
+            setting,
+            cache_http,
+            reqwest_client,
+            pool,
+            guild_id,
+            author,
+            permodule_executor,
+        )
+        .await?;
 
     Ok(state)
 }

@@ -1,7 +1,8 @@
 use futures_util::FutureExt;
 use module_settings::types::{
-    settings_wrap_columns, settings_wrap_precheck, Column, ColumnAction, ColumnSuggestion, ColumnType, ConfigOption, InnerColumnType, InnerColumnTypeStringKind, OperationSpecific, OperationType, SettingsError
+    settings_wrap_columns, settings_wrap_precheck, settings_wrap_datastore, Column, ColumnAction, ColumnSuggestion, ColumnType, ConfigOption, InnerColumnType, InnerColumnTypeStringKind, OperationSpecific, OperationType, SettingsError
 };
+use module_settings::data_stores::PostgresDataStore;
 use serenity::all::{Permissions, ChannelType};
 use splashcore_rs::value::Value;
 use once_cell::sync::Lazy;
@@ -16,6 +17,7 @@ pub static WEBHOOKS: Lazy<ConfigOption> = Lazy::new(|| {
         guild_id: "guild_id",
         primary_key: "id",
         max_entries: 5,
+        data_store: settings_wrap_datastore(PostgresDataStore {}),
         columns: settings_wrap_columns(vec![
             Column {
                 id: "id",
@@ -157,6 +159,7 @@ pub static REPOS: Lazy<ConfigOption> = Lazy::new(|| {
         guild_id: "guild_id",
         primary_key: "id",
         max_entries: 10,
+        data_store: settings_wrap_datastore(PostgresDataStore {}),
         columns: settings_wrap_columns(vec![
             Column {
                 id: "id",
@@ -371,6 +374,7 @@ pub static EVENT_MODIFIERS: Lazy<ConfigOption> = Lazy::new(|| {
         guild_id: "guild_id",
         primary_key: "id",
         max_entries: 50,
+        data_store: settings_wrap_datastore(PostgresDataStore {}),
         columns: settings_wrap_columns(vec![
             Column {
                 id: "id",
