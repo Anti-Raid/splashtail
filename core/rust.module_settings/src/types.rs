@@ -632,41 +632,16 @@ impl std::fmt::Debug for dyn CreateDataStore {
 pub trait DataStore: Send + Sync {
     /// Start a transaction
     #[allow(clippy::too_many_arguments)]
-    async fn start_transaction(
-        &mut self,
-        setting: &ConfigOption,
-        cache_http: &botox::cache::CacheHttpImpl,
-        reqwest_client: &reqwest::Client,
-        pool: &sqlx::PgPool,
-        guild_id: serenity::all::GuildId,
-        author: serenity::all::UserId,
-        permodule_executor: &dyn base_data::permodule::PermoduleFunctionExecutor,
-    ) -> Result<(), SettingsError>;
+    async fn start_transaction(&mut self) -> Result<(), SettingsError>;
 
     /// Commit the changes to the data store
     #[allow(clippy::too_many_arguments)]
-    async fn commit(
-        &mut self,
-        setting: &ConfigOption,
-        cache_http: &botox::cache::CacheHttpImpl,
-        reqwest_client: &reqwest::Client,
-        pool: &sqlx::PgPool,
-        guild_id: serenity::all::GuildId,
-        author: serenity::all::UserId,
-        permodule_executor: &dyn base_data::permodule::PermoduleFunctionExecutor,
-    ) -> Result<(), SettingsError>;
+    async fn commit(&mut self) -> Result<(), SettingsError>;
 
     /// Fetches all requested fields of a setting for a given guild matching filters
     #[allow(clippy::too_many_arguments)]
     async fn fetch_all(
-        &self,
-        setting: &ConfigOption,
-        cache_http: &botox::cache::CacheHttpImpl,
-        reqwest_client: &reqwest::Client,
-        pool: &sqlx::PgPool,
-        guild_id: serenity::all::GuildId,
-        author: serenity::all::UserId,
-        permodule_executor: &dyn base_data::permodule::PermoduleFunctionExecutor,
+        &mut self,
         fields: &[String],
         filters: indexmap::IndexMap<String, splashcore_rs::value::Value>,
     ) -> Result<Vec<super::state::State>, SettingsError>;
@@ -674,58 +649,21 @@ pub trait DataStore: Send + Sync {
     /// Fetch the count of all entries matching filters
     #[allow(clippy::too_many_arguments)]
     async fn matching_entry_count(
-        &self,
-        setting: &ConfigOption,
-        cache_http: &botox::cache::CacheHttpImpl,
-        reqwest_client: &reqwest::Client,
-        pool: &sqlx::PgPool,
-        guild_id: serenity::all::GuildId,
-        author: serenity::all::UserId,
-        permodule_executor: &dyn base_data::permodule::PermoduleFunctionExecutor,
+        &mut self,
         filters: indexmap::IndexMap<String, splashcore_rs::value::Value>,
-    ) -> Result<usize, SettingsError> {
-        let data = self
-            .fetch_all(
-                setting,
-                cache_http,
-                reqwest_client,
-                pool,
-                guild_id,
-                author,
-                permodule_executor,
-                &[setting.primary_key.to_string()],
-                filters,
-            )
-            .await?;
-
-        Ok(data.len())
-    }
+    ) -> Result<usize, SettingsError>;
 
     /// Creates a new entry given a set of columns to set returning the newly created entry
     #[allow(clippy::too_many_arguments)]
     async fn create_entry(
-        &self,
-        setting: &ConfigOption,
-        cache_http: &botox::cache::CacheHttpImpl,
-        reqwest_client: &reqwest::Client,
-        pool: &sqlx::PgPool,
-        guild_id: serenity::all::GuildId,
-        author: serenity::all::UserId,
-        permodule_executor: &dyn base_data::permodule::PermoduleFunctionExecutor,
+        &mut self,
         entry: indexmap::IndexMap<String, splashcore_rs::value::Value>,
     ) -> Result<super::state::State, SettingsError>;
 
     /// Updates all matching entry given a set of columns to set and a set of filters
     #[allow(clippy::too_many_arguments)]
     async fn update_matching_entries(
-        &self,
-        setting: &ConfigOption,
-        cache_http: &botox::cache::CacheHttpImpl,
-        reqwest_client: &reqwest::Client,
-        pool: &sqlx::PgPool,
-        guild_id: serenity::all::GuildId,
-        author: serenity::all::UserId,
-        permodule_executor: &dyn base_data::permodule::PermoduleFunctionExecutor,
+        &mut self,
         filters: indexmap::IndexMap<String, splashcore_rs::value::Value>,
         entry: indexmap::IndexMap<String, splashcore_rs::value::Value>,
     ) -> Result<(), SettingsError>;
@@ -735,14 +673,7 @@ pub trait DataStore: Send + Sync {
     /// NOTE: Data stores should return an error if no rows are deleted
     #[allow(clippy::too_many_arguments)]
     async fn delete_matching_entries(
-        &self,
-        setting: &ConfigOption,
-        cache_http: &botox::cache::CacheHttpImpl,
-        reqwest_client: &reqwest::Client,
-        pool: &sqlx::PgPool,
-        guild_id: serenity::all::GuildId,
-        author: serenity::all::UserId,
-        permodule_executor: &dyn base_data::permodule::PermoduleFunctionExecutor,
+        &mut self,
         filters: indexmap::IndexMap<String, splashcore_rs::value::Value>,
     ) -> Result<(), SettingsError>;
 }

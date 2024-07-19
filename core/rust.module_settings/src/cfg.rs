@@ -577,7 +577,7 @@ pub async fn settings_view(
         });
     };
 
-    let data_store = setting
+    let mut data_store = setting
         .data_store
         .create(
             setting,
@@ -597,17 +597,7 @@ pub async fn settings_view(
         .collect::<Vec<String>>();
 
     let states = data_store
-        .fetch_all(
-            setting,
-            cache_http,
-            reqwest_client,
-            pool,
-            guild_id,
-            author,
-            permodule_executor,
-            &cols,
-            indexmap::IndexMap::new(),
-        )
+        .fetch_all(&cols, indexmap::IndexMap::new())
         .await?;
 
     if states.is_empty() {
@@ -678,19 +668,7 @@ pub async fn settings_view(
                 update.insert(col.to_string(), value);
             }
 
-            data_store
-                .update_matching_entries(
-                    setting,
-                    cache_http,
-                    reqwest_client,
-                    pool,
-                    guild_id,
-                    author,
-                    permodule_executor,
-                    filters,
-                    update,
-                )
-                .await?;
+            data_store.update_matching_entries(filters, update).await?;
         }
 
         // Remove ignored columns + secret columns now that the actions have been executed
@@ -803,28 +781,11 @@ pub async fn settings_create(
         )
         .await?;
 
-    data_store
-        .start_transaction(
-            setting,
-            cache_http,
-            reqwest_client,
-            pool,
-            guild_id,
-            author,
-            permodule_executor,
-        )
-        .await?;
+    data_store.start_transaction().await?;
 
     // Get all ids we currently have to check max_entries and uniqueness of the primary key in one shot
     let ids = data_store
         .fetch_all(
-            setting,
-            cache_http,
-            reqwest_client,
-            pool,
-            guild_id,
-            author,
-            permodule_executor,
             &[setting.primary_key.to_string()],
             indexmap::IndexMap::new(),
         )
@@ -898,18 +859,9 @@ pub async fn settings_create(
         // In the case of create, we can do this directly within the column validation
         if column.unique {
             let count = data_store
-                .matching_entry_count(
-                    setting,
-                    cache_http,
-                    reqwest_client,
-                    pool,
-                    guild_id,
-                    author,
-                    permodule_executor,
-                    indexmap::indexmap! {
-                        column.id.to_string() => value.clone()
-                    },
-                )
+                .matching_entry_count(indexmap::indexmap! {
+                    column.id.to_string() => value.clone()
+                })
                 .await?;
 
             if count > 0 {
@@ -940,31 +892,10 @@ pub async fn settings_create(
     }
 
     // Create the row
-    let state = data_store
-        .create_entry(
-            setting,
-            cache_http,
-            reqwest_client,
-            pool,
-            guild_id,
-            author,
-            permodule_executor,
-            state.get_public(),
-        )
-        .await?;
+    let state = data_store.create_entry(state.get_public()).await?;
 
     // Commit the transaction
-    data_store
-        .commit(
-            setting,
-            cache_http,
-            reqwest_client,
-            pool,
-            guild_id,
-            author,
-            permodule_executor,
-        )
-        .await?;
+    data_store.commit().await?;
 
     Ok(state)
 }
@@ -1069,29 +1000,12 @@ pub async fn settings_update(
         .await?;
 
     // Start the transaction now that basic validation is done
-    data_store
-        .start_transaction(
-            setting,
-            cache_http,
-            reqwest_client,
-            pool,
-            guild_id,
-            author,
-            permodule_executor,
-        )
-        .await?;
+    data_store.start_transaction().await?;
 
     // Now retrieve all the unchanged fields
     if !unchanged_fields.is_empty() {
         let mut data = data_store
             .fetch_all(
-                setting,
-                cache_http,
-                reqwest_client,
-                pool,
-                guild_id,
-                author,
-                permodule_executor,
                 &unchanged_fields,
                 indexmap::indexmap! {
                     setting.primary_key.to_string() => pkey.clone(),
@@ -1161,13 +1075,6 @@ pub async fn settings_update(
         if column.unique {
             let ids = data_store
                 .fetch_all(
-                    setting,
-                    cache_http,
-                    reqwest_client,
-                    pool,
-                    guild_id,
-                    author,
-                    permodule_executor,
                     &[setting.primary_key.to_string()],
                     indexmap::indexmap! {
                         column.id.to_string() => value.clone(),
@@ -1195,18 +1102,9 @@ pub async fn settings_update(
         // ** This is unique to updates **
         if column.id == setting.primary_key {
             let count = data_store
-                .matching_entry_count(
-                    setting,
-                    cache_http,
-                    reqwest_client,
-                    pool,
-                    guild_id,
-                    author,
-                    permodule_executor,
-                    indexmap::indexmap! {
-                        column.id.to_string() => value.clone(),
-                    },
-                )
+                .matching_entry_count(indexmap::indexmap! {
+                    column.id.to_string() => value.clone(),
+                })
                 .await?;
 
             if count == 0 {
@@ -1242,13 +1140,6 @@ pub async fn settings_update(
     // Create the row
     data_store
         .update_matching_entries(
-            setting,
-            cache_http,
-            reqwest_client,
-            pool,
-            guild_id,
-            author,
-            permodule_executor,
             indexmap::indexmap! {
                 setting.primary_key.to_string() => pkey.clone(),
             },
@@ -1257,17 +1148,7 @@ pub async fn settings_update(
         .await?;
 
     // Commit the transaction
-    data_store
-        .commit(
-            setting,
-            cache_http,
-            reqwest_client,
-            pool,
-            guild_id,
-            author,
-            permodule_executor,
-        )
-        .await?;
+    data_store.commit().await?;
 
     Ok(state)
 }
@@ -1327,17 +1208,7 @@ pub async fn settings_delete(
         .await?;
 
     // Start the transaction now that basic validation is done
-    data_store
-        .start_transaction(
-            setting,
-            cache_http,
-            reqwest_client,
-            pool,
-            guild_id,
-            author,
-            permodule_executor,
-        )
-        .await?;
+    data_store.start_transaction().await?;
 
     // Fetch entire row to execute actions on before deleting
     let cols = setting
@@ -1348,13 +1219,6 @@ pub async fn settings_delete(
 
     let mut state = data_store
         .fetch_all(
-            setting,
-            cache_http,
-            reqwest_client,
-            pool,
-            guild_id,
-            author,
-            permodule_executor,
             &cols,
             indexmap::indexmap! {
                 setting.primary_key.to_string() => pkey.clone(),
@@ -1392,32 +1256,13 @@ pub async fn settings_delete(
 
     // Now delete the entire row, the ignored_for does not matter here as we are deleting the entire row
     data_store
-        .delete_matching_entries(
-            setting,
-            cache_http,
-            reqwest_client,
-            pool,
-            guild_id,
-            author,
-            permodule_executor,
-            indexmap::indexmap! {
-                setting.primary_key.to_string() => pkey.clone(),
-            },
-        )
+        .delete_matching_entries(indexmap::indexmap! {
+            setting.primary_key.to_string() => pkey.clone(),
+        })
         .await?;
 
     // Commit the transaction
-    data_store
-        .commit(
-            setting,
-            cache_http,
-            reqwest_client,
-            pool,
-            guild_id,
-            author,
-            permodule_executor,
-        )
-        .await?;
+    data_store.commit().await?;
 
     Ok(state)
 }

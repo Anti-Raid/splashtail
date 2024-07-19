@@ -1,6 +1,7 @@
 package settings_execute
 
 import (
+	"context"
 	"net/http"
 	"strconv"
 	"strings"
@@ -115,8 +116,11 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 		}
 	}
 
+	ctx, cancel := context.WithTimeout(d.Context, 5*time.Second)
+	defer cancel()
+
 	resps, err := state.AnimusMagicClient.Request(
-		d.Context,
+		ctx,
 		state.Rueidis,
 		animusmagic_messages.BotAnimusMessage{
 			SettingsOperation: &struct {
