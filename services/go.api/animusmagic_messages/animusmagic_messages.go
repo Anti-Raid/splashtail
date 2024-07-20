@@ -113,7 +113,7 @@ type BotAnimusResponse struct {
 		OwnerID   string                             `json:"owner_id"`
 		Name      string                             `json:"name"`
 		Icon      *string                            `json:"icon"`
-		Roles     map[string]*ext.SerenityRole       `json:"roles"`
+		Roles     []*ext.SerenityRole                `json:"roles"`
 		UserRoles []string                           `json:"user_roles"`
 		BotRoles  []string                           `json:"bot_roles"`
 		Channels  []*ext.GuildChannelWithPermissions `json:"channels"`
