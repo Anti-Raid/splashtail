@@ -12,7 +12,7 @@ use splashcore_rs::animusmagic::protocol::{AnimusErrorResponse, AnimusTarget};
 
 use module_settings::{self, canonical_types::CanonicalSettingsError, types::OperationType};
 use serde::{Deserialize, Serialize};
-use serenity::all::{ChannelId, GuildChannel, GuildId, Permissions, Role, RoleId, UserId};
+use serenity::all::{GuildChannel, GuildId, Permissions, Role, RoleId, UserId};
 use splashcore_rs::value::Value;
 use std::sync::Arc;
 
@@ -28,6 +28,13 @@ pub enum CanonicalSettingsResult {
     Err {
         error: CanonicalSettingsError,
     },
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+pub struct GuildChannelWithPermissions {
+    pub user: Permissions,
+    pub bot: Permissions,
+    pub channel: GuildChannel,
 }
 
 #[derive(Serialize, Deserialize, Clone)]
@@ -55,11 +62,7 @@ pub enum BotAnimusResponse {
         /// List of roles the bot has
         bot_roles: Vec<RoleId>,
         /// List of all channels in the server
-        channels: Vec<GuildChannel>,
-        /// Map of channel id to the permissions the bot has
-        channel_bot_permissions: std::collections::HashMap<ChannelId, Permissions>,
-        /// Map of channel id to the permissions the user has
-        channel_user_permissions: std::collections::HashMap<ChannelId, Permissions>,
+        channels: Vec<GuildChannelWithPermissions>,
     },
     /// Returns the response of a command permission check
     CheckCommandPermission {
@@ -233,15 +236,14 @@ impl BotAnimusMessage {
                 // Fetch the channels
                 let channels = proxy_support::guild_channels(cache_http, reqwest, guild_id).await?;
 
-                let mut channel_bot_permissions = std::collections::HashMap::new();
-                let mut channel_user_permissions = std::collections::HashMap::new();
+                let mut channels_with_permissions = Vec::with_capacity(channels.len());
 
                 for channel in channels.iter() {
-                    let bot_perm = guild.user_permissions_in(channel, &bot_user);
-                    let user_perm = guild.user_permissions_in(channel, &member);
-
-                    channel_bot_permissions.insert(channel.id, bot_perm);
-                    channel_user_permissions.insert(channel.id, user_perm);
+                    channels_with_permissions.push(GuildChannelWithPermissions {
+                        user: guild.user_permissions_in(channel, &member),
+                        bot: guild.user_permissions_in(channel, &bot_user),
+                        channel: channel.clone(),
+                    });
                 }
 
                 Ok(BotAnimusResponse::BaseGuildUserInfo {
@@ -255,9 +257,7 @@ impl BotAnimusMessage {
                         .collect(),
                     user_roles: member.roles.to_vec(),
                     bot_roles: bot_user.roles.to_vec(),
-                    channels,
-                    channel_bot_permissions,
-                    channel_user_permissions,
+                    channels: channels_with_permissions,
                 })
             }
             Self::CheckCommandPermission {

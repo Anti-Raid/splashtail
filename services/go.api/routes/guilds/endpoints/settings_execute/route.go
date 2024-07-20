@@ -212,7 +212,7 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 	if resp.Resp.SettingsOperation.Res.PermissionError != nil {
 		return uapi.HttpResponse{
 			Status: http.StatusForbidden,
-			Json:   resp.Resp.SettingsOperation.Res.PermissionError,
+			Json:   resp.Resp.SettingsOperation.Res.PermissionError.Res,
 			Headers: map[string]string{
 				"X-Error-Type": "permission_check",
 			},
@@ -222,7 +222,10 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 	if resp.Resp.SettingsOperation.Res.Err != nil {
 		return uapi.HttpResponse{
 			Status: http.StatusBadRequest,
-			Json:   resp.Resp.SettingsOperation.Res.Err,
+			Json:   resp.Resp.SettingsOperation.Res.Err.Error,
+			Headers: map[string]string{
+				"X-Error-Type": "canonical_settings_error",
+			},
 		}
 	}
 

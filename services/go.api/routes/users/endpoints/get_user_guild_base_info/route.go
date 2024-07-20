@@ -164,15 +164,13 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 
 	return uapi.HttpResponse{
 		Json: types.UserGuildBaseData{
-			OwnerID:                pr.Resp.BaseGuildUserInfo.OwnerID,
-			Name:                   pr.Resp.BaseGuildUserInfo.Name,
-			Icon:                   pr.Resp.BaseGuildUserInfo.Icon,
-			Roles:                  pr.Resp.BaseGuildUserInfo.Roles,
-			UserRoles:              pr.Resp.BaseGuildUserInfo.UserRoles,
-			BotRoles:               pr.Resp.BaseGuildUserInfo.BotRoles,
-			Channels:               pr.Resp.BaseGuildUserInfo.Channels,
-			ChannelBotPermissions:  pr.Resp.BaseGuildUserInfo.ChannelBotPermissions,
-			ChannelUserPermissions: pr.Resp.BaseGuildUserInfo.ChannelUserPermissions,
+			OwnerID:   pr.Resp.BaseGuildUserInfo.OwnerID,
+			Name:      pr.Resp.BaseGuildUserInfo.Name,
+			Icon:      pr.Resp.BaseGuildUserInfo.Icon,
+			Roles:     pr.Resp.BaseGuildUserInfo.Roles,
+			UserRoles: pr.Resp.BaseGuildUserInfo.UserRoles,
+			BotRoles:  pr.Resp.BaseGuildUserInfo.BotRoles,
+			Channels:  pr.Resp.BaseGuildUserInfo.Channels,
 		},
 	}
 }

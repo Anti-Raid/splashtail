@@ -4,7 +4,6 @@ import (
 	"time"
 
 	"github.com/anti-raid/splashtail/core/go.std/types/ext"
-	"github.com/bwmarrin/discordgo"
 	"github.com/infinitybotlist/eureka/dovewing/dovetypes"
 )
 
@@ -32,13 +31,11 @@ channels: Vec<GuildChannel>,
 */
 
 type UserGuildBaseData struct {
-	OwnerID                string                       `json:"owner_id"`
-	Name                   string                       `json:"name"`
-	Icon                   *string                      `json:"icon"`
-	Roles                  map[string]*ext.SerenityRole `json:"roles"`
-	UserRoles              []string                     `json:"user_roles"`
-	BotRoles               []string                     `json:"bot_roles"`
-	Channels               []*discordgo.Channel         `json:"channels"`
-	ChannelBotPermissions  map[string]ext.Permissions   `json:"channel_bot_permissions"`
-	ChannelUserPermissions map[string]ext.Permissions   `json:"channel_user_permissions"`
+	OwnerID   string                             `json:"owner_id"`
+	Name      string                             `json:"name"`
+	Icon      *string                            `json:"icon"`
+	Roles     map[string]*ext.SerenityRole       `json:"roles"`
+	UserRoles []string                           `json:"user_roles"`
+	BotRoles  []string                           `json:"bot_roles"`
+	Channels  []*ext.GuildChannelWithPermissions `json:"channels"`
 }
