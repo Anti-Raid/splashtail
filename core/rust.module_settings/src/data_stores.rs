@@ -331,19 +331,15 @@ impl DataStore for PostgresDataStoreImpl {
         }
 
         let rows = if self.tx.is_some() {
-            let mut tx = self.tx.take().unwrap();
-            let rows = query
-                .fetch_all(&mut *tx)
+            let tx = self.tx.as_deref_mut().unwrap();
+            query
+                .fetch_all(tx)
                 .await
                 .map_err(|e| SettingsError::Generic {
                     message: e.to_string(),
                     src: "settings_view [query fetch_all]".to_string(),
                     typ: "internal".to_string(),
-                })?;
-
-            self.tx = Some(tx);
-
-            rows
+                })?
         } else {
             query
                 .fetch_all(&self.pool)
@@ -427,19 +423,15 @@ impl DataStore for PostgresDataStoreImpl {
         }
 
         let row = if self.tx.is_some() {
-            let mut tx = self.tx.take().unwrap();
-            let row = query
-                .fetch_one(&mut *tx)
+            let tx = self.tx.as_deref_mut().unwrap();
+            query
+                .fetch_one(tx)
                 .await
                 .map_err(|e| SettingsError::Generic {
                     message: e.to_string(),
                     src: "settings_view [query fetch_one]".to_string(),
                     typ: "internal".to_string(),
-                })?;
-
-            self.tx = Some(tx);
-
-            row
+                })?
         } else {
             query
                 .fetch_one(&self.pool)
@@ -521,19 +513,15 @@ impl DataStore for PostgresDataStoreImpl {
 
         // Execute the query
         let pkey_row = if self.tx.is_some() {
-            let mut tx = self.tx.take().unwrap();
-            let pkey_row = query
-                .fetch_one(&mut *tx)
+            let tx = self.tx.as_deref_mut().unwrap();
+            query
+                .fetch_one(tx)
                 .await
                 .map_err(|e| SettingsError::Generic {
                     message: e.to_string(),
                     src: "settings_create [query execute]".to_string(),
                     typ: "internal".to_string(),
-                })?;
-
-            self.tx = Some(tx);
-
-            pkey_row
+                })?
         } else {
             query
                 .fetch_one(&self.pool)
@@ -634,17 +622,15 @@ impl DataStore for PostgresDataStoreImpl {
 
         // Execute the query
         if self.tx.is_some() {
-            let mut tx = self.tx.take().unwrap();
+            let tx = self.tx.as_deref_mut().unwrap();
             query
-                .execute(&mut *tx)
+                .execute(tx)
                 .await
-                .map_err(|e| SettingsError::Generic {
+                .map_err(|e: sqlx::Error| SettingsError::Generic {
                     message: e.to_string(),
                     src: "settings_update [query execute]".to_string(),
                     typ: "internal".to_string(),
                 })?;
-
-            self.tx = Some(tx);
         } else {
             query
                 .execute(&self.pool)
@@ -704,19 +690,15 @@ impl DataStore for PostgresDataStoreImpl {
         }
 
         let res = if self.tx.is_some() {
-            let mut tx = self.tx.take().unwrap();
-            let res = query
-                .execute(&mut *tx)
+            let tx = self.tx.as_deref_mut().unwrap();
+            query
+                .execute(tx)
                 .await
                 .map_err(|e| SettingsError::Generic {
                     message: e.to_string(),
                     src: "PostgresDataStore::delete_matching_entries [query_execute]".to_string(),
                     typ: "internal".to_string(),
-                })?;
-
-            self.tx = Some(tx);
-
-            res
+                })?
         } else {
             query
                 .execute(&self.pool)

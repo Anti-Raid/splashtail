@@ -1,7 +1,7 @@
-use modules::silverpelt::canonical_module::CanonicalModule;
 /// Bot animus contains the request and response for a bot
 ///
 /// To edit/add responses, add them both to bot.rs and to go.std/animusmagic/types.go
+use modules::silverpelt::canonical_module::CanonicalModule;
 use modules::silverpelt::silverpelt_cache::SILVERPELT_CACHE;
 use splashcore_rs::types::silverpelt::PermissionResult;
 
@@ -12,7 +12,7 @@ use splashcore_rs::animusmagic::protocol::{AnimusErrorResponse, AnimusTarget};
 
 use module_settings::{self, canonical_types::CanonicalSettingsError, types::OperationType};
 use serde::{Deserialize, Serialize};
-use serenity::all::{GuildChannel, GuildId, Role, RoleId, UserId};
+use serenity::all::{ChannelId, GuildChannel, GuildId, Permissions, Role, RoleId, UserId};
 use splashcore_rs::value::Value;
 use std::sync::Arc;
 
@@ -56,6 +56,10 @@ pub enum BotAnimusResponse {
         bot_roles: Vec<RoleId>,
         /// List of all channels in the server
         channels: Vec<GuildChannel>,
+        /// Map of channel id to the permissions the bot has
+        channel_bot_permissions: std::collections::HashMap<ChannelId, Permissions>,
+        /// Map of channel id to the permissions the user has
+        channel_user_permissions: std::collections::HashMap<ChannelId, Permissions>,
     },
     /// Returns the response of a command permission check
     CheckCommandPermission {
@@ -199,24 +203,14 @@ impl BotAnimusMessage {
             }
             Self::BaseGuildUserInfo { guild_id, user_id } => {
                 let bot_user_id = cache_http.cache.current_user().id;
-                let (name, icon, owner, roles, user_roles, bot_roles, channels) = {
-                    let (name, icon, owner_id, roles, channels) =
-                        match proxy_support::guild(cache_http, reqwest, guild_id).await {
-                            Ok(guild) => (
-                                guild.name.to_string(),
-                                guild.icon_url(),
-                                guild.owner_id,
-                                guild.roles.clone(),
-                                proxy_support::guild_channels(cache_http, reqwest, guild_id)
-                                    .await?,
-                            ),
-                            Err(e) => return Err(format!("Failed to get guild: {:#?}", e).into()),
-                        };
-
-                    let member = match proxy_support::member_in_guild(
-                        cache_http, reqwest, guild_id, user_id,
-                    )
+                let guild = proxy_support::guild(cache_http, reqwest, guild_id)
                     .await
+                    .map_err(|e| format!("Failed to get guild: {:#?}", e))?;
+
+                // Next fetch the member and bot_user
+                let member: serenity::model::prelude::Member =
+                    match proxy_support::member_in_guild(cache_http, reqwest, guild_id, user_id)
+                        .await
                     {
                         Ok(Some(member)) => member,
                         Ok(None) => {
@@ -225,32 +219,45 @@ impl BotAnimusMessage {
                         Err(e) => return Err(format!("Failed to get member: {:#?}", e).into()),
                     };
 
-                    let Some(bot_user) =
-                        botox::cache::member_on_guild(cache_http, guild_id, bot_user_id, true)
-                            .await?
-                    else {
-                        return Err("Failed to get bot member".into());
+                let bot_user: serenity::model::prelude::Member =
+                    match proxy_support::member_in_guild(cache_http, reqwest, guild_id, bot_user_id)
+                        .await
+                    {
+                        Ok(Some(member)) => member,
+                        Ok(None) => {
+                            return Err("Bot not found".into());
+                        }
+                        Err(e) => return Err(format!("Failed to get member: {:#?}", e).into()),
                     };
 
-                    (
-                        name,
-                        icon,
-                        owner_id,
-                        roles,
-                        member.roles.to_vec(),
-                        bot_user.roles.to_vec(),
-                        channels,
-                    )
-                };
+                // Fetch the channels
+                let channels = proxy_support::guild_channels(cache_http, reqwest, guild_id).await?;
+
+                let mut channel_bot_permissions = std::collections::HashMap::new();
+                let mut channel_user_permissions = std::collections::HashMap::new();
+
+                for channel in channels.iter() {
+                    let bot_perm = guild.user_permissions_in(channel, &bot_user);
+                    let user_perm = guild.user_permissions_in(channel, &member);
+
+                    channel_bot_permissions.insert(channel.id, bot_perm);
+                    channel_user_permissions.insert(channel.id, user_perm);
+                }
 
                 Ok(BotAnimusResponse::BaseGuildUserInfo {
-                    name,
-                    icon,
-                    owner_id: owner.to_string(),
-                    roles: roles.into_iter().map(|role| (role.id, role)).collect(),
-                    user_roles,
-                    bot_roles,
+                    name: guild.name.to_string(),
+                    icon: guild.icon_url(),
+                    owner_id: guild.owner_id.to_string(),
+                    roles: guild
+                        .roles
+                        .into_iter()
+                        .map(|role| (role.id, role))
+                        .collect(),
+                    user_roles: member.roles.to_vec(),
+                    bot_roles: bot_user.roles.to_vec(),
                     channels,
+                    channel_bot_permissions,
+                    channel_user_permissions,
                 })
             }
             Self::CheckCommandPermission {

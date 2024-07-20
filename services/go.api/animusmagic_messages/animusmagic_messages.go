@@ -3,7 +3,8 @@ package animusmagic_messages
 import (
 	"github.com/anti-raid/splashtail/core/go.std/animusmagic"
 	"github.com/anti-raid/splashtail/core/go.std/silverpelt"
-	"github.com/anti-raid/splashtail/core/go.std/types"
+	"github.com/anti-raid/splashtail/core/go.std/types/ext"
+	"github.com/bwmarrin/discordgo"
 	orderedmap "github.com/wk8/go-ordered-map/v2"
 )
 
@@ -109,7 +110,17 @@ type BotAnimusResponse struct {
 		GuildsExist []uint8 `json:"guilds_exist"`
 	} `json:"GuildsExist,omitempty"`
 
-	BaseGuildUserInfo *types.UserGuildBaseData `json:"BaseGuildUserInfo,omitempty"`
+	BaseGuildUserInfo *struct {
+		OwnerID                string                       `json:"owner_id"`
+		Name                   string                       `json:"name"`
+		Icon                   *string                      `json:"icon"`
+		Roles                  map[string]*ext.SerenityRole `json:"roles"`
+		UserRoles              []string                     `json:"user_roles"`
+		BotRoles               []string                     `json:"bot_roles"`
+		Channels               []*discordgo.Channel         `json:"channels"`
+		ChannelBotPermissions  map[string]ext.Permissions   `json:"channel_bot_permissions"`
+		ChannelUserPermissions map[string]ext.Permissions   `json:"channel_user_permissions"`
+	} `json:"BaseGuildUserInfo,omitempty"`
 
 	/// Returns the response of a command permission check
 	CheckCommandPermission *struct {
