@@ -234,6 +234,7 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 
 		hresp, ok := api.HandlePermissionCheck(d.Auth.ID, guildId, opSpecific.CorrespondingCommand, animusmagic_messages.AmCheckCommandOptions{
 			CustomResolvedKittycatPerms: api.PermLimits(d.Auth),
+			Flags:                       animusmagic_messages.AmCheckCommandOptionsFlagIgnoreModuleDisabled,
 		})
 
 		if !ok {

@@ -404,7 +404,10 @@ impl BotAnimusMessage {
                     pool,
                     cache_http,
                     &None,
-                    modules::silverpelt::cmd::CheckCommandOptions::default(),
+                    modules::silverpelt::cmd::CheckCommandOptions {
+                        ignore_module_disabled: true,
+                        ..Default::default()
+                    },
                 )
                 .await;
 

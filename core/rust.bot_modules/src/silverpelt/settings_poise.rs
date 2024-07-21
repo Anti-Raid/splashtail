@@ -176,7 +176,10 @@ pub async fn settings_viewer(
             &data.pool,
             &cache_http,
             &Some(*ctx),
-            crate::silverpelt::cmd::CheckCommandOptions::default(),
+            crate::silverpelt::cmd::CheckCommandOptions {
+                ignore_module_disabled: true,
+                ..Default::default()
+            },
         )
         .await;
 
@@ -344,7 +347,10 @@ pub async fn settings_creator(
             &data.pool,
             &cache_http,
             &Some(*ctx),
-            crate::silverpelt::cmd::CheckCommandOptions::default(),
+            crate::silverpelt::cmd::CheckCommandOptions {
+                ignore_module_disabled: true,
+                ..Default::default()
+            },
         )
         .await;
 
@@ -471,7 +477,10 @@ pub async fn settings_updater(
             &data.pool,
             &cache_http,
             &Some(*ctx),
-            crate::silverpelt::cmd::CheckCommandOptions::default(),
+            crate::silverpelt::cmd::CheckCommandOptions {
+                ignore_module_disabled: true,
+                ..Default::default()
+            },
         )
         .await;
 
@@ -600,7 +609,10 @@ pub async fn settings_deleter(
             &data.pool,
             &cache_http,
             &Some(*ctx),
-            crate::silverpelt::cmd::CheckCommandOptions::default(),
+            crate::silverpelt::cmd::CheckCommandOptions {
+                ignore_module_disabled: true,
+                ..Default::default()
+            },
         )
         .await;
 
