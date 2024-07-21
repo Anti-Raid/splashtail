@@ -8,7 +8,6 @@ import (
 
 	_ "embed"
 
-	"github.com/anti-raid/splashtail/core/go.std/types"
 	"github.com/anti-raid/splashtail/services/go.api/api"
 	"github.com/anti-raid/splashtail/services/go.api/constants"
 	"github.com/anti-raid/splashtail/services/go.api/integrations/gitlogs"
@@ -20,6 +19,7 @@ import (
 	"github.com/anti-raid/splashtail/services/go.api/routes/tasks"
 	"github.com/anti-raid/splashtail/services/go.api/routes/users"
 	"github.com/anti-raid/splashtail/services/go.api/state"
+	"github.com/anti-raid/splashtail/services/go.api/types"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	docs "github.com/infinitybotlist/eureka/doclib"

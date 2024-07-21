@@ -8,10 +8,6 @@ import (
 	_ "github.com/anti-raid/splashtail/core/go.std/config"
 	_ "github.com/anti-raid/splashtail/core/go.std/objectstorage"
 	_ "github.com/anti-raid/splashtail/core/go.std/structparser/db"
-	_ "github.com/anti-raid/splashtail/core/go.std/types"
 	_ "github.com/anti-raid/splashtail/core/go.std/utils"
 	_ "github.com/anti-raid/splashtail/core/go.std/utils/mewext"
-
-	// Ensure a cyclical import occurs if go.api attempts to import state
-	_ "github.com/anti-raid/splashtail/services/go.api"
 )

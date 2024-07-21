@@ -5,8 +5,8 @@ import (
 	"io/fs"
 	"net/http"
 
-	"github.com/anti-raid/splashtail/core/go.std/types"
 	"github.com/anti-raid/splashtail/data"
+	"github.com/anti-raid/splashtail/services/go.api/types"
 	"github.com/go-chi/chi/v5"
 	docs "github.com/infinitybotlist/eureka/doclib"
 	"github.com/infinitybotlist/eureka/uapi"

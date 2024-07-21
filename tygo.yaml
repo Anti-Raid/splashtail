@@ -1,5 +1,5 @@
 packages:
-  - path: "github.com/anti-raid/splashtail/core/go.std/types"
+  - path: "github.com/anti-raid/splashtail/services/go.api/types"
     output_path: "/silverpelt/cdn/antiraid/dev/bindings/splashtail/types.ts"
     frontmatter: |
       import { PlatformUser } from "./eureka-dovewing"
@@ -14,8 +14,8 @@ packages:
       pgtype.Timestamptz: "string | null /* RFC3339, nullable */"
       bigint.BigInt: "string /* bigint */"
       orderedmap.OrderedMap: "Record"
-      ext.GuildChannelWithPermissions: ext.GuildChannelWithPermissions
-      ext.SerenityRole: ext.SerenityRole
+      ext_types.GuildChannelWithPermissions: ext.GuildChannelWithPermissions
+      ext_types.SerenityRole: ext.SerenityRole
       discordgo.Channel: discordgo.Channel
         
   - path: "github.com/infinitybotlist/eureka/dovewing/dovetypes"
@@ -43,8 +43,8 @@ packages:
       orderedmap.OrderedMap: "Record"
       bigint.BigInt: "string /* bigint */"
 
-  - path: "github.com/anti-raid/splashtail/core/go.std/types/ext"
-    output_path: "/silverpelt/cdn/antiraid/dev/bindings/splashtail/ext.ts"
+  - path: "github.com/anti-raid/splashtail/core/go.std/ext_types"
+    output_path: "/silverpelt/cdn/antiraid/dev/bindings/splashtail/ext_types.ts"
     frontmatter: |
       import * as discordgo from "./discordgo"
       import * as silverpelt from "./silverpelt"

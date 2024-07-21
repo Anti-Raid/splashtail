@@ -1,7 +1,7 @@
 package auth
 
 import (
-	"github.com/anti-raid/splashtail/core/go.std/types"
+	"github.com/anti-raid/splashtail/core/go.std/splashcore"
 	"github.com/anti-raid/splashtail/services/go.api/api"
 	"github.com/anti-raid/splashtail/services/go.api/routes/auth/endpoints/create_ioauth_login"
 	"github.com/anti-raid/splashtail/services/go.api/routes/auth/endpoints/create_oauth2_login"
@@ -55,7 +55,7 @@ func (m Router) Routes(r *chi.Mux) {
 		Handler: get_user_sessions.Route,
 		Auth: []uapi.AuthType{
 			{
-				Type:         types.TargetTypeUser,
+				Type:         splashcore.TargetTypeUser,
 				AllowedScope: "ban_exempt",
 			},
 		},
@@ -72,7 +72,7 @@ func (m Router) Routes(r *chi.Mux) {
 		Handler: create_user_session.Route,
 		Auth: []uapi.AuthType{
 			{
-				Type: types.TargetTypeUser,
+				Type: splashcore.TargetTypeUser,
 			},
 		},
 		ExtData: map[string]any{
@@ -88,7 +88,7 @@ func (m Router) Routes(r *chi.Mux) {
 		Handler: revoke_user_session.Route,
 		Auth: []uapi.AuthType{
 			{
-				Type:         types.TargetTypeUser,
+				Type:         splashcore.TargetTypeUser,
 				AllowedScope: "ban_exempt",
 			},
 		},

@@ -3,7 +3,7 @@ package guilds
 import (
 	"net/http"
 
-	"github.com/anti-raid/splashtail/core/go.std/types"
+	"github.com/anti-raid/splashtail/core/go.std/splashcore"
 	"github.com/anti-raid/splashtail/services/go.api/api"
 	"github.com/anti-raid/splashtail/services/go.api/routes/guilds/endpoints/get_all_command_configurations"
 	"github.com/anti-raid/splashtail/services/go.api/routes/guilds/endpoints/get_module_configurations"
@@ -32,7 +32,7 @@ func (b Router) Routes(r *chi.Mux) {
 		Handler: get_module_configurations.Route,
 		Auth: []uapi.AuthType{
 			{
-				Type: types.TargetTypeUser,
+				Type: splashcore.TargetTypeUser,
 			},
 		},
 		ExtData: map[string]any{
@@ -55,7 +55,7 @@ func (b Router) Routes(r *chi.Mux) {
 		Handler: patch_module_configuration.Route,
 		Auth: []uapi.AuthType{
 			{
-				Type: types.TargetTypeUser,
+				Type: splashcore.TargetTypeUser,
 			},
 		},
 		ExtData: map[string]any{
@@ -71,7 +71,7 @@ func (b Router) Routes(r *chi.Mux) {
 		Handler: get_all_command_configurations.Route,
 		Auth: []uapi.AuthType{
 			{
-				Type: types.TargetTypeUser,
+				Type: splashcore.TargetTypeUser,
 			},
 		},
 		ExtData: map[string]any{
@@ -94,7 +94,7 @@ func (b Router) Routes(r *chi.Mux) {
 		Handler: patch_command_configuration.Route,
 		Auth: []uapi.AuthType{
 			{
-				Type: types.TargetTypeUser,
+				Type: splashcore.TargetTypeUser,
 			},
 		},
 		ExtData: map[string]any{
@@ -110,7 +110,7 @@ func (b Router) Routes(r *chi.Mux) {
 		Handler: settings_execute.Route,
 		Auth: []uapi.AuthType{
 			{
-				Type: types.TargetTypeUser,
+				Type: splashcore.TargetTypeUser,
 			},
 		},
 		ExtData: map[string]any{
@@ -126,7 +126,7 @@ func (b Router) Routes(r *chi.Mux) {
 		Handler: settings_get_suggestions.Route,
 		Auth: []uapi.AuthType{
 			{
-				Type: types.TargetTypeUser,
+				Type: splashcore.TargetTypeUser,
 			},
 		},
 		ExtData: map[string]any{

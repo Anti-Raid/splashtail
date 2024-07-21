@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/anti-raid/splashtail/core/go.jobs/taskstate"
-	"github.com/anti-raid/splashtail/core/go.std/types"
+	"github.com/anti-raid/splashtail/core/go.std/ext_types"
 	"go.uber.org/zap"
 )
 
@@ -15,7 +15,7 @@ type TaskDefinition interface {
 	Name() string
 
 	// TaskFor returns who the task is for
-	TaskFor() *types.TaskFor
+	TaskFor() *ext_types.TaskFor
 
 	// As tasks often deal with sensitive data such as secrets, the TaskFields method returns
 	// a map of fields that can be stored in the database
@@ -25,7 +25,7 @@ type TaskDefinition interface {
 	Validate(state taskstate.TaskState) error
 
 	// Exec executes the task returning an output if any
-	Exec(l *zap.Logger, state taskstate.TaskState, progstate taskstate.TaskProgressState) (*types.TaskOutput, error)
+	Exec(l *zap.Logger, state taskstate.TaskState, progstate taskstate.TaskProgressState) (*ext_types.TaskOutput, error)
 
 	// Expiry returns when the task will expire (if any), setting this to nil will make the task not expire
 	Expiry() *time.Duration

@@ -9,7 +9,7 @@ import (
 	"strconv"
 
 	"github.com/anti-raid/splashtail/core/go.jobs/taskstate"
-	"github.com/anti-raid/splashtail/core/go.std/types"
+	"github.com/anti-raid/splashtail/core/go.std/ext_types"
 	"go.uber.org/zap"
 )
 
@@ -75,7 +75,7 @@ func (s *Stepper[T]) Exec(
 	l *zap.Logger,
 	state taskstate.TaskState,
 	progstate taskstate.TaskProgressState,
-) (*types.TaskOutput, error) {
+) (*ext_types.TaskOutput, error) {
 	curProg, err := progstate.GetProgress()
 
 	if err != nil {
@@ -178,5 +178,5 @@ type Step[T any] struct {
 		state taskstate.TaskState,
 		progstate taskstate.TaskProgressState,
 		progress *taskstate.Progress,
-	) (*types.TaskOutput, *taskstate.Progress, error)
+	) (*ext_types.TaskOutput, *taskstate.Progress, error)
 }

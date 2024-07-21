@@ -1,7 +1,7 @@
 package silverpelt
 
 import (
-	"github.com/anti-raid/splashtail/core/go.std/types/ext"
+	"github.com/anti-raid/splashtail/core/go.std/ext_types"
 	"github.com/bwmarrin/discordgo"
 	orderedmap "github.com/wk8/go-ordered-map/v2"
 )
@@ -90,7 +90,7 @@ type CanonicalInnerColumnTypeStringKind struct {
 	User    *struct{} `json:"User,omitempty"`
 	Channel *struct {
 		AllowedTypes         []discordgo.ChannelType `json:"allowed_types"`
-		NeededBotPermissions ext.Permissions         `json:"needed_bot_permissions"`
+		NeededBotPermissions ext_types.Permissions   `json:"needed_bot_permissions"`
 	} `json:"Channel,omitempty"`
 	Role    *struct{} `json:"Role,omitempty"`
 	Emoji   *struct{} `json:"Emoji,omitempty"`

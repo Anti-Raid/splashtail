@@ -10,11 +10,13 @@ import (
 	"time"
 
 	jobs "github.com/anti-raid/splashtail/core/go.jobs"
+	"github.com/anti-raid/splashtail/core/go.std/ext_types"
+	"github.com/anti-raid/splashtail/core/go.std/splashcore"
 	"github.com/anti-raid/splashtail/core/go.std/structparser/db"
-	types "github.com/anti-raid/splashtail/core/go.std/types"
 	"github.com/anti-raid/splashtail/services/go.api/animusmagic_messages"
 	"github.com/anti-raid/splashtail/services/go.api/api"
 	"github.com/anti-raid/splashtail/services/go.api/state"
+	types "github.com/anti-raid/splashtail/services/go.api/types"
 
 	"github.com/go-chi/chi/v5"
 	docs "github.com/infinitybotlist/eureka/doclib"
@@ -24,7 +26,7 @@ import (
 )
 
 var (
-	taskColsArr = db.GetCols(types.Task{})
+	taskColsArr = db.GetCols(ext_types.Task{})
 	taskColsStr = strings.Join(taskColsArr, ", ")
 )
 
@@ -62,7 +64,7 @@ func Docs() *docs.Doc {
 				Schema:      docs.IdSchema,
 			},
 		},
-		Resp: types.Task{},
+		Resp: ext_types.Task{},
 	}
 }
 
@@ -136,7 +138,7 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 		return uapi.DefaultResponse(http.StatusInternalServerError)
 	}
 
-	task, err := pgx.CollectOneRow(row, pgx.RowToStructByName[types.Task])
+	task, err := pgx.CollectOneRow(row, pgx.RowToStructByName[ext_types.Task])
 
 	if errors.Is(err, pgx.ErrNoRows) {
 		return uapi.HttpResponse{
@@ -183,14 +185,14 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 			}
 		}
 
-		if task.TaskFor.TargetType == types.TargetTypeUser {
+		if task.TaskFor.TargetType == splashcore.TargetTypeUser {
 			if iot.DiscordUser.ID != task.TaskFor.ID {
 				return uapi.HttpResponse{
 					Status: http.StatusForbidden,
 					Json:   types.ApiError{Message: "You are not authorized to fetch this task [TargetType = User]!"},
 				}
 			}
-		} else if task.TaskFor.TargetType == types.TargetTypeServer {
+		} else if task.TaskFor.TargetType == splashcore.TargetTypeServer {
 			// Check permissions
 			resp, ok := api.HandlePermissionCheck(iot.DiscordUser.ID, task.TaskFor.ID, taskDef.CorrespondingBotCommand_Download(), animusmagic_messages.AmCheckCommandOptions{})
 

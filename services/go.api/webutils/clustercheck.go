@@ -3,8 +3,8 @@ package webutils
 import (
 	"net/http"
 
-	"github.com/anti-raid/splashtail/core/go.std/types"
 	"github.com/anti-raid/splashtail/services/go.api/state"
+	"github.com/anti-raid/splashtail/services/go.api/types"
 	"github.com/infinitybotlist/eureka/uapi"
 )
 

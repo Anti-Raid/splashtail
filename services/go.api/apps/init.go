@@ -1,8 +1,8 @@
 package apps
 
 import (
-	"github.com/anti-raid/splashtail/core/go.std/types"
 	"github.com/anti-raid/splashtail/services/go.api/state"
+	"github.com/anti-raid/splashtail/services/go.api/types"
 )
 
 var Stable = true

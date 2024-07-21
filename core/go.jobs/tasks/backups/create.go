@@ -16,7 +16,8 @@ import (
 	"github.com/anti-raid/splashtail/core/go.jobs/common"
 	"github.com/anti-raid/splashtail/core/go.jobs/taskdef"
 	"github.com/anti-raid/splashtail/core/go.jobs/taskstate"
-	"github.com/anti-raid/splashtail/core/go.std/types"
+	"github.com/anti-raid/splashtail/core/go.std/ext_types"
+	"github.com/anti-raid/splashtail/core/go.std/splashcore"
 	"github.com/anti-raid/splashtail/core/go.std/utils"
 
 	_ "golang.org/x/image/webp"
@@ -418,7 +419,7 @@ func (t *ServerBackupCreateTask) Exec(
 	l *zap.Logger,
 	state taskstate.TaskState,
 	progstate taskstate.TaskProgressState,
-) (*types.TaskOutput, error) {
+) (*ext_types.TaskOutput, error) {
 	discord, botUser, _ := state.Discord()
 	ctx := state.Context()
 
@@ -704,7 +705,7 @@ func (t *ServerBackupCreateTask) Exec(
 		return nil, fmt.Errorf("error writing backup: %w", err)
 	}
 
-	return &types.TaskOutput{
+	return &ext_types.TaskOutput{
 		Filename: fmt.Sprintf("antiraid-backup-%s.iblfile", time.Now().Format("2006-01-02-15-04-05")),
 		Buffer:   &outputBuf,
 	}, nil
@@ -726,10 +727,10 @@ func (t *ServerBackupCreateTask) Name() string {
 	return "guild_create_backup"
 }
 
-func (t *ServerBackupCreateTask) TaskFor() *types.TaskFor {
-	return &types.TaskFor{
+func (t *ServerBackupCreateTask) TaskFor() *ext_types.TaskFor {
+	return &ext_types.TaskFor{
 		ID:         t.ServerID,
-		TargetType: types.TargetTypeServer,
+		TargetType: splashcore.TargetTypeServer,
 	}
 }
 

@@ -6,11 +6,12 @@ import (
 	"strings"
 
 	jobs "github.com/anti-raid/splashtail/core/go.jobs"
+	"github.com/anti-raid/splashtail/core/go.std/ext_types"
 	"github.com/anti-raid/splashtail/core/go.std/structparser/db"
-	"github.com/anti-raid/splashtail/core/go.std/types"
 	"github.com/anti-raid/splashtail/services/go.api/animusmagic_messages"
 	"github.com/anti-raid/splashtail/services/go.api/api"
 	"github.com/anti-raid/splashtail/services/go.api/state"
+	"github.com/anti-raid/splashtail/services/go.api/types"
 	"github.com/go-chi/chi/v5"
 	docs "github.com/infinitybotlist/eureka/doclib"
 	"github.com/infinitybotlist/eureka/uapi"
@@ -19,7 +20,7 @@ import (
 )
 
 var (
-	taskColsArr = db.GetCols(types.PartialTask{})
+	taskColsArr = db.GetCols(ext_types.PartialTask{})
 	taskColsStr = strings.Join(taskColsArr, ", ")
 )
 
@@ -50,7 +51,7 @@ func Docs() *docs.Doc {
 				Schema:      docs.IdSchema,
 			},
 		},
-		Resp: types.TaskListResponse{},
+		Resp: ext_types.TaskListResponse{},
 	}
 }
 
@@ -82,7 +83,7 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 		return uapi.DefaultResponse(http.StatusInternalServerError)
 	}
 
-	tasksFetched, err := pgx.CollectRows(row, pgx.RowToStructByName[types.PartialTask])
+	tasksFetched, err := pgx.CollectRows(row, pgx.RowToStructByName[ext_types.PartialTask])
 
 	if errors.Is(err, pgx.ErrNoRows) {
 		return uapi.HttpResponse{
@@ -97,7 +98,7 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 	}
 
 	var checksDone = map[string]bool{}
-	var parsedTasks = []types.PartialTask{}
+	var parsedTasks = []ext_types.PartialTask{}
 	for _, task := range tasksFetched {
 		// NOTE/WARNING: This is a fastpath that depends on the assumption that the corresponding bot command
 		// does not change for a task. If this assumption is broken, this code will break if the corresponding
@@ -140,6 +141,6 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 
 	return uapi.HttpResponse{
 		Status: http.StatusOK,
-		Json:   types.TaskListResponse{Tasks: parsedTasks},
+		Json:   ext_types.TaskListResponse{Tasks: parsedTasks},
 	}
 }

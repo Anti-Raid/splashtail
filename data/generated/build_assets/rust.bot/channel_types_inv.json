@@ -1,0 +1,14 @@
+{
+  "0": "text",
+  "1": "private",
+  "2": "voice",
+  "3": "group_dm",
+  "4": "category",
+  "5": "news",
+  "10": "news_thread",
+  "11": "public_thread",
+  "12": "private_thread",
+  "13": "stage",
+  "14": "directory",
+  "15": "forum"
+}

@@ -115,7 +115,7 @@ ts:
 
 	# Copy over go types
 	mkdir -p $(CDN_PATH)/dev/bindings/splashtail/go
-	cp -rf core/go.std/types $(CDN_PATH)/dev/bindings/splashtail/go
+	cp -rf services/go.api/types $(CDN_PATH)/dev/bindings/splashtail/go
 
 	# Patch to change package name to 'splashtail_types'
 	#sed -i 's:package types:package splashtail_types:g' $(CDN_PATH)/dev/bindings/splashtail/go/types/{*.go,*.ts}

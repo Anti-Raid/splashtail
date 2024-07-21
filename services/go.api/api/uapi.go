@@ -8,11 +8,12 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/anti-raid/splashtail/core/go.std/types"
+	"github.com/anti-raid/splashtail/core/go.std/splashcore"
 	"github.com/anti-raid/splashtail/core/go.std/utils/mewext"
 	"github.com/anti-raid/splashtail/services/go.api/animusmagic_messages"
 	"github.com/anti-raid/splashtail/services/go.api/constants"
 	"github.com/anti-raid/splashtail/services/go.api/state"
+	"github.com/anti-raid/splashtail/services/go.api/types"
 	"github.com/anti-raid/splashtail/services/go.api/webutils"
 	"github.com/go-chi/chi/v5"
 	"go.uber.org/zap"
@@ -205,7 +206,7 @@ func Authorize(r uapi.Route, req *http.Request) (uapi.AuthData, uapi.HttpRespons
 		var urlIds []string
 
 		switch auth.Type {
-		case types.TargetTypeUser:
+		case splashcore.TargetTypeUser:
 			// Delete old/expiring auths first
 			_, err := state.Pool.Exec(state.Context, "DELETE FROM web_api_tokens WHERE expiry < NOW()")
 
@@ -285,7 +286,7 @@ func Authorize(r uapi.Route, req *http.Request) (uapi.AuthData, uapi.HttpRespons
 			}
 
 			authData = uapi.AuthData{
-				TargetType: types.TargetTypeUser,
+				TargetType: splashcore.TargetTypeUser,
 				ID:         id.String,
 				Authorized: true,
 				Banned:     userstate == "banned" || userstate == "api_banned",
@@ -327,8 +328,8 @@ func Setup() {
 		Logger:    state.Logger,
 		Authorize: Authorize,
 		AuthTypeMap: map[string]string{
-			types.TargetTypeUser:   types.TargetTypeUser,
-			types.TargetTypeServer: types.TargetTypeServer,
+			splashcore.TargetTypeUser:   splashcore.TargetTypeUser,
+			splashcore.TargetTypeServer: splashcore.TargetTypeServer,
 		},
 		Context: state.Context,
 		Constants: &uapi.UAPIConstants{

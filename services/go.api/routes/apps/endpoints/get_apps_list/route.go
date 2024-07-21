@@ -5,8 +5,8 @@ import (
 	"strings"
 
 	"github.com/anti-raid/splashtail/core/go.std/structparser/db"
-	"github.com/anti-raid/splashtail/core/go.std/types"
 	"github.com/anti-raid/splashtail/services/go.api/state"
+	"github.com/anti-raid/splashtail/services/go.api/types"
 
 	docs "github.com/infinitybotlist/eureka/doclib"
 	"github.com/infinitybotlist/eureka/uapi"

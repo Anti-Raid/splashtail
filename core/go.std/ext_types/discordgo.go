@@ -1,4 +1,4 @@
-package ext
+package ext_types
 
 type Permissions string
 

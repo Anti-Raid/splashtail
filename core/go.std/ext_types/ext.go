@@ -1,4 +1,4 @@
-package ext
+package ext_types
 
 import (
 	"github.com/bwmarrin/discordgo"

@@ -5,8 +5,8 @@ import (
 	"strconv"
 
 	"github.com/anti-raid/splashtail/core/go.std/silverpelt"
-	"github.com/anti-raid/splashtail/core/go.std/types"
 	"github.com/anti-raid/splashtail/services/go.api/state"
+	"github.com/anti-raid/splashtail/services/go.api/types"
 	"github.com/anti-raid/splashtail/services/go.api/webutils"
 	"github.com/go-chi/chi/v5"
 

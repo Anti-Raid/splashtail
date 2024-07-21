@@ -1,7 +1,7 @@
 package apps
 
 import (
-	"github.com/anti-raid/splashtail/core/go.std/types"
+	"github.com/anti-raid/splashtail/core/go.std/splashcore"
 	"github.com/anti-raid/splashtail/services/go.api/api"
 	"github.com/anti-raid/splashtail/services/go.api/routes/apps/endpoints/create_app"
 	"github.com/anti-raid/splashtail/services/go.api/routes/apps/endpoints/get_apps_list"
@@ -38,7 +38,7 @@ func (b Router) Routes(r *chi.Mux) {
 		Handler: get_apps_list.Route,
 		Auth: []uapi.AuthType{
 			{
-				Type:         types.TargetTypeUser,
+				Type:         splashcore.TargetTypeUser,
 				AllowedScope: "ban_exempt", // Ensure banned users can view their own apps
 			},
 		},
@@ -54,7 +54,7 @@ func (b Router) Routes(r *chi.Mux) {
 		Handler: create_app.Route,
 		Auth: []uapi.AuthType{
 			{
-				Type:         types.TargetTypeUser,
+				Type:         splashcore.TargetTypeUser,
 				AllowedScope: "ban_exempt", // Ensure banned users can create apps
 			},
 		},

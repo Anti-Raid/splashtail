@@ -8,7 +8,8 @@ import (
 	"github.com/anti-raid/splashtail/core/go.jobs/common"
 	"github.com/anti-raid/splashtail/core/go.jobs/taskdef"
 	"github.com/anti-raid/splashtail/core/go.jobs/taskstate"
-	"github.com/anti-raid/splashtail/core/go.std/types"
+	"github.com/anti-raid/splashtail/core/go.std/ext_types"
+	"github.com/anti-raid/splashtail/core/go.std/splashcore"
 	"github.com/anti-raid/splashtail/core/go.std/utils"
 	"github.com/anti-raid/splashtail/core/go.std/utils/timex"
 	"github.com/bwmarrin/discordgo"
@@ -109,7 +110,7 @@ func (t *MessagePruneTask) Exec(
 	l *zap.Logger,
 	state taskstate.TaskState,
 	progstate taskstate.TaskProgressState,
-) (*types.TaskOutput, error) {
+) (*ext_types.TaskOutput, error) {
 	discord, botUser, _ := state.Discord()
 	ctx := state.Context()
 
@@ -291,7 +292,7 @@ func (t *MessagePruneTask) Exec(
 		return nil, fmt.Errorf("error encoding final messages: %w", err)
 	}
 
-	return &types.TaskOutput{
+	return &ext_types.TaskOutput{
 		Filename: "pruned-messages.txt",
 		Buffer:   &outputBuf,
 	}, nil
@@ -313,10 +314,10 @@ func (t *MessagePruneTask) Name() string {
 	return "message_prune"
 }
 
-func (t *MessagePruneTask) TaskFor() *types.TaskFor {
-	return &types.TaskFor{
+func (t *MessagePruneTask) TaskFor() *ext_types.TaskFor {
+	return &ext_types.TaskFor{
 		ID:         t.ServerID,
-		TargetType: types.TargetTypeServer,
+		TargetType: splashcore.TargetTypeServer,
 	}
 }
 

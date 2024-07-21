@@ -2,8 +2,8 @@ package animusmagic_messages
 
 import (
 	"github.com/anti-raid/splashtail/core/go.std/animusmagic"
+	"github.com/anti-raid/splashtail/core/go.std/ext_types"
 	"github.com/anti-raid/splashtail/core/go.std/silverpelt"
-	"github.com/anti-raid/splashtail/core/go.std/types/ext"
 	orderedmap "github.com/wk8/go-ordered-map/v2"
 )
 
@@ -110,13 +110,13 @@ type BotAnimusResponse struct {
 	} `json:"GuildsExist,omitempty"`
 
 	BaseGuildUserInfo *struct {
-		OwnerID   string                             `json:"owner_id"`
-		Name      string                             `json:"name"`
-		Icon      *string                            `json:"icon"`
-		Roles     []*ext.SerenityRole                `json:"roles"`
-		UserRoles []string                           `json:"user_roles"`
-		BotRoles  []string                           `json:"bot_roles"`
-		Channels  []*ext.GuildChannelWithPermissions `json:"channels"`
+		OwnerID   string                                  `json:"owner_id"`
+		Name      string                                  `json:"name"`
+		Icon      *string                                 `json:"icon"`
+		Roles     []ext_types.SerenityRole                `json:"roles"`
+		UserRoles []string                                `json:"user_roles"`
+		BotRoles  []string                                `json:"bot_roles"`
+		Channels  []ext_types.GuildChannelWithPermissions `json:"channels"`
 	} `json:"BaseGuildUserInfo,omitempty"`
 
 	/// Returns the response of a command permission check

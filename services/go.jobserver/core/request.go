@@ -9,8 +9,9 @@ import (
 
 	jobs "github.com/anti-raid/splashtail/core/go.jobs"
 	"github.com/anti-raid/splashtail/core/go.std/animusmagic"
+	"github.com/anti-raid/splashtail/core/go.std/ext_types"
+	"github.com/anti-raid/splashtail/core/go.std/splashcore"
 	"github.com/anti-raid/splashtail/core/go.std/structparser/db"
-	"github.com/anti-raid/splashtail/core/go.std/types"
 	"github.com/anti-raid/splashtail/core/go.std/utils/mewext"
 	"github.com/anti-raid/splashtail/services/go.jobserver/animusmagic_messages"
 	"github.com/anti-raid/splashtail/services/go.jobserver/jobrunner"
@@ -25,7 +26,7 @@ var ResumeOngoingTaskTimeoutSecs = 15 * 60
 var DefaultValidationTimeout = 5 * time.Second
 
 var (
-	taskCols    = db.GetCols(types.Task{})
+	taskCols    = db.GetCols(ext_types.Task{})
 	taskColsStr = strings.Join(taskCols, ", ")
 )
 
@@ -84,7 +85,7 @@ func AnimusOnRequest(c *animusmagic.ClientRequest) (animusmagic.AnimusResponse, 
 		taskFor := task.TaskFor()
 
 		// Check if task pertains to this clusters shard
-		if taskFor.TargetType == types.TargetTypeUser && state.Shard != 0 {
+		if taskFor.TargetType == splashcore.TargetTypeUser && state.Shard != 0 {
 			return nil, fmt.Errorf("task is not for this shard [user tasks must run on shard 0]")
 		} else {
 			taskShard, err := mewext.GetShardIDFromGuildID(taskFor.ID, int(state.ShardCount))
@@ -196,7 +197,7 @@ func Resume() {
 
 		defer row.Close()
 
-		t, err := pgx.CollectOneRow(row, pgx.RowToAddrOfStructByName[types.Task])
+		t, err := pgx.CollectOneRow(row, pgx.RowToAddrOfStructByName[ext_types.Task])
 
 		if errors.Is(err, pgx.ErrNoRows) {
 			state.Logger.Error("Task not found", zap.String("task_id", taskId))
@@ -242,7 +243,7 @@ func Resume() {
 		taskFor := task.TaskFor()
 
 		// Check if task pertains to this clusters shard
-		if taskFor.TargetType == types.TargetTypeUser && state.Shard != 0 {
+		if taskFor.TargetType == splashcore.TargetTypeUser && state.Shard != 0 {
 			continue
 		} else {
 			taskShard, err := mewext.GetShardIDFromGuildID(taskFor.ID, int(state.ShardCount))

@@ -3,7 +3,7 @@ package tasks
 import (
 	"net/http"
 
-	"github.com/anti-raid/splashtail/core/go.std/types"
+	"github.com/anti-raid/splashtail/core/go.std/splashcore"
 	"github.com/anti-raid/splashtail/services/go.api/api"
 	"github.com/anti-raid/splashtail/services/go.api/routes/tasks/endpoints/create_guild_task"
 	"github.com/anti-raid/splashtail/services/go.api/routes/tasks/endpoints/get_guild_task"
@@ -32,7 +32,7 @@ func (b Router) Routes(r *chi.Mux) {
 		AuthOptional: true,
 		Auth: []uapi.AuthType{
 			{
-				Type: types.TargetTypeUser,
+				Type: splashcore.TargetTypeUser,
 			},
 		},
 		ExtData: map[string]any{
@@ -56,7 +56,7 @@ func (b Router) Routes(r *chi.Mux) {
 		AuthOptional: true,
 		Auth: []uapi.AuthType{
 			{
-				Type: types.TargetTypeUser,
+				Type: splashcore.TargetTypeUser,
 			},
 		},
 		ExtData: map[string]any{
@@ -79,7 +79,7 @@ func (b Router) Routes(r *chi.Mux) {
 		Handler: create_guild_task.Route,
 		Auth: []uapi.AuthType{
 			{
-				Type: types.TargetTypeUser,
+				Type: splashcore.TargetTypeUser,
 			},
 		},
 		ExtData: map[string]any{

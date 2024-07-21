@@ -3,7 +3,7 @@ package types
 import (
 	"time"
 
-	"github.com/anti-raid/splashtail/core/go.std/types/ext"
+	"github.com/anti-raid/splashtail/core/go.std/ext_types"
 	"github.com/infinitybotlist/eureka/dovewing/dovetypes"
 )
 
@@ -31,11 +31,11 @@ channels: Vec<GuildChannel>,
 */
 
 type UserGuildBaseData struct {
-	OwnerID   string                             `json:"owner_id" description:"The ID of the guild owner"`
-	Name      string                             `json:"name" description:"The name of the guild"`
-	Icon      *string                            `json:"icon" description:"The icon of the guild"`
-	Roles     []*ext.SerenityRole                `json:"roles" description:"The roles of the guild"`
-	UserRoles []string                           `json:"user_roles" description:"The role IDs the user has in the guild"`
-	BotRoles  []string                           `json:"bot_roles" description:"The role IDs the bot has in the guild"`
-	Channels  []*ext.GuildChannelWithPermissions `json:"channels" description:"The channels of the guild with permission info"`
+	OwnerID   string                                  `json:"owner_id" description:"The ID of the guild owner"`
+	Name      string                                  `json:"name" description:"The name of the guild"`
+	Icon      *string                                 `json:"icon" description:"The icon of the guild"`
+	Roles     []ext_types.SerenityRole                `json:"roles" description:"The roles of the guild"`
+	UserRoles []string                                `json:"user_roles" description:"The role IDs the user has in the guild"`
+	BotRoles  []string                                `json:"bot_roles" description:"The role IDs the bot has in the guild"`
+	Channels  []ext_types.GuildChannelWithPermissions `json:"channels" description:"The channels of the guild with permission info"`
 }

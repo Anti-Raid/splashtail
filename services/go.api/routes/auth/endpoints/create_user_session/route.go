@@ -4,8 +4,8 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/anti-raid/splashtail/core/go.std/types"
 	"github.com/anti-raid/splashtail/services/go.api/state"
+	"github.com/anti-raid/splashtail/services/go.api/types"
 	"github.com/go-playground/validator/v10"
 	"go.uber.org/zap"
 
