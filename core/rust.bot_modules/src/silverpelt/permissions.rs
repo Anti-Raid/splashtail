@@ -1,6 +1,6 @@
 use super::{
-    silverpelt_cache::SILVERPELT_CACHE, CommandExtendedData, GuildCommandConfiguration,
-    GuildModuleConfiguration, PermissionCheck, PermissionChecks,
+    CommandExtendedData, GuildCommandConfiguration, GuildModuleConfiguration, PermissionCheck,
+    PermissionChecks,
 };
 use splashcore_rs::types::silverpelt::PermissionResult;
 
@@ -137,6 +137,7 @@ pub fn can_run_command(
     cmd_qualified_name: &str,
     member_native_perms: serenity::all::Permissions,
     member_kittycat_perms: &[kittycat::perms::Permission],
+    is_default_enabled: bool,
 ) -> PermissionResult {
     log::debug!(
         "Command config: {:?} [{}]",
@@ -154,13 +155,7 @@ pub fn can_run_command(
     }
 
     {
-        let Some(module) = SILVERPELT_CACHE.module_cache.get(&module_config.module) else {
-            return PermissionResult::UnknownModule {
-                module_config: module_config.clone(),
-            };
-        };
-
-        if module_config.disabled.unwrap_or(!module.is_default_enabled) {
+        if module_config.disabled.unwrap_or(!is_default_enabled) {
             return PermissionResult::ModuleDisabled {
                 module_config: module_config.clone(),
             };
@@ -303,6 +298,7 @@ mod tests {
             "test",
             serenity::all::Permissions::empty(),
             &["abc.test".into()],
+            true
         )
         .is_ok());
 
@@ -329,6 +325,7 @@ mod tests {
                 "test",
                 serenity::all::Permissions::empty(),
                 &["abc.test".into()],
+                true
             ),
             "no_checks_succeeded"
         ));
@@ -355,6 +352,7 @@ mod tests {
                 "test",
                 serenity::all::Permissions::empty(),
                 &["abc.test".into()],
+                true
             ),
             "no_checks_succeeded"
         ));
@@ -389,6 +387,7 @@ mod tests {
                 "test",
                 serenity::all::Permissions::BAN_MEMBERS,
                 &["abc.test".into()],
+                true
             ),
             "missing_min_checks"
         ));
@@ -408,6 +407,7 @@ mod tests {
                 "backups create",
                 serenity::all::Permissions::ADMINISTRATOR,
                 &[],
+                true
             ),
             "no_checks_succeeded"
         ));
@@ -426,6 +426,7 @@ mod tests {
             "backups create",
             serenity::all::Permissions::ADMINISTRATOR,
             &[],
+            true
         )
         .is_ok());
 
@@ -458,6 +459,7 @@ mod tests {
             "test",
             serenity::all::Permissions::BAN_MEMBERS,
             &["abc.test".into()],
+            true
         )
         .is_ok());
 
@@ -491,6 +493,7 @@ mod tests {
                 "test abc",
                 serenity::all::Permissions::VIEW_AUDIT_LOG,
                 &[],
+                true,
             );
 
             println!("{}", r.code());

@@ -369,6 +369,14 @@ pub async fn check_command(
         user_id, command, member_perms
     );
 
+    let module_default_enabled = {
+        let Some(module) = SILVERPELT_CACHE.module_cache.get(module) else {
+            return PermissionResult::UnknownModule { module_config };
+        };
+
+        module.is_default_enabled
+    };
+
     let perm_res = super::permissions::can_run_command(
         &cmd_data,
         &command_config,
@@ -376,6 +384,7 @@ pub async fn check_command(
         command,
         member_perms,
         &kittycat_perms,
+        module_default_enabled,
     );
 
     if !opts.cache_result {
