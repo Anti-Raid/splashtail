@@ -282,7 +282,7 @@ fn _parse_value(
 #[async_recursion::async_recursion]
 async fn _validate_value(
     v: Value,
-    state: &State,
+    state: &mut State,
     guild_id: serenity::all::GuildId,
     cache_http: &botox::cache::CacheHttpImpl,
     reqwest_client: &reqwest::Client,
@@ -809,7 +809,7 @@ pub async fn settings_create(
                 // Validate and parse the value
                 _validate_value(
                     parsed_value,
-                    &state,
+                    &mut state,
                     guild_id,
                     cache_http,
                     reqwest_client,
@@ -1011,7 +1011,7 @@ pub async fn settings_update(
 
                         _validate_value(
                             parsed_value,
-                            &state,
+                            &mut state,
                             guild_id,
                             cache_http,
                             reqwest_client,

@@ -26,7 +26,7 @@ import (
 func Docs() *docs.Doc {
 	return &docs.Doc{
 		Summary:     "Settings Execute",
-		Description: "Execute a settings operation (list/create/update/delete)",
+		Description: "Execute a settings operation (list/create/update/delete). Note that, for dynamic values, all referenced variables must also be sent in the request.",
 		Req:         types.SettingsExecute{},
 		Resp:        types.SettingsExecuteResponse{},
 		Params: []docs.Parameter{
