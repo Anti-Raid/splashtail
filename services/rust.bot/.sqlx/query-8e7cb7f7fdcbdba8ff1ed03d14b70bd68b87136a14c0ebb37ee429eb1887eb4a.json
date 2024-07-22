@@ -1,0 +1,25 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "select action_id from limits__user_actions where guild_id = $1 and user_id = $2 and limit_type = $3 and created_at + make_interval(secs => $4) > now()",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "action_id",
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text",
+        "Text",
+        "Float8"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "8e7cb7f7fdcbdba8ff1ed03d14b70bd68b87136a14c0ebb37ee429eb1887eb4a"
+}
