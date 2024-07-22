@@ -12,10 +12,6 @@ fn _parse_value(
     column_type: &ColumnType,
     column_id: &str,
 ) -> Result<Value, SettingsError> {
-    if matches!(v, Value::None) {
-        return Ok(v);
-    }
-
     match column_type {
         ColumnType::Scalar { column_type } => {
             if matches!(v, Value::List(_)) {
@@ -48,16 +44,26 @@ fn _parse_value(
                         got_type: format!("{:?}", v),
                     }),
                 },
-                InnerColumnType::String { .. } => match v {
+                InnerColumnType::String { kind, .. } => match v {
                     Value::String(ref s) => {
                         if s.is_empty() {
-                            Ok(Value::None)
+                            match kind {
+                                InnerColumnTypeStringKind::Token { default_length } => {
+                                    Ok(Value::String(botox::crypto::gen_random(*default_length)))
+                                }
+                                _ => Ok(Value::None),
+                            }
                         } else {
                             Ok(v)
                         }
                     }
                     Value::Uuid(v) => Ok(Value::String(v.to_string())),
-                    Value::None => Ok(v),
+                    Value::None => match kind {
+                        InnerColumnTypeStringKind::Token { default_length } => {
+                            Ok(Value::String(botox::crypto::gen_random(*default_length)))
+                        }
+                        _ => Ok(v),
+                    },
                     _ => Err(SettingsError::SchemaTypeValidationError {
                         column: column_id.to_string(),
                         expected_type: "String".to_string(),
@@ -248,6 +254,7 @@ fn _parse_value(
 
                 Ok(Value::List(values))
             }
+            Value::None => Ok(v),
             _ => Err(SettingsError::SchemaTypeValidationError {
                 column: column_id.to_string(),
                 expected_type: "Array".to_string(),
@@ -282,7 +289,7 @@ fn _parse_value(
 #[async_recursion::async_recursion]
 async fn _validate_value(
     v: Value,
-    state: &mut State,
+    state: &State,
     guild_id: serenity::all::GuildId,
     cache_http: &botox::cache::CacheHttpImpl,
     reqwest_client: &reqwest::Client,
@@ -342,7 +349,7 @@ async fn _validate_value(
 
                             let parsed_value = match kind {
                                 InnerColumnTypeStringKind::Normal => v,
-                                InnerColumnTypeStringKind::Token { .. } => v, // Normalizing automatically makes empty strings into None
+                                InnerColumnTypeStringKind::Token { .. } => v, // Handled in parse_value
                                 InnerColumnTypeStringKind::Textarea => v,
                                 InnerColumnTypeStringKind::Template { .. } => {
                                     let compiled = templating::compile_template(
@@ -568,12 +575,7 @@ async fn _validate_value(
                             };
                             Ok(parsed_value)
                         }
-                        Value::None => match kind {
-                            InnerColumnTypeStringKind::Token { default_length } => {
-                                Ok(Value::String(botox::crypto::gen_random(*default_length)))
-                            }
-                            _ => Ok(v),
-                        },
+                        Value::None => Ok(v),
                         _ => Err(SettingsError::SchemaTypeValidationError {
                             column: column_id.to_string(),
                             expected_type: "String".to_string(),
@@ -799,7 +801,7 @@ pub async fn settings_create(
         // If the column is a secret column, then ensure we set it to something random as this is a create operation
         let value = {
             if column.ignored_for.contains(&OperationType::Create) {
-                Value::None
+                _parse_value(Value::None, &state, &column.column_type, column.id)?
             } else {
                 // Get the value
                 let val = fields.swap_remove(column.id).unwrap_or(Value::None);
@@ -809,7 +811,7 @@ pub async fn settings_create(
                 // Validate and parse the value
                 _validate_value(
                     parsed_value,
-                    &mut state,
+                    &state,
                     guild_id,
                     cache_http,
                     reqwest_client,
@@ -1011,7 +1013,7 @@ pub async fn settings_update(
 
                         _validate_value(
                             parsed_value,
-                            &mut state,
+                            &state,
                             guild_id,
                             cache_http,
                             reqwest_client,
