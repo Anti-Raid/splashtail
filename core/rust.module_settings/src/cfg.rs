@@ -22,18 +22,14 @@ async fn _validate_and_parse_value(
     is_nullable: bool,
     perform_schema_checks: bool,
 ) -> Result<Value, SettingsError> {
+    if matches!(v, Value::None) && !is_nullable {
+        return Err(SettingsError::SchemaNullValueValidationError {
+            column: column_id.to_string(),
+        });
+    }
+
     match column_type {
         ColumnType::Scalar { column_type } => {
-            if matches!(v, Value::None) {
-                if is_nullable {
-                    return Ok(Value::None);
-                } else {
-                    return Err(SettingsError::SchemaNullValueValidationError {
-                        column: column_id.to_string(),
-                    });
-                }
-            }
-
             if matches!(v, Value::List(_)) {
                 return Err(SettingsError::SchemaTypeValidationError {
                     column: column_id.to_string(),
@@ -57,6 +53,7 @@ async fn _validate_and_parse_value(
                         Ok(Value::Uuid(value))
                     }
                     Value::Uuid(_) => Ok(v),
+                    Value::None => Ok(v),
                     _ => Err(SettingsError::SchemaTypeValidationError {
                         column: column_id.to_string(),
                         expected_type: "Uuid".to_string(),
@@ -68,9 +65,13 @@ async fn _validate_and_parse_value(
                     max_length,
                     allowed_values,
                     kind,
-                } => match v {
-                    Value::String(ref s) => {
-                        if perform_schema_checks {
+                } => {
+                    match v {
+                        Value::String(ref s) => {
+                            if !perform_schema_checks {
+                                return Ok(v);
+                            }
+
                             if let Some(min) = min_length {
                                 if s.len() < *min {
                                     return Err(SettingsError::SchemaCheckValidationError {
@@ -95,16 +96,23 @@ async fn _validate_and_parse_value(
 
                             if !allowed_values.is_empty() && !allowed_values.contains(&s.as_str()) {
                                 return Err(SettingsError::SchemaCheckValidationError {
-                                    column: column_id.to_string(),
-                                    check: "allowed_values".to_string(),
-                                    accepted_range: format!("{:?}", allowed_values),
-                                    error: "!allowed_values.is_empty() && !allowed_values.contains(&s.as_str())".to_string()
-                                });
+                                column: column_id.to_string(),
+                                check: "allowed_values".to_string(),
+                                accepted_range: format!("{:?}", allowed_values),
+                                error: "!allowed_values.is_empty() && !allowed_values.contains(&s.as_str())".to_string()
+                            });
                             }
 
-                            match kind {
-                                InnerColumnTypeStringKind::Normal => {}
-                                InnerColumnTypeStringKind::Textarea => {}
+                            let parsed_value = match kind {
+                                InnerColumnTypeStringKind::Normal => v,
+                                InnerColumnTypeStringKind::Token { default_length } => {
+                                    if s.is_empty() {
+                                        Value::String(botox::crypto::gen_random(*default_length))
+                                    } else {
+                                        v
+                                    }
+                                }
+                                InnerColumnTypeStringKind::Textarea => v,
                                 InnerColumnTypeStringKind::Template { .. } => {
                                     let compiled = templating::compile_template(
                                         s,
@@ -123,6 +131,8 @@ async fn _validate_and_parse_value(
                                             error: err.to_string(),
                                         });
                                     }
+
+                                    v
                                 }
                                 InnerColumnTypeStringKind::User => {
                                     // Try parsing to a UserId
@@ -134,6 +144,8 @@ async fn _validate_and_parse_value(
                                             error: err.to_string(),
                                         });
                                     }
+
+                                    v
                                 }
                                 InnerColumnTypeStringKind::Channel {
                                     allowed_types,
@@ -193,29 +205,29 @@ async fn _validate_and_parse_value(
 
                                                 if gc.guild_id != guild_id {
                                                     return Err(SettingsError::SchemaCheckValidationError {
-                                                        column: column_id.to_string(),
-                                                        check: "channel_guild".to_string(),
-                                                        accepted_range: "Valid channel id".to_string(),
-                                                        error: "Channel is not in the guild specified".to_string(),
-                                                    });
+                                                    column: column_id.to_string(),
+                                                    check: "channel_guild".to_string(),
+                                                    accepted_range: "Valid channel id".to_string(),
+                                                    error: "Channel is not in the guild specified".to_string(),
+                                                });
                                                 }
 
                                                 if !needed_bot_permissions.is_empty() {
                                                     let perms = gc.permissions_for_user(&cache_http.cache, cache_http.cache.current_user().id).map_err(|e| SettingsError::SchemaCheckValidationError {
-                                                        column: column_id.to_string(),
-                                                        check: "channel_perms".to_string(),
-                                                        accepted_range: "Valid channel id".to_string(),
-                                                        error: e.to_string(),
-                                                    })?;
+                                                    column: column_id.to_string(),
+                                                    check: "channel_perms".to_string(),
+                                                    accepted_range: "Valid channel id".to_string(),
+                                                    error: e.to_string(),
+                                                })?;
 
                                                     for perm in needed_bot_permissions.iter() {
                                                         if !perms.contains(perm) {
                                                             return Err(SettingsError::SchemaCheckValidationError {
-                                                                column: column_id.to_string(),
-                                                                check: "channel_perms".to_string(),
-                                                                accepted_range: "Valid channel id".to_string(),
-                                                                error: format!("Missing permission: {}", perm),
-                                                            });
+                                                            column: column_id.to_string(),
+                                                            check: "channel_perms".to_string(),
+                                                            accepted_range: "Valid channel id".to_string(),
+                                                            error: format!("Missing permission: {}", perm),
+                                                        });
                                                         }
                                                     }
                                                 }
@@ -249,6 +261,8 @@ async fn _validate_and_parse_value(
                                             }
                                         }
                                     }
+
+                                    v
                                 }
                                 InnerColumnTypeStringKind::Role => {
                                     // Try parsing to a RoleId
@@ -260,6 +274,8 @@ async fn _validate_and_parse_value(
                                             error: err.to_string(),
                                         });
                                     }
+
+                                    v
                                 }
                                 InnerColumnTypeStringKind::Emoji => {
                                     // Try parsing to a ChannelId
@@ -271,6 +287,8 @@ async fn _validate_and_parse_value(
                                             error: err.to_string(),
                                         });
                                     }
+
+                                    v
                                 }
                                 InnerColumnTypeStringKind::Message => {
                                     // The format of a message on db should be channel_id/message_id
@@ -313,18 +331,32 @@ async fn _validate_and_parse_value(
                                             error: format!("p2: {}", err),
                                         });
                                     }
+
+                                    v
                                 }
+                            };
+                            Ok(parsed_value)
+                        }
+                        Value::Uuid(v) => Ok(Value::String(v.to_string())),
+                        Value::None => {
+                            if !perform_schema_checks {
+                                return Ok(v);
+                            }
+
+                            match kind {
+                                InnerColumnTypeStringKind::Token { default_length } => {
+                                    Ok(Value::String(botox::crypto::gen_random(*default_length)))
+                                }
+                                _ => Ok(v),
                             }
                         }
-                        Ok(v)
+                        _ => Err(SettingsError::SchemaTypeValidationError {
+                            column: column_id.to_string(),
+                            expected_type: "String".to_string(),
+                            got_type: format!("{:?}", v),
+                        }),
                     }
-                    Value::Uuid(v) => Ok(Value::String(v.to_string())),
-                    _ => Err(SettingsError::SchemaTypeValidationError {
-                        column: column_id.to_string(),
-                        expected_type: "String".to_string(),
-                        got_type: format!("{:?}", v),
-                    }),
-                },
+                }
                 InnerColumnType::Timestamp {} => match v {
                     Value::String(s) => {
                         let value = chrono::NaiveDateTime::parse_from_str(&s, "%Y-%m-%d %H:%M:%S")
@@ -338,6 +370,7 @@ async fn _validate_and_parse_value(
                         Ok(Value::Timestamp(value))
                     }
                     Value::Timestamp(_) => Ok(v),
+                    Value::None => Ok(v),
                     Value::TimestampTz(v) => Ok(Value::Timestamp(v.naive_utc())),
                     _ => Err(SettingsError::SchemaTypeValidationError {
                         column: column_id.to_string(),
@@ -369,6 +402,7 @@ async fn _validate_and_parse_value(
                         chrono::DateTime::from_naive_utc_and_offset(v, chrono::Utc),
                     )),
                     Value::TimestampTz(_) => Ok(v),
+                    Value::None => Ok(v),
                     _ => Err(SettingsError::SchemaTypeValidationError {
                         column: column_id.to_string(),
                         expected_type: "TimestampTz".to_string(),
@@ -393,6 +427,7 @@ async fn _validate_and_parse_value(
                         Ok(Value::Interval(duration))
                     }
                     Value::Interval(_) => Ok(v),
+                    Value::None => Ok(v),
                     _ => Err(SettingsError::SchemaTypeValidationError {
                         column: column_id.to_string(),
                         expected_type: "Interval".to_string(),
@@ -413,6 +448,7 @@ async fn _validate_and_parse_value(
                         Ok(Value::Integer(value))
                     }
                     Value::Integer(v) => Ok(Value::Integer(v)),
+                    Value::None => Ok(v),
                     _ => Err(SettingsError::SchemaTypeValidationError {
                         column: column_id.to_string(),
                         expected_type: "Integer".to_string(),
@@ -433,6 +469,7 @@ async fn _validate_and_parse_value(
                         Ok(Value::Float(value))
                     }
                     Value::Float(v) => Ok(Value::Float(v)),
+                    Value::None => Ok(v),
                     _ => Err(SettingsError::SchemaTypeValidationError {
                         column: column_id.to_string(),
                         expected_type: "Float".to_string(),
@@ -452,6 +489,7 @@ async fn _validate_and_parse_value(
 
                         Ok(Value::Integer(final_value))
                     }
+                    Value::None => Ok(v),
                     _ => Err(SettingsError::SchemaTypeValidationError {
                         column: column_id.to_string(),
                         expected_type: "Integer".to_string(),
@@ -472,6 +510,7 @@ async fn _validate_and_parse_value(
                         Ok(Value::Boolean(value))
                     }
                     Value::Boolean(v) => Ok(Value::Boolean(v)),
+                    Value::None => Ok(v),
                     _ => Err(SettingsError::SchemaTypeValidationError {
                         column: column_id.to_string(),
                         expected_type: "Boolean".to_string(),
@@ -480,6 +519,7 @@ async fn _validate_and_parse_value(
                 },
                 InnerColumnType::Json {} => match v {
                     Value::Map(_) => Ok(v),
+                    Value::None => Ok(v),
                     _ => Err(SettingsError::SchemaTypeValidationError {
                         column: column_id.to_string(),
                         expected_type: "Json".to_string(),
@@ -488,48 +528,36 @@ async fn _validate_and_parse_value(
                 },
             }
         }
-        ColumnType::Array { inner } => {
-            if matches!(v, Value::None) {
-                if is_nullable {
-                    return Ok(Value::None);
-                } else {
-                    return Err(SettingsError::SchemaNullValueValidationError {
-                        column: column_id.to_string(),
-                    });
+        ColumnType::Array { inner } => match v {
+            Value::List(l) => {
+                let mut values: Vec<Value> = Vec::new();
+
+                let column_type = ColumnType::new_scalar(inner.clone());
+                for v in l {
+                    let new_v = _validate_and_parse_value(
+                        v,
+                        state,
+                        guild_id,
+                        cache_http,
+                        reqwest_client,
+                        &column_type,
+                        column_id,
+                        is_nullable,
+                        perform_schema_checks,
+                    )
+                    .await?;
+
+                    values.push(new_v);
                 }
+
+                Ok(Value::List(values))
             }
-
-            match v {
-                Value::List(l) => {
-                    let mut values: Vec<Value> = Vec::new();
-
-                    let column_type = ColumnType::new_scalar(inner.clone());
-                    for v in l {
-                        let new_v = _validate_and_parse_value(
-                            v,
-                            state,
-                            guild_id,
-                            cache_http,
-                            reqwest_client,
-                            &column_type,
-                            column_id,
-                            is_nullable,
-                            perform_schema_checks,
-                        )
-                        .await?;
-
-                        values.push(new_v);
-                    }
-
-                    Ok(Value::List(values))
-                }
-                _ => Err(SettingsError::SchemaTypeValidationError {
-                    column: column_id.to_string(),
-                    expected_type: "Array".to_string(),
-                    got_type: format!("{:?}", v),
-                }),
-            }
-        }
+            _ => Err(SettingsError::SchemaTypeValidationError {
+                column: column_id.to_string(),
+                expected_type: "Array".to_string(),
+                got_type: format!("{:?}", v),
+            }),
+        },
         ColumnType::Dynamic { clauses } => {
             for clause in clauses {
                 let value = state.template_to_string(clause.field);
@@ -673,7 +701,7 @@ pub async fn settings_view(
 
         // Remove ignored columns + secret columns now that the actions have been executed
         for col in setting.columns.iter() {
-            if col.secret.is_some() {
+            if col.secret {
                 state.state.swap_remove(col.id);
                 continue; // Skip secret columns in view. **this applies to view and update only as create is creating a new object**
             }
@@ -720,28 +748,10 @@ pub async fn settings_create(
         // If the column is a secret column, then ensure we set it to something random as this is a create operation
         let value = {
             if column.ignored_for.contains(&OperationType::Create) {
-                match column.secret {
-                    Some(length) => Value::String(botox::crypto::gen_random(length)),
-                    None => Value::None,
-                }
+                Value::None
             } else {
-                // Get the value, taking secret into account
-                let val = match fields.swap_remove(column.id) {
-                    Some(val) => {
-                        if matches!(val, Value::None) {
-                            match column.secret {
-                                Some(length) => Value::String(botox::crypto::gen_random(length)),
-                                None => Value::None,
-                            }
-                        } else {
-                            val
-                        }
-                    }
-                    None => match column.secret {
-                        Some(length) => Value::String(botox::crypto::gen_random(length)),
-                        None => Value::None,
-                    },
-                };
+                // Get the value
+                let val = fields.swap_remove(column.id).unwrap_or(Value::None);
 
                 // Validate and parse the value
                 _validate_and_parse_value(
@@ -928,7 +938,7 @@ pub async fn settings_update(
         // If the column is ignored for create, skip
         let value = {
             if column.ignored_for.contains(&OperationType::Update) {
-                if column.secret.is_none() {
+                if !column.secret {
                     unchanged_fields.push(column.id.to_string()); // Ensure that ignored_for columns are still seen as unchanged but only if not secret
                 }
                 Value::None
@@ -949,7 +959,7 @@ pub async fn settings_update(
                         .await?
                     }
                     None => {
-                        if column.secret.is_none() {
+                        if !column.secret {
                             unchanged_fields.push(column.id.to_string()); // Don't retrieve the value if it's a secret column
                         }
                         Value::None

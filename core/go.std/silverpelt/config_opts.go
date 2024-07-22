@@ -82,7 +82,10 @@ type CanonicalInnerColumnTypeStringKindTemplateKind struct {
 }
 
 type CanonicalInnerColumnTypeStringKind struct {
-	Normal   *struct{} `json:"Normal,omitempty"`
+	Normal *struct{} `json:"Normal,omitempty"`
+	Token  *struct {
+		DefaultLength uint64 `json:"default_length"`
+	} `json:"Token,omitempty"`
 	Textarea *struct{} `json:"Textarea,omitempty"`
 	Template *struct {
 		Kind CanonicalInnerColumnTypeStringKindTemplateKind `json:"kind"`
@@ -142,6 +145,7 @@ type CanonicalColumn struct {
 	Nullable    bool                      `json:"nullable"`
 	Suggestions CanonicalColumnSuggestion `json:"suggestions"`
 	Unique      bool                      `json:"unique"`
+	Secret      bool                      `json:"secret"`
 	IgnoredFor  []CanonicalOperationType  `json:"ignored_for"`
 }
 

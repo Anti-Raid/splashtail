@@ -27,7 +27,7 @@ pub static SINK: Lazy<ConfigOption> = Lazy::new(|| {
                 unique: true,
                 suggestions: ColumnSuggestion::None {},
                 ignored_for: vec![OperationType::Create],
-                secret: None,
+                secret: false,
                 pre_checks: settings_wrap_precheck(indexmap::indexmap! {}),
                 default_pre_checks: settings_wrap_precheck(vec![]),
             },
@@ -40,7 +40,7 @@ pub static SINK: Lazy<ConfigOption> = Lazy::new(|| {
                 unique: false,
                 suggestions: ColumnSuggestion::None {},
                 ignored_for: vec![],
-                secret: None,
+                secret: false,
                 pre_checks: settings_wrap_precheck(indexmap::indexmap! {}),
                 default_pre_checks: settings_wrap_precheck(vec![]),
             },
@@ -69,7 +69,7 @@ pub static SINK: Lazy<ConfigOption> = Lazy::new(|| {
                 unique: false,
                 suggestions: ColumnSuggestion::None {},
                 ignored_for: vec![],
-                secret: None,
+                secret: false,
                 pre_checks: settings_wrap_precheck(indexmap::indexmap! {}),
                 default_pre_checks: settings_wrap_precheck(vec![
                     ColumnAction::NativeAction {
@@ -138,7 +138,7 @@ pub static SINK: Lazy<ConfigOption> = Lazy::new(|| {
                 unique: false,
                 suggestions: ColumnSuggestion::Static { suggestions: gwevent::core::event_list().to_vec() },
                 ignored_for: vec![],
-                secret: None,
+                secret: false,
                 pre_checks: settings_wrap_precheck(indexmap::indexmap! {
                     OperationType::View => vec![]
                 }),
@@ -160,7 +160,7 @@ pub static SINK: Lazy<ConfigOption> = Lazy::new(|| {
                 column_type: ColumnType::new_scalar(InnerColumnType::String { min_length: None, max_length: None, allowed_values: vec![], kind: InnerColumnTypeStringKind::Template { kind: InnerColumnTypeStringKindTemplateKind::Message {
                 } } }),
                 ignored_for: vec![],
-                secret: None,
+                secret: false,
                 nullable: true,
                 unique: false,
                 suggestions: ColumnSuggestion::None {},
@@ -173,7 +173,7 @@ pub static SINK: Lazy<ConfigOption> = Lazy::new(|| {
                 description: "Whether to send the JSON context of the event to the sink. This can be useful for seeing exactly what happened to your server.",
                 column_type: ColumnType::new_scalar(InnerColumnType::Boolean {}),
                 ignored_for: vec![],
-                secret: None,
+                secret: false,
                 nullable: false,
                 unique: false,
                 suggestions: ColumnSuggestion::None {},
@@ -190,7 +190,7 @@ pub static SINK: Lazy<ConfigOption> = Lazy::new(|| {
                 description: "If the sink is marked as broken, it will not be used for sending logs. This can be useful in debugging too!",
                 column_type: ColumnType::new_scalar(InnerColumnType::Boolean {}),
                 ignored_for: vec![OperationType::Create],
-                secret: None,
+                secret: false,
                 nullable: false,
                 unique: false,
                 suggestions: ColumnSuggestion::None {},

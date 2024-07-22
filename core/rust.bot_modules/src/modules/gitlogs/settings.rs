@@ -28,7 +28,7 @@ pub static WEBHOOKS: Lazy<ConfigOption> = Lazy::new(|| {
                 unique: true,
                 suggestions: ColumnSuggestion::None {},
                 ignored_for: vec![OperationType::Create],
-                secret: None,
+                secret: false,
                 pre_checks: settings_wrap_precheck(indexmap::indexmap! {
                     OperationType::Create => vec![
                         // Set sink display type
@@ -54,7 +54,7 @@ pub static WEBHOOKS: Lazy<ConfigOption> = Lazy::new(|| {
                 unique: false,
                 suggestions: ColumnSuggestion::None {},
                 ignored_for: vec![],
-                secret: None,
+                secret: false,
                 pre_checks: settings_wrap_precheck(indexmap::indexmap! {}),
                 default_pre_checks: settings_wrap_precheck(vec![]),
             },
@@ -62,12 +62,21 @@ pub static WEBHOOKS: Lazy<ConfigOption> = Lazy::new(|| {
                 id: "secret",
                 name: "Secret",
                 description: "A secret to verify the authenticity of the webhook. This is used to ensure that the webhook is from Github and not a malicious actor.",
-                column_type: ColumnType::new_scalar(InnerColumnType::String { min_length: None, max_length: Some(256), allowed_values: vec![], kind: InnerColumnTypeStringKind::Normal }),
+                column_type: ColumnType::new_scalar(
+                    InnerColumnType::String { 
+                        min_length: None, 
+                        max_length: Some(256), 
+                        allowed_values: vec![], 
+                        kind: InnerColumnTypeStringKind::Token { 
+                            default_length: 256
+                        } 
+                    }
+                ),
                 nullable: false,
                 unique: false,
                 suggestions: ColumnSuggestion::None {},
                 ignored_for: vec![],
-                secret: Some(256),
+                secret: true,
                 pre_checks: settings_wrap_precheck(indexmap::indexmap! {
                     OperationType::Create => vec![
                         // Set sink display type
@@ -170,7 +179,7 @@ pub static REPOS: Lazy<ConfigOption> = Lazy::new(|| {
                 unique: true,
                 suggestions: ColumnSuggestion::None {},
                 ignored_for: vec![OperationType::Create],
-                secret: None,
+                secret: false,
                 pre_checks: settings_wrap_precheck(indexmap::indexmap! {
                     OperationType::Create => vec![
                         // Set sink display type
@@ -201,7 +210,7 @@ pub static REPOS: Lazy<ConfigOption> = Lazy::new(|| {
                     guild_id_column: "guild_id",
                 },
                 ignored_for: vec![],
-                secret: None,
+                secret: false,
                 pre_checks: settings_wrap_precheck(indexmap::indexmap! {}),
                 default_pre_checks: settings_wrap_precheck(vec![
                     // Set sink display type
@@ -252,7 +261,7 @@ pub static REPOS: Lazy<ConfigOption> = Lazy::new(|| {
                 unique: false,
                 suggestions: ColumnSuggestion::None {},
                 ignored_for: vec![],
-                secret: None,
+                secret: false,
                 pre_checks: settings_wrap_precheck(indexmap::indexmap! {
                     OperationType::Create => vec![
                         // Set sink display type
@@ -325,7 +334,7 @@ pub static REPOS: Lazy<ConfigOption> = Lazy::new(|| {
                 unique: false,
                 suggestions: ColumnSuggestion::None {},
                 ignored_for: vec![],
-                secret: None,
+                secret: false,
                 pre_checks: settings_wrap_precheck(indexmap::indexmap! {}),
                 default_pre_checks: settings_wrap_precheck(vec![]),
             },
@@ -385,7 +394,7 @@ pub static EVENT_MODIFIERS: Lazy<ConfigOption> = Lazy::new(|| {
                 unique: true,
                 suggestions: ColumnSuggestion::None {},
                 ignored_for: vec![OperationType::Create],
-                secret: None,
+                secret: false,
                 pre_checks: settings_wrap_precheck(indexmap::indexmap! {
                     OperationType::Create => vec![
                         // Set sink display type
@@ -416,7 +425,7 @@ pub static EVENT_MODIFIERS: Lazy<ConfigOption> = Lazy::new(|| {
                     guild_id_column: "guild_id",
                 },
                 ignored_for: vec![],
-                secret: None,
+                secret: false,
                 pre_checks: settings_wrap_precheck(indexmap::indexmap! {}),
                 default_pre_checks: settings_wrap_precheck(vec![
                     // Set sink display type
@@ -472,7 +481,7 @@ pub static EVENT_MODIFIERS: Lazy<ConfigOption> = Lazy::new(|| {
                     guild_id_column: "guild_id",
                 },
                 ignored_for: vec![],
-                secret: None,
+                secret: false,
                 pre_checks: settings_wrap_precheck(indexmap::indexmap! {}),
                 default_pre_checks: settings_wrap_precheck(vec![
                     // Set sink display type
@@ -521,7 +530,7 @@ pub static EVENT_MODIFIERS: Lazy<ConfigOption> = Lazy::new(|| {
                 unique: false,
                 suggestions: ColumnSuggestion::None {},
                 ignored_for: vec![],
-                secret: None,
+                secret: false,
                 pre_checks: settings_wrap_precheck(indexmap::indexmap! {}),
                 default_pre_checks: settings_wrap_precheck(vec![]),
             },
@@ -534,7 +543,7 @@ pub static EVENT_MODIFIERS: Lazy<ConfigOption> = Lazy::new(|| {
                 unique: false,
                 suggestions: ColumnSuggestion::None {},
                 ignored_for: vec![],
-                secret: None,
+                secret: false,
                 pre_checks: settings_wrap_precheck(indexmap::indexmap! {}),
                 default_pre_checks: settings_wrap_precheck(vec![]),
             },
@@ -547,7 +556,7 @@ pub static EVENT_MODIFIERS: Lazy<ConfigOption> = Lazy::new(|| {
                 unique: false,
                 suggestions: ColumnSuggestion::None {},
                 ignored_for: vec![],
-                secret: None,
+                secret: false,
                 pre_checks: settings_wrap_precheck(indexmap::indexmap! {}),
                 default_pre_checks: settings_wrap_precheck(vec![]),
             },
@@ -563,7 +572,7 @@ pub static EVENT_MODIFIERS: Lazy<ConfigOption> = Lazy::new(|| {
                 unique: false,
                 suggestions: ColumnSuggestion::None {},
                 ignored_for: vec![],
-                secret: None,
+                secret: false,
                 pre_checks: settings_wrap_precheck(indexmap::indexmap! {}),
                 default_pre_checks: settings_wrap_precheck(vec![]),
             },
@@ -576,7 +585,7 @@ pub static EVENT_MODIFIERS: Lazy<ConfigOption> = Lazy::new(|| {
                 unique: false,
                 suggestions: ColumnSuggestion::None {},
                 ignored_for: vec![],
-                secret: None,
+                secret: false,
                 pre_checks: settings_wrap_precheck(indexmap::indexmap! {}),
                 default_pre_checks: settings_wrap_precheck(vec![
                     ColumnAction::NativeAction {
