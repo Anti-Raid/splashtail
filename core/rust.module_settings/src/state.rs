@@ -1,5 +1,7 @@
 use splashcore_rs::value::Value;
 
+pub const INTERNAL_KEY: &str = "__";
+
 pub struct State {
     /// The state of the settings operation. This will be exposed to the client
     pub state: indexmap::IndexMap<String, Value>,
@@ -60,7 +62,7 @@ impl State {
     pub fn get_public(&self) -> indexmap::IndexMap<String, Value> {
         self.state
             .iter()
-            .filter(|(k, _)| !k.starts_with("__"))
+            .filter(|(k, _)| !k.starts_with(INTERNAL_KEY))
             .map(|(k, v)| (k.clone(), v.clone()))
             .collect()
     }

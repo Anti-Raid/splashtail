@@ -290,13 +290,7 @@ async fn _validate_value(
     column_id: &str,
     is_nullable: bool,
 ) -> Result<Value, SettingsError> {
-    if matches!(v, Value::None) && !is_nullable {
-        return Err(SettingsError::SchemaNullValueValidationError {
-            column: column_id.to_string(),
-        });
-    }
-
-    match column_type {
+    let v = match column_type {
         ColumnType::Scalar { column_type } => {
             if matches!(v, Value::List(_)) {
                 return Err(SettingsError::SchemaTypeValidationError {
@@ -646,7 +640,15 @@ async fn _validate_value(
                 error: "No valid dynamic clause matched".to_string(),
             })
         }
+    }?;
+
+    if matches!(v, Value::None) && !is_nullable {
+        return Err(SettingsError::SchemaNullValueValidationError {
+            column: column_id.to_string(),
+        });
     }
+
+    Ok(v)
 }
 
 /// Settings API: View implementation
@@ -952,12 +954,21 @@ pub async fn settings_create(
     }
 
     // Create the row
-    let state = data_store.create_entry(state.get_public()).await?;
+    let mut new_state = data_store.create_entry(state.get_public()).await?;
+
+    // Insert any internal columns
+    for (key, value) in state
+        .state
+        .into_iter()
+        .filter(|(k, _)| k.starts_with(super::state::INTERNAL_KEY))
+    {
+        new_state.state.insert(key, value);
+    }
 
     // Commit the transaction
     data_store.commit().await?;
 
-    Ok(state)
+    Ok(new_state)
 }
 
 /// Settings API: Update implementation
