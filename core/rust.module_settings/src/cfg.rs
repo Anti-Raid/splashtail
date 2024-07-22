@@ -610,6 +610,7 @@ async fn _validate_value(
 
                 Ok(Value::List(values))
             }
+            Value::None => Ok(v),
             _ => Err(SettingsError::SchemaTypeValidationError {
                 column: column_id.to_string(),
                 expected_type: "Array".to_string(),
@@ -1003,47 +1004,41 @@ pub async fn settings_update(
     let mut unchanged_fields = Vec::new();
     let mut pkey = None;
     for column in setting.columns.iter() {
-        // If the column is ignored for create, skip
-        let value = {
-            if column.ignored_for.contains(&OperationType::Update) {
-                if !column.secret {
-                    unchanged_fields.push(column.id.to_string()); // Ensure that ignored_for columns are still seen as unchanged but only if not secret
-                }
-                Value::None
-            } else {
-                match fields.swap_remove(column.id) {
-                    Some(val) => {
-                        let parsed_value =
-                            _parse_value(val, &state, &column.column_type, column.id)?;
+        // If the column is ignored for update, skip
+        if column.ignored_for.contains(&OperationType::Update) {
+            if !column.secret {
+                unchanged_fields.push(column.id.to_string()); // Ensure that ignored_for columns are still seen as unchanged but only if not secret
+            }
+        } else {
+            match fields.swap_remove(column.id) {
+                Some(val) => {
+                    let parsed_value = _parse_value(val, &state, &column.column_type, column.id)?;
 
-                        _validate_value(
-                            parsed_value,
-                            &state,
-                            guild_id,
-                            cache_http,
-                            reqwest_client,
-                            &column.column_type,
-                            column.id,
-                            column.nullable,
-                        )
-                        .await?
+                    let parsed_value = _validate_value(
+                        parsed_value,
+                        &state,
+                        guild_id,
+                        cache_http,
+                        reqwest_client,
+                        &column.column_type,
+                        column.id,
+                        column.nullable,
+                    )
+                    .await?;
+
+                    if column.id == setting.primary_key {
+                        pkey = Some((column, parsed_value.clone()));
                     }
-                    None => {
-                        if !column.secret {
-                            unchanged_fields.push(column.id.to_string()); // Don't retrieve the value if it's a secret column
-                        }
-                        Value::None
+
+                    state.state.insert(column.id.to_string(), parsed_value);
+                }
+                None => {
+                    if !column.secret {
+                        unchanged_fields.push(column.id.to_string()); // Don't retrieve the value if it's a secret column
                     }
                 }
             }
-        };
-
-        if column.id == setting.primary_key {
-            pkey = Some((column, value.clone()));
         }
-
-        // Insert the value into the state
-        state.state.insert(column.id.to_string(), value);
     }
 
     drop(fields); // Drop fields to avoid accidental use of user data

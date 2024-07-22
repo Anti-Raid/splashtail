@@ -477,11 +477,11 @@ pub struct Column {
     ///
     /// View => The column is removed from the list of columns sent to the consumer. The value is set to its current value when executing the actions
     ///
-    /// Create => All column checks other than actions are ignored. The value itself will be set to None. The key itself is set to None in state
+    /// Create => All column checks other than actions are ignored. The value itself may or may not be set. The key itself is set to None in state
     ///
-    /// Update => All column checks other than actions are ignored. The value itself will be set to None. The key itself is set to None in state
+    /// Update => All column checks other than actions are ignored. The value itself may or may not be set. The key itself is set to None in state
     ///
-    /// Delete => All column checks other than actions are ignored. The value itself will be set to None. The key itself is set to None in state
+    /// Delete => All column checks other than actions are ignored. The value itself may or may not be set. The key itself is set to None in state
     pub ignored_for: Vec<OperationType>,
 
     /// Whether or not the column is a secret
