@@ -1,14 +1,19 @@
 use super::state::State;
-use super::types::{ActionConditionContext, ColumnAction, NativeActionContext, SettingsError};
+use super::types::{
+    ActionConditionContext, ColumnAction, NativeActionContext, OperationType, SettingsError,
+};
 use async_recursion::async_recursion;
 use splashcore_rs::value::Value;
 
 #[allow(dead_code)]
+#[allow(clippy::too_many_arguments)]
 #[async_recursion]
 pub async fn execute_actions(
     state: &mut State,
+    operation_type: OperationType,
     actions: &[ColumnAction],
     cache_http: &botox::cache::CacheHttpImpl,
+    reqwest_client: &reqwest::Client,
     pool: &sqlx::PgPool,
     author: serenity::all::UserId,
     guild_id: serenity::all::GuildId,
@@ -80,6 +85,9 @@ pub async fn execute_actions(
                 let nac = NativeActionContext {
                     author,
                     guild_id,
+                    cache_http,
+                    reqwest_client,
+                    operation_type,
                     pool: pool.clone(),
                 };
                 action(nac, state).await?;

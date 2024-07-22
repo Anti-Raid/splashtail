@@ -7,6 +7,9 @@ mod events;
 mod modules;
 mod perms;
 
+#[allow(clippy::module_inception)]
+mod settings;
+
 pub fn module() -> crate::silverpelt::Module {
     crate::silverpelt::Module {
         id: "settings",
@@ -67,6 +70,7 @@ pub fn module() -> crate::silverpelt::Module {
         ],
         on_startup: vec![Box::new(move |data| am_toggles::setup(data).boxed())],
         event_handlers: vec![Box::new(move |ectx| events::event_listener(ectx).boxed())],
+        config_options: vec![(*settings::GUILD_ROLES).clone()],
         ..Default::default()
     }
 }

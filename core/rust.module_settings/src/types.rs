@@ -216,6 +216,8 @@ pub enum InnerColumnTypeStringKind {
     Template {
         kind: InnerColumnTypeStringKindTemplateKind,
     },
+    /// A kittycat permission
+    KittycatPermission,
     /// User
     User,
     /// Channel
@@ -240,6 +242,7 @@ impl std::fmt::Display for InnerColumnTypeStringKind {
             }
             InnerColumnTypeStringKind::Textarea => write!(f, "Textarea"),
             InnerColumnTypeStringKind::Template { kind } => write!(f, "Template {:?}", kind),
+            InnerColumnTypeStringKind::KittycatPermission => write!(f, "KittycatPermission"),
             InnerColumnTypeStringKind::User => write!(f, "User"),
             InnerColumnTypeStringKind::Channel {
                 allowed_types,
@@ -345,17 +348,20 @@ pub enum ColumnSuggestion {
 /// This is the context provided to all NativeAction's. Note that on_conditions have a slightly different structure
 /// as they are synchronous functions and thus cannot use certain fields
 #[allow(dead_code)]
-pub struct NativeActionContext {
+pub struct NativeActionContext<'a> {
     pub author: serenity::all::UserId,
     pub guild_id: serenity::all::GuildId,
+    pub cache_http: &'a botox::cache::CacheHttpImpl,
+    pub reqwest_client: &'a reqwest::Client,
     pub pool: sqlx::PgPool,
+    pub operation_type: OperationType,
 }
 
 pub type NativeActionFunc = Box<
     dyn Send
         + Sync
         + for<'a> Fn(
-            NativeActionContext,
+            NativeActionContext<'a>,
             &'a mut super::state::State,
         ) -> BoxFuture<'a, Result<(), SettingsError>>,
 >;
@@ -526,7 +532,7 @@ pub struct OperationSpecific {
     pub columns_to_set: indexmap::IndexMap<&'static str, &'static str>,
 }
 
-#[derive(Debug, Clone, PartialEq, Hash, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Hash, Eq)]
 #[allow(dead_code)]
 pub enum OperationType {
     View,

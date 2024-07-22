@@ -372,6 +372,7 @@ async fn _validate_value(
 
                                     v
                                 }
+                                InnerColumnTypeStringKind::KittycatPermission => v, // All kittycat permissions are valid
                                 InnerColumnTypeStringKind::User => {
                                     // Try parsing to a UserId
                                     if let Err(err) = s.parse::<serenity::all::UserId>() {
@@ -716,8 +717,10 @@ pub async fn settings_view(
 
             super::action_executor::execute_actions(
                 &mut state,
+                OperationType::View,
                 actions,
                 cache_http,
+                reqwest_client,
                 pool,
                 author,
                 guild_id,
@@ -885,8 +888,10 @@ pub async fn settings_create(
 
         super::action_executor::execute_actions(
             &mut state,
+            OperationType::Create,
             actions,
             cache_http,
+            reqwest_client,
             pool,
             author,
             guild_id,
@@ -1111,8 +1116,10 @@ pub async fn settings_update(
 
         super::action_executor::execute_actions(
             &mut state,
+            OperationType::Update,
             actions,
             cache_http,
+            reqwest_client,
             pool,
             author,
             guild_id,
@@ -1308,8 +1315,10 @@ pub async fn settings_delete(
 
         super::action_executor::execute_actions(
             &mut state,
+            OperationType::Delete,
             actions,
             cache_http,
+            reqwest_client,
             pool,
             author,
             guild_id,

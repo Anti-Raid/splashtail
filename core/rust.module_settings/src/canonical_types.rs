@@ -206,6 +206,8 @@ pub enum CanonicalInnerColumnTypeStringKind {
         /// The kind of template
         kind: CanonicalInnerColumnTypeStringKindTemplateKind,
     },
+    /// A kittycat permission
+    KittycatPermission {},
     /// User
     User {},
     /// Channel
@@ -235,6 +237,9 @@ impl From<super::types::InnerColumnTypeStringKind> for CanonicalInnerColumnTypeS
             }
             super::types::InnerColumnTypeStringKind::Template { kind } => {
                 CanonicalInnerColumnTypeStringKind::Template { kind: kind.into() }
+            }
+            super::types::InnerColumnTypeStringKind::KittycatPermission => {
+                CanonicalInnerColumnTypeStringKind::KittycatPermission {}
             }
             super::types::InnerColumnTypeStringKind::User => {
                 CanonicalInnerColumnTypeStringKind::User {}
@@ -412,11 +417,7 @@ impl From<&super::types::Column> for CanonicalColumn {
             nullable: column.nullable,
             suggestions: column.suggestions.clone().into(),
             unique: column.unique,
-            ignored_for: column
-                .ignored_for
-                .iter()
-                .map(|o| o.clone().into())
-                .collect(),
+            ignored_for: column.ignored_for.iter().map(|o| (*o).into()).collect(),
             secret: column.secret,
         }
     }
