@@ -993,70 +993,34 @@ pub async fn settings_update(
 
     // Ensure all columns exist in fields, note that we can ignore extra fields so this one single loop is enough
     let mut state: State = State::new_with_special_variables(author, guild_id);
-    let mut unchanged_fields = Vec::new();
-    let mut pkey = None;
-    for column in setting.columns.iter() {
-        // If the column is ignored for create, skip
-        let value = {
-            if column.ignored_for.contains(&OperationType::Update) {
-                if !column.secret {
-                    unchanged_fields.push(column.id.to_string()); // Ensure that ignored_for columns are still seen as unchanged but only if not secret
-                }
-                Value::None
-            } else {
-                match fields.swap_remove(column.id) {
-                    Some(val) => {
-                        let parsed_value =
-                            _parse_value(val, &state, &column.column_type, column.id)?;
+    let pkey =
+        fields
+            .swap_remove(setting.primary_key)
+            .ok_or(SettingsError::MissingOrInvalidField {
+                field: setting.primary_key.to_string(),
+                src: "settings_update [pkey]".to_string(),
+            })?;
 
-                        _validate_value(
-                            parsed_value,
-                            &state,
-                            guild_id,
-                            cache_http,
-                            reqwest_client,
-                            &column.column_type,
-                            column.id,
-                            column.nullable,
-                        )
-                        .await?
-                    }
-                    None => {
-                        if !column.secret {
-                            unchanged_fields.push(column.id.to_string()); // Don't retrieve the value if it's a secret column
-                        }
-                        Value::None
-                    }
-                }
-            }
-        };
-
-        if column.id == setting.primary_key {
-            pkey = Some((column, value.clone()));
-        }
-
-        // Insert the value into the state
-        state.state.insert(column.id.to_string(), value);
-    }
-
-    drop(fields); // Drop fields to avoid accidental use of user data
-    #[allow(unused_variables)]
-    let fields = (); // Reset fields to avoid accidental use of user data
-
-    // Get out the pkey and pkey_column data here as we need it for the rest of the update
-    let Some((_pkey_column, pkey)) = pkey else {
-        return Err(SettingsError::MissingOrInvalidField {
-            field: setting.primary_key.to_string(),
-            src: "settings_update [pkey_let]".to_string(),
-        });
-    };
-
-    // PKEY should already have passed the validation checks
     if matches!(pkey, Value::None) {
         return Err(SettingsError::MissingOrInvalidField {
             field: setting.primary_key.to_string(),
             src: "settings_update [pkey_none]".to_string(),
         });
+    }
+
+    // Determine unchanged fields beforehand to allow handling dynamic fields
+    // TODO: Think about optimizing this by only fetching the dynamic fields itself
+    let mut unchanged_fields = Vec::new();
+
+    for column in setting.columns.iter() {
+        if column.ignored_for.contains(&OperationType::Update) || !fields.contains_key(column.id) {
+            if !column.secret {
+                unchanged_fields.push(column.id.to_string());
+            } else {
+                state.state.insert(column.id.to_string(), Value::None);
+            }
+            continue;
+        }
     }
 
     let mut data_store = setting
@@ -1075,7 +1039,7 @@ pub async fn settings_update(
     // Start the transaction now that basic validation is done
     data_store.start_transaction().await?;
 
-    // Now retrieve all the unchanged fields
+    // Now retrieve all the unchanged fields beforehand to allow dynamic queries
     if !unchanged_fields.is_empty() {
         let mut data = data_store
             .fetch_all(
@@ -1097,6 +1061,46 @@ pub async fn settings_update(
         for (k, v) in unchanged_state.state.into_iter() {
             state.state.insert(k.to_string(), v);
         }
+    }
+
+    for column in setting.columns.iter() {
+        if state.state.contains_key(column.id) {
+            continue;
+        }
+
+        let value = match fields.swap_remove(column.id) {
+            Some(val) => {
+                let parsed_value = _parse_value(val, &state, &column.column_type, column.id)?;
+
+                _validate_value(
+                    parsed_value,
+                    &state,
+                    guild_id,
+                    cache_http,
+                    reqwest_client,
+                    &column.column_type,
+                    column.id,
+                    column.nullable,
+                )
+                .await?
+            }
+            None => Value::None,
+        };
+
+        // Insert the value into the state
+        state.state.insert(column.id.to_string(), value);
+    }
+
+    drop(fields); // Drop fields to avoid accidental use of user data
+    #[allow(unused_variables)]
+    let fields = (); // Reset fields to avoid accidental use of user data
+
+    // PKEY should already have passed the validation checks
+    if matches!(pkey, Value::None) {
+        return Err(SettingsError::MissingOrInvalidField {
+            field: setting.primary_key.to_string(),
+            src: "settings_update [pkey_none]".to_string(),
+        });
     }
 
     // Handle all the actual checks here, now that all validation and needed fetches are done
