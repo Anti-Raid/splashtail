@@ -5,27 +5,15 @@ use super::types::{
 };
 use splashcore_rs::value::Value;
 
-/// Validates the value against the schema's column type handling schema checks if `perform_schema_checks` is true
-///
-/// NOTE: This may make HTTP/Discord API requests to parse values such as channels etc.
-#[allow(dead_code)]
-#[allow(clippy::too_many_arguments)]
-#[async_recursion::async_recursion]
-async fn _validate_and_parse_value(
+/// Parse a value against the schema's column type
+fn _parse_value(
     v: Value,
     state: &State,
-    guild_id: serenity::all::GuildId,
-    cache_http: &botox::cache::CacheHttpImpl,
-    reqwest_client: &reqwest::Client,
     column_type: &ColumnType,
     column_id: &str,
-    is_nullable: bool,
-    perform_schema_checks: bool,
 ) -> Result<Value, SettingsError> {
-    if matches!(v, Value::None) && !is_nullable {
-        return Err(SettingsError::SchemaNullValueValidationError {
-            column: column_id.to_string(),
-        });
+    if matches!(v, Value::None) {
+        return Ok(v);
     }
 
     match column_type {
@@ -60,303 +48,22 @@ async fn _validate_and_parse_value(
                         got_type: format!("{:?}", v),
                     }),
                 },
-                InnerColumnType::String {
-                    min_length,
-                    max_length,
-                    allowed_values,
-                    kind,
-                } => {
-                    match v {
-                        Value::String(ref s) => {
-                            if !perform_schema_checks {
-                                return Ok(v);
-                            }
-
-                            if let Some(min) = min_length {
-                                if s.len() < *min {
-                                    return Err(SettingsError::SchemaCheckValidationError {
-                                        column: column_id.to_string(),
-                                        check: "minlength".to_string(),
-                                        accepted_range: format!(">{}", min),
-                                        error: "s.len() < *min".to_string(),
-                                    });
-                                }
-                            }
-
-                            if let Some(max) = max_length {
-                                if s.len() > *max {
-                                    return Err(SettingsError::SchemaCheckValidationError {
-                                        column: column_id.to_string(),
-                                        check: "maxlength".to_string(),
-                                        accepted_range: format!("<{}", max),
-                                        error: "s.len() > *max".to_string(),
-                                    });
-                                }
-                            }
-
-                            if !allowed_values.is_empty() && !allowed_values.contains(&s.as_str()) {
-                                return Err(SettingsError::SchemaCheckValidationError {
-                                column: column_id.to_string(),
-                                check: "allowed_values".to_string(),
-                                accepted_range: format!("{:?}", allowed_values),
-                                error: "!allowed_values.is_empty() && !allowed_values.contains(&s.as_str())".to_string()
-                            });
-                            }
-
-                            let parsed_value = match kind {
-                                InnerColumnTypeStringKind::Normal => v,
-                                InnerColumnTypeStringKind::Token { default_length } => {
-                                    if s.is_empty() {
-                                        Value::String(botox::crypto::gen_random(*default_length))
-                                    } else {
-                                        v
-                                    }
-                                }
-                                InnerColumnTypeStringKind::Textarea => v,
-                                InnerColumnTypeStringKind::Template { .. } => {
-                                    let compiled = templating::compile_template(
-                                        s,
-                                        templating::CompileTemplateOptions {
-                                            cache_result: false, // Don't uselessly cache the template to decrease memory footprint
-                                            ignore_cache: false, // Don't ignore the cache to avoid recompiling the same template over and over
-                                        },
-                                    )
-                                    .await;
-
-                                    if let Err(err) = compiled {
-                                        return Err(SettingsError::SchemaCheckValidationError {
-                                            column: column_id.to_string(),
-                                            check: "template_compile".to_string(),
-                                            accepted_range: "Valid tera template".to_string(),
-                                            error: err.to_string(),
-                                        });
-                                    }
-
-                                    v
-                                }
-                                InnerColumnTypeStringKind::User => {
-                                    // Try parsing to a UserId
-                                    if let Err(err) = s.parse::<serenity::all::UserId>() {
-                                        return Err(SettingsError::SchemaCheckValidationError {
-                                            column: column_id.to_string(),
-                                            check: "snowflake_parse".to_string(),
-                                            accepted_range: "Valid user id".to_string(),
-                                            error: err.to_string(),
-                                        });
-                                    }
-
-                                    v
-                                }
-                                InnerColumnTypeStringKind::Channel {
-                                    allowed_types,
-                                    needed_bot_permissions,
-                                } => {
-                                    // Try parsing to a ChannelId
-                                    let channel_id = s
-                                        .parse::<serenity::all::ChannelId>()
-                                        .map_err(|e| SettingsError::SchemaCheckValidationError {
-                                            column: column_id.to_string(),
-                                            check: "snowflake_parse".to_string(),
-                                            accepted_range: "Valid channel id".to_string(),
-                                            error: e.to_string(),
-                                        })?;
-
-                                    // Get the channel
-                                    let channel = proxy_support::channel(
-                                        cache_http,
-                                        reqwest_client,
-                                        Some(guild_id),
-                                        channel_id,
-                                    )
-                                    .await
-                                    .map_err(|e| SettingsError::SchemaCheckValidationError {
-                                        column: column_id.to_string(),
-                                        check: "channel_get".to_string(),
-                                        accepted_range: "Valid channel id".to_string(),
-                                        error: e.to_string(),
-                                    })?;
-
-                                    let Some(channel) = channel else {
-                                        return Err(SettingsError::SchemaCheckValidationError {
-                                            column: column_id.to_string(),
-                                            check: "channel_get".to_string(),
-                                            accepted_range: "Valid channel id".to_string(),
-                                            error: "Channel not found".to_string(),
-                                        });
-                                    };
-
-                                    if !allowed_types.is_empty() {
-                                        match channel {
-                                            serenity::all::Channel::Guild(gc) => {
-                                                if !allowed_types.contains(&gc.kind) {
-                                                    return Err(
-                                                        SettingsError::SchemaCheckValidationError {
-                                                            column: column_id.to_string(),
-                                                            check: "channel_type".to_string(),
-                                                            accepted_range: "Text channel"
-                                                                .to_string(),
-                                                            error: format!(
-                                                                "Channel type is not text: {:?}",
-                                                                gc.kind
-                                                            ),
-                                                        },
-                                                    );
-                                                }
-
-                                                if gc.guild_id != guild_id {
-                                                    return Err(SettingsError::SchemaCheckValidationError {
-                                                    column: column_id.to_string(),
-                                                    check: "channel_guild".to_string(),
-                                                    accepted_range: "Valid channel id".to_string(),
-                                                    error: "Channel is not in the guild specified".to_string(),
-                                                });
-                                                }
-
-                                                if !needed_bot_permissions.is_empty() {
-                                                    let perms = gc.permissions_for_user(&cache_http.cache, cache_http.cache.current_user().id).map_err(|e| SettingsError::SchemaCheckValidationError {
-                                                    column: column_id.to_string(),
-                                                    check: "channel_perms".to_string(),
-                                                    accepted_range: "Valid channel id".to_string(),
-                                                    error: e.to_string(),
-                                                })?;
-
-                                                    for perm in needed_bot_permissions.iter() {
-                                                        if !perms.contains(perm) {
-                                                            return Err(SettingsError::SchemaCheckValidationError {
-                                                            column: column_id.to_string(),
-                                                            check: "channel_perms".to_string(),
-                                                            accepted_range: "Valid channel id".to_string(),
-                                                            error: format!("Missing permission: {}", perm),
-                                                        });
-                                                        }
-                                                    }
-                                                }
-                                            }
-                                            serenity::all::Channel::Private(pc) => {
-                                                if !allowed_types.contains(&pc.kind) {
-                                                    return Err(
-                                                        SettingsError::SchemaCheckValidationError {
-                                                            column: column_id.to_string(),
-                                                            check: "channel_type".to_string(),
-                                                            accepted_range: "Text channel"
-                                                                .to_string(),
-                                                            error: format!(
-                                                                "Channel type is not text: {:?}",
-                                                                pc.kind
-                                                            ),
-                                                        },
-                                                    );
-                                                }
-                                            }
-                                            _ => {
-                                                return Err(
-                                                    SettingsError::SchemaCheckValidationError {
-                                                        column: column_id.to_string(),
-                                                        check: "channel_type".to_string(),
-                                                        accepted_range: "Valid channel".to_string(),
-                                                        error: "Channel type is unknown"
-                                                            .to_string(),
-                                                    },
-                                                );
-                                            }
-                                        }
-                                    }
-
-                                    v
-                                }
-                                InnerColumnTypeStringKind::Role => {
-                                    // Try parsing to a RoleId
-                                    if let Err(err) = s.parse::<serenity::all::RoleId>() {
-                                        return Err(SettingsError::SchemaCheckValidationError {
-                                            column: column_id.to_string(),
-                                            check: "snowflake_parse".to_string(),
-                                            accepted_range: "Valid role id".to_string(),
-                                            error: err.to_string(),
-                                        });
-                                    }
-
-                                    v
-                                }
-                                InnerColumnTypeStringKind::Emoji => {
-                                    // Try parsing to a ChannelId
-                                    if let Err(err) = s.parse::<serenity::all::EmojiId>() {
-                                        return Err(SettingsError::SchemaCheckValidationError {
-                                            column: column_id.to_string(),
-                                            check: "snowflake_parse".to_string(),
-                                            accepted_range: "Valid emoji id".to_string(),
-                                            error: err.to_string(),
-                                        });
-                                    }
-
-                                    v
-                                }
-                                InnerColumnTypeStringKind::Message => {
-                                    // The format of a message on db should be channel_id/message_id
-                                    //
-                                    // So, split by '/' and check if the first part is a valid channel id
-                                    // and the second part is a valid message id
-                                    let parts: Vec<&str> = s.split('/').collect();
-
-                                    if parts.len() != 2 {
-                                        return Err(SettingsError::SchemaCheckValidationError {
-                                            column: column_id.to_string(),
-                                            check: "message_parse_plength".to_string(),
-                                            accepted_range:
-                                                "Valid message id in format <channel_id>/<message_id>"
-                                                    .to_string(),
-                                            error: "parts.len() != 2".to_string(),
-                                        });
-                                    }
-
-                                    // Try parsing to a ChannelId
-                                    if let Err(err) = parts[0].parse::<serenity::all::ChannelId>() {
-                                        return Err(SettingsError::SchemaCheckValidationError {
-                                            column: column_id.to_string(),
-                                            check: "message_parse_0".to_string(),
-                                            accepted_range:
-                                                "Valid message id in format <channel_id>/<message_id>"
-                                                    .to_string(),
-                                            error: format!("p1: {}", err),
-                                        });
-                                    }
-
-                                    // Try parsing to a MessageId
-                                    if let Err(err) = parts[1].parse::<serenity::all::MessageId>() {
-                                        return Err(SettingsError::SchemaCheckValidationError {
-                                            column: column_id.to_string(),
-                                            check: "message_parse_1".to_string(),
-                                            accepted_range:
-                                                "Valid message id in format <channel_id>/<message_id>"
-                                                    .to_string(),
-                                            error: format!("p2: {}", err),
-                                        });
-                                    }
-
-                                    v
-                                }
-                            };
-                            Ok(parsed_value)
+                InnerColumnType::String { .. } => match v {
+                    Value::String(ref s) => {
+                        if s.is_empty() {
+                            Ok(Value::None)
+                        } else {
+                            Ok(v)
                         }
-                        Value::Uuid(v) => Ok(Value::String(v.to_string())),
-                        Value::None => {
-                            if !perform_schema_checks {
-                                return Ok(v);
-                            }
-
-                            match kind {
-                                InnerColumnTypeStringKind::Token { default_length } => {
-                                    Ok(Value::String(botox::crypto::gen_random(*default_length)))
-                                }
-                                _ => Ok(v),
-                            }
-                        }
-                        _ => Err(SettingsError::SchemaTypeValidationError {
-                            column: column_id.to_string(),
-                            expected_type: "String".to_string(),
-                            got_type: format!("{:?}", v),
-                        }),
                     }
-                }
+                    Value::Uuid(v) => Ok(Value::String(v.to_string())),
+                    Value::None => Ok(v),
+                    _ => Err(SettingsError::SchemaTypeValidationError {
+                        column: column_id.to_string(),
+                        expected_type: "String".to_string(),
+                        got_type: format!("{:?}", v),
+                    }),
+                },
                 InnerColumnType::Timestamp {} => match v {
                     Value::String(s) => {
                         let value = chrono::NaiveDateTime::parse_from_str(&s, "%Y-%m-%d %H:%M:%S")
@@ -534,7 +241,362 @@ async fn _validate_and_parse_value(
 
                 let column_type = ColumnType::new_scalar(inner.clone());
                 for v in l {
-                    let new_v = _validate_and_parse_value(
+                    let new_v = _parse_value(v, state, &column_type, column_id)?;
+
+                    values.push(new_v);
+                }
+
+                Ok(Value::List(values))
+            }
+            _ => Err(SettingsError::SchemaTypeValidationError {
+                column: column_id.to_string(),
+                expected_type: "Array".to_string(),
+                got_type: format!("{:?}", v),
+            }),
+        },
+        ColumnType::Dynamic { clauses } => {
+            for clause in clauses {
+                let value = state.template_to_string(clause.field);
+
+                if value == clause.value {
+                    // We got the kind
+                    return _parse_value(v, state, &clause.column_type, column_id);
+                }
+            }
+
+            Err(SettingsError::SchemaCheckValidationError {
+                column: column_id.to_string(),
+                check: "dynamic_clause".to_string(),
+                accepted_range: "Valid dynamic clause".to_string(),
+                error: "No valid dynamic clause matched".to_string(),
+            })
+        }
+    }
+}
+
+/// Validates the value against the schema's column type
+///
+/// NOTE: This may make HTTP/Discord API requests to parse values such as channels etc.
+#[allow(dead_code)]
+#[allow(clippy::too_many_arguments)]
+#[async_recursion::async_recursion]
+async fn _validate_value(
+    v: Value,
+    state: &State,
+    guild_id: serenity::all::GuildId,
+    cache_http: &botox::cache::CacheHttpImpl,
+    reqwest_client: &reqwest::Client,
+    column_type: &ColumnType,
+    column_id: &str,
+    is_nullable: bool,
+) -> Result<Value, SettingsError> {
+    if matches!(v, Value::None) && !is_nullable {
+        return Err(SettingsError::SchemaNullValueValidationError {
+            column: column_id.to_string(),
+        });
+    }
+
+    match column_type {
+        ColumnType::Scalar { column_type } => {
+            if matches!(v, Value::List(_)) {
+                return Err(SettingsError::SchemaTypeValidationError {
+                    column: column_id.to_string(),
+                    expected_type: "Scalar".to_string(),
+                    got_type: "Array".to_string(),
+                });
+            }
+
+            match column_type {
+                InnerColumnType::String {
+                    min_length,
+                    max_length,
+                    allowed_values,
+                    kind,
+                } => {
+                    match v {
+                        Value::String(ref s) => {
+                            if let Some(min) = min_length {
+                                if s.len() < *min {
+                                    return Err(SettingsError::SchemaCheckValidationError {
+                                        column: column_id.to_string(),
+                                        check: "minlength".to_string(),
+                                        accepted_range: format!(">{}", min),
+                                        error: "s.len() < *min".to_string(),
+                                    });
+                                }
+                            }
+
+                            if let Some(max) = max_length {
+                                if s.len() > *max {
+                                    return Err(SettingsError::SchemaCheckValidationError {
+                                        column: column_id.to_string(),
+                                        check: "maxlength".to_string(),
+                                        accepted_range: format!("<{}", max),
+                                        error: "s.len() > *max".to_string(),
+                                    });
+                                }
+                            }
+
+                            if !allowed_values.is_empty() && !allowed_values.contains(&s.as_str()) {
+                                return Err(SettingsError::SchemaCheckValidationError {
+                                    column: column_id.to_string(),
+                                    check: "allowed_values".to_string(),
+                                    accepted_range: format!("{:?}", allowed_values),
+                                    error: "!allowed_values.is_empty() && !allowed_values.contains(&s.as_str())".to_string()
+                                });
+                            }
+
+                            let parsed_value = match kind {
+                                InnerColumnTypeStringKind::Normal => v,
+                                InnerColumnTypeStringKind::Token { .. } => v, // Normalizing automatically makes empty strings into None
+                                InnerColumnTypeStringKind::Textarea => v,
+                                InnerColumnTypeStringKind::Template { .. } => {
+                                    let compiled = templating::compile_template(
+                                        s,
+                                        templating::CompileTemplateOptions {
+                                            cache_result: false, // Don't uselessly cache the template to decrease memory footprint
+                                            ignore_cache: false, // Don't ignore the cache to avoid recompiling the same template over and over
+                                        },
+                                    )
+                                    .await;
+
+                                    if let Err(err) = compiled {
+                                        return Err(SettingsError::SchemaCheckValidationError {
+                                            column: column_id.to_string(),
+                                            check: "template_compile".to_string(),
+                                            accepted_range: "Valid tera template".to_string(),
+                                            error: err.to_string(),
+                                        });
+                                    }
+
+                                    v
+                                }
+                                InnerColumnTypeStringKind::User => {
+                                    // Try parsing to a UserId
+                                    if let Err(err) = s.parse::<serenity::all::UserId>() {
+                                        return Err(SettingsError::SchemaCheckValidationError {
+                                            column: column_id.to_string(),
+                                            check: "snowflake_parse".to_string(),
+                                            accepted_range: "Valid user id".to_string(),
+                                            error: err.to_string(),
+                                        });
+                                    }
+
+                                    v
+                                }
+                                InnerColumnTypeStringKind::Channel {
+                                    allowed_types,
+                                    needed_bot_permissions,
+                                } => {
+                                    // Try parsing to a ChannelId
+                                    let channel_id = s
+                                        .parse::<serenity::all::ChannelId>()
+                                        .map_err(|e| SettingsError::SchemaCheckValidationError {
+                                            column: column_id.to_string(),
+                                            check: "snowflake_parse".to_string(),
+                                            accepted_range: "Valid channel id".to_string(),
+                                            error: e.to_string(),
+                                        })?;
+
+                                    // Get the channel
+                                    let channel = proxy_support::channel(
+                                        cache_http,
+                                        reqwest_client,
+                                        Some(guild_id),
+                                        channel_id,
+                                    )
+                                    .await
+                                    .map_err(|e| SettingsError::SchemaCheckValidationError {
+                                        column: column_id.to_string(),
+                                        check: "channel_get".to_string(),
+                                        accepted_range: "Valid channel id".to_string(),
+                                        error: e.to_string(),
+                                    })?;
+
+                                    let Some(channel) = channel else {
+                                        return Err(SettingsError::SchemaCheckValidationError {
+                                            column: column_id.to_string(),
+                                            check: "channel_get".to_string(),
+                                            accepted_range: "Valid channel id".to_string(),
+                                            error: "Channel not found".to_string(),
+                                        });
+                                    };
+
+                                    if !allowed_types.is_empty() {
+                                        match channel {
+                                            serenity::all::Channel::Guild(gc) => {
+                                                if !allowed_types.contains(&gc.kind) {
+                                                    return Err(
+                                                        SettingsError::SchemaCheckValidationError {
+                                                            column: column_id.to_string(),
+                                                            check: "channel_type".to_string(),
+                                                            accepted_range: "Text channel"
+                                                                .to_string(),
+                                                            error: format!(
+                                                                "Channel type is not text: {:?}",
+                                                                gc.kind
+                                                            ),
+                                                        },
+                                                    );
+                                                }
+
+                                                if gc.guild_id != guild_id {
+                                                    return Err(SettingsError::SchemaCheckValidationError {
+                                                    column: column_id.to_string(),
+                                                    check: "channel_guild".to_string(),
+                                                    accepted_range: "Valid channel id".to_string(),
+                                                    error: "Channel is not in the guild specified".to_string(),
+                                                });
+                                                }
+
+                                                if !needed_bot_permissions.is_empty() {
+                                                    let perms = gc.permissions_for_user(&cache_http.cache, cache_http.cache.current_user().id).map_err(|e| SettingsError::SchemaCheckValidationError {
+                                                        column: column_id.to_string(),
+                                                        check: "channel_perms".to_string(),
+                                                        accepted_range: "Valid channel id".to_string(),
+                                                        error: e.to_string(),
+                                                    })?;
+
+                                                    for perm in needed_bot_permissions.iter() {
+                                                        if !perms.contains(perm) {
+                                                            return Err(SettingsError::SchemaCheckValidationError {
+                                                                column: column_id.to_string(),
+                                                                check: "channel_perms".to_string(),
+                                                                accepted_range: "Valid channel id".to_string(),
+                                                                error: format!("Missing permission: {}", perm),
+                                                            });
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            serenity::all::Channel::Private(pc) => {
+                                                if !allowed_types.contains(&pc.kind) {
+                                                    return Err(
+                                                        SettingsError::SchemaCheckValidationError {
+                                                            column: column_id.to_string(),
+                                                            check: "channel_type".to_string(),
+                                                            accepted_range: "Text channel"
+                                                                .to_string(),
+                                                            error: format!(
+                                                                "Channel type is not text: {:?}",
+                                                                pc.kind
+                                                            ),
+                                                        },
+                                                    );
+                                                }
+                                            }
+                                            _ => {
+                                                return Err(
+                                                    SettingsError::SchemaCheckValidationError {
+                                                        column: column_id.to_string(),
+                                                        check: "channel_type".to_string(),
+                                                        accepted_range: "Valid channel".to_string(),
+                                                        error: "Channel type is unknown"
+                                                            .to_string(),
+                                                    },
+                                                );
+                                            }
+                                        }
+                                    }
+
+                                    v
+                                }
+                                InnerColumnTypeStringKind::Role => {
+                                    // Try parsing to a RoleId
+                                    if let Err(err) = s.parse::<serenity::all::RoleId>() {
+                                        return Err(SettingsError::SchemaCheckValidationError {
+                                            column: column_id.to_string(),
+                                            check: "snowflake_parse".to_string(),
+                                            accepted_range: "Valid role id".to_string(),
+                                            error: err.to_string(),
+                                        });
+                                    }
+
+                                    v
+                                }
+                                InnerColumnTypeStringKind::Emoji => {
+                                    // Try parsing to a ChannelId
+                                    if let Err(err) = s.parse::<serenity::all::EmojiId>() {
+                                        return Err(SettingsError::SchemaCheckValidationError {
+                                            column: column_id.to_string(),
+                                            check: "snowflake_parse".to_string(),
+                                            accepted_range: "Valid emoji id".to_string(),
+                                            error: err.to_string(),
+                                        });
+                                    }
+
+                                    v
+                                }
+                                InnerColumnTypeStringKind::Message => {
+                                    // The format of a message on db should be channel_id/message_id
+                                    //
+                                    // So, split by '/' and check if the first part is a valid channel id
+                                    // and the second part is a valid message id
+                                    let parts: Vec<&str> = s.split('/').collect();
+
+                                    if parts.len() != 2 {
+                                        return Err(SettingsError::SchemaCheckValidationError {
+                                            column: column_id.to_string(),
+                                            check: "message_parse_plength".to_string(),
+                                            accepted_range:
+                                                "Valid message id in format <channel_id>/<message_id>"
+                                                    .to_string(),
+                                            error: "parts.len() != 2".to_string(),
+                                        });
+                                    }
+
+                                    // Try parsing to a ChannelId
+                                    if let Err(err) = parts[0].parse::<serenity::all::ChannelId>() {
+                                        return Err(SettingsError::SchemaCheckValidationError {
+                                            column: column_id.to_string(),
+                                            check: "message_parse_0".to_string(),
+                                            accepted_range:
+                                                "Valid message id in format <channel_id>/<message_id>"
+                                                    .to_string(),
+                                            error: format!("p1: {}", err),
+                                        });
+                                    }
+
+                                    // Try parsing to a MessageId
+                                    if let Err(err) = parts[1].parse::<serenity::all::MessageId>() {
+                                        return Err(SettingsError::SchemaCheckValidationError {
+                                            column: column_id.to_string(),
+                                            check: "message_parse_1".to_string(),
+                                            accepted_range:
+                                                "Valid message id in format <channel_id>/<message_id>"
+                                                    .to_string(),
+                                            error: format!("p2: {}", err),
+                                        });
+                                    }
+
+                                    v
+                                }
+                            };
+                            Ok(parsed_value)
+                        }
+                        Value::None => match kind {
+                            InnerColumnTypeStringKind::Token { default_length } => {
+                                Ok(Value::String(botox::crypto::gen_random(*default_length)))
+                            }
+                            _ => Ok(v),
+                        },
+                        _ => Err(SettingsError::SchemaTypeValidationError {
+                            column: column_id.to_string(),
+                            expected_type: "String".to_string(),
+                            got_type: format!("{:?}", v),
+                        }),
+                    }
+                }
+                _ => Ok(v),
+            }
+        }
+        ColumnType::Array { inner } => match v {
+            Value::List(l) => {
+                let mut values: Vec<Value> = Vec::new();
+
+                let column_type = ColumnType::new_scalar(inner.clone());
+                for v in l {
+                    let new_v = _validate_value(
                         v,
                         state,
                         guild_id,
@@ -543,7 +605,6 @@ async fn _validate_and_parse_value(
                         &column_type,
                         column_id,
                         is_nullable,
-                        perform_schema_checks,
                     )
                     .await?;
 
@@ -564,7 +625,7 @@ async fn _validate_and_parse_value(
 
                 if value == clause.value {
                     // We got the kind
-                    return _validate_and_parse_value(
+                    return _validate_value(
                         v,
                         state,
                         guild_id,
@@ -573,7 +634,6 @@ async fn _validate_and_parse_value(
                         &clause.column_type,
                         column_id,
                         is_nullable,
-                        perform_schema_checks,
                     )
                     .await;
                 }
@@ -640,18 +700,7 @@ pub async fn settings_view(
             let mut val = state.state.swap_remove(col.id).unwrap_or(Value::None);
 
             // Validate the value. returning the parsed value
-            val = _validate_and_parse_value(
-                val,
-                &state,
-                guild_id,
-                cache_http,
-                reqwest_client,
-                &col.column_type,
-                col.id,
-                col.nullable,
-                false,
-            )
-            .await?;
+            val = _parse_value(val, &state, &col.column_type, col.id)?;
 
             // Reinsert
             state.state.insert(col.id.to_string(), val);
@@ -753,9 +802,11 @@ pub async fn settings_create(
                 // Get the value
                 let val = fields.swap_remove(column.id).unwrap_or(Value::None);
 
+                let parsed_value = _parse_value(val, &state, &column.column_type, column.id)?;
+
                 // Validate and parse the value
-                _validate_and_parse_value(
-                    val,
+                _validate_value(
+                    parsed_value,
                     &state,
                     guild_id,
                     cache_http,
@@ -763,7 +814,6 @@ pub async fn settings_create(
                     &column.column_type,
                     column.id,
                     column.nullable,
-                    true,
                 )
                 .await?
             }
@@ -945,8 +995,11 @@ pub async fn settings_update(
             } else {
                 match fields.swap_remove(column.id) {
                     Some(val) => {
-                        _validate_and_parse_value(
-                            val,
+                        let parsed_value =
+                            _parse_value(val, &state, &column.column_type, column.id)?;
+
+                        _validate_value(
+                            parsed_value,
                             &state,
                             guild_id,
                             cache_http,
@@ -954,7 +1007,6 @@ pub async fn settings_update(
                             &column.column_type,
                             column.id,
                             column.nullable,
-                            true,
                         )
                         .await?
                     }
@@ -1191,18 +1243,7 @@ pub async fn settings_delete(
         });
     };
 
-    let pkey = _validate_and_parse_value(
-        pkey,
-        &state,
-        guild_id,
-        cache_http,
-        reqwest_client,
-        &pkey_column.column_type,
-        setting.primary_key,
-        false,
-        false,
-    )
-    .await?;
+    let pkey = _parse_value(pkey, &state, &pkey_column.column_type, setting.primary_key)?;
 
     let mut data_store = setting
         .data_store
