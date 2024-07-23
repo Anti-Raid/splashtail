@@ -9,6 +9,10 @@
 
 - Flatten ``Field``s and tag it with the value stored in ``value``. This helps improve user experience in templates.
 
+## Settings (module)
+
+- Moved guild roles to settings. This also removes the (now useless) ``perms list`` and ``perms modrole`` commands.
+
 # Thursday, July 18th 2024
 
 ## Settings
