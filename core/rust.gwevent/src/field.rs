@@ -10,10 +10,12 @@ pub struct CategorizedField {
     /// The category of the field
     pub category: String,
     /// The field itself
+    #[serde(flatten)]
     pub field: Field,
 }
 
 #[derive(serde::Serialize, serde::Deserialize)]
+#[serde(tag = "type", content = "field")]
 pub enum Field {
     // Primitive Types
     Bool(bool),
@@ -84,7 +86,7 @@ pub enum Field {
 
     // Special Types
     JsonValue(serde_json::Value),
-    None,
+    None(()),
 }
 
 impl Field {
@@ -261,7 +263,7 @@ impl Field {
 
                 Ok(stickers.join(", "))
             }
-            Field::None => Ok("None".to_string()),
+            Field::None(()) => Ok("None".to_string()),
             Field::ChannelMentions(c) => {
                 let mut channels = Vec::new();
 

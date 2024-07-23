@@ -312,7 +312,7 @@ pub async fn prune_user(
             } else {
                 CategorizedField {
                     category: "config".to_string(),
-                    field: gwevent::field::Field::None
+                    field: gwevent::field::Field::None(())
                 }
             },
         };

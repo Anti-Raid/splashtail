@@ -391,7 +391,7 @@ pub fn expand_event(event: FullEvent) -> Option<IndexMap<String, CategorizedFiel
                     key.to_string(),
                     CategorizedField {
                         category: category.to_string(),
-                        field: Field::None,
+                        field: Field::None(()),
                     },
                 );
             }

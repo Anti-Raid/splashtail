@@ -27,6 +27,10 @@ Hello world
 
 Note that this only applies to templates used to construct messages such as ``Audit Long Sink`` templates.
 
+## Gateway event structure
+
+All gateway events are tagged
+
 ## Common Functions And Filters
 
 ### Base filters

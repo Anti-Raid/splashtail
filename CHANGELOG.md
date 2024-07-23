@@ -1,3 +1,14 @@
+## Tuesday, July 23rd 2024
+
+## Settings
+
+- Refactored out the database code into two traits. The first, ``CreateDataStore`` has one function ``create`` which is passed all the common arguments/state. The second, ``DataStore`` includes functions for fetching/creating/updating/deleting entries.
+- Refactored the ``_validate_and_parse_value`` function into two seperate functions ``_parse_value`` and ``_validate_value``. This avoids performing useless operations and helps improve maintenance and readability of the codebase at the cost of potential performance.
+
+## GWEvent
+
+- Flatten ``Field``s and tag it with the value stored in ``value``. This helps improve user experience in templates.
+
 # Thursday, July 18th 2024
 
 ## Settings

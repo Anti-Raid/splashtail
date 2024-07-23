@@ -10,5 +10,5 @@ pub mod embed_limits {
 }
 
 pub mod message_limits {
-    pub const MESSAGE_CONTENT_LIMIT: usize = 4096;
+    pub const MESSAGE_CONTENT_LIMIT: usize = 2000;
 }
