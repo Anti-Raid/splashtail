@@ -1,6 +1,6 @@
 use futures_util::FutureExt;
 use module_settings::types::{
-    settings_wrap_columns, settings_wrap_precheck, settings_wrap_datastore, Column, ColumnAction, ColumnSuggestion, ColumnType, ConfigOption, InnerColumnType, InnerColumnTypeStringKind, InnerColumnTypeStringKindTemplateKind, ColumnTypeDynamicClause, OperationSpecific, OperationType, SettingsError
+    settings_wrap_columns, settings_wrap_precheck, settings_wrap_postactions, settings_wrap_datastore, Column, ColumnAction, ColumnSuggestion, ColumnType, ConfigOption, InnerColumnType, InnerColumnTypeStringKind, InnerColumnTypeStringKindTemplateKind, ColumnTypeDynamicClause, OperationSpecific, OperationType, SettingsError
 };
 use module_settings::data_stores::PostgresDataStore;
 use once_cell::sync::Lazy;
@@ -180,10 +180,6 @@ pub static SINK: Lazy<ConfigOption> = Lazy::new(|| {
                 pre_checks: settings_wrap_precheck(indexmap::indexmap! {}),
                 default_pre_checks: settings_wrap_precheck(vec![])
             },
-            module_settings::common_columns::created_at(),
-            module_settings::common_columns::created_by(),
-            module_settings::common_columns::last_updated_at(),
-            module_settings::common_columns::last_updated_by(),
             Column {
                 id: "broken",
                 name: "Marked as Broken",
@@ -197,6 +193,10 @@ pub static SINK: Lazy<ConfigOption> = Lazy::new(|| {
                 pre_checks: settings_wrap_precheck(indexmap::indexmap! {}),
                 default_pre_checks: settings_wrap_precheck(vec![])
             },
+            module_settings::common_columns::created_at(),
+            module_settings::common_columns::created_by(),
+            module_settings::common_columns::last_updated_at(),
+            module_settings::common_columns::last_updated_by(),
         ]),
         title_template: "{type} {sink} [{id}]",
         operations: indexmap::indexmap! {
@@ -224,6 +224,7 @@ pub static SINK: Lazy<ConfigOption> = Lazy::new(|| {
                 corresponding_command: "auditlogs remove_sink",
                 columns_to_set: indexmap::indexmap! {},
             },
-        }
+        },
+        post_actions: settings_wrap_postactions(vec![]),
     }
 });

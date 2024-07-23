@@ -1,6 +1,6 @@
 use futures_util::FutureExt;
 use module_settings::types::{
-    settings_wrap_columns, settings_wrap_precheck, settings_wrap_datastore, Column, ColumnAction, ColumnSuggestion, ColumnType, ConfigOption, InnerColumnType, InnerColumnTypeStringKind, OperationSpecific, OperationType, SettingsError
+    settings_wrap_columns, settings_wrap_precheck, settings_wrap_postactions, settings_wrap_datastore, Column, ColumnAction, ColumnSuggestion, ColumnType, ConfigOption, InnerColumnType, InnerColumnTypeStringKind, OperationSpecific, OperationType, SettingsError
 };
 use module_settings::data_stores::PostgresDataStore;
 use serenity::all::{Permissions, ChannelType};
@@ -155,6 +155,7 @@ When creating repositories, use `{id}` as the ID.
                 columns_to_set: indexmap::indexmap! {},
             },
         },
+        post_actions: settings_wrap_postactions(vec![])
     }
 });
 
@@ -229,7 +230,7 @@ pub static REPOS: Lazy<ConfigOption> = Lazy::new(|| {
                                 webhook_id,
                                 ctx.guild_id.to_string()
                             )
-                            .fetch_one(&ctx.pool)
+                            .fetch_one(ctx.pool)
                             .await
                             .map_err(|e| SettingsError::Generic { 
                                 message: e.to_string(),
@@ -293,7 +294,7 @@ pub static REPOS: Lazy<ConfigOption> = Lazy::new(|| {
                                         webhook_id,
                                         ctx.guild_id.to_string()
                                     )
-                                    .fetch_one(&ctx.pool)
+                                    .fetch_one(ctx.pool)
                                     .await
                                     .map_err(|e| SettingsError::Generic { 
                                         message: e.to_string(),
@@ -370,6 +371,7 @@ pub static REPOS: Lazy<ConfigOption> = Lazy::new(|| {
                 columns_to_set: indexmap::indexmap! {},
             },
         },
+        post_actions: settings_wrap_postactions(vec![])
     }
 });
 
@@ -444,7 +446,7 @@ pub static EVENT_MODIFIERS: Lazy<ConfigOption> = Lazy::new(|| {
                                 webhook_id,
                                 ctx.guild_id.to_string()
                             )
-                            .fetch_one(&ctx.pool)
+                            .fetch_one(ctx.pool)
                             .await
                             .map_err(|e| SettingsError::Generic { 
                                 message: e.to_string(),
@@ -494,7 +496,7 @@ pub static EVENT_MODIFIERS: Lazy<ConfigOption> = Lazy::new(|| {
                                     repo_id,
                                     ctx.guild_id.to_string()
                                 )
-                                .fetch_one(&ctx.pool)
+                                .fetch_one(ctx.pool)
                                 .await
                                 .map_err(|e| SettingsError::Generic { 
                                     message: e.to_string(),
@@ -639,5 +641,6 @@ pub static EVENT_MODIFIERS: Lazy<ConfigOption> = Lazy::new(|| {
                 columns_to_set: indexmap::indexmap! {},
             },
         },
+        post_actions: settings_wrap_postactions(vec![])
     }
 });

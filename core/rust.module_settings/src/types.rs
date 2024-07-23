@@ -353,7 +353,8 @@ pub struct NativeActionContext<'a> {
     pub guild_id: serenity::all::GuildId,
     pub cache_http: &'a botox::cache::CacheHttpImpl,
     pub reqwest_client: &'a reqwest::Client,
-    pub pool: sqlx::PgPool,
+    pub pool: &'a sqlx::PgPool,
+    pub data_store: &'a mut dyn DataStore, // The current datastore
     pub operation_type: OperationType,
 }
 
@@ -368,6 +369,7 @@ pub type NativeActionFunc = Box<
 
 #[allow(dead_code)]
 pub struct ActionConditionContext {
+    pub operation_type: OperationType,
     pub author: serenity::all::UserId,
     pub guild_id: serenity::all::GuildId,
 }
@@ -584,6 +586,13 @@ pub struct ConfigOption {
     /// Operation specific data
     pub operations: indexmap::IndexMap<OperationType, OperationSpecific>,
 
+    /// Any post-operation actions. These are guaranteed to run after the operation has been completed
+    ///
+    /// Note: this is pretty useless in View but may be useful in Create/Update/Delete
+    ///
+    /// If/when called, the state will be the state after the operation has been completed. In particular, the data itself may not be present in database anymore
+    pub post_actions: Arc<Vec<ColumnAction>>,
+
     /// The underlying data store to use for fetch operations
     ///
     /// This can be useful in cases where postgres/etc. is not the main underlying storage (for example, seaweedfs etc.)
@@ -600,6 +609,13 @@ impl PartialEq for ConfigOption {
 ///
 /// Currently, this is an Arc for now
 pub fn settings_wrap_precheck<T>(action: T) -> Arc<T> {
+    Arc::new(action)
+}
+
+/// Wraps post operation actions in the currently used wrapper
+///
+/// Currently, this is an Arc for now
+pub fn settings_wrap_postactions<T>(action: T) -> Arc<T> {
     Arc::new(action)
 }
 
@@ -641,16 +657,21 @@ impl std::fmt::Debug for dyn CreateDataStore {
 /// How should data be fetched
 #[async_trait]
 pub trait DataStore: Send + Sync {
+    /// Casts the DataStore to std::any::Any
+    fn as_any(&mut self) -> &mut dyn std::any::Any;
+
     /// Start a transaction
-    #[allow(clippy::too_many_arguments)]
     async fn start_transaction(&mut self) -> Result<(), SettingsError>;
 
     /// Commit the changes to the data store
-    #[allow(clippy::too_many_arguments)]
     async fn commit(&mut self) -> Result<(), SettingsError>;
 
+    /// Gets the list of all available columns on the database
+    ///
+    /// This can be useful for debugging purposes and validation/tests
+    async fn columns(&mut self) -> Result<Vec<String>, SettingsError>;
+
     /// Fetches all requested fields of a setting for a given guild matching filters
-    #[allow(clippy::too_many_arguments)]
     async fn fetch_all(
         &mut self,
         fields: &[String],
@@ -658,21 +679,18 @@ pub trait DataStore: Send + Sync {
     ) -> Result<Vec<super::state::State>, SettingsError>;
 
     /// Fetch the count of all entries matching filters
-    #[allow(clippy::too_many_arguments)]
     async fn matching_entry_count(
         &mut self,
         filters: indexmap::IndexMap<String, splashcore_rs::value::Value>,
     ) -> Result<usize, SettingsError>;
 
     /// Creates a new entry given a set of columns to set returning the newly created entry
-    #[allow(clippy::too_many_arguments)]
     async fn create_entry(
         &mut self,
         entry: indexmap::IndexMap<String, splashcore_rs::value::Value>,
     ) -> Result<super::state::State, SettingsError>;
 
     /// Updates all matching entry given a set of columns to set and a set of filters
-    #[allow(clippy::too_many_arguments)]
     async fn update_matching_entries(
         &mut self,
         filters: indexmap::IndexMap<String, splashcore_rs::value::Value>,
@@ -682,7 +700,6 @@ pub trait DataStore: Send + Sync {
     /// Deletes entries given a set of filters
     ///
     /// NOTE: Data stores should return an error if no rows are deleted
-    #[allow(clippy::too_many_arguments)]
     async fn delete_matching_entries(
         &mut self,
         filters: indexmap::IndexMap<String, splashcore_rs::value::Value>,

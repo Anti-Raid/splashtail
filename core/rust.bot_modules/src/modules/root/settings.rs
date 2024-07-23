@@ -1,9 +1,11 @@
+use futures_util::FutureExt;
 use module_settings::{
     data_stores::PostgresDataStore,
     types::{
-        settings_wrap_columns, settings_wrap_datastore, settings_wrap_precheck, Column,
-        ColumnSuggestion, ColumnType, ConfigOption, InnerColumnType, InnerColumnTypeStringKind,
-        OperationSpecific, OperationType,
+        settings_wrap_columns, settings_wrap_datastore, settings_wrap_postactions,
+        settings_wrap_precheck, Column, ColumnAction, ColumnSuggestion, ColumnType, ConfigOption,
+        InnerColumnType, InnerColumnTypeStringKind, OperationSpecific, OperationType,
+        SettingsError,
     },
 };
 use once_cell::sync::Lazy;
@@ -123,4 +125,25 @@ pub static INSPECTOR_FAKE_BOTS: Lazy<ConfigOption> = Lazy::new(|| ConfigOption {
             columns_to_set: indexmap::indexmap! {},
         },
     },
+    post_actions: settings_wrap_postactions(vec![ColumnAction::NativeAction {
+        action: Box::new(|ctx, _state| {
+            async move {
+                if ctx.operation_type == OperationType::View {
+                    return Ok(());
+                }
+
+                crate::modules::inspector::cache::setup_fake_bots_cache(ctx.pool)
+                    .await
+                    .map_err(|e| SettingsError::Generic {
+                        message: format!("Failed to setup fake bots cache: {}", e),
+                        src: "inspector__fake_bots::post_actions".to_string(),
+                        typ: "internal".to_string(),
+                    })?;
+
+                Ok(())
+            }
+            .boxed()
+        }),
+        on_condition: None,
+    }]),
 });

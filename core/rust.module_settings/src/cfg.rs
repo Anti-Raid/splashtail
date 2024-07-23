@@ -726,6 +726,7 @@ pub async fn settings_view(
                 author,
                 guild_id,
                 permodule_executor,
+                &mut *data_store,
             )
             .await?;
         }
@@ -771,6 +772,20 @@ pub async fn settings_view(
                 state.state.swap_remove(col.id);
             }
         }
+
+        super::action_executor::execute_actions(
+            &mut state,
+            OperationType::View,
+            &setting.post_actions,
+            cache_http,
+            reqwest_client,
+            pool,
+            author,
+            guild_id,
+            permodule_executor,
+            &mut *data_store,
+        )
+        .await?;
 
         values.push(state);
     }
@@ -897,6 +912,7 @@ pub async fn settings_create(
             author,
             guild_id,
             permodule_executor,
+            &mut *data_store,
         )
         .await?;
 
@@ -975,6 +991,21 @@ pub async fn settings_create(
 
     // Commit the transaction
     data_store.commit().await?;
+
+    // Execute post actions
+    super::action_executor::execute_actions(
+        &mut new_state,
+        OperationType::Create,
+        &setting.post_actions,
+        cache_http,
+        reqwest_client,
+        pool,
+        author,
+        guild_id,
+        permodule_executor,
+        &mut *data_store,
+    )
+    .await?;
 
     Ok(new_state)
 }
@@ -1119,6 +1150,7 @@ pub async fn settings_update(
             author,
             guild_id,
             permodule_executor,
+            &mut *data_store,
         )
         .await?;
 
@@ -1227,6 +1259,21 @@ pub async fn settings_update(
     // Commit the transaction
     data_store.commit().await?;
 
+    // Execute post actions
+    super::action_executor::execute_actions(
+        &mut state,
+        OperationType::Update,
+        &setting.post_actions,
+        cache_http,
+        reqwest_client,
+        pool,
+        author,
+        guild_id,
+        permodule_executor,
+        &mut *data_store,
+    )
+    .await?;
+
     Ok(state)
 }
 
@@ -1318,6 +1365,7 @@ pub async fn settings_delete(
             author,
             guild_id,
             permodule_executor,
+            &mut *data_store,
         )
         .await?;
     }
@@ -1331,6 +1379,21 @@ pub async fn settings_delete(
 
     // Commit the transaction
     data_store.commit().await?;
+
+    // Execute post actions
+    super::action_executor::execute_actions(
+        &mut state,
+        OperationType::Delete,
+        &setting.post_actions,
+        cache_http,
+        reqwest_client,
+        pool,
+        author,
+        guild_id,
+        permodule_executor,
+        &mut *data_store,
+    )
+    .await?;
 
     Ok(state)
 }

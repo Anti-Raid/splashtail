@@ -1,9 +1,9 @@
 use module_settings::{
     data_stores::PostgresDataStore,
     types::{
-        settings_wrap_columns, settings_wrap_datastore, settings_wrap_precheck, Column,
-        ColumnSuggestion, ColumnType, ConfigOption, InnerColumnType, InnerColumnTypeStringKind,
-        OperationSpecific, OperationType,
+        settings_wrap_columns, settings_wrap_datastore, settings_wrap_postactions,
+        settings_wrap_precheck, Column, ColumnSuggestion, ColumnType, ConfigOption,
+        InnerColumnType, InnerColumnTypeStringKind, OperationSpecific, OperationType,
     },
 };
 use once_cell::sync::Lazy;
@@ -139,6 +139,7 @@ pub static GUILD_LIMITS: Lazy<ConfigOption> = Lazy::new(|| {
                 corresponding_command: "limits remove",
                 columns_to_set: indexmap::indexmap! {},
             },
-        }
+        },
+        post_actions: settings_wrap_postactions(vec![])
     }
 });

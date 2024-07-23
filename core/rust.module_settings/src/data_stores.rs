@@ -4,6 +4,7 @@ use super::types::{
 };
 use async_trait::async_trait;
 use splashcore_rs::value::Value;
+use sqlx::Row;
 use std::sync::Arc;
 
 pub struct PostgresDataStore {}
@@ -33,21 +34,31 @@ impl CreateDataStore for PostgresDataStore {
     }
 }
 
-struct PostgresDataStoreImpl {
+pub struct PostgresDataStoreImpl {
     // Args needed for queries
-    pool: sqlx::PgPool,
-    setting_table: &'static str,
-    setting_guild_id: &'static str,
-    setting_primary_key: &'static str,
-    author: serenity::all::UserId,
-    guild_id: serenity::all::GuildId,
-    columns: Arc<Vec<Column>>,
+    pub pool: sqlx::PgPool,
+    pub setting_table: &'static str,
+    pub setting_guild_id: &'static str,
+    pub setting_primary_key: &'static str,
+    pub author: serenity::all::UserId,
+    pub guild_id: serenity::all::GuildId,
+    pub columns: Arc<Vec<Column>>,
 
     // Transaction (if ongoing)
-    tx: Option<sqlx::Transaction<'static, sqlx::Postgres>>,
+    pub tx: Option<sqlx::Transaction<'static, sqlx::Postgres>>,
 }
 
 impl PostgresDataStoreImpl {
+    pub fn from_data_store(d: &mut dyn DataStore) -> Result<&mut Self, SettingsError> {
+        d.as_any()
+            .downcast_mut::<Self>()
+            .ok_or(SettingsError::Generic {
+                message: "Failed to downcast to PostgresDataStoreImpl".to_string(),
+                src: "PostgresDataStoreImpl::from_data_store".to_string(),
+                typ: "internal".to_string(),
+            })
+    }
+
     /// Binds a value to a query
     ///
     /// Note that Maps are binded as JSONs
@@ -251,6 +262,10 @@ impl PostgresDataStoreImpl {
 
 #[async_trait]
 impl DataStore for PostgresDataStoreImpl {
+    fn as_any(&mut self) -> &mut dyn std::any::Any {
+        self
+    }
+
     async fn start_transaction(&mut self) -> Result<(), SettingsError> {
         let tx: sqlx::Transaction<'_, sqlx::Postgres> =
             self.pool
@@ -277,6 +292,49 @@ impl DataStore for PostgresDataStoreImpl {
         }
 
         Ok(())
+    }
+
+    async fn columns(&mut self) -> Result<Vec<String>, SettingsError> {
+        // Get columns from database
+        let rows = if self.tx.is_some() {
+            let tx = self.tx.as_deref_mut().unwrap();
+
+            sqlx::query("SELECT column_name FROM information_schema.columns WHERE table_name = $1 ORDER BY ordinal_position")
+                .bind(self.setting_table)
+                .fetch_all(tx)
+                .await
+                .map_err(|e| SettingsError::Generic {
+                    message: e.to_string(),
+                    src: "PostgresDataStore::columns [query fetch_all]".to_string(),
+                    typ: "internal".to_string(),
+                })?
+        } else {
+            sqlx::query("SELECT column_name FROM information_schema.columns WHERE table_name = $1 ORDER BY ordinal_position")
+                .bind(self.setting_table)
+                .fetch_all(&self.pool)
+                .await
+                .map_err(|e| SettingsError::Generic {
+                    message: e.to_string(),
+                    src: "PostgresDataStore::columns [query fetch_all]".to_string(),
+                    typ: "internal".to_string(),
+                })?
+        };
+
+        let mut columns = Vec::new();
+
+        for row in rows {
+            let column_name: String =
+                row.try_get("column_name")
+                    .map_err(|e| SettingsError::Generic {
+                        message: e.to_string(),
+                        src: "PostgresDataStore::columns [row try_get]".to_string(),
+                        typ: "internal".to_string(),
+                    })?;
+
+            columns.push(column_name);
+        }
+
+        Ok(columns)
     }
 
     #[allow(clippy::too_many_arguments)]
@@ -443,21 +501,13 @@ impl DataStore for PostgresDataStoreImpl {
                 })?
         };
 
-        let count = Value::from_sqlx(&row, 0).map_err(|e| SettingsError::Generic {
+        let count: i64 = row.try_get(0).map_err(|e| SettingsError::Generic {
             message: e.to_string(),
-            src: "PostgresDataStore::matching_entry_count [Value::from_sqlx]".to_string(),
+            src: "PostgresDataStore::matching_entry_count [row try_get]".to_string(),
             typ: "internal".to_string(),
         })?;
 
-        if let Value::Integer(count) = count {
-            Ok(count as usize)
-        } else {
-            Err(SettingsError::Generic {
-                message: "Count is not an integer".to_string(),
-                src: "settings_view [matching_entry_count]".to_string(),
-                typ: "internal".to_string(),
-            })
-        }
+        Ok(count as usize)
     }
 
     /// Creates a new entry given a set of columns to set returning the newly created entry

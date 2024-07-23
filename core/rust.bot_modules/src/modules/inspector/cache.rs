@@ -16,14 +16,14 @@ pub struct FakeBots {
 
 pub static FAKE_BOTS_CACHE: Lazy<DashMap<UserId, FakeBots>> = Lazy::new(DashMap::new);
 
-pub async fn setup_fake_bots(data: &crate::Data) -> Result<(), crate::Error> {
-    // Clear the cache
-    FAKE_BOTS_CACHE.clear();
-
+pub async fn setup_fake_bots_cache(pool: &sqlx::PgPool) -> Result<(), crate::Error> {
     let fake_bots =
         sqlx::query!("SELECT bot_id, name, official_bot_ids FROM inspector__fake_bots",)
-            .fetch_all(&data.pool)
+            .fetch_all(pool)
             .await?;
+
+    // Clear the cache
+    FAKE_BOTS_CACHE.clear();
 
     for row in fake_bots {
         let bot_id = row.bot_id.parse::<UserId>()?;

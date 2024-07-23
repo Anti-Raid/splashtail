@@ -1,3 +1,3 @@
 #/bin/bash
 LOCAL_PATH=~/splashtail/staging/data
-cd ~/ && ibl db new seed "${LOCAL_PATH}/seed.iblcli-seed" --db antiraid --backup-tables inspector__fake_bots,can_use_bot,maintenance --extensions uuid-ossp\|citext\|semver,https://github.com/theory/pg-semver # && ibl db gen-ci-schema ${LOCAL_PATH}/seed-ci.json
+cd ~/ && ibl db new seed "${LOCAL_PATH}/seed.iblcli-seed" --db antiraid --backup-tables inspector__fake_bots,can_use_bot --extensions uuid-ossp\|citext\|semver,https://github.com/theory/pg-semver # && ibl db gen-ci-schema ${LOCAL_PATH}/seed-ci.json

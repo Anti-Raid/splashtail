@@ -18,6 +18,7 @@ pub async fn execute_actions(
     author: serenity::all::UserId,
     guild_id: serenity::all::GuildId,
     permodule_executor: &dyn base_data::permodule::PermoduleFunctionExecutor,
+    data_store: &mut dyn super::types::DataStore,
 ) -> Result<(), SettingsError> {
     for action in actions {
         match action {
@@ -28,7 +29,11 @@ pub async fn execute_actions(
                 on_condition,
             } => {
                 if let Some(on_condition) = on_condition {
-                    let acc = ActionConditionContext { author, guild_id };
+                    let acc = ActionConditionContext {
+                        operation_type,
+                        author,
+                        guild_id,
+                    };
 
                     match (on_condition)(acc, state) {
                         Ok(true) => (),          // Go ahead
@@ -73,7 +78,11 @@ pub async fn execute_actions(
                 on_condition,
             } => {
                 if let Some(on_condition) = on_condition {
-                    let acc = ActionConditionContext { author, guild_id };
+                    let acc = ActionConditionContext {
+                        operation_type,
+                        author,
+                        guild_id,
+                    };
 
                     match (on_condition)(acc, state) {
                         Ok(true) => (),          // Go ahead
@@ -88,7 +97,8 @@ pub async fn execute_actions(
                     cache_http,
                     reqwest_client,
                     operation_type,
-                    pool: pool.clone(),
+                    data_store,
+                    pool,
                 };
                 action(nac, state).await?;
             }
@@ -98,7 +108,11 @@ pub async fn execute_actions(
                 on_condition,
             } => {
                 if let Some(on_condition) = on_condition {
-                    let acc = ActionConditionContext { author, guild_id };
+                    let acc = ActionConditionContext {
+                        operation_type,
+                        author,
+                        guild_id,
+                    };
                     match (on_condition)(acc, state) {
                         Ok(true) => (),          // Go ahead
                         Ok(false) => continue,   // Skip execution

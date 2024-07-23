@@ -1,4 +1,4 @@
-mod cache;
+pub mod cache; // Used by root module
 mod core;
 mod dehoist;
 pub mod events; // Events is a public interface
@@ -23,7 +23,7 @@ pub fn module() -> crate::silverpelt::Module {
         on_startup: vec![
             Box::new(move |data| cache::setup_cache_initial(&data.pool).boxed()),
             Box::new(move |data| cache::setup_am_toggle(data).boxed()),
-            Box::new(move |data| cache::setup_fake_bots(data).boxed()),
+            Box::new(move |data| cache::setup_fake_bots_cache(&data.pool).boxed()),
             Box::new(move |data| core::register_punishment_sting_source(data).boxed()),
         ],
         on_first_ready: vec![Box::new(move |ctx, data| {
