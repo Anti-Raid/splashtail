@@ -48,7 +48,7 @@ pub static GUILD_ROLES: Lazy<ConfigOption> = Lazy::new(|| {
                 nullable: false,
                 unique: true,
                 suggestions: ColumnSuggestion::None {},
-                ignored_for: vec![OperationType::Create],
+                ignored_for: vec![],
                 secret: false,
                 pre_checks: settings_wrap_precheck(indexmap::indexmap! {}),
                 default_pre_checks: settings_wrap_precheck(vec![]),
@@ -64,7 +64,7 @@ pub static GUILD_ROLES: Lazy<ConfigOption> = Lazy::new(|| {
                     allowed_values: vec![],
                 }),
                 nullable: false,
-                unique: true,
+                unique: false,
                 suggestions: ColumnSuggestion::None {},
                 ignored_for: vec![],
                 secret: false,
@@ -75,13 +75,8 @@ pub static GUILD_ROLES: Lazy<ConfigOption> = Lazy::new(|| {
                 id: "index",
                 name: "Index",
                 description: "Where in the role hierarchy should this role be on Anti-Raid for permission purposes. Note that a lower index implies higher on the hierarchy and vice versa",
-                column_type: ColumnType::new_array(InnerColumnType::String {
-                    kind: InnerColumnTypeStringKind::KittycatPermission,
-                    min_length: None,
-                    max_length: Some(64),
-                    allowed_values: vec![],
-                }),
-                nullable: false,
+                column_type: ColumnType::new_scalar(InnerColumnType::Integer {}),
+                nullable: true,
                 unique: true,
                 suggestions: ColumnSuggestion::None {},
                 ignored_for: vec![],
@@ -92,6 +87,59 @@ pub static GUILD_ROLES: Lazy<ConfigOption> = Lazy::new(|| {
                 default_pre_checks: settings_wrap_precheck(vec![
                     ColumnAction::NativeAction {
                         action: Box::new(|ctx, state| async move {
+                            let pg_data_store = PostgresDataStoreImpl::from_data_store(ctx.data_store)?;
+
+                            // This should be safe as all actions for Create/Update/Delete run after fetching all prerequisite fields
+                            let new_index = if state.state.contains_key("index") {
+                                // Get the new index and check it while we're at it
+                                let Some(Value::Integer(new_index)) = state.state.get("index") else {
+                                    return Err(SettingsError::MissingOrInvalidField { 
+                                        field: "index".to_string(),
+                                        src: "index->NativeAction [default_pre_checks]".to_string(),
+                                    });
+                                };
+
+                                *new_index
+                            } else {
+                                let highest_index_rec = if pg_data_store.tx.is_some() {
+                                    let tx = pg_data_store.tx.as_deref_mut().unwrap();
+
+                                    sqlx::query!(
+                                        "SELECT MAX(index) FROM guild_roles WHERE guild_id = $1",
+                                        ctx.guild_id.to_string()
+                                    )
+                                    .fetch_one(tx)
+                                    .await
+                                    .map_err(|e| SettingsError::Generic {
+                                        message: format!("Failed to get highest index: {:?}", e),
+                                        src: "NativeAction->index".to_string(),
+                                        typ: "internal".to_string(),
+                                    })?
+                                    .max
+                                    .unwrap_or(0)
+                                } else {
+                                    sqlx::query!(
+                                        "SELECT MAX(index) FROM guild_roles WHERE guild_id = $1",
+                                        ctx.guild_id.to_string()
+                                    )
+                                    .fetch_one(ctx.pool)
+                                    .await
+                                    .map_err(|e| SettingsError::Generic {
+                                        message: format!("Failed to get highest index: {:?}", e),
+                                        src: "NativeAction->index".to_string(),
+                                        typ: "internal".to_string(),
+                                    })?
+                                    .max
+                                    .unwrap_or(0)
+                                };
+
+                                let index_i64 = (highest_index_rec + 1).into();
+
+                                state.state.insert("index".to_string(), Value::Integer(index_i64)); // Set the index
+
+                                index_i64
+                            };
+
                             let Some(Value::String(settings_role_id_str)) = state.state.get("role_id") else {
                                 return Err(SettingsError::MissingOrInvalidField { 
                                     field: "role_id".to_string(),
@@ -131,8 +179,6 @@ pub static GUILD_ROLES: Lazy<ConfigOption> = Lazy::new(|| {
                                     typ: "internal".to_string(),
                                 });
                             };
-
-                            let pg_data_store = PostgresDataStoreImpl::from_data_store(ctx.data_store)?;
 
                             let current_roles = if pg_data_store.tx.is_some() {
                                 let tx = pg_data_store.tx.as_deref_mut().unwrap();
@@ -291,17 +337,9 @@ pub static GUILD_ROLES: Lazy<ConfigOption> = Lazy::new(|| {
                             }
                         }
 
-                        // Get the new index and check it while we're at it
-                        let Some(Value::Integer(new_index)) = state.state.get("index") else {
-                            return Err(SettingsError::MissingOrInvalidField { 
-                                field: "index".to_string(),
-                                src: "index->NativeAction [default_pre_checks]".to_string(),
-                            });
-                        };
-
-                        if *new_index < lowest_index.into() {
+                        if new_index < lowest_index.into() {
                             return Err(SettingsError::Generic {
-                                message: format!("You do not have permission to edit this role's permissions as the new index would be lower than you: {} < {}", *new_index, lowest_index),
+                                message: format!("You do not have permission to edit this role's permissions as the new index would be lower than you: {} < {}", new_index, lowest_index),
                                 src: "NativeAction->index".to_string(),
                                 typ: "internal".to_string(),
                             });

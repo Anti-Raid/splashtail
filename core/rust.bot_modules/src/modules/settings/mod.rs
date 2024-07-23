@@ -4,8 +4,8 @@ use indexmap::indexmap;
 mod am_toggles;
 mod commands;
 mod events;
+mod guildroles;
 mod modules;
-mod perms;
 
 #[allow(clippy::module_inception)]
 mod settings;
@@ -41,22 +41,22 @@ pub fn module() -> crate::silverpelt::Module {
                 },
             ),
             (
-                perms::perms(),
+                guildroles::guildroles(),
                 indexmap! {
-                    "list" => crate::silverpelt::CommandExtendedData::kittycat_simple("perms", "list"),
-                    "modrole" => crate::silverpelt::CommandExtendedData {
+                    "list" => crate::silverpelt::CommandExtendedData::kittycat_simple("guildroles", "list"),
+                    "add" => crate::silverpelt::CommandExtendedData {
                         default_perms: crate::silverpelt::PermissionChecks {
                             checks: vec![
                                 crate::silverpelt::PermissionCheck {
-                                    kittycat_perms: vec!["perms.editrole".to_string(), "perms.manage".to_string()],
+                                    kittycat_perms: vec!["guildroles.add".to_string()],
                                     native_perms: vec![],
-                                    inner_and: true,
-                                    outer_and: false,
+                                    inner_and: false,
+                                    outer_and: true,
                                 },
                                 crate::silverpelt::PermissionCheck {
                                     kittycat_perms: vec![],
                                     native_perms: vec![serenity::model::permissions::Permissions::MANAGE_ROLES],
-                                    inner_and: true,
+                                    inner_and: false,
                                     outer_and: false,
                                 }
                             ],
@@ -64,7 +64,27 @@ pub fn module() -> crate::silverpelt::Module {
                         },
                         ..Default::default()
                     },
-                    "deleterole" => crate::silverpelt::CommandExtendedData::kittycat_simple("perms", "deleterole"),
+                    "edit" => crate::silverpelt::CommandExtendedData {
+                        default_perms: crate::silverpelt::PermissionChecks {
+                            checks: vec![
+                                crate::silverpelt::PermissionCheck {
+                                    kittycat_perms: vec!["guildroles.edit".to_string()],
+                                    native_perms: vec![],
+                                    inner_and: false,
+                                    outer_and: true,
+                                },
+                                crate::silverpelt::PermissionCheck {
+                                    kittycat_perms: vec![],
+                                    native_perms: vec![serenity::model::permissions::Permissions::MANAGE_ROLES],
+                                    inner_and: false,
+                                    outer_and: false,
+                                }
+                            ],
+                            checks_needed: 1,
+                        },
+                        ..Default::default()
+                    },
+                    "remove" => crate::silverpelt::CommandExtendedData::kittycat_simple("guildroles", "remove"),
                 },
             ),
         ],

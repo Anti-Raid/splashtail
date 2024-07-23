@@ -1032,13 +1032,13 @@ pub async fn settings_update(
 
     // Ensure all columns exist in fields, note that we can ignore extra fields so this one single loop is enough
     let mut state: State = State::new_with_special_variables(author, guild_id);
-    let mut unchanged_fields = Vec::new();
+    let mut unchanged_fields = indexmap::IndexSet::new();
     let mut pkey = None;
     for column in setting.columns.iter() {
         // If the column is ignored for update, skip
         if column.ignored_for.contains(&OperationType::Update) {
             if !column.secret {
-                unchanged_fields.push(column.id.to_string()); // Ensure that ignored_for columns are still seen as unchanged but only if not secret
+                unchanged_fields.insert(column.id.to_string()); // Ensure that ignored_for columns are still seen as unchanged but only if not secret
             }
         } else {
             match fields.swap_remove(column.id) {
@@ -1065,7 +1065,7 @@ pub async fn settings_update(
                 }
                 None => {
                     if !column.secret {
-                        unchanged_fields.push(column.id.to_string()); // Don't retrieve the value if it's a secret column
+                        unchanged_fields.insert(column.id.to_string()); // Don't retrieve the value if it's a secret column
                     }
                 }
             }
@@ -1112,7 +1112,10 @@ pub async fn settings_update(
     if !unchanged_fields.is_empty() {
         let mut data = data_store
             .fetch_all(
-                &unchanged_fields,
+                &unchanged_fields
+                    .iter()
+                    .map(|f| f.to_string())
+                    .collect::<Vec<String>>(),
                 indexmap::indexmap! {
                     setting.primary_key.to_string() => pkey.clone(),
                 },
@@ -1182,6 +1185,10 @@ pub async fn settings_update(
         //
         // ** Difference from create: We can't treat unique and primary key the same as the unique check must take into account the existing row **
         if column.unique {
+            if unchanged_fields.contains(&column.id.to_string()) {
+                continue; // Skip uniqueness check if the field is unchanged
+            }
+
             let ids = data_store
                 .fetch_all(
                     &[setting.primary_key.to_string()],
