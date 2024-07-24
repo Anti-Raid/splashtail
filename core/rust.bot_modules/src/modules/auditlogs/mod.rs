@@ -22,7 +22,7 @@ pub fn module() -> crate::silverpelt::Module {
             cmds::auditlogs(),
             indexmap! {
                 "list_sinks" => crate::silverpelt::CommandExtendedData {
-                    default_perms: crate::silverpelt::PermissionChecks {
+                    default_perms: crate::silverpelt::PermissionChecks::Simple {
                         checks: vec![
                             crate::silverpelt::PermissionCheck {
                                 kittycat_perms: vec!["auditlogs.list_sinks".to_string(), "auditlogs.list".to_string()],
@@ -37,12 +37,11 @@ pub fn module() -> crate::silverpelt::Module {
                                 outer_and: false,
                             }
                         ],
-                        checks_needed: 1,
                     },
                     ..Default::default()
                 },
                 "add_channel" => crate::silverpelt::CommandExtendedData {
-                    default_perms: crate::silverpelt::PermissionChecks {
+                    default_perms: crate::silverpelt::PermissionChecks::Simple {
                         checks: vec![
                             crate::silverpelt::PermissionCheck {
                                 kittycat_perms: vec!["auditlogs.add_sink".to_string()],
@@ -57,12 +56,11 @@ pub fn module() -> crate::silverpelt::Module {
                                 outer_and: false,
                             }
                         ],
-                        checks_needed: 1,
                     },
                     ..Default::default()
                 },
                 "add_sink" => crate::silverpelt::CommandExtendedData {
-                    default_perms: crate::silverpelt::PermissionChecks {
+                    default_perms: crate::silverpelt::PermissionChecks::Simple {
                         checks: vec![
                             crate::silverpelt::PermissionCheck {
                                 kittycat_perms: vec!["auditlogs.add_sink".to_string()],
@@ -77,12 +75,11 @@ pub fn module() -> crate::silverpelt::Module {
                                 outer_and: false,
                             }
                         ],
-                        checks_needed: 1,
                     },
                     ..Default::default()
                 },
                 "add_discordhook" => crate::silverpelt::CommandExtendedData {
-                    default_perms: crate::silverpelt::PermissionChecks {
+                    default_perms: crate::silverpelt::PermissionChecks::Simple {
                         checks: vec![
                             crate::silverpelt::PermissionCheck {
                                 kittycat_perms: vec!["auditlogs.add_sink".to_string()],
@@ -97,12 +94,11 @@ pub fn module() -> crate::silverpelt::Module {
                                 outer_and: false,
                             }
                         ],
-                        checks_needed: 1,
                     },
                     ..Default::default()
                 },
                 "edit_sink" => crate::silverpelt::CommandExtendedData {
-                    default_perms: crate::silverpelt::PermissionChecks {
+                    default_perms: crate::silverpelt::PermissionChecks::Simple {
                         checks: vec![
                             crate::silverpelt::PermissionCheck {
                                 kittycat_perms: vec!["auditlogs.edit_sink".to_string()],
@@ -117,12 +113,11 @@ pub fn module() -> crate::silverpelt::Module {
                                 outer_and: false,
                             }
                         ],
-                        checks_needed: 1,
                     },
                     ..Default::default()
                 },
                 "remove_sink" => crate::silverpelt::CommandExtendedData {
-                    default_perms: crate::silverpelt::PermissionChecks {
+                    default_perms: crate::silverpelt::PermissionChecks::Simple {
                         checks: vec![
                             crate::silverpelt::PermissionCheck {
                                 kittycat_perms: vec!["auditlogs.remove_sink".to_string()],
@@ -137,7 +132,6 @@ pub fn module() -> crate::silverpelt::Module {
                                 outer_and: false,
                             }
                         ],
-                        checks_needed: 1,
                     },
                     ..Default::default()
                 },

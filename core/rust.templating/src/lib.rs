@@ -7,6 +7,7 @@ use tera::Tera;
 
 // Re-export Tera as Engine
 pub mod engine {
+    pub use tera::Context;
     pub use tera::Filter;
     pub use tera::Function;
     pub use tera::Result;
@@ -93,6 +94,7 @@ struct InternalTemplateExecuteState {
     /// What content to set on the message
     content: RwLock<Option<String>>,
 }
+
 // Set title of embed
 struct EmbedTitleFunction {
     state: Arc<InternalTemplateExecuteState>,
@@ -504,12 +506,12 @@ impl ExecutedTemplate {
 /// Note that for message templates, the `execute_template_for_message` function should be used instead
 pub async fn execute_template(
     tera: &mut Tera,
-    context: Arc<tera::Context>,
+    context: &tera::Context,
 ) -> Result<String, base_data::Error> {
     // Render the template
     Ok(tokio::time::timeout(
         TEMPLATE_EXECUTION_TIMEOUT,
-        tera.render_async("main", &context),
+        tera.render_async("main", context),
     )
     .await
     .map_err(|_| "Template execution timed out")??)
@@ -566,7 +568,7 @@ pub async fn execute_template_for_message(
     tera.register_filter("bettertitle", BetterTitleFilter {});
 
     // Execute the template
-    execute_template(tera, context).await?;
+    execute_template(tera, &context).await?;
 
     // Read the outputted template embeds
     let embeds_reader = ites.embeds.read().map_err(|_| "Failed to read embeds")?;

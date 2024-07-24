@@ -1,3 +1,11 @@
+## Wednesday, July 24th 2024
+
+## Permissions
+
+- Removed ``PermissionResult::MissingMinChecks``
+- Removed ``checks_needed`` from ``PermissionChecks`` in favor of just using templates
+- Added ``PermissionChecks::Template`` to allow for more advanced permission checks. This is a work in progress and may not be fully functional yet.
+
 ## Tuesday, July 23rd 2024
 
 ## Settings

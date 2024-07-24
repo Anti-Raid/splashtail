@@ -1,3 +1,5 @@
+use std::sync::{Arc, RwLock};
+
 use super::{
     CommandExtendedData, GuildCommandConfiguration, GuildModuleConfiguration, PermissionCheck,
     PermissionChecks,
@@ -7,7 +9,7 @@ use splashcore_rs::types::silverpelt::PermissionResult;
 /// This function runs a single permission check on a command without taking any branching decisions
 ///
 /// This may be useful when mocking or visualizing a permission check
-pub fn check_perms_single(
+fn check_perms_single(
     check: &PermissionCheck,
     member_native_perms: serenity::all::Permissions,
     member_kittycat_perms: &[kittycat::perms::Permission],
@@ -75,69 +77,314 @@ pub fn check_perms_single(
     PermissionResult::Ok {}
 }
 
-/// Executes `PermissionChecks` against the member's native permissions and kittycat permissions
-pub fn run_permission_checks(
-    perms: &PermissionChecks,
+/// Executes `PermissionChecks::Simple` against the member's native permissions and kittycat permissions
+fn simple_permission_checks(
+    checks: &[PermissionCheck],
     member_native_perms: serenity::all::Permissions,
-    member_kittycat_perms: &[kittycat::perms::Permission],
+    member_kittycat_perms: Vec<kittycat::perms::Permission>,
 ) -> PermissionResult {
-    // This stores whether or not we need to check the next permission AND the current one or OR the current one
-    let mut outer_and = false;
-    let mut success: usize = 0;
+    let mut remaining_checks = std::collections::VecDeque::with_capacity(checks.len());
 
-    for check in &perms.checks {
+    for check in checks {
+        remaining_checks.push_back(check);
+    }
+
+    while let Some(check) = remaining_checks.pop_front() {
         // Run the check
-        let res = check_perms_single(check, member_native_perms, member_kittycat_perms);
+        let res = check_perms_single(check, member_native_perms, &member_kittycat_perms);
 
-        if outer_and {
-            // Question mark needs cloning which may harm performance
-            if !res.is_ok() {
-                return res;
-            }
+        if check.outer_and {
+            let next = match remaining_checks.pop_front() {
+                Some(next) => next,
+                None => return res,
+            };
 
-            // AND yet check_perms_single returned an error, so we can short-circuit and checks_needed
-            if success >= perms.checks_needed {
-                return res;
+            let res_next = check_perms_single(next, member_native_perms, &member_kittycat_perms);
+
+            if !res.is_ok() || !res_next.is_ok() {
+                return PermissionResult::NoChecksSucceeded {
+                    checks: PermissionChecks::Simple {
+                        checks: vec![check.clone(), next.clone()],
+                    },
+                };
             }
         } else {
-            // OR, so we can short-circuit if we have the permission and checks_needed
-            if res.is_ok() && success >= perms.checks_needed {
+            if res.is_ok() {
                 return res;
             }
+
+            let next = match remaining_checks.pop_front() {
+                Some(next) => next,
+                None => return res,
+            };
+
+            let res_next = check_perms_single(next, member_native_perms, &member_kittycat_perms);
+
+            if res_next.is_ok() {
+                return res_next;
+            }
         }
-
-        if res.is_ok() {
-            success += 1;
-        }
-
-        // Set the outer AND to the new outer AND
-        outer_and = check.outer_and;
-    }
-
-    // If we have no successful checks, return the error
-    if success == 0 {
-        return PermissionResult::NoChecksSucceeded {
-            checks: perms.clone(),
-        };
-    }
-
-    if success < perms.checks_needed {
-        return PermissionResult::MissingMinChecks {
-            checks: perms.clone(),
-        };
     }
 
     PermissionResult::Ok {}
 }
 
-pub fn can_run_command(
+struct InternalTemplateExecuteState {
+    /// The current native permissions of the member
+    member_native_perms: serenity::all::Permissions,
+    /// The current kittycat permissions of the member
+    member_kittycat_perms: Vec<kittycat::perms::Permission>,
+    /// The current permission result
+    result: RwLock<Option<PermissionResult>>,
+}
+
+// Run permission check function
+struct RunPermissionCheckFunction {
+    state: Arc<InternalTemplateExecuteState>,
+}
+
+// run_permission_check(kittycat_perms = string[], native_permissions = Permissions, and = BOOLEAN)
+impl templating::engine::Function for RunPermissionCheckFunction {
+    fn call(
+        &self,
+        args: &std::collections::HashMap<String, templating::engine::Value>,
+    ) -> templating::engine::Result<templating::engine::Value> {
+        let kittycat_perms = args
+            .get("kittycat_perms")
+            .ok_or("missing kittycat_perms")?
+            .as_array()
+            .ok_or("kittycat_perms is not an array")?
+            .iter()
+            .map(|v| {
+                v.as_str()
+                    .ok_or("kittycat_perm is not a string")
+                    .map(|s| s.to_string())
+            })
+            .collect::<Result<Vec<String>, _>>()?;
+
+        let native_perms = match args.get("native_perms").ok_or("missing native_perms")? {
+            templating::engine::Value::String(s) => {
+                vec![serenity::all::Permissions::from_bits_truncate(
+                    s.parse::<u64>()
+                        .map_err(|_| "native_perms is not a number")?,
+                )]
+            }
+            templating::engine::Value::Number(n) => {
+                vec![serenity::all::Permissions::from_bits_truncate(
+                    n.as_u64().ok_or("native_perms is not a number")?,
+                )]
+            }
+            templating::engine::Value::Array(a) => a
+                .iter()
+                .map(|v| match v {
+                    templating::engine::Value::String(s) => {
+                        Ok(serenity::all::Permissions::from_bits_truncate(
+                            s.parse::<u64>()
+                                .map_err(|_| "native_perms is not a number")?,
+                        ))
+                    }
+                    templating::engine::Value::Number(n) => {
+                        Ok(serenity::all::Permissions::from_bits_truncate(
+                            n.as_u64().ok_or("native_perms is not a number")?,
+                        ))
+                    }
+                    _ => Err("native_perms is not a number"),
+                })
+                .collect::<Result<Vec<serenity::all::Permissions>, _>>()?,
+            _ => return Err("native_perms is not a number".into()),
+        };
+
+        let and = args
+            .get("and")
+            .ok_or("missing and")?
+            .as_bool()
+            .ok_or("and is not a boolean")?;
+
+        let res = check_perms_single(
+            &PermissionCheck {
+                kittycat_perms,
+                native_perms,
+                inner_and: and,
+                outer_and: false,
+            },
+            self.state.member_native_perms,
+            &self.state.member_kittycat_perms,
+        );
+
+        let mut writer = self
+            .state
+            .result
+            .write()
+            .map_err(|_| "failed to lock result")?;
+
+        let ret = serde_json::json!({
+            "code": res.code(),
+            "ok": res.is_ok(),
+        });
+
+        *writer = Some(res);
+
+        Ok(ret)
+    }
+}
+
+// Run permission check function
+struct PermissionResultFilter {
+    state: Arc<InternalTemplateExecuteState>,
+}
+
+// permission_result (result=PermissionResult)
+impl templating::engine::Filter for PermissionResultFilter {
+    fn filter(
+        &self,
+        value: &templating::engine::Value,
+        _args: &std::collections::HashMap<String, templating::engine::Value>,
+    ) -> templating::engine::Result<templating::engine::Value> {
+        let value = match value {
+            templating::engine::Value::String(s) => serde_json::from_str::<PermissionResult>(s),
+            templating::engine::Value::Object(m) => serde_json::from_value::<PermissionResult>(
+                templating::engine::Value::Object(m.clone()),
+            ),
+            _ => return Err("value is not a string".into()),
+        }
+        .map_err(|e| format!("failed to parse PermissionResult: {}", e))?;
+
+        let mut writer = self
+            .state
+            .result
+            .write()
+            .map_err(|_| "failed to lock result")?;
+
+        *writer = Some(value);
+
+        Ok(templating::engine::Value::Null)
+    }
+}
+
+async fn template_permission_checks(
+    template: &str,
+    member_native_perms: serenity::all::Permissions,
+    member_kittycat_perms: Vec<kittycat::perms::Permission>,
+    ctx: TemplatePermissionChecksContext,
+) -> PermissionResult {
+    let mut template = match templating::compile_template(
+        template,
+        templating::CompileTemplateOptions {
+            cache_result: true,
+            ignore_cache: false,
+        },
+    )
+    .await
+    {
+        Ok(t) => t,
+        Err(e) => {
+            return PermissionResult::GenericError {
+                error: format!("failed to compile template: {}", e),
+            }
+        }
+    };
+
+    let mut context = templating::engine::Context::new();
+
+    if let Err(e) = context.insert("user_id", &ctx.user_id) {
+        return PermissionResult::GenericError {
+            error: format!("failed to insert user_id into context: {}", e),
+        };
+    }
+
+    if let Err(e) = context.insert("guild_id", &ctx.guild_id) {
+        return PermissionResult::GenericError {
+            error: format!("failed to insert guild_id into context: {}", e),
+        };
+    }
+
+    if let Err(e) = context.insert("guild_owner_id", &ctx.guild_owner_id) {
+        return PermissionResult::GenericError {
+            error: format!("failed to insert guild_owner_id into context: {}", e),
+        };
+    }
+
+    if let Err(e) = context.insert("channel_id", &ctx.channel_id) {
+        return PermissionResult::GenericError {
+            error: format!("failed to insert channel_id into context: {}", e),
+        };
+    }
+
+    if let Err(e) = context.insert(
+        "native_permissions",
+        &member_native_perms.bits().to_string(),
+    ) {
+        return PermissionResult::GenericError {
+            error: format!("failed to insert native_permissions into context: {}", e),
+        };
+    }
+
+    if let Err(e) = context.insert("kittycat_permissions", &member_kittycat_perms) {
+        return PermissionResult::GenericError {
+            error: format!("failed to insert kittycat_permissions into context: {}", e),
+        };
+    }
+
+    let state = Arc::new(InternalTemplateExecuteState {
+        member_native_perms,
+        member_kittycat_perms,
+        result: RwLock::new(None),
+    });
+
+    template.register_function(
+        "run_permission_check",
+        RunPermissionCheckFunction {
+            state: state.clone(),
+        },
+    );
+
+    template.register_filter(
+        "permission_result",
+        PermissionResultFilter {
+            state: state.clone(),
+        },
+    );
+
+    // Execute the template
+    match templating::execute_template(&mut template, &context).await {
+        Ok(r) => r,
+        Err(e) => {
+            return PermissionResult::GenericError {
+                error: format!("failed to execute template: {}", e),
+            }
+        }
+    };
+
+    let mut writer = match state
+        .result
+        .write()
+        .map_err(|e| format!("failed to lock result: {:?}", e))
+    {
+        Ok(r) => r,
+        Err(e) => return PermissionResult::GenericError { error: e },
+    };
+
+    (*writer).take().unwrap_or(PermissionResult::Ok {})
+}
+
+#[derive(Default, Clone, Eq, PartialEq, Debug)]
+pub struct TemplatePermissionChecksContext {
+    pub user_id: serenity::all::UserId,
+    pub guild_id: serenity::all::GuildId,
+    pub guild_owner_id: serenity::all::UserId,
+    pub channel_id: Option<serenity::all::ChannelId>,
+}
+
+#[allow(clippy::too_many_arguments)]
+pub async fn can_run_command(
     cmd_data: &CommandExtendedData,
     command_config: &GuildCommandConfiguration,
     module_config: &GuildModuleConfiguration,
     cmd_qualified_name: &str,
     member_native_perms: serenity::all::Permissions,
-    member_kittycat_perms: &[kittycat::perms::Permission],
+    member_kittycat_perms: Vec<kittycat::perms::Permission>,
     is_default_enabled: bool,
+    template_ctx: TemplatePermissionChecksContext,
 ) -> PermissionResult {
     log::debug!(
         "Command config: {:?} [{}]",
@@ -177,11 +424,28 @@ pub fn can_run_command(
         }
     };
 
-    if perms.checks.is_empty() {
-        return PermissionResult::Ok {};
-    }
+    match perms {
+        PermissionChecks::Simple { checks } => {
+            if checks.is_empty() {
+                return PermissionResult::Ok {};
+            }
 
-    run_permission_checks(perms, member_native_perms, member_kittycat_perms)
+            simple_permission_checks(checks, member_native_perms, member_kittycat_perms)
+        }
+        PermissionChecks::Template { template } => {
+            if template.is_empty() {
+                return PermissionResult::Ok {};
+            }
+
+            template_permission_checks(
+                template,
+                member_native_perms,
+                member_kittycat_perms,
+                template_ctx,
+            )
+            .await
+        }
+    }
 }
 
 #[cfg(test)]
@@ -282,8 +546,8 @@ mod tests {
         ));
     }
 
-    #[test]
-    fn test_can_run_command() {
+    #[tokio::test]
+    async fn test_can_run_command() {
         // Basic test
         assert!(can_run_command(
             &CommandExtendedData::none_map().get("").unwrap().clone(),
@@ -297,9 +561,11 @@ mod tests {
             &gen_module_config("core"),
             "test",
             serenity::all::Permissions::empty(),
-            &["abc.test".into()],
-            true
+            vec!["abc.test".into()],
+            true,
+            TemplatePermissionChecksContext::default()
         )
+        .await
         .is_ok());
 
         // With a native permission
@@ -310,23 +576,24 @@ mod tests {
                     id: "test".into(),
                     guild_id: "test".into(),
                     command: "test".into(),
-                    perms: Some(PermissionChecks {
+                    perms: Some(PermissionChecks::Simple {
                         checks: vec![PermissionCheck {
                             kittycat_perms: vec![],
                             native_perms: vec![serenity::all::Permissions::ADMINISTRATOR],
                             outer_and: false,
                             inner_and: false,
                         }],
-                        checks_needed: 0,
                     }),
                     disabled: None,
                 },
                 &gen_module_config("core"),
                 "test",
                 serenity::all::Permissions::empty(),
-                &["abc.test".into()],
-                true
-            ),
+                vec!["abc.test".into()],
+                true,
+                TemplatePermissionChecksContext::default()
+            )
+            .await,
             "no_checks_succeeded"
         ));
 
@@ -337,23 +604,24 @@ mod tests {
                     id: "test".into(),
                     guild_id: "test".into(),
                     command: "test".into(),
-                    perms: Some(PermissionChecks {
+                    perms: Some(PermissionChecks::Simple {
                         checks: vec![PermissionCheck {
                             kittycat_perms: vec![],
                             native_perms: vec![serenity::all::Permissions::ADMINISTRATOR],
                             outer_and: false,
                             inner_and: false,
                         }],
-                        checks_needed: 1,
                     }),
                     disabled: None,
                 },
                 &gen_module_config("core"),
                 "test",
                 serenity::all::Permissions::empty(),
-                &["abc.test".into()],
-                true
-            ),
+                vec!["abc.test".into()],
+                true,
+                TemplatePermissionChecksContext::default()
+            )
+            .await,
             "no_checks_succeeded"
         ));
 
@@ -364,13 +632,13 @@ mod tests {
                     id: "test".into(),
                     guild_id: "test".into(),
                     command: "test".into(),
-                    perms: Some(PermissionChecks {
+                    perms: Some(PermissionChecks::Simple {
                         checks: vec![
                             PermissionCheck {
                                 kittycat_perms: vec![],
                                 native_perms: vec![serenity::all::Permissions::BAN_MEMBERS],
                                 outer_and: false,
-                                inner_and: false,
+                                inner_and: true,
                             },
                             PermissionCheck {
                                 kittycat_perms: vec![],
@@ -379,17 +647,18 @@ mod tests {
                                 inner_and: false,
                             },
                         ],
-                        checks_needed: 2,
                     }),
                     disabled: None,
                 },
                 &gen_module_config("core"),
                 "test",
                 serenity::all::Permissions::BAN_MEMBERS,
-                &["abc.test".into()],
-                true
-            ),
-            "missing_min_checks"
+                vec!["abc.test".into()],
+                true,
+                TemplatePermissionChecksContext::default()
+            )
+            .await,
+            "no_checks_succeeded"
         ));
 
         // Real-life example
@@ -406,9 +675,11 @@ mod tests {
                 &gen_module_config("core"),
                 "backups create",
                 serenity::all::Permissions::ADMINISTRATOR,
-                &[],
-                true
-            ),
+                vec![],
+                true,
+                TemplatePermissionChecksContext::default()
+            )
+            .await,
             "no_checks_succeeded"
         ));
 
@@ -425,9 +696,11 @@ mod tests {
             &gen_module_config("core"),
             "backups create",
             serenity::all::Permissions::ADMINISTRATOR,
-            &[],
-            true
+            vec![],
+            true,
+            TemplatePermissionChecksContext::default()
         )
+        .await
         .is_ok());
 
         assert!(can_run_command(
@@ -436,7 +709,7 @@ mod tests {
                 id: "test".into(),
                 guild_id: "test".into(),
                 command: "test".into(),
-                perms: Some(PermissionChecks {
+                perms: Some(PermissionChecks::Simple {
                     checks: vec![
                         PermissionCheck {
                             kittycat_perms: vec![],
@@ -451,16 +724,17 @@ mod tests {
                             inner_and: false,
                         },
                     ],
-                    checks_needed: 1,
                 }),
                 disabled: None,
             },
             &gen_module_config("core"),
             "test",
             serenity::all::Permissions::BAN_MEMBERS,
-            &["abc.test".into()],
-            true
+            vec!["abc.test".into()],
+            true,
+            TemplatePermissionChecksContext::default()
         )
+        .await
         .is_ok());
 
         // Check: module default_perms
@@ -480,21 +754,22 @@ mod tests {
                     guild_id: "testing".into(),
                     module: "auditlogs".to_string(),
                     disabled: Some(false),
-                    default_perms: Some(PermissionChecks {
+                    default_perms: Some(PermissionChecks::Simple {
                         checks: vec![PermissionCheck {
                             kittycat_perms: vec![],
                             native_perms: vec![serenity::all::Permissions::VIEW_AUDIT_LOG],
                             outer_and: false,
                             inner_and: false,
                         }],
-                        checks_needed: 1,
                     }),
                 },
                 "test abc",
                 serenity::all::Permissions::VIEW_AUDIT_LOG,
-                &[],
+                vec![],
                 true,
-            );
+                TemplatePermissionChecksContext::default(),
+            )
+            .await;
 
             println!("{}", r.code());
 

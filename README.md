@@ -189,6 +189,9 @@ Anti-Raid has 2 gateway proxies that can optionally be used to reduce the number
 
 # TODO List
 
+NOW:
+- Make ``channel_overrides`` available in the UI.
+
 For initial release:
 
 - Stabilizing the module+command permission system [X]  

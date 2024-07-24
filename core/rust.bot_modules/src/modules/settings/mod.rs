@@ -45,7 +45,7 @@ pub fn module() -> crate::silverpelt::Module {
                 indexmap! {
                     "list" => crate::silverpelt::CommandExtendedData::kittycat_simple("guildroles", "list"),
                     "add" => crate::silverpelt::CommandExtendedData {
-                        default_perms: crate::silverpelt::PermissionChecks {
+                        default_perms: crate::silverpelt::PermissionChecks::Simple {
                             checks: vec![
                                 crate::silverpelt::PermissionCheck {
                                     kittycat_perms: vec!["guildroles.add".to_string()],
@@ -60,12 +60,11 @@ pub fn module() -> crate::silverpelt::Module {
                                     outer_and: false,
                                 }
                             ],
-                            checks_needed: 1,
                         },
                         ..Default::default()
                     },
                     "edit" => crate::silverpelt::CommandExtendedData {
-                        default_perms: crate::silverpelt::PermissionChecks {
+                        default_perms: crate::silverpelt::PermissionChecks::Simple {
                             checks: vec![
                                 crate::silverpelt::PermissionCheck {
                                     kittycat_perms: vec!["guildroles.edit".to_string()],
@@ -80,7 +79,6 @@ pub fn module() -> crate::silverpelt::Module {
                                     outer_and: false,
                                 }
                             ],
-                            checks_needed: 1,
                         },
                         ..Default::default()
                     },

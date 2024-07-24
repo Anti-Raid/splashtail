@@ -1,6 +1,7 @@
 use indexmap::{indexmap, IndexMap};
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
+use std::hash::Hash;
 
 pub type CommandExtendedDataMap = IndexMap<&'static str, CommandExtendedData>;
 
@@ -62,36 +63,51 @@ impl Display for PermissionCheck {
     }
 }
 
-#[derive(Default, Clone, Hash, Eq, PartialEq, Serialize, Deserialize, Debug)]
-pub struct PermissionChecks {
-    /// The list of permission checks
-    pub checks: Vec<PermissionCheck>,
+#[derive(Clone, Hash, Eq, PartialEq, Serialize, Deserialize, Debug)]
+#[serde(tag = "var")]
+pub enum PermissionChecks {
+    Simple {
+        /// The list of permission checks
+        checks: Vec<PermissionCheck>,
+    },
+    Template {
+        /// The template string to use
+        template: String,
+    },
+}
 
-    /// Number of checks that need to be true
-    pub checks_needed: usize,
+impl Default for PermissionChecks {
+    fn default() -> Self {
+        Self::Simple { checks: vec![] }
+    }
 }
 
 impl Display for PermissionChecks {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        for (i, check) in self.checks.iter().enumerate() {
-            if i != 0 {
-                write!(f, " ")?;
-            }
+        match self {
+            Self::Simple { checks } => {
+                for (i, check) in checks.iter().enumerate() {
+                    if i != 0 {
+                        write!(f, " ")?;
+                    }
 
-            write!(f, "\n{}. {}", i, check)?; // The Display trait on PermissionCheck automatically formats individual permissions the correct way
+                    write!(f, "\n{}. {}", i, check)?; // The Display trait on PermissionCheck automatically formats individual permissions the correct way
 
-            let empty = check.kittycat_perms.is_empty() && check.native_perms.is_empty();
+                    let empty = check.kittycat_perms.is_empty() && check.native_perms.is_empty();
 
-            if i < self.checks.len() - 1 {
-                if check.outer_and && !empty {
-                    write!(f, " AND ")?;
-                } else {
-                    write!(f, " OR ")?;
+                    if i < checks.len() - 1 {
+                        if check.outer_and && !empty {
+                            write!(f, " AND ")?;
+                        } else {
+                            write!(f, " OR ")?;
+                        }
+                    }
                 }
             }
+            Self::Template { template } => {
+                write!(f, "Template: {}", template)?;
+            }
         }
-
-        write!(f, "\nChecks needed: {}", self.checks_needed)?;
 
         Ok(())
     }
@@ -113,10 +129,7 @@ pub struct CommandExtendedData {
 impl Default for CommandExtendedData {
     fn default() -> Self {
         Self {
-            default_perms: PermissionChecks {
-                checks: vec![],
-                checks_needed: 0,
-            },
+            default_perms: PermissionChecks::Simple { checks: vec![] },
             is_default_enabled: true,
             web_hidden: false,
             virtual_command: false,
@@ -127,10 +140,7 @@ impl Default for CommandExtendedData {
 impl CommandExtendedData {
     pub fn none() -> Self {
         CommandExtendedData {
-            default_perms: PermissionChecks {
-                checks: vec![],
-                checks_needed: 0,
-            },
+            default_perms: PermissionChecks::Simple { checks: vec![] },
             is_default_enabled: true,
             web_hidden: false,
             virtual_command: false,
@@ -140,10 +150,7 @@ impl CommandExtendedData {
     pub fn none_map() -> CommandExtendedDataMap {
         indexmap! {
             "" => CommandExtendedData {
-                default_perms: PermissionChecks {
-                    checks: vec![],
-                    checks_needed: 0,
-                },
+                default_perms: PermissionChecks::Simple { checks: vec![] },
                 is_default_enabled: true,
                 web_hidden: false,
                 virtual_command: false,
@@ -153,14 +160,13 @@ impl CommandExtendedData {
 
     pub fn kittycat_simple(namespace: &str, permission: &str) -> CommandExtendedData {
         CommandExtendedData {
-            default_perms: PermissionChecks {
+            default_perms: PermissionChecks::Simple {
                 checks: vec![PermissionCheck {
                     kittycat_perms: vec![format!("{}.{}", namespace, permission)],
                     native_perms: vec![],
                     outer_and: false,
                     inner_and: false,
                 }],
-                checks_needed: 1,
             },
             is_default_enabled: true,
             web_hidden: false,
@@ -170,14 +176,13 @@ impl CommandExtendedData {
 
     pub fn kittycat_or_admin(namespace: &str, permission: &str) -> CommandExtendedData {
         CommandExtendedData {
-            default_perms: PermissionChecks {
+            default_perms: PermissionChecks::Simple {
                 checks: vec![PermissionCheck {
                     kittycat_perms: vec![format!("{}.{}", namespace, permission)],
                     native_perms: vec![serenity::all::Permissions::ADMINISTRATOR],
                     outer_and: false,
                     inner_and: false,
                 }],
-                checks_needed: 1,
             },
             is_default_enabled: true,
             web_hidden: false,
@@ -318,9 +323,6 @@ pub enum PermissionResult {
     NoChecksSucceeded {
         checks: PermissionChecks,
     },
-    MissingMinChecks {
-        checks: PermissionChecks,
-    },
     DiscordError {
         error: String,
     },
@@ -351,7 +353,6 @@ impl PermissionResult {
             PermissionResult::ModuleNotFound { .. } => "module_not_found",
             PermissionResult::ModuleDisabled { .. } => "module_disabled",
             PermissionResult::NoChecksSucceeded { .. } => "no_checks_succeeded",
-            PermissionResult::MissingMinChecks { .. } => "missing_min_checks",
             PermissionResult::DiscordError { .. } => "discord_error",
             PermissionResult::SudoNotGranted { .. } => "sudo_not_granted",
             PermissionResult::GenericError { .. } => "generic_error",
@@ -409,12 +410,6 @@ impl PermissionResult {
                 format!(
                     "You do not have the required permissions to perform this action. You need at least one of the following permissions to perform this action:\n\n**Required Permissions**: {}",
                     checks
-                )
-            }
-            PermissionResult::MissingMinChecks { checks } => {
-                format!(
-                    "You do not have the required permissions to perform this action. You need at least {} of the following permissions to perform this action:\n\n**Required Permissions**: {}",
-                    checks.checks_needed, checks
                 )
             }
             PermissionResult::DiscordError { error } => {

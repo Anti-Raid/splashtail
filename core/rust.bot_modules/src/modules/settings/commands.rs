@@ -56,6 +56,7 @@ pub async fn commands_check(
         &Some(ctx),
         crate::silverpelt::cmd::CheckCommandOptions {
             ignore_command_disabled: true,
+            channel_id: Some(ctx.channel_id()),
             ..Default::default()
         },
     )
@@ -128,6 +129,7 @@ pub async fn commands_enable(
         &Some(ctx),
         crate::silverpelt::cmd::CheckCommandOptions {
             ignore_command_disabled: true,
+            channel_id: Some(ctx.channel_id()),
             ..Default::default()
         },
     )
@@ -252,6 +254,7 @@ pub async fn commands_disable(
         &Some(ctx),
         crate::silverpelt::cmd::CheckCommandOptions {
             ignore_command_disabled: true,
+            channel_id: Some(ctx.channel_id()),
             ..Default::default()
         },
     )
@@ -370,6 +373,7 @@ pub async fn commands_modperms(
         &Some(ctx),
         crate::silverpelt::cmd::CheckCommandOptions {
             ignore_command_disabled: true,
+            channel_id: Some(ctx.channel_id()),
             ..Default::default()
         },
     )
@@ -500,7 +504,10 @@ pub async fn commands_modperms(
                     &data.pool,
                     cache_http,
                     &Some(ctx),
-                    crate::silverpelt::cmd::CheckCommandOptions::default(),
+                    crate::silverpelt::cmd::CheckCommandOptions {
+                        channel_id: Some(ctx.channel_id()),
+                        ..Default::default()
+                    },
                 )
                 .await;
 
@@ -551,7 +558,10 @@ pub async fn commands_modperms(
                     &data.pool,
                     cache_http,
                     &Some(ctx),
-                    crate::silverpelt::cmd::CheckCommandOptions::default(),
+                    crate::silverpelt::cmd::CheckCommandOptions {
+                        channel_id: Some(ctx.channel_id()),
+                        ..Default::default()
+                    },
                 )
                 .await;
 
@@ -604,7 +614,10 @@ pub async fn commands_modperms(
                         &data.pool,
                         cache_http,
                         &Some(ctx),
-                        crate::silverpelt::cmd::CheckCommandOptions::default(),
+                        crate::silverpelt::cmd::CheckCommandOptions {
+                            channel_id: Some(ctx.channel_id()),
+                            ..Default::default()
+                        },
                     )
                     .await;
 
@@ -634,7 +647,10 @@ pub async fn commands_modperms(
                         &data.pool,
                         cache_http,
                         &Some(ctx),
-                        crate::silverpelt::cmd::CheckCommandOptions::default(),
+                        crate::silverpelt::cmd::CheckCommandOptions {
+                            channel_id: Some(ctx.channel_id()),
+                            ..Default::default()
+                        },
                     )
                     .await;
 
@@ -675,6 +691,7 @@ pub async fn commands_modperms(
                                 ..new_command_config.clone()
                             },
                         ),
+                        channel_id: Some(ctx.channel_id()),
                         ..Default::default()
                     },
                 )
@@ -741,7 +758,7 @@ pub async fn commands_modperms(
                 match perms {
                     Ok(perms) => {
                         let parsed =
-                            crate::silverpelt::validators::parse_permission_checks(&perms)?;
+                            crate::silverpelt::validators::parse_permission_checks(&perms).await?;
 
                         let perm_res = crate::silverpelt::cmd::check_command(
                             base_command,
@@ -758,6 +775,7 @@ pub async fn commands_modperms(
                                         ..new_command_config.clone()
                                     },
                                 ),
+                                channel_id: Some(ctx.channel_id()),
                                 ..Default::default()
                             },
                         )
@@ -804,6 +822,7 @@ pub async fn commands_modperms(
                         ignore_cache: true,
                         cache_result: false,
                         custom_command_configuration: Some(new_command_config.clone()),
+                        channel_id: Some(ctx.channel_id()),
                         ..Default::default()
                     },
                 )

@@ -149,16 +149,20 @@ fn _parse_value(
                 },
                 InnerColumnType::Integer {} => match v {
                     Value::String(s) => {
-                        let value = s.parse::<i64>().map_err(|e| {
-                            SettingsError::SchemaCheckValidationError {
-                                column: column_id.to_string(),
-                                check: "integer_parse".to_string(),
-                                accepted_range: "Valid integer".to_string(),
-                                error: e.to_string(),
-                            }
-                        })?;
+                        if s.is_empty() {
+                            Ok(Value::None)
+                        } else {
+                            let value = s.parse::<i64>().map_err(|e| {
+                                SettingsError::SchemaCheckValidationError {
+                                    column: column_id.to_string(),
+                                    check: "integer_parse".to_string(),
+                                    accepted_range: "Valid integer".to_string(),
+                                    error: e.to_string(),
+                                }
+                            })?;
 
-                        Ok(Value::Integer(value))
+                            Ok(Value::Integer(value))
+                        }
                     }
                     Value::Integer(v) => Ok(Value::Integer(v)),
                     Value::None => Ok(v),

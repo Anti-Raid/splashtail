@@ -7,7 +7,7 @@ To do so, Anti-Raid uses [tera](https://keats.github.io/tera/docs/). See its doc
 - Dangerous functions such as ``get_env`` do not exist.
 - ``__tera_context_raw`` provides the Tera context as an object. This complements ``__tera_context`` which provides the context as a string for debugging.
 - All templates have a (reasonable) time limit for execution to protect against abuse and DDOS attacks.
-- **When using templates to construct a message, the output of the template itself is ignored. For messages, you must use ``Message Helpers`` to construct the message. See example 1 below:**
+- **When using templates, the output of the template itself is ignored. For messages, you must use ``Message Helpers`` to construct the message and for permission checking, you must use ``Permission Check Helpers``. See example 1 below:**
 
 ## Example 1:
 
@@ -84,3 +84,38 @@ This is a cool embed
 This is message content
 {% endfilter %}
 ```
+
+### Permission Check Helpers
+
+Works on:
+- Permission Checking
+
+- The ``run_permission_check(kittycat_perms = string[], native_permissions = Permissions, and = BOOLEAN)`` function can be used to run a single permission check against the members permission returning a boolean. This returns an object containing ``code`` and ``ok`` fields.
+- The ``permission_result(result=PermissionResult)`` filter can be used to return a permission result early on. For example:
+
+For example, the below template will return "Ok" if the user has the permission "moderation.prune_user" and Administrator on Discord:
+
+```jinja2
+{% set perm_res = run_permission_check(kittycat_perms = ["moderation.prune_user"], native_permissions = 8, and = true) %}
+
+{% if perm_res.ok %}
+    {% filter permission_result %}
+        {"Ok": {}}
+    {% endfilter %}
+{% endif %}
+```
+
+## Available Fields
+
+### Messages
+
+{message_fields}
+
+### Permission Checking
+
+- ``user_id``: The user ID of the user being checked
+- ``guild_id``: The guild ID of the guild the user is being checked in
+- ``guild_owner_id``: The user ID of the owner of the guild the user is being checked in
+- ``native_permissions``: The native (Discord) permissions of the user
+- ``kittycat_permissions``: The kittycat (custom) permissions of the user (`Vec<String>`)
+- ``channel_id``: The channel ID of the channel the user is being checked in (if the command is executed in a channel context), may be `None`

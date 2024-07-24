@@ -90,56 +90,66 @@ pub static GUILD_ROLES: Lazy<ConfigOption> = Lazy::new(|| {
                             let pg_data_store = PostgresDataStoreImpl::from_data_store(ctx.data_store)?;
 
                             // This should be safe as all actions for Create/Update/Delete run after fetching all prerequisite fields
-                            let new_index = if state.state.contains_key("index") {
-                                // Get the new index and check it while we're at it
-                                let Some(Value::Integer(new_index)) = state.state.get("index") else {
-                                    return Err(SettingsError::MissingOrInvalidField { 
+                            let parsed_value = if let Some(new_index_val) = state.state.get("index") {
+                                match new_index_val {
+                                    Value::Integer(new_index) => Value::Integer(*new_index),
+                                    Value::None => Value::None,
+                                    _ => return Err(SettingsError::MissingOrInvalidField { 
                                         field: "index".to_string(),
                                         src: "index->NativeAction [default_pre_checks]".to_string(),
-                                    });
-                                };
-
-                                *new_index
+                                    }),
+                                }
                             } else {
-                                let highest_index_rec = if pg_data_store.tx.is_some() {
-                                    let tx = pg_data_store.tx.as_deref_mut().unwrap();
-
-                                    sqlx::query!(
-                                        "SELECT MAX(index) FROM guild_roles WHERE guild_id = $1",
-                                        ctx.guild_id.to_string()
-                                    )
-                                    .fetch_one(tx)
-                                    .await
-                                    .map_err(|e| SettingsError::Generic {
-                                        message: format!("Failed to get highest index: {:?}", e),
-                                        src: "NativeAction->index".to_string(),
-                                        typ: "internal".to_string(),
-                                    })?
-                                    .max
-                                    .unwrap_or(0)
-                                } else {
-                                    sqlx::query!(
-                                        "SELECT MAX(index) FROM guild_roles WHERE guild_id = $1",
-                                        ctx.guild_id.to_string()
-                                    )
-                                    .fetch_one(ctx.pool)
-                                    .await
-                                    .map_err(|e| SettingsError::Generic {
-                                        message: format!("Failed to get highest index: {:?}", e),
-                                        src: "NativeAction->index".to_string(),
-                                        typ: "internal".to_string(),
-                                    })?
-                                    .max
-                                    .unwrap_or(0)
-                                };
-
-                                let index_i64 = (highest_index_rec + 1).into();
-
-                                state.state.insert("index".to_string(), Value::Integer(index_i64)); // Set the index
-
-                                index_i64
+                                Value::None
                             };
 
+                            let new_index = match parsed_value {
+                                Value::Integer(new_index_val) => new_index_val,
+                                Value::None => {
+                                    let highest_index_rec = if pg_data_store.tx.is_some() {
+                                        let tx = pg_data_store.tx.as_deref_mut().unwrap();
+    
+                                        sqlx::query!(
+                                            "SELECT MAX(index) FROM guild_roles WHERE guild_id = $1",
+                                            ctx.guild_id.to_string()
+                                        )
+                                        .fetch_one(tx)
+                                        .await
+                                        .map_err(|e| SettingsError::Generic {
+                                            message: format!("Failed to get highest index: {:?}", e),
+                                            src: "NativeAction->index".to_string(),
+                                            typ: "internal".to_string(),
+                                        })?
+                                        .max
+                                        .unwrap_or(0)
+                                    } else {
+                                        sqlx::query!(
+                                            "SELECT MAX(index) FROM guild_roles WHERE guild_id = $1",
+                                            ctx.guild_id.to_string()
+                                        )
+                                        .fetch_one(ctx.pool)
+                                        .await
+                                        .map_err(|e| SettingsError::Generic {
+                                            message: format!("Failed to get highest index: {:?}", e),
+                                            src: "NativeAction->index".to_string(),
+                                            typ: "internal".to_string(),
+                                        })?
+                                        .max
+                                        .unwrap_or(0)
+                                    };
+    
+                                    let index_i64 = (highest_index_rec + 1).into();
+    
+                                    state.state.insert("index".to_string(), Value::Integer(index_i64)); // Set the index
+    
+                                    index_i64    
+                                },
+                                _ => return Err(SettingsError::MissingOrInvalidField { 
+                                    field: "index".to_string(),
+                                    src: "index->NativeAction [default_pre_checks]".to_string(),
+                                }),
+                            };
+                            
                             let Some(Value::String(settings_role_id_str)) = state.state.get("role_id") else {
                                 return Err(SettingsError::MissingOrInvalidField { 
                                     field: "role_id".to_string(),

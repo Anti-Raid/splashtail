@@ -121,6 +121,10 @@ pub struct AmCheckCommandOptions {
     #[serde(default)]
     pub custom_module_configuration:
         Option<Box<splashcore_rs::types::silverpelt::GuildModuleConfiguration>>,
+
+    /// The current channel id
+    #[serde(default)]
+    pub channel_id: Option<serenity::all::ChannelId>,
 }
 
 #[derive(Serialize, Deserialize, Clone)]
@@ -293,6 +297,7 @@ impl BotAnimusMessage {
                         custom_module_configuration: opts.custom_module_configuration.map(|x| *x),
                         skip_custom_resolved_fit_checks: flags
                             .contains(AmCheckCommandOptionsFlags::SKIP_CUSTOM_RESOLVED_FIT_CHECKS),
+                        channel_id: opts.channel_id,
                     },
                 )
                 .await;

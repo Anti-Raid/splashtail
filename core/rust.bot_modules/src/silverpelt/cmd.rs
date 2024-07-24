@@ -4,6 +4,7 @@ use crate::silverpelt::{
     module_config::{
         get_best_command_configuration, get_command_extended_data, get_module_configuration,
     },
+    permissions::TemplatePermissionChecksContext,
     utils::permute_command_names,
     GuildCommandConfiguration, GuildModuleConfiguration,
 };
@@ -206,6 +207,10 @@ pub struct CheckCommandOptions {
     /// Custom module configuration to use
     #[serde(default)]
     pub custom_module_configuration: Option<GuildModuleConfiguration>,
+
+    /// The current channel id
+    #[serde(default)]
+    pub channel_id: Option<serenity::all::ChannelId>,
 }
 
 impl Default for CheckCommandOptions {
@@ -219,6 +224,7 @@ impl Default for CheckCommandOptions {
             skip_custom_resolved_fit_checks: false,
             custom_command_configuration: None,
             custom_module_configuration: None,
+            channel_id: None,
         }
     }
 }
@@ -383,9 +389,16 @@ pub async fn check_command(
         &module_config,
         command,
         member_perms,
-        &kittycat_perms,
+        kittycat_perms,
         module_default_enabled,
-    );
+        TemplatePermissionChecksContext {
+            guild_id,
+            user_id,
+            guild_owner_id,
+            channel_id: opts.channel_id,
+        },
+    )
+    .await;
 
     if !opts.cache_result {
         return perm_res;

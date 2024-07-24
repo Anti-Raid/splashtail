@@ -719,7 +719,10 @@ async fn main() {
                     &data.pool,
                     &CacheHttpImpl::from_ctx(ctx.serenity_context()),
                     &Some(ctx),
-                    modules::silverpelt::cmd::CheckCommandOptions::default(),
+                    modules::silverpelt::cmd::CheckCommandOptions {
+                        channel_id: Some(ctx.channel_id()),
+                        ..Default::default()
+                    },
                 )
                 .await;
 
