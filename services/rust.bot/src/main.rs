@@ -468,8 +468,8 @@ async fn event_listener<'a>(
 
 #[tokio::main]
 async fn main() {
-    // Initially set allocator limit to 1GB
-    ALLOCATOR.set_limit(1024 * 1024 * 1024).unwrap();
+    // Initially set allocator limit to 5GB, while this is quite high, it does ensure that the bot doesn't go down during normal operation
+    ALLOCATOR.set_limit(5 * 1024 * 1024 * 1024).unwrap();
 
     const POSTGRES_MAX_CONNECTIONS: u32 = 3; // max connections to the database, we don't need too many here
     const REDIS_MAX_CONNECTIONS: u32 = 10; // max connections to the redis
