@@ -298,7 +298,7 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 			updateCols = append(updateCols, "perms")
 			updateArgs = append(updateArgs, nil)
 		} else {
-			parsedValue, err := webutils.ParsePermissionChecks(value)
+			parsedValue, err := webutils.ParsePermissionChecks(d.Context, state.AnimusMagicClient, state.Rueidis, uint16(clusterId), value)
 
 			if err != nil {
 				return uapi.HttpResponse{
@@ -309,25 +309,23 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 				}
 			}
 
-			if len(value.Checks) > 0 {
-				// Ensure user has permission to use the command
-				hresp, ok = api.HandlePermissionCheck(d.Auth.ID, guildId, body.Command, animusmagic_messages.AmCheckCommandOptions{
-					CustomResolvedKittycatPerms: permLimits,
-					CustomCommandConfiguration: &silverpelt.GuildCommandConfiguration{
-						Command:  body.Command,
-						Perms:    parsedValue,
-						Disabled: utils.Pointer(false),
-					},
-					Flags: animusmagic_messages.AmCheckCommandOptionsFlagIgnoreCommandDisabled,
-				})
+			// Ensure user has permission to use the command
+			hresp, ok = api.HandlePermissionCheck(d.Auth.ID, guildId, body.Command, animusmagic_messages.AmCheckCommandOptions{
+				CustomResolvedKittycatPerms: permLimits,
+				CustomCommandConfiguration: &silverpelt.GuildCommandConfiguration{
+					Command:  body.Command,
+					Perms:    parsedValue,
+					Disabled: utils.Pointer(false),
+				},
+				Flags: animusmagic_messages.AmCheckCommandOptionsFlagIgnoreCommandDisabled,
+			})
 
-				if !ok {
-					return hresp
-				}
-
-				updateCols = append(updateCols, "perms")
-				updateArgs = append(updateArgs, parsedValue)
+			if !ok {
+				return hresp
 			}
+
+			updateCols = append(updateCols, "perms")
+			updateArgs = append(updateArgs, parsedValue)
 		}
 
 		if cacheFlushFlag&CACHE_FLUSH_COMMAND_PERMISSION_CACHE_CLEAR != CACHE_FLUSH_COMMAND_PERMISSION_CACHE_CLEAR {

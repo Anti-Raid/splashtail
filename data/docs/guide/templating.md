@@ -7,7 +7,9 @@ To do so, Anti-Raid uses [tera](https://keats.github.io/tera/docs/). See its doc
 - Dangerous functions such as ``get_env`` do not exist.
 - ``__tera_context_raw`` provides the Tera context as an object. This complements ``__tera_context`` which provides the context as a string for debugging.
 - All templates have a (reasonable) time limit for execution to protect against abuse and DDOS attacks.
+- Dividing by zero will error instead of returning ``NaN``.
 - **When using templates, the output of the template itself is ignored. For messages, you must use ``Message Helpers`` to construct the message and for permission checking, you must use ``Permission Check Helpers``. See example 1 below:**
+- Bitwise operators are also supported. ``N bitor N`` (bitwise OR / ``|``), ``N bitand N`` (bitwise AND / ``&``), ``N bitxor N`` (bitwise XOR / ``^``), ``N << N`` (bitwise shift left / ``<<``), ``N >> N`` (bitwise shift right / ``>>``), ``bitnot N`` (bitwise NOT / ``~``) are supported. ``N`` is a number. For example, ``8 bitor 4`` will return ``12``. 
 
 ## Example 1:
 
@@ -36,6 +38,7 @@ All gateway events are tagged
 ### Base filters
 
 - The ``bettertitle`` filter provides a potentially better title-ing filter than the ``title`` filter pre-provided by Tera
+- The ``merge`` filter merges two objects together with the second object being defined by ``with``. The second object overwrites the first one in the event of a conflict
 
 ## Situational Functions and Filters
 

@@ -56,25 +56,35 @@ func (pc PermissionCheck) String() string {
 
 // PermissionChecks represents a list of permission checks.
 type PermissionChecks struct {
-	Checks       []PermissionCheck `json:"checks"`        // The list of permission checks
-	ChecksNeeded int               `json:"checks_needed"` // Number of checks that need to be true
+	Simple *struct {
+		Checks []PermissionCheck `json:"checks"` // The list of permission checks
+	} `json:"Simple,omitempty"` // The list of permission checks, if Simple
+	Template *struct {
+		Template string `json:"template"` // The template to use
+	} `json:"Template,omitempty"` // The template to use, if using Templates
 }
 
 func (pcs PermissionChecks) String() string {
 	var sb strings.Builder
-	for i, check := range pcs.Checks {
-		if i != 0 {
-			sb.WriteString(" ")
-		}
-		sb.WriteString(check.String())
-		empty := len(check.KittycatPerms) == 0 && len(check.NativePerms) == 0
-		if i < len(pcs.Checks)-1 {
-			if check.OuterAnd && !empty {
-				sb.WriteString("AND ")
-			} else {
-				sb.WriteString("OR ")
+
+	if pcs.Simple != nil {
+		for i, check := range pcs.Simple.Checks {
+			if i != 0 {
+				sb.WriteString(" ")
+			}
+			sb.WriteString(check.String())
+			empty := len(check.KittycatPerms) == 0 && len(check.NativePerms) == 0
+			if i < len(pcs.Simple.Checks)-1 {
+				if check.OuterAnd && !empty {
+					sb.WriteString("AND ")
+				} else {
+					sb.WriteString("OR ")
+				}
 			}
 		}
+	} else if pcs.Template != nil {
+		sb.WriteString("Template: ")
+		sb.WriteString(pcs.Template.Template)
 	}
 	return sb.String()
 }
@@ -91,8 +101,11 @@ type CommandExtendedData struct {
 func NewCommandExtendedData() CommandExtendedData {
 	return CommandExtendedData{
 		DefaultPerms: PermissionChecks{
-			Checks:       []PermissionCheck{},
-			ChecksNeeded: 0,
+			Simple: &struct {
+				Checks []PermissionCheck `json:"checks"`
+			}{
+				Checks: []PermissionCheck{},
+			},
 		},
 		IsDefaultEnabled: true,
 	}

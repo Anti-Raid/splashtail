@@ -42,8 +42,6 @@ func (p PermissionResult) Code() string {
 		return "module_disabled"
 	case "NoChecksSucceeded":
 		return "no_checks_succeeded"
-	case "MissingMinChecks":
-		return "missing_min_checks"
 	case "DiscordError":
 		return "discord_error"
 	case "SudoNotGranted":

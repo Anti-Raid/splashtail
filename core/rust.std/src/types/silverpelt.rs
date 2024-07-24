@@ -64,7 +64,6 @@ impl Display for PermissionCheck {
 }
 
 #[derive(Clone, Hash, Eq, PartialEq, Serialize, Deserialize, Debug)]
-#[serde(tag = "var")]
 pub enum PermissionChecks {
     Simple {
         /// The list of permission checks

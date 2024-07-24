@@ -21,12 +21,16 @@ func GetCommandExtendedData(
 	if !ok {
 		cmdData = &CommandExtendedData{
 			DefaultPerms: PermissionChecks{
-				Checks: []PermissionCheck{
-					{
-						KittycatPerms: []string{fmt.Sprintf("%s.%s", rootCmd, "*")},
-						NativePerms: []bigint.BigInt{
-							{
-								Int: *big.NewInt(8),
+				Simple: &struct {
+					Checks []PermissionCheck `json:"checks"`
+				}{
+					Checks: []PermissionCheck{
+						{
+							KittycatPerms: []string{fmt.Sprintf("%s.%s", rootCmd, "*")},
+							NativePerms: []bigint.BigInt{
+								{
+									Int: *big.NewInt(8),
+								},
 							},
 						},
 					},

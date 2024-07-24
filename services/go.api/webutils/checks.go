@@ -1,97 +1,61 @@
 package webutils
 
 import (
+	"context"
 	"fmt"
-	"math/big"
 
-	"github.com/anti-raid/splashtail/core/go.std/bigint"
+	"github.com/anti-raid/splashtail/core/go.std/animusmagic"
 	"github.com/anti-raid/splashtail/core/go.std/silverpelt"
-	"github.com/anti-raid/splashtail/services/go.api/state"
+	"github.com/anti-raid/splashtail/services/go.api/animusmagic_messages"
+	"github.com/redis/rueidis"
 )
 
-const (
-	maxPermCheck                  = 10
-	maxKittycatPerms              = 10
-	maxIndividualKittycatPermSize = 128
-	maxNativePerms                = 10
-)
+// ParsePermissionChecks verifies permission checks. This currently needs an animus magic call
+func ParsePermissionChecks(ctx context.Context, c *animusmagic.AnimusMagicClient, redis rueidis.Client, clusterId uint16, permChecks *silverpelt.PermissionChecks) (*silverpelt.PermissionChecks, error) {
+	mlr, err := c.Request(
+		ctx,
+		redis,
+		animusmagic_messages.BotAnimusMessage{
+			ParsePermissionChecks: &struct {
+				Checks *silverpelt.PermissionChecks `json:"checks"`
+			}{
+				Checks: permChecks,
+			},
+		},
+		&animusmagic.RequestOptions{
+			ClusterID: &clusterId,
+			To:        animusmagic.AnimusTargetBot,
+			Op:        animusmagic.OpRequest,
+		},
+	)
 
-// ParseBitFlag returns a new bitfield with the flags that are set in the given flags map.
-func ParseBitFlag(flags map[string]bigint.BigInt, flag bigint.BigInt) bigint.BigInt {
-	var parsedFlag = bigint.BigInt{}
-
-	for _, v := range flags {
-		tempFlag := big.Int{}
-		if tempFlag.And(&v.Int, &flag.Int).Cmp(&v.Int) == 0 {
-			parsedFlag.Or(&parsedFlag.Int, &v.Int)
-		}
+	if err != nil {
+		return nil, err
 	}
 
-	return parsedFlag
-}
-
-// Parses a user-inputted PermissionChecks object into a parsed PermissionChecks object.
-func ParsePermissionChecks(pc *silverpelt.PermissionChecks) (*silverpelt.PermissionChecks, error) {
-	if pc == nil {
-		return nil, fmt.Errorf("pc is nil")
+	if len(mlr) == 0 {
+		return nil, animusmagic.ErrNilMessage
 	}
 
-	if pc.ChecksNeeded < 1 {
-		return nil, fmt.Errorf("checks_needed must be at least 1")
+	if len(mlr) > 1 {
+		return nil, fmt.Errorf("expected 1 response, got %d", len(mlr))
 	}
 
-	if len(pc.Checks) > maxPermCheck {
-		return nil, fmt.Errorf("too many checks: %d", len(pc.Checks))
+	upr := mlr[0]
+
+	resp, err := animusmagic.ParseClientResponse[animusmagic_messages.BotAnimusResponse](upr)
+
+	if err != nil {
+		return nil, err
 	}
 
-	var parsedChecks = make([]silverpelt.PermissionCheck, 0, len(pc.Checks))
-	for _, check := range pc.Checks {
-		if len(check.KittycatPerms) == 0 && len(check.NativePerms) == 0 {
-			continue
-		}
-
-		parsedCheck := silverpelt.PermissionCheck{
-			KittycatPerms: func() []string {
-				if len(check.KittycatPerms) == 0 {
-					return make([]string, 0)
-				}
-
-				return check.KittycatPerms
-			}(),
-			NativePerms: func() []bigint.BigInt {
-				if len(check.NativePerms) == 0 {
-					return make([]bigint.BigInt, 0)
-				}
-
-				return check.NativePerms
-			}(),
-			OuterAnd: check.OuterAnd,
-			InnerAnd: check.InnerAnd,
-		}
-
-		if len(parsedCheck.KittycatPerms) > maxKittycatPerms {
-			return nil, fmt.Errorf("too many kittycat perms: %d", len(parsedCheck.KittycatPerms))
-		}
-
-		if len(parsedCheck.NativePerms) > maxNativePerms {
-			return nil, fmt.Errorf("too many native perms: %d", len(parsedCheck.NativePerms))
-		}
-
-		for j := range parsedCheck.NativePerms {
-			parsedCheck.NativePerms[j] = ParseBitFlag(state.SerenityPermissions, parsedCheck.NativePerms[j])
-		}
-
-		for _, perm := range parsedCheck.KittycatPerms {
-			if len(perm) > maxIndividualKittycatPermSize {
-				return nil, fmt.Errorf("kittycat perm too long: max=%d", maxIndividualKittycatPermSize)
-			}
-		}
-
-		parsedChecks = append(parsedChecks, parsedCheck)
+	if resp.ClientResp.Meta.Op == animusmagic.OpError {
+		return nil, animusmagic.ErrOpError
 	}
 
-	return &silverpelt.PermissionChecks{
-		Checks:       parsedChecks,
-		ChecksNeeded: pc.ChecksNeeded,
-	}, nil
+	if resp.Resp == nil || resp.Resp.ParsePermissionChecks == nil {
+		return nil, animusmagic.ErrNilMessage
+	}
+
+	return resp.Resp.ParsePermissionChecks.Checks, nil
 }

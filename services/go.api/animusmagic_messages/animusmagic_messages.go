@@ -80,7 +80,9 @@ type BotAnimusMessage struct {
 		Toggle  string         `json:"toggle"`
 		Options map[string]any `json:"options,omitempty"`
 	} `json:"ExecutePerModuleFunction,omitempty"`
-	/// Executes an operation on a setting
+	ParsePermissionChecks *struct {
+		Checks *silverpelt.PermissionChecks `json:"checks"`
+	} `json:"ParsePermissionChecks,omitempty"`
 	SettingsOperation *struct {
 		Fields  orderedmap.OrderedMap[string, any] `json:"fields"`
 		Op      silverpelt.CanonicalOperationType  `json:"op"`
@@ -118,6 +120,10 @@ type BotAnimusResponse struct {
 		BotRoles  []string                                `json:"bot_roles"`
 		Channels  []ext_types.GuildChannelWithPermissions `json:"channels"`
 	} `json:"BaseGuildUserInfo,omitempty"`
+
+	ParsePermissionChecks *struct {
+		Checks *silverpelt.PermissionChecks `json:"checks"`
+	} `json:"ParsePermissionChecks,omitempty"`
 
 	/// Returns the response of a command permission check
 	CheckCommandPermission *struct {

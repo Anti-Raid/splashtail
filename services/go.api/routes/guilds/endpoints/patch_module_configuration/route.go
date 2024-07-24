@@ -285,7 +285,7 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 			updateCols = append(updateCols, "default_perms")
 			updateArgs = append(updateArgs, nil)
 		} else {
-			parsedValue, err := webutils.ParsePermissionChecks(value)
+			parsedValue, err := webutils.ParsePermissionChecks(d.Context, state.AnimusMagicClient, state.Rueidis, uint16(clusterId), value)
 
 			if err != nil {
 				return uapi.HttpResponse{
@@ -296,23 +296,21 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 				}
 			}
 
-			if len(value.Checks) > 0 {
-				hresp, ok = api.HandlePermissionCheck(d.Auth.ID, guildId, "acl__"+body.Module+"_defaultperms_check", animusmagic_messages.AmCheckCommandOptions{
-					CustomResolvedKittycatPerms: permLimits,
-					CustomModuleConfiguration: silverpelt.GuildModuleConfiguration{
-						Disabled:     utils.Pointer(false),
-						Module:       body.Module,
-						DefaultPerms: parsedValue,
-					}.Fill(),
-				})
+			hresp, ok = api.HandlePermissionCheck(d.Auth.ID, guildId, "acl__"+body.Module+"_defaultperms_check", animusmagic_messages.AmCheckCommandOptions{
+				CustomResolvedKittycatPerms: permLimits,
+				CustomModuleConfiguration: silverpelt.GuildModuleConfiguration{
+					Disabled:     utils.Pointer(false),
+					Module:       body.Module,
+					DefaultPerms: parsedValue,
+				}.Fill(),
+			})
 
-				if !ok {
-					return hresp
-				}
-
-				updateCols = append(updateCols, "default_perms")
-				updateArgs = append(updateArgs, parsedValue)
+			if !ok {
+				return hresp
 			}
+
+			updateCols = append(updateCols, "default_perms")
+			updateArgs = append(updateArgs, parsedValue)
 		}
 
 		if cacheFlushFlag&CACHE_FLUSH_MODULE_TOGGLE != CACHE_FLUSH_MODULE_TOGGLE && cacheFlushFlag&CACHE_FLUSH_COMMAND_PERMISSION_CACHE_CLEAR != CACHE_FLUSH_COMMAND_PERMISSION_CACHE_CLEAR {

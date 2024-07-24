@@ -3,7 +3,7 @@
 /// To edit/add responses, add them both to bot.rs and to go.std/animusmagic/types.go
 use modules::silverpelt::canonical_module::CanonicalModule;
 use modules::silverpelt::silverpelt_cache::SILVERPELT_CACHE;
-use splashcore_rs::types::silverpelt::PermissionResult;
+use splashcore_rs::types::silverpelt::{PermissionChecks, PermissionResult};
 
 use splashcore_rs::animusmagic::client::{
     AnimusMessage, AnimusResponse, SerializableAnimusMessage, SerializableAnimusResponse,
@@ -63,6 +63,10 @@ pub enum BotAnimusResponse {
         bot_roles: Vec<RoleId>,
         /// List of all channels in the server
         channels: Vec<GuildChannelWithPermissions>,
+    },
+    /// Verify/parse a set of permission checks returning the parsed checks
+    ParsePermissionChecks {
+        checks: PermissionChecks,
     },
     /// Returns the response of a command permission check
     CheckCommandPermission {
@@ -140,6 +144,8 @@ pub enum BotAnimusMessage {
     /// - The users roles
     /// - The bots highest role
     BaseGuildUserInfo { guild_id: GuildId, user_id: UserId },
+    /// Verify/parse a set of permission checks returning the parsed checks
+    ParsePermissionChecks { checks: PermissionChecks },
     /// Given a guild id, a user id and a command name, check if the user has permission to run the command
     CheckCommandPermission {
         guild_id: GuildId,
@@ -526,6 +532,16 @@ impl BotAnimusMessage {
                         }
                     }
                 }
+            }
+            Self::ParsePermissionChecks { checks } => {
+                let parsed_checks =
+                    modules::silverpelt::validators::parse_permission_checks(&checks)
+                        .await
+                        .map_err(|e| format!("Failed to parse permission checks: {:#?}", e))?;
+
+                Ok(BotAnimusResponse::ParsePermissionChecks {
+                    checks: parsed_checks,
+                })
             }
         }
     }

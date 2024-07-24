@@ -18,10 +18,15 @@ use std::sync::{Arc, OnceLock};
 use tokio::sync::RwLock;
 
 use base_data::{Data, Error};
+use cap::Cap;
 use log::{error, info, warn};
 use serenity::all::{FullEvent, GuildId, HttpBuilder, UserId};
 use sqlx::postgres::PgPoolOptions;
+use std::alloc;
 use std::io::Write;
+
+#[global_allocator]
+static ALLOCATOR: Cap<alloc::System> = Cap::new(alloc::System, usize::MAX);
 
 pub struct ConnectState {
     pub has_started_bgtasks: bool,
@@ -463,6 +468,9 @@ async fn event_listener<'a>(
 
 #[tokio::main]
 async fn main() {
+    // Initially set allocator limit to 1GB
+    ALLOCATOR.set_limit(1024 * 1024 * 1024).unwrap();
+
     const POSTGRES_MAX_CONNECTIONS: u32 = 3; // max connections to the database, we don't need too many here
     const REDIS_MAX_CONNECTIONS: u32 = 10; // max connections to the redis
 
