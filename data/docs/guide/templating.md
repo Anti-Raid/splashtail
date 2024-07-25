@@ -37,7 +37,6 @@ All gateway events are tagged
 
 ### Base filters
 
-- The ``bettertitle`` filter provides a potentially better title-ing filter than the ``title`` filter pre-provided by Tera
 - The ``merge`` filter merges two objects together with the second object being defined by ``with``. The second object overwrites the first one in the event of a conflict
 
 ## Situational Functions and Filters
@@ -93,18 +92,16 @@ This is message content
 Works on:
 - Permission Checking
 
-- The ``run_permission_check(kittycat_perms = string[], native_permissions = Permissions, and = BOOLEAN)`` function can be used to run a single permission check against the members permission returning a boolean. This returns an object containing ``code`` and ``ok`` fields.
-- The ``permission_result(result=PermissionResult)`` filter can be used to return a permission result early on. For example:
+- The ``run_permission_check(kittycat_perms = string[], native_permissions = Permissions, inner_and = BOOLEAN)`` function can be used to run a single permission check against the members permission returning a boolean. This returns ``ok`` containing a boolean of whether the permission check succeeded and ``result`` containing the permission result.
+- The ``permission_result`` filter can be used to return a permission result early on. For example:
 
 For example, the below template will return "Ok" if the user has the permission "moderation.prune_user" and Administrator on Discord:
 
 ```jinja2
-{% set perm_res = run_permission_check(kittycat_perms = ["moderation.prune_user"], native_permissions = 8, and = true) %}
+{% set perm_res = run_permission_check(kittycat_perms = ["moderation.prune_user"], native_permissions = 8, inner_and = true) %}
 
 {% if perm_res.ok %}
-    {% filter permission_result %}
-        {"Ok": {}}
-    {% endfilter %}
+    {{ perm_res.result | permission_result }}
 {% endif %}
 ```
 

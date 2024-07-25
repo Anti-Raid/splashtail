@@ -211,7 +211,7 @@ pub async fn dispatch_audit_log(
         tera_ctx.insert("event", &expanded_event)?;
 
         let templated =
-            templating::execute_template_for_message(&mut tera, Arc::new(tera_ctx)).await;
+            templating::message::execute_template_for_message(&mut tera, Arc::new(tera_ctx)).await;
 
         let discord_reply = match templated {
             Ok(templated) => match templated.to_discord_reply() {
@@ -222,7 +222,7 @@ pub async fn dispatch_audit_log(
                         e
                     ));
 
-                    templating::DiscordReply {
+                    templating::message::DiscordReply {
                         embeds: vec![embed],
                         ..Default::default()
                     }
@@ -232,7 +232,7 @@ pub async fn dispatch_audit_log(
                 let embed = serenity::all::CreateEmbed::default()
                     .description(format!("Failed to render template: {}", e));
 
-                templating::DiscordReply {
+                templating::message::DiscordReply {
                     embeds: vec![embed],
                     ..Default::default()
                 }
