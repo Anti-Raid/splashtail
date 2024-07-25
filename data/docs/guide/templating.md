@@ -10,6 +10,7 @@ To do so, Anti-Raid uses [tera](https://keats.github.io/tera/docs/). See its doc
 - Dividing by zero will error instead of returning ``NaN``.
 - **When using templates, the output of the template itself is ignored. For messages, you must use ``Message Helpers`` to construct the message and for permission checking, you must use ``Permission Check Helpers``. See example 1 below:**
 - Bitwise operators are also supported. ``N bitor N`` (bitwise OR / ``|``), ``N bitand N`` (bitwise AND / ``&``), ``N bitxor N`` (bitwise XOR / ``^``), ``N << N`` (bitwise shift left / ``<<``), ``N >> N`` (bitwise shift right / ``>>``), ``bitnot N`` (bitwise NOT / ``~``) are supported. ``N`` is a number. For example, ``8 bitor 4`` will return ``12``. 
+- Deleting setted variables is also supported through ``delete`` (delete from current context) and ``delete_global`` (delete from global context). Note that the difference between these only matters within loops and if statements. For example, deleting a variable in a loop with ``delete`` will only delete the variable in the current loop iteration, while deleting a variable in a loop with ``delete_global`` will delete the variable in the global context.
 
 ## Example 1:
 
@@ -92,7 +93,15 @@ This is message content
 Works on:
 - Permission Checking
 
-- The ``run_permission_check(kittycat_perms = string[], native_permissions = Permissions, inner_and = BOOLEAN)`` function can be used to run a single permission check against the members permission returning a boolean. This returns ``ok`` containing a boolean of whether the permission check succeeded and ``result`` containing the permission result.
+- The ``run_permission_check(kittycat_perms = string[], native_permissions = Permissions, check_all = BOOLEAN)`` function can be used to run a single permission check against the members permission returning a boolean. This returns ``ok`` containing a boolean of whether the permission check succeeded and ``result`` containing the permission result. The ``check_all`` parameter can be used to check that all permissions in the list are present versus at least one.
+- The ``has_kittycat_permission`` filter can be used to check if a user has a kittycat permission. For example:
+
+```jinja2
+{% if has_kittycat_permission("moderation.prune_user") %}
+{{ {"Ok": {}} | permission_result }}
+{% endif %}
+```
+
 - The ``permission_result`` filter can be used to return a permission result early on. For example:
 
 For example, the below template will return "Ok" if the user has the permission "moderation.prune_user" and Administrator on Discord:

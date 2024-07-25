@@ -14,6 +14,32 @@ pub struct InternalTemplateExecuteState {
     result: RwLock<Option<PermissionResult>>,
 }
 
+// Has kittycat perm function
+pub struct HasKittycatPermFunction {
+    state: Arc<InternalTemplateExecuteState>,
+}
+
+// has_kittycat_permission(perm = string)
+impl tera::Function for HasKittycatPermFunction {
+    fn call(
+        &self,
+        args: &std::collections::HashMap<String, tera::Value>,
+    ) -> tera::Result<tera::Value> {
+        let perm = args
+            .get("perm")
+            .ok_or("missing perm")?
+            .as_str()
+            .ok_or("perm is not an array")?;
+
+        let res = kittycat::perms::has_perm(
+            &self.state.member_kittycat_perms,
+            &kittycat::perms::Permission::from(perm),
+        );
+
+        Ok(serde_json::Value::Bool(res))
+    }
+}
+
 // Run permission check function
 pub struct RunPermissionCheckFunction {
     state: Arc<InternalTemplateExecuteState>,
@@ -66,17 +92,17 @@ impl tera::Function for RunPermissionCheckFunction {
             _ => return Err("native_perms is not a number".into()),
         };
 
-        let and = args
-            .get("inner_and")
-            .ok_or("missing inner_and")?
+        let check_all = args
+            .get("check_all")
+            .ok_or("missing check_all")?
             .as_bool()
-            .ok_or("and is not a boolean")?;
+            .ok_or("check_all is not a boolean")?;
 
         let res = check_perms_single(
             &PermissionCheck {
                 kittycat_perms,
                 native_perms,
-                inner_and: and,
+                inner_and: check_all,
                 outer_and: false,
             },
             self.state.member_native_perms,
@@ -185,6 +211,13 @@ pub async fn template_permission_checks(
     tera.register_function(
         "run_permission_check",
         RunPermissionCheckFunction {
+            state: state.clone(),
+        },
+    );
+
+    tera.register_function(
+        "has_kittycat_permission",
+        HasKittycatPermFunction {
             state: state.clone(),
         },
     );
