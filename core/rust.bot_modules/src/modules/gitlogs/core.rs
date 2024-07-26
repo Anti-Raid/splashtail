@@ -152,7 +152,7 @@ pub async fn repo_create(
         &super::settings::REPOS,
         indexmap::indexmap! {
             "webhook_id".to_string() => Value::String(webhook_id),
-            "repo_name".to_string() => Value::String((owner + "/" + &name).to_lowercase()),
+            "repo_name".to_string() => Value::String((owner + "/" + name.as_str()).to_lowercase()),
             "channel_id".to_string() => Value::String(channel.to_string()),
         },
     )
@@ -181,7 +181,7 @@ pub async fn repo_update(
         indexmap::indexmap! {
             "id".to_string() => Value::String(id),
             "webhook_id".to_string() => Value::String(webhook_id),
-            "repo_name".to_string() => Value::String((owner + "/" + &name).to_lowercase()),
+            "repo_name".to_string() => Value::String((owner + "/" + name.as_str()).to_lowercase()),
             "channel_id".to_string() => Value::String(channel.to_string()),
         },
     )

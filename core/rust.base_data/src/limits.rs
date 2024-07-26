@@ -1,6 +1,7 @@
 pub mod embed_limits {
     pub const EMBED_TITLE_LIMIT: usize = 256;
     pub const EMBED_DESCRIPTION_LIMIT: usize = 4096;
+    pub const EMBED_MAX_COUNT: usize = 10;
     pub const EMBED_FIELDS_MAX_COUNT: usize = 25;
     pub const EMBED_FIELD_NAME_LIMIT: usize = 256;
     pub const EMBED_FIELD_VALUE_LIMIT: usize = 1024;

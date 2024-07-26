@@ -14,6 +14,7 @@ indexmap = { version = "2", features = ["serde"] }
 
 # Anti-Raid specific
 splashcore_rs = { path = "../rust.std" }
+rhai = { version = "1.19.0", features = ["std", "serde", "no_closure", "sync", "internals"] }
 
 [dependencies.tokio]
 version = "1"

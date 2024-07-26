@@ -13,8 +13,34 @@ pub mod engine {
     pub use tera::Value;
 }
 
+pub mod lang_rhai;
 pub mod message;
 pub mod permissions;
+
+pub fn get_char_limit(total_chars: usize, limit: usize, max_chars: usize) -> usize {
+    if max_chars <= total_chars {
+        return 0;
+    }
+
+    // If limit is 6000 and max_chars - total_chars is 1000, return 1000 etc.
+    std::cmp::min(limit, max_chars - total_chars)
+}
+
+pub fn slice_chars(s: &str, total_chars: &mut usize, limit: usize, max_chars: usize) -> String {
+    let char_limit = get_char_limit(*total_chars, limit, max_chars);
+
+    if char_limit == 0 {
+        return String::new();
+    }
+
+    if s.len() > char_limit {
+        *total_chars += char_limit;
+        s.chars().take(char_limit).collect()
+    } else {
+        *total_chars += s.len();
+        s.to_string()
+    }
+}
 
 /// Maximum number of AST nodes in a template
 pub const MAX_TEMPLATE_NODES: usize = 1024;

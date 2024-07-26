@@ -191,13 +191,14 @@ pub async fn limitactions_view(
             }
         }
 
+        let action_user_id = action.user_id.to_string();
         embeds[i] = embeds[i].clone().field(
             action_id.clone(),
             format!(
                 "``{limit_type}`` by {user_id} on {target} at <t:{timestamp}:R> (for {no_stings} stings) | {action_data} [{id}]\n**Hit Limits:** {limits_hit:#?}",
                 limit_type = action.limit_type,
                 action_data = serde_json::to_string(&action.action_data).map_err(|_| "Could not serialize action_data")?,
-                user_id = action.user_id.mention().to_string() + " (" + &action.user_id.to_string() + ")",
+                user_id = action.user_id.mention().to_string() + " (" + action_user_id.as_str() + ")",
                 target = target,
                 timestamp = action.created_at.timestamp(),
                 no_stings = action.stings,
@@ -283,24 +284,25 @@ pub async fn limits_hit(ctx: Context<'_>) -> Result<(), Error> {
             )
             .await?;
 
+            let cause_user_id = cause.user_id.to_string();
             causes.push_str(&format!(
                 "``{limit_type}`` by {user_id} at <t:{timestamp}:R> [{id}] | {action_data}",
                 limit_type = cause.limit_type,
                 action_data = serde_json::to_string(&cause.action_data)
                     .map_err(|_| "Could not serialize action_data")?,
-                user_id =
-                    cause.user_id.mention().to_string() + " (" + &cause.user_id.to_string() + ")",
+                user_id = cause.user_id.mention().to_string() + " (" + cause_user_id.as_str() + ")",
                 timestamp = cause.created_at.timestamp(),
                 id = cause.action_id,
             ));
         }
 
+        let hit_limits_user_id = hit_limit.user_id.to_string();
         embeds[i] = embeds[i].clone().field(
             hit_limit.id.clone(),
             format!(
                 "Limits ``{limit_ids}`` reached by ``{user_id}`` at <t:{timestamp}:R> [{id}]\n**Notes:** {notes}\n**Causes:** {causes}",
                 limit_ids = hit_limit.limit_ids.join(", "),
-                user_id = hit_limit.user_id.mention().to_string() + " (" + &hit_limit.user_id.to_string() + ")",
+                user_id = hit_limit.user_id.mention().to_string() + " (" + hit_limits_user_id.as_str() + ")",
                 timestamp = hit_limit.created_at.timestamp(),
                 id = hit_limit.id,
                 notes = notes,
