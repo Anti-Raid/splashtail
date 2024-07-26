@@ -47,6 +47,7 @@ pub const MAX_TEMPLATE_NODES: usize = 1024;
 
 /// Timeout for template execution
 pub const TEMPLATE_EXECUTION_TIMEOUT: Duration = Duration::from_millis(600);
+pub const MAX_TEMPLATE_MEMORY_USAGE: usize = 1024 * 1024; // 1 MB maximum memory
 
 /// Stores a cache of templates with the template content as key
 static TEMPLATE_CACHE: Lazy<Cache<String, Tera>> = Lazy::new(|| {
