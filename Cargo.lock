@@ -4152,6 +4152,7 @@ dependencies = [
  "moka",
  "once_cell",
  "quickjs_runtime",
+ "rayon",
  "rhai",
  "serde",
  "serde_json",
