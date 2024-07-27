@@ -23,16 +23,17 @@ mod test {
 
         //let mut rts = Vec::new();
 
-        for i in 0..100000 {
-            let rt = QuickJsRuntimeBuilder::new()
-            .memory_limit(super::MAX_TEMPLATE_MEMORY_USAGE.try_into().unwrap())
-            .max_stack_size(/* 1MB */ 1024 * 1024)
-            .build();
+        // TODO: Make this not share state across the test if possible
+        let rt = QuickJsRuntimeBuilder::new()
+        .memory_limit(super::MAX_TEMPLATE_MEMORY_USAGE.try_into().unwrap())
+        .max_stack_size(/* 1MB */ 1024 * 1024)
+        .build();
 
+        for i in 0..100000 {
             println!("{}", i);
 
             // with the first Option you may specify which realm to use, None indicates the default or main realm
-            rt.eval(None, Script::new("test.js", "let a = 1 + 2;")).await.unwrap();
+            rt.eval(None, Script::new("test.js", r#"function a() {}"#)).await.unwrap();
             if i % 100 == 0 {
                 rt.gc().await;
             }
