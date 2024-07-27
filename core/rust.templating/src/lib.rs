@@ -13,6 +13,8 @@ pub mod engine {
     pub use tera::Value;
 }
 
+pub mod lang_javascript_quickjs;
+pub mod lang_javascript_v8__notworking;
 pub mod lang_rhai;
 pub mod message;
 pub mod permissions;

@@ -50,7 +50,7 @@ config = { path = "../../core/rust.config" }
 cap = { version = "0.1.2", features = ["stats"] }
 
 [dependencies.tokio]
-version = "1"
+version = "1.38"
 default-features = true
 features = ["full", "macros", "rt-multi-thread"]
 

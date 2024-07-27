@@ -18,7 +18,7 @@ splashcore_rs = { path = "../rust.std" }
 proxy_support = { path = "../rust.proxy_support" }
 
 [dependencies.tokio]
-version = "1"
+version = "1.38"
 default-features = true
 features = ["full", "macros", "rt-multi-thread"]
 

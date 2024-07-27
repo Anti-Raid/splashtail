@@ -22,7 +22,7 @@ log = "0.4"
 async-trait = "0.1.80"
 
 [dependencies.tokio]
-version = "1"
+version = "1.38"
 default-features = true
 features = ["full", "macros", "rt-multi-thread"]
 

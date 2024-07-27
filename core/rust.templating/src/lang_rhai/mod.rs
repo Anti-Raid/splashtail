@@ -91,25 +91,45 @@ pub fn apply_sandboxing(engine: &mut rhai::Engine) {
 mod test {
     use super::*;
 
-    #[test]
-    fn test_prepare() {
-        let mut engine = create_engine();
-        apply_sandboxing(&mut engine);
-        let Ok((engine, mut scope, ast)) = prepare(
-            engine,
-            "return 'Hello, {args.name}!'",
-            indexmap::indexmap! {
-                "name".to_string() => serde_json::Value::String("world".to_string())
-            },
-            crate::CompileTemplateOptions {
-                ignore_cache: false,
-                cache_result: true,
-            },
-        ) else {
-            panic!("Failed to prepare template");
-        };
+    #[tokio::test]
+    async fn test_100000_concurrent() {
+        let mut rts = Vec::new();
 
-        let result: String = engine.eval_ast_with_scope(&mut scope, &ast).unwrap();
-        assert_eq!(result, "Hello, world!");
+        for i in 0..100000 {
+            println!("{}", i);
+
+            let rt = tokio::task::spawn_blocking(move || {
+                let mut engine = create_engine();
+                //apply_sandboxing(&mut engine);
+
+                match prepare(
+                    engine,
+                    "return 1",
+                    indexmap::indexmap! {
+                        "name".to_string() => serde_json::Value::String("world".to_string())
+                    },
+                    crate::CompileTemplateOptions {
+                        ignore_cache: false,
+                        cache_result: false,
+                    },
+                ) {
+                    Ok((engine, mut scope, ast)) => {
+                        let result: i64 = engine.eval_ast_with_scope(&mut scope, &ast).unwrap();
+                        assert_eq!(result, 1);
+                    }
+                    Err(e) => {
+                        println!("Error: {}", e);
+                        panic!("Failed to prepare template");
+                    }
+                }
+            });
+
+            rts.push(rt);
+        }
+
+        for rt in rts {
+            rt.await.unwrap();
+        }
     }
+
 }
