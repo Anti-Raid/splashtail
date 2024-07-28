@@ -1,8 +1,8 @@
 pub mod core;
-pub mod lang_javascript_quickjs;
-pub mod lang_javascript_v8;
-pub mod lang_rhai;
-pub mod lang_tera;
+mod lang_javascript_quickjs;
+mod lang_javascript_v8;
+mod lang_rhai;
+mod lang_tera;
 
 use splashcore_rs::types::silverpelt::PermissionResult;
 use std::str::FromStr;
@@ -106,7 +106,7 @@ pub async fn render_message_template(
             let mut tera = lang_tera::compile_template(rest, opts).await?;
             let msg_exec_template =
                 lang_tera::message::execute_template_for_message(&mut tera, args).await?;
-            msg_exec_template.to_discord_reply()
+            msg_exec_template.discord_reply()
         }
     }
 }

@@ -18,10 +18,6 @@ static TEMPLATE_CACHE: Lazy<Cache<String, tera::Tera>> = Lazy::new(|| {
         .build()
 });
 
-pub fn make_templating_context() -> tera::Context {
-    tera::Context::new()
-}
-
 pub async fn compile_template(
     template: &str,
     opts: crate::CompileTemplateOptions,
@@ -61,8 +57,6 @@ pub async fn compile_template(
 }
 
 /// Executes a template with the given context returning the resultant string
-///
-/// Note that for message templates, the `execute_template_for_message` function should be used instead
 pub async fn execute_template(
     tera: &mut tera::Tera,
     context: &tera::Context,

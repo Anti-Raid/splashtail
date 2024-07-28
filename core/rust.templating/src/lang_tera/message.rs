@@ -317,7 +317,7 @@ pub struct ExecutedTemplate {
 }
 
 impl ExecutedTemplate {
-    pub fn to_discord_reply<'a>(self) -> Result<DiscordReply<'a>, base_data::Error> {
+    pub fn discord_reply<'a>(self) -> Result<DiscordReply<'a>, base_data::Error> {
         let mut total_chars: usize = 0;
         let mut total_content_chars = 0;
 
