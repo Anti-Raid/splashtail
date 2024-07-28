@@ -1,4 +1,4 @@
-use crate::slice_chars;
+use crate::core::{slice_chars, DiscordReply};
 use base_data::limits::{embed_limits, message_limits};
 use rhai::plugin::*;
 use serde::{Deserialize, Serialize};
@@ -200,14 +200,42 @@ pub mod plugin {
         }
         Ok(message.embeds.remove(index))
     }
-}
 
-#[derive(Default, serde::Serialize)]
-/// A DiscordReply is guaranteed to map 1-1 to discords API
-pub struct DiscordReply<'a> {
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub content: Option<String>,
-    pub embeds: Vec<serenity::all::CreateEmbed<'a>>,
+    /// Gateway event integration
+    pub type GWEventField = gwevent::field::Field;
+    pub type GWEventCategorizedField = gwevent::field::CategorizedField;
+
+    #[rhai_fn(name = "to_gwevent_field", global, return_raw)]
+    pub fn to_gwevent_field(
+        value: serde_json::Value,
+    ) -> Result<GWEventField, Box<rhai::EvalAltResult>> {
+        serde_json::from_value(value).map_err(|e| format!("Failed to deserialize: {:?}", e).into())
+    }
+
+    #[rhai_fn(name = "to_gwevent_categorized_field", global, return_raw)]
+    pub fn to_gwevent_categorized_field(
+        value: serde_json::Value,
+    ) -> Result<GWEventCategorizedField, Box<rhai::EvalAltResult>> {
+        serde_json::from_value(value).map_err(|e| format!("Failed to deserialize: {:?}", e).into())
+    }
+
+    #[rhai_fn(name = "format_gwevent_field", global, return_raw, pure)]
+    pub fn format_gateway_event_field(
+        field: &mut GWEventField,
+    ) -> Result<String, Box<rhai::EvalAltResult>> {
+        field
+            .template_format()
+            .map_err(|e| format!("Failed to format field: {:?}", e).into())
+    }
+
+    #[rhai_fn(name = "format_gwevent_categorized_field", global, return_raw, pure)]
+    pub fn format_gateway_event_categorized_field(
+        field: &mut GWEventCategorizedField,
+    ) -> Result<String, Box<rhai::EvalAltResult>> {
+        field
+            .template_format()
+            .map_err(|e| format!("Failed to format field: {:?}", e).into())
+    }
 }
 
 pub fn to_discord_reply<'a>(
@@ -300,6 +328,19 @@ pub fn to_discord_reply<'a>(
     }
 
     Ok(DiscordReply { embeds, content })
+}
+
+pub fn create_message_scope<'a>(
+    args: crate::core::MessageTemplateContext,
+) -> Result<rhai::Scope<'a>, base_data::Error> {
+    let mut scope = rhai::Scope::new();
+    let dyn_val: rhai::Dynamic =
+        rhai::serde::to_dynamic(&args).map_err(|e| format!("Failed to deserialize args: {}", e))?;
+
+    scope.set_value("args", args);
+    scope.set_value("args_dyn", dyn_val);
+
+    Ok(scope)
 }
 
 #[cfg(test)]

@@ -1,4 +1,6 @@
+use crate::core::{slice_chars, DiscordReply};
 use base_data::limits::{embed_limits, message_limits};
+use gwevent::field::{CategorizedField, Field};
 use std::sync::{Arc, RwLock};
 use tera::Tera;
 
@@ -245,6 +247,46 @@ impl tera::Function for NewEmbedFunction {
     }
 }
 
+/// Field formatter
+pub struct FieldFormatterFilter {
+    /// Whether or not the template defaults to a CategorizedField versus a simple Field
+    pub is_categorized_default: bool,
+}
+
+impl tera::Filter for FieldFormatterFilter {
+    fn filter(
+        &self,
+        val: &tera::Value,
+        args: &std::collections::HashMap<String, tera::Value>,
+    ) -> tera::Result<tera::Value> {
+        let is_categorized = args
+            .get("is_categorized")
+            .map_or(self.is_categorized_default, |x| {
+                x.as_bool().unwrap_or(self.is_categorized_default)
+            });
+
+        if is_categorized {
+            let field: CategorizedField = serde_json::from_value(val.clone())
+                .map_err(|e| format!("Failed to parse categorized field: {:?}", e))?;
+
+            let formatted = field
+                .template_format()
+                .map_err(|e| format!("Failed to format categorized field: {:?}", e))?;
+
+            Ok(tera::Value::String(formatted))
+        } else {
+            let field: Field = serde_json::from_value(val.clone())
+                .map_err(|e| format!("Failed to parse field: {:?}", e))?;
+
+            let formatted = field
+                .template_format()
+                .map_err(|e| format!("Failed to format field: {:?}", e))?;
+
+            Ok(tera::Value::String(formatted))
+        }
+    }
+}
+
 #[allow(dead_code)]
 struct StubFunction {}
 
@@ -279,36 +321,6 @@ impl ExecutedTemplate {
         let mut total_chars: usize = 0;
         let mut total_content_chars = 0;
 
-        fn _get_char_limit(total_chars: usize, limit: usize, max_chars: usize) -> usize {
-            if max_chars <= total_chars {
-                return 0;
-            }
-
-            // If limit is 6000 and max_chars - total_chars is 1000, return 1000 etc.
-            std::cmp::min(limit, max_chars - total_chars)
-        }
-
-        fn _slice_chars(
-            s: &str,
-            total_chars: &mut usize,
-            limit: usize,
-            max_chars: usize,
-        ) -> String {
-            let char_limit = _get_char_limit(*total_chars, limit, max_chars);
-
-            if char_limit == 0 {
-                return String::new();
-            }
-
-            if s.len() > char_limit {
-                *total_chars += char_limit;
-                s.chars().take(char_limit).collect()
-            } else {
-                *total_chars += s.len();
-                s.to_string()
-            }
-        }
-
         let mut embeds = Vec::new();
         for template_embed in self.embeds {
             let mut set = false; // Is something set on the embed?
@@ -316,7 +328,7 @@ impl ExecutedTemplate {
 
             if let Some(title) = &template_embed.title {
                 // Slice title to EMBED_TITLE_LIMIT
-                embed = embed.title(_slice_chars(
+                embed = embed.title(slice_chars(
                     title,
                     &mut total_chars,
                     embed_limits::EMBED_TITLE_LIMIT,
@@ -328,7 +340,7 @@ impl ExecutedTemplate {
             if let Some(description) = &template_embed.description {
                 // Slice description to EMBED_DESCRIPTION_LIMIT
                 embed = embed.description(
-                    _slice_chars(
+                    slice_chars(
                         description,
                         &mut total_chars,
                         embed_limits::EMBED_DESCRIPTION_LIMIT,
@@ -356,7 +368,7 @@ impl ExecutedTemplate {
                 }
 
                 // Slice field name to EMBED_FIELD_NAME_LIMIT
-                let name = _slice_chars(
+                let name = slice_chars(
                     name,
                     &mut total_chars,
                     embed_limits::EMBED_FIELD_NAME_LIMIT,
@@ -364,7 +376,7 @@ impl ExecutedTemplate {
                 );
 
                 // Slice field value to EMBED_FIELD_VALUE_LIMIT
-                let value = _slice_chars(
+                let value = slice_chars(
                     value,
                     &mut total_chars,
                     embed_limits::EMBED_FIELD_VALUE_LIMIT,
@@ -381,7 +393,7 @@ impl ExecutedTemplate {
 
         // Now handle content
         let content = self.content.map(|c| {
-            _slice_chars(
+            slice_chars(
                 &c,
                 &mut total_content_chars,
                 message_limits::MESSAGE_CONTENT_LIMIT,
@@ -400,8 +412,11 @@ impl ExecutedTemplate {
 /// Executes a template with the given context with the expectation that the template returns a message
 pub async fn execute_template_for_message(
     tera: &mut Tera,
-    context: Arc<tera::Context>,
+    args: crate::core::MessageTemplateContext,
 ) -> Result<ExecutedTemplate, base_data::Error> {
+    let mut ctx = tera::Context::new();
+    ctx.insert("args", &args)?;
+
     let ites = Arc::new(InternalTemplateExecuteState::default());
 
     // Add embed_title function
@@ -444,8 +459,16 @@ pub async fn execute_template_for_message(
         },
     );
 
+    // Add gwevent templater
+    tera.register_filter(
+        "formatter__gwevent_field",
+        FieldFormatterFilter {
+            is_categorized_default: true,
+        },
+    );
+
     // Execute the template
-    crate::execute_template(tera, &context).await?;
+    super::execute_template(tera, &ctx).await?;
 
     // Read the outputted template embeds
     let embeds_reader = ites.embeds.read().map_err(|_| "Failed to read embeds")?;
@@ -466,12 +489,4 @@ pub async fn execute_template_for_message(
         embeds: template_embeds,
         content: (*content_reader).clone(),
     })
-}
-
-#[derive(Default, serde::Serialize)]
-/// A DiscordReply is guaranteed to map 1-1 to discords API
-pub struct DiscordReply<'a> {
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub content: Option<String>,
-    pub embeds: Vec<serenity::all::CreateEmbed<'a>>,
 }

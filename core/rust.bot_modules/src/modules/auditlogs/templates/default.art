@@ -1,3 +1,4 @@
+//lang:lang_tera
 {{ embed_title(title=(event_titlename)) }}
 
 {% filter embed_description %}

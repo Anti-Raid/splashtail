@@ -4,18 +4,17 @@ use include_dir::{include_dir, Dir};
 use log::warn;
 use poise::serenity_prelude::FullEvent;
 use serenity::all::{ChannelId, CreateMessage};
-use std::sync::Arc;
 
 static DEFAULT_TEMPLATES: Dir<'_> =
     include_dir!("$CARGO_MANIFEST_DIR/src/modules/auditlogs/templates");
 
 pub fn load_embedded_event_template(event: &str) -> Result<String, Error> {
-    let template = match DEFAULT_TEMPLATES.get_file(format!("{}.tera", event)) {
+    let template = match DEFAULT_TEMPLATES.get_file(format!("{}.art", event)) {
         Some(template) => template,
         None => {
-            // Load default.tera
+            // Load default.art
             DEFAULT_TEMPLATES
-                .get_file("default.tera")
+                .get_file("default.art")
                 .ok_or("Failed to load default template")?
         }
     };
@@ -159,80 +158,39 @@ pub async fn dispatch_audit_log(
             }
         }
 
-        let mut tera = {
-            if let Some(ref embed_template) = sink.embed_template {
+        let template = {
+            if let Some(embed_template) = sink.embed_template {
                 if !embed_template.is_empty() {
-                    templating::compile_template(
-                        embed_template,
-                        templating::CompileTemplateOptions {
-                            ignore_cache: false,
-                            cache_result: true,
-                        },
-                    )
-                    .await?
+                    embed_template
                 } else {
                     // Load default template
-                    let template_str = load_embedded_event_template(event_name)?;
-
-                    templating::compile_template(
-                        &template_str,
-                        templating::CompileTemplateOptions {
-                            ignore_cache: false,
-                            cache_result: true,
-                        },
-                    )
-                    .await?
+                    load_embedded_event_template(event_name)?
                 }
             } else {
-                let template_str = load_embedded_event_template(event_name)?;
-
-                templating::compile_template(
-                    &template_str,
-                    templating::CompileTemplateOptions {
-                        ignore_cache: false,
-                        cache_result: true,
-                    },
-                )
-                .await?
+                load_embedded_event_template(event_name)?
             }
         };
 
-        // Add gwevent templater
-        tera.register_filter(
-            "formatter__gwevent_field",
-            gwevent::templating::FieldFormatter {
-                is_categorized_default: true,
+        let discord_reply = match templating::render_message_template(
+            &template,
+            templating::core::MessageTemplateContext {
+                event_titlename: event_titlename.to_string(),
+                event_name: event_name.to_string(),
+                fields: expanded_event.clone(),
             },
-        );
-
-        let mut tera_ctx = templating::make_templating_context();
-        tera_ctx.insert("event_name", event_name)?;
-        tera_ctx.insert("event_titlename", event_titlename)?;
-        tera_ctx.insert("event", &expanded_event)?;
-
-        let templated =
-            templating::message::execute_template_for_message(&mut tera, Arc::new(tera_ctx)).await;
-
-        let discord_reply = match templated {
-            Ok(templated) => match templated.to_discord_reply() {
-                Ok(reply) => reply, // Templated message is valid
-                Err(e) => {
-                    let embed = serenity::all::CreateEmbed::default().description(format!(
-                        "Failed to convert templated message to discord reply: {}",
-                        e
-                    ));
-
-                    templating::message::DiscordReply {
-                        embeds: vec![embed],
-                        ..Default::default()
-                    }
-                }
+            templating::CompileTemplateOptions {
+                ignore_cache: false,
+                cache_result: true,
             },
+        )
+        .await
+        {
+            Ok(reply) => reply,
             Err(e) => {
                 let embed = serenity::all::CreateEmbed::default()
                     .description(format!("Failed to render template: {}", e));
 
-                templating::message::DiscordReply {
+                templating::core::DiscordReply {
                     embeds: vec![embed],
                     ..Default::default()
                 }

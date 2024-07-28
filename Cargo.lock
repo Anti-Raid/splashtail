@@ -1434,7 +1434,6 @@ dependencies = [
  "small-fixed-array",
  "strum",
  "strum_macros",
- "templating",
  "walkdir",
 ]
 
@@ -4147,6 +4146,7 @@ version = "0.1.0"
 dependencies = [
  "base_data",
  "dashmap",
+ "gwevent",
  "indexmap",
  "kittycat",
  "moka",

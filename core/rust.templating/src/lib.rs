@@ -1,62 +1,11 @@
-use moka::future::Cache;
-use once_cell::sync::Lazy;
-use std::time::Duration;
-use tera::Tera;
-
-// Re-export Tera as Engine
-pub mod engine {
-    pub use tera::Context;
-    pub use tera::Filter;
-    pub use tera::Function;
-    pub use tera::Result;
-    pub use tera::Tera as Engine;
-    pub use tera::Value;
-}
-
+pub mod core;
 pub mod lang_javascript_quickjs;
-pub mod lang_javascript_v8__notworking;
+pub mod lang_javascript_v8;
 pub mod lang_rhai;
-pub mod message;
-pub mod permissions;
+pub mod lang_tera;
 
-pub fn get_char_limit(total_chars: usize, limit: usize, max_chars: usize) -> usize {
-    if max_chars <= total_chars {
-        return 0;
-    }
-
-    // If limit is 6000 and max_chars - total_chars is 1000, return 1000 etc.
-    std::cmp::min(limit, max_chars - total_chars)
-}
-
-pub fn slice_chars(s: &str, total_chars: &mut usize, limit: usize, max_chars: usize) -> String {
-    let char_limit = get_char_limit(*total_chars, limit, max_chars);
-
-    if char_limit == 0 {
-        return String::new();
-    }
-
-    if s.len() > char_limit {
-        *total_chars += char_limit;
-        s.chars().take(char_limit).collect()
-    } else {
-        *total_chars += s.len();
-        s.to_string()
-    }
-}
-
-/// Maximum number of AST nodes in a template
-pub const MAX_TEMPLATE_NODES: usize = 1024;
-
-/// Timeout for template execution
-pub const TEMPLATE_EXECUTION_TIMEOUT: Duration = Duration::from_millis(600);
-pub const MAX_TEMPLATE_MEMORY_USAGE: usize = 1024 * 1024; // 1 MB maximum memory
-
-/// Stores a cache of templates with the template content as key
-static TEMPLATE_CACHE: Lazy<Cache<String, Tera>> = Lazy::new(|| {
-    Cache::builder()
-        .time_to_live(Duration::from_secs(60 * 60))
-        .build()
-});
+use splashcore_rs::types::silverpelt::PermissionResult;
+use std::str::FromStr;
 
 pub struct CompileTemplateOptions {
     /// Cache the result of the template compilation
@@ -65,60 +14,165 @@ pub struct CompileTemplateOptions {
     pub ignore_cache: bool,
 }
 
-pub fn make_templating_context() -> tera::Context {
-    tera::Context::new()
+pub enum TemplateLanguage {
+    Rhai,
+    Tera,
+}
+
+impl FromStr for TemplateLanguage {
+    type Err = ();
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "lang_rhai" => Ok(Self::Rhai),
+            "lang_tera" => Ok(Self::Tera),
+            _ => Err(()),
+        }
+    }
+}
+
+impl TemplateLanguage {
+    pub fn from_comment(comment: &str) -> Option<Self> {
+        let comment = comment.trim();
+
+        if comment.starts_with("//lang:") {
+            let lang = comment.split(':').nth(1)?;
+
+            match Self::from_str(lang) {
+                Ok(lang) => Some(lang),
+                Err(_) => None,
+            }
+        } else {
+            None
+        }
+    }
 }
 
 pub async fn compile_template(
     template: &str,
     opts: CompileTemplateOptions,
-) -> Result<Tera, base_data::Error> {
-    if !opts.ignore_cache {
-        // Check if in template
-        if let Some(ref tera) = TEMPLATE_CACHE.get(template).await {
-            return Ok(tera.clone());
+) -> Result<(), base_data::Error> {
+    let (first_line, rest) = match template.find('\n') {
+        Some(i) => template.split_at(i),
+        None => (template, ""),
+    };
+
+    let Some(lang) = TemplateLanguage::from_comment(first_line) else {
+        return Err("No/unknown template language specified".into());
+    };
+
+    match lang {
+        TemplateLanguage::Rhai => {
+            let mut engine = lang_rhai::create_engine();
+            lang_rhai::apply_sandboxing(&mut engine);
+            lang_rhai::compile(&engine, rest, opts)?;
+        }
+        TemplateLanguage::Tera => {
+            lang_tera::compile_template(rest, opts).await?;
         }
     }
 
-    // Compile a new template
-    let mut tera = Tera::default();
-
-    tera.autoescape_on(vec![]);
-
-    // Add main template
-    tera.add_raw_template("main", template)?;
-
-    let mut total_nodes = 0;
-    for (_, t) in tera.templates.iter() {
-        total_nodes += t.ast.len();
-
-        if total_nodes > MAX_TEMPLATE_NODES {
-            return Err("Template has too many nodes".into());
-        }
-    }
-
-    if opts.cache_result {
-        // Store the template in the cache
-        TEMPLATE_CACHE
-            .insert(template.to_string(), tera.clone())
-            .await;
-    }
-
-    Ok(tera)
+    Ok(())
 }
 
-/// Executes a template with the given context returning the resultant string
-///
-/// Note that for message templates, the `execute_template_for_message` function should be used instead
-pub async fn execute_template(
-    tera: &mut Tera,
-    context: &tera::Context,
-) -> Result<String, base_data::Error> {
-    // Render the template
-    Ok(tokio::time::timeout(
-        TEMPLATE_EXECUTION_TIMEOUT,
-        tera.render_async("main", context),
-    )
-    .await
-    .map_err(|_| "Template execution timed out")??)
+/// Renders a message template
+pub async fn render_message_template(
+    template: &str,
+    args: crate::core::MessageTemplateContext,
+    opts: CompileTemplateOptions,
+) -> Result<core::DiscordReply, base_data::Error> {
+    let (first_line, rest) = match template.find('\n') {
+        Some(i) => template.split_at(i),
+        None => (template, ""),
+    };
+
+    let Some(lang) = TemplateLanguage::from_comment(first_line) else {
+        return Err("No/unknown template language specified".into());
+    };
+
+    match lang {
+        TemplateLanguage::Rhai => {
+            let mut engine = lang_rhai::create_engine();
+            lang_rhai::apply_sandboxing(&mut engine);
+            let ast = lang_rhai::compile(&engine, rest, opts)?;
+
+            let mut scope = lang_rhai::plugins::message::create_message_scope(args)?;
+            let result: lang_rhai::plugins::message::plugin::Message =
+                engine.eval_ast_with_scope(&mut scope, &ast)?;
+
+            lang_rhai::plugins::message::to_discord_reply(result)
+        }
+        TemplateLanguage::Tera => {
+            let mut tera = lang_tera::compile_template(rest, opts).await?;
+            let msg_exec_template =
+                lang_tera::message::execute_template_for_message(&mut tera, args).await?;
+            msg_exec_template.to_discord_reply()
+        }
+    }
+}
+
+/// Renders a permissions template
+pub async fn render_permissions_template(
+    template: &str,
+    pctx: crate::core::PermissionTemplateContext,
+    opts: CompileTemplateOptions,
+) -> PermissionResult {
+    let (first_line, rest) = match template.find('\n') {
+        Some(i) => template.split_at(i),
+        None => (template, ""),
+    };
+
+    let Some(lang) = TemplateLanguage::from_comment(first_line) else {
+        return PermissionResult::GenericError {
+            error: "No/unknown template language specified".into(),
+        };
+    };
+
+    match lang {
+        TemplateLanguage::Rhai => {
+            let mut engine = lang_rhai::create_engine();
+            lang_rhai::apply_sandboxing(&mut engine);
+
+            let ast = match lang_rhai::compile(&engine, rest, opts) {
+                Ok(ast) => ast,
+                Err(e) => {
+                    return PermissionResult::GenericError {
+                        error: format!("Failed to compile: {:?}", e),
+                    }
+                }
+            };
+
+            let mut scope = match lang_rhai::plugins::permissions::create_permission_scope(pctx) {
+                Ok(scope) => scope,
+                Err(e) => {
+                    return PermissionResult::GenericError {
+                        error: format!("Failed to create scope: {:?}", e),
+                    }
+                }
+            };
+
+            let result: PermissionResult = match engine.eval_ast_with_scope(&mut scope, &ast) {
+                Ok(result) => result,
+                Err(e) => {
+                    return PermissionResult::GenericError {
+                        error: format!("Failed to eval: {:?}", e),
+                    }
+                }
+            };
+
+            result
+        }
+        TemplateLanguage::Tera => {
+            let mut tera = match lang_tera::compile_template(rest, opts).await {
+                Ok(tera) => tera,
+                Err(e) => {
+                    return PermissionResult::GenericError {
+                        error: format!("Failed to compile: {:?}", e),
+                    }
+                }
+            };
+
+            lang_tera::permissions::execute_permissions_template(&mut tera, pctx).await
+        }
+    }
 }

@@ -3,6 +3,9 @@ use rhai::module_resolvers::StaticModuleResolver;
 
 pub mod plugins;
 
+/// Timeout for template execution
+pub const TEMPLATE_EXECUTION_TIMEOUT: std::time::Duration = std::time::Duration::from_millis(600);
+
 pub static TEMPLATE_CACHE: once_cell::sync::Lazy<moka::sync::Cache<String, rhai::AST>> =
     once_cell::sync::Lazy::new(|| {
         moka::sync::Cache::builder()
@@ -10,7 +13,7 @@ pub static TEMPLATE_CACHE: once_cell::sync::Lazy<moka::sync::Cache<String, rhai:
             .build()
     });
 
-fn create_engine() -> rhai::Engine {
+pub fn create_engine() -> rhai::Engine {
     let mut engine = rhai::Engine::new();
 
     let mut resolver = StaticModuleResolver::new();
@@ -26,15 +29,14 @@ fn create_engine() -> rhai::Engine {
     engine
 }
 
-/// To execute, use the following:
+/// To execute, first create the scope using `create_scope` and then call `eval_ast_with_scope` on the engine:
 ///
 /// let v: T = ENGINE.eval_ast_with_scope(&mut scope, &ast)?;
-pub fn prepare(
-    engine: rhai::Engine,
+pub fn compile(
+    engine: &rhai::Engine,
     template: &str,
-    args: indexmap::IndexMap<String, serde_json::Value>,
     compile_opts: crate::CompileTemplateOptions, // We don't support this yet
-) -> Result<(rhai::Engine, rhai::Scope, rhai::AST), base_data::Error> {
+) -> Result<rhai::AST, base_data::Error> {
     let ast = {
         if compile_opts.ignore_cache {
             engine.compile(template)?
@@ -51,13 +53,7 @@ pub fn prepare(
         }
     };
 
-    let mut scope = rhai::Scope::new();
-    let dyn_val: rhai::Dynamic =
-        rhai::serde::to_dynamic(&args).map_err(|e| format!("Failed to deserialize args: {}", e))?;
-    scope.set_value("args", args);
-    scope.set_value("args_dyn", dyn_val);
-
-    Ok((engine, scope, ast))
+    Ok(ast)
 }
 
 pub fn apply_sandboxing(engine: &mut rhai::Engine) {
@@ -77,7 +73,7 @@ pub fn apply_sandboxing(engine: &mut rhai::Engine) {
         // Check 1: Execution timeout
         let now = std::time::Instant::now();
 
-        if now.duration_since(start) > crate::TEMPLATE_EXECUTION_TIMEOUT {
+        if now.duration_since(start) > TEMPLATE_EXECUTION_TIMEOUT {
             // Return a dummy token just to force-terminate the script
             // after running for more than 60 seconds!
             return Some(rhai::Dynamic::UNIT);
@@ -91,6 +87,19 @@ pub fn apply_sandboxing(engine: &mut rhai::Engine) {
 mod test {
     use super::*;
 
+    pub fn create_scope<'a>(
+        args: indexmap::IndexMap<String, serde_json::Value>,
+    ) -> Result<rhai::Scope<'a>, base_data::Error> {
+        let mut scope = rhai::Scope::new();
+        let dyn_val: rhai::Dynamic = rhai::serde::to_dynamic(&args)
+            .map_err(|e| format!("Failed to deserialize args: {}", e))?;
+
+        scope.set_value("args", args);
+        scope.set_value("args_dyn", dyn_val);
+
+        Ok(scope)
+    }
+
     #[tokio::test]
     async fn test_100000_concurrent() {
         let mut rts = Vec::new();
@@ -99,29 +108,30 @@ mod test {
             println!("{}", i);
 
             let rt = tokio::task::spawn_blocking(move || {
-                let mut engine = create_engine();
+                let engine = create_engine();
                 //apply_sandboxing(&mut engine);
 
-                match prepare(
-                    engine,
+                let ast = match compile(
+                    &engine,
                     "return 1",
-                    indexmap::indexmap! {
-                        "name".to_string() => serde_json::Value::String("world".to_string())
-                    },
                     crate::CompileTemplateOptions {
                         ignore_cache: false,
                         cache_result: false,
                     },
                 ) {
-                    Ok((engine, mut scope, ast)) => {
-                        let result: i64 = engine.eval_ast_with_scope(&mut scope, &ast).unwrap();
-                        assert_eq!(result, 1);
-                    }
+                    Ok(ast) => ast,
                     Err(e) => {
                         println!("Error: {}", e);
-                        panic!("Failed to prepare template");
+                        panic!("Failed to compile template");
                     }
-                }
+                };
+
+                let mut scope = create_scope(indexmap::indexmap! {
+                    "name".to_string() => serde_json::Value::String("world".to_string())
+                })
+                .unwrap();
+
+                let _result: i64 = engine.eval_ast_with_scope(&mut scope, &ast).unwrap();
             });
 
             rts.push(rt);
@@ -131,5 +141,4 @@ mod test {
             rt.await.unwrap();
         }
     }
-
 }

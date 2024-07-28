@@ -5,7 +5,7 @@ use serenity::nonmax::{NonMaxU16, NonMaxU8};
 use serenity::small_fixed_array::{FixedArray, FixedString};
 
 /// A CategorizedField is a field that contains metadata such as category (and potentially more in the future)
-#[derive(serde::Serialize, serde::Deserialize)]
+#[derive(Clone, serde::Serialize, serde::Deserialize)]
 pub struct CategorizedField {
     /// The category of the field
     pub category: String,
@@ -14,7 +14,18 @@ pub struct CategorizedField {
     pub field: Field,
 }
 
-#[derive(serde::Serialize, serde::Deserialize)]
+impl CategorizedField {
+    /// Format the field into a string for use in templates
+    pub fn template_format(&self) -> Result<String, Error> {
+        Ok(format!(
+            "{}: {}",
+            self.category,
+            self.field.template_format()?
+        ))
+    }
+}
+
+#[derive(Clone, serde::Serialize, serde::Deserialize)]
 #[serde(tag = "type", content = "field")]
 pub enum Field {
     // Primitive Types

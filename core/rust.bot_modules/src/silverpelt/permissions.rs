@@ -58,7 +58,7 @@ fn simple_permission_checks(
 }
 
 #[derive(Default, Clone, Eq, PartialEq, Debug)]
-pub struct TemplatePermissionChecksContext {
+pub struct PermissionChecksContext {
     pub user_id: serenity::all::UserId,
     pub guild_id: serenity::all::GuildId,
     pub guild_owner_id: serenity::all::UserId,
@@ -69,34 +69,22 @@ async fn template_permission_checks(
     template: &str,
     member_native_perms: serenity::all::Permissions,
     member_kittycat_perms: Vec<kittycat::perms::Permission>,
-    ctx: TemplatePermissionChecksContext,
+    ctx: PermissionChecksContext,
 ) -> PermissionResult {
-    let mut template = match templating::compile_template(
+    templating::render_permissions_template(
         template,
+        templating::core::PermissionTemplateContext {
+            member_native_permissions: member_native_perms,
+            member_kittycat_permissions: member_kittycat_perms,
+            user_id: ctx.user_id,
+            guild_id: ctx.guild_id,
+            guild_owner_id: ctx.guild_owner_id,
+            channel_id: ctx.channel_id,
+        },
         templating::CompileTemplateOptions {
             cache_result: true,
             ignore_cache: false,
         },
-    )
-    .await
-    {
-        Ok(t) => t,
-        Err(e) => {
-            return PermissionResult::GenericError {
-                error: format!("failed to compile template: {}", e),
-            }
-        }
-    };
-
-    // Execute the template
-    templating::permissions::template_permission_checks(
-        &mut template,
-        member_native_perms,
-        member_kittycat_perms,
-        ctx.user_id,
-        ctx.guild_id,
-        ctx.guild_owner_id,
-        ctx.channel_id,
     )
     .await
 }
@@ -110,7 +98,7 @@ pub async fn can_run_command(
     member_native_perms: serenity::all::Permissions,
     member_kittycat_perms: Vec<kittycat::perms::Permission>,
     is_default_enabled: bool,
-    template_ctx: TemplatePermissionChecksContext,
+    perms_ctx: PermissionChecksContext,
 ) -> PermissionResult {
     log::debug!(
         "Command config: {:?} [{}]",
@@ -167,7 +155,7 @@ pub async fn can_run_command(
                 template,
                 member_native_perms,
                 member_kittycat_perms,
-                template_ctx,
+                perms_ctx,
             )
             .await
         }
@@ -289,7 +277,7 @@ mod tests {
             serenity::all::Permissions::empty(),
             vec!["abc.test".into()],
             true,
-            TemplatePermissionChecksContext::default()
+            PermissionChecksContext::default()
         )
         .await
         .is_ok());
@@ -317,7 +305,7 @@ mod tests {
                 serenity::all::Permissions::empty(),
                 vec!["abc.test".into()],
                 true,
-                TemplatePermissionChecksContext::default()
+                PermissionChecksContext::default()
             )
             .await,
             "no_checks_succeeded"
@@ -345,7 +333,7 @@ mod tests {
                 serenity::all::Permissions::empty(),
                 vec!["abc.test".into()],
                 true,
-                TemplatePermissionChecksContext::default()
+                PermissionChecksContext::default()
             )
             .await,
             "no_checks_succeeded"
@@ -381,7 +369,7 @@ mod tests {
                 serenity::all::Permissions::BAN_MEMBERS,
                 vec!["abc.test".into()],
                 true,
-                TemplatePermissionChecksContext::default()
+                PermissionChecksContext::default()
             )
             .await,
             "no_checks_succeeded"
@@ -403,7 +391,7 @@ mod tests {
                 serenity::all::Permissions::ADMINISTRATOR,
                 vec![],
                 true,
-                TemplatePermissionChecksContext::default()
+                PermissionChecksContext::default()
             )
             .await,
             "no_checks_succeeded"
@@ -424,7 +412,7 @@ mod tests {
             serenity::all::Permissions::ADMINISTRATOR,
             vec![],
             true,
-            TemplatePermissionChecksContext::default()
+            PermissionChecksContext::default()
         )
         .await
         .is_ok());
@@ -458,7 +446,7 @@ mod tests {
             serenity::all::Permissions::BAN_MEMBERS,
             vec!["abc.test".into()],
             true,
-            TemplatePermissionChecksContext::default()
+            PermissionChecksContext::default()
         )
         .await
         .is_ok());
@@ -493,7 +481,7 @@ mod tests {
                 serenity::all::Permissions::VIEW_AUDIT_LOG,
                 vec![],
                 true,
-                TemplatePermissionChecksContext::default(),
+                PermissionChecksContext::default(),
             )
             .await;
 

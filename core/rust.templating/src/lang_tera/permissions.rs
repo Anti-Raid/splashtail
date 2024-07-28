@@ -152,59 +152,21 @@ impl tera::Filter for PermissionResultFilter {
     }
 }
 
-pub async fn template_permission_checks(
+pub async fn execute_permissions_template(
     tera: &mut Tera,
-    member_native_perms: serenity::all::Permissions,
-    member_kittycat_perms: Vec<kittycat::perms::Permission>,
-    user_id: serenity::all::UserId,
-    guild_id: serenity::all::GuildId,
-    guild_owner_id: serenity::all::UserId,
-    channel_id: Option<serenity::all::ChannelId>,
+    tctx: crate::core::PermissionTemplateContext,
 ) -> PermissionResult {
     let mut context = tera::Context::new();
 
-    if let Err(e) = context.insert("user_id", &user_id) {
+    if let Err(e) = context.insert("ctx", &tctx) {
         return PermissionResult::GenericError {
-            error: format!("failed to insert user_id into context: {}", e),
-        };
-    }
-
-    if let Err(e) = context.insert("guild_id", &guild_id) {
-        return PermissionResult::GenericError {
-            error: format!("failed to insert guild_id into context: {}", e),
-        };
-    }
-
-    if let Err(e) = context.insert("guild_owner_id", &guild_owner_id) {
-        return PermissionResult::GenericError {
-            error: format!("failed to insert guild_owner_id into context: {}", e),
-        };
-    }
-
-    if let Err(e) = context.insert("channel_id", &channel_id) {
-        return PermissionResult::GenericError {
-            error: format!("failed to insert channel_id into context: {}", e),
-        };
-    }
-
-    if let Err(e) = context.insert(
-        "native_permissions",
-        &member_native_perms.bits().to_string(),
-    ) {
-        return PermissionResult::GenericError {
-            error: format!("failed to insert native_permissions into context: {}", e),
-        };
-    }
-
-    if let Err(e) = context.insert("kittycat_permissions", &member_kittycat_perms) {
-        return PermissionResult::GenericError {
-            error: format!("failed to insert kittycat_permissions into context: {}", e),
+            error: format!("failed to insert permission context into context: {}", e),
         };
     }
 
     let state = Arc::new(InternalTemplateExecuteState {
-        member_native_perms,
-        member_kittycat_perms,
+        member_native_perms: tctx.member_native_permissions,
+        member_kittycat_perms: tctx.member_kittycat_permissions,
         result: RwLock::new(None),
     });
 
@@ -230,7 +192,7 @@ pub async fn template_permission_checks(
     );
 
     // Execute the template
-    match crate::execute_template(tera, &context).await {
+    match super::execute_template(tera, &context).await {
         Ok(r) => r,
         Err(e) => {
             return PermissionResult::GenericError {

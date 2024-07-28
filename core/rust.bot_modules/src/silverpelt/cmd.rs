@@ -4,7 +4,7 @@ use crate::silverpelt::{
     module_config::{
         get_best_command_configuration, get_command_extended_data, get_module_configuration,
     },
-    permissions::TemplatePermissionChecksContext,
+    permissions::PermissionChecksContext,
     utils::permute_command_names,
     GuildCommandConfiguration, GuildModuleConfiguration,
 };
@@ -391,7 +391,7 @@ pub async fn check_command(
         member_perms,
         kittycat_perms,
         module_default_enabled,
-        TemplatePermissionChecksContext {
+        PermissionChecksContext {
             guild_id,
             user_id,
             guild_owner_id,

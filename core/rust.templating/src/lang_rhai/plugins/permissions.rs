@@ -155,6 +155,20 @@ pub mod plugin {
     }
 }
 
+pub fn create_permission_scope<'a>(
+    ctx: crate::core::PermissionTemplateContext,
+) -> Result<rhai::Scope<'a>, base_data::Error> {
+    let ctx_dyn: rhai::Dynamic =
+        rhai::serde::to_dynamic(&ctx).map_err(|e| format!("Failed to serialize context: {}", e))?;
+
+    let mut scope = rhai::Scope::new();
+
+    scope.set_value("ctx", ctx);
+    scope.set_value("ctx_dyn", ctx_dyn);
+
+    Ok(scope)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
