@@ -9,6 +9,8 @@ pub const MAX_TEMPLATE_NODES: usize = 1024;
 
 /// Timeout for template execution
 pub const TEMPLATE_EXECUTION_TIMEOUT: std::time::Duration = std::time::Duration::from_millis(600);
+
+#[allow(dead_code)]
 pub const MAX_TEMPLATE_MEMORY_USAGE: usize = 1024 * 1024; // 1 MB maximum memory
 
 /// Stores a cache of templates with the template content as key

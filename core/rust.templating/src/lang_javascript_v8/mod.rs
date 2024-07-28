@@ -2,6 +2,7 @@
 #[allow(dead_code)]
 const NUM_THREADS: usize = 10;
 
+#[allow(dead_code)]
 pub fn new_isolate() -> v8::OwnedIsolate {
     extern "C" fn oom_handler(_: *const std::os::raw::c_char, _: &v8::OomDetails) {
         println!("OOM!");
