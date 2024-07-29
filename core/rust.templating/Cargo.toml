@@ -10,6 +10,7 @@ base_data = { path = "../rust.base_data" }
 once_cell = "1"
 moka = { version = "0.12", features = ["future", "futures-util", "sync"] }
 mini-moka = { version = "0.10" }
+async-channel = "2"
 dashmap = { version = "5", features = ["serde", "inline", "rayon"] }
 indexmap = { version = "2", features = ["serde"] }
 
@@ -45,5 +46,5 @@ git = "https://github.com/infinitybotlist/kittycat"
 branch = "main"
 
 [features]
-default-features = []
+default = ["experiment_lua_worker"]
 experiment_lua_worker = []

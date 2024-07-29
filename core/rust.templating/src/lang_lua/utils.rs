@@ -1,12 +1,11 @@
-use std::sync::{
-    atomic::{AtomicUsize, Ordering},
-};
+use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
+use std::sync::Arc;
 use std::time::{Duration, Instant};
 
 #[cfg(feature = "experiment_lua_worker")]
-use tokio::sync::Mutex;
-#[cfg(feature = "experiment_lua_worker")]
 use mlua::prelude::*;
+#[cfg(feature = "experiment_lua_worker")]
+use tokio::sync::Mutex;
 
 pub const DEFAULT_ORDERING: Ordering = Ordering::SeqCst;
 
@@ -46,16 +45,50 @@ impl AtomicInstant {
 //
 // This is highly experimental
 
+pub struct LuaWorkerManager {
+    pub workers: dashmap::DashMap<usize, LuaWorker>,
+}
+
+impl LuaWorkerManager {
+    /// Spawns a new LuaWorkerManager
+    pub fn new() -> Self {
+        let manager = LuaWorkerManager {
+            workers: dashmap::DashMap::new(),
+        };
+
+        manager
+    }
+
+    /// Spawns a new LuaWorker given thread number to spawn
+    fn spawn_worker(&self, tid: usize) {}
+}
+
+/// Wrapper around async-channels channel
+pub struct AsyncChannel<T> {
+    pub tx: async_channel::Sender<T>,
+    pub rx: async_channel::Receiver<T>,
+}
+
+impl<T> AsyncChannel<T> {
+    pub fn new() -> Self {
+        let (tx, rx) = async_channel::unbounded();
+        Self { tx, rx }
+    }
+}
+
 #[cfg(feature = "experiment_lua_worker")]
 pub struct LuaWorker {
     /// A handle that allows stopping the VM inside its tokio localset
-    ///
-    /// This is wrapped in an option to allow destroying the handle when the LuaWorker is dropped
-    pub tx_stop: Option<tokio::sync::oneshot::Sender<()>>,
-    /// A channel used for sending requests to the VM
-    pub tx_msg_recv: tokio::sync::broadcast::Sender<LuaWorkerRequest>,
-    /// A channel that can be used to listen for a response from the VM
-    pub rx_msg_resp: tokio::sync::broadcast::Receiver<LuaWorkerResponse>,
+    pub stopper: AsyncChannel<()>,
+    pub request_queue: AsyncChannel<LuaWorkerRequest>,
+    pub response_queue: AsyncChannel<LuaWorkerResponse>,
+    pub open: Arc<AtomicBool>,
+}
+
+impl Drop for LuaWorker {
+    fn drop(&mut self) {
+        self.stopper.tx.try_send(()).unwrap();
+    }
 }
 
 #[cfg(feature = "experiment_lua_worker")]
@@ -94,96 +127,115 @@ impl LuaWorker {
         Ok(v)
     }
 
-    // Spawn a new LuaWorker thread
-    pub async fn spawn(&self) {
+    pub fn new() -> Self {
+        Self {
+            stopper: AsyncChannel::new(),
+            request_queue: AsyncChannel::new(),
+            response_queue: AsyncChannel::new(),
+            open: Arc::new(AtomicBool::new(true)),
+        }
+    }
+
+    pub fn spawn(&self) {
         let rt = tokio::runtime::Builder::new_current_thread()
             .enable_all()
             .build()
             .unwrap();
 
+        let stopper = self.stopper.rx.clone();
+        let request_queue = self.request_queue.rx.clone();
+        let response_queue = self.response_queue.tx.clone();
+        let open = self.open.clone();
         std::thread::spawn(move || {
-            let local = tokio::task::LocalSet::new();
-
-            let _ = local.spawn_local(async move {
-                let vms = std::rc::Rc::new(mini_moka::unsync::Cache::<serenity::all::GuildId, super::ArLua>::builder()
-                    .time_to_idle(super::MAX_TEMPLATE_LIFETIME)
-                    .build());
-
-                let mut rx_stop = rx_stop;
-                let mut rx_msg_recv = rx_msg_recv;
-                let mut tx_msg_resp = tx_msg_resp;
+            rt.block_on(async move {
+                let stopper = stopper.clone();
+                let request_queue = request_queue.clone();
+                let open = open.clone();
+                let mut current_tasks: Vec<tokio::task::JoinHandle<()>> = Vec::new();
+                let handling_guilds = std::rc::Rc::new(
+                    tokio::sync::Mutex::new(
+                    mini_moka::unsync::Cache::<serenity::all::GuildId, super::ArLuaNonSend>::builder()
+                        .time_to_idle(super::MAX_TEMPLATE_LIFETIME).build()
+                    )
+                );
 
                 loop {
-                    let tx_msg_resp = tx_msg_resp.clone();
-
+                    let handling_guilds = handling_guilds.clone();
+                    let response_queue = response_queue.clone();
                     tokio::select! {
-                        /*_ = rx_stop => {
+                        _ = stopper.recv() => {
+                            for task in current_tasks.iter() {
+                                task.abort();
+                            }
+
+                            open.store(false, DEFAULT_ORDERING);
+
                             break;
-                        },*/
-                        Some(msg) = rx_msg_recv.recv() => {
-                            tokio::task::spawn_local(async move {
-                                let vms = vms.clone();
-                                let lua = match vms.get(msg.guild_id) {
-                                    Some(vm) => Ok(vm),
-                                    None => {
-                                        let vm = match super::create_lua_vm().await {
-                                            Ok(vm) => vm,
-                                            Err(e) => {
-                                                let _ = tx_msg_resp.send(LuaWorkerResponse::Err(e.to_string())).await;
-                                                return;
-                                            }
-                                        };
-                                        vms.insert(msg.guild_id, vm.clone());
-                                        Ok(vm)
+                        }
+                        msg = request_queue.recv() => {
+                            let msg = match msg {
+                                Ok(msg) => msg,
+                                Err(_) => {
+                                    for task in current_tasks.iter() {
+                                        task.abort();
                                     }
-                                };                            
+                                    open.store(false, DEFAULT_ORDERING);
+                                    break;
+                                },
+                            };
+                            let jh = tokio::task::spawn_local(async move {
+                                let handling_guilds = handling_guilds.clone();
+                                let response_queue = response_queue.clone();
 
+                                match msg {
+                                    LuaWorkerRequest::Template { guild_id, template, args } => {
+                                        // Get a lock
+                                        let mut vmg = handling_guilds.lock().await;
+                                        let vm = match (*vmg).get(&guild_id) {
+                                            Some(vm) => vm.clone(),
+                                            None => {
+                                                let vm = match super::create_lua_vm_nonsend().await {
+                                                    Ok(vm) => vm,
+                                                    Err(e) => {
+                                                        let _ = response_queue.send(LuaWorkerResponse::Err(e.to_string())).await;
+                                                        return;
+                                                    }
+                                                };
+                                                (*vmg).insert(guild_id, vm.clone());
+                                                vm
+                                            },
+                                        };
 
-                                let res = LuaWorker::exec(&lua, &msg.template, msg.args).await;
-                                let _ = tx_msg_resp.send(match res {
-                                    Ok(v) => LuaWorkerResponse::Ok(v),
-                                    Err(e) => LuaWorkerResponse::Err(e.to_string()),
-                                }).await;
+                                        drop(vmg);
+
+                                        match Self::exec(&vm.vm, &template, args).await {
+                                            Ok(v) => {
+                                                let _ = response_queue.send(LuaWorkerResponse::Ok(v)).await;
+                                            },
+                                            Err(e) => {
+                                                let _ = response_queue.send(LuaWorkerResponse::Err(e.to_string())).await;
+                                            }
+                                        }
+                                    } 
+                                };
                             });
+                            current_tasks.push(jh);
                         }
                     }
                 }
             });
-
-            rt.block_on(local);
         });
     }
-
-    // Spawns a new LuaWorker with the given Lua VM
-    pub fn new(lua: Lua) -> Self {
-        let (tx_stop, rx_stop) = tokio::sync::oneshot::channel();
-        let (tx_msg_recv, rx_msg_recv) = tokio::sync::mpsc::channel(32);
-        let (tx_msg_resp, rx_msg_resp) = tokio::sync::mpsc::channel(32);
-
-        let worker = LuaWorker {
-            tx_stop: Some(tx_stop),
-            tx_msg_recv,
-            rx_msg_resp,
-        };
-
-        worker
-    }
 }
 
 #[cfg(feature = "experiment_lua_worker")]
-impl Drop for LuaWorker {
-    fn drop(&mut self) {
-        if let Some(sender) = self.tx_stop.take() {
-            let _ = sender.send(());
-        }
+pub enum LuaWorkerRequest {
+    /// Execute a Lua template
+    Template {
+        guild_id: serenity::all::GuildId,
+        template: String,
+        args: serde_json::Value,
     }
-}
-
-#[cfg(feature = "experiment_lua_worker")]
-pub struct LuaWorkerRequest {
-    pub guild_id: serenity::all::GuildId,
-    pub template: String,
-    pub args: serde_json::Value,
 }
 
 #[cfg(feature = "experiment_lua_worker")]

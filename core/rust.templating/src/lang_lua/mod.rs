@@ -32,6 +32,19 @@ pub struct ArLua {
     pub state: Arc<ArLuaExecutionState>,
 }
 
+#[cfg(feature = "experiment_lua_worker")]
+#[derive(Clone)]
+pub struct ArLuaNonSend {
+    /// The Lua VM
+    ///
+    /// This sadly needs to be a Mutex because mlua is not Sync yet but is Send
+    ///
+    /// A tokio Mutex is used here because the Lua VM is used in async contexts across await points
+    pub vm: Arc<Lua>,
+    /// The execution state of the Lua VM
+    pub state: Arc<ArLuaExecutionState>,
+}
+
 /// Create a new Lua VM complete with sandboxing and modules pre-loaded
 ///
 /// Note that callers should instead call the render_message_template/render_permissions_template functions
@@ -81,6 +94,62 @@ async fn create_lua_vm() -> LuaResult<ArLua> {
 
     let ar_lua = ArLua {
         vm: Arc::new(Mutex::new(lua)),
+        state,
+    };
+
+    Ok(ar_lua)
+}
+
+#[cfg(feature = "experiment_lua_worker")]
+/// Create a new Lua VM complete with sandboxing and modules pre-loaded
+///
+/// Note that callers should instead call the render_message_template/render_permissions_template functions
+///
+/// As such, this function is private and should not be used outside of this module
+async fn create_lua_vm_nonsend() -> LuaResult<ArLuaNonSend> {
+    let lua = Lua::new();
+    lua.sandbox(true)?; // We explicitly want globals to be shared across all scripts in this VM
+    lua.set_memory_limit(MAX_TEMPLATE_MEMORY_USAGE)?;
+
+    // To allow locking down _G, we need to create a table to store user data (__stack)
+    lua.globals().set("__stack", lua.create_table()?)?;
+
+    // Disable print function, templates should not be able to access stdout
+    // TODO: Offer a custom print function that logs to a channel
+    lua.globals().set("print", LuaValue::Nil)?;
+
+    // Create new __ar_modules table
+    let ar_modules_table = lua.create_table()?;
+    ar_modules_table.set_readonly(true); // Block any attempt to modify this table
+
+    for (module_name, module_fn) in plugins::lua_plugins() {
+        let module_table = (module_fn)(&lua)?;
+        ar_modules_table.set(module_name, module_table)?;
+    }
+
+    lua.globals().set("__ar_modules", ar_modules_table)?;
+
+    let state: Arc<ArLuaExecutionState> = Arc::new(ArLuaExecutionState {
+        last_exec: utils::AtomicInstant::new(std::time::Instant::now()),
+    });
+
+    let state_interrupt_ref = state.clone();
+
+    // Create an interrupt to limit the execution time of a template
+    lua.set_interrupt(move |_| {
+        if state_interrupt_ref
+            .last_exec
+            .load(utils::DEFAULT_ORDERING)
+            .elapsed()
+            >= MAX_TEMPLATES_EXECUTION_TIME
+        {
+            return Ok(LuaVmState::Yield);
+        }
+        Ok(LuaVmState::Continue)
+    });
+
+    let ar_lua = ArLuaNonSend {
+        vm: Arc::new(lua),
         state,
     };
 
