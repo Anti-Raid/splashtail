@@ -346,23 +346,33 @@ impl DataStore for PostgresDataStoreImpl {
         let mut filters_str = String::new();
 
         for (i, (key, v)) in filters.iter().enumerate() {
-            // $1 is guild_id, $2 is the first filter
+            // $1 is the first filter
             if matches!(v, Value::None) {
                 filters_str.push_str(format!(" AND {} IS NULL", key).as_str());
             } else {
-                filters_str.push_str(format!(" AND {} = ${}", key, i + 2).as_str());
+                filters_str.push_str(format!(" AND {} = ${}", key, i + 1).as_str());
             }
         }
 
-        let sql_stmt = format!(
-            "SELECT {} FROM {} WHERE {} = $1 {}",
-            fields.join(", "),
-            self.setting_table,
-            self.setting_guild_id,
-            filters_str
-        );
+        let sql_stmt = if self.setting_guild_id.is_empty() {
+            format!(
+                "SELECT {} FROM {} WHERE {}",
+                fields.join(", "),
+                self.setting_table,
+                filters_str
+            )
+        } else {
+            format!(
+                "SELECT {} FROM {} WHERE {} AND {} = {}",
+                fields.join(", "),
+                self.setting_table,
+                filters_str,
+                self.setting_guild_id,
+                filters.len() + 1
+            )
+        };
 
-        let mut query = sqlx::query(sql_stmt.as_str()).bind(self.guild_id.to_string());
+        let mut query = sqlx::query(sql_stmt.as_str());
 
         if !filters.is_empty() {
             let filter_state = State::new_with_special_variables(self.author, self.guild_id); // TODO: Avoid needing filter state here
@@ -386,6 +396,11 @@ impl DataStore for PostgresDataStoreImpl {
                     &filter_state,
                 );
             }
+        }
+
+        // Bind guild id last if set
+        if !self.setting_guild_id.is_empty() {
+            query = query.bind(self.guild_id.to_string());
         }
 
         let rows = if self.tx.is_some() {
@@ -445,16 +460,26 @@ impl DataStore for PostgresDataStoreImpl {
             if matches!(v, Value::None) {
                 filters_str.push_str(format!(" AND {} IS NULL", key).as_str());
             } else {
-                filters_str.push_str(format!(" AND {} = ${}", key, i + 2).as_str());
+                filters_str.push_str(format!(" AND {} = ${}", key, i + 1).as_str());
             }
         }
 
-        let sql_stmt = format!(
-            "SELECT COUNT(*) FROM {} WHERE {} = $1 {}",
-            self.setting_table, self.setting_guild_id, filters_str
-        );
+        let sql_stmt = if self.setting_guild_id.is_empty() {
+            format!(
+                "SELECT COUNT(*) FROM {} WHERE {}",
+                self.setting_table, filters_str
+            )
+        } else {
+            format!(
+                "SELECT COUNT(*) FROM {} WHERE {} AND {} = ${}",
+                self.setting_table,
+                filters_str,
+                self.setting_guild_id,
+                filters.len() + 1
+            )
+        };
 
-        let mut query = sqlx::query(sql_stmt.as_str()).bind(self.guild_id.to_string());
+        let mut query = sqlx::query(sql_stmt.as_str());
 
         if !filters.is_empty() {
             let filter_state = State::new_with_special_variables(self.author, self.guild_id); // TODO: Avoid needing filter state here
@@ -478,6 +503,11 @@ impl DataStore for PostgresDataStoreImpl {
                     &filter_state,
                 );
             }
+        }
+
+        // Bind guild id last if set
+        if !self.setting_guild_id.is_empty() {
+            query = query.bind(self.guild_id.to_string());
         }
 
         let row = if self.tx.is_some() {
@@ -516,14 +546,12 @@ impl DataStore for PostgresDataStoreImpl {
         entry: indexmap::IndexMap<String, splashcore_rs::value::Value>,
     ) -> Result<super::state::State, SettingsError> {
         // Create the row
-        // First create the $N's from the cols starting with 2 as 1 is the guild_id
+        // First create the $N's from the cols starting with 1
         let mut n_params = "".to_string();
         let mut col_params = "".to_string();
         for (i, (col, _)) in entry.iter().enumerate() {
-            n_params.push_str(&format!("${}", i + 2));
-            col_params.push_str(col);
-
-            n_params.push(',');
+            n_params.push_str(&format!("${},", i + 1));
+            col_params.push_str(&format!("{},", col));
             col_params.push(',');
         }
 
@@ -532,20 +560,26 @@ impl DataStore for PostgresDataStoreImpl {
         col_params.pop();
 
         // Execute the SQL statement
-        let sql_stmt = format!(
-            "INSERT INTO {} ({},{}) VALUES ($1,{}) RETURNING {}",
-            self.setting_table,
-            self.setting_guild_id,
-            col_params,
-            n_params,
-            self.setting_primary_key
-        );
+        let sql_stmt = if self.setting_guild_id.is_empty() {
+            format!(
+                "INSERT INTO {} ({}) VALUES ({}) RETURNING {}",
+                self.setting_table, col_params, n_params, self.setting_primary_key
+            )
+        } else {
+            format!(
+                "INSERT INTO {} ({},{}) VALUES ({},${}) RETURNING {}",
+                self.setting_table,
+                self.setting_guild_id,
+                col_params,
+                n_params,
+                entry.len() + 1,
+                self.setting_primary_key
+            )
+        };
 
         let mut query = sqlx::query(sql_stmt.as_str());
 
         // Bind the sql query arguments
-        query = query.bind(self.guild_id.to_string());
-
         let mut state = State::from_indexmap(entry);
 
         for (col, value) in state.state.iter() {
@@ -559,6 +593,11 @@ impl DataStore for PostgresDataStoreImpl {
             };
 
             query = Self::_query_bind_value(query, value.clone(), &column.column_type, &state);
+        }
+
+        // Bind guild id last if set
+        if !self.setting_guild_id.is_empty() {
+            query = query.bind(self.guild_id.to_string());
         }
 
         // Execute the query

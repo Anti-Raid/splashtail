@@ -10,6 +10,14 @@ use module_settings::{
 };
 use once_cell::sync::Lazy;
 
+pub static CAN_USE_BOT: Lazy<ConfigOption> = Lazy::new(|| ConfigOption {
+    id: "can_use_bot",
+    name: "Can Use Bot Whitelist",
+    description: "Stores a list of users and guilds who can use the bot",
+    table: "can_use_bot",
+    guild_id: "published_from",
+});
+
 pub static INSPECTOR_FAKE_BOTS: Lazy<ConfigOption> = Lazy::new(|| ConfigOption {
     id: "inspector__fake_bots",
     name: "Inspector (Fake Bots)",

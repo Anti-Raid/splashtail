@@ -1,17 +1,43 @@
 pub mod core;
 mod lang_javascript_quickjs;
 mod lang_javascript_v8;
+mod lang_lua;
 mod lang_rhai;
 mod lang_tera;
 
+use once_cell::sync::Lazy;
 use splashcore_rs::types::silverpelt::PermissionResult;
 use std::str::FromStr;
+
+static TEMPLATING_ENVVAR: Lazy<Vec<String>> = Lazy::new(|| {
+    let v = std::env::var("ANTIRAID_SUPPORTED_TEMPLATED_ENGINES");
+
+    match v {
+        Ok(v) => v.split(',').map(|s| s.trim().to_string()).collect(),
+        Err(_) => Vec::new(),
+    }
+});
 
 pub struct CompileTemplateOptions {
     /// Cache the result of the template compilation
     pub cache_result: bool,
     /// Ignore the cache and compile the template again
     pub ignore_cache: bool,
+}
+
+pub enum TemplateLanguageSupportTier {
+    TierOne,   // Fully supported without an environment variable, full sandboxing built in
+    TierTwo,   // Supported without an environment variable, may have limited sandboxing
+    TierThree, // Supported with an environment variable, may have limited sandboxing and may be broken
+}
+
+impl TemplateLanguageSupportTier {
+    pub fn can_execute_without_env_var(&self) -> bool {
+        match self {
+            Self::TierOne | Self::TierTwo => true,
+            Self::TierThree => false,
+        }
+    }
 }
 
 pub enum TemplateLanguage {
@@ -31,9 +57,35 @@ impl FromStr for TemplateLanguage {
     }
 }
 
+impl std::fmt::Display for TemplateLanguage {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Rhai => write!(f, "lang_rhai"),
+            Self::Tera => write!(f, "lang_tera"),
+        }
+    }
+}
+
 impl TemplateLanguage {
-    pub fn from_comment(comment: &str) -> Option<Self> {
-        let comment = comment.trim();
+    pub fn support_tier(&self) -> TemplateLanguageSupportTier {
+        match self {
+            Self::Rhai => TemplateLanguageSupportTier::TierTwo,
+            Self::Tera => TemplateLanguageSupportTier::TierTwo,
+        }
+    }
+
+    pub fn can_execute(&self) -> bool {
+        let tier = self.support_tier();
+
+        if tier.can_execute_without_env_var() {
+            return true;
+        }
+
+        TEMPLATING_ENVVAR.contains(&self.to_string())
+    }
+
+    pub fn from_pragma(pragma: &str) -> Option<Self> {
+        let comment = pragma.trim();
 
         if comment.starts_with("//lang:") {
             let lang = comment.split(':').nth(1)?;
@@ -57,7 +109,7 @@ pub async fn compile_template(
         None => (template, ""),
     };
 
-    let Some(lang) = TemplateLanguage::from_comment(first_line) else {
+    let Some(lang) = TemplateLanguage::from_pragma(first_line) else {
         return Err("No/unknown template language specified".into());
     };
 
@@ -86,7 +138,7 @@ pub async fn render_message_template(
         None => (template, ""),
     };
 
-    let Some(lang) = TemplateLanguage::from_comment(first_line) else {
+    let Some(lang) = TemplateLanguage::from_pragma(first_line) else {
         return Err("No/unknown template language specified".into());
     };
 
@@ -122,7 +174,7 @@ pub async fn render_permissions_template(
         None => (template, ""),
     };
 
-    let Some(lang) = TemplateLanguage::from_comment(first_line) else {
+    let Some(lang) = TemplateLanguage::from_pragma(first_line) else {
         return PermissionResult::GenericError {
             error: "No/unknown template language specified".into(),
         };

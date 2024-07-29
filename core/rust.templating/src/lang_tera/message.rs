@@ -323,6 +323,10 @@ impl ExecutedTemplate {
 
         let mut embeds = Vec::new();
         for template_embed in self.embeds {
+            if embeds.len() >= embed_limits::EMBED_MAX_COUNT {
+                break;
+            }
+
             let mut set = false; // Is something set on the embed?
             let mut embed = serenity::all::CreateEmbed::default();
 
