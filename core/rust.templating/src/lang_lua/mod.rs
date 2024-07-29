@@ -269,4 +269,41 @@ mod test {
 
         assert_eq!(res, 3);
     }
+
+    #[cfg(feature = "experiment_lua_worker")]
+    #[tokio::test]
+    async fn lua_workers_test() {
+        let mut workers = Vec::new();
+
+        for i in 0..100000 {
+            println!("{}", i);
+
+            let lua = Lua::new();
+            lua.sandbox(true).unwrap();
+            lua.set_memory_limit(super::MAX_TEMPLATE_MEMORY_USAGE)
+                .unwrap();
+            lua.globals().set("require", LuaValue::Nil).unwrap();
+
+            let map_table = lua.create_table().unwrap();
+            map_table.set(1, "one").unwrap();
+            map_table.set("two", 2).unwrap();
+
+            lua.globals().set("map_table", map_table).unwrap();
+
+            let worker = super::utils::LuaWorker::new(lua);
+
+            workers.push(worker);
+
+            // Test the worker
+            let worker = workers.last().unwrap();
+            worker
+                .tx_msg_recv
+                .send(super::utils::LuaWorkerRequest {
+                    template: "for k,v in pairs(map_table) do end".to_string(),
+                    args: Default::default(),
+                })
+                .await
+                .unwrap();
+        }
+    }
 }
