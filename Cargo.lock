@@ -4288,6 +4288,7 @@ dependencies = [
  "gwevent",
  "indexmap",
  "kittycat",
+ "log",
  "mini-moka",
  "mlua",
  "moka",

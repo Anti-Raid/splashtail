@@ -757,8 +757,10 @@ pub async fn commands_modperms(
 
                 match perms {
                     Ok(perms) => {
-                        let parsed =
-                            crate::silverpelt::validators::parse_permission_checks(&perms).await?;
+                        let parsed = crate::silverpelt::validators::parse_permission_checks(
+                            guild_id, &perms,
+                        )
+                        .await?;
 
                         let perm_res = crate::silverpelt::cmd::check_command(
                             base_command,

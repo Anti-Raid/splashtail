@@ -357,6 +357,7 @@ async fn _validate_value(
                                 InnerColumnTypeStringKind::Textarea => v,
                                 InnerColumnTypeStringKind::Template { .. } => {
                                     let compiled = templating::compile_template(
+                                        guild_id,
                                         s,
                                         templating::CompileTemplateOptions {
                                             cache_result: false, // Don't uselessly cache the template to decrease memory footprint

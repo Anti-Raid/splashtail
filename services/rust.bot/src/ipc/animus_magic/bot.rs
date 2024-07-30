@@ -145,7 +145,10 @@ pub enum BotAnimusMessage {
     /// - The bots highest role
     BaseGuildUserInfo { guild_id: GuildId, user_id: UserId },
     /// Verify/parse a set of permission checks returning the parsed checks
-    ParsePermissionChecks { checks: PermissionChecks },
+    ParsePermissionChecks {
+        guild_id: GuildId,
+        checks: PermissionChecks,
+    },
     /// Given a guild id, a user id and a command name, check if the user has permission to run the command
     CheckCommandPermission {
         guild_id: GuildId,
@@ -533,9 +536,9 @@ impl BotAnimusMessage {
                     }
                 }
             }
-            Self::ParsePermissionChecks { checks } => {
+            Self::ParsePermissionChecks { guild_id, checks } => {
                 let parsed_checks =
-                    modules::silverpelt::validators::parse_permission_checks(&checks)
+                    modules::silverpelt::validators::parse_permission_checks(guild_id, &checks)
                         .await
                         .map_err(|e| format!("Failed to parse permission checks: {:#?}", e))?;
 

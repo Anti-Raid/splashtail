@@ -172,6 +172,7 @@ pub async fn dispatch_audit_log(
         };
 
         let discord_reply = match templating::render_message_template(
+            guild_id,
             &template,
             templating::core::MessageTemplateContext {
                 event_titlename: event_titlename.to_string(),

@@ -81,7 +81,8 @@ type BotAnimusMessage struct {
 		Options map[string]any `json:"options,omitempty"`
 	} `json:"ExecutePerModuleFunction,omitempty"`
 	ParsePermissionChecks *struct {
-		Checks *silverpelt.PermissionChecks `json:"checks"`
+		GuildID string                       `json:"guild_id"`
+		Checks  *silverpelt.PermissionChecks `json:"checks"`
 	} `json:"ParsePermissionChecks,omitempty"`
 	SettingsOperation *struct {
 		Fields  orderedmap.OrderedMap[string, any] `json:"fields"`

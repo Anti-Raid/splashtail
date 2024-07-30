@@ -1,11 +1,8 @@
-use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
-use std::sync::Arc;
+use std::sync::atomic::{AtomicUsize, Ordering};
 use std::time::{Duration, Instant};
 
 #[cfg(feature = "experiment_lua_worker")]
 use mlua::prelude::*;
-#[cfg(feature = "experiment_lua_worker")]
-use tokio::sync::Mutex;
 #[cfg(feature = "experiment_lua_worker")]
 use std::rc::Rc;
 
@@ -65,7 +62,7 @@ impl LuaWorkerManager {
 
     /// Spawn all workers
     /// 
-    /// NOTE: Calling this is required to prevent a deadlock at this time
+    /// NOTE: Calling mat prevent deadlocks
     pub fn spawn_all(&self) {
         for i in 0..self.max_workers {
             self.spawn_worker(i);
@@ -246,7 +243,20 @@ impl Drop for LuaWorker {
 
 #[cfg(feature = "experiment_lua_worker")]
 impl LuaWorker {
-    // Executes a Lua script in the Lua VM
+    /// Compiles a Lua script in the Lua VM 
+    pub async fn compile(
+        vm: &Lua,
+        template: &str,
+    ) -> Result<(), base_data::Error> {
+        let f: LuaFunction = vm
+            .load(template)
+            .eval_async()
+            .await
+            .map_err(|e| LuaError::external(e.to_string()))?;
+
+        Ok(())
+    }
+    /// Executes a Lua script in the Lua VM
     pub async fn exec(
         vm: &Lua,
         template: &str,
@@ -281,7 +291,7 @@ impl LuaWorker {
     }
 
     pub fn spawn(&mut self) {
-        println!("Spawning LuaWorker");
+        log::debug!("Spawning LuaWorker");
 
         let stopper = self.stopper.rx.clone();
         let request_queue = self.request_queue.rx.clone();
@@ -357,6 +367,30 @@ impl LuaWorker {
                                                 let _ = msg.responder.send(LuaWorkerResponse::Err(e.to_string()));
                                             }
                                         }
+                                    },
+                                    LuaWorkerRequest::Compile { guild_id, template } => {
+                                        let vm = match handling_guilds.get(guild_id).await {
+                                            Some(vm) => vm.clone(),
+                                            None => {
+                                                let vm = match super::create_lua_vm_nonsend().await {
+                                                    Ok(vm) => vm,
+                                                    Err(e) => {
+                                                        let _ = msg.responder.send(LuaWorkerResponse::Err(e.to_string()));
+                                                        return;
+                                                    }
+                                                };
+                                                handling_guilds.insert(guild_id, vm).await
+                                            },
+                                        };
+
+                                        match Self::compile(&vm.vm, &template).await {
+                                            Ok(()) => {
+                                                let _ = msg.responder.send(LuaWorkerResponse::Ok(serde_json::Value::Null)); // No need to send anything
+                                            },
+                                            Err(e) => {
+                                                let _ = msg.responder.send(LuaWorkerResponse::Err(e.to_string()));
+                                            }
+                                        }
                                     } 
                                 };
                             });
@@ -379,6 +413,11 @@ struct LuaWorkerFullRequest {
 
 #[cfg(feature = "experiment_lua_worker")]
 pub enum LuaWorkerRequest {
+    /// Compiles a Lua template
+    Compile {
+        guild_id: serenity::all::GuildId,
+        template: String,
+    },
     /// Execute a Lua template
     Template {
         guild_id: serenity::all::GuildId,
@@ -387,9 +426,4 @@ pub enum LuaWorkerRequest {
     }
 }
 
-#[cfg(feature = "experiment_lua_worker")]
-#[derive(Debug)]
-pub enum LuaWorkerResponse {
-    Ok(serde_json::Value),
-    Err(String),
-}
+pub type LuaWorkerResponse = Result<serde_json::Value, String>;

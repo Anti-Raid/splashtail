@@ -709,8 +709,10 @@ pub async fn modules_modperms(
 
                 match perms {
                     Ok(perms) => {
-                        let parsed =
-                            crate::silverpelt::validators::parse_permission_checks(&perms).await?;
+                        let parsed = crate::silverpelt::validators::parse_permission_checks(
+                            guild_id, &perms,
+                        )
+                        .await?;
 
                         let perm_res = crate::silverpelt::cmd::check_command(
                             &format!("acl__{}_defaultperms_check", module.id),

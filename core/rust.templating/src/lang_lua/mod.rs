@@ -2,17 +2,23 @@ pub mod plugins;
 mod utils; // Private utils like AtomicInstant
 
 use mlua::prelude::*;
-use moka::future::Cache;
 use once_cell::sync::Lazy;
 use serenity::all::GuildId;
 use std::sync::Arc;
-use tokio::sync::Mutex;
 
 #[cfg(feature = "experiment_lua_worker")]
 use std::rc::Rc;
 
+#[cfg(not(feature = "experiment_lua_worker"))]
 static VMS: Lazy<Cache<GuildId, ArLua>> =
     Lazy::new(|| Cache::builder().time_to_idle(MAX_TEMPLATE_LIFETIME).build());
+
+#[cfg(feature = "experiment_lua_worker")]
+static WORKER_MANAGER: Lazy<utils::LuaWorkerManager> = Lazy::new(|| {
+    let manager = utils::LuaWorkerManager::new(100);
+    manager.spawn_all();
+    manager
+}); // 100 workers max
 
 pub const MAX_TEMPLATE_MEMORY_USAGE: usize = 1024 * 1024 * 3; // 3MB maximum memory
 pub const MAX_TEMPLATE_LIFETIME: std::time::Duration = std::time::Duration::from_secs(60 * 5); // 5 minutes maximum lifetime
@@ -23,6 +29,7 @@ pub struct ArLuaExecutionState {
     pub last_exec: utils::AtomicInstant,
 }
 
+#[cfg(not(feature = "experiment_lua_worker"))]
 #[derive(Clone)]
 pub struct ArLua {
     /// The Lua VM
@@ -45,9 +52,11 @@ pub struct ArLuaNonSend {
     /// A tokio Mutex is used here because the Lua VM is used in async contexts across await points
     pub vm: Rc<Lua>,
     /// The execution state of the Lua VM
+    #[allow(dead_code)] // it isnt actually dead code
     pub state: Arc<ArLuaExecutionState>,
 }
 
+#[cfg(not(feature = "experiment_lua_worker"))]
 /// Create a new Lua VM complete with sandboxing and modules pre-loaded
 ///
 /// Note that callers should instead call the render_message_template/render_permissions_template functions
@@ -161,6 +170,7 @@ async fn create_lua_vm_nonsend() -> LuaResult<ArLuaNonSend> {
     Ok(ar_lua)
 }
 
+#[cfg(not(feature = "experiment_lua_worker"))]
 /// Get a Lua VM for a guild
 ///
 /// This function will either return an existing Lua VM for the guild or create a new one if it does not exist
@@ -175,32 +185,144 @@ async fn get_lua_vm(guild_id: GuildId) -> LuaResult<ArLua> {
     }
 }
 
+/// Compiles a template
+pub async fn compile_template(guild_id: serenity::all::GuildId, template: &str) -> LuaResult<()> {
+    #[cfg(not(feature = "experiment_lua_worker"))]
+    {
+        let lua = get_lua_vm(guild_id).await?;
+
+        // Acquire a lock to the Lua VM
+        let vm = lua.vm.lock().await;
+        let f: LuaFunction = vm.load(template).eval_async().await?;
+        drop(f); // Drop the function
+        drop(vm); // Drop the lock
+
+        Ok(())
+    }
+
+    #[cfg(feature = "experiment_lua_worker")]
+    {
+        // Send to worker
+        WORKER_MANAGER
+            .make_request(
+                guild_id,
+                utils::LuaWorkerRequest::Compile {
+                    guild_id,
+                    template: template.to_string(),
+                },
+            )
+            .await
+            .map_err(|e| LuaError::external(format!("Error making request: {:?}", e)))?
+            .map_err(|e| LuaError::external(format!("Lua error: {:?}", e)))?;
+
+        Ok(())
+    }
+}
+
 /// Render a message template
 pub async fn render_message_template(
     guild_id: GuildId,
     template: &str,
     args: crate::core::MessageTemplateContext,
 ) -> LuaResult<plugins::message::Message> {
-    let lua = get_lua_vm(guild_id).await?;
+    #[cfg(not(feature = "experiment_lua_worker"))]
+    {
+        let lua = get_lua_vm(guild_id).await?;
 
-    // Acquire a lock to the Lua VM
-    let vm = lua.vm.lock().await;
-    let f: LuaFunction = vm.load(template).eval_async().await?;
+        // Acquire a lock to the Lua VM
+        let vm = lua.vm.lock().await;
+        let f: LuaFunction = vm.load(template).eval_async().await?;
 
-    let _args = vm.create_table()?;
-    let args = vm.to_value(&args)?;
-    _args.set("args", args)?;
+        let _args = vm.create_table()?;
+        let args = vm.to_value(&args)?;
+        _args.set("args", args)?;
 
-    let v: LuaValue = f.call_async(_args).await?;
+        let v: LuaValue = f.call_async(_args).await?;
 
-    let json_v = serde_json::to_value(v).map_err(|e| LuaError::external(e.to_string()))?;
-    let v: plugins::message::Message =
-        serde_json::from_value(json_v).map_err(|e| LuaError::external(e.to_string()))?;
+        let json_v = serde_json::to_value(v).map_err(|e| LuaError::external(e.to_string()))?;
+        let v: plugins::message::Message =
+            serde_json::from_value(json_v).map_err(|e| LuaError::external(e.to_string()))?;
 
-    drop(f); // Drop the function
-    drop(vm); // Drop the lock
+        drop(f); // Drop the function
+        drop(vm); // Drop the lock
 
-    Ok(v)
+        Ok(v)
+    }
+
+    #[cfg(feature = "experiment_lua_worker")]
+    {
+        // Send to worker
+        let resp = WORKER_MANAGER
+            .make_request(
+                guild_id,
+                utils::LuaWorkerRequest::Template {
+                    guild_id,
+                    template: template.to_string(),
+                    args: Box::new(args),
+                },
+            )
+            .await
+            .map_err(|e| LuaError::external(format!("Error making request: {:?}", e)))?
+            .map_err(|e| LuaError::external(format!("Lua error: {:?}", e)))?;
+
+        let v: plugins::message::Message =
+            serde_json::from_value(resp).map_err(|e| LuaError::external(e.to_string()))?;
+
+        Ok(v)
+    }
+}
+
+/// Render a message template
+pub async fn render_permissions_template(
+    guild_id: GuildId,
+    template: &str,
+    args: crate::core::PermissionTemplateContext,
+) -> LuaResult<splashcore_rs::types::silverpelt::PermissionResult> {
+    #[cfg(not(feature = "experiment_lua_worker"))]
+    {
+        let lua = get_lua_vm(guild_id).await?;
+
+        // Acquire a lock to the Lua VM
+        let vm = lua.vm.lock().await;
+        let f: LuaFunction = vm.load(template).eval_async().await?;
+
+        let _args = vm.create_table()?;
+        let args = vm.to_value(&args)?;
+        _args.set("args", args)?;
+
+        let v: LuaValue = f.call_async(_args).await?;
+
+        let json_v = serde_json::to_value(v).map_err(|e| LuaError::external(e.to_string()))?;
+        let v: splashcore_rs::types::silverpelt::PermissionResult =
+            serde_json::from_value(json_v).map_err(|e| LuaError::external(e.to_string()))?;
+
+        drop(f); // Drop the function
+        drop(vm); // Drop the lock
+
+        Ok(v)
+    }
+
+    #[cfg(feature = "experiment_lua_worker")]
+    {
+        // Send to worker
+        let resp = WORKER_MANAGER
+            .make_request(
+                guild_id,
+                utils::LuaWorkerRequest::Template {
+                    guild_id,
+                    template: template.to_string(),
+                    args: Box::new(args),
+                },
+            )
+            .await
+            .map_err(|e| LuaError::external(format!("Error making request: {:?}", e)))?
+            .map_err(|e| LuaError::external(format!("Lua error: {:?}", e)))?;
+
+        let v: splashcore_rs::types::silverpelt::PermissionResult =
+            serde_json::from_value(resp).map_err(|e| LuaError::external(e.to_string()))?;
+
+        Ok(v)
+    }
 }
 
 #[cfg(test)]
@@ -376,6 +498,7 @@ end
                     },
                 )
                 .await
+                .unwrap()
                 .unwrap();
 
             //println!("{:?}", resp);
@@ -394,7 +517,7 @@ end
             tasks.push(tokio::task::spawn(async move {
                 println!("{}", i);
                 let workman = workman.clone();
-                workman
+                let _ = workman
                     .make_request(
                         serenity::all::GuildId::new(i as u64),
                         super::utils::LuaWorkerRequest::Template {
@@ -436,7 +559,7 @@ end
             tasks.push(tokio::task::spawn(async move {
                 println!("{}", i);
                 let workman = workman.clone();
-                workman
+                let _ = workman
                     .make_request(
                         serenity::all::GuildId::new(1),
                         super::utils::LuaWorkerRequest::Template {

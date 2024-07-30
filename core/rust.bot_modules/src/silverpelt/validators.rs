@@ -5,6 +5,7 @@ const MAX_NATIVE_PERMS: usize = 10;
 
 // Parses a user-inputted PermissionChecks object into a parsed PermissionChecks object.
 pub async fn parse_permission_checks(
+    guild_id: serenity::all::GuildId,
     pc: &super::PermissionChecks,
 ) -> Result<super::PermissionChecks, crate::Error> {
     match pc {
@@ -70,6 +71,7 @@ pub async fn parse_permission_checks(
         }
         super::PermissionChecks::Template { template } => {
             templating::compile_template(
+                guild_id,
                 template,
                 templating::CompileTemplateOptions {
                     cache_result: false,

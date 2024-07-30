@@ -72,6 +72,7 @@ async fn template_permission_checks(
     ctx: PermissionChecksContext,
 ) -> PermissionResult {
     templating::render_permissions_template(
+        ctx.guild_id,
         template,
         templating::core::PermissionTemplateContext {
             member_native_permissions: member_native_perms,

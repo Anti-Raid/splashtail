@@ -11,14 +11,16 @@ import (
 )
 
 // ParsePermissionChecks verifies permission checks. This currently needs an animus magic call
-func ParsePermissionChecks(ctx context.Context, c *animusmagic.AnimusMagicClient, redis rueidis.Client, clusterId uint16, permChecks *silverpelt.PermissionChecks) (*silverpelt.PermissionChecks, error) {
+func ParsePermissionChecks(ctx context.Context, c *animusmagic.AnimusMagicClient, redis rueidis.Client, clusterId uint16, guildId string, permChecks *silverpelt.PermissionChecks) (*silverpelt.PermissionChecks, error) {
 	mlr, err := c.Request(
 		ctx,
 		redis,
 		animusmagic_messages.BotAnimusMessage{
 			ParsePermissionChecks: &struct {
+				GuildID string `json:"guild_id"`
 				Checks *silverpelt.PermissionChecks `json:"checks"`
 			}{
+				GuildID: guildId,
 				Checks: permChecks,
 			},
 		},

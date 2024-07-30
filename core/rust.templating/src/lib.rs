@@ -41,6 +41,7 @@ impl TemplateLanguageSupportTier {
 }
 
 pub enum TemplateLanguage {
+    Lua,
     Rhai,
     Tera,
 }
@@ -50,6 +51,7 @@ impl FromStr for TemplateLanguage {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
+            "lang_lua" => Ok(Self::Lua),
             "lang_rhai" => Ok(Self::Rhai),
             "lang_tera" => Ok(Self::Tera),
             _ => Err(()),
@@ -60,6 +62,7 @@ impl FromStr for TemplateLanguage {
 impl std::fmt::Display for TemplateLanguage {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
+            Self::Lua => write!(f, "lang_lua"),
             Self::Rhai => write!(f, "lang_rhai"),
             Self::Tera => write!(f, "lang_tera"),
         }
@@ -69,6 +72,7 @@ impl std::fmt::Display for TemplateLanguage {
 impl TemplateLanguage {
     pub fn support_tier(&self) -> TemplateLanguageSupportTier {
         match self {
+            Self::Lua => TemplateLanguageSupportTier::TierTwo, // Untested but could become TierOne
             Self::Rhai => TemplateLanguageSupportTier::TierTwo,
             Self::Tera => TemplateLanguageSupportTier::TierTwo,
         }
@@ -101,6 +105,7 @@ impl TemplateLanguage {
 }
 
 pub async fn compile_template(
+    guild_id: serenity::all::GuildId,
     template: &str,
     opts: CompileTemplateOptions,
 ) -> Result<(), base_data::Error> {
@@ -114,6 +119,9 @@ pub async fn compile_template(
     };
 
     match lang {
+        TemplateLanguage::Lua => {
+            lang_lua::compile_template(guild_id, rest).await?;
+        }
         TemplateLanguage::Rhai => {
             let mut engine = lang_rhai::create_engine();
             lang_rhai::apply_sandboxing(&mut engine);
@@ -129,6 +137,7 @@ pub async fn compile_template(
 
 /// Renders a message template
 pub async fn render_message_template(
+    guild_id: serenity::all::GuildId,
     template: &str,
     args: crate::core::MessageTemplateContext,
     opts: CompileTemplateOptions,
@@ -143,6 +152,11 @@ pub async fn render_message_template(
     };
 
     match lang {
+        TemplateLanguage::Lua => {
+            let msg_exec_template =
+                lang_lua::render_message_template(guild_id, template, args).await?;
+            lang_lua::plugins::message::to_discord_reply(msg_exec_template)
+        }
         TemplateLanguage::Rhai => {
             let mut engine = lang_rhai::create_engine();
             lang_rhai::apply_sandboxing(&mut engine);
@@ -165,6 +179,7 @@ pub async fn render_message_template(
 
 /// Renders a permissions template
 pub async fn render_permissions_template(
+    guild_id: serenity::all::GuildId,
     template: &str,
     pctx: crate::core::PermissionTemplateContext,
     opts: CompileTemplateOptions,
@@ -181,6 +196,14 @@ pub async fn render_permissions_template(
     };
 
     match lang {
+        TemplateLanguage::Lua => {
+            match lang_lua::render_permissions_template(guild_id, template, pctx).await {
+                Ok(result) => result,
+                Err(e) => PermissionResult::GenericError {
+                    error: format!("Failed to render: {:?}", e),
+                },
+            }
+        }
         TemplateLanguage::Rhai => {
             let mut engine = lang_rhai::create_engine();
             lang_rhai::apply_sandboxing(&mut engine);

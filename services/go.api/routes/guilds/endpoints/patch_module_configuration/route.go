@@ -285,7 +285,7 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 			updateCols = append(updateCols, "default_perms")
 			updateArgs = append(updateArgs, nil)
 		} else {
-			parsedValue, err := webutils.ParsePermissionChecks(d.Context, state.AnimusMagicClient, state.Rueidis, uint16(clusterId), value)
+			parsedValue, err := webutils.ParsePermissionChecks(d.Context, state.AnimusMagicClient, state.Rueidis, uint16(clusterId), guildId, value)
 
 			if err != nil {
 				return uapi.HttpResponse{
