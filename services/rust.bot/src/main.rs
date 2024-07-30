@@ -499,7 +499,7 @@ async fn main() {
                 record.args()
             )
         })
-        .parse_filters("serenity=error,fred=error,bot=info,modules=info")
+        .parse_filters("serenity=error,fred=error,bot=info,modules=info,templating=debug")
         .filter(None, log::LevelFilter::Info);
 
     // Set custom log levels

@@ -23,7 +23,7 @@ gwevent = { path = "../rust.gwevent" }
 rhai = { version = "1.19.0", features = ["std", "serde", "no_closure", "sync"] }
 quickjs_runtime = { git="https://github.com/HiRoFa/quickjs_es_runtime", features=["setimmediate", "setinterval", "settimeout", "quickjs-ng"], default-features=false } # TODO: Add typescript
 v8 = { version = "0.100", features = [] }
-mlua = { version = "0.9", features = ["async", "luau", "send", "serialize", "macros"] }
+mlua = { version = "0.9", features = ["async", "luau", "serialize", "macros"] }
 rayon = "1.10"
 
 # QuickJS + Rhai Increase Stack

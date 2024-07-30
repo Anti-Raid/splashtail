@@ -134,8 +134,10 @@ pub fn init_plugin(lua: &Lua) -> LuaResult<LuaTable> {
         lua.create_function(|_, ()| {
             let message = Message::default();
 
-            serde_json::to_string(&message)
-                .map_err(|e| LuaError::external(format!("Failed to serialize message: {}", e)))
+            Ok(match serde_json::to_string(&message) {
+                Ok(s) => super::core::ArLuaResult(Ok(s)),
+                Err(e) => super::core::ArLuaResult(Err(e.to_string())),
+            })
         })?,
     )?;
     module.set(
@@ -143,8 +145,9 @@ pub fn init_plugin(lua: &Lua) -> LuaResult<LuaTable> {
         lua.create_function(|_, ()| {
             let embed = MessageEmbed::default();
 
-            serde_json::to_string(&embed).map_err(|e| {
-                LuaError::external(format!("Failed to serialize message embed: {}", e))
+            Ok(match serde_json::to_string(&embed) {
+                Ok(s) => super::core::ArLuaResult(Ok(s)),
+                Err(e) => super::core::ArLuaResult(Err(e.to_string())),
             })
         })?,
     )?;
@@ -154,8 +157,9 @@ pub fn init_plugin(lua: &Lua) -> LuaResult<LuaTable> {
         lua.create_function(|_, ()| {
             let field = MessageEmbedField::default();
 
-            serde_json::to_string(&field).map_err(|e| {
-                LuaError::external(format!("Failed to serialize message embed field: {}", e))
+            Ok(match serde_json::to_string(&field) {
+                Ok(s) => super::core::ArLuaResult(Ok(s)),
+                Err(e) => super::core::ArLuaResult(Err(e.to_string())),
             })
         })?,
     )?;
@@ -164,13 +168,20 @@ pub fn init_plugin(lua: &Lua) -> LuaResult<LuaTable> {
         "format_gwevent_field",
         lua.create_function(|lua, (field,): (LuaValue,)| {
             // Cast it to a normal field
-            let field: Field = lua
-                .from_value(field)
-                .map_err(|e| LuaError::external(format!("Failed to cast field: {}", e)))?;
+            let field = match lua.from_value::<Field>(field) {
+                Ok(f) => f,
+                Err(e) => {
+                    return Ok(super::core::ArLuaResult(Err(format!(
+                        "Failed to cast field: {}",
+                        e
+                    ))));
+                }
+            };
 
-            field
-                .template_format()
-                .map_err(|e| LuaError::external(format!("Failed to format field: {}", e)))
+            Ok(match field.template_format() {
+                Ok(s) => super::core::ArLuaResult(Ok(s)),
+                Err(e) => super::core::ArLuaResult(Err(e.to_string())),
+            })
         })?,
     )?;
 
@@ -178,12 +189,19 @@ pub fn init_plugin(lua: &Lua) -> LuaResult<LuaTable> {
         "format_gwevent_categorized_field",
         lua.create_function(|lua, (field,): (LuaValue,)| {
             // Cast it to a normal field
-            let cat_field: CategorizedField = lua
-                .from_value(field)
-                .map_err(|e| LuaError::external(format!("Failed to cast field: {}", e)))?;
+            let cat_field = match lua.from_value::<CategorizedField>(field) {
+                Ok(f) => f,
+                Err(e) => {
+                    return Ok(super::core::ArLuaResult(Err(format!(
+                        "Failed to cast field: {}",
+                        e
+                    ))));
+                }
+            };
 
-            cat_field.template_format().map_err(|e| {
-                LuaError::external(format!("Failed to format categorized field: {}", e))
+            Ok(match cat_field.template_format() {
+                Ok(s) => super::core::ArLuaResult(Ok(s)),
+                Err(e) => super::core::ArLuaResult(Err(e.to_string())),
             })
         })?,
     )?;

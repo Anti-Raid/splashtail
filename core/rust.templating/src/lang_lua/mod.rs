@@ -6,6 +6,12 @@ use once_cell::sync::Lazy;
 use serenity::all::GuildId;
 use std::sync::Arc;
 
+#[cfg(not(feature = "experiment_lua_worker"))]
+use tokio::sync::Mutex;
+
+#[cfg(not(feature = "experiment_lua_worker"))]
+use moka::future::Cache;
+
 #[cfg(feature = "experiment_lua_worker")]
 use std::rc::Rc;
 
@@ -15,7 +21,7 @@ static VMS: Lazy<Cache<GuildId, ArLua>> =
 
 #[cfg(feature = "experiment_lua_worker")]
 static WORKER_MANAGER: Lazy<utils::LuaWorkerManager> = Lazy::new(|| {
-    let manager = utils::LuaWorkerManager::new(100);
+    let manager = utils::LuaWorkerManager::new(1);
     manager.spawn_all();
     manager
 }); // 100 workers max
@@ -96,7 +102,8 @@ async fn create_lua_vm() -> LuaResult<ArLua> {
     let state_interrupt_ref = state.clone();
 
     // Create an interrupt to limit the execution time of a template
-    lua.set_interrupt(move |_| {
+    // TODO: Fix this to not error once underlying mlua bug is fixed
+    /*lua.set_interrupt(move |_| {
         if state_interrupt_ref
             .last_exec
             .load(utils::DEFAULT_ORDERING)
@@ -106,7 +113,7 @@ async fn create_lua_vm() -> LuaResult<ArLua> {
             return Ok(LuaVmState::Yield);
         }
         Ok(LuaVmState::Continue)
-    });
+    });*/
 
     let ar_lua = ArLua {
         vm: Arc::new(Mutex::new(lua)),

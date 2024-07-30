@@ -167,23 +167,28 @@ impl<K: core::hash::Hash + std::cmp::Eq + std::clone::Clone, V> ThreadLocalCache
         let now = Instant::now();
         let entry = self.cache.get(&key);
 
-        match entry {
-            Some(entry) => {
-                if now.duration_since(entry.last_access) > self.time_to_idle {
-                    self.cache.remove(&key);
-                    None
+        let (new_entry, remove) = match entry {
+            Some(ref entry) => {
+                if now.duration_since(entry.value().last_access) > self.time_to_idle {
+                    (None, true)
                 } else {
-                    let value = entry.value.clone();
-                    let new_entry = ThreadLocalCacheEntry {
+                    let entry = entry.value();
+                    (Some(ThreadLocalCacheEntry {
                         value: entry.value.clone(),
                         last_access: now,
-                    };
-                    self.cache.insert(key, new_entry);
-                    Some(value)
+                    }), false)
                 }
             }
-            None => None,
+            None => (None, false),
+        };
+
+        drop(entry); // Avoid deadlock in dashmap.get
+
+        if remove {
+            self.cache.remove(&key);
         }
+
+        new_entry.map(|e| e.value)
     }
 
     pub async fn insert(&self, key: K, value: V) -> Rc<V> {
@@ -245,6 +250,7 @@ pub struct LuaWorker {
 impl Drop for LuaWorker {
     fn drop(&mut self) {
         self.stopper.tx.try_send(()).unwrap();
+        log::info!("Dropping LuaWorker");
     }
 }
 
@@ -273,6 +279,8 @@ impl LuaWorker {
             .eval_async()
             .await?;
 
+        log::info!("exec (done creating function f)");
+
         let args = vm
             .to_value(&args)?;
 
@@ -298,7 +306,7 @@ impl LuaWorker {
 
         let stopper = self.stopper.rx.clone();
         let request_queue = self.request_queue.rx.clone();
-        self.thread = Some(std::thread::spawn(move || {
+        self.thread = Some(std::thread::Builder::new().name("lua-worker".to_string()).spawn(move || {
             let rt = tokio::runtime::Builder::new_current_thread()
             .enable_all()
             .build()
@@ -333,7 +341,8 @@ impl LuaWorker {
                             break;
                         }
                         msg = request_queue.recv() => {
-                            let msg = match msg {
+                            log::info!("Received request");
+                            /*let msg = match msg {
                                 Ok(msg) => msg,
                                 Err(_) => {
                                     for task in current_tasks.iter() {
@@ -342,8 +351,11 @@ impl LuaWorker {
                                     stopper.close();
                                     break;
                                 },
-                            };
+                            };*/
+                            let msg = msg.unwrap();
                             let jh = tokio::task::spawn_local(async move {
+                                log::debug!("Executing request");
+
                                 let handling_guilds = handling_guilds.clone();
 
                                 match msg.request {
@@ -362,11 +374,15 @@ impl LuaWorker {
                                             },
                                         };
 
+                                        log::debug!("Executing template");
+
                                         match Self::exec(&vm.vm, &template, args).await {
                                             Ok(v) => {
+                                                log::debug!("Compiled template, returning to sender");
                                                 let _ = msg.responder.send(LuaWorkerResponse::Ok(v));
                                             },
                                             Err(e) => {
+                                                log::debug!("Compiled template, returning to sender");
                                                 let _ = msg.responder.send(LuaWorkerResponse::Err(e.to_string()));
                                             }
                                         }
@@ -388,9 +404,11 @@ impl LuaWorker {
 
                                         match Self::compile(&vm.vm, &template).await {
                                             Ok(()) => {
+                                                log::debug!("Compiled template, returning to sender");
                                                 let _ = msg.responder.send(LuaWorkerResponse::Ok(serde_json::Value::Null)); // No need to send anything
                                             },
                                             Err(e) => {
+                                                log::debug!("Compiled template, returning to sender");
                                                 let _ = msg.responder.send(LuaWorkerResponse::Err(e.to_string()));
                                             }
                                         }
@@ -404,7 +422,7 @@ impl LuaWorker {
             });
 
             rt.block_on(local_set);
-        }));
+        }).unwrap());
     }
 }
 
