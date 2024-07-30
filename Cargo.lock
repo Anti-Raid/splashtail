@@ -4283,6 +4283,8 @@ dependencies = [
  "async-channel",
  "base_data",
  "dashmap",
+ "erased-serde",
+ "futures",
  "gwevent",
  "indexmap",
  "kittycat",

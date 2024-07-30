@@ -13,6 +13,8 @@ mini-moka = { version = "0.10" }
 async-channel = "2"
 dashmap = { version = "5", features = ["serde", "inline", "rayon"] }
 indexmap = { version = "2", features = ["serde"] }
+erased-serde = "0.4"
+futures = "0.3"
 
 # Anti-Raid specific
 splashcore_rs = { path = "../rust.std" }

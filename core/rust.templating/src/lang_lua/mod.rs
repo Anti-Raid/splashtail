@@ -8,6 +8,9 @@ use serenity::all::GuildId;
 use std::sync::Arc;
 use tokio::sync::Mutex;
 
+#[cfg(feature = "experiment_lua_worker")]
+use std::rc::Rc;
+
 static VMS: Lazy<Cache<GuildId, ArLua>> =
     Lazy::new(|| Cache::builder().time_to_idle(MAX_TEMPLATE_LIFETIME).build());
 
@@ -40,7 +43,7 @@ pub struct ArLuaNonSend {
     /// This sadly needs to be a Mutex because mlua is not Sync yet but is Send
     ///
     /// A tokio Mutex is used here because the Lua VM is used in async contexts across await points
-    pub vm: Arc<Lua>,
+    pub vm: Rc<Lua>,
     /// The execution state of the Lua VM
     pub state: Arc<ArLuaExecutionState>,
 }
@@ -64,12 +67,13 @@ async fn create_lua_vm() -> LuaResult<ArLua> {
 
     // Create new __ar_modules table
     let ar_modules_table = lua.create_table()?;
-    ar_modules_table.set_readonly(true); // Block any attempt to modify this table
 
     for (module_name, module_fn) in plugins::lua_plugins() {
         let module_table = (module_fn)(&lua)?;
         ar_modules_table.set(module_name, module_table)?;
     }
+
+    ar_modules_table.set_readonly(true); // Block any attempt to modify this table
 
     lua.globals().set("__ar_modules", ar_modules_table)?;
 
@@ -120,12 +124,13 @@ async fn create_lua_vm_nonsend() -> LuaResult<ArLuaNonSend> {
 
     // Create new __ar_modules table
     let ar_modules_table = lua.create_table()?;
-    ar_modules_table.set_readonly(true); // Block any attempt to modify this table
 
     for (module_name, module_fn) in plugins::lua_plugins() {
         let module_table = (module_fn)(&lua)?;
         ar_modules_table.set(module_name, module_table)?;
     }
+
+    ar_modules_table.set_readonly(true); // Block any attempt to modify this table
 
     lua.globals().set("__ar_modules", ar_modules_table)?;
 
@@ -149,7 +154,7 @@ async fn create_lua_vm_nonsend() -> LuaResult<ArLuaNonSend> {
     });
 
     let ar_lua = ArLuaNonSend {
-        vm: Arc::new(lua),
+        vm: Rc::new(lua),
         state,
     };
 
@@ -342,37 +347,80 @@ mod test {
     #[cfg(feature = "experiment_lua_worker")]
     #[tokio::test]
     async fn lua_workers_test() {
-        let mut workers = Vec::new();
+        let workman = super::utils::LuaWorkerManager::new(100); // 100 workers max
+        workman.spawn_all();
 
         for i in 0..100000 {
-            println!("{}", i);
+            //println!("{}", i);
 
-            let lua = Lua::new();
-            lua.sandbox(true).unwrap();
-            lua.set_memory_limit(super::MAX_TEMPLATE_MEMORY_USAGE)
-                .unwrap();
-            lua.globals().set("require", LuaValue::Nil).unwrap();
-
-            let map_table = lua.create_table().unwrap();
-            map_table.set(1, "one").unwrap();
-            map_table.set("two", 2).unwrap();
-
-            lua.globals().set("map_table", map_table).unwrap();
-
-            let worker = super::utils::LuaWorker::new(lua);
-
-            workers.push(worker);
-
-            // Test the worker
-            let worker = workers.last().unwrap();
-            worker
-                .tx_msg_recv
-                .send(super::utils::LuaWorkerRequest {
-                    template: "for k,v in pairs(map_table) do end".to_string(),
-                    args: Default::default(),
-                })
+            workman
+                .make_request(
+                    serenity::all::GuildId::new(i as u64),
+                    super::utils::LuaWorkerRequest::Template {
+                        guild_id: serenity::all::GuildId::new(i as u64),
+                        template: r#"
+function(args)
+    for k, v in pairs(args.map_table) do
+        --print(k, v)
+    end
+    return args.map_table
+end
+                        "#
+                        .to_string(),
+                        args: Box::new(serde_json::json!({
+                            "map_table": {
+                                "1": "one",
+                                "two": 2
+                            }
+                        })),
+                    },
+                )
                 .await
                 .unwrap();
+
+            //println!("{:?}", resp);
         }
+    }
+
+    #[cfg(feature = "experiment_lua_worker")]
+    #[tokio::test]
+    async fn lua_workers_test_multitask() {
+        let workman = std::sync::Arc::new(super::utils::LuaWorkerManager::new(100)); // 100 workers max
+        workman.spawn_all();
+
+        let mut tasks = Vec::new();
+        for i in 0..100000 {
+            let workman = workman.clone();
+            tasks.push(tokio::task::spawn(async move {
+                println!("{}", i);
+                let workman = workman.clone();
+                workman
+                    .make_request(
+                        serenity::all::GuildId::new(i as u64),
+                        super::utils::LuaWorkerRequest::Template {
+                            guild_id: serenity::all::GuildId::new(i as u64),
+                            template: r#"
+                function(args)
+                    for k, v in pairs(args.map_table) do
+                        --print(k, v)
+                    end
+                    return args.map_table
+                end
+                                        "#
+                            .to_string(),
+                            args: Box::new(serde_json::json!({
+                                "map_table": {
+                                    "1": "one",
+                                    "two": 2
+                                }
+                            })),
+                        },
+                    )
+                    .await
+                    .unwrap();
+            }));
+        }
+
+        futures::future::join_all(tasks).await;
     }
 }

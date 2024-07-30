@@ -17,6 +17,7 @@ Lua is the recommended language for templating. Tera and Rhai are supported but 
 - The ``__stack`` table can be used to share data across templates safely *while the VM is running*. without affecting other templates. This is useful for sharing data between templates such as Audit Logs. **Note that Anti-Raid uses luau sandboxing meaning that `_G` is readonly.**
 - All Anti-Raid specific modules can be found in the ``__ar_modules`` table. This includes the ``messages`` and ``permissions`` modules.
 - The entrypoint of any Lua template is ``function(args)``. 
+- **Currently, only one template may run at any given time on a specific guild. Other executions will block/queue until the current execution is complete. Anti-Raid is looking into using Workers and/or WebAssembly to solve this**
 
 ## WIP/Potential Languages
 
