@@ -1,8 +1,8 @@
 //lang:lang_tera
-{{ embed_title(title=(event_titlename)) }}
+{{ embed_title(title=(args.event_titlename)) }}
 
 {% filter embed_description %}
-{% for key, value in event %}
+{% for key, value in args.fields %}
 **{{- key | replace(from="_", to=" ") | uppercase -}}**: {{- value|formatter__gwevent_field -}}
 {% endfor %}
 {% endfilter %}
