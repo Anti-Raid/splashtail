@@ -275,6 +275,9 @@ fn validate_config_opts() -> Result<(), Error> {
         let mut settings_statics = Vec::new();
 
         for line in settings_rs.lines() {
+            if line.starts_with("/*") {
+                continue;
+            }
             if line.contains("pub static") {
                 let variable_name = line
                     .split(' ')
