@@ -64,6 +64,8 @@ impl LuaWorkerManager {
     }
 
     /// Spawn all workers
+    /// 
+    /// NOTE: Calling this is required to prevent a deadlock at this time
     pub fn spawn_all(&self) {
         for i in 0..self.max_workers {
             self.spawn_worker(i);
