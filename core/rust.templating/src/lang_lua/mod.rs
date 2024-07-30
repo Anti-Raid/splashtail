@@ -386,7 +386,7 @@ end
     #[tokio::test]
     async fn lua_workers_test_multitask() {
         let workman = std::sync::Arc::new(super::utils::LuaWorkerManager::new(100)); // 100 workers max
-        workman.spawn_all();
+                                                                                     //workman.spawn_all();
 
         let mut tasks = Vec::new();
         for i in 0..100000 {
@@ -399,6 +399,48 @@ end
                         serenity::all::GuildId::new(i as u64),
                         super::utils::LuaWorkerRequest::Template {
                             guild_id: serenity::all::GuildId::new(i as u64),
+                            template: r#"
+                function(args)
+                    for k, v in pairs(args.map_table) do
+                        --print(k, v)
+                    end
+                    return args.map_table
+                end
+                                        "#
+                            .to_string(),
+                            args: Box::new(serde_json::json!({
+                                "map_table": {
+                                    "1": "one",
+                                    "two": 2
+                                }
+                            })),
+                        },
+                    )
+                    .await
+                    .unwrap();
+            }));
+        }
+
+        futures::future::join_all(tasks).await;
+    }
+
+    #[cfg(feature = "experiment_lua_worker")]
+    #[tokio::test]
+    async fn lua_workers_test_multitask_sameworker() {
+        let workman = std::sync::Arc::new(super::utils::LuaWorkerManager::new(2)); // 2 workers for sameworker test
+        workman.spawn_all();
+
+        let mut tasks = Vec::new();
+        for i in 0..100 {
+            let workman = workman.clone();
+            tasks.push(tokio::task::spawn(async move {
+                println!("{}", i);
+                let workman = workman.clone();
+                workman
+                    .make_request(
+                        serenity::all::GuildId::new(1),
+                        super::utils::LuaWorkerRequest::Template {
+                            guild_id: serenity::all::GuildId::new(1),
                             template: r#"
                 function(args)
                     for k, v in pairs(args.map_table) do

@@ -84,28 +84,42 @@ impl LuaWorkerManager {
     /// The thread number is calculated by the guild id modulo the number of workers
     pub async fn make_request(&self, guild_id: serenity::all::GuildId, request: LuaWorkerRequest) -> Result<LuaWorkerResponse, base_data::Error> {
         let tid = guild_id.get() % self.max_workers;
-        let worker = match self.workers.get(&tid) {
-            Some(worker) => worker,
+        match self.workers.get(&tid) {
+            Some(worker) => {
+                let (tx, rx) = tokio::sync::oneshot::channel();
+
+                let request = LuaWorkerFullRequest {
+                    responder: tx,
+                    request
+                };
+        
+                worker.request_queue.tx.send(request).await.unwrap();
+        
+                rx.await.map_err(|e| format!("Failed to receive response: {}", e).into())        
+            },
             None => {
                 self.spawn_worker(tid);
+
+                // Wait for 1 second to avoid deadlock
+                tokio::time::sleep(Duration::from_secs(1)).await;
                 
-                match self.workers.get(&tid) {
+                let worker = match self.workers.get(&tid) {
                     Some(worker) => worker,
                     None => return Err("Failed to spawn worker".into())
-                }
+                };
+
+                let (tx, rx) = tokio::sync::oneshot::channel();
+
+                let request = LuaWorkerFullRequest {
+                    responder: tx,
+                    request
+                };
+        
+                worker.request_queue.tx.send(request).await.unwrap();
+        
+                rx.await.map_err(|e| format!("Failed to receive response: {}", e).into())        
             }
-        };
-
-        let (tx, rx) = tokio::sync::oneshot::channel();
-
-        let request = LuaWorkerFullRequest {
-            responder: tx,
-            request
-        };
-
-        worker.request_queue.tx.send(request).await.unwrap();
-
-        rx.await.map_err(|e| format!("Failed to receive response: {}", e).into())
+        }
     }
 }
 
