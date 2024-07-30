@@ -1,8 +1,17 @@
-//lang:lang_tera
-{{ embed_title(title=(args.event_titlename)) }}
+//lang:lang_lua
 
-{% filter embed_description %}
-{% for key, value in args.fields %}
-**{{- key | replace(from="_", to=" ") | uppercase -}}**: {{- value|formatter__gwevent_field -}}
-{% endfor %}
-{% endfilter %}
+function(args) 
+    -- Make the embed
+    local embed = {
+        title = args.event_titlename,
+        description = "",
+        fields = {}
+    }
+
+    -- Add the fields to the description
+    for key, value in pairs(args.fields) do
+        embed.description = embed.description .. "**" .. key:gsub("_", " "):upper() .. "**: " .. __ar_modules.message.format_gwevent_categorized_field(value) .. "\n"
+    end
+
+    return embed
+end

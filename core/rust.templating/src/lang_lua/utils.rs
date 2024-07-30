@@ -83,6 +83,13 @@ impl LuaWorkerManager {
         let tid = guild_id.get() % self.max_workers;
         match self.workers.get(&tid) {
             Some(worker) => {
+                if let Some(ref thread) = worker.thread {
+                    if thread.is_finished() {
+                        self.spawn_worker(tid);
+                        tokio::time::sleep(Duration::from_secs(1)).await;
+                    }
+                }
+
                 let (tx, rx) = tokio::sync::oneshot::channel();
 
                 let request = LuaWorkerFullRequest {
@@ -248,11 +255,10 @@ impl LuaWorker {
         vm: &Lua,
         template: &str,
     ) -> Result<(), base_data::Error> {
-        let f: LuaFunction = vm
+        vm
             .load(template)
             .eval_async()
-            .await
-            .map_err(|e| LuaError::external(e.to_string()))?;
+            .await?;
 
         Ok(())
     }
@@ -265,19 +271,16 @@ impl LuaWorker {
         let f: LuaFunction = vm
             .load(template)
             .eval_async()
-            .await
-            .map_err(|e| LuaError::external(e.to_string()))?;
+            .await?;
 
         let args = vm
-            .to_value(&args)
-            .map_err(|e| LuaError::external(e.to_string()))?;
+            .to_value(&args)?;
 
         let v: LuaValue = f
             .call_async(args)
-            .await
-            .map_err(|e| LuaError::external(e.to_string()))?;
+            .await?;
 
-        let v = serde_json::to_value(v).map_err(|e| LuaError::external(e.to_string()))?;
+        let v = serde_json::to_value(v)?;
 
         Ok(v)
     }

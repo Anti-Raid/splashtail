@@ -7,7 +7,6 @@ resolver = "2"
 
 [profile.release]
 strip = true  # Automatically strip symbols from the binary.
-panic = "abort"  # Abort on panic. This is what we want for a bot.
 
 [profile.dev]
 opt-level = 1 # Optimize for faster compilation times.

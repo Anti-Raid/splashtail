@@ -111,7 +111,7 @@ pub async fn compile_template(
 ) -> Result<(), base_data::Error> {
     let (first_line, rest) = match template.find('\n') {
         Some(i) => template.split_at(i),
-        None => (template, ""),
+        None => return Err("No/unknown template language specified".into()),
     };
 
     let Some(lang) = TemplateLanguage::from_pragma(first_line) else {
@@ -144,7 +144,7 @@ pub async fn render_message_template(
 ) -> Result<core::DiscordReply, base_data::Error> {
     let (first_line, rest) = match template.find('\n') {
         Some(i) => template.split_at(i),
-        None => (template, ""),
+        None => return Err("No/unknown template language specified".into()),
     };
 
     let Some(lang) = TemplateLanguage::from_pragma(first_line) else {
@@ -153,8 +153,7 @@ pub async fn render_message_template(
 
     match lang {
         TemplateLanguage::Lua => {
-            let msg_exec_template =
-                lang_lua::render_message_template(guild_id, template, args).await?;
+            let msg_exec_template = lang_lua::render_message_template(guild_id, rest, args).await?;
             lang_lua::plugins::message::to_discord_reply(msg_exec_template)
         }
         TemplateLanguage::Rhai => {
@@ -186,7 +185,11 @@ pub async fn render_permissions_template(
 ) -> PermissionResult {
     let (first_line, rest) = match template.find('\n') {
         Some(i) => template.split_at(i),
-        None => (template, ""),
+        None => {
+            return PermissionResult::GenericError {
+                error: "No/unknown template language specified".into(),
+            }
+        }
     };
 
     let Some(lang) = TemplateLanguage::from_pragma(first_line) else {
@@ -197,7 +200,7 @@ pub async fn render_permissions_template(
 
     match lang {
         TemplateLanguage::Lua => {
-            match lang_lua::render_permissions_template(guild_id, template, pctx).await {
+            match lang_lua::render_permissions_template(guild_id, rest, pctx).await {
                 Ok(result) => result,
                 Err(e) => PermissionResult::GenericError {
                     error: format!("Failed to render: {:?}", e),

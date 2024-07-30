@@ -63,7 +63,10 @@ pub struct ArLuaNonSend {
 ///
 /// As such, this function is private and should not be used outside of this module
 async fn create_lua_vm() -> LuaResult<ArLua> {
-    let lua = Lua::new();
+    let lua = Lua::new_with(
+        LuaStdLib::ALL_SAFE,
+        LuaOptions::new().catch_rust_panics(true),
+    )?;
     lua.sandbox(true)?; // We explicitly want globals to be shared across all scripts in this VM
     lua.set_memory_limit(MAX_TEMPLATE_MEMORY_USAGE)?;
 
@@ -120,7 +123,10 @@ async fn create_lua_vm() -> LuaResult<ArLua> {
 ///
 /// As such, this function is private and should not be used outside of this module
 async fn create_lua_vm_nonsend() -> LuaResult<ArLuaNonSend> {
-    let lua = Lua::new();
+    let lua = Lua::new_with(
+        LuaStdLib::ALL_SAFE,
+        LuaOptions::new().catch_rust_panics(true),
+    )?;
     lua.sandbox(true)?; // We explicitly want globals to be shared across all scripts in this VM
     lua.set_memory_limit(MAX_TEMPLATE_MEMORY_USAGE)?;
 
