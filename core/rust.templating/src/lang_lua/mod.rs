@@ -2,29 +2,13 @@ pub mod plugins;
 mod utils; // Private utils like AtomicInstant
 
 use mlua::prelude::*;
+use moka::future::Cache;
 use once_cell::sync::Lazy;
 use serenity::all::GuildId;
 use std::sync::Arc;
 
-#[cfg(not(feature = "experiment_lua_worker"))]
-use tokio::sync::Mutex;
-
-#[cfg(not(feature = "experiment_lua_worker"))]
-use moka::future::Cache;
-
-#[cfg(feature = "experiment_lua_worker")]
-use std::rc::Rc;
-
-#[cfg(not(feature = "experiment_lua_worker"))]
 static VMS: Lazy<Cache<GuildId, ArLua>> =
     Lazy::new(|| Cache::builder().time_to_idle(MAX_TEMPLATE_LIFETIME).build());
-
-#[cfg(feature = "experiment_lua_worker")]
-static WORKER_MANAGER: Lazy<utils::LuaWorkerManager> = Lazy::new(|| {
-    let manager = utils::LuaWorkerManager::new(1);
-    manager.spawn_all();
-    manager
-}); // 100 workers max
 
 pub const MAX_TEMPLATE_MEMORY_USAGE: usize = 1024 * 1024 * 3; // 3MB maximum memory
 pub const MAX_TEMPLATE_LIFETIME: std::time::Duration = std::time::Duration::from_secs(60 * 5); // 5 minutes maximum lifetime
@@ -35,29 +19,14 @@ pub struct ArLuaExecutionState {
     pub last_exec: utils::AtomicInstant,
 }
 
-#[cfg(not(feature = "experiment_lua_worker"))]
 #[derive(Clone)]
 pub struct ArLua {
     /// The Lua VM
-    ///
-    /// This sadly needs to be a Mutex because mlua is not Sync yet but is Send
-    ///
-    /// A tokio Mutex is used here because the Lua VM is used in async contexts across await points
-    pub vm: Arc<Mutex<Lua>>,
-    /// The execution state of the Lua VM
-    pub state: Arc<ArLuaExecutionState>,
-}
-
-#[cfg(feature = "experiment_lua_worker")]
-pub struct ArLuaNonSend {
-    /// The Lua VM
     pub vm: Lua,
     /// The execution state of the Lua VM
-    #[allow(dead_code)] // it isnt actually dead code
     pub state: Arc<ArLuaExecutionState>,
 }
 
-#[cfg(not(feature = "experiment_lua_worker"))]
 /// Create a new Lua VM complete with sandboxing and modules pre-loaded
 ///
 /// Note that callers should instead call the render_message_template/render_permissions_template functions
@@ -110,72 +79,11 @@ async fn create_lua_vm() -> LuaResult<ArLua> {
         Ok(LuaVmState::Continue)
     });*/
 
-    let ar_lua = ArLua {
-        vm: Arc::new(Mutex::new(lua)),
-        state,
-    };
+    let ar_lua = ArLua { vm: lua, state };
 
     Ok(ar_lua)
 }
 
-#[cfg(feature = "experiment_lua_worker")]
-/// Create a new Lua VM complete with sandboxing and modules pre-loaded
-///
-/// Note that callers should instead call the render_message_template/render_permissions_template functions
-///
-/// As such, this function is private and should not be used outside of this module
-async fn create_lua_vm_nonsend() -> LuaResult<ArLuaNonSend> {
-    let lua = Lua::new_with(
-        LuaStdLib::ALL_SAFE,
-        LuaOptions::new().catch_rust_panics(true),
-    )?;
-    lua.sandbox(true)?; // We explicitly want globals to be shared across all scripts in this VM
-    lua.set_memory_limit(MAX_TEMPLATE_MEMORY_USAGE)?;
-
-    // To allow locking down _G, we need to create a table to store user data (__stack)
-    lua.globals().set("__stack", lua.create_table()?)?;
-
-    // Disable print function, templates should not be able to access stdout
-    // TODO: Offer a custom print function that logs to a channel
-    lua.globals().set("print", LuaValue::Nil)?;
-
-    // Create new __ar_modules table
-    let ar_modules_table = lua.create_table()?;
-
-    for (module_name, module_fn) in plugins::lua_plugins() {
-        let module_table = (module_fn)(&lua)?;
-        ar_modules_table.set(module_name, module_table)?;
-    }
-
-    ar_modules_table.set_readonly(true); // Block any attempt to modify this table
-
-    lua.globals().set("__ar_modules", ar_modules_table)?;
-
-    let state: Arc<ArLuaExecutionState> = Arc::new(ArLuaExecutionState {
-        last_exec: utils::AtomicInstant::new(std::time::Instant::now()),
-    });
-
-    let state_interrupt_ref = state.clone();
-
-    // Create an interrupt to limit the execution time of a template
-    /*lua.set_interrupt(move |_| {
-        if state_interrupt_ref
-            .last_exec
-            .load(utils::DEFAULT_ORDERING)
-            .elapsed()
-            >= MAX_TEMPLATES_EXECUTION_TIME
-        {
-            return Ok(LuaVmState::Yield);
-        }
-        Ok(LuaVmState::Continue)
-    });*/
-
-    let ar_lua = ArLuaNonSend { vm: lua, state };
-
-    Ok(ar_lua)
-}
-
-#[cfg(not(feature = "experiment_lua_worker"))]
 /// Get a Lua VM for a guild
 ///
 /// This function will either return an existing Lua VM for the guild or create a new one if it does not exist
@@ -192,36 +100,11 @@ async fn get_lua_vm(guild_id: GuildId) -> LuaResult<ArLua> {
 
 /// Compiles a template
 pub async fn compile_template(guild_id: serenity::all::GuildId, template: &str) -> LuaResult<()> {
-    #[cfg(not(feature = "experiment_lua_worker"))]
-    {
-        let lua = get_lua_vm(guild_id).await?;
+    let lua = get_lua_vm(guild_id).await?;
 
-        // Acquire a lock to the Lua VM
-        let vm = lua.vm.lock().await;
-        let f: LuaFunction = vm.load(template).eval_async().await?;
-        drop(f); // Drop the function
-        drop(vm); // Drop the lock
+    let _: LuaFunction = lua.vm.load(template).eval_async().await?;
 
-        Ok(())
-    }
-
-    #[cfg(feature = "experiment_lua_worker")]
-    {
-        // Send to worker
-        WORKER_MANAGER
-            .make_request(
-                guild_id,
-                utils::LuaWorkerRequest::Compile {
-                    guild_id,
-                    template: template.to_string(),
-                },
-            )
-            .await
-            .map_err(|e| LuaError::external(format!("Error making request: {:?}", e)))?
-            .map_err(|e| LuaError::external(format!("Lua error: {:?}", e)))?;
-
-        Ok(())
-    }
+    Ok(())
 }
 
 /// Render a message template
@@ -230,51 +113,19 @@ pub async fn render_message_template(
     template: &str,
     args: crate::core::MessageTemplateContext,
 ) -> LuaResult<plugins::message::Message> {
-    #[cfg(not(feature = "experiment_lua_worker"))]
-    {
-        let lua = get_lua_vm(guild_id).await?;
+    let lua = get_lua_vm(guild_id).await?;
 
-        // Acquire a lock to the Lua VM
-        let vm = lua.vm.lock().await;
-        let f: LuaFunction = vm.load(template).eval_async().await?;
+    let args = lua.vm.to_value(&args)?;
 
-        let _args = vm.create_table()?;
-        let args = vm.to_value(&args)?;
-        _args.set("args", args)?;
+    let f: LuaFunction = lua.vm.load(template).eval_async().await?;
 
-        let v: LuaValue = f.call_async(_args).await?;
+    let v: LuaValue = f.call_async(args).await?;
 
-        let json_v = serde_json::to_value(v).map_err(|e| LuaError::external(e.to_string()))?;
-        let v: plugins::message::Message =
-            serde_json::from_value(json_v).map_err(|e| LuaError::external(e.to_string()))?;
+    let json_v = serde_json::to_value(v).map_err(|e| LuaError::external(e.to_string()))?;
+    let v: plugins::message::Message =
+        serde_json::from_value(json_v).map_err(|e| LuaError::external(e.to_string()))?;
 
-        drop(f); // Drop the function
-        drop(vm); // Drop the lock
-
-        Ok(v)
-    }
-
-    #[cfg(feature = "experiment_lua_worker")]
-    {
-        // Send to worker
-        let resp = WORKER_MANAGER
-            .make_request(
-                guild_id,
-                utils::LuaWorkerRequest::Template {
-                    guild_id,
-                    template: template.to_string(),
-                    args: Box::new(args),
-                },
-            )
-            .await
-            .map_err(|e| LuaError::external(format!("Error making request: {:?}", e)))?
-            .map_err(|e| LuaError::external(format!("Lua error: {:?}", e)))?;
-
-        let v: plugins::message::Message =
-            serde_json::from_value(resp).map_err(|e| LuaError::external(e.to_string()))?;
-
-        Ok(v)
-    }
+    Ok(v)
 }
 
 /// Render a message template
@@ -283,51 +134,19 @@ pub async fn render_permissions_template(
     template: &str,
     args: crate::core::PermissionTemplateContext,
 ) -> LuaResult<splashcore_rs::types::silverpelt::PermissionResult> {
-    #[cfg(not(feature = "experiment_lua_worker"))]
-    {
-        let lua = get_lua_vm(guild_id).await?;
+    let lua = get_lua_vm(guild_id).await?;
 
-        // Acquire a lock to the Lua VM
-        let vm = lua.vm.lock().await;
-        let f: LuaFunction = vm.load(template).eval_async().await?;
+    let args = lua.vm.to_value(&args)?;
 
-        let _args = vm.create_table()?;
-        let args = vm.to_value(&args)?;
-        _args.set("args", args)?;
+    let f: LuaFunction = lua.vm.load(template).eval_async().await?;
 
-        let v: LuaValue = f.call_async(_args).await?;
+    let v: LuaValue = f.call_async(args).await?;
 
-        let json_v = serde_json::to_value(v).map_err(|e| LuaError::external(e.to_string()))?;
-        let v: splashcore_rs::types::silverpelt::PermissionResult =
-            serde_json::from_value(json_v).map_err(|e| LuaError::external(e.to_string()))?;
+    let json_v = serde_json::to_value(v).map_err(|e| LuaError::external(e.to_string()))?;
+    let v: splashcore_rs::types::silverpelt::PermissionResult =
+        serde_json::from_value(json_v).map_err(|e| LuaError::external(e.to_string()))?;
 
-        drop(f); // Drop the function
-        drop(vm); // Drop the lock
-
-        Ok(v)
-    }
-
-    #[cfg(feature = "experiment_lua_worker")]
-    {
-        // Send to worker
-        let resp = WORKER_MANAGER
-            .make_request(
-                guild_id,
-                utils::LuaWorkerRequest::Template {
-                    guild_id,
-                    template: template.to_string(),
-                    args: Box::new(args),
-                },
-            )
-            .await
-            .map_err(|e| LuaError::external(format!("Error making request: {:?}", e)))?
-            .map_err(|e| LuaError::external(format!("Lua error: {:?}", e)))?;
-
-        let v: splashcore_rs::types::silverpelt::PermissionResult =
-            serde_json::from_value(resp).map_err(|e| LuaError::external(e.to_string()))?;
-
-        Ok(v)
-    }
+    Ok(v)
 }
 
 #[cfg(test)]
@@ -469,128 +288,5 @@ mod test {
             .unwrap();
 
         assert_eq!(res, 3);
-    }
-
-    #[cfg(feature = "experiment_lua_worker")]
-    #[tokio::test]
-    async fn lua_workers_test() {
-        let workman = super::utils::LuaWorkerManager::new(100); // 100 workers max
-        workman.spawn_all();
-
-        for i in 0..100000 {
-            //println!("{}", i);
-
-            workman
-                .make_request(
-                    serenity::all::GuildId::new(i as u64),
-                    super::utils::LuaWorkerRequest::Template {
-                        guild_id: serenity::all::GuildId::new(i as u64),
-                        template: r#"
-function(args)
-    for k, v in pairs(args.map_table) do
-        --print(k, v)
-    end
-    return args.map_table
-end
-                        "#
-                        .to_string(),
-                        args: Box::new(serde_json::json!({
-                            "map_table": {
-                                "1": "one",
-                                "two": 2
-                            }
-                        })),
-                    },
-                )
-                .await
-                .unwrap()
-                .unwrap();
-
-            //println!("{:?}", resp);
-        }
-    }
-
-    #[cfg(feature = "experiment_lua_worker")]
-    #[tokio::test]
-    async fn lua_workers_test_multitask() {
-        let workman = std::sync::Arc::new(super::utils::LuaWorkerManager::new(100)); // 100 workers max
-                                                                                     //workman.spawn_all();
-
-        let mut tasks = Vec::new();
-        for i in 0..100000 {
-            let workman = workman.clone();
-            tasks.push(tokio::task::spawn(async move {
-                println!("{}", i);
-                let workman = workman.clone();
-                let _ = workman
-                    .make_request(
-                        serenity::all::GuildId::new(i as u64),
-                        super::utils::LuaWorkerRequest::Template {
-                            guild_id: serenity::all::GuildId::new(i as u64),
-                            template: r#"
-                function(args)
-                    for k, v in pairs(args.map_table) do
-                        --print(k, v)
-                    end
-                    return args.map_table
-                end
-                                        "#
-                            .to_string(),
-                            args: Box::new(serde_json::json!({
-                                "map_table": {
-                                    "1": "one",
-                                    "two": 2
-                                }
-                            })),
-                        },
-                    )
-                    .await
-                    .unwrap();
-            }));
-        }
-
-        futures::future::join_all(tasks).await;
-    }
-
-    #[cfg(feature = "experiment_lua_worker")]
-    #[tokio::test]
-    async fn lua_workers_test_multitask_sameworker() {
-        let workman = std::sync::Arc::new(super::utils::LuaWorkerManager::new(2)); // 2 workers for sameworker test
-        workman.spawn_all();
-
-        let mut tasks = Vec::new();
-        for i in 0..100 {
-            let workman = workman.clone();
-            tasks.push(tokio::task::spawn(async move {
-                println!("{}", i);
-                let workman = workman.clone();
-                let _ = workman
-                    .make_request(
-                        serenity::all::GuildId::new(1),
-                        super::utils::LuaWorkerRequest::Template {
-                            guild_id: serenity::all::GuildId::new(1),
-                            template: r#"
-                function(args)
-                    for k, v in pairs(args.map_table) do
-                        --print(k, v)
-                    end
-                    return args.map_table
-                end
-                                        "#
-                            .to_string(),
-                            args: Box::new(serde_json::json!({
-                                "map_table": {
-                                    "1": "one",
-                                    "two": 2
-                                }
-                            })),
-                        },
-                    )
-                    .await
-                    .unwrap();
-            }));
-        }
-
-        futures::future::join_all(tasks).await;
     }
 }

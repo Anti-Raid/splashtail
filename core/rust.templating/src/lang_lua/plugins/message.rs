@@ -167,6 +167,8 @@ pub fn init_plugin(lua: &Lua) -> LuaResult<LuaTable> {
     module.set(
         "format_gwevent_field",
         lua.create_function(|lua, (field,): (LuaValue,)| {
+            log::info!("format_gwevent_field: {:?}", field);
+
             // Cast it to a normal field
             let field = match lua.from_value::<Field>(field) {
                 Ok(f) => f,
