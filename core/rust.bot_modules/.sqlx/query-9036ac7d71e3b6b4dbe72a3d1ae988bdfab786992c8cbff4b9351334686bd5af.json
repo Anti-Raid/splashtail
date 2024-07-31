@@ -1,0 +1,24 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT COUNT(1) FROM gitlogs__repos WHERE lower(repo_name) = $1 AND guild_id = $2 AND webhook_id = $3",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "count",
+        "type_info": "Int8"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "9036ac7d71e3b6b4dbe72a3d1ae988bdfab786992c8cbff4b9351334686bd5af"
+}
