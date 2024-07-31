@@ -190,6 +190,7 @@ pub fn init_plugin(lua: &Lua) -> LuaResult<LuaTable> {
     module.set(
         "format_gwevent_categorized_field",
         lua.create_function(|lua, (field,): (LuaValue,)| {
+            log::info!("format_gwevent_categorized_field: {:?}", field);
             // Cast it to a normal field
             let cat_field = match lua.from_value::<CategorizedField>(field) {
                 Ok(f) => f,

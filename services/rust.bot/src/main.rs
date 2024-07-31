@@ -29,31 +29,16 @@ use std::io::Write;
 static ALLOCATOR: Cap<alloc::System> = Cap::new(alloc::System, usize::MAX);
 
 pub struct ConnectState {
-    pub has_started_bgtasks: bool,
-    pub has_started_ipc: bool,
-    pub have_called_firstready: bool,
+    pub started_tasks: std::sync::atomic::AtomicBool,
+    pub ready: dashmap::DashMap<serenity::all::ShardId, bool>,
+    pub ready_lock: tokio::sync::Mutex<()>,
 }
 
-pub static CONNECT_STATE: Lazy<RwLock<ConnectState>> = Lazy::new(|| {
-    RwLock::new(ConnectState {
-        has_started_bgtasks: false,
-        has_started_ipc: false,
-        have_called_firstready: false,
-    })
+pub static CONNECT_STATE: Lazy<ConnectState> = Lazy::new(|| ConnectState {
+    started_tasks: std::sync::atomic::AtomicBool::new(false),
+    ready: dashmap::DashMap::new(),
+    ready_lock: tokio::sync::Mutex::new(()),
 });
-
-/*
-   pub pool: sqlx::PgPool,
-   pub redis_pool: fred::prelude::RedisPool,
-   pub reqwest: reqwest::Client,
-   pub object_store: Arc<ObjectStore>,
-   pub shards_ready: Arc<dashmap::DashMap<u16, bool>>,
-   pub proxy_support_data: RwLock<Option<proxy_support::ProxySupportData>>, // Shard ID, WebsocketConfiguration
-   pub props: Box<dyn Props>,
-
-   /// Any extra data
-   extra_data: Arc<dyn std::any::Any + Send + Sync>,
-*/
 
 /// Props
 pub struct Props {
@@ -272,6 +257,28 @@ async fn event_listener<'a>(
     let user_data = ctx.serenity_context.data::<Data>();
     match event {
         FullEvent::InteractionCreate { interaction } => {
+            if !CONNECT_STATE
+                .ready
+                .contains_key(&ctx.serenity_context.shard_id)
+            {
+                // Send maint message in response
+                let ic = match interaction {
+                    serenity::all::Interaction::Command(ic) => ic,
+                    _ => return Ok(()),
+                };
+
+                ic.create_response(
+                    &ctx.serenity_context.http,
+                    serenity::all::CreateInteractionResponse::Message(
+                        maint_message(&user_data).to_slash_initial_response(
+                            serenity::all::CreateInteractionResponseMessage::default(),
+                        ),
+                    ),
+                )
+                .await
+                .map_err(|e| format!("Error sending reply: {}", e))?;
+            }
+
             info!("Interaction received: {:?}", interaction.id());
 
             let ic = match interaction {
@@ -302,62 +309,62 @@ async fn event_listener<'a>(
             }
         }
         FullEvent::Ready { data_about_bot } => {
+            let _lock = CONNECT_STATE.ready_lock.lock().await; // Lock to ensure that we don't have multiple ready events at the same time
+
             info!(
                 "{} is ready on shard {}",
                 data_about_bot.user.name, ctx.serenity_context.shard_id
             );
 
-            if ctx.serenity_context.shard_id.0
-                == *crate::ipc::argparse::MEWLD_ARGS.shards.first().unwrap()
+            // We don't really care which shard runs this, we just need one to run it
+            if CONNECT_STATE
+                .started_tasks
+                .load(std::sync::atomic::Ordering::SeqCst)
             {
-                if !CONNECT_STATE.read().await.has_started_bgtasks {
-                    info!("Starting background tasks");
-                    // Get all tasks
-                    let mut tasks = Vec::new();
-                    for module in modules::modules::modules() {
-                        for task in module.background_tasks {
-                            tasks.push(task);
-                        }
+                info!("Starting background tasks");
+                // Get all tasks
+                let mut tasks = Vec::new();
+                for module in modules::modules::modules() {
+                    for task in module.background_tasks {
+                        tasks.push(task);
                     }
-
-                    tokio::task::spawn(botox::taskman::start_all_tasks(
-                        tasks,
-                        ctx.serenity_context.clone(),
-                    ));
                 }
 
-                CONNECT_STATE.write().await.has_started_bgtasks = true;
+                tokio::task::spawn(botox::taskman::start_all_tasks(
+                    tasks,
+                    ctx.serenity_context.clone(),
+                ));
 
-                if !CONNECT_STATE.read().await.has_started_ipc {
-                    info!("Starting IPC");
+                info!("Starting IPC");
 
-                    let data = ctx.serenity_context.data::<Data>();
-                    let props = data.extra_data::<Props>();
-                    let ipc_ref = props.mewld_ipc.clone();
-                    let ch = CacheHttpImpl::from_ctx(ctx.serenity_context);
-                    let sm = ctx.shard_manager().clone();
-                    tokio::task::spawn(async move {
-                        let ipc_ref = ipc_ref;
-                        ipc_ref.start_ipc_listener(&ch, &sm).await;
-                    });
+                let data = ctx.serenity_context.data::<Data>();
+                let props = data.extra_data::<Props>();
+                let ipc_ref = props.mewld_ipc.clone();
+                let ch = CacheHttpImpl::from_ctx(ctx.serenity_context);
+                let sm = ctx.shard_manager().clone();
+                tokio::task::spawn(async move {
+                    let ipc_ref = ipc_ref;
+                    ipc_ref.start_ipc_listener(&ch, &sm).await;
+                });
 
-                    // And for animus magic
-                    let am = Arc::new(AnimusMagicClient::new(ClientData {
-                        pool: data.pool.clone(),
-                        redis_pool: data.redis_pool.clone(),
-                        reqwest: data.reqwest.clone(),
-                        cache_http: CacheHttpImpl::from_ctx(ctx.serenity_context),
-                    }));
+                // And for animus magic
+                let am = Arc::new(AnimusMagicClient::new(ClientData {
+                    pool: data.pool.clone(),
+                    redis_pool: data.redis_pool.clone(),
+                    reqwest: data.reqwest.clone(),
+                    cache_http: CacheHttpImpl::from_ctx(ctx.serenity_context),
+                }));
 
-                    props.animus_magic_ipc.get_or_init(|| am.clone());
+                props.animus_magic_ipc.get_or_init(|| am.clone());
 
-                    tokio::task::spawn(async move {
-                        let am_ref = am.clone();
-                        am_ref.listen().await;
-                    });
-                }
+                tokio::task::spawn(async move {
+                    let am_ref = am.clone();
+                    am_ref.listen().await;
+                });
 
-                CONNECT_STATE.write().await.has_started_ipc = true;
+                CONNECT_STATE
+                    .started_tasks
+                    .store(true, std::sync::atomic::Ordering::SeqCst);
             }
 
             if ctx.serenity_context.shard_id.0
@@ -370,17 +377,16 @@ async fn event_listener<'a>(
                     return Err(e);
                 }
 
-                user_data
-                    .shards_ready
-                    .insert(ctx.serenity_context.shard_id.0, true);
-
                 info!(
                     "Published IPC launch next to channel {}",
                     crate::ipc::argparse::MEWLD_ARGS.mewld_redis_channel
                 );
             }
 
-            if !CONNECT_STATE.read().await.have_called_firstready {
+            if !CONNECT_STATE
+                .ready
+                .contains_key(&ctx.serenity_context.shard_id)
+            {
                 for module in modules::modules::modules() {
                     for on_ready in module.on_first_ready.iter() {
                         if let Err(e) = on_ready(ctx.serenity_context.clone(), &user_data).await {
@@ -392,14 +398,26 @@ async fn event_listener<'a>(
                         }
                     }
                 }
-
-                CONNECT_STATE.write().await.have_called_firstready = true;
             }
+
+            CONNECT_STATE
+                .ready
+                .insert(ctx.serenity_context.shard_id, true);
+
+            drop(_lock);
         }
         _ => {}
     }
 
-    // Add all event listeners for key modules here
+    // Ignore all other events if the bot is not ready
+    if !CONNECT_STATE
+        .ready
+        .contains_key(&ctx.serenity_context.shard_id)
+    {
+        return Ok(());
+    }
+
+    // Get guild id
     let event_guild_id = match get_event_guild_id(event) {
         Ok(guild_id) => guild_id,
         Err(None) => return Ok(()),
@@ -852,7 +870,6 @@ async fn main() {
         ),
         pool: pg_pool.clone(),
         reqwest,
-        shards_ready: Arc::new(dashmap::DashMap::new()),
         proxy_support_data: RwLock::new(None),
         extra_data: props.clone(),
         props: props.clone(),

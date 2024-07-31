@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO guild_module_configurations (guild_id, module, disabled) VALUES ($1, $2, false)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "904db3ba4bde4aad346b05f8b1ef323b71c6cf1fe8f0b67b3915b981af527d9c"
+}

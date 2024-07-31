@@ -23,7 +23,6 @@ pub struct Data {
     pub redis_pool: fred::prelude::RedisPool,
     pub reqwest: reqwest::Client,
     pub object_store: Arc<ObjectStore>,
-    pub shards_ready: Arc<dashmap::DashMap<u16, bool>>,
     pub proxy_support_data: RwLock<Option<proxy_support::ProxySupportData>>, // Shard ID, WebsocketConfiguration
     pub props: Arc<dyn Props>,
 

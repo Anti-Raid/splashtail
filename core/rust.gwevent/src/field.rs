@@ -97,7 +97,7 @@ pub enum Field {
 
     // Special Types
     JsonValue(serde_json::Value),
-    None(()),
+    None,
 }
 
 impl Field {
@@ -274,7 +274,7 @@ impl Field {
 
                 Ok(stickers.join(", "))
             }
-            Field::None(()) => Ok("None".to_string()),
+            Field::None => Ok("None".to_string()),
             Field::ChannelMentions(c) => {
                 let mut channels = Vec::new();
 
