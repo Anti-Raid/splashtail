@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "UPDATE auditlogs__sinks SET broken = true WHERE id = $1",
+  "query": "DELETE FROM tasks WHERE task_id = $1",
   "describe": {
     "columns": [],
     "parameters": {
@@ -10,5 +10,5 @@
     },
     "nullable": []
   },
-  "hash": "ed012db3d3de01cb7fbd930c8118c9fc79ad8b99e1bedd0c168096b9918d4d51"
+  "hash": "9dfcb367cd03b43ab6821c6264b25af1fa22162881394a9a55da73a82ff90d55"
 }
