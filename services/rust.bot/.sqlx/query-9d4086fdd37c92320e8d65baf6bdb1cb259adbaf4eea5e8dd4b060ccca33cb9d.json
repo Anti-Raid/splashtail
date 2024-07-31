@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "INSERT INTO guilds (id) VALUES ($1)",
+  "query": "INSERT INTO users (user_id) VALUES ($1)",
   "describe": {
     "columns": [],
     "parameters": {
@@ -10,5 +10,5 @@
     },
     "nullable": []
   },
-  "hash": "4b216254624357e07abd8e0281224b2d47af1d4fcf54bad090847e03cd05b1ea"
+  "hash": "9d4086fdd37c92320e8d65baf6bdb1cb259adbaf4eea5e8dd4b060ccca33cb9d"
 }

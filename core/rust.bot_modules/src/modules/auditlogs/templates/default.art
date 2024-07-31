@@ -9,7 +9,7 @@ function (args)
 
     -- Add the fields to the description
     for key, value in pairs(args.fields) do
-        local value = "N/A"
+        local final_value = "N/A"
         if value ~= nil then
             local formatted_value, err = __ar_modules.message.format_gwevent_categorized_field(value)
 
@@ -17,10 +17,10 @@ function (args)
                 error("Error formatting categorized field" .. err)
             end
 
-            value = formatted_value
+            final_value = formatted_value
         end
 
-        embed.description = embed.description .. "**" .. key:gsub("_", " "):upper() .. "**: " .. value .. "\n"
+        embed.description = embed.description .. "**" .. key:gsub("_", " "):upper() .. "**: " .. final_value .. "\n"
     end
 
     local message = __ar_modules.message.new_message()
