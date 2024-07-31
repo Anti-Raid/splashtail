@@ -1,8 +1,5 @@
 //lang:lang_lua
-
 function(args) 
-    error("Not implemented")
-
     -- Make the embed
     local embed = {
         title = args.event_titlename,
@@ -16,4 +13,4 @@ function(args)
     end
 
     return embed
-end
+end    

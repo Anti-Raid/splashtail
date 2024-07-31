@@ -49,14 +49,9 @@ pub struct ArLua {
 }
 
 #[cfg(feature = "experiment_lua_worker")]
-#[derive(Clone)]
 pub struct ArLuaNonSend {
     /// The Lua VM
-    ///
-    /// This sadly needs to be a Mutex because mlua is not Sync yet but is Send
-    ///
-    /// A tokio Mutex is used here because the Lua VM is used in async contexts across await points
-    pub vm: Rc<Lua>,
+    pub vm: Lua,
     /// The execution state of the Lua VM
     #[allow(dead_code)] // it isnt actually dead code
     pub state: Arc<ArLuaExecutionState>,
@@ -163,7 +158,7 @@ async fn create_lua_vm_nonsend() -> LuaResult<ArLuaNonSend> {
     let state_interrupt_ref = state.clone();
 
     // Create an interrupt to limit the execution time of a template
-    lua.set_interrupt(move |_| {
+    /*lua.set_interrupt(move |_| {
         if state_interrupt_ref
             .last_exec
             .load(utils::DEFAULT_ORDERING)
@@ -173,12 +168,9 @@ async fn create_lua_vm_nonsend() -> LuaResult<ArLuaNonSend> {
             return Ok(LuaVmState::Yield);
         }
         Ok(LuaVmState::Continue)
-    });
+    });*/
 
-    let ar_lua = ArLuaNonSend {
-        vm: Rc::new(lua),
-        state,
-    };
+    let ar_lua = ArLuaNonSend { vm: lua, state };
 
     Ok(ar_lua)
 }

@@ -31,6 +31,8 @@ pub async fn compile_template(
         }
     }
 
+    log::info!("Compiling Tera template: {:?}", template);
+
     // Compile a new template
     let mut tera = tera::Tera::default();
 
