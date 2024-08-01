@@ -145,8 +145,10 @@ pub async fn event_listener(ectx: &EventHandlerContext) -> Result<(), Error> {
                         .fake_bot_detection
                         .contains(FakeBotDetectionOptions::NORMALIZE_NAMES)
                     {
-                        let mut normalized_name =
-                            plsfix::fix_text(&new_member.user.name.to_lowercase(), None);
+                        let mut normalized_name = splashcore_rs::text::normalize::fix_text(
+                            &new_member.user.name.to_lowercase(),
+                            None,
+                        );
 
                         // Handle prefixes people add to the bot name for scamming by removing them
                         // TODO: Make a database of these

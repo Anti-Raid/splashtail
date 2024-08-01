@@ -20,6 +20,17 @@ reqwest = { version = "0.12", default-features = false, features = ["json", "rus
 log = "0.4"
 async-trait = "0.1.80"
 
+# Text normalization
+unicode-normalization = { version = "0.1.23", default-features = false }
+encoding = "0.2.33"
+encoding_rs = "0.8.34"
+html-escape = "0.2.13"
+icu = "1.5.0"
+oem_cp = { version = "2.0.0", features = ["alloc"] }
+regex = "1"
+fancy-regex = "0.12"
+rustc-hash = "2"
+
 [dependencies.tokio]
 version = "1"
 features = ["sync", "macros", "rt-multi-thread"]

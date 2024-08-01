@@ -97,7 +97,7 @@ pub fn embed<'a>(
     let embed = CreateEmbed::default()
         .title("Task Status")
         .description(description)
-        .color(poise::serenity_prelude::Colour::DARK_GREEN);
+        .color(serenity::all::Colour::DARK_GREEN);
 
     let mut msg = poise::CreateReply::default();
 
