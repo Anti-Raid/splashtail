@@ -1,5 +1,5 @@
 use crate::Error;
-use futures_util::FutureExt;
+use futures_util::future::FutureExt;
 use poise::serenity_prelude::{GuildId, UserId};
 use serde::{Deserialize, Serialize};
 use splashcore_rs::utils::pg_interval_to_secs;

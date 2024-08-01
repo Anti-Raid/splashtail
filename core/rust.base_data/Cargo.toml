@@ -4,10 +4,9 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-poise = { git = "https://github.com/serenity-rs/poise", branch = "serenity-next" }
 sqlx = { version = "0.7", features = [ "runtime-tokio-rustls", "postgres", "chrono", "uuid", "json"] }
 reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls", "rustls-tls-native-roots"] }
-futures = "0.3"
+futures-util = "0.3"
 indexmap = { version = "2", features = ["serde"] }
 dashmap = { version = "5", features = ["serde", "inline", "rayon"] }
 fred = { version = "9.0.3", features = ["enable-rustls", "enable-rustls-ring", "serde-json", "subscriber-client"] }
@@ -18,9 +17,9 @@ splashcore_rs = { path = "../rust.std" }
 proxy_support = { path = "../rust.proxy_support" }
 
 [dependencies.tokio]
-version = "1.38"
+version = "1"
 default-features = true
-features = ["full", "macros", "rt-multi-thread"]
+features = ["sync"]
 
 [dependencies.botox]
 git = "https://github.com/infinitybotlist/botox"

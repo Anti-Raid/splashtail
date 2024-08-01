@@ -1,6 +1,6 @@
 use super::types::{DehoistOptions, FakeBotDetectionOptions, GuildProtectionOptions};
 use dashmap::DashMap;
-use futures::future::FutureExt;
+use futures_util::future::FutureExt;
 use moka::future::Cache;
 use once_cell::sync::Lazy;
 use serenity::all::UserId;

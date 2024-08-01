@@ -1,4 +1,4 @@
-use futures::future::FutureExt;
+use futures_util::future::FutureExt;
 use indexmap::indexmap;
 
 mod am_toggles;

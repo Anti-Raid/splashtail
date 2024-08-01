@@ -3,7 +3,7 @@ use crate::modules::temporary_punishments::source::{
     add_source, Action as TemporaryPunishmentsAction, Entry as TemporaryPunishmentsEntry,
     Source as TemporaryPunishmentsSource,
 };
-use futures_util::FutureExt;
+use futures_util::future::FutureExt;
 use serenity::all::User;
 use splashcore_rs::utils::pg_interval_to_secs;
 

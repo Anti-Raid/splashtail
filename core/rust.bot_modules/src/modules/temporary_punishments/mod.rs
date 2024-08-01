@@ -1,7 +1,7 @@
 pub mod source;
 pub mod tasks;
 
-use futures::future::FutureExt;
+use futures_util::future::FutureExt;
 
 pub fn module() -> crate::silverpelt::Module {
     crate::silverpelt::Module {

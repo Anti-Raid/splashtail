@@ -14,13 +14,11 @@ chrono = { version = "0.4", features = ["serde"]}
 reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls", "rustls-tls-native-roots"] }
 serde_json = "1.0"
 once_cell = "1"
-futures = "0.3"
 futures-util = "0.3"
 indexmap = { version = "2", features = ["serde"] }
 dashmap = { version = "5", features = ["serde", "inline", "rayon"] }
 strum = "0.26"
 strum_macros = "0.26"
-rand = "0.8"
 moka = { version = "0.12", features = ["future", "futures-util"] }
 regex = "1"
 bitflags = "2"
@@ -42,9 +40,8 @@ proxy_support = { path = "../rust.proxy_support" }
 templating = { path = "../rust.templating" }
 
 [dependencies.tokio]
-version = "1.38"
-default-features = true
-features = ["full", "macros", "rt-multi-thread"]
+version = "1"
+features = ["sync", "macros", "rt-multi-thread"]
 
 [dependencies.serenity]
 git = "https://github.com/serenity-rs/serenity"

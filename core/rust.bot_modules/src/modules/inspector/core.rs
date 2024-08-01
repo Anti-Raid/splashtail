@@ -1,4 +1,4 @@
-use futures::future::FutureExt;
+use futures_util::future::FutureExt;
 
 /// Punishment sting source
 pub async fn register_punishment_sting_source(_data: &crate::Data) -> Result<(), crate::Error> {

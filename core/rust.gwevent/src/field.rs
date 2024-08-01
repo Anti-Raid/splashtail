@@ -10,16 +10,19 @@ pub struct CategorizedField {
     /// The category of the field
     pub category: String,
     /// The field itself
-    #[serde(flatten)]
     pub field: Field,
 }
 
 impl CategorizedField {
     /// Format the field into a string for use in templates
     pub fn template_format(&self) -> Result<String, Error> {
+        if self.category == "event" {
+            return self.field.template_format();
+        }
+
         Ok(format!(
             "{}: {}",
-            self.category,
+            self.category.replace("_", " "),
             self.field.template_format()?
         ))
     }

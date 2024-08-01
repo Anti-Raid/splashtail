@@ -1,4 +1,4 @@
-use futures_util::FutureExt;
+use futures_util::future::FutureExt;
 use module_settings::types::{
     settings_wrap_columns, settings_wrap_precheck, settings_wrap_postactions, settings_wrap_datastore, Column, ColumnAction, ColumnSuggestion, ColumnType, ConfigOption, InnerColumnType, InnerColumnTypeStringKind, OperationSpecific, OperationType, SettingsError
 };

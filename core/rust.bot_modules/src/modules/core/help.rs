@@ -1,6 +1,6 @@
 use crate::Context;
 use crate::Error;
-use futures::future::FutureExt;
+use futures_util::future::FutureExt;
 
 pub fn get_category(category_id: Option<String>) -> Option<String> {
     if let Some(cat_name) = category_id {

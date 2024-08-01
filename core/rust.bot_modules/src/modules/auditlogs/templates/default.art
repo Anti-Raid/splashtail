@@ -1,30 +1,29 @@
 //lang:lang_lua
 function (args) 
+    local message_plugin = __ar_builtins.load_plugin("message")
+
     -- Make the embed
-    local embed = {
-        title = args.event_titlename,
-        description = "",
-        fields = {}
-    }
+    local embed = message_plugin.new_message_embed()
+    embed.title = args.event_titlename
+    embed.description = "" -- Start with an empty description
 
     -- Add the fields to the description
     for key, value in pairs(args.fields) do
-        local final_value = "N/A"
-        if value ~= nil then
-            local formatted_value, err = __ar_modules.message.format_gwevent_categorized_field(value)
+        local should_set = false
 
-            if err ~= nil then
-                error("Error formatting categorized field" .. err)
-            end
-
-            final_value = formatted_value
+        if value ~= nil and value.field.type ~= "None" then
+            should_set = true
         end
-
-        embed.description = embed.description .. "**" .. key:gsub("_", " "):upper() .. "**: " .. final_value .. "\n"
+    
+        if should_set then
+            local formatted_value = message_plugin.format_gwevent_categorized_field(value)
+            embed.description = embed.description .. "**" .. key:gsub("_", " "):upper() .. "**: " .. formatted_value .. "\n"
+        end
     end
 
-    local message = __ar_modules.message.new_message()
-    message:embeds {embed}
+    local message = message_plugin.new_message()
+
+    table.insert(message.embeds, embed)
 
     return message
 end

@@ -1,8 +1,14 @@
 pub mod core;
+
+#[cfg(feature = "quickjs")]
 mod lang_javascript_quickjs;
+#[cfg(feature = "v8")]
 mod lang_javascript_v8;
+#[cfg(feature = "lua")]
 mod lang_lua;
+#[cfg(feature = "rhai")]
 mod lang_rhai;
+#[cfg(feature = "tera")]
 mod lang_tera;
 
 use once_cell::sync::Lazy;
@@ -41,8 +47,11 @@ impl TemplateLanguageSupportTier {
 }
 
 pub enum TemplateLanguage {
+    #[cfg(feature = "lua")]
     Lua,
+    #[cfg(feature = "rhai")]
     Rhai,
+    #[cfg(feature = "tera")]
     Tera,
 }
 
@@ -51,8 +60,11 @@ impl FromStr for TemplateLanguage {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
+            #[cfg(feature = "lua")]
             "lang_lua" => Ok(Self::Lua),
+            #[cfg(feature = "rhai")]
             "lang_rhai" => Ok(Self::Rhai),
+            #[cfg(feature = "tera")]
             "lang_tera" => Ok(Self::Tera),
             _ => Err(()),
         }
@@ -62,8 +74,11 @@ impl FromStr for TemplateLanguage {
 impl std::fmt::Display for TemplateLanguage {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
+            #[cfg(feature = "lua")]
             Self::Lua => write!(f, "lang_lua"),
+            #[cfg(feature = "rhai")]
             Self::Rhai => write!(f, "lang_rhai"),
+            #[cfg(feature = "tera")]
             Self::Tera => write!(f, "lang_tera"),
         }
     }
@@ -72,8 +87,11 @@ impl std::fmt::Display for TemplateLanguage {
 impl TemplateLanguage {
     pub fn support_tier(&self) -> TemplateLanguageSupportTier {
         match self {
-            Self::Lua => TemplateLanguageSupportTier::TierTwo, // Untested but could become TierOne
+            #[cfg(feature = "lua")]
+            Self::Lua => TemplateLanguageSupportTier::TierOne, 
+            #[cfg(feature = "rhai")]
             Self::Rhai => TemplateLanguageSupportTier::TierTwo,
+            #[cfg(feature = "tera")]
             Self::Tera => TemplateLanguageSupportTier::TierTwo,
         }
     }
@@ -104,6 +122,7 @@ impl TemplateLanguage {
     }
 }
 
+#[allow(unused_variables)]
 pub async fn compile_template(
     guild_id: serenity::all::GuildId,
     template: &str,
@@ -119,14 +138,17 @@ pub async fn compile_template(
     };
 
     match lang {
+        #[cfg(feature = "lua")]
         TemplateLanguage::Lua => {
             lang_lua::compile_template(guild_id, rest).await?;
         }
+        #[cfg(feature = "rhai")]
         TemplateLanguage::Rhai => {
             let mut engine = lang_rhai::create_engine();
             lang_rhai::apply_sandboxing(&mut engine);
             lang_rhai::compile(&engine, rest, opts)?;
         }
+        #[cfg(feature = "tera")]
         TemplateLanguage::Tera => {
             lang_tera::compile_template(rest, opts).await?;
         }
@@ -136,6 +158,7 @@ pub async fn compile_template(
 }
 
 /// Renders a message template
+#[allow(unused_variables)]
 pub async fn render_message_template(
     guild_id: serenity::all::GuildId,
     template: &str,
@@ -152,10 +175,12 @@ pub async fn render_message_template(
     };
 
     match lang {
+        #[cfg(feature = "lua")]
         TemplateLanguage::Lua => {
             let msg_exec_template = lang_lua::render_message_template(guild_id, rest, args).await?;
             lang_lua::plugins::message::to_discord_reply(msg_exec_template)
         }
+        #[cfg(feature = "rhai")]
         TemplateLanguage::Rhai => {
             let mut engine = lang_rhai::create_engine();
             lang_rhai::apply_sandboxing(&mut engine);
@@ -167,6 +192,7 @@ pub async fn render_message_template(
 
             lang_rhai::plugins::message::to_discord_reply(result)
         }
+        #[cfg(feature = "tera")]
         TemplateLanguage::Tera => {
             let mut tera = lang_tera::compile_template(rest, opts).await?;
             let msg_exec_template =
@@ -177,6 +203,7 @@ pub async fn render_message_template(
 }
 
 /// Renders a permissions template
+#[allow(unused_variables)]
 pub async fn render_permissions_template(
     guild_id: serenity::all::GuildId,
     template: &str,
@@ -199,6 +226,7 @@ pub async fn render_permissions_template(
     };
 
     match lang {
+        #[cfg(feature = "lua")]
         TemplateLanguage::Lua => {
             match lang_lua::render_permissions_template(guild_id, rest, pctx).await {
                 Ok(result) => result,
@@ -207,6 +235,7 @@ pub async fn render_permissions_template(
                 },
             }
         }
+        #[cfg(feature = "rhai")]
         TemplateLanguage::Rhai => {
             let mut engine = lang_rhai::create_engine();
             lang_rhai::apply_sandboxing(&mut engine);
@@ -240,6 +269,7 @@ pub async fn render_permissions_template(
 
             result
         }
+        #[cfg(feature = "tera")]
         TemplateLanguage::Tera => {
             let mut tera = match lang_tera::compile_template(rest, opts).await {
                 Ok(tera) => tera,

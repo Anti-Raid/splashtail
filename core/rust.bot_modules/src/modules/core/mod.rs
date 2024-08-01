@@ -3,7 +3,7 @@ mod ping;
 mod sandwich_status_task;
 mod stats;
 
-use futures_util::FutureExt;
+use futures_util::future::FutureExt;
 
 pub fn module() -> crate::silverpelt::Module {
     crate::silverpelt::Module {

@@ -7,7 +7,6 @@ use std::sync::Arc;
 use tokio::sync::RwLock;
 
 pub type Error = Box<dyn std::error::Error + Send + Sync>; // This is constant and should be copy pasted
-pub type Context<'a> = poise::Context<'a, Data, Error>;
 
 /*#[derive(Clone)]
 pub struct AnimusMagicBaseData {

@@ -6,7 +6,7 @@ use fred::{
     prelude::Builder,
     types::RedisValue,
 };
-use futures::future::FutureExt;
+use futures_util::future::FutureExt;
 use splashcore_rs::animusmagic::client::{ClientRequest, UnderlyingClient};
 use splashcore_rs::animusmagic::protocol::{
     get_payload_meta, serialize_data, AnimusErrorResponse, AnimusTarget,

@@ -1,4 +1,4 @@
-use futures_util::FutureExt;
+use futures_util::future::FutureExt;
 use module_settings::{
     data_stores::PostgresDataStore,
     types::{

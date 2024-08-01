@@ -1,4 +1,4 @@
-use futures::future::FutureExt;
+use futures_util::future::FutureExt;
 use splashcore_rs::value::Value;
 
 pub async fn setup(data: &crate::Data) -> Result<(), crate::Error> {

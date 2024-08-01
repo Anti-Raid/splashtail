@@ -4,7 +4,7 @@ use super::protocol::{
 };
 use crate::Error;
 use async_trait::async_trait;
-use futures::future::BoxFuture;
+use futures_util::future::BoxFuture;
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
 use std::sync::atomic::AtomicUsize;

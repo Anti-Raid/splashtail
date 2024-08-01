@@ -317,7 +317,7 @@ async fn event_listener<'a>(
             );
 
             // We don't really care which shard runs this, we just need one to run it
-            if CONNECT_STATE
+            if !CONNECT_STATE
                 .started_tasks
                 .load(std::sync::atomic::Ordering::SeqCst)
             {

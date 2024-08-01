@@ -47,17 +47,12 @@ async fn create_lua_vm() -> LuaResult<ArLua> {
     // TODO: Offer a custom print function that logs to a channel
     lua.globals().set("print", LuaValue::Nil)?;
 
-    // Create new __ar_modules table
-    let ar_modules_table = lua.create_table()?;
+    // Add the builtins module to global scope
+    //
+    // Note that we do not register every plugin here to give more memory to the templates themselves
+    let builtins_module = plugins::builtins(&lua)?;
 
-    for (module_name, module_fn) in plugins::lua_plugins() {
-        let module_table = (module_fn)(&lua)?;
-        ar_modules_table.set(module_name, module_table)?;
-    }
-
-    ar_modules_table.set_readonly(true); // Block any attempt to modify this table
-
-    lua.globals().set("__ar_modules", ar_modules_table)?;
+    lua.globals().set("__ar_builtins", builtins_module)?;
 
     let state: Arc<ArLuaExecutionState> = Arc::new(ArLuaExecutionState {
         last_exec: utils::AtomicInstant::new(std::time::Instant::now()),
@@ -66,8 +61,7 @@ async fn create_lua_vm() -> LuaResult<ArLua> {
     let state_interrupt_ref = state.clone();
 
     // Create an interrupt to limit the execution time of a template
-    // TODO: Fix this to not error once underlying mlua bug is fixed
-    /*lua.set_interrupt(move |_| {
+    lua.set_interrupt(move |_| {
         if state_interrupt_ref
             .last_exec
             .load(utils::DEFAULT_ORDERING)
@@ -77,7 +71,7 @@ async fn create_lua_vm() -> LuaResult<ArLua> {
             return Ok(LuaVmState::Yield);
         }
         Ok(LuaVmState::Continue)
-    });*/
+    });
 
     let ar_lua = ArLua { vm: lua, state };
 
@@ -89,7 +83,12 @@ async fn create_lua_vm() -> LuaResult<ArLua> {
 /// This function will either return an existing Lua VM for the guild or create a new one if it does not exist
 async fn get_lua_vm(guild_id: GuildId) -> LuaResult<ArLua> {
     match VMS.get(&guild_id).await {
-        Some(vm) => Ok(vm.clone()),
+        Some(vm) => {
+            vm.state
+                .last_exec
+                .store(std::time::Instant::now(), utils::DEFAULT_ORDERING); // Update the last execution time
+            Ok(vm.clone())
+        }
         None => {
             let vm = create_lua_vm().await?;
             VMS.insert(guild_id, vm.clone()).await;

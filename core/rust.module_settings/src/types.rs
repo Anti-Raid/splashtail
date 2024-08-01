@@ -10,7 +10,7 @@
 // For sending a info message etc on save, the {__message} can be set
 
 use async_trait::async_trait;
-use futures::future::BoxFuture;
+use futures_util::future::BoxFuture;
 use std::sync::Arc;
 
 #[derive(Debug, Clone, PartialEq)]

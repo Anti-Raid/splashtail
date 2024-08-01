@@ -1,6 +1,6 @@
 use crate::silverpelt::silverpelt_cache::SILVERPELT_CACHE;
 use splashcore_rs::value::Value;
-use futures::future::FutureExt;
+use futures_util::future::FutureExt;
 use serenity::all::GuildId;
 
 pub async fn setup(data: &crate::Data) -> Result<(), crate::Error> {

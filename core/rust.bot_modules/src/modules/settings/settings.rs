@@ -7,7 +7,7 @@ use module_settings::{
         InnerColumnTypeStringKind, OperationSpecific, OperationType, SettingsError,
     },
 };
-use futures_util::FutureExt;
+use futures_util::future::FutureExt;
 use once_cell::sync::Lazy;
 use splashcore_rs::value::Value;
 

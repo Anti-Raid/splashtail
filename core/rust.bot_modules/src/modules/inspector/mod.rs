@@ -5,7 +5,7 @@ pub mod events; // Events is a public interface
 mod guildprotect;
 pub mod types;
 
-use futures::future::FutureExt;
+use futures_util::future::FutureExt;
 
 pub fn module() -> crate::silverpelt::Module {
     crate::silverpelt::Module {

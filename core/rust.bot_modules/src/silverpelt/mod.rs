@@ -15,7 +15,7 @@ pub use splashcore_rs::types::silverpelt::{
     GuildModuleConfiguration, PermissionCheck, PermissionChecks, PermissionResult,
 };
 
-use futures::future::BoxFuture;
+use futures_util::future::BoxFuture;
 use std::sync::Arc;
 
 pub type Command = poise::Command<crate::Data, crate::Error>;
