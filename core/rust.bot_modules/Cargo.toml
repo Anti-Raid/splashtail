@@ -28,7 +28,6 @@ data-encoding = "2" # Hex-encoding
 
 # Module: inspector
 plsfix = "0.1.7"
-text-diff = "0.4.0"
 
 # Anti-Raid specific
 splashcore_rs = { path = "../rust.std" }

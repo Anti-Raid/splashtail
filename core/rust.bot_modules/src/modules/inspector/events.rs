@@ -149,6 +149,7 @@ pub async fn event_listener(ectx: &EventHandlerContext) -> Result<(), Error> {
                             plsfix::fix_text(&new_member.user.name.to_lowercase(), None);
 
                         // Handle prefixes people add to the bot name for scamming by removing them
+                        // TODO: Make a database of these
                         for prefixes in ["premium", "vip", "prime", "pro", "official", "bot"].iter()
                         {
                             if normalized_name.starts_with(prefixes) {
@@ -193,7 +194,8 @@ pub async fn event_listener(ectx: &EventHandlerContext) -> Result<(), Error> {
                             .fake_bot_detection
                             .contains(FakeBotDetectionOptions::SIMILAR_NAME_CHECK)
                         {
-                            let (diff, _) = text_diff::diff(&normalized_name, &val.name, "");
+                            let (diff, _) =
+                                splashcore_rs::text::diff::diff(&normalized_name, &val.name, "");
 
                             if diff <= 2 {
                                 found = true;
