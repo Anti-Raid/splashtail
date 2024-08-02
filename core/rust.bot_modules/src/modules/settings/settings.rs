@@ -17,7 +17,10 @@ pub static GUILD_ROLES: Lazy<ConfigOption> = Lazy::new(|| {
         name: "Guild Roles",
         description: "Configure/setup guild roles which can then have permissions on Anti-Raid",
         table: "guild_roles",
-        guild_id: "guild_id",
+        common_filters: indexmap::indexmap! {},
+        default_common_filters: indexmap::indexmap! {
+            "guild_id" => "{__guild_id}"
+        },
         primary_key: "id",
         max_entries: 512,
         data_store: settings_wrap_datastore(PostgresDataStore {}),

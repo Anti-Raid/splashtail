@@ -1,3 +1,9 @@
+# Friday, August 2nd, 2024
+
+## Settings
+
+- Replaced guild_id with common_filters/default_common_filters in settings. This allows for global config options to properly be supported without requiring a ``published_from`` extra table. This also opens the door for more advanced use-cases internally in the future.
+
 # Thursday, July 25th 2024
 
 ## Permissions

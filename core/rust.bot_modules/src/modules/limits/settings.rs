@@ -15,7 +15,10 @@ pub static GUILD_LIMITS: Lazy<ConfigOption> = Lazy::new(|| {
         name: "Limits",
         description: "Limits can be used to rate limit actions on your server. For example, you can use limits to enforce 2 channels are created every minute. Once a limit has been exceeded, the infringing user will be given `stings` (like a bee!). Punishments are then applied in a unified and consistent fashion based on the number of stings a user has.",
         table: "limits__guild_limits",
-        guild_id: "guild_id",
+        common_filters: indexmap::indexmap! {},
+        default_common_filters: indexmap::indexmap! {
+            "guild_id" => "{__guild_id}"
+        },
         primary_key: "limit_id",
         max_entries: 10,
         data_store: settings_wrap_datastore(PostgresDataStore {}),

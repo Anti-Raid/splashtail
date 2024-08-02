@@ -9,6 +9,15 @@ use std::sync::Arc;
 
 pub struct PostgresDataStore {}
 
+/// Simple macro to combine two indexmaps into one
+macro_rules! combine_indexmaps {
+    ($map1:expr, $map2:expr) => {{
+        let mut map = $map1;
+        map.extend($map2);
+        map
+    }};
+}
+
 #[async_trait]
 impl CreateDataStore for PostgresDataStore {
     async fn create(
@@ -20,16 +29,17 @@ impl CreateDataStore for PostgresDataStore {
         guild_id: serenity::all::GuildId,
         author: serenity::all::UserId,
         _permodule_executor: &dyn base_data::permodule::PermoduleFunctionExecutor,
+        common_filters: indexmap::IndexMap<String, splashcore_rs::value::Value>,
     ) -> Result<Box<dyn DataStore>, SettingsError> {
         Ok(Box::new(PostgresDataStoreImpl {
             tx: None,
             setting_table: setting.table,
-            setting_guild_id: setting.guild_id,
             setting_primary_key: setting.primary_key,
             author,
             guild_id,
             columns: setting.columns.clone(),
             pool: pool.clone(),
+            common_filters,
         }))
     }
 }
@@ -38,11 +48,11 @@ pub struct PostgresDataStoreImpl {
     // Args needed for queries
     pub pool: sqlx::PgPool,
     pub setting_table: &'static str,
-    pub setting_guild_id: &'static str,
     pub setting_primary_key: &'static str,
     pub author: serenity::all::UserId,
     pub guild_id: serenity::all::GuildId,
     pub columns: Arc<Vec<Column>>,
+    pub common_filters: indexmap::IndexMap<String, splashcore_rs::value::Value>,
 
     // Transaction (if ongoing)
     pub tx: Option<sqlx::Transaction<'static, sqlx::Postgres>>,
@@ -258,6 +268,177 @@ impl PostgresDataStoreImpl {
             },
         }
     }
+
+    /// Helper method to create a WHERE clause from a set of filters
+    ///
+    /// E.g. a = $1 AND b IS NULL AND c = $2 etc.
+    fn create_where_clause(filters: &indexmap::IndexMap<String, Value>, offset: usize) -> String {
+        let mut filters_str = String::new();
+
+        for (i, (key, v)) in filters.iter().enumerate() {
+            if i > 0 {
+                filters_str.push_str(" AND ")
+            }
+
+            if matches!(v, Value::None) {
+                filters_str.push_str(format!(" {} IS NULL", key).as_str());
+            } else {
+                filters_str.push_str(format!(" {} = ${}", key, (i + 1) + offset).as_str());
+            }
+        }
+
+        filters_str
+    }
+
+    /// Helper method to create a SET clause from a set of entries
+    /// E.g. a = $1, b = $2, c = $3 etc.
+    fn create_update_set_clause(
+        entry: &indexmap::IndexMap<String, Value>,
+        offset: usize,
+    ) -> String {
+        let mut col_params = "".to_string();
+        for (i, (col, _)) in entry.iter().enumerate() {
+            // $1 is first col param
+            col_params.push_str(&format!("{} = ${},", col, (i + 1) + offset));
+        }
+
+        // Remove the trailing comma
+        col_params.pop();
+
+        col_params
+    }
+
+    /// Helper method to create the col_params (col1, col2, col3 etc.) and the n_params ($1, $2, $3 etc.)
+    /// for a query
+    fn create_col_and_n_params(
+        entry: &indexmap::IndexMap<String, Value>,
+        offset: usize,
+    ) -> (String, String) {
+        let mut n_params = "".to_string();
+        let mut col_params = "".to_string();
+        for (i, (col, _)) in entry.iter().enumerate() {
+            n_params.push_str(&format!("${},", (i + 1) + offset));
+            col_params.push_str(&format!("{},", col));
+        }
+
+        // Remove the trailing comma
+        n_params.pop();
+        col_params.pop();
+
+        (col_params, n_params)
+    }
+
+    /// Binds filters to a query
+    ///
+    /// If bind_nulls is true, then entries with Value::None are also binded. This should be disabled on filters and enabled on entries
+    fn bind_map<'a>(
+        query: sqlx::query::Query<'a, sqlx::Postgres, sqlx::postgres::PgArguments>,
+        map: indexmap::IndexMap<String, Value>,
+        state: &State,
+        bind_nulls: bool,
+        columns: &[Column],
+    ) -> Result<sqlx::query::Query<'a, sqlx::Postgres, sqlx::postgres::PgArguments>, SettingsError>
+    {
+        let mut query = query;
+        for (field_name, value) in map {
+            // If None, we omit the value from binding
+            if !bind_nulls && matches!(value, Value::None) {
+                continue;
+            }
+
+            let column =
+                columns
+                    .iter()
+                    .find(|c| c.id == field_name)
+                    .ok_or(SettingsError::Generic {
+                        message: format!("Column {} not found", field_name),
+                        src: "settings_view [fetch_all]".to_string(),
+                        typ: "internal".to_string(),
+                    })?;
+
+            query = Self::_query_bind_value(query, value, &column.column_type, state);
+        }
+
+        Ok(query)
+    }
+
+    /// Helper method to either perform a perform a query using either the transaction or the pool
+    async fn execute_query<'a>(
+        &mut self,
+        query: sqlx::query::Query<'a, sqlx::Postgres, sqlx::postgres::PgArguments>,
+    ) -> Result<sqlx::postgres::PgQueryResult, SettingsError> {
+        if self.tx.is_some() {
+            let tx = self.tx.as_deref_mut().unwrap();
+            query.execute(tx).await.map_err(|e| SettingsError::Generic {
+                message: e.to_string(),
+                src: "PostgresDataStore::execute_query#with_tx [query_execute]".to_string(),
+                typ: "internal".to_string(),
+            })
+        } else {
+            query
+                .execute(&self.pool)
+                .await
+                .map_err(|e| SettingsError::Generic {
+                    message: e.to_string(),
+                    src: "PostgresDataStore::execute_query#without_tx [query_execute]".to_string(),
+                    typ: "internal".to_string(),
+                })
+        }
+    }
+
+    /// Helper method to either perform a perform a query using either the transaction or the pool
+    async fn fetchone_query<'a>(
+        &mut self,
+        query: sqlx::query::Query<'a, sqlx::Postgres, sqlx::postgres::PgArguments>,
+    ) -> Result<sqlx::postgres::PgRow, SettingsError> {
+        if self.tx.is_some() {
+            let tx = self.tx.as_deref_mut().unwrap();
+            query
+                .fetch_one(tx)
+                .await
+                .map_err(|e| SettingsError::Generic {
+                    message: e.to_string(),
+                    src: "PostgresDataStore::fetchone_query#with_tx [query_execute]".to_string(),
+                    typ: "internal".to_string(),
+                })
+        } else {
+            query
+                .fetch_one(&self.pool)
+                .await
+                .map_err(|e| SettingsError::Generic {
+                    message: e.to_string(),
+                    src: "PostgresDataStore::fetchone_query#without_tx [query_execute]".to_string(),
+                    typ: "internal".to_string(),
+                })
+        }
+    }
+
+    /// Helper method to either perform a perform a query using either the transaction or the pool
+    async fn fetchall_query<'a>(
+        &mut self,
+        query: sqlx::query::Query<'a, sqlx::Postgres, sqlx::postgres::PgArguments>,
+    ) -> Result<Vec<sqlx::postgres::PgRow>, SettingsError> {
+        if self.tx.is_some() {
+            let tx = self.tx.as_deref_mut().unwrap();
+            query
+                .fetch_all(tx)
+                .await
+                .map_err(|e| SettingsError::Generic {
+                    message: e.to_string(),
+                    src: "PostgresDataStore::fetchone_query#with_tx [query_execute]".to_string(),
+                    typ: "internal".to_string(),
+                })
+        } else {
+            query
+                .fetch_all(&self.pool)
+                .await
+                .map_err(|e| SettingsError::Generic {
+                    message: e.to_string(),
+                    src: "PostgresDataStore::fetchone_query#without_tx [query_execute]".to_string(),
+                    typ: "internal".to_string(),
+                })
+        }
+    }
 }
 
 #[async_trait]
@@ -296,29 +477,10 @@ impl DataStore for PostgresDataStoreImpl {
 
     async fn columns(&mut self) -> Result<Vec<String>, SettingsError> {
         // Get columns from database
-        let rows = if self.tx.is_some() {
-            let tx = self.tx.as_deref_mut().unwrap();
+        let query = sqlx::query("SELECT column_name FROM information_schema.columns WHERE table_name = $1 ORDER BY ordinal_position")
+            .bind(self.setting_table);
 
-            sqlx::query("SELECT column_name FROM information_schema.columns WHERE table_name = $1 ORDER BY ordinal_position")
-                .bind(self.setting_table)
-                .fetch_all(tx)
-                .await
-                .map_err(|e| SettingsError::Generic {
-                    message: e.to_string(),
-                    src: "PostgresDataStore::columns [query fetch_all]".to_string(),
-                    typ: "internal".to_string(),
-                })?
-        } else {
-            sqlx::query("SELECT column_name FROM information_schema.columns WHERE table_name = $1 ORDER BY ordinal_position")
-                .bind(self.setting_table)
-                .fetch_all(&self.pool)
-                .await
-                .map_err(|e| SettingsError::Generic {
-                    message: e.to_string(),
-                    src: "PostgresDataStore::columns [query fetch_all]".to_string(),
-                    typ: "internal".to_string(),
-                })?
-        };
+        let rows = self.fetchall_query(query).await?;
 
         let mut columns = Vec::new();
 
@@ -337,106 +499,38 @@ impl DataStore for PostgresDataStoreImpl {
         Ok(columns)
     }
 
-    #[allow(clippy::too_many_arguments)]
     async fn fetch_all(
         &mut self,
         fields: &[String],
         filters: indexmap::IndexMap<String, splashcore_rs::value::Value>,
     ) -> Result<Vec<super::state::State>, SettingsError> {
-        let mut filters_str = String::new();
+        let filters = combine_indexmaps!(filters, self.common_filters.clone());
 
-        for (i, (key, v)) in filters.iter().enumerate() {
-            // $1 is the first filter
-            if matches!(v, Value::None) {
-                filters_str.push_str(format!(" AND {} IS NULL", key).as_str());
-            } else {
-                filters_str.push_str(format!(" AND {} = ${}", key, i + 1).as_str());
-            }
-        }
-
-        let sql_stmt = if self.setting_guild_id.is_empty() {
-            format!(
-                "SELECT {} FROM {} WHERE {}",
-                fields.join(", "),
-                self.setting_table,
-                filters_str
-            )
-        } else {
-            format!(
-                "SELECT {} FROM {} WHERE {} AND {} = {}",
-                fields.join(", "),
-                self.setting_table,
-                filters_str,
-                self.setting_guild_id,
-                filters.len() + 1
-            )
-        };
+        let sql_stmt = format!(
+            "SELECT {} FROM {} WHERE {}",
+            fields.join(", "),
+            self.setting_table,
+            Self::create_where_clause(&filters, 0)
+        );
 
         let mut query = sqlx::query(sql_stmt.as_str());
 
         if !filters.is_empty() {
             let filter_state = State::new_with_special_variables(self.author, self.guild_id); // TODO: Avoid needing filter state here
-            for (field_name, value) in filters.iter() {
-                if matches!(value, Value::None) {
-                    continue;
-                }
-
-                let column = self.columns.iter().find(|c| c.id == field_name).ok_or(
-                    SettingsError::Generic {
-                        message: format!("Column {} not found", field_name),
-                        src: "PostgresDataStore [bind_filters_for_update]".to_string(),
-                        typ: "internal".to_string(),
-                    },
-                )?;
-
-                query = Self::_query_bind_value(
-                    query,
-                    value.clone(),
-                    &column.column_type,
-                    &filter_state,
-                );
-            }
+            query = Self::bind_map(query, filters, &filter_state, false, &self.columns)?;
         }
 
-        // Bind guild id last if set
-        if !self.setting_guild_id.is_empty() {
-            query = query.bind(self.guild_id.to_string());
-        }
-
-        let rows = if self.tx.is_some() {
-            let tx = self.tx.as_deref_mut().unwrap();
-            query
-                .fetch_all(tx)
-                .await
-                .map_err(|e| SettingsError::Generic {
-                    message: e.to_string(),
-                    src: "settings_view [query fetch_all]".to_string(),
-                    typ: "internal".to_string(),
-                })?
-        } else {
-            query
-                .fetch_all(&self.pool)
-                .await
-                .map_err(|e| SettingsError::Generic {
-                    message: e.to_string(),
-                    src: "settings_view [query fetch_all]".to_string(),
-                    typ: "internal".to_string(),
-                })?
-        };
-
-        if rows.is_empty() {
-            return Ok(Vec::new());
-        }
+        // Execute the query and process it to a Vec<state>
+        let rows = self.fetchall_query(query).await?;
 
         let mut values: Vec<State> = Vec::new();
-
         for row in rows {
-            let mut state = State::new_with_special_variables(self.author, self.guild_id);
+            let mut state = State::new_with_special_variables(self.author, self.guild_id); // Ensure special vars are in the state
 
             for (i, col) in fields.iter().enumerate() {
                 let val = Value::from_sqlx(&row, i).map_err(|e| SettingsError::Generic {
                     message: e.to_string(),
-                    src: "PostgresDataStore::fetch_all [Value::from_sqlx]".to_string(),
+                    src: "PostgresDataStore::rows_to_states [Value::from_sqlx]".to_string(),
                     typ: "internal".to_string(),
                 })?;
 
@@ -449,87 +543,27 @@ impl DataStore for PostgresDataStoreImpl {
         Ok(values)
     }
 
-    #[allow(clippy::too_many_arguments)]
     async fn matching_entry_count(
         &mut self,
         filters: indexmap::IndexMap<String, splashcore_rs::value::Value>,
     ) -> Result<usize, SettingsError> {
-        let mut filters_str = String::new();
+        let filters = combine_indexmaps!(filters, self.common_filters.clone());
 
-        for (i, (key, v)) in filters.iter().enumerate() {
-            if matches!(v, Value::None) {
-                filters_str.push_str(format!(" AND {} IS NULL", key).as_str());
-            } else {
-                filters_str.push_str(format!(" AND {} = ${}", key, i + 1).as_str());
-            }
-        }
-
-        let sql_stmt = if self.setting_guild_id.is_empty() {
-            format!(
-                "SELECT COUNT(*) FROM {} WHERE {}",
-                self.setting_table, filters_str
-            )
-        } else {
-            format!(
-                "SELECT COUNT(*) FROM {} WHERE {} AND {} = ${}",
-                self.setting_table,
-                filters_str,
-                self.setting_guild_id,
-                filters.len() + 1
-            )
-        };
+        let sql_stmt = format!(
+            "SELECT COUNT(*) FROM {} WHERE {}",
+            self.setting_table,
+            Self::create_where_clause(&filters, 0)
+        );
 
         let mut query = sqlx::query(sql_stmt.as_str());
 
         if !filters.is_empty() {
             let filter_state = State::new_with_special_variables(self.author, self.guild_id); // TODO: Avoid needing filter state here
-            for (field_name, value) in filters.iter() {
-                if matches!(value, Value::None) {
-                    continue;
-                }
-
-                let column = self.columns.iter().find(|c| c.id == field_name).ok_or(
-                    SettingsError::Generic {
-                        message: format!("Column {} not found", field_name),
-                        src: "settings_view [fetch_all]".to_string(),
-                        typ: "internal".to_string(),
-                    },
-                )?;
-
-                query = Self::_query_bind_value(
-                    query,
-                    value.clone(),
-                    &column.column_type,
-                    &filter_state,
-                );
-            }
+            query = Self::bind_map(query, filters, &filter_state, false, &self.columns)?;
         }
 
-        // Bind guild id last if set
-        if !self.setting_guild_id.is_empty() {
-            query = query.bind(self.guild_id.to_string());
-        }
-
-        let row = if self.tx.is_some() {
-            let tx = self.tx.as_deref_mut().unwrap();
-            query
-                .fetch_one(tx)
-                .await
-                .map_err(|e| SettingsError::Generic {
-                    message: e.to_string(),
-                    src: "settings_view [query fetch_one]".to_string(),
-                    typ: "internal".to_string(),
-                })?
-        } else {
-            query
-                .fetch_one(&self.pool)
-                .await
-                .map_err(|e| SettingsError::Generic {
-                    message: e.to_string(),
-                    src: "settings_view [query fetch_one]".to_string(),
-                    typ: "internal".to_string(),
-                })?
-        };
+        // Execute the query
+        let row = self.fetchone_query(query).await?;
 
         let count: i64 = row.try_get(0).map_err(|e| SettingsError::Generic {
             message: e.to_string(),
@@ -545,82 +579,26 @@ impl DataStore for PostgresDataStoreImpl {
         &mut self,
         entry: indexmap::IndexMap<String, splashcore_rs::value::Value>,
     ) -> Result<super::state::State, SettingsError> {
-        // Create the row
-        // First create the $N's from the cols starting with 1
-        let mut n_params = "".to_string();
-        let mut col_params = "".to_string();
-        for (i, (col, _)) in entry.iter().enumerate() {
-            n_params.push_str(&format!("${},", i + 1));
-            col_params.push_str(&format!("{},", col));
-            col_params.push(',');
-        }
+        let entry = combine_indexmaps!(entry, self.common_filters.clone());
 
-        // Remove the trailing comma
-        n_params.pop();
-        col_params.pop();
+        // Create the row
+        let (col_params, n_params) = Self::create_col_and_n_params(&entry, 0);
 
         // Execute the SQL statement
-        let sql_stmt = if self.setting_guild_id.is_empty() {
-            format!(
-                "INSERT INTO {} ({}) VALUES ({}) RETURNING {}",
-                self.setting_table, col_params, n_params, self.setting_primary_key
-            )
-        } else {
-            format!(
-                "INSERT INTO {} ({},{}) VALUES ({},${}) RETURNING {}",
-                self.setting_table,
-                self.setting_guild_id,
-                col_params,
-                n_params,
-                entry.len() + 1,
-                self.setting_primary_key
-            )
-        };
+        let sql_stmt = format!(
+            "INSERT INTO {} ({}) VALUES ({}) RETURNING {}",
+            self.setting_table, col_params, n_params, self.setting_primary_key
+        );
 
         let mut query = sqlx::query(sql_stmt.as_str());
 
         // Bind the sql query arguments
-        let mut state = State::from_indexmap(entry);
+        let mut state = State::from_indexmap(entry.clone());
 
-        for (col, value) in state.state.iter() {
-            // Get column type from schema for db query hinting
-            let Some(column) = self.columns.iter().find(|c| c.id == col) else {
-                return Err(SettingsError::Generic {
-                    message: format!("Column `{}` not found in schema", col),
-                    src: "PostgresDataStore::create_entry [column_type_let_else]".to_string(),
-                    typ: "internal".to_string(),
-                });
-            };
-
-            query = Self::_query_bind_value(query, value.clone(), &column.column_type, &state);
-        }
-
-        // Bind guild id last if set
-        if !self.setting_guild_id.is_empty() {
-            query = query.bind(self.guild_id.to_string());
-        }
+        query = Self::bind_map(query, entry, &state, true, &self.columns)?;
 
         // Execute the query
-        let pkey_row = if self.tx.is_some() {
-            let tx = self.tx.as_deref_mut().unwrap();
-            query
-                .fetch_one(tx)
-                .await
-                .map_err(|e| SettingsError::Generic {
-                    message: e.to_string(),
-                    src: "settings_create [query execute]".to_string(),
-                    typ: "internal".to_string(),
-                })?
-        } else {
-            query
-                .fetch_one(&self.pool)
-                .await
-                .map_err(|e| SettingsError::Generic {
-                    message: e.to_string(),
-                    src: "settings_create [query execute]".to_string(),
-                    typ: "internal".to_string(),
-                })?
-        };
+        let pkey_row = self.fetchone_query(query).await?;
 
         // Save pkey to state
         state.state.insert(
@@ -638,98 +616,30 @@ impl DataStore for PostgresDataStoreImpl {
     /// Updates an entry given a set of columns to set and a set of filters returning the updated entry
     ///
     /// Note that only the fields to be updated should be passed to this function
-    #[allow(clippy::too_many_arguments)]
     async fn update_matching_entries(
         &mut self,
         filters: indexmap::IndexMap<String, splashcore_rs::value::Value>,
         entry: indexmap::IndexMap<String, splashcore_rs::value::Value>,
     ) -> Result<(), SettingsError> {
-        let mut col_params = "".to_string();
-        for (i, (col, _)) in entry.iter().enumerate() {
-            // $1 is guild id, $2 is first col param
-            col_params.push_str(&format!("{}=${},", col, i + 2));
-        }
+        let filters = combine_indexmaps!(filters, self.common_filters.clone());
 
-        // Remove the trailing comma
-        col_params.pop();
-
-        // Make the filter string
-        let mut filters_str = String::new();
-
-        for (i, (key, v)) in filters.iter().enumerate() {
-            if matches!(v, Value::None) {
-                filters_str.push_str(format!(" AND {} IS NULL", key).as_str());
-            } else {
-                // $1 is guild_id, $2-$N are the filters, $N+1-$M are the columns to set
-                filters_str.push_str(format!(" AND {} = ${}", key, (i + 2) + entry.len()).as_str());
-            }
-        }
-
-        // Execute the SQL statement
+        // Create the SQL statement
         let sql_stmt = format!(
-            "UPDATE {} SET {} WHERE {} = $1 {}",
-            self.setting_table, col_params, self.setting_guild_id, filters_str
+            "UPDATE {} SET {} WHERE {}",
+            self.setting_table,
+            Self::create_update_set_clause(&entry, 0),
+            Self::create_where_clause(&filters, entry.len()),
         );
 
         let mut query = sqlx::query(sql_stmt.as_str());
 
-        // Bind the sql query arguments
-        query = query.bind(self.guild_id.to_string());
+        let entry_state = State::from_indexmap(entry.clone());
 
-        let entry_state = State::from_indexmap(entry);
-
-        // Add in entry values first
-        for (col, value) in entry_state.state.iter() {
-            // Get column type from schema for db query hinting
-            let Some(column) = self.columns.iter().find(|c| c.id == col) else {
-                return Err(SettingsError::Generic {
-                    message: format!("Column `{}` not found in schema", col),
-                    src: "PostgresDataStore [column_type_let_else_for_update]".to_string(),
-                    typ: "internal".to_string(),
-                });
-            };
-
-            query =
-                Self::_query_bind_value(query, value.clone(), &column.column_type, &entry_state);
-        }
-
-        // Add in filter values
-        for (field_name, value) in filters.iter() {
-            let column =
-                self.columns
-                    .iter()
-                    .find(|c| c.id == field_name)
-                    .ok_or(SettingsError::Generic {
-                        message: format!("Column {} not found", field_name),
-                        src: "PostgresDataStore [bind_filters_for_update]".to_string(),
-                        typ: "internal".to_string(),
-                    })?;
-
-            query =
-                Self::_query_bind_value(query, value.clone(), &column.column_type, &entry_state);
-        }
+        query = Self::bind_map(query, entry, &entry_state, true, &self.columns)?; // Bind the entry
+        query = Self::bind_map(query, filters, &entry_state, false, &self.columns)?; // Bind the filters
 
         // Execute the query
-        if self.tx.is_some() {
-            let tx = self.tx.as_deref_mut().unwrap();
-            query
-                .execute(tx)
-                .await
-                .map_err(|e: sqlx::Error| SettingsError::Generic {
-                    message: e.to_string(),
-                    src: "settings_update [query execute]".to_string(),
-                    typ: "internal".to_string(),
-                })?;
-        } else {
-            query
-                .execute(&self.pool)
-                .await
-                .map_err(|e| SettingsError::Generic {
-                    message: e.to_string(),
-                    src: "settings_update [query execute]".to_string(),
-                    typ: "internal".to_string(),
-                })?;
-        }
+        self.execute_query(query).await?;
 
         Ok(())
     }
@@ -737,67 +647,28 @@ impl DataStore for PostgresDataStoreImpl {
     /// Deletes entries given a set of filters
     ///
     /// Returns all deleted rows
-    #[allow(clippy::too_many_arguments)]
     async fn delete_matching_entries(
         &mut self,
         filters: indexmap::IndexMap<String, splashcore_rs::value::Value>,
     ) -> Result<(), SettingsError> {
-        let mut filters_str = String::new();
+        let filters = combine_indexmaps!(filters, self.common_filters.clone());
 
-        for (i, (key, _)) in filters.iter().enumerate() {
-            // $1 is guild_id, $2 is the first filter
-            filters_str.push_str(format!(" AND {} = ${}", key, i + 2).as_str());
-        }
-
+        // Create the SQL statement
         let sql_stmt = format!(
-            "DELETE FROM {} WHERE {} = $1 {}",
-            self.setting_table, self.setting_guild_id, filters_str
+            "DELETE FROM {} WHERE {}",
+            self.setting_table,
+            Self::create_where_clause(&filters, 0)
         );
 
         let mut query = sqlx::query(sql_stmt.as_str());
 
-        query = query.bind(self.guild_id.to_string());
-
         if !filters.is_empty() {
             let filter_state = State::new_with_special_variables(self.author, self.guild_id); // TODO: Avoid needing filter state here
-            for (field_name, value) in filters.iter() {
-                let column = self.columns.iter().find(|c| c.id == field_name).ok_or(
-                    SettingsError::Generic {
-                        message: format!("Column {} not found", field_name),
-                        src: "PostgresDataStore [bind_filters_for_update]".to_string(),
-                        typ: "internal".to_string(),
-                    },
-                )?;
-
-                query = Self::_query_bind_value(
-                    query,
-                    value.clone(),
-                    &column.column_type,
-                    &filter_state,
-                );
-            }
+            query = Self::bind_map(query, filters, &filter_state, false, &self.columns)?;
         }
 
-        let res = if self.tx.is_some() {
-            let tx = self.tx.as_deref_mut().unwrap();
-            query
-                .execute(tx)
-                .await
-                .map_err(|e| SettingsError::Generic {
-                    message: e.to_string(),
-                    src: "PostgresDataStore::delete_matching_entries [query_execute]".to_string(),
-                    typ: "internal".to_string(),
-                })?
-        } else {
-            query
-                .execute(&self.pool)
-                .await
-                .map_err(|e| SettingsError::Generic {
-                    message: e.to_string(),
-                    src: "PostgresDataStore::delete_matching_entries [query_execute]".to_string(),
-                    typ: "internal".to_string(),
-                })?
-        };
+        // Execute the query
+        let res = self.execute_query(query).await?;
 
         if res.rows_affected() == 0 {
             return Err(SettingsError::RowDoesNotExist {

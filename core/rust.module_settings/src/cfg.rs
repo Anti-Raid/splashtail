@@ -660,6 +660,27 @@ async fn _validate_value(
     Ok(v)
 }
 
+/// Returns the common filters for a given operation type
+fn common_filters(
+    setting: &ConfigOption,
+    operation_type: OperationType,
+    base_state: &State,
+) -> indexmap::IndexMap<String, splashcore_rs::value::Value> {
+    let common_filters_unparsed = setting
+        .common_filters
+        .get(&operation_type)
+        .unwrap_or(&setting.default_common_filters);
+
+    let mut common_filters = indexmap::IndexMap::new();
+
+    for (key, value) in common_filters_unparsed.iter() {
+        let value = base_state.template_to_string(value);
+        common_filters.insert(key.to_string(), value);
+    }
+
+    common_filters
+}
+
 /// Settings API: View implementation
 pub async fn settings_view(
     setting: &ConfigOption,
@@ -686,6 +707,11 @@ pub async fn settings_view(
             guild_id,
             author,
             permodule_executor,
+            common_filters(
+                setting,
+                OperationType::View,
+                &super::state::State::new_with_special_variables(author, guild_id),
+            ),
         )
         .await?;
 
@@ -866,6 +892,7 @@ pub async fn settings_create(
             guild_id,
             author,
             permodule_executor,
+            common_filters(setting, OperationType::Create, &state),
         )
         .await?;
 
@@ -1107,6 +1134,7 @@ pub async fn settings_update(
             guild_id,
             author,
             permodule_executor,
+            common_filters(setting, OperationType::Update, &state),
         )
         .await?;
 
@@ -1329,6 +1357,7 @@ pub async fn settings_delete(
             guild_id,
             author,
             permodule_executor,
+            common_filters(setting, OperationType::Delete, &state),
         )
         .await?;
 

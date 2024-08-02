@@ -503,8 +503,19 @@ pub struct CanonicalConfigOption {
     /// The table name for the config option
     pub table: String,
 
-    /// The column name refering to the guild id of the config option    
-    pub guild_id: String,
+    /// The common filters to apply to all crud operations on this config options
+    ///
+    /// For example, this can be used for guild_id scoped config options or non-guild scoped config options
+    ///
+    /// Semantics:
+    ///
+    /// View/Update/Delete: Common filters are applied to the view operation as an extension of all other filters
+    /// Create: Common filters are appended on to the entry itself
+    pub common_filters:
+        indexmap::IndexMap<CanonicalOperationType, indexmap::IndexMap<String, String>>,
+
+    /// The default common filter
+    pub default_common_filters: indexmap::IndexMap<String, String>,
 
     /// The primary key of the table
     pub primary_key: String,
@@ -528,7 +539,23 @@ impl From<super::types::ConfigOption> for CanonicalConfigOption {
         Self {
             id: module.id.to_string(),
             table: module.table.to_string(),
-            guild_id: module.guild_id.to_string(),
+            common_filters: module
+                .common_filters
+                .into_iter()
+                .map(|(k, v)| {
+                    (
+                        k.into(),
+                        v.into_iter()
+                            .map(|(k, v)| (k.to_string(), v.to_string()))
+                            .collect(),
+                    )
+                })
+                .collect(),
+            default_common_filters: module
+                .default_common_filters
+                .into_iter()
+                .map(|(k, v)| (k.to_string(), v.to_string()))
+                .collect(),
             name: module.name.to_string(),
             description: module.description.to_string(),
             columns: module.columns.iter().map(|c| c.into()).collect(),

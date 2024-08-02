@@ -13,7 +13,10 @@ pub static SINK: Lazy<ConfigOption> = Lazy::new(|| {
         name: "Audit Log Sinks",
         description: "A sink is a place where audit logs are sent to. This can be a channel or a webhook at this time. More sink types may be added in the future.",
         table: "auditlogs__sinks",
-        guild_id: "guild_id",
+        common_filters: indexmap::indexmap! {},
+        default_common_filters: indexmap::indexmap! {
+            "guild_id" => "{__guild_id}"
+        },
         primary_key: "id",
         max_entries: 10,
         data_store: settings_wrap_datastore(PostgresDataStore {}),

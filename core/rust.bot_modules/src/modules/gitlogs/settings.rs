@@ -14,7 +14,10 @@ pub static WEBHOOKS: Lazy<ConfigOption> = Lazy::new(|| {
         description:
             "Stores a list of webhooks to which Github can post events to.",
         table: "gitlogs__webhooks",
-        guild_id: "guild_id",
+        common_filters: indexmap::indexmap! {},
+        default_common_filters: indexmap::indexmap! {
+            "guild_id" => "{__guild_id}"
+        },
         primary_key: "id",
         max_entries: 5,
         data_store: settings_wrap_datastore(PostgresDataStore {}),
@@ -166,7 +169,10 @@ pub static REPOS: Lazy<ConfigOption> = Lazy::new(|| {
         description:
             "In order for the Git Logs integration to post webhooks, you must provide a list of repositories",
         table: "gitlogs__repos",
-        guild_id: "guild_id",
+        common_filters: indexmap::indexmap! {},
+        default_common_filters: indexmap::indexmap! {
+            "guild_id" => "{__guild_id}"
+        },
         primary_key: "id",
         max_entries: 10,
         data_store: settings_wrap_datastore(PostgresDataStore {}),
@@ -382,7 +388,10 @@ pub static EVENT_MODIFIERS: Lazy<ConfigOption> = Lazy::new(|| {
         description:
             "An event modifier allows customizing and redirecting webhooks based on the event type.",
         table: "gitlogs__event_modifiers",
-        guild_id: "guild_id",
+        common_filters: indexmap::indexmap! {},
+        default_common_filters: indexmap::indexmap! {
+            "guild_id" => "{__guild_id}"
+        },
         primary_key: "id",
         max_entries: 50,
         data_store: settings_wrap_datastore(PostgresDataStore {}),

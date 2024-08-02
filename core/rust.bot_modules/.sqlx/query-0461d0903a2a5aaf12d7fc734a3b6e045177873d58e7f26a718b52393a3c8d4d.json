@@ -1,0 +1,17 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE guild_module_configurations SET default_perms = $1, disabled = $2 WHERE guild_id = $3 AND module = $4",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Jsonb",
+        "Bool",
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "0461d0903a2a5aaf12d7fc734a3b6e045177873d58e7f26a718b52393a3c8d4d"
+}

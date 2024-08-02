@@ -568,8 +568,19 @@ pub struct ConfigOption {
     /// The table name for the config option
     pub table: &'static str,
 
-    /// The column name refering to the guild id of the config option    
-    pub guild_id: &'static str,
+    /// The common filters to apply to all crud operations on this config options
+    ///
+    /// For example, this can be used for guild_id scoped config options or non-guild scoped config options
+    ///
+    /// Semantics:
+    ///
+    /// View/Update/Delete: Common filters are applied to the view operation as an extension of all other filters
+    /// Create: Common filters are appended on to the entry itself
+    pub common_filters:
+        indexmap::IndexMap<OperationType, indexmap::IndexMap<&'static str, &'static str>>,
+
+    /// The default common filter
+    pub default_common_filters: indexmap::IndexMap<&'static str, &'static str>,
 
     /// The primary key of the table
     pub primary_key: &'static str,
@@ -645,6 +656,7 @@ pub trait CreateDataStore: Send + Sync {
         guild_id: serenity::all::GuildId,
         author: serenity::all::UserId,
         permodule_executor: &dyn base_data::permodule::PermoduleFunctionExecutor,
+        common_filters: indexmap::IndexMap<String, splashcore_rs::value::Value>,
     ) -> Result<Box<dyn DataStore>, SettingsError>;
 }
 
