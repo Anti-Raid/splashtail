@@ -1,0 +1,52 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n                SELECT limit_id, limit_name, limit_type, stings, limit_per, \n                limit_time AS limit_time FROM limits__guild_limits\n                WHERE guild_id = $1\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "limit_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "limit_name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "limit_type",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "stings",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 4,
+        "name": "limit_per",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 5,
+        "name": "limit_time",
+        "type_info": "Interval"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "a2a19f0ce0d7737ad7f66fd7dd83c6573bb1e081f54b93044786e84c646ded1d"
+}

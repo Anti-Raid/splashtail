@@ -1,0 +1,34 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT index, role_id, perms FROM guild_roles WHERE guild_id = $1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "index",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 1,
+        "name": "role_id",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "perms",
+        "type_info": "TextArray"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "e30145a42d154a92e851421ea3ba38c1e4476722f3527902b5e471acc363dc54"
+}
