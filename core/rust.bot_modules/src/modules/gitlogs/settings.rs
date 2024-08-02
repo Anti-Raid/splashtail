@@ -48,6 +48,7 @@ pub static WEBHOOKS: Lazy<ConfigOption> = Lazy::new(|| {
                 }),
                 default_pre_checks: settings_wrap_precheck(vec![]),
             },
+            module_settings::common_columns::guild_id("guild_id", "Guild ID", "The Guild ID the webhook belongs to"),
             Column {
                 id: "comment",
                 name: "Comment",
@@ -259,6 +260,7 @@ pub static REPOS: Lazy<ConfigOption> = Lazy::new(|| {
                     },
                 ]),
             },
+            module_settings::common_columns::guild_id("guild_id", "Guild ID", "The Guild ID the repository belongs to"),
             Column {
                 id: "repo_name",
                 name: "Repository Name [format: org/repo]",
@@ -532,6 +534,7 @@ pub static EVENT_MODIFIERS: Lazy<ConfigOption> = Lazy::new(|| {
                     },
                 ]),
             },
+            module_settings::common_columns::guild_id("guild_id", "Guild ID", "The Guild ID the event modifier belongs to"),
             Column {
                 id: "events",
                 name: "Events",

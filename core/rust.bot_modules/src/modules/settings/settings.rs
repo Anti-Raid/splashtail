@@ -38,6 +38,7 @@ pub static GUILD_ROLES: Lazy<ConfigOption> = Lazy::new(|| {
                 pre_checks: settings_wrap_precheck(indexmap::indexmap! {}),
                 default_pre_checks: settings_wrap_precheck(vec![]),
             },
+            module_settings::common_columns::guild_id("guild_id", "Guild ID", "The Guild ID"),
             Column {
                 id: "role_id",
                 name: "Role ID",

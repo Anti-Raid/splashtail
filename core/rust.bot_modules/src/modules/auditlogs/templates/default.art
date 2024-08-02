@@ -1,6 +1,6 @@
 //lang:lang_lua
 function (args) 
-    local message_plugin = __ar_builtins.load_plugin("message")
+    local message_plugin = require "@antiraid/message"
 
     -- Make the embed
     local embed = message_plugin.new_message_embed()

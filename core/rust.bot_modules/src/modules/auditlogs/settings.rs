@@ -34,6 +34,7 @@ pub static SINK: Lazy<ConfigOption> = Lazy::new(|| {
                 pre_checks: settings_wrap_precheck(indexmap::indexmap! {}),
                 default_pre_checks: settings_wrap_precheck(vec![]),
             },
+            module_settings::common_columns::guild_id("guild_id", "Guild ID", "The Guild ID the sink belongs to"),
             Column {
                 id: "type",
                 name: "Sink Type",

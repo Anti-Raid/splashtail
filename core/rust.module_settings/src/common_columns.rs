@@ -81,3 +81,28 @@ pub fn last_updated_by() -> Column {
         default_pre_checks: settings_wrap_precheck(vec![]),
     }
 }
+
+pub fn guild_id(id: &'static str, name: &'static str, description: &'static str) -> Column {
+    Column {
+        id,
+        name,
+        description,
+        column_type: ColumnType::new_scalar(InnerColumnType::String {
+            min_length: None,
+            max_length: None,
+            allowed_values: vec![],
+            kind: InnerColumnTypeStringKind::Normal,
+        }),
+        nullable: false,
+        unique: false,
+        suggestions: ColumnSuggestion::None {},
+        ignored_for: vec![
+            OperationType::View,
+            OperationType::Create,
+            OperationType::Update,
+        ],
+        secret: false,
+        pre_checks: settings_wrap_precheck(indexmap::indexmap! {}),
+        default_pre_checks: settings_wrap_precheck(vec![]),
+    }
+}

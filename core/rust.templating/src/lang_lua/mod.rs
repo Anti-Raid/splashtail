@@ -47,12 +47,15 @@ async fn create_lua_vm() -> LuaResult<ArLua> {
     // TODO: Offer a custom print function that logs to a channel
     lua.globals().set("print", LuaValue::Nil)?;
 
-    // Add the builtins module to global scope
-    //
-    // Note that we do not register every plugin here to give more memory to the templates themselves
-    let builtins_module = plugins::builtins(&lua)?;
+    // First copy existing require function to registry
+    lua.set_named_registry_value(
+        "_lua_require",
+        lua.globals().get::<_, LuaFunction>("require")?,
+    )?;
 
-    lua.globals().set("__ar_builtins", builtins_module)?;
+    // Then override require
+    lua.globals()
+        .set("require", lua.create_function(plugins::require)?)?;
 
     let state: Arc<ArLuaExecutionState> = Arc::new(ArLuaExecutionState {
         last_exec: utils::AtomicInstant::new(std::time::Instant::now()),
