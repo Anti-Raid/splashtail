@@ -156,21 +156,11 @@ pub async fn render_permissions_template(
 mod test {
     use mlua::prelude::*;
 
-    fn test_and_return_luavm() -> LuaResult<Lua> {
-        let lua = Lua::new();
-        lua.sandbox(true)?;
-        lua.set_memory_limit(super::MAX_TEMPLATE_MEMORY_USAGE)?;
-        lua.globals().set("require", LuaValue::Nil)?;
-
-        let map_table = lua.create_table()?;
-        map_table.set(1, "one")?;
-        map_table.set("two", 2)?;
-
-        lua.globals().set("map_table", map_table)?;
-
-        lua.load("for k,v in pairs(map_table) do end").exec()?;
-
-        Ok(lua)
+    async fn test_and_return_luavm() -> LuaResult<Lua> {
+        let lua = super::create_lua_vm().await?;
+        lua.vm.load("require \"@antiraid/builtins\" ").exec()?;
+        lua.vm.load("require \"os\" ").exec()?;
+        Ok(lua.vm)
     }
 
     #[tokio::test]
@@ -180,7 +170,7 @@ mod test {
         for i in 0..100000 {
             println!("{}", i);
 
-            let lua = test_and_return_luavm().unwrap();
+            let lua = test_and_return_luavm().await.unwrap();
             vms.push(std::rc::Rc::new(lua));
         }
     }

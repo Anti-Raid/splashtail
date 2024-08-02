@@ -16,6 +16,10 @@ type ModuleFn = fn(&Lua) -> LuaResult<LuaTable>;
 pub fn builtins(lua: &Lua) -> LuaResult<LuaTable> {
     let module = lua.create_table()?;
     module.set("require", lua.create_function(require)?)?;
+    module.set(
+        "memusage",
+        lua.create_function(|lua, _: ()| Ok(lua.used_memory()))?,
+    )?;
 
     module.set_readonly(true); // Block any attempt to modify this table
 
@@ -26,6 +30,24 @@ pub fn require(lua: &Lua, (plugin_name,): (String,)) -> LuaResult<LuaTable> {
     match PLUGINS.get(plugin_name.as_str()) {
         Some(plugin) => plugin(lua),
         None => {
+            // These core modules are provided directly
+            let is_module = matches!(
+                plugin_name.as_str(),
+                "math"
+                    | "table"
+                    | "string"
+                    | "coroutine"
+                    | "bit32"
+                    | "utf8"
+                    | "os"
+                    | "debug"
+                    | "buffer"
+            );
+
+            if is_module {
+                return lua.globals().get::<_, LuaTable>(plugin_name);
+            }
+
             // Import the plugin from lua stdlib
             let require = lua.named_registry_value::<LuaFunction>("_lua_require")?;
             require.call::<_, LuaTable>(plugin_name)
