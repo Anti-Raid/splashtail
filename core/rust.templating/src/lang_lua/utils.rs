@@ -1,8 +1,6 @@
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::time::{Duration, Instant};
 
-pub const DEFAULT_ORDERING: Ordering = Ordering::SeqCst;
-
 pub struct AtomicInstant {
     base: Instant,
     offset: AtomicUsize,

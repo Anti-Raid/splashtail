@@ -64,7 +64,7 @@ async fn create_lua_vm() -> LuaResult<ArLua> {
     lua.set_interrupt(move |_| {
         if state_interrupt_ref
             .last_exec
-            .load(utils::DEFAULT_ORDERING)
+            .load(std::sync::atomic::Ordering::Acquire)
             .elapsed()
             >= MAX_TEMPLATES_EXECUTION_TIME
         {
@@ -84,9 +84,10 @@ async fn create_lua_vm() -> LuaResult<ArLua> {
 async fn get_lua_vm(guild_id: GuildId) -> LuaResult<ArLua> {
     match VMS.get(&guild_id).await {
         Some(vm) => {
-            vm.state
-                .last_exec
-                .store(std::time::Instant::now(), utils::DEFAULT_ORDERING); // Update the last execution time
+            vm.state.last_exec.store(
+                std::time::Instant::now(),
+                std::sync::atomic::Ordering::Release,
+            ); // Update the last execution time
             Ok(vm.clone())
         }
         None => {

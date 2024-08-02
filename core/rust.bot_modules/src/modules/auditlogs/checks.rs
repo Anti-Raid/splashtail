@@ -9,7 +9,7 @@ pub async fn check_all_events(events: Vec<String>) -> Result<(), crate::Error> {
             let not_audit_loggable = super::events::not_audit_loggable_event();
 
             for event in events {
-                if res_killed.load(std::sync::atomic::Ordering::SeqCst) {
+                if res_killed.load(std::sync::atomic::Ordering::Acquire) {
                     return Err("Killed".to_string());
                 }
 
@@ -57,7 +57,7 @@ pub async fn check_all_events(events: Vec<String>) -> Result<(), crate::Error> {
     )
     .await??;
 
-    is_killed.store(true, std::sync::atomic::Ordering::SeqCst); // Kill the task when possible
+    is_killed.store(true, std::sync::atomic::Ordering::Release); // Kill the task when possible
 
     res.map_err(|e| e.into())
 }
