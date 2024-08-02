@@ -287,6 +287,11 @@ impl PostgresDataStoreImpl {
             }
         }
 
+        if filters_str.is_empty() {
+            // HACK: Use 1 = 1
+            filters_str.push_str("1 = 1");
+        }
+
         filters_str
     }
 
