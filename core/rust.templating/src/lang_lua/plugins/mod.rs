@@ -30,7 +30,9 @@ pub fn require(lua: &Lua, (plugin_name,): (String,)) -> LuaResult<LuaTable> {
     match PLUGINS.get(plugin_name.as_str()) {
         Some(plugin) => plugin(lua),
         None => {
-            // These core modules are provided directly
+            // These core modules are provided directly in globals.
+            //
+            // To ensure compatibility with Lua scripts though, we need to manually allow them to be imported
             let is_module = matches!(
                 plugin_name.as_str(),
                 "math"
