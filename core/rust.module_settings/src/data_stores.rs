@@ -425,6 +425,7 @@ impl PostgresDataStoreImpl {
         &mut self,
         query: sqlx::query::Query<'a, sqlx::Postgres, sqlx::postgres::PgArguments>,
     ) -> Result<Vec<sqlx::postgres::PgRow>, SettingsError> {
+        let query_sql = query.sql();
         if self.tx.is_some() {
             let tx = self.tx.as_deref_mut().unwrap();
             query
@@ -432,7 +433,10 @@ impl PostgresDataStoreImpl {
                 .await
                 .map_err(|e| SettingsError::Generic {
                     message: e.to_string(),
-                    src: "PostgresDataStore::fetchone_query#with_tx [query_execute]".to_string(),
+                    src: format!(
+                        "PostgresDataStore::fetchall_query#with_tx [query_execute]: {}",
+                        query_sql
+                    ),
                     typ: "internal".to_string(),
                 })
         } else {
@@ -441,7 +445,10 @@ impl PostgresDataStoreImpl {
                 .await
                 .map_err(|e| SettingsError::Generic {
                     message: e.to_string(),
-                    src: "PostgresDataStore::fetchone_query#without_tx [query_execute]".to_string(),
+                    src: format!(
+                        "PostgresDataStore::fetchall_query#without_tx [query_execute]: {}",
+                        query_sql
+                    ),
                     typ: "internal".to_string(),
                 })
         }
