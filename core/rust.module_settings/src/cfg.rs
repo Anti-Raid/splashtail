@@ -682,7 +682,9 @@ fn common_filters(
 }
 
 /// Validate keys for basic sanity
-fn validate_keys(
+///
+/// This *MUST* be called at the start of any operation to ensure that the keys are valid and safe
+pub fn validate_keys(
     _setting: &ConfigOption,
     fields: &indexmap::IndexMap<String, Value>,
 ) -> Result<(), SettingsError> {

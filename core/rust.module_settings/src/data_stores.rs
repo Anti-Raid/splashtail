@@ -281,9 +281,9 @@ impl PostgresDataStoreImpl {
             }
 
             if matches!(v, Value::None) {
-                filters_str.push_str(format!(" {} IS NULL", key).as_str());
+                filters_str.push_str(format!(" \"{}\" IS NULL", key).as_str());
             } else {
-                filters_str.push_str(format!(" {} = ${}", key, (i + 1) + offset).as_str());
+                filters_str.push_str(format!(" \"{}\" = ${}", key, (i + 1) + offset).as_str());
             }
         }
 
@@ -296,7 +296,7 @@ impl PostgresDataStoreImpl {
     }
 
     /// Helper method to create a SET clause from a set of entries
-    /// E.g. a = $1, b = $2, c = $3 etc.
+    /// E.g. "a" = $1, "b" = $2, "c" = $3 etc.
     fn create_update_set_clause(
         entry: &indexmap::IndexMap<String, Value>,
         offset: usize,
@@ -304,7 +304,7 @@ impl PostgresDataStoreImpl {
         let mut col_params = "".to_string();
         for (i, (col, _)) in entry.iter().enumerate() {
             // $1 is first col param
-            col_params.push_str(&format!("{} = ${},", col, (i + 1) + offset));
+            col_params.push_str(&format!("\"{}\" = ${},", col, (i + 1) + offset));
         }
 
         // Remove the trailing comma
@@ -313,7 +313,7 @@ impl PostgresDataStoreImpl {
         col_params
     }
 
-    /// Helper method to create the col_params (col1, col2, col3 etc.) and the n_params ($1, $2, $3 etc.)
+    /// Helper method to create the col_params ("col1", "col2", "col3" etc.) and the n_params ($1, $2, $3 etc.)
     /// for a query
     fn create_col_and_n_params(
         entry: &indexmap::IndexMap<String, Value>,
@@ -323,7 +323,7 @@ impl PostgresDataStoreImpl {
         let mut col_params = "".to_string();
         for (i, (col, _)) in entry.iter().enumerate() {
             n_params.push_str(&format!("${},", (i + 1) + offset));
-            col_params.push_str(&format!("{},", col));
+            col_params.push_str(&format!("\"{}\",", col));
         }
 
         // Remove the trailing comma
