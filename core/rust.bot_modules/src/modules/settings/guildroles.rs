@@ -27,7 +27,12 @@ pub async fn guildroles(_ctx: Context<'_>) -> Result<(), Error> {
     rename = "list"
 )]
 pub async fn guildroles_list(ctx: Context<'_>) -> Result<(), Error> {
-    crate::silverpelt::settings_poise::settings_viewer(&ctx, &super::settings::GUILD_ROLES).await
+    crate::silverpelt::settings_poise::settings_viewer(
+        &ctx,
+        &super::settings::GUILD_ROLES,
+        indexmap::IndexMap::new(),
+    )
+    .await
 }
 
 /// Adds a new role with specific permissions

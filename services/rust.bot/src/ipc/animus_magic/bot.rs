@@ -440,6 +440,7 @@ impl BotAnimusMessage {
                             pool,
                             guild_id,
                             user_id,
+                            p_fields,
                             &crate::PermoduleFunctionExecutor {},
                         )
                         .await

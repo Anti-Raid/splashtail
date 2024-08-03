@@ -27,7 +27,12 @@ pub async fn register(ctx: Context<'_>) -> Result<(), Error> {
 
 #[poise::command(prefix_command)]
 pub async fn can_use_bot_list(ctx: Context<'_>) -> Result<(), crate::Error> {
-    crate::silverpelt::settings_poise::settings_viewer(&ctx, &super::settings::CAN_USE_BOT).await
+    crate::silverpelt::settings_poise::settings_viewer(
+        &ctx,
+        &super::settings::CAN_USE_BOT,
+        indexmap::IndexMap::new(),
+    )
+    .await
 }
 
 #[poise::command(prefix_command)]
@@ -83,8 +88,12 @@ pub async fn can_use_bot_delete(
 
 #[poise::command(prefix_command)]
 pub async fn inspector__fake_bots_list(ctx: Context<'_>) -> Result<(), crate::Error> {
-    crate::silverpelt::settings_poise::settings_viewer(&ctx, &super::settings::INSPECTOR_FAKE_BOTS)
-        .await
+    crate::silverpelt::settings_poise::settings_viewer(
+        &ctx,
+        &super::settings::INSPECTOR_FAKE_BOTS,
+        indexmap::IndexMap::new(),
+    )
+    .await
 }
 
 #[poise::command(prefix_command)]

@@ -592,7 +592,7 @@ pub struct ConfigOption {
     pub columns: Arc<Vec<Column>>,
 
     /// Maximum number of entries a server may have
-    pub max_entries: usize,
+    pub max_entries: Option<usize>,
 
     /// Operation specific data
     pub operations: indexmap::IndexMap<OperationType, OperationSpecific>,

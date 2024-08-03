@@ -18,7 +18,7 @@ pub static CAN_USE_BOT: Lazy<ConfigOption> = Lazy::new(|| ConfigOption {
     common_filters: indexmap::indexmap! {},
     default_common_filters: indexmap::indexmap! {},
     primary_key: "id",
-    max_entries: 1024,
+    max_entries: None,
     data_store: settings_wrap_datastore(PostgresDataStore {}),
     columns: settings_wrap_columns(vec![
         Column {
@@ -161,7 +161,7 @@ pub static INSPECTOR_FAKE_BOTS: Lazy<ConfigOption> = Lazy::new(|| ConfigOption {
     common_filters: indexmap::indexmap! {},
     default_common_filters: indexmap::indexmap! {},
     primary_key: "bot_id",
-    max_entries: 1024,
+    max_entries: None,
     data_store: settings_wrap_datastore(PostgresDataStore {}),
     columns: settings_wrap_columns(vec![
         Column {

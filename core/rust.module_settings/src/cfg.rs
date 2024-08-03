@@ -681,7 +681,36 @@ fn common_filters(
     common_filters
 }
 
+/// Validate keys for basic sanity
+fn validate_keys(
+    _setting: &ConfigOption,
+    fields: &indexmap::IndexMap<String, Value>,
+) -> Result<(), SettingsError> {
+    const MAX_FIELDS: usize = 50;
+    if fields.len() > MAX_FIELDS {
+        return Err(SettingsError::Generic {
+            message: format!("Too many fields: {}", fields.len()),
+            src: "settings_common#validate_keys".to_string(),
+            typ: "internal".to_string(),
+        });
+    }
+
+    for (key, _) in fields.iter() {
+        // Ensure key only contains a-z, A-Z, 1-9 and _ to protect against SQL injection and other potential attacks
+        if !key.chars().all(|c| c.is_alphanumeric() || c == '_') {
+            return Err(SettingsError::Generic {
+                message: format!("Invalid key: {}", key),
+                src: "settings_common#validate_keys".to_string(),
+                typ: "internal".to_string(),
+            });
+        }
+    }
+
+    Ok(())
+}
+
 /// Settings API: View implementation
+#[allow(clippy::too_many_arguments)]
 pub async fn settings_view(
     setting: &ConfigOption,
     cache_http: &botox::cache::CacheHttpImpl,
@@ -689,6 +718,7 @@ pub async fn settings_view(
     pool: &sqlx::PgPool,
     guild_id: serenity::all::GuildId,
     author: serenity::all::UserId,
+    fields: indexmap::IndexMap<String, Value>, // The filters to apply
     permodule_executor: &dyn base_data::permodule::PermoduleFunctionExecutor,
 ) -> Result<Vec<State>, SettingsError> {
     let Some(operation_specific) = setting.operations.get(&OperationType::View) else {
@@ -696,6 +726,9 @@ pub async fn settings_view(
             operation: OperationType::View,
         });
     };
+
+    // WARNING: The ``validate_keys`` function call here should never be omitted, add back at once if you see this message without the function call
+    validate_keys(setting, &fields)?;
 
     let mut data_store = setting
         .data_store
@@ -721,9 +754,7 @@ pub async fn settings_view(
         .map(|c| c.id.to_string())
         .collect::<Vec<String>>();
 
-    let states = data_store
-        .fetch_all(&cols, indexmap::IndexMap::new())
-        .await?;
+    let states = data_store.fetch_all(&cols, fields).await?;
 
     if states.is_empty() {
         return Ok(Vec::new());
@@ -842,6 +873,9 @@ pub async fn settings_create(
         });
     };
 
+    // WARNING: The ``validate_keys`` function call here should never be omitted, add back at once if you see this message without the function call
+    validate_keys(setting, &fields)?;
+
     let mut fields = fields; // Make fields mutable, consuming the input
 
     // Ensure all columns exist in fields, note that we can ignore extra fields so this one single loop is enough
@@ -906,11 +940,13 @@ pub async fn settings_create(
         )
         .await?;
 
-    if ids.len() > setting.max_entries {
-        return Err(SettingsError::MaximumCountReached {
-            max: setting.max_entries,
-            current: ids.len(),
-        });
+    if let Some(max_entries) = setting.max_entries {
+        if ids.len() > max_entries {
+            return Err(SettingsError::MaximumCountReached {
+                max: max_entries,
+                current: ids.len(),
+            });
+        }
     }
 
     for id in ids.iter() {
@@ -1059,6 +1095,9 @@ pub async fn settings_update(
             operation: OperationType::Update,
         });
     };
+
+    // WARNING: The ``validate_keys`` function call here should never be omitted, add back at once if you see this message without the function call
+    validate_keys(setting, &fields)?;
 
     let mut fields = fields; // Make fields mutable, consuming the input
 

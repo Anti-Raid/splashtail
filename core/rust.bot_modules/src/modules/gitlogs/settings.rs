@@ -19,7 +19,7 @@ pub static WEBHOOKS: Lazy<ConfigOption> = Lazy::new(|| {
             "guild_id" => "{__guild_id}"
         },
         primary_key: "id",
-        max_entries: 5,
+        max_entries: Some(5),
         data_store: settings_wrap_datastore(PostgresDataStore {}),
         columns: settings_wrap_columns(vec![
             Column {
@@ -175,7 +175,7 @@ pub static REPOS: Lazy<ConfigOption> = Lazy::new(|| {
             "guild_id" => "{__guild_id}"
         },
         primary_key: "id",
-        max_entries: 10,
+        max_entries: Some(10),
         data_store: settings_wrap_datastore(PostgresDataStore {}),
         columns: settings_wrap_columns(vec![
             Column {
@@ -395,7 +395,7 @@ pub static EVENT_MODIFIERS: Lazy<ConfigOption> = Lazy::new(|| {
             "guild_id" => "{__guild_id}"
         },
         primary_key: "id",
-        max_entries: 50,
+        max_entries: Some(50),
         data_store: settings_wrap_datastore(PostgresDataStore {}),
         columns: settings_wrap_columns(vec![
             Column {

@@ -35,7 +35,12 @@ pub async fn gitlogs(_ctx: Context<'_>) -> Result<(), Error> {
     required_permissions = "MANAGE_GUILD"
 )]
 pub async fn webhooks_list(ctx: Context<'_>) -> Result<(), Error> {
-    crate::silverpelt::settings_poise::settings_viewer(&ctx, &super::settings::WEBHOOKS).await
+    crate::silverpelt::settings_poise::settings_viewer(
+        &ctx,
+        &super::settings::WEBHOOKS,
+        indexmap::IndexMap::new(),
+    )
+    .await
 }
 
 /// Creates a new webhook in a guild
@@ -129,7 +134,12 @@ pub async fn webhooks_delete(
     required_permissions = "MANAGE_GUILD"
 )]
 pub async fn repo_list(ctx: Context<'_>) -> Result<(), Error> {
-    crate::silverpelt::settings_poise::settings_viewer(&ctx, &super::settings::REPOS).await
+    crate::silverpelt::settings_poise::settings_viewer(
+        &ctx,
+        &super::settings::REPOS,
+        indexmap::IndexMap::new(),
+    )
+    .await
 }
 
 /// Creates a new repository for a webhook
@@ -217,8 +227,12 @@ pub async fn repo_delete(
     required_permissions = "MANAGE_GUILD"
 )]
 pub async fn eventmods_list(ctx: Context<'_>) -> Result<(), Error> {
-    crate::silverpelt::settings_poise::settings_viewer(&ctx, &super::settings::EVENT_MODIFIERS)
-        .await
+    crate::silverpelt::settings_poise::settings_viewer(
+        &ctx,
+        &super::settings::EVENT_MODIFIERS,
+        indexmap::IndexMap::new(),
+    )
+    .await
 }
 
 /// Creates a event modifier

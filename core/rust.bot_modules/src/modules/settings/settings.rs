@@ -22,7 +22,7 @@ pub static GUILD_ROLES: Lazy<ConfigOption> = Lazy::new(|| {
             "guild_id" => "{__guild_id}"
         },
         primary_key: "id",
-        max_entries: 512,
+        max_entries: None,
         data_store: settings_wrap_datastore(PostgresDataStore {}),
         columns: settings_wrap_columns(vec![
             Column {

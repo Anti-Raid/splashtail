@@ -21,7 +21,12 @@ pub async fn auditlogs(_ctx: Context<'_>) -> Result<(), Error> {
 
 #[poise::command(prefix_command, slash_command, user_cooldown = 1)]
 pub async fn list_sinks(ctx: Context<'_>) -> Result<(), Error> {
-    crate::silverpelt::settings_poise::settings_viewer(&ctx, &super::settings::SINK).await
+    crate::silverpelt::settings_poise::settings_viewer(
+        &ctx,
+        &super::settings::SINK,
+        indexmap::IndexMap::new(),
+    )
+    .await
 }
 
 #[poise::command(prefix_command, slash_command, user_cooldown = 1)]

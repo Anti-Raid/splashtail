@@ -69,6 +69,7 @@ fn _get_display_value(column_type: &ColumnType, value: &Value, state: &State) ->
 pub async fn settings_viewer(
     ctx: &crate::Context<'_>,
     setting: &ConfigOption,
+    fields: indexmap::IndexMap<String, Value>, // The filters to apply
 ) -> Result<(), crate::Error> {
     fn _create_reply<'a>(
         setting: &ConfigOption,
@@ -208,6 +209,7 @@ pub async fn settings_viewer(
         &data.pool,
         guild_id,
         ctx.author().id,
+        fields,
         &*data.props.permodule_executor(),
     )
     .await

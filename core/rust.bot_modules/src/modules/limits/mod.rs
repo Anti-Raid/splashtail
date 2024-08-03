@@ -27,15 +27,22 @@ pub fn module() -> crate::silverpelt::Module {
                     "add" => crate::silverpelt::CommandExtendedData::kittycat_or_admin("limits", "add"),
                     "update" => crate::silverpelt::CommandExtendedData::kittycat_or_admin("limits", "update"),
                     "remove" => crate::silverpelt::CommandExtendedData::kittycat_or_admin("limits", "remove"),
-                    "hit" => crate::silverpelt::CommandExtendedData::kittycat_or_admin("limits", "hit"),
                 },
             ),
             (
-                cmds::limitactions(),
+                cmds::past_hit_limits(),
                 indexmap! {
-                    "view" => crate::silverpelt::CommandExtendedData::kittycat_or_admin("limits", "limitactions_view"),
+                    "view" => crate::silverpelt::CommandExtendedData::kittycat_or_admin("past_hit_limits", "view"),
+                    "remove" => crate::silverpelt::CommandExtendedData::kittycat_or_admin("past_hit_limits", "remove"),
                 }
             ),
+            (
+                cmds::limit_user_actions(),
+                indexmap! {
+                    "view" => crate::silverpelt::CommandExtendedData::kittycat_or_admin("limit_user_actions", "view"),
+                    "remove" => crate::silverpelt::CommandExtendedData::kittycat_or_admin("limit_user_actions", "remove"),
+                }
+            )
         ],
         event_handlers: vec![Box::new(move |ectx| {
             events::event_listener(ectx).boxed()
@@ -43,7 +50,11 @@ pub fn module() -> crate::silverpelt::Module {
         on_startup: vec![Box::new(move |data| {
             core::register_punishment_sting_source(data).boxed()
         })],
-        config_options: vec![(*settings::GUILD_LIMITS).clone()],
+        config_options: vec![
+            (*settings::PAST_HIT_LIMITS).clone(),
+            (*settings::USER_ACTIONS).clone(),
+            (*settings::GUILD_LIMITS).clone(),
+        ],
         ..Default::default()
     }
 }
