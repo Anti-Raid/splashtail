@@ -21,7 +21,10 @@ pub fn module() -> crate::silverpelt::Module {
             cmds::sudo(),
             indexmap::indexmap! {
                 "register" => crate::silverpelt::CommandExtendedData::none(),
-                "cub" => crate::silverpelt::CommandExtendedData::none(),
+                "can_use_bot_list" => crate::silverpelt::CommandExtendedData::none(),
+                "can_use_bot_add" => crate::silverpelt::CommandExtendedData::none(),
+                "can_use_bot_update" => crate::silverpelt::CommandExtendedData::none(),
+                "can_use_bot_delete" => crate::silverpelt::CommandExtendedData::none(),
                 "inspector__fake_bots_list" => crate::silverpelt::CommandExtendedData::none(),
                 "inspector__fake_bots_add" => crate::silverpelt::CommandExtendedData::none(),
                 "inspector__fake_bots_update" => crate::silverpelt::CommandExtendedData::none(),
