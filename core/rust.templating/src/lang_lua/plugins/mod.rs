@@ -1,3 +1,4 @@
+pub mod interop;
 pub mod message;
 
 use mlua::prelude::*;
@@ -6,6 +7,7 @@ use once_cell::sync::Lazy;
 static PLUGINS: Lazy<indexmap::IndexMap<String, ModuleFn>> = Lazy::new(|| {
     indexmap::indexmap! {
         "@antiraid/builtins".to_string() => builtins as ModuleFn,
+        "@antiraid/interop".to_string() => interop::init_plugin as ModuleFn,
         "@antiraid/message".to_string() => message::init_plugin as ModuleFn,
     }
 });
@@ -16,13 +18,7 @@ type ModuleFn = fn(&Lua) -> LuaResult<LuaTable>;
 pub fn builtins(lua: &Lua) -> LuaResult<LuaTable> {
     let module = lua.create_table()?;
     module.set("require", lua.create_function(require)?)?;
-    module.set(
-        "memusage",
-        lua.create_function(|lua, _: ()| Ok(lua.used_memory()))?,
-    )?;
-
     module.set_readonly(true); // Block any attempt to modify this table
-
     Ok(module)
 }
 
