@@ -37,15 +37,29 @@ async fn create_lua_vm() -> LuaResult<ArLua> {
         LuaStdLib::ALL_SAFE,
         LuaOptions::new().catch_rust_panics(true),
     )?;
+
+    // Override print function with function that appends to __stack.stdout table
+    // We do this by executing a lua script
+    lua.load(
+        r#"
+        _G.print = function(...)
+            local args = {...}
+            local str = ""
+            for i = 1, #args do
+                str = str .. tostring(args[i]) .. "\t"
+            end
+            __stack.stdout = __stack.stdout or {}
+            table.insert(__stack.stdout, str)
+        end
+    "#,
+    )
+    .exec()?;
+
     lua.sandbox(true)?; // We explicitly want globals to be shared across all scripts in this VM
     lua.set_memory_limit(MAX_TEMPLATE_MEMORY_USAGE)?;
 
     // To allow locking down _G, we need to create a table to store user data (__stack)
     lua.globals().set("__stack", lua.create_table()?)?;
-
-    // Disable print function, templates should not be able to access stdout
-    // TODO: Offer a custom print function that logs to a channel
-    lua.globals().set("print", LuaValue::Nil)?;
 
     // First copy existing require function to registry
     lua.set_named_registry_value(

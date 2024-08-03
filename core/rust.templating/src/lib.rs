@@ -46,12 +46,42 @@ impl TemplateLanguageSupportTier {
     }
 }
 
+#[derive(Clone, serde::Serialize, serde::Deserialize)]
+pub struct TemplatePragma {
+    pub lang: TemplateLanguage,
+
+    #[serde(flatten)]
+    pub extra_info: indexmap::IndexMap<String, serde_json::Value>,
+}
+
+impl TemplatePragma {
+    pub fn parse(template: &str) -> Result<(&str, Self), base_data::Error> {
+        let (first_line, rest) = match template.find('\n') {
+            Some(i) => template.split_at(i),
+            None => return Err("No/unknown template language specified".into()),
+        };
+
+        if !first_line.contains("@pragma ") {
+            return Err("No/unknown template language specified".into());
+        }
+
+        // Remove out the @pragma and serde parse it
+        let first_line = first_line.replace("@pragma ", "");
+
+        Ok((rest, serde_json::from_str(&first_line)?))
+    }
+}
+
+#[derive(Clone, serde::Serialize, serde::Deserialize)]
 pub enum TemplateLanguage {
     #[cfg(feature = "lua")]
+    #[serde(rename = "lua")]
     Lua,
     #[cfg(feature = "rhai")]
+    #[serde(rename = "rhai")]
     Rhai,
     #[cfg(feature = "tera")]
+    #[serde(rename = "tera")]
     Tera,
 }
 
@@ -88,7 +118,7 @@ impl TemplateLanguage {
     pub fn support_tier(&self) -> TemplateLanguageSupportTier {
         match self {
             #[cfg(feature = "lua")]
-            Self::Lua => TemplateLanguageSupportTier::TierOne, 
+            Self::Lua => TemplateLanguageSupportTier::TierOne,
             #[cfg(feature = "rhai")]
             Self::Rhai => TemplateLanguageSupportTier::TierTwo,
             #[cfg(feature = "tera")]
@@ -105,21 +135,6 @@ impl TemplateLanguage {
 
         TEMPLATING_ENVVAR.contains(&self.to_string())
     }
-
-    pub fn from_pragma(pragma: &str) -> Option<Self> {
-        let comment = pragma.trim();
-
-        if comment.starts_with("//lang:") {
-            let lang = comment.split(':').nth(1)?;
-
-            match Self::from_str(lang) {
-                Ok(lang) => Some(lang),
-                Err(_) => None,
-            }
-        } else {
-            None
-        }
-    }
 }
 
 #[allow(unused_variables)]
@@ -128,29 +143,22 @@ pub async fn compile_template(
     template: &str,
     opts: CompileTemplateOptions,
 ) -> Result<(), base_data::Error> {
-    let (first_line, rest) = match template.find('\n') {
-        Some(i) => template.split_at(i),
-        None => return Err("No/unknown template language specified".into()),
-    };
+    let (template, pragma) = TemplatePragma::parse(template)?;
 
-    let Some(lang) = TemplateLanguage::from_pragma(first_line) else {
-        return Err("No/unknown template language specified".into());
-    };
-
-    match lang {
+    match pragma.lang {
         #[cfg(feature = "lua")]
         TemplateLanguage::Lua => {
-            lang_lua::compile_template(guild_id, rest).await?;
+            lang_lua::compile_template(guild_id, template).await?;
         }
         #[cfg(feature = "rhai")]
         TemplateLanguage::Rhai => {
             let mut engine = lang_rhai::create_engine();
             lang_rhai::apply_sandboxing(&mut engine);
-            lang_rhai::compile(&engine, rest, opts)?;
+            lang_rhai::compile(&engine, template, opts)?;
         }
         #[cfg(feature = "tera")]
         TemplateLanguage::Tera => {
-            lang_tera::compile_template(rest, opts).await?;
+            lang_tera::compile_template(template, opts).await?;
         }
     }
 
@@ -165,26 +173,20 @@ pub async fn render_message_template(
     args: crate::core::MessageTemplateContext,
     opts: CompileTemplateOptions,
 ) -> Result<core::DiscordReply, base_data::Error> {
-    let (first_line, rest) = match template.find('\n') {
-        Some(i) => template.split_at(i),
-        None => return Err("No/unknown template language specified".into()),
-    };
+    let (template, pragma) = TemplatePragma::parse(template)?;
 
-    let Some(lang) = TemplateLanguage::from_pragma(first_line) else {
-        return Err("No/unknown template language specified".into());
-    };
-
-    match lang {
+    match pragma.lang {
         #[cfg(feature = "lua")]
         TemplateLanguage::Lua => {
-            let msg_exec_template = lang_lua::render_message_template(guild_id, rest, args).await?;
+            let msg_exec_template =
+                lang_lua::render_message_template(guild_id, template, args).await?;
             lang_lua::plugins::message::to_discord_reply(msg_exec_template)
         }
         #[cfg(feature = "rhai")]
         TemplateLanguage::Rhai => {
             let mut engine = lang_rhai::create_engine();
             lang_rhai::apply_sandboxing(&mut engine);
-            let ast = lang_rhai::compile(&engine, rest, opts)?;
+            let ast = lang_rhai::compile(&engine, template, opts)?;
 
             let mut scope = lang_rhai::plugins::message::create_message_scope(args)?;
             let result: lang_rhai::plugins::message::plugin::Message =
@@ -194,7 +196,7 @@ pub async fn render_message_template(
         }
         #[cfg(feature = "tera")]
         TemplateLanguage::Tera => {
-            let mut tera = lang_tera::compile_template(rest, opts).await?;
+            let mut tera = lang_tera::compile_template(template, opts).await?;
             let msg_exec_template =
                 lang_tera::message::execute_template_for_message(&mut tera, args).await?;
             msg_exec_template.discord_reply()
@@ -210,25 +212,19 @@ pub async fn render_permissions_template(
     pctx: crate::core::PermissionTemplateContext,
     opts: CompileTemplateOptions,
 ) -> PermissionResult {
-    let (first_line, rest) = match template.find('\n') {
-        Some(i) => template.split_at(i),
-        None => {
+    let (template, pragma) = match TemplatePragma::parse(template) {
+        Ok(v) => v,
+        Err(e) => {
             return PermissionResult::GenericError {
-                error: "No/unknown template language specified".into(),
+                error: format!("{:?}", e),
             }
         }
     };
 
-    let Some(lang) = TemplateLanguage::from_pragma(first_line) else {
-        return PermissionResult::GenericError {
-            error: "No/unknown template language specified".into(),
-        };
-    };
-
-    match lang {
+    match pragma.lang {
         #[cfg(feature = "lua")]
         TemplateLanguage::Lua => {
-            match lang_lua::render_permissions_template(guild_id, rest, pctx).await {
+            match lang_lua::render_permissions_template(guild_id, template, pctx).await {
                 Ok(result) => result,
                 Err(e) => PermissionResult::GenericError {
                     error: format!("Failed to render: {:?}", e),
@@ -240,7 +236,7 @@ pub async fn render_permissions_template(
             let mut engine = lang_rhai::create_engine();
             lang_rhai::apply_sandboxing(&mut engine);
 
-            let ast = match lang_rhai::compile(&engine, rest, opts) {
+            let ast = match lang_rhai::compile(&engine, template, opts) {
                 Ok(ast) => ast,
                 Err(e) => {
                     return PermissionResult::GenericError {
@@ -271,7 +267,7 @@ pub async fn render_permissions_template(
         }
         #[cfg(feature = "tera")]
         TemplateLanguage::Tera => {
-            let mut tera = match lang_tera::compile_template(rest, opts).await {
+            let mut tera = match lang_tera::compile_template(template, opts).await {
                 Ok(tera) => tera,
                 Err(e) => {
                     return PermissionResult::GenericError {

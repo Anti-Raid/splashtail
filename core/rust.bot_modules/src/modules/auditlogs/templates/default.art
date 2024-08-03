@@ -1,4 +1,4 @@
-//lang:lang_lua
+@pragma {"lang":"lua"}
 function (args) 
     local message_plugin = require "@antiraid/message"
 
