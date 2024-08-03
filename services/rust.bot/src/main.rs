@@ -42,10 +42,12 @@ pub static CONNECT_STATE: Lazy<ConnectState> = Lazy::new(|| ConnectState {
 
 /// Props
 pub struct Props {
+    pub pool: sqlx::PgPool,
     pub mewld_ipc: Arc<MewldIpcClient>,
     pub animus_magic_ipc: OnceLock<Arc<AnimusMagicClient>>, // a rwlock is needed as the cachehttp is only available after the client is started
 }
 
+#[async_trait::async_trait]
 impl base_data::Props for Props {
     fn underlying_am_client(
         &self,
@@ -109,6 +111,11 @@ impl base_data::Props for Props {
     fn total_users(&self) -> u64 {
         self.mewld_ipc.cache.total_users()
     }
+
+    async fn reset_can_use_bot(&self) -> Result<(), base_data::Error> {
+        load_can_use_bot_whitelist(&self.pool).await?;
+        Ok(())
+    }
 }
 
 pub struct CanUseBotList {
@@ -151,6 +158,45 @@ impl base_data::permodule::PermoduleFunctionExecutor for PermoduleFunctionExecut
 
         func(cache_http, arguments).await
     }
+}
+
+async fn load_can_use_bot_whitelist(pool: &sqlx::PgPool) -> Result<CanUseBotList, Error> {
+    // Fetch can_use_bot list
+    let rec = sqlx::query!("SELECT id, type FROM can_use_bot")
+        .fetch_all(pool)
+        .await
+        .map_err(|e| format!("Error fetching can_use_bot list: {}", e))?;
+
+    let mut users = Vec::new();
+    let mut guilds = Vec::new();
+
+    for item in rec {
+        match item.r#type.as_str() {
+            "user" => {
+                let id = item
+                    .id
+                    .parse::<UserId>()
+                    .map_err(|e| format!("Failed to parse user id: {}", e))?;
+                users.push(id);
+            }
+            "guild" => {
+                let id = item
+                    .id
+                    .parse::<GuildId>()
+                    .map_err(|e| format!("Failed to parse guild id: {}", e))?;
+                guilds.push(id);
+            }
+            _ => {
+                continue;
+            }
+        }
+    }
+
+    for root_user in config::CONFIG.discord_auth.root_users.iter() {
+        users.push(*root_user);
+    }
+
+    Ok(CanUseBotList { users, guilds })
 }
 
 // TODO: allow root users to customize/set this in database later
@@ -812,37 +858,13 @@ async fn main() {
         .expect("Could not initialize connection");
 
     // Fetch can_use_bot list
-    let rec = sqlx::query!("SELECT id, type FROM can_use_bot")
-        .fetch_all(&pg_pool)
+    let cub_list = load_can_use_bot_whitelist(&pg_pool)
         .await
         .expect("Could not fetch the users who are allowed to use the bot");
 
     // Save to CAN_USE_BOT_CACHE
     let mut cub = CAN_USE_BOT_CACHE.write().await;
-    for item in rec {
-        match item.r#type.as_str() {
-            "user" => {
-                let id = item
-                    .id
-                    .parse::<UserId>()
-                    .unwrap_or_else(|_| panic!("Failed to parse user id: {}", item.id));
-                cub.users.push(id);
-            }
-            "guild" => {
-                let id = item
-                    .id
-                    .parse::<GuildId>()
-                    .unwrap_or_else(|_| panic!("Failed to parse guild id: {}", item.id));
-                cub.guilds.push(id);
-            }
-            _ => panic!("Unsupported type: {}", item.r#type),
-        }
-    }
-
-    for root_user in config::CONFIG.discord_auth.root_users.iter() {
-        cub.users.push(*root_user);
-    }
-
+    *cub = cub_list;
     drop(cub);
 
     let reqwest = reqwest::Client::builder()
@@ -858,6 +880,7 @@ async fn main() {
             pool: pg_pool.clone(),
         }),
         animus_magic_ipc: OnceLock::new(),
+        pool: pg_pool.clone(),
     });
 
     let data = Data {

@@ -47,6 +47,7 @@ impl Data {
     }
 }
 
+#[async_trait::async_trait]
 pub trait Props
 where
     Self: Send + Sync,
@@ -90,4 +91,7 @@ where
     ///
     /// Note that this statistic may not always be available, in such cases, 0 will be returned
     fn total_users(&self) -> u64;
+
+    /// Reset the can_use_bot whitelist
+    async fn reset_can_use_bot(&self) -> Result<(), Error>;
 }

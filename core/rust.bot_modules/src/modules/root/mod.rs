@@ -1,5 +1,8 @@
 #![allow(non_snake_case)]
 
+use futures_util::FutureExt;
+
+mod am_toggles;
 mod cmds;
 mod settings;
 
@@ -25,7 +28,11 @@ pub fn module() -> crate::silverpelt::Module {
                 "inspector__fake_bots_delete" => crate::silverpelt::CommandExtendedData::none(),
             },
         )],
-        config_options: vec![(*settings::INSPECTOR_FAKE_BOTS).clone()],
+        on_startup: vec![Box::new(move |data| am_toggles::setup(data).boxed())],
+        config_options: vec![
+            (*settings::CAN_USE_BOT).clone(),
+            (*settings::INSPECTOR_FAKE_BOTS).clone(),
+        ],
         ..Default::default()
     }
 }
