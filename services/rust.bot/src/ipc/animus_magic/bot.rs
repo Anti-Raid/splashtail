@@ -404,7 +404,7 @@ impl BotAnimusMessage {
                 };
 
                 // Ensure that the keys are validated at the edge boundary before parsing as well just in case...
-                module_settings::cfg::validate_keys(&opt, &p_fields)?;
+                module_settings::cfg::validate_keys(opt, &p_fields)?;
 
                 // Check COMMAND_ID_MODULE_MAP
                 let base_command = operation_specific
