@@ -8,6 +8,21 @@ names:
   - "Waffle"
   - "Struma"
   - "Oppenheimer"
+  - Nebula Nexus
+  - Stellar Summit
+  - Quantum Quorum
+  - Galactic Grid
+  - Orion Outpost
+  - Cosmic Constellation
+  - Celestial Circle
+  - Astro Array
+  - Meteor Matrix
+  - Pulsar Pack
+  - Comet Cluster
+  - Luna League
+  - Horizon Hive
+  - Supernova Syndicate
+  - Aurora Assembly
 module: botv2
 redis_channel: ar_clusters/staging
 interp: 
@@ -19,8 +34,8 @@ allowed_ids:
   - "775855009421066262"
   - "773193286776389653"
 
-ping_interval: 20 # 20 seconds (for testing, change this)
-ping_timeout: 60 # 60 seconds (for testing, change this)
+ping_interval: 30 # 20 seconds (for testing, change this)
+ping_timeout: 120 # 120 seconds (for testing, change this)
 cluster_start_next_delay: 0 # 1 second (for testing, change this)
 per_cluster: 4 # Number of shards per cluster, can be overrided using ``PER_CLUSTER`` env var
 minimum_safe_sessions_remaining: 3

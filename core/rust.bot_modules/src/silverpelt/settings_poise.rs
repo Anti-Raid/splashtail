@@ -157,8 +157,8 @@ pub async fn settings_viewer(
     let data = ctx.data();
     let cache_http = botox::cache::CacheHttpImpl::from_ctx(ctx.serenity_context());
 
-    let Some(operation_specific) = setting.operations.get(&OperationType::Update) else {
-        return Err("Unsupported operation (Update) for setting".into());
+    let Some(operation_specific) = setting.operations.get(&OperationType::View) else {
+        return Err("Unsupported operation (View) for setting".into());
     };
 
     {
@@ -329,8 +329,8 @@ pub async fn settings_creator(
     let data = ctx.data();
     let cache_http = botox::cache::CacheHttpImpl::from_ctx(ctx.serenity_context());
 
-    let Some(operation_specific) = setting.operations.get(&OperationType::Update) else {
-        return Err("Unsupported operation (Update) for setting".into());
+    let Some(operation_specific) = setting.operations.get(&OperationType::Create) else {
+        return Err("Unsupported operation (Create) for setting".into());
     };
 
     {

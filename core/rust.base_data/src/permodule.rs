@@ -28,3 +28,19 @@ pub trait PermoduleFunctionExecutor: Send + Sync {
         arguments: &indexmap::IndexMap<String, Value>,
     ) -> Result<(), crate::Error>;
 }
+
+// Dummy PermoduleFunctionExecutor
+pub struct DummyPermoduleFunctionExecutor;
+
+#[async_trait]
+impl PermoduleFunctionExecutor for DummyPermoduleFunctionExecutor {
+    async fn execute_permodule_function(
+        &self,
+        _cache_http: &botox::cache::CacheHttpImpl,
+        _module: &str,
+        _function: &str,
+        _arguments: &indexmap::IndexMap<String, Value>,
+    ) -> Result<(), crate::Error> {
+        Ok(())
+    }
+}

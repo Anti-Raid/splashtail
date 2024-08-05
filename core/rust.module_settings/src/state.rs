@@ -41,7 +41,11 @@ impl State {
     pub fn template_to_string(&self, template: &str) -> Value {
         let mut result = template.to_string();
 
-        if result.starts_with("{") && result.ends_with("}") {
+        // Get number of variables in the template
+        let num_starts = result.matches('{').count();
+
+        // If 1 variables, return the value of the variable
+        if num_starts == 1 && result.ends_with('}') {
             let var = template
                 .chars()
                 .skip(1)

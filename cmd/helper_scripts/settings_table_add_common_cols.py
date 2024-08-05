@@ -14,10 +14,10 @@ table = sys.argv[1]
 async def main():
     conn: asyncpg.Connection = await asyncpg.connect()
 
-    await conn.execute(f"ALTER TABLE {table} ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT NOW()")
+    await conn.execute(f"ALTER TABLE {table} ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()")
     await conn.execute(f"ALTER TABLE {table} ADD COLUMN IF NOT EXISTS created_by TEXT NOT NULL DEFAULT '0'")
     await conn.execute(f"ALTER TABLE {table} ALTER COLUMN created_by DROP DEFAULT")
-    await conn.execute(f"ALTER TABLE {table} ADD COLUMN IF NOT EXISTS last_updated_at TIMESTAMPTZ DEFAULT NOW()")
+    await conn.execute(f"ALTER TABLE {table} ADD COLUMN IF NOT EXISTS last_updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()")
     await conn.execute(f"ALTER TABLE {table} ADD COLUMN IF NOT EXISTS last_updated_by TEXT NOT NULL DEFAULT '0'")
     await conn.execute(f"ALTER TABLE {table} ALTER COLUMN last_updated_by DROP DEFAULT")
     
