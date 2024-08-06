@@ -291,3 +291,72 @@ pub static INSPECTOR_FAKE_BOTS: Lazy<ConfigOption> = Lazy::new(|| ConfigOption {
         on_condition: None,
     }]),
 });
+
+pub static LAST_TASK_EXPIRY: Lazy<ConfigOption> = Lazy::new(|| ConfigOption {
+    id: "last_task_expiry",
+    name: "Last Task Expiry",
+    description: "Internal table used to schedule long-running tasks (1 week etc.)",
+    table: "last_task_expiry",
+    common_filters: indexmap::indexmap! {},
+    default_common_filters: indexmap::indexmap! {},
+    primary_key: "id",
+    max_entries: None,
+    data_store: settings_wrap_datastore(PostgresDataStore {}),
+    columns: settings_wrap_columns(vec![
+        Column {
+            id: "id",
+            name: "ID",
+            description: "The unique identifier for the guild role.",
+            column_type: ColumnType::new_scalar(InnerColumnType::Uuid {}),
+            nullable: false,
+            unique: true,
+            suggestions: ColumnSuggestion::None {},
+            ignored_for: vec![OperationType::Create],
+            secret: false,
+            pre_checks: settings_wrap_precheck(indexmap::indexmap! {}),
+            default_pre_checks: settings_wrap_precheck(vec![]),
+        },
+        Column {
+            id: "task",
+            name: "Task",
+            description: "The name of the task",
+            column_type: ColumnType::new_scalar(InnerColumnType::String {
+                min_length: None,
+                max_length: Some(64),
+                allowed_values: vec![],
+                kind: InnerColumnTypeStringKind::Normal,
+            }),
+            nullable: false,
+            unique: false,
+            suggestions: ColumnSuggestion::None {},
+            ignored_for: vec![],
+            secret: false,
+            pre_checks: settings_wrap_precheck(indexmap::indexmap! {}),
+            default_pre_checks: settings_wrap_precheck(vec![]),
+        },
+        module_settings::common_columns::created_at(),
+    ]),
+    title_template: "{id} - {task} - {created_at}",
+    operations: indexmap::indexmap! {
+        OperationType::View => OperationSpecific {
+            corresponding_command: "sudo last_task_expiry_list",
+            columns_to_set: indexmap::indexmap! {
+            },
+        },
+        OperationType::Create => OperationSpecific {
+            corresponding_command: "sudo last_task_expiry_create",
+            columns_to_set: indexmap::indexmap! {
+                "created_at" => "{__now}",
+            },
+        },
+        OperationType::Update => OperationSpecific {
+            corresponding_command: "sudo last_task_expiry_update",
+            columns_to_set: indexmap::indexmap! {},
+        },
+        OperationType::Delete => OperationSpecific {
+            corresponding_command: "sudo last_task_expiry_delete",
+            columns_to_set: indexmap::indexmap! {},
+        },
+    },
+    post_actions: settings_wrap_postactions(vec![]),
+});

@@ -1,0 +1,12 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO last_task_expiry (task) VALUES ('afk')",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": []
+  },
+  "hash": "1e9ca1f9fd09dd971d7dc0054f35caf4a114d0fedf3662922f7a7a33cd5b20f7"
+}

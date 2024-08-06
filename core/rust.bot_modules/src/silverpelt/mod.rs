@@ -45,6 +45,11 @@ pub type OnReadyFunction = Box<
         ) -> BoxFuture<'a, Result<(), crate::Error>>,
 >;
 
+pub type BackgroundTask = (
+    botox::taskman::Task,
+    fn(&serenity::all::Context) -> (bool, String),
+);
+
 /// This structure defines a basic module
 #[derive(Default)]
 pub struct Module {
@@ -78,8 +83,10 @@ pub struct Module {
     /// Event handlers (if any)
     pub event_handlers: Vec<ModuleEventHandler>,
 
-    /// Background tasks (if any)
-    pub background_tasks: Vec<botox::taskman::Task>,
+    /// Background tasks (if any), first argument is the task
+    ///
+    /// Second is a function that returns whether the task should be added
+    pub background_tasks: Vec<BackgroundTask>,
 
     /// Function to be run on startup
     ///

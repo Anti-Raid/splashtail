@@ -1,4 +1,6 @@
-# Templating
+# Tera Templating
+
+**Note that tera templating is NOT secure and disabled by default. These docs are still provided as Tera can be enabled for self-hosted builds**
 
 To allow further customizing the bot. Anti-Raid supports templating. Templating allows you to customize embeds and messages to the extreme through for-loops, if statements, variables and some basic functions.
 

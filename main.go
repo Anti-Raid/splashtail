@@ -223,7 +223,7 @@ func main() {
 						webh.Token,
 						false,
 						&discordgo.WebhookParams{
-							Content: "@everyone **MEWLD ALERT [webserver]**\n" + payloadStr.String(),
+							Content: "**MEWLD ALERT [bot]**\n" + payloadStr.String(),
 						},
 					)
 

@@ -14,13 +14,16 @@ pub fn module() -> crate::silverpelt::Module {
         web_hidden: false,
         is_default_enabled: true,
         on_startup: vec![],
-        background_tasks: vec![botox::taskman::Task {
-            name: "Temporary Punishment Task",
-            description: "Handle expired punishments",
-            duration: std::time::Duration::from_secs(60),
-            enabled: true,
-            run: Box::new(move |ctx| tasks::temporary_punishment_task(ctx).boxed()),
-        }],
+        background_tasks: vec![(
+            botox::taskman::Task {
+                name: "Temporary Punishment Task",
+                description: "Handle expired punishments",
+                duration: std::time::Duration::from_secs(60),
+                enabled: true,
+                run: Box::new(move |ctx| tasks::temporary_punishment_task(ctx).boxed()),
+            },
+            |_ctx| (true, "Temporary Punishment Task is enabled".to_string()),
+        )],
         ..Default::default()
     }
 }

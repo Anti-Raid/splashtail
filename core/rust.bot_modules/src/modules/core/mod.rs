@@ -33,13 +33,21 @@ pub fn module() -> crate::silverpelt::Module {
                 crate::silverpelt::CommandExtendedData::none_map(),
             ),
         ],
-        background_tasks: vec![botox::taskman::Task {
-            name: "Sandwich Status Task",
-            description: "Checks the status of the sandwich http server",
-            duration: std::time::Duration::from_secs(30),
-            enabled: config::CONFIG.meta.sandwich_http_api.is_some(),
-            run: Box::new(move |ctx| sandwich_status_task::sandwich_status_task(ctx).boxed()),
-        }],
+        background_tasks: vec![(
+            botox::taskman::Task {
+                name: "Sandwich Status Task",
+                description: "Checks the status of the sandwich http server",
+                duration: std::time::Duration::from_secs(30),
+                enabled: config::CONFIG.meta.sandwich_http_api.is_some(),
+                run: Box::new(move |ctx| sandwich_status_task::sandwich_status_task(ctx).boxed()),
+            },
+            |_ctx| {
+                (
+                    config::CONFIG.meta.sandwich_http_api.is_some(),
+                    "Sandwich HTTP API is enabled".to_string(),
+                )
+            },
+        )],
         ..Default::default()
     }
 }

@@ -29,12 +29,17 @@ pub fn module() -> crate::silverpelt::Module {
                 "inspector__fake_bots_add" => crate::silverpelt::CommandExtendedData::none(),
                 "inspector__fake_bots_update" => crate::silverpelt::CommandExtendedData::none(),
                 "inspector__fake_bots_delete" => crate::silverpelt::CommandExtendedData::none(),
+                "last_task_expiry_view" => crate::silverpelt::CommandExtendedData::none(),
+                "last_task_expiry_create" => crate::silverpelt::CommandExtendedData::none(),
+                "last_task_expiry_update" => crate::silverpelt::CommandExtendedData::none(),
+                "last_task_expiry_delete" => crate::silverpelt::CommandExtendedData::none(),
             },
         )],
         on_startup: vec![Box::new(move |data| am_toggles::setup(data).boxed())],
         config_options: vec![
             (*settings::CAN_USE_BOT).clone(),
             (*settings::INSPECTOR_FAKE_BOTS).clone(),
+            (*settings::LAST_TASK_EXPIRY).clone(),
         ],
         ..Default::default()
     }

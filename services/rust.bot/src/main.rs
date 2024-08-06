@@ -371,7 +371,21 @@ async fn event_listener<'a>(
                 // Get all tasks
                 let mut tasks = Vec::new();
                 for module in modules::modules::modules() {
-                    for task in module.background_tasks {
+                    for (task, confirm_task) in module.background_tasks {
+                        let (confirmed, reason) = (confirm_task)(ctx.serenity_context);
+                        if confirmed {
+                            info!(
+                                "Adding task {} with confirm_task reason: {}",
+                                task.name, reason
+                            );
+                        } else {
+                            info!(
+                                "Skipping task {} as it is disabled for reason: {}",
+                                task.name, reason
+                            );
+                            continue;
+                        }
+
                         tasks.push(task);
                     }
                 }

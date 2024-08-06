@@ -11,10 +11,23 @@ pub async fn event_listener(ectx: &EventHandlerContext) -> Result<(), Error> {
                 return Err("No guild ID found".into());
             };
 
+            // Get all mentioned users in the message
+            let mentioned_users = new_message
+                .mentions
+                .iter()
+                .filter(|u| !u.bot() && u.id != new_message.author.id) // Filter out bots and the author itself
+                .take(20) // Collect first 20 mentioned users
+                .collect::<Vec<_>>();
+
+            if mentioned_users.is_empty() {
+                return Ok(());
+            }
+
+            // We auto-expire them every week automatically to both preserve performance to avoid table bloat
             let recs = sqlx::query!(
-                "SELECT id, reason, expires_at FROM afk__afks WHERE guild_id = $1 AND user_id = $2",
+                "SELECT user_id, reason, expires_at FROM afk__afks WHERE guild_id = $1 AND user_id = ANY ($2) AND expires_at > NOW()",
                 guild_id.to_string(),
-                new_message.author.id.to_string(),
+                &mentioned_users.iter().map(|u| u.id.to_string()).collect::<Vec<_>>(),
             )
             .fetch_all(&ectx.data.pool)
             .await?;
@@ -23,31 +36,38 @@ pub async fn event_listener(ectx: &EventHandlerContext) -> Result<(), Error> {
                 return Ok(());
             }
 
-            let mut reason = None;
-            let mut expires_at = None;
+            let mut embeds = Vec::new();
+
             for rec in recs {
-                if rec.expires_at < chrono::Utc::now() {
-                    sqlx::query!("DELETE FROM afk__afks WHERE id = $1", rec.id,)
-                        .execute(&ectx.data.pool)
-                        .await?;
+                if embeds.len() > base_data::limits::embed_limits::EMBED_MAX_COUNT {
+                    break;
                 }
 
-                reason = Some(rec.reason);
-                expires_at = Some(rec.expires_at);
+                let Some(user) = mentioned_users
+                    .iter()
+                    .find(|u| u.id.to_string() == rec.user_id)
+                else {
+                    continue;
+                };
+
+                let reason = rec.reason;
+                let expires_at = rec.expires_at;
+
+                let embed = serenity::all::CreateEmbed::default()
+                    .title("AFK")
+                    .field("User", user.tag(), true)
+                    .description(format!(
+                        "**Reason:** {}\n**Expires at:** <t:{}>:R",
+                        reason,
+                        expires_at.timestamp()
+                    ));
+
+                embeds.push(embed);
             }
 
-            if reason.is_none() || expires_at.is_none() {
-                return Ok(());
-            }
-
-            let cm = serenity::all::CreateMessage::new()
+            let cm: serenity::all::CreateMessage = serenity::all::CreateMessage::new()
                 .reference_message(new_message)
-                .embed(
-                    serenity::all::CreateEmbed::default()
-                        .title("AFK")
-                        .field("User", new_message.author.tag(), true)
-                        .description(reason.unwrap_or("No reason provided".to_string())),
-                );
+                .embeds(embeds);
 
             // Reply to the new_message itself
             new_message.channel_id.send_message(&ctx.http, cm).await?;
