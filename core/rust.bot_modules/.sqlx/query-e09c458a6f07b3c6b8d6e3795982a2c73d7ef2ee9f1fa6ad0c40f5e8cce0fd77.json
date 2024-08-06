@@ -1,0 +1,12 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "DELETE FROM afk__afks WHERE expires_at < NOW()",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": []
+  },
+  "hash": "e09c458a6f07b3c6b8d6e3795982a2c73d7ef2ee9f1fa6ad0c40f5e8cce0fd77"
+}
