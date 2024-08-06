@@ -53,41 +53,7 @@ pub static AFKS: Lazy<ConfigOption> = Lazy::new(|| {
                 ignored_for: vec![OperationType::Create, OperationType::Update],
                 secret: false,
                 pre_checks: settings_wrap_precheck(indexmap::indexmap! {}),
-                default_pre_checks: settings_wrap_precheck(vec![
-                    // Set sink display type
-                    ColumnAction::NativeAction {
-                        action: Box::new(|ctx, state| {
-                            async move {
-                                match ctx.operation_type {
-                                    OperationType::View | OperationType::Delete => return Ok(()),
-                                    _ => {}
-                                }
-
-                                // Check that user_id is the author
-                                let Some(Value::String(user_id)) = state.state.get("user_id")
-                                else {
-                                    return Err(SettingsError::Generic {
-                                        message: "User ID is required".to_string(),
-                                        src: "NativeActions#user_id".to_string(),
-                                        typ: "external".to_string(),
-                                    });
-                                };
-
-                                if ctx.author.to_string() != *user_id {
-                                    return Err(SettingsError::Generic {
-                                        message: "You can only update your own AFK".to_string(),
-                                        src: "NativeActions#user_id".to_string(),
-                                        typ: "external".to_string(),
-                                    });
-                                }
-
-                                Ok(())
-                            }
-                            .boxed()
-                        }),
-                        on_condition: None,
-                    },
-                ]),
+                default_pre_checks: settings_wrap_precheck(vec![]),
             },
             module_settings::common_columns::guild_id(
                 "guild_id",
@@ -178,7 +144,7 @@ pub static AFKS: Lazy<ConfigOption> = Lazy::new(|| {
             module_settings::common_columns::last_updated_at(),
             module_settings::common_columns::last_updated_by(),
         ]),
-        title_template: "{id}",
+        title_template: "{created_at} - {expires_at}",
         operations: indexmap::indexmap! {
             OperationType::View => OperationSpecific {
                 corresponding_command: "afk list",
@@ -187,6 +153,7 @@ pub static AFKS: Lazy<ConfigOption> = Lazy::new(|| {
             OperationType::Create => OperationSpecific {
                 corresponding_command: "afk create",
                 columns_to_set: indexmap::indexmap! {
+                    "user_id" => "{__author}",
                     "created_at" => "{__now}",
                     "created_by" => "{__author}",
                     "last_updated_at" => "{__now}",
