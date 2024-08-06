@@ -282,6 +282,8 @@ pub async fn check_command(
         }
     }
 
+    debug!("Checking command {} for user {}", command, user_id);
+
     let permutations = permute_command_names(command);
 
     let mut module_config = {
@@ -370,11 +372,6 @@ pub async fn check_command(
             }
         };
 
-    debug!(
-        "Checking if user {} can run command {} with permissions {:?}",
-        user_id, command, member_perms
-    );
-
     let module_default_enabled = {
         let Some(module) = SILVERPELT_CACHE.module_cache.get(module) else {
             return PermissionResult::UnknownModule { module_config };
@@ -382,6 +379,11 @@ pub async fn check_command(
 
         module.is_default_enabled
     };
+
+    debug!(
+        "Checking if user {} can run command {} with permissions {:?} with module_default_enabled {}",
+        user_id, command, member_perms, module_default_enabled
+    );
 
     let perm_res = super::permissions::can_run_command(
         &cmd_data,

@@ -98,7 +98,7 @@ pub async fn can_run_command(
     cmd_qualified_name: &str,
     member_native_perms: serenity::all::Permissions,
     member_kittycat_perms: Vec<kittycat::perms::Permission>,
-    is_default_enabled: bool,
+    module_is_default_enabled: bool,
     perms_ctx: PermissionChecksContext,
 ) -> PermissionResult {
     log::debug!(
@@ -116,12 +116,10 @@ pub async fn can_run_command(
         };
     }
 
-    {
-        if module_config.disabled.unwrap_or(!is_default_enabled) {
-            return PermissionResult::ModuleDisabled {
-                module_config: module_config.clone(),
-            };
-        }
+    if module_config.disabled.unwrap_or(!module_is_default_enabled) {
+        return PermissionResult::ModuleDisabled {
+            module_config: module_config.clone(),
+        };
     }
 
     // Check:

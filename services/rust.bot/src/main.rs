@@ -797,6 +797,7 @@ async fn main() {
 
                 let command = ctx.command();
 
+                debug!("Checking command permissions for {}", command.qualified_name);
                 let res = modules::silverpelt::cmd::check_command(
                     command.name.as_str(),
                     &command.qualified_name,
