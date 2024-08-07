@@ -145,7 +145,7 @@ pub async fn event_listener(ectx: &EventHandlerContext) -> Result<(), Error> {
                         .fake_bot_detection
                         .contains(FakeBotDetectionOptions::NORMALIZE_NAMES)
                     {
-                        let mut normalized_name = splashcore_rs::text::normalize::fix_text(
+                        let mut normalized_name = splashcore_text::normalize::fix_text(
                             &new_member.user.name.to_lowercase(),
                             None,
                         );
@@ -197,7 +197,7 @@ pub async fn event_listener(ectx: &EventHandlerContext) -> Result<(), Error> {
                             .contains(FakeBotDetectionOptions::SIMILAR_NAME_CHECK)
                         {
                             let (diff, _) =
-                                splashcore_rs::text::diff::diff(&normalized_name, &val.name, "");
+                                splashcore_text::diff::diff(&normalized_name, &val.name, "");
 
                             if diff <= 2 {
                                 found = true;

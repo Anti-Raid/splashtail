@@ -197,21 +197,6 @@ pub async fn modules_enable(
         .remove(&(guild_id, module))
         .await;
 
-    tokio::spawn(async move {
-        if let Err(err) = SILVERPELT_CACHE
-            .command_permission_cache
-            .invalidate_entries_if(move |k, _| k.0 == guild_id)
-        {
-            log::error!(
-                "Failed to invalidate command permission cache for guild {}: {}",
-                guild_id,
-                err
-            );
-        } else {
-            log::info!("Invalidated cache for guild {}", guild_id);
-        }
-    });
-
     ctx.say("Module enabled successfully!").await?;
 
     Ok(())
@@ -293,21 +278,6 @@ pub async fn modules_disable(
         .module_enabled_cache
         .remove(&(guild_id, module))
         .await;
-
-    tokio::spawn(async move {
-        if let Err(err) = SILVERPELT_CACHE
-            .command_permission_cache
-            .invalidate_entries_if(move |k, _| k.0 == guild_id)
-        {
-            log::error!(
-                "Failed to invalidate command permission cache for guild {}: {}",
-                guild_id,
-                err
-            );
-        } else {
-            log::info!("Invalidated cache for guild {}", guild_id);
-        }
-    });
 
     ctx.say("Module disabled successfully!").await?;
 
@@ -814,21 +784,6 @@ pub async fn modules_modperms(
                 .await?;
 
                 tx.commit().await?;
-
-                tokio::spawn(async move {
-                    if let Err(err) = SILVERPELT_CACHE
-                        .command_permission_cache
-                        .invalidate_entries_if(move |k, _| k.0 == guild_id)
-                    {
-                        log::error!(
-                            "Failed to invalidate command permission cache for guild {}: {}",
-                            guild_id,
-                            err
-                        );
-                    } else {
-                        log::info!("Invalidated cache for guild {}", guild_id);
-                    }
-                });
 
                 break;
             }

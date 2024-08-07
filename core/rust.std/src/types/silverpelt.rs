@@ -293,7 +293,7 @@ pub struct GuildModuleConfiguration {
 }
 
 // @ci go=PermissionResult
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize, Debug)]
 #[serde(tag = "var")]
 pub enum PermissionResult {
     Ok {},

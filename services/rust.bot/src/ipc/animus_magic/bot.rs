@@ -87,10 +87,6 @@ impl SerializableAnimusResponse for BotAnimusResponse {}
 
 bitflags::bitflags! {
     pub struct AmCheckCommandOptionsFlags: u8 {
-        /// Whether or not to ignore the cache
-        const IGNORE_CACHE = 1 << 0;
-        /// Whether or not to cache the result at all
-        const CACHE_RESULT = 1 << 1;
         /// Whether or not to ignore the fact that the module is disabled in the guild
         const IGNORE_MODULE_DISABLED = 1 << 2;
         /// Whether or not to ignore the fact that the command is disabled in the guild
@@ -289,8 +285,6 @@ impl BotAnimusMessage {
                     cache_http,
                     &None,
                     modules::silverpelt::cmd::CheckCommandOptions {
-                        ignore_cache: flags.contains(AmCheckCommandOptionsFlags::IGNORE_CACHE),
-                        cache_result: flags.contains(AmCheckCommandOptionsFlags::CACHE_RESULT),
                         ignore_module_disabled: flags
                             .contains(AmCheckCommandOptionsFlags::IGNORE_MODULE_DISABLED),
                         ignore_command_disabled: flags

@@ -44,8 +44,6 @@ import (
 type AmCheckCommandOptionsFlag uint8
 
 const (
-	AmCheckCommandOptionsFlagIgnoreCache                 AmCheckCommandOptionsFlag = 1 << 0
-	AmCheckCommandOptionsFlagCacheResult                 AmCheckCommandOptionsFlag = 1 << 1
 	AmCheckCommandOptionsFlagIgnoreModuleDisabled        AmCheckCommandOptionsFlag = 1 << 2
 	AmCheckCommandOptionsFlagIgnoreCommandDisabled       AmCheckCommandOptionsFlag = 1 << 3
 	AmCheckCommandOptionsFlagSkipCustomResolvedFitChecks AmCheckCommandOptionsFlag = 1 << 4

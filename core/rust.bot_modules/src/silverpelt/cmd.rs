@@ -4,13 +4,13 @@ use crate::silverpelt::{
     module_config::{
         get_best_command_configuration, get_command_extended_data, get_module_configuration,
     },
-    permissions::PermissionChecksContext,
     utils::permute_command_names,
     GuildCommandConfiguration, GuildModuleConfiguration,
 };
 use botox::cache::CacheHttpImpl;
 use kittycat::perms::Permission;
-use log::debug;
+use log::info;
+use permissions::PermissionChecksContext;
 use serde::{Deserialize, Serialize};
 use serenity::all::{GuildId, UserId};
 use serenity::small_fixed_array::FixedArray;
@@ -32,6 +32,19 @@ pub async fn get_user_discord_info(
     ),
     PermissionResult,
 > {
+    #[cfg(test)]
+    {
+        // Check for env var CHECK_MODULES_TEST_ENABLED, if so, return dummy data
+        if std::env::var("CHECK_MODULES_TEST_ENABLED").unwrap_or_default() == "true" {
+            return Ok((
+                true,
+                UserId::new(1),
+                serenity::all::Permissions::all(),
+                FixedArray::new(),
+            ));
+        }
+    }
+
     if let Some(cached_guild) = guild_id.to_guild_cached(&cache_http.cache) {
         // OPTIMIZATION: if owner, we dont need to continue further
         if user_id == cached_guild.owner_id {
@@ -176,14 +189,6 @@ pub async fn get_user_kittycat_perms(
 /// Extra options for checking a command
 #[derive(Debug, Clone, Serialize, Deserialize, Hash, PartialEq, Eq)]
 pub struct CheckCommandOptions {
-    /// Whether or not to ignore the cache
-    #[serde(default)]
-    pub ignore_cache: bool,
-
-    /// Whether or not to cache the result at all
-    #[serde(default)]
-    pub cache_result: bool,
-
     /// Whether or not to ignore the fact that the module is disabled in the guild
     #[serde(default)]
     pub ignore_module_disabled: bool,
@@ -213,11 +218,10 @@ pub struct CheckCommandOptions {
     pub channel_id: Option<serenity::all::ChannelId>,
 }
 
+#[allow(clippy::derivable_impls)]
 impl Default for CheckCommandOptions {
     fn default() -> Self {
         Self {
-            ignore_cache: false,
-            cache_result: true,
             ignore_module_disabled: false,
             ignore_command_disabled: false,
             custom_resolved_kittycat_perms: None,
@@ -257,6 +261,8 @@ pub async fn check_command(
         }
     };
 
+    info!("Checking if user {} can run command {}", user_id, command);
+
     if module == "root" {
         if !config::CONFIG.discord_auth.root_users.contains(&user_id) {
             return PermissionResult::SudoNotGranted {};
@@ -267,26 +273,9 @@ pub async fn check_command(
         };
     }
 
-    if !opts.ignore_cache {
-        let key = SILVERPELT_CACHE
-            .command_permission_cache
-            .get(&(guild_id, user_id, opts.clone()))
-            .await;
-
-        if let Some(ref map) = key {
-            let cpr = map.get(command);
-
-            if let Some(cpr) = cpr {
-                return cpr.clone();
-            }
-        }
-    }
-
-    debug!("Checking command {} for user {}", command, user_id);
-
     let permutations = permute_command_names(command);
 
-    let mut module_config = {
+    let module_config = {
         if let Some(ref custom_module_configuration) = opts.custom_module_configuration {
             custom_module_configuration.clone()
         } else {
@@ -316,7 +305,7 @@ pub async fn check_command(
         }
     };
 
-    let mut command_config = {
+    let command_config = {
         if let Some(ref custom_command_configuration) = opts.custom_command_configuration {
             custom_command_configuration.clone()
         } else {
@@ -340,12 +329,35 @@ pub async fn check_command(
         }
     };
 
-    if opts.ignore_command_disabled {
-        command_config.disabled = Some(false);
+    // Check if command is disabled if and only if ignore_command_disabled is false
+    #[allow(clippy::collapsible_if)]
+    if !opts.ignore_command_disabled {
+        if command_config
+            .disabled
+            .unwrap_or(!cmd_data.is_default_enabled)
+        {
+            return PermissionResult::CommandDisabled {
+                command_config: command_config.clone(),
+            };
+        }
     }
 
-    if opts.ignore_module_disabled {
-        module_config.disabled = Some(false);
+    // Check if module is disabled if and only if ignore_module_disabled is false
+    #[allow(clippy::collapsible_if)]
+    if !opts.ignore_module_disabled {
+        let module_default_enabled = {
+            let Some(module) = SILVERPELT_CACHE.module_cache.get(module) else {
+                return PermissionResult::UnknownModule { module_config };
+            };
+
+            module.is_default_enabled
+        };
+
+        if module_config.disabled.unwrap_or(!module_default_enabled) {
+            return PermissionResult::ModuleDisabled {
+                module_config: module_config.clone(),
+            };
+        }
     }
 
     // Try getting guild+member from cache to speed up response times first
@@ -372,27 +384,24 @@ pub async fn check_command(
             }
         };
 
-    let module_default_enabled = {
-        let Some(module) = SILVERPELT_CACHE.module_cache.get(module) else {
-            return PermissionResult::UnknownModule { module_config };
-        };
-
-        module.is_default_enabled
+    // Check for permission checks in this order:
+    // - command_config.perms
+    // - module_config.default_perms
+    // - cmd_data.default_perms
+    let perms = {
+        if let Some(perms) = &command_config.perms {
+            perms
+        } else if let Some(perms) = &module_config.default_perms {
+            perms
+        } else {
+            &cmd_data.default_perms
+        }
     };
 
-    debug!(
-        "Checking if user {} can run command {} with permissions {:?} with module_default_enabled {}",
-        user_id, command, member_perms, module_default_enabled
-    );
-
-    let perm_res = super::permissions::can_run_command(
-        &cmd_data,
-        &command_config,
-        &module_config,
-        command,
+    permissions::can_run_command(
         member_perms,
         kittycat_perms,
-        module_default_enabled,
+        perms,
         PermissionChecksContext {
             guild_id,
             user_id,
@@ -400,27 +409,55 @@ pub async fn check_command(
             channel_id: opts.channel_id,
         },
     )
-    .await;
+    .await
+}
 
-    if !opts.cache_result {
-        return perm_res;
-    }
+#[cfg(test)]
+mod test {
+    #[tokio::test]
+    async fn check_command_test_cache_bust() {
+        // Set the env var CHECK_MODULES_TEST_ENABLED
+        std::env::set_var("CHECK_MODULES_TEST_ENABLED", "true");
 
-    let mut key = SILVERPELT_CACHE
-        .command_permission_cache
-        .get(&(guild_id, user_id, opts.clone()))
+        // Set current directory to ../../
+        let current_dir = std::env::current_dir().unwrap();
+
+        if current_dir.ends_with("core/rust.bot_modules") {
+            std::env::set_current_dir("../../").unwrap();
+        }
+
+        let pg_pool = sqlx::postgres::PgPoolOptions::new()
+            .connect(&config::CONFIG.meta.postgres_url)
+            .await
+            .expect("Could not initialize connection");
+
+        let cache = serenity::all::Cache::new();
+        let http = serenity::all::Http::new(&config::CONFIG.discord_auth.token);
+        let cache_http = botox::cache::CacheHttpImpl {
+            cache: cache.into(),
+            http: http.into(),
+        };
+
+        let cmd = super::check_command(
+            "afk",
+            "afk create",
+            serenity::all::GuildId::new(1),
+            serenity::all::UserId::new(1),
+            &pg_pool,
+            &cache_http,
+            &None,
+            // Needed for settings and the website (potentially)
+            super::CheckCommandOptions::default(),
+        )
         .await;
 
-    if let Some(ref mut map) = key {
-        map.insert(command.to_string(), perm_res.clone());
-    } else {
-        let mut map = indexmap::IndexMap::new();
-        map.insert(command.to_string(), perm_res.clone());
-        SILVERPELT_CACHE
-            .command_permission_cache
-            .insert((guild_id, user_id, opts), map)
-            .await;
+        match cmd {
+            super::PermissionResult::ModuleDisabled { module_config } => {
+                assert_eq!(module_config.module, "afk".to_string());
+            }
+            _ => {
+                panic!("Expected ModuleDisabled, got {:?}", cmd);
+            }
+        }
     }
-
-    perm_res
 }

@@ -273,7 +273,7 @@ async fn on_error(error: poise::FrameworkError<'_, Data, Error>) {
         poise::FrameworkError::CommandCheckFailed { error, ctx, .. } => {
             error!(
                 "[Possible] error in command `{}`: {:?}",
-                ctx.command().name,
+                ctx.command().qualified_name,
                 error,
             );
             if let Some(error) = error {
@@ -797,7 +797,6 @@ async fn main() {
 
                 let command = ctx.command();
 
-                debug!("Checking command permissions for {}", command.qualified_name);
                 let res = modules::silverpelt::cmd::check_command(
                     command.name.as_str(),
                     &command.qualified_name,

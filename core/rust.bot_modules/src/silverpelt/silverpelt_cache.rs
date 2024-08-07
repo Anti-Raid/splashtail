@@ -1,22 +1,14 @@
 use super::{
     canonical_module::CanonicalModule, CommandExtendedDataMap, Module, ModuleEventHandler,
 };
-use indexmap::IndexMap;
 use moka::future::Cache;
 use once_cell::sync::Lazy;
-use serenity::all::{GuildId, UserId};
-use splashcore_rs::types::silverpelt::PermissionResult;
+use serenity::all::GuildId;
 
 /// The silverpelt cache is a structure that contains the core state for the bot
 pub struct SilverpeltCache {
     /// Cache of whether a (GuildId, String) pair has said module enabled or disabled
     pub module_enabled_cache: Cache<(GuildId, String), bool>,
-
-    /// Cache of whether a (GuildId, UserId) pair has the permission to run a command
-    pub command_permission_cache: Cache<
-        (GuildId, UserId, super::cmd::CheckCommandOptions),
-        IndexMap<String, PermissionResult>,
-    >,
 
     /// Cache of the extended data given a command (the extended data map stores the default base permissions and other data per command)
     pub command_extra_data_map: dashmap::DashMap<String, CommandExtendedDataMap>,
@@ -48,10 +40,6 @@ impl SilverpeltCache {
     pub fn new() -> Self {
         log::info!("Making new SilverpeltCache");
         Self {
-            command_permission_cache: Cache::builder()
-                .support_invalidation_closures()
-                .time_to_live(std::time::Duration::from_secs(60))
-                .build(),
             module_enabled_cache: Cache::builder().support_invalidation_closures().build(),
             command_extra_data_map: {
                 let map = dashmap::DashMap::new();

@@ -3,7 +3,6 @@ use indexmap::indexmap;
 
 mod am_toggles;
 mod commands;
-mod events;
 mod guildroles;
 mod modules;
 
@@ -87,7 +86,6 @@ pub fn module() -> crate::silverpelt::Module {
             ),
         ],
         on_startup: vec![Box::new(move |data| am_toggles::setup(data).boxed())],
-        event_handlers: vec![Box::new(move |ectx| events::event_listener(ectx).boxed())],
         config_options: vec![(*settings::GUILD_ROLES).clone()],
         ..Default::default()
     }

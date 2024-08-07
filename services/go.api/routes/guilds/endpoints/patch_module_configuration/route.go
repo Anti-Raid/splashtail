@@ -30,9 +30,8 @@ var (
 )
 
 const (
-	CACHE_FLUSH_NONE                           = 0      // No cache flush operation
-	CACHE_FLUSH_MODULE_TOGGLE                  = 1 << 1 // Must trigger a module trigger
-	CACHE_FLUSH_COMMAND_PERMISSION_CACHE_CLEAR = 1 << 2 // Must trigger a command permission cache clear
+	CACHE_FLUSH_NONE          = 0      // No cache flush operation
+	CACHE_FLUSH_MODULE_TOGGLE = 1 << 1 // Must trigger a module trigger
 )
 
 func Docs() *docs.Doc {
@@ -312,10 +311,6 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 			updateCols = append(updateCols, "default_perms")
 			updateArgs = append(updateArgs, parsedValue)
 		}
-
-		if cacheFlushFlag&CACHE_FLUSH_MODULE_TOGGLE != CACHE_FLUSH_MODULE_TOGGLE && cacheFlushFlag&CACHE_FLUSH_COMMAND_PERMISSION_CACHE_CLEAR != CACHE_FLUSH_COMMAND_PERMISSION_CACHE_CLEAR {
-			cacheFlushFlag |= CACHE_FLUSH_COMMAND_PERMISSION_CACHE_CLEAR
-		}
 	}
 
 	if len(updateCols) == 0 {
@@ -422,55 +417,6 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 						"guild_id": guildId,
 						"module":   body.Module,
 						"enabled":  isDisabled,
-					},
-				},
-			},
-			&animusmagic.RequestOptions{
-				ClusterID: utils.Pointer(uint16(clusterId)),
-				To:        animusmagic.AnimusTargetBot,
-				Op:        animusmagic.OpRequest,
-			},
-		)
-
-		if err != nil {
-			return uapi.HttpResponse{
-				Status: http.StatusInternalServerError,
-				Json: types.ApiError{
-					Message: "Error sending request to animus magic: " + err.Error(),
-				},
-				Headers: map[string]string{
-					"Retry-After": "10",
-				},
-			}
-		}
-
-		if len(resps) != 1 {
-			return uapi.HttpResponse{
-				Status: http.StatusInternalServerError,
-				Json: types.ApiError{
-					Message: "Error sending request to animus magic: [unexpected response count of " + strconv.Itoa(len(resps)) + "]",
-				},
-				Headers: map[string]string{
-					"Retry-After": "10",
-				},
-			}
-		}
-	}
-
-	if cacheFlushFlag&CACHE_FLUSH_COMMAND_PERMISSION_CACHE_CLEAR == CACHE_FLUSH_COMMAND_PERMISSION_CACHE_CLEAR {
-		resps, err := state.AnimusMagicClient.Request(
-			d.Context,
-			state.Rueidis,
-			animusmagic_messages.BotAnimusMessage{
-				ExecutePerModuleFunction: &struct {
-					Module  string         `json:"module"`
-					Toggle  string         `json:"toggle"`
-					Options map[string]any `json:"options,omitempty"`
-				}{
-					Module: "settings",
-					Toggle: "clear_command_permission_cache",
-					Options: map[string]any{
-						"guild_id": guildId,
 					},
 				},
 			},

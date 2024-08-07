@@ -1,4 +1,4 @@
-use crate::silverpelt::{silverpelt_cache::SILVERPELT_CACHE, GuildCommandConfiguration};
+use crate::silverpelt::GuildCommandConfiguration;
 use crate::{Context, Error};
 use botox::cache::CacheHttpImpl;
 use futures_util::StreamExt;
@@ -182,21 +182,6 @@ pub async fn commands_enable(
 
     tx.commit().await?;
 
-    tokio::spawn(async move {
-        if let Err(err) = SILVERPELT_CACHE
-            .command_permission_cache
-            .invalidate_entries_if(move |k, _| k.0 == guild_id)
-        {
-            log::error!(
-                "Failed to invalidate command permission cache for guild {}: {}",
-                guild_id,
-                err
-            );
-        } else {
-            log::info!("Invalidated cache for guild {}", guild_id);
-        }
-    });
-
     ctx.say("Command enabled").await?;
 
     Ok(())
@@ -306,21 +291,6 @@ pub async fn commands_disable(
     }
 
     tx.commit().await?;
-
-    tokio::spawn(async move {
-        if let Err(err) = SILVERPELT_CACHE
-            .command_permission_cache
-            .invalidate_entries_if(move |k, _| k.0 == guild_id)
-        {
-            log::error!(
-                "Failed to invalidate command permission cache for guild {}: {}",
-                guild_id,
-                err
-            );
-        } else {
-            log::info!("Invalidated cache for guild {}", guild_id);
-        }
-    });
 
     ctx.say("Command disabled").await?;
 
@@ -821,8 +791,6 @@ pub async fn commands_modperms(
                     &Some(ctx),
                     crate::silverpelt::cmd::CheckCommandOptions {
                         ignore_command_disabled: true,
-                        ignore_cache: true,
-                        cache_result: false,
                         custom_command_configuration: Some(new_command_config.clone()),
                         channel_id: Some(ctx.channel_id()),
                         ..Default::default()
@@ -886,22 +854,6 @@ pub async fn commands_modperms(
                 .await?;
 
                 tx.commit().await?;
-
-                tokio::spawn(async move {
-                    if let Err(err) = SILVERPELT_CACHE
-                        .command_permission_cache
-                        .invalidate_entries_if(move |k, _| k.0 == guild_id)
-                    {
-                        log::error!(
-                            "Failed to invalidate command permission cache for guild {}: {}",
-                            guild_id,
-                            err
-                        );
-                    } else {
-                        log::info!("Invalidated cache for guild {}", guild_id);
-                    }
-                });
-
                 break;
             }
             _ => {}
