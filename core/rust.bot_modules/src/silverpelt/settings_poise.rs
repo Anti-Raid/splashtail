@@ -154,23 +154,15 @@ pub async fn settings_viewer(
         return Err("This command must be run in a server".into());
     };
 
-    let data = ctx.data();
-    let cache_http = botox::cache::CacheHttpImpl::from_ctx(ctx.serenity_context());
-
     let Some(operation_specific) = setting.operations.get(&OperationType::View) else {
         return Err("Unsupported operation (View) for setting".into());
     };
 
-    {
-        // Check COMMAND_ID_MODULE_MAP
-        let base_command = operation_specific
-            .corresponding_command
-            .split_whitespace()
-            .next()
-            .unwrap();
+    let data = ctx.data();
+    let cache_http = botox::cache::CacheHttpImpl::from_ctx(ctx.serenity_context());
 
+    {
         let perm_res = crate::silverpelt::cmd::check_command(
-            base_command,
             operation_specific.corresponding_command,
             guild_id,
             ctx.author().id,
@@ -326,23 +318,15 @@ pub async fn settings_creator(
         return Err("This command must be run in a server".into());
     };
 
-    let data = ctx.data();
-    let cache_http = botox::cache::CacheHttpImpl::from_ctx(ctx.serenity_context());
-
     let Some(operation_specific) = setting.operations.get(&OperationType::Create) else {
         return Err("Unsupported operation (Create) for setting".into());
     };
 
-    {
-        // Check COMMAND_ID_MODULE_MAP
-        let base_command = operation_specific
-            .corresponding_command
-            .split_whitespace()
-            .next()
-            .unwrap();
+    let data = ctx.data();
+    let cache_http = botox::cache::CacheHttpImpl::from_ctx(ctx.serenity_context());
 
+    {
         let perm_res = crate::silverpelt::cmd::check_command(
-            base_command,
             operation_specific.corresponding_command,
             guild_id,
             ctx.author().id,
@@ -456,23 +440,15 @@ pub async fn settings_updater(
         return Err("This command must be run in a server".into());
     };
 
-    let data = ctx.data();
-    let cache_http = botox::cache::CacheHttpImpl::from_ctx(ctx.serenity_context());
-
     let Some(operation_specific) = setting.operations.get(&OperationType::Update) else {
         return Err("Unsupported operation (Update) for setting".into());
     };
 
-    {
-        // Check COMMAND_ID_MODULE_MAP
-        let base_command = operation_specific
-            .corresponding_command
-            .split_whitespace()
-            .next()
-            .unwrap();
+    let data = ctx.data();
+    let cache_http = botox::cache::CacheHttpImpl::from_ctx(ctx.serenity_context());
 
+    {
         let perm_res = crate::silverpelt::cmd::check_command(
-            base_command,
             operation_specific.corresponding_command,
             guild_id,
             ctx.author().id,
@@ -596,15 +572,7 @@ pub async fn settings_deleter(
     let cache_http = botox::cache::CacheHttpImpl::from_ctx(ctx.serenity_context());
 
     {
-        // Check COMMAND_ID_MODULE_MAP
-        let base_command = operation_specific
-            .corresponding_command
-            .split_whitespace()
-            .next()
-            .unwrap();
-
         let perm_res = crate::silverpelt::cmd::check_command(
-            base_command,
             operation_specific.corresponding_command,
             guild_id,
             ctx.author().id,

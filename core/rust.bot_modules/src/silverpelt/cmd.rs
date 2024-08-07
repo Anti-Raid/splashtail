@@ -236,7 +236,6 @@ impl Default for CheckCommandOptions {
 /// Check command checks whether or not a user has permission to run a command
 #[allow(clippy::too_many_arguments)]
 pub async fn check_command(
-    base_command: &str,
     command: &str,
     guild_id: GuildId,
     user_id: UserId,
@@ -247,14 +246,12 @@ pub async fn check_command(
     // Needed for settings and the website (potentially)
     opts: CheckCommandOptions,
 ) -> PermissionResult {
-    if !SILVERPELT_CACHE
-        .command_id_module_map
-        .contains_key(base_command)
-    {
-        return "This command is not registered in the database, please contact support".into();
-    }
+    let command_permutations = permute_command_names(command);
 
-    let module = match SILVERPELT_CACHE.command_id_module_map.get(base_command) {
+    let module = match SILVERPELT_CACHE
+        .command_id_module_map
+        .get(&command_permutations[0])
+    {
         Some(module) => module,
         None => {
             return PermissionResult::ModuleNotFound {};
@@ -272,8 +269,6 @@ pub async fn check_command(
             message: "root_cmd".to_string(),
         };
     }
-
-    let permutations = permute_command_names(command);
 
     let module_config = {
         if let Some(ref custom_module_configuration) = opts.custom_module_configuration {
@@ -298,7 +293,7 @@ pub async fn check_command(
         }
     };
 
-    let cmd_data = match get_command_extended_data(&permutations) {
+    let cmd_data = match get_command_extended_data(&command_permutations) {
         Ok(v) => v,
         Err(e) => {
             return e.into();
@@ -309,15 +304,18 @@ pub async fn check_command(
         if let Some(ref custom_command_configuration) = opts.custom_command_configuration {
             custom_command_configuration.clone()
         } else {
-            let gcc =
-                match get_best_command_configuration(pool, &guild_id.to_string(), &permutations)
-                    .await
-                {
-                    Ok(v) => v,
-                    Err(e) => {
-                        return e.into();
-                    }
-                };
+            let gcc = match get_best_command_configuration(
+                pool,
+                &guild_id.to_string(),
+                &command_permutations,
+            )
+            .await
+            {
+                Ok(v) => v,
+                Err(e) => {
+                    return e.into();
+                }
+            };
 
             gcc.unwrap_or(silverpelt::GuildCommandConfiguration {
                 id: "".to_string(),
@@ -439,7 +437,6 @@ mod test {
         };
 
         let cmd = super::check_command(
-            "afk",
             "afk create",
             serenity::all::GuildId::new(1),
             serenity::all::UserId::new(1),
@@ -458,6 +455,22 @@ mod test {
             _ => {
                 panic!("Expected ModuleDisabled, got {:?}", cmd);
             }
+        }
+
+        let cmd = super::check_command(
+            "afk list",
+            serenity::all::GuildId::new(1064135068928454766),
+            serenity::all::UserId::new(728871946456137770),
+            &pg_pool,
+            &cache_http,
+            &None,
+            // Needed for settings and the website (potentially)
+            super::CheckCommandOptions::default(),
+        )
+        .await;
+
+        if !matches!(cmd, super::PermissionResult::ModuleDisabled { .. }) {
+            panic!("Expected ModuleDisabled, got {:?}", cmd);
         }
     }
 }

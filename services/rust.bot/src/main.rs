@@ -798,7 +798,6 @@ async fn main() {
                 let command = ctx.command();
 
                 let res = modules::silverpelt::cmd::check_command(
-                    command.name.as_str(),
                     &command.qualified_name,
                     guild_id,
                     ctx.author().id,

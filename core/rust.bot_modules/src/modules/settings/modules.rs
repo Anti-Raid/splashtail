@@ -308,7 +308,6 @@ pub async fn modules_modperms(
 
     let cache_http = botox::cache::CacheHttpImpl::from_ctx(ctx.serenity_context());
     let perm_res = crate::silverpelt::cmd::check_command(
-        "acl__modules_modperms",
         &format!("acl__modules_modperms {}", module.id),
         guild_id,
         ctx.author().id,
@@ -431,7 +430,6 @@ pub async fn modules_modperms(
                 }
 
                 let perm_res = crate::silverpelt::cmd::check_command(
-                    "modules",
                     "modules enable",
                     guild_id,
                     ctx.author().id,
@@ -482,7 +480,6 @@ pub async fn modules_modperms(
                 }
 
                 let perm_res = crate::silverpelt::cmd::check_command(
-                    "modules",
                     "modules disable",
                     guild_id,
                     ctx.author().id,
@@ -534,7 +531,6 @@ pub async fn modules_modperms(
 
                 if module.is_default_enabled {
                     let perm_res = crate::silverpelt::cmd::check_command(
-                        "modules",
                         "modules enable",
                         guild_id,
                         ctx.author().id,
@@ -564,7 +560,6 @@ pub async fn modules_modperms(
                     }
                 } else {
                     let perm_res = crate::silverpelt::cmd::check_command(
-                        "modules",
                         "modules disable",
                         guild_id,
                         ctx.author().id,
@@ -598,7 +593,6 @@ pub async fn modules_modperms(
             }
             "module/default-perms/reset" => {
                 let perm_res = crate::silverpelt::cmd::check_command(
-                    &format!("acl__{}_defaultperms_check", module.id),
                     &format!("acl__{}_defaultperms_check", module.id),
                     guild_id,
                     ctx.author().id,
@@ -685,7 +679,6 @@ pub async fn modules_modperms(
                         .await?;
 
                         let perm_res = crate::silverpelt::cmd::check_command(
-                            &format!("acl__{}_defaultperms_check", module.id),
                             &format!("acl__{}_defaultperms_check", module.id),
                             guild_id,
                             ctx.author().id,

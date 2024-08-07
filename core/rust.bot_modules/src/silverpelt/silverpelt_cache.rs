@@ -67,10 +67,6 @@ impl SilverpeltCache {
                 for module in crate::modules::modules() {
                     for command in module.commands.iter() {
                         map.insert(command.0.name.to_string(), module.id.to_string());
-
-                        for sub in command.0.subcommands.iter() {
-                            map.insert(sub.name.to_string(), module.id.to_string());
-                        }
                     }
                 }
 

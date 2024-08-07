@@ -42,8 +42,7 @@ pub async fn filter(
         };
 
         let res = crate::silverpelt::cmd::check_command(
-            cmd.name.as_str(),
-            &cmd.qualified_name,
+            cmd.qualified_name.as_str(),
             guild_id,
             ctx.author().id,
             &ctx.data().pool,

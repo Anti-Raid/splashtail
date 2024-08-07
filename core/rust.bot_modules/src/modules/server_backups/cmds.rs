@@ -400,7 +400,6 @@ pub async fn backups_list(ctx: Context<'_>) -> Result<(), Error> {
             "backups_delete" => {
                 // Check permission
                 let perm_res = crate::silverpelt::cmd::check_command(
-                    "backups",
                     "backups delete",
                     guild_id,
                     ctx.author().id,

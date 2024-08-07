@@ -271,13 +271,9 @@ impl BotAnimusMessage {
                 command,
                 opts,
             } => {
-                // Check COMMAND_ID_MODULE_MAP
-                let base_command = command.split_whitespace().next().unwrap();
-
                 let flags = AmCheckCommandOptionsFlags::from_bits_truncate(opts.flags);
 
                 let perm_res = modules::silverpelt::cmd::check_command(
-                    base_command,
                     &command,
                     guild_id,
                     user_id,
@@ -400,15 +396,7 @@ impl BotAnimusMessage {
                 // Ensure that the keys are validated at the edge boundary before parsing as well just in case...
                 module_settings::cfg::validate_keys(opt, &p_fields)?;
 
-                // Check COMMAND_ID_MODULE_MAP
-                let base_command = operation_specific
-                    .corresponding_command
-                    .split_whitespace()
-                    .next()
-                    .unwrap();
-
                 let perm_res = modules::silverpelt::cmd::check_command(
-                    base_command,
                     operation_specific.corresponding_command,
                     guild_id,
                     user_id,
