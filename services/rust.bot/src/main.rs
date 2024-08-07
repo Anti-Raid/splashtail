@@ -8,9 +8,7 @@ use ipc::{
 
 use botox::cache::CacheHttpImpl;
 use gwevent::core::get_event_guild_id;
-use modules::silverpelt::{
-    module_config::is_module_enabled, silverpelt_cache::SILVERPELT_CACHE, EventHandlerContext,
-};
+use silverpelt::{module_config::is_module_enabled, EventHandlerContext};
 use splashcore_rs::value::Value;
 
 use once_cell::sync::Lazy;
@@ -370,7 +368,7 @@ async fn event_listener<'a>(
                 info!("Starting background tasks");
                 // Get all tasks
                 let mut tasks = Vec::new();
-                for module in modules::modules::modules() {
+                for module in modules::modules() {
                     for (task, confirm_task) in module.background_tasks {
                         let (confirmed, reason) = (confirm_task)(ctx.serenity_context);
                         if confirmed {
@@ -447,7 +445,7 @@ async fn event_listener<'a>(
                 .ready
                 .contains_key(&ctx.serenity_context.shard_id)
             {
-                for module in modules::modules::modules() {
+                for module in modules::modules() {
                     for on_ready in module.on_first_ready.iter() {
                         if let Err(e) = on_ready(ctx.serenity_context.clone(), &user_data).await {
                             error!("Error initializing module [on_first_ready]: {}", e);
@@ -506,16 +504,24 @@ async fn event_listener<'a>(
     });
 
     let mut set = tokio::task::JoinSet::new();
-    for (module, evts) in SILVERPELT_CACHE.module_event_listeners_cache.iter() {
-        let module_enabled =
-            match is_module_enabled(&event_handler_context.data.pool, event_guild_id, module).await
-            {
-                Ok(enabled) => enabled,
-                Err(e) => {
-                    error!("Error getting module enabled status: {}", e);
-                    continue;
-                }
-            };
+    for (module, evts) in modules::SILVERPELT_CACHE
+        .module_event_listeners_cache
+        .iter()
+    {
+        let module_enabled = match is_module_enabled(
+            &modules::SILVERPELT_CACHE,
+            &event_handler_context.data.pool,
+            event_guild_id,
+            module,
+        )
+        .await
+        {
+            Ok(enabled) => enabled,
+            Err(e) => {
+                error!("Error getting module enabled status: {}", e);
+                continue;
+            }
+        };
 
         if !module_enabled {
             continue;
@@ -658,7 +664,7 @@ async fn main() {
             let mut cmds = Vec::new();
 
             let mut _cmd_names = Vec::new();
-            for module in modules::modules::modules() {
+            for module in modules::modules() {
                 log::info!("Loading module {}", module.id);
 
                 if !module.is_parsed() {
@@ -797,14 +803,15 @@ async fn main() {
 
                 let command = ctx.command();
 
-                let res = modules::silverpelt::cmd::check_command(
+                let res = silverpelt::cmd::check_command(
+                    &modules::SILVERPELT_CACHE,
                     &command.qualified_name,
                     guild_id,
                     ctx.author().id,
                     &data.pool,
                     &CacheHttpImpl::from_ctx(ctx.serenity_context()),
                     &Some(ctx),
-                    modules::silverpelt::cmd::CheckCommandOptions {
+                    silverpelt::cmd::CheckCommandOptions {
                         channel_id: Some(ctx.channel_id()),
                         ..Default::default()
                     },
@@ -913,7 +920,7 @@ async fn main() {
 
     info!("Initializing bot state");
 
-    for module in modules::modules::modules() {
+    for module in modules::modules() {
         for init in module.on_startup.iter() {
             if let Err(e) = init(&data).await {
                 error!("Error initializing module: {}", e);

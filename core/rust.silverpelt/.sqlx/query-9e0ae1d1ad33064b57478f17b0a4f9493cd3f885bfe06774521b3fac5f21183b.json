@@ -1,0 +1,17 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE guild_members SET roles = $1, resolved_perms_cache = $2, needs_perm_rederive = false WHERE guild_id = $3 AND user_id = $4",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "TextArray",
+        "TextArray",
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "9e0ae1d1ad33064b57478f17b0a4f9493cd3f885bfe06774521b3fac5f21183b"
+}

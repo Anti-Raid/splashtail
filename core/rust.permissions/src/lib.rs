@@ -1,4 +1,6 @@
-use splashcore_rs::types::silverpelt::{PermissionCheck, PermissionChecks, PermissionResult};
+pub mod types;
+
+use types::{PermissionCheck, PermissionChecks, PermissionResult};
 
 /// This function runs a single permission check on a command without taking any branching decisions
 ///
@@ -71,8 +73,8 @@ pub fn check_perms_single(
     PermissionResult::Ok {}
 }
 
-/// Executes `PermissionChecks::Simple` against the member's native permissions and kittycat permissions
-fn simple_permission_checks(
+/// Executes a set of PermissionCheck against the member's native permissions and kittycat permissions
+pub fn eval_checks(
     checks: &[PermissionCheck],
     member_native_perms: serenity::all::Permissions,
     member_kittycat_perms: Vec<kittycat::perms::Permission>,
@@ -121,70 +123,6 @@ fn simple_permission_checks(
     }
 
     PermissionResult::Ok {}
-}
-
-#[derive(Default, Clone, Eq, PartialEq, Debug)]
-pub struct PermissionChecksContext {
-    pub user_id: serenity::all::UserId,
-    pub guild_id: serenity::all::GuildId,
-    pub guild_owner_id: serenity::all::UserId,
-    pub channel_id: Option<serenity::all::ChannelId>,
-}
-
-async fn template_permission_checks(
-    template: &str,
-    member_native_perms: serenity::all::Permissions,
-    member_kittycat_perms: Vec<kittycat::perms::Permission>,
-    ctx: PermissionChecksContext,
-) -> PermissionResult {
-    templating::render_permissions_template(
-        ctx.guild_id,
-        template,
-        templating::core::PermissionTemplateContext {
-            member_native_permissions: member_native_perms,
-            member_kittycat_permissions: member_kittycat_perms,
-            user_id: ctx.user_id,
-            guild_id: ctx.guild_id,
-            guild_owner_id: ctx.guild_owner_id,
-            channel_id: ctx.channel_id,
-        },
-        templating::CompileTemplateOptions {
-            cache_result: true,
-            ignore_cache: false,
-        },
-    )
-    .await
-}
-
-#[allow(clippy::too_many_arguments)]
-pub async fn can_run_command(
-    member_native_perms: serenity::all::Permissions,
-    member_kittycat_perms: Vec<kittycat::perms::Permission>,
-    perms: &PermissionChecks,
-    perms_ctx: PermissionChecksContext,
-) -> PermissionResult {
-    match perms {
-        PermissionChecks::Simple { checks } => {
-            if checks.is_empty() {
-                return PermissionResult::Ok {};
-            }
-
-            simple_permission_checks(checks, member_native_perms, member_kittycat_perms)
-        }
-        PermissionChecks::Template { template } => {
-            if template.is_empty() {
-                return PermissionResult::Ok {};
-            }
-
-            template_permission_checks(
-                template,
-                member_native_perms,
-                member_kittycat_perms,
-                perms_ctx,
-            )
-            .await
-        }
-    }
 }
 
 #[cfg(test)]
@@ -274,127 +212,51 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_can_run_command() {
+    async fn test_eval_checks() {
         // Basic test
-        assert!(can_run_command(
+        assert!(eval_checks(
+            &[PermissionCheck::default()],
             serenity::all::Permissions::empty(),
             vec!["abc.test".into()],
-            &PermissionChecks::Simple {
-                checks: vec![PermissionCheck::default()],
-            },
-            PermissionChecksContext::default()
         )
-        .await
         .is_ok());
 
         // With a native permission
         assert!(err_with_code(
-            can_run_command(
-                serenity::all::Permissions::empty(),
-                vec!["abc.test".into()],
-                &PermissionChecks::Simple {
-                    checks: vec![PermissionCheck {
-                        kittycat_perms: vec![],
-                        native_perms: vec![serenity::all::Permissions::ADMINISTRATOR],
-                        outer_and: false,
-                        inner_and: false,
-                    }],
-                },
-                PermissionChecksContext::default()
-            )
-            .await,
-            "missing_any_perms"
-        ));
-
-        assert!(err_with_code(
-            can_run_command(
-                serenity::all::Permissions::empty(),
-                vec!["abc.test".into()],
-                &PermissionChecks::Simple {
-                    checks: vec![PermissionCheck {
-                        kittycat_perms: vec![],
-                        native_perms: vec![serenity::all::Permissions::ADMINISTRATOR],
-                        outer_and: false,
-                        inner_and: false,
-                    }],
-                },
-                PermissionChecksContext::default()
-            )
-            .await,
-            "missing_any_perms"
-        ));
-
-        assert!(err_with_code(
-            can_run_command(
-                serenity::all::Permissions::BAN_MEMBERS,
-                vec!["abc.test".into()],
-                &PermissionChecks::Simple {
-                    checks: vec![
-                        PermissionCheck {
-                            kittycat_perms: vec![],
-                            native_perms: vec![serenity::all::Permissions::BAN_MEMBERS],
-                            outer_and: true,
-                            inner_and: false,
-                        },
-                        PermissionCheck {
-                            kittycat_perms: vec![],
-                            native_perms: vec![serenity::all::Permissions::KICK_MEMBERS],
-                            outer_and: false,
-                            inner_and: false,
-                        },
-                    ],
-                },
-                PermissionChecksContext::default()
-            )
-            .await,
-            "no_checks_succeeded"
-        ));
-
-        // Real-life example
-        assert!(err_with_code(
-            can_run_command(
-                serenity::all::Permissions::ADMINISTRATOR,
-                vec![],
-                &PermissionChecks::Simple {
-                    checks: vec![PermissionCheck {
-                        kittycat_perms: vec!["backups.create".to_string()],
-                        native_perms: vec![],
-                        outer_and: false,
-                        inner_and: false,
-                    },],
-                },
-                PermissionChecksContext::default()
-            )
-            .await,
-            "missing_any_perms"
-        ));
-
-        // Real-life example
-        assert!(can_run_command(
-            serenity::all::Permissions::ADMINISTRATOR,
-            vec!["backups.create".into()],
-            &PermissionChecks::Simple {
-                checks: vec![PermissionCheck {
-                    kittycat_perms: vec!["backups.create".to_string()],
+            eval_checks(
+                &[PermissionCheck {
+                    kittycat_perms: vec![],
                     native_perms: vec![serenity::all::Permissions::ADMINISTRATOR],
                     outer_and: false,
-                    inner_and: true,
-                },],
-            },
-            PermissionChecksContext::default()
-        )
-        .await
-        .is_ok());
+                    inner_and: false,
+                }],
+                serenity::all::Permissions::empty(),
+                vec!["abc.test".into()],
+            ),
+            "missing_any_perms"
+        ));
 
-        assert!(can_run_command(
-            serenity::all::Permissions::BAN_MEMBERS,
-            vec!["abc.test".into()],
-            &PermissionChecks::Simple {
-                checks: vec![
+        assert!(err_with_code(
+            eval_checks(
+                &[PermissionCheck {
+                    kittycat_perms: vec![],
+                    native_perms: vec![serenity::all::Permissions::ADMINISTRATOR],
+                    outer_and: false,
+                    inner_and: false,
+                }],
+                serenity::all::Permissions::empty(),
+                vec!["abc.test".into()],
+            ),
+            "missing_any_perms"
+        ));
+
+        assert!(err_with_code(
+            eval_checks(
+                &[
                     PermissionCheck {
                         kittycat_perms: vec![],
                         native_perms: vec![serenity::all::Permissions::BAN_MEMBERS],
-                        outer_and: false,
+                        outer_and: true,
                         inner_and: false,
                     },
                     PermissionCheck {
@@ -404,10 +266,58 @@ mod tests {
                         inner_and: false,
                     },
                 ],
-            },
-            PermissionChecksContext::default()
+                serenity::all::Permissions::BAN_MEMBERS,
+                vec!["abc.test".into()],
+            ),
+            "no_checks_succeeded"
+        ));
+
+        // Real-life example
+        assert!(err_with_code(
+            eval_checks(
+                &[PermissionCheck {
+                    kittycat_perms: vec!["backups.create".to_string()],
+                    native_perms: vec![],
+                    outer_and: false,
+                    inner_and: false,
+                }],
+                serenity::all::Permissions::ADMINISTRATOR,
+                vec![],
+            ),
+            "missing_any_perms"
+        ));
+
+        // Real-life example
+        assert!(eval_checks(
+            &[PermissionCheck {
+                kittycat_perms: vec!["backups.create".to_string()],
+                native_perms: vec![serenity::all::Permissions::ADMINISTRATOR],
+                outer_and: false,
+                inner_and: true,
+            }],
+            serenity::all::Permissions::ADMINISTRATOR,
+            vec!["backups.create".into()],
         )
-        .await
+        .is_ok());
+
+        assert!(eval_checks(
+            &[
+                PermissionCheck {
+                    kittycat_perms: vec![],
+                    native_perms: vec![serenity::all::Permissions::BAN_MEMBERS],
+                    outer_and: false,
+                    inner_and: false,
+                },
+                PermissionCheck {
+                    kittycat_perms: vec![],
+                    native_perms: vec![serenity::all::Permissions::KICK_MEMBERS],
+                    outer_and: false,
+                    inner_and: false,
+                },
+            ],
+            serenity::all::Permissions::BAN_MEMBERS,
+            vec!["abc.test".into()],
+        )
         .is_ok());
     }
 }

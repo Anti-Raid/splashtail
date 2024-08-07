@@ -12,7 +12,7 @@ mod lang_rhai;
 mod lang_tera;
 
 use once_cell::sync::Lazy;
-use splashcore_rs::types::silverpelt::PermissionResult;
+use permissions::types::PermissionResult;
 use std::str::FromStr;
 
 static TEMPLATING_ENVVAR: Lazy<Vec<String>> = Lazy::new(|| {

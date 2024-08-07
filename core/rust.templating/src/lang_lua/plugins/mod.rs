@@ -4,7 +4,8 @@ pub mod message;
 use mlua::prelude::*;
 use once_cell::sync::Lazy;
 
-static PLUGINS: Lazy<indexmap::IndexMap<String, ModuleFn>> = Lazy::new(|| {
+// Modules can load their own plugins
+pub static PLUGINS: Lazy<indexmap::IndexMap<String, ModuleFn>> = Lazy::new(|| {
     indexmap::indexmap! {
         "@antiraid/builtins".to_string() => builtins as ModuleFn,
         "@antiraid/interop".to_string() => interop::init_plugin as ModuleFn,

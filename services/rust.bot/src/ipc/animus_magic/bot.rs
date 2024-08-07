@@ -1,9 +1,9 @@
+use permissions::types::{PermissionChecks, PermissionResult};
 /// Bot animus contains the request and response for a bot
 ///
 /// To edit/add responses, add them both to bot.rs and to go.std/animusmagic/types.go
-use modules::silverpelt::canonical_module::CanonicalModule;
-use modules::silverpelt::silverpelt_cache::SILVERPELT_CACHE;
-use splashcore_rs::types::silverpelt::{PermissionChecks, PermissionResult};
+use silverpelt::canonical_module::CanonicalModule;
+use silverpelt::types::{GuildCommandConfiguration, GuildModuleConfiguration};
 
 use splashcore_rs::animusmagic::client::{
     AnimusMessage, AnimusResponse, SerializableAnimusMessage, SerializableAnimusResponse,
@@ -23,7 +23,7 @@ pub enum CanonicalSettingsResult {
         fields: Vec<indexmap::IndexMap<String, serde_json::Value>>,
     },
     PermissionError {
-        res: splashcore_rs::types::silverpelt::PermissionResult,
+        res: PermissionResult,
     },
     Err {
         error: CanonicalSettingsError,
@@ -114,13 +114,11 @@ pub struct AmCheckCommandOptions {
 
     /// Custom permission checks to use
     #[serde(default)]
-    pub custom_command_configuration:
-        Option<Box<splashcore_rs::types::silverpelt::GuildCommandConfiguration>>,
+    pub custom_command_configuration: Option<Box<GuildCommandConfiguration>>,
 
     /// Custom permission checks to use
     #[serde(default)]
-    pub custom_module_configuration:
-        Option<Box<splashcore_rs::types::silverpelt::GuildModuleConfiguration>>,
+    pub custom_module_configuration: Option<Box<GuildModuleConfiguration>>,
 
     /// The current channel id
     #[serde(default)]
@@ -189,7 +187,7 @@ impl BotAnimusMessage {
             Self::Modules {} => {
                 let mut modules = Vec::new();
 
-                for idm in SILVERPELT_CACHE.canonical_module_cache.iter() {
+                for idm in modules::SILVERPELT_CACHE.canonical_module_cache.iter() {
                     let module = idm.value();
                     modules.push(module.clone());
                 }
@@ -273,14 +271,15 @@ impl BotAnimusMessage {
             } => {
                 let flags = AmCheckCommandOptionsFlags::from_bits_truncate(opts.flags);
 
-                let perm_res = modules::silverpelt::cmd::check_command(
+                let perm_res = silverpelt::cmd::check_command(
+                    &modules::SILVERPELT_CACHE,
                     &command,
                     guild_id,
                     user_id,
                     pool,
                     cache_http,
                     &None,
-                    modules::silverpelt::cmd::CheckCommandOptions {
+                    silverpelt::cmd::CheckCommandOptions {
                         ignore_module_disabled: flags
                             .contains(AmCheckCommandOptionsFlags::IGNORE_MODULE_DISABLED),
                         ignore_command_disabled: flags
@@ -339,7 +338,7 @@ impl BotAnimusMessage {
                 let op: OperationType = op.into();
 
                 // Find the setting
-                let Some(module) = SILVERPELT_CACHE.module_cache.get(&module) else {
+                let Some(module) = modules::SILVERPELT_CACHE.module_cache.get(&module) else {
                     return Ok(BotAnimusResponse::SettingsOperation {
                         res: CanonicalSettingsResult::Err {
                             error: CanonicalSettingsError::Generic {
@@ -396,14 +395,15 @@ impl BotAnimusMessage {
                 // Ensure that the keys are validated at the edge boundary before parsing as well just in case...
                 module_settings::cfg::validate_keys(opt, &p_fields)?;
 
-                let perm_res = modules::silverpelt::cmd::check_command(
+                let perm_res = silverpelt::cmd::check_command(
+                    &modules::SILVERPELT_CACHE,
                     operation_specific.corresponding_command,
                     guild_id,
                     user_id,
                     pool,
                     cache_http,
                     &None,
-                    modules::silverpelt::cmd::CheckCommandOptions {
+                    silverpelt::cmd::CheckCommandOptions {
                         ignore_module_disabled: true,
                         ..Default::default()
                     },
@@ -524,7 +524,7 @@ impl BotAnimusMessage {
             }
             Self::ParsePermissionChecks { guild_id, checks } => {
                 let parsed_checks =
-                    modules::silverpelt::validators::parse_permission_checks(guild_id, &checks)
+                    silverpelt::validators::parse_permission_checks(guild_id, &checks)
                         .await
                         .map_err(|e| format!("Failed to parse permission checks: {:#?}", e))?;
 

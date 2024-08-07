@@ -4,7 +4,7 @@ use splashcore_rs::permissions::check_perms_single;
 #[export_module]
 pub mod plugin {
     /// PermissionResult structure
-    pub type PermissionResult = splashcore_rs::types::silverpelt::PermissionResult;
+    pub type PermissionResult = permissions_types::PermissionResult;
 
     /// Kittycat permission
     pub type KittycatPermission = kittycat::perms::Permission;
@@ -92,7 +92,7 @@ pub mod plugin {
     }
 
     /// Permission check
-    pub type PermissionCheck = splashcore_rs::types::silverpelt::PermissionCheck;
+    pub type PermissionCheck = permissions_types::PermissionCheck;
 
     /// Creates a new permission check
     #[rhai_fn(name = "create_permission_check", return_raw)]

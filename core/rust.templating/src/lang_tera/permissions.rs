@@ -1,7 +1,5 @@
-use splashcore_rs::{
-    permissions::check_perms_single,
-    types::silverpelt::{PermissionCheck, PermissionResult},
-};
+use permissions::check_perms_single;
+use permissions_types::{PermissionCheck, PermissionResult};
 use std::sync::{Arc, RwLock};
 use tera::Tera;
 

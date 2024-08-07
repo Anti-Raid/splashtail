@@ -242,7 +242,7 @@ Run ``cargo sqlx prepare`` in the ``botv2`` folder before committing anything. T
 
 When changing `PermissionChecks` validation rules, be sure to edit the following locations and keep them up to date:
 
-- ``botv2 [crate::silverpelt::validators::parse_permission_checks]`` (the consts)
+- ``botv2 [silverpelt::validators::parse_permission_checks]`` (the consts)
 - ``webserver/webutils/checks.go`` (the consts)
 
 -------------------------------------------------------------------------------------------

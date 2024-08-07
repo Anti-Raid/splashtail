@@ -150,7 +150,7 @@ pub async fn render_permissions_template(
     guild_id: GuildId,
     template: &str,
     args: crate::core::PermissionTemplateContext,
-) -> LuaResult<splashcore_rs::types::silverpelt::PermissionResult> {
+) -> LuaResult<permissions::types::PermissionResult> {
     let lua = get_lua_vm(guild_id).await?;
 
     let args = lua.vm.to_value(&args)?;
@@ -160,7 +160,7 @@ pub async fn render_permissions_template(
     let v: LuaValue = f.call_async(args).await?;
 
     let json_v = serde_json::to_value(v).map_err(|e| LuaError::external(e.to_string()))?;
-    let v: splashcore_rs::types::silverpelt::PermissionResult =
+    let v: permissions::types::PermissionResult =
         serde_json::from_value(json_v).map_err(|e| LuaError::external(e.to_string()))?;
 
     Ok(v)

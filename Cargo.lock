@@ -352,12 +352,14 @@ dependencies = [
  "module_settings",
  "modules",
  "once_cell",
+ "permissions",
  "poise",
  "proxy_support",
  "reqwest",
  "serde",
  "serde_json",
  "serenity",
+ "silverpelt",
  "splashcore_rs",
  "sqlx",
  "tokio",
@@ -2364,6 +2366,7 @@ dependencies = [
  "serde",
  "serde_json",
  "serenity",
+ "silverpelt",
  "splashcore_rs",
  "splashcore_text",
  "sqlx",
@@ -2621,10 +2624,11 @@ checksum = "e3148f5046208a5d56bcfc03053e3ca6334e51da8dfb19b6cdc8b306fae3283e"
 name = "permissions"
 version = "0.1.0"
 dependencies = [
+ "indexmap",
  "kittycat",
+ "serde",
  "serenity",
  "splashcore_rs",
- "templating",
  "tokio",
 ]
 
@@ -3615,6 +3619,37 @@ dependencies = [
 ]
 
 [[package]]
+name = "silverpelt"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "base_data",
+ "botox",
+ "chrono",
+ "config",
+ "dashmap",
+ "futures-util",
+ "indexmap",
+ "kittycat",
+ "log",
+ "module_settings",
+ "moka",
+ "permissions",
+ "poise",
+ "proxy_support",
+ "regex",
+ "reqwest",
+ "rusty-s3",
+ "serde",
+ "serde_json",
+ "serenity",
+ "splashcore_rs",
+ "sqlx",
+ "templating",
+ "tokio",
+]
+
+[[package]]
 name = "siphasher"
 version = "0.3.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4127,6 +4162,7 @@ dependencies = [
  "mlua",
  "moka",
  "once_cell",
+ "permissions",
  "quickjs_runtime",
  "rhai",
  "serde",

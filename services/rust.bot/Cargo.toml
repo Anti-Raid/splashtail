@@ -31,6 +31,8 @@ base_data = { path = "../../core/rust.base_data" }
 proxy_support = { path = "../../core/rust.proxy_support" }
 config = { path = "../../core/rust.config" }
 cap = { version = "0.1.2", features = ["stats"] }
+silverpelt = { path = "../../core/rust.silverpelt" }
+permissions = { path = "../../core/rust.permissions" }
 
 [dependencies.tokio]
 version = "1"
