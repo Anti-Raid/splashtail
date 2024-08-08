@@ -328,15 +328,14 @@ pub enum CanonicalColumnSuggestion {
     Static {
         suggestions: Vec<String>,
     },
-    Dynamic {
-        /// The table name to query
-        table_name: String,
-        /// The column name to query for the user-displayed value
-        value_column: String,
-        /// The column name to query for the id
-        id_column: String,
-        /// The column name to query for the guild id
-        guild_id_column: String,
+    /// A reference to another setting
+    ///
+    /// The primary key of the referred setting is used as the value
+    SettingsReference {
+        /// The module of the referenced setting
+        module: String,
+        /// The setting of the referenced setting
+        setting: String,
     },
     None {},
 }
@@ -349,17 +348,12 @@ impl From<super::types::ColumnSuggestion> for CanonicalColumnSuggestion {
                     suggestions: suggestions.iter().map(|s| s.to_string()).collect(),
                 }
             }
-            super::types::ColumnSuggestion::Dynamic {
-                table_name,
-                value_column,
-                id_column,
-                guild_id_column,
-            } => CanonicalColumnSuggestion::Dynamic {
-                table_name: table_name.to_string(),
-                value_column: value_column.to_string(),
-                id_column: id_column.to_string(),
-                guild_id_column: guild_id_column.to_string(),
-            },
+            super::types::ColumnSuggestion::SettingsReference { module, setting } => {
+                CanonicalColumnSuggestion::SettingsReference {
+                    module: module.to_string(),
+                    setting: setting.to_string(),
+                }
+            }
             super::types::ColumnSuggestion::None {} => CanonicalColumnSuggestion::None {},
         }
     }

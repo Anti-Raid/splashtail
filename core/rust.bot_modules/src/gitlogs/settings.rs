@@ -211,11 +211,9 @@ pub static REPOS: Lazy<ConfigOption> = Lazy::new(|| {
                 column_type: ColumnType::new_scalar(InnerColumnType::String { min_length: None, max_length: None, allowed_values: vec![], kind: InnerColumnTypeStringKind::Normal }),
                 nullable: false,
                 unique: false,
-                suggestions: ColumnSuggestion::Dynamic {
-                    table_name: "gitlogs__webhooks",
-                    value_column: "comment",
-                    id_column: "id",
-                    guild_id_column: "guild_id",
+                suggestions: ColumnSuggestion::SettingsReference {
+                    module: "gitlogs",
+                    setting: "webhooks",
                 },
                 ignored_for: vec![],
                 secret: false,
@@ -431,11 +429,9 @@ pub static EVENT_MODIFIERS: Lazy<ConfigOption> = Lazy::new(|| {
                 column_type: ColumnType::new_scalar(InnerColumnType::String { min_length: None, max_length: None, allowed_values: vec![], kind: InnerColumnTypeStringKind::Normal }),
                 nullable: false,
                 unique: false,
-                suggestions: ColumnSuggestion::Dynamic {
-                    table_name: "gitlogs__webhooks",
-                    value_column: "comment",
-                    id_column: "id",
-                    guild_id_column: "guild_id",
+                suggestions: ColumnSuggestion::SettingsReference {
+                    module: "gitlogs",
+                    setting: "webhooks",
                 },
                 ignored_for: vec![],
                 secret: false,
@@ -487,11 +483,9 @@ pub static EVENT_MODIFIERS: Lazy<ConfigOption> = Lazy::new(|| {
                 column_type: ColumnType::new_scalar(InnerColumnType::String { min_length: None, max_length: None, allowed_values: vec![], kind: InnerColumnTypeStringKind::Normal }),
                 nullable: true,
                 unique: false,
-                suggestions: ColumnSuggestion::Dynamic {
-                    table_name: "gitlogs__repos",
-                    value_column: "repo_name",
-                    id_column: "id",
-                    guild_id_column: "guild_id",
+                suggestions: ColumnSuggestion::SettingsReference {
+                    module: "gitlogs",
+                    setting: "repos",
                 },
                 ignored_for: vec![],
                 secret: false,

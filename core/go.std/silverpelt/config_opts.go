@@ -124,16 +124,15 @@ type CanonicalColumnSuggestion struct {
 	Static *struct {
 		Suggestions []string `json:"suggestions"`
 	} `json:"Static,omitempty"`
-	Dynamic *struct {
-		// The table name to query
-		TableName string `json:"table_name"`
-		// The column name containing the ID/value to be set
-		IDColumn string `json:"id_column"`
-		// The column name containing the user-facing value
-		ValueColumn string `json:"value_column"`
-		// The column name containing the guild id
-		GuildIDColumn string `json:"guild_id_column"`
-	} `json:"Dynamic,omitempty"`
+	// A reference to another setting
+	//
+	// The primary key of the referred setting is used as the value
+	SettingsReference *struct {
+		// The module of the referenced setting
+		Module string `json:"module"`
+		// The setting of the referenced setting
+		Setting string `json:"setting"`
+	} `json:"SettingsReference,omitempty"`
 	None *struct{} `json:",omitempty"`
 }
 

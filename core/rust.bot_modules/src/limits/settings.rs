@@ -70,11 +70,9 @@ pub static PAST_HIT_LIMITS: Lazy<ConfigOption> = Lazy::new(|| ConfigOption {
             }),
             nullable: false,
             unique: false,
-            suggestions: ColumnSuggestion::Dynamic {
-                table_name: "limits__user_actions",
-                value_column: "user_id",
-                id_column: "action_id",
-                guild_id_column: "guild_id",
+            suggestions: ColumnSuggestion::SettingsReference {
+                module: "limits",
+                setting: "user_actions",
             },
             ignored_for: vec![],
             secret: false,
@@ -93,11 +91,9 @@ pub static PAST_HIT_LIMITS: Lazy<ConfigOption> = Lazy::new(|| ConfigOption {
             }),
             nullable: false,
             unique: true,
-            suggestions: ColumnSuggestion::Dynamic {
-                table_name: "limits__guild_limits",
-                value_column: "limit_name",
-                id_column: "limit_id",
-                guild_id_column: "guild_id",
+            suggestions: ColumnSuggestion::SettingsReference {
+                module: "limits",
+                setting: "guild_limits",
             },
             ignored_for: vec![OperationType::Create],
             secret: false,

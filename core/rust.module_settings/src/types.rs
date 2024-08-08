@@ -332,15 +332,14 @@ pub enum ColumnSuggestion {
     Static {
         suggestions: Vec<&'static str>,
     },
-    Dynamic {
-        /// The table name to query
-        table_name: &'static str,
-        /// The column name to query for the user-displayed value
-        value_column: &'static str,
-        /// The column name to query for the id
-        id_column: &'static str,
-        /// The column name containing the guild id
-        guild_id_column: &'static str,
+    /// A reference to another setting
+    ///
+    /// The primary key of the referred setting is used as the value
+    SettingsReference {
+        /// The module of the referenced setting
+        module: &'static str,
+        /// The setting of the referenced setting
+        setting: &'static str,
     },
     None {},
 }
