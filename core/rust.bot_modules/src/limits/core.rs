@@ -1,12 +1,9 @@
 use base_data::Error;
 use futures_util::future::FutureExt;
-use poise::serenity_prelude::{GuildId, UserId};
+use poise::serenity_prelude::GuildId;
 use serde::{Deserialize, Serialize};
 use splashcore_rs::utils::pg_interval_to_secs;
-use sqlx::{
-    types::chrono::{DateTime, Utc},
-    PgPool,
-};
+use sqlx::PgPool;
 use strum_macros::{Display, EnumString, VariantNames};
 
 /// Punishment sting source
@@ -161,114 +158,6 @@ impl LimitTypes {
     }
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct UserAction {
-    /// The ID of the action
-    pub action_id: String,
-    /// The limit type associated with this action performed
-    pub limit_type: LimitTypes,
-    /// The time the action was performed
-    pub created_at: DateTime<Utc>,
-    /// The ID of the user who performed the action
-    pub user_id: UserId,
-    /// The ID of the guild the action was performed in
-    pub guild_id: GuildId,
-    /// The data associated with the action (extra data etc.)
-    pub action_data: serde_json::Value,
-    /// The target the action was intended for
-    pub target: Option<String>,
-    /// The number of stings the user has procured from this action
-    pub stings: i32,
-}
-
-impl UserAction {
-    /// Fetch user actions for a action id
-    pub async fn by_id(
-        data: &base_data::Data,
-        guild_id: GuildId,
-        action_id: &str,
-    ) -> Result<Self, Error> {
-        let res = sqlx::query!(
-            "SELECT action_id, limit_type, created_at, user_id, guild_id, action_data, target, stings FROM limits__user_actions WHERE guild_id = $1 AND action_id = $2",
-            guild_id.to_string(),
-            action_id
-        )
-        .fetch_optional(&data.pool)
-        .await?;
-
-        match res {
-            Some(action) => Ok(UserAction {
-                action_id: action.action_id,
-                limit_type: action.limit_type.parse()?,
-                created_at: action.created_at,
-                user_id: action.user_id.parse()?,
-                guild_id: action.guild_id.parse()?,
-                action_data: action.action_data,
-                target: action.target,
-                stings: action.stings,
-            }),
-            None => Err("No action found".into()),
-        }
-    }
-
-    /// Fetch actions for a user in a guild
-    pub async fn user(
-        data: &base_data::Data,
-        guild_id: GuildId,
-        user_id: UserId,
-    ) -> Result<Vec<Self>, Error> {
-        let res = sqlx::query!(
-            "SELECT action_id, limit_type, created_at, user_id, guild_id, action_data, target, stings FROM limits__user_actions WHERE guild_id = $1 AND user_id = $2",
-            guild_id.to_string(),
-            user_id.to_string()
-        )
-        .fetch_all(&data.pool)
-        .await?;
-
-        let mut actions = Vec::new();
-        for action in res {
-            actions.push(UserAction {
-                action_id: action.action_id,
-                limit_type: action.limit_type.parse()?,
-                created_at: action.created_at,
-                user_id,
-                guild_id,
-                action_data: action.action_data,
-                target: action.target,
-                stings: action.stings,
-            });
-        }
-
-        Ok(actions)
-    }
-
-    /// Fetch all user actions in a guild
-    pub async fn guild(data: &base_data::Data, guild_id: GuildId) -> Result<Vec<Self>, Error> {
-        let res = sqlx::query!(
-            "SELECT action_id, limit_type, created_at, user_id, guild_id, action_data, target, stings FROM limits__user_actions WHERE guild_id = $1",
-            guild_id.to_string(),
-        )
-        .fetch_all(&data.pool)
-        .await?;
-
-        let mut actions = Vec::new();
-        for action in res {
-            actions.push(UserAction {
-                action_id: action.action_id,
-                limit_type: action.limit_type.parse()?,
-                created_at: action.created_at,
-                user_id: action.user_id.parse()?,
-                guild_id,
-                action_data: action.action_data,
-                target: action.target,
-                stings: action.stings,
-            });
-        }
-
-        Ok(actions)
-    }
-}
-
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Limit {
     /// The ID of the guild this limit is for
@@ -320,54 +209,5 @@ impl Limit {
             });
         }
         Ok(limits)
-    }
-}
-
-#[derive(Debug, Serialize)]
-pub struct PastHitLimits {
-    /// The ID of the past hit limits object
-    pub id: String,
-    /// The ID of the user who hit the limits
-    pub user_id: UserId,
-    /// The ID of the guild the limits were hit in
-    pub guild_id: GuildId,
-    /// The IDs of the limits that were hit
-    pub limit_ids: Vec<String>,
-    /// The action IDs responsible
-    pub cause: Vec<String>,
-    /// Any extra staff-given notes
-    pub notes: Vec<String>,
-    /// The time the limits were hit
-    pub created_at: DateTime<Utc>,
-}
-
-impl PastHitLimits {
-    /// Fetch actions for guild
-    pub async fn guild(data: &base_data::Data, guild_id: GuildId) -> Result<Vec<Self>, Error> {
-        let rec = sqlx::query!(
-            "
-                SELECT id, user_id, limit_ids, cause, notes, created_at FROM limits__past_hit_limits
-                WHERE guild_id = $1
-            ",
-            guild_id.to_string()
-        )
-        .fetch_all(&data.pool)
-        .await?;
-
-        let mut hits = Vec::new();
-
-        for r in rec {
-            hits.push(Self {
-                guild_id,
-                id: r.id,
-                limit_ids: r.limit_ids,
-                created_at: r.created_at,
-                user_id: r.user_id.parse()?,
-                notes: r.notes,
-                cause: r.cause,
-            });
-        }
-
-        Ok(hits)
     }
 }
