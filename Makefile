@@ -85,7 +85,7 @@ ifndef CI_BUILD
 endif
 
 buildmewldwebui:
-	cd services/go.std/mewld_web/ui && npm i && npm run build && cd ../../
+	cd core/go.std/mewld_web/ui && npm i && npm run build && cd ../../
 
 tests:
 	CGO_ENABLED=0 go test -v -coverprofile=coverage.out ./...
