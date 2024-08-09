@@ -120,7 +120,12 @@ func CreateClusters() {
 	il, rh, err := mloader.Load(&mldConfig, &mproc.LoaderData{
 		Start: func(l *mproc.InstanceList, i *mproc.Instance, cm *mproc.ClusterMap) error {
 			cmd := exec.Command(
-				os.Args[0],
+				func() string {
+					if l.Dir == "" {
+						return l.Dir + "/" + l.Config.Module
+					}
+					return "./" + l.Config.Module
+				}(),
 				"jobs.node",
 				mutils.ToPyListUInt64(i.Shards),
 				strconv.Itoa(i.ClusterID),

@@ -23,7 +23,7 @@ names:
   - Horizon Hive
   - Supernova Syndicate
   - Aurora Assembly
-module: botv2
+module: out/rust.bot
 redis_channel: ar_clusters/staging
 interp: 
 

@@ -4,6 +4,7 @@ include .env
 
 TEST__USER_ID := 728871946456137770
 CDN_PATH := /silverpelt/cdn/antiraid
+PWD := $(shell pwd)
 
 default:
 	$(error No target provided. Please see README.md for more information)
@@ -13,64 +14,28 @@ buildall:
 	# Core infra
 	cd infra/nirn-proxy && make
 	cd infra/Sandwich-Daemon && make
+	cd infra/animuscli && make
+	cd infra/wafflepaw && make
 
 	# Other infra
 	make buildanimuscli
 	make buildwafflepaw
-	make buildbot
 	make buildmewldwebui
-	make buildwebserver
+	make build
 
-# Alias for buildall
 all:
 	make buildall
-
-buildanimuscli:
-	cd infra/animuscli && make
-
-buildwafflepaw:
-	cd infra/wafflepaw && make
-
-buildwebserver:
-	CGO_ENABLED=0 go build -v 
-
-reloadwebserver:
-	systemctl restart splashtail-staging-webserver
-
-restartwebserver:
-	make buildwebserver
-	make reloadwebserver
-
-updatebot:
-	make buildbot && cp -v target/release/botv2 botv2
-
-updatebot_dbg:
-	make buildbot_dbg && cp -v target/debug/botv2 botv2
 	
-format_rust:
+format:
 	# For every project in core/rust.*, run cargo sqlx prepare
-	for d in core/rust.*; do \
+	for d in core/rust.* services/rust.*; do \
 		cd $$d && cargo fmt && cd ../..; \
 	done
 
-	# For every project in services/rust.*, run cargo sqlx prepare
-	for d in services/rust.*; do \
-		cd $$d && cargo fmt && cd ../..; \
+	# For every project in services/go.*, run cargo sqlx prepare
+	for d in core/go.* services/go.*; do \
+		cd $$d && go fmt && cd ../..; \
 	done
-
-
-restartbot:
-	make buildbot
-	make restartbot_nobuild
-
-restartbot_nobuild:
-	systemctl stop splashtail-staging-bot
-	sleep 3 # Give time for the webserver to stop
-	cp -v target/release/bot botv2
-	systemctl start splashtail-staging-bot
-
-reloadjobserver:
-	systemctl restart splashtail-staging-jobs
 
 sqlx:
 ifndef CI_BUILD
@@ -85,9 +50,28 @@ ifndef CI_BUILD
 	done
 endif
 
-buildbot: sqlx
-	cd services/rust.bot && SQLX_OFFLINE=true cargo build --release
+build: sqlx
+	mkdir -p out
+	make build_go
+	make build_rust
+	make copyassets
 
+build_go:
+	for d in services/go.*; do \
+		echo $$d && cd ${PWD}/$$d && go build -v -o ${PWD}/out && cd ${PWD}; \
+	done
+
+build_rust: sqlx
+	for d in services/rust.*; do \
+		PROJECT_NAME=$$(basename $$d) && \
+		OUTPUT_FILE=$$(echo $$PROJECT_NAME | tr . _) && \
+		echo $$d && cd ${PWD}/$$d && cargo build --release && \
+		cp ${PWD}/target/release/$$OUTPUT_FILE ${PWD}/out/$$PROJECT_NAME && \
+		go build -v -o ${PWD}/out/$$PROJECT_NAME.loader && cd ${PWD} \
+		cd ${PWD}; \
+	done
+
+copyassets:
 ifndef CI_BUILD
 	# For every project in core/* and services/*, copy .generated/* to data/generated/{project_name} and to the website (services/website/lib/generated)
 	mkdir -p data/generated/build_assets
@@ -99,9 +83,6 @@ ifndef CI_BUILD
 		cp -rf $$d/.generated/* services/website/src/lib/generated/build_assets; \
 	done
 endif
-
-buildbot_dbg: sqlx
-	cd services/rust.bot && SQLX_OFFLINE=true cargo build --timings
 
 buildmewldwebui:
 	cd services/go.api/mewld_web/ui && npm i && npm run build && cd ../../

@@ -331,41 +331,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "bot"
-version = "6.0.0"
-dependencies = [
- "async-trait",
- "base_data",
- "bitflags 2.5.0",
- "botox",
- "cap",
- "chrono",
- "config",
- "dashmap",
- "env_logger",
- "fred",
- "futures-util",
- "gwevent",
- "indexmap",
- "kittycat",
- "log",
- "module_settings",
- "modules",
- "once_cell",
- "permissions",
- "poise",
- "proxy_support",
- "reqwest",
- "serde",
- "serde_json",
- "serenity",
- "silverpelt",
- "splashcore_rs",
- "sqlx",
- "tokio",
-]
-
-[[package]]
 name = "botox"
 version = "0.1.0"
 source = "git+https://github.com/infinitybotlist/botox?branch=main#ebc5dea74571d858f0b097df1a4e5f6a23c63cd1"
@@ -3196,6 +3161,41 @@ dependencies = [
  "spki",
  "subtle",
  "zeroize",
+]
+
+[[package]]
+name = "rust_bot"
+version = "6.0.0"
+dependencies = [
+ "async-trait",
+ "base_data",
+ "bitflags 2.5.0",
+ "botox",
+ "cap",
+ "chrono",
+ "config",
+ "dashmap",
+ "env_logger",
+ "fred",
+ "futures-util",
+ "gwevent",
+ "indexmap",
+ "kittycat",
+ "log",
+ "module_settings",
+ "modules",
+ "once_cell",
+ "permissions",
+ "poise",
+ "proxy_support",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "serenity",
+ "silverpelt",
+ "splashcore_rs",
+ "sqlx",
+ "tokio",
 ]
 
 [[package]]

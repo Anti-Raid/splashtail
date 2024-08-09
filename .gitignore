@@ -1,5 +1,4 @@
-splashtail
-botv2
+out
 .vscode
 localjobs-config.yaml
 config.yaml
@@ -8,7 +7,6 @@ coverage.out
 __pycache__
 node_modules
 ljconfig
-cmd/localjobs/localjobs
 .DS_Store
 /**/target
 /**/.DS_Store

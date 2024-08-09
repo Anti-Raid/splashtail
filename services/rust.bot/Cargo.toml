@@ -1,5 +1,5 @@
 [package]
-name = "bot"
+name = "rust_bot"
 version = "6.0.0"
 edition = "2021"
 

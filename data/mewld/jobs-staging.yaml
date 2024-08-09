@@ -4,7 +4,7 @@ use_current_directory: true
 use_custom_webui: true
 env:
 names: # Names is calculated in splashtail itself based on the botv2 clusters
-module:
+module: out/go.jobserver
 redis_channel: jobs/staging
 interp: 
 
