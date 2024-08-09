@@ -3,8 +3,8 @@ package clear_user
 import (
 	"net/http"
 
-	"github.com/anti-raid/splashtail/services/go.api/state"
-	"github.com/anti-raid/splashtail/services/go.api/types"
+	"go.api/state"
+	"go.api/types"
 
 	"github.com/go-chi/chi/v5"
 	docs "github.com/infinitybotlist/eureka/doclib"

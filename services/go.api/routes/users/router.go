@@ -3,13 +3,13 @@ package users
 import (
 	"net/http"
 
-	"github.com/anti-raid/splashtail/core/go.std/splashcore"
-	"github.com/anti-raid/splashtail/services/go.api/api"
-	"github.com/anti-raid/splashtail/services/go.api/routes/users/endpoints/get_user"
-	"github.com/anti-raid/splashtail/services/go.api/routes/users/endpoints/get_user_guild_base_info"
-	"github.com/anti-raid/splashtail/services/go.api/routes/users/endpoints/get_user_guilds"
 	"github.com/go-chi/chi/v5"
 	"github.com/infinitybotlist/eureka/uapi"
+	"go.api/api"
+	"go.api/routes/users/endpoints/get_user"
+	"go.api/routes/users/endpoints/get_user_guild_base_info"
+	"go.api/routes/users/endpoints/get_user_guilds"
+	"go.std/splashcore"
 )
 
 const tagName = "Users"

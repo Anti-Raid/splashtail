@@ -4,9 +4,9 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/anti-raid/splashtail/services/go.api/state"
-	"github.com/anti-raid/splashtail/services/go.api/types"
 	"github.com/go-playground/validator/v10"
+	"go.api/state"
+	"go.api/types"
 	"go.uber.org/zap"
 
 	"github.com/infinitybotlist/eureka/crypto"

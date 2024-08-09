@@ -1,31 +1,38 @@
-package webserver
+package main
 
 import (
 	"html/template"
 	"net/http"
+	"os"
+	"os/signal"
+	"runtime"
+	"strconv"
 	"strings"
+	"syscall"
 	"time"
 
 	_ "embed"
 
-	"github.com/anti-raid/splashtail/services/go.api/api"
-	"github.com/anti-raid/splashtail/services/go.api/constants"
-	"github.com/anti-raid/splashtail/services/go.api/integrations/gitlogs"
-	"github.com/anti-raid/splashtail/services/go.api/routes/apps"
-	"github.com/anti-raid/splashtail/services/go.api/routes/auth"
-	"github.com/anti-raid/splashtail/services/go.api/routes/core"
-	"github.com/anti-raid/splashtail/services/go.api/routes/guilds"
-	"github.com/anti-raid/splashtail/services/go.api/routes/platform"
-	"github.com/anti-raid/splashtail/services/go.api/routes/tasks"
-	"github.com/anti-raid/splashtail/services/go.api/routes/users"
-	"github.com/anti-raid/splashtail/services/go.api/state"
-	"github.com/anti-raid/splashtail/services/go.api/types"
+	"github.com/cloudflare/tableflip"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	docs "github.com/infinitybotlist/eureka/doclib"
 	"github.com/infinitybotlist/eureka/jsonimpl"
 	"github.com/infinitybotlist/eureka/uapi"
 	"github.com/infinitybotlist/eureka/zapchi"
+	"go.api/api"
+	"go.api/constants"
+	"go.api/integrations/gitlogs"
+	"go.api/routes/apps"
+	"go.api/routes/auth"
+	"go.api/routes/core"
+	"go.api/routes/guilds"
+	"go.api/routes/platform"
+	"go.api/routes/tasks"
+	"go.api/routes/users"
+	"go.api/state"
+	"go.api/types"
+	"go.uber.org/zap"
 )
 
 //go:embed docs/docs.html
@@ -197,4 +204,65 @@ func CreateWebserver() *chi.Mux {
 	r.Mount("/integrations/gitlogs", gitlogs.Setup())
 
 	return r
+}
+
+// Launches the webserver
+func main() {
+	state.Setup()
+
+	state.CurrentOperationMode = "webserver"
+
+	r := CreateWebserver()
+
+	go state.AnimusMagicClient.Listen(state.Context, state.Rueidis, state.Logger)
+
+	// If GOOS is windows, do normal http server
+	if runtime.GOOS == "linux" || runtime.GOOS == "darwin" {
+		upg, _ := tableflip.New(tableflip.Options{})
+		defer upg.Stop()
+
+		go func() {
+			sig := make(chan os.Signal, 1)
+			signal.Notify(sig, syscall.SIGHUP)
+			for range sig {
+				state.Logger.Info("Received SIGHUP, upgrading server")
+				upg.Upgrade()
+			}
+		}()
+
+		// Listen must be called before Ready
+		ln, err := upg.Listen("tcp", ":"+strconv.Itoa(state.Config.Meta.Port.Parse()))
+
+		if err != nil {
+			state.Logger.Fatal("Error binding to socket", zap.Error(err))
+		}
+
+		defer ln.Close()
+
+		server := http.Server{
+			ReadTimeout: 30 * time.Second,
+			Handler:     r,
+		}
+
+		go func() {
+			err := server.Serve(ln)
+			if err != http.ErrServerClosed {
+				state.Logger.Error("Server failed due to unexpected error", zap.Error(err))
+			}
+		}()
+
+		if err := upg.Ready(); err != nil {
+			state.Logger.Fatal("Error calling upg.Ready", zap.Error(err))
+		}
+
+		<-upg.Exit()
+	} else {
+		// Tableflip not supported
+		state.Logger.Warn("Tableflip not supported on this platform, this is not a production-capable server.")
+		err := http.ListenAndServe(":"+strconv.Itoa(state.Config.Meta.Port.Parse()), r)
+
+		if err != nil {
+			state.Logger.Fatal("Error binding to socket", zap.Error(err))
+		}
+	}
 }

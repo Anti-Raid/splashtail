@@ -1,8 +1,8 @@
 package types
 
 import (
-	"github.com/anti-raid/splashtail/core/go.std/silverpelt"
 	orderedmap "github.com/wk8/go-ordered-map/v2"
+	"go.std/silverpelt"
 )
 
 // SettingsExecute allows execution of a settings operation

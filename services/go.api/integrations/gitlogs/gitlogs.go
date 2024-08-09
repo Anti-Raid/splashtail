@@ -3,7 +3,6 @@ package gitlogs
 import (
 	"time"
 
-	webserverstate "github.com/anti-raid/splashtail/services/go.api/state"
 	"github.com/git-logs/client/webserver/config"
 	"github.com/git-logs/client/webserver/mapofmu"
 	"github.com/git-logs/client/webserver/ontos"
@@ -11,6 +10,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/infinitybotlist/eureka/zapchi"
+	webserverstate "go.api/state"
 )
 
 // Sets up the git-logs bot

@@ -6,15 +6,15 @@ import (
 	"strings"
 	"time"
 
-	"github.com/anti-raid/splashtail/core/go.std/silverpelt"
-	"github.com/anti-raid/splashtail/core/go.std/structparser/db"
-	"github.com/anti-raid/splashtail/services/go.api/state"
-	"github.com/anti-raid/splashtail/services/go.api/types"
 	"github.com/go-chi/chi/v5"
 	docs "github.com/infinitybotlist/eureka/doclib"
 	"github.com/infinitybotlist/eureka/ratelimit"
 	"github.com/infinitybotlist/eureka/uapi"
 	"github.com/jackc/pgx/v5"
+	"go.api/state"
+	"go.api/types"
+	"go.std/silverpelt"
+	"go.std/structparser/db"
 	"go.uber.org/zap"
 )
 

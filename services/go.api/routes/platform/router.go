@@ -1,8 +1,8 @@
 package platform
 
 import (
-	"github.com/anti-raid/splashtail/services/go.api/routes/platform/endpoints/clear_user"
-	"github.com/anti-raid/splashtail/services/go.api/routes/platform/endpoints/get_user"
+	"go.api/routes/platform/endpoints/clear_user"
+	"go.api/routes/platform/endpoints/get_user"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/infinitybotlist/eureka/uapi"

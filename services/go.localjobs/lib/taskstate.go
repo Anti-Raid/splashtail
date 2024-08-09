@@ -5,8 +5,8 @@ import (
 	"net/http"
 	"runtime/debug"
 
-	"github.com/anti-raid/splashtail/core/go.jobs/taskstate"
 	"github.com/bwmarrin/discordgo"
+	"go.jobs/taskstate"
 )
 
 // Implementor of tasks.TaskState

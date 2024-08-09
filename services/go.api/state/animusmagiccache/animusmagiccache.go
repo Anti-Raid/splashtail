@@ -4,10 +4,10 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/anti-raid/splashtail/core/go.std/animusmagic"
-	"github.com/anti-raid/splashtail/core/go.std/utils/syncmap"
-	"github.com/anti-raid/splashtail/services/go.api/animusmagic_messages"
 	"github.com/redis/rueidis"
+	"go.api/animusmagic_messages"
+	"go.std/animusmagic"
+	"go.std/utils/syncmap"
 )
 
 // Wrapper around animusmagic.AnimusMagicClient with cache support

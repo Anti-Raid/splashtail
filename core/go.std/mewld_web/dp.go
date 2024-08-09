@@ -8,9 +8,13 @@ import (
 	"slices"
 	"strconv"
 	"time"
-
-	"github.com/anti-raid/splashtail/services/go.api/state"
 )
+
+var dpSecret string
+
+func SetState(secret string) {
+	dpSecret = secret
+}
 
 // Ported from https://github.com/InfinityBotList/sysmanage-web/blob/main/plugins/authdp/mw.go
 func DpAuthMiddleware(next http.Handler) http.Handler {
@@ -55,8 +59,8 @@ func DpAuthMiddleware(next http.Handler) http.Handler {
 		ts := r.Header.Get("X-DP-Timestamp")
 
 		// Validate DP-Secret next
-		if state.Config.Meta.DPSecret != "" {
-			h := hmac.New(sha512.New, []byte(state.Config.Meta.DPSecret))
+		if dpSecret != "" {
+			h := hmac.New(sha512.New, []byte(dpSecret))
 			h.Write([]byte(ts))
 			h.Write([]byte(r.Header.Get("X-DP-UserID")))
 			hexed := hex.EncodeToString(h.Sum(nil))

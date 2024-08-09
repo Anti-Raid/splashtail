@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/anti-raid/splashtail/core/go.std/bigint"
+	"go.std/bigint"
 )
 
 // Returns the extended data for a command

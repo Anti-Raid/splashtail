@@ -8,12 +8,12 @@ import (
 	"net/http"
 	"runtime/debug"
 
-	jobs "github.com/anti-raid/splashtail/core/go.jobs"
-	"github.com/anti-raid/splashtail/core/go.jobs/taskdef"
-	"github.com/anti-raid/splashtail/core/go.jobs/taskstate"
-	"github.com/anti-raid/splashtail/services/go.jobserver/state"
 	"github.com/bwmarrin/discordgo"
 	"github.com/infinitybotlist/eureka/crypto"
+	jobs "go.jobs"
+	"go.jobs/taskdef"
+	"go.jobs/taskstate"
+	"go.jobserver/state"
 	"go.uber.org/zap"
 )
 

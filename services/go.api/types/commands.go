@@ -1,6 +1,6 @@
 package types
 
-import "github.com/anti-raid/splashtail/core/go.std/silverpelt"
+import "go.std/silverpelt"
 
 // PatchGuildModuleConfiguration allows updating the guild module configuration
 type PatchGuildCommandConfiguration struct {

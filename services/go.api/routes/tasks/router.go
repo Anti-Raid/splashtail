@@ -3,12 +3,12 @@ package tasks
 import (
 	"net/http"
 
-	"github.com/anti-raid/splashtail/core/go.std/splashcore"
-	"github.com/anti-raid/splashtail/services/go.api/api"
-	"github.com/anti-raid/splashtail/services/go.api/routes/tasks/endpoints/create_guild_task"
-	"github.com/anti-raid/splashtail/services/go.api/routes/tasks/endpoints/get_guild_task"
-	"github.com/anti-raid/splashtail/services/go.api/routes/tasks/endpoints/get_task_list"
-	"github.com/anti-raid/splashtail/services/go.api/routes/tasks/endpoints/ioauth_download_task"
+	"go.api/api"
+	"go.api/routes/tasks/endpoints/create_guild_task"
+	"go.api/routes/tasks/endpoints/get_guild_task"
+	"go.api/routes/tasks/endpoints/get_task_list"
+	"go.api/routes/tasks/endpoints/ioauth_download_task"
+	"go.std/splashcore"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/infinitybotlist/eureka/uapi"

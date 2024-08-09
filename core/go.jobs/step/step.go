@@ -8,8 +8,8 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/anti-raid/splashtail/core/go.jobs/taskstate"
-	"github.com/anti-raid/splashtail/core/go.std/ext_types"
+	"go.jobs/taskstate"
+	"go.std/ext_types"
 	"go.uber.org/zap"
 )
 

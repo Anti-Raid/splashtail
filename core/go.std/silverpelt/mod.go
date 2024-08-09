@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/anti-raid/splashtail/core/go.std/bigint"
+	"go.std/bigint"
 )
 
 // PermissionCheck represents the permissions needed to run a command.

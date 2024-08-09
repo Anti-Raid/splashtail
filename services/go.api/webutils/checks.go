@@ -4,10 +4,10 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/anti-raid/splashtail/core/go.std/animusmagic"
-	"github.com/anti-raid/splashtail/core/go.std/silverpelt"
-	"github.com/anti-raid/splashtail/services/go.api/animusmagic_messages"
 	"github.com/redis/rueidis"
+	"go.api/animusmagic_messages"
+	"go.std/animusmagic"
+	"go.std/silverpelt"
 )
 
 // ParsePermissionChecks verifies permission checks. This currently needs an animus magic call
@@ -17,11 +17,11 @@ func ParsePermissionChecks(ctx context.Context, c *animusmagic.AnimusMagicClient
 		redis,
 		animusmagic_messages.BotAnimusMessage{
 			ParsePermissionChecks: &struct {
-				GuildID string `json:"guild_id"`
-				Checks *silverpelt.PermissionChecks `json:"checks"`
+				GuildID string                       `json:"guild_id"`
+				Checks  *silverpelt.PermissionChecks `json:"checks"`
 			}{
 				GuildID: guildId,
-				Checks: permChecks,
+				Checks:  permChecks,
 			},
 		},
 		&animusmagic.RequestOptions{

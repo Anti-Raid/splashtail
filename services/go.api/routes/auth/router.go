@@ -1,14 +1,14 @@
 package auth
 
 import (
-	"github.com/anti-raid/splashtail/core/go.std/splashcore"
-	"github.com/anti-raid/splashtail/services/go.api/api"
-	"github.com/anti-raid/splashtail/services/go.api/routes/auth/endpoints/create_ioauth_login"
-	"github.com/anti-raid/splashtail/services/go.api/routes/auth/endpoints/create_oauth2_login"
-	"github.com/anti-raid/splashtail/services/go.api/routes/auth/endpoints/create_user_session"
-	"github.com/anti-raid/splashtail/services/go.api/routes/auth/endpoints/get_user_sessions"
-	"github.com/anti-raid/splashtail/services/go.api/routes/auth/endpoints/revoke_user_session"
-	"github.com/anti-raid/splashtail/services/go.api/routes/auth/endpoints/test_auth"
+	"go.api/api"
+	"go.api/routes/auth/endpoints/create_ioauth_login"
+	"go.api/routes/auth/endpoints/create_oauth2_login"
+	"go.api/routes/auth/endpoints/create_user_session"
+	"go.api/routes/auth/endpoints/get_user_sessions"
+	"go.api/routes/auth/endpoints/revoke_user_session"
+	"go.api/routes/auth/endpoints/test_auth"
+	"go.std/splashcore"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/infinitybotlist/eureka/uapi"

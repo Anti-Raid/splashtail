@@ -4,10 +4,10 @@ import (
 	"errors"
 	"net/http"
 
-	"github.com/anti-raid/splashtail/services/go.api/state"
-	"github.com/anti-raid/splashtail/services/go.api/types"
 	"github.com/go-chi/chi/v5"
 	"github.com/jackc/pgx/v5"
+	"go.api/state"
+	"go.api/types"
 	"go.uber.org/zap"
 
 	docs "github.com/infinitybotlist/eureka/doclib"

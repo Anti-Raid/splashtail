@@ -1,6 +1,6 @@
 package common
 
-import "github.com/anti-raid/splashtail/core/go.jobs/taskstate"
+import "go.jobs/taskstate"
 
 // SaveIntermediateResult is a helper method to save an intermediate
 // result to database within the state

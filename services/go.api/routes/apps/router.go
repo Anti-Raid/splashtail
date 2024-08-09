@@ -1,11 +1,11 @@
 package apps
 
 import (
-	"github.com/anti-raid/splashtail/core/go.std/splashcore"
-	"github.com/anti-raid/splashtail/services/go.api/api"
-	"github.com/anti-raid/splashtail/services/go.api/routes/apps/endpoints/create_app"
-	"github.com/anti-raid/splashtail/services/go.api/routes/apps/endpoints/get_apps_list"
-	"github.com/anti-raid/splashtail/services/go.api/routes/apps/endpoints/get_apps_meta"
+	"go.api/api"
+	"go.api/routes/apps/endpoints/create_app"
+	"go.api/routes/apps/endpoints/get_apps_list"
+	"go.api/routes/apps/endpoints/get_apps_meta"
+	"go.std/splashcore"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/infinitybotlist/eureka/uapi"

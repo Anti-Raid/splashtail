@@ -1,6 +1,6 @@
 package backups
 
-import "github.com/anti-raid/splashtail/core/go.std/utils/syncmap"
+import "go.std/utils/syncmap"
 
 // concurrentBackupState is a map of guild IDs to the number of backup tasks
 // they have running concurrently.

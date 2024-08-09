@@ -1,8 +1,8 @@
 package animusmagic_messages
 
 import (
-	"github.com/anti-raid/splashtail/core/go.std/animusmagic"
-	_ "github.com/anti-raid/splashtail/services/go.jobserver/state" // Avoid unsafe import
+	_ "go.jobserver/state" // Avoid unsafe import
+	"go.std/animusmagic"
 )
 
 type JobserverMessage struct {

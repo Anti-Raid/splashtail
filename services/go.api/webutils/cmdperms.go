@@ -4,10 +4,10 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/anti-raid/splashtail/core/go.std/animusmagic"
-	"github.com/anti-raid/splashtail/core/go.std/silverpelt"
-	"github.com/anti-raid/splashtail/services/go.api/animusmagic_messages"
 	"github.com/redis/rueidis"
+	"go.api/animusmagic_messages"
+	"go.std/animusmagic"
+	"go.std/silverpelt"
 )
 
 // Calls the CheckCommandPermission animus magic method to check whether or not a command is runnable

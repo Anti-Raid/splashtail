@@ -4,8 +4,8 @@ import (
 	"context"
 	"net/http"
 
-	"github.com/anti-raid/splashtail/services/go.api/api"
-	"github.com/anti-raid/splashtail/services/go.api/types"
+	"go.api/api"
+	"go.api/types"
 
 	docs "github.com/infinitybotlist/eureka/doclib"
 	"github.com/infinitybotlist/eureka/uapi"

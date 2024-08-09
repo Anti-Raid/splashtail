@@ -4,11 +4,11 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/anti-raid/splashtail/core/go.std/silverpelt"
-	"github.com/anti-raid/splashtail/services/go.api/state"
-	"github.com/anti-raid/splashtail/services/go.api/types"
-	"github.com/anti-raid/splashtail/services/go.api/webutils"
 	"github.com/go-chi/chi/v5"
+	"go.api/state"
+	"go.api/types"
+	"go.api/webutils"
+	"go.std/silverpelt"
 
 	docs "github.com/infinitybotlist/eureka/doclib"
 	"github.com/infinitybotlist/eureka/uapi"

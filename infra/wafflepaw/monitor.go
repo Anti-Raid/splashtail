@@ -11,12 +11,12 @@ import (
 	"time"
 
 	"github.com/anti-raid/splashtail/cmd/wafflepaw/bgtasks"
-	"github.com/anti-raid/splashtail/core/go.std/animusmagic"
-	"github.com/anti-raid/splashtail/core/go.std/config"
 	"github.com/bwmarrin/discordgo"
 	mconfig "github.com/cheesycod/mewld/config"
 	mproc "github.com/cheesycod/mewld/proc"
 	mredis "github.com/cheesycod/mewld/redis"
+	"go.std/animusmagic"
+	"go.std/config"
 	"go.uber.org/zap"
 	"gopkg.in/yaml.v3"
 )

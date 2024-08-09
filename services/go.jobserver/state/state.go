@@ -8,10 +8,6 @@ import (
 	"runtime/debug"
 	"strings"
 
-	"github.com/anti-raid/splashtail/core/go.std/animusmagic"
-	"github.com/anti-raid/splashtail/core/go.std/config"
-	"github.com/anti-raid/splashtail/core/go.std/mewldresponder"
-	"github.com/anti-raid/splashtail/core/go.std/objectstorage"
 	"github.com/bwmarrin/discordgo"
 	"github.com/go-playground/validator/v10"
 	"github.com/go-playground/validator/v10/non-standard/validators"
@@ -20,6 +16,10 @@ import (
 	"github.com/infinitybotlist/eureka/snippets"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/redis/rueidis"
+	"go.std/animusmagic"
+	"go.std/config"
+	"go.std/mewldresponder"
+	"go.std/objectstorage"
 	"go.uber.org/zap"
 	"gopkg.in/yaml.v3"
 )

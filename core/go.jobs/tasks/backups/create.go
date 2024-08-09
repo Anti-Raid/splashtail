@@ -13,12 +13,12 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/anti-raid/splashtail/core/go.jobs/common"
-	"github.com/anti-raid/splashtail/core/go.jobs/taskdef"
-	"github.com/anti-raid/splashtail/core/go.jobs/taskstate"
-	"github.com/anti-raid/splashtail/core/go.std/ext_types"
-	"github.com/anti-raid/splashtail/core/go.std/splashcore"
-	"github.com/anti-raid/splashtail/core/go.std/utils"
+	"go.jobs/common"
+	"go.jobs/taskdef"
+	"go.jobs/taskstate"
+	"go.std/ext_types"
+	"go.std/splashcore"
+	"go.std/utils"
 
 	_ "golang.org/x/image/webp"
 

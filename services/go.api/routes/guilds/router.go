@@ -3,15 +3,15 @@ package guilds
 import (
 	"net/http"
 
-	"github.com/anti-raid/splashtail/core/go.std/splashcore"
-	"github.com/anti-raid/splashtail/services/go.api/api"
-	"github.com/anti-raid/splashtail/services/go.api/routes/guilds/endpoints/get_all_command_configurations"
-	"github.com/anti-raid/splashtail/services/go.api/routes/guilds/endpoints/get_module_configurations"
-	"github.com/anti-raid/splashtail/services/go.api/routes/guilds/endpoints/patch_command_configuration"
-	"github.com/anti-raid/splashtail/services/go.api/routes/guilds/endpoints/patch_module_configuration"
-	"github.com/anti-raid/splashtail/services/go.api/routes/guilds/endpoints/settings_execute"
 	"github.com/go-chi/chi/v5"
 	"github.com/infinitybotlist/eureka/uapi"
+	"go.api/api"
+	"go.api/routes/guilds/endpoints/get_all_command_configurations"
+	"go.api/routes/guilds/endpoints/get_module_configurations"
+	"go.api/routes/guilds/endpoints/patch_command_configuration"
+	"go.api/routes/guilds/endpoints/patch_module_configuration"
+	"go.api/routes/guilds/endpoints/settings_execute"
+	"go.std/splashcore"
 )
 
 const tagName = "Users"

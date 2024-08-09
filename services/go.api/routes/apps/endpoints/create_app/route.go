@@ -4,9 +4,9 @@ import (
 	"errors"
 	"net/http"
 
-	"github.com/anti-raid/splashtail/services/go.api/apps"
-	"github.com/anti-raid/splashtail/services/go.api/state"
-	"github.com/anti-raid/splashtail/services/go.api/types"
+	"go.api/apps"
+	"go.api/state"
+	"go.api/types"
 
 	docs "github.com/infinitybotlist/eureka/doclib"
 	"github.com/infinitybotlist/eureka/uapi"

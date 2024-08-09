@@ -1,9 +1,9 @@
 package jobs
 
 import (
-	"github.com/anti-raid/splashtail/core/go.jobs/taskdef"
-	"github.com/anti-raid/splashtail/core/go.jobs/tasks/backups"
-	"github.com/anti-raid/splashtail/core/go.jobs/tasks/moderation"
+	"go.jobs/taskdef"
+	"go.jobs/tasks/backups"
+	"go.jobs/tasks/moderation"
 )
 
 // Task management core

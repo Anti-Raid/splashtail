@@ -8,9 +8,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/anti-raid/splashtail/services/go.api/state"
-	"github.com/anti-raid/splashtail/services/go.api/types"
 	"github.com/redis/rueidis"
+	"go.api/state"
+	"go.api/types"
 
 	"github.com/infinitybotlist/eureka/jsonimpl"
 	"github.com/infinitybotlist/eureka/ratelimit"

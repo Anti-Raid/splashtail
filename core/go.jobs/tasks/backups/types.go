@@ -3,9 +3,9 @@ package backups
 import (
 	"bytes"
 
-	"github.com/anti-raid/splashtail/core/go.std/utils/timex"
 	"github.com/bwmarrin/discordgo"
 	"github.com/infinitybotlist/iblfile"
+	"go.std/utils/timex"
 )
 
 type BackupCreateConstraints struct {

@@ -1,9 +1,9 @@
 package silverpelt
 
 import (
-	"github.com/anti-raid/splashtail/core/go.std/ext_types"
 	"github.com/bwmarrin/discordgo"
 	orderedmap "github.com/wk8/go-ordered-map/v2"
+	"go.std/ext_types"
 )
 
 type CanonicalSettingsResult struct {

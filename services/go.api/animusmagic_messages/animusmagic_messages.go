@@ -1,10 +1,10 @@
 package animusmagic_messages
 
 import (
-	"github.com/anti-raid/splashtail/core/go.std/animusmagic"
-	"github.com/anti-raid/splashtail/core/go.std/ext_types"
-	"github.com/anti-raid/splashtail/core/go.std/silverpelt"
 	orderedmap "github.com/wk8/go-ordered-map/v2"
+	"go.std/animusmagic"
+	"go.std/ext_types"
+	"go.std/silverpelt"
 )
 
 /*

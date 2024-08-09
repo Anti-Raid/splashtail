@@ -5,10 +5,10 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/anti-raid/splashtail/core/go.std/structparser/db"
-	"github.com/anti-raid/splashtail/services/go.api/state"
-	"github.com/anti-raid/splashtail/services/go.api/types"
 	"github.com/jackc/pgx/v5"
+	"go.api/state"
+	"go.api/types"
+	"go.std/structparser/db"
 	"go.uber.org/zap"
 
 	docs "github.com/infinitybotlist/eureka/doclib"

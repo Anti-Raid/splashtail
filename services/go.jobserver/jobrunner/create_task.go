@@ -4,9 +4,9 @@ import (
 	"context"
 	"fmt"
 
-	jobs "github.com/anti-raid/splashtail/core/go.jobs"
-	"github.com/anti-raid/splashtail/core/go.jobs/taskdef"
 	"github.com/jackc/pgx/v5/pgxpool"
+	jobs "go.jobs"
+	"go.jobs/taskdef"
 )
 
 // Sets up a task

@@ -10,10 +10,10 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/anti-raid/splashtail/core/go.std/utils/syncmap"
 	"github.com/infinitybotlist/eureka/crypto"
 	"github.com/infinitybotlist/eureka/jsonimpl"
 	"github.com/redis/rueidis"
+	"go.std/utils/syncmap"
 	"go.uber.org/zap"
 )
 

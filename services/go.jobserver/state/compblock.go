@@ -3,11 +3,11 @@ package state
 
 import (
 	// Unsafe to import state as used in both webserver and jobserver
-	_ "github.com/anti-raid/splashtail/core/go.jobs"
-	_ "github.com/anti-raid/splashtail/core/go.std/animusmagic"
-	_ "github.com/anti-raid/splashtail/core/go.std/config"
-	_ "github.com/anti-raid/splashtail/core/go.std/objectstorage"
-	_ "github.com/anti-raid/splashtail/core/go.std/structparser/db"
-	_ "github.com/anti-raid/splashtail/core/go.std/utils"
-	_ "github.com/anti-raid/splashtail/core/go.std/utils/mewext"
+	_ "go.jobs"
+	_ "go.std/animusmagic"
+	_ "go.std/config"
+	_ "go.std/objectstorage"
+	_ "go.std/structparser/db"
+	_ "go.std/utils"
+	_ "go.std/utils/mewext"
 )

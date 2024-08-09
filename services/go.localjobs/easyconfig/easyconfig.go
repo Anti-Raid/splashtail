@@ -3,10 +3,10 @@ package easyconfig
 import (
 	"fmt"
 
-	"github.com/anti-raid/splashtail/cmd/localjobs/lib"
-	"github.com/anti-raid/splashtail/cmd/localjobs/types"
 	"github.com/bwmarrin/discordgo"
 	"github.com/fatih/color"
+	"go.localjobs/lib"
+	"go.localjobs/types"
 )
 
 var bold = color.New(color.Bold).PrintlnFunc()

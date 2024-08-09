@@ -1,11 +1,10 @@
 package core
 
 import (
-	"github.com/anti-raid/splashtail/services/go.api/routes/core/endpoints/get_asset"
-	"github.com/anti-raid/splashtail/services/go.api/routes/core/endpoints/get_cluster_modules"
-	"github.com/anti-raid/splashtail/services/go.api/routes/core/endpoints/get_clusters_health"
 	"github.com/go-chi/chi/v5"
 	"github.com/infinitybotlist/eureka/uapi"
+	"go.api/routes/core/endpoints/get_cluster_modules"
+	"go.api/routes/core/endpoints/get_clusters_health"
 )
 
 const tagName = "Core"
@@ -23,14 +22,6 @@ func (b Router) Routes(r *chi.Mux) {
 		Method:  uapi.GET,
 		Docs:    get_clusters_health.Docs,
 		Handler: get_clusters_health.Route,
-	}.Route(r)
-
-	uapi.Route{
-		Pattern: "/assets/{asset}",
-		OpId:    "get_asset",
-		Method:  uapi.GET,
-		Docs:    get_asset.Docs,
-		Handler: get_asset.Route,
 	}.Route(r)
 
 	uapi.Route{

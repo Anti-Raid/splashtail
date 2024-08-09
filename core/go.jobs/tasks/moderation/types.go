@@ -1,6 +1,6 @@
 package moderation
 
-import "github.com/anti-raid/splashtail/core/go.std/utils/timex"
+import "go.std/utils/timex"
 
 // Options that can be set when pruning a message
 type MessagePruneOpts struct {

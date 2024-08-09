@@ -3,9 +3,9 @@ package webutils
 import (
 	"net/http"
 
-	"github.com/anti-raid/splashtail/services/go.api/state"
-	"github.com/anti-raid/splashtail/services/go.api/types"
 	"github.com/infinitybotlist/eureka/uapi"
+	"go.api/state"
+	"go.api/types"
 )
 
 func ClusterCheck(clusterId int) (resp uapi.HttpResponse, ok bool) {

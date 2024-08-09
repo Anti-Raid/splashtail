@@ -9,14 +9,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/anti-raid/splashtail/core/go.std/animusmagic"
-	"github.com/anti-raid/splashtail/core/go.std/config"
-	"github.com/anti-raid/splashtail/core/go.std/objectstorage"
-	"github.com/anti-raid/splashtail/data"
-	"github.com/anti-raid/splashtail/services/go.api/state/animusmagiccache"
-	"github.com/anti-raid/splashtail/services/go.api/state/redishotcache"
+	"go.api/state/animusmagiccache"
+	"go.api/state/redishotcache"
+	"go.std/animusmagic"
+	"go.std/config"
+	"go.std/objectstorage"
 
-	"github.com/anti-raid/splashtail/core/go.std/bigint"
 	"github.com/bwmarrin/discordgo"
 	mproc "github.com/cheesycod/mewld/proc"
 	"github.com/go-playground/validator/v10"
@@ -49,7 +47,6 @@ var (
 	CurrentOperationMode    string // Current mode splashtail is operating in
 	Config                  *config.Config
 	MewldInstanceList       *mproc.InstanceList
-	SerenityPermissions     map[string]bigint.BigInt
 )
 
 func fetchMewldInstanceList() (*mproc.InstanceList, error) {
@@ -117,18 +114,6 @@ func Setup() {
 	}
 
 	Logger = snippets.CreateZap()
-
-	serenityJsonFile, err := data.Data.ReadFile("generated/build_assets/rust.bot/serenity_perms.json")
-
-	if err != nil {
-		panic(err)
-	}
-
-	err = jsonimpl.Unmarshal(serenityJsonFile, &SerenityPermissions)
-
-	if err != nil {
-		panic(err)
-	}
 
 	for {
 		mil, err := fetchMewldInstanceList()

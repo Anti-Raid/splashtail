@@ -1,7 +1,7 @@
 package types
 
 import (
-	"github.com/anti-raid/splashtail/core/go.std/silverpelt"
+	"go.std/silverpelt"
 )
 
 // PatchGuildModuleConfiguration allows updating the guild module configuration

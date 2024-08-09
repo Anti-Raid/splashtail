@@ -4,9 +4,9 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/anti-raid/splashtail/core/go.std/structparser/db"
-	"github.com/anti-raid/splashtail/services/go.api/state"
-	"github.com/anti-raid/splashtail/services/go.api/types"
+	"go.api/state"
+	"go.api/types"
+	"go.std/structparser/db"
 
 	docs "github.com/infinitybotlist/eureka/doclib"
 	"github.com/infinitybotlist/eureka/uapi"

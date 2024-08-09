@@ -17,15 +17,15 @@ import (
 
 	"text/template"
 
-	"github.com/anti-raid/splashtail/cmd/localjobs/easyconfig"
-	"github.com/anti-raid/splashtail/cmd/localjobs/lib"
-	"github.com/anti-raid/splashtail/cmd/localjobs/ljstate"
-	jobs "github.com/anti-raid/splashtail/core/go.jobs"
 	"github.com/bwmarrin/discordgo"
 	"github.com/infinitybotlist/eureka/cmd"
 	"github.com/infinitybotlist/eureka/crypto"
 	"github.com/infinitybotlist/eureka/snippets"
 	orderedmap "github.com/wk8/go-ordered-map/v2"
+	jobs "go.jobs"
+	"go.localjobs/easyconfig"
+	"go.localjobs/lib"
+	"go.localjobs/ljstate"
 	"gopkg.in/yaml.v3"
 )
 
