@@ -61,12 +61,12 @@ build_go:
 		echo $$d && cd ${PWD}/$$d && go build -v -o ${PWD}/out && cd ${PWD}; \
 	done
 
-build_rust: sqlx
+build_rust:
 	for d in services/rust.*; do \
 		PROJECT_NAME=$$(basename $$d) && \
 		OUTPUT_FILE=$$(echo $$PROJECT_NAME | tr . _) && \
 		echo $$d && cd ${PWD}/$$d && cargo build --release && \
-		cp ${PWD}/target/release/$$OUTPUT_FILE ${PWD}/out/$$PROJECT_NAME && \
+		mv ${PWD}/target/release/$$OUTPUT_FILE ${PWD}/out/$$PROJECT_NAME && \
 		go build -v -o ${PWD}/out/$$PROJECT_NAME.loader && cd ${PWD} \
 		cd ${PWD}; \
 	done
