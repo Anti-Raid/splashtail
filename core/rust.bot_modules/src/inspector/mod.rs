@@ -3,6 +3,7 @@ mod core;
 mod dehoist;
 pub mod events; // Events is a public interface
 mod guildprotect;
+mod settings;
 pub mod types;
 
 use futures_util::future::FutureExt;
@@ -30,6 +31,7 @@ pub fn module() -> silverpelt::Module {
             guildprotect::save_all_guilds_initial(ctx, data).boxed()
         })],
         s3_paths: vec!["inspector/guild_icons/{guild_id}".to_string()],
+        config_options: vec![(*settings::INSPECTOR_OPTIONS).clone()],
         ..Default::default()
     }
 }

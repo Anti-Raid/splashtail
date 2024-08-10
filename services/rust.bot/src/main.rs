@@ -1,5 +1,6 @@
 mod ext_generate;
 mod ipc;
+mod test;
 
 use ipc::{
     animus_magic::client::{AnimusMagicClient, ClientData},

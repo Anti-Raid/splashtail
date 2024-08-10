@@ -278,7 +278,7 @@ pub enum InnerColumnType {
     Float {},
     BitFlag {
         /// The bit flag values
-        values: indexmap::IndexMap<&'static str, i64>,
+        values: indexmap::IndexMap<String, i64>,
     },
     Boolean {},
     Json {},

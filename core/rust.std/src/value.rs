@@ -156,7 +156,7 @@ impl Value {
                     };
                     Ok(Value::Integer(v.into()))
                 }
-                "int8" => {
+                "int8" | "bigint" => {
                     let Some(v) = row.try_get::<Option<i64>, _>(index)? else {
                         return Ok(Value::None);
                     };
@@ -236,7 +236,7 @@ impl Value {
                             v.into_iter().map(|x| Value::Integer(x.into())).collect(),
                         ))
                     }
-                    "int8" => {
+                    "int8" | "bigint" => {
                         let Some(v) = row.try_get::<Option<Vec<i64>>, _>(index)? else {
                             return Ok(Value::None);
                         };
