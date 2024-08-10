@@ -43,7 +43,7 @@ jobs:
           dev-files: true
       
       - name: Setup Postgres
-        run: data/misc/ibl db load data/seed.iblcli-seed
+        run: data/misc/ibl db load data/seed.iblcli-seed --database antiraid
         env:
           PGUSER: runner
       
