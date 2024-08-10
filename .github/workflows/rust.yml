@@ -32,7 +32,19 @@ jobs:
       
       - name: Install dependencies
         run: sudo apt install pkg-config openssl libssl-dev build-essential clangd clang libclang-14-dev lld mold 
-      - run: rustup update ${{ matrix.toolchain }} && rustup default ${{ matrix.toolchain }}
+      
+      - name: Setup Rust
+        run: rustup update ${{ matrix.toolchain }} && rustup default ${{ matrix.toolchain }}
+
+      - uses: ankane/setup-postgres@v1
+        with:
+          postgres-version: 16
+          database: antiraid
+          dev-files: true
+      
+      - name: Setup Postgres
+        run: data/misc/ibl db load data/seed.iblcli-seed --db antiraid
+      
       - name: Fetch all submodules
         run: git submodule update --init --recursive
       - run: make buildall

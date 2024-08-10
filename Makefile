@@ -27,30 +27,17 @@ all:
 	make buildall
 	
 format:
-	# For every project in core/rust.*, run cargo sqlx prepare
+	# For every project in core/rust.*
 	for d in core/rust.* services/rust.*; do \
 		cd $$d && cargo fmt && cd ../..; \
 	done
 
-	# For every project in services/go.*, run cargo sqlx prepare
+	# For every project in services/go.*
 	for d in core/go.* services/go.*; do \
 		cd $$d && go fmt && cd ../..; \
 	done
 
-sqlx:
-ifndef CI_BUILD
-	# For every project in core/rust.*, run cargo sqlx prepare
-	for d in core/rust.*; do \
-		cd $$d && cargo sqlx prepare && cd ../..; \
-	done
-
-	# For every project in services/rust.*, run cargo sqlx prepare
-	for d in services/rust.*; do \
-		cd $$d && cargo sqlx prepare && cd ../..; \
-	done
-endif
-
-build: sqlx
+build:
 	mkdir -p out
 	make build_go
 	make build_rust
