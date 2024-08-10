@@ -45,7 +45,7 @@ jobs:
       - name: Setup Postgres
         run: data/misc/ibl db load data/seed.iblcli-seed --db antiraid
         env:
-          PGUSER: runner
+          PGUSER: antiraid
       
       - name: Fetch all submodules
         run: git submodule update --init --recursive
