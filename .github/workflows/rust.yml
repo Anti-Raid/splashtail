@@ -41,11 +41,11 @@ jobs:
           postgres-version: 16
           dev-files: true
       
+      - run: createdb runner
+      
       - name: Setup Postgres
         run: data/misc/ibl db load data/seed.iblcli-seed 
-        env:
-          PGUSER: runneradmin
-      
+
       - name: Fetch all submodules
         run: git submodule update --init --recursive
       - run: make buildall
