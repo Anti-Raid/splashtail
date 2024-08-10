@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"os"
@@ -13,6 +14,7 @@ import (
 	"github.com/bwmarrin/discordgo"
 	"github.com/go-chi/chi/v5"
 	"github.com/infinitybotlist/eureka/jsonimpl"
+	"github.com/redis/go-redis/v9"
 	"go.jobserver/bgtasks"
 	"go.jobserver/core"
 	"go.jobserver/state"
@@ -24,6 +26,7 @@ import (
 	"gopkg.in/yaml.v3"
 
 	mconfig "github.com/cheesycod/mewld/config"
+	"github.com/cheesycod/mewld/ipc_redis"
 	mloader "github.com/cheesycod/mewld/loader"
 	mproc "github.com/cheesycod/mewld/proc"
 	mutils "github.com/cheesycod/mewld/utils"
@@ -117,7 +120,30 @@ func CreateClusters() {
 		state.Logger.Fatal("Error parsing webhook URL", zap.Error(err))
 	}
 
-	il, rh, err := mloader.Load(&mldConfig, &mproc.LoaderData{
+	// Setup connection to redis
+	if !strings.HasPrefix(mldConfig.Redis, "redis://") {
+		// Assume config URL with some sane defaults
+		mldConfig.Redis = "redis://" + mldConfig.Redis + "/0"
+	}
+
+	opts, err := redis.ParseURL(mldConfig.Redis)
+
+	if err != nil {
+		panic("redis url parse error" + err.Error())
+	}
+
+	rdb := redis.NewClient(opts)
+
+	status := rdb.Ping(context.Background())
+
+	if status.Err() != nil {
+		panic("redis error" + status.Err().Error())
+	}
+
+	// Start the redis handler
+	ipc := ipc_redis.NewRedisHandler(context.Background(), rdb, mldConfig.RedisChannel)
+
+	il, err := mloader.Load(&mldConfig, &mproc.LoaderData{
 		Start: func(l *mproc.InstanceList, i *mproc.Instance, cm *mproc.ClusterMap) error {
 			cmd := exec.Command(
 				func() string {
@@ -175,7 +201,7 @@ func CreateClusters() {
 
 			return nil
 		},
-	})
+	}, ipc)
 
 	if err != nil {
 		panic(err)
@@ -193,7 +219,6 @@ func CreateClusters() {
 
 	mewld_web.SetState(state.Config.Meta.DPSecret)
 	r.Mount("/mewld", mewld_web.CreateServer(mewld_web.WebData{
-		RedisHandler: rh,
 		InstanceList: il,
 	}))
 

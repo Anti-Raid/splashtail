@@ -3,7 +3,6 @@ package mewld_web
 import (
 	"embed"
 	"encoding/json"
-	"fmt"
 	"io"
 	"io/fs"
 	"net/http"
@@ -12,7 +11,6 @@ import (
 
 	mconfig "github.com/cheesycod/mewld/config"
 	mproc "github.com/cheesycod/mewld/proc"
-	mredis "github.com/cheesycod/mewld/redis"
 
 	"github.com/go-chi/chi/v5"
 	log "github.com/sirupsen/logrus"
@@ -25,7 +23,6 @@ var serverRootSubbed fs.FS
 var globalConfig *mconfig.CoreConfig
 
 type WebData struct {
-	RedisHandler *mredis.RedisHandler
 	InstanceList *mproc.InstanceList
 }
 
@@ -55,7 +52,7 @@ func routeStatic(next http.Handler) http.Handler {
 	})
 }
 
-func loginRoute(webData WebData, f func(w http.ResponseWriter, r *http.Request, sess *loginDat)) func(w http.ResponseWriter, r *http.Request) {
+func loginRoute(f func(w http.ResponseWriter, r *http.Request, sess *loginDat)) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Header.Get("X-User-ID") == "" {
 			w.Write([]byte("Unauthorized. Not running under deployproxy?"))
@@ -116,46 +113,37 @@ func CreateServer(webData WebData) *chi.Mux {
 	globalConfig = webData.InstanceList.Config
 
 	r.Get("/api/ping", loginRoute(
-		webData,
 		func(w http.ResponseWriter, r *http.Request, sess *loginDat) {
 			w.Write([]byte("pong"))
 		},
 	))
 
 	r.Get("/api/instance-list", loginRoute(
-		webData,
 		func(w http.ResponseWriter, r *http.Request, sess *loginDat) {
 			toJson(w, webData.InstanceList)
 		},
 	))
 
 	r.Get("/api/action-logs", loginRoute(
-		webData,
 		func(w http.ResponseWriter, r *http.Request, sess *loginDat) {
-			payload := webData.InstanceList.Redis.LRange(webData.InstanceList.Ctx, webData.InstanceList.Config.RedisChannel+"/actlogs", 0, -1).Val()
+			messages, err := webData.InstanceList.Ipc.GetArray("actlogs")
 
-			var payloadFinal []map[string]any
-
-			for i, p := range payload {
-				var pm map[string]any
-
-				err := json.Unmarshal([]byte(p), &pm)
-
-				if err != nil {
-					w.WriteHeader(http.StatusBadRequest)
-					w.Write([]byte(fmt.Sprintf("Could not marshal payload %d: %s", i, err.Error())))
-					return
-				}
-
-				payloadFinal = append(payloadFinal, pm)
+			if err != nil {
+				w.Write([]byte(err.Error()))
+				w.WriteHeader(http.StatusInternalServerError)
+				return
 			}
 
-			toJson(w, payloadFinal)
+			err = json.NewEncoder(w).Encode(messages)
+
+			if err != nil {
+				w.Write([]byte(err.Error()))
+				w.WriteHeader(http.StatusInternalServerError)
+			}
 		},
 	))
 
 	r.Post("/api/redis/pub", loginRoute(
-		webData,
 		func(w http.ResponseWriter, r *http.Request, sess *loginDat) {
 			payload, err := io.ReadAll(r.Body)
 
@@ -166,14 +154,20 @@ func CreateServer(webData WebData) *chi.Mux {
 				return
 			}
 
-			v := webData.InstanceList.Redis.Publish(webData.InstanceList.Ctx, webData.InstanceList.Config.RedisChannel, string(payload)).Val()
+			err = webData.InstanceList.Ipc.Send(payload)
 
-			w.Write([]byte(strconv.Itoa(int(v))))
+			if err != nil {
+				log.Error(err)
+				w.WriteHeader(http.StatusInternalServerError)
+				w.Write([]byte("Error sending IPC message: " + err.Error()))
+				return
+			}
+
+			w.Write([]byte("OK"))
 		},
 	))
 
 	r.Get("/api/cluster-health", loginRoute(
-		webData,
 		func(w http.ResponseWriter, r *http.Request, sess *loginDat) {
 			var cid = r.URL.Query().Get("cid")
 
