@@ -54,6 +54,7 @@ jobs:
       - run: make buildall
         env:
           CI_BUILD: true
+          DATABASE_URL: postgres:///antiraid
       # The below doesn't work due to ci issues (sigh)
       # - run: cargo test --verbose
       #  env:
