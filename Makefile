@@ -1,4 +1,6 @@
+ifndef CI_BUILD
 include .env
+endif
 
 .PHONY: default $(MAKECMDGOALS)
 
