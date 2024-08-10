@@ -44,7 +44,9 @@ jobs:
       - run: createdb runner
       
       - name: Setup Postgres
-        run: data/misc/ibl db load data/seed.iblcli-seed 
+        run: sudo -E data/misc/ibl db load data/seed.iblcli-seed 
+        env:
+          ALLOW_ROOT: "true"
 
       - name: Fetch all submodules
         run: git submodule update --init --recursive
