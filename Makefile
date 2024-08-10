@@ -40,7 +40,6 @@ format:
 	done
 
 build:
-	echo $$DATABASE_URL
 	mkdir -p out
 	make build_go
 	make build_rust
