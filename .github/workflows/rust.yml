@@ -42,9 +42,13 @@ jobs:
           dev-files: true
       
       - run: createdb runner
+      - run: psql -c "CREATE ROLE antiraid WITH PASSWORD 'runner';"
+      - run: createdb antiraid
       
       - name: Setup Postgres
-        run: data/misc/ibl db load data/seed.iblcli-seed 
+        run: data/misc/ibl db load data/seed.iblcli-seed --db antiraid
+        env:
+          PGPASSWORD: runner
 
       - name: Fetch all submodules
         run: git submodule update --init --recursive
