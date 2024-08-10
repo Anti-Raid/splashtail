@@ -39,11 +39,10 @@ jobs:
       - uses: ankane/setup-postgres@v1
         with:
           postgres-version: 16
-          database: antiraid
           dev-files: true
       
       - name: Setup Postgres
-        run: data/misc/ibl db load data/seed.iblcli-seed --db antiraid
+        run: data/misc/ibl db load data/seed.iblcli-seed
       
       - name: Fetch all submodules
         run: git submodule update --init --recursive
