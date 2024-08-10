@@ -6,7 +6,6 @@ on:
 
 env: 
   CARGO_TERM_COLOR: always
-  SQLX_OFFLINE: true
 
 jobs:
   build_and_test:
