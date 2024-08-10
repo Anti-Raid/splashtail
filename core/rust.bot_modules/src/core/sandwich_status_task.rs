@@ -33,7 +33,7 @@ pub async fn sandwich_status_task(ctx: &serenity::client::Context) -> Result<(),
 
     if support_data.shard_conns.len() > data.props.shard_count().into() {
         // TODO: Restart instead of panic
-        panic!("Sandwich returned more shard groups than we have shards, aborting to ensure re-sharding");
+        return Err("Sandwich API returned more shards than the bot has".into());
     }
 
     let mut guard = data.proxy_support_data.write().await;

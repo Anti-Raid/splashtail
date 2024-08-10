@@ -122,6 +122,20 @@ func SetupBase() {
 	if Shard != ClusterID {
 		panic("shard and cluster id must be the same at this time")
 	}
+
+	// Discordgo
+	Discord, err = discordgo.New("Bot " + Config.DiscordAuth.Token)
+
+	if err != nil {
+		panic(err)
+	}
+
+	Discord.Client.Transport = proxy.NewHostRewriter(strings.Replace(Config.Meta.Proxy.Parse(), "http://", "", 1), http.DefaultTransport, func(s string) {
+		Logger.Info("[PROXY]", zap.String("note", s))
+	})
+
+	Discord.ShardID = int(Shard)
+
 }
 
 func Setup() {

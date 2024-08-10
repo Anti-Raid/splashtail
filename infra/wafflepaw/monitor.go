@@ -13,8 +13,8 @@ import (
 	"github.com/anti-raid/splashtail/cmd/wafflepaw/bgtasks"
 	"github.com/bwmarrin/discordgo"
 	mconfig "github.com/cheesycod/mewld/config"
-	"github.com/cheesycod/mewld/ipc"
 	mproc "github.com/cheesycod/mewld/proc"
+	mredis "github.com/cheesycod/mewld/redis"
 	"go.std/animusmagic"
 	"go.std/config"
 	"go.uber.org/zap"
@@ -489,7 +489,7 @@ func (p *AMProbeTask) tryRollingRestartMewldCluster() error {
 		return nil // This strategy does not work
 	}
 
-	rr := ipc.LauncherCmd{
+	rr := mredis.LauncherCmd{
 		Scope:     "launcher",
 		Action:    "rollingrestart",
 		CommandId: animusmagic.NewCommandId(),

@@ -8,7 +8,7 @@ replace go.jobs => ../../core/go.jobs
 
 require (
 	github.com/bwmarrin/discordgo v0.28.1
-	github.com/cheesycod/mewld v0.0.0-20240810124323-e2dc8d19b2ba
+	github.com/cheesycod/mewld v0.0.0-20240810135330-af6971248190
 	github.com/go-chi/chi/v5 v5.1.0
 	github.com/go-playground/validator/v10 v10.22.0
 	github.com/infinitybotlist/eureka v1.7.0
@@ -50,7 +50,7 @@ require (
 	github.com/mailru/easyjson v0.7.7 // indirect
 	github.com/minio/md5-simd v1.1.2 // indirect
 	github.com/minio/minio-go/v7 v7.0.74 // indirect
-	github.com/redis/go-redis/v9 v9.6.1
+	github.com/redis/go-redis/v9 v9.6.1 // indirect
 	github.com/rs/xid v1.5.0 // indirect
 	github.com/twitchyliquid64/golang-asm v0.15.1 // indirect
 	github.com/vmihailenco/msgpack/v5 v5.4.1 // indirect
