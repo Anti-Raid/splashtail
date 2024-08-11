@@ -19,7 +19,7 @@ pub async fn ping(ctx: Context<'_>) -> Result<(), Error> {
     );
 
     let real_ws_latency = {
-        if let Some(psd) = ctx.data().proxy_support_data.read().await.as_ref() {
+        if let Some(psd) = ctx.data().props.get_proxysupport_data().await.as_ref() {
             let sid = ctx.serenity_context().shard_id.0 as i64;
             psd.shard_conns.get(&sid).map(|sc| sc.real_latency)
         } else {

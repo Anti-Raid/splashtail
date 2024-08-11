@@ -27,9 +27,6 @@ pub fn module() -> silverpelt::Module {
             Box::new(move |data| cache::setup_fake_bots_cache(&data.pool).boxed()),
             Box::new(move |data| core::register_punishment_sting_source(data).boxed()),
         ],
-        on_first_ready: vec![Box::new(move |ctx, data| {
-            guildprotect::save_all_guilds_initial(ctx, data).boxed()
-        })],
         s3_paths: vec!["inspector/guild_icons/{guild_id}".to_string()],
         config_options: vec![(*settings::INSPECTOR_OPTIONS).clone()],
         ..Default::default()

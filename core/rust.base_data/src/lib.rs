@@ -4,25 +4,16 @@ pub mod permodule;
 
 use splashcore_rs::{animusmagic::client::AnimusMagicRequestClient, objectstore::ObjectStore};
 use std::sync::Arc;
-use tokio::sync::RwLock;
 
 pub type Error = Box<dyn std::error::Error + Send + Sync>; // This is constant and should be copy pasted
 
-/*#[derive(Clone)]
-pub struct AnimusMagicBaseData {
-    pub pool: sqlx::PgPool,
-    pub redis_pool: fred::prelude::RedisPool,
-    pub reqwest: reqwest::Client,
-    pub cache_http: botox::cache::CacheHttpImpl,
-}*/
-
 /// This struct stores base/standard command data, which is stored and accessible in all command invocations
+#[derive(Clone)]
 pub struct Data {
     pub pool: sqlx::PgPool,
     pub redis_pool: fred::prelude::RedisPool,
     pub reqwest: reqwest::Client,
     pub object_store: Arc<ObjectStore>,
-    pub proxy_support_data: RwLock<Option<proxy_support::ProxySupportData>>, // Shard ID, WebsocketConfiguration
     pub props: Arc<dyn Props>,
 
     /// Any extra data
@@ -81,6 +72,15 @@ where
 
     /// The number of available clusters
     fn available_clusters(&self) -> usize;
+
+    /// Proxy support data
+    async fn get_proxysupport_data(&self) -> Option<Arc<proxy_support::ProxySupportData>>;
+
+    /// Set the proxy support data
+    async fn set_proxysupport_data(
+        &self,
+        data: proxy_support::ProxySupportData,
+    ) -> Result<(), Error>;
 
     /// Total number of guilds
     ///

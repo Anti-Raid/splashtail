@@ -1,9 +1,52 @@
 /// This test ensures that all modules can be parsed
 #[cfg(test)]
 pub mod test_module_parse {
+    use std::sync::Arc;
+
     #[test]
     fn test_module_parse() {
         let _ = modules::modules();
+    }
+
+    async fn new_dummy_basedatadata() -> base_data::Data {
+        const POSTGRES_MAX_CONNECTIONS: u32 = 3; // max connections to the database, we don't need too many here
+        const REDIS_MAX_CONNECTIONS: u32 = 10; // max connections to the redis
+
+        let pool = fred::prelude::Builder::from_config(
+            fred::prelude::RedisConfig::from_url(&config::CONFIG.meta.bot_redis_url)
+                .expect("Could not initialize Redis config"),
+        )
+        .build_pool(REDIS_MAX_CONNECTIONS.try_into().unwrap())
+        .expect("Could not initialize Redis pool");
+
+        let pg_pool = sqlx::postgres::PgPoolOptions::new()
+            .max_connections(POSTGRES_MAX_CONNECTIONS)
+            .connect(&config::CONFIG.meta.postgres_url)
+            .await
+            .expect("Could not initialize connection");
+
+        base_data::Data {
+            redis_pool: pool.clone(),
+            object_store: Arc::new(
+                config::CONFIG
+                    .object_storage
+                    .build()
+                    .expect("Could not initialize object store"),
+            ),
+            pool: pg_pool.clone(),
+            reqwest: reqwest::Client::new(),
+            extra_data: Arc::new(None::<()>),
+            props: Arc::new(crate::Props {
+                mewld_ipc: Arc::new(crate::ipc::mewld::MewldIpcClient {
+                    redis_pool: pool.clone(),
+                    cache: Arc::new(crate::ipc::mewld::MewldIpcCache::default()),
+                    pool: pg_pool.clone(),
+                }),
+                animus_magic_ipc: std::sync::OnceLock::new(),
+                pool: pg_pool.clone(),
+                proxy_support_data: tokio::sync::RwLock::new(None),
+            }),
+        }
     }
 
     #[tokio::test]
@@ -20,11 +63,7 @@ pub mod test_module_parse {
             std::env::set_current_dir("../../").unwrap();
         }
 
-        let pg_pool = sqlx::postgres::PgPoolOptions::new()
-            .connect(&config::CONFIG.meta.postgres_url)
-            .await
-            .expect("Could not initialize connection");
-
+        let data = new_dummy_basedatadata().await;
         for module in modules::modules() {
             assert!(module.is_parsed());
 
@@ -42,18 +81,15 @@ pub mod test_module_parse {
                     cache: cache.into(),
                     http: http.into(),
                 };
-                let reqwest_client = reqwest::Client::new();
 
                 let mut data_store = config_opt
                     .data_store
                     .create(
                         &config_opt,
-                        &cache_http,
-                        &reqwest_client,
-                        &pg_pool,
                         serenity::all::GuildId::new(1),
                         serenity::all::UserId::new(1),
-                        &base_data::permodule::DummyPermoduleFunctionExecutor {},
+                        &data,
+                        &cache_http,
                         indexmap::IndexMap::new(),
                     )
                     .await

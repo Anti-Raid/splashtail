@@ -2,23 +2,18 @@ use super::state::State;
 use super::types::{
     ActionConditionContext, ColumnAction, NativeActionContext, OperationType, SettingsError,
 };
-use async_recursion::async_recursion;
 use splashcore_rs::value::Value;
 
-#[allow(dead_code)]
 #[allow(clippy::too_many_arguments)]
-#[async_recursion]
 pub async fn execute_actions(
     state: &mut State,
     operation_type: OperationType,
     actions: &[ColumnAction],
-    cache_http: &botox::cache::CacheHttpImpl,
-    reqwest_client: &reqwest::Client,
-    pool: &sqlx::PgPool,
     author: serenity::all::UserId,
     guild_id: serenity::all::GuildId,
-    permodule_executor: &dyn base_data::permodule::PermoduleFunctionExecutor,
     data_store: &mut dyn super::types::DataStore,
+    data: &base_data::Data,
+    cache_http: &botox::cache::CacheHttpImpl,
 ) -> Result<(), SettingsError> {
     for action in actions {
         match action {
@@ -52,7 +47,9 @@ pub async fn execute_actions(
                     args.insert(key, value);
                 }
 
-                match permodule_executor
+                match data
+                    .props
+                    .permodule_executor()
                     .execute_permodule_function(cache_http, module, function, &args)
                     .await
                 {
@@ -94,11 +91,10 @@ pub async fn execute_actions(
                 let nac = NativeActionContext {
                     author,
                     guild_id,
-                    cache_http,
-                    reqwest_client,
                     operation_type,
                     data_store,
-                    pool,
+                    data,
+                    cache_http,
                 };
                 action(nac, state).await?;
             }

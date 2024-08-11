@@ -6,7 +6,7 @@ replace go.std => ../../core/go.std
 
 require (
 	github.com/bwmarrin/discordgo v0.28.1
-	github.com/cheesycod/mewld v0.0.0-20240810131357-63b7e74ea907
+	github.com/cheesycod/mewld v0.0.0-20240810135330-af6971248190
 	github.com/go-chi/chi/v5 v5.1.0
 	github.com/go-playground/validator/v10 v10.22.0
 	github.com/infinitybotlist/eureka v1.7.0

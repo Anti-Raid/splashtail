@@ -289,14 +289,14 @@ fn _parse_value(
 ///
 /// NOTE: This may make HTTP/Discord API requests to parse values such as channels etc.
 #[allow(dead_code)]
-#[allow(clippy::too_many_arguments)]
 #[async_recursion::async_recursion]
+#[allow(clippy::too_many_arguments)]
 async fn _validate_value(
     v: Value,
     state: &State,
     guild_id: serenity::all::GuildId,
+    data: &base_data::Data,
     cache_http: &botox::cache::CacheHttpImpl,
-    reqwest_client: &reqwest::Client,
     column_type: &ColumnType,
     column_id: &str,
     is_nullable: bool,
@@ -408,7 +408,7 @@ async fn _validate_value(
                                     // Get the channel
                                     let channel = proxy_support::channel(
                                         cache_http,
-                                        reqwest_client,
+                                        &data.reqwest,
                                         Some(guild_id),
                                         channel_id,
                                     )
@@ -602,8 +602,8 @@ async fn _validate_value(
                         v,
                         state,
                         guild_id,
+                        data,
                         cache_http,
-                        reqwest_client,
                         &column_type,
                         column_id,
                         is_nullable,
@@ -632,8 +632,8 @@ async fn _validate_value(
                         v,
                         state,
                         guild_id,
+                        data,
                         cache_http,
-                        reqwest_client,
                         &clause.column_type,
                         column_id,
                         is_nullable,
@@ -712,16 +712,13 @@ pub fn validate_keys(
 }
 
 /// Settings API: View implementation
-#[allow(clippy::too_many_arguments)]
 pub async fn settings_view(
     setting: &ConfigOption,
+    data: &base_data::Data,
     cache_http: &botox::cache::CacheHttpImpl,
-    reqwest_client: &reqwest::Client,
-    pool: &sqlx::PgPool,
     guild_id: serenity::all::GuildId,
     author: serenity::all::UserId,
     fields: indexmap::IndexMap<String, Value>, // The filters to apply
-    permodule_executor: &dyn base_data::permodule::PermoduleFunctionExecutor,
 ) -> Result<Vec<State>, SettingsError> {
     let Some(operation_specific) = setting.operations.get(&OperationType::View) else {
         return Err(SettingsError::OperationNotSupported {
@@ -736,12 +733,10 @@ pub async fn settings_view(
         .data_store
         .create(
             setting,
-            cache_http,
-            reqwest_client,
-            pool,
             guild_id,
             author,
-            permodule_executor,
+            data,
+            cache_http,
             common_filters(
                 setting,
                 OperationType::View,
@@ -784,13 +779,11 @@ pub async fn settings_view(
                 &mut state,
                 OperationType::View,
                 actions,
-                cache_http,
-                reqwest_client,
-                pool,
                 author,
                 guild_id,
-                permodule_executor,
                 &mut *data_store,
+                data,
+                cache_http,
             )
             .await?;
         }
@@ -841,13 +834,11 @@ pub async fn settings_view(
             &mut state,
             OperationType::View,
             &setting.post_actions,
-            cache_http,
-            reqwest_client,
-            pool,
             author,
             guild_id,
-            permodule_executor,
             &mut *data_store,
+            data,
+            cache_http,
         )
         .await?;
 
@@ -858,16 +849,13 @@ pub async fn settings_view(
 }
 
 /// Settings API: Create implementation
-#[allow(clippy::too_many_arguments)]
 pub async fn settings_create(
     setting: &ConfigOption,
+    data: &base_data::Data,
     cache_http: &botox::cache::CacheHttpImpl,
-    reqwest_client: &reqwest::Client,
-    pool: &sqlx::PgPool,
     guild_id: serenity::all::GuildId,
     author: serenity::all::UserId,
     fields: indexmap::IndexMap<String, Value>,
-    permodule_executor: &dyn base_data::permodule::PermoduleFunctionExecutor,
 ) -> Result<State, SettingsError> {
     let Some(operation_specific) = setting.operations.get(&OperationType::Create) else {
         return Err(SettingsError::OperationNotSupported {
@@ -899,8 +887,8 @@ pub async fn settings_create(
                     parsed_value,
                     &state,
                     guild_id,
+                    data,
                     cache_http,
-                    reqwest_client,
                     &column.column_type,
                     column.id,
                     column.nullable,
@@ -922,12 +910,10 @@ pub async fn settings_create(
         .data_store
         .create(
             setting,
-            cache_http,
-            reqwest_client,
-            pool,
             guild_id,
             author,
-            permodule_executor,
+            data,
+            cache_http,
             common_filters(setting, OperationType::Create, &state),
         )
         .await?;
@@ -976,13 +962,11 @@ pub async fn settings_create(
             &mut state,
             OperationType::Create,
             actions,
-            cache_http,
-            reqwest_client,
-            pool,
             author,
             guild_id,
-            permodule_executor,
             &mut *data_store,
+            data,
+            cache_http,
         )
         .await?;
 
@@ -1067,13 +1051,11 @@ pub async fn settings_create(
         &mut new_state,
         OperationType::Create,
         &setting.post_actions,
-        cache_http,
-        reqwest_client,
-        pool,
         author,
         guild_id,
-        permodule_executor,
         &mut *data_store,
+        data,
+        cache_http,
     )
     .await?;
 
@@ -1081,16 +1063,13 @@ pub async fn settings_create(
 }
 
 /// Settings API: Update implementation
-#[allow(clippy::too_many_arguments)]
 pub async fn settings_update(
     setting: &ConfigOption,
+    data: &base_data::Data,
     cache_http: &botox::cache::CacheHttpImpl,
-    reqwest_client: &reqwest::Client,
-    pool: &sqlx::PgPool,
     guild_id: serenity::all::GuildId,
     author: serenity::all::UserId,
     fields: indexmap::IndexMap<String, Value>,
-    permodule_executor: &dyn base_data::permodule::PermoduleFunctionExecutor,
 ) -> Result<State, SettingsError> {
     let Some(operation_specific) = setting.operations.get(&OperationType::Update) else {
         return Err(SettingsError::OperationNotSupported {
@@ -1122,8 +1101,8 @@ pub async fn settings_update(
                         parsed_value,
                         &state,
                         guild_id,
+                        data,
                         cache_http,
-                        reqwest_client,
                         &column.column_type,
                         column.id,
                         column.nullable,
@@ -1169,12 +1148,10 @@ pub async fn settings_update(
         .data_store
         .create(
             setting,
-            cache_http,
-            reqwest_client,
-            pool,
             guild_id,
             author,
-            permodule_executor,
+            data,
+            cache_http,
             common_filters(setting, OperationType::Update, &state),
         )
         .await?;
@@ -1221,13 +1198,11 @@ pub async fn settings_update(
             &mut state,
             OperationType::Update,
             actions,
-            cache_http,
-            reqwest_client,
-            pool,
             author,
             guild_id,
-            permodule_executor,
             &mut *data_store,
+            data,
+            cache_http,
         )
         .await?;
 
@@ -1345,13 +1320,11 @@ pub async fn settings_update(
         &mut state,
         OperationType::Update,
         &setting.post_actions,
-        cache_http,
-        reqwest_client,
-        pool,
         author,
         guild_id,
-        permodule_executor,
         &mut *data_store,
+        data,
+        cache_http,
     )
     .await?;
 
@@ -1362,13 +1335,11 @@ pub async fn settings_update(
 #[allow(clippy::too_many_arguments)]
 pub async fn settings_delete(
     setting: &ConfigOption,
+    data: &base_data::Data,
     cache_http: &botox::cache::CacheHttpImpl,
-    reqwest_client: &reqwest::Client,
-    pool: &sqlx::PgPool,
     guild_id: serenity::all::GuildId,
     author: serenity::all::UserId,
     pkey: Value,
-    permodule_executor: &dyn base_data::permodule::PermoduleFunctionExecutor,
 ) -> Result<State, SettingsError> {
     let Some(_operation_specific) = setting.operations.get(&OperationType::Delete) else {
         return Err(SettingsError::OperationNotSupported {
@@ -1392,12 +1363,10 @@ pub async fn settings_delete(
         .data_store
         .create(
             setting,
-            cache_http,
-            reqwest_client,
-            pool,
             guild_id,
             author,
-            permodule_executor,
+            data,
+            cache_http,
             common_filters(setting, OperationType::Delete, &state),
         )
         .await?;
@@ -1441,13 +1410,11 @@ pub async fn settings_delete(
             &mut state,
             OperationType::Delete,
             actions,
-            cache_http,
-            reqwest_client,
-            pool,
             author,
             guild_id,
-            permodule_executor,
             &mut *data_store,
+            data,
+            cache_http,
         )
         .await?;
     }
@@ -1467,13 +1434,11 @@ pub async fn settings_delete(
         &mut state,
         OperationType::Delete,
         &setting.post_actions,
-        cache_http,
-        reqwest_client,
-        pool,
         author,
         guild_id,
-        permodule_executor,
         &mut *data_store,
+        data,
+        cache_http,
     )
     .await?;
 

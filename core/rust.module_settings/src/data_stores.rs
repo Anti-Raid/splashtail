@@ -23,12 +23,10 @@ impl CreateDataStore for PostgresDataStore {
     async fn create(
         &self,
         setting: &ConfigOption,
-        _cache_http: &botox::cache::CacheHttpImpl,
-        _reqwest_client: &reqwest::Client,
-        pool: &sqlx::PgPool,
         guild_id: serenity::all::GuildId,
         author: serenity::all::UserId,
-        _permodule_executor: &dyn base_data::permodule::PermoduleFunctionExecutor,
+        data: &base_data::Data,
+        _cache_http: &botox::cache::CacheHttpImpl,
         common_filters: indexmap::IndexMap<String, splashcore_rs::value::Value>,
     ) -> Result<Box<dyn DataStore>, SettingsError> {
         Ok(Box::new(PostgresDataStoreImpl {
@@ -38,7 +36,7 @@ impl CreateDataStore for PostgresDataStore {
             author,
             guild_id,
             columns: setting.columns.clone(),
-            pool: pool.clone(),
+            pool: data.pool.clone(),
             common_filters,
         }))
     }

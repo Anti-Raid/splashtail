@@ -180,8 +180,8 @@ impl BotAnimusMessage {
         state: Arc<super::client::ClientData>,
     ) -> Result<BotAnimusResponse, AnimusErrorResponse> {
         let cache_http = &state.cache_http;
-        let pool = &state.pool;
-        let reqwest = &state.reqwest;
+        let pool = &state.data.pool;
+        let reqwest = &state.data.reqwest;
 
         match self {
             Self::Modules {} => {
@@ -420,13 +420,11 @@ impl BotAnimusMessage {
                     OperationType::View => {
                         match module_settings::cfg::settings_view(
                             opt,
+                            &state.data,
                             &state.cache_http,
-                            &state.reqwest,
-                            pool,
                             guild_id,
                             user_id,
                             p_fields,
-                            &crate::PermoduleFunctionExecutor {},
                         )
                         .await
                         {
@@ -443,13 +441,11 @@ impl BotAnimusMessage {
                     OperationType::Create => {
                         match module_settings::cfg::settings_create(
                             opt,
+                            &state.data,
                             &state.cache_http,
-                            &state.reqwest,
-                            pool,
                             guild_id,
                             user_id,
                             p_fields,
-                            &crate::PermoduleFunctionExecutor {},
                         )
                         .await
                         {
@@ -466,13 +462,11 @@ impl BotAnimusMessage {
                     OperationType::Update => {
                         match module_settings::cfg::settings_update(
                             opt,
+                            &state.data,
                             &state.cache_http,
-                            &state.reqwest,
-                            pool,
                             guild_id,
                             user_id,
                             p_fields,
-                            &crate::PermoduleFunctionExecutor {},
                         )
                         .await
                         {
@@ -500,13 +494,11 @@ impl BotAnimusMessage {
 
                         match module_settings::cfg::settings_delete(
                             opt,
+                            &state.data,
                             &state.cache_http,
-                            &state.reqwest,
-                            pool,
                             guild_id,
                             user_id,
                             pkey.clone(),
-                            &crate::PermoduleFunctionExecutor {},
                         )
                         .await
                         {

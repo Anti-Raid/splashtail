@@ -376,7 +376,18 @@ pub async fn event_listener(ectx: &EventHandlerContext) -> Result<(), Error> {
                     name: row.name.clone(),
                     icon: row.icon.clone(),
                 }
-                .revert(ctx, &ectx.data, name_changed, icon_changed)
+                .revert(
+                    ctx,
+                    &ectx.data,
+                    name_changed
+                        && config
+                            .guild_protection
+                            .contains(GuildProtectionOptions::NAME),
+                    icon_changed
+                        && config
+                            .guild_protection
+                            .contains(GuildProtectionOptions::ICON),
+                )
                 .await?;
             }
 

@@ -1,10 +1,8 @@
-use super::types::GuildProtectionOptions;
-
 /// Since discord does not store past guild icons for a guild, so we have to store it manually
 /// on s3
 pub async fn fetch_guild_icon(
     data: &base_data::Data,
-    guild_id: serenity::model::id::GuildId,
+    guild_id: serenity::all::GuildId,
 ) -> Result<Vec<u8>, base_data::Error> {
     let url = data.object_store.get_url(
         &format!("inspector/guild_icons/{}", guild_id),
@@ -18,13 +16,14 @@ pub async fn fetch_guild_icon(
 
 /// Saves a guild icon to s3
 pub async fn save_guild_icon(
-    data: &base_data::Data,
-    guild_id: serenity::model::id::GuildId,
+    reqwest_client: &reqwest::Client,
+    object_store: &splashcore_rs::objectstore::ObjectStore,
+    guild_id: serenity::all::GuildId,
     icon: &[u8],
 ) -> Result<(), base_data::Error> {
-    data.object_store
+    object_store
         .upload_file(
-            &data.reqwest,
+            reqwest_client,
             &format!("inspector/guild_icons/{}", guild_id),
             icon,
         )
@@ -33,133 +32,7 @@ pub async fn save_guild_icon(
     Ok(())
 }
 
-pub async fn save_all_guilds_initial(
-    ctx: serenity::all::Context,
-    data: &base_data::Data,
-) -> Result<(), base_data::Error> {
-    // For every guild with inspector enabled, check if the guild is saved in inspector__guilds, if not save
-    let cache_http = botox::cache::CacheHttpImpl::from_ctx(&ctx);
-    let reqwest_client = &data.reqwest;
-    let pool = &data.pool;
-
-    bitflags::bitflags! {
-        #[derive(PartialEq, Debug, Clone, Copy)]
-        pub struct InitialProtectionTriggers: i32 {
-            const NONE = 0;
-            const NAME = 1 << 1;
-            const ICON = 1 << 2;
-        }
-    }
-
-    for guild_id in ctx.cache.guilds() {
-        // Ensure shard id
-        let shard_id = serenity::utils::shard_id(guild_id, data.props.shard_count().try_into()?);
-
-        if ctx.shard_id.0 != shard_id {
-            continue;
-        }
-
-        let module_enabled = match silverpelt::module_config::is_module_enabled(
-            &crate::SILVERPELT_CACHE,
-            pool,
-            guild_id,
-            "inspector",
-        )
-        .await
-        {
-            Ok(enabled) => enabled,
-            Err(e) => {
-                log::error!("Error while checking if module is enabled: {}", e);
-                continue;
-            }
-        };
-
-        if !module_enabled {
-            continue;
-        }
-
-        // Fetch the config
-        let config = match super::cache::get_config(pool, guild_id).await {
-            Ok(config) => config,
-            Err(e) => {
-                log::error!("Error while fetching config: {}", e);
-                continue;
-            }
-        };
-
-        if config
-            .guild_protection
-            .contains(GuildProtectionOptions::DISABLED)
-        {
-            continue;
-        }
-
-        // We anyways need to fetch the guild anyways, so do that
-        let guild = match proxy_support::guild(&cache_http, reqwest_client, guild_id).await {
-            Ok(guild) => guild,
-            Err(e) => {
-                log::error!("Error while fetching guild: {}", e);
-                continue;
-            }
-        };
-
-        let guild_row = match sqlx::query!(
-            "SELECT name, icon FROM inspector__guilds WHERE guild_id = $1",
-            guild_id.to_string(),
-        )
-        .fetch_optional(pool)
-        .await
-        {
-            Ok(row) => row,
-            Err(e) => {
-                log::error!("Error while fetching guild row: {}", e);
-                continue;
-            }
-        };
-
-        if let Some(guild_row) = guild_row {
-            match (Snapshot {
-                guild_id,
-                name: guild_row.name.clone(),
-                icon: guild_row.icon.clone(),
-            }
-            .revert(&ctx, data, guild_row.name != guild.name, {
-                if guild_row.icon.is_some() {
-                    guild_row.icon != guild.icon.map(|x| x.to_string())
-                } else {
-                    false
-                }
-            }))
-            .await
-            {
-                Ok(_) => {}
-                Err(e) => {
-                    log::error!("Error while reverting guild: {}", e);
-                    continue;
-                }
-            }
-        } else {
-            // Guild not saved, save it
-            match (Snapshot {
-                guild_id,
-                name: guild.name.to_string(),
-                icon: guild.icon.map(|x| x.to_string()),
-            })
-            .save(data)
-            .await
-            {
-                Ok(_) => {}
-                Err(e) => {
-                    log::error!("Error while saving guild: {}", e);
-                    continue;
-                }
-            }
-        }
-    }
-
-    Ok(())
-}
-
+/// A snapshot stores the state of a guild at a certain point in time for inspector guild protection
 pub struct Snapshot {
     pub guild_id: serenity::all::GuildId,
     pub name: String,
@@ -177,11 +50,18 @@ impl Snapshot {
     }
 
     /// Saves a new snapshot of a guild to the database
-    pub async fn save(&self, data: &base_data::Data) -> Result<(), base_data::Error> {
+    pub async fn save(
+        &self,
+        pool: &sqlx::PgPool,
+        reqwest_client: &reqwest::Client,
+        object_store: &splashcore_rs::objectstore::ObjectStore,
+    ) -> Result<(), base_data::Error> {
         // Download icon from discord
         let mut icon_bytes = None;
         if let Some(icon) = self.icon_url() {
-            let bytes = reqwest::get(icon)
+            let bytes = reqwest_client
+                .get(icon)
+                .send()
                 .await?
                 .error_for_status()?
                 .bytes()
@@ -190,19 +70,19 @@ impl Snapshot {
             icon_bytes = Some(bytes.to_vec());
         }
 
-        let mut tx = data.pool.begin().await?;
+        let mut tx = pool.begin().await?;
 
         sqlx::query!(
-        "INSERT INTO inspector__guilds (guild_id, name, icon) VALUES ($1, $2, $3) ON CONFLICT (guild_id) DO UPDATE SET name = $2, icon = $3",
-        self.guild_id.to_string(),
-        &self.name.to_string(),
-        self.icon.as_ref().map(|x| x.to_string()),
-    )
-    .execute(&mut *tx)
-    .await?;
+            "INSERT INTO inspector__guilds (guild_id, name, icon) VALUES ($1, $2, $3) ON CONFLICT (guild_id) DO UPDATE SET name = $2, icon = $3",
+            self.guild_id.to_string(),
+            &self.name.to_string(),
+            self.icon.as_ref().map(|x| x.to_string()),
+        )
+        .execute(&mut *tx)
+        .await?;
 
         if let Some(icon_bytes) = icon_bytes {
-            save_guild_icon(data, self.guild_id, &icon_bytes).await?;
+            save_guild_icon(reqwest_client, object_store, self.guild_id, &icon_bytes).await?;
         }
 
         tx.commit().await?;

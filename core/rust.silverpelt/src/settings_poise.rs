@@ -200,13 +200,11 @@ pub async fn settings_viewer(
 
     let values = settings_view(
         setting,
+        &data,
         &cache_http,
-        &data.reqwest,
-        &data.pool,
         guild_id,
         ctx.author().id,
         fields,
-        &*data.props.permodule_executor(),
     )
     .await
     .map_err(|e| format!("Error fetching settings: {}", e))?;
@@ -366,13 +364,11 @@ pub async fn settings_creator(
 
     let mut value = settings_create(
         setting,
+        &data,
         &cache_http,
-        &data.reqwest,
-        &data.pool,
         guild_id,
         ctx.author().id,
         fields,
-        &*data.props.permodule_executor(),
     )
     .await
     .map_err(|e| format!("Error creating new setting: {}", e))?;
@@ -490,13 +486,11 @@ pub async fn settings_updater(
 
     let mut value = settings_update(
         setting,
+        &data,
         &cache_http,
-        &data.reqwest,
-        &data.pool,
         guild_id,
         ctx.author().id,
         fields,
-        &*data.props.permodule_executor(),
     )
     .await
     .map_err(|e| format!("Error updating setting: {}", e))?;
@@ -614,18 +608,9 @@ pub async fn settings_deleter(
         }
     }
 
-    let mut value = settings_delete(
-        setting,
-        &cache_http,
-        &data.reqwest,
-        &data.pool,
-        guild_id,
-        ctx.author().id,
-        pkey,
-        &*data.props.permodule_executor(),
-    )
-    .await
-    .map_err(|e| format!("Error deleting setting: {}", e))?;
+    let mut value = settings_delete(setting, &data, &cache_http, guild_id, ctx.author().id, pkey)
+        .await
+        .map_err(|e| format!("Error deleting setting: {}", e))?;
 
     value.state.insert(
         "key".to_string(),

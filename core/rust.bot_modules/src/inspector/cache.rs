@@ -67,7 +67,7 @@ impl Default for BasicAntispamConfig {
             fake_bot_detection: FakeBotDetectionOptions::NORMALIZE_NAMES
                 | FakeBotDetectionOptions::EXACT_NAME_CHECK
                 | FakeBotDetectionOptions::SIMILAR_NAME_CHECK, // The default checks should protect against most case of scam 'dyno' bot nukes
-            guild_protection: GuildProtectionOptions::DISABLED, // Many people dont want antiraid constantly monitoring their servers name
+            guild_protection: GuildProtectionOptions::DISABLED, // Needs extra setup
             hoist_detection: DehoistOptions::STRIP_SPECIAL_CHARS_STARTSWITH
                 | DehoistOptions::STRIP_NON_ASCII,
             minimum_account_age: None,

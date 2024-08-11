@@ -131,7 +131,7 @@ pub static GUILD_ROLES: Lazy<ConfigOption> = Lazy::new(|| {
                                             "SELECT MAX(index) FROM guild_roles WHERE guild_id = $1",
                                             ctx.guild_id.to_string()
                                         )
-                                        .fetch_one(ctx.pool)
+                                        .fetch_one(&ctx.data.pool)
                                         .await
                                         .map_err(|e| SettingsError::Generic {
                                             message: format!("Failed to get highest index: {:?}", e),
@@ -167,7 +167,7 @@ pub static GUILD_ROLES: Lazy<ConfigOption> = Lazy::new(|| {
                                 typ: "internal".to_string(),
                             })?;
 
-                            let guild = proxy_support::guild(ctx.cache_http, ctx.reqwest_client, ctx.guild_id)
+                            let guild = proxy_support::guild(ctx.cache_http, &ctx.data.reqwest, ctx.guild_id)
                                 .await
                                 .map_err(|e| SettingsError::Generic {
                                     message: format!("Failed to get guild: {:?}", e),
@@ -180,7 +180,7 @@ pub static GUILD_ROLES: Lazy<ConfigOption> = Lazy::new(|| {
                                 return Ok(())
                             }
 
-                            let Some(member) = proxy_support::member_in_guild(ctx.cache_http, ctx.reqwest_client, ctx.guild_id, ctx.author)
+                            let Some(member) = proxy_support::member_in_guild(ctx.cache_http, &ctx.data.reqwest, ctx.guild_id, ctx.author)
                             .await
                             .map_err(|e| SettingsError::Generic {
                                 message: format!("Failed to get member: {:?}", e),
@@ -225,7 +225,7 @@ pub static GUILD_ROLES: Lazy<ConfigOption> = Lazy::new(|| {
                                     "SELECT index, role_id, perms FROM guild_roles WHERE guild_id = $1",
                                     ctx.guild_id.to_string()
                                 )
-                                .fetch_all(ctx.pool)
+                                .fetch_all(&ctx.data.pool)
                                 .await
                                 .map_err(|e| SettingsError::Generic {
                                     message: format!("Failed to get current role configuration: {:?}", e),
@@ -316,7 +316,7 @@ pub static GUILD_ROLES: Lazy<ConfigOption> = Lazy::new(|| {
                             }
 
                             let author_kittycat_perms = silverpelt::member_permission_calc::get_kittycat_perms(
-                                ctx.pool,
+                                &ctx.data.pool,
                                 ctx.guild_id,
                                 guild.owner_id,
                                 member.user.id,
@@ -495,7 +495,7 @@ pub static GUILD_ROLES: Lazy<ConfigOption> = Lazy::new(|| {
                         ctx.guild_id.to_string(),
                         settings_role_id_str.to_string()
                     )
-                    .execute(ctx.pool)
+                    .execute(&ctx.data.pool)
                     .await
                     .map_err(|e| SettingsError::Generic {
                         message: format!("Failed to update guild members: {:?}", e),

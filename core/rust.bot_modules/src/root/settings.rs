@@ -276,7 +276,7 @@ pub static INSPECTOR_FAKE_BOTS: Lazy<ConfigOption> = Lazy::new(|| ConfigOption {
                     return Ok(());
                 }
 
-                crate::inspector::cache::setup_fake_bots_cache(ctx.pool)
+                crate::inspector::cache::setup_fake_bots_cache(&ctx.data.pool)
                     .await
                     .map_err(|e| SettingsError::Generic {
                         message: format!("Failed to setup fake bots cache: {}", e),

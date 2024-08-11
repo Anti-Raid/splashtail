@@ -350,10 +350,9 @@ pub enum ColumnSuggestion {
 pub struct NativeActionContext<'a> {
     pub author: serenity::all::UserId,
     pub guild_id: serenity::all::GuildId,
-    pub cache_http: &'a botox::cache::CacheHttpImpl,
-    pub reqwest_client: &'a reqwest::Client,
-    pub pool: &'a sqlx::PgPool,
     pub data_store: &'a mut dyn DataStore, // The current datastore
+    pub data: &'a base_data::Data,         // The data object
+    pub cache_http: &'a botox::cache::CacheHttpImpl, // The cache http object
     pub operation_type: OperationType,
 }
 
@@ -645,16 +644,13 @@ pub fn settings_wrap_datastore<T>(datastore: T) -> Arc<T> {
 #[async_trait]
 pub trait CreateDataStore: Send + Sync {
     /// Create a datastore performing any needed setup
-    #[allow(clippy::too_many_arguments)]
     async fn create(
         &self,
         setting: &ConfigOption,
-        cache_http: &botox::cache::CacheHttpImpl,
-        reqwest_client: &reqwest::Client,
-        pool: &sqlx::PgPool,
         guild_id: serenity::all::GuildId,
         author: serenity::all::UserId,
-        permodule_executor: &dyn base_data::permodule::PermoduleFunctionExecutor,
+        data: &base_data::Data,
+        cache_http: &botox::cache::CacheHttpImpl,
         common_filters: indexmap::IndexMap<String, splashcore_rs::value::Value>,
     ) -> Result<Box<dyn DataStore>, SettingsError>;
 }

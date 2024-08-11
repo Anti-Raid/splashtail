@@ -1,12 +1,14 @@
+use futures_util::FutureExt;
 use module_settings::{
     data_stores::PostgresDataStore,
     types::{
         settings_wrap_columns, settings_wrap_datastore, settings_wrap_postactions,
-        settings_wrap_precheck, Column, ColumnSuggestion, ColumnType, ConfigOption,
-        InnerColumnType, OperationSpecific, OperationType,
+        settings_wrap_precheck, Column, ColumnAction, ColumnSuggestion, ColumnType, ConfigOption,
+        InnerColumnType, OperationSpecific, OperationType, SettingsError,
     },
 };
 use once_cell::sync::Lazy;
+use splashcore_rs::value::Value;
 
 use super::types::{DehoistOptions, FakeBotDetectionOptions, GuildProtectionOptions};
 
@@ -127,7 +129,85 @@ pub static INSPECTOR_OPTIONS: Lazy<ConfigOption> = Lazy::new(|| ConfigOption {
             ignored_for: vec![],
             secret: false,
             pre_checks: settings_wrap_precheck(indexmap::indexmap! {}),
-            default_pre_checks: settings_wrap_precheck(vec![]),
+            default_pre_checks: settings_wrap_precheck(vec![ColumnAction::NativeAction {
+                action: Box::new(|ctx, state| {
+                    async move {
+                        let Some(Value::Integer(gp)) = state.state.get("guild_protection") else {
+                            return Err(SettingsError::MissingOrInvalidField {
+                                field: "guild_protection".to_string(),
+                                src: "index->NativeAction [default_pre_checks]".to_string(),
+                            });
+                        };
+
+                        let gp_flags = GuildProtectionOptions::from_bits_truncate(
+                            (*gp).try_into().map_err(|e| SettingsError::Generic {
+                                message: format!(
+                                    "Error while converting guild protection flags: {}",
+                                    e
+                                ),
+                                typ: "value_error".to_string(),
+                                src: "inspector__options.guild_protection".to_string(),
+                            })?,
+                        );
+
+                        if gp_flags.contains(GuildProtectionOptions::DISABLED) {
+                            // Delete from inspector__guilds
+                            sqlx::query!(
+                                "DELETE FROM inspector__guilds WHERE guild_id = $1",
+                                ctx.guild_id.to_string(),
+                            )
+                            .execute(&ctx.data.pool)
+                            .await
+                            .map_err(|e| SettingsError::Generic {
+                                message: format!("Error while deleting guild: {}", e),
+                                typ: "database_error".to_string(),
+                                src: "inspector__options.guild_protection".to_string(),
+                            })?;
+                        } else {
+                            // Fetch guild
+                            let guild = match proxy_support::guild(
+                                ctx.cache_http,
+                                &ctx.data.reqwest,
+                                ctx.guild_id,
+                            )
+                            .await
+                            {
+                                Ok(guild) => guild,
+                                Err(e) => {
+                                    return Err(SettingsError::Generic {
+                                        message: format!("Error while fetching guild: {}", e),
+                                        typ: "api_error".to_string(),
+                                        src: "inspector__options.guild_protection".to_string(),
+                                    });
+                                }
+                            };
+
+                            // Save guild
+                            match (super::guildprotect::Snapshot {
+                                guild_id: ctx.guild_id,
+                                name: guild.name.to_string(),
+                                icon: guild.icon.map(|x| x.to_string()),
+                            })
+                            .save(&ctx.data.pool, &ctx.data.reqwest, &ctx.data.object_store)
+                            .await
+                            {
+                                Ok(_) => {}
+                                Err(e) => {
+                                    return Err(SettingsError::Generic {
+                                        message: format!("Error while saving guild: {}", e),
+                                        typ: "database_error".to_string(),
+                                        src: "inspector__options.guild_protection".to_string(),
+                                    });
+                                }
+                            }
+                        }
+
+                        Ok(())
+                    }
+                    .boxed()
+                }),
+                on_condition: Some(|ctx, _state| Ok(ctx.operation_type != OperationType::View)),
+            }]),
         },
         Column {
             id: "fake_bot_detection",

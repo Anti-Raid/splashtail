@@ -44,6 +44,7 @@ pub struct Props {
     pub pool: sqlx::PgPool,
     pub mewld_ipc: Arc<MewldIpcClient>,
     pub animus_magic_ipc: OnceLock<Arc<AnimusMagicClient>>, // a rwlock is needed as the cachehttp is only available after the client is started
+    pub proxy_support_data: RwLock<Option<Arc<proxy_support::ProxySupportData>>>,
 }
 
 #[async_trait::async_trait]
@@ -113,6 +114,31 @@ impl base_data::Props for Props {
 
     async fn reset_can_use_bot(&self) -> Result<(), base_data::Error> {
         load_can_use_bot_whitelist(&self.pool).await?;
+        Ok(())
+    }
+
+    /// Proxy support data
+    async fn get_proxysupport_data(&self) -> Option<Arc<proxy_support::ProxySupportData>> {
+        let guard = self.proxy_support_data.read().await;
+
+        match guard.as_ref() {
+            Some(data) => {
+                return Some(data.clone());
+            }
+            None => {
+                return None;
+            }
+        }
+    }
+
+    /// Set the proxy support data
+    async fn set_proxysupport_data(
+        &self,
+        data: proxy_support::ProxySupportData,
+    ) -> Result<(), base_data::Error> {
+        let mut guard = self.proxy_support_data.write().await;
+        *guard = Some(Arc::new(data));
+
         Ok(())
     }
 }
@@ -408,9 +434,7 @@ async fn event_listener<'a>(
 
                 // And for animus magic
                 let am = Arc::new(AnimusMagicClient::new(ClientData {
-                    pool: data.pool.clone(),
-                    redis_pool: data.redis_pool.clone(),
-                    reqwest: data.reqwest.clone(),
+                    data: data.clone(),
                     cache_http: CacheHttpImpl::from_ctx(ctx.serenity_context),
                 }));
 
@@ -902,6 +926,7 @@ async fn main() {
         }),
         animus_magic_ipc: OnceLock::new(),
         pool: pg_pool.clone(),
+        proxy_support_data: RwLock::new(None),
     });
 
     let data = Data {
@@ -914,8 +939,7 @@ async fn main() {
         ),
         pool: pg_pool.clone(),
         reqwest,
-        proxy_support_data: RwLock::new(None),
-        extra_data: props.clone(),
+        extra_data: Arc::new(None::<()>),
         props: props.clone(),
     };
 

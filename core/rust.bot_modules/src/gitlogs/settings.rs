@@ -235,7 +235,7 @@ pub static REPOS: Lazy<ConfigOption> = Lazy::new(|| {
                                 webhook_id,
                                 ctx.guild_id.to_string()
                             )
-                            .fetch_one(ctx.pool)
+                            .fetch_one(&ctx.data.pool)
                             .await
                             .map_err(|e| SettingsError::Generic { 
                                 message: e.to_string(),
@@ -300,7 +300,7 @@ pub static REPOS: Lazy<ConfigOption> = Lazy::new(|| {
                                         webhook_id,
                                         ctx.guild_id.to_string()
                                     )
-                                    .fetch_one(ctx.pool)
+                                    .fetch_one(&ctx.data.pool)
                                     .await
                                     .map_err(|e| SettingsError::Generic { 
                                         message: e.to_string(),
@@ -453,7 +453,7 @@ pub static EVENT_MODIFIERS: Lazy<ConfigOption> = Lazy::new(|| {
                                 webhook_id,
                                 ctx.guild_id.to_string()
                             )
-                            .fetch_one(ctx.pool)
+                            .fetch_one(&ctx.data.pool)
                             .await
                             .map_err(|e| SettingsError::Generic { 
                                 message: e.to_string(),
@@ -501,7 +501,7 @@ pub static EVENT_MODIFIERS: Lazy<ConfigOption> = Lazy::new(|| {
                                     repo_id,
                                     ctx.guild_id.to_string()
                                 )
-                                .fetch_one(ctx.pool)
+                                .fetch_one(&ctx.data.pool)
                                 .await
                                 .map_err(|e| SettingsError::Generic { 
                                     message: e.to_string(),
