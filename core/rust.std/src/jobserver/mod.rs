@@ -1,14 +1,11 @@
 pub mod taskpoll;
 
-use super::utils::get_icon_of_state;
 use crate::objectstore::ObjectStore;
 use indexmap::IndexMap;
 use sqlx::{types::uuid::Uuid, PgPool};
 use std::str::FromStr;
 use std::sync::Arc;
 use std::time::Duration;
-
-type Error = Box<dyn std::error::Error + Send + Sync>;
 
 /// Rust internal/special type to better serialize/speed up task embed creation
 #[derive(serde::Deserialize, serde::Serialize, Clone, PartialEq)]
@@ -279,7 +276,7 @@ impl Task {
     }
 
     #[allow(dead_code)]
-    pub async fn get_url(&self, object_store: &Arc<ObjectStore>) -> Result<String, Error> {
+    pub async fn get_url(&self, object_store: &Arc<ObjectStore>) -> Result<String, crate::Error> {
         // Check if the task has an output
         let Some(path) = &self.get_file_path() else {
             return Err("Task has no output".into());
@@ -293,7 +290,7 @@ impl Task {
         &self,
         client: &reqwest::Client,
         object_store: &Arc<ObjectStore>,
-    ) -> Result<(), Error> {
+    ) -> Result<(), crate::Error> {
         // Check if the task has an output
         let Some(path) = self.get_path() else {
             return Err("Task has no output".into());
@@ -311,7 +308,7 @@ impl Task {
     }
 
     /// Delete the task from the database, this also consumes the task dropping it from memory
-    pub async fn delete_from_db(self, pool: &PgPool) -> Result<(), Error> {
+    pub async fn delete_from_db(self, pool: &PgPool) -> Result<(), crate::Error> {
         sqlx::query!("DELETE FROM tasks WHERE task_id = $1", self.task_id,)
             .execute(pool)
             .await?;
@@ -327,7 +324,7 @@ impl Task {
         pool: &PgPool,
         client: &reqwest::Client,
         object_store: &Arc<ObjectStore>,
-    ) -> Result<(), Error> {
+    ) -> Result<(), crate::Error> {
         self.delete_from_storage(client, object_store).await?;
         self.delete_from_db(pool).await?;
 

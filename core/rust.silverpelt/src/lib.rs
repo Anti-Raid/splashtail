@@ -1,6 +1,7 @@
 pub mod cache;
 pub mod canonical_module;
 pub mod cmd;
+pub mod jobserver;
 pub mod member_permission_calc;
 pub mod module_config;
 pub mod settings_poise;

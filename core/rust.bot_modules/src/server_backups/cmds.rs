@@ -3,13 +3,13 @@ use futures_util::StreamExt;
 use serenity::all::{ChannelId, CreateEmbed, EditMessage};
 use serenity::small_fixed_array::TruncatingInto;
 use serenity::utils::shard_id;
+use silverpelt::jobserver::{embed as embed_task, get_icon_of_state};
 use silverpelt::Context;
 use splashcore_rs::animusmagic::protocol::serialize_data;
 use splashcore_rs::animusmagic::responses::jobserver::{
     JobserverAnimusMessage, JobserverAnimusResponse,
 };
 use splashcore_rs::jobserver;
-use splashcore_rs::utils::get_icon_of_state;
 use splashcore_rs::utils::{
     create_special_allocation_from_str, parse_numeric_list, REPLACE_CHANNEL,
 };
@@ -223,8 +223,7 @@ pub async fn backups_create(
         mut base_message: serenity::model::channel::Message,
         task: Arc<jobserver::Task>,
     ) -> Result<(), Error> {
-        let new_task_msg =
-            jobserver::taskpoll::embed(&config::CONFIG.sites.api.get(), &task, vec![], true)?;
+        let new_task_msg = embed_task(&config::CONFIG.sites.api.get(), &task, vec![], true)?;
 
         base_message
             .edit(
@@ -973,8 +972,7 @@ pub async fn backups_restore(
         mut base_message: serenity::model::channel::Message,
         task: Arc<jobserver::Task>,
     ) -> Result<(), Error> {
-        let new_task_msg =
-            jobserver::taskpoll::embed(&config::CONFIG.sites.api.get(), &task, vec![], true)?;
+        let new_task_msg = embed_task(&config::CONFIG.sites.api.get(), &task, vec![], true)?;
 
         base_message
             .edit(

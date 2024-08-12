@@ -8,6 +8,7 @@ use serenity::all::{
     User, UserId,
 };
 use serenity::utils::shard_id;
+use silverpelt::jobserver::{embed as embed_task, get_icon_of_state};
 use silverpelt::Context;
 use splashcore_rs::animusmagic::client::RequestOptions;
 use splashcore_rs::animusmagic::protocol::{
@@ -18,8 +19,8 @@ use splashcore_rs::animusmagic::responses::jobserver::{
 };
 use splashcore_rs::jobserver;
 use splashcore_rs::utils::{
-    create_special_allocation_from_str, get_icon_of_state, parse_duration_string,
-    parse_numeric_list_to_str, Unit, REPLACE_CHANNEL,
+    create_special_allocation_from_str, parse_duration_string, parse_numeric_list_to_str, Unit,
+    REPLACE_CHANNEL,
 };
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -362,7 +363,7 @@ pub async fn prune_user(
         mut base_message: Message,
         task: Arc<jobserver::Task>,
     ) -> Result<(), Error> {
-        let new_task_msg = jobserver::taskpoll::embed(
+        let new_task_msg = embed_task(
             &config::CONFIG.sites.api.get(),
             &task,
             vec![CreateEmbed::default()

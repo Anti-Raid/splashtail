@@ -1,22 +1,10 @@
-use crate::Error;
 use once_cell::sync::Lazy;
 use sqlx::postgres::types::PgInterval;
 use std::collections::HashMap;
 
-pub fn get_icon_of_state(state: &str) -> String {
-    match state {
-        "pending" => ":hourglass:",
-        "running" => ":hourglass_flowing_sand:",
-        "completed" => ":white_check_mark:",
-        "failed" => ":x:",
-        _ => ":question:",
-    }
-    .to_string()
-}
-
 pub fn create_special_allocation_from_str(
     special_allocations: &str,
-) -> Result<HashMap<String, u32>, Error> {
+) -> Result<HashMap<String, u32>, crate::Error> {
     let split = special_allocations.split(',').collect::<Vec<&str>>();
 
     if !split.is_empty() {
@@ -104,7 +92,7 @@ impl Unit {
 }
 
 impl TryFrom<&str> for Unit {
-    type Error = Error;
+    type Error = crate::Error;
 
     fn try_from(s: &str) -> Result<Self, Self::Error> {
         match s {
@@ -137,7 +125,7 @@ impl TryFrom<&str> for Unit {
 /// Given a string of the format <number> days/hours/minutes/seconds, parse it into a u64 of seconds
 ///
 /// This function should handle both spaced and non-spaced formats
-pub fn parse_duration_string(s: &str) -> Result<(u64, Unit), Error> {
+pub fn parse_duration_string(s: &str) -> Result<(u64, Unit), crate::Error> {
     let mut number: u64 = 0;
     let mut unit = String::new();
 
@@ -162,7 +150,7 @@ pub fn parse_duration_string(s: &str) -> Result<(u64, Unit), Error> {
 /// Given a string of the format <number> days/hours/minutes/seconds, parse it into a chrono::Duration
 ///
 /// This is a wrapper around parse_duration_string that converts the result into a chrono::Duration
-pub fn parse_duration_string_to_chrono_duration(s: &str) -> Result<chrono::Duration, Error> {
+pub fn parse_duration_string_to_chrono_duration(s: &str) -> Result<chrono::Duration, crate::Error> {
     let (number, unit) = parse_duration_string(s)?;
 
     Ok(chrono::Duration::from_std(std::time::Duration::from_secs(

@@ -1,4 +1,5 @@
 pub mod cache; // Used by root module
+mod cmd;
 mod core;
 mod dehoist;
 pub mod events; // Events is a public interface
@@ -19,7 +20,15 @@ pub fn module() -> silverpelt::Module {
         virtual_module: false,
         web_hidden: false,
         is_default_enabled: false,
-        commands: vec![],
+        commands: vec![(
+            cmd::inspector(),
+            indexmap::indexmap! {
+                "list" => silverpelt::types::CommandExtendedData::kittycat_or_admin("inspector", "list"),
+                "setup" => silverpelt::types::CommandExtendedData::kittycat_or_admin("inspector", "setup"),
+                "update" => silverpelt::types::CommandExtendedData::kittycat_or_admin("inspector", "setup"),
+                "disable" => silverpelt::types::CommandExtendedData::kittycat_or_admin("inspector", "setup"),
+            },
+        )],
         event_handlers: vec![Box::new(move |ectx| events::event_listener(ectx).boxed())],
         on_startup: vec![
             Box::new(move |data| cache::setup_cache_initial(&data.pool).boxed()),
