@@ -1151,7 +1151,7 @@ pub async fn settings_update(
     let mut pkey = None;
     for column in setting.columns.iter() {
         // If the column is ignored for update, skip
-        if column.ignored_for.contains(&OperationType::Update) {
+        if column.ignored_for.contains(&OperationType::Update) && column.id != setting.primary_key {
             if !column.secret {
                 unchanged_fields.insert(column.id.to_string()); // Ensure that ignored_for columns are still seen as unchanged but only if not secret
             }

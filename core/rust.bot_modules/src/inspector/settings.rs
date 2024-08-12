@@ -247,5 +247,32 @@ pub static INSPECTOR_OPTIONS: Lazy<ConfigOption> = Lazy::new(|| ConfigOption {
             columns_to_set: indexmap::indexmap! {},
         },
     },
-    post_actions: settings_wrap_postactions(vec![]),
+    post_actions: settings_wrap_postactions(vec![ColumnAction::NativeAction {
+        action: Box::new(|_ctx, state| {
+            async move {
+                let Some(Value::String(guild_id)) = state.state.get("guild_id") else {
+                    return Err(SettingsError::MissingOrInvalidField {
+                        field: "guild_id".to_string(),
+                        src: "index->NativeAction [post_actions]".to_string(),
+                    });
+                };
+
+                let guild_id = guild_id.parse::<serenity::all::GuildId>().map_err(|e| {
+                    SettingsError::Generic {
+                        message: format!("Error while parsing guild_id: {}", e),
+                        typ: "value_error".to_string(),
+                        src: "inspector__options.guild_id".to_string(),
+                    }
+                })?;
+
+                super::cache::BASIC_ANTISPAM_CONFIG_CACHE
+                    .remove(&guild_id)
+                    .await;
+
+                Ok(())
+            }
+            .boxed()
+        }),
+        on_condition: Some(|ctx, _state| Ok(ctx.operation_type != OperationType::View)),
+    }]),
 });

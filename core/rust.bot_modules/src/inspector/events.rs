@@ -3,7 +3,7 @@ use super::types::{
     DehoistOptions, FakeBotDetectionOptions, GuildProtectionOptions, TriggeredFlags, MAX_MENTIONS,
 };
 use base_data::Error;
-use proxy_support::member_in_guild;
+use proxy_support::{guild, member_in_guild};
 use serenity::all::FullEvent;
 use silverpelt::{module_config::is_module_enabled, EventHandlerContext};
 
@@ -322,6 +322,7 @@ pub async fn event_listener(ectx: &EventHandlerContext) -> Result<(), Error> {
             old_data_if_available,
             new_data,
         } => {
+            log::info!("Guild update event [inspector]: {}", new_data.id);
             let name_changed = {
                 if let Some(old_data) = old_data_if_available {
                     old_data.name != new_data.name
@@ -422,7 +423,9 @@ pub async fn event_listener(ectx: &EventHandlerContext) -> Result<(), Error> {
                         return Err("Bot member not found".into());
                     };
 
-                    let bp = bot.permissions(&ectx.serenity_context.cache)?;
+                    let guild = guild(&cache_http, &data.reqwest, ectx.guild_id).await?;
+
+                    let bp = guild.member_permissions(&bot);
 
                     // TODO: Check for hierarchy here too
 
