@@ -39,6 +39,11 @@ pub async fn bitflag_autocomplete<'a>(
         return Vec::new();
     }
 
+    let current_choices = partial
+        .split(';')
+        .map(|x| x.to_string())
+        .collect::<Vec<String>>();
+
     let mut choices = Vec::with_capacity(std::cmp::max(values.len(), 25));
 
     for (label, _) in values {
@@ -46,6 +51,21 @@ pub async fn bitflag_autocomplete<'a>(
         if choices.len() > 25 {
             break;
         }
+
+        if current_choices.contains(label) {
+            continue;
+        }
+
+        let partial = partial.trim().trim_matches(';');
+
+        if partial.is_empty() {
+            choices.push(serenity::all::AutocompleteChoice::new(
+                label.clone(),
+                label.clone(),
+            ));
+            continue;
+        }
+
         choices.push(serenity::all::AutocompleteChoice::new(
             format!("{};{}", partial, label),
             format!("{};{}", partial, label),
@@ -97,13 +117,11 @@ pub async fn fake_bot_detection_autocomplete<'a>(
     bitflag_autocomplete(ctx, &FAKE_BOT_DETECTION_OPTIONS, partial).await
 }
 
-pub fn number_to_value(number: Option<i64>) -> Value {
+pub fn number_to_value(number: Option<i64>, default: Option<i64>) -> Value {
     if let Some(number) = number {
-        if number == 0 {
-            Value::None
-        } else {
-            Value::Integer(number)
-        }
+        Value::Integer(number)
+    } else if let Some(default) = default {
+        Value::Integer(default)
     } else {
         Value::None
     }
@@ -186,11 +204,11 @@ pub async fn inspector_setup(
                     return Err("Guild ID not found".into());
                 }
             },
-            "minimum_account_age".to_string() => number_to_value(minimum_account_age),
-            "maximum_account_age".to_string() => number_to_value(maximum_account_age),
-            "anti_invite".to_string() => number_to_value(anti_invite),
-            "anti_everyone".to_string() => number_to_value(anti_everyone),
-            "sting_retention".to_string() => number_to_value(sting_retention),
+            "minimum_account_age".to_string() => number_to_value(minimum_account_age, None),
+            "maximum_account_age".to_string() => number_to_value(maximum_account_age, None),
+            "anti_invite".to_string() => number_to_value(anti_invite, None),
+            "anti_everyone".to_string() => number_to_value(anti_everyone, None),
+            "sting_retention".to_string() => number_to_value(sting_retention, Some(60)),
             "hoist_detection".to_string() => convert_bitflags_string_to_value(&DEHOIST_OPTIONS, hoist_detection),
             "guild_protection".to_string() => convert_bitflags_string_to_value(&GUILD_PROTECTION_OPTIONS, guild_protection),
             "fake_bot_detection".to_string() => convert_bitflags_string_to_value(&FAKE_BOT_DETECTION_OPTIONS, fake_bot_detection),
@@ -241,11 +259,11 @@ pub async fn inspector_update(
                     return Err("Guild ID not found".into());
                 }
             },
-            "minimum_account_age".to_string() => number_to_value(minimum_account_age),
-            "maximum_account_age".to_string() => number_to_value(maximum_account_age),
-            "anti_invite".to_string() => number_to_value(anti_invite),
-            "anti_everyone".to_string() => number_to_value(anti_everyone),
-            "sting_retention".to_string() => number_to_value(sting_retention),
+            "minimum_account_age".to_string() => number_to_value(minimum_account_age, None),
+            "maximum_account_age".to_string() => number_to_value(maximum_account_age, None),
+            "anti_invite".to_string() => number_to_value(anti_invite, None),
+            "anti_everyone".to_string() => number_to_value(anti_everyone, None),
+            "sting_retention".to_string() => number_to_value(sting_retention, Some(60)),
             "hoist_detection".to_string() => convert_bitflags_string_to_value(&DEHOIST_OPTIONS, hoist_detection),
             "guild_protection".to_string() => convert_bitflags_string_to_value(&GUILD_PROTECTION_OPTIONS, guild_protection),
             "fake_bot_detection".to_string() => convert_bitflags_string_to_value(&FAKE_BOT_DETECTION_OPTIONS, fake_bot_detection),

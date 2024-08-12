@@ -49,6 +49,11 @@ pub struct Props {
 
 #[async_trait::async_trait]
 impl base_data::Props for Props {
+    /// Converts the props to std::any::Any
+    fn as_any(&self) -> &(dyn std::any::Any + Send + Sync) {
+        self
+    }
+
     fn underlying_am_client(
         &self,
     ) -> Result<
@@ -423,7 +428,7 @@ async fn event_listener<'a>(
                 info!("Starting IPC");
 
                 let data = ctx.serenity_context.data::<Data>();
-                let props = data.extra_data::<Props>();
+                let props = data.props.as_any().downcast_ref::<Props>().unwrap();
                 let ipc_ref = props.mewld_ipc.clone();
                 let ch = CacheHttpImpl::from_ctx(ctx.serenity_context);
                 let sm = ctx.shard_manager().clone();
@@ -454,7 +459,8 @@ async fn event_listener<'a>(
                 == *crate::ipc::argparse::MEWLD_ARGS.shards.last().unwrap()
             {
                 info!("All shards ready, launching next cluster");
-                let props = user_data.extra_data::<Props>();
+                let data = ctx.serenity_context.data::<Data>();
+                let props = data.props.as_any().downcast_ref::<Props>().unwrap();
                 if let Err(e) = props.mewld_ipc.publish_ipc_launch_next().await {
                     error!("Error publishing IPC launch next: {}", e);
                     return Err(e);

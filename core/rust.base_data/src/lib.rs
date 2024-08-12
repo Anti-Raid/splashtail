@@ -14,28 +14,10 @@ pub struct Data {
     pub redis_pool: fred::prelude::RedisPool,
     pub reqwest: reqwest::Client,
     pub object_store: Arc<ObjectStore>,
-    pub props: Arc<dyn Props>,
+    pub props: Arc<dyn Props + Send + Sync>,
 
     /// Any extra data
     pub extra_data: Arc<dyn std::any::Any + Send + Sync>,
-}
-
-impl Data {
-    /// A container for a extra_data type that can be used in command execution.
-    ///
-    /// The purpose of the extra_data field is to be accessible and persistent across contexts; that is,
-    /// data can be modified by one context, and will persist through the future and be accessible
-    /// through other contexts. This is useful for anything that should "live" through the program:
-    /// counters, database connections, custom user caches, etc.
-    ///
-    /// # Panics
-    /// Panics if the generic provided is not equal to the type provided in its creation
-    #[must_use]
-    pub fn extra_data<Data: Send + Sync + 'static>(&self) -> Arc<Data> {
-        Arc::clone(&self.extra_data)
-            .downcast()
-            .expect("Type provided to extra_data should be the same as data.")
-    }
 }
 
 #[async_trait::async_trait]
@@ -43,6 +25,9 @@ pub trait Props
 where
     Self: Send + Sync,
 {
+    /// Converts the props to std::any::Any
+    fn as_any(&self) -> &(dyn std::any::Any + Send + Sync);
+
     /// Returns the underlying client for animus magic
     fn underlying_am_client(&self) -> Result<Box<dyn AnimusMagicRequestClient>, Error>;
 
