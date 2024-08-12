@@ -188,9 +188,6 @@ Anti-Raid has 2 gateway proxies that can optionally be used to reduce the number
 
 # TODO List
 
-NOW:
-- Make ``channel_overrides`` available in the UI.
-
 For initial release:
 
 - Stabilizing the module+command permission system [X]  
@@ -204,19 +201,22 @@ For initial release:
 - Basic Anti-Spam (anti-invite, anti-everyone ping) [X]
 - Basic Anti-Spam Punishment integration [X]
 - Basic Anti-Spam audit log integration []
-- Basic Anti-Spam server name/server icon protection [WIP, UNTESTED]
+- Basic Anti-Spam server name/server icon protection [X]
 - Webhook creation and deletion monitoring []
 - Audit Logs [X]
 - Better serde-based audit log expansion [WIP]
 - Integrating audit logs into moderation [X]
-- Basic utility functions (if needed) [NOT NEEDED YET]
 - Stabilizing the `Limits` module [X]
 - Stabilizing the ``Server Backups`` module [X]
-- Stabilizing the ``Inspector`` module []
+- Stabilizing the ``Inspector`` module [X]
+- Integration of settings into bot+website [X]
+- Thorough testing of Anti-Raid []
+
+
+For later:
 - Creating and stabilizing the ``Captcha`` module []
 - Dangerous role quarantine/removal []
-- Thorough testing of Anti-Raid []
-- Integration of settings into bot+website []
+- Tags/custom tags []
 
 *Key*
 
