@@ -192,7 +192,7 @@ For initial release:
 
 - Stabilizing the module+command permission system [X]  
 - Add a monitoring script to probe clusters [X]
-- Add the ability to enable/disable modules [X] and commands [WIP, WU] and also override command permissions [WIP, WU]
+- Add the ability to enable/disable modules [X] and commands [X] and also override command permissions [X]
 - Basic Moderation (warn/kick/ban+tempban/unban) [X]
 - Punishment module (give punishment based on stings) [X]
 - Basic Anti-Raid (lockdown/lockserver/unlockserver/lockchannel/unlockchannel) []
