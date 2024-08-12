@@ -204,28 +204,70 @@ fn _parse_value(
                             }
                         }
 
-                        Ok(Value::Integer(final_value))
-                    }
-                    Value::String(s) => {
-                        let v = s.parse::<i64>().map_err(|e| {
-                            SettingsError::SchemaCheckValidationError {
-                                column: column_id.to_string(),
-                                check: "bitflag_parse".to_string(),
-                                accepted_range: "Valid bitflag".to_string(),
-                                error: e.to_string(),
-                            }
-                        })?;
+                        if final_value == 0 {
+                            // Set the first value as the default value
+                            let Some(fv) = values.values().next() else {
+                                return Err(SettingsError::SchemaCheckValidationError {
+                                    column: column_id.to_string(),
+                                    check: "bitflag_default".to_string(),
+                                    accepted_range: "Valid bitflag".to_string(),
+                                    error: "No default value found".to_string(),
+                                });
+                            };
 
-                        let mut final_value = 0;
-
-                        // Set all the valid bits in final_value to ensure no unknown bits are being set
-                        for (_, bit) in values.iter() {
-                            if *bit & v == *bit {
-                                final_value |= *bit;
-                            }
+                            final_value = *fv;
                         }
 
                         Ok(Value::Integer(final_value))
+                    }
+                    Value::String(s) => {
+                        if s.is_empty() {
+                            // Set the first value as the default value
+                            let Some(fv) = values.values().next() else {
+                                return Err(SettingsError::SchemaCheckValidationError {
+                                    column: column_id.to_string(),
+                                    check: "bitflag_default".to_string(),
+                                    accepted_range: "Valid bitflag".to_string(),
+                                    error: "No default value found".to_string(),
+                                });
+                            };
+
+                            Ok(Value::Integer(*fv))
+                        } else {
+                            let v = s.parse::<i64>().map_err(|e| {
+                                SettingsError::SchemaCheckValidationError {
+                                    column: column_id.to_string(),
+                                    check: "bitflag_parse".to_string(),
+                                    accepted_range: "Valid bitflag".to_string(),
+                                    error: e.to_string(),
+                                }
+                            })?;
+
+                            let mut final_value = 0;
+
+                            // Set all the valid bits in final_value to ensure no unknown bits are being set
+                            for (_, bit) in values.iter() {
+                                if *bit & v == *bit {
+                                    final_value |= *bit;
+                                }
+                            }
+
+                            if final_value == 0 {
+                                // Set the first value as the default value
+                                let Some(fv) = values.values().next() else {
+                                    return Err(SettingsError::SchemaCheckValidationError {
+                                        column: column_id.to_string(),
+                                        check: "bitflag_default".to_string(),
+                                        accepted_range: "Valid bitflag".to_string(),
+                                        error: "No default value found".to_string(),
+                                    });
+                                };
+
+                                final_value = *fv;
+                            }
+
+                            Ok(Value::Integer(final_value))
+                        }
                     }
                     Value::None => Ok(v),
                     _ => Err(SettingsError::SchemaTypeValidationError {
