@@ -206,6 +206,27 @@ fn _parse_value(
 
                         Ok(Value::Integer(final_value))
                     }
+                    Value::String(s) => {
+                        let v = s.parse::<i64>().map_err(|e| {
+                            SettingsError::SchemaCheckValidationError {
+                                column: column_id.to_string(),
+                                check: "bitflag_parse".to_string(),
+                                accepted_range: "Valid bitflag".to_string(),
+                                error: e.to_string(),
+                            }
+                        })?;
+
+                        let mut final_value = 0;
+
+                        // Set all the valid bits in final_value to ensure no unknown bits are being set
+                        for (_, bit) in values.iter() {
+                            if *bit & v == *bit {
+                                final_value |= *bit;
+                            }
+                        }
+
+                        Ok(Value::Integer(final_value))
+                    }
                     Value::None => Ok(v),
                     _ => Err(SettingsError::SchemaTypeValidationError {
                         column: column_id.to_string(),
