@@ -224,7 +224,7 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 			Status: http.StatusBadRequest,
 			Json:   resp.Resp.SettingsOperation.Res.Err.Error,
 			Headers: map[string]string{
-				"X-Error-Type": "canonical_settings_error",
+				"X-Error-Type": "settings_error",
 			},
 		}
 	}
