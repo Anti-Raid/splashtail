@@ -1,21 +1,20 @@
 use std::time::Duration;
 
-use base_data::Error;
 use futures_util::StreamExt;
 use permissions::types::PermissionChecks;
 use serenity::all::AutocompleteChoice;
 use silverpelt::types::GuildModuleConfiguration;
 use silverpelt::Context;
+use silverpelt::Error;
 
 async fn module_list_autocomplete<'a>(
-    _ctx: Context<'_>,
+    ctx: Context<'_>,
     partial: &'a str,
 ) -> Vec<AutocompleteChoice<'a>> {
+    let data = ctx.data();
     let mut ac = Vec::new();
 
-    for mv in crate::SILVERPELT_CACHE.module_cache.iter() {
-        let module = mv.value();
-
+    for (_, module) in data.silverpelt_cache.module_cache.iter() {
         if module.name.to_lowercase().contains(&partial.to_lowercase())
             || module.id.to_lowercase().contains(&partial.to_lowercase())
         {
@@ -68,7 +67,8 @@ pub async fn modules_list(ctx: Context<'_>) -> Result<(), Error> {
 
     let mut done_modules = Vec::new();
     for module_config in module_configs {
-        let Some(module) = crate::SILVERPELT_CACHE
+        let Some(module) = data
+            .silverpelt_cache
             .module_cache
             .get(&module_config.module)
         else {
@@ -100,9 +100,7 @@ pub async fn modules_list(ctx: Context<'_>) -> Result<(), Error> {
         done_modules.push(module_id);
     }
 
-    for module in crate::SILVERPELT_CACHE.module_cache.iter() {
-        let module = module.value();
-
+    for (_, module) in data.silverpelt_cache.module_cache.iter() {
         if done_modules.contains(&module.id.to_string()) {
             continue;
         }
@@ -142,8 +140,10 @@ pub async fn modules_enable(
         return Err("This command must be run in a guild".into());
     };
 
+    let data = ctx.data();
+
     // Check that the module exists
-    let Some(module_data) = crate::SILVERPELT_CACHE.module_cache.get(&module) else {
+    let Some(module_data) = data.silverpelt_cache.module_cache.get(&module) else {
         return Err(format!(
             "The module you are trying to disable ({}) does not exist",
             module
@@ -155,11 +155,8 @@ pub async fn modules_enable(
         return Err("This module cannot be enabled/disabled".into());
     }
 
-    drop(module_data);
-
     // Check for a module_configuration in db
     // If it doesn't exist, create it
-    let data = ctx.data();
     let mut tx = data.pool.begin().await?;
 
     let disabled = sqlx::query!(
@@ -196,9 +193,9 @@ pub async fn modules_enable(
 
     tx.commit().await?;
 
-    crate::SILVERPELT_CACHE
+    data.silverpelt_cache
         .module_enabled_cache
-        .remove(&(guild_id, module))
+        .invalidate(&(guild_id, module))
         .await;
 
     ctx.say("Module enabled successfully!").await?;
@@ -224,8 +221,10 @@ pub async fn modules_disable(
         return Err("This command must be run in a guild".into());
     };
 
+    let data = ctx.data();
+
     // Check that the module exists
-    let Some(module_data) = crate::SILVERPELT_CACHE.module_cache.get(&module) else {
+    let Some(module_data) = data.silverpelt_cache.module_cache.get(&module) else {
         return Err(format!(
             "The module you are trying to disable ({}) does not exist",
             module
@@ -237,11 +236,8 @@ pub async fn modules_disable(
         return Err("This module cannot be enabled/disabled".into());
     }
 
-    drop(module_data);
-
     // Check for a module_configuration in db
     // If it doesn't exist, create it
-    let data = ctx.data();
     let mut tx = data.pool.begin().await?;
 
     let disabled = sqlx::query!(
@@ -278,9 +274,9 @@ pub async fn modules_disable(
 
     tx.commit().await?;
 
-    crate::SILVERPELT_CACHE
+    data.silverpelt_cache
         .module_enabled_cache
-        .remove(&(guild_id, module))
+        .invalidate(&(guild_id, module))
         .await;
 
     ctx.say("Module disabled successfully!").await?;
@@ -306,13 +302,13 @@ pub async fn modules_modperms(
 
     let data = ctx.data();
 
-    let Some(module) = crate::SILVERPELT_CACHE.module_cache.get(&module) else {
+    let Some(module) = data.silverpelt_cache.module_cache.get(&module) else {
         return Err("Module not found".into());
     };
 
     let cache_http = botox::cache::CacheHttpImpl::from_ctx(ctx.serenity_context());
     let perm_res = silverpelt::cmd::check_command(
-        &crate::SILVERPELT_CACHE,
+        &data.silverpelt_cache,
         &format!("acl__modules_modperms {}", module.id),
         guild_id,
         ctx.author().id,
@@ -435,7 +431,7 @@ pub async fn modules_modperms(
                 }
 
                 let perm_res = silverpelt::cmd::check_command(
-                    &crate::SILVERPELT_CACHE,
+                    &data.silverpelt_cache,
                     "modules enable",
                     guild_id,
                     ctx.author().id,
@@ -486,7 +482,7 @@ pub async fn modules_modperms(
                 }
 
                 let perm_res = silverpelt::cmd::check_command(
-                    &crate::SILVERPELT_CACHE,
+                    &data.silverpelt_cache,
                     "modules disable",
                     guild_id,
                     ctx.author().id,
@@ -538,7 +534,7 @@ pub async fn modules_modperms(
 
                 if module.is_default_enabled {
                     let perm_res = silverpelt::cmd::check_command(
-                        &crate::SILVERPELT_CACHE,
+                        &data.silverpelt_cache,
                         "modules enable",
                         guild_id,
                         ctx.author().id,
@@ -568,7 +564,7 @@ pub async fn modules_modperms(
                     }
                 } else {
                     let perm_res = silverpelt::cmd::check_command(
-                        &crate::SILVERPELT_CACHE,
+                        &data.silverpelt_cache,
                         "modules disable",
                         guild_id,
                         ctx.author().id,
@@ -602,7 +598,7 @@ pub async fn modules_modperms(
             }
             "module/default-perms/reset" => {
                 let perm_res = silverpelt::cmd::check_command(
-                    &crate::SILVERPELT_CACHE,
+                    &data.silverpelt_cache,
                     &format!("acl__{}_defaultperms_check", module.id),
                     guild_id,
                     ctx.author().id,
@@ -689,7 +685,7 @@ pub async fn modules_modperms(
                         .await?;
 
                         let perm_res = silverpelt::cmd::check_command(
-                            &crate::SILVERPELT_CACHE,
+                            &data.silverpelt_cache,
                             &format!("acl__{}_defaultperms_check", module.id),
                             guild_id,
                             ctx.author().id,

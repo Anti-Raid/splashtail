@@ -27,7 +27,6 @@ splashcore_rs = { path = "../../core/rust.std" }
 gwevent = { path = "../../core/rust.gwevent" }
 modules = { path = "../../core/rust.bot_modules" }
 module_settings = { path = "../../core/rust.module_settings" }
-base_data = { path = "../../core/rust.base_data" }
 proxy_support = { path = "../../core/rust.proxy_support" }
 config = { path = "../../core/rust.config" }
 cap = { version = "0.1.2", features = ["stats"] }

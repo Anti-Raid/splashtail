@@ -1,7 +1,7 @@
 use poise::{serenity_prelude::CreateEmbed, CreateReply};
 use serenity::builder::EditMessage;
 
-type Error = base_data::Error;
+type Error = silverpelt::Error;
 type Context<'a> = silverpelt::Context<'a>;
 
 #[poise::command(category = "Stats", prefix_command, slash_command, user_cooldown = 1)]

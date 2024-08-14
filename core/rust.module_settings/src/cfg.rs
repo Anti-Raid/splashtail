@@ -2,6 +2,7 @@ use super::state::State;
 use super::types::SettingsError;
 use super::types::{
     ColumnType, ConfigOption, InnerColumnType, InnerColumnTypeStringKind, OperationType,
+    SettingsData,
 };
 use splashcore_rs::value::Value;
 
@@ -358,8 +359,7 @@ async fn _validate_value(
     v: Value,
     state: &State,
     guild_id: serenity::all::GuildId,
-    data: &base_data::Data,
-    cache_http: &botox::cache::CacheHttpImpl,
+    data: &SettingsData,
     column_type: &ColumnType,
     column_id: &str,
     is_nullable: bool,
@@ -471,7 +471,7 @@ async fn _validate_value(
 
                                     // Get the channel
                                     let channel = proxy_support::channel(
-                                        cache_http,
+                                        &data.cache_http,
                                         &data.reqwest,
                                         Some(guild_id),
                                         channel_id,
@@ -521,7 +521,7 @@ async fn _validate_value(
                                                 }
 
                                                 if !needed_bot_permissions.is_empty() {
-                                                    let perms = gc.permissions_for_user(&cache_http.cache, cache_http.cache.current_user().id).map_err(|e| SettingsError::SchemaCheckValidationError {
+                                                    let perms = gc.permissions_for_user(&data.cache_http.cache, data.cache_http.cache.current_user().id).map_err(|e| SettingsError::SchemaCheckValidationError {
                                                         column: column_id.to_string(),
                                                         check: "channel_perms".to_string(),
                                                         accepted_range: "Valid channel id".to_string(),
@@ -667,7 +667,6 @@ async fn _validate_value(
                         state,
                         guild_id,
                         data,
-                        cache_http,
                         &column_type,
                         column_id,
                         is_nullable,
@@ -697,7 +696,6 @@ async fn _validate_value(
                         state,
                         guild_id,
                         data,
-                        cache_http,
                         &clause.column_type,
                         column_id,
                         is_nullable,
@@ -778,8 +776,7 @@ pub fn validate_keys(
 /// Settings API: View implementation
 pub async fn settings_view(
     setting: &ConfigOption,
-    data: &base_data::Data,
-    cache_http: &botox::cache::CacheHttpImpl,
+    data: &SettingsData,
     guild_id: serenity::all::GuildId,
     author: serenity::all::UserId,
     fields: indexmap::IndexMap<String, Value>, // The filters to apply
@@ -800,7 +797,6 @@ pub async fn settings_view(
             guild_id,
             author,
             data,
-            cache_http,
             common_filters(
                 setting,
                 OperationType::View,
@@ -847,7 +843,6 @@ pub async fn settings_view(
                 guild_id,
                 &mut *data_store,
                 data,
-                cache_http,
             )
             .await?;
         }
@@ -902,7 +897,6 @@ pub async fn settings_view(
             guild_id,
             &mut *data_store,
             data,
-            cache_http,
         )
         .await?;
 
@@ -915,8 +909,7 @@ pub async fn settings_view(
 /// Settings API: Create implementation
 pub async fn settings_create(
     setting: &ConfigOption,
-    data: &base_data::Data,
-    cache_http: &botox::cache::CacheHttpImpl,
+    data: &SettingsData,
     guild_id: serenity::all::GuildId,
     author: serenity::all::UserId,
     fields: indexmap::IndexMap<String, Value>,
@@ -952,7 +945,6 @@ pub async fn settings_create(
                     &state,
                     guild_id,
                     data,
-                    cache_http,
                     &column.column_type,
                     column.id,
                     column.nullable,
@@ -977,7 +969,6 @@ pub async fn settings_create(
             guild_id,
             author,
             data,
-            cache_http,
             common_filters(setting, OperationType::Create, &state),
         )
         .await?;
@@ -1030,7 +1021,6 @@ pub async fn settings_create(
             guild_id,
             &mut *data_store,
             data,
-            cache_http,
         )
         .await?;
 
@@ -1119,7 +1109,6 @@ pub async fn settings_create(
         guild_id,
         &mut *data_store,
         data,
-        cache_http,
     )
     .await?;
 
@@ -1129,8 +1118,7 @@ pub async fn settings_create(
 /// Settings API: Update implementation
 pub async fn settings_update(
     setting: &ConfigOption,
-    data: &base_data::Data,
-    cache_http: &botox::cache::CacheHttpImpl,
+    data: &SettingsData,
     guild_id: serenity::all::GuildId,
     author: serenity::all::UserId,
     fields: indexmap::IndexMap<String, Value>,
@@ -1166,7 +1154,6 @@ pub async fn settings_update(
                         &state,
                         guild_id,
                         data,
-                        cache_http,
                         &column.column_type,
                         column.id,
                         column.nullable,
@@ -1215,7 +1202,6 @@ pub async fn settings_update(
             guild_id,
             author,
             data,
-            cache_http,
             common_filters(setting, OperationType::Update, &state),
         )
         .await?;
@@ -1266,7 +1252,6 @@ pub async fn settings_update(
             guild_id,
             &mut *data_store,
             data,
-            cache_http,
         )
         .await?;
 
@@ -1388,7 +1373,6 @@ pub async fn settings_update(
         guild_id,
         &mut *data_store,
         data,
-        cache_http,
     )
     .await?;
 
@@ -1399,8 +1383,7 @@ pub async fn settings_update(
 #[allow(clippy::too_many_arguments)]
 pub async fn settings_delete(
     setting: &ConfigOption,
-    data: &base_data::Data,
-    cache_http: &botox::cache::CacheHttpImpl,
+    data: &SettingsData,
     guild_id: serenity::all::GuildId,
     author: serenity::all::UserId,
     pkey: Value,
@@ -1430,7 +1413,6 @@ pub async fn settings_delete(
             guild_id,
             author,
             data,
-            cache_http,
             common_filters(setting, OperationType::Delete, &state),
         )
         .await?;
@@ -1478,7 +1460,6 @@ pub async fn settings_delete(
             guild_id,
             &mut *data_store,
             data,
-            cache_http,
         )
         .await?;
     }
@@ -1502,7 +1483,6 @@ pub async fn settings_delete(
         guild_id,
         &mut *data_store,
         data,
-        cache_http,
     )
     .await?;
 

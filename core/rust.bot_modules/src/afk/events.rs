@@ -1,5 +1,5 @@
-use base_data::Error;
 use poise::serenity_prelude::FullEvent;
+use silverpelt::Error;
 use silverpelt::EventHandlerContext;
 
 pub async fn event_listener(ectx: &EventHandlerContext) -> Result<(), Error> {
@@ -40,7 +40,7 @@ pub async fn event_listener(ectx: &EventHandlerContext) -> Result<(), Error> {
             let mut embeds = Vec::new();
 
             for rec in recs {
-                if embeds.len() > base_data::limits::embed_limits::EMBED_MAX_COUNT {
+                if embeds.len() > limits::embed_limits::EMBED_MAX_COUNT {
                     break;
                 }
 

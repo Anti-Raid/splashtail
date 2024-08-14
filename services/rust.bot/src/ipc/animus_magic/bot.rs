@@ -187,7 +187,7 @@ impl BotAnimusMessage {
             Self::Modules {} => {
                 let mut modules = Vec::new();
 
-                for idm in modules::SILVERPELT_CACHE.canonical_module_cache.iter() {
+                for idm in state.data.silverpelt_cache.canonical_module_cache.iter() {
                     let module = idm.value();
                     modules.push(module.clone());
                 }
@@ -272,7 +272,7 @@ impl BotAnimusMessage {
                 let flags = AmCheckCommandOptionsFlags::from_bits_truncate(opts.flags);
 
                 let perm_res = silverpelt::cmd::check_command(
-                    &modules::SILVERPELT_CACHE,
+                    &state.data.silverpelt_cache,
                     &command,
                     guild_id,
                     user_id,
@@ -338,7 +338,7 @@ impl BotAnimusMessage {
                 let op: OperationType = op.into();
 
                 // Find the setting
-                let Some(module) = modules::SILVERPELT_CACHE.module_cache.get(&module) else {
+                let Some(module) = state.data.silverpelt_cache.module_cache.get(&module) else {
                     return Ok(BotAnimusResponse::SettingsOperation {
                         res: CanonicalSettingsResult::Err {
                             error: CanonicalSettingsError::Generic {
@@ -396,7 +396,7 @@ impl BotAnimusMessage {
                 module_settings::cfg::validate_keys(opt, &p_fields)?;
 
                 let perm_res = silverpelt::cmd::check_command(
-                    &modules::SILVERPELT_CACHE,
+                    &state.data.silverpelt_cache,
                     operation_specific.corresponding_command,
                     guild_id,
                     user_id,
@@ -420,8 +420,7 @@ impl BotAnimusMessage {
                     OperationType::View => {
                         match module_settings::cfg::settings_view(
                             opt,
-                            &state.data,
-                            &state.cache_http,
+                            &state.data.settings_data(state.cache_http.clone()),
                             guild_id,
                             user_id,
                             p_fields,
@@ -441,8 +440,7 @@ impl BotAnimusMessage {
                     OperationType::Create => {
                         match module_settings::cfg::settings_create(
                             opt,
-                            &state.data,
-                            &state.cache_http,
+                            &state.data.settings_data(state.cache_http.clone()),
                             guild_id,
                             user_id,
                             p_fields,
@@ -462,8 +460,7 @@ impl BotAnimusMessage {
                     OperationType::Update => {
                         match module_settings::cfg::settings_update(
                             opt,
-                            &state.data,
-                            &state.cache_http,
+                            &state.data.settings_data(state.cache_http.clone()),
                             guild_id,
                             user_id,
                             p_fields,
@@ -494,8 +491,7 @@ impl BotAnimusMessage {
 
                         match module_settings::cfg::settings_delete(
                             opt,
-                            &state.data,
-                            &state.cache_http,
+                            &state.data.settings_data(state.cache_http.clone()),
                             guild_id,
                             user_id,
                             pkey.clone(),

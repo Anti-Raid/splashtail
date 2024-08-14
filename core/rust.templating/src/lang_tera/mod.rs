@@ -23,7 +23,7 @@ static TEMPLATE_CACHE: Lazy<Cache<String, tera::Tera>> = Lazy::new(|| {
 pub async fn compile_template(
     template: &str,
     opts: crate::CompileTemplateOptions,
-) -> Result<tera::Tera, base_data::Error> {
+) -> Result<tera::Tera, crate::Error> {
     if !opts.ignore_cache {
         // Check if in template
         if let Some(ref tera) = TEMPLATE_CACHE.get(template).await {
@@ -64,7 +64,7 @@ pub async fn compile_template(
 pub async fn execute_template(
     tera: &mut tera::Tera,
     context: &tera::Context,
-) -> Result<String, base_data::Error> {
+) -> Result<String, crate::Error> {
     // Render the template
     Ok(tokio::time::timeout(
         TEMPLATE_EXECUTION_TIMEOUT,

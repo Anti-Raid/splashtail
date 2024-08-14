@@ -16,7 +16,6 @@ indexmap = { version = "2", features = ["serde"] }
 
 # Anti-Raid specific
 splashcore_rs = { path = "../rust.std" }
-base_data = { path = "../rust.base_data" }
 templating = { path = "../rust.templating" }
 proxy_support = { path = "../rust.proxy_support" }
 async-recursion = "1.1.1"

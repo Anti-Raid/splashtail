@@ -1,28 +1,12 @@
-use base_data::Error;
 use futures_util::future::FutureExt;
 use permissions::types::PermissionResult;
 use silverpelt::Context;
-
-pub fn get_category(category_id: Option<String>) -> Option<String> {
-    if let Some(cat_name) = category_id {
-        // Get the module from the name
-        let cat_module: Option<dashmap::mapref::one::Ref<String, silverpelt::Module>> =
-            crate::SILVERPELT_CACHE.module_cache.get(&cat_name);
-
-        if let Some(cat_module) = cat_module {
-            Some(cat_module.name.to_string())
-        } else {
-            Some("Misc Commands".to_string())
-        }
-    } else {
-        Some("Misc Commands".to_string())
-    }
-}
+use silverpelt::Error;
 
 pub async fn filter(
     ctx: &Context<'_>,
     state: &HelpState,
-    cmd: &poise::Command<base_data::Data, base_data::Error>,
+    cmd: &poise::Command<silverpelt::data::Data, silverpelt::Error>,
 ) -> Result<bool, Error> {
     let Some(ref module) = cmd.category else {
         return Err("Internal error: command has no category".into());
@@ -43,8 +27,10 @@ pub async fn filter(
             return Err("You must be in a guild to use ``filter_by_perms``".into());
         };
 
+        let data = ctx.data();
+
         let res = silverpelt::cmd::check_command(
-            &crate::SILVERPELT_CACHE,
+            &data.silverpelt_cache,
             cmd.qualified_name.as_str(),
             guild_id,
             ctx.author().id,
@@ -78,12 +64,27 @@ pub async fn help(
     command: Option<String>,
     #[description = "Only show commands you have permission to use"] filter_by_perms: Option<bool>,
 ) -> Result<(), Error> {
+    let data = ctx.data();
+    let data = data.clone();
     botox::help::help(
         ctx,
         command,
         "%",
         botox::help::HelpOptions {
-            get_category: Some(Box::new(get_category)),
+            get_category: Some(Box::new(move |category_id| {
+                if let Some(cat_name) = category_id {
+                    // Get the module from the name
+                    let cat_module = data.silverpelt_cache.module_cache.get(&cat_name);
+
+                    if let Some(cat_module) = cat_module {
+                        Some(cat_module.name.to_string())
+                    } else {
+                        Some("Misc Commands".to_string())
+                    }
+                } else {
+                    Some("Misc Commands".to_string())
+                }
+            })),
             state: HelpState {
                 filter_by_perms: filter_by_perms.unwrap_or(false),
             },

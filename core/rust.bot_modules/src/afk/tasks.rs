@@ -1,5 +1,5 @@
-pub async fn afk_task(ctx: &serenity::client::Context) -> Result<(), base_data::Error> {
-    let data = ctx.data::<base_data::Data>();
+pub async fn afk_task(ctx: &serenity::client::Context) -> Result<(), silverpelt::Error> {
+    let data = ctx.data::<silverpelt::data::Data>();
     let pool = &data.pool;
 
     let mut tx = pool.begin().await?;

@@ -166,7 +166,7 @@ pub static INSPECTOR_OPTIONS: Lazy<ConfigOption> = Lazy::new(|| ConfigOption {
                         } else {
                             // Fetch guild
                             let guild = match proxy_support::guild(
-                                ctx.cache_http,
+                                &ctx.data.cache_http,
                                 &ctx.data.reqwest,
                                 ctx.guild_id,
                             )
@@ -266,7 +266,7 @@ pub static INSPECTOR_OPTIONS: Lazy<ConfigOption> = Lazy::new(|| ConfigOption {
                 })?;
 
                 super::cache::BASIC_ANTISPAM_CONFIG_CACHE
-                    .remove(&guild_id)
+                    .invalidate(&guild_id)
                     .await;
 
                 Ok(())

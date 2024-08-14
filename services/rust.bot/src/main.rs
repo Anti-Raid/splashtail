@@ -16,10 +16,10 @@ use once_cell::sync::Lazy;
 use std::sync::{Arc, OnceLock};
 use tokio::sync::RwLock;
 
-use base_data::{Data, Error};
 use cap::Cap;
 use log::{error, info, warn};
 use serenity::all::{FullEvent, GuildId, HttpBuilder, UserId};
+use silverpelt::{data::Data, Error};
 use sqlx::postgres::PgPoolOptions;
 use std::alloc;
 use std::io::Write;
@@ -39,6 +39,16 @@ pub static CONNECT_STATE: Lazy<ConnectState> = Lazy::new(|| ConnectState {
     ready_lock: tokio::sync::Mutex::new(()),
 });
 
+static SILVERPELT_CACHE: Lazy<Arc<silverpelt::cache::SilverpeltCache>> = Lazy::new(|| {
+    let mut silverpelt_cache = silverpelt::cache::SilverpeltCache::default();
+
+    for module in modules::modules() {
+        silverpelt_cache.add_module(module);
+    }
+
+    Arc::new(silverpelt_cache)
+});
+
 /// Props
 pub struct Props {
     pub pool: sqlx::PgPool,
@@ -48,7 +58,7 @@ pub struct Props {
 }
 
 #[async_trait::async_trait]
-impl base_data::Props for Props {
+impl silverpelt::data::Props for Props {
     /// Converts the props to std::any::Any
     fn as_any(&self) -> &(dyn std::any::Any + Send + Sync) {
         self
@@ -58,7 +68,7 @@ impl base_data::Props for Props {
         &self,
     ) -> Result<
         Box<dyn splashcore_rs::animusmagic::client::AnimusMagicRequestClient>,
-        base_data::Error,
+        silverpelt::Error,
     > {
         let am = self.animus_magic_ipc.get();
 
@@ -68,7 +78,9 @@ impl base_data::Props for Props {
         }
     }
 
-    fn permodule_executor(&self) -> Box<dyn base_data::permodule::PermoduleFunctionExecutor> {
+    fn permodule_executor(
+        &self,
+    ) -> Box<dyn splashcore_rs::permodule_functions::PermoduleFunctionExecutor> {
         Box::new(PermoduleFunctionExecutor {})
     }
 
@@ -76,7 +88,7 @@ impl base_data::Props for Props {
         &self,
         module: &str,
         function: &str,
-        func: base_data::permodule::ToggleFunc,
+        func: splashcore_rs::permodule_functions::ToggleFunc,
     ) {
         PERMODULE_FUNCTIONS.insert((module.to_string(), function.to_string()), func);
     }
@@ -117,7 +129,7 @@ impl base_data::Props for Props {
         self.mewld_ipc.cache.total_users()
     }
 
-    async fn reset_can_use_bot(&self) -> Result<(), base_data::Error> {
+    async fn reset_can_use_bot(&self) -> Result<(), silverpelt::Error> {
         load_can_use_bot_whitelist(&self.pool).await?;
         Ok(())
     }
@@ -140,7 +152,7 @@ impl base_data::Props for Props {
     async fn set_proxysupport_data(
         &self,
         data: proxy_support::ProxySupportData,
-    ) -> Result<(), base_data::Error> {
+    ) -> Result<(), silverpelt::Error> {
         let mut guard = self.proxy_support_data.write().await;
         *guard = Some(Arc::new(data));
 
@@ -165,13 +177,13 @@ pub static CAN_USE_BOT_CACHE: Lazy<RwLock<CanUseBotList>> = Lazy::new(|| {
 //
 // Format of a permodule toggle is (module_name, toggle)
 pub static PERMODULE_FUNCTIONS: Lazy<
-    dashmap::DashMap<(String, String), base_data::permodule::ToggleFunc>,
+    dashmap::DashMap<(String, String), splashcore_rs::permodule_functions::ToggleFunc>,
 > = Lazy::new(dashmap::DashMap::new);
 
 pub struct PermoduleFunctionExecutor {}
 
 #[async_trait::async_trait]
-impl base_data::permodule::PermoduleFunctionExecutor for PermoduleFunctionExecutor {
+impl splashcore_rs::permodule_functions::PermoduleFunctionExecutor for PermoduleFunctionExecutor {
     async fn execute_permodule_function(
         &self,
         cache_http: &botox::cache::CacheHttpImpl,
@@ -432,6 +444,7 @@ async fn event_listener<'a>(
                 let ipc_ref = props.mewld_ipc.clone();
                 let ch = CacheHttpImpl::from_ctx(ctx.serenity_context);
                 let sm = ctx.shard_manager().clone();
+                let redis_pool_am = ipc_ref.redis_pool.clone();
                 tokio::task::spawn(async move {
                     let ipc_ref = ipc_ref;
                     ipc_ref.start_ipc_listener(&ch, &sm).await;
@@ -440,6 +453,7 @@ async fn event_listener<'a>(
                 // And for animus magic
                 let am = Arc::new(AnimusMagicClient::new(ClientData {
                     data: data.clone(),
+                    redis_pool: redis_pool_am,
                     cache_http: CacheHttpImpl::from_ctx(ctx.serenity_context),
                 }));
 
@@ -529,21 +543,18 @@ async fn event_listener<'a>(
     // Create context for event handlers, this is done here and wrapped in an Arc to avoid useless clones
     let event_handler_context = Arc::new(EventHandlerContext {
         guild_id: event_guild_id,
-        full_event: event.clone(),
         data: ctx.user_data(),
+        full_event: event.clone(),
         serenity_context: ctx.serenity_context.clone(),
     });
 
     let mut set = tokio::task::JoinSet::new();
-    for (module, evts) in modules::SILVERPELT_CACHE
-        .module_event_listeners_cache
-        .iter()
-    {
+    for (id, module) in (*SILVERPELT_CACHE).module_cache.iter() {
         let module_enabled = match is_module_enabled(
-            &modules::SILVERPELT_CACHE,
+            &event_handler_context.data.silverpelt_cache,
             &event_handler_context.data.pool,
             event_guild_id,
-            module,
+            id,
         )
         .await
         {
@@ -558,11 +569,9 @@ async fn event_listener<'a>(
             continue;
         }
 
-        log::trace!("Executing event handlers for {}", module);
-
-        for evth in evts.iter() {
-            let event_handler_context = event_handler_context.clone();
-            set.spawn(async move { evth(&event_handler_context).await });
+        for event_handler in module.event_handlers.iter() {
+            let ehr = event_handler_context.clone();
+            set.spawn(async move { (event_handler)(&ehr).await });
         }
     }
 
@@ -835,7 +844,7 @@ async fn main() {
                 let command = ctx.command();
 
                 let res = silverpelt::cmd::check_command(
-                    &modules::SILVERPELT_CACHE,
+                    &data.silverpelt_cache,
                     &command.qualified_name,
                     guild_id,
                     ctx.author().id,
@@ -936,7 +945,6 @@ async fn main() {
     });
 
     let data = Data {
-        redis_pool: pool.clone(),
         object_store: Arc::new(
             config::CONFIG
                 .object_storage
@@ -945,8 +953,9 @@ async fn main() {
         ),
         pool: pg_pool.clone(),
         reqwest,
-        extra_data: Arc::new(None::<()>),
+        extra_data: dashmap::DashMap::new(),
         props: props.clone(),
+        silverpelt_cache: (*SILVERPELT_CACHE).clone(),
     };
 
     info!("Initializing bot state");

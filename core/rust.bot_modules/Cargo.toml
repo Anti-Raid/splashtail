@@ -30,11 +30,11 @@ silverpelt = { path = "../rust.silverpelt" }
 splashcore_rs = { path = "../rust.std" }
 permissions = { path = "../rust.permissions" }
 splashcore_text = { path = "../rust.text" }
-base_data = { path = "../rust.base_data" }
 config = { path = "../rust.config" }
 module_settings = { path = "../rust.module_settings" }
 gwevent = { path = "../rust.gwevent" }
 proxy_support = { path = "../rust.proxy_support" }
+limits = { path = "../rust.limits" }
 templating = { path = "../rust.templating" }
 
 [dependencies.tokio]

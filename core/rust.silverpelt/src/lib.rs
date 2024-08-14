@@ -1,6 +1,7 @@
 pub mod cache;
 pub mod canonical_module;
 pub mod cmd;
+pub mod data;
 pub mod jobserver;
 pub mod member_permission_calc;
 pub mod module_config;
@@ -14,35 +15,27 @@ use crate::types::{CommandExtendedData, CommandExtendedDataMap};
 use futures_util::future::BoxFuture;
 use std::sync::Arc;
 
-pub type Command = poise::Command<base_data::Data, base_data::Error>;
-pub type Context<'a> = poise::Context<'a, base_data::Data, base_data::Error>;
+pub type Error = Box<dyn std::error::Error + Send + Sync>; // This is constant and should be copy pasted
+pub type Command = poise::Command<data::Data, Error>;
+pub type Context<'a> = poise::Context<'a, data::Data, Error>;
 
 pub struct EventHandlerContext {
     pub guild_id: serenity::all::GuildId,
     pub full_event: serenity::all::FullEvent,
-    pub data: Arc<base_data::Data>,
+    pub data: Arc<data::Data>,
     pub serenity_context: serenity::all::Context,
 }
 
-pub type ModuleEventHandler = Box<
-    dyn Send
-        + Sync
-        + for<'a> Fn(&'a EventHandlerContext) -> BoxFuture<'a, Result<(), base_data::Error>>,
->;
+pub type ModuleEventHandler =
+    Box<dyn Send + Sync + for<'a> Fn(&'a EventHandlerContext) -> BoxFuture<'a, Result<(), Error>>>;
 
-pub type OnStartupFunction = Box<
-    dyn Send
-        + Sync
-        + for<'a> Fn(&'a base_data::Data) -> BoxFuture<'a, Result<(), base_data::Error>>,
->;
+pub type OnStartupFunction =
+    Box<dyn Send + Sync + for<'a> Fn(&'a data::Data) -> BoxFuture<'a, Result<(), Error>>>;
 
 pub type OnReadyFunction = Box<
     dyn Send
         + Sync
-        + for<'a> Fn(
-            serenity::all::Context,
-            &'a base_data::Data,
-        ) -> BoxFuture<'a, Result<(), base_data::Error>>,
+        + for<'a> Fn(serenity::all::Context, &'a data::Data) -> BoxFuture<'a, Result<(), Error>>,
 >;
 
 pub type BackgroundTask = (
@@ -112,7 +105,7 @@ impl Module {
     /// Parses a module and performs basic checks before starting the bot to ensure a proper module setup
     pub fn parse(self) -> Module {
         #[poise::command(prefix_command, slash_command, rename = "")]
-        pub async fn base_cmd(_ctx: crate::Context<'_>) -> Result<(), base_data::Error> {
+        pub async fn base_cmd(_ctx: crate::Context<'_>) -> Result<(), Error> {
             Ok(())
         }
 

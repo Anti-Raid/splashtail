@@ -1,10 +1,10 @@
-use base_data::Error;
 use futures_util::StreamExt;
 use serenity::all::{ChannelId, CreateEmbed, EditMessage};
 use serenity::small_fixed_array::TruncatingInto;
 use serenity::utils::shard_id;
 use silverpelt::jobserver::{embed as embed_task, get_icon_of_state};
 use silverpelt::Context;
+use silverpelt::Error;
 use splashcore_rs::animusmagic::protocol::serialize_data;
 use splashcore_rs::animusmagic::responses::jobserver::{
     JobserverAnimusMessage, JobserverAnimusResponse,
@@ -267,13 +267,12 @@ pub async fn backups_list(ctx: Context<'_>) -> Result<(), Error> {
         return Err("This command can only be used in a guild".into());
     };
 
-    let mut backup_tasks = jobserver::Task::from_guild_and_task_name(
-        guild_id,
-        "guild_create_backup",
-        &ctx.data().pool,
-    )
-    .await
-    .map_err(|e| format!("Failed to get backup tasks: {}", e))?;
+    let data = ctx.data();
+
+    let mut backup_tasks =
+        jobserver::Task::from_guild_and_task_name(guild_id, "guild_create_backup", &data.pool)
+            .await
+            .map_err(|e| format!("Failed to get backup tasks: {}", e))?;
 
     if backup_tasks.is_empty() {
         ctx.say("You don't have any backups yet!\n\n**TIP:** Use `/backups create` to create your first server backup :heart:").await?;
@@ -400,7 +399,7 @@ pub async fn backups_list(ctx: Context<'_>) -> Result<(), Error> {
             "backups_delete" => {
                 // Check permission
                 let perm_res = silverpelt::cmd::check_command(
-                    &crate::SILVERPELT_CACHE,
+                    &data.silverpelt_cache,
                     "backups delete",
                     guild_id,
                     ctx.author().id,
@@ -491,7 +490,6 @@ pub async fn backups_list(ctx: Context<'_>) -> Result<(), Error> {
 
                         let mut status = Vec::new();
 
-                        let data = &ctx.data();
                         match task
                             .delete_from_storage(&data.reqwest, &data.object_store)
                             .await
@@ -522,7 +520,7 @@ pub async fn backups_list(ctx: Context<'_>) -> Result<(), Error> {
                         }
 
                         // Lastly deleting the task from the database
-                        match task.delete_from_db(&ctx.data().pool).await {
+                        match task.delete_from_db(&data.pool).await {
                             Ok(_) => {
                                 status.push(":white_check_mark: Successfully deleted the backup task from database".to_string());
                             }

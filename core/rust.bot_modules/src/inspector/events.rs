@@ -2,9 +2,9 @@ use super::dehoist::dehoist_user;
 use super::types::{
     DehoistOptions, FakeBotDetectionOptions, GuildProtectionOptions, TriggeredFlags, MAX_MENTIONS,
 };
-use base_data::Error;
 use proxy_support::{guild, member_in_guild};
 use serenity::all::FullEvent;
+use silverpelt::Error;
 use silverpelt::{module_config::is_module_enabled, EventHandlerContext};
 
 pub async fn event_listener(ectx: &EventHandlerContext) -> Result<(), Error> {
@@ -66,7 +66,7 @@ pub async fn event_listener(ectx: &EventHandlerContext) -> Result<(), Error> {
                 // Apply stings
                 if triggered_stings > 0
                     && is_module_enabled(
-                        &crate::SILVERPELT_CACHE,
+                        &data.silverpelt_cache,
                         &data.pool,
                         ectx.guild_id,
                         "punishments",
@@ -252,7 +252,7 @@ pub async fn event_listener(ectx: &EventHandlerContext) -> Result<(), Error> {
 
                 // Send audit logs if Audit Logs module is enabled
                 if silverpelt::module_config::is_module_enabled(
-                    &crate::SILVERPELT_CACHE,
+                    &data.silverpelt_cache,
                     &data.pool,
                     ectx.guild_id,
                     "auditlogs",
@@ -266,6 +266,7 @@ pub async fn event_listener(ectx: &EventHandlerContext) -> Result<(), Error> {
 
                     crate::auditlogs::events::dispatch_audit_log(
                         ctx,
+                        data,
                         "AR/MemberJoinInspectionFailed",
                         "(Anti-Raid) Member Join Inspection Failed",
                         imap,

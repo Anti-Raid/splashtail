@@ -1,5 +1,5 @@
-use base_data::Error;
 use silverpelt::Context;
+use silverpelt::Error;
 use splashcore_rs::value::Value;
 
 /// Limits base command
@@ -17,7 +17,6 @@ pub async fn limits(_ctx: Context<'_>) -> Result<(), Error> {
 #[poise::command(prefix_command, slash_command, guild_only, rename = "view")]
 pub async fn limits_view(ctx: Context<'_>) -> Result<(), Error> {
     silverpelt::settings_poise::settings_viewer(
-        &crate::SILVERPELT_CACHE,
         &ctx,
         &super::settings::GUILD_LIMITS,
         indexmap::IndexMap::new(),
@@ -39,7 +38,6 @@ pub async fn limits_add(
     #[description = "The number of stings to give on hitting the limit"] stings: i32,
 ) -> Result<(), Error> {
     silverpelt::settings_poise::settings_creator(
-        &crate::SILVERPELT_CACHE,
         &ctx,
         &super::settings::GUILD_LIMITS,
         indexmap::indexmap! {
@@ -69,7 +67,6 @@ pub async fn limits_update(
     #[description = "The number of stings to give on hitting the limit"] stings: i32,
 ) -> Result<(), Error> {
     silverpelt::settings_poise::settings_updater(
-        &crate::SILVERPELT_CACHE,
         &ctx,
         &super::settings::GUILD_LIMITS,
         indexmap::indexmap! {
@@ -93,7 +90,6 @@ pub async fn limits_remove(
     limit_id: String,
 ) -> Result<(), Error> {
     silverpelt::settings_poise::settings_deleter(
-        &crate::SILVERPELT_CACHE,
         &ctx,
         &super::settings::GUILD_LIMITS,
         Value::String(limit_id),
@@ -118,18 +114,13 @@ pub async fn past_hit_limits_view(
     ctx: Context<'_>,
     #[description = "The user id to filter by"] user_id: Option<serenity::all::UserId>,
 ) -> Result<(), Error> {
-    silverpelt::settings_poise::settings_viewer(
-        &crate::SILVERPELT_CACHE,
-        &ctx,
-        &super::settings::PAST_HIT_LIMITS,
-        {
-            let mut map = indexmap::IndexMap::new();
-            if let Some(user_id) = user_id {
-                map.insert("user_id".to_string(), Value::String(user_id.to_string()));
-            }
-            map
-        },
-    )
+    silverpelt::settings_poise::settings_viewer(&ctx, &super::settings::PAST_HIT_LIMITS, {
+        let mut map = indexmap::IndexMap::new();
+        if let Some(user_id) = user_id {
+            map.insert("user_id".to_string(), Value::String(user_id.to_string()));
+        }
+        map
+    })
     .await
 }
 
@@ -140,7 +131,6 @@ pub async fn past_hit_limits_remove(
     #[description = "The past hit limit ID to remove"] past_hit_limit_id: String,
 ) -> Result<(), Error> {
     silverpelt::settings_poise::settings_deleter(
-        &crate::SILVERPELT_CACHE,
         &ctx,
         &super::settings::PAST_HIT_LIMITS,
         Value::String(past_hit_limit_id),
@@ -165,18 +155,13 @@ pub async fn limit_user_actions_view(
     ctx: Context<'_>,
     #[description = "The user id to filter by"] user_id: Option<serenity::all::UserId>,
 ) -> Result<(), Error> {
-    silverpelt::settings_poise::settings_viewer(
-        &crate::SILVERPELT_CACHE,
-        &ctx,
-        &super::settings::USER_ACTIONS,
-        {
-            let mut map = indexmap::IndexMap::new();
-            if let Some(user_id) = user_id {
-                map.insert("user_id".to_string(), Value::String(user_id.to_string()));
-            }
-            map
-        },
-    )
+    silverpelt::settings_poise::settings_viewer(&ctx, &super::settings::USER_ACTIONS, {
+        let mut map = indexmap::IndexMap::new();
+        if let Some(user_id) = user_id {
+            map.insert("user_id".to_string(), Value::String(user_id.to_string()));
+        }
+        map
+    })
     .await
 }
 
@@ -187,7 +172,6 @@ pub async fn limit_user_actions_remove(
     #[description = "The user action ID to remove"] user_action_id: String,
 ) -> Result<(), Error> {
     silverpelt::settings_poise::settings_deleter(
-        &crate::SILVERPELT_CACHE,
         &ctx,
         &super::settings::USER_ACTIONS,
         Value::String(user_action_id),

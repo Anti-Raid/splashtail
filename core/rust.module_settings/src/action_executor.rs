@@ -1,6 +1,7 @@
 use super::state::State;
 use super::types::{
-    ActionConditionContext, ColumnAction, NativeActionContext, OperationType, SettingsError,
+    ActionConditionContext, ColumnAction, NativeActionContext, OperationType, SettingsData,
+    SettingsError,
 };
 use splashcore_rs::value::Value;
 
@@ -12,8 +13,7 @@ pub async fn execute_actions(
     author: serenity::all::UserId,
     guild_id: serenity::all::GuildId,
     data_store: &mut dyn super::types::DataStore,
-    data: &base_data::Data,
-    cache_http: &botox::cache::CacheHttpImpl,
+    data: &SettingsData,
 ) -> Result<(), SettingsError> {
     for action in actions {
         match action {
@@ -48,9 +48,8 @@ pub async fn execute_actions(
                 }
 
                 match data
-                    .props
-                    .permodule_executor()
-                    .execute_permodule_function(cache_http, module, function, &args)
+                    .permodule_executor
+                    .execute_permodule_function(&data.cache_http, module, function, &args)
                     .await
                 {
                     Ok(()) => (),
@@ -94,7 +93,6 @@ pub async fn execute_actions(
                     operation_type,
                     data_store,
                     data,
-                    cache_http,
                 };
                 action(nac, state).await?;
             }

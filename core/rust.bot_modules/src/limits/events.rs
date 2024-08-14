@@ -5,7 +5,7 @@ use serenity::model::guild::audit_log::{Action, ChannelAction};
 use super::handler::handle_mod_action;
 use silverpelt::EventHandlerContext;
 
-pub async fn event_listener(ectx: &EventHandlerContext) -> Result<(), base_data::Error> {
+pub async fn event_listener(ectx: &EventHandlerContext) -> Result<(), silverpelt::Error> {
     let ctx = &ectx.serenity_context;
     let event = &ectx.full_event;
 

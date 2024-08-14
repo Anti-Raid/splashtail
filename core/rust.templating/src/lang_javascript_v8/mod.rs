@@ -63,7 +63,7 @@ mod test {
                 }
             }
 
-            Ok::<(), base_data::Error>(())
+            Ok::<(), crate::Error>(())
         })
         .await
         .unwrap()

@@ -1,5 +1,5 @@
-use base_data::Error;
 use silverpelt::Context;
+use silverpelt::Error;
 use splashcore_rs::value::Value;
 use std::sync::LazyLock;
 
@@ -154,7 +154,6 @@ pub async fn inspector(_ctx: Context<'_>) -> Result<(), Error> {
 )]
 pub async fn inspector_list(ctx: Context<'_>) -> Result<(), Error> {
     silverpelt::settings_poise::settings_viewer(
-        &crate::SILVERPELT_CACHE,
         &ctx,
         &super::settings::INSPECTOR_OPTIONS,
         indexmap::IndexMap::new(),
@@ -193,7 +192,6 @@ pub async fn inspector_setup(
     fake_bot_detection: Option<String>,
 ) -> Result<(), Error> {
     silverpelt::settings_poise::settings_creator(
-        &crate::SILVERPELT_CACHE,
         &ctx,
         &super::settings::INSPECTOR_OPTIONS,
         indexmap::indexmap! {
@@ -248,7 +246,6 @@ pub async fn inspector_update(
     fake_bot_detection: Option<String>,
 ) -> Result<(), Error> {
     silverpelt::settings_poise::settings_updater(
-        &crate::SILVERPELT_CACHE,
         &ctx,
         &super::settings::INSPECTOR_OPTIONS,
         indexmap::indexmap! {
@@ -281,17 +278,12 @@ pub async fn inspector_update(
     rename = "disable"
 )]
 pub async fn inspector_disable(ctx: Context<'_>) -> Result<(), Error> {
-    silverpelt::settings_poise::settings_deleter(
-        &crate::SILVERPELT_CACHE,
-        &ctx,
-        &super::settings::INSPECTOR_OPTIONS,
-        {
-            if let Some(guild_id) = ctx.guild_id() {
-                Value::String(guild_id.to_string())
-            } else {
-                return Err("Guild ID not found".into());
-            }
-        },
-    )
+    silverpelt::settings_poise::settings_deleter(&ctx, &super::settings::INSPECTOR_OPTIONS, {
+        if let Some(guild_id) = ctx.guild_id() {
+            Value::String(guild_id.to_string())
+        } else {
+            return Err("Guild ID not found".into());
+        }
+    })
     .await
 }

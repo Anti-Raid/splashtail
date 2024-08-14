@@ -7,7 +7,7 @@ use silverpelt::EventHandlerContext;
 
 static DEFAULT_TEMPLATES: Dir<'_> = include_dir!("$CARGO_MANIFEST_DIR/src/auditlogs/templates");
 
-pub fn load_embedded_event_template(event: &str) -> Result<String, base_data::Error> {
+pub fn load_embedded_event_template(event: &str) -> Result<String, silverpelt::Error> {
     let template = match DEFAULT_TEMPLATES.get_file(format!("{}.art", event)) {
         Some(template) => template,
         None => {
@@ -35,7 +35,7 @@ pub const fn not_audit_loggable_event() -> &'static [&'static str] {
     ]
 }
 
-pub async fn event_listener(ectx: &EventHandlerContext) -> Result<(), base_data::Error> {
+pub async fn event_listener(ectx: &EventHandlerContext) -> Result<(), silverpelt::Error> {
     let ctx = &ectx.serenity_context;
     let event = &ectx.full_event;
 
@@ -82,6 +82,7 @@ pub async fn event_listener(ectx: &EventHandlerContext) -> Result<(), base_data:
 
     dispatch_audit_log(
         ctx,
+        &ectx.data,
         event_name,
         &event_titlename,
         expanded_event,
@@ -93,7 +94,8 @@ pub async fn event_listener(ectx: &EventHandlerContext) -> Result<(), base_data:
 pub async fn check_event_matches(
     event_name: &str,
     filters: Vec<String>,
-) -> Result<bool, base_data::Error> {
+    silverpelt_cache: &silverpelt::cache::SilverpeltCache,
+) -> Result<bool, silverpelt::Error> {
     // If empty, always return Ok
     if filters.is_empty() {
         return Ok(true);
@@ -112,7 +114,7 @@ pub async fn check_event_matches(
     }
 
     for regex in regexes {
-        match crate::SILVERPELT_CACHE.regex_match(regex, event_name).await {
+        match silverpelt_cache.regex_match(regex, event_name).await {
             Ok(true) => return Ok(true),
             Ok(false) => {}
             Err(e) => {
@@ -126,15 +128,14 @@ pub async fn check_event_matches(
 
 pub async fn dispatch_audit_log(
     ctx: &serenity::client::Context,
+    data: &silverpelt::data::Data,
     event_name: &str,
     event_titlename: &str,
     expanded_event: indexmap::IndexMap<String, CategorizedField>,
     guild_id: serenity::model::id::GuildId,
-) -> Result<(), base_data::Error> {
-    let user_data = ctx.data::<base_data::Data>();
-
+) -> Result<(), silverpelt::Error> {
     let sinks = sqlx::query!("SELECT id, type AS typ, sink, events, embed_template, send_json_context FROM auditlogs__sinks WHERE guild_id = $1 AND broken = false", guild_id.to_string())
-        .fetch_all(&user_data.pool)
+        .fetch_all(&data.pool)
         .await?;
 
     if sinks.is_empty() {
@@ -152,7 +153,7 @@ pub async fn dispatch_audit_log(
     for sink in sinks {
         // Verify event in whitelisted event list, if events is set
         if let Some(events) = sink.events {
-            if !check_event_matches(event_name, events).await? {
+            if !check_event_matches(event_name, events, &data.silverpelt_cache).await? {
                 continue;
             }
         }
@@ -173,7 +174,7 @@ pub async fn dispatch_audit_log(
         let discord_reply = match templating::render_message_template(
             guild_id,
             &template,
-            user_data.pool.clone(),
+            data.pool.clone(),
             templating::core::MessageTemplateContext {
                 event_titlename: event_titlename.to_string(),
                 event_name: event_name.to_string(),
@@ -236,7 +237,7 @@ pub async fn dispatch_audit_log(
                                         "UPDATE auditlogs__sinks SET broken = true WHERE id = $1",
                                         sink.id
                                     )
-                                    .execute(&user_data.pool)
+                                    .execute(&data.pool)
                                     .await?;
                                 }
                                 _ => {}
@@ -279,7 +280,7 @@ pub async fn dispatch_audit_log(
                                 "UPDATE auditlogs__sinks SET broken = true WHERE id = $1",
                                 sink.id
                             )
-                            .execute(&user_data.pool)
+                            .execute(&data.pool)
                             .await?;
                         }
                         _ => {}

@@ -14,8 +14,9 @@ use splashcore_rs::animusmagic::protocol::{
 use std::sync::Arc;
 
 pub struct ClientData {
-    pub data: Arc<base_data::Data>,
+    pub data: Arc<silverpelt::data::Data>,
     pub cache_http: CacheHttpImpl,
+    pub redis_pool: fred::clients::RedisPool,
 }
 
 pub struct ClientDataWrapper(pub Arc<ClientData>);
@@ -30,7 +31,6 @@ async fn publish(data: Arc<ClientData>, payload: Vec<u8>) -> Result<(), Error> {
     let payload = RedisValue::Bytes(payload.into());
 
     match data
-        .data
         .redis_pool
         .next()
         .publish(MEWLD_ARGS.animus_magic_channel.as_str(), payload)
@@ -82,25 +82,14 @@ impl AnimusMagicClient {
     /// These messages will then be passed on to the underlying client
     pub async fn listen(&self) -> ! {
         // Subscribes to the redis IPC channels we need to subscribe to
-        let cfg = self
-            .underlying_client
-            .state
-            .0
-            .data
-            .redis_pool
-            .client_config();
+        let cfg = self.underlying_client.state.0.redis_pool.client_config();
 
         let subscriber = Builder::from_config(cfg).build_subscriber_client().unwrap();
 
         subscriber.connect();
         subscriber.wait_for_connect().await.unwrap();
 
-        self.underlying_client
-            .state
-            .0
-            .data
-            .redis_pool
-            .connect_pool();
+        self.underlying_client.state.0.redis_pool.connect_pool();
 
         let mut message_stream = subscriber.message_rx();
 

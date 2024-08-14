@@ -1,4 +1,4 @@
-use base_data::Error;
+use silverpelt::Error;
 use silverpelt::Context;
 
 use serenity::all::{CreateEmbed, Member, Mentionable, User};

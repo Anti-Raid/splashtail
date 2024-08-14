@@ -100,7 +100,7 @@ impl GuildCommandConfiguration {
     pub async fn to_full_guild_command_configuration(
         self,
         pool: &sqlx::PgPool,
-    ) -> Result<FullGuildCommandConfiguration, base_data::Error> {
+    ) -> Result<FullGuildCommandConfiguration, crate::Error> {
         let id = self.id.parse::<sqlx::types::uuid::Uuid>()?;
         let audit_info = sqlx::query!(
             r#"

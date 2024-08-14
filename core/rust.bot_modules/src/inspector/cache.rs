@@ -16,7 +16,7 @@ pub struct FakeBots {
 
 pub static FAKE_BOTS_CACHE: Lazy<DashMap<UserId, FakeBots>> = Lazy::new(DashMap::new);
 
-pub async fn setup_fake_bots_cache(pool: &sqlx::PgPool) -> Result<(), base_data::Error> {
+pub async fn setup_fake_bots_cache(pool: &sqlx::PgPool) -> Result<(), silverpelt::Error> {
     let fake_bots =
         sqlx::query!("SELECT bot_id, name, official_bot_ids FROM inspector__fake_bots",)
             .fetch_all(pool)
@@ -80,7 +80,7 @@ impl Default for BasicAntispamConfig {
 pub static BASIC_ANTISPAM_CONFIG_CACHE: Lazy<Cache<serenity::all::GuildId, BasicAntispamConfig>> =
     Lazy::new(|| Cache::builder().support_invalidation_closures().build());
 
-pub async fn setup_cache_initial(data: &sqlx::PgPool) -> Result<(), base_data::Error> {
+pub async fn setup_cache_initial(data: &sqlx::PgPool) -> Result<(), silverpelt::Error> {
     let config = sqlx::query!(
         "SELECT guild_id, anti_invite, anti_everyone, fake_bot_detection, guild_protection, hoist_detection, minimum_account_age, maximum_account_age, sting_retention FROM inspector__options",
     )
@@ -117,7 +117,7 @@ pub async fn setup_cache_initial(data: &sqlx::PgPool) -> Result<(), base_data::E
 pub async fn get_config(
     pool: &sqlx::PgPool,
     guild_id: serenity::all::GuildId,
-) -> Result<BasicAntispamConfig, base_data::Error> {
+) -> Result<BasicAntispamConfig, silverpelt::Error> {
     if let Some(config) = BASIC_ANTISPAM_CONFIG_CACHE.get(&guild_id).await {
         Ok(config.clone())
     } else {
@@ -159,15 +159,15 @@ pub async fn get_config(
     }
 }
 
-pub async fn setup_am_toggle(data: &base_data::Data) -> Result<(), base_data::Error> {
-    async fn clear(options: &indexmap::IndexMap<String, Value>) -> Result<(), base_data::Error> {
+pub async fn setup_am_toggle(data: &silverpelt::data::Data) -> Result<(), silverpelt::Error> {
+    async fn clear(options: &indexmap::IndexMap<String, Value>) -> Result<(), silverpelt::Error> {
         let Some(Value::String(guild_id)) = options.get("gulld_id") else {
             return Err("No guild_id provided".into());
         };
 
         let guild_id = guild_id.parse::<serenity::all::GuildId>()?;
 
-        BASIC_ANTISPAM_CONFIG_CACHE.remove(&guild_id).await;
+        BASIC_ANTISPAM_CONFIG_CACHE.invalidate(&guild_id).await;
 
         Ok(())
     }

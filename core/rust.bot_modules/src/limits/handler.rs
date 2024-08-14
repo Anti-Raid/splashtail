@@ -1,8 +1,8 @@
 use super::core;
 use crate::limits::core::Limit;
-use base_data::Error;
 use botox::crypto::gen_random;
 use poise::serenity_prelude::{GuildId, UserId};
+use silverpelt::Error;
 use std::collections::{HashMap, HashSet};
 
 pub struct HandleModAction {
@@ -22,7 +22,7 @@ pub async fn handle_mod_action(
     ctx: &serenity::all::Context,
     ha: &HandleModAction,
 ) -> Result<(), Error> {
-    let data = ctx.data::<base_data::Data>();
+    let data = ctx.data::<silverpelt::data::Data>();
 
     let guild_id = ha.guild_id;
     let limit = ha.limit;
@@ -123,7 +123,7 @@ pub async fn handle_mod_action(
 
     if stings > 0
         && silverpelt::module_config::is_module_enabled(
-            &crate::SILVERPELT_CACHE,
+            &data.silverpelt_cache,
             &data.pool,
             guild_id,
             "punishments",

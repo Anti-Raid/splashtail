@@ -1,12 +1,14 @@
 use futures_util::future::FutureExt;
 use serenity::all::GuildId;
 use splashcore_rs::value::Value;
+use std::sync::Arc;
 
-pub async fn setup(data: &base_data::Data) -> Result<(), base_data::Error> {
+pub async fn setup(data: &silverpelt::data::Data) -> Result<(), silverpelt::Error> {
+    let sc = data.silverpelt_cache.clone();
     data.props.add_permodule_function(
         "settings",
         "toggle_module",
-        Box::new(move |_, options| toggle_module(options).boxed()),
+        Box::new(move |_, options| toggle_module(sc.clone(), options).boxed()),
     );
 
     Ok(())
@@ -18,8 +20,9 @@ pub async fn setup(data: &base_data::Data) -> Result<(), base_data::Error> {
 /// - `enabled` - Whether the module is enabled or not [bool]
 /// - `guild_id` - The guild ID to clear the cache for. If not provided, the cache will be cleared globally [Option<String>]
 pub async fn toggle_module(
+    silverpelt_cache: Arc<silverpelt::cache::SilverpeltCache>,
     value: &indexmap::IndexMap<String, Value>,
-) -> Result<(), base_data::Error> {
+) -> Result<(), silverpelt::Error> {
     let module = match value.get("module") {
         Some(Value::String(s)) => s,
         _ => return Err("`module` could not be parsed".into()),
@@ -38,15 +41,15 @@ pub async fn toggle_module(
             _ => return Err("`guild_id` could not be parsed".into()),
         };
 
-        crate::SILVERPELT_CACHE
+        silverpelt_cache
             .module_enabled_cache
             .insert((guild_id, module.clone()), enabled)
             .await;
     } else {
         // Global enable/disable the module by iterating the entire cache
-        for (k, v) in crate::SILVERPELT_CACHE.module_enabled_cache.iter() {
+        for (k, v) in silverpelt_cache.module_enabled_cache.iter() {
             if k.1 == *module && enabled != v {
-                crate::SILVERPELT_CACHE
+                silverpelt_cache
                     .module_enabled_cache
                     .insert((k.0, module.clone()), enabled)
                     .await;

@@ -1,6 +1,6 @@
-use base_data::Error;
 use serenity::all::Role;
 use silverpelt::Context;
+use silverpelt::Error;
 use splashcore_rs::value::Value;
 
 #[poise::command(
@@ -29,7 +29,6 @@ pub async fn guildroles(_ctx: Context<'_>) -> Result<(), Error> {
 )]
 pub async fn guildroles_list(ctx: Context<'_>) -> Result<(), Error> {
     silverpelt::settings_poise::settings_viewer(
-        &crate::SILVERPELT_CACHE,
         &ctx,
         &super::settings::GUILD_ROLES,
         indexmap::IndexMap::new(),
@@ -52,7 +51,6 @@ pub async fn guildroles_add(
     #[description = "The index of the role"] index: Option<i32>,
 ) -> Result<(), Error> {
     silverpelt::settings_poise::settings_creator(
-        &crate::SILVERPELT_CACHE,
         &ctx,
         &super::settings::GUILD_ROLES,
         indexmap::indexmap! {
@@ -79,7 +77,6 @@ pub async fn guildroles_edit(
     #[description = "The index of the role"] index: Option<i32>,
 ) -> Result<(), Error> {
     silverpelt::settings_poise::settings_updater(
-        &crate::SILVERPELT_CACHE,
         &ctx,
         &super::settings::GUILD_ROLES,
         indexmap::indexmap! {
@@ -104,7 +101,6 @@ pub async fn guildroles_remove(
     #[description = "The role to remove"] role: Role,
 ) -> Result<(), Error> {
     silverpelt::settings_poise::settings_deleter(
-        &crate::SILVERPELT_CACHE,
         &ctx,
         &super::settings::GUILD_ROLES,
         Value::String(role.id.to_string()),

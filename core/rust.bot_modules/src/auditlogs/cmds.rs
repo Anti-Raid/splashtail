@@ -1,6 +1,6 @@
-use base_data::Error;
 use serenity::all::ChannelId;
 use silverpelt::Context;
+use silverpelt::Error;
 use splashcore_rs::value::Value;
 
 #[poise::command(
@@ -23,7 +23,6 @@ pub async fn auditlogs(_ctx: Context<'_>) -> Result<(), Error> {
 #[poise::command(prefix_command, slash_command, user_cooldown = 1)]
 pub async fn list_sinks(ctx: Context<'_>) -> Result<(), Error> {
     silverpelt::settings_poise::settings_viewer(
-        &crate::SILVERPELT_CACHE,
         &ctx,
         &super::settings::SINK,
         indexmap::IndexMap::new(),
@@ -41,7 +40,6 @@ pub async fn add_sink(
     #[description = "Mark as broken (temporarily disables the webhook)"] broken: bool,
 ) -> Result<(), Error> {
     silverpelt::settings_poise::settings_creator(
-        &crate::SILVERPELT_CACHE,
         &ctx,
         &super::settings::SINK,
         indexmap::indexmap! {
@@ -89,7 +87,6 @@ pub async fn add_channel(
     #[description = "Specific events you want to filter by"] events: Option<String>,
 ) -> Result<(), Error> {
     silverpelt::settings_poise::settings_creator(
-        &crate::SILVERPELT_CACHE,
         &ctx,
         &super::settings::SINK,
         indexmap::indexmap! {
@@ -130,7 +127,6 @@ pub async fn add_discordhook(
     #[description = "Specific events you want to filter by"] events: Option<String>,
 ) -> Result<(), Error> {
     silverpelt::settings_poise::settings_creator(
-        &crate::SILVERPELT_CACHE,
         &ctx,
         &super::settings::SINK,
         indexmap::indexmap! {
@@ -175,7 +171,6 @@ pub async fn edit_sink(
     #[description = "Mark as broken (temporarily disables the webhook)"] broken: bool,
 ) -> Result<(), Error> {
     silverpelt::settings_poise::settings_updater(
-        &crate::SILVERPELT_CACHE,
         &ctx,
         &super::settings::SINK,
         indexmap::indexmap! {
@@ -222,7 +217,6 @@ pub async fn remove_sink(
     #[description = "Sink ID to remove"] sink_id: String,
 ) -> Result<(), Error> {
     silverpelt::settings_poise::settings_deleter(
-        &crate::SILVERPELT_CACHE,
         &ctx,
         &super::settings::SINK,
         Value::String(sink_id),

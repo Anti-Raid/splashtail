@@ -13,6 +13,14 @@ use async_trait::async_trait;
 use futures_util::future::BoxFuture;
 use std::sync::Arc;
 
+pub struct SettingsData {
+    pub pool: sqlx::PgPool,
+    pub reqwest: reqwest::Client,
+    pub object_store: Arc<splashcore_rs::objectstore::ObjectStore>,
+    pub cache_http: botox::cache::CacheHttpImpl,
+    pub permodule_executor: Box<dyn splashcore_rs::permodule_functions::PermoduleFunctionExecutor>,
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum SettingsError {
     /// Operation not supported
@@ -351,8 +359,7 @@ pub struct NativeActionContext<'a> {
     pub author: serenity::all::UserId,
     pub guild_id: serenity::all::GuildId,
     pub data_store: &'a mut dyn DataStore, // The current datastore
-    pub data: &'a base_data::Data,         // The data object
-    pub cache_http: &'a botox::cache::CacheHttpImpl, // The cache http object
+    pub data: &'a SettingsData,            // The data object
     pub operation_type: OperationType,
 }
 
@@ -649,8 +656,7 @@ pub trait CreateDataStore: Send + Sync {
         setting: &ConfigOption,
         guild_id: serenity::all::GuildId,
         author: serenity::all::UserId,
-        data: &base_data::Data,
-        cache_http: &botox::cache::CacheHttpImpl,
+        data: &SettingsData,
         common_filters: indexmap::IndexMap<String, splashcore_rs::value::Value>,
     ) -> Result<Box<dyn DataStore>, SettingsError>;
 }

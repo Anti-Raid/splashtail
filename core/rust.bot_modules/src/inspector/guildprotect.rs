@@ -1,9 +1,9 @@
 /// Since discord does not store past guild icons for a guild, so we have to store it manually
 /// on s3
 pub async fn fetch_guild_icon(
-    data: &base_data::Data,
+    data: &silverpelt::data::Data,
     guild_id: serenity::all::GuildId,
-) -> Result<Vec<u8>, base_data::Error> {
+) -> Result<Vec<u8>, silverpelt::Error> {
     let url = data.object_store.get_url(
         &format!("inspector/guild_icons/{}", guild_id),
         std::time::Duration::from_secs(120),
@@ -20,7 +20,7 @@ pub async fn save_guild_icon(
     object_store: &splashcore_rs::objectstore::ObjectStore,
     guild_id: serenity::all::GuildId,
     icon: &[u8],
-) -> Result<(), base_data::Error> {
+) -> Result<(), silverpelt::Error> {
     object_store
         .upload_file(
             reqwest_client,
@@ -55,7 +55,7 @@ impl Snapshot {
         pool: &sqlx::PgPool,
         reqwest_client: &reqwest::Client,
         object_store: &splashcore_rs::objectstore::ObjectStore,
-    ) -> Result<(), base_data::Error> {
+    ) -> Result<(), silverpelt::Error> {
         // Download icon from discord
         let mut icon_bytes = None;
         if let Some(icon) = self.icon_url() {
@@ -94,10 +94,10 @@ impl Snapshot {
     pub async fn revert(
         &self,
         ctx: &serenity::all::Context,
-        data: &base_data::Data,
+        data: &silverpelt::data::Data,
         change_name: bool,
         change_icon: bool,
-    ) -> Result<(), base_data::Error> {
+    ) -> Result<(), silverpelt::Error> {
         bitflags::bitflags! {
             #[derive(PartialEq, Debug, Clone, Copy)]
             pub struct InitialProtectionTriggers: i32 {
@@ -153,7 +153,7 @@ impl Snapshot {
             // Create audit log
             // Send audit logs if Audit Logs module is enabled
             if silverpelt::module_config::is_module_enabled(
-                &crate::SILVERPELT_CACHE,
+                &data.silverpelt_cache,
                 &data.pool,
                 self.guild_id,
                 "auditlogs",
@@ -167,6 +167,7 @@ impl Snapshot {
 
                 crate::auditlogs::events::dispatch_audit_log(
                     ctx,
+                    data,
                     "AR/GuildProtectRevert",
                     "(Anti-Raid) Guild Protection: Revert Changes",
                     imap,

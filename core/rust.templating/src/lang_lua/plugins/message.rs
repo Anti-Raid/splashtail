@@ -1,6 +1,6 @@
 use crate::core::{slice_chars, DiscordReply};
-use base_data::limits::{embed_limits, message_limits};
 use gwevent::field::{CategorizedField, Field};
+use limits::{embed_limits, message_limits};
 use mlua::prelude::*;
 use serde::{Deserialize, Serialize};
 
@@ -33,7 +33,7 @@ pub struct Message {
     pub content: Option<String>,
 }
 
-pub fn to_discord_reply<'a>(message: Message) -> Result<DiscordReply<'a>, base_data::Error> {
+pub fn to_discord_reply<'a>(message: Message) -> Result<DiscordReply<'a>, crate::Error> {
     let mut total_chars = 0;
     let mut total_content_chars = 0;
     let mut embeds = Vec::new();

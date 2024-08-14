@@ -11,6 +11,8 @@ mod lang_rhai;
 #[cfg(feature = "tera")]
 mod lang_tera;
 
+type Error = Box<dyn std::error::Error + Send + Sync>; // This is constant and should be copy pasted
+
 use once_cell::sync::Lazy;
 use permissions::types::PermissionResult;
 use std::str::FromStr;
@@ -55,7 +57,7 @@ pub struct TemplatePragma {
 }
 
 impl TemplatePragma {
-    pub fn parse(template: &str) -> Result<(&str, Self), base_data::Error> {
+    pub fn parse(template: &str) -> Result<(&str, Self), Error> {
         let (first_line, rest) = match template.find('\n') {
             Some(i) => template.split_at(i),
             None => return Err("No/unknown template language specified".into()),
@@ -143,7 +145,7 @@ pub async fn compile_template(
     template: &str,
     pool: sqlx::PgPool,
     opts: CompileTemplateOptions,
-) -> Result<(), base_data::Error> {
+) -> Result<(), Error> {
     let (template, pragma) = TemplatePragma::parse(template)?;
 
     match pragma.lang {
@@ -174,7 +176,7 @@ pub async fn render_message_template(
     pool: sqlx::PgPool,
     args: crate::core::MessageTemplateContext,
     opts: CompileTemplateOptions,
-) -> Result<core::DiscordReply, base_data::Error> {
+) -> Result<core::DiscordReply, Error> {
     let (template, pragma) = TemplatePragma::parse(template)?;
 
     match pragma.lang {

@@ -1,6 +1,7 @@
 use super::state::State;
 use super::types::{
-    Column, ColumnType, ConfigOption, CreateDataStore, DataStore, InnerColumnType, SettingsError,
+    Column, ColumnType, ConfigOption, CreateDataStore, DataStore, InnerColumnType, SettingsData,
+    SettingsError,
 };
 use async_trait::async_trait;
 use splashcore_rs::value::Value;
@@ -25,8 +26,7 @@ impl CreateDataStore for PostgresDataStore {
         setting: &ConfigOption,
         guild_id: serenity::all::GuildId,
         author: serenity::all::UserId,
-        data: &base_data::Data,
-        _cache_http: &botox::cache::CacheHttpImpl,
+        data: &SettingsData,
         common_filters: indexmap::IndexMap<String, splashcore_rs::value::Value>,
     ) -> Result<Box<dyn DataStore>, SettingsError> {
         Ok(Box::new(PostgresDataStoreImpl {

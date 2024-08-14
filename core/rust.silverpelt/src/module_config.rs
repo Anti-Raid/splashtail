@@ -19,7 +19,7 @@ pub async fn is_module_enabled(
     pool: &PgPool,
     guild_id: GuildId,
     module: &str,
-) -> Result<bool, base_data::Error> {
+) -> Result<bool, crate::Error> {
     if let Some(state) = silverpelt_cache
         .module_enabled_cache
         .get(&(guild_id, module.to_string()))
@@ -48,7 +48,7 @@ pub async fn is_module_enabled(
                 let module = silverpelt_cache
                     .module_cache
                     .get(module)
-                    .ok_or::<base_data::Error>(
+                    .ok_or::<crate::Error>(
                         format!("Could not find module {} in cache", module).into(),
                     )?;
 
@@ -63,7 +63,7 @@ pub async fn is_module_enabled(
             let module = silverpelt_cache
                 .module_cache
                 .get(module)
-                .ok_or::<base_data::Error>(
+                .ok_or::<crate::Error>(
                     format!("Could not find module {} in cache", module).into(),
                 )?;
 
@@ -81,7 +81,7 @@ pub async fn get_module_configuration(
     pool: &PgPool,
     guild_id: &str,
     module: &str,
-) -> Result<Option<GuildModuleConfiguration>, base_data::Error> {
+) -> Result<Option<GuildModuleConfiguration>, crate::Error> {
     let rec = sqlx::query!(
         "SELECT id, guild_id, module, disabled, default_perms FROM guild_module_configurations WHERE guild_id = $1 AND module = $2",
         guild_id,
@@ -113,7 +113,7 @@ pub async fn get_module_configuration(
 pub fn get_command_extended_data(
     silverpelt_cache: &SilverpeltCache,
     permutations: &[String],
-) -> Result<CommandExtendedData, base_data::Error> {
+) -> Result<CommandExtendedData, crate::Error> {
     let root_cmd = permutations.first().unwrap();
 
     let root_cmd_data = silverpelt_cache.command_extra_data_map.get(root_cmd);
@@ -157,7 +157,7 @@ pub async fn get_best_command_configuration(
     pool: &PgPool,
     guild_id: &str,
     permutations: &[String],
-) -> Result<Option<GuildCommandConfiguration>, base_data::Error> {
+) -> Result<Option<GuildCommandConfiguration>, crate::Error> {
     let mut command_configuration: Option<GuildCommandConfiguration> = None;
     for permutation in permutations.iter() {
         let rec = sqlx::query!(
@@ -214,7 +214,7 @@ pub async fn get_exact_command_configuration(
     pool: &PgPool,
     guild_id: &str,
     command: &str,
-) -> Result<Option<GuildCommandConfiguration>, base_data::Error> {
+) -> Result<Option<GuildCommandConfiguration>, crate::Error> {
     let mut command_configuration = None;
     let rec = sqlx::query!(
         "SELECT id, guild_id, command, perms, disabled FROM guild_command_configurations WHERE guild_id = $1 AND command = $2",
@@ -249,7 +249,7 @@ pub async fn get_all_command_configurations(
     pool: &PgPool,
     guild_id: &str,
     name: &str,
-) -> Result<Vec<GuildCommandConfiguration>, base_data::Error> {
+) -> Result<Vec<GuildCommandConfiguration>, crate::Error> {
     let permutations = permute_command_names(name);
 
     let mut command_configurations = Vec::new();

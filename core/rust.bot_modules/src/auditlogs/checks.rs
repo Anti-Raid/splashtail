@@ -1,4 +1,4 @@
-pub async fn check_all_events(events: Vec<String>) -> Result<(), base_data::Error> {
+pub async fn check_all_events(events: Vec<String>) -> Result<(), silverpelt::Error> {
     let is_killed = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
 
     let res_killed = is_killed.clone();

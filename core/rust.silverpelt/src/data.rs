@@ -1,23 +1,35 @@
-pub mod limits;
-pub mod permissions;
-pub mod permodule;
-
 use splashcore_rs::{animusmagic::client::AnimusMagicRequestClient, objectstore::ObjectStore};
 use std::sync::Arc;
-
-pub type Error = Box<dyn std::error::Error + Send + Sync>; // This is constant and should be copy pasted
 
 /// This struct stores base/standard command data, which is stored and accessible in all command invocations
 #[derive(Clone)]
 pub struct Data {
     pub pool: sqlx::PgPool,
-    pub redis_pool: fred::prelude::RedisPool,
     pub reqwest: reqwest::Client,
     pub object_store: Arc<ObjectStore>,
     pub props: Arc<dyn Props + Send + Sync>,
 
-    /// Any extra data
-    pub extra_data: Arc<dyn std::any::Any + Send + Sync>,
+    /// Any extra data represented as a key-value map
+    pub extra_data: dashmap::DashMap<i32, Arc<dyn std::any::Any + Send + Sync>>,
+
+    /// The silverpelt cache to use for this module
+    pub silverpelt_cache: Arc<crate::cache::SilverpeltCache>,
+}
+
+impl Data {
+    /// Given the Data and a cache_http, returns the settings data
+    pub fn settings_data(
+        &self,
+        cache_http: botox::cache::CacheHttpImpl,
+    ) -> module_settings::types::SettingsData {
+        module_settings::types::SettingsData {
+            pool: self.pool.clone(),
+            reqwest: self.reqwest.clone(),
+            object_store: self.object_store.clone(),
+            cache_http,
+            permodule_executor: self.props.permodule_executor(),
+        }
+    }
 }
 
 #[async_trait::async_trait]
@@ -29,13 +41,20 @@ where
     fn as_any(&self) -> &(dyn std::any::Any + Send + Sync);
 
     /// Returns the underlying client for animus magic
-    fn underlying_am_client(&self) -> Result<Box<dyn AnimusMagicRequestClient>, Error>;
+    fn underlying_am_client(&self) -> Result<Box<dyn AnimusMagicRequestClient>, crate::Error>;
 
     /// Returns the per module executor of the context
-    fn permodule_executor(&self) -> Box<dyn permodule::PermoduleFunctionExecutor>;
+    fn permodule_executor(
+        &self,
+    ) -> Box<dyn splashcore_rs::permodule_functions::PermoduleFunctionExecutor>;
 
     /// Adds a permodule function to the executor
-    fn add_permodule_function(&self, module: &str, function: &str, func: permodule::ToggleFunc);
+    fn add_permodule_function(
+        &self,
+        module: &str,
+        function: &str,
+        func: splashcore_rs::permodule_functions::ToggleFunc,
+    );
 
     /// The name of the service
     fn name(&self) -> String;
@@ -65,7 +84,7 @@ where
     async fn set_proxysupport_data(
         &self,
         data: proxy_support::ProxySupportData,
-    ) -> Result<(), Error>;
+    ) -> Result<(), crate::Error>;
 
     /// Total number of guilds
     ///
@@ -78,5 +97,5 @@ where
     fn total_users(&self) -> u64;
 
     /// Reset the can_use_bot whitelist
-    async fn reset_can_use_bot(&self) -> Result<(), Error>;
+    async fn reset_can_use_bot(&self) -> Result<(), crate::Error>;
 }

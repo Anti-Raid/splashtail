@@ -1,5 +1,5 @@
 use crate::field::{CategorizedField, Field};
-use base_data::Error;
+use crate::Error;
 use indexmap::IndexMap;
 use log::warn;
 use serenity::all::{FullEvent, GuildId, UserId};

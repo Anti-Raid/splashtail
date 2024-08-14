@@ -7,8 +7,6 @@ use module_settings::types::{
 use splashcore_rs::value::Value;
 use std::time::Duration;
 
-use crate::cache::SilverpeltCache;
-
 fn _get_display_value(column_type: &ColumnType, value: &Value, state: &State) -> String {
     match column_type {
         ColumnType::Scalar { column_type } => match column_type {
@@ -69,11 +67,10 @@ fn _get_display_value(column_type: &ColumnType, value: &Value, state: &State) ->
 
 /// Common settings viewer for poise, sends an embed, all that stuff
 pub async fn settings_viewer(
-    silverpelt_cache: &SilverpeltCache,
     ctx: &crate::Context<'_>,
     setting: &ConfigOption,
     fields: indexmap::IndexMap<String, Value>, // The filters to apply
-) -> Result<(), base_data::Error> {
+) -> Result<(), crate::Error> {
     fn _create_reply<'a>(
         setting: &ConfigOption,
         values: &'a [State],
@@ -166,7 +163,7 @@ pub async fn settings_viewer(
 
     {
         let perm_res = crate::cmd::check_command(
-            silverpelt_cache,
+            &data.silverpelt_cache,
             operation_specific.corresponding_command,
             guild_id,
             ctx.author().id,
@@ -200,8 +197,7 @@ pub async fn settings_viewer(
 
     let values = settings_view(
         setting,
-        &data,
-        &cache_http,
+        &data.settings_data(cache_http),
         guild_id,
         ctx.author().id,
         fields,
@@ -265,11 +261,10 @@ pub async fn settings_viewer(
 
 /// Common settings creator for poise, sends an embed, all that stuff
 pub async fn settings_creator(
-    silverpelt_cache: &SilverpeltCache,
     ctx: &crate::Context<'_>,
     setting: &ConfigOption,
     fields: indexmap::IndexMap<String, Value>,
-) -> Result<(), base_data::Error> {
+) -> Result<(), crate::Error> {
     fn _create_reply<'a>(setting: &ConfigOption, value: &State) -> poise::CreateReply<'a> {
         let mut embed = serenity::all::CreateEmbed::default();
 
@@ -330,7 +325,7 @@ pub async fn settings_creator(
 
     {
         let perm_res = crate::cmd::check_command(
-            silverpelt_cache,
+            &data.silverpelt_cache,
             operation_specific.corresponding_command,
             guild_id,
             ctx.author().id,
@@ -364,8 +359,7 @@ pub async fn settings_creator(
 
     let mut value = settings_create(
         setting,
-        &data,
-        &cache_http,
+        &data.settings_data(cache_http),
         guild_id,
         ctx.author().id,
         fields,
@@ -387,11 +381,10 @@ pub async fn settings_creator(
 
 /// Common settings updater for poise, sends an embed, all that stuff
 pub async fn settings_updater(
-    silverpelt_cache: &SilverpeltCache,
     ctx: &crate::Context<'_>,
     setting: &ConfigOption,
     fields: indexmap::IndexMap<String, Value>,
-) -> Result<(), base_data::Error> {
+) -> Result<(), crate::Error> {
     fn _create_reply<'a>(setting: &ConfigOption, value: &State) -> poise::CreateReply<'a> {
         let mut embed = serenity::all::CreateEmbed::default();
 
@@ -452,7 +445,7 @@ pub async fn settings_updater(
 
     {
         let perm_res = crate::cmd::check_command(
-            silverpelt_cache,
+            &data.silverpelt_cache,
             operation_specific.corresponding_command,
             guild_id,
             ctx.author().id,
@@ -486,8 +479,7 @@ pub async fn settings_updater(
 
     let mut value = settings_update(
         setting,
-        &data,
-        &cache_http,
+        &data.settings_data(cache_http),
         guild_id,
         ctx.author().id,
         fields,
@@ -509,11 +501,10 @@ pub async fn settings_updater(
 
 /// Common settings deleter for poise, sends an embed, all that stuff
 pub async fn settings_deleter(
-    silverpelt_cache: &SilverpeltCache,
     ctx: &crate::Context<'_>,
     setting: &ConfigOption,
     pkey: Value,
-) -> Result<(), base_data::Error> {
+) -> Result<(), crate::Error> {
     fn _create_reply<'a>(setting: &ConfigOption, value: &State) -> poise::CreateReply<'a> {
         let mut embed = serenity::all::CreateEmbed::default();
 
@@ -576,7 +567,7 @@ pub async fn settings_deleter(
 
     {
         let perm_res = crate::cmd::check_command(
-            silverpelt_cache,
+            &data.silverpelt_cache,
             operation_specific.corresponding_command,
             guild_id,
             ctx.author().id,
@@ -608,9 +599,15 @@ pub async fn settings_deleter(
         }
     }
 
-    let mut value = settings_delete(setting, &data, &cache_http, guild_id, ctx.author().id, pkey)
-        .await
-        .map_err(|e| format!("Error deleting setting: {}", e))?;
+    let mut value = settings_delete(
+        setting,
+        &data.settings_data(cache_http),
+        guild_id,
+        ctx.author().id,
+        pkey,
+    )
+    .await
+    .map_err(|e| format!("Error deleting setting: {}", e))?;
 
     value.state.insert(
         "key".to_string(),

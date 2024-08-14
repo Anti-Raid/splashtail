@@ -240,23 +240,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8c3c1a368f70d6cf7302d78f8f7093da241fb8e8807c05cc9e51a125895a6d5b"
 
 [[package]]
-name = "base_data"
-version = "0.1.0"
-dependencies = [
- "async-trait",
- "botox",
- "dashmap",
- "fred",
- "futures-util",
- "indexmap",
- "proxy_support",
- "reqwest",
- "splashcore_rs",
- "sqlx",
- "tokio",
-]
-
-[[package]]
 name = "bindgen"
 version = "0.69.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1284,7 +1267,6 @@ dependencies = [
 name = "gwevent"
 version = "0.0.1"
 dependencies = [
- "base_data",
  "glob",
  "indexmap",
  "log",
@@ -2116,6 +2098,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "limits"
+version = "0.1.0"
+
+[[package]]
 name = "linked-hash-map"
 version = "0.5.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2289,7 +2275,6 @@ version = "6.0.0"
 dependencies = [
  "async-recursion",
  "async-trait",
- "base_data",
  "botox",
  "chrono",
  "futures-util",
@@ -2308,7 +2293,6 @@ dependencies = [
 name = "modules"
 version = "6.0.0"
 dependencies = [
- "base_data",
  "bitflags 2.5.0",
  "botox",
  "chrono",
@@ -2319,6 +2303,7 @@ dependencies = [
  "include_dir",
  "indexmap",
  "kittycat",
+ "limits",
  "log",
  "module_settings",
  "moka",
@@ -3168,7 +3153,6 @@ name = "rust_bot"
 version = "6.0.0"
 dependencies = [
  "async-trait",
- "base_data",
  "bitflags 2.5.0",
  "botox",
  "cap",
@@ -3623,7 +3607,6 @@ name = "silverpelt"
 version = "0.1.0"
 dependencies = [
  "async-trait",
- "base_data",
  "botox",
  "chrono",
  "config",
@@ -4152,13 +4135,13 @@ dependencies = [
 name = "templating"
 version = "0.1.0"
 dependencies = [
- "base_data",
  "config",
  "dashmap",
  "futures-util",
  "gwevent",
  "indexmap",
  "kittycat",
+ "limits",
  "log",
  "mlua",
  "moka",

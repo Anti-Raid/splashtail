@@ -54,16 +54,9 @@ impl ConsolidatedStingEntries {
         ctx: &serenity::all::Context,
         guild_id: GuildId,
         user_id: UserId,
-    ) -> Result<Self, base_data::Error> {
-        let data = ctx.data::<base_data::Data>();
-        if !is_module_enabled(
-            &crate::SILVERPELT_CACHE,
-            &data.pool,
-            guild_id,
-            "punishments",
-        )
-        .await?
-        {
+    ) -> Result<Self, silverpelt::Error> {
+        let data = ctx.data::<silverpelt::data::Data>();
+        if !is_module_enabled(&data.silverpelt_cache, &data.pool, guild_id, "punishments").await? {
             // Punishments module is not enabled
             return Err("Punishments module is not enabled".into());
         }
@@ -116,8 +109,8 @@ impl GuildPunishmentList {
     pub async fn guild(
         ctx: &serenity::all::Context,
         guild_id: GuildId,
-    ) -> Result<Self, base_data::Error> {
-        let data = ctx.data::<base_data::Data>();
+    ) -> Result<Self, silverpelt::Error> {
+        let data = ctx.data::<silverpelt::data::Data>();
         let rec = sqlx::query!(
             "SELECT id, guild_id, creator, stings, action, modifiers, created_at, EXTRACT(seconds FROM duration)::integer AS duration FROM punishments__guild_punishment_list WHERE guild_id = $1",
             guild_id.to_string(),
@@ -273,8 +266,8 @@ impl Action {
         punishment: &GuildPunishment,
         guild_id: GuildId,
         user_id: UserId,
-    ) -> Result<Option<String>, base_data::Error> {
-        let data = ctx.data::<base_data::Data>();
+    ) -> Result<Option<String>, silverpelt::Error> {
+        let data = ctx.data::<silverpelt::data::Data>();
         let cache_http = botox::cache::CacheHttpImpl::from_ctx(ctx);
 
         let guild = guild(&cache_http, &data.reqwest, guild_id).await?;
@@ -392,7 +385,7 @@ pub async fn trigger_punishment(
     guild_id: GuildId,
     user_id: UserId,
     ignore_actions: HashSet<Action>,
-) -> Result<(), base_data::Error> {
+) -> Result<(), silverpelt::Error> {
     let mut sting_entries =
         ConsolidatedStingEntries::get_entries_for_guild_user(ctx, guild_id, user_id).await?;
     let sting_count = sting_entries.sting_count();

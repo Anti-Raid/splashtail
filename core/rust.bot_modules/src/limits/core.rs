@@ -1,21 +1,21 @@
-use base_data::Error;
 use futures_util::future::FutureExt;
 use poise::serenity_prelude::GuildId;
 use serde::{Deserialize, Serialize};
+use silverpelt::Error;
 use splashcore_rs::utils::pg_interval_to_secs;
 use sqlx::PgPool;
 use strum_macros::{Display, EnumString, VariantNames};
 
 /// Punishment sting source
 pub async fn register_punishment_sting_source(
-    _data: &base_data::Data,
-) -> Result<(), base_data::Error> {
+    _data: &silverpelt::data::Data,
+) -> Result<(), silverpelt::Error> {
     async fn sting_entries(
         ctx: &serenity::all::Context,
         guild_id: serenity::all::GuildId,
         user_id: serenity::all::UserId,
-    ) -> Result<Vec<crate::punishments::sting_source::StingEntry>, base_data::Error> {
-        let data = ctx.data::<base_data::Data>();
+    ) -> Result<Vec<crate::punishments::sting_source::StingEntry>, silverpelt::Error> {
+        let data = ctx.data::<silverpelt::data::Data>();
         let pool = &data.pool;
 
         let mut entries = vec![];

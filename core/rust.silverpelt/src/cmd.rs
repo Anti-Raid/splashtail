@@ -149,7 +149,7 @@ pub async fn get_user_kittycat_perms(
     guild_owner_id: UserId,
     user_id: UserId,
     roles: &FixedArray<serenity::all::RoleId>,
-) -> Result<Vec<kittycat::perms::Permission>, base_data::Error> {
+) -> Result<Vec<kittycat::perms::Permission>, crate::Error> {
     if let Some(ref custom_resolved_kittycat_perms) = opts.custom_resolved_kittycat_perms {
         if !opts.skip_custom_resolved_fit_checks {
             let kc_perms = crate::member_permission_calc::get_kittycat_perms(
@@ -247,19 +247,24 @@ pub async fn check_command(
 ) -> PermissionResult {
     let command_permutations = permute_command_names(command);
 
-    let module = match silverpelt_cache
+    let module_ref = match silverpelt_cache
         .command_id_module_map
-        .get(&command_permutations[0])
+        .try_get(&command_permutations[0])
     {
-        Some(module) => module,
-        None => {
+        dashmap::try_result::TryResult::Present(v) => v,
+        dashmap::try_result::TryResult::Absent => {
             return PermissionResult::ModuleNotFound {};
+        }
+        dashmap::try_result::TryResult::Locked => {
+            return PermissionResult::GenericError {
+                error: "This module is being updated! Please try again later.".to_string(),
+            };
         }
     };
 
     info!("Checking if user {} can run command {}", user_id, command);
 
-    if module == "root" {
+    if module_ref.value() == "root" {
         if !config::CONFIG.discord_auth.root_users.contains(&user_id) {
             return PermissionResult::SudoNotGranted {};
         }
@@ -273,19 +278,20 @@ pub async fn check_command(
         if let Some(ref custom_module_configuration) = opts.custom_module_configuration {
             custom_module_configuration.clone()
         } else {
-            let gmc = match get_module_configuration(pool, &guild_id.to_string(), module.as_str())
-                .await
-            {
-                Ok(v) => v,
-                Err(e) => {
-                    return e.into();
-                }
-            };
+            let gmc =
+                match get_module_configuration(pool, &guild_id.to_string(), module_ref.value())
+                    .await
+                {
+                    Ok(v) => v,
+                    Err(e) => {
+                        return e.into();
+                    }
+                };
 
             gmc.unwrap_or(GuildModuleConfiguration {
                 id: "".to_string(),
                 guild_id: guild_id.to_string(),
-                module: module.clone(),
+                module: module_ref.clone(),
                 disabled: None,
                 default_perms: None,
             })
@@ -343,9 +349,9 @@ pub async fn check_command(
     #[allow(clippy::collapsible_if)]
     if !opts.ignore_module_disabled {
         let module_default_enabled = {
-            let Some(module) = silverpelt_cache.module_cache.get(module) else {
+            let Some(module) = silverpelt_cache.module_cache.get(module_ref.value()) else {
                 return PermissionResult::UnknownModule {
-                    module: module.to_string(),
+                    module: module_ref.to_string(),
                 };
             };
 
@@ -354,7 +360,7 @@ pub async fn check_command(
 
         if module_config.disabled.unwrap_or(!module_default_enabled) {
             return PermissionResult::ModuleDisabled {
-                module: module.to_string(),
+                module: module_ref.to_string(),
             };
         }
     }

@@ -1,6 +1,6 @@
 use futures_util::FutureExt;
 
-pub async fn setup(data: &base_data::Data) -> Result<(), base_data::Error> {
+pub async fn setup(data: &silverpelt::data::Data) -> Result<(), silverpelt::Error> {
     let props = data.props.clone();
     data.props.add_permodule_function(
         "root",
@@ -20,7 +20,7 @@ pub async fn setup(data: &base_data::Data) -> Result<(), base_data::Error> {
 
 /// No arguments required
 pub async fn reset_can_use_bot_whitelist(
-    props: &dyn base_data::Props,
-) -> Result<(), base_data::Error> {
+    props: &dyn silverpelt::data::Props,
+) -> Result<(), silverpelt::Error> {
     props.reset_can_use_bot().await
 }

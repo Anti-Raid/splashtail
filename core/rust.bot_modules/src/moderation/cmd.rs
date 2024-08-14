@@ -1,5 +1,4 @@
 use super::core::to_log_format;
-use base_data::Error;
 use gwevent::field::CategorizedField;
 use poise::CreateReply;
 use proxy_support::{guild, member_in_guild};
@@ -10,6 +9,7 @@ use serenity::all::{
 use serenity::utils::shard_id;
 use silverpelt::jobserver::{embed as embed_task, get_icon_of_state};
 use silverpelt::Context;
+use silverpelt::Error;
 use splashcore_rs::animusmagic::client::RequestOptions;
 use splashcore_rs::animusmagic::protocol::{
     default_request_timeout, serialize_data, AnimusOp, AnimusTarget,
@@ -275,7 +275,7 @@ pub async fn prune_user(
 
     // Trigger punishments as a tokio task
     if silverpelt::module_config::is_module_enabled(
-        &crate::SILVERPELT_CACHE,
+        &data.silverpelt_cache,
         &ctx.data().pool,
         guild_id,
         "punishments",
@@ -296,8 +296,8 @@ pub async fn prune_user(
 
     // Send audit logs if Audit Logs module is enabled
     if silverpelt::module_config::is_module_enabled(
-        &crate::SILVERPELT_CACHE,
-        &ctx.data().pool,
+        &data.silverpelt_cache,
+        &data.pool,
         guild_id,
         "auditlogs",
     )
@@ -327,6 +327,7 @@ pub async fn prune_user(
 
         crate::auditlogs::events::dispatch_audit_log(
             ctx.serenity_context(),
+            &data,
             "AR/PruneMessageBegin",
             "(Anti-Raid) Prune Messages Begin",
             imap,
@@ -433,6 +434,8 @@ pub async fn kick(
         return Err("This command can only be used in a guild".into());
     };
 
+    let data = ctx.data();
+
     // Check user hierarchy before performing moderative actions
     check_hierarchy(&ctx, member.user.id).await?;
 
@@ -461,7 +464,7 @@ pub async fn kick(
         return Err("Stings must be greater than or equal to 0".into());
     }
 
-    let mut tx = ctx.data().pool.begin().await?;
+    let mut tx = data.pool.begin().await?;
 
     sqlx::query!(
         "INSERT INTO moderation__actions (guild_id, user_id, moderator, action, stings, reason) VALUES ($1, $2, $3, $4, $5, $6)",
@@ -477,7 +480,7 @@ pub async fn kick(
 
     // Send audit logs if Audit Logs module is enabled
     if silverpelt::module_config::is_module_enabled(
-        &crate::SILVERPELT_CACHE,
+        &data.silverpelt_cache,
         &ctx.data().pool,
         guild_id,
         "auditlogs",
@@ -494,6 +497,7 @@ pub async fn kick(
 
         crate::auditlogs::events::dispatch_audit_log(
             ctx.serenity_context(),
+            &data,
             "AR/KickMember",
             "(Anti-Raid) Kick Member",
             imap,
@@ -513,7 +517,7 @@ pub async fn kick(
 
     // Trigger punishments as a tokio task
     if silverpelt::module_config::is_module_enabled(
-        &crate::SILVERPELT_CACHE,
+        &data.silverpelt_cache,
         &ctx.data().pool,
         guild_id,
         "punishments",
@@ -574,6 +578,8 @@ pub async fn ban(
         return Err("This command can only be used in a guild".into());
     };
 
+    let data = ctx.data();
+
     // Check user hierarchy before performing moderative actions
     check_hierarchy(&ctx, member.id).await?;
 
@@ -604,7 +610,7 @@ pub async fn ban(
         return Err("Stings must be greater than or equal to 0".into());
     }
 
-    let mut tx = ctx.data().pool.begin().await?;
+    let mut tx = data.pool.begin().await?;
 
     sqlx::query!(
         "INSERT INTO moderation__actions (guild_id, user_id, moderator, action, stings, reason) VALUES ($1, $2, $3, $4, $5, $6)",
@@ -620,8 +626,8 @@ pub async fn ban(
 
     // Send audit logs if Audit Logs module is enabled
     if silverpelt::module_config::is_module_enabled(
-        &crate::SILVERPELT_CACHE,
-        &ctx.data().pool,
+        &data.silverpelt_cache,
+        &data.pool,
         guild_id,
         "auditlogs",
     )
@@ -638,6 +644,7 @@ pub async fn ban(
 
         crate::auditlogs::events::dispatch_audit_log(
             ctx.serenity_context(),
+            &data,
             "AR/BanMember",
             "(Anti-Raid) Ban Member",
             imap,
@@ -659,7 +666,7 @@ pub async fn ban(
 
     // Trigger punishments as a tokio task
     if silverpelt::module_config::is_module_enabled(
-        &crate::SILVERPELT_CACHE,
+        &data.silverpelt_cache,
         &ctx.data().pool,
         guild_id,
         "punishments",
@@ -721,6 +728,8 @@ pub async fn tempban(
         return Err("This command can only be used in a guild".into());
     };
 
+    let data = ctx.data();
+
     // Check user hierarchy before performing moderative actions
     check_hierarchy(&ctx, member.id).await?;
 
@@ -753,7 +762,7 @@ pub async fn tempban(
         return Err("Stings must be greater than or equal to 0".into());
     }
 
-    let mut tx = ctx.data().pool.begin().await?;
+    let mut tx = data.pool.begin().await?;
 
     sqlx::query!(
         "INSERT INTO moderation__actions (guild_id, user_id, duration, moderator, action, stings, reason) VALUES ($1, $2, make_interval(secs => $3), $4, $5, $6, $7)",
@@ -770,7 +779,7 @@ pub async fn tempban(
 
     // Send audit logs if Audit Logs module is enabled
     if silverpelt::module_config::is_module_enabled(
-        &crate::SILVERPELT_CACHE,
+        &data.silverpelt_cache,
         &ctx.data().pool,
         guild_id,
         "auditlogs",
@@ -789,6 +798,7 @@ pub async fn tempban(
 
         crate::auditlogs::events::dispatch_audit_log(
             ctx.serenity_context(),
+            &data,
             "AR/BanMemberTemporary",
             "(Anti-Raid) Ban Member (Temporary)",
             imap,
@@ -810,7 +820,7 @@ pub async fn tempban(
 
     // Trigger punishments as a tokio task
     if silverpelt::module_config::is_module_enabled(
-        &crate::SILVERPELT_CACHE,
+        &data.silverpelt_cache,
         &ctx.data().pool,
         guild_id,
         "punishments",
@@ -868,6 +878,8 @@ pub async fn unban(
         return Err("This command can only be used in a guild".into());
     };
 
+    let data = ctx.data();
+
     let mut embed = CreateEmbed::new()
         .title("Unbanning Member...")
         .description(format!(
@@ -892,7 +904,7 @@ pub async fn unban(
         return Err("Stings must be greater than or equal to 0".into());
     }
 
-    let mut tx = ctx.data().pool.begin().await?;
+    let mut tx = data.pool.begin().await?;
 
     sqlx::query!(
         "INSERT INTO moderation__actions (guild_id, user_id, moderator, action, stings, reason) VALUES ($1, $2, $3, $4, $5, $6)",
@@ -908,7 +920,7 @@ pub async fn unban(
 
     // Send audit logs if Audit Logs module is enabled
     if silverpelt::module_config::is_module_enabled(
-        &crate::SILVERPELT_CACHE,
+        &data.silverpelt_cache,
         &ctx.data().pool,
         guild_id,
         "auditlogs",
@@ -925,6 +937,7 @@ pub async fn unban(
 
         crate::auditlogs::events::dispatch_audit_log(
             ctx.serenity_context(),
+            &data,
             "AR/UnbanMember",
             "(Anti-Raid) Unban Member",
             imap,
@@ -945,7 +958,7 @@ pub async fn unban(
 
     // Trigger punishments as a tokio task
     if silverpelt::module_config::is_module_enabled(
-        &crate::SILVERPELT_CACHE,
+        &data.silverpelt_cache,
         &ctx.data().pool,
         guild_id,
         "punishments",
@@ -1006,6 +1019,8 @@ pub async fn timeout(
         return Err("This command can only be used in a guild".into());
     };
 
+    let data = ctx.data();
+
     // Check user hierarchy before performing moderative actions
     check_hierarchy(&ctx, member.user.id).await?;
 
@@ -1051,7 +1066,7 @@ pub async fn timeout(
         return Err("Stings must be greater than or equal to 0".into());
     }
 
-    let mut tx = ctx.data().pool.begin().await?;
+    let mut tx = data.pool.begin().await?;
 
     sqlx::query!(
         "INSERT INTO moderation__actions (guild_id, user_id, duration, moderator, action, stings, reason) VALUES ($1, $2, make_interval(secs => $3), $4, $5, $6, $7)",
@@ -1068,7 +1083,7 @@ pub async fn timeout(
 
     // Send audit logs if Audit Logs module is enabled
     if silverpelt::module_config::is_module_enabled(
-        &crate::SILVERPELT_CACHE,
+        &data.silverpelt_cache,
         &ctx.data().pool,
         guild_id,
         "auditlogs",
@@ -1086,6 +1101,7 @@ pub async fn timeout(
 
         crate::auditlogs::events::dispatch_audit_log(
             ctx.serenity_context(),
+            &data,
             "AR/TimeoutMember",
             "(Anti-Raid) Timeout Member",
             imap,
@@ -1109,7 +1125,7 @@ pub async fn timeout(
 
     // Trigger punishments as a tokio task
     if silverpelt::module_config::is_module_enabled(
-        &crate::SILVERPELT_CACHE,
+        &data.silverpelt_cache,
         &ctx.data().pool,
         guild_id,
         "punishments",

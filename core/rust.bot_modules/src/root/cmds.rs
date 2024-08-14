@@ -1,6 +1,6 @@
-use base_data::Error;
 use chrono::TimeZone;
 use silverpelt::Context;
+use silverpelt::Error;
 use splashcore_rs::value::Value;
 
 #[poise::command(
@@ -32,9 +32,8 @@ pub async fn register(ctx: Context<'_>) -> Result<(), Error> {
 }
 
 #[poise::command(prefix_command)]
-pub async fn can_use_bot_list(ctx: Context<'_>) -> Result<(), base_data::Error> {
+pub async fn can_use_bot_list(ctx: Context<'_>) -> Result<(), silverpelt::Error> {
     silverpelt::settings_poise::settings_viewer(
-        &crate::SILVERPELT_CACHE,
         &ctx,
         &super::settings::CAN_USE_BOT,
         indexmap::IndexMap::new(),
@@ -48,9 +47,8 @@ pub async fn can_use_bot_add(
     #[description = "ID of the entity"] id: String,
     #[description = "Type of the entity. Either user or guild"] r#type: String,
     #[description = "Name of the entity"] name: String,
-) -> Result<(), base_data::Error> {
+) -> Result<(), silverpelt::Error> {
     silverpelt::settings_poise::settings_creator(
-        &crate::SILVERPELT_CACHE,
         &ctx,
         &super::settings::CAN_USE_BOT,
         indexmap::indexmap! {
@@ -68,9 +66,8 @@ pub async fn can_use_bot_update(
     #[description = "ID of the entity"] id: String,
     #[description = "Type of the entity. Either user or guild"] r#type: String,
     #[description = "Name of the entity"] name: String,
-) -> Result<(), base_data::Error> {
+) -> Result<(), silverpelt::Error> {
     silverpelt::settings_poise::settings_updater(
-        &crate::SILVERPELT_CACHE,
         &ctx,
         &super::settings::CAN_USE_BOT,
         indexmap::indexmap! {
@@ -86,9 +83,8 @@ pub async fn can_use_bot_update(
 pub async fn can_use_bot_delete(
     ctx: Context<'_>,
     #[description = "ID of the entity"] id: String,
-) -> Result<(), base_data::Error> {
+) -> Result<(), silverpelt::Error> {
     silverpelt::settings_poise::settings_deleter(
-        &crate::SILVERPELT_CACHE,
         &ctx,
         &super::settings::CAN_USE_BOT,
         Value::String(id),
@@ -97,9 +93,8 @@ pub async fn can_use_bot_delete(
 }
 
 #[poise::command(prefix_command)]
-pub async fn inspector__fake_bots_list(ctx: Context<'_>) -> Result<(), base_data::Error> {
+pub async fn inspector__fake_bots_list(ctx: Context<'_>) -> Result<(), silverpelt::Error> {
     silverpelt::settings_poise::settings_viewer(
-        &crate::SILVERPELT_CACHE,
         &ctx,
         &super::settings::INSPECTOR_FAKE_BOTS,
         indexmap::IndexMap::new(),
@@ -113,9 +108,8 @@ pub async fn inspector__fake_bots_add(
     #[description = "ID of the bot"] id: String,
     #[description = "Name of the bot"] name: String,
     #[description = "Official bot IDs, comma-seperated"] official_ids: String,
-) -> Result<(), base_data::Error> {
+) -> Result<(), silverpelt::Error> {
     silverpelt::settings_poise::settings_creator(
-        &crate::SILVERPELT_CACHE,
         &ctx,
         &super::settings::INSPECTOR_FAKE_BOTS,
         indexmap::indexmap! {
@@ -136,9 +130,8 @@ pub async fn inspector__fake_bots_update(
     #[description = "ID of the bot"] id: String,
     #[description = "Name of the bot"] name: String,
     #[description = "Official bot IDs, comma-seperated"] official_ids: String,
-) -> Result<(), base_data::Error> {
+) -> Result<(), silverpelt::Error> {
     silverpelt::settings_poise::settings_updater(
-        &crate::SILVERPELT_CACHE,
         &ctx,
         &super::settings::INSPECTOR_FAKE_BOTS,
         indexmap::indexmap! {
@@ -157,9 +150,8 @@ pub async fn inspector__fake_bots_update(
 pub async fn inspector__fake_bots_delete(
     ctx: Context<'_>,
     #[description = "ID of the bot"] id: String,
-) -> Result<(), base_data::Error> {
+) -> Result<(), silverpelt::Error> {
     silverpelt::settings_poise::settings_deleter(
-        &crate::SILVERPELT_CACHE,
         &ctx,
         &super::settings::INSPECTOR_FAKE_BOTS,
         Value::String(id),
@@ -168,9 +160,8 @@ pub async fn inspector__fake_bots_delete(
 }
 
 #[poise::command(prefix_command)]
-pub async fn last_task_expiry_view(ctx: Context<'_>) -> Result<(), base_data::Error> {
+pub async fn last_task_expiry_view(ctx: Context<'_>) -> Result<(), silverpelt::Error> {
     silverpelt::settings_poise::settings_viewer(
-        &crate::SILVERPELT_CACHE,
         &ctx,
         &super::settings::LAST_TASK_EXPIRY,
         indexmap::IndexMap::new(),
@@ -183,9 +174,8 @@ pub async fn last_task_expiry_create(
     ctx: Context<'_>,
     #[description = "Task Name (afk etc)"] task: String,
     #[description = "Created At"] created_at: i64,
-) -> Result<(), base_data::Error> {
+) -> Result<(), silverpelt::Error> {
     silverpelt::settings_poise::settings_creator(
-        &crate::SILVERPELT_CACHE,
         &ctx,
         &super::settings::LAST_TASK_EXPIRY,
         indexmap::indexmap! {
@@ -210,9 +200,8 @@ pub async fn last_task_expiry_update(
     #[description = "ID"] id: String,
     #[description = "Task Name (afk etc)"] task: String,
     #[description = "Created At"] created_at: i64,
-) -> Result<(), base_data::Error> {
+) -> Result<(), silverpelt::Error> {
     silverpelt::settings_poise::settings_updater(
-        &crate::SILVERPELT_CACHE,
         &ctx,
         &super::settings::LAST_TASK_EXPIRY,
         indexmap::indexmap! {
@@ -236,9 +225,8 @@ pub async fn last_task_expiry_update(
 pub async fn last_task_expiry_delete(
     ctx: Context<'_>,
     #[description = "ID"] id: String,
-) -> Result<(), base_data::Error> {
+) -> Result<(), silverpelt::Error> {
     silverpelt::settings_poise::settings_deleter(
-        &crate::SILVERPELT_CACHE,
         &ctx,
         &super::settings::LAST_TASK_EXPIRY,
         Value::String(id),

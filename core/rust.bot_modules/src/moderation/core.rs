@@ -9,14 +9,14 @@ use splashcore_rs::utils::pg_interval_to_secs;
 
 /// Punishment sting source
 pub async fn register_punishment_sting_source(
-    _data: &base_data::Data,
-) -> Result<(), base_data::Error> {
+    _data: &silverpelt::data::Data,
+) -> Result<(), silverpelt::Error> {
     async fn sting_entries(
         ctx: &serenity::all::Context,
         guild_id: serenity::all::GuildId,
         user_id: serenity::all::UserId,
-    ) -> Result<Vec<StingEntry>, base_data::Error> {
-        let data = ctx.data::<base_data::Data>();
+    ) -> Result<Vec<StingEntry>, silverpelt::Error> {
+        let data = ctx.data::<silverpelt::data::Data>();
         let pool = &data.pool;
 
         let mut entries = vec![];
@@ -73,12 +73,12 @@ pub fn to_log_format(moderator: &User, member: &User, reason: &str) -> String {
 
 /// Temp punishments sting source
 pub async fn register_temporary_punishment_source(
-    _data: &base_data::Data,
-) -> Result<(), base_data::Error> {
+    _data: &silverpelt::data::Data,
+) -> Result<(), silverpelt::Error> {
     async fn entries(
         ctx: &serenity::all::Context,
-    ) -> Result<Vec<TemporaryPunishmentsEntry>, base_data::Error> {
-        let data = ctx.data::<base_data::Data>();
+    ) -> Result<Vec<TemporaryPunishmentsEntry>, silverpelt::Error> {
+        let data = ctx.data::<silverpelt::data::Data>();
         let pool = &data.pool;
 
         let mut entries = vec![];
@@ -122,8 +122,8 @@ pub async fn register_temporary_punishment_source(
         ctx: &serenity::all::Context,
         entry: &TemporaryPunishmentsEntry,
         error: Option<String>,
-    ) -> Result<(), base_data::Error> {
-        let data = ctx.data::<base_data::Data>();
+    ) -> Result<(), silverpelt::Error> {
+        let data = ctx.data::<silverpelt::data::Data>();
         let pool = &data.pool;
 
         let id = entry.id.parse::<sqlx::types::Uuid>()?;

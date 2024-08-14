@@ -167,7 +167,7 @@ pub static GUILD_ROLES: Lazy<ConfigOption> = Lazy::new(|| {
                                 typ: "internal".to_string(),
                             })?;
 
-                            let guild = proxy_support::guild(ctx.cache_http, &ctx.data.reqwest, ctx.guild_id)
+                            let guild = proxy_support::guild(&ctx.data.cache_http, &ctx.data.reqwest, ctx.guild_id)
                                 .await
                                 .map_err(|e| SettingsError::Generic {
                                     message: format!("Failed to get guild: {:?}", e),
@@ -180,7 +180,7 @@ pub static GUILD_ROLES: Lazy<ConfigOption> = Lazy::new(|| {
                                 return Ok(())
                             }
 
-                            let Some(member) = proxy_support::member_in_guild(ctx.cache_http, &ctx.data.reqwest, ctx.guild_id, ctx.author)
+                            let Some(member) = proxy_support::member_in_guild(&ctx.data.cache_http, &ctx.data.reqwest, ctx.guild_id, ctx.author)
                             .await
                             .map_err(|e| SettingsError::Generic {
                                 message: format!("Failed to get member: {:?}", e),

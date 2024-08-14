@@ -1,5 +1,5 @@
 use crate::core::{slice_chars, DiscordReply};
-use base_data::limits::{embed_limits, message_limits};
+use limits::{embed_limits, message_limits};
 use rhai::plugin::*;
 use serde::{Deserialize, Serialize};
 
@@ -238,9 +238,7 @@ pub mod plugin {
     }
 }
 
-pub fn to_discord_reply<'a>(
-    message: plugin::Message,
-) -> Result<DiscordReply<'a>, base_data::Error> {
+pub fn to_discord_reply<'a>(message: plugin::Message) -> Result<DiscordReply<'a>, crate::Error> {
     let mut total_chars = 0;
     let mut total_content_chars = 0;
     let mut embeds = Vec::new();
@@ -332,7 +330,7 @@ pub fn to_discord_reply<'a>(
 
 pub fn create_message_scope<'a>(
     args: crate::core::MessageTemplateContext,
-) -> Result<rhai::Scope<'a>, base_data::Error> {
+) -> Result<rhai::Scope<'a>, crate::Error> {
     let mut scope = rhai::Scope::new();
     let dyn_val: rhai::Dynamic =
         rhai::serde::to_dynamic(&args).map_err(|e| format!("Failed to deserialize args: {}", e))?;

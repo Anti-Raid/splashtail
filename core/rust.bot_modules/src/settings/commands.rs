@@ -1,9 +1,9 @@
-use base_data::Error;
 use botox::cache::CacheHttpImpl;
 use futures_util::StreamExt;
 use permissions::types::PermissionChecks;
 use silverpelt::types::GuildCommandConfiguration;
 use silverpelt::Context;
+use silverpelt::Error;
 use std::time::Duration;
 
 /// Settings related to commands
@@ -44,7 +44,7 @@ pub async fn commands_check(
     // Check if the user has permission to use the command
     let cache_http = &CacheHttpImpl::from_ctx(ctx.serenity_context());
     let perm_res = silverpelt::cmd::check_command(
-        &crate::SILVERPELT_CACHE,
+        &data.silverpelt_cache,
         &command,
         guild_id,
         ctx.author().id,
@@ -84,6 +84,8 @@ pub async fn commands_enable(
     ctx: Context<'_>,
     #[description = "The command to enable"] command: String,
 ) -> Result<(), Error> {
+    let data = ctx.data();
+
     let Some(guild_id) = ctx.guild_id() else {
         return Err("This command must be run in a guild".into());
     };
@@ -95,14 +97,15 @@ pub async fn commands_enable(
     // Find command in cache
     let command_permutations = silverpelt::utils::permute_command_names(&command);
 
-    let Some(module) = crate::SILVERPELT_CACHE
+    let Some(module) = data
+        .silverpelt_cache
         .command_id_module_map
         .get(&command_permutations[0])
     else {
         return Err("Command not found".into());
     };
 
-    let Some(module) = crate::SILVERPELT_CACHE.module_cache.get(module) else {
+    let Some(module) = data.silverpelt_cache.module_cache.get(module.value()) else {
         return Err("Module not found".into());
     };
 
@@ -114,12 +117,10 @@ pub async fn commands_enable(
         .into());
     }
 
-    let data = ctx.data();
-
     // Check if the user has permission to use the command
     let cache_http = &CacheHttpImpl::from_ctx(ctx.serenity_context());
     let perm_res = silverpelt::cmd::check_command(
-        &crate::SILVERPELT_CACHE,
+        &data.silverpelt_cache,
         &command,
         guild_id,
         ctx.author().id,
@@ -206,17 +207,20 @@ pub async fn commands_disable(
         return Err("No command provided".into());
     }
 
+    let data = ctx.data();
+
     // Find command in cache
     let command_permutations = silverpelt::utils::permute_command_names(&command);
 
-    let Some(module) = crate::SILVERPELT_CACHE
+    let Some(module) = data
+        .silverpelt_cache
         .command_id_module_map
         .get(&command_permutations[0])
     else {
         return Err("Command not found".into());
     };
 
-    let Some(module) = crate::SILVERPELT_CACHE.module_cache.get(module) else {
+    let Some(module) = data.silverpelt_cache.module_cache.get(module.value()) else {
         return Err("Module not found".into());
     };
 
@@ -231,7 +235,7 @@ pub async fn commands_disable(
     // Check if the user has permission to use the command
     let cache_http = &CacheHttpImpl::from_ctx(ctx.serenity_context());
     let perm_res = silverpelt::cmd::check_command(
-        &crate::SILVERPELT_CACHE,
+        &data.silverpelt_cache,
         &command,
         guild_id,
         ctx.author().id,
@@ -323,21 +327,22 @@ pub async fn commands_modperms(
     // Find command in cache
     let command_permutations = silverpelt::utils::permute_command_names(&command);
 
-    let Some(module) = crate::SILVERPELT_CACHE
+    let Some(module) = data
+        .silverpelt_cache
         .command_id_module_map
         .get(&command_permutations[0])
     else {
         return Err("Command not found".into());
     };
 
-    let Some(module) = crate::SILVERPELT_CACHE.module_cache.get(module) else {
+    let Some(module) = data.silverpelt_cache.module_cache.get(module.value()) else {
         return Err("Module not found".into());
     };
 
     // Check if the user has permission to use the command
     let cache_http = &CacheHttpImpl::from_ctx(ctx.serenity_context());
     let perm_res = silverpelt::cmd::check_command(
-        &crate::SILVERPELT_CACHE,
+        &data.silverpelt_cache,
         &command,
         guild_id,
         ctx.author().id,
@@ -384,7 +389,7 @@ pub async fn commands_modperms(
 
     // Also, fetch the commands extended data
     let cmd_extended_data = silverpelt::module_config::get_command_extended_data(
-        &crate::SILVERPELT_CACHE,
+        &data.silverpelt_cache,
         &silverpelt::utils::permute_command_names(&command),
     )?;
 
@@ -471,7 +476,7 @@ pub async fn commands_modperms(
                 }
 
                 let perm_res = silverpelt::cmd::check_command(
-                    &crate::SILVERPELT_CACHE,
+                    &data.silverpelt_cache,
                     "commands enable",
                     guild_id,
                     ctx.author().id,
@@ -525,7 +530,7 @@ pub async fn commands_modperms(
                 }
 
                 let perm_res = silverpelt::cmd::check_command(
-                    &crate::SILVERPELT_CACHE,
+                    &data.silverpelt_cache,
                     "commands disable",
                     guild_id,
                     ctx.author().id,
@@ -581,7 +586,7 @@ pub async fn commands_modperms(
                 // If there is no change, then only do permission checking
                 if cmd_extended_data.is_default_enabled {
                     let perm_res = silverpelt::cmd::check_command(
-                        &crate::SILVERPELT_CACHE,
+                        &data.silverpelt_cache,
                         "commands enable",
                         guild_id,
                         ctx.author().id,
@@ -614,7 +619,7 @@ pub async fn commands_modperms(
                     }
                 } else {
                     let perm_res = silverpelt::cmd::check_command(
-                        &crate::SILVERPELT_CACHE,
+                        &data.silverpelt_cache,
                         "commands disable",
                         guild_id,
                         ctx.author().id,
@@ -651,7 +656,7 @@ pub async fn commands_modperms(
             }
             "perms/reset" => {
                 let perm_res = silverpelt::cmd::check_command(
-                    &crate::SILVERPELT_CACHE,
+                    &data.silverpelt_cache,
                     &command,
                     guild_id,
                     ctx.author().id,
@@ -737,7 +742,7 @@ pub async fn commands_modperms(
                         .await?;
 
                         let perm_res = silverpelt::cmd::check_command(
-                            &crate::SILVERPELT_CACHE,
+                            &data.silverpelt_cache,
                             &command,
                             guild_id,
                             ctx.author().id,
@@ -784,7 +789,7 @@ pub async fn commands_modperms(
             }
             "cmd/save" => {
                 let perm_res = silverpelt::cmd::check_command(
-                    &crate::SILVERPELT_CACHE,
+                    &data.silverpelt_cache,
                     &command,
                     guild_id,
                     ctx.author().id,

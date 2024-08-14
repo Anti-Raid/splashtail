@@ -135,8 +135,8 @@ impl From<&crate::Command> for CanonicalCommandData {
 }
 
 /// Given a module, return its canonical representation
-impl From<crate::Module> for CanonicalModule {
-    fn from(module: crate::Module) -> Self {
+impl From<&crate::Module> for CanonicalModule {
+    fn from(module: &crate::Module) -> Self {
         CanonicalModule {
             id: module.id.to_string(),
             name: module.name.to_string(),
@@ -148,14 +148,14 @@ impl From<crate::Module> for CanonicalModule {
             is_default_enabled: module.is_default_enabled,
             commands: module
                 .commands
-                .into_iter()
-                .map(|(cmd, perms)| CanonicalCommand::from_repr(&cmd, perms))
+                .iter()
+                .map(|(cmd, perms)| CanonicalCommand::from_repr(cmd, perms.clone()))
                 .collect(),
-            s3_paths: module.s3_paths,
+            s3_paths: module.s3_paths.clone(),
             config_options: module
                 .config_options
-                .into_iter()
-                .map(module_settings::canonical_types::CanonicalConfigOption::from)
+                .iter()
+                .map(|x| module_settings::canonical_types::CanonicalConfigOption::from(x.clone()))
                 .collect(),
         }
     }

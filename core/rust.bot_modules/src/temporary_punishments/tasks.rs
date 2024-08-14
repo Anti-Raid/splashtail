@@ -10,7 +10,7 @@ enum UnbanError {
 
 async fn get_all_temp_punishments(
     ctx: &serenity::client::Context,
-) -> Result<Vec<(Arc<super::source::Source>, Vec<super::source::Entry>)>, base_data::Error> {
+) -> Result<Vec<(Arc<super::source::Source>, Vec<super::source::Entry>)>, silverpelt::Error> {
     let mut temp_punishments = Vec::new();
 
     for src in super::source::SOURCES.iter() {
@@ -26,8 +26,8 @@ async fn get_all_temp_punishments(
 
 pub async fn temporary_punishment_task(
     ctx: &serenity::client::Context,
-) -> Result<(), base_data::Error> {
-    let data = ctx.data::<base_data::Data>();
+) -> Result<(), silverpelt::Error> {
+    let data = ctx.data::<silverpelt::data::Data>();
     let pool = &data.pool;
 
     let temp_punishments = get_all_temp_punishments(ctx).await?;
@@ -48,7 +48,7 @@ pub async fn temporary_punishment_task(
 
             // Ensure temporary punishments module is enabled
             if !silverpelt::module_config::is_module_enabled(
-                &crate::SILVERPELT_CACHE,
+                &data.silverpelt_cache,
                 pool,
                 punishment.guild_id,
                 "temporary_punishments",

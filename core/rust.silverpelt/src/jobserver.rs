@@ -1,4 +1,4 @@
-use base_data::Error;
+use crate::Error;
 use serenity::all::{CreateActionRow, CreateButton, CreateEmbed};
 use splashcore_rs::jobserver::Task;
 

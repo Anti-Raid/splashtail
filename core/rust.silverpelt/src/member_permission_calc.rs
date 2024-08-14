@@ -12,7 +12,7 @@ pub async fn rederive_perms(
     guild_id: GuildId,
     user_id: UserId,
     roles: &[RoleId],
-) -> Result<Vec<Permission>, base_data::Error> {
+) -> Result<Vec<Permission>, crate::Error> {
     let roles_str = {
         let mut r = Vec::new();
 
@@ -129,7 +129,7 @@ pub async fn get_kittycat_perms(
     guild_owner_id: UserId,
     user_id: UserId,
     roles: &[RoleId],
-) -> Result<Vec<Permission>, base_data::Error> {
+) -> Result<Vec<Permission>, crate::Error> {
     // For now, owners have full permission, this may change in the future (maybe??)
     if guild_owner_id == user_id {
         return Ok(vec!["global.*".into()]);

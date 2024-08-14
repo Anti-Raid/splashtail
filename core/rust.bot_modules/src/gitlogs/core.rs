@@ -1,6 +1,6 @@
-use base_data::Error;
 use poise::serenity_prelude::ChannelId;
 use silverpelt::Context;
+use silverpelt::Error;
 use splashcore_rs::value::Value;
 
 /// Gitlogs base command
@@ -37,7 +37,6 @@ pub async fn gitlogs(_ctx: Context<'_>) -> Result<(), Error> {
 )]
 pub async fn webhooks_list(ctx: Context<'_>) -> Result<(), Error> {
     silverpelt::settings_poise::settings_viewer(
-        &crate::SILVERPELT_CACHE,
         &ctx,
         &super::settings::WEBHOOKS,
         indexmap::IndexMap::new(),
@@ -59,7 +58,6 @@ pub async fn webhooks_create(
     #[description = "Custom secret for the webhook"] secret: Option<String>,
 ) -> Result<(), Error> {
     silverpelt::settings_poise::settings_creator(
-        &crate::SILVERPELT_CACHE,
         &ctx,
         &super::settings::WEBHOOKS,
         indexmap::indexmap! {
@@ -91,7 +89,6 @@ pub async fn webhooks_update(
     #[description = "Custom secret for the webhook"] secret: Option<String>,
 ) -> Result<(), Error> {
     silverpelt::settings_poise::settings_updater(
-        &crate::SILVERPELT_CACHE,
         &ctx,
         &super::settings::WEBHOOKS,
         indexmap::indexmap! {
@@ -122,7 +119,6 @@ pub async fn webhooks_delete(
     #[description = "The webhook ID"] id: String,
 ) -> Result<(), Error> {
     silverpelt::settings_poise::settings_deleter(
-        &crate::SILVERPELT_CACHE,
         &ctx,
         &super::settings::WEBHOOKS,
         Value::String(id),
@@ -140,7 +136,6 @@ pub async fn webhooks_delete(
 )]
 pub async fn repo_list(ctx: Context<'_>) -> Result<(), Error> {
     silverpelt::settings_poise::settings_viewer(
-        &crate::SILVERPELT_CACHE,
         &ctx,
         &super::settings::REPOS,
         indexmap::IndexMap::new(),
@@ -164,7 +159,6 @@ pub async fn repo_create(
     #[description = "The channel to send to"] channel: ChannelId,
 ) -> Result<(), Error> {
     silverpelt::settings_poise::settings_creator(
-        &crate::SILVERPELT_CACHE,
         &ctx,
         &super::settings::REPOS,
         indexmap::indexmap! {
@@ -193,7 +187,6 @@ pub async fn repo_update(
     #[description = "The channel to send to"] channel: ChannelId,
 ) -> Result<(), Error> {
     silverpelt::settings_poise::settings_updater(
-        &crate::SILVERPELT_CACHE,
         &ctx,
         &super::settings::REPOS,
         indexmap::indexmap! {
@@ -218,13 +211,8 @@ pub async fn repo_delete(
     ctx: Context<'_>,
     #[description = "The repo ID"] id: String,
 ) -> Result<(), Error> {
-    silverpelt::settings_poise::settings_deleter(
-        &crate::SILVERPELT_CACHE,
-        &ctx,
-        &super::settings::REPOS,
-        Value::String(id),
-    )
-    .await
+    silverpelt::settings_poise::settings_deleter(&ctx, &super::settings::REPOS, Value::String(id))
+        .await
 }
 
 /// Lists all event modifiers
@@ -237,7 +225,6 @@ pub async fn repo_delete(
 )]
 pub async fn eventmods_list(ctx: Context<'_>) -> Result<(), Error> {
     silverpelt::settings_poise::settings_viewer(
-        &crate::SILVERPELT_CACHE,
         &ctx,
         &super::settings::EVENT_MODIFIERS,
         indexmap::IndexMap::new(),
@@ -268,7 +255,6 @@ pub async fn eventmods_create(
     #[description = "Redirect channel ID"] redirect_channel: Option<ChannelId>,
 ) -> Result<(), Error> {
     silverpelt::settings_poise::settings_creator(
-        &crate::SILVERPELT_CACHE,
         &ctx,
         &super::settings::EVENT_MODIFIERS,
         indexmap::indexmap! {
@@ -330,7 +316,6 @@ pub async fn eventmods_update(
     #[description = "Redirect channel ID"] redirect_channel: Option<ChannelId>,
 ) -> Result<(), Error> {
     silverpelt::settings_poise::settings_updater(
-        &crate::SILVERPELT_CACHE,
         &ctx,
         &super::settings::EVENT_MODIFIERS,
         indexmap::indexmap! {
@@ -382,7 +367,6 @@ pub async fn eventmods_delete(
     #[description = "The modifier ID"] modifier_id: String,
 ) -> Result<(), Error> {
     silverpelt::settings_poise::settings_deleter(
-        &crate::SILVERPELT_CACHE,
         &ctx,
         &super::settings::EVENT_MODIFIERS,
         Value::String(modifier_id),

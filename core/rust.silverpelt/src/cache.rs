@@ -1,6 +1,4 @@
-use crate::{
-    canonical_module::CanonicalModule, CommandExtendedDataMap, Module, ModuleEventHandler,
-};
+use crate::{canonical_module::CanonicalModule, CommandExtendedDataMap, Module};
 use moka::future::Cache;
 use serenity::all::GuildId;
 
@@ -15,12 +13,14 @@ pub struct SilverpeltCache {
     /// A commonly needed operation is mapping a module id to its respective module
     ///
     /// module_cache is a cache of module id to module
-    pub module_cache: dashmap::DashMap<String, Module>,
+    ///
+    /// We use indexmap here to avoid the 'static restriction
+    pub module_cache: indexmap::IndexMap<String, Module>,
 
     /// Command ID to module map
     ///
     /// This uses an indexmap for now to avoid sending values over await point
-    pub command_id_module_map: indexmap::IndexMap<String, String>,
+    pub command_id_module_map: dashmap::DashMap<String, String>,
 
     /// Cache of the canonical forms of all modules
     pub canonical_module_cache: dashmap::DashMap<String, CanonicalModule>,
@@ -30,74 +30,53 @@ pub struct SilverpeltCache {
 
     /// Cache of all regexes and their pat as a (String, String) to a boolean indicating success
     pub regex_match_cache: Cache<(String, String), bool>,
-
-    /// Cache of all event listeners for a given module
-    pub module_event_listeners_cache: indexmap::IndexMap<String, Vec<ModuleEventHandler>>,
 }
 
-pub type NewCacheFn = fn() -> Vec<Module>;
-
-impl SilverpeltCache {
-    pub fn new(modules: NewCacheFn) -> Self {
-        log::info!("Making new SilverpeltCache");
+impl Default for SilverpeltCache {
+    fn default() -> Self {
         Self {
             module_enabled_cache: Cache::builder().support_invalidation_closures().build(),
-            command_extra_data_map: {
-                let map = dashmap::DashMap::new();
-
-                for module in (modules)() {
-                    for (command, extended_data) in module.commands {
-                        map.insert(command.name.clone(), extended_data);
-                    }
-                }
-
-                map
-            },
-            module_cache: {
-                let map = dashmap::DashMap::new();
-
-                for module in (modules)() {
-                    map.insert(module.id.to_string(), module);
-                }
-
-                map
-            },
-            command_id_module_map: {
-                let mut map = indexmap::IndexMap::new();
-
-                for module in (modules)() {
-                    for command in module.commands.iter() {
-                        map.insert(command.0.name.to_string(), module.id.to_string());
-                    }
-                }
-
-                map
-            },
-            canonical_module_cache: {
-                let map = dashmap::DashMap::new();
-
-                for module in (modules)() {
-                    map.insert(module.id.to_string(), CanonicalModule::from(module));
-                }
-
-                map
-            },
+            command_extra_data_map: dashmap::DashMap::new(),
+            module_cache: indexmap::IndexMap::new(),
+            command_id_module_map: dashmap::DashMap::new(),
+            canonical_module_cache: dashmap::DashMap::new(),
             regex_cache: Cache::builder().support_invalidation_closures().build(),
             regex_match_cache: Cache::builder().support_invalidation_closures().build(),
-            module_event_listeners_cache: {
-                let mut map = indexmap::IndexMap::new();
+        }
+    }
+}
 
-                for module in (modules)() {
-                    map.insert(module.id.to_string(), module.event_handlers);
-                }
+impl SilverpeltCache {
+    pub fn add_module(&mut self, module: Module) {
+        // Add the commands to cache
+        for (command, extended_data) in module.commands.iter() {
+            self.command_id_module_map
+                .insert(command.name.clone(), module.id.to_string());
+            self.command_extra_data_map
+                .insert(command.name.clone(), extended_data.clone());
+        }
 
-                map
-            },
+        // Add to canonical cache
+        self.canonical_module_cache
+            .insert(module.id.to_string(), CanonicalModule::from(&module));
+
+        // Add the module to cache
+        self.module_cache.insert(module.id.to_string(), module);
+    }
+
+    pub fn remove_module(&mut self, module_id: &str) {
+        if let Some(module) = self.module_cache.shift_remove(module_id) {
+            for (command, _) in module.commands.iter() {
+                self.command_id_module_map.remove(&command.name);
+                self.command_extra_data_map.remove(&command.name);
+            }
+
+            self.canonical_module_cache.remove(module_id);
         }
     }
 
     // This method attempts to match on a regex while using the cache where possible
-    pub async fn regex_match(&self, regex: &str, pat: &str) -> Result<bool, base_data::Error> {
+    pub async fn regex_match(&self, regex: &str, pat: &str) -> Result<bool, crate::Error> {
         if let Some(m) = self
             .regex_match_cache
             .get(&(regex.to_string(), pat.to_string()))

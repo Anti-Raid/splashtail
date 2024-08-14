@@ -1,7 +1,7 @@
 use poise::{serenity_prelude::CreateEmbed, CreateReply};
 use sqlx::types::chrono;
 
-type Error = base_data::Error;
+type Error = silverpelt::Error;
 type Context<'a> = silverpelt::Context<'a>;
 
 // Various statistics

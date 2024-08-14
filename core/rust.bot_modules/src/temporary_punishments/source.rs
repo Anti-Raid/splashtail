@@ -61,7 +61,7 @@ pub type Fetch = Box<
         + Sync
         + for<'a> Fn(
             &'a serenity::all::Context,
-        ) -> BoxFuture<'a, Result<Vec<Entry>, base_data::Error>>,
+        ) -> BoxFuture<'a, Result<Vec<Entry>, silverpelt::Error>>,
 >;
 
 pub type LogError = Box<
@@ -71,7 +71,7 @@ pub type LogError = Box<
             &'a serenity::all::Context,
             &'a Entry,
             Option<String>,
-        ) -> BoxFuture<'a, Result<(), base_data::Error>>,
+        ) -> BoxFuture<'a, Result<(), silverpelt::Error>>,
 >;
 
 /// As multiple modules may use and store temporary punishments in their own way,

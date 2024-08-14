@@ -8,7 +8,7 @@ pub mod test_module_parse {
         let _ = modules::modules();
     }
 
-    async fn new_dummy_basedatadata() -> base_data::Data {
+    async fn new_dummy_basedatadata() -> silverpelt::data::Data {
         const POSTGRES_MAX_CONNECTIONS: u32 = 3; // max connections to the database, we don't need too many here
         const REDIS_MAX_CONNECTIONS: u32 = 10; // max connections to the redis
 
@@ -25,8 +25,7 @@ pub mod test_module_parse {
             .await
             .expect("Could not initialize connection");
 
-        base_data::Data {
-            redis_pool: pool.clone(),
+        silverpelt::data::Data {
             object_store: Arc::new(
                 config::CONFIG
                     .object_storage
@@ -35,7 +34,7 @@ pub mod test_module_parse {
             ),
             pool: pg_pool.clone(),
             reqwest: reqwest::Client::new(),
-            extra_data: Arc::new(None::<()>),
+            extra_data: dashmap::DashMap::new(),
             props: Arc::new(crate::Props {
                 mewld_ipc: Arc::new(crate::ipc::mewld::MewldIpcClient {
                     redis_pool: pool.clone(),
@@ -46,6 +45,7 @@ pub mod test_module_parse {
                 pool: pg_pool.clone(),
                 proxy_support_data: tokio::sync::RwLock::new(None),
             }),
+            silverpelt_cache: (*crate::SILVERPELT_CACHE).clone(),
         }
     }
 
@@ -88,8 +88,7 @@ pub mod test_module_parse {
                         &config_opt,
                         serenity::all::GuildId::new(1),
                         serenity::all::UserId::new(1),
-                        &data,
-                        &cache_http,
+                        &data.settings_data(cache_http),
                         indexmap::IndexMap::new(),
                     )
                     .await

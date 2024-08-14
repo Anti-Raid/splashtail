@@ -300,4 +300,4 @@ Once the investigation has been completed, the nuke should be reversed. This inv
 ## Env files
 
 - ``core/go.std/data/current-env`
-- ``core/rust.base_data/current-env`
+- ``core/rust.config/current-env`

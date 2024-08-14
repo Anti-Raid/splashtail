@@ -1,6 +1,6 @@
 use crate::core::{slice_chars, DiscordReply};
-use base_data::limits::{embed_limits, message_limits};
 use gwevent::field::{CategorizedField, Field};
+use limits::{embed_limits, message_limits};
 use std::sync::{Arc, RwLock};
 use tera::Tera;
 
@@ -317,7 +317,7 @@ pub struct ExecutedTemplate {
 }
 
 impl ExecutedTemplate {
-    pub fn discord_reply<'a>(self) -> Result<DiscordReply<'a>, base_data::Error> {
+    pub fn discord_reply<'a>(self) -> Result<DiscordReply<'a>, crate::Error> {
         let mut total_chars: usize = 0;
         let mut total_content_chars = 0;
 
@@ -417,7 +417,7 @@ impl ExecutedTemplate {
 pub async fn execute_template_for_message(
     tera: &mut Tera,
     args: crate::core::MessageTemplateContext,
-) -> Result<ExecutedTemplate, base_data::Error> {
+) -> Result<ExecutedTemplate, crate::Error> {
     let mut ctx = tera::Context::new();
     ctx.insert("args", &args)?;
 

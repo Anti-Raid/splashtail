@@ -10,7 +10,7 @@ pub async fn parse_permission_checks(
     guild_id: serenity::all::GuildId,
     pool: sqlx::PgPool,
     pc: &PermissionChecks,
-) -> Result<PermissionChecks, base_data::Error> {
+) -> Result<PermissionChecks, crate::Error> {
     match pc {
         PermissionChecks::Simple { checks } => {
             if checks.len() > MAX_PERM_CHECK {

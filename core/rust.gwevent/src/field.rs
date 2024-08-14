@@ -1,4 +1,4 @@
-use base_data::Error;
+use crate::Error;
 use serenity::all::Mentionable;
 use serenity::model::timestamp::Timestamp;
 use serenity::nonmax::{NonMaxU16, NonMaxU8};

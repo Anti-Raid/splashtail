@@ -1,7 +1,7 @@
+use crate::value::Value;
 use async_trait::async_trait;
 use dashmap::DashMap;
 use futures_util::future::BoxFuture;
-use splashcore_rs::value::Value;
 
 pub type ToggleFunc = Box<
     dyn Send

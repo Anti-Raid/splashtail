@@ -1,7 +1,7 @@
 use std::str::FromStr;
 
 use silverpelt::Context;
-use base_data::Error;
+use silverpelt::Error;
 use splashcore_rs::utils::{
     parse_duration_string, parse_numeric_list, parse_pg_interval, REPLACE_ROLE, REPLACE_USER,
 };

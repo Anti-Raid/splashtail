@@ -44,7 +44,7 @@ pub type StingFetch = Box<
             &'a serenity::all::Context,
             &GuildId,
             &UserId,
-        ) -> BoxFuture<'a, Result<Vec<StingEntry>, base_data::Error>>,
+        ) -> BoxFuture<'a, Result<Vec<StingEntry>, silverpelt::Error>>,
 >;
 
 /// As multiple modules may use and store stings in their own way,

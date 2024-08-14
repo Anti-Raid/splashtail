@@ -36,7 +36,7 @@ pub fn compile(
     engine: &rhai::Engine,
     template: &str,
     compile_opts: crate::CompileTemplateOptions, // We don't support this yet
-) -> Result<rhai::AST, base_data::Error> {
+) -> Result<rhai::AST, crate::Error> {
     let ast = {
         if compile_opts.ignore_cache {
             engine.compile(template)?
@@ -89,7 +89,7 @@ mod test {
 
     pub fn create_scope<'a>(
         args: indexmap::IndexMap<String, serde_json::Value>,
-    ) -> Result<rhai::Scope<'a>, base_data::Error> {
+    ) -> Result<rhai::Scope<'a>, crate::Error> {
         let mut scope = rhai::Scope::new();
         let dyn_val: rhai::Dynamic = rhai::serde::to_dynamic(&args)
             .map_err(|e| format!("Failed to deserialize args: {}", e))?;
