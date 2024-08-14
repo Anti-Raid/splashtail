@@ -1,4 +1,5 @@
 pub mod plugins;
+mod state;
 mod utils; // Private utils like AtomicInstant
 
 use mlua::prelude::*;
@@ -11,20 +12,28 @@ static VMS: Lazy<Cache<GuildId, ArLua>> =
     Lazy::new(|| Cache::builder().time_to_idle(MAX_TEMPLATE_LIFETIME).build());
 
 pub const MAX_TEMPLATE_MEMORY_USAGE: usize = 1024 * 1024 * 3; // 3MB maximum memory
+pub const MAX_VM_THREAD_STACK_SIZE: usize = 1024 * 1024 * 4; // 4MB maximum memory
 pub const MAX_TEMPLATE_LIFETIME: std::time::Duration = std::time::Duration::from_secs(60 * 5); // 5 minutes maximum lifetime
 pub const MAX_TEMPLATES_EXECUTION_TIME: std::time::Duration = std::time::Duration::from_secs(5); // 5 seconds maximum execution time
 
-pub struct ArLuaExecutionState {
-    /// The last time this Lua VM was executed
-    pub last_exec: utils::AtomicInstant,
+pub struct LoadLuaTemplate {
+    pub template: String,
+    pub args: Option<serde_json::Value>,
+    pub callback: tokio::sync::oneshot::Sender<Result<serde_json::Value, LuaError>>,
 }
 
 #[derive(Clone)]
 pub struct ArLua {
-    /// The Lua VM
+    /// The Lua VM. The VM is wrapped in an async aware Mutex to ensure it is safe to use across await points
+    #[allow(dead_code)]
     pub vm: Lua,
-    /// The execution state of the Lua VM
-    pub state: Arc<ArLuaExecutionState>,
+    /// The last execution time of the Lua VM
+    pub last_execution_time: Arc<utils::AtomicInstant>,
+    /// The thread handle for the Lua VM
+    pub thread_handle: (
+        std::thread::Thread,
+        tokio::sync::mpsc::UnboundedSender<LoadLuaTemplate>,
+    ),
 }
 
 /// Create a new Lua VM complete with sandboxing and modules pre-loaded
@@ -32,7 +41,7 @@ pub struct ArLua {
 /// Note that callers should instead call the render_message_template/render_permissions_template functions
 ///
 /// As such, this function is private and should not be used outside of this module
-async fn create_lua_vm() -> LuaResult<ArLua> {
+async fn create_lua_vm(guild_id: GuildId, pool: sqlx::PgPool) -> LuaResult<ArLua> {
     let lua = Lua::new_with(
         LuaStdLib::ALL_SAFE,
         LuaOptions::new().catch_rust_panics(true),
@@ -71,16 +80,13 @@ async fn create_lua_vm() -> LuaResult<ArLua> {
     lua.globals()
         .set("require", lua.create_function(plugins::require)?)?;
 
-    let state: Arc<ArLuaExecutionState> = Arc::new(ArLuaExecutionState {
-        last_exec: utils::AtomicInstant::new(std::time::Instant::now()),
-    });
+    let last_execution_time = Arc::new(utils::AtomicInstant::new(std::time::Instant::now()));
 
-    let state_interrupt_ref = state.clone();
+    let last_execution_time_interrupt_ref = last_execution_time.clone();
 
     // Create an interrupt to limit the execution time of a template
     lua.set_interrupt(move |_| {
-        if state_interrupt_ref
-            .last_exec
+        if last_execution_time_interrupt_ref
             .load(std::sync::atomic::Ordering::Acquire)
             .elapsed()
             >= MAX_TEMPLATES_EXECUTION_TIME
@@ -90,7 +96,92 @@ async fn create_lua_vm() -> LuaResult<ArLua> {
         Ok(LuaVmState::Continue)
     });
 
-    let ar_lua = ArLua { vm: lua, state };
+    // Set lua user data
+    // TODO: Use guild id to find any custom constraints
+    let user_data = state::LuaUserData {
+        pool,
+        guild_id,
+        kv_constraints: state::LuaKVConstraints::default(),
+    };
+
+    lua.set_app_data(user_data);
+
+    let lua_ref = lua.clone();
+
+    // Create thread handle for async execution
+    //
+    // This both avoids locking and allows running multiple scripts concurrently
+    let thread_handle: (
+        std::thread::Thread,
+        tokio::sync::mpsc::UnboundedSender<LoadLuaTemplate>,
+    ) = {
+        let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel::<LoadLuaTemplate>();
+
+        let thread = std::thread::Builder::new()
+            .name(format!("lua-vm-{}", guild_id))
+            .stack_size(MAX_VM_THREAD_STACK_SIZE)
+            .spawn(move || {
+                let rt = tokio::runtime::Builder::new_current_thread()
+                    .enable_all()
+                    .build()
+                    .unwrap();
+
+                let lua_ref = lua_ref.clone();
+                rt.block_on(async {
+                    while let Some(template) = rx.recv().await {
+                        let args = template.args;
+                        let callback = template.callback;
+                        let template = template.template;
+                        let lua_ref = lua_ref.clone();
+
+                        tokio::task::spawn(async move {
+                            let f: LuaFunction = match lua_ref.load(&template).eval_async().await {
+                                Ok(f) => f,
+                                Err(e) => {
+                                    let _ = callback.send(Err(e));
+                                    return;
+                                }
+                            };
+
+                            match args {
+                                Some(args) => {
+                                    let args = match lua_ref.to_value(&args) {
+                                        Ok(args) => args,
+                                        Err(e) => {
+                                            let _ = callback
+                                                .send(Err(LuaError::external(e.to_string())));
+                                            return;
+                                        }
+                                    };
+
+                                    let v: LuaValue = f.call_async(args).await.unwrap();
+
+                                    let _v: Result<serde_json::Value, LuaError> = lua_ref
+                                        .from_value(v)
+                                        .map_err(|e| LuaError::external(e.to_string()));
+
+                                    let _ = callback.send(_v);
+                                }
+                                None => {
+                                    // Just compiling etc. return Null
+                                    let _ = callback.send(Ok(serde_json::Value::Null));
+                                }
+                            };
+                        });
+                    }
+                });
+            })?;
+
+        let thread_handle = thread.thread().clone();
+
+        (thread_handle, tx)
+    };
+
+    let ar_lua = ArLua {
+        vm: lua,
+        last_execution_time,
+        thread_handle,
+    };
 
     Ok(ar_lua)
 }
@@ -98,17 +189,11 @@ async fn create_lua_vm() -> LuaResult<ArLua> {
 /// Get a Lua VM for a guild
 ///
 /// This function will either return an existing Lua VM for the guild or create a new one if it does not exist
-async fn get_lua_vm(guild_id: GuildId) -> LuaResult<ArLua> {
+async fn get_lua_vm(guild_id: GuildId, pool: sqlx::PgPool) -> LuaResult<ArLua> {
     match VMS.get(&guild_id).await {
-        Some(vm) => {
-            vm.state.last_exec.store(
-                std::time::Instant::now(),
-                std::sync::atomic::Ordering::Release,
-            ); // Update the last execution time
-            Ok(vm.clone())
-        }
+        Some(vm) => Ok(vm.clone()),
         None => {
-            let vm = create_lua_vm().await?;
+            let vm = create_lua_vm(guild_id, pool).await?;
             VMS.insert(guild_id, vm.clone()).await;
             Ok(vm)
         }
@@ -116,75 +201,111 @@ async fn get_lua_vm(guild_id: GuildId) -> LuaResult<ArLua> {
 }
 
 /// Compiles a template
-pub async fn compile_template(guild_id: serenity::all::GuildId, template: &str) -> LuaResult<()> {
-    let lua = get_lua_vm(guild_id).await?;
+pub async fn compile_template(
+    guild_id: serenity::all::GuildId,
+    template: &str,
+    pool: sqlx::PgPool,
+) -> LuaResult<()> {
+    let lua = get_lua_vm(guild_id, pool).await?;
 
-    let _: LuaFunction = lua.vm.load(template).eval_async().await?;
+    // Update last execution time.
+    lua.last_execution_time.store(
+        std::time::Instant::now(),
+        std::sync::atomic::Ordering::Release,
+    );
+
+    let (tx, rx) = tokio::sync::oneshot::channel();
+
+    lua.thread_handle
+        .1
+        .send(LoadLuaTemplate {
+            template: template.to_string(),
+            args: None,
+            callback: tx,
+        })
+        .map_err(|e| LuaError::external(format!("Could not send data to Lua thread: {}", e)))?;
+
+    tokio::select! {
+        _ = tokio::time::sleep(MAX_TEMPLATES_EXECUTION_TIME) => {
+            return Err(LuaError::external("Template took too long to compile"));
+        }
+        _ = rx => {}
+    }
 
     Ok(())
 }
 
-/// Render a message template
-pub async fn render_message_template(
+/// Render a template
+pub async fn render_template<Request: serde::Serialize, Response: serde::de::DeserializeOwned>(
     guild_id: GuildId,
     template: &str,
-    args: crate::core::MessageTemplateContext,
-) -> LuaResult<plugins::message::Message> {
-    let lua = get_lua_vm(guild_id).await?;
+    pool: sqlx::PgPool,
+    args: Request,
+) -> LuaResult<Response> {
+    let lua = get_lua_vm(guild_id, pool).await?;
 
-    let args = lua.vm.to_value(&args)?;
+    let args = serde_json::to_value(&args).map_err(|e| LuaError::external(e.to_string()))?;
 
-    let f: LuaFunction = lua.vm.load(template).eval_async().await?;
+    // Update last execution time.
+    lua.last_execution_time.store(
+        std::time::Instant::now(),
+        std::sync::atomic::Ordering::Release,
+    );
 
-    let v: LuaValue = f.call_async(args).await?;
+    let (tx, rx) = tokio::sync::oneshot::channel();
 
-    let json_v = serde_json::to_value(v).map_err(|e| LuaError::external(e.to_string()))?;
-    let v: plugins::message::Message =
-        serde_json::from_value(json_v).map_err(|e| LuaError::external(e.to_string()))?;
+    lua.thread_handle
+        .1
+        .send(LoadLuaTemplate {
+            template: template.to_string(),
+            args: Some(args),
+            callback: tx,
+        })
+        .map_err(|e| LuaError::external(format!("Could not send data to Lua thread: {}", e)))?;
 
-    Ok(v)
-}
+    tokio::select! {
+        _ = tokio::time::sleep(MAX_TEMPLATES_EXECUTION_TIME) => {
+            Err(LuaError::external("Template took too long to compile"))
+        }
+        value = rx => {
+            let Ok(value) = value else {
+                return Err(LuaError::external("Could not receive data from Lua thread"));
+            };
 
-/// Render a message template
-pub async fn render_permissions_template(
-    guild_id: GuildId,
-    template: &str,
-    args: crate::core::PermissionTemplateContext,
-) -> LuaResult<permissions::types::PermissionResult> {
-    let lua = get_lua_vm(guild_id).await?;
+            let v: Response = serde_json::from_value(value?)
+                .map_err(|e| LuaError::external(e.to_string()))?;
 
-    let args = lua.vm.to_value(&args)?;
-
-    let f: LuaFunction = lua.vm.load(template).eval_async().await?;
-
-    let v: LuaValue = f.call_async(args).await?;
-
-    let json_v = serde_json::to_value(v).map_err(|e| LuaError::external(e.to_string()))?;
-    let v: permissions::types::PermissionResult =
-        serde_json::from_value(json_v).map_err(|e| LuaError::external(e.to_string()))?;
-
-    Ok(v)
+            Ok(v)
+        }
+    }
 }
 
 #[cfg(test)]
 mod test {
     use mlua::prelude::*;
-
-    async fn test_and_return_luavm() -> LuaResult<Lua> {
-        let lua = super::create_lua_vm().await?;
-        lua.vm.load("require \"@antiraid/builtins\" ").exec()?;
-        lua.vm.load("require \"os\" ").exec()?;
-        Ok(lua.vm)
-    }
+    use serenity::all::GuildId;
 
     #[tokio::test]
     async fn lua_test() {
+        let pool = sqlx::postgres::PgPoolOptions::new()
+            .max_connections(3)
+            .connect(&config::CONFIG.meta.postgres_url)
+            .await
+            .expect("Could not initialize connection");
+
         let mut vms = Vec::new();
 
         for i in 0..100000 {
             println!("{}", i);
 
-            let lua = test_and_return_luavm().await.unwrap();
+            let lua = super::create_lua_vm(GuildId::new(1), pool.clone())
+                .await
+                .unwrap();
+            lua.vm
+                .load("require \"@antiraid/builtins\" ")
+                .exec()
+                .unwrap();
+            lua.vm.load("require \"os\" ").exec().unwrap();
             vms.push(std::rc::Rc::new(lua));
         }
     }

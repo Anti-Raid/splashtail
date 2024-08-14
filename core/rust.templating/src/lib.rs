@@ -141,6 +141,7 @@ impl TemplateLanguage {
 pub async fn compile_template(
     guild_id: serenity::all::GuildId,
     template: &str,
+    pool: sqlx::PgPool,
     opts: CompileTemplateOptions,
 ) -> Result<(), base_data::Error> {
     let (template, pragma) = TemplatePragma::parse(template)?;
@@ -148,7 +149,7 @@ pub async fn compile_template(
     match pragma.lang {
         #[cfg(feature = "lua")]
         TemplateLanguage::Lua => {
-            lang_lua::compile_template(guild_id, template).await?;
+            lang_lua::compile_template(guild_id, template, pool).await?;
         }
         #[cfg(feature = "rhai")]
         TemplateLanguage::Rhai => {
@@ -170,6 +171,7 @@ pub async fn compile_template(
 pub async fn render_message_template(
     guild_id: serenity::all::GuildId,
     template: &str,
+    pool: sqlx::PgPool,
     args: crate::core::MessageTemplateContext,
     opts: CompileTemplateOptions,
 ) -> Result<core::DiscordReply, base_data::Error> {
@@ -179,7 +181,7 @@ pub async fn render_message_template(
         #[cfg(feature = "lua")]
         TemplateLanguage::Lua => {
             let msg_exec_template =
-                lang_lua::render_message_template(guild_id, template, args).await?;
+                lang_lua::render_template(guild_id, template, pool, args).await?;
             lang_lua::plugins::message::to_discord_reply(msg_exec_template)
         }
         #[cfg(feature = "rhai")]
@@ -209,6 +211,7 @@ pub async fn render_message_template(
 pub async fn render_permissions_template(
     guild_id: serenity::all::GuildId,
     template: &str,
+    pool: sqlx::PgPool,
     pctx: crate::core::PermissionTemplateContext,
     opts: CompileTemplateOptions,
 ) -> PermissionResult {
@@ -224,7 +227,7 @@ pub async fn render_permissions_template(
     match pragma.lang {
         #[cfg(feature = "lua")]
         TemplateLanguage::Lua => {
-            match lang_lua::render_permissions_template(guild_id, template, pctx).await {
+            match lang_lua::render_template(guild_id, template, pool, pctx).await {
                 Ok(result) => result,
                 Err(e) => PermissionResult::GenericError {
                     error: format!("Failed to render: {:?}", e),

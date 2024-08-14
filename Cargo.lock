@@ -4153,6 +4153,7 @@ name = "templating"
 version = "0.1.0"
 dependencies = [
  "base_data",
+ "config",
  "dashmap",
  "futures-util",
  "gwevent",
@@ -4169,6 +4170,7 @@ dependencies = [
  "serde_json",
  "serenity",
  "splashcore_rs",
+ "sqlx",
  "stacker",
  "tera",
  "tokio",

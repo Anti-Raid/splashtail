@@ -515,10 +515,13 @@ impl BotAnimusMessage {
                 }
             }
             Self::ParsePermissionChecks { guild_id, checks } => {
-                let parsed_checks =
-                    silverpelt::validators::parse_permission_checks(guild_id, &checks)
-                        .await
-                        .map_err(|e| format!("Failed to parse permission checks: {:#?}", e))?;
+                let parsed_checks = silverpelt::validators::parse_permission_checks(
+                    guild_id,
+                    pool.clone(),
+                    &checks,
+                )
+                .await
+                .map_err(|e| format!("Failed to parse permission checks: {:#?}", e))?;
 
                 Ok(BotAnimusResponse::ParsePermissionChecks {
                     checks: parsed_checks,

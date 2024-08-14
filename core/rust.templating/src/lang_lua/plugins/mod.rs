@@ -1,3 +1,4 @@
+pub mod concurrency;
 pub mod interop;
 pub mod message;
 
@@ -8,6 +9,7 @@ use once_cell::sync::Lazy;
 pub static PLUGINS: Lazy<indexmap::IndexMap<String, ModuleFn>> = Lazy::new(|| {
     indexmap::indexmap! {
         "@antiraid/builtins".to_string() => builtins as ModuleFn,
+        "@antiraid/concurrency".to_string() => concurrency::init_plugin as ModuleFn,
         "@antiraid/interop".to_string() => interop::init_plugin as ModuleFn,
         "@antiraid/message".to_string() => message::init_plugin as ModuleFn,
     }

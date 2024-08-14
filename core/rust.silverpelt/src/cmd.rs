@@ -413,6 +413,7 @@ pub async fn check_command(
             templating::render_permissions_template(
                 guild_id,
                 template,
+                pool.clone(),
                 templating::core::PermissionTemplateContext {
                     member_native_permissions: member_perms,
                     member_kittycat_permissions: kittycat_perms,

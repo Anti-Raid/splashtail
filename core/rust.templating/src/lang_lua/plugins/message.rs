@@ -129,6 +129,7 @@ pub fn to_discord_reply<'a>(message: Message) -> Result<DiscordReply<'a>, base_d
 
 pub fn init_plugin(lua: &Lua) -> LuaResult<LuaTable> {
     let module = lua.create_table()?;
+
     module.set(
         "new_message",
         lua.create_function(|lua, ()| {
@@ -169,6 +170,8 @@ pub fn init_plugin(lua: &Lua) -> LuaResult<LuaTable> {
             lua.to_value(&cfield.template_format().map_err(LuaError::external)?)
         })?,
     )?;
+
+    module.set_readonly(true); // Block any attempt to modify this table
 
     Ok(module)
 }
