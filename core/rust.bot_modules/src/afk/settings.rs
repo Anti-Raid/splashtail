@@ -5,12 +5,12 @@ use module_settings::types::{
     settings_wrap_precheck, Column, ColumnAction, ColumnSuggestion, ColumnType, ConfigOption,
     InnerColumnType, InnerColumnTypeStringKind, OperationSpecific, OperationType, SettingsError,
 };
-use once_cell::sync::Lazy;
 use splashcore_rs::value::Value;
+use std::sync::LazyLock;
 
 pub const MAX_AFK: i64 = 60 * 60 * 24 * 30; // 30 days
 
-pub static AFKS: Lazy<ConfigOption> = Lazy::new(|| {
+pub static AFKS: LazyLock<ConfigOption> = LazyLock::new(|| {
     ConfigOption {
         id: "afks",
         name: "AFKs",

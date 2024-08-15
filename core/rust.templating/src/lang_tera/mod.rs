@@ -2,7 +2,7 @@ pub mod message;
 pub mod permissions;
 
 use moka::future::Cache;
-use once_cell::sync::Lazy;
+use std::sync::LazyLock;
 
 /// Maximum number of AST nodes in a template
 pub const MAX_TEMPLATE_NODES: usize = 1024;
@@ -14,7 +14,7 @@ pub const TEMPLATE_EXECUTION_TIMEOUT: std::time::Duration = std::time::Duration:
 pub const MAX_TEMPLATE_MEMORY_USAGE: usize = 1024 * 1024; // 1 MB maximum memory
 
 /// Stores a cache of templates with the template content as key
-static TEMPLATE_CACHE: Lazy<Cache<String, tera::Tera>> = Lazy::new(|| {
+static TEMPLATE_CACHE: LazyLock<Cache<String, tera::Tera>> = LazyLock::new(|| {
     Cache::builder()
         .time_to_live(std::time::Duration::from_secs(60 * 60))
         .build()

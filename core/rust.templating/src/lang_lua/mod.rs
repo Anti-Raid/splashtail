@@ -4,12 +4,12 @@ mod utils; // Private utils like AtomicInstant
 
 use mlua::prelude::*;
 use moka::future::Cache;
-use once_cell::sync::Lazy;
 use serenity::all::GuildId;
 use std::sync::Arc;
+use std::sync::LazyLock;
 
-static VMS: Lazy<Cache<GuildId, ArLua>> =
-    Lazy::new(|| Cache::builder().time_to_idle(MAX_TEMPLATE_LIFETIME).build());
+static VMS: LazyLock<Cache<GuildId, ArLua>> =
+    LazyLock::new(|| Cache::builder().time_to_idle(MAX_TEMPLATE_LIFETIME).build());
 
 pub const MAX_TEMPLATE_MEMORY_USAGE: usize = 1024 * 1024 * 3; // 3MB maximum memory
 pub const MAX_VM_THREAD_STACK_SIZE: usize = 1024 * 1024 * 4; // 4MB maximum memory

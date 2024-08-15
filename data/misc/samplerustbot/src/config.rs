@@ -1,11 +1,11 @@
-use once_cell::sync::Lazy;
+use std::sync::LazyLock;
 use serde::{Deserialize, Serialize};
 use std::fs::File;
 
 use crate::Error;
 
 /// Global config object
-pub static CONFIG: Lazy<Config> = Lazy::new(|| Config::load().expect("Failed to load config"));
+pub static CONFIG: LazyLock<Config> = LazyLock::new(|| Config::load().expect("Failed to load config"));
 
 #[derive(Serialize, Deserialize, Default)]
 pub struct DiscordAuth {

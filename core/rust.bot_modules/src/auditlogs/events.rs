@@ -28,7 +28,6 @@ pub const fn not_audit_loggable_event() -> &'static [&'static str] {
     &[
         "CACHE_READY",         // Internal
         "INTERACTION_CREATE",  // Spams too much / is useless
-        "MESSAGE",             // Spams too much / is useless
         "RATELIMIT",           // Internal
         "GUILD_CREATE",        // Internal
         "GUILD_MEMBERS_CHUNK", // Internal
@@ -45,7 +44,7 @@ pub async fn event_listener(ectx: &EventHandlerContext) -> Result<(), silverpelt
 
     // (hopefully temporary) work around to reduce spam
     match event {
-        FullEvent::GuildAuditLogEntryCreate { .. } => {}
+        FullEvent::GuildAuditLogEntryCreate { .. } | FullEvent::Message { .. } => {}
         _ => match gwevent::core::get_event_user_id(event) {
             Ok(user_id) => {
                 if user_id == ctx.cache.current_user().id {
@@ -91,11 +90,24 @@ pub async fn event_listener(ectx: &EventHandlerContext) -> Result<(), silverpelt
     .await
 }
 
-pub async fn check_event_matches(
+/// Check if an event matches a list of filters
+///
+/// Rules:
+/// - If filter is empty, return true unless a special case applies
+/// - If filter matches the event_name, return true unless a special case applies
+///
+/// Special cases:
+/// - If filter starts with `R/`, treat it as a regex
+/// - If event_name is MESSAGE, then it must be an exact match to be dispatched. This is to avoid spam
+pub async fn should_dispatch_event(
     event_name: &str,
-    filters: Vec<String>,
+    filters: &[String],
     silverpelt_cache: &silverpelt::cache::SilverpeltCache,
 ) -> Result<bool, silverpelt::Error> {
+    if event_name == "MESSAGE" && !filters.contains(&event_name.to_string()) {
+        return Ok(false);
+    }
+
     // If empty, always return Ok
     if filters.is_empty() {
         return Ok(true);
@@ -134,9 +146,7 @@ pub async fn dispatch_audit_log(
     expanded_event: indexmap::IndexMap<String, CategorizedField>,
     guild_id: serenity::model::id::GuildId,
 ) -> Result<(), silverpelt::Error> {
-    let sinks = sqlx::query!("SELECT id, type AS typ, sink, events, embed_template, send_json_context FROM auditlogs__sinks WHERE guild_id = $1 AND broken = false", guild_id.to_string())
-        .fetch_all(&data.pool)
-        .await?;
+    let sinks = super::cache::get_sinks(guild_id, &data.pool).await?;
 
     if sinks.is_empty() {
         return Ok(());
@@ -150,18 +160,18 @@ pub async fn dispatch_audit_log(
         }
     })?;
 
-    for sink in sinks {
+    for sink in sinks.iter() {
         // Verify event in whitelisted event list, if events is set
-        if let Some(events) = sink.events {
-            if !check_event_matches(event_name, events, &data.silverpelt_cache).await? {
+        if let Some(ref events) = sink.events {
+            if !should_dispatch_event(event_name, events, &data.silverpelt_cache).await? {
                 continue;
             }
         }
 
         let template = {
-            if let Some(embed_template) = sink.embed_template {
+            if let Some(ref embed_template) = sink.embed_template {
                 if !embed_template.is_empty() {
-                    embed_template
+                    embed_template.clone()
                 } else {
                     // Load default template
                     load_embedded_event_template(event_name)?

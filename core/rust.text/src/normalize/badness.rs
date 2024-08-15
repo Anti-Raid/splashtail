@@ -11,10 +11,10 @@ identify sequences and contexts of these characters that are much more likely
 to be mojibake than intended strings, such as lowercase accented letters
 followed immediately by currency symbols.
 */
-use once_cell::sync::Lazy;
 use rustc_hash::FxHashMap;
+use std::sync::LazyLock;
 
-static MOJIBAKE_CATEGORIES: Lazy<FxHashMap<&'static str, &'static str>> = Lazy::new(|| {
+static MOJIBAKE_CATEGORIES: LazyLock<FxHashMap<&'static str, &'static str>> = LazyLock::new(|| {
     let mut m = FxHashMap::default();
     m.insert(
         "common",
@@ -49,7 +49,7 @@ This is a verbose regular expression, with whitespace added for somewhat more
 readability. Remember that the only spaces that count as literal spaces in this
 expression are ones inside character classes (square brackets).
 */
-static BADNESS_RE: Lazy<regex::Regex> = Lazy::new(|| {
+static BADNESS_RE: LazyLock<regex::Regex> = LazyLock::new(|| {
     regex::Regex::new(
     &format!(
 r#"[{c1}]

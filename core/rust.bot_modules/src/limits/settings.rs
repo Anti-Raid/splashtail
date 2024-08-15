@@ -6,10 +6,10 @@ use module_settings::{
         InnerColumnType, InnerColumnTypeStringKind, OperationSpecific, OperationType,
     },
 };
-use once_cell::sync::Lazy;
+use std::sync::LazyLock;
 use strum::VariantNames;
 
-pub static PAST_HIT_LIMITS: Lazy<ConfigOption> = Lazy::new(|| ConfigOption {
+pub static PAST_HIT_LIMITS: LazyLock<ConfigOption> = LazyLock::new(|| ConfigOption {
     id: "past_hit_limits",
     name: "Past Hit Limits",
     description: "All limits that have been hit in the past",
@@ -134,7 +134,7 @@ pub static PAST_HIT_LIMITS: Lazy<ConfigOption> = Lazy::new(|| ConfigOption {
     post_actions: settings_wrap_postactions(vec![]),
 });
 
-pub static USER_ACTIONS: Lazy<ConfigOption> = Lazy::new(|| ConfigOption {
+pub static USER_ACTIONS: LazyLock<ConfigOption> = LazyLock::new(|| ConfigOption {
     id: "user_actions",
     name: "User Actions",
     description: "All actions that have been performed by a user",
@@ -274,7 +274,7 @@ pub static USER_ACTIONS: Lazy<ConfigOption> = Lazy::new(|| ConfigOption {
     post_actions: settings_wrap_postactions(vec![]),
 });
 
-pub static GUILD_LIMITS: Lazy<ConfigOption> = Lazy::new(|| {
+pub static GUILD_LIMITS: LazyLock<ConfigOption> = LazyLock::new(|| {
     ConfigOption {
         id: "guild_limits",
         name: "Limits",

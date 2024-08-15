@@ -8,9 +8,9 @@ use module_settings::{
         SettingsError,
     },
 };
-use once_cell::sync::Lazy;
+use std::sync::LazyLock;
 
-pub static CAN_USE_BOT: Lazy<ConfigOption> = Lazy::new(|| ConfigOption {
+pub static CAN_USE_BOT: LazyLock<ConfigOption> = LazyLock::new(|| ConfigOption {
     id: "can_use_bot",
     name: "Can Use Bot Whitelist",
     description: "Stores a list of users and guilds who can use the bot",
@@ -153,7 +153,7 @@ pub static CAN_USE_BOT: Lazy<ConfigOption> = Lazy::new(|| ConfigOption {
     }]),
 });
 
-pub static INSPECTOR_FAKE_BOTS: Lazy<ConfigOption> = Lazy::new(|| ConfigOption {
+pub static INSPECTOR_FAKE_BOTS: LazyLock<ConfigOption> = LazyLock::new(|| ConfigOption {
     id: "inspector__fake_bots",
     name: "Inspector (Fake Bots)",
     description: "Stores a list of official bots and their ID to allow detection of fake bots",
@@ -292,7 +292,7 @@ pub static INSPECTOR_FAKE_BOTS: Lazy<ConfigOption> = Lazy::new(|| ConfigOption {
     }]),
 });
 
-pub static LAST_TASK_EXPIRY: Lazy<ConfigOption> = Lazy::new(|| ConfigOption {
+pub static LAST_TASK_EXPIRY: LazyLock<ConfigOption> = LazyLock::new(|| ConfigOption {
     id: "last_task_expiry",
     name: "Last Task Expiry",
     description: "Internal table used to schedule long-running tasks (1 week etc.)",

@@ -1,7 +1,7 @@
 /// This crate parses down the mewld arguments down to a simple MewldCmdArgs struct
-use once_cell::sync::Lazy;
+use std::sync::LazyLock;
 
-pub static MEWLD_ARGS: Lazy<MewldCmdArgs> = Lazy::new(|| {
+pub static MEWLD_ARGS: LazyLock<MewldCmdArgs> = LazyLock::new(|| {
     let args: Vec<String> = std::env::args().collect();
     MewldCmdArgs::parse_argv(&args).expect("Failed to parse mewld arguments")
 });

@@ -8,7 +8,7 @@ use super::codecs::sloppy::{
     SLOPPY_WINDOWS_1251, SLOPPY_WINDOWS_1252, SLOPPY_WINDOWS_1253, SLOPPY_WINDOWS_1254,
 };
 
-use once_cell::sync::Lazy;
+use std::sync::LazyLock;
 
 pub fn possible_encoding(text: &str, encoding: CodecType) -> bool {
     /*
@@ -21,7 +21,7 @@ pub fn possible_encoding(text: &str, encoding: CodecType) -> bool {
     ENCODING_REGEXES[&encoding].is_match(text.as_bytes())
 }
 
-pub static CHARMAP_ENCODINGS: Lazy<Vec<(CodecType, &'static dyn Codec)>> = Lazy::new(|| {
+pub static CHARMAP_ENCODINGS: LazyLock<Vec<(CodecType, &'static dyn Codec)>> = LazyLock::new(|| {
     vec![
         (CodecType::Latin1, &*LATIN_1),
         (CodecType::SloppyWindows1252, &*SLOPPY_WINDOWS_1252),
@@ -35,10 +35,10 @@ pub static CHARMAP_ENCODINGS: Lazy<Vec<(CodecType, &'static dyn Codec)>> = Lazy:
     ]
 });
 
-pub static SINGLE_QUOTE_RE: Lazy<Regex> =
-    Lazy::new(|| Regex::new("\u{02bc}|\u{2018}|\u{2019}|\u{201a}|\u{201b}").unwrap());
-pub static DOUBLE_QUOTE_RE: Lazy<Regex> =
-    Lazy::new(|| Regex::new("\u{201c}|\u{201d}|\u{201e}|\u{201f}").unwrap());
+pub static SINGLE_QUOTE_RE: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new("\u{02bc}|\u{2018}|\u{2019}|\u{201a}|\u{201b}").unwrap());
+pub static DOUBLE_QUOTE_RE: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new("\u{201c}|\u{201d}|\u{201e}|\u{201f}").unwrap());
 
 /*
 ENCODING_REGEXES contain reasonably fast ways to detect if we
@@ -46,60 +46,61 @@ could represent a given string in a given encoding. The simplest one is
 the 'ascii' detector, which of course just determines if all characters
 are between U+0000 and U+007F.
 */
-pub static ENCODING_REGEXES: Lazy<FxHashMap<CodecType, regex::bytes::Regex>> = Lazy::new(|| {
-    let mut encoding_regexes: FxHashMap<CodecType, regex::bytes::Regex> = FxHashMap::default();
+pub static ENCODING_REGEXES: LazyLock<FxHashMap<CodecType, regex::bytes::Regex>> =
+    LazyLock::new(|| {
+        let mut encoding_regexes: FxHashMap<CodecType, regex::bytes::Regex> = FxHashMap::default();
 
-    encoding_regexes.insert(
-        CodecType::Ascii,
-        regex::bytes::Regex::new(r"(?-u:^[\x00-\x7f]*$)").unwrap(),
-    );
-
-    /*
-    Make a sequence of characters that bytes \x80 to \xFF decode to
-    in each encoding, as well as byte \x1A, which is used to represent
-    the replacement character � in the sloppy-* encodings.
-    */
-    let byte_range: Vec<u8> = (0x80..=0xFF).chain(std::iter::once(0x1A)).collect();
-
-    for (codec_type, codec) in CHARMAP_ENCODINGS.iter() {
-        let charlist = codec.decode(&byte_range);
-        // for each character, encode back to utf-8
-        let bytes = charlist
-            .chars()
-            .map(|c| c.encode_utf8(&mut [0; 4]).as_bytes().to_vec());
-
-        // convert bytes to a regex like \x80\x81\x82\x83|\x84\x85\x86\x87|...
-        let charlist = bytes
-            .map(|b| {
-                b.iter()
-                    .map(|b| format!(r"\x{:02x}", b))
-                    .collect::<Vec<String>>()
-                    .join("")
-            })
-            .collect::<Vec<String>>()
-            .join("|");
-
-        /*
-        The rest of the ASCII bytes -- bytes \x00 to \x19 and \x1B
-        to \x7F -- will decode as those ASCII characters in any encoding we
-        support, so we can just include them as ranges. This also lets us
-        not worry about escaping regex special characters, because all of
-        them are in the \x1B to \x7F range.
-        */
-        let regex = format!(
-            r"^(?-u:[\x00-\x19\x1b-\x7f]|{charlist})*$",
-            charlist = charlist
+        encoding_regexes.insert(
+            CodecType::Ascii,
+            regex::bytes::Regex::new(r"(?-u:^[\x00-\x7f]*$)").unwrap(),
         );
 
-        encoding_regexes.insert(*codec_type, regex::bytes::Regex::new(&regex).unwrap());
-    }
+        /*
+        Make a sequence of characters that bytes \x80 to \xFF decode to
+        in each encoding, as well as byte \x1A, which is used to represent
+        the replacement character � in the sloppy-* encodings.
+        */
+        let byte_range: Vec<u8> = (0x80..=0xFF).chain(std::iter::once(0x1A)).collect();
 
-    encoding_regexes
-});
+        for (codec_type, codec) in CHARMAP_ENCODINGS.iter() {
+            let charlist = codec.decode(&byte_range);
+            // for each character, encode back to utf-8
+            let bytes = charlist
+                .chars()
+                .map(|c| c.encode_utf8(&mut [0; 4]).as_bytes().to_vec());
 
-pub static HTML_ENTITY_RE: Lazy<Regex> =
-    Lazy::new(|| Regex::new(r"&#?[0-9A-Za-z]{1,24};").unwrap());
-pub static HTML_ENTITIES: Lazy<FxHashMap<String, String>> = Lazy::new(|| {
+            // convert bytes to a regex like \x80\x81\x82\x83|\x84\x85\x86\x87|...
+            let charlist = bytes
+                .map(|b| {
+                    b.iter()
+                        .map(|b| format!(r"\x{:02x}", b))
+                        .collect::<Vec<String>>()
+                        .join("")
+                })
+                .collect::<Vec<String>>()
+                .join("|");
+
+            /*
+            The rest of the ASCII bytes -- bytes \x00 to \x19 and \x1B
+            to \x7F -- will decode as those ASCII characters in any encoding we
+            support, so we can just include them as ranges. This also lets us
+            not worry about escaping regex special characters, because all of
+            them are in the \x1B to \x7F range.
+            */
+            let regex = format!(
+                r"^(?-u:[\x00-\x19\x1b-\x7f]|{charlist})*$",
+                charlist = charlist
+            );
+
+            encoding_regexes.insert(*codec_type, regex::bytes::Regex::new(&regex).unwrap());
+        }
+
+        encoding_regexes
+    });
+
+pub static HTML_ENTITY_RE: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"&#?[0-9A-Za-z]{1,24};").unwrap());
+pub static HTML_ENTITIES: LazyLock<FxHashMap<String, String>> = LazyLock::new(|| {
     let mut entities: FxHashMap<String, String> = FxHashMap::default();
 
     /*
@@ -126,7 +127,7 @@ pub static HTML_ENTITIES: Lazy<FxHashMap<String, String>> = Lazy::new(|| {
     entities
 });
 
-pub static CONTROL_CHARS: Lazy<FxHashSet<u32>> = Lazy::new(|| {
+pub static CONTROL_CHARS: LazyLock<FxHashSet<u32>> = LazyLock::new(|| {
     /*
     Build a translate mapping that strips likely-unintended control characters.
     See `plsfix::fixes::remove_control_chars` for a description of these
@@ -194,7 +195,7 @@ spaces, particularly U+C5 (Å), which is a word in multiple languages!
 We should consider checking for b'\x85' being converted to ... in the future.
 I've seen it once, but the text still wasn't recoverable.
 */
-pub static ALTERED_UTF8_RE: Lazy<regex::bytes::Regex> = Lazy::new(|| {
+pub static ALTERED_UTF8_RE: LazyLock<regex::bytes::Regex> = LazyLock::new(|| {
     regex::bytes::Regex::new(
         &(r"(?-u:".to_string()
             + r"[\xc2\xc3\xc5\xce\xd0\xd9][ ]"
@@ -218,7 +219,7 @@ sequence as \ufffd instead of failing to re-decode it at all.
 In some cases, we allow the ASCII '?' in place of \ufffd, but at most once per
 sequence.
 */
-pub static LOSSY_UTF8_RE: Lazy<regex::bytes::Regex> = Lazy::new(|| {
+pub static LOSSY_UTF8_RE: LazyLock<regex::bytes::Regex> = LazyLock::new(|| {
     regex::bytes::Regex::new(
         &(r"(?-u:".to_string()
             + r"[\xc2-\xdf][\x1a]"
@@ -240,8 +241,8 @@ pub static LOSSY_UTF8_RE: Lazy<regex::bytes::Regex> = Lazy::new(|| {
 This regex matches C1 control characters, which occupy some of the positions
 in the Latin-1 character map that Windows assigns to other characters instead.
 */
-pub static C1_CONTROL_RE: Lazy<fancy_regex::Regex> =
-    Lazy::new(|| fancy_regex::Regex::new(r"[\x80-\x9f]").unwrap());
+pub static C1_CONTROL_RE: LazyLock<fancy_regex::Regex> =
+    LazyLock::new(|| fancy_regex::Regex::new(r"[\x80-\x9f]").unwrap());
 
 /*
 A translate mapping that breaks ligatures made of Latin letters. While
@@ -255,7 +256,7 @@ characters for legacy encoding reasons, not for typographical reasons.
 Ligatures and digraphs may also be separated by NFKC normalization, but that
 is sometimes more normalization than you want.
 */
-pub static LIGATURES: Lazy<FxHashMap<u32, &'static str>> = Lazy::new(|| {
+pub static LIGATURES: LazyLock<FxHashMap<u32, &'static str>> = LazyLock::new(|| {
     let mut ligatures: FxHashMap<u32, &str> = FxHashMap::default();
 
     ligatures.insert('Ĳ' as u32, "IJ"); // Dutch ligatures
@@ -284,7 +285,7 @@ pub static LIGATURES: Lazy<FxHashMap<u32, &'static str>> = Lazy::new(|| {
     ligatures
 });
 
-pub static WIDTH_MAP: Lazy<FxHashMap<u32, char>> = Lazy::new(|| {
+pub static WIDTH_MAP: LazyLock<FxHashMap<u32, char>> = LazyLock::new(|| {
     let mut width_map: FxHashMap<u32, char> = FxHashMap::default();
     // Though it's not listed as a fullwidth character, we'll want to convert
     // U+3000 IDEOGRAPHIC SPACE to U+20 SPACE on the same principle, so start
@@ -323,7 +324,7 @@ less efficient. The 'badness' rules that require context, such as a preceding
 lowercase letter, will prevent some cases of inconsistent UTF-8 from being
 fixed when they don't see it.
 */
-pub static UTF8_DETECTOR_RE: Lazy<fancy_regex::Regex> = Lazy::new(|| {
+pub static UTF8_DETECTOR_RE: LazyLock<fancy_regex::Regex> = LazyLock::new(|| {
     fancy_regex::Regex::new(
     &format!(
         r"(?<![{utf8_continuation_strict}])

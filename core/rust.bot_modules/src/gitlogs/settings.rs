@@ -5,9 +5,9 @@ use module_settings::types::{
 use module_settings::data_stores::PostgresDataStore;
 use serenity::all::{Permissions, ChannelType};
 use splashcore_rs::value::Value;
-use once_cell::sync::Lazy;
+use std::sync::LazyLock;
 
-pub static WEBHOOKS: Lazy<ConfigOption> = Lazy::new(|| {
+pub static WEBHOOKS: LazyLock<ConfigOption> = LazyLock::new(|| {
     ConfigOption {
         id: "webhooks",
         name: "Webhooks",
@@ -163,7 +163,7 @@ When creating repositories, use `{id}` as the ID.
     }
 });
 
-pub static REPOS: Lazy<ConfigOption> = Lazy::new(|| {
+pub static REPOS: LazyLock<ConfigOption> = LazyLock::new(|| {
     ConfigOption {
         id: "repos",
         name: "Repositories",
@@ -381,7 +381,7 @@ pub static REPOS: Lazy<ConfigOption> = Lazy::new(|| {
     }
 });
 
-pub static EVENT_MODIFIERS: Lazy<ConfigOption> = Lazy::new(|| {
+pub static EVENT_MODIFIERS: LazyLock<ConfigOption> = LazyLock::new(|| {
     ConfigOption {
         id: "event_modifiers",
         name: "Event Modifiers",

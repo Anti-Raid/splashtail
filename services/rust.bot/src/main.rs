@@ -12,8 +12,7 @@ use gwevent::core::get_event_guild_id;
 use silverpelt::{module_config::is_module_enabled, EventHandlerContext};
 use splashcore_rs::value::Value;
 
-use once_cell::sync::Lazy;
-use std::sync::{Arc, OnceLock};
+use std::sync::{Arc, LazyLock, OnceLock};
 use tokio::sync::RwLock;
 
 use cap::Cap;
@@ -33,13 +32,13 @@ pub struct ConnectState {
     pub ready_lock: tokio::sync::Mutex<()>,
 }
 
-pub static CONNECT_STATE: Lazy<ConnectState> = Lazy::new(|| ConnectState {
+pub static CONNECT_STATE: LazyLock<ConnectState> = LazyLock::new(|| ConnectState {
     started_tasks: std::sync::atomic::AtomicBool::new(false),
     ready: dashmap::DashMap::new(),
     ready_lock: tokio::sync::Mutex::new(()),
 });
 
-static SILVERPELT_CACHE: Lazy<Arc<silverpelt::cache::SilverpeltCache>> = Lazy::new(|| {
+static SILVERPELT_CACHE: LazyLock<Arc<silverpelt::cache::SilverpeltCache>> = LazyLock::new(|| {
     let mut silverpelt_cache = silverpelt::cache::SilverpeltCache::default();
 
     for module in modules::modules() {
@@ -53,7 +52,7 @@ static SILVERPELT_CACHE: Lazy<Arc<silverpelt::cache::SilverpeltCache>> = Lazy::n
 pub struct Props {
     pub pool: sqlx::PgPool,
     pub mewld_ipc: Arc<MewldIpcClient>,
-    pub animus_magic_ipc: OnceLock<Arc<AnimusMagicClient>>, // a rwlock is needed as the cachehttp is only available after the client is started
+    pub animus_magic_ipc: OnceLock<Arc<AnimusMagicClient>>,
     pub proxy_support_data: RwLock<Option<Arc<proxy_support::ProxySupportData>>>,
 }
 
@@ -165,7 +164,7 @@ pub struct CanUseBotList {
     pub guilds: Vec<GuildId>,
 }
 
-pub static CAN_USE_BOT_CACHE: Lazy<RwLock<CanUseBotList>> = Lazy::new(|| {
+pub static CAN_USE_BOT_CACHE: LazyLock<RwLock<CanUseBotList>> = LazyLock::new(|| {
     RwLock::new(CanUseBotList {
         users: Vec::new(),
         guilds: Vec::new(),
@@ -176,9 +175,9 @@ pub static CAN_USE_BOT_CACHE: Lazy<RwLock<CanUseBotList>> = Lazy::new(|| {
 // we implement PERMODULE_FUNCTIONS which any module can register/add on to
 //
 // Format of a permodule toggle is (module_name, toggle)
-pub static PERMODULE_FUNCTIONS: Lazy<
+pub static PERMODULE_FUNCTIONS: LazyLock<
     dashmap::DashMap<(String, String), splashcore_rs::permodule_functions::ToggleFunc>,
-> = Lazy::new(dashmap::DashMap::new);
+> = LazyLock::new(dashmap::DashMap::new);
 
 pub struct PermoduleFunctionExecutor {}
 
@@ -549,7 +548,7 @@ async fn event_listener<'a>(
     });
 
     let mut set = tokio::task::JoinSet::new();
-    for (id, module) in (*SILVERPELT_CACHE).module_cache.iter() {
+    for (id, module) in SILVERPELT_CACHE.module_cache.iter() {
         let module_enabled = match is_module_enabled(
             &event_handler_context.data.silverpelt_cache,
             &event_handler_context.data.pool,

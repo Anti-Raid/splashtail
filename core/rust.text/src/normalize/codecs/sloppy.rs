@@ -59,8 +59,8 @@ use oem_cp::code_table::DECODING_TABLE_CP437;
 use oem_cp::code_table::ENCODING_TABLE_CP437;
 use oem_cp::decode_string_complete_table;
 use oem_cp::encode_string_checked;
-use once_cell::sync::Lazy;
 use rustc_hash::FxHashMap;
+use std::sync::LazyLock;
 
 static REPLACEMENT_CHAR: char = '\u{FFFD}';
 
@@ -245,7 +245,7 @@ fn make_sloppy_codec(
     }
 }
 
-pub static SLOPPY_WINDOWS_1250: Lazy<SloppyCodec> = Lazy::new(|| {
+pub static SLOPPY_WINDOWS_1250: LazyLock<SloppyCodec> = LazyLock::new(|| {
     make_sloppy_codec(
         "sloppy-windows-1250",
         CodecType::SloppyWindows1250,
@@ -253,7 +253,7 @@ pub static SLOPPY_WINDOWS_1250: Lazy<SloppyCodec> = Lazy::new(|| {
     )
 });
 
-pub static SLOPPY_WINDOWS_1251: Lazy<SloppyCodec> = Lazy::new(|| {
+pub static SLOPPY_WINDOWS_1251: LazyLock<SloppyCodec> = LazyLock::new(|| {
     make_sloppy_codec(
         "sloppy-windows-1251",
         CodecType::SloppyWindows1251,
@@ -261,7 +261,7 @@ pub static SLOPPY_WINDOWS_1251: Lazy<SloppyCodec> = Lazy::new(|| {
     )
 });
 
-pub static SLOPPY_WINDOWS_1252: Lazy<SloppyCodec> = Lazy::new(|| {
+pub static SLOPPY_WINDOWS_1252: LazyLock<SloppyCodec> = LazyLock::new(|| {
     make_sloppy_codec(
         "sloppy-windows-1252",
         CodecType::SloppyWindows1252,
@@ -269,7 +269,7 @@ pub static SLOPPY_WINDOWS_1252: Lazy<SloppyCodec> = Lazy::new(|| {
     )
 });
 
-pub static SLOPPY_WINDOWS_1253: Lazy<SloppyCodec> = Lazy::new(|| {
+pub static SLOPPY_WINDOWS_1253: LazyLock<SloppyCodec> = LazyLock::new(|| {
     make_sloppy_codec(
         "sloppy-windows-1253",
         CodecType::SloppyWindows1253,
@@ -277,7 +277,7 @@ pub static SLOPPY_WINDOWS_1253: Lazy<SloppyCodec> = Lazy::new(|| {
     )
 });
 
-pub static SLOPPY_WINDOWS_1254: Lazy<SloppyCodec> = Lazy::new(|| {
+pub static SLOPPY_WINDOWS_1254: LazyLock<SloppyCodec> = LazyLock::new(|| {
     make_sloppy_codec(
         "sloppy-windows-1254",
         CodecType::SloppyWindows1254,
@@ -285,30 +285,30 @@ pub static SLOPPY_WINDOWS_1254: Lazy<SloppyCodec> = Lazy::new(|| {
     )
 });
 
-pub static ISO_8859_2: Lazy<StandardCodec> = Lazy::new(|| StandardCodec {
+pub static ISO_8859_2: LazyLock<StandardCodec> = LazyLock::new(|| StandardCodec {
     name: "iso-8859-2",
     codec_type: CodecType::Iso88592,
     encoding: encoding_rs::ISO_8859_2,
 });
 
-pub static WINDOWS_1252: Lazy<StandardCodec> = Lazy::new(|| StandardCodec {
+pub static WINDOWS_1252: LazyLock<StandardCodec> = LazyLock::new(|| StandardCodec {
     name: "windows-1252",
     codec_type: CodecType::Windows1252,
     encoding: encoding_rs::WINDOWS_1252,
 });
 
-pub static MACROMAN: Lazy<StandardCodec> = Lazy::new(|| StandardCodec {
+pub static MACROMAN: LazyLock<StandardCodec> = LazyLock::new(|| StandardCodec {
     name: "macroman",
     codec_type: CodecType::MacRoman,
     encoding: encoding_rs::MACINTOSH,
 });
 
-pub static LATIN_1: Lazy<Latin1Codec> = Lazy::new(|| Latin1Codec {
+pub static LATIN_1: LazyLock<Latin1Codec> = LazyLock::new(|| Latin1Codec {
     name: "latin-1",
     codec_type: CodecType::Latin1,
 });
 
-pub static CP437: Lazy<Cp437Codec> = Lazy::new(|| Cp437Codec {
+pub static CP437: LazyLock<Cp437Codec> = LazyLock::new(|| Cp437Codec {
     name: "cp437",
     codec_type: CodecType::Cp437,
 });

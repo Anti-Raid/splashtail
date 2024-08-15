@@ -1,14 +1,14 @@
 use dashmap::DashMap;
 use futures_util::future::BoxFuture;
-use once_cell::sync::Lazy;
 use serenity::all::{GuildId, UserId};
+use std::sync::LazyLock;
 
 /// Stores a map of all sting sources
 ///
 /// Note that modules wanting to add sting sources
 /// should call [`add_sting_source`](crate::punishments::sting_source::add_sting_source)
 /// to add their sting source to this map
-pub static STING_SOURCES: Lazy<DashMap<String, StingSource>> = Lazy::new(DashMap::new);
+pub static STING_SOURCES: LazyLock<DashMap<String, StingSource>> = LazyLock::new(DashMap::new);
 
 /// Allows a module to add a new sting source
 pub fn add_sting_source(source: StingSource) {

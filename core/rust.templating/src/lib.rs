@@ -13,11 +13,11 @@ mod lang_tera;
 
 type Error = Box<dyn std::error::Error + Send + Sync>; // This is constant and should be copy pasted
 
-use once_cell::sync::Lazy;
 use permissions::types::PermissionResult;
 use std::str::FromStr;
+use std::sync::LazyLock;
 
-static TEMPLATING_ENVVAR: Lazy<Vec<String>> = Lazy::new(|| {
+static TEMPLATING_ENVVAR: LazyLock<Vec<String>> = LazyLock::new(|| {
     let v = std::env::var("ANTIRAID_SUPPORTED_TEMPLATED_ENGINES");
 
     match v {

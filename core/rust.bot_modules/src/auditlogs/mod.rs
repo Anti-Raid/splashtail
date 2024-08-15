@@ -1,4 +1,5 @@
 mod am_toggles;
+mod cache;
 mod checks;
 mod cmds;
 pub mod events;

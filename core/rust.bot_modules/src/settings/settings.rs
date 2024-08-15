@@ -8,10 +8,10 @@ use module_settings::{
     },
 };
 use futures_util::future::FutureExt;
-use once_cell::sync::Lazy;
+use std::sync::LazyLock;
 use splashcore_rs::value::Value;
 
-pub static GUILD_ROLES: Lazy<ConfigOption> = Lazy::new(|| {
+pub static GUILD_ROLES: LazyLock<ConfigOption> = LazyLock::new(|| {
     ConfigOption {
         id: "guild_roles",
         name: "Guild Roles",

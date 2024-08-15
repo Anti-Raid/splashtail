@@ -7,12 +7,12 @@ use module_settings::{
         InnerColumnType, OperationSpecific, OperationType, SettingsError,
     },
 };
-use once_cell::sync::Lazy;
 use splashcore_rs::value::Value;
+use std::sync::LazyLock;
 
 use super::types::{DehoistOptions, FakeBotDetectionOptions, GuildProtectionOptions};
 
-pub static INSPECTOR_OPTIONS: Lazy<ConfigOption> = Lazy::new(|| ConfigOption {
+pub static INSPECTOR_OPTIONS: LazyLock<ConfigOption> = LazyLock::new(|| ConfigOption {
     id: "options",
     name: "Inspector Options",
     description: "Setup inspector here",

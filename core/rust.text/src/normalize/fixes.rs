@@ -7,9 +7,9 @@ use super::{
     codecs::sloppy::{Codec, LATIN_1, SLOPPY_WINDOWS_1252},
     fix_encoding_and_explain,
 };
-use once_cell::sync::Lazy;
 use regex::{Regex, Replacer};
 use std::borrow::Cow;
+use std::sync::LazyLock;
 
 fn _unescape_fixup(capture: &regex::Captures) -> String {
     /*
@@ -53,8 +53,8 @@ pub fn unescape_html(text: &str) -> Cow<str> {
 }
 
 #[allow(clippy::octal_escapes)]
-static ANSI_RE: Lazy<regex::Regex> =
-    Lazy::new(|| regex::Regex::new("\033\\[((?:\\d|;)*)([a-zA-Z])").unwrap());
+static ANSI_RE: LazyLock<regex::Regex> =
+    LazyLock::new(|| regex::Regex::new("\033\\[((?:\\d|;)*)([a-zA-Z])").unwrap());
 
 /// Extension methods for `Regex` that operate on `Cow<str>` instead of `&str`.
 pub trait RegexCowExt {
@@ -175,8 +175,8 @@ pub fn fix_character_width(text: &str) -> Cow<str> {
     Cow::Owned(result)
 }
 
-static LINE_BREAK_RE: Lazy<Regex> =
-    Lazy::new(|| Regex::new(r"\r\n|\r|\u{2028}|\u{2029}|\u{0085}").unwrap());
+static LINE_BREAK_RE: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"\r\n|\r|\u{2028}|\u{2029}|\u{0085}").unwrap());
 
 pub fn fix_line_breaks(text: &str) -> Cow<str> {
     /*
@@ -270,11 +270,11 @@ contain it will end up with inserted spaces. We can't do the right thing with
 every word. The cost is that the mojibake text "fÃ cil" will be interpreted as
 "fà cil", not "fàcil".
 */
-static A_GRAVE_WORD_RE: Lazy<regex::bytes::Regex> =
-    Lazy::new(|| regex::bytes::Regex::new(r"(?-u:\xc3 [^ ]* ?)").unwrap());
+static A_GRAVE_WORD_RE: LazyLock<regex::bytes::Regex> =
+    LazyLock::new(|| regex::bytes::Regex::new(r"(?-u:\xc3 [^ ]* ?)").unwrap());
 
-static A_GRAVE_NEGATIVE_RE: Lazy<regex::bytes::Regex> =
-    Lazy::new(|| regex::bytes::Regex::new(r"^(?-u:\xc3 ( |quele|quela|quilo|s ))").unwrap());
+static A_GRAVE_NEGATIVE_RE: LazyLock<regex::bytes::Regex> =
+    LazyLock::new(|| regex::bytes::Regex::new(r"^(?-u:\xc3 ( |quele|quela|quilo|s ))").unwrap());
 
 pub fn restore_byte_a0(byts: &[u8]) -> Vec<u8> {
     /*

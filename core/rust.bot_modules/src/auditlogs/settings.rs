@@ -3,11 +3,11 @@ use module_settings::types::{
     settings_wrap_columns, settings_wrap_precheck, settings_wrap_postactions, settings_wrap_datastore, Column, ColumnAction, ColumnSuggestion, ColumnType, ConfigOption, InnerColumnType, InnerColumnTypeStringKind, InnerColumnTypeStringKindTemplateKind, ColumnTypeDynamicClause, OperationSpecific, OperationType, SettingsError
 };
 use module_settings::data_stores::PostgresDataStore;
-use once_cell::sync::Lazy;
+use std::sync::LazyLock;
 use serenity::all::{ChannelType, Permissions};
 use splashcore_rs::value::Value;
 
-pub static SINK: Lazy<ConfigOption> = Lazy::new(|| {
+pub static SINK: LazyLock<ConfigOption> = LazyLock::new(|| {
     ConfigOption {
         id: "sinks",
         name: "Audit Log Sinks",
@@ -229,6 +229,33 @@ pub static SINK: Lazy<ConfigOption> = Lazy::new(|| {
                 columns_to_set: indexmap::indexmap! {},
             },
         },
-        post_actions: settings_wrap_postactions(vec![]),
+        post_actions: settings_wrap_postactions(vec![ColumnAction::NativeAction {
+            action: Box::new(|_ctx, state| {
+                async move {
+                    let Some(Value::String(guild_id)) = state.state.get("guild_id") else {
+                        return Err(SettingsError::MissingOrInvalidField {
+                            field: "guild_id".to_string(),
+                            src: "index->NativeAction [post_actions]".to_string(),
+                        });
+                    };
+    
+                    let guild_id = guild_id.parse::<serenity::all::GuildId>().map_err(|e| {
+                        SettingsError::Generic {
+                            message: format!("Error while parsing guild_id: {}", e),
+                            typ: "value_error".to_string(),
+                            src: "sink.guild_id".to_string(),
+                        }
+                    })?;
+    
+                    super::cache::SINKS_CACHE
+                        .invalidate(&guild_id)
+                        .await;
+    
+                    Ok(())
+                }
+                .boxed()
+            }),
+            on_condition: Some(|ctx, _state| Ok(ctx.operation_type != OperationType::View)),
+        }]),
     }
 });

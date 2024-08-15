@@ -2,9 +2,9 @@
 /// module will provide a temporary punishments source to handle all bans in one single place
 use dashmap::DashMap;
 use futures_util::future::BoxFuture;
-use once_cell::sync::Lazy;
 use serenity::all::{GuildId, UserId};
 use std::sync::Arc;
+use std::sync::LazyLock;
 
 /// An action that can be reverted by the temp punishment module
 #[derive(Debug, Clone)]
@@ -18,7 +18,7 @@ pub enum Action {
 /// Note that modules wanting to add sting sources
 /// should call [`add_sting_source`](crate::punishments::sting_source::add_sting_source)
 /// to add their sting source to this map
-pub static SOURCES: Lazy<DashMap<String, Arc<Source>>> = Lazy::new(DashMap::new);
+pub static SOURCES: LazyLock<DashMap<String, Arc<Source>>> = LazyLock::new(DashMap::new);
 
 /// Allows a module to add a new source for a temporary punishment
 pub fn add_source(source: Source) {

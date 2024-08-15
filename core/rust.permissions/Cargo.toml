@@ -6,9 +6,7 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-indexmap = { version = "2", features = ["serde"] }
 serde = { version = "1.0", features = ["derive"] }
-splashcore_rs = { path = "../rust.std" }
 
 [dependencies.tokio]
 version = "1"

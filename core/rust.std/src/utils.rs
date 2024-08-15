@@ -1,6 +1,6 @@
-use once_cell::sync::Lazy;
 use sqlx::postgres::types::PgInterval;
 use std::collections::HashMap;
+use std::sync::LazyLock;
 
 pub fn create_special_allocation_from_str(
     special_allocations: &str,
@@ -158,14 +158,14 @@ pub fn parse_duration_string_to_chrono_duration(s: &str) -> Result<chrono::Durat
     ))?)
 }
 
-pub static REPLACE_CHANNEL: Lazy<Vec<(&'static str, &'static str)>> =
-    Lazy::new(|| vec![("<#", ""), (">", "")]);
+pub static REPLACE_CHANNEL: LazyLock<Vec<(&'static str, &'static str)>> =
+    LazyLock::new(|| vec![("<#", ""), (">", "")]);
 
-pub static REPLACE_USER: Lazy<Vec<(&'static str, &'static str)>> =
-    Lazy::new(|| vec![("<@", ""), ("!", ""), (">", "")]);
+pub static REPLACE_USER: LazyLock<Vec<(&'static str, &'static str)>> =
+    LazyLock::new(|| vec![("<@", ""), ("!", ""), (">", "")]);
 
-pub static REPLACE_ROLE: Lazy<Vec<(&'static str, &'static str)>> =
-    Lazy::new(|| vec![("<@", ""), ("&", ""), (">", "")]);
+pub static REPLACE_ROLE: LazyLock<Vec<(&'static str, &'static str)>> =
+    LazyLock::new(|| vec![("<@", ""), ("&", ""), (">", "")]);
 
 /// Parse a numeric list from a string without knowing its separator
 pub fn parse_numeric_list<T: std::str::FromStr + Send + Sync>(

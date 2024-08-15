@@ -2,9 +2,9 @@ use super::types::{DehoistOptions, FakeBotDetectionOptions, GuildProtectionOptio
 use dashmap::DashMap;
 use futures_util::future::FutureExt;
 use moka::future::Cache;
-use once_cell::sync::Lazy;
 use serenity::all::UserId;
 use splashcore_rs::value::Value;
+use std::sync::LazyLock;
 
 #[derive(Debug, Clone)]
 #[allow(dead_code)]
@@ -14,7 +14,7 @@ pub struct FakeBots {
     pub official_bot_ids: Vec<UserId>,
 }
 
-pub static FAKE_BOTS_CACHE: Lazy<DashMap<UserId, FakeBots>> = Lazy::new(DashMap::new);
+pub static FAKE_BOTS_CACHE: LazyLock<DashMap<UserId, FakeBots>> = LazyLock::new(DashMap::new);
 
 pub async fn setup_fake_bots_cache(pool: &sqlx::PgPool) -> Result<(), silverpelt::Error> {
     let fake_bots =
@@ -77,8 +77,9 @@ impl Default for BasicAntispamConfig {
     }
 }
 
-pub static BASIC_ANTISPAM_CONFIG_CACHE: Lazy<Cache<serenity::all::GuildId, BasicAntispamConfig>> =
-    Lazy::new(|| Cache::builder().support_invalidation_closures().build());
+pub static BASIC_ANTISPAM_CONFIG_CACHE: LazyLock<
+    Cache<serenity::all::GuildId, BasicAntispamConfig>,
+> = LazyLock::new(|| Cache::builder().support_invalidation_closures().build());
 
 pub async fn setup_cache_initial(data: &sqlx::PgPool) -> Result<(), silverpelt::Error> {
     let config = sqlx::query!(

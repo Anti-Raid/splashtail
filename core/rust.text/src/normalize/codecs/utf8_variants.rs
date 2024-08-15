@@ -22,9 +22,9 @@ decoding is. So this module won't produce CESU-8 for you. Look for that
 functionality in the sister module, "Breaks Text For You", coming approximately
 never.
 */
-use once_cell::sync::Lazy;
 use std::str;
 use std::string::String;
+use std::sync::LazyLock;
 
 /*
 This regular expression matches all possible six-byte CESU-8 sequences,
@@ -46,14 +46,14 @@ truncated and we need more bytes.
 */
 const NULL_EXPR: &str = r"(?-u:\xc0(\x80|$))";
 
-static CESU_8_RE: Lazy<regex::bytes::Regex> =
-    Lazy::new(|| regex::bytes::Regex::new(CESU8_EXPR).unwrap());
+static CESU_8_RE: LazyLock<regex::bytes::Regex> =
+    LazyLock::new(|| regex::bytes::Regex::new(CESU8_EXPR).unwrap());
 
 /*
 This regex matches cases that we need to decode differently from
 standard UTF-8.
 */
-static SPECIAL_BYTES_RE: Lazy<regex::bytes::Regex> = Lazy::new(|| {
+static SPECIAL_BYTES_RE: LazyLock<regex::bytes::Regex> = LazyLock::new(|| {
     regex::bytes::Regex::new(&(NULL_EXPR.to_string() + "|" + CESU8_EXPR + "|" + SURROGATE_EXPR))
         .unwrap()
 });

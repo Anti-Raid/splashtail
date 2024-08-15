@@ -6,8 +6,8 @@ pub mod plugins;
 /// Timeout for template execution
 pub const TEMPLATE_EXECUTION_TIMEOUT: std::time::Duration = std::time::Duration::from_millis(600);
 
-pub static TEMPLATE_CACHE: once_cell::sync::Lazy<moka::sync::Cache<String, rhai::AST>> =
-    once_cell::sync::Lazy::new(|| {
+pub static TEMPLATE_CACHE: once_cell::sync::LazyLock<moka::sync::Cache<String, rhai::AST>> =
+    once_cell::sync::LazyLock::new(|| {
         moka::sync::Cache::builder()
             .time_to_live(std::time::Duration::from_secs(60 * 60))
             .build()

@@ -1,19 +1,19 @@
-use once_cell::sync::Lazy;
-use serenity::all::UserId;
 use serde::{Deserialize, Serialize};
+use serenity::all::UserId;
 use splashcore_rs::objectstore::ObjectStore;
 use std::fs::File;
+use std::sync::LazyLock;
 
 type Error = Box<dyn std::error::Error + Send + Sync>;
 
-pub static CURRENT_ENV: Lazy<&str> = Lazy::new(|| {
+pub static CURRENT_ENV: LazyLock<&str> = LazyLock::new(|| {
     let current_env = include_bytes!("../current-env");
 
     std::str::from_utf8(current_env).unwrap()
 });
 
 /// Global config object
-pub static CONFIG: Lazy<Config> = Lazy::new(|| Config::load().expect("Failed to load config"));
+pub static CONFIG: LazyLock<Config> = LazyLock::new(|| Config::load().expect("Failed to load config"));
 
 #[derive(Serialize, Deserialize, Default)]
 pub struct Differs<T: Default + Clone> {

@@ -7,7 +7,6 @@ edition = "2021"
 serde = "1.0"
 chrono = { version = "0.4", features = ["serde"]}
 serde_yaml = "0.9"
-once_cell = "1"
 rusty-s3 = "0.5"
 
 # Anti-Raid specific

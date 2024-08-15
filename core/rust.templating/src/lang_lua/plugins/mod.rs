@@ -3,10 +3,10 @@ pub mod interop;
 pub mod message;
 
 use mlua::prelude::*;
-use once_cell::sync::Lazy;
+use std::sync::LazyLock;
 
 // Modules can load their own plugins
-pub static PLUGINS: Lazy<indexmap::IndexMap<String, ModuleFn>> = Lazy::new(|| {
+pub static PLUGINS: LazyLock<indexmap::IndexMap<String, ModuleFn>> = LazyLock::new(|| {
     indexmap::indexmap! {
         "@antiraid/builtins".to_string() => builtins as ModuleFn,
         "@antiraid/concurrency".to_string() => concurrency::init_plugin as ModuleFn,
