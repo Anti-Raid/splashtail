@@ -1643,6 +1643,11 @@ fn create_template_docs() -> Result<(), Error> {
 }
 
 fn main() -> Result<(), Error> {
+    let serenity_path = _get_serenity_path()?;
+
+    // Tell cargo to rerun this build script if any of the files in the serenity path change
+    println!("cargo:rerun-if-changed={}", serenity_path);
+
     ci_expand_events()?;
     create_template_docs()?;
 

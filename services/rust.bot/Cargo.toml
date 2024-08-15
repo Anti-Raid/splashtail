@@ -24,13 +24,27 @@ async-trait = "0.1.80"
 # Anti-Raid specific
 splashcore_rs = { path = "../../core/rust.std" }
 gwevent = { path = "../../core/rust.gwevent" }
-modules = { path = "../../core/rust.bot_modules" }
 module_settings = { path = "../../core/rust.module_settings" }
 proxy_support = { path = "../../core/rust.proxy_support" }
 config = { path = "../../core/rust.config" }
 cap = { version = "0.1.2", features = ["stats"] }
 silverpelt = { path = "../../core/rust.silverpelt" }
 permissions = { path = "../../core/rust.permissions" }
+
+# Modules
+bot_modules_afk = { path = "../../core/rust.bot_modules.afk" }
+bot_modules_auditlogs = { path = "../../core/rust.bot_modules.auditlogs" }
+bot_modules_core = { path = "../../core/rust.bot_modules.core" }
+bot_modules_gitlogs = { path = "../../core/rust.bot_modules.gitlogs" }
+bot_modules_inspector = { path = "../../core/rust.bot_modules.inspector" }
+bot_modules_limits = { path = "../../core/rust.bot_modules.limits" }
+bot_modules_moderation = { path = "../../core/rust.bot_modules.moderation" }
+bot_modules_punishments = { path = "../../core/rust.bot_modules.punishments" }
+bot_modules_root = { path = "../../core/rust.bot_modules.root" }
+bot_modules_server_backups = { path = "../../core/rust.bot_modules.server_backups" }
+bot_modules_server_member_backups = { path = "../../core/rust.bot_modules.server_member_backups" }
+bot_modules_settings = { path = "../../core/rust.bot_modules.settings" }
+bot_modules_temporary_punishments = { path = "../../core/rust.bot_modules.temporary_punishments" }
 
 [dependencies.tokio]
 version = "1"

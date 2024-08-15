@@ -23,6 +23,26 @@ use sqlx::postgres::PgPoolOptions;
 use std::alloc;
 use std::io::Write;
 
+/// List of modules to load
+pub fn modules() -> Vec<silverpelt::Module> {
+    vec![
+        //bot_modules_acl::module().parse(),
+        bot_modules_afk::module().parse(),
+        bot_modules_auditlogs::module().parse(),
+        bot_modules_core::module().parse(),
+        bot_modules_gitlogs::module().parse(),
+        bot_modules_inspector::module().parse(),
+        bot_modules_limits::module().parse(),
+        bot_modules_moderation::module().parse(),
+        bot_modules_punishments::module().parse(),
+        bot_modules_server_backups::module().parse(),
+        bot_modules_server_member_backups::module().parse(),
+        bot_modules_settings::module().parse(),
+        bot_modules_temporary_punishments::module().parse(),
+        bot_modules_root::module().parse(),
+    ]
+}
+
 #[global_allocator]
 static ALLOCATOR: Cap<alloc::System> = Cap::new(alloc::System, usize::MAX);
 
@@ -41,7 +61,7 @@ pub static CONNECT_STATE: LazyLock<ConnectState> = LazyLock::new(|| ConnectState
 static SILVERPELT_CACHE: LazyLock<Arc<silverpelt::cache::SilverpeltCache>> = LazyLock::new(|| {
     let mut silverpelt_cache = silverpelt::cache::SilverpeltCache::default();
 
-    for module in modules::modules() {
+    for module in modules() {
         silverpelt_cache.add_module(module);
     }
 
@@ -411,7 +431,7 @@ async fn event_listener<'a>(
                 info!("Starting background tasks");
                 // Get all tasks
                 let mut tasks = Vec::new();
-                for module in modules::modules() {
+                for module in modules() {
                     for (task, confirm_task) in module.background_tasks {
                         let (confirmed, reason) = (confirm_task)(ctx.serenity_context);
                         if confirmed {
@@ -489,7 +509,7 @@ async fn event_listener<'a>(
                 .ready
                 .contains_key(&ctx.serenity_context.shard_id)
             {
-                for module in modules::modules() {
+                for module in modules() {
                     for on_ready in module.on_first_ready.iter() {
                         if let Err(e) = on_ready(ctx.serenity_context.clone(), &user_data).await {
                             error!("Error initializing module [on_first_ready]: {}", e);
@@ -609,6 +629,16 @@ async fn main() {
 
     let mut env_builder = env_logger::builder();
 
+    let mut default_filter =
+        "serenity=error,fred=error,bot=info,modules=info,templating=debug".to_string();
+
+    for module in modules() {
+        let module_id = module.id;
+        let module_filter = format!("{}=info", module_id);
+        default_filter.push(',');
+        default_filter.push_str(module_filter.as_str());
+    }
+
     env_builder
         .format(move |buf, record| {
             writeln!(
@@ -622,7 +652,7 @@ async fn main() {
                 record.args()
             )
         })
-        .parse_filters("serenity=error,fred=error,bot=info,modules=info,templating=debug")
+        .parse_filters(&default_filter)
         .filter(None, log::LevelFilter::Info);
 
     // Set custom log levels
@@ -703,7 +733,7 @@ async fn main() {
             let mut cmds = Vec::new();
 
             let mut _cmd_names = Vec::new();
-            for module in modules::modules() {
+            for module in modules() {
                 log::info!("Loading module {}", module.id);
 
                 if !module.is_parsed() {
@@ -959,7 +989,7 @@ async fn main() {
 
     info!("Initializing bot state");
 
-    for module in modules::modules() {
+    for module in modules() {
         for init in module.on_startup.iter() {
             if let Err(e) = init(&data).await {
                 error!("Error initializing module: {}", e);

@@ -5,7 +5,7 @@ pub mod test_module_parse {
 
     #[test]
     fn test_module_parse() {
-        let _ = modules::modules();
+        let _ = crate::modules();
     }
 
     async fn new_dummy_basedatadata() -> silverpelt::data::Data {
@@ -64,7 +64,7 @@ pub mod test_module_parse {
         }
 
         let data = new_dummy_basedatadata().await;
-        for module in modules::modules() {
+        for module in crate::modules() {
             assert!(module.is_parsed());
 
             // Ensure that all settings have all columns
