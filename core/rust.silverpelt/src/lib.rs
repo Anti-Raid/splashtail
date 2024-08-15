@@ -98,6 +98,10 @@ pub struct Module {
     /// Config options for this module
     pub config_options: Vec<module_settings::types::ConfigOption>,
 
+    /// Whether the module is a 'root'/sudo module. These modules will only be accessible
+    /// to a whitelist-defined set of users
+    pub root_module: bool,
+
     pub __parsed: bool,
 }
 

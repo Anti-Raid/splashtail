@@ -10,11 +10,12 @@ pub fn module() -> silverpelt::Module {
     silverpelt::Module {
         id: "root",
         name: "Root/Staff-Only Commands",
-        description: "Commands that are only available to staff members. Publicly viewable for transparency.",
+        description:
+            "Commands that are only available to staff members. Publicly viewable for transparency.",
         toggleable: false,
         commands_toggleable: false,
         virtual_module: false,
-        web_hidden: false, 
+        web_hidden: false,
         is_default_enabled: true,
         // These commands do not follow the typical permission system anyways
         commands: vec![(
@@ -41,6 +42,7 @@ pub fn module() -> silverpelt::Module {
             (*settings::INSPECTOR_FAKE_BOTS).clone(),
             (*settings::LAST_TASK_EXPIRY).clone(),
         ],
+        root_module: true,
         ..Default::default()
     }
 }

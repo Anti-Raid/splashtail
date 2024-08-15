@@ -262,9 +262,21 @@ pub async fn check_command(
         }
     };
 
-    info!("Checking if user {} can run command {}", user_id, command);
+    let module = match silverpelt_cache.module_cache.get(module_ref.value()) {
+        Some(v) => v,
+        None => {
+            return PermissionResult::UnknownModule {
+                module: module_ref.to_string(),
+            };
+        }
+    };
 
-    if module_ref.value() == "root" {
+    info!(
+        "Checking if user {} can run command {} on module {}",
+        user_id, command, module.id
+    );
+
+    if module.root_module {
         if !config::CONFIG.discord_auth.root_users.contains(&user_id) {
             return PermissionResult::SudoNotGranted {};
         }
