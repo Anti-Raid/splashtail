@@ -26,7 +26,12 @@ pub static PAST_HIT_LIMITS: LazyLock<ConfigOption> = LazyLock::new(|| ConfigOpti
             id: "id",
             name: "ID",
             description: "The unique identifier for the past hit limit.",
-            column_type: ColumnType::new_scalar(InnerColumnType::Uuid {}),
+            column_type: ColumnType::new_scalar(InnerColumnType::String {
+                kind: InnerColumnTypeStringKind::Normal,
+                min_length: None,
+                max_length: None,
+                allowed_values: vec![],
+            }),
             nullable: false,
             unique: true,
             suggestions: ColumnSuggestion::None {},

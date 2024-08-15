@@ -25,8 +25,7 @@ use std::io::Write;
 
 /// List of modules to load
 pub fn modules() -> Vec<silverpelt::Module> {
-    vec![
-        //bot_modules_acl::module().parse(),
+    let base_modules = vec![
         bot_modules_afk::module().parse(),
         bot_modules_auditlogs::module().parse(),
         bot_modules_core::module().parse(),
@@ -40,7 +39,23 @@ pub fn modules() -> Vec<silverpelt::Module> {
         bot_modules_settings::module().parse(),
         bot_modules_temporary_punishments::module().parse(),
         bot_modules_root::module().parse(),
-    ]
+    ];
+
+    // Add ACL module
+    let mut module_ids = Vec::new();
+
+    for module in base_modules.iter() {
+        module_ids.push(module.id);
+    }
+
+    let mut modules = Vec::new();
+
+    modules.push(bot_modules_acl::module(module_ids).parse());
+
+    // Add all base modules
+    modules.extend(base_modules);
+
+    modules
 }
 
 #[global_allocator]
