@@ -44,7 +44,7 @@ pub async fn event_listener(ectx: &EventHandlerContext) -> Result<(), silverpelt
 
     // (hopefully temporary) work around to reduce spam
     match event {
-        FullEvent::GuildAuditLogEntryCreate { .. } | FullEvent::Message { .. } => {}
+        FullEvent::GuildAuditLogEntryCreate { .. } => {}
         _ => match gwevent::core::get_event_user_id(event) {
             Ok(user_id) => {
                 if user_id == ctx.cache.current_user().id {
@@ -98,14 +98,23 @@ pub async fn event_listener(ectx: &EventHandlerContext) -> Result<(), silverpelt
 ///
 /// Special cases:
 /// - If filter starts with `R/`, treat it as a regex
-/// - If event_name is MESSAGE, then it must be an exact match to be dispatched. This is to avoid spam
+/// - If event_name is MESSAGE, then it must be an exact match to be dispatched AND must have a custom template declared for it. This is to avoid spam
 pub async fn should_dispatch_event(
     event_name: &str,
     filters: &[String],
+    uses_custom_template: bool,
     silverpelt_cache: &silverpelt::cache::SilverpeltCache,
 ) -> Result<bool, silverpelt::Error> {
-    if event_name == "MESSAGE" && !filters.contains(&event_name.to_string()) {
-        return Ok(false);
+    if event_name == "MESSAGE" {
+        if !filters.contains(&event_name.to_string()) {
+            return Ok(false);
+        }
+
+        if !uses_custom_template {
+            return Ok(false);
+        }
+
+        return Ok(true);
     }
 
     // If empty, always return Ok
@@ -161,11 +170,30 @@ pub async fn dispatch_audit_log(
     })?;
 
     for sink in sinks.iter() {
-        // Verify event in whitelisted event list, if events is set
-        if let Some(ref events) = sink.events {
-            if !should_dispatch_event(event_name, events, &data.silverpelt_cache).await? {
-                continue;
-            }
+        // Verify event dispatch
+        if !should_dispatch_event(
+            event_name,
+            {
+                // False positive, unwrap_or_default cannot be used here as it moves the event out of the sink
+                #[allow(clippy::manual_unwrap_or_default)]
+                if let Some(ref events) = sink.events {
+                    events
+                } else {
+                    &[]
+                }
+            },
+            {
+                if let Some(ref embed_template) = sink.embed_template {
+                    !embed_template.is_empty()
+                } else {
+                    false
+                }
+            },
+            &data.silverpelt_cache,
+        )
+        .await?
+        {
+            continue;
         }
 
         let template = {
