@@ -1,56 +1,156 @@
-use futures_util::future::FutureExt;
 use poise::serenity_prelude::GuildId;
 use serde::{Deserialize, Serialize};
-use silverpelt::Error;
+use serenity::async_trait;
+use silverpelt::{sting_sources, Error};
 use splashcore_rs::utils::pg_interval_to_secs;
 use sqlx::PgPool;
+use sqlx::Row;
 use strum_macros::{Display, EnumString, VariantNames};
 
-/// Punishment sting source
-pub async fn register_punishment_sting_source(
-    _data: &silverpelt::data::Data,
-) -> Result<(), silverpelt::Error> {
-    async fn sting_entries(
+pub(crate) struct LimitsUserActionsStingSource;
+
+#[async_trait]
+impl sting_sources::StingSource for LimitsUserActionsStingSource {
+    fn id(&self) -> String {
+        "limits__user_actions".to_string()
+    }
+
+    fn description(&self) -> String {
+        "Limits (User Action) Punishments".to_string()
+    }
+
+    fn flags(&self) -> sting_sources::StingSourceFlags {
+        sting_sources::StingSourceFlags::SUPPORTS_DURATIONS
+            | sting_sources::StingSourceFlags::SUPPORTS_DELETE
+    }
+
+    async fn fetch(
+        &self,
         ctx: &serenity::all::Context,
-        guild_id: serenity::all::GuildId,
-        user_id: serenity::all::UserId,
-    ) -> Result<Vec<bot_modules_punishments::sting_source::StingEntry>, silverpelt::Error> {
-        let data = ctx.data::<silverpelt::data::Data>();
-        let pool = &data.pool;
+        filters: sting_sources::StingFetchFilters,
+    ) -> Result<Vec<sting_sources::FullStingEntry>, silverpelt::Error> {
+        let base_query = "SELECT stings, stings_expiry, created_at, user_id, guild_id, action_id FROM limits__user_actions";
 
-        let mut entries = vec![];
+        let mut where_filters = Vec::new();
+        // Guild ID filter
+        if filters.guild_id.is_some() {
+            where_filters.push(format!("guild_id = ${}", where_filters.len() + 1));
+        }
 
-        // Fetch all entries
-        let moderation_entries = sqlx::query!(
-                "SELECT stings, (NOW() > stings_expiry) AS expired, created_at FROM limits__user_actions WHERE user_id = $1 AND guild_id = $2",
-                user_id.to_string(),
-                guild_id.to_string(),
-            )
-            .fetch_all(pool)
+        // User ID filter
+        if filters.user_id.is_some() {
+            where_filters.push(format!("user_id = ${}", where_filters.len() + 1));
+        }
+
+        let query = if where_filters.is_empty() {
+            base_query.to_string()
+        } else {
+            format!("{} WHERE {}", base_query, where_filters.join(" AND "))
+        };
+
+        let query = sqlx::query(&query);
+
+        // Bind filters
+        let query = if let Some(guild_id) = filters.guild_id {
+            query.bind(guild_id.to_string())
+        } else {
+            query
+        };
+
+        let query = if let Some(user_id) = filters.user_id {
+            query.bind(user_id.to_string())
+        } else {
+            query
+        };
+
+        let rows = query
+            .fetch_all(&ctx.data::<silverpelt::data::Data>().pool)
             .await?;
 
-        for entry in moderation_entries {
-            entries.push(bot_modules_punishments::sting_source::StingEntry {
-                user_id,
-                guild_id,
-                stings: entry.stings,
-                reason: None, // TODO: Add reason (if possible)
-                created_at: entry.created_at,
-                expired: entry.expired.unwrap_or(false),
+        let mut entries = Vec::new();
+        for row in rows {
+            let stings = row.try_get::<Option<i32>, _>("stings")?;
+            let stings_expiry =
+                row.try_get::<Option<chrono::DateTime<chrono::Utc>>, _>("stings_expiry")?;
+            let created_at = row.try_get::<chrono::DateTime<chrono::Utc>, _>("created_at")?;
+
+            let user_id = row.try_get::<String, _>("user_id")?;
+            let guild_id = row.try_get::<String, _>("guild_id")?;
+            let action_id = row.try_get::<String, _>("action_id")?;
+
+            // As limits does not support StingState, we emulate it using expiry here
+            let (duration, state) = {
+                match stings_expiry {
+                    Some(ts) => {
+                        let delta = ts - created_at;
+
+                        // Convert to std::time::Duration
+                        let dur = std::time::Duration::from_secs(delta.num_seconds() as u64);
+
+                        if ts < chrono::Utc::now() {
+                            (Some(dur), sting_sources::StingState::Handled)
+                        } else {
+                            (Some(dur), sting_sources::StingState::Active)
+                        }
+                    }
+                    None => (None, sting_sources::StingState::Active),
+                }
+            };
+
+            entries.push(sting_sources::FullStingEntry {
+                entry: sting_sources::StingEntry {
+                    user_id: user_id.to_string().parse()?,
+                    guild_id: guild_id.to_string().parse()?,
+                    stings: stings.unwrap_or_default(),
+                    reason: None,
+                    void_reason: None,
+                    action: sting_sources::Action::None,
+                    state,
+                    duration,
+                    creator: sting_sources::StingCreator::System,
+                },
+                created_at,
+                id: action_id,
             });
         }
 
-        Ok(entries)
+        Ok(filters.client_side_apply_filters(entries))
     }
 
-    let source = bot_modules_punishments::sting_source::StingSource {
-        id: "limits__user_actions".to_string(),
-        description: "Limits (User Action) Punishments".to_string(),
-        fetch: Box::new(|ctx, guild_id, user_id| sting_entries(ctx, *guild_id, *user_id).boxed()),
-    };
+    // No-op
+    async fn create_sting_entry(
+        &self,
+        _ctx: &serenity::all::Context,
+        entry: sting_sources::StingEntry,
+    ) -> Result<sting_sources::FullStingEntry, silverpelt::Error> {
+        Ok(sting_sources::FullStingEntry {
+            entry,
+            created_at: chrono::Utc::now(),
+            id: "".to_string(),
+        })
+    }
 
-    bot_modules_punishments::sting_source::add_sting_source(source);
-    Ok(())
+    // No-op
+    async fn update_sting_entry(
+        &self,
+        _ctx: &serenity::all::Context,
+        _id: String,
+        _entry: sting_sources::UpdateStingEntry,
+    ) -> Result<(), silverpelt::Error> {
+        Ok(())
+    }
+
+    async fn delete_sting_entry(
+        &self,
+        ctx: &serenity::all::Context,
+        id: String,
+    ) -> Result<(), silverpelt::Error> {
+        sqlx::query!("DELETE FROM limits__user_actions WHERE action_id = $1", id)
+            .execute(&ctx.data::<silverpelt::data::Data>().pool)
+            .await?;
+
+        Ok(())
+    }
 }
 
 #[derive(poise::ChoiceParameter)]

@@ -6,6 +6,7 @@ pub mod jobserver;
 pub mod member_permission_calc;
 pub mod module_config;
 pub mod settings_poise;
+pub mod sting_sources;
 pub mod types;
 pub mod utils;
 pub mod validators;
@@ -101,6 +102,9 @@ pub struct Module {
     /// Whether the module is a 'root'/sudo module. These modules will only be accessible
     /// to a whitelist-defined set of users
     pub root_module: bool,
+
+    /// What punishment sting sources this module uses
+    pub sting_sources: Vec<Arc<dyn sting_sources::StingSource>>,
 
     pub __parsed: bool,
 }

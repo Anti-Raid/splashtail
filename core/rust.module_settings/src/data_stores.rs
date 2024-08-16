@@ -4,11 +4,9 @@ use super::types::{
     SettingsError,
 };
 use async_trait::async_trait;
-use splashcore_rs::value::Value;
+use splashcore_rs::{utils::sql_utils, value::Value};
 use sqlx::{Execute, Row};
 use std::sync::Arc;
-
-pub struct PostgresDataStore {}
 
 /// Simple macro to combine two indexmaps into one
 macro_rules! combine_indexmaps {
@@ -18,6 +16,8 @@ macro_rules! combine_indexmaps {
         map
     }};
 }
+
+pub struct PostgresDataStore {}
 
 #[async_trait]
 impl CreateDataStore for PostgresDataStore {
@@ -36,6 +36,7 @@ impl CreateDataStore for PostgresDataStore {
             author,
             guild_id,
             columns: setting.columns.clone(),
+            valid_columns: setting.columns.iter().map(|c| c.id.to_string()).collect(),
             pool: data.pool.clone(),
             common_filters,
         }))
@@ -50,6 +51,7 @@ pub struct PostgresDataStoreImpl {
     pub author: serenity::all::UserId,
     pub guild_id: serenity::all::GuildId,
     pub columns: Arc<Vec<Column>>,
+    pub valid_columns: std::collections::HashSet<String>, // Derived from columns
     pub common_filters: indexmap::IndexMap<String, splashcore_rs::value::Value>,
 
     // Transaction (if ongoing)
@@ -267,70 +269,6 @@ impl PostgresDataStoreImpl {
         }
     }
 
-    /// Helper method to create a WHERE clause from a set of filters
-    ///
-    /// E.g. a = $1 AND b IS NULL AND c = $2 etc.
-    fn create_where_clause(filters: &indexmap::IndexMap<String, Value>, offset: usize) -> String {
-        let mut filters_str = String::new();
-
-        for (i, (key, v)) in filters.iter().enumerate() {
-            if i > 0 {
-                filters_str.push_str(" AND ")
-            }
-
-            if matches!(v, Value::None) {
-                filters_str.push_str(format!(" \"{}\" IS NULL", key).as_str());
-            } else {
-                filters_str.push_str(format!(" \"{}\" = ${}", key, (i + 1) + offset).as_str());
-            }
-        }
-
-        if filters_str.is_empty() {
-            // HACK: Use 1 = 1
-            filters_str.push_str("1 = 1");
-        }
-
-        filters_str
-    }
-
-    /// Helper method to create a SET clause from a set of entries
-    /// E.g. "a" = $1, "b" = $2, "c" = $3 etc.
-    fn create_update_set_clause(
-        entry: &indexmap::IndexMap<String, Value>,
-        offset: usize,
-    ) -> String {
-        let mut col_params = "".to_string();
-        for (i, (col, _)) in entry.iter().enumerate() {
-            // $1 is first col param
-            col_params.push_str(&format!("\"{}\" = ${},", col, (i + 1) + offset));
-        }
-
-        // Remove the trailing comma
-        col_params.pop();
-
-        col_params
-    }
-
-    /// Helper method to create the col_params ("col1", "col2", "col3" etc.) and the n_params ($1, $2, $3 etc.)
-    /// for a query
-    fn create_col_and_n_params(
-        entry: &indexmap::IndexMap<String, Value>,
-        offset: usize,
-    ) -> (String, String) {
-        let mut n_params = "".to_string();
-        let mut col_params = "".to_string();
-        for (i, (col, _)) in entry.iter().enumerate() {
-            n_params.push_str(&format!("${},", (i + 1) + offset));
-            col_params.push_str(&format!("\"{}\",", col));
-        }
-
-        // Remove the trailing comma
-        n_params.pop();
-        col_params.pop();
-
-        (col_params, n_params)
-    }
-
     /// Binds filters to a query
     ///
     /// If bind_nulls is true, then entries with Value::None are also binded. This should be disabled on filters and enabled on entries
@@ -527,7 +465,13 @@ impl DataStore for PostgresDataStoreImpl {
             "SELECT {} FROM {} WHERE {}",
             fields.join(", "),
             self.setting_table,
-            Self::create_where_clause(&filters, 0)
+            sql_utils::create_where_clause(&self.valid_columns, &filters, 0).map_err(|e| {
+                SettingsError::Generic {
+                    message: e.to_string(),
+                    src: "PostgresDataStore::fetch_all [create_where_clause]".to_string(),
+                    typ: "internal".to_string(),
+                }
+            })?
         );
 
         let mut query = sqlx::query(sql_stmt.as_str());
@@ -569,7 +513,14 @@ impl DataStore for PostgresDataStoreImpl {
         let sql_stmt = format!(
             "SELECT COUNT(*) FROM {} WHERE {}",
             self.setting_table,
-            Self::create_where_clause(&filters, 0)
+            sql_utils::create_where_clause(&self.valid_columns, &filters, 0).map_err(|e| {
+                SettingsError::Generic {
+                    message: e.to_string(),
+                    src: "PostgresDataStore::matching_entry_count [create_where_clause]"
+                        .to_string(),
+                    typ: "internal".to_string(),
+                }
+            })?
         );
 
         let mut query = sqlx::query(sql_stmt.as_str());
@@ -599,7 +550,14 @@ impl DataStore for PostgresDataStoreImpl {
         let entry = combine_indexmaps!(entry, self.common_filters.clone());
 
         // Create the row
-        let (col_params, n_params) = Self::create_col_and_n_params(&entry, 0);
+        let (col_params, n_params) =
+            sql_utils::create_col_and_n_params(&self.valid_columns, &entry, 0).map_err(|e| {
+                SettingsError::Generic {
+                    message: e.to_string(),
+                    src: "settings_create [create_col_and_n_params]".to_string(),
+                    typ: "internal".to_string(),
+                }
+            })?;
 
         // Execute the SQL statement
         let sql_stmt = format!(
@@ -644,8 +602,22 @@ impl DataStore for PostgresDataStoreImpl {
         let sql_stmt = format!(
             "UPDATE {} SET {} WHERE {}",
             self.setting_table,
-            Self::create_update_set_clause(&entry, 0),
-            Self::create_where_clause(&filters, entry.len()),
+            sql_utils::create_update_set_clause(&self.valid_columns, &entry, 0).map_err(|e| {
+                SettingsError::Generic {
+                    message: e.to_string(),
+                    src: "settings_update [create_update_set_clause]".to_string(),
+                    typ: "internal".to_string(),
+                }
+            })?,
+            sql_utils::create_where_clause(&self.valid_columns, &filters, entry.len()).map_err(
+                |e| {
+                    SettingsError::Generic {
+                        message: e.to_string(),
+                        src: "settings_update [create_where_clause]".to_string(),
+                        typ: "internal".to_string(),
+                    }
+                }
+            )?
         );
 
         let mut query = sqlx::query(sql_stmt.as_str());
@@ -674,7 +646,13 @@ impl DataStore for PostgresDataStoreImpl {
         let sql_stmt = format!(
             "DELETE FROM {} WHERE {}",
             self.setting_table,
-            Self::create_where_clause(&filters, 0)
+            sql_utils::create_where_clause(&self.valid_columns, &filters, 0).map_err(|e| {
+                SettingsError::Generic {
+                    message: e.to_string(),
+                    src: "settings_delete [create_where_clause]".to_string(),
+                    typ: "internal".to_string(),
+                }
+            })?
         );
 
         let mut query = sqlx::query(sql_stmt.as_str());

@@ -33,16 +33,16 @@ pub async fn punishments(_ctx: Context<'_>) -> Result<(), Error> {
 pub async fn punishments_viewsources(ctx: Context<'_>) -> Result<(), Error> {
     let mut embed = serenity::all::CreateEmbed::new();
 
+    let data = ctx.data();
+
     embed = embed.title("Sting Sources");
 
-    for source in super::sting_source::STING_SOURCES.iter() {
-        let id = source.key();
-        let source = source.value();
-        embed = embed.field(
-            id.clone(),
-            format!("{} {}", source.id, source.description),
-            false,
-        );
+    for (_, module) in data.silverpelt_cache.module_cache.iter() {
+        for source in module.sting_sources.iter() {
+            let id = source.id();
+            let description = source.description();
+            embed = embed.field(id, description, false);
+        }
     }
 
     ctx.send(poise::CreateReply::new().embed(embed)).await?;

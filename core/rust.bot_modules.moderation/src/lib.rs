@@ -1,7 +1,6 @@
 mod cmd;
 mod core;
 
-use futures_util::future::FutureExt;
 use indexmap::indexmap;
 use permissions::types::{PermissionCheck, PermissionChecks};
 use silverpelt::types::CommandExtendedData;
@@ -132,10 +131,7 @@ pub fn module() -> silverpelt::Module {
                 },
             ),
         ],
-        on_startup: vec![
-            Box::new(move |data| core::register_punishment_sting_source(data).boxed()),
-            Box::new(move |data| core::register_temporary_punishment_source(data).boxed()),
-        ],
+        sting_sources: vec![std::sync::Arc::new(core::ModerationActionsStingSource)],
         ..Default::default()
     }
 }

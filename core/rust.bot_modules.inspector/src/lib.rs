@@ -34,8 +34,8 @@ pub fn module() -> silverpelt::Module {
             Box::new(move |data| cache::setup_cache_initial(&data.pool).boxed()),
             Box::new(move |data| cache::setup_am_toggle(data).boxed()),
             Box::new(move |data| cache::setup_fake_bots_cache(&data.pool).boxed()),
-            Box::new(move |data| core::register_punishment_sting_source(data).boxed()),
         ],
+        sting_sources: vec![std::sync::Arc::new(core::InspectorPunishmentsStingSource)],
         s3_paths: vec!["inspector/guild_icons/{guild_id}".to_string()],
         config_options: vec![(*settings::INSPECTOR_OPTIONS).clone()],
         ..Default::default()

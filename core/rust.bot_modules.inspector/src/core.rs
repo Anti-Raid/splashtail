@@ -1,58 +1,151 @@
-use futures_util::future::FutureExt;
+use serenity::async_trait;
+use silverpelt::sting_sources;
+use sqlx::Row;
 
-/// Punishment sting source
-pub async fn register_punishment_sting_source(
-    _data: &silverpelt::data::Data,
-) -> Result<(), silverpelt::Error> {
-    async fn sting_entries(
+pub(crate) struct InspectorPunishmentsStingSource;
+
+#[async_trait]
+impl sting_sources::StingSource for InspectorPunishmentsStingSource {
+    fn id(&self) -> String {
+        "inspector__punishments".to_string()
+    }
+
+    fn description(&self) -> String {
+        "Inspector Punishments".to_string()
+    }
+
+    fn flags(&self) -> sting_sources::StingSourceFlags {
+        sting_sources::StingSourceFlags::SUPPORTS_DELETE
+            | sting_sources::StingSourceFlags::REQUIRES_GUILD_ID_IN_FILTER
+    }
+
+    async fn fetch(
+        &self,
         ctx: &serenity::all::Context,
-        guild_id: serenity::all::GuildId,
-        user_id: serenity::all::UserId,
-    ) -> Result<Vec<bot_modules_punishments::sting_source::StingEntry>, silverpelt::Error> {
+        filters: sting_sources::StingFetchFilters,
+    ) -> Result<Vec<sting_sources::FullStingEntry>, silverpelt::Error> {
+        let Some(guild_id) = filters.guild_id else {
+            return Err("Guild ID is required for this sting source".into());
+        };
+
         let data = ctx.data::<silverpelt::data::Data>();
-        let pool = &data.pool;
 
-        let mut entries = vec![];
-
-        let opts = super::cache::get_config(pool, guild_id).await?;
+        let opts = super::cache::get_config(&data.pool, guild_id).await?;
 
         // Delete old entries
         sqlx::query!(
             "DELETE FROM inspector__punishments WHERE created_at < $1",
             chrono::Utc::now() - chrono::Duration::seconds(opts.sting_retention as i64),
         )
-        .execute(pool)
+        .execute(&data.pool)
         .await?;
 
-        // Fetch all entries
-        let ba_entries = sqlx::query!(
-                "SELECT stings, created_at FROM inspector__punishments WHERE user_id = $1 AND guild_id = $2",
-                user_id.to_string(),
-                guild_id.to_string(),
-            )
-            .fetch_all(pool)
-            .await?;
+        let base_query = "SELECT id, user_id, guild_id, stings, created_at FROM inspector__punishments WHERE guild_id = $1";
 
-        for entry in ba_entries {
-            entries.push(bot_modules_punishments::sting_source::StingEntry {
-                user_id,
-                guild_id,
-                stings: entry.stings,
-                reason: None, // TODO: Add reason (if possible)
-                created_at: entry.created_at,
-                expired: false,
+        let mut where_filters = Vec::new();
+
+        // User ID filter
+        if filters.user_id.is_some() {
+            where_filters.push(format!("user_id = ${}", where_filters.len() + 2));
+        }
+
+        let query = if where_filters.is_empty() {
+            base_query.to_string()
+        } else {
+            format!("{} WHERE {}", base_query, where_filters.join(" AND "))
+        };
+
+        let query = sqlx::query(&query);
+
+        // Bind filters
+        let query = query.bind(guild_id.to_string());
+
+        let query = if let Some(user_id) = filters.user_id {
+            query.bind(user_id.to_string())
+        } else {
+            query
+        };
+
+        let rows = query.fetch_all(&data.pool).await?;
+
+        let mut entries = Vec::new();
+        for row in rows {
+            let id = row.try_get::<sqlx::types::Uuid, _>("id")?;
+            let user_id = row.try_get::<String, _>("user_id")?;
+            let guild_id = row.try_get::<String, _>("guild_id")?;
+            let stings = row.try_get::<i32, _>("stings")?;
+            let created_at = row.try_get::<chrono::DateTime<chrono::Utc>, _>("created_at")?;
+
+            entries.push(sting_sources::FullStingEntry {
+                entry: sting_sources::StingEntry {
+                    user_id: user_id.to_string().parse()?,
+                    guild_id: guild_id.to_string().parse()?,
+                    stings,
+                    reason: None,
+                    void_reason: None,
+                    action: sting_sources::Action::None,
+                    state: sting_sources::StingState::Active,
+                    duration: None,
+                    creator: sting_sources::StingCreator::System,
+                },
+                created_at,
+                id: id.to_string(),
             });
         }
 
         Ok(entries)
     }
 
-    let source = bot_modules_punishments::sting_source::StingSource {
-        id: "inspector__punishments".to_string(),
-        description: "Inspector Punishments".to_string(),
-        fetch: Box::new(|ctx, guild_id, user_id| sting_entries(ctx, *guild_id, *user_id).boxed()),
-    };
+    // No-op
+    async fn create_sting_entry(
+        &self,
+        _ctx: &serenity::all::Context,
+        entry: sting_sources::StingEntry,
+    ) -> Result<sting_sources::FullStingEntry, silverpelt::Error> {
+        Ok(sting_sources::FullStingEntry {
+            entry,
+            created_at: chrono::Utc::now(),
+            id: "".to_string(),
+        })
+    }
 
-    bot_modules_punishments::sting_source::add_sting_source(source);
-    Ok(())
+    // No-op
+    async fn update_sting_entry(
+        &self,
+        ctx: &serenity::all::Context,
+        id: String,
+        entry: sting_sources::UpdateStingEntry,
+    ) -> Result<(), silverpelt::Error> {
+        // We only support editting stings for this source
+        let Some(stings) = entry.stings else {
+            return Ok(());
+        };
+
+        let data = ctx.data::<silverpelt::data::Data>();
+
+        sqlx::query!(
+            "UPDATE inspector__punishments SET stings = $1 WHERE id = $2",
+            stings,
+            id.parse::<sqlx::types::Uuid>()?,
+        )
+        .execute(&data.pool)
+        .await?;
+
+        Ok(())
+    }
+
+    async fn delete_sting_entry(
+        &self,
+        ctx: &serenity::all::Context,
+        id: String,
+    ) -> Result<(), silverpelt::Error> {
+        sqlx::query!(
+            "DELETE FROM inspector__punishments WHERE id = $1",
+            id.parse::<sqlx::types::Uuid>()?
+        )
+        .execute(&ctx.data::<silverpelt::data::Data>().pool)
+        .await?;
+
+        Ok(())
+    }
 }

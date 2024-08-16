@@ -222,6 +222,118 @@ pub fn parse_numeric_list_to_str<T: std::fmt::Display + std::str::FromStr + Send
     Ok(list)
 }
 
+pub mod sql_utils {
+    use std::collections::HashSet;
+
+    /// Helper method to create a WHERE clause from a set of filters
+    ///
+    /// E.g. a = $1 AND b IS NULL AND c = $2 etc.
+    ///
+    /// This does NOT check against column set
+    pub fn create_where_clause_unchecked(
+        filters: &indexmap::IndexMap<String, crate::value::Value>,
+        offset: usize,
+    ) -> String {
+        let mut filters_str = String::new();
+
+        for (i, (key, v)) in filters.iter().enumerate() {
+            if i > 0 {
+                filters_str.push_str(" AND ")
+            }
+
+            if matches!(v, crate::value::Value::None) {
+                filters_str.push_str(format!(" \"{}\" IS NULL", key).as_str());
+            } else {
+                filters_str.push_str(format!(" \"{}\" = ${}", key, (i + 1) + offset).as_str());
+            }
+        }
+
+        if filters_str.is_empty() {
+            // HACK: Use 1 = 1
+            filters_str.push_str("1 = 1");
+        }
+
+        filters_str
+    }
+
+    /// Helper method to create a WHERE clause from a set of filters
+    ///
+    /// E.g. a = $1 AND b IS NULL AND c = $2 etc.
+    pub fn create_where_clause(
+        valid_columns: &HashSet<String>,
+        filters: &indexmap::IndexMap<String, crate::value::Value>,
+        offset: usize,
+    ) -> Result<String, crate::Error> {
+        for (key, _) in filters.iter() {
+            // Validate the column to avoid SQL injection
+            let parts = key.split("__").collect::<Vec<&str>>();
+
+            if !valid_columns.contains(&parts[0].to_string()) {
+                return Err(format!("Invalid column [part 0 not valid column]: {}", key).into());
+            }
+
+            // Ensure all other parts are alphanumeric and/or contains an _
+            for part in parts.iter().skip(1) {
+                if !part.chars().all(|c| c.is_alphanumeric() || c == '_') {
+                    return Err(format!("Invalid column [rest not valid]: {}", key).into());
+                }
+            }
+        }
+
+        Ok(create_where_clause_unchecked(filters, offset))
+    }
+
+    /// Helper method to create a SET clause from a set of entries
+    /// E.g. "a" = $1, "b" = $2, "c" = $3 etc.
+    pub fn create_update_set_clause(
+        valid_columns: &HashSet<String>,
+        entry: &indexmap::IndexMap<String, crate::value::Value>,
+        offset: usize,
+    ) -> Result<String, crate::Error> {
+        let mut col_params = "".to_string();
+        for (i, (col, _)) in entry.iter().enumerate() {
+            // Validate the column to avoid SQL injection, here we don't really need to care about parts etc.
+            if !valid_columns.contains(col) {
+                return Err(format!("Invalid column [part 0 not valid column]: {}", col).into());
+            }
+
+            // $1 is first col param
+            col_params.push_str(&format!("\"{}\" = ${},", col, (i + 1) + offset));
+        }
+
+        // Remove the trailing comma
+        col_params.pop();
+
+        Ok(col_params)
+    }
+
+    /// Helper method to create the col_params ("col1", "col2", "col3" etc.) and the n_params ($1, $2, $3 etc.)
+    /// for a query
+    pub fn create_col_and_n_params(
+        valid_columns: &HashSet<String>,
+        entry: &indexmap::IndexMap<String, crate::value::Value>,
+        offset: usize,
+    ) -> Result<(String, String), crate::Error> {
+        let mut n_params = "".to_string();
+        let mut col_params = "".to_string();
+        for (i, (col, _)) in entry.iter().enumerate() {
+            // Validate the column to avoid SQL injection, here we don't really need to care about parts etc.
+            if !valid_columns.contains(col) {
+                return Err(format!("Invalid column [part 0 not valid column]: {}", col).into());
+            }
+
+            n_params.push_str(&format!("${},", (i + 1) + offset));
+            col_params.push_str(&format!("\"{}\",", col));
+        }
+
+        // Remove the trailing comma
+        n_params.pop();
+        col_params.pop();
+
+        Ok((col_params, n_params))
+    }
+}
+
 #[cfg(test)]
 mod test {
     pub use super::*;

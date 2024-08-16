@@ -42,6 +42,10 @@ fn acl__modules_modperms(
 }
 
 pub fn module(module_ids: Vec<&'static str>) -> silverpelt::Module {
+    // Add ACL to the list of modules
+    let mut module_ids = module_ids;
+    module_ids.push("acl");
+
     silverpelt::Module {
         id: "access_control",
         name: "Access Control",

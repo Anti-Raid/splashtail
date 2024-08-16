@@ -1,11 +1,10 @@
-pub mod source;
 pub mod tasks;
 
 use futures_util::future::FutureExt;
 
 pub fn module() -> silverpelt::Module {
     silverpelt::Module {
-        id: "temp_punishments",
+        id: "temporary_punishments",
         name: "Temporary Punishments",
         description: "Customizable setting and management of temporary punishments (tempbans/temp role removals). Most servers will not need to customize this",
         toggleable: true,

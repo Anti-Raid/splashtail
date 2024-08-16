@@ -1,8 +1,8 @@
-use super::sting_source::StingEntry;
 use proxy_support::{guild, member_in_guild};
 use serde::{Deserialize, Serialize};
 use serenity::all::{EditMember, GuildId, RoleId, Timestamp, UserId};
 use silverpelt::module_config::is_module_enabled;
+use silverpelt::sting_sources::{FullStingEntry, StingFetchFilters};
 use std::collections::HashSet;
 use strum_macros::{Display, EnumString, VariantNames};
 
@@ -10,7 +10,7 @@ use strum_macros::{Display, EnumString, VariantNames};
 #[allow(dead_code)]
 pub struct ConsolidatedStingEntry {
     pub source_id: String,
-    pub entry: StingEntry,
+    pub entry: FullStingEntry,
 }
 
 /// This struct is a wrapper around a list of consolidated sting entries
@@ -35,11 +35,11 @@ impl ConsolidatedStingEntries {
 
         let mut total_count: i32 = 0;
         for entry in &self.entries {
-            if entry.entry.expired {
+            if entry.entry.is_expired() {
                 continue;
             }
 
-            let count = entry.entry.stings;
+            let count = entry.entry.entry.stings;
             total_count += count;
         }
 
@@ -63,15 +63,26 @@ impl ConsolidatedStingEntries {
 
         let mut stings = vec![];
 
-        for source in super::sting_source::STING_SOURCES.iter() {
-            let source = source.value();
-            let entries = (source.fetch)(ctx, &guild_id, &user_id).await?;
+        for (_, module) in data.silverpelt_cache.module_cache.iter() {
+            for source in module.sting_sources.iter() {
+                let entries = source
+                    .fetch(
+                        ctx,
+                        StingFetchFilters {
+                            guild_id: Some(guild_id),
+                            user_id: Some(user_id),
+                            expired: Some(false),
+                            ..Default::default()
+                        },
+                    )
+                    .await?;
 
-            for entry in entries {
-                stings.push(ConsolidatedStingEntry {
-                    source_id: source.id.clone(),
-                    entry,
-                });
+                for entry in entries {
+                    stings.push(ConsolidatedStingEntry {
+                        source_id: source.id(),
+                        entry,
+                    });
+                }
             }
         }
 
