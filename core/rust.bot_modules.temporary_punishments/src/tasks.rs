@@ -10,8 +10,7 @@ enum EventError {
 }
 
 async fn get_all_temp_punishments(
-    ctx: &serenity::client::Context,
-    silverpelt_cache: &silverpelt::cache::SilverpeltCache,
+    data: &sting_sources::StingSourceData,
 ) -> Result<
     Vec<(
         Arc<dyn sting_sources::StingSource>,
@@ -21,7 +20,7 @@ async fn get_all_temp_punishments(
 > {
     let mut temp_punishments = Vec::new();
 
-    for (_, module) in silverpelt_cache.module_cache.iter() {
+    for (_, module) in data.silverpelt_cache.module_cache.iter() {
         for src in module.sting_sources.iter() {
             // If the module doesn't support durations/expirations, skip
             let flags = src.flags();
@@ -33,7 +32,7 @@ async fn get_all_temp_punishments(
 
             let entries = source
                 .fetch(
-                    ctx,
+                    data,
                     sting_sources::StingFetchFilters {
                         user_id: None,
                         guild_id: None,
@@ -57,14 +56,20 @@ pub async fn temporary_punishment_task(
     let data = ctx.data::<silverpelt::data::Data>();
     let pool = &data.pool;
 
-    let temp_punishments = get_all_temp_punishments(ctx, &data.silverpelt_cache).await?;
+    // NOTE: While silverpelt does provide a from_ctx method, it leads to a second Any downcast
+    let source_data = Arc::new(sting_sources::StingSourceData {
+        pool: pool.clone(),
+        reqwest: data.reqwest.clone(),
+        cache_http: botox::cache::CacheHttpImpl::from_ctx(ctx),
+        silverpelt_cache: data.silverpelt_cache.clone(),
+    });
+
+    let temp_punishments = get_all_temp_punishments(&source_data).await?;
 
     let mut set = tokio::task::JoinSet::new();
 
     let shard_count = data.props.shard_count().try_into()?;
     let shards = data.props.shards();
-
-    let cache_http = botox::cache::CacheHttpImpl::from_ctx(ctx);
 
     for (source, punishments) in temp_punishments {
         for punishment in punishments {
@@ -77,7 +82,7 @@ pub async fn temporary_punishment_task(
 
             // Ensure temporary punishments module is enabled
             if !silverpelt::module_config::is_module_enabled(
-                &data.silverpelt_cache,
+                &source_data.silverpelt_cache,
                 pool,
                 punishment.entry.guild_id,
                 "temporary_punishments",
@@ -103,16 +108,14 @@ pub async fn temporary_punishment_task(
                 }
             }
 
-            let ctx = ctx.clone();
             let source = source.clone();
-            let reqwest = data.reqwest.clone();
-            let cache_http = cache_http.clone();
+            let source_data = source_data.clone();
             set.spawn(async move {
-                let bot_id = ctx.cache.current_user().id;
+                let bot_id = source_data.cache_http.cache.current_user().id;
 
                 let current_user = match proxy_support::member_in_guild(
-                    &cache_http,
-                    &reqwest,
+                    &source_data.cache_http,
+                    &source_data.reqwest,
                     punishment.entry.guild_id,
                     bot_id,
                 )
@@ -124,7 +127,7 @@ pub async fn temporary_punishment_task(
                         // Bot is not in the guild, update the sting entry
                         source
                             .update_sting_entry(
-                                &ctx,
+                                &source_data,
                                 punishment.id,
                                 sting_sources::UpdateStingEntry {
                                     state: Some(sting_sources::StingState::Voided),
@@ -141,13 +144,13 @@ pub async fn temporary_punishment_task(
                 };
 
                 let permissions = current_user
-                    .permissions(&ctx.cache)
+                    .permissions(&source_data.cache_http.cache)
                     .map_err(EventError::Serenity)?;
 
                 if !permissions.ban_members() {
                     source
                         .update_sting_entry(
-                            &ctx,
+                            &source_data,
                             punishment.id,
                             sting_sources::UpdateStingEntry {
                                 state: Some(sting_sources::StingState::Voided),
@@ -176,7 +179,7 @@ pub async fn temporary_punishment_task(
                     sting_sources::Action::None => {
                         source
                             .update_sting_entry(
-                                &ctx,
+                                &source_data,
                                 punishment.id,
                                 sting_sources::UpdateStingEntry {
                                     state: Some(sting_sources::StingState::Handled),
@@ -192,7 +195,8 @@ pub async fn temporary_punishment_task(
                             })?;
                         return Ok(());
                     }
-                    sting_sources::Action::Ban => ctx
+                    sting_sources::Action::Ban => source_data
+                        .cache_http
                         .http
                         .remove_ban(
                             punishment.entry.guild_id,
@@ -205,7 +209,7 @@ pub async fn temporary_punishment_task(
                         .entry
                         .guild_id
                         .edit_member(
-                            &ctx.http,
+                            &source_data.cache_http.http,
                             punishment.entry.user_id,
                             serenity::all::EditMember::new()
                                 .audit_log_reason(reason.as_str())
@@ -220,7 +224,7 @@ pub async fn temporary_punishment_task(
                     Ok(_) => {
                         source
                             .update_sting_entry(
-                                &ctx,
+                                &source_data,
                                 punishment.id,
                                 sting_sources::UpdateStingEntry {
                                     state: Some(sting_sources::StingState::Handled),
@@ -250,7 +254,7 @@ pub async fn temporary_punishment_task(
 
                                     source
                                         .update_sting_entry(
-                                            &ctx,
+                                            &source_data,
                                             punishment.id,
                                             sting_sources::UpdateStingEntry {
                                                 state: Some(sting_sources::StingState::Voided),
@@ -274,7 +278,7 @@ pub async fn temporary_punishment_task(
                                 serenity::Error::Model(e) => {
                                     source
                                         .update_sting_entry(
-                                            &ctx,
+                                            &source_data,
                                             punishment.id,
                                             sting_sources::UpdateStingEntry {
                                                 state: Some(sting_sources::StingState::Voided),
@@ -300,7 +304,7 @@ pub async fn temporary_punishment_task(
                         } else {
                             source
                                 .update_sting_entry(
-                                    &ctx,
+                                    &source_data,
                                     punishment.id,
                                     sting_sources::UpdateStingEntry {
                                         state: Some(sting_sources::StingState::Voided),

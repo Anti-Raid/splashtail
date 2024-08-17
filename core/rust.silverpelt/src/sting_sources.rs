@@ -131,7 +131,7 @@ impl std::str::FromStr for Action {
 ///
 /// As multiple modules may use and store stings in their own way,
 /// StingEntry is a common abstraction for the punishment module
-/// to store string data and reason for presentation to users etc.
+/// to store sting data and reason for presentation to users etc.
 #[derive(Debug, Clone)]
 #[allow(dead_code)]
 pub struct FullStingEntry {
@@ -254,8 +254,27 @@ impl StingFetchFilters {
     }
 }
 
+pub struct StingSourceData {
+    pub pool: sqlx::PgPool,
+    pub reqwest: reqwest::Client,
+    pub cache_http: botox::cache::CacheHttpImpl,
+    pub silverpelt_cache: std::sync::Arc<crate::cache::SilverpeltCache>,
+}
+
+impl StingSourceData {
+    pub fn from_ctx(ctx: &serenity::all::Context) -> Self {
+        let data = ctx.data::<crate::data::Data>();
+        Self {
+            pool: data.pool.clone(),
+            reqwest: data.reqwest.clone(),
+            cache_http: botox::cache::CacheHttpImpl::from_ctx(ctx),
+            silverpelt_cache: data.silverpelt_cache.clone(),
+        }
+    }
+}
+
 /// As multiple modules may use and store stings in their own way,
-/// StringSource is a common abstraction for to store sources
+/// StingSource is a common abstraction for to store sources
 ///
 /// Ex: moderation can now store stings in moderation__actions, this
 /// can then be shared with all punishment modules by defining a
@@ -277,21 +296,21 @@ where
     /// Fetches sting entries from the source
     async fn fetch(
         &self,
-        ctx: &serenity::all::Context,
+        data: &StingSourceData,
         filters: StingFetchFilters,
     ) -> Result<Vec<FullStingEntry>, crate::Error>;
 
     /// Creates a new sting entry
     async fn create_sting_entry(
         &self,
-        ctx: &serenity::all::Context,
+        data: &StingSourceData,
         entry: StingEntry,
     ) -> Result<FullStingEntry, crate::Error>;
 
     /// Updates a sting entry
     async fn update_sting_entry(
         &self,
-        ctx: &serenity::all::Context,
+        data: &StingSourceData,
         id: String,
         entry: UpdateStingEntry,
     ) -> Result<(), crate::Error>;
@@ -299,7 +318,47 @@ where
     /// Deletes a sting entry
     async fn delete_sting_entry(
         &self,
-        ctx: &serenity::all::Context,
+        data: &StingSourceData,
         id: String,
     ) -> Result<(), crate::Error>;
 }
+
+/*
+// Data source for stings
+pub struct StingsDataStore {}
+
+#[async_trait]
+impl module_settings::types::CreateDataStore for StingsDataStore {
+    async fn create(
+        &self,
+        setting: &module_settings::types::ConfigOption,
+        guild_id: serenity::all::GuildId,
+        author: serenity::all::UserId,
+        data: &module_settings::types::SettingsData,
+        common_filters: indexmap::IndexMap<String, splashcore_rs::value::Value>,
+    ) -> Result<Box<dyn module_settings::types::DataStore>, module_settings::types::SettingsError> {
+        Ok(Box::new(StingsDataStoreImpl {
+            setting_table: setting.table,
+            setting_primary_key: setting.primary_key,
+            author,
+            guild_id,
+            columns: setting.columns.clone(),
+            valid_columns: setting.columns.iter().map(|c| c.id.to_string()).collect(),
+            pool: data.pool.clone(),
+            common_filters,
+        }))
+    }
+}
+
+pub struct PostgresDataStoreImpl {
+    // Args needed for queries
+    pub pool: sqlx::PgPool,
+    pub setting_table: &'static str,
+    pub setting_primary_key: &'static str,
+    pub author: serenity::all::UserId,
+    pub guild_id: serenity::all::GuildId,
+    pub columns: Arc<Vec<Column>>,
+    pub valid_columns: std::collections::HashSet<String>, // Derived from columns
+    pub common_filters: indexmap::IndexMap<String, splashcore_rs::value::Value>,
+}
+*/

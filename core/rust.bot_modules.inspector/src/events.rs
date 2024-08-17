@@ -74,11 +74,12 @@ pub async fn event_listener(ectx: &EventHandlerContext) -> Result<(), Error> {
                     .await?
                 {
                     sqlx::query!(
-                        "INSERT INTO inspector__punishments (user_id, guild_id, stings, triggered_flags) VALUES ($1, $2, $3, $4)",
+                        "INSERT INTO inspector__punishments (user_id, guild_id, stings, triggered_flags, stings_expiry) VALUES ($1, $2, $3, $4, $5)",
                         new_message.author.id.to_string(),
                         ectx.guild_id.to_string(),
                         triggered_stings as i32,
-                        i64::from(triggered_flags.bits())
+                        i64::from(triggered_flags.bits()),
+                        chrono::Utc::now() + chrono::Duration::seconds(config.sting_retention as i64),
                     )
                     .execute(&data.pool)
                     .await?;

@@ -2,7 +2,7 @@ use proxy_support::{guild, member_in_guild};
 use serde::{Deserialize, Serialize};
 use serenity::all::{EditMember, GuildId, RoleId, Timestamp, UserId};
 use silverpelt::module_config::is_module_enabled;
-use silverpelt::sting_sources::{FullStingEntry, StingFetchFilters};
+use silverpelt::sting_sources::{self, FullStingEntry, StingFetchFilters};
 use std::collections::HashSet;
 use strum_macros::{Display, EnumString, VariantNames};
 
@@ -55,19 +55,27 @@ impl ConsolidatedStingEntries {
         guild_id: GuildId,
         user_id: UserId,
     ) -> Result<Self, silverpelt::Error> {
-        let data = ctx.data::<silverpelt::data::Data>();
-        if !is_module_enabled(&data.silverpelt_cache, &data.pool, guild_id, "punishments").await? {
+        let source_data = sting_sources::StingSourceData::from_ctx(ctx);
+
+        if !is_module_enabled(
+            &source_data.silverpelt_cache,
+            &source_data.pool,
+            guild_id,
+            "punishments",
+        )
+        .await?
+        {
             // Punishments module is not enabled
             return Err("Punishments module is not enabled".into());
         }
 
         let mut stings = vec![];
 
-        for (_, module) in data.silverpelt_cache.module_cache.iter() {
+        for (_, module) in source_data.silverpelt_cache.module_cache.iter() {
             for source in module.sting_sources.iter() {
                 let entries = source
                     .fetch(
-                        ctx,
+                        &source_data,
                         StingFetchFilters {
                             guild_id: Some(guild_id),
                             user_id: Some(user_id),

@@ -45,6 +45,20 @@ pub fn secs_to_pg_interval(secs: i64) -> PgInterval {
     }
 }
 
+pub fn secs_to_pg_interval_u64(secs: u64) -> PgInterval {
+    // Check if the value is too large to fit in an i64
+    if secs > i64::MAX as u64 {
+        // If it is, return the maximum value
+        return PgInterval {
+            microseconds: i64::MAX,
+            days: i32::MAX,
+            months: i32::MAX,
+        };
+    }
+
+    secs_to_pg_interval(secs as i64)
+}
+
 pub fn parse_pg_interval(i: PgInterval) -> String {
     let seconds = pg_interval_to_secs(i);
 

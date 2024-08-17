@@ -2,8 +2,6 @@ use serenity::all::User;
 use serenity::async_trait;
 use silverpelt::sting_sources;
 use splashcore_rs::utils::pg_interval_to_secs;
-use sqlx::postgres::types::PgInterval;
-use sqlx::Row;
 use std::str::FromStr;
 
 pub(crate) struct ModerationActionsStingSource;
@@ -28,113 +26,60 @@ impl sting_sources::StingSource for ModerationActionsStingSource {
 
     async fn fetch(
         &self,
-        ctx: &serenity::all::Context,
+        data: &sting_sources::StingSourceData,
         filters: sting_sources::StingFetchFilters,
     ) -> Result<Vec<sting_sources::FullStingEntry>, silverpelt::Error> {
-        let base_query = "SELECT guild_id, user_id, moderator, action, stings, reason, duration, id, created_at, state, void_reason FROM moderation__actions";
-
-        let mut where_filters = Vec::new();
-        let mut total_binds = 0;
-
-        // Guild ID filter
-        if filters.guild_id.is_some() {
-            where_filters.push(format!("guild_id = ${}", total_binds + 1));
-            total_binds += 1;
-        }
-
-        // User ID filter
-        if filters.user_id.is_some() {
-            where_filters.push(format!("user_id = ${}", total_binds + 1));
-            total_binds += 1;
-        }
-
-        // State filter
-        if filters.state.is_some() {
-            where_filters.push(format!("state = ${}", total_binds + 1));
-        }
-
-        // Has duration filter
-        if let Some(has_duration) = filters.has_duration {
-            if has_duration {
-                where_filters.push("duration IS NOT NULL".to_string());
-            } else {
-                where_filters.push("duration IS NULL".to_string());
-            }
-        }
-
-        // Expired filter
-        if let Some(expired) = filters.expired {
-            if expired {
-                where_filters.push("created_at + duration < NOW()".to_string());
-            } else {
-                where_filters.push("created_at + duration > NOW()".to_string());
-            }
-        }
-
-        let query = if where_filters.is_empty() {
-            base_query.to_string()
-        } else {
-            format!("{} WHERE {}", base_query, where_filters.join(" AND "))
-        };
-
-        let query = sqlx::query(&query);
-
-        // Bind filters
-        let query = if let Some(guild_id) = filters.guild_id {
-            query.bind(guild_id.to_string())
-        } else {
-            query
-        };
-
-        let query = if let Some(user_id) = filters.user_id {
-            query.bind(user_id.to_string())
-        } else {
-            query
-        };
-
-        let query = if let Some(state) = filters.state {
-            query.bind(state.to_string())
-        } else {
-            query
-        };
-
-        let rows = query
-            .fetch_all(&ctx.data::<silverpelt::data::Data>().pool)
-            .await?;
+        let rows = sqlx::query!(
+            "
+            SELECT guild_id, user_id, moderator, action, stings, reason, duration, id, created_at, state, void_reason FROM moderation__actions
+            WHERE (
+                $1::TEXT IS NULL OR 
+                guild_id = $1::TEXT
+            ) AND (
+                $2::TEXT IS NULL OR 
+                user_id = $2::TEXT
+            ) AND (
+                $3::TEXT IS NULL OR
+                state = $3::TEXT
+            ) AND (
+                $4::BOOL IS NULL OR 
+                ($4 = true AND duration IS NOT NULL) OR 
+                ($4 = false AND duration IS NULL)
+            ) AND (
+                $5::BOOL IS NULL OR 
+                ($5 = true AND created_at + duration > NOW()) OR 
+                ($5 = false AND created_at + duration < NOW()) 
+            )",
+            filters.guild_id.map(|g| g.to_string()),
+            filters.user_id.map(|u| u.to_string()),
+            filters.state.map(|s| s.to_string()),
+            filters.has_duration,
+            filters.expired,
+        )
+        .fetch_all(&data.pool)
+        .await?;
 
         let mut entries = Vec::new();
         for row in rows {
-            let guild_id = row.try_get::<String, _>("guild_id")?;
-            let user_id = row.try_get::<String, _>("user_id")?;
-            let moderator = row.try_get::<String, _>("moderator")?;
-            let action = row.try_get::<String, _>("action")?;
-            let stings = row.try_get::<i32, _>("stings")?;
-            let reason = row.try_get::<Option<String>, _>("reason")?;
-            let duration = row.try_get::<Option<PgInterval>, _>("duration")?;
-            let id = row.try_get::<sqlx::types::Uuid, _>("id")?;
-            let created_at = row.try_get::<chrono::DateTime<chrono::Utc>, _>("created_at")?;
-            let state = row.try_get::<String, _>("state")?;
-            let void_reason = row.try_get::<Option<String>, _>("void_reason")?;
-
             entries.push(sting_sources::FullStingEntry {
                 entry: sting_sources::StingEntry {
-                    user_id: user_id.parse()?,
-                    guild_id: guild_id.parse()?,
-                    stings,
-                    reason,
-                    void_reason,
-                    action: sting_sources::Action::from_str(&action)?,
-                    state: sting_sources::StingState::from_str(&state)?,
-                    duration: match duration {
+                    user_id: row.user_id.parse()?,
+                    guild_id: row.guild_id.parse()?,
+                    stings: row.stings,
+                    reason: row.reason,
+                    void_reason: row.void_reason,
+                    action: sting_sources::Action::from_str(&row.action)?,
+                    state: sting_sources::StingState::from_str(&row.state)?,
+                    duration: match row.duration {
                         Some(d) => Some(std::time::Duration::from_secs(u64::try_from(
                             pg_interval_to_secs(d),
                         )?)),
                         None => None,
                     },
-                    creator: sting_sources::StingCreator::User(moderator.parse()?),
+                    creator: sting_sources::StingCreator::User(row.moderator.parse()?),
                 },
-                created_at,
-                id: id.to_string(),
+                created_at: row.created_at,
+                id: row.id.to_string(),
             });
         }
 
@@ -144,7 +89,7 @@ impl sting_sources::StingSource for ModerationActionsStingSource {
     // No-op
     async fn create_sting_entry(
         &self,
-        _ctx: &serenity::all::Context,
+        _data: &sting_sources::StingSourceData,
         entry: sting_sources::StingEntry,
     ) -> Result<sting_sources::FullStingEntry, silverpelt::Error> {
         Ok(sting_sources::FullStingEntry {
@@ -156,102 +101,42 @@ impl sting_sources::StingSource for ModerationActionsStingSource {
 
     async fn update_sting_entry(
         &self,
-        ctx: &serenity::all::Context,
+        data: &sting_sources::StingSourceData,
         id: String,
         entry: sting_sources::UpdateStingEntry,
     ) -> Result<(), silverpelt::Error> {
-        let data = ctx.data::<silverpelt::data::Data>();
-
-        let mut query = "UPDATE moderation__actions SET".to_string();
-
-        let mut total_binds = 0;
-
-        if entry.stings.is_some() {
-            query.push_str(&format!(" stings = ${},", total_binds + 1));
-            total_binds += 1;
-        }
-
-        if entry.reason.is_some() {
-            query.push_str(&format!(" reason = ${},", total_binds + 1));
-            total_binds += 1;
-        }
-
-        if entry.duration.is_some() {
-            query.push_str(&format!(" duration = ${},", total_binds + 1));
-            total_binds += 1;
-        }
-
-        if entry.action.is_some() {
-            query.push_str(&format!(" action = ${},", total_binds + 1));
-            total_binds += 1;
-        }
-
-        if entry.state.is_some() {
-            query.push_str(&format!(" state = ${},", total_binds + 1));
-            total_binds += 1;
-        }
-
-        if entry.void_reason.is_some() {
-            query.push_str(&format!(" void_reason = ${},", total_binds + 1));
-            total_binds += 1;
-        }
-
-        query.pop(); // Remove trailing comma
-
-        query.push_str(format!(" WHERE id = ${}", total_binds + 1).as_str());
-
-        let query = sqlx::query(&query);
-
-        let query = if let Some(stings) = entry.stings {
-            query.bind(stings)
-        } else {
-            query
-        };
-
-        let query = if let Some(reason) = entry.reason {
-            query.bind(reason)
-        } else {
-            query
-        };
-
-        let query = if let Some(duration) = entry.duration {
-            query.bind(duration)
-        } else {
-            query
-        };
-
-        let query = if let Some(action) = entry.action {
-            query.bind(action.to_string())
-        } else {
-            query
-        };
-
-        let query = if let Some(state) = entry.state {
-            query.bind(state.to_string())
-        } else {
-            query
-        };
-
-        let query = if let Some(void_reason) = entry.void_reason {
-            query.bind(void_reason)
-        } else {
-            query
-        };
-
-        let query = query.bind(id.parse::<sqlx::types::Uuid>()?);
-
-        query.execute(&data.pool).await?;
+        sqlx::query!(
+            "UPDATE moderation__actions 
+            SET stings = COALESCE($1, stings),
+            reason = COALESCE($2, reason),
+            duration = COALESCE($3, duration),
+            action = COALESCE($4, action),
+            state = COALESCE($5, state),
+            void_reason = COALESCE($6, void_reason) 
+            WHERE id = $7",
+            entry.stings,
+            entry.reason,
+            entry
+                .duration
+                .map(|d| splashcore_rs::utils::secs_to_pg_interval_u64(d.as_secs())),
+            entry.action.map(|a| a.to_string()),
+            entry.state.map(|s| s.to_string()),
+            entry.void_reason,
+            id.parse::<sqlx::types::Uuid>()?,
+        )
+        .execute(&data.pool)
+        .await?;
 
         Ok(())
     }
 
     async fn delete_sting_entry(
         &self,
-        ctx: &serenity::all::Context,
+        data: &sting_sources::StingSourceData,
         id: String,
     ) -> Result<(), silverpelt::Error> {
         sqlx::query!("DELETE FROM limits__user_actions WHERE action_id = $1", id)
-            .execute(&ctx.data::<silverpelt::data::Data>().pool)
+            .execute(&data.pool)
             .await?;
 
         Ok(())

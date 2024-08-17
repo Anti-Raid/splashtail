@@ -4,7 +4,6 @@ use serenity::async_trait;
 use silverpelt::{sting_sources, Error};
 use splashcore_rs::utils::pg_interval_to_secs;
 use sqlx::PgPool;
-use sqlx::Row;
 use strum_macros::{Display, EnumString, VariantNames};
 
 pub(crate) struct LimitsUserActionsStingSource;
@@ -26,82 +25,47 @@ impl sting_sources::StingSource for LimitsUserActionsStingSource {
 
     async fn fetch(
         &self,
-        ctx: &serenity::all::Context,
+        data: &sting_sources::StingSourceData,
         filters: sting_sources::StingFetchFilters,
     ) -> Result<Vec<sting_sources::FullStingEntry>, silverpelt::Error> {
-        let base_query = "SELECT stings, stings_expiry, created_at, user_id, guild_id, action_id FROM limits__user_actions";
-
-        let mut where_filters = Vec::new();
-        // Guild ID filter
-        if filters.guild_id.is_some() {
-            where_filters.push(format!("guild_id = ${}", where_filters.len() + 1));
-        }
-
-        // User ID filter
-        if filters.user_id.is_some() {
-            where_filters.push(format!("user_id = ${}", where_filters.len() + 1));
-        }
-
-        let query = if where_filters.is_empty() {
-            base_query.to_string()
-        } else {
-            format!("{} WHERE {}", base_query, where_filters.join(" AND "))
-        };
-
-        let query = sqlx::query(&query);
-
-        // Bind filters
-        let query = if let Some(guild_id) = filters.guild_id {
-            query.bind(guild_id.to_string())
-        } else {
-            query
-        };
-
-        let query = if let Some(user_id) = filters.user_id {
-            query.bind(user_id.to_string())
-        } else {
-            query
-        };
-
-        let rows = query
-            .fetch_all(&ctx.data::<silverpelt::data::Data>().pool)
-            .await?;
+        let rows = sqlx::query!(
+            "
+            SELECT stings, stings_expiry, created_at, user_id, guild_id, action_id FROM limits__user_actions
+            WHERE 
+                ($1::TEXT IS NULL OR guild_id = $1::TEXT) AND 
+                ($2::TEXT IS NULL OR user_id = $2::TEXT) AND (
+                $3::BOOL IS NULL OR 
+                ($3 = true AND stings_expiry < NOW()) OR
+                ($3 = false AND stings_expiry > NOW())
+            )",
+            filters.guild_id.map(|g| g.to_string()),
+            filters.user_id.map(|u| u.to_string()),
+            filters.expired,
+        )
+        .fetch_all(&data.pool)
+        .await?;
 
         let mut entries = Vec::new();
         for row in rows {
-            let stings = row.try_get::<Option<i32>, _>("stings")?;
-            let stings_expiry =
-                row.try_get::<Option<chrono::DateTime<chrono::Utc>>, _>("stings_expiry")?;
-            let created_at = row.try_get::<chrono::DateTime<chrono::Utc>, _>("created_at")?;
-
-            let user_id = row.try_get::<String, _>("user_id")?;
-            let guild_id = row.try_get::<String, _>("guild_id")?;
-            let action_id = row.try_get::<String, _>("action_id")?;
-
             // As limits does not support StingState, we emulate it using expiry here
             let (duration, state) = {
-                match stings_expiry {
-                    Some(ts) => {
-                        let delta = ts - created_at;
+                let delta = row.stings_expiry - row.created_at;
 
-                        // Convert to std::time::Duration
-                        let dur = std::time::Duration::from_secs(delta.num_seconds() as u64);
+                // Convert to std::time::Duration
+                let dur = std::time::Duration::from_secs(delta.num_seconds() as u64);
 
-                        if ts < chrono::Utc::now() {
-                            (Some(dur), sting_sources::StingState::Handled)
-                        } else {
-                            (Some(dur), sting_sources::StingState::Active)
-                        }
-                    }
-                    None => (None, sting_sources::StingState::Active),
+                if row.stings_expiry < chrono::Utc::now() {
+                    (Some(dur), sting_sources::StingState::Handled)
+                } else {
+                    (Some(dur), sting_sources::StingState::Active)
                 }
             };
 
             entries.push(sting_sources::FullStingEntry {
                 entry: sting_sources::StingEntry {
-                    user_id: user_id.to_string().parse()?,
-                    guild_id: guild_id.to_string().parse()?,
-                    stings: stings.unwrap_or_default(),
+                    user_id: row.user_id.parse()?,
+                    guild_id: row.guild_id.parse()?,
+                    stings: row.stings,
                     reason: None,
                     void_reason: None,
                     action: sting_sources::Action::None,
@@ -109,8 +73,8 @@ impl sting_sources::StingSource for LimitsUserActionsStingSource {
                     duration,
                     creator: sting_sources::StingCreator::System,
                 },
-                created_at,
-                id: action_id,
+                created_at: row.created_at,
+                id: row.action_id,
             });
         }
 
@@ -120,7 +84,7 @@ impl sting_sources::StingSource for LimitsUserActionsStingSource {
     // No-op
     async fn create_sting_entry(
         &self,
-        _ctx: &serenity::all::Context,
+        _data: &sting_sources::StingSourceData,
         entry: sting_sources::StingEntry,
     ) -> Result<sting_sources::FullStingEntry, silverpelt::Error> {
         Ok(sting_sources::FullStingEntry {
@@ -133,7 +97,7 @@ impl sting_sources::StingSource for LimitsUserActionsStingSource {
     // No-op
     async fn update_sting_entry(
         &self,
-        _ctx: &serenity::all::Context,
+        _data: &sting_sources::StingSourceData,
         _id: String,
         _entry: sting_sources::UpdateStingEntry,
     ) -> Result<(), silverpelt::Error> {
@@ -142,11 +106,11 @@ impl sting_sources::StingSource for LimitsUserActionsStingSource {
 
     async fn delete_sting_entry(
         &self,
-        ctx: &serenity::all::Context,
+        data: &sting_sources::StingSourceData,
         id: String,
     ) -> Result<(), silverpelt::Error> {
         sqlx::query!("DELETE FROM limits__user_actions WHERE action_id = $1", id)
-            .execute(&ctx.data::<silverpelt::data::Data>().pool)
+            .execute(&data.pool)
             .await?;
 
         Ok(())
