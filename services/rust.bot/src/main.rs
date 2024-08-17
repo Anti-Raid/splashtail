@@ -23,39 +23,8 @@ use sqlx::postgres::PgPoolOptions;
 use std::alloc;
 use std::io::Write;
 
-/// List of modules to load
 pub fn modules() -> Vec<silverpelt::Module> {
-    let base_modules = vec![
-        bot_modules_afk::module().parse(),
-        bot_modules_auditlogs::module().parse(),
-        bot_modules_core::module().parse(),
-        bot_modules_gitlogs::module().parse(),
-        bot_modules_inspector::module().parse(),
-        bot_modules_limits::module().parse(),
-        bot_modules_moderation::module().parse(),
-        bot_modules_punishments::module().parse(),
-        bot_modules_server_backups::module().parse(),
-        bot_modules_server_member_backups::module().parse(),
-        bot_modules_settings::module().parse(),
-        bot_modules_temporary_punishments::module().parse(),
-        bot_modules_root::module().parse(),
-    ];
-
-    // Add ACL module
-    let mut module_ids = Vec::new();
-
-    for module in base_modules.iter() {
-        module_ids.push(module.id);
-    }
-
-    let mut modules = Vec::new();
-
-    modules.push(bot_modules_acl::module(module_ids).parse());
-
-    // Add all base modules
-    modules.extend(base_modules);
-
-    modules
+    bot_modules_default::modules()
 }
 
 #[global_allocator]
@@ -131,12 +100,12 @@ impl silverpelt::data::Props for Props {
         "bot".to_string()
     }
 
-    fn shards(&self) -> Vec<u16> {
-        crate::ipc::argparse::MEWLD_ARGS.shards.clone()
+    async fn shards(&self) -> Result<Vec<u16>, Error> {
+        Ok(crate::ipc::argparse::MEWLD_ARGS.shards.clone())
     }
 
-    fn shard_count(&self) -> u16 {
-        crate::ipc::argparse::MEWLD_ARGS.shard_count
+    async fn shard_count(&self) -> Result<u16, Error> {
+        Ok(crate::ipc::argparse::MEWLD_ARGS.shard_count)
     }
 
     fn cluster_id(&self) -> u16 {
@@ -155,12 +124,12 @@ impl silverpelt::data::Props for Props {
         self.mewld_ipc.cache.cluster_healths.len()
     }
 
-    fn total_guilds(&self) -> u64 {
-        self.mewld_ipc.cache.total_guilds()
+    async fn total_guilds(&self) -> Result<u64, Error> {
+        Ok(self.mewld_ipc.cache.total_guilds())
     }
 
-    fn total_users(&self) -> u64 {
-        self.mewld_ipc.cache.total_users()
+    async fn total_users(&self) -> Result<u64, Error> {
+        Ok(self.mewld_ipc.cache.total_users())
     }
 
     async fn reset_can_use_bot(&self) -> Result<(), silverpelt::Error> {
@@ -276,7 +245,7 @@ async fn load_can_use_bot_whitelist(pool: &sqlx::PgPool) -> Result<CanUseBotList
 }
 
 // TODO: allow root users to customize/set this in database later
-pub fn maint_message<'a>(user_data: &crate::Data) -> poise::CreateReply<'a> {
+pub async fn maint_message<'a>(user_data: &crate::Data) -> Result<poise::CreateReply<'a>, Error> {
     let primary = poise::serenity_prelude::CreateEmbed::default()
     .color(0xff0000)
     .title("AntiRaid")
@@ -301,7 +270,7 @@ pub fn maint_message<'a>(user_data: &crate::Data) -> poise::CreateReply<'a> {
     .color(0xff0000)
     .description(format!(
         "**Server Count:** {}\n**Shard Count:** {}\n**Cluster Count:** {}\n**Cluster ID:** {}\n**Cluster Name:** {}\n**Uptime:** {}",
-        user_data.props.total_guilds(),
+        user_data.props.total_guilds().await?,
         ipc::argparse::MEWLD_ARGS.shard_count,
         ipc::argparse::MEWLD_ARGS.cluster_count,
         ipc::argparse::MEWLD_ARGS.cluster_id,
@@ -315,12 +284,12 @@ pub fn maint_message<'a>(user_data: &crate::Data) -> poise::CreateReply<'a> {
         }
     ));
 
-    poise::CreateReply::new()
+    Ok(poise::CreateReply::new()
         .ephemeral(true)
         .content(&config::CONFIG.meta.support_server)
         .embed(primary)
         .embed(updates)
-        .embed(statistics)
+        .embed(statistics))
 }
 
 async fn on_error(error: poise::FrameworkError<'_, Data, Error>) {
@@ -392,7 +361,7 @@ async fn event_listener<'a>(
                 ic.create_response(
                     &ctx.serenity_context.http,
                     serenity::all::CreateInteractionResponse::Message(
-                        maint_message(&user_data).to_slash_initial_response(
+                        maint_message(&user_data).await?.to_slash_initial_response(
                             serenity::all::CreateInteractionResponseMessage::default(),
                         ),
                     ),
@@ -421,7 +390,7 @@ async fn event_listener<'a>(
                 ic.create_response(
                     &ctx.serenity_context.http,
                     serenity::all::CreateInteractionResponse::Message(
-                        maint_message(&user_data).to_slash_initial_response(
+                        maint_message(&user_data).await?.to_slash_initial_response(
                             serenity::all::CreateInteractionResponseMessage::default(),
                         ),
                     ),
@@ -645,7 +614,7 @@ async fn main() {
     let mut env_builder = env_logger::builder();
 
     let mut default_filter =
-        "serenity=error,fred=error,bot=info,modules=info,templating=debug".to_string();
+        "serenity=error,fred=error,rust_bot=info,botox=info,templating=debug".to_string();
 
     for module in modules() {
         let module_id = module.id;
@@ -841,7 +810,7 @@ async fn main() {
                         return Ok(false);
                     }
 
-                    ctx.send(maint_message(&ctx.data()))
+                    ctx.send(maint_message(&ctx.data()).await?)
                         .await
                         .map_err(|e| format!("Error sending reply: {}", e))?;
 

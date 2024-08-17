@@ -15,6 +15,8 @@ pub const RUSTC_VERSION: &str = env!("RUSTC_VERSION");
 
 #[poise::command(category = "Stats", prefix_command, slash_command, user_cooldown = 1)]
 pub async fn stats(ctx: Context<'_>) -> Result<(), Error> {
+    let total_guilds = ctx.data().props.total_guilds().await?;
+    let total_users = ctx.data().props.total_users().await?;
     let msg = CreateReply::default().embed(
         CreateEmbed::default()
             .title("Bot Stats")
@@ -64,8 +66,8 @@ pub async fn stats(ctx: Context<'_>) -> Result<(), Error> {
                 ),
                 true,
             )
-            .field("Servers", ctx.data().props.total_guilds().to_string(), true)
-            .field("Users", ctx.data().props.total_users().to_string(), true)
+            .field("Servers", total_guilds.to_string(), true)
+            .field("Users", total_users.to_string(), true)
             .field("Commit Message", GIT_COMMIT_MSG, true)
             .field("Built On", BUILD_CPU, true)
             .field("Cargo Profile", CARGO_PROFILE, true),

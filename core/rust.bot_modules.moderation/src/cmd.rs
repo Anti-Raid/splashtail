@@ -243,7 +243,7 @@ pub async fn prune_user(
     let Some(resp) = am
         .request_one(
             RequestOptions {
-                cluster_id: shard_id(guild_id, data.props.shard_count().try_into()?),
+                cluster_id: shard_id(guild_id, data.props.shard_count().await?.try_into()?),
                 expected_response_count: 1,
                 to: AnimusTarget::Jobserver,
                 op: AnimusOp::Request,

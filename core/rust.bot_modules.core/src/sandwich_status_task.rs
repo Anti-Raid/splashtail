@@ -33,7 +33,7 @@ pub async fn sandwich_status_task(
 
     let support_data = ProxyResponse::Sandwich(res).to_support_data();
 
-    if support_data.shard_conns.len() > data.props.shard_count().into() {
+    if support_data.shard_conns.len() > data.props.shard_count().await?.into() {
         return Err("Sandwich API returned more shards than the bot has".into());
     }
 

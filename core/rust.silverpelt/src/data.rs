@@ -60,10 +60,10 @@ where
     fn name(&self) -> String;
 
     /// If applicable, the shards associated with the service
-    fn shards(&self) -> Vec<u16>;
+    async fn shards(&self) -> Result<Vec<u16>, crate::Error>;
 
     /// If applicable, the shard count
-    fn shard_count(&self) -> u16;
+    async fn shard_count(&self) -> Result<u16, crate::Error>;
 
     /// The cluster ID
     fn cluster_id(&self) -> u16;
@@ -89,12 +89,12 @@ where
     /// Total number of guilds
     ///
     /// Note that this statistic may not always be available, in such cases, 0 will be returned
-    fn total_guilds(&self) -> u64;
+    async fn total_guilds(&self) -> Result<u64, crate::Error>;
 
     /// Total number of users
     ///
     /// Note that this statistic may not always be available, in such cases, 0 will be returned
-    fn total_users(&self) -> u64;
+    async fn total_users(&self) -> Result<u64, crate::Error>;
 
     /// Reset the can_use_bot whitelist
     async fn reset_can_use_bot(&self) -> Result<(), crate::Error>;

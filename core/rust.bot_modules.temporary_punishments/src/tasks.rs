@@ -68,8 +68,8 @@ pub async fn temporary_punishment_task(
 
     let mut set = tokio::task::JoinSet::new();
 
-    let shard_count = data.props.shard_count().try_into()?;
-    let shards = data.props.shards();
+    let shard_count = data.props.shard_count().await?.try_into()?;
+    let shards = data.props.shards().await?;
 
     for (source, punishments) in temp_punishments {
         for punishment in punishments {

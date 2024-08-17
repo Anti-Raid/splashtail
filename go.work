@@ -19,4 +19,5 @@ use (
 	./services/go.jobserver
 	./services/go.localjobs
 	./services/rust.bot
+	./services/rust.bot.nocluster
 )
