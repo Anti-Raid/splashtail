@@ -197,6 +197,7 @@ func Setup() {
 	// Shouldnt be called yet as we don't start websocket
 	Discord.AddHandler(func(s *discordgo.Session, r *discordgo.Ready) {
 		Logger.Info("[DISCORD]", zap.String("note", "ready"))
+		Logger.Info("[DISCORD] Launching with shard count", zap.Int("shard_count", Discord.ShardCount), zap.Int("shard_id", Discord.ShardID))
 	})
 
 	// Load dovewing state

@@ -13,6 +13,13 @@ pub async fn rederive_perms(
     user_id: UserId,
     roles: &[RoleId],
 ) -> Result<Vec<Permission>, crate::Error> {
+    // We hardcode root users for the main server to ensure root users have control over the bot even under extreme circumstances
+    if guild_id == config::CONFIG.servers.main.get()
+        && config::CONFIG.discord_auth.root_users.contains(&user_id)
+    {
+        return Ok(vec!["global.*".into()]);
+    }
+
     let roles_str = {
         let mut r = Vec::new();
 

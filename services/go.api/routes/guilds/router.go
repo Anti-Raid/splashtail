@@ -8,6 +8,7 @@ import (
 	"go.api/api"
 	"go.api/routes/guilds/endpoints/get_all_command_configurations"
 	"go.api/routes/guilds/endpoints/get_module_configurations"
+	"go.api/routes/guilds/endpoints/get_staff_team"
 	"go.api/routes/guilds/endpoints/patch_command_configuration"
 	"go.api/routes/guilds/endpoints/patch_module_configuration"
 	"go.api/routes/guilds/endpoints/settings_execute"
@@ -23,6 +24,14 @@ func (b Router) Tag() (string, string) {
 }
 
 func (b Router) Routes(r *chi.Mux) {
+	uapi.Route{
+		Pattern: "/guilds/{guild_id}/staff-team",
+		OpId:    "get_staff_team",
+		Method:  uapi.GET,
+		Docs:    get_staff_team.Docs,
+		Handler: get_staff_team.Route,
+	}.Route(r)
+
 	uapi.Route{
 		Pattern: "/guilds/{guild_id}/module-configurations",
 		OpId:    "get_module_configurations",
