@@ -326,10 +326,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "bot_modules_antiraid"
-version = "0.1.0"
-
-[[package]]
 name = "bot_modules_auditlogs"
 version = "0.1.0"
 dependencies = [
@@ -455,6 +451,24 @@ dependencies = [
  "sqlx",
  "strum",
  "strum_macros",
+]
+
+[[package]]
+name = "bot_modules_lockdown"
+version = "0.1.0"
+dependencies = [
+ "botox",
+ "config",
+ "futures-util",
+ "indexmap",
+ "log",
+ "poise",
+ "serde",
+ "serde_json",
+ "serenity",
+ "silverpelt",
+ "splashcore_rs",
+ "sqlx",
 ]
 
 [[package]]
