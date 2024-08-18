@@ -1,15 +1,15 @@
 [package]
-name = "bot_modules_temporary_punishments"
+name = "bot_binutils"
 version = "0.1.0"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+poise = { git = "https://github.com/serenity-rs/poise", branch = "serenity-next" }
+sqlx = { version = "0.8", features = [ "runtime-tokio-rustls", "postgres", "chrono", "uuid", "json"] }
 log = "0.4"
-futures-util = "0.3"
 silverpelt = { path = "../rust.silverpelt" }
-proxy_support = { path = "../rust.proxy_support" }
 
 [dependencies.serenity]
 git = "https://github.com/serenity-rs/serenity"

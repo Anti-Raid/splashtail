@@ -1,3 +1,4 @@
+use serenity::all::{GuildId, UserId};
 use splashcore_rs::{animusmagic::client::AnimusMagicRequestClient, objectstore::ObjectStore};
 use std::sync::Arc;
 
@@ -98,4 +99,14 @@ where
 
     /// Reset the can_use_bot whitelist
     async fn reset_can_use_bot(&self) -> Result<(), crate::Error>;
+
+    /// Returns if a user is whitelisted to use the bot
+    async fn is_whitelisted(
+        &self,
+        guild_id: Option<GuildId>,
+        user_id: UserId,
+    ) -> Result<bool, crate::Error>;
+
+    /// Returns the maintenace message for the bot
+    fn maint_message<'a>(&self) -> poise::CreateReply<'a>;
 }

@@ -9,7 +9,7 @@ use ipc::{
 
 use botox::cache::CacheHttpImpl;
 use gwevent::core::get_event_guild_id;
-use silverpelt::{module_config::is_module_enabled, EventHandlerContext};
+use silverpelt::EventHandlerContext;
 use splashcore_rs::value::Value;
 
 use std::sync::{Arc, LazyLock, OnceLock};
@@ -132,11 +132,6 @@ impl silverpelt::data::Props for Props {
         Ok(self.mewld_ipc.cache.total_users())
     }
 
-    async fn reset_can_use_bot(&self) -> Result<(), silverpelt::Error> {
-        load_can_use_bot_whitelist(&self.pool).await?;
-        Ok(())
-    }
-
     /// Proxy support data
     async fn get_proxysupport_data(&self) -> Option<Arc<proxy_support::ProxySupportData>> {
         let guard = self.proxy_support_data.read().await;
@@ -160,6 +155,56 @@ impl silverpelt::data::Props for Props {
         *guard = Some(Arc::new(data));
 
         Ok(())
+    }
+
+    async fn reset_can_use_bot(&self) -> Result<(), silverpelt::Error> {
+        load_can_use_bot_whitelist(&self.pool).await?;
+        Ok(())
+    }
+
+    /// Returns if a user is whitelisted to use the bot
+    async fn is_whitelisted(
+        &self,
+        guild_id: Option<GuildId>,
+        user_id: UserId,
+    ) -> Result<bool, crate::Error> {
+        Ok(config::CONFIG.discord_auth.public_bot || {
+            let cub_cache = CAN_USE_BOT_CACHE.read().await;
+            if let Some(ref guild_id) = guild_id {
+                cub_cache.guilds.contains(guild_id) && cub_cache.users.contains(&user_id)
+            } else {
+                cub_cache.users.contains(&user_id)
+            }
+        })
+    }
+
+    fn maint_message<'a>(&self) -> poise::CreateReply<'a> {
+        let primary = poise::serenity_prelude::CreateEmbed::default()
+    .color(0xff0000)
+    .title("AntiRaid")
+    .url(&config::CONFIG.meta.support_server)
+    .description(
+        format!("Unfortunately, AntiRaid is currently unavailable due to poor code management and changes with the Discord API. We are currently in the works of V6, and hope to have it out by next month. All use of our services will not be available, and updates will be pushed here. We are extremely sorry for the inconvenience.\nFor more information you can also join our [Support Server]({})!", config::CONFIG.meta.support_server)
+    );
+
+        let changes: [&str; 5] = [
+        "We are working extremely hard on Antiraid v6, and have completed working on half of the bot. We should have this update out by Q1/Q2 2024! Delays may occur due to the sheer scope of the unique features we want to provide!",
+        "Yet another update: we are in the process of adding some MASSIVE new features including advanced permission management, server member limits, AI image classification, server member backups and custom customizable github webhook support (for developers)",
+        "Update (Tuesday, July 2nd 2024 Edition): We are still working on the bot. It is taking longer than expected due to the large amount of new features being added. You can also request specific features you want in Anti-Raid on our Discord Server!",
+        "Update (July 15th): Our developers want feedback on what we should add to the bot! Please join our support server and give your wishlist now!",
+        "Update (August 18th) :thinking:"
+    ];
+
+        let updates = poise::serenity_prelude::CreateEmbed::default()
+            .color(0x0000ff)
+            .title("Updates")
+            .description(changes.join("\t-"));
+
+        poise::CreateReply::new()
+            .ephemeral(true)
+            .content(&config::CONFIG.meta.support_server)
+            .embed(primary)
+            .embed(updates)
     }
 }
 
@@ -244,103 +289,6 @@ async fn load_can_use_bot_whitelist(pool: &sqlx::PgPool) -> Result<CanUseBotList
     Ok(CanUseBotList { users, guilds })
 }
 
-// TODO: allow root users to customize/set this in database later
-pub async fn maint_message<'a>(user_data: &crate::Data) -> Result<poise::CreateReply<'a>, Error> {
-    let primary = poise::serenity_prelude::CreateEmbed::default()
-    .color(0xff0000)
-    .title("AntiRaid")
-    .url(&config::CONFIG.meta.support_server)
-    .description(
-        format!("Unfortunately, AntiRaid is currently unavailable due to poor code management and changes with the Discord API. We are currently in the works of V6, and hope to have it out by next month. All use of our services will not be available, and updates will be pushed here. We are extremely sorry for the inconvenience.\nFor more information you can also join our [Support Server]({})!", config::CONFIG.meta.support_server)
-    );
-
-    let changes: [&str; 4] = [
-        "We are working extremely hard on Antiraid v6, and have completed working on half of the bot. We should have this update out by Q1/Q2 2024! Delays may occur due to the sheer scope of the unique features we want to provide!",
-        "Yet another update: we are in the process of adding some MASSIVE new features including advanced permission management, server member limits, AI image classification, server member backups and custom customizable github webhook support (for developers)",
-        "Update (Tuesday, July 2nd 2024 Edition): We are still working on the bot. It is taking longer than expected due to the large amount of new features being added. You can also request specific features you want in Anti-Raid on our Discord Server!",
-        "Update (July 15th): Our developers want feedback on what we should add to the bot! Please join our support server and give your wishlist now!"
-    ];
-
-    let updates = poise::serenity_prelude::CreateEmbed::default()
-        .color(0x0000ff)
-        .title("Updates")
-        .description(changes.join("\t-"));
-
-    let statistics = poise::serenity_prelude::CreateEmbed::default()
-    .color(0xff0000)
-    .description(format!(
-        "**Server Count:** {}\n**Shard Count:** {}\n**Cluster Count:** {}\n**Cluster ID:** {}\n**Cluster Name:** {}\n**Uptime:** {}",
-        user_data.props.total_guilds().await?,
-        ipc::argparse::MEWLD_ARGS.shard_count,
-        ipc::argparse::MEWLD_ARGS.cluster_count,
-        ipc::argparse::MEWLD_ARGS.cluster_id,
-        ipc::argparse::MEWLD_ARGS.cluster_name,
-        {
-            let duration: std::time::Duration = std::time::Duration::from_secs((chrono::Utc::now().timestamp() - config::CONFIG.start_time) as u64);
-            let seconds = duration.as_secs() % 60;
-            let minutes = (duration.as_secs() / 60) % 60;
-            let hours = (duration.as_secs() / 60) / 60;
-            format!("{}h{}m{}s", hours, minutes, seconds)
-        }
-    ));
-
-    Ok(poise::CreateReply::new()
-        .ephemeral(true)
-        .content(&config::CONFIG.meta.support_server)
-        .embed(primary)
-        .embed(updates)
-        .embed(statistics))
-}
-
-async fn on_error(error: poise::FrameworkError<'_, Data, Error>) {
-    // This is our custom error handler
-    // They are many errors that can occur, so we only handle the ones we want to customize
-    // and forward the rest to the default handler
-    match error {
-        poise::FrameworkError::Command { error, ctx, .. } => {
-            error!("Error in command `{}`: {:?}", ctx.command().name, error,);
-
-            let err = ctx
-                .send(
-                    poise::CreateReply::new().embed(
-                        serenity::all::CreateEmbed::new()
-                            .color(serenity::all::Color::RED)
-                            .title("An error has occurred")
-                            .description(error.to_string()),
-                    ),
-                )
-                .await;
-
-            if let Err(e) = err {
-                error!("Message send error for FrameworkError::Command: {}", e);
-            }
-        }
-        poise::FrameworkError::CommandCheckFailed { error, ctx, .. } => {
-            error!(
-                "[Possible] error in command `{}`: {:?}",
-                ctx.command().qualified_name,
-                error,
-            );
-            if let Some(error) = error {
-                error!("Error in command `{}`: {:?}", ctx.command().name, error,);
-                let err = ctx.say(format!("{}", error)).await;
-
-                if let Err(e) = err {
-                    error!(
-                        "Message send error for FrameworkError::CommandCheckFailed: {}",
-                        e
-                    );
-                }
-            }
-        }
-        error => {
-            if let Err(e) = poise::builtins::on_error(error).await {
-                error!("Error while handling error: {}", e);
-            }
-        }
-    }
-}
-
 async fn event_listener<'a>(
     ctx: poise::FrameworkContext<'a, Data, Error>,
     event: &FullEvent,
@@ -361,7 +309,7 @@ async fn event_listener<'a>(
                 ic.create_response(
                     &ctx.serenity_context.http,
                     serenity::all::CreateInteractionResponse::Message(
-                        maint_message(&user_data).await?.to_slash_initial_response(
+                        user_data.props.maint_message().to_slash_initial_response(
                             serenity::all::CreateInteractionResponseMessage::default(),
                         ),
                     ),
@@ -390,7 +338,7 @@ async fn event_listener<'a>(
                 ic.create_response(
                     &ctx.serenity_context.http,
                     serenity::all::CreateInteractionResponse::Message(
-                        maint_message(&user_data).await?.to_slash_initial_response(
+                        user_data.props.maint_message().to_slash_initial_response(
                             serenity::all::CreateInteractionResponseMessage::default(),
                         ),
                     ),
@@ -413,28 +361,7 @@ async fn event_listener<'a>(
                 .load(std::sync::atomic::Ordering::SeqCst)
             {
                 info!("Starting background tasks");
-                // Get all tasks
-                let mut tasks = Vec::new();
-                for module in modules() {
-                    for (task, confirm_task) in module.background_tasks {
-                        let (confirmed, reason) = (confirm_task)(ctx.serenity_context);
-                        if confirmed {
-                            info!(
-                                "Adding task {} with confirm_task reason: {}",
-                                task.name, reason
-                            );
-                        } else {
-                            info!(
-                                "Skipping task {} as it is disabled for reason: {}",
-                                task.name, reason
-                            );
-                            continue;
-                        }
-
-                        tasks.push(task);
-                    }
-                }
-
+                let tasks = bot_binutils::get_tasks(modules(), ctx.serenity_context);
                 tokio::task::spawn(botox::taskman::start_all_tasks(
                     tasks,
                     ctx.serenity_context.clone(),
@@ -551,33 +478,8 @@ async fn event_listener<'a>(
         serenity_context: ctx.serenity_context.clone(),
     });
 
-    let mut set = tokio::task::JoinSet::new();
-    for (id, module) in SILVERPELT_CACHE.module_cache.iter() {
-        let module_enabled = match is_module_enabled(
-            &event_handler_context.data.silverpelt_cache,
-            &event_handler_context.data.pool,
-            event_guild_id,
-            id,
-        )
-        .await
-        {
-            Ok(enabled) => enabled,
-            Err(e) => {
-                error!("Error getting module enabled status: {}", e);
-                continue;
-            }
-        };
-
-        if !module_enabled {
-            continue;
-        }
-
-        for event_handler in module.event_handlers.iter() {
-            let ehr = event_handler_context.clone();
-            set.spawn(async move { (event_handler)(&ehr).await });
-        }
-    }
-
+    let mut set =
+        bot_binutils::dispatch_event_to_modules(&SILVERPELT_CACHE, event_handler_context).await;
     while let Some(res) = set.join_next().await {
         match res {
             Ok(Ok(_)) => {}
@@ -614,7 +516,8 @@ async fn main() {
     let mut env_builder = env_logger::builder();
 
     let mut default_filter =
-        "serenity=error,fred=error,rust_bot=info,botox=info,templating=debug".to_string();
+        "serenity=error,fred=error,rust_bot=info,bot_binutils=info,botox=info,templating=debug"
+            .to_string();
 
     for module in modules() {
         let module_id = module.id;
@@ -713,182 +616,8 @@ async fn main() {
             ..poise::PrefixFrameworkOptions::default()
         },
         event_handler: |ctx, event| Box::pin(event_listener(ctx, event)),
-        commands: {
-            let mut cmds = Vec::new();
-
-            let mut _cmd_names = Vec::new();
-            for module in modules() {
-                log::info!("Loading module {}", module.id);
-
-                if !module.is_parsed() {
-                    panic!("Module {} is not parsed", module.id);
-                }
-
-                if module.virtual_module {
-                    continue;
-                }
-
-                for (mut cmd, extended_data) in module.commands {
-                    let root_is_virtual = match extended_data.get("") {
-                        Some(root) => root.virtual_command,
-                        None => false,
-                    };
-
-                    if root_is_virtual {
-                        continue;
-                    }
-
-                    cmd.category = Some(module.id.to_string());
-
-                    let mut subcommands = Vec::new();
-                    // Ensure subcommands are also linked to a category
-                    for subcommand in cmd.subcommands {
-                        let ext_data =
-                            extended_data
-                                .get(subcommand.name.as_str())
-                                .unwrap_or_else(|| {
-                                    panic!(
-                                        "Subcommand {} does not have extended data",
-                                        subcommand.name
-                                    )
-                                });
-
-                        if ext_data.virtual_command {
-                            continue;
-                        }
-
-                        subcommands.push(poise::Command {
-                            category: Some(module.id.to_string()),
-                            ..subcommand
-                        });
-                    }
-
-                    cmd.subcommands = subcommands;
-
-                    // Check for duplicate command names
-                    if _cmd_names.contains(&cmd.name) {
-                        error!("Duplicate command name: {:#?}", cmd);
-                        panic!("Duplicate command name: {}", cmd.qualified_name);
-                    }
-
-                    _cmd_names.push(cmd.name.clone());
-
-                    // Check for duplicate command aliases
-                    for alias in cmd.aliases.iter() {
-                        if _cmd_names.contains(alias) {
-                            panic!(
-                                "Duplicate command alias: {} from command {}",
-                                alias, cmd.name
-                            );
-                        }
-
-                        _cmd_names.push(alias.clone());
-                    }
-
-                    // Good to go
-                    cmds.push(cmd);
-                }
-            }
-
-            cmds
-        },
-        command_check: Some(|ctx| {
-            Box::pin(async move {
-                let user_id = ctx.author().id;
-                let allowed = config::CONFIG.discord_auth.public_bot || {
-                    let cub_cache = CAN_USE_BOT_CACHE.read().await;
-                    if let Some(ref guild_id) = ctx.guild_id() {
-                        cub_cache.guilds.contains(guild_id) && cub_cache.users.contains(&user_id)
-                    } else {
-                        cub_cache.users.contains(&user_id)
-                    }
-                };
-
-                if !allowed {
-                    // We already send in the event handler
-                    if let poise::Context::Application(_) = ctx {
-                        return Ok(false);
-                    }
-
-                    ctx.send(maint_message(&ctx.data()).await?)
-                        .await
-                        .map_err(|e| format!("Error sending reply: {}", e))?;
-
-                    return Ok(false);
-                }
-
-                let Some(guild_id) = ctx.guild_id() else {
-                    return Err("This command can only be run from servers".into());
-                };
-
-                let data = ctx.data();
-
-                let guild = sqlx::query!(
-                    "SELECT COUNT(*) FROM guilds WHERE id = $1",
-                    guild_id.to_string()
-                )
-                .fetch_one(&data.pool)
-                .await?;
-
-                if guild.count.unwrap_or_default() == 0 {
-                    // Guild not found, create it
-                    sqlx::query!("INSERT INTO guilds (id) VALUES ($1)", guild_id.to_string())
-                        .execute(&data.pool)
-                        .await?;
-                }
-
-                let user = sqlx::query!(
-                    "SELECT COUNT(*) FROM users WHERE user_id = $1",
-                    guild_id.to_string()
-                )
-                .fetch_one(&data.pool)
-                .await?;
-
-                if user.count.unwrap_or_default() == 0 {
-                    // User not found, create it
-                    sqlx::query!(
-                        "INSERT INTO users (user_id) VALUES ($1)",
-                        guild_id.to_string()
-                    )
-                    .execute(&data.pool)
-                    .await?;
-                }
-
-                let command = ctx.command();
-
-                let res = silverpelt::cmd::check_command(
-                    &data.silverpelt_cache,
-                    &command.qualified_name,
-                    guild_id,
-                    ctx.author().id,
-                    &data.pool,
-                    &CacheHttpImpl::from_ctx(ctx.serenity_context()),
-                    &Some(ctx),
-                    silverpelt::cmd::CheckCommandOptions {
-                        channel_id: Some(ctx.channel_id()),
-                        ..Default::default()
-                    },
-                )
-                .await;
-
-                if res.is_ok() {
-                    return Ok(true);
-                }
-
-                ctx.send(
-                    poise::CreateReply::new().embed(
-                        serenity::all::CreateEmbed::new()
-                            .color(serenity::all::Color::RED)
-                            .title("You don't have permission to use this command?")
-                            .description(res.to_markdown())
-                            .field("Code", format!("`{}`", res.code()), false),
-                    ),
-                )
-                .await?;
-
-                Ok(false)
-            })
-        }),
+        commands: bot_binutils::get_commands(modules()),
+        command_check: Some(|ctx| Box::pin(bot_binutils::command_check(ctx))),
         pre_command: |ctx| {
             Box::pin(async move {
                 info!(
@@ -909,7 +638,7 @@ async fn main() {
                 );
             })
         },
-        on_error: |error| Box::pin(on_error(error)),
+        on_error: |error| Box::pin(bot_binutils::on_error(error)),
         ..Default::default()
     };
 
