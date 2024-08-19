@@ -16,12 +16,9 @@ buildall:
 	# Core infra
 	cd infra/nirn-proxy && make
 	cd infra/Sandwich-Daemon && make
-	cd infra/animuscli && make
 	cd infra/wafflepaw && make
 
 	# Other infra
-	make buildanimuscli
-	make buildwafflepaw
 	make buildmewldwebui
 	make build
 

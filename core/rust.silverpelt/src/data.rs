@@ -1,5 +1,5 @@
 use serenity::all::{GuildId, UserId};
-use splashcore_rs::{animusmagic::client::AnimusMagicRequestClient, objectstore::ObjectStore};
+use splashcore_rs::objectstore::ObjectStore;
 use std::sync::Arc;
 
 /// This struct stores base/standard command data, which is stored and accessible in all command invocations
@@ -40,9 +40,6 @@ where
 {
     /// Converts the props to std::any::Any
     fn as_any(&self) -> &(dyn std::any::Any + Send + Sync);
-
-    /// Returns the underlying client for animus magic
-    fn underlying_am_client(&self) -> Result<Box<dyn AnimusMagicRequestClient>, crate::Error>;
 
     /// Returns the per module executor of the context
     fn permodule_executor(

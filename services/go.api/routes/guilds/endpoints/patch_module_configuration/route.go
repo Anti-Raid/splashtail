@@ -11,12 +11,11 @@ import (
 	"github.com/infinitybotlist/eureka/ratelimit"
 	"github.com/infinitybotlist/eureka/uapi"
 	"github.com/jackc/pgx/v5"
-	"go.api/animusmagic_messages"
 	"go.api/api"
+	"go.api/rpc_messages"
 	"go.api/state"
 	"go.api/types"
 	"go.api/webutils"
-	"go.std/animusmagic"
 	"go.std/silverpelt"
 	"go.std/structparser/db"
 	"go.std/utils"
@@ -120,7 +119,7 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 	}
 
 	// Find module from cluster
-	modules, err := state.CachedAnimusMagicClient.GetClusterModules(d.Context, state.Rueidis, uint16(clusterId))
+	modules, err := state.ClusterModuleCache.GetClusterModules(d.Context, uint16(clusterId))
 
 	if err != nil {
 		return uapi.HttpResponse{
@@ -133,7 +132,7 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 
 	var moduleData *silverpelt.CanonicalModule
 
-	for _, m := range modules {
+	for _, m := range *modules {
 		if m.ID == body.Module {
 			moduleData = &m
 			break
@@ -182,7 +181,7 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 
 		if clear {
 			if moduleData.IsDefaultEnabled {
-				hresp, ok = api.HandlePermissionCheck(d.Auth.ID, guildId, "modules enable", animusmagic_messages.AmCheckCommandOptions{
+				hresp, ok = api.HandlePermissionCheck(d.Auth.ID, guildId, "modules enable", rpc_messages.RpcCheckCommandOptions{
 					CustomResolvedKittycatPerms: permLimits,
 				})
 
@@ -190,7 +189,7 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 					return hresp
 				}
 			} else {
-				hresp, ok = api.HandlePermissionCheck(d.Auth.ID, guildId, "modules disable", animusmagic_messages.AmCheckCommandOptions{
+				hresp, ok = api.HandlePermissionCheck(d.Auth.ID, guildId, "modules disable", rpc_messages.RpcCheckCommandOptions{
 					CustomResolvedKittycatPerms: permLimits,
 				})
 
@@ -208,7 +207,7 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 			// Check for permissions next
 			if *value {
 				// Disable
-				hresp, ok = api.HandlePermissionCheck(d.Auth.ID, guildId, "modules disable", animusmagic_messages.AmCheckCommandOptions{
+				hresp, ok = api.HandlePermissionCheck(d.Auth.ID, guildId, "modules disable", rpc_messages.RpcCheckCommandOptions{
 					CustomResolvedKittycatPerms: permLimits,
 				})
 
@@ -217,7 +216,7 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 				}
 			} else {
 				// Enable
-				hresp, ok = api.HandlePermissionCheck(d.Auth.ID, guildId, "modules enable", animusmagic_messages.AmCheckCommandOptions{
+				hresp, ok = api.HandlePermissionCheck(d.Auth.ID, guildId, "modules enable", rpc_messages.RpcCheckCommandOptions{
 					CustomResolvedKittycatPerms: permLimits,
 				})
 
@@ -251,7 +250,7 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 		}
 
 		// Check for permissions next
-		hresp, ok = api.HandlePermissionCheck(d.Auth.ID, guildId, "modules modperms", animusmagic_messages.AmCheckCommandOptions{
+		hresp, ok = api.HandlePermissionCheck(d.Auth.ID, guildId, "modules modperms", rpc_messages.RpcCheckCommandOptions{
 			CustomResolvedKittycatPerms: permLimits,
 		})
 
@@ -259,7 +258,7 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 			return hresp
 		}
 
-		hresp, ok = api.HandlePermissionCheck(d.Auth.ID, guildId, "acl__modules_modperms "+body.Module, animusmagic_messages.AmCheckCommandOptions{
+		hresp, ok = api.HandlePermissionCheck(d.Auth.ID, guildId, "acl__modules_modperms "+body.Module, rpc_messages.RpcCheckCommandOptions{
 			CustomResolvedKittycatPerms: permLimits,
 		})
 
@@ -268,7 +267,7 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 		}
 
 		if clear {
-			hresp, ok = api.HandlePermissionCheck(d.Auth.ID, guildId, "acl__"+body.Module+"_defaultperms_check", animusmagic_messages.AmCheckCommandOptions{
+			hresp, ok = api.HandlePermissionCheck(d.Auth.ID, guildId, "acl__"+body.Module+"_defaultperms_check", rpc_messages.RpcCheckCommandOptions{
 				CustomResolvedKittycatPerms: permLimits,
 				CustomModuleConfiguration: silverpelt.GuildModuleConfiguration{
 					Disabled:     utils.Pointer(false),
@@ -284,7 +283,7 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 			updateCols = append(updateCols, "default_perms")
 			updateArgs = append(updateArgs, nil)
 		} else {
-			parsedValue, err := webutils.ParsePermissionChecks(d.Context, state.AnimusMagicClient, state.Rueidis, uint16(clusterId), guildId, value)
+			parsedValue, err := webutils.ParsePermissionChecks(d.Context, clusterId, guildId, value)
 
 			if err != nil {
 				return uapi.HttpResponse{
@@ -295,7 +294,7 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 				}
 			}
 
-			hresp, ok = api.HandlePermissionCheck(d.Auth.ID, guildId, "acl__"+body.Module+"_defaultperms_check", animusmagic_messages.AmCheckCommandOptions{
+			hresp, ok = api.HandlePermissionCheck(d.Auth.ID, guildId, "acl__"+body.Module+"_defaultperms_check", rpc_messages.RpcCheckCommandOptions{
 				CustomResolvedKittycatPerms: permLimits,
 				CustomModuleConfiguration: silverpelt.GuildModuleConfiguration{
 					Disabled:     utils.Pointer(false),
@@ -402,28 +401,17 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 	}
 
 	if cacheFlushFlag&CACHE_FLUSH_MODULE_TOGGLE == CACHE_FLUSH_MODULE_TOGGLE && body.Disabled != nil {
-		resps, err := state.AnimusMagicClient.Request(
+		err := webutils.ExecutePerModuleFunction(
 			d.Context,
-			state.Rueidis,
-			animusmagic_messages.BotAnimusMessage{
-				ExecutePerModuleFunction: &struct {
-					Module  string         `json:"module"`
-					Toggle  string         `json:"toggle"`
-					Options map[string]any `json:"options,omitempty"`
-				}{
-					Module: "settings",
-					Toggle: "toggle_module",
-					Options: map[string]any{
-						"guild_id": guildId,
-						"module":   body.Module,
-						"enabled":  isDisabled,
-					},
+			clusterId,
+			&rpc_messages.ExecutePerModuleFunctionRequest{
+				Module:   "settings",
+				Function: "toggle_module",
+				Args: map[string]any{
+					"guild_id": guildId,
+					"module":   body.Module,
+					"enabled":  isDisabled,
 				},
-			},
-			&animusmagic.RequestOptions{
-				ClusterID: utils.Pointer(uint16(clusterId)),
-				To:        animusmagic.AnimusTargetBot,
-				Op:        animusmagic.OpRequest,
 			},
 		)
 
@@ -431,19 +419,7 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 			return uapi.HttpResponse{
 				Status: http.StatusInternalServerError,
 				Json: types.ApiError{
-					Message: "Error sending request to animus magic: " + err.Error(),
-				},
-				Headers: map[string]string{
-					"Retry-After": "10",
-				},
-			}
-		}
-
-		if len(resps) != 1 {
-			return uapi.HttpResponse{
-				Status: http.StatusInternalServerError,
-				Json: types.ApiError{
-					Message: "Error sending request to animus magic: [unexpected response count of " + strconv.Itoa(len(resps)) + "]",
+					Message: "Error clearing bot caches: " + err.Error(),
 				},
 				Headers: map[string]string{
 					"Retry-After": "10",

@@ -40,7 +40,6 @@ pub mod test_module_parse {
             extra_data: dashmap::DashMap::new(),
             props: Arc::new(crate::Props {
                 redis_pool: pool.clone(),
-                animus_magic_ipc: std::sync::OnceLock::new(),
                 pool: pg_pool.clone(),
                 proxy_support_data: tokio::sync::RwLock::new(None),
                 cmd_args: cmd_args.clone(),

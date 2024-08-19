@@ -27,15 +27,14 @@ pub struct MewldCmdArgs {
     pub cluster_count: u16,
     pub mewld_redis_channel: String,
     pub current_env: String,
-    pub animus_magic_channel: String,
 }
 
 impl MewldCmdArgs {
     pub fn parse_argv(args: &[String]) -> Result<Self, crate::Error> {
-        if args.len() != 9 {
+        if args.len() != 8 {
             return Err(r#"Invalid number of arguments
             
-Expected arguments: [program name] <shards> <shard_count> <cluster_id> <cluster_name> <cluster_count> <mewld_redis_channel> <env> <animus_magic_channel>
+Expected arguments: [program name] <shards> <shard_count> <cluster_id> <cluster_name> <cluster_count> <mewld_redis_channel> <env>
             "#.into());
         }
 
@@ -46,7 +45,6 @@ Expected arguments: [program name] <shards> <shard_count> <cluster_id> <cluster_
         let cluster_count: u16 = str::parse(&args[5])?;
         let mewld_redis_channel: String = args[6].clone();
         let current_env: String = args[7].clone();
-        let animus_magic_channel: String = args[8].clone();
 
         let args = Self {
             shards,
@@ -58,7 +56,6 @@ Expected arguments: [program name] <shards> <shard_count> <cluster_id> <cluster_
             cluster_count,
             mewld_redis_channel,
             current_env,
-            animus_magic_channel,
         };
 
         if args.current_env != config::CURRENT_ENV.to_string() {

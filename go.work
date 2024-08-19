@@ -9,7 +9,6 @@ use (
 
 	// Infra
 	./infra/Sandwich-Daemon
-	./infra/animuscli
 	./infra/animusweb
 	./infra/nirn-proxy
 	./infra/wafflepaw

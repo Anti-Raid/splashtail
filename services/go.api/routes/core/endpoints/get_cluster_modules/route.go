@@ -64,7 +64,7 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 		return hresp
 	}
 
-	modules, err := state.CachedAnimusMagicClient.GetClusterModules(d.Context, state.Rueidis, uint16(clusterId64))
+	modules, err := state.ClusterModuleCache.GetClusterModules(d.Context, uint16(clusterId64))
 
 	if err != nil {
 		return uapi.HttpResponse{

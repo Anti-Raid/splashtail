@@ -214,8 +214,6 @@ func main() {
 
 	r := CreateWebserver()
 
-	go state.AnimusMagicClient.Listen(state.Context, state.Rueidis, state.Logger)
-
 	// If GOOS is windows, do normal http server
 	if runtime.GOOS == "linux" || runtime.GOOS == "darwin" {
 		upg, _ := tableflip.New(tableflip.Options{})

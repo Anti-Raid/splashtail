@@ -169,6 +169,7 @@ pub async fn settings_viewer(
             ctx.author().id,
             &data.pool,
             &cache_http,
+            &data.reqwest,
             &Some(*ctx),
             crate::cmd::CheckCommandOptions {
                 ignore_module_disabled: true,
@@ -331,6 +332,7 @@ pub async fn settings_creator(
             ctx.author().id,
             &data.pool,
             &cache_http,
+            &data.reqwest,
             &Some(*ctx),
             crate::cmd::CheckCommandOptions {
                 ignore_module_disabled: true,
@@ -451,6 +453,7 @@ pub async fn settings_updater(
             ctx.author().id,
             &data.pool,
             &cache_http,
+            &data.reqwest,
             &Some(*ctx),
             crate::cmd::CheckCommandOptions {
                 ignore_module_disabled: true,
@@ -573,6 +576,7 @@ pub async fn settings_deleter(
             ctx.author().id,
             &data.pool,
             &cache_http,
+            &data.reqwest,
             &Some(*ctx),
             crate::cmd::CheckCommandOptions {
                 ignore_module_disabled: true,

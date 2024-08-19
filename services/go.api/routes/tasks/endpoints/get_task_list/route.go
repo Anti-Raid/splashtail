@@ -9,8 +9,8 @@ import (
 	docs "github.com/infinitybotlist/eureka/doclib"
 	"github.com/infinitybotlist/eureka/uapi"
 	"github.com/jackc/pgx/v5"
-	"go.api/animusmagic_messages"
 	"go.api/api"
+	"go.api/rpc_messages"
 	"go.api/state"
 	"go.api/types"
 	jobs "go.jobs"
@@ -124,7 +124,7 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 
 		// Check permissions
 		permLimits := api.PermLimits(d.Auth)
-		resp, ok := api.HandlePermissionCheck(d.Auth.ID, guildId, baseTaskDef.CorrespondingBotCommand_View(), animusmagic_messages.AmCheckCommandOptions{
+		resp, ok := api.HandlePermissionCheck(d.Auth.ID, guildId, baseTaskDef.CorrespondingBotCommand_View(), rpc_messages.RpcCheckCommandOptions{
 			CustomResolvedKittycatPerms: permLimits,
 		})
 

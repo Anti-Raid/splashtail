@@ -14,7 +14,6 @@ import (
 	"github.com/infinitybotlist/eureka/proxy"
 	"github.com/infinitybotlist/eureka/snippets"
 	"github.com/redis/rueidis"
-	"go.std/animusmagic"
 	"go.std/config"
 	"go.std/mewldresponder"
 	"go.std/utils"
@@ -23,16 +22,15 @@ import (
 )
 
 var (
-	Context           context.Context
-	ContextClose      context.CancelFunc
-	Logger            *zap.Logger
-	Config            *config.Config
-	Rueidis           rueidis.Client
-	Discord           *discordgo.Session
-	AnimusMagicClient *animusmagic.AnimusMagicClient
-	MewldResponder    *mewldresponder.MewldResponder
-	MonitorWebhook    *utils.ParsedWebhookUrl
-	v                 = validator.New()
+	Context        context.Context
+	ContextClose   context.CancelFunc
+	Logger         *zap.Logger
+	Config         *config.Config
+	Rueidis        rueidis.Client
+	Discord        *discordgo.Session
+	MewldResponder *mewldresponder.MewldResponder
+	MonitorWebhook *utils.ParsedWebhookUrl
+	v              = validator.New()
 )
 
 func logPanic(msg string, err error) {
@@ -46,7 +44,7 @@ func main() {
 	Logger = snippets.CreateZap()
 
 	// Load monitors.yaml
-	var monitors []AMProbeTask
+	var monitors []ProbeTask
 	monitorFile, err := os.ReadFile("infra/wafflepaw/monitors.yaml")
 
 	if err != nil {

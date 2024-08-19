@@ -5,17 +5,9 @@ use serenity::utils::shard_id;
 use silverpelt::jobserver::{embed as embed_task, get_icon_of_state};
 use silverpelt::Context;
 use silverpelt::Error;
-use splashcore_rs::animusmagic::protocol::serialize_data;
-use splashcore_rs::animusmagic::responses::jobserver::{
-    JobserverAnimusMessage, JobserverAnimusResponse,
-};
 use splashcore_rs::jobserver;
 use splashcore_rs::utils::{
     create_special_allocation_from_str, parse_numeric_list, REPLACE_CHANNEL,
-};
-use splashcore_rs::{
-    animusmagic::client::RequestOptions,
-    animusmagic::protocol::{default_request_timeout, AnimusOp, AnimusTarget},
 };
 use sqlx::types::uuid::Uuid;
 use std::fmt::Display;
@@ -167,37 +159,33 @@ pub async fn backups_create(
 
     let data = ctx.data();
 
-    let am = data.props.underlying_am_client()?;
-    let Some(resp) = am
-        .request_one(
-            RequestOptions {
-                cluster_id: shard_id(guild_id, data.props.shard_count().await?.try_into()?),
-                expected_response_count: 1,
-                to: AnimusTarget::Jobserver,
-                op: AnimusOp::Request,
-                ..Default::default()
-            },
-            default_request_timeout(),
-            serialize_data(&JobserverAnimusMessage::SpawnTask {
-                name: "guild_create_backup".to_string(),
-                data: backup_args,
-                create: true,
-                execute: true,
-                task_id: None,
-                user_id: ctx.author().id.to_string(),
-            })?,
-        )
+    // Make request to jobserver
+    let jobserver_cluster_id = shard_id(guild_id, data.props.shard_count().await?.try_into()?);
+    let resp = data
+        .reqwest
+        .post(&format!(
+            "{}:{}/spawn-task",
+            config::CONFIG.base_ports.jobserver_base_addr.get(),
+            config::CONFIG.base_ports.jobserver.get() + jobserver_cluster_id
+        ))
+        .json(&splashcore_rs::jobserver::JobserverSpawnTaskRequest {
+            name: "guild_create_backup".to_string(),
+            data: backup_args,
+            create: true,
+            execute: true,
+            task_id: None,
+            user_id: ctx.author().id.to_string(),
+        })
+        .send()
         .await
         .map_err(|e| format!("Failed to create backup task: {}", e))?
-        .parse::<JobserverAnimusResponse>()?
-        .resp
-    else {
-        return Err("Failed to create backup task".into());
-    };
+        .error_for_status()
+        .map_err(|e| format!("Failed to create backup task: {}", e))?;
 
-    let backup_task_id = match resp {
-        JobserverAnimusResponse::SpawnTask { task_id } => task_id,
-    };
+    let backup_task_id = resp
+        .json::<splashcore_rs::jobserver::JobserverSpawnTaskResponse>()
+        .await?
+        .task_id;
 
     base_message
         .edit(
@@ -405,6 +393,7 @@ pub async fn backups_list(ctx: Context<'_>) -> Result<(), Error> {
                     ctx.author().id,
                     &ctx.data().pool,
                     &botox::cache::CacheHttpImpl::from_ctx(ctx.serenity_context()),
+                    &data.reqwest,
                     &Some(ctx),
                     silverpelt::cmd::CheckCommandOptions::default(), // TODO: Maybe change this to allow backups delete to be disabled?
                 )
@@ -914,37 +903,32 @@ pub async fn backups_restore(
     });
 
     // Restore backup
-    let am = data.props.underlying_am_client()?;
-    let Some(res) = am
-        .request_one(
-            RequestOptions {
-                cluster_id: shard_id(guild_id, data.props.shard_count().await?.try_into()?),
-                expected_response_count: 1,
-                to: AnimusTarget::Jobserver,
-                op: AnimusOp::Request,
-                ..Default::default()
-            },
-            default_request_timeout(),
-            serialize_data(&JobserverAnimusMessage::SpawnTask {
-                name: "guild_restore_backup".to_string(),
-                data: json,
-                create: true,
-                execute: true,
-                task_id: None,
-                user_id: ctx.author().id.to_string(),
-            })?,
-        )
+    let jobserver_cluster_id = shard_id(guild_id, data.props.shard_count().await?.try_into()?);
+    let resp = data
+        .reqwest
+        .post(&format!(
+            "{}:{}/spawn-task",
+            config::CONFIG.base_ports.jobserver_base_addr.get(),
+            config::CONFIG.base_ports.jobserver.get() + jobserver_cluster_id
+        ))
+        .json(&splashcore_rs::jobserver::JobserverSpawnTaskRequest {
+            name: "guild_restore_backup".to_string(),
+            data: json,
+            create: true,
+            execute: true,
+            task_id: None,
+            user_id: ctx.author().id.to_string(),
+        })
+        .send()
         .await
-        .map_err(|e| format!("Failed to create restore backup task: {}", e))?
-        .parse::<JobserverAnimusResponse>()?
-        .resp
-    else {
-        return Err("Failed to create restore backup task".into());
-    };
+        .map_err(|e| format!("Failed to create backup task: {}", e))?
+        .error_for_status()
+        .map_err(|e| format!("Failed to create backup task: {}", e))?;
 
-    let restore_task_id = match res {
-        JobserverAnimusResponse::SpawnTask { task_id } => task_id,
-    };
+    let restore_task_id = resp
+        .json::<splashcore_rs::jobserver::JobserverSpawnTaskResponse>()
+        .await?
+        .task_id;
 
     base_message
         .edit(

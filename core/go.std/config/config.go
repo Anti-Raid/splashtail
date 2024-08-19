@@ -52,6 +52,7 @@ type Config struct {
 	Meta          Meta                `yaml:"meta" validate:"required"`
 	ObjectStorage ObjectStorageConfig `yaml:"object_storage" validate:"required"`
 	Wafflepaw     Wafflepaw           `yaml:"wafflepaw" validate:"required"`
+	BasePorts     BasePorts           `yaml:"base_ports" validate:"required"`
 }
 
 type Wafflepaw struct {
@@ -146,4 +147,13 @@ type ObjectStorageConfig struct {
 	CdnSecure   bool   `yaml:"cdn_secure" comment:"Only for s3-like, this should be whether or not to use a secure connection to the CDN."`
 	AccessKey   string `yaml:"access_key" comment:"Only for s3-like, this should be the access key to the bucket."`
 	SecretKey   string `yaml:"secret_key" comment:"Only for s3-like, this should be the secret key to the bucket."`
+}
+
+type BasePorts struct {
+	JobserverBaseAddr Differs[string] `yaml:"jobserver_base_addr" default:"http://localhost" comment:"Jobserver Base Address" validate:"required"`
+	BotBaseAddr       Differs[string] `yaml:"bot_base_addr" default:"http://localhost" comment:"Bot Base Address" validate:"required"`
+	JobserverBindAddr Differs[string] `yaml:"jobserver_bind_addr" default:"127.0.0.1" comment:"Jobserver Bind Address" validate:"required"`
+	BotBindAddr       Differs[string] `yaml:"bot_bind_addr" default:"127.0.0.1" comment:"Bot Bind Address" validate:"required"`
+	Jobserver         Differs[int]    `yaml:"jobserver" default:"10000" comment:"Jobserver Base Port" validate:"required"`
+	Bot               Differs[int]    `yaml:"bot" default:"20000" comment:"Bot Base Port" validate:"required"`
 }

@@ -6,18 +6,6 @@ import (
 	"go.std/ext_types"
 )
 
-type CanonicalSettingsResult struct {
-	Ok *struct {
-		Fields []orderedmap.OrderedMap[string, any] `json:"fields"`
-	} `json:"Ok"`
-	PermissionError *struct {
-		Res PermissionResult `json:"res"`
-	} `json:"PermissionError"`
-	Err *struct {
-		Error CanonicalSettingsError `json:"error"`
-	} `json:"Err"`
-}
-
 type CanonicalSettingsError struct {
 	OperationNotSupported *struct {
 		Operation CanonicalOperationType `json:"operation"`

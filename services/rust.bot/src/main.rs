@@ -2,17 +2,14 @@ mod ext_generate;
 mod ipc;
 mod test;
 
-use ipc::{
-    animus_magic::client::{AnimusMagicClient, ClientData},
-    mewld::MewldIpcClient,
-};
+use ipc::mewld::MewldIpcClient;
 
 use botox::cache::CacheHttpImpl;
 use gwevent::core::get_event_guild_id;
 use silverpelt::EventHandlerContext;
 use splashcore_rs::value::Value;
 
-use std::sync::{Arc, LazyLock, OnceLock};
+use std::sync::{Arc, LazyLock};
 use tokio::sync::RwLock;
 
 use cap::Cap;
@@ -56,7 +53,6 @@ static SILVERPELT_CACHE: LazyLock<Arc<silverpelt::cache::SilverpeltCache>> = Laz
 pub struct Props {
     pub pool: sqlx::PgPool,
     pub mewld_ipc: Arc<MewldIpcClient>,
-    pub animus_magic_ipc: OnceLock<Arc<AnimusMagicClient>>,
     pub proxy_support_data: RwLock<Option<Arc<proxy_support::ProxySupportData>>>,
 }
 
@@ -65,20 +61,6 @@ impl silverpelt::data::Props for Props {
     /// Converts the props to std::any::Any
     fn as_any(&self) -> &(dyn std::any::Any + Send + Sync) {
         self
-    }
-
-    fn underlying_am_client(
-        &self,
-    ) -> Result<
-        Box<dyn splashcore_rs::animusmagic::client::AnimusMagicRequestClient>,
-        silverpelt::Error,
-    > {
-        let am = self.animus_magic_ipc.get();
-
-        match am {
-            Some(am) => Ok(Box::new(am.underlying_client.clone())),
-            None => Err("Animus Magic IPC not initialized".into()),
-        }
     }
 
     fn permodule_executor(
@@ -220,9 +202,6 @@ pub static CAN_USE_BOT_CACHE: LazyLock<RwLock<CanUseBotList>> = LazyLock::new(||
     })
 });
 
-// In order to allow modules to implement their own internal caches/logic without polluting the animus magic protocol,
-// we implement PERMODULE_FUNCTIONS which any module can register/add on to
-//
 // Format of a permodule toggle is (module_name, toggle)
 pub static PERMODULE_FUNCTIONS: LazyLock<
     dashmap::DashMap<(String, String), splashcore_rs::permodule_functions::ToggleFunc>,
@@ -374,24 +353,37 @@ async fn event_listener<'a>(
                 let ipc_ref = props.mewld_ipc.clone();
                 let ch = CacheHttpImpl::from_ctx(ctx.serenity_context);
                 let sm = ctx.shard_manager().clone();
-                let redis_pool_am = ipc_ref.redis_pool.clone();
                 tokio::task::spawn(async move {
                     let ipc_ref = ipc_ref;
                     ipc_ref.start_ipc_listener(&ch, &sm).await;
                 });
 
-                // And for animus magic
-                let am = Arc::new(AnimusMagicClient::new(ClientData {
-                    data: data.clone(),
-                    redis_pool: redis_pool_am,
-                    cache_http: CacheHttpImpl::from_ctx(ctx.serenity_context),
-                }));
+                // Create a new rpc server
+                let rpc_server =
+                    rust_rpc_server_bot::create_bot_rpc_server(data.clone(), ctx.serenity_context);
 
-                props.animus_magic_ipc.get_or_init(|| am.clone());
-
+                // Start the rpc server
                 tokio::task::spawn(async move {
-                    let am_ref = am.clone();
-                    am_ref.listen().await;
+                    log::info!(
+                        "Starting RPC server on cluster {}",
+                        ipc::argparse::MEWLD_ARGS.cluster_id
+                    );
+                    let opts = rust_rpc_server::CreateRpcServerOptions {
+                        bind: rust_rpc_server::CreateRpcServerBind::Address(format!(
+                            "{}:{}",
+                            config::CONFIG.base_ports.bot_bind_addr.get(),
+                            config::CONFIG.base_ports.bot.get()
+                                + ipc::argparse::MEWLD_ARGS.cluster_id
+                        )),
+                    };
+
+                    match rust_rpc_server::start_rpc_server(opts, rpc_server).await {
+                        Ok(_) => {}
+                        Err(e) => {
+                            error!("Error starting RPC server: {}", e);
+                            std::process::exit(1);
+                        }
+                    }
                 });
 
                 CONNECT_STATE
@@ -516,7 +508,7 @@ async fn main() {
     let mut env_builder = env_logger::builder();
 
     let mut default_filter =
-        "serenity=error,fred=error,rust_bot=info,bot_binutils=info,botox=info,templating=debug"
+        "serenity=error,fred=error,rust_bot=info,bot_binutils=info,rust_rpc_server=info,rust_rpc_server_bot=info,botox=info,templating=debug"
             .to_string();
 
     for module in modules() {
@@ -681,7 +673,6 @@ async fn main() {
             cache: Arc::new(ipc::mewld::MewldIpcCache::default()),
             pool: pg_pool.clone(),
         }),
-        animus_magic_ipc: OnceLock::new(),
         pool: pg_pool.clone(),
         proxy_support_data: RwLock::new(None),
     });

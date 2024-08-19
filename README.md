@@ -56,38 +56,9 @@ For ``mewld``-``bot`` communication, core state such as Cluster ID, Cluster Name
 
 The ``mredis.LauncherCmd`` type from ``mewld`` (``import mredis "github.com/cheesycod/mewld/redis"``) is the primary type used for communication. ``Args`` should be used to send arguments for the IPC command and ``Output`` should be used to send arbitrary data to IPC. Diagnostic payloads (used to check uptimes and gather the guild/user count per cluster) are a special case and use ``mredis.LauncherCmd`` for the request and a ``diagPayload`` (renamed to ``MewldDiagResponse`` in the bot).
 
-## Animus Magic
+## RPC
 
-Due to the need for N-directional (webserver+bot+jobserver+infra) communication, AntiRaid uses an unstable (constantly changing not crashing-type unstable) Redis PubSub API for communication. The documentation for Animus Magic is given below:
-
-### Basic structure
-
-All payloads will formatted as per the following: ``<target [from]: u8><target [to]: u8><cluster id [from]: u16><cluster id [to]: u16><op: u8><command_id: alphanumeric string>/<payload>``
-
-- `target`: The target of the message (`Bot`, `Webserver`, `Jobserver`, `Infra` etc each have a byte for themselves)
-- `cluster id`: The cluster's ID. Each cluster of a service is assigned a number. Non-clustered services must use `0` for this field
-- `op`: The operation to perform. See below for more information. Note that the enum starts from `0` so `Request` is `0`, `Response` is `1`, `Error` is `2` and `Probe` is `3`.
-
-- ``u8``: Unsigned 8-bit integer (or `byte`). This should just be sent as a byte in Go and Rust
-- ``u16``: Unsigned 16-bit integer. This should be sent as 2 bytes in big-endian (network) byte order. In rust, this is `u16.to_be_bytes()` and in Go, this is either ``byte(N>>8) & 0xFF, byte(N) & 0xFF`` or `binary.BigEndian.PutUint16()`.
-
-Note that ``command_id`` and ``payload`` must be separated by a ``/`` character. The ``command_id`` is a unique string that is used to identify the command and the ``payload`` is the payload of the command encoded in JSON.
-
-### Basic operations
-
-```rust
-#[derive(Serialize, Deserialize, PartialEq)]
-pub enum AnimusOp {
-    Request,
-    Response,
-    Error,
-    Probe,
-}
-```
-
-As seen above, the basic operations are ``Request``, ``Response``, ``Error`` and ``Probe``. ``Probe`` is used to check if a cluster is alive and is not used for any other purpose. ``Request`` is used to send a command to a cluster and ``Response`` is used to send a response to a command. ``Error`` is used to send an error response to a command.
-
-When sending a ``Probe``, the service should respond with a ``Response`` whose response is the PID of the process (`string`) to allow for quick/easy monitoring.
+All communication between the webserver, the bot and the jobserver take place over RPC and standard HTTP. This allows for easy, yet high quality integration between services on Anti-Raid.
 
 ## Serializing/Deserializing for external usage
 

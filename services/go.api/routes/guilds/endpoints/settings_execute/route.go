@@ -1,9 +1,7 @@
 package settings_execute
 
 import (
-	"context"
 	"net/http"
-	"strconv"
 	"strings"
 	"time"
 
@@ -11,14 +9,10 @@ import (
 	docs "github.com/infinitybotlist/eureka/doclib"
 	"github.com/infinitybotlist/eureka/ratelimit"
 	"github.com/infinitybotlist/eureka/uapi"
-	orderedmap "github.com/wk8/go-ordered-map/v2"
-	"go.api/animusmagic_messages"
+	"go.api/rpc_messages"
 	"go.api/state"
 	"go.api/types"
 	"go.api/webutils"
-	"go.std/animusmagic"
-	"go.std/silverpelt"
-	"go.std/utils"
 	"go.std/utils/mewext"
 	"go.uber.org/zap"
 )
@@ -43,7 +37,7 @@ func Docs() *docs.Doc {
 
 func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 	limit, err := ratelimit.Ratelimit{
-		Expiry:      2 * time.Minute,
+		Expiry:      5 * time.Minute,
 		MaxRequests: 10,
 		Bucket:      "settings_execute",
 	}.Limit(d.Context, r)
@@ -116,33 +110,16 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 		}
 	}
 
-	ctx, cancel := context.WithTimeout(d.Context, 5*time.Second)
-	defer cancel()
-
-	resps, err := state.AnimusMagicClient.Request(
-		ctx,
-		state.Rueidis,
-		animusmagic_messages.BotAnimusMessage{
-			SettingsOperation: &struct {
-				Fields  orderedmap.OrderedMap[string, any] `json:"fields"`
-				Op      silverpelt.CanonicalOperationType  `json:"op"`
-				Module  string                             `json:"module"`
-				Setting string                             `json:"setting"`
-				GuildID string                             `json:"guild_id"`
-				UserID  string                             `json:"user_id"`
-			}{
-				Fields:  body.Fields,
-				Op:      body.Operation,
-				Module:  body.Module,
-				Setting: body.Setting,
-				GuildID: guildId,
-				UserID:  d.Auth.ID,
-			},
-		},
-		&animusmagic.RequestOptions{
-			ClusterID: utils.Pointer(uint16(clusterId)),
-			To:        animusmagic.AnimusTargetBot,
-			Op:        animusmagic.OpRequest,
+	resp, err := webutils.SettingsOperation(
+		d.Context,
+		clusterId,
+		guildId,
+		d.Auth.ID,
+		&rpc_messages.SettingsOperationRequest{
+			Fields:  body.Fields,
+			Op:      body.Operation,
+			Module:  body.Module,
+			Setting: body.Setting,
 		},
 	)
 
@@ -150,79 +127,33 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 		return uapi.HttpResponse{
 			Status: http.StatusInternalServerError,
 			Json: types.ApiError{
-				Message: "Error sending request to animus magic: " + err.Error(),
-			},
-			Headers: map[string]string{
-				"Retry-After": "10",
+				Message: "Error executing settings operation: " + err.Error(),
 			},
 		}
 	}
 
-	if len(resps) != 1 {
-		return uapi.HttpResponse{
-			Status: http.StatusInternalServerError,
-			Json: types.ApiError{
-				Message: "Error sending request to animus magic: [unexpected response count of " + strconv.Itoa(len(resps)) + "]",
-			},
-			Headers: map[string]string{
-				"Retry-After": "10",
-			},
-		}
-	}
-
-	upr := resps[0]
-
-	resp, err := animusmagic.ParseClientResponse[animusmagic_messages.BotAnimusResponse](upr)
-
-	if err != nil {
-		return uapi.HttpResponse{
-			Status: http.StatusInternalServerError,
-			Json: types.ApiError{
-				Message: "Error parsing response from animus magic: " + err.Error(),
-			},
-		}
-	}
-
-	if resp.ClientResp.Meta.Op == animusmagic.OpError {
-		return uapi.HttpResponse{
-			Status: http.StatusInternalServerError,
-			Json: types.ApiError{
-				Message: "Error executing operation: " + string(resp.ClientResp.RawPayload),
-			},
-		}
-	}
-
-	if resp.Resp == nil || resp.Resp.SettingsOperation == nil {
-		return uapi.HttpResponse{
-			Status: http.StatusInternalServerError,
-			Json: types.ApiError{
-				Message: "Error executing operation: [nil response]",
-			},
-		}
-	}
-
-	if resp.Resp.SettingsOperation.Res.Ok != nil {
+	if resp.Ok != nil {
 		return uapi.HttpResponse{
 			Json: types.SettingsExecuteResponse{
-				Fields: resp.Resp.SettingsOperation.Res.Ok.Fields,
+				Fields: resp.Ok.Fields,
 			},
 		}
 	}
 
-	if resp.Resp.SettingsOperation.Res.PermissionError != nil {
+	if resp.PermissionError != nil {
 		return uapi.HttpResponse{
 			Status: http.StatusForbidden,
-			Json:   resp.Resp.SettingsOperation.Res.PermissionError.Res,
+			Json:   resp.PermissionError.Res,
 			Headers: map[string]string{
 				"X-Error-Type": "permission_check",
 			},
 		}
 	}
 
-	if resp.Resp.SettingsOperation.Res.Err != nil {
+	if resp.Err != nil {
 		return uapi.HttpResponse{
 			Status: http.StatusBadRequest,
-			Json:   resp.Resp.SettingsOperation.Res.Err.Error,
+			Json:   resp.Err.Error,
 			Headers: map[string]string{
 				"X-Error-Type": "settings_error",
 			},

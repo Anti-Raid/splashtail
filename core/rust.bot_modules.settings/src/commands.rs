@@ -50,6 +50,7 @@ pub async fn commands_check(
         ctx.author().id,
         &data.pool,
         cache_http,
+        &data.reqwest,
         &Some(ctx),
         silverpelt::cmd::CheckCommandOptions {
             ignore_command_disabled: true,
@@ -126,6 +127,7 @@ pub async fn commands_enable(
         ctx.author().id,
         &data.pool,
         cache_http,
+        &data.reqwest,
         &Some(ctx),
         silverpelt::cmd::CheckCommandOptions {
             ignore_command_disabled: true,
@@ -241,6 +243,7 @@ pub async fn commands_disable(
         ctx.author().id,
         &ctx.data().pool,
         cache_http,
+        &data.reqwest,
         &Some(ctx),
         silverpelt::cmd::CheckCommandOptions {
             ignore_command_disabled: true,
@@ -348,6 +351,7 @@ pub async fn commands_modperms(
         ctx.author().id,
         &data.pool,
         cache_http,
+        &data.reqwest,
         &Some(ctx),
         silverpelt::cmd::CheckCommandOptions {
             ignore_command_disabled: true,
@@ -482,6 +486,7 @@ pub async fn commands_modperms(
                     ctx.author().id,
                     &data.pool,
                     cache_http,
+                    &data.reqwest,
                     &Some(ctx),
                     silverpelt::cmd::CheckCommandOptions {
                         channel_id: Some(ctx.channel_id()),
@@ -536,6 +541,7 @@ pub async fn commands_modperms(
                     ctx.author().id,
                     &data.pool,
                     cache_http,
+                    &data.reqwest,
                     &Some(ctx),
                     silverpelt::cmd::CheckCommandOptions {
                         channel_id: Some(ctx.channel_id()),
@@ -592,6 +598,7 @@ pub async fn commands_modperms(
                         ctx.author().id,
                         &data.pool,
                         cache_http,
+                        &data.reqwest,
                         &Some(ctx),
                         silverpelt::cmd::CheckCommandOptions {
                             channel_id: Some(ctx.channel_id()),
@@ -625,6 +632,7 @@ pub async fn commands_modperms(
                         ctx.author().id,
                         &data.pool,
                         cache_http,
+                        &data.reqwest,
                         &Some(ctx),
                         silverpelt::cmd::CheckCommandOptions {
                             channel_id: Some(ctx.channel_id()),
@@ -662,6 +670,7 @@ pub async fn commands_modperms(
                     ctx.author().id,
                     &data.pool,
                     cache_http,
+                    &data.reqwest,
                     &Some(ctx),
                     silverpelt::cmd::CheckCommandOptions {
                         custom_command_configuration: Some(GuildCommandConfiguration {
@@ -748,6 +757,7 @@ pub async fn commands_modperms(
                             ctx.author().id,
                             &data.pool,
                             cache_http,
+                            &data.reqwest,
                             &Some(ctx),
                             silverpelt::cmd::CheckCommandOptions {
                                 custom_command_configuration: Some(GuildCommandConfiguration {
@@ -795,6 +805,7 @@ pub async fn commands_modperms(
                     ctx.author().id,
                     &data.pool,
                     cache_http,
+                    &data.reqwest,
                     &Some(ctx),
                     silverpelt::cmd::CheckCommandOptions {
                         ignore_command_disabled: true,

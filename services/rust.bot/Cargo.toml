@@ -29,8 +29,12 @@ config = { path = "../../core/rust.config" }
 cap = { version = "0.1.2", features = ["stats"] }
 silverpelt = { path = "../../core/rust.silverpelt" }
 permissions = { path = "../../core/rust.permissions" }
+
+# Modules
 bot_modules_default = { path = "../../core/rust.bot_modules_default" }
 bot_binutils = { path = "../../core/rust.binutils" }
+rust_rpc_server = { path = "../../core/rust.rpc_server" }
+rust_rpc_server_bot = { path = "../../core/rust.rpc_server.bot" }
 
 [dependencies.tokio]
 version = "1"

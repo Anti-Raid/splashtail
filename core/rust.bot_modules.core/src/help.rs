@@ -36,6 +36,7 @@ pub async fn filter(
             ctx.author().id,
             &ctx.data().pool,
             &botox::cache::CacheHttpImpl::from_ctx(ctx.serenity_context()),
+            &data.reqwest,
             &Some(*ctx),
             silverpelt::cmd::CheckCommandOptions::default(),
         )

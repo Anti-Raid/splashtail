@@ -10,13 +10,6 @@ use serenity::utils::shard_id;
 use silverpelt::jobserver::{embed as embed_task, get_icon_of_state};
 use silverpelt::Context;
 use silverpelt::Error;
-use splashcore_rs::animusmagic::client::RequestOptions;
-use splashcore_rs::animusmagic::protocol::{
-    default_request_timeout, serialize_data, AnimusOp, AnimusTarget,
-};
-use splashcore_rs::animusmagic::responses::jobserver::{
-    JobserverAnimusMessage, JobserverAnimusResponse,
-};
 use splashcore_rs::jobserver;
 use splashcore_rs::utils::{
     create_special_allocation_from_str, parse_duration_string, parse_numeric_list_to_str, Unit,
@@ -239,37 +232,33 @@ pub async fn prune_user(
 
     let data = ctx.data();
 
-    let am = data.props.underlying_am_client()?;
-    let Some(resp) = am
-        .request_one(
-            RequestOptions {
-                cluster_id: shard_id(guild_id, data.props.shard_count().await?.try_into()?),
-                expected_response_count: 1,
-                to: AnimusTarget::Jobserver,
-                op: AnimusOp::Request,
-                ..Default::default()
-            },
-            default_request_timeout(),
-            serialize_data(&JobserverAnimusMessage::SpawnTask {
-                name: "message_prune".to_string(),
-                data: prune_opts.clone(),
-                create: true,
-                execute: true,
-                task_id: None,
-                user_id: author.user.id.to_string(),
-            })?,
-        )
+    // Make request to jobserver
+    let jobserver_cluster_id = shard_id(guild_id, data.props.shard_count().await?.try_into()?);
+    let resp = data
+        .reqwest
+        .post(&format!(
+            "{}:{}/spawn-task",
+            config::CONFIG.base_ports.jobserver_base_addr.get(),
+            config::CONFIG.base_ports.jobserver.get() + jobserver_cluster_id
+        ))
+        .json(&splashcore_rs::jobserver::JobserverSpawnTaskRequest {
+            name: "message_prune".to_string(),
+            data: prune_opts.clone(),
+            create: true,
+            execute: true,
+            task_id: None,
+            user_id: author.user.id.to_string(),
+        })
+        .send()
         .await
-        .map_err(|e| format!("Failed to create backup task: {}", e))?
-        .parse::<JobserverAnimusResponse>()?
-        .resp
-    else {
-        return Err("Failed to create backup task".into());
-    };
+        .map_err(|e| format!("Failed to create prune task: {}", e))?
+        .error_for_status()
+        .map_err(|e| format!("Failed to create prune task: {}", e))?;
 
-    let task_id = match resp {
-        JobserverAnimusResponse::SpawnTask { task_id } => task_id,
-    };
+    let task_id = resp
+        .json::<splashcore_rs::jobserver::JobserverSpawnTaskResponse>()
+        .await?
+        .task_id;
 
     tx.commit().await?;
 

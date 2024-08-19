@@ -16,7 +16,6 @@ import (
 	"github.com/infinitybotlist/eureka/snippets"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/redis/rueidis"
-	"go.std/animusmagic"
 	"go.std/config"
 	"go.std/mewldresponder"
 	"go.std/objectstorage"
@@ -40,8 +39,7 @@ var (
 	ObjectStorage        *objectstorage.ObjectStorage
 	CurrentOperationMode string // Current mode splashtail is operating in
 
-	Rueidis           rueidis.Client
-	AnimusMagicClient *animusmagic.AnimusMagicClient
+	Rueidis rueidis.Client
 
 	// Debug stuff
 	BuildInfo  *debug.BuildInfo
@@ -203,8 +201,6 @@ func Setup() {
 	if err != nil {
 		panic(err)
 	}
-
-	AnimusMagicClient = animusmagic.New(Config.Meta.AnimusMagicChannel.Parse(), animusmagic.AnimusTargetJobserver, ClusterID)
 
 	TaskTransport.RegisterProtocol("task", TaskRT{next: TaskTransport})
 }

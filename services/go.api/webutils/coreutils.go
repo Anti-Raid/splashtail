@@ -2,11 +2,28 @@ package webutils
 
 import (
 	"net/http"
+	"strconv"
 
 	"github.com/infinitybotlist/eureka/uapi"
 	"go.api/state"
 	"go.api/types"
 )
+
+func CalcBotPort(clusterId int) int {
+	return state.Config.BasePorts.Bot.Parse() + clusterId
+}
+
+func CalcJobserverPort(clusterId int) int {
+	return state.Config.BasePorts.Jobserver.Parse() + clusterId
+}
+
+func CalcBotAddr(clusterId int) string {
+	return state.Config.BasePorts.BotBaseAddr.Parse() + ":" + strconv.Itoa(CalcBotPort(clusterId))
+}
+
+func CalcJobserverAddr(clusterId int) string {
+	return state.Config.BasePorts.JobserverBaseAddr.Parse() + ":" + strconv.Itoa(CalcJobserverPort(clusterId))
+}
 
 func ClusterCheck(clusterId int) (resp uapi.HttpResponse, ok bool) {
 	if state.MewldInstanceList == nil {

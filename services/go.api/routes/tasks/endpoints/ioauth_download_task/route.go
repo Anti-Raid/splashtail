@@ -9,8 +9,8 @@ import (
 	"strings"
 	"time"
 
-	"go.api/animusmagic_messages"
 	"go.api/api"
+	"go.api/rpc_messages"
 	"go.api/state"
 	types "go.api/types"
 	jobs "go.jobs"
@@ -194,7 +194,7 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 			}
 		} else if task.TaskFor.TargetType == splashcore.TargetTypeServer {
 			// Check permissions
-			resp, ok := api.HandlePermissionCheck(iot.DiscordUser.ID, task.TaskFor.ID, taskDef.CorrespondingBotCommand_Download(), animusmagic_messages.AmCheckCommandOptions{})
+			resp, ok := api.HandlePermissionCheck(iot.DiscordUser.ID, task.TaskFor.ID, taskDef.CorrespondingBotCommand_Download(), rpc_messages.RpcCheckCommandOptions{})
 
 			if !ok {
 				return resp

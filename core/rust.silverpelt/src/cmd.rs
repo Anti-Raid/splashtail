@@ -20,6 +20,7 @@ pub async fn get_user_discord_info(
     guild_id: GuildId,
     user_id: UserId,
     cache_http: &CacheHttpImpl,
+    reqwest: &reqwest::Client,
     poise_ctx: &Option<crate::Context<'_>>,
 ) -> Result<
     (
@@ -109,21 +110,15 @@ pub async fn get_user_discord_info(
     }
 
     let member = {
-        let member = match proxy_support::member_in_guild(
-            cache_http,
-            &reqwest::Client::new(),
-            guild_id,
-            user_id,
-        )
-        .await
-        {
-            Ok(member) => member,
-            Err(e) => {
-                return Err(PermissionResult::DiscordError {
-                    error: e.to_string(),
-                });
-            }
-        };
+        let member =
+            match proxy_support::member_in_guild(cache_http, reqwest, guild_id, user_id).await {
+                Ok(member) => member,
+                Err(e) => {
+                    return Err(PermissionResult::DiscordError {
+                        error: e.to_string(),
+                    });
+                }
+            };
 
         let Some(member) = member else {
             return Err(PermissionResult::DiscordError {
@@ -240,6 +235,7 @@ pub async fn check_command(
     user_id: UserId,
     pool: &PgPool,
     cache_http: &CacheHttpImpl,
+    reqwest: &reqwest::Client,
     // If a poise::Context is available and originates from a Application Command, we can fetch the guild+member from cache itself
     poise_ctx: &Option<crate::Context<'_>>,
     // Needed for settings and the website (potentially)
@@ -379,7 +375,7 @@ pub async fn check_command(
 
     // Try getting guild+member from cache to speed up response times first
     let (is_owner, guild_owner_id, member_perms, roles) =
-        match get_user_discord_info(guild_id, user_id, cache_http, poise_ctx).await {
+        match get_user_discord_info(guild_id, user_id, cache_http, reqwest, poise_ctx).await {
             Ok(v) => v,
             Err(e) => {
                 return e;

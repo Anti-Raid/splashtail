@@ -13,7 +13,8 @@ pub static CURRENT_ENV: LazyLock<&str> = LazyLock::new(|| {
 });
 
 /// Global config object
-pub static CONFIG: LazyLock<Config> = LazyLock::new(|| Config::load().expect("Failed to load config"));
+pub static CONFIG: LazyLock<Config> =
+    LazyLock::new(|| Config::load().expect("Failed to load config"));
 
 #[derive(Serialize, Deserialize, Default)]
 pub struct Differs<T: Default + Clone> {
@@ -127,12 +128,24 @@ pub struct Servers {
 }
 
 #[derive(Serialize, Deserialize)]
+#[allow(dead_code)]
+pub struct BasePorts {
+    pub jobserver: Differs<u16>,
+    pub bot: Differs<u16>,
+    pub jobserver_base_addr: Differs<String>,
+    pub jobserver_bind_addr: Differs<String>,
+    pub bot_base_addr: Differs<String>,
+    pub bot_bind_addr: Differs<String>,
+}
+
+#[derive(Serialize, Deserialize)]
 pub struct Config {
     pub discord_auth: DiscordAuth,
     pub meta: Meta,
     pub sites: Sites,
     pub servers: Servers,
     pub object_storage: ObjectStorage,
+    pub base_ports: BasePorts,
 
     #[serde(skip)]
     /// Setup by load() for statistics

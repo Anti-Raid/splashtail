@@ -10,10 +10,9 @@ import (
 	"github.com/infinitybotlist/eureka/jsonimpl"
 	"github.com/jackc/pgx/v5"
 	jobs "go.jobs"
-	"go.jobserver/animusmagic_messages"
 	"go.jobserver/jobrunner"
+	"go.jobserver/rpc_messages"
 	"go.jobserver/state"
-	"go.std/animusmagic"
 	"go.std/ext_types"
 	"go.std/splashcore"
 	"go.std/structparser/db"
@@ -30,122 +29,102 @@ var (
 	taskColsStr = strings.Join(taskCols, ", ")
 )
 
-func AnimusOnRequest(c *animusmagic.ClientRequest) (animusmagic.AnimusResponse, error) {
+func SpawnTask(spawnTask rpc_messages.SpawnTask) (*rpc_messages.SpawnTaskResponse, error) {
 	defer func() {
 		if rvr := recover(); rvr != nil {
 			fmt.Println("Recovered from panic:", rvr)
 		}
 	}()
 
-	state.Logger.Info("Recieved request", zap.String("from", c.Meta.From.String()), zap.String("to", c.Meta.To.String()), zap.String("commandId", c.Meta.CommandID))
+	if !spawnTask.Create && !spawnTask.Execute {
+		return nil, fmt.Errorf("either create or execute must be set")
+	}
 
-	data, err := animusmagic.ParseClientRequest[animusmagic_messages.JobserverMessage](c)
+	if spawnTask.Name == "" {
+		return nil, fmt.Errorf("invalid task name provided")
+	}
+
+	baseTaskDef, ok := jobs.TaskDefinitionRegistry[spawnTask.Name]
+
+	if !ok {
+		return nil, fmt.Errorf("task %s does not exist on registry", spawnTask.Name)
+	}
+
+	if len(spawnTask.Data) == 0 {
+		return nil, fmt.Errorf("invalid task data provided")
+	}
+
+	tBytes, err := jsonimpl.Marshal(spawnTask.Data)
 
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error marshalling task args: %w", err)
 	}
 
-	if data == nil {
-		return nil, fmt.Errorf("nil data")
+	task := baseTaskDef // Copy task
+
+	err = jsonimpl.Unmarshal(tBytes, &task)
+
+	if err != nil {
+		return nil, fmt.Errorf("error unmarshalling task args: %w", err)
 	}
 
-	if data.SpawnTask != nil {
-		if !data.SpawnTask.Create && !data.SpawnTask.Execute {
-			return nil, fmt.Errorf("either create or execute must be set")
-		}
+	taskFor := task.TaskFor()
 
-		if data.SpawnTask.Name == "" {
-			return nil, fmt.Errorf("invalid task name provided")
-		}
-
-		baseTaskDef, ok := jobs.TaskDefinitionRegistry[data.SpawnTask.Name]
-
-		if !ok {
-			return nil, fmt.Errorf("task %s does not exist on registry", data.SpawnTask.Name)
-		}
-
-		if len(data.SpawnTask.Data) == 0 {
-			return nil, fmt.Errorf("invalid task data provided")
-		}
-
-		tBytes, err := jsonimpl.Marshal(data.SpawnTask.Data)
+	// Check if task pertains to this clusters shard
+	if taskFor.TargetType == splashcore.TargetTypeUser && state.Shard != 0 {
+		return nil, fmt.Errorf("task is not for this shard [user tasks must run on shard 0]")
+	} else {
+		taskShard, err := mewext.GetShardIDFromGuildID(taskFor.ID, int(state.ShardCount))
 
 		if err != nil {
-			return nil, fmt.Errorf("error marshalling task args: %w", err)
+			state.Logger.Error("Failed to get shard id from guild id", zap.Error(err))
+			return nil, fmt.Errorf("failed to get shard id from guild id: %w", err)
 		}
 
-		task := baseTaskDef // Copy task
-
-		err = jsonimpl.Unmarshal(tBytes, &task)
-
-		if err != nil {
-			return nil, fmt.Errorf("error unmarshalling task args: %w", err)
+		// This case should work until we reach 65 million servers
+		if uint16(taskShard) != state.Shard {
+			return nil, fmt.Errorf("task is not for this shard [task shard: %d, this shard: %d]", taskShard, state.Shard)
 		}
-
-		taskFor := task.TaskFor()
-
-		// Check if task pertains to this clusters shard
-		if taskFor.TargetType == splashcore.TargetTypeUser && state.Shard != 0 {
-			return nil, fmt.Errorf("task is not for this shard [user tasks must run on shard 0]")
-		} else {
-			taskShard, err := mewext.GetShardIDFromGuildID(taskFor.ID, int(state.ShardCount))
-
-			if err != nil {
-				state.Logger.Error("Failed to get shard id from guild id", zap.Error(err))
-				return nil, fmt.Errorf("failed to get shard id from guild id: %w", err)
-			}
-
-			// This case should work until we reach 65 million servers
-			if uint16(taskShard) != state.Shard {
-				return nil, fmt.Errorf("task is not for this shard [task shard: %d, this shard: %d]", taskShard, state.Shard)
-			}
-		}
-
-		// Validate task
-		ctx, cancel := context.WithTimeout(state.Context, DefaultValidationTimeout)
-		defer cancel()
-		err = task.Validate(jobrunner.TaskState{
-			Ctx: ctx,
-		})
-
-		if err != nil {
-			return nil, fmt.Errorf("failed to validate task: %w", err)
-		}
-
-		// Create task
-		var taskId string
-		if data.SpawnTask.Create {
-			tid, err := jobrunner.CreateTask(state.Context, state.Pool, task)
-
-			if err != nil {
-				return nil, fmt.Errorf("error creating task: %w", err)
-			}
-
-			taskId = *tid
-		} else {
-			if data.SpawnTask.TaskID == "" {
-				return nil, fmt.Errorf("task id must be set if SpawnTask.Create is false")
-			}
-
-			taskId = data.SpawnTask.TaskID
-		}
-
-		// Execute task
-		if data.SpawnTask.Execute {
-			ctx, cancel := context.WithTimeout(state.Context, DefaultTimeout)
-			go jobrunner.ExecuteTask(ctx, cancel, taskId, task, nil)
-		}
-
-		return &animusmagic_messages.JobserverResponse{
-			SpawnTask: &struct {
-				TaskID string "json:\"task_id\""
-			}{
-				TaskID: taskId,
-			},
-		}, nil
 	}
 
-	return nil, fmt.Errorf("invalid request")
+	// Validate task
+	ctx, cancel := context.WithTimeout(state.Context, DefaultValidationTimeout)
+	defer cancel()
+	err = task.Validate(jobrunner.TaskState{
+		Ctx: ctx,
+	})
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to validate task: %w", err)
+	}
+
+	// Create task
+	var taskId string
+	if spawnTask.Create {
+		tid, err := jobrunner.CreateTask(state.Context, state.Pool, task)
+
+		if err != nil {
+			return nil, fmt.Errorf("error creating task: %w", err)
+		}
+
+		taskId = *tid
+	} else {
+		if spawnTask.TaskID == "" {
+			return nil, fmt.Errorf("task id must be set if SpawnTask.Create is false")
+		}
+
+		taskId = spawnTask.TaskID
+	}
+
+	// Execute task
+	if spawnTask.Execute {
+		ctx, cancel := context.WithTimeout(state.Context, DefaultTimeout)
+		go jobrunner.ExecuteTask(ctx, cancel, taskId, task, nil)
+	}
+
+	return &rpc_messages.SpawnTaskResponse{
+		TaskID: taskId,
+	}, nil
 }
 
 func Resume() {

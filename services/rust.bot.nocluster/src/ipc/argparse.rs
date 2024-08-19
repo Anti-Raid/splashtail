@@ -14,6 +14,4 @@ pub struct CmdArgs {
     pub cluster_count: u16,
     #[clap(long, short, default_value = "staging")]
     pub current_env: String,
-    #[clap(long, short, default_value = "animus_magic-staging")]
-    pub animus_magic_channel: String,
 }

@@ -9,9 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"go.api/state/animusmagiccache"
 	"go.api/state/redishotcache"
-	"go.std/animusmagic"
 	"go.std/config"
 	"go.std/objectstorage"
 
@@ -35,8 +33,6 @@ import (
 var (
 	Pool                    *pgxpool.Pool
 	Rueidis                 rueidis.Client // where perf is needed
-	AnimusMagicClient       *animusmagic.AnimusMagicClient
-	CachedAnimusMagicClient *animusmagiccache.CachedAnimusMagicClient
 	DovewingPlatformDiscord *dovewing.DiscordState
 	Discord                 *discordgo.Session
 	Logger                  *zap.Logger
@@ -47,6 +43,10 @@ var (
 	CurrentOperationMode    string // Current mode splashtail is operating in
 	Config                  *config.Config
 	MewldInstanceList       *mproc.InstanceList
+
+	ClusterModuleCache ClusterModuleCacher
+
+	IpcClient http.Client
 )
 
 func fetchMewldInstanceList() (*mproc.InstanceList, error) {
@@ -164,9 +164,6 @@ func Setup() {
 		panic(err)
 	}
 
-	AnimusMagicClient = animusmagic.New(Config.Meta.AnimusMagicChannel.Parse(), animusmagic.AnimusTargetWebserver, 0)
-	CachedAnimusMagicClient = animusmagiccache.New(AnimusMagicClient)
-
 	// Object Storage
 	ObjectStorage, err = objectstorage.New(&Config.ObjectStorage)
 
@@ -231,4 +228,6 @@ func Setup() {
 			Disabled: Config.Meta.WebDisableRatelimits,
 		},
 	})
+
+	IpcClient.Timeout = 30 * time.Second
 }

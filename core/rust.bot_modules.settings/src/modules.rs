@@ -314,6 +314,7 @@ pub async fn modules_modperms(
         ctx.author().id,
         &data.pool,
         &cache_http,
+        &data.reqwest,
         &Some(ctx),
         silverpelt::cmd::CheckCommandOptions::default(),
     )
@@ -437,6 +438,7 @@ pub async fn modules_modperms(
                     ctx.author().id,
                     &data.pool,
                     &cache_http,
+                    &data.reqwest,
                     &Some(ctx),
                     silverpelt::cmd::CheckCommandOptions::default(),
                 )
@@ -488,6 +490,7 @@ pub async fn modules_modperms(
                     ctx.author().id,
                     &data.pool,
                     &cache_http,
+                    &data.reqwest,
                     &Some(ctx),
                     silverpelt::cmd::CheckCommandOptions::default(),
                 )
@@ -540,6 +543,7 @@ pub async fn modules_modperms(
                         ctx.author().id,
                         &data.pool,
                         &cache_http,
+                        &data.reqwest,
                         &Some(ctx),
                         silverpelt::cmd::CheckCommandOptions::default(),
                     )
@@ -570,6 +574,7 @@ pub async fn modules_modperms(
                         ctx.author().id,
                         &data.pool,
                         &cache_http,
+                        &data.reqwest,
                         &Some(ctx),
                         silverpelt::cmd::CheckCommandOptions::default(),
                     )
@@ -604,6 +609,7 @@ pub async fn modules_modperms(
                     ctx.author().id,
                     &data.pool,
                     &cache_http,
+                    &data.reqwest,
                     &Some(ctx),
                     silverpelt::cmd::CheckCommandOptions {
                         custom_module_configuration: Some(GuildModuleConfiguration {
@@ -691,6 +697,7 @@ pub async fn modules_modperms(
                             ctx.author().id,
                             &data.pool,
                             &cache_http,
+                            &data.reqwest,
                             &Some(ctx),
                             silverpelt::cmd::CheckCommandOptions {
                                 custom_module_configuration: Some(GuildModuleConfiguration {

@@ -151,6 +151,7 @@ pub async fn command_check(ctx: Context<'_>) -> Result<bool, Error> {
         ctx.author().id,
         &data.pool,
         &CacheHttpImpl::from_ctx(ctx.serenity_context()),
+        &data.reqwest,
         &Some(ctx),
         silverpelt::cmd::CheckCommandOptions {
             channel_id: Some(ctx.channel_id()),

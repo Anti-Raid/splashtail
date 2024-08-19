@@ -1,4 +1,3 @@
-pub mod animusmagic;
 pub mod jobserver;
 pub mod objectstore;
 pub mod permodule_functions;

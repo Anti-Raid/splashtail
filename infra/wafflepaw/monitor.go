@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"os"
 	"os/exec"
 	"slices"
@@ -15,7 +16,7 @@ import (
 	mconfig "github.com/cheesycod/mewld/config"
 	mproc "github.com/cheesycod/mewld/proc"
 	mredis "github.com/cheesycod/mewld/redis"
-	"go.std/animusmagic"
+	"github.com/infinitybotlist/eureka/crypto"
 	"go.std/config"
 	"go.uber.org/zap"
 	"gopkg.in/yaml.v3"
@@ -29,8 +30,8 @@ var (
 	jobserverClusterMap []mproc.ClusterMap
 )
 
-func StartMonitors(monitors []AMProbeTask) (err error) {
-	Logger.Info("Starting animus magic client for monitoring main bot")
+func StartMonitors(monitors []ProbeTask) (err error) {
+	Logger.Info("Starting wafflepaw probe task for monitoring main bot")
 
 	// First check number of shards recommended
 	getGatewayBot, err = Discord.GatewayBot(discordgo.WithContext(Context))
@@ -101,32 +102,25 @@ func StartMonitors(monitors []AMProbeTask) (err error) {
 
 	Logger.Info("Cluster maps generated", zap.Any("botClusterMap", botClusterMap), zap.Any("jobserverClusterMap", jobserverClusterMap))
 
-	AnimusMagicClient = animusmagic.New(Config.Meta.AnimusMagicChannel.Parse(), animusmagic.AnimusTargetInfra, 0)
-
-	go AnimusMagicClient.Listen(Context, Rueidis, Logger)
-
-	var clusterMaps = map[animusmagic.AnimusTarget][]mproc.ClusterMap{
-		animusmagic.AnimusTargetBot:       botClusterMap,
-		animusmagic.AnimusTargetJobserver: jobserverClusterMap,
-		animusmagic.AnimusTargetWebserver: {{ID: 0}},
+	var clusterMaps = map[string][]mproc.ClusterMap{
+		"bot":  botClusterMap,
+		"jobs": jobserverClusterMap,
 	}
 
-	var mewldChanMap = map[animusmagic.AnimusTarget]string{
-		animusmagic.AnimusTargetBot:       botMldConfig.RedisChannel,
-		animusmagic.AnimusTargetJobserver: jobserverMldConfig.RedisChannel,
+	var mewldChanMap = map[string]string{
+		"bot":  botMldConfig.RedisChannel,
+		"jobs": jobserverMldConfig.RedisChannel,
 	}
 
 	for i := range monitors {
-		monitors[i].AnimusMagicClient = AnimusMagicClient
-
 		if len(monitors[i].ClusterMap) == 0 {
 			cmap, ok := clusterMaps[monitors[i].Target]
 
 			if !ok {
-				return fmt.Errorf("unsupported target due to lacking clustermap: %s", monitors[i].Target)
+				monitors[i].ClusterMap = []mproc.ClusterMap{{ID: 0}}
+			} else {
+				monitors[i].ClusterMap = cmap
 			}
-
-			monitors[i].ClusterMap = cmap
 		}
 
 		// Set mewld channel if unset and supported, otherwise ignore
@@ -140,15 +134,18 @@ func StartMonitors(monitors []AMProbeTask) (err error) {
 
 		Logger.Info("Added monitor", zap.Any("monitor", monitors[i]))
 		bgtasks.BgTaskRegistry = append(bgtasks.BgTaskRegistry, &monitors[i])
+
+		monitors[i].state.Client.Timeout = 10 * time.Second
 	}
 
 	return nil
 }
 
-// Internal animus magic state info
+// Internal state info
 
 // Internal task state. TaskMutex in bgtasks guarantees that only one task is running at a time.
 type probeTaskState struct {
+	Client                              http.Client
 	LastProbeTime                       time.Time
 	LastSuccessfulProbeTime             time.Time
 	AttemptedMewldClusterRollingRestart bool
@@ -159,41 +156,41 @@ type probeTaskState struct {
 	BackoffExp                          int // Exponential backoff in restart
 }
 
-type AMProbeTask struct {
-	AnimusMagicClient *animusmagic.AnimusMagicClient `json:"-" yaml:"-"`
-
+type ProbeTask struct {
 	// Only the below fields are exposed for monitors in monitor.yaml
-	ClusterMap              []mproc.ClusterMap       `json:"cluster_map" yaml:"cluster_map"`                               // Cluster map
-	Target                  animusmagic.AnimusTarget `json:"target" yaml:"target"`                                         // Target to probe
-	MewldChannel            string                   `json:"mewld_channel" yaml:"mewld_channel"`                           // Mewld channel to send pings to
-	SystemdService          string                   `json:"systemd_service" yaml:"systemd_service"`                       // Corresponding Systemd service to restart
-	AuxillaryServices       []string                 `json:"auxillary_services" yaml:"auxillary_services"`                 // Auxillary services to restart if needed
-	DelayStart              time.Duration            `json:"delay_start" yaml:"delay_start"`                               // Delay start
-	NoHandleInactiveSystemd bool                     `json:"no_handle_inactive_systemd" yaml:"no_handle_inactive_systemd"` // Do not handle inactive systemd services
-	RestartAfterFailed      int                      `json:"restart_after_failed" yaml:"restart_after_failed"`             // After how many failed checks should we restart the service
-	ProcessName             []string                 `json:"process_name" yaml:"process_name"`                             // Process names to kill
+	ClusterMap              []mproc.ClusterMap `json:"cluster_map" yaml:"cluster_map"`                               // Cluster map
+	Target                  string             `json:"target" yaml:"target"`                                         // Target to probe
+	MewldChannel            string             `json:"mewld_channel" yaml:"mewld_channel"`                           // Mewld channel to send pings to
+	SystemdService          string             `json:"systemd_service" yaml:"systemd_service"`                       // Corresponding Systemd service to restart
+	AuxillaryServices       []string           `json:"auxillary_services" yaml:"auxillary_services"`                 // Auxillary services to restart if needed
+	DelayStart              time.Duration      `json:"delay_start" yaml:"delay_start"`                               // Delay start
+	NoHandleInactiveSystemd bool               `json:"no_handle_inactive_systemd" yaml:"no_handle_inactive_systemd"` // Do not handle inactive systemd services
+	RestartAfterFailed      int                `json:"restart_after_failed" yaml:"restart_after_failed"`             // After how many failed checks should we restart the service
+	ProcessName             []string           `json:"process_name" yaml:"process_name"`                             // Process names to kill
+	BasePort                int                `json:"base_port" yaml:"base_port"`                                   // Base port for the service
+	BaseAddr                string             `json:"base_addr" yaml:"base_addr"`                                   // Base address for the service
 
 	// Internal state
 	state probeTaskState `yaml:"-"`
 }
 
-func (p *AMProbeTask) Enabled() bool {
+func (p *ProbeTask) Enabled() bool {
 	return true
 }
 
-func (p *AMProbeTask) Duration() time.Duration {
+func (p *ProbeTask) Duration() time.Duration {
 	return 10*time.Second + p.DelayStart
 }
 
-func (p *AMProbeTask) Name() string {
+func (p *ProbeTask) Name() string {
 	return "AMProbe"
 }
 
-func (p *AMProbeTask) Description() string {
-	return "Probes for animus target " + p.Target.String()
+func (p *ProbeTask) Description() string {
+	return "Probes for target " + p.Target
 }
 
-func (p *AMProbeTask) Run() error {
+func (p *ProbeTask) Run() error {
 	p.state.LastProbeTime = time.Now()
 
 	serviceStatus, err := p.getServiceStatus()
@@ -214,90 +211,34 @@ func (p *AMProbeTask) Run() error {
 		return p.tryRestartServiceSystemd()
 	}
 
-	commandId := animusmagic.NewCommandId()
-	payload, err := p.AnimusMagicClient.CreatePayload(
-		p.AnimusMagicClient.Identify,
-		p.Target,
-		p.AnimusMagicClient.ClusterID,
-		animusmagic.WildcardClusterID,
-		animusmagic.OpProbe,
-		commandId,
-		[]byte{},
-	)
+	var resps []int // A collection of status codes
 
-	if err != nil {
-		return fmt.Errorf("error creating payload: %s", err)
+	for _, cluster := range p.ClusterMap {
+		// Make GET request to check if the cluster is alive
+		resp, err := p.state.Client.Get(fmt.Sprintf("%s:%d", p.BaseAddr, p.BasePort+cluster.ID))
+
+		if err != nil {
+			Logger.Error("Error making request", zap.Error(err))
+			resps = append(resps, 500)
+			continue
+		}
+
+		resps = append(resps, resp.StatusCode)
 	}
 
-	// Create a channel to receive the response
-	notify := p.AnimusMagicClient.CreateNotifier(commandId, 0)
+	// Get the count of 200s
+	var count200 int
 
-	// Publish the payload
-	err = p.AnimusMagicClient.Publish(Context, Rueidis, payload)
-
-	if err != nil {
-		// Remove the notifier
-		p.AnimusMagicClient.CloseNotifier(commandId)
-		return fmt.Errorf("error publishing payload: %s", err)
-	}
-
-	// Wait for the response
-	waitForResponse := func() (clusterIds map[uint16][]string, duplicates map[uint16][]string, err error) {
-		clusterIds = map[uint16][]string{}
-		duplicates = map[uint16][]string{}
-
-		ticker := time.NewTicker(time.Second*9 + time.Second*time.Duration(2^p.state.BackoffExp))
-		startTime := time.Now()
-		for {
-			select {
-			case <-Context.Done():
-				return nil, nil, fmt.Errorf("context cancelled")
-			case <-ticker.C:
-				return clusterIds, duplicates, nil
-			case response := <-notify:
-				since := time.Since(startTime)
-
-				if since > time.Second*5 {
-					Logger.Warn("AMProbe response took too longer than usual", zap.Duration("duration", since))
-				}
-
-				// Parse message as animuserrorresponse
-				var resp string
-				err := animusmagic.DeserializeData(response.RawPayload, &resp)
-
-				if err != nil {
-					Logger.Warn("Error parsing response", zap.Error(err))
-					continue
-				}
-
-				if _, ok := clusterIds[response.Meta.ClusterIDFrom]; !ok {
-					clusterIds[response.Meta.ClusterIDFrom] = []string{resp}
-				} else {
-					clusterIds[response.Meta.ClusterIDFrom] = append(clusterIds[response.Meta.ClusterIDFrom], resp)
-					duplicates[response.Meta.ClusterIDFrom] = clusterIds[response.Meta.ClusterIDFrom]
-				}
-			}
+	for _, resp := range resps {
+		if resp == 200 {
+			count200++
 		}
 	}
 
-	clusterIds, duplicateClusterIds, err := waitForResponse()
-
-	if err != nil {
-		return fmt.Errorf("error waiting for response: %s", err)
-	}
-
-	Logger.Debug("AMProbe response", zap.Any("clusterIds", clusterIds), zap.Any("duplicateClusterIds", duplicateClusterIds))
-
-	// If we have duplicate cluster ids, try to restart problematic clusters
-	if len(duplicateClusterIds) > 0 {
-		Logger.Error("Duplicate cluster ids detected", zap.Any("clusterIds", duplicateClusterIds))
-		return p.restart(tryRestartOptions{
-			ProblematicClusters: duplicateClusterIds,
-		})
-	}
+	Logger.Debug("AMProbe response", zap.Int("200s", count200), zap.Int("total", len(resps)), zap.Int("resps", len(p.ClusterMap)))
 
 	// If we have less than half the expected clusters, try to restart all
-	if len(clusterIds) < len(p.ClusterMap)/2 {
+	if count200 < len(p.ClusterMap)/2 {
 		return p.restart(tryRestartOptions{})
 	}
 
@@ -307,7 +248,7 @@ func (p *AMProbeTask) Run() error {
 }
 
 // resetAttempts resets the state of the task related to attempts
-func (p *AMProbeTask) resetAttempts() {
+func (p *ProbeTask) resetAttempts() {
 	p.state.AttemptedMewldClusterRollingRestart = false
 	p.state.AttemptedTargettedKills = []string{}
 	p.state.AttemptedKillall = false
@@ -322,7 +263,7 @@ type tryRestartOptions struct {
 
 // restart tries to restart the service only when failedCount is greater than RestartAfterFailed
 // (with some other logic such as sending a webhook). Consumers should use restart over tryRestart hence.
-func (p *AMProbeTask) restart(opts tryRestartOptions) error {
+func (p *ProbeTask) restart(opts tryRestartOptions) error {
 	p.state.FailedCount++
 
 	Logger.Error("Restart called", zap.Int("failedCount", p.state.FailedCount))
@@ -362,7 +303,7 @@ func (p *AMProbeTask) restart(opts tryRestartOptions) error {
 //
 // If, at the next run, we still go through this function, then we try
 // the tryRestartServiceSystemd method
-func (p *AMProbeTask) tryRestart(opts tryRestartOptions) error {
+func (p *ProbeTask) tryRestart(opts tryRestartOptions) error {
 	Logger.Info("Attempting restart")
 	if len(opts.ProblematicClusters) > 0 {
 		// Just log for now, restarting individual clusters is not implemented yet
@@ -447,7 +388,7 @@ func (p *AMProbeTask) tryRestart(opts tryRestartOptions) error {
 
 // getServiceStatus returns the systemd status of the service
 // e.g. "active", "inactive", "failed"
-func (p *AMProbeTask) getServiceStatus() (string, error) {
+func (p *ProbeTask) getServiceStatus() (string, error) {
 	cmd := exec.Command("systemctl", "show", p.SystemdService, "--property=ActiveState", "--value")
 
 	out, err := cmd.Output()
@@ -463,7 +404,7 @@ func (p *AMProbeTask) getServiceStatus() (string, error) {
 }
 
 // tryKillPid tries to kill a specific pid
-func (p *AMProbeTask) tryKillPid(pid string) error {
+func (p *ProbeTask) tryKillPid(pid string) error {
 	cmd := exec.Command("kill", "-9", pid)
 
 	err := cmd.Run()
@@ -478,13 +419,13 @@ func (p *AMProbeTask) tryKillPid(pid string) error {
 // tryRestartMewldCluster tries to restart a specific cluster with an id
 //
 // TODO: Implement this
-/*func (p *AMProbeTask) tryRestartMewldCluster(clusterId uint16) error {
+/*func (p *ProbeTask) tryRestartMewldCluster(clusterId uint16) error {
 	return nil
 }*/
 
 // tryRollingRestartMewldCluster tries to restart the mewld cluster
 // using a rolling restart
-func (p *AMProbeTask) tryRollingRestartMewldCluster() error {
+func (p *ProbeTask) tryRollingRestartMewldCluster() error {
 	if p.MewldChannel == "" {
 		return nil // This strategy does not work
 	}
@@ -492,7 +433,7 @@ func (p *AMProbeTask) tryRollingRestartMewldCluster() error {
 	rr := mredis.LauncherCmd{
 		Scope:     "launcher",
 		Action:    "rollingrestart",
-		CommandId: animusmagic.NewCommandId(),
+		CommandId: crypto.RandString(16),
 	}
 
 	bytes, err := json.Marshal(rr)
@@ -513,7 +454,7 @@ func (p *AMProbeTask) tryRollingRestartMewldCluster() error {
 }
 
 // tryRestartServiceSystemd tries to restart the entire service using systemd
-func (p *AMProbeTask) tryRestartServiceSystemd() error {
+func (p *ProbeTask) tryRestartServiceSystemd() error {
 	Logger.Debug("Restarting service", zap.String("service", p.SystemdService))
 	cmd := exec.Command("systemctl", "restart", p.SystemdService)
 

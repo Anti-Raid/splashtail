@@ -9,8 +9,8 @@ import (
 	"strings"
 
 	"github.com/go-chi/chi/v5"
-	"go.api/animusmagic_messages"
 	"go.api/constants"
+	"go.api/rpc_messages"
 	"go.api/state"
 	"go.api/types"
 	"go.api/webutils"
@@ -46,7 +46,7 @@ func HandlePermissionCheck(
 	userId,
 	guildId,
 	command string,
-	checkCommandOptions animusmagic_messages.AmCheckCommandOptions,
+	checkCommandOptions rpc_messages.RpcCheckCommandOptions,
 ) (hresp uapi.HttpResponse, ok bool) {
 	if guildId == "" {
 		state.Logger.Error("Guild ID is empty")
@@ -76,10 +76,8 @@ func HandlePermissionCheck(
 	}
 
 	permRes, ok, err := webutils.CheckCommandPermission(
-		state.AnimusMagicClient,
 		state.Context,
-		state.Rueidis,
-		uint16(clusterId),
+		clusterId,
 		guildId,
 		userId,
 		command,
@@ -264,7 +262,7 @@ func Authorize(r uapi.Route, req *http.Request) (uapi.AuthData, uapi.HttpRespons
 				guildId := permCheck.GuildID(r, req)
 
 				// First check for web use permissions
-				hresp, ok := HandlePermissionCheck(id.String, guildId, "web use", animusmagic_messages.AmCheckCommandOptions{
+				hresp, ok := HandlePermissionCheck(id.String, guildId, "web use", rpc_messages.RpcCheckCommandOptions{
 					CustomResolvedKittycatPerms: permLimits,
 				})
 
@@ -275,7 +273,7 @@ func Authorize(r uapi.Route, req *http.Request) (uapi.AuthData, uapi.HttpRespons
 				cmd := permCheck.Command(r, req)
 
 				if cmd != "" {
-					hresp, ok = HandlePermissionCheck(id.String, guildId, cmd, animusmagic_messages.AmCheckCommandOptions{
+					hresp, ok = HandlePermissionCheck(id.String, guildId, cmd, rpc_messages.RpcCheckCommandOptions{
 						CustomResolvedKittycatPerms: permLimits,
 					})
 

@@ -116,7 +116,6 @@ func main() {
 				strconv.Itoa(len(l.Map)),
 				l.Config.RedisChannel,
 				config.CurrentEnv,
-				cfg.Meta.AnimusMagicChannel.Parse(),
 			)
 
 			cmd.Stdout = os.Stdout

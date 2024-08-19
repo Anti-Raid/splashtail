@@ -41,7 +41,6 @@ pub mod test_module_parse {
                     cache: Arc::new(crate::ipc::mewld::MewldIpcCache::default()),
                     pool: pg_pool.clone(),
                 }),
-                animus_magic_ipc: std::sync::OnceLock::new(),
                 pool: pg_pool.clone(),
                 proxy_support_data: tokio::sync::RwLock::new(None),
             }),

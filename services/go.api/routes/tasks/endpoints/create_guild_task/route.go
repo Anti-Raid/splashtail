@@ -1,19 +1,17 @@
 package create_guild_task
 
 import (
-	"fmt"
 	"io"
 	"net/http"
 	"time"
 
-	"go.api/animusmagic_messages"
 	"go.api/api"
+	"go.api/rpc_messages"
 	"go.api/state"
 	"go.api/types"
+	"go.api/webutils"
 	jobs "go.jobs"
-	"go.std/animusmagic"
 	"go.std/ext_types"
-	"go.std/utils"
 	"go.std/utils/mewext"
 
 	"github.com/go-chi/chi/v5"
@@ -148,7 +146,7 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 
 	// Check permissions
 	permLimits := api.PermLimits(d.Auth)
-	resp, ok := api.HandlePermissionCheck(d.Auth.ID, guildId, task.CorrespondingBotCommand_Create(), animusmagic_messages.AmCheckCommandOptions{
+	resp, ok := api.HandlePermissionCheck(d.Auth.ID, guildId, task.CorrespondingBotCommand_Create(), rpc_messages.RpcCheckCommandOptions{
 		CustomResolvedKittycatPerms: permLimits,
 	})
 
@@ -169,78 +167,27 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 		}
 	}
 
-	// Make animus magic request
-	animusResp, err := state.AnimusMagicClient.Request(
-		d.Context,
-		state.Rueidis,
-		animusmagic_messages.JobserverMessage{
-			SpawnTask: &struct {
-				Name    string                 `json:"name"`
-				Data    map[string]interface{} `json:"data"`
-				Create  bool                   `json:"create"`
-				Execute bool                   `json:"execute"`
-				TaskID  string                 `json:"task_id"`
-				UserID  string                 `json:"user_id"`
-			}{
-				Name:    taskName,
-				Data:    data,
-				Create:  true,
-				Execute: true,
-				UserID:  d.Auth.ID,
-			},
-		},
-		&animusmagic.RequestOptions{
-			ClusterID:             utils.Pointer(uint16(clusterId)),
-			ExpectedResponseCount: 1,
-			To:                    animusmagic.AnimusTargetJobserver,
-		},
-	)
+	str, err := webutils.JobserverSpawnTask(d.Context, clusterId, &rpc_messages.JobserverSpawnTask{
+		Name:    taskName,
+		Data:    data,
+		Create:  true,
+		Execute: true,
+		UserID:  d.Auth.ID,
+	})
 
 	if err != nil {
-		state.Logger.Error("Error while making animus request", zap.Error(err))
+		state.Logger.Error("Error while spawning task on jobserver", zap.Error(err))
 		return uapi.HttpResponse{
 			Status: http.StatusInternalServerError,
 			Json: types.ApiError{
-				Message: "Error while making animus request: " + err.Error(),
-			},
-		}
-	}
-
-	if len(animusResp) != 1 {
-		return uapi.HttpResponse{
-			Status: http.StatusInternalServerError,
-			Json: types.ApiError{
-				Message: fmt.Sprintf("Unexpected response count: %d", len(animusResp)),
-			},
-		}
-	}
-
-	acr := animusResp[0]
-
-	parsedAnimusResp, err := animusmagic.ParseClientResponse[animusmagic_messages.JobserverResponse](acr)
-
-	if err != nil {
-		state.Logger.Error("Error while parsing animus response", zap.Error(err))
-		return uapi.HttpResponse{
-			Status: http.StatusInternalServerError,
-			Json: types.ApiError{
-				Message: "Error while parsing animus response: " + err.Error(),
-			},
-		}
-	}
-
-	if parsedAnimusResp.Resp.SpawnTask == nil {
-		return uapi.HttpResponse{
-			Status: http.StatusInternalServerError,
-			Json: types.ApiError{
-				Message: "Unexpected response",
+				Message: "Error while spawning task on jobserver: " + err.Error(),
 			},
 		}
 	}
 
 	return uapi.HttpResponse{
 		Json: ext_types.PartialTask{
-			TaskID: parsedAnimusResp.Resp.SpawnTask.TaskID,
+			TaskID: str.TaskID,
 		},
 	}
 }

@@ -1,75 +1,72 @@
 package webutils
 
 import (
+	"bytes"
 	"context"
 	"fmt"
+	"io"
+	"net/http"
 
-	"github.com/redis/rueidis"
-	"go.api/animusmagic_messages"
-	"go.std/animusmagic"
+	"github.com/infinitybotlist/eureka/jsonimpl"
+	"go.api/rpc_messages"
+	"go.api/state"
 	"go.std/silverpelt"
 )
 
-// Calls the CheckCommandPermission animus magic method to check whether or not a command is runnable
+// Calls the CheckCommandPermission method to check whether or not a command is runnable
 func CheckCommandPermission(
-	c *animusmagic.AnimusMagicClient,
 	ctx context.Context,
-	redis rueidis.Client,
-	clusterId uint16,
+	clusterId int,
 	guildID string,
 	userID string,
 	command string,
-	checkCommandOptions animusmagic_messages.AmCheckCommandOptions,
+	checkCommandOptions rpc_messages.RpcCheckCommandOptions,
 ) (res *silverpelt.PermissionResult, ok bool, err error) {
-	mlr, err := c.Request(
-		ctx,
-		redis,
-		animusmagic_messages.BotAnimusMessage{
-			CheckCommandPermission: &struct {
-				GuildID             string                                     "json:\"guild_id\""
-				UserID              string                                     "json:\"user_id\""
-				Command             string                                     "json:\"command\""
-				CheckCommandOptions animusmagic_messages.AmCheckCommandOptions `json:"opts"`
-			}{
-				GuildID:             guildID,
-				UserID:              userID,
-				Command:             command,
-				CheckCommandOptions: checkCommandOptions,
-			},
-		},
-		&animusmagic.RequestOptions{
-			ClusterID: &clusterId,
-		},
-	)
+	var body bytes.Buffer
+	err = jsonimpl.MarshalToWriter(&body, rpc_messages.CheckCommandPermissionRequest{
+		Command: command,
+		Opts:    checkCommandOptions,
+	})
 
 	if err != nil {
-		return nil, false, err
+		return nil, false, fmt.Errorf("failed to marshal check command option request: %w", err)
 	}
 
-	if len(mlr) == 0 {
-		return nil, false, animusmagic.ErrNilMessage
-	}
-
-	if len(mlr) > 1 {
-		return nil, false, fmt.Errorf("expected 1 response, got %d", len(mlr))
-	}
-
-	upr := mlr[0]
-
-	resp, err := animusmagic.ParseClientResponse[animusmagic_messages.BotAnimusResponse](upr)
+	req, err := http.NewRequestWithContext(ctx, "GET", fmt.Sprintf("%s/check-command-permission/%s/%s", CalcBotAddr(clusterId), guildID, userID), &body)
 
 	if err != nil {
-		return nil, false, err
+		return nil, false, fmt.Errorf("failed to create request: %w", err)
 	}
 
-	if resp.ClientResp.Meta.Op == animusmagic.OpError {
-		return nil, false, animusmagic.ErrOpError
+	resp, err := state.IpcClient.Do(req)
+
+	if err != nil {
+		return nil, false, fmt.Errorf("failed to send request: %w", err)
 	}
 
-	if resp.Resp == nil || resp.Resp.CheckCommandPermission == nil {
-		return nil, false, animusmagic.ErrNilMessage
+	if resp.StatusCode != http.StatusOK {
+		var bodyText string
+
+		if resp.Body != nil {
+			bytes, err := io.ReadAll(resp.Body)
+
+			if err != nil {
+				bodyText = fmt.Sprintf("failed to read response body: %v, status code: %d", err, resp.StatusCode)
+			} else {
+				bodyText = string(bytes)
+			}
+		}
+
+		return nil, false, fmt.Errorf(bodyText)
 	}
 
-	return &resp.Resp.CheckCommandPermission.PermRes, resp.Resp.CheckCommandPermission.IsOk, nil
+	var checkResp rpc_messages.CheckCommandPermission
 
+	err = jsonimpl.UnmarshalReader(resp.Body, &resp)
+
+	if err != nil {
+		return nil, false, fmt.Errorf("failed to unmarshal response: %w", err)
+	}
+
+	return &checkResp.PermRes, checkResp.IsOk, nil
 }

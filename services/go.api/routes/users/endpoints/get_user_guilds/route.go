@@ -8,10 +8,9 @@ import (
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/jackc/pgx/v5/pgtype"
-	"go.api/animusmagic_messages"
 	"go.api/state"
 	"go.api/types"
-	"go.std/animusmagic"
+	"go.api/webutils"
 	"go.std/utils"
 	"go.std/utils/mewext"
 	"go.uber.org/zap"
@@ -243,78 +242,31 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 			}
 		}
 
-		moduleListResp, err := state.AnimusMagicClient.Request(
-			d.Context,
-			state.Rueidis,
-			animusmagic_messages.BotAnimusMessage{
-				GuildsExist: &struct {
-					Guilds []string `json:"guilds"`
-				}{
-					Guilds: guilds,
-				},
-			},
-			&animusmagic.RequestOptions{
-				ClusterID: utils.Pointer(uint16(clusterId)),
-			},
-		)
+		guildsExist, err := webutils.GuildsExist(d.Context, clusterId, guilds)
 
 		if err != nil {
-			state.Logger.Error("Failed to send request to animus magic", zap.Error(err))
-
-			for _, payload := range moduleListResp {
-				state.Logger.Error("Payload", zap.String("payload", string(payload.RawPayload)), zap.Error(err))
-			}
-
+			state.Logger.Error("Failed to check if bot is in guilds", zap.Error(err))
 			return uapi.HttpResponse{
 				Status: http.StatusInternalServerError,
 				Json: types.ApiError{
-					Message: "Failed to send request to animus magic: " + err.Error(),
+					Message: "Failed to check if bot is in guilds: " + err.Error(),
 				},
 			}
 		}
 
-		if len(moduleListResp) != 1 {
-			continue
-		}
-
-		parsedModuleListResp, err := animusmagic.ParseClientResponses[animusmagic_messages.BotAnimusResponse](moduleListResp)
-
-		if err != nil {
-			state.Logger.Error("Failed to parse response from animus magic", zap.Error(err))
+		if len(guildsExist) != len(guilds) {
+			state.Logger.Error("Mismatch in guildsExist response", zap.Any("guildsExist", guildsExist), zap.Any("guilds", guilds))
 			return uapi.HttpResponse{
 				Status: http.StatusInternalServerError,
-				Json:   "Failed to parse response from animus magic: " + err.Error(),
+				Json: types.ApiError{
+					Message: "Mismatch in guildsExist response",
+				},
 			}
 		}
 
-		for _, resp := range parsedModuleListResp {
-			if resp.ClientResp.Meta.Op == animusmagic.OpError {
-				return uapi.HttpResponse{
-					Status: http.StatusInternalServerError,
-					Json:   "Cluster returned OpError when trying to fetch user guilds",
-				}
-			}
-
-			if resp.Err != nil {
-				state.Logger.Error("Error response from animus magic", zap.Any("error", resp.Err))
-				return uapi.HttpResponse{
-					Status: http.StatusInternalServerError,
-					Json:   resp.Err,
-				}
-			}
-
-			if resp == nil || resp.Resp.GuildsExist == nil {
-				state.Logger.Error("Nil response from animus magic")
-				return uapi.HttpResponse{
-					Status: http.StatusInternalServerError,
-					Json:   "Nil response from animus magic",
-				}
-			}
-
-			for i, v := range resp.Resp.GuildsExist.GuildsExist {
-				if v == 1 {
-					botInGuild = append(botInGuild, guilds[i])
-				}
+		for i, v := range guildsExist {
+			if v == 1 {
+				botInGuild = append(botInGuild, guilds[i])
 			}
 		}
 	}

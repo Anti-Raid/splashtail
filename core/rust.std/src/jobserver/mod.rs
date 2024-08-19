@@ -7,6 +7,21 @@ use std::str::FromStr;
 use std::sync::Arc;
 use std::time::Duration;
 
+#[derive(serde::Deserialize, serde::Serialize)]
+pub struct JobserverSpawnTaskResponse {
+    pub task_id: String,
+}
+
+#[derive(serde::Deserialize, serde::Serialize)]
+pub struct JobserverSpawnTaskRequest {
+    pub name: String,
+    pub data: serde_json::Value,
+    pub create: bool,
+    pub execute: bool,
+    pub task_id: Option<String>, // If create is false, this is required
+    pub user_id: String,
+}
+
 /// Rust internal/special type to better serialize/speed up task embed creation
 #[derive(serde::Deserialize, serde::Serialize, Clone, PartialEq)]
 pub struct TaskStatuses {
