@@ -38,6 +38,8 @@ func CheckCommandPermission(
 		return nil, false, fmt.Errorf("failed to create request: %w", err)
 	}
 
+	req.Header.Set("Content-Type", "application/json")
+
 	resp, err := state.IpcClient.Do(req)
 
 	if err != nil {
@@ -62,7 +64,7 @@ func CheckCommandPermission(
 
 	var checkResp rpc_messages.CheckCommandPermission
 
-	err = jsonimpl.UnmarshalReader(resp.Body, &resp)
+	err = jsonimpl.UnmarshalReader(resp.Body, &checkResp)
 
 	if err != nil {
 		return nil, false, fmt.Errorf("failed to unmarshal response: %w", err)

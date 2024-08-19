@@ -17,19 +17,19 @@ type BaseGuildUserInfo struct {
 }
 
 type CheckCommandPermission struct {
-	PermRes silverpelt.PermissionResult
-	IsOk    bool
+	PermRes silverpelt.PermissionResult `json:"perm_res"`
+	IsOk    bool                        `json:"is_ok"`
 }
 
 type CheckCommandPermissionRequest struct {
-	Command string
-	Opts    RpcCheckCommandOptions
+	Command string                 `json:"command"`
+	Opts    RpcCheckCommandOptions `json:"opts"`
 }
 
 type ExecutePerModuleFunctionRequest struct {
-	Module   string
-	Function string
-	Args     map[string]any
+	Module   string         `json:"module"`
+	Function string         `json:"function"`
+	Args     map[string]any `json:"args"`
 }
 
 type SettingsOperationRequest struct {

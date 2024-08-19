@@ -27,6 +27,8 @@ func ParsePermissionChecks(ctx context.Context, clusterId int, guildId string, p
 		return nil, fmt.Errorf("failed to create request: %w", err)
 	}
 
+	req.Header.Set("Content-Type", "application/json")
+
 	resp, err := state.IpcClient.Do(req)
 
 	if err != nil {

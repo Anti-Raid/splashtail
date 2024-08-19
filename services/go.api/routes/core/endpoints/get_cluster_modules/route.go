@@ -46,8 +46,8 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 
 	clusterIdStr := chi.URLParam(r, "clusterId")
 
-	// Get cluster id as uint16
-	clusterId64, err := strconv.ParseUint(clusterIdStr, 10, 16)
+	// Get cluster id as int
+	clusterId64, err := strconv.Atoi(clusterIdStr)
 
 	if err != nil {
 		return uapi.HttpResponse{
@@ -58,13 +58,13 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 		}
 	}
 
-	hresp, ok := webutils.ClusterCheck(int(clusterId64))
+	hresp, ok := webutils.ClusterCheck(clusterId64)
 
 	if !ok {
 		return hresp
 	}
 
-	modules, err := state.ClusterModuleCache.GetClusterModules(d.Context, uint16(clusterId64))
+	modules, err := webutils.ClusterModuleCache.GetClusterModules(d.Context, clusterId64)
 
 	if err != nil {
 		return uapi.HttpResponse{

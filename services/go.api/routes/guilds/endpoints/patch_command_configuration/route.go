@@ -116,7 +116,7 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 	baseCommand := strings.Split(body.Command, " ")[0]
 
 	// Find module from cluster
-	modules, err := state.ClusterModuleCache.GetClusterModules(d.Context, uint16(clusterId))
+	modules, err := webutils.ClusterModuleCache.GetClusterModules(d.Context, clusterId)
 
 	if err != nil {
 		return uapi.HttpResponse{

@@ -1,4 +1,4 @@
-package state
+package webutils
 
 import (
 	"context"
@@ -8,25 +8,28 @@ import (
 
 	"github.com/infinitybotlist/eureka/jsonimpl"
 	"go.api/rpc_messages"
+	"go.api/state"
 	"go.std/utils/syncmap"
 )
 
+var ClusterModuleCache = &ClusterModuleCacher{}
+
 type ClusterModuleCacher struct {
-	cache syncmap.Map[uint16, rpc_messages.ClusterModules]
+	cache syncmap.Map[int, rpc_messages.ClusterModules]
 }
 
-func (c *ClusterModuleCacher) GetClusterModules(ctx context.Context, clusterId uint16) (*rpc_messages.ClusterModules, error) {
+func (c *ClusterModuleCacher) GetClusterModules(ctx context.Context, clusterId int) (*rpc_messages.ClusterModules, error) {
 	if v, ok := c.cache.Load(clusterId); ok {
 		return &v, nil
 	}
 
-	req, err := http.NewRequestWithContext(ctx, "GET", fmt.Sprintf("http://%s:%d/modules", Config.BasePorts.BotBaseAddr.Parse(), Config.BasePorts.Bot.Parse()), nil)
+	req, err := http.NewRequestWithContext(ctx, "GET", fmt.Sprintf("%s/modules", CalcBotAddr(clusterId)), nil)
 
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %w", err)
 	}
 
-	resp, err := IpcClient.Do(req)
+	resp, err := state.IpcClient.Do(req)
 
 	if err != nil {
 		return nil, fmt.Errorf("failed to send request: %w", err)

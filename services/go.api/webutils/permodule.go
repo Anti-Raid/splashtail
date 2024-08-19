@@ -27,6 +27,8 @@ func ExecutePerModuleFunction(ctx context.Context, clusterId int, data *rpc_mess
 		return fmt.Errorf("failed to create request: %w", err)
 	}
 
+	req.Header.Set("Content-Type", "application/json")
+
 	resp, err := state.IpcClient.Do(req)
 
 	if err != nil {

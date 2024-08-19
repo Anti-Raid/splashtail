@@ -39,7 +39,9 @@ impl AppData {
 }
 
 pub fn create_blank_rpc_server() -> Router<AppData> {
-    Router::new().route("/", get(|| async { "bot" }))
+    Router::new()
+        .layer(tower_http::trace::TraceLayer::new_for_http())
+        .route("/", get(|| async { "bot" }))
 }
 
 pub async fn start_rpc_server(

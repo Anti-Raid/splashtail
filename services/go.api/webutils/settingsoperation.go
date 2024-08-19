@@ -27,11 +27,13 @@ func SettingsOperation(
 		return nil, fmt.Errorf("failed to marshal settings operation request: %w", err)
 	}
 
-	req, err := http.NewRequestWithContext(ctx, "GET", fmt.Sprintf("%s/settings-operation/%s/%s", CalcBotAddr(clusterId), guildID, userID), &body)
+	req, err := http.NewRequestWithContext(ctx, "POST", fmt.Sprintf("%s/settings-operation/%s/%s", CalcBotAddr(clusterId), guildID, userID), &body)
 
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %w", err)
 	}
+
+	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := state.IpcClient.Do(req)
 
@@ -52,7 +54,7 @@ func SettingsOperation(
 			}
 		}
 
-		return nil, fmt.Errorf(bodyText)
+		return nil, fmt.Errorf("failed to send request: %s, status code %v", bodyText, resp.StatusCode)
 	}
 
 	var csr rpc_messages.CanonicalSettingsResult

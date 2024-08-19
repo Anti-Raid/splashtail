@@ -124,6 +124,7 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 	)
 
 	if err != nil {
+		state.Logger.Error("Error executing settings operation", zap.Error(err))
 		return uapi.HttpResponse{
 			Status: http.StatusInternalServerError,
 			Json: types.ApiError{

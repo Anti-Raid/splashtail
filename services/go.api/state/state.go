@@ -44,8 +44,6 @@ var (
 	Config                  *config.Config
 	MewldInstanceList       *mproc.InstanceList
 
-	ClusterModuleCache ClusterModuleCacher
-
 	IpcClient http.Client
 )
 
