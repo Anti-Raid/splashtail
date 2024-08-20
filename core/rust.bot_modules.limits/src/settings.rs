@@ -20,6 +20,7 @@ pub static PAST_HIT_LIMITS: LazyLock<ConfigOption> = LazyLock::new(|| ConfigOpti
     },
     primary_key: "id",
     max_entries: None,
+    max_return: 20,
     data_store: settings_wrap_datastore(PostgresDataStore {}),
     columns: settings_wrap_columns(vec![
         Column {
@@ -86,8 +87,8 @@ pub static PAST_HIT_LIMITS: LazyLock<ConfigOption> = LazyLock::new(|| ConfigOpti
         },
         Column {
             id: "limit_ids",
-            name: "ID",
-            description: "The unique identifier for the past hit limit.",
+            name: "Limit IDs",
+            description: "The Limit IDs hit.",
             column_type: ColumnType::new_array(InnerColumnType::String {
                 kind: InnerColumnTypeStringKind::Normal,
                 min_length: None,
@@ -150,6 +151,7 @@ pub static USER_ACTIONS: LazyLock<ConfigOption> = LazyLock::new(|| ConfigOption 
     },
     primary_key: "action_id",
     max_entries: None,
+    max_return: 20,
     data_store: settings_wrap_datastore(PostgresDataStore {}),
     columns: settings_wrap_columns(vec![
         Column {
@@ -291,6 +293,7 @@ pub static GUILD_LIMITS: LazyLock<ConfigOption> = LazyLock::new(|| {
         },
         primary_key: "limit_id",
         max_entries: Some(10),
+        max_return: 10,
         data_store: settings_wrap_datastore(PostgresDataStore {}),
         columns: settings_wrap_columns(vec![
             Column {

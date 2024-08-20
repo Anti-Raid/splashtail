@@ -20,6 +20,7 @@ pub static WEBHOOKS: LazyLock<ConfigOption> = LazyLock::new(|| {
         },
         primary_key: "id",
         max_entries: Some(5),
+        max_return: 7,
         data_store: settings_wrap_datastore(PostgresDataStore {}),
         columns: settings_wrap_columns(vec![
             Column {
@@ -176,6 +177,7 @@ pub static REPOS: LazyLock<ConfigOption> = LazyLock::new(|| {
         },
         primary_key: "id",
         max_entries: Some(10),
+        max_return: 12,
         data_store: settings_wrap_datastore(PostgresDataStore {}),
         columns: settings_wrap_columns(vec![
             Column {
@@ -394,6 +396,7 @@ pub static EVENT_MODIFIERS: LazyLock<ConfigOption> = LazyLock::new(|| {
         },
         primary_key: "id",
         max_entries: Some(50),
+        max_return: 20,
         data_store: settings_wrap_datastore(PostgresDataStore {}),
         columns: settings_wrap_columns(vec![
             Column {

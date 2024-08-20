@@ -520,6 +520,11 @@ pub struct CanonicalConfigOption {
     /// The columns for this option
     pub columns: Vec<CanonicalColumn>,
 
+    /// Maximum number of entries to return
+    ///
+    /// Only applies to View operations
+    pub max_return: i64,
+
     /// Maximum number of entries a server may have
     pub max_entries: Option<usize>,
 
@@ -555,6 +560,7 @@ impl From<super::types::ConfigOption> for CanonicalConfigOption {
             columns: module.columns.iter().map(|c| c.into()).collect(),
             primary_key: module.primary_key.to_string(),
             title_template: module.title_template.to_string(),
+            max_return: module.max_return,
             max_entries: module.max_entries,
             operations: module
                 .operations

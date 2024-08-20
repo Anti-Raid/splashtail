@@ -21,6 +21,7 @@ pub static AFKS: LazyLock<ConfigOption> = LazyLock::new(|| {
             "guild_id" => "{__guild_id}"
         },
         primary_key: "id",
+        max_return: 15,
         max_entries: None,
         data_store: settings_wrap_datastore(PostgresDataStore {}),
         columns: settings_wrap_columns(vec![

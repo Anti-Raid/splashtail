@@ -75,6 +75,7 @@ pub async fn settings_viewer(
         setting: &ConfigOption,
         values: &'a [State],
         index: usize,
+        count: i64,
     ) -> poise::CreateReply<'a> {
         fn create_action_row<'a>(index: usize, total: usize) -> serenity::all::CreateActionRow<'a> {
             serenity::all::CreateActionRow::Buttons(vec![
@@ -99,12 +100,7 @@ pub async fn settings_viewer(
 
         let mut embed = serenity::all::CreateEmbed::default();
 
-        embed = embed.title(format!(
-            "{} ({} of {})",
-            setting.name,
-            index + 1,
-            values.len()
-        ));
+        embed = embed.title(format!("{} ({} of {})", setting.name, index + 1, count));
 
         for (key, value) in values[index].state.iter() {
             if key.starts_with("__") {
@@ -147,7 +143,10 @@ pub async fn settings_viewer(
 
         poise::CreateReply::new()
             .embed(embed)
-            .components(vec![create_action_row(index, values.len())])
+            .components(vec![create_action_row(
+                index,
+                count.try_into().unwrap_or_default(),
+            )])
     }
 
     let Some(guild_id) = ctx.guild_id() else {
@@ -196,12 +195,12 @@ pub async fn settings_viewer(
         }
     }
 
-    let values = settings_view(
+    let mut values = settings_view(
         setting,
-        &data.settings_data(cache_http),
+        &data.settings_data(cache_http.clone()),
         guild_id,
         ctx.author().id,
-        fields,
+        fields.clone(),
     )
     .await
     .map_err(|e| format!("Error fetching settings: {}", e))?;
@@ -212,9 +211,33 @@ pub async fn settings_viewer(
         return Ok(());
     }
 
+    let total_count = match settings_view(
+        setting,
+        &data.settings_data(cache_http.clone()),
+        guild_id,
+        ctx.author().id,
+        {
+            let mut fields = fields.clone();
+            fields.insert("__count".to_string(), Value::Boolean(true));
+            fields
+        },
+    )
+    .await
+    .map_err(|e| format!("Error fetching settings count: {}", e))?
+    .first()
+    .ok_or("No count found")?
+    .state
+    .get("count")
+    {
+        Some(Value::Integer(v)) => *v,
+        _ => 0,
+    };
+
+    let total_count_usize: usize = total_count.try_into()?;
+
     let mut index = 0;
 
-    let reply = _create_reply(setting, &values, index);
+    let reply = _create_reply(setting, &values, index, total_count);
 
     let msg = ctx.send(reply).await?.into_message().await?;
 
@@ -233,7 +256,7 @@ pub async fn settings_viewer(
                 index = index.saturating_sub(1);
             }
             "next" => {
-                index = usize::min(index + 1, values.len() - 1);
+                index = usize::min(index + 1, total_count_usize - 1);
             }
             "first" => {
                 index = 0;
@@ -248,7 +271,32 @@ pub async fn settings_viewer(
 
         item.defer(ctx.http()).await?;
 
-        let reply = _create_reply(setting, &values, index);
+        if index > total_count_usize {
+            index = total_count_usize - 1;
+        }
+
+        // Check if we need to fetch more values
+        if index >= values.len() {
+            // Fetch the next page
+            let next = settings_view(
+                setting,
+                &data.settings_data(cache_http.clone()),
+                guild_id,
+                ctx.author().id,
+                {
+                    let mut fields = fields.clone();
+                    fields.insert("__offset".to_string(), Value::Integer(index as i64));
+                    fields.insert("__limit".to_string(), Value::Integer(setting.max_return));
+                    fields
+                },
+            )
+            .await
+            .map_err(|e| format!("Error fetching settings: {}", e))?;
+
+            values.extend(next);
+        }
+
+        let reply = _create_reply(setting, &values, index, total_count);
 
         item.edit_response(
             ctx.http(),

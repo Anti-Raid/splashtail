@@ -237,20 +237,38 @@ pub fn parse_numeric_list_to_str<T: std::fmt::Display + std::str::FromStr + Send
 }
 
 pub mod sql_utils {
+    pub const SPECIAL_VARS: [&str; 2] = ["__limit", "__offset"];
+
     use std::collections::HashSet;
 
     /// Helper method to create a WHERE clause from a set of filters
     ///
     /// E.g. a = $1 AND b IS NULL AND c = $2 etc.
     ///
-    /// This does NOT check against column set
+    /// This does NOT check against column set and is hence potentially vulnerable to SQL injection if not used correctly
     pub fn create_where_clause_unchecked(
         filters: &indexmap::IndexMap<String, crate::value::Value>,
         offset: usize,
     ) -> String {
         let mut filters_str = String::new();
 
-        for (i, (key, v)) in filters.iter().enumerate() {
+        let mut i = 0;
+
+        let mut spec_limit = false;
+        let mut spec_offset = false;
+        for (key, v) in filters.iter() {
+            if key == "__limit" {
+                if let crate::value::Value::Integer(_) = v {
+                    spec_limit = true;
+                }
+                continue;
+            } else if key == "__offset" {
+                if let crate::value::Value::Integer(_) = v {
+                    spec_offset = true;
+                }
+                continue;
+            }
+
             if i > 0 {
                 filters_str.push_str(" AND ")
             }
@@ -259,12 +277,22 @@ pub mod sql_utils {
                 filters_str.push_str(format!(" \"{}\" IS NULL", key).as_str());
             } else {
                 filters_str.push_str(format!(" \"{}\" = ${}", key, (i + 1) + offset).as_str());
+                i += 1; // Only update i if we actually add a filter that binds a value
             }
         }
 
         if filters_str.is_empty() {
             // HACK: Use 1 = 1
             filters_str.push_str("1 = 1");
+        }
+
+        // Add the limit and offset *LAST* if they exist
+        if spec_limit {
+            filters_str.push_str(format!(" LIMIT ${}", (i + 1) + offset).as_str());
+        }
+
+        if spec_offset {
+            filters_str.push_str(format!(" OFFSET ${}", (i + 2) + offset).as_str());
         }
 
         filters_str
@@ -279,6 +307,11 @@ pub mod sql_utils {
         offset: usize,
     ) -> Result<String, crate::Error> {
         for (key, _) in filters.iter() {
+            // The __limit, __offset etc key is special and is used for pagination
+            if SPECIAL_VARS.contains(&key.as_str()) {
+                continue;
+            }
+
             // Validate the column to avoid SQL injection
             let parts = key.split("__").collect::<Vec<&str>>();
 
@@ -299,26 +332,48 @@ pub mod sql_utils {
 
     /// Helper method to create a SET clause from a set of entries
     /// E.g. "a" = $1, "b" = $2, "c" = $3 etc.
-    pub fn create_update_set_clause(
-        valid_columns: &HashSet<String>,
+    ///
+    /// This does NOT check against column set and is hence potentially vulnerable to SQL injection if not used correctly
+    pub fn create_update_set_clause_unchecked(
         entry: &indexmap::IndexMap<String, crate::value::Value>,
         offset: usize,
-    ) -> Result<String, crate::Error> {
+    ) -> String {
         let mut col_params = "".to_string();
-        for (i, (col, _)) in entry.iter().enumerate() {
-            // Validate the column to avoid SQL injection, here we don't really need to care about parts etc.
-            if !valid_columns.contains(col) {
-                return Err(format!("Invalid column [part 0 not valid column]: {}", col).into());
-            }
 
+        let mut i = 0;
+
+        #[allow(clippy::explicit_counter_loop)]
+        for (col, _) in entry.iter() {
             // $1 is first col param
             col_params.push_str(&format!("\"{}\" = ${},", col, (i + 1) + offset));
+            i += 1;
         }
 
         // Remove the trailing comma
         col_params.pop();
 
-        Ok(col_params)
+        col_params
+    }
+
+    /// Helper method to create a SET clause from a set of entries
+    /// E.g. "a" = $1, "b" = $2, "c" = $3 etc.
+    pub fn create_update_set_clause(
+        valid_columns: &HashSet<String>,
+        entry: &indexmap::IndexMap<String, crate::value::Value>,
+        offset: usize,
+    ) -> Result<String, crate::Error> {
+        for (col, _) in entry.iter() {
+            if SPECIAL_VARS.contains(&col.as_str()) {
+                continue;
+            }
+
+            // Validate the column to avoid SQL injection, here we don't really need to care about parts etc.
+            if !valid_columns.contains(col) {
+                return Err(format!("Invalid column [part 0 not valid column]: {}", col).into());
+            }
+        }
+
+        Ok(create_update_set_clause_unchecked(entry, offset))
     }
 
     /// Helper method to create the col_params ("col1", "col2", "col3" etc.) and the n_params ($1, $2, $3 etc.)

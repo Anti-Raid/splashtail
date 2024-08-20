@@ -23,6 +23,7 @@ pub static GUILD_ROLES: LazyLock<ConfigOption> = LazyLock::new(|| {
         },
         primary_key: "id",
         max_entries: None,
+        max_return: 20,
         data_store: settings_wrap_datastore(PostgresDataStore {}),
         columns: settings_wrap_columns(vec![
             Column {

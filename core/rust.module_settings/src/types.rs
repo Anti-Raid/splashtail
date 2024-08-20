@@ -1,14 +1,3 @@
-// Common state variables:
-//
-// - {__author} => the user id of the user running the operation
-// - {__guild_id} => the guild id of the guild the operation is being run in
-//
-// {__now} always returns the current timestamp (TimestampTz), {__now_naive} returns the current timestamp in naive form (Timestamp)
-//
-// Note that these special variables do not need to live in state and may instead be special cased
-//
-// For sending a info message etc on save, the {__message} can be set
-
 use async_trait::async_trait;
 use futures_util::future::BoxFuture;
 use std::sync::Arc;
@@ -595,6 +584,11 @@ pub struct ConfigOption {
 
     /// The columns for this option
     pub columns: Arc<Vec<Column>>,
+
+    /// Maximum number of entries to return
+    ///
+    /// Only applies to View operations
+    pub max_return: i64,
 
     /// Maximum number of entries a server may have
     pub max_entries: Option<usize>,

@@ -72,9 +72,6 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 			Json: types.ApiError{
 				Message: "Error getting cluster ID: " + err.Error(),
 			},
-			Headers: map[string]string{
-				"Retry-After": "10",
-			},
 		}
 	}
 

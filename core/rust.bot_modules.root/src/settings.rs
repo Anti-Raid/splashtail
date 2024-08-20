@@ -19,6 +19,7 @@ pub static CAN_USE_BOT: LazyLock<ConfigOption> = LazyLock::new(|| ConfigOption {
     default_common_filters: indexmap::indexmap! {},
     primary_key: "id",
     max_entries: None,
+    max_return: 15,
     data_store: settings_wrap_datastore(PostgresDataStore {}),
     columns: settings_wrap_columns(vec![
         Column {
@@ -162,6 +163,7 @@ pub static INSPECTOR_FAKE_BOTS: LazyLock<ConfigOption> = LazyLock::new(|| Config
     default_common_filters: indexmap::indexmap! {},
     primary_key: "bot_id",
     max_entries: None,
+    max_return: 15,
     data_store: settings_wrap_datastore(PostgresDataStore {}),
     columns: settings_wrap_columns(vec![
         Column {
@@ -301,6 +303,7 @@ pub static LAST_TASK_EXPIRY: LazyLock<ConfigOption> = LazyLock::new(|| ConfigOpt
     default_common_filters: indexmap::indexmap! {},
     primary_key: "id",
     max_entries: None,
+    max_return: 15,
     data_store: settings_wrap_datastore(PostgresDataStore {}),
     columns: settings_wrap_columns(vec![
         Column {

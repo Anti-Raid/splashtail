@@ -2,7 +2,9 @@ package state
 
 import (
 	"context"
+	"crypto/tls"
 	"fmt"
+	"net"
 	"net/http"
 	"os"
 	"reflect"
@@ -12,6 +14,7 @@ import (
 	"go.api/state/redishotcache"
 	"go.std/config"
 	"go.std/objectstorage"
+	"golang.org/x/net/http2"
 
 	"github.com/bwmarrin/discordgo"
 	mproc "github.com/cheesycod/mewld/proc"
@@ -228,4 +231,11 @@ func Setup() {
 	})
 
 	IpcClient.Timeout = 30 * time.Second
+	IpcClient.Transport = &http2.Transport{
+		AllowHTTP:      true,
+		DialTLSContext: nil,
+		DialTLS: func(network, addr string, cfg *tls.Config) (net.Conn, error) {
+			return net.Dial(network, addr)
+		},
+	}
 }

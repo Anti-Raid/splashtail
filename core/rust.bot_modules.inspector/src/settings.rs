@@ -23,6 +23,7 @@ pub static INSPECTOR_OPTIONS: LazyLock<ConfigOption> = LazyLock::new(|| ConfigOp
     },
     primary_key: "guild_id",
     max_entries: Some(1),
+    max_return: 2,
     data_store: settings_wrap_datastore(PostgresDataStore {}),
     columns: settings_wrap_columns(vec![
         module_settings::common_columns::guild_id(

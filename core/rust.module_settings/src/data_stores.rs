@@ -281,7 +281,36 @@ impl PostgresDataStoreImpl {
     ) -> Result<sqlx::query::Query<'a, sqlx::Postgres, sqlx::postgres::PgArguments>, SettingsError>
     {
         let mut query = query;
+
+        let mut spec_limit: Option<i64> = None;
+        let mut spec_offset: Option<i64> = None;
         for (field_name, value) in map {
+            if field_name == "__limit" {
+                if let Value::Integer(value) = value {
+                    if value < 1 {
+                        return Err(SettingsError::Generic {
+                            message: "__limit must be greater than 0".to_string(),
+                            src: "PostgresDataStore#bind_map".to_string(),
+                            typ: "internal".to_string(),
+                        });
+                    }
+                    spec_limit = Some(value);
+                }
+                continue;
+            } else if field_name == "__offset" {
+                if let Value::Integer(value) = value {
+                    if value < 0 {
+                        return Err(SettingsError::Generic {
+                            message: "__offset must be greater than or equal to 0".to_string(),
+                            src: "PostgresDataStore#bind_map".to_string(),
+                            typ: "internal".to_string(),
+                        });
+                    }
+                    spec_offset = Some(value);
+                }
+                continue;
+            }
+
             // If None, we omit the value from binding
             if !bind_nulls && matches!(value, Value::None) {
                 continue;
@@ -298,6 +327,15 @@ impl PostgresDataStoreImpl {
                     })?;
 
             query = Self::_query_bind_value(query, value, &column.column_type, state);
+        }
+
+        // Add limit and offset last
+        if let Some(limit) = spec_limit {
+            query = query.bind(limit);
+        }
+
+        if let Some(offset) = spec_offset {
+            query = query.bind(offset);
         }
 
         Ok(query)

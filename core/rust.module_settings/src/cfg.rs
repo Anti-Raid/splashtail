@@ -759,17 +759,6 @@ pub fn validate_keys(
         });
     }
 
-    for (key, _) in fields.iter() {
-        // Ensure key only contains a-z, A-Z, 1-9 and _ to protect against SQL injection and other potential attacks
-        if !key.chars().all(|c| c.is_alphanumeric() || c == '_') {
-            return Err(SettingsError::Generic {
-                message: format!("Invalid key: {}", key),
-                src: "settings_common#validate_keys".to_string(),
-                typ: "internal".to_string(),
-            });
-        }
-    }
-
     Ok(())
 }
 
@@ -790,6 +779,15 @@ pub async fn settings_view(
     // WARNING: The ``validate_keys`` function call here should never be omitted, add back at once if you see this message without the function call
     validate_keys(setting, &fields)?;
 
+    let mut fields = fields; // Make fields mutable, consuming the input
+
+    // Ensure limit is good
+    let mut use_limit = setting.max_return;
+    if let Some(Value::Integer(limit)) = fields.get("__limit") {
+        use_limit = std::cmp::min(*limit, use_limit);
+    }
+    fields.insert("__limit".to_string(), Value::Integer(use_limit));
+
     let mut data_store = setting
         .data_store
         .create(
@@ -804,6 +802,28 @@ pub async fn settings_view(
             ),
         )
         .await?;
+
+    if let Some(Value::Boolean(true)) = fields.get("__count") {
+        // We only need to count the number of rows
+        fields.shift_remove("__limit");
+        fields.shift_remove("__count");
+
+        let count = data_store.matching_entry_count(fields).await?;
+
+        let count = count.try_into().map_err(|e| SettingsError::Generic {
+            message: format!("Count too large: {:?}", e),
+            src: "settings_view".to_string(),
+            typ: "internal".to_string(),
+        })?;
+
+        let mut state = super::state::State::new();
+
+        state
+            .state
+            .insert("count".to_string(), Value::Integer(count));
+
+        return Ok(vec![state]);
+    }
 
     let cols = setting
         .columns
