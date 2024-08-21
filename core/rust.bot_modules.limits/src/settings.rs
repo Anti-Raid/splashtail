@@ -4,16 +4,19 @@ use module_settings::{
         settings_wrap_columns, settings_wrap_datastore, settings_wrap_postactions,
         settings_wrap_precheck, Column, ColumnSuggestion, ColumnType, ConfigOption,
         InnerColumnType, InnerColumnTypeStringKind, OperationSpecific, OperationType,
+        SettingsError, ColumnAction
     },
 };
 use std::sync::LazyLock;
 use strum::VariantNames;
+use splashcore_rs::value::Value;
+use futures_util::FutureExt;
 
-pub static PAST_HIT_LIMITS: LazyLock<ConfigOption> = LazyLock::new(|| ConfigOption {
-    id: "past_hit_limits",
-    name: "Past Hit Limits",
-    description: "All limits that have been hit in the past",
-    table: "limits__past_hit_limits",
+pub static USER_STINGS: LazyLock<ConfigOption> = LazyLock::new(|| ConfigOption {
+    id: "user_stings",
+    name: "User Stings",
+    description: "All stings users have recieved due to hitting limits",
+    table: "limits__user_stings",
     common_filters: indexmap::indexmap! {},
     default_common_filters: indexmap::indexmap! {
         "guild_id" => "{__guild_id}"
@@ -26,13 +29,8 @@ pub static PAST_HIT_LIMITS: LazyLock<ConfigOption> = LazyLock::new(|| ConfigOpti
         Column {
             id: "id",
             name: "ID",
-            description: "The unique identifier for the past hit limit.",
-            column_type: ColumnType::new_scalar(InnerColumnType::String {
-                kind: InnerColumnTypeStringKind::Normal,
-                min_length: None,
-                max_length: None,
-                allowed_values: vec![],
-            }),
+            description: "The unique identifier for the limit user sting.",
+            column_type: ColumnType::new_scalar(InnerColumnType::Uuid {}),
             nullable: false,
             unique: true,
             suggestions: ColumnSuggestion::None {},
@@ -44,7 +42,7 @@ pub static PAST_HIT_LIMITS: LazyLock<ConfigOption> = LazyLock::new(|| ConfigOpti
         Column {
             id: "user_id",
             name: "User ID",
-            description: "The User ID who hit this limit",
+            description: "The User ID who has been stung by this limit",
             column_type: ColumnType::new_scalar(InnerColumnType::String {
                 kind: InnerColumnTypeStringKind::User,
                 min_length: None,
@@ -62,64 +60,64 @@ pub static PAST_HIT_LIMITS: LazyLock<ConfigOption> = LazyLock::new(|| ConfigOpti
         module_settings::common_columns::guild_id(
             "guild_id",
             "Guild ID",
-            "The Guild ID the hit limit belongs to",
+            "The Guild ID referring to this user sting",
         ),
         Column {
-            id: "cause",
-            name: "Causes",
-            description: "The user actions which caused this limit to be hit",
-            column_type: ColumnType::new_array(InnerColumnType::String {
-                kind: InnerColumnTypeStringKind::Normal,
-                min_length: None,
-                max_length: Some(64),
-                allowed_values: vec![],
-            }),
-            nullable: false,
+            id: "stings",
+            name: "Stings",
+            description: "The number of stings the user received",
+            column_type: ColumnType::new_scalar(InnerColumnType::Integer {}),
+            nullable: true,
             unique: false,
-            suggestions: ColumnSuggestion::SettingsReference {
-                module: "limits",
-                setting: "user_actions",
-            },
+            suggestions: ColumnSuggestion::None {},
             ignored_for: vec![],
             secret: false,
             pre_checks: settings_wrap_precheck(indexmap::indexmap! {}),
             default_pre_checks: settings_wrap_precheck(vec![]),
         },
         Column {
-            id: "limit_ids",
-            name: "Limit IDs",
-            description: "The Limit IDs hit.",
+            id: "hit_limits",
+            name: "Hit Limits",
+            description: "The limits the user hit",
             column_type: ColumnType::new_array(InnerColumnType::String {
                 kind: InnerColumnTypeStringKind::Normal,
                 min_length: None,
-                max_length: Some(64),
+                max_length: Some(256),
                 allowed_values: vec![],
             }),
-            nullable: false,
-            unique: true,
+            nullable: true,
+            unique: false,
             suggestions: ColumnSuggestion::SettingsReference {
                 module: "limits",
                 setting: "guild_limits",
             },
-            ignored_for: vec![OperationType::Create],
+            ignored_for: vec![],
             secret: false,
             pre_checks: settings_wrap_precheck(indexmap::indexmap! {}),
             default_pre_checks: settings_wrap_precheck(vec![]),
         },
         Column {
-            id: "notes",
-            name: "Notes",
-            description: "Any notes about the hit limit",
-            column_type: ColumnType::new_array(InnerColumnType::String {
-                kind: InnerColumnTypeStringKind::Normal,
-                min_length: None,
-                max_length: Some(64),
-                allowed_values: vec![],
-            }),
-            nullable: false,
+            id: "causes",
+            name: "Causes",
+            description: "A JSON object containing more context about the stings",
+            column_type: ColumnType::new_scalar(InnerColumnType::Json {}),
+            nullable: true,
             unique: false,
             suggestions: ColumnSuggestion::None {},
             ignored_for: vec![],
+            secret: false,
+            pre_checks: settings_wrap_precheck(indexmap::indexmap! {}),
+            default_pre_checks: settings_wrap_precheck(vec![]),
+        },
+        Column {
+            id: "expiry",
+            name: "Expiry",
+            description: "When the stings expire",
+            column_type: ColumnType::new_scalar(InnerColumnType::TimestampTz {}),
+            nullable: false,
+            unique: true,
+            suggestions: ColumnSuggestion::None {},
+            ignored_for: vec![OperationType::Create],
             secret: false,
             pre_checks: settings_wrap_precheck(indexmap::indexmap! {}),
             default_pre_checks: settings_wrap_precheck(vec![]),
@@ -129,11 +127,11 @@ pub static PAST_HIT_LIMITS: LazyLock<ConfigOption> = LazyLock::new(|| ConfigOpti
     title_template: "{id} - {user_id} - {created_at}",
     operations: indexmap::indexmap! {
         OperationType::View => OperationSpecific {
-            corresponding_command: "past_hit_limits view",
+            corresponding_command: "limits_user_stings view",
             columns_to_set: indexmap::indexmap! {},
         },
         OperationType::Delete => OperationSpecific {
-            corresponding_command: "past_hit_limits remove",
+            corresponding_command: "limits_user_stings remove",
             columns_to_set: indexmap::indexmap! {},
         },
     },
@@ -417,6 +415,33 @@ pub static GUILD_LIMITS: LazyLock<ConfigOption> = LazyLock::new(|| {
                 columns_to_set: indexmap::indexmap! {},
             },
         },
-        post_actions: settings_wrap_postactions(vec![])
+        post_actions: settings_wrap_postactions(vec![ColumnAction::NativeAction {
+            action: Box::new(|_ctx, state| {
+                async move {
+                    let Some(Value::String(guild_id)) = state.state.get("guild_id") else {
+                        return Err(SettingsError::MissingOrInvalidField {
+                            field: "guild_id".to_string(),
+                            src: "index->NativeAction [post_actions]".to_string(),
+                        });
+                    };
+    
+                    let guild_id = guild_id.parse::<serenity::all::GuildId>().map_err(|e| {
+                        SettingsError::Generic {
+                            message: format!("Error while parsing guild_id: {}", e),
+                            typ: "value_error".to_string(),
+                            src: "inspector__options.guild_id".to_string(),
+                        }
+                    })?;
+    
+                    super::cache::GUILD_LIMITS
+                        .invalidate(&guild_id)
+                        .await;
+    
+                    Ok(())
+                }
+                .boxed()
+            }),
+            on_condition: Some(|ctx, _state| Ok(ctx.operation_type != OperationType::View)),
+        }]),    
     }
 });

@@ -1,21 +1,21 @@
-use poise::serenity_prelude::GuildId;
 use serde::{Deserialize, Serialize};
+use serenity::all::{GuildId, UserId};
 use serenity::async_trait;
 use silverpelt::{sting_sources, Error};
 use splashcore_rs::utils::pg_interval_to_secs;
 use sqlx::PgPool;
 use strum_macros::{Display, EnumString, VariantNames};
 
-pub(crate) struct LimitsUserActionsStingSource;
+pub(crate) struct LimitsUserStingsStingSource;
 
 #[async_trait]
-impl sting_sources::StingSource for LimitsUserActionsStingSource {
+impl sting_sources::StingSource for LimitsUserStingsStingSource {
     fn id(&self) -> String {
-        "limits__user_actions".to_string()
+        "limits__user_stings".to_string()
     }
 
     fn description(&self) -> String {
-        "Limits (User Action) Punishments".to_string()
+        "Limits User Stings".to_string()
     }
 
     fn flags(&self) -> sting_sources::StingSourceFlags {
@@ -30,13 +30,13 @@ impl sting_sources::StingSource for LimitsUserActionsStingSource {
     ) -> Result<Vec<sting_sources::FullStingEntry>, silverpelt::Error> {
         let rows = sqlx::query!(
             "
-            SELECT stings, stings_expiry, created_at, user_id, guild_id, action_id FROM limits__user_actions
+            SELECT id, user_id, guild_id, stings, expiry, created_at FROM limits__user_stings
             WHERE 
                 ($1::TEXT IS NULL OR guild_id = $1::TEXT) AND 
                 ($2::TEXT IS NULL OR user_id = $2::TEXT) AND (
                 $3::BOOL IS NULL OR 
-                ($3 = true AND stings_expiry < NOW()) OR
-                ($3 = false AND stings_expiry > NOW())
+                ($3 = true AND expiry < NOW()) OR
+                ($3 = false AND expiry > NOW())
             )",
             filters.guild_id.map(|g| g.to_string()),
             filters.user_id.map(|u| u.to_string()),
@@ -49,12 +49,12 @@ impl sting_sources::StingSource for LimitsUserActionsStingSource {
         for row in rows {
             // As limits does not support StingState, we emulate it using expiry here
             let (duration, state) = {
-                let delta = row.stings_expiry - row.created_at;
+                let delta = row.expiry - row.created_at;
 
                 // Convert to std::time::Duration
                 let dur = std::time::Duration::from_secs(delta.num_seconds() as u64);
 
-                if row.stings_expiry < chrono::Utc::now() {
+                if row.expiry < chrono::Utc::now() {
                     (Some(dur), sting_sources::StingState::Handled)
                 } else {
                     (Some(dur), sting_sources::StingState::Active)
@@ -74,7 +74,7 @@ impl sting_sources::StingSource for LimitsUserActionsStingSource {
                     creator: sting_sources::StingCreator::System,
                 },
                 created_at: row.created_at,
-                id: row.action_id,
+                id: row.id.to_string(),
             });
         }
 
@@ -109,9 +109,12 @@ impl sting_sources::StingSource for LimitsUserActionsStingSource {
         data: &sting_sources::StingSourceData,
         id: String,
     ) -> Result<(), silverpelt::Error> {
-        sqlx::query!("DELETE FROM limits__user_actions WHERE action_id = $1", id)
-            .execute(&data.pool)
-            .await?;
+        sqlx::query!(
+            "DELETE FROM limits__user_stings WHERE id = $1",
+            id.parse::<sqlx::types::uuid::Uuid>()?
+        )
+        .execute(&data.pool)
+        .await?;
 
         Ok(())
     }
@@ -222,6 +225,68 @@ impl LimitTypes {
     }
 }
 
+#[derive(
+    EnumString,
+    Display,
+    PartialEq,
+    VariantNames,
+    Clone,
+    Copy,
+    Debug,
+    Serialize,
+    Hash,
+    Eq,
+    Deserialize,
+)]
+#[strum(serialize_all = "snake_case")]
+pub enum LimitStrategy {
+    InMemory,
+    // WARNING: Persist is MUCH SLOWER than InMemory and will only be available for servers with less than 1500 members
+    Persist,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+/// Stores the configuration for a guild
+pub struct LimitGuild {
+    pub guild_id: GuildId,
+
+    /// Whether to persist actions in postgres or just use governor/in-memory limiting
+    ///
+    /// Note that using persist_actions is MUCH SLOWER than in-memory limiting
+    pub strategy: LimitStrategy,
+}
+
+impl LimitGuild {
+    pub fn default_for_guild(guild_id: GuildId) -> Self {
+        Self {
+            guild_id,
+            strategy: LimitStrategy::InMemory,
+        }
+    }
+
+    pub async fn get(pool: &PgPool, guild_id: GuildId) -> Result<Self, Error> {
+        let rec = sqlx::query!(
+            "SELECT guild_id, strategy FROM limits__guilds WHERE guild_id = $1",
+            guild_id.to_string()
+        )
+        .fetch_one(pool)
+        .await;
+
+        let rec = match rec {
+            Ok(rec) => rec,
+            Err(sqlx::Error::RowNotFound) => {
+                return Ok(Self::default_for_guild(guild_id));
+            }
+            Err(e) => return Err(e.into()),
+        };
+
+        Ok(Self {
+            guild_id,
+            strategy: rec.strategy.parse()?,
+        })
+    }
+}
+
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Limit {
     /// The ID of the guild this limit is for
@@ -232,7 +297,7 @@ pub struct Limit {
     pub limit_name: String,
     /// The type of limit
     pub limit_type: LimitTypes,
-    /// The action to take when the limit is hit
+    /// The number of stings to give when the limit is hit
     pub stings: i32,
     /// The number of times the limit can be hit
     pub limit_per: i32,
@@ -274,4 +339,17 @@ impl Limit {
         }
         Ok(limits)
     }
+}
+
+pub struct HandleModAction {
+    /// Guild ID
+    pub guild_id: GuildId,
+    /// User ID
+    pub user_id: UserId,
+    /// Limit to handle for the User ID in question
+    pub limit: LimitTypes,
+    /// Target of the action
+    pub target: Option<String>,
+    /// Extra data for the action
+    pub action_data: serde_json::Value,
 }

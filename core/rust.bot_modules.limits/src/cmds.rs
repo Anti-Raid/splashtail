@@ -97,24 +97,24 @@ pub async fn limits_remove(
     .await
 }
 
-/// Past hit limits base command
+/// Limits User stings base command
 #[poise::command(
     prefix_command,
     slash_command,
     guild_only,
-    subcommands("past_hit_limits_view", "past_hit_limits_remove",)
+    subcommands("limits_user_stings_view", "limits_user_stings_remove",)
 )]
-pub async fn past_hit_limits(_ctx: Context<'_>) -> Result<(), Error> {
+pub async fn limits_user_stings(_ctx: Context<'_>) -> Result<(), Error> {
     Ok(())
 }
 
-/// View all past hit limits on the server
+/// View all user stings due to limits
 #[poise::command(prefix_command, slash_command, guild_only, rename = "view")]
-pub async fn past_hit_limits_view(
+pub async fn limits_user_stings_view(
     ctx: Context<'_>,
     #[description = "The user id to filter by"] user_id: Option<serenity::all::UserId>,
 ) -> Result<(), Error> {
-    silverpelt::settings_poise::settings_viewer(&ctx, &super::settings::PAST_HIT_LIMITS, {
+    silverpelt::settings_poise::settings_viewer(&ctx, &super::settings::USER_STINGS, {
         let mut map = indexmap::IndexMap::new();
         if let Some(user_id) = user_id {
             map.insert("user_id".to_string(), Value::String(user_id.to_string()));
@@ -124,16 +124,16 @@ pub async fn past_hit_limits_view(
     .await
 }
 
-/// Remove a past hit limit by ID
+/// Remove a user sting caused by a limit
 #[poise::command(prefix_command, slash_command, guild_only, rename = "remove")]
-pub async fn past_hit_limits_remove(
+pub async fn limits_user_stings_remove(
     ctx: Context<'_>,
-    #[description = "The past hit limit ID to remove"] past_hit_limit_id: String,
+    #[description = "The limit user sting ID to remove"] limit_user_sting_id: String,
 ) -> Result<(), Error> {
     silverpelt::settings_poise::settings_deleter(
         &ctx,
-        &super::settings::PAST_HIT_LIMITS,
-        Value::String(past_hit_limit_id),
+        &super::settings::USER_STINGS,
+        Value::String(limit_user_sting_id),
     )
     .await
 }

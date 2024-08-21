@@ -1,6 +1,6 @@
 - target: bot
   systemd_service:  splashtail-{env}-bot
-  delay_start: 0s
+  delay_start: 10s
   no_handle_inactive_systemd: true
   restart_after_failed: 3
   base_port: 2000

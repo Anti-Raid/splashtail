@@ -2,6 +2,7 @@ use log::{error, info};
 use poise::serenity_prelude::{Change, FullEvent, MemberAction, RoleAction};
 use serenity::model::guild::audit_log::{Action, ChannelAction};
 
+use super::core::HandleModAction;
 use super::handler::handle_mod_action;
 use silverpelt::EventHandlerContext;
 
@@ -13,7 +14,7 @@ pub async fn event_listener(ectx: &EventHandlerContext) -> Result<(), silverpelt
         FullEvent::GuildMemberAddition { new_member } => {
             handle_mod_action(
                 ctx,
-                &super::handler::HandleModAction {
+                &HandleModAction {
                     guild_id: ectx.guild_id,
                     limit: super::core::LimitTypes::MemberAdd,
                     user_id: new_member.user.id,
@@ -26,7 +27,7 @@ pub async fn event_listener(ectx: &EventHandlerContext) -> Result<(), silverpelt
         FullEvent::Message { new_message } => {
             handle_mod_action(
                 ctx,
-                &super::handler::HandleModAction {
+                &HandleModAction {
                     guild_id: ectx.guild_id,
                     limit: super::core::LimitTypes::MessageCreate,
                     user_id: new_message.author.id,
@@ -53,7 +54,7 @@ pub async fn event_listener(ectx: &EventHandlerContext) -> Result<(), silverpelt
 
                             handle_mod_action(
                                 ctx,
-                                &super::handler::HandleModAction {
+                                &HandleModAction {
                                     guild_id: *guild_id,
                                     limit: super::core::LimitTypes::ChannelAdd,
                                     user_id,
@@ -70,7 +71,7 @@ pub async fn event_listener(ectx: &EventHandlerContext) -> Result<(), silverpelt
 
                             handle_mod_action(
                                 ctx,
-                                &super::handler::HandleModAction {
+                                &HandleModAction {
                                     guild_id: *guild_id,
                                     limit: super::core::LimitTypes::ChannelRemove,
                                     user_id,
@@ -87,7 +88,7 @@ pub async fn event_listener(ectx: &EventHandlerContext) -> Result<(), silverpelt
 
                             handle_mod_action(
                                 ctx,
-                                &super::handler::HandleModAction {
+                                &HandleModAction {
                                     guild_id: *guild_id,
                                     limit: super::core::LimitTypes::ChannelUpdate,
                                     user_id,
@@ -111,7 +112,7 @@ pub async fn event_listener(ectx: &EventHandlerContext) -> Result<(), silverpelt
 
                             handle_mod_action(
                                 ctx,
-                                &super::handler::HandleModAction {
+                                &HandleModAction {
                                     guild_id: *guild_id,
                                     limit: super::core::LimitTypes::RoleAdd,
                                     user_id,
@@ -128,7 +129,7 @@ pub async fn event_listener(ectx: &EventHandlerContext) -> Result<(), silverpelt
 
                             handle_mod_action(
                                 ctx,
-                                &super::handler::HandleModAction {
+                                &HandleModAction {
                                     guild_id: *guild_id,
                                     limit: super::core::LimitTypes::RoleUpdate,
                                     user_id,
@@ -145,7 +146,7 @@ pub async fn event_listener(ectx: &EventHandlerContext) -> Result<(), silverpelt
 
                             handle_mod_action(
                                 ctx,
-                                &super::handler::HandleModAction {
+                                &HandleModAction {
                                     guild_id: *guild_id,
                                     limit: super::core::LimitTypes::RoleRemove,
                                     user_id,
@@ -228,7 +229,7 @@ pub async fn event_listener(ectx: &EventHandlerContext) -> Result<(), silverpelt
 
                             handle_mod_action(
                                 ctx,
-                                &super::handler::HandleModAction {
+                                &HandleModAction {
                                     guild_id: *guild_id,
                                     limit: super::core::LimitTypes::MemberRolesUpdated,
                                     user_id,
@@ -247,7 +248,7 @@ pub async fn event_listener(ectx: &EventHandlerContext) -> Result<(), silverpelt
 
                                 handle_mod_action(
                                     ctx,
-                                    &super::handler::HandleModAction {
+                                    &HandleModAction {
                                         guild_id: *guild_id,
                                         limit: super::core::LimitTypes::RoleGivenToMember,
                                         user_id,
@@ -267,7 +268,7 @@ pub async fn event_listener(ectx: &EventHandlerContext) -> Result<(), silverpelt
 
                                 handle_mod_action(
                                     ctx,
-                                    &super::handler::HandleModAction {
+                                    &HandleModAction {
                                         guild_id: *guild_id,
                                         limit: super::core::LimitTypes::RoleRemovedFromMember,
                                         user_id,

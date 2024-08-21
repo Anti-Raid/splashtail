@@ -1,9 +1,11 @@
 mod autocompletes;
+mod cache;
 mod cmds;
 mod core;
 mod events;
 mod handler;
 mod settings;
+mod strategy;
 
 use futures_util::future::FutureExt;
 use indexmap::indexmap;
@@ -30,7 +32,7 @@ pub fn module() -> silverpelt::Module {
                 },
             ),
             (
-                cmds::past_hit_limits(),
+                cmds::limits_user_stings(),
                 indexmap! {
                     "view" => silverpelt::types::CommandExtendedData::kittycat_or_admin("past_hit_limits", "view"),
                     "remove" => silverpelt::types::CommandExtendedData::kittycat_or_admin("past_hit_limits", "remove"),
@@ -48,10 +50,10 @@ pub fn module() -> silverpelt::Module {
             events::event_listener(ectx).boxed()
         })],
         sting_sources: vec![
-            std::sync::Arc::new(core::LimitsUserActionsStingSource)
+            std::sync::Arc::new(core::LimitsUserStingsStingSource)
         ],
         config_options: vec![
-            (*settings::PAST_HIT_LIMITS).clone(),
+            (*settings::USER_STINGS).clone(),
             (*settings::USER_ACTIONS).clone(),
             (*settings::GUILD_LIMITS).clone(),
         ],
