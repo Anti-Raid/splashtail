@@ -1,6 +1,6 @@
 packages:
   - path: "go.api/types"
-    output_path: "/silverpelt/cdn/antiraid/dev/bindings/splashtail/types.ts"
+    output_path: "services/website/src/lib/generated/types.ts"
     frontmatter: |
       import { PlatformUser } from "./eureka-dovewing"
       import * as ext from "./ext"
@@ -21,10 +21,10 @@ packages:
       discordgo.ChannelType: discordgo.ChannelType
         
   - path: "github.com/infinitybotlist/eureka/dovewing/dovetypes"
-    output_path: "/silverpelt/cdn/antiraid/dev/bindings/splashtail/eureka-dovewing.ts"
+    output_path: "services/website/src/lib/generated/eureka-dovewing.ts"
 
   - path: "github.com/bwmarrin/discordgo"
-    output_path: "/silverpelt/cdn/antiraid/dev/bindings/splashtail/discordgo.ts"
+    output_path: "services/website/src/lib/generated/discordgo.ts"
     type_mappings:
       time.Time: "string /* RFC3339 */"
       time.Second: "1"
@@ -35,7 +35,7 @@ packages:
       time.Nanosecond: "0.000000001"
 
   - path: "go.std/silverpelt"
-    output_path: "/silverpelt/cdn/antiraid/dev/bindings/splashtail/silverpelt.ts"
+    output_path: "services/website/src/lib/generated/silverpelt.ts"
     frontmatter: |
       import * as ext from "./ext"
       import * as discordgo from "./discordgo"
@@ -54,7 +54,7 @@ packages:
       discordgo.ChannelType: discordgo.ChannelType
 
   - path: "go.std/ext_types"
-    output_path: "/silverpelt/cdn/antiraid/dev/bindings/splashtail/ext.ts"
+    output_path: "services/website/src/lib/generated/ext.ts"
     frontmatter: |
       import * as discordgo from "./discordgo"
       import * as silverpelt from "./silverpelt"
@@ -69,7 +69,7 @@ packages:
       discordgo.Channel: discordgo.Channel
 
   - path: "github.com/cheesycod/mewld/proc"
-    output_path: "/silverpelt/cdn/antiraid/dev/bindings/splashtail/mewld/proc.ts"
+    output_path: "services/website/src/lib/generated/mewld/proc.ts"
     type_mappings:
       time.Time: "string /* RFC3339 */"
       pgtype.Text: "string | null /* nullable */"

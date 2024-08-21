@@ -77,21 +77,10 @@ tests:
 	CGO_ENABLED=0 go test -v -coverprofile=coverage.out ./...
 
 ts:
-	rm -rvf $(CDN_PATH)/dev/bindings/splashtail
-	~/go/bin/tygo generate
-
-	# Copy over go types
-	mkdir -p $(CDN_PATH)/dev/bindings/splashtail/go
-	cp -rf services/go.api/types $(CDN_PATH)/dev/bindings/splashtail/go
-
-	# Patch to change package name to 'splashtail_types'
-	#sed -i 's:package types:package splashtail_types:g' $(CDN_PATH)/dev/bindings/splashtail/go/types/{*.go,*.ts}
+	tygo generate
 
 	# Patch to change all "SelectMenu = any;" to "SelectMenu = undefined /*tygo workaround*/;" to work around tygo issue
-	sed -i 's:SelectMenu = any;:SelectMenu = undefined /*tygo workaround*/;:g' $(CDN_PATH)/dev/bindings/splashtail/discordgo.ts
-
-	cp -rf $(CDN_PATH)/dev/bindings/splashtail/* services/website/src/lib/generated
-	rm -rf services/website/src/lib/generated/go	
+	sed -i 's:SelectMenu = any;:SelectMenu = undefined /*tygo workaround*/;:g' services/website/src/lib/generated/discordgo.ts
 
 promoteprod:
 	rm -rf ../prod2
