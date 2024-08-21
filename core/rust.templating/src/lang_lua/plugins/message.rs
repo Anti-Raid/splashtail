@@ -156,7 +156,6 @@ pub fn init_plugin(lua: &Lua) -> LuaResult<LuaTable> {
     module.set(
         "format_gwevent_field",
         lua.create_function(|lua, (field,): (LuaValue,)| {
-            log::info!("format_gwevent_field: {:?}", field);
             let field: Field = lua.from_value(field)?;
             lua.to_value(&field.template_format().map_err(LuaError::external)?)
         })?,
@@ -165,7 +164,6 @@ pub fn init_plugin(lua: &Lua) -> LuaResult<LuaTable> {
     module.set(
         "format_gwevent_categorized_field",
         lua.create_function(|lua, (field,): (LuaValue,)| {
-            log::info!("format_gwevent_categorized_field: {:?}", field);
             let cfield: CategorizedField = lua.from_value(field)?;
             lua.to_value(&cfield.template_format().map_err(LuaError::external)?)
         })?,

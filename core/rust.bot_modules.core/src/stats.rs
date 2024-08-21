@@ -1,17 +1,11 @@
 use poise::{serenity_prelude::CreateEmbed, CreateReply};
+use rust_buildstats::{
+    BUILD_CPU, CARGO_PROFILE, GIT_COMMIT_MSG, GIT_REPO, GIT_SHA, RUSTC_VERSION, VERSION,
+};
 use sqlx::types::chrono;
 
 type Error = silverpelt::Error;
 type Context<'a> = silverpelt::Context<'a>;
-
-// Various statistics
-pub const VERSION: &str = env!("CARGO_PKG_VERSION");
-pub const GIT_SHA: &str = env!("GIT_COMMIT_HASH");
-pub const GIT_REPO: &str = env!("GIT_REPO");
-pub const GIT_COMMIT_MSG: &str = env!("GIT_COMMIT_MESSAGE");
-pub const BUILD_CPU: &str = env!("CPU_MODEL");
-pub const CARGO_PROFILE: &str = env!("CARGO_PROFILE");
-pub const RUSTC_VERSION: &str = env!("RUSTC_VERSION");
 
 #[poise::command(category = "Stats", prefix_command, slash_command, user_cooldown = 1)]
 pub async fn stats(ctx: Context<'_>) -> Result<(), Error> {

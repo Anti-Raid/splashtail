@@ -1,3 +1,4 @@
+#[allow(dead_code)]
 pub struct LuaKVConstraints {
     /// Maximum number of keys allowed in the KV store
     pub max_keys: usize,
@@ -18,6 +19,7 @@ impl Default for LuaKVConstraints {
     }
 }
 
+#[allow(dead_code)]
 pub struct LuaUserData {
     pub pool: sqlx::PgPool,
     pub guild_id: serenity::all::GuildId,

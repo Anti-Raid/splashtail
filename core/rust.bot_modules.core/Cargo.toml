@@ -18,6 +18,7 @@ silverpelt = { path = "../rust.silverpelt" }
 permissions = { path = "../rust.permissions" }
 config = { path = "../rust.config" }
 proxy_support = { path = "../rust.proxy_support" }
+rust_buildstats = { path = "../rust.buildstats" }
 
 [dependencies.serenity]
 git = "https://github.com/serenity-rs/serenity"
