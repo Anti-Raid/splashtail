@@ -4,9 +4,9 @@ go 1.22.5
 
 require (
 	github.com/bwmarrin/discordgo v0.28.1
-	github.com/go-viper/mapstructure/v2 v2.0.0
-	github.com/infinitybotlist/eureka v1.7.0
-	github.com/infinitybotlist/iblfile v0.0.0-20240609122654-f388ed492b00
+	github.com/go-viper/mapstructure/v2 v2.1.0
+	github.com/infinitybotlist/eureka v1.8.0
+	github.com/infinitybotlist/iblfile v0.0.0-20240822045208-fa5e42749283
 	github.com/vmihailenco/msgpack/v5 v5.4.1
 	github.com/wk8/go-ordered-map/v2 v2.1.8
 	go.std v0.0.0-00010101000000-000000000000
@@ -18,8 +18,8 @@ require (
 require (
 	github.com/bahlo/generic-list-go v0.2.0 // indirect
 	github.com/buger/jsonparser v1.1.1 // indirect
-	github.com/bytedance/sonic v1.11.9 // indirect
-	github.com/bytedance/sonic/loader v0.1.1 // indirect
+	github.com/bytedance/sonic v1.12.1 // indirect
+	github.com/bytedance/sonic/loader v0.2.0 // indirect
 	github.com/cloudwego/base64x v0.1.4 // indirect
 	github.com/cloudwego/iasm v0.2.0 // indirect
 	github.com/gorilla/websocket v1.5.3 // indirect
@@ -28,9 +28,9 @@ require (
 	github.com/twitchyliquid64/golang-asm v0.15.1 // indirect
 	github.com/vmihailenco/tagparser/v2 v2.0.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
-	golang.org/x/arch v0.8.0 // indirect
+	golang.org/x/arch v0.9.0 // indirect
 	golang.org/x/crypto v0.26.0 // indirect
-	golang.org/x/sys v0.23.0 // indirect
+	golang.org/x/sys v0.24.0 // indirect
 	gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )

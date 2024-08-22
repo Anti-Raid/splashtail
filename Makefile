@@ -77,7 +77,7 @@ tests:
 	CGO_ENABLED=0 go test -v -coverprofile=coverage.out ./...
 
 ts:
-	tygo generate
+	~/go/bin/tygo generate
 
 	# Patch to change all "SelectMenu = any;" to "SelectMenu = undefined /*tygo workaround*/;" to work around tygo issue
 	sed -i 's:SelectMenu = any;:SelectMenu = undefined /*tygo workaround*/;:g' services/website/src/lib/generated/discordgo.ts
@@ -92,10 +92,17 @@ promoteprod:
 	# Git push to "current-prod" branch
 	cd ../prod && git branch current-prod && git add -v . && git commit -m "Promote staging to prod" && git push -u origin HEAD:current-prod --force
 
-lintbasic:
+lint_go:
 	for d in core/go.* services/go.*; do \
 		~/go/bin/golangci-lint run ./$$d/...; \
 	done
 
-lintfull:
+lintfull_go:
 	go work edit -json | jq -r '.Use[].DiskPath'  | xargs -I{} ~/go/bin/golangci-lint run {}/... 
+
+update_go:
+	PWD=$(shell pwd)
+	for d in core/go.* services/go.*; do \
+		echo $$d; \
+		cd $$d && go get -u ./... && cd ${PWD}; \
+	done

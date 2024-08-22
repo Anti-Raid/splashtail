@@ -4,13 +4,13 @@ go 1.22.5
 
 require (
 	github.com/bwmarrin/discordgo v0.28.1
-	github.com/cheesycod/mewld v0.0.0-20240810124323-e2dc8d19b2ba
+	github.com/cheesycod/mewld v0.0.0-20240810135330-af6971248190
 	github.com/go-chi/chi/v5 v5.1.0
-	github.com/infinitybotlist/eureka v1.7.0
+	github.com/infinitybotlist/eureka v1.8.0
 	github.com/infinitybotlist/kittycat/go v0.0.0-20240526051606-6574fb343539
 	github.com/jackc/pgx/v5 v5.6.0
-	github.com/minio/minio-go/v7 v7.0.74
-	github.com/redis/rueidis v1.0.43
+	github.com/minio/minio-go/v7 v7.0.75
+	github.com/redis/rueidis v1.0.44
 	github.com/sirupsen/logrus v1.9.3
 	github.com/stretchr/testify v1.9.0
 	github.com/wk8/go-ordered-map/v2 v2.1.8
@@ -23,10 +23,12 @@ require (
 	github.com/buger/jsonparser v1.1.1 // indirect
 	github.com/bytedance/sonic v1.12.1 // indirect
 	github.com/bytedance/sonic/loader v0.2.0 // indirect
+	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/cloudwego/base64x v0.1.4 // indirect
 	github.com/cloudwego/iasm v0.2.0 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/deckarep/golang-set/v2 v2.6.0 // indirect
+	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/go-ini/ini v1.67.0 // indirect
 	github.com/goccy/go-json v0.10.3 // indirect
@@ -41,6 +43,7 @@ require (
 	github.com/mailru/easyjson v0.7.7 // indirect
 	github.com/minio/md5-simd v1.1.2 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
+	github.com/redis/go-redis/v9 v9.6.1 // indirect
 	github.com/rogpeppe/go-internal v1.12.0 // indirect
 	github.com/rs/xid v1.5.0 // indirect
 	github.com/twitchyliquid64/golang-asm v0.15.1 // indirect

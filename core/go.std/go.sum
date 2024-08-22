@@ -22,6 +22,8 @@ github.com/cheesycod/mewld v0.0.0-20240506045451-d25a175505ee h1:Dh6l3PjmmdeH99l
 github.com/cheesycod/mewld v0.0.0-20240506045451-d25a175505ee/go.mod h1:aG40sffwuzcsqbfG6cqkmZjrrt/1WtG9Pw12+4AkA1M=
 github.com/cheesycod/mewld v0.0.0-20240810124323-e2dc8d19b2ba h1:LgH1KJOcTH5x7QnLlOnoMhYI+RLFZ2ygtGBTSZunMxk=
 github.com/cheesycod/mewld v0.0.0-20240810124323-e2dc8d19b2ba/go.mod h1:aG40sffwuzcsqbfG6cqkmZjrrt/1WtG9Pw12+4AkA1M=
+github.com/cheesycod/mewld v0.0.0-20240810135330-af6971248190 h1:KzW8YpAOlWOVs+c5xgp6v3M6NsBObSzuX6D/aRxqME0=
+github.com/cheesycod/mewld v0.0.0-20240810135330-af6971248190/go.mod h1:aG40sffwuzcsqbfG6cqkmZjrrt/1WtG9Pw12+4AkA1M=
 github.com/cloudwego/base64x v0.1.4 h1:jwCgWpFanWmN8xoIUHa2rtzmkd5J2plF/dnLS6Xd/0Y=
 github.com/cloudwego/base64x v0.1.4/go.mod h1:0zlkT4Wn5C6NdauXdJRhSKRlJvmclQ1hhJgA0rcu/8w=
 github.com/cloudwego/iasm v0.2.0 h1:1KNIy1I1H9hNNFEEH3DVnI4UujN+1zjpuk6gwHLTssg=
@@ -51,6 +53,8 @@ github.com/gorilla/websocket v1.5.3 h1:saDtZ6Pbx/0u+bgYQ3q96pZgCzfhKXGPqt7kZ72aN
 github.com/gorilla/websocket v1.5.3/go.mod h1:YR8l580nyteQvAITg2hZ9XVh4b55+EU/adAjf1fMHhE=
 github.com/infinitybotlist/eureka v1.7.0 h1:ULnJmuQr5XWpd3ajDtBNmivw7ol3uX1pO5f/jGxTTWc=
 github.com/infinitybotlist/eureka v1.7.0/go.mod h1:+XpKNt78xfvzOLdakj1CLt4Fn6wIaQ6L3Cq0X2luIPY=
+github.com/infinitybotlist/eureka v1.8.0 h1:gQyQVaoiFnzPyxzfdwUupaHe3tKlSU5MoS+or+G1NH0=
+github.com/infinitybotlist/eureka v1.8.0/go.mod h1:4zMcOZnaS/h/Gh4h7r59q+uB6WWdJMZUUOqFm9fKdIA=
 github.com/infinitybotlist/kittycat/go v0.0.0-20240526051606-6574fb343539 h1:u3NLosYX7PgcMp5CNByNOkoDKEAJFXdfBQOOp/7XX0s=
 github.com/infinitybotlist/kittycat/go v0.0.0-20240526051606-6574fb343539/go.mod h1:AYyGvOSsNrb8mBFQnWi8D+Z84PClkglpK+DqzC1NRB8=
 github.com/jackc/pgpassfile v1.0.0 h1:/6Hmqy13Ss2zCq62VdNG8tM1wchn8zjSGOBJ6icpsIM=
@@ -81,6 +85,8 @@ github.com/minio/md5-simd v1.1.2 h1:Gdi1DZK69+ZVMoNHRXJyNcxrMA4dSxoYHZSQbirFg34=
 github.com/minio/md5-simd v1.1.2/go.mod h1:MzdKDxYpY2BT9XQFocsiZf/NKVtR7nkE4RoEpN+20RM=
 github.com/minio/minio-go/v7 v7.0.74 h1:fTo/XlPBTSpo3BAMshlwKL5RspXRv9us5UeHEGYCFe0=
 github.com/minio/minio-go/v7 v7.0.74/go.mod h1:qydcVzV8Hqtj1VtEocfxbmVFa2siu6HGa+LDEPogjD8=
+github.com/minio/minio-go/v7 v7.0.75 h1:0uLrB6u6teY2Jt+cJUVi9cTvDRuBKWSRzSAcznRkwlE=
+github.com/minio/minio-go/v7 v7.0.75/go.mod h1:qydcVzV8Hqtj1VtEocfxbmVFa2siu6HGa+LDEPogjD8=
 github.com/onsi/gomega v1.31.1 h1:KYppCUK+bUgAZwHOu7EXVBKyQA6ILvOESHkn/tgoqvo=
 github.com/onsi/gomega v1.31.1/go.mod h1:y40C95dwAD1Nz36SsEnxvfFe8FFfNxzI5eJ0EYGyAy0=
 github.com/pkg/diff v0.0.0-20210226163009-20ebb0f2a09e/go.mod h1:pJLUxLENpZxwdsKMEsNbx1VGcRFpLqf3715MtcvvzbA=
@@ -92,6 +98,8 @@ github.com/redis/go-redis/v9 v9.6.1 h1:HHDteefn6ZkTtY5fGUE8tj8uy85AHk6zP7CpzIAM0
 github.com/redis/go-redis/v9 v9.6.1/go.mod h1:0C0c6ycQsdpVNQpxb1njEQIqkx5UcsM8FJCQLgE9+RA=
 github.com/redis/rueidis v1.0.43 h1:wszWRYT+xf8FRmoPKW1nAgMMkhqioy2aZnxfFfWGw/A=
 github.com/redis/rueidis v1.0.43/go.mod h1:bnbkk4+CkXZgDPEbUtSos/o55i4RhFYYesJ4DS2zmq0=
+github.com/redis/rueidis v1.0.44 h1:QfhfuovwEabcywfEXofRjPZuT29pjtpIWDJlCGHZfg8=
+github.com/redis/rueidis v1.0.44/go.mod h1:bnbkk4+CkXZgDPEbUtSos/o55i4RhFYYesJ4DS2zmq0=
 github.com/rogpeppe/go-internal v1.9.0/go.mod h1:WtVeX8xhTBvf0smdhujwtBcq4Qrzq/fJaraNFVN+nFs=
 github.com/rogpeppe/go-internal v1.12.0 h1:exVL4IDcn6na9z1rAb56Vxr+CgyK3nn3O+epU5NdKM8=
 github.com/rogpeppe/go-internal v1.12.0/go.mod h1:E+RYuTGaKKdloAfM02xzb0FW3Paa99yedzYV+kq4uf4=
