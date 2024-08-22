@@ -41,6 +41,15 @@ type BackupRestoreOpts struct {
 }
 */
 
+/// Checks backup encryption, when encrypted, Options->Encrypt is not empty ("SET" / a random string)
+fn is_backup_encrypted(task_fields: &indexmap::IndexMap<String, serde_json::Value>) -> bool {
+    task_fields
+        .get("Options")
+        .and_then(|options| options.get("Encrypt"))
+        .map(|v| !v.as_str().unwrap_or_default().is_empty())
+        .unwrap_or_default()
+}
+
 /// Create, load and get info on backups of your server!
 #[poise::command(
     prefix_command,
@@ -269,10 +278,11 @@ pub async fn backups_list(ctx: Context<'_>) -> Result<(), Error> {
 
     fn create_embed_for_task<'a>(task: &jobserver::Task) -> serenity::all::CreateEmbed<'a> {
         let mut initial_desc = format!(
-            "Task ID: {}\nTask Name: {}\nTask State: {}\n\n**Created At**: <t:{}:f> (<t:{}:R>)",
+            "Task ID: {}\nTask Name: {}\nTask State: {}\n**Encrypted:** {}\n\n**Created At**: <t:{}:f> (<t:{}:R>)",
             task.task_id,
             task.task_name,
             task.state,
+            is_backup_encrypted(&task.task_fields),
             task.created_at.and_utc().timestamp(),
             task.created_at.and_utc().timestamp()
         );
@@ -308,39 +318,46 @@ pub async fn backups_list(ctx: Context<'_>) -> Result<(), Error> {
         let cr = poise::CreateReply::default()
             .embed(create_embed_for_task(&backup_tasks[index]))
             .ephemeral(true)
-            .components(vec![serenity::all::CreateActionRow::Buttons(vec![
-                serenity::all::CreateButton::new("backups_previous")
-                    .label("Previous")
-                    .emoji(serenity::all::ReactionType::Unicode(
-                        "◀️".to_string().trunc_into(),
-                    ))
-                    .style(serenity::all::ButtonStyle::Primary)
-                    .disabled(index == 0),
-                serenity::all::CreateButton::new("backups_next")
-                    .label("Next")
-                    .emoji(serenity::all::ReactionType::Unicode(
-                        "▶️".to_string().trunc_into(),
-                    ))
-                    .style(serenity::all::ButtonStyle::Primary)
-                    .disabled(index >= backup_tasks.len()),
-                serenity::all::CreateButton::new("backups_last")
-                    .label("Last")
-                    .emoji(serenity::all::ReactionType::Unicode(
-                        "⏩".to_string().trunc_into(),
-                    ))
-                    .style(serenity::all::ButtonStyle::Primary)
-                    .disabled(index >= backup_tasks.len()),
-                serenity::all::CreateButton::new("backups_first")
-                    .label("First")
-                    .emoji(serenity::all::ReactionType::Unicode(
-                        "⏪".to_string().trunc_into(),
-                    ))
-                    .style(serenity::all::ButtonStyle::Primary)
-                    .disabled(index == 0),
-                serenity::all::CreateButton::new("backups_delete")
-                    .label("Delete")
-                    .style(serenity::all::ButtonStyle::Danger),
-            ])]);
+            .components(vec![
+                serenity::all::CreateActionRow::Buttons(vec![
+                    serenity::all::CreateButton::new("backups_previous")
+                        .label("Previous")
+                        .emoji(serenity::all::ReactionType::Unicode(
+                            "◀️".to_string().trunc_into(),
+                        ))
+                        .style(serenity::all::ButtonStyle::Primary)
+                        .disabled(index == 0),
+                    serenity::all::CreateButton::new("backups_next")
+                        .label("Next")
+                        .emoji(serenity::all::ReactionType::Unicode(
+                            "▶️".to_string().trunc_into(),
+                        ))
+                        .style(serenity::all::ButtonStyle::Primary)
+                        .disabled(index >= backup_tasks.len()),
+                    serenity::all::CreateButton::new("backups_last")
+                        .label("Last")
+                        .emoji(serenity::all::ReactionType::Unicode(
+                            "⏩".to_string().trunc_into(),
+                        ))
+                        .style(serenity::all::ButtonStyle::Primary)
+                        .disabled(index >= backup_tasks.len()),
+                    serenity::all::CreateButton::new("backups_first")
+                        .label("First")
+                        .emoji(serenity::all::ReactionType::Unicode(
+                            "⏪".to_string().trunc_into(),
+                        ))
+                        .style(serenity::all::ButtonStyle::Primary)
+                        .disabled(index == 0),
+                ]),
+                serenity::all::CreateActionRow::Buttons(vec![
+                    serenity::all::CreateButton::new("backups_restore")
+                        .label("Restore")
+                        .style(serenity::all::ButtonStyle::Danger),
+                    serenity::all::CreateButton::new("backups_delete")
+                        .label("Delete")
+                        .style(serenity::all::ButtonStyle::Danger),
+                ]),
+            ]);
 
         Ok(cr)
     }
@@ -384,6 +401,293 @@ pub async fn backups_list(ctx: Context<'_>) -> Result<(), Error> {
             "backups_first" => {
                 index = 0;
             }
+            "backups_restore" => {
+                // Check permission
+                let perm_res = silverpelt::cmd::check_command(
+                    &data.silverpelt_cache,
+                    "backups restore",
+                    guild_id,
+                    ctx.author().id,
+                    &ctx.data().pool,
+                    &botox::cache::CacheHttpImpl::from_ctx(ctx.serenity_context()),
+                    &data.reqwest,
+                    &Some(ctx),
+                    silverpelt::cmd::CheckCommandOptions::default(), // TODO: Maybe change this to allow backups restore to be disabled?
+                )
+                .await;
+
+                if !perm_res.is_ok() {
+                    item.create_response(
+                        &ctx.serenity_context().http,
+                        serenity::all::CreateInteractionResponse::Message(
+                            serenity::all::CreateInteractionResponseMessage::default()
+                                .ephemeral(true)
+                                .content(perm_res.to_markdown()),
+                        ),
+                    )
+                    .await?;
+
+                    continue;
+                }
+
+                item.defer(&ctx.serenity_context().http).await?;
+
+                followup_done = true;
+
+                // Check for encryption, is so give a prompt
+                let task = &backup_tasks[index];
+
+                let mut password = None;
+                if is_backup_encrypted(&task.task_fields) {
+                    let mut password_preinput_warning = ctx.send(
+                        poise::reply::CreateReply::default()
+                        .content("This backup is encrypted. Please provide the password to decrypt it!")
+                        .ephemeral(true)
+                        .components(
+                            vec![
+                                serenity::all::CreateActionRow::Buttons(
+                                    vec![
+                                        serenity::all::CreateButton::new("backups_restore_enc_cont")
+                                        .label("Continue")
+                                        .style(serenity::all::ButtonStyle::Success),
+                                        serenity::all::CreateButton::new("backups_restore_enc_cancel")
+                                        .label("No")
+                                        .style(serenity::all::ButtonStyle::Danger),
+                                    ]
+                                )
+                            ]
+                        )
+                    )
+                    .await?
+                    .into_message()
+                    .await?;
+
+                    let password_preinp_collector = password_preinput_warning
+                        .await_component_interaction(ctx.serenity_context().shard.clone())
+                        .author_id(ctx.author().id)
+                        .timeout(Duration::from_secs(30))
+                        .await;
+
+                    if password_preinp_collector.is_none() {
+                        // Edit the message to say that the user took too long to respond
+                        password_preinput_warning
+                            .edit(
+                                &ctx.serenity_context().http,
+                                EditMessage::default().content("You took too long to respond"),
+                            )
+                            .await?;
+                    }
+
+                    let item = password_preinp_collector.unwrap();
+
+                    if item.data.custom_id.as_str() == "backups_restore_enc_cancel" {
+                        item.create_response(
+                            &ctx.serenity_context().http,
+                            serenity::all::CreateInteractionResponse::Message(
+                                serenity::all::CreateInteractionResponseMessage::default()
+                                    .ephemeral(true)
+                                    .content("Cancelled restoration of backup"),
+                            ),
+                        )
+                        .await?;
+
+                        continue;
+                    }
+
+                    // Ask for password in modal
+                    let password_modal = serenity::all::CreateQuickModal::new("Password")
+                        .short_field("Password")
+                        .timeout(std::time::Duration::from_secs(300));
+
+                    let Some(password_modal) = item
+                        .quick_modal(ctx.serenity_context(), password_modal)
+                        .await?
+                    else {
+                        continue;
+                    };
+
+                    password = Some(password_modal.inputs[0].to_string());
+                }
+
+                // Ask for final confirmation
+                let mut confirm = ctx.send(
+                    poise::reply::CreateReply::default()
+                    .content("Are you sure you want to restore this backup?\n\n**This action is irreversible!**")
+                    .ephemeral(true)
+                    .components(
+                        vec![
+                            serenity::all::CreateActionRow::Buttons(
+                                vec![
+                                    serenity::all::CreateButton::new("backups_restore_confirm")
+                                    .label("Yes")
+                                    .style(serenity::all::ButtonStyle::Success),
+                                    serenity::all::CreateButton::new("backups_restore_cancel")
+                                    .label("No")
+                                    .style(serenity::all::ButtonStyle::Danger),
+                                ]
+                            )
+                        ]
+                    )
+                )
+                .await?
+                .into_message()
+                .await?;
+
+                let confirm_collector = confirm
+                    .await_component_interaction(ctx.serenity_context().shard.clone())
+                    .author_id(ctx.author().id)
+                    .timeout(Duration::from_secs(30))
+                    .await;
+
+                if confirm_collector.is_none() {
+                    // Edit the message to say that the user took too long to respond
+                    confirm
+                        .edit(
+                            &ctx.serenity_context().http,
+                            EditMessage::default().content("You took too long to respond"),
+                        )
+                        .await?;
+                }
+
+                let confirm_item = confirm_collector.unwrap();
+
+                if confirm_item.data.custom_id.as_str() == "backups_restore_cancel" {
+                    confirm_item
+                        .create_response(
+                            &ctx.serenity_context().http,
+                            serenity::all::CreateInteractionResponse::Message(
+                                serenity::all::CreateInteractionResponseMessage::default()
+                                    .ephemeral(true)
+                                    .content("Cancelled restoration of backup"),
+                            ),
+                        )
+                        .await?;
+
+                    continue;
+                }
+
+                // Take out the current backup task
+                let task = &backup_tasks[index];
+
+                let url = {
+                    if task.format_task_for_simplex() != format!("g/{}", guild_id) {
+                        return Err("Backup task is not for this guild".into());
+                    }
+
+                    let Some(path) = task.get_file_path() else {
+                        return Err("Failed to get backup path".into());
+                    };
+
+                    format!("task:///{}", path)
+                };
+
+                let mut base_message = ctx
+                    .send(
+                        poise::CreateReply::default().embed(
+                            CreateEmbed::default()
+                                .title("Restoring Backup...")
+                                .description(
+                                    ":yellow_circle: Please wait, starting backup task...",
+                                ),
+                        ),
+                    )
+                    .await?
+                    .into_message()
+                    .await?;
+
+                let json = serde_json::json!({
+                    "ServerID": guild_id.to_string(),
+                    "Options": {
+                        "IgnoreRestoreErrors": false,
+                        "BackupSource": url,
+                        "Decrypt": password.unwrap_or_default(),
+                        "ChannelRestoreMode": ChannelRestoreMode::Full.to_string(),
+                        "RoleRestoreMode": RoleRestoreMode::Full.to_string(),
+                    },
+                });
+
+                // Restore backup
+                let jobserver_cluster_id =
+                    shard_id(guild_id, data.props.shard_count().await?.try_into()?);
+                let resp = data
+                    .reqwest
+                    .post(&format!(
+                        "{}:{}/spawn-task",
+                        config::CONFIG.base_ports.jobserver_base_addr.get(),
+                        config::CONFIG.base_ports.jobserver.get() + jobserver_cluster_id
+                    ))
+                    .json(&splashcore_rs::jobserver::JobserverSpawnTaskRequest {
+                        name: "guild_restore_backup".to_string(),
+                        data: json,
+                        create: true,
+                        execute: true,
+                        task_id: None,
+                        user_id: ctx.author().id.to_string(),
+                    })
+                    .send()
+                    .await
+                    .map_err(|e| format!("Failed to create backup task: {}", e))?
+                    .error_for_status()
+                    .map_err(|e| format!("Failed to create backup task: {}", e))?;
+
+                let restore_task_id = resp
+                    .json::<splashcore_rs::jobserver::JobserverSpawnTaskResponse>()
+                    .await?
+                    .task_id;
+
+                base_message
+                    .edit(
+                        &ctx,
+                        serenity::all::EditMessage::default().embed(
+                            CreateEmbed::default()
+                                .title("Restoring Backup...")
+                                .description(format!(
+                                    ":yellow_circle: Created task with Task ID of {}",
+                                    restore_task_id
+                                )),
+                        ),
+                    )
+                    .await?;
+
+                let ch = botox::cache::CacheHttpImpl {
+                    cache: ctx.serenity_context().cache.clone(),
+                    http: ctx.serenity_context().http.clone(),
+                };
+
+                async fn update_base_message(
+                    cache_http: botox::cache::CacheHttpImpl,
+                    mut base_message: serenity::model::channel::Message,
+                    task: Arc<jobserver::Task>,
+                ) -> Result<(), Error> {
+                    let new_task_msg =
+                        embed_task(&config::CONFIG.sites.api.get(), &task, vec![], true)?;
+
+                    base_message
+                        .edit(
+                            &cache_http,
+                            new_task_msg.to_prefix_edit(serenity::all::EditMessage::default()),
+                        )
+                        .await?;
+
+                    Ok(())
+                }
+
+                // Use jobserver::reactive to keep updating the message
+                jobserver::taskpoll::reactive(
+                    &ch,
+                    &ctx.data().pool,
+                    restore_task_id.as_str(),
+                    |cache_http, task| {
+                        Box::pin(update_base_message(
+                            cache_http.clone(),
+                            base_message.clone(),
+                            task.clone(),
+                        ))
+                    },
+                    jobserver::taskpoll::PollTaskOptions::default(),
+                )
+                .await?;
+            }
             "backups_delete" => {
                 // Check permission
                 let perm_res = silverpelt::cmd::check_command(
@@ -420,6 +724,7 @@ pub async fn backups_list(ctx: Context<'_>) -> Result<(), Error> {
                 let mut confirm = ctx.send(
                     poise::reply::CreateReply::default()
                     .content("Are you sure you want to delete this backup?\n\n**This action is irreversible!**")
+                    .ephemeral(true)
                     .components(
                         vec![
                             serenity::all::CreateActionRow::Buttons(

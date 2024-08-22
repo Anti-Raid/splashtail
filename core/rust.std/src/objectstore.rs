@@ -16,6 +16,11 @@ pub enum ObjectStore {
     },
 }
 
+pub struct ListObjectsResponse {
+    pub key: String,
+    pub last_modified: chrono::DateTime<chrono::Utc>,
+}
+
 impl ObjectStore {
     /// Note that duration is only supported for S3
     ///
@@ -32,6 +37,104 @@ impl ObjectStore {
             }
             ObjectStore::Local { prefix } => {
                 format!("file://{}/{}", prefix, key)
+            }
+        }
+    }
+
+    /// Lists all files in the object store with a given prefix
+    pub async fn list_files(
+        &self,
+        client: &reqwest::Client,
+        key: Option<&str>,
+    ) -> Result<Vec<ListObjectsResponse>, crate::Error> {
+        match self {
+            ObjectStore::S3 {
+                credentials,
+                bucket,
+            } => {
+                let mut continuation_token = None;
+                let mut resp = vec![];
+
+                loop {
+                    let mut action = bucket.list_objects_v2(Some(credentials));
+
+                    if let Some(key) = key {
+                        action.with_prefix(key);
+                    }
+
+                    if let Some(continuation_token) = &continuation_token {
+                        action.with_continuation_token(continuation_token);
+                    }
+
+                    let url = action.sign(std::time::Duration::from_secs(30));
+                    let response = client
+                        .get(url)
+                        .send()
+                        .await
+                        .map_err(|e| format!("Failed to list objects: {}", e))?;
+
+                    if !response.status().is_success() {
+                        let text = response
+                            .text()
+                            .await
+                            .map_err(|e| format!("Failed to read response: {}", e))?;
+                        return Err(format!("Failed to list objects: {}", text).into());
+                    }
+
+                    let body = response
+                        .text()
+                        .await
+                        .map_err(|e| format!("Failed to read response: {}", e))?;
+
+                    let list = rusty_s3::actions::ListObjectsV2::parse_response(&body)?;
+
+                    for object in list.contents {
+                        resp.push(ListObjectsResponse {
+                            key: object.key,
+                            last_modified: object.last_modified.parse()?,
+                        });
+                    }
+
+                    if list.next_continuation_token.is_none() {
+                        break;
+                    }
+
+                    continuation_token = list.next_continuation_token;
+                }
+
+                Ok(resp)
+            }
+            ObjectStore::Local { prefix } => {
+                let mut path = std::path::Path::new(prefix).to_path_buf();
+
+                if let Some(key) = key {
+                    path = path.join(key);
+                }
+
+                let mut files = vec![];
+                for entry in std::fs::read_dir(path)
+                    .map_err(|e| format!("Failed to read directory: {}", e))?
+                {
+                    let entry = entry.map_err(|e| format!("Failed to read entry: {}", e))?;
+                    let path = entry.path();
+                    if path.is_file() {
+                        files.push(ListObjectsResponse {
+                            key: path
+                                .file_name()
+                                .ok_or("Failed to get file name")?
+                                .to_string_lossy()
+                                .to_string(),
+                            last_modified: entry
+                                .metadata()
+                                .map_err(|e| format!("Failed to get metadata: {}", e))?
+                                .modified()
+                                .map_err(|e| format!("Failed to get modified time: {}", e))?
+                                .into(),
+                        });
+                    }
+                }
+
+                Ok(files)
             }
         }
     }

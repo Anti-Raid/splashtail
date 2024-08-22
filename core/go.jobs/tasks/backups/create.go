@@ -463,7 +463,7 @@ func (t *ServerBackupCreateTask) Exec(
 		}
 	}
 
-	t.Options.Encrypt = "" // Clear encryption key
+	t.Options.Encrypt = "SET" // Clear encryption key to 'SET'
 
 	f := iblfile.NewAutoEncryptedFile_FullFile(aeSource)
 
