@@ -86,6 +86,9 @@ pub struct ExecutePerModuleFunctionRequest {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ExecutePerModuleFunctionResponse {}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum CanonicalSettingsResult {
     Ok {
         fields: Vec<indexmap::IndexMap<String, serde_json::Value>>,

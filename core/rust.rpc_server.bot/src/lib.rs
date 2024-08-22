@@ -236,7 +236,7 @@ async fn parse_permission_checks(
 async fn execute_per_module_function(
     State(AppData { data, cache_http }): State<AppData>,
     Json(req): Json<crate::types::ExecutePerModuleFunctionRequest>,
-) -> Response<()> {
+) -> Response<crate::types::ExecutePerModuleFunctionResponse> {
     let mut n_options = indexmap::IndexMap::new();
 
     for (k, v) in req.args {
@@ -255,5 +255,5 @@ async fn execute_per_module_function(
             )
         })?;
 
-    Ok(Json(()))
+    Ok(Json(crate::types::ExecutePerModuleFunctionResponse {}))
 }

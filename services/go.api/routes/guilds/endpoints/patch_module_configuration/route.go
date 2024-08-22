@@ -401,7 +401,7 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 	}
 
 	if cacheFlushFlag&CACHE_FLUSH_MODULE_TOGGLE == CACHE_FLUSH_MODULE_TOGGLE && body.Disabled != nil {
-		err := webutils.ExecutePerModuleFunction(
+		_, err := webutils.ExecutePerModuleFunction(
 			d.Context,
 			clusterId,
 			&rpc_messages.ExecutePerModuleFunctionRequest{

@@ -75,7 +75,7 @@ func HandlePermissionCheck(
 		return hresp, false
 	}
 
-	permRes, ok, err := webutils.CheckCommandPermission(
+	permRes, err := webutils.CheckCommandPermission(
 		state.Context,
 		clusterId,
 		guildId,
@@ -95,7 +95,7 @@ func HandlePermissionCheck(
 		}, false
 	}
 
-	if !ok {
+	if !permRes.IsOk {
 		return uapi.HttpResponse{
 			Status: http.StatusForbidden,
 			Json:   permRes,

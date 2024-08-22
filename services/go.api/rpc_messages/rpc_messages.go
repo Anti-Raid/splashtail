@@ -32,6 +32,8 @@ type ExecutePerModuleFunctionRequest struct {
 	Args     map[string]any `json:"args"`
 }
 
+type ExecutePerModuleFunctionResponse struct{}
+
 type SettingsOperationRequest struct {
 	Fields  orderedmap.OrderedMap[string, any] `json:"fields"`
 	Op      silverpelt.CanonicalOperationType  `json:"op"`

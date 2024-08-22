@@ -242,7 +242,7 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 			}
 		}
 
-		guildsExist, err := webutils.GuildsExist(d.Context, clusterId, guilds)
+		guildsExistResp, err := webutils.GuildsExist(d.Context, clusterId, guilds)
 
 		if err != nil {
 			state.Logger.Error("Failed to check if bot is in guilds", zap.Error(err))
@@ -253,6 +253,8 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 				},
 			}
 		}
+
+		guildsExist := *guildsExistResp
 
 		if len(guildsExist) != len(guilds) {
 			state.Logger.Error("Mismatch in guildsExist response", zap.Any("guildsExist", guildsExist), zap.Any("guilds", guilds))
