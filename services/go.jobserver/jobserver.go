@@ -15,7 +15,7 @@ import (
 	"github.com/infinitybotlist/eureka/jsonimpl"
 	"go.jobserver/bgtasks"
 	"go.jobserver/core"
-	"go.jobserver/rpc_messages"
+	"go.jobserver/rpc"
 	"go.jobserver/state"
 	"go.std/config"
 	"go.std/mewld_web"
@@ -30,55 +30,6 @@ import (
 	mutils "github.com/cheesycod/mewld/utils"
 )
 
-func CreateJobserverRpc() {
-	handler := http.NewServeMux()
-
-	handler.Handle("/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("jobserver"))
-	}))
-
-	handler.HandleFunc("/spawn-task", func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodPost {
-			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-			return
-		}
-
-		// Read request
-		var spawnTask rpc_messages.SpawnTask
-
-		err := jsonimpl.UnmarshalReader(r.Body, &spawnTask)
-
-		if err != nil {
-			http.Error(w, fmt.Sprintf("Error reading request: %s", err), http.StatusBadRequest)
-			return
-		}
-
-		// Spawn task
-		resp, err := core.SpawnTask(spawnTask)
-
-		if err != nil {
-			http.Error(w, fmt.Sprintf("Error spawning task: %s", err), http.StatusInternalServerError)
-			return
-		}
-
-		// Write response
-		err = jsonimpl.MarshalToWriter(w, resp)
-
-		if err != nil {
-			http.Error(w, fmt.Sprintf("Error writing response: %s", err), http.StatusInternalServerError)
-			return
-		}
-	})
-
-	// Start server
-	err := http.ListenAndServe(":"+strconv.Itoa(state.Config.BasePorts.Jobserver.Parse()+int(state.ClusterID)), handler)
-
-	if err != nil {
-		panic(err)
-	}
-}
-
 func CreateJobServer() {
 	// Set state of all pending tasks to 'failed'
 	_, err := state.Pool.Exec(state.Context, "UPDATE tasks SET state = $1 WHERE state = $2", "failed", "pending")
@@ -87,7 +38,7 @@ func CreateJobServer() {
 		panic(err)
 	}
 
-	go CreateJobserverRpc()
+	go rpc.JobserverRpcServer()
 
 	// Resume ongoing tasks
 	go core.Resume()
@@ -250,7 +201,7 @@ func CreateClusters() {
 	}
 }
 
-func LaunchJobserver() {
+func LaunchJobserverMewldClustered() {
 	state.CurrentOperationMode = "jobs"
 
 	// Read cmd args
@@ -298,7 +249,7 @@ func LaunchJobserver() {
 
 	state.Logger.Info("Starting node")
 
-	state.MewldResponder = &mewldresponder.MewldResponder{
+	mewldResponder := &mewldresponder.MewldResponder{
 		ClusterID:   state.ClusterID,
 		ClusterName: state.ClusterName,
 		Shards:      shards,
@@ -329,7 +280,7 @@ func LaunchJobserver() {
 
 	// Handle mewld by starting ping checks and sending launch_next
 	go func() {
-		err := state.MewldResponder.LaunchNext(state.Context, state.Rueidis, state.Logger)
+		err := mewldResponder.LaunchNext(state.Context, state.Rueidis, state.Logger)
 
 		if err != nil {
 			state.Logger.Fatal("Error sending launch_next command", zap.Error(err))
@@ -339,7 +290,13 @@ func LaunchJobserver() {
 		state.Logger.Info("Sent launch_next command")
 	}()
 
-	go state.MewldResponder.Listen(state.Context, state.Rueidis, state.Logger)
+	go func() {
+		err := mewldResponder.Listen(state.Context, state.Rueidis, state.Logger)
+
+		if err != nil {
+			panic(err)
+		}
+	}()
 
 	// Wait until signal is received
 	c := make(chan os.Signal, 1)
@@ -351,8 +308,11 @@ func LaunchJobserver() {
 
 func main() {
 	if len(os.Args) > 2 {
+		switch os.Args[1] {
+		}
+
 		if os.Args[1] == "jobs.node" {
-			LaunchJobserver()
+			LaunchJobserverMewldClustered()
 			return
 		}
 	}

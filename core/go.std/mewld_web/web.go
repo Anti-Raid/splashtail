@@ -55,10 +55,10 @@ func routeStatic(next http.Handler) http.Handler {
 	})
 }
 
-func loginRoute(webData WebData, f func(w http.ResponseWriter, r *http.Request, sess *loginDat)) func(w http.ResponseWriter, r *http.Request) {
+func loginRoute(_ WebData, f func(w http.ResponseWriter, r *http.Request, sess *loginDat)) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Header.Get("X-User-ID") == "" {
-			w.Write([]byte("Unauthorized. Not running under deployproxy?"))
+			_, _ = w.Write([]byte("Unauthorized. Not running under deployproxy?"))
 			return
 		}
 
@@ -81,12 +81,12 @@ func toJson(w http.ResponseWriter, v interface{}) {
 	if err != nil {
 		log.Error(err)
 		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte(err.Error()))
+		_, _ = w.Write([]byte(err.Error()))
 		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	w.Write(b)
+	_, _ = w.Write(b)
 }
 
 func CreateServer(webData WebData) *chi.Mux {
@@ -118,7 +118,7 @@ func CreateServer(webData WebData) *chi.Mux {
 	r.Get("/api/ping", loginRoute(
 		webData,
 		func(w http.ResponseWriter, r *http.Request, sess *loginDat) {
-			w.Write([]byte("pong"))
+			_, _ = w.Write([]byte("pong"))
 		},
 	))
 
@@ -143,7 +143,7 @@ func CreateServer(webData WebData) *chi.Mux {
 
 				if err != nil {
 					w.WriteHeader(http.StatusBadRequest)
-					w.Write([]byte(fmt.Sprintf("Could not marshal payload %d: %s", i, err.Error())))
+					_, _ = w.Write([]byte(fmt.Sprintf("Could not marshal payload %d: %s", i, err.Error())))
 					return
 				}
 
@@ -162,13 +162,13 @@ func CreateServer(webData WebData) *chi.Mux {
 			if err != nil {
 				log.Error(err)
 				w.WriteHeader(http.StatusInternalServerError)
-				w.Write([]byte("Error reading body: " + err.Error()))
+				_, _ = w.Write([]byte("Error reading body: " + err.Error()))
 				return
 			}
 
 			v := webData.InstanceList.Redis.Publish(webData.InstanceList.Ctx, webData.InstanceList.Config.RedisChannel, string(payload)).Val()
 
-			w.Write([]byte(strconv.Itoa(int(v))))
+			_, _ = w.Write([]byte(strconv.Itoa(int(v))))
 		},
 	))
 

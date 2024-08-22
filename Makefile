@@ -91,3 +91,11 @@ promoteprod:
 
 	# Git push to "current-prod" branch
 	cd ../prod && git branch current-prod && git add -v . && git commit -m "Promote staging to prod" && git push -u origin HEAD:current-prod --force
+
+lintbasic:
+	for d in core/go.* services/go.*; do \
+		~/go/bin/golangci-lint run ./$$d/...; \
+	done
+
+lintfull:
+	go work edit -json | jq -r '.Use[].DiskPath'  | xargs -I{} ~/go/bin/golangci-lint run {}/... 

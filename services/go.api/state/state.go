@@ -14,6 +14,7 @@ import (
 	"go.api/state/redishotcache"
 	"go.std/config"
 	"go.std/objectstorage"
+	"go.std/utils"
 	"golang.org/x/net/http2"
 
 	"github.com/bwmarrin/discordgo"
@@ -88,11 +89,13 @@ func nonVulgar(fl validator.FieldLevel) bool {
 }
 
 func Setup() {
-	Validator.RegisterValidation("nonvulgar", nonVulgar)
-	Validator.RegisterValidation("notblank", validators.NotBlank)
-	Validator.RegisterValidation("nospaces", snippets.ValidatorNoSpaces)
-	Validator.RegisterValidation("https", snippets.ValidatorIsHttps)
-	Validator.RegisterValidation("httporhttps", snippets.ValidatorIsHttpOrHttps)
+	utils.Must(
+		Validator.RegisterValidation("nonvulgar", nonVulgar),
+		Validator.RegisterValidation("notblank", validators.NotBlank),
+		Validator.RegisterValidation("nospaces", snippets.ValidatorNoSpaces),
+		Validator.RegisterValidation("https", snippets.ValidatorIsHttps),
+		Validator.RegisterValidation("httporhttps", snippets.ValidatorIsHttpOrHttps),
+	)
 
 	genconfig.GenConfig(config.Config{})
 

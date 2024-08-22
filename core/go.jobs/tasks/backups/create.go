@@ -86,7 +86,12 @@ func backupGuildAsset(state taskstate.TaskState, constraints *BackupConstraints,
 	default:
 	}
 
-	f.WriteSection(&buf, "assets/"+name)
+	err = f.WriteSection(&buf, "assets/"+name)
+
+	if err != nil {
+		return fmt.Errorf("error writing guild asset: %w", err)
+	}
+
 	return nil
 }
 
@@ -294,7 +299,12 @@ func createAttachmentBlob(state taskstate.TaskState, constraints *BackupConstrai
 
 			var buf bytes.Buffer
 			gz := gzip.NewWriter(&buf)
-			gz.Write(bt)
+			_, err = gz.Write(bt)
+
+			if err != nil {
+				logger.Error("Error gzipping attachment", zap.Error(err), zap.String("url", url))
+				return attachments, nil, fmt.Errorf("error gzipping attachment: %w", err)
+			}
 
 			err = gz.Close()
 
@@ -636,7 +646,11 @@ func (t *ServerBackupCreateTask) Exec(
 					for _, msg := range msgs {
 						if len(msg.attachments) > 0 {
 							for id, buf := range msg.attachments {
-								f.WriteSection(buf, "attachments/"+id)
+								err = f.WriteSection(buf, "attachments/"+id)
+
+								if err != nil {
+									return len(msgs), fmt.Errorf("error writing attachment: %w", err)
+								}
 							}
 						}
 					}

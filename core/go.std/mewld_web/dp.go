@@ -21,14 +21,14 @@ func DpAuthMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Header.Get("X-DP-Host") == "" {
 			w.WriteHeader(http.StatusUnauthorized)
-			w.Write([]byte("Unauthorized. X-DP-Host header not found. Not running under deployproxy?"))
+			_, _ = w.Write([]byte("Unauthorized. X-DP-Host header not found. Not running under deployproxy?"))
 			return
 		}
 
 		if r.Header.Get("X-DP-UserID") == "" {
 			// User is not authenticated
 			w.WriteHeader(http.StatusUnauthorized)
-			w.Write([]byte("Unauthorized. Not running under deployproxy?"))
+			_, _ = w.Write([]byte("Unauthorized. Not running under deployproxy?"))
 			return
 		}
 
@@ -38,21 +38,21 @@ func DpAuthMiddleware(next http.Handler) http.Handler {
 		// Check if user is allowed
 		if len(globalConfig.AllowedIDS) > 0 && !slices.Contains(globalConfig.AllowedIDS, r.Header.Get("X-DP-UserID")) {
 			w.WriteHeader(http.StatusUnauthorized)
-			w.Write([]byte("Unauthorized. User not allowed to access this site."))
+			_, _ = w.Write([]byte("Unauthorized. User not allowed to access this site."))
 			return
 		}
 
 		// User is possibly allowed
 		if r.Header.Get("X-DP-Signature") == "" {
 			w.WriteHeader(http.StatusUnauthorized)
-			w.Write([]byte("Unauthorized. X-DP-Signature header not found."))
+			_, _ = w.Write([]byte("Unauthorized. X-DP-Signature header not found."))
 			return
 		}
 
 		// Check for X-DP-Timestamp
 		if r.Header.Get("X-DP-Timestamp") == "" {
 			w.WriteHeader(http.StatusUnauthorized)
-			w.Write([]byte("Unauthorized. X-DP-Timestamp header not found."))
+			_, _ = w.Write([]byte("Unauthorized. X-DP-Timestamp header not found."))
 			return
 		}
 
@@ -67,7 +67,7 @@ func DpAuthMiddleware(next http.Handler) http.Handler {
 
 			if r.Header.Get("X-DP-Signature") != hexed {
 				w.WriteHeader(http.StatusUnauthorized)
-				w.Write([]byte("Unauthorized. Signature from deployproxy mismatch"))
+				_, _ = w.Write([]byte("Unauthorized. Signature from deployproxy mismatch"))
 				return
 			}
 		}
@@ -77,13 +77,13 @@ func DpAuthMiddleware(next http.Handler) http.Handler {
 
 		if err != nil {
 			w.WriteHeader(http.StatusUnauthorized)
-			w.Write([]byte("Unauthorized. X-DP-Timestamp is not a valid integer."))
+			_, _ = w.Write([]byte("Unauthorized. X-DP-Timestamp is not a valid integer."))
 			return
 		}
 
 		if time.Now().Unix()-timestamp > 10 {
 			w.WriteHeader(http.StatusUnauthorized)
-			w.Write([]byte("Unauthorized. X-DP-Timestamp is too old."))
+			_, _ = w.Write([]byte("Unauthorized. X-DP-Timestamp is too old."))
 			return
 		}
 

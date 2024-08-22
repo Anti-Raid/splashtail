@@ -72,7 +72,7 @@ func corsMiddleware(next http.Handler) http.Handler {
 		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE")
 
 		if r.Method == "OPTIONS" {
-			w.Write([]byte{})
+			_, _ = w.Write([]byte{})
 			return
 		}
 
@@ -145,7 +145,7 @@ func CreateWebserver() *chi.Mux {
 	}
 
 	r.Get("/openapi", func(w http.ResponseWriter, r *http.Request) {
-		w.Write(openapi)
+		_, _ = w.Write(openapi)
 	})
 
 	docsTempl := template.Must(template.New("docs").Parse(docsHTML))
@@ -163,7 +163,7 @@ func CreateWebserver() *chi.Mux {
 
 		if srv == "" {
 			w.WriteHeader(http.StatusBadRequest)
-			w.Write([]byte("Invalid service name"))
+			_, _ = w.Write([]byte("Invalid service name"))
 			return
 		}
 
@@ -171,15 +171,21 @@ func CreateWebserver() *chi.Mux {
 
 		if !ok {
 			w.WriteHeader(http.StatusBadRequest)
-			w.Write([]byte("Invalid service"))
+			_, _ = w.Write([]byte("Invalid service"))
 			return
 		}
 
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 
-		docsTempl.Execute(w, map[string]string{
+		err := docsTempl.Execute(w, map[string]string{
 			"url": v,
 		})
+
+		if err != nil {
+			state.Logger.Error("Error executing template", zap.Error(err))
+			w.WriteHeader(http.StatusInternalServerError)
+			_, _ = w.Write([]byte("Error executing template"))
+		}
 	})
 
 	// Load openapi here to avoid large marshalling in every request
@@ -192,12 +198,12 @@ func CreateWebserver() *chi.Mux {
 
 	r.NotFound(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNotFound)
-		w.Write([]byte(constants.EndpointNotFound))
+		_, _ = w.Write([]byte(constants.EndpointNotFound))
 	})
 
 	r.MethodNotAllowed(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusMethodNotAllowed)
-		w.Write([]byte(constants.MethodNotAllowed))
+		_, _ = w.Write([]byte(constants.MethodNotAllowed))
 	})
 
 	// Mount integrations
@@ -224,7 +230,11 @@ func main() {
 			signal.Notify(sig, syscall.SIGHUP)
 			for range sig {
 				state.Logger.Info("Received SIGHUP, upgrading server")
-				upg.Upgrade()
+				err := upg.Upgrade()
+
+				if err != nil {
+					state.Logger.Error("Error upgrading server", zap.Error(err))
+				}
 			}
 		}()
 

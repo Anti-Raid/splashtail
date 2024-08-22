@@ -17,18 +17,17 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/redis/rueidis"
 	"go.std/config"
-	"go.std/mewldresponder"
 	"go.std/objectstorage"
+	"go.std/utils"
 	"go.uber.org/zap"
 	"gopkg.in/yaml.v3"
 )
 
 var (
-	ClusterID      uint16
-	ClusterName    string
-	Shard          uint16 // A cluster can only have one associated shard
-	ShardCount     uint16
-	MewldResponder *mewldresponder.MewldResponder
+	ClusterID   uint16
+	ClusterName string
+	Shard       uint16 // A cluster can only have one associated shard
+	ShardCount  uint16
 )
 
 var (
@@ -138,11 +137,14 @@ func SetupBase() {
 
 func Setup() {
 	SetupDebug()
-	Validator.RegisterValidation("nonvulgar", nonVulgar)
-	Validator.RegisterValidation("notblank", validators.NotBlank)
-	Validator.RegisterValidation("nospaces", snippets.ValidatorNoSpaces)
-	Validator.RegisterValidation("https", snippets.ValidatorIsHttps)
-	Validator.RegisterValidation("httporhttps", snippets.ValidatorIsHttpOrHttps)
+
+	utils.Must(
+		Validator.RegisterValidation("nonvulgar", nonVulgar),
+		Validator.RegisterValidation("notblank", validators.NotBlank),
+		Validator.RegisterValidation("nospaces", snippets.ValidatorNoSpaces),
+		Validator.RegisterValidation("https", snippets.ValidatorIsHttps),
+		Validator.RegisterValidation("httporhttps", snippets.ValidatorIsHttpOrHttps),
+	)
 
 	SetupBase()
 

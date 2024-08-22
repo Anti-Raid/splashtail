@@ -28,6 +28,7 @@ func CreateTask(ctx context.Context, pool *pgxpool.Pool, task taskdef.TaskDefini
 		return nil, fmt.Errorf("failed to start transaction: %w", err)
 	}
 
+	//nolint:errcheck
 	defer tx.Rollback(ctx)
 
 	taskForStr, err := jobs.FormatTaskFor(taskFor)

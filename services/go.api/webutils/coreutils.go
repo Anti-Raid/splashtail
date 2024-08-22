@@ -113,7 +113,9 @@ func RpcQuery[T any](
 		return nil, fmt.Errorf("failed to send request: %w", err)
 	}
 
+	//nolint:errcheck
 	defer resp.Body.Close()
+	//nolint:errcheck
 	defer io.Copy(io.Discard, resp.Body)
 
 	if resp.StatusCode != http.StatusOK {

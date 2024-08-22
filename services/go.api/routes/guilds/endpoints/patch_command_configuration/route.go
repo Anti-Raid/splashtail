@@ -353,6 +353,7 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 		}
 	}
 
+	//nolint:errcheck
 	defer tx.Rollback(d.Context)
 
 	var sqlString = "INSERT INTO guild_command_configurations (guild_id, command, created_by, " + strings.Join(updateCols, ", ") + ") VALUES ($1, $2, $3, " + strings.Join(insertParams, ",") + ") ON CONFLICT (guild_id, command) DO UPDATE SET " + strings.Join(updateParams, ", ") + " RETURNING id"

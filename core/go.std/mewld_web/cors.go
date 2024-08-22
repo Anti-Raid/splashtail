@@ -16,7 +16,7 @@ func corsMiddleware(next http.Handler) http.Handler {
 		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE")
 
 		if r.Method == "OPTIONS" {
-			w.Write([]byte{})
+			_, _ = w.Write([]byte{})
 			return
 		}
 

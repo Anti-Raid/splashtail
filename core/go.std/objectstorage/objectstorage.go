@@ -125,7 +125,7 @@ func (o *ObjectStorage) GetUrl(ctx context.Context, dir, filename string, urlExp
 			Path:   path,
 		}, nil
 	case "s3-like":
-		var path = ""
+		var path string
 
 		if filename == "" {
 			path = dir
