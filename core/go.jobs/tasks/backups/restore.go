@@ -576,7 +576,7 @@ func (t *ServerBackupRestoreTask) Exec(
 					}
 
 					if tgtBotGuildHighestRole.Position > 1 && srcGuild.Roles[i].Position >= tgtBotGuildHighestRole.Position {
-						srcGuild.Roles[i].Position = tgtBotGuildHighestRole.Position - 1
+						srcGuild.Roles[i].Position = srcGuild.Roles[i].Position - tgtBotGuildHighestRole.Position
 					}
 
 					if slices.Contains(t.Options.ProtectedRoles, srcGuild.Roles[i].ID) {
