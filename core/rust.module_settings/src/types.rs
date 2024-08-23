@@ -60,51 +60,51 @@ pub enum SettingsError {
 impl std::fmt::Display for SettingsError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            SettingsError::Generic { message, src, typ } => {
-                write!(f, "`{}` from src `{}` of type `{}`", message, src, typ)
-            }
-            SettingsError::OperationNotSupported { operation } => {
-                write!(f, "Operation `{}` is not supported", operation)
-            }
-            SettingsError::SchemaTypeValidationError {
-                column,
-                expected_type,
-                got_type,
-            } => write!(
-                f,
-                "Column `{}` expected type `{}`, got type `{}`",
-                column, expected_type, got_type
-            ),
-            SettingsError::SchemaNullValueValidationError { column } => {
-                write!(f, "Column `{}` is not nullable, yet value is null", column)
-            }
-            SettingsError::SchemaCheckValidationError {
-                column,
-                check,
-                error,
-                accepted_range,
-            } => {
-                write!(
+                SettingsError::Generic { message, src, typ } => {
+                    write!(f, "```{}```\n**Source:** `{}`\n**Error Type:** `{}`", message, src, typ)
+                }
+                SettingsError::OperationNotSupported { operation } => {
+                    write!(f, "Operation `{}` is not supported", operation)
+                }
+                SettingsError::SchemaTypeValidationError {
+                    column,
+                    expected_type,
+                    got_type,
+                } => write!(
                     f,
-                    "Column `{}` failed check `{}`, accepted range: `{}`, error: `{}`",
-                    column, check, accepted_range, error
-                )
+                    "Column `{}` expected type `{}`, got type `{}`",
+                    column, expected_type, got_type
+                ),
+                SettingsError::SchemaNullValueValidationError { column } => {
+                    write!(f, "Column `{}` is not nullable, yet value is null", column)
+                }
+                SettingsError::SchemaCheckValidationError {
+                    column,
+                    check,
+                    error,
+                    accepted_range,
+                } => {
+                    write!(
+                        f,
+                        "Column `{}` failed check `{}`, accepted range: `{}`, error: `{}`",
+                        column, check, accepted_range, error
+                    )
+                }
+                SettingsError::MissingOrInvalidField { field, src } => write!(f, "Missing (or invalid) field `{}` with src: `{}`", field, src),
+                SettingsError::RowExists { column_id, count } => write!(
+                    f,
+                    "A row with the same column `{}` already exists. Count: `{}`",
+                    column_id, count
+                ),
+                SettingsError::RowDoesNotExist { column_id } => {
+                    write!(f, "A row with the same column `{}` does not exist", column_id)
+                }
+                SettingsError::MaximumCountReached { max, current } => write!(
+                    f,
+                    "The maximum number of entities this server may have (`{}`) has been reached. This server currently has `{}`.",
+                    max, current
+                ),
             }
-            SettingsError::MissingOrInvalidField { field, src } => write!(f, "Missing (or invalid) field `{}` with src: `{}`", field, src),
-            SettingsError::RowExists { column_id, count } => write!(
-                f,
-                "A row with the same column `{}` already exists. Count: `{}`",
-                column_id, count
-            ),
-            SettingsError::RowDoesNotExist { column_id } => {
-                write!(f, "A row with the same column `{}` does not exist", column_id)
-            }
-            SettingsError::MaximumCountReached { max, current } => write!(
-                f,
-                "The maximum number of entities this server may have (`{}`) has been reached. This server currently has `{}`.",
-                max, current
-            ),
-        }
     }
 }
 

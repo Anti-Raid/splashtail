@@ -4,12 +4,15 @@ use std::collections::HashSet;
 /// The base permissions for quick lockdown
 ///
 /// If any of these permissions are provided, quick lockdown cannot proceed
-static BASE_PERMS: [serenity::model::permissions::Permissions; 4] = [
+static BASE_PERMS: [serenity::model::permissions::Permissions; 2] = [
     serenity::all::Permissions::VIEW_CHANNEL,
     serenity::all::Permissions::SEND_MESSAGES,
-    serenity::all::Permissions::SEND_MESSAGES_IN_THREADS,
-    serenity::all::Permissions::CONNECT,
+    //serenity::all::Permissions::SEND_MESSAGES_IN_THREADS,
+    //serenity::all::Permissions::CONNECT,
 ];
+
+static LOCKDOWN_PERMS: std::sync::LazyLock<serenity::model::permissions::Permissions> =
+    std::sync::LazyLock::new(|| serenity::all::Permissions::VIEW_CHANNEL);
 
 #[derive(Debug, Serialize, Deserialize, Clone, Copy, Hash, PartialEq)]
 pub enum ChangeOp {
@@ -117,6 +120,8 @@ pub async fn test_quick_lockdown(
 /// Creates a new quick lockdown given a [PartialGuild](`serenity::all::PartialGuild`) and a set of critical roles
 ///
 /// This is achieved by **removing** the `BASE_PERMS` from the critical roles
+///
+/// NOTE: Callers must *save* the old role permissions before calling this function
 pub async fn create_quick_lockdown(
     ctx: &botox::cache::CacheHttpImpl,
     pg: &mut serenity::all::PartialGuild,
@@ -125,26 +130,12 @@ pub async fn create_quick_lockdown(
     let mut new_roles = Vec::new();
     for role in pg.roles.iter() {
         if critical_roles.contains(&role.id) {
-            let mut perms = role.permissions;
-
-            let mut changed = false;
-            for perm in BASE_PERMS {
-                if perms.contains(perm) {
-                    changed = true;
-                    perms.remove(perm);
-                }
-            }
-
-            if !changed {
-                continue; // Avoid useless API call when no changes are needed
-            }
-
             new_roles.push(
                 pg.id
                     .edit_role(
                         &ctx.http,
                         role.id,
-                        serenity::all::EditRole::new().permissions(perms),
+                        serenity::all::EditRole::new().permissions(*LOCKDOWN_PERMS),
                     )
                     .await?,
             );
@@ -160,28 +151,22 @@ pub async fn create_quick_lockdown(
 
 /// Reverts a quick lockdown given a [PartialGuild](`serenity::all::PartialGuild`) and a set of critical roles
 ///
-/// This is achieved by **adding** the `BASE_PERMS` to the critical roles
+/// This is achieved by RESTORING the old role permissions
 pub async fn revert_quick_lockdown(
     ctx: &botox::cache::CacheHttpImpl,
     pg: &mut serenity::all::PartialGuild,
     critical_roles: HashSet<serenity::all::RoleId>,
+    old_permissions: std::collections::HashMap<serenity::all::RoleId, serenity::all::Permissions>,
 ) -> Result<(), silverpelt::Error> {
     let mut new_roles = Vec::new();
     for role in pg.roles.iter() {
         if critical_roles.contains(&role.id) {
-            let mut perms = role.permissions;
-
-            let mut changed = false;
-            for perm in BASE_PERMS {
-                if !perms.contains(perm) {
-                    changed = true;
-                    perms |= perm;
-                }
-            }
-
-            if !changed {
-                continue; // Avoid useless API call when no changes are needed
-            }
+            let perms = old_permissions.get(&role.id).copied().unwrap_or(
+                BASE_PERMS
+                    .iter()
+                    .copied()
+                    .fold(serenity::all::Permissions::empty(), |acc, perm| acc | perm),
+            );
 
             new_roles.push(
                 pg.id
