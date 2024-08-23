@@ -286,6 +286,30 @@ pub static QUICK_SERVER_LOCKDOWNS: LazyLock<ConfigOption> = LazyLock::new(|| Con
                                             src: "lockdown__server_lockdowns.ongoing".to_string(),
                                         });
                                     }
+                                } else if !*ongoing {
+                                    let Some(Value::Map(old_permissions)) = state.state.get("old_permissions") else {
+                                        return Err(SettingsError::MissingOrInvalidField {
+                                            field: "old_permissions".to_string(),
+                                            src: "index->NativeAction [post_actions]".to_string(),
+                                        });
+                                    };
+                        
+                                    for (k, v) in old_permissions.iter() {
+                                        k.parse::<serenity::all::RoleId>().map_err(|e| {
+                                            SettingsError::Generic {
+                                                message: format!("Error while parsing role ID: {}", e),
+                                                typ: "value_error".to_string(),
+                                                src: "lockdown__server_lockdowns.ongoing".to_string(),
+                                            }
+                                        })?;
+                                        v.as_u64().ok_or_else(|| {
+                                            SettingsError::Generic {
+                                                message: format!("Error while converting permissions: {}", v),
+                                                typ: "value_error".to_string(),
+                                                src: "lockdown__server_lockdowns.ongoing".to_string(),
+                                            }
+                                        })?;
+                                     }            
                                 }
         
                                 Ok(())
@@ -415,13 +439,7 @@ pub static QUICK_SERVER_LOCKDOWNS: LazyLock<ConfigOption> = LazyLock::new(|| Con
                                 }
                             })?;
 
-                            let value_perms = serenity::all::Permissions::from_bits(value).ok_or_else(|| {
-                                SettingsError::Generic {
-                                    message: format!("Error while converting permissions: {}", value),
-                                    typ: "value_error".to_string(),
-                                    src: "lockdown__server_lockdowns.ongoing".to_string(),
-                                }
-                            })?;
+                            let value_perms = serenity::all::Permissions::from_bits_retain(value);
 
                             op.insert(role_id, value_perms);
                         }
