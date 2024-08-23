@@ -431,9 +431,9 @@
       "Option",
       "Message"
     ],
-    "interaction": [
+    "interaction_metadata": [
       "Option",
-      "MessageInteraction"
+      "MessageInteractionMetadata"
     ],
     "thread": [
       "Option",
@@ -625,6 +625,42 @@
   "EntitlementDelete": {
     "entitlement": [
       "Entitlement"
+    ]
+  },
+  "MessagePollVoteAdd": {
+    "user_id": [
+      "UserId"
+    ],
+    "channel_id": [
+      "ChannelId"
+    ],
+    "message_id": [
+      "MessageId"
+    ],
+    "guild_id": [
+      "Option",
+      "GuildId"
+    ],
+    "answer_id": [
+      "AnswerId"
+    ]
+  },
+  "MessagePollVoteRemove": {
+    "user_id": [
+      "UserId"
+    ],
+    "channel_id": [
+      "ChannelId"
+    ],
+    "message_id": [
+      "MessageId"
+    ],
+    "guild_id": [
+      "Option",
+      "GuildId"
+    ],
+    "answer_id": [
+      "AnswerId"
     ]
   }
 }
