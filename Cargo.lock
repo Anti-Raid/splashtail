@@ -492,6 +492,7 @@ dependencies = [
  "bot_modules_gitlogs",
  "bot_modules_inspector",
  "bot_modules_limits",
+ "bot_modules_lockdown",
  "bot_modules_moderation",
  "bot_modules_punishments",
  "bot_modules_root",

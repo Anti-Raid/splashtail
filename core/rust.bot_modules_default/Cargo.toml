@@ -17,6 +17,7 @@ bot_modules_core = { path = "../../core/rust.bot_modules.core" }
 bot_modules_gitlogs = { path = "../../core/rust.bot_modules.gitlogs" }
 bot_modules_inspector = { path = "../../core/rust.bot_modules.inspector" }
 bot_modules_limits = { path = "../../core/rust.bot_modules.limits" }
+bot_modules_lockdown = { path = "../../core/rust.bot_modules.lockdown" }
 bot_modules_moderation = { path = "../../core/rust.bot_modules.moderation" }
 bot_modules_punishments = { path = "../../core/rust.bot_modules.punishments" }
 bot_modules_root = { path = "../../core/rust.bot_modules.root" }

@@ -7,6 +7,7 @@ pub fn modules() -> Vec<silverpelt::Module> {
         bot_modules_gitlogs::module().parse(),
         bot_modules_inspector::module().parse(),
         bot_modules_limits::module().parse(),
+        bot_modules_lockdown::module().parse(),
         bot_modules_moderation::module().parse(),
         bot_modules_punishments::module().parse(),
         bot_modules_server_backups::module().parse(),
