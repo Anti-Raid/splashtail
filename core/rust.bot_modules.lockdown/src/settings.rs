@@ -223,7 +223,7 @@ pub static QUICK_SERVER_LOCKDOWNS: LazyLock<ConfigOption> = LazyLock::new(|| Con
                                             }
         
                                             needed_changes.push_str(&format!("Role: {}\n", role_id));
-                                            needed_changes.push_str(&format!("Permissions: {}\n", perms));
+                                            needed_changes.push_str(&format!("Permissions: {} {}\n", perms.0, perms.1));
                                             needed_changes.push('\n');
                                         }
         
@@ -326,7 +326,7 @@ pub static QUICK_SERVER_LOCKDOWNS: LazyLock<ConfigOption> = LazyLock::new(|| Con
                                     }
 
                                     needed_changes.push_str(&format!("Role: {}\n", role_id));
-                                    needed_changes.push_str(&format!("Permissions: {}\n", perms));
+                                    needed_changes.push_str(&format!("Permissions: {} {}\n", perms.0, perms.1));
                                     needed_changes.push('\n');
                                 }
 

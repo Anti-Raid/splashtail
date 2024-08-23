@@ -11,12 +11,27 @@ static BASE_PERMS: [serenity::model::permissions::Permissions; 4] = [
     serenity::all::Permissions::CONNECT,
 ];
 
+#[derive(Debug, Serialize, Deserialize, Clone, Copy, Hash, PartialEq)]
+pub enum ChangeOp {
+    Add,
+    Remove,
+}
+
+impl std::fmt::Display for ChangeOp {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ChangeOp::Add => write!(f, "Add"),
+            ChangeOp::Remove => write!(f, "Remove"),
+        }
+    }
+}
+
 /// The result of a `test_quick_lockdown` call
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct QuickLockdownTestResult {
     /// Which roles need to be changed/fixed combined with the target perms
     pub changes_needed:
-        std::collections::HashMap<serenity::all::RoleId, serenity::all::Permissions>,
+        std::collections::HashMap<serenity::all::RoleId, (ChangeOp, serenity::all::Permissions)>,
     /// The critical roles (either member roles or the `@everyone` role)
     pub critical_roles: HashSet<serenity::all::RoleId>,
 }
@@ -63,32 +78,32 @@ pub async fn test_quick_lockdown(
     // From here on out, we only need to care about critical and non critical roles
     for role in pg.roles.iter() {
         if critical_roles.contains(&role.id) {
-            let mut needed_perms = role.permissions;
+            let mut needed_perms = serenity::all::Permissions::empty();
 
             let mut missing = false;
             for perm in BASE_PERMS {
-                if !needed_perms.contains(perm) {
+                if !role.permissions.contains(perm) {
                     needed_perms |= perm;
                     missing = true;
                 }
             }
 
             if missing {
-                changes_needed.insert(role.id, needed_perms);
+                changes_needed.insert(role.id, (ChangeOp::Add, needed_perms));
             }
         } else {
-            let mut current_perms = role.permissions;
+            let mut perms_to_remove = serenity::all::Permissions::empty();
 
             let mut needs_perms_removed = false;
             for perm in BASE_PERMS {
-                if current_perms.contains(perm) {
-                    current_perms.remove(perm);
+                if role.permissions.contains(perm) {
+                    perms_to_remove |= perm;
                     needs_perms_removed = true;
                 }
             }
 
             if needs_perms_removed {
-                changes_needed.insert(role.id, current_perms);
+                changes_needed.insert(role.id, (ChangeOp::Remove, perms_to_remove));
             }
         }
     }
