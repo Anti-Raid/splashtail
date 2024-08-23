@@ -28,7 +28,7 @@ pub async fn get_guild_lockdown_settings(
         Ok(settings.clone())
     } else {
         let settings = match sqlx::query!(
-            "SELECT member_roles, require_correct_layout FROM lockdown__server WHERE guild_id = $1",
+            "SELECT member_roles, require_correct_layout FROM lockdown__guilds WHERE guild_id = $1",
             guild_id.to_string(),
         )
         .fetch_optional(pool)

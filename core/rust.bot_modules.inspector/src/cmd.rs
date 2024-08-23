@@ -27,55 +27,6 @@ static FAKE_BOT_DETECTION_OPTIONS: LazyLock<indexmap::IndexMap<String, i64>> =
     });
 
 #[inline]
-pub async fn bitflag_autocomplete<'a>(
-    ctx: Context<'_>,
-    values: &indexmap::IndexMap<String, i64>,
-    partial: &'a str,
-) -> Vec<serenity::all::AutocompleteChoice<'a>> {
-    // Fetch all bitflags available
-    let guild_id = ctx.guild_id();
-
-    if guild_id.is_none() {
-        return Vec::new();
-    }
-
-    let current_choices = partial
-        .split(';')
-        .map(|x| x.to_string())
-        .collect::<Vec<String>>();
-
-    let mut choices = Vec::with_capacity(std::cmp::max(values.len(), 25));
-
-    for (label, _) in values {
-        // We can abuse autocomplete to emulate a bitflag like setup
-        if choices.len() > 25 {
-            break;
-        }
-
-        if current_choices.contains(label) {
-            continue;
-        }
-
-        let partial = partial.trim().trim_matches(';');
-
-        if partial.is_empty() {
-            choices.push(serenity::all::AutocompleteChoice::new(
-                label.clone(),
-                label.clone(),
-            ));
-            continue;
-        }
-
-        choices.push(serenity::all::AutocompleteChoice::new(
-            format!("{};{}", partial, label),
-            format!("{};{}", partial, label),
-        ));
-    }
-
-    choices
-}
-
-#[inline]
 pub fn convert_bitflags_string_to_value(
     values: &indexmap::IndexMap<String, i64>,
     input: Option<String>,
@@ -100,21 +51,22 @@ pub async fn hoist_detection_autocomplete<'a>(
     ctx: Context<'_>,
     partial: &'a str,
 ) -> Vec<serenity::all::AutocompleteChoice<'a>> {
-    bitflag_autocomplete(ctx, &DEHOIST_OPTIONS, partial).await
+    silverpelt::settings_poise::bitflag_autocomplete(ctx, &DEHOIST_OPTIONS, partial).await
 }
 
 pub async fn guild_protection_autocomplete<'a>(
     ctx: Context<'_>,
     partial: &'a str,
 ) -> Vec<serenity::all::AutocompleteChoice<'a>> {
-    bitflag_autocomplete(ctx, &GUILD_PROTECTION_OPTIONS, partial).await
+    silverpelt::settings_poise::bitflag_autocomplete(ctx, &GUILD_PROTECTION_OPTIONS, partial).await
 }
 
 pub async fn fake_bot_detection_autocomplete<'a>(
     ctx: Context<'_>,
     partial: &'a str,
 ) -> Vec<serenity::all::AutocompleteChoice<'a>> {
-    bitflag_autocomplete(ctx, &FAKE_BOT_DETECTION_OPTIONS, partial).await
+    silverpelt::settings_poise::bitflag_autocomplete(ctx, &FAKE_BOT_DETECTION_OPTIONS, partial)
+        .await
 }
 
 pub fn number_to_value(number: Option<i64>, default: Option<i64>) -> Value {

@@ -672,3 +672,112 @@ pub async fn settings_deleter(
 
     Ok(())
 }
+
+pub async fn standard_autocomplete<'a>(
+    ctx: super::Context<'_>,
+    setting: &ConfigOption,
+    partial: &'a str,
+) -> Vec<serenity::all::AutocompleteChoice<'a>> {
+    // Fetch first 20 objects
+    let data = ctx.data();
+
+    let guild_id = ctx.guild_id();
+
+    if guild_id.is_none() {
+        return Vec::new();
+    }
+
+    let guild_id = guild_id.unwrap();
+
+    let limit = std::cmp::max(20, setting.max_return);
+
+    let objs = match settings_view(
+        setting,
+        &data.settings_data(botox::cache::CacheHttpImpl::from_ctx(
+            ctx.serenity_context(),
+        )),
+        guild_id,
+        ctx.author().id,
+        indexmap::indexmap! {
+            "__limit".to_string() => Value::Integer(limit),
+        },
+    )
+    .await
+    {
+        Ok(objs) => objs,
+        Err(_) => return Vec::new(),
+    };
+
+    let mut choices = Vec::new();
+
+    for obj in objs {
+        let disp_name = obj.template_to_string(setting.title_template);
+
+        for (k, v) in obj.state {
+            if k.starts_with("__") {
+                continue;
+            }
+
+            if let Value::String(v) = v {
+                if v.starts_with(partial) {
+                    choices.push(serenity::all::AutocompleteChoice::new(
+                        disp_name.to_string(),
+                        v,
+                    ));
+                    continue;
+                }
+            }
+        }
+    }
+
+    choices
+}
+
+#[inline(always)]
+pub async fn bitflag_autocomplete<'a>(
+    ctx: super::Context<'_>,
+    values: &indexmap::IndexMap<String, i64>,
+    partial: &'a str,
+) -> Vec<serenity::all::AutocompleteChoice<'a>> {
+    // Fetch all bitflags available
+    let guild_id = ctx.guild_id();
+
+    if guild_id.is_none() {
+        return Vec::new();
+    }
+
+    let current_choices = partial
+        .split(';')
+        .map(|x| x.to_string())
+        .collect::<Vec<String>>();
+
+    let mut choices = Vec::with_capacity(std::cmp::max(values.len(), 25));
+
+    for (label, _) in values {
+        // We can abuse autocomplete to emulate a bitflag like setup
+        if choices.len() > 25 {
+            break;
+        }
+
+        if current_choices.contains(label) {
+            continue;
+        }
+
+        let partial = partial.trim().trim_matches(';');
+
+        if partial.is_empty() {
+            choices.push(serenity::all::AutocompleteChoice::new(
+                label.clone(),
+                label.clone(),
+            ));
+            continue;
+        }
+
+        choices.push(serenity::all::AutocompleteChoice::new(
+            format!("{};{}", partial, label),
+            format!("{};{}", partial, label),
+        ));
+    }
+
+    choices
+}
