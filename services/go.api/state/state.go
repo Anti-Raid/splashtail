@@ -54,7 +54,7 @@ var (
 func fetchMewldInstanceList() (*mproc.InstanceList, error) {
 	var mc *mproc.InstanceList
 
-	resp, err := http.Get(fmt.Sprintf("http://localhost:%d/getMewldInstanceList", Config.Meta.BotPort.Parse()))
+	resp, err := http.Get(fmt.Sprintf("http://localhost:%d/getMewldInstanceList", Config.BasePorts.Bot.Parse() - 1))
 
 	if err != nil {
 		return nil, err

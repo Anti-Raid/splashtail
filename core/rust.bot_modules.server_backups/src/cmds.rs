@@ -172,7 +172,7 @@ pub async fn backups_create(
     let jobserver_cluster_id = shard_id(guild_id, data.props.shard_count().await?.try_into()?);
     let resp = data
         .reqwest
-        .post(&format!(
+        .post(format!(
             "{}:{}/spawn-task",
             config::CONFIG.base_ports.jobserver_base_addr.get(),
             config::CONFIG.base_ports.jobserver.get() + jobserver_cluster_id
@@ -611,7 +611,7 @@ pub async fn backups_list(ctx: Context<'_>) -> Result<(), Error> {
                     shard_id(guild_id, data.props.shard_count().await?.try_into()?);
                 let resp = data
                     .reqwest
-                    .post(&format!(
+                    .post(format!(
                         "{}:{}/spawn-task",
                         config::CONFIG.base_ports.jobserver_base_addr.get(),
                         config::CONFIG.base_ports.jobserver.get() + jobserver_cluster_id
@@ -1211,7 +1211,7 @@ pub async fn backups_restore(
     let jobserver_cluster_id = shard_id(guild_id, data.props.shard_count().await?.try_into()?);
     let resp = data
         .reqwest
-        .post(&format!(
+        .post(format!(
             "{}:{}/spawn-task",
             config::CONFIG.base_ports.jobserver_base_addr.get(),
             config::CONFIG.base_ports.jobserver.get() + jobserver_cluster_id

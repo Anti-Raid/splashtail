@@ -573,9 +573,22 @@ dependencies = [
 name = "bot_modules_lockdown"
 version = "0.1.0"
 dependencies = [
+ "botox",
+ "chrono",
+ "futures-util",
+ "indexmap",
+ "module_settings",
+ "moka",
+ "poise",
+ "proxy_support",
  "serde",
+ "serde_json",
  "serenity",
  "silverpelt",
+ "splashcore_rs",
+ "sqlx",
+ "strum",
+ "strum_macros",
 ]
 
 [[package]]

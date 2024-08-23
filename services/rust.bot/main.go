@@ -212,7 +212,7 @@ func main() {
 		InstanceList: il,
 	}))
 
-	err = http.ListenAndServe(":"+strconv.Itoa(cfg.Meta.BotPort.Parse()), r)
+	err = http.ListenAndServe(":"+strconv.Itoa(cfg.BasePorts.Bot.Parse()-1), r)
 
 	if err != nil {
 		logger.Fatal("Error binding to socket", zap.Error(err))

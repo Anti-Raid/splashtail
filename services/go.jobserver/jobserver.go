@@ -193,7 +193,7 @@ func CreateClusters() {
 
 	// Tableflip not supported
 	state.Logger.Warn("Tableflip not supported on this platform, this is not a production-capable server.")
-	err = http.ListenAndServe(":"+strconv.Itoa(state.Config.Meta.JobserverPort.Parse()), r)
+	err = http.ListenAndServe(":"+strconv.Itoa(state.Config.BasePorts.Jobserver.Parse()-1), r)
 
 	if err != nil {
 		il.KillAll()

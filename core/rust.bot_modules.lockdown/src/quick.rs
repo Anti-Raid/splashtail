@@ -2,26 +2,36 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 
 /// The base permissions for quick lockdown
-static BASE_PERMS: [serenity::model::permissions::Permissions; 3] = [
+///
+/// If any of these permissions are provided, quick lockdown cannot proceed
+static BASE_PERMS: [serenity::model::permissions::Permissions; 4] = [
     serenity::all::Permissions::VIEW_CHANNEL,
     serenity::all::Permissions::SEND_MESSAGES,
     serenity::all::Permissions::SEND_MESSAGES_IN_THREADS,
+    serenity::all::Permissions::CONNECT,
 ];
 
 /// The result of a `test_quick_lockdown` call
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct QuickLockdownTestResult {
-    /// Which roles need to be changed/fixed combined with the permissions they are missing
+    /// Which roles need to be changed/fixed combined with the target perms
     pub changes_needed:
         std::collections::HashMap<serenity::all::RoleId, serenity::all::Permissions>,
     /// The critical roles (either member roles or the `@everyone` role)
     pub critical_roles: HashSet<serenity::all::RoleId>,
 }
 
+impl QuickLockdownTestResult {
+    /// Returns whether the guild is in a state where quick lockdown can be applied perfectly
+    pub fn can_apply_perfectly(&self) -> bool {
+        self.changes_needed.is_empty()
+    }
+}
+
 /// Returns the critical roles given a [PartialGuild](`serenity::all::PartialGuild`) and a set of member roles
 pub fn get_critical_roles(
     pg: &serenity::all::PartialGuild,
-    member_roles: HashSet<serenity::all::RoleId>,
+    member_roles: &HashSet<serenity::all::RoleId>,
 ) -> Result<HashSet<serenity::all::RoleId>, silverpelt::Error> {
     if member_roles.is_empty() {
         // Find the everyone role
@@ -33,7 +43,7 @@ pub fn get_critical_roles(
 
         Ok(std::iter::once(everyone_role.id).collect())
     } else {
-        Ok(member_roles)
+        Ok(member_roles.clone())
     }
 }
 
@@ -44,7 +54,7 @@ pub fn get_critical_roles(
 /// - One can define a set of critical roles which are either the member roles or the ``@everyone`` role, all other roles must not have View Channel, Send Messages and/or Send Messages In Threads permissions
 pub async fn test_quick_lockdown(
     pg: &serenity::all::PartialGuild,
-    member_roles: HashSet<serenity::all::RoleId>,
+    member_roles: &HashSet<serenity::all::RoleId>,
 ) -> Result<QuickLockdownTestResult, silverpelt::Error> {
     let critical_roles = get_critical_roles(pg, member_roles)?;
 
@@ -53,11 +63,11 @@ pub async fn test_quick_lockdown(
     // From here on out, we only need to care about critical and non critical roles
     for role in pg.roles.iter() {
         if critical_roles.contains(&role.id) {
-            let mut needed_perms = serenity::all::Permissions::empty();
+            let mut needed_perms = role.permissions;
 
             let mut missing = false;
             for perm in BASE_PERMS {
-                if !role.permissions.contains(perm) {
+                if !needed_perms.contains(perm) {
                     needed_perms |= perm;
                     missing = true;
                 }
@@ -65,6 +75,20 @@ pub async fn test_quick_lockdown(
 
             if missing {
                 changes_needed.insert(role.id, needed_perms);
+            }
+        } else {
+            let mut current_perms = role.permissions;
+
+            let mut needs_perms_removed = false;
+            for perm in BASE_PERMS {
+                if current_perms.contains(perm) {
+                    current_perms.remove(perm);
+                    needs_perms_removed = true;
+                }
+            }
+
+            if needs_perms_removed {
+                changes_needed.insert(role.id, current_perms);
             }
         }
     }
@@ -79,7 +103,7 @@ pub async fn test_quick_lockdown(
 ///
 /// This is achieved by **removing** the `BASE_PERMS` from the critical roles
 pub async fn create_quick_lockdown(
-    ctx: &serenity::all::client::Context,
+    ctx: &botox::cache::CacheHttpImpl,
     pg: &mut serenity::all::PartialGuild,
     critical_roles: HashSet<serenity::all::RoleId>,
 ) -> Result<(), silverpelt::Error> {
@@ -88,8 +112,16 @@ pub async fn create_quick_lockdown(
         if critical_roles.contains(&role.id) {
             let mut perms = role.permissions;
 
+            let mut changed = false;
             for perm in BASE_PERMS {
-                perms.remove(perm);
+                if perms.contains(perm) {
+                    changed = true;
+                    perms.remove(perm);
+                }
+            }
+
+            if !changed {
+                continue; // Avoid useless API call when no changes are needed
             }
 
             new_roles.push(
@@ -115,7 +147,7 @@ pub async fn create_quick_lockdown(
 ///
 /// This is achieved by **adding** the `BASE_PERMS` to the critical roles
 pub async fn revert_quick_lockdown(
-    ctx: &serenity::all::client::Context,
+    ctx: &botox::cache::CacheHttpImpl,
     pg: &mut serenity::all::PartialGuild,
     critical_roles: HashSet<serenity::all::RoleId>,
 ) -> Result<(), silverpelt::Error> {
