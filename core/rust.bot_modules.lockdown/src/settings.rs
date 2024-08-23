@@ -115,24 +115,11 @@ pub static QUICK_SERVER_LOCKDOWNS: LazyLock<ConfigOption> = LazyLock::new(|| Con
     default_common_filters: indexmap::indexmap! {
         "guild_id" => "{__guild_id}"
     },
-    primary_key: "id",
+    primary_key: "guild_id",
     max_entries: Some(1),
     max_return: 5,
     data_store: settings_wrap_datastore(PostgresDataStore {}),
     columns: settings_wrap_columns(vec![
-        Column {
-            id: "id",
-            name: "ID",
-            description: "The unique identifier for the server lockdown.",
-            column_type: ColumnType::new_scalar(InnerColumnType::Uuid {}),
-            nullable: false,
-            unique: true,
-            suggestions: ColumnSuggestion::None {},
-            ignored_for: vec![OperationType::Create],
-            secret: false,
-            pre_checks: settings_wrap_precheck(indexmap::indexmap! {}),
-            default_pre_checks: settings_wrap_precheck(vec![]),
-        },
         module_settings::common_columns::guild_id(
             "guild_id",
             "Guild ID",
