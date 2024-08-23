@@ -83,25 +83,10 @@ pub static LOCKDOWN_SETTINGS: LazyLock<ConfigOption> = LazyLock::new(|| {
         },
     },
     post_actions: settings_wrap_postactions(vec![ColumnAction::NativeAction {
-        action: Box::new(|_ctx, state| {
+        action: Box::new(|ctx, _state| {
             async move {
-                let Some(Value::String(guild_id)) = state.state.get("guild_id") else {
-                    return Err(SettingsError::MissingOrInvalidField {
-                        field: "guild_id".to_string(),
-                        src: "index->NativeAction [post_actions]".to_string(),
-                    });
-                };
-
-                let guild_id = guild_id.parse::<serenity::all::GuildId>().map_err(|e| {
-                    SettingsError::Generic {
-                        message: format!("Error while parsing guild_id: {}", e),
-                        typ: "value_error".to_string(),
-                        src: "lockdown_server.guild_id".to_string(),
-                    }
-                })?;
-
                 super::cache::GUILD_LOCKDOWN_SETTINGS
-                    .invalidate(&guild_id)
+                    .invalidate(&ctx.guild_id)
                     .await;
 
                 Ok(())
@@ -178,21 +163,6 @@ pub static QUICK_SERVER_LOCKDOWNS: LazyLock<ConfigOption> = LazyLock::new(|| Con
                     ColumnAction::NativeAction {
                         action: Box::new(|ctx, state| {
                             async move {
-                                let Some(Value::String(guild_id)) = state.state.get("guild_id") else {
-                                    return Err(SettingsError::MissingOrInvalidField {
-                                        field: "guild_id".to_string(),
-                                        src: "index->NativeAction [pre_checks]".to_string(),
-                                    });
-                                };
-        
-                                let guild_id = guild_id.parse::<serenity::all::GuildId>().map_err(|e| {
-                                    SettingsError::Generic {
-                                        message: format!("Error while parsing guild_id: {}", e),
-                                        typ: "value_error".to_string(),
-                                        src: "lockdown__server_lockdowns.guild_id".to_string(),
-                                    }
-                                })?;
-
                                 // Ensure we are set to internally disable the lockdown entirely
                                 if ctx.operation_type == OperationType::Delete {
                                     state.state.insert("ongoing".to_string(), Value::Boolean(false));
@@ -207,7 +177,7 @@ pub static QUICK_SERVER_LOCKDOWNS: LazyLock<ConfigOption> = LazyLock::new(|| Con
         
                                 let lockdown_settings = super::cache::get_guild_lockdown_settings(
                                     &ctx.data.pool,
-                                    guild_id
+                                    ctx.guild_id
                                 )
                                 .await
                                 .map_err(|e| {
@@ -221,7 +191,7 @@ pub static QUICK_SERVER_LOCKDOWNS: LazyLock<ConfigOption> = LazyLock::new(|| Con
                                 let pg = proxy_support::guild(
                                     &ctx.data.cache_http,
                                     &ctx.data.reqwest,
-                                    guild_id,
+                                    ctx.guild_id,
                                 )
                                 .await
                                 .map_err(|e| {
@@ -301,31 +271,16 @@ pub static QUICK_SERVER_LOCKDOWNS: LazyLock<ConfigOption> = LazyLock::new(|| Con
         ColumnAction::NativeAction {
             action: Box::new(|ctx, state| {
                 async move {
-                        let Some(Value::String(guild_id)) = state.state.get("guild_id") else {
-                            return Err(SettingsError::MissingOrInvalidField {
-                                field: "guild_id".to_string(),
-                                src: "index->NativeAction [pre_checks]".to_string(),
-                            });
-                        };
-
-                        let guild_id = guild_id.parse::<serenity::all::GuildId>().map_err(|e| {
-                            SettingsError::Generic {
-                                message: format!("Error while parsing guild_id: {}", e),
-                                typ: "value_error".to_string(),
-                                src: "lockdown__server_lockdowns.guild_id".to_string(),
-                            }
-                        })?;
-
                         let Some(Value::Boolean(ongoing)) = state.state.get("ongoing") else {
                             return Err(SettingsError::MissingOrInvalidField {
                                 field: "ongoing".to_string(),
-                                src: "index->NativeAction [pre_checks]".to_string(),
+                                src: "index->NativeAction [post_actions]".to_string(),
                             });
                         };
 
                         let lockdown_settings = super::cache::get_guild_lockdown_settings(
                             &ctx.data.pool,
-                            guild_id
+                            ctx.guild_id
                         )
                         .await
                         .map_err(|e| {
@@ -339,7 +294,7 @@ pub static QUICK_SERVER_LOCKDOWNS: LazyLock<ConfigOption> = LazyLock::new(|| Con
                         let mut pg = proxy_support::guild(
                             &ctx.data.cache_http,
                             &ctx.data.reqwest,
-                            guild_id,
+                            ctx.guild_id,
                         )
                         .await
                         .map_err(|e| {

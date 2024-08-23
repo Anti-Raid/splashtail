@@ -4,12 +4,11 @@ use module_settings::{
         settings_wrap_columns, settings_wrap_datastore, settings_wrap_postactions,
         settings_wrap_precheck, Column, ColumnSuggestion, ColumnType, ConfigOption,
         InnerColumnType, InnerColumnTypeStringKind, OperationSpecific, OperationType,
-        SettingsError, ColumnAction
+        ColumnAction
     },
 };
 use std::sync::LazyLock;
 use strum::VariantNames;
-use splashcore_rs::value::Value;
 use futures_util::FutureExt;
 
 pub static USER_STINGS: LazyLock<ConfigOption> = LazyLock::new(|| ConfigOption {
@@ -416,25 +415,10 @@ pub static GUILD_LIMITS: LazyLock<ConfigOption> = LazyLock::new(|| {
             },
         },
         post_actions: settings_wrap_postactions(vec![ColumnAction::NativeAction {
-            action: Box::new(|_ctx, state| {
+            action: Box::new(|ctx, _state| {
                 async move {
-                    let Some(Value::String(guild_id)) = state.state.get("guild_id") else {
-                        return Err(SettingsError::MissingOrInvalidField {
-                            field: "guild_id".to_string(),
-                            src: "index->NativeAction [post_actions]".to_string(),
-                        });
-                    };
-    
-                    let guild_id = guild_id.parse::<serenity::all::GuildId>().map_err(|e| {
-                        SettingsError::Generic {
-                            message: format!("Error while parsing guild_id: {}", e),
-                            typ: "value_error".to_string(),
-                            src: "inspector__options.guild_id".to_string(),
-                        }
-                    })?;
-    
                     super::cache::GUILD_LIMITS
-                        .invalidate(&guild_id)
+                        .invalidate(&ctx.guild_id)
                         .await;
     
                     Ok(())

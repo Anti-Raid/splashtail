@@ -39,7 +39,7 @@ async fn lockdown_settings_view(ctx: Context<'_>) -> Result<(), Error> {
 }
 
 /// Create new lockdown settings currently configured
-#[poise::command(prefix_command, slash_command, guild_only, rename = "view")]
+#[poise::command(prefix_command, slash_command, guild_only, rename = "create")]
 async fn lockdown_settings_create(
     ctx: Context<'_>,
     #[description = "The member roles to apply lockdown to"] member_roles: Option<String>,
@@ -76,7 +76,7 @@ async fn lockdown_settings_create(
 }
 
 /// Updates an existing server lockdown configuration
-#[poise::command(prefix_command, slash_command, guild_only, rename = "view")]
+#[poise::command(prefix_command, slash_command, guild_only, rename = "update")]
 async fn lockdown_settings_update(
     ctx: Context<'_>,
     #[description = "The member roles to apply lockdown to"] member_roles: Option<String>,
@@ -113,7 +113,7 @@ async fn lockdown_settings_update(
 }
 
 /// Deletes a server lockdown configuration
-#[poise::command(prefix_command, slash_command, guild_only, rename = "view")]
+#[poise::command(prefix_command, slash_command, guild_only, rename = "delete")]
 async fn lockdown_settings_delete(
     ctx: Context<'_>,
 ) -> Result<(), Error> {
