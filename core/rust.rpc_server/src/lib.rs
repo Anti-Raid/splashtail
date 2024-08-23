@@ -126,6 +126,7 @@ pub async fn start_rpc_server(
 fn unwrap_infallible<T>(result: Result<T, Infallible>) -> T {
     match result {
         Ok(value) => value,
-        Err(err) => match err {},
+        #[allow(unreachable_patterns)]
+        Err(never) => match never {},
     }
 }

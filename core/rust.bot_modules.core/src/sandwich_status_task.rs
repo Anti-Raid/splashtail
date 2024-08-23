@@ -9,7 +9,7 @@ struct Resp {
 }
 
 pub async fn sandwich_status_task(
-    ctx: &serenity::client::Context,
+    ctx: &serenity::all::client::Context,
 ) -> Result<(), silverpelt::Error> {
     let data = ctx.data::<silverpelt::data::Data>();
 

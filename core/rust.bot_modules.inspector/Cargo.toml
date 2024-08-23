@@ -6,7 +6,7 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-poise = { git = "https://github.com/serenity-rs/poise", branch = "serenity-next" }
+poise = { git = "https://github.com/Anti-Raid/poise", branch = "serenity-next" }
 log = "0.4"
 sqlx = { version = "0.8", features = [ "runtime-tokio-rustls", "postgres", "chrono", "uuid", "json"] }
 chrono = { version = "0.4", features = ["serde"]}
@@ -34,5 +34,5 @@ branch = "next"
 features = ["model", "http", "cache", "rustls_backend", "unstable"]
 
 [dependencies.botox]
-git = "https://github.com/infinitybotlist/botox"
+git = "https://github.com/Anti-Raid/botox"
 branch = "main"

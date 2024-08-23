@@ -1,4 +1,4 @@
-pub async fn afk_task(ctx: &serenity::client::Context) -> Result<(), silverpelt::Error> {
+pub async fn afk_task(ctx: &serenity::all::client::Context) -> Result<(), silverpelt::Error> {
     let data = ctx.data::<silverpelt::data::Data>();
     let pool = &data.pool;
 

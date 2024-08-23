@@ -412,6 +412,42 @@
         "MessageId"
       ]
     },
+    "MessagePollVoteAdd": {
+      "answer_id": [
+        "AnswerId"
+      ],
+      "channel_id": [
+        "ChannelId"
+      ],
+      "guild_id": [
+        "Option",
+        "GuildId"
+      ],
+      "message_id": [
+        "MessageId"
+      ],
+      "user_id": [
+        "UserId"
+      ]
+    },
+    "MessagePollVoteRemove": {
+      "answer_id": [
+        "AnswerId"
+      ],
+      "channel_id": [
+        "ChannelId"
+      ],
+      "guild_id": [
+        "Option",
+        "GuildId"
+      ],
+      "message_id": [
+        "MessageId"
+      ],
+      "user_id": [
+        "UserId"
+      ]
+    },
     "MessageUpdate": {
       "activity": [
         "Option",
@@ -463,9 +499,9 @@
       "id": [
         "MessageId"
       ],
-      "interaction": [
+      "interaction_metadata": [
         "Option",
-        "MessageInteraction"
+        "MessageInteractionMetadata"
       ],
       "kind": [
         "Option",
@@ -1414,7 +1450,7 @@
               ]
             },
             {
-              "description": "Sescription for the file (max 1024 characters).",
+              "description": "Description for the file (max 1024 characters).",
               "name": "description",
               "normalized_type": [
                 "Option",
@@ -1558,6 +1594,13 @@
         }
       },
       "name": "AuditLogEntry"
+    },
+    "AuthorizingIntegrationOwners": {
+      "description": "",
+      "fields": {
+        "Unknown": {}
+      },
+      "name": "AuthorizingIntegrationOwners"
     },
     "AutoArchiveDuration": {
       "description": "See [`ThreadMetadata::auto_archive_duration`].\n\n[Discord docs](https://discord.com/developers/docs/resources/channel#thread-metadata-object)",
@@ -2196,6 +2239,21 @@
                 "Vec",
                 "Entitlement"
               ]
+            },
+            {
+              "description": "The owners of the applications that authorized the interaction, such as a guild or user.",
+              "name": "authorizing_integration_owners",
+              "normalized_type": [
+                "AuthorizingIntegrationOwners"
+              ]
+            },
+            {
+              "description": "The context where the interaction was triggered from.",
+              "name": "context",
+              "normalized_type": [
+                "Option",
+                "InteractionContext"
+              ]
             }
           ]
         }
@@ -2436,6 +2494,21 @@
                 "Vec",
                 "Entitlement"
               ]
+            },
+            {
+              "description": "The owners of the applications that authorized the interaction, such as a guild or user.",
+              "name": "authorizing_integration_owners",
+              "normalized_type": [
+                "AuthorizingIntegrationOwners"
+              ]
+            },
+            {
+              "description": "The context where the interaction was triggered from.",
+              "name": "context",
+              "normalized_type": [
+                "Option",
+                "InteractionContext"
+              ]
             }
           ]
         }
@@ -2570,6 +2643,30 @@
         }
       },
       "name": "ComponentType"
+    },
+    "CountDetails": {
+      "description": "A representation of reaction count details.\n\n[Discord docs](https://discord.com/developers/docs/resources/channel#reaction-count-details-object).",
+      "fields": {
+        "StructFields": {
+          "fields": [
+            {
+              "description": "",
+              "name": "burst",
+              "normalized_type": [
+                "u64"
+              ]
+            },
+            {
+              "description": "",
+              "name": "normal",
+              "normalized_type": [
+                "u64"
+              ]
+            }
+          ]
+        }
+      },
+      "name": "CountDetails"
     },
     "CreatorMonetizationAction": {
       "description": "[Discord docs](https://discord.com/developers/docs/resources/audit-log#audit-log-entry-object-audit-log-events).",
@@ -4514,6 +4611,31 @@
       },
       "name": "Interaction"
     },
+    "InteractionContext": {
+      "description": "An enum representing the different [interaction contexts].\n\n[interaction contexts](https://discord.com/developers/docs/interactions/receiving-and-responding#interaction-object-interaction-context-types).",
+      "fields": {
+        "EnumWithVariants": {
+          "variants": [
+            {
+              "description": "Interaction can be used within servers",
+              "value": "0",
+              "variant_name": "Guild"
+            },
+            {
+              "description": "Interaction can be used within DMs with the app's bot user",
+              "value": "1",
+              "variant_name": "BotDm"
+            },
+            {
+              "description": "Interaction can be used within Group DMs and DMs other than the app's bot user",
+              "value": "2",
+              "variant_name": "PrivateChannel"
+            }
+          ]
+        }
+      },
+      "name": "InteractionContext"
+    },
     "InteractionType": {
       "description": "The type of an Interaction.\n\n[Discord docs](https://discord.com/developers/docs/interactions/receiving-and-responding#interaction-object-interaction-type).",
       "fields": {
@@ -4697,7 +4819,7 @@
               ]
             },
             {
-              "description": "If the member is currently flagged for sending excessive DMs to non-friend server members\nin the last 24 hours.\n\nWill be None or a time in the past if the user is not timed out.",
+              "description": "If the member is currently flagged for sending excessive DMs to non-friend server members\nin the last 24 hours.\n\nWill be None or a time in the past if the user is not flagged.",
               "name": "unusual_dm_activity_until",
               "normalized_type": [
                 "Option",
@@ -4947,11 +5069,19 @@
               ]
             },
             {
-              "description": "Sent if the message is a response to an [`Interaction`].\n\n[`Interaction`]: crate::model::application::Interaction",
+              "description": "",
               "name": "interaction",
               "normalized_type": [
                 "Option",
                 "MessageInteraction"
+              ]
+            },
+            {
+              "description": "Sent if the message is a response to an [`Interaction`].\n\n[`Interaction`]: crate::model::application::Interaction",
+              "name": "interaction_metadata",
+              "normalized_type": [
+                "Option",
+                "MessageInteractionMetadata"
               ]
             },
             {
@@ -5241,21 +5371,97 @@
       },
       "name": "MessageInteraction"
     },
+    "MessageInteractionMetadata": {
+      "description": "Metadata about the interaction, including the source of the interaction relevant server and\nuser IDs.",
+      "fields": {
+        "StructFields": {
+          "fields": [
+            {
+              "description": "The ID of the interaction",
+              "name": "id",
+              "normalized_type": [
+                "InteractionId"
+              ]
+            },
+            {
+              "description": "The type of interaction",
+              "name": "type",
+              "normalized_type": [
+                "InteractionType"
+              ]
+            },
+            {
+              "description": "The ID of the user who triggered the interaction",
+              "name": "user",
+              "normalized_type": [
+                "User"
+              ]
+            },
+            {
+              "description": "The IDs for installation context(s) related to an interaction.",
+              "name": "authorizing_integration_owners",
+              "normalized_type": [
+                "AuthorizingIntegrationOwners"
+              ]
+            },
+            {
+              "description": "The ID of the original response message, present only on follow-up messages.",
+              "name": "original_response_message_id",
+              "normalized_type": [
+                "Option",
+                "MessageId"
+              ]
+            },
+            {
+              "description": "ID of the message that contained interactive component, present only on messages created\nfrom component interactions.",
+              "name": "interacted_message_id",
+              "normalized_type": [
+                "Option",
+                "MessageId"
+              ]
+            },
+            {
+              "description": "Metadata for the interaction that was used to open the modal, present only on modal submit\ninteractions",
+              "name": "triggering_interaction_metadata",
+              "normalized_type": [
+                "Option",
+                "MessageInteractionMetadata"
+              ]
+            }
+          ]
+        }
+      },
+      "name": "MessageInteractionMetadata"
+    },
     "MessageReaction": {
       "description": "A representation of a reaction to a message.\n\nMultiple of the same [reaction type] are sent into one [`MessageReaction`], with an associated\n[`Self::count`].\n\n[Discord docs](https://discord.com/developers/docs/resources/channel#reaction-object).\n\n[reaction type]: ReactionType",
       "fields": {
         "StructFields": {
           "fields": [
             {
-              "description": "The amount of the type of reaction that have been sent for the associated message.",
+              "description": "The amount of the type of reaction that have been sent for the associated message\nincluding super reactions.",
               "name": "count",
               "normalized_type": [
                 "u64"
               ]
             },
             {
-              "description": "Indicator of whether the current user has sent the type of reaction.",
+              "description": "A breakdown of what reactions were from regular reactions and super reactions.",
+              "name": "count_details",
+              "normalized_type": [
+                "CountDetails"
+              ]
+            },
+            {
+              "description": "Indicator of whether the current user has sent this type of reaction.",
               "name": "me",
+              "normalized_type": [
+                "bool"
+              ]
+            },
+            {
+              "description": "Indicator of whether the current user has sent the type of super-reaction.",
+              "name": "me_burst",
               "normalized_type": [
                 "bool"
               ]
@@ -5265,6 +5471,14 @@
               "name": "emoji",
               "normalized_type": [
                 "ReactionType"
+              ]
+            },
+            {
+              "description": "",
+              "name": "burst_colors",
+              "normalized_type": [
+                "Vec",
+                "Colour"
               ]
             }
           ]
@@ -5472,6 +5686,26 @@
               "description": "",
               "value": "32",
               "variant_name": "GuildApplicationPremiumSubscription"
+            },
+            {
+              "description": "",
+              "value": "36",
+              "variant_name": "GuildIncidentAlertModeEnabled"
+            },
+            {
+              "description": "",
+              "value": "37",
+              "variant_name": "GuildIncidentAlertModeDisabled"
+            },
+            {
+              "description": "",
+              "value": "38",
+              "variant_name": "GuildIncidentReportRaid"
+            },
+            {
+              "description": "",
+              "value": "39",
+              "variant_name": "GuildIncidentReportFalseAlarm"
             }
           ]
         }
@@ -6319,7 +6553,7 @@
               ]
             },
             {
-              "description": "If the member is currently flagged for sending excessive DMs to non-friend server members\nin the last 24 hours.\n\nWill be None or a time in the past if the user is not timed out.",
+              "description": "If the member is currently flagged for sending excessive DMs to non-friend server members\nin the last 24 hours.\n\nWill be None or a time in the past if the user is not flagged.",
               "name": "unusual_dm_activity_until",
               "normalized_type": [
                 "Option",

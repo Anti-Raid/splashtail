@@ -51,7 +51,7 @@ async fn get_all_temp_punishments(
 }
 
 pub async fn temporary_punishment_task(
-    ctx: &serenity::client::Context,
+    ctx: &serenity::all::client::Context,
 ) -> Result<(), silverpelt::Error> {
     let data = ctx.data::<silverpelt::data::Data>();
     let pool = &data.pool;

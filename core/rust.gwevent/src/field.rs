@@ -44,6 +44,7 @@ pub enum Field {
     PermissionOverwrites(Vec<serenity::all::PermissionOverwrite>),
 
     // Discord ID Types
+    AnswerId(serenity::all::AnswerId), // Used in polls
     ApplicationId(serenity::all::ApplicationId),
     AuditLogId(serenity::all::AuditLogEntryId),
     ChannelIds(Vec<serenity::all::ChannelId>),
@@ -96,7 +97,7 @@ pub enum Field {
     MessageApplication(serenity::all::MessageApplication),
     MessageReference(serenity::all::MessageReference),
     MessageFlags(serenity::all::MessageFlags),
-    MessageInteraction(serenity::all::MessageInteraction),
+    MessageInteractionMetadata(serenity::all::MessageInteractionMetadata),
 
     // Special Types
     JsonValue(serde_json::Value),
@@ -502,6 +503,7 @@ from_field! {
     serenity::all::Permissions => Permissions,
 
     // Discord ID Types
+    serenity::all::AnswerId => AnswerId,
     serenity::all::ApplicationId => ApplicationId,
     serenity::all::AuditLogEntryId => AuditLogId,
     serenity::all::GuildId => GuildId,
@@ -525,7 +527,7 @@ from_field! {
     serenity::all::MessageApplication => MessageApplication,
     serenity::all::MessageReference => MessageReference,
     serenity::all::MessageFlags => MessageFlags,
-    serenity::all::MessageInteraction => MessageInteraction,
+    serenity::all::MessageInteractionMetadata => MessageInteractionMetadata,
 
     // Special Types
     serde_json::Value => JsonValue

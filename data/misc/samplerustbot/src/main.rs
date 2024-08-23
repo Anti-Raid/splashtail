@@ -10,7 +10,7 @@ pub struct EventDispatch {}
 
 #[async_trait]
 impl RawEventHandler for EventDispatch {
-    async fn raw_event(&self, ctx: serenity::client::Context, event: serenity::all::Event) {
+    async fn raw_event(&self, ctx: serenity::all::client::Context, event: serenity::all::Event) {
         match event {
             serenity::all::Event::Ready(data_about_bot) => {
                 info!("{} is now ready on shard {}", data_about_bot.ready.user.name, ctx.shard_id);

@@ -8,7 +8,9 @@ struct Resp {
     data: Option<StatusEndpointResponse>,
 }
 
-pub async fn s3_task_cleaner(ctx: &serenity::client::Context) -> Result<(), silverpelt::Error> {
+pub async fn s3_task_cleaner(
+    ctx: &serenity::all::client::Context,
+) -> Result<(), silverpelt::Error> {
     let data = ctx.data::<silverpelt::data::Data>();
 
     let Some(ref sandwich_url) = config::CONFIG.meta.sandwich_http_api else {

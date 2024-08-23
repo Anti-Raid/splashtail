@@ -169,7 +169,7 @@
     "message_reference": "Option<Option<MessageReference>>",
     "flags": "Option<Option<MessageFlags>>",
     "referenced_message": "Option<Option<Box<Message>>>",
-    "interaction": "Option<Option<Box<MessageInteraction>>>",
+    "interaction_metadata": "Option<Option<Box<MessageInteractionMetadata>>>",
     "thread": "Option<Option<Box<GuildChannel>>>",
     "components": "Option<FixedArray<ActionRow>>",
     "sticker_items": "Option<FixedArray<StickerItem>>",
@@ -259,5 +259,19 @@
   },
   "EntitlementDelete": {
     "entitlement": "Entitlement"
+  },
+  "MessagePollVoteAdd": {
+    "user_id": "UserId",
+    "channel_id": "ChannelId",
+    "message_id": "MessageId",
+    "guild_id": "Option<GuildId>",
+    "answer_id": "AnswerId"
+  },
+  "MessagePollVoteRemove": {
+    "user_id": "UserId",
+    "channel_id": "ChannelId",
+    "message_id": "MessageId",
+    "guild_id": "Option<GuildId>",
+    "answer_id": "AnswerId"
   }
 }

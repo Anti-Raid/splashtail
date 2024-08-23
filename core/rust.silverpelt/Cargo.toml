@@ -7,7 +7,7 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-poise = { git = "https://github.com/serenity-rs/poise", branch = "serenity-next" }
+poise = { git = "https://github.com/Anti-Raid/poise", branch = "serenity-next" }
 chrono = { version = "0.4", features = ["serde"]}
 indexmap = { version = "2", features = ["serde"] }
 futures-util = "0.3"
@@ -35,7 +35,7 @@ version = "1"
 features = ["sync", "macros", "rt-multi-thread"]
 
 [dependencies.botox]
-git = "https://github.com/infinitybotlist/botox"
+git = "https://github.com/Anti-Raid/botox"
 branch = "main"
 
 [dependencies.serenity]

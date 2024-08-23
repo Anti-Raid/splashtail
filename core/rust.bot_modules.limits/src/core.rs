@@ -204,6 +204,7 @@ pub enum LimitTypes {
     MessageCreate,
 }
 
+#[allow(dead_code)] // Will be used later
 impl LimitTypes {
     pub fn to_cond(self) -> String {
         match &self {

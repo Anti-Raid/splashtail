@@ -77,7 +77,7 @@ fn _get_serenity_events(
     let mut current_event_marker: Option<String> = None;
     let mut current_event_fields: String = String::new();
 
-    for line in models_file.iter() {
+    for (i, line) in models_file.iter().enumerate() {
         if let Some(ref current_event) = current_event_marker {
             if line.contains("}") {
                 let args = _unflatten_args(&current_event_fields);
@@ -88,6 +88,11 @@ fn _get_serenity_events(
                 current_event_marker = None;
             } else {
                 if !line.contains("pub") {
+                    continue;
+                }
+
+                // Check if previous line included not(feature = "unstable")
+                if models_file[i - 1].contains("not(feature = \"unstable\")") {
                     continue;
                 }
 
@@ -495,8 +500,9 @@ fn _parse_full_events(
 ) -> Result<indexmap::IndexMap<String, indexmap::IndexMap<String, String>>, Error> {
     let serenity_path = _get_serenity_path()?;
 
-    // Read src/client/event_handler.rs
-    let event_handler = std::fs::read_to_string(serenity_path + "/src/client/event_handler.rs")?;
+    // Read src/gateway/client/event_handler.rs
+    let event_handler =
+        std::fs::read_to_string(serenity_path + "/src/gateway/client/event_handler.rs")?;
 
     // Remove out all lines preceding event_handler! macro
     let event_handler = event_handler.lines().collect::<Vec<&str>>();
@@ -1649,6 +1655,7 @@ fn main() -> Result<(), Error> {
     println!("cargo:rerun-if-changed={}", serenity_path);
 
     ci_expand_events()?;
+
     create_template_docs()?;
 
     Ok(())

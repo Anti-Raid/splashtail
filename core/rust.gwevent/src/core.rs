@@ -125,6 +125,20 @@ pub fn get_event_guild_id(event: &FullEvent) -> Result<GuildId, Option<Error>> {
                 return Err(None);
             }
         }
+        FullEvent::MessagePollVoteAdd { event } => {
+            if let Some(guild_id) = &event.guild_id {
+                guild_id.to_owned()
+            } else {
+                return Err(None);
+            }
+        }
+        FullEvent::MessagePollVoteRemove { event } => {
+            if let Some(guild_id) = &event.guild_id {
+                guild_id.to_owned()
+            } else {
+                return Err(None);
+            }
+        }
         FullEvent::MessageUpdate { event, .. } => {
             if let Some(guild_id) = &event.guild_id {
                 guild_id.to_owned()
@@ -132,8 +146,7 @@ pub fn get_event_guild_id(event: &FullEvent) -> Result<GuildId, Option<Error>> {
                 return Err(None);
             }
         }
-        FullEvent::PresenceReplace { .. } => return Err(None), // We dont handle precenses
-        FullEvent::PresenceUpdate { .. } => return Err(None),  // We dont handle precenses
+        FullEvent::PresenceUpdate { .. } => return Err(None), // We dont handle precenses
         FullEvent::Ratelimit { data, .. } => {
             // Warn i guess
             warn!("Ratelimit event recieved: {:?}", data);
@@ -286,6 +299,8 @@ pub fn get_event_user_id(event: &FullEvent) -> Result<UserId, Option<Error>> {
         FullEvent::Message { new_message, .. } => new_message.author.id,
         FullEvent::MessageDelete { .. } => return Err(None), // Doesn't have a known user just from event
         FullEvent::MessageDeleteBulk { .. } => return Err(None), // Doesn't have a known user just from event
+        FullEvent::MessagePollVoteAdd { event } => event.user_id,
+        FullEvent::MessagePollVoteRemove { event } => event.user_id,
         FullEvent::MessageUpdate { event, new, .. } => {
             if let Some(new) = new {
                 new.author.id.to_owned()
@@ -296,8 +311,7 @@ pub fn get_event_user_id(event: &FullEvent) -> Result<UserId, Option<Error>> {
                 return Err(None);
             }
         }
-        FullEvent::PresenceReplace { .. } => return Err(None), // We dont handle precenses
-        FullEvent::PresenceUpdate { .. } => return Err(None),  // We dont handle precenses
+        FullEvent::PresenceUpdate { .. } => return Err(None), // We dont handle precenses
         FullEvent::Ratelimit { data, .. } => {
             // Warn i guess
             warn!("Ratelimit event recieved: {:?}", data);
@@ -783,6 +797,22 @@ pub fn expand_event(event: FullEvent) -> Option<IndexMap<String, CategorizedFiel
                 multiple_deleted_messages_ids,
             );
         }
+        // @ci.expand_event_check MessagePollVoteAdd event:event,MessagePollVoteAddEvent
+        FullEvent::MessagePollVoteAdd { event } => {
+            insert_field(&mut fields, "poll_vote", "user_id", event.user_id);
+            insert_field(&mut fields, "poll_vote", "channel_id", event.channel_id);
+            insert_field(&mut fields, "poll_vote", "message_id", event.message_id);
+            insert_optional_field(&mut fields, "poll_vote", "guild_id", event.guild_id);
+            insert_field(&mut fields, "poll_vote", "answer_id", event.answer_id);
+        }
+        // @ci.expand_event_check MessagePollVoteRemove event:event,MessagePollVoteRemoveEvent
+        FullEvent::MessagePollVoteRemove { event } => {
+            insert_field(&mut fields, "poll_vote", "user_id", event.user_id);
+            insert_field(&mut fields, "poll_vote", "channel_id", event.channel_id);
+            insert_field(&mut fields, "poll_vote", "message_id", event.message_id);
+            insert_optional_field(&mut fields, "poll_vote", "guild_id", event.guild_id);
+            insert_field(&mut fields, "poll_vote", "answer_id", event.answer_id);
+        }
         // @ci.expand_event_check MessageUpdate event:event,MessageUpdateEvent/create_template_docs.rename old_if_available old
         FullEvent::MessageUpdate {
             old_if_available,
@@ -863,8 +893,8 @@ pub fn expand_event(event: FullEvent) -> Option<IndexMap<String, CategorizedFiel
             insert_optional_field(
                 &mut fields,
                 "event",
-                "interaction",
-                event.interaction.and_then(|x| x.map(|x| *x)),
+                "interaction_metadata",
+                event.interaction_metadata.and_then(|x| x.map(|x| *x)),
             );
             insert_optional_field(
                 &mut fields,
@@ -894,7 +924,6 @@ pub fn expand_event(event: FullEvent) -> Option<IndexMap<String, CategorizedFiel
                 event.member.and_then(|x| x.map(|x| (*x))),
             );
         }
-        FullEvent::PresenceReplace { .. } => return None,
         FullEvent::PresenceUpdate { .. } => return None,
         FullEvent::Ratelimit { .. } => return None,
         FullEvent::ReactionAdd { .. } => return None,

@@ -10,7 +10,7 @@ type Error = Box<dyn std::error::Error + Send + Sync>;
 pub async fn has_guild(
     ctx: &botox::cache::CacheHttpImpl,
     reqwest_client: &reqwest::Client,
-    guild_id: serenity::model::id::GuildId,
+    guild_id: serenity::all::GuildId,
 ) -> Result<bool, Error> {
     if ctx.cache.guilds().contains(&guild_id) {
         return Ok(true);
@@ -424,7 +424,7 @@ pub async fn channel(
         }
 
         // Make http query
-        let channel = match channel_id.to_channel(&ctx).await {
+        let channel = match channel_id.to_channel(&ctx, guild_id).await {
             Ok(channel) => channel,
             Err(e) => match e {
                 serenity::Error::Http(e) => match e {
@@ -493,7 +493,7 @@ pub async fn channel(
     }
 
     // Last resort, fetch from http and then update sandwich as well
-    let channel = match channel_id.to_channel(&ctx).await {
+    let channel = match channel_id.to_channel(&ctx, guild_id).await {
         Ok(channel) => channel,
         Err(e) => match e {
             serenity::Error::Http(e) => match e {

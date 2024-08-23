@@ -79,7 +79,7 @@ pub async fn test_quick_lockdown(
 ///
 /// This is achieved by **removing** the `BASE_PERMS` from the critical roles
 pub async fn create_quick_lockdown(
-    ctx: &serenity::client::Context,
+    ctx: &serenity::all::client::Context,
     pg: &mut serenity::all::PartialGuild,
     critical_roles: HashSet<serenity::all::RoleId>,
 ) -> Result<(), silverpelt::Error> {
@@ -115,7 +115,7 @@ pub async fn create_quick_lockdown(
 ///
 /// This is achieved by **adding** the `BASE_PERMS` to the critical roles
 pub async fn revert_quick_lockdown(
-    ctx: &serenity::client::Context,
+    ctx: &serenity::all::client::Context,
     pg: &mut serenity::all::PartialGuild,
     critical_roles: HashSet<serenity::all::RoleId>,
 ) -> Result<(), silverpelt::Error> {

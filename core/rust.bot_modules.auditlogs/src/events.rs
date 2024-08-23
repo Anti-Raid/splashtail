@@ -148,7 +148,7 @@ pub async fn should_dispatch_event(
 }
 
 pub async fn dispatch_audit_log(
-    ctx: &serenity::client::Context,
+    ctx: &serenity::all::client::Context,
     data: &silverpelt::data::Data,
     event_name: &str,
     event_titlename: &str,
