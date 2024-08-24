@@ -294,15 +294,18 @@ pub struct LockdownSet {
 }
 
 impl LockdownSet {
-    pub async fn guild(
+    pub async fn guild<'a, E>(
         guild_id: serenity::all::GuildId,
-        pool: &sqlx::PgPool,
-    ) -> Result<Self, silverpelt::Error> {
+        db: E,
+    ) -> Result<Self, silverpelt::Error>
+    where
+        E: sqlx::Executor<'a, Database = sqlx::Postgres>,
+    {
         let data = sqlx::query!(
             "SELECT type, data FROM lockdown__guild_lockdowns WHERE guild_id = $1",
             guild_id.to_string(),
         )
-        .fetch_all(pool)
+        .fetch_all(db)
         .await?;
 
         let mut lockdowns = Vec::new();
