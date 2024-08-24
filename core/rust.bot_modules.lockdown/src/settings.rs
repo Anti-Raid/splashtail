@@ -607,6 +607,27 @@ impl DataStore for LockdownDataStoreImpl {
         &mut self,
         filters: indexmap::IndexMap<String, splashcore_rs::value::Value>,
     ) -> Result<(), SettingsError> {
+        let elements = self
+        .fetch_all(
+            &[
+                self.inner.setting_primary_key.to_string(),
+                "type".to_string(),
+                "data".to_string(),
+            ],
+            filters.clone(),
+        )
+        .await?;
+
+        if elements.len() != 1 {
+            return Err(SettingsError::Generic {
+                message: "Expected exactly one element to delete".to_string(),
+                src: "PostgresDataStore::delete_matching_entries".to_string(),
+                typ: "internal".to_string(),
+            });
+        }
+
+        //for element in elements {}
+
         self.inner.delete_matching_entries(filters).await
     }
 }

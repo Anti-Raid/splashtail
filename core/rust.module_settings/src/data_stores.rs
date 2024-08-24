@@ -697,27 +697,6 @@ impl DataStore for PostgresDataStoreImpl {
     ) -> Result<(), SettingsError> {
         let filters = combine_indexmaps!(filters, self.common_filters.clone());
 
-        let elements = self
-            .fetch_all(
-                &[
-                    self.setting_primary_key.to_string(),
-                    "type".to_string(),
-                    "data".to_string(),
-                ],
-                filters.clone(),
-            )
-            .await?;
-
-        if elements.len() != 1 {
-            return Err(SettingsError::Generic {
-                message: "Expected exactly one element to delete".to_string(),
-                src: "PostgresDataStore::delete_matching_entries".to_string(),
-                typ: "internal".to_string(),
-            });
-        }
-
-        for element in elements {}
-
         // Create the SQL statement
         let sql_stmt = format!(
             "DELETE FROM {} WHERE {}",
