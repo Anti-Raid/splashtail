@@ -125,6 +125,32 @@ pub enum LockdownModes {
     QuickServerLockdown(qsl::QuickServerLockdown),
     TraditionalServerLockdown(tsl::TraditionalServerLockdown),
     SingleChannelLockdown(scl::SingleChannelLockdown),
+    Unknown(Box<dyn LockdownMode>),
+}
+
+impl LockdownModes {
+    pub fn from_string(s: &str) -> Result<Option<LockdownModes>, silverpelt::Error> {
+        if s == "qsl" {
+            Ok(Some(LockdownModes::QuickServerLockdown(
+                qsl::QuickServerLockdown,
+            )))
+        } else if s == "tsl" {
+            Ok(Some(LockdownModes::TraditionalServerLockdown(
+                tsl::TraditionalServerLockdown,
+            )))
+        } else if s.starts_with("scl/") {
+            let channel_id = s
+                .strip_prefix("scl/")
+                .ok_or_else(|| silverpelt::Error::from("Invalid SCL string"))?
+                .parse()
+                .map_err(|e| format!("Error while parsing channel ID: {}", e))?;
+            Ok(Some(LockdownModes::SingleChannelLockdown(
+                scl::SingleChannelLockdown(channel_id),
+            )))
+        } else {
+            Ok(None)
+        }
+    }
 }
 
 #[async_trait]
@@ -134,6 +160,7 @@ impl LockdownMode for LockdownModes {
             LockdownModes::QuickServerLockdown(qsl) => qsl.specificity(),
             LockdownModes::TraditionalServerLockdown(tsl) => tsl.specificity(),
             LockdownModes::SingleChannelLockdown(scl) => scl.specificity(),
+            LockdownModes::Unknown(m) => m.specificity(),
         }
     }
 
@@ -153,6 +180,7 @@ impl LockdownMode for LockdownModes {
             LockdownModes::SingleChannelLockdown(scl) => {
                 scl.test(lockdown_data, pg, critical_roles).await
             }
+            LockdownModes::Unknown(m) => m.test(lockdown_data, pg, critical_roles).await,
         }
     }
 
@@ -172,6 +200,7 @@ impl LockdownMode for LockdownModes {
             LockdownModes::SingleChannelLockdown(scl) => {
                 scl.setup(lockdown_data, pg, critical_roles).await
             }
+            LockdownModes::Unknown(m) => m.setup(lockdown_data, pg, critical_roles).await,
         }
     }
 
@@ -194,6 +223,10 @@ impl LockdownMode for LockdownModes {
             }
             LockdownModes::SingleChannelLockdown(scl) => {
                 scl.create(lockdown_data, pg, critical_roles, data, all_handles)
+                    .await
+            }
+            LockdownModes::Unknown(m) => {
+                m.create(lockdown_data, pg, critical_roles, data, all_handles)
                     .await
             }
         }
@@ -220,6 +253,10 @@ impl LockdownMode for LockdownModes {
                 scl.revert(lockdown_data, pg, critical_roles, data, all_handles)
                     .await
             }
+            LockdownModes::Unknown(m) => {
+                m.revert(lockdown_data, pg, critical_roles, data, all_handles)
+                    .await
+            }
         }
     }
 
@@ -240,7 +277,55 @@ impl LockdownMode for LockdownModes {
             LockdownModes::SingleChannelLockdown(scl) => {
                 scl.handles(lockdown_data, pg, critical_roles, data).await
             }
+            LockdownModes::Unknown(m) => m.handles(lockdown_data, pg, critical_roles, data).await,
         }
+    }
+}
+
+/// Represents a lockdown
+pub struct Lockdown {
+    pub r#type: LockdownModes,
+    pub data: serde_json::Value,
+}
+
+/// Represents a list of lockdowns
+pub struct LockdownSet {
+    pub lockdowns: Vec<Lockdown>,
+}
+
+impl LockdownSet {
+    pub async fn guild(
+        guild_id: serenity::all::GuildId,
+        pool: &sqlx::PgPool,
+    ) -> Result<Self, silverpelt::Error> {
+        let data = sqlx::query!(
+            "SELECT type, data FROM lockdown__guild_lockdowns WHERE guild_id = $1",
+            guild_id.to_string(),
+        )
+        .fetch_all(pool)
+        .await?;
+
+        let mut lockdowns = Vec::new();
+
+        for row in data {
+            let r#type = row.r#type;
+            let data = row.data;
+
+            let lockdown = match LockdownModes::from_string(&r#type) {
+                Ok(Some(m)) => Lockdown { r#type: m, data },
+                Ok(None) => continue,
+                Err(e) => {
+                    return Err(silverpelt::Error::from(format!(
+                        "Error while parsing lockdown type: {}",
+                        e
+                    )))
+                }
+            };
+
+            lockdowns.push(lockdown);
+        }
+
+        Ok(LockdownSet { lockdowns })
     }
 }
 
@@ -708,7 +793,7 @@ pub mod scl {
             "".to_string()
         }
     }
-    pub struct SingleChannelLockdown(serenity::all::ChannelId);
+    pub struct SingleChannelLockdown(pub serenity::all::ChannelId);
 
     impl SingleChannelLockdown {
         pub fn from_data(
