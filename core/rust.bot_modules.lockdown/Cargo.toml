@@ -16,6 +16,8 @@ indexmap = { version = "2", features = ["serde"] }
 strum = "0.26"
 strum_macros = "0.26"
 moka = { version = "0.12", features = ["future", "futures-util"] }
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls", "rustls-tls-native-roots"] }
+async-trait = "0.1.80"
 
 # Anti-Raid specific
 silverpelt = { path = "../rust.silverpelt" }

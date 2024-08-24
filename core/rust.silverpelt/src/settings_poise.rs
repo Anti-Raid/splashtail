@@ -107,6 +107,14 @@ pub async fn settings_viewer(
                 continue; // Skip internal variables
             }
 
+            // Find a __{key}_botDisplayIgnore field, skip if it exists
+            if values[index]
+                .state
+                .contains_key(&format!("__{}_botDisplayIgnore", key))
+            {
+                continue;
+            }
+
             // Find the key in the schema
             let column = setting.columns.iter().find(|c| c.id == key);
 
@@ -324,6 +332,14 @@ pub async fn settings_creator(
                 continue; // Skip internal variables
             }
 
+            // Find a __{key}_botDisplayIgnore field, skip if it exists
+            if value
+                .state
+                .contains_key(&format!("__{}_botDisplayIgnore", key))
+            {
+                continue;
+            }
+
             // Find the key in the schema
             let column = setting.columns.iter().find(|c| c.id == key);
 
@@ -443,6 +459,14 @@ pub async fn settings_updater(
         for (key, v) in value.state.iter() {
             if key.starts_with("__") {
                 continue; // Skip internal variables
+            }
+
+            // Find a __{key}_botDisplayIgnore field, skip if it exists
+            if value
+                .state
+                .contains_key(&format!("__{}_botDisplayIgnore", key))
+            {
+                continue;
             }
 
             // Find the key in the schema
@@ -566,6 +590,14 @@ pub async fn settings_deleter(
         for (key, v) in value.state.iter() {
             if key.starts_with("__") {
                 continue; // Skip internal variables
+            }
+
+            // Find a __{key}_botDisplayIgnore field, skip if it exists
+            if value
+                .state
+                .contains_key(&format!("__{}_botDisplayIgnore", key))
+            {
+                continue;
             }
 
             // Find the key in the schema
