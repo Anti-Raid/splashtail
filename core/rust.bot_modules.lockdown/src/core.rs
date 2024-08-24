@@ -43,7 +43,17 @@ pub struct LockdownData {
     pub pool: sqlx::PgPool,
     pub reqwest: reqwest::Client,
     pub object_store: Arc<splashcore_rs::objectstore::ObjectStore>,
-    pub permodule_executor: Box<dyn splashcore_rs::permodule_functions::PermoduleFunctionExecutor>,
+}
+
+impl LockdownData {
+    pub fn from_settings_data(data: &module_settings::types::SettingsData) -> Self {
+        Self {
+            cache_http: data.cache_http.clone(),
+            pool: data.pool.clone(),
+            reqwest: data.reqwest.clone(),
+            object_store: data.object_store.clone(),
+        }
+    }
 }
 
 pub trait LockdownTestResult
@@ -319,10 +329,54 @@ impl LockdownMode for LockdownModes {
     }
 }
 
+// Serializer for LockdownMode
+impl serde::Serialize for LockdownModes {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        match self {
+            LockdownModes::QuickServerLockdown(_) => serializer.serialize_str("qsl"),
+            LockdownModes::TraditionalServerLockdown(_) => serializer.serialize_str("tsl"),
+            LockdownModes::SingleChannelLockdown(scl) => {
+                serializer.serialize_str(&format!("scl/{}", scl.0))
+            }
+            LockdownModes::Unknown(m) => serializer.serialize_str(&m.to_string()),
+        }
+    }
+}
+
+// Deserializer for LockdownMode
+impl<'de> serde::Deserialize<'de> for LockdownModes {
+    fn deserialize<D>(deserializer: D) -> Result<LockdownModes, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let s = String::deserialize(deserializer)?;
+
+        match LockdownModes::from_string(&s) {
+            Ok(Some(m)) => Ok(m),
+            Ok(None) => Err(serde::de::Error::custom("Invalid lockdown mode")),
+            Err(e) => Err(serde::de::Error::custom(e)),
+        }
+    }
+}
+
 /// Represents a lockdown
+#[derive(serde::Serialize, serde::Deserialize)]
 pub struct Lockdown {
+    pub id: sqlx::types::Uuid,
     pub r#type: LockdownModes,
     pub data: serde_json::Value,
+}
+
+impl Lockdown {
+    pub fn to_map(&self) -> indexmap::IndexMap<String, splashcore_rs::value::Value> {
+        indexmap::indexmap! {
+            "type".to_string() => splashcore_rs::value::Value::String(self.r#type.to_string()),
+            "data".to_string() => splashcore_rs::value::Value::from_json(&self.data),
+        }
+    }
 }
 
 /// Represents a list of lockdowns
@@ -338,7 +392,7 @@ impl LockdownSet {
         pool: &sqlx::PgPool,
     ) -> Result<Self, silverpelt::Error> {
         let data = sqlx::query!(
-            "SELECT type, data FROM lockdown__guild_lockdowns WHERE guild_id = $1",
+            "SELECT id, type, data FROM lockdown__guild_lockdowns WHERE guild_id = $1",
             guild_id.to_string(),
         )
         .fetch_all(pool)
@@ -347,11 +401,16 @@ impl LockdownSet {
         let mut lockdowns = Vec::new();
 
         for row in data {
+            let id = row.id;
             let r#type = row.r#type;
             let data = row.data;
 
             let lockdown = match LockdownModes::from_string(&r#type) {
-                Ok(Some(m)) => Lockdown { r#type: m, data },
+                Ok(Some(m)) => Lockdown {
+                    id,
+                    r#type: m,
+                    data,
+                },
                 Ok(None) => continue,
                 Err(e) => {
                     return Err(silverpelt::Error::from(format!(
@@ -409,12 +468,12 @@ impl LockdownSet {
         Ok(handles)
     }
 
-    /// Adds a lockdown to the set
+    /// Adds a lockdown to the set returning the id of the created entry
     pub async fn apply(
         &mut self,
-        lockdown: Lockdown,
+        lockdown_type: LockdownModes,
         lockdown_data: &LockdownData,
-    ) -> Result<(), silverpelt::Error> {
+    ) -> Result<sqlx::types::Uuid, silverpelt::Error> {
         self.sort();
 
         // Fetch guild+channel info to advance to avoid needing to fetch it on every interaction with the trait
@@ -436,8 +495,7 @@ impl LockdownSet {
 
         // Test new lockdown if required
         if self.settings.require_correct_layout {
-            let test_results = lockdown
-                .r#type
+            let test_results = lockdown_type
                 .test(lockdown_data, &pg, &pgc, &critical_roles)
                 .await?;
 
@@ -446,36 +504,33 @@ impl LockdownSet {
             }
         }
 
+        // Setup the lockdown
+        let data = lockdown_type
+            .setup(lockdown_data, &pg, &pgc, &critical_roles)
+            .await?;
+
         let current_handles = self.get_handles(lockdown_data, &pg, &pgc).await?;
 
         // Get the handles for the new lockdown
-        let new_handles = lockdown
-            .r#type
-            .handles(lockdown_data, &pg, &pgc, &critical_roles, &lockdown.data)
+        let new_handles = lockdown_type
+            .handles(lockdown_data, &pg, &pgc, &critical_roles, &data)
             .await?;
 
         if current_handles.is_redundant(&new_handles) {
             return Err("Lockdown is redundant (all changes made by this lockdown handle are already locked by another handle)".into());
         }
 
-        // Setup the lockdown
-        let data = lockdown
-            .r#type
-            .setup(lockdown_data, &pg, &pgc, &critical_roles)
-            .await?;
-
-        sqlx::query!(
-            "INSERT INTO lockdown__guild_lockdowns (guild_id, type, data) VALUES ($1, $2, $3)",
+        let id = sqlx::query!(
+            "INSERT INTO lockdown__guild_lockdowns (guild_id, type, data) VALUES ($1, $2, $3) RETURNING id",
             self.guild_id.to_string(),
-            lockdown.r#type.to_string(),
+            lockdown_type.to_string(),
             &data,
         )
-        .execute(&lockdown_data.pool)
+        .fetch_one(&lockdown_data.pool)
         .await?;
 
         // Apply the lockdown
-        lockdown
-            .r#type
+        lockdown_type
             .create(
                 lockdown_data,
                 &mut pg,
@@ -487,9 +542,13 @@ impl LockdownSet {
             .await?;
 
         // Update self.lockdowns
-        self.lockdowns.push(lockdown);
+        self.lockdowns.push(Lockdown {
+            id: id.id,
+            r#type: lockdown_type,
+            data,
+        });
 
-        Ok(())
+        Ok(id.id)
     }
 
     /// Removes a lockdown from the set by index

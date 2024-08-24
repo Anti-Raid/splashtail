@@ -19,6 +19,30 @@ macro_rules! combine_indexmaps {
 
 pub struct PostgresDataStore {}
 
+impl PostgresDataStore {
+    /// Creates a new PostgresDataStoreImpl. This is exposed as it is useful for making wrapper data stores
+    pub async fn create_impl(
+        &self,
+        setting: &ConfigOption,
+        guild_id: serenity::all::GuildId,
+        author: serenity::all::UserId,
+        data: &SettingsData,
+        common_filters: indexmap::IndexMap<String, splashcore_rs::value::Value>,
+    ) -> Result<PostgresDataStoreImpl, SettingsError> {
+        Ok(PostgresDataStoreImpl {
+            tx: None,
+            setting_table: setting.table,
+            setting_primary_key: setting.primary_key,
+            author,
+            guild_id,
+            columns: setting.columns.clone(),
+            valid_columns: setting.columns.iter().map(|c| c.id.to_string()).collect(),
+            pool: data.pool.clone(),
+            common_filters,
+        })
+    }
+}
+
 #[async_trait]
 impl CreateDataStore for PostgresDataStore {
     async fn create(
@@ -29,17 +53,10 @@ impl CreateDataStore for PostgresDataStore {
         data: &SettingsData,
         common_filters: indexmap::IndexMap<String, splashcore_rs::value::Value>,
     ) -> Result<Box<dyn DataStore>, SettingsError> {
-        Ok(Box::new(PostgresDataStoreImpl {
-            tx: None,
-            setting_table: setting.table,
-            setting_primary_key: setting.primary_key,
-            author,
-            guild_id,
-            columns: setting.columns.clone(),
-            valid_columns: setting.columns.iter().map(|c| c.id.to_string()).collect(),
-            pool: data.pool.clone(),
-            common_filters,
-        }))
+        Ok(Box::new(
+            self.create_impl(setting, guild_id, author, data, common_filters)
+                .await?,
+        ))
     }
 }
 
@@ -679,6 +696,27 @@ impl DataStore for PostgresDataStoreImpl {
         filters: indexmap::IndexMap<String, splashcore_rs::value::Value>,
     ) -> Result<(), SettingsError> {
         let filters = combine_indexmaps!(filters, self.common_filters.clone());
+
+        let elements = self
+            .fetch_all(
+                &[
+                    self.setting_primary_key.to_string(),
+                    "type".to_string(),
+                    "data".to_string(),
+                ],
+                filters.clone(),
+            )
+            .await?;
+
+        if elements.len() != 1 {
+            return Err(SettingsError::Generic {
+                message: "Expected exactly one element to delete".to_string(),
+                src: "PostgresDataStore::delete_matching_entries".to_string(),
+                typ: "internal".to_string(),
+            });
+        }
+
+        for element in elements {}
 
         // Create the SQL statement
         let sql_stmt = format!(

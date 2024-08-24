@@ -1,15 +1,13 @@
 use futures_util::FutureExt;
 use module_settings::{
-    data_stores::PostgresDataStore,
+    data_stores::{PostgresDataStore, PostgresDataStoreImpl},
     types::{
-        settings_wrap_columns, settings_wrap_datastore, settings_wrap_postactions,
-        settings_wrap_precheck, Column, ColumnAction, ColumnSuggestion, ColumnType, ConfigOption,
-        InnerColumnType, InnerColumnTypeStringKind, OperationSpecific, OperationType,
-        SettingsError,
+        settings_wrap_columns, settings_wrap_datastore, settings_wrap_postactions, settings_wrap_precheck, Column, ColumnAction, ColumnSuggestion, ColumnType, ConfigOption, CreateDataStore, DataStore, InnerColumnType, InnerColumnTypeStringKind, OperationSpecific, OperationType, SettingsData, SettingsError
     },
 };
 use splashcore_rs::value::Value;
 use std::sync::LazyLock;
+use async_trait::async_trait;
 
 pub static LOCKDOWN_SETTINGS: LazyLock<ConfigOption> = LazyLock::new(|| {
     ConfigOption {
@@ -468,3 +466,147 @@ pub static QUICK_SERVER_LOCKDOWNS: LazyLock<ConfigOption> = LazyLock::new(|| Con
         },
     ]),
 });
+
+
+/// A custom data store is needed to handle the specific requirements of the lockdown module
+pub struct LockdownDataStore {}
+
+#[async_trait]
+impl CreateDataStore for LockdownDataStore {
+    async fn create(
+        &self,
+        setting: &ConfigOption,
+        guild_id: serenity::all::GuildId,
+        author: serenity::all::UserId,
+        data: &SettingsData,
+        common_filters: indexmap::IndexMap<String, splashcore_rs::value::Value>,
+    ) -> Result<Box<dyn DataStore>, SettingsError> {
+        Ok(Box::new(LockdownDataStoreImpl {
+            inner: (PostgresDataStore {}).create_impl(setting, guild_id, author, data, common_filters).await?,
+            lockdown_data: super::core::LockdownData::from_settings_data(data),
+        }))
+    }
+}
+
+pub struct LockdownDataStoreImpl {
+    inner: PostgresDataStoreImpl,
+    lockdown_data: super::core::LockdownData,
+}
+
+#[async_trait]
+impl DataStore for LockdownDataStoreImpl {
+    fn as_any(&mut self) -> &mut dyn std::any::Any {
+        self
+    }
+
+    async fn start_transaction(&mut self) -> Result<(), SettingsError> {
+        Ok(()) // No-op for our use case
+    }
+
+    async fn commit(&mut self) -> Result<(), SettingsError> {
+        Ok(()) // No-op for our use case
+    }
+
+    async fn columns(&mut self) -> Result<Vec<String>, SettingsError> {
+        self.inner.columns().await
+    }
+
+    async fn fetch_all(
+        &mut self,
+        fields: &[String],
+        filters: indexmap::IndexMap<String, splashcore_rs::value::Value>,
+    ) -> Result<Vec<module_settings::state::State>, SettingsError> {
+        self.inner.fetch_all(fields, filters).await
+    }
+
+    async fn matching_entry_count(
+        &mut self,
+        filters: indexmap::IndexMap<String, splashcore_rs::value::Value>,
+    ) -> Result<usize, SettingsError> {
+        self.inner.matching_entry_count(filters).await
+    }
+
+    async fn create_entry(
+        &mut self,
+        entry: indexmap::IndexMap<String, splashcore_rs::value::Value>,
+    ) -> Result<module_settings::state::State, SettingsError> {
+        let Some(splashcore_rs::value::Value::String(typ)) = entry.get("type") else {
+            return Err(
+                SettingsError::MissingOrInvalidField {
+                    field: "type".to_string(),
+                    src: "lockdown_create_entry".to_string(),
+                }
+            )
+        };
+
+        // Get the current lockdown set
+        let mut lockdowns = super::core::LockdownSet::guild(self.inner.guild_id, &self.inner.pool).await
+            .map_err(|e| {
+                SettingsError::Generic {
+                    message: format!("Error while fetching lockdown set: {}", e),
+                    src: "lockdown_create_entry".to_string(),
+                    typ: "value_error".to_string(),
+                }
+            })?;
+        
+        // Create the lockdown
+        let lockdown_type = super::core::LockdownModes::from_string(typ)
+            .map_err(|_| {
+                SettingsError::Generic {
+                    message: format!("Invalid lockdown type: {}", typ),
+                    src: "lockdown_create_entry".to_string(),
+                    typ: "value_error".to_string(),
+                }
+            })?
+            .ok_or_else(|| {
+                SettingsError::Generic {
+                    message: format!("Invalid lockdown type: {}", typ),
+                    src: "lockdown_create_entry".to_string(),
+                    typ: "value_error".to_string(),
+                }
+            })?;
+
+        lockdowns.apply(lockdown_type, &self.lockdown_data).await
+            .map_err(|e| {
+                SettingsError::Generic {
+                    message: format!("Error while applying lockdown: {}", e),
+                    src: "lockdown_create_entry".to_string(),
+                    typ: "value_error".to_string(),
+                }
+            })?;
+        
+        let created_lockdown = lockdowns.lockdowns.last().ok_or_else(|| {
+            SettingsError::Generic {
+                message: "No lockdowns created".to_string(),
+                src: "lockdown_create_entry".to_string(),
+                typ: "value_error".to_string(),
+            }
+        })?;
+
+        Ok(module_settings::state::State {
+            state: created_lockdown.to_map(),
+            bypass_ignore_for: std::collections::HashSet::new(),
+        })
+    }
+
+    async fn update_matching_entries(
+        &mut self,
+        _filters: indexmap::IndexMap<String, splashcore_rs::value::Value>,
+        _entry: indexmap::IndexMap<String, splashcore_rs::value::Value>,
+    ) -> Result<(), SettingsError> {
+        Err(
+            SettingsError::Generic {
+                message: "Internal Error: Lockdown data store does not support `update_matching_entries`".to_string(),
+                src: "lockdown_update_matching_entries".to_string(),
+                typ: "internal".to_string(),
+            }
+        )
+    }
+
+    async fn delete_matching_entries(
+        &mut self,
+        filters: indexmap::IndexMap<String, splashcore_rs::value::Value>,
+    ) -> Result<(), SettingsError> {
+        self.inner.delete_matching_entries(filters).await
+    }
+}
