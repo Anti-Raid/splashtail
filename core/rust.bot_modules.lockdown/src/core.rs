@@ -64,9 +64,15 @@ pub struct LockdownModeHandles {
 }
 
 impl LockdownModeHandles {
+    /// Merges two sets of handles
     pub fn merge(&mut self, other: &LockdownModeHandles) {
         self.roles.extend(other.roles.iter().cloned());
         self.channels.extend(other.channels.iter().cloned());
+    }
+
+    // A handle is redundant if it contains all roles and channels of the current handle
+    pub fn is_redundant(&self, other: &LockdownModeHandles) -> bool {
+        self.roles.is_superset(&other.roles) && self.channels.is_superset(&other.channels)
     }
 }
 
@@ -82,6 +88,7 @@ where
         &self,
         lockdown_data: &LockdownData,
         pg: &serenity::all::PartialGuild,
+        pgc: &[serenity::all::GuildChannel],
         critical_roles: &HashSet<serenity::all::RoleId>,
     ) -> Result<Box<dyn LockdownTestResult>, silverpelt::Error>;
 
@@ -90,6 +97,7 @@ where
         &self,
         lockdown_data: &LockdownData,
         pg: &serenity::all::PartialGuild,
+        pgc: &[serenity::all::GuildChannel],
         critical_roles: &HashSet<serenity::all::RoleId>,
     ) -> Result<serde_json::Value, silverpelt::Error>;
 
@@ -97,6 +105,7 @@ where
         &self,
         lockdown_data: &LockdownData,
         pg: &mut serenity::all::PartialGuild,
+        pgc: &mut [serenity::all::GuildChannel],
         critical_roles: &HashSet<serenity::all::RoleId>,
         data: &serde_json::Value,
         all_handles: &LockdownModeHandles,
@@ -106,6 +115,7 @@ where
         &self,
         lockdown_data: &LockdownData,
         pg: &mut serenity::all::PartialGuild,
+        pgc: &mut [serenity::all::GuildChannel],
         critical_roles: &HashSet<serenity::all::RoleId>,
         data: &serde_json::Value,
         all_handles: &LockdownModeHandles,
@@ -115,17 +125,20 @@ where
         &self,
         lockdown_data: &LockdownData,
         pg: &serenity::all::PartialGuild,
+        pgc: &[serenity::all::GuildChannel],
         critical_roles: &HashSet<serenity::all::RoleId>,
         data: &serde_json::Value,
     ) -> Result<LockdownModeHandles, silverpelt::Error>;
 }
+
+pub trait CustomLockdownMode: LockdownMode + std::fmt::Display {}
 
 /// Enum containing all variants
 pub enum LockdownModes {
     QuickServerLockdown(qsl::QuickServerLockdown),
     TraditionalServerLockdown(tsl::TraditionalServerLockdown),
     SingleChannelLockdown(scl::SingleChannelLockdown),
-    Unknown(Box<dyn LockdownMode>),
+    Unknown(Box<dyn CustomLockdownMode>),
 }
 
 impl LockdownModes {
@@ -153,6 +166,19 @@ impl LockdownModes {
     }
 }
 
+impl std::fmt::Display for LockdownModes {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            LockdownModes::QuickServerLockdown(_) => write!(f, "Quick Server Lockdown"),
+            LockdownModes::TraditionalServerLockdown(_) => write!(f, "Traditional Server Lockdown"),
+            LockdownModes::SingleChannelLockdown(scl) => {
+                write!(f, "Single Channel Lockdown ({})", scl.0)
+            }
+            LockdownModes::Unknown(m) => write!(f, "{}", m),
+        }
+    }
+}
+
 #[async_trait]
 impl LockdownMode for LockdownModes {
     fn specificity(&self) -> i32 {
@@ -168,19 +194,20 @@ impl LockdownMode for LockdownModes {
         &self,
         lockdown_data: &LockdownData,
         pg: &serenity::all::PartialGuild,
+        pgc: &[serenity::all::GuildChannel],
         critical_roles: &HashSet<serenity::all::RoleId>,
     ) -> Result<Box<dyn LockdownTestResult>, silverpelt::Error> {
         match self {
             LockdownModes::QuickServerLockdown(qsl) => {
-                qsl.test(lockdown_data, pg, critical_roles).await
+                qsl.test(lockdown_data, pg, pgc, critical_roles).await
             }
             LockdownModes::TraditionalServerLockdown(tsl) => {
-                tsl.test(lockdown_data, pg, critical_roles).await
+                tsl.test(lockdown_data, pg, pgc, critical_roles).await
             }
             LockdownModes::SingleChannelLockdown(scl) => {
-                scl.test(lockdown_data, pg, critical_roles).await
+                scl.test(lockdown_data, pg, pgc, critical_roles).await
             }
-            LockdownModes::Unknown(m) => m.test(lockdown_data, pg, critical_roles).await,
+            LockdownModes::Unknown(m) => m.test(lockdown_data, pg, pgc, critical_roles).await,
         }
     }
 
@@ -188,19 +215,20 @@ impl LockdownMode for LockdownModes {
         &self,
         lockdown_data: &LockdownData,
         pg: &serenity::all::PartialGuild,
+        pgc: &[serenity::all::GuildChannel],
         critical_roles: &HashSet<serenity::all::RoleId>,
     ) -> Result<serde_json::Value, silverpelt::Error> {
         match self {
             LockdownModes::QuickServerLockdown(qsl) => {
-                qsl.setup(lockdown_data, pg, critical_roles).await
+                qsl.setup(lockdown_data, pg, pgc, critical_roles).await
             }
             LockdownModes::TraditionalServerLockdown(tsl) => {
-                tsl.setup(lockdown_data, pg, critical_roles).await
+                tsl.setup(lockdown_data, pg, pgc, critical_roles).await
             }
             LockdownModes::SingleChannelLockdown(scl) => {
-                scl.setup(lockdown_data, pg, critical_roles).await
+                scl.setup(lockdown_data, pg, pgc, critical_roles).await
             }
-            LockdownModes::Unknown(m) => m.setup(lockdown_data, pg, critical_roles).await,
+            LockdownModes::Unknown(m) => m.setup(lockdown_data, pg, pgc, critical_roles).await,
         }
     }
 
@@ -208,25 +236,26 @@ impl LockdownMode for LockdownModes {
         &self,
         lockdown_data: &LockdownData,
         pg: &mut serenity::all::PartialGuild,
+        pgc: &mut [serenity::all::GuildChannel],
         critical_roles: &HashSet<serenity::all::RoleId>,
         data: &serde_json::Value,
         all_handles: &LockdownModeHandles,
     ) -> Result<(), silverpelt::Error> {
         match self {
             LockdownModes::QuickServerLockdown(qsl) => {
-                qsl.create(lockdown_data, pg, critical_roles, data, all_handles)
+                qsl.create(lockdown_data, pg, pgc, critical_roles, data, all_handles)
                     .await
             }
             LockdownModes::TraditionalServerLockdown(tsl) => {
-                tsl.create(lockdown_data, pg, critical_roles, data, all_handles)
+                tsl.create(lockdown_data, pg, pgc, critical_roles, data, all_handles)
                     .await
             }
             LockdownModes::SingleChannelLockdown(scl) => {
-                scl.create(lockdown_data, pg, critical_roles, data, all_handles)
+                scl.create(lockdown_data, pg, pgc, critical_roles, data, all_handles)
                     .await
             }
             LockdownModes::Unknown(m) => {
-                m.create(lockdown_data, pg, critical_roles, data, all_handles)
+                m.create(lockdown_data, pg, pgc, critical_roles, data, all_handles)
                     .await
             }
         }
@@ -236,25 +265,26 @@ impl LockdownMode for LockdownModes {
         &self,
         lockdown_data: &LockdownData,
         pg: &mut serenity::all::PartialGuild,
+        pgc: &mut [serenity::all::GuildChannel],
         critical_roles: &HashSet<serenity::all::RoleId>,
         data: &serde_json::Value,
         all_handles: &LockdownModeHandles,
     ) -> Result<(), silverpelt::Error> {
         match self {
             LockdownModes::QuickServerLockdown(qsl) => {
-                qsl.revert(lockdown_data, pg, critical_roles, data, all_handles)
+                qsl.revert(lockdown_data, pg, pgc, critical_roles, data, all_handles)
                     .await
             }
             LockdownModes::TraditionalServerLockdown(tsl) => {
-                tsl.revert(lockdown_data, pg, critical_roles, data, all_handles)
+                tsl.revert(lockdown_data, pg, pgc, critical_roles, data, all_handles)
                     .await
             }
             LockdownModes::SingleChannelLockdown(scl) => {
-                scl.revert(lockdown_data, pg, critical_roles, data, all_handles)
+                scl.revert(lockdown_data, pg, pgc, critical_roles, data, all_handles)
                     .await
             }
             LockdownModes::Unknown(m) => {
-                m.revert(lockdown_data, pg, critical_roles, data, all_handles)
+                m.revert(lockdown_data, pg, pgc, critical_roles, data, all_handles)
                     .await
             }
         }
@@ -264,20 +294,27 @@ impl LockdownMode for LockdownModes {
         &self,
         lockdown_data: &LockdownData,
         pg: &serenity::all::PartialGuild,
+        pgc: &[serenity::all::GuildChannel],
         critical_roles: &HashSet<serenity::all::RoleId>,
         data: &serde_json::Value,
     ) -> Result<LockdownModeHandles, silverpelt::Error> {
         match self {
             LockdownModes::QuickServerLockdown(qsl) => {
-                qsl.handles(lockdown_data, pg, critical_roles, data).await
+                qsl.handles(lockdown_data, pg, pgc, critical_roles, data)
+                    .await
             }
             LockdownModes::TraditionalServerLockdown(tsl) => {
-                tsl.handles(lockdown_data, pg, critical_roles, data).await
+                tsl.handles(lockdown_data, pg, pgc, critical_roles, data)
+                    .await
             }
             LockdownModes::SingleChannelLockdown(scl) => {
-                scl.handles(lockdown_data, pg, critical_roles, data).await
+                scl.handles(lockdown_data, pg, pgc, critical_roles, data)
+                    .await
             }
-            LockdownModes::Unknown(m) => m.handles(lockdown_data, pg, critical_roles, data).await,
+            LockdownModes::Unknown(m) => {
+                m.handles(lockdown_data, pg, pgc, critical_roles, data)
+                    .await
+            }
         }
     }
 }
@@ -291,21 +328,20 @@ pub struct Lockdown {
 /// Represents a list of lockdowns
 pub struct LockdownSet {
     pub lockdowns: Vec<Lockdown>,
+    pub settings: Arc<super::cache::GuildLockdownSettings>,
+    pub guild_id: serenity::all::GuildId,
 }
 
 impl LockdownSet {
-    pub async fn guild<'a, E>(
+    pub async fn guild(
         guild_id: serenity::all::GuildId,
-        db: E,
-    ) -> Result<Self, silverpelt::Error>
-    where
-        E: sqlx::Executor<'a, Database = sqlx::Postgres>,
-    {
+        pool: &sqlx::PgPool,
+    ) -> Result<Self, silverpelt::Error> {
         let data = sqlx::query!(
             "SELECT type, data FROM lockdown__guild_lockdowns WHERE guild_id = $1",
             guild_id.to_string(),
         )
-        .fetch_all(db)
+        .fetch_all(pool)
         .await?;
 
         let mut lockdowns = Vec::new();
@@ -328,7 +364,250 @@ impl LockdownSet {
             lockdowns.push(lockdown);
         }
 
-        Ok(LockdownSet { lockdowns })
+        let settings = super::cache::get_guild_lockdown_settings(pool, guild_id).await?;
+
+        Ok(LockdownSet {
+            lockdowns,
+            settings,
+            guild_id,
+        })
+    }
+
+    /// Sorts the lockdowns by specificity in descending order
+    pub fn sort(&mut self) {
+        self.lockdowns
+            .sort_by(|a, b| b.r#type.specificity().cmp(&a.r#type.specificity()));
+    }
+
+    pub async fn get_handles(
+        &self,
+        lockdown_data: &LockdownData,
+        pg: &serenity::all::PartialGuild,
+        pgc: &[serenity::all::GuildChannel],
+    ) -> Result<LockdownModeHandles, silverpelt::Error> {
+        let mut handles = LockdownModeHandles {
+            roles: HashSet::new(),
+            channels: HashSet::new(),
+        };
+
+        for lockdown in self.lockdowns.iter() {
+            let handle = lockdown
+                .r#type
+                .handles(
+                    lockdown_data,
+                    pg,
+                    pgc,
+                    &self.settings.member_roles,
+                    &lockdown.data,
+                )
+                .await?;
+
+            // Extend roles and channels
+            handles.merge(&handle);
+        }
+
+        Ok(handles)
+    }
+
+    /// Adds a lockdown to the set
+    pub async fn apply(
+        &mut self,
+        lockdown: Lockdown,
+        lockdown_data: &LockdownData,
+    ) -> Result<(), silverpelt::Error> {
+        self.sort();
+
+        // Fetch guild+channel info to advance to avoid needing to fetch it on every interaction with the trait
+        let mut pg = proxy_support::guild(
+            &lockdown_data.cache_http,
+            &lockdown_data.reqwest,
+            self.guild_id,
+        )
+        .await?;
+
+        let mut pgc = proxy_support::guild_channels(
+            &lockdown_data.cache_http,
+            &lockdown_data.reqwest,
+            self.guild_id,
+        )
+        .await?;
+
+        let critical_roles = get_critical_roles(&pg, &self.settings.member_roles)?;
+
+        // Test new lockdown if required
+        if self.settings.require_correct_layout {
+            let test_results = lockdown
+                .r#type
+                .test(lockdown_data, &pg, &pgc, &critical_roles)
+                .await?;
+
+            if !test_results.can_apply_perfectly() {
+                return Err(test_results.display_result(&pg).into());
+            }
+        }
+
+        let current_handles = self.get_handles(lockdown_data, &pg, &pgc).await?;
+
+        // Get the handles for the new lockdown
+        let new_handles = lockdown
+            .r#type
+            .handles(lockdown_data, &pg, &pgc, &critical_roles, &lockdown.data)
+            .await?;
+
+        if current_handles.is_redundant(&new_handles) {
+            return Err("Lockdown is redundant (all changes made by this lockdown handle are already locked by another handle)".into());
+        }
+
+        // Setup the lockdown
+        let data = lockdown
+            .r#type
+            .setup(lockdown_data, &pg, &pgc, &critical_roles)
+            .await?;
+
+        sqlx::query!(
+            "INSERT INTO lockdown__guild_lockdowns (guild_id, type, data) VALUES ($1, $2, $3)",
+            self.guild_id.to_string(),
+            lockdown.r#type.to_string(),
+            &data,
+        )
+        .execute(&lockdown_data.pool)
+        .await?;
+
+        // Apply the lockdown
+        lockdown
+            .r#type
+            .create(
+                lockdown_data,
+                &mut pg,
+                &mut pgc,
+                &critical_roles,
+                &data,
+                &new_handles,
+            )
+            .await?;
+
+        // Update self.lockdowns
+        self.lockdowns.push(lockdown);
+
+        Ok(())
+    }
+
+    /// Removes a lockdown from the set by index
+    pub async fn remove(
+        &mut self,
+        index: usize,
+        lockdown_data: &LockdownData,
+    ) -> Result<(), silverpelt::Error> {
+        self.sort();
+
+        let lockdown = self.lockdowns.get(index).ok_or_else(|| {
+            silverpelt::Error::from("Lockdown index out of bounds (does not exist)")
+        })?;
+
+        // Fetch guild+channel info to advance to avoid needing to fetch it on every interaction with the trait
+        let mut pg = proxy_support::guild(
+            &lockdown_data.cache_http,
+            &lockdown_data.reqwest,
+            self.guild_id,
+        )
+        .await?;
+
+        let mut pgc = proxy_support::guild_channels(
+            &lockdown_data.cache_http,
+            &lockdown_data.reqwest,
+            self.guild_id,
+        )
+        .await?;
+
+        let critical_roles = get_critical_roles(&pg, &self.settings.member_roles)?;
+
+        let current_handles = self.get_handles(lockdown_data, &pg, &pgc).await?;
+
+        // Revert the lockdown
+        lockdown
+            .r#type
+            .revert(
+                lockdown_data,
+                &mut pg,
+                &mut pgc,
+                &critical_roles,
+                &lockdown.data,
+                &current_handles,
+            )
+            .await?;
+
+        // Remove the lockdown from the database
+        sqlx::query!(
+            "DELETE FROM lockdown__guild_lockdowns WHERE guild_id = $1 AND type = $2",
+            self.guild_id.to_string(),
+            lockdown.r#type.to_string(),
+        )
+        .execute(&lockdown_data.pool)
+        .await?;
+
+        // Update self.lockdowns
+        self.lockdowns.remove(index);
+
+        Ok(())
+    }
+
+    /// Remove all lockdowns in order of specificity
+    pub async fn remove_all(
+        &mut self,
+        lockdown_data: &LockdownData,
+    ) -> Result<(), silverpelt::Error> {
+        self.sort();
+
+        // Fetch guild+channel info to advance to avoid needing to fetch it on every interaction with the trait
+        let mut pg = proxy_support::guild(
+            &lockdown_data.cache_http,
+            &lockdown_data.reqwest,
+            self.guild_id,
+        )
+        .await?;
+
+        let mut pgc = proxy_support::guild_channels(
+            &lockdown_data.cache_http,
+            &lockdown_data.reqwest,
+            self.guild_id,
+        )
+        .await?;
+
+        let critical_roles = get_critical_roles(&pg, &self.settings.member_roles)?;
+
+        let mut current_handles = self.get_handles(lockdown_data, &pg, &pgc).await?;
+
+        for lockdown in self.lockdowns.iter() {
+            // Revert the lockdown
+            lockdown
+                .r#type
+                .revert(
+                    lockdown_data,
+                    &mut pg,
+                    &mut pgc,
+                    &critical_roles,
+                    &lockdown.data,
+                    &current_handles,
+                )
+                .await?;
+
+            // Remove the lockdown from the database
+            sqlx::query!(
+                "DELETE FROM lockdown__guild_lockdowns WHERE guild_id = $1 AND type = $2",
+                self.guild_id.to_string(),
+                lockdown.r#type.to_string(),
+            )
+            .execute(&lockdown_data.pool)
+            .await?;
+
+            // We need to re-fetch the handles after each lockdown is removed
+            current_handles = self.get_handles(lockdown_data, &pg, &pgc).await?;
+        }
+
+        // Update self.lockdowns
+        self.lockdowns.clear();
+
+        Ok(())
     }
 }
 
@@ -414,6 +693,7 @@ pub mod qsl {
             &self,
             _lockdown_data: &LockdownData,
             pg: &serenity::all::PartialGuild,
+            _pgc: &[serenity::all::GuildChannel],
             critical_roles: &HashSet<serenity::all::RoleId>,
         ) -> Result<Box<dyn LockdownTestResult>, silverpelt::Error> {
             let mut changes_needed = std::collections::HashMap::new();
@@ -461,6 +741,7 @@ pub mod qsl {
             &self,
             _lockdown_data: &LockdownData,
             pg: &serenity::all::PartialGuild,
+            _pgc: &[serenity::all::GuildChannel],
             _critical_roles: &HashSet<serenity::all::RoleId>,
         ) -> Result<serde_json::Value, silverpelt::Error> {
             let mut map = serde_json::Map::new();
@@ -479,6 +760,7 @@ pub mod qsl {
             &self,
             lockdown_data: &LockdownData,
             pg: &mut serenity::all::PartialGuild,
+            _pgc: &mut [serenity::all::GuildChannel],
             critical_roles: &HashSet<serenity::all::RoleId>,
             _data: &serde_json::Value,
             _all_handles: &LockdownModeHandles,
@@ -510,6 +792,7 @@ pub mod qsl {
             &self,
             lockdown_data: &LockdownData,
             pg: &mut serenity::all::PartialGuild,
+            _pgc: &mut [serenity::all::GuildChannel],
             critical_roles: &HashSet<serenity::all::RoleId>,
             data: &serde_json::Value,
             _all_handles: &LockdownModeHandles,
@@ -549,6 +832,7 @@ pub mod qsl {
             &self,
             _lockdown_data: &LockdownData,
             _pg: &serenity::all::PartialGuild,
+            _pgc: &[serenity::all::GuildChannel],
             critical_roles: &HashSet<serenity::all::RoleId>,
             _data: &serde_json::Value,
         ) -> Result<LockdownModeHandles, silverpelt::Error> {
@@ -621,6 +905,7 @@ pub mod tsl {
             &self,
             _lockdown_data: &LockdownData,
             _pg: &serenity::all::PartialGuild,
+            _pgc: &[serenity::all::GuildChannel],
             _critical_roles: &HashSet<serenity::all::RoleId>,
         ) -> Result<Box<dyn LockdownTestResult>, silverpelt::Error> {
             Ok(Box::new(TraditionalLockdownTestResult))
@@ -628,20 +913,14 @@ pub mod tsl {
 
         async fn setup(
             &self,
-            lockdown_data: &LockdownData,
-            pg: &serenity::all::PartialGuild,
+            _lockdown_data: &LockdownData,
+            _pg: &serenity::all::PartialGuild,
+            pgc: &[serenity::all::GuildChannel],
             _critical_roles: &HashSet<serenity::all::RoleId>,
         ) -> Result<serde_json::Value, silverpelt::Error> {
-            let channels = proxy_support::guild_channels(
-                &lockdown_data.cache_http,
-                &lockdown_data.reqwest,
-                pg.id,
-            )
-            .await?;
-
             let mut map = serde_json::Map::new();
 
-            for channel in channels.iter() {
+            for channel in pgc.iter() {
                 map.insert(
                     channel.id.to_string(),
                     serde_json::to_value(channel.permission_overwrites.clone())?,
@@ -654,19 +933,13 @@ pub mod tsl {
         async fn create(
             &self,
             lockdown_data: &LockdownData,
-            pg: &mut serenity::all::PartialGuild,
+            _pg: &mut serenity::all::PartialGuild,
+            pgc: &mut [serenity::all::GuildChannel],
             critical_roles: &HashSet<serenity::all::RoleId>,
             _data: &serde_json::Value,
             all_handles: &LockdownModeHandles,
         ) -> Result<(), silverpelt::Error> {
-            let mut channels = proxy_support::guild_channels(
-                &lockdown_data.cache_http,
-                &lockdown_data.reqwest,
-                pg.id,
-            )
-            .await?;
-
-            for channel in channels.iter_mut() {
+            for channel in pgc.iter_mut() {
                 if all_handles.channels.contains(&channel.id) {
                     continue; // Someone else is handling this channel
                 }
@@ -712,21 +985,15 @@ pub mod tsl {
         async fn revert(
             &self,
             lockdown_data: &LockdownData,
-            pg: &mut serenity::all::PartialGuild,
+            _pg: &mut serenity::all::PartialGuild,
+            pgc: &mut [serenity::all::GuildChannel],
             _critical_roles: &HashSet<serenity::all::RoleId>,
             data: &serde_json::Value,
             all_handles: &LockdownModeHandles,
         ) -> Result<(), silverpelt::Error> {
             let old_permissions = Self::from_data(data)?;
 
-            let mut channels = proxy_support::guild_channels(
-                &lockdown_data.cache_http,
-                &lockdown_data.reqwest,
-                pg.id,
-            )
-            .await?;
-
-            for channel in channels.iter_mut() {
+            for channel in pgc.iter_mut() {
                 if all_handles.channels.contains(&channel.id) {
                     continue; // Someone else is handling this channel
                 }
@@ -749,22 +1016,16 @@ pub mod tsl {
 
         async fn handles(
             &self,
-            lockdown_data: &LockdownData,
-            pg: &serenity::all::PartialGuild,
+            _lockdown_data: &LockdownData,
+            _pg: &serenity::all::PartialGuild,
+            pgc: &[serenity::all::GuildChannel],
             _critical_roles: &HashSet<serenity::all::RoleId>,
             _data: &serde_json::Value,
         ) -> Result<LockdownModeHandles, silverpelt::Error> {
             // TSL locks all channels, but *NOT* roles
-            let channels = proxy_support::guild_channels(
-                &lockdown_data.cache_http,
-                &lockdown_data.reqwest,
-                pg.id,
-            )
-            .await?;
-
             Ok(LockdownModeHandles {
                 roles: HashSet::new(),
-                channels: channels.iter().map(|c| c.id).collect(),
+                channels: pgc.iter().map(|c| c.id).collect(),
             })
         }
     }
@@ -822,6 +1083,7 @@ pub mod scl {
             &self,
             _lockdown_data: &LockdownData,
             _pg: &serenity::all::PartialGuild,
+            _pgc: &[serenity::all::GuildChannel],
             _critical_roles: &HashSet<serenity::all::RoleId>,
         ) -> Result<Box<dyn LockdownTestResult>, silverpelt::Error> {
             Ok(Box::new(SingleChannelLockdownTestResult))
@@ -829,18 +1091,12 @@ pub mod scl {
 
         async fn setup(
             &self,
-            lockdown_data: &LockdownData,
-            pg: &serenity::all::PartialGuild,
+            _lockdown_data: &LockdownData,
+            _pg: &serenity::all::PartialGuild,
+            pgc: &[serenity::all::GuildChannel],
             _critical_roles: &HashSet<serenity::all::RoleId>,
         ) -> Result<serde_json::Value, silverpelt::Error> {
-            let channels = proxy_support::guild_channels(
-                &lockdown_data.cache_http,
-                &lockdown_data.reqwest,
-                pg.id,
-            )
-            .await?;
-
-            let channel = channels
+            let channel = pgc
                 .iter()
                 .find(|c| c.id == self.0)
                 .ok_or_else(|| silverpelt::Error::from("Channel not found"))?;
@@ -852,6 +1108,7 @@ pub mod scl {
             &self,
             lockdown_data: &LockdownData,
             _pg: &mut serenity::all::PartialGuild,
+            _pgc: &mut [serenity::all::GuildChannel],
             critical_roles: &HashSet<serenity::all::RoleId>,
             data: &serde_json::Value,
             _all_handles: &LockdownModeHandles,
@@ -897,6 +1154,7 @@ pub mod scl {
             &self,
             lockdown_data: &LockdownData,
             _pg: &mut serenity::all::PartialGuild,
+            _pgc: &mut [serenity::all::GuildChannel],
             _critical_roles: &HashSet<serenity::all::RoleId>,
             data: &serde_json::Value,
             _all_handles: &LockdownModeHandles,
@@ -917,6 +1175,7 @@ pub mod scl {
             &self,
             _lockdown_data: &LockdownData,
             _pg: &serenity::all::PartialGuild,
+            _pgc: &[serenity::all::GuildChannel],
             _critical_roles: &HashSet<serenity::all::RoleId>,
             _data: &serde_json::Value,
         ) -> Result<LockdownModeHandles, silverpelt::Error> {
