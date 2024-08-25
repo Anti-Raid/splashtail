@@ -63,6 +63,10 @@ pub static LOCKDOWN_SETTINGS: LazyLock<ConfigOption> = LazyLock::new(|| {
             pre_checks: settings_wrap_precheck(indexmap::indexmap! {}),
             default_pre_checks: settings_wrap_precheck(vec![]),
         },
+        module_settings::common_columns::created_at(),
+        module_settings::common_columns::created_by(),
+        module_settings::common_columns::last_updated_at(),
+        module_settings::common_columns::last_updated_by(),
     ]),
     title_template: "Lockdown Settings",
     operations: indexmap::indexmap! {
