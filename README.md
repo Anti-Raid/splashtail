@@ -166,13 +166,12 @@ For initial release:
 - Add the ability to enable/disable modules [X] and commands [X] and also override command permissions [X]
 - Basic Moderation (warn/kick/ban+tempban/unban) [X]
 - Punishment module (give punishment based on stings) [X]
-- Basic Anti-Raid (lockdown/lockserver/unlockserver/lockchannel/unlockchannel) []
+- Lockdown (qsl (quick server lockdown)/tsl (traditional server lockdown)/scl (single channel lockdown)) [X]
 - Server lockdown on limits hit []
 - Basic Anti-Spam (anti-invite, anti-everyone ping) [X]
 - Basic Anti-Spam Punishment integration [X]
 - Basic Anti-Spam audit log integration []
 - Basic Anti-Spam server name/server icon protection [X]
-- Webhook creation and deletion monitoring []
 - Audit Logs [X]
 - Better serde-based audit log expansion [WIP]
 - Integrating audit logs into moderation [X]
@@ -184,6 +183,7 @@ For initial release:
 
 
 For later:
+- Webhook creation and deletion monitoring []
 - Creating and stabilizing the ``Captcha`` module []
 - Server Member Backup/Restore []
 - Dangerous role quarantine/removal []
