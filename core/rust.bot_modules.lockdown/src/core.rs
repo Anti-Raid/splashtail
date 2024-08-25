@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
 /// Change operation, commonly used in lockdown modes
@@ -68,21 +68,75 @@ where
 }
 
 /// To ensure two lockdowns don't conflict with each other, we need some information about what all lockdowns are handling
+/// along with what specificity they have
 pub struct LockdownModeHandles {
-    pub roles: HashSet<serenity::all::RoleId>,
-    pub channels: HashSet<serenity::all::ChannelId>,
+    pub roles: HashMap<serenity::all::RoleId, i32>,
+    pub channels: HashMap<serenity::all::ChannelId, i32>,
 }
 
 impl LockdownModeHandles {
     /// Merges two sets of handles
     pub fn merge(&mut self, other: &LockdownModeHandles) {
-        self.roles.extend(other.roles.iter().cloned());
-        self.channels.extend(other.channels.iter().cloned());
+        self.roles.extend(other.roles.iter().map(|(k, v)| (*k, *v)));
+        self.channels
+            .extend(other.channels.iter().map(|(k, v)| (*k, *v)));
     }
 
-    // A handle is redundant if it contains all roles and channels of the current handle
+    // A role is locked if it contains all roles of the current *with a lower specificity*
+    pub fn is_role_locked(
+        &self,
+        role: serenity::all::RoleId,
+        specificity: i32,
+    ) -> Option<(serenity::all::RoleId, i32)> {
+        if let Some(current_spec) = self.roles.get(&role) {
+            if *current_spec >= specificity {
+                return Some((role, *current_spec));
+            }
+        }
+
+        None
+    }
+
+    // A channel is locked if it contains all channels of the current *with a lower specificity*
+    pub fn is_channel_locked(
+        &self,
+        _channel: serenity::all::ChannelId,
+        _specificity: i32,
+    ) -> Option<(serenity::all::ChannelId, i32)> {
+        None // For now
+
+        /*if let Some(current_spec) = self.channels.get(&channel) {
+            if *current_spec >= specificity {
+                return Some((channel, *current_spec));
+            }
+        }
+
+        None*/
+    }
+
+    // A handle is redundant if it contains all roles and channels of the current *with a lower specificity*
     pub fn is_redundant(&self, other: &LockdownModeHandles) -> bool {
-        self.roles.is_superset(&other.roles) && self.channels.is_superset(&other.channels)
+        for (role, spec) in other.roles.iter() {
+            if let Some(current_spec) = self.roles.get(role) {
+                if current_spec >= spec {
+                    return false;
+                }
+            } else {
+                return false;
+            }
+        }
+
+        for (channel, spec) in other.channels.iter() {
+            if let Some(current_spec) = self.channels.get(channel) {
+                if current_spec >= spec {
+                    return false;
+                }
+            } else {
+                return false;
+            }
+        }
+
+        true
     }
 }
 
@@ -448,8 +502,8 @@ impl LockdownSet {
         pgc: &[serenity::all::GuildChannel],
     ) -> Result<LockdownModeHandles, silverpelt::Error> {
         let mut handles = LockdownModeHandles {
-            roles: HashSet::new(),
-            channels: HashSet::new(),
+            roles: HashMap::new(),
+            channels: HashMap::new(),
         };
 
         for lockdown in self.lockdowns.iter() {
@@ -542,7 +596,7 @@ impl LockdownSet {
                 &mut pgc,
                 &critical_roles,
                 &data,
-                &new_handles,
+                &current_handles,
             )
             .await?;
 
@@ -902,9 +956,10 @@ pub mod qsl {
             _data: &serde_json::Value,
         ) -> Result<LockdownModeHandles, silverpelt::Error> {
             // QSL locks the critical roles
+            let spec = self.specificity();
             Ok(LockdownModeHandles {
-                roles: critical_roles.clone(),
-                channels: HashSet::new(),
+                roles: critical_roles.iter().map(|r| (*r, spec)).collect(),
+                channels: HashMap::new(),
             })
         }
     }
@@ -1010,7 +1065,10 @@ pub mod tsl {
         ) -> Result<(), silverpelt::Error> {
             log::info!("Called create");
             for channel in pgc.iter_mut() {
-                if all_handles.channels.contains(&channel.id) {
+                if all_handles
+                    .is_channel_locked(channel.id, self.specificity())
+                    .is_some()
+                {
                     continue; // Someone else is handling this channel
                 }
 
@@ -1066,7 +1124,10 @@ pub mod tsl {
             let old_permissions = Self::from_data(data)?;
 
             for channel in pgc.iter_mut() {
-                if all_handles.channels.contains(&channel.id) {
+                if all_handles
+                    .is_channel_locked(channel.id, self.specificity())
+                    .is_some()
+                {
                     continue; // Someone else is handling this channel
                 }
 
@@ -1095,9 +1156,10 @@ pub mod tsl {
             _data: &serde_json::Value,
         ) -> Result<LockdownModeHandles, silverpelt::Error> {
             // TSL locks all channels, but *NOT* roles
+            let spec = self.specificity();
             Ok(LockdownModeHandles {
-                roles: HashSet::new(),
-                channels: pgc.iter().map(|c| c.id).collect(),
+                roles: HashMap::new(),
+                channels: pgc.iter().map(|c| (c.id, spec)).collect(),
             })
         }
     }
@@ -1183,8 +1245,15 @@ pub mod scl {
             _pgc: &mut [serenity::all::GuildChannel],
             critical_roles: &HashSet<serenity::all::RoleId>,
             data: &serde_json::Value,
-            _all_handles: &LockdownModeHandles,
+            all_handles: &LockdownModeHandles,
         ) -> Result<(), silverpelt::Error> {
+            if all_handles
+                .is_channel_locked(self.0, self.specificity())
+                .is_some()
+            {
+                return Ok(()); // Someone else is handling this channel
+            }
+
             let mut overwrites = Self::from_data(data)?;
 
             let mut nyset_overwrite = critical_roles.clone();
@@ -1229,8 +1298,15 @@ pub mod scl {
             _pgc: &mut [serenity::all::GuildChannel],
             _critical_roles: &HashSet<serenity::all::RoleId>,
             data: &serde_json::Value,
-            _all_handles: &LockdownModeHandles,
+            all_handles: &LockdownModeHandles,
         ) -> Result<(), silverpelt::Error> {
+            if all_handles
+                .is_channel_locked(self.0, self.specificity())
+                .is_some()
+            {
+                return Ok(()); // Someone else is handling this channel
+            }
+
             let overwrites = Self::from_data(data)?;
 
             self.0
@@ -1253,8 +1329,8 @@ pub mod scl {
         ) -> Result<LockdownModeHandles, silverpelt::Error> {
             // SCL locks a single channel
             Ok(LockdownModeHandles {
-                roles: HashSet::new(),
-                channels: std::iter::once(self.0).collect(),
+                roles: HashMap::new(),
+                channels: std::iter::once((self.0, self.specificity())).collect(),
             })
         }
     }
