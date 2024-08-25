@@ -108,10 +108,10 @@ pub static LOCKDOWN_SETTINGS: LazyLock<ConfigOption> = LazyLock::new(|| {
 });
 
 pub static LOCKDOWNS: LazyLock<ConfigOption> = LazyLock::new(|| ConfigOption {
-    id: "quick_server_lockdowns",
-    name: "Quick Server Lockdowns",
-    description: "Quick server lockdowns",
-    table: "lockdown__quick_server_lockdowns",
+    id: "lockdowns",
+    name: "Lockdowns",
+    description: "Lockdowns",
+    table: "lockdown__guild_lockdowns",
     common_filters: indexmap::indexmap! {},
     default_common_filters: indexmap::indexmap! {
         "guild_id" => "{__guild_id}"
@@ -188,10 +188,10 @@ pub static LOCKDOWNS: LazyLock<ConfigOption> = LazyLock::new(|| ConfigOption {
             pre_checks: settings_wrap_precheck(indexmap::indexmap! {}),
             default_pre_checks: settings_wrap_precheck(vec![]),
         },
-        module_settings::common_columns::created_at(),
+        /*module_settings::common_columns::created_at(),
         module_settings::common_columns::created_by(),
         module_settings::common_columns::last_updated_at(),
-        module_settings::common_columns::last_updated_by(),
+        module_settings::common_columns::last_updated_by(),*/
     ]),
     title_template: "Reason: {reason}",
     operations: indexmap::indexmap! {
@@ -202,10 +202,10 @@ pub static LOCKDOWNS: LazyLock<ConfigOption> = LazyLock::new(|| ConfigOption {
         OperationType::Create => OperationSpecific {
             corresponding_command: "lockdown lock",
             columns_to_set: indexmap::indexmap! {
-                "created_at" => "{__now}",
+                /*"created_at" => "{__now}",
                 "created_by" => "{__author}",
                 "last_updated_at" => "{__now}",
-                "last_updated_by" => "{__author}",
+                "last_updated_by" => "{__author}",*/
             },
         },
         OperationType::Delete => OperationSpecific {
