@@ -179,10 +179,10 @@ impl LockdownModes {
 impl std::fmt::Display for LockdownModes {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            LockdownModes::QuickServerLockdown(_) => write!(f, "Quick Server Lockdown"),
-            LockdownModes::TraditionalServerLockdown(_) => write!(f, "Traditional Server Lockdown"),
+            LockdownModes::QuickServerLockdown(_) => write!(f, "qsl"),
+            LockdownModes::TraditionalServerLockdown(_) => write!(f, "tsl"),
             LockdownModes::SingleChannelLockdown(scl) => {
-                write!(f, "Single Channel Lockdown ({})", scl.0)
+                write!(f, "scl/{}", scl.0)
             }
             LockdownModes::Unknown(m) => write!(f, "{}", m),
         }

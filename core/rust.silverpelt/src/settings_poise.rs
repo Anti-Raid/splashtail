@@ -745,20 +745,19 @@ pub async fn standard_autocomplete<'a>(
     for obj in objs {
         let disp_name = obj.template_to_string(setting.title_template);
 
-        for (k, v) in obj.state {
-            if k.starts_with("__") {
-                continue;
-            }
+        let Some(primary_key) = obj.state.get(setting.primary_key) else {
+            continue;
+        };
 
-            if let Value::String(v) = v {
-                if v.starts_with(partial) {
-                    choices.push(serenity::all::AutocompleteChoice::new(
-                        disp_name.to_string(),
-                        v,
-                    ));
-                    continue;
-                }
-            }
+        let disp_name = disp_name.to_string();
+        let primary_key = primary_key.to_string();
+
+        if disp_name.starts_with(partial) || primary_key.starts_with(partial) {
+            choices.push(serenity::all::AutocompleteChoice::new(
+                disp_name,
+                primary_key,
+            ));
+            continue;
         }
     }
 
