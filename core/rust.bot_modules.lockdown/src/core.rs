@@ -929,6 +929,7 @@ pub mod tsl {
 
     impl LockdownTestResult for TraditionalLockdownTestResult {
         fn can_apply_perfectly(&self) -> bool {
+            log::info!("Called can_apply_perfectly");
             true
         }
 
@@ -948,6 +949,7 @@ pub mod tsl {
             >,
             silverpelt::Error,
         > {
+            log::info!("Called from_data");
             let v: std::collections::HashMap<
                 serenity::all::ChannelId,
                 Vec<serenity::all::PermissionOverwrite>,
@@ -973,6 +975,7 @@ pub mod tsl {
             _pgc: &[serenity::all::GuildChannel],
             _critical_roles: &HashSet<serenity::all::RoleId>,
         ) -> Result<Box<dyn LockdownTestResult>, silverpelt::Error> {
+            log::info!("Called test");
             Ok(Box::new(TraditionalLockdownTestResult))
         }
 
@@ -983,6 +986,7 @@ pub mod tsl {
             pgc: &[serenity::all::GuildChannel],
             _critical_roles: &HashSet<serenity::all::RoleId>,
         ) -> Result<serde_json::Value, silverpelt::Error> {
+            log::info!("Called setup");
             let mut map = serde_json::Map::new();
 
             for channel in pgc.iter() {
@@ -1004,6 +1008,7 @@ pub mod tsl {
             _data: &serde_json::Value,
             all_handles: &LockdownModeHandles,
         ) -> Result<(), silverpelt::Error> {
+            log::info!("Called create");
             for channel in pgc.iter_mut() {
                 if all_handles.channels.contains(&channel.id) {
                     continue; // Someone else is handling this channel
@@ -1056,6 +1061,8 @@ pub mod tsl {
             data: &serde_json::Value,
             all_handles: &LockdownModeHandles,
         ) -> Result<(), silverpelt::Error> {
+            log::info!("Called can_apply_perfectly");
+
             let old_permissions = Self::from_data(data)?;
 
             for channel in pgc.iter_mut() {

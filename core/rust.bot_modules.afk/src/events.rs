@@ -8,6 +8,10 @@ pub async fn event_listener(ectx: &EventHandlerContext) -> Result<(), Error> {
 
     match event {
         FullEvent::Message { new_message } => {
+            if new_message.author.bot() {
+                return Ok(());
+            }
+
             let Some(guild_id) = new_message.guild_id else {
                 return Err("No guild ID found".into());
             };
@@ -58,7 +62,7 @@ pub async fn event_listener(ectx: &EventHandlerContext) -> Result<(), Error> {
                     .title("AFK")
                     .field("User", user.tag(), true)
                     .description(format!(
-                        "**Reason:** {}\n**Expires at:** <t:{}>:R",
+                        "**Reason:** {}\n**Expires at:** <t:{}>",
                         reason,
                         expires_at.timestamp()
                     ));

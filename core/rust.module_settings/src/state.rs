@@ -45,7 +45,7 @@ impl State {
         let num_starts = result.matches('{').count();
 
         // If 1 variables, return the value of the variable
-        if num_starts == 1 && result.starts_with('}') && result.ends_with('}') {
+        if num_starts == 1 && result.starts_with('{') && result.ends_with('}') {
             let var = template
                 .chars()
                 .skip(1)

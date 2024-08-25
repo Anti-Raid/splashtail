@@ -124,26 +124,14 @@ pub async fn settings_viewer(
                 key.clone()
             };
 
-            let display_value = if let Some(column) = column {
+            let mut display_value = if let Some(column) = column {
                 _get_display_value(&column.column_type, value, &values[index])
             } else {
                 value.to_string()
             };
 
             if display_value.len() > 1024 {
-                // Discord embed fields have a 1024 character limit
-                // Split the value into multiple fields
-                let mut len = 0;
-
-                while display_value.len() >= len {
-                    // Take the next 1024 characters
-                    let next: String = display_value.chars().skip(len).take(1024).collect();
-                    let next_len = next.len();
-                    embed = embed.field(display_key.clone(), next, true);
-                    len += next_len;
-                }
-
-                continue;
+                display_value = format!("{}...", &display_value[..1021]);
             }
 
             embed = embed.field(display_key, display_value, true);
@@ -349,26 +337,14 @@ pub async fn settings_creator(
                 key.clone()
             };
 
-            let display_value = if let Some(column) = column {
+            let mut display_value = if let Some(column) = column {
                 _get_display_value(&column.column_type, v, value)
             } else {
                 v.to_string()
             };
 
             if display_value.len() > 1024 {
-                // Discord embed fields have a 1024 character limit
-                // Split the value into multiple fields
-                let mut len = 0;
-
-                while display_value.len() >= len {
-                    // Take the next 1024 characters
-                    let next: String = display_value.chars().skip(len).take(1024).collect();
-                    let next_len = next.len();
-                    embed = embed.field(display_key.clone(), next, true);
-                    len += next_len;
-                }
-
-                continue;
+                display_value = format!("{}...", &display_value[..1021]);
             }
 
             embed = embed.field(display_key, display_value, true);
@@ -478,26 +454,14 @@ pub async fn settings_updater(
                 key.clone()
             };
 
-            let display_value = if let Some(column) = column {
+            let mut display_value = if let Some(column) = column {
                 _get_display_value(&column.column_type, v, value)
             } else {
                 v.to_string()
             };
 
             if display_value.len() > 1024 {
-                // Discord embed fields have a 1024 character limit
-                // Split the value into multiple fields
-                let mut len = 0;
-
-                while display_value.len() >= len {
-                    // Take the next 1024 characters
-                    let next: String = display_value.chars().skip(len).take(1024).collect();
-                    let next_len = next.len();
-                    embed = embed.field(display_key.clone(), next, true);
-                    len += next_len;
-                }
-
-                continue;
+                display_value = format!("{}...", &display_value[..1021]);
             }
 
             embed = embed.field(display_key, display_value, true);
@@ -609,26 +573,14 @@ pub async fn settings_deleter(
                 key.clone()
             };
 
-            let display_value = if let Some(column) = column {
+            let mut display_value = if let Some(column) = column {
                 _get_display_value(&column.column_type, v, value)
             } else {
                 v.to_string()
             };
 
             if display_value.len() > 1024 {
-                // Discord embed fields have a 1024 character limit
-                // Split the value into multiple fields
-                let mut len = 0;
-
-                while display_value.len() >= len {
-                    // Take the next 1024 characters
-                    let next: String = display_value.chars().skip(len).take(1024).collect();
-                    let next_len = next.len();
-                    embed = embed.field(display_key.clone(), next, true);
-                    len += next_len;
-                }
-
-                continue;
+                display_value = format!("{}...", &display_value[..1021]);
             }
 
             embed = embed.field(display_key, display_value, true);
