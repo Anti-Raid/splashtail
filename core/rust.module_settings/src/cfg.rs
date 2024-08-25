@@ -15,7 +15,8 @@ fn _parse_value(
 ) -> Result<Value, SettingsError> {
     match column_type {
         ColumnType::Scalar { column_type } => {
-            if matches!(v, Value::List(_)) {
+            // Special case: JSON columns can be any type
+            if matches!(v, Value::List(_)) && !matches!(column_type, InnerColumnType::Json {}) {
                 return Err(SettingsError::SchemaTypeValidationError {
                     column: column_id.to_string(),
                     expected_type: "Scalar".to_string(),
@@ -298,15 +299,7 @@ fn _parse_value(
                         got_type: format!("{:?}", v),
                     }),
                 },
-                InnerColumnType::Json {} => match v {
-                    Value::Map(_) => Ok(v),
-                    Value::None => Ok(v),
-                    _ => Err(SettingsError::SchemaTypeValidationError {
-                        column: column_id.to_string(),
-                        expected_type: "Json".to_string(),
-                        got_type: format!("{:?}", v),
-                    }),
-                },
+                InnerColumnType::Json {} => Ok(v),
             }
         }
         ColumnType::Array { inner } => match v {
@@ -366,7 +359,8 @@ async fn _validate_value(
 ) -> Result<Value, SettingsError> {
     let v = match column_type {
         ColumnType::Scalar { column_type } => {
-            if matches!(v, Value::List(_)) {
+            // Special case: JSON columns can be any type
+            if matches!(v, Value::List(_)) && !matches!(column_type, InnerColumnType::Json {}) {
                 return Err(SettingsError::SchemaTypeValidationError {
                     column: column_id.to_string(),
                     expected_type: "Scalar".to_string(),
