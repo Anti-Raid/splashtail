@@ -1,13 +1,16 @@
+use async_trait::async_trait;
 use futures_util::FutureExt;
 use module_settings::{
     data_stores::{PostgresDataStore, PostgresDataStoreImpl},
     types::{
-        settings_wrap_columns, settings_wrap_datastore, settings_wrap_postactions, settings_wrap_precheck, Column, ColumnAction, ColumnSuggestion, ColumnType, ConfigOption, CreateDataStore, DataStore, InnerColumnType, InnerColumnTypeStringKind, OperationSpecific, OperationType, SettingsData, SettingsError
+        settings_wrap_columns, settings_wrap_datastore, settings_wrap_postactions,
+        settings_wrap_precheck, Column, ColumnAction, ColumnSuggestion, ColumnType, ConfigOption,
+        CreateDataStore, DataStore, InnerColumnType, InnerColumnTypeStringKind, OperationSpecific,
+        OperationType, SettingsData, SettingsError,
     },
 };
 use splashcore_rs::value::Value;
 use std::sync::LazyLock;
-use async_trait::async_trait;
 
 pub static LOCKDOWN_SETTINGS: LazyLock<ConfigOption> = LazyLock::new(|| {
     ConfigOption {
@@ -104,7 +107,7 @@ pub static LOCKDOWN_SETTINGS: LazyLock<ConfigOption> = LazyLock::new(|| {
 }
 });
 
-pub static QUICK_SERVER_LOCKDOWNS: LazyLock<ConfigOption> = LazyLock::new(|| ConfigOption {
+pub static LOCKDOWNS: LazyLock<ConfigOption> = LazyLock::new(|| ConfigOption {
     id: "quick_server_lockdowns",
     name: "Quick Server Lockdowns",
     description: "Quick server lockdowns",
@@ -113,16 +116,60 @@ pub static QUICK_SERVER_LOCKDOWNS: LazyLock<ConfigOption> = LazyLock::new(|| Con
     default_common_filters: indexmap::indexmap! {
         "guild_id" => "{__guild_id}"
     },
-    primary_key: "guild_id",
+    primary_key: "id",
     max_entries: Some(1),
     max_return: 5,
-    data_store: settings_wrap_datastore(PostgresDataStore {}),
+    data_store: settings_wrap_datastore(LockdownDataStore {}),
     columns: settings_wrap_columns(vec![
+        Column {
+            id: "id",
+            name: "ID",
+            description: "The ID of the lockdown",
+            column_type: ColumnType::new_scalar(InnerColumnType::Uuid {}),
+            nullable: false,
+            unique: false,
+            suggestions: ColumnSuggestion::None {},
+            ignored_for: vec![OperationType::Create],
+            secret: false,
+            pre_checks: settings_wrap_precheck(indexmap::indexmap! {}),
+            default_pre_checks: settings_wrap_precheck(vec![]),
+        },
         module_settings::common_columns::guild_id(
             "guild_id",
             "Guild ID",
             "The Guild ID referring to this lockdown",
         ),
+        Column {
+            id: "type",
+            name: "Type",
+            description: "The type of the lockdown.",
+            column_type: ColumnType::new_scalar(InnerColumnType::String {
+                kind: InnerColumnTypeStringKind::Normal,
+                min_length: Some(1),
+                max_length: Some(256),
+                allowed_values: vec![],
+            }),
+            nullable: false,
+            unique: false,
+            suggestions: ColumnSuggestion::None {},
+            ignored_for: vec![],
+            secret: false,
+            pre_checks: settings_wrap_precheck(indexmap::indexmap! {}),
+            default_pre_checks: settings_wrap_precheck(vec![]),
+        },
+        Column {
+            id: "data",
+            name: "Data",
+            description: "The data stored of the lockdown.",
+            column_type: ColumnType::new_scalar(InnerColumnType::Json {}),
+            nullable: false,
+            unique: false,
+            suggestions: ColumnSuggestion::None {},
+            ignored_for: vec![OperationType::Create],
+            secret: false,
+            pre_checks: settings_wrap_precheck(indexmap::indexmap! {}),
+            default_pre_checks: settings_wrap_precheck(vec![]),
+        },
         Column {
             id: "reason",
             name: "Reason",
@@ -141,196 +188,19 @@ pub static QUICK_SERVER_LOCKDOWNS: LazyLock<ConfigOption> = LazyLock::new(|| Con
             pre_checks: settings_wrap_precheck(indexmap::indexmap! {}),
             default_pre_checks: settings_wrap_precheck(vec![]),
         },
-        Column {
-            id: "old_permissions",
-            name: "Old Permissions",
-            description: "The old permissions",
-            column_type: ColumnType::new_scalar(InnerColumnType::Json {}),
-            nullable: false,
-            unique: false,
-            suggestions: ColumnSuggestion::None {},
-            ignored_for: vec![OperationType::Create],
-            secret: false,
-            pre_checks: settings_wrap_precheck(indexmap::indexmap! {
-                OperationType::Create => vec![ColumnAction::NativeAction { 
-                    action: Box::new(|ctx, state| {
-                        async move {
-                            let Some(Value::Boolean(ongoing)) = state.state.get("ongoing") else {
-                                return Err(SettingsError::MissingOrInvalidField {
-                                    field: "ongoing".to_string(),
-                                    src: "index->NativeAction [pre_checks]".to_string(),
-                                });
-                            };
-
-                            if *ongoing {
-                                // Get the old permissions
-                                let pg = proxy_support::guild(
-                                    &ctx.data.cache_http,
-                                    &ctx.data.reqwest,
-                                    ctx.guild_id,
-                                )
-                                .await
-                                .map_err(|e| {
-                                    SettingsError::Generic {
-                                        message: format!("Error while fetching guild: {}", e),
-                                        typ: "value_error".to_string(),
-                                        src: "lockdown__server_lockdowns.old_permissions".to_string(),
-                                    }
-                                })?;
-
-                                let mut map = indexmap::IndexMap::new();
-
-                                for role in pg.roles.iter() {
-                                    map.insert(role.id.to_string(), Value::String(role.permissions.bits().to_string()));
-                                }
-
-                                state.bypass_ignore_for.insert("old_permissions".to_string());
-                                state.state.insert("old_permissions".to_string(), Value::Map(map));
-                            }
-
-                            Ok(())
-                        }
-                        .boxed()
-                    }),
-                    on_condition: None
-                }],
-            }),
-            default_pre_checks: settings_wrap_precheck(vec![]),
-        },
-        Column {
-            id: "ongoing",
-            name: "Ongoing",
-            description: "Is the lockdown still ongoing",
-            column_type: ColumnType::new_scalar(InnerColumnType::Boolean {}),
-            nullable: true,
-            unique: false,
-            suggestions: ColumnSuggestion::None {},
-            ignored_for: vec![],
-            secret: false,
-            pre_checks: settings_wrap_precheck(indexmap::indexmap! {}),
-            default_pre_checks: settings_wrap_precheck(vec![
-                    ColumnAction::NativeAction {
-                        action: Box::new(|ctx, state| {
-                            async move {
-                                // Ensure we are set to internally disable the lockdown entirely
-                                if ctx.operation_type == OperationType::Delete {
-                                    state.state.insert("ongoing".to_string(), Value::Boolean(false));
-                                }
-
-                                let Some(Value::Boolean(ongoing)) = state.state.get("ongoing") else {
-                                    return Err(SettingsError::MissingOrInvalidField {
-                                        field: "ongoing".to_string(),
-                                        src: "index->NativeAction [pre_checks]".to_string(),
-                                    });
-                                };
-
-                                let lockdown_settings = super::cache::get_guild_lockdown_settings(
-                                    &ctx.data.pool,
-                                    ctx.guild_id
-                                )
-                                .await
-                                .map_err(|e| {
-                                    SettingsError::Generic {
-                                        message: format!("Error while fetching lockdown settings: {}", e),
-                                        typ: "value_error".to_string(),
-                                        src: "lockdown__server_lockdowns.ongoing".to_string(),
-                                    }
-                                })?;
-        
-                                let pg = proxy_support::guild(
-                                    &ctx.data.cache_http,
-                                    &ctx.data.reqwest,
-                                    ctx.guild_id,
-                                )
-                                .await
-                                .map_err(|e| {
-                                    SettingsError::Generic {
-                                        message: format!("Error while fetching guild: {}", e),
-                                        typ: "value_error".to_string(),
-                                        src: "lockdown__server_lockdowns.ongoing".to_string(),
-                                    }
-                                })?;
-        
-                                if *ongoing && lockdown_settings.require_correct_layout {
-                                    let lockdown_test = crate::quick::test_quick_lockdown(&pg, &lockdown_settings.member_roles)
-                                    .await
-                                    .map_err(|e| {
-                                        SettingsError::Generic {
-                                            message: format!("Error while testing lockdown: {}", e),
-                                            typ: "value_error".to_string(),
-                                            src: "lockdown__server_lockdowns.ongoing".to_string(),
-                                        }
-                                    })?;
-        
-                                    if !lockdown_test.can_apply_perfectly() {
-                                        let mut needed_changes = String::new();
-        
-                                        needed_changes.push_str("The following roles need to be changed:\n");
-                                        for (role_id, perms) in lockdown_test.changes_needed.iter() {
-                                            if needed_changes.len() > 3700 {
-                                                break;
-                                            }
-
-                                            let role_name = pg.roles.get(role_id).map(|r| r.name.to_string()).unwrap_or_else(|| "Unknown".to_string());
-        
-                                            needed_changes.push_str(&format!("Role: {} ({})\n", role_name, role_id));
-                                            needed_changes.push_str(&format!("Permissions: {} {}\n", perms.0, perms.1));
-                                            needed_changes.push('\n');
-                                        }
-        
-                                        return Err(SettingsError::Generic {
-                                            message: format!("Lockdown cannot proceed without correct layout. Needed changes:\n{}", needed_changes),
-                                            typ: "value_error".to_string(),
-                                            src: "lockdown__server_lockdowns.ongoing".to_string(),
-                                        });
-                                    }
-                                } else if !*ongoing {
-                                    let Some(Value::Map(old_permissions)) = state.state.get("old_permissions") else {
-                                        return Err(SettingsError::MissingOrInvalidField {
-                                            field: "old_permissions".to_string(),
-                                            src: "index->NativeAction [post_actions]".to_string(),
-                                        });
-                                    };
-                        
-                                    for (k, v) in old_permissions.iter() {
-                                        k.parse::<serenity::all::RoleId>().map_err(|e| {
-                                            SettingsError::Generic {
-                                                message: format!("Error while parsing role ID: {}", e),
-                                                typ: "value_error".to_string(),
-                                                src: "lockdown__server_lockdowns.ongoing".to_string(),
-                                            }
-                                        })?;
-                                        v.as_u64().ok_or_else(|| {
-                                            SettingsError::Generic {
-                                                message: format!("Error while converting permissions: {}", v),
-                                                typ: "value_error".to_string(),
-                                                src: "lockdown__server_lockdowns.ongoing".to_string(),
-                                            }
-                                        })?;
-                                     }            
-                                }
-        
-                                Ok(())
-                            }
-                            .boxed()
-                        }),
-                        on_condition: None,
-                    },        
-            ]),
-        },
         module_settings::common_columns::created_at(),
         module_settings::common_columns::created_by(),
         module_settings::common_columns::last_updated_at(),
         module_settings::common_columns::last_updated_by(),
     ]),
-    title_template: "Ongoing: {ongoing}, Reason: {reason}",
+    title_template: "Reason: {reason}",
     operations: indexmap::indexmap! {
         OperationType::View => OperationSpecific {
-            corresponding_command: "lockserver list",
+            corresponding_command: "lockdown list",
             columns_to_set: indexmap::indexmap! {},
         },
         OperationType::Create => OperationSpecific {
-            corresponding_command: "lockserver lock",
+            corresponding_command: "lockdown lock",
             columns_to_set: indexmap::indexmap! {
                 "created_at" => "{__now}",
                 "created_by" => "{__author}",
@@ -338,135 +208,13 @@ pub static QUICK_SERVER_LOCKDOWNS: LazyLock<ConfigOption> = LazyLock::new(|| Con
                 "last_updated_by" => "{__author}",
             },
         },
-        OperationType::Update => OperationSpecific {
-            corresponding_command: "lockserver update",
-            columns_to_set: indexmap::indexmap! {
-                "last_updated_at" => "{__now}",
-                "last_updated_by" => "{__author}",
-            },
-        },
         OperationType::Delete => OperationSpecific {
-            corresponding_command: "lockserver unlock",
+            corresponding_command: "lockdown unlock",
             columns_to_set: indexmap::indexmap! {},
         }
     },
-    post_actions: settings_wrap_postactions(vec![
-        ColumnAction::NativeAction {
-            action: Box::new(|ctx, state| {
-                async move {
-                    let Some(Value::Boolean(ongoing)) = state.state.get("ongoing") else {
-                        return Err(SettingsError::MissingOrInvalidField {
-                            field: "ongoing".to_string(),
-                            src: "index->NativeAction [post_actions]".to_string(),
-                        });
-                    };
-
-                    let lockdown_settings = super::cache::get_guild_lockdown_settings(
-                        &ctx.data.pool,
-                        ctx.guild_id
-                    )
-                    .await
-                    .map_err(|e| {
-                        SettingsError::Generic {
-                            message: format!("Error while fetching lockdown settings: {}", e),
-                            typ: "value_error".to_string(),
-                            src: "lockdown__server_lockdowns.ongoing".to_string(),
-                        }
-                    })?;
-
-                    let mut pg = proxy_support::guild(
-                        &ctx.data.cache_http,
-                        &ctx.data.reqwest,
-                        ctx.guild_id,
-                    )
-                    .await
-                    .map_err(|e| {
-                        SettingsError::Generic {
-                            message: format!("Error while fetching guild: {}", e),
-                            typ: "value_error".to_string(),
-                            src: "lockdown__server_lockdowns.ongoing".to_string(),
-                        }
-                    })?;
-
-                    let crit_roles = super::quick::get_critical_roles(&pg, &lockdown_settings.member_roles)
-                    .map_err(|e| {
-                        SettingsError::Generic {
-                            message: format!("Error while fetching critical roles: {}", e),
-                            typ: "value_error".to_string(),
-                            src: "lockdown__server_lockdowns.ongoing".to_string(),
-                        }
-                    })?;
-
-                    if *ongoing {
-                        super::quick::create_quick_lockdown(
-                            &ctx.data.cache_http,
-                            &mut pg,
-                            crit_roles,
-                        )
-                        .await
-                        .map_err(|e| {
-                            SettingsError::Generic {
-                                message: format!("Error while creating lockdown: {}", e),
-                                typ: "value_error".to_string(),
-                                src: "lockdown__server_lockdowns.ongoing".to_string(),
-                            }
-                        })?;
-                    } else {
-                        let Some(Value::Map(old_permissions)) = state.state.get("old_permissions") else {
-                            return Err(SettingsError::MissingOrInvalidField {
-                                field: "old_permissions".to_string(),
-                                src: "index->NativeAction [post_actions]".to_string(),
-                            });
-                        };
-
-                        let mut op = std::collections::HashMap::new();
-
-                        for (k, v) in old_permissions.iter() {
-                            let role_id = k.parse::<serenity::all::RoleId>().map_err(|e| {
-                                SettingsError::Generic {
-                                    message: format!("Error while parsing role ID: {}", e),
-                                    typ: "value_error".to_string(),
-                                    src: "lockdown__server_lockdowns.ongoing".to_string(),
-                                }
-                            })?;
-                            let value = v.as_u64().ok_or_else(|| {
-                                SettingsError::Generic {
-                                    message: format!("Error while converting permissions: {}", v),
-                                    typ: "value_error".to_string(),
-                                    src: "lockdown__server_lockdowns.ongoing".to_string(),
-                                }
-                            })?;
-
-                            let value_perms = serenity::all::Permissions::from_bits_retain(value);
-
-                            op.insert(role_id, value_perms);
-                        }
-
-                        super::quick::revert_quick_lockdown(
-                            &ctx.data.cache_http,
-                            &mut pg,
-                            crit_roles,
-                            op,
-                        )
-                        .await
-                        .map_err(|e| {
-                            SettingsError::Generic {
-                                message: format!("Error while reverting lockdown: {}", e),
-                                typ: "value_error".to_string(),
-                                src: "lockdown__server_lockdowns.ongoing".to_string(),
-                            }
-                        })?;
-                    }
-
-                    Ok(())
-                }
-                .boxed()
-            }),
-            on_condition: None,
-        },
-    ]),
+    post_actions: settings_wrap_postactions(vec![]),
 });
-
 
 /// A custom data store is needed to handle the specific requirements of the lockdown module
 pub struct LockdownDataStore {}
@@ -482,7 +230,9 @@ impl CreateDataStore for LockdownDataStore {
         common_filters: indexmap::IndexMap<String, splashcore_rs::value::Value>,
     ) -> Result<Box<dyn DataStore>, SettingsError> {
         Ok(Box::new(LockdownDataStoreImpl {
-            inner: (PostgresDataStore {}).create_impl(setting, guild_id, author, data, common_filters).await?,
+            inner: (PostgresDataStore {})
+                .create_impl(setting, guild_id, author, data, common_filters)
+                .await?,
             lockdown_data: super::core::LockdownData::from_settings_data(data),
         }))
     }
@@ -531,57 +281,59 @@ impl DataStore for LockdownDataStoreImpl {
         entry: indexmap::IndexMap<String, splashcore_rs::value::Value>,
     ) -> Result<module_settings::state::State, SettingsError> {
         let Some(splashcore_rs::value::Value::String(typ)) = entry.get("type") else {
-            return Err(
-                SettingsError::MissingOrInvalidField {
-                    field: "type".to_string(),
-                    src: "lockdown_create_entry".to_string(),
-                }
-            )
+            return Err(SettingsError::MissingOrInvalidField {
+                field: "type".to_string(),
+                src: "lockdown_create_entry".to_string(),
+            });
+        };
+
+        let Some(splashcore_rs::value::Value::String(reason)) = entry.get("reason") else {
+            return Err(SettingsError::MissingOrInvalidField {
+                field: "reason".to_string(),
+                src: "lockdown_create_entry".to_string(),
+            });
         };
 
         // Get the current lockdown set
-        let mut lockdowns = super::core::LockdownSet::guild(self.inner.guild_id, &self.inner.pool).await
-            .map_err(|e| {
-                SettingsError::Generic {
-                    message: format!("Error while fetching lockdown set: {}", e),
-                    src: "lockdown_create_entry".to_string(),
-                    typ: "value_error".to_string(),
-                }
-            })?;
-        
-        // Create the lockdown
-        let lockdown_type = super::core::LockdownModes::from_string(typ)
-            .map_err(|_| {
-                SettingsError::Generic {
-                    message: format!("Invalid lockdown type: {}", typ),
-                    src: "lockdown_create_entry".to_string(),
-                    typ: "value_error".to_string(),
-                }
-            })?
-            .ok_or_else(|| {
-                SettingsError::Generic {
-                    message: format!("Invalid lockdown type: {}", typ),
-                    src: "lockdown_create_entry".to_string(),
-                    typ: "value_error".to_string(),
-                }
-            })?;
-
-        lockdowns.apply(lockdown_type, &self.lockdown_data).await
-            .map_err(|e| {
-                SettingsError::Generic {
-                    message: format!("Error while applying lockdown: {}", e),
-                    src: "lockdown_create_entry".to_string(),
-                    typ: "value_error".to_string(),
-                }
-            })?;
-        
-        let created_lockdown = lockdowns.lockdowns.last().ok_or_else(|| {
-            SettingsError::Generic {
-                message: "No lockdowns created".to_string(),
+        let mut lockdowns = super::core::LockdownSet::guild(self.inner.guild_id, &self.inner.pool)
+            .await
+            .map_err(|e| SettingsError::Generic {
+                message: format!("Error while fetching lockdown set: {}", e),
                 src: "lockdown_create_entry".to_string(),
                 typ: "value_error".to_string(),
-            }
-        })?;
+            })?;
+
+        // Create the lockdown
+        let lockdown_type = super::core::LockdownModes::from_string(typ)
+            .map_err(|_| SettingsError::Generic {
+                message: format!("Invalid lockdown type: {}", typ),
+                src: "lockdown_create_entry".to_string(),
+                typ: "value_error".to_string(),
+            })?
+            .ok_or_else(|| SettingsError::Generic {
+                message: format!("Invalid lockdown type: {}", typ),
+                src: "lockdown_create_entry".to_string(),
+                typ: "value_error".to_string(),
+            })?;
+
+        lockdowns
+            .apply(lockdown_type, &self.lockdown_data, reason)
+            .await
+            .map_err(|e| SettingsError::Generic {
+                message: format!("Error while applying lockdown: {}", e),
+                src: "lockdown_create_entry".to_string(),
+                typ: "value_error".to_string(),
+            })?;
+
+        let created_lockdown =
+            lockdowns
+                .lockdowns
+                .last()
+                .ok_or_else(|| SettingsError::Generic {
+                    message: "No lockdowns created".to_string(),
+                    src: "lockdown_create_entry".to_string(),
+                    typ: "value_error".to_string(),
+                })?;
 
         Ok(module_settings::state::State {
             state: created_lockdown.to_map(),
@@ -594,40 +346,80 @@ impl DataStore for LockdownDataStoreImpl {
         _filters: indexmap::IndexMap<String, splashcore_rs::value::Value>,
         _entry: indexmap::IndexMap<String, splashcore_rs::value::Value>,
     ) -> Result<(), SettingsError> {
-        Err(
-            SettingsError::Generic {
-                message: "Internal Error: Lockdown data store does not support `update_matching_entries`".to_string(),
-                src: "lockdown_update_matching_entries".to_string(),
-                typ: "internal".to_string(),
-            }
-        )
+        Err(SettingsError::Generic {
+            message:
+                "Internal Error: Lockdown data store does not support `update_matching_entries`"
+                    .to_string(),
+            src: "lockdown_update_matching_entries".to_string(),
+            typ: "internal".to_string(),
+        })
     }
 
     async fn delete_matching_entries(
         &mut self,
         filters: indexmap::IndexMap<String, splashcore_rs::value::Value>,
     ) -> Result<(), SettingsError> {
-        let elements = self
-        .fetch_all(
-            &[
-                self.inner.setting_primary_key.to_string(),
-                "type".to_string(),
-                "data".to_string(),
-            ],
-            filters.clone(),
-        )
-        .await?;
-
-        if elements.len() != 1 {
-            return Err(SettingsError::Generic {
-                message: "Expected exactly one element to delete".to_string(),
-                src: "PostgresDataStore::delete_matching_entries".to_string(),
-                typ: "internal".to_string(),
-            });
+        for (k, _) in filters.iter() {
+            if *k != self.inner.setting_primary_key {
+                return Err(
+                    SettingsError::Generic {
+                        message: format!("Invalid filter key: {}. Lockdown deletion only supports the primary key as a filter", k),
+                        src: "lockdown_delete_matching_entries".to_string(),
+                        typ: "value_error".to_string(),
+                    }
+                );
+            }
         }
 
-        //for element in elements {}
+        let primary_key = match filters.get(self.inner.setting_primary_key) {
+            Some(Value::String(primary_key)) => {
+                primary_key
+                    .clone()
+                    .parse()
+                    .map_err(|_| SettingsError::Generic {
+                        message: format!("Invalid primary key: {}", primary_key),
+                        src: "lockdown_delete_matching_entries".to_string(),
+                        typ: "value_error".to_string(),
+                    })?
+            }
+            Some(Value::Uuid(primary_key)) => *primary_key,
+            _ => {
+                return Err(SettingsError::Generic {
+                    message: "Primary key must be a string or UUID".to_string(),
+                    src: "lockdown_delete_matching_entries".to_string(),
+                    typ: "value_error".to_string(),
+                })
+            }
+        };
 
-        self.inner.delete_matching_entries(filters).await
+        // Get the current lockdown set
+        let mut lockdowns = super::core::LockdownSet::guild(self.inner.guild_id, &self.inner.pool)
+            .await
+            .map_err(|e| SettingsError::Generic {
+                message: format!("Error while fetching lockdown set: {}", e),
+                src: "lockdown_delete_matching_entries".to_string(),
+                typ: "value_error".to_string(),
+            })?;
+
+        // Find the index of the lockdown element with the given primary key
+        let index = lockdowns
+            .lockdowns
+            .iter()
+            .position(|l| l.id == primary_key)
+            .ok_or_else(|| SettingsError::RowDoesNotExist {
+                column_id: self.inner.setting_primary_key.to_string(),
+            })?;
+
+        // Remove the lockdown
+        lockdowns
+            .remove(index, &self.lockdown_data)
+            .await
+            .map_err(|e| SettingsError::Generic {
+                message: format!("Error while removing lockdown: {}", e),
+                src: "lockdown_delete_matching_entries".to_string(),
+                typ: "value_error".to_string(),
+            })?;
+
+        Ok(())
     }
 }

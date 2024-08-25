@@ -28,18 +28,17 @@ pub fn module() -> silverpelt::Module {
                 },
             ),
             (
-                cmds::lockserver(),
+                cmds::lockdown(),
                 indexmap! {
-                    "list" => silverpelt::types::CommandExtendedData::kittycat_or_admin("lockserver", "list"),
-                    "lock" => silverpelt::types::CommandExtendedData::kittycat_or_admin("lockserver", "lock"),
-                    "update" => silverpelt::types::CommandExtendedData::kittycat_or_admin("lockserver", "update"),
-                    "unlock" => silverpelt::types::CommandExtendedData::kittycat_or_admin("lockserver", "unlock"),
+                    "list" => silverpelt::types::CommandExtendedData::kittycat_or_admin("lockdown", "list"),
+                    "lock" => silverpelt::types::CommandExtendedData::kittycat_or_admin("lockdown", "lock"),
+                    "unlock" => silverpelt::types::CommandExtendedData::kittycat_or_admin("lockdown", "unlock"),
                 },
             ),
         ],
         config_options: vec![
             (*settings::LOCKDOWN_SETTINGS).clone(),
-            (*settings::QUICK_SERVER_LOCKDOWNS).clone(),
+            (*settings::LOCKDOWNS).clone(),
         ],
         ..Default::default()
     }

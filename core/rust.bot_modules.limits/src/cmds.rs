@@ -2,6 +2,14 @@ use silverpelt::Context;
 use silverpelt::Error;
 use splashcore_rs::value::Value;
 
+pub async fn limits_autocomplete<'a>(
+    ctx: Context<'_>,
+    partial: &'a str,
+) -> Vec<serenity::all::AutocompleteChoice<'a>> {
+    silverpelt::settings_poise::standard_autocomplete(ctx, &super::settings::GUILD_LIMITS, partial)
+        .await
+}
+
 /// Limits base command
 #[poise::command(
     prefix_command,
@@ -86,7 +94,7 @@ pub async fn limits_update(
 pub async fn limits_remove(
     ctx: Context<'_>,
     #[description = "The limit id to remove"]
-    #[autocomplete = "super::autocompletes::limits_autocomplete"]
+    #[autocomplete = "limits_autocomplete"]
     limit_id: String,
 ) -> Result<(), Error> {
     silverpelt::settings_poise::settings_deleter(

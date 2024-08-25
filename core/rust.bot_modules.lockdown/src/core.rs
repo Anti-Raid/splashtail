@@ -366,6 +366,7 @@ impl<'de> serde::Deserialize<'de> for LockdownModes {
 #[derive(serde::Serialize, serde::Deserialize)]
 pub struct Lockdown {
     pub id: sqlx::types::Uuid,
+    pub reason: String,
     pub r#type: LockdownModes,
     pub data: serde_json::Value,
 }
@@ -392,7 +393,7 @@ impl LockdownSet {
         pool: &sqlx::PgPool,
     ) -> Result<Self, silverpelt::Error> {
         let data = sqlx::query!(
-            "SELECT id, type, data FROM lockdown__guild_lockdowns WHERE guild_id = $1",
+            "SELECT id, type, data, reason FROM lockdown__guild_lockdowns WHERE guild_id = $1",
             guild_id.to_string(),
         )
         .fetch_all(pool)
@@ -404,12 +405,14 @@ impl LockdownSet {
             let id = row.id;
             let r#type = row.r#type;
             let data = row.data;
+            let reason = row.reason;
 
             let lockdown = match LockdownModes::from_string(&r#type) {
                 Ok(Some(m)) => Lockdown {
                     id,
                     r#type: m,
                     data,
+                    reason,
                 },
                 Ok(None) => continue,
                 Err(e) => {
@@ -473,6 +476,7 @@ impl LockdownSet {
         &mut self,
         lockdown_type: LockdownModes,
         lockdown_data: &LockdownData,
+        reason: &str,
     ) -> Result<sqlx::types::Uuid, silverpelt::Error> {
         self.sort();
 
@@ -521,10 +525,11 @@ impl LockdownSet {
         }
 
         let id = sqlx::query!(
-            "INSERT INTO lockdown__guild_lockdowns (guild_id, type, data) VALUES ($1, $2, $3) RETURNING id",
+            "INSERT INTO lockdown__guild_lockdowns (guild_id, type, data, reason) VALUES ($1, $2, $3, $4) RETURNING id",
             self.guild_id.to_string(),
             lockdown_type.to_string(),
             &data,
+            reason,
         )
         .fetch_one(&lockdown_data.pool)
         .await?;
@@ -546,6 +551,7 @@ impl LockdownSet {
             id: id.id,
             r#type: lockdown_type,
             data,
+            reason: reason.to_string(),
         });
 
         Ok(id.id)

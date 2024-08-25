@@ -1,4 +1,3 @@
-mod autocompletes;
 mod cache;
 mod cmds;
 mod core;

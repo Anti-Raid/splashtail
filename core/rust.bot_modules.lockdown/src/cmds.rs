@@ -3,12 +3,11 @@ use silverpelt::Error;
 use splashcore_rs::utils::{parse_numeric_list, REPLACE_ROLE};
 use splashcore_rs::value::Value;
 
-#[allow(dead_code)] // This function is a useful utility function for future
-async fn quick_server_lockdown_autocomplete<'a>(
+async fn lockdown_autocomplete<'a>(
     ctx: Context<'_>,
     partial: &'a str,
 ) -> Vec<serenity::all::AutocompleteChoice<'a>> {
-    silverpelt::settings_poise::standard_autocomplete(ctx, &super::settings::LOCKDOWN_SETTINGS, partial).await
+    silverpelt::settings_poise::standard_autocomplete(ctx, &super::settings::LOCKDOWNS, partial).await
 }
 
 /// Configure the common lockdown settings for this server
@@ -131,28 +130,27 @@ async fn lockdown_settings_delete(
     .await
 }
 
-/// Configure quick server lockdown
+/// Configure lockdowns
 #[poise::command(
     prefix_command,
     slash_command,
     guild_only,
     subcommands(
-        "lockserver_list",
-        "lockserver_lock",
-        "lockserver_update",
-        "lockserver_unlock",
+        "lockdown_list",
+        "lockdown_lock",
+        "lockdown_unlock",
     )
 )]
-pub async fn lockserver(_ctx: Context<'_>) -> Result<(), Error> {
+pub async fn lockdown(_ctx: Context<'_>) -> Result<(), Error> {
     Ok(())
 }
 
-/// List all current quick server lockdowns
+/// List all current lockdowns
 #[poise::command(prefix_command, slash_command, guild_only, rename = "list")]
-async fn lockserver_list(ctx: Context<'_>) -> Result<(), Error> {
+async fn lockdown_list(ctx: Context<'_>) -> Result<(), Error> {
     silverpelt::settings_poise::settings_viewer(
         &ctx,
-        &super::settings::QUICK_SERVER_LOCKDOWNS,
+        &super::settings::LOCKDOWNS,
         indexmap::IndexMap::new(),
     )
     .await
@@ -160,13 +158,14 @@ async fn lockserver_list(ctx: Context<'_>) -> Result<(), Error> {
 
 /// Start a quick server lockdown
 #[poise::command(prefix_command, slash_command, guild_only, rename = "lock")]
-async fn lockserver_lock(
+async fn lockdown_lock(
     ctx: Context<'_>,
+    #[description = "The type for the lockdown"] r#type: String,
     #[description = "The reason for the lockdown"] reason: String,
 ) -> Result<(), Error> {
     silverpelt::settings_poise::settings_creator(
         &ctx,
-        &super::settings::QUICK_SERVER_LOCKDOWNS,
+        &super::settings::LOCKDOWNS,
         indexmap::indexmap! {
             "guild_id".to_string() => {
                 let Some(guild_id) = ctx.guild_id() else {
@@ -175,52 +174,25 @@ async fn lockserver_lock(
 
                 Value::String(guild_id.to_string())
             },
+            "type".to_string() => Value::String(r#type),
             "reason".to_string() => Value::String(reason),
-            "ongoing".to_string() => Value::Boolean(true),
         },
     )
     .await
 }
 
-/// Update an ongoing quick server lockdown
-#[poise::command(prefix_command, slash_command, guild_only, rename = "update")]
-async fn lockserver_update(
-    ctx: Context<'_>,
-    #[description = "The reason for the lockdown"] reason: String,
-) -> Result<(), Error> {
-    silverpelt::settings_poise::settings_updater(
-        &ctx,
-        &super::settings::QUICK_SERVER_LOCKDOWNS,
-        indexmap::indexmap! {
-            "guild_id".to_string() => {
-                let Some(guild_id) = ctx.guild_id() else {
-                    return Err("This command must be run in a server".into());
-                };
-
-                Value::String(guild_id.to_string())
-            },
-            "reason".to_string() => Value::String(reason),
-            "ongoing".to_string() => Value::Boolean(true),
-        },
-    )
-    .await
-}
-
-/// Unlock a quick server lockdown
+/// Unlock/revert a lockdown
 #[poise::command(prefix_command, slash_command, guild_only, rename = "unlock")]
-async fn lockserver_unlock(
+async fn lockdown_unlock(
     ctx: Context<'_>,
+    #[description = "The lockdown to unlock"] 
+    #[autocomplete = "lockdown_autocomplete"]
+    id: String,
 ) -> Result<(), Error> {
     silverpelt::settings_poise::settings_deleter(
         &ctx,
-        &super::settings::QUICK_SERVER_LOCKDOWNS,
-        {
-            let Some(guild_id) = ctx.guild_id() else {
-                return Err("This command must be run in a server".into());
-            };
-
-            Value::String(guild_id.to_string())
-        }
+        &super::settings::LOCKDOWNS,
+        Value::String(id)
     )
     .await
 }
