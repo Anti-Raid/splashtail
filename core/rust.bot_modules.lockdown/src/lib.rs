@@ -1,7 +1,6 @@
 pub mod cache;
 pub mod cmds;
 pub mod core;
-pub mod quick;
 pub mod settings;
 
 use indexmap::indexmap;
