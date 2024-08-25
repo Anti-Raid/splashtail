@@ -82,10 +82,10 @@ func CreateClusters() {
 	state.Logger.Info("Setting up mewld")
 
 	mldConfig.Proxy = state.Config.Meta.Proxy.Parse()
-	mldConfig.Token = state.Config.DiscordAuth.Token
+	mldConfig.Token = state.Config.DiscordAuth.Token.Parse()
 	mldConfig.Oauth = mconfig.Oauth{
-		ClientID:     state.Config.DiscordAuth.ClientID,
-		ClientSecret: state.Config.DiscordAuth.ClientSecret,
+		ClientID:     state.Config.DiscordAuth.ClientID.Parse(),
+		ClientSecret: state.Config.DiscordAuth.ClientSecret.Parse(),
 		RedirectURL:  state.Config.DiscordAuth.MewldRedirect,
 	}
 
@@ -185,7 +185,7 @@ func CreateClusters() {
 
 	r := chi.NewMux()
 
-	mewld_web.SetState(state.Config.Meta.DPSecret)
+	mewld_web.SetState(state.Config.DiscordAuth.DPSecret.Parse())
 	r.Mount("/mewld", mewld_web.CreateServer(mewld_web.WebData{
 		RedisHandler: rh,
 		InstanceList: il,

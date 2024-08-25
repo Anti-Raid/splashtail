@@ -64,7 +64,7 @@ func main() {
 		panic(err)
 	}
 
-	discordSess, err := discordgo.New("Bot " + cfg.DiscordAuth.Token)
+	discordSess, err := discordgo.New("Bot " + cfg.DiscordAuth.Token.Parse())
 
 	if err != nil {
 		panic(err)
@@ -79,10 +79,10 @@ func main() {
 	}
 
 	mldConfig.Proxy = cfg.Meta.Proxy.Parse()
-	mldConfig.Token = cfg.DiscordAuth.Token
+	mldConfig.Token = cfg.DiscordAuth.Token.Parse()
 	mldConfig.Oauth = mconfig.Oauth{
-		ClientID:     cfg.DiscordAuth.ClientID,
-		ClientSecret: cfg.DiscordAuth.ClientSecret,
+		ClientID:     cfg.DiscordAuth.ClientID.Parse(),
+		ClientSecret: cfg.DiscordAuth.ClientSecret.Parse(),
 		RedirectURL:  cfg.DiscordAuth.MewldRedirect,
 	}
 
@@ -206,7 +206,7 @@ func main() {
 		w.Write(bytes)
 	})
 
-	mewld_web.SetState(cfg.Meta.DPSecret)
+	mewld_web.SetState(cfg.DiscordAuth.DPSecret.Parse())
 	r.Mount("/mewld", mewld_web.CreateServer(mewld_web.WebData{
 		RedisHandler: rh,
 		InstanceList: il,

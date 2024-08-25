@@ -7,6 +7,13 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+// API configuration data
+type ApiConfig struct {
+	MainServer          string `json:"main_server" description:"The ID of the main Anti-Raid Discord Server" validate:"required"`
+	SupportServerInvite string `json:"support_server_invite" comment:"Discord Support Server Link" default:"https://discord.gg/u78NFAXm" validate:"required"`
+	ClientID            string `json:"client_id" description:"The ID of the Anti-Raid bot client" validate:"required"`
+}
+
 // A link is any extra link
 type Link struct {
 	Name  string `json:"name" description:"Name of the link. Links starting with an underscore are 'asset links' and are not visible"`

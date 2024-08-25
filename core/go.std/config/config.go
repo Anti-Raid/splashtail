@@ -41,6 +41,28 @@ func (d *Differs[T]) Production() T {
 	return d.Prod
 }
 
+// Common struct for values that differ between staging and production environments
+//
+// Unlike Differs, this struct does not require the values to be set
+type DiffersNotRequired[T any] struct {
+	Staging T `yaml:"staging" comment:"Staging value"`
+	Prod    T `yaml:"prod" comment:"Production value"`
+}
+
+func (d *DiffersNotRequired[T]) Parse() T {
+	if CurrentEnv == CurrentEnvProd {
+		return d.Prod
+	} else if CurrentEnv == CurrentEnvStaging {
+		return d.Staging
+	} else {
+		panic("invalid environment")
+	}
+}
+
+func (d *DiffersNotRequired[T]) Production() T {
+	return d.Prod
+}
+
 type Config struct {
 	DiscordAuth   DiscordAuth         `yaml:"discord_auth" validate:"required"`
 	Sites         Sites               `yaml:"sites" validate:"required"`
@@ -61,13 +83,14 @@ type Wafflepaw struct {
 }
 
 type DiscordAuth struct {
-	Token            string   `yaml:"token" comment:"Discord bot token" validate:"required"`
-	ClientID         string   `yaml:"client_id" default:"849331145862283275" comment:"Discord Client ID" validate:"required"`
-	ClientSecret     string   `yaml:"client_secret" comment:"Discord Client Secret" validate:"required"`
-	AllowedRedirects []string `yaml:"allowed_redirects" default:"http://localhost:3000/auth" validate:"required"`
-	MewldRedirect    string   `yaml:"mewld_redirect" default:"https://mewld.antiraid.xyz/login" validate:"required"`
-	RootUsers        []string `yaml:"root_users" default:"728871946456137770,564164277251080208,775855009421066262" validate:"required"`
-	PublicBot        bool     `yaml:"public_bot" default:"false" comment:"Whether the bot needs whitelisting in order to use"`
+	Token            Differs[string]          `yaml:"token" comment:"Discord bot token" validate:"required"`
+	ClientID         Differs[string]          `yaml:"client_id" default:"849331145862283275" comment:"Discord Client ID" validate:"required"`
+	ClientSecret     Differs[string]          `yaml:"client_secret" comment:"Discord Client Secret" validate:"required"`
+	AllowedRedirects []string                 `yaml:"allowed_redirects" default:"http://localhost:3000/auth" validate:"required"`
+	MewldRedirect    string                   `yaml:"mewld_redirect" default:"https://mewld.antiraid.xyz/login" validate:"required"`
+	RootUsers        []string                 `yaml:"root_users" default:"728871946456137770,564164277251080208,775855009421066262" validate:"required"`
+	PublicBot        DiffersNotRequired[bool] `yaml:"public_bot" default:"false" comment:"Whether the bot needs whitelisting in order to use"`
+	DPSecret         Differs[string]          `yaml:"dp_secret" comment:"DeployProxy Auth URL for super-sensitive pages" validate:"required"`
 }
 
 type Sites struct {
@@ -109,12 +132,10 @@ type Meta struct {
 	RedisURL             Differs[string] `yaml:"redis_url" default:"redis://localhost:6379" comment:"Redis URL" validate:"required"`
 	Port                 Differs[int]    `yaml:"port" default:":8081" comment:"Port to run the server on" validate:"required"`
 	CDNPath              string          `yaml:"cdn_path" default:"/failuremgmt/cdn/antiraid" comment:"CDN Path" validate:"required"`
-	VulgarList           []string        `yaml:"vulgar_list" default:"fuck,suck,shit,kill" validate:"required"`
 	UrgentMentions       string          `yaml:"urgent_mentions" default:"<@&1061643797315993701>" comment:"Urgent mentions" validate:"required"`
 	Proxy                Differs[string] `yaml:"proxy" default:"http://127.0.0.1:3221,http://127.0.0.1:3222" comment:"Popplio Proxy URL" validate:"required"`
-	DPSecret             string          `yaml:"dp_secret" comment:"DeployProxy Auth URL for super-sensitive pages" validate:"required"`
 	DebugTaskLogger      bool            `yaml:"debug_task_logger" comment:"Debug the task logger"`
-	SupportServer        string          `yaml:"support_server" comment:"Discord Support Server Link" default:"https://discord.gg/u78NFAXm" validate:"required"`
+	SupportServerInvite  string          `yaml:"support_server_invite" comment:"Discord Support Server Link" default:"https://discord.gg/u78NFAXm" validate:"required"`
 	SandwichHttpApi      string          `yaml:"sandwich_http_api" comment:"(optional) Sandwich HTTP API (if using sandwich for proxy)" default:""`
 }
 

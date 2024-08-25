@@ -144,8 +144,8 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 
 		// Exchange code for token
 		req, err := http.NewRequest("POST", state.Config.Meta.Proxy.Parse()+"/api/v10/oauth2/token", strings.NewReader(url.Values{
-			"client_id":     {state.Config.DiscordAuth.ClientID},
-			"client_secret": {state.Config.DiscordAuth.ClientSecret},
+			"client_id":     {state.Config.DiscordAuth.ClientID.Parse()},
+			"client_secret": {state.Config.DiscordAuth.ClientSecret.Parse()},
 			"grant_type":    {"authorization_code"},
 			"code":          {r.URL.Query().Get("code")},
 			"redirect_uri":  {redirectUrl},

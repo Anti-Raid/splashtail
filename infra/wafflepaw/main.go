@@ -97,7 +97,7 @@ func main() {
 	}
 
 	// Discord
-	Discord, err = discordgo.New("Bot " + Config.DiscordAuth.Token)
+	Discord, err = discordgo.New("Bot " + Config.DiscordAuth.Token.Parse())
 
 	if err != nil {
 		logPanic("error creating discord session", err)

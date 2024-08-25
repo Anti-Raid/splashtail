@@ -40,11 +40,11 @@ impl<T: Default + Clone> Differs<T> {
 
 #[derive(Serialize, Deserialize, Default)]
 pub struct DiscordAuth {
-    pub token: String,
-    pub client_id: String,
-    pub client_secret: String,
+    pub token: Differs<String>,
+    pub client_id: Differs<String>,
+    pub client_secret: Differs<String>,
     pub root_users: Vec<UserId>,
-    pub public_bot: bool,
+    pub public_bot: Differs<bool>,
 }
 
 // Object storage code
@@ -112,7 +112,7 @@ pub struct Meta {
     pub postgres_url: String,
     pub bot_redis_url: String,
     pub proxy: Differs<String>,
-    pub support_server: String,
+    pub support_server_invite: String,
     pub sandwich_http_api: Option<String>,
 }
 

@@ -204,7 +204,7 @@ impl silverpelt::data::Props for Props {
         guild_id: Option<GuildId>,
         user_id: UserId,
     ) -> Result<bool, crate::Error> {
-        Ok(config::CONFIG.discord_auth.public_bot || {
+        Ok(config::CONFIG.discord_auth.public_bot.get() || {
             let cub_cache = CAN_USE_BOT_CACHE.read().await;
             if let Some(ref guild_id) = guild_id {
                 cub_cache.guilds.contains(guild_id) && cub_cache.users.contains(&user_id)
@@ -218,9 +218,9 @@ impl silverpelt::data::Props for Props {
         let primary = poise::serenity_prelude::CreateEmbed::default()
     .color(0xff0000)
     .title("AntiRaid")
-    .url(&config::CONFIG.meta.support_server)
+    .url(&config::CONFIG.meta.support_server_invite)
     .description(
-        format!("Unfortunately, AntiRaid is currently unavailable due to poor code management and changes with the Discord API. We are currently in the works of V6, and hope to have it out by next month. All use of our services will not be available, and updates will be pushed here. We are extremely sorry for the inconvenience.\nFor more information you can also join our [Support Server]({})!", config::CONFIG.meta.support_server)
+        format!("Unfortunately, AntiRaid is currently unavailable due to poor code management and changes with the Discord API. We are currently in the works of V6, and hope to have it out by next month. All use of our services will not be available, and updates will be pushed here. We are extremely sorry for the inconvenience.\nFor more information you can also join our [Support Server]({})!", config::CONFIG.meta.support_server_invite)
     );
 
         let changes: [&str; 5] = [
@@ -238,7 +238,7 @@ impl silverpelt::data::Props for Props {
 
         poise::CreateReply::new()
             .ephemeral(true)
-            .content(&config::CONFIG.meta.support_server)
+            .content(&config::CONFIG.meta.support_server_invite)
             .embed(primary)
             .embed(updates)
     }
@@ -358,7 +358,7 @@ async fn event_listener<'a>(
                 _ => return Ok(()),
             };
 
-            let allowed = config::CONFIG.discord_auth.public_bot || {
+            let allowed = config::CONFIG.discord_auth.public_bot.get() || {
                 let cub_cache = CAN_USE_BOT_CACHE.read().await;
                 if let Some(ref guild_id) = ic.guild_id {
                     cub_cache.guilds.contains(guild_id) && cub_cache.users.contains(&ic.user.id)
@@ -494,7 +494,7 @@ async fn event_listener<'a>(
     };
 
     // Check if whitelisted
-    let allowed = config::CONFIG.discord_auth.public_bot || {
+    let allowed = config::CONFIG.discord_auth.public_bot.get() || {
         let cub = CAN_USE_BOT_CACHE.read().await;
         cub.guilds.contains(&event_guild_id)
     };
@@ -621,7 +621,7 @@ async fn main() {
     info!("Proxy URL: {}", proxy_url);
 
     let http = Arc::new(
-        HttpBuilder::new(&config::CONFIG.discord_auth.token)
+        HttpBuilder::new(&config::CONFIG.discord_auth.token.get())
             .proxy(proxy_url)
             .ratelimiter_disabled(true)
             .build(),

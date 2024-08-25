@@ -108,24 +108,8 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 		})
 	}
 
-	var members = []types.GuildStaffMember{}
-	for _, member := range collected {
-		user, err := dovewing.GetUser(d.Context, member.UserId, state.DovewingPlatformDiscord)
-
-		if err != nil {
-			state.Logger.Error("Error while getting user", zap.Error(err))
-			return uapi.DefaultResponse(http.StatusInternalServerError)
-		}
-
-		members = append(members, types.GuildStaffMember{
-			User:   user,
-			Role:   member.Roles,
-			Public: member.Public,
-		})
-	}
-
 	// Fetch guild staff roles from the database
-	rows, err = state.Pool.Query(d.Context, "SELECT role_id, perms, index, display_name FROM guild_roles WHERE guild_id = $1", guildId)
+	rows, err = state.Pool.Query(d.Context, "SELECT role_id, perms, index, display_name FROM guild_roles WHERE guild_id = $1 AND cardinality(perms) > 0", guildId)
 
 	if err != nil {
 		state.Logger.Error("Error while querying database", zap.Error(err))
@@ -154,6 +138,36 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 			Perms:       perms,
 			Index:       index,
 			DisplayName: displayName,
+		})
+	}
+
+	var members = []types.GuildStaffMember{}
+	for _, member := range collected {
+		user, err := dovewing.GetUser(d.Context, member.UserId, state.DovewingPlatformDiscord)
+
+		if err != nil {
+			state.Logger.Error("Error while getting user", zap.Error(err))
+			return uapi.DefaultResponse(http.StatusInternalServerError)
+		}
+
+		properRoles := []string{}
+
+		for _, role := range member.Roles {
+			for _, r := range roles {
+				if r.RoleID == role {
+					properRoles = append(properRoles, role)
+				}
+			}
+		}
+
+		if len(properRoles) == 0 {
+			continue // Skip if the user has no roles
+		}
+
+		members = append(members, types.GuildStaffMember{
+			User:   user,
+			Role:   properRoles,
+			Public: member.Public,
 		})
 	}
 

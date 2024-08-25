@@ -7,7 +7,6 @@ import (
 	"net"
 	"net/http"
 	"os"
-	"reflect"
 	"strings"
 	"time"
 
@@ -54,7 +53,7 @@ var (
 func fetchMewldInstanceList() (*mproc.InstanceList, error) {
 	var mc *mproc.InstanceList
 
-	resp, err := http.Get(fmt.Sprintf("http://localhost:%d/getMewldInstanceList", Config.BasePorts.Bot.Parse() - 1))
+	resp, err := http.Get(fmt.Sprintf("http://localhost:%d/getMewldInstanceList", Config.BasePorts.Bot.Parse()-1))
 
 	if err != nil {
 		return nil, err
@@ -71,26 +70,8 @@ func fetchMewldInstanceList() (*mproc.InstanceList, error) {
 	return mc, nil
 }
 
-func nonVulgar(fl validator.FieldLevel) bool {
-	// get the field value
-	switch fl.Field().Kind() {
-	case reflect.String:
-		value := fl.Field().String()
-
-		for _, v := range Config.Meta.VulgarList {
-			if strings.Contains(value, v) {
-				return false
-			}
-		}
-		return true
-	default:
-		return false
-	}
-}
-
 func Setup() {
 	utils.Must(
-		Validator.RegisterValidation("nonvulgar", nonVulgar),
 		Validator.RegisterValidation("notblank", validators.NotBlank),
 		Validator.RegisterValidation("nospaces", snippets.ValidatorNoSpaces),
 		Validator.RegisterValidation("https", snippets.ValidatorIsHttps),
@@ -176,7 +157,7 @@ func Setup() {
 	}
 
 	// Discordgo
-	Discord, err = discordgo.New("Bot " + Config.DiscordAuth.Token)
+	Discord, err = discordgo.New("Bot " + Config.DiscordAuth.Token.Parse())
 
 	if err != nil {
 		panic(err)

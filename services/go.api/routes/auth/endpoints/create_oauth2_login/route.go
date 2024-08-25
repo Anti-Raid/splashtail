@@ -128,8 +128,8 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 	}
 
 	httpResp, err := http.PostForm("https://discord.com/api/v10/oauth2/token", url.Values{
-		"client_id":     {state.Config.DiscordAuth.ClientID},
-		"client_secret": {state.Config.DiscordAuth.ClientSecret},
+		"client_id":     {state.Config.DiscordAuth.ClientID.Parse()},
+		"client_secret": {state.Config.DiscordAuth.ClientSecret.Parse()},
 		"grant_type":    {"authorization_code"},
 		"code":          {req.Code},
 		"redirect_uri":  {req.RedirectURI},
