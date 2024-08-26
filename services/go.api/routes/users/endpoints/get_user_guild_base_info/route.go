@@ -5,9 +5,9 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
+	"go.api/rpc"
 	"go.api/state"
 	"go.api/types"
-	"go.api/webutils"
 	"go.std/utils/mewext"
 	"go.uber.org/zap"
 
@@ -76,13 +76,13 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 		}
 	}
 
-	hresp, ok := webutils.ClusterCheck(clusterId)
+	hresp, ok := rpc.ClusterCheck(clusterId)
 
 	if !ok {
 		return hresp
 	}
 
-	bgui, err := webutils.BaseGuildUserInfo(d.Context, clusterId, guildId, d.Auth.ID)
+	bgui, err := rpc.BaseGuildUserInfo(d.Context, clusterId, guildId, d.Auth.ID)
 
 	if err != nil {
 		return uapi.HttpResponse{

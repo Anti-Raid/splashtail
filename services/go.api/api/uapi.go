@@ -10,10 +10,10 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"go.api/constants"
+	"go.api/rpc"
 	"go.api/rpc_messages"
 	"go.api/state"
 	"go.api/types"
-	"go.api/webutils"
 	"go.std/splashcore"
 	"go.std/utils/mewext"
 	"go.uber.org/zap"
@@ -69,13 +69,13 @@ func HandlePermissionCheck(
 		}, false
 	}
 
-	hresp, ok = webutils.ClusterCheck(clusterId)
+	hresp, ok = rpc.ClusterCheck(clusterId)
 
 	if !ok {
 		return hresp, false
 	}
 
-	permRes, err := webutils.CheckCommandPermission(
+	permRes, err := rpc.CheckCommandPermission(
 		state.Context,
 		clusterId,
 		guildId,

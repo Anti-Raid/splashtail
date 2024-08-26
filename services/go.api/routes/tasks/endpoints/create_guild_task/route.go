@@ -6,10 +6,10 @@ import (
 	"time"
 
 	"go.api/api"
+	"go.api/rpc"
 	"go.api/rpc_messages"
 	"go.api/state"
 	"go.api/types"
-	"go.api/webutils"
 	jobs "go.jobs"
 	"go.std/ext_types"
 	"go.std/utils/mewext"
@@ -167,7 +167,7 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 		}
 	}
 
-	str, err := webutils.JobserverSpawnTask(d.Context, clusterId, &rpc_messages.JobserverSpawnTask{
+	str, err := rpc.JobserverSpawnTask(d.Context, clusterId, &rpc_messages.JobserverSpawnTask{
 		Name:    taskName,
 		Data:    data,
 		Create:  true,

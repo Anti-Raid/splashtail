@@ -1,9 +1,10 @@
-package webutils
+package rpc
 
 import (
 	"context"
 	"fmt"
 
+	"go.api/state"
 	"go.std/silverpelt"
 )
 
@@ -11,8 +12,10 @@ import (
 func ParsePermissionChecks(ctx context.Context, clusterId int, guildId string, permChecks *silverpelt.PermissionChecks) (*silverpelt.PermissionChecks, error) {
 	return RpcQuery[silverpelt.PermissionChecks](
 		ctx,
+		state.IpcClient,
 		"GET",
 		fmt.Sprintf("%s/parse-permission-checks/%s", CalcBotAddr(clusterId), guildId),
 		permChecks,
+		true,
 	)
 }

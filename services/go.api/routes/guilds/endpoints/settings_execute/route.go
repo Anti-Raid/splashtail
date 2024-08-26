@@ -9,10 +9,10 @@ import (
 	docs "github.com/infinitybotlist/eureka/doclib"
 	"github.com/infinitybotlist/eureka/ratelimit"
 	"github.com/infinitybotlist/eureka/uapi"
+	"go.api/rpc"
 	"go.api/rpc_messages"
 	"go.api/state"
 	"go.api/types"
-	"go.api/webutils"
 	"go.std/utils/mewext"
 	"go.uber.org/zap"
 )
@@ -75,7 +75,7 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 		}
 	}
 
-	hresp, ok := webutils.ClusterCheck(clusterId)
+	hresp, ok := rpc.ClusterCheck(clusterId)
 
 	if !ok {
 		return hresp
@@ -107,7 +107,7 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 		}
 	}
 
-	resp, err := webutils.SettingsOperation(
+	resp, err := rpc.SettingsOperation(
 		d.Context,
 		clusterId,
 		guildId,

@@ -1,8 +1,10 @@
-package webutils
+package rpc
 
 import (
 	"context"
 	"fmt"
+
+	"go.api/state"
 )
 
 // guilds-exist
@@ -15,8 +17,10 @@ func GuildsExist(
 ) (res *[]uint16, err error) {
 	return RpcQuery[[]uint16](
 		ctx,
+		state.IpcClient,
 		"GET",
 		fmt.Sprintf("%s/guilds-exist", CalcBotAddr(clusterId)),
 		guildIds,
+		true,
 	)
 }

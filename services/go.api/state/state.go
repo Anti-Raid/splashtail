@@ -47,7 +47,8 @@ var (
 	Config                  *config.Config
 	MewldInstanceList       *mproc.InstanceList
 
-	IpcClient http.Client
+	IpcClient       http.Client
+	IpcClientHttp11 http.Client
 )
 
 func fetchMewldInstanceList() (*mproc.InstanceList, error) {
@@ -222,4 +223,7 @@ func Setup() {
 			return net.Dial(network, addr)
 		},
 	}
+
+	IpcClientHttp11.Timeout = 30 * time.Second
+	IpcClientHttp11.Transport = &http.Transport{}
 }

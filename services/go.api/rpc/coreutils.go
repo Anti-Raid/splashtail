@@ -1,4 +1,4 @@
-package webutils
+package rpc
 
 import (
 	"bytes"
@@ -83,9 +83,11 @@ func ClusterCheck(clusterId int) (resp uapi.HttpResponse, ok bool) {
 // Calls a route using the RPC protocol
 func RpcQuery[T any](
 	ctx context.Context,
+	client http.Client,
 	method string,
 	url string,
 	body any,
+	sendJsonHeader bool,
 ) (res *T, err error) {
 	var reader io.Reader = nil
 	if body != nil {
@@ -105,9 +107,11 @@ func RpcQuery[T any](
 		return nil, fmt.Errorf("failed to create request: %w", err)
 	}
 
-	req.Header.Set("Content-Type", "application/json")
+	if sendJsonHeader {
+		req.Header.Set("Content-Type", "application/json")
+	}
 
-	resp, err := state.IpcClient.Do(req)
+	resp, err := client.Do(req)
 
 	if err != nil {
 		return nil, fmt.Errorf("failed to send request: %w", err)

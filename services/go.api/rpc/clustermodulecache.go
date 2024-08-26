@@ -1,10 +1,11 @@
-package webutils
+package rpc
 
 import (
 	"context"
 	"fmt"
 
 	"go.api/rpc_messages"
+	"go.api/state"
 	"go.std/utils/syncmap"
 )
 
@@ -21,9 +22,11 @@ func (c *ClusterModuleCacher) GetClusterModules(ctx context.Context, clusterId i
 
 	modules, err := RpcQuery[rpc_messages.ClusterModules](
 		ctx,
+		state.IpcClient,
 		"GET",
 		fmt.Sprintf("%s/modules", CalcBotAddr(clusterId)),
 		nil,
+		true,
 	)
 
 	if err != nil {

@@ -12,10 +12,10 @@ import (
 	"github.com/infinitybotlist/eureka/uapi"
 	"github.com/jackc/pgx/v5"
 	"go.api/api"
+	"go.api/rpc"
 	"go.api/rpc_messages"
 	"go.api/state"
 	"go.api/types"
-	"go.api/webutils"
 	"go.std/silverpelt"
 	"go.std/structparser/db"
 	"go.std/utils"
@@ -94,7 +94,7 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 		}
 	}
 
-	hresp, ok := webutils.ClusterCheck(clusterId)
+	hresp, ok := rpc.ClusterCheck(clusterId)
 
 	if !ok {
 		return hresp
@@ -119,7 +119,7 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 	}
 
 	// Find module from cluster
-	modules, err := webutils.ClusterModuleCache.GetClusterModules(d.Context, clusterId)
+	modules, err := rpc.ClusterModuleCache.GetClusterModules(d.Context, clusterId)
 
 	if err != nil {
 		return uapi.HttpResponse{
@@ -283,7 +283,7 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 			updateCols = append(updateCols, "default_perms")
 			updateArgs = append(updateArgs, nil)
 		} else {
-			parsedValue, err := webutils.ParsePermissionChecks(d.Context, clusterId, guildId, value)
+			parsedValue, err := rpc.ParsePermissionChecks(d.Context, clusterId, guildId, value)
 
 			if err != nil {
 				return uapi.HttpResponse{
@@ -402,7 +402,7 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 	}
 
 	if cacheFlushFlag&CACHE_FLUSH_MODULE_TOGGLE == CACHE_FLUSH_MODULE_TOGGLE && body.Disabled != nil {
-		_, err := webutils.ExecutePerModuleFunction(
+		_, err := rpc.ExecutePerModuleFunction(
 			d.Context,
 			clusterId,
 			&rpc_messages.ExecutePerModuleFunctionRequest{

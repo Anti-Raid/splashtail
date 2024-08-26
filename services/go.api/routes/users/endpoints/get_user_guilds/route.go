@@ -8,9 +8,9 @@ import (
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/jackc/pgx/v5/pgtype"
+	"go.api/rpc"
 	"go.api/state"
 	"go.api/types"
-	"go.api/webutils"
 	"go.std/utils"
 	"go.std/utils/mewext"
 	"go.uber.org/zap"
@@ -242,7 +242,7 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 			}
 		}
 
-		guildsExistResp, err := webutils.GuildsExist(d.Context, clusterId, guilds)
+		guildsExistResp, err := rpc.GuildsExist(d.Context, clusterId, guilds)
 
 		if err != nil {
 			state.Logger.Error("Failed to check if bot is in guilds", zap.Error(err))

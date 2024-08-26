@@ -5,9 +5,9 @@ import (
 	"strconv"
 
 	"github.com/go-chi/chi/v5"
+	"go.api/rpc"
 	"go.api/state"
 	"go.api/types"
-	"go.api/webutils"
 	"go.std/silverpelt"
 
 	docs "github.com/infinitybotlist/eureka/doclib"
@@ -58,13 +58,13 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 		}
 	}
 
-	hresp, ok := webutils.ClusterCheck(clusterId64)
+	hresp, ok := rpc.ClusterCheck(clusterId64)
 
 	if !ok {
 		return hresp
 	}
 
-	modules, err := webutils.ClusterModuleCache.GetClusterModules(d.Context, clusterId64)
+	modules, err := rpc.ClusterModuleCache.GetClusterModules(d.Context, clusterId64)
 
 	if err != nil {
 		return uapi.HttpResponse{
