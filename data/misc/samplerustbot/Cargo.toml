@@ -1,0 +1,21 @@
+[package]
+name = "samplerustbot"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+serde = {version = "1.0", features = ["rc"] }
+serde_yaml = "0.9"
+log = "0.4"
+env_logger = "0.9"
+
+[dependencies.tokio]
+version = "1"
+features = ["sync"]
+
+[dependencies.serenity]
+git = "https://github.com/serenity-rs/serenity"
+branch = "next"
+features = ["model", "http", "cache", "rustls_backend"]

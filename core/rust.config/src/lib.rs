@@ -1,0 +1,179 @@
+use serde::{Deserialize, Serialize};
+use serenity::all::UserId;
+use splashcore_rs::objectstore::ObjectStore;
+use std::fs::File;
+use std::sync::LazyLock;
+
+type Error = Box<dyn std::error::Error + Send + Sync>;
+
+pub static CURRENT_ENV: LazyLock<&str> = LazyLock::new(|| {
+    let current_env = include_bytes!("../current-env");
+
+    std::str::from_utf8(current_env).unwrap()
+});
+
+/// Global config object
+pub static CONFIG: LazyLock<Config> =
+    LazyLock::new(|| Config::load().expect("Failed to load config"));
+
+#[derive(Serialize, Deserialize, Default)]
+pub struct Differs<T: Default + Clone> {
+    staging: T,
+    prod: T,
+}
+
+impl<T: Default + Clone> Differs<T> {
+    /// Get the value for a given environment
+    pub fn get_for_env(&self, env: &str) -> T {
+        if env == "staging" {
+            self.staging.clone()
+        } else {
+            self.prod.clone()
+        }
+    }
+
+    /// Get the value for the current environment
+    pub fn get(&self) -> T {
+        self.get_for_env(*CURRENT_ENV)
+    }
+}
+
+#[derive(Serialize, Deserialize, Default)]
+pub struct DiscordAuth {
+    pub token: Differs<String>,
+    pub client_id: Differs<String>,
+    pub client_secret: Differs<String>,
+    pub root_users: Vec<UserId>,
+    pub public_bot: Differs<bool>,
+}
+
+// Object storage code
+#[derive(Serialize, Deserialize)]
+pub enum ObjectStorageType {
+    #[serde(rename = "s3-like")]
+    S3Like,
+    #[serde(rename = "local")]
+    Local,
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct ObjectStorage {
+    #[serde(rename = "type")]
+    pub object_storage_type: ObjectStorageType,
+    pub path: String,
+    pub endpoint: Option<String>,
+    pub secure: Option<bool>,
+    pub cdn_secure: Option<bool>,
+    pub cdn_endpoint: String,
+    pub access_key: Option<String>,
+    pub secret_key: Option<String>,
+}
+
+impl ObjectStorage {
+    pub fn build(&self) -> Result<ObjectStore, crate::Error> {
+        match self.object_storage_type {
+            ObjectStorageType::S3Like => {
+                let access_key = self.access_key.as_ref().ok_or("Missing access key")?;
+                let secret_key = self.secret_key.as_ref().ok_or("Missing secret key")?;
+                let endpoint = self.endpoint.as_ref().ok_or("Missing endpoint")?;
+
+                let bucket = rusty_s3::Bucket::new(
+                    format!(
+                        "{}://{}",
+                        if self.secure.unwrap_or(false) {
+                            "https"
+                        } else {
+                            "http"
+                        },
+                        endpoint
+                    )
+                    .parse()
+                    .map_err(|e| format!("Failed to parse cdn endpoint: {}", e))?,
+                    rusty_s3::UrlStyle::Path,
+                    self.path.clone(),
+                    "us-east-1",
+                )?;
+
+                let credentials = rusty_s3::Credentials::new(access_key, secret_key);
+                Ok(ObjectStore::S3 {
+                    credentials,
+                    bucket,
+                })
+            }
+            ObjectStorageType::Local => Ok(ObjectStore::Local {
+                prefix: self.path.clone(),
+            }),
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize, Default)]
+pub struct Meta {
+    pub postgres_url: String,
+    pub bot_redis_url: String,
+    pub proxy: Differs<String>,
+    pub support_server_invite: String,
+    pub sandwich_http_api: Option<String>,
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct Sites {
+    pub api: Differs<String>,
+    pub frontend: Differs<String>,
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct Servers {
+    pub main: Differs<serenity::all::GuildId>,
+}
+
+#[derive(Serialize, Deserialize)]
+#[allow(dead_code)]
+pub struct BasePorts {
+    pub jobserver: Differs<u16>,
+    pub bot: Differs<u16>,
+    pub jobserver_base_addr: Differs<String>,
+    pub jobserver_bind_addr: Differs<String>,
+    pub bot_base_addr: Differs<String>,
+    pub bot_bind_addr: Differs<String>,
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct Config {
+    pub discord_auth: DiscordAuth,
+    pub meta: Meta,
+    pub sites: Sites,
+    pub servers: Servers,
+    pub object_storage: ObjectStorage,
+    pub base_ports: BasePorts,
+
+    #[serde(skip)]
+    /// Setup by load() for statistics
+    pub start_time: i64,
+}
+
+impl Config {
+    pub fn load() -> Result<Self, Error> {
+        // Open config.yaml from parent directory
+        let file = File::open("config.yaml");
+
+        match file {
+            Ok(file) => {
+                // Parse config.yaml
+                let mut cfg: Config = serde_yaml::from_reader(file)?;
+
+                cfg.start_time = chrono::Utc::now().timestamp();
+
+                // Return config
+                Ok(cfg)
+            }
+            Err(e) => {
+                // Print error
+                println!("config.yaml could not be loaded: {}", e);
+
+                // Exit
+                std::process::exit(1);
+            }
+        }
+    }
+}

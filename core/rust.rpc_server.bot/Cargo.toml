@@ -1,0 +1,30 @@
+[package]
+name = "rust_rpc_server_bot"
+version = "6.0.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+serde = "1.0"
+serde_json = "1.0"
+indexmap = { version = "2", features = ["serde"] }
+bitflags = "2"
+axum = { version = "0.7.5", features = ["macros"] }
+
+# Anti-Raid specific
+splashcore_rs = { path = "../../core/rust.std" }
+module_settings = { path = "../../core/rust.module_settings" }
+proxy_support = { path = "../../core/rust.proxy_support" }
+silverpelt = { path = "../../core/rust.silverpelt" }
+permissions = { path = "../../core/rust.permissions" }
+rust_rpc_server = { path = "../../core/rust.rpc_server" }
+
+[dependencies.serenity]
+git = "https://github.com/serenity-rs/serenity"
+branch = "next"
+features = ["model", "http", "cache", "rustls_backend", "unstable"]
+
+[dependencies.kittycat]
+git = "https://github.com/infinitybotlist/kittycat"
+branch = "main"

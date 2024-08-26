@@ -1,0 +1,13 @@
+[workspace]
+members = [
+    "core/rust.*",
+    "services/rust.*"
+]
+resolver = "2"
+
+[profile.release]
+strip = true  # Automatically strip symbols from the binary.
+incremental = true # Enable incremental compilation.
+
+[profile.dev]
+opt-level = 1 # Optimize for faster compilation times.

@@ -1,48 +1,98 @@
+ifndef CI_BUILD
+include .env
+endif
+
+.PHONY: default $(MAKECMDGOALS)
+
 TEST__USER_ID := 728871946456137770
-CDN_PATH := /failuremgmt/cdn/antiraid
+CDN_PATH := /silverpelt/cdn/antiraid
+PWD := $(shell pwd)
 
+default:
+	$(error No target provided. Please see README.md for more information)
 
-stcore:
-	CGO_ENABLED=0 go build -v 
-reloadwebserver:
-	systemctl restart splashtail-staging-webserver
-updatebot:
-	make buildbot && cp -v botv2/target/release/botv2 botv2
-restartwebserver:
-	make stcore
-	make buildbot
-	systemctl stop splashtail-staging-webserver
-	cp -v botv2/target/release/botv2 botv2
-	systemctl start splashtail-staging-webserver
-reloadjobserver:
-	systemctl restart splashtail-staging-jobs
+# This target builds all of Anti-Raid's components
+buildall:
+	# Core infra
+	cd infra/nirn-proxy && make
+	cd infra/Sandwich-Daemon && make
+	cd infra/wafflepaw && make
+
+	# Other infra
+	make buildmewldwebui
+	make build
+
 all:
-	make buildbot && make buildmewldwebui && make stcore 
-buildbot:
-	cd botv2 && cargo build --release
+	make buildall
+	
+format:
+	# For every project in core/rust.*
+	for d in core/rust.* services/rust.*; do \
+		cd $$d && cargo fmt && cd ../..; \
+	done
+
+	# For every project in services/go.*
+	for d in core/go.* services/go.*; do \
+		cd $$d && go fmt && cd ../..; \
+	done
+
+build:
+	mkdir -p out
+	make build_go
+	make build_rust
+	make copyassets
+
+build_go:
+	for d in services/go.*; do \
+		echo $$d && cd ${PWD}/$$d && go build -v -o ${PWD}/out && cd ${PWD}; \
+	done
+
+build_rust:
+	for d in services/rust.*; do \
+		PROJECT_NAME=$$(basename $$d) && \
+		OUTPUT_FILE=$$(echo $$PROJECT_NAME | tr . _) && \
+		echo $$d && cd ${PWD}/$$d && cargo build --release && \
+		mv ${PWD}/target/release/$$OUTPUT_FILE ${PWD}/out/$$PROJECT_NAME && \
+		go build -v -o ${PWD}/out/$$PROJECT_NAME.loader && cd ${PWD} \
+		cd ${PWD}; \
+	done
+
+copyassets:
+ifndef CI_BUILD
+	# For every project in core/* and services/*, copy .generated/* to data/generated/{project_name} and to the website (services/website/lib/generated)
+	mkdir -p data/generated/build_assets
+	for d in core/* services/*; do \
+		[ -d $$d/.generated ] || continue; \
+		mkdir -p data/generated/build_assets/$$(basename $$d); \
+		mkdir -p services/website/src/lib/generated/build_assets; \
+		cp -rf $$d/.generated/* data/generated/build_assets/$$(basename $$d); \
+		cp -rf $$d/.generated/* services/website/src/lib/generated/build_assets; \
+	done
+endif
+
 buildmewldwebui:
-	cd webserver/mewld_web/ui && npm i && npm run build && cd ../../
+	cd core/go.std/mewld_web/ui && npm i && npm run build && cd ../../
+
 tests:
 	CGO_ENABLED=0 go test -v -coverprofile=coverage.out ./...
+
 ts:
-	rm -rvf $(CDN_PATH)/dev/bindings/splashtail
 	~/go/bin/tygo generate
 
-	# Copy over go types
-	mkdir -p $(CDN_PATH)/dev/bindings/splashtail/go
-	cp -rf types $(CDN_PATH)/dev/bindings/splashtail/go
+	# Patch to change all "SelectMenu = any;" to "SelectMenu = undefined /*tygo workaround*/;" to work around tygo issue
+	sed -i 's:SelectMenu = any;:SelectMenu = undefined /*tygo workaround*/;:g' services/website/src/lib/generated/discordgo.ts
 
-	# Patch to change package name to 'splashtail_types'
-	#sed -i 's:package types:package splashtail_types:g' $(CDN_PATH)/dev/bindings/splashtail/go/types/{*.go,*.ts}
-	cp -rf $(CDN_PATH)/dev/bindings/splashtail/* website/src/lib/generated
-	rm -rf website/src/lib/generated/go
+lint_go:
+	for d in core/go.* services/go.*; do \
+		~/go/bin/golangci-lint run ./$$d/...; \
+	done
 
-promoteprod:
-	rm -rf ../prod2
-	cd .. && cp -rf staging prod2
-	echo "prod" > ../prod2/config/current-env
-	cd ../prod2 && make && rm -rf ../prod && mv -vf ../prod2 ../prod && systemctl restart splashtail-prod
-	cd ../prod && make ts
+lintfull_go:
+	go work edit -json | jq -r '.Use[].DiskPath'  | xargs -I{} ~/go/bin/golangci-lint run {}/... 
 
-	# Git push to "current-prod" branch
-	cd ../prod && git branch current-prod && git add -v . && git commit -m "Promote staging to prod" && git push -u origin HEAD:current-prod --force
+update_go:
+	PWD=$(shell pwd)
+	for d in core/go.* services/go.*; do \
+		echo $$d; \
+		cd $$d && go get -u ./... && cd ${PWD}; \
+	done

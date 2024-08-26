@@ -1,0 +1,50 @@
+[package]
+name = "templating"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1.0"
+moka = { version = "0.12", features = ["future", "futures-util", "sync"] }
+indexmap = { version = "2", features = ["serde"] }
+futures-util = "0.3"
+log = "0.4"
+sqlx = { version = "0.8", features = [ "runtime-tokio-rustls", "postgres", "chrono", "uuid", "json"] } 
+
+# Anti-Raid specific
+permissions = { path = "../rust.permissions" }
+splashcore_rs = { path = "../rust.std" }
+gwevent = { path = "../rust.gwevent" }
+config = { path = "../rust.config" }
+limits = { path = "../rust.limits" }
+
+# Template language support
+stacker = { version = "0.1", optional = true } # Required for quickjs and v8
+quickjs_runtime = { git="https://github.com/HiRoFa/quickjs_es_runtime", features=["setimmediate", "setinterval", "settimeout", "quickjs-ng"], default-features=false, optional = true } # Only in integration test phase, not actually supported
+v8 = { version = "0.100", features = [], optional = true } # Only in integration test phase, not actually supported
+rhai = { version = "1.19.0", features = ["std", "serde", "no_closure", "sync"], optional = true } # Has sandboxing issues
+mlua = { version = "0.10.0-beta.1", features = ["async", "luau", "serialize", "macros", "send"], optional = true } # Supported by default
+tera = { git = "https://github.com/anti-raid/tera", branch = "master", features = ["preserve_order", "builtins", "async"], optional = true } # Has sandboxing issues
+
+
+[dependencies.tokio]
+version = "1"
+features = ["sync", "macros", "rt-multi-thread"]
+
+[dependencies.serenity]
+git = "https://github.com/serenity-rs/serenity"
+branch = "next"
+features = ["model", "http", "cache", "rustls_backend", "unstable"]
+
+[dependencies.kittycat]
+git = "https://github.com/infinitybotlist/kittycat"
+branch = "main"
+
+[features]
+default = ["lua"]
+quickjs = ["dep:quickjs_runtime", "dep:stacker"] # Not actually supported, threading issues
+v8 = ["dep:v8", "dep:stacker"] # Not actually supported, memory issues
+rhai = ["dep:rhai"] # Has sandboxing issues
+lua = ["dep:mlua"] # Supported by default
+tera = ["dep:tera"] # Has sandboxing issues

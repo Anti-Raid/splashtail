@@ -1,8 +1,22 @@
-go 1.21.5
+go 1.22.5
 
 use (
 	.
-	./cmd/localjobs
-	./infra/animuscli
+
+	// Core
+	./core/go.jobs
+	./core/go.std
+
+	// Infra
+	./infra/Sandwich-Daemon
+	./infra/animusweb
 	./infra/nirn-proxy
+	./infra/wafflepaw
+
+	// Services
+	./services/go.api
+	./services/go.jobserver
+	./services/go.localjobs
+	./services/rust.bot
+	./services/rust.bot.nocluster
 )

@@ -1,0 +1,48 @@
+[package]
+name = "silverpelt"
+description = "Silverpelt provides the core library used to produce Anti-Raid modules. In Warriors, Silverpelt represents the mortal plane and the stars that guide the clans."
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+poise = { git = "https://github.com/Anti-Raid/poise", branch = "serenity-next" }
+chrono = { version = "0.4", features = ["serde"]}
+indexmap = { version = "2", features = ["serde"] }
+futures-util = "0.3"
+serde_json = "1.0"
+moka = { version = "0.12", features = ["future", "futures-util"] }
+serde = { version = "1.0", features = ["derive"] }
+dashmap = { version = "5", features = ["serde", "inline", "rayon"] }
+sqlx = { version = "0.8", features = [ "runtime-tokio-rustls", "postgres", "chrono", "uuid", "json"] }
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls", "rustls-tls-native-roots"] }
+log = "0.4"
+async-trait = "0.1.80"
+regex = "1"
+bitflags = "2"
+
+# Anti-Raid specific
+splashcore_rs = { path = "../rust.std" }
+permissions = { path = "../rust.permissions" }
+templating = { path = "../rust.templating" }
+module_settings = { path = "../rust.module_settings" }
+config = { path = "../rust.config" }
+proxy_support = { path = "../rust.proxy_support" }
+
+[dependencies.tokio]
+version = "1"
+features = ["sync", "macros", "rt-multi-thread"]
+
+[dependencies.botox]
+git = "https://github.com/Anti-Raid/botox"
+branch = "main"
+
+[dependencies.serenity]
+git = "https://github.com/serenity-rs/serenity"
+branch = "next"
+features = ["model", "http", "cache", "rustls_backend", "unstable"]
+
+[dependencies.kittycat]
+git = "https://github.com/infinitybotlist/kittycat"
+branch = "main"

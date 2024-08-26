@@ -1,0 +1,35 @@
+#!/bin/bash
+
+set -e # Exit on error
+
+# Ensure $1 is set
+if [ -z "$1" ]; then
+    echo "Usage: $0 <db_name> <pubkey>"
+    exit 1
+fi
+
+# Ensure $2 is set to the pubkey
+if [ -z "$2" ]; then
+    echo "Usage: $0 <db_name> <pubkey>"
+    exit 1ls
+fi
+
+DATE=$(date '+%Y-%m-%d@%H:%M:%S')
+FILENAME=$1-${DATE}.iblcli-backup
+FILE=/tmp/${FILENAME}
+
+/usr/bin/ibl db new backup ${FILE} --db $1 --pubkey $2 
+
+mkdir -p /silverpelt/backups/pg/$1
+
+cp ${FILE} /silverpelt/backups/pg/$1
+
+# Check for s3cmd config, if present, upload to s3
+if [ -f ~/.s3cfg ]; then
+    s3cmd put ${FILE} s3://antiraid-db-backups/pg/$1/${FILENAME}
+else
+    echo "s3cmd not found!"
+    exit 1
+fi
+
+rm ${FILE}

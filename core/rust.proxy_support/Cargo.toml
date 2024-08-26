@@ -1,0 +1,24 @@
+[package]
+name = "proxy_support"
+version = "6.0.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+serde = "1.0"
+log = "0.4"
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls", "rustls-tls-native-roots"] }
+serde_repr = "0.1"
+
+# Anti-Raid specific
+config = { path = "../rust.config" }
+
+[dependencies.serenity]
+git = "https://github.com/serenity-rs/serenity"
+branch = "next"
+features = ["model", "http", "cache", "rustls_backend", "unstable"]
+
+[dependencies.botox]
+git = "https://github.com/Anti-Raid/botox"
+branch = "main"

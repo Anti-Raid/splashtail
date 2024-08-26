@@ -1,0 +1,18 @@
+[package]
+name = "config"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+serde = "1.0"
+chrono = { version = "0.4", features = ["serde"]}
+serde_yaml = "0.9"
+rusty-s3 = "0.5"
+
+# Anti-Raid specific
+splashcore_rs = { path = "../rust.std" }
+
+[dependencies.serenity]
+git = "https://github.com/serenity-rs/serenity"
+branch = "next"
+features = ["model", "http", "cache", "rustls_backend", "unstable"]

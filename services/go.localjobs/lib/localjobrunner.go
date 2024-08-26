@@ -1,0 +1,102 @@
+package lib
+
+import (
+	"fmt"
+	"os"
+
+	jobs "go.jobs"
+	"go.jobs/taskdef"
+	"go.jobs/taskstate"
+
+	"github.com/infinitybotlist/eureka/crypto"
+	"go.uber.org/zap"
+)
+
+type TaskLocalOpts struct {
+	OnStateChange func(state string) error
+}
+
+// Executes a task locally
+func ExecuteTaskLocal(prefix, taskId string, l *zap.Logger, task taskdef.TaskDefinition, opts TaskLocalOpts, taskState taskstate.TaskState) error {
+	var currentTaskState = "pending"
+
+	err := opts.OnStateChange(currentTaskState)
+
+	if err != nil {
+		return fmt.Errorf("failed to update task state: %w", err)
+	}
+
+	err = task.Validate(taskState)
+
+	if err != nil {
+		return fmt.Errorf("failed to validate task: %w", err)
+	}
+
+	_, ok := jobs.TaskDefinitionRegistry[task.Name()]
+
+	if !ok {
+		return fmt.Errorf("task %s does not exist on registry", task.Name())
+	}
+
+	currentTaskState = "running"
+
+	err = opts.OnStateChange(currentTaskState)
+
+	if err != nil {
+		return fmt.Errorf("failed to update task state: %w", err)
+	}
+
+	outp, terr := task.Exec(l, taskState, TaskProgress{})
+
+	// Save output to object storage
+	if outp != nil {
+		if outp.Filename == "" {
+			outp.Filename = "unnamed." + crypto.RandString(16)
+		}
+
+		if outp.Buffer == nil {
+			l.Error("Task output buffer is nil", zap.Any("data", task))
+			currentTaskState = "failed"
+
+			err = opts.OnStateChange(currentTaskState)
+
+			if err != nil {
+				return fmt.Errorf("failed to update task state: %w", err)
+			}
+		} else {
+			// Write task output to tasks/$taskId/$output
+			err = os.MkdirAll(prefix+"/tasks/"+taskId, 0755)
+
+			if err != nil {
+				return fmt.Errorf("failed to create task output directory: %w", err)
+			}
+
+			f, err := os.Create(prefix + "/tasks/" + taskId + "/" + outp.Filename)
+
+			if err != nil {
+				return fmt.Errorf("failed to create task output file: %w", err)
+			}
+
+			_, err = f.Write(outp.Buffer.Bytes())
+
+			if err != nil {
+				return fmt.Errorf("failed to write task output file: %w", err)
+			}
+
+			l.Info("Saved task output", zap.String("filename", outp.Filename), zap.String("task_id", taskId))
+		}
+	}
+
+	if terr != nil {
+		l.Error("Failed to execute task", zap.Error(err))
+		currentTaskState = "failed"
+		err = opts.OnStateChange(currentTaskState)
+
+		if err != nil {
+			return fmt.Errorf("failed to update task state: %w", err)
+		}
+		return fmt.Errorf("failed to execute task: %w", err)
+	}
+
+	return nil
+}

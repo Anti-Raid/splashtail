@@ -1,4 +1,4 @@
-splashtail
+out
 .vscode
 localjobs-config.yaml
 config.yaml
@@ -7,6 +7,13 @@ coverage.out
 __pycache__
 node_modules
 ljconfig
-cmd/localjobs/localjobs
 .DS_Store
+/**/target
 /**/.DS_Store
+.idea
+semver
+mewld-staging.yaml
+mewld-prod.yaml
+data/cache
+history.txt # surrealdb
+cmd/nursery/ban_possibilities

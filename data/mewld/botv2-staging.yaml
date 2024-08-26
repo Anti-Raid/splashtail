@@ -1,0 +1,43 @@
+dir: 
+override_dir:
+use_current_directory: true
+use_custom_webui: true
+env:
+names: 
+  - "Flare"
+  - "Waffle"
+  - "Struma"
+  - "Oppenheimer"
+  - Nebula Nexus
+  - Stellar Summit
+  - Quantum Quorum
+  - Galactic Grid
+  - Orion Outpost
+  - Cosmic Constellation
+  - Celestial Circle
+  - Astro Array
+  - Meteor Matrix
+  - Pulsar Pack
+  - Comet Cluster
+  - Luna League
+  - Horizon Hive
+  - Supernova Syndicate
+  - Aurora Assembly
+module: out/rust.bot
+redis_channel: ar_clusters/staging
+interp: 
+
+# WEBUI
+allowed_ids:
+  - "728871946456137770"
+  - "564164277251080208"
+  - "775855009421066262"
+  - "773193286776389653"
+
+ping_interval: 30 # 20 seconds (for testing, change this)
+ping_timeout: 120 # 120 seconds (for testing, change this)
+cluster_start_next_delay: 0 # 1 second (for testing, change this)
+per_cluster: 4 # Number of shards per cluster, can be overrided using ``PER_CLUSTER`` env var
+minimum_safe_sessions_remaining: 3
+experimental_features:
+  - reshard

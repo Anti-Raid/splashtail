@@ -1,0 +1,39 @@
+[package]
+name = "bot_modules_moderation"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+poise = { git = "https://github.com/Anti-Raid/poise", branch = "serenity-next" }
+log = "0.4"
+sqlx = { version = "0.8", features = [ "runtime-tokio-rustls", "postgres", "chrono", "uuid", "json"] }
+chrono = { version = "0.4", features = ["serde"]}
+serde_json = "1.0"
+indexmap = { version = "2", features = ["serde"] }
+
+# Anti-Raid specific
+splashcore_rs = { path = "../rust.std" }
+silverpelt = { path = "../rust.silverpelt" }
+permissions = { path = "../rust.permissions" }
+config = { path = "../rust.config" }
+gwevent = { path = "../rust.gwevent" }
+proxy_support = { path = "../rust.proxy_support" }
+
+# Inter-module dependency
+bot_modules_auditlogs = { path = "../rust.bot_modules.auditlogs" }
+bot_modules_punishments = { path = "../rust.bot_modules.punishments" }
+
+[dependencies.tokio]
+version = "1"
+features = ["sync", "macros", "rt-multi-thread"]
+
+[dependencies.serenity]
+git = "https://github.com/serenity-rs/serenity"
+branch = "next"
+features = ["model", "http", "cache", "rustls_backend", "unstable"]
+
+[dependencies.botox]
+git = "https://github.com/Anti-Raid/botox"
+branch = "main"

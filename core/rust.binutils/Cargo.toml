@@ -1,0 +1,25 @@
+[package]
+name = "bot_binutils"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+poise = { git = "https://github.com/Anti-Raid/poise", branch = "serenity-next" }
+sqlx = { version = "0.8", features = [ "runtime-tokio-rustls", "postgres", "chrono", "uuid", "json"] }
+log = "0.4"
+silverpelt = { path = "../rust.silverpelt" }
+
+[dependencies.serenity]
+git = "https://github.com/serenity-rs/serenity"
+branch = "next"
+features = ["model", "http", "cache", "rustls_backend", "unstable"]
+
+[dependencies.botox]
+git = "https://github.com/Anti-Raid/botox"
+branch = "main"
+
+[dependencies.tokio]
+version = "1"
+features = ["sync", "macros", "rt-multi-thread"]
