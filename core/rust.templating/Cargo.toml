@@ -49,3 +49,4 @@ v8 = ["dep:v8", "dep:stacker"] # Not actually supported, memory issues
 rhai = ["dep:rhai"] # Has sandboxing issues
 lua = ["dep:mlua"] # Supported by default
 tera = ["dep:tera"] # Has sandboxing issues
+ext-test = []

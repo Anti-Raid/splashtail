@@ -280,6 +280,7 @@ pub async fn render_template<Request: serde::Serialize, Response: serde::de::Des
     }
 }
 
+#[cfg(feature = "ext-test")]
 #[cfg(test)]
 mod test {
     use mlua::prelude::*;

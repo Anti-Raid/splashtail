@@ -1,5 +1,4 @@
 mod ipc;
-mod test;
 
 use botox::cache::CacheHttpImpl;
 use gwevent::core::get_event_guild_id;
