@@ -134,7 +134,7 @@ async fn create_lua_vm(guild_id: GuildId, pool: sqlx::PgPool) -> LuaResult<ArLua
                         let template = template.template;
                         let lua_ref = lua_ref.clone();
 
-                        tokio::task::spawn(async move {
+                        rt.spawn(async move {
                             let f: LuaFunction = match lua_ref.load(&template).eval_async().await {
                                 Ok(f) => f,
                                 Err(e) => {
@@ -283,6 +283,7 @@ pub async fn render_template<Request: serde::Serialize, Response: serde::de::Des
 #[cfg(test)]
 mod test {
     use mlua::prelude::*;
+    use rand::Rng;
     use serenity::all::GuildId;
 
     #[tokio::test]
@@ -416,5 +417,42 @@ mod test {
             .unwrap();
 
         assert_eq!(res, 3);
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn test_async_multi() {
+        use mlua::{Lua, Result};
+        use std::time::Duration;
+
+        async fn sleep(_: &Lua, i: u64) -> Result<()> {
+            // Get a random number between 0 and 1000
+            let ms = rand::thread_rng().gen_range(0..1000);
+            tokio::time::sleep(Duration::from_millis(ms)).await;
+            println!("Slept for {ms} ms {}", i);
+            Ok(())
+        }
+
+        let lua = Lua::new();
+
+        lua.globals()
+            .set("sleep", lua.create_async_function(sleep).unwrap())
+            .unwrap();
+
+        let mut tasks = tokio::task::JoinSet::new();
+        let mut i = 100;
+        loop {
+            let lua = lua.clone();
+            tasks.spawn(async move {
+                lua.load(format!("sleep({i})")).exec_async().await.unwrap();
+            });
+            i -= 1;
+
+            if i == 0 {
+                break;
+            }
+        }
+
+        #[allow(clippy::redundant_pattern_matching)]
+        while let Some(_) = tasks.join_next().await {}
     }
 }
