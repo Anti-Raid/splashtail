@@ -1,0 +1,16 @@
+[package]
+name = "rust_assetgen"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+serde_json = "1.0"
+indexmap = { version = "2", features = ["serde"] }
+permissions = { path = "../../core/rust.permissions" }
+
+[dependencies.serenity]
+git = "https://github.com/serenity-rs/serenity"
+branch = "next"
+features = ["model", "http", "cache", "rustls_backend", "unstable"]

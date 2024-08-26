@@ -19,4 +19,5 @@ use (
 	./services/go.localjobs
 	./services/rust.bot
 	./services/rust.bot.nocluster
+	./services/rust.assetgen
 )

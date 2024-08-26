@@ -11,7 +11,6 @@ log = "0.4"
 env_logger = "0.11"
 sqlx = { version = "0.8", features = [ "runtime-tokio-rustls", "postgres", "chrono", "uuid", "json"] }
 reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls", "rustls-tls-native-roots"] }
-serde_json = "1.0"
 indexmap = { version = "2", features = ["serde"] }
 dashmap = { version = "5", features = ["serde", "inline", "rayon"] }
 fred = { version = "9.0.3", features = ["serde-json", "subscriber-client"] }
@@ -24,7 +23,6 @@ proxy_support = { path = "../../core/rust.proxy_support" }
 config = { path = "../../core/rust.config" }
 cap = { version = "0.1.2", features = ["stats"] }
 silverpelt = { path = "../../core/rust.silverpelt" }
-permissions = { path = "../../core/rust.permissions" }
 clap = { version = "4.5.16", features = ["derive"] }
 
 # Modules

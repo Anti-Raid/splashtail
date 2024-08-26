@@ -25,7 +25,6 @@ proxy_support = { path = "../../core/rust.proxy_support" }
 config = { path = "../../core/rust.config" }
 cap = { version = "0.1.2", features = ["stats"] }
 silverpelt = { path = "../../core/rust.silverpelt" }
-permissions = { path = "../../core/rust.permissions" }
 
 # Modules
 bot_modules_default = { path = "../../core/rust.bot_modules_default" }

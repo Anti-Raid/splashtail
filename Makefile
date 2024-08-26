@@ -60,14 +60,27 @@ build_rust:
 copyassets:
 ifndef CI_BUILD
 	# For every project in core/* and services/*, copy .generated/* to data/generated/{project_name} and to the website (services/website/lib/generated)
+	rm -rf data/generated/build_assets
 	mkdir -p data/generated/build_assets
 	for d in core/* services/*; do \
 		[ -d $$d/.generated ] || continue; \
 		mkdir -p data/generated/build_assets/$$(basename $$d); \
-		mkdir -p services/website/src/lib/generated/build_assets; \
 		cp -rf $$d/.generated/* data/generated/build_assets/$$(basename $$d); \
-		cp -rf $$d/.generated/* services/website/src/lib/generated/build_assets; \
 	done
+
+	rm -rf services/website/src/lib/generated/build_assets
+	mkdir -p services/website/src/lib/generated/build_assets
+	
+	for d in core/* services/*; do \
+		[ -d $$d/.generated ] || continue; \
+		mkdir -p services/website/src/lib/generated/build_assets/$$(basename $$d); \
+		cp -rf $$d/.generated/* services/website/src/lib/generated/build_assets/$$(basename $$d); \
+	done
+
+	# Build rust assets too
+	cd data/generated/build_assets && ../../../out/rust.assetgen && cd ../../..
+	cd services/website/src/lib/generated/build_assets && ../../../../../../out/rust.assetgen && cd ../../../../../..
+
 endif
 
 buildmewldwebui:
