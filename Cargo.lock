@@ -3649,7 +3649,7 @@ dependencies = [
 
 [[package]]
 name = "rust_bot"
-version = "6.0.0"
+version = "0.1.0"
 dependencies = [
  "async-trait",
  "bot_binutils",
@@ -3680,7 +3680,7 @@ dependencies = [
 
 [[package]]
 name = "rust_bot_nocluster"
-version = "6.0.0"
+version = "0.1.0"
 dependencies = [
  "async-trait",
  "bot_binutils",
@@ -3711,7 +3711,7 @@ dependencies = [
 
 [[package]]
 name = "rust_buildstats"
-version = "0.1.0"
+version = "6.2.0"
 
 [[package]]
 name = "rust_rpc_server"

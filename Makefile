@@ -82,16 +82,6 @@ ts:
 	# Patch to change all "SelectMenu = any;" to "SelectMenu = undefined /*tygo workaround*/;" to work around tygo issue
 	sed -i 's:SelectMenu = any;:SelectMenu = undefined /*tygo workaround*/;:g' services/website/src/lib/generated/discordgo.ts
 
-promoteprod:
-	rm -rf ../prod2
-	cd .. && cp -rf staging prod2
-	echo "prod" > ../prod2/config/current-env
-	cd ../prod2 && make && rm -rf ../prod && mv -vf ../prod2 ../prod && systemctl restart splashtail-prod
-	cd ../prod && make ts
-
-	# Git push to "current-prod" branch
-	cd ../prod && git branch current-prod && git add -v . && git commit -m "Promote staging to prod" && git push -u origin HEAD:current-prod --force
-
 lint_go:
 	for d in core/go.* services/go.*; do \
 		~/go/bin/golangci-lint run ./$$d/...; \
