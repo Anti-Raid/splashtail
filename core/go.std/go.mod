@@ -9,7 +9,7 @@ require (
 	github.com/infinitybotlist/eureka v1.8.0
 	github.com/infinitybotlist/kittycat/go v0.0.0-20240526051606-6574fb343539
 	github.com/jackc/pgx/v5 v5.6.0
-	github.com/minio/minio-go/v7 v7.0.75
+	github.com/minio/minio-go/v7 v7.0.76
 	github.com/redis/rueidis v1.0.44
 	github.com/sirupsen/logrus v1.9.3
 	github.com/stretchr/testify v1.9.0
@@ -45,7 +45,7 @@ require (
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/redis/go-redis/v9 v9.6.1 // indirect
 	github.com/rogpeppe/go-internal v1.12.0 // indirect
-	github.com/rs/xid v1.5.0 // indirect
+	github.com/rs/xid v1.6.0 // indirect
 	github.com/twitchyliquid64/golang-asm v0.15.1 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	golang.org/x/arch v0.9.0 // indirect
