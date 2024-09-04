@@ -1,4 +1,4 @@
-go 1.22.5
+go 1.22.6
 
 use (
 	.
@@ -6,10 +6,10 @@ use (
 	// Core
 	./core/go.jobs
 	./core/go.std
+	./infra/Sandwich-Daemon
 
 	// Infra
-	./infra/Sandwich-Daemon
-	./infra/animusweb
+	./infra/catway
 	./infra/nirn-proxy
 	./infra/wafflepaw
 
@@ -17,7 +17,7 @@ use (
 	./services/go.api
 	./services/go.jobserver
 	./services/go.localjobs
+	./services/rust.assetgen
 	./services/rust.bot
 	./services/rust.bot.nocluster
-	./services/rust.assetgen
 )
