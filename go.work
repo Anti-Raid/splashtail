@@ -9,7 +9,6 @@ use (
 	./infra/Sandwich-Daemon
 
 	// Infra
-	./infra/catway
 	./infra/nirn-proxy
 	./infra/wafflepaw
 

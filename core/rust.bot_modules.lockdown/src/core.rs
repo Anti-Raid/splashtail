@@ -1,7 +1,9 @@
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
 use std::sync::Arc;
+
+use crate::priority_handles::PrioritySet;
 
 /// Change operation, commonly used in lockdown modes
 #[derive(Debug, Serialize, Deserialize, Clone, Copy, Hash, PartialEq)]
@@ -69,28 +71,39 @@ where
 
 /// To ensure two lockdowns don't conflict with each other, we need some information about what all lockdowns are handling
 /// along with what specificity they have
+pub struct LockdownModeHandle {
+    pub roles: HashSet<serenity::all::RoleId>,
+    pub channels: HashSet<serenity::all::ChannelId>,
+}
+
+/// To ensure two lockdowns don't conflict with each other, we need some information about what all lockdowns are handling
+/// along with what specificity they have
 pub struct LockdownModeHandles {
-    pub roles: HashMap<serenity::all::RoleId, i32>,
-    pub channels: HashMap<serenity::all::ChannelId, i32>,
+    pub roles: PrioritySet<serenity::all::RoleId>,
+    pub channels: PrioritySet<serenity::all::ChannelId>,
 }
 
 impl LockdownModeHandles {
-    /// Merges two sets of handles
-    pub fn merge(&mut self, other: &LockdownModeHandles) {
-        self.roles.extend(other.roles.iter().map(|(k, v)| (*k, *v)));
-        self.channels
-            .extend(other.channels.iter().map(|(k, v)| (*k, *v)));
+    /// `add_handle` adds a handle to the set given the specificity of the handle
+    pub fn add_handle(&mut self, handle: LockdownModeHandle, specificity: usize) {
+        for role in handle.roles {
+            self.roles.add(role, specificity);
+        }
+
+        for channel in handle.channels {
+            self.channels.add(channel, specificity);
+        }
     }
 
     // A role is locked if it contains all roles of the current *with a lower specificity*
     pub fn is_role_locked(
         &self,
         role: serenity::all::RoleId,
-        specificity: i32,
-    ) -> Option<(serenity::all::RoleId, i32)> {
-        if let Some(current_spec) = self.roles.get(&role) {
-            if *current_spec >= specificity {
-                return Some((role, *current_spec));
+        specificity: usize,
+    ) -> Option<(serenity::all::RoleId, usize)> {
+        if let Some(current_spec) = self.roles.highest_priority(&role) {
+            if current_spec >= specificity {
+                return Some((role, current_spec));
             }
         }
 
@@ -100,25 +113,23 @@ impl LockdownModeHandles {
     // A channel is locked if it contains all channels of the current *with a lower specificity*
     pub fn is_channel_locked(
         &self,
-        _channel: serenity::all::ChannelId,
-        _specificity: i32,
-    ) -> Option<(serenity::all::ChannelId, i32)> {
-        None // For now
-
-        /*if let Some(current_spec) = self.channels.get(&channel) {
-            if *current_spec >= specificity {
-                return Some((channel, *current_spec));
+        channel: serenity::all::ChannelId,
+        specificity: usize,
+    ) -> Option<(serenity::all::ChannelId, usize)> {
+        if let Some(current_spec) = self.channels.highest_priority(&channel) {
+            if current_spec >= specificity {
+                return Some((channel, current_spec));
             }
         }
 
-        None*/
+        None
     }
 
     // A handle is redundant if it contains all roles and channels of the current *with a lower specificity*
-    pub fn is_redundant(&self, other: &LockdownModeHandles) -> bool {
-        for (role, spec) in other.roles.iter() {
-            if let Some(current_spec) = self.roles.get(role) {
-                if current_spec >= spec {
+    pub fn is_redundant(&self, other: &LockdownModeHandle, other_spec: usize) -> bool {
+        for role in other.roles.iter() {
+            if let Some(current_spec) = self.roles.highest_priority(role) {
+                if current_spec >= other_spec {
                     return false;
                 }
             } else {
@@ -126,9 +137,9 @@ impl LockdownModeHandles {
             }
         }
 
-        for (channel, spec) in other.channels.iter() {
-            if let Some(current_spec) = self.channels.get(channel) {
-                if current_spec >= spec {
+        for channel in other.channels.iter() {
+            if let Some(current_spec) = self.channels.highest_priority(channel) {
+                if current_spec >= other_spec {
                     return false;
                 }
             } else {
@@ -146,7 +157,7 @@ where
     Self: Send + Sync,
 {
     /// All lockdowns will be sorted by this value, with the highest value being the most specific and hence viewed first
-    fn specificity(&self) -> i32;
+    fn specificity(&self) -> usize;
 
     async fn test(
         &self,
@@ -192,7 +203,7 @@ where
         pgc: &[serenity::all::GuildChannel],
         critical_roles: &HashSet<serenity::all::RoleId>,
         data: &serde_json::Value,
-    ) -> Result<LockdownModeHandles, silverpelt::Error>;
+    ) -> Result<LockdownModeHandle, silverpelt::Error>;
 }
 
 pub trait CustomLockdownMode: LockdownMode + std::fmt::Display {}
@@ -245,7 +256,7 @@ impl std::fmt::Display for LockdownModes {
 
 #[async_trait]
 impl LockdownMode for LockdownModes {
-    fn specificity(&self) -> i32 {
+    fn specificity(&self) -> usize {
         match self {
             LockdownModes::QuickServerLockdown(qsl) => qsl.specificity(),
             LockdownModes::TraditionalServerLockdown(tsl) => tsl.specificity(),
@@ -361,7 +372,7 @@ impl LockdownMode for LockdownModes {
         pgc: &[serenity::all::GuildChannel],
         critical_roles: &HashSet<serenity::all::RoleId>,
         data: &serde_json::Value,
-    ) -> Result<LockdownModeHandles, silverpelt::Error> {
+    ) -> Result<LockdownModeHandle, silverpelt::Error> {
         match self {
             LockdownModes::QuickServerLockdown(qsl) => {
                 qsl.handles(lockdown_data, pg, pgc, critical_roles, data)
@@ -502,8 +513,8 @@ impl LockdownSet {
         pgc: &[serenity::all::GuildChannel],
     ) -> Result<LockdownModeHandles, silverpelt::Error> {
         let mut handles = LockdownModeHandles {
-            roles: HashMap::new(),
-            channels: HashMap::new(),
+            roles: PrioritySet::default(),
+            channels: PrioritySet::default(),
         };
 
         for lockdown in self.lockdowns.iter() {
@@ -519,7 +530,7 @@ impl LockdownSet {
                 .await?;
 
             // Extend roles and channels
-            handles.merge(&handle);
+            handles.add_handle(handle, lockdown.r#type.specificity());
         }
 
         Ok(handles)
@@ -570,11 +581,11 @@ impl LockdownSet {
         let current_handles = self.get_handles(lockdown_data, &pg, &pgc).await?;
 
         // Get the handles for the new lockdown
-        let new_handles = lockdown_type
+        let new_handle = lockdown_type
             .handles(lockdown_data, &pg, &pgc, &critical_roles, &data)
             .await?;
 
-        if current_handles.is_redundant(&new_handles) {
+        if current_handles.is_redundant(&new_handle, lockdown_type.specificity()) {
             return Err("Lockdown is redundant (all changes made by this lockdown handle are already locked by another handle)".into());
         }
 
@@ -804,7 +815,7 @@ pub mod qsl {
     #[async_trait]
     impl LockdownMode for QuickServerLockdown {
         // Lowest specificity
-        fn specificity(&self) -> i32 {
+        fn specificity(&self) -> usize {
             0
         }
 
@@ -954,12 +965,11 @@ pub mod qsl {
             _pgc: &[serenity::all::GuildChannel],
             critical_roles: &HashSet<serenity::all::RoleId>,
             _data: &serde_json::Value,
-        ) -> Result<LockdownModeHandles, silverpelt::Error> {
+        ) -> Result<LockdownModeHandle, silverpelt::Error> {
             // QSL locks the critical roles
-            let spec = self.specificity();
-            Ok(LockdownModeHandles {
-                roles: critical_roles.iter().map(|r| (*r, spec)).collect(),
-                channels: HashMap::new(),
+            Ok(LockdownModeHandle {
+                roles: critical_roles.clone(),
+                channels: HashSet::new(),
             })
         }
     }
@@ -1018,7 +1028,7 @@ pub mod tsl {
     #[async_trait]
     impl LockdownMode for TraditionalServerLockdown {
         // TSL > QSL as it updates all channels in a server
-        fn specificity(&self) -> i32 {
+        fn specificity(&self) -> usize {
             1
         }
 
@@ -1154,12 +1164,11 @@ pub mod tsl {
             pgc: &[serenity::all::GuildChannel],
             _critical_roles: &HashSet<serenity::all::RoleId>,
             _data: &serde_json::Value,
-        ) -> Result<LockdownModeHandles, silverpelt::Error> {
+        ) -> Result<LockdownModeHandle, silverpelt::Error> {
             // TSL locks all channels, but *NOT* roles
-            let spec = self.specificity();
-            Ok(LockdownModeHandles {
-                roles: HashMap::new(),
-                channels: pgc.iter().map(|c| (c.id, spec)).collect(),
+            Ok(LockdownModeHandle {
+                roles: HashSet::new(),
+                channels: pgc.iter().map(|c| c.id).collect(),
             })
         }
     }
@@ -1208,7 +1217,7 @@ pub mod scl {
     #[async_trait]
     impl LockdownMode for SingleChannelLockdown {
         // SCL > TSL as it updates a single channel
-        fn specificity(&self) -> i32 {
+        fn specificity(&self) -> usize {
             2
         }
 
@@ -1326,11 +1335,11 @@ pub mod scl {
             _pgc: &[serenity::all::GuildChannel],
             _critical_roles: &HashSet<serenity::all::RoleId>,
             _data: &serde_json::Value,
-        ) -> Result<LockdownModeHandles, silverpelt::Error> {
+        ) -> Result<LockdownModeHandle, silverpelt::Error> {
             // SCL locks a single channel
-            Ok(LockdownModeHandles {
-                roles: HashMap::new(),
-                channels: std::iter::once((self.0, self.specificity())).collect(),
+            Ok(LockdownModeHandle {
+                roles: HashSet::new(),
+                channels: std::iter::once(self.0).collect(),
             })
         }
     }
