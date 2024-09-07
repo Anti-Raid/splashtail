@@ -95,6 +95,16 @@ impl LockdownModeHandles {
         }
     }
 
+    pub fn remove_handle(&mut self, handle: &LockdownModeHandle, specificity: usize) {
+        for role in handle.roles.iter() {
+            self.roles.remove(*role, specificity);
+        }
+
+        for channel in handle.channels.iter() {
+            self.channels.remove(*channel, specificity);
+        }
+    }
+
     // A role is locked if it contains all roles of the current *with a lower specificity*
     pub fn is_role_locked(
         &self,
@@ -581,13 +591,13 @@ impl LockdownSet {
         let current_handles = self.get_handles(lockdown_data, &pg, &pgc).await?;
 
         // Get the handles for the new lockdown
-        let new_handle = lockdown_type
+        /*let new_handle = lockdown_type
             .handles(lockdown_data, &pg, &pgc, &critical_roles, &data)
             .await?;
 
         if current_handles.is_redundant(&new_handle, lockdown_type.specificity()) {
             return Err("Lockdown is redundant (all changes made by this lockdown handle are already locked by another handle)".into());
-        }
+        }*/
 
         let id = sqlx::query!(
             "INSERT INTO lockdown__guild_lockdowns (guild_id, type, data, reason) VALUES ($1, $2, $3, $4) RETURNING id",
@@ -651,7 +661,15 @@ impl LockdownSet {
 
         let critical_roles = get_critical_roles(&pg, &self.settings.member_roles)?;
 
-        let current_handles = self.get_handles(lockdown_data, &pg, &pgc).await?;
+        let mut current_handles = self.get_handles(lockdown_data, &pg, &pgc).await?;
+
+        // Remove handle from the set
+        let handle = lockdown
+            .r#type
+            .handles(lockdown_data, &pg, &pgc, &critical_roles, &lockdown.data)
+            .await?;
+
+        current_handles.remove_handle(&handle, lockdown.r#type.specificity());
 
         // Revert the lockdown
         lockdown
@@ -1109,12 +1127,45 @@ pub mod tsl {
                     }
                 }
 
-                channel
+                match channel
                     .edit(
                         &lockdown_data.cache_http.http,
                         serenity::all::EditChannel::new().permissions(overwrites),
                     )
-                    .await?;
+                    .await
+                {
+                    Ok(_) => {}
+                    Err(e) => match e {
+                        serenity::Error::Http(e) => match e {
+                            serenity::all::HttpError::UnsuccessfulRequest(er) => {
+                                if er.status_code == reqwest::StatusCode::NOT_FOUND {
+                                    log::info!("Channel not found: {}", channel.id);
+                                    continue; // Rare, but sometimes happens (?)
+                                } else {
+                                    return Err(format!(
+                                        "Failed to create channel lockdown (http, non-404) {}: {:?}",
+                                        channel.id, er
+                                    )
+                                    .into());
+                                }
+                            }
+                            _ => {
+                                return Err(format!(
+                                    "Failed to create channel lockdown (http) {}: {:?}",
+                                    channel.id, e
+                                )
+                                .into());
+                            }
+                        },
+                        _ => {
+                            return Err(format!(
+                                "Failed to create channel lockdown {}: {:?}",
+                                channel.id, e
+                            )
+                            .into());
+                        }
+                    },
+                };
             }
 
             Ok(())
@@ -1146,12 +1197,44 @@ pub mod tsl {
                     continue;
                 };
 
-                channel
+                match channel
                     .edit(
                         &lockdown_data.cache_http.http,
                         serenity::all::EditChannel::new().permissions(overwrites),
                     )
-                    .await?;
+                    .await
+                {
+                    Ok(_) => {}
+                    Err(e) => match e {
+                        serenity::Error::Http(e) => match e {
+                            serenity::all::HttpError::UnsuccessfulRequest(er) => {
+                                if er.status_code == reqwest::StatusCode::NOT_FOUND {
+                                    continue; // Rare, but sometimes happens (?)
+                                } else {
+                                    return Err(format!(
+                                        "Failed to delete channel lockdown (http, non-404) {}: {:?}",
+                                        channel.id, er
+                                    )
+                                    .into());
+                                }
+                            }
+                            _ => {
+                                return Err(format!(
+                                    "Failed to delete channel lockdown (http) {}: {:?}",
+                                    channel.id, e
+                                )
+                                .into());
+                            }
+                        },
+                        _ => {
+                            return Err(format!(
+                                "Failed to delete channel lockdown {}: {:?}",
+                                channel.id, e
+                            )
+                            .into());
+                        }
+                    },
+                };
             }
 
             Ok(())
