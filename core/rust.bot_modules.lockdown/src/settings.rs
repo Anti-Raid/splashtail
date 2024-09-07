@@ -308,14 +308,22 @@ impl DataStore for LockdownDataStoreImpl {
             })?;
 
         // Create the lockdown
-        let lockdown_type = super::core::LockdownModes::from_string(typ)
-            .map_err(|_| SettingsError::Generic {
-                message: format!("Invalid lockdown type: {}", typ),
-                src: "lockdown_create_entry".to_string(),
-                typ: "value_error".to_string(),
-            })?
-            .ok_or_else(|| SettingsError::Generic {
-                message: format!("Invalid lockdown type: {}", typ),
+        let lockdown_type =
+            super::core::from_lockdown_mode_string(typ).map_err(|_| SettingsError::Generic {
+                message: format!(
+                    "Invalid lockdown mode: {}.\n\nTIP: The following lockdown modes are supported: {}", 
+                    typ, 
+                    {
+                        let mut supported_lockdown_modes = String::new();
+
+                        for mode in super::core::CREATE_LOCKDOWN_MODES.iter() {
+                            let creator = mode.value();
+                            supported_lockdown_modes.push_str(&format!("\n- {}", creator.syntax()));
+                        }
+
+                        supported_lockdown_modes
+                    }
+                ),
                 src: "lockdown_create_entry".to_string(),
                 typ: "value_error".to_string(),
             })?;

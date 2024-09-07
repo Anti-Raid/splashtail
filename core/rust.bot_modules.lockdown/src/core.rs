@@ -1,9 +1,38 @@
+use crate::priority_handles::PrioritySet;
 use async_trait::async_trait;
+use dashmap::DashMap;
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
-use std::sync::Arc;
+use std::sync::{Arc, LazyLock};
 
-use crate::priority_handles::PrioritySet;
+pub static CREATE_LOCKDOWN_MODES: LazyLock<DashMap<String, Box<dyn CreateLockdownMode>>> =
+    LazyLock::new(|| {
+        let map: DashMap<String, Box<dyn CreateLockdownMode>> = DashMap::new();
+
+        map.insert("qsl".to_string(), Box::new(qsl::CreateQuickServerLockdown));
+        map.insert(
+            "tsl".to_string(),
+            Box::new(tsl::CreateTraditionalServerLockdown),
+        );
+        map.insert(
+            "scl".to_string(),
+            Box::new(scl::CreateSingleChannelLockdown),
+        );
+
+        map
+    });
+
+/// Given a string, returns the lockdown mode
+pub fn from_lockdown_mode_string(s: &str) -> Result<Box<dyn LockdownMode>, silverpelt::Error> {
+    for pair in CREATE_LOCKDOWN_MODES.iter() {
+        let creator = pair.value();
+        if let Some(m) = creator.to_lockdown_mode(s)? {
+            return Ok(m);
+        }
+    }
+
+    Err("Unknown lockdown mode".into())
+}
 
 /// Change operation, commonly used in lockdown modes
 #[derive(Debug, Serialize, Deserialize, Clone, Copy, Hash, PartialEq)]
@@ -161,11 +190,34 @@ impl LockdownModeHandles {
     }
 }
 
+/// Trait for creating a lockdown mode
+#[async_trait]
+pub trait CreateLockdownMode
+where
+    Self: Send + Sync,
+{
+    /// Returns the syntax for the lockdown mode
+    ///
+    /// E.g. `qsl` for Quick Server Lockdown, `scl/{channel_id}` for Single Channel Lockdown
+    fn syntax(&self) -> &'static str;
+
+    /// Given the string form of the lockdown mode, returns the lockdown mode
+    fn to_lockdown_mode(&self, s: &str)
+        -> Result<Option<Box<dyn LockdownMode>>, silverpelt::Error>;
+}
+
+/// Trait for a lockdown mode
 #[async_trait]
 pub trait LockdownMode
 where
     Self: Send + Sync,
 {
+    /// Returns the creator for the lockdown mode
+    fn creator(&self) -> Box<dyn CreateLockdownMode>;
+
+    /// Returns the string form of the lockdown mode
+    fn string_form(&self) -> String;
+
     /// All lockdowns will be sorted by this value, with the highest value being the most specific and hence viewed first
     fn specificity(&self) -> usize;
 
@@ -216,224 +268,26 @@ where
     ) -> Result<LockdownModeHandle, silverpelt::Error>;
 }
 
-pub trait CustomLockdownMode: LockdownMode + std::fmt::Display {}
-
-/// Enum containing all variants
-pub enum LockdownModes {
-    QuickServerLockdown(qsl::QuickServerLockdown),
-    TraditionalServerLockdown(tsl::TraditionalServerLockdown),
-    SingleChannelLockdown(scl::SingleChannelLockdown),
-    Unknown(Box<dyn CustomLockdownMode>),
-}
-
-impl LockdownModes {
-    pub fn from_string(s: &str) -> Result<Option<LockdownModes>, silverpelt::Error> {
-        if s == "qsl" {
-            Ok(Some(LockdownModes::QuickServerLockdown(
-                qsl::QuickServerLockdown,
-            )))
-        } else if s == "tsl" {
-            Ok(Some(LockdownModes::TraditionalServerLockdown(
-                tsl::TraditionalServerLockdown,
-            )))
-        } else if s.starts_with("scl/") {
-            let channel_id = s
-                .strip_prefix("scl/")
-                .ok_or_else(|| silverpelt::Error::from("Invalid SCL string"))?
-                .parse()
-                .map_err(|e| format!("Error while parsing channel ID: {}", e))?;
-            Ok(Some(LockdownModes::SingleChannelLockdown(
-                scl::SingleChannelLockdown(channel_id),
-            )))
-        } else {
-            Ok(None)
-        }
-    }
-}
-
-impl std::fmt::Display for LockdownModes {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            LockdownModes::QuickServerLockdown(_) => write!(f, "qsl"),
-            LockdownModes::TraditionalServerLockdown(_) => write!(f, "tsl"),
-            LockdownModes::SingleChannelLockdown(scl) => {
-                write!(f, "scl/{}", scl.0)
-            }
-            LockdownModes::Unknown(m) => write!(f, "{}", m),
-        }
-    }
-}
-
-#[async_trait]
-impl LockdownMode for LockdownModes {
-    fn specificity(&self) -> usize {
-        match self {
-            LockdownModes::QuickServerLockdown(qsl) => qsl.specificity(),
-            LockdownModes::TraditionalServerLockdown(tsl) => tsl.specificity(),
-            LockdownModes::SingleChannelLockdown(scl) => scl.specificity(),
-            LockdownModes::Unknown(m) => m.specificity(),
-        }
-    }
-
-    async fn test(
-        &self,
-        lockdown_data: &LockdownData,
-        pg: &serenity::all::PartialGuild,
-        pgc: &[serenity::all::GuildChannel],
-        critical_roles: &HashSet<serenity::all::RoleId>,
-    ) -> Result<Box<dyn LockdownTestResult>, silverpelt::Error> {
-        match self {
-            LockdownModes::QuickServerLockdown(qsl) => {
-                qsl.test(lockdown_data, pg, pgc, critical_roles).await
-            }
-            LockdownModes::TraditionalServerLockdown(tsl) => {
-                tsl.test(lockdown_data, pg, pgc, critical_roles).await
-            }
-            LockdownModes::SingleChannelLockdown(scl) => {
-                scl.test(lockdown_data, pg, pgc, critical_roles).await
-            }
-            LockdownModes::Unknown(m) => m.test(lockdown_data, pg, pgc, critical_roles).await,
-        }
-    }
-
-    async fn setup(
-        &self,
-        lockdown_data: &LockdownData,
-        pg: &serenity::all::PartialGuild,
-        pgc: &[serenity::all::GuildChannel],
-        critical_roles: &HashSet<serenity::all::RoleId>,
-    ) -> Result<serde_json::Value, silverpelt::Error> {
-        match self {
-            LockdownModes::QuickServerLockdown(qsl) => {
-                qsl.setup(lockdown_data, pg, pgc, critical_roles).await
-            }
-            LockdownModes::TraditionalServerLockdown(tsl) => {
-                tsl.setup(lockdown_data, pg, pgc, critical_roles).await
-            }
-            LockdownModes::SingleChannelLockdown(scl) => {
-                scl.setup(lockdown_data, pg, pgc, critical_roles).await
-            }
-            LockdownModes::Unknown(m) => m.setup(lockdown_data, pg, pgc, critical_roles).await,
-        }
-    }
-
-    async fn create(
-        &self,
-        lockdown_data: &LockdownData,
-        pg: &mut serenity::all::PartialGuild,
-        pgc: &mut [serenity::all::GuildChannel],
-        critical_roles: &HashSet<serenity::all::RoleId>,
-        data: &serde_json::Value,
-        all_handles: &LockdownModeHandles,
-    ) -> Result<(), silverpelt::Error> {
-        match self {
-            LockdownModes::QuickServerLockdown(qsl) => {
-                qsl.create(lockdown_data, pg, pgc, critical_roles, data, all_handles)
-                    .await
-            }
-            LockdownModes::TraditionalServerLockdown(tsl) => {
-                tsl.create(lockdown_data, pg, pgc, critical_roles, data, all_handles)
-                    .await
-            }
-            LockdownModes::SingleChannelLockdown(scl) => {
-                scl.create(lockdown_data, pg, pgc, critical_roles, data, all_handles)
-                    .await
-            }
-            LockdownModes::Unknown(m) => {
-                m.create(lockdown_data, pg, pgc, critical_roles, data, all_handles)
-                    .await
-            }
-        }
-    }
-
-    async fn revert(
-        &self,
-        lockdown_data: &LockdownData,
-        pg: &mut serenity::all::PartialGuild,
-        pgc: &mut [serenity::all::GuildChannel],
-        critical_roles: &HashSet<serenity::all::RoleId>,
-        data: &serde_json::Value,
-        all_handles: &LockdownModeHandles,
-    ) -> Result<(), silverpelt::Error> {
-        match self {
-            LockdownModes::QuickServerLockdown(qsl) => {
-                qsl.revert(lockdown_data, pg, pgc, critical_roles, data, all_handles)
-                    .await
-            }
-            LockdownModes::TraditionalServerLockdown(tsl) => {
-                tsl.revert(lockdown_data, pg, pgc, critical_roles, data, all_handles)
-                    .await
-            }
-            LockdownModes::SingleChannelLockdown(scl) => {
-                scl.revert(lockdown_data, pg, pgc, critical_roles, data, all_handles)
-                    .await
-            }
-            LockdownModes::Unknown(m) => {
-                m.revert(lockdown_data, pg, pgc, critical_roles, data, all_handles)
-                    .await
-            }
-        }
-    }
-
-    async fn handles(
-        &self,
-        lockdown_data: &LockdownData,
-        pg: &serenity::all::PartialGuild,
-        pgc: &[serenity::all::GuildChannel],
-        critical_roles: &HashSet<serenity::all::RoleId>,
-        data: &serde_json::Value,
-    ) -> Result<LockdownModeHandle, silverpelt::Error> {
-        match self {
-            LockdownModes::QuickServerLockdown(qsl) => {
-                qsl.handles(lockdown_data, pg, pgc, critical_roles, data)
-                    .await
-            }
-            LockdownModes::TraditionalServerLockdown(tsl) => {
-                tsl.handles(lockdown_data, pg, pgc, critical_roles, data)
-                    .await
-            }
-            LockdownModes::SingleChannelLockdown(scl) => {
-                scl.handles(lockdown_data, pg, pgc, critical_roles, data)
-                    .await
-            }
-            LockdownModes::Unknown(m) => {
-                m.handles(lockdown_data, pg, pgc, critical_roles, data)
-                    .await
-            }
-        }
-    }
-}
-
-// Serializer for LockdownMode
-impl serde::Serialize for LockdownModes {
+/// Serde serialization for LockdownMode
+impl Serialize for Box<dyn LockdownMode> {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: serde::Serializer,
     {
-        match self {
-            LockdownModes::QuickServerLockdown(_) => serializer.serialize_str("qsl"),
-            LockdownModes::TraditionalServerLockdown(_) => serializer.serialize_str("tsl"),
-            LockdownModes::SingleChannelLockdown(scl) => {
-                serializer.serialize_str(&format!("scl/{}", scl.0))
-            }
-            LockdownModes::Unknown(m) => serializer.serialize_str(&m.to_string()),
-        }
+        self.string_form().serialize(serializer)
     }
 }
 
-// Deserializer for LockdownMode
-impl<'de> serde::Deserialize<'de> for LockdownModes {
-    fn deserialize<D>(deserializer: D) -> Result<LockdownModes, D::Error>
+/// Serde deserialization for LockdownMode
+impl<'de> Deserialize<'de> for Box<dyn LockdownMode> {
+    fn deserialize<D>(deserializer: D) -> Result<Box<dyn LockdownMode>, D::Error>
     where
         D: serde::Deserializer<'de>,
     {
         let s = String::deserialize(deserializer)?;
 
-        match LockdownModes::from_string(&s) {
-            Ok(Some(m)) => Ok(m),
-            Ok(None) => Err(serde::de::Error::custom("Invalid lockdown mode")),
-            Err(e) => Err(serde::de::Error::custom(e)),
-        }
+        // Call `from_lockdown_mode_string` to get the lockdown mode
+        from_lockdown_mode_string(&s).map_err(serde::de::Error::custom)
     }
 }
 
@@ -442,14 +296,14 @@ impl<'de> serde::Deserialize<'de> for LockdownModes {
 pub struct Lockdown {
     pub id: sqlx::types::Uuid,
     pub reason: String,
-    pub r#type: LockdownModes,
+    pub r#type: Box<dyn LockdownMode>,
     pub data: serde_json::Value,
 }
 
 impl Lockdown {
     pub fn to_map(&self) -> indexmap::IndexMap<String, splashcore_rs::value::Value> {
         indexmap::indexmap! {
-            "type".to_string() => splashcore_rs::value::Value::String(self.r#type.to_string()),
+            "type".to_string() => splashcore_rs::value::Value::String(self.r#type.string_form()),
             "data".to_string() => splashcore_rs::value::Value::from_json(&self.data),
         }
     }
@@ -482,20 +336,13 @@ impl LockdownSet {
             let data = row.data;
             let reason = row.reason;
 
-            let lockdown = match LockdownModes::from_string(&r#type) {
-                Ok(Some(m)) => Lockdown {
-                    id,
-                    r#type: m,
-                    data,
-                    reason,
-                },
-                Ok(None) => continue,
-                Err(e) => {
-                    return Err(silverpelt::Error::from(format!(
-                        "Error while parsing lockdown type: {}",
-                        e
-                    )))
-                }
+            let lockdown_mode = from_lockdown_mode_string(&r#type)?;
+
+            let lockdown = Lockdown {
+                id,
+                r#type: lockdown_mode,
+                data,
+                reason,
             };
 
             lockdowns.push(lockdown);
@@ -549,7 +396,7 @@ impl LockdownSet {
     /// Adds a lockdown to the set returning the id of the created entry
     pub async fn apply(
         &mut self,
-        lockdown_type: LockdownModes,
+        lockdown_type: Box<dyn LockdownMode>,
         lockdown_data: &LockdownData,
         reason: &str,
     ) -> Result<sqlx::types::Uuid, silverpelt::Error> {
@@ -590,19 +437,19 @@ impl LockdownSet {
 
         let current_handles = self.get_handles(lockdown_data, &pg, &pgc).await?;
 
-        // Get the handles for the new lockdown
-        /*let new_handle = lockdown_type
+        // TODO: Block redundant handles, this is required until we support getting underlying permissions during a lockdown
+        let new_handle = lockdown_type
             .handles(lockdown_data, &pg, &pgc, &critical_roles, &data)
             .await?;
 
         if current_handles.is_redundant(&new_handle, lockdown_type.specificity()) {
             return Err("Lockdown is redundant (all changes made by this lockdown handle are already locked by another handle)".into());
-        }*/
+        }
 
         let id = sqlx::query!(
             "INSERT INTO lockdown__guild_lockdowns (guild_id, type, data, reason) VALUES ($1, $2, $3, $4) RETURNING id",
             self.guild_id.to_string(),
-            lockdown_type.to_string(),
+            lockdown_type.string_form(),
             &data,
             reason,
         )
@@ -688,7 +535,7 @@ impl LockdownSet {
         sqlx::query!(
             "DELETE FROM lockdown__guild_lockdowns WHERE guild_id = $1 AND type = $2",
             self.guild_id.to_string(),
-            lockdown.r#type.to_string(),
+            lockdown.r#type.string_form(),
         )
         .execute(&lockdown_data.pool)
         .await?;
@@ -743,7 +590,7 @@ impl LockdownSet {
             sqlx::query!(
                 "DELETE FROM lockdown__guild_lockdowns WHERE guild_id = $1 AND type = $2",
                 self.guild_id.to_string(),
-                lockdown.r#type.to_string(),
+                lockdown.r#type.string_form(),
             )
             .execute(&lockdown_data.pool)
             .await?;
@@ -813,6 +660,26 @@ pub mod qsl {
         }
     }
 
+    pub struct CreateQuickServerLockdown;
+
+    #[async_trait]
+    impl CreateLockdownMode for CreateQuickServerLockdown {
+        fn syntax(&self) -> &'static str {
+            "qsl"
+        }
+
+        fn to_lockdown_mode(
+            &self,
+            s: &str,
+        ) -> Result<Option<Box<dyn LockdownMode>>, silverpelt::Error> {
+            if s == "qsl" {
+                Ok(Some(Box::new(QuickServerLockdown)))
+            } else {
+                Ok(None)
+            }
+        }
+    }
+
     pub struct QuickServerLockdown;
 
     impl QuickServerLockdown {
@@ -832,6 +699,14 @@ pub mod qsl {
 
     #[async_trait]
     impl LockdownMode for QuickServerLockdown {
+        fn creator(&self) -> Box<dyn CreateLockdownMode> {
+            Box::new(CreateQuickServerLockdown)
+        }
+
+        fn string_form(&self) -> String {
+            "qsl".to_string()
+        }
+
         // Lowest specificity
         fn specificity(&self) -> usize {
             0
@@ -1020,6 +895,27 @@ pub mod tsl {
             "".to_string()
         }
     }
+
+    pub struct CreateTraditionalServerLockdown;
+
+    #[async_trait]
+    impl CreateLockdownMode for CreateTraditionalServerLockdown {
+        fn syntax(&self) -> &'static str {
+            "tsl"
+        }
+
+        fn to_lockdown_mode(
+            &self,
+            s: &str,
+        ) -> Result<Option<Box<dyn LockdownMode>>, silverpelt::Error> {
+            if s == "tsl" {
+                Ok(Some(Box::new(TraditionalServerLockdown)))
+            } else {
+                Ok(None)
+            }
+        }
+    }
+
     pub struct TraditionalServerLockdown;
 
     impl TraditionalServerLockdown {
@@ -1045,6 +941,14 @@ pub mod tsl {
 
     #[async_trait]
     impl LockdownMode for TraditionalServerLockdown {
+        fn creator(&self) -> Box<dyn CreateLockdownMode> {
+            Box::new(CreateTraditionalServerLockdown)
+        }
+
+        fn string_form(&self) -> String {
+            "tsl".to_string()
+        }
+
         // TSL > QSL as it updates all channels in a server
         fn specificity(&self) -> usize {
             1
@@ -1281,6 +1185,35 @@ pub mod scl {
             "".to_string()
         }
     }
+
+    pub struct CreateSingleChannelLockdown;
+
+    #[async_trait]
+    impl CreateLockdownMode for CreateSingleChannelLockdown {
+        fn syntax(&self) -> &'static str {
+            "scl/<channel_id>"
+        }
+
+        fn to_lockdown_mode(
+            &self,
+            s: &str,
+        ) -> Result<Option<Box<dyn LockdownMode>>, silverpelt::Error> {
+            if s.starts_with("scl/") {
+                let channel_id = s
+                    .strip_prefix("scl/")
+                    .ok_or_else(|| silverpelt::Error::from("Invalid syntax"))?;
+
+                let channel_id = channel_id
+                    .parse()
+                    .map_err(|e| format!("Error while parsing channel id: {}", e))?;
+
+                Ok(Some(Box::new(SingleChannelLockdown(channel_id))))
+            } else {
+                Ok(None)
+            }
+        }
+    }
+
     pub struct SingleChannelLockdown(pub serenity::all::ChannelId);
 
     impl SingleChannelLockdown {
@@ -1297,6 +1230,14 @@ pub mod scl {
 
     #[async_trait]
     impl LockdownMode for SingleChannelLockdown {
+        fn creator(&self) -> Box<dyn CreateLockdownMode> {
+            Box::new(CreateSingleChannelLockdown)
+        }
+
+        fn string_form(&self) -> String {
+            format!("scl/{}", self.0)
+        }
+
         // SCL > TSL as it updates a single channel
         fn specificity(&self) -> usize {
             2

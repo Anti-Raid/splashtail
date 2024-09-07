@@ -18,6 +18,7 @@ indexmap = { version = "2", features = ["serde"] }
 moka = { version = "0.12", features = ["future", "futures-util"] }
 reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls", "rustls-tls-native-roots"] }
 async-trait = "0.1.80"
+dashmap = { version = "5", features = ["serde", "inline", "rayon"] }
 
 # Anti-Raid specific
 silverpelt = { path = "../rust.silverpelt" }
