@@ -399,6 +399,19 @@ pub async fn settings_creator(
         }
     }
 
+    // Send message that we are creating the setting
+    let mut msg = ctx
+        .send(
+            poise::CreateReply::new().embed(
+                serenity::all::CreateEmbed::new()
+                    .title(format!("Creating {}", setting.name))
+                    .description(":hourglass_flowing_sand: Please wait..."),
+            ),
+        )
+        .await?
+        .into_message()
+        .await?;
+
     let mut value = settings_create(
         setting,
         &data.settings_data(cache_http),
@@ -416,7 +429,8 @@ pub async fn settings_creator(
 
     let reply = _create_reply(setting, &value);
 
-    ctx.send(reply).await?;
+    msg.edit(ctx, reply.to_prefix_edit(serenity::all::EditMessage::new()))
+        .await?;
 
     Ok(())
 }
@@ -635,6 +649,19 @@ pub async fn settings_deleter(
         }
     }
 
+    // Send message that we are creating the setting
+    let mut msg = ctx
+        .send(
+            poise::CreateReply::new().embed(
+                serenity::all::CreateEmbed::new()
+                    .title(format!("Deleting {}", setting.name))
+                    .description(":hourglass_flowing_sand: Please wait..."),
+            ),
+        )
+        .await?
+        .into_message()
+        .await?;
+
     let mut value = settings_delete(
         setting,
         &data.settings_data(cache_http),
@@ -652,7 +679,8 @@ pub async fn settings_deleter(
 
     let reply = _create_reply(setting, &value);
 
-    ctx.send(reply).await?;
+    msg.edit(ctx, reply.to_prefix_edit(serenity::all::EditMessage::new()))
+        .await?;
 
     Ok(())
 }
