@@ -1180,8 +1180,6 @@ pub mod tsl {
             data: &serde_json::Value,
             all_handles: &LockdownModeHandles,
         ) -> Result<(), silverpelt::Error> {
-            log::info!("Called can_apply_perfectly");
-
             let old_permissions = Self::from_data(data)?;
 
             for channel in pgc.iter_mut() {

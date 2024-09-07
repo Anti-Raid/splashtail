@@ -551,7 +551,7 @@ async fn main() {
 
     for module in modules() {
         let module_id = module.id;
-        let module_filter = format!("{}=info", module_id);
+        let module_filter = format!("bot_modules_{}=info", module_id);
         default_filter.push(',');
         default_filter.push_str(module_filter.as_str());
     }
