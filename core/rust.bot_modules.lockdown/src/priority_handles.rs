@@ -27,17 +27,25 @@ impl<T: std::hash::Hash + Clone + PartialEq + Eq> PrioritySet<T> {
     /// Removes an element with a priority with priorities removed from back to front
     pub fn remove(&mut self, element: T, priority: usize) {
         if let Some(priorities) = self.elements.get_mut(&element) {
+            let mut removed = false;
+            let mut new_priorities = VecDeque::new();
+
             while let Some(p) = priorities.pop_back() {
-                if p == priority {
-                    break;
+                if p == priority && !removed {
+                    // We've removed an element, so we need to skip this priority
+                    removed = true;
                 } else {
-                    // Reinstate the priority back to where we found it
-                    priorities.push_back(p);
+                    // Reinstate the priority in new_priorities
+                    new_priorities.push_back(p);
                 }
             }
 
-            if priorities.is_empty() {
+            // If the element has no more priorities, remove it
+            // Otherwise, update the element with the new priorities
+            if new_priorities.is_empty() {
                 self.elements.remove(&element);
+            } else {
+                self.elements.insert(element, new_priorities);
             }
         }
     }

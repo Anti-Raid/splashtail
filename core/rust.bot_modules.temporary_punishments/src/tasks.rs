@@ -205,6 +205,19 @@ pub async fn temporary_punishment_task(
                         )
                         .await
                         .map_err(EventError::Serenity),
+                    sting_sources::Action::Timeout => punishment
+                        .entry
+                        .guild_id
+                        .edit_member(
+                            &source_data.cache_http.http,
+                            punishment.entry.user_id,
+                            serenity::all::EditMember::new()
+                                .audit_log_reason(reason.as_str())
+                                .enable_communication(),
+                        )
+                        .await
+                        .map_err(EventError::Serenity)
+                        .map(|_| ()),
                     sting_sources::Action::RemoveAllRoles => punishment
                         .entry
                         .guild_id

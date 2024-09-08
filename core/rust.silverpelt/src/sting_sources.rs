@@ -157,6 +157,7 @@ impl<'de> Deserialize<'de> for StingCreator {
 pub enum Action {
     None,
     Ban,
+    Timeout,
     RemoveAllRoles,
 }
 
@@ -165,6 +166,7 @@ impl std::fmt::Display for Action {
         match self {
             Action::None => write!(f, "none"),
             Action::Ban => write!(f, "ban"),
+            Action::Timeout => write!(f, "timeout"),
             Action::RemoveAllRoles => write!(f, "remove_all_roles"),
         }
     }
@@ -177,6 +179,7 @@ impl std::str::FromStr for Action {
         match s {
             "none" => Ok(Action::None),
             "ban" => Ok(Action::Ban),
+            "timeout" => Ok(Action::Timeout),
             "remove_all_roles" => Ok(Action::RemoveAllRoles),
             _ => Err(format!("Invalid action: {}", s).into()),
         }
@@ -192,6 +195,7 @@ impl Serialize for Action {
         match self {
             Action::None => serializer.serialize_str("none"),
             Action::Ban => serializer.serialize_str("ban"),
+            Action::Timeout => serializer.serialize_str("timeout"),
             Action::RemoveAllRoles => serializer.serialize_str("remove_all_roles"),
         }
     }

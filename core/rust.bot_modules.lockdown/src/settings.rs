@@ -192,6 +192,7 @@ pub static LOCKDOWNS: LazyLock<ConfigOption> = LazyLock::new(|| ConfigOption {
             pre_checks: settings_wrap_precheck(indexmap::indexmap! {}),
             default_pre_checks: settings_wrap_precheck(vec![]),
         },
+        module_settings::common_columns::created_at(),
         /*module_settings::common_columns::created_at(),
         module_settings::common_columns::created_by(),
         module_settings::common_columns::last_updated_at(),
@@ -206,6 +207,7 @@ pub static LOCKDOWNS: LazyLock<ConfigOption> = LazyLock::new(|| ConfigOption {
         OperationType::Create => OperationSpecific {
             corresponding_command: "lockdown lock",
             columns_to_set: indexmap::indexmap! {
+                "created_at" => "{__now}",
                 /*"created_at" => "{__now}",
                 "created_by" => "{__author}",
                 "last_updated_at" => "{__now}",

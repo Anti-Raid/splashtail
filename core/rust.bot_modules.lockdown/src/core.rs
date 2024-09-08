@@ -2,7 +2,7 @@ use crate::priority_handles::PrioritySet;
 use async_trait::async_trait;
 use dashmap::DashMap;
 use serde::{Deserialize, Serialize};
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::sync::{Arc, LazyLock};
 
 pub static CREATE_LOCKDOWN_MODES: LazyLock<DashMap<String, Box<dyn CreateLockdownMode>>> =
@@ -190,6 +190,14 @@ impl LockdownModeHandles {
     }
 }
 
+/// To allow lockdowns to have access to the low-level data of other lockdowns,
+/// this struct contains the roles and channels each lockdown knows about
+pub struct LockdownSharableData {
+    pub role_permissions: HashMap<serenity::all::RoleId, serenity::all::Permissions>,
+    pub channel_permissions:
+        HashMap<serenity::all::ChannelId, Vec<serenity::all::PermissionOverwrite>>,
+}
+
 /// Trait for creating a lockdown mode
 #[async_trait]
 pub trait CreateLockdownMode
@@ -227,6 +235,7 @@ where
         pg: &serenity::all::PartialGuild,
         pgc: &[serenity::all::GuildChannel],
         critical_roles: &HashSet<serenity::all::RoleId>,
+        lockdowns: &[Lockdown],
     ) -> Result<Box<dyn LockdownTestResult>, silverpelt::Error>;
 
     /// Sets up the lockdown mode, returning any data to be stored in database
@@ -236,8 +245,16 @@ where
         pg: &serenity::all::PartialGuild,
         pgc: &[serenity::all::GuildChannel],
         critical_roles: &HashSet<serenity::all::RoleId>,
+        lockdowns: &[Lockdown],
     ) -> Result<serde_json::Value, silverpelt::Error>;
 
+    /// Returns the sharable lockdown data
+    async fn shareable(
+        &self,
+        data: &serde_json::Value,
+    ) -> Result<LockdownSharableData, silverpelt::Error>;
+
+    #[allow(clippy::too_many_arguments)]
     async fn create(
         &self,
         lockdown_data: &LockdownData,
@@ -246,8 +263,10 @@ where
         critical_roles: &HashSet<serenity::all::RoleId>,
         data: &serde_json::Value,
         all_handles: &LockdownModeHandles,
+        lockdowns: &[Lockdown],
     ) -> Result<(), silverpelt::Error>;
 
+    #[allow(clippy::too_many_arguments)]
     async fn revert(
         &self,
         lockdown_data: &LockdownData,
@@ -256,6 +275,7 @@ where
         critical_roles: &HashSet<serenity::all::RoleId>,
         data: &serde_json::Value,
         all_handles: &LockdownModeHandles,
+        lockdowns: &[Lockdown],
     ) -> Result<(), silverpelt::Error>;
 
     async fn handles(
@@ -265,6 +285,7 @@ where
         pgc: &[serenity::all::GuildChannel],
         critical_roles: &HashSet<serenity::all::RoleId>,
         data: &serde_json::Value,
+        lockdowns: &[Lockdown],
     ) -> Result<LockdownModeHandle, silverpelt::Error>;
 }
 
@@ -298,6 +319,7 @@ pub struct Lockdown {
     pub reason: String,
     pub r#type: Box<dyn LockdownMode>,
     pub data: serde_json::Value,
+    pub created_at: chrono::DateTime<chrono::Utc>,
 }
 
 impl Lockdown {
@@ -308,6 +330,72 @@ impl Lockdown {
             "type".to_string() => splashcore_rs::value::Value::String(self.r#type.string_form()),
             "data".to_string() => splashcore_rs::value::Value::from_json(&self.data),
         }
+    }
+
+    pub async fn get_underlying_role_permissions(
+        lockdowns: &[Self],
+        role_id: serenity::all::RoleId,
+    ) -> Option<serenity::all::Permissions> {
+        let mut perms = None;
+
+        // Sort lockdown indexes by creation date with least recent first (reverse)
+        let mut lockdown_idxs: Vec<usize> = (0..lockdowns.len()).collect();
+
+        lockdown_idxs.sort_by(|a, b| {
+            lockdowns[*a]
+                .created_at
+                .cmp(&lockdowns[*b].created_at)
+                .reverse()
+        });
+
+        // Now loop over all lockdowns, and look for channel permissions in shareable data
+        // Because we sorted by creation date, the least recent lockdowns will be checked first
+        // hence ensuring the permissions we get are from before lockdowns
+        for idx in lockdown_idxs {
+            let lockdown = &lockdowns[idx];
+
+            if let Ok(data) = lockdown.r#type.shareable(&lockdown.data).await {
+                if let Some(permissions) = data.role_permissions.get(&role_id) {
+                    perms = Some(*permissions);
+                    break;
+                }
+            }
+        }
+
+        perms
+    }
+
+    pub async fn get_underlying_channel_permissions(
+        lockdowns: &[Self],
+        channel_id: serenity::all::ChannelId,
+    ) -> Option<Vec<serenity::all::PermissionOverwrite>> {
+        let mut perms = None;
+
+        // Sort lockdown indexes by creation date with least recent first (reverse)
+        let mut lockdown_idxs: Vec<usize> = (0..lockdowns.len()).collect();
+
+        lockdown_idxs.sort_by(|a, b| {
+            lockdowns[*a]
+                .created_at
+                .cmp(&lockdowns[*b].created_at)
+                .reverse()
+        });
+
+        // Now loop over all lockdowns, and look for channel permissions in shareable data
+        // Because we sorted by creation date, the least recent lockdowns will be checked first
+        // hence ensuring the permissions we get are from before lockdowns
+        for idx in lockdown_idxs {
+            let lockdown = &lockdowns[idx];
+
+            if let Ok(data) = lockdown.r#type.shareable(&lockdown.data).await {
+                if let Some(permissions) = data.channel_permissions.get(&channel_id) {
+                    perms = Some(permissions.clone());
+                    break;
+                }
+            }
+        }
+
+        perms
     }
 }
 
@@ -324,7 +412,7 @@ impl LockdownSet {
         pool: &sqlx::PgPool,
     ) -> Result<Self, silverpelt::Error> {
         let data = sqlx::query!(
-            "SELECT id, type, data, reason FROM lockdown__guild_lockdowns WHERE guild_id = $1",
+            "SELECT id, type, data, reason, created_at FROM lockdown__guild_lockdowns WHERE guild_id = $1",
             guild_id.to_string(),
         )
         .fetch_all(pool)
@@ -337,6 +425,7 @@ impl LockdownSet {
             let r#type = row.r#type;
             let data = row.data;
             let reason = row.reason;
+            let created_at = row.created_at;
 
             let lockdown_mode = from_lockdown_mode_string(&r#type)?;
 
@@ -345,6 +434,7 @@ impl LockdownSet {
                 r#type: lockdown_mode,
                 data,
                 reason,
+                created_at,
             };
 
             lockdowns.push(lockdown);
@@ -385,6 +475,7 @@ impl LockdownSet {
                     pgc,
                     &self.settings.member_roles,
                     &lockdown.data,
+                    &self.lockdowns,
                 )
                 .await?;
 
@@ -402,8 +493,6 @@ impl LockdownSet {
         lockdown_data: &LockdownData,
         reason: &str,
     ) -> Result<sqlx::types::Uuid, silverpelt::Error> {
-        self.sort();
-
         // Fetch guild+channel info to advance to avoid needing to fetch it on every interaction with the trait
         let mut pg = proxy_support::guild(
             &lockdown_data.cache_http,
@@ -424,7 +513,7 @@ impl LockdownSet {
         // Test new lockdown if required
         if self.settings.require_correct_layout {
             let test_results = lockdown_type
-                .test(lockdown_data, &pg, &pgc, &critical_roles)
+                .test(lockdown_data, &pg, &pgc, &critical_roles, &self.lockdowns)
                 .await?;
 
             if !test_results.can_apply_perfectly() {
@@ -434,26 +523,29 @@ impl LockdownSet {
 
         // Setup the lockdown
         let data = lockdown_type
-            .setup(lockdown_data, &pg, &pgc, &critical_roles)
+            .setup(lockdown_data, &pg, &pgc, &critical_roles, &self.lockdowns)
             .await?;
 
         let current_handles = self.get_handles(lockdown_data, &pg, &pgc).await?;
 
         // TODO: Block redundant handles, this is required until we support getting underlying permissions during a lockdown
-        let new_handle = lockdown_type
+        /*let new_handle = lockdown_type
             .handles(lockdown_data, &pg, &pgc, &critical_roles, &data)
             .await?;
 
         if current_handles.is_redundant(&new_handle, lockdown_type.specificity()) {
             return Err("Lockdown is redundant (all changes made by this lockdown handle are already locked by another handle)".into());
-        }
+        }*/
+
+        let created_at = chrono::Utc::now();
 
         let id = sqlx::query!(
-            "INSERT INTO lockdown__guild_lockdowns (guild_id, type, data, reason) VALUES ($1, $2, $3, $4) RETURNING id",
+            "INSERT INTO lockdown__guild_lockdowns (guild_id, type, data, reason, created_at) VALUES ($1, $2, $3, $4, $5) RETURNING id",
             self.guild_id.to_string(),
             lockdown_type.string_form(),
             &data,
             reason,
+            created_at,
         )
         .fetch_one(&lockdown_data.pool)
         .await?;
@@ -467,6 +559,7 @@ impl LockdownSet {
                 &critical_roles,
                 &data,
                 &current_handles,
+                &self.lockdowns,
             )
             .await?;
 
@@ -476,6 +569,7 @@ impl LockdownSet {
             r#type: lockdown_type,
             data,
             reason: reason.to_string(),
+            created_at,
         });
 
         Ok(id.id)
@@ -487,8 +581,6 @@ impl LockdownSet {
         index: usize,
         lockdown_data: &LockdownData,
     ) -> Result<(), silverpelt::Error> {
-        self.sort();
-
         let lockdown = self.lockdowns.get(index).ok_or_else(|| {
             silverpelt::Error::from("Lockdown index out of bounds (does not exist)")
         })?;
@@ -515,7 +607,14 @@ impl LockdownSet {
         // Remove handle from the set
         let handle = lockdown
             .r#type
-            .handles(lockdown_data, &pg, &pgc, &critical_roles, &lockdown.data)
+            .handles(
+                lockdown_data,
+                &pg,
+                &pgc,
+                &critical_roles,
+                &lockdown.data,
+                &self.lockdowns,
+            )
             .await?;
 
         current_handles.remove_handle(&handle, lockdown.r#type.specificity());
@@ -530,14 +629,15 @@ impl LockdownSet {
                 &critical_roles,
                 &lockdown.data,
                 &current_handles,
+                &self.lockdowns,
             )
             .await?;
 
         // Remove the lockdown from the database
         sqlx::query!(
-            "DELETE FROM lockdown__guild_lockdowns WHERE guild_id = $1 AND type = $2",
+            "DELETE FROM lockdown__guild_lockdowns WHERE guild_id = $1 AND id = $2",
             self.guild_id.to_string(),
-            lockdown.r#type.string_form(),
+            lockdown.id,
         )
         .execute(&lockdown_data.pool)
         .await?;
@@ -585,6 +685,7 @@ impl LockdownSet {
                     &critical_roles,
                     &lockdown.data,
                     &current_handles,
+                    &self.lockdowns,
                 )
                 .await?;
 
@@ -720,6 +821,7 @@ pub mod qsl {
             pg: &serenity::all::PartialGuild,
             _pgc: &[serenity::all::GuildChannel],
             critical_roles: &HashSet<serenity::all::RoleId>,
+            _lockdowns: &[Lockdown], // We dont need to care about other lockdowns
         ) -> Result<Box<dyn LockdownTestResult>, silverpelt::Error> {
             let mut changes_needed = std::collections::HashMap::new();
 
@@ -768,17 +870,38 @@ pub mod qsl {
             pg: &serenity::all::PartialGuild,
             _pgc: &[serenity::all::GuildChannel],
             _critical_roles: &HashSet<serenity::all::RoleId>,
+            lockdowns: &[Lockdown], // We dont need to care about other lockdowns
         ) -> Result<serde_json::Value, silverpelt::Error> {
             let mut map = serde_json::Map::new();
 
             for role in pg.roles.iter() {
+                let mut permissions = role.permissions;
+
+                // Check for an underlying permission overwrite to the channel
+                if let Some(underlying_permissions) =
+                    Lockdown::get_underlying_role_permissions(lockdowns, role.id).await
+                {
+                    permissions = underlying_permissions; // Overwrite the permissions
+                }
+
                 map.insert(
                     role.id.to_string(),
-                    serde_json::Value::String(role.permissions.bits().to_string()),
+                    serde_json::Value::String(permissions.bits().to_string()),
                 );
             }
 
             Ok(serde_json::Value::Object(map))
+        }
+
+        async fn shareable(
+            &self,
+            data: &serde_json::Value,
+        ) -> Result<LockdownSharableData, silverpelt::Error> {
+            let data = Self::from_data(data)?;
+            Ok(LockdownSharableData {
+                role_permissions: data,
+                channel_permissions: HashMap::new(),
+            })
         }
 
         async fn create(
@@ -789,6 +912,7 @@ pub mod qsl {
             critical_roles: &HashSet<serenity::all::RoleId>,
             _data: &serde_json::Value,
             _all_handles: &LockdownModeHandles,
+            _lockdowns: &[Lockdown], // We dont need to care about other lockdowns
         ) -> Result<(), silverpelt::Error> {
             let mut new_roles = Vec::new();
             for role in pg.roles.iter() {
@@ -821,6 +945,7 @@ pub mod qsl {
             critical_roles: &HashSet<serenity::all::RoleId>,
             data: &serde_json::Value,
             _all_handles: &LockdownModeHandles,
+            _lockdowns: &[Lockdown], // We dont need to care about other lockdowns
         ) -> Result<(), silverpelt::Error> {
             let old_permissions = Self::from_data(data)?;
 
@@ -860,6 +985,7 @@ pub mod qsl {
             _pgc: &[serenity::all::GuildChannel],
             critical_roles: &HashSet<serenity::all::RoleId>,
             _data: &serde_json::Value,
+            _lockdowns: &[Lockdown], // We dont need to care about other lockdowns
         ) -> Result<LockdownModeHandle, silverpelt::Error> {
             // QSL locks the critical roles
             Ok(LockdownModeHandle {
@@ -963,6 +1089,7 @@ pub mod tsl {
             _pg: &serenity::all::PartialGuild,
             _pgc: &[serenity::all::GuildChannel],
             _critical_roles: &HashSet<serenity::all::RoleId>,
+            _lockdowns: &[Lockdown],
         ) -> Result<Box<dyn LockdownTestResult>, silverpelt::Error> {
             log::info!("Called test");
             Ok(Box::new(TraditionalLockdownTestResult))
@@ -974,18 +1101,36 @@ pub mod tsl {
             _pg: &serenity::all::PartialGuild,
             pgc: &[serenity::all::GuildChannel],
             _critical_roles: &HashSet<serenity::all::RoleId>,
+            lockdowns: &[Lockdown],
         ) -> Result<serde_json::Value, silverpelt::Error> {
             log::info!("Called setup");
             let mut map = serde_json::Map::new();
 
             for channel in pgc.iter() {
-                map.insert(
-                    channel.id.to_string(),
-                    serde_json::to_value(channel.permission_overwrites.clone())?,
-                );
+                let mut overwrites = channel.permission_overwrites.to_vec();
+
+                // Check for an underlying permission overwrite to the channel
+                if let Some(underlying_overwrite) =
+                    Lockdown::get_underlying_channel_permissions(lockdowns, channel.id).await
+                {
+                    overwrites = underlying_overwrite; // Overwrite the overwrites
+                }
+
+                map.insert(channel.id.to_string(), serde_json::to_value(overwrites)?);
             }
 
             Ok(serde_json::Value::Object(map))
+        }
+
+        async fn shareable(
+            &self,
+            data: &serde_json::Value,
+        ) -> Result<LockdownSharableData, silverpelt::Error> {
+            let data = Self::from_data(data)?;
+            Ok(LockdownSharableData {
+                role_permissions: HashMap::new(),
+                channel_permissions: data,
+            })
         }
 
         async fn create(
@@ -996,6 +1141,7 @@ pub mod tsl {
             critical_roles: &HashSet<serenity::all::RoleId>,
             _data: &serde_json::Value,
             all_handles: &LockdownModeHandles,
+            _lockdowns: &[Lockdown],
         ) -> Result<(), silverpelt::Error> {
             log::info!("Called create");
             for channel in pgc.iter_mut() {
@@ -1085,7 +1231,9 @@ pub mod tsl {
             _critical_roles: &HashSet<serenity::all::RoleId>,
             data: &serde_json::Value,
             all_handles: &LockdownModeHandles,
+            _lockdowns: &[Lockdown],
         ) -> Result<(), silverpelt::Error> {
+            log::info!("Called revert");
             let old_permissions = Self::from_data(data)?;
 
             for channel in pgc.iter_mut() {
@@ -1151,6 +1299,7 @@ pub mod tsl {
             pgc: &[serenity::all::GuildChannel],
             _critical_roles: &HashSet<serenity::all::RoleId>,
             _data: &serde_json::Value,
+            _lockdowns: &[Lockdown],
         ) -> Result<LockdownModeHandle, silverpelt::Error> {
             // TSL locks all channels, but *NOT* roles
             Ok(LockdownModeHandle {
@@ -1252,6 +1401,7 @@ pub mod scl {
             _pg: &serenity::all::PartialGuild,
             _pgc: &[serenity::all::GuildChannel],
             _critical_roles: &HashSet<serenity::all::RoleId>,
+            _lockdowns: &[Lockdown],
         ) -> Result<Box<dyn LockdownTestResult>, silverpelt::Error> {
             Ok(Box::new(SingleChannelLockdownTestResult))
         }
@@ -1262,13 +1412,34 @@ pub mod scl {
             _pg: &serenity::all::PartialGuild,
             pgc: &[serenity::all::GuildChannel],
             _critical_roles: &HashSet<serenity::all::RoleId>,
+            lockdowns: &[Lockdown],
         ) -> Result<serde_json::Value, silverpelt::Error> {
             let channel = pgc
                 .iter()
                 .find(|c| c.id == self.0)
                 .ok_or_else(|| silverpelt::Error::from("Channel not found"))?;
 
-            Ok(serde_json::to_value(channel.permission_overwrites.clone())?)
+            let mut overwrites = channel.permission_overwrites.to_vec();
+
+            // Check for an underlying permission overwrite to the channel
+            if let Some(underlying_overwrite) =
+                Lockdown::get_underlying_channel_permissions(lockdowns, channel.id).await
+            {
+                overwrites = underlying_overwrite; // Overwrite the overwrites
+            }
+
+            Ok(serde_json::to_value(overwrites)?)
+        }
+
+        async fn shareable(
+            &self,
+            data: &serde_json::Value,
+        ) -> Result<LockdownSharableData, silverpelt::Error> {
+            let data = Self::from_data(data)?;
+            Ok(LockdownSharableData {
+                role_permissions: HashMap::new(),
+                channel_permissions: std::iter::once((self.0, data)).collect(),
+            })
         }
 
         async fn create(
@@ -1279,6 +1450,7 @@ pub mod scl {
             critical_roles: &HashSet<serenity::all::RoleId>,
             data: &serde_json::Value,
             all_handles: &LockdownModeHandles,
+            _lockdowns: &[Lockdown],
         ) -> Result<(), silverpelt::Error> {
             if all_handles
                 .is_channel_locked(self.0, self.specificity())
@@ -1332,6 +1504,7 @@ pub mod scl {
             _critical_roles: &HashSet<serenity::all::RoleId>,
             data: &serde_json::Value,
             all_handles: &LockdownModeHandles,
+            _lockdowns: &[Lockdown],
         ) -> Result<(), silverpelt::Error> {
             if all_handles
                 .is_channel_locked(self.0, self.specificity())
@@ -1359,6 +1532,7 @@ pub mod scl {
             _pgc: &[serenity::all::GuildChannel],
             _critical_roles: &HashSet<serenity::all::RoleId>,
             _data: &serde_json::Value,
+            _lockdowns: &[Lockdown],
         ) -> Result<LockdownModeHandle, silverpelt::Error> {
             // SCL locks a single channel
             Ok(LockdownModeHandle {
