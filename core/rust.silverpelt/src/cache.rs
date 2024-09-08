@@ -1,6 +1,7 @@
 use crate::{canonical_module::CanonicalModule, CommandExtendedDataMap, Module};
 use moka::future::Cache;
 use serenity::all::GuildId;
+use std::sync::Arc;
 
 /// The silverpelt cache is a structure that contains the core state for the bot
 pub struct SilverpeltCache {
@@ -15,7 +16,7 @@ pub struct SilverpeltCache {
     /// module_cache is a cache of module id to module
     ///
     /// We use indexmap here to avoid the 'static restriction
-    pub module_cache: indexmap::IndexMap<String, Module>,
+    pub module_cache: indexmap::IndexMap<String, Arc<Module>>,
 
     /// Command ID to module map
     ///
@@ -48,6 +49,8 @@ impl Default for SilverpeltCache {
 
 impl SilverpeltCache {
     pub fn add_module(&mut self, module: Module) {
+        let module = Arc::new(module);
+
         // Add the commands to cache
         for (command, extended_data) in module.commands.iter() {
             self.command_id_module_map
@@ -57,8 +60,9 @@ impl SilverpeltCache {
         }
 
         // Add to canonical cache
+        let module_ref: &Module = &module;
         self.canonical_module_cache
-            .insert(module.id.to_string(), CanonicalModule::from(&module));
+            .insert(module.id.to_string(), CanonicalModule::from(module_ref));
 
         // Add the module to cache
         self.module_cache.insert(module.id.to_string(), module);

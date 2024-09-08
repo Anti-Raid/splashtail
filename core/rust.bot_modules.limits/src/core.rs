@@ -23,6 +23,30 @@ impl sting_sources::StingSource for LimitsUserStingsStingSource {
             | sting_sources::StingSourceFlags::SUPPORTS_DELETE
     }
 
+    async fn count(
+        &self,
+        data: &sting_sources::StingSourceData,
+        filters: sting_sources::StingCountFilters,
+    ) -> Result<usize, silverpelt::Error> {
+        let row = sqlx::query!(
+            "SELECT COUNT(*) FROM limits__user_stings
+            WHERE 
+                ($1::TEXT IS NULL OR guild_id = $1::TEXT) AND 
+                ($2::TEXT IS NULL OR user_id = $2::TEXT) AND (
+                $3::BOOL IS NULL OR 
+                ($3 = true AND expiry < NOW()) OR
+                ($3 = false AND expiry > NOW())
+            )",
+            filters.guild_id.map(|g| g.to_string()),
+            filters.user_id.map(|u| u.to_string()),
+            filters.expired,
+        )
+        .fetch_one(&data.pool)
+        .await?;
+
+        Ok(row.count.unwrap_or(0) as usize)
+    }
+
     async fn fetch(
         &self,
         data: &sting_sources::StingSourceData,

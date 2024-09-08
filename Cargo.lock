@@ -2733,6 +2733,7 @@ dependencies = [
  "chrono",
  "futures-util",
  "indexmap",
+ "moka",
  "proxy_support",
  "reqwest",
  "serde",

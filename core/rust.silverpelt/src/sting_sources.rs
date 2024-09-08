@@ -1,6 +1,10 @@
 use async_trait::async_trait;
 use bitflags::bitflags;
+use module_settings::types::{OperationType, SettingsError};
+use serde::{Deserialize, Serialize};
 use serenity::all::{GuildId, UserId};
+use std::str::FromStr;
+use std::sync::Arc;
 
 bitflags! {
     /// Flags for the sting source
@@ -87,6 +91,26 @@ impl std::str::FromStr for StingState {
     }
 }
 
+// Serde impls for StingState
+impl Serialize for StingState {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::ser::Serializer,
+    {
+        serializer.serialize_str(&format!("{}", self))
+    }
+}
+
+impl<'de> Deserialize<'de> for StingState {
+    fn deserialize<D>(deserializer: D) -> Result<StingState, D::Error>
+    where
+        D: serde::de::Deserializer<'de>,
+    {
+        let s = String::deserialize(deserializer)?;
+        StingState::from_str(&s).map_err(serde::de::Error::custom)
+    }
+}
+
 /// What created the sting
 #[derive(Debug, Clone)]
 pub enum StingCreator {
@@ -94,6 +118,38 @@ pub enum StingCreator {
     User(UserId),
     /// The sting was created by the system
     System,
+}
+
+// Serde impls for StingCreator
+impl Serialize for StingCreator {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::ser::Serializer,
+    {
+        match self {
+            StingCreator::User(user_id) => serializer.serialize_str(&format!("user:{}", user_id)),
+            StingCreator::System => serializer.serialize_str("system"),
+        }
+    }
+}
+
+impl<'de> Deserialize<'de> for StingCreator {
+    fn deserialize<D>(deserializer: D) -> Result<StingCreator, D::Error>
+    where
+        D: serde::de::Deserializer<'de>,
+    {
+        let s = String::deserialize(deserializer)?;
+        if s == "system" {
+            Ok(StingCreator::System)
+        } else {
+            let user_id = s
+                .strip_prefix("user:")
+                .ok_or_else(|| serde::de::Error::custom("Invalid sting creator"))?;
+            Ok(StingCreator::User(
+                user_id.parse().map_err(serde::de::Error::custom)?,
+            ))
+        }
+    }
 }
 
 /// An action taken due to this sting
@@ -127,12 +183,41 @@ impl std::str::FromStr for Action {
     }
 }
 
+// Serde impls for Action
+impl Serialize for Action {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::ser::Serializer,
+    {
+        match self {
+            Action::None => serializer.serialize_str("none"),
+            Action::Ban => serializer.serialize_str("ban"),
+            Action::RemoveAllRoles => serializer.serialize_str("remove_all_roles"),
+        }
+    }
+}
+
+impl<'de> Deserialize<'de> for Action {
+    fn deserialize<D>(deserializer: D) -> Result<Action, D::Error>
+    where
+        D: serde::de::Deserializer<'de>,
+    {
+        let s = String::deserialize(deserializer)?;
+        match s.as_str() {
+            "none" => Ok(Action::None),
+            "ban" => Ok(Action::Ban),
+            "remove_all_roles" => Ok(Action::RemoveAllRoles),
+            _ => Err(serde::de::Error::custom("Invalid action")),
+        }
+    }
+}
+
 /// This struct contains data about a sting
 ///
 /// As multiple modules may use and store stings in their own way,
 /// StingEntry is a common abstraction for the punishment module
 /// to store sting data and reason for presentation to users etc.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[allow(dead_code)]
 pub struct FullStingEntry {
     /// The unique ID of the sting entry
@@ -163,7 +248,7 @@ impl FullStingEntry {
 /// As multiple modules may use and store stings in their own way,
 /// StingEntry is a common abstraction for the punishment module
 /// to store string data and reason for presentation to users etc.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[allow(dead_code)]
 pub struct StingEntry {
     /// The user ID of the user who was stung
@@ -197,12 +282,89 @@ pub struct UpdateStingEntry {
 }
 
 #[derive(Hash, Debug, Default, Clone)]
+pub struct StingCountFilters {
+    pub user_id: Option<UserId>,
+    pub guild_id: Option<GuildId>,
+    pub state: Option<StingState>,
+    pub expired: Option<bool>,
+    pub has_duration: Option<bool>, // Is 'ephemeral' AKA has a duration
+}
+
+impl StingCountFilters {
+    pub fn from_map(
+        src: &indexmap::IndexMap<String, splashcore_rs::value::Value>,
+    ) -> Result<Self, crate::Error> {
+        let mut filters = StingCountFilters::default();
+
+        for (k, v) in src.iter() {
+            match k.as_str() {
+                "user_id" => {
+                    let uid_str = v.as_string().ok_or("Invalid user_id")?;
+                    filters.user_id = Some(uid_str.parse()?);
+                }
+                "guild_id" => {
+                    let gid_str = v.as_string().ok_or("Invalid guild_id")?;
+                    filters.guild_id = Some(gid_str.parse()?);
+                }
+                "state" => {
+                    filters.state =
+                        Some(StingState::from_str(v.as_string().ok_or("Invalid state")?)?);
+                }
+                "expired" => {
+                    filters.expired = Some(v.as_bool().ok_or("Invalid expired")?);
+                }
+                "has_duration" => {
+                    filters.has_duration = Some(v.as_bool().ok_or("Invalid has_duration")?);
+                }
+                _ => continue,
+            }
+        }
+
+        Ok(filters)
+    }
+}
+
+#[derive(Hash, Debug, Default, Clone)]
 pub struct StingFetchFilters {
     pub user_id: Option<UserId>,
     pub guild_id: Option<GuildId>,
     pub state: Option<StingState>,
     pub expired: Option<bool>,
     pub has_duration: Option<bool>, // Is 'ephemeral' AKA has a duration
+}
+
+impl StingFetchFilters {
+    pub fn from_map(
+        src: &indexmap::IndexMap<String, splashcore_rs::value::Value>,
+    ) -> Result<Self, crate::Error> {
+        let mut filters = StingFetchFilters::default();
+
+        for (k, v) in src.iter() {
+            match k.as_str() {
+                "user_id" => {
+                    let uid_str = v.as_string().ok_or("Invalid user_id")?;
+                    filters.user_id = Some(uid_str.parse()?);
+                }
+                "guild_id" => {
+                    let gid_str = v.as_string().ok_or("Invalid guild_id")?;
+                    filters.guild_id = Some(gid_str.parse()?);
+                }
+                "state" => {
+                    filters.state =
+                        Some(StingState::from_str(v.as_string().ok_or("Invalid state")?)?);
+                }
+                "expired" => {
+                    filters.expired = Some(v.as_bool().ok_or("Invalid expired")?);
+                }
+                "has_duration" => {
+                    filters.has_duration = Some(v.as_bool().ok_or("Invalid has_duration")?);
+                }
+                _ => continue,
+            }
+        }
+
+        Ok(filters)
+    }
 }
 
 impl StingFetchFilters {
@@ -293,6 +455,13 @@ where
     /// The flags of the sting source
     fn flags(&self) -> StingSourceFlags;
 
+    /// Returns the count
+    async fn count(
+        &self,
+        data: &StingSourceData,
+        filters: StingCountFilters,
+    ) -> Result<usize, crate::Error>;
+
     /// Fetches sting entries from the source
     async fn fetch(
         &self,
@@ -323,9 +492,10 @@ where
     ) -> Result<(), crate::Error>;
 }
 
-/*
 // Data source for stings
-pub struct StingsDataStore {}
+pub struct StingsDataStore {
+    pub silverpelt_cache: std::sync::Arc<crate::cache::SilverpeltCache>,
+}
 
 #[async_trait]
 impl module_settings::types::CreateDataStore for StingsDataStore {
@@ -336,7 +506,8 @@ impl module_settings::types::CreateDataStore for StingsDataStore {
         author: serenity::all::UserId,
         data: &module_settings::types::SettingsData,
         common_filters: indexmap::IndexMap<String, splashcore_rs::value::Value>,
-    ) -> Result<Box<dyn module_settings::types::DataStore>, module_settings::types::SettingsError> {
+    ) -> Result<Box<dyn module_settings::types::DataStore>, module_settings::types::SettingsError>
+    {
         Ok(Box::new(StingsDataStoreImpl {
             setting_table: setting.table,
             setting_primary_key: setting.primary_key,
@@ -345,20 +516,175 @@ impl module_settings::types::CreateDataStore for StingsDataStore {
             columns: setting.columns.clone(),
             valid_columns: setting.columns.iter().map(|c| c.id.to_string()).collect(),
             pool: data.pool.clone(),
+            reqwest: data.reqwest.clone(),
+            cache_http: data.cache_http.clone(),
+            silverpelt_cache: self.silverpelt_cache.clone(),
             common_filters,
         }))
     }
 }
 
-pub struct PostgresDataStoreImpl {
+pub struct StingsDataStoreImpl {
     // Args needed for queries
     pub pool: sqlx::PgPool,
+    pub reqwest: reqwest::Client,
+    pub cache_http: botox::cache::CacheHttpImpl,
     pub setting_table: &'static str,
     pub setting_primary_key: &'static str,
     pub author: serenity::all::UserId,
     pub guild_id: serenity::all::GuildId,
-    pub columns: Arc<Vec<Column>>,
+    pub columns: Arc<Vec<module_settings::types::Column>>,
     pub valid_columns: std::collections::HashSet<String>, // Derived from columns
     pub common_filters: indexmap::IndexMap<String, splashcore_rs::value::Value>,
+    pub silverpelt_cache: std::sync::Arc<crate::cache::SilverpeltCache>,
 }
-*/
+
+#[async_trait]
+impl module_settings::types::DataStore for StingsDataStoreImpl {
+    fn as_any(&mut self) -> &mut dyn std::any::Any {
+        self
+    }
+
+    async fn start_transaction(&mut self) -> Result<(), SettingsError> {
+        Ok(()) // No-op for our use case
+    }
+
+    async fn commit(&mut self) -> Result<(), SettingsError> {
+        Ok(()) // No-op for our use case
+    }
+
+    async fn columns(&mut self) -> Result<Vec<String>, SettingsError> {
+        Ok(self.columns.iter().map(|c| c.id.to_string()).collect())
+    }
+
+    async fn fetch_all(
+        &mut self,
+        fields: &[String],
+        filters: indexmap::IndexMap<String, splashcore_rs::value::Value>,
+    ) -> Result<Vec<module_settings::state::State>, SettingsError> {
+        let mut states = Vec::new();
+
+        for module in self.silverpelt_cache.module_cache.values() {
+            for source in module.sting_sources.iter() {
+                let entries = source
+                    .fetch(
+                        &StingSourceData {
+                            pool: self.pool.clone(),
+                            reqwest: self.reqwest.clone(),
+                            cache_http: self.cache_http.clone(),
+                            silverpelt_cache: self.silverpelt_cache.clone(),
+                        },
+                        StingFetchFilters::from_map(&filters).map_err(|e| {
+                            SettingsError::Generic {
+                                message: format!("Failed to parse filters: {}", e),
+                                src: "fetch_all".to_string(),
+                                typ: "internal".to_string(),
+                            }
+                        })?,
+                    )
+                    .await
+                    .map_err(|e| SettingsError::Generic {
+                        message: format!("Failed to fetch stings: {}", e),
+                        src: "fetch_all".to_string(),
+                        typ: "internal".to_string(),
+                    })?;
+
+                for entry in entries {
+                    let mut state = module_settings::state::State::default();
+
+                    let serde_json::Value::Object(obj) = serde_json::to_value(entry.entry)
+                        .map_err(|e| SettingsError::Generic {
+                            message: format!("Failed to serialize sting entry: {}", e),
+                            src: "fetch_all".to_string(),
+                            typ: "internal".to_string(),
+                        })?
+                    else {
+                        return Err(SettingsError::Generic {
+                            message: "Failed to serialize sting entry".to_string(),
+                            src: "fetch_all".to_string(),
+                            typ: "internal".to_string(),
+                        });
+                    };
+
+                    for (k, v) in obj {
+                        if !fields.is_empty() && !fields.contains(&k) {
+                            continue;
+                        }
+
+                        state
+                            .state
+                            .insert(k, splashcore_rs::value::Value::from_json(&v));
+                    }
+
+                    states.push(state);
+                }
+            }
+        }
+
+        Ok(states)
+    }
+
+    async fn matching_entry_count(
+        &mut self,
+        filters: indexmap::IndexMap<String, splashcore_rs::value::Value>,
+    ) -> Result<usize, SettingsError> {
+        let mut count = 0;
+
+        for module in self.silverpelt_cache.module_cache.values() {
+            for source in module.sting_sources.iter() {
+                count += source
+                    .count(
+                        &StingSourceData {
+                            pool: self.pool.clone(),
+                            reqwest: self.reqwest.clone(),
+                            cache_http: self.cache_http.clone(),
+                            silverpelt_cache: self.silverpelt_cache.clone(),
+                        },
+                        StingCountFilters::from_map(&filters).map_err(|e| {
+                            SettingsError::Generic {
+                                message: format!("Failed to parse filters: {}", e),
+                                src: "matching_entry_count".to_string(),
+                                typ: "internal".to_string(),
+                            }
+                        })?,
+                    )
+                    .await
+                    .map_err(|e| SettingsError::Generic {
+                        message: format!("Failed to count stings: {}", e),
+                        src: "matching_entry_count".to_string(),
+                        typ: "internal".to_string(),
+                    })?;
+            }
+        }
+
+        Ok(count)
+    }
+
+    async fn create_entry(
+        &mut self,
+        _entry: indexmap::IndexMap<String, splashcore_rs::value::Value>,
+    ) -> Result<module_settings::state::State, SettingsError> {
+        Err(SettingsError::OperationNotSupported {
+            operation: OperationType::Create,
+        })
+    }
+
+    async fn update_matching_entries(
+        &mut self,
+        _filters: indexmap::IndexMap<String, splashcore_rs::value::Value>,
+        _entry: indexmap::IndexMap<String, splashcore_rs::value::Value>,
+    ) -> Result<(), SettingsError> {
+        Err(SettingsError::OperationNotSupported {
+            operation: OperationType::Update,
+        })
+    }
+
+    async fn delete_matching_entries(
+        &mut self,
+        _filters: indexmap::IndexMap<String, splashcore_rs::value::Value>,
+    ) -> Result<(), SettingsError> {
+        Err(SettingsError::OperationNotSupported {
+            operation: OperationType::Delete,
+        })
+    }
+}

@@ -358,12 +358,8 @@ impl DataStore for LockdownDataStoreImpl {
         _filters: indexmap::IndexMap<String, splashcore_rs::value::Value>,
         _entry: indexmap::IndexMap<String, splashcore_rs::value::Value>,
     ) -> Result<(), SettingsError> {
-        Err(SettingsError::Generic {
-            message:
-                "Internal Error: Lockdown data store does not support `update_matching_entries`"
-                    .to_string(),
-            src: "lockdown_update_matching_entries".to_string(),
-            typ: "internal".to_string(),
+        Err(SettingsError::OperationNotSupported {
+            operation: OperationType::Update
         })
     }
 
