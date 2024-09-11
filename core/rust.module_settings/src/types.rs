@@ -7,6 +7,7 @@ pub struct SettingsData {
     pub reqwest: reqwest::Client,
     pub object_store: Arc<splashcore_rs::objectstore::ObjectStore>,
     pub cache_http: botox::cache::CacheHttpImpl,
+    pub extra_data: Vec<(usize, Arc<(dyn std::any::Any + Send + Sync)>)>, // Internally, all extra data is represented as slots with each slot having a unique usize id
     pub permodule_executor: Box<dyn splashcore_rs::permodule_functions::PermoduleFunctionExecutor>,
 }
 

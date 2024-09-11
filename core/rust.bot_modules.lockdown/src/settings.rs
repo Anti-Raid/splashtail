@@ -239,6 +239,7 @@ impl CreateDataStore for LockdownDataStore {
             inner: (PostgresDataStore {})
                 .create_impl(setting, guild_id, author, data, common_filters)
                 .await?,
+            cache: silverpelt::data::Data::silverpelt_cache(data),
             lockdown_data: super::core::LockdownData::from_settings_data(data),
         }))
     }
@@ -246,6 +247,7 @@ impl CreateDataStore for LockdownDataStore {
 
 pub struct LockdownDataStoreImpl {
     inner: PostgresDataStoreImpl,
+    cache: std::sync::Arc<silverpelt::cache::SilverpeltCache>,
     lockdown_data: super::core::LockdownData,
 }
 
@@ -286,6 +288,20 @@ impl DataStore for LockdownDataStoreImpl {
         &mut self,
         entry: indexmap::IndexMap<String, splashcore_rs::value::Value>,
     ) -> Result<module_settings::state::State, SettingsError> {
+        if !silverpelt::module_config::is_module_enabled(&self.cache, &self.inner.pool, self.inner.guild_id, "lockdown")
+            .await
+            .map_err(|e| SettingsError::Generic {
+                message: format!("Error while checking if module is enabled: {}", e),
+                src: "lockdown_create".to_string(),
+                typ: "value_error".to_string(),
+            })? {
+            return Err(SettingsError::Generic {
+                message: "Lockdown module is not enabled".to_string(),
+                src: "lockdown_create".to_string(),
+                typ: "value_error".to_string(),
+            });
+        }
+        
         let Some(splashcore_rs::value::Value::String(typ)) = entry.get("type") else {
             return Err(SettingsError::MissingOrInvalidField {
                 field: "type".to_string(),
@@ -369,6 +385,20 @@ impl DataStore for LockdownDataStoreImpl {
         &mut self,
         filters: indexmap::IndexMap<String, splashcore_rs::value::Value>,
     ) -> Result<(), SettingsError> {
+        if !silverpelt::module_config::is_module_enabled(&self.cache, &self.inner.pool, self.inner.guild_id, "lockdown")
+        .await
+        .map_err(|e| SettingsError::Generic {
+            message: format!("Error while checking if module is enabled: {}", e),
+            src: "lockdown_create".to_string(),
+            typ: "value_error".to_string(),
+        })? {
+        return Err(SettingsError::Generic {
+            message: "Lockdown module is not enabled".to_string(),
+            src: "lockdown_create".to_string(),
+            typ: "value_error".to_string(),
+        });
+    }
+        
         for (k, _) in filters.iter() {
             if *k != self.inner.setting_primary_key {
                 return Err(

@@ -497,9 +497,7 @@ where
 }
 
 // Data source for stings
-pub struct StingsDataStore {
-    pub silverpelt_cache: std::sync::Arc<crate::cache::SilverpeltCache>,
-}
+pub struct StingsDataStore {}
 
 #[async_trait]
 impl module_settings::types::CreateDataStore for StingsDataStore {
@@ -522,7 +520,7 @@ impl module_settings::types::CreateDataStore for StingsDataStore {
             pool: data.pool.clone(),
             reqwest: data.reqwest.clone(),
             cache_http: data.cache_http.clone(),
-            silverpelt_cache: self.silverpelt_cache.clone(),
+            silverpelt_cache: crate::data::Data::silverpelt_cache(data),
             common_filters,
         }))
     }

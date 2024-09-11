@@ -18,6 +18,8 @@ pub struct Data {
 }
 
 impl Data {
+    const SILVERPELT_CACHE_KEY_ID: usize = 0;
+
     /// Given the Data and a cache_http, returns the settings data
     pub fn settings_data(
         &self,
@@ -28,8 +30,25 @@ impl Data {
             reqwest: self.reqwest.clone(),
             object_store: self.object_store.clone(),
             cache_http,
+            extra_data: vec![(Self::SILVERPELT_CACHE_KEY_ID, self.silverpelt_cache.clone())],
             permodule_executor: self.props.permodule_executor(),
         }
+    }
+
+    /// Given a settings data, return the silverpelt cache
+    pub fn silverpelt_cache(
+        settings_data: &module_settings::types::SettingsData,
+    ) -> Arc<crate::cache::SilverpeltCache> {
+        for (slot, data) in &settings_data.extra_data {
+            if slot == &Self::SILVERPELT_CACHE_KEY_ID {
+                return data
+                    .downcast_ref::<Arc<crate::cache::SilverpeltCache>>()
+                    .unwrap()
+                    .clone();
+            }
+        }
+
+        panic!("Silverpelt cache not found in settings data");
     }
 }
 
