@@ -8,6 +8,7 @@ use serenity::all::{
 };
 use serenity::utils::shard_id;
 use silverpelt::jobserver::{embed as embed_task, get_icon_of_state};
+use silverpelt::sting_sources::StingCreator;
 use silverpelt::Context;
 use silverpelt::Error;
 use splashcore_rs::jobserver;
@@ -276,7 +277,7 @@ pub async fn prune_user(
             bot_modules_punishments::core::trigger_punishment(
                 &sctx,
                 guild_id,
-                user.id,
+                StingCreator::User(user.id),
                 std::collections::HashSet::new(),
             )
             .await
@@ -518,7 +519,7 @@ pub async fn kick(
             bot_modules_punishments::core::trigger_punishment(
                 &sctx,
                 guild_id,
-                member.user.id,
+                StingCreator::User(member.user.id),
                 std::collections::HashSet::new(),
             )
             .await
@@ -667,7 +668,7 @@ pub async fn ban(
             bot_modules_punishments::core::trigger_punishment(
                 &sctx,
                 guild_id,
-                member.id,
+                StingCreator::User(member.id),
                 std::collections::HashSet::new(),
             )
             .await
@@ -821,7 +822,7 @@ pub async fn tempban(
             bot_modules_punishments::core::trigger_punishment(
                 &sctx,
                 guild_id,
-                member.id,
+                StingCreator::User(member.id),
                 std::collections::HashSet::new(),
             )
             .await
@@ -959,7 +960,7 @@ pub async fn unban(
             bot_modules_punishments::core::trigger_punishment(
                 &sctx,
                 guild_id,
-                user.id,
+                StingCreator::User(user.id),
                 std::collections::HashSet::new(),
             )
             .await
@@ -1126,7 +1127,7 @@ pub async fn timeout(
             bot_modules_punishments::core::trigger_punishment(
                 &sctx,
                 guild_id,
-                member.user.id,
+                StingCreator::User(member.user.id),
                 std::collections::HashSet::new(),
             )
             .await

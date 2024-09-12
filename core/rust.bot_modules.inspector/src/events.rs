@@ -4,6 +4,7 @@ use super::types::{
 };
 use proxy_support::{guild, member_in_guild};
 use serenity::all::FullEvent;
+use silverpelt::sting_sources::StingCreator;
 use silverpelt::Error;
 use silverpelt::{module_config::is_module_enabled, EventHandlerContext};
 
@@ -82,6 +83,15 @@ pub async fn event_listener(ectx: &EventHandlerContext) -> Result<(), Error> {
                         chrono::Utc::now() + chrono::Duration::seconds(config.sting_retention as i64),
                     )
                     .execute(&data.pool)
+                    .await?;
+
+                    // Trigger punishment
+                    bot_modules_punishments::core::trigger_punishment(
+                        &ctx,
+                        ectx.guild_id,
+                        StingCreator::User(new_message.author.id),
+                        std::collections::HashSet::new(),
+                    )
                     .await?;
                 }
             }

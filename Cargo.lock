@@ -526,6 +526,7 @@ version = "0.1.0"
 dependencies = [
  "bitflags 2.6.0",
  "bot_modules_auditlogs",
+ "bot_modules_punishments",
  "botox",
  "chrono",
  "dashmap",

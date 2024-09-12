@@ -112,7 +112,7 @@ impl<'de> Deserialize<'de> for StingState {
 }
 
 /// What created the sting
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 pub enum StingCreator {
     /// The sting was created by a user
     User(UserId),

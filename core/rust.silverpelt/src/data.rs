@@ -42,9 +42,9 @@ impl Data {
         for (slot, data) in &settings_data.extra_data {
             if slot == &Self::SILVERPELT_CACHE_KEY_ID {
                 return data
-                    .downcast_ref::<Arc<crate::cache::SilverpeltCache>>()
-                    .unwrap()
-                    .clone();
+                    .clone()
+                    .downcast::<crate::cache::SilverpeltCache>()
+                    .expect("Silverpelt cache not found in settings data [downcast failure]");
             }
         }
 

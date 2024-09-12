@@ -3,102 +3,49 @@ use serde::{Deserialize, Serialize};
 use serenity::all::{EditMember, GuildId, RoleId, Timestamp, UserId};
 use silverpelt::module_config::is_module_enabled;
 use silverpelt::sting_sources::{self, FullStingEntry, StingFetchFilters};
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use strum_macros::{Display, EnumString, VariantNames};
 
-/// This struct is a wrapper around a sting entry that has been consolidated
+pub type StingEntryMap = HashMap<String, Vec<FullStingEntry>>;
+
+/// Returns all sting entries that a server has. This can be useful when triggering punishments to users
+/// or just showing them a user friendly list of all the stings
 #[allow(dead_code)]
-pub struct ConsolidatedStingEntry {
-    pub source_id: String,
-    pub entry: FullStingEntry,
-}
+pub async fn get_consolidated_sting_entries(
+    ctx: &serenity::all::Context,
+    guild_id: GuildId,
+    filters: Option<StingFetchFilters>,
+) -> Result<StingEntryMap, silverpelt::Error> {
+    let source_data = sting_sources::StingSourceData::from_ctx(ctx);
 
-/// This struct is a wrapper around a list of consolidated sting entries
-pub struct ConsolidatedStingEntries {
-    /// The list of consolidated sting entries
-    pub entries: Vec<ConsolidatedStingEntry>,
-
-    // The total sting count, is determined automatically on calls to sting_count()
-    sting_count: Option<i32>,
-}
-
-impl ConsolidatedStingEntries {
-    /// Returns the total number of stings in the list
-    ///
-    /// Note that this function caches the result
-    /// so calling it multiple times will not result in
-    /// a new sting count calculation
-    pub fn sting_count(&mut self) -> i32 {
-        if let Some(count) = self.sting_count {
-            return count;
-        }
-
-        let mut total_count: i32 = 0;
-        for entry in &self.entries {
-            if entry.entry.is_expired() {
-                continue;
-            }
-
-            let count = entry.entry.entry.stings;
-            total_count += count;
-        }
-
-        self.sting_count = Some(total_count);
-        total_count
+    if !is_module_enabled(
+        &source_data.silverpelt_cache,
+        &source_data.pool,
+        guild_id,
+        "punishments",
+    )
+    .await?
+    {
+        // Punishments module is not enabled
+        return Err("Punishments module is not enabled".into());
     }
 
-    /// Returns all sting entries that a user has. This can be useful when triggering punishments to users
-    /// or just showing them a user friendly list of all the stings they have.
-    #[allow(dead_code)]
-    pub async fn get_entries_for_guild_user(
-        ctx: &serenity::all::Context,
-        guild_id: GuildId,
-        user_id: UserId,
-    ) -> Result<Self, silverpelt::Error> {
-        let source_data = sting_sources::StingSourceData::from_ctx(ctx);
+    let filters = filters.unwrap_or(StingFetchFilters {
+        guild_id: Some(guild_id),
+        ..Default::default()
+    });
 
-        if !is_module_enabled(
-            &source_data.silverpelt_cache,
-            &source_data.pool,
-            guild_id,
-            "punishments",
-        )
-        .await?
-        {
-            // Punishments module is not enabled
-            return Err("Punishments module is not enabled".into());
+    let mut stings = HashMap::new();
+
+    for (_, module) in source_data.silverpelt_cache.module_cache.iter() {
+        for source in module.sting_sources.iter() {
+            let entries = source.fetch(&source_data, filters.clone()).await?;
+
+            stings.insert(source.id(), entries);
         }
-
-        let mut stings = vec![];
-
-        for (_, module) in source_data.silverpelt_cache.module_cache.iter() {
-            for source in module.sting_sources.iter() {
-                let entries = source
-                    .fetch(
-                        &source_data,
-                        StingFetchFilters {
-                            guild_id: Some(guild_id),
-                            user_id: Some(user_id),
-                            expired: Some(false),
-                            ..Default::default()
-                        },
-                    )
-                    .await?;
-
-                for entry in entries {
-                    stings.push(ConsolidatedStingEntry {
-                        source_id: source.id(),
-                        entry,
-                    });
-                }
-            }
-        }
-
-        Ok(Self {
-            entries: stings,
-            sting_count: None,
-        })
     }
+
+    Ok(stings)
 }
 
 /// This struct stores a guild punishment that can then be used to trigger punishments
@@ -119,6 +66,7 @@ pub struct GuildPunishment {
 /// to make things easier when coding punishments
 ///
 /// Note that the guild punishment list should not be modified directly
+#[derive(Serialize, Deserialize, Clone)]
 pub struct GuildPunishmentList {
     punishments: Vec<GuildPunishment>,
 }
@@ -276,15 +224,16 @@ impl Action {
         self.standing() <= other.standing()
     }
 
-    /// Attempts to carry out the given action on a given user (ID)
+    /// Attempts to carry out the given action on a user
+    ///
     /// TODO: Improve audit log reasons
-    /// TODO: Allow duration on ban/removeallroles as well
     pub async fn execute(
         &self,
         ctx: &serenity::all::Context,
         punishment: &GuildPunishment,
         guild_id: GuildId,
         user_id: UserId,
+        _trigger: sting_sources::StingCreator,
     ) -> Result<Option<String>, silverpelt::Error> {
         let data = ctx.data::<silverpelt::data::Data>();
         let cache_http = botox::cache::CacheHttpImpl::from_ctx(ctx);
@@ -297,11 +246,18 @@ impl Action {
             return Err("Bot not found".into());
         };
 
+        if user_id == bot_userid {
+            return Err("Bot cannot be punished".into());
+        }
+
         let Some(mut user) = member_in_guild(&cache_http, &data.reqwest, guild_id, user_id).await?
         else {
-            return Err("User not found".into());
+            return Ok(None);
         };
 
+        // Handle modifiers
+        //
+        // Modifiers are used to limit/expand the scope of a punishment
         for modifier in &punishment.modifiers {
             if modifier.is_empty() {
                 continue;
@@ -399,32 +355,63 @@ impl Action {
     }
 }
 
+pub fn get_per_user_sting_counts(sting_entries_map: &StingEntryMap) -> HashMap<UserId, i32> {
+    // TODO: Allow scoping punishments based on sting source
+
+    let mut per_user_sting_counts = HashMap::new();
+
+    let mut total_system_punishments = 0;
+    for (_src, entries) in sting_entries_map {
+        for entry in entries {
+            match entry.entry.creator {
+                sting_sources::StingCreator::User(user_id) => {
+                    let count = per_user_sting_counts.entry(user_id).or_insert(0);
+                    *count += 1;
+                }
+                sting_sources::StingCreator::System => {
+                    total_system_punishments += 1;
+                }
+            }
+        }
+    }
+
+    // Add the total system punishments to all users
+    for (_, count) in per_user_sting_counts.iter_mut() {
+        *count += total_system_punishments;
+    }
+
+    per_user_sting_counts
+}
+
 pub async fn trigger_punishment(
     ctx: &serenity::all::Context,
     guild_id: GuildId,
-    user_id: UserId,
+    creator: sting_sources::StingCreator,
     ignore_actions: HashSet<Action>,
 ) -> Result<(), silverpelt::Error> {
-    let mut sting_entries =
-        ConsolidatedStingEntries::get_entries_for_guild_user(ctx, guild_id, user_id).await?;
-    let sting_count = sting_entries.sting_count();
+    let sting_entries = get_consolidated_sting_entries(ctx, guild_id, None).await?;
 
-    log::debug!("User {} has {} stings", user_id, sting_count);
+    let punishments = GuildPunishmentList::guild(ctx, guild_id).await?;
 
-    let punishments = GuildPunishmentList::guild(ctx, guild_id)
-        .await?
-        .filter(sting_count);
-    let apply_punishments = punishments.get_dominating();
+    let per_user_sting_counts = get_per_user_sting_counts(&sting_entries);
 
-    for punishment in apply_punishments {
-        if ignore_actions.contains(&punishment.action) {
-            continue;
+    async {}.await; // Insert await point
+
+    for (user_id, sting_count) in per_user_sting_counts {
+        let punishments = punishments.clone().filter(sting_count.try_into()?);
+
+        let apply_punishments = punishments.get_dominating();
+
+        for punishment in apply_punishments {
+            if ignore_actions.contains(&punishment.action) {
+                continue;
+            }
+
+            punishment
+                .action
+                .execute(ctx, punishment, guild_id, user_id, creator)
+                .await?;
         }
-
-        punishment
-            .action
-            .execute(ctx, punishment, guild_id, user_id)
-            .await?;
     }
 
     Ok(())
