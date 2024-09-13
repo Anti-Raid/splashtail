@@ -132,6 +132,12 @@ pub fn module() -> silverpelt::Module {
             ),
         ],
         sting_sources: vec![std::sync::Arc::new(core::ModerationActionsStingSource)],
+        punishment_actions: vec![
+            std::sync::Arc::new(core::punishment_actions::CreateTimeoutAction),
+            std::sync::Arc::new(core::punishment_actions::CreateKickAction),
+            std::sync::Arc::new(core::punishment_actions::CreateBanAction),
+            std::sync::Arc::new(core::punishment_actions::CreateRemoveAllRolesAction),
+        ],
         ..Default::default()
     }
 }

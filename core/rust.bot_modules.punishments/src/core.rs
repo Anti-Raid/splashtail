@@ -1,213 +1,9 @@
-use async_trait::async_trait;
-use dashmap::DashMap;
 use proxy_support::{guild, member_in_guild};
-use serde::{Deserialize, Serialize};
-use serenity::all::{EditMember, GuildId, Timestamp, UserId};
+use serenity::all::{GuildId, RoleId, UserId};
 use silverpelt::module_config::is_module_enabled;
+use silverpelt::punishments::*;
 use silverpelt::sting_sources::{self, FullStingEntry, StingFetchFilters};
 use std::collections::HashMap;
-use std::sync::{Arc, LazyLock};
-
-pub static PUNISHMENT_ACTIONS: LazyLock<DashMap<String, Box<dyn CreatePunishmentAction>>> =
-    LazyLock::new(|| {
-        let map: DashMap<String, Box<dyn CreatePunishmentAction>> = DashMap::new();
-
-        // Default punishment actions
-        map.insert(
-            "timeout".to_string(),
-            Box::new(timeout::CreateTimeoutAction),
-        );
-        map.insert("kick".to_string(), Box::new(kick::CreateKickAction));
-        map.insert("ban".to_string(), Box::new(ban::CreateBanAction));
-        map.insert(
-            "remove_all_roles".to_string(),
-            Box::new(remove_all_roles::CreateRemoveAllRolesAction),
-        );
-
-        map
-    });
-
-pub struct PunishmentActionData {
-    pub cache_http: botox::cache::CacheHttpImpl,
-    pub pool: sqlx::PgPool,
-    pub reqwest: reqwest::Client,
-    pub object_store: Arc<splashcore_rs::objectstore::ObjectStore>,
-}
-
-/// Trait for creating a punishment action
-#[async_trait]
-pub trait CreatePunishmentAction
-where
-    Self: Send + Sync,
-{
-    /// Name of the action
-    fn name(&self) -> &'static str;
-
-    /// Returns the syntax for the action
-    ///
-    /// E.g. `ban` for banning a user
-    fn syntax(&self) -> &'static str;
-
-    /// Given the string form of the action, returns the action
-    fn to_punishment_action(&self, s: &str) -> Result<Option<PunishmentAction>, silverpelt::Error>;
-}
-
-/// Display impl for CreatePunishmentAction
-impl std::fmt::Display for dyn CreatePunishmentAction {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{} ({})", self.name(), self.syntax())
-    }
-}
-
-pub enum PunishmentAction {
-    User(Box<dyn PunishmentUserAction>),
-    Global(Box<dyn PunishmentGlobalAction>),
-}
-
-impl PunishmentAction {
-    pub fn creator(&self) -> Box<dyn CreatePunishmentAction> {
-        match self {
-            Self::User(action) => action.creator(),
-            Self::Global(action) => action.creator(),
-        }
-    }
-
-    pub fn string_form(&self) -> String {
-        match self {
-            Self::User(action) => action.string_form(),
-            Self::Global(action) => action.string_form(),
-        }
-    }
-}
-
-/// Display impl for PunishmentAction
-impl std::fmt::Display for PunishmentAction {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::User(action) => write!(f, "{}", action),
-            Self::Global(action) => write!(f, "{}", action),
-        }
-    }
-}
-
-#[async_trait]
-pub trait PunishmentUserAction
-where
-    Self: Send + Sync,
-{
-    /// Returns the creator for the punishment action
-    fn creator(&self) -> Box<dyn CreatePunishmentAction>;
-
-    /// Returns the string form of the punishment action
-    fn string_form(&self) -> String;
-
-    /// Applies a punishment to the target
-    async fn create(
-        &self,
-        data: &PunishmentActionData,
-        member: &mut serenity::all::Member,
-        bot_member: &mut serenity::all::Member,
-        applied_punishments: &[GuildPunishment],
-    ) -> Result<(), silverpelt::Error>;
-
-    /// Attempts to revert a punishment from the target
-    async fn revert(
-        &self,
-        data: &PunishmentActionData,
-        member: &mut serenity::all::Member,
-        bot_member: &mut serenity::all::Member,
-        applied_punishments: &[GuildPunishment],
-    ) -> Result<(), silverpelt::Error>;
-}
-
-/// Display impl for PunishmentUserAction
-impl std::fmt::Display for dyn PunishmentUserAction {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "{} ({}) [per-user]",
-            self.creator().name(),
-            self.string_form()
-        )
-    }
-}
-
-#[async_trait]
-pub trait PunishmentGlobalAction
-where
-    Self: Send + Sync,
-{
-    /// Returns the creator for the punishment action
-    fn creator(&self) -> Box<dyn CreatePunishmentAction>;
-
-    /// Returns the string form of the punishment action
-    fn string_form(&self) -> String;
-
-    /// Applies a punishment
-    async fn create(
-        &self,
-        data: &PunishmentActionData,
-        partial_guild: &mut serenity::all::PartialGuild,
-        bot_member: &mut serenity::all::Member,
-        applied_punishments: &[GuildPunishment],
-    ) -> Result<(), silverpelt::Error>;
-
-    /// Attempts to revert a punishment from the target
-    async fn revert(
-        &self,
-        data: &PunishmentActionData,
-        partial_guild: &mut serenity::all::PartialGuild,
-        bot_member: &mut serenity::all::Member,
-        applied_punishments: &[GuildPunishment],
-    ) -> Result<(), silverpelt::Error>;
-}
-
-/// Display impl for PunishmentGlobalAction
-impl std::fmt::Display for dyn PunishmentGlobalAction {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "{} ({}) [system]",
-            self.creator().name(),
-            self.string_form()
-        )
-    }
-}
-
-/// Given a string, returns the punishment action
-pub fn from_punishment_action_string(s: &str) -> Result<PunishmentAction, silverpelt::Error> {
-    for pair in PUNISHMENT_ACTIONS.iter() {
-        let creator = pair.value();
-        if let Some(m) = creator.to_punishment_action(s)? {
-            return Ok(m);
-        }
-    }
-
-    Err("Unknown punishment".into())
-}
-
-/// Serde serialization for PunishmentAction
-impl Serialize for PunishmentAction {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: serde::Serializer,
-    {
-        self.string_form().serialize(serializer)
-    }
-}
-
-/// Serde deserialization for PunishmentAction
-impl<'de> Deserialize<'de> for PunishmentAction {
-    fn deserialize<D>(deserializer: D) -> Result<PunishmentAction, D::Error>
-    where
-        D: serde::Deserializer<'de>,
-    {
-        let s = String::deserialize(deserializer)?;
-
-        // Call `from_lockdown_mode_string` to get the lockdown mode
-        from_punishment_action_string(&s).map_err(serde::de::Error::custom)
-    }
-}
 
 pub type StingEntryMap = HashMap<String, Vec<FullStingEntry>>;
 
@@ -251,25 +47,11 @@ pub async fn get_consolidated_sting_entries(
     Ok(stings)
 }
 
-/// This struct stores a guild punishment that can then be used to trigger punishments
-/// on a user through the bot
-#[derive(Serialize, Deserialize, Clone)]
-pub struct GuildPunishment {
-    pub id: String,
-    pub guild_id: GuildId,
-    pub creator: UserId,
-    pub stings: i32,
-    pub action: Arc<PunishmentAction>,
-    pub duration: Option<i32>,
-    pub modifiers: Vec<String>,
-    pub created_at: chrono::DateTime<chrono::Utc>,
-}
-
 /// A guild punishment list is internally a Vec<GuildPunishment> but has special methods
 /// to make things easier when coding punishments
 ///
 /// Note that the guild punishment list should not be modified directly
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Clone)]
 pub struct GuildPunishmentList {
     punishments: Vec<GuildPunishment>,
 }
@@ -281,12 +63,16 @@ impl GuildPunishmentList {
         guild_id: GuildId,
     ) -> Result<Self, silverpelt::Error> {
         let data = ctx.data::<silverpelt::data::Data>();
+
+        let actions_map =
+            silverpelt::punishments::get_punishment_actions_for_guild(guild_id, &data).await?;
+
         let rec = sqlx::query!(
-            "SELECT id, guild_id, creator, stings, action, modifiers, created_at, EXTRACT(seconds FROM duration)::integer AS duration FROM punishments__guild_punishment_list WHERE guild_id = $1",
-            guild_id.to_string(),
-        )
-        .fetch_all(&data.pool)
-        .await?;
+                "SELECT id, guild_id, creator, stings, action, modifiers, created_at, EXTRACT(seconds FROM duration)::integer AS duration FROM punishments__guild_punishment_list WHERE guild_id = $1",
+                guild_id.to_string(),
+            )
+            .fetch_all(&data.pool)
+            .await?;
 
         let mut punishments = vec![];
 
@@ -297,7 +83,7 @@ impl GuildPunishmentList {
                 creator: row.creator.parse::<UserId>()?,
                 stings: row.stings,
                 action: {
-                    let action = from_punishment_action_string(&row.action);
+                    let action = from_punishment_action_string(&actions_map, &row.action);
 
                     let Ok(action) = action else {
                         continue; // Skip this punishment if the action is not found
@@ -448,6 +234,52 @@ pub async fn trigger_punishment(
         let punishments = punishments.filter(sting_count.try_into()?);
 
         for punishment in punishments.iter() {
+            let mut modifier_match = None;
+            for modifier in &punishment.modifiers {
+                if modifier.is_empty() {
+                    continue;
+                }
+
+                let negator = modifier.chars().nth(0).unwrap_or('-') == '-';
+                let splitted = modifier.splitn(2, ':').collect::<Vec<&str>>();
+
+                let (modifier_type, modifier_id) = match splitted[..] {
+                    [a, b] => (a, b),
+                    [a] => (a, ""),
+                    _ => continue,
+                };
+
+                let matches_modifier = match modifier_type {
+                    "r" => {
+                        let role_id = modifier_id.parse::<RoleId>().unwrap_or(RoleId::new(0));
+                        user.roles.contains(&role_id)
+                    }
+                    "u" => {
+                        let user_id = modifier_id.parse::<UserId>().unwrap_or(UserId::new(0));
+                        user.user.id == user_id
+                    }
+                    _ => false,
+                };
+
+                if negator && matches_modifier {
+                    modifier_match = Some("User matches a negated modifier".to_string());
+                    break;
+                } else if !negator && !matches_modifier {
+                    modifier_match = Some("User does not match a specified modifier".to_string());
+                    break;
+                }
+            }
+
+            if let Some(reason) = modifier_match {
+                log::trace!(
+                    "Skipping punishment {} for user {} due to modifier match reason: {}",
+                    punishment.id,
+                    user_id,
+                    reason
+                );
+                continue;
+            }
+
             match &*punishment.action {
                 PunishmentAction::User(action) => {
                     action
@@ -460,294 +292,4 @@ pub async fn trigger_punishment(
     }
 
     Ok(())
-}
-
-pub mod timeout {
-    use super::*;
-
-    pub struct CreateTimeoutAction;
-
-    #[async_trait]
-    impl CreatePunishmentAction for CreateTimeoutAction {
-        fn name(&self) -> &'static str {
-            "Timeout User"
-        }
-
-        fn syntax(&self) -> &'static str {
-            "timeout"
-        }
-
-        fn to_punishment_action(
-            &self,
-            s: &str,
-        ) -> Result<Option<PunishmentAction>, silverpelt::Error> {
-            if s == "timeout" {
-                Ok(Some(PunishmentAction::User(Box::new(TimeoutAction))))
-            } else {
-                Ok(None)
-            }
-        }
-    }
-
-    pub struct TimeoutAction;
-
-    #[async_trait]
-    impl PunishmentUserAction for TimeoutAction {
-        fn creator(&self) -> Box<dyn CreatePunishmentAction> {
-            Box::new(CreateTimeoutAction)
-        }
-
-        fn string_form(&self) -> String {
-            "timeout".to_string()
-        }
-
-        async fn create(
-            &self,
-            data: &PunishmentActionData,
-            member: &mut serenity::all::Member,
-            _bot_member: &mut serenity::all::Member,
-            _applied_punishments: &[GuildPunishment],
-        ) -> Result<(), silverpelt::Error> {
-            let timeout_duration = chrono::Duration::minutes(5);
-            let new_time = chrono::Utc::now() + timeout_duration;
-
-            member
-                .edit(
-                    &data.cache_http.http,
-                    EditMember::new()
-                        .disable_communication_until(Timestamp::from(new_time))
-                        .audit_log_reason("[Punishment] Timeout applied to user"),
-                )
-                .await?;
-
-            Ok(())
-        }
-
-        async fn revert(
-            &self,
-            data: &PunishmentActionData,
-            member: &mut serenity::all::Member,
-            _bot_member: &mut serenity::all::Member,
-            _applied_punishments: &[GuildPunishment],
-        ) -> Result<(), silverpelt::Error> {
-            member
-                .edit(
-                    &data.cache_http.http,
-                    EditMember::new()
-                        .enable_communication()
-                        .audit_log_reason("[Punishment] Timeout removed from user"),
-                )
-                .await?;
-
-            Ok(())
-        }
-    }
-}
-
-pub mod kick {
-    use super::*;
-
-    pub struct CreateKickAction;
-
-    #[async_trait]
-    impl CreatePunishmentAction for CreateKickAction {
-        fn name(&self) -> &'static str {
-            "Kick User"
-        }
-
-        fn syntax(&self) -> &'static str {
-            "kick"
-        }
-
-        fn to_punishment_action(
-            &self,
-            s: &str,
-        ) -> Result<Option<PunishmentAction>, silverpelt::Error> {
-            if s == "kick" {
-                Ok(Some(PunishmentAction::User(Box::new(KickAction))))
-            } else {
-                Ok(None)
-            }
-        }
-    }
-
-    pub struct KickAction;
-
-    #[async_trait]
-    impl PunishmentUserAction for KickAction {
-        fn creator(&self) -> Box<dyn CreatePunishmentAction> {
-            Box::new(CreateKickAction)
-        }
-
-        fn string_form(&self) -> String {
-            "kick".to_string()
-        }
-
-        async fn create(
-            &self,
-            data: &PunishmentActionData,
-            member: &mut serenity::all::Member,
-            _bot_member: &mut serenity::all::Member,
-            _applied_punishments: &[GuildPunishment],
-        ) -> Result<(), silverpelt::Error> {
-            member
-                .kick(
-                    &data.cache_http.http,
-                    Some("[Punishment] User kicked from server"),
-                )
-                .await?;
-
-            Ok(())
-        }
-
-        async fn revert(
-            &self,
-            _data: &PunishmentActionData,
-            _member: &mut serenity::all::Member,
-            _bot_member: &mut serenity::all::Member,
-            _applied_punishments: &[GuildPunishment],
-        ) -> Result<(), silverpelt::Error> {
-            Ok(()) // No-op
-        }
-    }
-}
-
-pub mod ban {
-    use super::*;
-
-    pub struct CreateBanAction;
-
-    #[async_trait]
-    impl CreatePunishmentAction for CreateBanAction {
-        fn name(&self) -> &'static str {
-            "Ban User"
-        }
-
-        fn syntax(&self) -> &'static str {
-            "ban"
-        }
-
-        fn to_punishment_action(
-            &self,
-            s: &str,
-        ) -> Result<Option<PunishmentAction>, silverpelt::Error> {
-            if s == "ban" {
-                Ok(Some(PunishmentAction::User(Box::new(BanAction))))
-            } else {
-                Ok(None)
-            }
-        }
-    }
-
-    pub struct BanAction;
-
-    #[async_trait]
-    impl PunishmentUserAction for BanAction {
-        fn creator(&self) -> Box<dyn CreatePunishmentAction> {
-            Box::new(CreateBanAction)
-        }
-
-        fn string_form(&self) -> String {
-            "ban".to_string()
-        }
-
-        async fn create(
-            &self,
-            data: &PunishmentActionData,
-            member: &mut serenity::all::Member,
-            _bot_member: &mut serenity::all::Member,
-            _applied_punishments: &[GuildPunishment],
-        ) -> Result<(), silverpelt::Error> {
-            member
-                .ban(
-                    &data.cache_http.http,
-                    0,
-                    Some("[Punishment] User banned from server"),
-                )
-                .await?;
-
-            Ok(())
-        }
-
-        async fn revert(
-            &self,
-            _data: &PunishmentActionData,
-            _member: &mut serenity::all::Member,
-            _bot_member: &mut serenity::all::Member,
-            _applied_punishments: &[GuildPunishment],
-        ) -> Result<(), silverpelt::Error> {
-            Ok(()) // No-op
-        }
-    }
-}
-
-pub mod remove_all_roles {
-    use super::*;
-
-    pub struct CreateRemoveAllRolesAction;
-
-    #[async_trait]
-    impl CreatePunishmentAction for CreateRemoveAllRolesAction {
-        fn name(&self) -> &'static str {
-            "Remove All Roles"
-        }
-
-        fn syntax(&self) -> &'static str {
-            "remove_all_roles"
-        }
-
-        fn to_punishment_action(
-            &self,
-            s: &str,
-        ) -> Result<Option<PunishmentAction>, silverpelt::Error> {
-            if s == "remove_all_roles" {
-                Ok(Some(PunishmentAction::User(Box::new(RemoveAllRolesAction))))
-            } else {
-                Ok(None)
-            }
-        }
-    }
-
-    pub struct RemoveAllRolesAction;
-
-    #[async_trait]
-    impl PunishmentUserAction for RemoveAllRolesAction {
-        fn creator(&self) -> Box<dyn CreatePunishmentAction> {
-            Box::new(CreateRemoveAllRolesAction)
-        }
-
-        fn string_form(&self) -> String {
-            "remove_all_roles".to_string()
-        }
-
-        async fn create(
-            &self,
-            data: &PunishmentActionData,
-            member: &mut serenity::all::Member,
-            _bot_member: &mut serenity::all::Member,
-            _applied_punishments: &[GuildPunishment],
-        ) -> Result<(), silverpelt::Error> {
-            member
-                .edit(
-                    &data.cache_http.http,
-                    EditMember::new()
-                        .roles(Vec::new())
-                        .audit_log_reason("[Punishment] All roles removed from user"),
-                )
-                .await?;
-
-            Ok(())
-        }
-
-        /// TODO: Implement this
-        async fn revert(
-            &self,
-            _data: &PunishmentActionData,
-            _member: &mut serenity::all::Member,
-            _bot_member: &mut serenity::all::Member,
-            _applied_punishments: &[GuildPunishment],
-        ) -> Result<(), silverpelt::Error> {
-            Ok(()) // No-op
-        }
-    }
 }

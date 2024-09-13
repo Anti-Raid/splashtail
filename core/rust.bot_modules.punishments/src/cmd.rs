@@ -5,13 +5,21 @@ use splashcore_rs::utils::{
 };
 
 async fn punishment_actions_autocomplete<'a>(
-    _ctx: Context<'_>,
+    ctx: Context<'_>,
     partial: &'a str,
 ) -> Vec<serenity::all::AutocompleteChoice<'a>> {
-    let mut choices = Vec::new();
-    for action in super::core::PUNISHMENT_ACTIONS.iter() {
-        let action = action.value();
+    let Some(guild_id) = ctx.guild_id() else {
+        return Vec::new();
+    };
 
+    let mut choices = Vec::new();
+
+    let actions_map =
+        silverpelt::punishments::get_punishment_actions_for_guild(guild_id, &ctx.data())
+            .await
+            .unwrap_or_default();
+
+    for action in actions_map.iter() {
         if choices.len() > 25 {
             break;
         }
@@ -89,6 +97,9 @@ pub async fn punishments_list(ctx: Context<'_>) -> Result<(), Error> {
 
     let data = ctx.data();
 
+    let actions_map =
+        silverpelt::punishments::get_punishment_actions_for_guild(guild_id, &data).await?;
+
     let punishments = sqlx::query!(
         "SELECT id, creator, stings, action, modifiers, created_at, duration FROM punishments__guild_punishment_list WHERE guild_id = $1",
         guild_id.to_string(),
@@ -107,7 +118,10 @@ pub async fn punishments_list(ctx: Context<'_>) -> Result<(), Error> {
             embed = serenity::all::CreateEmbed::default();
         }
 
-        let action = match super::core::from_punishment_action_string(punishment.action.as_str()) {
+        let action = match silverpelt::punishments::from_punishment_action_string(
+            &actions_map,
+            punishment.action.as_str(),
+        ) {
             Ok(v) => v,
             Err(_) => {
                 log::error!("Failed to parse action: {}", punishment.action);
@@ -221,7 +235,11 @@ pub async fn punishments_add(
         }
     }
 
-    let action = super::core::from_punishment_action_string(action.as_str())?;
+    let actions_map =
+        silverpelt::punishments::get_punishment_actions_for_guild(guild_id, &ctx.data()).await?;
+
+    let action =
+        silverpelt::punishments::from_punishment_action_string(&actions_map, action.as_str())?;
 
     let duration = if let Some(duration) = duration {
         let (duration, unit) = parse_duration_string(&duration)?;
@@ -252,21 +270,20 @@ pub async fn punishment_delete_autocomplete<'a>(
     ctx: silverpelt::Context<'_>,
     partial: &'a str,
 ) -> Vec<serenity::all::AutocompleteChoice<'a>> {
-    let data = ctx.data();
-
-    let guild_id = ctx.guild_id();
-
-    if guild_id.is_none() {
+    let Some(guild_id) = ctx.guild_id() else {
         return Vec::new();
-    }
+    };
 
-    let guild_id = guild_id.unwrap();
+    let actions_map =
+        silverpelt::punishments::get_punishment_actions_for_guild(guild_id, &ctx.data())
+            .await
+            .unwrap_or_default();
 
     let punishments = match sqlx::query!(
         "SELECT id, stings, action FROM punishments__guild_punishment_list WHERE guild_id = $1",
         guild_id.to_string(),
     )
-    .fetch_all(&data.pool)
+    .fetch_all(&ctx.data().pool)
     .await
     {
         Ok(punishments) => punishments,
@@ -279,7 +296,10 @@ pub async fn punishment_delete_autocomplete<'a>(
     let mut choices = Vec::new();
 
     for punishment in punishments {
-        let action = match super::core::from_punishment_action_string(punishment.action.as_str()) {
+        let action = match silverpelt::punishments::from_punishment_action_string(
+            &actions_map,
+            punishment.action.as_str(),
+        ) {
             Ok(v) => v,
             Err(_) => {
                 log::error!("Failed to parse action: {}", punishment.action);

@@ -5,6 +5,7 @@ pub mod data;
 pub mod jobserver;
 pub mod member_permission_calc;
 pub mod module_config;
+pub mod punishments;
 pub mod settings_poise;
 pub mod sting_sources;
 pub mod types;
@@ -103,8 +104,11 @@ pub struct Module {
     /// to a whitelist-defined set of users
     pub root_module: bool,
 
-    /// What punishment sting sources this module uses
+    /// What punishment sting sources this module provides
     pub sting_sources: Vec<Arc<dyn sting_sources::StingSource>>,
+
+    /// What punishment actions this module provides
+    pub punishment_actions: Vec<Arc<dyn punishments::CreatePunishmentAction>>,
 
     pub __parsed: bool,
 }

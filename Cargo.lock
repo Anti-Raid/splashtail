@@ -600,11 +600,13 @@ dependencies = [
 name = "bot_modules_moderation"
 version = "0.1.0"
 dependencies = [
+ "async-trait",
  "bot_modules_auditlogs",
  "bot_modules_punishments",
  "botox",
  "chrono",
  "config",
+ "futures-util",
  "gwevent",
  "indexmap",
  "log",
