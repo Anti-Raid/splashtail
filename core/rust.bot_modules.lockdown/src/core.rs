@@ -1,7 +1,7 @@
-use crate::priority_handles::PrioritySet;
 use async_trait::async_trait;
 use dashmap::DashMap;
 use serde::{Deserialize, Serialize};
+use splashcore_rs::priorityset::PrioritySet;
 use std::collections::{HashMap, HashSet};
 use std::sync::{Arc, LazyLock};
 
@@ -226,7 +226,10 @@ where
     /// Returns the string form of the lockdown mode
     fn string_form(&self) -> String;
 
-    /// All lockdowns will be sorted by this value, with the highest value being the most specific and hence viewed first
+    /// The specificity of the lockdown mode. More specific lockdowns should have higher specificity
+    ///
+    /// The specificity is used to determine which lockdowns should be applied/reverted in the event of multiple lockdowns
+    /// handling the same roles/channels
     fn specificity(&self) -> usize;
 
     async fn test(
@@ -492,22 +495,9 @@ impl LockdownSet {
         lockdown_type: Box<dyn LockdownMode>,
         lockdown_data: &LockdownData,
         reason: &str,
+        pg: &mut serenity::all::PartialGuild,
+        pgc: &mut [serenity::all::GuildChannel],
     ) -> Result<sqlx::types::Uuid, silverpelt::Error> {
-        // Fetch guild+channel info to advance to avoid needing to fetch it on every interaction with the trait
-        let mut pg = proxy_support::guild(
-            &lockdown_data.cache_http,
-            &lockdown_data.reqwest,
-            self.guild_id,
-        )
-        .await?;
-
-        let mut pgc = proxy_support::guild_channels(
-            &lockdown_data.cache_http,
-            &lockdown_data.reqwest,
-            self.guild_id,
-        )
-        .await?;
-
         let critical_roles = get_critical_roles(&pg, &self.settings.member_roles)?;
 
         // Test new lockdown if required
@@ -554,8 +544,8 @@ impl LockdownSet {
         lockdown_type
             .create(
                 lockdown_data,
-                &mut pg,
-                &mut pgc,
+                pg,
+                pgc,
                 &critical_roles,
                 &data,
                 &current_handles,
@@ -580,25 +570,12 @@ impl LockdownSet {
         &mut self,
         index: usize,
         lockdown_data: &LockdownData,
+        pg: &mut serenity::all::PartialGuild,
+        pgc: &mut [serenity::all::GuildChannel],
     ) -> Result<(), silverpelt::Error> {
         let lockdown = self.lockdowns.get(index).ok_or_else(|| {
             silverpelt::Error::from("Lockdown index out of bounds (does not exist)")
         })?;
-
-        // Fetch guild+channel info to advance to avoid needing to fetch it on every interaction with the trait
-        let mut pg = proxy_support::guild(
-            &lockdown_data.cache_http,
-            &lockdown_data.reqwest,
-            self.guild_id,
-        )
-        .await?;
-
-        let mut pgc = proxy_support::guild_channels(
-            &lockdown_data.cache_http,
-            &lockdown_data.reqwest,
-            self.guild_id,
-        )
-        .await?;
 
         let critical_roles = get_critical_roles(&pg, &self.settings.member_roles)?;
 
@@ -624,8 +601,8 @@ impl LockdownSet {
             .r#type
             .revert(
                 lockdown_data,
-                &mut pg,
-                &mut pgc,
+                pg,
+                pgc,
                 &critical_roles,
                 &lockdown.data,
                 &current_handles,

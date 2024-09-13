@@ -1,10 +1,156 @@
+use async_trait::async_trait;
+use dashmap::DashMap;
 use proxy_support::{guild, member_in_guild};
 use serde::{Deserialize, Serialize};
-use serenity::all::{EditMember, GuildId, RoleId, Timestamp, UserId};
+use serenity::all::{EditMember, GuildId, Timestamp, UserId};
 use silverpelt::module_config::is_module_enabled;
 use silverpelt::sting_sources::{self, FullStingEntry, StingFetchFilters};
-use std::collections::{HashMap, HashSet};
-use strum_macros::{Display, EnumString, VariantNames};
+use std::collections::HashMap;
+use std::sync::{Arc, LazyLock};
+
+pub static PUNISHMENT_ACTIONS: LazyLock<DashMap<String, PunishmentAction>> = LazyLock::new(|| {
+    let map: DashMap<String, PunishmentAction> = DashMap::new();
+
+    map
+});
+
+pub struct PunishmentActionData {
+    pub cache_http: botox::cache::CacheHttpImpl,
+    pub pool: sqlx::PgPool,
+    pub reqwest: reqwest::Client,
+    pub object_store: Arc<splashcore_rs::objectstore::ObjectStore>,
+}
+
+/// Trait for creating a punishment action
+#[async_trait]
+pub trait CreatePunishmentAction
+where
+    Self: Send + Sync,
+{
+    /// Returns the syntax for the action
+    ///
+    /// E.g. `ban` for banning a user
+    fn syntax(&self) -> &'static str;
+
+    /// Given the string form of the action, returns the action
+    fn to_punishment_action(&self, s: &str) -> Result<Option<PunishmentAction>, silverpelt::Error>;
+}
+
+pub enum PunishmentAction {
+    User(Box<dyn PunishmentUserAction>),
+    Global(Box<dyn PunishmentGlobalAction>),
+}
+
+impl PunishmentAction {
+    pub fn creator(&self) -> Box<dyn CreatePunishmentAction> {
+        match self {
+            Self::User(action) => action.creator(),
+            Self::Global(action) => action.creator(),
+        }
+    }
+
+    pub fn string_form(&self) -> String {
+        match self {
+            Self::User(action) => action.string_form(),
+            Self::Global(action) => action.string_form(),
+        }
+    }
+}
+
+#[async_trait]
+pub trait PunishmentUserAction
+where
+    Self: Send + Sync,
+{
+    /// Returns the creator for the punishment action
+    fn creator(&self) -> Box<dyn CreatePunishmentAction>;
+
+    /// Returns the string form of the punishment action
+    fn string_form(&self) -> String;
+
+    /// Applies a punishment to the target
+    async fn create(
+        &self,
+        data: &PunishmentActionData,
+        member: &mut serenity::all::Member,
+        bot_member: &mut serenity::all::Member,
+        applied_punishments: &[GuildPunishment],
+    ) -> Result<(), silverpelt::Error>;
+
+    /// Attempts to revert a punishment from the target
+    async fn revert(
+        &self,
+        data: &PunishmentActionData,
+        member: &mut serenity::all::Member,
+        bot_member: &mut serenity::all::Member,
+        applied_punishments: &[GuildPunishment],
+    ) -> Result<(), silverpelt::Error>;
+}
+
+#[async_trait]
+pub trait PunishmentGlobalAction
+where
+    Self: Send + Sync,
+{
+    /// Returns the creator for the punishment action
+    fn creator(&self) -> Box<dyn CreatePunishmentAction>;
+
+    /// Returns the string form of the punishment action
+    fn string_form(&self) -> String;
+
+    /// Applies a punishment
+    async fn create(
+        &self,
+        data: &PunishmentActionData,
+        partial_guild: &mut serenity::all::PartialGuild,
+        bot_member: &mut serenity::all::Member,
+        applied_punishments: &[GuildPunishment],
+    ) -> Result<(), silverpelt::Error>;
+
+    /// Attempts to revert a punishment from the target
+    async fn revert(
+        &self,
+        data: &PunishmentActionData,
+        partial_guild: &mut serenity::all::PartialGuild,
+        bot_member: &mut serenity::all::Member,
+        applied_punishments: &[GuildPunishment],
+    ) -> Result<(), silverpelt::Error>;
+}
+
+/// Given a string, returns the punishment action
+pub fn from_punishment_action_string(s: &str) -> Result<PunishmentAction, silverpelt::Error> {
+    for pair in PUNISHMENT_ACTIONS.iter() {
+        let creator = pair.value().creator();
+        if let Some(m) = creator.to_punishment_action(s)? {
+            return Ok(m);
+        }
+    }
+
+    Err("Unknown punishment".into())
+}
+
+/// Serde serialization for PunishmentAction
+impl Serialize for PunishmentAction {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        self.string_form().serialize(serializer)
+    }
+}
+
+/// Serde deserialization for PunishmentAction
+impl<'de> Deserialize<'de> for PunishmentAction {
+    fn deserialize<D>(deserializer: D) -> Result<PunishmentAction, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let s = String::deserialize(deserializer)?;
+
+        // Call `from_lockdown_mode_string` to get the lockdown mode
+        from_punishment_action_string(&s).map_err(serde::de::Error::custom)
+    }
+}
 
 pub type StingEntryMap = HashMap<String, Vec<FullStingEntry>>;
 
@@ -56,7 +202,7 @@ pub struct GuildPunishment {
     pub guild_id: GuildId,
     pub creator: UserId,
     pub stings: i32,
-    pub action: Action,
+    pub action: Arc<PunishmentAction>,
     pub duration: Option<i32>,
     pub modifiers: Vec<String>,
     pub created_at: chrono::DateTime<chrono::Utc>,
@@ -93,7 +239,15 @@ impl GuildPunishmentList {
                 guild_id: row.guild_id.parse::<GuildId>()?,
                 creator: row.creator.parse::<UserId>()?,
                 stings: row.stings,
-                action: row.action.parse()?,
+                action: {
+                    let action = from_punishment_action_string(&row.action);
+
+                    let Ok(action) = action else {
+                        continue; // Skip this punishment if the action is not found
+                    };
+
+                    action.into()
+                },
                 modifiers: row.modifiers,
                 duration: row.duration,
                 created_at: row.created_at,
@@ -114,250 +268,21 @@ impl GuildPunishmentList {
     /// Filter returns a new GuildPunishmentList with only the punishments that match the set of filters
     ///
     /// Note that this drops the existing punishment list
-    pub fn filter(self, stings: i32) -> Self {
+    pub fn filter(&self, stings: i32) -> Vec<GuildPunishment> {
         let mut punishments = vec![];
 
-        for punishment in self.punishments {
+        for punishment in self.punishments.iter() {
             if punishment.stings <= stings {
-                punishments.push(punishment);
+                punishments.push(punishment.clone());
             }
         }
 
-        Self { punishments }
-    }
-
-    /// `get_dominant` returns the dominat punishments in the list
-    ///
-    /// Dominant punishments are the punishments with the highest standing and the highest duration
-    pub fn get_dominating(&self) -> Vec<&GuildPunishment> {
-        if self.punishments.is_empty() {
-            return Vec::new();
-        }
-
-        let mut curr_dominant_punishment = &self.punishments[0];
-        let mut dominant_punishments = vec![]; // Start with empty list, the iteration with handle the rest (including the first punishment)
-
-        for punishment in &self.punishments {
-            if punishment
-                .action
-                .is_dominant_to(&curr_dominant_punishment.action)
-                && punishment.duration.unwrap_or_default()
-                    > curr_dominant_punishment.duration.unwrap_or_default()
-            {
-                curr_dominant_punishment = punishment;
-                dominant_punishments.clear();
-                dominant_punishments.push(punishment);
-            }
-        }
-
-        dominant_punishments
+        punishments
     }
 }
 
-/// Poise helper to allow displaying the different punishment actions in a menu
-#[derive(poise::ChoiceParameter)]
-pub enum ActionChoices {
-    #[name = "Timeout"]
-    Timeout,
-    #[name = "Kick"]
-    Kick,
-    #[name = "Ban"]
-    Ban,
-    #[name = "Remove All Roles"]
-    RemoveAllRoles,
-}
-
-impl ActionChoices {
-    pub fn resolve(self) -> Action {
-        match self {
-            Self::Timeout => Action::Timeout,
-            Self::Kick => Action::Kick,
-            Self::Ban => Action::Ban,
-            Self::RemoveAllRoles => Action::RemoveAllRoles,
-        }
-    }
-}
-
-#[derive(
-    EnumString,
-    Display,
-    PartialEq,
-    VariantNames,
-    Copy,
-    Clone,
-    Debug,
-    Serialize,
-    Deserialize,
-    Hash,
-    Eq,
-)]
-#[strum(serialize_all = "snake_case")]
-pub enum Action {
-    Timeout,
-    Kick,
-    Ban,
-    RemoveAllRoles,
-    Unknown,
-}
-
-impl Action {
-    /// Returns the 'standing' for a action
-    ///
-    /// An action with higher stading is considered as dominant
-    ///
-    /// Non-dominant actions should be ignored in favor of dominant actions
-    ///
-    /// This stops cases where a user is kicked and then banned for example
-    pub fn standing(&self) -> i32 {
-        match self {
-            Self::Unknown => 0,
-            Self::Ban => 1,
-            Self::Kick => 2,
-
-            // Remove all roles and timeout are considered the same priority
-            Self::RemoveAllRoles => 3,
-            Self::Timeout => 3,
-        }
-    }
-
-    pub fn is_dominant_to(&self, other: &Action) -> bool {
-        self.standing() <= other.standing()
-    }
-
-    /// Attempts to carry out the given action on a user
-    ///
-    /// TODO: Improve audit log reasons
-    pub async fn execute(
-        &self,
-        ctx: &serenity::all::Context,
-        punishment: &GuildPunishment,
-        guild_id: GuildId,
-        user_id: UserId,
-        _trigger: sting_sources::StingCreator,
-    ) -> Result<Option<String>, silverpelt::Error> {
-        let data = ctx.data::<silverpelt::data::Data>();
-        let cache_http = botox::cache::CacheHttpImpl::from_ctx(ctx);
-
-        let guild = guild(&cache_http, &data.reqwest, guild_id).await?;
-
-        let bot_userid = ctx.cache.current_user().id;
-        let Some(bot) = member_in_guild(&cache_http, &data.reqwest, guild_id, bot_userid).await?
-        else {
-            return Err("Bot not found".into());
-        };
-
-        if user_id == bot_userid {
-            return Err("Bot cannot be punished".into());
-        }
-
-        let Some(mut user) = member_in_guild(&cache_http, &data.reqwest, guild_id, user_id).await?
-        else {
-            return Ok(None);
-        };
-
-        // Handle modifiers
-        //
-        // Modifiers are used to limit/expand the scope of a punishment
-        for modifier in &punishment.modifiers {
-            if modifier.is_empty() {
-                continue;
-            }
-
-            let negator = modifier.chars().nth(0).unwrap_or('-') == '-';
-            let splitted = modifier.splitn(2, ':').collect::<Vec<&str>>();
-
-            let (modifier_type, modifier_id) = match splitted[..] {
-                [a, b] => (a, b),
-                [a] => (a, ""),
-                _ => continue,
-            };
-
-            let matches_modifier = match modifier_type {
-                "r" => {
-                    let role_id = modifier_id.parse::<RoleId>().unwrap_or(RoleId::new(0));
-                    user.roles.contains(&role_id)
-                }
-                "u" => {
-                    let user_id = modifier_id.parse::<UserId>().unwrap_or(UserId::new(0));
-                    user.user.id == user_id
-                }
-                _ => false,
-            };
-
-            if negator && matches_modifier {
-                return Ok(Some("User matches a negated modifier".to_string()));
-            } else if !negator && !matches_modifier {
-                return Ok(Some("User does not match a specified modifier".to_string()));
-            }
-        }
-
-        if guild
-            .greater_member_hierarchy(&bot, &user)
-            .unwrap_or(user.user.id)
-            == user.user.id
-        {
-            return Err(
-                "Bot does not have the required permissions to carry out this action".into(),
-            );
-        }
-
-        match self {
-            Action::Unknown => {
-                // Do nothing
-                return Ok(None);
-            }
-            Action::Timeout => {
-                let timeout_duration = if let Some(duration) = punishment.duration {
-                    chrono::Duration::seconds(duration as i64)
-                } else {
-                    chrono::Duration::minutes(5)
-                };
-
-                let new_time = chrono::Utc::now() + timeout_duration;
-
-                user.edit(
-                    &ctx.http,
-                    EditMember::new()
-                        .disable_communication_until(Timestamp::from(new_time))
-                        .audit_log_reason(
-                            format!("Punishment applied to user: {}", punishment.id).as_str(),
-                        ),
-                )
-                .await?;
-            }
-            Action::Kick => {
-                user.kick(
-                    &ctx.http,
-                    Some(format!("Punishment applied to user: {}", punishment.id).as_str()),
-                )
-                .await?;
-            }
-            Action::Ban => {
-                user.ban(
-                    &ctx.http,
-                    0,
-                    Some(format!("Punishment applied to user: {}", punishment.id).as_str()),
-                )
-                .await?;
-            }
-            Action::RemoveAllRoles => {
-                user.edit(
-                    &ctx.http,
-                    EditMember::new().roles(Vec::new()).audit_log_reason(
-                        format!("Punishment applied to user: {}", punishment.id).as_str(),
-                    ),
-                )
-                .await?;
-            }
-        }
-
-        Ok(None)
-    }
-}
-
-pub fn get_per_user_sting_counts(sting_entries_map: &StingEntryMap) -> HashMap<UserId, i32> {
-    // TODO: Allow scoping punishments based on sting source
-
+/// Returns (per_user_sting_counts, total_system_punishments, total sting count)
+pub fn get_sting_counts(sting_entries_map: &StingEntryMap) -> (HashMap<UserId, i32>, i32, i32) {
     let mut per_user_sting_counts = HashMap::new();
 
     let mut total_system_punishments = 0;
@@ -375,44 +300,381 @@ pub fn get_per_user_sting_counts(sting_entries_map: &StingEntryMap) -> HashMap<U
         }
     }
 
-    // Add the total system punishments to all users
+    // Total sting count is the sum of all user stings and system stings prior to adding the system stings to all users
+    let mut total_sting_count = total_system_punishments;
+    for (_, count) in per_user_sting_counts.iter() {
+        total_sting_count += count;
+    }
+
+    // Now add the total system punishments to all users
     for (_, count) in per_user_sting_counts.iter_mut() {
         *count += total_system_punishments;
     }
 
-    per_user_sting_counts
+    (
+        per_user_sting_counts,
+        total_system_punishments,
+        total_sting_count,
+    )
 }
 
 pub async fn trigger_punishment(
     ctx: &serenity::all::Context,
     guild_id: GuildId,
-    creator: sting_sources::StingCreator,
-    ignore_actions: HashSet<Action>,
+    _creator: sting_sources::StingCreator,
 ) -> Result<(), silverpelt::Error> {
     let sting_entries = get_consolidated_sting_entries(ctx, guild_id, None).await?;
 
+    if sting_entries.is_empty() {
+        return Ok(());
+    }
+
     let punishments = GuildPunishmentList::guild(ctx, guild_id).await?;
 
-    let per_user_sting_counts = get_per_user_sting_counts(&sting_entries);
+    if punishments.punishments().is_empty() {
+        return Ok(());
+    }
 
-    async {}.await; // Insert await point
+    let (per_user_sting_counts, _total_system_punishments, total_sting_count) =
+        get_sting_counts(&sting_entries);
+
+    let data = ctx.data::<silverpelt::data::Data>();
+    let cache_http = botox::cache::CacheHttpImpl::from_ctx(ctx);
+
+    let bot_userid = ctx.cache.current_user().id;
+    let Some(mut bot) = member_in_guild(&cache_http, &data.reqwest, guild_id, bot_userid).await?
+    else {
+        return Err("Bot not found".into());
+    };
+
+    let punishment_data = PunishmentActionData {
+        cache_http: cache_http.clone(),
+        pool: data.pool.clone(),
+        reqwest: data.reqwest.clone(),
+        object_store: data.object_store.clone(),
+    };
+
+    let mut guild = guild(&cache_http, &data.reqwest, guild_id).await?;
+
+    // First apply global punishments, the total sting count is used for this
+    let system_punishments = punishments.filter(total_sting_count);
+
+    if !system_punishments.is_empty() {
+        for punishment in system_punishments.iter() {
+            match &*punishment.action {
+                PunishmentAction::Global(action) => {
+                    action
+                        .create(&punishment_data, &mut guild, &mut bot, &system_punishments)
+                        .await?;
+                }
+                _ => {}
+            }
+        }
+    }
 
     for (user_id, sting_count) in per_user_sting_counts {
-        let punishments = punishments.clone().filter(sting_count.try_into()?);
+        let Some(mut user) = member_in_guild(&cache_http, &data.reqwest, guild_id, user_id).await?
+        else {
+            return Ok(());
+        };
 
-        let apply_punishments = punishments.get_dominating();
+        if guild
+            .greater_member_hierarchy(&bot, &user)
+            .unwrap_or(user.user.id)
+            == user.user.id
+        {
+            return Err(
+                "Bot does not have the required permissions to carry out this action".into(),
+            );
+        }
 
-        for punishment in apply_punishments {
-            if ignore_actions.contains(&punishment.action) {
-                continue;
+        let punishments = punishments.filter(sting_count.try_into()?);
+
+        for punishment in punishments.iter() {
+            match &*punishment.action {
+                PunishmentAction::User(action) => {
+                    action
+                        .create(&punishment_data, &mut user, &mut bot, &punishments)
+                        .await?;
+                }
+                _ => {}
             }
-
-            punishment
-                .action
-                .execute(ctx, punishment, guild_id, user_id, creator)
-                .await?;
         }
     }
 
     Ok(())
+}
+
+pub mod timeout {
+    use super::*;
+
+    pub struct CreateTimeoutAction;
+
+    #[async_trait]
+    impl CreatePunishmentAction for CreateTimeoutAction {
+        fn syntax(&self) -> &'static str {
+            "timeout"
+        }
+
+        fn to_punishment_action(
+            &self,
+            s: &str,
+        ) -> Result<Option<PunishmentAction>, silverpelt::Error> {
+            if s == "timeout" {
+                Ok(Some(PunishmentAction::User(Box::new(TimeoutAction))))
+            } else {
+                Ok(None)
+            }
+        }
+    }
+
+    pub struct TimeoutAction;
+
+    #[async_trait]
+    impl PunishmentUserAction for TimeoutAction {
+        fn creator(&self) -> Box<dyn CreatePunishmentAction> {
+            Box::new(CreateTimeoutAction)
+        }
+
+        fn string_form(&self) -> String {
+            "timeout".to_string()
+        }
+
+        async fn create(
+            &self,
+            data: &PunishmentActionData,
+            member: &mut serenity::all::Member,
+            _bot_member: &mut serenity::all::Member,
+            _applied_punishments: &[GuildPunishment],
+        ) -> Result<(), silverpelt::Error> {
+            let timeout_duration = chrono::Duration::minutes(5);
+            let new_time = chrono::Utc::now() + timeout_duration;
+
+            member
+                .edit(
+                    &data.cache_http.http,
+                    EditMember::new()
+                        .disable_communication_until(Timestamp::from(new_time))
+                        .audit_log_reason("[Punishment] Timeout applied to user"),
+                )
+                .await?;
+
+            Ok(())
+        }
+
+        async fn revert(
+            &self,
+            data: &PunishmentActionData,
+            member: &mut serenity::all::Member,
+            _bot_member: &mut serenity::all::Member,
+            _applied_punishments: &[GuildPunishment],
+        ) -> Result<(), silverpelt::Error> {
+            member
+                .edit(
+                    &data.cache_http.http,
+                    EditMember::new()
+                        .enable_communication()
+                        .audit_log_reason("[Punishment] Timeout removed from user"),
+                )
+                .await?;
+
+            Ok(())
+        }
+    }
+}
+
+pub mod kick {
+    use super::*;
+
+    pub struct CreateKickAction;
+
+    #[async_trait]
+    impl CreatePunishmentAction for CreateKickAction {
+        fn syntax(&self) -> &'static str {
+            "kick"
+        }
+
+        fn to_punishment_action(
+            &self,
+            s: &str,
+        ) -> Result<Option<PunishmentAction>, silverpelt::Error> {
+            if s == "kick" {
+                Ok(Some(PunishmentAction::User(Box::new(KickAction))))
+            } else {
+                Ok(None)
+            }
+        }
+    }
+
+    pub struct KickAction;
+
+    #[async_trait]
+    impl PunishmentUserAction for KickAction {
+        fn creator(&self) -> Box<dyn CreatePunishmentAction> {
+            Box::new(CreateKickAction)
+        }
+
+        fn string_form(&self) -> String {
+            "kick".to_string()
+        }
+
+        async fn create(
+            &self,
+            data: &PunishmentActionData,
+            member: &mut serenity::all::Member,
+            _bot_member: &mut serenity::all::Member,
+            _applied_punishments: &[GuildPunishment],
+        ) -> Result<(), silverpelt::Error> {
+            member
+                .kick(
+                    &data.cache_http.http,
+                    Some("[Punishment] User kicked from server"),
+                )
+                .await?;
+
+            Ok(())
+        }
+
+        async fn revert(
+            &self,
+            _data: &PunishmentActionData,
+            _member: &mut serenity::all::Member,
+            _bot_member: &mut serenity::all::Member,
+            _applied_punishments: &[GuildPunishment],
+        ) -> Result<(), silverpelt::Error> {
+            Ok(()) // No-op
+        }
+    }
+}
+
+pub mod ban {
+    use super::*;
+
+    pub struct CreateBanAction;
+
+    #[async_trait]
+    impl CreatePunishmentAction for CreateBanAction {
+        fn syntax(&self) -> &'static str {
+            "ban"
+        }
+
+        fn to_punishment_action(
+            &self,
+            s: &str,
+        ) -> Result<Option<PunishmentAction>, silverpelt::Error> {
+            if s == "ban" {
+                Ok(Some(PunishmentAction::User(Box::new(BanAction))))
+            } else {
+                Ok(None)
+            }
+        }
+    }
+
+    pub struct BanAction;
+
+    #[async_trait]
+    impl PunishmentUserAction for BanAction {
+        fn creator(&self) -> Box<dyn CreatePunishmentAction> {
+            Box::new(CreateBanAction)
+        }
+
+        fn string_form(&self) -> String {
+            "ban".to_string()
+        }
+
+        async fn create(
+            &self,
+            data: &PunishmentActionData,
+            member: &mut serenity::all::Member,
+            _bot_member: &mut serenity::all::Member,
+            _applied_punishments: &[GuildPunishment],
+        ) -> Result<(), silverpelt::Error> {
+            member
+                .ban(
+                    &data.cache_http.http,
+                    0,
+                    Some("[Punishment] User banned from server"),
+                )
+                .await?;
+
+            Ok(())
+        }
+
+        async fn revert(
+            &self,
+            _data: &PunishmentActionData,
+            _member: &mut serenity::all::Member,
+            _bot_member: &mut serenity::all::Member,
+            _applied_punishments: &[GuildPunishment],
+        ) -> Result<(), silverpelt::Error> {
+            Ok(()) // No-op
+        }
+    }
+}
+
+pub mod remove_all_roles {
+    use super::*;
+
+    pub struct CreateRemoveAllRolesAction;
+
+    #[async_trait]
+    impl CreatePunishmentAction for CreateRemoveAllRolesAction {
+        fn syntax(&self) -> &'static str {
+            "remove_all_roles"
+        }
+
+        fn to_punishment_action(
+            &self,
+            s: &str,
+        ) -> Result<Option<PunishmentAction>, silverpelt::Error> {
+            if s == "remove_all_roles" {
+                Ok(Some(PunishmentAction::User(Box::new(RemoveAllRolesAction))))
+            } else {
+                Ok(None)
+            }
+        }
+    }
+
+    pub struct RemoveAllRolesAction;
+
+    #[async_trait]
+    impl PunishmentUserAction for RemoveAllRolesAction {
+        fn creator(&self) -> Box<dyn CreatePunishmentAction> {
+            Box::new(CreateRemoveAllRolesAction)
+        }
+
+        fn string_form(&self) -> String {
+            "remove_all_roles".to_string()
+        }
+
+        async fn create(
+            &self,
+            data: &PunishmentActionData,
+            member: &mut serenity::all::Member,
+            _bot_member: &mut serenity::all::Member,
+            _applied_punishments: &[GuildPunishment],
+        ) -> Result<(), silverpelt::Error> {
+            member
+                .edit(
+                    &data.cache_http.http,
+                    EditMember::new()
+                        .roles(Vec::new())
+                        .audit_log_reason("[Punishment] All roles removed from user"),
+                )
+                .await?;
+
+            Ok(())
+        }
+
+        /// TODO: Implement this
+        async fn revert(
+            &self,
+            _data: &PunishmentActionData,
+            _member: &mut serenity::all::Member,
+            _bot_member: &mut serenity::all::Member,
+            _applied_punishments: &[GuildPunishment],
+        ) -> Result<(), silverpelt::Error> {
+            Ok(()) // No-op
+        }
+    }
 }

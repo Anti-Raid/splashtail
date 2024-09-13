@@ -1,7 +1,6 @@
 pub mod cache;
 pub mod cmds;
 pub mod core;
-pub mod priority_handles;
 pub mod settings;
 
 use indexmap::indexmap;

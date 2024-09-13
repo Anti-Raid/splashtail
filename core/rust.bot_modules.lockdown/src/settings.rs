@@ -346,8 +346,32 @@ impl DataStore for LockdownDataStoreImpl {
                 typ: "value_error".to_string(),
             })?;
 
+        let mut pg = proxy_support::guild(
+            &self.lockdown_data.cache_http,
+            &self.lockdown_data.reqwest,
+            self.inner.guild_id,
+        )
+        .await
+        .map_err(|e| SettingsError::Generic {
+            message: format!("Error while creating proxy guild: {}", e),
+            src: "lockdown_create_entry".to_string(),
+            typ: "value_error".to_string(),
+        })?;
+
+        let mut pgc = proxy_support::guild_channels(
+            &self.lockdown_data.cache_http,
+            &self.lockdown_data.reqwest,
+            self.inner.guild_id,
+        )
+        .await
+        .map_err(|e| SettingsError::Generic {
+            message: format!("Error while creating proxy guild channels: {}", e),
+            src: "lockdown_create_entry".to_string(),
+            typ: "value_error".to_string(),
+        })?;
+
         lockdowns
-            .apply(lockdown_type, &self.lockdown_data, reason)
+            .apply(lockdown_type, &self.lockdown_data, reason, &mut pg, &mut pgc)
             .await
             .map_err(|e| SettingsError::Generic {
                 message: format!("Error while applying lockdown: {}", e),
@@ -450,9 +474,33 @@ impl DataStore for LockdownDataStoreImpl {
                 column_id: self.inner.setting_primary_key.to_string(),
             })?;
 
+        let mut pg = proxy_support::guild(
+            &self.lockdown_data.cache_http,
+            &self.lockdown_data.reqwest,
+            self.inner.guild_id,
+        )
+        .await
+        .map_err(|e| SettingsError::Generic {
+            message: format!("Error while removing lockdown: {}", e),
+            src: "lockdown_delete_matching_entries".to_string(),
+            typ: "value_error".to_string(),
+        })?;
+
+        let mut pgc = proxy_support::guild_channels(
+            &self.lockdown_data.cache_http,
+            &self.lockdown_data.reqwest,
+            self.inner.guild_id,
+        )
+        .await
+        .map_err(|e| SettingsError::Generic {
+            message: format!("Error while removing lockdown: {}", e),
+            src: "lockdown_delete_matching_entries".to_string(),
+            typ: "value_error".to_string(),
+        })?;
+
         // Remove the lockdown
         lockdowns
-            .remove(index, &self.lockdown_data)
+            .remove(index, &self.lockdown_data, &mut pg, &mut pgc)
             .await
             .map_err(|e| SettingsError::Generic {
                 message: format!("Error while removing lockdown: {}", e),

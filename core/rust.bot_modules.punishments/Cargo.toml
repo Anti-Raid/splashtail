@@ -17,6 +17,12 @@ strum_macros = "0.26"
 silverpelt = { path = "../rust.silverpelt" }
 splashcore_rs = { path = "../rust.std" }
 proxy_support = { path = "../rust.proxy_support" }
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls", "rustls-tls-native-roots"] }
+async-trait = "0.1.80"
+dashmap = { version = "5", features = ["serde", "inline", "rayon"] }
+
+# Anti-Raid specific
+module_settings = { path = "../rust.module_settings" }
 
 [dependencies.serenity]
 git = "https://github.com/serenity-rs/serenity"
