@@ -8,11 +8,24 @@ use silverpelt::sting_sources::{self, FullStingEntry, StingFetchFilters};
 use std::collections::HashMap;
 use std::sync::{Arc, LazyLock};
 
-pub static PUNISHMENT_ACTIONS: LazyLock<DashMap<String, PunishmentAction>> = LazyLock::new(|| {
-    let map: DashMap<String, PunishmentAction> = DashMap::new();
+pub static PUNISHMENT_ACTIONS: LazyLock<DashMap<String, Box<dyn CreatePunishmentAction>>> =
+    LazyLock::new(|| {
+        let map: DashMap<String, Box<dyn CreatePunishmentAction>> = DashMap::new();
 
-    map
-});
+        // Default punishment actions
+        map.insert(
+            "timeout".to_string(),
+            Box::new(timeout::CreateTimeoutAction),
+        );
+        map.insert("kick".to_string(), Box::new(kick::CreateKickAction));
+        map.insert("ban".to_string(), Box::new(ban::CreateBanAction));
+        map.insert(
+            "remove_all_roles".to_string(),
+            Box::new(remove_all_roles::CreateRemoveAllRolesAction),
+        );
+
+        map
+    });
 
 pub struct PunishmentActionData {
     pub cache_http: botox::cache::CacheHttpImpl,
@@ -27,6 +40,9 @@ pub trait CreatePunishmentAction
 where
     Self: Send + Sync,
 {
+    /// Name of the action
+    fn name(&self) -> &'static str;
+
     /// Returns the syntax for the action
     ///
     /// E.g. `ban` for banning a user
@@ -34,6 +50,13 @@ where
 
     /// Given the string form of the action, returns the action
     fn to_punishment_action(&self, s: &str) -> Result<Option<PunishmentAction>, silverpelt::Error>;
+}
+
+/// Display impl for CreatePunishmentAction
+impl std::fmt::Display for dyn CreatePunishmentAction {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{} ({})", self.name(), self.syntax())
+    }
 }
 
 pub enum PunishmentAction {
@@ -53,6 +76,16 @@ impl PunishmentAction {
         match self {
             Self::User(action) => action.string_form(),
             Self::Global(action) => action.string_form(),
+        }
+    }
+}
+
+/// Display impl for PunishmentAction
+impl std::fmt::Display for PunishmentAction {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::User(action) => write!(f, "{}", action),
+            Self::Global(action) => write!(f, "{}", action),
         }
     }
 }
@@ -87,6 +120,18 @@ where
     ) -> Result<(), silverpelt::Error>;
 }
 
+/// Display impl for PunishmentUserAction
+impl std::fmt::Display for dyn PunishmentUserAction {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{} ({}) [per-user]",
+            self.creator().name(),
+            self.string_form()
+        )
+    }
+}
+
 #[async_trait]
 pub trait PunishmentGlobalAction
 where
@@ -117,10 +162,22 @@ where
     ) -> Result<(), silverpelt::Error>;
 }
 
+/// Display impl for PunishmentGlobalAction
+impl std::fmt::Display for dyn PunishmentGlobalAction {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{} ({}) [system]",
+            self.creator().name(),
+            self.string_form()
+        )
+    }
+}
+
 /// Given a string, returns the punishment action
 pub fn from_punishment_action_string(s: &str) -> Result<PunishmentAction, silverpelt::Error> {
     for pair in PUNISHMENT_ACTIONS.iter() {
-        let creator = pair.value().creator();
+        let creator = pair.value();
         if let Some(m) = creator.to_punishment_action(s)? {
             return Ok(m);
         }
@@ -412,6 +469,10 @@ pub mod timeout {
 
     #[async_trait]
     impl CreatePunishmentAction for CreateTimeoutAction {
+        fn name(&self) -> &'static str {
+            "Timeout User"
+        }
+
         fn syntax(&self) -> &'static str {
             "timeout"
         }
@@ -490,6 +551,10 @@ pub mod kick {
 
     #[async_trait]
     impl CreatePunishmentAction for CreateKickAction {
+        fn name(&self) -> &'static str {
+            "Kick User"
+        }
+
         fn syntax(&self) -> &'static str {
             "kick"
         }
@@ -554,6 +619,10 @@ pub mod ban {
 
     #[async_trait]
     impl CreatePunishmentAction for CreateBanAction {
+        fn name(&self) -> &'static str {
+            "Ban User"
+        }
+
         fn syntax(&self) -> &'static str {
             "ban"
         }
@@ -619,6 +688,10 @@ pub mod remove_all_roles {
 
     #[async_trait]
     impl CreatePunishmentAction for CreateRemoveAllRolesAction {
+        fn name(&self) -> &'static str {
+            "Remove All Roles"
+        }
+
         fn syntax(&self) -> &'static str {
             "remove_all_roles"
         }

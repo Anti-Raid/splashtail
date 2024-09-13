@@ -90,7 +90,6 @@ pub async fn event_listener(ectx: &EventHandlerContext) -> Result<(), Error> {
                         &ctx,
                         ectx.guild_id,
                         StingCreator::User(new_message.author.id),
-                        std::collections::HashSet::new(),
                     )
                     .await?;
                 }

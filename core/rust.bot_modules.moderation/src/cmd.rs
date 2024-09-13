@@ -278,7 +278,6 @@ pub async fn prune_user(
                 &sctx,
                 guild_id,
                 StingCreator::User(user.id),
-                std::collections::HashSet::new(),
             )
             .await
         });
@@ -520,7 +519,6 @@ pub async fn kick(
                 &sctx,
                 guild_id,
                 StingCreator::User(member.user.id),
-                std::collections::HashSet::new(),
             )
             .await
         });
@@ -669,7 +667,6 @@ pub async fn ban(
                 &sctx,
                 guild_id,
                 StingCreator::User(member.id),
-                std::collections::HashSet::new(),
             )
             .await
         });
@@ -823,7 +820,6 @@ pub async fn tempban(
                 &sctx,
                 guild_id,
                 StingCreator::User(member.id),
-                std::collections::HashSet::new(),
             )
             .await
         });
@@ -961,7 +957,6 @@ pub async fn unban(
                 &sctx,
                 guild_id,
                 StingCreator::User(user.id),
-                std::collections::HashSet::new(),
             )
             .await
         });
@@ -1128,7 +1123,6 @@ pub async fn timeout(
                 &sctx,
                 guild_id,
                 StingCreator::User(member.user.id),
-                std::collections::HashSet::new(),
             )
             .await
         });

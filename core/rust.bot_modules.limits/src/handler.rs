@@ -2,7 +2,6 @@ use crate::strategy::Strategy;
 
 use super::core::HandleModAction;
 use silverpelt::Error;
-use std::collections::HashSet;
 use silverpelt::sting_sources::StingCreator;
 
 const DEFAULT_EXPIRY: std::time::Duration = std::time::Duration::from_secs(60 * 5);
@@ -74,7 +73,6 @@ pub async fn handle_mod_action(
                 ctx,
                 ha.guild_id,
                 StingCreator::User(ha.user_id),
-                HashSet::new(),
             )
             .await
             {

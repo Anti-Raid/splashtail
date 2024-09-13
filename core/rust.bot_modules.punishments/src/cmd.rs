@@ -1,10 +1,34 @@
-use std::str::FromStr;
-
 use silverpelt::Context;
 use silverpelt::Error;
 use splashcore_rs::utils::{
     parse_duration_string, parse_numeric_list, parse_pg_interval, REPLACE_ROLE, REPLACE_USER,
 };
+
+async fn punishment_actions_autocomplete<'a>(
+    _ctx: Context<'_>,
+    partial: &'a str,
+) -> Vec<serenity::all::AutocompleteChoice<'a>> {
+    let mut choices = Vec::new();
+    for action in super::core::PUNISHMENT_ACTIONS.iter() {
+        let action = action.value();
+
+        if choices.len() > 25 {
+            break;
+        }
+
+        if partial.is_empty()
+            || action.name().contains(partial)
+            || action.syntax().contains(partial)
+        {
+            choices.push(serenity::all::AutocompleteChoice::new(
+                format!("{}", action),
+                action.syntax(),
+            ));
+        }
+    }
+
+    choices
+}
 
 /// Punishment list  base command
 #[poise::command(
@@ -83,8 +107,13 @@ pub async fn punishments_list(ctx: Context<'_>) -> Result<(), Error> {
             embed = serenity::all::CreateEmbed::default();
         }
 
-        let action = super::core::Action::from_str(punishment.action.as_str())
-            .unwrap_or(super::core::Action::Unknown);
+        let action = match super::core::from_punishment_action_string(punishment.action.as_str()) {
+            Ok(v) => v,
+            Err(_) => {
+                log::error!("Failed to parse action: {}", punishment.action);
+                continue;
+            }
+        };
 
         let mut modifiers = Vec::new();
 
@@ -140,7 +169,9 @@ pub async fn punishments_list(ctx: Context<'_>) -> Result<(), Error> {
 pub async fn punishments_add(
     ctx: Context<'_>,
     #[description = "The number of stings that must be reached"] stings: i32,
-    #[description = "What action to take"] action: super::core::ActionChoices,
+    #[description = "What action to take"]
+    #[autocomplete = "punishment_actions_autocomplete"]
+    action: String,
     #[description = "How long should the punishment be (timeout only)"] duration: Option<String>,
     #[description = "Ignored Roles, comma seperated"] ignored_roles: Option<String>,
     #[description = "Ignored Users, comma seperated"] ignored_users: Option<String>,
@@ -190,7 +221,7 @@ pub async fn punishments_add(
         }
     }
 
-    let action = action.resolve();
+    let action = super::core::from_punishment_action_string(action.as_str())?;
 
     let duration = if let Some(duration) = duration {
         let (duration, unit) = parse_duration_string(&duration)?;
@@ -206,7 +237,7 @@ pub async fn punishments_add(
         guild_id.to_string(),
         ctx.author().id.to_string(),
         stings,
-        action.to_string(),
+        action.string_form(),
         duration,
         &modifiers,
     )
@@ -248,8 +279,13 @@ pub async fn punishment_delete_autocomplete<'a>(
     let mut choices = Vec::new();
 
     for punishment in punishments {
-        let action = super::core::Action::from_str(punishment.action.as_str())
-            .unwrap_or(super::core::Action::Unknown);
+        let action = match super::core::from_punishment_action_string(punishment.action.as_str()) {
+            Ok(v) => v,
+            Err(_) => {
+                log::error!("Failed to parse action: {}", punishment.action);
+                continue;
+            }
+        };
         let name = format!("At, {} stings, {}", punishment.stings, action);
         if name.contains(partial) {
             choices.push(serenity::all::AutocompleteChoice::new(
