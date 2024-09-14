@@ -1,10 +1,10 @@
-# Anti-Raid Plugins
+# AntiRaid Plugins
 
 ## Builtins
 
 **Module Name:** ``@antiraid/builtins``
 
-Provides some basic builtins for Anti-Raid.
+Provides some basic builtins for AntiRaid.
 
 ### Functions
 
@@ -36,11 +36,13 @@ Interop between Lua and the Rust core
 
 - ``null``
 
-While the Lua ``nil`` does work in many cases (and even when calling the SDK), its not the best choice. When querying Anti-Raid SDK, the SDK will use the ``@antiraid/interop#null`` value to represent a null value. Lua templates can also use this value if desired.
+While the Lua ``nil`` does work in many cases (and even when calling the SDK), its not the best choice. When querying AntiRaid SDK, the SDK will use the ``@antiraid/interop#null`` value to represent a null value. Lua templates can also use this value if desired.
+
+One advantage of ``null`` vs ``nil`` is that ``null`` can be used to check whether a value is set but is null or is completely unset. ``nil`` can only be used to check if a value is unset. This is important when interfacing with Discord as Discord often has differing semantics between non-existence and existing-but-null such as in Gateway Events.
 
 - ``array_metatable``
 
-To pass arrays to modules within the Anti-Raid SDK, you need to set the metatable to ``@antiraid/interop#array_metatable``. This will allow the SDK to convert the array to a Rust ``Vec`` internally.
+To pass arrays to modules within the AntiRaid SDK, you need to set the metatable to ``@antiraid/interop#array_metatable``. This will allow the SDK to convert the array to a Rust ``Vec`` internally.
 
 ```lua
 local interop = require '@antiraid/interop'
@@ -53,7 +55,7 @@ This is required because tables in Lua can represent both a hashmap and an array
 
 - ``memusage() -> number``
 
-While not strictly useful for interop, it is often desirable to know the memory usage of a Lua template as Anti-Raid will kill your template if it exceeds the memory limit. For this, you can use the `@antiraid/interop#memusage` function.
+While not strictly useful for interop, it is often desirable to know the memory usage of a Lua template as AntiRaid will kill your template if it exceeds the memory limit. For this, you can use the `@antiraid/interop#memusage` function.
 
 ```lua
 local interop = require '@antiraid/interop'
