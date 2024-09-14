@@ -24,7 +24,7 @@ pub fn init_plugin(lua: &Lua) -> LuaResult<LuaTable> {
 
             let (res, _) = futures_util::future::select_ok(
                 futs.into_iter()
-                    .map(|f| Box::pin(f.call_async::<_, LuaValue>(()))),
+                    .map(|f| Box::pin(f.call_async::<LuaValue>(()))),
             )
             .await?;
             Ok(res)

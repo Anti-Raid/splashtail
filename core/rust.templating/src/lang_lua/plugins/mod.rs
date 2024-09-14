@@ -48,12 +48,12 @@ pub fn require(lua: &Lua, (plugin_name,): (String,)) -> LuaResult<LuaTable> {
             );
 
             if is_module {
-                return lua.globals().get::<_, LuaTable>(plugin_name);
+                return lua.globals().get::<LuaTable>(plugin_name);
             }
 
             // Import the plugin from lua stdlib
             let require = lua.named_registry_value::<LuaFunction>("_lua_require")?;
-            require.call::<_, LuaTable>(plugin_name)
+            require.call::<LuaTable>(plugin_name)
         }
     }
 }

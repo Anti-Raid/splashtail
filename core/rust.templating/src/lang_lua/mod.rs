@@ -71,10 +71,7 @@ async fn create_lua_vm(guild_id: GuildId, pool: sqlx::PgPool) -> LuaResult<ArLua
     lua.globals().set("__stack", lua.create_table()?)?;
 
     // First copy existing require function to registry
-    lua.set_named_registry_value(
-        "_lua_require",
-        lua.globals().get::<_, LuaFunction>("require")?,
-    )?;
+    lua.set_named_registry_value("_lua_require", lua.globals().get::<LuaFunction>("require")?)?;
 
     // Then override require
     lua.globals()
