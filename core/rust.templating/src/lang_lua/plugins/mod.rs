@@ -1,6 +1,7 @@
 pub mod concurrency;
 pub mod interop;
 pub mod message;
+pub mod permissions;
 
 use mlua::prelude::*;
 use std::sync::LazyLock;
@@ -12,6 +13,7 @@ pub static PLUGINS: LazyLock<indexmap::IndexMap<String, ModuleFn>> = LazyLock::n
         "@antiraid/concurrency".to_string() => concurrency::init_plugin as ModuleFn,
         "@antiraid/interop".to_string() => interop::init_plugin as ModuleFn,
         "@antiraid/message".to_string() => message::init_plugin as ModuleFn,
+        "@antiraid/permissions".to_string() => permissions::init_plugin as ModuleFn,
     }
 });
 

@@ -15,6 +15,7 @@ pub struct MessageEmbedField {
     pub inline: bool,
 }
 
+/// Represents a message embed
 #[derive(Serialize, Deserialize, Debug, Default, Clone)]
 pub struct MessageEmbed {
     /// The title set by the template
@@ -25,6 +26,7 @@ pub struct MessageEmbed {
     pub fields: Vec<MessageEmbedField>,
 }
 
+/// Represents a message that can be created by templates
 #[derive(Serialize, Deserialize, Debug, Default, Clone)]
 pub struct Message {
     /// Embeds [current_index, embeds]
@@ -33,6 +35,9 @@ pub struct Message {
     pub content: Option<String>,
 }
 
+/// Converts a templated message to a discord reply
+///
+/// This method also handles all of the various discord message+embed limits as well, returning an error if unable to comply
 pub fn to_discord_reply<'a>(message: Message) -> Result<DiscordReply<'a>, crate::Error> {
     let mut total_chars = 0;
     let mut total_content_chars = 0;

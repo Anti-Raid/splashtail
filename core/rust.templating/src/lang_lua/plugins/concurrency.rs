@@ -14,11 +14,11 @@ pub fn init_plugin(lua: &Lua) -> LuaResult<LuaTable> {
     let module = lua.create_table()?;
 
     module.set(
-        "select",
+        "select_ok",
         lua.create_async_function(|_, futs: Variadic<LuaFunction>| async move {
             if futs.len() == 0 {
                 return Err(LuaError::external(
-                    "select() requires at least one argument",
+                    "select_ok() requires at least one argument",
                 ));
             }
 
