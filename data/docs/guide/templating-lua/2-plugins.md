@@ -86,7 +86,7 @@ Creates a new message embed field table
 
 Formats a gwevent field into a string. These are exposed in places such as Audit Logs and other areas.
 
-- ``format_gwevent_categorized_field(field: table<gwevent.field.Field>) -> String``
+- ``format_gwevent_categorized_field(field: table<gwevent.field.CategorizedField>) -> String``
 
 Formats a categorized gwevent field into a string. These are exposed in places such as Audit Logs and other areas.
 
