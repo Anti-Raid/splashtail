@@ -50,12 +50,15 @@ impl std::fmt::Display for ChangeOp {
     }
 }
 
-/// Returns the critical roles given a [PartialGuild](`serenity::all::PartialGuild`) and a set of member roles
+/// Returns the critical roles for a [PartialGuild](`serenity::all::PartialGuild`)
+///
+/// The ``set_member_roles`` here are the pre-defined roles set by the server that should be locked down
+/// If ``set_member_roles`` is empty (no overrides), the @everyone role is returned
 pub fn get_critical_roles(
     pg: &serenity::all::PartialGuild,
-    member_roles: &HashSet<serenity::all::RoleId>,
+    set_critical_roles: &HashSet<serenity::all::RoleId>,
 ) -> Result<HashSet<serenity::all::RoleId>, silverpelt::Error> {
-    if member_roles.is_empty() {
+    if set_critical_roles.is_empty() {
         // Find the everyone role
         let everyone_role = pg
             .roles
@@ -65,7 +68,7 @@ pub fn get_critical_roles(
 
         Ok(std::iter::once(everyone_role.id).collect())
     } else {
-        Ok(member_roles.clone())
+        Ok(set_critical_roles.clone())
     }
 }
 
@@ -710,7 +713,7 @@ pub mod qsl {
             serenity::all::RoleId,
             (ChangeOp, serenity::all::Permissions),
         >,
-        /// The critical roles (either member roles or the `@everyone` role)
+        /// The critical roles
         pub critical_roles: HashSet<serenity::all::RoleId>,
     }
 

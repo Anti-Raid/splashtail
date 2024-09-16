@@ -702,6 +702,31 @@ dependencies = [
 ]
 
 [[package]]
+name = "bot_modules_sting_sources"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "bitflags 2.6.0",
+ "botox",
+ "chrono",
+ "dashmap",
+ "indexmap",
+ "log",
+ "module_settings",
+ "poise",
+ "proxy_support",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "serenity",
+ "silverpelt",
+ "splashcore_rs",
+ "sqlx",
+ "strum",
+ "strum_macros",
+]
+
+[[package]]
 name = "bot_modules_temporary_punishments"
 version = "0.1.0"
 dependencies = [
