@@ -22,7 +22,7 @@ Quickly lockdown a server as fast as possible
 
 Quick Lockdown allows for quickly locking down a server given the following permission overwrite setup:
 
-- All critical roles must have View Channel, Send Messages, Send Messages In Threads. All other roles must not have View Channel, Send Messages, Send Messages In Threads
+- All critical roles must have View Channel and Send Messages. All other roles must not have View Channel and Send Messages
 
 Internally, ``qsl`` modifies only the critical roles to the locked down set of permissions. This requires much fewer API calls and is hence much faster than traditional lockdowns.
 
@@ -44,7 +44,7 @@ In many cases, the requirements for ``qsl`` are not feasible for servers to meet
 
 Traditional Lockdown is a more traditional lockdown method. It is more flexible than ``qsl`` as it has no required prior setup. However, it is much slower and should be avoided if possible.
 
-Internally, ``tsl`` works by iterating over all channels and setting the permission overwrites for all critical roles to the locked down set. This is a slow process and can take a long time for large servers.
+Internally, ``tsl`` works by iterating over all channels and setting the permission overwrites for all critical roles to the locked down set. This is a slow process and can take a long time for large servers. In addition, super large servers may have outages when using a ``tsl`` that a ``qsl`` may not lead to.
 
 
 ## Single-Channel Lockdown

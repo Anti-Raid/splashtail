@@ -168,7 +168,7 @@ impl Snapshot {
                 bot_modules_auditlogs::events::dispatch_audit_log(
                     ctx,
                     data,
-                    "AR/GuildProtectRevert",
+                    "AR/Inspector_GuildProtectRevert",
                     "(Anti-Raid) Guild Protection: Revert Changes",
                     imap,
                     self.guild_id,

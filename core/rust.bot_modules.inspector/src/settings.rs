@@ -10,7 +10,9 @@ use module_settings::{
 use splashcore_rs::value::Value;
 use std::sync::LazyLock;
 
-use super::types::{DehoistOptions, FakeBotDetectionOptions, GuildProtectionOptions};
+use super::types::{
+    AutoResponseMemberJoinOptions, DehoistOptions, FakeBotDetectionOptions, GuildProtectionOptions,
+};
 
 pub static INSPECTOR_OPTIONS: LazyLock<ConfigOption> = LazyLock::new(|| ConfigOption {
     id: "options",
@@ -209,6 +211,24 @@ pub static INSPECTOR_OPTIONS: LazyLock<ConfigOption> = LazyLock::new(|| ConfigOp
                 }),
                 on_condition: Some(|ctx, _state| Ok(ctx.operation_type != OperationType::View)),
             }]),
+        },
+        Column {
+            id: "auto_response_memberjoin",
+            name: "Auto Response (Member Join)",
+            description: "Action that should be performed automatically when a member joins",
+            column_type: ColumnType::new_scalar(InnerColumnType::BitFlag {
+                values: AutoResponseMemberJoinOptions::all()
+                    .into_iter()
+                    .map(|x| (x.to_string(), x.bits() as i64))
+                    .collect(),
+            }),
+            nullable: false,
+            unique: false,
+            suggestions: ColumnSuggestion::None {},
+            ignored_for: vec![],
+            secret: false,
+            pre_checks: settings_wrap_precheck(indexmap::indexmap! {}),
+            default_pre_checks: settings_wrap_precheck(vec![]),
         },
         Column {
             id: "fake_bot_detection",

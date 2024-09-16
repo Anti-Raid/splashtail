@@ -130,3 +130,41 @@ impl std::fmt::Display for FakeBotDetectionOptions {
         write!(f, "{}", flags.join(", "))
     }
 }
+
+bitflags::bitflags! {
+    #[derive(PartialEq, Debug, Clone, Copy)]
+    pub struct AutoResponseMemberJoinOptions: i32 {
+        const DISABLED = 1 << 0;
+        const KICK_NEW_MEMBERS = 1 << 1;
+        const BAN_NEW_MEMBERS = 1 << 2; // An unknown bot is one that is not on the whitelist nor is registered on fake bot database with official ids
+    }
+}
+
+impl AutoResponseMemberJoinOptions {
+    pub fn order() -> Vec<Self> {
+        vec![
+            AutoResponseMemberJoinOptions::DISABLED,
+            AutoResponseMemberJoinOptions::BAN_NEW_MEMBERS,
+            AutoResponseMemberJoinOptions::KICK_NEW_MEMBERS,
+        ]
+    }
+}
+
+impl std::fmt::Display for AutoResponseMemberJoinOptions {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let mut flags = Vec::new();
+
+        for flag in self.iter() {
+            let f = match flag {
+                AutoResponseMemberJoinOptions::DISABLED => "Disabled",
+                AutoResponseMemberJoinOptions::KICK_NEW_MEMBERS => "Kick New Members",
+                AutoResponseMemberJoinOptions::BAN_NEW_MEMBERS => "Ban New Members",
+                _ => "Unknown",
+            };
+
+            flags.push(f);
+        }
+
+        write!(f, "{}", flags.join(", "))
+    }
+}

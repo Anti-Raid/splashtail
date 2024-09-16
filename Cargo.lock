@@ -499,6 +499,7 @@ dependencies = [
  "bot_modules_server_backups",
  "bot_modules_server_member_backups",
  "bot_modules_settings",
+ "bot_modules_sting_sources",
  "bot_modules_temporary_punishments",
  "silverpelt",
 ]

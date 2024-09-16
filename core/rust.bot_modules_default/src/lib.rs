@@ -13,6 +13,7 @@ pub fn modules() -> Vec<silverpelt::Module> {
         bot_modules_server_backups::module().parse(),
         bot_modules_server_member_backups::module().parse(),
         bot_modules_settings::module().parse(),
+        bot_modules_sting_sources::module().parse(),
         bot_modules_temporary_punishments::module().parse(),
         bot_modules_root::module().parse(),
     ];

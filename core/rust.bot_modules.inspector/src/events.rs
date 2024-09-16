@@ -1,6 +1,7 @@
 use super::dehoist::dehoist_user;
 use super::types::{
-    DehoistOptions, FakeBotDetectionOptions, GuildProtectionOptions, TriggeredFlags, MAX_MENTIONS,
+    AutoResponseMemberJoinOptions, DehoistOptions, FakeBotDetectionOptions, GuildProtectionOptions,
+    TriggeredFlags, MAX_MENTIONS,
 };
 use proxy_support::{guild, member_in_guild};
 use serenity::all::FullEvent;
@@ -100,6 +101,106 @@ pub async fn event_listener(ectx: &EventHandlerContext) -> Result<(), Error> {
         FullEvent::GuildMemberAddition { new_member } => {
             let data = &ectx.data;
             let config = super::cache::get_config(&data.pool, ectx.guild_id).await?;
+
+            // First check for an auto response
+            if !config
+                .auto_response_memberjoin
+                .contains(AutoResponseMemberJoinOptions::DISABLED)
+            {
+                let bot_userid = ectx.serenity_context.cache.current_user().id;
+                let cache_http = botox::cache::CacheHttpImpl::from_ctx(&ectx.serenity_context);
+                let Some(bot) =
+                    member_in_guild(&cache_http, &data.reqwest, ectx.guild_id, bot_userid).await?
+                else {
+                    return Err("Bot member not found".into());
+                };
+
+                let bp = bot.permissions(&ectx.serenity_context.cache)?;
+
+                // keep going through the list of responses until we have one that works
+                for flag in AutoResponseMemberJoinOptions::order() {
+                    if config.auto_response_memberjoin.contains(flag) {
+                        match flag {
+                            AutoResponseMemberJoinOptions::DISABLED => break,
+                            AutoResponseMemberJoinOptions::KICK_NEW_MEMBERS => {
+                                if !bp.kick_members() {
+                                    log::error!(
+                                        "Cannot kick members on this guild: {}",
+                                        ectx.guild_id
+                                    );
+                                    continue; // Try the next one
+                                }
+
+                                new_member
+                                    .kick(&ctx.http, Some("Auto response: Kick new members"))
+                                    .await?;
+
+                                // Send audit logs if Audit Logs module is enabled
+                                if silverpelt::module_config::is_module_enabled(
+                                    &data.silverpelt_cache,
+                                    &data.pool,
+                                    ectx.guild_id,
+                                    "auditlogs",
+                                )
+                                .await?
+                                {
+                                    let imap = indexmap::indexmap! {
+                                        "member".to_string() => gwevent::field::CategorizedField { category: "summary".to_string(), field: new_member.user.clone().into() },
+                                    };
+
+                                    bot_modules_auditlogs::events::dispatch_audit_log(
+                                        ctx,
+                                        data,
+                                        "AR/Inspector_AutoResponseMemberJoin.KickNewMembers",
+                                        "(Anti-Raid) Auto Response: Kick New Members",
+                                        imap,
+                                        ectx.guild_id,
+                                    )
+                                    .await?;
+                                }
+                            }
+                            AutoResponseMemberJoinOptions::BAN_NEW_MEMBERS => {
+                                if !bp.ban_members() {
+                                    log::error!(
+                                        "Cannot ban members on this guild: {}",
+                                        ectx.guild_id
+                                    );
+                                    continue; // Try the next one
+                                }
+
+                                new_member
+                                    .ban(&ctx.http, 0, Some("Auto response: Ban new members"))
+                                    .await?;
+
+                                // Send audit logs if Audit Logs module is enabled
+                                if silverpelt::module_config::is_module_enabled(
+                                    &data.silverpelt_cache,
+                                    &data.pool,
+                                    ectx.guild_id,
+                                    "auditlogs",
+                                )
+                                .await?
+                                {
+                                    let imap = indexmap::indexmap! {
+                                        "member".to_string() => gwevent::field::CategorizedField { category: "summary".to_string(), field: new_member.user.clone().into() },
+                                    };
+
+                                    bot_modules_auditlogs::events::dispatch_audit_log(
+                                        ctx,
+                                        data,
+                                        "AR/Inspector_AutoResponseMemberJoin.BanNewMembers",
+                                        "(Anti-Raid) Auto Response Ban New Members",
+                                        imap,
+                                        ectx.guild_id,
+                                    )
+                                    .await?;
+                                }
+                            }
+                            _ => continue, // Ignore unknown flags
+                        }
+                    }
+                }
+            }
 
             let mut triggered_flags = TriggeredFlags::NONE;
 
@@ -277,7 +378,7 @@ pub async fn event_listener(ectx: &EventHandlerContext) -> Result<(), Error> {
                     bot_modules_auditlogs::events::dispatch_audit_log(
                         ctx,
                         data,
-                        "AR/MemberJoinInspectionFailed",
+                        "AR/Inspector_MemberJoinInspectionFailed",
                         "(Anti-Raid) Member Join Inspection Failed",
                         imap,
                         ectx.guild_id,
@@ -318,12 +419,38 @@ pub async fn event_listener(ectx: &EventHandlerContext) -> Result<(), Error> {
                         .edit(
                             &ctx.http,
                             serenity::all::EditMember::new()
-                                .nickname(new)
+                                .nickname(new.clone())
                                 .audit_log_reason(
                                     "User attempted to hoist themselves on the member list",
                                 ),
                         )
                         .await?;
+
+                    // Send audit logs if Audit Logs module is enabled
+                    if silverpelt::module_config::is_module_enabled(
+                        &data.silverpelt_cache,
+                        &data.pool,
+                        ectx.guild_id,
+                        "auditlogs",
+                    )
+                    .await?
+                    {
+                        let imap = indexmap::indexmap! {
+                            "member".to_string() => gwevent::field::CategorizedField { category: "summary".to_string(), field: new_member.user.clone().into() },
+                            "old_display_name".to_string() => gwevent::field::CategorizedField { category: "summary".to_string(), field: display_name.into() },
+                            "new_nickname".to_string() => gwevent::field::CategorizedField { category: "summary".to_string(), field: new.into() },
+                        };
+
+                        bot_modules_auditlogs::events::dispatch_audit_log(
+                            ctx,
+                            data,
+                            "AR/Inspector_MemberJoinHoistAttempt",
+                            "(Anti-Raid) Member Join Hoist Attempt",
+                            imap,
+                            ectx.guild_id,
+                        )
+                        .await?;
+                    }
                 }
             }
 
@@ -454,12 +581,38 @@ pub async fn event_listener(ectx: &EventHandlerContext) -> Result<(), Error> {
                             &ctx.http,
                             event.user.id,
                             serenity::all::EditMember::new()
-                                .nickname(new)
+                                .nickname(new.clone())
                                 .audit_log_reason(
                                     "User attempted to hoist themselves on the member list",
                                 ),
                         )
                         .await?;
+
+                    // Send audit logs if Audit Logs module is enabled
+                    if silverpelt::module_config::is_module_enabled(
+                        &data.silverpelt_cache,
+                        &data.pool,
+                        ectx.guild_id,
+                        "auditlogs",
+                    )
+                    .await?
+                    {
+                        let imap = indexmap::indexmap! {
+                            "member".to_string() => gwevent::field::CategorizedField { category: "summary".to_string(), field: event.user.clone().into() },
+                            "old_display_name".to_string() => gwevent::field::CategorizedField { category: "summary".to_string(), field: display_name.into() },
+                            "new_nickname".to_string() => gwevent::field::CategorizedField { category: "summary".to_string(), field: new.into() },
+                        };
+
+                        bot_modules_auditlogs::events::dispatch_audit_log(
+                            ctx,
+                            data,
+                            "AR/Inspector_MemberUpdateHoistAttempt",
+                            "(Anti-Raid) Member Update Hoist Attempt",
+                            imap,
+                            ectx.guild_id,
+                        )
+                        .await?;
+                    }
                 }
             }
 

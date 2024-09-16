@@ -1,4 +1,6 @@
-use super::types::{DehoistOptions, FakeBotDetectionOptions, GuildProtectionOptions};
+use super::types::{
+    AutoResponseMemberJoinOptions, DehoistOptions, FakeBotDetectionOptions, GuildProtectionOptions,
+};
 use dashmap::DashMap;
 use futures_util::future::FutureExt;
 use moka::future::Cache;
@@ -53,6 +55,7 @@ pub struct BasicAntispamConfig {
     pub anti_everyone: Option<i32>, // None = disabled, Some(<stings>) othersise
     pub fake_bot_detection: FakeBotDetectionOptions,
     pub guild_protection: GuildProtectionOptions,
+    pub auto_response_memberjoin: AutoResponseMemberJoinOptions,
     pub hoist_detection: DehoistOptions,
     pub minimum_account_age: Option<i64>,
     pub maximum_account_age: Option<i64>, // Not sure why you'd ever want this, but it's here
@@ -68,6 +71,7 @@ impl Default for BasicAntispamConfig {
                 | FakeBotDetectionOptions::EXACT_NAME_CHECK
                 | FakeBotDetectionOptions::SIMILAR_NAME_CHECK, // The default checks should protect against most case of scam 'dyno' bot nukes
             guild_protection: GuildProtectionOptions::DISABLED, // Needs extra setup
+            auto_response_memberjoin: AutoResponseMemberJoinOptions::DISABLED, // This needs to be enabled/disabled when theres an actual problem
             hoist_detection: DehoistOptions::STRIP_SPECIAL_CHARS_STARTSWITH
                 | DehoistOptions::STRIP_NON_ASCII,
             minimum_account_age: None,
@@ -83,7 +87,7 @@ pub static BASIC_ANTISPAM_CONFIG_CACHE: LazyLock<
 
 pub async fn setup_cache_initial(data: &sqlx::PgPool) -> Result<(), silverpelt::Error> {
     let config = sqlx::query!(
-        "SELECT guild_id, anti_invite, anti_everyone, fake_bot_detection, guild_protection, hoist_detection, minimum_account_age, maximum_account_age, sting_retention FROM inspector__options",
+        "SELECT guild_id, anti_invite, anti_everyone, fake_bot_detection, guild_protection, auto_response_memberjoin, hoist_detection, minimum_account_age, maximum_account_age, sting_retention FROM inspector__options",
     )
     .fetch_all(data)
     .await?;
@@ -104,6 +108,9 @@ pub async fn setup_cache_initial(data: &sqlx::PgPool) -> Result<(), silverpelt::
                     guild_protection: GuildProtectionOptions::from_bits_truncate(
                         row.guild_protection,
                     ),
+                    auto_response_memberjoin: AutoResponseMemberJoinOptions::from_bits_truncate(
+                        row.auto_response_memberjoin,
+                    ),
                     minimum_account_age: row.minimum_account_age,
                     maximum_account_age: row.maximum_account_age,
                     sting_retention: row.sting_retention,
@@ -123,7 +130,7 @@ pub async fn get_config(
         Ok(config.clone())
     } else {
         let row = sqlx::query!(
-            "SELECT anti_invite, anti_everyone, fake_bot_detection, guild_protection, hoist_detection, minimum_account_age, maximum_account_age, sting_retention FROM inspector__options WHERE guild_id = $1",
+            "SELECT anti_invite, anti_everyone, fake_bot_detection, guild_protection, auto_response_memberjoin, hoist_detection, minimum_account_age, maximum_account_age, sting_retention FROM inspector__options WHERE guild_id = $1",
             guild_id.to_string(),
         )
         .fetch_optional(pool)
@@ -138,6 +145,9 @@ pub async fn get_config(
                 ),
                 hoist_detection: DehoistOptions::from_bits_truncate(row.hoist_detection),
                 guild_protection: GuildProtectionOptions::from_bits_truncate(row.guild_protection),
+                auto_response_memberjoin: AutoResponseMemberJoinOptions::from_bits_truncate(
+                    row.auto_response_memberjoin,
+                ),
                 minimum_account_age: row.minimum_account_age,
                 maximum_account_age: row.maximum_account_age,
                 sting_retention: row.sting_retention,
