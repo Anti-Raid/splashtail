@@ -2,8 +2,6 @@ package types
 
 import (
 	"time"
-
-	"github.com/jackc/pgx/v5/pgtype"
 )
 
 type AuthorizeRequest struct {
@@ -19,13 +17,13 @@ type UserLogin struct {
 }
 
 type UserSession struct {
-	ID         string      `db:"id" json:"id" description:"The ID of the session"`
-	Name       pgtype.Text `db:"name" json:"name,omitempty" description:"The name of the session. Login sessions do not have any names by default"`
-	UserID     string      `db:"user_id" json:"user_id" description:"The users ID"`
-	CreatedAt  time.Time   `db:"created_at" json:"created_at" description:"The time the session was created"`
-	Type       string      `db:"type" json:"type" description:"The type of session token"`
-	PermLimits []string    `db:"perm_limits" json:"perm_limits" description:"The permissions the session has"`
-	Expiry     time.Time   `db:"expiry" json:"expiry" description:"The time the session expires"`
+	ID         string    `db:"id" json:"id" description:"The ID of the session"`
+	Name       *string   `db:"name" json:"name,omitempty" description:"The name of the session. Login sessions do not have any names by default"`
+	UserID     string    `db:"user_id" json:"user_id" description:"The users ID"`
+	CreatedAt  time.Time `db:"created_at" json:"created_at" description:"The time the session was created"`
+	Type       string    `db:"type" json:"type" description:"The type of session token"`
+	PermLimits []string  `db:"perm_limits" json:"perm_limits" description:"The permissions the session has"`
+	Expiry     time.Time `db:"expiry" json:"expiry" description:"The time the session expires"`
 }
 
 type CreateUserSession struct {

@@ -2,9 +2,6 @@ package types
 
 import (
 	"errors"
-	"time"
-
-	"github.com/jackc/pgx/v5/pgtype"
 )
 
 // API configuration data
@@ -45,14 +42,6 @@ type PagedResult[T any] struct {
 	Count   uint64 `json:"count"`
 	PerPage uint64 `json:"per_page"`
 	Results T      `json:"results"`
-}
-
-type Vanity struct {
-	ITag       pgtype.UUID `db:"itag" json:"itag" description:"The vanities internal ID."`
-	TargetID   string      `db:"target_id" json:"target_id" description:"The ID of the entity"`
-	TargetType string      `db:"target_type" json:"target_type" description:"The type of the entity"`
-	Code       string      `db:"code" json:"code" description:"The code of the vanity"`
-	CreatedAt  time.Time   `db:"created_at" json:"created_at" description:"The time the vanity was created"`
 }
 
 // A clearable is a value that can be either cleared or set
