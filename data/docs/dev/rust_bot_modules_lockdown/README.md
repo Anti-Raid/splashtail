@@ -73,6 +73,7 @@ Internally, ``scl/<channel_id>`` works by setting the permission overwrites for 
 
 When multiple lockdowns are made on the same item (which will now be called a ``handle`` from now on), there needs to be a way to know what lockdown owns/has the handle. In AntiRaid, this is controlled through specificity based on the rules:
 
+- Rule 0: When a handle is locked, the priority is added without replacing older priorities. When a handle is unlocked, the priority is removed leading to its previous value.
 - Rule 1: A handle is controlled unlocked by a lockdown A if the lockdown (say, lockdown B) corresponding to the largest specificity that has locked the handle is less than the specificity of lockdown A. Otherwise, it is considered locked and cannot be modified by lockdown A.
 - Rule 2: The underlying permissions or permission overwrites of a role/channel are defined as the saved permissions/permission overwrites of the role/channel of the oldest possible lockdown which has saved said data.
 
