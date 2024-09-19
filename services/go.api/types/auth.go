@@ -11,11 +11,6 @@ type AuthorizeRequest struct {
 	Scope       string `json:"scope" validate:"required,oneof=normal ban_exempt"`
 }
 
-type UserLogin struct {
-	Token  string `json:"token" description:"The users token"`
-	UserID string `json:"user_id" description:"The users ID"`
-}
-
 type UserSession struct {
 	ID         string    `db:"id" json:"id" description:"The ID of the session"`
 	Name       *string   `db:"name" json:"name,omitempty" description:"The name of the session. Login sessions do not have any names by default"`
@@ -34,6 +29,7 @@ type CreateUserSession struct {
 }
 
 type CreateUserSessionResponse struct {
+	UserID    string `json:"user_id" description:"The ID of the user who created the session"`
 	Token     string `json:"token" description:"The token of the session"`
 	SessionID string `json:"session_id" description:"The ID of the session"`
 }

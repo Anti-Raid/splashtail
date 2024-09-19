@@ -23,7 +23,7 @@ func Docs() *docs.Doc {
 		Summary:     "Create User Session",
 		Description: "Creates a user session returning the session token. The session token cannot be read after creation.",
 		Req:         types.CreateUserSession{},
-		Resp:        types.UserSessionList{},
+		Resp:        types.CreateUserSessionResponse{},
 		Params:      []docs.Parameter{},
 	}
 }

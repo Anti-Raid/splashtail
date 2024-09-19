@@ -33,7 +33,7 @@ func Docs() *docs.Doc {
 		Summary:     "Create Oauth2 Login",
 		Description: "Takes in a ``code`` query parameter and returns a temporary session token`. **Cannot be used outside of the site for security reasons**",
 		Req:         types.AuthorizeRequest{},
-		Resp:        types.UserLogin{},
+		Resp:        types.CreateUserSessionResponse{},
 	}
 }
 
@@ -376,8 +376,9 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 	}
 
 	var sessionToken = crypto.RandString(128)
+	var sessionId string
 
-	_, err = state.Pool.Exec(d.Context, "INSERT INTO web_api_tokens (user_id, type, token, expiry) VALUES ($1, 'login', $2, NOW() + INTERVAL '1 hour')", user.ID, sessionToken)
+	err = state.Pool.QueryRow(d.Context, "INSERT INTO web_api_tokens (user_id, type, token, expiry) VALUES ($1, 'login', $2, NOW() + INTERVAL '1 hour') RETURNING id", user.ID, sessionToken).Scan(&sessionId)
 
 	if err != nil {
 		state.Logger.Error("Failed to create session token", zap.Error(err), zap.String("userID", user.ID))
@@ -391,9 +392,10 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 	}
 
 	// Create authUser and send
-	var authUser = types.UserLogin{
-		UserID: user.ID,
-		Token:  sessionToken,
+	var authUser = types.CreateUserSessionResponse{
+		UserID:    user.ID,
+		SessionID: sessionId,
+		Token:     sessionToken,
 	}
 
 	return uapi.HttpResponse{
