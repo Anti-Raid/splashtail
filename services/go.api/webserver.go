@@ -23,7 +23,6 @@ import (
 	"go.api/api"
 	"go.api/constants"
 	"go.api/integrations/gitlogs"
-	"go.api/routes/apps"
 	"go.api/routes/auth"
 	"go.api/routes/core"
 	"go.api/routes/guilds"
@@ -123,7 +122,6 @@ func CreateWebserver() *chi.Mux {
 
 	routers := []uapi.APIRouter{
 		// Use same order as routes folder
-		apps.Router{},
 		auth.Router{},
 		core.Router{},
 		guilds.Router{},
