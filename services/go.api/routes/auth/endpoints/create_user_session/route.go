@@ -85,7 +85,9 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 		Status: http.StatusCreated,
 		Json: types.CreateUserSessionResponse{
 			Token:     sessionToken,
+			UserID:    d.Auth.ID,
 			SessionID: sessionId,
+			Expiry:    expiry,
 		},
 	}
 
