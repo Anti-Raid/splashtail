@@ -21,7 +21,7 @@ import (
 func PersistTaskState(tc *TaskProgress, prog *taskstate.Progress) error {
 	_, err := state.Pool.Exec(
 		tc.TaskState.Context(),
-		"UPDATE ongoing_tasks SET state = $2, data = $3 WHERE task_id = $1",
+		"UPDATE ongoing_jobs SET state = $2, data = $3 WHERE task_id = $1",
 		tc.TaskID,
 		prog.State,
 		prog.Data,
@@ -39,7 +39,7 @@ func GetPersistedTaskState(tc *TaskProgress) (*taskstate.Progress, error) {
 	var s string
 	var data map[string]any
 
-	err := state.Pool.QueryRow(tc.TaskState.Context(), "SELECT state, data FROM ongoing_tasks WHERE task_id = $1", tc.TaskID).Scan(&s, &data)
+	err := state.Pool.QueryRow(tc.TaskState.Context(), "SELECT state, data FROM ongoing_jobs WHERE task_id = $1", tc.TaskID).Scan(&s, &data)
 
 	if err != nil {
 		return nil, err
@@ -167,7 +167,7 @@ func ExecuteTask(
 			defer ctxCancel()
 		}
 
-		_, err2 := state.Pool.Exec(state.Context, "DELETE FROM ongoing_tasks WHERE task_id = $1", taskId)
+		_, err2 := state.Pool.Exec(state.Context, "DELETE FROM ongoing_jobs WHERE task_id = $1", taskId)
 
 		if err != nil {
 			l.Error("Failed to delete task from ongoing tasks", zap.Error(err2))

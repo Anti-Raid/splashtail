@@ -50,17 +50,17 @@ func CreateTask(ctx context.Context, pool *pgxpool.Pool, task taskdef.TaskDefini
 		return nil, fmt.Errorf("failed to create task: %w", err)
 	}
 
-	// Add to ongoing_tasks
+	// Add to ongoing_jobs
 	_, err = tx.Exec(
 		ctx,
-		"INSERT INTO ongoing_tasks (task_id, data, initial_opts) VALUES ($1, $2, $3)",
+		"INSERT INTO ongoing_jobs (task_id, data, initial_opts) VALUES ($1, $2, $3)",
 		taskId,
 		map[string]any{},
 		task,
 	)
 
 	if err != nil {
-		return nil, fmt.Errorf("failed to add task to ongoing_tasks: %w", err)
+		return nil, fmt.Errorf("failed to add task to ongoing_jobs: %w", err)
 	}
 
 	err = tx.Commit(ctx)

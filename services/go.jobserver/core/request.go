@@ -128,13 +128,13 @@ func SpawnTask(spawnTask rpc_messages.SpawnTask) (*rpc_messages.SpawnTaskRespons
 }
 
 func Resume() {
-	state.Logger.Info("Deleting ancient ongoing_tasks older than ResumeOngoingTaskTimeout", zap.Int("timeout", ResumeOngoingTaskTimeoutSecs))
+	state.Logger.Info("Deleting ancient ongoing jobs older than ResumeOngoingTaskTimeout", zap.Int("timeout", ResumeOngoingTaskTimeoutSecs))
 
-	_, err := state.Pool.Exec(state.Context, "DELETE FROM ongoing_tasks WHERE created_at < NOW() - make_interval(secs => $1)", ResumeOngoingTaskTimeoutSecs)
+	_, err := state.Pool.Exec(state.Context, "DELETE FROM ongoing_jobs WHERE created_at < NOW() - make_interval(secs => $1)", ResumeOngoingTaskTimeoutSecs)
 
 	if err != nil {
-		state.Logger.Error("Failed to delete ancient ongoing_tasks", zap.Error(err))
-		panic("Failed to delete ancient ongoing_tasks")
+		state.Logger.Error("Failed to delete ancient ongoing_jobs", zap.Error(err))
+		panic("Failed to delete ancient ongoing_jobs")
 	}
 
 	state.Logger.Info("Looking for tasks to resume")
@@ -144,7 +144,7 @@ func Resume() {
 	var initialOpts map[string]any
 	var createdAt time.Time
 
-	rows, err := state.Pool.Query(state.Context, "SELECT task_id, data, initial_opts, created_at FROM ongoing_tasks")
+	rows, err := state.Pool.Query(state.Context, "SELECT task_id, data, initial_opts, created_at FROM ongoing_jobs")
 
 	if err != nil {
 		state.Logger.Error("Failed to query tasks", zap.Error(err))
