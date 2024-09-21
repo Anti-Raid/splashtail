@@ -12,13 +12,13 @@ import (
 	"github.com/infinitybotlist/eureka/crypto"
 	jobs "go.jobs"
 	"go.jobs/interfaces"
-	"go.jobs/taskstate"
+	jobstate "go.jobs/state"
 	"go.jobserver/state"
 	"go.uber.org/zap"
 )
 
 // PersistTaskState persists task state to redis temporarily
-func PersistTaskState(tc *TaskProgress, prog *taskstate.Progress) error {
+func PersistTaskState(tc *TaskProgress, prog *jobstate.Progress) error {
 	_, err := state.Pool.Exec(
 		tc.TaskState.Context(),
 		"UPDATE ongoing_jobs SET state = $2, data = $3 WHERE id = $1",
@@ -35,7 +35,7 @@ func PersistTaskState(tc *TaskProgress, prog *taskstate.Progress) error {
 }
 
 // GetPersistedTaskState gets persisted task state from redis
-func GetPersistedTaskState(tc *TaskProgress) (*taskstate.Progress, error) {
+func GetPersistedTaskState(tc *TaskProgress) (*jobstate.Progress, error) {
 	var s string
 	var data map[string]any
 
@@ -45,7 +45,7 @@ func GetPersistedTaskState(tc *TaskProgress) (*taskstate.Progress, error) {
 		return nil, err
 	}
 
-	return &taskstate.Progress{
+	return &jobstate.Progress{
 		State: s,
 		Data:  data,
 	}, nil
@@ -84,15 +84,15 @@ type TaskProgress struct {
 	// Used to cache the current task progress in resumes
 	//
 	// When resuming, set this to the current progress
-	CurrentTaskProgress *taskstate.Progress
+	CurrentTaskProgress *jobstate.Progress
 
 	// OnSetProgress is a callback that is called when SetProgress is called
 	//
 	// If unset, calls PersistTaskState
-	OnSetProgress func(tc *TaskProgress, prog *taskstate.Progress) error
+	OnSetProgress func(tc *TaskProgress, prog *jobstate.Progress) error
 }
 
-func (ts TaskProgress) GetProgress() (*taskstate.Progress, error) {
+func (ts TaskProgress) GetProgress() (*jobstate.Progress, error) {
 	if ts.CurrentTaskProgress == nil {
 		return GetPersistedTaskState(&ts)
 	}
@@ -100,7 +100,7 @@ func (ts TaskProgress) GetProgress() (*taskstate.Progress, error) {
 	return ts.CurrentTaskProgress, nil
 }
 
-func (ts TaskProgress) SetProgress(prog *taskstate.Progress) error {
+func (ts TaskProgress) SetProgress(prog *jobstate.Progress) error {
 	ts.CurrentTaskProgress = prog
 
 	if ts.OnSetProgress != nil {

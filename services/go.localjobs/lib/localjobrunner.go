@@ -6,7 +6,7 @@ import (
 
 	jobs "go.jobs"
 	"go.jobs/interfaces"
-	"go.jobs/taskstate"
+	jobstate "go.jobs/state"
 
 	"github.com/infinitybotlist/eureka/crypto"
 	"go.uber.org/zap"
@@ -17,7 +17,7 @@ type TaskLocalOpts struct {
 }
 
 // Executes a job locally
-func ExecuteJobLocal(prefix, taskId string, l *zap.Logger, jobImpl interfaces.JobImpl, opts TaskLocalOpts, taskState taskstate.TaskState) error {
+func ExecuteJobLocal(prefix, taskId string, l *zap.Logger, jobImpl interfaces.JobImpl, opts TaskLocalOpts, taskState jobstate.State) error {
 	var currentTaskState = "pending"
 
 	err := opts.OnStateChange(currentTaskState)

@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"strconv"
 
-	"go.jobs/taskstate"
+	jobstate "go.jobs/state"
 	"go.jobs/types"
 	"go.uber.org/zap"
 )
@@ -73,8 +73,8 @@ func (s *Stepper[T]) StepIndex(state string) int {
 func (s *Stepper[T]) Exec(
 	task *T,
 	l *zap.Logger,
-	state taskstate.TaskState,
-	progstate taskstate.TaskProgressState,
+	state jobstate.State,
+	progstate jobstate.ProgressState,
 ) (*types.TaskOutput, error) {
 	curProg, err := progstate.GetProgress()
 
@@ -83,7 +83,7 @@ func (s *Stepper[T]) Exec(
 	}
 
 	if curProg == nil {
-		curProg = &taskstate.Progress{
+		curProg = &jobstate.Progress{
 			State: "",
 			Data:  map[string]any{},
 		}
@@ -175,8 +175,8 @@ type Step[T any] struct {
 	Exec func(
 		t *T,
 		l *zap.Logger,
-		state taskstate.TaskState,
-		progstate taskstate.TaskProgressState,
-		progress *taskstate.Progress,
-	) (*types.TaskOutput, *taskstate.Progress, error)
+		state jobstate.State,
+		progstate jobstate.ProgressState,
+		progress *jobstate.Progress,
+	) (*types.TaskOutput, *jobstate.Progress, error)
 }

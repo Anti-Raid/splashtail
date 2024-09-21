@@ -6,10 +6,10 @@ import (
 	"runtime/debug"
 
 	"github.com/bwmarrin/discordgo"
-	"go.jobs/taskstate"
+	jobstate "go.jobs/state"
 )
 
-// Implementor of tasks.TaskState
+// Implementor of jobstate.State
 type TaskState struct {
 	HttpTransport *http.Transport
 	DiscordSess   *discordgo.Session
@@ -40,13 +40,13 @@ func (ts TaskState) Context() context.Context {
 
 type TaskProgress struct{}
 
-func (ts TaskProgress) GetProgress() (*taskstate.Progress, error) {
-	return &taskstate.Progress{
+func (ts TaskProgress) GetProgress() (*jobstate.Progress, error) {
+	return &jobstate.Progress{
 		State: "",
 		Data:  map[string]any{},
 	}, nil
 }
 
-func (ts TaskProgress) SetProgress(prog *taskstate.Progress) error {
+func (ts TaskProgress) SetProgress(prog *jobstate.Progress) error {
 	return nil
 }

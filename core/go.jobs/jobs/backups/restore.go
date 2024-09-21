@@ -12,8 +12,8 @@ import (
 	"github.com/go-viper/mapstructure/v2"
 	"go.jobs/common"
 	"go.jobs/interfaces"
+	jobstate "go.jobs/state"
 	"go.jobs/step"
-	"go.jobs/taskstate"
 	"go.jobs/types"
 	"go.std/splashcore"
 	"go.std/utils"
@@ -27,7 +27,7 @@ import (
 	"go.uber.org/zap"
 )
 
-func getImageAsDataUri(state taskstate.TaskState, constraints *BackupConstraints, l *zap.Logger, f *iblfile.AutoEncryptedFile_FullFile, name, endpoint string, bo *BackupCreateOpts) (string, error) {
+func getImageAsDataUri(state jobstate.State, constraints *BackupConstraints, l *zap.Logger, f *iblfile.AutoEncryptedFile_FullFile, name, endpoint string, bo *BackupCreateOpts) (string, error) {
 	if slices.Contains(bo.BackupGuildAssets, name) {
 		l.Info("Fetching guild asset", zap.String("name", name))
 		iconBytes, err := f.Get("assets/" + name)
@@ -141,7 +141,7 @@ func (t *ServerBackupRestoreTask) Resumable() bool {
 }
 
 // Validate validates the task and sets up state if needed
-func (t *ServerBackupRestoreTask) Validate(state taskstate.TaskState) error {
+func (t *ServerBackupRestoreTask) Validate(state jobstate.State) error {
 	if t.ServerID == "" {
 		return fmt.Errorf("server_id is required")
 	}
@@ -192,8 +192,8 @@ func (t *ServerBackupRestoreTask) Validate(state taskstate.TaskState) error {
 
 func (t *ServerBackupRestoreTask) Exec(
 	l *zap.Logger,
-	state taskstate.TaskState,
-	progstate taskstate.TaskProgressState,
+	state jobstate.State,
+	progstate jobstate.ProgressState,
 ) (*types.TaskOutput, error) {
 	discord, botUser, _ := state.Discord()
 	ctx := state.Context()
@@ -409,7 +409,7 @@ func (t *ServerBackupRestoreTask) Exec(
 	outp, err := step.NewStepper(
 		step.Step[ServerBackupRestoreTask]{
 			State: "edit_base_guild",
-			Exec: func(t *ServerBackupRestoreTask, l *zap.Logger, state taskstate.TaskState, progstate taskstate.TaskProgressState, progress *taskstate.Progress) (*types.TaskOutput, *taskstate.Progress, error) {
+			Exec: func(t *ServerBackupRestoreTask, l *zap.Logger, state jobstate.State, progstate jobstate.ProgressState, progress *jobstate.Progress) (*types.TaskOutput, *jobstate.Progress, error) {
 				// Edit basic guild. Note that settings related to ID's are changed later if needed
 				// Notes:
 				//
@@ -481,12 +481,12 @@ func (t *ServerBackupRestoreTask) Exec(
 					return nil, nil, fmt.Errorf("failed to edit guild: %w", err)
 				}
 
-				return nil, &taskstate.Progress{}, nil
+				return nil, &jobstate.Progress{}, nil
 			},
 		},
 		step.Step[ServerBackupRestoreTask]{
 			State: "delete_old_roles",
-			Exec: func(t *ServerBackupRestoreTask, l *zap.Logger, state taskstate.TaskState, progstate taskstate.TaskProgressState, progress *taskstate.Progress) (*types.TaskOutput, *taskstate.Progress, error) {
+			Exec: func(t *ServerBackupRestoreTask, l *zap.Logger, state jobstate.State, progstate jobstate.ProgressState, progress *jobstate.Progress) (*types.TaskOutput, *jobstate.Progress, error) {
 				for _, r := range tgtGuild.Roles {
 					if slices.Contains(t.Options.ProtectedRoles, r.ID) {
 						continue
@@ -523,12 +523,12 @@ func (t *ServerBackupRestoreTask) Exec(
 					time.Sleep(time.Duration(t.Constraints.Restore.RoleDeleteSleep))
 				}
 
-				return nil, &taskstate.Progress{}, nil
+				return nil, &jobstate.Progress{}, nil
 			},
 		},
 		step.Step[ServerBackupRestoreTask]{
 			State: "create_new_roles",
-			Exec: func(t *ServerBackupRestoreTask, l *zap.Logger, state taskstate.TaskState, progstate taskstate.TaskProgressState, progress *taskstate.Progress) (*types.TaskOutput, *taskstate.Progress, error) {
+			Exec: func(t *ServerBackupRestoreTask, l *zap.Logger, state jobstate.State, progstate jobstate.ProgressState, progress *jobstate.Progress) (*types.TaskOutput, *jobstate.Progress, error) {
 				var prevState struct {
 					RestoredRoleMap map[string]string `mapstructure:"restoredRoleMap,omitempty"`
 				}
@@ -625,7 +625,7 @@ func (t *ServerBackupRestoreTask) Exec(
 					time.Sleep(time.Duration(t.Constraints.Restore.RoleCreateSleep))
 				}
 
-				return nil, &taskstate.Progress{
+				return nil, &jobstate.Progress{
 					Data: map[string]any{
 						"restoredRoleMap": restoredRolesMap,
 					},
@@ -634,7 +634,7 @@ func (t *ServerBackupRestoreTask) Exec(
 		},
 		step.Step[ServerBackupRestoreTask]{
 			State: "delete_old_channels",
-			Exec: func(t *ServerBackupRestoreTask, l *zap.Logger, state taskstate.TaskState, progstate taskstate.TaskProgressState, progress *taskstate.Progress) (*types.TaskOutput, *taskstate.Progress, error) {
+			Exec: func(t *ServerBackupRestoreTask, l *zap.Logger, state jobstate.State, progstate jobstate.ProgressState, progress *jobstate.Progress) (*types.TaskOutput, *jobstate.Progress, error) {
 				var srcChannelMap = make(map[string]*discordgo.Channel) // Map of backed up channel id to channel object
 				for _, channel := range srcGuild.Channels {
 					srcChannelMap[channel.ID] = channel
@@ -680,7 +680,7 @@ func (t *ServerBackupRestoreTask) Exec(
 					time.Sleep(time.Duration(t.Constraints.Restore.ChannelDeleteSleep))
 				}
 
-				return nil, &taskstate.Progress{
+				return nil, &jobstate.Progress{
 					Data: map[string]any{
 						"ignoredChannels": ignoredChannels,
 					},
@@ -689,7 +689,7 @@ func (t *ServerBackupRestoreTask) Exec(
 		},
 		step.Step[ServerBackupRestoreTask]{
 			State: "create_new_channels",
-			Exec: func(t *ServerBackupRestoreTask, l *zap.Logger, state taskstate.TaskState, progstate taskstate.TaskProgressState, progress *taskstate.Progress) (*types.TaskOutput, *taskstate.Progress, error) {
+			Exec: func(t *ServerBackupRestoreTask, l *zap.Logger, state jobstate.State, progstate jobstate.ProgressState, progress *jobstate.Progress) (*types.TaskOutput, *jobstate.Progress, error) {
 				var prevState struct {
 					IgnoredChannels     []string          `mapstructure:"ignoredChannels"`
 					RestoredRoleMap     map[string]string `mapstructure:"restoredRoleMap"`
@@ -851,7 +851,7 @@ func (t *ServerBackupRestoreTask) Exec(
 					time.Sleep(time.Duration(t.Constraints.Restore.ChannelCreateSleep))
 				}
 
-				return nil, &taskstate.Progress{
+				return nil, &jobstate.Progress{
 					Data: map[string]any{
 						"restoredChannelsMap": restoredChannelsMap,
 					},
@@ -860,7 +860,7 @@ func (t *ServerBackupRestoreTask) Exec(
 		},
 		step.Step[ServerBackupRestoreTask]{
 			State: "update_guild_features",
-			Exec: func(t *ServerBackupRestoreTask, l *zap.Logger, state taskstate.TaskState, progstate taskstate.TaskProgressState, progress *taskstate.Progress) (*types.TaskOutput, *taskstate.Progress, error) {
+			Exec: func(t *ServerBackupRestoreTask, l *zap.Logger, state jobstate.State, progstate jobstate.ProgressState, progress *jobstate.Progress) (*types.TaskOutput, *jobstate.Progress, error) {
 				var prevState struct {
 					RestoredChannelsMap map[string]string `mapstructure:"restoredChannelsMap"`
 				}
@@ -919,12 +919,12 @@ func (t *ServerBackupRestoreTask) Exec(
 					return nil, nil, fmt.Errorf("failed to edit guild: %w", err)
 				}
 
-				return nil, &taskstate.Progress{}, nil
+				return nil, &jobstate.Progress{}, nil
 			},
 		},
 		step.Step[ServerBackupRestoreTask]{
 			State: "create_webhook_if_needed",
-			Exec: func(t *ServerBackupRestoreTask, l *zap.Logger, state taskstate.TaskState, progstate taskstate.TaskProgressState, progress *taskstate.Progress) (*types.TaskOutput, *taskstate.Progress, error) {
+			Exec: func(t *ServerBackupRestoreTask, l *zap.Logger, state jobstate.State, progstate jobstate.ProgressState, progress *jobstate.Progress) (*types.TaskOutput, *jobstate.Progress, error) {
 				if bo.BackupMessages {
 					l.Info("Waiting 5 seconds to avoid API issues")
 
@@ -959,7 +959,7 @@ func (t *ServerBackupRestoreTask) Exec(
 						return nil, nil, fmt.Errorf("failed to create message send webhook: %w", err)
 					}
 
-					return nil, &taskstate.Progress{
+					return nil, &jobstate.Progress{
 						Data: map[string]any{
 							"webhook_id":    webhook.ID,
 							"webhook_token": webhook.Token,
@@ -972,7 +972,7 @@ func (t *ServerBackupRestoreTask) Exec(
 		},
 		step.Step[ServerBackupRestoreTask]{
 			State: "restore_messages",
-			Exec: func(t *ServerBackupRestoreTask, l *zap.Logger, state taskstate.TaskState, progstate taskstate.TaskProgressState, progress *taskstate.Progress) (*types.TaskOutput, *taskstate.Progress, error) {
+			Exec: func(t *ServerBackupRestoreTask, l *zap.Logger, state jobstate.State, progstate jobstate.ProgressState, progress *jobstate.Progress) (*types.TaskOutput, *jobstate.Progress, error) {
 				if bo.BackupMessages {
 					l.Info("Waiting 5 seconds to avoid API issues")
 

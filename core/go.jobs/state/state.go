@@ -1,6 +1,6 @@
-// To avoid needing to store the entire state even when not needed, tasks defines a state interface
+// To avoid needing to store the entire state even when not needed, jobs defines a state interface
 // to store and fetch only needed state
-package taskstate
+package state
 
 import (
 	"context"
@@ -10,8 +10,8 @@ import (
 	"github.com/bwmarrin/discordgo"
 )
 
-type TaskState interface {
-	// GetTransport returns the http transport to use for tasks
+type State interface {
+	// GetTransport returns the http transport to use for jobs
 	//
 	// E.g. localjobs uses a custom http transport to support local files via the file:// scheme
 	Transport() *http.Transport
@@ -27,7 +27,7 @@ type TaskState interface {
 	// Debug Info and extra debug info
 	DebugInfo() *debug.BuildInfo
 
-	// Context returns the context to use for the task
+	// Context returns the context to use for the job
 	Context() context.Context
 }
 
@@ -36,11 +36,11 @@ type Progress struct {
 	Data  map[string]any
 }
 
-type TaskProgressState interface {
-	// GetProgress returns the current progress of the task. This is useful
-	// for resumable tasks like server restores
+type ProgressState interface {
+	// GetProgress returns the current progress of the job. This is useful
+	// for resumable jobs like server restores
 	GetProgress() (*Progress, error)
 
-	// Sets/demarkates the progress of the task, if supported
+	// Sets/demarkates the progress of the job, if supported
 	SetProgress(prog *Progress) error
 }

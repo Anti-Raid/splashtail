@@ -4,7 +4,7 @@ package interfaces
 import (
 	"time"
 
-	"go.jobs/taskstate"
+	jobstate "go.jobs/state"
 	"go.jobs/types"
 	"go.uber.org/zap"
 )
@@ -22,10 +22,10 @@ type JobImpl interface {
 	Fields() map[string]any
 
 	// Validate validates the task and sets up state if needed
-	Validate(state taskstate.TaskState) error
+	Validate(state jobstate.State) error
 
 	// Exec executes the task returning an output if any
-	Exec(l *zap.Logger, state taskstate.TaskState, progstate taskstate.TaskProgressState) (*types.TaskOutput, error)
+	Exec(l *zap.Logger, state jobstate.State, progstate jobstate.ProgressState) (*types.TaskOutput, error)
 
 	// Expiry returns when the task will expire (if any), setting this to nil will make the task not expire
 	Expiry() *time.Duration

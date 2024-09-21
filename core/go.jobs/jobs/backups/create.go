@@ -15,7 +15,7 @@ import (
 
 	"go.jobs/common"
 	"go.jobs/interfaces"
-	"go.jobs/taskstate"
+	jobstate "go.jobs/state"
 	"go.jobs/types"
 	"go.std/splashcore"
 	"go.std/utils"
@@ -31,7 +31,7 @@ import (
 )
 
 // Backs up image data to a file
-func backupGuildAsset(state taskstate.TaskState, constraints *BackupConstraints, l *zap.Logger, f *iblfile.AutoEncryptedFile_FullFile, name, url string) error {
+func backupGuildAsset(state jobstate.State, constraints *BackupConstraints, l *zap.Logger, f *iblfile.AutoEncryptedFile_FullFile, name, url string) error {
 	l.Info("Backing up guild asset", zap.String("name", name))
 	ctx := state.Context()
 	client := http.Client{
@@ -100,7 +100,7 @@ func backupGuildAsset(state taskstate.TaskState, constraints *BackupConstraints,
 // Note that attachments are only backed up if withAttachments is true and f.Size() < fileSizeWarningThreshold
 //
 // Note that this function does not write the messages to the file, it only returns them
-func backupChannelMessages(state taskstate.TaskState, constraints *BackupConstraints, logger *zap.Logger, f *iblfile.AutoEncryptedFile_FullFile, channelID string, allocation int, withAttachments bool) ([]*BackupMessage, error) {
+func backupChannelMessages(state jobstate.State, constraints *BackupConstraints, logger *zap.Logger, f *iblfile.AutoEncryptedFile_FullFile, channelID string, allocation int, withAttachments bool) ([]*BackupMessage, error) {
 	discord, _, _ := state.Discord()
 	ctx := state.Context()
 
@@ -150,7 +150,7 @@ func backupChannelMessages(state taskstate.TaskState, constraints *BackupConstra
 	return finalMsgs, nil
 }
 
-func createAttachmentBlob(state taskstate.TaskState, constraints *BackupConstraints, logger *zap.Logger, msg *discordgo.Message) ([]AttachmentMetadata, map[string]*bytes.Buffer, error) {
+func createAttachmentBlob(state jobstate.State, constraints *BackupConstraints, logger *zap.Logger, msg *discordgo.Message) ([]AttachmentMetadata, map[string]*bytes.Buffer, error) {
 	ctx := state.Context()
 
 	var attachments []AttachmentMetadata
@@ -371,7 +371,7 @@ func (t *ServerBackupCreateTask) Resumable() bool {
 	return false
 }
 
-func (t *ServerBackupCreateTask) Validate(state taskstate.TaskState) error {
+func (t *ServerBackupCreateTask) Validate(state jobstate.State) error {
 	if t.ServerID == "" {
 		return fmt.Errorf("server_id is required")
 	}
@@ -427,8 +427,8 @@ func (t *ServerBackupCreateTask) Validate(state taskstate.TaskState) error {
 
 func (t *ServerBackupCreateTask) Exec(
 	l *zap.Logger,
-	state taskstate.TaskState,
-	progstate taskstate.TaskProgressState,
+	state jobstate.State,
+	progstate jobstate.ProgressState,
 ) (*types.TaskOutput, error) {
 	discord, botUser, _ := state.Discord()
 	ctx := state.Context()

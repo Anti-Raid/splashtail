@@ -10,7 +10,7 @@ import (
 	orderedmap "github.com/wk8/go-ordered-map/v2"
 	"go.jobs/common"
 	"go.jobs/interfaces"
-	"go.jobs/taskstate"
+	jobstate "go.jobs/state"
 	"go.jobs/types"
 	"go.std/splashcore"
 	"go.std/utils"
@@ -56,7 +56,7 @@ func (t *MessagePruneTask) Resumable() bool {
 	return true
 }
 
-func (t *MessagePruneTask) Validate(state taskstate.TaskState) error {
+func (t *MessagePruneTask) Validate(state jobstate.State) error {
 	if t.ServerID == "" {
 		return fmt.Errorf("server_id is required")
 	}
@@ -108,8 +108,8 @@ func (t *MessagePruneTask) Validate(state taskstate.TaskState) error {
 
 func (t *MessagePruneTask) Exec(
 	l *zap.Logger,
-	state taskstate.TaskState,
-	progstate taskstate.TaskProgressState,
+	state jobstate.State,
+	progstate jobstate.ProgressState,
 ) (*types.TaskOutput, error) {
 	discord, botUser, _ := state.Discord()
 	ctx := state.Context()

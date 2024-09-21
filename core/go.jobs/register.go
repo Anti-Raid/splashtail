@@ -9,11 +9,11 @@ import (
 // Job impl registry
 var JobImplRegistry = map[string]interfaces.JobImpl{}
 
-func RegisterJobImpl(task interfaces.JobImpl) {
-	JobImplRegistry[task.Name()] = task
+func RegisterJobImpl(jobImpl interfaces.JobImpl) {
+	JobImplRegistry[jobImpl.Name()] = jobImpl
 }
 
-// Add all tasks here
+// Add all jobs here
 func init() {
 	RegisterJobImpl(&backups.ServerBackupCreateTask{})
 	RegisterJobImpl(&backups.ServerBackupRestoreTask{})
