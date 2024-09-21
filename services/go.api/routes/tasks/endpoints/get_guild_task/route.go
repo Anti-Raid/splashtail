@@ -8,9 +8,9 @@ import (
 	"go.api/api"
 	"go.api/rpc_messages"
 	"go.api/state"
-	types "go.api/types"
+	"go.api/types"
 	jobs "go.jobs"
-	"go.std/ext_types"
+	jobtypes "go.jobs/types"
 	"go.std/structparser/db"
 
 	"github.com/go-chi/chi/v5"
@@ -21,7 +21,7 @@ import (
 )
 
 var (
-	taskColsArr = db.GetCols(ext_types.Task{})
+	taskColsArr = db.GetCols(jobtypes.Task{})
 	taskColsStr = strings.Join(taskColsArr, ", ")
 )
 
@@ -45,7 +45,7 @@ func Docs() *docs.Doc {
 				Schema:      docs.IdSchema,
 			},
 		},
-		Resp: ext_types.Task{},
+		Resp: jobtypes.Task{},
 	}
 }
 
@@ -69,14 +69,14 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 	}
 
 	var row pgx.Rows
-	row, err = state.Pool.Query(d.Context, "SELECT "+taskColsStr+" FROM tasks WHERE task_id = $1 AND guild_id = $2", taskId, guildId)
+	row, err = state.Pool.Query(d.Context, "SELECT "+taskColsStr+" FROM tasks WHERE id = $1 AND guild_id = $2", taskId, guildId)
 
 	if err != nil {
 		state.Logger.Error("Failed to fetch task [db fetch]", zap.Error(err))
 		return uapi.DefaultResponse(http.StatusInternalServerError)
 	}
 
-	task, err := pgx.CollectOneRow(row, pgx.RowToStructByName[ext_types.Task])
+	task, err := pgx.CollectOneRow(row, pgx.RowToStructByName[jobtypes.Task])
 
 	if errors.Is(err, pgx.ErrNoRows) {
 		return uapi.HttpResponse{
@@ -86,16 +86,16 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 	}
 
 	if err != nil {
-		state.Logger.Error("Failed to fetch task [db fetch]", zap.Error(err))
+		state.Logger.Error("Failed to fetch job [db fetch]", zap.Error(err))
 		return uapi.DefaultResponse(http.StatusInternalServerError)
 	}
 
-	baseTaskDef, ok := jobs.TaskDefinitionRegistry[task.TaskName]
+	baseJobImpl, ok := jobs.JobImplRegistry[task.Name]
 
 	if !ok {
 		return uapi.HttpResponse{
 			Json: types.ApiError{
-				Message: "Internal Error: Unknown task name",
+				Message: "Internal Error: Unknown job name",
 			},
 			Status: http.StatusInternalServerError,
 		}
@@ -103,7 +103,7 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 
 	// Check permissions
 	permLimits := api.PermLimits(d.Auth)
-	resp, ok := api.HandlePermissionCheck(d.Auth.ID, guildId, baseTaskDef.CorrespondingBotCommand_View(), rpc_messages.RpcCheckCommandOptions{
+	resp, ok := api.HandlePermissionCheck(d.Auth.ID, guildId, baseJobImpl.CorrespondingBotCommand_View(), rpc_messages.RpcCheckCommandOptions{
 		CustomResolvedKittycatPerms: permLimits,
 	})
 

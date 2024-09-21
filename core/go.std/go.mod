@@ -7,7 +7,6 @@ require (
 	github.com/cheesycod/mewld v0.0.0-20240810135330-af6971248190
 	github.com/go-chi/chi/v5 v5.1.0
 	github.com/infinitybotlist/eureka v1.8.0
-	github.com/infinitybotlist/kittycat/go v0.0.0-20240526051606-6574fb343539
 	github.com/jackc/pgx/v5 v5.6.0
 	github.com/minio/minio-go/v7 v7.0.76
 	github.com/redis/rueidis v1.0.44

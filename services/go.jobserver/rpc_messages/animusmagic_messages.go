@@ -12,12 +12,12 @@ type SpawnTask struct {
 	Execute bool                   `json:"execute"`
 
 	// If create is false, then task id must be set
-	TaskID string `json:"task_id"`
+	ID string `json:"id"`
 
 	// The User ID who initiated the action
 	UserID string `json:"user_id"`
 }
 
 type SpawnTaskResponse struct {
-	TaskID string `json:"task_id"`
+	ID string `json:"id"`
 }

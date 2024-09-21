@@ -9,7 +9,7 @@ import (
 	"strconv"
 
 	"go.jobs/taskstate"
-	"go.std/ext_types"
+	"go.jobs/types"
 	"go.uber.org/zap"
 )
 
@@ -75,7 +75,7 @@ func (s *Stepper[T]) Exec(
 	l *zap.Logger,
 	state taskstate.TaskState,
 	progstate taskstate.TaskProgressState,
-) (*ext_types.TaskOutput, error) {
+) (*types.TaskOutput, error) {
 	curProg, err := progstate.GetProgress()
 
 	if err != nil {
@@ -178,5 +178,5 @@ type Step[T any] struct {
 		state taskstate.TaskState,
 		progstate taskstate.TaskProgressState,
 		progress *taskstate.Progress,
-	) (*ext_types.TaskOutput, *taskstate.Progress, error)
+	) (*types.TaskOutput, *taskstate.Progress, error)
 }

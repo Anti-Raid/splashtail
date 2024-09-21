@@ -14,9 +14,9 @@ import (
 	"time"
 
 	"go.jobs/common"
-	"go.jobs/taskdef"
+	"go.jobs/interfaces"
 	"go.jobs/taskstate"
-	"go.std/ext_types"
+	"go.jobs/types"
 	"go.std/splashcore"
 	"go.std/utils"
 
@@ -352,7 +352,7 @@ type ServerBackupCreateTask struct {
 	Options BackupCreateOpts
 }
 
-func (t *ServerBackupCreateTask) TaskFields() map[string]any {
+func (t *ServerBackupCreateTask) Fields() map[string]any {
 	opts := t.Options
 	opts.Encrypt = "" // Clear encryption key
 
@@ -429,7 +429,7 @@ func (t *ServerBackupCreateTask) Exec(
 	l *zap.Logger,
 	state taskstate.TaskState,
 	progstate taskstate.TaskProgressState,
-) (*ext_types.TaskOutput, error) {
+) (*types.TaskOutput, error) {
 	discord, botUser, _ := state.Discord()
 	ctx := state.Context()
 
@@ -719,7 +719,7 @@ func (t *ServerBackupCreateTask) Exec(
 		return nil, fmt.Errorf("error writing backup: %w", err)
 	}
 
-	return &ext_types.TaskOutput{
+	return &types.TaskOutput{
 		Filename: fmt.Sprintf("antiraid-backup-%s.iblfile", time.Now().Format("2006-01-02-15-04-05")),
 		Buffer:   &outputBuf,
 	}, nil
@@ -741,15 +741,15 @@ func (t *ServerBackupCreateTask) Name() string {
 	return "guild_create_backup"
 }
 
-func (t *ServerBackupCreateTask) TaskFor() *ext_types.TaskFor {
-	return &ext_types.TaskFor{
+func (t *ServerBackupCreateTask) TaskFor() *types.TaskFor {
+	return &types.TaskFor{
 		ID:         t.ServerID,
 		TargetType: splashcore.TargetTypeServer,
 	}
 }
 
-func (t *ServerBackupCreateTask) LocalPresets() *taskdef.PresetInfo {
-	return &taskdef.PresetInfo{
+func (t *ServerBackupCreateTask) LocalPresets() *interfaces.PresetInfo {
+	return &interfaces.PresetInfo{
 		Runnable: true,
 		Preset: &ServerBackupCreateTask{
 			ServerID: "{{.Args.ServerID}}",

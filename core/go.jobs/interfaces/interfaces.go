@@ -1,31 +1,31 @@
-// To avoid circular dependencies, taskdef contains the core TaskDefinition
-package taskdef
+// To avoid circular dependencies, interfaces contains the core implementation of the job interfaces
+package interfaces
 
 import (
 	"time"
 
 	"go.jobs/taskstate"
-	"go.std/ext_types"
+	"go.jobs/types"
 	"go.uber.org/zap"
 )
 
-// TaskDefinition is the definition for any task that can be executed on splashtail
-type TaskDefinition interface {
-	// Name returns the name of the task
+// JobImpl provides the definition for any job that can be executed on splashtail
+type JobImpl interface {
+	// Name returns the name of the job
 	Name() string
 
-	// TaskFor returns who the task is for
-	TaskFor() *ext_types.TaskFor
+	// TaskFor returns who the job is for
+	TaskFor() *types.TaskFor
 
-	// As tasks often deal with sensitive data such as secrets, the TaskFields method returns
+	// As jobs often deal with sensitive data such as secrets, the Fields method returns
 	// a map of fields that can be stored in the database
-	TaskFields() map[string]any
+	Fields() map[string]any
 
 	// Validate validates the task and sets up state if needed
 	Validate(state taskstate.TaskState) error
 
 	// Exec executes the task returning an output if any
-	Exec(l *zap.Logger, state taskstate.TaskState, progstate taskstate.TaskProgressState) (*ext_types.TaskOutput, error)
+	Exec(l *zap.Logger, state taskstate.TaskState, progstate taskstate.TaskProgressState) (*types.TaskOutput, error)
 
 	// Expiry returns when the task will expire (if any), setting this to nil will make the task not expire
 	Expiry() *time.Duration
@@ -51,7 +51,7 @@ type PresetInfo struct {
 	Runnable bool
 
 	// The default options/data of the task
-	Preset TaskDefinition
+	Preset JobImpl
 
 	// Any comments for specific fields
 	Comments map[string]string

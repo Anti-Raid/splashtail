@@ -6,9 +6,9 @@ Splashtail is a monorepo containing all the code needed to run and setup Anti-Ra
 
 ## Current
 
-- **infra** => Core infrastructure for the bot such as `animuscli` (animus magic intro), `wafflepaw` (monitoring service) our fork of [`nirn-proxy`](https://github.com/anti-raid/nirn-proxy) and our fork of [`Sandwich-Daemon`](https://github.com/anti-raid/Sandwich-Daemon).
+- **infra** => Core infrastructure for the bot such as `wafflepaw` (monitoring service) our fork of [`nirn-proxy`](https://github.com/anti-raid/nirn-proxy) and our fork of [`Sandwich-Daemon`](https://github.com/anti-raid/Sandwich-Daemon).
 - **botv2** => The core bot interface for AntiRaid, written in Serenity+Poise and Rust
-- **jobserver** => The jobserver is the component of AntiRaid responsible for handling tasks concurrently to ensure that Bot/API restarts/issues/outages does not affect ongoing backup creations/backup restores/member restores etc. The jobserver also allows code related to core functionality to be shared between the Bot (rust) and the API/website while also being isolated and easily restartable with resumable tasks allowing for greater reliability and scalability.
+- **jobserver** => The jobserver is the component of AntiRaid responsible for handling jobs concurrently to ensure that Bot/API restarts/issues/outages does not affect ongoing backup creations/backup restores/member restores etc. The jobserver also allows code related to core functionality to be shared between the Bot (rust) and the API/website while also being isolated and easily restartable with resumable jobs allowing for greater reliability and scalability.
 - **webserver** (API) => The API interface for AntiRaid used for third-party integrations and the website
 - **website** => The website for AntiRaid 
 - **data** => Miscellaneous stuff such as code used to test the WIP simpleproxy2 as well as database seeds

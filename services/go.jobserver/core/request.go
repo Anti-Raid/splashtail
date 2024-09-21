@@ -10,10 +10,10 @@ import (
 	"github.com/infinitybotlist/eureka/jsonimpl"
 	"github.com/jackc/pgx/v5"
 	jobs "go.jobs"
+	"go.jobs/types"
 	"go.jobserver/jobrunner"
 	"go.jobserver/rpc_messages"
 	"go.jobserver/state"
-	"go.std/ext_types"
 	"go.std/splashcore"
 	"go.std/structparser/db"
 	"go.std/utils/mewext"
@@ -25,7 +25,7 @@ var ResumeOngoingTaskTimeoutSecs = 15 * 60
 var DefaultValidationTimeout = 5 * time.Second
 
 var (
-	taskCols    = db.GetCols(ext_types.Task{})
+	taskCols    = db.GetCols(types.Task{})
 	taskColsStr = strings.Join(taskCols, ", ")
 )
 
@@ -41,13 +41,13 @@ func SpawnTask(spawnTask rpc_messages.SpawnTask) (*rpc_messages.SpawnTaskRespons
 	}
 
 	if spawnTask.Name == "" {
-		return nil, fmt.Errorf("invalid task name provided")
+		return nil, fmt.Errorf("invalid job name provided")
 	}
 
-	baseTaskDef, ok := jobs.TaskDefinitionRegistry[spawnTask.Name]
+	baseJobImpl, ok := jobs.JobImplRegistry[spawnTask.Name]
 
 	if !ok {
-		return nil, fmt.Errorf("task %s does not exist on registry", spawnTask.Name)
+		return nil, fmt.Errorf("job %s does not exist on registry", spawnTask.Name)
 	}
 
 	if len(spawnTask.Data) == 0 {
@@ -60,7 +60,7 @@ func SpawnTask(spawnTask rpc_messages.SpawnTask) (*rpc_messages.SpawnTaskRespons
 		return nil, fmt.Errorf("error marshalling task args: %w", err)
 	}
 
-	task := baseTaskDef // Copy task
+	task := baseJobImpl // Copy task
 
 	err = jsonimpl.Unmarshal(tBytes, &task)
 
@@ -109,11 +109,11 @@ func SpawnTask(spawnTask rpc_messages.SpawnTask) (*rpc_messages.SpawnTaskRespons
 
 		taskId = *tid
 	} else {
-		if spawnTask.TaskID == "" {
+		if spawnTask.ID == "" {
 			return nil, fmt.Errorf("task id must be set if SpawnTask.Create is false")
 		}
 
-		taskId = spawnTask.TaskID
+		taskId = spawnTask.ID
 	}
 
 	// Execute task
@@ -123,7 +123,7 @@ func SpawnTask(spawnTask rpc_messages.SpawnTask) (*rpc_messages.SpawnTaskRespons
 	}
 
 	return &rpc_messages.SpawnTaskResponse{
-		TaskID: taskId,
+		ID: taskId,
 	}, nil
 }
 
@@ -144,7 +144,7 @@ func Resume() {
 	var initialOpts map[string]any
 	var createdAt time.Time
 
-	rows, err := state.Pool.Query(state.Context, "SELECT task_id, data, initial_opts, created_at FROM ongoing_jobs")
+	rows, err := state.Pool.Query(state.Context, "SELECT id, data, initial_opts, created_at FROM ongoing_jobs")
 
 	if err != nil {
 		state.Logger.Error("Failed to query tasks", zap.Error(err))
@@ -162,10 +162,10 @@ func Resume() {
 		}
 
 		// Select the task from the task db
-		row, err := state.Pool.Query(state.Context, "SELECT "+taskColsStr+" FROM tasks WHERE task_id = $1", taskId)
+		row, err := state.Pool.Query(state.Context, "SELECT "+taskColsStr+" FROM tasks WHERE id = $1", taskId)
 
 		if errors.Is(err, pgx.ErrNoRows) {
-			state.Logger.Error("Task not found", zap.String("task_id", taskId))
+			state.Logger.Error("Task not found", zap.String("id", taskId))
 			continue
 		}
 
@@ -176,10 +176,10 @@ func Resume() {
 
 		defer row.Close()
 
-		t, err := pgx.CollectOneRow(row, pgx.RowToAddrOfStructByName[ext_types.Task])
+		t, err := pgx.CollectOneRow(row, pgx.RowToAddrOfStructByName[types.Task])
 
 		if errors.Is(err, pgx.ErrNoRows) {
-			state.Logger.Error("Task not found", zap.String("task_id", taskId))
+			state.Logger.Error("Task not found", zap.String("id", taskId))
 			continue
 		}
 
@@ -196,10 +196,10 @@ func Resume() {
 			continue
 		}
 
-		baseTaskDef, ok := jobs.TaskDefinitionRegistry[t.TaskName]
+		baseJobImpl, ok := jobs.JobImplRegistry[t.Name]
 
 		if !ok {
-			state.Logger.Error("Task not found in registry", zap.String("task_id", taskId))
+			state.Logger.Error("Task not found in registry", zap.String("id", taskId))
 			continue
 		}
 
@@ -210,7 +210,7 @@ func Resume() {
 			continue
 		}
 
-		task := baseTaskDef // Copy task
+		task := baseJobImpl // Copy task
 
 		err = jsonimpl.Unmarshal(tBytes, &task)
 

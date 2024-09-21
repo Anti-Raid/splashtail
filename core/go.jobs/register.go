@@ -1,21 +1,21 @@
 package jobs
 
 import (
-	"go.jobs/taskdef"
+	"go.jobs/interfaces"
 	"go.jobs/tasks/backups"
 	"go.jobs/tasks/moderation"
 )
 
-// Task management core
-var TaskDefinitionRegistry = map[string]taskdef.TaskDefinition{}
+// Job impl registry
+var JobImplRegistry = map[string]interfaces.JobImpl{}
 
-func RegisterTaskDefinition(task taskdef.TaskDefinition) {
-	TaskDefinitionRegistry[task.Name()] = task
+func RegisterJobImpl(task interfaces.JobImpl) {
+	JobImplRegistry[task.Name()] = task
 }
 
 // Add all tasks here
 func init() {
-	RegisterTaskDefinition(&backups.ServerBackupCreateTask{})
-	RegisterTaskDefinition(&backups.ServerBackupRestoreTask{})
-	RegisterTaskDefinition(&moderation.MessagePruneTask{})
+	RegisterJobImpl(&backups.ServerBackupCreateTask{})
+	RegisterJobImpl(&backups.ServerBackupRestoreTask{})
+	RegisterJobImpl(&moderation.MessagePruneTask{})
 }

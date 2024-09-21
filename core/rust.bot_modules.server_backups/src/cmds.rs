@@ -42,8 +42,8 @@ type BackupRestoreOpts struct {
 */
 
 /// Checks backup encryption, when encrypted, Options->Encrypt is not empty ("SET" / a random string)
-fn is_backup_encrypted(task_fields: &indexmap::IndexMap<String, serde_json::Value>) -> bool {
-    task_fields
+fn is_backup_encrypted(fields: &indexmap::IndexMap<String, serde_json::Value>) -> bool {
+    fields
         .get("Options")
         .and_then(|options| options.get("Encrypt"))
         .map(|v| !v.as_str().unwrap_or_default().is_empty())
@@ -182,7 +182,7 @@ pub async fn backups_create(
             data: backup_args,
             create: true,
             execute: true,
-            task_id: None,
+            id: None,
             user_id: ctx.author().id.to_string(),
         })
         .send()
@@ -191,10 +191,10 @@ pub async fn backups_create(
         .error_for_status()
         .map_err(|e| format!("Failed to create backup task: {}", e))?;
 
-    let backup_task_id = resp
+    let backup_id = resp
         .json::<splashcore_rs::jobserver::JobserverSpawnTaskResponse>()
         .await?
-        .task_id;
+        .id;
 
     base_message
         .edit(
@@ -204,7 +204,7 @@ pub async fn backups_create(
                     .title("Creating Backup...")
                     .description(format!(
                         ":yellow_circle: Created task with Task ID of {}",
-                        backup_task_id
+                        backup_id
                     )),
             ),
         )
@@ -236,7 +236,7 @@ pub async fn backups_create(
     jobserver::taskpoll::reactive(
         &ch,
         &ctx.data().pool,
-        &backup_task_id,
+        &backup_id,
         |cache_http, task| {
             Box::pin(update_base_message(
                 cache_http.clone(),
@@ -267,7 +267,7 @@ pub async fn backups_list(ctx: Context<'_>) -> Result<(), Error> {
     let data = ctx.data();
 
     let mut backup_tasks =
-        jobserver::Task::from_guild_and_task_name(guild_id, "guild_create_backup", &data.pool)
+        jobserver::Task::from_guild_and_name(guild_id, "guild_create_backup", &data.pool)
             .await
             .map_err(|e| format!("Failed to get backup tasks: {}", e))?;
 
@@ -279,10 +279,10 @@ pub async fn backups_list(ctx: Context<'_>) -> Result<(), Error> {
     fn create_embed_for_task<'a>(task: &jobserver::Task) -> serenity::all::CreateEmbed<'a> {
         let mut initial_desc = format!(
             "Task ID: {}\nTask Name: {}\nTask State: {}\n**Encrypted:** {}\n\n**Created At**: <t:{}:f> (<t:{}:R>)",
-            task.task_id,
-            task.task_name,
+            task.id,
+            task.name,
             task.state,
-            is_backup_encrypted(&task.task_fields),
+            is_backup_encrypted(&task.fields),
             task.created_at.and_utc().timestamp(),
             task.created_at.and_utc().timestamp()
         );
@@ -296,7 +296,7 @@ pub async fn backups_list(ctx: Context<'_>) -> Result<(), Error> {
             let furl = format!(
                 "{}/tasks/{}/ioauth/download-link",
                 config::CONFIG.sites.api.get(),
-                task.task_id
+                task.id
             );
 
             initial_desc += &format!("\n\n:link: [Download {}]({})", output.filename, &furl);
@@ -438,7 +438,7 @@ pub async fn backups_list(ctx: Context<'_>) -> Result<(), Error> {
                 let task = &backup_tasks[index];
 
                 let mut password = None;
-                if is_backup_encrypted(&task.task_fields) {
+                if is_backup_encrypted(&task.fields) {
                     let mut password_preinput_warning = ctx.send(
                         poise::reply::CreateReply::default()
                         .content("This backup is encrypted. Please provide the password to decrypt it!")
@@ -621,7 +621,7 @@ pub async fn backups_list(ctx: Context<'_>) -> Result<(), Error> {
                         data: json,
                         create: true,
                         execute: true,
-                        task_id: None,
+                        id: None,
                         user_id: ctx.author().id.to_string(),
                     })
                     .send()
@@ -630,10 +630,10 @@ pub async fn backups_list(ctx: Context<'_>) -> Result<(), Error> {
                     .error_for_status()
                     .map_err(|e| format!("Failed to create backup task: {}", e))?;
 
-                let restore_task_id = resp
+                let restore_id = resp
                     .json::<splashcore_rs::jobserver::JobserverSpawnTaskResponse>()
                     .await?
-                    .task_id;
+                    .id;
 
                 base_message
                     .edit(
@@ -643,7 +643,7 @@ pub async fn backups_list(ctx: Context<'_>) -> Result<(), Error> {
                                 .title("Restoring Backup...")
                                 .description(format!(
                                     ":yellow_circle: Created task with Task ID of {}",
-                                    restore_task_id
+                                    restore_id
                                 )),
                         ),
                     )
@@ -676,7 +676,7 @@ pub async fn backups_list(ctx: Context<'_>) -> Result<(), Error> {
                 jobserver::taskpoll::reactive(
                     &ch,
                     &ctx.data().pool,
-                    restore_task_id.as_str(),
+                    restore_id.as_str(),
                     |cache_http, task| {
                         Box::pin(update_base_message(
                             cache_http.clone(),
@@ -891,8 +891,8 @@ pub async fn backups_list(ctx: Context<'_>) -> Result<(), Error> {
     user_cooldown = "5",
     rename = "delete"
 )]
-pub async fn backups_delete(ctx: Context<'_>, task_id: String) -> Result<(), Error> {
-    let task = jobserver::Task::from_id(task_id.parse::<Uuid>()?, &ctx.data().pool)
+pub async fn backups_delete(ctx: Context<'_>, id: String) -> Result<(), Error> {
+    let task = jobserver::Task::from_id(id.parse::<Uuid>()?, &ctx.data().pool)
         .await
         .map_err(|e| format!("Failed to get backup task: {}", e))?;
 
@@ -1221,7 +1221,7 @@ pub async fn backups_restore(
             data: json,
             create: true,
             execute: true,
-            task_id: None,
+            id: None,
             user_id: ctx.author().id.to_string(),
         })
         .send()
@@ -1230,10 +1230,10 @@ pub async fn backups_restore(
         .error_for_status()
         .map_err(|e| format!("Failed to create backup task: {}", e))?;
 
-    let restore_task_id = resp
+    let restore_id = resp
         .json::<splashcore_rs::jobserver::JobserverSpawnTaskResponse>()
         .await?
-        .task_id;
+        .id;
 
     base_message
         .edit(
@@ -1243,7 +1243,7 @@ pub async fn backups_restore(
                     .title("Restoring Backup...")
                     .description(format!(
                         ":yellow_circle: Created task with Task ID of {}",
-                        restore_task_id
+                        restore_id
                     )),
             ),
         )
@@ -1275,7 +1275,7 @@ pub async fn backups_restore(
     jobserver::taskpoll::reactive(
         &ch,
         &ctx.data().pool,
-        restore_task_id.as_str(),
+        restore_id.as_str(),
         |cache_http, task| {
             Box::pin(update_base_message(
                 cache_http.clone(),

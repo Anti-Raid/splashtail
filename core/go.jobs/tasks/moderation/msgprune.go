@@ -9,9 +9,9 @@ import (
 	"github.com/infinitybotlist/eureka/jsonimpl"
 	orderedmap "github.com/wk8/go-ordered-map/v2"
 	"go.jobs/common"
-	"go.jobs/taskdef"
+	"go.jobs/interfaces"
 	"go.jobs/taskstate"
-	"go.std/ext_types"
+	"go.jobs/types"
 	"go.std/splashcore"
 	"go.std/utils"
 	"go.std/utils/timex"
@@ -38,9 +38,9 @@ type MessagePruneTask struct {
 	Options MessagePruneOpts
 }
 
-// As tasks often deal with sensitive data such as secrets, the TaskFields method returns
+// As tasks often deal with sensitive data such as secrets, the Fields method returns
 // a map of fields that can be stored in the database
-func (t *MessagePruneTask) TaskFields() map[string]any {
+func (t *MessagePruneTask) Fields() map[string]any {
 	return map[string]any{
 		"ServerID":    t.ServerID,
 		"Constraints": t.Constraints,
@@ -110,7 +110,7 @@ func (t *MessagePruneTask) Exec(
 	l *zap.Logger,
 	state taskstate.TaskState,
 	progstate taskstate.TaskProgressState,
-) (*ext_types.TaskOutput, error) {
+) (*types.TaskOutput, error) {
 	discord, botUser, _ := state.Discord()
 	ctx := state.Context()
 
@@ -292,7 +292,7 @@ func (t *MessagePruneTask) Exec(
 		return nil, fmt.Errorf("error encoding final messages: %w", err)
 	}
 
-	return &ext_types.TaskOutput{
+	return &types.TaskOutput{
 		Filename: "pruned-messages.txt",
 		Buffer:   &outputBuf,
 	}, nil
@@ -314,15 +314,15 @@ func (t *MessagePruneTask) Name() string {
 	return "message_prune"
 }
 
-func (t *MessagePruneTask) TaskFor() *ext_types.TaskFor {
-	return &ext_types.TaskFor{
+func (t *MessagePruneTask) TaskFor() *types.TaskFor {
+	return &types.TaskFor{
 		ID:         t.ServerID,
 		TargetType: splashcore.TargetTypeServer,
 	}
 }
 
-func (t *MessagePruneTask) LocalPresets() *taskdef.PresetInfo {
-	return &taskdef.PresetInfo{
+func (t *MessagePruneTask) LocalPresets() *interfaces.PresetInfo {
+	return &interfaces.PresetInfo{
 		Runnable: true,
 		Preset: &MessagePruneTask{
 			ServerID: "{{.Args.ServerID}}",

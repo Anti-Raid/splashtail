@@ -9,7 +9,7 @@ use std::time::Duration;
 
 #[derive(serde::Deserialize, serde::Serialize)]
 pub struct JobserverSpawnTaskResponse {
-    pub task_id: String,
+    pub id: String,
 }
 
 #[derive(serde::Deserialize, serde::Serialize)]
@@ -18,7 +18,7 @@ pub struct JobserverSpawnTaskRequest {
     pub data: serde_json::Value,
     pub create: bool,
     pub execute: bool,
-    pub task_id: Option<String>, // If create is false, this is required
+    pub id: Option<String>, // If create is false, this is required
     pub user_id: String,
 }
 
@@ -36,10 +36,10 @@ pub struct TaskStatuses {
 }
 
 pub struct Task {
-    pub task_id: Uuid,
-    pub task_name: String,
+    pub id: Uuid,
+    pub name: String,
     pub output: Option<TaskOutput>,
-    pub task_fields: IndexMap<String, serde_json::Value>,
+    pub fields: IndexMap<String, serde_json::Value>,
     pub statuses: Vec<TaskStatuses>,
     pub task_for: TaskFor,
     pub expiry: Option<chrono::Duration>,
@@ -85,7 +85,7 @@ pub struct TaskOutput {
 #[derive(serde::Deserialize, serde::Serialize, Clone)]
 pub struct TaskCreateResponse {
     /// The ID of the newly created task
-    pub task_id: String,
+    pub id: String,
 }
 
 /// WrappedTaskCreateResponse is the response upon creating a task
@@ -96,10 +96,10 @@ pub struct WrappedTaskCreateResponse {
 
 impl Task {
     /// Fetches a task from the database based on id
-    pub async fn from_id(task_id: Uuid, pool: &PgPool) -> Result<Self, crate::Error> {
+    pub async fn from_id(id: Uuid, pool: &PgPool) -> Result<Self, crate::Error> {
         let rec = sqlx::query!(
-            "SELECT task_id, task_name, output, statuses, task_for, expiry, state, created_at, task_fields, resumable FROM tasks WHERE task_id = $1 ORDER BY created_at DESC",
-            task_id,
+            "SELECT id, name, output, statuses, task_for, expiry, state, created_at, fields, resumable FROM tasks WHERE id = $1 ORDER BY created_at DESC",
+            id,
         )
         .fetch_one(pool)
         .await?;
@@ -112,15 +112,13 @@ impl Task {
         }
 
         let task = Task {
-            task_id: rec.task_id,
-            task_name: rec.task_name,
+            id: rec.id,
+            name: rec.name,
             output: rec
                 .output
                 .map(serde_json::from_value::<TaskOutput>)
                 .transpose()?,
-            task_fields: serde_json::from_value::<IndexMap<String, serde_json::Value>>(
-                rec.task_fields,
-            )?,
+            fields: serde_json::from_value::<IndexMap<String, serde_json::Value>>(rec.fields)?,
             statuses,
             task_for: rec.task_for.into(),
             expiry: {
@@ -149,7 +147,7 @@ impl Task {
         pool: &sqlx::PgPool,
     ) -> Result<Vec<Self>, crate::Error> {
         let recs = sqlx::query!(
-            "SELECT task_id, task_name, output, statuses, task_for, expiry, state, created_at, task_fields, resumable FROM tasks WHERE task_for = $1",
+            "SELECT id, name, output, statuses, task_for, expiry, state, created_at, fields, resumable FROM tasks WHERE task_for = $1",
             format!("g/{}", guild_id)
         )
         .fetch_all(pool)
@@ -166,15 +164,13 @@ impl Task {
             }
 
             let task = Task {
-                task_id: rec.task_id,
-                task_name: rec.task_name,
+                id: rec.id,
+                name: rec.name,
                 output: rec
                     .output
                     .map(serde_json::from_value::<TaskOutput>)
                     .transpose()?,
-                task_fields: serde_json::from_value::<IndexMap<String, serde_json::Value>>(
-                    rec.task_fields,
-                )?,
+                fields: serde_json::from_value::<IndexMap<String, serde_json::Value>>(rec.fields)?,
                 statuses,
                 task_for: rec.task_for.into(),
                 expiry: {
@@ -200,15 +196,15 @@ impl Task {
     }
 
     /// Returns all tasks with a specific guild ID and a specific task name
-    pub async fn from_guild_and_task_name(
+    pub async fn from_guild_and_name(
         guild_id: serenity::all::GuildId,
-        task_name: &str,
+        name: &str,
         pool: &sqlx::PgPool,
     ) -> Result<Vec<Self>, crate::Error> {
         let recs = sqlx::query!(
-            "SELECT task_id, task_name, output, statuses, task_for, expiry, state, created_at, task_fields, resumable FROM tasks WHERE task_for = $1 AND task_name = $2",
+            "SELECT id, name, output, statuses, task_for, expiry, state, created_at, fields, resumable FROM tasks WHERE task_for = $1 AND name = $2",
             format!("g/{}", guild_id),
-            task_name,
+            name,
         )
         .fetch_all(pool)
         .await?;
@@ -224,15 +220,13 @@ impl Task {
             }
 
             let task = Task {
-                task_id: rec.task_id,
-                task_name: rec.task_name,
+                id: rec.id,
+                name: rec.name,
                 output: rec
                     .output
                     .map(serde_json::from_value::<TaskOutput>)
                     .transpose()?,
-                task_fields: serde_json::from_value::<IndexMap<String, serde_json::Value>>(
-                    rec.task_fields,
-                )?,
+                fields: serde_json::from_value::<IndexMap<String, serde_json::Value>>(rec.fields)?,
                 statuses,
                 task_for: rec.task_for.into(),
                 expiry: {
@@ -271,11 +265,11 @@ impl Task {
                 Some(format!(
                     "{}/{}/{}",
                     self.format_task_for_simplex(),
-                    self.task_name,
-                    self.task_id,
+                    self.name,
+                    self.id,
                 ))
             } else {
-                Some(format!("tasks/{}", self.task_id))
+                Some(format!("tasks/{}", self.id))
             }
         } else {
             None
@@ -324,7 +318,7 @@ impl Task {
 
     /// Delete the task from the database, this also consumes the task dropping it from memory
     pub async fn delete_from_db(self, pool: &PgPool) -> Result<(), crate::Error> {
-        sqlx::query!("DELETE FROM tasks WHERE task_id = $1", self.task_id,)
+        sqlx::query!("DELETE FROM tasks WHERE id = $1", self.id,)
             .execute(pool)
             .await?;
 

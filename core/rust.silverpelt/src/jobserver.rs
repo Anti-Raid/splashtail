@@ -67,16 +67,13 @@ pub fn embed<'a>(
         "{} Task state: {}\nTask ID: {}\n\n{}",
         get_icon_of_state(task_state.as_str()),
         task_state,
-        task.task_id,
+        task.id,
         task_statuses.join("\n")
     );
 
     if task.state == "completed" {
         if let Some(ref output) = task.output {
-            let furl = format!(
-                "{}/tasks/{}/ioauth/download-link",
-                base_api_url, task.task_id
-            );
+            let furl = format!("{}/tasks/{}/ioauth/download-link", base_api_url, task.id);
             description += &format!("\n\n:link: [Download {}]({})", output.filename, &furl);
 
             components.push(CreateActionRow::Buttons(vec![CreateButton::new_link(furl)

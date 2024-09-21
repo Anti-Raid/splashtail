@@ -11,7 +11,7 @@ import (
 	"github.com/bwmarrin/discordgo"
 	"github.com/infinitybotlist/eureka/crypto"
 	jobs "go.jobs"
-	"go.jobs/taskdef"
+	"go.jobs/interfaces"
 	"go.jobs/taskstate"
 	"go.jobserver/state"
 	"go.uber.org/zap"
@@ -21,8 +21,8 @@ import (
 func PersistTaskState(tc *TaskProgress, prog *taskstate.Progress) error {
 	_, err := state.Pool.Exec(
 		tc.TaskState.Context(),
-		"UPDATE ongoing_jobs SET state = $2, data = $3 WHERE task_id = $1",
-		tc.TaskID,
+		"UPDATE ongoing_jobs SET state = $2, data = $3 WHERE id = $1",
+		tc.ID,
 		prog.State,
 		prog.Data,
 	)
@@ -39,7 +39,7 @@ func GetPersistedTaskState(tc *TaskProgress) (*taskstate.Progress, error) {
 	var s string
 	var data map[string]any
 
-	err := state.Pool.QueryRow(tc.TaskState.Context(), "SELECT state, data FROM ongoing_jobs WHERE task_id = $1", tc.TaskID).Scan(&s, &data)
+	err := state.Pool.QueryRow(tc.TaskState.Context(), "SELECT state, data FROM ongoing_jobs WHERE id = $1", tc.ID).Scan(&s, &data)
 
 	if err != nil {
 		return nil, err
@@ -77,7 +77,7 @@ func (t TaskState) Context() context.Context {
 }
 
 type TaskProgress struct {
-	TaskID string
+	ID string
 
 	TaskState TaskState
 
@@ -127,7 +127,7 @@ func ExecuteTask(
 	ctx context.Context,
 	ctxCancel context.CancelFunc,
 	taskId string,
-	task taskdef.TaskDefinition,
+	jobImpl interfaces.JobImpl,
 	prog *TaskProgress,
 ) {
 	if state.CurrentOperationMode != "jobs" {
@@ -148,7 +148,7 @@ func ExecuteTask(
 			erl.Error("Panic", zap.Any("err", err))
 			state.Logger.Error("Panic", zap.Any("err", err))
 
-			_, err := state.Pool.Exec(state.Context, "UPDATE tasks SET state = $1 WHERE task_id = $2", "failed", taskId)
+			_, err := state.Pool.Exec(state.Context, "UPDATE tasks SET state = $1 WHERE id = $2", "failed", taskId)
 
 			if err != nil {
 				l.Error("Failed to update task", zap.Error(err))
@@ -156,7 +156,7 @@ func ExecuteTask(
 		}
 
 		if !done {
-			_, err := state.Pool.Exec(state.Context, "UPDATE tasks SET state = $1 WHERE task_id = $2", "failed", taskId)
+			_, err := state.Pool.Exec(state.Context, "UPDATE tasks SET state = $1 WHERE id = $2", "failed", taskId)
 
 			if err != nil {
 				l.Error("Failed to update task", zap.Error(err))
@@ -167,7 +167,7 @@ func ExecuteTask(
 			defer ctxCancel()
 		}
 
-		_, err2 := state.Pool.Exec(state.Context, "DELETE FROM ongoing_jobs WHERE task_id = $1", taskId)
+		_, err2 := state.Pool.Exec(state.Context, "DELETE FROM ongoing_jobs WHERE id = $1", taskId)
 
 		if err != nil {
 			l.Error("Failed to delete task from ongoing tasks", zap.Error(err2))
@@ -191,7 +191,7 @@ func ExecuteTask(
 	}()
 
 	// Set task state to running
-	_, err := state.Pool.Exec(state.Context, "UPDATE tasks SET state = $1 WHERE task_id = $2", "running", taskId)
+	_, err := state.Pool.Exec(state.Context, "UPDATE tasks SET state = $1 WHERE id = $2", "running", taskId)
 
 	if err != nil {
 		l.Error("Failed to update task", zap.Error(err))
@@ -203,14 +203,14 @@ func ExecuteTask(
 	}
 	if prog == nil {
 		prog = &TaskProgress{
-			TaskID:    taskId,
+			ID:        taskId,
 			TaskState: ts,
 		}
 	}
 
 	var taskState = "completed"
 
-	outp, terr := task.Exec(l, ts, prog)
+	outp, terr := jobImpl.Exec(l, ts, prog)
 
 	if terr != nil {
 		l.Error("Failed to execute task [terr != nil]", zap.Error(terr))
@@ -231,7 +231,7 @@ func ExecuteTask(
 
 			err = state.ObjectStorage.Save(
 				state.Context,
-				jobs.GetPathFromOutput(taskId, task, outp),
+				jobs.GetPathFromOutput(taskId, jobImpl, outp),
 				outp.Filename,
 				outp.Buffer,
 				0,
@@ -244,7 +244,7 @@ func ExecuteTask(
 		}
 	}
 
-	_, err = state.Pool.Exec(state.Context, "UPDATE tasks SET output = $1, state = $2 WHERE task_id = $3", outp, taskState, taskId)
+	_, err = state.Pool.Exec(state.Context, "UPDATE tasks SET output = $1, state = $2 WHERE id = $3", outp, taskState, taskId)
 
 	if err != nil {
 		l.Error("Failed to update task", zap.Error(err))

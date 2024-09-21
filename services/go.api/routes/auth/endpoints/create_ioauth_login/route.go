@@ -119,7 +119,7 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 		// Redirect user
 		return uapi.HttpResponse{
 			Status:   http.StatusTemporaryRedirect,
-			Redirect: fmt.Sprintf("https://discord.com/api/v10/oauth2/authorize?client_id=%s&redirect_uri=%s&response_type=code&scope=%s&state=%s", state.Config.DiscordAuth.ClientID, redirectUrl, strings.Join(rd.Scopes, "%20"), rdB),
+			Redirect: fmt.Sprintf("https://discord.com/api/v10/oauth2/authorize?client_id=%s&redirect_uri=%s&response_type=code&scope=%s&state=%s", state.Config.DiscordAuth.ClientID.Parse(), redirectUrl, strings.Join(rd.Scopes, "%20"), rdB),
 		}
 	} else {
 		// Check for reuse

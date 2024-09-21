@@ -24,7 +24,7 @@ impl Default for PollTaskOptions {
 pub async fn reactive(
     cache_http: &CacheHttpImpl,
     pool: &sqlx::PgPool,
-    task_id: &str,
+    id: &str,
     mut func: impl FnMut(
         &CacheHttpImpl,
         Arc<Task>,
@@ -35,7 +35,7 @@ pub async fn reactive(
     let timeout_nostatuschange = to.timeout_nostatuschange;
     let duration = std::time::Duration::from_secs(interval);
     let mut interval = tokio::time::interval(duration);
-    let task_id = sqlx::types::uuid::Uuid::parse_str(task_id)?;
+    let id = sqlx::types::uuid::Uuid::parse_str(id)?;
     let mut prev_task: Option<Arc<Task>> = None;
 
     let mut last_statuschange = tokio::time::Instant::now();
@@ -53,7 +53,7 @@ pub async fn reactive(
             .into());
         }
 
-        let task = Arc::new(super::Task::from_id(task_id, pool).await?);
+        let task = Arc::new(super::Task::from_id(id, pool).await?);
 
         if let Some(ref prev_task) = prev_task {
             if prev_task.state == task.state && task.statuses == prev_task.statuses {

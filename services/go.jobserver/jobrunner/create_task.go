@@ -6,18 +6,18 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	jobs "go.jobs"
-	"go.jobs/taskdef"
+	"go.jobs/interfaces"
 )
 
 // Sets up a task
-func CreateTask(ctx context.Context, pool *pgxpool.Pool, task taskdef.TaskDefinition) (*string, error) {
-	taskName := task.Name()
-	taskFor := task.TaskFor()
+func CreateTask(ctx context.Context, pool *pgxpool.Pool, jobImpl interfaces.JobImpl) (*string, error) {
+	name := jobImpl.Name()
+	taskFor := jobImpl.TaskFor()
 
-	_, ok := jobs.TaskDefinitionRegistry[task.Name()]
+	_, ok := jobs.JobImplRegistry[jobImpl.Name()]
 
 	if !ok {
-		return nil, fmt.Errorf("task %s does not exist on registry", task.Name())
+		return nil, fmt.Errorf("job %s does not exist on registry", jobImpl.Name())
 	}
 
 	var taskId string
@@ -37,30 +37,30 @@ func CreateTask(ctx context.Context, pool *pgxpool.Pool, task taskdef.TaskDefini
 		return nil, fmt.Errorf("failed to format task_for: %w", err)
 	}
 
-	err = tx.QueryRow(ctx, "INSERT INTO tasks (task_name, task_for, expiry, output, task_fields, resumable) VALUES ($1, $2, $3, $4, $5, $6) RETURNING task_id",
-		taskName,
+	err = tx.QueryRow(ctx, "INSERT INTO tasks (name, task_for, expiry, output, fields, resumable) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id",
+		name,
 		taskForStr,
-		task.Expiry(),
+		jobImpl.Expiry(),
 		nil,
-		task.TaskFields(),
-		task.Resumable(),
+		jobImpl.Fields(),
+		jobImpl.Resumable(),
 	).Scan(&taskId)
 
 	if err != nil {
-		return nil, fmt.Errorf("failed to create task: %w", err)
+		return nil, fmt.Errorf("failed to create job: %w", err)
 	}
 
 	// Add to ongoing_jobs
 	_, err = tx.Exec(
 		ctx,
-		"INSERT INTO ongoing_jobs (task_id, data, initial_opts) VALUES ($1, $2, $3)",
+		"INSERT INTO ongoing_jobs (id, data, initial_opts) VALUES ($1, $2, $3)",
 		taskId,
 		map[string]any{},
-		task,
+		jobImpl,
 	)
 
 	if err != nil {
-		return nil, fmt.Errorf("failed to add task to ongoing_jobs: %w", err)
+		return nil, fmt.Errorf("failed to add job to ongoing_jobs: %w", err)
 	}
 
 	err = tx.Commit(ctx)

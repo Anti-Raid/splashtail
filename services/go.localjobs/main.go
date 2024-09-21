@@ -132,7 +132,7 @@ func main() {
 		}
 	}
 
-	for _, task := range jobs.TaskDefinitionRegistry {
+	for _, task := range jobs.JobImplRegistry {
 		// Stat localjobs/presets/preset.Name()
 		s, err := os.Stat(prefixDir + "/presets/" + task.Name() + ".yaml")
 
@@ -315,9 +315,9 @@ func main() {
 					os.Args = append(os.Args, args...)
 					// Flag parsing
 					var usage bool
-					var taskName string
+					var name string
 					flag.BoolVar(&usage, "usage", false, "Show help")
-					flag.StringVar(&taskName, "task", "", "The task to run")
+					flag.StringVar(&name, "task", "", "The task to run")
 					flag.Var(&flags, "field", "The fields to use")
 					flag.Var(&flags, "F", "The fields to use [alias to field]")
 					flag.Parse()
@@ -331,17 +331,17 @@ func main() {
 						os.Exit(1)
 					}
 
-					if taskName == "" {
+					if name == "" {
 						fmt.Println("ERROR: No task specified!")
 						flag.Usage()
 						os.Exit(1)
 					}
 
 					fmt.Println("Flags:", flags)
-					fmt.Println("Task:", taskName)
+					fmt.Println("Task:", name)
 
 					// Find in task registry
-					taskDef, ok := jobs.TaskDefinitionRegistry[taskName]
+					taskDef, ok := jobs.JobImplRegistry[name]
 
 					if !ok {
 						fmt.Println("ERROR: Task not found!")
@@ -351,7 +351,7 @@ func main() {
 					ljstate.Config.Args = flags
 
 					// Find preset file
-					fi, err := os.Stat(prefixDir + "/presets/" + taskName + ".yaml")
+					fi, err := os.Stat(prefixDir + "/presets/" + name + ".yaml")
 
 					if errors.Is(err, os.ErrNotExist) {
 						fmt.Println("WARNING: Preset not found despite task existing!")
@@ -365,7 +365,7 @@ func main() {
 						}
 
 						// First text/template it
-						templ, err := template.ParseFiles(prefixDir + "/presets/" + taskName + ".yaml")
+						templ, err := template.ParseFiles(prefixDir + "/presets/" + name + ".yaml")
 
 						if err != nil {
 							fmt.Println("ERROR: Failed to parse preset:", err.Error())
@@ -432,7 +432,7 @@ func main() {
 						}
 					}()
 
-					err = lib.ExecuteTaskLocal(prefixDir, taskId, l, taskDef, lib.TaskLocalOpts{
+					err = lib.ExecuteJobLocal(prefixDir, taskId, l, taskDef, lib.TaskLocalOpts{
 						OnStateChange: func(state string) error {
 							fmt.Println("INFO: Task state has changed to:", state)
 							return nil

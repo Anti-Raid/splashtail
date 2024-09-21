@@ -14,13 +14,13 @@ import (
 	"go.api/state"
 	"go.api/types"
 	jobs "go.jobs"
-	"go.std/ext_types"
+	jobtypes "go.jobs/types"
 	"go.std/structparser/db"
 	"go.uber.org/zap"
 )
 
 var (
-	taskColsArr = db.GetCols(ext_types.PartialTask{})
+	taskColsArr = db.GetCols(jobtypes.PartialTask{})
 	taskColsStr = strings.Join(taskColsArr, ", ")
 )
 
@@ -51,7 +51,7 @@ func Docs() *docs.Doc {
 				Schema:      docs.IdSchema,
 			},
 		},
-		Resp: ext_types.TaskListResponse{},
+		Resp: jobtypes.TaskListResponse{},
 	}
 }
 
@@ -83,7 +83,7 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 		return uapi.DefaultResponse(http.StatusInternalServerError)
 	}
 
-	tasksFetched, err := pgx.CollectRows(row, pgx.RowToStructByName[ext_types.PartialTask])
+	tasksFetched, err := pgx.CollectRows(row, pgx.RowToStructByName[jobtypes.PartialTask])
 
 	if errors.Is(err, pgx.ErrNoRows) {
 		return uapi.HttpResponse{
@@ -98,16 +98,16 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 	}
 
 	var checksDone = map[string]bool{}
-	var parsedTasks = []ext_types.PartialTask{}
+	var parsedTasks = []jobtypes.PartialTask{}
 	for _, task := range tasksFetched {
 		// NOTE/WARNING: This is a fastpath that depends on the assumption that the corresponding bot command
 		// does not change for a task. If this assumption is broken, this code will break if the corresponding
 		// command changes while in this loop
-		if _, ok := checksDone[task.TaskName]; ok {
+		if _, ok := checksDone[task.Name]; ok {
 			parsedTasks = append(parsedTasks, task)
 		}
 
-		baseTaskDef, ok := jobs.TaskDefinitionRegistry[task.TaskName]
+		baseJobImpl, ok := jobs.JobImplRegistry[task.Name]
 
 		if !ok {
 			if errorOnUnknownTask {
@@ -124,7 +124,7 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 
 		// Check permissions
 		permLimits := api.PermLimits(d.Auth)
-		resp, ok := api.HandlePermissionCheck(d.Auth.ID, guildId, baseTaskDef.CorrespondingBotCommand_View(), rpc_messages.RpcCheckCommandOptions{
+		resp, ok := api.HandlePermissionCheck(d.Auth.ID, guildId, baseJobImpl.CorrespondingBotCommand_View(), rpc_messages.RpcCheckCommandOptions{
 			CustomResolvedKittycatPerms: permLimits,
 		})
 
@@ -135,12 +135,12 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 			continue
 		}
 
-		checksDone[task.TaskName] = true
+		checksDone[task.Name] = true
 		parsedTasks = append(parsedTasks, task)
 	}
 
 	return uapi.HttpResponse{
 		Status: http.StatusOK,
-		Json:   ext_types.TaskListResponse{Tasks: parsedTasks},
+		Json:   jobtypes.TaskListResponse{Tasks: parsedTasks},
 	}
 }

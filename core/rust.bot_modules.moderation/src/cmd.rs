@@ -247,7 +247,7 @@ pub async fn prune_user(
             data: prune_opts.clone(),
             create: true,
             execute: true,
-            task_id: None,
+            id: None,
             user_id: author.user.id.to_string(),
         })
         .send()
@@ -256,10 +256,10 @@ pub async fn prune_user(
         .error_for_status()
         .map_err(|e| format!("Failed to create prune task: {}", e))?;
 
-    let task_id = resp
+    let id = resp
         .json::<splashcore_rs::jobserver::JobserverSpawnTaskResponse>()
         .await?
-        .task_id;
+        .id;
 
     tx.commit().await?;
 
@@ -333,7 +333,7 @@ pub async fn prune_user(
         ))
         .field(
             "Pruning Messages",
-            format!(":yellow_circle: Created task with Task ID of {}", task_id),
+            format!(":yellow_circle: Created task with Task ID of {}", id),
             false,
         );
 
@@ -380,7 +380,7 @@ pub async fn prune_user(
     jobserver::taskpoll::reactive(
         &ch,
         &ctx.data().pool,
-        &task_id,
+        &id,
         |cache_http, task| {
             Box::pin(update_base_message(
                 uarc.clone(),

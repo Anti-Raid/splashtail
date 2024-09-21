@@ -11,7 +11,7 @@ import (
 	"go.api/state"
 	"go.api/types"
 	jobs "go.jobs"
-	"go.std/ext_types"
+	jobtypes "go.jobs/types"
 	"go.std/utils/mewext"
 
 	"github.com/go-chi/chi/v5"
@@ -50,7 +50,7 @@ func Docs() *docs.Doc {
 			},
 		},
 		Req:  "The tasks fields",
-		Resp: ext_types.TaskCreateResponse{},
+		Resp: jobtypes.TaskCreateResponse{},
 	}
 }
 
@@ -79,9 +79,9 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 		}
 	}
 
-	taskName := chi.URLParam(r, "name")
+	name := chi.URLParam(r, "name")
 
-	if taskName == "" {
+	if name == "" {
 		return uapi.HttpResponse{
 			Json: types.ApiError{
 				Message: "Missing name",
@@ -113,12 +113,12 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 		}
 	}
 
-	baseTaskDef, ok := jobs.TaskDefinitionRegistry[taskName]
+	baseJobImpl, ok := jobs.JobImplRegistry[name]
 
 	if !ok {
 		return uapi.HttpResponse{
 			Json: types.ApiError{
-				Message: "Unknown task name",
+				Message: "Unknown job name",
 			},
 			Status: http.StatusBadRequest,
 		}
@@ -131,7 +131,7 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 		return uapi.DefaultResponse(http.StatusInternalServerError)
 	}
 
-	task := baseTaskDef // Copy task
+	task := baseJobImpl // Copy task
 
 	err = jsonimpl.Unmarshal(tBytes, &task)
 
@@ -168,7 +168,7 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 	}
 
 	str, err := rpc.JobserverSpawnTask(d.Context, clusterId, &rpc_messages.JobserverSpawnTask{
-		Name:    taskName,
+		Name:    name,
 		Data:    data,
 		Create:  true,
 		Execute: true,
@@ -186,8 +186,8 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 	}
 
 	return uapi.HttpResponse{
-		Json: ext_types.PartialTask{
-			TaskID: str.TaskID,
+		Json: jobtypes.TaskCreateResponse{
+			ID: str.ID,
 		},
 	}
 }
