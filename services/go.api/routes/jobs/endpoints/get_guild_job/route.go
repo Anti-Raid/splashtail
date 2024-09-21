@@ -56,7 +56,7 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 	if id == "" || guildId == "" {
 		return uapi.HttpResponse{
 			Status: http.StatusBadRequest,
-			Json:   types.ApiError{Message: "tid/guild_id is required"},
+			Json:   types.ApiError{Message: "id/guild_id is required"},
 		}
 	}
 

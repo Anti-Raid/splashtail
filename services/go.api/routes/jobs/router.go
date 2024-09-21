@@ -24,7 +24,7 @@ func (b Router) Tag() (string, string) {
 
 func (b Router) Routes(r *chi.Mux) {
 	uapi.Route{
-		Pattern:      "/guilds/{guild_id}/jobs/{tid}",
+		Pattern:      "/guilds/{guild_id}/jobs/{id}",
 		OpId:         "get_guild_job",
 		Method:       uapi.GET,
 		Docs:         get_guild_job.Docs,
@@ -72,8 +72,8 @@ func (b Router) Routes(r *chi.Mux) {
 	}.Route(r)
 
 	uapi.Route{
-		Pattern: "/guilds/{guild_id}/tasks/{name}",
-		OpId:    "create_task",
+		Pattern: "/guilds/{guild_id}/jobs/{name}",
+		OpId:    "create_guild_job",
 		Method:  uapi.POST,
 		Docs:    create_guild_job.Docs,
 		Handler: create_guild_job.Route,
@@ -95,8 +95,8 @@ func (b Router) Routes(r *chi.Mux) {
 	}.Route(r)
 
 	uapi.Route{
-		Pattern: "/tasks/{id}/ioauth/download-link",
-		OpId:    "ioauth_download_task",
+		Pattern: "/jobs/{id}/ioauth/download-link",
+		OpId:    "ioauth_download_job",
 		Method:  uapi.GET,
 		Docs:    ioauth_download_job.Docs,
 		Handler: ioauth_download_job.Route,
