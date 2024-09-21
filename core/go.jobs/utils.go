@@ -71,6 +71,6 @@ func GetPathFromOutput(id string, jobImpl interfaces.JobImpl, outp *types.TaskOu
 	if outp.Segregated {
 		return fmt.Sprintf("%s/%s/%s/%s", FormatTaskForSimplex(jobImpl.TaskFor()), jobImpl.Name(), id, outp.Filename)
 	} else {
-		return fmt.Sprintf("tasks/%s", id)
+		return fmt.Sprintf("jobs/%s", id)
 	}
 }

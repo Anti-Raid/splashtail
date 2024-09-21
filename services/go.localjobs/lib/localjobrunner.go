@@ -64,8 +64,8 @@ func ExecuteJobLocal(prefix, taskId string, l *zap.Logger, jobImpl interfaces.Jo
 				return fmt.Errorf("failed to update task state: %w", err)
 			}
 		} else {
-			// Write task output to tasks/$taskId/$output
-			err = os.MkdirAll(prefix+"/tasks/"+taskId, 0755)
+			// Write task output to jobs/$taskId/$output
+			err = os.MkdirAll(prefix+"/jobs/"+taskId, 0755)
 
 			if err != nil {
 				return fmt.Errorf("failed to create job output directory: %w", err)

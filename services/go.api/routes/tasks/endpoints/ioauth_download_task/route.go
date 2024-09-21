@@ -168,32 +168,43 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 		}
 	}
 
-	if task.TaskFor.ID == "" || task.TaskFor.TargetType == "" {
-		return uapi.HttpResponse{
-			Status: http.StatusInternalServerError,
-			Json:   types.ApiError{Message: "Invalid task.TaskFor. Missing ID or TargetType"},
-		}
-	}
+	if task.TaskForRaw != nil {
+		task.TaskFor = jobs.ParseTaskFor(*task.TaskForRaw)
 
-	if task.TaskFor.TargetType == splashcore.TargetTypeUser {
-		if iot.DiscordUser.ID != task.TaskFor.ID {
+		if task.TaskFor == nil {
 			return uapi.HttpResponse{
-				Status: http.StatusForbidden,
-				Json:   types.ApiError{Message: "You are not authorized to fetch this task [TargetType = User]!"},
+				Status: http.StatusInternalServerError,
+				Json:   types.ApiError{Message: "Invalid task.TaskFor. Parsing error occurred"},
 			}
 		}
-	} else if task.TaskFor.TargetType == splashcore.TargetTypeServer {
-		// Check permissions
-		resp, ok := api.HandlePermissionCheck(iot.DiscordUser.ID, task.TaskFor.ID, taskDef.CorrespondingBotCommand_Download(), rpc_messages.RpcCheckCommandOptions{})
 
-		if !ok {
-			return resp
+		if task.TaskFor.ID == "" || task.TaskFor.TargetType == "" {
+			return uapi.HttpResponse{
+				Status: http.StatusInternalServerError,
+				Json:   types.ApiError{Message: "Invalid task.TaskFor. Missing ID or TargetType"},
+			}
 		}
 
-	} else {
-		return uapi.HttpResponse{
-			Status: http.StatusNotImplemented,
-			Json:   types.ApiError{Message: "Downloading is not supported for this target type [TargetType = " + task.TaskFor.TargetType + "]"},
+		if task.TaskFor.TargetType == splashcore.TargetTypeUser {
+			if iot.DiscordUser.ID != task.TaskFor.ID {
+				return uapi.HttpResponse{
+					Status: http.StatusForbidden,
+					Json:   types.ApiError{Message: "You are not authorized to fetch this task [TargetType = User]!"},
+				}
+			}
+		} else if task.TaskFor.TargetType == splashcore.TargetTypeServer {
+			// Check permissions
+			resp, ok := api.HandlePermissionCheck(iot.DiscordUser.ID, task.TaskFor.ID, taskDef.CorrespondingBotCommand_Download(), rpc_messages.RpcCheckCommandOptions{})
+
+			if !ok {
+				return resp
+			}
+
+		} else {
+			return uapi.HttpResponse{
+				Status: http.StatusNotImplemented,
+				Json:   types.ApiError{Message: "Downloading is not supported for this target type [TargetType = " + task.TaskFor.TargetType + "]"},
+			}
 		}
 	}
 

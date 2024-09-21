@@ -20,16 +20,17 @@ type TaskCreateResponse struct {
 //
 // Jobs are background processes that can be run on a coordinator server.
 type Task struct {
-	ID        string           `db:"id" json:"id" validate:"required" description:"The ID of the job."`
-	Name      string           `db:"name" json:"name" validate:"required" description:"The name of the job."`
-	Output    *TaskOutput      `db:"output" json:"output" description:"The output of the job."`
-	Fields    map[string]any   `db:"fields" json:"fields" description:"The public fields of the job. Note that sensitive data may be omitted from storage entirely"`
-	Statuses  []map[string]any `db:"statuses" json:"statuses" validate:"required" description:"The task statuses."`
-	TaskFor   *TaskFor         `db:"task_for" json:"task_for" description:"The entity this task is for."`
-	Expiry    *time.Duration   `db:"expiry" json:"expiry" validate:"required" description:"The task expiry."`
-	State     string           `db:"state" json:"state" validate:"required" description:"The tasks current state (pending/completed etc)."`
-	Resumable bool             `db:"resumable" json:"resumable" description:"Whether the task is resumable."`
-	CreatedAt time.Time        `db:"created_at" json:"created_at" description:"The time the task was created."`
+	ID         string           `db:"id" json:"id" validate:"required" description:"The ID of the job."`
+	Name       string           `db:"name" json:"name" validate:"required" description:"The name of the job."`
+	Output     *TaskOutput      `db:"output" json:"output" description:"The output of the job."`
+	Fields     map[string]any   `db:"fields" json:"fields" description:"The public fields of the job. Note that sensitive data may be omitted from storage entirely"`
+	Statuses   []map[string]any `db:"statuses" json:"statuses" validate:"required" description:"The task statuses."`
+	TaskForRaw *string          `db:"task_for" json:"-" description:"The entity this job is for." ci:"internal"`
+	TaskFor    *TaskFor         `db:"-" json:"task_for" description:"The entity this job is for."`
+	Expiry     *time.Duration   `db:"expiry" json:"expiry" validate:"required" description:"The task expiry."`
+	State      string           `db:"state" json:"state" validate:"required" description:"The tasks current state (pending/completed etc)."`
+	Resumable  bool             `db:"resumable" json:"resumable" description:"Whether the task is resumable."`
+	CreatedAt  time.Time        `db:"created_at" json:"created_at" description:"The time the task was created."`
 }
 
 // @ci table=tasks unfilled=1

@@ -269,7 +269,7 @@ impl Task {
                     self.id,
                 ))
             } else {
-                Some(format!("tasks/{}", self.id))
+                Some(format!("jobs/{}", self.id))
             }
         } else {
             None

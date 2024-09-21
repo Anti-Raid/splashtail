@@ -11,7 +11,6 @@ var taskMutex sync.Mutex
 
 var BgTaskRegistry = []BackgroundTask{}
 
-// Inspired from https://github.com/InfinityBotList/Arcadia/blob/main/src/tasks/taskcat.rs
 type BackgroundTask interface {
 	// Whether or not the task is enabled
 	Enabled() bool
