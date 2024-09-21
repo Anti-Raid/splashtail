@@ -19,24 +19,24 @@ func JobserverRpcServer() {
 		_, _ = w.Write([]byte("jobserver"))
 	}))
 
-	handler.HandleFunc("/spawn-task", func(w http.ResponseWriter, r *http.Request) {
+	handler.HandleFunc("/spawn", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 			return
 		}
 
 		// Read request
-		var spawnTask rpc_messages.SpawnTask
+		var spawn rpc_messages.Spawn
 
-		err := jsonimpl.UnmarshalReader(r.Body, &spawnTask)
+		err := jsonimpl.UnmarshalReader(r.Body, &spawn)
 
 		if err != nil {
 			http.Error(w, fmt.Sprintf("Error reading request: %s", err), http.StatusBadRequest)
 			return
 		}
 
-		// Spawn task
-		resp, err := core.Spawn(spawnTask)
+		// Spawn job
+		resp, err := core.Spawn(spawn)
 
 		if err != nil {
 			http.Error(w, fmt.Sprintf("Error spawning job: %s", err), http.StatusInternalServerError)

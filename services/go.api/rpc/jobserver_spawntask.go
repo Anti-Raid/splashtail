@@ -12,13 +12,13 @@ import (
 func JobserverSpawnTask(
 	ctx context.Context,
 	clusterId int,
-	spawnTask *rpc_messages.JobserverSpawnTask,
-) (res *rpc_messages.JobserverSpawnTaskResponse, err error) {
-	return RpcQuery[rpc_messages.JobserverSpawnTaskResponse](
+	spawnTask *rpc_messages.JobserverSpawn,
+) (res *rpc_messages.JobserverSpawnResponse, err error) {
+	return RpcQuery[rpc_messages.JobserverSpawnResponse](
 		ctx,
 		state.IpcClient,
 		"POST",
-		fmt.Sprintf("%s/spawn-task", CalcJobserverAddr(clusterId)),
+		fmt.Sprintf("%s/spawn", CalcJobserverAddr(clusterId)),
 		spawnTask,
 		true,
 	)

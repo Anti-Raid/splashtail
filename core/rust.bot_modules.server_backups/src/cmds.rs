@@ -2,7 +2,7 @@ use futures_util::StreamExt;
 use serenity::all::{ChannelId, CreateEmbed, EditMessage};
 use serenity::small_fixed_array::TruncatingInto;
 use serenity::utils::shard_id;
-use silverpelt::jobserver::{embed as embed_task, get_icon_of_state};
+use silverpelt::jobserver::{embed as embed_job, get_icon_of_state};
 use silverpelt::Context;
 use silverpelt::Error;
 use splashcore_rs::jobserver;
@@ -142,7 +142,7 @@ pub async fn backups_create(
             poise::CreateReply::default().embed(
                 CreateEmbed::default()
                     .title("Creating Backup...")
-                    .description(":yellow_circle: Please wait, starting backup task..."),
+                    .description(":yellow_circle: Please wait, starting backup..."),
             ),
         )
         .await?
@@ -173,11 +173,11 @@ pub async fn backups_create(
     let resp = data
         .reqwest
         .post(format!(
-            "{}:{}/spawn-task",
+            "{}:{}/spawn",
             config::CONFIG.base_ports.jobserver_base_addr.get(),
             config::CONFIG.base_ports.jobserver.get() + jobserver_cluster_id
         ))
-        .json(&splashcore_rs::jobserver::JobserverSpawnTaskRequest {
+        .json(&splashcore_rs::jobserver::Spawn {
             name: "guild_create_backup".to_string(),
             data: backup_args,
             create: true,
@@ -187,12 +187,12 @@ pub async fn backups_create(
         })
         .send()
         .await
-        .map_err(|e| format!("Failed to create backup task: {}", e))?
+        .map_err(|e| format!("Failed to initiate backup: {}", e))?
         .error_for_status()
-        .map_err(|e| format!("Failed to create backup task: {}", e))?;
+        .map_err(|e| format!("Failed to initiate backup: {}", e))?;
 
     let backup_id = resp
-        .json::<splashcore_rs::jobserver::JobserverSpawnTaskResponse>()
+        .json::<splashcore_rs::jobserver::SpawnResponse>()
         .await?
         .id;
 
@@ -203,7 +203,7 @@ pub async fn backups_create(
                 CreateEmbed::default()
                     .title("Creating Backup...")
                     .description(format!(
-                        ":yellow_circle: Created task with Task ID of {}",
+                        ":yellow_circle: Created job with ID of `{}`",
                         backup_id
                     )),
             ),
@@ -218,14 +218,14 @@ pub async fn backups_create(
     async fn update_base_message(
         cache_http: botox::cache::CacheHttpImpl,
         mut base_message: serenity::model::channel::Message,
-        task: Arc<jobserver::Task>,
+        job: Arc<jobserver::Job>,
     ) -> Result<(), Error> {
-        let new_task_msg = embed_task(&config::CONFIG.sites.api.get(), &task, vec![], true)?;
+        let new_job_msg = embed_job(&config::CONFIG.sites.api.get(), &job, vec![], true)?;
 
         base_message
             .edit(
                 &cache_http,
-                new_task_msg.to_prefix_edit(serenity::all::EditMessage::default()),
+                new_job_msg.to_prefix_edit(serenity::all::EditMessage::default()),
             )
             .await?;
 
@@ -233,18 +233,18 @@ pub async fn backups_create(
     }
 
     // Use jobserver::reactive to keep updating the message
-    jobserver::taskpoll::reactive(
+    jobserver::poll::reactive(
         &ch,
         &ctx.data().pool,
         &backup_id,
-        |cache_http, task| {
+        |cache_http, job| {
             Box::pin(update_base_message(
                 cache_http.clone(),
                 base_message.clone(),
-                task.clone(),
+                job.clone(),
             ))
         },
-        jobserver::taskpoll::PollTaskOptions::default(),
+        jobserver::poll::PollTaskOptions::default(),
     )
     .await?;
 
@@ -266,37 +266,37 @@ pub async fn backups_list(ctx: Context<'_>) -> Result<(), Error> {
 
     let data = ctx.data();
 
-    let mut backup_tasks =
-        jobserver::Task::from_guild_and_name(guild_id, "guild_create_backup", &data.pool)
+    let mut backup_jobs =
+        jobserver::Job::from_guild_and_name(guild_id, "guild_create_backup", &data.pool)
             .await
-            .map_err(|e| format!("Failed to get backup tasks: {}", e))?;
+            .map_err(|e| format!("Failed to get backup job: {}", e))?;
 
-    if backup_tasks.is_empty() {
+    if backup_jobs.is_empty() {
         ctx.say("You don't have any backups yet!\n\n**TIP:** Use `/backups create` to create your first server backup :heart:").await?;
         return Ok(());
     }
 
-    fn create_embed_for_task<'a>(task: &jobserver::Task) -> serenity::all::CreateEmbed<'a> {
+    fn create_embed_for_job<'a>(job: &jobserver::Job) -> serenity::all::CreateEmbed<'a> {
         let mut initial_desc = format!(
-            "Task ID: {}\nTask Name: {}\nTask State: {}\n**Encrypted:** {}\n\n**Created At**: <t:{}:f> (<t:{}:R>)",
-            task.id,
-            task.name,
-            task.state,
-            is_backup_encrypted(&task.fields),
-            task.created_at.and_utc().timestamp(),
-            task.created_at.and_utc().timestamp()
+            "ID: {}\nName: {}\nState: {}\n**Encrypted:** {}\n\n**Created At**: <t:{}:f> (<t:{}:R>)",
+            job.id,
+            job.name,
+            job.state,
+            is_backup_encrypted(&job.fields),
+            job.created_at.and_utc().timestamp(),
+            job.created_at.and_utc().timestamp()
         );
 
         let embed = poise::serenity_prelude::CreateEmbed::default().title(format!(
             "{} | Server Backup",
-            get_icon_of_state(task.state.as_str())
+            get_icon_of_state(job.state.as_str())
         ));
 
-        if let Some(ref output) = task.output {
+        if let Some(ref output) = job.output {
             let furl = format!(
-                "{}/tasks/{}/ioauth/download-link",
+                "{}/jobs/{}/ioauth/download-link",
                 config::CONFIG.sites.api.get(),
-                task.id
+                job.id
             );
 
             initial_desc += &format!("\n\n:link: [Download {}]({})", output.filename, &furl);
@@ -309,14 +309,14 @@ pub async fn backups_list(ctx: Context<'_>) -> Result<(), Error> {
 
     fn create_reply<'a>(
         index: usize,
-        backup_tasks: &[jobserver::Task],
+        backup_jobs: &[jobserver::Job],
     ) -> Result<poise::CreateReply<'a>, Error> {
-        if backup_tasks.is_empty() || index >= backup_tasks.len() {
+        if backup_jobs.is_empty() || index >= backup_jobs.len() {
             return Err("No backups found".into());
         }
 
         let cr = poise::CreateReply::default()
-            .embed(create_embed_for_task(&backup_tasks[index]))
+            .embed(create_embed_for_job(&backup_jobs[index]))
             .ephemeral(true)
             .components(vec![
                 serenity::all::CreateActionRow::Buttons(vec![
@@ -333,14 +333,14 @@ pub async fn backups_list(ctx: Context<'_>) -> Result<(), Error> {
                             "▶️".to_string().trunc_into(),
                         ))
                         .style(serenity::all::ButtonStyle::Primary)
-                        .disabled(index >= backup_tasks.len()),
+                        .disabled(index >= backup_jobs.len()),
                     serenity::all::CreateButton::new("backups_last")
                         .label("Last")
                         .emoji(serenity::all::ReactionType::Unicode(
                             "⏩".to_string().trunc_into(),
                         ))
                         .style(serenity::all::ButtonStyle::Primary)
-                        .disabled(index >= backup_tasks.len()),
+                        .disabled(index >= backup_jobs.len()),
                     serenity::all::CreateButton::new("backups_first")
                         .label("First")
                         .emoji(serenity::all::ReactionType::Unicode(
@@ -364,7 +364,7 @@ pub async fn backups_list(ctx: Context<'_>) -> Result<(), Error> {
 
     let mut index = 0;
 
-    let cr = create_reply(index, &backup_tasks)?;
+    let cr = create_reply(index, &backup_jobs)?;
 
     let msg = ctx.send(cr).await?.into_message().await?;
 
@@ -389,14 +389,14 @@ pub async fn backups_list(ctx: Context<'_>) -> Result<(), Error> {
                 index -= 1;
             }
             "backups_next" => {
-                if index >= backup_tasks.len() {
+                if index >= backup_jobs.len() {
                     continue;
                 }
 
                 index += 1;
             }
             "backups_last" => {
-                index = backup_tasks.len() - 1;
+                index = backup_jobs.len() - 1;
             }
             "backups_first" => {
                 index = 0;
@@ -435,10 +435,10 @@ pub async fn backups_list(ctx: Context<'_>) -> Result<(), Error> {
                 followup_done = true;
 
                 // Check for encryption, is so give a prompt
-                let task = &backup_tasks[index];
+                let job = &backup_jobs[index];
 
                 let mut password = None;
-                if is_backup_encrypted(&task.fields) {
+                if is_backup_encrypted(&job.fields) {
                     let mut password_preinput_warning = ctx.send(
                         poise::reply::CreateReply::default()
                         .content("This backup is encrypted. Please provide the password to decrypt it!")
@@ -566,15 +566,15 @@ pub async fn backups_list(ctx: Context<'_>) -> Result<(), Error> {
                     continue;
                 }
 
-                // Take out the current backup task
-                let task = &backup_tasks[index];
+                // Take out the current backup job
+                let job = &backup_jobs[index];
 
                 let url = {
-                    if task.format_owner_simplex() != format!("g/{}", guild_id) {
-                        return Err("Backup task is not for this guild".into());
+                    if job.format_owner_simplex() != format!("g/{}", guild_id) {
+                        return Err("Backup is not owned by this server".into());
                     }
 
-                    let Some(path) = task.get_file_path() else {
+                    let Some(path) = job.get_file_path() else {
                         return Err("Failed to get backup path".into());
                     };
 
@@ -587,7 +587,7 @@ pub async fn backups_list(ctx: Context<'_>) -> Result<(), Error> {
                             CreateEmbed::default()
                                 .title("Restoring Backup...")
                                 .description(
-                                    ":yellow_circle: Please wait, starting backup task...",
+                                    ":yellow_circle: Please wait, initating backup restore...",
                                 ),
                         ),
                     )
@@ -612,11 +612,11 @@ pub async fn backups_list(ctx: Context<'_>) -> Result<(), Error> {
                 let resp = data
                     .reqwest
                     .post(format!(
-                        "{}:{}/spawn-task",
+                        "{}:{}/spawn",
                         config::CONFIG.base_ports.jobserver_base_addr.get(),
                         config::CONFIG.base_ports.jobserver.get() + jobserver_cluster_id
                     ))
-                    .json(&splashcore_rs::jobserver::JobserverSpawnTaskRequest {
+                    .json(&splashcore_rs::jobserver::Spawn {
                         name: "guild_restore_backup".to_string(),
                         data: json,
                         create: true,
@@ -626,12 +626,12 @@ pub async fn backups_list(ctx: Context<'_>) -> Result<(), Error> {
                     })
                     .send()
                     .await
-                    .map_err(|e| format!("Failed to create backup task: {}", e))?
+                    .map_err(|e| format!("Failed to initiate backup: {}", e))?
                     .error_for_status()
-                    .map_err(|e| format!("Failed to create backup task: {}", e))?;
+                    .map_err(|e| format!("Failed to initiate backup: {}", e))?;
 
                 let restore_id = resp
-                    .json::<splashcore_rs::jobserver::JobserverSpawnTaskResponse>()
+                    .json::<splashcore_rs::jobserver::SpawnResponse>()
                     .await?
                     .id;
 
@@ -642,7 +642,7 @@ pub async fn backups_list(ctx: Context<'_>) -> Result<(), Error> {
                             CreateEmbed::default()
                                 .title("Restoring Backup...")
                                 .description(format!(
-                                    ":yellow_circle: Created task with Task ID of {}",
+                                    ":yellow_circle: Created job with ID of {}",
                                     restore_id
                                 )),
                         ),
@@ -657,15 +657,15 @@ pub async fn backups_list(ctx: Context<'_>) -> Result<(), Error> {
                 async fn update_base_message(
                     cache_http: botox::cache::CacheHttpImpl,
                     mut base_message: serenity::model::channel::Message,
-                    task: Arc<jobserver::Task>,
+                    job: Arc<jobserver::Job>,
                 ) -> Result<(), Error> {
-                    let new_task_msg =
-                        embed_task(&config::CONFIG.sites.api.get(), &task, vec![], true)?;
+                    let new_job_msg =
+                        embed_job(&config::CONFIG.sites.api.get(), &job, vec![], true)?;
 
                     base_message
                         .edit(
                             &cache_http,
-                            new_task_msg.to_prefix_edit(serenity::all::EditMessage::default()),
+                            new_job_msg.to_prefix_edit(serenity::all::EditMessage::default()),
                         )
                         .await?;
 
@@ -673,18 +673,18 @@ pub async fn backups_list(ctx: Context<'_>) -> Result<(), Error> {
                 }
 
                 // Use jobserver::reactive to keep updating the message
-                jobserver::taskpoll::reactive(
+                jobserver::poll::reactive(
                     &ch,
                     &ctx.data().pool,
                     restore_id.as_str(),
-                    |cache_http, task| {
+                    |cache_http, job| {
                         Box::pin(update_base_message(
                             cache_http.clone(),
                             base_message.clone(),
-                            task.clone(),
+                            job.clone(),
                         ))
                     },
-                    jobserver::taskpoll::PollTaskOptions::default(),
+                    jobserver::poll::PollTaskOptions::default(),
                 )
                 .await?;
             }
@@ -764,8 +764,8 @@ pub async fn backups_list(ctx: Context<'_>) -> Result<(), Error> {
 
                 match confirm_item.data.custom_id.as_str() {
                     "backups_delete_confirm" => {
-                        // Take out the current backup task
-                        let task = backup_tasks.remove(index);
+                        // Take out the current backup job
+                        let job = backup_jobs.remove(index);
 
                         // Respond to the interaction
                         confirm_item.create_response(
@@ -784,7 +784,7 @@ pub async fn backups_list(ctx: Context<'_>) -> Result<(), Error> {
 
                         let mut status = Vec::new();
 
-                        match task
+                        match job
                             .delete_from_storage(&data.reqwest, &data.object_store)
                             .await
                         {
@@ -813,14 +813,14 @@ pub async fn backups_list(ctx: Context<'_>) -> Result<(), Error> {
                             log::error!("Failed to edit message: {}", e);
                         }
 
-                        // Lastly deleting the task from the database
-                        match task.delete_from_db(&data.pool).await {
+                        // Lastly deleting the job from the database
+                        match job.delete_from_db(&data.pool).await {
                             Ok(_) => {
-                                status.push(":white_check_mark: Successfully deleted the backup task from database".to_string());
+                                status.push(":white_check_mark: Successfully deleted the backup from database".to_string());
                             }
                             Err(e) => {
                                 status.push(format!(
-                                    ":x: Failed to delete the backup task from database: {}",
+                                    ":x: Failed to delete the backup from database: {}",
                                     e
                                 ));
                             }
@@ -863,15 +863,15 @@ pub async fn backups_list(ctx: Context<'_>) -> Result<(), Error> {
             }
         }
 
-        if index >= backup_tasks.len() {
-            index = backup_tasks.len() - 1;
+        if index >= backup_jobs.len() {
+            index = backup_jobs.len() - 1;
         }
 
         if !followup_done {
             item.defer(&ctx.serenity_context().http).await?;
         }
 
-        let cr = create_reply(index, &backup_tasks)?;
+        let cr = create_reply(index, &backup_jobs)?;
 
         item.edit_response(
             &ctx.serenity_context().http,
@@ -892,9 +892,9 @@ pub async fn backups_list(ctx: Context<'_>) -> Result<(), Error> {
     rename = "delete"
 )]
 pub async fn backups_delete(ctx: Context<'_>, id: String) -> Result<(), Error> {
-    let task = jobserver::Task::from_id(id.parse::<Uuid>()?, &ctx.data().pool)
+    let job = jobserver::Job::from_id(id.parse::<Uuid>()?, &ctx.data().pool)
         .await
-        .map_err(|e| format!("Failed to get backup task: {}", e))?;
+        .map_err(|e| format!("Failed to get backup job: {}", e))?;
 
     let mut confirm = ctx.send(
         poise::reply::CreateReply::default()
@@ -957,7 +957,7 @@ pub async fn backups_delete(ctx: Context<'_>, id: String) -> Result<(), Error> {
             let mut status = Vec::new();
 
             let data = &ctx.data();
-            match task
+            match job
                 .delete_from_storage(&data.reqwest, &data.object_store)
                 .await
             {
@@ -989,17 +989,17 @@ pub async fn backups_delete(ctx: Context<'_>, id: String) -> Result<(), Error> {
                 log::error!("Failed to edit message: {}", e);
             }
 
-            // Lastly deleting the task from the database
-            match task.delete_from_db(&ctx.data().pool).await {
+            // Lastly deleting the job from the database
+            match job.delete_from_db(&ctx.data().pool).await {
                 Ok(_) => {
                     status.push(
-                        ":white_check_mark: Successfully deleted the backup task from database"
+                        ":white_check_mark: Successfully deleted the backup from database"
                             .to_string(),
                     );
                 }
                 Err(e) => {
                     status.push(format!(
-                        ":x: Failed to delete the backup task from database: {}",
+                        ":x: Failed to delete the backup from database: {}",
                         e
                     ));
                 }
@@ -1081,7 +1081,7 @@ pub async fn backups_restore(
         serenity::all::Attachment,
     >,
 
-    #[description = "The task id of the backup to restore"] backup_id: Option<String>,
+    #[description = "The job id of the backup to restore"] backup_id: Option<String>,
 
     #[description = "Password to decrypt backup with. Should not be reused"] password: Option<
         String,
@@ -1125,17 +1125,17 @@ pub async fn backups_restore(
                 return Err("Failed to get backup id".into());
             };
 
-            // Get the task
-            let task = jobserver::Task::from_id(backup_id.parse::<Uuid>()?, &ctx.data().pool)
+            // Get the job
+            let job = jobserver::Job::from_id(backup_id.parse::<Uuid>()?, &ctx.data().pool)
                 .await
-                .map_err(|e| format!("Failed to get backup task: {}", e))?;
+                .map_err(|e| format!("Failed to get backup: {}", e))?;
 
-            if task.format_owner_simplex() != format!("g/{}", guild_id) {
-                return Err("Backup task is not for this guild".into());
+            if job.format_owner_simplex() != format!("g/{}", guild_id) {
+                return Err("Backup job is not owned by this server".into());
             }
 
-            let Some(path) = task.get_file_path() else {
-                return Err("Failed to get backup path".into());
+            let Some(path) = job.get_file_path() else {
+                return Err("Failed to find backup storage path".into());
             };
 
             format!("job:///{}", path)
@@ -1187,7 +1187,7 @@ pub async fn backups_restore(
             poise::CreateReply::default().embed(
                 CreateEmbed::default()
                     .title("Restoring Backup...")
-                    .description(":yellow_circle: Please wait, starting backup task..."),
+                    .description(":yellow_circle: Please wait, initiating backup restore..."),
             ),
         )
         .await?
@@ -1212,11 +1212,11 @@ pub async fn backups_restore(
     let resp = data
         .reqwest
         .post(format!(
-            "{}:{}/spawn-task",
+            "{}:{}/spawn",
             config::CONFIG.base_ports.jobserver_base_addr.get(),
             config::CONFIG.base_ports.jobserver.get() + jobserver_cluster_id
         ))
-        .json(&splashcore_rs::jobserver::JobserverSpawnTaskRequest {
+        .json(&splashcore_rs::jobserver::Spawn {
             name: "guild_restore_backup".to_string(),
             data: json,
             create: true,
@@ -1226,12 +1226,12 @@ pub async fn backups_restore(
         })
         .send()
         .await
-        .map_err(|e| format!("Failed to create backup task: {}", e))?
+        .map_err(|e| format!("Failed to initiate backup restore: {}", e))?
         .error_for_status()
-        .map_err(|e| format!("Failed to create backup task: {}", e))?;
+        .map_err(|e| format!("Failed to initiate backup restore: {}", e))?;
 
     let restore_id = resp
-        .json::<splashcore_rs::jobserver::JobserverSpawnTaskResponse>()
+        .json::<splashcore_rs::jobserver::SpawnResponse>()
         .await?
         .id;
 
@@ -1242,7 +1242,7 @@ pub async fn backups_restore(
                 CreateEmbed::default()
                     .title("Restoring Backup...")
                     .description(format!(
-                        ":yellow_circle: Created task with Task ID of {}",
+                        ":yellow_circle: Created job with ID of {}",
                         restore_id
                     )),
             ),
@@ -1257,14 +1257,14 @@ pub async fn backups_restore(
     async fn update_base_message(
         cache_http: botox::cache::CacheHttpImpl,
         mut base_message: serenity::model::channel::Message,
-        task: Arc<jobserver::Task>,
+        job: Arc<jobserver::Job>,
     ) -> Result<(), Error> {
-        let new_task_msg = embed_task(&config::CONFIG.sites.api.get(), &task, vec![], true)?;
+        let new_job_msg = embed_job(&config::CONFIG.sites.api.get(), &job, vec![], true)?;
 
         base_message
             .edit(
                 &cache_http,
-                new_task_msg.to_prefix_edit(serenity::all::EditMessage::default()),
+                new_job_msg.to_prefix_edit(serenity::all::EditMessage::default()),
             )
             .await?;
 
@@ -1272,18 +1272,18 @@ pub async fn backups_restore(
     }
 
     // Use jobserver::reactive to keep updating the message
-    jobserver::taskpoll::reactive(
+    jobserver::poll::reactive(
         &ch,
         &ctx.data().pool,
         restore_id.as_str(),
-        |cache_http, task| {
+        |cache_http, job| {
             Box::pin(update_base_message(
                 cache_http.clone(),
                 base_message.clone(),
-                task.clone(),
+                job.clone(),
             ))
         },
-        jobserver::taskpoll::PollTaskOptions::default(),
+        jobserver::poll::PollTaskOptions::default(),
     )
     .await?;
 

@@ -1,4 +1,4 @@
-package create_guild_task
+package create_guild_job
 
 import (
 	"io"
@@ -24,8 +24,8 @@ import (
 
 func Docs() *docs.Doc {
 	return &docs.Doc{
-		Summary:     "Create Guild Task",
-		Description: "Creates a task for a guild. Returns the task data if this is successful",
+		Summary:     "Create Guild Job",
+		Description: "Creates a job on a guild. Returns the job ID on success",
 		Params: []docs.Parameter{
 			{
 				Name:        "guild_id",
@@ -36,21 +36,14 @@ func Docs() *docs.Doc {
 			},
 			{
 				Name:        "name",
-				Description: "The name of the task",
+				Description: "The name of the job",
 				Required:    true,
 				In:          "path",
 				Schema:      docs.IdSchema,
 			},
-			{
-				Name:        "guild_id",
-				Description: "The ID of the guild to run the task in",
-				Required:    true,
-				In:          "query",
-				Schema:      docs.IdSchema,
-			},
 		},
-		Req:  "The tasks fields",
-		Resp: jobtypes.TaskCreateResponse{},
+		Req:  "The fields to pass to the job create",
+		Resp: jobtypes.JobCreateResponse{},
 	}
 }
 
@@ -58,14 +51,14 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 	limit, err := ratelimit.Ratelimit{
 		Expiry:      1 * time.Hour,
 		MaxRequests: 50,
-		Bucket:      "create_task",
+		Bucket:      "create_job",
 		Identifier: func(r *http.Request) string {
 			return d.Auth.ID
 		},
 	}.Limit(d.Context, r)
 
 	if err != nil {
-		state.Logger.Error("Error while ratelimiting", zap.Error(err), zap.String("bucket", "create_task"))
+		state.Logger.Error("Error while ratelimiting", zap.Error(err), zap.String("bucket", "create_job"))
 		return uapi.DefaultResponse(http.StatusInternalServerError)
 	}
 
@@ -131,7 +124,7 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 		return uapi.DefaultResponse(http.StatusInternalServerError)
 	}
 
-	job := baseJobImpl // Copy task
+	job := baseJobImpl // Copy job
 
 	err = jsonimpl.Unmarshal(b, &job)
 
@@ -139,7 +132,7 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 		return uapi.HttpResponse{
 			Status: http.StatusBadRequest,
 			Json: types.ApiError{
-				Message: "Invalid task data: " + err.Error(),
+				Message: "Invalid job data: " + err.Error(),
 			},
 		}
 	}
@@ -162,12 +155,12 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 		return uapi.HttpResponse{
 			Status: http.StatusBadRequest,
 			Json: types.ApiError{
-				Message: "Invalid task data: " + err.Error(),
+				Message: "Invalid job data: " + err.Error(),
 			},
 		}
 	}
 
-	str, err := rpc.JobserverSpawnTask(d.Context, clusterId, &rpc_messages.JobserverSpawnTask{
+	str, err := rpc.JobserverSpawnTask(d.Context, clusterId, &rpc_messages.JobserverSpawn{
 		Name:    name,
 		Data:    data,
 		Create:  true,
@@ -176,17 +169,17 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 	})
 
 	if err != nil {
-		state.Logger.Error("Error while spawning task on jobserver", zap.Error(err))
+		state.Logger.Error("Error while spawning job on jobserver", zap.Error(err))
 		return uapi.HttpResponse{
 			Status: http.StatusInternalServerError,
 			Json: types.ApiError{
-				Message: "Error while spawning task on jobserver: " + err.Error(),
+				Message: "Error while spawning job on jobserver: " + err.Error(),
 			},
 		}
 	}
 
 	return uapi.HttpResponse{
-		Json: jobtypes.TaskCreateResponse{
+		Json: jobtypes.JobCreateResponse{
 			ID: str.ID,
 		},
 	}

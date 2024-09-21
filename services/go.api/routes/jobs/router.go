@@ -1,34 +1,34 @@
-package tasks
+package jobs
 
 import (
 	"net/http"
 
 	"go.api/api"
-	"go.api/routes/tasks/endpoints/create_guild_task"
-	"go.api/routes/tasks/endpoints/get_guild_task"
-	"go.api/routes/tasks/endpoints/get_task_list"
-	"go.api/routes/tasks/endpoints/ioauth_download_task"
+	"go.api/routes/jobs/endpoints/create_guild_job"
+	"go.api/routes/jobs/endpoints/get_guild_job"
+	"go.api/routes/jobs/endpoints/get_job_list"
+	"go.api/routes/jobs/endpoints/ioauth_download_job"
 	"go.std/splashcore"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/infinitybotlist/eureka/uapi"
 )
 
-const tagName = "Tasks"
+const tagName = "Jobs"
 
 type Router struct{}
 
 func (b Router) Tag() (string, string) {
-	return tagName, "These API endpoints are related to tasks"
+	return tagName, "These API endpoints are related to jobs"
 }
 
 func (b Router) Routes(r *chi.Mux) {
 	uapi.Route{
-		Pattern:      "/guilds/{guild_id}/tasks/{tid}",
-		OpId:         "get_guild_task",
+		Pattern:      "/guilds/{guild_id}/jobs/{tid}",
+		OpId:         "get_guild_job",
 		Method:       uapi.GET,
-		Docs:         get_guild_task.Docs,
-		Handler:      get_guild_task.Route,
+		Docs:         get_guild_job.Docs,
+		Handler:      get_guild_job.Route,
 		AuthOptional: true,
 		Auth: []uapi.AuthType{
 			{
@@ -48,11 +48,11 @@ func (b Router) Routes(r *chi.Mux) {
 	}.Route(r)
 
 	uapi.Route{
-		Pattern:      "/guilds/{guild_id}/tasks",
-		OpId:         "get_task_list",
+		Pattern:      "/guilds/{guild_id}/jobs",
+		OpId:         "get_job_list",
 		Method:       uapi.GET,
-		Docs:         get_task_list.Docs,
-		Handler:      get_task_list.Route,
+		Docs:         get_job_list.Docs,
+		Handler:      get_job_list.Route,
 		AuthOptional: true,
 		Auth: []uapi.AuthType{
 			{
@@ -75,8 +75,8 @@ func (b Router) Routes(r *chi.Mux) {
 		Pattern: "/guilds/{guild_id}/tasks/{name}",
 		OpId:    "create_task",
 		Method:  uapi.POST,
-		Docs:    create_guild_task.Docs,
-		Handler: create_guild_task.Route,
+		Docs:    create_guild_job.Docs,
+		Handler: create_guild_job.Route,
 		Auth: []uapi.AuthType{
 			{
 				Type: splashcore.TargetTypeUser,
@@ -98,8 +98,8 @@ func (b Router) Routes(r *chi.Mux) {
 		Pattern: "/tasks/{id}/ioauth/download-link",
 		OpId:    "ioauth_download_task",
 		Method:  uapi.GET,
-		Docs:    ioauth_download_task.Docs,
-		Handler: ioauth_download_task.Route,
+		Docs:    ioauth_download_job.Docs,
+		Handler: ioauth_download_job.Route,
 		ExtData: map[string]any{
 			"ioauth": []string{"identify"},
 		},

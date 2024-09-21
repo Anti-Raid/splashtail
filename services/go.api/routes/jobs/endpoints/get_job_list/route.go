@@ -1,4 +1,4 @@
-package get_task_list
+package get_job_list
 
 import (
 	"errors"
@@ -20,14 +20,14 @@ import (
 )
 
 var (
-	taskColsArr = db.GetCols(jobtypes.PartialTask{})
-	taskColsStr = strings.Join(taskColsArr, ", ")
+	jobColsArr = db.GetCols(jobtypes.PartialJob{})
+	jobColsStr = strings.Join(jobColsArr, ", ")
 )
 
 func Docs() *docs.Doc {
 	return &docs.Doc{
-		Summary:     "Get Task List",
-		Description: "Gets the list of all tasks as a PartialTask object",
+		Summary:     "Get Job List",
+		Description: "Gets the list of all jobs as PartialJob objects",
 		Params: []docs.Parameter{
 			{
 				Name:        "guild_id",
@@ -38,14 +38,14 @@ func Docs() *docs.Doc {
 			},
 			{
 				Name:        "error_if_no_permissions",
-				Description: "Whether or not to return an error if the user does not have permission to view a task on the task list",
+				Description: "Whether or not to return an error if the user does not have permission to view a job. Otherwise, the job will simply not be returned",
 				Required:    true,
 				In:          "query",
 				Schema:      docs.IdSchema,
 			},
 			{
-				Name:        "error_on_unknown_task",
-				Description: "Whether or not to return an error if a task on the task list is unknown. Otherwise, the task will simply not be returned",
+				Name:        "error_on_unknown_job",
+				Description: "Whether or not to return an error if a job is unknown. Otherwise, the job will simply not be returned",
 				Required:    true,
 				In:          "query",
 				Schema:      docs.IdSchema,
@@ -66,54 +66,54 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 	}
 
 	errorIfNoPermissions := r.URL.Query().Get("error_if_no_permissions") == "true"
-	errorOnUnknownTask := r.URL.Query().Get("error_on_unknown_task") == "true"
+	errorOnUnknownJobs := r.URL.Query().Get("error_on_unknown_jobs") == "true"
 
-	// Delete expired tasks first
-	_, err := state.Pool.Exec(d.Context, "DELETE FROM tasks WHERE created_at + expiry < NOW()")
+	// Delete expired jobs first
+	_, err := state.Pool.Exec(d.Context, "DELETE FROM jobs WHERE created_at + expiry < NOW()")
 
 	if err != nil {
-		state.Logger.Error("Failed to delete expired tasks [db delete]", zap.Error(err))
+		state.Logger.Error("Failed to delete expired jobs [db delete]", zap.Error(err))
 		return uapi.DefaultResponse(http.StatusInternalServerError)
 	}
 
-	row, err := state.Pool.Query(d.Context, "SELECT "+taskColsStr+" FROM tasks WHERE guild_id = $1", guildId)
+	row, err := state.Pool.Query(d.Context, "SELECT "+jobColsStr+" FROM jobs WHERE guild_id = $1", guildId)
 
 	if err != nil {
-		state.Logger.Error("Failed to fetch task [db fetch]", zap.Error(err))
+		state.Logger.Error("Failed to fetch job [db fetch]", zap.Error(err))
 		return uapi.DefaultResponse(http.StatusInternalServerError)
 	}
 
-	tasksFetched, err := pgx.CollectRows(row, pgx.RowToStructByName[jobtypes.PartialTask])
+	jobsFetched, err := pgx.CollectRows(row, pgx.RowToStructByName[jobtypes.PartialJob])
 
 	if errors.Is(err, pgx.ErrNoRows) {
 		return uapi.HttpResponse{
 			Status: http.StatusNotFound,
-			Json:   types.ApiError{Message: "Task not found"},
+			Json:   types.ApiError{Message: "Job not found"},
 		}
 	}
 
 	if err != nil {
-		state.Logger.Error("Failed to fetch task [db fetch]", zap.Error(err))
+		state.Logger.Error("Failed to fetch job [db fetch]", zap.Error(err))
 		return uapi.DefaultResponse(http.StatusInternalServerError)
 	}
 
 	var checksDone = map[string]bool{}
-	var parsedTasks = []jobtypes.PartialTask{}
-	for _, task := range tasksFetched {
+	var parsedJobs = []jobtypes.PartialJob{}
+	for _, job := range jobsFetched {
 		// NOTE/WARNING: This is a fastpath that depends on the assumption that the corresponding bot command
-		// does not change for a task. If this assumption is broken, this code will break if the corresponding
+		// does not change for a job. If this assumption is broken, this code will break if the corresponding
 		// command changes while in this loop
-		if _, ok := checksDone[task.Name]; ok {
-			parsedTasks = append(parsedTasks, task)
+		if _, ok := checksDone[job.Name]; ok {
+			parsedJobs = append(parsedJobs, job)
 		}
 
-		baseJobImpl, ok := jobs.JobImplRegistry[task.Name]
+		baseJobImpl, ok := jobs.JobImplRegistry[job.Name]
 
 		if !ok {
-			if errorOnUnknownTask {
+			if errorOnUnknownJobs {
 				return uapi.HttpResponse{
 					Json: types.ApiError{
-						Message: "Internal Error: Unknown task name",
+						Message: "Internal Error: Unknown job name",
 					},
 					Status: http.StatusInternalServerError,
 				}
@@ -135,12 +135,12 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 			continue
 		}
 
-		checksDone[task.Name] = true
-		parsedTasks = append(parsedTasks, task)
+		checksDone[job.Name] = true
+		parsedJobs = append(parsedJobs, job)
 	}
 
 	return uapi.HttpResponse{
 		Status: http.StatusOK,
-		Json:   jobtypes.JobListResponse{Jobs: parsedTasks},
+		Json:   jobtypes.JobListResponse{Jobs: parsedJobs},
 	}
 }

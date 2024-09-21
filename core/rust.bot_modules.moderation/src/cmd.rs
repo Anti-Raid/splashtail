@@ -7,7 +7,7 @@ use serenity::all::{
     User, UserId,
 };
 use serenity::utils::shard_id;
-use silverpelt::jobserver::{embed as embed_task, get_icon_of_state};
+use silverpelt::jobserver::{embed as embed_job, get_icon_of_state};
 use silverpelt::sting_sources::StingCreator;
 use silverpelt::Context;
 use silverpelt::Error;
@@ -238,11 +238,11 @@ pub async fn prune_user(
     let resp = data
         .reqwest
         .post(format!(
-            "{}:{}/spawn-task",
+            "{}:{}/spawn",
             config::CONFIG.base_ports.jobserver_base_addr.get(),
             config::CONFIG.base_ports.jobserver.get() + jobserver_cluster_id
         ))
-        .json(&splashcore_rs::jobserver::JobserverSpawnTaskRequest {
+        .json(&splashcore_rs::jobserver::Spawn {
             name: "message_prune".to_string(),
             data: prune_opts.clone(),
             create: true,
@@ -252,12 +252,12 @@ pub async fn prune_user(
         })
         .send()
         .await
-        .map_err(|e| format!("Failed to create prune task: {}", e))?
+        .map_err(|e| format!("Failed to initiate message prune: {}", e))?
         .error_for_status()
-        .map_err(|e| format!("Failed to create prune task: {}", e))?;
+        .map_err(|e| format!("Failed to initiate message prune: {}", e))?;
 
     let id = resp
-        .json::<splashcore_rs::jobserver::JobserverSpawnTaskResponse>()
+        .json::<splashcore_rs::jobserver::SpawnResponse>()
         .await?
         .id;
 
@@ -333,7 +333,7 @@ pub async fn prune_user(
         ))
         .field(
             "Pruning Messages",
-            format!(":yellow_circle: Created task with Task ID of {}", id),
+            format!(":yellow_circle: Created job with ID of {}", id),
             false,
         );
 
@@ -351,22 +351,22 @@ pub async fn prune_user(
         prune_debug: bool,
         cache_http: botox::cache::CacheHttpImpl,
         mut base_message: Message,
-        task: Arc<jobserver::Task>,
+        job: Arc<jobserver::Job>,
     ) -> Result<(), Error> {
-        let new_task_msg = embed_task(
+        let new_job_msg = embed_job(
             &config::CONFIG.sites.api.get(),
-            &task,
+            &job,
             vec![CreateEmbed::default()
                 .title("Pruning User Messages...")
                 .description(format!(
                     "{} | Pruning User Messages {}",
-                    get_icon_of_state(&task.state),
+                    get_icon_of_state(&job.state),
                     user.mention()
                 ))],
             prune_debug,
         )?;
 
-        let prefix_msg = new_task_msg.to_prefix_edit(EditMessage::default());
+        let prefix_msg = new_job_msg.to_prefix_edit(EditMessage::default());
 
         base_message.edit(&cache_http, prefix_msg).await?;
 
@@ -377,20 +377,20 @@ pub async fn prune_user(
 
     // Use jobserver::reactive to keep updating the message
     let prune_debug = prune_debug.unwrap_or(false);
-    jobserver::taskpoll::reactive(
+    jobserver::poll::reactive(
         &ch,
         &ctx.data().pool,
         &id,
-        |cache_http, task| {
+        |cache_http, job| {
             Box::pin(update_base_message(
                 uarc.clone(),
                 prune_debug,
                 cache_http.clone(),
                 base_message.clone(),
-                task.clone(),
+                job.clone(),
             ))
         },
-        jobserver::taskpoll::PollTaskOptions::default(),
+        jobserver::poll::PollTaskOptions::default(),
     )
     .await?;
 

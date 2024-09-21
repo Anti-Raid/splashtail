@@ -13,7 +13,6 @@ import (
 	"github.com/bwmarrin/discordgo"
 	"github.com/go-chi/chi/v5"
 	"github.com/infinitybotlist/eureka/jsonimpl"
-	"go.jobserver/bgtasks"
 	"go.jobserver/core"
 	"go.jobserver/rpc"
 	"go.jobserver/state"
@@ -32,7 +31,7 @@ import (
 
 func CreateJobServer() {
 	// Set state of all pending tasks to 'failed'
-	_, err := state.Pool.Exec(state.Context, "UPDATE tasks SET state = $1 WHERE state = $2", "failed", "pending")
+	_, err := state.Pool.Exec(state.Context, "UPDATE job SET state = $1 WHERE state = $2", "failed", "pending")
 
 	if err != nil {
 		panic(err)
@@ -40,11 +39,8 @@ func CreateJobServer() {
 
 	go rpc.JobserverRpcServer()
 
-	// Resume ongoing tasks
+	// Resume ongoing jobs
 	go core.Resume()
-
-	// Start all background tasks
-	go bgtasks.StartAllTasks()
 }
 
 func CreateClusters() {
@@ -274,9 +270,6 @@ func LaunchJobserverMewldClustered() {
 	}
 
 	CreateJobServer()
-
-	// Load jobs
-	bgtasks.StartAllTasks()
 
 	// Handle mewld by starting ping checks and sending launch_next
 	go func() {

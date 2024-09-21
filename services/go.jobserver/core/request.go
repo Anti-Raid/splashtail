@@ -21,15 +21,15 @@ import (
 )
 
 var DefaultTimeout = 30 * time.Minute
-var ResumeOngoingTaskTimeoutSecs = 15 * 60
+var ResumeOngoingJobTimeoutSecs = 15 * 60
 var DefaultValidationTimeout = 5 * time.Second
 
 var (
-	taskCols    = db.GetCols(types.Task{})
-	taskColsStr = strings.Join(taskCols, ", ")
+	jobCols    = db.GetCols(types.Job{})
+	jobColsStr = strings.Join(jobCols, ", ")
 )
 
-func Spawn(spawn rpc_messages.SpawnTask) (*rpc_messages.SpawnTaskResponse, error) {
+func Spawn(spawn rpc_messages.Spawn) (*rpc_messages.SpawnResponse, error) {
 	defer func() {
 		if rvr := recover(); rvr != nil {
 			fmt.Println("Recovered from panic:", rvr)
@@ -51,30 +51,30 @@ func Spawn(spawn rpc_messages.SpawnTask) (*rpc_messages.SpawnTaskResponse, error
 	}
 
 	if len(spawn.Data) == 0 {
-		return nil, fmt.Errorf("invalid task data provided")
+		return nil, fmt.Errorf("invalid job data provided")
 	}
 
 	b, err := jsonimpl.Marshal(spawn.Data)
 
 	if err != nil {
-		return nil, fmt.Errorf("error marshalling task args: %w", err)
+		return nil, fmt.Errorf("error marshalling args: %w", err)
 	}
 
-	job := baseJobImpl // Copy task
+	job := baseJobImpl // Copy job
 
 	err = jsonimpl.Unmarshal(b, &job)
 
 	if err != nil {
-		return nil, fmt.Errorf("error unmarshalling task args: %w", err)
+		return nil, fmt.Errorf("error unmarshalling args: %w", err)
 	}
 
 	owner := job.Owner()
 
-	// Check if task pertains to this clusters shard
+	// Check if job pertains to this clusters shard
 	if owner.TargetType == splashcore.TargetTypeUser && state.Shard != 0 {
-		return nil, fmt.Errorf("task is not for this shard [user tasks must run on shard 0]")
+		return nil, fmt.Errorf("job is not for this shard [user jobs must run on shard 0]")
 	} else {
-		taskShard, err := mewext.GetShardIDFromGuildID(owner.ID, int(state.ShardCount))
+		jobShard, err := mewext.GetShardIDFromGuildID(owner.ID, int(state.ShardCount))
 
 		if err != nil {
 			state.Logger.Error("Failed to get shard id from guild id", zap.Error(err))
@@ -82,12 +82,12 @@ func Spawn(spawn rpc_messages.SpawnTask) (*rpc_messages.SpawnTaskResponse, error
 		}
 
 		// This case should work until we reach 65 million servers
-		if uint16(taskShard) != state.Shard {
-			return nil, fmt.Errorf("task is not for this shard [task shard: %d, this shard: %d]", taskShard, state.Shard)
+		if uint16(jobShard) != state.Shard {
+			return nil, fmt.Errorf("job is not for this shard [expected shard: %d, this shard: %d]", jobShard, state.Shard)
 		}
 	}
 
-	// Validate task
+	// Validate
 	ctx, cancel := context.WithTimeout(state.Context, DefaultValidationTimeout)
 	defer cancel()
 	err = job.Validate(jobrunner.State{
@@ -98,39 +98,39 @@ func Spawn(spawn rpc_messages.SpawnTask) (*rpc_messages.SpawnTaskResponse, error
 		return nil, fmt.Errorf("failed to validate job: %w", err)
 	}
 
-	// Create task
+	// Create
 	var id string
 	if spawn.Create {
 		tid, err := jobrunner.Create(state.Context, state.Pool, job)
 
 		if err != nil {
-			return nil, fmt.Errorf("error creating task: %w", err)
+			return nil, fmt.Errorf("error creating job: %w", err)
 		}
 
 		id = *tid
 	} else {
 		if spawn.ID == "" {
-			return nil, fmt.Errorf("task id must be set if spawn.Create is false")
+			return nil, fmt.Errorf("id must be set if spawn.Create is false")
 		}
 
 		id = spawn.ID
 	}
 
-	// Execute task
+	// Execute
 	if spawn.Execute {
 		ctx, cancel := context.WithTimeout(state.Context, DefaultTimeout)
 		go jobrunner.Execute(ctx, cancel, id, job, nil)
 	}
 
-	return &rpc_messages.SpawnTaskResponse{
+	return &rpc_messages.SpawnResponse{
 		ID: id,
 	}, nil
 }
 
 func Resume() {
-	state.Logger.Info("Deleting ancient ongoing jobs older than ResumeOngoingTaskTimeout", zap.Int("timeout", ResumeOngoingTaskTimeoutSecs))
+	state.Logger.Info("Deleting ancient ongoing jobs older than ResumeOngoingJobTimeoutSecs", zap.Int("timeout", ResumeOngoingJobTimeoutSecs))
 
-	_, err := state.Pool.Exec(state.Context, "DELETE FROM ongoing_jobs WHERE created_at < NOW() - make_interval(secs => $1)", ResumeOngoingTaskTimeoutSecs)
+	_, err := state.Pool.Exec(state.Context, "DELETE FROM ongoing_jobs WHERE created_at < NOW() - make_interval(secs => $1)", ResumeOngoingJobTimeoutSecs)
 
 	if err != nil {
 		state.Logger.Error("Failed to delete ancient ongoing_jobs", zap.Error(err))
@@ -147,8 +147,8 @@ func Resume() {
 	rows, err := state.Pool.Query(state.Context, "SELECT id, data, initial_opts, created_at FROM ongoing_jobs")
 
 	if err != nil {
-		state.Logger.Error("Failed to query tasks", zap.Error(err))
-		panic("Failed to query tasks")
+		state.Logger.Error("Failed to query ongoing_jobs", zap.Error(err))
+		panic("Failed to query ongoing_jobs")
 	}
 
 	defer rows.Close()
@@ -157,34 +157,34 @@ func Resume() {
 		err = rows.Scan(&id, &data, &initialOpts, &createdAt)
 
 		if err != nil {
-			state.Logger.Error("Failed to scan task", zap.Error(err))
-			panic("Failed to scan task")
+			state.Logger.Error("Failed to scan jobs", zap.Error(err))
+			panic("Failed to scan jobs")
 		}
 
-		// Select the task from the task db
-		row, err := state.Pool.Query(state.Context, "SELECT "+taskColsStr+" FROM tasks WHERE id = $1", id)
+		// Select the job from the job db
+		row, err := state.Pool.Query(state.Context, "SELECT "+jobColsStr+" FROM jobs WHERE id = $1", id)
 
 		if errors.Is(err, pgx.ErrNoRows) {
-			state.Logger.Error("Task not found", zap.String("id", id))
+			state.Logger.Error("Job not found", zap.String("id", id))
 			continue
 		}
 
 		if err != nil {
-			state.Logger.Error("Failed to query task", zap.Error(err))
+			state.Logger.Error("Failed to query job", zap.Error(err))
 			continue
 		}
 
 		defer row.Close()
 
-		t, err := pgx.CollectOneRow(row, pgx.RowToAddrOfStructByName[types.Task])
+		t, err := pgx.CollectOneRow(row, pgx.RowToAddrOfStructByName[types.Job])
 
 		if errors.Is(err, pgx.ErrNoRows) {
-			state.Logger.Error("Task not found", zap.String("id", id))
+			state.Logger.Error("Job not found", zap.String("id", id))
 			continue
 		}
 
 		if err != nil {
-			state.Logger.Error("Failed to collect task", zap.Error(err))
+			state.Logger.Error("Failed to collect job", zap.Error(err))
 			continue
 		}
 
@@ -221,11 +221,11 @@ func Resume() {
 
 		owner := job.Owner()
 
-		// Check if task pertains to this clusters shard
+		// Check if job pertains to this clusters shard
 		if owner.TargetType == splashcore.TargetTypeUser && state.Shard != 0 {
 			continue
 		} else {
-			taskShard, err := mewext.GetShardIDFromGuildID(owner.ID, int(state.ShardCount))
+			jobShard, err := mewext.GetShardIDFromGuildID(owner.ID, int(state.ShardCount))
 
 			if err != nil {
 				state.Logger.Error("Failed to get shard id from guild id", zap.Error(err))
@@ -233,7 +233,7 @@ func Resume() {
 			}
 
 			// This case should work until we reach 65 million servers
-			if uint16(taskShard) != state.Shard {
+			if uint16(jobShard) != state.Shard {
 				continue
 			}
 		}
@@ -248,11 +248,11 @@ func Resume() {
 		cancel()
 
 		if err != nil {
-			state.Logger.Error("Failed to validate task", zap.Error(err))
+			state.Logger.Error("Failed to validate job", zap.Error(err))
 			continue
 		}
 
-		// Execute task
+		// Execute job
 		ctx, cancel = context.WithTimeout(state.Context, DefaultTimeout)
 
 		go jobrunner.Execute(ctx, cancel, id, job, nil)

@@ -26,8 +26,8 @@ import (
 	"go.api/routes/auth"
 	"go.api/routes/core"
 	"go.api/routes/guilds"
+	"go.api/routes/jobs"
 	"go.api/routes/platform"
-	"go.api/routes/tasks"
 	"go.api/routes/users"
 	"go.api/state"
 	"go.api/types"
@@ -125,8 +125,8 @@ func CreateWebserver() *chi.Mux {
 		auth.Router{},
 		core.Router{},
 		guilds.Router{},
+		jobs.Router{},
 		platform.Router{},
-		tasks.Router{},
 		users.Router{},
 	}
 

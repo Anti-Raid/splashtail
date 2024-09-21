@@ -4,8 +4,8 @@ import (
 	_ "go.jobserver/state" // Avoid unsafe import
 )
 
-// Spawns a task and executes it if the execute argument is set.
-type SpawnTask struct {
+// Spawns a job and executes it if the execute argument is set.
+type Spawn struct {
 	Name    string                 `json:"name"`
 	Data    map[string]interface{} `json:"data"`
 	Create  bool                   `json:"create"`
@@ -18,6 +18,6 @@ type SpawnTask struct {
 	UserID string `json:"user_id"`
 }
 
-type SpawnTaskResponse struct {
+type SpawnResponse struct {
 	ID string `json:"id"`
 }

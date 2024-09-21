@@ -134,7 +134,6 @@ type Meta struct {
 	CDNPath              string          `yaml:"cdn_path" default:"/failuremgmt/cdn/antiraid" comment:"CDN Path" validate:"required"`
 	UrgentMentions       string          `yaml:"urgent_mentions" default:"<@&1061643797315993701>" comment:"Urgent mentions" validate:"required"`
 	Proxy                Differs[string] `yaml:"proxy" default:"http://127.0.0.1:3221,http://127.0.0.1:3222" comment:"Popplio Proxy URL" validate:"required"`
-	DebugTaskLogger      bool            `yaml:"debug_task_logger" comment:"Debug the task logger"`
 	SupportServerInvite  string          `yaml:"support_server_invite" comment:"Discord Support Server Link" default:"https://discord.gg/u78NFAXm" validate:"required"`
 	SandwichHttpApi      string          `yaml:"sandwich_http_api" comment:"(optional) Sandwich HTTP API (if using sandwich for proxy)" default:""`
 }

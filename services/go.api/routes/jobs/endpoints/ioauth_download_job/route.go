@@ -1,4 +1,4 @@
-package ioauth_download_task
+package ioauth_download_job
 
 import (
 	"bytes"
@@ -26,8 +26,8 @@ import (
 )
 
 var (
-	taskColsArr = db.GetCols(jobtypes.Task{})
-	taskColsStr = strings.Join(taskColsArr, ", ")
+	jobColsArr = db.GetCols(jobtypes.Job{})
+	jobColsStr = strings.Join(jobColsArr, ", ")
 )
 
 var downloadTemplate = template.Must(template.New("download").Parse(`<!DOCTYPE html>
@@ -47,7 +47,7 @@ var downloadTemplate = template.Must(template.New("download").Parse(`<!DOCTYPE h
 func Docs() *docs.Doc {
 	return &docs.Doc{
 		Summary:     "Get IOAuth Download Link",
-		Description: "Gets the download link to a tasks output.",
+		Description: "Gets the download link to a jobs output.",
 		Params: []docs.Parameter{
 			{
 				Name:        "id",
@@ -64,7 +64,7 @@ func Docs() *docs.Doc {
 				Schema:      docs.IdSchema,
 			},
 		},
-		Resp: jobtypes.Task{},
+		Resp: jobtypes.Job{},
 	}
 }
 
@@ -123,32 +123,32 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 		}
 	}
 
-	// Delete expired tasks first
-	_, err = state.Pool.Exec(d.Context, "DELETE FROM tasks WHERE created_at + expiry < NOW()")
+	// Delete expired jobs first
+	_, err = state.Pool.Exec(d.Context, "DELETE FROM jobs WHERE created_at + expiry < NOW()")
 
 	if err != nil {
-		state.Logger.Error("Failed to delete expired tasks [db delete]", zap.Error(err))
+		state.Logger.Error("Failed to delete expired jobs [db delete]", zap.Error(err))
 		return uapi.DefaultResponse(http.StatusInternalServerError)
 	}
 
-	row, err := state.Pool.Query(d.Context, "SELECT "+taskColsStr+" FROM tasks WHERE id = $1", id)
+	row, err := state.Pool.Query(d.Context, "SELECT "+jobColsStr+" FROM jobs WHERE id = $1", id)
 
 	if err != nil {
-		state.Logger.Error("Failed to fetch task [db fetch]", zap.Error(err))
+		state.Logger.Error("Failed to fetch jobs [db fetch]", zap.Error(err))
 		return uapi.DefaultResponse(http.StatusInternalServerError)
 	}
 
-	job, err := pgx.CollectOneRow(row, pgx.RowToStructByName[jobtypes.Task])
+	job, err := pgx.CollectOneRow(row, pgx.RowToStructByName[jobtypes.Job])
 
 	if errors.Is(err, pgx.ErrNoRows) {
 		return uapi.HttpResponse{
 			Status: http.StatusNotFound,
-			Json:   types.ApiError{Message: "Task not found"},
+			Json:   types.ApiError{Message: "Job not found"},
 		}
 	}
 
 	if err != nil {
-		state.Logger.Error("Failed to fetch task [db fetch]", zap.Error(err))
+		state.Logger.Error("Failed to fetch jobs [db fetch]", zap.Error(err))
 		return uapi.DefaultResponse(http.StatusInternalServerError)
 	}
 
@@ -159,12 +159,12 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 		}
 	}
 
-	taskDef, ok := jobs.JobImplRegistry[job.Name]
+	baseJobImpl, ok := jobs.JobImplRegistry[job.Name]
 
 	if !ok {
 		return uapi.HttpResponse{
 			Status: http.StatusInternalServerError,
-			Json:   types.ApiError{Message: "Task definition not found"},
+			Json:   types.ApiError{Message: "Job definition not found"},
 		}
 	}
 
@@ -189,12 +189,12 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 			if iot.DiscordUser.ID != job.Owner.ID {
 				return uapi.HttpResponse{
 					Status: http.StatusForbidden,
-					Json:   types.ApiError{Message: "You are not authorized to fetch this task [TargetType = User]!"},
+					Json:   types.ApiError{Message: "You are not authorized to fetch this job [TargetType = User]!"},
 				}
 			}
 		} else if job.Owner.TargetType == splashcore.TargetTypeServer {
 			// Check permissions
-			resp, ok := api.HandlePermissionCheck(iot.DiscordUser.ID, job.Owner.ID, taskDef.CorrespondingBotCommand_Download(), rpc_messages.RpcCheckCommandOptions{})
+			resp, ok := api.HandlePermissionCheck(iot.DiscordUser.ID, job.Owner.ID, baseJobImpl.CorrespondingBotCommand_Download(), rpc_messages.RpcCheckCommandOptions{})
 
 			if !ok {
 				return resp
@@ -209,7 +209,7 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 	}
 
 	// Now get URL
-	url, err := state.ObjectStorage.GetUrl(d.Context, jobs.GetPathFromOutput(job.ID, taskDef, job.Output), job.Output.Filename, 10*time.Minute)
+	url, err := state.ObjectStorage.GetUrl(d.Context, jobs.GetPathFromOutput(job.ID, baseJobImpl, job.Output), job.Output.Filename, 10*time.Minute)
 
 	if err != nil {
 		state.Logger.Error("Failed to get url for job", zap.Error(err))

@@ -1,6 +1,6 @@
 use crate::Error;
 use serenity::all::{CreateActionRow, CreateButton, CreateEmbed};
-use splashcore_rs::jobserver::Task;
+use splashcore_rs::jobserver::Job;
 
 pub fn get_icon_of_state(state: &str) -> String {
     match state {
@@ -15,23 +15,23 @@ pub fn get_icon_of_state(state: &str) -> String {
 
 pub fn embed<'a>(
     base_api_url: &str,
-    task: &Task,
+    job: &Job,
     pre_embeds: Vec<serenity::all::CreateEmbed<'a>>,
     show_status: bool,
 ) -> Result<poise::CreateReply<'a>, Error> {
-    let mut task_statuses: Vec<String> = Vec::new();
-    let mut task_statuses_length = 0;
+    let mut job_statuses: Vec<String> = Vec::new();
+    let mut job_statuses_length = 0;
     let mut components = Vec::new();
 
-    let task_state = &task.state;
+    let job_state = &job.state;
 
     if show_status {
-        for status in &task.statuses {
-            if task_statuses_length > 2500 {
+        for status in &job.statuses {
+            if job_statuses_length > 2500 {
                 // Keep removing elements from start of array until we are under 2500 characters
-                while task_statuses_length > 2500 {
-                    let removed = task_statuses.remove(0);
-                    task_statuses_length -= removed.len();
+                while job_statuses_length > 2500 {
+                    let removed = job_statuses.remove(0);
+                    job_statuses_length -= removed.len();
                 }
             }
 
@@ -58,22 +58,22 @@ pub fn embed<'a>(
 
             add += &format!(" | <t:{}:R>", status.ts.round());
 
-            task_statuses_length += if add.len() > 500 { 500 } else { add.len() };
-            task_statuses.push(add);
+            job_statuses_length += if add.len() > 500 { 500 } else { add.len() };
+            job_statuses.push(add);
         }
     }
 
     let mut description = format!(
-        "{} Task state: {}\nTask ID: {}\n\n{}",
-        get_icon_of_state(task_state.as_str()),
-        task_state,
-        task.id,
-        task_statuses.join("\n")
+        "{} Job state: {}\nJob ID: {}\n\n{}",
+        get_icon_of_state(job_state.as_str()),
+        job_state,
+        job.id,
+        job_statuses.join("\n")
     );
 
-    if task.state == "completed" {
-        if let Some(ref output) = task.output {
-            let furl = format!("{}/tasks/{}/ioauth/download-link", base_api_url, task.id);
+    if job.state == "completed" {
+        if let Some(ref output) = job.output {
+            let furl = format!("{}/jobs/{}/ioauth/download-link", base_api_url, job.id);
             description += &format!("\n\n:link: [Download {}]({})", output.filename, &furl);
 
             components.push(CreateActionRow::Buttons(vec![CreateButton::new_link(furl)
@@ -83,7 +83,7 @@ pub fn embed<'a>(
     }
 
     let embed = CreateEmbed::default()
-        .title("Task Status")
+        .title("Status")
         .description(description)
         .color(serenity::all::Colour::DARK_GREEN);
 

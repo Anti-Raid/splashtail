@@ -5,14 +5,14 @@ import (
 	"time"
 )
 
-type TaskCreateResponse struct {
-	ID string `json:"id" description:"The id of the task"`
+type JobCreateResponse struct {
+	ID string `json:"id" description:"The id of the job"`
 }
 
 // @ci table=jobs
 //
 // Jobs are background processes that can be run on a coordinator server.
-type Task struct {
+type Job struct {
 	ID        string           `db:"id" json:"id" validate:"required" description:"The ID of the job."`
 	Name      string           `db:"name" json:"name" validate:"required" description:"The name of the job."`
 	Output    *Output          `db:"output" json:"output" description:"The output of the job."`
@@ -28,8 +28,8 @@ type Task struct {
 
 // @ci table=jobs unfilled=1
 //
-// A PartialTask represents a partial representation of a job.
-type PartialTask struct {
+// A PartialJob represents a partial representation of a job.
+type PartialJob struct {
 	ID        string         `db:"id" json:"id" validate:"required" description:"The ID of the job."`
 	Name      string         `db:"name" json:"name" validate:"required" description:"The name of the job."`
 	Expiry    *time.Duration `db:"expiry" json:"expiry" validate:"required" description:"The job expiry."`
@@ -38,18 +38,18 @@ type PartialTask struct {
 }
 
 type JobListResponse struct {
-	Jobs []PartialTask `json:"jobs" description:"The list of (partial) jobs"`
+	Jobs []PartialJob `json:"jobs" description:"The list of (partial) jobs"`
 }
 
-// Owner is a struct containing the internal representation of who a task is for
+// Owner is a struct containing the internal representation of who a job is for
 type Owner struct {
-	ID         string `json:"id" description:"The ID of the entity the task is for"`
-	TargetType string `json:"target_type" description:"The type of the entity the task is for"`
+	ID         string `json:"id" description:"The ID of the entity"`
+	TargetType string `json:"target_type" description:"The type of the entity"`
 }
 
-// Output is the output of a task
+// Output is the output of a job
 type Output struct {
 	Filename   string        `json:"filename"`
-	Segregated bool          `json:"segregated"` // If this flag is set, then the stored output will be stored in $taskForSimplexFormat/$Name/$taskId/$filename instead of $taskId/$filename
+	Segregated bool          `json:"segregated"` // If this flag is set, then the stored output will be stored in $jobForSimplexFormat/$Name/$id/$filename instead of $id/$filename
 	Buffer     *bytes.Buffer `json:"-"`
 }

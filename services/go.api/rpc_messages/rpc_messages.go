@@ -105,19 +105,19 @@ type CanonicalSettingsResult struct {
 	} `json:"Err"`
 }
 
-type JobserverSpawnTask struct {
+type JobserverSpawn struct {
 	Name    string                 `json:"name"`
 	Data    map[string]interface{} `json:"data"`
 	Create  bool                   `json:"create"`
 	Execute bool                   `json:"execute"`
 
-	// If create is false, then task id must be set
+	// If create is false, then `id`` must be set
 	ID string `json:"id"`
 
 	// The User ID who initiated the action
 	UserID string `json:"user_id"`
 }
 
-type JobserverSpawnTaskResponse struct {
+type JobserverSpawnResponse struct {
 	ID string `json:"id"`
 }

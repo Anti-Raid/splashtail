@@ -20,7 +20,7 @@ func Create(ctx context.Context, pool *pgxpool.Pool, jobImpl interfaces.JobImpl)
 		return nil, fmt.Errorf("job %s does not exist on registry", jobImpl.Name())
 	}
 
-	var taskId string
+	var id string
 
 	tx, err := pool.Begin(ctx)
 
@@ -37,14 +37,14 @@ func Create(ctx context.Context, pool *pgxpool.Pool, jobImpl interfaces.JobImpl)
 		return nil, fmt.Errorf("failed to format owner: %w", err)
 	}
 
-	err = tx.QueryRow(ctx, "INSERT INTO tasks (name, owner, expiry, output, fields, resumable) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id",
+	err = tx.QueryRow(ctx, "INSERT INTO jobs (name, owner, expiry, output, fields, resumable) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id",
 		name,
 		ownerStr,
 		jobImpl.Expiry(),
 		nil,
 		jobImpl.Fields(),
 		jobImpl.Resumable(),
-	).Scan(&taskId)
+	).Scan(&id)
 
 	if err != nil {
 		return nil, fmt.Errorf("failed to create job: %w", err)
@@ -54,7 +54,7 @@ func Create(ctx context.Context, pool *pgxpool.Pool, jobImpl interfaces.JobImpl)
 	_, err = tx.Exec(
 		ctx,
 		"INSERT INTO ongoing_jobs (id, data, initial_opts) VALUES ($1, $2, $3)",
-		taskId,
+		id,
 		map[string]any{},
 		jobImpl,
 	)
@@ -69,5 +69,5 @@ func Create(ctx context.Context, pool *pgxpool.Pool, jobImpl interfaces.JobImpl)
 		return nil, fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
-	return &taskId, nil
+	return &id, nil
 }

@@ -1,4 +1,4 @@
-use super::Task;
+use super::Job;
 use botox::cache::CacheHttpImpl;
 use std::future::Future;
 use std::pin::Pin;
@@ -27,7 +27,7 @@ pub async fn reactive(
     id: &str,
     mut func: impl FnMut(
         &CacheHttpImpl,
-        Arc<Task>,
+        Arc<Job>,
     ) -> Pin<Box<dyn Future<Output = Result<(), crate::Error>> + Send>>,
     to: PollTaskOptions,
 ) -> Result<(), crate::Error> {
@@ -36,7 +36,7 @@ pub async fn reactive(
     let duration = std::time::Duration::from_secs(interval);
     let mut interval = tokio::time::interval(duration);
     let id = sqlx::types::uuid::Uuid::parse_str(id)?;
-    let mut prev_task: Option<Arc<Task>> = None;
+    let mut prev_job: Option<Arc<Job>> = None;
 
     let mut last_statuschange = tokio::time::Instant::now();
     loop {
@@ -47,32 +47,32 @@ pub async fn reactive(
                 > tokio::time::Duration::from_secs(timeout_nostatuschange)
         {
             return Err(format!(
-                "Task status timeout of {} seconds reached",
+                "Job poll timeout of {} seconds reached without status change",
                 timeout_nostatuschange
             )
             .into());
         }
 
-        let task = Arc::new(super::Task::from_id(id, pool).await?);
+        let job = Arc::new(super::Job::from_id(id, pool).await?);
 
-        if let Some(ref prev_task) = prev_task {
-            if prev_task.state == task.state && task.statuses == prev_task.statuses {
+        if let Some(ref prev_job) = prev_job {
+            if prev_job.state == job.state && job.statuses == prev_job.statuses {
                 continue;
             }
         }
 
-        prev_task = Some(task.clone());
+        prev_job = Some(job.clone());
 
         last_statuschange = tokio::time::Instant::now();
 
-        func(cache_http, task.clone()).await?;
+        func(cache_http, job.clone()).await?;
 
-        if task.state != "pending" && task.state != "running" {
+        if job.state != "pending" && job.state != "running" {
             break;
         }
     }
 
-    drop(prev_task); // Drop prev_task
+    drop(prev_job); // Drop prev_task
 
     Ok(())
 }

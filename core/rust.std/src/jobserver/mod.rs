@@ -1,4 +1,4 @@
-pub mod taskpoll;
+pub mod poll;
 
 use crate::objectstore::ObjectStore;
 use indexmap::IndexMap;
@@ -8,12 +8,12 @@ use std::sync::Arc;
 use std::time::Duration;
 
 #[derive(serde::Deserialize, serde::Serialize)]
-pub struct JobserverSpawnTaskResponse {
+pub struct SpawnResponse {
     pub id: String,
 }
 
 #[derive(serde::Deserialize, serde::Serialize)]
-pub struct JobserverSpawnTaskRequest {
+pub struct Spawn {
     pub name: String,
     pub data: serde_json::Value,
     pub create: bool,
@@ -22,9 +22,9 @@ pub struct JobserverSpawnTaskRequest {
     pub user_id: String,
 }
 
-/// Rust internal/special type to better serialize/speed up task embed creation
+/// Rust internal/special type to better serialize/speed up embed creation
 #[derive(serde::Deserialize, serde::Serialize, Clone, PartialEq)]
-pub struct TaskStatuses {
+pub struct Statuses {
     pub level: String,
     pub msg: String,
     pub ts: f64,
@@ -35,12 +35,12 @@ pub struct TaskStatuses {
     pub extra_info: IndexMap<String, serde_json::Value>,
 }
 
-pub struct Task {
+pub struct Job {
     pub id: Uuid,
     pub name: String,
     pub output: Option<Output>,
     pub fields: IndexMap<String, serde_json::Value>,
-    pub statuses: Vec<TaskStatuses>,
+    pub statuses: Vec<Statuses>,
     pub owner: Owner,
     pub expiry: Option<chrono::Duration>,
     pub state: String,
@@ -59,8 +59,8 @@ impl FromStr for Owner {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let mut split = s.splitn(2, '/');
-        let target_type = split.next().ok_or("Invalid task for")?;
-        let id = split.next().ok_or("Invalid task for")?;
+        let target_type = split.next().ok_or("Invalid owner.target_type")?;
+        let id = split.next().ok_or("Invalid owner.id")?;
 
         Ok(Self {
             id: id.to_string(),
@@ -81,24 +81,18 @@ pub struct Output {
     pub segregated: bool,
 }
 
-/// TaskCreateResponse is the response upon creating a task
+/// JobCreateResponse is the response upon creation of a job
 #[derive(serde::Deserialize, serde::Serialize, Clone)]
-pub struct TaskCreateResponse {
+pub struct JobCreateResponse {
     /// The ID of the newly created task
     pub id: String,
 }
 
-/// WrappedTaskCreateResponse is the response upon creating a task
-#[derive(serde::Deserialize, serde::Serialize, Clone)]
-pub struct WrappedTaskCreateResponse {
-    pub tcr: TaskCreateResponse,
-}
-
-impl Task {
+impl Job {
     /// Fetches a task from the database based on id
     pub async fn from_id(id: Uuid, pool: &PgPool) -> Result<Self, crate::Error> {
         let rec = sqlx::query!(
-            "SELECT id, name, output, statuses, owner, expiry, state, created_at, fields, resumable FROM tasks WHERE id = $1 ORDER BY created_at DESC",
+            "SELECT id, name, output, statuses, owner, expiry, state, created_at, fields, resumable FROM jobs WHERE id = $1 ORDER BY created_at DESC",
             id,
         )
         .fetch_one(pool)
@@ -107,11 +101,11 @@ impl Task {
         let mut statuses = Vec::new();
 
         for status in &rec.statuses {
-            let status = serde_json::from_value::<TaskStatuses>(status.clone())?;
+            let status = serde_json::from_value::<Statuses>(status.clone())?;
             statuses.push(status);
         }
 
-        let task = Task {
+        let task = Job {
             id: rec.id,
             name: rec.name,
             output: rec
@@ -140,30 +134,30 @@ impl Task {
         Ok(task)
     }
 
-    /// Fetches all tasks of a guild given guild id
+    /// Fetches all jobs of a guild given guild id
     #[allow(dead_code)] // Will be used in the near future
     pub async fn from_guild(
         guild_id: serenity::all::GuildId,
         pool: &sqlx::PgPool,
     ) -> Result<Vec<Self>, crate::Error> {
         let recs = sqlx::query!(
-            "SELECT id, name, output, statuses, owner, expiry, state, created_at, fields, resumable FROM tasks WHERE owner = $1",
+            "SELECT id, name, output, statuses, owner, expiry, state, created_at, fields, resumable FROM jobs WHERE owner = $1",
             format!("g/{}", guild_id)
         )
         .fetch_all(pool)
         .await?;
 
-        let mut tasks = Vec::new();
+        let mut jobs = Vec::new();
 
         for rec in recs {
             let mut statuses = Vec::new();
 
             for status in &rec.statuses {
-                let status = serde_json::from_value::<TaskStatuses>(status.clone())?;
+                let status = serde_json::from_value::<Statuses>(status.clone())?;
                 statuses.push(status);
             }
 
-            let task = Task {
+            let job = Job {
                 id: rec.id,
                 name: rec.name,
                 output: rec
@@ -189,37 +183,37 @@ impl Task {
                 resumable: rec.resumable,
             };
 
-            tasks.push(task);
+            jobs.push(job);
         }
 
-        Ok(tasks)
+        Ok(jobs)
     }
 
-    /// Returns all tasks with a specific guild ID and a specific task name
+    /// Returns all jobs with a specific guild ID and a specific task name
     pub async fn from_guild_and_name(
         guild_id: serenity::all::GuildId,
         name: &str,
         pool: &sqlx::PgPool,
     ) -> Result<Vec<Self>, crate::Error> {
         let recs = sqlx::query!(
-            "SELECT id, name, output, statuses, owner, expiry, state, created_at, fields, resumable FROM tasks WHERE owner = $1 AND name = $2",
+            "SELECT id, name, output, statuses, owner, expiry, state, created_at, fields, resumable FROM jobs WHERE owner = $1 AND name = $2",
             format!("g/{}", guild_id),
             name,
         )
         .fetch_all(pool)
         .await?;
 
-        let mut tasks = Vec::new();
+        let mut jobs = Vec::new();
 
         for rec in recs {
             let mut statuses = Vec::new();
 
             for status in &rec.statuses {
-                let status = serde_json::from_value::<TaskStatuses>(status.clone())?;
+                let status = serde_json::from_value::<Statuses>(status.clone())?;
                 statuses.push(status);
             }
 
-            let task = Task {
+            let job = Job {
                 id: rec.id,
                 name: rec.name,
                 output: rec
@@ -245,10 +239,10 @@ impl Task {
                 resumable: rec.resumable,
             };
 
-            tasks.push(task);
+            jobs.push(job);
         }
 
-        Ok(tasks)
+        Ok(jobs)
     }
 
     pub fn format_owner_simplex(&self) -> String {
@@ -286,27 +280,27 @@ impl Task {
 
     #[allow(dead_code)]
     pub async fn get_url(&self, object_store: &Arc<ObjectStore>) -> Result<String, crate::Error> {
-        // Check if the task has an output
+        // Check if the job has an output
         let Some(path) = &self.get_file_path() else {
-            return Err("Task has no output".into());
+            return Err("Job has no output".into());
         };
 
         Ok(object_store.get_url(path, Duration::from_secs(600)))
     }
 
-    /// Deletes the task from the object storage
+    /// Deletes the job from the object storage
     pub async fn delete_from_storage(
         &self,
         client: &reqwest::Client,
         object_store: &Arc<ObjectStore>,
     ) -> Result<(), crate::Error> {
-        // Check if the task has an output
+        // Check if the job has an output
         let Some(path) = self.get_path() else {
-            return Err("Task has no output".into());
+            return Err("Job has no output".into());
         };
 
         let Some(outp) = &self.output else {
-            return Err("Task has no output".into());
+            return Err("Job has no output".into());
         };
 
         object_store
@@ -316,17 +310,17 @@ impl Task {
         Ok(())
     }
 
-    /// Delete the task from the database, this also consumes the task dropping it from memory
+    /// Delete the job from the database, this also consumes the job dropping it from memory
     pub async fn delete_from_db(self, pool: &PgPool) -> Result<(), crate::Error> {
-        sqlx::query!("DELETE FROM tasks WHERE id = $1", self.id,)
+        sqlx::query!("DELETE FROM jobs WHERE id = $1", self.id,)
             .execute(pool)
             .await?;
 
         Ok(())
     }
 
-    /// Deletes the task entirely, this includes deleting it from the object storage and the database
-    /// This also consumes the task dropping it from memory
+    /// Deletes the job entirely, this includes deleting it from the object storage and the database
+    /// This also consumes the job dropping it from memory
     #[allow(dead_code)] // Will be used in the near future
     pub async fn delete(
         self,
