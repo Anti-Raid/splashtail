@@ -18,7 +18,7 @@ func Docs() *docs.Doc {
 	return &docs.Doc{
 		Summary:     "Revoke User Session",
 		Description: "Revokes a session of a user based on session ID",
-		Resp:        types.UserSessionList{},
+		Resp:        types.ApiError{},
 		Params: []docs.Parameter{
 			{
 				Name:        "session_id",
