@@ -2,8 +2,8 @@ package jobs
 
 import (
 	"go.jobs/interfaces"
-	"go.jobs/tasks/backups"
-	"go.jobs/tasks/moderation"
+	"go.jobs/jobs/backups"
+	"go.jobs/jobs/moderation"
 )
 
 // Job impl registry
