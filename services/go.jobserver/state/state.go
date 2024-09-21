@@ -44,7 +44,7 @@ var (
 	ExtraDebug ExtraDebugInfo
 
 	// Task stuff
-	TaskTransport *http.Transport = &http.Transport{}
+	Transport *http.Transport = &http.Transport{}
 
 	Pool    *pgxpool.Pool
 	Discord *discordgo.Session
@@ -185,5 +185,5 @@ func Setup() {
 		panic(err)
 	}
 
-	TaskTransport.RegisterProtocol("task", TaskRT{next: TaskTransport})
+	Transport.RegisterProtocol("job", RT{next: Transport})
 }

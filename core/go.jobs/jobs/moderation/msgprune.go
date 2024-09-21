@@ -27,20 +27,18 @@ var allowedMsgPruneChannelTypes = []discordgo.ChannelType{
 	discordgo.ChannelTypeGuildForum,
 }
 
-type MessagePruneTask struct {
+type MessagePrune struct {
 	// The ID of the server
 	ServerID string
 
-	// Constraints, this is auto-set by the task in jobserver and hence not configurable in this mode.
+	// Constraints, this is auto-set by the job in jobserver and hence not configurable in this mode.
 	Constraints *ModerationConstraints
 
 	// Backup options
 	Options MessagePruneOpts
 }
 
-// As tasks often deal with sensitive data such as secrets, the Fields method returns
-// a map of fields that can be stored in the database
-func (t *MessagePruneTask) Fields() map[string]any {
+func (t *MessagePrune) Fields() map[string]any {
 	return map[string]any{
 		"ServerID":    t.ServerID,
 		"Constraints": t.Constraints,
@@ -48,15 +46,15 @@ func (t *MessagePruneTask) Fields() map[string]any {
 	}
 }
 
-func (t *MessagePruneTask) Expiry() *time.Duration {
+func (t *MessagePrune) Expiry() *time.Duration {
 	return nil
 }
 
-func (t *MessagePruneTask) Resumable() bool {
+func (t *MessagePrune) Resumable() bool {
 	return true
 }
 
-func (t *MessagePruneTask) Validate(state jobstate.State) error {
+func (t *MessagePrune) Validate(state jobstate.State) error {
 	if t.ServerID == "" {
 		return fmt.Errorf("server_id is required")
 	}
@@ -99,26 +97,26 @@ func (t *MessagePruneTask) Validate(state jobstate.State) error {
 	// Check current moderation concurrency
 	count, _ := concurrentModerationState.LoadOrStore(t.ServerID, 0)
 
-	if count >= t.Constraints.MaxServerModerationTasks {
-		return fmt.Errorf("you already have more than %d moderation tasks in progress, please wait for it to finish", t.Constraints.MaxServerModerationTasks)
+	if count >= t.Constraints.MaxServerModeration {
+		return fmt.Errorf("you already have more than %d moderation jobs in progress, please wait for it to finish", t.Constraints.MaxServerModeration)
 	}
 
 	return nil
 }
 
-func (t *MessagePruneTask) Exec(
+func (t *MessagePrune) Exec(
 	l *zap.Logger,
 	state jobstate.State,
 	progstate jobstate.ProgressState,
-) (*types.TaskOutput, error) {
+) (*types.Output, error) {
 	discord, botUser, _ := state.Discord()
 	ctx := state.Context()
 
 	// Check current moderation concurrency
 	count, _ := concurrentModerationState.LoadOrStore(t.ServerID, 0)
 
-	if count >= t.Constraints.MaxServerModerationTasks {
-		return nil, fmt.Errorf("you already have more than %d moderation tasks in progress, please wait for it to finish", t.Constraints.MaxServerModerationTasks)
+	if count >= t.Constraints.MaxServerModeration {
+		return nil, fmt.Errorf("you already have more than %d moderation jobs in progress, please wait for it to finish", t.Constraints.MaxServerModeration)
 	}
 
 	concurrentModerationState.Store(t.ServerID, count+1)
@@ -292,53 +290,53 @@ func (t *MessagePruneTask) Exec(
 		return nil, fmt.Errorf("error encoding final messages: %w", err)
 	}
 
-	return &types.TaskOutput{
+	return &types.Output{
 		Filename: "pruned-messages.txt",
 		Buffer:   &outputBuf,
 	}, nil
 }
 
-func (t *MessagePruneTask) CorrespondingBotCommand_Create() string {
+func (t *MessagePrune) CorrespondingBotCommand_Create() string {
 	return "prune_user"
 }
 
-func (t *MessagePruneTask) CorrespondingBotCommand_View() string {
+func (t *MessagePrune) CorrespondingBotCommand_View() string {
 	return "prune_user"
 }
 
-func (t *MessagePruneTask) CorrespondingBotCommand_Download() string {
+func (t *MessagePrune) CorrespondingBotCommand_Download() string {
 	return "prune_user"
 }
 
-func (t *MessagePruneTask) Name() string {
+func (t *MessagePrune) Name() string {
 	return "message_prune"
 }
 
-func (t *MessagePruneTask) TaskFor() *types.TaskFor {
-	return &types.TaskFor{
+func (t *MessagePrune) Owner() *types.Owner {
+	return &types.Owner{
 		ID:         t.ServerID,
 		TargetType: splashcore.TargetTypeServer,
 	}
 }
 
-func (t *MessagePruneTask) LocalPresets() *interfaces.PresetInfo {
+func (t *MessagePrune) LocalPresets() *interfaces.PresetInfo {
 	return &interfaces.PresetInfo{
 		Runnable: true,
-		Preset: &MessagePruneTask{
+		Preset: &MessagePrune{
 			ServerID: "{{.Args.ServerID}}",
 			Constraints: &ModerationConstraints{
 				MessagePrune: &MessagePruneConstraints{
 					TotalMaxMessages: 1000,
 					MinPerChannel:    10,
 				},
-				MaxServerModerationTasks: 1,
+				MaxServerModeration: 1,
 			},
 			Options: MessagePruneOpts{
 				PerChannel: 100,
 			},
 		},
 		Comments: map[string]string{
-			"Constraints.MaxServerModerationTasks":      "Only 1 mod task should be running at any given time locally",
+			"Constraints.MaxServerModeration":           "Only 1 mod job should be running at any given time locally",
 			"Constraints.MessagePrune.TotalMaxMessages": "We can be more generous here with 1000 by default",
 			"Constraints.MessagePrune.MinPerChannel":    "We can be more generous here with 10 by default",
 		},

@@ -14,7 +14,7 @@ import (
 
 type MutLogger struct {
 	sync.Mutex
-	taskId string
+	id     string
 	pool   *pgxpool.Pool
 	ctx    context.Context
 	logger *zap.Logger
@@ -39,7 +39,7 @@ func (m *MutLogger) add(p []byte) error {
 	}
 
 	// For us, this is just an array append of the json
-	_, err = m.pool.Exec(m.ctx, "UPDATE tasks SET statuses = array_append(statuses, $1), last_updated = NOW() WHERE id = $2", data, m.taskId)
+	_, err = m.pool.Exec(m.ctx, "UPDATE tasks SET statuses = array_append(statuses, $1), last_updated = NOW() WHERE id = $2", data, m.id)
 
 	if err != nil {
 		return fmt.Errorf("failed to update statuses: %w", err)
@@ -52,7 +52,7 @@ func (m *MutLogger) Write(p []byte) (n int, err error) {
 	err = m.add(p)
 
 	if err != nil {
-		m.logger.Error("[dwWriter] Failed to add to buffer", zap.Error(err), zap.String("taskId", m.taskId))
+		m.logger.Error("[dwWriter] Failed to add to buffer", zap.Error(err), zap.String("id", m.id))
 	}
 
 	return len(p), err
@@ -62,9 +62,9 @@ func (m *MutLogger) Sync() error {
 	return nil
 }
 
-func NewTaskLogger(taskId string, pool *pgxpool.Pool, ctx context.Context, baseLogger *zap.Logger) (*zap.Logger, *MutLogger) {
+func NewTaskLogger(id string, pool *pgxpool.Pool, ctx context.Context, baseLogger *zap.Logger) (*zap.Logger, *MutLogger) {
 	ml := &MutLogger{
-		taskId: taskId,
+		id:     id,
 		pool:   pool,
 		ctx:    ctx,
 		logger: baseLogger,

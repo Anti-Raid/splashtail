@@ -107,21 +107,19 @@ func convertToDataUri(mimeType string, data []byte) string {
 	return fmt.Sprintf("data:%s;base64,%s", mimeType, b64enc)
 }
 
-// A task to restore a backup of a server
-type ServerBackupRestoreTask struct {
+// A job to restore a backup of a server
+type ServerBackupRestore struct {
 	// The ID of the server
 	ServerID string
 
-	// Constraints, this is auto-set by the task in jobserver and hence not configurable in this mode.
+	// Constraints, this is auto-set by the job in jobserver and hence not configurable in this mode.
 	Constraints *BackupConstraints
 
 	// Backup options
 	Options BackupRestoreOpts
 }
 
-// As tasks often deal with sensitive data such as secrets, the Fields method returns
-// a map of fields that can be stored in the database
-func (t *ServerBackupRestoreTask) Fields() map[string]any {
+func (t *ServerBackupRestore) Fields() map[string]any {
 	opts := t.Options
 	opts.Decrypt = "" // Clear encryption key
 
@@ -132,16 +130,16 @@ func (t *ServerBackupRestoreTask) Fields() map[string]any {
 	}
 }
 
-func (t *ServerBackupRestoreTask) Expiry() *time.Duration {
+func (t *ServerBackupRestore) Expiry() *time.Duration {
 	return nil
 }
 
-func (t *ServerBackupRestoreTask) Resumable() bool {
+func (t *ServerBackupRestore) Resumable() bool {
 	return true
 }
 
-// Validate validates the task and sets up state if needed
-func (t *ServerBackupRestoreTask) Validate(state jobstate.State) error {
+// Validate validates the job and sets up state if needed
+func (t *ServerBackupRestore) Validate(state jobstate.State) error {
 	if t.ServerID == "" {
 		return fmt.Errorf("server_id is required")
 	}
@@ -156,8 +154,8 @@ func (t *ServerBackupRestoreTask) Validate(state jobstate.State) error {
 	}
 
 	if opMode == "jobs" {
-		if !strings.HasPrefix(t.Options.BackupSource, "https://") && !strings.HasPrefix(t.Options.BackupSource, "task://") {
-			return fmt.Errorf("backup_source must be a valid URL or a task id")
+		if !strings.HasPrefix(t.Options.BackupSource, "https://") && !strings.HasPrefix(t.Options.BackupSource, "job://") {
+			return fmt.Errorf("backup_source must be a valid URL or a Job ID")
 		}
 	} else if opMode == "localjobs" {
 		if !strings.HasPrefix(t.Options.BackupSource, "file://") && !strings.HasPrefix(t.Options.BackupSource, "http://") && !strings.HasPrefix(t.Options.BackupSource, "https://") {
@@ -183,26 +181,26 @@ func (t *ServerBackupRestoreTask) Validate(state jobstate.State) error {
 	// Check current backup concurrency
 	count, _ := concurrentBackupState.LoadOrStore(t.ServerID, 0)
 
-	if count >= t.Constraints.MaxServerBackupTasks {
-		return fmt.Errorf("you already have more than %d backup-related tasks in progress, please wait for it to finish", t.Constraints.MaxServerBackupTasks)
+	if count >= t.Constraints.MaxServerBackups {
+		return fmt.Errorf("you already have more than %d backup-related jobs in progress, please wait for it to finish", t.Constraints.MaxServerBackups)
 	}
 
 	return nil
 }
 
-func (t *ServerBackupRestoreTask) Exec(
+func (t *ServerBackupRestore) Exec(
 	l *zap.Logger,
 	state jobstate.State,
 	progstate jobstate.ProgressState,
-) (*types.TaskOutput, error) {
+) (*types.Output, error) {
 	discord, botUser, _ := state.Discord()
 	ctx := state.Context()
 
 	// Check current backup concurrency
 	count, _ := concurrentBackupState.LoadOrStore(t.ServerID, 0)
 
-	if count >= t.Constraints.MaxServerBackupTasks {
-		return nil, fmt.Errorf("you already have more than %d backup-related tasks in progress, please wait for it to finish", t.Constraints.MaxServerBackupTasks)
+	if count >= t.Constraints.MaxServerBackups {
+		return nil, fmt.Errorf("you already have more than %d backup-related jobs in progress, please wait for it to finish", t.Constraints.MaxServerBackups)
 	}
 
 	concurrentBackupState.Store(t.ServerID, count+1)
@@ -407,9 +405,9 @@ func (t *ServerBackupRestoreTask) Exec(
 
 	// Resumability starts here
 	outp, err := step.NewStepper(
-		step.Step[ServerBackupRestoreTask]{
+		step.Step[ServerBackupRestore]{
 			State: "edit_base_guild",
-			Exec: func(t *ServerBackupRestoreTask, l *zap.Logger, state jobstate.State, progstate jobstate.ProgressState, progress *jobstate.Progress) (*types.TaskOutput, *jobstate.Progress, error) {
+			Exec: func(t *ServerBackupRestore, l *zap.Logger, state jobstate.State, progstate jobstate.ProgressState, progress *jobstate.Progress) (*types.Output, *jobstate.Progress, error) {
 				// Edit basic guild. Note that settings related to ID's are changed later if needed
 				// Notes:
 				//
@@ -484,9 +482,9 @@ func (t *ServerBackupRestoreTask) Exec(
 				return nil, &jobstate.Progress{}, nil
 			},
 		},
-		step.Step[ServerBackupRestoreTask]{
+		step.Step[ServerBackupRestore]{
 			State: "delete_old_roles",
-			Exec: func(t *ServerBackupRestoreTask, l *zap.Logger, state jobstate.State, progstate jobstate.ProgressState, progress *jobstate.Progress) (*types.TaskOutput, *jobstate.Progress, error) {
+			Exec: func(t *ServerBackupRestore, l *zap.Logger, state jobstate.State, progstate jobstate.ProgressState, progress *jobstate.Progress) (*types.Output, *jobstate.Progress, error) {
 				for _, r := range tgtGuild.Roles {
 					if slices.Contains(t.Options.ProtectedRoles, r.ID) {
 						continue
@@ -526,9 +524,9 @@ func (t *ServerBackupRestoreTask) Exec(
 				return nil, &jobstate.Progress{}, nil
 			},
 		},
-		step.Step[ServerBackupRestoreTask]{
+		step.Step[ServerBackupRestore]{
 			State: "create_new_roles",
-			Exec: func(t *ServerBackupRestoreTask, l *zap.Logger, state jobstate.State, progstate jobstate.ProgressState, progress *jobstate.Progress) (*types.TaskOutput, *jobstate.Progress, error) {
+			Exec: func(t *ServerBackupRestore, l *zap.Logger, state jobstate.State, progstate jobstate.ProgressState, progress *jobstate.Progress) (*types.Output, *jobstate.Progress, error) {
 				var prevState struct {
 					RestoredRoleMap map[string]string `mapstructure:"restoredRoleMap,omitempty"`
 				}
@@ -632,9 +630,9 @@ func (t *ServerBackupRestoreTask) Exec(
 				}, nil
 			},
 		},
-		step.Step[ServerBackupRestoreTask]{
+		step.Step[ServerBackupRestore]{
 			State: "delete_old_channels",
-			Exec: func(t *ServerBackupRestoreTask, l *zap.Logger, state jobstate.State, progstate jobstate.ProgressState, progress *jobstate.Progress) (*types.TaskOutput, *jobstate.Progress, error) {
+			Exec: func(t *ServerBackupRestore, l *zap.Logger, state jobstate.State, progstate jobstate.ProgressState, progress *jobstate.Progress) (*types.Output, *jobstate.Progress, error) {
 				var srcChannelMap = make(map[string]*discordgo.Channel) // Map of backed up channel id to channel object
 				for _, channel := range srcGuild.Channels {
 					srcChannelMap[channel.ID] = channel
@@ -687,9 +685,9 @@ func (t *ServerBackupRestoreTask) Exec(
 				}, nil
 			},
 		},
-		step.Step[ServerBackupRestoreTask]{
+		step.Step[ServerBackupRestore]{
 			State: "create_new_channels",
-			Exec: func(t *ServerBackupRestoreTask, l *zap.Logger, state jobstate.State, progstate jobstate.ProgressState, progress *jobstate.Progress) (*types.TaskOutput, *jobstate.Progress, error) {
+			Exec: func(t *ServerBackupRestore, l *zap.Logger, state jobstate.State, progstate jobstate.ProgressState, progress *jobstate.Progress) (*types.Output, *jobstate.Progress, error) {
 				var prevState struct {
 					IgnoredChannels     []string          `mapstructure:"ignoredChannels"`
 					RestoredRoleMap     map[string]string `mapstructure:"restoredRoleMap"`
@@ -858,9 +856,9 @@ func (t *ServerBackupRestoreTask) Exec(
 				}, nil
 			},
 		},
-		step.Step[ServerBackupRestoreTask]{
+		step.Step[ServerBackupRestore]{
 			State: "update_guild_features",
-			Exec: func(t *ServerBackupRestoreTask, l *zap.Logger, state jobstate.State, progstate jobstate.ProgressState, progress *jobstate.Progress) (*types.TaskOutput, *jobstate.Progress, error) {
+			Exec: func(t *ServerBackupRestore, l *zap.Logger, state jobstate.State, progstate jobstate.ProgressState, progress *jobstate.Progress) (*types.Output, *jobstate.Progress, error) {
 				var prevState struct {
 					RestoredChannelsMap map[string]string `mapstructure:"restoredChannelsMap"`
 				}
@@ -922,9 +920,9 @@ func (t *ServerBackupRestoreTask) Exec(
 				return nil, &jobstate.Progress{}, nil
 			},
 		},
-		step.Step[ServerBackupRestoreTask]{
+		step.Step[ServerBackupRestore]{
 			State: "create_webhook_if_needed",
-			Exec: func(t *ServerBackupRestoreTask, l *zap.Logger, state jobstate.State, progstate jobstate.ProgressState, progress *jobstate.Progress) (*types.TaskOutput, *jobstate.Progress, error) {
+			Exec: func(t *ServerBackupRestore, l *zap.Logger, state jobstate.State, progstate jobstate.ProgressState, progress *jobstate.Progress) (*types.Output, *jobstate.Progress, error) {
 				if bo.BackupMessages {
 					l.Info("Waiting 5 seconds to avoid API issues")
 
@@ -970,9 +968,9 @@ func (t *ServerBackupRestoreTask) Exec(
 				return nil, nil, nil
 			},
 		},
-		step.Step[ServerBackupRestoreTask]{
+		step.Step[ServerBackupRestore]{
 			State: "restore_messages",
-			Exec: func(t *ServerBackupRestoreTask, l *zap.Logger, state jobstate.State, progstate jobstate.ProgressState, progress *jobstate.Progress) (*types.TaskOutput, *jobstate.Progress, error) {
+			Exec: func(t *ServerBackupRestore, l *zap.Logger, state jobstate.State, progstate jobstate.ProgressState, progress *jobstate.Progress) (*types.Output, *jobstate.Progress, error) {
 				if bo.BackupMessages {
 					l.Info("Waiting 5 seconds to avoid API issues")
 
@@ -1146,33 +1144,33 @@ func (t *ServerBackupRestoreTask) Exec(
 	return outp, nil
 }
 
-func (t *ServerBackupRestoreTask) CorrespondingBotCommand_Create() string {
+func (t *ServerBackupRestore) CorrespondingBotCommand_Create() string {
 	return "backups restore"
 }
 
-func (t *ServerBackupRestoreTask) CorrespondingBotCommand_View() string {
+func (t *ServerBackupRestore) CorrespondingBotCommand_View() string {
 	return "backups list"
 }
 
-func (t *ServerBackupRestoreTask) CorrespondingBotCommand_Download() string {
+func (t *ServerBackupRestore) CorrespondingBotCommand_Download() string {
 	return "backups list"
 }
 
-func (t *ServerBackupRestoreTask) Name() string {
+func (t *ServerBackupRestore) Name() string {
 	return "guild_restore_backup"
 }
 
-func (t *ServerBackupRestoreTask) TaskFor() *types.TaskFor {
-	return &types.TaskFor{
+func (t *ServerBackupRestore) Owner() *types.Owner {
+	return &types.Owner{
 		ID:         t.ServerID,
 		TargetType: splashcore.TargetTypeServer,
 	}
 }
 
-func (t *ServerBackupRestoreTask) LocalPresets() *interfaces.PresetInfo {
+func (t *ServerBackupRestore) LocalPresets() *interfaces.PresetInfo {
 	return &interfaces.PresetInfo{
 		Runnable: true,
-		Preset: &ServerBackupRestoreTask{
+		Preset: &ServerBackupRestore{
 			ServerID: "{{.Args.ServerID}}",
 			Constraints: &BackupConstraints{
 				Restore: &BackupRestoreConstraints{
@@ -1185,8 +1183,8 @@ func (t *ServerBackupRestoreTask) LocalPresets() *interfaces.PresetInfo {
 					HttpClientTimeout:  10 * timex.Second,
 					MaxBodySize:        100000000,
 				},
-				MaxServerBackupTasks: 1,
-				FileType:             "backup.server",
+				MaxServerBackups: 1,
+				FileType:         "backup.server",
 			},
 			Options: BackupRestoreOpts{
 				IgnoreRestoreErrors: false,
@@ -1198,7 +1196,7 @@ func (t *ServerBackupRestoreTask) LocalPresets() *interfaces.PresetInfo {
 			},
 		},
 		Comments: map[string]string{
-			"Constraints.MaxServerBackupTasks":  "Only 1 backup task should be running at any given time locally",
+			"Constraints.MaxServerBackups":      "Only 1 backup job should be running at any given time locally",
 			"Constraints.FileType":              "The file type of the backup, you probably don't want to change this",
 			"Constraints.Restore.MaxBodySize":   "Since this is a local job, we can afford to be more generous",
 			"Options.IgnoreMessageBackupErrors": "We likely don't want errors ignored in local jobs",

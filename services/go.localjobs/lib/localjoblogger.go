@@ -93,7 +93,7 @@ func (m *LocalMutLogger) Sync() error {
 	return nil
 }
 
-func NewLocalTaskLogger(taskId string, l *zap.Logger) (*zap.Logger, *LocalMutLogger) {
+func NewLocalLogger(taskId string, l *zap.Logger) (*zap.Logger, *LocalMutLogger) {
 	ml := &LocalMutLogger{
 		taskId: taskId,
 		logger: l,

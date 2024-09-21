@@ -1,6 +1,6 @@
-// Package taskexecutor defines a "production-ready" task executor.
+// Package executor defines a "production-ready" executor for jobs.
 //
-// For local/non-production use, consider looking at cmd/localjobs's task executor
+// For local/non-production use, consider looking at cmd/localjobs's executor
 package jobrunner
 
 import (
@@ -17,10 +17,10 @@ import (
 	"go.uber.org/zap"
 )
 
-// PersistTaskState persists task state to redis temporarily
-func PersistTaskState(tc *TaskProgress, prog *jobstate.Progress) error {
+// PersistState persists the state to redis temporarily
+func PersistState(tc *Progress, prog *jobstate.Progress) error {
 	_, err := state.Pool.Exec(
-		tc.TaskState.Context(),
+		tc.State.Context(),
 		"UPDATE ongoing_jobs SET state = $2, data = $3 WHERE id = $1",
 		tc.ID,
 		prog.State,
@@ -34,12 +34,12 @@ func PersistTaskState(tc *TaskProgress, prog *jobstate.Progress) error {
 	return nil
 }
 
-// GetPersistedTaskState gets persisted task state from redis
-func GetPersistedTaskState(tc *TaskProgress) (*jobstate.Progress, error) {
+// GetPersistedState gets persisted state from redis
+func GetPersistedState(tc *Progress) (*jobstate.Progress, error) {
 	var s string
 	var data map[string]any
 
-	err := state.Pool.QueryRow(tc.TaskState.Context(), "SELECT state, data FROM ongoing_jobs WHERE id = $1", tc.ID).Scan(&s, &data)
+	err := state.Pool.QueryRow(tc.State.Context(), "SELECT state, data FROM ongoing_jobs WHERE id = $1", tc.ID).Scan(&s, &data)
 
 	if err != nil {
 		return nil, err
@@ -51,57 +51,57 @@ func GetPersistedTaskState(tc *TaskProgress) (*jobstate.Progress, error) {
 	}, nil
 }
 
-// Implementor of jobs.TaskState
-type TaskState struct {
+// Implementor of jobs.State
+type State struct {
 	Ctx context.Context
 }
 
-func (TaskState) Transport() *http.Transport {
-	return state.TaskTransport
+func (State) Transport() *http.Transport {
+	return state.Transport
 }
 
-func (TaskState) OperationMode() string {
+func (State) OperationMode() string {
 	return state.CurrentOperationMode
 }
 
-func (TaskState) Discord() (*discordgo.Session, *discordgo.User, bool) {
+func (State) Discord() (*discordgo.Session, *discordgo.User, bool) {
 	return state.Discord, state.BotUser, false
 }
 
-func (TaskState) DebugInfo() *debug.BuildInfo {
+func (State) DebugInfo() *debug.BuildInfo {
 	return state.BuildInfo
 }
 
-func (t TaskState) Context() context.Context {
+func (t State) Context() context.Context {
 	return t.Ctx
 }
 
-type TaskProgress struct {
+type Progress struct {
 	ID string
 
-	TaskState TaskState
+	State State
 
-	// Used to cache the current task progress in resumes
+	// Used to cache the current progress in resumes
 	//
 	// When resuming, set this to the current progress
-	CurrentTaskProgress *jobstate.Progress
+	CurrentProgress *jobstate.Progress
 
 	// OnSetProgress is a callback that is called when SetProgress is called
 	//
-	// If unset, calls PersistTaskState
-	OnSetProgress func(tc *TaskProgress, prog *jobstate.Progress) error
+	// If unset, calls PersistState
+	OnSetProgress func(tc *Progress, prog *jobstate.Progress) error
 }
 
-func (ts TaskProgress) GetProgress() (*jobstate.Progress, error) {
-	if ts.CurrentTaskProgress == nil {
-		return GetPersistedTaskState(&ts)
+func (ts Progress) GetProgress() (*jobstate.Progress, error) {
+	if ts.CurrentProgress == nil {
+		return GetPersistedState(&ts)
 	}
 
-	return ts.CurrentTaskProgress, nil
+	return ts.CurrentProgress, nil
 }
 
-func (ts TaskProgress) SetProgress(prog *jobstate.Progress) error {
-	ts.CurrentTaskProgress = prog
+func (ts Progress) SetProgress(prog *jobstate.Progress) error {
+	ts.CurrentProgress = prog
 
 	if ts.OnSetProgress != nil {
 		err := ts.OnSetProgress(&ts, prog)
@@ -110,7 +110,7 @@ func (ts TaskProgress) SetProgress(prog *jobstate.Progress) error {
 			return err
 		}
 	} else {
-		err := PersistTaskState(&ts, prog)
+		err := PersistState(&ts, prog)
 
 		if err != nil {
 			return err
@@ -120,27 +120,27 @@ func (ts TaskProgress) SetProgress(prog *jobstate.Progress) error {
 	return nil
 }
 
-// Creates a new task on server and executes it
+// Creates a new job on server and executes it
 //
-// If prog is set, it will be used to cache the task progress, otherwise a blank one will be used
-func ExecuteTask(
+// If prog is set, it will be used to cache the progress, otherwise a blank one will be used
+func Execute(
 	ctx context.Context,
 	ctxCancel context.CancelFunc,
-	taskId string,
+	id string,
 	jobImpl interfaces.JobImpl,
-	prog *TaskProgress,
+	prog *Progress,
 ) {
 	if state.CurrentOperationMode != "jobs" {
-		panic("cannot execute task outside of job server")
+		panic("cannot execute jobs outside of job server")
 	}
 
-	l, _ := NewTaskLogger(taskId, state.Pool, ctx, state.Logger)
-	erl, _ := NewTaskLogger(taskId, state.Pool, state.Context, state.Logger)
+	l, _ := NewTaskLogger(id, state.Pool, ctx, state.Logger)
+	erl, _ := NewTaskLogger(id, state.Pool, state.Context, state.Logger)
 
 	var done bool
 	var bChan = make(chan int) // bChan is a channel thats used to control the canceller channel
 
-	// Fail failed tasks
+	// Fail failed jobs
 	defer func() {
 		err := recover()
 
@@ -148,18 +148,18 @@ func ExecuteTask(
 			erl.Error("Panic", zap.Any("err", err))
 			state.Logger.Error("Panic", zap.Any("err", err))
 
-			_, err := state.Pool.Exec(state.Context, "UPDATE tasks SET state = $1 WHERE id = $2", "failed", taskId)
+			_, err := state.Pool.Exec(state.Context, "UPDATE tasks SET state = $1 WHERE id = $2", "failed", id)
 
 			if err != nil {
-				l.Error("Failed to update task", zap.Error(err))
+				l.Error("Failed to update job", zap.Error(err))
 			}
 		}
 
 		if !done {
-			_, err := state.Pool.Exec(state.Context, "UPDATE tasks SET state = $1 WHERE id = $2", "failed", taskId)
+			_, err := state.Pool.Exec(state.Context, "UPDATE tasks SET state = $1 WHERE id = $2", "failed", id)
 
 			if err != nil {
-				l.Error("Failed to update task", zap.Error(err))
+				l.Error("Failed to update job", zap.Error(err))
 			}
 		}
 
@@ -167,10 +167,10 @@ func ExecuteTask(
 			defer ctxCancel()
 		}
 
-		_, err2 := state.Pool.Exec(state.Context, "DELETE FROM ongoing_jobs WHERE id = $1", taskId)
+		_, err2 := state.Pool.Exec(state.Context, "DELETE FROM ongoing_jobs WHERE id = $1", id)
 
 		if err != nil {
-			l.Error("Failed to delete task from ongoing tasks", zap.Error(err2))
+			l.Error("Failed to delete job from ongoing jobs", zap.Error(err2))
 			return
 		}
 
@@ -190,31 +190,31 @@ func ExecuteTask(
 		}
 	}()
 
-	// Set task state to running
-	_, err := state.Pool.Exec(state.Context, "UPDATE tasks SET state = $1 WHERE id = $2", "running", taskId)
+	// Set state to running
+	_, err := state.Pool.Exec(state.Context, "UPDATE tasks SET state = $1 WHERE id = $2", "running", id)
 
 	if err != nil {
-		l.Error("Failed to update task", zap.Error(err))
+		l.Error("Failed to update job", zap.Error(err))
 		return
 	}
 
-	ts := TaskState{
+	ts := State{
 		Ctx: ctx,
 	}
 	if prog == nil {
-		prog = &TaskProgress{
-			ID:        taskId,
-			TaskState: ts,
+		prog = &Progress{
+			ID:    id,
+			State: ts,
 		}
 	}
 
-	var taskState = "completed"
+	var currState = "completed"
 
 	outp, terr := jobImpl.Exec(l, ts, prog)
 
 	if terr != nil {
-		l.Error("Failed to execute task [terr != nil]", zap.Error(terr))
-		taskState = "failed"
+		l.Error("Failed to execute job [terr != nil]", zap.Error(terr))
+		currState = "failed"
 	}
 
 	// Save output to object storage
@@ -224,14 +224,14 @@ func ExecuteTask(
 		}
 
 		if outp.Buffer == nil {
-			l.Error("Task output buffer is nil")
-			taskState = "failed"
+			l.Error("Job output buffer is nil")
+			currState = "failed"
 		} else {
-			l.Info("Saving task output", zap.String("filename", outp.Filename))
+			l.Info("Saving job output", zap.String("filename", outp.Filename))
 
 			err = state.ObjectStorage.Save(
 				state.Context,
-				jobs.GetPathFromOutput(taskId, jobImpl, outp),
+				jobs.GetPathFromOutput(id, jobImpl, outp),
 				outp.Filename,
 				outp.Buffer,
 				0,
@@ -244,10 +244,10 @@ func ExecuteTask(
 		}
 	}
 
-	_, err = state.Pool.Exec(state.Context, "UPDATE tasks SET output = $1, state = $2 WHERE id = $3", outp, taskState, taskId)
+	_, err = state.Pool.Exec(state.Context, "UPDATE tasks SET output = $1, state = $2 WHERE id = $3", outp, currState, id)
 
 	if err != nil {
-		l.Error("Failed to update task", zap.Error(err))
+		l.Error("Failed to update job", zap.Error(err))
 		return
 	}
 

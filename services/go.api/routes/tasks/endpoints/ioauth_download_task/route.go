@@ -80,12 +80,12 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 		}
 	}
 
-	taskId := chi.URLParam(r, "id")
+	id := chi.URLParam(r, "id")
 
-	if taskId == "" {
+	if id == "" {
 		return uapi.HttpResponse{
 			Status: http.StatusBadRequest,
-			Json:   types.ApiError{Message: "task id is required"},
+			Json:   types.ApiError{Message: "`id` is required"},
 		}
 	}
 
@@ -131,14 +131,14 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 		return uapi.DefaultResponse(http.StatusInternalServerError)
 	}
 
-	row, err := state.Pool.Query(d.Context, "SELECT "+taskColsStr+" FROM tasks WHERE id = $1", taskId)
+	row, err := state.Pool.Query(d.Context, "SELECT "+taskColsStr+" FROM tasks WHERE id = $1", id)
 
 	if err != nil {
 		state.Logger.Error("Failed to fetch task [db fetch]", zap.Error(err))
 		return uapi.DefaultResponse(http.StatusInternalServerError)
 	}
 
-	task, err := pgx.CollectOneRow(row, pgx.RowToStructByName[jobtypes.Task])
+	job, err := pgx.CollectOneRow(row, pgx.RowToStructByName[jobtypes.Task])
 
 	if errors.Is(err, pgx.ErrNoRows) {
 		return uapi.HttpResponse{
@@ -152,14 +152,14 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 		return uapi.DefaultResponse(http.StatusInternalServerError)
 	}
 
-	if task.Output == nil {
+	if job.Output == nil {
 		return uapi.HttpResponse{
 			Status: http.StatusNotFound,
 			Json:   types.ApiError{Message: "Task output not found"},
 		}
 	}
 
-	taskDef, ok := jobs.JobImplRegistry[task.Name]
+	taskDef, ok := jobs.JobImplRegistry[job.Name]
 
 	if !ok {
 		return uapi.HttpResponse{
@@ -168,33 +168,33 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 		}
 	}
 
-	if task.TaskForRaw != nil {
-		task.TaskFor = jobs.ParseTaskFor(*task.TaskForRaw)
+	if job.OwnerRaw != nil {
+		job.Owner = jobs.ParseOwner(*job.OwnerRaw)
 
-		if task.TaskFor == nil {
+		if job.Owner == nil {
 			return uapi.HttpResponse{
 				Status: http.StatusInternalServerError,
-				Json:   types.ApiError{Message: "Invalid task.TaskFor. Parsing error occurred"},
+				Json:   types.ApiError{Message: "Invalid job.Owner. Parsing error occurred"},
 			}
 		}
 
-		if task.TaskFor.ID == "" || task.TaskFor.TargetType == "" {
+		if job.Owner.ID == "" || job.Owner.TargetType == "" {
 			return uapi.HttpResponse{
 				Status: http.StatusInternalServerError,
-				Json:   types.ApiError{Message: "Invalid task.TaskFor. Missing ID or TargetType"},
+				Json:   types.ApiError{Message: "Invalid job.Owner. Missing ID or TargetType"},
 			}
 		}
 
-		if task.TaskFor.TargetType == splashcore.TargetTypeUser {
-			if iot.DiscordUser.ID != task.TaskFor.ID {
+		if job.Owner.TargetType == splashcore.TargetTypeUser {
+			if iot.DiscordUser.ID != job.Owner.ID {
 				return uapi.HttpResponse{
 					Status: http.StatusForbidden,
 					Json:   types.ApiError{Message: "You are not authorized to fetch this task [TargetType = User]!"},
 				}
 			}
-		} else if task.TaskFor.TargetType == splashcore.TargetTypeServer {
+		} else if job.Owner.TargetType == splashcore.TargetTypeServer {
 			// Check permissions
-			resp, ok := api.HandlePermissionCheck(iot.DiscordUser.ID, task.TaskFor.ID, taskDef.CorrespondingBotCommand_Download(), rpc_messages.RpcCheckCommandOptions{})
+			resp, ok := api.HandlePermissionCheck(iot.DiscordUser.ID, job.Owner.ID, taskDef.CorrespondingBotCommand_Download(), rpc_messages.RpcCheckCommandOptions{})
 
 			if !ok {
 				return resp
@@ -203,19 +203,19 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 		} else {
 			return uapi.HttpResponse{
 				Status: http.StatusNotImplemented,
-				Json:   types.ApiError{Message: "Downloading is not supported for this target type [TargetType = " + task.TaskFor.TargetType + "]"},
+				Json:   types.ApiError{Message: "Downloading is not supported for this target type [TargetType = " + job.Owner.TargetType + "]"},
 			}
 		}
 	}
 
 	// Now get URL
-	url, err := state.ObjectStorage.GetUrl(d.Context, jobs.GetPathFromOutput(task.ID, taskDef, task.Output), task.Output.Filename, 10*time.Minute)
+	url, err := state.ObjectStorage.GetUrl(d.Context, jobs.GetPathFromOutput(job.ID, taskDef, job.Output), job.Output.Filename, 10*time.Minute)
 
 	if err != nil {
-		state.Logger.Error("Failed to get url for task", zap.Error(err))
+		state.Logger.Error("Failed to get url for job", zap.Error(err))
 		return uapi.HttpResponse{
 			Status: http.StatusInternalServerError,
-			Json:   types.ApiError{Message: "Failed to get url for task: " + err.Error()},
+			Json:   types.ApiError{Message: "Failed to get url for job: " + err.Error()},
 		}
 	}
 

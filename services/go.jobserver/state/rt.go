@@ -6,13 +6,13 @@ import (
 	"time"
 )
 
-var taskRtDefaultExp = 5 * time.Minute
+var rtDefaultExp = 5 * time.Minute
 
-type TaskRT struct {
+type RT struct {
 	next http.RoundTripper
 }
 
-func (t TaskRT) RoundTrip(req *http.Request) (resp *http.Response, err error) {
+func (t RT) RoundTrip(req *http.Request) (resp *http.Response, err error) {
 	// Create presigned url
 	expiry := req.URL.Query().Get("exp")
 
@@ -25,7 +25,7 @@ func (t TaskRT) RoundTrip(req *http.Request) (resp *http.Response, err error) {
 			return nil, err
 		}
 	} else {
-		expiryDuration = taskRtDefaultExp
+		expiryDuration = rtDefaultExp
 	}
 
 	fmt.Println(req.URL.Path)

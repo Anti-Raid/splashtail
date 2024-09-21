@@ -17,16 +17,16 @@ type TaskLocalOpts struct {
 }
 
 // Executes a job locally
-func ExecuteJobLocal(prefix, taskId string, l *zap.Logger, jobImpl interfaces.JobImpl, opts TaskLocalOpts, taskState jobstate.State) error {
-	var currentTaskState = "pending"
+func ExecuteJobLocal(prefix, id string, l *zap.Logger, jobImpl interfaces.JobImpl, opts TaskLocalOpts, state jobstate.State) error {
+	var currentState = "pending"
 
-	err := opts.OnStateChange(currentTaskState)
+	err := opts.OnStateChange(currentState)
 
 	if err != nil {
 		return fmt.Errorf("failed to update job state: %w", err)
 	}
 
-	err = jobImpl.Validate(taskState)
+	err = jobImpl.Validate(state)
 
 	if err != nil {
 		return fmt.Errorf("failed to validate job: %w", err)
@@ -38,15 +38,15 @@ func ExecuteJobLocal(prefix, taskId string, l *zap.Logger, jobImpl interfaces.Jo
 		return fmt.Errorf("job %s does not exist on registry", jobImpl.Name())
 	}
 
-	currentTaskState = "running"
+	currentState = "running"
 
-	err = opts.OnStateChange(currentTaskState)
+	err = opts.OnStateChange(currentState)
 
 	if err != nil {
-		return fmt.Errorf("failed to update task state: %w", err)
+		return fmt.Errorf("failed to update state: %w", err)
 	}
 
-	outp, terr := jobImpl.Exec(l, taskState, TaskProgress{})
+	outp, terr := jobImpl.Exec(l, state, Progress{})
 
 	// Save output to object storage
 	if outp != nil {
@@ -56,46 +56,46 @@ func ExecuteJobLocal(prefix, taskId string, l *zap.Logger, jobImpl interfaces.Jo
 
 		if outp.Buffer == nil {
 			l.Error("Job output buffer is nil", zap.Any("data", jobImpl))
-			currentTaskState = "failed"
+			currentState = "failed"
 
-			err = opts.OnStateChange(currentTaskState)
+			err = opts.OnStateChange(currentState)
 
 			if err != nil {
-				return fmt.Errorf("failed to update task state: %w", err)
+				return fmt.Errorf("failed to update state: %w", err)
 			}
 		} else {
-			// Write task output to jobs/$taskId/$output
-			err = os.MkdirAll(prefix+"/jobs/"+taskId, 0755)
+			// Write task output to jobs/$id/$output
+			err = os.MkdirAll(prefix+"/jobs/"+id, 0755)
 
 			if err != nil {
 				return fmt.Errorf("failed to create job output directory: %w", err)
 			}
 
-			f, err := os.Create(prefix + "/jobs/" + taskId + "/" + outp.Filename)
+			f, err := os.Create(prefix + "/jobs/" + id + "/" + outp.Filename)
 
 			if err != nil {
-				return fmt.Errorf("failed to create task output file: %w", err)
+				return fmt.Errorf("failed to create output file: %w", err)
 			}
 
 			_, err = f.Write(outp.Buffer.Bytes())
 
 			if err != nil {
-				return fmt.Errorf("failed to write task output file: %w", err)
+				return fmt.Errorf("failed to write output file: %w", err)
 			}
 
-			l.Info("Saved task output", zap.String("filename", outp.Filename), zap.String("id", taskId))
+			l.Info("Saved output", zap.String("filename", outp.Filename), zap.String("id", id))
 		}
 	}
 
 	if terr != nil {
 		l.Error("Failed to execute job", zap.Error(err))
-		currentTaskState = "failed"
-		err = opts.OnStateChange(currentTaskState)
+		currentState = "failed"
+		err = opts.OnStateChange(currentState)
 
 		if err != nil {
-			return fmt.Errorf("failed to update task state: %w", err)
+			return fmt.Errorf("failed to update state: %w", err)
 		}
-		return fmt.Errorf("failed to execute task: %w", err)
+		return fmt.Errorf("failed to execute job: %w", err)
 	}
 
 	return nil

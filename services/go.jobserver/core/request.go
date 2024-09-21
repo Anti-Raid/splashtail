@@ -29,52 +29,52 @@ var (
 	taskColsStr = strings.Join(taskCols, ", ")
 )
 
-func SpawnTask(spawnTask rpc_messages.SpawnTask) (*rpc_messages.SpawnTaskResponse, error) {
+func Spawn(spawn rpc_messages.SpawnTask) (*rpc_messages.SpawnTaskResponse, error) {
 	defer func() {
 		if rvr := recover(); rvr != nil {
 			fmt.Println("Recovered from panic:", rvr)
 		}
 	}()
 
-	if !spawnTask.Create && !spawnTask.Execute {
+	if !spawn.Create && !spawn.Execute {
 		return nil, fmt.Errorf("either create or execute must be set")
 	}
 
-	if spawnTask.Name == "" {
+	if spawn.Name == "" {
 		return nil, fmt.Errorf("invalid job name provided")
 	}
 
-	baseJobImpl, ok := jobs.JobImplRegistry[spawnTask.Name]
+	baseJobImpl, ok := jobs.JobImplRegistry[spawn.Name]
 
 	if !ok {
-		return nil, fmt.Errorf("job %s does not exist on registry", spawnTask.Name)
+		return nil, fmt.Errorf("job %s does not exist on registry", spawn.Name)
 	}
 
-	if len(spawnTask.Data) == 0 {
+	if len(spawn.Data) == 0 {
 		return nil, fmt.Errorf("invalid task data provided")
 	}
 
-	tBytes, err := jsonimpl.Marshal(spawnTask.Data)
+	b, err := jsonimpl.Marshal(spawn.Data)
 
 	if err != nil {
 		return nil, fmt.Errorf("error marshalling task args: %w", err)
 	}
 
-	task := baseJobImpl // Copy task
+	job := baseJobImpl // Copy task
 
-	err = jsonimpl.Unmarshal(tBytes, &task)
+	err = jsonimpl.Unmarshal(b, &job)
 
 	if err != nil {
 		return nil, fmt.Errorf("error unmarshalling task args: %w", err)
 	}
 
-	taskFor := task.TaskFor()
+	owner := job.Owner()
 
 	// Check if task pertains to this clusters shard
-	if taskFor.TargetType == splashcore.TargetTypeUser && state.Shard != 0 {
+	if owner.TargetType == splashcore.TargetTypeUser && state.Shard != 0 {
 		return nil, fmt.Errorf("task is not for this shard [user tasks must run on shard 0]")
 	} else {
-		taskShard, err := mewext.GetShardIDFromGuildID(taskFor.ID, int(state.ShardCount))
+		taskShard, err := mewext.GetShardIDFromGuildID(owner.ID, int(state.ShardCount))
 
 		if err != nil {
 			state.Logger.Error("Failed to get shard id from guild id", zap.Error(err))
@@ -90,40 +90,40 @@ func SpawnTask(spawnTask rpc_messages.SpawnTask) (*rpc_messages.SpawnTaskRespons
 	// Validate task
 	ctx, cancel := context.WithTimeout(state.Context, DefaultValidationTimeout)
 	defer cancel()
-	err = task.Validate(jobrunner.TaskState{
+	err = job.Validate(jobrunner.State{
 		Ctx: ctx,
 	})
 
 	if err != nil {
-		return nil, fmt.Errorf("failed to validate task: %w", err)
+		return nil, fmt.Errorf("failed to validate job: %w", err)
 	}
 
 	// Create task
-	var taskId string
-	if spawnTask.Create {
-		tid, err := jobrunner.CreateTask(state.Context, state.Pool, task)
+	var id string
+	if spawn.Create {
+		tid, err := jobrunner.Create(state.Context, state.Pool, job)
 
 		if err != nil {
 			return nil, fmt.Errorf("error creating task: %w", err)
 		}
 
-		taskId = *tid
+		id = *tid
 	} else {
-		if spawnTask.ID == "" {
-			return nil, fmt.Errorf("task id must be set if SpawnTask.Create is false")
+		if spawn.ID == "" {
+			return nil, fmt.Errorf("task id must be set if spawn.Create is false")
 		}
 
-		taskId = spawnTask.ID
+		id = spawn.ID
 	}
 
 	// Execute task
-	if spawnTask.Execute {
+	if spawn.Execute {
 		ctx, cancel := context.WithTimeout(state.Context, DefaultTimeout)
-		go jobrunner.ExecuteTask(ctx, cancel, taskId, task, nil)
+		go jobrunner.Execute(ctx, cancel, id, job, nil)
 	}
 
 	return &rpc_messages.SpawnTaskResponse{
-		ID: taskId,
+		ID: id,
 	}, nil
 }
 
@@ -137,9 +137,9 @@ func Resume() {
 		panic("Failed to delete ancient ongoing_jobs")
 	}
 
-	state.Logger.Info("Looking for tasks to resume")
+	state.Logger.Info("Looking for jobs to resume")
 
-	var taskId string
+	var id string
 	var data map[string]any
 	var initialOpts map[string]any
 	var createdAt time.Time
@@ -154,7 +154,7 @@ func Resume() {
 	defer rows.Close()
 
 	for rows.Next() {
-		err = rows.Scan(&taskId, &data, &initialOpts, &createdAt)
+		err = rows.Scan(&id, &data, &initialOpts, &createdAt)
 
 		if err != nil {
 			state.Logger.Error("Failed to scan task", zap.Error(err))
@@ -162,10 +162,10 @@ func Resume() {
 		}
 
 		// Select the task from the task db
-		row, err := state.Pool.Query(state.Context, "SELECT "+taskColsStr+" FROM tasks WHERE id = $1", taskId)
+		row, err := state.Pool.Query(state.Context, "SELECT "+taskColsStr+" FROM tasks WHERE id = $1", id)
 
 		if errors.Is(err, pgx.ErrNoRows) {
-			state.Logger.Error("Task not found", zap.String("id", taskId))
+			state.Logger.Error("Task not found", zap.String("id", id))
 			continue
 		}
 
@@ -179,7 +179,7 @@ func Resume() {
 		t, err := pgx.CollectOneRow(row, pgx.RowToAddrOfStructByName[types.Task])
 
 		if errors.Is(err, pgx.ErrNoRows) {
-			state.Logger.Error("Task not found", zap.String("id", taskId))
+			state.Logger.Error("Task not found", zap.String("id", id))
 			continue
 		}
 
@@ -199,33 +199,33 @@ func Resume() {
 		baseJobImpl, ok := jobs.JobImplRegistry[t.Name]
 
 		if !ok {
-			state.Logger.Error("Task not found in registry", zap.String("id", taskId))
+			state.Logger.Error("Task not found in registry", zap.String("id", id))
 			continue
 		}
 
-		tBytes, err := jsonimpl.Marshal(initialOpts)
+		b, err := jsonimpl.Marshal(initialOpts)
 
 		if err != nil {
-			state.Logger.Error("Failed to marshal task create opts", zap.Error(err))
+			state.Logger.Error("Failed to marshal job create opts", zap.Error(err))
 			continue
 		}
 
-		task := baseJobImpl // Copy task
+		job := baseJobImpl // Copy job
 
-		err = jsonimpl.Unmarshal(tBytes, &task)
+		err = jsonimpl.Unmarshal(b, &job)
 
 		if err != nil {
-			state.Logger.Error("Failed to unmarshal task create opts", zap.Error(err))
+			state.Logger.Error("Failed to unmarshal job create opts", zap.Error(err))
 			continue
 		}
 
-		taskFor := task.TaskFor()
+		owner := job.Owner()
 
 		// Check if task pertains to this clusters shard
-		if taskFor.TargetType == splashcore.TargetTypeUser && state.Shard != 0 {
+		if owner.TargetType == splashcore.TargetTypeUser && state.Shard != 0 {
 			continue
 		} else {
-			taskShard, err := mewext.GetShardIDFromGuildID(taskFor.ID, int(state.ShardCount))
+			taskShard, err := mewext.GetShardIDFromGuildID(owner.ID, int(state.ShardCount))
 
 			if err != nil {
 				state.Logger.Error("Failed to get shard id from guild id", zap.Error(err))
@@ -238,10 +238,10 @@ func Resume() {
 			}
 		}
 
-		// Validate task
+		// Validate
 		ctx, cancel := context.WithTimeout(state.Context, DefaultValidationTimeout)
 
-		err = task.Validate(jobrunner.TaskState{
+		err = job.Validate(jobrunner.State{
 			Ctx: ctx,
 		})
 
@@ -255,6 +255,6 @@ func Resume() {
 		// Execute task
 		ctx, cancel = context.WithTimeout(state.Context, DefaultTimeout)
 
-		go jobrunner.ExecuteTask(ctx, cancel, taskId, task, nil)
+		go jobrunner.Execute(ctx, cancel, id, job, nil)
 	}
 }

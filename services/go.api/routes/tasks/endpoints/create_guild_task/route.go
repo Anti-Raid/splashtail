@@ -124,16 +124,16 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 		}
 	}
 
-	tBytes, err := io.ReadAll(r.Body)
+	b, err := io.ReadAll(r.Body)
 
 	if err != nil {
 		state.Logger.Error("Error reading body", zap.Error(err))
 		return uapi.DefaultResponse(http.StatusInternalServerError)
 	}
 
-	task := baseJobImpl // Copy task
+	job := baseJobImpl // Copy task
 
-	err = jsonimpl.Unmarshal(tBytes, &task)
+	err = jsonimpl.Unmarshal(b, &job)
 
 	if err != nil {
 		return uapi.HttpResponse{
@@ -146,7 +146,7 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 
 	// Check permissions
 	permLimits := api.PermLimits(d.Auth)
-	resp, ok := api.HandlePermissionCheck(d.Auth.ID, guildId, task.CorrespondingBotCommand_Create(), rpc_messages.RpcCheckCommandOptions{
+	resp, ok := api.HandlePermissionCheck(d.Auth.ID, guildId, job.CorrespondingBotCommand_Create(), rpc_messages.RpcCheckCommandOptions{
 		CustomResolvedKittycatPerms: permLimits,
 	})
 
@@ -156,7 +156,7 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 
 	var data map[string]any
 
-	err = jsonimpl.Unmarshal(tBytes, &data)
+	err = jsonimpl.Unmarshal(b, &data)
 
 	if err != nil {
 		return uapi.HttpResponse{

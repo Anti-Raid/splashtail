@@ -163,7 +163,7 @@ func main() {
 
 		// WARN if not runnable
 		if !localPresets.Runnable {
-			fmt.Println("WARNING: Task", task.Name(), "is not officially runnable yet")
+			fmt.Println("WARNING: Job", task.Name(), "is not officially runnable yet")
 		}
 
 		// Because yaml doesnt properly handle presets, we have to use reflection to convert it to a map then yaml it
@@ -276,7 +276,7 @@ func main() {
 	}
 
 	// Setup state
-	taskState := lib.TaskState{
+	state := lib.State{
 		HttpTransport: func() *http.Transport {
 			transport := http.Transport{}
 			transport.RegisterProtocol("file", http.NewFileTransport(http.Dir("/")))
@@ -338,13 +338,13 @@ func main() {
 					}
 
 					fmt.Println("Flags:", flags)
-					fmt.Println("Task:", name)
+					fmt.Println("Name:", name)
 
 					// Find in task registry
 					taskDef, ok := jobs.JobImplRegistry[name]
 
 					if !ok {
-						fmt.Println("ERROR: Task not found!")
+						fmt.Println("ERROR: Job not found!")
 						os.Exit(1)
 					}
 
@@ -415,9 +415,9 @@ func main() {
 
 					taskId := "local-" + crypto.RandString(32)
 
-					fmt.Println("Task ID:", taskId)
+					fmt.Println("ID:", taskId)
 
-					l, _ := lib.NewLocalTaskLogger(taskId, logger)
+					l, _ := lib.NewLocalLogger(taskId, logger)
 
 					go func() {
 						for {
@@ -427,20 +427,20 @@ func main() {
 								cancelFunc() // Just in case
 								os.Exit(1)
 							case <-time.After(time.Second * 30):
-								fmt.Println("REMINDER: Task state is currently:", taskState)
+								fmt.Println("REMINDER: Job state is currently:", state)
 							}
 						}
 					}()
 
 					err = lib.ExecuteJobLocal(prefixDir, taskId, l, taskDef, lib.TaskLocalOpts{
 						OnStateChange: func(state string) error {
-							fmt.Println("INFO: Task state has changed to:", state)
+							fmt.Println("INFO: Job state has changed to:", state)
 							return nil
 						},
-					}, taskState)
+					}, state)
 
 					if err != nil {
-						fmt.Println("ERROR: Failed to execute task:", err.Error())
+						fmt.Println("ERROR: Failed to execute job:", err.Error())
 						os.Exit(1)
 					}
 				},

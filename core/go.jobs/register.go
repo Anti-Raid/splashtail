@@ -15,7 +15,7 @@ func RegisterJobImpl(jobImpl interfaces.JobImpl) {
 
 // Add all jobs here
 func init() {
-	RegisterJobImpl(&backups.ServerBackupCreateTask{})
-	RegisterJobImpl(&backups.ServerBackupRestoreTask{})
-	RegisterJobImpl(&moderation.MessagePruneTask{})
+	RegisterJobImpl(&backups.ServerBackupCreate{})
+	RegisterJobImpl(&backups.ServerBackupRestore{})
+	RegisterJobImpl(&moderation.MessagePrune{})
 }

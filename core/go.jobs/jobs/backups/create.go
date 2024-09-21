@@ -340,19 +340,19 @@ func writeMsgpack(f *iblfile.AutoEncryptedFile_FullFile, section string, data an
 	return f.WriteSection(&buf, section)
 }
 
-// A task to create backup a server
-type ServerBackupCreateTask struct {
+// A job to create backup a server
+type ServerBackupCreate struct {
 	// The ID of the server
 	ServerID string
 
-	// Constraints, this is auto-set by the task in jobserver and hence not configurable in this mode.
+	// Constraints, this is auto-set by the job on jobserver and hence not configurable in this mode.
 	Constraints *BackupConstraints
 
 	// Backup options
 	Options BackupCreateOpts
 }
 
-func (t *ServerBackupCreateTask) Fields() map[string]any {
+func (t *ServerBackupCreate) Fields() map[string]any {
 	opts := t.Options
 	opts.Encrypt = "" // Clear encryption key
 
@@ -363,15 +363,15 @@ func (t *ServerBackupCreateTask) Fields() map[string]any {
 	}
 }
 
-func (t *ServerBackupCreateTask) Expiry() *time.Duration {
+func (t *ServerBackupCreate) Expiry() *time.Duration {
 	return nil
 }
 
-func (t *ServerBackupCreateTask) Resumable() bool {
+func (t *ServerBackupCreate) Resumable() bool {
 	return false
 }
 
-func (t *ServerBackupCreateTask) Validate(state jobstate.State) error {
+func (t *ServerBackupCreate) Validate(state jobstate.State) error {
 	if t.ServerID == "" {
 		return fmt.Errorf("server_id is required")
 	}
@@ -418,26 +418,26 @@ func (t *ServerBackupCreateTask) Validate(state jobstate.State) error {
 	// Check current backup concurrency
 	count, _ := concurrentBackupState.LoadOrStore(t.ServerID, 0)
 
-	if count >= t.Constraints.MaxServerBackupTasks {
-		return fmt.Errorf("you already have more than %d backup-related tasks in progress, please wait for it to finish", t.Constraints.MaxServerBackupTasks)
+	if count >= t.Constraints.MaxServerBackups {
+		return fmt.Errorf("you already have more than %d backup-related jobs in progress, please wait for it to finish", t.Constraints.MaxServerBackups)
 	}
 
 	return nil
 }
 
-func (t *ServerBackupCreateTask) Exec(
+func (t *ServerBackupCreate) Exec(
 	l *zap.Logger,
 	state jobstate.State,
 	progstate jobstate.ProgressState,
-) (*types.TaskOutput, error) {
+) (*types.Output, error) {
 	discord, botUser, _ := state.Discord()
 	ctx := state.Context()
 
 	// Check current backup concurrency
 	count, _ := concurrentBackupState.LoadOrStore(t.ServerID, 0)
 
-	if count >= t.Constraints.MaxServerBackupTasks {
-		return nil, fmt.Errorf("you already have more than %d backup-related tasks in progress, please wait for it to finish", t.Constraints.MaxServerBackupTasks)
+	if count >= t.Constraints.MaxServerBackups {
+		return nil, fmt.Errorf("you already have more than %d backup-related jobs in progress, please wait for it to finish", t.Constraints.MaxServerBackups)
 	}
 
 	concurrentBackupState.Store(t.ServerID, count+1)
@@ -719,39 +719,39 @@ func (t *ServerBackupCreateTask) Exec(
 		return nil, fmt.Errorf("error writing backup: %w", err)
 	}
 
-	return &types.TaskOutput{
+	return &types.Output{
 		Filename: fmt.Sprintf("antiraid-backup-%s.iblfile", time.Now().Format("2006-01-02-15-04-05")),
 		Buffer:   &outputBuf,
 	}, nil
 }
 
-func (t *ServerBackupCreateTask) CorrespondingBotCommand_Create() string {
+func (t *ServerBackupCreate) CorrespondingBotCommand_Create() string {
 	return "backups create"
 }
 
-func (t *ServerBackupCreateTask) CorrespondingBotCommand_View() string {
+func (t *ServerBackupCreate) CorrespondingBotCommand_View() string {
 	return "backups list"
 }
 
-func (t *ServerBackupCreateTask) CorrespondingBotCommand_Download() string {
+func (t *ServerBackupCreate) CorrespondingBotCommand_Download() string {
 	return "backups list"
 }
 
-func (t *ServerBackupCreateTask) Name() string {
+func (t *ServerBackupCreate) Name() string {
 	return "guild_create_backup"
 }
 
-func (t *ServerBackupCreateTask) TaskFor() *types.TaskFor {
-	return &types.TaskFor{
+func (t *ServerBackupCreate) Owner() *types.Owner {
+	return &types.Owner{
 		ID:         t.ServerID,
 		TargetType: splashcore.TargetTypeServer,
 	}
 }
 
-func (t *ServerBackupCreateTask) LocalPresets() *interfaces.PresetInfo {
+func (t *ServerBackupCreate) LocalPresets() *interfaces.PresetInfo {
 	return &interfaces.PresetInfo{
 		Runnable: true,
-		Preset: &ServerBackupCreateTask{
+		Preset: &ServerBackupCreate{
 			ServerID: "{{.Args.ServerID}}",
 			Constraints: &BackupConstraints{
 				Create: &BackupCreateConstraints{
@@ -762,8 +762,8 @@ func (t *ServerBackupCreateTask) LocalPresets() *interfaces.PresetInfo {
 					JpegReencodeQuality:       85,
 					GuildAssetReencodeQuality: 85,
 				},
-				MaxServerBackupTasks: 1,
-				FileType:             "backup.server",
+				MaxServerBackups: 1,
+				FileType:         "backup.server",
 			},
 			Options: BackupCreateOpts{
 				MaxMessages:               500,
@@ -777,7 +777,7 @@ func (t *ServerBackupCreateTask) LocalPresets() *interfaces.PresetInfo {
 			},
 		},
 		Comments: map[string]string{
-			"Constraints.MaxServerBackupTasks":            "Only 1 backup task should be running at any given time locally",
+			"Constraints.MaxServerBackups":                "Only 1 backup job should be running at any given time locally",
 			"Constraints.FileType":                        "The file type of the backup, you probably don't want to change this",
 			"Constraints.Create.TotalMaxMessages":         "Since this is a local job, we can afford to be more generous",
 			"Constraints.Create.FileSizeWarningThreshold": "100MB is used as default as we can be more generous with storage locally",

@@ -14,10 +14,10 @@ import (
 	"golang.org/x/text/language"
 )
 
-// Formats a TaskFor into a string under the 'normal' type. Returns nil if the TaskFor is nil or has an invalid target type
-func FormatTaskFor(fu *types.TaskFor) (*string, error) {
+// Formats a Owner into a string under the 'normal' type. Returns nil if the Owner is nil or has an invalid target type
+func FormatOwner(fu *types.Owner) (*string, error) {
 	if fu == nil {
-		return nil, errors.New("formattaskfor: task for is nil")
+		return nil, errors.New("formatowner: jobs is nil")
 	}
 
 	switch fu.TargetType {
@@ -26,14 +26,14 @@ func FormatTaskFor(fu *types.TaskFor) (*string, error) {
 	case splashcore.TargetTypeServer:
 		return utils.Pointer("g/" + fu.ID), nil
 	default:
-		return nil, fmt.Errorf("formattaskfor: invalid target type: %s", fu.TargetType)
+		return nil, fmt.Errorf("formatjobs: invalid target type: %s", fu.TargetType)
 	}
 }
 
-// Parses a TaskFor from a string. Returns nil if the string is invalid.
+// Parses a Owner from a string. Returns nil if the string is invalid.
 //
-// TaskFor must be in 'normal' (not simplex) form (e.g: u/1234567890).
-func ParseTaskFor(fu string) *types.TaskFor {
+// Owner must be in 'normal' (not simplex) form (e.g: u/1234567890).
+func ParseOwner(fu string) *types.Owner {
 	fuSplit := strings.SplitN(fu, "/", 2)
 
 	if len(fuSplit) != 2 {
@@ -42,12 +42,12 @@ func ParseTaskFor(fu string) *types.TaskFor {
 
 	switch fuSplit[0] {
 	case "u":
-		return &types.TaskFor{
+		return &types.Owner{
 			TargetType: splashcore.TargetTypeUser,
 			ID:         fuSplit[1],
 		}
 	case "g":
-		return &types.TaskFor{
+		return &types.Owner{
 			TargetType: splashcore.TargetTypeServer,
 			ID:         fuSplit[1],
 		}
@@ -59,7 +59,7 @@ func ParseTaskFor(fu string) *types.TaskFor {
 // Formats in 'simplex' form (e.g: user/1234567890).
 //
 // This is mainly used for Object Storage and should NEVER be used for anything else especially database operations
-func FormatTaskForSimplex(fu *types.TaskFor) string {
+func FormatOwnerSimplex(fu *types.Owner) string {
 	if fu == nil {
 		return ""
 	}
@@ -67,9 +67,9 @@ func FormatTaskForSimplex(fu *types.TaskFor) string {
 	return cases.Lower(language.English).String(fu.TargetType) + "/" + fu.ID
 }
 
-func GetPathFromOutput(id string, jobImpl interfaces.JobImpl, outp *types.TaskOutput) string {
+func GetPathFromOutput(id string, jobImpl interfaces.JobImpl, outp *types.Output) string {
 	if outp.Segregated {
-		return fmt.Sprintf("%s/%s/%s/%s", FormatTaskForSimplex(jobImpl.TaskFor()), jobImpl.Name(), id, outp.Filename)
+		return fmt.Sprintf("%s/%s/%s/%s", FormatOwnerSimplex(jobImpl.Owner()), jobImpl.Name(), id, outp.Filename)
 	} else {
 		return fmt.Sprintf("jobs/%s", id)
 	}

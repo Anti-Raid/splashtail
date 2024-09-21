@@ -10,7 +10,7 @@ import (
 )
 
 // Implementor of jobstate.State
-type TaskState struct {
+type State struct {
 	HttpTransport *http.Transport
 	DiscordSess   *discordgo.Session
 	BotUser       *discordgo.User
@@ -18,35 +18,35 @@ type TaskState struct {
 	ContextUse    context.Context
 }
 
-func (ts TaskState) Transport() *http.Transport {
+func (ts State) Transport() *http.Transport {
 	return ts.HttpTransport
 }
 
-func (TaskState) OperationMode() string {
+func (State) OperationMode() string {
 	return "localjobs"
 }
 
-func (ts TaskState) Discord() (*discordgo.Session, *discordgo.User, bool) {
+func (ts State) Discord() (*discordgo.Session, *discordgo.User, bool) {
 	return ts.DiscordSess, ts.BotUser, false
 }
 
-func (ts TaskState) DebugInfo() *debug.BuildInfo {
+func (ts State) DebugInfo() *debug.BuildInfo {
 	return ts.DebugInfoData
 }
 
-func (ts TaskState) Context() context.Context {
+func (ts State) Context() context.Context {
 	return ts.ContextUse
 }
 
-type TaskProgress struct{}
+type Progress struct{}
 
-func (ts TaskProgress) GetProgress() (*jobstate.Progress, error) {
+func (ts Progress) GetProgress() (*jobstate.Progress, error) {
 	return &jobstate.Progress{
 		State: "",
 		Data:  map[string]any{},
 	}, nil
 }
 
-func (ts TaskProgress) SetProgress(prog *jobstate.Progress) error {
+func (ts Progress) SetProgress(prog *jobstate.Progress) error {
 	return nil
 }

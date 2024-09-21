@@ -36,10 +36,10 @@ func JobserverRpcServer() {
 		}
 
 		// Spawn task
-		resp, err := core.SpawnTask(spawnTask)
+		resp, err := core.Spawn(spawnTask)
 
 		if err != nil {
-			http.Error(w, fmt.Sprintf("Error spawning task: %s", err), http.StatusInternalServerError)
+			http.Error(w, fmt.Sprintf("Error spawning job: %s", err), http.StatusInternalServerError)
 			return
 		}
 

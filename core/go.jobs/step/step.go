@@ -1,7 +1,7 @@
-// In many cases such as restoring backups, tasks can be quite complex
+// In many cases such as restoring backups, jobs can be quite complex
 // and should/can be broken down into smaller steps
 //
-// Step is an utility structure that allows breaking down tasks complete with persist support
+// Step is an utility structure that allows breaking down jobs complete with persist support
 package step
 
 import (
@@ -71,11 +71,11 @@ func (s *Stepper[T]) StepIndex(state string) int {
 
 // Exec executes all steps, skipping over steps with a lower index
 func (s *Stepper[T]) Exec(
-	task *T,
+	self *T,
 	l *zap.Logger,
 	state jobstate.State,
 	progstate jobstate.ProgressState,
-) (*types.TaskOutput, error) {
+) (*types.Output, error) {
 	curProg, err := progstate.GetProgress()
 
 	if err != nil {
@@ -107,7 +107,7 @@ func (s *Stepper[T]) Exec(
 		if curProg.State == "" || curProg.State == step.State || step.Index >= s.StepIndex(curProg.State) {
 			l.Info("[" + strconv.Itoa(step.Index) + "] Executing step '" + step.State + "'")
 
-			outp, prog, err := step.Exec(task, l, state, progstate, curProg)
+			outp, prog, err := step.Exec(self, l, state, progstate, curProg)
 
 			if err != nil {
 				return nil, err
@@ -153,7 +153,7 @@ func (s *Stepper[T]) Exec(
 				}
 			}
 		} else {
-			l.Info("[" + strconv.Itoa(step.Index) + "] Skipping step '" + step.State + "' [resuming task?]")
+			l.Info("[" + strconv.Itoa(step.Index) + "] Skipping step '" + step.State + "' [resuming job?]")
 		}
 	}
 
@@ -167,16 +167,13 @@ type Step[T any] struct {
 	// Steps may however have an equal index in which case the step that is first in the array is first executed
 	Index int
 
-	// Exec will either return the task output which ends the task
-	// or a task progress telling the new progress of the task
+	// Exec will either return the output and/which ends the job, the new progress for the job
 	// or an error to quickly abort the stepping
-	//
-	// After finishing the task
 	Exec func(
-		t *T,
+		self *T,
 		l *zap.Logger,
 		state jobstate.State,
 		progstate jobstate.ProgressState,
 		progress *jobstate.Progress,
-	) (*types.TaskOutput, *jobstate.Progress, error)
+	) (*types.Output, *jobstate.Progress, error)
 }

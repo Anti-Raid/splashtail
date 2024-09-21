@@ -9,10 +9,10 @@ import (
 	"go.jobs/interfaces"
 )
 
-// Sets up a task
-func CreateTask(ctx context.Context, pool *pgxpool.Pool, jobImpl interfaces.JobImpl) (*string, error) {
+// Sets up a job
+func Create(ctx context.Context, pool *pgxpool.Pool, jobImpl interfaces.JobImpl) (*string, error) {
 	name := jobImpl.Name()
-	taskFor := jobImpl.TaskFor()
+	owner := jobImpl.Owner()
 
 	_, ok := jobs.JobImplRegistry[jobImpl.Name()]
 
@@ -31,15 +31,15 @@ func CreateTask(ctx context.Context, pool *pgxpool.Pool, jobImpl interfaces.JobI
 	//nolint:errcheck
 	defer tx.Rollback(ctx)
 
-	taskForStr, err := jobs.FormatTaskFor(taskFor)
+	ownerStr, err := jobs.FormatOwner(owner)
 
 	if err != nil {
-		return nil, fmt.Errorf("failed to format task_for: %w", err)
+		return nil, fmt.Errorf("failed to format owner: %w", err)
 	}
 
-	err = tx.QueryRow(ctx, "INSERT INTO tasks (name, task_for, expiry, output, fields, resumable) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id",
+	err = tx.QueryRow(ctx, "INSERT INTO tasks (name, owner, expiry, output, fields, resumable) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id",
 		name,
-		taskForStr,
+		ownerStr,
 		jobImpl.Expiry(),
 		nil,
 		jobImpl.Fields(),

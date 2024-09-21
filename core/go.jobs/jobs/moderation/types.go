@@ -20,8 +20,8 @@ type MessagePruneConstraints struct {
 }
 
 type ModerationConstraints struct {
-	MessagePrune             *MessagePruneConstraints
-	MaxServerModerationTasks int // How many moderation tasks can run concurrently per server
+	MessagePrune        *MessagePruneConstraints
+	MaxServerModeration int // How many moderation related jobs can run concurrently per server
 }
 
 var FreePlanModerationConstraints = &ModerationConstraints{
@@ -29,5 +29,5 @@ var FreePlanModerationConstraints = &ModerationConstraints{
 		TotalMaxMessages: 1000,
 		MinPerChannel:    10,
 	},
-	MaxServerModerationTasks: 5,
+	MaxServerModeration: 5,
 }

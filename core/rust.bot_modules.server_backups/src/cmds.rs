@@ -570,7 +570,7 @@ pub async fn backups_list(ctx: Context<'_>) -> Result<(), Error> {
                 let task = &backup_tasks[index];
 
                 let url = {
-                    if task.format_task_for_simplex() != format!("g/{}", guild_id) {
+                    if task.format_owner_simplex() != format!("g/{}", guild_id) {
                         return Err("Backup task is not for this guild".into());
                     }
 
@@ -578,7 +578,7 @@ pub async fn backups_list(ctx: Context<'_>) -> Result<(), Error> {
                         return Err("Failed to get backup path".into());
                     };
 
-                    format!("task:///{}", path)
+                    format!("job:///{}", path)
                 };
 
                 let mut base_message = ctx
@@ -1130,7 +1130,7 @@ pub async fn backups_restore(
                 .await
                 .map_err(|e| format!("Failed to get backup task: {}", e))?;
 
-            if task.format_task_for_simplex() != format!("g/{}", guild_id) {
+            if task.format_owner_simplex() != format!("g/{}", guild_id) {
                 return Err("Backup task is not for this guild".into());
             }
 
@@ -1138,7 +1138,7 @@ pub async fn backups_restore(
                 return Err("Failed to get backup path".into());
             };
 
-            format!("task:///{}", path)
+            format!("job:///{}", path)
         }
     };
 

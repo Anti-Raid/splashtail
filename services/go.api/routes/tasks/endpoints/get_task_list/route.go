@@ -51,7 +51,7 @@ func Docs() *docs.Doc {
 				Schema:      docs.IdSchema,
 			},
 		},
-		Resp: jobtypes.TaskListResponse{},
+		Resp: jobtypes.JobListResponse{},
 	}
 }
 
@@ -141,6 +141,6 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 
 	return uapi.HttpResponse{
 		Status: http.StatusOK,
-		Json:   jobtypes.TaskListResponse{Tasks: parsedTasks},
+		Json:   jobtypes.JobListResponse{Jobs: parsedTasks},
 	}
 }

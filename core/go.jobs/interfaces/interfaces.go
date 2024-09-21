@@ -14,43 +14,43 @@ type JobImpl interface {
 	// Name returns the name of the job
 	Name() string
 
-	// TaskFor returns who the job is for
-	TaskFor() *types.TaskFor
+	// Owner returns who the job is for
+	Owner() *types.Owner
 
 	// As jobs often deal with sensitive data such as secrets, the Fields method returns
 	// a map of fields that can be stored in the database
 	Fields() map[string]any
 
-	// Validate validates the task and sets up state if needed
+	// Validate validates and sets up state if needed
 	Validate(state jobstate.State) error
 
-	// Exec executes the task returning an output if any
-	Exec(l *zap.Logger, state jobstate.State, progstate jobstate.ProgressState) (*types.TaskOutput, error)
+	// Exec executes the job returning an output if any
+	Exec(l *zap.Logger, state jobstate.State, progstate jobstate.ProgressState) (*types.Output, error)
 
-	// Expiry returns when the task will expire (if any), setting this to nil will make the task not expire
+	// Expiry returns when the job will expire (if any), setting this to nil will make the job not expire
 	Expiry() *time.Duration
 
-	// Resumable returns whether or not the task is resumable
+	// Resumable returns whether or not the job is resumable
 	Resumable() bool
 
-	// CorrespondingBotCommand_View returns the bot command that should be checked for ACL purposes to list/view such a task
+	// CorrespondingBotCommand_View returns the bot command that should be checked for ACL purposes to list/view the job
 	CorrespondingBotCommand_View() string
 
-	// CorrespondingBotCommand_Create returns the bot command that should be checked for ACL purposes to create such a task
+	// CorrespondingBotCommand_Create returns the bot command that should be checked for ACL purposes to create the job
 	CorrespondingBotCommand_Create() string
 
-	// CorrespondingBotCommand_Download returns the bot command that should be checked for ACL purposes to download such a task
+	// CorrespondingBotCommand_Download returns the bot command that should be checked for ACL purposes to download the job
 	CorrespondingBotCommand_Download() string
 
-	// LocalPresets returns the preset options of a task
+	// LocalPresets returns the preset options of a job
 	LocalPresets() *PresetInfo
 }
 
 type PresetInfo struct {
-	// Whether or not this task should be runnable
+	// Whether or not this job should be runnable
 	Runnable bool
 
-	// The default options/data of the task
+	// The default options/data
 	Preset JobImpl
 
 	// Any comments for specific fields

@@ -31,10 +31,10 @@ type BackupRestoreConstraints struct {
 }
 
 type BackupConstraints struct {
-	Create               *BackupCreateConstraints
-	Restore              *BackupRestoreConstraints
-	MaxServerBackupTasks int    // How many backup tasks can run concurrently per server
-	FileType             string // The file type to use for backups
+	Create           *BackupCreateConstraints
+	Restore          *BackupRestoreConstraints
+	MaxServerBackups int    // How many backup/restore jobs can run concurrently per server
+	FileType         string // The file type to use for backups
 }
 
 var FreePlanBackupConstraints = &BackupConstraints{
@@ -58,8 +58,8 @@ var FreePlanBackupConstraints = &BackupConstraints{
 		MaxBodySize:                100_000_000, // 100MB
 		TotalMaxAttachmentFileSize: 25_000_000,  // 25MB
 	},
-	MaxServerBackupTasks: 1,
-	FileType:             "backup.server",
+	MaxServerBackups: 1,
+	FileType:         "backup.server",
 }
 
 var allowedChannelTypes = []discordgo.ChannelType{
