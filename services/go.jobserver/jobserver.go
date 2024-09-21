@@ -31,7 +31,7 @@ import (
 
 func CreateJobServer() {
 	// Set state of all pending tasks to 'failed'
-	_, err := state.Pool.Exec(state.Context, "UPDATE job SET state = $1 WHERE state = $2", "failed", "pending")
+	_, err := state.Pool.Exec(state.Context, "UPDATE jobs SET state = $1 WHERE state = $2", "failed", "pending")
 
 	if err != nil {
 		panic(err)

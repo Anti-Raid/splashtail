@@ -148,7 +148,7 @@ func Execute(
 			erl.Error("Panic", zap.Any("err", err))
 			state.Logger.Error("Panic", zap.Any("err", err))
 
-			_, err := state.Pool.Exec(state.Context, "UPDATE job SET state = $1 WHERE id = $2", "failed", id)
+			_, err := state.Pool.Exec(state.Context, "UPDATE jobs SET state = $1 WHERE id = $2", "failed", id)
 
 			if err != nil {
 				l.Error("Failed to update job", zap.Error(err))
@@ -156,7 +156,7 @@ func Execute(
 		}
 
 		if !done {
-			_, err := state.Pool.Exec(state.Context, "UPDATE job SET state = $1 WHERE id = $2", "failed", id)
+			_, err := state.Pool.Exec(state.Context, "UPDATE jobs SET state = $1 WHERE id = $2", "failed", id)
 
 			if err != nil {
 				l.Error("Failed to update job", zap.Error(err))
@@ -191,7 +191,7 @@ func Execute(
 	}()
 
 	// Set state to running
-	_, err := state.Pool.Exec(state.Context, "UPDATE job SET state = $1 WHERE id = $2", "running", id)
+	_, err := state.Pool.Exec(state.Context, "UPDATE jobs SET state = $1 WHERE id = $2", "running", id)
 
 	if err != nil {
 		l.Error("Failed to update job", zap.Error(err))
@@ -244,7 +244,7 @@ func Execute(
 		}
 	}
 
-	_, err = state.Pool.Exec(state.Context, "UPDATE job SET output = $1, state = $2 WHERE id = $3", outp, currState, id)
+	_, err = state.Pool.Exec(state.Context, "UPDATE jobs SET output = $1, state = $2 WHERE id = $3", outp, currState, id)
 
 	if err != nil {
 		l.Error("Failed to update job", zap.Error(err))

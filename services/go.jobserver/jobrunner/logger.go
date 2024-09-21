@@ -39,7 +39,7 @@ func (m *MutLogger) add(p []byte) error {
 	}
 
 	// For us, this is just an array append of the json
-	_, err = m.pool.Exec(m.ctx, "UPDATE job SET statuses = array_append(statuses, $1), last_updated = NOW() WHERE id = $2", data, m.id)
+	_, err = m.pool.Exec(m.ctx, "UPDATE jobs SET statuses = array_append(statuses, $1), last_updated = NOW() WHERE id = $2", data, m.id)
 
 	if err != nil {
 		return fmt.Errorf("failed to update statuses: %w", err)
