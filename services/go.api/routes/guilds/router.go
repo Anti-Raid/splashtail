@@ -15,7 +15,7 @@ import (
 	"go.std/splashcore"
 )
 
-const tagName = "Users"
+const tagName = "Guilds"
 
 type Router struct{}
 
