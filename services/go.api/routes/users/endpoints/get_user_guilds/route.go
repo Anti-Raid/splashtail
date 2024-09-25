@@ -23,7 +23,7 @@ import (
 func Docs() *docs.Doc {
 	return &docs.Doc{
 		Summary:     "Get User Guilds",
-		Description: "This endpoint will return user information given their ID",
+		Description: "This endpoint will return all guilds the user is in along with information regarding whether the bot is in said guild",
 		Resp:        types.DashboardGuildData{},
 		Params: []docs.Parameter{
 			{
