@@ -1,11 +1,10 @@
-use futures_util::future::FutureExt;
 use module_settings::{
     data_stores::PostgresDataStore,
+    state::State,
     types::{
-        settings_wrap_columns, settings_wrap_datastore, settings_wrap_postactions,
-        settings_wrap_precheck, Column, ColumnAction, ColumnSuggestion, ColumnType, ConfigOption,
-        InnerColumnType, InnerColumnTypeStringKind, OperationSpecific, OperationType,
-        SettingsError,
+        settings_wrap, Column, ColumnSuggestion, ColumnType, ConfigOption, HookContext,
+        InnerColumnType, InnerColumnTypeStringKind, NoOpPostAction, NoOpValidator,
+        OperationSpecific, OperationType, PostAction, SettingDataValidator, SettingsError,
     },
 };
 use std::sync::LazyLock;
@@ -20,8 +19,8 @@ pub static CAN_USE_BOT: LazyLock<ConfigOption> = LazyLock::new(|| ConfigOption {
     primary_key: "id",
     max_entries: None,
     max_return: 15,
-    data_store: settings_wrap_datastore(PostgresDataStore {}),
-    columns: settings_wrap_columns(vec![
+    data_store: settings_wrap(PostgresDataStore {}),
+    columns: settings_wrap(vec![
         Column {
             id: "id",
             name: "ID",
@@ -37,8 +36,6 @@ pub static CAN_USE_BOT: LazyLock<ConfigOption> = LazyLock::new(|| ConfigOption {
             suggestions: ColumnSuggestion::None {},
             ignored_for: vec![],
             secret: false,
-            pre_checks: settings_wrap_precheck(indexmap::indexmap! {}),
-            default_pre_checks: settings_wrap_precheck(vec![]),
         },
         Column {
             id: "type",
@@ -55,8 +52,6 @@ pub static CAN_USE_BOT: LazyLock<ConfigOption> = LazyLock::new(|| ConfigOption {
             suggestions: ColumnSuggestion::None {},
             ignored_for: vec![],
             secret: false,
-            pre_checks: settings_wrap_precheck(indexmap::indexmap! {}),
-            default_pre_checks: settings_wrap_precheck(vec![]),
         },
         Column {
             id: "name",
@@ -73,8 +68,6 @@ pub static CAN_USE_BOT: LazyLock<ConfigOption> = LazyLock::new(|| ConfigOption {
             suggestions: ColumnSuggestion::None {},
             ignored_for: vec![],
             secret: false,
-            pre_checks: settings_wrap_precheck(indexmap::indexmap! {}),
-            default_pre_checks: settings_wrap_precheck(vec![]),
         },
         Column {
             id: "protected",
@@ -87,32 +80,6 @@ pub static CAN_USE_BOT: LazyLock<ConfigOption> = LazyLock::new(|| ConfigOption {
             suggestions: ColumnSuggestion::None {},
             ignored_for: vec![OperationType::Create, OperationType::Update],
             secret: false,
-            pre_checks: settings_wrap_precheck(indexmap::indexmap! {}),
-            default_pre_checks: settings_wrap_precheck(vec![ColumnAction::NativeAction {
-                action: Box::new(|ctx, state| {
-                    async move {
-                        if ctx.operation_type != OperationType::Update
-                            && ctx.operation_type != OperationType::Delete
-                        {
-                            return Ok(());
-                        }
-
-                        if let Some(splashcore_rs::value::Value::Boolean(true)) =
-                            state.state.get("protected")
-                        {
-                            return Err(SettingsError::Generic {
-                                message: "Cannot change protected entries".to_string(),
-                                src: "can_use_bot::protected".to_string(),
-                                typ: "internal".to_string(),
-                            });
-                        }
-
-                        Ok(())
-                    }
-                    .boxed()
-                }),
-                on_condition: None,
-            }]),
         },
         module_settings::common_columns::created_at(),
         module_settings::common_columns::created_by(),
@@ -146,13 +113,68 @@ pub static CAN_USE_BOT: LazyLock<ConfigOption> = LazyLock::new(|| ConfigOption {
             columns_to_set: indexmap::indexmap! {},
         },
     },
-    post_actions: settings_wrap_postactions(vec![ColumnAction::IpcPerModuleFunction {
-        module: "root",
-        function: "reset_can_use_bot_whitelist",
-        arguments: indexmap::indexmap! {},
-        on_condition: None,
-    }]),
+    validator: settings_wrap(CanUseBotValidator {}),
+    post_action: settings_wrap(CanUseBotPostAction {}),
 });
+
+/// Protect protected entries using a validator
+pub struct CanUseBotValidator;
+
+#[async_trait::async_trait]
+impl SettingDataValidator for CanUseBotValidator {
+    async fn validate<'a>(
+        &self,
+        ctx: HookContext<'a>,
+        state: &'a mut State,
+    ) -> Result<(), SettingsError> {
+        if ctx.operation_type == OperationType::View {
+            return Ok(());
+        }
+
+        if let Some(splashcore_rs::value::Value::Boolean(true)) = state.state.get("protected") {
+            return Err(SettingsError::Generic {
+                message: "Cannot change protected entries".to_string(),
+                src: "can_use_bot::protected".to_string(),
+                typ: "internal".to_string(),
+            });
+        }
+
+        Ok(())
+    }
+}
+
+/// Cache reset hook using post-action
+pub struct CanUseBotPostAction;
+
+#[async_trait::async_trait]
+impl PostAction for CanUseBotPostAction {
+    async fn post_action<'a>(
+        &self,
+        ctx: HookContext<'a>,
+        _state: &'a mut State,
+    ) -> Result<(), SettingsError> {
+        if ctx.operation_type == OperationType::View {
+            return Ok(());
+        }
+
+        ctx.data
+            .permodule_executor
+            .execute_permodule_function(
+                &ctx.data.cache_http,
+                "root",
+                "reset_can_use_bot_whitelist",
+                &indexmap::indexmap! {},
+            )
+            .await
+            .map_err(|e| SettingsError::Generic {
+                message: format!("Failed to reset can_use_bot whitelist: {}", e),
+                src: "can_use_bot::post_actions".to_string(),
+                typ: "internal".to_string(),
+            })?;
+
+        Ok(())
+    }
+}
 
 pub static INSPECTOR_FAKE_BOTS: LazyLock<ConfigOption> = LazyLock::new(|| ConfigOption {
     id: "inspector__fake_bots",
@@ -164,8 +186,8 @@ pub static INSPECTOR_FAKE_BOTS: LazyLock<ConfigOption> = LazyLock::new(|| Config
     primary_key: "bot_id",
     max_entries: None,
     max_return: 15,
-    data_store: settings_wrap_datastore(PostgresDataStore {}),
-    columns: settings_wrap_columns(vec![
+    data_store: settings_wrap(PostgresDataStore {}),
+    columns: settings_wrap(vec![
         Column {
             id: "bot_id",
             name: "Bot ID",
@@ -181,8 +203,6 @@ pub static INSPECTOR_FAKE_BOTS: LazyLock<ConfigOption> = LazyLock::new(|| Config
             suggestions: ColumnSuggestion::None {},
             ignored_for: vec![],
             secret: false,
-            pre_checks: settings_wrap_precheck(indexmap::indexmap! {}),
-            default_pre_checks: settings_wrap_precheck(vec![]),
         },
         Column {
             id: "name",
@@ -199,8 +219,6 @@ pub static INSPECTOR_FAKE_BOTS: LazyLock<ConfigOption> = LazyLock::new(|| Config
             suggestions: ColumnSuggestion::None {},
             ignored_for: vec![],
             secret: false,
-            pre_checks: settings_wrap_precheck(indexmap::indexmap! {}),
-            default_pre_checks: settings_wrap_precheck(vec![]),
         },
         Column {
             id: "official_bot_ids",
@@ -217,8 +235,6 @@ pub static INSPECTOR_FAKE_BOTS: LazyLock<ConfigOption> = LazyLock::new(|| Config
             suggestions: ColumnSuggestion::None {},
             ignored_for: vec![],
             secret: false,
-            pre_checks: settings_wrap_precheck(indexmap::indexmap! {}),
-            default_pre_checks: settings_wrap_precheck(vec![]),
         },
         module_settings::common_columns::created_at(),
         module_settings::common_columns::created_by(),
@@ -239,16 +255,13 @@ pub static INSPECTOR_FAKE_BOTS: LazyLock<ConfigOption> = LazyLock::new(|| Config
             suggestions: ColumnSuggestion::None {},
             ignored_for: vec![],
             secret: false,
-            pre_checks: settings_wrap_precheck(indexmap::indexmap! {}),
-            default_pre_checks: settings_wrap_precheck(vec![]),
         },
     ]),
     title_template: "{name} - {bot_id}",
     operations: indexmap::indexmap! {
         OperationType::View => OperationSpecific {
             corresponding_command: "sudo inspector__fake_bots_list",
-            columns_to_set: indexmap::indexmap! {
-            },
+            columns_to_set: indexmap::indexmap! {},
         },
         OperationType::Create => OperationSpecific {
             corresponding_command: "sudo inspector__fake_bots_create",
@@ -271,28 +284,35 @@ pub static INSPECTOR_FAKE_BOTS: LazyLock<ConfigOption> = LazyLock::new(|| Config
             columns_to_set: indexmap::indexmap! {},
         },
     },
-    post_actions: settings_wrap_postactions(vec![ColumnAction::NativeAction {
-        action: Box::new(|ctx, _state| {
-            async move {
-                if ctx.operation_type == OperationType::View {
-                    return Ok(());
-                }
-
-                bot_modules_inspector::cache::setup_fake_bots_cache(&ctx.data.pool)
-                    .await
-                    .map_err(|e| SettingsError::Generic {
-                        message: format!("Failed to setup fake bots cache: {}", e),
-                        src: "inspector__fake_bots::post_actions".to_string(),
-                        typ: "internal".to_string(),
-                    })?;
-
-                Ok(())
-            }
-            .boxed()
-        }),
-        on_condition: None,
-    }]),
+    post_action: settings_wrap(InspectorFakeBotsPostAction {}),
+    validator: settings_wrap(NoOpValidator {}),
 });
+
+/// Inspector Fake Bots Post Action
+pub struct InspectorFakeBotsPostAction;
+
+#[async_trait::async_trait]
+impl PostAction for InspectorFakeBotsPostAction {
+    async fn post_action<'a>(
+        &self,
+        ctx: HookContext<'a>,
+        _state: &'a mut State,
+    ) -> Result<(), SettingsError> {
+        if ctx.operation_type == OperationType::View {
+            return Ok(());
+        }
+
+        bot_modules_inspector::cache::setup_fake_bots_cache(&ctx.data.pool)
+            .await
+            .map_err(|e| SettingsError::Generic {
+                message: format!("Failed to setup fake bots cache: {}", e),
+                src: "inspector__fake_bots::post_actions".to_string(),
+                typ: "internal".to_string(),
+            })?;
+
+        Ok(())
+    }
+}
 
 pub static LAST_TASK_EXPIRY: LazyLock<ConfigOption> = LazyLock::new(|| ConfigOption {
     id: "last_task_expiry",
@@ -304,8 +324,8 @@ pub static LAST_TASK_EXPIRY: LazyLock<ConfigOption> = LazyLock::new(|| ConfigOpt
     primary_key: "id",
     max_entries: None,
     max_return: 15,
-    data_store: settings_wrap_datastore(PostgresDataStore {}),
-    columns: settings_wrap_columns(vec![
+    data_store: settings_wrap(PostgresDataStore {}),
+    columns: settings_wrap(vec![
         Column {
             id: "id",
             name: "ID",
@@ -316,8 +336,6 @@ pub static LAST_TASK_EXPIRY: LazyLock<ConfigOption> = LazyLock::new(|| ConfigOpt
             suggestions: ColumnSuggestion::None {},
             ignored_for: vec![OperationType::Create],
             secret: false,
-            pre_checks: settings_wrap_precheck(indexmap::indexmap! {}),
-            default_pre_checks: settings_wrap_precheck(vec![]),
         },
         Column {
             id: "task",
@@ -334,8 +352,6 @@ pub static LAST_TASK_EXPIRY: LazyLock<ConfigOption> = LazyLock::new(|| ConfigOpt
             suggestions: ColumnSuggestion::None {},
             ignored_for: vec![],
             secret: false,
-            pre_checks: settings_wrap_precheck(indexmap::indexmap! {}),
-            default_pre_checks: settings_wrap_precheck(vec![]),
         },
         module_settings::common_columns::created_at(),
     ]),
@@ -361,5 +377,6 @@ pub static LAST_TASK_EXPIRY: LazyLock<ConfigOption> = LazyLock::new(|| ConfigOpt
             columns_to_set: indexmap::indexmap! {},
         },
     },
-    post_actions: settings_wrap_postactions(vec![]),
+    post_action: settings_wrap(NoOpPostAction {}),
+    validator: settings_wrap(NoOpValidator {}),
 });

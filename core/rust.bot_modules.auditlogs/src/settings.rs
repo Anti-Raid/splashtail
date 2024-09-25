@@ -1,11 +1,13 @@
-use futures_util::future::FutureExt;
-use module_settings::types::{
-    settings_wrap_columns, settings_wrap_precheck, settings_wrap_postactions, settings_wrap_datastore, Column, ColumnAction, ColumnSuggestion, ColumnType, ConfigOption, InnerColumnType, InnerColumnTypeStringKind, InnerColumnTypeStringKindTemplateKind, ColumnTypeDynamicClause, OperationSpecific, OperationType, SettingsError
-};
 use module_settings::data_stores::PostgresDataStore;
-use std::sync::LazyLock;
+use module_settings::state::State;
+use module_settings::types::{
+    settings_wrap, Column, ColumnSuggestion, ColumnType, ColumnTypeDynamicClause, ConfigOption,
+    HookContext, InnerColumnType, InnerColumnTypeStringKind, InnerColumnTypeStringKindTemplateKind,
+    OperationSpecific, OperationType, PostAction, SettingDataValidator, SettingsError,
+};
 use serenity::all::{ChannelType, Permissions};
 use splashcore_rs::value::Value;
+use std::sync::LazyLock;
 
 pub static SINK: LazyLock<ConfigOption> = LazyLock::new(|| {
     ConfigOption {
@@ -20,8 +22,8 @@ pub static SINK: LazyLock<ConfigOption> = LazyLock::new(|| {
         primary_key: "id",
         max_return: 15,
         max_entries: Some(10),
-        data_store: settings_wrap_datastore(PostgresDataStore {}),
-        columns: settings_wrap_columns(vec![
+        data_store: settings_wrap(PostgresDataStore {}),
+        columns: settings_wrap(vec![
             Column {
                 id: "id",
                 name: "Sink ID",
@@ -32,8 +34,6 @@ pub static SINK: LazyLock<ConfigOption> = LazyLock::new(|| {
                 suggestions: ColumnSuggestion::None {},
                 ignored_for: vec![OperationType::Create],
                 secret: false,
-                pre_checks: settings_wrap_precheck(indexmap::indexmap! {}),
-                default_pre_checks: settings_wrap_precheck(vec![]),
             },
             module_settings::common_columns::guild_id("guild_id", "Guild ID", "The Guild ID the sink belongs to"),
             Column {
@@ -46,8 +46,6 @@ pub static SINK: LazyLock<ConfigOption> = LazyLock::new(|| {
                 suggestions: ColumnSuggestion::None {},
                 ignored_for: vec![],
                 secret: false,
-                pre_checks: settings_wrap_precheck(indexmap::indexmap! {}),
-                default_pre_checks: settings_wrap_precheck(vec![]),
             },
             Column {
                 id: "sink",
@@ -75,64 +73,6 @@ pub static SINK: LazyLock<ConfigOption> = LazyLock::new(|| {
                 suggestions: ColumnSuggestion::None {},
                 ignored_for: vec![],
                 secret: false,
-                pre_checks: settings_wrap_precheck(indexmap::indexmap! {}),
-                default_pre_checks: settings_wrap_precheck(vec![
-                    ColumnAction::NativeAction {
-                        action: Box::new(|_ctx, state| async move {
-                            let Some(Value::String(sink)) = state.state.get("sink") else {
-                                return Err(SettingsError::MissingOrInvalidField { 
-                                    field: "sink".to_string(),
-                                    src: "sink->NativeAction [default_pre_checks]".to_string(),
-                                });
-                            };
-    
-                            let Some(Value::String(typ)) = state.state.get("type") else {
-                                return Err(SettingsError::MissingOrInvalidField { 
-                                    field: "type".to_string(),
-                                    src: "sink->NativeAction [default_pre_checks]".to_string(),
-                                });
-                            };
-    
-                            if typ == "discordhook" {
-                                let sink_url = url::Url::parse(sink)
-                                .map_err(|e| SettingsError::SchemaCheckValidationError { 
-                                    column: "sink".to_string(),
-                                    check: "parse_webhook.parse_sink_to_url".to_string(),
-                                    error: e.to_string(),
-                                    accepted_range: "Valid Discord webhook URL".to_string()
-                                })?;    
-    
-                                if serenity::utils::parse_webhook(
-                                    &sink_url
-                                ).is_none() {
-                                    return Err(SettingsError::SchemaCheckValidationError { 
-                                        column: "sink".to_string(),
-                                        check: "parse_webhook.parse".to_string(),
-                                        error: "Discord webhook sinks must be a valid webhook URL".to_string(),
-                                        accepted_range: "Valid Discord webhook URL".to_string()
-                                    });
-                                }
-                            } else if typ == "channel" {
-                                sink.parse::<serenity::all::ChannelId>().map_err(|e| SettingsError::SchemaCheckValidationError {
-                                    column: "sink".to_string(),
-                                    check: "snowflake_parse".to_string(),
-                                    accepted_range: "Valid channel id".to_string(),
-                                    error: e.to_string(),
-                                })?;
-                            } else {
-                                return Err(SettingsError::SchemaCheckValidationError { 
-                                    column: "type".to_string(),
-                                    check: "parse_webhook.parse".to_string(),
-                                    error: "Invalid sink type".to_string(),
-                                    accepted_range: "Valid Discord webhook URL".to_string()
-                                });
-                            }
-    
-                            Ok(())
-                        }.boxed()),
-                        on_condition: None
-                    },
-                ])
             },
             Column {
                 id: "events",
@@ -144,19 +84,6 @@ pub static SINK: LazyLock<ConfigOption> = LazyLock::new(|| {
                 suggestions: ColumnSuggestion::Static { suggestions: gwevent::core::event_list().to_vec() },
                 ignored_for: vec![],
                 secret: false,
-                pre_checks: settings_wrap_precheck(indexmap::indexmap! {
-                    OperationType::View => vec![]
-                }),
-                default_pre_checks: settings_wrap_precheck(vec![
-                    ColumnAction::IpcPerModuleFunction {
-                        module: "auditlogs",
-                        function: "check_all_events",
-                        arguments: indexmap::indexmap! {
-                            "events" => "{events}"
-                        },
-                        on_condition: None
-                    }
-                ])
             },
             Column {
                 id: "embed_template",
@@ -169,8 +96,6 @@ pub static SINK: LazyLock<ConfigOption> = LazyLock::new(|| {
                 nullable: true,
                 unique: false,
                 suggestions: ColumnSuggestion::None {},
-                pre_checks: settings_wrap_precheck(indexmap::indexmap! {}),
-                default_pre_checks: settings_wrap_precheck(vec![])
             },
             Column {
                 id: "send_json_context",
@@ -182,8 +107,6 @@ pub static SINK: LazyLock<ConfigOption> = LazyLock::new(|| {
                 nullable: false,
                 unique: false,
                 suggestions: ColumnSuggestion::None {},
-                pre_checks: settings_wrap_precheck(indexmap::indexmap! {}),
-                default_pre_checks: settings_wrap_precheck(vec![])
             },
             Column {
                 id: "broken",
@@ -195,8 +118,6 @@ pub static SINK: LazyLock<ConfigOption> = LazyLock::new(|| {
                 nullable: false,
                 unique: false,
                 suggestions: ColumnSuggestion::None {},
-                pre_checks: settings_wrap_precheck(indexmap::indexmap! {}),
-                default_pre_checks: settings_wrap_precheck(vec![])
             },
             module_settings::common_columns::created_at(),
             module_settings::common_columns::created_by(),
@@ -230,18 +151,127 @@ pub static SINK: LazyLock<ConfigOption> = LazyLock::new(|| {
                 columns_to_set: indexmap::indexmap! {},
             },
         },
-        post_actions: settings_wrap_postactions(vec![ColumnAction::NativeAction {
-            action: Box::new(|ctx, _state| {
-                async move {
-                    super::cache::SINKS_CACHE
-                        .invalidate(&ctx.guild_id)
-                        .await;
-    
-                    Ok(())
-                }
-                .boxed()
-            }),
-            on_condition: Some(|ctx, _state| Ok(ctx.operation_type != OperationType::View)),
-        }]),
+        validator: settings_wrap(SinkValidator {}),
+        post_action: settings_wrap(ClearCachePostAction {}),
     }
 });
+
+/// Special validator for sinks
+pub struct SinkValidator;
+
+#[async_trait::async_trait]
+impl SettingDataValidator for SinkValidator {
+    async fn validate<'a>(
+        &self,
+        ctx: HookContext<'a>,
+        state: &'a mut State,
+    ) -> Result<(), SettingsError> {
+        // Ignore for View
+        if ctx.operation_type == OperationType::View {
+            return Ok(());
+        }
+
+        let Some(Value::String(sink)) = state.state.get("sink") else {
+            return Err(SettingsError::MissingOrInvalidField {
+                field: "sink".to_string(),
+                src: "sink->NativeAction [default_pre_checks]".to_string(),
+            });
+        };
+
+        let Some(Value::String(typ)) = state.state.get("type") else {
+            return Err(SettingsError::MissingOrInvalidField {
+                field: "type".to_string(),
+                src: "sink->NativeAction [default_pre_checks]".to_string(),
+            });
+        };
+
+        if typ == "discordhook" {
+            let sink_url =
+                url::Url::parse(sink).map_err(|e| SettingsError::SchemaCheckValidationError {
+                    column: "sink".to_string(),
+                    check: "parse_webhook.parse_sink_to_url".to_string(),
+                    error: e.to_string(),
+                    accepted_range: "Valid Discord webhook URL".to_string(),
+                })?;
+
+            if serenity::utils::parse_webhook(&sink_url).is_none() {
+                return Err(SettingsError::SchemaCheckValidationError {
+                    column: "sink".to_string(),
+                    check: "parse_webhook.parse".to_string(),
+                    error: "Discord webhook sinks must be a valid webhook URL".to_string(),
+                    accepted_range: "Valid Discord webhook URL".to_string(),
+                });
+            }
+        } else if typ == "channel" {
+            sink.parse::<serenity::all::ChannelId>().map_err(|e| {
+                SettingsError::SchemaCheckValidationError {
+                    column: "sink".to_string(),
+                    check: "snowflake_parse".to_string(),
+                    accepted_range: "Valid channel id".to_string(),
+                    error: e.to_string(),
+                }
+            })?;
+        } else {
+            return Err(SettingsError::SchemaCheckValidationError {
+                column: "type".to_string(),
+                check: "parse_webhook.parse".to_string(),
+                error: "Invalid sink type".to_string(),
+                accepted_range: "Valid Discord webhook URL".to_string(),
+            });
+        }
+
+        // Check the events next
+        let Some(Value::List(events_value)) = state.state.get("events") else {
+            return Err(SettingsError::MissingOrInvalidField {
+                field: "events".to_string(),
+                src: "SinkValidator".to_string(),
+            });
+        };
+
+        let mut events = Vec::new();
+
+        for event in events_value {
+            if let Value::String(event) = event {
+                events.push(event.clone());
+            } else {
+                return Err(SettingsError::SchemaCheckValidationError {
+                    column: "events".to_string(),
+                    check: "parse_webhook.parse".to_string(),
+                    error: "Invalid event type".to_string(),
+                    accepted_range: "String".to_string(),
+                });
+            }
+        }
+
+        super::checks::check_all_events(events).await.map_err(|e| {
+            SettingsError::SchemaCheckValidationError {
+                column: "events".to_string(),
+                check: "check_all_events".to_string(),
+                error: e.to_string(),
+                accepted_range: "Valid event".to_string(),
+            }
+        })?;
+
+        Ok(()) // TODO
+    }
+}
+
+/// Post action to clear the cache
+pub struct ClearCachePostAction;
+
+#[async_trait::async_trait]
+impl PostAction for ClearCachePostAction {
+    async fn post_action<'a>(
+        &self,
+        ctx: HookContext<'a>,
+        _state: &'a mut State,
+    ) -> Result<(), SettingsError> {
+        if ctx.operation_type == OperationType::View {
+            return Ok(());
+        }
+
+        super::cache::SINKS_CACHE.invalidate(&ctx.guild_id).await;
+
+        Ok(())
+    }
+}

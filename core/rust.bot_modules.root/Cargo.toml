@@ -10,6 +10,7 @@ poise = { git = "https://github.com/Anti-Raid/poise", branch = "serenity-next" }
 chrono = { version = "0.4", features = ["serde"]}
 futures-util = "0.3"
 indexmap = { version = "2", features = ["serde"] }
+async-trait = "0.1.80"
 
 # Anti-Raid specific
 silverpelt = { path = "../rust.silverpelt" }

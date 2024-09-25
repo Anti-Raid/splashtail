@@ -1,115 +1,121 @@
 use async_trait::async_trait;
-use futures_util::FutureExt;
 use module_settings::{
     data_stores::{PostgresDataStore, PostgresDataStoreImpl},
     types::{
-        settings_wrap_columns, settings_wrap_datastore, settings_wrap_postactions,
-        settings_wrap_precheck, Column, ColumnAction, ColumnSuggestion, ColumnType, ConfigOption,
+        settings_wrap, Column, ColumnSuggestion, ColumnType, ConfigOption,
         CreateDataStore, DataStore, InnerColumnType, InnerColumnTypeStringKind, OperationSpecific,
-        OperationType, SettingsData, SettingsError,
+        OperationType, SettingsData, SettingsError, NoOpValidator, NoOpPostAction, PostAction, HookContext
     },
+    state::State,
 };
 use splashcore_rs::value::Value;
 use std::sync::LazyLock;
 
 pub static LOCKDOWN_SETTINGS: LazyLock<ConfigOption> = LazyLock::new(|| {
     ConfigOption {
-    id: "lockdown_guilds",
-    name: "Lockdown Settings",
-    description: "Setup standard lockdown settings for a server",
-    table: "lockdown__guilds",
-    common_filters: indexmap::indexmap! {},
-    default_common_filters: indexmap::indexmap! {
-        "guild_id" => "{__guild_id}"
-    },
-    primary_key: "guild_id",
-    max_entries: Some(1),
-    max_return: 2,
-    data_store: settings_wrap_datastore(PostgresDataStore {}),
-    columns: settings_wrap_columns(vec![
-        module_settings::common_columns::guild_id(
-            "guild_id",
-            "Guild ID",
-            "Guild ID of the server in question",
-        ),
-        Column {
-            id: "member_roles",
-            name: "Member Roles",
-            description: "Which roles to use as member roles for the purpose of lockdown. These roles will be explicitly modified during lockdown",
-            column_type: ColumnType::new_array(InnerColumnType::String {
-                kind: InnerColumnTypeStringKind::Role,
-                min_length: None,
-                max_length: None,
-                allowed_values: vec![],
-            }),
-            nullable: false,
-            unique: false,
-            suggestions: ColumnSuggestion::None {},
-            ignored_for: vec![],
-            secret: false,
-            pre_checks: settings_wrap_precheck(indexmap::indexmap! {}),
-            default_pre_checks: settings_wrap_precheck(vec![]),
+        id: "lockdown_guilds",
+        name: "Lockdown Settings",
+        description: "Setup standard lockdown settings for a server",
+        table: "lockdown__guilds",
+        common_filters: indexmap::indexmap! {},
+        default_common_filters: indexmap::indexmap! {
+            "guild_id" => "{__guild_id}"
         },
-        Column {
-            id: "require_correct_layout",
-            name: "Require Correct Layout",
-            description: "Whether or not a lockdown can proceed even without correct critical role permissions. May lead to partial lockdowns if disabled",
-            column_type: ColumnType::new_scalar(InnerColumnType::Boolean {}),
-            nullable: false,
-            unique: true,
-            suggestions: ColumnSuggestion::None {},
-            ignored_for: vec![OperationType::Create],
-            secret: false,
-            pre_checks: settings_wrap_precheck(indexmap::indexmap! {}),
-            default_pre_checks: settings_wrap_precheck(vec![]),
-        },
-        module_settings::common_columns::created_at(),
-        module_settings::common_columns::created_by(),
-        module_settings::common_columns::last_updated_at(),
-        module_settings::common_columns::last_updated_by(),
-    ]),
-    title_template: "Lockdown Settings",
-    operations: indexmap::indexmap! {
-        OperationType::View => OperationSpecific {
-            corresponding_command: "lockdown_settings view",
-            columns_to_set: indexmap::indexmap! {},
-        },
-        OperationType::Create => OperationSpecific {
-            corresponding_command: "lockdown_settings create",
-            columns_to_set: indexmap::indexmap! {
-                "created_at" => "{__now}",
-                "created_by" => "{__author}",
-                "last_updated_at" => "{__now}",
-                "last_updated_by" => "{__author}",
+        primary_key: "guild_id",
+        max_entries: Some(1),
+        max_return: 2,
+        data_store: settings_wrap(PostgresDataStore {}),
+        columns: settings_wrap(vec![
+            module_settings::common_columns::guild_id(
+                "guild_id",
+                "Guild ID",
+                "Guild ID of the server in question",
+            ),
+            Column {
+                id: "member_roles",
+                name: "Member Roles",
+                description: "Which roles to use as member roles for the purpose of lockdown. These roles will be explicitly modified during lockdown",
+                column_type: ColumnType::new_array(InnerColumnType::String {
+                    kind: InnerColumnTypeStringKind::Role,
+                    min_length: None,
+                    max_length: None,
+                    allowed_values: vec![],
+                }),
+                nullable: false,
+                unique: false,
+                suggestions: ColumnSuggestion::None {},
+                ignored_for: vec![],
+                secret: false,
+            },
+            Column {
+                id: "require_correct_layout",
+                name: "Require Correct Layout",
+                description: "Whether or not a lockdown can proceed even without correct critical role permissions. May lead to partial lockdowns if disabled",
+                column_type: ColumnType::new_scalar(InnerColumnType::Boolean {}),
+                nullable: false,
+                unique: true,
+                suggestions: ColumnSuggestion::None {},
+                ignored_for: vec![OperationType::Create],
+                secret: false,
+            },
+            module_settings::common_columns::created_at(),
+            module_settings::common_columns::created_by(),
+            module_settings::common_columns::last_updated_at(),
+            module_settings::common_columns::last_updated_by(),
+        ]),
+        title_template: "Lockdown Settings",
+        operations: indexmap::indexmap! {
+            OperationType::View => OperationSpecific {
+                corresponding_command: "lockdown_settings view",
+                columns_to_set: indexmap::indexmap! {},
+            },
+            OperationType::Create => OperationSpecific {
+                corresponding_command: "lockdown_settings create",
+                columns_to_set: indexmap::indexmap! {
+                    "created_at" => "{__now}",
+                    "created_by" => "{__author}",
+                    "last_updated_at" => "{__now}",
+                    "last_updated_by" => "{__author}",
+                },
+            },
+            OperationType::Update => OperationSpecific {
+                corresponding_command: "lockdown_settings update",
+                columns_to_set: indexmap::indexmap! {
+                    "last_updated_at" => "{__now}",
+                    "last_updated_by" => "{__author}",
+                },
+            },
+            OperationType::Delete => OperationSpecific {
+                corresponding_command: "lockdown_settings delete",
+                columns_to_set: indexmap::indexmap! {},
             },
         },
-        OperationType::Update => OperationSpecific {
-            corresponding_command: "lockdown_settings update",
-            columns_to_set: indexmap::indexmap! {
-                "last_updated_at" => "{__now}",
-                "last_updated_by" => "{__author}",
-            },
-        },
-        OperationType::Delete => OperationSpecific {
-            corresponding_command: "lockdown_settings delete",
-            columns_to_set: indexmap::indexmap! {},
-        },
-    },
-    post_actions: settings_wrap_postactions(vec![ColumnAction::NativeAction {
-        action: Box::new(|ctx, _state| {
-            async move {
-                super::cache::GUILD_LOCKDOWN_SETTINGS
-                    .invalidate(&ctx.guild_id)
-                    .await;
-
-                Ok(())
-            }
-            .boxed()
-        }),
-        on_condition: Some(|ctx, _state| Ok(ctx.operation_type != OperationType::View)),
-    }]),
-}
+        validator: settings_wrap(NoOpValidator {}),
+        post_action: settings_wrap(NoOpPostAction {}),
+    }
 });
+
+/// Post actions for Lockdown Settings to clear cache
+pub struct LockdownSettingsPostActions;
+
+#[async_trait::async_trait]
+impl PostAction for LockdownSettingsPostActions {
+    async fn post_action<'a>(
+        &self,
+        ctx: HookContext<'a>,
+        _state: &'a mut State,
+    ) -> Result<(), SettingsError> {
+        if ctx.operation_type == OperationType::View {
+            return Ok(());
+        }
+        super::cache::GUILD_LOCKDOWN_SETTINGS
+            .invalidate(&ctx.guild_id)
+            .await;
+
+        Ok(())
+    }
+}
+
 
 pub static LOCKDOWNS: LazyLock<ConfigOption> = LazyLock::new(|| ConfigOption {
     id: "lockdowns",
@@ -123,8 +129,8 @@ pub static LOCKDOWNS: LazyLock<ConfigOption> = LazyLock::new(|| ConfigOption {
     primary_key: "id",
     max_entries: Some(1),
     max_return: 5,
-    data_store: settings_wrap_datastore(LockdownDataStore {}),
-    columns: settings_wrap_columns(vec![
+    data_store: settings_wrap(LockdownDataStore {}), // We use a custom data store here to make lockdown handling easier+more separate from settings
+    columns: settings_wrap(vec![
         Column {
             id: "id",
             name: "ID",
@@ -135,8 +141,6 @@ pub static LOCKDOWNS: LazyLock<ConfigOption> = LazyLock::new(|| ConfigOption {
             suggestions: ColumnSuggestion::None {},
             ignored_for: vec![OperationType::Create],
             secret: false,
-            pre_checks: settings_wrap_precheck(indexmap::indexmap! {}),
-            default_pre_checks: settings_wrap_precheck(vec![]),
         },
         module_settings::common_columns::guild_id(
             "guild_id",
@@ -158,8 +162,6 @@ pub static LOCKDOWNS: LazyLock<ConfigOption> = LazyLock::new(|| ConfigOption {
             suggestions: ColumnSuggestion::None {},
             ignored_for: vec![],
             secret: false,
-            pre_checks: settings_wrap_precheck(indexmap::indexmap! {}),
-            default_pre_checks: settings_wrap_precheck(vec![]),
         },
         Column {
             id: "data",
@@ -171,8 +173,6 @@ pub static LOCKDOWNS: LazyLock<ConfigOption> = LazyLock::new(|| ConfigOption {
             suggestions: ColumnSuggestion::None {},
             ignored_for: vec![OperationType::Create],
             secret: false,
-            pre_checks: settings_wrap_precheck(indexmap::indexmap! {}),
-            default_pre_checks: settings_wrap_precheck(vec![]),
         },
         Column {
             id: "reason",
@@ -189,14 +189,8 @@ pub static LOCKDOWNS: LazyLock<ConfigOption> = LazyLock::new(|| ConfigOption {
             suggestions: ColumnSuggestion::None {},
             ignored_for: vec![],
             secret: false,
-            pre_checks: settings_wrap_precheck(indexmap::indexmap! {}),
-            default_pre_checks: settings_wrap_precheck(vec![]),
         },
         module_settings::common_columns::created_at(),
-        /*module_settings::common_columns::created_at(),
-        module_settings::common_columns::created_by(),
-        module_settings::common_columns::last_updated_at(),
-        module_settings::common_columns::last_updated_by(),*/
     ]),
     title_template: "Reason: {reason}",
     operations: indexmap::indexmap! {
@@ -208,10 +202,6 @@ pub static LOCKDOWNS: LazyLock<ConfigOption> = LazyLock::new(|| ConfigOption {
             corresponding_command: "lockdown lock",
             columns_to_set: indexmap::indexmap! {
                 "created_at" => "{__now}",
-                /*"created_at" => "{__now}",
-                "created_by" => "{__author}",
-                "last_updated_at" => "{__now}",
-                "last_updated_by" => "{__author}",*/
             },
         },
         OperationType::Delete => OperationSpecific {
@@ -219,7 +209,8 @@ pub static LOCKDOWNS: LazyLock<ConfigOption> = LazyLock::new(|| ConfigOption {
             columns_to_set: indexmap::indexmap! {},
         }
     },
-    post_actions: settings_wrap_postactions(vec![]),
+    validator: settings_wrap(NoOpValidator {}),
+    post_action: settings_wrap(NoOpPostAction {}),
 });
 
 /// A custom data store is needed to handle the specific requirements of the lockdown module

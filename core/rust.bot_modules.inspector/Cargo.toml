@@ -16,6 +16,7 @@ indexmap = { version = "2", features = ["serde"] }
 dashmap = { version = "5", features = ["serde", "inline", "rayon"] }
 moka = { version = "0.12", features = ["future", "futures-util"] }
 bitflags = "2"
+async-trait = "0.1"
 
 # Anti-Raid specific
 silverpelt = { path = "../rust.silverpelt" }

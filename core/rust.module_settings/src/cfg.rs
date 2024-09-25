@@ -843,23 +843,23 @@ pub async fn settings_view(
 
             // Reinsert
             state.state.insert(col.id.to_string(), val);
+        }
 
-            let actions = col
-                .pre_checks
-                .get(&OperationType::View)
-                .unwrap_or(&col.default_pre_checks);
+        // Run validators
 
-            super::action_executor::execute_actions(
+        setting
+            .validator
+            .validate(
+                super::types::HookContext {
+                    author,
+                    guild_id,
+                    operation_type: OperationType::View,
+                    data_store: &mut *data_store,
+                    data,
+                },
                 &mut state,
-                OperationType::View,
-                actions,
-                author,
-                guild_id,
-                &mut *data_store,
-                data,
             )
             .await?;
-        }
 
         // Get out the pkey and pkey_column data here as we need it for the rest of the update
         let Some(pkey) = state.state.get(setting.primary_key) else {
@@ -903,16 +903,19 @@ pub async fn settings_view(
             }
         }
 
-        super::action_executor::execute_actions(
-            &mut state,
-            OperationType::View,
-            &setting.post_actions,
-            author,
-            guild_id,
-            &mut *data_store,
-            data,
-        )
-        .await?;
+        setting
+            .post_action
+            .post_action(
+                super::types::HookContext {
+                    author,
+                    guild_id,
+                    operation_type: OperationType::View,
+                    data_store: &mut *data_store,
+                    data,
+                },
+                &mut state,
+            )
+            .await?;
 
         values.push(state);
     }
@@ -1021,23 +1024,6 @@ pub async fn settings_create(
 
     // Now execute all actions and handle null/unique/pkey checks
     for column in setting.columns.iter() {
-        // Execute actions
-        let actions = column
-            .pre_checks
-            .get(&OperationType::Create)
-            .unwrap_or(&column.default_pre_checks);
-
-        super::action_executor::execute_actions(
-            &mut state,
-            OperationType::Create,
-            actions,
-            author,
-            guild_id,
-            &mut *data_store,
-            data,
-        )
-        .await?;
-
         // Checks should only happen if the column is not being intentionally ignored
         if column.ignored_for.contains(&OperationType::Create) {
             continue;
@@ -1081,6 +1067,21 @@ pub async fn settings_create(
         }
     }
 
+    // Run validator
+    setting
+        .validator
+        .validate(
+            super::types::HookContext {
+                author,
+                guild_id,
+                operation_type: OperationType::Create,
+                data_store: &mut *data_store,
+                data,
+            },
+            &mut state,
+        )
+        .await?;
+
     // Remove ignored columns now that the actions have been executed
     for col in setting.columns.iter() {
         if state.bypass_ignore_for.contains(col.id) {
@@ -1115,16 +1116,19 @@ pub async fn settings_create(
     data_store.commit().await?;
 
     // Execute post actions
-    super::action_executor::execute_actions(
-        &mut new_state,
-        OperationType::Create,
-        &setting.post_actions,
-        author,
-        guild_id,
-        &mut *data_store,
-        data,
-    )
-    .await?;
+    setting
+        .post_action
+        .post_action(
+            super::types::HookContext {
+                author,
+                guild_id,
+                operation_type: OperationType::Create,
+                data_store: &mut *data_store,
+                data,
+            },
+            &mut new_state,
+        )
+        .await?;
 
     Ok(new_state)
 }
@@ -1252,23 +1256,6 @@ pub async fn settings_update(
 
     // Handle all the actual checks here, now that all validation and needed fetches are done
     for column in setting.columns.iter() {
-        // Execute actions
-        let actions = column
-            .pre_checks
-            .get(&OperationType::Update)
-            .unwrap_or(&column.default_pre_checks);
-
-        super::action_executor::execute_actions(
-            &mut state,
-            OperationType::Update,
-            actions,
-            author,
-            guild_id,
-            &mut *data_store,
-            data,
-        )
-        .await?;
-
         if column.ignored_for.contains(&OperationType::Update) {
             continue;
         }
@@ -1343,6 +1330,21 @@ pub async fn settings_update(
         }
     }
 
+    // Run validator
+    setting
+        .validator
+        .validate(
+            super::types::HookContext {
+                author,
+                guild_id,
+                operation_type: OperationType::Update,
+                data_store: &mut *data_store,
+                data,
+            },
+            &mut state,
+        )
+        .await?;
+
     // Remove ignored columns now that the actions have been executed
     //
     // Note that we cannot mutate state here
@@ -1379,16 +1381,19 @@ pub async fn settings_update(
     data_store.commit().await?;
 
     // Execute post actions
-    super::action_executor::execute_actions(
-        &mut state,
-        OperationType::Update,
-        &setting.post_actions,
-        author,
-        guild_id,
-        &mut *data_store,
-        data,
-    )
-    .await?;
+    setting
+        .post_action
+        .post_action(
+            super::types::HookContext {
+                author,
+                guild_id,
+                operation_type: OperationType::Update,
+                data_store: &mut *data_store,
+                data,
+            },
+            &mut state,
+        )
+        .await?;
 
     Ok(state)
 }
@@ -1458,25 +1463,20 @@ pub async fn settings_delete(
 
     let mut state = state.pop().unwrap(); // We know there is only one row
 
-    // Execute all actions
-    for column in setting.columns.iter() {
-        // Execute actions
-        let actions = column
-            .pre_checks
-            .get(&OperationType::Delete)
-            .unwrap_or(&column.default_pre_checks);
-
-        super::action_executor::execute_actions(
+    // Run validator
+    setting
+        .validator
+        .validate(
+            super::types::HookContext {
+                author,
+                guild_id,
+                operation_type: OperationType::Delete,
+                data_store: &mut *data_store,
+                data,
+            },
             &mut state,
-            OperationType::Delete,
-            actions,
-            author,
-            guild_id,
-            &mut *data_store,
-            data,
         )
         .await?;
-    }
 
     // Now delete the entire row, the ignored_for does not matter here as we are deleting the entire row
     data_store
@@ -1489,16 +1489,19 @@ pub async fn settings_delete(
     data_store.commit().await?;
 
     // Execute post actions
-    super::action_executor::execute_actions(
-        &mut state,
-        OperationType::Delete,
-        &setting.post_actions,
-        author,
-        guild_id,
-        &mut *data_store,
-        data,
-    )
-    .await?;
+    setting
+        .post_action
+        .post_action(
+            super::types::HookContext {
+                author,
+                guild_id,
+                operation_type: OperationType::Delete,
+                data_store: &mut *data_store,
+                data,
+            },
+            &mut state,
+        )
+        .await?;
 
     Ok(state)
 }

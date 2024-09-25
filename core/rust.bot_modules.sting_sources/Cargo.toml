@@ -1,5 +1,6 @@
 [package]
 name = "bot_modules_sting_sources"
+description = "WIP"
 version = "0.1.0"
 edition = "2021"
 

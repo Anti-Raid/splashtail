@@ -1,5 +1,3 @@
-use crate::types::settings_wrap_precheck;
-
 use super::types::{
     Column, ColumnSuggestion, ColumnType, InnerColumnType, InnerColumnTypeStringKind, OperationType,
 };
@@ -16,8 +14,6 @@ pub fn created_at() -> Column {
         ignored_for: vec![OperationType::Create, OperationType::Update],
         secret: false,
         suggestions: ColumnSuggestion::None {},
-        pre_checks: settings_wrap_precheck(indexmap::indexmap! {}),
-        default_pre_checks: settings_wrap_precheck(vec![]),
     }
 }
 
@@ -38,8 +34,6 @@ pub fn created_by() -> Column {
         nullable: false,
         unique: false,
         suggestions: ColumnSuggestion::None {},
-        pre_checks: settings_wrap_precheck(indexmap::indexmap! {}),
-        default_pre_checks: settings_wrap_precheck(vec![]),
     }
 }
 
@@ -55,8 +49,6 @@ pub fn last_updated_at() -> Column {
         nullable: false,
         unique: false,
         suggestions: ColumnSuggestion::None {},
-        pre_checks: settings_wrap_precheck(indexmap::indexmap! {}),
-        default_pre_checks: settings_wrap_precheck(vec![]),
     }
 }
 
@@ -77,8 +69,6 @@ pub fn last_updated_by() -> Column {
         nullable: false,
         unique: false,
         suggestions: ColumnSuggestion::None {},
-        pre_checks: settings_wrap_precheck(indexmap::indexmap! {}),
-        default_pre_checks: settings_wrap_precheck(vec![]),
     }
 }
 
@@ -98,7 +88,5 @@ pub fn guild_id(id: &'static str, name: &'static str, description: &'static str)
         suggestions: ColumnSuggestion::None {},
         ignored_for: vec![OperationType::Create, OperationType::Update],
         secret: false,
-        pre_checks: settings_wrap_precheck(indexmap::indexmap! {}),
-        default_pre_checks: settings_wrap_precheck(vec![]),
     }
 }

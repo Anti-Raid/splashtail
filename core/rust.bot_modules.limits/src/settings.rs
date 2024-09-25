@@ -1,15 +1,14 @@
 use module_settings::{
     data_stores::PostgresDataStore,
     types::{
-        settings_wrap_columns, settings_wrap_datastore, settings_wrap_postactions,
-        settings_wrap_precheck, Column, ColumnSuggestion, ColumnType, ConfigOption,
+        settings_wrap, Column, ColumnSuggestion, ColumnType, ConfigOption,
         InnerColumnType, InnerColumnTypeStringKind, OperationSpecific, OperationType,
-        ColumnAction
+        NoOpValidator, NoOpPostAction, PostAction, HookContext, SettingsError
     },
+    state::State
 };
 use std::sync::LazyLock;
 use strum::VariantNames;
-use futures_util::FutureExt;
 
 pub static USER_STINGS: LazyLock<ConfigOption> = LazyLock::new(|| ConfigOption {
     id: "user_stings",
@@ -23,8 +22,8 @@ pub static USER_STINGS: LazyLock<ConfigOption> = LazyLock::new(|| ConfigOption {
     primary_key: "id",
     max_entries: None,
     max_return: 20,
-    data_store: settings_wrap_datastore(PostgresDataStore {}),
-    columns: settings_wrap_columns(vec![
+    data_store: settings_wrap(PostgresDataStore {}),
+    columns: settings_wrap(vec![
         Column {
             id: "id",
             name: "ID",
@@ -35,8 +34,6 @@ pub static USER_STINGS: LazyLock<ConfigOption> = LazyLock::new(|| ConfigOption {
             suggestions: ColumnSuggestion::None {},
             ignored_for: vec![OperationType::Create],
             secret: false,
-            pre_checks: settings_wrap_precheck(indexmap::indexmap! {}),
-            default_pre_checks: settings_wrap_precheck(vec![]),
         },
         Column {
             id: "user_id",
@@ -53,8 +50,6 @@ pub static USER_STINGS: LazyLock<ConfigOption> = LazyLock::new(|| ConfigOption {
             suggestions: ColumnSuggestion::None {},
             ignored_for: vec![],
             secret: false,
-            pre_checks: settings_wrap_precheck(indexmap::indexmap! {}),
-            default_pre_checks: settings_wrap_precheck(vec![]),
         },
         module_settings::common_columns::guild_id(
             "guild_id",
@@ -71,8 +66,6 @@ pub static USER_STINGS: LazyLock<ConfigOption> = LazyLock::new(|| ConfigOption {
             suggestions: ColumnSuggestion::None {},
             ignored_for: vec![],
             secret: false,
-            pre_checks: settings_wrap_precheck(indexmap::indexmap! {}),
-            default_pre_checks: settings_wrap_precheck(vec![]),
         },
         Column {
             id: "hit_limits",
@@ -92,8 +85,6 @@ pub static USER_STINGS: LazyLock<ConfigOption> = LazyLock::new(|| ConfigOption {
             },
             ignored_for: vec![],
             secret: false,
-            pre_checks: settings_wrap_precheck(indexmap::indexmap! {}),
-            default_pre_checks: settings_wrap_precheck(vec![]),
         },
         Column {
             id: "causes",
@@ -103,10 +94,8 @@ pub static USER_STINGS: LazyLock<ConfigOption> = LazyLock::new(|| ConfigOption {
             nullable: true,
             unique: false,
             suggestions: ColumnSuggestion::None {},
-            ignored_for: vec![],
+            ignored_for: vec![OperationType::Create, OperationType::Update],
             secret: false,
-            pre_checks: settings_wrap_precheck(indexmap::indexmap! {}),
-            default_pre_checks: settings_wrap_precheck(vec![]),
         },
         Column {
             id: "expiry",
@@ -118,8 +107,6 @@ pub static USER_STINGS: LazyLock<ConfigOption> = LazyLock::new(|| ConfigOption {
             suggestions: ColumnSuggestion::None {},
             ignored_for: vec![OperationType::Create],
             secret: false,
-            pre_checks: settings_wrap_precheck(indexmap::indexmap! {}),
-            default_pre_checks: settings_wrap_precheck(vec![]),
         },
         module_settings::common_columns::created_at(),
     ]),
@@ -134,7 +121,8 @@ pub static USER_STINGS: LazyLock<ConfigOption> = LazyLock::new(|| ConfigOption {
             columns_to_set: indexmap::indexmap! {},
         },
     },
-    post_actions: settings_wrap_postactions(vec![]),
+    validator: settings_wrap(NoOpValidator {}),
+    post_action: settings_wrap(NoOpPostAction {}),
 });
 
 pub static USER_ACTIONS: LazyLock<ConfigOption> = LazyLock::new(|| ConfigOption {
@@ -149,8 +137,8 @@ pub static USER_ACTIONS: LazyLock<ConfigOption> = LazyLock::new(|| ConfigOption 
     primary_key: "action_id",
     max_entries: None,
     max_return: 20,
-    data_store: settings_wrap_datastore(PostgresDataStore {}),
-    columns: settings_wrap_columns(vec![
+    data_store: settings_wrap(PostgresDataStore {}),
+    columns: settings_wrap(vec![
         Column {
             id: "action_id",
             name: "Action ID",
@@ -161,8 +149,6 @@ pub static USER_ACTIONS: LazyLock<ConfigOption> = LazyLock::new(|| ConfigOption 
             suggestions: ColumnSuggestion::None {},
             ignored_for: vec![OperationType::Create],
             secret: false,
-            pre_checks: settings_wrap_precheck(indexmap::indexmap! {}),
-            default_pre_checks: settings_wrap_precheck(vec![]),
         },
         Column {
             id: "user_id",
@@ -179,8 +165,6 @@ pub static USER_ACTIONS: LazyLock<ConfigOption> = LazyLock::new(|| ConfigOption 
             suggestions: ColumnSuggestion::None {},
             ignored_for: vec![],
             secret: false,
-            pre_checks: settings_wrap_precheck(indexmap::indexmap! {}),
-            default_pre_checks: settings_wrap_precheck(vec![]),
         },
         Column {
             id: "limit_type",
@@ -197,8 +181,6 @@ pub static USER_ACTIONS: LazyLock<ConfigOption> = LazyLock::new(|| ConfigOption 
             suggestions: ColumnSuggestion::None {},
             ignored_for: vec![],
             secret: false,
-            pre_checks: settings_wrap_precheck(indexmap::indexmap! {}),
-            default_pre_checks: settings_wrap_precheck(vec![]),
         },
         Column {
             id: "target",
@@ -215,8 +197,6 @@ pub static USER_ACTIONS: LazyLock<ConfigOption> = LazyLock::new(|| ConfigOption 
             suggestions: ColumnSuggestion::None {},
             ignored_for: vec![],
             secret: false,
-            pre_checks: settings_wrap_precheck(indexmap::indexmap! {}),
-            default_pre_checks: settings_wrap_precheck(vec![]),
         },
         Column {
             id: "action_data",
@@ -228,8 +208,6 @@ pub static USER_ACTIONS: LazyLock<ConfigOption> = LazyLock::new(|| ConfigOption 
             suggestions: ColumnSuggestion::None {},
             ignored_for: vec![],
             secret: false,
-            pre_checks: settings_wrap_precheck(indexmap::indexmap! {}),
-            default_pre_checks: settings_wrap_precheck(vec![]),
         },
         Column {
             id: "stings",
@@ -241,8 +219,6 @@ pub static USER_ACTIONS: LazyLock<ConfigOption> = LazyLock::new(|| ConfigOption 
             suggestions: ColumnSuggestion::None {},
             ignored_for: vec![],
             secret: false,
-            pre_checks: settings_wrap_precheck(indexmap::indexmap! {}),
-            default_pre_checks: settings_wrap_precheck(vec![]),
         },
         Column {
             id: "stings_expiry",
@@ -254,8 +230,6 @@ pub static USER_ACTIONS: LazyLock<ConfigOption> = LazyLock::new(|| ConfigOption 
             suggestions: ColumnSuggestion::None {},
             ignored_for: vec![],
             secret: false,
-            pre_checks: settings_wrap_precheck(indexmap::indexmap! {}),
-            default_pre_checks: settings_wrap_precheck(vec![]),
         },
         module_settings::common_columns::guild_id(
             "guild_id",
@@ -275,7 +249,8 @@ pub static USER_ACTIONS: LazyLock<ConfigOption> = LazyLock::new(|| ConfigOption 
             columns_to_set: indexmap::indexmap! {},
         },
     },
-    post_actions: settings_wrap_postactions(vec![]),
+    validator: settings_wrap(NoOpValidator {}),
+    post_action: settings_wrap(NoOpPostAction {}),
 });
 
 pub static GUILD_LIMITS: LazyLock<ConfigOption> = LazyLock::new(|| {
@@ -291,8 +266,8 @@ pub static GUILD_LIMITS: LazyLock<ConfigOption> = LazyLock::new(|| {
         primary_key: "limit_id",
         max_entries: Some(10),
         max_return: 10,
-        data_store: settings_wrap_datastore(PostgresDataStore {}),
-        columns: settings_wrap_columns(vec![
+        data_store: settings_wrap(PostgresDataStore {}),
+        columns: settings_wrap(vec![
             Column {
                 id: "limit_id",
                 name: "Limit ID",
@@ -303,8 +278,6 @@ pub static GUILD_LIMITS: LazyLock<ConfigOption> = LazyLock::new(|| {
                 suggestions: ColumnSuggestion::None {},
                 ignored_for: vec![OperationType::Create],
                 secret: false,
-                pre_checks: settings_wrap_precheck(indexmap::indexmap! {}),
-                default_pre_checks: settings_wrap_precheck(vec![]),
             },
             module_settings::common_columns::guild_id("guild_id", "Guild ID", "The Guild ID the limit belongs to"),
             Column {
@@ -322,8 +295,6 @@ pub static GUILD_LIMITS: LazyLock<ConfigOption> = LazyLock::new(|| {
                 suggestions: ColumnSuggestion::None {},
                 ignored_for: vec![],
                 secret: false,
-                pre_checks: settings_wrap_precheck(indexmap::indexmap! {}),
-                default_pre_checks: settings_wrap_precheck(vec![]),
             },
             Column {
                 id: "limit_type",
@@ -340,8 +311,6 @@ pub static GUILD_LIMITS: LazyLock<ConfigOption> = LazyLock::new(|| {
                 suggestions: ColumnSuggestion::None {},
                 ignored_for: vec![],
                 secret: false,
-                pre_checks: settings_wrap_precheck(indexmap::indexmap! {}),
-                default_pre_checks: settings_wrap_precheck(vec![]),
             },
             Column {
                 id: "limit_per",
@@ -353,8 +322,6 @@ pub static GUILD_LIMITS: LazyLock<ConfigOption> = LazyLock::new(|| {
                 suggestions: ColumnSuggestion::None {},
                 ignored_for: vec![],
                 secret: false,
-                pre_checks: settings_wrap_precheck(indexmap::indexmap! {}),
-                default_pre_checks: settings_wrap_precheck(vec![]),
             },
             Column {
                 id: "limit_time",
@@ -366,8 +333,6 @@ pub static GUILD_LIMITS: LazyLock<ConfigOption> = LazyLock::new(|| {
                 suggestions: ColumnSuggestion::None {},
                 ignored_for: vec![],
                 secret: false,
-                pre_checks: settings_wrap_precheck(indexmap::indexmap! {}),
-                default_pre_checks: settings_wrap_precheck(vec![]),
             },
             Column {
                 id: "stings",
@@ -379,8 +344,6 @@ pub static GUILD_LIMITS: LazyLock<ConfigOption> = LazyLock::new(|| {
                 suggestions: ColumnSuggestion::None {},
                 ignored_for: vec![],
                 secret: false,
-                pre_checks: settings_wrap_precheck(indexmap::indexmap! {}),
-                default_pre_checks: settings_wrap_precheck(vec![]),
             },
             module_settings::common_columns::created_at(),
             module_settings::common_columns::created_by(),
@@ -414,18 +377,28 @@ pub static GUILD_LIMITS: LazyLock<ConfigOption> = LazyLock::new(|| {
                 columns_to_set: indexmap::indexmap! {},
             },
         },
-        post_actions: settings_wrap_postactions(vec![ColumnAction::NativeAction {
-            action: Box::new(|ctx, _state| {
-                async move {
-                    super::cache::GUILD_LIMITS
-                        .invalidate(&ctx.guild_id)
-                        .await;
-    
-                    Ok(())
-                }
-                .boxed()
-            }),
-            on_condition: Some(|ctx, _state| Ok(ctx.operation_type != OperationType::View)),
-        }]),    
+        validator: settings_wrap(NoOpValidator {}),
+        post_action: settings_wrap(GuildLimitsPostActions {}),    
     }
 });
+
+/// Post actions for Guild Limits to clear cache
+pub struct GuildLimitsPostActions;
+
+#[async_trait::async_trait]
+impl PostAction for GuildLimitsPostActions {
+    async fn post_action<'a>(
+        &self,
+        ctx: HookContext<'a>,
+        _state: &'a mut State,
+    ) -> Result<(), SettingsError> {
+        if ctx.operation_type == OperationType::View {
+            return Ok(());
+        }
+        super::cache::GUILD_LIMITS
+            .invalidate(&ctx.guild_id)
+            .await;
+
+        Ok(())
+    }
+}
