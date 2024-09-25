@@ -403,6 +403,7 @@ name = "bot_binutils"
 version = "0.1.0"
 dependencies = [
  "botox",
+ "config",
  "log",
  "poise",
  "serenity",

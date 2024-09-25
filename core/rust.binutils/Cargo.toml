@@ -10,6 +10,7 @@ poise = { git = "https://github.com/Anti-Raid/poise", branch = "serenity-next" }
 sqlx = { version = "0.8", features = [ "runtime-tokio-rustls", "postgres", "chrono", "uuid", "json"] }
 log = "0.4"
 silverpelt = { path = "../rust.silverpelt" }
+config = { path = "../rust.config" }
 
 [dependencies.serenity]
 git = "https://github.com/serenity-rs/serenity"

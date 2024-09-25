@@ -12,12 +12,19 @@ pub async fn on_error(error: poise::FrameworkError<'_, Data, Error>) {
 
             let err = ctx
                 .send(
-                    poise::CreateReply::new().embed(
-                        serenity::all::CreateEmbed::new()
-                            .color(serenity::all::Color::RED)
-                            .title("An error has occurred")
-                            .description(error.to_string()),
-                    ),
+                    poise::CreateReply::new()
+                        .embed(
+                            serenity::all::CreateEmbed::new()
+                                .color(serenity::all::Color::RED)
+                                .title("An error has occurred")
+                                .description(error.to_string()),
+                        )
+                        .components(vec![serenity::all::CreateActionRow::Buttons(vec![
+                            serenity::all::CreateButton::new_link(
+                                &config::CONFIG.meta.support_server_invite,
+                            )
+                            .label("Support Server"),
+                        ])]),
                 )
                 .await;
 
@@ -37,12 +44,19 @@ pub async fn on_error(error: poise::FrameworkError<'_, Data, Error>) {
 
                 let err = ctx
                     .send(
-                        poise::CreateReply::new().embed(
-                            serenity::all::CreateEmbed::new()
-                                .color(serenity::all::Color::RED)
-                                .title("Command Check Failed")
-                                .description(error.to_string()),
-                        ),
+                        poise::CreateReply::new()
+                            .embed(
+                                serenity::all::CreateEmbed::new()
+                                    .color(serenity::all::Color::RED)
+                                    .title("Command Check Failed")
+                                    .description(error.to_string()),
+                            )
+                            .components(vec![serenity::all::CreateActionRow::Buttons(vec![
+                                serenity::all::CreateButton::new_link(
+                                    &config::CONFIG.meta.support_server_invite,
+                                )
+                                .label("Support Server"),
+                            ])]),
                     )
                     .await;
 
@@ -63,12 +77,19 @@ pub async fn on_error(error: poise::FrameworkError<'_, Data, Error>) {
 
             let err = ctx
                 .send(
-                    poise::CreateReply::new().embed(
+                    poise::CreateReply::new()
+                    .embed(
                         serenity::all::CreateEmbed::new()
                             .color(serenity::all::Color::RED)
                             .title("Command Panic")
-                            .description(format!("The command panicked. Please report this to the bots owner.\n\n```{}`", payload.unwrap_or("No payload provided".to_string()))),
-                    ),
+                            .description(format!("The command panicked. Please report this on our support server.\n\n```{}`", payload.unwrap_or("No payload provided".to_string()))),
+                    )
+                    .components(vec![serenity::all::CreateActionRow::Buttons(vec![
+                        serenity::all::CreateButton::new_link(
+                            &config::CONFIG.meta.support_server_invite,
+                        )
+                        .label("Support Server"),
+                    ])]),
                 )
                 .await;
 
