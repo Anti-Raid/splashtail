@@ -646,6 +646,7 @@ async fn main() {
 
     let pg_pool = PgPoolOptions::new()
         .max_connections(POSTGRES_MAX_CONNECTIONS)
+        .acquire_timeout(std::time::Duration::from_secs(30))
         .connect(&config::CONFIG.meta.postgres_url)
         .await
         .expect("Could not initialize connection");
