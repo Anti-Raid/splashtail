@@ -221,36 +221,40 @@ impl SettingDataValidator for SinkValidator {
         }
 
         // Check the events next
-        let Some(Value::List(events_value)) = state.state.get("events") else {
-            return Err(SettingsError::MissingOrInvalidField {
-                field: "events".to_string(),
-                src: "SinkValidator".to_string(),
-            });
-        };
+        match state.state.get("events") {
+            Some(Value::List(events_value)) => {
+                let mut events = Vec::new();
 
-        let mut events = Vec::new();
+                for event in events_value {
+                    if let Value::String(event) = event {
+                        events.push(event.clone());
+                    } else {
+                        return Err(SettingsError::SchemaCheckValidationError {
+                            column: "events".to_string(),
+                            check: "parse_webhook.parse".to_string(),
+                            error: "Invalid event type".to_string(),
+                            accepted_range: "String".to_string(),
+                        });
+                    }
+                }
 
-        for event in events_value {
-            if let Value::String(event) = event {
-                events.push(event.clone());
-            } else {
-                return Err(SettingsError::SchemaCheckValidationError {
-                    column: "events".to_string(),
-                    check: "parse_webhook.parse".to_string(),
-                    error: "Invalid event type".to_string(),
-                    accepted_range: "String".to_string(),
+                super::checks::check_all_events(events).await.map_err(|e| {
+                    SettingsError::SchemaCheckValidationError {
+                        column: "events".to_string(),
+                        check: "check_all_events".to_string(),
+                        error: e.to_string(),
+                        accepted_range: "Valid event".to_string(),
+                    }
+                })?;
+            }
+            Some(Value::None) => {}
+            _ => {
+                return Err(SettingsError::MissingOrInvalidField {
+                    field: "events".to_string(),
+                    src: "SinkValidator".to_string(),
                 });
             }
         }
-
-        super::checks::check_all_events(events).await.map_err(|e| {
-            SettingsError::SchemaCheckValidationError {
-                column: "events".to_string(),
-                check: "check_all_events".to_string(),
-                error: e.to_string(),
-                accepted_range: "Valid event".to_string(),
-            }
-        })?;
 
         Ok(()) // TODO
     }
