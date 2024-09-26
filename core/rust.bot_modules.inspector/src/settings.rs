@@ -39,6 +39,7 @@ pub static INSPECTOR_OPTIONS: LazyLock<ConfigOption> = LazyLock::new(|| ConfigOp
             description: "Minimum account age required to join the server",
             column_type: ColumnType::new_scalar(InnerColumnType::Integer {}),
             nullable: true,
+            default: None,
             unique: false,
             suggestions: ColumnSuggestion::None {},
             ignored_for: vec![],
@@ -50,6 +51,7 @@ pub static INSPECTOR_OPTIONS: LazyLock<ConfigOption> = LazyLock::new(|| ConfigOp
             description: "Maximum account age to join the server",
             column_type: ColumnType::new_scalar(InnerColumnType::Integer {}),
             nullable: true,
+            default: None,
             unique: false,
             suggestions: ColumnSuggestion::None {},
             ignored_for: vec![],
@@ -61,6 +63,7 @@ pub static INSPECTOR_OPTIONS: LazyLock<ConfigOption> = LazyLock::new(|| ConfigOp
             description: "Number of stings to give when an invite is sent",
             column_type: ColumnType::new_scalar(InnerColumnType::Integer {}),
             nullable: true,
+            default: None,
             unique: false,
             suggestions: ColumnSuggestion::None {},
             ignored_for: vec![],
@@ -72,6 +75,7 @@ pub static INSPECTOR_OPTIONS: LazyLock<ConfigOption> = LazyLock::new(|| ConfigOp
             description: "Number of stings to give when an everyone ping is sent",
             column_type: ColumnType::new_scalar(InnerColumnType::Integer {}),
             nullable: true,
+            default: None,
             unique: false,
             suggestions: ColumnSuggestion::None {},
             ignored_for: vec![],
@@ -83,6 +87,7 @@ pub static INSPECTOR_OPTIONS: LazyLock<ConfigOption> = LazyLock::new(|| ConfigOp
             description: "Number of seconds to keep stings for",
             column_type: ColumnType::new_scalar(InnerColumnType::Integer {}),
             nullable: false,
+            default: Some(|_| Value::Integer(300)),
             unique: false,
             suggestions: ColumnSuggestion::None {},
             ignored_for: vec![],
@@ -99,6 +104,13 @@ pub static INSPECTOR_OPTIONS: LazyLock<ConfigOption> = LazyLock::new(|| ConfigOp
                     .collect(),
             }),
             nullable: false,
+            default: Some(|_| {
+                Value::Integer(
+                    super::cache::BasicAntispamConfig::default()
+                        .hoist_detection
+                        .bits() as i64,
+                )
+            }),
             unique: false,
             suggestions: ColumnSuggestion::None {},
             ignored_for: vec![],
@@ -115,6 +127,13 @@ pub static INSPECTOR_OPTIONS: LazyLock<ConfigOption> = LazyLock::new(|| ConfigOp
                     .collect(),
             }),
             nullable: false,
+            default: Some(|_| {
+                Value::Integer(
+                    super::cache::BasicAntispamConfig::default()
+                        .guild_protection
+                        .bits() as i64,
+                )
+            }),
             unique: false,
             suggestions: ColumnSuggestion::None {},
             ignored_for: vec![],
@@ -131,6 +150,13 @@ pub static INSPECTOR_OPTIONS: LazyLock<ConfigOption> = LazyLock::new(|| ConfigOp
                     .collect(),
             }),
             nullable: false,
+            default: Some(|_| {
+                Value::Integer(
+                    super::cache::BasicAntispamConfig::default()
+                        .auto_response_memberjoin
+                        .bits() as i64,
+                )
+            }),
             unique: false,
             suggestions: ColumnSuggestion::None {},
             ignored_for: vec![],
@@ -147,6 +173,13 @@ pub static INSPECTOR_OPTIONS: LazyLock<ConfigOption> = LazyLock::new(|| ConfigOp
                     .collect(),
             }),
             nullable: false,
+            default: Some(|_| {
+                Value::Integer(
+                    super::cache::BasicAntispamConfig::default()
+                        .fake_bot_detection
+                        .bits() as i64,
+                )
+            }),
             unique: false,
             suggestions: ColumnSuggestion::None {},
             ignored_for: vec![],

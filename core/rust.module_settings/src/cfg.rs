@@ -971,7 +971,20 @@ pub async fn settings_create(
         };
 
         // Insert the value into the state
-        state.state.insert(column.id.to_string(), value);
+        state.state.insert(
+            column.id.to_string(),
+            match value {
+                Value::None => {
+                    // Check for default
+                    if let Some(default) = &column.default {
+                        (default)(false)
+                    } else {
+                        value
+                    }
+                }
+                _ => value,
+            },
+        );
     }
 
     drop(fields); // Drop fields to avoid accidental use of user data

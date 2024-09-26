@@ -360,6 +360,9 @@ pub struct Column {
     /// Note that the point where nullability is checked may vary but will occur after pre_checks are executed
     pub nullable: bool,
 
+    /// The default value of the column
+    pub default: Option<fn(is_example: bool) -> splashcore_rs::value::Value>,
+
     /// Suggestions to display
     pub suggestions: ColumnSuggestion,
 

@@ -376,6 +376,9 @@ pub struct CanonicalColumn {
     /// Whether or not the column is nullable
     pub nullable: bool,
 
+    /// The default value of the column
+    pub default: Option<serde_json::Value>,
+
     /// Suggestions to display
     pub suggestions: CanonicalColumnSuggestion,
 
@@ -409,6 +412,7 @@ impl From<&super::types::Column> for CanonicalColumn {
             description: column.description.to_string(),
             column_type: column.column_type.clone().into(),
             nullable: column.nullable,
+            default: column.default.clone().map(|v| v(true).to_json()),
             suggestions: column.suggestions.clone().into(),
             unique: column.unique,
             ignored_for: column.ignored_for.iter().map(|o| (*o).into()).collect(),
