@@ -84,7 +84,7 @@ fn create_message_prune_serde(
     ))
 }
 
-// Helper method to check the author of a user versus a target
+/// Helper method to check the author of a user versus a target
 async fn check_hierarchy(ctx: &Context<'_>, user_id: UserId) -> Result<(), Error> {
     let data = ctx.data();
     let sctx = ctx.serenity_context();
