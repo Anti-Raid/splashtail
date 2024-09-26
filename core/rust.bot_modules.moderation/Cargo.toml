@@ -26,6 +26,7 @@ proxy_support = { path = "../rust.proxy_support" }
 # Inter-module dependency
 bot_modules_auditlogs = { path = "../rust.bot_modules.auditlogs" }
 bot_modules_punishments = { path = "../rust.bot_modules.punishments" }
+bot_modules_limits = { path = "../rust.bot_modules.limits" }
 
 [dependencies.tokio]
 version = "1"

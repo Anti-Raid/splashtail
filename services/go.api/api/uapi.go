@@ -261,24 +261,37 @@ func Authorize(r uapi.Route, req *http.Request) (uapi.AuthData, uapi.HttpRespons
 			if ok {
 				guildId := permCheck.GuildID(r, req)
 
-				// First check for web use permissions
-				hresp, ok := HandlePermissionCheck(id.String, guildId, "web use", rpc_messages.RpcCheckCommandOptions{
-					CustomResolvedKittycatPerms: permLimits,
-				})
+				if guildId != "" {
+					// Ensure guild is in database
+					_, err := state.Pool.Exec(state.Context, "INSERT INTO guilds (id) VALUES ($1) ON CONFLICT DO NOTHING", guildId)
 
-				if !ok {
-					return uapi.AuthData{}, hresp, false
-				}
+					if err != nil {
+						state.Logger.Error("Failed to insert guild into database", zap.Error(err))
+						return uapi.AuthData{}, uapi.HttpResponse{
+							Status: http.StatusInternalServerError,
+							Json:   types.ApiError{Message: "Internal server error: Failed to insert guild into database"},
+						}, false
+					}
 
-				cmd := permCheck.Command(r, req)
-
-				if cmd != "" {
-					hresp, ok = HandlePermissionCheck(id.String, guildId, cmd, rpc_messages.RpcCheckCommandOptions{
+					// First check for web use permissions
+					hresp, ok := HandlePermissionCheck(id.String, guildId, "web use", rpc_messages.RpcCheckCommandOptions{
 						CustomResolvedKittycatPerms: permLimits,
 					})
 
 					if !ok {
 						return uapi.AuthData{}, hresp, false
+					}
+
+					cmd := permCheck.Command(r, req)
+
+					if cmd != "" {
+						hresp, ok = HandlePermissionCheck(id.String, guildId, cmd, rpc_messages.RpcCheckCommandOptions{
+							CustomResolvedKittycatPerms: permLimits,
+						})
+
+						if !ok {
+							return uapi.AuthData{}, hresp, false
+						}
 					}
 				}
 			}

@@ -6,10 +6,11 @@ use silverpelt::sting_sources::StingCreator;
 
 const DEFAULT_EXPIRY: std::time::Duration = std::time::Duration::from_secs(60 * 5);
 
+/// Returns true if the user has hit limits
 pub async fn handle_mod_action(
     ctx: &serenity::all::Context,
     ha: &HandleModAction,
-) -> Result<(), Error> {
+) -> Result<bool, Error> {
     let data = ctx.data::<silverpelt::data::Data>();
 
     // Check limits cache
@@ -17,7 +18,7 @@ pub async fn handle_mod_action(
 
     if guild_limits.3.is_empty() {
         // No limits for this guild
-        return Ok(());
+        return Ok(false);
     }
 
     let strategy_result = guild_limits
@@ -89,5 +90,5 @@ pub async fn handle_mod_action(
         }
     }
 
-    Ok(())
+    Ok(strategy_result.stings > 0)
 }

@@ -428,6 +428,27 @@ pub async fn kick(
     // Check user hierarchy before performing moderative actions
     check_hierarchy(&ctx, member.user.id).await?;
 
+    // Attempt to add limit
+    let limits_hit = bot_modules_limits::handler::handle_mod_action(
+        ctx.serenity_context(),
+        &bot_modules_limits::core::HandleModAction {
+            guild_id,
+            user_id: ctx.author().id,
+            limit: bot_modules_limits::core::LimitTypes::Kick,
+            target: Some(member.user.id.to_string()),
+            action_data: serde_json::json!({
+                "reason": reason,
+                "stings": stings.unwrap_or(1),
+                "ar": true,
+            }),
+        },
+    )
+    .await?;
+
+    if limits_hit {
+        return Err("You have hit this server's kick limit".into());
+    }
+
     let mut embed = CreateEmbed::new()
         .title("Kicking Member...")
         .description(format!(
@@ -570,6 +591,27 @@ pub async fn ban(
 
     // Check user hierarchy before performing moderative actions
     check_hierarchy(&ctx, member.id).await?;
+
+    // Attempt to add limit
+    let limits_hit = bot_modules_limits::handler::handle_mod_action(
+        ctx.serenity_context(),
+        &bot_modules_limits::core::HandleModAction {
+            guild_id,
+            user_id: ctx.author().id,
+            limit: bot_modules_limits::core::LimitTypes::Ban,
+            target: Some(member.id.to_string()),
+            action_data: serde_json::json!({
+                "reason": reason,
+                "stings": stings.unwrap_or(1),
+                "ar": true,
+            }),
+        },
+    )
+    .await?;
+
+    if limits_hit {
+        return Err("You have hit this server's ban limit".into());
+    }
 
     let mut embed = CreateEmbed::new()
         .title("Banning Member...")

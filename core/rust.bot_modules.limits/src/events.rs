@@ -22,7 +22,9 @@ pub async fn event_listener(ectx: &EventHandlerContext) -> Result<(), silverpelt
                     action_data: serde_json::json!({}),
                 },
             )
-            .await
+            .await?;
+
+            Ok(())
         }
         FullEvent::Message { new_message } => {
             handle_mod_action(
@@ -35,7 +37,9 @@ pub async fn event_listener(ectx: &EventHandlerContext) -> Result<(), silverpelt
                     action_data: serde_json::json!({}),
                 },
             )
-            .await
+            .await?;
+
+            Ok(())
         }
         FullEvent::GuildAuditLogEntryCreate { entry, guild_id } => {
             info!("Audit log created: {:?}. Guild: {}", entry, guild_id);
@@ -43,6 +47,11 @@ pub async fn event_listener(ectx: &EventHandlerContext) -> Result<(), silverpelt
             let Some(user_id) = entry.user_id else {
                 return Ok(());
             };
+
+            // Bot itself performed action. Ignore
+            if user_id == ctx.cache.current_user().id {
+                return Ok(());
+            }
 
             let res = match entry.action {
                 Action::Channel(ch) => {
@@ -64,7 +73,9 @@ pub async fn event_listener(ectx: &EventHandlerContext) -> Result<(), silverpelt
                                     }),
                                 },
                             )
-                            .await
+                            .await?;
+
+                            Ok(())
                         }
                         ChannelAction::Delete => {
                             info!("Channel deleted: {}", ch_id);
@@ -81,7 +92,9 @@ pub async fn event_listener(ectx: &EventHandlerContext) -> Result<(), silverpelt
                                     }),
                                 },
                             )
-                            .await
+                            .await?;
+
+                            Ok(())
                         }
                         ChannelAction::Update => {
                             info!("Channel updated: {}", ch_id);
@@ -98,7 +111,9 @@ pub async fn event_listener(ectx: &EventHandlerContext) -> Result<(), silverpelt
                                     }),
                                 },
                             )
-                            .await
+                            .await?;
+
+                            Ok(())
                         }
                         _ => Ok(()),
                     }
@@ -122,7 +137,9 @@ pub async fn event_listener(ectx: &EventHandlerContext) -> Result<(), silverpelt
                                     }),
                                 },
                             )
-                            .await
+                            .await?;
+
+                            Ok(())
                         }
                         RoleAction::Update => {
                             info!("Role updated: {}", r_id);
@@ -139,7 +156,9 @@ pub async fn event_listener(ectx: &EventHandlerContext) -> Result<(), silverpelt
                                     }),
                                 },
                             )
-                            .await
+                            .await?;
+
+                            Ok(())
                         }
                         RoleAction::Delete => {
                             info!("Role deleted: {}", r_id);
@@ -156,7 +175,9 @@ pub async fn event_listener(ectx: &EventHandlerContext) -> Result<(), silverpelt
                                     }),
                                 },
                             )
-                            .await
+                            .await?;
+
+                            Ok(())
                         }
                         _ => Ok(()),
                     }
@@ -282,6 +303,68 @@ pub async fn event_listener(ectx: &EventHandlerContext) -> Result<(), silverpelt
                                 )
                                 .await?;
                             }
+                        }
+                        MemberAction::BanAdd => {
+                            handle_mod_action(
+                                ctx,
+                                &HandleModAction {
+                                    guild_id: *guild_id,
+                                    limit: super::core::LimitTypes::Ban,
+                                    user_id,
+                                    target: Some(target.to_string()),
+                                    action_data: serde_json::json!({
+                                        "changes": entry.changes.clone(),
+                                        "ar": false,
+                                    }),
+                                },
+                            )
+                            .await?;
+                        }
+                        MemberAction::BanRemove => {
+                            handle_mod_action(
+                                ctx,
+                                &HandleModAction {
+                                    guild_id: *guild_id,
+                                    limit: super::core::LimitTypes::Unban,
+                                    user_id,
+                                    target: Some(target.to_string()),
+                                    action_data: serde_json::json!({
+                                        "changes": entry.changes.clone(),
+                                        "ar": false,
+                                    }),
+                                },
+                            )
+                            .await?;
+                        }
+                        MemberAction::Kick => {
+                            handle_mod_action(
+                                ctx,
+                                &HandleModAction {
+                                    guild_id: *guild_id,
+                                    limit: super::core::LimitTypes::Kick,
+                                    user_id,
+                                    target: Some(target.to_string()),
+                                    action_data: serde_json::json!({
+                                        "changes": entry.changes.clone(),
+                                    }),
+                                },
+                            )
+                            .await?;
+                        }
+                        MemberAction::Prune => {
+                            handle_mod_action(
+                                ctx,
+                                &HandleModAction {
+                                    guild_id: *guild_id,
+                                    limit: super::core::LimitTypes::PruneMembers,
+                                    user_id,
+                                    target: Some(target.to_string()),
+                                    action_data: serde_json::json!({
+                                        "changes": entry.changes.clone(),
+                                    }),
+                                },
+                            )
+                            .await?;
                         }
                         _ => {}
                     }

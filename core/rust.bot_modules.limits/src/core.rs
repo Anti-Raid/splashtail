@@ -221,11 +221,12 @@ pub enum LimitTypes {
     MemberRolesUpdated,    // set
     ChannelAdd,            // set
     ChannelUpdate,         // set
-    ChannelRemove,         //set
-    Kick,
-    Ban,
-    Unban,
-    MessageCreate,
+    ChannelRemove,         // set
+    Kick,                  // set
+    Ban,                   // set
+    Unban,                 // set
+    MessageCreate,         // set
+    PruneMembers,          // set
 }
 
 #[allow(dead_code)] // Will be used later
@@ -246,6 +247,7 @@ impl LimitTypes {
             Self::Ban => "Bans".to_string(),
             Self::Unban => "Unbans".to_string(),
             Self::MessageCreate => "Messages Created".to_string(),
+            Self::PruneMembers => "Members Pruned".to_string(),
         }
     }
 }

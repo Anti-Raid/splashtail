@@ -1,8 +1,8 @@
 mod cache;
 mod cmds;
-mod core;
+pub mod core;
 mod events;
-mod handler;
+pub mod handler;
 mod settings;
 mod strategy;
 
