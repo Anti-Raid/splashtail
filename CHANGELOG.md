@@ -1,3 +1,9 @@
+# Friday, September 27th, 2024
+
+Lots of changes have passed since the last changelog. Anti-Raid is firstly, now public!
+
+Lots of bug fixes (too many to list here) have been made to the bot, API, Jobserver and Webserver. ``tasks`` have been renamed to ``jobs`` to avoid conficting contexts and several Day-0 bugs have also been found and fixed as reported by users.
+
 # Friday, August 2nd, 2024
 
 ## Settings

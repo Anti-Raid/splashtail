@@ -155,8 +155,6 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 	var updateArgs []any
 	var cacheFlushFlag = CACHE_FLUSH_NONE
 
-	var isDisabled bool // This must be set to ensure cache flushes are done correctly
-
 	// Perm check area
 	if body.Disabled != nil {
 		value, clear, err := body.Disabled.Get()
@@ -198,9 +196,6 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 				}
 			}
 
-			// Set isDisabled to ensure cache flushes are done correctly
-			isDisabled = !moduleData.IsDefaultEnabled
-
 			updateCols = append(updateCols, "disabled")
 			updateArgs = append(updateArgs, nil)
 		} else {
@@ -224,9 +219,6 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 					return hresp
 				}
 			}
-
-			// Set isDisabled to ensure cache flushes are done correctly
-			isDisabled = *value
 
 			updateCols = append(updateCols, "disabled")
 			updateArgs = append(updateArgs, *value)
@@ -407,11 +399,10 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 			clusterId,
 			&rpc_messages.ExecutePerModuleFunctionRequest{
 				Module:   "settings",
-				Function: "toggle_module",
+				Function: "invalidate_module_enabled_cache",
 				Args: map[string]any{
 					"guild_id": guildId,
 					"module":   body.Module,
-					"enabled":  !isDisabled,
 				},
 			},
 		)

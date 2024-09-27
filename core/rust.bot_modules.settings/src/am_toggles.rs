@@ -7,8 +7,8 @@ pub async fn setup(data: &silverpelt::data::Data) -> Result<(), silverpelt::Erro
     let sc = data.silverpelt_cache.clone();
     data.props.add_permodule_function(
         "settings",
-        "toggle_module",
-        Box::new(move |_, options| toggle_module(sc.clone(), options).boxed()),
+        "invalidate_module_enabled_cache",
+        Box::new(move |_, options| invalidate_module_enabled_cache(sc.clone(), options).boxed()),
     );
 
     Ok(())
@@ -16,21 +16,15 @@ pub async fn setup(data: &silverpelt::data::Data) -> Result<(), silverpelt::Erro
 
 /// Arguments:
 ///
-/// - `module` - The module to toggle [String]
-/// - `enabled` - Whether the module is enabled or not [bool]
+/// - `module` - The module to invalidate module enabled cache [String]
 /// - `guild_id` - The guild ID to clear the cache for. If not provided, the cache will be cleared globally [Option<String>]
-pub async fn toggle_module(
+pub async fn invalidate_module_enabled_cache(
     silverpelt_cache: Arc<silverpelt::cache::SilverpeltCache>,
     value: &indexmap::IndexMap<String, Value>,
 ) -> Result<(), silverpelt::Error> {
     let module = match value.get("module") {
         Some(Value::String(s)) => s,
         _ => return Err("`module` could not be parsed".into()),
-    };
-
-    let enabled = match value.get("enabled") {
-        Some(Value::Boolean(b)) => *b,
-        _ => return Err("`enabled` could not be parsed".into()),
     };
 
     let guild_id = value.get("guild_id");
@@ -43,15 +37,15 @@ pub async fn toggle_module(
 
         silverpelt_cache
             .module_enabled_cache
-            .insert((guild_id, module.clone()), enabled)
+            .invalidate(&(guild_id, module.clone()))
             .await;
     } else {
         // Global enable/disable the module by iterating the entire cache
-        for (k, v) in silverpelt_cache.module_enabled_cache.iter() {
-            if k.1 == *module && enabled != v {
+        for (k, _) in silverpelt_cache.module_enabled_cache.iter() {
+            if k.1 == *module {
                 silverpelt_cache
                     .module_enabled_cache
-                    .insert((k.0, module.clone()), enabled)
+                    .invalidate(&(k.0, module.clone()))
                     .await;
             }
         }
