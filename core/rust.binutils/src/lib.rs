@@ -1,6 +1,6 @@
 use botox::cache::CacheHttpImpl;
 use log::{error, info};
-use silverpelt::{cache::SilverpeltCache, data::Data, Context, Error, EventHandlerContext, Module};
+use silverpelt::{data::Data, Context, Error, EventHandlerContext, Module};
 use std::sync::Arc;
 use tokio::task::JoinSet;
 
@@ -301,18 +301,40 @@ pub fn get_tasks(modules: Vec<Module>, ctx: &serenity::all::Context) -> Vec<boto
     tasks
 }
 
-pub async fn dispatch_event_to_modules(
-    silverpelt_cache: &'static SilverpeltCache,
+async fn dispatch_for_module(
     event_handler_context: Arc<EventHandlerContext>,
-) -> JoinSet<Result<(), Error>> {
+    module: Arc<Module>,
+) -> Result<(), Error> {
+    for event_handler in module.event_handlers.iter() {
+        let res = event_handler(&event_handler_context).await;
+
+        if let Err(e) = res {
+            return Err(e);
+        }
+    }
+
+    Ok(())
+}
+
+pub async fn dispatch_event_to_modules(
+    event_handler_context: Arc<EventHandlerContext>,
+) -> Result<(), Error> {
     let mut set = JoinSet::new();
 
-    for (id, module) in silverpelt_cache.module_cache.iter() {
+    let mut futs = Vec::new();
+
+    for refs in event_handler_context
+        .data
+        .silverpelt_cache
+        .module_cache
+        .iter()
+    {
+        let module = refs.value();
         let module_enabled = match silverpelt::module_config::is_module_enabled(
             &event_handler_context.data.silverpelt_cache,
             &event_handler_context.data.pool,
             event_handler_context.guild_id,
-            id,
+            module.id,
         )
         .await
         {
@@ -327,11 +349,33 @@ pub async fn dispatch_event_to_modules(
             continue;
         }
 
-        for event_handler in module.event_handlers.iter() {
-            let ehr = event_handler_context.clone();
-            set.spawn(async move { event_handler(&ehr).await });
+        let ehr = event_handler_context.clone();
+        futs.push(dispatch_for_module(ehr, module.clone()));
+    }
+
+    for fut in futs {
+        set.spawn(fut);
+    }
+
+    let mut errors = Vec::new();
+
+    while let Some(res) = set.join_next().await {
+        match res {
+            Ok(Ok(_)) => {}
+            Ok(Err(e)) => {
+                error!("Error in dispatch_event_to_modules: {}", e);
+                errors.push(e);
+            }
+            Err(e) => {
+                error!("Error in dispatch_event_to_modules: {}", e);
+                errors.push(e.into());
+            }
         }
     }
 
-    set
+    if !errors.is_empty() {
+        return Err(format!("Errors in dispatch_event_to_modules: {:#?}", errors).into());
+    }
+
+    Ok(())
 }

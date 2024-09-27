@@ -14,7 +14,8 @@ async fn module_list_autocomplete<'a>(
     let data = ctx.data();
     let mut ac = Vec::new();
 
-    for (_, module) in data.silverpelt_cache.module_cache.iter() {
+    for refs in data.silverpelt_cache.module_cache.iter() {
+        let module = refs.value();
         if module.name.to_lowercase().contains(&partial.to_lowercase())
             || module.id.to_lowercase().contains(&partial.to_lowercase())
         {
@@ -100,7 +101,8 @@ pub async fn modules_list(ctx: Context<'_>) -> Result<(), Error> {
         done_modules.push(module_id);
     }
 
-    for (_, module) in data.silverpelt_cache.module_cache.iter() {
+    for refs in data.silverpelt_cache.module_cache.iter() {
+        let module = refs.value();
         if done_modules.contains(&module.id.to_string()) {
             continue;
         }

@@ -44,7 +44,15 @@ pub mod test_module_parse {
                 pool: pg_pool.clone(),
                 proxy_support_data: tokio::sync::RwLock::new(None),
             }),
-            silverpelt_cache: (*crate::SILVERPELT_CACHE).clone(),
+            silverpelt_cache: {
+                let mut silverpelt_cache = silverpelt::cache::SilverpeltCache::default();
+
+                for module in crate::modules() {
+                    silverpelt_cache.add_module(module);
+                }
+
+                Arc::new(silverpelt_cache)
+            },
         }
     }
 

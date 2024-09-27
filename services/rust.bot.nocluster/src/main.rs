@@ -36,16 +36,6 @@ pub static CONNECT_STATE: LazyLock<ConnectState> = LazyLock::new(|| ConnectState
     ready_lock: tokio::sync::Mutex::new(()),
 });
 
-static SILVERPELT_CACHE: LazyLock<Arc<silverpelt::cache::SilverpeltCache>> = LazyLock::new(|| {
-    let mut silverpelt_cache = silverpelt::cache::SilverpeltCache::default();
-
-    for module in modules() {
-        silverpelt_cache.add_module(module);
-    }
-
-    Arc::new(silverpelt_cache)
-});
-
 /// Props
 pub struct Props {
     pub pool: sqlx::PgPool,
@@ -509,19 +499,9 @@ async fn event_listener<'a>(
         serenity_context: ctx.serenity_context.clone(),
     });
 
-    let mut set =
-        bot_binutils::dispatch_event_to_modules(&SILVERPELT_CACHE, event_handler_context).await;
-    while let Some(res) = set.join_next().await {
-        match res {
-            Ok(Ok(_)) => {}
-            Ok(Err(e)) => {
-                error!("Error in event handler [task]: {}", e);
-            }
-            Err(e) => {
-                error!("Error in event handler [joinset]: {}", e);
-            }
-        }
-    }
+    if let Err(e) = bot_binutils::dispatch_event_to_modules(event_handler_context).await {
+        error!("Error dispatching event to modules: {}", e);
+    };
 
     Ok(())
 }
@@ -726,7 +706,15 @@ async fn main() {
         reqwest,
         extra_data: dashmap::DashMap::new(),
         props: props.clone(),
-        silverpelt_cache: (*SILVERPELT_CACHE).clone(),
+        silverpelt_cache: {
+            let mut silverpelt_cache = silverpelt::cache::SilverpeltCache::default();
+
+            for module in modules() {
+                silverpelt_cache.add_module(module);
+            }
+
+            Arc::new(silverpelt_cache)
+        },
     };
 
     info!("Initializing bot state");

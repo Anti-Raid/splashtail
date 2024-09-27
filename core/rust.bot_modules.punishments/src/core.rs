@@ -36,7 +36,8 @@ pub async fn get_consolidated_sting_entries(
 
     let mut stings = HashMap::new();
 
-    for (_, module) in source_data.silverpelt_cache.module_cache.iter() {
+    for refs in source_data.silverpelt_cache.module_cache.iter() {
+        let module = refs.value();
         for source in module.sting_sources.iter() {
             let entries = source.fetch(&source_data, filters.clone()).await?;
 

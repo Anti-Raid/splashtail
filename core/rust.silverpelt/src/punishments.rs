@@ -158,7 +158,8 @@ pub async fn get_punishment_actions_for_guild(
     data: &crate::data::Data,
 ) -> Result<Vec<Arc<dyn CreatePunishmentAction>>, crate::Error> {
     let mut actions_map = Vec::new();
-    for module in data.silverpelt_cache.module_cache.values() {
+    for refs in data.silverpelt_cache.module_cache.iter() {
+        let module = refs.value();
         if !crate::module_config::is_module_enabled(
             &data.silverpelt_cache,
             &data.pool,

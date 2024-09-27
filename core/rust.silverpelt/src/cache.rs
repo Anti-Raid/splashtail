@@ -16,11 +16,9 @@ pub struct SilverpeltCache {
     /// module_cache is a cache of module id to module
     ///
     /// We use indexmap here to avoid the 'static restriction
-    pub module_cache: indexmap::IndexMap<String, Arc<Module>>,
+    pub module_cache: dashmap::DashMap<String, Arc<Module>>,
 
     /// Command ID to module map
-    ///
-    /// This uses an indexmap for now to avoid sending values over await point
     pub command_id_module_map: dashmap::DashMap<String, String>,
 
     /// Cache of the canonical forms of all modules
@@ -38,7 +36,7 @@ impl Default for SilverpeltCache {
         Self {
             module_enabled_cache: Cache::builder().support_invalidation_closures().build(),
             command_extra_data_map: dashmap::DashMap::new(),
-            module_cache: indexmap::IndexMap::new(),
+            module_cache: dashmap::DashMap::new(),
             command_id_module_map: dashmap::DashMap::new(),
             canonical_module_cache: dashmap::DashMap::new(),
             regex_cache: Cache::builder().support_invalidation_closures().build(),
@@ -69,7 +67,7 @@ impl SilverpeltCache {
     }
 
     pub fn remove_module(&mut self, module_id: &str) {
-        if let Some(module) = self.module_cache.shift_remove(module_id) {
+        if let Some((_, module)) = self.module_cache.remove(module_id) {
             for (command, _) in module.commands.iter() {
                 self.command_id_module_map.remove(&command.name);
                 self.command_extra_data_map.remove(&command.name);

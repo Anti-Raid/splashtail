@@ -73,7 +73,8 @@ impl module_settings::types::DataStore for StingsDataStoreImpl {
     ) -> Result<Vec<module_settings::state::State>, SettingsError> {
         let mut states = Vec::new();
 
-        for module in self.silverpelt_cache.module_cache.values() {
+        for refs in self.silverpelt_cache.module_cache.iter() {
+            let module = refs.value();
             for source in module.sting_sources.iter() {
                 let entries = source
                     .fetch(
@@ -139,7 +140,8 @@ impl module_settings::types::DataStore for StingsDataStoreImpl {
     ) -> Result<usize, SettingsError> {
         let mut count = 0;
 
-        for module in self.silverpelt_cache.module_cache.values() {
+        for refs in self.silverpelt_cache.module_cache.iter() {
+            let module = refs.value();
             for source in module.sting_sources.iter() {
                 count += source
                     .count(
