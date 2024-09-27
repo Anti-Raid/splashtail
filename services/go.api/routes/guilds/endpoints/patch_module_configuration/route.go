@@ -411,7 +411,7 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 				Args: map[string]any{
 					"guild_id": guildId,
 					"module":   body.Module,
-					"enabled":  isDisabled,
+					"enabled":  !isDisabled,
 				},
 			},
 		)
