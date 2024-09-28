@@ -762,7 +762,7 @@ impl SettingDataValidator for GuildMembersValidator {
             return Ok(());
         }
 
-        // Quick checks:
+        // Get the user id as this is required for all operations
         let Some(Value::String(user_id)) = state.state.get("user_id") else {
             return Err(SettingsError::MissingOrInvalidField {
                 field: "user_id".to_string(),
@@ -770,6 +770,7 @@ impl SettingDataValidator for GuildMembersValidator {
             });
         };
 
+        // Parse the user id
         let user_id: serenity::all::UserId = user_id
             .parse()
             .map_err(|e| SettingsError::Generic {
@@ -792,26 +793,30 @@ impl SettingDataValidator for GuildMembersValidator {
         }
 
         // Get perm overrides
-        let Some(Value::List(perm_overrides_value)) = state.state.get("perm_overrides") else {
-            return Err(SettingsError::MissingOrInvalidField {
-                field: "perm_overrides".to_string(),
-                src: "guildmembers->perm_overrides".to_string(),
-            });
-        };
-
-        let mut perm_overrides = Vec::with_capacity(perm_overrides_value.len());
-
-        for perm in perm_overrides_value {
-            if let Value::String(perm) = perm {
-                perm_overrides.push(kittycat::perms::Permission::from_string(perm));
-            } else {
-                return Err(SettingsError::Generic {
-                    message: "Failed to parse permissions".to_string(),
-                    src: "NativeAction->index".to_string(),
-                    typ: "internal".to_string(),
+        let perm_overrides = {
+            let Some(Value::List(perm_overrides_value)) = state.state.get("perm_overrides") else {
+                return Err(SettingsError::MissingOrInvalidField {
+                    field: "perm_overrides".to_string(),
+                    src: "guildmembers->perm_overrides".to_string(),
                 });
+            };
+
+            let mut perm_overrides = Vec::with_capacity(perm_overrides_value.len());
+
+            for perm in perm_overrides_value {
+                if let Value::String(perm) = perm {
+                    perm_overrides.push(kittycat::perms::Permission::from_string(perm));
+                } else {
+                    return Err(SettingsError::Generic {
+                        message: "Failed to parse permissions".to_string(),
+                        src: "NativeAction->index".to_string(),
+                        typ: "internal".to_string(),
+                    });
+                }
             }
-        }
+
+            perm_overrides
+        };
 
         let guild = proxy_support::guild(&ctx.data.cache_http, &ctx.data.reqwest, ctx.guild_id)
         .await
@@ -851,7 +856,7 @@ impl SettingDataValidator for GuildMembersValidator {
             }),
         };
 
-        // Get the target members current kittycat permissions (if any)
+        // Get the target members current kittycat permissions (if any) as well as their roles (for finding new permissions with overrides taken into account)
         let (target_member_roles, current_user_kittycat_perms) = match self.get_kittycat_perms_for_user(settings_data, conn, ctx.guild_id, guild.owner_id, user_id).await {
             Ok((target_member_roles, current_user_kittycat_perms)) => (target_member_roles, current_user_kittycat_perms),
             Err(e) => return Err(SettingsError::Generic {
@@ -861,7 +866,7 @@ impl SettingDataValidator for GuildMembersValidator {
             }),
         };
 
-        // Find new user's permissions with perm overrides
+        // Find new user's permissions with the given perm overrides
         let new_user_kittycat_perms = {
             let roles_str = silverpelt::member_permission_calc::create_roles_list_for_guild(&target_member_roles, ctx.guild_id);
 

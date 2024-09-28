@@ -51,7 +51,7 @@ pub async fn guildmembers_add(
 ) -> Result<(), Error> {
     silverpelt::settings_poise::settings_creator(
         &ctx,
-        &super::settings::GUILD_ROLES,
+        &super::settings::GUILD_MEMBERS,
         indexmap::indexmap! {
             "user_id".to_string() => Value::String(user_id.to_string()),
             "perm_overrides".to_string() => {
@@ -84,7 +84,7 @@ pub async fn guildmembers_edit(
 ) -> Result<(), Error> {
     silverpelt::settings_poise::settings_updater(
         &ctx,
-        &super::settings::GUILD_ROLES,
+        &super::settings::GUILD_MEMBERS,
         indexmap::indexmap! {
             "user_id".to_string() => Value::String(user_id.to_string()),
             "perm_overrides".to_string() => {

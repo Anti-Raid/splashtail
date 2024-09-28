@@ -363,23 +363,29 @@ impl PostgresDataStoreImpl {
         &mut self,
         query: sqlx::query::Query<'a, sqlx::Postgres, sqlx::postgres::PgArguments>,
     ) -> Result<sqlx::postgres::PgQueryResult, SettingsError> {
-        if self.tx.is_some() {
-            let tx = self.tx.as_deref_mut().unwrap();
-            query.execute(tx).await.map_err(|e| SettingsError::Generic {
-                message: e.to_string(),
-                src: "PostgresDataStore::execute_query#with_tx [query_execute]".to_string(),
-                typ: "internal".to_string(),
-            })
+        // Get the transaction connection or acquire one from pool if not in a transaction
+        let conn = if self.tx.is_some() {
+            self.tx.as_deref_mut().unwrap()
         } else {
-            query
-                .execute(&self.pool)
+            &mut *self
+                .pool
+                .acquire()
                 .await
                 .map_err(|e| SettingsError::Generic {
-                    message: e.to_string(),
-                    src: "PostgresDataStore::execute_query#without_tx [query_execute]".to_string(),
+                    message: format!("Failed to get connection: {:?}", e),
+                    src: "PostgresDataStore::execute_query [query_execute]".to_string(),
                     typ: "internal".to_string(),
-                })
-        }
+                })?
+        };
+
+        query
+            .execute(&mut *conn)
+            .await
+            .map_err(|e| SettingsError::Generic {
+                message: e.to_string(),
+                src: "PostgresDataStore::execute_query [query_execute]".to_string(),
+                typ: "internal".to_string(),
+            })
     }
 
     /// Helper method to either perform a perform a query using either the transaction or the pool
@@ -388,32 +394,33 @@ impl PostgresDataStoreImpl {
         query: sqlx::query::Query<'a, sqlx::Postgres, sqlx::postgres::PgArguments>,
     ) -> Result<sqlx::postgres::PgRow, SettingsError> {
         let query_sql = query.sql();
-        if self.tx.is_some() {
-            let tx = self.tx.as_deref_mut().unwrap();
-            query
-                .fetch_one(tx)
-                .await
-                .map_err(|e| SettingsError::Generic {
-                    message: e.to_string(),
-                    src: format!(
-                        "PostgresDataStore::fetchone_query#with_tx [query_execute]: {}",
-                        query_sql
-                    ),
-                    typ: "internal".to_string(),
-                })
+
+        // Get the transaction connection or acquire one from pool if not in a transaction
+        let conn = if self.tx.is_some() {
+            self.tx.as_deref_mut().unwrap()
         } else {
-            query
-                .fetch_one(&self.pool)
+            &mut *self
+                .pool
+                .acquire()
                 .await
                 .map_err(|e| SettingsError::Generic {
-                    message: e.to_string(),
-                    src: format!(
-                        "PostgresDataStore::fetchone_query#without_tx [query_execute]: {}",
-                        query_sql
-                    ),
+                    message: format!("Failed to get connection: {:?}", e),
+                    src: "PostgresDataStore::fetchone_query".to_string(),
                     typ: "internal".to_string(),
-                })
-        }
+                })?
+        };
+
+        query
+            .fetch_one(&mut *conn)
+            .await
+            .map_err(|e| SettingsError::Generic {
+                message: e.to_string(),
+                src: format!(
+                    "PostgresDataStore::fetchone_query [query_execute]: {}",
+                    query_sql
+                ),
+                typ: "internal".to_string(),
+            })
     }
 
     /// Helper method to either perform a perform a query using either the transaction or the pool
@@ -422,32 +429,32 @@ impl PostgresDataStoreImpl {
         query: sqlx::query::Query<'a, sqlx::Postgres, sqlx::postgres::PgArguments>,
     ) -> Result<Vec<sqlx::postgres::PgRow>, SettingsError> {
         let query_sql = query.sql();
-        if self.tx.is_some() {
-            let tx = self.tx.as_deref_mut().unwrap();
-            query
-                .fetch_all(tx)
-                .await
-                .map_err(|e| SettingsError::Generic {
-                    message: e.to_string(),
-                    src: format!(
-                        "PostgresDataStore::fetchall_query#with_tx [query_execute]: {}",
-                        query_sql
-                    ),
-                    typ: "internal".to_string(),
-                })
+
+        let conn = if self.tx.is_some() {
+            self.tx.as_deref_mut().unwrap()
         } else {
-            query
-                .fetch_all(&self.pool)
+            &mut *self
+                .pool
+                .acquire()
                 .await
                 .map_err(|e| SettingsError::Generic {
-                    message: e.to_string(),
-                    src: format!(
-                        "PostgresDataStore::fetchall_query#without_tx [query_execute]: {}",
-                        query_sql
-                    ),
+                    message: format!("Failed to get connection: {:?}", e),
+                    src: "PostgresDataStore::fetchall_query".to_string(),
                     typ: "internal".to_string(),
-                })
-        }
+                })?
+        };
+
+        query
+            .fetch_all(&mut *conn)
+            .await
+            .map_err(|e| SettingsError::Generic {
+                message: e.to_string(),
+                src: format!(
+                    "PostgresDataStore::fetchall_query [query_execute]: {}",
+                    query_sql
+                ),
+                typ: "internal".to_string(),
+            })
     }
 }
 
