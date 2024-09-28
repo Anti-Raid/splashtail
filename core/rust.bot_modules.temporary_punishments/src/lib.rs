@@ -2,18 +2,31 @@ pub mod tasks;
 
 use futures_util::future::FutureExt;
 
-pub fn module() -> silverpelt::Module {
-    silverpelt::Module {
-        id: "temporary_punishments",
-        name: "Temporary Punishments",
-        description: "Customizable setting and management of temporary punishments (tempbans/temp role removals). Most servers will not need to customize this",
-        toggleable: true,
-        commands_toggleable: true,
-        virtual_module: false,
-        web_hidden: false,
-        is_default_enabled: true,
-        on_startup: vec![],
-        background_tasks: vec![(
+pub struct Module;
+
+impl silverpelt::module::Module for Module {
+    fn id(&self) -> &'static str {
+        "temporary_punishments"
+    }
+
+    fn name(&self) -> &'static str {
+        "Temporary Punishments"
+    }
+
+    fn description(&self) -> &'static str {
+        "Customizable setting and management of temporary punishments (tempbans/temp role removals). Most servers will not need to customize this"
+    }
+
+    fn is_default_enabled(&self) -> bool {
+        true
+    }
+
+    fn raw_commands(&self) -> Vec<silverpelt::module::CommandObj> {
+        vec![]
+    }
+
+    fn background_tasks(&self) -> Vec<silverpelt::BackgroundTask> {
+        vec![(
             botox::taskman::Task {
                 name: "Temporary Punishment Task",
                 description: "Handle expired punishments",
@@ -22,7 +35,6 @@ pub fn module() -> silverpelt::Module {
                 run: Box::new(move |ctx| tasks::temporary_punishment_task(ctx).boxed()),
             },
             |_ctx| (true, "Temporary Punishment Task is enabled".to_string()),
-        )],
-        ..Default::default()
+        )]
     }
 }

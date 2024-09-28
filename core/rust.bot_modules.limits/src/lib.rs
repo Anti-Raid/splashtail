@@ -6,21 +6,25 @@ pub mod handler;
 mod settings;
 mod strategy;
 
-use futures_util::future::FutureExt;
 use indexmap::indexmap;
 
-pub fn module() -> silverpelt::Module {
-    silverpelt::Module {
-        id: "limits",
-        name: "Limits",
-        description:
-            "Experimental server ratelimiting module. Not yet suitable for production use. Should be combined with anti-nuke bots for best efficacy",
-        toggleable: true,
-        commands_toggleable: true,
-        virtual_module: false,
-        web_hidden: false,
-        is_default_enabled: false,
-        commands: vec![
+pub struct Module;
+
+impl silverpelt::module::Module for Module {
+    fn id(&self) -> &'static str {
+        "limits"
+    }
+
+    fn name(&self) -> &'static str {
+        "Limits"
+    }
+
+    fn description(&self) -> &'static str {
+        "Experimental server ratelimiting module. Not yet suitable for production use. Should be combined with anti-nuke bots for best efficacy"
+    }
+
+    fn raw_commands(&self) -> Vec<silverpelt::module::CommandObj> {
+        vec![
             (
                 cmds::limits(),
                 indexmap! {
@@ -35,27 +39,43 @@ pub fn module() -> silverpelt::Module {
                 indexmap! {
                     "view" => silverpelt::types::CommandExtendedData::kittycat_or_admin("past_hit_limits", "view"),
                     "remove" => silverpelt::types::CommandExtendedData::kittycat_or_admin("past_hit_limits", "remove"),
-                }
+                },
             ),
             (
                 cmds::limit_user_actions(),
                 indexmap! {
                     "view" => silverpelt::types::CommandExtendedData::kittycat_or_admin("limit_user_actions", "view"),
                     "remove" => silverpelt::types::CommandExtendedData::kittycat_or_admin("limit_user_actions", "remove"),
-                }
-            )
-        ],
-        event_handlers: vec![Box::new(move |ectx| {
-            events::event_listener(ectx).boxed()
-        })],
-        sting_sources: vec![
-            std::sync::Arc::new(core::LimitsUserStingsStingSource)
-        ],
-        config_options: vec![
+                },
+            ),
+        ]
+    }
+
+    fn sting_sources(&self) -> Vec<std::sync::Arc<dyn silverpelt::sting_sources::StingSource>> {
+        vec![std::sync::Arc::new(core::LimitsUserStingsStingSource)]
+    }
+
+    fn config_options(&self) -> Vec<module_settings::types::ConfigOption> {
+        vec![
             (*settings::USER_STINGS).clone(),
             (*settings::USER_ACTIONS).clone(),
             (*settings::GUILD_LIMITS).clone(),
-        ],
-        ..Default::default()
+        ]
+    }
+
+    fn event_listeners(&self) -> Option<Box<dyn silverpelt::module::ModuleEventListeners>> {
+        Some(Box::new(EventListener))
+    }
+}
+
+struct EventListener;
+
+#[async_trait::async_trait]
+impl silverpelt::module::ModuleEventListeners for EventListener {
+    async fn event_handler(
+        &self,
+        ectx: &silverpelt::EventHandlerContext,
+    ) -> Result<(), silverpelt::Error> {
+        events::event_listener(ectx).await
     }
 }

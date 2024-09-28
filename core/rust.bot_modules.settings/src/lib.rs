@@ -1,4 +1,3 @@
-use futures_util::future::FutureExt;
 use indexmap::indexmap;
 use permissions::types::{PermissionCheck, PermissionChecks};
 use silverpelt::types::CommandExtendedData;
@@ -12,17 +11,36 @@ mod modules;
 #[allow(clippy::module_inception)]
 mod settings;
 
-pub fn module() -> silverpelt::Module {
-    silverpelt::Module {
-        id: "settings",
-        name: "Settings",
-        description: "Configure the bot to your liking",
-        toggleable: false,
-        commands_toggleable: true,
-        virtual_module: false,
-        web_hidden: false,
-        is_default_enabled: true,
-        commands: vec![
+pub struct Module;
+
+#[async_trait::async_trait]
+impl silverpelt::module::Module for Module {
+    fn id(&self) -> &'static str {
+        "settings"
+    }
+
+    fn name(&self) -> &'static str {
+        "Settings"
+    }
+
+    fn description(&self) -> &'static str {
+        "Configure the bot to your liking"
+    }
+
+    fn toggleable(&self) -> bool {
+        false
+    }
+
+    fn commands_toggleable(&self) -> bool {
+        true
+    }
+
+    fn is_default_enabled(&self) -> bool {
+        true
+    }
+
+    fn raw_commands(&self) -> Vec<silverpelt::module::CommandObj> {
+        vec![
             (
                 modules::modules(),
                 indexmap! {
@@ -132,12 +150,26 @@ pub fn module() -> silverpelt::Module {
                     "remove" => silverpelt::types::CommandExtendedData::kittycat_simple("guildmembers", "remove"),
                 },
             ),
-        ],
-        on_startup: vec![Box::new(move |data| am_toggles::setup(data).boxed())],
-        config_options: vec![
+        ]
+    }
+
+    fn config_options(&self) -> Vec<module_settings::types::ConfigOption> {
+        vec![
             (*settings::GUILD_ROLES).clone(),
             (*settings::GUILD_MEMBERS).clone(),
-        ],
-        ..Default::default()
+        ]
+    }
+
+    fn event_listeners(&self) -> Option<Box<dyn silverpelt::module::ModuleEventListeners>> {
+        Some(Box::new(EventHandler))
+    }
+}
+
+struct EventHandler;
+
+#[async_trait::async_trait]
+impl silverpelt::module::ModuleEventListeners for EventHandler {
+    async fn on_startup(&self, data: &silverpelt::data::Data) -> Result<(), silverpelt::Error> {
+        am_toggles::setup(data).await
     }
 }

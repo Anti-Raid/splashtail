@@ -5,18 +5,23 @@ pub mod settings;
 
 use indexmap::indexmap;
 
-pub fn module() -> silverpelt::Module {
-    silverpelt::Module {
-        id: "lockdown",
-        name: "Lockdown",
-        description:
-            "Lockdown module for quickly locking/unlocking your whole server or individual channels",
-        toggleable: true,
-        commands_toggleable: true,
-        virtual_module: false,
-        web_hidden: false,
-        is_default_enabled: false,
-        commands: vec![
+pub struct Module;
+
+impl silverpelt::module::Module for Module {
+    fn id(&self) -> &'static str {
+        "lockdown"
+    }
+
+    fn name(&self) -> &'static str {
+        "Lockdown"
+    }
+
+    fn description(&self) -> &'static str {
+        "Lockdown module for quickly locking/unlocking your whole server or individual channels"
+    }
+
+    fn raw_commands(&self) -> Vec<silverpelt::module::CommandObj> {
+        vec![
             (
                 cmds::lockdown_settings(),
                 indexmap! {
@@ -34,11 +39,13 @@ pub fn module() -> silverpelt::Module {
                     "unlock" => silverpelt::types::CommandExtendedData::kittycat_or_admin("lockdown", "unlock"),
                 },
             ),
-        ],
-        config_options: vec![
+        ]
+    }
+
+    fn config_options(&self) -> Vec<module_settings::types::ConfigOption> {
+        vec![
             (*settings::LOCKDOWN_SETTINGS).clone(),
             (*settings::LOCKDOWNS).clone(),
-        ],
-        ..Default::default()
+        ]
     }
 }

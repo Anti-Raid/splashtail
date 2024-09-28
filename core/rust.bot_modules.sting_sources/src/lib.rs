@@ -1,17 +1,29 @@
 pub mod settings;
 
-pub fn module() -> silverpelt::Module {
-    silverpelt::Module {
-        id: "sting_sources",
-        name: "Sting Sources",
-        description: "Customizable management of sting sources",
-        toggleable: true,
-        commands_toggleable: true,
-        virtual_module: false,
-        web_hidden: true, // Not yet ready for release yet
-        is_default_enabled: true,
-        commands: vec![],
-        on_startup: vec![],
-        ..Default::default()
+pub struct Module;
+
+impl silverpelt::module::Module for Module {
+    fn id(&self) -> &'static str {
+        "sting_sources"
+    }
+
+    fn name(&self) -> &'static str {
+        "Sting Sources"
+    }
+
+    fn description(&self) -> &'static str {
+        "Customizable management of sting sources"
+    }
+
+    fn web_hidden(&self) -> bool {
+        true // Not yet ready for release yet
+    }
+
+    fn is_default_enabled(&self) -> bool {
+        true
+    }
+
+    fn raw_commands(&self) -> Vec<silverpelt::module::CommandObj> {
+        vec![]
     }
 }

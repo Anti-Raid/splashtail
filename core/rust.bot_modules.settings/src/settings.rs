@@ -657,7 +657,7 @@ pub static GUILD_MEMBERS: LazyLock<ConfigOption> = LazyLock::new(|| {
                 description: "Whether the member is public or not",
                 column_type: ColumnType::new_scalar(InnerColumnType::Boolean {}),
                 nullable: false,
-                default: None,
+                default: Some(|_| Value::Boolean(false)),
                 unique: false,
                 suggestions: ColumnSuggestion::None {},
                 ignored_for: vec![],

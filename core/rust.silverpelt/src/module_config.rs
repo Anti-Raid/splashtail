@@ -54,9 +54,12 @@ pub async fn is_module_enabled(
 
                 silverpelt_cache
                     .module_enabled_cache
-                    .insert((guild_id, module.id.to_string()), module.is_default_enabled)
+                    .insert(
+                        (guild_id, module.id().to_string()),
+                        module.is_default_enabled(),
+                    )
                     .await;
-                Ok(module.is_default_enabled)
+                Ok(module.is_default_enabled())
             }
         } else {
             // User wants to use the default value
@@ -69,9 +72,12 @@ pub async fn is_module_enabled(
 
             silverpelt_cache
                 .module_enabled_cache
-                .insert((guild_id, module.id.to_string()), module.is_default_enabled)
+                .insert(
+                    (guild_id, module.id().to_string()),
+                    module.is_default_enabled(),
+                )
                 .await;
-            Ok(module.is_default_enabled)
+            Ok(module.is_default_enabled())
         }
     }
 }

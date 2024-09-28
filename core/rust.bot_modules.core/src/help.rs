@@ -78,7 +78,7 @@ pub async fn help(
                     let cat_module = data.silverpelt_cache.module_cache.get(&cat_name);
 
                     if let Some(cat_module) = cat_module {
-                        Some(cat_module.name.to_string())
+                        Some(cat_module.name().to_string())
                     } else {
                         Some("Misc Commands".to_string())
                     }

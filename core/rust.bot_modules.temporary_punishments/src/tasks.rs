@@ -22,7 +22,7 @@ async fn get_all_temp_punishments(
 
     for refs in data.silverpelt_cache.module_cache.iter() {
         let module = refs.value();
-        for src in module.sting_sources.iter() {
+        for src in module.sting_sources().iter() {
             // If the module doesn't support durations/expirations, skip
             let flags = src.flags();
             if !flags.supports_duration() || !flags.supports_actions() {

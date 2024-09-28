@@ -72,10 +72,10 @@ pub mod test_module_parse {
 
         let data = new_dummy_basedatadata().await;
         for module in crate::modules() {
-            assert!(module.is_parsed());
+            assert!(module.validate().is_ok());
 
             // Ensure that all settings have all columns
-            for config_opt in module.config_options {
+            for config_opt in module.config_options() {
                 let mut missing_columns = Vec::new();
 
                 for column in config_opt.columns.iter() {
@@ -105,7 +105,9 @@ pub mod test_module_parse {
 
                 println!(
                     "Module: {}, Config Opt: {}, Columns: {:?}",
-                    module.id, config_opt.id, columns
+                    module.id(),
+                    config_opt.id,
+                    columns
                 );
 
                 for column in columns {
@@ -117,7 +119,7 @@ pub mod test_module_parse {
                 if !missing_columns.is_empty() {
                     panic!(
                         "Module {} has a config option {} with missing columns: {}",
-                        module.id,
+                        module.id(),
                         config_opt.id,
                         missing_columns.join(", ")
                     );

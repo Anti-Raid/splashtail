@@ -19,7 +19,7 @@ use sqlx::postgres::PgPoolOptions;
 use std::alloc;
 use std::io::Write;
 
-pub fn modules() -> Vec<silverpelt::Module> {
+pub fn modules() -> Vec<Box<dyn silverpelt::module::Module>> {
     bot_modules_default::modules()
 }
 
@@ -329,7 +329,7 @@ async fn event_listener<'a>(
                 .load(std::sync::atomic::Ordering::SeqCst)
             {
                 info!("Starting background tasks");
-                let tasks = bot_binutils::get_tasks(modules(), ctx.serenity_context);
+                let tasks = bot_binutils::get_tasks(ctx.serenity_context, &user_data);
                 tokio::task::spawn(botox::taskman::start_all_tasks(
                     tasks,
                     ctx.serenity_context.clone(),
@@ -401,17 +401,9 @@ async fn event_listener<'a>(
                 .ready
                 .contains_key(&ctx.serenity_context.shard_id)
             {
-                for module in modules() {
-                    for on_ready in module.on_first_ready.iter() {
-                        if let Err(e) = on_ready(ctx.serenity_context.clone(), &user_data).await {
-                            error!("Error initializing module [on_first_ready]: {}", e);
-                            panic!(
-                                "CRITICAL: Error initializing module [on_first_ready]: {}",
-                                e
-                            );
-                        }
-                    }
-                }
+                bot_binutils::dispatch_on_first_ready(ctx.serenity_context, &user_data)
+                    .await
+                    .expect("Error dispatching on first ready");
             }
 
             CONNECT_STATE
@@ -491,7 +483,7 @@ async fn main() {
             .to_string();
 
     for module in modules() {
-        let module_id = module.id;
+        let module_id = module.id();
         let module_filter = format!("bot_modules_{}=info", module_id);
         default_filter.push(',');
         default_filter.push_str(module_filter.as_str());
@@ -580,6 +572,16 @@ async fn main() {
 
     info!("Created ClientBuilder");
 
+    let silverpelt_cache = {
+        let mut silverpelt_cache = silverpelt::cache::SilverpeltCache::default();
+
+        for module in modules() {
+            silverpelt_cache.add_module(module);
+        }
+
+        Arc::new(silverpelt_cache)
+    };
+
     let framework_opts = poise::FrameworkOptions {
         initialize_owners: true,
         prefix_options: poise::PrefixFrameworkOptions {
@@ -587,7 +589,7 @@ async fn main() {
             ..poise::PrefixFrameworkOptions::default()
         },
         event_handler: |ctx, event| Box::pin(event_listener(ctx, event)),
-        commands: bot_binutils::get_commands(modules()),
+        commands: bot_binutils::get_commands(&silverpelt_cache),
         command_check: Some(|ctx| Box::pin(bot_binutils::command_check(ctx))),
         pre_command: |ctx| {
             Box::pin(async move {
@@ -668,27 +670,14 @@ async fn main() {
         reqwest,
         extra_data: dashmap::DashMap::new(),
         props: props.clone(),
-        silverpelt_cache: {
-            let mut silverpelt_cache = silverpelt::cache::SilverpeltCache::default();
-
-            for module in modules() {
-                silverpelt_cache.add_module(module);
-            }
-
-            Arc::new(silverpelt_cache)
-        },
+        silverpelt_cache,
     };
 
     info!("Initializing bot state");
 
-    for module in modules() {
-        for init in module.on_startup.iter() {
-            if let Err(e) = init(&data).await {
-                error!("Error initializing module: {}", e);
-                panic!("CRITICAL: Error initializing module: {}", e);
-            }
-        }
-    }
+    bot_binutils::dispatch_on_startup(&data)
+        .await
+        .expect("Error dispatching on startup");
 
     let mut client = client_builder
         .framework(framework)

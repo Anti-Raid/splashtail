@@ -5,17 +5,27 @@ use indexmap::indexmap;
 use permissions::types::{PermissionCheck, PermissionChecks};
 use silverpelt::types::CommandExtendedData;
 
-pub fn module() -> silverpelt::Module {
-    silverpelt::Module {
-        id: "moderation",
-        name: "Moderation",
-        description: "Basic customizable moderation plugin for your server.",
-        toggleable: true,
-        commands_toggleable: true,
-        virtual_module: false,
-        web_hidden: false,
-        is_default_enabled: true,
-        commands: vec![
+pub struct Module;
+
+impl silverpelt::module::Module for Module {
+    fn id(&self) -> &'static str {
+        "moderation"
+    }
+
+    fn name(&self) -> &'static str {
+        "Moderation"
+    }
+
+    fn description(&self) -> &'static str {
+        "Simple yet customizable moderation plugin for your server."
+    }
+
+    fn is_default_enabled(&self) -> bool {
+        true
+    }
+
+    fn raw_commands(&self) -> Vec<silverpelt::module::CommandObj> {
+        vec![
             (
                 cmd::prune_user(),
                 indexmap! {
@@ -130,14 +140,21 @@ pub fn module() -> silverpelt::Module {
                     },
                 },
             ),
-        ],
-        sting_sources: vec![std::sync::Arc::new(core::ModerationActionsStingSource)],
-        punishment_actions: vec![
+        ]
+    }
+
+    fn sting_sources(&self) -> Vec<std::sync::Arc<dyn silverpelt::sting_sources::StingSource>> {
+        vec![std::sync::Arc::new(core::ModerationActionsStingSource)]
+    }
+
+    fn punishment_actions(
+        &self,
+    ) -> Vec<std::sync::Arc<dyn silverpelt::punishments::CreatePunishmentAction>> {
+        vec![
             std::sync::Arc::new(core::punishment_actions::CreateTimeoutAction),
             std::sync::Arc::new(core::punishment_actions::CreateKickAction),
             std::sync::Arc::new(core::punishment_actions::CreateBanAction),
             std::sync::Arc::new(core::punishment_actions::CreateRemoveAllRolesAction),
-        ],
-        ..Default::default()
+        ]
     }
 }

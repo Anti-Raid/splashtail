@@ -16,10 +16,13 @@ async fn module_list_autocomplete<'a>(
 
     for refs in data.silverpelt_cache.module_cache.iter() {
         let module = refs.value();
-        if module.name.to_lowercase().contains(&partial.to_lowercase())
-            || module.id.to_lowercase().contains(&partial.to_lowercase())
+        if module
+            .name()
+            .to_lowercase()
+            .contains(&partial.to_lowercase())
+            || module.id().to_lowercase().contains(&partial.to_lowercase())
         {
-            ac.push(AutocompleteChoice::new(module.name, module.id));
+            ac.push(AutocompleteChoice::new(module.name(), module.id()));
         }
     }
 
@@ -81,15 +84,15 @@ pub async fn modules_list(ctx: Context<'_>) -> Result<(), Error> {
         if let Some(disabled) = module_config.disabled {
             msg.push_str(&format!(
                 "**{}**: {} [module id = {}]\n",
-                module.name,
+                module.name(),
                 if disabled { "Disabled" } else { "Enabled" },
                 module_id
             ));
         } else {
             msg.push_str(&format!(
                 "**{}**: {} [default] [module id = {}]\n",
-                module.name,
-                if module.is_default_enabled {
+                module.name(),
+                if module.is_default_enabled() {
                     "Enabled"
                 } else {
                     "Disabled"
@@ -103,19 +106,19 @@ pub async fn modules_list(ctx: Context<'_>) -> Result<(), Error> {
 
     for refs in data.silverpelt_cache.module_cache.iter() {
         let module = refs.value();
-        if done_modules.contains(&module.id.to_string()) {
+        if done_modules.contains(&module.id().to_string()) {
             continue;
         }
 
         msg.push_str(&format!(
             "**{}**: {} [default, config not modified] [module id = {}]\n",
-            module.name,
-            if module.is_default_enabled {
+            module.name(),
+            if module.is_default_enabled() {
                 "Enabled"
             } else {
                 "Disabled"
             },
-            module.id
+            module.id()
         ));
     }
 
@@ -153,7 +156,7 @@ pub async fn modules_enable(
         .into());
     };
 
-    if !module_data.toggleable {
+    if !module_data.toggleable() {
         return Err("This module cannot be enabled/disabled".into());
     }
 
@@ -234,7 +237,7 @@ pub async fn modules_disable(
         .into());
     };
 
-    if !module_data.toggleable {
+    if !module_data.toggleable() {
         return Err("This module cannot be enabled/disabled".into());
     }
 
@@ -311,7 +314,7 @@ pub async fn modules_modperms(
     let cache_http = botox::cache::CacheHttpImpl::from_ctx(ctx.serenity_context());
     let perm_res = silverpelt::cmd::check_command(
         &data.silverpelt_cache,
-        &format!("acl__modules_modperms {}", module.id),
+        &format!("acl__modules_modperms {}", module.id()),
         guild_id,
         ctx.author().id,
         &data.pool,
@@ -333,7 +336,7 @@ pub async fn modules_modperms(
     let module_config = silverpelt::module_config::get_module_configuration(
         &data.pool,
         guild_id.to_string().as_str(),
-        module.id,
+        module.id(),
     )
     .await?;
 
@@ -344,7 +347,7 @@ pub async fn modules_modperms(
             GuildModuleConfiguration {
                 id: "".to_string(),
                 guild_id: guild_id.to_string(),
-                module: module.id.to_string(),
+                module: module.id().to_string(),
                 disabled: None,
                 default_perms: None,
             }
@@ -415,14 +418,14 @@ pub async fn modules_modperms(
         let mut response_deferred = false;
         match item_id {
             "module/enable" => {
-                if !module.toggleable {
+                if !module.toggleable() {
                     item.create_response(
                         &ctx.serenity_context().http,
                         poise::serenity_prelude::CreateInteractionResponse::Message(
                             poise::CreateReply::new()
                                 .content(format!(
                                     "The module `{}` cannot be toggled (enabled/disable) at this time!",
-                                    module.id
+                                    module.id()
                                 ))
                                 .to_slash_initial_response(
                                     serenity::all::CreateInteractionResponseMessage::default(),
@@ -467,14 +470,14 @@ pub async fn modules_modperms(
                 new_module_config.disabled = Some(false);
             }
             "module/disable" => {
-                if !module.toggleable {
+                if !module.toggleable() {
                     item.create_response(
                         &ctx.serenity_context().http,
                         poise::serenity_prelude::CreateInteractionResponse::Message(
                             poise::CreateReply::new()
                                 .content(format!(
                                     "The module `{}` cannot be toggled (enabled/disable) at this time!",
-                                    module.id
+                                    module.id()
                                 ))
                                 .to_slash_initial_response(
                                     serenity::all::CreateInteractionResponseMessage::default(),
@@ -519,14 +522,14 @@ pub async fn modules_modperms(
                 new_module_config.disabled = Some(true);
             }
             "module/reset-toggle" => {
-                if !module.toggleable {
+                if !module.toggleable() {
                     item.create_response(
                         &ctx.serenity_context().http,
                         poise::serenity_prelude::CreateInteractionResponse::Message(
                             poise::CreateReply::new()
                                 .content(format!(
                                     "The module `{}` cannot be toggled (enabled/disable) at this time!",
-                                    module.id
+                                    module.id()
                                 ))
                                 .to_slash_initial_response(
                                     serenity::all::CreateInteractionResponseMessage::default(),
@@ -537,7 +540,7 @@ pub async fn modules_modperms(
                     continue;
                 }
 
-                if module.is_default_enabled {
+                if module.is_default_enabled() {
                     let perm_res = silverpelt::cmd::check_command(
                         &data.silverpelt_cache,
                         "modules enable",
@@ -606,7 +609,7 @@ pub async fn modules_modperms(
             "module/default-perms/reset" => {
                 let perm_res = silverpelt::cmd::check_command(
                     &data.silverpelt_cache,
-                    &format!("acl__{}_defaultperms_check", module.id),
+                    &format!("acl__{}_defaultperms_check", module.id()),
                     guild_id,
                     ctx.author().id,
                     &data.pool,
@@ -631,7 +634,7 @@ pub async fn modules_modperms(
                             poise::CreateReply::new()
                                 .content(format!(
                                     "You must have permission to use `acl__{}_defaultperms_check` with the permissions you have provided: {}",
-                                    module.id,
+                                    module.id(),
                                     perm_res.to_markdown()
                                 ))
                                 .to_slash_initial_response(
@@ -694,7 +697,7 @@ pub async fn modules_modperms(
 
                         let perm_res = silverpelt::cmd::check_command(
                             &data.silverpelt_cache,
-                            &format!("acl__{}_defaultperms_check", module.id),
+                            &format!("acl__{}_defaultperms_check", module.id()),
                             guild_id,
                             ctx.author().id,
                             &data.pool,
@@ -719,7 +722,7 @@ pub async fn modules_modperms(
                                     poise::CreateReply::new()
                                         .content(format!(
                                             "You must have permission to use `acl__{}_defaultperms_check` with the permissions you have provided: {}",
-                                            module.id,
+                                            module.id(),
                                             perm_res.to_markdown()
                                         ))
                                         .to_slash_initial_response(
@@ -747,7 +750,7 @@ pub async fn modules_modperms(
                 let count = sqlx::query!(
                     "SELECT COUNT(*) FROM guild_module_configurations WHERE guild_id = $1 AND module = $2",
                     guild_id.to_string(),
-                    module.id
+                    module.id()
                 )
                 .fetch_one(&mut *tx)
                 .await?
@@ -762,7 +765,7 @@ pub async fn modules_modperms(
                         new_perms,
                         new_module_config.disabled,
                         guild_id.to_string(),
-                        module.id
+                        module.id()
                     )
                     .execute(&mut *tx)
                     .await?;
@@ -770,7 +773,7 @@ pub async fn modules_modperms(
                     sqlx::query!(
                         "INSERT INTO guild_module_configurations (guild_id, module, default_perms, disabled) VALUES ($1, $2, $3, $4)",
                         guild_id.to_string(),
-                        module.id,
+                        module.id(),
                         new_perms,
                         new_module_config.disabled
                     )

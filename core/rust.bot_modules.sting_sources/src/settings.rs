@@ -75,7 +75,7 @@ impl module_settings::types::DataStore for StingsDataStoreImpl {
 
         for refs in self.silverpelt_cache.module_cache.iter() {
             let module = refs.value();
-            for source in module.sting_sources.iter() {
+            for source in module.sting_sources().iter() {
                 let entries = source
                     .fetch(
                         &StingSourceData {
@@ -142,7 +142,7 @@ impl module_settings::types::DataStore for StingsDataStoreImpl {
 
         for refs in self.silverpelt_cache.module_cache.iter() {
             let module = refs.value();
-            for source in module.sting_sources.iter() {
+            for source in module.sting_sources().iter() {
                 count += source
                     .count(
                         &StingSourceData {

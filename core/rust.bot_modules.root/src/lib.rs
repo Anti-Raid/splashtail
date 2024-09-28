@@ -1,24 +1,42 @@
 #![allow(non_snake_case)]
 
-use futures_util::FutureExt;
-
 mod am_toggles;
 mod cmds;
 mod settings;
 
-pub fn module() -> silverpelt::Module {
-    silverpelt::Module {
-        id: "root",
-        name: "Root/Staff-Only Commands",
-        description:
-            "Commands that are only available to staff members. Publicly viewable for transparency.",
-        toggleable: false,
-        commands_toggleable: false,
-        virtual_module: false,
-        web_hidden: false,
-        is_default_enabled: true,
-        // These commands do not follow the typical permission system anyways
-        commands: vec![(
+pub struct Module;
+
+impl silverpelt::module::Module for Module {
+    fn id(&self) -> &'static str {
+        "root"
+    }
+
+    fn name(&self) -> &'static str {
+        "Root/Staff-Only Commands"
+    }
+
+    fn description(&self) -> &'static str {
+        "Commands that are only available to staff members. Publicly viewable for transparency."
+    }
+
+    fn toggleable(&self) -> bool {
+        false
+    }
+
+    fn commands_toggleable(&self) -> bool {
+        false
+    }
+
+    fn is_default_enabled(&self) -> bool {
+        true
+    }
+
+    fn root_module(&self) -> bool {
+        true
+    }
+
+    fn raw_commands(&self) -> Vec<silverpelt::module::CommandObj> {
+        vec![(
             cmds::sudo(),
             indexmap::indexmap! {
                 "register" => silverpelt::types::CommandExtendedData::none(),
@@ -35,14 +53,27 @@ pub fn module() -> silverpelt::Module {
                 "last_task_expiry_update" => silverpelt::types::CommandExtendedData::none(),
                 "last_task_expiry_delete" => silverpelt::types::CommandExtendedData::none(),
             },
-        )],
-        on_startup: vec![Box::new(move |data| am_toggles::setup(data).boxed())],
-        config_options: vec![
+        )]
+    }
+
+    fn event_listeners(&self) -> Option<Box<dyn silverpelt::module::ModuleEventListeners>> {
+        Some(Box::new(EventListener))
+    }
+
+    fn config_options(&self) -> Vec<module_settings::types::ConfigOption> {
+        vec![
             (*settings::CAN_USE_BOT).clone(),
             (*settings::INSPECTOR_FAKE_BOTS).clone(),
             (*settings::LAST_TASK_EXPIRY).clone(),
-        ],
-        root_module: true,
-        ..Default::default()
+        ]
+    }
+}
+
+struct EventListener;
+
+#[async_trait::async_trait]
+impl silverpelt::module::ModuleEventListeners for EventListener {
+    async fn on_startup(&self, data: &silverpelt::data::Data) -> Result<(), silverpelt::Error> {
+        am_toggles::setup(data).await
     }
 }

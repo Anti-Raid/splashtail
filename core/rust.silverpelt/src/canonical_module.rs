@@ -135,28 +135,35 @@ impl From<&crate::Command> for CanonicalCommandData {
 }
 
 /// Given a module, return its canonical representation
-impl From<&crate::Module> for CanonicalModule {
-    fn from(module: &crate::Module) -> Self {
+impl From<&dyn crate::module::Module> for CanonicalModule {
+    fn from(module: &dyn crate::module::Module) -> Self {
         CanonicalModule {
-            id: module.id.to_string(),
-            name: module.name.to_string(),
-            description: module.description.to_string(),
-            toggleable: module.toggleable,
-            commands_toggleable: module.commands_toggleable,
-            virtual_module: module.virtual_module,
-            web_hidden: module.web_hidden,
-            is_default_enabled: module.is_default_enabled,
+            id: module.id().to_string(),
+            name: module.name().to_string(),
+            description: module.description().to_string(),
+            toggleable: module.toggleable(),
+            commands_toggleable: module.commands_toggleable(),
+            virtual_module: module.virtual_module(),
+            web_hidden: module.web_hidden(),
+            is_default_enabled: module.is_default_enabled(),
             commands: module
-                .commands
+                .full_command_list()
                 .iter()
                 .map(|(cmd, perms)| CanonicalCommand::from_repr(cmd, perms.clone()))
                 .collect(),
-            s3_paths: module.s3_paths.clone(),
+            s3_paths: module.s3_paths().clone(),
             config_options: module
-                .config_options
+                .config_options()
                 .iter()
                 .map(|x| module_settings::canonical_types::CanonicalConfigOption::from(x.clone()))
                 .collect(),
         }
+    }
+}
+
+/// Allow &Arc<dyn Module> to be converted to CanonicalModule
+impl From<&std::sync::Arc<dyn crate::module::Module>> for CanonicalModule {
+    fn from(module: &std::sync::Arc<dyn crate::module::Module>) -> Self {
+        CanonicalModule::from(&**module)
     }
 }

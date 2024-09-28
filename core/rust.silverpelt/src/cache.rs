@@ -1,7 +1,24 @@
-use crate::{canonical_module::CanonicalModule, CommandExtendedDataMap, Module};
+use crate::{canonical_module::CanonicalModule, module::Module, CommandExtendedDataMap};
 use moka::future::Cache;
 use serenity::all::GuildId;
 use std::sync::Arc;
+
+/// The compiler requires some help here with module cache so we use a wrapper struct
+pub struct ModuleCacheEntry(pub Arc<dyn Module>);
+
+impl Clone for ModuleCacheEntry {
+    fn clone(&self) -> Self {
+        Self(self.0.clone())
+    }
+}
+
+impl std::ops::Deref for ModuleCacheEntry {
+    type Target = Arc<dyn Module>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
 
 /// The silverpelt cache is a structure that contains the core state for the bot
 pub struct SilverpeltCache {
@@ -16,7 +33,7 @@ pub struct SilverpeltCache {
     /// module_cache is a cache of module id to module
     ///
     /// We use indexmap here to avoid the 'static restriction
-    pub module_cache: dashmap::DashMap<String, Arc<Module>>,
+    pub module_cache: dashmap::DashMap<String, ModuleCacheEntry>,
 
     /// Command ID to module map
     pub command_id_module_map: dashmap::DashMap<String, String>,
@@ -46,29 +63,40 @@ impl Default for SilverpeltCache {
 }
 
 impl SilverpeltCache {
-    pub fn add_module(&mut self, module: Module) {
-        let module = Arc::new(module);
+    pub fn add_module(&mut self, module: Box<dyn Module>) {
+        // Try validating the module first before adding it
+        match module.validate() {
+            Ok(_) => {}
+            Err(e) => {
+                panic!(
+                    "SilverpeltCache::add_module - Failed to validate module: {}",
+                    e
+                );
+            }
+        }
+
+        let module: Arc<dyn Module> = module.into();
 
         // Add the commands to cache
-        for (command, extended_data) in module.commands.iter() {
+        for (command, extended_data) in module.full_command_list().iter() {
             self.command_id_module_map
-                .insert(command.name.clone(), module.id.to_string());
+                .insert(command.name.clone(), module.id().to_string());
             self.command_extra_data_map
                 .insert(command.name.clone(), extended_data.clone());
         }
 
         // Add to canonical cache
-        let module_ref: &Module = &module;
         self.canonical_module_cache
-            .insert(module.id.to_string(), CanonicalModule::from(module_ref));
+            .insert(module.id().to_string(), CanonicalModule::from(&module));
 
         // Add the module to cache
-        self.module_cache.insert(module.id.to_string(), module);
+        self.module_cache
+            .insert(module.id().to_string(), ModuleCacheEntry(module));
     }
 
     pub fn remove_module(&mut self, module_id: &str) {
         if let Some((_, module)) = self.module_cache.remove(module_id) {
-            for (command, _) in module.commands.iter() {
+            for (command, _) in module.full_command_list().iter() {
                 self.command_id_module_map.remove(&command.name);
                 self.command_extra_data_map.remove(&command.name);
             }

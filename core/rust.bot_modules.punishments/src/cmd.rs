@@ -71,7 +71,7 @@ pub async fn punishments_viewsources(ctx: Context<'_>) -> Result<(), Error> {
 
     for refs in data.silverpelt_cache.module_cache.iter() {
         let module = refs.value();
-        for source in module.sting_sources.iter() {
+        for source in module.sting_sources().iter() {
             let id = source.id();
             let description = source.description();
             embed = embed.field(id, description, false);

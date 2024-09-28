@@ -38,7 +38,7 @@ pub async fn get_consolidated_sting_entries(
 
     for refs in source_data.silverpelt_cache.module_cache.iter() {
         let module = refs.value();
-        for source in module.sting_sources.iter() {
+        for source in module.sting_sources().iter() {
             let entries = source.fetch(&source_data, filters.clone()).await?;
 
             stings.insert(source.id(), entries);

@@ -1,6 +1,6 @@
 use botox::cache::CacheHttpImpl;
 use log::{error, info};
-use silverpelt::{data::Data, Context, Error, EventHandlerContext, Module};
+use silverpelt::{data::Data, module::ModuleEventListeners, Context, Error, EventHandlerContext};
 use std::sync::Arc;
 use tokio::task::JoinSet;
 
@@ -199,22 +199,27 @@ pub async fn command_check(ctx: Context<'_>) -> Result<bool, Error> {
     Ok(false)
 }
 
-pub fn get_commands(modules: Vec<Module>) -> Vec<poise::Command<Data, Error>> {
+pub fn get_commands(
+    silverpelt_cache: &silverpelt::cache::SilverpeltCache,
+) -> Vec<poise::Command<Data, Error>> {
     let mut cmds = Vec::new();
 
     let mut _cmd_names = Vec::new();
-    for module in modules {
-        log::info!("Loading module {}", module.id);
+    for module in silverpelt_cache.module_cache.iter() {
+        log::info!("Loading module {}", module.id());
 
-        if !module.is_parsed() {
-            panic!("Module {} is not parsed", module.id);
+        match module.validate() {
+            Ok(_) => {}
+            Err(e) => {
+                panic!("Error validating module {}: {}", module.id(), e);
+            }
         }
 
-        if module.virtual_module {
+        if module.virtual_module() {
             continue;
         }
 
-        for (mut cmd, extended_data) in module.commands {
+        for (mut cmd, extended_data) in module.full_command_list() {
             let root_is_virtual = match extended_data.get("") {
                 Some(root) => root.virtual_command,
                 None => false,
@@ -224,7 +229,7 @@ pub fn get_commands(modules: Vec<Module>) -> Vec<poise::Command<Data, Error>> {
                 continue;
             }
 
-            cmd.category = Some(module.id.to_string());
+            cmd.category = Some(module.id().to_string());
 
             let mut subcommands = Vec::new();
             // Ensure subcommands are also linked to a category
@@ -240,7 +245,7 @@ pub fn get_commands(modules: Vec<Module>) -> Vec<poise::Command<Data, Error>> {
                 }
 
                 subcommands.push(poise::Command {
-                    category: Some(module.id.to_string()),
+                    category: Some(module.id().to_string()),
                     ..subcommand
                 });
             }
@@ -275,11 +280,12 @@ pub fn get_commands(modules: Vec<Module>) -> Vec<poise::Command<Data, Error>> {
     cmds
 }
 
-pub fn get_tasks(modules: Vec<Module>, ctx: &serenity::all::Context) -> Vec<botox::taskman::Task> {
+pub fn get_tasks(ctx: &serenity::all::Context, data: &Data) -> Vec<botox::taskman::Task> {
     // Get all tasks
     let mut tasks = Vec::new();
-    for module in modules {
-        for (task, confirm_task) in module.background_tasks {
+    for module in data.silverpelt_cache.module_cache.iter() {
+        let module = module.value();
+        for (task, confirm_task) in module.background_tasks() {
             let (confirmed, reason) = (confirm_task)(ctx);
             if confirmed {
                 info!(
@@ -303,16 +309,11 @@ pub fn get_tasks(modules: Vec<Module>, ctx: &serenity::all::Context) -> Vec<boto
 
 async fn dispatch_for_module(
     event_handler_context: Arc<EventHandlerContext>,
-    module: Arc<Module>,
+    event_listeners: Box<dyn ModuleEventListeners>,
 ) -> Result<(), Error> {
-    for event_handler in module.event_handlers.iter() {
-        let res = event_handler(&event_handler_context).await;
-
-        if let Err(e) = res {
-            return Err(e);
-        }
-    }
-
+    event_listeners
+        .event_handler(&event_handler_context)
+        .await?;
     Ok(())
 }
 
@@ -334,7 +335,7 @@ pub async fn dispatch_event_to_modules(
             &event_handler_context.data.silverpelt_cache,
             &event_handler_context.data.pool,
             event_handler_context.guild_id,
-            module.id,
+            module.id(),
         )
         .await
         {
@@ -349,8 +350,12 @@ pub async fn dispatch_event_to_modules(
             continue;
         }
 
+        let Some(event_listeners) = module.event_listeners() else {
+            continue;
+        };
+
         let ehr = event_handler_context.clone();
-        futs.push(dispatch_for_module(ehr, module.clone()));
+        futs.push(dispatch_for_module(ehr, event_listeners));
     }
 
     for fut in futs {
@@ -375,6 +380,53 @@ pub async fn dispatch_event_to_modules(
 
     if !errors.is_empty() {
         return Err(format!("Errors in dispatch_event_to_modules: {:#?}", errors).into());
+    }
+
+    Ok(())
+}
+
+/// Helper function to dispatch the on_first_ready event to all modules
+pub async fn dispatch_on_first_ready(
+    ctx: &serenity::all::Context,
+    data: &Data,
+) -> Result<(), Error> {
+    let mut errs = Vec::new();
+    for module in data.silverpelt_cache.module_cache.iter() {
+        let module = module.value();
+
+        let Some(event_listeners) = module.event_listeners() else {
+            continue;
+        };
+
+        if let Err(e) = event_listeners.on_first_ready(ctx, data).await {
+            errs.push(e);
+        }
+    }
+
+    if !errs.is_empty() {
+        return Err(format!("Errors in dispatch_on_first_ready: {:#?}", errs).into());
+    }
+
+    Ok(())
+}
+
+/// Helper function to dispatch on_startup event to all modules
+pub async fn dispatch_on_startup(data: &Data) -> Result<(), Error> {
+    let mut errs = Vec::new();
+    for module in data.silverpelt_cache.module_cache.iter() {
+        let module = module.value();
+
+        let Some(event_listeners) = module.event_listeners() else {
+            continue;
+        };
+
+        if let Err(e) = event_listeners.on_startup(data).await {
+            errs.push(e);
+        }
+    }
+
+    if !errs.is_empty() {
+        return Err(format!("Errors in dispatch_on_startup: {:#?}", errs).into());
     }
 
     Ok(())

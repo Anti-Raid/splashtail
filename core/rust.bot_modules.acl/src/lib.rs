@@ -41,43 +41,61 @@ fn acl__modules_modperms(
     cmd
 }
 
-pub fn module(module_ids: Vec<&'static str>) -> silverpelt::Module {
-    // Add ACL to the list of modules
-    let mut module_ids = module_ids;
-    module_ids.push("acl");
+pub struct Module {
+    pub module_ids: Vec<&'static str>,
+}
 
-    silverpelt::Module {
-        id: "access_control",
-        name: "Access Control",
-        description: "Access Control virtual module. Used for permission controlling the web dashboard and other common ACL's",
-        toggleable: false,
-        commands_toggleable: true,
-        virtual_module: true,
-        web_hidden: false,
-        is_default_enabled: true,
-        commands: vec![
+impl silverpelt::module::Module for Module {
+    fn id(&self) -> &'static str {
+        "access_control"
+    }
+
+    fn name(&self) -> &'static str {
+        "Access Control"
+    }
+
+    fn description(&self) -> &'static str {
+        "Access Control virtual module. Used for permission controlling the web dashboard, module ACL's and other common ACL's"
+    }
+
+    fn toggleable(&self) -> bool {
+        false
+    }
+
+    fn is_default_enabled(&self) -> bool {
+        true // ACL is one of the few modules in std that should be always enabled
+    }
+
+    fn virtual_module(&self) -> bool {
+        true
+    }
+
+    fn raw_commands(&self) -> Vec<silverpelt::module::CommandObj> {
+        vec![
             (
                 web(),
                 indexmap! {
-                    "use" => silverpelt::types::CommandExtendedData::kittycat_or_admin("web", "use"),
+                    "use" => silverpelt::types::CommandExtendedData {
+                        virtual_command: true,
+                        ..silverpelt::types::CommandExtendedData::kittycat_or_admin("web", "use")
+                    },
                 },
             ),
-            (
-                acl__modules_modperms(&module_ids),
-                {
-                    let mut imap = indexmap::IndexMap::new();
+            (acl__modules_modperms(&self.module_ids), {
+                let mut imap = indexmap::IndexMap::new();
 
-                    for module in module_ids {
-                        imap.insert(
-                            module,
-                            silverpelt::types::CommandExtendedData::none(),
-                        );
-                    }
-
-                    imap
+                for module in self.module_ids.iter() {
+                    imap.insert(
+                        *module,
+                        silverpelt::types::CommandExtendedData {
+                            virtual_command: true,
+                            ..silverpelt::types::CommandExtendedData::none()
+                        },
+                    );
                 }
-            ),
-        ],
-        ..Default::default()
+
+                imap
+            }),
+        ]
     }
 }

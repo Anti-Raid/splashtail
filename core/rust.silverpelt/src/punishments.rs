@@ -164,15 +164,15 @@ pub async fn get_punishment_actions_for_guild(
             &data.silverpelt_cache,
             &data.pool,
             guild_id,
-            module.id,
+            module.id(),
         )
         .await?
         {
             continue;
         }
 
-        if !module.punishment_actions.is_empty() {
-            actions_map.extend(module.punishment_actions.iter().cloned());
+        if !module.punishment_actions().is_empty() {
+            actions_map.extend(module.punishment_actions().iter().cloned());
         }
     }
 

@@ -6,17 +6,36 @@ mod whois;
 
 use futures_util::future::FutureExt;
 
-pub fn module() -> silverpelt::Module {
-    silverpelt::Module {
-        id: "core",
-        name: "Core Commands",
-        description: "Core commands for the bot",
-        toggleable: false,
-        commands_toggleable: false,
-        virtual_module: false,
-        web_hidden: false,
-        is_default_enabled: true,
-        commands: vec![
+pub struct Module;
+
+#[async_trait::async_trait]
+impl silverpelt::module::Module for Module {
+    fn id(&self) -> &'static str {
+        "core"
+    }
+
+    fn name(&self) -> &'static str {
+        "Core Commands"
+    }
+
+    fn description(&self) -> &'static str {
+        "Core commands for the bot"
+    }
+
+    fn toggleable(&self) -> bool {
+        false
+    }
+
+    fn commands_toggleable(&self) -> bool {
+        false
+    }
+
+    fn is_default_enabled(&self) -> bool {
+        true
+    }
+
+    fn raw_commands(&self) -> Vec<silverpelt::module::CommandObj> {
+        vec![
             (
                 help::help(),
                 silverpelt::types::CommandExtendedData::none_map(),
@@ -36,9 +55,12 @@ pub fn module() -> silverpelt::Module {
             (
                 whois::whois(),
                 silverpelt::types::CommandExtendedData::none_map(),
-            )
-        ],
-        background_tasks: vec![(
+            ),
+        ]
+    }
+
+    fn background_tasks(&self) -> Vec<silverpelt::BackgroundTask> {
+        vec![(
             botox::taskman::Task {
                 name: "Sandwich Status Task",
                 description: "Checks the status of the sandwich http server",
@@ -52,7 +74,6 @@ pub fn module() -> silverpelt::Module {
                     "Sandwich HTTP API is enabled".to_string(),
                 )
             },
-        )],
-        ..Default::default()
+        )]
     }
 }

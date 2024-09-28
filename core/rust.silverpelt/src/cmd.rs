@@ -269,10 +269,12 @@ pub async fn check_command(
 
     info!(
         "Checking if user {} can run command {} on module {}",
-        user_id, command, module.id
+        user_id,
+        command,
+        module.id()
     );
 
-    if module.root_module {
+    if module.root_module() {
         if !config::CONFIG.discord_auth.root_users.contains(&user_id) {
             return PermissionResult::SudoNotGranted {};
         }
@@ -363,7 +365,7 @@ pub async fn check_command(
                 };
             };
 
-            module.is_default_enabled
+            module.is_default_enabled()
         };
 
         if module_config.disabled.unwrap_or(!module_default_enabled) {

@@ -5,23 +5,27 @@ mod cmds;
 pub mod events;
 mod settings;
 
-use futures_util::future::FutureExt;
 use indexmap::indexmap;
 use permissions::types::{PermissionCheck, PermissionChecks};
 use silverpelt::types::CommandExtendedData;
 
-pub fn module() -> silverpelt::Module {
-    silverpelt::Module {
-        id: "auditlogs",
-        name: "Audit Logs",
-        description:
-            "Customizable and comprehensive audit logging module supporting 72+ discord events",
-        toggleable: true,
-        commands_toggleable: true,
-        virtual_module: false,
-        web_hidden: false,
-        is_default_enabled: false,
-        commands: vec![(
+pub struct Module;
+
+impl silverpelt::module::Module for Module {
+    fn id(&self) -> &'static str {
+        "auditlogs"
+    }
+
+    fn name(&self) -> &'static str {
+        "Audit Logs"
+    }
+
+    fn description(&self) -> &'static str {
+        "Customizable and comprehensive audit logging module supporting 72+ discord events"
+    }
+
+    fn raw_commands(&self) -> Vec<silverpelt::module::CommandObj> {
+        vec![(
             cmds::auditlogs(),
             indexmap! {
                 "list_sinks" => CommandExtendedData {
@@ -139,10 +143,30 @@ pub fn module() -> silverpelt::Module {
                     ..Default::default()
                 },
             },
-        )],
-        on_startup: vec![Box::new(move |data| am_toggles::setup(data).boxed())],
-        event_handlers: vec![Box::new(move |ectx| events::event_listener(ectx).boxed())],
-        config_options: vec![(*settings::SINK).clone()],
-        ..Default::default()
+        )]
+    }
+
+    fn event_listeners(&self) -> Option<Box<dyn silverpelt::module::ModuleEventListeners>> {
+        Some(Box::new(EventHandler))
+    }
+
+    fn config_options(&self) -> Vec<module_settings::types::ConfigOption> {
+        vec![(*settings::SINK).clone()]
+    }
+}
+
+struct EventHandler;
+
+#[async_trait::async_trait]
+impl silverpelt::module::ModuleEventListeners for EventHandler {
+    async fn on_startup(&self, data: &silverpelt::data::Data) -> Result<(), silverpelt::Error> {
+        am_toggles::setup(data).await
+    }
+
+    async fn event_handler(
+        &self,
+        ectx: &silverpelt::EventHandlerContext,
+    ) -> Result<(), silverpelt::Error> {
+        events::event_listener(ectx).await
     }
 }

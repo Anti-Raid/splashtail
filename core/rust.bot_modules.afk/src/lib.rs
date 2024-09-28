@@ -5,17 +5,23 @@ mod tasks;
 
 use futures_util::future::FutureExt;
 
-pub fn module() -> silverpelt::Module {
-    silverpelt::Module {
-        id: "afk",
-        name: "AFK",
-        description: "Exactly what it says. Away from keyboard related commands",
-        toggleable: true,
-        commands_toggleable: true,
-        virtual_module: false,
-        web_hidden: false,
-        is_default_enabled: false,
-        commands: vec![(
+pub struct Module;
+
+impl silverpelt::module::Module for Module {
+    fn id(&self) -> &'static str {
+        "afk"
+    }
+
+    fn name(&self) -> &'static str {
+        "AFK"
+    }
+
+    fn description(&self) -> &'static str {
+        "Exactly what it says. Away from keyboard related commands"
+    }
+
+    fn raw_commands(&self) -> Vec<silverpelt::module::CommandObj> {
+        vec![(
             cmds::afk(),
             indexmap::indexmap! {
                 "list" => silverpelt::types::CommandExtendedData::none(),
@@ -23,9 +29,11 @@ pub fn module() -> silverpelt::Module {
                 "update" => silverpelt::types::CommandExtendedData::none(),
                 "delete" => silverpelt::types::CommandExtendedData::none(),
             },
-        )],
-        on_startup: vec![],
-        background_tasks: vec![(
+        )]
+    }
+
+    fn background_tasks(&self) -> Vec<silverpelt::BackgroundTask> {
+        vec![(
             botox::taskman::Task {
                 name: "AFK Expiration Task",
                 description: "Handle expired AFKs",
@@ -39,9 +47,26 @@ pub fn module() -> silverpelt::Module {
                     "AFK expiration only runs on shard 0".to_string(),
                 )
             },
-        )],
-        event_handlers: vec![Box::new(move |ectx| events::event_listener(ectx).boxed())],
-        config_options: vec![(*settings::AFKS).clone()],
-        ..Default::default()
+        )]
+    }
+
+    fn event_listeners(&self) -> Option<Box<dyn silverpelt::module::ModuleEventListeners>> {
+        Some(Box::new(EventHandler))
+    }
+
+    fn config_options(&self) -> Vec<module_settings::types::ConfigOption> {
+        vec![(*settings::AFKS).clone()]
+    }
+}
+
+struct EventHandler;
+
+#[async_trait::async_trait]
+impl silverpelt::module::ModuleEventListeners for EventHandler {
+    async fn event_handler(
+        &self,
+        ectx: &silverpelt::EventHandlerContext,
+    ) -> Result<(), silverpelt::Error> {
+        events::event_listener(ectx).await
     }
 }

@@ -7,20 +7,23 @@ mod guildprotect;
 mod settings;
 pub mod types;
 
-use futures_util::future::FutureExt;
+pub struct Module;
 
-pub fn module() -> silverpelt::Module {
-    silverpelt::Module {
-        id: "inspector",
-        name: "Inspector",
-        description:
-            "Provides basic anti-spam options (currently only anti-invite and anti-everyone pings)",
-        toggleable: true,
-        commands_toggleable: true,
-        virtual_module: false,
-        web_hidden: false,
-        is_default_enabled: false,
-        commands: vec![(
+impl silverpelt::module::Module for Module {
+    fn id(&self) -> &'static str {
+        "inspector"
+    }
+
+    fn name(&self) -> &'static str {
+        "Inspector"
+    }
+
+    fn description(&self) -> &'static str {
+        "Provides passive anti-spam options"
+    }
+
+    fn raw_commands(&self) -> Vec<silverpelt::module::CommandObj> {
+        vec![(
             cmd::inspector(),
             indexmap::indexmap! {
                 "list" => silverpelt::types::CommandExtendedData::kittycat_or_admin("inspector", "list"),
@@ -28,16 +31,41 @@ pub fn module() -> silverpelt::Module {
                 "update" => silverpelt::types::CommandExtendedData::kittycat_or_admin("inspector", "setup"),
                 "disable" => silverpelt::types::CommandExtendedData::kittycat_or_admin("inspector", "setup"),
             },
-        )],
-        event_handlers: vec![Box::new(move |ectx| events::event_listener(ectx).boxed())],
-        on_startup: vec![
-            Box::new(move |data| cache::setup_cache_initial(&data.pool).boxed()),
-            Box::new(move |data| cache::setup_am_toggle(data).boxed()),
-            Box::new(move |data| cache::setup_fake_bots_cache(&data.pool).boxed()),
-        ],
-        sting_sources: vec![std::sync::Arc::new(core::InspectorPunishmentsStingSource)],
-        s3_paths: vec!["inspector/guild_icons/{guild_id}".to_string()],
-        config_options: vec![(*settings::INSPECTOR_OPTIONS).clone()],
-        ..Default::default()
+        )]
+    }
+
+    fn event_listeners(&self) -> Option<Box<dyn silverpelt::module::ModuleEventListeners>> {
+        Some(Box::new(EventListener))
+    }
+
+    fn sting_sources(&self) -> Vec<std::sync::Arc<dyn silverpelt::sting_sources::StingSource>> {
+        vec![std::sync::Arc::new(core::InspectorPunishmentsStingSource)]
+    }
+
+    fn s3_paths(&self) -> Vec<String> {
+        vec!["inspector/guild_icons/{guild_id}".to_string()]
+    }
+
+    fn config_options(&self) -> Vec<module_settings::types::ConfigOption> {
+        vec![(*settings::INSPECTOR_OPTIONS).clone()]
+    }
+}
+
+struct EventListener;
+
+#[async_trait::async_trait]
+impl silverpelt::module::ModuleEventListeners for EventListener {
+    async fn on_startup(&self, data: &silverpelt::data::Data) -> Result<(), silverpelt::Error> {
+        cache::setup_cache_initial(&data.pool).await?;
+        cache::setup_am_toggle(data).await?;
+        cache::setup_fake_bots_cache(&data.pool).await?;
+        Ok(())
+    }
+
+    async fn event_handler(
+        &self,
+        _ctx: &silverpelt::EventHandlerContext,
+    ) -> Result<(), silverpelt::Error> {
+        events::event_listener(_ctx).await
     }
 }

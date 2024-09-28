@@ -110,10 +110,10 @@ pub async fn commands_enable(
         return Err("Module not found".into());
     };
 
-    if !module.commands_toggleable {
+    if !module.commands_toggleable() {
         return Err(format!(
             "Commands within the module `{}` cannot be toggled (enabled/disable) at this time!",
-            module.id
+            module.id()
         )
         .into());
     }
@@ -226,10 +226,10 @@ pub async fn commands_disable(
         return Err("Module not found".into());
     };
 
-    if !module.commands_toggleable {
+    if !module.commands_toggleable() {
         return Err(format!(
             "Commands within the module `{}` cannot be toggled (enabled/disable) at this time!",
-            module.id
+            module.id()
         )
         .into());
     }
@@ -461,14 +461,14 @@ pub async fn commands_modperms(
         let mut response_deferred = false;
         match item_id {
             "cmd/enable" => {
-                if !module.commands_toggleable {
+                if !module.commands_toggleable() {
                     item.create_response(
                         &ctx.serenity_context().http,
                         poise::serenity_prelude::CreateInteractionResponse::Message(
                             poise::CreateReply::new()
                                 .content(format!(
                                     "Commands within the module `{}` cannot be toggled (enabled/disable) at this time!",
-                                    module.id
+                                    module.id()
                                 ))
                                 .to_slash_initial_response(
                                     serenity::all::CreateInteractionResponseMessage::default(),
@@ -516,14 +516,14 @@ pub async fn commands_modperms(
                 new_command_config.disabled = Some(false);
             }
             "cmd/disable" => {
-                if !module.commands_toggleable {
+                if !module.commands_toggleable() {
                     item.create_response(
                         &ctx.serenity_context().http,
                         poise::serenity_prelude::CreateInteractionResponse::Message(
                             poise::CreateReply::new()
                                 .content(format!(
                                     "Commands within the module `{}` cannot be toggled (enabled/disable) at this time!",
-                                    module.id
+                                    module.id()
                                 ))
                                 .to_slash_initial_response(
                                     serenity::all::CreateInteractionResponseMessage::default(),
@@ -571,14 +571,14 @@ pub async fn commands_modperms(
                 new_command_config.disabled = Some(true);
             }
             "cmd/reset-toggle" => {
-                if !module.commands_toggleable {
+                if !module.commands_toggleable() {
                     item.create_response(
                         &ctx.serenity_context().http,
                         poise::serenity_prelude::CreateInteractionResponse::Message(
                             poise::CreateReply::new()
                                 .content(format!(
                                     "Commands within the module `{}` cannot be toggled (enabled/disable) at this time!",
-                                    module.id
+                                    module.id()
                                 ))
                                 .to_slash_initial_response(
                                     serenity::all::CreateInteractionResponseMessage::default(),

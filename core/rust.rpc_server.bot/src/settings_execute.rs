@@ -26,7 +26,9 @@ pub(crate) async fn settings_operation(
         });
     };
 
-    let Some(opt) = module.config_options.iter().find(|x| x.id == req.setting) else {
+    let config_options = module.config_options(); // Get the config options
+
+    let Some(opt) = config_options.iter().find(|x| x.id == req.setting) else {
         return Json(CanonicalSettingsResult::Err {
             error: CanonicalSettingsError::Generic {
                 message: "Setting not found".to_string(),
