@@ -4,19 +4,15 @@ use serenity::all::GuildId;
 use std::sync::Arc;
 
 /// The compiler requires some help here with module cache so we use a wrapper struct
-pub struct ModuleCacheEntry(pub Arc<dyn Module>);
-
-impl Clone for ModuleCacheEntry {
-    fn clone(&self) -> Self {
-        Self(self.0.clone())
-    }
+pub struct ModuleCacheEntry {
+    pub inner: Arc<dyn Module>,
 }
 
 impl std::ops::Deref for ModuleCacheEntry {
     type Target = Arc<dyn Module>;
 
     fn deref(&self) -> &Self::Target {
-        &self.0
+        &self.inner
     }
 }
 
@@ -91,7 +87,7 @@ impl SilverpeltCache {
 
         // Add the module to cache
         self.module_cache
-            .insert(module.id().to_string(), ModuleCacheEntry(module));
+            .insert(module.id().to_string(), ModuleCacheEntry { inner: module });
     }
 
     pub fn remove_module(&mut self, module_id: &str) {
