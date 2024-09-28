@@ -256,6 +256,8 @@ pub mod sql_utils {
 
         let mut spec_limit = false;
         let mut spec_offset = false;
+
+        let mut needs_sep = false;
         for (key, v) in filters.iter() {
             if key == "__limit" {
                 if let crate::value::Value::Integer(_) = v {
@@ -269,7 +271,7 @@ pub mod sql_utils {
                 continue;
             }
 
-            if i > 0 {
+            if needs_sep {
                 filters_str.push_str(" AND ")
             }
 
@@ -279,6 +281,8 @@ pub mod sql_utils {
                 filters_str.push_str(format!(" \"{}\" = ${}", key, (i + 1) + offset).as_str());
                 i += 1; // Only update i if we actually add a filter that binds a value
             }
+
+            needs_sep = true;
         }
 
         if filters_str.is_empty() {

@@ -1,11 +1,12 @@
 use kittycat::perms::Permission;
 use module_settings::state::State;
+use module_settings::types::SettingsData;
 use module_settings::{
     data_stores::{PostgresDataStore, PostgresDataStoreImpl},
     types::{
         settings_wrap, Column, ColumnSuggestion, ColumnType, ConfigOption, HookContext,
         InnerColumnType, InnerColumnTypeStringKind, OperationSpecific, OperationType, PostAction,
-        SettingDataValidator, SettingsError,
+        SettingDataValidator, SettingsError, NoOpPostAction
     },
 };
 use splashcore_rs::value::Value;
@@ -14,30 +15,18 @@ use std::sync::LazyLock;
 pub static GUILD_ROLES: LazyLock<ConfigOption> = LazyLock::new(|| {
     ConfigOption {
         id: "guild_roles",
-        name: "Guild Roles",
-        description: "Configure/setup guild roles which can then have permissions on Anti-Raid",
+        name: "Server Roles",
+        description: "Configure/setup server roles which can then have permissions on AntiRaid",
         table: "guild_roles",
         common_filters: indexmap::indexmap! {},
         default_common_filters: indexmap::indexmap! {
             "guild_id" => "{__guild_id}"
         },
-        primary_key: "id",
+        primary_key: "role_id",
         max_entries: None,
         max_return: 20,
         data_store: settings_wrap(PostgresDataStore {}),
         columns: settings_wrap(vec![
-            Column {
-                id: "id",
-                name: "ID",
-                description: "The unique identifier for the guild role.",
-                column_type: ColumnType::new_scalar(InnerColumnType::Uuid {}),
-                nullable: false,
-                default: None,
-                unique: true,
-                suggestions: ColumnSuggestion::None {},
-                ignored_for: vec![OperationType::Create],
-                secret: false,
-            },
             module_settings::common_columns::guild_id("guild_id", "Guild ID", "The Guild ID"),
             Column {
                 id: "role_id",
@@ -154,8 +143,6 @@ impl SettingDataValidator for GuildRolesValidator {
             return Ok(());
         }
 
-        let pg_data_store = PostgresDataStoreImpl::from_data_store(ctx.data_store)?;
-
         // This should be safe as all actions for Create/Update/Delete run after fetching all prerequisite fields
         let parsed_value = if let Some(new_index_val) = state.state.get("index") {
             match new_index_val {
@@ -171,6 +158,8 @@ impl SettingDataValidator for GuildRolesValidator {
         } else {
             Value::None
         };
+
+        let pg_data_store = PostgresDataStoreImpl::from_data_store(ctx.data_store)?;
 
         let new_index = match parsed_value {
             Value::Integer(new_index_val) => new_index_val,
@@ -379,19 +368,42 @@ impl SettingDataValidator for GuildRolesValidator {
             });
         }
 
-        let author_kittycat_perms = silverpelt::member_permission_calc::get_kittycat_perms(
-            &ctx.data.pool,
-            ctx.guild_id,
-            guild.owner_id,
-            member.user.id,
-            &member.roles,
-        )
-        .await
-        .map_err(|e| SettingsError::Generic {
-            message: format!("Failed to get kittycat permissions: {:?}", e),
-            src: "NativeAction->index".to_string(),
-            typ: "internal".to_string(),
-        })?;
+        let author_kittycat_perms = if pg_data_store.tx.is_some() {
+            let tx = pg_data_store.tx.as_deref_mut().unwrap();
+
+            silverpelt::member_permission_calc::get_kittycat_perms(
+                &mut *tx,
+                ctx.guild_id,
+                guild.owner_id,
+                ctx.author,
+                &member.roles,
+            )
+            .await
+            .map_err(|e| SettingsError::Generic {
+                message: format!("Failed to get author permissions: {:?}", e),
+                src: "NativeAction->index".to_string(),
+                typ: "internal".to_string(),
+            })?
+        } else {
+            let mut conn = ctx.data.pool.acquire().await.map_err(|e| SettingsError::Generic {
+                message: format!("Failed to get connection: {:?}", e),
+                src: "NativeAction->index".to_string(),
+                typ: "internal".to_string(),
+            })?;
+            silverpelt::member_permission_calc::get_kittycat_perms(
+                &mut *conn,
+                ctx.guild_id,
+                guild.owner_id,
+                ctx.author,
+                &member.roles,
+            )
+            .await
+            .map_err(|e| SettingsError::Generic {
+                message: format!("Failed to get author permissions: {:?}", e),
+                src: "NativeAction->index".to_string(),
+                typ: "internal".to_string(),
+            })?
+        };
 
         // Get the new permissions as a Vec<String>
         let Some(Value::List(perms_value)) = state.state.get("perms") else {
@@ -539,6 +551,384 @@ impl PostAction for GuildRolesPostAction {
             typ: "internal".to_string(),
         })?;
 
+        Ok(())
+    }
+}
+
+pub static GUILD_MEMBERS: LazyLock<ConfigOption> = LazyLock::new(|| {
+    ConfigOption {
+        id: "guild_members",
+        name: "Server Members",
+        description: "Manage server members",
+        table: "guild_members",
+        common_filters: indexmap::indexmap! {},
+        default_common_filters: indexmap::indexmap! {
+            "guild_id" => "{__guild_id}"
+        },
+        primary_key: "user_id",
+        max_entries: None,
+        max_return: 20,
+        data_store: settings_wrap(PostgresDataStore {}),
+        columns: settings_wrap(vec![
+            module_settings::common_columns::guild_id("guild_id", "Guild ID", "The Guild ID"),
+            Column {
+                id: "user_id",
+                name: "User ID",
+                description: "The user ID. Cannot be updated once set",
+                column_type: ColumnType::new_scalar(InnerColumnType::String {
+                    kind: InnerColumnTypeStringKind::User,
+                    min_length: None,
+                    max_length: Some(64),
+                    allowed_values: vec![],
+                }),
+                nullable: false,
+                default: None,
+                unique: true,
+                suggestions: ColumnSuggestion::None {},
+                ignored_for: vec![OperationType::Update], 
+                secret: false,
+            },
+            Column {
+                id: "roles",
+                name: "Roles",
+                description: "The roles the member has. Cannot be editted and is updated internally",
+                column_type: ColumnType::new_array(InnerColumnType::String {
+                    kind: InnerColumnTypeStringKind::Role,
+                    min_length: None,
+                    max_length: Some(64),
+                    allowed_values: vec![],
+                }),
+                nullable: false,
+                default: None,
+                unique: false,
+                suggestions: ColumnSuggestion::None {},
+                ignored_for: vec![OperationType::Create, OperationType::Update, OperationType::Delete],
+                secret: false,
+            },
+            Column {
+                id: "perm_overrides",
+                name: "Permission Overrides",
+                description: "Any permission overrides the member has. This can and should be edited if needed",
+                column_type: ColumnType::new_array(InnerColumnType::String {
+                    kind: InnerColumnTypeStringKind::KittycatPermission,
+                    min_length: None,
+                    max_length: Some(64),
+                    allowed_values: vec![],
+                }),
+                nullable: false,
+                default: Some(|_| Value::List(Vec::new())),
+                unique: false,
+                suggestions: ColumnSuggestion::None {},
+                ignored_for: vec![],
+                secret: false,
+            },
+            Column {
+                id: "resolved_perms_cache",
+                name: "Resolved Permissions Cache",
+                description: "A cache of the resolved permissions for the member. This is updated internally and cannot be edited but could be useful for debugging",
+                column_type: ColumnType::new_array(InnerColumnType::String {
+                    kind: InnerColumnTypeStringKind::KittycatPermission,
+                    min_length: None,
+                    max_length: Some(64),
+                    allowed_values: vec![],
+                }),
+                nullable: false,
+                default: None,
+                unique: false,
+                suggestions: ColumnSuggestion::None {},
+                ignored_for: vec![OperationType::Create, OperationType::Update, OperationType::Delete],
+                secret: false,
+            },
+            Column {
+                id: "needs_perm_rederive",
+                name: "Needs Permission Rederive",
+                description: "Whether the member needs their permissions rederived. This is updated internally and cannot be edited but could be useful for debugging",
+                column_type: ColumnType::new_scalar(InnerColumnType::Boolean {}),
+                nullable: false,
+                default: None,
+                unique: false,
+                suggestions: ColumnSuggestion::None {},
+                ignored_for: vec![OperationType::Create, OperationType::Update, OperationType::Delete],
+                secret: false,
+            },
+            Column {
+                id: "public",
+                name: "Public",
+                description: "Whether the member is public or not",
+                column_type: ColumnType::new_scalar(InnerColumnType::Boolean {}),
+                nullable: false,
+                default: None,
+                unique: false,
+                suggestions: ColumnSuggestion::None {},
+                ignored_for: vec![],
+                secret: false,
+            },
+            module_settings::common_columns::created_at(),
+            module_settings::common_columns::created_by(),
+            module_settings::common_columns::last_updated_at(),
+            module_settings::common_columns::last_updated_by(),
+        ]),
+        title_template: "{index} - {role_id}",
+        operations: indexmap::indexmap! {
+            OperationType::View => OperationSpecific {
+                corresponding_command: "guildmembers list",
+                columns_to_set: indexmap::indexmap! {},
+            },
+            OperationType::Create => OperationSpecific {
+                corresponding_command: "guildmembers add",
+                columns_to_set: indexmap::indexmap! {
+                    "created_at" => "{__now}",
+                    "created_by" => "{__author}",
+                    "last_updated_at" => "{__now}",
+                    "last_updated_by" => "{__author}",
+                },
+            },
+            OperationType::Update => OperationSpecific {
+                corresponding_command: "guildmembers edit",
+                columns_to_set: indexmap::indexmap! {
+                    "last_updated_at" => "{__now}",
+                    "last_updated_by" => "{__author}",
+                },
+            },
+            OperationType::Delete => OperationSpecific {
+                corresponding_command: "guildmembers remove",
+                columns_to_set: indexmap::indexmap! {},
+            },
+        },
+        validator: settings_wrap(GuildMembersValidator {}),
+        post_action: settings_wrap(NoOpPostAction {}),
+    }
+});
+
+/// GuildMembersValidator handles all the required permission checking etc. for guild members
+pub struct GuildMembersValidator;
+
+impl GuildMembersValidator {
+    async fn get_kittycat_perms_for_user<'a>(
+        &self, 
+        data: &SettingsData, 
+        conn: &mut sqlx::PgConnection,
+        guild_id: serenity::all::GuildId,
+        guild_owner_id: serenity::all::UserId, 
+        user_id: serenity::all::UserId,
+) -> Result<(Vec<serenity::all::RoleId>, Vec<kittycat::perms::Permission>), SettingsError> {
+        let Some(member) = proxy_support::member_in_guild(
+            &data.cache_http,
+            &data.reqwest,
+            guild_id,
+            user_id,
+        )
+        .await
+        .map_err(|e| SettingsError::Generic {
+            message: format!("Failed to get user {}: {:?}", user_id, e),
+            src: "NativeAction->index".to_string(),
+            typ: "internal".to_string(),
+        })? else {
+            return Ok((
+                Vec::new(),
+                Vec::new(),
+            ));
+        };
+
+        let kittycat_perms = silverpelt::member_permission_calc::get_kittycat_perms(
+            &mut *conn,
+            guild_id,
+            guild_owner_id,
+            user_id,
+            &member.roles,
+        )
+        .await
+        .map_err(|e| SettingsError::Generic {
+            message: format!("Failed to get user permissions: {:?} ({})", e, user_id),
+            src: "NativeAction->index".to_string(),
+            typ: "internal".to_string(),
+        })?;
+
+        let roles = member.roles.iter().map(|x| *x).collect::<Vec<serenity::all::RoleId>>();
+
+        Ok((roles, kittycat_perms))
+    }
+}
+
+#[async_trait::async_trait]
+impl SettingDataValidator for GuildMembersValidator {
+    async fn validate<'a>(
+        &self,
+        ctx: HookContext<'a>,
+        state: &'a mut State,
+    ) -> Result<(), SettingsError> {
+        // Early return if we are viewing, we don't need to check perms if so
+        if ctx.operation_type == OperationType::View {
+            return Ok(());
+        }
+
+        // Quick checks:
+        let Some(Value::String(user_id)) = state.state.get("user_id") else {
+            return Err(SettingsError::MissingOrInvalidField {
+                field: "user_id".to_string(),
+                src: "guildmembers->user_id".to_string(),
+            });
+        };
+
+        let user_id: serenity::all::UserId = user_id
+            .parse()
+            .map_err(|e| SettingsError::Generic {
+                message: format!("Failed to parse user id: {:?}", e),
+                src: "guildmembers->user_id".to_string(),
+                typ: "internal".to_string(),
+            })?;
+
+        // Only the author can set public to true
+        if let Some(Value::Boolean(public)) = state.state.get("public") {
+            if *public {
+                if ctx.author != user_id {
+                    return Err(SettingsError::Generic {
+                        message: "Only the author can set publicity".to_string(),
+                        src: "guildmembers->public".to_string(),
+                        typ: "internal".to_string(),
+                    });
+                }
+            }
+        }
+
+        // Get perm overrides
+        let Some(Value::List(perm_overrides_value)) = state.state.get("perm_overrides") else {
+            return Err(SettingsError::MissingOrInvalidField {
+                field: "perm_overrides".to_string(),
+                src: "guildmembers->perm_overrides".to_string(),
+            });
+        };
+
+        let mut perm_overrides = Vec::with_capacity(perm_overrides_value.len());
+
+        for perm in perm_overrides_value {
+            if let Value::String(perm) = perm {
+                perm_overrides.push(kittycat::perms::Permission::from_string(perm));
+            } else {
+                return Err(SettingsError::Generic {
+                    message: "Failed to parse permissions".to_string(),
+                    src: "NativeAction->index".to_string(),
+                    typ: "internal".to_string(),
+                });
+            }
+        }
+
+        let guild = proxy_support::guild(&ctx.data.cache_http, &ctx.data.reqwest, ctx.guild_id)
+        .await
+        .map_err(|e| SettingsError::Generic {
+            message: format!("Failed to get guild: {:?}", e),
+            src: "NativeAction->index".to_string(),
+            typ: "internal".to_string(),
+        })?;
+
+        // If owner, early return
+        if guild.owner_id == ctx.author {
+            return Ok(());
+        }
+
+        let settings_data = ctx.data;
+
+        let pg_data_store = PostgresDataStoreImpl::from_data_store(ctx.data_store)?;
+
+        // Get the transaction connection or acquire one from pool if not in a transaction
+        let conn = if pg_data_store.tx.is_some() {
+            pg_data_store.tx.as_deref_mut().unwrap()
+        } else {
+            &mut *ctx.data.pool.acquire().await.map_err(|e| SettingsError::Generic {
+                message: format!("Failed to get connection: {:?}", e),
+                src: "NativeAction->index".to_string(),
+                typ: "internal".to_string(),
+            })?
+        };
+
+        // Get the authors kittycat permissions
+        let author_kittycat_perms = match self.get_kittycat_perms_for_user(settings_data, conn, ctx.guild_id, guild.owner_id, ctx.author).await {
+            Ok((_, author_kittycat_perms)) => author_kittycat_perms,
+            Err(e) => return Err(SettingsError::Generic {
+                message: format!("Failed to get author permissions: {:?}", e),
+                src: "NativeAction->index".to_string(),
+                typ: "internal".to_string(),
+            }),
+        };
+
+        // Get the target members current kittycat permissions (if any)
+        let (target_member_roles, current_user_kittycat_perms) = match self.get_kittycat_perms_for_user(settings_data, conn, ctx.guild_id, guild.owner_id, user_id).await {
+            Ok((target_member_roles, current_user_kittycat_perms)) => (target_member_roles, current_user_kittycat_perms),
+            Err(e) => return Err(SettingsError::Generic {
+                message: format!("Failed to get target member permissions: {:?}", e),
+                src: "NativeAction->index".to_string(),
+                typ: "internal".to_string(),
+            }),
+        };
+
+        // Find new user's permissions with perm overrides
+        let new_user_kittycat_perms = {
+            let roles_str = silverpelt::member_permission_calc::create_roles_list_for_guild(&target_member_roles, ctx.guild_id);
+
+            let user_positions = silverpelt::member_permission_calc::get_user_positions_from_db(&mut *conn, ctx.guild_id, &roles_str).await
+            .map_err(|e| SettingsError::Generic {
+                message: format!("Failed to get user positions: {:?}", e),
+                src: "NativeAction->index".to_string(),
+                typ: "internal".to_string(),
+            })?;
+
+            silverpelt::member_permission_calc::rederive_perms_impl(ctx.guild_id, user_id, user_positions, perm_overrides)
+        };
+
+        // Check permissions
+        match ctx.operation_type {
+            OperationType::Create => {
+                kittycat::perms::check_patch_changes(
+                    &author_kittycat_perms,
+                    &[],
+                    &new_user_kittycat_perms,
+                )
+                .map_err(|e| SettingsError::Generic {
+                    message: format!(
+                        "You do not have permission to add a role with these permissions: {}",
+                        e
+                    ),
+                    src: "NativeAction->index".to_string(),
+                    typ: "perm_check_failed".to_string(),
+                })?;
+            }
+            OperationType::Update => {
+                kittycat::perms::check_patch_changes(
+                    &author_kittycat_perms,
+                    &current_user_kittycat_perms,
+                    &new_user_kittycat_perms,
+                )
+                .map_err(|e| SettingsError::Generic {
+                    message: format!(
+                        "You do not have permission to edit this role's permissions: {}",
+                        e
+                    ),
+                    src: "NativeAction->index".to_string(),
+                    typ: "perm_check_failed".to_string(),
+                })?;
+            }
+            OperationType::Delete => {
+                kittycat::perms::check_patch_changes(
+                    &author_kittycat_perms,
+                    &current_user_kittycat_perms,
+                    &[],
+                )
+                .map_err(|e| SettingsError::Generic {
+                    message: format!(
+                        "You do not have permission to remove this members permission overrides: {}",
+                        e
+                    ),
+                    src: "NativeAction->index".to_string(),
+                    typ: "perm_check_failed".to_string(),
+                })?;
+            }
+            _ => {
+                return Err(SettingsError::OperationNotSupported {
+                    operation: ctx.operation_type,
+                });
+            }
+        }
+        
         Ok(())
     }
 }

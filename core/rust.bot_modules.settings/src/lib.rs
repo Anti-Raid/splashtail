@@ -5,6 +5,7 @@ use silverpelt::types::CommandExtendedData;
 
 mod am_toggles;
 mod commands;
+mod guildmembers;
 mod guildroles;
 mod modules;
 
@@ -86,9 +87,57 @@ pub fn module() -> silverpelt::Module {
                     "remove" => silverpelt::types::CommandExtendedData::kittycat_simple("guildroles", "remove"),
                 },
             ),
+            (
+                guildmembers::guildmembers(),
+                indexmap! {
+                    "list" => silverpelt::types::CommandExtendedData::kittycat_simple("guildmembers", "list"),
+                    "add" => silverpelt::types::CommandExtendedData {
+                        default_perms: PermissionChecks::Simple {
+                            checks: vec![
+                                PermissionCheck {
+                                    kittycat_perms: vec!["guildmembers.add".to_string()],
+                                    native_perms: vec![],
+                                    inner_and: false,
+                                    outer_and: true,
+                                },
+                                PermissionCheck {
+                                    kittycat_perms: vec![],
+                                    native_perms: vec![serenity::model::permissions::Permissions::MANAGE_ROLES],
+                                    inner_and: false,
+                                    outer_and: false,
+                                }
+                            ],
+                        },
+                        ..Default::default()
+                    },
+                    "edit" => silverpelt::types::CommandExtendedData {
+                        default_perms: PermissionChecks::Simple {
+                            checks: vec![
+                                PermissionCheck {
+                                    kittycat_perms: vec!["guildmembers.edit".to_string()],
+                                    native_perms: vec![],
+                                    inner_and: false,
+                                    outer_and: true,
+                                },
+                                PermissionCheck {
+                                    kittycat_perms: vec![],
+                                    native_perms: vec![serenity::model::permissions::Permissions::MANAGE_ROLES],
+                                    inner_and: false,
+                                    outer_and: false,
+                                }
+                            ],
+                        },
+                        ..Default::default()
+                    },
+                    "remove" => silverpelt::types::CommandExtendedData::kittycat_simple("guildmembers", "remove"),
+                },
+            ),
         ],
         on_startup: vec![Box::new(move |data| am_toggles::setup(data).boxed())],
-        config_options: vec![(*settings::GUILD_ROLES).clone()],
+        config_options: vec![
+            (*settings::GUILD_ROLES).clone(),
+            (*settings::GUILD_MEMBERS).clone(),
+        ],
         ..Default::default()
     }
 }

@@ -55,7 +55,11 @@ pub async fn guildroles_add(
         &super::settings::GUILD_ROLES,
         indexmap::indexmap! {
             "role_id".to_string() => Value::String(role.id.to_string()),
-            "perms".to_string() => Value::String(perms),
+            "perms".to_string() => {
+                let split = perms.split(',').map(|x| x.trim().to_string()).collect::<Vec<String>>();
+
+                Value::List(split.into_iter().map(|x| Value::String(x)).collect())
+            },
             "index".to_string() => index.map(|x| Value::Integer(x as i64)).unwrap_or(Value::None),
         },
     )
@@ -81,14 +85,18 @@ pub async fn guildroles_edit(
         &super::settings::GUILD_ROLES,
         indexmap::indexmap! {
             "role_id".to_string() => Value::String(role.id.to_string()),
-            "perms".to_string() => Value::String(perms),
+            "perms".to_string() => {
+                let split = perms.split(',').map(|x| x.trim().to_string()).collect::<Vec<String>>();
+
+                Value::List(split.into_iter().map(|x| Value::String(x)).collect())
+            },
             "index".to_string() => index.map(|x| Value::Integer(x as i64)).unwrap_or(Value::None),
         },
     )
     .await
 }
 
-/// Edits an existing roles' permissions
+/// Deletes an existing roles' permissions
 #[poise::command(
     prefix_command,
     slash_command,

@@ -148,7 +148,7 @@ pub async fn get_user_kittycat_perms(
     if let Some(ref custom_resolved_kittycat_perms) = opts.custom_resolved_kittycat_perms {
         if !opts.skip_custom_resolved_fit_checks {
             let kc_perms = crate::member_permission_calc::get_kittycat_perms(
-                pool,
+                &mut *pool.acquire().await?,
                 guild_id,
                 guild_owner_id,
                 user_id,
@@ -169,7 +169,7 @@ pub async fn get_user_kittycat_perms(
         }
     } else {
         Ok(crate::member_permission_calc::get_kittycat_perms(
-            pool,
+            &mut *pool.acquire().await?,
             guild_id,
             guild_owner_id,
             user_id,
