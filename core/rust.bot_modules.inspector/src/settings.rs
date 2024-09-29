@@ -321,7 +321,7 @@ pub static INSPECTOR_SPECIFIC_OPTIONS: LazyLock<ConfigOption> = LazyLock::new(||
     id: "inspector__specific_options",
     name: "Specific Inspector Options",
     description: "Specific options that apply to specific targets (or globally too!)",
-    table: "inspector__global_options",
+    table: "inspector__specific_options",
     common_filters: indexmap::indexmap! {},
     default_common_filters: indexmap::indexmap! {
         "guild_id" => "{__guild_id}"
