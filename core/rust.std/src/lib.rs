@@ -1,4 +1,5 @@
 pub mod jobserver;
+pub mod modifier;
 pub mod objectstore;
 pub mod permodule_functions;
 pub mod priorityset;

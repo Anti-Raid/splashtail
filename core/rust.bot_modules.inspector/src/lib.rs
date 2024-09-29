@@ -23,15 +23,26 @@ impl silverpelt::module::Module for Module {
     }
 
     fn raw_commands(&self) -> Vec<silverpelt::module::CommandObj> {
-        vec![(
-            cmd::inspector(),
-            indexmap::indexmap! {
-                "list" => silverpelt::types::CommandExtendedData::kittycat_or_admin("inspector", "list"),
-                "setup" => silverpelt::types::CommandExtendedData::kittycat_or_admin("inspector", "setup"),
-                "update" => silverpelt::types::CommandExtendedData::kittycat_or_admin("inspector", "setup"),
-                "disable" => silverpelt::types::CommandExtendedData::kittycat_or_admin("inspector", "setup"),
-            },
-        )]
+        vec![
+            (
+                cmd::inspector_global(),
+                indexmap::indexmap! {
+                    "list" => silverpelt::types::CommandExtendedData::kittycat_or_admin("inspector_global", "list"),
+                    "setup" => silverpelt::types::CommandExtendedData::kittycat_or_admin("inspector_global", "setup"),
+                    "update" => silverpelt::types::CommandExtendedData::kittycat_or_admin("inspector_global", "setup"),
+                    "delete" => silverpelt::types::CommandExtendedData::kittycat_or_admin("inspector_global", "setup"),
+                },
+            ),
+            (
+                cmd::inspector_specific(),
+                indexmap::indexmap! {
+                    "list" => silverpelt::types::CommandExtendedData::kittycat_or_admin("inspector_specific", "list"),
+                    "setup" => silverpelt::types::CommandExtendedData::kittycat_or_admin("inspector_specific", "setup"),
+                    "update" => silverpelt::types::CommandExtendedData::kittycat_or_admin("inspector_specific", "setup"),
+                    "delete" => silverpelt::types::CommandExtendedData::kittycat_or_admin("inspector_specific", "setup"),
+                },
+            ),
+        ]
     }
 
     fn event_listeners(&self) -> Option<Box<dyn silverpelt::module::ModuleEventListeners>> {
@@ -47,7 +58,10 @@ impl silverpelt::module::Module for Module {
     }
 
     fn config_options(&self) -> Vec<module_settings::types::ConfigOption> {
-        vec![(*settings::INSPECTOR_OPTIONS).clone()]
+        vec![
+            (*settings::INSPECTOR_GLOBAL_OPTIONS).clone(),
+            (*settings::INSPECTOR_SPECIFIC_OPTIONS).clone(),
+        ]
     }
 }
 

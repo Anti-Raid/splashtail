@@ -79,24 +79,24 @@ pub fn number_to_value(number: Option<i64>, default: Option<i64>) -> Value {
     }
 }
 
-/// Inspector base command
+/// Inspector global options command
 #[poise::command(
     prefix_command,
     slash_command,
     guild_only,
     user_cooldown = "5",
     subcommands(
-        "inspector_list",
-        "inspector_setup",
-        "inspector_update",
-        "inspector_disable"
+        "inspector_global_list",
+        "inspector_global_setup",
+        "inspector_global_update",
+        "inspector_global_delete"
     )
 )]
-pub async fn inspector(_ctx: Context<'_>) -> Result<(), Error> {
+pub async fn inspector_global(_ctx: Context<'_>) -> Result<(), Error> {
     Ok(())
 }
 
-/// List inspector settings
+/// List inspector global settings
 #[poise::command(
     prefix_command,
     slash_command,
@@ -104,16 +104,16 @@ pub async fn inspector(_ctx: Context<'_>) -> Result<(), Error> {
     user_cooldown = "5",
     rename = "list"
 )]
-pub async fn inspector_list(ctx: Context<'_>) -> Result<(), Error> {
+pub async fn inspector_global_list(ctx: Context<'_>) -> Result<(), Error> {
     silverpelt::settings_poise::settings_viewer(
         &ctx,
-        &super::settings::INSPECTOR_OPTIONS,
+        &super::settings::INSPECTOR_GLOBAL_OPTIONS,
         indexmap::IndexMap::new(),
     )
     .await
 }
 
-/// Setup inspector
+/// Setup inspector global settings (initially)
 #[allow(clippy::too_many_arguments)]
 #[poise::command(
     prefix_command,
@@ -122,14 +122,10 @@ pub async fn inspector_list(ctx: Context<'_>) -> Result<(), Error> {
     user_cooldown = "5",
     rename = "setup"
 )]
-pub async fn inspector_setup(
+pub async fn inspector_global_setup(
     ctx: Context<'_>,
     #[description = "Minimum Account Age"] minimum_account_age: Option<i64>,
     #[description = "Maximum Account Age"] maximum_account_age: Option<i64>,
-    #[description = "Number of stings to give when an invite is sent, None means disabled"]
-    anti_invite: Option<i64>,
-    #[description = "Number of stings to give when an everyone ping is sent, 0 or none means disabled"]
-    anti_everyone: Option<i64>,
     #[description = "Number of seconds to keep stings for. Defaults to 0"] sting_retention: Option<
         i64,
     >,
@@ -145,7 +141,7 @@ pub async fn inspector_setup(
 ) -> Result<(), Error> {
     silverpelt::settings_poise::settings_creator(
         &ctx,
-        &super::settings::INSPECTOR_OPTIONS,
+        &super::settings::INSPECTOR_GLOBAL_OPTIONS,
         indexmap::indexmap! {
             "guild_id".to_string() => {
                 if let Some(guild_id) = ctx.guild_id() {
@@ -156,8 +152,6 @@ pub async fn inspector_setup(
             },
             "minimum_account_age".to_string() => number_to_value(minimum_account_age, None),
             "maximum_account_age".to_string() => number_to_value(maximum_account_age, None),
-            "anti_invite".to_string() => number_to_value(anti_invite, None),
-            "anti_everyone".to_string() => number_to_value(anti_everyone, None),
             "sting_retention".to_string() => number_to_value(sting_retention, Some(60)),
             "hoist_detection".to_string() => convert_bitflags_string_to_value(&DEHOIST_OPTIONS, hoist_detection),
             "guild_protection".to_string() => convert_bitflags_string_to_value(&GUILD_PROTECTION_OPTIONS, guild_protection),
@@ -167,7 +161,7 @@ pub async fn inspector_setup(
     .await
 }
 
-/// Update inspector settings
+/// Update inspector global settings
 #[allow(clippy::too_many_arguments)]
 #[poise::command(
     prefix_command,
@@ -176,14 +170,10 @@ pub async fn inspector_setup(
     user_cooldown = "5",
     rename = "update"
 )]
-pub async fn inspector_update(
+pub async fn inspector_global_update(
     ctx: Context<'_>,
     #[description = "Minimum Account Age"] minimum_account_age: Option<i64>,
     #[description = "Maximum Account Age"] maximum_account_age: Option<i64>,
-    #[description = "Number of stings to give when an invite is sent, None means disabled"]
-    anti_invite: Option<i64>,
-    #[description = "Number of stings to give when an everyone ping is sent, 0 or none means disabled"]
-    anti_everyone: Option<i64>,
     #[description = "Number of seconds to keep stings for. Defaults to 0"] sting_retention: Option<
         i64,
     >,
@@ -199,7 +189,7 @@ pub async fn inspector_update(
 ) -> Result<(), Error> {
     silverpelt::settings_poise::settings_updater(
         &ctx,
-        &super::settings::INSPECTOR_OPTIONS,
+        &super::settings::INSPECTOR_GLOBAL_OPTIONS,
         indexmap::indexmap! {
             "guild_id".to_string() => {
                 if let Some(guild_id) = ctx.guild_id() {
@@ -210,8 +200,6 @@ pub async fn inspector_update(
             },
             "minimum_account_age".to_string() => number_to_value(minimum_account_age, None),
             "maximum_account_age".to_string() => number_to_value(maximum_account_age, None),
-            "anti_invite".to_string() => number_to_value(anti_invite, None),
-            "anti_everyone".to_string() => number_to_value(anti_everyone, None),
             "sting_retention".to_string() => number_to_value(sting_retention, Some(60)),
             "hoist_detection".to_string() => convert_bitflags_string_to_value(&DEHOIST_OPTIONS, hoist_detection),
             "guild_protection".to_string() => convert_bitflags_string_to_value(&GUILD_PROTECTION_OPTIONS, guild_protection),
@@ -221,21 +209,217 @@ pub async fn inspector_update(
     .await
 }
 
-/// List inspector settings
+/// Delete inspector global settings
 #[poise::command(
     prefix_command,
     slash_command,
     guild_only,
     user_cooldown = "5",
-    rename = "disable"
+    rename = "delete"
 )]
-pub async fn inspector_disable(ctx: Context<'_>) -> Result<(), Error> {
-    silverpelt::settings_poise::settings_deleter(&ctx, &super::settings::INSPECTOR_OPTIONS, {
-        if let Some(guild_id) = ctx.guild_id() {
-            Value::String(guild_id.to_string())
-        } else {
-            return Err("Guild ID not found".into());
+pub async fn inspector_global_delete(ctx: Context<'_>) -> Result<(), Error> {
+    silverpelt::settings_poise::settings_deleter(
+        &ctx,
+        &super::settings::INSPECTOR_GLOBAL_OPTIONS,
+        {
+            if let Some(guild_id) = ctx.guild_id() {
+                Value::String(guild_id.to_string())
+            } else {
+                return Err("Guild ID not found".into());
+            }
+        },
+    )
+    .await
+}
+
+pub async fn inspector_specific_id_autocomplete<'a>(
+    ctx: Context<'_>,
+    partial: &'a str,
+) -> Vec<serenity::all::AutocompleteChoice<'a>> {
+    let Some(guild_id) = ctx.guild_id() else {
+        return Vec::new();
+    };
+
+    let data = ctx.data();
+
+    let Ok(configs) = super::cache::get_specific_configs(&data.pool, guild_id).await else {
+        log::error!("Failed to get specific configs");
+        return Vec::new();
+    };
+
+    let mut choices = Vec::new();
+
+    for config in configs {
+        if config.id.to_string().starts_with(partial) {
+            choices.push(serenity::all::AutocompleteChoice::new(format!("ID: {}", config.id), config.id.to_string()));
         }
-    })
+    }
+
+    choices
+}
+
+/// Inspector specific options base command
+#[poise::command(
+    prefix_command,
+    slash_command,
+    guild_only,
+    user_cooldown = "5",
+    subcommands(
+        "inspector_specific_list",
+        "inspector_specific_create",
+        "inspector_specific_update",
+        "inspector_specific_delete"
+    )
+)]
+pub async fn inspector_specific(_ctx: Context<'_>) -> Result<(), Error> {
+    Ok(())
+}
+
+/// List inspector specific settings
+#[poise::command(
+    prefix_command,
+    slash_command,
+    guild_only,
+    user_cooldown = "5",
+    rename = "list"
+)]
+pub async fn inspector_specific_list(ctx: Context<'_>) -> Result<(), Error> {
+    silverpelt::settings_poise::settings_viewer(
+        &ctx,
+        &super::settings::INSPECTOR_SPECIFIC_OPTIONS,
+        indexmap::IndexMap::new(),
+    )
+    .await
+}
+
+/// Create inspector specific settings
+#[poise::command(
+    prefix_command,
+    slash_command,
+    guild_only,
+    user_cooldown = "5",
+    rename = "create"
+)]
+pub async fn inspector_specific_create(
+    ctx: Context<'_>,
+    #[description = "Number of stings to give when an invite is sent, None means disabled"]
+    anti_invite: Option<i64>,
+    #[description = "Number of stings to give when an everyone ping is sent, 0 or none means disabled"]
+    anti_everyone: Option<i64>,
+    #[description = "Number of seconds to keep stings for. Defaults to 0"] sting_retention: Option<
+        i64,
+    >,
+    #[description = "Modifiers to set, comma seperated"] modifiers: Option<String>,
+) -> Result<(), Error> {
+    silverpelt::settings_poise::settings_creator(
+        &ctx,
+        &super::settings::INSPECTOR_SPECIFIC_OPTIONS,
+        indexmap::indexmap! {
+            "guild_id".to_string() => {
+                if let Some(guild_id) = ctx.guild_id() {
+                    Value::String(guild_id.to_string())
+                } else {
+                    return Err("Guild ID not found".into());
+                }
+            },
+            "anti_invite".to_string() => number_to_value(anti_invite, None),
+            "anti_everyone".to_string() => number_to_value(anti_everyone, None),
+            "sting_retention".to_string() => number_to_value(sting_retention, Some(60)),
+            "modifiers".to_string() => {
+                let modifiers = splashcore_rs::utils::split_input_to_string(&modifiers.unwrap_or_default(), ",");
+                let mut modifiers_value = Vec::new();
+
+                for modifier in modifiers.iter() {
+                    match splashcore_rs::modifier::Modifier::from_repr(modifier)? {
+                        splashcore_rs::modifier::Modifier::Role(_) => return Err("Role modifiers are not allowed".into()),
+                        _ => {}
+                    }
+
+                    modifiers_value.push(Value::String(modifier.to_string())); 
+                }
+
+                Value::List(modifiers_value)
+            }
+        },
+    )
+    .await
+}
+
+/// Update inspector specific settings
+#[poise::command(
+    prefix_command,
+    slash_command,
+    guild_only,
+    user_cooldown = "5",
+    rename = "update"
+)]
+pub async fn inspector_specific_update(
+    ctx: Context<'_>,
+    #[description = "Which specific settings to update"] 
+    #[autocomplete = "inspector_specific_id_autocomplete"]
+    id: String,
+    #[description = "Number of stings to give when an invite is sent, None means disabled"]
+    anti_invite: Option<i64>,
+    #[description = "Number of stings to give when an everyone ping is sent, 0 or none means disabled"]
+    anti_everyone: Option<i64>,
+    #[description = "Number of seconds to keep stings for. Defaults to 0"] sting_retention: Option<
+        i64,
+    >,
+    #[description = "Modifiers to set, comma seperated"] modifiers: Option<String>,
+) -> Result<(), Error> {
+    silverpelt::settings_poise::settings_updater(
+        &ctx,
+        &super::settings::INSPECTOR_SPECIFIC_OPTIONS,
+        indexmap::indexmap! {
+            "id".to_string() => Value::String(id),
+            "guild_id".to_string() => {
+                if let Some(guild_id) = ctx.guild_id() {
+                    Value::String(guild_id.to_string())
+                } else {
+                    return Err("Guild ID not found".into());
+                }
+            },
+            "anti_invite".to_string() => number_to_value(anti_invite, None),
+            "anti_everyone".to_string() => number_to_value(anti_everyone, None),
+            "sting_retention".to_string() => number_to_value(sting_retention, Some(60)),
+            "modifiers".to_string() => {
+                let modifiers = splashcore_rs::utils::split_input_to_string(&modifiers.unwrap_or_default(), ",");
+                let mut modifiers_value = Vec::new();
+
+                for modifier in modifiers.iter() {
+                    match splashcore_rs::modifier::Modifier::from_repr(modifier)? {
+                        splashcore_rs::modifier::Modifier::Role(_) => return Err("Role modifiers are not allowed".into()),
+                        _ => {}
+                    }
+
+                    modifiers_value.push(Value::String(modifier.to_string())); 
+                }
+
+                Value::List(modifiers_value)
+            }
+        },
+    )
+    .await
+}
+
+/// Delete inspector specific settings
+#[poise::command(
+    prefix_command,
+    slash_command,
+    guild_only,
+    user_cooldown = "5",
+    rename = "delete"
+)]
+pub async fn inspector_specific_delete(
+    ctx: Context<'_>,
+    #[description = "Which specific settings to delete"] 
+    #[autocomplete = "inspector_specific_id_autocomplete"]
+    id: String,
+) -> Result<(), Error> {
+    silverpelt::settings_poise::settings_deleter(
+        &ctx,
+        &super::settings::INSPECTOR_SPECIFIC_OPTIONS,
+        Value::String(id),
+    )
     .await
 }

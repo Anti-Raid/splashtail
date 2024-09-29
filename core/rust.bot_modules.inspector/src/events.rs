@@ -16,12 +16,25 @@ pub async fn event_listener(ectx: &EventHandlerContext) -> Result<(), Error> {
     match event {
         FullEvent::Message { new_message } => {
             let data = &ectx.data;
-            let config = super::cache::get_config(&data.pool, ectx.guild_id).await?;
+            let config = super::cache::get_specific_configs(&data.pool, ectx.guild_id).await?;
+
+            let anti_invite = super::cache::InspectorSpecificOptions::get(
+                &config,
+                |c| c.anti_invite,
+                new_message.author.id,
+                Some(new_message.channel_id),
+            );
+            let anti_everyone = super::cache::InspectorSpecificOptions::get(
+                &config,
+                |c| c.anti_everyone,
+                new_message.author.id,
+                Some(new_message.channel_id),
+            );
 
             let mut triggered_flags = TriggeredFlags::NONE;
             let mut triggered_stings = 0;
 
-            if let Some(ai_stings) = config.anti_invite {
+            if let Some(ai_stings) = anti_invite {
                 let trimmed_msg = new_message
                     .content
                     .trim()
@@ -38,7 +51,7 @@ pub async fn event_listener(ectx: &EventHandlerContext) -> Result<(), Error> {
                 }
             }
 
-            if let Some(ae_stings) = config.anti_everyone {
+            if let Some(ae_stings) = anti_everyone {
                 if new_message.content.contains("@everyone")
                     || new_message.mention_everyone()
                     || new_message.mentions.len() > MAX_MENTIONS
@@ -75,13 +88,21 @@ pub async fn event_listener(ectx: &EventHandlerContext) -> Result<(), Error> {
                     )
                     .await?
                 {
+                    let sting_retention = super::cache::InspectorSpecificOptions::get(
+                        &config,
+                        |c| Some(c.sting_retention),
+                        new_message.author.id,
+                        Some(new_message.channel_id),
+                    )
+                    .unwrap_or(300);
+
                     sqlx::query!(
                         "INSERT INTO inspector__punishments (user_id, guild_id, stings, triggered_flags, stings_expiry) VALUES ($1, $2, $3, $4, $5)",
                         new_message.author.id.to_string(),
                         ectx.guild_id.to_string(),
                         triggered_stings as i32,
                         i64::from(triggered_flags.bits()),
-                        chrono::Utc::now() + chrono::Duration::seconds(config.sting_retention as i64),
+                        chrono::Utc::now() + chrono::Duration::seconds(sting_retention as i64),
                     )
                     .execute(&data.pool)
                     .await?;
@@ -100,7 +121,7 @@ pub async fn event_listener(ectx: &EventHandlerContext) -> Result<(), Error> {
         }
         FullEvent::GuildMemberAddition { new_member } => {
             let data = &ectx.data;
-            let config = super::cache::get_config(&data.pool, ectx.guild_id).await?;
+            let config = super::cache::get_global_config(&data.pool, ectx.guild_id).await?;
 
             // First check for an auto response
             if !config
@@ -477,7 +498,7 @@ pub async fn event_listener(ectx: &EventHandlerContext) -> Result<(), Error> {
                 }
             };
 
-            let config = super::cache::get_config(&ectx.data.pool, ectx.guild_id).await?;
+            let config = super::cache::get_global_config(&ectx.data.pool, ectx.guild_id).await?;
 
             if !config
                 .guild_protection
@@ -538,7 +559,7 @@ pub async fn event_listener(ectx: &EventHandlerContext) -> Result<(), Error> {
             event,
         } => {
             let data = &ectx.data;
-            let config = super::cache::get_config(&data.pool, ectx.guild_id).await?;
+            let config = super::cache::get_global_config(&data.pool, ectx.guild_id).await?;
 
             // Hoist detection
             if !config.hoist_detection.contains(DehoistOptions::DISABLED) {

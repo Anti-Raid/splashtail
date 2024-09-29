@@ -236,6 +236,10 @@ pub fn parse_numeric_list_to_str<T: std::fmt::Display + std::str::FromStr + Send
     Ok(list)
 }
 
+pub fn split_input_to_string(s: &str, separator: &str) -> Vec<String> {
+    s.split(separator).map(|s| s.trim().to_string()).collect()
+}
+
 pub mod sql_utils {
     pub const SPECIAL_VARS: [&str; 2] = ["__limit", "__offset"];
 
