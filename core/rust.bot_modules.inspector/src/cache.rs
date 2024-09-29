@@ -112,11 +112,16 @@ impl InspectorSpecificOptions {
     ) -> Option<T> {
         let mut best = (val_fn(&InspectorSpecificOptions::default()), -1);
 
+        let variables = Some(indexmap::indexmap! {
+            "source".to_string() => "inspector".to_string(),
+        });
+
         for opt in opts.iter() {
             let matches = splashcore_rs::modifier::Modifier::set_matches_user_id(
                 &opt.modifier,
                 user_id,
                 channel_id,
+                &variables,
             );
 
             // Go over the matches and check if any have a greater specificity than best

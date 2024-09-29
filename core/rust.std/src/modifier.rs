@@ -1,14 +1,17 @@
-#[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]
+use indexmap::IndexMap;
+
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub enum Modifier {
     User(serenity::all::UserId),
     Channel(serenity::all::ChannelId),
     Role(serenity::all::RoleId),
+    Custom((String, String, i32)),
     Global,
 }
 
 impl Modifier {
     pub fn from_repr(repr: &str) -> Result<Self, crate::Error> {
-        let mut parts = repr.splitn(2, '/');
+        let mut parts = repr.splitn(3, '/');
 
         let target = match parts.next() {
             Some("user") => {
@@ -35,6 +38,24 @@ impl Modifier {
 
                 Modifier::Role(id)
             }
+            Some("custom") => {
+                let key = match parts.next() {
+                    Some(key) => key.to_string(),
+                    None => return Err(format!("Invalid modifier target: {}", repr).into()),
+                };
+
+                let value = match parts.next() {
+                    Some(value) => value.to_string(),
+                    None => return Err(format!("Invalid modifier target: {}", repr).into()),
+                };
+
+                let specificity = match parts.next() {
+                    Some(specificity) => specificity.parse::<i32>()?,
+                    None => return Err(format!("Invalid modifier target: {}", repr).into()),
+                };
+
+                Modifier::Custom((key, value, specificity))
+            }
             Some("global") => Modifier::Global,
             _ => return Err(format!("Invalid modifier target: {}", repr).into()),
         };
@@ -42,8 +63,10 @@ impl Modifier {
         Ok(target)
     }
 
+    /// Returns the specificity of a modifier which is used to resolve conflicts
     pub fn specificity(&self) -> i32 {
         match self {
+            Modifier::Custom((_, _, specificity)) => *specificity,
             Modifier::User(_) => 3, // Most specific
             Modifier::Channel(_) => 2,
             Modifier::Role(_) => 1,
@@ -51,6 +74,7 @@ impl Modifier {
         }
     }
 
+    /// Check if a modifier is a user
     pub fn is_user(&self, user_id: serenity::all::UserId) -> bool {
         match self {
             Modifier::User(id) => *id == user_id,
@@ -58,6 +82,7 @@ impl Modifier {
         }
     }
 
+    /// Check if a modifier is a channel
     pub fn is_channel(&self, channel_id: serenity::all::ChannelId) -> bool {
         match self {
             Modifier::Channel(id) => *id == channel_id,
@@ -65,6 +90,7 @@ impl Modifier {
         }
     }
 
+    /// Check if a modifier is a role
     pub fn is_role(&self, role_id: serenity::all::RoleId) -> bool {
         match self {
             Modifier::Role(id) => *id == role_id,
@@ -72,11 +98,26 @@ impl Modifier {
         }
     }
 
+    /// Check if a modifier is global or not
     pub fn is_global(&self) -> bool {
         match self {
             Modifier::Global => true,
             _ => false,
         }
+    }
+
+    /// Check if a modifier contains a variable
+    pub fn contains_variable(&self, map: &IndexMap<String, String>) -> bool {
+        match self {
+            Modifier::Custom((k, v, _)) => {
+                if let Some(value) = map.get(k) {
+                    return value == v;
+                }
+            }
+            _ => {}
+        }
+
+        false
     }
 
     /// Helper method to check if a modifier contains a role modifier
@@ -97,6 +138,7 @@ impl Modifier {
         &self,
         member: &serenity::all::Member,
         channel_id: Option<serenity::all::ChannelId>,
+        variables: &Option<IndexMap<String, String>>,
     ) -> bool {
         if self.is_global() {
             return true;
@@ -118,7 +160,52 @@ impl Modifier {
             }
         }
 
+        if let Some(variables) = variables {
+            if self.contains_variable(&variables) {
+                return true;
+            }
+        }
+
         false
+    }
+
+    /// Check if a channel id matches this modifier
+    pub fn matches_channel_id(
+        &self,
+        channel_id: serenity::all::ChannelId,
+        variables: &Option<IndexMap<String, String>>,
+    ) -> bool {
+        if self.is_global() {
+            return true;
+        }
+
+        if self.is_channel(channel_id) {
+            return true;
+        }
+
+        if let Some(variables) = variables {
+            if self.contains_variable(&variables) {
+                return true;
+            }
+        }
+
+        false
+    }
+
+    /// Helper method to check if a member matches a list of modifiers
+    pub fn set_matches_channel_id(
+        modifiers: &[Self],
+        channel_id: serenity::all::ChannelId,
+        variables: &Option<IndexMap<String, String>>,
+    ) -> Vec<Modifier> {
+        let mut matches = Vec::new();
+        for modifier in modifiers {
+            if modifier.matches_channel_id(channel_id, variables) {
+                matches.push(modifier.clone());
+            }
+        }
+
+        matches
     }
 
     /// Check if a user id matches this modifier
@@ -126,6 +213,7 @@ impl Modifier {
         &self,
         user_id: serenity::all::UserId,
         channel_id: Option<serenity::all::ChannelId>,
+        variables: &Option<IndexMap<String, String>>,
     ) -> bool {
         if self.is_global() {
             return true;
@@ -141,6 +229,12 @@ impl Modifier {
             }
         }
 
+        if let Some(variables) = variables {
+            if self.contains_variable(&variables) {
+                return true;
+            }
+        }
+
         false
     }
 
@@ -149,11 +243,12 @@ impl Modifier {
         modifiers: &[Self],
         member: &serenity::all::Member,
         channel_id: Option<serenity::all::ChannelId>,
+        variables: &Option<IndexMap<String, String>>,
     ) -> Vec<Modifier> {
         let mut matches = Vec::new();
         for modifier in modifiers {
-            if modifier.matches_member(member, channel_id) {
-                matches.push(*modifier);
+            if modifier.matches_member(member, channel_id, variables) {
+                matches.push(modifier.clone());
             }
         }
 
@@ -167,13 +262,28 @@ impl Modifier {
         modifiers: &[Self],
         user_id: serenity::all::UserId,
         channel_id: Option<serenity::all::ChannelId>,
+        variables: &Option<IndexMap<String, String>>,
     ) -> Vec<Modifier> {
         let mut matches = Vec::new();
         for modifier in modifiers {
-            if modifier.matches_user_id(user_id, channel_id) {
-                matches.push(*modifier);
+            if modifier.matches_user_id(user_id, channel_id, variables) {
+                matches.push(modifier.clone());
             }
         }
         matches
+    }
+}
+
+/// Implement partial ordering for modifiers based on specificity
+impl PartialOrd for Modifier {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+/// Implement ordering for modifiers based on specificity
+impl Ord for Modifier {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        self.specificity().cmp(&other.specificity())
     }
 }
