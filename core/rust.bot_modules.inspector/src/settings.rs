@@ -340,7 +340,7 @@ pub static INSPECTOR_SPECIFIC_OPTIONS: LazyLock<ConfigOption> = LazyLock::new(||
             default: None,
             unique: false,
             suggestions: ColumnSuggestion::None {},
-            ignored_for: vec![],
+            ignored_for: vec![OperationType::Create],
             secret: false,
         },
         module_settings::common_columns::guild_id(
