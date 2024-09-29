@@ -37,7 +37,7 @@ impl silverpelt::module::Module for Module {
                 cmd::inspector_specific(),
                 indexmap::indexmap! {
                     "list" => silverpelt::types::CommandExtendedData::kittycat_or_admin("inspector_specific", "list"),
-                    "setup" => silverpelt::types::CommandExtendedData::kittycat_or_admin("inspector_specific", "setup"),
+                    "create" => silverpelt::types::CommandExtendedData::kittycat_or_admin("inspector_specific", "create"),
                     "update" => silverpelt::types::CommandExtendedData::kittycat_or_admin("inspector_specific", "setup"),
                     "delete" => silverpelt::types::CommandExtendedData::kittycat_or_admin("inspector_specific", "setup"),
                 },
