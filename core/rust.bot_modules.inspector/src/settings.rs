@@ -3,7 +3,7 @@ use module_settings::{
     data_stores::PostgresDataStore,
     types::{
         settings_wrap, Column, ColumnSuggestion, ColumnType, ConfigOption, HookContext,
-        InnerColumnType, NoOpValidator, OperationSpecific, OperationType, PostAction,
+        InnerColumnType, InnerColumnTypeStringKind, OperationSpecific, OperationType, PostAction,
         SettingDataValidator, SettingsError,
     },
 };
@@ -384,6 +384,23 @@ pub static INSPECTOR_SPECIFIC_OPTIONS: LazyLock<ConfigOption> = LazyLock::new(||
             ignored_for: vec![],
             secret: false,
         },
+        Column {
+            id: "modifier",
+            name: "Modifier",
+            description: "Modifier to apply to option",
+            column_type: ColumnType::new_array(InnerColumnType::String {
+                max_length: None,
+                min_length: None,
+                allowed_values: vec![],
+                kind: InnerColumnTypeStringKind::Normal,
+            }),
+            nullable: false,
+            default: Some(|_| Value::Integer(300)),
+            unique: false,
+            suggestions: ColumnSuggestion::None {},
+            ignored_for: vec![],
+            secret: false,
+        },
     ]),
     title_template: "Specific Inspector Setup {id}",
     operations: indexmap::indexmap! {
@@ -404,9 +421,60 @@ pub static INSPECTOR_SPECIFIC_OPTIONS: LazyLock<ConfigOption> = LazyLock::new(||
             columns_to_set: indexmap::indexmap! {},
         },
     },
-    validator: settings_wrap(NoOpValidator {}),
+    validator: settings_wrap(InspectorSpecificOptionsValidator {}),
     post_action: settings_wrap(InspectorSpecificOptionsPostActions {}),
 });
+
+/// Special validator for Inspector Options to handle Guild Protection
+pub struct InspectorSpecificOptionsValidator;
+
+#[async_trait::async_trait]
+impl SettingDataValidator for InspectorSpecificOptionsValidator {
+    async fn validate<'a>(
+        &self,
+        ctx: HookContext<'a>,
+        state: &'a mut State,
+    ) -> Result<(), SettingsError> {
+        // Ignore for View
+        if ctx.operation_type == OperationType::View {
+            return Ok(());
+        }
+
+        let Some(Value::List(modifiers)) = state.state.get("modifier") else {
+            return Err(SettingsError::MissingOrInvalidField {
+                field: "modifier".to_string(),
+                src: "index->NativeAction [default_pre_checks]".to_string(),
+            });
+        };
+
+        for modifier in modifiers {
+            let modifier = match splashcore_rs::modifier::Modifier::from_repr(&modifier.to_string())
+            {
+                Ok(modifier) => modifier,
+                Err(e) => {
+                    return Err(SettingsError::Generic {
+                        message: format!("Error while parsing modifier: {}", e),
+                        typ: "value_error".to_string(),
+                        src: "inspector__specific_options.modifier".to_string(),
+                    });
+                }
+            };
+
+            match modifier {
+                splashcore_rs::modifier::Modifier::Role(_) => {
+                    return Err(SettingsError::Generic {
+                        message: "Role modifiers are not supported".to_string(),
+                        typ: "value_error".to_string(),
+                        src: "inspector__specific_options.modifier".to_string(),
+                    });
+                }
+                _ => {}
+            }
+        }
+
+        Ok(())
+    }
+}
 
 /// Post actions for Inspector Specific Options
 pub struct InspectorSpecificOptionsPostActions;
