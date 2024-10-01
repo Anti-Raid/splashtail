@@ -19,6 +19,7 @@ strum_macros = "0.26"
 moka = { version = "0.12", features = ["future", "futures-util"] }
 governor = "0.6"
 async-trait = "0.1.80"
+dashmap = { version = "5", features = ["serde", "inline", "rayon"] }
 
 # Anti-Raid specific
 silverpelt = { path = "../rust.silverpelt" }

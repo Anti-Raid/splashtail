@@ -1,11 +1,7 @@
 use module_settings::{
-    data_stores::PostgresDataStore,
-    types::{
-        settings_wrap, Column, ColumnSuggestion, ColumnType, ConfigOption,
-        InnerColumnType, InnerColumnTypeStringKind, OperationSpecific, OperationType,
-        NoOpValidator, NoOpPostAction, PostAction, HookContext, SettingsError
-    },
-    state::State
+    data_stores::PostgresDataStore, state::State, types::{
+        settings_wrap, Column, ColumnSuggestion, ColumnType, ConfigOption, HookContext, InnerColumnType, InnerColumnTypeStringKind, NoOpPostAction, NoOpValidator, OperationSpecific, OperationType, PostAction, SettingDataValidator, SettingsError
+    }
 };
 use std::sync::LazyLock;
 use strum::VariantNames;
@@ -265,6 +261,122 @@ pub static USER_ACTIONS: LazyLock<ConfigOption> = LazyLock::new(|| ConfigOption 
     validator: settings_wrap(NoOpValidator {}),
     post_action: settings_wrap(NoOpPostAction {}),
 });
+
+pub static GUILD_GLOBALS: LazyLock<ConfigOption> = LazyLock::new(|| {
+    ConfigOption {
+        id: "guilds",
+        name: "Guild Limits Global Settings",
+        description: "Guild Limit global settings",
+        table: "limits__guilds",
+        common_filters: indexmap::indexmap! {},
+        default_common_filters: indexmap::indexmap! {
+            "guild_id" => "{__guild_id}"
+        },
+        primary_key: "guild_id",
+        max_entries: Some(1),
+        max_return: 1,
+        data_store: settings_wrap(PostgresDataStore {}),
+        columns: settings_wrap(vec![
+            module_settings::common_columns::guild_id("guild_id", "Guild ID", "The Guild ID"),
+            Column {
+                id: "strategy",
+                name: "Limiting Strategy",
+                description: "The strategy to use for limiting",
+                column_type: ColumnType::new_scalar(InnerColumnType::String {
+                    kind: InnerColumnTypeStringKind::Normal,
+                    min_length: None,
+                    max_length: Some(64),
+                    allowed_values: vec![],
+                }),
+                nullable: false,
+                default: None,
+                unique: false,
+                suggestions: ColumnSuggestion::None {},
+                ignored_for: vec![],
+                secret: false,
+            },
+        ]),
+        title_template: "{limit_name}: On {limit_type}, {limit_per} times every {limit_time} [{limit_id}]",
+        operations: indexmap::indexmap! {
+            OperationType::View => OperationSpecific {
+                corresponding_command: "limit_globals view",
+                columns_to_set: indexmap::indexmap! {},
+            },
+            OperationType::Create => OperationSpecific {
+                corresponding_command: "limit_globals add",
+                columns_to_set: indexmap::indexmap! {},
+            },
+            OperationType::Delete => OperationSpecific {
+                corresponding_command: "limit_globals remove",
+                columns_to_set: indexmap::indexmap! {},
+            },
+        },
+        validator: settings_wrap(GuildGlobalsValidator {}),
+        post_action: settings_wrap(GuildLimitsPostActions {}),    
+    }
+});
+
+/// Post actions to clear cache
+pub struct GuildGlobalsValidator;
+
+#[async_trait::async_trait]
+impl SettingDataValidator for GuildGlobalsValidator {
+    async fn validate<'a>(
+        &self,
+        ctx: HookContext<'a>,
+        state: &'a mut State,
+    ) -> Result<(), SettingsError> {
+        if ctx.operation_type == OperationType::View {
+            return Ok(());
+        }
+
+        let Some(splashcore_rs::value::Value::String(strategy)) = state.state.get("strategy") else {
+            return Err(SettingsError::Generic {
+                message: "Strategy is required".to_string(),
+                src: "GuildGlobalsValidator".to_string(),
+                typ: "external".to_string(),
+            });
+        };
+
+        if let Err(e) = super::strategy::from_limit_strategy_string(&strategy) {
+            let mut accepted_strategies = Vec::new();
+
+            for s in super::strategy::STRATEGY.iter() {
+                let v = s.value();
+                accepted_strategies.push(format!("- {}", v.syntax()));
+            }
+
+            return Err(SettingsError::Generic {
+                message: format!("Invalid strategy: {}\nAccepted strategies:\n{}", e, accepted_strategies.join("\n")),
+                src: "GuildGlobalsValidator".to_string(),
+                typ: "external".to_string(),
+            });
+        }
+
+        Ok(())
+    }
+}
+
+/// Post actions to clear cache
+pub struct GuildGlobalsPostActions;
+
+#[async_trait::async_trait]
+impl PostAction for GuildGlobalsPostActions {
+    async fn post_action<'a>(
+        &self,
+        ctx: HookContext<'a>,
+        _state: &'a mut State,
+    ) -> Result<(), SettingsError> {
+        if ctx.operation_type == OperationType::View {
+            return Ok(());
+        }
+        super::cache::GUILD_LIMITS
+            .invalidate(&ctx.guild_id)
+            .await;
+
+        Ok(())
+    }
+}
 
 pub static GUILD_LIMITS: LazyLock<ConfigOption> = LazyLock::new(|| {
     ConfigOption {

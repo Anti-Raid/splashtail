@@ -35,6 +35,14 @@ impl silverpelt::module::Module for Module {
                 },
             ),
             (
+                cmds::limit_globals(),
+                indexmap::indexmap! {
+                    "view" => silverpelt::types::CommandExtendedData::kittycat_or_admin("limit_globals", "view"),
+                    "add" => silverpelt::types::CommandExtendedData::kittycat_or_admin("limit_globals", "add"),
+                    "remove" => silverpelt::types::CommandExtendedData::kittycat_or_admin("limit_globals", "remove"),
+                }
+            ),
+            (
                 cmds::limits_user_stings(),
                 indexmap! {
                     "view" => silverpelt::types::CommandExtendedData::kittycat_or_admin("past_hit_limits", "view"),
@@ -59,6 +67,7 @@ impl silverpelt::module::Module for Module {
         vec![
             (*settings::USER_STINGS).clone(),
             (*settings::USER_ACTIONS).clone(),
+            (*settings::GUILD_GLOBALS).clone(),
             (*settings::GUILD_LIMITS).clone(),
         ]
     }

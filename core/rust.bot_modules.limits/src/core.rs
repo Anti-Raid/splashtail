@@ -252,42 +252,20 @@ impl LimitTypes {
     }
 }
 
-#[derive(
-    EnumString,
-    Display,
-    PartialEq,
-    VariantNames,
-    Clone,
-    Copy,
-    Debug,
-    Serialize,
-    Hash,
-    Eq,
-    Deserialize,
-)]
-#[strum(serialize_all = "snake_case")]
-pub enum LimitStrategy {
-    InMemory,
-    // WARNING: Persist is MUCH SLOWER than InMemory and will only be available for servers with less than 1500 members
-    Persist,
-}
-
 #[derive(Debug, Serialize, Deserialize, Clone)]
 /// Stores the configuration for a guild
 pub struct LimitGuild {
     pub guild_id: GuildId,
 
-    /// Whether to persist actions in postgres or just use governor/in-memory limiting
-    ///
-    /// Note that using persist_actions is MUCH SLOWER than in-memory limiting
-    pub strategy: LimitStrategy,
+    /// Which strategy to use for this guild
+    pub strategy: String,
 }
 
 impl LimitGuild {
     pub fn default_for_guild(guild_id: GuildId) -> Self {
         Self {
             guild_id,
-            strategy: LimitStrategy::InMemory,
+            strategy: "in-memory".to_string(),
         }
     }
 
@@ -309,7 +287,7 @@ impl LimitGuild {
 
         Ok(Self {
             guild_id,
-            strategy: rec.strategy.parse()?,
+            strategy: rec.strategy,
         })
     }
 }

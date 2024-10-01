@@ -1,6 +1,30 @@
 use super::core::HandleModAction;
 use botox::crypto::gen_random;
 use std::collections::HashMap;
+use dashmap::DashMap;
+use std::sync::LazyLock;
+
+pub static STRATEGY: LazyLock<DashMap<String, Box<dyn CreateStrategy>>> =
+    LazyLock::new(|| {
+        let map: DashMap<String, Box<dyn CreateStrategy>> = DashMap::new();
+
+        map.insert("in-memory".to_string(), Box::new(CreateInMemoryStrategy));
+        map.insert("persist".to_string(), Box::new(CreatePersistStrategy));
+
+        map
+    });
+
+/// Given a string, returns the limit strategy
+pub fn from_limit_strategy_string(s: &str) -> Result<Box<dyn Strategy>, silverpelt::Error> {
+    for pair in STRATEGY.iter() {
+        let creator = pair.value();
+        if let Some(m) = creator.to_strategy(s)? {
+            return Ok(m);
+        }
+    }
+
+    Err("Unknown lockdown mode".into())
+}
 
 pub struct StrategyResult {
     pub stings: i32,                                    // How many stings to give
@@ -10,11 +34,31 @@ pub struct StrategyResult {
     pub causes: Option<HashMap<String, Vec<String>>>, // If possible, the actions which caused the limit to be hit
 }
 
+pub trait CreateStrategy
+where
+    Self: Send + Sync, 
+{
+    /// Returns the syntax for the limit
+    ///
+    /// E.g. `in-memory` for In Memory Limit
+    fn syntax(&self) -> &'static str;
+
+    fn to_strategy(&self, s: &str) -> Result<Option<Box<dyn Strategy>>, silverpelt::Error>;
+}
+
 #[async_trait::async_trait]
 pub trait Strategy
 where
     Self: Send + Sync,
 {
+    /// Returns the creator for the limit
+    #[allow(dead_code)]
+    fn creator(&self) -> Box<dyn CreateStrategy>;
+
+    /// Returns the string form of the strategy
+    #[allow(dead_code)]
+    fn string_form(&self) -> String;
+
     /// Adds a mod action to the strategy
     async fn add_mod_action(
         &self,
@@ -24,38 +68,34 @@ where
     ) -> Result<StrategyResult, silverpelt::Error>;
 }
 
-/// Enum containing all variants
-pub enum LimitStrategy {
-    InMemory(InMemory),
-    Persist(PersistStrategy),
-}
+pub struct CreateInMemoryStrategy;
 
-#[async_trait::async_trait]
-impl Strategy for LimitStrategy {
-    async fn add_mod_action(
-        &self,
-        data: &silverpelt::data::Data,
-        ha: &HandleModAction,
-        cgl: &super::cache::CachedGuildLimit,
-    ) -> Result<StrategyResult, silverpelt::Error> {
-        match self {
-            LimitStrategy::InMemory(strategy) => strategy.add_mod_action(data, ha, cgl).await,
-            LimitStrategy::Persist(strategy) => strategy.add_mod_action(data, ha, cgl).await,
+impl CreateStrategy for CreateInMemoryStrategy {
+    fn to_strategy(&self, s: &str) -> Result<Option<Box<dyn Strategy>>, silverpelt::Error> {
+        if s == "in-memory" {
+            Ok(Some(Box::new(InMemoryStrategy)))
+        } else {
+            Ok(None)
         }
     }
-}
 
-pub fn get_strategy(strategy: super::core::LimitStrategy) -> LimitStrategy {
-    match strategy {
-        super::core::LimitStrategy::InMemory => LimitStrategy::InMemory(InMemory),
-        super::core::LimitStrategy::Persist => LimitStrategy::Persist(PersistStrategy),
+    fn syntax(&self) -> &'static str {
+        "in-memory"
     }
 }
 
-pub struct InMemory;
+pub struct InMemoryStrategy;
 
 #[async_trait::async_trait]
-impl Strategy for InMemory {
+impl Strategy for InMemoryStrategy {
+    fn string_form(&self) -> String {
+        "in-memory".to_string()
+    }
+
+    fn creator(&self) -> Box<dyn CreateStrategy> {
+        Box::new(CreateInMemoryStrategy)
+    }
+
     // NOTE: In memory aggregates the causes so there is nothing to return for that
     async fn add_mod_action(
         &self,
@@ -63,7 +103,7 @@ impl Strategy for InMemory {
         ha: &HandleModAction,
         cgl: &super::cache::CachedGuildLimit,
     ) -> Result<StrategyResult, silverpelt::Error> {
-        let (ok, result) = cgl.2.limit(ha.user_id, ha.limit).await;
+        let (ok, result) = cgl.1.limit(ha.user_id, ha.limit).await;
 
         if ok {
             return Ok(StrategyResult {
@@ -81,7 +121,7 @@ impl Strategy for InMemory {
 
         // Count the stings and expiries
         for (limit_id, hit_limit) in result {
-            if let Some(limit) = cgl.3.get(&limit_id) {
+            if let Some(limit) = cgl.2.get(&limit_id) {
                 stings += limit.stings;
                 expiries.insert(limit_id.clone(), hit_limit.time);
                 hit_limits.push(limit_id);
@@ -98,10 +138,34 @@ impl Strategy for InMemory {
     }
 }
 
+pub struct CreatePersistStrategy;
+
+impl CreateStrategy for CreatePersistStrategy {
+    fn to_strategy(&self, s: &str) -> Result<Option<Box<dyn Strategy>>, silverpelt::Error> {
+        if s == "persist" {
+            Ok(Some(Box::new(PersistStrategy)))
+        } else {
+            Ok(None)
+        }
+    }
+
+    fn syntax(&self) -> &'static str {
+        "persist"
+    }
+}
+
 pub struct PersistStrategy;
 
 #[async_trait::async_trait]
 impl Strategy for PersistStrategy {
+    fn string_form(&self) -> String {
+        "persist".to_string()
+    }
+
+    fn creator(&self) -> Box<dyn CreateStrategy> {
+        Box::new(CreatePersistStrategy)
+    }
+
     async fn add_mod_action(
         &self,
         data: &silverpelt::data::Data,
@@ -131,7 +195,7 @@ impl Strategy for PersistStrategy {
         let mut stings = 0;
         let mut largest_expiry = 0;
         let mut expiries = HashMap::new();
-        for (_limit_id, guild_limit) in cgl.3.iter() {
+        for (_limit_id, guild_limit) in cgl.2.iter() {
             let stings_from_limit = guild_limit.stings;
             let limit_time_from_limit = guild_limit.limit_time;
 

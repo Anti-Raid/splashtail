@@ -68,7 +68,6 @@ impl GuildLimitsCache {
 }
 
 pub type CachedGuildLimit = (
-    super::strategy::LimitStrategy,
     LimitGuild,
     GuildLimitsCache,
     HashMap<String, Limit>,
@@ -113,7 +112,6 @@ pub async fn get_limits(
         }
 
         let limits = Arc::new((
-            super::strategy::get_strategy(limit_guild.strategy),
             limit_guild,
             limits,
             limits_db,

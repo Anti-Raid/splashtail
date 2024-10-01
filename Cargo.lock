@@ -561,6 +561,7 @@ dependencies = [
  "bot_modules_punishments",
  "botox",
  "chrono",
+ "dashmap",
  "futures-util",
  "governor",
  "indexmap",
