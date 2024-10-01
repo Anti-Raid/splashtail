@@ -30,13 +30,13 @@ impl sting_sources::StingSource for ModerationActionsStingSource {
         filters: sting_sources::StingCountFilters,
     ) -> Result<usize, silverpelt::Error> {
         let row = sqlx::query!(
-            "SELECT COUNT(*) FROM limits__user_stings
+            "SELECT COUNT(*) FROM moderation__actions
             WHERE 
                 ($1::TEXT IS NULL OR guild_id = $1::TEXT) AND 
                 ($2::TEXT IS NULL OR user_id = $2::TEXT) AND (
                 $3::BOOL IS NULL OR 
-                ($3 = true AND expiry < NOW()) OR
-                ($3 = false AND expiry > NOW())
+                ($3 = true AND (created_at + duration) < NOW()) OR
+                ($3 = false AND (created_at + duration) > NOW())
             )",
             filters.guild_id.map(|g| g.to_string()),
             filters.user_id.map(|u| u.to_string()),
