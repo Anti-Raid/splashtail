@@ -8,7 +8,7 @@ pub mod module;
 pub mod module_config;
 pub mod punishments;
 pub mod settings_poise;
-pub mod sting_sources;
+pub mod stings;
 pub mod types;
 pub mod utils;
 pub mod validators;

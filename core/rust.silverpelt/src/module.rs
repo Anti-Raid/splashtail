@@ -81,11 +81,6 @@ pub trait Module: Send + Sync {
         false
     }
 
-    /// What punishment sting sources this module provides
-    fn sting_sources(&self) -> Vec<Arc<dyn crate::sting_sources::StingSource>> {
-        Vec::new()
-    }
-
     /// What punishment actions this module provides
     fn punishment_actions(&self) -> Vec<Arc<dyn crate::punishments::CreatePunishmentAction>> {
         Vec::new()

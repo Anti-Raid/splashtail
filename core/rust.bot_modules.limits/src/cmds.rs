@@ -188,47 +188,6 @@ pub async fn limit_globals_remove(ctx: Context<'_>) -> Result<(), Error> {
         .await
 }
 
-/// Limits user stings base command
-#[poise::command(
-    prefix_command,
-    slash_command,
-    guild_only,
-    subcommands("limits_user_stings_view", "limits_user_stings_remove",)
-)]
-pub async fn limits_user_stings(_ctx: Context<'_>) -> Result<(), Error> {
-    Ok(())
-}
-
-/// View all user stings due to limits
-#[poise::command(prefix_command, slash_command, guild_only, rename = "view")]
-pub async fn limits_user_stings_view(
-    ctx: Context<'_>,
-    #[description = "The user id to filter by"] user_id: Option<serenity::all::UserId>,
-) -> Result<(), Error> {
-    silverpelt::settings_poise::settings_viewer(&ctx, &super::settings::USER_STINGS, {
-        let mut map = indexmap::IndexMap::new();
-        if let Some(user_id) = user_id {
-            map.insert("user_id".to_string(), Value::String(user_id.to_string()));
-        }
-        map
-    })
-    .await
-}
-
-/// Remove a user sting caused by a limit
-#[poise::command(prefix_command, slash_command, guild_only, rename = "remove")]
-pub async fn limits_user_stings_remove(
-    ctx: Context<'_>,
-    #[description = "The limit user sting ID to remove"] limit_user_sting_id: String,
-) -> Result<(), Error> {
-    silverpelt::settings_poise::settings_deleter(
-        &ctx,
-        &super::settings::USER_STINGS,
-        Value::String(limit_user_sting_id),
-    )
-    .await
-}
-
 /// Limit user actions base command
 #[poise::command(
     prefix_command,

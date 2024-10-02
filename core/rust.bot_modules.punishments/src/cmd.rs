@@ -44,42 +44,11 @@ async fn punishment_actions_autocomplete<'a>(
     slash_command,
     subcommands(
         "punishments_add",
-        "punishments_viewsources",
         "punishments_list",
         "punishments_delete"
     )
 )]
 pub async fn punishments(_ctx: Context<'_>) -> Result<(), Error> {
-    Ok(())
-}
-
-/// List all sources that stings can come from
-#[poise::command(
-    prefix_command,
-    slash_command,
-    guild_only,
-    user_cooldown = "5",
-    rename = "viewsources"
-)]
-#[allow(clippy::too_many_arguments)]
-pub async fn punishments_viewsources(ctx: Context<'_>) -> Result<(), Error> {
-    let mut embed = serenity::all::CreateEmbed::new();
-
-    let data = ctx.data();
-
-    embed = embed.title("Sting Sources");
-
-    for refs in data.silverpelt_cache.module_cache.iter() {
-        let module = refs.value();
-        for source in module.sting_sources().iter() {
-            let id = source.id();
-            let description = source.description();
-            embed = embed.field(id, description, false);
-        }
-    }
-
-    ctx.send(poise::CreateReply::new().embed(embed)).await?;
-
     Ok(())
 }
 

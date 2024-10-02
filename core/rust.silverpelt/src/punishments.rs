@@ -1,8 +1,6 @@
-use crate::sting_sources::FullStingEntry;
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use serenity::all::{GuildId, UserId};
-use std::collections::HashMap;
 use std::sync::Arc;
 
 pub struct PunishmentActionData {
@@ -27,7 +25,7 @@ where
     fn syntax(&self) -> &'static str;
 
     /// Given the string form of the action, returns the action
-    fn to_punishment_action(&self, s: &str) -> Result<Option<PunishmentAction>, crate::Error>;
+    fn to_punishment_action(&self, s: &str) -> Result<Option<Box<dyn PunishmentAction>>, crate::Error>;
 }
 
 /// Display impl for CreatePunishmentAction
@@ -37,39 +35,8 @@ impl std::fmt::Display for dyn CreatePunishmentAction {
     }
 }
 
-pub enum PunishmentAction {
-    User(Box<dyn PunishmentUserAction>),
-    Global(Box<dyn PunishmentGlobalAction>),
-}
-
-impl PunishmentAction {
-    pub fn creator(&self) -> Box<dyn CreatePunishmentAction> {
-        match self {
-            Self::User(action) => action.creator(),
-            Self::Global(action) => action.creator(),
-        }
-    }
-
-    pub fn string_form(&self) -> String {
-        match self {
-            Self::User(action) => action.string_form(),
-            Self::Global(action) => action.string_form(),
-        }
-    }
-}
-
-/// Display impl for PunishmentActionto_string
-impl std::fmt::Display for PunishmentAction {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::User(action) => write!(f, "{}", action),
-            Self::Global(action) => write!(f, "{}", action),
-        }
-    }
-}
-
 #[async_trait]
-pub trait PunishmentUserAction
+pub trait PunishmentAction
 where
     Self: Send + Sync,
 {
@@ -83,69 +50,27 @@ where
     async fn create(
         &self,
         data: &PunishmentActionData,
-        member: &mut serenity::all::Member,
+        user_id: UserId,
         bot_member: &mut serenity::all::Member,
-        applied_punishments: &[GuildPunishment],
+        reason: String,
     ) -> Result<(), crate::Error>;
 
     /// Attempts to revert a punishment from the target
     async fn revert(
         &self,
         data: &PunishmentActionData,
-        member: &mut serenity::all::Member,
+        user_id: UserId,
         bot_member: &mut serenity::all::Member,
-        applied_punishments: &[GuildPunishment],
+        reason: String,
     ) -> Result<(), crate::Error>;
 }
 
-/// Display impl for PunishmentUserAction
-impl std::fmt::Display for dyn PunishmentUserAction {
+/// Display impl for PunishmentAction
+impl std::fmt::Display for dyn PunishmentAction {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
             "{} ({}) [per-user]",
-            self.creator().name(),
-            self.string_form()
-        )
-    }
-}
-
-#[async_trait]
-pub trait PunishmentGlobalAction
-where
-    Self: Send + Sync,
-{
-    /// Returns the creator for the punishment action
-    fn creator(&self) -> Box<dyn CreatePunishmentAction>;
-
-    /// Returns the string form of the punishment action
-    fn string_form(&self) -> String;
-
-    /// Applies a punishment
-    async fn create(
-        &self,
-        data: &PunishmentActionData,
-        partial_guild: &mut serenity::all::PartialGuild,
-        bot_member: &mut serenity::all::Member,
-        applied_punishments: &[GuildPunishment],
-    ) -> Result<(), crate::Error>;
-
-    /// Attempts to revert a punishment from the target
-    async fn revert(
-        &self,
-        data: &PunishmentActionData,
-        partial_guild: &mut serenity::all::PartialGuild,
-        bot_member: &mut serenity::all::Member,
-        applied_punishments: &[GuildPunishment],
-    ) -> Result<(), crate::Error>;
-}
-
-/// Display impl for PunishmentGlobalAction
-impl std::fmt::Display for dyn PunishmentGlobalAction {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "{} ({}) [system]",
             self.creator().name(),
             self.string_form()
         )
@@ -183,7 +108,7 @@ pub async fn get_punishment_actions_for_guild(
 pub fn from_punishment_action_string(
     actions: &[Arc<dyn CreatePunishmentAction>],
     s: &str,
-) -> Result<PunishmentAction, crate::Error> {
+) -> Result<Box<dyn PunishmentAction>, crate::Error> {
     for action in actions.iter() {
         if let Some(m) = action.to_punishment_action(s)? {
             return Ok(m);
@@ -194,7 +119,7 @@ pub fn from_punishment_action_string(
 }
 
 /// Serde serialization for PunishmentAction
-impl Serialize for PunishmentAction {
+impl Serialize for dyn PunishmentAction {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: serde::Serializer,
@@ -202,8 +127,6 @@ impl Serialize for PunishmentAction {
         self.string_form().serialize(serializer)
     }
 }
-
-pub type StingEntryMap = HashMap<String, Vec<FullStingEntry>>;
 
 /// This struct stores a guild punishment that can then be used to trigger punishments
 /// on a user through the bot
@@ -213,7 +136,7 @@ pub struct GuildPunishment {
     pub guild_id: GuildId,
     pub creator: UserId,
     pub stings: i32,
-    pub action: Arc<PunishmentAction>,
+    pub action: Arc<dyn PunishmentAction>,
     pub duration: Option<i32>,
     pub modifiers: Vec<String>,
     pub created_at: chrono::DateTime<chrono::Utc>,
@@ -245,7 +168,7 @@ impl GuildPunishment {
             guild_id: canonical.guild_id,
             creator: canonical.creator,
             stings: canonical.stings,
-            action: Arc::new(action),
+            action: action.into(),
             duration: canonical.duration,
             modifiers: canonical.modifiers,
             created_at: canonical.created_at,

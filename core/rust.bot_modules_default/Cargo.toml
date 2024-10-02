@@ -24,6 +24,5 @@ bot_modules_root = { path = "../../core/rust.bot_modules.root" }
 bot_modules_server_backups = { path = "../../core/rust.bot_modules.server_backups" }
 bot_modules_server_member_backups = { path = "../../core/rust.bot_modules.server_member_backups" }
 bot_modules_settings = { path = "../../core/rust.bot_modules.settings" }
-bot_modules_sting_sources = { path = "../../core/rust.bot_modules.sting_sources" }
 bot_modules_temporary_punishments = { path = "../../core/rust.bot_modules.temporary_punishments" }
 

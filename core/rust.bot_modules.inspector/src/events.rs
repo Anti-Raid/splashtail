@@ -5,7 +5,6 @@ use super::types::{
 };
 use proxy_support::{guild, member_in_guild};
 use serenity::all::FullEvent;
-use silverpelt::sting_sources::StingCreator;
 use silverpelt::Error;
 use silverpelt::{module_config::is_module_enabled, EventHandlerContext};
 
@@ -88,6 +87,7 @@ pub async fn event_listener(ectx: &EventHandlerContext) -> Result<(), Error> {
                     )
                     .await?
                 {
+                    // Create a new sting
                     let sting_retention = super::cache::InspectorSpecificOptions::get(
                         &config,
                         |c| Some(c.sting_retention),
@@ -96,22 +96,33 @@ pub async fn event_listener(ectx: &EventHandlerContext) -> Result<(), Error> {
                     )
                     .unwrap_or(300);
 
-                    sqlx::query!(
-                        "INSERT INTO inspector__punishments (user_id, guild_id, stings, triggered_flags, stings_expiry) VALUES ($1, $2, $3, $4, $5)",
-                        new_message.author.id.to_string(),
-                        ectx.guild_id.to_string(),
-                        triggered_stings as i32,
-                        i64::from(triggered_flags.bits()),
-                        chrono::Utc::now() + chrono::Duration::seconds(sting_retention as i64),
-                    )
-                    .execute(&data.pool)
+                    silverpelt::stings::StingCreate {
+                        module: "inspector".to_string(),
+                        src: None,
+                        stings: triggered_stings,
+                        reason: Some(format!(
+                            "Message triggered flags: {:?}",
+                            triggered_flags.iter_names().map(|(flag, _)| flag.to_string()).collect::<Vec<String>>().join(", ")
+                        )),
+                        void_reason: None,
+                        guild_id: ectx.guild_id,
+                        creator: silverpelt::stings::StingTarget::System,
+                        target: silverpelt::stings::StingTarget::User(new_message.author.id),
+                        state: silverpelt::stings::StingState::Active,
+                        duration: Some(std::time::Duration::from_secs(sting_retention as u64)),
+                        sting_data: Some(serde_json::json!({
+                            "triggered_flags": triggered_flags.bits(),
+                        })),
+                        handle_log: None,
+                        punishment: None,
+                    }
+                    .create(&data.pool)
                     .await?;
 
                     // Trigger punishment
                     bot_modules_punishments::core::trigger_punishment(
                         &ctx,
                         ectx.guild_id,
-                        StingCreator::User(new_message.author.id),
                     )
                     .await?;
                 }

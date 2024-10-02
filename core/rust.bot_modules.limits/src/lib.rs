@@ -43,13 +43,6 @@ impl silverpelt::module::Module for Module {
                 }
             ),
             (
-                cmds::limits_user_stings(),
-                indexmap! {
-                    "view" => silverpelt::types::CommandExtendedData::kittycat_or_admin("past_hit_limits", "view"),
-                    "remove" => silverpelt::types::CommandExtendedData::kittycat_or_admin("past_hit_limits", "remove"),
-                },
-            ),
-            (
                 cmds::limit_user_actions(),
                 indexmap! {
                     "view" => silverpelt::types::CommandExtendedData::kittycat_or_admin("limit_user_actions", "view"),
@@ -59,13 +52,8 @@ impl silverpelt::module::Module for Module {
         ]
     }
 
-    fn sting_sources(&self) -> Vec<std::sync::Arc<dyn silverpelt::sting_sources::StingSource>> {
-        vec![std::sync::Arc::new(core::LimitsUserStingsStingSource)]
-    }
-
     fn config_options(&self) -> Vec<module_settings::types::ConfigOption> {
         vec![
-            (*settings::USER_STINGS).clone(),
             (*settings::USER_ACTIONS).clone(),
             (*settings::GUILD_GLOBALS).clone(),
             (*settings::GUILD_LIMITS).clone(),

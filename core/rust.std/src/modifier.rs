@@ -1,5 +1,73 @@
 use indexmap::IndexMap;
 
+/// A modifier matcher is used to match modifiers using a simple syntax
+#[derive(Default, Debug, Clone, PartialEq, Eq)]
+pub struct ModifierMatcher {
+    pub user_ids: Vec<serenity::all::UserId>,
+    pub channel_ids: Vec<serenity::all::ChannelId>,
+    pub role_ids: Vec<serenity::all::RoleId>,
+    pub variables: IndexMap<String, String>,
+}
+
+impl ModifierMatcher {
+    pub fn add_user_id(&mut self, user_id: serenity::all::UserId) {
+        self.user_ids.push(user_id);
+    }
+
+    pub fn add_channel_id(&mut self, channel_id: serenity::all::ChannelId) {
+        self.channel_ids.push(channel_id);
+    }
+
+    pub fn add_role_id(&mut self, role_id: serenity::all::RoleId) {
+        self.role_ids.push(role_id);
+    }
+
+    pub fn add_variable(&mut self, key: String, value: String) {
+        self.variables.insert(key, value);
+    }
+
+    pub fn add_variables(&mut self, variables: IndexMap<String, String>) {
+        self.variables.extend(variables);
+    }
+
+    pub fn add_member(&mut self, member: &serenity::all::Member) {
+        self.add_user_id(member.user.id);
+        
+        for role in member.roles.iter() {
+            self.add_role_id(*role);
+        }
+    }
+
+    /// Matches a single modifier
+    pub fn match_modifier(&self, modifier: &Modifier) -> bool {
+        match modifier {
+            Modifier::User(id) => self.user_ids.contains(id),
+            Modifier::Channel(id) => self.channel_ids.contains(id),
+            Modifier::Role(id) => self.role_ids.contains(id),
+            Modifier::Custom((key, value, _)) => {
+                if let Some(v) = self.variables.get(key) {
+                    v == value
+                } else {
+                    false
+                }
+            }
+            Modifier::Global => true,
+        }
+    }
+
+    /// Matches a list of modifiers returning the modifiers that match
+    pub fn match_modifiers(&self, modifiers: Vec<Modifier>) -> Vec<Modifier> {
+        let mut matches = Vec::new();
+        for modifier in modifiers {
+            if self.match_modifier(&modifier) {
+                matches.push(modifier);
+            }
+        }
+
+        matches
+    }
+}
+
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub enum Modifier {
     User(serenity::all::UserId),
@@ -72,205 +140,6 @@ impl Modifier {
             Modifier::Role(_) => 1,
             Modifier::Global => 0, // Least specific
         }
-    }
-
-    /// Check if a modifier is a user
-    pub fn is_user(&self, user_id: serenity::all::UserId) -> bool {
-        match self {
-            Modifier::User(id) => *id == user_id,
-            _ => false,
-        }
-    }
-
-    /// Check if a modifier is a channel
-    pub fn is_channel(&self, channel_id: serenity::all::ChannelId) -> bool {
-        match self {
-            Modifier::Channel(id) => *id == channel_id,
-            _ => false,
-        }
-    }
-
-    /// Check if a modifier is a role
-    pub fn is_role(&self, role_id: serenity::all::RoleId) -> bool {
-        match self {
-            Modifier::Role(id) => *id == role_id,
-            _ => false,
-        }
-    }
-
-    /// Check if a modifier is global or not
-    pub fn is_global(&self) -> bool {
-        match self {
-            Modifier::Global => true,
-            _ => false,
-        }
-    }
-
-    /// Check if a modifier contains a variable
-    pub fn contains_variable(&self, map: &IndexMap<String, String>) -> bool {
-        match self {
-            Modifier::Custom((k, v, _)) => {
-                if let Some(value) = map.get(k) {
-                    return value == v;
-                }
-            }
-            _ => {}
-        }
-
-        false
-    }
-
-    /// Helper method to check if a modifier contains a role modifier
-    ///
-    /// Note: As all role modifiers have the same specificity, this just returns a bool to save on computation
-    pub fn contains_role_modifier(modifiers: &[Self]) -> bool {
-        for modifier in modifiers {
-            if matches!(modifier, Modifier::Role(_)) {
-                return true;
-            }
-        }
-
-        false
-    }
-
-    /// Check if a member matches this modifier
-    pub fn matches_member(
-        &self,
-        member: &serenity::all::Member,
-        channel_id: Option<serenity::all::ChannelId>,
-        variables: &Option<IndexMap<String, String>>,
-    ) -> bool {
-        if self.is_global() {
-            return true;
-        }
-
-        if self.is_user(member.user.id) {
-            return true;
-        }
-
-        for role in member.roles.iter() {
-            if self.is_role(*role) {
-                return true;
-            }
-        }
-
-        if let Some(channel_id) = channel_id {
-            if self.is_channel(channel_id) {
-                return true;
-            }
-        }
-
-        if let Some(variables) = variables {
-            if self.contains_variable(&variables) {
-                return true;
-            }
-        }
-
-        false
-    }
-
-    /// Check if a channel id matches this modifier
-    pub fn matches_channel_id(
-        &self,
-        channel_id: serenity::all::ChannelId,
-        variables: &Option<IndexMap<String, String>>,
-    ) -> bool {
-        if self.is_global() {
-            return true;
-        }
-
-        if self.is_channel(channel_id) {
-            return true;
-        }
-
-        if let Some(variables) = variables {
-            if self.contains_variable(&variables) {
-                return true;
-            }
-        }
-
-        false
-    }
-
-    /// Helper method to check if a member matches a list of modifiers
-    pub fn set_matches_channel_id(
-        modifiers: &[Self],
-        channel_id: serenity::all::ChannelId,
-        variables: &Option<IndexMap<String, String>>,
-    ) -> Vec<Modifier> {
-        let mut matches = Vec::new();
-        for modifier in modifiers {
-            if modifier.matches_channel_id(channel_id, variables) {
-                matches.push(modifier.clone());
-            }
-        }
-
-        matches
-    }
-
-    /// Check if a user id matches this modifier
-    pub fn matches_user_id(
-        &self,
-        user_id: serenity::all::UserId,
-        channel_id: Option<serenity::all::ChannelId>,
-        variables: &Option<IndexMap<String, String>>,
-    ) -> bool {
-        if self.is_global() {
-            return true;
-        }
-
-        if self.is_user(user_id) {
-            return true;
-        }
-
-        if let Some(channel_id) = channel_id {
-            if self.is_channel(channel_id) {
-                return true;
-            }
-        }
-
-        if let Some(variables) = variables {
-            if self.contains_variable(&variables) {
-                return true;
-            }
-        }
-
-        false
-    }
-
-    /// Helper method to check if a member matches a list of modifiers
-    pub fn set_matches_member(
-        modifiers: &[Self],
-        member: &serenity::all::Member,
-        channel_id: Option<serenity::all::ChannelId>,
-        variables: &Option<IndexMap<String, String>>,
-    ) -> Vec<Modifier> {
-        let mut matches = Vec::new();
-        for modifier in modifiers {
-            if modifier.matches_member(member, channel_id, variables) {
-                matches.push(modifier.clone());
-            }
-        }
-
-        matches
-    }
-
-    /// Helper method to check if a user id matches a list of modifiers
-    ///
-    /// Note that unlike `set_matches_member`, this method does not check for role as user objects do not contain role information
-    pub fn set_matches_user_id(
-        modifiers: &[Self],
-        user_id: serenity::all::UserId,
-        channel_id: Option<serenity::all::ChannelId>,
-        variables: &Option<IndexMap<String, String>>,
-    ) -> Vec<Modifier> {
-        let mut matches = Vec::new();
-        for modifier in modifiers {
-            if modifier.matches_user_id(user_id, channel_id, variables) {
-                matches.push(modifier.clone());
-            }
-        }
-        matches
     }
 }
 

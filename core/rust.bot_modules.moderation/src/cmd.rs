@@ -8,7 +8,7 @@ use serenity::all::{
 };
 use serenity::utils::shard_id;
 use silverpelt::jobserver::{embed as embed_job, get_icon_of_state};
-use silverpelt::sting_sources::StingCreator;
+use silverpelt::punishments::CreatePunishmentAction;
 use silverpelt::Context;
 use silverpelt::Error;
 use splashcore_rs::jobserver;
@@ -206,16 +206,22 @@ pub async fn prune_user(
 
     let mut tx = ctx.data().pool.begin().await?;
 
-    sqlx::query!(
-        "INSERT INTO moderation__actions (guild_id, user_id, moderator, action, stings, reason) VALUES ($1, $2, $3, $4, $5, $6)",
-        guild_id.to_string(),
-        user.id.to_string(),
-        author.user.id.to_string(),
-        "prune",
+    silverpelt::stings::StingCreate {
+        module: "moderation".to_string(),
+        src: Some("prune_user".to_string()),
+        punishment: None,
         stings,
-        reason,
-    )
-    .execute(&mut *tx)
+        reason: Some(reason.clone()),
+        void_reason: None,
+        guild_id,
+        creator: silverpelt::stings::StingTarget::User(author.user.id),
+        target: silverpelt::stings::StingTarget::User(user.id),
+        state: silverpelt::stings::StingState::Active,
+        duration: None,
+        sting_data: None,
+        handle_log: None
+    }
+    .create(&mut *tx)
     .await?;
 
     // If we're pruning messages, do that
@@ -277,7 +283,6 @@ pub async fn prune_user(
             bot_modules_punishments::core::trigger_punishment(
                 &sctx,
                 guild_id,
-                StingCreator::User(user.id),
             )
             .await
         });
@@ -476,16 +481,22 @@ pub async fn kick(
 
     let mut tx = data.pool.begin().await?;
 
-    sqlx::query!(
-        "INSERT INTO moderation__actions (guild_id, user_id, moderator, action, stings, reason) VALUES ($1, $2, $3, $4, $5, $6)",
-        guild_id.to_string(),
-        member.user.id.to_string(),
-        author.user.id.to_string(),
-        "kick",
+    silverpelt::stings::StingCreate {
+        module: "moderation".to_string(),
+        src: Some("kick".to_string()),
+        punishment: None,
         stings,
-        reason,
-    )
-    .execute(&mut *tx)
+        reason: Some(reason.clone()),
+        void_reason: None,
+        guild_id,
+        creator: silverpelt::stings::StingTarget::User(author.user.id),
+        target: silverpelt::stings::StingTarget::User(member.user.id),
+        state: silverpelt::stings::StingState::Active,
+        duration: None,
+        sting_data: None,
+        handle_log: None
+    }
+    .create(&mut *tx)
     .await?;
 
     // Send audit logs if Audit Logs module is enabled
@@ -539,7 +550,6 @@ pub async fn kick(
             bot_modules_punishments::core::trigger_punishment(
                 &sctx,
                 guild_id,
-                StingCreator::User(member.user.id),
             )
             .await
         });
@@ -642,16 +652,22 @@ pub async fn ban(
 
     let mut tx = data.pool.begin().await?;
 
-    sqlx::query!(
-        "INSERT INTO moderation__actions (guild_id, user_id, moderator, action, stings, reason) VALUES ($1, $2, $3, $4, $5, $6)",
-        guild_id.to_string(),
-        member.id.to_string(),
-        author.user.id.to_string(),
-        "ban",
+    silverpelt::stings::StingCreate {
+        module: "moderation".to_string(),
+        src: Some("ban".to_string()),
+        punishment: None,
         stings,
-        reason,
-    )
-    .execute(&mut *tx)
+        reason: Some(reason.clone()),
+        void_reason: None,
+        guild_id,
+        creator: silverpelt::stings::StingTarget::User(author.user.id),
+        target: silverpelt::stings::StingTarget::User(member.id),
+        state: silverpelt::stings::StingState::Active,
+        duration: None,
+        sting_data: None,
+        handle_log: None
+    }
+    .create(&mut *tx)
     .await?;
 
     // Send audit logs if Audit Logs module is enabled
@@ -708,7 +724,6 @@ pub async fn ban(
             bot_modules_punishments::core::trigger_punishment(
                 &sctx,
                 guild_id,
-                StingCreator::User(member.id),
             )
             .await
         });
@@ -793,17 +808,27 @@ pub async fn tempban(
 
     let mut tx = data.pool.begin().await?;
 
-    sqlx::query!(
-        "INSERT INTO moderation__actions (guild_id, user_id, duration, moderator, action, stings, reason) VALUES ($1, $2, make_interval(secs => $3), $4, $5, $6, $7)",
-        guild_id.to_string(),
-        member.id.to_string(),
-        (duration.0 * duration.1.to_seconds()) as f64,
-        author.user.id.to_string(),
-        "ban",
+    silverpelt::stings::StingCreate {
+        module: "moderation".to_string(),
+        src: Some("tempban".to_string()),
+        punishment: Some(
+            super::core::punishment_actions::CreateBanAction{}
+            .to_punishment_action(&format!("user:{}", member.id.to_string()))?
+            .ok_or("Failed to create punishment action")?
+            .string_form(),
+        ),
         stings,
-        reason,
-    )
-    .execute(&mut *tx)
+        reason: Some(reason.clone()),
+        void_reason: None,
+        guild_id,
+        creator: silverpelt::stings::StingTarget::User(author.user.id),
+        target: silverpelt::stings::StingTarget::User(member.id),
+        state: silverpelt::stings::StingState::Active,
+        duration: Some(std::time::Duration::from_secs(duration.0 * duration.1.to_seconds())),
+        sting_data: None,
+        handle_log: None,
+    }
+    .create(&mut *tx)
     .await?;
 
     // Send audit logs if Audit Logs module is enabled
@@ -861,7 +886,6 @@ pub async fn tempban(
             bot_modules_punishments::core::trigger_punishment(
                 &sctx,
                 guild_id,
-                StingCreator::User(member.id),
             )
             .await
         });
@@ -934,16 +958,22 @@ pub async fn unban(
 
     let mut tx = data.pool.begin().await?;
 
-    sqlx::query!(
-        "INSERT INTO moderation__actions (guild_id, user_id, moderator, action, stings, reason) VALUES ($1, $2, $3, $4, $5, $6)",
-        guild_id.to_string(),
-        user.id.to_string(),
-        author.user.id.to_string(),
-        "unban",
+    silverpelt::stings::StingCreate {
+        module: "moderation".to_string(),
+        src: Some("unban".to_string()),
+        punishment: None,
         stings,
-        reason,
-    )
-    .execute(&mut *tx)
+        reason: Some(reason.clone()),
+        void_reason: None,
+        guild_id,
+        creator: silverpelt::stings::StingTarget::User(author.user.id),
+        target: silverpelt::stings::StingTarget::User(user.id),
+        state: silverpelt::stings::StingState::Active,
+        duration: None,
+        sting_data: None,
+        handle_log: None,
+    }
+    .create(&mut *tx)
     .await?;
 
     // Send audit logs if Audit Logs module is enabled
@@ -998,7 +1028,6 @@ pub async fn unban(
             bot_modules_punishments::core::trigger_punishment(
                 &sctx,
                 guild_id,
-                StingCreator::User(user.id),
             )
             .await
         });
@@ -1095,17 +1124,22 @@ pub async fn timeout(
 
     let mut tx = data.pool.begin().await?;
 
-    sqlx::query!(
-        "INSERT INTO moderation__actions (guild_id, user_id, duration, moderator, action, stings, reason) VALUES ($1, $2, make_interval(secs => $3), $4, $5, $6, $7)",
-        guild_id.to_string(),
-        member.user.id.to_string(),
-        time as f64,
-        author.user.id.to_string(),
-        "timeout",
+    silverpelt::stings::StingCreate {
+        module: "moderation".to_string(),
+        src: Some("timeout".to_string()),
+        punishment: None,
         stings,
-        reason,
-    )
-    .execute(&mut *tx)
+        reason: Some(reason.clone()),
+        void_reason: None,
+        guild_id,
+        creator: silverpelt::stings::StingTarget::User(author.user.id),
+        target: silverpelt::stings::StingTarget::User(member.user.id),
+        state: silverpelt::stings::StingState::Active,
+        duration: Some(std::time::Duration::from_secs(duration.0 * duration.1.to_seconds())),
+        sting_data: None,
+        handle_log: None,
+    }
+    .create(&mut *tx)
     .await?;
 
     // Send audit logs if Audit Logs module is enabled
@@ -1164,7 +1198,6 @@ pub async fn timeout(
             bot_modules_punishments::core::trigger_punishment(
                 &sctx,
                 guild_id,
-                StingCreator::User(member.user.id),
             )
             .await
         });

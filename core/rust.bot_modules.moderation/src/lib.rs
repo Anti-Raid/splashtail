@@ -143,10 +143,6 @@ impl silverpelt::module::Module for Module {
         ]
     }
 
-    fn sting_sources(&self) -> Vec<std::sync::Arc<dyn silverpelt::sting_sources::StingSource>> {
-        vec![std::sync::Arc::new(core::ModerationActionsStingSource)]
-    }
-
     fn punishment_actions(
         &self,
     ) -> Vec<std::sync::Arc<dyn silverpelt::punishments::CreatePunishmentAction>> {

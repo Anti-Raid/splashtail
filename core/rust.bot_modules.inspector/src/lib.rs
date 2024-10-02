@@ -1,6 +1,5 @@
 pub mod cache; // Used by root module
 mod cmd;
-mod core;
 mod dehoist;
 pub mod events; // Events is a public interface
 mod guildprotect;
@@ -47,10 +46,6 @@ impl silverpelt::module::Module for Module {
 
     fn event_listeners(&self) -> Option<Box<dyn silverpelt::module::ModuleEventListeners>> {
         Some(Box::new(EventListener))
-    }
-
-    fn sting_sources(&self) -> Vec<std::sync::Arc<dyn silverpelt::sting_sources::StingSource>> {
-        vec![std::sync::Arc::new(core::InspectorPunishmentsStingSource)]
     }
 
     fn s3_paths(&self) -> Vec<String> {

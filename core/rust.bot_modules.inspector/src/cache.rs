@@ -110,18 +110,20 @@ impl InspectorSpecificOptions {
         user_id: serenity::all::UserId,
         channel_id: Option<serenity::all::ChannelId>,
     ) -> Option<T> {
+        // Create a matcher that matches the user_id
+        let mut matcher = splashcore_rs::modifier::ModifierMatcher::default();
+        matcher.add_user_id(user_id);
+
+        if let Some(channel_id) = channel_id {
+            matcher.add_channel_id(channel_id);
+        }
+
+        matcher.add_variable("source".to_string(), "inspector".to_string());
+
         let mut best = (val_fn(&InspectorSpecificOptions::default()), -1);
-
-        let variables = Some(indexmap::indexmap! {
-            "source".to_string() => "inspector".to_string(),
-        });
-
         for opt in opts.iter() {
-            let matches = splashcore_rs::modifier::Modifier::set_matches_user_id(
-                &opt.modifier,
-                user_id,
-                channel_id,
-                &variables,
+            let matches = matcher.match_modifiers(
+                opt.modifier.clone(),
             );
 
             // Go over the matches and check if any have a greater specificity than best

@@ -1,6 +1,5 @@
 use super::core::HandleModAction;
 use silverpelt::Error;
-use silverpelt::sting_sources::StingCreator;
 
 const DEFAULT_EXPIRY: std::time::Duration = std::time::Duration::from_secs(60 * 5);
 
@@ -26,7 +25,7 @@ pub async fn handle_mod_action(
         .await?;
 
     if strategy_result.stings > 0 {
-        // Add to limits__user_stings
+        // Add to stings db
         let expiry_duration = strategy_result.expiry.unwrap_or({
             // Get the longest duration from expiries
             let max = strategy_result.expiries.iter().max();
@@ -37,21 +36,32 @@ pub async fn handle_mod_action(
             }
         });
 
-        sqlx::query!(
-            "INSERT INTO limits__user_stings (guild_id, user_id, stings, hit_limits, causes, expiry) VALUES ($1, $2, $3, $4, $5, $6)",
-            ha.guild_id.to_string(),
-            ha.user_id.to_string(),
-            strategy_result.stings as i32,
-            &strategy_result.hit_limits,
-            serde_json::json!({
+        silverpelt::stings::StingCreate {
+            module: "limits".to_string(),
+            src: None,
+            stings: strategy_result.stings,
+            reason: Some(format!(
+                "Hit limits: {:?}",
+                strategy_result.hit_limits
+            )),
+            void_reason: None,
+            guild_id: ha.guild_id,
+            creator: silverpelt::stings::StingTarget::System,
+            target: silverpelt::stings::StingTarget::User(ha.user_id),
+            state: silverpelt::stings::StingState::Active,
+            duration: Some(expiry_duration),
+            sting_data: Some(serde_json::json!({
                 "action_data": ha.action_data,
                 "target": ha.target,
                 "causes": strategy_result.causes,
-                "expiries": strategy_result.expiries
-            }),
-            chrono::Utc::now() + chrono::Duration::from_std(expiry_duration).unwrap()  
-        )
-        .execute(&data.pool)
+                "expiries": strategy_result.expiries,
+                "hit_limits": strategy_result.hit_limits,
+                "strategy": guild_limits.0.strategy,
+            })),
+            handle_log: None,
+            punishment: None,
+        }
+        .create(&data.pool)
         .await?;
 
         if silverpelt::module_config::is_module_enabled(
@@ -72,7 +82,6 @@ pub async fn handle_mod_action(
             match bot_modules_punishments::core::trigger_punishment(
                 ctx,
                 ha.guild_id,
-                StingCreator::User(ha.user_id),
             )
             .await
             {
