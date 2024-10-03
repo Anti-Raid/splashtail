@@ -307,7 +307,7 @@ pub async fn get_aggregate_stings_for_guild(
     guild_id: serenity::all::GuildId,
 ) -> Result<Vec<StingAggregate>, crate::Error> {
     let rec = sqlx::query!(
-        "SELECT COUNT(*) AS total_stings, module, src, target FROM stings WHERE guild_id = $1 GROUP BY module, src, target",
+        "SELECT SUM(stings) AS total_stings, module, src, target FROM stings WHERE guild_id = $1 GROUP BY module, src, target",
         guild_id.to_string(),
     )
     .fetch_all(db)
