@@ -12,16 +12,16 @@ pub async fn temporary_punishment_task(
     let data = ctx.data::<silverpelt::data::Data>();
     let pool = &data.pool;
 
-    let punishment_stings = silverpelt::stings::Sting::get_expired_punishments(pool).await?;
+    let punishments = silverpelt::punishments::GuildPunishment::get_expired(pool).await?;
 
     let mut set = tokio::task::JoinSet::new();
 
     let shard_count = data.props.shard_count().await?.try_into()?;
     let shards = data.props.shards().await?;
 
-    for sting in punishment_stings {
+    for punishment in punishments {
         // Ensure shard id
-        let shard_id = serenity::utils::shard_id(sting.guild_id, shard_count);
+        let shard_id = serenity::utils::shard_id(punishment.guild_id, shard_count);
 
         if !shards.contains(&shard_id) {
             continue;
@@ -31,7 +31,7 @@ pub async fn temporary_punishment_task(
         if !silverpelt::module_config::is_module_enabled(
             &data.silverpelt_cache,
             pool,
-            sting.guild_id,
+            punishment.guild_id,
             "temporary_punishments",
         )
         .await?
@@ -59,25 +59,29 @@ pub async fn temporary_punishment_task(
         let reqwest = data.reqwest.clone();
         let data = data.clone();
 
-        let target_user_id = match sting.target {
-            silverpelt::stings::StingTarget::User(user_id) => user_id,
+        let target_user_id = match punishment.target {
+            silverpelt::punishments::PunishmentTarget::User(user_id) => user_id,
             _ => continue,
         };
 
         set.spawn(async move {
             let bot_id = cache_http.cache.current_user().id;
 
-            let mut current_user =
-                match proxy_support::member_in_guild(&cache_http, &reqwest, sting.guild_id, bot_id)
-                    .await
-                    .map_err(|x| EventError::Generic(x.to_string()))?
-                {
-                    Some(user) => user,
-                    None => {
-                        // Bot is not in the guild, update the sting entry
-                        return Err(EventError::Generic("Bot is not in the guild".into()));
-                    }
-                };
+            let mut current_user = match proxy_support::member_in_guild(
+                &cache_http,
+                &reqwest,
+                punishment.guild_id,
+                bot_id,
+            )
+            .await
+            .map_err(|x| EventError::Generic(x.to_string()))?
+            {
+                Some(user) => user,
+                None => {
+                    // Bot is not in the guild, update the sting entry
+                    return Err(EventError::Generic("Bot is not in the guild".into()));
+                }
+            };
 
             let permissions = current_user
                 .permissions(&cache_http.cache)
@@ -90,26 +94,21 @@ pub async fn temporary_punishment_task(
                 ));
             }
 
-            let reason = if let Some(ref reason) = sting.reason {
-                format!(
-                    "Revert expired ban with reason={}, stings={}, duration={:#?}",
-                    reason, sting.stings, sting.expiry
-                )
-            } else {
-                format!(
-                    "Revert expired ban with stings={}, duration={:#?}",
-                    sting.stings, sting.expiry
-                )
-            };
+            let reason = format!(
+                "Revert expired ban with reason={}, duration={:#?}",
+                punishment.reason, punishment.duration
+            );
 
-            let punishment_actions =
-                silverpelt::punishments::get_punishment_actions_for_guild(sting.guild_id, &data)
-                    .await
-                    .map_err(|e| EventError::Generic(e.to_string()))?;
+            let punishment_actions = silverpelt::punishments::get_punishment_actions_for_guild(
+                punishment.guild_id,
+                &data,
+            )
+            .await
+            .map_err(|e| EventError::Generic(e.to_string()))?;
 
             let cpa_revert = silverpelt::punishments::from_punishment_action_string(
                 &punishment_actions,
-                &sting.punishment.unwrap(),
+                &punishment.punishment,
             )
             .map_err(|e| EventError::Generic(e.to_string()))?;
 

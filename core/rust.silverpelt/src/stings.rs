@@ -34,51 +34,7 @@ pub struct Sting {
     pub expiry: Option<std::time::Duration>,
     /// The data/metadata present within the sting, if any
     pub sting_data: Option<serde_json::Value>,
-    /// The handle log encountered while handling punishments/other actions on the sting
-    pub handle_log: Option<serde_json::Value>,
-    /// The punishment associated with the sting
-    pub punishment: Option<String>,
 }
-
-impl Sting {
-    pub async fn get_expired_punishments(
-        db: impl sqlx::PgExecutor<'_>,
-    ) -> Result<Vec<Sting>, crate::Error> {
-        let rec = sqlx::query!(
-            "SELECT id, module, src, stings, reason, void_reason, guild_id, creator, target, state, created_at, duration, sting_data, handle_log, punishment FROM stings WHERE state = 'active' AND duration IS NOT NULL AND punishment IS NOT NULL AND (created_at + duration) < NOW()",
-        )
-        .fetch_all(db)
-        .await?;
-
-        let mut stings = Vec::new();
-
-        for row in rec {
-            stings.push(Sting {
-                id: row.id,
-                module: row.module,
-                src: row.src,
-                stings: row.stings,
-                reason: row.reason,
-                void_reason: row.void_reason,
-                guild_id: row.guild_id.parse()?,
-                creator: StingTarget::from_str(&row.creator)?,
-                target: StingTarget::from_str(&row.target)?,
-                state: StingState::from_str(&row.state)?,
-                created_at: row.created_at,
-                expiry: row.duration.map(|d| {
-                    let secs = splashcore_rs::utils::pg_interval_to_secs(d);
-                    std::time::Duration::from_secs(secs.try_into().unwrap())
-                }),
-                sting_data: row.sting_data,
-                handle_log: row.handle_log,
-                punishment: row.punishment,
-            });
-        }
-
-        Ok(stings)
-    }
-}
-
 /// Data required to create a sting
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct StingCreate {
@@ -104,18 +60,14 @@ pub struct StingCreate {
     pub duration: Option<std::time::Duration>,
     /// The data/metadata present within the sting, if any
     pub sting_data: Option<serde_json::Value>,
-    /// The handle log encountered while handling punishments/other actions on the sting
-    pub handle_log: Option<serde_json::Value>,
-    /// The punishment associated with the sting
-    pub punishment: Option<String>,
 }
 
 impl StingCreate {
     pub async fn create(self, db: impl sqlx::PgExecutor<'_>) -> Result<Sting, crate::Error> {
         let ret_data = sqlx::query!(
             r#"
-            INSERT INTO stings (module, src, stings, reason, void_reason, guild_id, target, creator, state, duration, sting_data, handle_log, punishment)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, make_interval(secs => $10), $11, $12, $13) RETURNING id, created_at
+            INSERT INTO stings (module, src, stings, reason, void_reason, guild_id, target, creator, state, duration, sting_data)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, make_interval(secs => $10), $11) RETURNING id, created_at
             "#,
             self.module,
             self.src,
@@ -128,8 +80,6 @@ impl StingCreate {
             self.state.to_string(),
             self.duration.map(|d| d.as_secs() as f64),
             self.sting_data,
-            self.handle_log,
-            self.punishment,
         )
         .fetch_one(db)
         .await?;
@@ -148,8 +98,6 @@ impl StingCreate {
             created_at: ret_data.created_at,
             expiry: self.duration,
             sting_data: self.sting_data,
-            handle_log: self.handle_log,
-            punishment: self.punishment,
         })
     }
 }

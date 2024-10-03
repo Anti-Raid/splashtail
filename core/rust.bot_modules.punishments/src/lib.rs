@@ -15,7 +15,7 @@ impl silverpelt::module::Module for Module {
     }
 
     fn description(&self) -> &'static str {
-        "Customizable setting and executing of punishments based on stings."
+        "Auto-trigger punishments based on stings."
     }
 
     fn is_default_enabled(&self) -> bool {

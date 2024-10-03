@@ -102,7 +102,11 @@ pub async fn event_listener(ectx: &EventHandlerContext) -> Result<(), Error> {
                         stings: triggered_stings,
                         reason: Some(format!(
                             "Message triggered flags: {:?}",
-                            triggered_flags.iter_names().map(|(flag, _)| flag.to_string()).collect::<Vec<String>>().join(", ")
+                            triggered_flags
+                                .iter_names()
+                                .map(|(flag, _)| flag.to_string())
+                                .collect::<Vec<String>>()
+                                .join(", ")
                         )),
                         void_reason: None,
                         guild_id: ectx.guild_id,
@@ -113,18 +117,12 @@ pub async fn event_listener(ectx: &EventHandlerContext) -> Result<(), Error> {
                         sting_data: Some(serde_json::json!({
                             "triggered_flags": triggered_flags.bits(),
                         })),
-                        handle_log: None,
-                        punishment: None,
                     }
                     .create(&data.pool)
                     .await?;
 
                     // Trigger punishment
-                    bot_modules_punishments::core::trigger_punishment(
-                        &ctx,
-                        ectx.guild_id,
-                    )
-                    .await?;
+                    bot_modules_punishments::core::autotrigger(&ctx, ectx.guild_id).await?;
                 }
             }
 

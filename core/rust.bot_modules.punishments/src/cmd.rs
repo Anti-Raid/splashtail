@@ -38,15 +38,11 @@ async fn punishment_actions_autocomplete<'a>(
     choices
 }
 
-/// Punishment list  base command
+/// Punishment list base command
 #[poise::command(
     prefix_command,
     slash_command,
-    subcommands(
-        "punishments_add",
-        "punishments_list",
-        "punishments_delete"
-    )
+    subcommands("punishments_add", "punishments_list", "punishments_delete")
 )]
 pub async fn punishments(_ctx: Context<'_>) -> Result<(), Error> {
     Ok(())
@@ -71,7 +67,7 @@ pub async fn punishments_list(ctx: Context<'_>) -> Result<(), Error> {
         silverpelt::punishments::get_punishment_actions_for_guild(guild_id, &data).await?;
 
     let punishments = sqlx::query!(
-        "SELECT id, creator, stings, action, modifiers, created_at, duration FROM punishments__guild_punishment_list WHERE guild_id = $1",
+        "SELECT id, creator, stings, action, modifiers, created_at, duration FROM punishments__autotriggers WHERE guild_id = $1",
         guild_id.to_string(),
     )
     .fetch_all(&data.pool)
@@ -221,7 +217,7 @@ pub async fn punishments_add(
     let data = ctx.data();
 
     sqlx::query!(
-        "INSERT INTO punishments__guild_punishment_list (guild_id, creator, stings, action, duration, modifiers) VALUES ($1, $2, $3, $4, make_interval(secs => $5), $6)",
+        "INSERT INTO punishments__autotriggers (guild_id, creator, stings, action, duration, modifiers) VALUES ($1, $2, $3, $4, make_interval(secs => $5), $6)",
         guild_id.to_string(),
         ctx.author().id.to_string(),
         stings,
@@ -250,7 +246,7 @@ pub async fn punishment_delete_autocomplete<'a>(
             .unwrap_or_default();
 
     let punishments = match sqlx::query!(
-        "SELECT id, stings, action FROM punishments__guild_punishment_list WHERE guild_id = $1",
+        "SELECT id, stings, action FROM punishments__autotriggers WHERE guild_id = $1",
         guild_id.to_string(),
     )
     .fetch_all(&ctx.data().pool)
@@ -313,7 +309,7 @@ pub async fn punishments_delete(
     let mut tx = data.pool.begin().await?;
 
     let count = sqlx::query!(
-        "SELECT COUNT(*) FROM punishments__guild_punishment_list WHERE guild_id = $1 AND id = $2",
+        "SELECT COUNT(*) FROM punishments__autotriggers WHERE guild_id = $1 AND id = $2",
         guild_id.to_string(),
         id,
     )
@@ -327,7 +323,7 @@ pub async fn punishments_delete(
     }
 
     sqlx::query!(
-        "DELETE FROM punishments__guild_punishment_list WHERE guild_id = $1 AND id = $2",
+        "DELETE FROM punishments__autotriggers WHERE guild_id = $1 AND id = $2",
         guild_id.to_string(),
         id,
     )

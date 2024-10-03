@@ -36,14 +36,19 @@ pub async fn handle_mod_action(
             }
         });
 
+        // Create a new sting
+        log::info!(
+            "Adding {} stings for user_id: {} due to hit limits {:?}",
+            strategy_result.stings,
+            ha.user_id,
+            strategy_result.hit_limits
+        );
+
         silverpelt::stings::StingCreate {
             module: "limits".to_string(),
             src: None,
             stings: strategy_result.stings,
-            reason: Some(format!(
-                "Hit limits: {:?}",
-                strategy_result.hit_limits
-            )),
+            reason: Some(format!("Hit limits: {:?}", strategy_result.hit_limits)),
             void_reason: None,
             guild_id: ha.guild_id,
             creator: silverpelt::stings::StingTarget::System,
@@ -58,8 +63,6 @@ pub async fn handle_mod_action(
                 "hit_limits": strategy_result.hit_limits,
                 "strategy": guild_limits.0.strategy,
             })),
-            handle_log: None,
-            punishment: None,
         }
         .create(&data.pool)
         .await?;
@@ -72,29 +75,7 @@ pub async fn handle_mod_action(
         )
         .await?
         {
-            // Create a new punishment
-            log::info!(
-                "Triggering punishment for user_id: {} due to hit limits {:?}",
-                ha.user_id,
-                strategy_result.hit_limits
-            );
-
-            match bot_modules_punishments::core::trigger_punishment(
-                ctx,
-                ha.guild_id,
-            )
-            .await
-            {
-                Ok(()) => {
-                    log::info!(
-                        "Punishment triggered successfully with cause: {:?}",
-                        strategy_result.causes
-                    );
-                }
-                Err(e) => {
-                    log::error!("Failed to trigger punishment: {:?}, cause: {:?}", e, strategy_result.causes);
-                }
-            }
+            bot_modules_punishments::core::autotrigger(ctx, ha.guild_id).await?;
         }
     }
 

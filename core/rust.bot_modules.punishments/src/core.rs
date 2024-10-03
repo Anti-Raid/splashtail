@@ -1,17 +1,32 @@
 use proxy_support::{guild, member_in_guild};
 use serenity::all::{GuildId, UserId};
 use silverpelt::punishments::*;
+use std::sync::Arc;
+
+/// This struct stores a guild punishment autotrigger that can then be used to trigger punishments
+/// on a user through the bot based on sting count
+#[derive(Clone)]
+pub struct GuildPunishmentAutoTrigger {
+    pub id: String,
+    pub guild_id: GuildId,
+    pub creator: UserId,
+    pub stings: i32,
+    pub action: Arc<dyn PunishmentAction>,
+    pub duration: Option<i32>,
+    pub modifiers: Vec<String>,
+    pub created_at: chrono::DateTime<chrono::Utc>,
+}
 
 /// A guild punishment list is internally a Vec<GuildPunishment> but has special methods
 /// to make things easier when coding punishments
 ///
 /// Note that the guild punishment list should not be modified directly
 #[derive(Clone)]
-pub struct GuildPunishmentList {
-    punishments: Vec<GuildPunishment>,
+pub struct GuildPunishmentAutoTriggerList {
+    punishments: Vec<GuildPunishmentAutoTrigger>,
 }
 
-impl GuildPunishmentList {
+impl GuildPunishmentAutoTriggerList {
     /// Gets the punishment list of a specific guild
     pub async fn guild(
         ctx: &serenity::all::Context,
@@ -23,7 +38,7 @@ impl GuildPunishmentList {
             silverpelt::punishments::get_punishment_actions_for_guild(guild_id, &data).await?;
 
         let rec = sqlx::query!(
-                "SELECT id, guild_id, creator, stings, action, modifiers, created_at, EXTRACT(seconds FROM duration)::integer AS duration FROM punishments__guild_punishment_list WHERE guild_id = $1",
+                "SELECT id, guild_id, creator, stings, action, modifiers, created_at, EXTRACT(seconds FROM duration)::integer AS duration FROM punishments__autotriggers WHERE guild_id = $1",
                 guild_id.to_string(),
             )
             .fetch_all(&data.pool)
@@ -32,7 +47,7 @@ impl GuildPunishmentList {
         let mut punishments = vec![];
 
         for row in rec {
-            punishments.push(GuildPunishment {
+            punishments.push(GuildPunishmentAutoTrigger {
                 id: row.id.to_string(),
                 guild_id: row.guild_id.parse::<GuildId>()?,
                 creator: row.creator.parse::<UserId>()?,
@@ -59,14 +74,14 @@ impl GuildPunishmentList {
     ///
     /// This is a method to ensure that the returned list is not modified (is immutable)
     #[allow(dead_code)]
-    pub fn punishments(&self) -> &Vec<GuildPunishment> {
+    pub fn punishments(&self) -> &Vec<GuildPunishmentAutoTrigger> {
         &self.punishments
     }
 
     /// Filter returns a new GuildPunishmentList with only the punishments that match the set of filters
     ///
     /// Note that this drops the existing punishment list
-    pub fn filter(&self, stings: i32) -> Vec<GuildPunishment> {
+    pub fn filter(&self, stings: i32) -> Vec<GuildPunishmentAutoTrigger> {
         let mut punishments = vec![];
 
         for punishment in self.punishments.iter() {
@@ -80,17 +95,18 @@ impl GuildPunishmentList {
 }
 
 // TODO: Readd support for modifiers later
-pub async fn trigger_punishment(
+pub async fn autotrigger(
     ctx: &serenity::all::Context,
     guild_id: GuildId,
 ) -> Result<(), silverpelt::Error> {
     let data = ctx.data::<silverpelt::data::Data>();
 
-    let (per_user_sting_counts, _system_stings) = silverpelt::stings::StingAggregate::total_stings_per_user(
-        silverpelt::stings::get_aggregate_stings_for_guild(&data.pool, guild_id).await?
-    );
+    let (per_user_sting_counts, _system_stings) =
+        silverpelt::stings::StingAggregate::total_stings_per_user(
+            silverpelt::stings::get_aggregate_stings_for_guild(&data.pool, guild_id).await?,
+        );
 
-    let punishments = GuildPunishmentList::guild(ctx, guild_id).await?;
+    let punishments = GuildPunishmentAutoTriggerList::guild(ctx, guild_id).await?;
 
     if punishments.punishments().is_empty() {
         return Ok(());
@@ -133,30 +149,35 @@ pub async fn trigger_punishment(
 
         for punishment in punishments.iter() {
             punishment
-            .action
-            .create(
-                &punishment_data, 
-                user.user.id, 
-                &mut bot,
-                format!("[Auto-Triggered] {} at {} stings", punishment.action.string_form(), sting_count)
-            )
-            .await?;
+                .action
+                .create(
+                    &punishment_data,
+                    user.user.id,
+                    &mut bot,
+                    format!(
+                        "[Auto-Triggered] {} at {} stings",
+                        punishment.action.string_form(),
+                        sting_count
+                    ),
+                )
+                .await?;
 
-            // Add empty sting containing punishment info
-            silverpelt::stings::StingCreate {
+            // Add punishment
+            silverpelt::punishments::PunishmentCreate {
                 module: "punishments".to_string(),
                 src: None,
-                stings: 0,
-                punishment: Some(punishment.action.string_form()),
-                target: silverpelt::stings::StingTarget::User(user.user.id),
+                punishment: punishment.action.string_form(),
+                creator: silverpelt::punishments::PunishmentTarget::System,
+                target: silverpelt::punishments::PunishmentTarget::User(user.user.id),
+                handle_log: serde_json::json!({}),
                 guild_id,
                 duration: None, // TODO: Auto-triggered punishments do not support duration yet
-                reason: Some(format!("[Auto-Triggered] {} at {} stings", punishment.action.string_form(), sting_count)),
-                void_reason: None,
-                creator: silverpelt::stings::StingTarget::System,
-                state: silverpelt::stings::StingState::Active,
-                sting_data: None,
-                handle_log: None,
+                reason: format!(
+                    "[Auto-Triggered] {} at {} stings",
+                    punishment.action.string_form(),
+                    sting_count
+                ),
+                data: None,
             }
             .create(&data.pool)
             .await?;

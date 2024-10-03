@@ -645,6 +645,7 @@ dependencies = [
  "proxy_support",
  "reqwest",
  "serde",
+ "serde_json",
  "serenity",
  "silverpelt",
  "splashcore_rs",

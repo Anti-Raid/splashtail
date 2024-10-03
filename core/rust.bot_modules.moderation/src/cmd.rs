@@ -198,7 +198,7 @@ pub async fn prune_user(
         return Err("This command can only be used in a guild".into());
     };
 
-    let stings = stings.unwrap_or(1);
+    let stings = stings.unwrap_or(0);
 
     if stings < 0 {
         return Err("Stings must be greater than or equal to 0".into());
@@ -206,23 +206,23 @@ pub async fn prune_user(
 
     let mut tx = ctx.data().pool.begin().await?;
 
-    silverpelt::stings::StingCreate {
-        module: "moderation".to_string(),
-        src: Some("prune_user".to_string()),
-        punishment: None,
-        stings,
-        reason: Some(reason.clone()),
-        void_reason: None,
-        guild_id,
-        creator: silverpelt::stings::StingTarget::User(author.user.id),
-        target: silverpelt::stings::StingTarget::User(user.id),
-        state: silverpelt::stings::StingState::Active,
-        duration: None,
-        sting_data: None,
-        handle_log: None
+    if stings > 0 {
+        silverpelt::stings::StingCreate {
+            module: "moderation".to_string(),
+            src: Some("prune_user".to_string()),
+            stings,
+            reason: Some(reason.clone()),
+            void_reason: None,
+            guild_id,
+            creator: silverpelt::stings::StingTarget::User(author.user.id),
+            target: silverpelt::stings::StingTarget::User(user.id),
+            state: silverpelt::stings::StingState::Active,
+            duration: None,
+            sting_data: None,
+        }
+        .create(&mut *tx)
+        .await?;
     }
-    .create(&mut *tx)
-    .await?;
 
     // If we're pruning messages, do that
     let prune_opts = create_message_prune_serde(
@@ -279,13 +279,9 @@ pub async fn prune_user(
     .await?
     {
         let sctx = ctx.serenity_context().clone();
-        tokio::spawn(async move {
-            bot_modules_punishments::core::trigger_punishment(
-                &sctx,
-                guild_id,
-            )
-            .await
-        });
+        tokio::spawn(
+            async move { bot_modules_punishments::core::autotrigger(&sctx, guild_id).await },
+        );
     }
 
     // Send audit logs if Audit Logs module is enabled
@@ -473,7 +469,7 @@ pub async fn kick(
     };
 
     // Try kicking them
-    let stings = stings.unwrap_or(1);
+    let stings = stings.unwrap_or(0);
 
     if stings < 0 {
         return Err("Stings must be greater than or equal to 0".into());
@@ -481,23 +477,23 @@ pub async fn kick(
 
     let mut tx = data.pool.begin().await?;
 
-    silverpelt::stings::StingCreate {
-        module: "moderation".to_string(),
-        src: Some("kick".to_string()),
-        punishment: None,
-        stings,
-        reason: Some(reason.clone()),
-        void_reason: None,
-        guild_id,
-        creator: silverpelt::stings::StingTarget::User(author.user.id),
-        target: silverpelt::stings::StingTarget::User(member.user.id),
-        state: silverpelt::stings::StingState::Active,
-        duration: None,
-        sting_data: None,
-        handle_log: None
+    if stings > 0 {
+        silverpelt::stings::StingCreate {
+            module: "moderation".to_string(),
+            src: Some("kick".to_string()),
+            stings,
+            reason: Some(reason.clone()),
+            void_reason: None,
+            guild_id,
+            creator: silverpelt::stings::StingTarget::User(author.user.id),
+            target: silverpelt::stings::StingTarget::User(member.user.id),
+            state: silverpelt::stings::StingState::Active,
+            duration: None,
+            sting_data: None,
+        }
+        .create(&mut *tx)
+        .await?;
     }
-    .create(&mut *tx)
-    .await?;
 
     // Send audit logs if Audit Logs module is enabled
     if silverpelt::module_config::is_module_enabled(
@@ -546,13 +542,9 @@ pub async fn kick(
     .await?
     {
         let sctx = ctx.serenity_context().clone();
-        tokio::spawn(async move {
-            bot_modules_punishments::core::trigger_punishment(
-                &sctx,
-                guild_id,
-            )
-            .await
-        });
+        tokio::spawn(
+            async move { bot_modules_punishments::core::autotrigger(&sctx, guild_id).await },
+        );
     }
 
     embed = CreateEmbed::new()
@@ -652,20 +644,39 @@ pub async fn ban(
 
     let mut tx = data.pool.begin().await?;
 
-    silverpelt::stings::StingCreate {
+    if stings > 0 {
+        silverpelt::stings::StingCreate {
+            module: "moderation".to_string(),
+            src: Some("ban".to_string()),
+            stings,
+            reason: Some(reason.clone()),
+            void_reason: None,
+            guild_id,
+            creator: silverpelt::stings::StingTarget::User(author.user.id),
+            target: silverpelt::stings::StingTarget::User(member.id),
+            state: silverpelt::stings::StingState::Active,
+            duration: None,
+            sting_data: None,
+        }
+        .create(&mut *tx)
+        .await?;
+    }
+
+    // Create new punishment
+    silverpelt::punishments::PunishmentCreate {
         module: "moderation".to_string(),
-        src: Some("ban".to_string()),
-        punishment: None,
-        stings,
-        reason: Some(reason.clone()),
-        void_reason: None,
+        src: Some("tempban".to_string()),
         guild_id,
-        creator: silverpelt::stings::StingTarget::User(author.user.id),
-        target: silverpelt::stings::StingTarget::User(member.id),
-        state: silverpelt::stings::StingState::Active,
+        punishment: super::core::punishment_actions::CreateBanAction {}
+            .to_punishment_action(&format!("user:{}", member.id.to_string()))?
+            .ok_or("Failed to create punishment action")?
+            .string_form(),
+        creator: silverpelt::punishments::PunishmentTarget::User(author.user.id),
+        target: silverpelt::punishments::PunishmentTarget::User(member.id),
+        handle_log: serde_json::json!({}),
         duration: None,
-        sting_data: None,
-        handle_log: None
+        reason: reason.clone(),
+        data: None,
     }
     .create(&mut *tx)
     .await?;
@@ -720,13 +731,9 @@ pub async fn ban(
     .await?
     {
         let sctx = ctx.serenity_context().clone();
-        tokio::spawn(async move {
-            bot_modules_punishments::core::trigger_punishment(
-                &sctx,
-                guild_id,
-            )
-            .await
-        });
+        tokio::spawn(
+            async move { bot_modules_punishments::core::autotrigger(&sctx, guild_id).await },
+        );
     }
 
     embed = CreateEmbed::new()
@@ -808,25 +815,43 @@ pub async fn tempban(
 
     let mut tx = data.pool.begin().await?;
 
-    silverpelt::stings::StingCreate {
+    if stings > 0 {
+        silverpelt::stings::StingCreate {
+            module: "moderation".to_string(),
+            src: Some("tempban".to_string()),
+            stings,
+            reason: Some(reason.clone()),
+            void_reason: None,
+            guild_id,
+            creator: silverpelt::stings::StingTarget::User(author.user.id),
+            target: silverpelt::stings::StingTarget::User(member.id),
+            state: silverpelt::stings::StingState::Active,
+            duration: Some(std::time::Duration::from_secs(
+                duration.0 * duration.1.to_seconds(),
+            )),
+            sting_data: None,
+        }
+        .create(&mut *tx)
+        .await?;
+    }
+
+    // Create new punishment
+    silverpelt::punishments::PunishmentCreate {
         module: "moderation".to_string(),
         src: Some("tempban".to_string()),
-        punishment: Some(
-            super::core::punishment_actions::CreateBanAction{}
+        guild_id,
+        punishment: super::core::punishment_actions::CreateBanAction {}
             .to_punishment_action(&format!("user:{}", member.id.to_string()))?
             .ok_or("Failed to create punishment action")?
             .string_form(),
-        ),
-        stings,
-        reason: Some(reason.clone()),
-        void_reason: None,
-        guild_id,
-        creator: silverpelt::stings::StingTarget::User(author.user.id),
-        target: silverpelt::stings::StingTarget::User(member.id),
-        state: silverpelt::stings::StingState::Active,
-        duration: Some(std::time::Duration::from_secs(duration.0 * duration.1.to_seconds())),
-        sting_data: None,
-        handle_log: None,
+        creator: silverpelt::punishments::PunishmentTarget::User(author.user.id),
+        target: silverpelt::punishments::PunishmentTarget::User(member.id),
+        handle_log: serde_json::json!({}),
+        duration: Some(std::time::Duration::from_secs(
+            duration.0 * duration.1.to_seconds(),
+        )),
+        reason: reason.clone(),
+        data: None,
     }
     .create(&mut *tx)
     .await?;
@@ -882,13 +907,9 @@ pub async fn tempban(
     .await?
     {
         let sctx = ctx.serenity_context().clone();
-        tokio::spawn(async move {
-            bot_modules_punishments::core::trigger_punishment(
-                &sctx,
-                guild_id,
-            )
-            .await
-        });
+        tokio::spawn(
+            async move { bot_modules_punishments::core::autotrigger(&sctx, guild_id).await },
+        );
     }
 
     embed = CreateEmbed::new()
@@ -958,23 +979,23 @@ pub async fn unban(
 
     let mut tx = data.pool.begin().await?;
 
-    silverpelt::stings::StingCreate {
-        module: "moderation".to_string(),
-        src: Some("unban".to_string()),
-        punishment: None,
-        stings,
-        reason: Some(reason.clone()),
-        void_reason: None,
-        guild_id,
-        creator: silverpelt::stings::StingTarget::User(author.user.id),
-        target: silverpelt::stings::StingTarget::User(user.id),
-        state: silverpelt::stings::StingState::Active,
-        duration: None,
-        sting_data: None,
-        handle_log: None,
+    if stings > 0 {
+        silverpelt::stings::StingCreate {
+            module: "moderation".to_string(),
+            src: Some("unban".to_string()),
+            stings,
+            reason: Some(reason.clone()),
+            void_reason: None,
+            guild_id,
+            creator: silverpelt::stings::StingTarget::User(author.user.id),
+            target: silverpelt::stings::StingTarget::User(user.id),
+            state: silverpelt::stings::StingState::Active,
+            duration: None,
+            sting_data: None,
+        }
+        .create(&mut *tx)
+        .await?;
     }
-    .create(&mut *tx)
-    .await?;
 
     // Send audit logs if Audit Logs module is enabled
     if silverpelt::module_config::is_module_enabled(
@@ -1024,13 +1045,9 @@ pub async fn unban(
     .await?
     {
         let sctx = ctx.serenity_context().clone();
-        tokio::spawn(async move {
-            bot_modules_punishments::core::trigger_punishment(
-                &sctx,
-                guild_id,
-            )
-            .await
-        });
+        tokio::spawn(
+            async move { bot_modules_punishments::core::autotrigger(&sctx, guild_id).await },
+        );
     }
 
     embed = CreateEmbed::new()
@@ -1124,23 +1141,25 @@ pub async fn timeout(
 
     let mut tx = data.pool.begin().await?;
 
-    silverpelt::stings::StingCreate {
-        module: "moderation".to_string(),
-        src: Some("timeout".to_string()),
-        punishment: None,
-        stings,
-        reason: Some(reason.clone()),
-        void_reason: None,
-        guild_id,
-        creator: silverpelt::stings::StingTarget::User(author.user.id),
-        target: silverpelt::stings::StingTarget::User(member.user.id),
-        state: silverpelt::stings::StingState::Active,
-        duration: Some(std::time::Duration::from_secs(duration.0 * duration.1.to_seconds())),
-        sting_data: None,
-        handle_log: None,
+    if stings > 0 {
+        silverpelt::stings::StingCreate {
+            module: "moderation".to_string(),
+            src: Some("timeout".to_string()),
+            stings,
+            reason: Some(reason.clone()),
+            void_reason: None,
+            guild_id,
+            creator: silverpelt::stings::StingTarget::User(author.user.id),
+            target: silverpelt::stings::StingTarget::User(member.user.id),
+            state: silverpelt::stings::StingState::Active,
+            duration: Some(std::time::Duration::from_secs(
+                duration.0 * duration.1.to_seconds(),
+            )),
+            sting_data: None,
+        }
+        .create(&mut *tx)
+        .await?;
     }
-    .create(&mut *tx)
-    .await?;
 
     // Send audit logs if Audit Logs module is enabled
     if silverpelt::module_config::is_module_enabled(
@@ -1194,13 +1213,9 @@ pub async fn timeout(
     .await?
     {
         let sctx = ctx.serenity_context().clone();
-        tokio::spawn(async move {
-            bot_modules_punishments::core::trigger_punishment(
-                &sctx,
-                guild_id,
-            )
-            .await
-        });
+        tokio::spawn(
+            async move { bot_modules_punishments::core::autotrigger(&sctx, guild_id).await },
+        );
     }
 
     embed = CreateEmbed::new()
