@@ -856,6 +856,7 @@ pub async fn settings_view(
                     operation_type: OperationType::View,
                     data_store: &mut *data_store,
                     data,
+                    unchanged_fields: vec![],
                 },
                 &mut state,
             )
@@ -912,6 +913,7 @@ pub async fn settings_view(
                     operation_type: OperationType::View,
                     data_store: &mut *data_store,
                     data,
+                    unchanged_fields: vec![],
                 },
                 &mut state,
             )
@@ -1090,6 +1092,7 @@ pub async fn settings_create(
                 operation_type: OperationType::Create,
                 data_store: &mut *data_store,
                 data,
+                unchanged_fields: vec![],
             },
             &mut state,
         )
@@ -1138,6 +1141,7 @@ pub async fn settings_create(
                 operation_type: OperationType::Create,
                 data_store: &mut *data_store,
                 data,
+                unchanged_fields: vec![],
             },
             &mut new_state,
         )
@@ -1353,6 +1357,7 @@ pub async fn settings_update(
                 operation_type: OperationType::Update,
                 data_store: &mut *data_store,
                 data,
+                unchanged_fields: unchanged_fields.iter().map(|f| f.to_string()).collect(),
             },
             &mut state,
         )
@@ -1403,6 +1408,7 @@ pub async fn settings_update(
                 operation_type: OperationType::Update,
                 data_store: &mut *data_store,
                 data,
+                unchanged_fields: unchanged_fields.iter().map(|f| f.to_string()).collect(),
             },
             &mut state,
         )
@@ -1486,6 +1492,7 @@ pub async fn settings_delete(
                 operation_type: OperationType::Delete,
                 data_store: &mut *data_store,
                 data,
+                unchanged_fields: vec![],
             },
             &mut state,
         )
@@ -1511,6 +1518,7 @@ pub async fn settings_delete(
                 operation_type: OperationType::Delete,
                 data_store: &mut *data_store,
                 data,
+                unchanged_fields: vec![],
             },
             &mut state,
         )

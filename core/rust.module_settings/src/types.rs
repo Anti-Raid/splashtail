@@ -603,6 +603,7 @@ pub struct HookContext<'a> {
     pub data_store: &'a mut dyn DataStore, // The current datastore
     pub data: &'a SettingsData,            // The data object
     pub operation_type: OperationType,
+    pub unchanged_fields: Vec<String>, // The fields that have not changed in an operation
 }
 
 /// Settings can (optionally) have a validator to allow for custom data validation/processing prior to executing an operation

@@ -665,7 +665,7 @@ pub static GUILD_MEMBERS: LazyLock<ConfigOption> = LazyLock::new(|| {
             },
             module_settings::common_columns::created_at(),
         ]),
-        title_template: "{index} - {role_id}",
+        title_template: "{user_id}, perm_overrides={perm_overrides}",
         operations: indexmap::indexmap! {
             OperationType::View => OperationSpecific {
                 corresponding_command: "guildmembers list",
@@ -770,18 +770,20 @@ impl SettingDataValidator for GuildMembersValidator {
             .map_err(|e| SettingsError::Generic {
                 message: format!("Failed to parse user id: {:?}", e),
                 src: "guildmembers->user_id".to_string(),
-                typ: "internal".to_string(),
+                typ: "external".to_string(),
             })?;
 
         // Only the author can set public to true
-        if let Some(Value::Boolean(public)) = state.state.get("public") {
-            if *public {
-                if ctx.author != user_id {
-                    return Err(SettingsError::Generic {
-                        message: "Only the author can set publicity".to_string(),
-                        src: "guildmembers->public".to_string(),
-                        typ: "internal".to_string(),
-                    });
+        if !ctx.unchanged_fields.contains(&"public".to_string()) {
+            if let Some(Value::Boolean(public)) = state.state.get("public") {
+                if *public {
+                    if ctx.author != user_id {
+                        return Err(SettingsError::Generic {
+                            message: "Only the author can set publicity".to_string(),
+                            src: "guildmembers->public".to_string(),
+                            typ: "external".to_string(),
+                        });
+                    }
                 }
             }
         }
