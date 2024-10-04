@@ -664,9 +664,6 @@ pub static GUILD_MEMBERS: LazyLock<ConfigOption> = LazyLock::new(|| {
                 secret: false,
             },
             module_settings::common_columns::created_at(),
-            module_settings::common_columns::created_by(),
-            module_settings::common_columns::last_updated_at(),
-            module_settings::common_columns::last_updated_by(),
         ]),
         title_template: "{index} - {role_id}",
         operations: indexmap::indexmap! {
@@ -678,16 +675,13 @@ pub static GUILD_MEMBERS: LazyLock<ConfigOption> = LazyLock::new(|| {
                 corresponding_command: "guildmembers add",
                 columns_to_set: indexmap::indexmap! {
                     "created_at" => "{__now}",
-                    "created_by" => "{__author}",
-                    "last_updated_at" => "{__now}",
-                    "last_updated_by" => "{__author}",
+                    "needs_perm_rederive" => "{__true}",
                 },
             },
             OperationType::Update => OperationSpecific {
                 corresponding_command: "guildmembers edit",
                 columns_to_set: indexmap::indexmap! {
-                    "last_updated_at" => "{__now}",
-                    "last_updated_by" => "{__author}",
+                    "needs_perm_rederive" => "{__true}",
                 },
             },
             OperationType::Delete => OperationSpecific {

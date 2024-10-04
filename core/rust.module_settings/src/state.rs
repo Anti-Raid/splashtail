@@ -95,6 +95,8 @@ impl State {
             state: indexmap::indexmap! {
                 "__author".to_string() => Value::String(author.to_string()),
                 "__guild_id".to_string() => Value::String(guild_id.to_string()),
+                "__true".to_string() => Value::Boolean(true),
+                "__false".to_string() => Value::Boolean(false),
             },
             bypass_ignore_for: std::collections::HashSet::new(),
         }
