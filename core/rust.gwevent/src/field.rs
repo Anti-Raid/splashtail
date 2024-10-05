@@ -231,6 +231,15 @@ impl Field {
 
                 Ok(roles.join(", "))
             }
+            Field::RoleIds(r) => {
+                let mut roles = Vec::new();
+
+                for ir in r.iter() {
+                    roles.push(format!("{} [``{}``]", ir.mention(), ir));
+                }
+
+                Ok(roles.join(", "))
+            }
             Field::GenericIds(g) => {
                 let mut generic_ids = Vec::new();
 
