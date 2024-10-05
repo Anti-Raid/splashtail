@@ -24,7 +24,12 @@ pub static USER_ACTIONS: LazyLock<ConfigOption> = LazyLock::new(|| ConfigOption 
             id: "action_id",
             name: "Action ID",
             description: "The unique identifier for the user action.",
-            column_type: ColumnType::new_scalar(InnerColumnType::Uuid {}),
+            column_type: ColumnType::new_scalar(InnerColumnType::String {
+                kind: InnerColumnTypeStringKind::Normal,
+                min_length: None,
+                max_length: None,
+                allowed_values: vec![],
+            }),
             nullable: false,
             default: None,
             unique: true,
