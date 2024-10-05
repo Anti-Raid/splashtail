@@ -55,7 +55,6 @@ pub struct InspectorGlobalOptions {
     pub hoist_detection: DehoistOptions,
     pub minimum_account_age: Option<i64>,
     pub maximum_account_age: Option<i64>, // Not sure why you'd ever want this, but it's here
-    pub sting_retention: i32,             // Number of seconds to keep stings for
 }
 
 impl Default for InspectorGlobalOptions {
@@ -70,7 +69,6 @@ impl Default for InspectorGlobalOptions {
                 | DehoistOptions::STRIP_NON_ASCII,
             minimum_account_age: None,
             maximum_account_age: None,
-            sting_retention: 60 * 60, // one hour retention
         }
     }
 }
@@ -144,7 +142,7 @@ pub static INSPECTOR_SPECIFIC_OPTIONS_CACHE: LazyLock<
 
 pub async fn setup_cache_initial(data: &sqlx::PgPool) -> Result<(), silverpelt::Error> {
     let config = sqlx::query!(
-        "SELECT guild_id, fake_bot_detection, guild_protection, auto_response_memberjoin, hoist_detection, minimum_account_age, maximum_account_age, sting_retention FROM inspector__global_options",
+        "SELECT guild_id, fake_bot_detection, guild_protection, auto_response_memberjoin, hoist_detection, minimum_account_age, maximum_account_age FROM inspector__global_options",
     )
     .fetch_all(data)
     .await?;
@@ -168,7 +166,6 @@ pub async fn setup_cache_initial(data: &sqlx::PgPool) -> Result<(), silverpelt::
                     ),
                     minimum_account_age: row.minimum_account_age,
                     maximum_account_age: row.maximum_account_age,
-                    sting_retention: row.sting_retention,
                 },
             )
             .await;
@@ -228,7 +225,7 @@ pub async fn get_global_config(
         Ok(config.clone())
     } else {
         let row = sqlx::query!(
-            "SELECT fake_bot_detection, guild_protection, auto_response_memberjoin, hoist_detection, minimum_account_age, maximum_account_age, sting_retention FROM inspector__global_options WHERE guild_id = $1",
+            "SELECT fake_bot_detection, guild_protection, auto_response_memberjoin, hoist_detection, minimum_account_age, maximum_account_age FROM inspector__global_options WHERE guild_id = $1",
             guild_id.to_string(),
         )
         .fetch_optional(pool)
@@ -246,7 +243,6 @@ pub async fn get_global_config(
                 ),
                 minimum_account_age: row.minimum_account_age,
                 maximum_account_age: row.maximum_account_age,
-                sting_retention: row.sting_retention,
             };
 
             INSPECTOR_GLOBAL_OPTIONS_CACHE

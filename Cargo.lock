@@ -658,12 +658,12 @@ name = "bot_modules_root"
 version = "0.1.0"
 dependencies = [
  "async-trait",
- "bot_modules_inspector",
  "chrono",
  "futures-util",
  "indexmap",
  "module_settings",
  "poise",
+ "serde_json",
  "silverpelt",
  "splashcore_rs",
 ]

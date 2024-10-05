@@ -1,10 +1,10 @@
-pub mod cache; // Used by root module
+mod cache;
 mod cmd;
 mod dehoist;
 mod events;
 mod guildprotect;
 mod settings;
-pub mod types;
+mod types;
 
 pub struct Module;
 
@@ -76,7 +76,7 @@ impl silverpelt::module::ModuleEventListeners for EventListener {
             silverpelt::ar_event::AntiraidEvent::Discord(_) => true,
             silverpelt::ar_event::AntiraidEvent::OnFirstReady => true,
             silverpelt::ar_event::AntiraidEvent::TrustedWebEvent((event_name, _)) => {
-                event_name == "inspector.clearCache"
+                event_name == "inspector.clearCache" || event_name == "inspector.resetFakeBotsCache"
             }
             _ => false, // Ignore all other events
         }

@@ -193,7 +193,7 @@ pub async fn settings_viewer(
 
     let mut values = settings_view(
         setting,
-        &data.settings_data(cache_http.clone()),
+        &data.settings_data(ctx.serenity_context().clone()),
         guild_id,
         ctx.author().id,
         fields.clone(),
@@ -209,7 +209,7 @@ pub async fn settings_viewer(
 
     let total_count = match settings_view(
         setting,
-        &data.settings_data(cache_http.clone()),
+        &data.settings_data(ctx.serenity_context().clone()),
         guild_id,
         ctx.author().id,
         {
@@ -276,7 +276,7 @@ pub async fn settings_viewer(
             // Fetch the next page
             let next = settings_view(
                 setting,
-                &data.settings_data(cache_http.clone()),
+                &data.settings_data(ctx.serenity_context().clone()),
                 guild_id,
                 ctx.author().id,
                 {
@@ -414,7 +414,7 @@ pub async fn settings_creator(
 
     let mut value = settings_create(
         setting,
-        &data.settings_data(cache_http),
+        &data.settings_data(ctx.serenity_context().clone()),
         guild_id,
         ctx.author().id,
         fields,
@@ -532,7 +532,7 @@ pub async fn settings_updater(
 
     let mut value = settings_update(
         setting,
-        &data.settings_data(cache_http),
+        &data.settings_data(ctx.serenity_context().clone()),
         guild_id,
         ctx.author().id,
         fields,
@@ -664,7 +664,7 @@ pub async fn settings_deleter(
 
     let mut value = settings_delete(
         setting,
-        &data.settings_data(cache_http),
+        &data.settings_data(ctx.serenity_context().clone()),
         guild_id,
         ctx.author().id,
         pkey,
@@ -705,9 +705,7 @@ pub async fn standard_autocomplete<'a>(
 
     let objs = match settings_view(
         setting,
-        &data.settings_data(botox::cache::CacheHttpImpl::from_ctx(
-            ctx.serenity_context(),
-        )),
+        &data.settings_data(ctx.serenity_context().clone()),
         guild_id,
         ctx.author().id,
         indexmap::indexmap! {

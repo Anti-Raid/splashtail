@@ -39,7 +39,7 @@ pub struct Sting {
 impl Sting {
     /// Dispatch a StingCreate event
     pub async fn dispatch_event(self, ctx: serenity::all::Context) -> Result<(), crate::Error> {
-        match crate::ar_event::dispatch_event_to_modules(std::sync::Arc::new(
+        crate::ar_event::dispatch_event_to_modules_errflatten(std::sync::Arc::new(
             crate::ar_event::EventHandlerContext {
                 guild_id: self.guild_id,
                 data: ctx.data::<crate::data::Data>(),
@@ -47,18 +47,7 @@ impl Sting {
                 serenity_context: ctx,
             },
         ))
-        .await
-        {
-            Ok(_) => {}
-            Err(e) => {
-                return Err(e
-                    .into_iter()
-                    .map(|e| e.to_string())
-                    .collect::<Vec<_>>()
-                    .join("\n")
-                    .into());
-            }
-        };
+        .await?;
 
         Ok(())
     }

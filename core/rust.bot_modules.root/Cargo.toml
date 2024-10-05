@@ -11,11 +11,9 @@ chrono = { version = "0.4", features = ["serde"]}
 futures-util = "0.3"
 indexmap = { version = "2", features = ["serde"] }
 async-trait = "0.1.80"
+serde_json = "1.0"
 
 # Anti-Raid specific
 silverpelt = { path = "../rust.silverpelt" }
 splashcore_rs = { path = "../rust.std" }
 module_settings = { path = "../rust.module_settings" }
-
-# Inter-module dependency
-bot_modules_inspector = { path = "../rust.bot_modules.inspector" }

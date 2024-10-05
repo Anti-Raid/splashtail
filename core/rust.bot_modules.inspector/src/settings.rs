@@ -83,18 +83,6 @@ pub static INSPECTOR_GLOBAL_OPTIONS: LazyLock<ConfigOption> = LazyLock::new(|| {
                 secret: false,
             },
             Column {
-                id: "sting_retention",
-                name: "Sting Retention",
-                description: "Number of seconds to keep stings for",
-                column_type: ColumnType::new_scalar(InnerColumnType::Integer {}),
-                nullable: false,
-                default: Some(|_| Value::Integer(300)),
-                unique: false,
-                suggestions: ColumnSuggestion::None {},
-                ignored_for: vec![],
-                secret: false,
-            },
-            Column {
                 id: "hoist_detection",
                 name: "Hoist Detection",
                 description: "Hoist detection options",

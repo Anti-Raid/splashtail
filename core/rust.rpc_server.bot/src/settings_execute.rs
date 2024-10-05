@@ -10,7 +10,10 @@ use splashcore_rs::value::Value;
 /// Executes an operation on a setting [SettingsOperation]
 pub(crate) async fn settings_operation(
     State(AppData {
-        data, cache_http, ..
+        data,
+        serenity_context,
+        cache_http,
+        ..
     }): State<AppData>,
     Path((guild_id, user_id)): Path<(serenity::all::GuildId, serenity::all::UserId)>,
     Json(req): Json<crate::types::SettingsOperationRequest>,
@@ -92,7 +95,7 @@ pub(crate) async fn settings_operation(
         OperationType::View => {
             match module_settings::cfg::settings_view(
                 opt,
-                &data.settings_data((*cache_http).clone()),
+                &data.settings_data(serenity_context),
                 guild_id,
                 user_id,
                 p_fields,
@@ -108,7 +111,7 @@ pub(crate) async fn settings_operation(
         OperationType::Create => {
             match module_settings::cfg::settings_create(
                 opt,
-                &data.settings_data((*cache_http).clone()),
+                &data.settings_data(serenity_context),
                 guild_id,
                 user_id,
                 p_fields,
@@ -124,7 +127,7 @@ pub(crate) async fn settings_operation(
         OperationType::Update => {
             match module_settings::cfg::settings_update(
                 opt,
-                &data.settings_data((*cache_http).clone()),
+                &data.settings_data(serenity_context),
                 guild_id,
                 user_id,
                 p_fields,
@@ -149,7 +152,7 @@ pub(crate) async fn settings_operation(
 
             match module_settings::cfg::settings_delete(
                 opt,
-                &data.settings_data((*cache_http).clone()),
+                &data.settings_data(serenity_context),
                 guild_id,
                 user_id,
                 pkey.clone(),

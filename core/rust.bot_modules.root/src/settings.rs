@@ -139,13 +139,25 @@ impl PostAction for InspectorFakeBotsPostAction {
             return Ok(());
         }
 
-        bot_modules_inspector::cache::setup_fake_bots_cache(&ctx.data.pool)
-            .await
-            .map_err(|e| SettingsError::Generic {
-                message: format!("Failed to setup fake bots cache: {}", e),
-                src: "inspector__fake_bots::post_actions".to_string(),
-                typ: "internal".to_string(),
-            })?;
+        let data = silverpelt::data::Data::data(ctx.data);
+
+        silverpelt::ar_event::dispatch_event_to_modules_errflatten(std::sync::Arc::new(
+            silverpelt::ar_event::EventHandlerContext {
+                guild_id: ctx.guild_id,
+                data,
+                event: silverpelt::ar_event::AntiraidEvent::TrustedWebEvent((
+                    "inspector.resetFakeBotsCache".to_string(),
+                    serde_json::Value::Null,
+                )),
+                serenity_context: ctx.data.serenity_context.clone(),
+            },
+        ))
+        .await
+        .map_err(|e| SettingsError::Generic {
+            message: format!("Failed to dispatch event: {:#?}", e),
+            typ: "InspectorFakeBotsPostAction".to_string(),
+            src: "internal".to_string(),
+        })?;
 
         Ok(())
     }

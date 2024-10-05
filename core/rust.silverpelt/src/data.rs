@@ -31,36 +31,38 @@ impl Debug for Data {
 }
 
 impl Data {
-    const SILVERPELT_CACHE_KEY_ID: usize = 0;
-
     /// Given the Data and a cache_http, returns the settings data
     pub fn settings_data(
         &self,
-        cache_http: botox::cache::CacheHttpImpl,
+        serenity_context: serenity::all::Context,
     ) -> module_settings::types::SettingsData {
         module_settings::types::SettingsData {
             pool: self.pool.clone(),
             reqwest: self.reqwest.clone(),
             object_store: self.object_store.clone(),
-            cache_http,
-            extra_data: vec![(Self::SILVERPELT_CACHE_KEY_ID, self.silverpelt_cache.clone())],
+            cache_http: botox::cache::CacheHttpImpl::from_ctx(&serenity_context),
+            serenity_context,
         }
     }
 
     /// Given a settings data, return the silverpelt cache
+    ///
+    /// This is just a wrapper for <serenity_context>.data::<Data>().silverpelt_cache.clone()
     pub fn silverpelt_cache(
         settings_data: &module_settings::types::SettingsData,
     ) -> Arc<crate::cache::SilverpeltCache> {
-        for (slot, data) in &settings_data.extra_data {
-            if slot == &Self::SILVERPELT_CACHE_KEY_ID {
-                return data
-                    .clone()
-                    .downcast::<crate::cache::SilverpeltCache>()
-                    .expect("Silverpelt cache not found in settings data [downcast failure]");
-            }
-        }
+        settings_data
+            .serenity_context
+            .data::<Data>()
+            .silverpelt_cache
+            .clone()
+    }
 
-        panic!("Silverpelt cache not found in settings data");
+    /// Given a settings data, return the data
+    ///
+    /// This is just a wrapper for settings_data.serenity_context.data::<Data>().clone()
+    pub fn data(settings_data: &module_settings::types::SettingsData) -> Arc<Self> {
+        settings_data.serenity_context.data::<Data>().clone()
     }
 }
 

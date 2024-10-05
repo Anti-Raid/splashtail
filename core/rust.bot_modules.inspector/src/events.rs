@@ -21,21 +21,25 @@ pub async fn event_listener(ectx: &EventHandlerContext) -> Result<(), Error> {
             Ok(())
         }
         silverpelt::ar_event::AntiraidEvent::TrustedWebEvent((ref event_name, _)) => {
-            if event_name != "inspector.clearCache" {
-                return Ok(()); // Ignore all other events
-            }
-
-            if ectx.guild_id == silverpelt::ar_event::SYSTEM_GUILD_ID {
-                crate::cache::INSPECTOR_GLOBAL_OPTIONS_CACHE.invalidate_all();
-                crate::cache::INSPECTOR_SPECIFIC_OPTIONS_CACHE.invalidate_all();
-            } else {
-                crate::cache::INSPECTOR_GLOBAL_OPTIONS_CACHE
-                    .invalidate(&ectx.guild_id)
-                    .await;
-                crate::cache::INSPECTOR_SPECIFIC_OPTIONS_CACHE
-                    .invalidate(&ectx.guild_id)
-                    .await;
-            }
+            match event_name.as_str() {
+                "inspector.resetFakeBotsCache" => {
+                    crate::cache::setup_fake_bots_cache(&ectx.data.pool).await?;
+                }
+                "inspector.clearCache" => {
+                    if ectx.guild_id == silverpelt::ar_event::SYSTEM_GUILD_ID {
+                        crate::cache::INSPECTOR_GLOBAL_OPTIONS_CACHE.invalidate_all();
+                        crate::cache::INSPECTOR_SPECIFIC_OPTIONS_CACHE.invalidate_all();
+                    } else {
+                        crate::cache::INSPECTOR_GLOBAL_OPTIONS_CACHE
+                            .invalidate(&ectx.guild_id)
+                            .await;
+                        crate::cache::INSPECTOR_SPECIFIC_OPTIONS_CACHE
+                            .invalidate(&ectx.guild_id)
+                            .await;
+                    }
+                }
+                _ => return Ok(()), // Ignore all other events
+            };
 
             Ok(())
         }
@@ -200,7 +204,7 @@ pub async fn event_listener(ectx: &EventHandlerContext) -> Result<(), Error> {
                                             )
                                             .await?;
 
-                                        match silverpelt::ar_event::dispatch_event_to_modules(
+                                        silverpelt::ar_event::dispatch_event_to_modules_errflatten(
                                             std::sync::Arc::new(silverpelt::ar_event::EventHandlerContext {
                                                 guild_id: ectx.guild_id,
                                                 data: ectx.data.clone(),
@@ -216,12 +220,7 @@ pub async fn event_listener(ectx: &EventHandlerContext) -> Result<(), Error> {
                                                 serenity_context: ctx.clone(),
                                             }),
                                         )
-                                        .await {
-                                            Ok(_) => {}
-                                            Err(e) => {
-                                                log::error!("Error in dispatch_event_to_modules: {:?}", e);
-                                            }
-                                        }
+                                        .await?;
                                     }
                                     AutoResponseMemberJoinOptions::BAN_NEW_MEMBERS => {
                                         if !bp.ban_members() {
@@ -240,7 +239,7 @@ pub async fn event_listener(ectx: &EventHandlerContext) -> Result<(), Error> {
                                             )
                                             .await?;
 
-                                        match silverpelt::ar_event::dispatch_event_to_modules(
+                                        silverpelt::ar_event::dispatch_event_to_modules_errflatten(
                                             std::sync::Arc::new(silverpelt::ar_event::EventHandlerContext {
                                                 guild_id: ectx.guild_id,
                                                 data: ectx.data.clone(),
@@ -256,12 +255,7 @@ pub async fn event_listener(ectx: &EventHandlerContext) -> Result<(), Error> {
                                                 serenity_context: ctx.clone(),
                                             }),
                                         )
-                                        .await {
-                                            Ok(_) => {}
-                                            Err(e) => {
-                                                log::error!("Error in dispatch_event_to_modules: {:?}", e);
-                                            }
-                                        }
+                                        .await?;
                                     }
                                     _ => continue, // Ignore unknown flags
                                 }
@@ -440,7 +434,7 @@ pub async fn event_listener(ectx: &EventHandlerContext) -> Result<(), Error> {
                             )
                             .await?;
 
-                        match silverpelt::ar_event::dispatch_event_to_modules(
+                        silverpelt::ar_event::dispatch_event_to_modules_errflatten(
                             std::sync::Arc::new(silverpelt::ar_event::EventHandlerContext {
                                 guild_id: ectx.guild_id,
                                 data: ectx.data.clone(),
@@ -457,12 +451,7 @@ pub async fn event_listener(ectx: &EventHandlerContext) -> Result<(), Error> {
                                 serenity_context: ctx.clone(),
                             }),
                         )
-                        .await {
-                            Ok(_) => {}
-                            Err(e) => {
-                                log::error!("Error in dispatch_event_to_modules: {:?}", e);
-                            }
-                        }
+                        .await?;
                     }
 
                     // Lastly, check for hoisting attempts
@@ -509,7 +498,7 @@ pub async fn event_listener(ectx: &EventHandlerContext) -> Result<(), Error> {
                                 )
                                 .await?;
 
-                            match silverpelt::ar_event::dispatch_event_to_modules(
+                            silverpelt::ar_event::dispatch_event_to_modules_errflatten(
                                 std::sync::Arc::new(silverpelt::ar_event::EventHandlerContext {
                                     guild_id: ectx.guild_id,
                                     data: ectx.data.clone(),
@@ -527,12 +516,7 @@ pub async fn event_listener(ectx: &EventHandlerContext) -> Result<(), Error> {
                                     serenity_context: ctx.clone(),
                                 }),
                             )
-                            .await {
-                                Ok(_) => {}
-                                Err(e) => {
-                                    log::error!("Error in dispatch_event_to_modules: {:?}", e);
-                                }
-                            }
+                            .await?;
                         }
                     }
 
@@ -683,7 +667,7 @@ pub async fn event_listener(ectx: &EventHandlerContext) -> Result<(), Error> {
                                 )
                                 .await?;
 
-                            match silverpelt::ar_event::dispatch_event_to_modules(
+                            silverpelt::ar_event::dispatch_event_to_modules_errflatten(
                                 std::sync::Arc::new(silverpelt::ar_event::EventHandlerContext {
                                     guild_id: ectx.guild_id,
                                     data: ectx.data.clone(),
@@ -701,12 +685,7 @@ pub async fn event_listener(ectx: &EventHandlerContext) -> Result<(), Error> {
                                     serenity_context: ctx.clone(),
                                 }),
                             )
-                            .await {
-                                Ok(_) => {}
-                                Err(e) => {
-                                    log::error!("Error in dispatch_event_to_modules: {:?}", e);
-                                }
-                            }
+                            .await?;
                         }
                     }
 

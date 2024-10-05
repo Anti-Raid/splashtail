@@ -150,7 +150,7 @@ impl Snapshot {
                 }
             }
 
-            match silverpelt::ar_event::dispatch_event_to_modules(
+            silverpelt::ar_event::dispatch_event_to_modules_errflatten(
                 std::sync::Arc::new(silverpelt::ar_event::EventHandlerContext {
                     guild_id: self.guild_id,
                     data: data.clone().into(),
@@ -167,12 +167,7 @@ impl Snapshot {
                     serenity_context: ctx.clone(),
                 }),
             )
-            .await {
-                Ok(_) => {}
-                Err(e) => {
-                    log::error!("Error in dispatch_event_to_modules: {:?}", e);
-                }
-            }
+            .await?;
         }
 
         Ok(())
