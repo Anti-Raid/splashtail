@@ -1,10 +1,12 @@
 use poise::serenity_prelude::FullEvent;
+use silverpelt::ar_event::{AntiraidEvent, EventHandlerContext};
 use silverpelt::Error;
-use silverpelt::EventHandlerContext;
 
 pub async fn event_listener(ectx: &EventHandlerContext) -> Result<(), Error> {
     let ctx = &ectx.serenity_context;
-    let event = &ectx.full_event;
+    let AntiraidEvent::Discord(ref event) = ectx.event else {
+        return Ok(()); // Ignore non-discord events
+    };
 
     match event {
         FullEvent::Message { new_message } => {

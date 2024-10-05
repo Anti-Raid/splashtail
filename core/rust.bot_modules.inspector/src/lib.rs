@@ -1,7 +1,7 @@
 pub mod cache; // Used by root module
 mod cmd;
 mod dehoist;
-pub mod events; // Events is a public interface
+mod events;
 mod guildprotect;
 mod settings;
 pub mod types;
@@ -73,8 +73,12 @@ impl silverpelt::module::ModuleEventListeners for EventListener {
 
     async fn event_handler(
         &self,
-        _ctx: &silverpelt::EventHandlerContext,
+        ctx: &silverpelt::ar_event::EventHandlerContext,
     ) -> Result<(), silverpelt::Error> {
-        events::event_listener(_ctx).await
+        events::event_listener(ctx).await
+    }
+
+    fn event_handler_filter(&self, event: &silverpelt::ar_event::AntiraidEvent) -> bool {
+        matches!(event, silverpelt::ar_event::AntiraidEvent::Discord(_)) // We only care about discord events
     }
 }

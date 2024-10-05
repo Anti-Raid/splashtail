@@ -3,11 +3,12 @@ use include_dir::{include_dir, Dir};
 use log::warn;
 use poise::serenity_prelude::FullEvent;
 use serenity::all::{ChannelId, CreateMessage};
-use silverpelt::EventHandlerContext;
+use silverpelt::ar_event::{AntiraidEvent, EventHandlerContext};
+use std_events::auditlog::AuditLogDispatchEvent;
 
 static DEFAULT_TEMPLATES: Dir<'_> = include_dir!("$CARGO_MANIFEST_DIR/src/templates");
 
-pub fn load_embedded_event_template(event: &str) -> Result<String, silverpelt::Error> {
+fn load_embedded_event_template(event: &str) -> Result<String, silverpelt::Error> {
     let template = match DEFAULT_TEMPLATES.get_file(format!("{}.art", event)) {
         Some(template) => template,
         None => {
@@ -24,7 +25,7 @@ pub fn load_embedded_event_template(event: &str) -> Result<String, silverpelt::E
 }
 
 #[inline]
-pub const fn not_audit_loggable_event() -> &'static [&'static str] {
+pub(crate) const fn not_audit_loggable_event() -> &'static [&'static str] {
     &[
         "CACHE_READY",         // Internal
         "INTERACTION_CREATE",  // Spams too much / is useless
@@ -34,60 +35,86 @@ pub const fn not_audit_loggable_event() -> &'static [&'static str] {
     ]
 }
 
-pub async fn event_listener(ectx: &EventHandlerContext) -> Result<(), silverpelt::Error> {
+pub(crate) async fn event_listener(ectx: &EventHandlerContext) -> Result<(), silverpelt::Error> {
     let ctx = &ectx.serenity_context;
-    let event = &ectx.full_event;
 
-    if not_audit_loggable_event().contains(&event.into()) {
-        return Ok(());
+    match ectx.event {
+        AntiraidEvent::Discord(ref event) => {
+            if not_audit_loggable_event().contains(&event.into()) {
+                return Ok(());
+            }
+
+            // (hopefully temporary) work around to reduce spam
+            match event {
+                FullEvent::GuildAuditLogEntryCreate { .. } => {}
+                _ => match gwevent::core::get_event_user_id(event) {
+                    Ok(user_id) => {
+                        if user_id == ctx.cache.current_user().id {
+                            return Ok(());
+                        }
+                    }
+                    Err(Some(e)) => {
+                        return Err(e);
+                    }
+                    Err(None) => {}
+                },
+            }
+
+            let Some(expanded_event) = gwevent::core::expand_event(event.clone()) else {
+                // Event cannot be expanded, ignore
+                return Ok(());
+            };
+
+            // Convert to titlecase by capitalizing the first letter of each word
+            let event_titlename = event
+                .snake_case_name()
+                .split('_')
+                .map(|s| {
+                    let mut c = s.chars();
+                    match c.next() {
+                        None => String::new(),
+                        Some(f) => f.to_uppercase().chain(c).collect(),
+                    }
+                })
+                .collect::<Vec<String>>()
+                .join(" ");
+
+            let event_name: &'static str = event.into();
+
+            dispatch_audit_log(
+                ctx,
+                &ectx.data,
+                event_name,
+                &event_titlename,
+                expanded_event,
+                ectx.guild_id,
+            )
+            .await
+        }
+
+        AntiraidEvent::Custom(ref event) => {
+            if event.target() == std_events::auditlog::AUDITLOG_TARGET_ID
+                && event.event_name() == "AuditLog:DispatchEvent"
+            {
+                let Some(event) = event.as_any().downcast_ref::<AuditLogDispatchEvent>() else {
+                    return Ok(()); // Ignore unknown events
+                };
+
+                dispatch_audit_log(
+                    ctx,
+                    &ectx.data,
+                    &event.event_name,
+                    &event.event_titlename,
+                    event.expanded_event.clone(),
+                    ectx.guild_id,
+                )
+                .await
+            } else {
+                Ok(())
+            }
+        }
+        _ => Ok(()), // We dont need to handle other events
     }
-
-    // (hopefully temporary) work around to reduce spam
-    match event {
-        FullEvent::GuildAuditLogEntryCreate { .. } => {}
-        _ => match gwevent::core::get_event_user_id(event) {
-            Ok(user_id) => {
-                if user_id == ctx.cache.current_user().id {
-                    return Ok(());
-                }
-            }
-            Err(Some(e)) => {
-                return Err(e);
-            }
-            Err(None) => {}
-        },
-    }
-
-    let Some(expanded_event) = gwevent::core::expand_event(event.clone()) else {
-        // Event cannot be expanded, ignore
-        return Ok(());
-    };
-
-    // Convert to titlecase by capitalizing the first letter of each word
-    let event_titlename = event
-        .snake_case_name()
-        .split('_')
-        .map(|s| {
-            let mut c = s.chars();
-            match c.next() {
-                None => String::new(),
-                Some(f) => f.to_uppercase().chain(c).collect(),
-            }
-        })
-        .collect::<Vec<String>>()
-        .join(" ");
-
-    let event_name: &'static str = event.into();
-
-    dispatch_audit_log(
-        ctx,
-        &ectx.data,
-        event_name,
-        &event_titlename,
-        expanded_event,
-        ectx.guild_id,
-    )
-    .await
 }
 
 /// Check if an event matches a list of filters
@@ -99,7 +126,7 @@ pub async fn event_listener(ectx: &EventHandlerContext) -> Result<(), silverpelt
 /// Special cases:
 /// - If filter starts with `R/`, treat it as a regex
 /// - If event_name is MESSAGE, then it must be an exact match to be dispatched AND must have a custom template declared for it. This is to avoid spam
-pub async fn should_dispatch_event(
+pub(crate) async fn should_dispatch_event(
     event_name: &str,
     filters: &[String],
     uses_custom_template: bool,
@@ -147,7 +174,7 @@ pub async fn should_dispatch_event(
     Ok(false)
 }
 
-pub async fn dispatch_audit_log(
+async fn dispatch_audit_log(
     ctx: &serenity::all::client::Context,
     data: &silverpelt::data::Data,
     event_name: &str,

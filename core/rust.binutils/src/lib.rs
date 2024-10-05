@@ -1,8 +1,6 @@
 use botox::cache::CacheHttpImpl;
 use log::{error, info};
-use silverpelt::{data::Data, module::ModuleEventListeners, Context, Error, EventHandlerContext};
-use std::sync::Arc;
-use tokio::task::JoinSet;
+use silverpelt::{data::Data, Context, Error};
 
 /// Standard error handler for Anti-Raid
 pub async fn on_error(error: poise::FrameworkError<'_, Data, Error>) {
@@ -305,84 +303,6 @@ pub fn get_tasks(ctx: &serenity::all::Context, data: &Data) -> Vec<botox::taskma
     }
 
     tasks
-}
-
-async fn dispatch_for_module(
-    event_handler_context: Arc<EventHandlerContext>,
-    event_listeners: Box<dyn ModuleEventListeners>,
-) -> Result<(), Error> {
-    event_listeners
-        .event_handler(&event_handler_context)
-        .await?;
-    Ok(())
-}
-
-pub async fn dispatch_event_to_modules(
-    event_handler_context: Arc<EventHandlerContext>,
-) -> Result<(), Error> {
-    let mut set = JoinSet::new();
-
-    let mut futs = Vec::new();
-
-    for refs in event_handler_context
-        .data
-        .silverpelt_cache
-        .module_cache
-        .iter()
-    {
-        let module = refs.value();
-        let module_enabled = match silverpelt::module_config::is_module_enabled(
-            &event_handler_context.data.silverpelt_cache,
-            &event_handler_context.data.pool,
-            event_handler_context.guild_id,
-            module.id(),
-        )
-        .await
-        {
-            Ok(enabled) => enabled,
-            Err(e) => {
-                error!("Error getting module enabled status: {}", e);
-                continue;
-            }
-        };
-
-        if !module_enabled {
-            continue;
-        }
-
-        let Some(event_listeners) = module.event_listeners() else {
-            continue;
-        };
-
-        let ehr = event_handler_context.clone();
-        futs.push(dispatch_for_module(ehr, event_listeners));
-    }
-
-    for fut in futs {
-        set.spawn(fut);
-    }
-
-    let mut errors = Vec::new();
-
-    while let Some(res) = set.join_next().await {
-        match res {
-            Ok(Ok(_)) => {}
-            Ok(Err(e)) => {
-                error!("Error in dispatch_event_to_modules: {}", e);
-                errors.push(e);
-            }
-            Err(e) => {
-                error!("Error in dispatch_event_to_modules: {}", e);
-                errors.push(e.into());
-            }
-        }
-    }
-
-    if !errors.is_empty() {
-        return Err(format!("Errors in dispatch_event_to_modules: {:#?}", errors).into());
-    }
-
-    Ok(())
 }
 
 /// Helper function to dispatch the on_first_ready event to all modules

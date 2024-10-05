@@ -455,11 +455,13 @@ dependencies = [
  "poise",
  "regex",
  "reqwest",
+ "serde",
  "serde_json",
  "serenity",
  "silverpelt",
  "splashcore_rs",
  "sqlx",
+ "std_events",
  "templating",
  "tokio",
  "url",
@@ -531,8 +533,6 @@ version = "0.1.0"
 dependencies = [
  "async-trait",
  "bitflags 2.6.0",
- "bot_modules_auditlogs",
- "bot_modules_punishments",
  "botox",
  "chrono",
  "dashmap",
@@ -551,6 +551,7 @@ dependencies = [
  "splashcore_rs",
  "splashcore_text",
  "sqlx",
+ "std_events",
 ]
 
 [[package]]
@@ -558,7 +559,6 @@ name = "bot_modules_limits"
 version = "0.1.0"
 dependencies = [
  "async-trait",
- "bot_modules_punishments",
  "botox",
  "chrono",
  "dashmap",
@@ -575,6 +575,7 @@ dependencies = [
  "silverpelt",
  "splashcore_rs",
  "sqlx",
+ "std_events",
  "strum",
  "strum_macros",
 ]
@@ -609,9 +610,6 @@ name = "bot_modules_moderation"
 version = "0.1.0"
 dependencies = [
  "async-trait",
- "bot_modules_auditlogs",
- "bot_modules_limits",
- "bot_modules_punishments",
  "botox",
  "chrono",
  "config",
@@ -627,6 +625,7 @@ dependencies = [
  "silverpelt",
  "splashcore_rs",
  "sqlx",
+ "std_events",
  "tokio",
 ]
 
@@ -2471,6 +2470,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "inventory"
+version = "0.3.15"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f958d3d68f4167080a18141e10381e7634563984a537f2a49a30fd8e53ac5767"
+
+[[package]]
 name = "ipnet"
 version = "2.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4202,6 +4207,7 @@ dependencies = [
  "sqlx",
  "templating",
  "tokio",
+ "typetag",
 ]
 
 [[package]]
@@ -4585,6 +4591,30 @@ name = "static_assertions"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a2eb9349b6444b326872e140eb1cf5e7c522154d69e7a0ffb0fb81c06b37543f"
+
+[[package]]
+name = "std_events"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "futures-util",
+ "gwevent",
+ "indexmap",
+ "log",
+ "permissions",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "serenity",
+ "silverpelt",
+ "splashcore_rs",
+ "sqlx",
+ "strum",
+ "strum_macros",
+ "templating",
+ "tokio",
+ "url",
+]
 
 [[package]]
 name = "string_cache"
@@ -5136,6 +5166,30 @@ name = "typesize-derive"
 version = "0.1.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "905e88c2a4cc27686bd57e495121d451f027e441388a67f773be729ad4be1ea8"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.76",
+]
+
+[[package]]
+name = "typetag"
+version = "0.2.18"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "52ba3b6e86ffe0054b2c44f2d86407388b933b16cb0a70eea3929420db1d9bbe"
+dependencies = [
+ "erased-serde",
+ "inventory",
+ "once_cell",
+ "serde",
+ "typetag-impl",
+]
+
+[[package]]
+name = "typetag-impl"
+version = "0.2.18"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "70b20a22c42c8f1cd23ce5e34f165d4d37038f5b663ad20fb6adbdf029172483"
 dependencies = [
  "proc-macro2",
  "quote",

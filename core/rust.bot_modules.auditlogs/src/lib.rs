@@ -165,8 +165,18 @@ impl silverpelt::module::ModuleEventListeners for EventHandler {
 
     async fn event_handler(
         &self,
-        ectx: &silverpelt::EventHandlerContext,
+        ectx: &silverpelt::ar_event::EventHandlerContext,
     ) -> Result<(), silverpelt::Error> {
         events::event_listener(ectx).await
+    }
+
+    fn event_handler_filter(&self, event: &silverpelt::ar_event::AntiraidEvent) -> bool {
+        match event {
+            silverpelt::ar_event::AntiraidEvent::Discord(_) => true,
+            silverpelt::ar_event::AntiraidEvent::Custom(ref ce) => {
+                ce.target() == std_events::auditlog::AUDITLOG_TARGET_ID
+            }
+            _ => false,
+        }
     }
 }

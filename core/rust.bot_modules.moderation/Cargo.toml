@@ -22,11 +22,7 @@ permissions = { path = "../rust.permissions" }
 config = { path = "../rust.config" }
 gwevent = { path = "../rust.gwevent" }
 proxy_support = { path = "../rust.proxy_support" }
-
-# Inter-module dependency
-bot_modules_auditlogs = { path = "../rust.bot_modules.auditlogs" }
-bot_modules_punishments = { path = "../rust.bot_modules.punishments" }
-bot_modules_limits = { path = "../rust.bot_modules.limits" }
+std_events = { path = "../rust.stdevents" }
 
 [dependencies.tokio]
 version = "1"

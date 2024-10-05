@@ -150,30 +150,28 @@ impl Snapshot {
                 }
             }
 
-            // Create audit log
-            // Send audit logs if Audit Logs module is enabled
-            if silverpelt::module_config::is_module_enabled(
-                &data.silverpelt_cache,
-                &data.pool,
-                self.guild_id,
-                "auditlogs",
+            match silverpelt::ar_event::dispatch_event_to_modules(
+                std::sync::Arc::new(silverpelt::ar_event::EventHandlerContext {
+                    guild_id: self.guild_id,
+                    data: data.clone().into(),
+                    event: silverpelt::ar_event::AntiraidEvent::Custom(
+                        Box::new(std_events::auditlog::AuditLogDispatchEvent {
+                            event_name: "AR/Inspector_GuildProtectRevert".to_string(),
+                            event_titlename: "(Anti-Raid) Guild Protection: Revert Changes".to_string(),
+                            expanded_event: indexmap::indexmap! {
+                                "name".to_string() => gwevent::field::CategorizedField { category: "summary".to_string(), field: self.name.clone().into() },
+                                "triggered_flags".to_string() => gwevent::field::CategorizedField { category: "summary".to_string(), field: triggered_protections.iter_names().map(|(flag, _)| flag.to_string()).collect::<Vec<String>>().join(", ").into() },
+                            }
+                        })
+                    ),
+                    serenity_context: ctx.clone(),
+                }),
             )
-            .await?
-            {
-                let imap = indexmap::indexmap! {
-                    "name".to_string() => gwevent::field::CategorizedField { category: "summary".to_string(), field: self.name.clone().into() },
-                    "triggered_flags".to_string() => gwevent::field::CategorizedField { category: "summary".to_string(), field: triggered_protections.iter_names().map(|(flag, _)| flag.to_string()).collect::<Vec<String>>().join(", ").into() },
-                };
-
-                bot_modules_auditlogs::events::dispatch_audit_log(
-                    ctx,
-                    data,
-                    "AR/Inspector_GuildProtectRevert",
-                    "(Anti-Raid) Guild Protection: Revert Changes",
-                    imap,
-                    self.guild_id,
-                )
-                .await?;
+            .await {
+                Ok(_) => {}
+                Err(e) => {
+                    log::error!("Error in dispatch_event_to_modules: {:?}", e);
+                }
             }
         }
 

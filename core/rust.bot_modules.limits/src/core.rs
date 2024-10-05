@@ -88,6 +88,7 @@ pub enum LimitTypes {
     Unban,                 // set
     MessageCreate,         // set
     PruneMembers,          // set
+    Custom(u8),            // unused, for future use
 }
 
 #[allow(dead_code)] // Will be used later
@@ -109,6 +110,28 @@ impl LimitTypes {
             Self::Unban => "Unbans".to_string(),
             Self::MessageCreate => "Messages Created".to_string(),
             Self::PruneMembers => "Members Pruned".to_string(),
+            Self::Custom(c) => format!("Custom {}", c),
+        }
+    }
+
+    pub fn from_std_events(typ: std_events::limit::LimitTypes) -> Self {
+        match typ {
+            std_events::limit::LimitTypes::MemberAdd => Self::MemberAdd,
+            std_events::limit::LimitTypes::RoleAdd => Self::RoleAdd,
+            std_events::limit::LimitTypes::RoleUpdate => Self::RoleUpdate,
+            std_events::limit::LimitTypes::RoleRemove => Self::RoleRemove,
+            std_events::limit::LimitTypes::RoleGivenToMember => Self::RoleGivenToMember,
+            std_events::limit::LimitTypes::RoleRemovedFromMember => Self::RoleRemovedFromMember,
+            std_events::limit::LimitTypes::MemberRolesUpdated => Self::MemberRolesUpdated,
+            std_events::limit::LimitTypes::ChannelAdd => Self::ChannelAdd,
+            std_events::limit::LimitTypes::ChannelUpdate => Self::ChannelUpdate,
+            std_events::limit::LimitTypes::ChannelRemove => Self::ChannelRemove,
+            std_events::limit::LimitTypes::Kick => Self::Kick,
+            std_events::limit::LimitTypes::Ban => Self::Ban,
+            std_events::limit::LimitTypes::Unban => Self::Unban,
+            std_events::limit::LimitTypes::MessageCreate => Self::MessageCreate,
+            std_events::limit::LimitTypes::PruneMembers => Self::PruneMembers,
+            std_events::limit::LimitTypes::Custom(c) => Self::Custom(c),
         }
     }
 }

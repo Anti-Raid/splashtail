@@ -6,11 +6,16 @@ use super::types::{
 use proxy_support::{guild, member_in_guild};
 use serenity::all::FullEvent;
 use silverpelt::Error;
-use silverpelt::{module_config::is_module_enabled, EventHandlerContext};
+use silverpelt::{
+    ar_event::{AntiraidEvent, EventHandlerContext},
+    module_config::is_module_enabled,
+};
 
 pub async fn event_listener(ectx: &EventHandlerContext) -> Result<(), Error> {
     let ctx = &ectx.serenity_context;
-    let event = &ectx.full_event;
+    let AntiraidEvent::Discord(ref event) = &ectx.event else {
+        return Ok(()); // Ignore non-discord events
+    };
 
     match event {
         FullEvent::Message { new_message } => {
@@ -118,11 +123,8 @@ pub async fn event_listener(ectx: &EventHandlerContext) -> Result<(), Error> {
                             "triggered_flags": triggered_flags.bits(),
                         })),
                     }
-                    .create(&data.pool)
+                    .create(ctx.clone(), &data.pool)
                     .await?;
-
-                    // Trigger punishment
-                    bot_modules_punishments::core::autotrigger(&ctx, ectx.guild_id).await?;
                 }
             }
 
@@ -165,28 +167,27 @@ pub async fn event_listener(ectx: &EventHandlerContext) -> Result<(), Error> {
                                     .kick(&ctx.http, Some("Auto response: Kick new members"))
                                     .await?;
 
-                                // Send audit logs if Audit Logs module is enabled
-                                if silverpelt::module_config::is_module_enabled(
-                                    &data.silverpelt_cache,
-                                    &data.pool,
-                                    ectx.guild_id,
-                                    "auditlogs",
+                                match silverpelt::ar_event::dispatch_event_to_modules(
+                                    std::sync::Arc::new(silverpelt::ar_event::EventHandlerContext {
+                                        guild_id: ectx.guild_id,
+                                        data: ectx.data.clone(),
+                                        event: silverpelt::ar_event::AntiraidEvent::Custom(
+                                            Box::new(std_events::auditlog::AuditLogDispatchEvent {
+                                                event_name: "AR/Inspector_AutoResponseMemberJoin.KickNewMembers".to_string(),
+                                                event_titlename: "(Anti-Raid) Auto Response: Kick New Members".to_string(),
+                                                expanded_event: indexmap::indexmap! {
+                                                    "member".to_string() => gwevent::field::CategorizedField { category: "summary".to_string(), field: new_member.user.clone().into() },
+                                                }
+                                            })
+                                        ),
+                                        serenity_context: ctx.clone(),
+                                    }),
                                 )
-                                .await?
-                                {
-                                    let imap = indexmap::indexmap! {
-                                        "member".to_string() => gwevent::field::CategorizedField { category: "summary".to_string(), field: new_member.user.clone().into() },
-                                    };
-
-                                    bot_modules_auditlogs::events::dispatch_audit_log(
-                                        ctx,
-                                        data,
-                                        "AR/Inspector_AutoResponseMemberJoin.KickNewMembers",
-                                        "(Anti-Raid) Auto Response: Kick New Members",
-                                        imap,
-                                        ectx.guild_id,
-                                    )
-                                    .await?;
+                                .await {
+                                    Ok(_) => {}
+                                    Err(e) => {
+                                        log::error!("Error in dispatch_event_to_modules: {:?}", e);
+                                    }
                                 }
                             }
                             AutoResponseMemberJoinOptions::BAN_NEW_MEMBERS => {
@@ -202,28 +203,27 @@ pub async fn event_listener(ectx: &EventHandlerContext) -> Result<(), Error> {
                                     .ban(&ctx.http, 0, Some("Auto response: Ban new members"))
                                     .await?;
 
-                                // Send audit logs if Audit Logs module is enabled
-                                if silverpelt::module_config::is_module_enabled(
-                                    &data.silverpelt_cache,
-                                    &data.pool,
-                                    ectx.guild_id,
-                                    "auditlogs",
+                                match silverpelt::ar_event::dispatch_event_to_modules(
+                                    std::sync::Arc::new(silverpelt::ar_event::EventHandlerContext {
+                                        guild_id: ectx.guild_id,
+                                        data: ectx.data.clone(),
+                                        event: silverpelt::ar_event::AntiraidEvent::Custom(
+                                            Box::new(std_events::auditlog::AuditLogDispatchEvent {
+                                                event_name: "AR/Inspector_AutoResponseMemberJoin.BanNewMembers".to_string(),
+                                                event_titlename: "(Anti-Raid) Auto Response Ban New Members".to_string(),
+                                                expanded_event: indexmap::indexmap! {
+                                                    "member".to_string() => gwevent::field::CategorizedField { category: "summary".to_string(), field: new_member.user.clone().into() },
+                                                }
+                                            })
+                                        ),
+                                        serenity_context: ctx.clone(),
+                                    }),
                                 )
-                                .await?
-                                {
-                                    let imap = indexmap::indexmap! {
-                                        "member".to_string() => gwevent::field::CategorizedField { category: "summary".to_string(), field: new_member.user.clone().into() },
-                                    };
-
-                                    bot_modules_auditlogs::events::dispatch_audit_log(
-                                        ctx,
-                                        data,
-                                        "AR/Inspector_AutoResponseMemberJoin.BanNewMembers",
-                                        "(Anti-Raid) Auto Response Ban New Members",
-                                        imap,
-                                        ectx.guild_id,
-                                    )
-                                    .await?;
+                                .await {
+                                    Ok(_) => {}
+                                    Err(e) => {
+                                        log::error!("Error in dispatch_event_to_modules: {:?}", e);
+                                    }
                                 }
                             }
                             _ => continue, // Ignore unknown flags
@@ -391,29 +391,28 @@ pub async fn event_listener(ectx: &EventHandlerContext) -> Result<(), Error> {
                     )
                     .await?;
 
-                // Send audit logs if Audit Logs module is enabled
-                if silverpelt::module_config::is_module_enabled(
-                    &data.silverpelt_cache,
-                    &data.pool,
-                    ectx.guild_id,
-                    "auditlogs",
+                match silverpelt::ar_event::dispatch_event_to_modules(
+                    std::sync::Arc::new(silverpelt::ar_event::EventHandlerContext {
+                        guild_id: ectx.guild_id,
+                        data: ectx.data.clone(),
+                        event: silverpelt::ar_event::AntiraidEvent::Custom(
+                            Box::new(std_events::auditlog::AuditLogDispatchEvent {
+                                event_name: "AR/Inspector_MemberJoinInspectionFailed".to_string(),
+                                event_titlename: "(Anti-Raid) Member Join Inspection Failed".to_string(),
+                                expanded_event: indexmap::indexmap! {
+                                    "member".to_string() => gwevent::field::CategorizedField { category: "summary".to_string(), field: new_member.user.clone().into() },
+                                    "triggered_flags".to_string() => gwevent::field::CategorizedField { category: "summary".to_string(), field: triggered_flags.iter_names().map(|(flag, _)| flag.to_string()).collect::<Vec<String>>().join(", ").into() },
+                                }
+                            })
+                        ),
+                        serenity_context: ctx.clone(),
+                    }),
                 )
-                .await?
-                {
-                    let imap = indexmap::indexmap! {
-                        "member".to_string() => gwevent::field::CategorizedField { category: "summary".to_string(), field: new_member.user.clone().into() },
-                        "triggered_flags".to_string() => gwevent::field::CategorizedField { category: "summary".to_string(), field: triggered_flags.iter_names().map(|(flag, _)| flag.to_string()).collect::<Vec<String>>().join(", ").into() },
-                    };
-
-                    bot_modules_auditlogs::events::dispatch_audit_log(
-                        ctx,
-                        data,
-                        "AR/Inspector_MemberJoinInspectionFailed",
-                        "(Anti-Raid) Member Join Inspection Failed",
-                        imap,
-                        ectx.guild_id,
-                    )
-                    .await?;
+                .await {
+                    Ok(_) => {}
+                    Err(e) => {
+                        log::error!("Error in dispatch_event_to_modules: {:?}", e);
+                    }
                 }
             }
 
@@ -456,30 +455,29 @@ pub async fn event_listener(ectx: &EventHandlerContext) -> Result<(), Error> {
                         )
                         .await?;
 
-                    // Send audit logs if Audit Logs module is enabled
-                    if silverpelt::module_config::is_module_enabled(
-                        &data.silverpelt_cache,
-                        &data.pool,
-                        ectx.guild_id,
-                        "auditlogs",
+                    match silverpelt::ar_event::dispatch_event_to_modules(
+                        std::sync::Arc::new(silverpelt::ar_event::EventHandlerContext {
+                            guild_id: ectx.guild_id,
+                            data: ectx.data.clone(),
+                            event: silverpelt::ar_event::AntiraidEvent::Custom(
+                                Box::new(std_events::auditlog::AuditLogDispatchEvent {
+                                    event_name: "AR/Inspector_MemberJoinHoistAttempt".to_string(),
+                                    event_titlename: "(Anti-Raid) Member Join Hoist Attempt".to_string(),
+                                    expanded_event: indexmap::indexmap! {
+                                        "member".to_string() => gwevent::field::CategorizedField { category: "summary".to_string(), field: new_member.user.clone().into() },
+                                        "old_display_name".to_string() => gwevent::field::CategorizedField { category: "summary".to_string(), field: display_name.into() },
+                                        "new_nickname".to_string() => gwevent::field::CategorizedField { category: "summary".to_string(), field: new.into() },
+                                    }
+                                })
+                            ),
+                            serenity_context: ctx.clone(),
+                        }),
                     )
-                    .await?
-                    {
-                        let imap = indexmap::indexmap! {
-                            "member".to_string() => gwevent::field::CategorizedField { category: "summary".to_string(), field: new_member.user.clone().into() },
-                            "old_display_name".to_string() => gwevent::field::CategorizedField { category: "summary".to_string(), field: display_name.into() },
-                            "new_nickname".to_string() => gwevent::field::CategorizedField { category: "summary".to_string(), field: new.into() },
-                        };
-
-                        bot_modules_auditlogs::events::dispatch_audit_log(
-                            ctx,
-                            data,
-                            "AR/Inspector_MemberJoinHoistAttempt",
-                            "(Anti-Raid) Member Join Hoist Attempt",
-                            imap,
-                            ectx.guild_id,
-                        )
-                        .await?;
+                    .await {
+                        Ok(_) => {}
+                        Err(e) => {
+                            log::error!("Error in dispatch_event_to_modules: {:?}", e);
+                        }
                     }
                 }
             }
@@ -618,30 +616,29 @@ pub async fn event_listener(ectx: &EventHandlerContext) -> Result<(), Error> {
                         )
                         .await?;
 
-                    // Send audit logs if Audit Logs module is enabled
-                    if silverpelt::module_config::is_module_enabled(
-                        &data.silverpelt_cache,
-                        &data.pool,
-                        ectx.guild_id,
-                        "auditlogs",
+                    match silverpelt::ar_event::dispatch_event_to_modules(
+                        std::sync::Arc::new(silverpelt::ar_event::EventHandlerContext {
+                            guild_id: ectx.guild_id,
+                            data: ectx.data.clone(),
+                            event: silverpelt::ar_event::AntiraidEvent::Custom(
+                                Box::new(std_events::auditlog::AuditLogDispatchEvent {
+                                    event_name: "AR/Inspector_MemberUpdateHoistAttempt".to_string(),
+                                    event_titlename: "(Anti-Raid) Member Update Hoist Attempt".to_string(),
+                                    expanded_event: indexmap::indexmap! {
+                                        "member".to_string() => gwevent::field::CategorizedField { category: "summary".to_string(), field: event.user.clone().into() },
+                                        "old_display_name".to_string() => gwevent::field::CategorizedField { category: "summary".to_string(), field: display_name.into() },
+                                        "new_nickname".to_string() => gwevent::field::CategorizedField { category: "summary".to_string(), field: new.into() },
+                                    }
+                                })
+                            ),
+                            serenity_context: ctx.clone(),
+                        }),
                     )
-                    .await?
-                    {
-                        let imap = indexmap::indexmap! {
-                            "member".to_string() => gwevent::field::CategorizedField { category: "summary".to_string(), field: event.user.clone().into() },
-                            "old_display_name".to_string() => gwevent::field::CategorizedField { category: "summary".to_string(), field: display_name.into() },
-                            "new_nickname".to_string() => gwevent::field::CategorizedField { category: "summary".to_string(), field: new.into() },
-                        };
-
-                        bot_modules_auditlogs::events::dispatch_audit_log(
-                            ctx,
-                            data,
-                            "AR/Inspector_MemberUpdateHoistAttempt",
-                            "(Anti-Raid) Member Update Hoist Attempt",
-                            imap,
-                            ectx.guild_id,
-                        )
-                        .await?;
+                    .await {
+                        Ok(_) => {}
+                        Err(e) => {
+                            log::error!("Error in dispatch_event_to_modules: {:?}", e);
+                        }
                     }
                 }
             }

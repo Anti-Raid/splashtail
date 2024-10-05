@@ -172,4 +172,8 @@ impl silverpelt::module::ModuleEventListeners for EventHandler {
     async fn on_startup(&self, data: &silverpelt::data::Data) -> Result<(), silverpelt::Error> {
         am_toggles::setup(data).await
     }
+
+    fn event_handler_filter(&self, _event: &silverpelt::ar_event::AntiraidEvent) -> bool {
+        false // No events to filter
+    }
 }

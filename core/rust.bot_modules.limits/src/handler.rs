@@ -4,10 +4,15 @@ use silverpelt::Error;
 const DEFAULT_EXPIRY: std::time::Duration = std::time::Duration::from_secs(60 * 5);
 
 /// Handles a mod action, returning true if the user has hit limits
-pub async fn handle_mod_action(
+pub(crate) async fn handle_mod_action(
     ctx: &serenity::all::Context,
     ha: &HandleModAction,
 ) -> Result<bool, Error> {
+    // Bot itself performed action. Ignore
+    if ha.user_id == ctx.cache.current_user().id {
+        return Ok(false);
+    }
+
     let data = ctx.data::<silverpelt::data::Data>();
 
     // Check limits cache
@@ -64,19 +69,8 @@ pub async fn handle_mod_action(
                 "strategy": guild_limits.0.strategy,
             })),
         }
-        .create(&data.pool)
+        .create(ctx.clone(), &data.pool)
         .await?;
-
-        if silverpelt::module_config::is_module_enabled(
-            &data.silverpelt_cache,
-            &data.pool,
-            ha.guild_id,
-            "punishments",
-        )
-        .await?
-        {
-            bot_modules_punishments::core::autotrigger(ctx, ha.guild_id).await?;
-        }
     }
 
     Ok(strategy_result.stings > 0)

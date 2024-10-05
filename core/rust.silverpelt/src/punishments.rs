@@ -4,6 +4,7 @@ use serenity::all::{GuildId, UserId};
 use std::{str::FromStr, sync::Arc};
 
 /// A punishment
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GuildPunishment {
     /// The ID of the applied punishment
     pub id: sqlx::types::Uuid,

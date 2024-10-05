@@ -8,10 +8,18 @@ Most things in silverpelt are abstracted out through traits. This includes per-m
 
 ## Interfaces 
 
-### Sting Sources
+### Sting
 
-Silverpelt provides abstractions for sting sources as well to allow for easy interfacing with different sources of stings. This is done through the ``sting_sources`` module
+Silverpelt provides concrete structures, utilities and special events for handling stings.
 
 ### Punishments
 
-Note that silverpelt only provides interfaces and general structures for punishments. A dedicated ``punishments`` module is needed for actually handling punishments using these interfaces
+Silverpelt provides concrete structures, utilities and special events for handling punishments.
+
+## Custom Events
+
+### Targets
+
+Current (std) target classes are:
+
+- `0x0` -> auditlogs

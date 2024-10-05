@@ -63,7 +63,33 @@ pub struct StingCreate {
 }
 
 impl StingCreate {
-    pub async fn create(self, db: impl sqlx::PgExecutor<'_>) -> Result<Sting, crate::Error> {
+    pub fn to_sting(
+        self,
+        id: sqlx::types::Uuid,
+        created_at: chrono::DateTime<chrono::Utc>,
+    ) -> Sting {
+        Sting {
+            id,
+            module: self.module,
+            src: self.src,
+            stings: self.stings,
+            reason: self.reason,
+            void_reason: self.void_reason,
+            guild_id: self.guild_id,
+            creator: self.creator,
+            target: self.target,
+            state: self.state,
+            created_at,
+            expiry: self.duration,
+            sting_data: self.sting_data,
+        }
+    }
+
+    pub async fn create(
+        self,
+        ctx: serenity::all::Context,
+        db: impl sqlx::PgExecutor<'_>,
+    ) -> Result<(), crate::Error> {
         let ret_data = sqlx::query!(
             r#"
             INSERT INTO stings (module, src, stings, reason, void_reason, guild_id, target, creator, state, duration, sting_data)
@@ -84,21 +110,30 @@ impl StingCreate {
         .fetch_one(db)
         .await?;
 
-        Ok(Sting {
-            id: ret_data.id,
-            module: self.module,
-            src: self.src,
-            stings: self.stings,
-            reason: self.reason,
-            void_reason: self.void_reason,
-            guild_id: self.guild_id,
-            target: self.target,
-            creator: self.creator,
-            state: self.state,
-            created_at: ret_data.created_at,
-            expiry: self.duration,
-            sting_data: self.sting_data,
-        })
+        let created_sting = self.to_sting(ret_data.id, ret_data.created_at);
+
+        match crate::ar_event::dispatch_event_to_modules(std::sync::Arc::new(
+            crate::ar_event::EventHandlerContext {
+                guild_id: created_sting.guild_id,
+                data: ctx.data::<crate::data::Data>(),
+                event: crate::ar_event::AntiraidEvent::StingCreate(created_sting),
+                serenity_context: ctx.clone(),
+            },
+        ))
+        .await
+        {
+            Ok(_) => {}
+            Err(e) => {
+                return Err(e
+                    .into_iter()
+                    .map(|e| e.to_string())
+                    .collect::<Vec<_>>()
+                    .join("\n")
+                    .into());
+            }
+        };
+
+        Ok(())
     }
 }
 

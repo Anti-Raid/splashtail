@@ -99,9 +99,20 @@ pub trait ModuleEventListeners: Send + Sync {
     /// Event handler for the module
     ///
     /// Modules requiring multiple event_handlers will have to handle that themselves
-    async fn event_handler(&self, _ctx: &crate::EventHandlerContext) -> Result<(), crate::Error> {
+    async fn event_handler(
+        &self,
+        _ctx: &crate::ar_event::EventHandlerContext,
+    ) -> Result<(), crate::Error> {
         Ok(())
     }
+
+    /// Filter the inbound events to a module
+    ///
+    /// This function is called before the event_handler function
+    ///
+    /// Returning false here will prevent a new tokio task from being spawned hence
+    /// making things more efficient
+    fn event_handler_filter(&self, _event: &crate::ar_event::AntiraidEvent) -> bool;
 
     /// Function to be run on startup
     ///

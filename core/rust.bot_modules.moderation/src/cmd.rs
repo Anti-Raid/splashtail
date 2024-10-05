@@ -220,7 +220,7 @@ pub async fn prune_user(
             duration: None,
             sting_data: None,
         }
-        .create(&mut *tx)
+        .create(ctx.serenity_context().clone(), &mut *tx)
         .await?;
     }
 
@@ -269,62 +269,41 @@ pub async fn prune_user(
 
     tx.commit().await?;
 
-    // Trigger punishments as a tokio task
-    if silverpelt::module_config::is_module_enabled(
-        &data.silverpelt_cache,
-        &ctx.data().pool,
-        guild_id,
-        "punishments",
-    )
-    .await?
-    {
-        let sctx = ctx.serenity_context().clone();
-        tokio::spawn(
-            async move { bot_modules_punishments::core::autotrigger(&sctx, guild_id).await },
-        );
-    }
-
-    // Send audit logs if Audit Logs module is enabled
-    if silverpelt::module_config::is_module_enabled(
-        &data.silverpelt_cache,
-        &data.pool,
-        guild_id,
-        "auditlogs",
-    )
-    .await?
-    {
-        let imap = indexmap::indexmap! {
-            "log".to_string() => CategorizedField {
-                category: "context".to_string(),
-                field: to_log_format(&author.user, &user, &reason).into(),
-            },
-            "prune_opts".to_string() => CategorizedField {
-                category: "config".to_string(),
-                field: prune_opts.clone().into(),
-            },
-            "channels".to_string() => if let Some(ref channels) = prune_channels {
-                CategorizedField {
-                    category: "config".to_string(),
-                    field: parse_numeric_list_to_str::<ChannelId>(channels, &REPLACE_CHANNEL)?.into()
-                }
-            } else {
-                CategorizedField {
-                    category: "config".to_string(),
-                    field: gwevent::field::Field::None
-                }
-            },
-        };
-
-        bot_modules_auditlogs::events::dispatch_audit_log(
-            ctx.serenity_context(),
-            &data,
-            "AR/PruneMessageBegin",
-            "(Anti-Raid) Prune Messages Begin",
-            imap,
+    silverpelt::ar_event::dispatch_event_to_modules_errflatten(
+        std::sync::Arc::new(silverpelt::ar_event::EventHandlerContext {
             guild_id,
-        )
-        .await?;
-    }
+            data,
+            event: silverpelt::ar_event::AntiraidEvent::Custom(
+                Box::new(std_events::auditlog::AuditLogDispatchEvent {
+                    event_name: "AR/Inspector_MemberUpdateHoistAttempt".to_string(),
+                    event_titlename: "(Anti-Raid) Member Update Hoist Attempt".to_string(),
+                    expanded_event: indexmap::indexmap! {
+                        "log".to_string() => CategorizedField {
+                            category: "context".to_string(),
+                            field: to_log_format(&author.user, &user, &reason).into(),
+                        },
+                        "prune_opts".to_string() => CategorizedField {
+                            category: "config".to_string(),
+                            field: prune_opts.clone().into(),
+                        },
+                        "channels".to_string() => if let Some(ref channels) = prune_channels {
+                            CategorizedField {
+                                category: "config".to_string(),
+                                field: parse_numeric_list_to_str::<ChannelId>(channels, &REPLACE_CHANNEL)?.into()
+                            }
+                        } else {
+                            CategorizedField {
+                                category: "config".to_string(),
+                                field: gwevent::field::Field::None
+                            }
+                        },
+                    }
+                })
+            ),
+            serenity_context: ctx.serenity_context().clone(),
+        }),
+    )
+    .await?;
 
     embed = CreateEmbed::new()
         .title("Pruning User Messages...")
@@ -429,22 +408,38 @@ pub async fn kick(
     // Check user hierarchy before performing moderative actions
     check_hierarchy(&ctx, member.user.id).await?;
 
-    // Attempt to add limit
-    let limits_hit = bot_modules_limits::handler::handle_mod_action(
-        ctx.serenity_context(),
-        &bot_modules_limits::core::HandleModAction {
-            guild_id,
-            user_id: ctx.author().id,
-            limit: bot_modules_limits::core::LimitTypes::Kick,
-            target: Some(member.user.id.to_string()),
-            action_data: serde_json::json!({
-                "reason": reason,
-                "stings": stings.unwrap_or(1),
-                "ar": true,
-            }),
-        },
-    )
-    .await?;
+    // Add limit, erroring if the user has hit limits
+    let limits_hit = {
+        let (send, mut recv) = tokio::sync::mpsc::channel(1);
+
+        silverpelt::ar_event::dispatch_event_to_modules_errflatten(std::sync::Arc::new(
+            silverpelt::ar_event::EventHandlerContext {
+                guild_id,
+                data: data.clone(),
+                event: silverpelt::ar_event::AntiraidEvent::Custom(Box::new(
+                    std_events::limit::HandleLimitActionEvent {
+                        limit: std_events::limit::LimitTypes::Kick,
+                        user_id: ctx.author().id,
+                        target: Some(member.user.id.to_string()),
+                        action_data: serde_json::json!({
+                            "reason": reason,
+                            "stings": stings.unwrap_or(1),
+                            "ar": true,
+                        }),
+                        send_chan: Some(send),
+                    },
+                )),
+                serenity_context: ctx.serenity_context().clone(),
+            },
+        ))
+        .await?;
+
+        let Some(res) = recv.recv().await else {
+            return Err("Failed to receive limit hit response".into());
+        };
+
+        res.is_limited
+    };
 
     if limits_hit {
         return Err("You have hit this server's kick limit".into());
@@ -475,8 +470,6 @@ pub async fn kick(
         return Err("Stings must be greater than or equal to 0".into());
     }
 
-    let mut tx = data.pool.begin().await?;
-
     if stings > 0 {
         silverpelt::stings::StingCreate {
             module: "moderation".to_string(),
@@ -491,37 +484,31 @@ pub async fn kick(
             duration: None,
             sting_data: None,
         }
-        .create(&mut *tx)
+        .create(ctx.serenity_context().clone(), &data.pool)
         .await?;
     }
 
-    // Send audit logs if Audit Logs module is enabled
-    if silverpelt::module_config::is_module_enabled(
-        &data.silverpelt_cache,
-        &ctx.data().pool,
-        guild_id,
-        "auditlogs",
-    )
-    .await?
-    {
-        let imap = indexmap::indexmap! {
-            "target".to_string() => CategorizedField { category: "action".to_string(), field: member.user.clone().into() },
-            "moderator".to_string() => CategorizedField { category: "action".to_string(), field: author.user.clone().into() },
-            "reason".to_string() => CategorizedField { category: "context".to_string(), field: reason.clone().into() },
-            "stings".to_string() => CategorizedField { category: "punishment".to_string(), field: stings.into() },
-            "log".to_string() => CategorizedField { category: "context".to_string(), field: to_log_format(&author.user, &member.user, &reason).into() },
-        };
-
-        bot_modules_auditlogs::events::dispatch_audit_log(
-            ctx.serenity_context(),
-            &data,
-            "AR/KickMember",
-            "(Anti-Raid) Kick Member",
-            imap,
+    silverpelt::ar_event::dispatch_event_to_modules_errflatten(
+        std::sync::Arc::new(silverpelt::ar_event::EventHandlerContext {
             guild_id,
-        )
-        .await?;
-    }
+            data: data.clone(),
+            event: silverpelt::ar_event::AntiraidEvent::Custom(
+                Box::new(std_events::auditlog::AuditLogDispatchEvent {
+                    event_name: "AR/KickMember".to_string(),
+                    event_titlename: "(Anti-Raid) Kick Member".to_string(),
+                    expanded_event: indexmap::indexmap! {
+                        "target".to_string() => CategorizedField { category: "action".to_string(), field: member.user.clone().into() },
+                        "moderator".to_string() => CategorizedField { category: "action".to_string(), field: author.user.clone().into() },
+                        "reason".to_string() => CategorizedField { category: "context".to_string(), field: reason.clone().into() },
+                        "stings".to_string() => CategorizedField { category: "punishment".to_string(), field: stings.into() },
+                        "log".to_string() => CategorizedField { category: "context".to_string(), field: to_log_format(&author.user, &member.user, &reason).into() },
+                    }
+                })
+            ),
+            serenity_context: ctx.serenity_context().clone(),
+        }),
+    )
+    .await?;
 
     member
         .kick(
@@ -529,23 +516,6 @@ pub async fn kick(
             Some(&to_log_format(&author.user, &member.user, &reason)),
         )
         .await?;
-
-    tx.commit().await?;
-
-    // Trigger punishments as a tokio task
-    if silverpelt::module_config::is_module_enabled(
-        &data.silverpelt_cache,
-        &ctx.data().pool,
-        guild_id,
-        "punishments",
-    )
-    .await?
-    {
-        let sctx = ctx.serenity_context().clone();
-        tokio::spawn(
-            async move { bot_modules_punishments::core::autotrigger(&sctx, guild_id).await },
-        );
-    }
 
     embed = CreateEmbed::new()
         .title("Kicking Member...")
@@ -594,22 +564,38 @@ pub async fn ban(
     // Check user hierarchy before performing moderative actions
     check_hierarchy(&ctx, member.id).await?;
 
-    // Attempt to add limit
-    let limits_hit = bot_modules_limits::handler::handle_mod_action(
-        ctx.serenity_context(),
-        &bot_modules_limits::core::HandleModAction {
-            guild_id,
-            user_id: ctx.author().id,
-            limit: bot_modules_limits::core::LimitTypes::Ban,
-            target: Some(member.id.to_string()),
-            action_data: serde_json::json!({
-                "reason": reason,
-                "stings": stings.unwrap_or(1),
-                "ar": true,
-            }),
-        },
-    )
-    .await?;
+    // Add limit, erroring if the user has hit limits
+    let limits_hit = {
+        let (send, mut recv) = tokio::sync::mpsc::channel(1);
+
+        silverpelt::ar_event::dispatch_event_to_modules_errflatten(std::sync::Arc::new(
+            silverpelt::ar_event::EventHandlerContext {
+                guild_id,
+                data: data.clone(),
+                event: silverpelt::ar_event::AntiraidEvent::Custom(Box::new(
+                    std_events::limit::HandleLimitActionEvent {
+                        limit: std_events::limit::LimitTypes::Ban,
+                        user_id: ctx.author().id,
+                        target: Some(member.id.to_string()),
+                        action_data: serde_json::json!({
+                            "reason": reason,
+                            "stings": stings.unwrap_or(1),
+                            "ar": true,
+                        }),
+                        send_chan: Some(send),
+                    },
+                )),
+                serenity_context: ctx.serenity_context().clone(),
+            },
+        ))
+        .await?;
+
+        let Some(res) = recv.recv().await else {
+            return Err("Failed to receive limit hit response".into());
+        };
+
+        res.is_limited
+    };
 
     if limits_hit {
         return Err("You have hit this server's ban limit".into());
@@ -642,8 +628,6 @@ pub async fn ban(
         return Err("Stings must be greater than or equal to 0".into());
     }
 
-    let mut tx = data.pool.begin().await?;
-
     if stings > 0 {
         silverpelt::stings::StingCreate {
             module: "moderation".to_string(),
@@ -658,14 +642,39 @@ pub async fn ban(
             duration: None,
             sting_data: None,
         }
-        .create(&mut *tx)
+        .create(ctx.serenity_context().clone(), &data.pool)
         .await?;
     }
+
+    let mut tx = data.pool.begin().await?;
+
+    silverpelt::ar_event::dispatch_event_to_modules_errflatten(
+        std::sync::Arc::new(silverpelt::ar_event::EventHandlerContext {
+            guild_id,
+            data: data.clone(),
+            event: silverpelt::ar_event::AntiraidEvent::Custom(
+                Box::new(std_events::auditlog::AuditLogDispatchEvent {
+                    event_name: "AR/BanMember".to_string(),
+                    event_titlename: "(Anti-Raid) Ban Member".to_string(),
+                    expanded_event: indexmap::indexmap! {
+                        "target".to_string() => CategorizedField { category: "action".to_string(), field: member.clone().into() },
+                        "moderator".to_string() => CategorizedField { category: "action".to_string(), field: author.user.clone().into() },
+                        "reason".to_string() => CategorizedField { category: "context".to_string(), field: reason.clone().into() },
+                        "stings".to_string() => CategorizedField { category: "punishment".to_string(), field: stings.into() },
+                        "prune_dmd".to_string() => CategorizedField { category: "config".to_string(), field: dmd.into() },
+                        "log".to_string() => CategorizedField { category: "context".to_string(), field: to_log_format(&author.user, &member, &reason).into() },
+                    }
+                })
+            ),
+            serenity_context: ctx.serenity_context().clone(),
+        }),
+    )
+    .await?;
 
     // Create new punishment
     silverpelt::punishments::PunishmentCreate {
         module: "moderation".to_string(),
-        src: Some("tempban".to_string()),
+        src: Some("ban".to_string()),
         guild_id,
         punishment: super::core::punishment_actions::CreateBanAction {}
             .to_punishment_action(&format!("user:{}", member.id.to_string()))?
@@ -681,35 +690,6 @@ pub async fn ban(
     .create(&mut *tx)
     .await?;
 
-    // Send audit logs if Audit Logs module is enabled
-    if silverpelt::module_config::is_module_enabled(
-        &data.silverpelt_cache,
-        &data.pool,
-        guild_id,
-        "auditlogs",
-    )
-    .await?
-    {
-        let imap = indexmap::indexmap! {
-            "target".to_string() => CategorizedField { category: "action".to_string(), field: member.clone().into() },
-            "moderator".to_string() => CategorizedField { category: "action".to_string(), field: author.user.clone().into() },
-            "reason".to_string() => CategorizedField { category: "context".to_string(), field: reason.clone().into() },
-            "stings".to_string() => CategorizedField { category: "punishment".to_string(), field: stings.into() },
-            "prune_dmd".to_string() => CategorizedField { category: "punishment".to_string(), field: dmd.into() },
-            "log".to_string() => CategorizedField { category: "context".to_string(), field: to_log_format(&author.user, &member, &reason).into() },
-        };
-
-        bot_modules_auditlogs::events::dispatch_audit_log(
-            ctx.serenity_context(),
-            &data,
-            "AR/BanMember",
-            "(Anti-Raid) Ban Member",
-            imap,
-            guild_id,
-        )
-        .await?;
-    }
-
     guild_id
         .ban(
             ctx.http(),
@@ -720,21 +700,6 @@ pub async fn ban(
         .await?;
 
     tx.commit().await?;
-
-    // Trigger punishments as a tokio task
-    if silverpelt::module_config::is_module_enabled(
-        &data.silverpelt_cache,
-        &ctx.data().pool,
-        guild_id,
-        "punishments",
-    )
-    .await?
-    {
-        let sctx = ctx.serenity_context().clone();
-        tokio::spawn(
-            async move { bot_modules_punishments::core::autotrigger(&sctx, guild_id).await },
-        );
-    }
 
     embed = CreateEmbed::new()
         .title("Banning Member...")
@@ -813,8 +778,6 @@ pub async fn tempban(
         return Err("Stings must be greater than or equal to 0".into());
     }
 
-    let mut tx = data.pool.begin().await?;
-
     if stings > 0 {
         silverpelt::stings::StingCreate {
             module: "moderation".to_string(),
@@ -831,9 +794,11 @@ pub async fn tempban(
             )),
             sting_data: None,
         }
-        .create(&mut *tx)
+        .create(ctx.serenity_context().clone(), &data.pool)
         .await?;
     }
+
+    let mut tx = data.pool.begin().await?;
 
     // Create new punishment
     silverpelt::punishments::PunishmentCreate {
@@ -856,35 +821,29 @@ pub async fn tempban(
     .create(&mut *tx)
     .await?;
 
-    // Send audit logs if Audit Logs module is enabled
-    if silverpelt::module_config::is_module_enabled(
-        &data.silverpelt_cache,
-        &ctx.data().pool,
-        guild_id,
-        "auditlogs",
-    )
-    .await?
-    {
-        let imap = indexmap::indexmap! {
-            "target".to_string() => CategorizedField { category: "action".to_string(), field: member.clone().into() },
-            "moderator".to_string() => CategorizedField { category: "action".to_string(), field: author.user.clone().into() },
-            "reason".to_string() => CategorizedField { category: "context".to_string(), field: reason.clone().into() },
-            "stings".to_string() => CategorizedField { category: "punishment".to_string(), field: stings.into() },
-            "prune_dmd".to_string() => CategorizedField { category: "punishment".to_string(), field: dmd.into() },
-            "log".to_string() => CategorizedField { category: "context".to_string(), field: to_log_format(&author.user, &member, &reason).into() },
-            "duration".to_string() => CategorizedField { category: "context".to_string(), field: (duration.0 * duration.1.to_seconds()).into() },
-        };
-
-        bot_modules_auditlogs::events::dispatch_audit_log(
-            ctx.serenity_context(),
-            &data,
-            "AR/BanMemberTemporary",
-            "(Anti-Raid) Ban Member (Temporary)",
-            imap,
+    silverpelt::ar_event::dispatch_event_to_modules_errflatten(
+        std::sync::Arc::new(silverpelt::ar_event::EventHandlerContext {
             guild_id,
-        )
-        .await?;
-    }
+            data: data.clone(),
+            event: silverpelt::ar_event::AntiraidEvent::Custom(
+                Box::new(std_events::auditlog::AuditLogDispatchEvent {
+                    event_name: "AR/BanMemberTemporary".to_string(),
+                    event_titlename: "(Anti-Raid) Ban Member (Temporary)".to_string(),
+                    expanded_event: indexmap::indexmap! {
+                        "target".to_string() => CategorizedField { category: "action".to_string(), field: member.clone().into() },
+                        "moderator".to_string() => CategorizedField { category: "action".to_string(), field: author.user.clone().into() },
+                        "reason".to_string() => CategorizedField { category: "context".to_string(), field: reason.clone().into() },
+                        "stings".to_string() => CategorizedField { category: "punishment".to_string(), field: stings.into() },
+                        "prune_dmd".to_string() => CategorizedField { category: "punishment".to_string(), field: dmd.into() },
+                        "log".to_string() => CategorizedField { category: "context".to_string(), field: to_log_format(&author.user, &member, &reason).into() },
+                        "duration".to_string() => CategorizedField { category: "context".to_string(), field: (duration.0 * duration.1.to_seconds()).into() },
+                    }
+                })
+            ),
+            serenity_context: ctx.serenity_context().clone(),
+        }),
+    )
+    .await?;
 
     guild_id
         .ban(
@@ -896,21 +855,6 @@ pub async fn tempban(
         .await?;
 
     tx.commit().await?;
-
-    // Trigger punishments as a tokio task
-    if silverpelt::module_config::is_module_enabled(
-        &data.silverpelt_cache,
-        &ctx.data().pool,
-        guild_id,
-        "punishments",
-    )
-    .await?
-    {
-        let sctx = ctx.serenity_context().clone();
-        tokio::spawn(
-            async move { bot_modules_punishments::core::autotrigger(&sctx, guild_id).await },
-        );
-    }
 
     embed = CreateEmbed::new()
         .title("(Temporarily) Banned Member...")
@@ -977,8 +921,6 @@ pub async fn unban(
         return Err("Stings must be greater than or equal to 0".into());
     }
 
-    let mut tx = data.pool.begin().await?;
-
     if stings > 0 {
         silverpelt::stings::StingCreate {
             module: "moderation".to_string(),
@@ -993,37 +935,31 @@ pub async fn unban(
             duration: None,
             sting_data: None,
         }
-        .create(&mut *tx)
+        .create(ctx.serenity_context().clone(), &data.pool)
         .await?;
     }
 
-    // Send audit logs if Audit Logs module is enabled
-    if silverpelt::module_config::is_module_enabled(
-        &data.silverpelt_cache,
-        &ctx.data().pool,
-        guild_id,
-        "auditlogs",
-    )
-    .await?
-    {
-        let imap = indexmap::indexmap! {
-            "target".to_string() => CategorizedField { category: "action".to_string(), field: user.clone().into() },
-            "moderator".to_string() => CategorizedField { category: "action".to_string(), field: author.user.clone().into() },
-            "reason".to_string() => CategorizedField { category: "context".to_string(), field: reason.clone().into() },
-            "stings".to_string() => CategorizedField { category: "punishment".to_string(), field: stings.into() },
-            "log".to_string() => CategorizedField { category: "context".to_string(), field: to_log_format(&author.user, &user, &reason).into() },
-        };
-
-        bot_modules_auditlogs::events::dispatch_audit_log(
-            ctx.serenity_context(),
-            &data,
-            "AR/UnbanMember",
-            "(Anti-Raid) Unban Member",
-            imap,
+    silverpelt::ar_event::dispatch_event_to_modules_errflatten(
+        std::sync::Arc::new(silverpelt::ar_event::EventHandlerContext {
             guild_id,
-        )
-        .await?;
-    }
+            data: data.clone(),
+            event: silverpelt::ar_event::AntiraidEvent::Custom(
+                Box::new(std_events::auditlog::AuditLogDispatchEvent {
+                    event_name: "AR/UnbanMember".to_string(),
+                    event_titlename: "(Anti-Raid) Unban Member".to_string(),
+                    expanded_event: indexmap::indexmap! {
+                        "target".to_string() => CategorizedField { category: "action".to_string(), field: user.clone().into() },
+                        "moderator".to_string() => CategorizedField { category: "action".to_string(), field: author.user.clone().into() },
+                        "reason".to_string() => CategorizedField { category: "context".to_string(), field: reason.clone().into() },
+                        "stings".to_string() => CategorizedField { category: "punishment".to_string(), field: stings.into() },
+                        "log".to_string() => CategorizedField { category: "context".to_string(), field: to_log_format(&author.user, &user, &reason).into() },
+                    }
+                })
+            ),
+            serenity_context: ctx.serenity_context().clone(),
+        }),
+    )
+    .await?;
 
     ctx.http()
         .remove_ban(
@@ -1032,23 +968,6 @@ pub async fn unban(
             Some(&to_log_format(&author.user, &user, &reason)),
         )
         .await?;
-
-    tx.commit().await?;
-
-    // Trigger punishments as a tokio task
-    if silverpelt::module_config::is_module_enabled(
-        &data.silverpelt_cache,
-        &ctx.data().pool,
-        guild_id,
-        "punishments",
-    )
-    .await?
-    {
-        let sctx = ctx.serenity_context().clone();
-        tokio::spawn(
-            async move { bot_modules_punishments::core::autotrigger(&sctx, guild_id).await },
-        );
-    }
 
     embed = CreateEmbed::new()
         .title("Unbanning Member...")
@@ -1139,8 +1058,6 @@ pub async fn timeout(
         return Err("Stings must be greater than or equal to 0".into());
     }
 
-    let mut tx = data.pool.begin().await?;
-
     if stings > 0 {
         silverpelt::stings::StingCreate {
             module: "moderation".to_string(),
@@ -1157,38 +1074,32 @@ pub async fn timeout(
             )),
             sting_data: None,
         }
-        .create(&mut *tx)
+        .create(ctx.serenity_context().clone(), &data.pool)
         .await?;
     }
 
-    // Send audit logs if Audit Logs module is enabled
-    if silverpelt::module_config::is_module_enabled(
-        &data.silverpelt_cache,
-        &ctx.data().pool,
-        guild_id,
-        "auditlogs",
-    )
-    .await?
-    {
-        let imap = indexmap::indexmap! {
-            "target".to_string() => CategorizedField { category: "action".to_string(), field: member.clone().into() },
-            "moderator".to_string() => CategorizedField { category: "action".to_string(), field: author.user.clone().into() },
-            "reason".to_string() => CategorizedField { category: "context".to_string(), field: reason.clone().into() },
-            "stings".to_string() => CategorizedField { category: "punishment".to_string(), field: stings.into() },
-            "log".to_string() => CategorizedField { category: "context".to_string(), field: to_log_format(&author.user, &member.user, &reason).into() },
-            "duration".to_string() => CategorizedField { category: "context".to_string(), field: (duration.0 * duration.1.to_seconds()).into() },
-        };
-
-        bot_modules_auditlogs::events::dispatch_audit_log(
-            ctx.serenity_context(),
-            &data,
-            "AR/TimeoutMember",
-            "(Anti-Raid) Timeout Member",
-            imap,
+    silverpelt::ar_event::dispatch_event_to_modules_errflatten(
+        std::sync::Arc::new(silverpelt::ar_event::EventHandlerContext {
             guild_id,
-        )
-        .await?;
-    }
+            data: data.clone(),
+            event: silverpelt::ar_event::AntiraidEvent::Custom(
+                Box::new(std_events::auditlog::AuditLogDispatchEvent {
+                    event_name: "AR/TimeoutMember".to_string(),
+                    event_titlename: "(Anti-Raid) Timeout Member".to_string(),
+                    expanded_event: indexmap::indexmap! {
+                        "target".to_string() => CategorizedField { category: "action".to_string(), field: member.clone().into() },
+                        "moderator".to_string() => CategorizedField { category: "action".to_string(), field: author.user.clone().into() },
+                        "reason".to_string() => CategorizedField { category: "context".to_string(), field: reason.clone().into() },
+                        "stings".to_string() => CategorizedField { category: "punishment".to_string(), field: stings.into() },
+                        "log".to_string() => CategorizedField { category: "context".to_string(), field: to_log_format(&author.user, &member.user, &reason).into() },
+                        "duration".to_string() => CategorizedField { category: "context".to_string(), field: (duration.0 * duration.1.to_seconds()).into() },
+                    }
+                })
+            ),
+            serenity_context: ctx.serenity_context().clone(),
+        }),
+    )
+    .await?;
 
     member
         .edit(
@@ -1200,23 +1111,6 @@ pub async fn timeout(
                 .audit_log_reason(&to_log_format(&author.user, &member.user, &reason)),
         )
         .await?;
-
-    tx.commit().await?;
-
-    // Trigger punishments as a tokio task
-    if silverpelt::module_config::is_module_enabled(
-        &data.silverpelt_cache,
-        &ctx.data().pool,
-        guild_id,
-        "punishments",
-    )
-    .await?
-    {
-        let sctx = ctx.serenity_context().clone();
-        tokio::spawn(
-            async move { bot_modules_punishments::core::autotrigger(&sctx, guild_id).await },
-        );
-    }
 
     embed = CreateEmbed::new()
         .title("Unbanned Member...")

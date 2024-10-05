@@ -1,8 +1,8 @@
 mod cache;
 mod cmds;
-pub mod core;
+mod core;
 mod events;
-pub mod handler;
+mod handler;
 mod settings;
 mod strategy;
 
@@ -40,7 +40,7 @@ impl silverpelt::module::Module for Module {
                     "view" => silverpelt::types::CommandExtendedData::kittycat_or_admin("limit_globals", "view"),
                     "add" => silverpelt::types::CommandExtendedData::kittycat_or_admin("limit_globals", "add"),
                     "remove" => silverpelt::types::CommandExtendedData::kittycat_or_admin("limit_globals", "remove"),
-                }
+                },
             ),
             (
                 cmds::limit_user_actions(),
@@ -71,8 +71,18 @@ struct EventListener;
 impl silverpelt::module::ModuleEventListeners for EventListener {
     async fn event_handler(
         &self,
-        ectx: &silverpelt::EventHandlerContext,
+        ectx: &silverpelt::ar_event::EventHandlerContext,
     ) -> Result<(), silverpelt::Error> {
         events::event_listener(ectx).await
+    }
+
+    fn event_handler_filter(&self, event: &silverpelt::ar_event::AntiraidEvent) -> bool {
+        match event {
+            silverpelt::ar_event::AntiraidEvent::Discord(_) => true,
+            silverpelt::ar_event::AntiraidEvent::Custom(ref ce) => {
+                ce.target() == std_events::limit::LIMIT_TARGET_ID
+            }
+            _ => false,
+        }
     }
 }

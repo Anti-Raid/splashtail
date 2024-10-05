@@ -95,7 +95,7 @@ impl GuildPunishmentAutoTriggerList {
 }
 
 // TODO: Readd support for modifiers later
-pub async fn autotrigger(
+pub(crate) async fn autotrigger(
     ctx: &serenity::all::Context,
     guild_id: GuildId,
 ) -> Result<(), silverpelt::Error> {

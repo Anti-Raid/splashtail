@@ -65,8 +65,12 @@ struct EventHandler;
 impl silverpelt::module::ModuleEventListeners for EventHandler {
     async fn event_handler(
         &self,
-        ectx: &silverpelt::EventHandlerContext,
+        ectx: &silverpelt::ar_event::EventHandlerContext,
     ) -> Result<(), silverpelt::Error> {
         events::event_listener(ectx).await
+    }
+
+    fn event_handler_filter(&self, event: &silverpelt::ar_event::AntiraidEvent) -> bool {
+        matches!(event, silverpelt::ar_event::AntiraidEvent::Discord(_)) // We only care about discord events
     }
 }

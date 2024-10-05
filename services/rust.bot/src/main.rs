@@ -5,7 +5,7 @@ use ipc::mewld::MewldIpcClient;
 
 use botox::cache::CacheHttpImpl;
 use gwevent::core::get_event_guild_id;
-use silverpelt::EventHandlerContext;
+use silverpelt::ar_event::{AntiraidEvent, EventHandlerContext};
 use splashcore_rs::value::Value;
 
 use std::sync::{Arc, LazyLock};
@@ -447,12 +447,18 @@ async fn event_listener<'a>(
     let event_handler_context = Arc::new(EventHandlerContext {
         guild_id: event_guild_id,
         data: ctx.user_data(),
-        full_event: event.clone(),
+        event: AntiraidEvent::Discord(event.clone()),
         serenity_context: ctx.serenity_context.clone(),
     });
 
-    if let Err(e) = bot_binutils::dispatch_event_to_modules(event_handler_context).await {
-        error!("Error dispatching event to modules: {}", e);
+    if let Err(e) = silverpelt::ar_event::dispatch_event_to_modules(event_handler_context).await {
+        error!(
+            "Error dispatching event to modules: {}",
+            e.into_iter()
+                .map(|e| e.to_string())
+                .collect::<Vec<_>>()
+                .join(", ")
+        );
     };
 
     Ok(())
