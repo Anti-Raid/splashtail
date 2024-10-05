@@ -237,7 +237,16 @@ pub fn parse_numeric_list_to_str<T: std::fmt::Display + std::str::FromStr + Send
 }
 
 pub fn split_input_to_string(s: &str, separator: &str) -> Vec<String> {
-    s.split(separator).map(|s| s.trim().to_string()).collect()
+    s.split(separator)
+        .filter_map(|s| {
+            let s = s.trim();
+            if s.is_empty() {
+                None
+            } else {
+                Some(s.to_string())
+            }
+        })
+        .collect()
 }
 
 pub mod sql_utils {
