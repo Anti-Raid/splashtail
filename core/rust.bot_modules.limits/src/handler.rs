@@ -69,7 +69,7 @@ pub(crate) async fn handle_mod_action(
                 "strategy": guild_limits.0.strategy,
             })),
         }
-        .create(ctx.clone(), &data.pool)
+        .create_and_dispatch(ctx.clone(), &data.pool)
         .await?;
     }
 

@@ -123,7 +123,7 @@ pub async fn event_listener(ectx: &EventHandlerContext) -> Result<(), Error> {
                             "triggered_flags": triggered_flags.bits(),
                         })),
                     }
-                    .create(ctx.clone(), &data.pool)
+                    .create_and_dispatch(ctx.clone(), &data.pool)
                     .await?;
                 }
             }

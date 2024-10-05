@@ -113,6 +113,30 @@ pub(crate) async fn event_listener(ectx: &EventHandlerContext) -> Result<(), sil
                 Ok(())
             }
         }
+        AntiraidEvent::StingCreate(ref sting) => dispatch_audit_log(
+            ctx,
+            &ectx.data,
+            "AR/StingCreate",
+            "(Anti Raid) Created Sting For User",
+            indexmap::indexmap! {
+                "target".to_string() => CategorizedField { category: "action".to_string(), field: {
+                    match &sting.target {
+                        silverpelt::stings::StingTarget::User(user_id) => (*user_id).into(),
+                        silverpelt::stings::StingTarget::System => "System".to_string().into(),
+                    }
+                } },
+                "reason".to_string() => CategorizedField { category: "action".to_string(), field: {
+                    match &sting.reason {
+                        Some(reason) => reason.clone().into(),
+                        None => gwevent::field::Field::None,
+                    }
+                } },
+                "stings".to_string() => CategorizedField { category: "action".to_string(), field: sting.stings.into() },
+                "state".to_string() => CategorizedField { category: "action".to_string(), field: sting.state.to_string().into() },
+            },
+            ectx.guild_id,
+        )
+        .await,
         _ => Ok(()), // We dont need to handle other events
     }
 }

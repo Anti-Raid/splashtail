@@ -35,6 +35,35 @@ pub struct Sting {
     /// The data/metadata present within the sting, if any
     pub sting_data: Option<serde_json::Value>,
 }
+
+impl Sting {
+    /// Dispatch a StingCreate event
+    pub async fn dispatch_event(self, ctx: serenity::all::Context) -> Result<(), crate::Error> {
+        match crate::ar_event::dispatch_event_to_modules(std::sync::Arc::new(
+            crate::ar_event::EventHandlerContext {
+                guild_id: self.guild_id,
+                data: ctx.data::<crate::data::Data>(),
+                event: crate::ar_event::AntiraidEvent::StingCreate(self),
+                serenity_context: ctx,
+            },
+        ))
+        .await
+        {
+            Ok(_) => {}
+            Err(e) => {
+                return Err(e
+                    .into_iter()
+                    .map(|e| e.to_string())
+                    .collect::<Vec<_>>()
+                    .join("\n")
+                    .into());
+            }
+        };
+
+        Ok(())
+    }
+}
+
 /// Data required to create a sting
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct StingCreate {
@@ -85,11 +114,11 @@ impl StingCreate {
         }
     }
 
-    pub async fn create(
+    /// Creates a new Sting without dispatching it as an event
+    pub async fn create_without_dispatch(
         self,
-        ctx: serenity::all::Context,
         db: impl sqlx::PgExecutor<'_>,
-    ) -> Result<(), crate::Error> {
+    ) -> Result<Sting, crate::Error> {
         let ret_data = sqlx::query!(
             r#"
             INSERT INTO stings (module, src, stings, reason, void_reason, guild_id, target, creator, state, duration, sting_data)
@@ -110,28 +139,18 @@ impl StingCreate {
         .fetch_one(db)
         .await?;
 
-        let created_sting = self.to_sting(ret_data.id, ret_data.created_at);
+        Ok(self.to_sting(ret_data.id, ret_data.created_at))
+    }
 
-        match crate::ar_event::dispatch_event_to_modules(std::sync::Arc::new(
-            crate::ar_event::EventHandlerContext {
-                guild_id: created_sting.guild_id,
-                data: ctx.data::<crate::data::Data>(),
-                event: crate::ar_event::AntiraidEvent::StingCreate(created_sting),
-                serenity_context: ctx.clone(),
-            },
-        ))
-        .await
-        {
-            Ok(_) => {}
-            Err(e) => {
-                return Err(e
-                    .into_iter()
-                    .map(|e| e.to_string())
-                    .collect::<Vec<_>>()
-                    .join("\n")
-                    .into());
-            }
-        };
+    /// Creates a new Sting and dispatches it as an event in one go
+    pub async fn create_and_dispatch(
+        self,
+        ctx: serenity::all::Context,
+        db: impl sqlx::PgExecutor<'_>,
+    ) -> Result<(), crate::Error> {
+        let sting = self.create_without_dispatch(db).await?;
+
+        sting.dispatch_event(ctx).await?;
 
         Ok(())
     }

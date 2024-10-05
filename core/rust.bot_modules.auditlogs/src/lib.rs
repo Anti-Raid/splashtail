@@ -176,6 +176,7 @@ impl silverpelt::module::ModuleEventListeners for EventHandler {
             silverpelt::ar_event::AntiraidEvent::Custom(ref ce) => {
                 ce.target() == std_events::auditlog::AUDITLOG_TARGET_ID
             }
+            silverpelt::ar_event::AntiraidEvent::StingCreate(_) => true,
             _ => false,
         }
     }

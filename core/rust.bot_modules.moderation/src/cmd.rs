@@ -8,7 +8,7 @@ use serenity::all::{
 };
 use serenity::utils::shard_id;
 use silverpelt::jobserver::{embed as embed_job, get_icon_of_state};
-use silverpelt::punishments::CreatePunishmentAction;
+use silverpelt::punishments::PunishmentAction;
 use silverpelt::Context;
 use silverpelt::Error;
 use splashcore_rs::jobserver;
@@ -206,22 +206,26 @@ pub async fn prune_user(
 
     let mut tx = ctx.data().pool.begin().await?;
 
+    let mut sting_dispatch = None;
+
     if stings > 0 {
-        silverpelt::stings::StingCreate {
-            module: "moderation".to_string(),
-            src: Some("prune_user".to_string()),
-            stings,
-            reason: Some(reason.clone()),
-            void_reason: None,
-            guild_id,
-            creator: silverpelt::stings::StingTarget::User(author.user.id),
-            target: silverpelt::stings::StingTarget::User(user.id),
-            state: silverpelt::stings::StingState::Active,
-            duration: None,
-            sting_data: None,
-        }
-        .create(ctx.serenity_context().clone(), &mut *tx)
-        .await?;
+        sting_dispatch = Some(
+            silverpelt::stings::StingCreate {
+                module: "moderation".to_string(),
+                src: Some("prune_user".to_string()),
+                stings,
+                reason: Some(reason.clone()),
+                void_reason: None,
+                guild_id,
+                creator: silverpelt::stings::StingTarget::User(author.user.id),
+                target: silverpelt::stings::StingTarget::User(user.id),
+                state: silverpelt::stings::StingState::Active,
+                duration: None,
+                sting_data: None,
+            }
+            .create_without_dispatch(&mut *tx)
+            .await?,
+        );
     }
 
     // If we're pruning messages, do that
@@ -269,14 +273,20 @@ pub async fn prune_user(
 
     tx.commit().await?;
 
+    if let Some(sting_dispatch) = sting_dispatch {
+        sting_dispatch
+            .dispatch_event(ctx.serenity_context().clone())
+            .await?;
+    };
+
     silverpelt::ar_event::dispatch_event_to_modules_errflatten(
         std::sync::Arc::new(silverpelt::ar_event::EventHandlerContext {
             guild_id,
             data,
             event: silverpelt::ar_event::AntiraidEvent::Custom(
                 Box::new(std_events::auditlog::AuditLogDispatchEvent {
-                    event_name: "AR/Inspector_MemberUpdateHoistAttempt".to_string(),
-                    event_titlename: "(Anti-Raid) Member Update Hoist Attempt".to_string(),
+                    event_name: "AR/PruneUser".to_string(),
+                    event_titlename: "(Anti-Raid) Prune User".to_string(),
                     expanded_event: indexmap::indexmap! {
                         "log".to_string() => CategorizedField {
                             category: "context".to_string(),
@@ -470,50 +480,80 @@ pub async fn kick(
         return Err("Stings must be greater than or equal to 0".into());
     }
 
+    let mut tx = data.pool.begin().await?;
+
+    let mut sting_dispatch = None;
+
     if stings > 0 {
-        silverpelt::stings::StingCreate {
-            module: "moderation".to_string(),
-            src: Some("kick".to_string()),
-            stings,
-            reason: Some(reason.clone()),
-            void_reason: None,
-            guild_id,
-            creator: silverpelt::stings::StingTarget::User(author.user.id),
-            target: silverpelt::stings::StingTarget::User(member.user.id),
-            state: silverpelt::stings::StingState::Active,
-            duration: None,
-            sting_data: None,
-        }
-        .create(ctx.serenity_context().clone(), &data.pool)
-        .await?;
+        sting_dispatch = Some(
+            silverpelt::stings::StingCreate {
+                module: "moderation".to_string(),
+                src: Some("kick".to_string()),
+                stings,
+                reason: Some(reason.clone()),
+                void_reason: None,
+                guild_id,
+                creator: silverpelt::stings::StingTarget::User(author.user.id),
+                target: silverpelt::stings::StingTarget::User(member.user.id),
+                state: silverpelt::stings::StingState::Active,
+                duration: None,
+                sting_data: None,
+            }
+            .create_without_dispatch(&mut *tx)
+            .await?,
+        );
     }
 
-    silverpelt::ar_event::dispatch_event_to_modules_errflatten(
-        std::sync::Arc::new(silverpelt::ar_event::EventHandlerContext {
-            guild_id,
-            data: data.clone(),
-            event: silverpelt::ar_event::AntiraidEvent::Custom(
-                Box::new(std_events::auditlog::AuditLogDispatchEvent {
-                    event_name: "AR/KickMember".to_string(),
-                    event_titlename: "(Anti-Raid) Kick Member".to_string(),
-                    expanded_event: indexmap::indexmap! {
-                        "target".to_string() => CategorizedField { category: "action".to_string(), field: member.user.clone().into() },
-                        "moderator".to_string() => CategorizedField { category: "action".to_string(), field: author.user.clone().into() },
-                        "reason".to_string() => CategorizedField { category: "context".to_string(), field: reason.clone().into() },
-                        "stings".to_string() => CategorizedField { category: "punishment".to_string(), field: stings.into() },
-                        "log".to_string() => CategorizedField { category: "context".to_string(), field: to_log_format(&author.user, &member.user, &reason).into() },
-                    }
-                })
-            ),
-            serenity_context: ctx.serenity_context().clone(),
-        }),
-    )
+    // Create new punishment
+    silverpelt::punishments::PunishmentCreate {
+        module: "moderation".to_string(),
+        src: Some("kick".to_string()),
+        guild_id,
+        punishment: super::core::punishment_actions::KickAction {}.string_form(),
+        creator: silverpelt::punishments::PunishmentTarget::User(author.user.id),
+        target: silverpelt::punishments::PunishmentTarget::User(member.user.id),
+        handle_log: serde_json::json!({}),
+        duration: None,
+        reason: reason.clone(),
+        data: None,
+    }
+    .create(&mut *tx)
     .await?;
 
     member
         .kick(
             ctx.http(),
             Some(&to_log_format(&author.user, &member.user, &reason)),
+        )
+        .await?;
+
+    tx.commit().await?;
+
+    if let Some(sting_dispatch) = sting_dispatch {
+        sting_dispatch
+            .dispatch_event(ctx.serenity_context().clone())
+            .await?;
+    };
+
+    silverpelt::ar_event::dispatch_event_to_modules_errflatten(
+            std::sync::Arc::new(silverpelt::ar_event::EventHandlerContext {
+                guild_id,
+                data: data.clone(),
+                event: silverpelt::ar_event::AntiraidEvent::Custom(
+                    Box::new(std_events::auditlog::AuditLogDispatchEvent {
+                        event_name: "AR/KickMember".to_string(),
+                        event_titlename: "(Anti-Raid) Kick Member".to_string(),
+                        expanded_event: indexmap::indexmap! {
+                            "target".to_string() => CategorizedField { category: "action".to_string(), field: member.user.clone().into() },
+                            "moderator".to_string() => CategorizedField { category: "action".to_string(), field: author.user.clone().into() },
+                            "reason".to_string() => CategorizedField { category: "context".to_string(), field: reason.clone().into() },
+                            "stings".to_string() => CategorizedField { category: "punishment".to_string(), field: stings.into() },
+                            "log".to_string() => CategorizedField { category: "context".to_string(), field: to_log_format(&author.user, &member.user, &reason).into() },
+                        }
+                    })
+                ),
+                serenity_context: ctx.serenity_context().clone(),
+            }),
         )
         .await?;
 
@@ -628,25 +668,62 @@ pub async fn ban(
         return Err("Stings must be greater than or equal to 0".into());
     }
 
+    let mut tx = data.pool.begin().await?;
+
+    let mut sting_dispatch = None;
+
     if stings > 0 {
-        silverpelt::stings::StingCreate {
-            module: "moderation".to_string(),
-            src: Some("ban".to_string()),
-            stings,
-            reason: Some(reason.clone()),
-            void_reason: None,
-            guild_id,
-            creator: silverpelt::stings::StingTarget::User(author.user.id),
-            target: silverpelt::stings::StingTarget::User(member.id),
-            state: silverpelt::stings::StingState::Active,
-            duration: None,
-            sting_data: None,
-        }
-        .create(ctx.serenity_context().clone(), &data.pool)
-        .await?;
+        sting_dispatch = Some(
+            silverpelt::stings::StingCreate {
+                module: "moderation".to_string(),
+                src: Some("ban".to_string()),
+                stings,
+                reason: Some(reason.clone()),
+                void_reason: None,
+                guild_id,
+                creator: silverpelt::stings::StingTarget::User(author.user.id),
+                target: silverpelt::stings::StingTarget::User(member.id),
+                state: silverpelt::stings::StingState::Active,
+                duration: None,
+                sting_data: None,
+            }
+            .create_without_dispatch(&mut *tx)
+            .await?,
+        );
     }
 
-    let mut tx = data.pool.begin().await?;
+    // Create new punishment
+    silverpelt::punishments::PunishmentCreate {
+        module: "moderation".to_string(),
+        src: Some("ban".to_string()),
+        guild_id,
+        punishment: super::core::punishment_actions::BanAction {}.string_form(),
+        creator: silverpelt::punishments::PunishmentTarget::User(author.user.id),
+        target: silverpelt::punishments::PunishmentTarget::User(member.id),
+        handle_log: serde_json::json!({}),
+        duration: None,
+        reason: reason.clone(),
+        data: None,
+    }
+    .create(&mut *tx)
+    .await?;
+
+    guild_id
+        .ban(
+            ctx.http(),
+            member.id,
+            dmd,
+            Some(&to_log_format(&author.user, &member, &reason)),
+        )
+        .await?;
+
+    tx.commit().await?;
+
+    if let Some(sting_dispatch) = sting_dispatch {
+        sting_dispatch
+            .dispatch_event(ctx.serenity_context().clone())
+            .await?;
+    };
 
     silverpelt::ar_event::dispatch_event_to_modules_errflatten(
         std::sync::Arc::new(silverpelt::ar_event::EventHandlerContext {
@@ -670,36 +747,6 @@ pub async fn ban(
         }),
     )
     .await?;
-
-    // Create new punishment
-    silverpelt::punishments::PunishmentCreate {
-        module: "moderation".to_string(),
-        src: Some("ban".to_string()),
-        guild_id,
-        punishment: super::core::punishment_actions::CreateBanAction {}
-            .to_punishment_action("ban")?
-            .ok_or("Failed to create punishment action")?
-            .string_form(),
-        creator: silverpelt::punishments::PunishmentTarget::User(author.user.id),
-        target: silverpelt::punishments::PunishmentTarget::User(member.id),
-        handle_log: serde_json::json!({}),
-        duration: None,
-        reason: reason.clone(),
-        data: None,
-    }
-    .create(&mut *tx)
-    .await?;
-
-    guild_id
-        .ban(
-            ctx.http(),
-            member.id,
-            dmd,
-            Some(&to_log_format(&author.user, &member, &reason)),
-        )
-        .await?;
-
-    tx.commit().await?;
 
     embed = CreateEmbed::new()
         .title("Banning Member...")
@@ -778,37 +825,38 @@ pub async fn tempban(
         return Err("Stings must be greater than or equal to 0".into());
     }
 
-    if stings > 0 {
-        silverpelt::stings::StingCreate {
-            module: "moderation".to_string(),
-            src: Some("tempban".to_string()),
-            stings,
-            reason: Some(reason.clone()),
-            void_reason: None,
-            guild_id,
-            creator: silverpelt::stings::StingTarget::User(author.user.id),
-            target: silverpelt::stings::StingTarget::User(member.id),
-            state: silverpelt::stings::StingState::Active,
-            duration: Some(std::time::Duration::from_secs(
-                duration.0 * duration.1.to_seconds(),
-            )),
-            sting_data: None,
-        }
-        .create(ctx.serenity_context().clone(), &data.pool)
-        .await?;
-    }
-
     let mut tx = data.pool.begin().await?;
+
+    let mut sting_dispatch = None;
+
+    if stings > 0 {
+        sting_dispatch = Some(
+            silverpelt::stings::StingCreate {
+                module: "moderation".to_string(),
+                src: Some("tempban".to_string()),
+                stings,
+                reason: Some(reason.clone()),
+                void_reason: None,
+                guild_id,
+                creator: silverpelt::stings::StingTarget::User(author.user.id),
+                target: silverpelt::stings::StingTarget::User(member.id),
+                state: silverpelt::stings::StingState::Active,
+                duration: Some(std::time::Duration::from_secs(
+                    duration.0 * duration.1.to_seconds(),
+                )),
+                sting_data: None,
+            }
+            .create_without_dispatch(&mut *tx)
+            .await?,
+        );
+    }
 
     // Create new punishment
     silverpelt::punishments::PunishmentCreate {
         module: "moderation".to_string(),
         src: Some("tempban".to_string()),
         guild_id,
-        punishment: super::core::punishment_actions::CreateBanAction {}
-            .to_punishment_action("kick")?
-            .ok_or("Failed to create punishment action")?
-            .string_form(),
+        punishment: super::core::punishment_actions::BanAction {}.string_form(),
         creator: silverpelt::punishments::PunishmentTarget::User(author.user.id),
         target: silverpelt::punishments::PunishmentTarget::User(member.id),
         handle_log: serde_json::json!({}),
@@ -820,6 +868,23 @@ pub async fn tempban(
     }
     .create(&mut *tx)
     .await?;
+
+    guild_id
+        .ban(
+            ctx.http(),
+            member.id,
+            dmd,
+            Some(&to_log_format(&author.user, &member, &reason)),
+        )
+        .await?;
+
+    tx.commit().await?;
+
+    if let Some(sting_dispatch) = sting_dispatch {
+        sting_dispatch
+            .dispatch_event(ctx.serenity_context().clone())
+            .await?;
+    };
 
     silverpelt::ar_event::dispatch_event_to_modules_errflatten(
         std::sync::Arc::new(silverpelt::ar_event::EventHandlerContext {
@@ -844,17 +909,6 @@ pub async fn tempban(
         }),
     )
     .await?;
-
-    guild_id
-        .ban(
-            ctx.http(),
-            member.id,
-            dmd,
-            Some(&to_log_format(&author.user, &member, &reason)),
-        )
-        .await?;
-
-    tx.commit().await?;
 
     embed = CreateEmbed::new()
         .title("(Temporarily) Banned Member...")
@@ -921,23 +975,45 @@ pub async fn unban(
         return Err("Stings must be greater than or equal to 0".into());
     }
 
+    let mut tx = data.pool.begin().await?;
+
+    let mut sting_dispatch = None;
+
     if stings > 0 {
-        silverpelt::stings::StingCreate {
-            module: "moderation".to_string(),
-            src: Some("unban".to_string()),
-            stings,
-            reason: Some(reason.clone()),
-            void_reason: None,
-            guild_id,
-            creator: silverpelt::stings::StingTarget::User(author.user.id),
-            target: silverpelt::stings::StingTarget::User(user.id),
-            state: silverpelt::stings::StingState::Active,
-            duration: None,
-            sting_data: None,
-        }
-        .create(ctx.serenity_context().clone(), &data.pool)
-        .await?;
+        sting_dispatch = Some(
+            silverpelt::stings::StingCreate {
+                module: "moderation".to_string(),
+                src: Some("unban".to_string()),
+                stings,
+                reason: Some(reason.clone()),
+                void_reason: None,
+                guild_id,
+                creator: silverpelt::stings::StingTarget::User(author.user.id),
+                target: silverpelt::stings::StingTarget::User(user.id),
+                state: silverpelt::stings::StingState::Active,
+                duration: None,
+                sting_data: None,
+            }
+            .create_without_dispatch(&mut *tx)
+            .await?,
+        );
     }
+
+    ctx.http()
+        .remove_ban(
+            guild_id,
+            user.id,
+            Some(&to_log_format(&author.user, &user, &reason)),
+        )
+        .await?;
+
+    tx.commit().await?;
+
+    if let Some(sting_dispatch) = sting_dispatch {
+        sting_dispatch
+            .dispatch_event(ctx.serenity_context().clone())
+            .await?;
+    };
 
     silverpelt::ar_event::dispatch_event_to_modules_errflatten(
         std::sync::Arc::new(silverpelt::ar_event::EventHandlerContext {
@@ -960,14 +1036,6 @@ pub async fn unban(
         }),
     )
     .await?;
-
-    ctx.http()
-        .remove_ban(
-            guild_id,
-            user.id,
-            Some(&to_log_format(&author.user, &user, &reason)),
-        )
-        .await?;
 
     embed = CreateEmbed::new()
         .title("Unbanning Member...")
@@ -1058,25 +1126,68 @@ pub async fn timeout(
         return Err("Stings must be greater than or equal to 0".into());
     }
 
+    let mut tx = data.pool.begin().await?;
+
+    let mut sting_dispatch = None;
+
     if stings > 0 {
-        silverpelt::stings::StingCreate {
-            module: "moderation".to_string(),
-            src: Some("timeout".to_string()),
-            stings,
-            reason: Some(reason.clone()),
-            void_reason: None,
-            guild_id,
-            creator: silverpelt::stings::StingTarget::User(author.user.id),
-            target: silverpelt::stings::StingTarget::User(member.user.id),
-            state: silverpelt::stings::StingState::Active,
-            duration: Some(std::time::Duration::from_secs(
-                duration.0 * duration.1.to_seconds(),
-            )),
-            sting_data: None,
-        }
-        .create(ctx.serenity_context().clone(), &data.pool)
-        .await?;
+        sting_dispatch = Some(
+            silverpelt::stings::StingCreate {
+                module: "moderation".to_string(),
+                src: Some("timeout".to_string()),
+                stings,
+                reason: Some(reason.clone()),
+                void_reason: None,
+                guild_id,
+                creator: silverpelt::stings::StingTarget::User(author.user.id),
+                target: silverpelt::stings::StingTarget::User(member.user.id),
+                state: silverpelt::stings::StingState::Active,
+                duration: Some(std::time::Duration::from_secs(
+                    duration.0 * duration.1.to_seconds(),
+                )),
+                sting_data: None,
+            }
+            .create_without_dispatch(&mut *tx)
+            .await?,
+        );
     }
+
+    // Create new punishment
+    silverpelt::punishments::PunishmentCreate {
+        module: "moderation".to_string(),
+        src: Some("timeout".to_string()),
+        guild_id,
+        punishment: super::core::punishment_actions::BanAction {}.string_form(),
+        creator: silverpelt::punishments::PunishmentTarget::User(author.user.id),
+        target: silverpelt::punishments::PunishmentTarget::User(member.user.id),
+        handle_log: serde_json::json!({}),
+        duration: Some(std::time::Duration::from_secs(
+            duration.0 * duration.1.to_seconds(),
+        )),
+        reason: reason.clone(),
+        data: None,
+    }
+    .create(&mut *tx)
+    .await?;
+
+    member
+        .edit(
+            ctx.http(),
+            EditMember::new()
+                .disable_communication_until(Timestamp::from_millis(
+                    Timestamp::now().unix_timestamp() * 1000 + time,
+                )?)
+                .audit_log_reason(&to_log_format(&author.user, &member.user, &reason)),
+        )
+        .await?;
+
+    tx.commit().await?;
+
+    if let Some(sting_dispatch) = sting_dispatch {
+        sting_dispatch
+            .dispatch_event(ctx.serenity_context().clone())
+            .await?;
+    };
 
     silverpelt::ar_event::dispatch_event_to_modules_errflatten(
         std::sync::Arc::new(silverpelt::ar_event::EventHandlerContext {
@@ -1101,21 +1212,10 @@ pub async fn timeout(
     )
     .await?;
 
-    member
-        .edit(
-            ctx.http(),
-            EditMember::new()
-                .disable_communication_until(Timestamp::from_millis(
-                    Timestamp::now().unix_timestamp() * 1000 + time,
-                )?)
-                .audit_log_reason(&to_log_format(&author.user, &member.user, &reason)),
-        )
-        .await?;
-
     embed = CreateEmbed::new()
-        .title("Unbanned Member...")
+        .title("Timed Out Member...")
         .description(format!(
-            "{} | Unbanning {}",
+            "{} | Timing out {}",
             get_icon_of_state("completed"),
             member.mention()
         ));

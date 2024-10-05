@@ -13,21 +13,6 @@ pub struct EventHandlerContext {
     pub serenity_context: serenity::all::Context,
 }
 
-impl EventHandlerContext {
-    pub fn from_poise_ctx(
-        ctx: &crate::Context,
-        guild_id: serenity::all::GuildId,
-        event: AntiraidEvent,
-    ) -> Self {
-        Self {
-            guild_id,
-            data: ctx.data(),
-            event,
-            serenity_context: ctx.serenity_context().clone(),
-        }
-    }
-}
-
 #[typetag::serde(tag = "type")]
 pub trait AntiraidCustomEvent: Send + Sync + std::fmt::Debug {
     /// Returns the expected target class for the event
