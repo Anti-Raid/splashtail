@@ -677,7 +677,7 @@ pub async fn ban(
         src: Some("ban".to_string()),
         guild_id,
         punishment: super::core::punishment_actions::CreateBanAction {}
-            .to_punishment_action(&format!("user:{}", member.id.to_string()))?
+            .to_punishment_action("ban")?
             .ok_or("Failed to create punishment action")?
             .string_form(),
         creator: silverpelt::punishments::PunishmentTarget::User(author.user.id),
@@ -806,7 +806,7 @@ pub async fn tempban(
         src: Some("tempban".to_string()),
         guild_id,
         punishment: super::core::punishment_actions::CreateBanAction {}
-            .to_punishment_action(&format!("user:{}", member.id.to_string()))?
+            .to_punishment_action("kick")?
             .ok_or("Failed to create punishment action")?
             .string_form(),
         creator: silverpelt::punishments::PunishmentTarget::User(author.user.id),
