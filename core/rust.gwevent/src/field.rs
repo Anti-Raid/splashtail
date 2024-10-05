@@ -21,9 +21,9 @@ impl CategorizedField {
         }
 
         Ok(format!(
-            "{}: {}",
+            "{} ({})",
+            self.field.template_format()?,
             self.category.replace("_", " "),
-            self.field.template_format()?
         ))
     }
 }
@@ -109,8 +109,17 @@ impl Field {
     pub fn template_format(&self) -> Result<String, Error> {
         match self {
             Field::Strings(s) => {
-                let joined = s.join(", ");
-                Ok(joined)
+                let mut md = String::new();
+
+                for (i, str) in s.iter().enumerate() {
+                    md.push_str(&format!("``{}``", str));
+
+                    if i != s.len() - 1 {
+                        md.push_str(", ");
+                    }
+                }
+
+                Ok(md)
             }
             Field::Bool(b) => Ok(if *b { "Yes" } else { "No" }.to_string()),
             Field::Number(n) => Ok(n.to_string()),
@@ -118,7 +127,7 @@ impl Field {
                 let mut perms = Vec::new();
 
                 for ip in p.iter() {
-                    perms.push(format!("{} ({})", ip, ip.bits()));
+                    perms.push(format!("``{} ({})``", ip, ip.bits()));
                 }
 
                 Ok(perms.join(", "))
@@ -127,7 +136,7 @@ impl Field {
                 let mut perms = Vec::new();
 
                 for ip in p.iter() {
-                    perms.push(format!("Allow={}, Deny={}", ip.allow, ip.deny));
+                    perms.push(format!("``Allow={}, Deny={}``", ip.allow, ip.deny));
                 }
 
                 Ok(perms.join(", "))
@@ -135,7 +144,7 @@ impl Field {
             Field::GuildMemberFlags(p) => {
                 let p_vec = p
                     .iter()
-                    .map(|x| format!("{:?}", x))
+                    .map(|x| format!("``{:?}``", x))
                     .collect::<Vec<String>>();
 
                 if p_vec.is_empty() {
@@ -158,7 +167,7 @@ impl Field {
 
                 for iu in u.iter() {
                     users.push(format!(
-                        "{} [{}], avatar={}",
+                        "{} [``{}``], avatar={}",
                         iu.mention(),
                         iu.name,
                         iu.face()
@@ -174,7 +183,7 @@ impl Field {
                     .map(|r| r.mention().to_string())
                     .collect::<Vec<String>>();
                 Ok(format!(
-                    "{} [{}], roles={} pending={}, timeout={}, nick={}, avatar={}",
+                    "{} [``{}``], roles={} pending={}, timeout={}, nick=``{}``, avatar={}",
                     m.user.mention(),
                     m.user.name,
                     roles.join(", "),
