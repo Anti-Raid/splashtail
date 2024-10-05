@@ -250,22 +250,6 @@ async fn event_listener<'a>(
                     .store(true, std::sync::atomic::Ordering::SeqCst);
             }
 
-            if !CONNECT_STATE
-                .ready
-                .contains_key(&ctx.serenity_context.shard_id)
-            {
-                silverpelt::ar_event::dispatch_event_to_modules_errflatten(Arc::new(
-                    EventHandlerContext {
-                        guild_id: silverpelt::ar_event::SYSTEM_GUILD_ID,
-                        data: ctx.user_data(),
-                        event: AntiraidEvent::OnFirstReady,
-                        serenity_context: ctx.serenity_context.clone(),
-                    },
-                ))
-                .await
-                .expect("Error dispatching OnFirstReady to modules");
-            }
-
             CONNECT_STATE
                 .ready
                 .insert(ctx.serenity_context.shard_id, true);

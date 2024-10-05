@@ -74,7 +74,6 @@ impl silverpelt::module::ModuleEventListeners for EventListener {
     fn event_handler_filter(&self, event: &silverpelt::ar_event::AntiraidEvent) -> bool {
         match event {
             silverpelt::ar_event::AntiraidEvent::Discord(_) => true,
-            silverpelt::ar_event::AntiraidEvent::OnFirstReady => true,
             silverpelt::ar_event::AntiraidEvent::TrustedWebEvent((event_name, _)) => {
                 event_name == "inspector.clearCache" || event_name == "inspector.resetFakeBotsCache"
             }

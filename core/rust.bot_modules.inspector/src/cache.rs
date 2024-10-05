@@ -22,9 +22,6 @@ pub async fn setup_fake_bots_cache(pool: &sqlx::PgPool) -> Result<(), silverpelt
             .fetch_all(pool)
             .await?;
 
-    // Clear the cache
-    FAKE_BOTS_CACHE.clear();
-
     for row in fake_bots {
         let bot_id = row.bot_id.parse::<UserId>()?;
         let name = row.name.to_lowercase();
@@ -139,83 +136,6 @@ impl InspectorSpecificOptions {
 pub static INSPECTOR_SPECIFIC_OPTIONS_CACHE: LazyLock<
     Cache<serenity::all::GuildId, Vec<InspectorSpecificOptions>>,
 > = LazyLock::new(|| Cache::builder().support_invalidation_closures().build());
-
-pub async fn setup_cache_initial(data: &sqlx::PgPool) -> Result<(), silverpelt::Error> {
-    let config = sqlx::query!(
-        "SELECT guild_id, fake_bot_detection, guild_protection, auto_response_memberjoin, hoist_detection, minimum_account_age, maximum_account_age FROM inspector__global_options",
-    )
-    .fetch_all(data)
-    .await?;
-
-    for row in config {
-        let guild_id = row.guild_id.parse::<serenity::all::GuildId>()?;
-
-        INSPECTOR_GLOBAL_OPTIONS_CACHE
-            .insert(
-                guild_id,
-                InspectorGlobalOptions {
-                    fake_bot_detection: FakeBotDetectionOptions::from_bits_truncate(
-                        row.fake_bot_detection,
-                    ),
-                    hoist_detection: DehoistOptions::from_bits_truncate(row.hoist_detection),
-                    guild_protection: GuildProtectionOptions::from_bits_truncate(
-                        row.guild_protection,
-                    ),
-                    auto_response_memberjoin: AutoResponseMemberJoinOptions::from_bits_truncate(
-                        row.auto_response_memberjoin,
-                    ),
-                    minimum_account_age: row.minimum_account_age,
-                    maximum_account_age: row.maximum_account_age,
-                },
-            )
-            .await;
-    }
-
-    let config = sqlx::query!(
-        "SELECT id, guild_id, anti_invite, anti_everyone, sting_retention, modifier FROM inspector__specific_options",
-    )
-    .fetch_all(data)
-    .await?;
-
-    for row in config {
-        let guild_id = row.guild_id.parse::<serenity::all::GuildId>()?;
-
-        let mut entry = INSPECTOR_SPECIFIC_OPTIONS_CACHE
-            .get(&guild_id)
-            .await
-            .unwrap_or_default();
-
-        entry.push(InspectorSpecificOptions {
-            id: row.id,
-            anti_invite: row.anti_invite,
-            anti_everyone: row.anti_everyone,
-            sting_retention: row.sting_retention,
-            modifier: {
-                let mut modifiers = vec![];
-
-                for modifier in row.modifier {
-                    match splashcore_rs::modifier::Modifier::from_repr(&modifier) {
-                        Ok(modifier) => {
-                            modifiers.push(modifier);
-                        }
-                        Err(_) => {
-                            log::warn!("Invalid modifier: {}", modifier);
-                            continue;
-                        }
-                    }
-                }
-
-                modifiers
-            },
-        });
-
-        INSPECTOR_SPECIFIC_OPTIONS_CACHE
-            .insert(guild_id, entry)
-            .await;
-    }
-
-    Ok(())
-}
 
 pub async fn get_global_config(
     pool: &sqlx::PgPool,

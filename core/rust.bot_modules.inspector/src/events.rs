@@ -15,14 +15,10 @@ pub async fn event_listener(ectx: &EventHandlerContext) -> Result<(), Error> {
     let ctx = &ectx.serenity_context;
 
     match ectx.event {
-        AntiraidEvent::OnFirstReady => {
-            crate::cache::setup_cache_initial(&ectx.data.pool).await?;
-            crate::cache::setup_fake_bots_cache(&ectx.data.pool).await?;
-            Ok(())
-        }
         silverpelt::ar_event::AntiraidEvent::TrustedWebEvent((ref event_name, _)) => {
             match event_name.as_str() {
                 "inspector.resetFakeBotsCache" => {
+                    crate::cache::FAKE_BOTS_CACHE.clear();
                     crate::cache::setup_fake_bots_cache(&ectx.data.pool).await?;
                 }
                 "inspector.clearCache" => {
@@ -307,6 +303,11 @@ pub async fn event_listener(ectx: &EventHandlerContext) -> Result<(), Error> {
                             .fake_bot_detection
                             .contains(FakeBotDetectionOptions::BLOCK_ALL_UNKNOWN_BOTS)
                         {
+                            // Check if we need to fill up fake bots cache
+                            if super::cache::FAKE_BOTS_CACHE.is_empty() {
+                                crate::cache::setup_fake_bots_cache(&ectx.data.pool).await?;
+                            }
+
                             // Check if the bot is an official bot or not
                             let is_an_official_bot =
                                 super::cache::FAKE_BOTS_CACHE.iter().any(|fb| {

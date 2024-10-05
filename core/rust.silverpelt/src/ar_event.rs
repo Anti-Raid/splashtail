@@ -28,11 +28,6 @@ pub trait AntiraidCustomEvent: Send + Sync + std::fmt::Debug {
 
 #[derive(Debug)]
 pub enum AntiraidEvent {
-    /// On first ready
-    ///
-    /// Note that guild_id will be SYSTEM_GUILD_ID for this event
-    OnFirstReady,
-
     /// A TrustedWebEvent is dispatched when a trusted web event is received
     ///
     /// This replaces the old `animus magic toggles` system with one that is more type safe and easier to use
@@ -94,7 +89,6 @@ pub async fn dispatch_event_to_modules(
 
         let module_enabled = {
             if event_handler_context.guild_id == SYSTEM_GUILD_ID {
-                // OnFirstReady event
                 true
             } else {
                 match crate::module_config::is_module_enabled(
@@ -180,7 +174,6 @@ pub async fn dispatch_event_to_modules_seq(
 
         let module_enabled = {
             if event_handler_context.guild_id == SYSTEM_GUILD_ID {
-                // OnFirstReady event
                 true
             } else {
                 match crate::module_config::is_module_enabled(
