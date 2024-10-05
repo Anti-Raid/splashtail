@@ -1,5 +1,5 @@
-use serenity::all::{GuildId, UserId};
 use splashcore_rs::objectstore::ObjectStore;
+use std::fmt::Debug;
 use std::sync::Arc;
 
 /// This struct stores base/standard command data, which is stored and accessible in all command invocations
@@ -17,6 +17,19 @@ pub struct Data {
     pub silverpelt_cache: Arc<crate::cache::SilverpeltCache>,
 }
 
+impl Debug for Data {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Data")
+            .field("pool", &"sqlx::PgPool")
+            .field("reqwest", &"reqwest::Client")
+            .field("object_store", &"Arc<ObjectStore>")
+            .field("props", &"Arc<dyn Props + Send + Sync>")
+            .field("extra_data", &self.extra_data.len())
+            .field("silverpelt_cache", &"Arc<crate::cache::SilverpeltCache>")
+            .finish()
+    }
+}
+
 impl Data {
     const SILVERPELT_CACHE_KEY_ID: usize = 0;
 
@@ -31,7 +44,6 @@ impl Data {
             object_store: self.object_store.clone(),
             cache_http,
             extra_data: vec![(Self::SILVERPELT_CACHE_KEY_ID, self.silverpelt_cache.clone())],
-            permodule_executor: self.props.permodule_executor(),
         }
     }
 
@@ -59,19 +71,6 @@ where
 {
     /// Converts the props to std::any::Any
     fn as_any(&self) -> &(dyn std::any::Any + Send + Sync);
-
-    /// Returns the per module executor of the context
-    fn permodule_executor(
-        &self,
-    ) -> Box<dyn splashcore_rs::permodule_functions::PermoduleFunctionExecutor>;
-
-    /// Adds a permodule function to the executor
-    fn add_permodule_function(
-        &self,
-        module: &str,
-        function: &str,
-        func: splashcore_rs::permodule_functions::ToggleFunc,
-    );
 
     /// The name of the service
     fn name(&self) -> String;
@@ -112,17 +111,4 @@ where
     ///
     /// Note that this statistic may not always be available, in such cases, 0 will be returned
     async fn total_users(&self) -> Result<u64, crate::Error>;
-
-    /// Reset the can_use_bot whitelist
-    async fn reset_can_use_bot(&self) -> Result<(), crate::Error>;
-
-    /// Returns if a user is whitelisted to use the bot
-    async fn is_whitelisted(
-        &self,
-        guild_id: Option<GuildId>,
-        user_id: UserId,
-    ) -> Result<bool, crate::Error>;
-
-    /// Returns the maintenace message for the bot
-    fn maint_message<'a>(&self) -> poise::CreateReply<'a>;
 }

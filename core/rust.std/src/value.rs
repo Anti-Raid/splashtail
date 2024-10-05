@@ -6,56 +6,36 @@ use std::hash::{Hash, Hasher};
 /// Represents a supported value type
 pub enum Value {
     /// A uuid value
-    ///
-    /// Safe for animus magic toggles: NO
     Uuid(sqlx::types::Uuid),
 
     /// A string value
-    ///
-    /// Safe for animus magic toggles: YES
     String(String),
 
     /// A timestamp value
-    ///
-    /// Safe for animus magic toggles: NO
     Timestamp(chrono::NaiveDateTime),
 
     /// A timestamp value with timezone
-    ///
-    /// Safe for animus magic toggles: NO
     TimestampTz(chrono::DateTime<chrono::Utc>),
 
     /// An interval value
     Interval(chrono::Duration),
 
     /// An integer value
-    ///
-    /// Safe for animus magic toggles: PARTIAL (ensure both Integer and Float are handled)
     Integer(i64),
 
     /// A float value
-    ///
-    /// Safe for animus magic toggles: PARTIAL (ensure both Integer and Float are handled)
     Float(f64),
 
     /// A boolean value
-    ///
-    /// Safe for animus magic toggles: YES
     Boolean(bool),
 
     /// A list of values
-    ///
-    /// Safe for animus magic toggles: YES
     List(Vec<Value>),
 
     /// A (indexmap) of values
-    ///
-    /// Safe for animus magic toggles: YES
     Map(indexmap::IndexMap<String, Value>),
 
     /// None
-    ///
-    /// Safe for animus magic toggles: YES
     None,
 }
 

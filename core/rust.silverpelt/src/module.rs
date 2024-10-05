@@ -113,24 +113,6 @@ pub trait ModuleEventListeners: Send + Sync {
     /// Returning false here will prevent a new tokio task from being spawned hence
     /// making things more efficient
     fn event_handler_filter(&self, _event: &crate::ar_event::AntiraidEvent) -> bool;
-
-    /// Function to be run on startup
-    ///
-    /// To run code involving serenity context, consider ``on_ready`` instead
-    async fn on_startup(&self, _data: &crate::data::Data) -> Result<(), crate::Error> {
-        Ok(())
-    }
-
-    /// Function to be run on ready
-    ///
-    /// This function will only be called once, when the shard is first ready
-    async fn on_first_ready(
-        &self,
-        _ctx: &serenity::all::Context,
-        _data: &crate::data::Data,
-    ) -> Result<(), crate::Error> {
-        Ok(())
-    }
 }
 
 /// Validates a module to ensure it is set up correctly

@@ -1,4 +1,3 @@
-mod am_toggles;
 mod cache;
 mod checks;
 mod cmds;
@@ -159,10 +158,6 @@ struct EventHandler;
 
 #[async_trait::async_trait]
 impl silverpelt::module::ModuleEventListeners for EventHandler {
-    async fn on_startup(&self, data: &silverpelt::data::Data) -> Result<(), silverpelt::Error> {
-        am_toggles::setup(data).await
-    }
-
     async fn event_handler(
         &self,
         ectx: &silverpelt::ar_event::EventHandlerContext,
@@ -172,6 +167,9 @@ impl silverpelt::module::ModuleEventListeners for EventHandler {
 
     fn event_handler_filter(&self, event: &silverpelt::ar_event::AntiraidEvent) -> bool {
         match event {
+            silverpelt::ar_event::AntiraidEvent::TrustedWebEvent((event_name, _)) => {
+                event_name == "checkAllEvents"
+            } // We need trusted web events
             silverpelt::ar_event::AntiraidEvent::Discord(_) => true,
             silverpelt::ar_event::AntiraidEvent::Custom(ref ce) => {
                 ce.target() == std_events::auditlog::AUDITLOG_TARGET_ID

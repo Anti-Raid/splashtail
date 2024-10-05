@@ -64,13 +64,6 @@ struct EventListener;
 
 #[async_trait::async_trait]
 impl silverpelt::module::ModuleEventListeners for EventListener {
-    async fn on_startup(&self, data: &silverpelt::data::Data) -> Result<(), silverpelt::Error> {
-        cache::setup_cache_initial(&data.pool).await?;
-        cache::setup_am_toggle(data).await?;
-        cache::setup_fake_bots_cache(&data.pool).await?;
-        Ok(())
-    }
-
     async fn event_handler(
         &self,
         ctx: &silverpelt::ar_event::EventHandlerContext,
@@ -79,6 +72,13 @@ impl silverpelt::module::ModuleEventListeners for EventListener {
     }
 
     fn event_handler_filter(&self, event: &silverpelt::ar_event::AntiraidEvent) -> bool {
-        matches!(event, silverpelt::ar_event::AntiraidEvent::Discord(_)) // We only care about discord events
+        match event {
+            silverpelt::ar_event::AntiraidEvent::Discord(_) => true,
+            silverpelt::ar_event::AntiraidEvent::OnFirstReady => true,
+            silverpelt::ar_event::AntiraidEvent::TrustedWebEvent((event_name, _)) => {
+                event_name == "inspector.clearCache"
+            }
+            _ => false, // Ignore all other events
+        }
     }
 }

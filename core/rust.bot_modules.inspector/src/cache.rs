@@ -2,10 +2,8 @@ use super::types::{
     AutoResponseMemberJoinOptions, DehoistOptions, FakeBotDetectionOptions, GuildProtectionOptions,
 };
 use dashmap::DashMap;
-use futures_util::future::FutureExt;
 use moka::future::Cache;
 use serenity::all::UserId;
-use splashcore_rs::value::Value;
 use std::sync::LazyLock;
 
 #[derive(Debug, Clone)]
@@ -122,9 +120,7 @@ impl InspectorSpecificOptions {
 
         let mut best = (val_fn(&InspectorSpecificOptions::default()), -1);
         for opt in opts.iter() {
-            let matches = matcher.match_modifiers(
-                opt.modifier.clone(),
-            );
+            let matches = matcher.match_modifiers(opt.modifier.clone());
 
             // Go over the matches and check if any have a greater specificity than best
             // If they do, they become the new best
@@ -317,27 +313,4 @@ pub async fn get_specific_configs(
             .await;
         Ok(v)
     }
-}
-
-pub async fn setup_am_toggle(data: &silverpelt::data::Data) -> Result<(), silverpelt::Error> {
-    async fn clear(options: &indexmap::IndexMap<String, Value>) -> Result<(), silverpelt::Error> {
-        let Some(Value::String(guild_id)) = options.get("gulld_id") else {
-            return Err("No guild_id provided".into());
-        };
-
-        let guild_id = guild_id.parse::<serenity::all::GuildId>()?;
-
-        INSPECTOR_GLOBAL_OPTIONS_CACHE.invalidate(&guild_id).await;
-        INSPECTOR_SPECIFIC_OPTIONS_CACHE.invalidate(&guild_id).await;
-
-        Ok(())
-    }
-
-    data.props.add_permodule_function(
-        "basic_antispam",
-        "clear",
-        Box::new(move |_, options| clear(options).boxed()),
-    );
-
-    Ok(())
 }

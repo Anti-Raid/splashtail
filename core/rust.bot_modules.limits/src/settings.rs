@@ -195,7 +195,7 @@ pub static GUILD_GLOBALS: LazyLock<ConfigOption> = LazyLock::new(|| {
     }
 });
 
-/// Post actions to clear cache
+/// Validate guild globals
 pub struct GuildGlobalsValidator;
 
 #[async_trait::async_trait]

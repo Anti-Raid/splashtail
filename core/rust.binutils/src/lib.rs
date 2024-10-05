@@ -104,25 +104,7 @@ pub async fn on_error(error: poise::FrameworkError<'_, Data, Error>) {
 }
 
 pub async fn command_check(ctx: Context<'_>) -> Result<bool, Error> {
-    let user_id = ctx.author().id;
     let guild_id = ctx.guild_id();
-
-    let data = ctx.data();
-
-    let allowed = data.props.is_whitelisted(guild_id, user_id).await?;
-
-    if !allowed {
-        // We already send in the event handler
-        if let poise::Context::Application(_) = ctx {
-            return Ok(false);
-        }
-
-        ctx.send(data.props.maint_message())
-            .await
-            .map_err(|e| format!("Error sending reply: {}", e))?;
-
-        return Ok(false);
-    }
 
     let Some(guild_id) = guild_id else {
         return Err("This command can only be run from servers".into());
@@ -303,51 +285,4 @@ pub fn get_tasks(ctx: &serenity::all::Context, data: &Data) -> Vec<botox::taskma
     }
 
     tasks
-}
-
-/// Helper function to dispatch the on_first_ready event to all modules
-pub async fn dispatch_on_first_ready(
-    ctx: &serenity::all::Context,
-    data: &Data,
-) -> Result<(), Error> {
-    let mut errs = Vec::new();
-    for module in data.silverpelt_cache.module_cache.iter() {
-        let module = module.value();
-
-        let Some(event_listeners) = module.event_listeners() else {
-            continue;
-        };
-
-        if let Err(e) = event_listeners.on_first_ready(ctx, data).await {
-            errs.push(e);
-        }
-    }
-
-    if !errs.is_empty() {
-        return Err(format!("Errors in dispatch_on_first_ready: {:#?}", errs).into());
-    }
-
-    Ok(())
-}
-
-/// Helper function to dispatch on_startup event to all modules
-pub async fn dispatch_on_startup(data: &Data) -> Result<(), Error> {
-    let mut errs = Vec::new();
-    for module in data.silverpelt_cache.module_cache.iter() {
-        let module = module.value();
-
-        let Some(event_listeners) = module.event_listeners() else {
-            continue;
-        };
-
-        if let Err(e) = event_listeners.on_startup(data).await {
-            errs.push(e);
-        }
-    }
-
-    if !errs.is_empty() {
-        return Err(format!("Errors in dispatch_on_startup: {:#?}", errs).into());
-    }
-
-    Ok(())
 }

@@ -1,6 +1,4 @@
 #![allow(non_snake_case)]
-
-mod am_toggles;
 mod cmds;
 mod settings;
 
@@ -40,10 +38,6 @@ impl silverpelt::module::Module for Module {
             cmds::sudo(),
             indexmap::indexmap! {
                 "register" => silverpelt::types::CommandExtendedData::none(),
-                "can_use_bot_list" => silverpelt::types::CommandExtendedData::none(),
-                "can_use_bot_add" => silverpelt::types::CommandExtendedData::none(),
-                "can_use_bot_update" => silverpelt::types::CommandExtendedData::none(),
-                "can_use_bot_delete" => silverpelt::types::CommandExtendedData::none(),
                 "inspector__fake_bots_list" => silverpelt::types::CommandExtendedData::none(),
                 "inspector__fake_bots_add" => silverpelt::types::CommandExtendedData::none(),
                 "inspector__fake_bots_update" => silverpelt::types::CommandExtendedData::none(),
@@ -56,28 +50,10 @@ impl silverpelt::module::Module for Module {
         )]
     }
 
-    fn event_listeners(&self) -> Option<Box<dyn silverpelt::module::ModuleEventListeners>> {
-        Some(Box::new(EventListener))
-    }
-
     fn config_options(&self) -> Vec<module_settings::types::ConfigOption> {
         vec![
-            (*settings::CAN_USE_BOT).clone(),
             (*settings::INSPECTOR_FAKE_BOTS).clone(),
             (*settings::LAST_TASK_EXPIRY).clone(),
         ]
-    }
-}
-
-struct EventListener;
-
-#[async_trait::async_trait]
-impl silverpelt::module::ModuleEventListeners for EventListener {
-    async fn on_startup(&self, data: &silverpelt::data::Data) -> Result<(), silverpelt::Error> {
-        am_toggles::setup(data).await
-    }
-
-    fn event_handler_filter(&self, _event: &silverpelt::ar_event::AntiraidEvent) -> bool {
-        false // No events to filter
     }
 }

@@ -141,7 +141,7 @@ After first building the bot, you will need to run ``cp -v botv2/target/release/
 
 Run ``./splashtail webserver``. This will create ``config.yaml.sample``. Copy this to ``config.yaml`` and fill in the required fields as per the below:
 
-- ``discord_auth``: use https://discord.dev to fill this out on a new application. Be sure to edit ``can_use_bot`` with your User ID 
+- ``discord_auth``: use https://discord.dev to fill this out on a new application.
 - ``animus_magic_channel``: Set ``animus_magic_channel.staging`` to ``animus_magic-staging`` and ``animus_magic_channel.prod`` to ``animus_magic-prod``. These are the Redis PubSub channels used for communication between the bot, server and jobserver
 
 ### Running

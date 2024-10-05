@@ -36,10 +36,10 @@ pub fn create_bot_rpc_server(
             "/parse-permission-checks/:guild_id",
             get(parse_permission_checks),
         )
-        // Toggles a per-module function [ExecutePerModuleFunction]
+        // Dispatches a TrustedWebEvent
         .route(
-            "/execute-per-module-function",
-            post(execute_per_module_function),
+            "/dispatch-trusted-web-event",
+            post(dispatch_trusted_web_event),
         )
         // Executes an operation on a setting [SettingsOperation]
         .route(
@@ -67,7 +67,9 @@ async fn modules(
 /// Given a list of guild ids, return a set of 0s and 1s indicating whether each guild exists in cache [GuildsExist]
 #[axum::debug_handler]
 async fn guilds_exist(
-    State(AppData { data, cache_http }): State<AppData>,
+    State(AppData {
+        data, cache_http, ..
+    }): State<AppData>,
     Json(guilds): Json<Vec<serenity::all::GuildId>>,
 ) -> Response<Vec<i32>> {
     let mut guilds_exist = Vec::with_capacity(guilds.len());
@@ -91,7 +93,9 @@ async fn guilds_exist(
 
 /// Returns basic user/guild information [BaseGuildUserInfo]
 async fn base_guild_user_info(
-    State(AppData { data, cache_http }): State<AppData>,
+    State(AppData {
+        data, cache_http, ..
+    }): State<AppData>,
     Path((guild_id, user_id)): Path<(serenity::all::GuildId, serenity::all::UserId)>,
 ) -> Response<crate::types::BaseGuildUserInfo> {
     let bot_user_id = cache_http.cache.current_user().id;
@@ -168,7 +172,9 @@ async fn base_guild_user_info(
 
 /// Returns if the user has permission to run a command on a given guild [CheckCommandPermission]
 async fn check_command_permission(
-    State(AppData { data, cache_http }): State<AppData>,
+    State(AppData {
+        data, cache_http, ..
+    }): State<AppData>,
     Path((guild_id, user_id)): Path<(serenity::all::GuildId, serenity::all::UserId)>,
     Json(req): Json<crate::types::CheckCommandPermissionRequest>,
 ) -> Response<crate::types::CheckCommandPermission> {
@@ -232,28 +238,32 @@ async fn parse_permission_checks(
     Ok(Json(parsed_checks))
 }
 
-// Toggles a per-module function [ExecutePerModuleFunction]
-async fn execute_per_module_function(
-    State(AppData { data, cache_http }): State<AppData>,
-    Json(req): Json<crate::types::ExecutePerModuleFunctionRequest>,
-) -> Response<crate::types::ExecutePerModuleFunctionResponse> {
-    let mut n_options = indexmap::IndexMap::new();
+// Dispatches a TrustedWebEvent
+async fn dispatch_trusted_web_event(
+    State(AppData {
+        data,
+        serenity_context,
+        ..
+    }): State<AppData>,
+    Json(req): Json<crate::types::DispatchTrustedWebEventRequest>,
+) -> Response<crate::types::DispatchTrustedWebEventResponse> {
+    silverpelt::ar_event::dispatch_event_to_modules_errflatten(Arc::new(
+        silverpelt::ar_event::EventHandlerContext {
+            guild_id: req
+                .guild_id
+                .unwrap_or(silverpelt::ar_event::SYSTEM_GUILD_ID),
+            data: data.clone(),
+            event: silverpelt::ar_event::AntiraidEvent::TrustedWebEvent((req.event_name, req.args)),
+            serenity_context: serenity_context.clone(),
+        },
+    ))
+    .await
+    .map_err(|e| {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("Failed to dispatch event: {:#?}", e),
+        )
+    })?;
 
-    for (k, v) in req.args {
-        n_options.insert(k, splashcore_rs::value::Value::from_json(&v));
-    }
-
-    let executor = data.props.permodule_executor();
-
-    executor
-        .execute_permodule_function(&cache_http, &req.module, &req.function, &n_options)
-        .await
-        .map_err(|e| {
-            (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                format!("Failed to execute per-module function: {:#?}", e),
-            )
-        })?;
-
-    Ok(Json(crate::types::ExecutePerModuleFunctionResponse {}))
+    Ok(Json(crate::types::DispatchTrustedWebEventResponse {}))
 }

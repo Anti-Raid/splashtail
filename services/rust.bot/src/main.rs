@@ -6,14 +6,13 @@ use ipc::mewld::MewldIpcClient;
 use botox::cache::CacheHttpImpl;
 use gwevent::core::get_event_guild_id;
 use silverpelt::ar_event::{AntiraidEvent, EventHandlerContext};
-use splashcore_rs::value::Value;
 
 use std::sync::{Arc, LazyLock};
 use tokio::sync::RwLock;
 
 use cap::Cap;
 use log::{error, info, warn};
-use serenity::all::{FullEvent, GuildId, HttpBuilder, UserId};
+use serenity::all::{FullEvent, HttpBuilder};
 use silverpelt::{data::Data, Error};
 use sqlx::postgres::PgPoolOptions;
 use std::alloc;
@@ -50,21 +49,6 @@ impl silverpelt::data::Props for Props {
     /// Converts the props to std::any::Any
     fn as_any(&self) -> &(dyn std::any::Any + Send + Sync) {
         self
-    }
-
-    fn permodule_executor(
-        &self,
-    ) -> Box<dyn splashcore_rs::permodule_functions::PermoduleFunctionExecutor> {
-        Box::new(PermoduleFunctionExecutor {})
-    }
-
-    fn add_permodule_function(
-        &self,
-        module: &str,
-        function: &str,
-        func: splashcore_rs::permodule_functions::ToggleFunc,
-    ) {
-        PERMODULE_FUNCTIONS.insert((module.to_string(), function.to_string()), func);
     }
 
     fn name(&self) -> String {
@@ -127,134 +111,6 @@ impl silverpelt::data::Props for Props {
 
         Ok(())
     }
-
-    async fn reset_can_use_bot(&self) -> Result<(), silverpelt::Error> {
-        load_can_use_bot_whitelist(&self.pool).await?;
-        Ok(())
-    }
-
-    /// Returns if a user is whitelisted to use the bot
-    async fn is_whitelisted(
-        &self,
-        guild_id: Option<GuildId>,
-        user_id: UserId,
-    ) -> Result<bool, crate::Error> {
-        Ok(config::CONFIG.discord_auth.public_bot.get() || {
-            let cub_cache = CAN_USE_BOT_CACHE.read().await;
-            if let Some(ref guild_id) = guild_id {
-                cub_cache.guilds.contains(guild_id) && cub_cache.users.contains(&user_id)
-            } else {
-                cub_cache.users.contains(&user_id)
-            }
-        })
-    }
-
-    fn maint_message<'a>(&self) -> poise::CreateReply<'a> {
-        let primary = poise::serenity_prelude::CreateEmbed::default()
-    .color(0xff0000)
-    .title("AntiRaid")
-    .url(&config::CONFIG.meta.support_server_invite)
-    .description(
-        format!("Unfortunately, AntiRaid is currently unavailable due to poor code management and changes with the Discord API. We are currently in the works of V6, and hope to have it out by next month. All use of our services will not be available, and updates will be pushed here. We are extremely sorry for the inconvenience.\nFor more information you can also join our [Support Server]({})!", config::CONFIG.meta.support_server_invite)
-    );
-
-        let changes: [&str; 5] = [
-        "We are working extremely hard on Antiraid v6, and have completed working on half of the bot. We should have this update out by Q1/Q2 2024! Delays may occur due to the sheer scope of the unique features we want to provide!",
-        "Yet another update: we are in the process of adding some MASSIVE new features including advanced permission management, server member limits, AI image classification, server member backups and custom customizable github webhook support (for developers)",
-        "Update (Tuesday, July 2nd 2024 Edition): We are still working on the bot. It is taking longer than expected due to the large amount of new features being added. You can also request specific features you want in Anti-Raid on our Discord Server!",
-        "Update (July 15th): Our developers want feedback on what we should add to the bot! Please join our support server and give your wishlist now!",
-        "Update (August 18th) :thinking:"
-    ];
-
-        let updates = poise::serenity_prelude::CreateEmbed::default()
-            .color(0x0000ff)
-            .title("Updates")
-            .description(changes.join("\t-"));
-
-        poise::CreateReply::new()
-            .ephemeral(true)
-            .content(&config::CONFIG.meta.support_server_invite)
-            .embed(primary)
-            .embed(updates)
-    }
-}
-
-pub struct CanUseBotList {
-    pub users: Vec<UserId>,
-    pub guilds: Vec<GuildId>,
-}
-
-pub static CAN_USE_BOT_CACHE: LazyLock<RwLock<CanUseBotList>> = LazyLock::new(|| {
-    RwLock::new(CanUseBotList {
-        users: Vec::new(),
-        guilds: Vec::new(),
-    })
-});
-
-// Format of a permodule toggle is (module_name, toggle)
-pub static PERMODULE_FUNCTIONS: LazyLock<
-    dashmap::DashMap<(String, String), splashcore_rs::permodule_functions::ToggleFunc>,
-> = LazyLock::new(dashmap::DashMap::new);
-
-pub struct PermoduleFunctionExecutor {}
-
-#[async_trait::async_trait]
-impl splashcore_rs::permodule_functions::PermoduleFunctionExecutor for PermoduleFunctionExecutor {
-    async fn execute_permodule_function(
-        &self,
-        cache_http: &botox::cache::CacheHttpImpl,
-        module: &str,
-        function: &str,
-        arguments: &indexmap::IndexMap<String, Value>,
-    ) -> Result<(), crate::Error> {
-        let key = (module.to_string(), function.to_string());
-        let func = PERMODULE_FUNCTIONS.get(&key);
-
-        let Some(func) = func else {
-            return Err(format!("Function {} not found for module {}", function, module).into());
-        };
-
-        func(cache_http, arguments).await
-    }
-}
-
-async fn load_can_use_bot_whitelist(pool: &sqlx::PgPool) -> Result<CanUseBotList, Error> {
-    // Fetch can_use_bot list
-    let rec = sqlx::query!("SELECT id, type FROM can_use_bot")
-        .fetch_all(pool)
-        .await
-        .map_err(|e| format!("Error fetching can_use_bot list: {}", e))?;
-
-    let mut users = Vec::new();
-    let mut guilds = Vec::new();
-
-    for item in rec {
-        match item.r#type.as_str() {
-            "user" => {
-                let id = item
-                    .id
-                    .parse::<UserId>()
-                    .map_err(|e| format!("Failed to parse user id: {}", e))?;
-                users.push(id);
-            }
-            "guild" => {
-                let id = item
-                    .id
-                    .parse::<GuildId>()
-                    .map_err(|e| format!("Failed to parse guild id: {}", e))?;
-                guilds.push(id);
-            }
-            _ => {
-                continue;
-            }
-        }
-    }
-
-    for root_user in config::CONFIG.discord_auth.root_users.iter() {
-        users.push(*root_user);
-    }
-
-    Ok(CanUseBotList { users, guilds })
 }
 
 async fn event_listener<'a>(
@@ -268,52 +124,10 @@ async fn event_listener<'a>(
                 .ready
                 .contains_key(&ctx.serenity_context.shard_id)
             {
-                // Send maint message in response
-                let ic = match interaction {
-                    serenity::all::Interaction::Command(ic) => ic,
-                    _ => return Ok(()),
-                };
-
-                ic.create_response(
-                    &ctx.serenity_context.http,
-                    serenity::all::CreateInteractionResponse::Message(
-                        user_data.props.maint_message().to_slash_initial_response(
-                            serenity::all::CreateInteractionResponseMessage::default(),
-                        ),
-                    ),
-                )
-                .await
-                .map_err(|e| format!("Error sending reply: {}", e))?;
+                return Ok(()); // Ignore interactions if the bot is not ready
             }
 
             info!("Interaction received: {:?}", interaction.id());
-
-            let ic = match interaction {
-                serenity::all::Interaction::Command(ic) => ic,
-                _ => return Ok(()),
-            };
-
-            let allowed = config::CONFIG.discord_auth.public_bot.get() || {
-                let cub_cache = CAN_USE_BOT_CACHE.read().await;
-                if let Some(ref guild_id) = ic.guild_id {
-                    cub_cache.guilds.contains(guild_id) && cub_cache.users.contains(&ic.user.id)
-                } else {
-                    cub_cache.users.contains(&ic.user.id)
-                }
-            };
-
-            if !allowed {
-                ic.create_response(
-                    &ctx.serenity_context.http,
-                    serenity::all::CreateInteractionResponse::Message(
-                        user_data.props.maint_message().to_slash_initial_response(
-                            serenity::all::CreateInteractionResponseMessage::default(),
-                        ),
-                    ),
-                )
-                .await
-                .map_err(|e| format!("Error sending reply: {}", e))?;
-            }
         }
         FullEvent::Ready { data_about_bot } => {
             let _lock = CONNECT_STATE.ready_lock.lock().await; // Lock to ensure that we don't have multiple ready events at the same time
@@ -401,9 +215,16 @@ async fn event_listener<'a>(
                 .ready
                 .contains_key(&ctx.serenity_context.shard_id)
             {
-                bot_binutils::dispatch_on_first_ready(ctx.serenity_context, &user_data)
-                    .await
-                    .expect("Error dispatching on first ready");
+                silverpelt::ar_event::dispatch_event_to_modules_errflatten(Arc::new(
+                    EventHandlerContext {
+                        guild_id: silverpelt::ar_event::SYSTEM_GUILD_ID,
+                        data: ctx.user_data(),
+                        event: AntiraidEvent::OnFirstReady,
+                        serenity_context: ctx.serenity_context.clone(),
+                    },
+                ))
+                .await
+                .expect("Error dispatching OnFirstReady to modules");
             }
 
             CONNECT_STATE
@@ -432,16 +253,6 @@ async fn event_listener<'a>(
             return Err(e);
         }
     };
-
-    // Check if whitelisted
-    let allowed = config::CONFIG.discord_auth.public_bot.get() || {
-        let cub = CAN_USE_BOT_CACHE.read().await;
-        cub.guilds.contains(&event_guild_id)
-    };
-
-    if !allowed {
-        return Ok(()); // Ignore the event
-    }
 
     // Create context for event handlers, this is done here and wrapped in an Arc to avoid useless clones
     let event_handler_context = Arc::new(EventHandlerContext {
@@ -639,16 +450,6 @@ async fn main() {
         .await
         .expect("Could not initialize connection");
 
-    // Fetch can_use_bot list
-    let cub_list = load_can_use_bot_whitelist(&pg_pool)
-        .await
-        .expect("Could not fetch the users who are allowed to use the bot");
-
-    // Save to CAN_USE_BOT_CACHE
-    let mut cub = CAN_USE_BOT_CACHE.write().await;
-    *cub = cub_list;
-    drop(cub);
-
     let reqwest = reqwest::Client::builder()
         .connect_timeout(std::time::Duration::from_secs(30))
         .timeout(std::time::Duration::from_secs(90))
@@ -678,12 +479,6 @@ async fn main() {
         props: props.clone(),
         silverpelt_cache,
     };
-
-    info!("Initializing bot state");
-
-    bot_binutils::dispatch_on_startup(&data)
-        .await
-        .expect("Error dispatching on startup");
 
     let mut client = client_builder
         .framework(framework)

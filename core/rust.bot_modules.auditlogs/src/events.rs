@@ -39,6 +39,18 @@ pub(crate) async fn event_listener(ectx: &EventHandlerContext) -> Result<(), sil
     let ctx = &ectx.serenity_context;
 
     match ectx.event {
+        silverpelt::ar_event::AntiraidEvent::TrustedWebEvent((ref event_name, ref data)) => {
+            if event_name != "checkAllEvents" {
+                return Ok(()); // Ignore unknown events
+            }
+
+            match serde_json::from_value::<Vec<String>>(data.clone()) {
+                Ok(events) => crate::checks::check_all_events(events).await?,
+                Err(e) => return Err(format!("ie: {}", e).into()), // internal error
+            }
+
+            Ok(())
+        } 
         AntiraidEvent::Discord(ref event) => {
             if not_audit_loggable_event().contains(&event.into()) {
                 return Ok(());

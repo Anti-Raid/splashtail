@@ -27,12 +27,14 @@ pub struct CreateRpcServerOptions {
 pub struct AppData {
     pub data: Arc<silverpelt::data::Data>,
     pub cache_http: Arc<botox::cache::CacheHttpImpl>,
+    pub serenity_context: serenity::all::Context,
 }
 
 impl AppData {
     pub fn new(data: Arc<silverpelt::data::Data>, ctx: &serenity::all::Context) -> Self {
         Self {
             data,
+            serenity_context: ctx.clone(),
             cache_http: Arc::new(botox::cache::CacheHttpImpl::from_ctx(ctx)),
         }
     }

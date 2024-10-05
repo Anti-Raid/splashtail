@@ -2,7 +2,7 @@
 
 Lots of changes have passed since the last changelog. Anti-Raid is firstly, now public!
 
-Lots of bug fixes (too many to list here) have been made to the bot, API, Jobserver and Webserver. ``tasks`` have been renamed to ``jobs`` to avoid conficting contexts and several Day-0 bugs have also been found and fixed as reported by users.
+Lots of bug fixes (too many to list here) have been made to the bot, API, Jobserver and Webserver. ``tasks`` have been renamed to ``jobs`` to avoid conficting contexts and several Day-0 bugs have also been found and fixed as reported by users. Animus magic has also been removed along with the can_use_bot whitelist and animus magic toggles/permodule toggles in favor of a new event-based architecture that is now used for all inter-module communication.
 
 # Friday, August 2nd, 2024
 

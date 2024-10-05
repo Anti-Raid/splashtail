@@ -128,7 +128,7 @@ func main() {
 
 	<-sig
 
-	Logger.Info("Shutting down animus magic client")
+	Logger.Info("Shutting down client")
 
 	ContextClose()
 

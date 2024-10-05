@@ -9,7 +9,9 @@ use splashcore_rs::value::Value;
 
 /// Executes an operation on a setting [SettingsOperation]
 pub(crate) async fn settings_operation(
-    State(AppData { data, cache_http }): State<AppData>,
+    State(AppData {
+        data, cache_http, ..
+    }): State<AppData>,
     Path((guild_id, user_id)): Path<(serenity::all::GuildId, serenity::all::UserId)>,
     Json(req): Json<crate::types::SettingsOperationRequest>,
 ) -> Json<crate::types::CanonicalSettingsResult> {

@@ -79,14 +79,14 @@ bitflags::bitflags! {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct ExecutePerModuleFunctionRequest {
-    pub module: String,
-    pub function: String,
-    pub args: indexmap::IndexMap<String, serde_json::Value>,
+pub struct DispatchTrustedWebEventRequest {
+    pub event_name: String,
+    pub guild_id: Option<serenity::all::GuildId>,
+    pub args: serde_json::Value,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ExecutePerModuleFunctionResponse {}
+pub struct DispatchTrustedWebEventResponse {}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum CanonicalSettingsResult {

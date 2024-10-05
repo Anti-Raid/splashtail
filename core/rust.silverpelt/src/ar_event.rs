@@ -6,6 +6,7 @@ use tokio::task::JoinSet;
 
 pub use typetag; // Re-exported
 
+pub const SYSTEM_GUILD_ID: serenity::all::GuildId = serenity::all::GuildId::new(1);
 pub struct EventHandlerContext {
     pub guild_id: serenity::all::GuildId,
     pub data: Arc<Data>,
@@ -27,6 +28,20 @@ pub trait AntiraidCustomEvent: Send + Sync + std::fmt::Debug {
 
 #[derive(Debug)]
 pub enum AntiraidEvent {
+    /// On first ready
+    ///
+    /// Note that guild_id will be SYSTEM_GUILD_ID for this event
+    OnFirstReady,
+
+    /// A TrustedWebEvent is dispatched when a trusted web event is received
+    ///
+    /// This replaces the old `animus magic toggles` system with one that is more type safe and easier to use
+    ///
+    /// Note that guild_id may be either a guild id or SYSTEM_GUILD_ID
+    ///
+    /// Format: (event_name, event_data)
+    TrustedWebEvent((String, serde_json::Value)),
+
     /// A regular discord event
     Discord(serenity::all::FullEvent),
 
@@ -77,18 +92,25 @@ pub async fn dispatch_event_to_modules(
             continue;
         }
 
-        let module_enabled = match crate::module_config::is_module_enabled(
-            &event_handler_context.data.silverpelt_cache,
-            &event_handler_context.data.pool,
-            event_handler_context.guild_id,
-            module.id(),
-        )
-        .await
-        {
-            Ok(enabled) => enabled,
-            Err(e) => {
-                errors.push(format!("Error getting module enabled status: {}", e).into());
-                continue;
+        let module_enabled = {
+            if event_handler_context.guild_id == SYSTEM_GUILD_ID {
+                // OnFirstReady event
+                true
+            } else {
+                match crate::module_config::is_module_enabled(
+                    &event_handler_context.data.silverpelt_cache,
+                    &event_handler_context.data.pool,
+                    event_handler_context.guild_id,
+                    module.id(),
+                )
+                .await
+                {
+                    Ok(enabled) => enabled,
+                    Err(e) => {
+                        errors.push(format!("Error getting module enabled status: {}", e).into());
+                        continue;
+                    }
+                }
             }
         };
 
@@ -156,18 +178,25 @@ pub async fn dispatch_event_to_modules_seq(
             continue;
         }
 
-        let module_enabled = match crate::module_config::is_module_enabled(
-            &event_handler_context.data.silverpelt_cache,
-            &event_handler_context.data.pool,
-            event_handler_context.guild_id,
-            module.id(),
-        )
-        .await
-        {
-            Ok(enabled) => enabled,
-            Err(e) => {
-                errors.push(format!("Error getting module enabled status: {}", e).into());
-                continue;
+        let module_enabled = {
+            if event_handler_context.guild_id == SYSTEM_GUILD_ID {
+                // OnFirstReady event
+                true
+            } else {
+                match crate::module_config::is_module_enabled(
+                    &event_handler_context.data.silverpelt_cache,
+                    &event_handler_context.data.pool,
+                    event_handler_context.guild_id,
+                    module.id(),
+                )
+                .await
+                {
+                    Ok(enabled) => enabled,
+                    Err(e) => {
+                        errors.push(format!("Error getting module enabled status: {}", e).into());
+                        continue;
+                    }
+                }
             }
         };
 

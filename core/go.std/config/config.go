@@ -66,10 +66,7 @@ func (d *DiffersNotRequired[T]) Production() T {
 type Config struct {
 	DiscordAuth   DiscordAuth         `yaml:"discord_auth" validate:"required"`
 	Sites         Sites               `yaml:"sites" validate:"required"`
-	Channels      Channels            `yaml:"channels" validate:"required"`
-	Roles         Roles               `yaml:"roles" validate:"required"`
 	JAPI          JAPI                `yaml:"japi" validate:"required"`
-	Notifications Notifications       `yaml:"notifications" validate:"required"`
 	Servers       Servers             `yaml:"servers" validate:"required"`
 	Meta          Meta                `yaml:"meta" validate:"required"`
 	ObjectStorage ObjectStorageConfig `yaml:"object_storage" validate:"required"`
@@ -83,14 +80,13 @@ type Wafflepaw struct {
 }
 
 type DiscordAuth struct {
-	Token            Differs[string]          `yaml:"token" comment:"Discord bot token" validate:"required"`
-	ClientID         Differs[string]          `yaml:"client_id" default:"849331145862283275" comment:"Discord Client ID" validate:"required"`
-	ClientSecret     Differs[string]          `yaml:"client_secret" comment:"Discord Client Secret" validate:"required"`
-	AllowedRedirects []string                 `yaml:"allowed_redirects" default:"http://localhost:3000/auth" validate:"required"`
-	MewldRedirect    string                   `yaml:"mewld_redirect" default:"https://mewld.antiraid.xyz/login" validate:"required"`
-	RootUsers        []string                 `yaml:"root_users" default:"728871946456137770,564164277251080208,775855009421066262" validate:"required"`
-	PublicBot        DiffersNotRequired[bool] `yaml:"public_bot" default:"false" comment:"Whether the bot needs whitelisting in order to use"`
-	DPSecret         Differs[string]          `yaml:"dp_secret" comment:"DeployProxy Auth URL for super-sensitive pages" validate:"required"`
+	Token            Differs[string] `yaml:"token" comment:"Discord bot token" validate:"required"`
+	ClientID         Differs[string] `yaml:"client_id" default:"849331145862283275" comment:"Discord Client ID" validate:"required"`
+	ClientSecret     Differs[string] `yaml:"client_secret" comment:"Discord Client Secret" validate:"required"`
+	AllowedRedirects []string        `yaml:"allowed_redirects" default:"http://localhost:3000/auth" validate:"required"`
+	MewldRedirect    string          `yaml:"mewld_redirect" default:"https://mewld.antiraid.xyz/login" validate:"required"`
+	RootUsers        []string        `yaml:"root_users" default:"728871946456137770,564164277251080208,775855009421066262" validate:"required"`
+	DPSecret         Differs[string] `yaml:"dp_secret" comment:"DeployProxy Auth URL for super-sensitive pages" validate:"required"`
 }
 
 type Sites struct {
@@ -101,23 +97,8 @@ type Sites struct {
 	Panel    string          `yaml:"panel" default:"https://panel.antiraid.xyz" comment:"Panel URL" validate:"required"`
 }
 
-type Roles struct {
-	Apps          string `yaml:"apps" default:"1222825827071426571" comment:"Apps Role" validate:"required"`
-	AwaitingStaff string `yaml:"awaiting_staff" default:"1222825827071426571" comment:"Awaiting Staff Role" validate:"required"`
-}
-
-type Channels struct {
-	Apps       string `yaml:"apps" default:"1216401068276060160" comment:"Apps Channel, should be a staff only channel" validate:"required"`
-	BanAppeals string `yaml:"ban_appeals" default:"1222823352771678249" comment:"Ban Appeals Channel" validate:"required"`
-}
-
 type JAPI struct {
 	Key string `yaml:"key" default:"Currently unused, ignore this field" comment:"JAPI Key. Get it from https://japi.rest" validate:"required"`
-}
-
-type Notifications struct {
-	VapidPublicKey  string `yaml:"vapid_public_key" default:"BNMhOWvN-6_jm72D3Ncnxmvwz03TLDNVOi1bd9uD-OjWbHmaa4w1A5nq8MTjSKL_tnMueI64ZxtRXWRltRu0Vio" comment:"Vapid Public Key (https://www.stephane-quantin.com/en/tools/generators/vapid-keys)" validate:"required"`
-	VapidPrivateKey string `yaml:"vapid_private_key" default:"Set this here if you want notifications to work" comment:"Vapid Private Key (https://www.stephane-quantin.com/en/tools/generators/vapid-keys)" validate:"required"`
 }
 
 type Servers struct {
@@ -125,7 +106,6 @@ type Servers struct {
 }
 
 type Meta struct {
-	AnimusMagicChannel   Differs[string] `yaml:"animus_magic_channel" default:"animus_magic_staging" comment:"Animus Magic Channel" validate:"required"`
 	WebDisableRatelimits bool            `yaml:"web_disable_ratelimits" comment:"Disable ratelimits for the web server"`
 	PostgresURL          string          `yaml:"postgres_url" default:"postgresql:///antiraid" comment:"Postgres URL" validate:"required"`
 	BotRedisURL          string          `yaml:"bot_redis_url" default:"redis://localhost:6379/0" comment:"Bot Redis URL" validate:"required"`
