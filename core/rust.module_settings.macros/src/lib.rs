@@ -25,6 +25,199 @@ const INJECT_LOCALE: &str = "ru";
 static COLUMN_CACHE: std::sync::LazyLock<dashmap::DashMap<u64, module_settings::types::Column>> =
     std::sync::LazyLock::new(dashmap::DashMap::new);
 
+/// Given a set of bitflag values and an input, return the bitflag value
+#[inline]
+fn convert_bitflags_string_to_value(
+    values: &indexmap::IndexMap<String, i64>,
+    input: Option<String>,
+) -> splashcore_rs::value::Value {
+    match input {
+        Some(input) => {
+            let mut bitflags = 0;
+
+            for value in input.split(';') {
+                if let Some(value) = values.get(value) {
+                    bitflags |= *value;
+                }
+            }
+
+            splashcore_rs::value::Value::Integer(bitflags)
+        }
+        None => splashcore_rs::value::Value::None,
+    }
+}
+
+/// This function takes in a serenity ResolvedValue and a ColumnType and returns a splashcore_rs::value::Value
+fn serenity_resolvedvalue_to_value<'a>(
+    rv: &serenity::all::ResolvedValue<'a>,
+    column_type: &ColumnType,
+) -> Result<splashcore_rs::value::Value, silverpelt::Error> {
+    // Before checking column_type, first handle unresolved resolved values so they don't waste our time
+    match rv {
+        serenity::all::ResolvedValue::Unresolved(inner) => match inner {
+            serenity::all::Unresolved::Attachment(aid) => {
+                return Ok(splashcore_rs::value::Value::String(aid.to_string()));
+            }
+            serenity::all::Unresolved::Channel(id) => {
+                return Ok(splashcore_rs::value::Value::String(id.to_string()));
+            }
+            serenity::all::Unresolved::Mentionable(id) => {
+                return Ok(splashcore_rs::value::Value::String(id.to_string()));
+            }
+            serenity::all::Unresolved::RoleId(id) => {
+                return Ok(splashcore_rs::value::Value::String(id.to_string()));
+            }
+            serenity::all::Unresolved::User(id) => {
+                return Ok(splashcore_rs::value::Value::String(id.to_string()));
+            }
+            serenity::all::Unresolved::Unknown(_) => {
+                return Ok(splashcore_rs::value::Value::None);
+            }
+            _ => {}
+        },
+        _ => {}
+    }
+
+    // Now handle the actual conversion code
+    //
+    // Get the inner column type and is_array status
+    let (is_array, inner_column_type) = match column_type {
+        ColumnType::Scalar { ref column_type } => (false, column_type),
+        ColumnType::Array { ref inner } => (true, inner),
+        _ => {
+            return Err("Only scalar/array columns are supported right now".into());
+        }
+    };
+
+    let pot_output = {
+        match rv {
+            serenity::all::ResolvedValue::Boolean(v) => v.to_string(),
+            serenity::all::ResolvedValue::Integer(v) => v.to_string(),
+            serenity::all::ResolvedValue::Number(v) => v.to_string(),
+            serenity::all::ResolvedValue::String(v) => v.to_string(),
+            serenity::all::ResolvedValue::Attachment(v) => v.proxy_url.to_string(),
+            serenity::all::ResolvedValue::Channel(v) => v.id.to_string(),
+            serenity::all::ResolvedValue::Role(v) => v.id.to_string(),
+            serenity::all::ResolvedValue::User(v, _) => v.id.to_string(),
+            _ => {
+                return Err(format!(
+                    "Please report: INTERNAL: Got unsupported ResolvedValue: {:?}",
+                    rv
+                )
+                .into())
+            }
+        }
+    };
+
+    match inner_column_type {
+        InnerColumnType::Integer {} => {
+            if is_array {
+                // Handle integer list
+                let list = splashcore_rs::utils::parse_numeric_list::<i64>(&pot_output, &[])?;
+
+                let mut new_list = Vec::new();
+
+                for v in list {
+                    new_list.push(splashcore_rs::value::Value::Integer(v));
+                }
+
+                return Ok(splashcore_rs::value::Value::List(new_list));
+            } else {
+                match rv {
+                    serenity::all::ResolvedValue::Integer(v) => {
+                        return Ok(splashcore_rs::value::Value::Integer(*v));
+                    }
+                    _ => return Err("Expected integer, got something else".into()),
+                }
+            }
+        }
+        InnerColumnType::Float {} => {
+            if is_array {
+                // Handle integer list
+                let list = splashcore_rs::utils::parse_numeric_list::<f64>(&pot_output, &[])?;
+
+                let mut new_list = Vec::new();
+
+                for v in list {
+                    new_list.push(splashcore_rs::value::Value::Float(v));
+                }
+
+                return Ok(splashcore_rs::value::Value::List(new_list));
+            } else {
+                match rv {
+                    serenity::all::ResolvedValue::Number(v) => {
+                        return Ok(splashcore_rs::value::Value::Float(*v));
+                    }
+                    _ => return Err("Expected float, got something else".into()),
+                }
+            }
+        }
+        InnerColumnType::Boolean {} => {
+            if is_array {
+                // Handle integer list
+                let list = splashcore_rs::utils::parse_numeric_list::<bool>(&pot_output, &[])?;
+
+                let mut new_list = Vec::new();
+
+                for v in list {
+                    new_list.push(splashcore_rs::value::Value::Boolean(v));
+                }
+
+                return Ok(splashcore_rs::value::Value::List(new_list));
+            } else {
+                match rv {
+                    serenity::all::ResolvedValue::Boolean(v) => {
+                        return Ok(splashcore_rs::value::Value::Boolean(*v));
+                    }
+                    _ => return Err("Expected boolean, got something else".into()),
+                }
+            }
+        }
+        InnerColumnType::String { .. } => {
+            if !is_array {
+                match rv {
+                    serenity::all::ResolvedValue::String(v) => {
+                        return Ok(splashcore_rs::value::Value::String(v.to_string()));
+                    }
+                    _ => return Err("Expected string, got something else".into()),
+                }
+            }
+        }
+        InnerColumnType::BitFlag { ref values } => {
+            if is_array {
+                return Err("Array bitflags are not supported yet".into()); // TODO
+            }
+
+            match rv {
+                serenity::all::ResolvedValue::String(v) => {
+                    return Ok(convert_bitflags_string_to_value(
+                        values,
+                        Some(v.to_string()),
+                    ));
+                }
+                _ => return Err("Expected string, got something else".into()),
+            }
+        }
+        // Fallback to the fallback code
+        _ => {}
+    };
+
+    // Fallback code
+    if is_array {
+        let list = splashcore_rs::utils::split_input_to_string(&pot_output, ",");
+
+        let mut new_list = Vec::new();
+
+        for v in list {
+            new_list.push(splashcore_rs::value::Value::String(v));
+        }
+
+        Ok(splashcore_rs::value::Value::List(new_list))
+    } else {
+        Ok(splashcore_rs::value::Value::String(pot_output))
+    }
+}
+
 /// Base command callback used for the root command
 async fn base_command(
     ctx: poise::Context<'_, silverpelt::data::Data, silverpelt::Error>,
@@ -52,9 +245,8 @@ struct SubcommandCallbackWrapper {
 }
 
 /// Subcommand callback
-/// Base command callback used for the root command
 async fn subcommand_command(
-    ctx: poise::Context<'_, silverpelt::data::Data, silverpelt::Error>,
+    ctx: poise::ApplicationContext<'_, silverpelt::data::Data, silverpelt::Error>,
 ) -> Result<(), poise::FrameworkError<'_, silverpelt::data::Data, silverpelt::Error>> {
     let Some(cwctx) = ctx
         .command()
@@ -62,7 +254,7 @@ async fn subcommand_command(
         .downcast_ref::<SubcommandCallbackWrapper>()
     else {
         return Err(poise::FrameworkError::new_command(
-            ctx,
+            poise::Context::Application(ctx),
             Box::new(StringErr(
                 "Failed to downcast custom_data to ConfigOption".to_string(),
             ))
@@ -70,25 +262,161 @@ async fn subcommand_command(
         ));
     };
 
-    // View is a special case, we just need to call settings viewer
-    if cwctx.operation_type == OperationType::View {
-        return silverpelt::settings_poise::settings_viewer(
-            &ctx,
-            &cwctx.config_option,
-            indexmap::IndexMap::new(), // TODO: Add filtering in the future
-        )
-        .await
-        .map_err(|e| poise::FrameworkError::new_command(ctx, Box::new(StringErr(e.to_string()))));
+    match cwctx.operation_type {
+        OperationType::View => {
+            return silverpelt::settings_poise::settings_viewer(
+                &poise::Context::Application(ctx),
+                &cwctx.config_option,
+                indexmap::IndexMap::new(), // TODO: Add filtering in the future
+            )
+            .await
+            .map_err(|e| {
+                poise::FrameworkError::new_command(
+                    poise::Context::Application(ctx),
+                    Box::new(StringErr(e.to_string())),
+                )
+            });
+        }
+        OperationType::Create => {
+            let mut entry = indexmap::IndexMap::new();
+
+            for arg in ctx.args {
+                let Some(column) = cwctx
+                    .config_option
+                    .columns
+                    .iter()
+                    .find(|c| c.id == arg.name)
+                else {
+                    return Err(poise::FrameworkError::new_command(
+                        poise::Context::Application(ctx),
+                        Box::new(StringErr(format!(
+                            "Column `{}` not found in config",
+                            arg.name
+                        ))),
+                    ));
+                };
+
+                let value = serenity_resolvedvalue_to_value(&arg.value, &column.column_type)
+                    .map_err(|e| {
+                        poise::FrameworkError::new_command(
+                            poise::Context::Application(ctx),
+                            Box::new(StringErr(e.to_string())),
+                        )
+                    })?;
+
+                entry.insert(column.id.to_string(), value);
+            }
+
+            return silverpelt::settings_poise::settings_creator(
+                &poise::Context::Application(ctx),
+                &cwctx.config_option,
+                entry,
+            )
+            .await
+            .map_err(|e| {
+                poise::FrameworkError::new_command(
+                    poise::Context::Application(ctx),
+                    Box::new(StringErr(e.to_string())),
+                )
+            });
+        }
+        OperationType::Update => {
+            let mut entry = indexmap::IndexMap::new();
+
+            for arg in ctx.args {
+                let Some(column) = cwctx
+                    .config_option
+                    .columns
+                    .iter()
+                    .find(|c| c.id == arg.name)
+                else {
+                    return Err(poise::FrameworkError::new_command(
+                        poise::Context::Application(ctx),
+                        Box::new(StringErr(format!(
+                            "Column `{}` not found in config",
+                            arg.name
+                        ))),
+                    ));
+                };
+
+                let value = serenity_resolvedvalue_to_value(&arg.value, &column.column_type)
+                    .map_err(|e| {
+                        poise::FrameworkError::new_command(
+                            poise::Context::Application(ctx),
+                            Box::new(StringErr(e.to_string())),
+                        )
+                    })?;
+
+                entry.insert(column.id.to_string(), value);
+            }
+
+            return silverpelt::settings_poise::settings_updater(
+                &poise::Context::Application(ctx),
+                &cwctx.config_option,
+                entry,
+            )
+            .await
+            .map_err(|e| {
+                poise::FrameworkError::new_command(
+                    poise::Context::Application(ctx),
+                    Box::new(StringErr(e.to_string())),
+                )
+            });
+        }
+        OperationType::Delete => {
+            // Find the primary key in the args
+            let mut pkey = splashcore_rs::value::Value::None;
+
+            for arg in ctx.args {
+                if arg.name == cwctx.config_option.primary_key {
+                    let Some(pkey_column) = cwctx
+                        .config_option
+                        .columns
+                        .iter()
+                        .find(|c| c.id == cwctx.config_option.primary_key)
+                    else {
+                        return Err(poise::FrameworkError::new_command(
+                            poise::Context::Application(ctx),
+                            Box::new(StringErr(
+                                "INTERNAL ERROR: Primary key not found".to_string(),
+                            )),
+                        ));
+                    };
+
+                    pkey = serenity_resolvedvalue_to_value(&arg.value, &pkey_column.column_type)
+                        .map_err(|e| {
+                            poise::FrameworkError::new_command(
+                                poise::Context::Application(ctx),
+                                Box::new(StringErr(e.to_string())),
+                            )
+                        })?;
+                }
+            }
+
+            if matches!(pkey, splashcore_rs::value::Value::None) {
+                return Err(poise::FrameworkError::new_command(
+                    poise::Context::Application(ctx),
+                    Box::new(StringErr(format!(
+                        "An input for `{}` is required",
+                        cwctx.config_option.primary_key
+                    ))),
+                ));
+            }
+
+            return silverpelt::settings_poise::settings_deleter(
+                &poise::Context::Application(ctx),
+                &cwctx.config_option,
+                pkey,
+            )
+            .await
+            .map_err(|e| {
+                poise::FrameworkError::new_command(
+                    poise::Context::Application(ctx),
+                    Box::new(StringErr(e.to_string())),
+                )
+            });
+        }
     }
-
-    ctx.say(format!(
-        "In subcommand for {} [{}]",
-        cwctx.config_option.id, cwctx.operation_type
-    ))
-    .await
-    .map_err(|e| poise::FrameworkError::new_command(ctx, Box::new(e)))?;
-
-    Ok(()) // TODO
 }
 
 pub fn create_poise_commands_from_setting(
@@ -164,17 +492,7 @@ pub fn create_poise_subcommands_from_setting(
             operation_type: *operation_type,
         }); // Store the config_opt in the command
 
-        sub_cmd.prefix_action = Some(|p_ctx| {
-            let ctx = poise::Context::Prefix(p_ctx);
-
-            subcommand_command(ctx).boxed()
-        });
-
-        sub_cmd.slash_action = Some(|app_ctx| {
-            let ctx = poise::Context::Application(app_ctx);
-
-            subcommand_command(ctx).boxed()
-        });
+        sub_cmd.slash_action = Some(|app_ctx| subcommand_command(app_ctx).boxed());
 
         // Add to command list
         sub_cmds.push(sub_cmd);
@@ -234,7 +552,7 @@ fn set_create_command_option_from_column_type<'a>(
                 _ => cco.kind(serenity::all::CommandOptionType::String),
             }
         }
-        // Other types are not supported yet, fallback to string
+        // Other types are handled automatically in validate so we should fallback to string
         _ => cco.kind(serenity::all::CommandOptionType::String),
     }
 }
