@@ -8,6 +8,7 @@ pub mod member_permission_calc;
 pub mod module;
 pub mod module_config;
 pub mod punishments;
+pub mod settings_autogen;
 pub mod settings_poise;
 pub mod stings;
 pub mod types;

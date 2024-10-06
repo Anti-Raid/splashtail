@@ -1,12 +1,7 @@
 mod cache;
 mod checks;
-mod cmds;
 pub mod events;
 mod settings;
-
-use indexmap::indexmap;
-use permissions::types::{PermissionCheck, PermissionChecks};
-use silverpelt::types::CommandExtendedData;
 
 pub struct Module;
 
@@ -21,128 +16,6 @@ impl silverpelt::module::Module for Module {
 
     fn description(&self) -> &'static str {
         "Customizable and comprehensive audit logging module supporting 72+ discord events"
-    }
-
-    fn raw_commands(&self) -> Vec<silverpelt::module::CommandObj> {
-        vec![(
-            cmds::auditlogs(),
-            indexmap! {
-                "list_sinks" => CommandExtendedData {
-                    default_perms: PermissionChecks::Simple {
-                        checks: vec![
-                            PermissionCheck {
-                                kittycat_perms: vec!["auditlogs.list_sinks".to_string(), "auditlogs.list".to_string()],
-                                native_perms: vec![],
-                                inner_and: false,
-                                outer_and: false,
-                            },
-                            PermissionCheck {
-                                kittycat_perms: vec![],
-                                native_perms: vec![serenity::model::permissions::Permissions::VIEW_AUDIT_LOG, serenity::model::permissions::Permissions::MANAGE_GUILD],
-                                inner_and: true,
-                                outer_and: false,
-                            }
-                        ],
-                    },
-                    ..Default::default()
-                },
-                "add_channel" => CommandExtendedData {
-                    default_perms: PermissionChecks::Simple {
-                        checks: vec![
-                            PermissionCheck {
-                                kittycat_perms: vec!["auditlogs.add_sink".to_string()],
-                                native_perms: vec![],
-                                inner_and: false,
-                                outer_and: false,
-                            },
-                            PermissionCheck {
-                                kittycat_perms: vec![],
-                                native_perms: vec![serenity::model::permissions::Permissions::VIEW_AUDIT_LOG, serenity::model::permissions::Permissions::MANAGE_GUILD],
-                                inner_and: true,
-                                outer_and: false,
-                            }
-                        ],
-                    },
-                    ..Default::default()
-                },
-                "add_sink" => CommandExtendedData {
-                    default_perms: PermissionChecks::Simple {
-                        checks: vec![
-                            PermissionCheck {
-                                kittycat_perms: vec!["auditlogs.add_sink".to_string()],
-                                native_perms: vec![],
-                                inner_and: false,
-                                outer_and: false,
-                            },
-                            PermissionCheck {
-                                kittycat_perms: vec![],
-                                native_perms: vec![serenity::model::permissions::Permissions::VIEW_AUDIT_LOG, serenity::model::permissions::Permissions::MANAGE_GUILD],
-                                inner_and: true,
-                                outer_and: false,
-                            }
-                        ],
-                    },
-                    ..Default::default()
-                },
-                "add_discordhook" => CommandExtendedData {
-                    default_perms: PermissionChecks::Simple {
-                        checks: vec![
-                            PermissionCheck {
-                                kittycat_perms: vec!["auditlogs.add_sink".to_string()],
-                                native_perms: vec![],
-                                inner_and: false,
-                                outer_and: false,
-                            },
-                            PermissionCheck {
-                                kittycat_perms: vec![],
-                                native_perms: vec![serenity::model::permissions::Permissions::VIEW_AUDIT_LOG, serenity::model::permissions::Permissions::MANAGE_GUILD],
-                                inner_and: true,
-                                outer_and: false,
-                            }
-                        ],
-                    },
-                    ..Default::default()
-                },
-                "edit_sink" => CommandExtendedData {
-                    default_perms: PermissionChecks::Simple {
-                        checks: vec![
-                            PermissionCheck {
-                                kittycat_perms: vec!["auditlogs.edit_sink".to_string()],
-                                native_perms: vec![],
-                                inner_and: false,
-                                outer_and: false,
-                            },
-                            PermissionCheck {
-                                kittycat_perms: vec![],
-                                native_perms: vec![serenity::model::permissions::Permissions::VIEW_AUDIT_LOG, serenity::model::permissions::Permissions::MANAGE_GUILD],
-                                inner_and: true,
-                                outer_and: false,
-                            }
-                        ],
-                    },
-                    ..Default::default()
-                },
-                "remove_sink" => CommandExtendedData {
-                    default_perms: PermissionChecks::Simple {
-                        checks: vec![
-                            PermissionCheck {
-                                kittycat_perms: vec!["auditlogs.remove_sink".to_string()],
-                                native_perms: vec![],
-                                inner_and: false,
-                                outer_and: false,
-                            },
-                            PermissionCheck {
-                                kittycat_perms: vec![],
-                                native_perms: vec![serenity::model::permissions::Permissions::VIEW_AUDIT_LOG, serenity::model::permissions::Permissions::MANAGE_GUILD],
-                                inner_and: true,
-                                outer_and: false,
-                            }
-                        ],
-                    },
-                    ..Default::default()
-                },
-            },
-        )]
     }
 
     fn event_listeners(&self) -> Option<Box<dyn silverpelt::module::ModuleEventListeners>> {

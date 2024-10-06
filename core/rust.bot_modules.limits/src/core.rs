@@ -5,59 +5,6 @@ use splashcore_rs::utils::pg_interval_to_secs;
 use sqlx::PgPool;
 use strum_macros::{Display, EnumString, VariantNames};
 
-#[derive(poise::ChoiceParameter)]
-pub enum LimitTypesChoices {
-    #[name = "Member Added to Server"]
-    MemberAdd,
-    #[name = "Role Create"]
-    RoleAdd,
-    #[name = "Role Update"]
-    RoleUpdate,
-    #[name = "Role Remove"]
-    RoleRemove,
-    #[name = "Role Given To Member"]
-    RoleGivenToMember,
-    #[name = "Role Removed From Member"]
-    RoleRemovedFromMember,
-    #[name = "Member Roles Updated"]
-    MemberRolesUpdated,
-    #[name = "Channel Create"]
-    ChannelAdd,
-    #[name = "Channel Update"]
-    ChannelUpdate,
-    #[name = "Channel Remove"]
-    ChannelRemove,
-    #[name = "Kick"]
-    Kick,
-    #[name = "Ban"]
-    Ban,
-    #[name = "Unban"]
-    Unban,
-    #[name = "Message Create"]
-    MessageCreate,
-}
-
-impl LimitTypesChoices {
-    pub fn resolve(self) -> LimitTypes {
-        match self {
-            Self::MemberAdd => LimitTypes::MemberAdd,
-            Self::RoleAdd => LimitTypes::RoleAdd,
-            Self::RoleUpdate => LimitTypes::RoleUpdate,
-            Self::RoleRemove => LimitTypes::RoleRemove,
-            Self::RoleGivenToMember => LimitTypes::RoleGivenToMember,
-            Self::RoleRemovedFromMember => LimitTypes::RoleRemovedFromMember,
-            Self::MemberRolesUpdated => LimitTypes::MemberRolesUpdated,
-            Self::ChannelAdd => LimitTypes::ChannelAdd,
-            Self::ChannelUpdate => LimitTypes::ChannelUpdate,
-            Self::ChannelRemove => LimitTypes::ChannelRemove,
-            Self::Kick => LimitTypes::Kick,
-            Self::Ban => LimitTypes::Ban,
-            Self::Unban => LimitTypes::Unban,
-            Self::MessageCreate => LimitTypes::MessageCreate,
-        }
-    }
-}
-
 #[derive(
     EnumString,
     Display,

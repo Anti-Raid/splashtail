@@ -75,6 +75,7 @@ pub static INSPECTOR_GLOBAL_OPTIONS_CACHE: LazyLock<
 > = LazyLock::new(|| Cache::builder().support_invalidation_closures().build());
 
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 pub struct InspectorSpecificOptions {
     pub id: sqlx::types::uuid::Uuid,
     pub anti_invite: Option<i32>, // None = disabled, Some(<stings>) othersise

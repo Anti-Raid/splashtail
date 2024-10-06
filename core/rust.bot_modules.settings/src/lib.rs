@@ -1,10 +1,7 @@
 use indexmap::indexmap;
-use permissions::types::{PermissionCheck, PermissionChecks};
 use silverpelt::types::CommandExtendedData;
 
 mod commands;
-mod guildmembers;
-mod guildroles;
 mod modules;
 
 #[allow(clippy::module_inception)]
@@ -57,96 +54,6 @@ impl silverpelt::module::Module for Module {
                     "enable" => silverpelt::types::CommandExtendedData::kittycat_or_admin("commands", "enable"),
                     "disable" => silverpelt::types::CommandExtendedData::kittycat_or_admin("commands", "disable"),
                     "modperms" => silverpelt::types::CommandExtendedData::kittycat_or_admin("commands", "modperms"),
-                },
-            ),
-            (
-                guildroles::guildroles(),
-                indexmap! {
-                    "list" => silverpelt::types::CommandExtendedData::kittycat_simple("guildroles", "list"),
-                    "add" => silverpelt::types::CommandExtendedData {
-                        default_perms: PermissionChecks::Simple {
-                            checks: vec![
-                                PermissionCheck {
-                                    kittycat_perms: vec!["guildroles.add".to_string()],
-                                    native_perms: vec![],
-                                    inner_and: false,
-                                    outer_and: true,
-                                },
-                                PermissionCheck {
-                                    kittycat_perms: vec![],
-                                    native_perms: vec![serenity::model::permissions::Permissions::MANAGE_ROLES],
-                                    inner_and: false,
-                                    outer_and: false,
-                                }
-                            ],
-                        },
-                        ..Default::default()
-                    },
-                    "edit" => silverpelt::types::CommandExtendedData {
-                        default_perms: PermissionChecks::Simple {
-                            checks: vec![
-                                PermissionCheck {
-                                    kittycat_perms: vec!["guildroles.edit".to_string()],
-                                    native_perms: vec![],
-                                    inner_and: false,
-                                    outer_and: true,
-                                },
-                                PermissionCheck {
-                                    kittycat_perms: vec![],
-                                    native_perms: vec![serenity::model::permissions::Permissions::MANAGE_ROLES],
-                                    inner_and: false,
-                                    outer_and: false,
-                                }
-                            ],
-                        },
-                        ..Default::default()
-                    },
-                    "remove" => silverpelt::types::CommandExtendedData::kittycat_simple("guildroles", "remove"),
-                },
-            ),
-            (
-                guildmembers::guildmembers(),
-                indexmap! {
-                    "list" => silverpelt::types::CommandExtendedData::kittycat_simple("guildmembers", "list"),
-                    "add" => silverpelt::types::CommandExtendedData {
-                        default_perms: PermissionChecks::Simple {
-                            checks: vec![
-                                PermissionCheck {
-                                    kittycat_perms: vec!["guildmembers.add".to_string()],
-                                    native_perms: vec![],
-                                    inner_and: false,
-                                    outer_and: true,
-                                },
-                                PermissionCheck {
-                                    kittycat_perms: vec![],
-                                    native_perms: vec![serenity::model::permissions::Permissions::MANAGE_ROLES],
-                                    inner_and: false,
-                                    outer_and: false,
-                                }
-                            ],
-                        },
-                        ..Default::default()
-                    },
-                    "edit" => silverpelt::types::CommandExtendedData {
-                        default_perms: PermissionChecks::Simple {
-                            checks: vec![
-                                PermissionCheck {
-                                    kittycat_perms: vec!["guildmembers.edit".to_string()],
-                                    native_perms: vec![],
-                                    inner_and: false,
-                                    outer_and: true,
-                                },
-                                PermissionCheck {
-                                    kittycat_perms: vec![],
-                                    native_perms: vec![serenity::model::permissions::Permissions::MANAGE_ROLES],
-                                    inner_and: false,
-                                    outer_and: false,
-                                }
-                            ],
-                        },
-                        ..Default::default()
-                    },
-                    "remove" => silverpelt::types::CommandExtendedData::kittycat_simple("guildmembers", "remove"),
                 },
             ),
         ]

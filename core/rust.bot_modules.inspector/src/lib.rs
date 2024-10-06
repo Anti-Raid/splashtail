@@ -1,5 +1,4 @@
 mod cache;
-mod cmd;
 mod dehoist;
 mod events;
 mod guildprotect;
@@ -19,29 +18,6 @@ impl silverpelt::module::Module for Module {
 
     fn description(&self) -> &'static str {
         "Provides passive anti-spam options"
-    }
-
-    fn raw_commands(&self) -> Vec<silverpelt::module::CommandObj> {
-        vec![
-            (
-                cmd::inspector_global(),
-                indexmap::indexmap! {
-                    "list" => silverpelt::types::CommandExtendedData::kittycat_or_admin("inspector_global", "list"),
-                    "setup" => silverpelt::types::CommandExtendedData::kittycat_or_admin("inspector_global", "setup"),
-                    "update" => silverpelt::types::CommandExtendedData::kittycat_or_admin("inspector_global", "setup"),
-                    "delete" => silverpelt::types::CommandExtendedData::kittycat_or_admin("inspector_global", "setup"),
-                },
-            ),
-            (
-                cmd::inspector_specific(),
-                indexmap::indexmap! {
-                    "list" => silverpelt::types::CommandExtendedData::kittycat_or_admin("inspector_specific", "list"),
-                    "create" => silverpelt::types::CommandExtendedData::kittycat_or_admin("inspector_specific", "create"),
-                    "update" => silverpelt::types::CommandExtendedData::kittycat_or_admin("inspector_specific", "setup"),
-                    "delete" => silverpelt::types::CommandExtendedData::kittycat_or_admin("inspector_specific", "setup"),
-                },
-            ),
-        ]
     }
 
     fn event_listeners(&self) -> Option<Box<dyn silverpelt::module::ModuleEventListeners>> {

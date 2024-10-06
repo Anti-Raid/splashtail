@@ -1,4 +1,3 @@
-mod cmds;
 mod events;
 mod settings;
 mod tasks;
@@ -18,18 +17,6 @@ impl silverpelt::module::Module for Module {
 
     fn description(&self) -> &'static str {
         "Exactly what it says. Away from keyboard related commands"
-    }
-
-    fn raw_commands(&self) -> Vec<silverpelt::module::CommandObj> {
-        vec![(
-            cmds::afk(),
-            indexmap::indexmap! {
-                "list" => silverpelt::types::CommandExtendedData::none(),
-                "create" => silverpelt::types::CommandExtendedData::none(),
-                "update" => silverpelt::types::CommandExtendedData::none(),
-                "delete" => silverpelt::types::CommandExtendedData::none(),
-            },
-        )]
     }
 
     fn background_tasks(&self) -> Vec<silverpelt::BackgroundTask> {

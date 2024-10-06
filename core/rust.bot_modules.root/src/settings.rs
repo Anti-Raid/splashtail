@@ -133,11 +133,11 @@ pub static INSPECTOR_FAKE_BOTS: LazyLock<ConfigOption> = LazyLock::new(|| Config
     title_template: "{name} - {bot_id}",
     operations: indexmap::indexmap! {
         OperationType::View => OperationSpecific {
-            corresponding_command: "sudo inspector__fake_bots_list",
+            corresponding_command: "sudo_inspector__fake_bots_list",
             columns_to_set: indexmap::indexmap! {},
         },
         OperationType::Create => OperationSpecific {
-            corresponding_command: "sudo inspector__fake_bots_create",
+            corresponding_command: "sudo_inspector__fake_bots_create",
             columns_to_set: indexmap::indexmap! {
                 "created_at" => "{__now}",
                 "created_by" => "{__author}",
@@ -146,14 +146,14 @@ pub static INSPECTOR_FAKE_BOTS: LazyLock<ConfigOption> = LazyLock::new(|| Config
             },
         },
         OperationType::Update => OperationSpecific {
-            corresponding_command: "sudo inspector__fake_bots_update",
+            corresponding_command: "sudo_inspector__fake_bots_update",
             columns_to_set: indexmap::indexmap! {
                 "last_updated_at" => "{__now}",
                 "last_updated_by" => "{__author}",
             },
         },
         OperationType::Delete => OperationSpecific {
-            corresponding_command: "sudo inspector__fake_bots_delete",
+            corresponding_command: "sudo_inspector__fake_bots_delete",
             columns_to_set: indexmap::indexmap! {},
         },
     },
@@ -245,22 +245,22 @@ pub static LAST_TASK_EXPIRY: LazyLock<ConfigOption> = LazyLock::new(|| ConfigOpt
     title_template: "{id} - {task} - {created_at}",
     operations: indexmap::indexmap! {
         OperationType::View => OperationSpecific {
-            corresponding_command: "sudo last_task_expiry_list",
+            corresponding_command: "sudo_last_task_expiry_list",
             columns_to_set: indexmap::indexmap! {
             },
         },
         OperationType::Create => OperationSpecific {
-            corresponding_command: "sudo last_task_expiry_create",
+            corresponding_command: "sudo_last_task_expiry_create",
             columns_to_set: indexmap::indexmap! {
                 "created_at" => "{__now}",
             },
         },
         OperationType::Update => OperationSpecific {
-            corresponding_command: "sudo last_task_expiry_update",
+            corresponding_command: "sudo_last_task_expiry_update",
             columns_to_set: indexmap::indexmap! {},
         },
         OperationType::Delete => OperationSpecific {
-            corresponding_command: "sudo last_task_expiry_delete",
+            corresponding_command: "sudo_last_task_expiry_delete",
             columns_to_set: indexmap::indexmap! {},
         },
     },

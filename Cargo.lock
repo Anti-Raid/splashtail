@@ -658,12 +658,10 @@ name = "bot_modules_root"
 version = "0.1.0"
 dependencies = [
  "async-trait",
- "bitflags 2.6.0",
  "chrono",
  "futures-util",
  "indexmap",
  "module_settings",
- "module_settings_macros",
  "poise",
  "serde_json",
  "silverpelt",
@@ -2781,22 +2779,6 @@ dependencies = [
  "splashcore_rs",
  "sqlx",
  "templating",
-]
-
-[[package]]
-name = "module_settings_macros"
-version = "6.0.0"
-dependencies = [
- "botox",
- "dashmap",
- "indexmap",
- "module_settings",
- "poise",
- "serde",
- "serde_json",
- "serenity",
- "silverpelt",
- "splashcore_rs",
 ]
 
 [[package]]

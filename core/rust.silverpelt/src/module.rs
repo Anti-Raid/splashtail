@@ -43,13 +43,17 @@ pub trait Module: Send + Sync {
     }
 
     /// The commands in the module
-    fn raw_commands(&self) -> Vec<CommandObj>;
+    fn raw_commands(&self) -> Vec<CommandObj> {
+        Vec::new()
+    }
 
     /// The full command list of the module
     ///
     /// Note that modules should not need to override this function (normally)
+    ///
+    /// When in doubt, just implement `raw_commands` instead
     fn full_command_list(&self) -> Vec<CommandObj> {
-        create_full_command_list(self.id(), self.raw_commands())
+        create_full_command_list(self.id(), self.raw_commands(), self.config_options())
     }
 
     /// Event listeners for the module
@@ -202,7 +206,11 @@ pub fn validate_module<T: Module + ?Sized>(module: &T) -> Result<(), crate::Erro
     Ok(())
 }
 
-fn create_full_command_list(module_id: &str, commands: Vec<CommandObj>) -> Vec<CommandObj> {
+fn create_full_command_list(
+    module_id: &str,
+    commands: Vec<CommandObj>,
+    config_options: Vec<module_settings::types::ConfigOption>,
+) -> Vec<CommandObj> {
     #[poise::command(prefix_command, slash_command, rename = "")]
     pub async fn base_cmd(_ctx: crate::Context<'_>) -> Result<(), crate::Error> {
         Ok(())
@@ -223,6 +231,26 @@ fn create_full_command_list(module_id: &str, commands: Vec<CommandObj>) -> Vec<C
             },
         },
     ));
+
+    // Add in the settings related commands
+    for config_opt in config_options {
+        let created_cmd =
+            crate::settings_autogen::create_poise_commands_from_setting(module_id, &config_opt);
+
+        let mut extended_data = indexmap::IndexMap::new();
+
+        for (op, operation) in config_opt.operations.iter() {
+            extended_data.insert(
+                operation.corresponding_command,
+                crate::CommandExtendedData::kittycat_or_admin(
+                    module_id,
+                    &format!("{}{}", op.to_string().to_lowercase(), &config_opt.id),
+                ),
+            );
+        }
+
+        commands.push((created_cmd, extended_data));
+    }
 
     commands
 }
