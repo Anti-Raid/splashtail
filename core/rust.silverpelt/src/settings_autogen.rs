@@ -581,6 +581,10 @@ fn create_command_args_for_operation_type(
     let mut sort_idx = vec![];
 
     for (idx, column) in config_opt.columns.iter().enumerate() {
+        if operation_type == OperationType::Delete && column.id != config_opt.primary_key {
+            continue; // Skip if not the primary key
+        }
+
         if column.nullable {
             sort_idx.push(idx);
         } else {
