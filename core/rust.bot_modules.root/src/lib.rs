@@ -34,20 +34,31 @@ impl silverpelt::module::Module for Module {
     }
 
     fn raw_commands(&self) -> Vec<silverpelt::module::CommandObj> {
-        vec![(
-            cmds::sudo(),
-            indexmap::indexmap! {
-                "register" => silverpelt::types::CommandExtendedData::none(),
-                "inspector__fake_bots_list" => silverpelt::types::CommandExtendedData::none(),
-                "inspector__fake_bots_add" => silverpelt::types::CommandExtendedData::none(),
-                "inspector__fake_bots_update" => silverpelt::types::CommandExtendedData::none(),
-                "inspector__fake_bots_delete" => silverpelt::types::CommandExtendedData::none(),
-                "last_task_expiry_view" => silverpelt::types::CommandExtendedData::none(),
-                "last_task_expiry_create" => silverpelt::types::CommandExtendedData::none(),
-                "last_task_expiry_update" => silverpelt::types::CommandExtendedData::none(),
-                "last_task_expiry_delete" => silverpelt::types::CommandExtendedData::none(),
-            },
-        )]
+        vec![
+            (
+                cmds::sudo(),
+                indexmap::indexmap! {
+                    "register" => silverpelt::types::CommandExtendedData::none(),
+                    "inspector__fake_bots_list" => silverpelt::types::CommandExtendedData::none(),
+                    "inspector__fake_bots_add" => silverpelt::types::CommandExtendedData::none(),
+                    "inspector__fake_bots_update" => silverpelt::types::CommandExtendedData::none(),
+                    "inspector__fake_bots_delete" => silverpelt::types::CommandExtendedData::none(),
+                    "last_task_expiry_view" => silverpelt::types::CommandExtendedData::none(),
+                    "last_task_expiry_create" => silverpelt::types::CommandExtendedData::none(),
+                    "last_task_expiry_update" => silverpelt::types::CommandExtendedData::none(),
+                    "last_task_expiry_delete" => silverpelt::types::CommandExtendedData::none(),
+                },
+            ),
+            (
+                cmds::inspector_fake_bots(),
+                indexmap::indexmap! {
+                    "inspector__fake_bots_list" => silverpelt::types::CommandExtendedData::none(),
+                    "inspector__fake_bots_create" => silverpelt::types::CommandExtendedData::none(),
+                    "inspector__fake_bots_update" => silverpelt::types::CommandExtendedData::none(),
+                    "inspector__fake_bots_delete" => silverpelt::types::CommandExtendedData::none(),
+                },
+            ),
+        ]
     }
 
     fn config_options(&self) -> Vec<module_settings::types::ConfigOption> {

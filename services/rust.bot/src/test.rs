@@ -8,6 +8,7 @@ pub mod test_module_parse {
         let _ = crate::modules();
     }
 
+    #[allow(dead_code)]
     async fn new_dummy_basedatadata() -> silverpelt::data::Data {
         const POSTGRES_MAX_CONNECTIONS: u32 = 3; // max connections to the database, we don't need too many here
         const REDIS_MAX_CONNECTIONS: u32 = 10; // max connections to the redis
@@ -70,7 +71,7 @@ pub mod test_module_parse {
             std::env::set_current_dir("../../").unwrap();
         }
 
-        let data = new_dummy_basedatadata().await;
+        //let data = new_dummy_basedatadata().await;
         for module in crate::modules() {
             assert!(module.validate().is_ok());
 

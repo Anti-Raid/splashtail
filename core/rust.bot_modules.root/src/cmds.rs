@@ -27,6 +27,13 @@ pub async fn register(ctx: Context<'_>) -> Result<(), Error> {
     Ok(())
 }
 
+pub fn inspector_fake_bots() -> poise::Command<silverpelt::data::Data, silverpelt::Error> {
+    module_settings_macros::create_poise_commands_from_setting(
+        "root",
+        &crate::settings::INSPECTOR_FAKE_BOTS,
+    )
+}
+
 #[poise::command(prefix_command)]
 pub async fn inspector__fake_bots_list(ctx: Context<'_>) -> Result<(), silverpelt::Error> {
     silverpelt::settings_poise::settings_viewer(

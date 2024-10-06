@@ -36,17 +36,3 @@ pub fn modules() -> Vec<Box<dyn Module>> {
 
     modules
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_create_poise_command() {
-        let module = bot_modules_root::Module {};
-        let opts = module.config_options();
-        let fbc = module_settings_macros::create_poise_commands_from_setting("root", &opts[0]);
-
-        println!("{:?}", fbc);
-    }
-}

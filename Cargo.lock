@@ -506,7 +506,6 @@ dependencies = [
  "bot_modules_server_member_backups",
  "bot_modules_settings",
  "bot_modules_temporary_punishments",
- "module_settings_macros",
  "silverpelt",
 ]
 
@@ -659,10 +658,12 @@ name = "bot_modules_root"
 version = "0.1.0"
 dependencies = [
  "async-trait",
+ "bitflags 2.6.0",
  "chrono",
  "futures-util",
  "indexmap",
  "module_settings",
+ "module_settings_macros",
  "poise",
  "serde_json",
  "silverpelt",
@@ -2788,12 +2789,14 @@ version = "6.0.0"
 dependencies = [
  "botox",
  "dashmap",
+ "indexmap",
  "module_settings",
  "poise",
  "serde",
  "serde_json",
  "serenity",
  "silverpelt",
+ "splashcore_rs",
 ]
 
 [[package]]

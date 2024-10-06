@@ -17,3 +17,7 @@ serde_json = "1.0"
 silverpelt = { path = "../rust.silverpelt" }
 splashcore_rs = { path = "../rust.std" }
 module_settings = { path = "../rust.module_settings" }
+
+# For testing
+module_settings_macros = { path = "../rust.module_settings.macros" }
+bitflags = "2"

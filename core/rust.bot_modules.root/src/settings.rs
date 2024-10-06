@@ -93,6 +93,42 @@ pub static INSPECTOR_FAKE_BOTS: LazyLock<ConfigOption> = LazyLock::new(|| Config
             ignored_for: vec![],
             secret: false,
         },
+        /*Column {
+            id: "test",
+            name: "Test",
+            description: "Test bitflag",
+            column_type: ColumnType::new_scalar(InnerColumnType::BitFlag {
+                values: indexmap::indexmap! {
+                    "A".to_string() => 1 << 0,
+                    "ABC".to_string() => 1 << 1,
+                    "DEF".to_string() => 1 << 2,
+                },
+            }),
+            nullable: true,
+            default: None,
+            unique: false,
+            suggestions: ColumnSuggestion::None {},
+            ignored_for: vec![OperationType::Create],
+            secret: false,
+        },
+        Column {
+            id: "test2",
+            name: "Test2",
+            description: "Test bitflag 2",
+            column_type: ColumnType::new_scalar(InnerColumnType::BitFlag {
+                values: indexmap::indexmap! {
+                    "ABSINTHE".to_string() => 1 << 0,
+                    "GOA".to_string() => 1 << 1,
+                    "LUA".to_string() => 1 << 2,
+                },
+            }),
+            nullable: true,
+            default: None,
+            unique: false,
+            suggestions: ColumnSuggestion::None {},
+            ignored_for: vec![OperationType::Create],
+            secret: false,
+        },*/
     ]),
     title_template: "{name} - {bot_id}",
     operations: indexmap::indexmap! {
