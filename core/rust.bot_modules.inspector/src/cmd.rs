@@ -325,7 +325,7 @@ pub async fn inspector_specific_create(
             "anti_invite".to_string() => number_to_value(anti_invite, None),
             "anti_everyone".to_string() => number_to_value(anti_everyone, None),
             "sting_retention".to_string() => number_to_value(sting_retention, Some(60)),
-            "modifiers".to_string() => {
+            "modifier".to_string() => {
                 let modifiers = splashcore_rs::utils::split_input_to_string(&modifiers.unwrap_or_default(), ",");
                 let mut modifiers_value = Vec::new();
 
@@ -382,7 +382,7 @@ pub async fn inspector_specific_update(
             "anti_invite".to_string() => number_to_value(anti_invite, None),
             "anti_everyone".to_string() => number_to_value(anti_everyone, None),
             "sting_retention".to_string() => number_to_value(sting_retention, Some(60)),
-            "modifiers".to_string() => {
+            "modifier".to_string() => {
                 let modifiers = splashcore_rs::utils::split_input_to_string(&modifiers.unwrap_or_default(), ",");
                 let mut modifiers_value = Vec::new();
 
