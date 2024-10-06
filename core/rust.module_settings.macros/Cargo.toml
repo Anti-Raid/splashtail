@@ -1,0 +1,23 @@
+[package]
+name = "module_settings_macros"
+version = "6.0.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+poise = { git = "https://github.com/Anti-Raid/poise", branch = "serenity-next" }
+module_settings = { path = "../rust.module_settings" }
+silverpelt = { path = "../rust.silverpelt" }
+serde = "1.0"
+serde_json = "1.0"
+dashmap = { version = "5", features = ["serde", "inline", "rayon"] }
+
+[dependencies.serenity]
+git = "https://github.com/serenity-rs/serenity"
+branch = "next"
+features = ["model", "http", "cache", "rustls_backend", "unstable"]
+
+[dependencies.botox]
+git = "https://github.com/Anti-Raid/botox"
+branch = "main"

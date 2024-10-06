@@ -506,6 +506,7 @@ dependencies = [
  "bot_modules_server_member_backups",
  "bot_modules_settings",
  "bot_modules_temporary_punishments",
+ "module_settings_macros",
  "silverpelt",
 ]
 
@@ -2779,6 +2780,20 @@ dependencies = [
  "splashcore_rs",
  "sqlx",
  "templating",
+]
+
+[[package]]
+name = "module_settings_macros"
+version = "6.0.0"
+dependencies = [
+ "botox",
+ "dashmap",
+ "module_settings",
+ "poise",
+ "serde",
+ "serde_json",
+ "serenity",
+ "silverpelt",
 ]
 
 [[package]]

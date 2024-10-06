@@ -1,7 +1,9 @@
+use silverpelt::module::Module;
+
 /// List of modules to load
-pub fn modules() -> Vec<Box<dyn silverpelt::module::Module>> {
+pub fn modules() -> Vec<Box<dyn Module>> {
     // List of base modules (wrapped in an Box::new, not a macro)
-    let base_modules: Vec<Box<dyn silverpelt::module::Module>> = vec![
+    let base_modules: Vec<Box<dyn Module>> = vec![
         Box::new(bot_modules_afk::Module),
         Box::new(bot_modules_auditlogs::Module),
         Box::new(bot_modules_core::Module),
@@ -33,4 +35,18 @@ pub fn modules() -> Vec<Box<dyn silverpelt::module::Module>> {
     modules.extend(base_modules);
 
     modules
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_create_poise_command() {
+        let module = bot_modules_root::Module {};
+        let opts = module.config_options();
+        let fbc = module_settings_macros::create_poise_commands_from_setting("root", &opts[0]);
+
+        println!("{:?}", fbc);
+    }
 }

@@ -26,3 +26,5 @@ bot_modules_server_member_backups = { path = "../../core/rust.bot_modules.server
 bot_modules_settings = { path = "../../core/rust.bot_modules.settings" }
 bot_modules_temporary_punishments = { path = "../../core/rust.bot_modules.temporary_punishments" }
 
+# For testing purposes
+module_settings_macros = { path = "../../core/rust.module_settings.macros" }
