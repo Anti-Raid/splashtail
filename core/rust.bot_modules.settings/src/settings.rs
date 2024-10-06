@@ -99,11 +99,9 @@ pub static GUILD_ROLES: LazyLock<ConfigOption> = LazyLock::new(|| {
         title_template: "{index} - {role_id}",
         operations: indexmap::indexmap! {
             OperationType::View => OperationSpecific {
-                corresponding_command: "guildroles list",
                 columns_to_set: indexmap::indexmap! {},
             },
             OperationType::Create => OperationSpecific {
-                corresponding_command: "guildroles add",
                 columns_to_set: indexmap::indexmap! {
                     "created_at" => "{__now}",
                     "created_by" => "{__author}",
@@ -112,14 +110,12 @@ pub static GUILD_ROLES: LazyLock<ConfigOption> = LazyLock::new(|| {
                 },
             },
             OperationType::Update => OperationSpecific {
-                corresponding_command: "guildroles edit",
                 columns_to_set: indexmap::indexmap! {
                     "last_updated_at" => "{__now}",
                     "last_updated_by" => "{__author}",
                 },
             },
             OperationType::Delete => OperationSpecific {
-                corresponding_command: "guildroles remove",
                 columns_to_set: indexmap::indexmap! {},
             },
         },
@@ -668,24 +664,20 @@ pub static GUILD_MEMBERS: LazyLock<ConfigOption> = LazyLock::new(|| {
         title_template: "{user_id}, perm_overrides={perm_overrides}",
         operations: indexmap::indexmap! {
             OperationType::View => OperationSpecific {
-                corresponding_command: "guildmembers list",
                 columns_to_set: indexmap::indexmap! {},
             },
             OperationType::Create => OperationSpecific {
-                corresponding_command: "guildmembers add",
                 columns_to_set: indexmap::indexmap! {
                     "created_at" => "{__now}",
                     "needs_perm_rederive" => "{__true}",
                 },
             },
             OperationType::Update => OperationSpecific {
-                corresponding_command: "guildmembers edit",
                 columns_to_set: indexmap::indexmap! {
                     "needs_perm_rederive" => "{__true}",
                 },
             },
             OperationType::Delete => OperationSpecific {
-                corresponding_command: "guildmembers remove",
                 columns_to_set: indexmap::indexmap! {},
             },
         },

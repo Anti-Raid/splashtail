@@ -10,7 +10,7 @@ use module_settings::{
 use std::sync::LazyLock;
 
 pub static INSPECTOR_FAKE_BOTS: LazyLock<ConfigOption> = LazyLock::new(|| ConfigOption {
-    id: "inspector__fake_bots",
+    id: "sudo__ifb",
     name: "Inspector (Fake Bots)",
     description: "Stores a list of official bots and their ID to allow detection of fake bots",
     table: "inspector__fake_bots",
@@ -133,11 +133,9 @@ pub static INSPECTOR_FAKE_BOTS: LazyLock<ConfigOption> = LazyLock::new(|| Config
     title_template: "{name} - {bot_id}",
     operations: indexmap::indexmap! {
         OperationType::View => OperationSpecific {
-            corresponding_command: "sudo_inspector__fake_bots_list",
             columns_to_set: indexmap::indexmap! {},
         },
         OperationType::Create => OperationSpecific {
-            corresponding_command: "sudo_inspector__fake_bots_create",
             columns_to_set: indexmap::indexmap! {
                 "created_at" => "{__now}",
                 "created_by" => "{__author}",
@@ -146,14 +144,12 @@ pub static INSPECTOR_FAKE_BOTS: LazyLock<ConfigOption> = LazyLock::new(|| Config
             },
         },
         OperationType::Update => OperationSpecific {
-            corresponding_command: "sudo_inspector__fake_bots_update",
             columns_to_set: indexmap::indexmap! {
                 "last_updated_at" => "{__now}",
                 "last_updated_by" => "{__author}",
             },
         },
         OperationType::Delete => OperationSpecific {
-            corresponding_command: "sudo_inspector__fake_bots_delete",
             columns_to_set: indexmap::indexmap! {},
         },
     },
@@ -200,7 +196,7 @@ impl PostAction for InspectorFakeBotsPostAction {
 }
 
 pub static LAST_TASK_EXPIRY: LazyLock<ConfigOption> = LazyLock::new(|| ConfigOption {
-    id: "last_task_expiry",
+    id: "sudo__lte",
     name: "Last Task Expiry",
     description: "Internal table used to schedule long-running tasks (1 week etc.)",
     table: "last_task_expiry",
@@ -245,22 +241,18 @@ pub static LAST_TASK_EXPIRY: LazyLock<ConfigOption> = LazyLock::new(|| ConfigOpt
     title_template: "{id} - {task} - {created_at}",
     operations: indexmap::indexmap! {
         OperationType::View => OperationSpecific {
-            corresponding_command: "sudo_last_task_expiry_list",
             columns_to_set: indexmap::indexmap! {
             },
         },
         OperationType::Create => OperationSpecific {
-            corresponding_command: "sudo_last_task_expiry_create",
             columns_to_set: indexmap::indexmap! {
                 "created_at" => "{__now}",
             },
         },
         OperationType::Update => OperationSpecific {
-            corresponding_command: "sudo_last_task_expiry_update",
             columns_to_set: indexmap::indexmap! {},
         },
         OperationType::Delete => OperationSpecific {
-            corresponding_command: "sudo_last_task_expiry_delete",
             columns_to_set: indexmap::indexmap! {},
         },
     },

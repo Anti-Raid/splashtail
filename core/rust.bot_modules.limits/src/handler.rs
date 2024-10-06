@@ -42,7 +42,7 @@ pub(crate) async fn handle_mod_action(
         });
 
         // Create a new sting
-        log::info!(
+        log::debug!(
             "Adding {} stings for user_id: {} due to hit limits {:?}",
             strategy_result.stings,
             ha.user_id,

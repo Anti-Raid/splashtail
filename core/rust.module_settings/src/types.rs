@@ -403,9 +403,6 @@ impl PartialEq for Column {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct OperationSpecific {
-    /// The corresponding command for ACL purposes
-    pub corresponding_command: &'static str,
-
     /// Any columns to set. For example, a last_updated column should be set on update
     ///
     /// Variables:
@@ -426,6 +423,17 @@ pub enum OperationType {
     Create,
     Update,
     Delete,
+}
+
+impl OperationType {
+    pub fn corresponding_command_suffix(&self) -> &'static str {
+        match self {
+            OperationType::View => "view",
+            OperationType::Create => "create",
+            OperationType::Update => "update",
+            OperationType::Delete => "delete",
+        }
+    }
 }
 
 impl std::fmt::Display for OperationType {
@@ -501,6 +509,12 @@ pub struct ConfigOption {
     ///
     /// This can be useful in cases where postgres/etc. is not the main underlying storage (for example, seaweedfs etc.)
     pub data_store: Arc<dyn CreateDataStore>,
+}
+
+impl ConfigOption {
+    pub fn get_corresponding_command(&self, op: OperationType) -> String {
+        format!("{} {}", self.id, op.corresponding_command_suffix())
+    }
 }
 
 impl PartialEq for ConfigOption {

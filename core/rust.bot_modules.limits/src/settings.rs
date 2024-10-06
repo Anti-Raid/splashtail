@@ -134,11 +134,9 @@ pub static USER_ACTIONS: LazyLock<ConfigOption> = LazyLock::new(|| ConfigOption 
     title_template: "{action_id} - {user_id} got {stings} stings",
     operations: indexmap::indexmap! {
         OperationType::View => OperationSpecific {
-            corresponding_command: "limit_user_actions view",
             columns_to_set: indexmap::indexmap! {},
         },
         OperationType::Delete => OperationSpecific {
-            corresponding_command: "limit_user_actions remove",
             columns_to_set: indexmap::indexmap! {},
         },
     },
@@ -183,15 +181,12 @@ pub static GUILD_GLOBALS: LazyLock<ConfigOption> = LazyLock::new(|| {
         title_template: "{limit_name}: On {limit_type}, {limit_per} times every {limit_time} [{limit_id}]",
         operations: indexmap::indexmap! {
             OperationType::View => OperationSpecific {
-                corresponding_command: "limit_globals view",
                 columns_to_set: indexmap::indexmap! {},
             },
             OperationType::Create => OperationSpecific {
-                corresponding_command: "limit_globals add",
                 columns_to_set: indexmap::indexmap! {},
             },
             OperationType::Delete => OperationSpecific {
-                corresponding_command: "limit_globals remove",
                 columns_to_set: indexmap::indexmap! {},
             },
         },
@@ -368,11 +363,9 @@ pub static GUILD_LIMITS: LazyLock<ConfigOption> = LazyLock::new(|| {
         title_template: "{limit_name}: On {limit_type}, {limit_per} times every {limit_time} [{limit_id}]",
         operations: indexmap::indexmap! {
             OperationType::View => OperationSpecific {
-                corresponding_command: "limits view",
                 columns_to_set: indexmap::indexmap! {},
             },
             OperationType::Create => OperationSpecific {
-                corresponding_command: "limits add",
                 columns_to_set: indexmap::indexmap! {
                     "created_at" => "{__now}",
                     "created_by" => "{__author}",
@@ -381,14 +374,12 @@ pub static GUILD_LIMITS: LazyLock<ConfigOption> = LazyLock::new(|| {
                 },
             },
             OperationType::Update => OperationSpecific {
-                corresponding_command: "limits update",
                 columns_to_set: indexmap::indexmap! {
                     "last_updated_at" => "{__now}",
                     "last_updated_by" => "{__author}",
                 },
             },
             OperationType::Delete => OperationSpecific {
-                corresponding_command: "limits remove",
                 columns_to_set: indexmap::indexmap! {},
             },
         },

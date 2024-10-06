@@ -149,7 +149,7 @@ pub async fn settings_viewer(
         return Err("This command must be run in a server".into());
     };
 
-    let Some(operation_specific) = setting.operations.get(&OperationType::View) else {
+    if setting.operations.get(&OperationType::View).is_none() {
         return Err("Unsupported operation (View) for setting".into());
     };
 
@@ -159,7 +159,7 @@ pub async fn settings_viewer(
     {
         let perm_res = crate::cmd::check_command(
             &data.silverpelt_cache,
-            operation_specific.corresponding_command,
+            &setting.get_corresponding_command(OperationType::View),
             guild_id,
             ctx.author().id,
             &data.pool,
@@ -357,7 +357,7 @@ pub async fn settings_creator(
         return Err("This command must be run in a server".into());
     };
 
-    let Some(operation_specific) = setting.operations.get(&OperationType::Create) else {
+    if setting.operations.get(&OperationType::Create).is_none() {
         return Err("Unsupported operation (Create) for setting".into());
     };
 
@@ -367,7 +367,7 @@ pub async fn settings_creator(
     {
         let perm_res = crate::cmd::check_command(
             &data.silverpelt_cache,
-            operation_specific.corresponding_command,
+            &setting.get_corresponding_command(OperationType::Create),
             guild_id,
             ctx.author().id,
             &data.pool,
@@ -488,7 +488,7 @@ pub async fn settings_updater(
         return Err("This command must be run in a server".into());
     };
 
-    let Some(operation_specific) = setting.operations.get(&OperationType::Update) else {
+    if setting.operations.get(&OperationType::Update).is_none() {
         return Err("Unsupported operation (Update) for setting".into());
     };
 
@@ -498,7 +498,7 @@ pub async fn settings_updater(
     {
         let perm_res = crate::cmd::check_command(
             &data.silverpelt_cache,
-            operation_specific.corresponding_command,
+            &setting.get_corresponding_command(OperationType::Update),
             guild_id,
             ctx.author().id,
             &data.pool,
@@ -607,9 +607,9 @@ pub async fn settings_deleter(
         return Err("This command must be run in a server".into());
     };
 
-    let Some(operation_specific) = setting.operations.get(&OperationType::Delete) else {
+    if setting.operations.get(&OperationType::Delete).is_none() {
         return Err("Unsupported operation (Delete) for setting".into());
-    };
+    }
 
     let data = ctx.data();
     let cache_http = botox::cache::CacheHttpImpl::from_ctx(ctx.serenity_context());
@@ -617,7 +617,7 @@ pub async fn settings_deleter(
     {
         let perm_res = crate::cmd::check_command(
             &data.silverpelt_cache,
-            operation_specific.corresponding_command,
+            &setting.get_corresponding_command(OperationType::Delete),
             guild_id,
             ctx.author().id,
             &data.pool,

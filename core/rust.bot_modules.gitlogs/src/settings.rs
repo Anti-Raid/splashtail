@@ -78,11 +78,9 @@ pub static WEBHOOKS: LazyLock<ConfigOption> = LazyLock::new(|| {
         title_template: "{comment} - {id}",
         operations: indexmap::indexmap! {
             OperationType::View => OperationSpecific {
-                corresponding_command: "gitlogs webhooks_list",
                 columns_to_set: indexmap::indexmap! {},
             },
             OperationType::Create => OperationSpecific {
-                corresponding_command: "gitlogs webhooks_create",
                 columns_to_set: indexmap::indexmap! {
                     "created_at" => "{__now}",
                     "created_by" => "{__author}",
@@ -91,14 +89,12 @@ pub static WEBHOOKS: LazyLock<ConfigOption> = LazyLock::new(|| {
                 },
             },
             OperationType::Update => OperationSpecific {
-                corresponding_command: "gitlogs webhooks_update",
                 columns_to_set: indexmap::indexmap! {
                     "last_updated_at" => "{__now}",
                     "last_updated_by" => "{__author}",
                 },
             },
             OperationType::Delete => OperationSpecific {
-                corresponding_command: "gitlogs webhooks_delete",
                 columns_to_set: indexmap::indexmap! {},
             },
         },
@@ -249,11 +245,9 @@ pub static REPOS: LazyLock<ConfigOption> = LazyLock::new(|| {
         title_template: "{repo_name} - {id}",
         operations: indexmap::indexmap! {
             OperationType::View => OperationSpecific {
-                corresponding_command: "gitlogs repo_list",
                 columns_to_set: indexmap::indexmap! {},
             },
             OperationType::Create => OperationSpecific {
-                corresponding_command: "gitlogs repo_create",
                 columns_to_set: indexmap::indexmap! {
                     "created_at" => "{__now}",
                     "created_by" => "{__author}",
@@ -262,14 +256,12 @@ pub static REPOS: LazyLock<ConfigOption> = LazyLock::new(|| {
                 },
             },
             OperationType::Update => OperationSpecific {
-                corresponding_command: "gitlogs repo_update",
                 columns_to_set: indexmap::indexmap! {
                     "last_updated_at" => "{__now}",
                     "last_updated_by" => "{__author}",
                 },
             },
             OperationType::Delete => OperationSpecific {
-                corresponding_command: "gitlogs repo_delete",
                 columns_to_set: indexmap::indexmap! {},
             },
         },
@@ -511,11 +503,9 @@ pub static EVENT_MODIFIERS: LazyLock<ConfigOption> = LazyLock::new(|| {
         title_template: "{id}",
         operations: indexmap::indexmap! {
             OperationType::View => OperationSpecific {
-                corresponding_command: "gitlogs eventmods_list",
                 columns_to_set: indexmap::indexmap! {},
             },
             OperationType::Create => OperationSpecific {
-                corresponding_command: "gitlogs eventmods_create",
                 columns_to_set: indexmap::indexmap! {
                     "created_at" => "{__now}",
                     "created_by" => "{__author}",
@@ -524,14 +514,12 @@ pub static EVENT_MODIFIERS: LazyLock<ConfigOption> = LazyLock::new(|| {
                 },
             },
             OperationType::Update => OperationSpecific {
-                corresponding_command: "gitlogs eventmods_update",
                 columns_to_set: indexmap::indexmap! {
                     "last_updated_at" => "{__now}",
                     "last_updated_by" => "{__author}",
                 },
             },
             OperationType::Delete => OperationSpecific {
-                corresponding_command: "gitlogs eventmods_delete",
                 columns_to_set: indexmap::indexmap! {},
             },
         },

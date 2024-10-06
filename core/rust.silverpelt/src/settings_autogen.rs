@@ -266,6 +266,52 @@ struct SubcommandCallbackWrapper {
     operation_type: OperationType,
 }
 
+/// Gets the values from a poise ResolvedValue handling choices and all that garbage
+fn poise_getvalues(
+    config_opt: &module_settings::types::ConfigOption,
+    ctx: &poise::ApplicationContext<'_, crate::data::Data, crate::Error>,
+) -> Result<indexmap::IndexMap<String, splashcore_rs::value::Value>, crate::Error> {
+    let mut map = indexmap::IndexMap::new();
+
+    // Due to dynamic columns, we need to parse in order
+    for column in config_opt.columns.iter() {
+        let Some(arg) = ctx.args.iter().find(|a| a.name == column.id) else {
+            continue; // Skip if the column is not present
+        };
+
+        let choices = get_choices_from_config_opt(column);
+
+        if !choices.is_empty() {
+            match arg.value {
+                serenity::all::ResolvedValue::Integer(a) => {
+                    if a < 0 || a > choices.len() as i64 {
+                        return Err(format!("Invalid choice for `{}`", arg.name).into());
+                    }
+
+                    let choice = choices[a as usize].clone();
+
+                    map.insert(
+                        arg.name.to_string(),
+                        splashcore_rs::value::Value::String(choice),
+                    );
+                }
+                _ => {
+                    return Err(format!("Invalid choice for `{}`", arg.name).into());
+                }
+            }
+
+            continue; // Done with special handling for choice
+        }
+
+        let value = serenity_resolvedvalue_to_value(&arg.value, &column.column_type, Some(&map))
+            .map_err(|e| format!("Column `{}`: {}", column.id, e))?;
+
+        map.insert(column.id.to_string(), value);
+    }
+
+    Ok(map)
+}
+
 /// Subcommand callback
 async fn subcommand_command(
     ctx: poise::ApplicationContext<'_, crate::data::Data, crate::Error>,
@@ -300,25 +346,12 @@ async fn subcommand_command(
             });
         }
         OperationType::Create => {
-            let mut entry = indexmap::IndexMap::new();
-
-            // Due to dynamic columns, we need to parse in order
-            for col in cwctx.config_option.columns.iter() {
-                let arg = ctx.args.iter().find(|a| a.name == col.id);
-
-                if let Some(arg) = arg {
-                    let value =
-                        serenity_resolvedvalue_to_value(&arg.value, &col.column_type, Some(&entry))
-                            .map_err(|e| {
-                                poise::FrameworkError::new_command(
-                                    poise::Context::Application(ctx),
-                                    Box::new(StringErr(e.to_string())),
-                                )
-                            })?;
-
-                    entry.insert(col.id.to_string(), value);
-                }
-            }
+            let entry = poise_getvalues(&cwctx.config_option, &ctx).map_err(|e| {
+                poise::FrameworkError::new_command(
+                    poise::Context::Application(ctx),
+                    Box::new(StringErr(e.to_string())),
+                )
+            })?;
 
             return crate::settings_poise::settings_creator(
                 &poise::Context::Application(ctx),
@@ -334,25 +367,12 @@ async fn subcommand_command(
             });
         }
         OperationType::Update => {
-            let mut entry = indexmap::IndexMap::new();
-
-            // Due to dynamic columns, we need to parse in order
-            for col in cwctx.config_option.columns.iter() {
-                let arg = ctx.args.iter().find(|a| a.name == col.id);
-
-                if let Some(arg) = arg {
-                    let value =
-                        serenity_resolvedvalue_to_value(&arg.value, &col.column_type, Some(&entry))
-                            .map_err(|e| {
-                                poise::FrameworkError::new_command(
-                                    poise::Context::Application(ctx),
-                                    Box::new(StringErr(e.to_string())),
-                                )
-                            })?;
-
-                    entry.insert(col.id.to_string(), value);
-                }
-            }
+            let entry = poise_getvalues(&cwctx.config_option, &ctx).map_err(|e| {
+                poise::FrameworkError::new_command(
+                    poise::Context::Application(ctx),
+                    Box::new(StringErr(e.to_string())),
+                )
+            })?;
 
             return crate::settings_poise::settings_updater(
                 &poise::Context::Application(ctx),
@@ -368,37 +388,14 @@ async fn subcommand_command(
             });
         }
         OperationType::Delete => {
-            // Find the primary key in the args
-            let mut pkey = splashcore_rs::value::Value::None;
+            let mut entry = poise_getvalues(&cwctx.config_option, &ctx).map_err(|e| {
+                poise::FrameworkError::new_command(
+                    poise::Context::Application(ctx),
+                    Box::new(StringErr(e.to_string())),
+                )
+            })?;
 
-            for arg in ctx.args {
-                if arg.name == cwctx.config_option.primary_key {
-                    let Some(pkey_column) = cwctx
-                        .config_option
-                        .columns
-                        .iter()
-                        .find(|c| c.id == cwctx.config_option.primary_key)
-                    else {
-                        return Err(poise::FrameworkError::new_command(
-                            poise::Context::Application(ctx),
-                            Box::new(StringErr(
-                                "INTERNAL ERROR: Primary key not found".to_string(),
-                            )),
-                        ));
-                    };
-
-                    pkey =
-                        serenity_resolvedvalue_to_value(&arg.value, &pkey_column.column_type, None)
-                            .map_err(|e| {
-                                poise::FrameworkError::new_command(
-                                    poise::Context::Application(ctx),
-                                    Box::new(StringErr(e.to_string())),
-                                )
-                            })?;
-                }
-            }
-
-            if matches!(pkey, splashcore_rs::value::Value::None) {
+            let Some(pkey) = entry.swap_remove(cwctx.config_option.primary_key) else {
                 return Err(poise::FrameworkError::new_command(
                     poise::Context::Application(ctx),
                     Box::new(StringErr(format!(
@@ -406,7 +403,7 @@ async fn subcommand_command(
                         cwctx.config_option.primary_key
                     ))),
                 ));
-            }
+            };
 
             return crate::settings_poise::settings_deleter(
                 &poise::Context::Application(ctx),
@@ -433,7 +430,13 @@ pub fn create_poise_commands_from_setting(
     // Set base info
     cmd.name = config_opt.id.to_string();
     cmd.qualified_name = config_opt.id.to_string();
-    cmd.description = Some(config_opt.description.to_string());
+    cmd.description = {
+        if config_opt.description.len() > 100 {
+            Some(config_opt.description[..97].to_string() + "...")
+        } else {
+            Some(config_opt.description.to_string())
+        }
+    };
     cmd.guild_only = true;
     cmd.subcommand_required = true;
     cmd.category = Some(module_id.to_string());
@@ -462,16 +465,12 @@ pub fn create_poise_subcommands_from_setting(
     config_opt: &module_settings::types::ConfigOption,
 ) -> Vec<poise::Command<crate::data::Data, crate::Error>> {
     let mut sub_cmds = Vec::new();
+
     // Create subcommands
-    for (operation_type, operation_specific) in config_opt.operations.iter() {
+    for (operation_type, _) in config_opt.operations.iter() {
         let mut sub_cmd = poise::Command::default();
 
-        sub_cmd.name = operation_specific
-            .corresponding_command
-            .split(" ")
-            .last()
-            .unwrap()
-            .to_string();
+        sub_cmd.name = operation_type.corresponding_command_suffix().to_string();
         sub_cmd.qualified_name = sub_cmd.name.clone();
         sub_cmd.parameters = create_command_args_for_operation_type(config_opt, *operation_type);
 
@@ -534,6 +533,12 @@ fn set_create_command_option_from_column_type<'a>(
     column: &module_settings::types::Column,
     cco: serenity::all::CreateCommandOption<'a>,
 ) -> serenity::all::CreateCommandOption<'a> {
+    let choices = get_choices_from_config_opt(column);
+
+    if !choices.is_empty() {
+        return cco.kind(serenity::all::CommandOptionType::Integer); // Poise handles choices in its own special snowflake way
+    }
+
     match column.column_type {
         ColumnType::Scalar { ref column_type } => {
             match column_type {
@@ -572,7 +577,20 @@ fn create_command_args_for_operation_type(
         return args; // View doesnt need any arguments
     }
 
-    for column in config_opt.columns.iter() {
+    // Sort the columns so required options come first
+    let mut sort_idx = vec![];
+
+    for (idx, column) in config_opt.columns.iter().enumerate() {
+        if column.nullable {
+            sort_idx.push(idx);
+        } else {
+            sort_idx.insert(0, idx);
+        }
+    }
+
+    for idx in sort_idx {
+        let column = &config_opt.columns[idx];
+
         // Check if we should ignore this column
         if column.ignored_for.contains(&operation_type) {
             continue;
@@ -600,7 +618,13 @@ fn create_command_args_for_operation_type(
             name: column.id.to_string(),
             name_localizations,
             description_localizations: std::collections::HashMap::new(),
-            description: Some(column.description.to_string()),
+            description: {
+                if column.description.len() > 100 {
+                    Some(column.description[..97].to_string() + "...")
+                } else {
+                    Some(column.description.to_string())
+                }
+            },
             required: !column.nullable,
             channel_types: {
                 match column.column_type {
@@ -649,6 +673,7 @@ fn create_command_args_for_operation_type(
                     let column = COLUMN_CACHE.get(&col_ptr).unwrap();
 
                     let cco = set_create_command_option_from_column_type(column.value(), cco);
+                    println!("Created command param: {:?}", cco);
                     cco.name_localized(INJECT_LOCALE, column.id.to_string())
                 })
             },

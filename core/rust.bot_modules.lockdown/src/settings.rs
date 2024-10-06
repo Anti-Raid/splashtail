@@ -68,11 +68,9 @@ pub static LOCKDOWN_SETTINGS: LazyLock<ConfigOption> = LazyLock::new(|| {
         title_template: "Lockdown Settings",
         operations: indexmap::indexmap! {
             OperationType::View => OperationSpecific {
-                corresponding_command: "lockdown_settings view",
                 columns_to_set: indexmap::indexmap! {},
             },
             OperationType::Create => OperationSpecific {
-                corresponding_command: "lockdown_settings create",
                 columns_to_set: indexmap::indexmap! {
                     "created_at" => "{__now}",
                     "created_by" => "{__author}",
@@ -81,14 +79,12 @@ pub static LOCKDOWN_SETTINGS: LazyLock<ConfigOption> = LazyLock::new(|| {
                 },
             },
             OperationType::Update => OperationSpecific {
-                corresponding_command: "lockdown_settings update",
                 columns_to_set: indexmap::indexmap! {
                     "last_updated_at" => "{__now}",
                     "last_updated_by" => "{__author}",
                 },
             },
             OperationType::Delete => OperationSpecific {
-                corresponding_command: "lockdown_settings delete",
                 columns_to_set: indexmap::indexmap! {},
             },
         },
@@ -201,17 +197,14 @@ pub static LOCKDOWNS: LazyLock<ConfigOption> = LazyLock::new(|| ConfigOption {
     title_template: "Reason: {reason}",
     operations: indexmap::indexmap! {
         OperationType::View => OperationSpecific {
-            corresponding_command: "lockdown list",
             columns_to_set: indexmap::indexmap! {},
         },
         OperationType::Create => OperationSpecific {
-            corresponding_command: "lockdown lock",
             columns_to_set: indexmap::indexmap! {
                 "created_at" => "{__now}",
             },
         },
         OperationType::Delete => OperationSpecific {
-            corresponding_command: "lockdown unlock",
             columns_to_set: indexmap::indexmap! {},
         }
     },

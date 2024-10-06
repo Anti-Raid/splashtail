@@ -63,17 +63,17 @@ pub(crate) async fn settings_operation(
         p_fields.insert(key, Value::from_json(&value));
     }
 
-    let Some(operation_specific) = opt.operations.get(&op) else {
+    if opt.operations.get(&op).is_none() {
         return Json(CanonicalSettingsResult::Err {
             error: CanonicalSettingsError::OperationNotSupported {
                 operation: op.into(),
             },
         });
-    };
+    }
 
     let perm_res = silverpelt::cmd::check_command(
         &data.silverpelt_cache,
-        operation_specific.corresponding_command,
+        &opt.get_corresponding_command(op),
         guild_id,
         user_id,
         &data.pool,

@@ -95,11 +95,9 @@ pub static AFKS: LazyLock<ConfigOption> = LazyLock::new(|| ConfigOption {
     title_template: "{created_at} - {expires_at}",
     operations: indexmap::indexmap! {
         OperationType::View => OperationSpecific {
-            corresponding_command: "afk list",
             columns_to_set: indexmap::indexmap! {},
         },
         OperationType::Create => OperationSpecific {
-            corresponding_command: "afk create",
             columns_to_set: indexmap::indexmap! {
                 "user_id" => "{__author}",
                 "created_at" => "{__now}",
@@ -109,14 +107,12 @@ pub static AFKS: LazyLock<ConfigOption> = LazyLock::new(|| ConfigOption {
             },
         },
         OperationType::Update => OperationSpecific {
-            corresponding_command: "afk update",
             columns_to_set: indexmap::indexmap! {
                 "last_updated_at" => "{__now}",
                 "last_updated_by" => "{__author}",
             },
         },
         OperationType::Delete => OperationSpecific {
-            corresponding_command: "afk delete",
             columns_to_set: indexmap::indexmap! {},
         },
     },

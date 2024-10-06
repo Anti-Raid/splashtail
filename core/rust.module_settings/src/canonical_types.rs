@@ -439,19 +439,6 @@ pub struct CanonicalOperationSpecific {
     pub columns_to_set: indexmap::IndexMap<String, String>,
 }
 
-impl From<super::types::OperationSpecific> for CanonicalOperationSpecific {
-    fn from(operation_specific: super::types::OperationSpecific) -> Self {
-        Self {
-            corresponding_command: operation_specific.corresponding_command.to_string(),
-            columns_to_set: operation_specific
-                .columns_to_set
-                .into_iter()
-                .map(|(k, v)| (k.to_string(), v.to_string()))
-                .collect(),
-        }
-    }
-}
-
 #[derive(Debug, Clone, PartialEq, Hash, Eq, Serialize, Deserialize)]
 #[allow(dead_code)]
 pub enum CanonicalOperationType {
@@ -542,6 +529,22 @@ impl From<super::types::ConfigOption> for CanonicalConfigOption {
         Self {
             id: module.id.to_string(),
             table: module.table.to_string(),
+            operations: module
+                .operations
+                .iter()
+                .map(|(k, v)| {
+                    ((*k).into(), {
+                        let mut columns_to_set = indexmap::IndexMap::new();
+                        for (k, v) in v.columns_to_set.iter() {
+                            columns_to_set.insert(k.to_string(), v.to_string());
+                        }
+                        CanonicalOperationSpecific {
+                            corresponding_command: module.get_corresponding_command(*k),
+                            columns_to_set,
+                        }
+                    })
+                })
+                .collect(),
             common_filters: module
                 .common_filters
                 .into_iter()
@@ -566,11 +569,6 @@ impl From<super::types::ConfigOption> for CanonicalConfigOption {
             title_template: module.title_template.to_string(),
             max_return: module.max_return,
             max_entries: module.max_entries,
-            operations: module
-                .operations
-                .into_iter()
-                .map(|(k, v)| (k.into(), v.into()))
-                .collect(),
         }
     }
 }

@@ -206,6 +206,10 @@ pub fn validate_module<T: Module + ?Sized>(module: &T) -> Result<(), crate::Erro
     Ok(())
 }
 
+fn string_to_static_str(s: String) -> &'static str {
+    Box::leak(s.into_boxed_str())
+}
+
 fn create_full_command_list(
     module_id: &str,
     commands: Vec<CommandObj>,
@@ -239,13 +243,10 @@ fn create_full_command_list(
 
         let mut extended_data = indexmap::IndexMap::new();
 
-        for (op, operation) in config_opt.operations.iter() {
+        for sub in created_cmd.subcommands.iter() {
             extended_data.insert(
-                operation.corresponding_command,
-                crate::CommandExtendedData::kittycat_or_admin(
-                    module_id,
-                    &format!("{}{}", op.to_string().to_lowercase(), &config_opt.id),
-                ),
+                string_to_static_str(sub.name.to_string()),
+                crate::CommandExtendedData::kittycat_or_admin(module_id, config_opt.id),
             );
         }
 

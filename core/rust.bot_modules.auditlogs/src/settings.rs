@@ -11,7 +11,7 @@ use std::sync::LazyLock;
 
 pub static SINK: LazyLock<ConfigOption> = LazyLock::new(|| {
     ConfigOption {
-        id: "sinks",
+        id: "auditlog_sinks",
         name: "Audit Log Sinks",
         description: "A sink is a place where audit logs are sent to. This can be a channel or a webhook at this time. More sink types may be added in the future.",
         table: "auditlogs__sinks",
@@ -134,11 +134,9 @@ pub static SINK: LazyLock<ConfigOption> = LazyLock::new(|| {
         title_template: "{type} {sink} [{id}]",
         operations: indexmap::indexmap! {
             OperationType::View => OperationSpecific {
-                corresponding_command: "auditlogs list_sinks",
                 columns_to_set: indexmap::indexmap! {},
             },
             OperationType::Create => OperationSpecific {
-                corresponding_command: "auditlogs add_sink",
                 columns_to_set: indexmap::indexmap! {
                     "created_at" => "{__now}",
                     "created_by" => "{__author}",
@@ -147,14 +145,12 @@ pub static SINK: LazyLock<ConfigOption> = LazyLock::new(|| {
                 },
             },
             OperationType::Update => OperationSpecific {
-                corresponding_command: "auditlogs edit_sink",
                 columns_to_set: indexmap::indexmap! {
                     "last_updated_at" => "{__now}",
                     "last_updated_by" => "{__author}",
                 },
             },
             OperationType::Delete => OperationSpecific {
-                corresponding_command: "auditlogs remove_sink",
                 columns_to_set: indexmap::indexmap! {},
             },
         },

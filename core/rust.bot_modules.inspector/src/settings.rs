@@ -178,19 +178,15 @@ pub static INSPECTOR_GLOBAL_OPTIONS: LazyLock<ConfigOption> = LazyLock::new(|| {
         title_template: "Servers Inspector Setup",
         operations: indexmap::indexmap! {
             OperationType::View => OperationSpecific {
-                corresponding_command: "inspector_global list",
                 columns_to_set: indexmap::indexmap! {},
             },
             OperationType::Create => OperationSpecific {
-                corresponding_command: "inspector_global setup",
                 columns_to_set: indexmap::indexmap! {},
             },
             OperationType::Update => OperationSpecific {
-                corresponding_command: "inspector_global update",
                 columns_to_set: indexmap::indexmap! {},
             },
             OperationType::Delete => OperationSpecific {
-                corresponding_command: "inspector_global delete",
                 columns_to_set: indexmap::indexmap! {},
             },
         },
@@ -393,19 +389,15 @@ pub static INSPECTOR_SPECIFIC_OPTIONS: LazyLock<ConfigOption> = LazyLock::new(||
     title_template: "Specific Inspector Setup {id}",
     operations: indexmap::indexmap! {
         OperationType::View => OperationSpecific {
-            corresponding_command: "inspector_specific list",
             columns_to_set: indexmap::indexmap! {},
         },
         OperationType::Create => OperationSpecific {
-            corresponding_command: "inspector_specific create",
             columns_to_set: indexmap::indexmap! {},
         },
         OperationType::Update => OperationSpecific {
-            corresponding_command: "inspector_specific update",
             columns_to_set: indexmap::indexmap! {},
         },
         OperationType::Delete => OperationSpecific {
-            corresponding_command: "inspector_specific disable",
             columns_to_set: indexmap::indexmap! {},
         },
     },
