@@ -9,7 +9,7 @@ pub mod module;
 pub mod module_config;
 pub mod punishments;
 pub mod settings_autogen;
-pub mod settings_poise;
+pub(crate) mod settings_poise; // Only used by settings_autogen
 pub mod stings;
 pub mod types;
 pub mod utils;

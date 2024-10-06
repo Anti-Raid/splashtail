@@ -28,17 +28,26 @@ impl From<State> for indexmap::IndexMap<String, serde_json::Value> {
 }
 
 impl State {
-    pub fn get_variable_value(&self, variable: &str) -> Value {
+    pub fn get_variable_value(map: &indexmap::IndexMap<String, Value>, variable: &str) -> Value {
         match variable {
             "__now" => Value::TimestampTz(chrono::Utc::now()),
             "__now_naive" => Value::Timestamp(chrono::Utc::now().naive_utc()),
-            _ => self.state.get(variable).cloned().unwrap_or(Value::None),
+            _ => map.get(variable).cloned().unwrap_or(Value::None),
         }
     }
 
     /// Given a template string, where state variables are surrounded by curly braces, return the
     /// template value (if a single variable) or a string if not
     pub fn template_to_string(&self, template: &str) -> Value {
+        Self::template_to_string_map(&self.state, template)
+    }
+
+    /// Given a template string, where state variables are surrounded by curly braces, return the
+    /// template value (if a single variable) or a string if not
+    pub fn template_to_string_map(
+        map: &indexmap::IndexMap<String, Value>,
+        template: &str,
+    ) -> Value {
         let mut result = template.to_string();
 
         // Get number of variables in the template
@@ -52,10 +61,10 @@ impl State {
                 .take(template.len() - 2)
                 .collect::<String>();
 
-            return self.get_variable_value(&var);
+            return Self::get_variable_value(map, &var);
         }
 
-        for (key, value) in &self.state {
+        for (key, value) in map {
             result = result.replace(&format!("{{{}}}", key), &value.to_string());
         }
 

@@ -685,6 +685,7 @@ pub async fn settings_deleter(
     Ok(())
 }
 
+#[allow(dead_code)]
 pub async fn standard_autocomplete<'a>(
     ctx: super::Context<'_>,
     setting: &ConfigOption,

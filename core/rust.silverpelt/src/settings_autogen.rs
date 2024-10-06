@@ -51,6 +51,7 @@ fn convert_bitflags_string_to_value(
 fn serenity_resolvedvalue_to_value<'a>(
     rv: &serenity::all::ResolvedValue<'a>,
     column_type: &ColumnType,
+    current_values: Option<&indexmap::IndexMap<String, splashcore_rs::value::Value>>,
 ) -> Result<splashcore_rs::value::Value, crate::Error> {
     // Before checking column_type, first handle unresolved resolved values so they don't waste our time
     match rv {
@@ -84,8 +85,29 @@ fn serenity_resolvedvalue_to_value<'a>(
     let (is_array, inner_column_type) = match column_type {
         ColumnType::Scalar { ref column_type } => (false, column_type),
         ColumnType::Array { ref inner } => (true, inner),
-        _ => {
-            return Err("Only scalar/array columns are supported right now".into());
+        ColumnType::Dynamic { ref clauses } => {
+            let Some(map) = current_values else {
+                return Err("INTERNAL: Dynamic column type requires current_values".into());
+            };
+
+            let mut current_value = None;
+
+            for clause in clauses {
+                let value =
+                    module_settings::state::State::template_to_string_map(map, clause.field);
+
+                if value == clause.value {
+                    current_value = Some(clause.column_type.clone());
+                    break;
+                }
+            }
+
+            if let Some(ref current_value) = current_value {
+                // Recurse
+                return serenity_resolvedvalue_to_value(rv, current_value, current_values);
+            } else {
+                return Err("INTERNAL: Dynamic column type failed to find a match".into());
+            }
         }
     };
 
@@ -280,31 +302,22 @@ async fn subcommand_command(
         OperationType::Create => {
             let mut entry = indexmap::IndexMap::new();
 
-            for arg in ctx.args {
-                let Some(column) = cwctx
-                    .config_option
-                    .columns
-                    .iter()
-                    .find(|c| c.id == arg.name)
-                else {
-                    return Err(poise::FrameworkError::new_command(
-                        poise::Context::Application(ctx),
-                        Box::new(StringErr(format!(
-                            "Column `{}` not found in config",
-                            arg.name
-                        ))),
-                    ));
-                };
+            // Due to dynamic columns, we need to parse in order
+            for col in cwctx.config_option.columns.iter() {
+                let arg = ctx.args.iter().find(|a| a.name == col.id);
 
-                let value = serenity_resolvedvalue_to_value(&arg.value, &column.column_type)
-                    .map_err(|e| {
-                        poise::FrameworkError::new_command(
-                            poise::Context::Application(ctx),
-                            Box::new(StringErr(e.to_string())),
-                        )
-                    })?;
+                if let Some(arg) = arg {
+                    let value =
+                        serenity_resolvedvalue_to_value(&arg.value, &col.column_type, Some(&entry))
+                            .map_err(|e| {
+                                poise::FrameworkError::new_command(
+                                    poise::Context::Application(ctx),
+                                    Box::new(StringErr(e.to_string())),
+                                )
+                            })?;
 
-                entry.insert(column.id.to_string(), value);
+                    entry.insert(col.id.to_string(), value);
+                }
             }
 
             return crate::settings_poise::settings_creator(
@@ -323,31 +336,22 @@ async fn subcommand_command(
         OperationType::Update => {
             let mut entry = indexmap::IndexMap::new();
 
-            for arg in ctx.args {
-                let Some(column) = cwctx
-                    .config_option
-                    .columns
-                    .iter()
-                    .find(|c| c.id == arg.name)
-                else {
-                    return Err(poise::FrameworkError::new_command(
-                        poise::Context::Application(ctx),
-                        Box::new(StringErr(format!(
-                            "Column `{}` not found in config",
-                            arg.name
-                        ))),
-                    ));
-                };
+            // Due to dynamic columns, we need to parse in order
+            for col in cwctx.config_option.columns.iter() {
+                let arg = ctx.args.iter().find(|a| a.name == col.id);
 
-                let value = serenity_resolvedvalue_to_value(&arg.value, &column.column_type)
-                    .map_err(|e| {
-                        poise::FrameworkError::new_command(
-                            poise::Context::Application(ctx),
-                            Box::new(StringErr(e.to_string())),
-                        )
-                    })?;
+                if let Some(arg) = arg {
+                    let value =
+                        serenity_resolvedvalue_to_value(&arg.value, &col.column_type, Some(&entry))
+                            .map_err(|e| {
+                                poise::FrameworkError::new_command(
+                                    poise::Context::Application(ctx),
+                                    Box::new(StringErr(e.to_string())),
+                                )
+                            })?;
 
-                entry.insert(column.id.to_string(), value);
+                    entry.insert(col.id.to_string(), value);
+                }
             }
 
             return crate::settings_poise::settings_updater(
@@ -383,13 +387,14 @@ async fn subcommand_command(
                         ));
                     };
 
-                    pkey = serenity_resolvedvalue_to_value(&arg.value, &pkey_column.column_type)
-                        .map_err(|e| {
-                            poise::FrameworkError::new_command(
-                                poise::Context::Application(ctx),
-                                Box::new(StringErr(e.to_string())),
-                            )
-                        })?;
+                    pkey =
+                        serenity_resolvedvalue_to_value(&arg.value, &pkey_column.column_type, None)
+                            .map_err(|e| {
+                                poise::FrameworkError::new_command(
+                                    poise::Context::Application(ctx),
+                                    Box::new(StringErr(e.to_string())),
+                                )
+                            })?;
                 }
             }
 
