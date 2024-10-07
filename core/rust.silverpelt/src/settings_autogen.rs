@@ -284,7 +284,7 @@ fn poise_getvalues(
         if !choices.is_empty() {
             match arg.value {
                 serenity::all::ResolvedValue::Integer(a) => {
-                    if a < 0 || a > choices.len() as i64 {
+                    if a < 0 || a >= choices.len() as i64 {
                         return Err(format!("Invalid choice for `{}`", arg.name).into());
                     }
 
