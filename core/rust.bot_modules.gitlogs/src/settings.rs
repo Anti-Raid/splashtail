@@ -10,7 +10,7 @@ use std::sync::LazyLock;
 
 pub static WEBHOOKS: LazyLock<ConfigOption> = LazyLock::new(|| {
     ConfigOption {
-        id: "webhooks",
+        id: "gitlogs__webhooks",
         name: "Webhooks",
         description:
             "Stores a list of webhooks to which Github can post events to.",
@@ -168,7 +168,7 @@ When creating repositories, use `{id}` as the ID.
 
 pub static REPOS: LazyLock<ConfigOption> = LazyLock::new(|| {
     ConfigOption {
-        id: "repos",
+        id: "gitlogs__repos",
         name: "Repositories",
         description:
             "In order for the Git Logs integration to post webhooks, you must provide a list of repositories",
@@ -375,7 +375,7 @@ impl SettingDataValidator for RepoValidator {
 
 pub static EVENT_MODIFIERS: LazyLock<ConfigOption> = LazyLock::new(|| {
     ConfigOption {
-        id: "event_modifiers",
+        id: "gitlogs__event_modifiers",
         name: "Event Modifiers",
         description:
             "An event modifier allows customizing and redirecting webhooks based on the event type.",
