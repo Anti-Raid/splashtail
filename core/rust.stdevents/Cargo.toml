@@ -30,6 +30,6 @@ version = "1"
 features = ["sync", "macros", "rt-multi-thread"]
 
 [dependencies.serenity]
-git = "https://github.com/serenity-rs/serenity"
+git = "https://github.com/Anti-Raid/serenity"
 branch = "next"
 features = ["model", "http", "cache", "rustls_backend", "unstable"]

@@ -20,7 +20,7 @@ config = { path = "../rust.config" }
 module_settings = { path = "../rust.module_settings" }
 
 [dependencies.serenity]
-git = "https://github.com/serenity-rs/serenity"
+git = "https://github.com/Anti-Raid/serenity"
 branch = "next"
 features = ["model", "http", "cache", "rustls_backend", "unstable"]
 

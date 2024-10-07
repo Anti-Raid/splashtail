@@ -38,7 +38,6 @@ pub static CONNECT_STATE: LazyLock<ConnectState> = LazyLock::new(|| ConnectState
 /// Props
 pub struct Props {
     pub pool: sqlx::PgPool,
-    pub redis_pool: fred::clients::RedisPool,
     pub cmd_args: Arc<ipc::argparse::CmdArgs>,
     pub cache_http: Arc<RwLock<Option<CacheHttpImpl>>>,
     pub shard_manager: Arc<RwLock<Option<Arc<serenity::all::ShardManager>>>>,
@@ -304,7 +303,6 @@ async fn main() {
     ALLOCATOR.set_limit(5 * 1024 * 1024 * 1024).unwrap();
 
     const POSTGRES_MAX_CONNECTIONS: u32 = 3; // max connections to the database, we don't need too many here
-    const REDIS_MAX_CONNECTIONS: u32 = 10; // max connections to the redis
 
     // Setup logging
     let cmd_args = Arc::new(ipc::argparse::CmdArgs::parse());
@@ -319,7 +317,7 @@ async fn main() {
     let mut env_builder = env_logger::builder();
 
     let mut default_filter =
-        "serenity=error,fred=error,rust_bot_nocluster=info,bot_binutils=info,rust_rpc_server=info,rust_rpc_server_bot=info,botox=info,templating=debug".to_string();
+        "serenity=error,fred=error,rust_bot_nocluster=info,bot_binutils=info,rust_rpc_server=info,rust_rpc_server_bot=info,botox=info,templating=debug,sqlx=info".to_string();
 
     for module in modules() {
         let module_id = module.id();
@@ -460,13 +458,6 @@ async fn main() {
 
     info!("Connecting to redis");
 
-    let pool = fred::prelude::Builder::from_config(
-        fred::prelude::RedisConfig::from_url(&config::CONFIG.meta.bot_redis_url)
-            .expect("Could not initialize Redis config"),
-    )
-    .build_pool(REDIS_MAX_CONNECTIONS.try_into().unwrap())
-    .expect("Could not initialize Redis pool");
-
     let pg_pool = PgPoolOptions::new()
         .max_connections(POSTGRES_MAX_CONNECTIONS)
         .acquire_timeout(std::time::Duration::from_secs(30))
@@ -481,7 +472,6 @@ async fn main() {
         .expect("Could not initialize reqwest client");
 
     let props = Arc::new(Props {
-        redis_pool: pool.clone(),
         pool: pg_pool.clone(),
         cmd_args: cmd_args.clone(),
         proxy_support_data: RwLock::new(None),

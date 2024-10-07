@@ -14,7 +14,7 @@ chrono = { version = "0.4", features = ["serde"]}
 reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls", "rustls-tls-native-roots"] }
 futures-util = "0.3"
 indexmap = { version = "2", features = ["serde"] }
-dashmap = { version = "5", features = ["serde", "inline", "rayon"] }
+dashmap = { version = "6", features = ["serde", "inline", "rayon"] }
 moka = { version = "0.12", features = ["future", "futures-util"] }
 bitflags = "2"
 async-trait = "0.1"
@@ -29,7 +29,7 @@ proxy_support = { path = "../rust.proxy_support" }
 std_events = { path = "../rust.stdevents" }
 
 [dependencies.serenity]
-git = "https://github.com/serenity-rs/serenity"
+git = "https://github.com/Anti-Raid/serenity"
 branch = "next"
 features = ["model", "http", "cache", "rustls_backend", "unstable"]
 

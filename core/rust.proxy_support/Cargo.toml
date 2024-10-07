@@ -15,7 +15,7 @@ serde_repr = "0.1"
 config = { path = "../rust.config" }
 
 [dependencies.serenity]
-git = "https://github.com/serenity-rs/serenity"
+git = "https://github.com/Anti-Raid/serenity"
 branch = "next"
 features = ["model", "http", "cache", "rustls_backend", "unstable"]
 

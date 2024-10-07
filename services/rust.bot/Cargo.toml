@@ -14,7 +14,7 @@ sqlx = { version = "0.8", features = [ "runtime-tokio-rustls", "postgres", "chro
 reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls", "rustls-tls-native-roots"] }
 serde_json = "1.0"
 indexmap = { version = "2", features = ["serde"] }
-dashmap = { version = "5", features = ["serde", "inline", "rayon"] }
+dashmap = { version = "6", features = ["serde", "inline", "rayon"] }
 fred = { version = "9.0.3", features = ["serde-json", "subscriber-client"] }
 async-trait = "0.1.80"
 
@@ -37,7 +37,7 @@ version = "1"
 features = ["sync", "macros", "rt-multi-thread"]
 
 [dependencies.serenity]
-git = "https://github.com/serenity-rs/serenity"
+git = "https://github.com/Anti-Raid/serenity"
 branch = "next"
 features = ["model", "http", "cache", "rustls_backend", "unstable"]
 

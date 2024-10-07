@@ -280,7 +280,7 @@ async fn main() {
     let mut env_builder = env_logger::builder();
 
     let mut default_filter =
-        "serenity=error,fred=error,rust_bot=info,bot_binutils=info,rust_rpc_server=info,rust_rpc_server_bot=info,botox=info,templating=debug"
+        "serenity=error,fred=error,rust_bot=info,bot_binutils=info,rust_rpc_server=info,rust_rpc_server_bot=info,botox=info,templating=debug,sqlx=info"
             .to_string();
 
     for module in modules() {

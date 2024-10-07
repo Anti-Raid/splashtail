@@ -21,7 +21,7 @@ permissions = { path = "../../core/rust.permissions" }
 rust_rpc_server = { path = "../../core/rust.rpc_server" }
 
 [dependencies.serenity]
-git = "https://github.com/serenity-rs/serenity"
+git = "https://github.com/Anti-Raid/serenity"
 branch = "next"
 features = ["model", "http", "cache", "rustls_backend", "unstable"]
 

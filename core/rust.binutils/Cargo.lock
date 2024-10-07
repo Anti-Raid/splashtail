@@ -3110,44 +3110,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "serenity"
-version = "0.12.1"
-source = "git+https://github.com/serenity-rs/serenity?branch=next#8b201e9708aa15d2a45b35f4457908aeb7a52d16"
-dependencies = [
- "arrayvec",
- "async-trait",
- "base64 0.21.7",
- "bitflags 2.5.0",
- "bool_to_bitflags",
- "bytes",
- "chrono",
- "dashmap",
- "extract_map",
- "flate2",
- "futures",
- "fxhash",
- "mime_guess",
- "nonmax",
- "parking_lot",
- "percent-encoding",
- "reqwest",
- "secrecy",
- "serde",
- "serde_cow",
- "serde_json",
- "small-fixed-array",
- "strum",
- "time",
- "to-arraystring",
- "tokio",
- "tokio-tungstenite",
- "tracing",
- "typesize",
- "url",
- "zeroize",
-]
-
-[[package]]
 name = "sha1"
 version = "0.10.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"

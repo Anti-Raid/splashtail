@@ -567,6 +567,18 @@ fn set_create_command_option_from_column_type<'a>(
     }
 }
 
+fn is_column_required_for_operation_type(
+    config_opt: &module_settings::types::ConfigOption,
+    column: &module_settings::types::Column,
+    operation_type: module_settings::types::OperationType,
+) -> bool {
+    if operation_type == OperationType::Update && column.id != config_opt.primary_key {
+        return false;
+    }
+
+    !column.nullable
+}
+
 fn create_command_args_for_operation_type(
     config_opt: &module_settings::types::ConfigOption,
     operation_type: module_settings::types::OperationType,
@@ -585,7 +597,7 @@ fn create_command_args_for_operation_type(
             continue; // Skip if not the primary key
         }
 
-        if column.nullable {
+        if !is_column_required_for_operation_type(config_opt, column, operation_type) {
             sort_idx.push(idx);
         } else {
             sort_idx.insert(0, idx);
@@ -629,7 +641,7 @@ fn create_command_args_for_operation_type(
                     Some(column.description.to_string())
                 }
             },
-            required: !column.nullable,
+            required: is_column_required_for_operation_type(config_opt, column, operation_type),
             channel_types: {
                 match column.column_type {
                     ColumnType::Scalar { ref column_type } => {

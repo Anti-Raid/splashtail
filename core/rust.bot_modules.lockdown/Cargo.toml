@@ -18,7 +18,7 @@ indexmap = { version = "2", features = ["serde"] }
 moka = { version = "0.12", features = ["future", "futures-util"] }
 reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls", "rustls-tls-native-roots"] }
 async-trait = "0.1.80"
-dashmap = { version = "5", features = ["serde", "inline", "rayon"] }
+dashmap = { version = "6", features = ["serde", "inline", "rayon"] }
 
 # Anti-Raid specific
 silverpelt = { path = "../rust.silverpelt" }
@@ -27,7 +27,7 @@ module_settings = { path = "../rust.module_settings" }
 proxy_support = { path = "../rust.proxy_support" }
 
 [dependencies.serenity]
-git = "https://github.com/serenity-rs/serenity"
+git = "https://github.com/Anti-Raid/serenity"
 branch = "next"
 features = ["model", "http", "cache", "rustls_backend", "unstable"]
 
