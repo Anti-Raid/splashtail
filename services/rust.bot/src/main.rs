@@ -1,5 +1,4 @@
 mod ipc;
-mod test;
 
 use ipc::mewld::MewldIpcClient;
 

@@ -6,11 +6,39 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+poise = { git = "https://github.com/Anti-Raid/poise", branch = "serenity-next" }
 serde_json = "1.0"
+log = "0.4"
+env_logger = "0.11"
+sqlx = { version = "0.8", features = [ "runtime-tokio-rustls", "postgres", "chrono", "uuid", "json"] }
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls", "rustls-tls-native-roots"] }
 indexmap = { version = "2", features = ["serde"] }
+dashmap = { version = "6", features = ["serde", "inline", "rayon"] }
+async-trait = "0.1.80"
+
+# AntiRaid specific
+splashcore_rs = { path = "../../core/rust.std" }
+gwevent = { path = "../../core/rust.gwevent" }
+proxy_support = { path = "../../core/rust.proxy_support" }
+config = { path = "../../core/rust.config" }
 permissions = { path = "../../core/rust.permissions" }
+silverpelt = { path = "../../core/rust.silverpelt" }
+
+# Modules
+bot_modules_default = { path = "../../core/rust.bot_modules_default" }
+bot_binutils = { path = "../../core/rust.binutils" }
+rust_rpc_server = { path = "../../core/rust.rpc_server" }
+rust_rpc_server_bot = { path = "../../core/rust.rpc_server.bot" }
+
+[dependencies.tokio]
+version = "1"
+features = ["sync", "macros", "rt-multi-thread"]
 
 [dependencies.serenity]
 git = "https://github.com/Anti-Raid/serenity"
 branch = "next"
 features = ["model", "http", "cache", "rustls_backend", "unstable"]
+
+[dependencies.botox]
+git = "https://github.com/Anti-Raid/botox"
+branch = "main"

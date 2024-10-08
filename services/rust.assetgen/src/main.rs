@@ -1,3 +1,5 @@
+mod tester;
+
 use std::fs::File;
 use std::io::Write;
 
@@ -52,17 +54,31 @@ fn generate_channel_types_json() {
     file.write_all(channel_types_inv_json.as_bytes()).unwrap();
 }
 
-fn main() {
+#[tokio::main]
+async fn main() {
     println!(
         "Current dir: {}",
         std::env::current_dir().unwrap().display(),
     );
 
-    println!("Saving serenity_perms.json");
+    // Get the first argument from cmd line
+    let args: Vec<String> = std::env::args().collect();
 
-    generate_serenity_perms_json();
+    match args.get(1).map(|s| s.as_str()) {
+        Some("genassets") => {
+            println!("Saving serenity_perms.json");
 
-    println!("Saving channel_types.json/channel_types_inv.json");
+            generate_serenity_perms_json();
 
-    generate_channel_types_json();
+            println!("Saving channel_types.json/channel_types_inv.json");
+
+            generate_channel_types_json();
+        }
+        Some("test") => {
+            crate::tester::run_tester().await;
+        }
+        _ => {
+            println!("No/unknown command specified. Use 'genassets' [generate build assets] or 'test' [test bot with some sanity checks]");
+        }
+    }
 }

@@ -3606,10 +3606,28 @@ dependencies = [
 name = "rust_assetgen"
 version = "0.1.0"
 dependencies = [
+ "async-trait",
+ "bot_binutils",
+ "bot_modules_default",
+ "botox",
+ "config",
+ "dashmap 6.1.0",
+ "env_logger",
+ "gwevent",
  "indexmap",
+ "log",
  "permissions",
+ "poise",
+ "proxy_support",
+ "reqwest",
+ "rust_rpc_server",
+ "rust_rpc_server_bot",
  "serde_json",
  "serenity",
+ "silverpelt",
+ "splashcore_rs",
+ "sqlx",
+ "tokio",
 ]
 
 [[package]]

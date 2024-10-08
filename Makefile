@@ -78,13 +78,13 @@ ifndef CI_BUILD
 	done
 
 	# Build rust assets too
-	cd data/generated/build_assets && ../../../out/rust.assetgen && cd ../../..
-	cd services/website/src/lib/generated/build_assets && ../../../../../../out/rust.assetgen && cd ../../../../../..
+	cd data/generated/build_assets && ../../../out/rust.assetgen genassets && cd ../../..
+	cd services/website/src/lib/generated/build_assets && ../../../../../../out/rust.assetgen genassets && cd ../../../../../..
 
 endif
 
 tests:
-	CGO_ENABLED=0 go test -v -coverprofile=coverage.out ./...
+	./out/rust.assetgen test
 
 ts:
 	~/go/bin/tygo generate

@@ -59,30 +59,6 @@ pub static INSPECTOR_GLOBAL_OPTIONS: LazyLock<ConfigOption> = LazyLock::new(|| {
                 secret: false,
             },
             Column {
-                id: "anti_invite",
-                name: "Anti Invite",
-                description: "Number of stings to give when an invite is sent",
-                column_type: ColumnType::new_scalar(InnerColumnType::Integer {}),
-                nullable: true,
-                default: None,
-                unique: false,
-                suggestions: ColumnSuggestion::None {},
-                ignored_for: vec![],
-                secret: false,
-            },
-            Column {
-                id: "anti_everyone",
-                name: "Anti Everyone",
-                description: "Number of stings to give when an everyone ping is sent",
-                column_type: ColumnType::new_scalar(InnerColumnType::Integer {}),
-                nullable: true,
-                default: None,
-                unique: false,
-                suggestions: ColumnSuggestion::None {},
-                ignored_for: vec![],
-                secret: false,
-            },
-            Column {
                 id: "hoist_detection",
                 name: "Hoist Detection",
                 description: "Hoist detection options",
@@ -129,29 +105,6 @@ pub static INSPECTOR_GLOBAL_OPTIONS: LazyLock<ConfigOption> = LazyLock::new(|| {
                 secret: false,
             },
             Column {
-                id: "auto_response_memberjoin",
-                name: "Auto Response (Member Join)",
-                description: "Action that should be performed automatically when a member joins",
-                column_type: ColumnType::new_scalar(InnerColumnType::BitFlag {
-                    values: AutoResponseMemberJoinOptions::all()
-                        .into_iter()
-                        .map(|x| (x.to_string(), x.bits() as i64))
-                        .collect(),
-                }),
-                nullable: false,
-                default: Some(|_| {
-                    Value::Integer(
-                        super::cache::InspectorGlobalOptions::default()
-                            .auto_response_memberjoin
-                            .bits() as i64,
-                    )
-                }),
-                unique: false,
-                suggestions: ColumnSuggestion::None {},
-                ignored_for: vec![],
-                secret: false,
-            },
-            Column {
                 id: "fake_bot_detection",
                 name: "Fake Bot Detection",
                 description: "Fake bot detection options",
@@ -166,6 +119,29 @@ pub static INSPECTOR_GLOBAL_OPTIONS: LazyLock<ConfigOption> = LazyLock::new(|| {
                     Value::Integer(
                         super::cache::InspectorGlobalOptions::default()
                             .fake_bot_detection
+                            .bits() as i64,
+                    )
+                }),
+                unique: false,
+                suggestions: ColumnSuggestion::None {},
+                ignored_for: vec![],
+                secret: false,
+            },
+            Column {
+                id: "auto_response_memberjoin",
+                name: "Auto Response (Member Join)",
+                description: "Action that should be performed automatically when a member joins",
+                column_type: ColumnType::new_scalar(InnerColumnType::BitFlag {
+                    values: AutoResponseMemberJoinOptions::all()
+                        .into_iter()
+                        .map(|x| (x.to_string(), x.bits() as i64))
+                        .collect(),
+                }),
+                nullable: false,
+                default: Some(|_| {
+                    Value::Integer(
+                        super::cache::InspectorGlobalOptions::default()
+                            .auto_response_memberjoin
                             .bits() as i64,
                     )
                 }),
