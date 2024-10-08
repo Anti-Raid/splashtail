@@ -83,9 +83,10 @@ type CanonicalInnerColumnTypeStringKind struct {
 		AllowedTypes         []discordgo.ChannelType `json:"allowed_types"`
 		NeededBotPermissions ext_types.Permissions   `json:"needed_bot_permissions"`
 	} `json:"Channel,omitempty"`
-	Role    *struct{} `json:"Role,omitempty"`
-	Emoji   *struct{} `json:"Emoji,omitempty"`
-	Message *struct{} `json:"Message,omitempty"`
+	Role     *struct{} `json:"Role,omitempty"`
+	Emoji    *struct{} `json:"Emoji,omitempty"`
+	Message  *struct{} `json:"Message,omitempty"`
+	Modifier *struct{} `json:"Modifier,omitempty"`
 }
 
 type CanonicalInnerColumnType struct {

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"os"
@@ -11,9 +12,11 @@ import (
 
 	"github.com/bwmarrin/discordgo"
 	mconfig "github.com/cheesycod/mewld/config"
+	"github.com/cheesycod/mewld/ipc/redis"
 	mloader "github.com/cheesycod/mewld/loader"
 	mproc "github.com/cheesycod/mewld/proc"
 	mutils "github.com/cheesycod/mewld/utils"
+	"github.com/git-logs/client/webserver/state"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-playground/validator/v10"
@@ -23,7 +26,6 @@ import (
 	"gopkg.in/yaml.v3"
 
 	"go.std/config"
-	"go.std/mewld_web"
 	"go.std/utils"
 
 	"go.uber.org/zap"
@@ -100,7 +102,13 @@ func main() {
 		logger.Fatal("Error parsing webhook URL", zap.Error(err))
 	}
 
-	il, rh, err := mloader.Load(&mldConfig, &mproc.LoaderData{
+	redisIpc, err := redis.NewWithRedis(context.Background(), mldConfig.Redis, mldConfig.RedisChannel)
+
+	if err != nil {
+		state.Logger.Fatal("Error creating redis IPC: ", zap.Error(err))
+	}
+
+	il, err := mloader.Load(&mldConfig, &mproc.LoaderData{
 		Start: func(l *mproc.InstanceList, i *mproc.Instance, cm *mproc.ClusterMap) error {
 			cmd := exec.Command(
 				func() string {
@@ -159,7 +167,7 @@ func main() {
 
 			return nil
 		},
-	})
+	}, redisIpc)
 
 	if err != nil {
 		panic(err)
@@ -205,12 +213,6 @@ func main() {
 
 		w.Write(bytes)
 	})
-
-	mewld_web.SetState(cfg.DiscordAuth.DPSecret.Parse())
-	r.Mount("/mewld", mewld_web.CreateServer(mewld_web.WebData{
-		RedisHandler: rh,
-		InstanceList: il,
-	}))
 
 	err = http.ListenAndServe(":"+strconv.Itoa(cfg.BasePorts.Bot.Parse()-1), r)
 

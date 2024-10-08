@@ -14,8 +14,8 @@ import (
 	"github.com/anti-raid/splashtail/cmd/wafflepaw/bgtasks"
 	"github.com/bwmarrin/discordgo"
 	mconfig "github.com/cheesycod/mewld/config"
+	"github.com/cheesycod/mewld/ipchandler"
 	mproc "github.com/cheesycod/mewld/proc"
-	mredis "github.com/cheesycod/mewld/redis"
 	"github.com/infinitybotlist/eureka/crypto"
 	"go.std/config"
 	"go.uber.org/zap"
@@ -430,7 +430,7 @@ func (p *ProbeTask) tryRollingRestartMewldCluster() error {
 		return nil // This strategy does not work
 	}
 
-	rr := mredis.LauncherCmd{
+	rr := ipchandler.LauncherCmd{
 		Scope:     "launcher",
 		Action:    "rollingrestart",
 		CommandId: crypto.RandString(16),

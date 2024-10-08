@@ -17,8 +17,8 @@ import (
 
 	"text/template"
 
+	"github.com/anti-raid/shellcli/cmd"
 	"github.com/bwmarrin/discordgo"
-	"github.com/infinitybotlist/eureka/cmd"
 	"github.com/infinitybotlist/eureka/crypto"
 	"github.com/infinitybotlist/eureka/snippets"
 	orderedmap "github.com/wk8/go-ordered-map/v2"

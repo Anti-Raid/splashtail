@@ -8,11 +8,11 @@ pub struct Module;
 
 impl silverpelt::module::Module for Module {
     fn id(&self) -> &'static str {
-        "punishments"
+        "punishment_autotriggers"
     }
 
     fn name(&self) -> &'static str {
-        "Punishments"
+        "Punishment Autotriggers"
     }
 
     fn description(&self) -> &'static str {

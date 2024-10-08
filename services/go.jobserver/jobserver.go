@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"os"
@@ -17,13 +18,13 @@ import (
 	"go.jobserver/rpc"
 	"go.jobserver/state"
 	"go.std/config"
-	"go.std/mewld_web"
 	"go.std/mewldresponder"
 	"go.std/utils"
 	"go.uber.org/zap"
 	"gopkg.in/yaml.v3"
 
 	mconfig "github.com/cheesycod/mewld/config"
+	"github.com/cheesycod/mewld/ipc/redis"
 	mloader "github.com/cheesycod/mewld/loader"
 	mproc "github.com/cheesycod/mewld/proc"
 	mutils "github.com/cheesycod/mewld/utils"
@@ -107,7 +108,13 @@ func CreateClusters() {
 		state.Logger.Fatal("Error parsing webhook URL", zap.Error(err))
 	}
 
-	il, rh, err := mloader.Load(&mldConfig, &mproc.LoaderData{
+	redisIpc, err := redis.NewWithRedis(context.Background(), mldConfig.Redis, mldConfig.RedisChannel)
+
+	if err != nil {
+		state.Logger.Fatal("Error creating redis IPC: ", zap.Error(err))
+	}
+
+	il, err := mloader.Load(&mldConfig, &mproc.LoaderData{
 		Start: func(l *mproc.InstanceList, i *mproc.Instance, cm *mproc.ClusterMap) error {
 			cmd := exec.Command(
 				func() string {
@@ -165,7 +172,7 @@ func CreateClusters() {
 
 			return nil
 		},
-	})
+	}, redisIpc)
 
 	if err != nil {
 		panic(err)
@@ -180,12 +187,6 @@ func CreateClusters() {
 	}()
 
 	r := chi.NewMux()
-
-	mewld_web.SetState(state.Config.DiscordAuth.DPSecret.Parse())
-	r.Mount("/mewld", mewld_web.CreateServer(mewld_web.WebData{
-		RedisHandler: rh,
-		InstanceList: il,
-	}))
 
 	// Tableflip not supported
 	state.Logger.Warn("Tableflip not supported on this platform, this is not a production-capable server.")

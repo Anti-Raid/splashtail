@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	mredis "github.com/cheesycod/mewld/redis"
+	"github.com/cheesycod/mewld/ipchandler"
 	"github.com/infinitybotlist/eureka/jsonimpl"
 	"github.com/redis/rueidis"
 	"go.uber.org/zap"
@@ -21,7 +21,7 @@ type MewldResponder struct {
 	OnDiag                func(p *MewldDiagPayload) (*MewldDiagResponse, error)
 	OnAllClustersLaunched func() error
 	OnLaunchNext          func() error
-	OnLauncherCmd         func(cmd mredis.LauncherCmd) error
+	OnLauncherCmd         func(cmd ipchandler.LauncherCmd) error
 }
 
 // ListenOnce starts listening for messages from redis
@@ -71,7 +71,7 @@ func (c *MewldResponder) ListenOnce(ctx context.Context, r rueidis.Client, l *za
 							return
 						}
 
-						lcmd := mredis.LauncherCmd{
+						lcmd := ipchandler.LauncherCmd{
 							Scope:  "launcher",
 							Action: "diag",
 							Output: string(bytes),
@@ -99,7 +99,7 @@ func (c *MewldResponder) ListenOnce(ctx context.Context, r rueidis.Client, l *za
 
 				bytesData := []byte(msg.Message)
 
-				var launcherData mredis.LauncherCmd
+				var launcherData ipchandler.LauncherCmd
 
 				err := jsonimpl.Unmarshal(bytesData, &launcherData)
 
@@ -163,7 +163,7 @@ func (c *MewldResponder) Listen(ctx context.Context, redis rueidis.Client, l *za
 
 // Sends the launch_next command
 func (c *MewldResponder) LaunchNext(ctx context.Context, redis rueidis.Client, l *zap.Logger) error {
-	launchNextCmd := mredis.LauncherCmd{
+	launchNextCmd := ipchandler.LauncherCmd{
 		Scope:  "launcher",
 		Action: "launch_next",
 		Args: map[string]any{

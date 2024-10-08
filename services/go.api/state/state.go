@@ -36,7 +36,7 @@ import (
 var (
 	Pool                    *pgxpool.Pool
 	Rueidis                 rueidis.Client // where perf is needed
-	DovewingPlatformDiscord *dovewing.DiscordState
+	DovewingPlatformDiscord *DiscordState
 	Discord                 *discordgo.Session
 	Logger                  *zap.Logger
 	Context                 = context.Background()
@@ -196,7 +196,7 @@ func Setup() {
 		UserExpiryTime: 8 * time.Hour,
 	}
 
-	DovewingPlatformDiscord, err = dovewing.DiscordStateConfig{
+	DovewingPlatformDiscord, err = DiscordStateConfig{
 		Session:        Discord,
 		PreferredGuild: Config.Servers.Main.Parse(),
 		BaseState:      &baseDovewingState,

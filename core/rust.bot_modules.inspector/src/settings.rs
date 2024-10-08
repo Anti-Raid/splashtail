@@ -376,7 +376,7 @@ pub static INSPECTOR_SPECIFIC_OPTIONS: LazyLock<ConfigOption> = LazyLock::new(||
                 max_length: None,
                 min_length: None,
                 allowed_values: vec![],
-                kind: InnerColumnTypeStringKind::Normal,
+                kind: InnerColumnTypeStringKind::Modifier,
             }),
             nullable: false,
             default: Some(|_| Value::Integer(300)),
@@ -443,7 +443,7 @@ impl SettingDataValidator for InspectorSpecificOptionsValidator {
             match modifier {
                 splashcore_rs::modifier::Modifier::Role(_) => {
                     return Err(SettingsError::Generic {
-                        message: "Role modifiers are not supported".to_string(),
+                        message: "Role modifiers are not supported yet".to_string(),
                         typ: "value_error".to_string(),
                         src: "inspector__specific_options.modifier".to_string(),
                     });

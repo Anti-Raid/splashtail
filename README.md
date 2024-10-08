@@ -129,7 +129,7 @@ To load the database seed, follow the following steps:
 
 ### Building Anti-Raid
 
-**When first compiling Anti-Raid, run ``make buildall`` to build all components including mewld_web.**. After the first run, you can use the below commands to build individual components.
+**When first compiling Anti-Raid, run ``make buildall`` to build all components including**. After the first run, you can use the below commands to build individual components.
 
 - Run ``make buildservices`` to build the bot and all components
 - Run ``make all`` to build everything

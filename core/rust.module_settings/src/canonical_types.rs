@@ -221,6 +221,8 @@ pub enum CanonicalInnerColumnTypeStringKind {
     Emoji {},
     /// Message
     Message {},
+    /// Modifier
+    Modifier {},
 }
 
 impl From<super::types::InnerColumnTypeStringKind> for CanonicalInnerColumnTypeStringKind {
@@ -259,6 +261,9 @@ impl From<super::types::InnerColumnTypeStringKind> for CanonicalInnerColumnTypeS
             }
             super::types::InnerColumnTypeStringKind::Message => {
                 CanonicalInnerColumnTypeStringKind::Message {}
+            }
+            super::types::InnerColumnTypeStringKind::Modifier => {
+                CanonicalInnerColumnTypeStringKind::Modifier {}
             }
         }
     }

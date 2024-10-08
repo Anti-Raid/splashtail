@@ -227,6 +227,8 @@ pub enum InnerColumnTypeStringKind {
     Emoji,
     /// Message
     Message,
+    /// Modifier
+    Modifier,
 }
 
 impl std::fmt::Display for InnerColumnTypeStringKind {
@@ -253,6 +255,7 @@ impl std::fmt::Display for InnerColumnTypeStringKind {
             InnerColumnTypeStringKind::Role => write!(f, "Role"),
             InnerColumnTypeStringKind::Emoji => write!(f, "Emoji"),
             InnerColumnTypeStringKind::Message => write!(f, "Message"),
+            InnerColumnTypeStringKind::Modifier => write!(f, "Modifier"),
         }
     }
 }

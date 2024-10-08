@@ -636,6 +636,18 @@ async fn _validate_value(
 
                                     v
                                 }
+                                InnerColumnTypeStringKind::Modifier => {
+                                    splashcore_rs::modifier::Modifier::from_repr(s).map_err(
+                                        |e| SettingsError::SchemaCheckValidationError {
+                                            column: column_id.to_string(),
+                                            check: "modifier_parse".to_string(),
+                                            accepted_range: "Valid modifier".to_string(),
+                                            error: e.to_string(),
+                                        },
+                                    )?;
+
+                                    v
+                                }
                             };
                             Ok(parsed_value)
                         }

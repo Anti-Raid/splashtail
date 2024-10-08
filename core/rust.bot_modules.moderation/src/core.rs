@@ -3,9 +3,7 @@ use serenity::all::User;
 pub(crate) mod punishment_actions {
     use async_trait::async_trait;
     use serenity::all::{EditMember, Timestamp};
-    use silverpelt::punishments::{
-        CreatePunishmentAction, PunishmentAction, PunishmentActionData,
-    };
+    use silverpelt::punishments::{CreatePunishmentAction, PunishmentAction, PunishmentActionData};
 
     pub struct CreateTimeoutAction;
 
@@ -134,11 +132,7 @@ pub(crate) mod punishment_actions {
         ) -> Result<(), silverpelt::Error> {
             bot_member
                 .guild_id
-                .kick(
-                    &data.cache_http.http,
-                    user_id,
-                    Some(&reason),
-                )
+                .kick(&data.cache_http.http, user_id, Some(&reason))
                 .await?;
 
             Ok(())
@@ -196,16 +190,11 @@ pub(crate) mod punishment_actions {
             data: &PunishmentActionData,
             user_id: serenity::all::UserId,
             bot_member: &mut serenity::all::Member,
-            reason: String
+            reason: String,
         ) -> Result<(), silverpelt::Error> {
             bot_member
                 .guild_id
-                .ban(
-                    &data.cache_http.http,
-                    user_id,
-                    0,
-                    Some(&reason),
-                )
+                .ban(&data.cache_http.http, user_id, 0, Some(&reason))
                 .await?;
 
             Ok(())
@@ -216,16 +205,26 @@ pub(crate) mod punishment_actions {
             data: &PunishmentActionData,
             user_id: serenity::all::UserId,
             bot_member: &mut serenity::all::Member,
-            reason: String
+            reason: String,
         ) -> Result<(), silverpelt::Error> {
-            bot_member
+            match bot_member
                 .guild_id
-                .unban(
-                    &data.cache_http.http,
-                    user_id,
-                    Some(&reason),
-                )
-                .await?;
+                .unban(&data.cache_http.http, user_id, Some(&reason))
+                .await
+            {
+                Ok(_) => {}
+                Err(e) => {
+                    match e {
+                        serenity::Error::Http(http_error) => {
+                            if http_error.status_code().unwrap_or_default() == 404 {
+                                // User is not banned
+                                return Ok(());
+                            }
+                        }
+                        _ => return Err(e.into()),
+                    }
+                }
+            }
 
             Ok(())
         }
