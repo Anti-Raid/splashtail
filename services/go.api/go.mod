@@ -8,7 +8,7 @@ replace go.jobs => ../../core/go.jobs
 
 require (
 	github.com/bwmarrin/discordgo v0.28.1
-	github.com/cheesycod/mewld v0.0.0-20241009012416-a5f6036feb21
+	github.com/cheesycod/mewld v0.0.0-20241009141200-7112e232556a
 	github.com/cloudflare/tableflip v1.2.3
 	github.com/git-logs/client/webserver v0.0.0-20240809070647-860483f2c2cc
 	github.com/go-chi/chi/v5 v5.1.0

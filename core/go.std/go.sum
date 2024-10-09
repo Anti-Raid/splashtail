@@ -37,6 +37,8 @@ github.com/cheesycod/mewld v0.0.0-20241008032024-23613421c7b3 h1:9ztyJgrgEBHP1G/
 github.com/cheesycod/mewld v0.0.0-20241008032024-23613421c7b3/go.mod h1:aG40sffwuzcsqbfG6cqkmZjrrt/1WtG9Pw12+4AkA1M=
 github.com/cheesycod/mewld v0.0.0-20241009012416-a5f6036feb21 h1:D6joQJlZ5WWXvW9B6bscM5PWeBjSJ/5LOBhK+rWBN7M=
 github.com/cheesycod/mewld v0.0.0-20241009012416-a5f6036feb21/go.mod h1:aG40sffwuzcsqbfG6cqkmZjrrt/1WtG9Pw12+4AkA1M=
+github.com/cheesycod/mewld v0.0.0-20241009141200-7112e232556a h1:uWhqXr7VxxUYM4blz0eJ2OTrtggWlGO95/2zyAq3jWE=
+github.com/cheesycod/mewld v0.0.0-20241009141200-7112e232556a/go.mod h1:aG40sffwuzcsqbfG6cqkmZjrrt/1WtG9Pw12+4AkA1M=
 github.com/cloudwego/base64x v0.1.4 h1:jwCgWpFanWmN8xoIUHa2rtzmkd5J2plF/dnLS6Xd/0Y=
 github.com/cloudwego/base64x v0.1.4/go.mod h1:0zlkT4Wn5C6NdauXdJRhSKRlJvmclQ1hhJgA0rcu/8w=
 github.com/cloudwego/iasm v0.2.0 h1:1KNIy1I1H9hNNFEEH3DVnI4UujN+1zjpuk6gwHLTssg=
