@@ -6,45 +6,16 @@ use std::sync::LazyLock;
 
 type Error = Box<dyn std::error::Error + Send + Sync>;
 
-pub static CURRENT_ENV: LazyLock<&str> = LazyLock::new(|| {
-    let current_env = include_bytes!("../current-env");
-
-    std::str::from_utf8(current_env).unwrap()
-});
-
 /// Global config object
 pub static CONFIG: LazyLock<Config> =
     LazyLock::new(|| Config::load().expect("Failed to load config"));
 
 #[derive(Serialize, Deserialize, Default)]
-pub struct Differs<T: Default + Clone> {
-    staging: T,
-    prod: T,
-}
-
-impl<T: Default + Clone> Differs<T> {
-    /// Get the value for a given environment
-    pub fn get_for_env(&self, env: &str) -> T {
-        if env == "staging" {
-            self.staging.clone()
-        } else {
-            self.prod.clone()
-        }
-    }
-
-    /// Get the value for the current environment
-    pub fn get(&self) -> T {
-        self.get_for_env(*CURRENT_ENV)
-    }
-}
-
-#[derive(Serialize, Deserialize, Default)]
 pub struct DiscordAuth {
-    pub token: Differs<String>,
-    pub client_id: Differs<String>,
-    pub client_secret: Differs<String>,
+    pub token: String,
+    pub client_id: String,
+    pub client_secret: String,
     pub root_users: Vec<UserId>,
-    pub public_bot: Differs<bool>,
 }
 
 // Object storage code
@@ -111,31 +82,31 @@ impl ObjectStorage {
 pub struct Meta {
     pub postgres_url: String,
     pub bot_redis_url: String,
-    pub proxy: Differs<String>,
+    pub proxy: String,
     pub support_server_invite: String,
     pub sandwich_http_api: Option<String>,
 }
 
 #[derive(Serialize, Deserialize)]
 pub struct Sites {
-    pub api: Differs<String>,
-    pub frontend: Differs<String>,
+    pub api: String,
+    pub frontend: String,
 }
 
 #[derive(Serialize, Deserialize)]
 pub struct Servers {
-    pub main: Differs<serenity::all::GuildId>,
+    pub main: serenity::all::GuildId,
 }
 
 #[derive(Serialize, Deserialize)]
 #[allow(dead_code)]
 pub struct BasePorts {
-    pub jobserver: Differs<u16>,
-    pub bot: Differs<u16>,
-    pub jobserver_base_addr: Differs<String>,
-    pub jobserver_bind_addr: Differs<String>,
-    pub bot_base_addr: Differs<String>,
-    pub bot_bind_addr: Differs<String>,
+    pub jobserver: u16,
+    pub bot: u16,
+    pub jobserver_base_addr: String,
+    pub jobserver_bind_addr: String,
+    pub bot_base_addr: String,
+    pub bot_bind_addr: String,
 }
 
 #[derive(Serialize, Deserialize)]

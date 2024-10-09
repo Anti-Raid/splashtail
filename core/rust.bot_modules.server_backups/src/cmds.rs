@@ -174,8 +174,8 @@ pub async fn backups_create(
         .reqwest
         .post(format!(
             "{}:{}/spawn",
-            config::CONFIG.base_ports.jobserver_base_addr.get(),
-            config::CONFIG.base_ports.jobserver.get() + jobserver_cluster_id
+            config::CONFIG.base_ports.jobserver_base_addr,
+            config::CONFIG.base_ports.jobserver + jobserver_cluster_id
         ))
         .json(&splashcore_rs::jobserver::Spawn {
             name: "guild_create_backup".to_string(),
@@ -220,7 +220,7 @@ pub async fn backups_create(
         mut base_message: serenity::model::channel::Message,
         job: Arc<jobserver::Job>,
     ) -> Result<(), Error> {
-        let new_job_msg = embed_job(&config::CONFIG.sites.api.get(), &job, vec![], true)?;
+        let new_job_msg = embed_job(&config::CONFIG.sites.api, &job, vec![], true)?;
 
         base_message
             .edit(
@@ -295,7 +295,7 @@ pub async fn backups_list(ctx: Context<'_>) -> Result<(), Error> {
         if let Some(ref output) = job.output {
             let furl = format!(
                 "{}/jobs/{}/ioauth/download-link",
-                config::CONFIG.sites.api.get(),
+                config::CONFIG.sites.api,
                 job.id
             );
 
@@ -613,8 +613,8 @@ pub async fn backups_list(ctx: Context<'_>) -> Result<(), Error> {
                     .reqwest
                     .post(format!(
                         "{}:{}/spawn",
-                        config::CONFIG.base_ports.jobserver_base_addr.get(),
-                        config::CONFIG.base_ports.jobserver.get() + jobserver_cluster_id
+                        config::CONFIG.base_ports.jobserver_base_addr,
+                        config::CONFIG.base_ports.jobserver + jobserver_cluster_id
                     ))
                     .json(&splashcore_rs::jobserver::Spawn {
                         name: "guild_restore_backup".to_string(),
@@ -659,8 +659,7 @@ pub async fn backups_list(ctx: Context<'_>) -> Result<(), Error> {
                     mut base_message: serenity::model::channel::Message,
                     job: Arc<jobserver::Job>,
                 ) -> Result<(), Error> {
-                    let new_job_msg =
-                        embed_job(&config::CONFIG.sites.api.get(), &job, vec![], true)?;
+                    let new_job_msg = embed_job(&config::CONFIG.sites.api, &job, vec![], true)?;
 
                     base_message
                         .edit(
@@ -1213,8 +1212,8 @@ pub async fn backups_restore(
         .reqwest
         .post(format!(
             "{}:{}/spawn",
-            config::CONFIG.base_ports.jobserver_base_addr.get(),
-            config::CONFIG.base_ports.jobserver.get() + jobserver_cluster_id
+            config::CONFIG.base_ports.jobserver_base_addr,
+            config::CONFIG.base_ports.jobserver + jobserver_cluster_id
         ))
         .json(&splashcore_rs::jobserver::Spawn {
             name: "guild_restore_backup".to_string(),
@@ -1259,7 +1258,7 @@ pub async fn backups_restore(
         mut base_message: serenity::model::channel::Message,
         job: Arc<jobserver::Job>,
     ) -> Result<(), Error> {
-        let new_job_msg = embed_job(&config::CONFIG.sites.api.get(), &job, vec![], true)?;
+        let new_job_msg = embed_job(&config::CONFIG.sites.api, &job, vec![], true)?;
 
         base_message
             .edit(

@@ -54,7 +54,7 @@ var (
 func fetchMewldInstanceList() (*mproc.InstanceList, error) {
 	var mc *mproc.InstanceList
 
-	resp, err := http.Get(fmt.Sprintf("http://localhost:%d/getMewldInstanceList", Config.BasePorts.Bot.Parse()-1))
+	resp, err := http.Get(fmt.Sprintf("http://localhost:%d/getMewldInstanceList", Config.BasePorts.Bot-1))
 
 	if err != nil {
 		return nil, err
@@ -138,7 +138,7 @@ func Setup() {
 	}
 
 	// Reuidis
-	ruOptions, err := rueidis.ParseURL(Config.Meta.RedisURL.Parse())
+	ruOptions, err := rueidis.ParseURL(Config.Meta.RedisURL)
 
 	if err != nil {
 		panic(err)
@@ -158,13 +158,13 @@ func Setup() {
 	}
 
 	// Discordgo
-	Discord, err = discordgo.New("Bot " + Config.DiscordAuth.Token.Parse())
+	Discord, err = discordgo.New("Bot " + Config.DiscordAuth.Token)
 
 	if err != nil {
 		panic(err)
 	}
 
-	Discord.Client.Transport = proxy.NewHostRewriter(strings.Replace(Config.Meta.Proxy.Parse(), "http://", "", 1), http.DefaultTransport, func(s string) {
+	Discord.Client.Transport = proxy.NewHostRewriter(strings.Replace(Config.Meta.Proxy, "http://", "", 1), http.DefaultTransport, func(s string) {
 		Logger.Info("[PROXY]", zap.String("note", s))
 	})
 
@@ -198,7 +198,7 @@ func Setup() {
 
 	DovewingPlatformDiscord, err = DiscordStateConfig{
 		Session:        Discord,
-		PreferredGuild: Config.Servers.Main.Parse(),
+		PreferredGuild: Config.Servers.Main,
 		BaseState:      &baseDovewingState,
 	}.New()
 

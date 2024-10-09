@@ -1,0 +1,13 @@
+[Unit]
+Description=AntiRaid Postgres Backup Timer
+
+[Timer]
+OnBootSec=15min
+Persistent=true
+# OnUnitActiveSec=1h -- If monotonic is desired, maybe it is(?)
+OnCalendar=hourly
+WakeSystem=true
+RandomizedDelaySec=20m
+
+[Install]
+WantedBy=timers.target

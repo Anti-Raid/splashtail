@@ -153,7 +153,7 @@ When creating repositories, use `{id}` as the ID.
 
 **Note that the above URL and secret is unique and should not be shared with others**
                         ",
-                        api_url=config::CONFIG.sites.api.get(),
+                        api_url=config::CONFIG.sites.api,
                         id=id,
                         webh_secret=secret
                     )

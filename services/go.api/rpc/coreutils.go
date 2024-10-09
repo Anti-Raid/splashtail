@@ -15,19 +15,19 @@ import (
 )
 
 func CalcBotPort(clusterId int) int {
-	return state.Config.BasePorts.Bot.Parse() + clusterId
+	return state.Config.BasePorts.Bot + clusterId
 }
 
 func CalcJobserverPort(clusterId int) int {
-	return state.Config.BasePorts.Jobserver.Parse() + clusterId
+	return state.Config.BasePorts.Jobserver + clusterId
 }
 
 func CalcBotAddr(clusterId int) string {
-	return state.Config.BasePorts.BotBaseAddr.Parse() + ":" + strconv.Itoa(CalcBotPort(clusterId))
+	return state.Config.BasePorts.BotBaseAddr + ":" + strconv.Itoa(CalcBotPort(clusterId))
 }
 
 func CalcJobserverAddr(clusterId int) string {
-	return state.Config.BasePorts.JobserverBaseAddr.Parse() + ":" + strconv.Itoa(CalcJobserverPort(clusterId))
+	return state.Config.BasePorts.JobserverBaseAddr + ":" + strconv.Itoa(CalcJobserverPort(clusterId))
 }
 
 func ClusterCheck(clusterId int) (resp uapi.HttpResponse, ok bool) {

@@ -113,13 +113,13 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 		}
 	}
 
-	redirectUrl := state.Config.Sites.API.Parse() + "/ioauth/login"
+	redirectUrl := state.Config.Sites.API + "/ioauth/login"
 
 	if r.URL.Query().Get("code") == "" {
 		// Redirect user
 		return uapi.HttpResponse{
 			Status:   http.StatusTemporaryRedirect,
-			Redirect: fmt.Sprintf("https://discord.com/api/v10/oauth2/authorize?client_id=%s&redirect_uri=%s&response_type=code&scope=%s&state=%s", state.Config.DiscordAuth.ClientID.Parse(), redirectUrl, strings.Join(rd.Scopes, "%20"), rdB),
+			Redirect: fmt.Sprintf("https://discord.com/api/v10/oauth2/authorize?client_id=%s&redirect_uri=%s&response_type=code&scope=%s&state=%s", state.Config.DiscordAuth.ClientID, redirectUrl, strings.Join(rd.Scopes, "%20"), rdB),
 		}
 	} else {
 		// Check for reuse
@@ -143,9 +143,9 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 		var iot types.IOAuthOutput
 
 		// Exchange code for token
-		req, err := http.NewRequest("POST", state.Config.Meta.Proxy.Parse()+"/api/v10/oauth2/token", strings.NewReader(url.Values{
-			"client_id":     {state.Config.DiscordAuth.ClientID.Parse()},
-			"client_secret": {state.Config.DiscordAuth.ClientSecret.Parse()},
+		req, err := http.NewRequest("POST", state.Config.Meta.Proxy+"/api/v10/oauth2/token", strings.NewReader(url.Values{
+			"client_id":     {state.Config.DiscordAuth.ClientID},
+			"client_secret": {state.Config.DiscordAuth.ClientSecret},
 			"grant_type":    {"authorization_code"},
 			"code":          {r.URL.Query().Get("code")},
 			"redirect_uri":  {redirectUrl},
@@ -251,7 +251,7 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 			switch scope {
 			case "identify":
 				// Fetch user information
-				req, err = http.NewRequest("GET", state.Config.Meta.Proxy.Parse()+"/api/v10/users/@me", nil)
+				req, err = http.NewRequest("GET", state.Config.Meta.Proxy+"/api/v10/users/@me", nil)
 
 				if err != nil {
 					state.Logger.Error("Error while creating request", zap.Error(err))
@@ -311,7 +311,7 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 				iot.DiscordUser = user
 			case "guilds":
 				// Fetch user guilds information
-				req, err = http.NewRequest("GET", state.Config.Meta.Proxy.Parse()+"/api/v10/users/@me/guilds", nil)
+				req, err = http.NewRequest("GET", state.Config.Meta.Proxy+"/api/v10/users/@me/guilds", nil)
 
 				if err != nil {
 					state.Logger.Error("Error while creating request", zap.Error(err))

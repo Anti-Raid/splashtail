@@ -1,0 +1,20 @@
+[Service]
+Type=simple
+ExecStart=/home/antiraid/splashtail/staging/out/go.api
+User=antiraid
+Group=antiraid
+WorkingDirectory=/home/antiraid/splashtail/staging
+ExecReload=/bin/kill -s HUP $MAINPID
+KillMode=mixed
+TimeoutStopSec=5
+PrivateTmp=true
+RestartSec=1
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
+
+[Unit]
+PartOf=antiraid-v6.target
+Description="Antiraid API and bot"
+After=splashtail-staging-bot.service

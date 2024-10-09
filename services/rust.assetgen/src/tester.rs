@@ -109,10 +109,10 @@ pub async fn check_modules_test() {
 
     info!("Starting check_modules_test");
 
-    let proxy_url = config::CONFIG.meta.proxy.get().clone();
+    let proxy_url = config::CONFIG.meta.proxy.clone();
 
     let http = Arc::new(
-        HttpBuilder::new(&config::CONFIG.discord_auth.token.get())
+        HttpBuilder::new(&config::CONFIG.discord_auth.token)
             .proxy(proxy_url)
             .ratelimiter_disabled(true)
             .build(),

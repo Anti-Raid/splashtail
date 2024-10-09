@@ -1,0 +1,20 @@
+[Service]
+Type=simple
+ExecStart=/home/antiraid/splashtail/staging/infra/Sandwich-Daemon/out/sandwich -configurationPath=sandwich.yaml -prometheusAddress :3931 -grpcHost localhost:10294 -grpcNetwork tcp -httpEnabled  --httpHost 0.0.0.0:29334 -level debug
+User=antiraid
+Group=antiraid
+WorkingDirectory=/home/antiraid/splashtail/staging/infra/Sandwich-Daemon
+ExecReload=/bin/kill -s HUP $MAINPID
+KillMode=mixed
+TimeoutStopSec=5
+PrivateTmp=true
+RestartSec=1
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
+
+[Unit]
+PartOf=antiraid-v6.target
+Description="Antiraid Sandwich Daemon (gateway proxy)"
+After=ibl-maint.service

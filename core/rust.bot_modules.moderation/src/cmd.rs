@@ -249,8 +249,8 @@ pub async fn prune_user(
         .reqwest
         .post(format!(
             "{}:{}/spawn",
-            config::CONFIG.base_ports.jobserver_base_addr.get(),
-            config::CONFIG.base_ports.jobserver.get() + jobserver_cluster_id
+            config::CONFIG.base_ports.jobserver_base_addr,
+            config::CONFIG.base_ports.jobserver + jobserver_cluster_id
         ))
         .json(&splashcore_rs::jobserver::Spawn {
             name: "message_prune".to_string(),
@@ -344,7 +344,7 @@ pub async fn prune_user(
         job: Arc<jobserver::Job>,
     ) -> Result<(), Error> {
         let new_job_msg = embed_job(
-            &config::CONFIG.sites.api.get(),
+            &config::CONFIG.sites.api,
             &job,
             vec![CreateEmbed::default()
                 .title("Pruning User Messages...")

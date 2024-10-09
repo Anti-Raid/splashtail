@@ -17,7 +17,7 @@ allowed_ids:
 
 ping_interval: 20 # 20 seconds (for testing, change this)
 ping_timeout: 60 # 60 seconds (for testing, change this)
-cluster_start_next_delay: 1 # 1 second (for testing, change this)
+cluster_start_next_delay: 0 # 1 second (for testing, change this)
 per_cluster: 1 # Must be 1 for jobserver
 minimum_safe_sessions_remaining: 3
 experimental_features:

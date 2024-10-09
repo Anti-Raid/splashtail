@@ -22,9 +22,9 @@ func Docs() *docs.Doc {
 func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 	return uapi.HttpResponse{
 		Json: types.ApiConfig{
-			MainServer:          state.Config.Servers.Main.Parse(),
+			MainServer:          state.Config.Servers.Main,
 			SupportServerInvite: state.Config.Meta.SupportServerInvite,
-			ClientID:            state.Config.DiscordAuth.ClientID.Parse(),
+			ClientID:            state.Config.DiscordAuth.ClientID,
 		},
 	}
 }

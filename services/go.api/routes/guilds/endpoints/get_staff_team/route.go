@@ -70,7 +70,7 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 	}
 
 	// TODO: Allow this API to be used for any guild
-	if guildId != state.Config.Servers.Main.Parse() {
+	if guildId != state.Config.Servers.Main {
 		return uapi.HttpResponse{
 			Status: http.StatusBadRequest,
 			Json: types.ApiError{

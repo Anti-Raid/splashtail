@@ -1,0 +1,20 @@
+[Service]
+Type=simple
+ExecStart=/home/antiraid/splashtail/staging/infra/nirn-proxy/nirn-proxy cache-endpoints=false ws-proxy=ws://127.0.0.1:3600 port=3221 ratelimit-over-408 endpoint-rewrite=/api/gateway/bot@http://127.0.0.1:29334/antiraid,/api/v*/gateway/bot@http://127.0.0.1:29334/antiraid
+User=antiraid
+Group=antiraid
+WorkingDirectory=/home/antiraid/splashtail/staging/infra/nirn-proxy
+ExecReload=/bin/kill -s HUP $MAINPID
+KillMode=mixed
+TimeoutStopSec=5
+PrivateTmp=true
+RestartSec=1
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
+
+[Unit]
+PartOf=antiraid-v6.target
+Description="nirn proxy"
+After=void.service

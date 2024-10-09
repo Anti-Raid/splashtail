@@ -17,7 +17,6 @@ import (
 	"go.jobserver/core"
 	"go.jobserver/rpc"
 	"go.jobserver/state"
-	"go.std/config"
 	"go.std/mewldresponder"
 	"go.std/utils"
 	"go.uber.org/zap"
@@ -47,7 +46,7 @@ func CreateJobServer() {
 func CreateClusters() {
 	state.SetupBase()
 
-	wmldF, err := os.ReadFile("data/mewld/botv2-" + config.CurrentEnv + ".yaml")
+	wmldF, err := os.ReadFile("data/mewld/bot.yaml")
 
 	if err != nil {
 		panic(err)
@@ -62,7 +61,7 @@ func CreateClusters() {
 	}
 
 	// Load mewld bot
-	mldF, err := os.ReadFile("data/mewld/jobs-" + config.CurrentEnv + ".yaml")
+	mldF, err := os.ReadFile("data/mewld/jobs.yaml")
 
 	if err != nil {
 		panic(err)
@@ -78,19 +77,19 @@ func CreateClusters() {
 
 	state.Logger.Info("Setting up mewld")
 
-	mldConfig.Proxy = state.Config.Meta.Proxy.Parse()
-	mldConfig.Token = state.Config.DiscordAuth.Token.Parse()
+	mldConfig.Proxy = state.Config.Meta.Proxy
+	mldConfig.Token = state.Config.DiscordAuth.Token
 	mldConfig.Oauth = mconfig.Oauth{
-		ClientID:     state.Config.DiscordAuth.ClientID.Parse(),
-		ClientSecret: state.Config.DiscordAuth.ClientSecret.Parse(),
-		RedirectURL:  state.Config.DiscordAuth.MewldRedirect,
+		ClientID:     state.Config.DiscordAuth.ClientID,
+		ClientSecret: state.Config.DiscordAuth.ClientSecret,
+		RedirectURL:  "https://example.com/mewld/@",
 	}
 
 	if mldConfig.Redis == "" {
-		mldConfig.Redis = state.Config.Meta.RedisURL.Parse()
+		mldConfig.Redis = state.Config.Meta.RedisURL
 	}
 
-	if mldConfig.Redis != state.Config.Meta.RedisURL.Parse() {
+	if mldConfig.Redis != state.Config.Meta.RedisURL {
 		state.Logger.Warn("Redis URL in mewld.yaml does not match the one in config.yaml")
 	}
 
@@ -137,7 +136,7 @@ func CreateClusters() {
 			env := os.Environ()
 
 			env = append(env, "MEWLD_CHANNEL="+l.Config.RedisChannel)
-			env = append(env, "REDIS_URL="+state.Config.Meta.RedisURL.Parse())
+			env = append(env, "REDIS_URL="+state.Config.Meta.RedisURL)
 
 			cmd.Env = env
 			cmd.Dir = l.Dir
@@ -190,7 +189,7 @@ func CreateClusters() {
 
 	// Tableflip not supported
 	state.Logger.Warn("Tableflip not supported on this platform, this is not a production-capable server.")
-	err = http.ListenAndServe(":"+strconv.Itoa(state.Config.BasePorts.Jobserver.Parse()-1), r)
+	err = http.ListenAndServe(":"+strconv.Itoa(state.Config.BasePorts.Jobserver-1), r)
 
 	if err != nil {
 		il.KillAll()

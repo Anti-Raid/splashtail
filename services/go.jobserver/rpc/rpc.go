@@ -53,7 +53,7 @@ func JobserverRpcServer() {
 	})
 
 	// Start server
-	err := http.ListenAndServe(":"+strconv.Itoa(state.Config.BasePorts.Jobserver.Parse()+int(state.ClusterID)), handler)
+	err := http.ListenAndServe(":"+strconv.Itoa(state.Config.BasePorts.Jobserver+int(state.ClusterID)), handler)
 
 	if err != nil {
 		panic(err)

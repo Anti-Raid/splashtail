@@ -1,0 +1,13 @@
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/mkarbackup antiraid /home/antiraid/.dbcerts/public.pem
+User=antiraid
+Group=antiraid
+WorkingDirectory=/home/antiraid
+PrivateTmp=true
+Environment="PGPORT=5433"
+
+[Unit]
+Description="Backup script"
+After=postgresql.service
+Wants=network-online.target

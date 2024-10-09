@@ -103,13 +103,13 @@ func SetupBase() {
 	}
 
 	// Discordgo
-	Discord, err = discordgo.New("Bot " + Config.DiscordAuth.Token.Parse())
+	Discord, err = discordgo.New("Bot " + Config.DiscordAuth.Token)
 
 	if err != nil {
 		panic(err)
 	}
 
-	Discord.Client.Transport = proxy.NewHostRewriter(strings.Replace(Config.Meta.Proxy.Parse(), "http://", "", 1), http.DefaultTransport, func(s string) {
+	Discord.Client.Transport = proxy.NewHostRewriter(strings.Replace(Config.Meta.Proxy, "http://", "", 1), http.DefaultTransport, func(s string) {
 		Logger.Info("[PROXY]", zap.String("note", s))
 	})
 
@@ -146,13 +146,13 @@ func Setup() {
 	}
 
 	// Discordgo
-	Discord, err = discordgo.New("Bot " + Config.DiscordAuth.Token.Parse())
+	Discord, err = discordgo.New("Bot " + Config.DiscordAuth.Token)
 
 	if err != nil {
 		panic(err)
 	}
 
-	Discord.Client.Transport = proxy.NewHostRewriter(strings.Replace(Config.Meta.Proxy.Parse(), "http://", "", 1), http.DefaultTransport, func(s string) {
+	Discord.Client.Transport = proxy.NewHostRewriter(strings.Replace(Config.Meta.Proxy, "http://", "", 1), http.DefaultTransport, func(s string) {
 		Logger.Info("[PROXY]", zap.String("note", s))
 	})
 
@@ -173,7 +173,7 @@ func Setup() {
 	})
 
 	// Reuidis
-	ruOptions, err := rueidis.ParseURL(Config.Meta.RedisURL.Parse())
+	ruOptions, err := rueidis.ParseURL(Config.Meta.RedisURL)
 
 	if err != nil {
 		panic(err)

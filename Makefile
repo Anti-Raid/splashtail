@@ -11,19 +11,11 @@ PWD := $(shell pwd)
 default:
 	$(error No target provided. Please see README.md for more information)
 
-# This target builds all of Anti-Raid's components
-buildall:
+infra:
 	# Core infra
 	cd infra/nirn-proxy && make
 	cd infra/Sandwich-Daemon && make
 	cd infra/wafflepaw && make
-
-	# Other infra
-	make buildmewldwebui
-	make build
-
-all:
-	make buildall
 	
 format:
 	# For every project in core/rust.*
@@ -36,6 +28,7 @@ format:
 		cd $$d && go fmt && cd ../..; \
 	done
 
+# Builds AntiRaid services
 build:
 	mkdir -p out
 	make build_go

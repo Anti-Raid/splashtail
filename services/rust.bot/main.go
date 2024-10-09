@@ -60,13 +60,13 @@ func main() {
 	logger := snippets.CreateZap()
 
 	// Load mewld bot
-	mldF, err := os.ReadFile("data/mewld/botv2-" + config.CurrentEnv + ".yaml")
+	mldF, err := os.ReadFile("data/mewld/bot.yaml")
 
 	if err != nil {
 		panic(err)
 	}
 
-	discordSess, err := discordgo.New("Bot " + cfg.DiscordAuth.Token.Parse())
+	discordSess, err := discordgo.New("Bot " + cfg.DiscordAuth.Token)
 
 	if err != nil {
 		panic(err)
@@ -80,19 +80,19 @@ func main() {
 		panic(err)
 	}
 
-	mldConfig.Proxy = cfg.Meta.Proxy.Parse()
-	mldConfig.Token = cfg.DiscordAuth.Token.Parse()
+	mldConfig.Proxy = cfg.Meta.Proxy
+	mldConfig.Token = cfg.DiscordAuth.Token
 	mldConfig.Oauth = mconfig.Oauth{
-		ClientID:     cfg.DiscordAuth.ClientID.Parse(),
-		ClientSecret: cfg.DiscordAuth.ClientSecret.Parse(),
-		RedirectURL:  cfg.DiscordAuth.MewldRedirect,
+		ClientID:     cfg.DiscordAuth.ClientID,
+		ClientSecret: cfg.DiscordAuth.ClientSecret,
+		RedirectURL:  "https://example.com/mewld/@",
 	}
 
 	if mldConfig.Redis == "" {
-		mldConfig.Redis = cfg.Meta.RedisURL.Parse()
+		mldConfig.Redis = cfg.Meta.RedisURL
 	}
 
-	if mldConfig.Redis != cfg.Meta.RedisURL.Parse() {
+	if mldConfig.Redis != cfg.Meta.RedisURL {
 		logger.Warn("Redis URL in mewld.yaml does not match the one in config.yaml")
 	}
 
@@ -123,7 +123,6 @@ func main() {
 				cm.Name,
 				strconv.Itoa(len(l.Map)),
 				l.Config.RedisChannel,
-				config.CurrentEnv,
 			)
 
 			cmd.Stdout = os.Stdout
@@ -132,7 +131,7 @@ func main() {
 			env := os.Environ()
 
 			env = append(env, "MEWLD_CHANNEL="+l.Config.RedisChannel)
-			env = append(env, "REDIS_URL="+cfg.Meta.RedisURL.Parse())
+			env = append(env, "REDIS_URL="+cfg.Meta.RedisURL)
 
 			cmd.Env = env
 			cmd.Dir = l.Dir
@@ -214,7 +213,7 @@ func main() {
 		w.Write(bytes)
 	})
 
-	err = http.ListenAndServe(":"+strconv.Itoa(cfg.BasePorts.Bot.Parse()-1), r)
+	err = http.ListenAndServe(":"+strconv.Itoa(cfg.BasePorts.Bot-1), r)
 
 	if err != nil {
 		logger.Fatal("Error binding to socket", zap.Error(err))

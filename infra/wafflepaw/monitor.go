@@ -17,7 +17,6 @@ import (
 	"github.com/cheesycod/mewld/ipchandler"
 	mproc "github.com/cheesycod/mewld/proc"
 	"github.com/infinitybotlist/eureka/crypto"
-	"go.std/config"
 	"go.uber.org/zap"
 	"gopkg.in/yaml.v3"
 )
@@ -43,7 +42,7 @@ func StartMonitors(monitors []ProbeTask) (err error) {
 	Logger.Debug("Got gateway bot", zap.Any("gatewayBot", getGatewayBot), zap.Int("shards", getGatewayBot.Shards))
 
 	// Next load mewld related yaml files
-	wmldF, err := os.ReadFile("data/mewld/botv2-" + config.CurrentEnv + ".yaml")
+	wmldF, err := os.ReadFile("data/mewld/bot.yaml")
 
 	if err != nil {
 		panic(err)
@@ -58,7 +57,7 @@ func StartMonitors(monitors []ProbeTask) (err error) {
 	}
 
 	// Load mewld bot
-	mldF, err := os.ReadFile("data/mewld/jobs-" + config.CurrentEnv + ".yaml")
+	mldF, err := os.ReadFile("data/mewld/jobs.yaml")
 
 	if err != nil {
 		panic(err)
@@ -75,15 +74,15 @@ func StartMonitors(monitors []ProbeTask) (err error) {
 	Logger.Info("Setting up mewld")
 
 	if mldConfig.Redis == "" {
-		mldConfig.Redis = Config.Meta.RedisURL.Parse()
+		mldConfig.Redis = Config.Meta.RedisURL
 	}
 
-	if mldConfig.Redis != Config.Meta.RedisURL.Parse() {
+	if mldConfig.Redis != Config.Meta.RedisURL {
 		Logger.Warn("Redis URL in mewld.yaml does not match the one in config.yaml")
 	}
 
-	mldConfig.Proxy = Config.Meta.Proxy.Parse()
-	wmldConfig.Proxy = Config.Meta.Proxy.Parse()
+	mldConfig.Proxy = Config.Meta.Proxy
+	wmldConfig.Proxy = Config.Meta.Proxy
 
 	for _, clusterName := range wmldConfig.Names {
 		var i uint64
@@ -129,8 +128,6 @@ func StartMonitors(monitors []ProbeTask) (err error) {
 				monitors[i].MewldChannel = ch
 			}
 		}
-
-		monitors[i].SystemdService = strings.ReplaceAll(monitors[i].SystemdService, "{env}", config.CurrentEnv)
 
 		Logger.Info("Added monitor", zap.Any("monitor", monitors[i]))
 		bgtasks.BgTaskRegistry = append(bgtasks.BgTaskRegistry, &monitors[i])

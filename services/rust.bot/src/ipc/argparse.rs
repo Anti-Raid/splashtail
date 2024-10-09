@@ -26,15 +26,14 @@ pub struct MewldCmdArgs {
     pub cluster_name: String,
     pub cluster_count: u16,
     pub mewld_redis_channel: String,
-    pub current_env: String,
 }
 
 impl MewldCmdArgs {
     pub fn parse_argv(args: &[String]) -> Result<Self, crate::Error> {
-        if args.len() != 8 {
+        if args.len() != 7 {
             return Err(r#"Invalid number of arguments
             
-Expected arguments: [program name] <shards> <shard_count> <cluster_id> <cluster_name> <cluster_count> <mewld_redis_channel> <env>
+Expected arguments: [program name] <shards> <shard_count> <cluster_id> <cluster_name> <cluster_count> <mewld_redis_channel>
             "#.into());
         }
 
@@ -44,7 +43,6 @@ Expected arguments: [program name] <shards> <shard_count> <cluster_id> <cluster_
         let cluster_name: String = args[4].clone();
         let cluster_count: u16 = str::parse(&args[5])?;
         let mewld_redis_channel: String = args[6].clone();
-        let current_env: String = args[7].clone();
 
         let args = Self {
             shards,
@@ -55,17 +53,7 @@ Expected arguments: [program name] <shards> <shard_count> <cluster_id> <cluster_
             cluster_name,
             cluster_count,
             mewld_redis_channel,
-            current_env,
         };
-
-        if args.current_env != config::CURRENT_ENV.to_string() {
-            return Err(format!(
-                "Invalid environment, expected: {}, got: {}",
-                *config::CURRENT_ENV,
-                args.current_env
-            )
-            .into());
-        }
 
         Ok(args)
     }

@@ -97,13 +97,13 @@ func main() {
 	}
 
 	// Discord
-	Discord, err = discordgo.New("Bot " + Config.DiscordAuth.Token.Parse())
+	Discord, err = discordgo.New("Bot " + Config.DiscordAuth.Token)
 
 	if err != nil {
 		logPanic("error creating discord session", err)
 	}
 
-	Discord.Client.Transport = proxy.NewHostRewriter(strings.Replace(Config.Meta.Proxy.Parse(), "http://", "", 1), http.DefaultTransport, func(s string) {
+	Discord.Client.Transport = proxy.NewHostRewriter(strings.Replace(Config.Meta.Proxy, "http://", "", 1), http.DefaultTransport, func(s string) {
 		Logger.Info("[PROXY]", zap.String("note", s))
 	})
 

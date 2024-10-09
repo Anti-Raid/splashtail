@@ -1,18 +1,18 @@
 - target: bot
-  systemd_service:  splashtail-{env}-bot
+  systemd_service:  splashtail-staging-bot
   delay_start: 10s
   no_handle_inactive_systemd: true
   restart_after_failed: 3
-  base_port: 2000
+  base_port: 20000
   base_addr: http://localhost
   process_name: 
     - rust.bot.loader
 
 - target: jobs
-  systemd_service:  splashtail-{env}-jobs
+  systemd_service:  splashtail-staging-jobs
   delay_start: 10s
   no_handle_inactive_systemd: true
-  base_port: 3000
+  base_port: 30000
   base_addr: http://localhost
   restart_after_failed: 3
 

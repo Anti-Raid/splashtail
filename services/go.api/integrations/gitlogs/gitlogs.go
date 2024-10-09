@@ -21,7 +21,7 @@ func Setup() *chi.Mux {
 	state.Logger = webserverstate.Logger
 	state.Config = &config.Config{
 		PostgresURL: webserverstate.Config.Meta.PostgresURL,
-		APIUrl:      webserverstate.Config.Sites.API.Parse() + "/integrations/gitlogs",
+		APIUrl:      webserverstate.Config.Sites.API + "/integrations/gitlogs",
 		GetTable: func(table string) string {
 			if table == state.TableGuilds {
 				return "guilds"

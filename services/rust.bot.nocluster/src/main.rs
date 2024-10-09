@@ -230,8 +230,8 @@ async fn event_listener<'a>(
                     let opts = rust_rpc_server::CreateRpcServerOptions {
                         bind: rust_rpc_server::CreateRpcServerBind::Address(format!(
                             "{}:{}",
-                            config::CONFIG.base_ports.bot_bind_addr.get(),
-                            config::CONFIG.base_ports.bot.get() + cluster_id
+                            config::CONFIG.base_ports.bot_bind_addr,
+                            config::CONFIG.base_ports.bot + cluster_id
                         )),
                     };
 
@@ -384,12 +384,12 @@ async fn main() {
 
     info!("{:#?}", cmd_args);
 
-    let proxy_url = config::CONFIG.meta.proxy.get().clone();
+    let proxy_url = config::CONFIG.meta.proxy.clone();
 
     info!("Proxy URL: {}", proxy_url);
 
     let http = Arc::new(
-        HttpBuilder::new(&config::CONFIG.discord_auth.token.get())
+        HttpBuilder::new(&config::CONFIG.discord_auth.token)
             .proxy(proxy_url)
             .ratelimiter_disabled(true)
             .build(),

@@ -230,7 +230,7 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 		var buf bytes.Buffer
 		err := downloadTemplate.Execute(&buf, map[string]any{
 			"URL":    url.String(),
-			"Domain": state.Config.Sites.Frontend.Parse(),
+			"Domain": state.Config.Sites.Frontend,
 		})
 
 		if err != nil {
