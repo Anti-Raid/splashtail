@@ -7,9 +7,12 @@ Splashtail is a monorepo containing all the code needed to run and setup Anti-Ra
 ## Current
 
 - **infra** => Core infrastructure for the bot such as `wafflepaw` (monitoring service) our fork of [`nirn-proxy`](https://github.com/anti-raid/nirn-proxy) and our fork of [`Sandwich-Daemon`](https://github.com/anti-raid/Sandwich-Daemon).
-- **botv2** => The core bot interface for AntiRaid, written in Serenity+Poise and Rust
-- **jobserver** => The jobserver is the component of AntiRaid responsible for handling jobs concurrently to ensure that Bot/API restarts/issues/outages does not affect ongoing backup creations/backup restores/member restores etc. The jobserver also allows code related to core functionality to be shared between the Bot (rust) and the API/website while also being isolated and easily restartable with resumable jobs allowing for greater reliability and scalability.
-- **webserver** (API) => The API interface for AntiRaid used for third-party integrations and the website
+- **core** => The core modules/code for AntiRaid, written in Serenity+Poise and Rust
+- **services** => The actual runnable services of AntiRaid.
+- **services/rust.assetgen** => This service provides automatic asset generation (used in builds) and initial startup testing (See ``make tests``)
+- **services/rust.bot** and **services/rust.bot.nocluster** => 2 variants of the AntiRaid bot depending on needs. ``rust.bot`` provides a production-ready implementation of AntiRaid with ``mewld`` clustering support. ``rust.bot.nocluster`` provides a variant without any special clustering support and is intended to be used as a base for other scaling technologies.
+- **services/go.jobserver** => The jobserver is the component of AntiRaid responsible for handling jobs concurrently to ensure that Bot/API restarts/issues/outages does not affect ongoing backup creations/backup restores/member restores etc. The jobserver also allows code related to core functionality to be shared between the Bot (rust) and the API/website while also being isolated and easily restartable with resumable jobs allowing for greater reliability and scalability.
+- **services/go.api** (API) => The API interface for AntiRaid used for third-party integrations and the website
 - **website** => The website for AntiRaid 
 - **data** => Miscellaneous stuff such as code used to test the WIP simpleproxy2 as well as database seeds
 
@@ -66,7 +69,7 @@ All communication between the webserver, the bot and the jobserver take place ov
 
 In some cases, the internal representation of a type is not suitable for external usage. For example, the ``Module`` type used in ``botv2`` to store information about a module contains function pointers and internal fields that cannot be serialized/deserialized. In such cases, a canonical representation of the type can be made. For example, the ``Module`` type has a canonical representation of ``CanonicalModule`` which is sent by IServer etc. for use by external consumers such as the API and/or website.
 
-**Botv2 notes:** If a canonical representation is used, the structs should be in a seperate file and the ``From<T>`` trait should be implemented on the canonical type for the internal type. This allows for easy conversion between the internal and canonical representations.
+Note that if a canonical representation is used, the structs should be in a seperate file and the ``From<T>`` trait should be implemented on the canonical type for the internal type. This allows for easy conversion between the internal and canonical representations.
 
 ## Self-Hosting and Deployment
 
@@ -115,7 +118,6 @@ To load the database seed, follow the following steps:
 4. Run ``ibl db load data/seed.iblcli-seed`` to try loading the seed into the database. 
 5. If ``ibl`` fails with a ``seed_info`` error, rerun Steps 3 and 4 to properly setup seeding
 
-
 ### Building Anti-Raid
 
 1. When building AntiRaid for the first time, use ``make infra`` to build all required infrastructure such as Sandwich. Then follow Step 2 as normal. For all future invocations, just go directly to Step 2 directly.
@@ -128,6 +130,8 @@ Enter the ``infra/Sandwich-Daemon`` folder. Copy ``example_sandwich.yaml`` to ``
 Run ``./out/go.api``. This will create ``config.yaml.sample``. Copy this to ``config.yaml`` and fill in the required fields as per the below:
 
 - ``discord_auth``: Use https://discord.dev to fill this out. Use a random string for ``dp_secret``.
+
+Before proceeding, run ``make tests`` to ensure your configuration is setup correctly.
 
 ### Running
 
