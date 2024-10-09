@@ -1028,7 +1028,7 @@ pub async fn settings_create(
         .await?;
 
     if let Some(max_entries) = setting.max_entries {
-        if ids.len() > max_entries {
+        if ids.len() >= max_entries {
             return Err(SettingsError::MaximumCountReached {
                 max: max_entries,
                 current: ids.len(),
