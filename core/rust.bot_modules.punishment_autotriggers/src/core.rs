@@ -9,7 +9,7 @@ use std::sync::Arc;
 pub struct GuildPunishmentAutoTrigger {
     pub id: String,
     pub guild_id: GuildId,
-    pub creator: UserId,
+    pub created_by: UserId,
     pub stings: i32,
     pub action: Arc<dyn PunishmentAction>,
     pub duration: Option<i32>,
@@ -38,7 +38,7 @@ impl GuildPunishmentAutoTriggerList {
             silverpelt::punishments::get_punishment_actions_for_guild(guild_id, &data).await?;
 
         let rec = sqlx::query!(
-                "SELECT id, guild_id, creator, stings, action, modifiers, created_at, EXTRACT(seconds FROM duration)::integer AS duration FROM punishments__autotriggers WHERE guild_id = $1",
+                "SELECT id, guild_id, created_by, stings, action, modifiers, created_at, EXTRACT(seconds FROM duration)::integer AS duration FROM punishment_autotriggers__autotriggers WHERE guild_id = $1",
                 guild_id.to_string(),
             )
             .fetch_all(&data.pool)
@@ -50,7 +50,7 @@ impl GuildPunishmentAutoTriggerList {
             punishments.push(GuildPunishmentAutoTrigger {
                 id: row.id.to_string(),
                 guild_id: row.guild_id.parse::<GuildId>()?,
-                creator: row.creator.parse::<UserId>()?,
+                created_by: row.created_by.parse::<UserId>()?,
                 stings: row.stings,
                 action: {
                     let action = from_punishment_action_string(&actions_map, &row.action);

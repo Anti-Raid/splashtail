@@ -4,7 +4,7 @@ go 1.22.5
 
 require (
 	github.com/bwmarrin/discordgo v0.28.1
-	github.com/cheesycod/mewld v0.0.0-20241008032024-23613421c7b3
+	github.com/cheesycod/mewld v0.0.0-20241009012416-a5f6036feb21
 	github.com/go-chi/chi/v5 v5.1.0
 	github.com/infinitybotlist/eureka v1.11.0
 	github.com/jackc/pgx/v5 v5.7.1

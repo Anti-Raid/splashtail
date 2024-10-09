@@ -1,8 +1,6 @@
-pub mod cmd;
 pub mod core;
 pub mod events;
-
-use indexmap::indexmap;
+pub mod settings;
 
 pub struct Module;
 
@@ -23,19 +21,12 @@ impl silverpelt::module::Module for Module {
         true
     }
 
-    fn raw_commands(&self) -> Vec<silverpelt::module::CommandObj> {
-        vec![(
-            cmd::punishments(),
-            indexmap! {
-                "add" => silverpelt::types::CommandExtendedData::kittycat_or_admin("punishments", "add"),
-                "list" => silverpelt::types::CommandExtendedData::kittycat_or_admin("punishments", "list"),
-                "delete" => silverpelt::types::CommandExtendedData::kittycat_or_admin("punishments", "delete"),
-            },
-        )]
-    }
-
     fn event_listeners(&self) -> Option<Box<dyn silverpelt::module::ModuleEventListeners>> {
         Some(Box::new(EventListener))
+    }
+
+    fn config_options(&self) -> Vec<module_settings::types::ConfigOption> {
+        vec![(*settings::AUTOTRIGGERS).clone()]
     }
 }
 
