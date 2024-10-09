@@ -240,12 +240,22 @@ fn create_full_command_list<T: Module + ?Sized>(module: &T) -> Vec<CommandObj> {
 
         let mut extended_data = indexmap::IndexMap::new();
 
+        // Add base command to extended data
+        let mut command_extended_data =
+            crate::CommandExtendedData::kittycat_or_admin(module.id(), config_opt.id);
+
+        if module.root_module() {
+            command_extended_data.virtual_command = true; // Root modules should not have any settings related commands accessible by default
+        }
+
+        extended_data.insert("", command_extended_data);
+
         for sub in created_cmd.subcommands.iter() {
             let mut command_extended_data =
                 crate::CommandExtendedData::kittycat_or_admin(module.id(), config_opt.id);
 
             if module.root_module() {
-                command_extended_data.virtual_command = true; // Root modules should not have any settings related accessible by default
+                command_extended_data.virtual_command = true; // Root modules should not have any settings related commands accessible by default
             }
 
             extended_data.insert(
