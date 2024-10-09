@@ -11,6 +11,7 @@ pub mod punishments;
 pub mod settings_autogen;
 pub(crate) mod settings_poise; // Only used by settings_autogen
 pub mod stings;
+pub mod subprocess_event;
 pub mod types;
 pub mod utils;
 pub mod validators;
