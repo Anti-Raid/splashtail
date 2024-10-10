@@ -7,7 +7,6 @@ use gwevent::core::get_event_guild_id;
 use silverpelt::ar_event::{AntiraidEvent, EventHandlerContext};
 
 use std::sync::{Arc, LazyLock};
-use tokio::sync::RwLock;
 
 use cap::Cap;
 use log::{error, info, warn};
@@ -40,7 +39,6 @@ pub static CONNECT_STATE: LazyLock<ConnectState> = LazyLock::new(|| ConnectState
 pub struct Props {
     pub pool: sqlx::PgPool,
     pub mewld_ipc: Arc<MewldIpcClient>,
-    pub proxy_support_data: RwLock<Option<Arc<proxy_support::ProxySupportData>>>,
 }
 
 #[async_trait::async_trait]
@@ -84,31 +82,6 @@ impl silverpelt::data::Props for Props {
 
     async fn total_users(&self) -> Result<u64, Error> {
         Ok(self.mewld_ipc.cache.total_users())
-    }
-
-    /// Proxy support data
-    async fn get_proxysupport_data(&self) -> Option<Arc<proxy_support::ProxySupportData>> {
-        let guard = self.proxy_support_data.read().await;
-
-        match guard.as_ref() {
-            Some(data) => {
-                return Some(data.clone());
-            }
-            None => {
-                return None;
-            }
-        }
-    }
-
-    /// Set the proxy support data
-    async fn set_proxysupport_data(
-        &self,
-        data: proxy_support::ProxySupportData,
-    ) -> Result<(), silverpelt::Error> {
-        let mut guard = self.proxy_support_data.write().await;
-        *guard = Some(Arc::new(data));
-
-        Ok(())
     }
 }
 
@@ -445,7 +418,6 @@ async fn main() {
             pool: pg_pool.clone(),
         }),
         pool: pg_pool.clone(),
-        proxy_support_data: RwLock::new(None),
     });
 
     let data = Data {

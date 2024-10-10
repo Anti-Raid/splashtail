@@ -15,7 +15,7 @@ axum = { version = "0.7.5", features = ["macros"] }
 # Anti-Raid specific
 splashcore_rs = { path = "../../core/rust.std" }
 module_settings = { path = "../../core/rust.module_settings" }
-proxy_support = { path = "../../core/rust.proxy_support" }
+sandwich_driver = { path = "../../core/rust.sandwich_driver" }
 silverpelt = { path = "../../core/rust.silverpelt" }
 permissions = { path = "../../core/rust.permissions" }
 rust_rpc_server = { path = "../../core/rust.rpc_server" }

@@ -21,7 +21,7 @@ silverpelt = { path = "../rust.silverpelt" }
 permissions = { path = "../rust.permissions" }
 config = { path = "../rust.config" }
 gwevent = { path = "../rust.gwevent" }
-proxy_support = { path = "../rust.proxy_support" }
+sandwich_driver = { path = "../rust.sandwich_driver" }
 std_events = { path = "../rust.stdevents" }
 
 [dependencies.tokio]

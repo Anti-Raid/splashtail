@@ -1,4 +1,4 @@
-use proxy_support::{sandwich::StatusEndpointResponse, ProxyResponse};
+use sandwich_driver::{sandwich::StatusEndpointResponse, ProxyResponse};
 
 use serde::{Deserialize, Serialize};
 

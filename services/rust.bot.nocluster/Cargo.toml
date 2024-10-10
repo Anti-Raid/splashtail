@@ -18,7 +18,7 @@ async-trait = "0.1.80"
 # Anti-Raid specific
 splashcore_rs = { path = "../../core/rust.std" }
 gwevent = { path = "../../core/rust.gwevent" }
-proxy_support = { path = "../../core/rust.proxy_support" }
+sandwich_driver = { path = "../../core/rust.sandwich_driver" }
 config = { path = "../../core/rust.config" }
 cap = { version = "0.1.2", features = ["stats"] }
 silverpelt = { path = "../../core/rust.silverpelt" }

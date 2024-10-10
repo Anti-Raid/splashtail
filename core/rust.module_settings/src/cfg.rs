@@ -464,7 +464,7 @@ async fn _validate_value(
                                         })?;
 
                                     // Get the channel
-                                    let channel = proxy_support::channel(
+                                    let channel = sandwich_driver::channel(
                                         &data.cache_http,
                                         &data.reqwest,
                                         Some(guild_id),

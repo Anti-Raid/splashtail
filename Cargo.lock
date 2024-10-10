@@ -464,13 +464,14 @@ dependencies = [
  "futures-util",
  "permissions",
  "poise",
- "proxy_support",
  "reqwest",
  "rust_buildstats",
+ "sandwich_driver",
  "serde",
  "serenity",
  "silverpelt",
  "sqlx",
+ "tokio",
 ]
 
 [[package]]
@@ -529,8 +530,8 @@ dependencies = [
  "module_settings",
  "moka",
  "poise",
- "proxy_support",
  "reqwest",
+ "sandwich_driver",
  "serde_json",
  "serenity",
  "silverpelt",
@@ -580,8 +581,8 @@ dependencies = [
  "module_settings",
  "moka",
  "poise",
- "proxy_support",
  "reqwest",
+ "sandwich_driver",
  "serde",
  "serde_json",
  "serenity",
@@ -605,7 +606,7 @@ dependencies = [
  "log",
  "permissions",
  "poise",
- "proxy_support",
+ "sandwich_driver",
  "serde_json",
  "serenity",
  "silverpelt",
@@ -627,8 +628,8 @@ dependencies = [
  "log",
  "module_settings",
  "poise",
- "proxy_support",
  "reqwest",
+ "sandwich_driver",
  "serde",
  "serde_json",
  "serenity",
@@ -691,7 +692,7 @@ dependencies = [
  "module_settings",
  "permissions",
  "poise",
- "proxy_support",
+ "sandwich_driver",
  "serde",
  "serde_json",
  "serenity",
@@ -707,7 +708,7 @@ dependencies = [
  "botox",
  "futures-util",
  "log",
- "proxy_support",
+ "sandwich_driver",
  "serde_json",
  "serenity",
  "silverpelt",
@@ -2722,8 +2723,8 @@ dependencies = [
  "futures-util",
  "indexmap",
  "moka",
- "proxy_support",
  "reqwest",
+ "sandwich_driver",
  "serde",
  "serde_json",
  "serenity",
@@ -3248,19 +3249,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "proxy_support"
-version = "6.0.0"
-dependencies = [
- "botox",
- "config",
- "log",
- "reqwest",
- "serde",
- "serde_repr",
- "serenity",
-]
-
-[[package]]
 name = "psm"
 version = "0.1.23"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3618,10 +3606,10 @@ dependencies = [
  "log",
  "permissions",
  "poise",
- "proxy_support",
  "reqwest",
  "rust_rpc_server",
  "rust_rpc_server_bot",
+ "sandwich_driver",
  "serde_json",
  "serenity",
  "silverpelt",
@@ -3647,10 +3635,10 @@ dependencies = [
  "indexmap",
  "log",
  "poise",
- "proxy_support",
  "reqwest",
  "rust_rpc_server",
  "rust_rpc_server_bot",
+ "sandwich_driver",
  "serde",
  "serde_json",
  "serenity",
@@ -3677,10 +3665,10 @@ dependencies = [
  "indexmap",
  "log",
  "poise",
- "proxy_support",
  "reqwest",
  "rust_rpc_server",
  "rust_rpc_server_bot",
+ "sandwich_driver",
  "serenity",
  "silverpelt",
  "splashcore_rs",
@@ -3718,8 +3706,8 @@ dependencies = [
  "kittycat",
  "module_settings",
  "permissions",
- "proxy_support",
  "rust_rpc_server",
+ "sandwich_driver",
  "serde",
  "serde_json",
  "serenity",
@@ -3872,6 +3860,19 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "93fc1dc3aaa9bfed95e02e6eadabb4baf7e3078b0bd1b4d7b6b0b68378900502"
 dependencies = [
  "winapi-util",
+]
+
+[[package]]
+name = "sandwich_driver"
+version = "6.0.0"
+dependencies = [
+ "botox",
+ "config",
+ "log",
+ "reqwest",
+ "serde",
+ "serde_repr",
+ "serenity",
 ]
 
 [[package]]
@@ -4130,9 +4131,9 @@ dependencies = [
  "moka",
  "permissions",
  "poise",
- "proxy_support",
  "regex",
  "reqwest",
+ "sandwich_driver",
  "serde",
  "serde_json",
  "serenity",

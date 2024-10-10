@@ -336,7 +336,7 @@ impl DataStore for LockdownDataStoreImpl {
                 typ: "value_error".to_string(),
             })?;
 
-        let mut pg = proxy_support::guild(
+        let mut pg = sandwich_driver::guild(
             &self.lockdown_data.cache_http,
             &self.lockdown_data.reqwest,
             self.inner.guild_id,
@@ -348,7 +348,7 @@ impl DataStore for LockdownDataStoreImpl {
             typ: "value_error".to_string(),
         })?;
 
-        let mut pgc = proxy_support::guild_channels(
+        let mut pgc = sandwich_driver::guild_channels(
             &self.lockdown_data.cache_http,
             &self.lockdown_data.reqwest,
             self.inner.guild_id,
@@ -464,7 +464,7 @@ impl DataStore for LockdownDataStoreImpl {
                 column_id: self.inner.setting_primary_key.to_string(),
             })?;
 
-        let mut pg = proxy_support::guild(
+        let mut pg = sandwich_driver::guild(
             &self.lockdown_data.cache_http,
             &self.lockdown_data.reqwest,
             self.inner.guild_id,
@@ -476,7 +476,7 @@ impl DataStore for LockdownDataStoreImpl {
             typ: "value_error".to_string(),
         })?;
 
-        let mut pgc = proxy_support::guild_channels(
+        let mut pgc = sandwich_driver::guild_channels(
             &self.lockdown_data.cache_http,
             &self.lockdown_data.reqwest,
             self.inner.guild_id,

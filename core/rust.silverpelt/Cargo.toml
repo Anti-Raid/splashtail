@@ -29,7 +29,7 @@ permissions = { path = "../rust.permissions" }
 templating = { path = "../rust.templating" }
 module_settings = { path = "../rust.module_settings" }
 config = { path = "../rust.config" }
-proxy_support = { path = "../rust.proxy_support" }
+sandwich_driver = { path = "../rust.sandwich_driver" }
 
 [dependencies.tokio]
 version = "1"

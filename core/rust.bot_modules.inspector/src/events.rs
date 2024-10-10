@@ -3,7 +3,7 @@ use super::types::{
     AutoResponseMemberJoinOptions, DehoistOptions, FakeBotDetectionOptions, GuildProtectionOptions,
     TriggeredFlags, MAX_MENTIONS,
 };
-use proxy_support::{guild, member_in_guild};
+use sandwich_driver::{guild, member_in_guild};
 use serenity::all::FullEvent;
 use silverpelt::Error;
 use silverpelt::{

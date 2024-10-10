@@ -636,14 +636,14 @@ impl LockdownSet {
         self.sort();
 
         // Fetch guild+channel info to advance to avoid needing to fetch it on every interaction with the trait
-        let mut pg = proxy_support::guild(
+        let mut pg = sandwich_driver::guild(
             &lockdown_data.cache_http,
             &lockdown_data.reqwest,
             self.guild_id,
         )
         .await?;
 
-        let mut pgc = proxy_support::guild_channels(
+        let mut pgc = sandwich_driver::guild_channels(
             &lockdown_data.cache_http,
             &lockdown_data.reqwest,
             self.guild_id,

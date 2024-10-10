@@ -24,7 +24,7 @@ dashmap = { version = "6", features = ["serde", "inline", "rayon"] }
 silverpelt = { path = "../rust.silverpelt" }
 splashcore_rs = { path = "../rust.std" }
 module_settings = { path = "../rust.module_settings" }
-proxy_support = { path = "../rust.proxy_support" }
+sandwich_driver = { path = "../rust.sandwich_driver" }
 
 [dependencies.serenity]
 git = "https://github.com/Anti-Raid/serenity"

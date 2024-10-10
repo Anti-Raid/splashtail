@@ -1,5 +1,5 @@
 [package]
-name = "proxy_support"
+name = "sandwich_driver"
 version = "6.0.0"
 edition = "2021"
 

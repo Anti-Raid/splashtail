@@ -25,7 +25,7 @@ splashcore_rs = { path = "../rust.std" }
 splashcore_text = { path = "../rust.text" }
 module_settings = { path = "../rust.module_settings" }
 gwevent = { path = "../rust.gwevent" }
-proxy_support = { path = "../rust.proxy_support" }
+sandwich_driver = { path = "../rust.sandwich_driver" }
 std_events = { path = "../rust.stdevents" }
 
 [dependencies.serenity]

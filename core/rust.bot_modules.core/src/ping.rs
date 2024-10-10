@@ -20,14 +20,21 @@ pub async fn ping(ctx: Context<'_>) -> Result<(), Error> {
             .field("Real WS Latency", "Finding...", true),
     );
 
+    let st = std::time::Instant::now();
+
+    let mut msg = ctx.send(msg).await?.into_message().await?;
+
+    let new_st = std::time::Instant::now();
+
     let real_ws_latency = {
-        if let Some(psd) = ctx.data().props.get_proxysupport_data().await.as_ref() {
+        let sandwich_resp_guard = crate::sandwich_status_task::SANDWICH_STATUS.read().await;
+        if let Some(sandwich_resp) = &*sandwich_resp_guard {
             // Due to Sandwich Virtual Sharding etc, we need to reshard the guild id
             let sid = {
                 if let Some(guild_id) = ctx.guild_id() {
                     serenity::utils::shard_id(
                         guild_id,
-                        NonZeroU16::new(psd.shard_conns.len().try_into()?)
+                        NonZeroU16::new(sandwich_resp.shard_conns.len().try_into()?)
                             .unwrap_or(NonZeroU16::new(1).unwrap()),
                     )
                 } else {
@@ -38,17 +45,18 @@ pub async fn ping(ctx: Context<'_>) -> Result<(), Error> {
             // Convert u16 to i64
             let sid = sid as i64;
 
-            psd.shard_conns.get(&sid).map(|sc| sc.real_latency)
+            let real_latency = sandwich_resp
+                .shard_conns
+                .get(&sid)
+                .map(|sc| sc.real_latency);
+
+            drop(sandwich_resp_guard);
+
+            real_latency
         } else {
             None
         }
     };
-
-    let st = std::time::Instant::now();
-
-    let mut msg = ctx.send(msg).await?.into_message().await?;
-
-    let new_st = std::time::Instant::now();
 
     msg.edit(
         ctx,

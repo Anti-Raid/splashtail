@@ -111,7 +111,7 @@ pub async fn get_user_discord_info(
 
     let member = {
         let member =
-            match proxy_support::member_in_guild(cache_http, reqwest, guild_id, user_id).await {
+            match sandwich_driver::member_in_guild(cache_http, reqwest, guild_id, user_id).await {
                 Ok(member) => member,
                 Err(e) => {
                     return Err(PermissionResult::DiscordError {

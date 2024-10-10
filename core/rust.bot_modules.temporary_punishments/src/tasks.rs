@@ -67,7 +67,7 @@ pub async fn temporary_punishment_task(
         set.spawn(async move {
             let bot_id = cache_http.cache.current_user().id;
 
-            let mut current_user = match proxy_support::member_in_guild(
+            let mut current_user = match sandwich_driver::member_in_guild(
                 &cache_http,
                 &reqwest,
                 punishment.guild_id,

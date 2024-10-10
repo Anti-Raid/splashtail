@@ -192,7 +192,6 @@ pub async fn check_modules_test() {
 
     let props = Arc::new(Props {
         _pool: pg_pool.clone(),
-        proxy_support_data: tokio::sync::RwLock::new(None),
     });
 
     let data = Data {
@@ -324,7 +323,6 @@ async fn check_modules_test_impl(ctx: &serenity::all::Context) {
 // Boilerplate code
 pub struct Props {
     pub _pool: sqlx::PgPool,
-    pub proxy_support_data: tokio::sync::RwLock<Option<Arc<proxy_support::ProxySupportData>>>,
 }
 
 #[async_trait::async_trait]
@@ -368,22 +366,5 @@ impl silverpelt::data::Props for Props {
 
     async fn total_users(&self) -> Result<u64, Error> {
         Ok(0)
-    }
-
-    /// Proxy support data
-    async fn get_proxysupport_data(&self) -> Option<Arc<proxy_support::ProxySupportData>> {
-        let guard = self.proxy_support_data.read().await;
-        guard.clone()
-    }
-
-    /// Set the proxy support data
-    async fn set_proxysupport_data(
-        &self,
-        data: proxy_support::ProxySupportData,
-    ) -> Result<(), silverpelt::Error> {
-        let mut guard = self.proxy_support_data.write().await;
-        *guard = Some(Arc::new(data));
-
-        Ok(())
     }
 }

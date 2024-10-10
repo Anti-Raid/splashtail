@@ -1,5 +1,5 @@
-use silverpelt::Error;
 use silverpelt::Context;
+use silverpelt::Error;
 
 use serenity::all::{CreateEmbed, Member, Mentionable, User};
 
@@ -72,7 +72,7 @@ pub async fn whois(ctx: Context<'_>, user: Option<User>) -> Result<(), Error> {
     let embed = {
         if let Some(guild_id) = ctx.guild_id() {
             let member =
-                proxy_support::member_in_guild(&cache_http, &data.reqwest, guild_id, user.id)
+                sandwich_driver::member_in_guild(&cache_http, &data.reqwest, guild_id, user.id)
                     .await?;
 
             if let Some(member) = member {

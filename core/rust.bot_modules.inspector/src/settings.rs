@@ -218,7 +218,7 @@ impl SettingDataValidator for InspectorGlobalOptionsValidator {
         } else {
             // Fetch guild
             let guild =
-                match proxy_support::guild(&ctx.data.cache_http, &ctx.data.reqwest, ctx.guild_id)
+                match sandwich_driver::guild(&ctx.data.cache_http, &ctx.data.reqwest, ctx.guild_id)
                     .await
                 {
                     Ok(guild) => guild,

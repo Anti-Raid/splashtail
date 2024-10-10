@@ -84,7 +84,7 @@ pub struct Meta {
     pub bot_redis_url: String,
     pub proxy: String,
     pub support_server_invite: String,
-    pub sandwich_http_api: Option<String>,
+    pub sandwich_http_api: String,
 }
 
 #[derive(Serialize, Deserialize)]

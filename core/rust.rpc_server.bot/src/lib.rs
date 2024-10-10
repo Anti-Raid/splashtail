@@ -75,7 +75,7 @@ async fn guilds_exist(
     let mut guilds_exist = Vec::with_capacity(guilds.len());
 
     for guild in guilds {
-        let has_guild = proxy_support::has_guild(&cache_http, &data.reqwest, guild)
+        let has_guild = sandwich_driver::has_guild(&cache_http, &data.reqwest, guild)
             .await
             .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
@@ -99,7 +99,7 @@ async fn base_guild_user_info(
     Path((guild_id, user_id)): Path<(serenity::all::GuildId, serenity::all::UserId)>,
 ) -> Response<crate::types::BaseGuildUserInfo> {
     let bot_user_id = cache_http.cache.current_user().id;
-    let guild = proxy_support::guild(&cache_http, &data.reqwest, guild_id)
+    let guild = sandwich_driver::guild(&cache_http, &data.reqwest, guild_id)
         .await
         .map_err(|e| {
             (
@@ -110,7 +110,8 @@ async fn base_guild_user_info(
 
     // Next fetch the member and bot_user
     let member: serenity::model::prelude::Member =
-        match proxy_support::member_in_guild(&cache_http, &data.reqwest, guild_id, user_id).await {
+        match sandwich_driver::member_in_guild(&cache_http, &data.reqwest, guild_id, user_id).await
+        {
             Ok(Some(member)) => member,
             Ok(None) => {
                 return Err((StatusCode::NOT_FOUND, "User not found".into()));
@@ -124,7 +125,7 @@ async fn base_guild_user_info(
         };
 
     let bot_user: serenity::model::prelude::Member =
-        match proxy_support::member_in_guild(&cache_http, &data.reqwest, guild_id, bot_user_id)
+        match sandwich_driver::member_in_guild(&cache_http, &data.reqwest, guild_id, bot_user_id)
             .await
         {
             Ok(Some(member)) => member,
@@ -140,7 +141,7 @@ async fn base_guild_user_info(
         };
 
     // Fetch the channels
-    let channels = proxy_support::guild_channels(&cache_http, &data.reqwest, guild_id)
+    let channels = sandwich_driver::guild_channels(&cache_http, &data.reqwest, guild_id)
         .await
         .map_err(|e| {
             (

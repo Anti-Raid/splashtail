@@ -19,7 +19,7 @@ async-trait = "0.1.80"
 # AntiRaid specific
 splashcore_rs = { path = "../../core/rust.std" }
 gwevent = { path = "../../core/rust.gwevent" }
-proxy_support = { path = "../../core/rust.proxy_support" }
+sandwich_driver = { path = "../../core/rust.sandwich_driver" }
 config = { path = "../../core/rust.config" }
 permissions = { path = "../../core/rust.permissions" }
 silverpelt = { path = "../../core/rust.silverpelt" }

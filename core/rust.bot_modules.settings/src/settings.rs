@@ -226,7 +226,7 @@ impl SettingDataValidator for GuildRolesValidator {
                 typ: "internal".to_string(),
             })?;
 
-        let guild = proxy_support::guild(&ctx.data.cache_http, &ctx.data.reqwest, ctx.guild_id)
+        let guild = sandwich_driver::guild(&ctx.data.cache_http, &ctx.data.reqwest, ctx.guild_id)
             .await
             .map_err(|e| SettingsError::Generic {
                 message: format!("Failed to get guild: {:?}", e),
@@ -239,7 +239,7 @@ impl SettingDataValidator for GuildRolesValidator {
             return Ok(());
         }
 
-        let Some(member) = proxy_support::member_in_guild(
+        let Some(member) = sandwich_driver::member_in_guild(
             &ctx.data.cache_http,
             &ctx.data.reqwest,
             ctx.guild_id,
@@ -698,7 +698,7 @@ impl GuildMembersValidator {
         guild_owner_id: serenity::all::UserId, 
         user_id: serenity::all::UserId,
 ) -> Result<(Vec<serenity::all::RoleId>, Vec<kittycat::perms::Permission>), SettingsError> {
-        let Some(member) = proxy_support::member_in_guild(
+        let Some(member) = sandwich_driver::member_in_guild(
             &data.cache_http,
             &data.reqwest,
             guild_id,
@@ -806,7 +806,7 @@ impl SettingDataValidator for GuildMembersValidator {
             perm_overrides
         };
 
-        let guild = proxy_support::guild(&ctx.data.cache_http, &ctx.data.reqwest, ctx.guild_id)
+        let guild = sandwich_driver::guild(&ctx.data.cache_http, &ctx.data.reqwest, ctx.guild_id)
         .await
         .map_err(|e| SettingsError::Generic {
             message: format!("Failed to get guild: {:?}", e),

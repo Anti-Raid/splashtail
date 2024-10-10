@@ -95,15 +95,6 @@ where
     /// The number of available clusters
     fn available_clusters(&self) -> usize;
 
-    /// Proxy support data
-    async fn get_proxysupport_data(&self) -> Option<Arc<proxy_support::ProxySupportData>>;
-
-    /// Set the proxy support data
-    async fn set_proxysupport_data(
-        &self,
-        data: proxy_support::ProxySupportData,
-    ) -> Result<(), crate::Error>;
-
     /// Total number of guilds
     ///
     /// Note that this statistic may not always be available, in such cases, 0 will be returned

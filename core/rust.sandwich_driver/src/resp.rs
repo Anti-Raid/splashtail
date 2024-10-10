@@ -33,3 +33,9 @@ pub struct StatusEndpointShardGroup {
     pub status: ShardGroupStatus,
     pub uptime: i64,
 }
+
+#[derive(Serialize, Deserialize)]
+pub struct Resp<T> {
+    pub ok: bool,
+    pub data: Option<T>,
+}

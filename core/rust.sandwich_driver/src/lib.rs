@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-pub mod sandwich;
+pub mod resp;
 
 type Error = Box<dyn std::error::Error + Send + Sync>;
 
@@ -24,38 +24,37 @@ pub async fn has_guild(
     }
 
     // Check sandwich, it may be there
-    if let Some(ref proxy_url) = config::CONFIG.meta.sandwich_http_api {
-        let url = format!(
-            "{}/antiraid/api/state?col=derived.has_guild_id&id={}",
-            proxy_url, guild_id
-        );
+    let url = format!(
+        "{}/antiraid/api/state?col=derived.has_guild_id&id={}",
+        config::CONFIG.meta.sandwich_http_api,
+        guild_id
+    );
 
-        let resp = reqwest_client.get(&url).send().await?.json::<Resp>().await;
+    let resp = reqwest_client.get(&url).send().await?.json::<Resp>().await;
 
-        if let Ok(resp) = resp {
-            if resp.ok {
-                let Some(has_guild_id) = resp.data else {
-                    return Err("Could not derive has_guild_id prop".into());
-                };
+    if let Ok(resp) = resp {
+        if resp.ok {
+            let Some(has_guild_id) = resp.data else {
+                return Err("Could not derive has_guild_id prop".into());
+            };
 
-                return Ok(has_guild_id);
-            } else {
-                log::warn!(
-                    "Sandwich proxy returned error [has guild id]: {:?}",
-                    resp.error
-                );
-            }
+            return Ok(has_guild_id);
         } else {
             log::warn!(
-                "Sandwich proxy returned invalid resp [has guild id]: {:?}",
-                resp
+                "Sandwich proxy returned error [has guild id]: {:?}",
+                resp.error
             );
         }
+    } else {
+        log::warn!(
+            "Sandwich proxy returned invalid resp [has guild id]: {:?}",
+            resp
+        );
     }
 
+    // Last resort: check if the guild is in the list using HTTP
     let guild_id_immediately_preceding = serenity::all::GuildId::new(guild_id.get() - 1);
 
-    // Last resort, fetch from http
     let gi = match ctx
         .http
         .get_guilds(
@@ -97,13 +96,14 @@ pub async fn guild(
     reqwest_client: &reqwest::Client,
     guild_id: serenity::model::id::GuildId,
 ) -> Result<serenity::all::PartialGuild, Error> {
-    let res = ctx.cache.guild(guild_id);
+    // Check serenity cache
+    {
+        let res = ctx.cache.guild(guild_id);
 
-    if let Some(res) = res {
-        return Ok(res.clone().into());
+        if let Some(res) = res {
+            return Ok(res.clone().into());
+        }
     }
-
-    drop(res);
 
     #[derive(serde::Serialize, serde::Deserialize, Debug)]
     struct Resp {
@@ -113,53 +113,51 @@ pub async fn guild(
     }
 
     // Check sandwich, it may be there
-    if let Some(ref proxy_url) = config::CONFIG.meta.sandwich_http_api {
-        let url = format!(
-            "{}/antiraid/api/state?col=guilds&id={}",
-            proxy_url, guild_id
-        );
+    let url = format!(
+        "{}/antiraid/api/state?col=guilds&id={}",
+        config::CONFIG.meta.sandwich_http_api,
+        guild_id
+    );
 
-        let resp = reqwest_client.get(&url).send().await?.json::<Resp>().await;
+    let resp = reqwest_client.get(&url).send().await?.json::<Resp>().await;
 
-        if let Ok(resp) = resp {
-            if resp.ok {
-                let Some(guild) = resp.data else {
-                    return Err("Guild not found".into());
-                };
+    if let Ok(resp) = resp {
+        if resp.ok {
+            let Some(guild) = resp.data else {
+                return Err("Guild not found".into());
+            };
 
-                return Ok(guild);
-            } else {
-                log::warn!(
-                    "Sandwich proxy returned error [get guild]: {:?}",
-                    resp.error
-                );
-            }
+            return Ok(guild);
         } else {
             log::warn!(
-                "Sandwich proxy returned invalid resp [get guild]: {:?}",
-                resp
+                "Sandwich proxy returned error [get guild]: {:?}",
+                resp.error
             );
         }
+    } else {
+        log::warn!(
+            "Sandwich proxy returned invalid resp [get guild]: {:?}",
+            resp
+        );
     }
 
     // Last resore: make the http call
     let res = ctx.http.get_guild(guild_id).await?;
 
     // Save to sandwich
-    if let Some(ref proxy_url) = config::CONFIG.meta.sandwich_http_api {
-        let url = format!(
-            "{}/antiraid/api/state?col=guilds&id={}",
-            proxy_url, guild_id
+    let url = format!(
+        "{}/antiraid/api/state?col=guilds&id={}",
+        config::CONFIG.meta.sandwich_http_api,
+        guild_id
+    );
+
+    let resp = reqwest_client.post(&url).json(&res).send().await?;
+
+    if !resp.status().is_success() {
+        log::warn!(
+            "Failed to update sandwich proxy with guild data: {:?}",
+            resp.text().await
         );
-
-        let resp = reqwest_client.post(&url).json(&res).send().await?;
-
-        if !resp.status().is_success() {
-            log::warn!(
-                "Failed to update sandwich proxy with guild data: {:?}",
-                resp.text().await
-            );
-        }
     }
 
     Ok(res)
@@ -172,22 +170,6 @@ pub async fn member_in_guild(
     guild_id: serenity::model::id::GuildId,
     user_id: serenity::model::id::UserId,
 ) -> Result<Option<serenity::all::Member>, Error> {
-    // No sandwich case
-    if config::CONFIG.meta.sandwich_http_api.is_none() {
-        let res = match botox::cache::member_on_guild(ctx, guild_id, user_id, true).await {
-            Ok(res) => res,
-            Err(e) => {
-                return Err(format!("Failed to fetch member: {:?}", e).into());
-            }
-        };
-
-        let Some(res) = res else {
-            return Ok(None);
-        };
-
-        return Ok(Some(res));
-    }
-
     // Check serenity cache
     if let Some(guild) = ctx.cache.guild(guild_id) {
         if let Some(member) = guild.members.get(&user_id).cloned() {
@@ -196,13 +178,11 @@ pub async fn member_in_guild(
     }
 
     // Part 2, try sandwich state
-    let Some(ref proxy_url) = config::CONFIG.meta.sandwich_http_api else {
-        return Err("Sandwich proxy not configured, not proceeding".into());
-    };
-
     let url = format!(
         "{}/antiraid/api/state?col=members&id={}&guild_id={}",
-        proxy_url, user_id, guild_id
+        config::CONFIG.meta.sandwich_http_api,
+        user_id,
+        guild_id
     );
 
     #[derive(serde::Serialize, serde::Deserialize)]
@@ -291,41 +271,10 @@ pub async fn guild_channels(
         };
     }
 
-    let Some(ref proxy_url) = config::CONFIG.meta.sandwich_http_api else {
-        // Last resort, fetch from http and then update sandwich as well
-        let channels = match ctx.http.get_channels(guild_id).await {
-            Ok(mem) => mem,
-            Err(e) => match e {
-                serenity::Error::Http(e) => match e {
-                    serenity::all::HttpError::UnsuccessfulRequest(er) => {
-                        if er.status_code == reqwest::StatusCode::NOT_FOUND {
-                            return Err("No channels found".into());
-                        } else {
-                            return Err(format!(
-                                "Failed to fetch channels (http, non-404): {:?}",
-                                er
-                            )
-                            .into());
-                        }
-                    }
-                    _ => {
-                        return Err(format!("Failed to fetch channels (http): {:?}", e).into());
-                    }
-                },
-                _ => {
-                    return Err(format!("Failed to fetch channels: {:?}", e).into());
-                }
-            },
-        };
-
-        let channels = channels.into_iter().collect();
-
-        return Ok(channels);
-    };
-
     let url = format!(
         "{}/antiraid/api/state?col=guild_channels&id={}",
-        proxy_url, guild_id
+        config::CONFIG.meta.sandwich_http_api,
+        guild_id
     );
 
     #[derive(serde::Serialize, serde::Deserialize)]
@@ -408,60 +357,31 @@ pub async fn channel(
     guild_id: Option<serenity::model::id::GuildId>,
     channel_id: serenity::model::id::ChannelId,
 ) -> Result<Option<serenity::all::Channel>, Error> {
-    // No sandwich case
-    if config::CONFIG.meta.sandwich_http_api.is_none() {
-        // Check for guild channel
-        if let Some(guild_id) = guild_id {
-            {
-                let guild = ctx.cache.guild(guild_id);
+    // Try serenity cache first
+    //
+    // We do this to ensure that we get up to date information if possible
+    if let Some(guild_id) = guild_id {
+        if let Some(guild) = ctx.cache.guild(guild_id) {
+            let channels = guild.channels.clone();
 
-                if let Some(guild) = guild {
-                    if let Some(channel) = guild.channels.get(&channel_id) {
-                        return Ok(Some(serenity::all::Channel::Guild(channel.clone())));
-                    }
-                }
+            if let Some(channel) = channels.get(&channel_id) {
+                let chan = serenity::all::Channel::Guild(channel.clone());
+                return Ok(Some(chan));
             }
-        }
-
-        // Make http query
-        let channel = match channel_id.to_channel(&ctx, guild_id).await {
-            Ok(channel) => channel,
-            Err(e) => match e {
-                serenity::Error::Http(e) => match e {
-                    serenity::all::HttpError::UnsuccessfulRequest(er) => {
-                        if er.status_code == reqwest::StatusCode::NOT_FOUND {
-                            return Ok(None);
-                        } else {
-                            return Err(format!(
-                                "Failed to fetch channels (http, non-404): {:?}",
-                                er
-                            )
-                            .into());
-                        }
-                    }
-                    _ => {
-                        return Err(format!("Failed to fetch channels (http): {:?}", e).into());
-                    }
-                },
-                _ => {
-                    return Err(format!("Failed to fetch channels: {:?}", e).into());
-                }
-            },
         };
-
-        return Ok(Some(channel));
     }
-
-    let proxy_url = config::CONFIG.meta.sandwich_http_api.as_ref().unwrap();
 
     let url = match guild_id {
         Some(guild_id) => format!(
             "{}/antiraid/api/state?col=channels&id={}&guild_id={}",
-            proxy_url, channel_id, guild_id
+            config::CONFIG.meta.sandwich_http_api,
+            channel_id,
+            guild_id
         ),
         None => format!(
             "{}/antiraid/api/state?col=channels&id={}",
-            proxy_url, channel_id
+            config::CONFIG.meta.sandwich_http_api,
+            channel_id
         ),
     };
 
@@ -534,59 +454,70 @@ pub async fn channel(
     Ok(Some(channel))
 }
 
-pub enum ProxyResponse {
-    Sandwich(sandwich::StatusEndpointResponse),
-}
+pub async fn get_status(client: &reqwest::Client) -> Result<GetStatusResponse, Error> {
+    let res = client
+        .get(&format!(
+            "{}/api/status",
+            config::CONFIG.meta.sandwich_http_api
+        ))
+        .send()
+        .await?
+        .error_for_status()?
+        .json::<resp::Resp<resp::StatusEndpointResponse>>()
+        .await?;
 
-impl ProxyResponse {
-    pub fn to_support_data(&self) -> ProxySupportData {
-        match self {
-            ProxyResponse::Sandwich(data) => {
-                let mut shards = HashMap::new();
-                for manager in data.managers.iter() {
-                    if manager.display_name != *"Anti Raid" {
-                        continue; // Not for us
-                    }
+    if !res.ok {
+        return Err("Sandwich API returned not ok".into());
+    }
 
-                    for v in manager.shard_groups.iter() {
-                        for shard in v.shards.iter() {
-                            let shard_id = shard[0];
-                            let status = shard[1];
-                            let latency = shard[2];
-                            let guilds = shard[3];
-                            let uptime = shard[4];
-                            let total_uptime = shard[5];
+    let Some(data) = res.data else {
+        return Err("No data in response".into());
+    };
 
-                            shards.insert(
-                                shard_id,
-                                ShardConn {
-                                    status: match status {
-                                        0 => "Idle".to_string(),
-                                        1 => "Connecting".to_string(),
-                                        2 => "Connected".to_string(),
-                                        3 => "MarkedForClosure".to_string(),
-                                        4 => "Closing".to_string(),
-                                        5 => "Closed".to_string(),
-                                        6 => "Erroring".to_string(),
-                                        _ => "Unknown".to_string(),
-                                    },
-                                    real_latency: latency,
-                                    guilds,
-                                    uptime,
-                                    total_uptime,
-                                },
-                            );
-                        }
-                    }
-                }
+    // Parse out the shard connections
+    let mut shards = HashMap::new();
 
-                ProxySupportData {
-                    resp: ProxyResponse::Sandwich(data.clone()),
-                    shard_conns: shards,
-                }
+    for manager in data.managers.iter() {
+        if manager.display_name != *"Anti Raid" {
+            continue; // Not for us
+        }
+
+        for v in manager.shard_groups.iter() {
+            for shard in v.shards.iter() {
+                let shard_id = shard[0];
+                let status = shard[1];
+                let latency = shard[2];
+                let guilds = shard[3];
+                let uptime = shard[4];
+                let total_uptime = shard[5];
+
+                shards.insert(
+                    shard_id,
+                    ShardConn {
+                        status: match status {
+                            0 => "Idle".to_string(),
+                            1 => "Connecting".to_string(),
+                            2 => "Connected".to_string(),
+                            3 => "MarkedForClosure".to_string(),
+                            4 => "Closing".to_string(),
+                            5 => "Closed".to_string(),
+                            6 => "Erroring".to_string(),
+                            _ => "Unknown".to_string(),
+                        },
+                        real_latency: latency,
+                        guilds,
+                        uptime,
+                        total_uptime,
+                    },
+                );
             }
         }
     }
+
+    Ok(GetStatusResponse {
+        resp: data,
+        shard_conns: shards,
+    })
 }
 
 pub struct ShardConn {
@@ -597,7 +528,7 @@ pub struct ShardConn {
     pub total_uptime: i64,
 }
 
-pub struct ProxySupportData {
-    pub resp: ProxyResponse,
+pub struct GetStatusResponse {
+    pub resp: resp::StatusEndpointResponse,
     pub shard_conns: HashMap<i64, ShardConn>,
 }

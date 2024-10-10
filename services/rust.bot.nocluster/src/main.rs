@@ -41,7 +41,6 @@ pub struct Props {
     pub cmd_args: Arc<ipc::argparse::CmdArgs>,
     pub cache_http: Arc<RwLock<Option<CacheHttpImpl>>>,
     pub shard_manager: Arc<RwLock<Option<Arc<serenity::all::ShardManager>>>>,
-    pub proxy_support_data: RwLock<Option<Arc<proxy_support::ProxySupportData>>>,
 }
 
 #[async_trait::async_trait]
@@ -137,31 +136,6 @@ impl silverpelt::data::Props for Props {
         } else {
             Ok(0)
         }
-    }
-
-    /// Proxy support data
-    async fn get_proxysupport_data(&self) -> Option<Arc<proxy_support::ProxySupportData>> {
-        let guard = self.proxy_support_data.read().await;
-
-        match guard.as_ref() {
-            Some(data) => {
-                return Some(data.clone());
-            }
-            None => {
-                return None;
-            }
-        }
-    }
-
-    /// Set the proxy support data
-    async fn set_proxysupport_data(
-        &self,
-        data: proxy_support::ProxySupportData,
-    ) -> Result<(), silverpelt::Error> {
-        let mut guard = self.proxy_support_data.write().await;
-        *guard = Some(Arc::new(data));
-
-        Ok(())
     }
 }
 
@@ -474,7 +448,6 @@ async fn main() {
     let props = Arc::new(Props {
         pool: pg_pool.clone(),
         cmd_args: cmd_args.clone(),
-        proxy_support_data: RwLock::new(None),
         cache_http: Arc::new(RwLock::new(None)),
         shard_manager: Arc::new(RwLock::new(None)),
     });

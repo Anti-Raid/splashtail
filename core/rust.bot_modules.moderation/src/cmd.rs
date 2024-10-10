@@ -1,7 +1,7 @@
 use super::core::to_log_format;
 use gwevent::field::CategorizedField;
 use poise::CreateReply;
-use proxy_support::{guild, member_in_guild};
+use sandwich_driver::{guild, member_in_guild};
 use serenity::all::{
     ChannelId, CreateEmbed, EditMember, EditMessage, GuildId, Mentionable, Message, Timestamp,
     User, UserId,
