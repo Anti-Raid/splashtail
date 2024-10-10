@@ -426,11 +426,11 @@ pub async fn check_command(
                 return PermissionResult::Ok {};
             }
 
-            templating::render_permissions_template(
+            match templating::execute(
                 guild_id,
                 template,
                 pool.clone(),
-                templating::core::PermissionTemplateContext {
+                PermissionTemplateContext {
                     member_native_permissions: member_perms,
                     member_kittycat_permissions: kittycat_perms,
                     user_id,
@@ -438,80 +438,31 @@ pub async fn check_command(
                     guild_owner_id,
                     channel_id: opts.channel_id,
                 },
-                templating::CompileTemplateOptions {
-                    cache_result: true,
-                    ignore_cache: false,
-                },
             )
             .await
+            {
+                Ok(v) => v,
+                Err(e) => {
+                    return PermissionResult::GenericError {
+                        error: format!("Failed to render permission template: {}", e),
+                    };
+                }
+            }
         }
     }
 }
 
-/*
-TODO: Move to services/rust.bot
+/// A PermissionTemplateContext is a context for permission templates
+/// that can be accessed in permission templates
+#[derive(Clone, serde::Serialize, serde::Deserialize)]
+pub struct PermissionTemplateContext {
+    pub member_native_permissions: serenity::all::Permissions,
+    pub member_kittycat_permissions: Vec<kittycat::perms::Permission>,
+    pub user_id: serenity::all::UserId,
+    pub guild_id: serenity::all::GuildId,
+    pub guild_owner_id: serenity::all::UserId,
+    pub channel_id: Option<serenity::all::ChannelId>,
+}
 
-#[cfg(test)]
-mod test {
-    #[tokio::test]
-    async fn check_command_test_cache_bust() {
-        // Set the env var CHECK_MODULES_TEST_ENABLED
-        std::env::set_var("CHECK_MODULES_TEST_ENABLED", "true");
-
-        // Set current directory to ../../
-        let current_dir = std::env::current_dir().unwrap();
-
-        if current_dir.ends_with("core/rust.bot_modules") {
-            std::env::set_current_dir("../../").unwrap();
-        }
-
-        let pg_pool = sqlx::postgres::PgPoolOptions::new()
-            .connect(&config::CONFIG.meta.postgres_url)
-            .await
-            .expect("Could not initialize connection");
-
-        let cache = serenity::all::Cache::new();
-        let http = serenity::all::Http::new(&config::CONFIG.discord_auth.token);
-        let cache_http = botox::cache::CacheHttpImpl {
-            cache: cache.into(),
-            http: http.into(),
-        };
-
-        let cmd = super::check_command(
-            "afk create",
-            serenity::all::GuildId::new(1),
-            serenity::all::UserId::new(1),
-            &pg_pool,
-            &cache_http,
-            &None,
-            // Needed for settings and the website (potentially)
-            super::CheckCommandOptions::default(),
-        )
-        .await;
-
-        match cmd {
-            super::PermissionResult::ModuleDisabled { module_config } => {
-                assert_eq!(module_config.module, "afk".to_string());
-            }
-            _ => {
-                panic!("Expected ModuleDisabled, got {:?}", cmd);
-            }
-        }
-
-        let cmd = super::check_command(
-            "afk list",
-            serenity::all::GuildId::new(1064135068928454766),
-            serenity::all::UserId::new(728871946456137770),
-            &pg_pool,
-            &cache_http,
-            &None,
-            // Needed for settings and the website (potentially)
-            super::CheckCommandOptions::default(),
-        )
-        .await;
-
-        if !matches!(cmd, super::PermissionResult::ModuleDisabled { .. }) {
-            panic!("Expected ModuleDisabled, got {:?}", cmd);
-        }
-    }
-}*/
+#[typetag::serde]
+impl templating::Context for PermissionTemplateContext {}

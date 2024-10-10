@@ -64,11 +64,6 @@ type CanonicalColumnType struct {
 	}
 }
 
-type CanonicalInnerColumnTypeStringKindTemplateKind struct {
-	// Template for formatting messages
-	Message *struct{} `json:"Message,omitempty"`
-}
-
 type CanonicalInnerColumnTypeStringKind struct {
 	Normal *struct{} `json:"Normal,omitempty"`
 	Token  *struct {
@@ -76,7 +71,8 @@ type CanonicalInnerColumnTypeStringKind struct {
 	} `json:"Token,omitempty"`
 	Textarea *struct{} `json:"Textarea,omitempty"`
 	Template *struct {
-		Kind CanonicalInnerColumnTypeStringKindTemplateKind `json:"kind"`
+		Kind string `json:"kind"`
+		Ctx  string `json:"ctx"`
 	} `json:"Template,omitempty"`
 	User    *struct{} `json:"User,omitempty"`
 	Channel *struct {

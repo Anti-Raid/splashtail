@@ -1,6 +1,6 @@
 mod cache;
 mod checks;
-pub mod events;
+mod events;
 mod settings;
 
 pub struct Module;

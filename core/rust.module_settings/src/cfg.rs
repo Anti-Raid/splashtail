@@ -413,16 +413,8 @@ async fn _validate_value(
                                 InnerColumnTypeStringKind::Token { .. } => v, // Handled in parse_value
                                 InnerColumnTypeStringKind::Textarea => v,
                                 InnerColumnTypeStringKind::Template { .. } => {
-                                    let compiled = templating::compile_template(
-                                        guild_id,
-                                        s,
-                                        data.pool.clone(),
-                                        templating::CompileTemplateOptions {
-                                            cache_result: false, // Don't uselessly cache the template to decrease memory footprint
-                                            ignore_cache: false, // Don't ignore the cache to avoid recompiling the same template over and over
-                                        },
-                                    )
-                                    .await;
+                                    let compiled =
+                                        templating::parse(guild_id, s, data.pool.clone()).await;
 
                                     if let Err(err) = compiled {
                                         return Err(SettingsError::SchemaCheckValidationError {

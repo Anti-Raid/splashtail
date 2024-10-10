@@ -272,33 +272,44 @@ async fn dispatch_audit_log(
             }
         };
 
-        let discord_reply = match templating::render_message_template(
+        let discord_reply = templating::execute::<_, templating::core::messages::Message>(
             guild_id,
             &template,
             data.pool.clone(),
-            templating::core::MessageTemplateContext {
+            AuditLogContext {
                 event_titlename: event_titlename.to_string(),
                 event_name: event_name.to_string(),
                 fields: expanded_event.clone(),
             },
-            templating::CompileTemplateOptions {
-                ignore_cache: false,
-                cache_result: true,
-            },
         )
-        .await
-        {
-            Ok(reply) => reply,
+        .await;
+
+        let discord_reply = match discord_reply {
+            Ok(reply) => {
+                match templating::core::messages::to_discord_reply(reply) {
+                    Ok(reply) => reply,
+                    Err(e) => {
+                        let embed = serenity::all::CreateEmbed::default()
+                            .description(format!("Failed to render template: {}", e));
+
+                        templating::core::messages::DiscordReply {
+                            embeds: vec![embed],
+                            ..Default::default()
+                        }
+                    }
+                }
+            },
             Err(e) => {
                 let embed = serenity::all::CreateEmbed::default()
                     .description(format!("Failed to render template: {}", e));
 
-                templating::core::DiscordReply {
+                templating::core::messages::DiscordReply {
                     embeds: vec![embed],
                     ..Default::default()
                 }
             }
         };
+
 
         match sink.typ.as_str() {
             "channel" => {
@@ -398,3 +409,15 @@ async fn dispatch_audit_log(
 
     Ok(())
 }
+
+/// A AuditLogContext is a context for message templates
+/// that can be accessed in audit log templates
+#[derive(Clone, serde::Serialize, serde::Deserialize)]
+struct AuditLogContext {
+    pub event_titlename: String,
+    pub event_name: String,
+    pub fields: indexmap::IndexMap<String, gwevent::field::CategorizedField>,
+}
+
+#[typetag::serde]
+impl templating::Context for AuditLogContext {}

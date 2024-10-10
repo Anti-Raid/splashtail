@@ -172,25 +172,6 @@ impl From<super::types::ColumnType> for CanonicalColumnType {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[allow(dead_code)]
-pub enum CanonicalInnerColumnTypeStringKindTemplateKind {
-    /// Template for formatting messages
-    Message {},
-}
-
-impl From<super::types::InnerColumnTypeStringKindTemplateKind>
-    for CanonicalInnerColumnTypeStringKindTemplateKind
-{
-    fn from(kind: super::types::InnerColumnTypeStringKindTemplateKind) -> Self {
-        match kind {
-            super::types::InnerColumnTypeStringKindTemplateKind::Message {} => {
-                CanonicalInnerColumnTypeStringKindTemplateKind::Message {}
-            }
-        }
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[allow(dead_code)]
 pub enum CanonicalInnerColumnTypeStringKind {
     /// Normal string
     Normal {},
@@ -204,7 +185,9 @@ pub enum CanonicalInnerColumnTypeStringKind {
     /// A template string
     Template {
         /// The kind of template
-        kind: CanonicalInnerColumnTypeStringKindTemplateKind,
+        kind: String,
+        /// The context type to use
+        ctx: String,
     },
     /// A kittycat permission
     KittycatPermission {},
@@ -237,8 +220,11 @@ impl From<super::types::InnerColumnTypeStringKind> for CanonicalInnerColumnTypeS
             super::types::InnerColumnTypeStringKind::Textarea => {
                 CanonicalInnerColumnTypeStringKind::Textarea {}
             }
-            super::types::InnerColumnTypeStringKind::Template { kind } => {
-                CanonicalInnerColumnTypeStringKind::Template { kind: kind.into() }
+            super::types::InnerColumnTypeStringKind::Template { kind, ctx } => {
+                CanonicalInnerColumnTypeStringKind::Template {
+                    kind: kind.into(),
+                    ctx: ctx.into(),
+                }
             }
             super::types::InnerColumnTypeStringKind::KittycatPermission => {
                 CanonicalInnerColumnTypeStringKind::KittycatPermission {}

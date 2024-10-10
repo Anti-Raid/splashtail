@@ -191,13 +191,6 @@ impl std::fmt::Display for ColumnType {
 
 #[derive(Debug, Clone, PartialEq)]
 #[allow(dead_code)]
-pub enum InnerColumnTypeStringKindTemplateKind {
-    /// Template for formatting messages
-    Message {},
-}
-
-#[derive(Debug, Clone, PartialEq)]
-#[allow(dead_code)]
 pub enum InnerColumnTypeStringKind {
     /// Normal string
     Normal,
@@ -210,7 +203,8 @@ pub enum InnerColumnTypeStringKind {
     Textarea,
     /// A template string
     Template {
-        kind: InnerColumnTypeStringKindTemplateKind,
+        kind: &'static str,
+        ctx: &'static str,
     },
     /// A kittycat permission
     KittycatPermission,
@@ -239,7 +233,9 @@ impl std::fmt::Display for InnerColumnTypeStringKind {
                 write!(f, "Token (default_length: {})", default_length)
             }
             InnerColumnTypeStringKind::Textarea => write!(f, "Textarea"),
-            InnerColumnTypeStringKind::Template { kind } => write!(f, "Template {:?}", kind),
+            InnerColumnTypeStringKind::Template { kind, ctx } => {
+                write!(f, "Template {} ({})", kind, ctx)
+            }
             InnerColumnTypeStringKind::KittycatPermission => write!(f, "KittycatPermission"),
             InnerColumnTypeStringKind::User => write!(f, "User"),
             InnerColumnTypeStringKind::Channel {

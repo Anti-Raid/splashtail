@@ -6,6 +6,7 @@ pub fn modules() -> Vec<Box<dyn Module>> {
     let base_modules: Vec<Box<dyn Module>> = vec![
         Box::new(bot_modules_afk::Module),
         Box::new(bot_modules_auditlogs::Module),
+        Box::new(bot_modules_captcha::Module),
         Box::new(bot_modules_core::Module),
         Box::new(bot_modules_gitlogs::Module),
         Box::new(bot_modules_inspector::Module),

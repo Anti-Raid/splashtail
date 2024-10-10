@@ -38,7 +38,7 @@ pub struct ArLua {
 
 /// Create a new Lua VM complete with sandboxing and modules pre-loaded
 ///
-/// Note that callers should instead call the render_message_template/render_permissions_template functions
+/// Note that callers should instead call the render_template functions
 ///
 /// As such, this function is private and should not be used outside of this module
 async fn create_lua_vm(guild_id: GuildId, pool: sqlx::PgPool) -> LuaResult<ArLua> {
@@ -198,7 +198,7 @@ async fn get_lua_vm(guild_id: GuildId, pool: sqlx::PgPool) -> LuaResult<ArLua> {
 }
 
 /// Compiles a template
-pub async fn compile_template(
+pub async fn parse(
     guild_id: serenity::all::GuildId,
     template: &str,
     pool: sqlx::PgPool,

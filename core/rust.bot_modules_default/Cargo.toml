@@ -13,6 +13,7 @@ silverpelt = { path = "../rust.silverpelt" }
 bot_modules_acl = { path = "../../core/rust.bot_modules.acl" }
 bot_modules_afk = { path = "../../core/rust.bot_modules.afk" }
 bot_modules_auditlogs = { path = "../../core/rust.bot_modules.auditlogs" }
+bot_modules_captcha = { path = "../../core/rust.bot_modules.captcha" }
 bot_modules_core = { path = "../../core/rust.bot_modules.core" }
 bot_modules_gitlogs = { path = "../../core/rust.bot_modules.gitlogs" }
 bot_modules_inspector = { path = "../../core/rust.bot_modules.inspector" }

@@ -2,8 +2,8 @@ use module_settings::data_stores::PostgresDataStore;
 use module_settings::state::State;
 use module_settings::types::{
     settings_wrap, Column, ColumnSuggestion, ColumnType, ColumnTypeDynamicClause, ConfigOption,
-    HookContext, InnerColumnType, InnerColumnTypeStringKind, InnerColumnTypeStringKindTemplateKind,
-    OperationSpecific, OperationType, PostAction, SettingDataValidator, SettingsError,
+    HookContext, InnerColumnType, InnerColumnTypeStringKind, OperationSpecific, OperationType,
+    PostAction, SettingDataValidator, SettingsError,
 };
 use serenity::all::{ChannelType, Permissions};
 use splashcore_rs::value::Value;
@@ -93,8 +93,7 @@ pub static SINK: LazyLock<ConfigOption> = LazyLock::new(|| {
                 id: "embed_template",
                 name: "Template",
                 description: "The custom template for the embed. This is a tera template that is executed when an event is sent to the sink. If empty, falls back to default handling",
-                column_type: ColumnType::new_scalar(InnerColumnType::String { min_length: None, max_length: None, allowed_values: vec![], kind: InnerColumnTypeStringKind::Template { kind: InnerColumnTypeStringKindTemplateKind::Message {
-                } } }),
+                column_type: ColumnType::new_scalar(InnerColumnType::String { min_length: None, max_length: None, allowed_values: vec![], kind: InnerColumnTypeStringKind::Template { kind: "message", ctx: "AuditLogContext" }}),
                 ignored_for: vec![],
                 secret: false,
                 nullable: true,
