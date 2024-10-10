@@ -1678,6 +1678,27 @@ dependencies = [
 ]
 
 [[package]]
+name = "guild_changes"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "futures-util",
+ "indexmap",
+ "log",
+ "moka",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "serenity",
+ "splashcore_rs",
+ "sqlx",
+ "strum",
+ "strum_macros",
+ "tokio",
+ "url",
+]
+
+[[package]]
 name = "gwevent"
 version = "0.0.1"
 dependencies = [
