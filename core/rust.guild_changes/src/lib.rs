@@ -657,6 +657,28 @@ impl GuildChangeList {
         }
     }
 
+    /// Returns the busy-ness of the guild
+    ///
+    /// Kick => +5
+    /// Ban => +10
+    /// PruneMember => +100
+    /// _ => +1
+    pub async fn busyness(&self) -> u64 {
+        let change_guard = self.changes.read().await;
+
+        let mut busyness = 0;
+        for (_, change) in change_guard.iter() {
+            match change {
+                GuildChange::Kick { .. } => busyness += 5,
+                GuildChange::Ban { .. } => busyness += 10,
+                GuildChange::PruneMembers { .. } => busyness += 100,
+                _ => busyness += 1,
+            }
+        }
+
+        busyness
+    }
+
     pub async fn count(&self, opt: GuildChangeCountOption) -> u64 {
         let change_guard = self.changes.read().await;
 
