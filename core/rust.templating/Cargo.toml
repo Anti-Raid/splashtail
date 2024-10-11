@@ -16,7 +16,6 @@ typetag = "0.2"
 
 # Anti-Raid specific
 permissions = { path = "../rust.permissions" }
-splashcore_rs = { path = "../rust.std" }
 gwevent = { path = "../rust.gwevent" }
 config = { path = "../rust.config" }
 limits = { path = "../rust.limits" }

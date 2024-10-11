@@ -1,4 +1,5 @@
-pub mod plugins;
+mod atomicinstant;
+mod plugins;
 mod state;
 
 use mlua::prelude::*;
@@ -27,7 +28,7 @@ pub struct ArLua {
     #[allow(dead_code)]
     pub vm: Lua,
     /// The last execution time of the Lua VM
-    pub last_execution_time: Arc<splashcore_rs::atomicinstant::AtomicInstant>,
+    pub last_execution_time: Arc<atomicinstant::AtomicInstant>,
     /// The thread handle for the Lua VM
     pub thread_handle: (
         std::thread::Thread,
@@ -82,9 +83,8 @@ async fn create_lua_vm(guild_id: GuildId, pool: sqlx::PgPool) -> LuaResult<ArLua
     lua.globals()
         .set("require", lua.create_function(plugins::require)?)?;
 
-    let last_execution_time = Arc::new(splashcore_rs::atomicinstant::AtomicInstant::new(
-        std::time::Instant::now(),
-    ));
+    let last_execution_time =
+        Arc::new(atomicinstant::AtomicInstant::new(std::time::Instant::now()));
 
     let last_execution_time_interrupt_ref = last_execution_time.clone();
 

@@ -4797,7 +4797,6 @@ dependencies = [
  "serde",
  "serde_json",
  "serenity",
- "splashcore_rs",
  "sqlx",
  "tokio",
  "typetag",
