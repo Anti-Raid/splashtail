@@ -61,7 +61,7 @@ type CanonicalColumnType struct {
 	} `json:"Array,omitempty"`
 	Dynamic *struct {
 		Clauses []CanonicalColumnTypeDynamicClause `json:"clauses"`
-	}
+	} `json:"Dynamic,omitempty"`
 }
 
 type CanonicalInnerColumnTypeStringKind struct {
