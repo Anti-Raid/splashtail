@@ -912,7 +912,7 @@ checksum = "6f125eb85b84a24c36b02ed1d22c9dd8632f53b3cde6e4d23512f94021030003"
 [[package]]
 name = "captcha"
 version = "0.0.9"
-source = "git+https://github.com/Anti-Raid/captcha?branch=master#e58952ca0402eb99ffe5dbff4b284c77f03cf94e"
+source = "git+https://github.com/Anti-Raid/captcha?branch=master#1f2398d9b7b61b3629cc83259b6481764a8a7d1f"
 dependencies = [
  "base64 0.13.1",
  "image",
