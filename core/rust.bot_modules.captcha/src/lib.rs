@@ -1,4 +1,5 @@
 mod settings;
+mod templater;
 
 pub struct Module;
 
