@@ -63,6 +63,8 @@ impl CaptchaConfig {
                     c.apply_filter_dyn(f)?;
                 }
             } else {
+                c.view(self.viewbox_size.0, self.viewbox_size.1);
+
                 for f in self.filters.iter() {
                     // Check if we've exceeded the timeout
                     if start_time - std::time::Instant::now() > timeout {
