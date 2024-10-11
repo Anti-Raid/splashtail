@@ -13,51 +13,88 @@ pub struct CaptchaConfig {
 }
 
 impl CaptchaConfig {
-    pub fn is_valid(&self) -> bool {
-        self.char_count > 0 
-        && self.filters.len() <= MAX_FILTERS // Max filters check
-        && self.viewbox_size.0 > 0 && self.viewbox_size.0 < MAX_VIEWBOX_X // Max viewbox size check (X)
-        && self.viewbox_size.1 > 0 && self.viewbox_size.1 < MAX_VIEWBOX_Y // Max viewbox size check (Y)
-        && self.set_viewbox_at_idx.map_or(true, |idx| idx < self.filters.len()) // Check set_viewbox_at_idx
-        && self.filters.iter().all(|f| f.validate(self.viewbox_size).is_ok()) // Check filters
+    pub fn is_valid(&self) -> Result<(), silverpelt::Error> {
+        if self.char_count <= 0 {
+            return Err("char_count must be greater than 0".into());
+        }
+
+        if self.filters.len() > MAX_FILTERS {
+            return Err(format!("filters must be less than or equal to {}", MAX_FILTERS).into());
+        }
+
+        if self.viewbox_size.0 <= 0 || self.viewbox_size.0 >= MAX_VIEWBOX_X {
+            return Err(format!(
+                "viewbox_size.0 must be greater than 0 and less than {}",
+                MAX_VIEWBOX_X
+            )
+            .into());
+        }
+
+        if self.viewbox_size.1 <= 0 || self.viewbox_size.1 >= MAX_VIEWBOX_Y {
+            return Err(format!(
+                "viewbox_size.1 must be greater than 0 and less than {}",
+                MAX_VIEWBOX_Y
+            )
+            .into());
+        }
+
+        if let Some(set_viewbox_at_idx) = self.set_viewbox_at_idx {
+            if set_viewbox_at_idx >= self.filters.len() {
+                return Err("set_viewbox_at_idx must be less than the length of filters".into());
+            }
+        }
+
+        for f in self.filters.iter() {
+            f.validate(self.viewbox_size)?;
+        }
+
+        Ok(())
     }
 
     pub async fn create_captcha(
         self,
         timeout: std::time::Duration,
     ) -> Result<(String, Vec<u8>), silverpelt::Error> {
-        if !self.is_valid() {
-            return Err("Invalid captcha configuration".into());
-        }
+        self.is_valid()?;
 
         let start_time = std::time::Instant::now();
-        
+
         tokio::task::spawn_blocking(move || {
             let mut c = captcha::Captcha::new();
             c.add_random_chars(self.char_count as u32);
-    
+
             if let Some(set_viewbox_at_idx) = self.set_viewbox_at_idx {
                 // Do two separate for loops, one for 0..set_viewbox_at_idx and one for set_viewbox_at_idx..filters.len()
                 for f in self.filters.iter().take(set_viewbox_at_idx) {
                     // Check if we've exceeded the timeout
                     if start_time - std::time::Instant::now() > timeout {
-                        return Err(format!("Timeout exceeded when rendering captcha: {:?}", timeout).into());
+                        return Err(format!(
+                            "Timeout exceeded when rendering captcha: {:?}",
+                            timeout
+                        )
+                        .into());
                     }
 
                     c.apply_filter_dyn(f)?;
                 }
-    
+
                 c.view(self.viewbox_size.0, self.viewbox_size.1);
 
                 // Check if we've exceeded the timeout
                 if start_time - std::time::Instant::now() > timeout {
-                    return Err(format!("Timeout exceeded when rendering captcha: {:?}", timeout).into());
+                    return Err(
+                        format!("Timeout exceeded when rendering captcha: {:?}", timeout).into(),
+                    );
                 }
 
                 for f in self.filters.iter().skip(set_viewbox_at_idx) {
                     // Check if we've exceeded the timeout
                     if start_time - std::time::Instant::now() > timeout {
-                        return Err(format!("Timeout exceeded when rendering captcha: {:?}", timeout).into());
+                        return Err(format!(
+                            "Timeout exceeded when rendering captcha: {:?}",
+                            timeout
+                        )
+                        .into());
                     }
 
                     c.apply_filter_dyn(f)?;
@@ -68,14 +105,18 @@ impl CaptchaConfig {
                 for f in self.filters.iter() {
                     // Check if we've exceeded the timeout
                     if start_time - std::time::Instant::now() > timeout {
-                        return Err(format!("Timeout exceeded when rendering captcha: {:?}", timeout).into());
+                        return Err(format!(
+                            "Timeout exceeded when rendering captcha: {:?}",
+                            timeout
+                        )
+                        .into());
                     }
 
                     c.apply_filter_dyn(f)?;
                 }
             }
-    
-            Ok(c.as_tuple().ok_or("Failed to create captcha")?)    
+
+            Ok(c.as_tuple().ok_or("Failed to create captcha")?)
         })
         .await?
     }
