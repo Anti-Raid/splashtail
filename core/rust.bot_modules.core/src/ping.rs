@@ -6,7 +6,7 @@ use serenity::builder::EditMessage;
 type Error = silverpelt::Error;
 type Context<'a> = silverpelt::Context<'a>;
 
-#[poise::command(category = "Stats", prefix_command, slash_command, user_cooldown = 1)]
+#[poise::command(category = "Stats", slash_command, user_cooldown = 1)]
 pub async fn ping(ctx: Context<'_>) -> Result<(), Error> {
     let msg = CreateReply::default().embed(
         CreateEmbed::default()

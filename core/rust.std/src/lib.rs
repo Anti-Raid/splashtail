@@ -1,3 +1,4 @@
+pub mod atomicinstant;
 pub mod jobserver;
 pub mod modifier;
 pub mod objectstore;

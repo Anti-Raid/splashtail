@@ -1,6 +1,5 @@
 pub mod plugins;
 mod state;
-mod utils; // Private utils like AtomicInstant
 
 use mlua::prelude::*;
 use moka::future::Cache;
@@ -28,7 +27,7 @@ pub struct ArLua {
     #[allow(dead_code)]
     pub vm: Lua,
     /// The last execution time of the Lua VM
-    pub last_execution_time: Arc<utils::AtomicInstant>,
+    pub last_execution_time: Arc<splashcore_rs::atomicinstant::AtomicInstant>,
     /// The thread handle for the Lua VM
     pub thread_handle: (
         std::thread::Thread,
@@ -53,11 +52,17 @@ async fn create_lua_vm(guild_id: GuildId, pool: sqlx::PgPool) -> LuaResult<ArLua
         r#"
         _G.print = function(...)
             local args = {...}
+
+            __stack.stdout = __stack.stdout or {}
+
+            if #args == 0 then
+                table.insert(__stack.stdout, "nil")
+            end
+
             local str = ""
             for i = 1, #args do
                 str = str .. tostring(args[i]) .. "\t"
             end
-            __stack.stdout = __stack.stdout or {}
             table.insert(__stack.stdout, str)
         end
     "#,
@@ -77,7 +82,9 @@ async fn create_lua_vm(guild_id: GuildId, pool: sqlx::PgPool) -> LuaResult<ArLua
     lua.globals()
         .set("require", lua.create_function(plugins::require)?)?;
 
-    let last_execution_time = Arc::new(utils::AtomicInstant::new(std::time::Instant::now()));
+    let last_execution_time = Arc::new(splashcore_rs::atomicinstant::AtomicInstant::new(
+        std::time::Instant::now(),
+    ));
 
     let last_execution_time_interrupt_ref = last_execution_time.clone();
 
@@ -286,6 +293,9 @@ mod test {
 
     #[tokio::test]
     async fn lua_test() {
+        // Switch to /home/antiraid/splashtail/staging dir
+        std::env::set_current_dir("/home/antiraid/splashtail/staging").unwrap();
+
         let pool = sqlx::postgres::PgPoolOptions::new()
             .max_connections(3)
             .connect(&config::CONFIG.meta.postgres_url)
@@ -300,6 +310,38 @@ mod test {
             let lua = super::create_lua_vm(GuildId::new(1), pool.clone())
                 .await
                 .unwrap();
+
+            // Pass a serenity::all::UserId of 728871946456137770
+            let f: LuaFunction = lua
+                .vm
+                .load(
+                    r#"
+                function(args)
+                    print(args)
+                    print(__stack)
+                    print(__stack.stdout)
+                    return 3
+                end
+            "#,
+                )
+                .eval_async()
+                .await
+                .unwrap();
+
+            let res: i32 = f
+                .call_async({
+                    let args: LuaValue = lua
+                        .vm
+                        .to_value(&serenity::all::UserId::new(728871946456137770))
+                        .unwrap();
+
+                    args
+                })
+                .await
+                .unwrap();
+
+            assert_eq!(res, 3);
+
             lua.vm
                 .load("require \"@antiraid/builtins\" ")
                 .exec()
@@ -422,7 +464,7 @@ mod test {
         use mlua::{Lua, Result};
         use std::time::Duration;
 
-        async fn sleep(_: &Lua, i: u64) -> Result<()> {
+        async fn sleep(_: Lua, i: u64) -> Result<()> {
             // Get a random number between 0 and 1000
             let ms = rand::thread_rng().gen_range(0..1000);
             tokio::time::sleep(Duration::from_millis(ms)).await;

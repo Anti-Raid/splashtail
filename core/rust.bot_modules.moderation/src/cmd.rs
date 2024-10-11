@@ -136,7 +136,6 @@ async fn check_hierarchy(ctx: &Context<'_>, user_id: UserId) -> Result<(), Error
 
 /// Prune messages from a user
 #[poise::command(
-    prefix_command,
     slash_command,
     guild_only,
     user_cooldown = "5",
@@ -389,7 +388,6 @@ pub async fn prune_user(
 
 /// Kicks a member from the server with optional purge/stinging abilities
 #[poise::command(
-    prefix_command,
     slash_command,
     guild_only,
     user_cooldown = "5",
@@ -574,7 +572,6 @@ pub async fn kick(
 
 /// Bans a member from the server with optional purge/stinging abilities
 #[poise::command(
-    prefix_command,
     slash_command,
     guild_only,
     user_cooldown = "5",
@@ -765,7 +762,6 @@ pub async fn ban(
 
 /// Temporaily bans a member from the server with optional purge/stinging abilities
 #[poise::command(
-    prefix_command,
     slash_command,
     guild_only,
     user_cooldown = "5",
@@ -927,7 +923,6 @@ pub async fn tempban(
 
 /// Unbans a member from the server with optional purge/stinging abilities
 #[poise::command(
-    prefix_command,
     slash_command,
     guild_only,
     user_cooldown = "5",
@@ -1054,7 +1049,6 @@ pub async fn unban(
 
 /// Times out a member from the server with optional purge/stinging abilities
 #[poise::command(
-    prefix_command,
     slash_command,
     guild_only,
     user_cooldown = "5",

@@ -63,7 +63,7 @@ fn whois_user<'a>(user: &User) -> CreateEmbed<'a> {
         .field("Bot", user.bot().to_string(), true)
 }
 
-#[poise::command(track_edits, prefix_command, slash_command)]
+#[poise::command(slash_command)]
 pub async fn whois(ctx: Context<'_>, user: Option<User>) -> Result<(), Error> {
     let data = ctx.data();
     let cache_http = botox::cache::CacheHttpImpl::from_ctx(ctx.serenity_context());

@@ -1,13 +1,13 @@
 use indexmap::indexmap;
 
 /// Web interface access control
-#[poise::command(prefix_command, slash_command, subcommands("web_use"))]
+#[poise::command(slash_command, subcommands("web_use"))]
 pub async fn web(_ctx: silverpelt::Context<'_>) -> Result<(), silverpelt::Error> {
     Ok(())
 }
 
 /// This command controls if a user can use the web interface.
-#[poise::command(prefix_command, slash_command, rename = "use")]
+#[poise::command(slash_command, rename = "use")]
 pub async fn web_use(_ctx: silverpelt::Context<'_>) -> Result<(), silverpelt::Error> {
     Ok(())
 }
@@ -16,7 +16,7 @@ pub async fn web_use(_ctx: silverpelt::Context<'_>) -> Result<(), silverpelt::Er
 fn acl__modules_modperms(
     module_ids: &[&'static str],
 ) -> poise::Command<silverpelt::data::Data, silverpelt::Error> {
-    #[poise::command(prefix_command, slash_command)]
+    #[poise::command(slash_command)]
     pub async fn base_cmd(_ctx: silverpelt::Context<'_>) -> Result<(), silverpelt::Error> {
         Ok(())
     }

@@ -7,7 +7,7 @@ use sqlx::types::chrono;
 type Error = silverpelt::Error;
 type Context<'a> = silverpelt::Context<'a>;
 
-#[poise::command(category = "Stats", prefix_command, slash_command, user_cooldown = 1)]
+#[poise::command(category = "Stats", slash_command, user_cooldown = 1)]
 pub async fn stats(ctx: Context<'_>) -> Result<(), Error> {
     let total_guilds = ctx.data().props.total_guilds().await?;
     let total_users = ctx.data().props.total_users().await?;

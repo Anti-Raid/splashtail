@@ -52,7 +52,6 @@ fn is_backup_encrypted(fields: &indexmap::IndexMap<String, serde_json::Value>) -
 
 /// Create, load and get info on backups of your server!
 #[poise::command(
-    prefix_command,
     slash_command,
     guild_only,
     user_cooldown = "5",
@@ -64,7 +63,7 @@ pub async fn backups(_ctx: Context<'_>) -> Result<(), Error> {
 }
 
 /// Create a backup of the current server
-#[poise::command(prefix_command, slash_command, guild_only, rename = "create")]
+#[poise::command(slash_command, guild_only, rename = "create")]
 #[allow(clippy::too_many_arguments)] // This function needs these arguments due to poise
 pub async fn backups_create(
     ctx: Context<'_>,
@@ -252,13 +251,7 @@ pub async fn backups_create(
 }
 
 /// Lists all currently made backups + download/delete them
-#[poise::command(
-    prefix_command,
-    slash_command,
-    guild_only,
-    user_cooldown = "5",
-    rename = "list"
-)]
+#[poise::command(slash_command, guild_only, user_cooldown = "5", rename = "list")]
 pub async fn backups_list(ctx: Context<'_>) -> Result<(), Error> {
     let Some(guild_id) = ctx.guild_id() else {
         return Err("This command can only be used in a guild".into());
@@ -883,13 +876,7 @@ pub async fn backups_list(ctx: Context<'_>) -> Result<(), Error> {
 }
 
 /// Deletes a backup given its Task ID
-#[poise::command(
-    prefix_command,
-    slash_command,
-    guild_only,
-    user_cooldown = "5",
-    rename = "delete"
-)]
+#[poise::command(slash_command, guild_only, user_cooldown = "5", rename = "delete")]
 pub async fn backups_delete(ctx: Context<'_>, id: String) -> Result<(), Error> {
     let job = jobserver::Job::from_id(id.parse::<Uuid>()?, &ctx.data().pool)
         .await
@@ -1065,7 +1052,6 @@ impl Display for RoleRestoreMode {
 
 /// Restores a created backup. Either backup_file or backup_id must be provided
 #[poise::command(
-    prefix_command,
     slash_command,
     guild_only,
     user_cooldown = "20",

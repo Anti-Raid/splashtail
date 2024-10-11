@@ -1,0 +1,23 @@
+@pragma {"lang":"lua"}
+function (args) 
+    local interop = require "@antiraid/interop"
+
+    local captcha_config = {}
+
+    --[[
+        pub struct CaptchaConfig {
+        pub char_count: u8,
+        pub filters: Vec<Box<dyn Filter>>,
+        pub viewbox_size: (u32, u32),
+        pub set_viewbox_at_idx: Option<usize>,
+    }
+    --]]
+
+    captcha_config.char_count = 7
+    captcha_config.filters = {}
+    setmetatable(captcha_config.filters, interop.array_metatable) -- Filters is an array
+    captcha_config.viewbox_size = { 280, 160 }
+    setmetatable(captcha_config.viewbox_size, interop.array_metatable) -- Viewbox size is a tuple
+
+    return captcha_config
+end

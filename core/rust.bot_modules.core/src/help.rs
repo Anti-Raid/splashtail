@@ -59,7 +59,7 @@ pub struct HelpState {
     filter_by_perms: bool, // Slow, should only be enabled when needed
 }
 
-#[poise::command(track_edits, prefix_command, slash_command)]
+#[poise::command(slash_command)]
 pub async fn help(
     ctx: Context<'_>,
     command: Option<String>,
@@ -97,7 +97,7 @@ pub async fn help(
     .await
 }
 
-#[poise::command(category = "Help", prefix_command, slash_command, user_cooldown = 1)]
+#[poise::command(category = "Help", slash_command, user_cooldown = 1)]
 pub async fn simplehelp(
     ctx: Context<'_>,
     #[description = "Specific command to show help about"]

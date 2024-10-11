@@ -1,3 +1,4 @@
+mod cmds;
 mod settings;
 mod templater;
 
@@ -14,6 +15,15 @@ impl silverpelt::module::Module for Module {
 
     fn description(&self) -> &'static str {
         "CAPTCHA support for Anti-Raid. Highly experimental and not complete yet"
+    }
+
+    fn raw_commands(&self) -> Vec<silverpelt::module::CommandObj> {
+        vec![(
+            cmds::captcha_test(),
+            indexmap::indexmap! {
+                "" => silverpelt::types::CommandExtendedData::kittycat_or_admin("captcha", "test")
+            },
+        )]
     }
 
     fn event_listeners(&self) -> Option<Box<dyn silverpelt::module::ModuleEventListeners>> {

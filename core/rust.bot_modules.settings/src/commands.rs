@@ -8,7 +8,6 @@ use std::time::Duration;
 
 /// Settings related to commands
 #[poise::command(
-    prefix_command,
     slash_command,
     user_cooldown = 1,
     guild_cooldown = 1,
@@ -24,13 +23,7 @@ pub async fn commands(_ctx: Context<'_>) -> Result<(), Error> {
 }
 
 /// Checks if a command is usable
-#[poise::command(
-    prefix_command,
-    slash_command,
-    user_cooldown = 1,
-    guild_cooldown = 1,
-    rename = "check"
-)]
+#[poise::command(slash_command, user_cooldown = 1, guild_cooldown = 1, rename = "check")]
 pub async fn commands_check(
     ctx: Context<'_>,
     #[description = "The command to check"] command: String,
@@ -75,7 +68,6 @@ pub async fn commands_check(
 
 /// Enables a module. Note that globally disabled modules cannot be used even if enabled
 #[poise::command(
-    prefix_command,
     slash_command,
     user_cooldown = 1,
     guild_cooldown = 1,
@@ -191,7 +183,6 @@ pub async fn commands_enable(
 
 /// Enables a module. Note that globally disabled modules cannot be used even if enabled
 #[poise::command(
-    prefix_command,
     slash_command,
     user_cooldown = 1,
     guild_cooldown = 1,
@@ -307,7 +298,6 @@ pub async fn commands_disable(
 
 /// Modifies the permissions and state of a command
 #[poise::command(
-    prefix_command,
     slash_command,
     user_cooldown = 1,
     guild_cooldown = 1,

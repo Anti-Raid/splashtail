@@ -211,7 +211,7 @@ fn string_to_static_str(s: String) -> &'static str {
 }
 
 fn create_full_command_list<T: Module + ?Sized>(module: &T) -> Vec<CommandObj> {
-    #[poise::command(prefix_command, slash_command, rename = "")]
+    #[poise::command(slash_command, rename = "")]
     pub async fn base_cmd(_ctx: crate::Context<'_>) -> Result<(), crate::Error> {
         Ok(())
     }

@@ -30,7 +30,6 @@ async fn module_list_autocomplete<'a>(
 }
 
 #[poise::command(
-    prefix_command,
     slash_command,
     user_cooldown = 1,
     guild_cooldown = 1,
@@ -46,13 +45,7 @@ pub async fn modules(_ctx: Context<'_>) -> Result<(), Error> {
 }
 
 /// Lists all module configurations currently setup
-#[poise::command(
-    prefix_command,
-    slash_command,
-    user_cooldown = 1,
-    guild_cooldown = 1,
-    rename = "list"
-)]
+#[poise::command(slash_command, user_cooldown = 1, guild_cooldown = 1, rename = "list")]
 pub async fn modules_list(ctx: Context<'_>) -> Result<(), Error> {
     let Some(guild_id) = ctx.guild_id() else {
         return Err("This command must be run in a guild".into());
@@ -129,7 +122,6 @@ pub async fn modules_list(ctx: Context<'_>) -> Result<(), Error> {
 
 /// Enables a module. Note that globally disabled modules cannot be used even if enabled
 #[poise::command(
-    prefix_command,
     slash_command,
     user_cooldown = 1,
     guild_cooldown = 1,
@@ -210,7 +202,6 @@ pub async fn modules_enable(
 
 /// Disables a module. Note that certain modules may not be disablable
 #[poise::command(
-    prefix_command,
     slash_command,
     user_cooldown = 1,
     guild_cooldown = 1,
@@ -291,7 +282,6 @@ pub async fn modules_disable(
 
 /// Modifies the permissions and state of a module
 #[poise::command(
-    prefix_command,
     slash_command,
     user_cooldown = 1,
     guild_cooldown = 1,

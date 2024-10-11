@@ -15,6 +15,7 @@ futures-util = "0.3"
 indexmap = { version = "2", features = ["serde"] }
 async-trait = "0.1"
 captcha = { git = "https://github.com/Anti-Raid/captcha", branch = "master" }
+typetag = "0.2"
 
 # Anti-Raid specific
 silverpelt = { path = "../rust.silverpelt" }
@@ -24,6 +25,7 @@ config = { path = "../rust.config" }
 sandwich_driver = { path = "../rust.sandwich_driver" }
 rust_buildstats = { path = "../rust.buildstats" }
 splashcore_rs = { path = "../rust.std" }
+templating = { path = "../rust.templating" }
 
 [dependencies.serenity]
 git = "https://github.com/Anti-Raid/serenity"
