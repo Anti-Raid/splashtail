@@ -1,4 +1,5 @@
 mod cmds;
+mod consts;
 mod settings;
 mod templater;
 
@@ -18,12 +19,20 @@ impl silverpelt::module::Module for Module {
     }
 
     fn raw_commands(&self) -> Vec<silverpelt::module::CommandObj> {
-        vec![(
-            cmds::captcha_test(),
-            indexmap::indexmap! {
-                "" => silverpelt::types::CommandExtendedData::kittycat_or_admin("captcha", "test")
-            },
-        )]
+        vec![
+            (
+                cmds::captcha_test(),
+                indexmap::indexmap! {
+                    "" => silverpelt::types::CommandExtendedData::kittycat_or_admin("captcha", "test")
+                },
+            ),
+            (
+                cmds::verify(),
+                indexmap::indexmap! {
+                    "" => silverpelt::types::CommandExtendedData::none()
+                },
+            ),
+        ]
     }
 
     fn event_listeners(&self) -> Option<Box<dyn silverpelt::module::ModuleEventListeners>> {

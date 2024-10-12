@@ -50,7 +50,7 @@ pub(crate) async fn event_listener(ectx: &EventHandlerContext) -> Result<(), sil
             }
 
             Ok(())
-        } 
+        }
         AntiraidEvent::Discord(ref event) => {
             if not_audit_loggable_event().contains(&event.into()) {
                 return Ok(());
@@ -125,31 +125,70 @@ pub(crate) async fn event_listener(ectx: &EventHandlerContext) -> Result<(), sil
                 Ok(())
             }
         }
-        AntiraidEvent::StingCreate(ref sting) => dispatch_audit_log(
-            ctx,
-            &ectx.data,
-            "AR/StingCreate",
-            "(Anti Raid) Created Sting For User",
-            indexmap::indexmap! {
-                "target".to_string() => CategorizedField { category: "action".to_string(), field: {
-                    match &sting.target {
-                        silverpelt::stings::StingTarget::User(user_id) => (*user_id).into(),
-                        silverpelt::stings::StingTarget::System => "System".to_string().into(),
-                    }
-                } },
-                "reason".to_string() => CategorizedField { category: "action".to_string(), field: {
-                    match &sting.reason {
-                        Some(reason) => reason.clone().into(),
-                        None => gwevent::field::Field::None,
-                    }
-                } },
-                "stings".to_string() => CategorizedField { category: "action".to_string(), field: sting.stings.into() },
-                "state".to_string() => CategorizedField { category: "action".to_string(), field: sting.state.to_string().into() },
-            },
-            ectx.guild_id,
-        )
-        .await,
-        _ => Ok(()), // We dont need to handle other events
+        AntiraidEvent::StingCreate(ref sting) => {
+            let sting_val = serde_json::to_value(sting)?;
+
+            dispatch_audit_log(
+                ctx,
+                &ectx.data,
+                "AR/StingCreate",
+                "(Anti Raid) Created Sting For User",
+                indexmap::indexmap! {
+                    "target".to_string() => CategorizedField { category: "action".to_string(), field: {
+                        match &sting.target {
+                            silverpelt::stings::StingTarget::User(user_id) => (*user_id).into(),
+                            silverpelt::stings::StingTarget::System => "System".to_string().into(),
+                        }
+                    } },
+                    "reason".to_string() => CategorizedField { category: "action".to_string(), field: {
+                        match &sting.reason {
+                            Some(reason) => reason.clone().into(),
+                            None => gwevent::field::Field::None,
+                        }
+                    } },
+                    "stings".to_string() => CategorizedField { category: "action".to_string(), field: sting.stings.into() },
+                    "state".to_string() => CategorizedField { category: "action".to_string(), field: sting.state.to_string().into() },
+                    "sting".to_string() => CategorizedField { category: "action".to_string(), field: sting_val.into() },
+                },
+                ectx.guild_id,
+            )
+            .await?;
+
+            Ok(())
+        }
+        AntiraidEvent::PunishmentCreate(ref punishments) => {
+            let punishment = serde_json::to_value(punishments)?;
+
+            dispatch_audit_log(
+                ctx,
+                &ectx.data,
+                "AR/PunishmentCreate",
+                "(Anti Raid) Created Punishment",
+                indexmap::indexmap! {
+                    "punishment".to_string() => CategorizedField { category: "action".to_string(), field: punishment.into() },
+                },
+                ectx.guild_id,
+            )
+            .await?;
+
+            Ok(())
+        }
+        AntiraidEvent::MemberVerify((user_id, ref data)) => {
+            dispatch_audit_log(
+                ctx,
+                &ectx.data,
+                "AR/MemberVerify",
+                "(Anti Raid) Member Verify",
+                indexmap::indexmap! {
+                    "user_id".to_string() => CategorizedField { category: "action".to_string(), field: user_id.into() },
+                    "data".to_string() => CategorizedField { category: "action".to_string(), field: data.clone().into() },
+                },
+                ectx.guild_id,
+            )
+            .await?;
+
+            Ok(())
+        }
     }
 }
 
@@ -285,17 +324,15 @@ async fn dispatch_audit_log(
         .await;
 
         let discord_reply = match discord_reply {
-            Ok(reply) => {
-                match templating::core::messages::to_discord_reply(reply) {
-                    Ok(reply) => reply,
-                    Err(e) => {
-                        let embed = serenity::all::CreateEmbed::default()
-                            .description(format!("Failed to render template: {}", e));
+            Ok(reply) => match templating::core::messages::to_discord_reply(reply) {
+                Ok(reply) => reply,
+                Err(e) => {
+                    let embed = serenity::all::CreateEmbed::default()
+                        .description(format!("Failed to render template: {}", e));
 
-                        templating::core::messages::DiscordReply {
-                            embeds: vec![embed],
-                            ..Default::default()
-                        }
+                    templating::core::messages::DiscordReply {
+                        embeds: vec![embed],
+                        ..Default::default()
                     }
                 }
             },
@@ -309,7 +346,6 @@ async fn dispatch_audit_log(
                 }
             }
         };
-
 
         match sink.typ.as_str() {
             "channel" => {

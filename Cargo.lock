@@ -536,6 +536,7 @@ dependencies = [
  "rust_buildstats",
  "sandwich_driver",
  "serde",
+ "serde_json",
  "serenity",
  "silverpelt",
  "splashcore_rs",
@@ -579,6 +580,7 @@ dependencies = [
  "bot_modules_inspector",
  "bot_modules_limits",
  "bot_modules_lockdown",
+ "bot_modules_member_verify_autotriggers",
  "bot_modules_moderation",
  "bot_modules_punishment_autotriggers",
  "bot_modules_root",
@@ -683,6 +685,30 @@ dependencies = [
  "splashcore_rs",
  "sqlx",
  "uuid",
+]
+
+[[package]]
+name = "bot_modules_member_verify_autotriggers"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "botox",
+ "chrono",
+ "dashmap 6.1.0",
+ "indexmap",
+ "log",
+ "module_settings",
+ "poise",
+ "reqwest",
+ "sandwich_driver",
+ "serde",
+ "serde_json",
+ "serenity",
+ "silverpelt",
+ "splashcore_rs",
+ "sqlx",
+ "strum",
+ "strum_macros",
 ]
 
 [[package]]

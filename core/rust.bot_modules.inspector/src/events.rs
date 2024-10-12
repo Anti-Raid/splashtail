@@ -480,11 +480,12 @@ pub async fn event_listener(ectx: &EventHandlerContext) -> Result<(), Error> {
                             let bp = bot.permissions(&ectx.serenity_context.cache)?;
 
                             if !bp.manage_nicknames() {
-                                return Err(format!(
+                                /*return Err(format!(
                                     "Cannot manage nicknames on this guild: {}",
                                     ectx.guild_id
                                 )
-                                .into());
+                                .into());*/
+                                return Ok(()); // Nothing we can do
                             }
 
                             let mut new_member = new_member.clone();
@@ -648,11 +649,12 @@ pub async fn event_listener(ectx: &EventHandlerContext) -> Result<(), Error> {
                             // TODO: Check for hierarchy here too
 
                             if !bp.manage_nicknames() {
-                                return Err(format!(
+                                /*return Err(format!(
                                     "Cannot manage nicknames on this guild: {}",
                                     ectx.guild_id
                                 )
-                                .into());
+                                .into());*/
+                                return Ok(()); // Nothing we can do
                             }
 
                             event

@@ -48,7 +48,8 @@ impl silverpelt::module::ModuleEventListeners for EventHandler {
                 ce.target() == std_events::auditlog::AUDITLOG_TARGET_ID
             }
             silverpelt::ar_event::AntiraidEvent::StingCreate(_) => true,
-            _ => false,
+            silverpelt::ar_event::AntiraidEvent::PunishmentCreate(_) => true,
+            silverpelt::ar_event::AntiraidEvent::MemberVerify(_) => true,
         }
     }
 }
