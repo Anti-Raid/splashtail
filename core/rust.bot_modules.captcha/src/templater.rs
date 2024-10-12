@@ -1,5 +1,6 @@
 use captcha::filters::Filter;
 
+pub const MAX_CHAR_COUNT: u8 = 10;
 pub const MAX_FILTERS: usize = 12;
 pub const MAX_VIEWBOX_X: u32 = 512;
 pub const MAX_VIEWBOX_Y: u32 = 512;
@@ -16,6 +17,14 @@ impl CaptchaConfig {
     pub fn is_valid(&self) -> Result<(), silverpelt::Error> {
         if self.char_count <= 0 {
             return Err("char_count must be greater than 0".into());
+        }
+
+        if self.char_count > MAX_CHAR_COUNT {
+            return Err(format!(
+                "char_count must be less than or equal to {}",
+                MAX_CHAR_COUNT
+            )
+            .into());
         }
 
         if self.filters.len() > MAX_FILTERS {

@@ -1,7 +1,7 @@
-mod atomicinstant;
 mod plugins;
 mod state;
 
+use crate::atomicinstant;
 use mlua::prelude::*;
 use moka::future::Cache;
 use serenity::all::GuildId;
@@ -139,7 +139,18 @@ async fn create_lua_vm(guild_id: GuildId, pool: sqlx::PgPool) -> LuaResult<ArLua
                         let lua_ref = lua_ref.clone();
 
                         rt.spawn(async move {
-                            let f: LuaFunction = match lua_ref.load(&template).eval_async().await {
+                            let f: LuaFunction = match lua_ref
+                                .load(&template)
+                                .set_name("script")
+                                .set_mode(mlua::ChunkMode::Text) // Ensure auto-detection never selects binary mode
+                                .set_compiler(
+                                    mlua::Compiler::new()
+                                        .set_optimization_level(2)
+                                        .set_type_info_level(1),
+                                )
+                                .eval_async()
+                                .await
+                            {
                                 Ok(f) => f,
                                 Err(e) => {
                                     let _ = callback.send(Err(e));
@@ -158,7 +169,13 @@ async fn create_lua_vm(guild_id: GuildId, pool: sqlx::PgPool) -> LuaResult<ArLua
                                         }
                                     };
 
-                                    let v: LuaValue = f.call_async(args).await.unwrap();
+                                    let v: LuaValue = match f.call_async(args).await {
+                                        Ok(v) => v,
+                                        Err(e) => {
+                                            let _ = callback.send(Err(e));
+                                            return;
+                                        }
+                                    };
 
                                     let _v: Result<serde_json::Value, LuaError> = lua_ref
                                         .from_value(v)
@@ -274,6 +291,16 @@ pub async fn render_template<Request: serde::Serialize, Response: serde::de::Des
         value = rx => {
             let Ok(value) = value else {
                 return Err(LuaError::external("Could not receive data from Lua thread"));
+            };
+
+            // Check for an error
+            match value {
+                Ok(serde_json::Value::Object(ref map)) => {
+                    if let Some(value) = map.get("__error") {
+                        return Err(LuaError::external(value.to_string()));
+                    }
+                },
+                _ => {}
             };
 
             let v: Response = serde_json::from_value(value?)

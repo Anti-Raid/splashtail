@@ -1,3 +1,8 @@
+# Examples
+
+## Sample CAPTCHA
+
+```lua
 @pragma {"lang":"lua"}
 function (args) 
     local interop = require "@antiraid/interop"
@@ -65,3 +70,43 @@ function (args)
 
     return captcha_config
 end
+```
+
+## CAPTCHA with increasing char count with maximum of 5 tries per user
+
+```lua
+@pragma {"lang":"lua"}
+function (args) 
+    local interop = require "@antiraid/interop"
+
+    local captcha_config = {}
+
+    -- Check __stack.users
+    if __stack._captcha_user_tries == nil then
+        __stack._captcha_user_tries = {} -- Initialize users table
+    end
+
+    -- Check __stack._captcha_user_tries[args.user_id]
+    if __stack._captcha_user_tries[args.user_id] == nil then
+        __stack._captcha_user_tries[args.user_id] = 0 -- Initialize user's try count
+    end
+
+    -- Check if user has reached maximum tries
+    if __stack._captcha_user_tries[args.user_id] >= 5 then
+        return { __error = "You have reached the maximum number of tries in this 5 minute window."}
+    end
+
+    -- Basic options
+    captcha_config.char_count = math.min(7 + __stack._captcha_user_tries[args.user_id], 10) -- Increment the number of characters
+
+    captcha_config.filters = {}
+    setmetatable(captcha_config.filters, interop.array_metatable) -- Filters is an array
+    captcha_config.viewbox_size = { 280, 160 }
+    setmetatable(captcha_config.viewbox_size, interop.array_metatable) -- Viewbox size is a tuple
+
+    -- Increment the maximum number of tries
+    __stack._captcha_user_tries[args.user_id] += 1
+
+    return captcha_config
+end
+```

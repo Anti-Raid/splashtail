@@ -1,3 +1,4 @@
+mod atomicinstant;
 pub mod core;
 
 #[cfg(feature = "lua")]
