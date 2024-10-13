@@ -587,6 +587,7 @@ dependencies = [
  "bot_modules_server_backups",
  "bot_modules_server_member_backups",
  "bot_modules_settings",
+ "bot_modules_tags",
  "bot_modules_temporary_punishments",
  "silverpelt",
 ]
@@ -818,6 +819,33 @@ dependencies = [
  "silverpelt",
  "splashcore_rs",
  "sqlx",
+]
+
+[[package]]
+name = "bot_modules_tags"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "botox",
+ "chrono",
+ "config",
+ "futures-util",
+ "indexmap",
+ "module_settings",
+ "permissions",
+ "poise",
+ "reqwest",
+ "rust_buildstats",
+ "sandwich_driver",
+ "serde",
+ "serde_json",
+ "serenity",
+ "silverpelt",
+ "splashcore_rs",
+ "sqlx",
+ "templating",
+ "tokio",
+ "typetag",
 ]
 
 [[package]]

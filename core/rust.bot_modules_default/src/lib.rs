@@ -18,6 +18,7 @@ pub fn modules() -> Vec<Box<dyn Module>> {
         Box::new(bot_modules_server_backups::Module),
         Box::new(bot_modules_server_member_backups::Module),
         Box::new(bot_modules_settings::Module),
+        Box::new(bot_modules_tags::Module),
         Box::new(bot_modules_temporary_punishments::Module),
         Box::new(bot_modules_root::Module),
     ];

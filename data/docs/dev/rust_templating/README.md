@@ -3,20 +3,8 @@
 ## Supported Languages
 
 - Lua (luau / Roblox Lua) - Tier 1
-- Tera* - Tier 2 (poor sandboxing capabilities)
-- Rhai* - Tier 2 (sandboxing capabilities rely on thread-unsafe methods and pointer arithmetic. Not suitable for the async environment Anti-Raid needs)
 
-Lua is the recommended language for templating. Tera and Rhai are supported but are not recommended due to their poor sandboxing capabilities and will be removed/disabled in production builds
-
-## Lua notes
-
-- Each guild is assigned a Lua VM. This VM is used to execute Lua code that is used in the templates.
-- The total memory usage that a guild can use is limited to ``MAX_TEMPLATE_MEMORY_USAGE`` (currently 3MB). This is to prevent a single guild from using too much memory.
-- Execution of all scripts is timed out when the last executed script takes longer than ``MAX_TEMPLATES_EXECUTION_TIME`` (currently 5 seconds).
-- A lua VM will exist for a total of ``MAX_TEMPLATE_LIFETIME`` (currently 5 minutes) after the last access before being destroyed. This is to reduce memory+CPU usage.
-- The ``__stack`` table can be used to share data across templates safely *while the VM is running*. without affecting other templates. This is useful for sharing data between templates such as Audit Logs. **Note that Anti-Raid uses luau sandboxing meaning that `_G` is readonly.**
-- The entrypoint of any Lua template is ``function(args)``. 
-- The standard ``require`` statement can be used to import Anti-Raid modules
+Lua is the recommended language for templating
 
 ## WIP/Potential Languages
 

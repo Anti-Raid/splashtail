@@ -420,7 +420,7 @@ async fn _validate_value(
                                         return Err(SettingsError::SchemaCheckValidationError {
                                             column: column_id.to_string(),
                                             check: "template_compile".to_string(),
-                                            accepted_range: "Valid tera template".to_string(),
+                                            accepted_range: "Valid template".to_string(),
                                             error: err.to_string(),
                                         });
                                     }

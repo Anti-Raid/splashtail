@@ -86,18 +86,18 @@ function (args)
         __stack._captcha_user_tries = {} -- Initialize users table
     end
 
-    -- Check __stack._captcha_user_tries[args.user_id]
-    if __stack._captcha_user_tries[args.user_id] == nil then
-        __stack._captcha_user_tries[args.user_id] = 0 -- Initialize user's try count
+    -- Check __stack._captcha_user_tries[args.user.id]
+    if __stack._captcha_user_tries[args.user.id] == nil then
+        __stack._captcha_user_tries[args.user.id] = 0 -- Initialize user's try count
     end
 
     -- Check if user has reached maximum tries
-    if __stack._captcha_user_tries[args.user_id] >= 5 then
+    if __stack._captcha_user_tries[args.user.id] >= 5 then
         return { __error = "You have reached the maximum number of tries in this 5 minute window."}
     end
 
     -- Basic options
-    captcha_config.char_count = math.min(7 + __stack._captcha_user_tries[args.user_id], 10) -- Increment the number of characters
+    captcha_config.char_count = math.min(7 + __stack._captcha_user_tries[args.user.id], 10) -- Increment the number of characters
 
     captcha_config.filters = {}
     setmetatable(captcha_config.filters, interop.array_metatable) -- Filters is an array
@@ -105,7 +105,7 @@ function (args)
     setmetatable(captcha_config.viewbox_size, interop.array_metatable) -- Viewbox size is a tuple
 
     -- Increment the maximum number of tries
-    __stack._captcha_user_tries[args.user_id] += 1
+    __stack._captcha_user_tries[args.user.id] += 1
 
     return captcha_config
 end

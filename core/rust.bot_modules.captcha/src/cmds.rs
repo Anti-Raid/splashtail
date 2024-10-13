@@ -43,7 +43,7 @@ pub async fn captcha_test(ctx: Context<'_>, use_sample: Option<bool>) -> Result<
         ctx.data().pool.clone(),
         super::templater::CaptchaContext {
             guild_id,
-            user_id: ctx.author().id,
+            user: ctx.author().clone(),
             channel_id: Some(msg.channel_id),
         },
     )
@@ -100,7 +100,7 @@ pub async fn verify(ctx: Context<'_>) -> Result<(), Error> {
         ctx.data().pool.clone(),
         super::templater::CaptchaContext {
             guild_id,
-            user_id: ctx.author().id,
+            user: ctx.author().clone(),
             channel_id: Some(msg.channel_id),
         },
     )

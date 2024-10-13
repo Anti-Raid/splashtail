@@ -92,7 +92,7 @@ pub static SINK: LazyLock<ConfigOption> = LazyLock::new(|| {
             Column {
                 id: "embed_template",
                 name: "Template",
-                description: "The custom template for the embed. This is a tera template that is executed when an event is sent to the sink. If empty, falls back to default handling",
+                description: "The custom template for the embed. This template will be executed when an event is sent to the sink. If empty, falls back to default handling",
                 column_type: ColumnType::new_scalar(InnerColumnType::String { min_length: None, max_length: None, allowed_values: vec![], kind: InnerColumnTypeStringKind::Template { kind: "message", ctx: "AuditLogContext" }}),
                 ignored_for: vec![],
                 secret: false,
