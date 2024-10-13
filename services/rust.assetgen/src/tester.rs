@@ -11,17 +11,6 @@ use std::sync::LazyLock;
 static TEST_ONE_TESTER: LazyLock<tokio::sync::Mutex<bool>> =
     LazyLock::new(|| tokio::sync::Mutex::new(false));
 
-static TEST_CHAN: LazyLock<tokio::sync::mpsc::Sender<()>> = LazyLock::new(|| {
-    let (tx, mut rx) = tokio::sync::mpsc::channel(1);
-
-    tokio::spawn(async move {
-        rx.recv().await;
-        std::process::exit(0);
-    });
-
-    tx
-});
-
 fn modules() -> Vec<Box<dyn silverpelt::module::Module>> {
     bot_modules_default::modules()
 }
@@ -214,8 +203,6 @@ pub async fn check_modules_test() {
         .await
         .expect("Error creating client");
 
-    let _ = &*TEST_CHAN; // Start the channel
-
     // Call get gateway bot. This assumes the user has a proper antiraid setup with a proxy setup that makes this call cheap+indefinitely callable (like sandwich)
     info!("Getting bot gateway");
     let gateway = client.http.get_bot_gateway().await.unwrap();
@@ -241,15 +228,16 @@ async fn start_testing<'a>(
 
             info!("Starting check_modules_test_impl");
 
-            // Set panic hook to exit(1)
-            std::panic::set_hook(Box::new(|_| {
-                println!("Panic occurred, exiting with code 1");
-                std::process::exit(1);
-            }));
-
-            check_modules_test_impl(ctx.serenity_context).await;
-
-            TEST_CHAN.send(()).await.unwrap();
+            match check_modules_test_impl(ctx.serenity_context).await {
+                Ok(_) => {
+                    info!("check_modules_test_impl passed");
+                    std::process::exit(0);
+                }
+                Err(e) => {
+                    error!("check_modules_test_impl failed: {:?}", e);
+                    std::process::exit(1)
+                }
+            };
         }
         _ => {}
     };
@@ -257,22 +245,22 @@ async fn start_testing<'a>(
     Ok(())
 }
 
-async fn check_modules_test_impl(ctx: &serenity::all::Context) {
+async fn check_modules_test_impl(ctx: &serenity::all::Context) -> Result<(), Error> {
     let data = ctx.data::<Data>();
     // Check for env var CHECK_MODULES_TEST_ENABLED
     if std::env::var("CHECK_MODULES_TEST_ENABLED").unwrap_or_default() == "true" {
-        return;
+        return Ok(());
     }
 
     // Set current directory to ../../
     let current_dir = std::env::current_dir().unwrap();
 
     if current_dir.ends_with("services/rust.bot") {
-        std::env::set_current_dir("../../").unwrap();
+        std::env::set_current_dir("../../")?;
     }
 
     for module in modules() {
-        assert!(module.validate().is_ok());
+        module.validate()?;
 
         // Ensure that all settings have all columns
         for config_opt in module.config_options() {
@@ -309,15 +297,18 @@ async fn check_modules_test_impl(ctx: &serenity::all::Context) {
             }
 
             if !missing_columns.is_empty() {
-                panic!(
+                return Err(format!(
                     "Module {} has a config option {} with missing columns: {}",
                     module.id(),
                     config_opt.id,
                     missing_columns.join(", ")
-                );
+                )
+                .into());
             }
         }
     }
+
+    return Ok(());
 }
 
 // Boilerplate code
