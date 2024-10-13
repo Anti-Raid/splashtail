@@ -298,10 +298,11 @@ async fn check_modules_test_impl(ctx: &serenity::all::Context) -> Result<(), Err
 
             if !missing_columns.is_empty() {
                 return Err(format!(
-                    "Module {} has a config option {} with missing columns: {}",
+                    "Module {} has a config option {} with missing columns: {}, table_name={}",
                     module.id(),
                     config_opt.id,
-                    missing_columns.join(", ")
+                    missing_columns.join(", "),
+                    config_opt.table
                 )
                 .into());
             }

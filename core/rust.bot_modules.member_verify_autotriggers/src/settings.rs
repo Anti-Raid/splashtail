@@ -28,7 +28,6 @@ pub static AUTOTRIGGERS: LazyLock<ConfigOption> = LazyLock::new(|| ConfigOption 
             "Guild ID",
             "Guild ID of the server in question",
         ),
-        module_settings::common_columns::created_by(),
         Column {
             id: "give_roles",
             name: "Give Roles",
@@ -63,8 +62,12 @@ pub static AUTOTRIGGERS: LazyLock<ConfigOption> = LazyLock::new(|| ConfigOption 
             ignored_for: vec![],
             secret: false,
         },
+        module_settings::common_columns::created_at(),
+        module_settings::common_columns::created_by(),
+        module_settings::common_columns::last_updated_at(),
+        module_settings::common_columns::last_updated_by(),
     ]),
-    title_template: "At {stings} stings, {action} will be triggered",
+    title_template: "When a user verifies, Give roles {give_roles} and remove roles {remove_roles}",
     operations: indexmap::indexmap! {
         OperationType::View => OperationSpecific {
             columns_to_set: indexmap::indexmap! {},
@@ -73,10 +76,15 @@ pub static AUTOTRIGGERS: LazyLock<ConfigOption> = LazyLock::new(|| ConfigOption 
             columns_to_set: indexmap::indexmap! {
                 "created_at" => "{__now}",
                 "created_by" => "{__author}",
+                "last_updated_at" => "{__now}",
+                "last_updated_by" => "{__author}",
             },
         },
         OperationType::Update => OperationSpecific {
-            columns_to_set: indexmap::indexmap! {},
+            columns_to_set: indexmap::indexmap! {
+                "last_updated_at" => "{__now}",
+                "last_updated_by" => "{__author}",
+            },
         },
         OperationType::Delete => OperationSpecific {
             columns_to_set: indexmap::indexmap! {},
