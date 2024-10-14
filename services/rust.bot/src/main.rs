@@ -258,7 +258,7 @@ async fn main() {
     // Initially set allocator limit to 5GB, while this is quite high, it does ensure that the bot doesn't go down during normal operation
     ALLOCATOR.set_limit(5 * 1024 * 1024 * 1024).unwrap();
 
-    const POSTGRES_MAX_CONNECTIONS: u32 = 3; // max connections to the database, we don't need too many here
+    const POSTGRES_MAX_CONNECTIONS: u32 = 70; // max connections to the database, we don't need too many here
 
     // Setup logging
     let cmd_args = Arc::new(ipc::argparse::CmdArgs::parse());
@@ -269,7 +269,7 @@ async fn main() {
     let mut env_builder = env_logger::builder();
 
     let mut default_filter =
-        "serenity=error,fred=error,rust_bot=info,bot_binutils=info,rust_rpc_server=info,rust_rpc_server_bot=info,botox=info,templating=debug,sqlx=info".to_string();
+        "serenity=error,fred=error,rust_bot=info,bot_binutils=info,rust_rpc_server=info,rust_rpc_server_bot=info,botox=info,templating=debug,sqlx=error".to_string();
 
     for module in modules() {
         let module_id = module.id();

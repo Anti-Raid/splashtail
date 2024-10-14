@@ -28,12 +28,7 @@ impl silverpelt::module::Module for Module {
                 enabled: true,
                 run: Box::new(move |ctx| tasks::afk_task(ctx).boxed()),
             },
-            |ctx| {
-                (
-                    ctx.shard_id == serenity::all::ShardId(0),
-                    "AFK expiration only runs on shard 0".to_string(),
-                )
-            },
+            |_| (true, "AFK expiration is always enabled".to_string()),
         )]
     }
 
