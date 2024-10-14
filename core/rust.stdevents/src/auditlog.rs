@@ -1,4 +1,4 @@
-use gwevent::field::CategorizedField;
+use gwevent::field::Field;
 use silverpelt::ar_event::{typetag, AntiraidCustomEvent};
 
 pub const AUDITLOG_TARGET_ID: u64 = 0x0;
@@ -8,7 +8,7 @@ pub const AUDITLOG_TARGET_ID: u64 = 0x0;
 pub struct AuditLogDispatchEvent {
     pub event_name: String,
     pub event_titlename: String,
-    pub expanded_event: indexmap::IndexMap<String, CategorizedField>,
+    pub event_data: indexmap::IndexMap<String, Field>,
 }
 
 #[typetag::serde]

@@ -1,5 +1,5 @@
 use crate::core::messages::{Message, MessageEmbed, MessageEmbedField};
-use gwevent::field::{CategorizedField, Field};
+use gwevent::field::Field;
 use mlua::prelude::*;
 
 pub fn init_plugin(lua: &Lua) -> LuaResult<LuaTable> {
@@ -33,14 +33,6 @@ pub fn init_plugin(lua: &Lua) -> LuaResult<LuaTable> {
         lua.create_function(|lua, (field,): (LuaValue,)| {
             let field: Field = lua.from_value(field)?;
             lua.to_value(&field.template_format().map_err(LuaError::external)?)
-        })?,
-    )?;
-
-    module.set(
-        "format_gwevent_categorized_field",
-        lua.create_function(|lua, (field,): (LuaValue,)| {
-            let cfield: CategorizedField = lua.from_value(field)?;
-            lua.to_value(&cfield.template_format().map_err(LuaError::external)?)
         })?,
     )?;
 

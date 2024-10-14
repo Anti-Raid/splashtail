@@ -57,10 +57,10 @@ for key, value in pairs(my_table) do
 end
 ```
 
-In the same way, we can now iterate over ``args.fields``:
+In the same way, we can now iterate over ``args.event_data``:
 
 ```lua
-for key, value in pairs(args.fields) do
+for key, value in pairs(args.event_data) do
     -- Do something with key and value
 end
 ```
@@ -75,27 +75,25 @@ When using Gateway Events, there are two cases to pay attention to, the first is
     end
 ```
 
-**TIP: In Gateway Events, the ``value`` is actually a Categorized Field (``gwevent::field::CategorizedField``)**
-
-Lastly, we need to format the field and add it to the description. Luckily, the message plugin provides a function for formatting any categorized field. This function is called ``format_gwevent_categorized_field``. 
+Lastly, we need to format the field and add it to the description. Luckily, the message plugin provides a function for formatting any categorized field. This function is called ``format_gwevent_field``. 
 
 ```lua
-local formatted_value = message_plugin.format_gwevent_categorized_field(value)
+local formatted_value = message_plugin.format_gwevent_field(value)
 ```
 
 Finally, we can put the entire loop together as so:
 
 ```lua
 -- Add the fields to the description
-for key, value in pairs(args.fields) do
+for key, value in pairs(args.event_data) do
     local should_set = false
 
-    if value ~= nil and value.field.type ~= "None" then
+    if value ~= nil and value.type ~= "None" then
         should_set = true
     end
 
     if should_set then
-        local formatted_value = message_plugin.format_gwevent_categorized_field(value)
+        local formatted_value = message_plugin.format_gwevent_field(value)
         embed.description = embed.description .. "**" .. key:gsub("_", " "):upper() .. "**: " .. formatted_value .. "\n"
     end
 end
@@ -128,15 +126,15 @@ function (args)
     embed.description = "" -- Start with an empty description
 
     -- Add the fields to the description
-    for key, value in pairs(args.fields) do
+    for key, value in pairs(args.event_data) do
         local should_set = false
 
-        if value ~= nil and value.field.type ~= "None" then
+        if value ~= nil and value.type ~= "None" then
             should_set = true
         end
     
         if should_set then
-            local formatted_value = message_plugin.format_gwevent_categorized_field(value)
+            local formatted_value = message_plugin.format_gwevent_field(value)
             embed.description = embed.description .. "**" .. key:gsub("_", " "):upper() .. "**: " .. formatted_value .. "\n"
         end
     end

@@ -1,4 +1,4 @@
-use gwevent::field::CategorizedField;
+use gwevent::field::Field;
 use include_dir::{include_dir, Dir};
 use log::warn;
 use poise::serenity_prelude::FullEvent;
@@ -72,7 +72,7 @@ pub(crate) async fn event_listener(ectx: &EventHandlerContext) -> Result<(), sil
                 },
             }
 
-            let Some(expanded_event) = gwevent::core::expand_event(event.clone()) else {
+            let Some(event_data) = gwevent::core::expand_event(event.clone()) else {
                 // Event cannot be expanded, ignore
                 return Ok(());
             };
@@ -98,7 +98,7 @@ pub(crate) async fn event_listener(ectx: &EventHandlerContext) -> Result<(), sil
                 &ectx.data,
                 event_name,
                 &event_titlename,
-                expanded_event,
+                event_data,
                 ectx.guild_id,
             )
             .await
@@ -117,7 +117,7 @@ pub(crate) async fn event_listener(ectx: &EventHandlerContext) -> Result<(), sil
                     &ectx.data,
                     &event.event_name,
                     &event.event_titlename,
-                    event.expanded_event.clone(),
+                    event.event_data.clone(),
                     ectx.guild_id,
                 )
                 .await
@@ -134,21 +134,19 @@ pub(crate) async fn event_listener(ectx: &EventHandlerContext) -> Result<(), sil
                 "AR/StingCreate",
                 "(Anti Raid) Created Sting For User",
                 indexmap::indexmap! {
-                    "target".to_string() => CategorizedField { category: "action".to_string(), field: {
+                    "target".to_string() =>
                         match &sting.target {
                             silverpelt::stings::StingTarget::User(user_id) => (*user_id).into(),
                             silverpelt::stings::StingTarget::System => "System".to_string().into(),
-                        }
-                    } },
-                    "reason".to_string() => CategorizedField { category: "action".to_string(), field: {
+                        },
+                    "reason".to_string() =>
                         match &sting.reason {
                             Some(reason) => reason.clone().into(),
-                            None => gwevent::field::Field::None,
-                        }
-                    } },
-                    "stings".to_string() => CategorizedField { category: "action".to_string(), field: sting.stings.into() },
-                    "state".to_string() => CategorizedField { category: "action".to_string(), field: sting.state.to_string().into() },
-                    "sting".to_string() => CategorizedField { category: "action".to_string(), field: sting_val.into() },
+                            None => Field::None,
+                        },
+                    "stings".to_string() => sting.stings.into(),
+                    "state".to_string() => sting.state.to_string().into(),
+                    "sting_val".to_string() => sting_val.into(),
                 },
                 ectx.guild_id,
             )
@@ -165,7 +163,7 @@ pub(crate) async fn event_listener(ectx: &EventHandlerContext) -> Result<(), sil
                 "AR/PunishmentCreate",
                 "(Anti Raid) Created Punishment",
                 indexmap::indexmap! {
-                    "punishment".to_string() => CategorizedField { category: "action".to_string(), field: punishment.into() },
+                    "punishment".to_string() => punishment.into(),
                 },
                 ectx.guild_id,
             )
@@ -180,8 +178,8 @@ pub(crate) async fn event_listener(ectx: &EventHandlerContext) -> Result<(), sil
                 "AR/MemberVerify",
                 "(Anti Raid) Member Verify",
                 indexmap::indexmap! {
-                    "user_id".to_string() => CategorizedField { category: "action".to_string(), field: user_id.into() },
-                    "data".to_string() => CategorizedField { category: "action".to_string(), field: data.clone().into() },
+                    "user_id".to_string() => user_id.into(),
+                    "data".to_string() => data.clone().into(),
                 },
                 ectx.guild_id,
             )
@@ -254,7 +252,7 @@ async fn dispatch_audit_log(
     data: &silverpelt::data::Data,
     event_name: &str,
     event_titlename: &str,
-    expanded_event: indexmap::IndexMap<String, CategorizedField>,
+    event_data: indexmap::IndexMap<String, Field>,
     guild_id: serenity::model::id::GuildId,
 ) -> Result<(), silverpelt::Error> {
     let sinks = super::cache::get_sinks(guild_id, &data.pool).await?;
@@ -265,7 +263,7 @@ async fn dispatch_audit_log(
 
     let event_json = serde_json::to_string(&serde_json::json! {
         {
-            "event": expanded_event,
+            "event_data": event_data,
             "event_name": event_name,
             "event_titlename": event_titlename,
         }
@@ -318,7 +316,7 @@ async fn dispatch_audit_log(
             AuditLogContext {
                 event_titlename: event_titlename.to_string(),
                 event_name: event_name.to_string(),
-                fields: expanded_event.clone(),
+                event_data: event_data.clone(),
             },
         )
         .await;
@@ -452,7 +450,7 @@ async fn dispatch_audit_log(
 struct AuditLogContext {
     pub event_titlename: String,
     pub event_name: String,
-    pub fields: indexmap::IndexMap<String, gwevent::field::CategorizedField>,
+    pub event_data: indexmap::IndexMap<String, Field>,
 }
 
 #[typetag::serde]

@@ -1,4 +1,4 @@
-use crate::field::{CategorizedField, Field};
+use crate::field::Field;
 use crate::Error;
 use indexmap::IndexMap;
 use log::warn;
@@ -360,54 +360,30 @@ pub fn get_event_user_id(event: &FullEvent) -> Result<UserId, Option<Error>> {
 /// Given an event, expand it to a hashmap of fields
 #[allow(dead_code)]
 // @ci.expand_event_check.start
-pub fn expand_event(event: FullEvent) -> Option<IndexMap<String, CategorizedField>> {
+pub fn expand_event(event: FullEvent) -> Option<IndexMap<String, Field>> {
     let mut fields = IndexMap::new();
 
     /// Inserts a field to the fields hashmap
     ///
     /// Note that existing fields will be replaced, to avoid this, use the old-new pattern
     /// which is also handled by audit logs
-    fn insert_field<T: Into<Field>>(
-        fields: &mut IndexMap<String, CategorizedField>,
-        category: &str,
-        key: &str,
-        value: T,
-    ) {
+    fn insert_field<T: Into<Field>>(fields: &mut IndexMap<String, Field>, key: &str, value: T) {
         let value = value.into();
-        fields.insert(
-            key.to_string(),
-            CategorizedField {
-                category: category.to_string(),
-                field: value,
-            },
-        );
+        fields.insert(key.to_string(), value);
     }
 
     fn insert_optional_field<T: Into<Field>>(
-        fields: &mut IndexMap<String, CategorizedField>,
-        category: &str,
+        fields: &mut IndexMap<String, Field>,
         key: &str,
         option: Option<T>,
     ) {
         match option {
             Some(value) => {
                 let value = value.into();
-                fields.insert(
-                    key.to_string(),
-                    CategorizedField {
-                        category: category.to_string(),
-                        field: value,
-                    },
-                );
+                fields.insert(key.to_string(), value);
             }
             None => {
-                fields.insert(
-                    key.to_string(),
-                    CategorizedField {
-                        category: category.to_string(),
-                        field: Field::None,
-                    },
-                );
+                fields.insert(key.to_string(), Field::None);
             }
         }
     }
@@ -415,37 +391,37 @@ pub fn expand_event(event: FullEvent) -> Option<IndexMap<String, CategorizedFiel
     match event {
         // @ci.expand_event_check AutoModActionExecution none
         FullEvent::AutoModActionExecution { execution } => {
-            insert_field(&mut fields, "execution", "execution", execution);
+            insert_field(&mut fields, "execution", execution);
         }
         // @ci.expand_event_check AutoModRuleCreate none
         FullEvent::AutoModRuleCreate { rule } => {
-            insert_field(&mut fields, "rule", "rule", rule);
+            insert_field(&mut fields, "rule", rule);
         }
         // @ci.expand_event_check AutoModRuleDelete none
         FullEvent::AutoModRuleDelete { rule } => {
-            insert_field(&mut fields, "rule", "rule", rule);
+            insert_field(&mut fields, "rule", rule);
         }
         // @ci.expand_event_check AutoModRuleUpdate none
         FullEvent::AutoModRuleUpdate { rule } => {
-            insert_field(&mut fields, "rule", "rule", rule);
+            insert_field(&mut fields, "rule", rule);
         }
         FullEvent::CacheReady { .. } => return None, // We don't want this to be propogated anyways and it's not a guild event
         // @ci.expand_event_check CategoryCreate none
         FullEvent::CategoryCreate { category } => {
-            insert_field(&mut fields, "category", "category", category);
+            insert_field(&mut fields, "category", category);
         }
         // @ci.expand_event_check CategoryDelete none
         FullEvent::CategoryDelete { category } => {
-            insert_field(&mut fields, "category", "category", category);
+            insert_field(&mut fields, "category", category);
         }
         // @ci.expand_event_check ChannelCreate none
         FullEvent::ChannelCreate { channel } => {
-            insert_field(&mut fields, "channel", "channel", channel);
+            insert_field(&mut fields, "channel", channel);
         }
         // @ci.expand_event_check ChannelDelete none
         FullEvent::ChannelDelete { channel, messages } => {
-            insert_field(&mut fields, "channel", "channel", channel);
-            insert_optional_field(&mut fields, "channel", "messages", {
+            insert_field(&mut fields, "channel", channel);
+            insert_optional_field(&mut fields, "messages", {
                 if let Some(messages) = messages {
                     let mut m = Vec::new();
 
@@ -461,84 +437,75 @@ pub fn expand_event(event: FullEvent) -> Option<IndexMap<String, CategorizedFiel
         }
         // @ci.expand_event_check ChannelPinsUpdate event:pin,ChannelPinsUpdateEvent
         FullEvent::ChannelPinsUpdate { pin } => {
-            insert_optional_field(&mut fields, "guild", "guild_id", pin.guild_id);
-            insert_field(&mut fields, "channel", "channel_id", pin.channel_id);
-            insert_optional_field(
-                &mut fields,
-                "timestamp",
-                "last_pin_timestamp",
-                pin.last_pin_timestamp,
-            );
+            insert_optional_field(&mut fields, "guild_id", pin.guild_id);
+            insert_field(&mut fields, "channel_id", pin.channel_id);
+            insert_optional_field(&mut fields, "last_pin_timestamp", pin.last_pin_timestamp);
         }
         // @ci.expand_event_check ChannelUpdate none
         FullEvent::ChannelUpdate { old, new } => {
-            insert_optional_field(&mut fields, "channel", "old", old);
-            insert_field(&mut fields, "channel", "new", new);
+            insert_optional_field(&mut fields, "old", old);
+            insert_field(&mut fields, "new", new);
         }
         // @ci.expand_event_check CommandPermissionsUpdate none
         FullEvent::CommandPermissionsUpdate { permission } => {
-            insert_field(&mut fields, "permission", "permission", permission);
+            insert_field(&mut fields, "permission", permission);
         }
         // @ci.expand_event_check EntitlementCreate none
         FullEvent::EntitlementCreate { entitlement } => {
-            insert_field(&mut fields, "entitlement", "entitlement", entitlement);
+            insert_field(&mut fields, "entitlement", entitlement);
         }
         // @ci.expand_event_check EntitlementDelete none
         FullEvent::EntitlementDelete { entitlement } => {
-            insert_field(&mut fields, "entitlement", "entitlement", entitlement);
+            insert_field(&mut fields, "entitlement", entitlement);
         }
         // @ci.expand_event_check EntitlementUpdate none
         FullEvent::EntitlementUpdate { entitlement } => {
-            insert_field(&mut fields, "entitlement", "entitlement", entitlement);
+            insert_field(&mut fields, "entitlement", entitlement);
         }
         // @ci.expand_event_check GuildAuditLogEntryCreate none
         FullEvent::GuildAuditLogEntryCreate {
             guild_id, entry, ..
         } => {
-            insert_field(&mut fields, "guild", "guild_id", guild_id);
-            insert_field(&mut fields, "entry", "entry", entry);
+            insert_field(&mut fields, "guild_id", guild_id);
+            insert_field(&mut fields, "entry", entry);
         }
         // @ci.expand_event_check GuildBanAddition none
         FullEvent::GuildBanAddition {
             guild_id,
             banned_user,
         } => {
-            insert_field(&mut fields, "guild", "guild_id", guild_id);
-            insert_field(&mut fields, "user", "banned_user", banned_user.clone());
+            insert_field(&mut fields, "guild_id", guild_id);
+            insert_field(&mut fields, "banned_user", banned_user);
         }
         // @ci.expand_event_check GuildBanRemoval none
         FullEvent::GuildBanRemoval {
             guild_id,
             unbanned_user,
         } => {
-            insert_field(&mut fields, "guild", "guild_id", guild_id);
-            insert_field(&mut fields, "user", "unbanned_user", unbanned_user.clone());
+            insert_field(&mut fields, "guild_id", guild_id);
+            insert_field(&mut fields, "unbanned_user", unbanned_user);
         }
         // @ci.expand_event_check GuildCreate none
         FullEvent::GuildCreate { guild, is_new } => {
-            insert_field(&mut fields, "guild", "guild", guild);
-            insert_optional_field(&mut fields, "guild_ext", "is_new", is_new);
+            insert_field(&mut fields, "guild", guild);
+            insert_optional_field(&mut fields, "is_new", is_new);
         }
-        // @ci.expand_event_check GuildDelete none/create_template_docs.add is_full_available: bool/create_template_docs.remove incomplete/create_template_docs.add guild_id: GuildId/create_template_docs.rename full guild
+        // @ci.expand_event_check GuildDelete none/create_template_docs.add is_full_available: bool/create_template_docs.add unavailable: bool/create_template_docs.remove incomplete/create_template_docs.add guild_id: GuildId/create_template_docs.rename full guild
         FullEvent::GuildDelete { incomplete, full } => {
-            insert_field(
-                &mut fields,
-                "is_full_available",
-                "is_full_available",
-                full.is_some(),
-            );
+            insert_field(&mut fields, "is_full_available", full.is_some());
 
-            insert_field(&mut fields, "guild", "guild_id", incomplete.id);
-            insert_optional_field(&mut fields, "guild", "guild", full);
+            insert_field(&mut fields, "guild_id", incomplete.id);
+            insert_field(&mut fields, "unavailable", incomplete.unavailable);
+            insert_optional_field(&mut fields, "guild", full);
         }
         // @ci.expand_event_check GuildEmojisUpdate none/create_template_docs.remove current_state/create_template_docs.add emojis: Vec<Emoji>
         FullEvent::GuildEmojisUpdate {
             guild_id,
             current_state,
         } => {
-            insert_field(&mut fields, "guild", "guild_id", guild_id);
+            insert_field(&mut fields, "guild_id", guild_id);
 
-            insert_field(&mut fields, "map", "emojis", {
+            insert_field(&mut fields, "emojis", {
                 let mut emojis = Vec::new();
                 for emoji in current_state.iter() {
                     emojis.push(emoji.clone());
@@ -548,11 +515,11 @@ pub fn expand_event(event: FullEvent) -> Option<IndexMap<String, CategorizedFiel
         }
         // @ci.expand_event_check GuildIntegrationsUpdate none
         FullEvent::GuildIntegrationsUpdate { guild_id } => {
-            insert_field(&mut fields, "guild_ext", "guild_id", guild_id);
+            insert_field(&mut fields, "guild_id", guild_id);
         }
         // @ci.expand_event_check GuildMemberAddition none
         FullEvent::GuildMemberAddition { new_member } => {
-            insert_field(&mut fields, "member", "new_member", new_member.clone());
+            insert_field(&mut fields, "new_member", new_member.clone());
         }
         // @ci.expand_event_check GuildMemberRemoval none
         FullEvent::GuildMemberRemoval {
@@ -560,47 +527,39 @@ pub fn expand_event(event: FullEvent) -> Option<IndexMap<String, CategorizedFiel
             user,
             member_data_if_available,
         } => {
-            insert_field(&mut fields, "guild", "guild_id", guild_id);
-            insert_field(&mut fields, "user", "user", user);
+            insert_field(&mut fields, "guild_id", guild_id);
+            insert_field(&mut fields, "user", user);
             insert_optional_field(
                 &mut fields,
-                "member",
                 "member_data_if_available",
                 member_data_if_available.clone(),
             );
         }
-        // @ci.expand_event_check GuildMemberUpdate event:event,GuildMemberUpdateEvent/create_template_docs.rename old_if_available old
+        // @ci.expand_event_check GuildMemberUpdate event:event,GuildMemberUpdateEvent
         FullEvent::GuildMemberUpdate {
             old_if_available,
             new,
             event,
         } => {
-            insert_optional_field(&mut fields, "member", "old", old_if_available);
-            insert_optional_field(&mut fields, "member", "new", new);
-            insert_field(&mut fields, "event", "guild_id", event.guild_id);
-            insert_field(&mut fields, "event", "pending", event.pending());
-            insert_field(&mut fields, "event", "deaf", event.deaf());
-            insert_field(&mut fields, "event", "mute", event.mute());
-            insert_optional_field(&mut fields, "event", "nick", event.nick);
-            insert_field(&mut fields, "event", "joined_at", event.joined_at);
-            insert_field(&mut fields, "event", "roles", event.roles);
-            insert_field(&mut fields, "event", "user", event.user);
-            insert_optional_field(&mut fields, "event", "premium_since", event.premium_since);
+            insert_optional_field(&mut fields, "old_if_available", old_if_available);
+            insert_optional_field(&mut fields, "new", new);
+            insert_field(&mut fields, "guild_id", event.guild_id);
+            insert_field(&mut fields, "pending", event.pending());
+            insert_field(&mut fields, "deaf", event.deaf());
+            insert_field(&mut fields, "mute", event.mute());
+            insert_optional_field(&mut fields, "nick", event.nick);
+            insert_field(&mut fields, "joined_at", event.joined_at);
+            insert_field(&mut fields, "roles", event.roles);
+            insert_field(&mut fields, "user", event.user);
+            insert_optional_field(&mut fields, "premium_since", event.premium_since);
+            insert_optional_field(&mut fields, "avatar", event.avatar.map(|a| a.to_string()));
             insert_optional_field(
                 &mut fields,
-                "event",
-                "avatar",
-                event.avatar.map(|a| a.to_string()),
-            );
-            insert_optional_field(
-                &mut fields,
-                "event",
                 "communication_disabled_until",
                 event.communication_disabled_until,
             );
             insert_optional_field(
                 &mut fields,
-                "event",
                 "unusual_dm_activity_until",
                 event.unusual_dm_activity_until,
             );
@@ -609,7 +568,7 @@ pub fn expand_event(event: FullEvent) -> Option<IndexMap<String, CategorizedFiel
         FullEvent::GuildMembersChunk { .. } => return None,
         // @ci.expand_event_check GuildRoleCreate none/create_template_docs.rename new role
         FullEvent::GuildRoleCreate { new } => {
-            insert_field(&mut fields, "role", "role", new);
+            insert_field(&mut fields, "role", new);
         }
         // @ci.expand_event_check GuildRoleDelete none/create_template_docs.rename removed_role_data_if_available role
         FullEvent::GuildRoleDelete {
@@ -617,80 +576,58 @@ pub fn expand_event(event: FullEvent) -> Option<IndexMap<String, CategorizedFiel
             removed_role_id,
             removed_role_data_if_available,
         } => {
-            insert_field(&mut fields, "guild", "guild_id", guild_id);
-            insert_field(&mut fields, "role", "removed_role_id", removed_role_id);
-            insert_optional_field(&mut fields, "role", "role", removed_role_data_if_available);
+            insert_field(&mut fields, "guild_id", guild_id);
+            insert_field(&mut fields, "removed_role_id", removed_role_id);
+            insert_optional_field(&mut fields, "role", removed_role_data_if_available);
         }
         // @ci.expand_event_check GuildRoleUpdate none/create_template_docs.rename old_data_if_available old
         FullEvent::GuildRoleUpdate {
             old_data_if_available,
             new,
         } => {
-            insert_optional_field(&mut fields, "role", "old", old_data_if_available);
-            insert_field(&mut fields, "role", "new", new);
+            insert_optional_field(&mut fields, "old", old_data_if_available);
+            insert_field(&mut fields, "new", new);
         }
         // @ci.expand_event_check GuildScheduledEventCreate none
         FullEvent::GuildScheduledEventCreate { event } => {
-            insert_field(&mut fields, "event", "event", event.clone());
+            insert_field(&mut fields, "event", event);
         }
         // @ci.expand_event_check GuildScheduledEventDelete none
         FullEvent::GuildScheduledEventDelete { event } => {
-            insert_field(&mut fields, "event", "event", event.clone());
+            insert_field(&mut fields, "event", event);
         }
         // @ci.expand_event_check GuildScheduledEventUpdate none
         FullEvent::GuildScheduledEventUpdate { event } => {
-            insert_field(&mut fields, "event", "event", event.clone());
+            insert_field(&mut fields, "event", event);
         }
         // @ci.expand_event_check GuildScheduledEventUserAdd event:subscribed,GuildScheduledEventUserAddEvent
         FullEvent::GuildScheduledEventUserAdd { subscribed } => {
+            insert_field(&mut fields, "guild_id", subscribed.guild_id);
             insert_field(
                 &mut fields,
-                "guild_scheduled_event_user_add",
-                "guild_id",
-                subscribed.guild_id,
-            );
-            insert_field(
-                &mut fields,
-                "guild_scheduled_event_user_add",
                 "scheduled_event_id",
                 subscribed.scheduled_event_id,
             );
-            insert_field(
-                &mut fields,
-                "guild_scheduled_event_user_add",
-                "user_id",
-                subscribed.user_id,
-            );
+            insert_field(&mut fields, "user_id", subscribed.user_id);
         }
         // @ci.expand_event_check GuildScheduledEventUserRemove event:unsubscribed,GuildScheduledEventUserRemoveEvent
         FullEvent::GuildScheduledEventUserRemove { unsubscribed } => {
+            insert_field(&mut fields, "guild_id", unsubscribed.guild_id);
             insert_field(
                 &mut fields,
-                "guild_scheduled_event_user_remove",
-                "guild_id",
-                unsubscribed.guild_id,
-            );
-            insert_field(
-                &mut fields,
-                "guild_scheduled_event_user_remove",
                 "scheduled_event_id",
                 unsubscribed.scheduled_event_id,
             );
-            insert_field(
-                &mut fields,
-                "guild_scheduled_event_user_remove",
-                "user_id",
-                unsubscribed.user_id,
-            );
+            insert_field(&mut fields, "user_id", unsubscribed.user_id);
         }
         // @ci.expand_event_check GuildStickersUpdate none//create_template_docs.remove current_state/create_template_docs.add stickers: Vec<Sticker>
         FullEvent::GuildStickersUpdate {
             guild_id,
             current_state,
         } => {
-            insert_field(&mut fields, "guild", "guild_id", guild_id);
+            insert_field(&mut fields, "guild_id", guild_id);
 
-            insert_field(&mut fields, "map", "stickers", {
+            insert_field(&mut fields, "stickers", {
                 let mut stickers = Vec::new();
                 for sticker in current_state.iter() {
                     stickers.push(sticker.clone());
@@ -698,17 +635,17 @@ pub fn expand_event(event: FullEvent) -> Option<IndexMap<String, CategorizedFiel
                 stickers
             });
         }
-        // @ci.expand_event_check GuildUpdate none/create_template_docs.rename old_data_if_available old/create_template_docs.rename new_data new
+        // @ci.expand_event_check GuildUpdate none
         FullEvent::GuildUpdate {
             old_data_if_available,
             new_data,
         } => {
-            insert_optional_field(&mut fields, "guild", "old", old_data_if_available);
-            insert_field(&mut fields, "guild", "new", new_data);
+            insert_optional_field(&mut fields, "old_data_if_available", old_data_if_available);
+            insert_field(&mut fields, "new_data", new_data);
         }
         // @ci.expand_event_check IntegrationCreate none
         FullEvent::IntegrationCreate { integration } => {
-            insert_field(&mut fields, "integration", "integration", integration);
+            insert_field(&mut fields, "integration", integration);
         }
         // @ci.expand_event_check IntegrationDelete none
         FullEvent::IntegrationDelete {
@@ -716,28 +653,27 @@ pub fn expand_event(event: FullEvent) -> Option<IndexMap<String, CategorizedFiel
             integration_id,
             application_id,
         } => {
-            insert_field(&mut fields, "integration", "guild_id", guild_id);
-            insert_field(&mut fields, "integration", "integration_id", integration_id);
-            insert_optional_field(&mut fields, "integration", "application_id", application_id);
+            insert_field(&mut fields, "guild_id", guild_id);
+            insert_field(&mut fields, "integration_id", integration_id);
+            insert_optional_field(&mut fields, "application_id", application_id);
         }
         // @ci.expand_event_check IntegrationUpdate none
         FullEvent::IntegrationUpdate { integration } => {
-            insert_field(&mut fields, "integration", "integration", integration);
+            insert_field(&mut fields, "integration", integration);
         }
         // @ci.expand_event_check InteractionCreate none
         FullEvent::InteractionCreate { interaction: _ } => return None, // We dont handle interactions create events in expand_events
         // @ci.expand_event_check InviteCreate event:data,InviteCreateEvent
         FullEvent::InviteCreate { data } => {
-            insert_field(&mut fields, "invite", "channel_id", data.channel_id);
-            insert_field(&mut fields, "invite", "code", data.code.to_string());
-            insert_field(&mut fields, "invite", "created_at", data.created_at);
-            insert_optional_field(&mut fields, "invite", "guild_id", data.guild_id);
-            insert_optional_field(&mut fields, "invite", "inviter", data.inviter);
-            insert_field(&mut fields, "expiry", "max_age", data.max_age);
-            insert_field(&mut fields, "expiry", "max_uses", data.max_uses);
+            insert_field(&mut fields, "channel_id", data.channel_id);
+            insert_field(&mut fields, "code", data.code.to_string());
+            insert_field(&mut fields, "created_at", data.created_at);
+            insert_optional_field(&mut fields, "guild_id", data.guild_id);
+            insert_optional_field(&mut fields, "inviter", data.inviter);
+            insert_field(&mut fields, "max_age", data.max_age);
+            insert_field(&mut fields, "max_uses", data.max_uses);
             insert_optional_field(
                 &mut fields,
-                "invite",
                 "target_type",
                 data.target_type.map(|x| match x {
                     serenity::all::InviteTargetType::Stream => "Stream".to_string(),
@@ -747,25 +683,20 @@ pub fn expand_event(event: FullEvent) -> Option<IndexMap<String, CategorizedFiel
                     _ => "Unknown".to_string(),
                 }),
             );
-            insert_optional_field(&mut fields, "invite", "target_user", data.target_user);
-            insert_optional_field(
-                &mut fields,
-                "invite",
-                "target_application",
-                data.target_application,
-            );
-            insert_field(&mut fields, "invite", "temporary", data.temporary);
-            insert_field(&mut fields, "invite", "uses", data.uses);
+            insert_optional_field(&mut fields, "target_user", data.target_user);
+            insert_optional_field(&mut fields, "target_application", data.target_application);
+            insert_field(&mut fields, "temporary", data.temporary);
+            insert_field(&mut fields, "uses", data.uses);
         }
         // @ci.expand_event_check InviteDelete event:data,InviteDeleteEvent
         FullEvent::InviteDelete { data } => {
-            insert_field(&mut fields, "invite_delete", "channel_id", data.channel_id);
-            insert_optional_field(&mut fields, "invite_delete", "guild_id", data.guild_id);
-            insert_field(&mut fields, "invite_delete", "code", data.code.to_string());
+            insert_field(&mut fields, "channel_id", data.channel_id);
+            insert_optional_field(&mut fields, "guild_id", data.guild_id);
+            insert_field(&mut fields, "code", data.code.to_string());
         }
         // @ci.expand_event_check Message none
         FullEvent::Message { new_message } => {
-            insert_field(&mut fields, "message", "new_message", new_message.clone());
+            insert_field(&mut fields, "new_message", new_message.clone());
         }
         // @ci.expand_event_check MessageDelete none
         FullEvent::MessageDelete {
@@ -773,153 +704,113 @@ pub fn expand_event(event: FullEvent) -> Option<IndexMap<String, CategorizedFiel
             deleted_message_id,
             channel_id,
         } => {
-            insert_optional_field(&mut fields, "message", "guild_id", guild_id);
-            insert_field(
-                &mut fields,
-                "message",
-                "deleted_message_id",
-                deleted_message_id,
-            );
-            insert_field(&mut fields, "message", "channel_id", channel_id);
+            insert_optional_field(&mut fields, "guild_id", guild_id);
+            insert_field(&mut fields, "deleted_message_id", deleted_message_id);
+            insert_field(&mut fields, "channel_id", channel_id);
         }
-        // @ci.expand_event_check MessageDeleteBulk none/create_template_docs.rename multiple_deleted_messages_ids message_ids
+        // @ci.expand_event_check MessageDeleteBulk none
         FullEvent::MessageDeleteBulk {
             guild_id,
             channel_id,
             multiple_deleted_messages_ids,
         } => {
-            insert_optional_field(&mut fields, "message", "guild_id", guild_id);
-            insert_field(&mut fields, "message", "channel_id", channel_id);
+            insert_optional_field(&mut fields, "guild_id", guild_id);
+            insert_field(&mut fields, "channel_id", channel_id);
             insert_field(
                 &mut fields,
-                "message",
-                "message_ids",
+                "multiple_deleted_messages_ids",
                 multiple_deleted_messages_ids,
             );
         }
         // @ci.expand_event_check MessagePollVoteAdd event:event,MessagePollVoteAddEvent
         FullEvent::MessagePollVoteAdd { event } => {
-            insert_field(&mut fields, "poll_vote", "user_id", event.user_id);
-            insert_field(&mut fields, "poll_vote", "channel_id", event.channel_id);
-            insert_field(&mut fields, "poll_vote", "message_id", event.message_id);
-            insert_optional_field(&mut fields, "poll_vote", "guild_id", event.guild_id);
-            insert_field(&mut fields, "poll_vote", "answer_id", event.answer_id);
+            insert_field(&mut fields, "user_id", event.user_id);
+            insert_field(&mut fields, "channel_id", event.channel_id);
+            insert_field(&mut fields, "message_id", event.message_id);
+            insert_optional_field(&mut fields, "guild_id", event.guild_id);
+            insert_field(&mut fields, "answer_id", event.answer_id);
         }
         // @ci.expand_event_check MessagePollVoteRemove event:event,MessagePollVoteRemoveEvent
         FullEvent::MessagePollVoteRemove { event } => {
-            insert_field(&mut fields, "poll_vote", "user_id", event.user_id);
-            insert_field(&mut fields, "poll_vote", "channel_id", event.channel_id);
-            insert_field(&mut fields, "poll_vote", "message_id", event.message_id);
-            insert_optional_field(&mut fields, "poll_vote", "guild_id", event.guild_id);
-            insert_field(&mut fields, "poll_vote", "answer_id", event.answer_id);
+            insert_field(&mut fields, "user_id", event.user_id);
+            insert_field(&mut fields, "channel_id", event.channel_id);
+            insert_field(&mut fields, "message_id", event.message_id);
+            insert_optional_field(&mut fields, "guild_id", event.guild_id);
+            insert_field(&mut fields, "answer_id", event.answer_id);
         }
-        // @ci.expand_event_check MessageUpdate event:event,MessageUpdateEvent/create_template_docs.rename old_if_available old
+        // @ci.expand_event_check MessageUpdate event:event,MessageUpdateEvent
         FullEvent::MessageUpdate {
             old_if_available,
             new,
             event,
         } => {
-            insert_optional_field(&mut fields, "message", "old", old_if_available);
-            insert_optional_field(&mut fields, "message", "new", new);
+            insert_optional_field(&mut fields, "old_if_available", old_if_available);
+            insert_optional_field(&mut fields, "new", new);
 
-            insert_field(&mut fields, "event", "id", event.id);
-            insert_field(&mut fields, "event", "channel_id", event.channel_id);
-            insert_optional_field(&mut fields, "event", "author", event.author);
-            insert_optional_field(&mut fields, "event", "content", event.content);
-            insert_optional_field(&mut fields, "event", "timestamp", event.timestamp);
+            insert_field(&mut fields, "id", event.id);
+            insert_field(&mut fields, "channel_id", event.channel_id);
+            insert_optional_field(&mut fields, "author", event.author);
+            insert_optional_field(&mut fields, "content", event.content);
+            insert_optional_field(&mut fields, "timestamp", event.timestamp);
+            insert_optional_field(&mut fields, "edited_timestamp", event.edited_timestamp);
+            insert_optional_field(&mut fields, "tts", event.tts);
+            insert_optional_field(&mut fields, "mention_everyone", event.mention_everyone);
+            insert_optional_field(&mut fields, "mentions", event.mentions);
+            insert_optional_field(&mut fields, "mention_roles", event.mention_roles);
+            insert_optional_field(&mut fields, "mention_channels", event.mention_channels);
+            insert_optional_field(&mut fields, "attachments", event.attachments);
+            insert_optional_field(&mut fields, "embeds", event.embeds);
+            insert_optional_field(&mut fields, "reactions", event.reactions);
+            insert_optional_field(&mut fields, "pinned", event.pinned);
+            insert_optional_field(&mut fields, "webhook_id", event.webhook_id.and_then(|x| x));
+            insert_optional_field(&mut fields, "kind", event.kind);
+            insert_optional_field(&mut fields, "activity", event.activity.and_then(|x| x));
             insert_optional_field(
                 &mut fields,
-                "event",
-                "edited_timestamp",
-                event.edited_timestamp,
-            );
-            insert_optional_field(&mut fields, "event", "tts", event.tts);
-            insert_optional_field(
-                &mut fields,
-                "event",
-                "mention_everyone",
-                event.mention_everyone,
-            );
-            insert_optional_field(&mut fields, "event", "mentions", event.mentions);
-            insert_optional_field(&mut fields, "event", "mention_roles", event.mention_roles);
-            insert_optional_field(
-                &mut fields,
-                "event",
-                "mention_channels",
-                event.mention_channels,
-            );
-            insert_optional_field(&mut fields, "event", "attachments", event.attachments);
-            insert_optional_field(&mut fields, "event", "embeds", event.embeds);
-            insert_optional_field(&mut fields, "event", "reactions", event.reactions);
-            insert_optional_field(&mut fields, "event", "pinned", event.pinned);
-            insert_optional_field(
-                &mut fields,
-                "event",
-                "webhook_id",
-                event.webhook_id.and_then(|x| x),
-            );
-            insert_optional_field(&mut fields, "event", "kind", event.kind);
-            insert_optional_field(
-                &mut fields,
-                "event",
-                "activity",
-                event.activity.and_then(|x| x),
-            );
-            insert_optional_field(
-                &mut fields,
-                "event",
                 "application",
                 event.application.and_then(|x| x),
             );
             insert_optional_field(
                 &mut fields,
-                "event",
                 "application_id",
                 event.application_id.and_then(|x| x),
             );
             insert_optional_field(
                 &mut fields,
-                "event",
                 "message_reference",
                 event.message_reference.and_then(|x| x),
             );
-            insert_optional_field(&mut fields, "event", "flags", event.flags.and_then(|x| x));
+            insert_optional_field(&mut fields, "flags", event.flags.and_then(|x| x));
             insert_optional_field(
                 &mut fields,
-                "event",
                 "referenced_message",
                 event.referenced_message.and_then(|x| x.map(|x| *x)),
             );
             insert_optional_field(
                 &mut fields,
-                "event",
                 "interaction_metadata",
                 event.interaction_metadata.and_then(|x| x.map(|x| *x)),
             );
             insert_optional_field(
                 &mut fields,
-                "event",
                 "thread",
                 event.thread.and_then(|x| x.map(|x| *x)),
             );
-            insert_optional_field(&mut fields, "event", "components", event.components);
-            insert_optional_field(&mut fields, "event", "sticker_items", event.sticker_items);
+            insert_optional_field(&mut fields, "components", event.components);
+            insert_optional_field(&mut fields, "sticker_items", event.sticker_items);
             insert_optional_field(
                 &mut fields,
-                "event",
                 "position",
                 event.position.and_then(|x| x.map(|x| x.get())),
             );
             insert_optional_field(
                 &mut fields,
-                "event",
                 "role_subscription_data",
                 event.role_subscription_data.and_then(|x| x),
             );
-            insert_optional_field(&mut fields, "event", "guild_id", event.guild_id);
+            insert_optional_field(&mut fields, "guild_id", event.guild_id);
             insert_optional_field(
                 &mut fields,
-                "event",
                 "member",
                 event.member.and_then(|x| x.map(|x| (*x))),
             );
@@ -936,114 +827,66 @@ pub fn expand_event(event: FullEvent) -> Option<IndexMap<String, CategorizedFiel
         FullEvent::ShardsReady { .. } => return None,
         // @ci.expand_event_check StageInstanceCreate none
         FullEvent::StageInstanceCreate { stage_instance } => {
-            insert_field(
-                &mut fields,
-                "stage_instance",
-                "stage_instance",
-                stage_instance,
-            );
+            insert_field(&mut fields, "stage_instance", stage_instance);
         }
         // @ci.expand_event_check StageInstanceDelete none
         FullEvent::StageInstanceDelete { stage_instance } => {
-            insert_field(
-                &mut fields,
-                "stage_instance",
-                "stage_instance",
-                stage_instance,
-            );
+            insert_field(&mut fields, "stage_instance", stage_instance);
         }
         // @ci.expand_event_check StageInstanceUpdate none
         FullEvent::StageInstanceUpdate { stage_instance } => {
-            insert_field(
-                &mut fields,
-                "stage_instance",
-                "stage_instance",
-                stage_instance,
-            );
+            insert_field(&mut fields, "stage_instance", stage_instance);
         }
         // @ci.expand_event_check ThreadCreate none
         FullEvent::ThreadCreate { thread } => {
-            insert_field(&mut fields, "thread", "thread", thread);
+            insert_field(&mut fields, "thread", thread);
         }
         // @ci.expand_event_check ThreadDelete none
         FullEvent::ThreadDelete {
             thread,
             full_thread_data,
         } => {
-            insert_field(&mut fields, "thread", "thread", thread);
-            insert_optional_field(&mut fields, "thread", "full_thread_data", full_thread_data);
+            insert_field(&mut fields, "thread", thread);
+            insert_optional_field(&mut fields, "full_thread_data", full_thread_data);
         }
         // @ci.expand_event_check ThreadListSync event:thread_list_sync,ThreadListSyncEvent
         FullEvent::ThreadListSync { thread_list_sync } => {
-            insert_optional_field(
-                &mut fields,
-                "channel",
-                "channel_ids",
-                thread_list_sync.channel_ids,
-            );
-            insert_field(
-                &mut fields,
-                "thread_list_sync",
-                "guild_id",
-                thread_list_sync.guild_id,
-            );
-            insert_field(
-                &mut fields,
-                "thread_list_sync",
-                "threads",
-                thread_list_sync.threads,
-            );
+            insert_optional_field(&mut fields, "channel_ids", thread_list_sync.channel_ids);
+            insert_field(&mut fields, "guild_id", thread_list_sync.guild_id);
+            insert_field(&mut fields, "threads", thread_list_sync.threads);
 
-            insert_field(
-                &mut fields,
-                "thread_list_sync",
-                "members",
-                thread_list_sync.members,
-            );
+            insert_field(&mut fields, "members", thread_list_sync.members);
         }
         // @ci.expand_event_check ThreadMemberUpdate none
         FullEvent::ThreadMemberUpdate { thread_member } => {
-            insert_field(&mut fields, "user", "thread_member", thread_member.clone());
+            insert_field(&mut fields, "thread_member", thread_member.clone());
         }
         // @ci.expand_event_check ThreadMembersUpdate event:thread_members_update,ThreadMembersUpdateEvent
         FullEvent::ThreadMembersUpdate {
             thread_members_update,
         } => {
+            insert_field(&mut fields, "id", thread_members_update.id);
+            insert_field(&mut fields, "guild_id", thread_members_update.guild_id);
             insert_field(
                 &mut fields,
-                "thread_members",
-                "id",
-                thread_members_update.id,
-            );
-            insert_field(
-                &mut fields,
-                "thread_members",
-                "guild_id",
-                thread_members_update.guild_id,
-            );
-            insert_field(
-                &mut fields,
-                "thread_members",
                 "member_count",
                 thread_members_update.member_count,
             );
             insert_field(
                 &mut fields,
-                "thread_members",
                 "added_members",
                 thread_members_update.added_members.into_vec(),
             );
             insert_field(
                 &mut fields,
-                "thread_members",
                 "removed_member_ids",
                 thread_members_update.removed_member_ids.into_vec(),
             );
         }
         // @ci.expand_event_check ThreadUpdate none
         FullEvent::ThreadUpdate { new, old } => {
-            insert_optional_field(&mut fields, "thread", "old", old);
-            insert_field(&mut fields, "thread", "new", new);
+            insert_optional_field(&mut fields, "old", old);
+            insert_field(&mut fields, "new", new);
         }
         FullEvent::TypingStart { .. } => return None,
         FullEvent::UserUpdate { .. } => return None,
@@ -1055,13 +898,8 @@ pub fn expand_event(event: FullEvent) -> Option<IndexMap<String, CategorizedFiel
             guild_id,
             belongs_to_channel_id,
         } => {
-            insert_field(&mut fields, "webhook", "guild_id", guild_id);
-            insert_field(
-                &mut fields,
-                "webhook",
-                "belongs_to_channel_id",
-                belongs_to_channel_id,
-            );
+            insert_field(&mut fields, "guild_id", guild_id);
+            insert_field(&mut fields, "belongs_to_channel_id", belongs_to_channel_id);
         }
     }
 

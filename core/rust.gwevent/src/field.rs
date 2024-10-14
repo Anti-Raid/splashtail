@@ -4,30 +4,6 @@ use serenity::model::timestamp::Timestamp;
 use serenity::nonmax::{NonMaxU16, NonMaxU8};
 use serenity::small_fixed_array::{FixedArray, FixedString};
 
-/// A CategorizedField is a field that contains metadata such as category (and potentially more in the future)
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
-pub struct CategorizedField {
-    /// The category of the field
-    pub category: String,
-    /// The field itself
-    pub field: Field,
-}
-
-impl CategorizedField {
-    /// Format the field into a string for use in templates
-    pub fn template_format(&self) -> Result<String, Error> {
-        if self.category == "event" {
-            return self.field.template_format();
-        }
-
-        Ok(format!(
-            "{} ({})",
-            self.field.template_format()?,
-            self.category.replace("_", " "),
-        ))
-    }
-}
-
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 #[serde(tag = "type", content = "field")]
 pub enum Field {

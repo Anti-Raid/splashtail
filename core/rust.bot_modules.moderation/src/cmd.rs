@@ -1,5 +1,5 @@
 use super::core::to_log_format;
-use gwevent::field::CategorizedField;
+use gwevent::field::Field;
 use poise::CreateReply;
 use sandwich_driver::{guild, member_in_guild};
 use serenity::all::{
@@ -286,25 +286,13 @@ pub async fn prune_user(
                 Box::new(std_events::auditlog::AuditLogDispatchEvent {
                     event_name: "AR/PruneUser".to_string(),
                     event_titlename: "(Anti-Raid) Prune User".to_string(),
-                    expanded_event: indexmap::indexmap! {
-                        "log".to_string() => CategorizedField {
-                            category: "context".to_string(),
-                            field: to_log_format(&author.user, &user, &reason).into(),
-                        },
-                        "prune_opts".to_string() => CategorizedField {
-                            category: "config".to_string(),
-                            field: prune_opts.clone().into(),
-                        },
+                    event_data: indexmap::indexmap! {
+                        "log".to_string() => to_log_format(&author.user, &user, &reason).into(),
+                        "prune_opts".to_string() => prune_opts.clone().into(),
                         "channels".to_string() => if let Some(ref channels) = prune_channels {
-                            CategorizedField {
-                                category: "config".to_string(),
-                                field: parse_numeric_list_to_str::<ChannelId>(channels, &REPLACE_CHANNEL)?.into()
-                            }
+                            parse_numeric_list_to_str::<ChannelId>(channels, &REPLACE_CHANNEL)?.into()
                         } else {
-                            CategorizedField {
-                                category: "config".to_string(),
-                                field: gwevent::field::Field::None
-                            }
+                            Field::None
                         },
                     }
                 })
@@ -541,12 +529,12 @@ pub async fn kick(
                     Box::new(std_events::auditlog::AuditLogDispatchEvent {
                         event_name: "AR/KickMember".to_string(),
                         event_titlename: "(Anti-Raid) Kick Member".to_string(),
-                        expanded_event: indexmap::indexmap! {
-                            "target".to_string() => CategorizedField { category: "action".to_string(), field: member.user.clone().into() },
-                            "moderator".to_string() => CategorizedField { category: "action".to_string(), field: author.user.clone().into() },
-                            "reason".to_string() => CategorizedField { category: "context".to_string(), field: reason.clone().into() },
-                            "stings".to_string() => CategorizedField { category: "punishment".to_string(), field: stings.into() },
-                            "log".to_string() => CategorizedField { category: "context".to_string(), field: to_log_format(&author.user, &member.user, &reason).into() },
+                        event_data: indexmap::indexmap! {
+                            "target".to_string() => member.user.clone().into(),
+                            "moderator".to_string() => author.user.clone().into(),
+                            "reason".to_string() => reason.clone().into(),
+                            "stings".to_string() => stings.into(),
+                            "log".to_string() => to_log_format(&author.user, &member.user, &reason).into(),
                         }
                     })
                 ),
@@ -722,27 +710,27 @@ pub async fn ban(
             .await?;
     };
 
-    silverpelt::ar_event::dispatch_event_to_modules_errflatten(
-        std::sync::Arc::new(silverpelt::ar_event::EventHandlerContext {
+    silverpelt::ar_event::dispatch_event_to_modules_errflatten(std::sync::Arc::new(
+        silverpelt::ar_event::EventHandlerContext {
             guild_id,
             data: data.clone(),
-            event: silverpelt::ar_event::AntiraidEvent::Custom(
-                Box::new(std_events::auditlog::AuditLogDispatchEvent {
+            event: silverpelt::ar_event::AntiraidEvent::Custom(Box::new(
+                std_events::auditlog::AuditLogDispatchEvent {
                     event_name: "AR/BanMember".to_string(),
                     event_titlename: "(Anti-Raid) Ban Member".to_string(),
-                    expanded_event: indexmap::indexmap! {
-                        "target".to_string() => CategorizedField { category: "action".to_string(), field: member.clone().into() },
-                        "moderator".to_string() => CategorizedField { category: "action".to_string(), field: author.user.clone().into() },
-                        "reason".to_string() => CategorizedField { category: "context".to_string(), field: reason.clone().into() },
-                        "stings".to_string() => CategorizedField { category: "punishment".to_string(), field: stings.into() },
-                        "prune_dmd".to_string() => CategorizedField { category: "config".to_string(), field: dmd.into() },
-                        "log".to_string() => CategorizedField { category: "context".to_string(), field: to_log_format(&author.user, &member, &reason).into() },
-                    }
-                })
-            ),
+                    event_data: indexmap::indexmap! {
+                        "target".to_string() => member.clone().into(),
+                        "moderator".to_string() => author.user.clone().into(),
+                        "reason".to_string() => reason.clone().into(),
+                        "stings".to_string() => stings.into(),
+                        "prune_dmd".to_string() => dmd.into(),
+                        "log".to_string() => to_log_format(&author.user, &member, &reason).into(),
+                    },
+                },
+            )),
             serenity_context: ctx.serenity_context().clone(),
-        }),
-    )
+        },
+    ))
     .await?;
 
     embed = CreateEmbed::new()
@@ -882,28 +870,28 @@ pub async fn tempban(
             .await?;
     };
 
-    silverpelt::ar_event::dispatch_event_to_modules_errflatten(
-        std::sync::Arc::new(silverpelt::ar_event::EventHandlerContext {
+    silverpelt::ar_event::dispatch_event_to_modules_errflatten(std::sync::Arc::new(
+        silverpelt::ar_event::EventHandlerContext {
             guild_id,
             data: data.clone(),
-            event: silverpelt::ar_event::AntiraidEvent::Custom(
-                Box::new(std_events::auditlog::AuditLogDispatchEvent {
+            event: silverpelt::ar_event::AntiraidEvent::Custom(Box::new(
+                std_events::auditlog::AuditLogDispatchEvent {
                     event_name: "AR/BanMemberTemporary".to_string(),
                     event_titlename: "(Anti-Raid) Ban Member (Temporary)".to_string(),
-                    expanded_event: indexmap::indexmap! {
-                        "target".to_string() => CategorizedField { category: "action".to_string(), field: member.clone().into() },
-                        "moderator".to_string() => CategorizedField { category: "action".to_string(), field: author.user.clone().into() },
-                        "reason".to_string() => CategorizedField { category: "context".to_string(), field: reason.clone().into() },
-                        "stings".to_string() => CategorizedField { category: "punishment".to_string(), field: stings.into() },
-                        "prune_dmd".to_string() => CategorizedField { category: "punishment".to_string(), field: dmd.into() },
-                        "log".to_string() => CategorizedField { category: "context".to_string(), field: to_log_format(&author.user, &member, &reason).into() },
-                        "duration".to_string() => CategorizedField { category: "context".to_string(), field: (duration.0 * duration.1.to_seconds()).into() },
-                    }
-                })
-            ),
+                    event_data: indexmap::indexmap! {
+                        "target".to_string() => member.clone().into(),
+                        "moderator".to_string() => author.user.clone().into(),
+                        "reason".to_string() => reason.clone().into(),
+                        "stings".to_string() => stings.into(),
+                        "prune_dmd".to_string() => dmd.into(),
+                        "log".to_string() => to_log_format(&author.user, &member, &reason).into(),
+                        "duration".to_string() => (duration.0 * duration.1.to_seconds()).into(),
+                    },
+                },
+            )),
             serenity_context: ctx.serenity_context().clone(),
-        }),
-    )
+        },
+    ))
     .await?;
 
     embed = CreateEmbed::new()
@@ -1010,26 +998,26 @@ pub async fn unban(
             .await?;
     };
 
-    silverpelt::ar_event::dispatch_event_to_modules_errflatten(
-        std::sync::Arc::new(silverpelt::ar_event::EventHandlerContext {
+    silverpelt::ar_event::dispatch_event_to_modules_errflatten(std::sync::Arc::new(
+        silverpelt::ar_event::EventHandlerContext {
             guild_id,
             data: data.clone(),
-            event: silverpelt::ar_event::AntiraidEvent::Custom(
-                Box::new(std_events::auditlog::AuditLogDispatchEvent {
+            event: silverpelt::ar_event::AntiraidEvent::Custom(Box::new(
+                std_events::auditlog::AuditLogDispatchEvent {
                     event_name: "AR/UnbanMember".to_string(),
                     event_titlename: "(Anti-Raid) Unban Member".to_string(),
-                    expanded_event: indexmap::indexmap! {
-                        "target".to_string() => CategorizedField { category: "action".to_string(), field: user.clone().into() },
-                        "moderator".to_string() => CategorizedField { category: "action".to_string(), field: author.user.clone().into() },
-                        "reason".to_string() => CategorizedField { category: "context".to_string(), field: reason.clone().into() },
-                        "stings".to_string() => CategorizedField { category: "punishment".to_string(), field: stings.into() },
-                        "log".to_string() => CategorizedField { category: "context".to_string(), field: to_log_format(&author.user, &user, &reason).into() },
-                    }
-                })
-            ),
+                    event_data: indexmap::indexmap! {
+                        "target".to_string() => user.clone().into(),
+                        "moderator".to_string() => author.user.clone().into(),
+                        "reason".to_string() => reason.clone().into(),
+                        "stings".to_string() => stings.into(),
+                        "log".to_string() => to_log_format(&author.user, &user, &reason).into(),
+                    },
+                },
+            )),
             serenity_context: ctx.serenity_context().clone(),
-        }),
-    )
+        },
+    ))
     .await?;
 
     embed = CreateEmbed::new()
@@ -1191,13 +1179,13 @@ pub async fn timeout(
                 Box::new(std_events::auditlog::AuditLogDispatchEvent {
                     event_name: "AR/TimeoutMember".to_string(),
                     event_titlename: "(Anti-Raid) Timeout Member".to_string(),
-                    expanded_event: indexmap::indexmap! {
-                        "target".to_string() => CategorizedField { category: "action".to_string(), field: member.clone().into() },
-                        "moderator".to_string() => CategorizedField { category: "action".to_string(), field: author.user.clone().into() },
-                        "reason".to_string() => CategorizedField { category: "context".to_string(), field: reason.clone().into() },
-                        "stings".to_string() => CategorizedField { category: "punishment".to_string(), field: stings.into() },
-                        "log".to_string() => CategorizedField { category: "context".to_string(), field: to_log_format(&author.user, &member.user, &reason).into() },
-                        "duration".to_string() => CategorizedField { category: "context".to_string(), field: (duration.0 * duration.1.to_seconds()).into() },
+                    event_data: indexmap::indexmap! {
+                        "target".to_string() => member.clone().into(),
+                        "moderator".to_string() => author.user.clone().into(),
+                        "reason".to_string() => reason.clone().into(),
+                        "stings".to_string() => stings.into(),
+                        "log".to_string() => to_log_format(&author.user, &member.user, &reason).into(),
+                        "duration".to_string() => (duration.0 * duration.1.to_seconds()).into(),
                     }
                 })
             ),

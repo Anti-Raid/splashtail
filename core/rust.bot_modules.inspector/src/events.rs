@@ -208,8 +208,8 @@ pub async fn event_listener(ectx: &EventHandlerContext) -> Result<(), Error> {
                                                     Box::new(std_events::auditlog::AuditLogDispatchEvent {
                                                         event_name: "AR/Inspector_AutoResponseMemberJoin.KickNewMembers".to_string(),
                                                         event_titlename: "(Anti-Raid) Auto Response: Kick New Members".to_string(),
-                                                        expanded_event: indexmap::indexmap! {
-                                                            "member".to_string() => gwevent::field::CategorizedField { category: "summary".to_string(), field: new_member.user.clone().into() },
+                                                        event_data: indexmap::indexmap! {
+                                                            "member".to_string() => new_member.user.clone().into(),
                                                         }
                                                     })
                                                 ),
@@ -243,8 +243,8 @@ pub async fn event_listener(ectx: &EventHandlerContext) -> Result<(), Error> {
                                                     Box::new(std_events::auditlog::AuditLogDispatchEvent {
                                                         event_name: "AR/Inspector_AutoResponseMemberJoin.BanNewMembers".to_string(),
                                                         event_titlename: "(Anti-Raid) Auto Response Ban New Members".to_string(),
-                                                        expanded_event: indexmap::indexmap! {
-                                                            "member".to_string() => gwevent::field::CategorizedField { category: "summary".to_string(), field: new_member.user.clone().into() },
+                                                        event_data: indexmap::indexmap! {
+                                                            "member".to_string() => new_member.user.clone().into(),
                                                         }
                                                     })
                                                 ),
@@ -443,9 +443,9 @@ pub async fn event_listener(ectx: &EventHandlerContext) -> Result<(), Error> {
                                     Box::new(std_events::auditlog::AuditLogDispatchEvent {
                                         event_name: "AR/Inspector_MemberJoinInspectionFailed".to_string(),
                                         event_titlename: "(Anti-Raid) Member Join Inspection Failed".to_string(),
-                                        expanded_event: indexmap::indexmap! {
-                                            "member".to_string() => gwevent::field::CategorizedField { category: "summary".to_string(), field: new_member.user.clone().into() },
-                                            "triggered_flags".to_string() => gwevent::field::CategorizedField { category: "summary".to_string(), field: triggered_flags.iter_names().map(|(flag, _)| flag.to_string()).collect::<Vec<String>>().join(", ").into() },
+                                        event_data: indexmap::indexmap! {
+                                            "member".to_string() => new_member.user.clone().into(),
+                                            "triggered_flags".to_string() => triggered_flags.iter_names().map(|(flag, _)| flag.to_string()).collect::<Vec<String>>().join(", ").into(),
                                         }
                                     })
                                 ),
@@ -508,10 +508,10 @@ pub async fn event_listener(ectx: &EventHandlerContext) -> Result<(), Error> {
                                         Box::new(std_events::auditlog::AuditLogDispatchEvent {
                                             event_name: "AR/Inspector_MemberJoinHoistAttempt".to_string(),
                                             event_titlename: "(Anti-Raid) Member Join Hoist Attempt".to_string(),
-                                            expanded_event: indexmap::indexmap! {
-                                                "member".to_string() => gwevent::field::CategorizedField { category: "summary".to_string(), field: new_member.user.clone().into() },
-                                                "old_display_name".to_string() => gwevent::field::CategorizedField { category: "summary".to_string(), field: display_name.into() },
-                                                "new_nickname".to_string() => gwevent::field::CategorizedField { category: "summary".to_string(), field: new.into() },
+                                            event_data: indexmap::indexmap! {
+                                                "member".to_string() => new_member.user.clone().into(),
+                                                "old_display_name".to_string() => display_name.into(),
+                                                "new_nickname".to_string() => new.into(),
                                             }
                                         })
                                     ),
@@ -678,10 +678,10 @@ pub async fn event_listener(ectx: &EventHandlerContext) -> Result<(), Error> {
                                         Box::new(std_events::auditlog::AuditLogDispatchEvent {
                                             event_name: "AR/Inspector_MemberUpdateHoistAttempt".to_string(),
                                             event_titlename: "(Anti-Raid) Member Update Hoist Attempt".to_string(),
-                                            expanded_event: indexmap::indexmap! {
-                                                "member".to_string() => gwevent::field::CategorizedField { category: "summary".to_string(), field: event.user.clone().into() },
-                                                "old_display_name".to_string() => gwevent::field::CategorizedField { category: "summary".to_string(), field: display_name.into() },
-                                                "new_nickname".to_string() => gwevent::field::CategorizedField { category: "summary".to_string(), field: new.into() },
+                                            event_data: indexmap::indexmap! {
+                                                "member".to_string() => event.user.clone().into(),
+                                                "old_display_name".to_string() => display_name.into(),
+                                                "new_nickname".to_string() => new.into(),
                                             }
                                         })
                                     ),
