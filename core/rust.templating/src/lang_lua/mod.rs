@@ -5,6 +5,7 @@ use crate::atomicinstant;
 use mlua::prelude::*;
 use moka::future::Cache;
 use serenity::all::GuildId;
+use std::panic::PanicHookInfo;
 use std::sync::Arc;
 use std::sync::LazyLock;
 
@@ -34,6 +35,8 @@ pub struct ArLua {
         std::thread::Thread,
         tokio::sync::mpsc::UnboundedSender<LoadLuaTemplate>,
     ),
+    /// Is the VM broken/needs to be remade
+    pub broken: Arc<std::sync::atomic::AtomicBool>,
 }
 
 /// Create a new Lua VM complete with sandboxing and modules pre-loaded
@@ -112,6 +115,9 @@ async fn create_lua_vm(guild_id: GuildId, pool: sqlx::PgPool) -> LuaResult<ArLua
 
     let lua_ref = lua.clone();
 
+    // Used to mark a thread as broken and needing to be remade
+    let broken = Arc::new(std::sync::atomic::AtomicBool::new(false));
+    let broken_ref = broken.clone();
     // Create thread handle for async execution
     //
     // This both avoids locking and allows running multiple scripts concurrently
@@ -131,7 +137,22 @@ async fn create_lua_vm(guild_id: GuildId, pool: sqlx::PgPool) -> LuaResult<ArLua
                     .unwrap();
 
                 let lua_ref = lua_ref.clone();
+                let broken_ref = broken_ref.clone();
                 rt.block_on(async {
+                    // Catch panics
+                    fn panic_catcher(
+                        guild_id: GuildId,
+                        broken_ref: Arc<std::sync::atomic::AtomicBool>,
+                    ) -> Box<dyn Fn(&PanicHookInfo<'_>) + 'static + Sync + Send>
+                    {
+                        return Box::new(move |_| {
+                            log::error!("Lua thread panicked: {}", guild_id);
+                            broken_ref.store(true, std::sync::atomic::Ordering::Release);
+                        });
+                    }
+
+                    std::panic::set_hook(panic_catcher(guild_id, broken_ref));
+
                     while let Some(template) = rx.recv().await {
                         let args = template.args;
                         let callback = template.callback;
@@ -202,6 +223,7 @@ async fn create_lua_vm(guild_id: GuildId, pool: sqlx::PgPool) -> LuaResult<ArLua
         vm: lua,
         last_execution_time,
         thread_handle,
+        broken,
     };
 
     Ok(ar_lua)
@@ -212,7 +234,14 @@ async fn create_lua_vm(guild_id: GuildId, pool: sqlx::PgPool) -> LuaResult<ArLua
 /// This function will either return an existing Lua VM for the guild or create a new one if it does not exist
 async fn get_lua_vm(guild_id: GuildId, pool: sqlx::PgPool) -> LuaResult<ArLua> {
     match VMS.get(&guild_id).await {
-        Some(vm) => Ok(vm.clone()),
+        Some(vm) => {
+            if vm.broken.load(std::sync::atomic::Ordering::Acquire) {
+                let vm = create_lua_vm(guild_id, pool).await?;
+                VMS.insert(guild_id, vm.clone()).await;
+                return Ok(vm);
+            }
+            Ok(vm.clone())
+        }
         None => {
             let vm = create_lua_vm(guild_id, pool).await?;
             VMS.insert(guild_id, vm.clone()).await;
