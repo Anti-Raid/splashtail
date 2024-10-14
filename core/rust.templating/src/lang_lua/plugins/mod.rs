@@ -1,5 +1,6 @@
 pub mod concurrency;
 pub mod interop;
+pub mod lune;
 pub mod message;
 pub mod permissions;
 
@@ -14,6 +15,8 @@ pub static PLUGINS: LazyLock<indexmap::IndexMap<String, ModuleFn>> = LazyLock::n
         "@antiraid/interop".to_string() => interop::init_plugin as ModuleFn,
         "@antiraid/message".to_string() => message::init_plugin as ModuleFn,
         "@antiraid/permissions".to_string() => permissions::init_plugin as ModuleFn,
+        "@lune/datetime".to_string() => lune::datetime::init_plugin as ModuleFn,
+        "@lune/regex".to_string() => lune::regex::init_plugin as ModuleFn,
     }
 });
 

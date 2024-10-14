@@ -1016,6 +1016,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "chrono_lc"
+version = "0.1.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "568e485d6ad62f607516ebb0820ae8cc46361b0870aeb46eb8232440a00b2eb6"
+dependencies = [
+ "chrono",
+ "lazy_static",
+ "num-integer",
+ "serde",
+ "serde_derive",
+ "serde_json",
+ "walkdir",
+]
+
+[[package]]
 name = "clap"
 version = "4.5.20"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4096,6 +4111,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "self_cell"
+version = "1.0.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d369a96f978623eb3dc28807c4852d6cc617fed53da5d3c400feff1ef34a714a"
+
+[[package]]
 name = "semver"
 version = "1.0.23"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4837,6 +4858,8 @@ dependencies = [
 name = "templating"
 version = "0.1.0"
 dependencies = [
+ "chrono",
+ "chrono_lc",
  "config",
  "futures-util",
  "gwevent",
@@ -4848,10 +4871,13 @@ dependencies = [
  "moka",
  "permissions",
  "rand",
+ "regex",
+ "self_cell",
  "serde",
  "serde_json",
  "serenity",
  "sqlx",
+ "thiserror",
  "tokio",
  "typetag",
 ]

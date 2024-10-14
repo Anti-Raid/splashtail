@@ -4,11 +4,11 @@ go 1.22.5
 
 require (
 	github.com/bwmarrin/discordgo v0.28.1
-	github.com/cheesycod/mewld v0.0.0-20241009141200-7112e232556a
+	github.com/cheesycod/mewld v0.0.0-20241013044302-e2a74edb57da
 	github.com/go-chi/chi/v5 v5.1.0
 	github.com/infinitybotlist/eureka v1.11.0
 	github.com/jackc/pgx/v5 v5.7.1
-	github.com/minio/minio-go/v7 v7.0.77
+	github.com/minio/minio-go/v7 v7.0.78
 	github.com/redis/rueidis v1.0.47
 	github.com/sirupsen/logrus v1.9.3
 	github.com/stretchr/testify v1.9.0
@@ -34,7 +34,7 @@ require (
 	github.com/gorilla/websocket v1.5.3 // indirect
 	github.com/jackc/pgpassfile v1.0.0 // indirect
 	github.com/jackc/pgservicefile v0.0.0-20240606120523-5a60cdf6a761 // indirect
-	github.com/klauspost/compress v1.17.10 // indirect
+	github.com/klauspost/compress v1.17.11 // indirect
 	github.com/klauspost/cpuid/v2 v2.2.8 // indirect
 	github.com/kr/pretty v0.3.1 // indirect
 	github.com/mailru/easyjson v0.7.7 // indirect
