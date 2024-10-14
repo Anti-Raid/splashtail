@@ -9,12 +9,12 @@ import (
 )
 
 // Dispatches a trusted web event to the bot
-func DispatchTrustedWebEvent(ctx context.Context, clusterId int, data *rpc_messages.DispatchTrustedWebEventRequest) (*rpc_messages.DispatchTrustedWebEventResponse, error) {
+func DispatchTrustedWebEvent(ctx context.Context, data *rpc_messages.DispatchTrustedWebEventRequest) (*rpc_messages.DispatchTrustedWebEventResponse, error) {
 	return RpcQuery[rpc_messages.DispatchTrustedWebEventResponse](
 		ctx,
 		state.IpcClient,
 		"POST",
-		fmt.Sprintf("%s/dispatch-trusted-web-event", CalcBotAddr(clusterId)),
+		fmt.Sprintf("%s/dispatch-trusted-web-event", CalcBotAddr()),
 		data,
 		true,
 	)

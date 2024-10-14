@@ -26,6 +26,7 @@ pub async fn stats(ctx: Context<'_>) -> Result<(), Error> {
                 format!("[{}]({}/commit/{})", GIT_SHA, GIT_REPO, GIT_SHA),
                 true,
             )
+            .field("Description", ctx.data().props.extra_description(), true)
             .field(
                 "Uptime",
                 {
@@ -39,25 +40,6 @@ pub async fn stats(ctx: Context<'_>) -> Result<(), Error> {
 
                     format!("{}h{}m{}s", hours, minutes, seconds)
                 },
-                true,
-            )
-            .field(
-                "Cluster",
-                format!(
-                    "{} ({} of {})",
-                    ctx.data().props.cluster_name(),
-                    ctx.data().props.cluster_id(),
-                    ctx.data().props.cluster_count() - 1,
-                ),
-                true,
-            )
-            .field(
-                "Clusters Available",
-                format!(
-                    "{}/{}",
-                    ctx.data().props.available_clusters(),
-                    ctx.data().props.cluster_count()
-                ),
                 true,
             )
             .field("Servers", total_guilds.to_string(), true)

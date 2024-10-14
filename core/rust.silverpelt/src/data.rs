@@ -74,26 +74,14 @@ where
     /// Converts the props to std::any::Any
     fn as_any(&self) -> &(dyn std::any::Any + Send + Sync);
 
-    /// The name of the service
-    fn name(&self) -> String;
+    /// Extra description of the service
+    fn extra_description(&self) -> String;
 
-    /// If applicable, the shards associated with the service
+    /// If applicable, the shards available to this process
     async fn shards(&self) -> Result<Vec<u16>, crate::Error>;
 
     /// If applicable, the shard count
     async fn shard_count(&self) -> Result<u16, crate::Error>;
-
-    /// The cluster ID
-    fn cluster_id(&self) -> u16;
-
-    /// The cluster name
-    fn cluster_name(&self) -> String;
-
-    /// The total number of clusters
-    fn cluster_count(&self) -> u16;
-
-    /// The number of available clusters
-    fn available_clusters(&self) -> usize;
 
     /// Total number of guilds
     ///

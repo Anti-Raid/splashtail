@@ -4,8 +4,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/infinitybotlist/eureka/uapi"
 	"go.api/routes/core/endpoints/get_api_config"
-	"go.api/routes/core/endpoints/get_cluster_modules"
-	"go.api/routes/core/endpoints/get_clusters_health"
+	"go.api/routes/core/endpoints/get_modules"
 )
 
 const tagName = "Core"
@@ -26,18 +25,10 @@ func (b Router) Routes(r *chi.Mux) {
 	}.Route(r)
 
 	uapi.Route{
-		Pattern: "/clusters/health",
-		OpId:    "get_clusters_health",
+		Pattern: "/modules",
+		OpId:    "get_modules",
 		Method:  uapi.GET,
-		Docs:    get_clusters_health.Docs,
-		Handler: get_clusters_health.Route,
-	}.Route(r)
-
-	uapi.Route{
-		Pattern: "/clusters/{clusterId}/modules",
-		OpId:    "get_cluster_modules",
-		Method:  uapi.GET,
-		Docs:    get_cluster_modules.Docs,
-		Handler: get_cluster_modules.Route,
+		Docs:    get_modules.Docs,
+		Handler: get_modules.Route,
 	}.Route(r)
 }

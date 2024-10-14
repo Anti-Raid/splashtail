@@ -11,7 +11,6 @@ import (
 // Calls the CheckCommandPermission method to check whether or not a command is runnable
 func CheckCommandPermission(
 	ctx context.Context,
-	clusterId int,
 	guildID string,
 	userID string,
 	command string,
@@ -21,7 +20,7 @@ func CheckCommandPermission(
 		ctx,
 		state.IpcClient,
 		"GET",
-		fmt.Sprintf("%s/check-command-permission/%s/%s", CalcBotAddr(clusterId), guildID, userID),
+		fmt.Sprintf("%s/check-command-permission/%s/%s", CalcBotAddr(), guildID, userID),
 		rpc_messages.CheckCommandPermissionRequest{
 			Command: command,
 			Opts:    checkCommandOptions,

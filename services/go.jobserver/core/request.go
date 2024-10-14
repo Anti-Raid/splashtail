@@ -14,9 +14,7 @@ import (
 	"go.jobserver/jobrunner"
 	"go.jobserver/rpc_messages"
 	"go.jobserver/state"
-	"go.std/splashcore"
 	"go.std/structparser/db"
-	"go.std/utils/mewext"
 	"go.uber.org/zap"
 )
 
@@ -66,25 +64,6 @@ func Spawn(spawn rpc_messages.Spawn) (*rpc_messages.SpawnResponse, error) {
 
 	if err != nil {
 		return nil, fmt.Errorf("error unmarshalling args: %w", err)
-	}
-
-	owner := job.Owner()
-
-	// Check if job pertains to this clusters shard
-	if owner.TargetType == splashcore.TargetTypeUser && state.Shard != 0 {
-		return nil, fmt.Errorf("job is not for this shard [user jobs must run on shard 0]")
-	} else {
-		jobShard, err := mewext.GetShardIDFromGuildID(owner.ID, int(state.ShardCount))
-
-		if err != nil {
-			state.Logger.Error("Failed to get shard id from guild id", zap.Error(err))
-			return nil, fmt.Errorf("failed to get shard id from guild id: %w", err)
-		}
-
-		// This case should work until we reach 65 million servers
-		if uint16(jobShard) != state.Shard {
-			return nil, fmt.Errorf("job is not for this shard [expected shard: %d, this shard: %d]", jobShard, state.Shard)
-		}
 	}
 
 	// Validate
@@ -217,25 +196,6 @@ func Resume() {
 		if err != nil {
 			state.Logger.Error("Failed to unmarshal job create opts", zap.Error(err))
 			continue
-		}
-
-		owner := job.Owner()
-
-		// Check if job pertains to this clusters shard
-		if owner.TargetType == splashcore.TargetTypeUser && state.Shard != 0 {
-			continue
-		} else {
-			jobShard, err := mewext.GetShardIDFromGuildID(owner.ID, int(state.ShardCount))
-
-			if err != nil {
-				state.Logger.Error("Failed to get shard id from guild id", zap.Error(err))
-				continue
-			}
-
-			// This case should work until we reach 65 million servers
-			if uint16(jobShard) != state.Shard {
-				continue
-			}
 		}
 
 		// Validate

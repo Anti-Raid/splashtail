@@ -3,7 +3,6 @@ package state
 import (
 	"context"
 	"crypto/tls"
-	"fmt"
 	"net"
 	"net/http"
 	"os"
@@ -17,13 +16,11 @@ import (
 	"golang.org/x/net/http2"
 
 	"github.com/bwmarrin/discordgo"
-	mproc "github.com/cheesycod/mewld/proc"
 	"github.com/go-playground/validator/v10"
 	"github.com/go-playground/validator/v10/non-standard/validators"
 	"github.com/infinitybotlist/eureka/dovewing"
 	"github.com/infinitybotlist/eureka/dovewing/dovetypes"
 	"github.com/infinitybotlist/eureka/genconfig"
-	"github.com/infinitybotlist/eureka/jsonimpl"
 	"github.com/infinitybotlist/eureka/proxy"
 	"github.com/infinitybotlist/eureka/ratelimit"
 	"github.com/infinitybotlist/eureka/snippets"
@@ -45,31 +42,10 @@ var (
 	ObjectStorage           *objectstorage.ObjectStorage
 	CurrentOperationMode    string // Current mode splashtail is operating in
 	Config                  *config.Config
-	MewldInstanceList       *mproc.InstanceList
 
 	IpcClient       http.Client
 	IpcClientHttp11 http.Client
 )
-
-func fetchMewldInstanceList() (*mproc.InstanceList, error) {
-	var mc *mproc.InstanceList
-
-	resp, err := http.Get(fmt.Sprintf("http://localhost:%d/getMewldInstanceList", Config.BasePorts.Bot-1))
-
-	if err != nil {
-		return nil, err
-	}
-
-	defer resp.Body.Close()
-
-	err = jsonimpl.UnmarshalReader(resp.Body, &mc)
-
-	if err != nil {
-		return nil, err
-	}
-
-	return mc, nil
-}
 
 func Setup() {
 	utils.Must(
@@ -100,35 +76,6 @@ func Setup() {
 	}
 
 	Logger = snippets.CreateZap()
-
-	for {
-		mil, err := fetchMewldInstanceList()
-
-		if err != nil {
-			Logger.Error("Error fetching mewld instance list, waiting", zap.Error(err))
-			time.Sleep(5 * time.Second)
-			continue
-		}
-
-		MewldInstanceList = mil
-		break
-	}
-
-	go func() {
-		// Keep updating instance list every 5 seconds
-		for {
-			mil, err := fetchMewldInstanceList()
-
-			if err != nil {
-				Logger.Error("Error fetching mewld instance list, waiting", zap.Error(err))
-			} else {
-				MewldInstanceList = mil
-				Logger.Debug("Updated mewld instance list")
-			}
-
-			time.Sleep(20 * time.Second)
-		}
-	}()
 
 	// Postgres
 	Pool, err = pgxpool.New(Context, Config.Meta.PostgresURL)

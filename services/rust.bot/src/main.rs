@@ -1,14 +1,14 @@
 mod ipc;
 
-use ipc::mewld::MewldIpcClient;
-
 use botox::cache::CacheHttpImpl;
 use gwevent::core::get_event_guild_id;
 use silverpelt::ar_event::{AntiraidEvent, EventHandlerContext};
 
 use std::sync::{Arc, LazyLock};
+use tokio::sync::RwLock;
 
 use cap::Cap;
+use clap::Parser;
 use log::{error, info, warn};
 use serenity::all::{FullEvent, HttpBuilder};
 use silverpelt::{data::Data, Error};
@@ -38,7 +38,9 @@ pub static CONNECT_STATE: LazyLock<ConnectState> = LazyLock::new(|| ConnectState
 /// Props
 pub struct Props {
     pub pool: sqlx::PgPool,
-    pub mewld_ipc: Arc<MewldIpcClient>,
+    pub cmd_args: Arc<ipc::argparse::CmdArgs>,
+    pub cache_http: Arc<RwLock<Option<CacheHttpImpl>>>,
+    pub shard_manager: Arc<RwLock<Option<Arc<serenity::all::ShardManager>>>>,
 }
 
 #[async_trait::async_trait]
@@ -48,40 +50,76 @@ impl silverpelt::data::Props for Props {
         self
     }
 
-    fn name(&self) -> String {
-        "bot".to_string()
+    fn extra_description(&self) -> String {
+        format!("...")
     }
 
     async fn shards(&self) -> Result<Vec<u16>, Error> {
-        Ok(crate::ipc::argparse::MEWLD_ARGS.shards.clone())
+        if let Some(ref shards) = self.cmd_args.shards {
+            return Ok(shards.clone());
+        };
+
+        let guard = self.shard_manager.read().await;
+
+        if let Some(shard_manager) = guard.as_ref() {
+            let mut shards = Vec::new();
+
+            for (id, _) in shard_manager.runners.lock().await.iter() {
+                shards.push(id.0);
+            }
+
+            Ok(shards)
+        } else {
+            Ok(Vec::new())
+        }
     }
 
     async fn shard_count(&self) -> Result<u16, Error> {
-        Ok(crate::ipc::argparse::MEWLD_ARGS.shard_count)
-    }
+        let guard = self.cache_http.read().await;
 
-    fn cluster_id(&self) -> u16 {
-        crate::ipc::argparse::MEWLD_ARGS.cluster_id
-    }
+        if let Some(cache_http) = guard.as_ref() {
+            Ok(cache_http.cache.shard_count().get())
+        } else {
+            if let Some(ref shards) = self.cmd_args.shards {
+                return Ok(shards.len() as u16);
+            }
 
-    fn cluster_name(&self) -> String {
-        crate::ipc::argparse::MEWLD_ARGS.cluster_name.clone()
-    }
-
-    fn cluster_count(&self) -> u16 {
-        crate::ipc::argparse::MEWLD_ARGS.cluster_count
-    }
-
-    fn available_clusters(&self) -> usize {
-        self.mewld_ipc.cache.cluster_healths.len()
+            Ok(1)
+        }
     }
 
     async fn total_guilds(&self) -> Result<u64, Error> {
-        Ok(self.mewld_ipc.cache.total_guilds())
+        let guard = self.cache_http.read().await;
+
+        if let Some(cache_http) = guard.as_ref() {
+            Ok(cache_http.cache.guilds().len() as u64)
+        } else {
+            Ok(0)
+        }
     }
 
     async fn total_users(&self) -> Result<u64, Error> {
-        Ok(self.mewld_ipc.cache.total_users())
+        let guard = self.cache_http.read().await;
+
+        if let Some(cache_http) = guard.as_ref() {
+            let mut count = 0;
+
+            for guild in cache_http.cache.guilds() {
+                {
+                    let guild = guild.to_guild_cached(&cache_http.cache);
+
+                    if let Some(guild) = guild {
+                        count += guild.member_count;
+                    }
+                }
+
+                tokio::task::yield_now().await;
+            }
+
+            Ok(count)
+        } else {
+            Ok(0)
+        }
     }
 }
 
@@ -89,7 +127,6 @@ async fn event_listener<'a>(
     ctx: poise::FrameworkContext<'a, Data, Error>,
     event: &FullEvent,
 ) -> Result<(), Error> {
-    let user_data = ctx.serenity_context.data::<Data>();
     match event {
         FullEvent::InteractionCreate { interaction } => {
             if !CONNECT_STATE
@@ -109,29 +146,35 @@ async fn event_listener<'a>(
                 data_about_bot.user.name, ctx.serenity_context.shard_id
             );
 
+            // Set props
+            let data = ctx.serenity_context.data::<Data>();
+            let props = data.props.as_any().downcast_ref::<Props>().unwrap();
+
+            let cache_http = CacheHttpImpl::from_ctx(ctx.serenity_context);
+            let mut guard = props.cache_http.write().await;
+            *guard = Some(cache_http);
+            drop(guard);
+
+            let shard_manager = ctx.shard_manager.clone();
+            let mut guard = props.shard_manager.write().await;
+            *guard = Some(shard_manager);
+            drop(guard);
+
             // We don't really care which shard runs this, we just need one to run it
             if !CONNECT_STATE
                 .started_tasks
                 .load(std::sync::atomic::Ordering::SeqCst)
             {
                 info!("Starting background tasks");
-                let tasks = bot_binutils::get_tasks(ctx.serenity_context, &user_data);
+                // Get all tasks
+                let tasks = bot_binutils::get_tasks(ctx.serenity_context, &data);
                 tokio::task::spawn(botox::taskman::start_all_tasks(
                     tasks,
                     ctx.serenity_context.clone(),
                 ));
 
                 info!("Starting IPC");
-
                 let data = ctx.serenity_context.data::<Data>();
-                let props = data.props.as_any().downcast_ref::<Props>().unwrap();
-                let ipc_ref = props.mewld_ipc.clone();
-                let ch = CacheHttpImpl::from_ctx(ctx.serenity_context);
-                let sm = ctx.shard_manager().clone();
-                tokio::task::spawn(async move {
-                    let ipc_ref = ipc_ref;
-                    ipc_ref.start_ipc_listener(&ch, &sm).await;
-                });
 
                 // Create a new rpc server
                 let rpc_server =
@@ -139,15 +182,12 @@ async fn event_listener<'a>(
 
                 // Start the rpc server
                 tokio::task::spawn(async move {
-                    log::info!(
-                        "Starting RPC server on cluster {}",
-                        ipc::argparse::MEWLD_ARGS.cluster_id
-                    );
+                    log::info!("Starting RPC server");
                     let opts = rust_rpc_server::CreateRpcServerOptions {
                         bind: rust_rpc_server::CreateRpcServerBind::Address(format!(
                             "{}:{}",
                             config::CONFIG.base_ports.bot_bind_addr,
-                            config::CONFIG.base_ports.bot + ipc::argparse::MEWLD_ARGS.cluster_id
+                            config::CONFIG.base_ports.bot
                         )),
                     };
 
@@ -163,23 +203,6 @@ async fn event_listener<'a>(
                 CONNECT_STATE
                     .started_tasks
                     .store(true, std::sync::atomic::Ordering::SeqCst);
-            }
-
-            if ctx.serenity_context.shard_id.0
-                == *crate::ipc::argparse::MEWLD_ARGS.shards.last().unwrap()
-            {
-                info!("All shards ready, launching next cluster");
-                let data = ctx.serenity_context.data::<Data>();
-                let props = data.props.as_any().downcast_ref::<Props>().unwrap();
-                if let Err(e) = props.mewld_ipc.publish_ipc_launch_next().await {
-                    error!("Error publishing IPC launch next: {}", e);
-                    return Err(e);
-                }
-
-                info!(
-                    "Published IPC launch next to channel {}",
-                    crate::ipc::argparse::MEWLD_ARGS.mewld_redis_channel
-                );
             }
 
             CONNECT_STATE
@@ -236,14 +259,9 @@ async fn main() {
     ALLOCATOR.set_limit(5 * 1024 * 1024 * 1024).unwrap();
 
     const POSTGRES_MAX_CONNECTIONS: u32 = 3; // max connections to the database, we don't need too many here
-    const REDIS_MAX_CONNECTIONS: u32 = 10; // max connections to the redis
 
     // Setup logging
-    let cluster_id = ipc::argparse::MEWLD_ARGS.cluster_id;
-    let cluster_name = ipc::argparse::MEWLD_ARGS.cluster_name.clone();
-    let cluster_count = ipc::argparse::MEWLD_ARGS.cluster_count;
-    let shards = ipc::argparse::MEWLD_ARGS.shards.clone();
-    let shard_count = ipc::argparse::MEWLD_ARGS.shard_count;
+    let cmd_args = Arc::new(ipc::argparse::CmdArgs::parse());
 
     let debug_mode = std::env::var("DEBUG").unwrap_or_default() == "true";
     let debug_opts = std::env::var("DEBUG_OPTS").unwrap_or_default();
@@ -251,8 +269,7 @@ async fn main() {
     let mut env_builder = env_logger::builder();
 
     let mut default_filter =
-        "serenity=error,fred=error,rust_bot=info,bot_binutils=info,rust_rpc_server=info,rust_rpc_server_bot=info,botox=info,templating=debug,sqlx=info"
-            .to_string();
+        "serenity=error,fred=error,rust_bot=info,bot_binutils=info,rust_rpc_server=info,rust_rpc_server_bot=info,botox=info,templating=debug,sqlx=info".to_string();
 
     for module in modules() {
         let module_id = module.id();
@@ -265,10 +282,7 @@ async fn main() {
         .format(move |buf, record| {
             writeln!(
                 buf,
-                "[{} ({} of {})] ({}) {} - {}",
-                cluster_name,
-                cluster_id,
-                cluster_count - 1,
+                "({}) {} - {}",
                 record.target(),
                 record.level(),
                 record.args()
@@ -317,7 +331,7 @@ async fn main() {
 
     env_builder.init();
 
-    info!("{:#?}", ipc::argparse::MEWLD_ARGS);
+    info!("{:#?}", cmd_args);
 
     let proxy_url = config::CONFIG.meta.proxy.clone();
 
@@ -343,6 +357,8 @@ async fn main() {
     let client_builder = serenity::all::ClientBuilder::new_with_http(http, intents);
 
     info!("Created ClientBuilder");
+
+    info!("Creating SilverpeltCache");
 
     let silverpelt_cache = {
         let mut silverpelt_cache = silverpelt::cache::SilverpeltCache::default();
@@ -389,18 +405,10 @@ async fn main() {
 
     let framework = poise::Framework::builder().options(framework_opts).build();
 
-    info!("Connecting to redis");
-
-    let pool = fred::prelude::Builder::from_config(
-        fred::prelude::RedisConfig::from_url(&config::CONFIG.meta.bot_redis_url)
-            .expect("Could not initialize Redis config"),
-    )
-    .build_pool(REDIS_MAX_CONNECTIONS.try_into().unwrap())
-    .expect("Could not initialize Redis pool");
+    info!("Connecting to database");
 
     let pg_pool = PgPoolOptions::new()
         .max_connections(POSTGRES_MAX_CONNECTIONS)
-        .acquire_timeout(std::time::Duration::from_secs(30))
         .connect(&config::CONFIG.meta.postgres_url)
         .await
         .expect("Could not initialize connection");
@@ -412,12 +420,10 @@ async fn main() {
         .expect("Could not initialize reqwest client");
 
     let props = Arc::new(Props {
-        mewld_ipc: Arc::new(ipc::mewld::MewldIpcClient {
-            redis_pool: pool.clone(),
-            cache: Arc::new(ipc::mewld::MewldIpcCache::default()),
-            pool: pg_pool.clone(),
-        }),
         pool: pg_pool.clone(),
+        cmd_args: cmd_args.clone(),
+        cache_http: Arc::new(RwLock::new(None)),
+        shard_manager: Arc::new(RwLock::new(None)),
     });
 
     let data = Data {
@@ -442,16 +448,37 @@ async fn main() {
 
     client.cache.set_max_messages(10000);
 
-    let shard_range = std::ops::Range {
-        start: shards[0],
-        end: *shards.last().unwrap(),
-    };
+    if let Some(shard_count) = cmd_args.shard_count {
+        if let Some(ref shards) = cmd_args.shards {
+            let shard_range = std::ops::Range {
+                start: shards[0],
+                end: *shards.last().unwrap(),
+            };
 
-    info!("Starting shard range: {:?}", shard_range);
+            info!("Starting shard range: {:?}", shard_range);
 
-    if let Err(why) = client.start_shard_range(shard_range, shard_count).await {
-        error!("Client error: {:?}", why);
+            if let Err(why) = client.start_shard_range(shard_range, shard_count).await {
+                error!("Client error: {:?}", why);
+                std::process::exit(1); // Clean exit with status code of 1
+            }
+
+            return;
+        } else {
+            info!("Starting shard count: {}", shard_count);
+
+            if let Err(why) = client.start_shards(shard_count).await {
+                error!("Client error: {:?}", why);
+                std::process::exit(1); // Clean exit with status code of 1
+            }
+
+            return;
+        }
     }
 
-    std::process::exit(1); // Clean exit with status code of 1
+    info!("Starting using autosharding");
+
+    if let Err(why) = client.start_autosharded().await {
+        error!("Client error: {:?}", why);
+        std::process::exit(1); // Clean exit with status code of 1
+    }
 }

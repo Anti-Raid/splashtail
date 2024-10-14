@@ -12,8 +12,4 @@ ljconfig
 /**/.DS_Store
 .idea
 semver
-mewld-staging.yaml
-mewld-prod.yaml
-data/cache
-history.txt # surrealdb
 cmd/nursery/ban_possibilities

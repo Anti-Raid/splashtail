@@ -15,7 +15,6 @@ infra:
 	# Core infra
 	cd infra/nirn-proxy && make
 	cd infra/Sandwich-Daemon && make
-	cd infra/wafflepaw && make
 	
 format:
 	# For every project in core/rust.*
@@ -46,7 +45,6 @@ build_rust:
 		OUTPUT_FILE=$$(echo $$PROJECT_NAME | tr . _) && \
 		echo $$d && cd ${PWD}/$$d && cargo build --release && \
 		mv ${PWD}/target/release/$$OUTPUT_FILE ${PWD}/out/$$PROJECT_NAME && \
-		go build -v -o ${PWD}/out/$$PROJECT_NAME.loader && cd ${PWD} \
 		cd ${PWD}; \
 	done
 
@@ -98,4 +96,11 @@ update_go:
 	for d in core/go.* services/go.*; do \
 		echo $$d; \
 		cd $$d && go get -u ./... && cd ${PWD}; \
+	done
+
+gomodtidy:
+	PWD=$(shell pwd)
+	for d in core/go.* services/go.*; do \
+		echo $$d; \
+		cd $$d && go mod tidy && cd ${PWD}; \
 	done

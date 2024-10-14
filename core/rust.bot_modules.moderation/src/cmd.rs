@@ -6,7 +6,6 @@ use serenity::all::{
     ChannelId, CreateEmbed, EditMember, EditMessage, GuildId, Mentionable, Message, Timestamp,
     User, UserId,
 };
-use serenity::utils::shard_id;
 use silverpelt::jobserver::{embed as embed_job, get_icon_of_state};
 use silverpelt::punishments::PunishmentAction;
 use silverpelt::Context;
@@ -243,13 +242,12 @@ pub async fn prune_user(
     let data = ctx.data();
 
     // Make request to jobserver
-    let jobserver_cluster_id = shard_id(guild_id, data.props.shard_count().await?.try_into()?);
     let resp = data
         .reqwest
         .post(format!(
             "{}:{}/spawn",
             config::CONFIG.base_ports.jobserver_base_addr,
-            config::CONFIG.base_ports.jobserver + jobserver_cluster_id
+            config::CONFIG.base_ports.jobserver
         ))
         .json(&splashcore_rs::jobserver::Spawn {
             name: "message_prune".to_string(),

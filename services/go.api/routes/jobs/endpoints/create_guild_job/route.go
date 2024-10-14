@@ -12,7 +12,6 @@ import (
 	"go.api/types"
 	jobs "go.jobs"
 	jobtypes "go.jobs/types"
-	"go.std/utils/mewext"
 
 	"github.com/go-chi/chi/v5"
 	docs "github.com/infinitybotlist/eureka/doclib"
@@ -94,18 +93,6 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 		}
 	}
 
-	clusterId, err := mewext.GetClusterIDFromGuildID(guildId, state.MewldInstanceList.Map, int(state.MewldInstanceList.ShardCount))
-
-	if err != nil {
-		state.Logger.Error("Error getting cluster ID", zap.Error(err))
-		return uapi.HttpResponse{
-			Status: http.StatusInternalServerError,
-			Json: types.ApiError{
-				Message: "Error getting cluster ID:" + err.Error(),
-			},
-		}
-	}
-
 	baseJobImpl, ok := jobs.JobImplRegistry[name]
 
 	if !ok {
@@ -160,7 +147,7 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 		}
 	}
 
-	str, err := rpc.JobserverSpawnTask(d.Context, clusterId, &rpc_messages.JobserverSpawn{
+	str, err := rpc.JobserverSpawnTask(d.Context, &rpc_messages.JobserverSpawn{
 		Name:    name,
 		Data:    data,
 		Create:  true,

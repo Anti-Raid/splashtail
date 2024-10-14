@@ -15,7 +15,6 @@ import (
 	"go.api/state"
 	"go.api/types"
 	"go.std/splashcore"
-	"go.std/utils/mewext"
 	"go.uber.org/zap"
 
 	"github.com/infinitybotlist/eureka/uapi"
@@ -56,28 +55,8 @@ func HandlePermissionCheck(
 		}, false
 	}
 
-	clusterId, err := mewext.GetClusterIDFromGuildID(guildId, state.MewldInstanceList.Map, int(state.MewldInstanceList.ShardCount))
-
-	if err != nil {
-		state.Logger.Error("Error getting cluster ID", zap.Error(err))
-		return uapi.HttpResponse{
-			Status: http.StatusInternalServerError,
-			Json:   types.ApiError{Message: "Error getting cluster ID: " + err.Error()},
-			Headers: map[string]string{
-				"Retry-After": "10",
-			},
-		}, false
-	}
-
-	hresp, ok = rpc.ClusterCheck(clusterId)
-
-	if !ok {
-		return hresp, false
-	}
-
 	permRes, err := rpc.CheckCommandPermission(
 		state.Context,
-		clusterId,
 		guildId,
 		userId,
 		command,

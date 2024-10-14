@@ -91,8 +91,6 @@ type RpcCheckCommandOptions struct {
 	ChannelID                   string                                `json:"channel_id,omitempty"`
 }
 
-type ClusterModules = []silverpelt.CanonicalModule
-
 type CanonicalSettingsResult struct {
 	Ok *struct {
 		Fields []orderedmap.OrderedMap[string, any] `json:"fields"`

@@ -12,7 +12,6 @@ import (
 	"go.api/state"
 	"go.api/types"
 	"go.std/utils"
-	"go.std/utils/mewext"
 	"go.uber.org/zap"
 
 	docs "github.com/infinitybotlist/eureka/doclib"
@@ -211,65 +210,44 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 		}
 	}
 
-	// Now use animus magic to determine which servers have the bot in them
-	var clusterGuildReqs = map[int][]string{}
+	// Get list of guild ids
+	var guilds = []string{}
 
 	for _, guild := range dashguilds {
-		clusterId, err := mewext.GetClusterIDFromGuildID(guild.ID, state.MewldInstanceList.Map, int(state.MewldInstanceList.ShardCount))
-
-		if err != nil {
-			continue
-		}
-
-		if v, ok := clusterGuildReqs[clusterId]; ok {
-			clusterGuildReqs[clusterId] = append(v, guild.ID)
-		} else {
-			clusterGuildReqs[clusterId] = []string{guild.ID}
-		}
+		guilds = append(guilds, guild.ID)
 	}
 
 	// Now send the requests
 	var botInGuild []string
 	var unknownGuilds []string
-	for clusterId, guilds := range clusterGuildReqs {
-		// Check if the cluster is Up
-		for _, v := range state.MewldInstanceList.Instances {
-			if v.ClusterID == clusterId {
-				if !v.Active || v.CurrentlyKilling || len(v.ClusterHealth) == 0 {
-					unknownGuilds = append(unknownGuilds, guilds...)
-					continue
-				}
-			}
+
+	guildsExistResp, err := rpc.GuildsExist(d.Context, guilds)
+
+	if err != nil {
+		state.Logger.Error("Failed to check if bot is in guilds", zap.Error(err))
+		return uapi.HttpResponse{
+			Status: http.StatusInternalServerError,
+			Json: types.ApiError{
+				Message: "Failed to check if bot is in guilds: " + err.Error(),
+			},
 		}
+	}
 
-		guildsExistResp, err := rpc.GuildsExist(d.Context, clusterId, guilds)
+	guildsExist := *guildsExistResp
 
-		if err != nil {
-			state.Logger.Error("Failed to check if bot is in guilds", zap.Error(err))
-			return uapi.HttpResponse{
-				Status: http.StatusInternalServerError,
-				Json: types.ApiError{
-					Message: "Failed to check if bot is in guilds: " + err.Error(),
-				},
-			}
+	if len(guildsExist) != len(guilds) {
+		state.Logger.Error("Mismatch in guildsExist response", zap.Any("guildsExist", guildsExist), zap.Any("guilds", guilds))
+		return uapi.HttpResponse{
+			Status: http.StatusInternalServerError,
+			Json: types.ApiError{
+				Message: "Mismatch in guildsExist response",
+			},
 		}
+	}
 
-		guildsExist := *guildsExistResp
-
-		if len(guildsExist) != len(guilds) {
-			state.Logger.Error("Mismatch in guildsExist response", zap.Any("guildsExist", guildsExist), zap.Any("guilds", guilds))
-			return uapi.HttpResponse{
-				Status: http.StatusInternalServerError,
-				Json: types.ApiError{
-					Message: "Mismatch in guildsExist response",
-				},
-			}
-		}
-
-		for i, v := range guildsExist {
-			if v == 1 {
-				botInGuild = append(botInGuild, guilds[i])
-			}
+	for i, v := range guildsExist {
+		if v == 1 {
+			botInGuild = append(botInGuild, guilds[i])
 		}
 	}
 

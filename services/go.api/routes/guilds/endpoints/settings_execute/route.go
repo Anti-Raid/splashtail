@@ -13,7 +13,6 @@ import (
 	"go.api/rpc_messages"
 	"go.api/state"
 	"go.api/types"
-	"go.std/utils/mewext"
 	"go.uber.org/zap"
 )
 
@@ -63,27 +62,9 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 		return uapi.DefaultResponse(http.StatusBadRequest)
 	}
 
-	clusterId, err := mewext.GetClusterIDFromGuildID(guildId, state.MewldInstanceList.Map, int(state.MewldInstanceList.ShardCount))
-
-	if err != nil {
-		state.Logger.Error("Error getting cluster ID", zap.Error(err))
-		return uapi.HttpResponse{
-			Status: http.StatusInternalServerError,
-			Json: types.ApiError{
-				Message: "Error getting cluster ID: " + err.Error(),
-			},
-		}
-	}
-
-	hresp, ok := rpc.ClusterCheck(clusterId)
-
-	if !ok {
-		return hresp
-	}
-
 	var body types.SettingsExecute
 
-	hresp, ok = uapi.MarshalReqWithHeaders(r, &body, limit.Headers())
+	hresp, ok := uapi.MarshalReqWithHeaders(r, &body, limit.Headers())
 
 	if !ok {
 		return hresp
@@ -109,7 +90,6 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 
 	resp, err := rpc.SettingsOperation(
 		d.Context,
-		clusterId,
 		guildId,
 		d.Auth.ID,
 		&rpc_messages.SettingsOperationRequest{
@@ -161,7 +141,7 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 	return uapi.HttpResponse{
 		Status: http.StatusNotImplemented,
 		Json: types.ApiError{
-			Message: "Unknown response from animus magic [resp.Resp.SettingsOperation != nil, but unsupported res]",
+			Message: "Unknown response from bot [Res.Ok == nil, but could not find error]",
 		},
 	}
 }

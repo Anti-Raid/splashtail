@@ -8,7 +8,6 @@ replace go.jobs => ../../core/go.jobs
 
 require (
 	github.com/bwmarrin/discordgo v0.28.1
-	github.com/cheesycod/mewld v0.0.0-20241013044302-e2a74edb57da
 	github.com/cloudflare/tableflip v1.2.3
 	github.com/git-logs/client/webserver v0.0.0-20240809070647-860483f2c2cc
 	github.com/go-chi/chi/v5 v5.1.0
@@ -16,7 +15,6 @@ require (
 	github.com/infinitybotlist/eureka v1.11.0
 	github.com/jackc/pgx/v5 v5.7.1
 	github.com/redis/rueidis v1.0.47
-	github.com/sirupsen/logrus v1.9.3 // indirect
 	github.com/wk8/go-ordered-map/v2 v2.1.8
 	go.jobs v0.0.0-00010101000000-000000000000
 	go.std v0.0.0-00010101000000-000000000000
@@ -32,10 +30,8 @@ require (
 	github.com/buger/jsonparser v1.1.1 // indirect
 	github.com/bytedance/sonic v1.12.3 // indirect
 	github.com/bytedance/sonic/loader v0.2.0 // indirect
-	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/cloudwego/base64x v0.1.4 // indirect
 	github.com/cloudwego/iasm v0.2.0 // indirect
-	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/gabriel-vasile/mimetype v1.4.5 // indirect
 	github.com/getkin/kin-openapi v0.128.0 // indirect
@@ -65,7 +61,6 @@ require (
 	github.com/modern-go/reflect2 v1.0.2 // indirect
 	github.com/mohae/deepcopy v0.0.0-20170929034955-c48cc78d4826 // indirect
 	github.com/perimeterx/marshmallow v1.1.5 // indirect
-	github.com/redis/go-redis/v9 v9.6.1 // indirect
 	github.com/rs/xid v1.6.0 // indirect
 	github.com/twitchyliquid64/golang-asm v0.15.1 // indirect
 	github.com/vmihailenco/msgpack/v5 v5.4.1 // indirect

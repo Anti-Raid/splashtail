@@ -8,17 +8,13 @@ use (
 	// Core
 	./core/go.jobs
 	./core/go.std
-	./infra/Sandwich-Daemon
 
 	// Infra
+	./infra/Sandwich-Daemon
 	./infra/nirn-proxy
-	./infra/wafflepaw
 
 	// Services
 	./services/go.api
 	./services/go.jobserver
 	./services/go.localjobs
-	./services/rust.assetgen
-	./services/rust.bot
-	./services/rust.bot.nocluster
 )

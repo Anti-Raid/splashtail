@@ -11,14 +11,13 @@ import (
 // Calls the CheckCommandPermission method to check whether or not a command is runnable
 func JobserverSpawnTask(
 	ctx context.Context,
-	clusterId int,
 	spawnTask *rpc_messages.JobserverSpawn,
 ) (res *rpc_messages.JobserverSpawnResponse, err error) {
 	return RpcQuery[rpc_messages.JobserverSpawnResponse](
 		ctx,
 		state.IpcClient,
 		"POST",
-		fmt.Sprintf("%s/spawn", CalcJobserverAddr(clusterId)),
+		fmt.Sprintf("%s/spawn", CalcJobserverAddr()),
 		spawnTask,
 		true,
 	)

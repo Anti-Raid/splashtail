@@ -19,7 +19,6 @@ import (
 	"go.std/silverpelt"
 	"go.std/structparser/db"
 	"go.std/utils"
-	"go.std/utils/mewext"
 	"go.uber.org/zap"
 )
 
@@ -79,31 +78,10 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 		return uapi.DefaultResponse(http.StatusBadRequest)
 	}
 
-	clusterId, err := mewext.GetClusterIDFromGuildID(guildId, state.MewldInstanceList.Map, int(state.MewldInstanceList.ShardCount))
-
-	if err != nil {
-		state.Logger.Error("Error getting cluster ID", zap.Error(err))
-		return uapi.HttpResponse{
-			Status: http.StatusInternalServerError,
-			Json: types.ApiError{
-				Message: "Error getting cluster ID: " + err.Error(),
-			},
-			Headers: map[string]string{
-				"Retry-After": "10",
-			},
-		}
-	}
-
-	hresp, ok := rpc.ClusterCheck(clusterId)
-
-	if !ok {
-		return hresp
-	}
-
 	// Read body
 	var body types.PatchGuildModuleConfiguration
 
-	hresp, ok = uapi.MarshalReqWithHeaders(r, &body, limit.Headers())
+	hresp, ok := uapi.MarshalReqWithHeaders(r, &body, limit.Headers())
 
 	if !ok {
 		return hresp
@@ -118,8 +96,8 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 		}
 	}
 
-	// Find module from cluster
-	modules, err := rpc.ClusterModuleCache.GetClusterModules(d.Context, clusterId)
+	// Get module list
+	modules, err := rpc.Modules(d.Context)
 
 	if err != nil {
 		return uapi.HttpResponse{
@@ -275,7 +253,7 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 			updateCols = append(updateCols, "default_perms")
 			updateArgs = append(updateArgs, nil)
 		} else {
-			parsedValue, err := rpc.ParsePermissionChecks(d.Context, clusterId, guildId, value)
+			parsedValue, err := rpc.ParsePermissionChecks(d.Context, guildId, value)
 
 			if err != nil {
 				return uapi.HttpResponse{
@@ -396,7 +374,6 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 	if cacheFlushFlag&CACHE_FLUSH_MODULE_TOGGLE == CACHE_FLUSH_MODULE_TOGGLE && body.Disabled != nil {
 		_, err := rpc.DispatchTrustedWebEvent(
 			d.Context,
-			clusterId,
 			&rpc_messages.DispatchTrustedWebEventRequest{
 				EventName: "settings.clearModuleEnabledCache",
 				GuildID:   guildId,

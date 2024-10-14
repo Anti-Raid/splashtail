@@ -1,7 +1,6 @@
 use futures_util::StreamExt;
 use serenity::all::{ChannelId, CreateEmbed, EditMessage};
 use serenity::small_fixed_array::TruncatingInto;
-use serenity::utils::shard_id;
 use silverpelt::jobserver::{embed as embed_job, get_icon_of_state};
 use silverpelt::Context;
 use silverpelt::Error;
@@ -168,13 +167,12 @@ pub async fn backups_create(
     let data = ctx.data();
 
     // Make request to jobserver
-    let jobserver_cluster_id = shard_id(guild_id, data.props.shard_count().await?.try_into()?);
     let resp = data
         .reqwest
         .post(format!(
             "{}:{}/spawn",
             config::CONFIG.base_ports.jobserver_base_addr,
-            config::CONFIG.base_ports.jobserver + jobserver_cluster_id
+            config::CONFIG.base_ports.jobserver
         ))
         .json(&splashcore_rs::jobserver::Spawn {
             name: "guild_create_backup".to_string(),
@@ -600,14 +598,12 @@ pub async fn backups_list(ctx: Context<'_>) -> Result<(), Error> {
                 });
 
                 // Restore backup
-                let jobserver_cluster_id =
-                    shard_id(guild_id, data.props.shard_count().await?.try_into()?);
                 let resp = data
                     .reqwest
                     .post(format!(
                         "{}:{}/spawn",
                         config::CONFIG.base_ports.jobserver_base_addr,
-                        config::CONFIG.base_ports.jobserver + jobserver_cluster_id
+                        config::CONFIG.base_ports.jobserver
                     ))
                     .json(&splashcore_rs::jobserver::Spawn {
                         name: "guild_restore_backup".to_string(),
@@ -1193,13 +1189,12 @@ pub async fn backups_restore(
     });
 
     // Restore backup
-    let jobserver_cluster_id = shard_id(guild_id, data.props.shard_count().await?.try_into()?);
     let resp = data
         .reqwest
         .post(format!(
             "{}:{}/spawn",
             config::CONFIG.base_ports.jobserver_base_addr,
-            config::CONFIG.base_ports.jobserver + jobserver_cluster_id
+            config::CONFIG.base_ports.jobserver
         ))
         .json(&splashcore_rs::jobserver::Spawn {
             name: "guild_restore_backup".to_string(),

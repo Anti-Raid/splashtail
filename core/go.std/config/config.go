@@ -11,13 +11,7 @@ type Config struct {
 	Servers       Servers             `yaml:"servers" validate:"required"`
 	Meta          Meta                `yaml:"meta" validate:"required"`
 	ObjectStorage ObjectStorageConfig `yaml:"object_storage" validate:"required"`
-	Wafflepaw     Wafflepaw           `yaml:"wafflepaw" validate:"required"`
 	BasePorts     BasePorts           `yaml:"base_ports" validate:"required"`
-}
-
-type Wafflepaw struct {
-	StatusWebhook string `yaml:"status_webhook" default:"https://discord.com/api/webhooks/849331145862283275/8Z9J"`
-	RolePing      string `yaml:"role_ping" default:"<@&1226087657541730364> <@728871946456137770>"`
 }
 
 type DiscordAuth struct {

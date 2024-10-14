@@ -11,7 +11,6 @@ import (
 // Calls the SettingsOperation method to execute a settings operation (settings-operation/:guild_id/:user_id)
 func SettingsOperation(
 	ctx context.Context,
-	clusterId int,
 	guildID string,
 	userID string,
 	settingsOpReq *rpc_messages.SettingsOperationRequest,
@@ -20,7 +19,7 @@ func SettingsOperation(
 		ctx,
 		state.IpcClient,
 		"POST",
-		fmt.Sprintf("%s/settings-operation/%s/%s", CalcBotAddr(clusterId), guildID, userID),
+		fmt.Sprintf("%s/settings-operation/%s/%s", CalcBotAddr(), guildID, userID),
 		settingsOpReq,
 		true,
 	)

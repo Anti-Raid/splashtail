@@ -17,7 +17,7 @@ pub fn create_bot_rpc_server(
     ctx: &serenity::all::Context,
 ) -> axum::routing::IntoMakeService<Router> {
     let router = rust_rpc_server::create_blank_rpc_server()
-        // Returns the list of cluster modules [Modules]
+        // Returns the list of modules [Modules]
         .route("/modules", get(modules))
         // Given a list of guild ids, return a set of 0s and 1s indicating whether each guild exists in cache [GuildsExist]
         .route("/guilds-exist", get(guilds_exist))

@@ -8,7 +8,6 @@ import (
 	"go.api/rpc"
 	"go.api/state"
 	"go.api/types"
-	"go.std/utils/mewext"
 	"go.uber.org/zap"
 
 	docs "github.com/infinitybotlist/eureka/doclib"
@@ -61,28 +60,7 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 		return uapi.DefaultResponse(http.StatusBadRequest)
 	}
 
-	clusterId, err := mewext.GetClusterIDFromGuildID(guildId, state.MewldInstanceList.Map, int(state.MewldInstanceList.ShardCount))
-
-	if err != nil {
-		state.Logger.Error("Error getting cluster ID", zap.Error(err))
-		return uapi.HttpResponse{
-			Status: http.StatusInternalServerError,
-			Json: types.ApiError{
-				Message: "Error getting cluster ID: " + err.Error(),
-			},
-			Headers: map[string]string{
-				"Retry-After": "10",
-			},
-		}
-	}
-
-	hresp, ok := rpc.ClusterCheck(clusterId)
-
-	if !ok {
-		return hresp
-	}
-
-	bgui, err := rpc.BaseGuildUserInfo(d.Context, clusterId, guildId, d.Auth.ID)
+	bgui, err := rpc.BaseGuildUserInfo(d.Context, guildId, d.Auth.ID)
 
 	if err != nil {
 		return uapi.HttpResponse{

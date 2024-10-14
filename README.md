@@ -6,11 +6,11 @@ Splashtail is a monorepo containing all the code needed to run and setup Anti-Ra
 
 ## Current
 
-- **infra** => Core infrastructure for the bot such as `wafflepaw` (monitoring service) our fork of [`nirn-proxy`](https://github.com/anti-raid/nirn-proxy) and our fork of [`Sandwich-Daemon`](https://github.com/anti-raid/Sandwich-Daemon).
+- **infra** => Core infrastructure for the bot such as our fork of [`nirn-proxy`](https://github.com/anti-raid/nirn-proxy) and our fork of [`Sandwich-Daemon`](https://github.com/anti-raid/Sandwich-Daemon).
 - **core** => The core modules/code for AntiRaid, written in Serenity+Poise and Rust
 - **services** => The actual runnable services of AntiRaid.
 - **services/rust.assetgen** => This service provides automatic asset generation (used in builds) and initial startup testing (See ``make tests``)
-- **services/rust.bot** and **services/rust.bot.nocluster** => 2 variants of the AntiRaid bot depending on needs. ``rust.bot`` provides a production-ready implementation of AntiRaid with ``mewld`` clustering support. ``rust.bot.nocluster`` provides a variant without any special clustering support and is intended to be used as a base for other scaling technologies.
+- **services/rust.bot** => a production-ready configuration of the AntiRaid bot. ``rust.bot`` provides a production-ready implementation of AntiRaid.
 - **services/go.jobserver** => The jobserver is the component of AntiRaid responsible for handling jobs concurrently to ensure that Bot/API restarts/issues/outages does not affect ongoing backup creations/backup restores/member restores etc. The jobserver also allows code related to core functionality to be shared between the Bot (rust) and the API/website while also being isolated and easily restartable with resumable jobs allowing for greater reliability and scalability.
 - **services/go.api** (API) => The API interface for AntiRaid used for third-party integrations and the website
 - **website** => The website for AntiRaid 
@@ -21,22 +21,6 @@ Splashtail is a monorepo containing all the code needed to run and setup Anti-Ra
 - **simpleproxy2** => Simple WIP gateway proxy to allow AntiRaid to be freely restarted/run multiple gateway sessions without needing to worry about IDENTITY's or compatibility with serenity/discordgo like twilight-gateway-proxy forces us to be.
     - **Replaced by:** [`Sandwich-Daemon`](https://github.com/anti-raid/Sandwich-Daemon)
     - **Reason:** Sandwich-Daemon is a more stable and scalable long-term solution
-- **arcadia** => Staff management bot for AntiRaid.
-    - **Replaced by:** None
-    - **Reason:** Removed for now as the bot's internals are still rapidly changing
-    - **Forked from:** https://github.com/infinitybotlist/arcadia
-    - **Commit:** 5554dadbd98ed4bd2a9594ac7af8d9ff06108322
-    - **Permalink:** https://github.com/InfinityBotList/Arcadia/commit/5554dadbd98ed4bd2a9594ac7af8d9ff06108322
-    - **License:** AGPLv3
-    - **Affidavits:** Licensed under the AGPLv3
-- **arcadia-panel** => Internal staff website to manage Anti-Raid.
-    - **Replaced by:** None
-    - **Reason:** Removed for now as the bot's internals are still rapidly changing
-    - **Forked from:** https://github.com/infinitybotlist/panelv2
-    - **Commit:** 61c626e5bf383fc8b277e836a9fcb9f02250bcb6
-    - **Permalink:** https://github.com/InfinityBotList/panelv2/commit/61c626e5bf383fc8b277e836a9fcb9f02250bcb6
-    - **License:** AGPLv3
-    - **Affidavits:** Licensed under the AGPLv3
 
 # Integration
 
@@ -51,17 +35,7 @@ To increase our feature set and to ensure that we are synced with upstream, Anti
 
 # Communication
 
-Communication between the bot, jobserver, server and the ``mewld`` clusterer (used to run multiple clusters of the bot with each cluster responsible for a set of shards) happens in 3 primary ways.
-
-## Mewld IPC
-
-For ``mewld``-``bot`` communication, core state such as Cluster ID, Cluster Name, Shard List, Redis Channel etc. are given as command-line arguments and are parsed by the ``argparse`` module of botv2's IPC subsystem.
-
-The ``mredis.LauncherCmd`` type from ``mewld`` (``import mredis "github.com/cheesycod/mewld/redis"``) is the primary type used for communication. ``Args`` should be used to send arguments for the IPC command and ``Output`` should be used to send arbitrary data to IPC. Diagnostic payloads (used to check uptimes and gather the guild/user count per cluster) are a special case and use ``mredis.LauncherCmd`` for the request and a ``diagPayload`` (renamed to ``MewldDiagResponse`` in the bot).
-
-## RPC
-
-All communication between the webserver, the bot and the jobserver take place over RPC and standard HTTP. This allows for easy, yet high quality integration between services on Anti-Raid.
+All communication between the webserver, the bot and the jobserver take place over an internal RPC API and standard HTTP. This allows for easy, yet high quality integration between services on Anti-Raid.
 
 ## Serializing/Deserializing for external usage
 

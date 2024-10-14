@@ -11,7 +11,6 @@ import (
 // Calls the BaseGuildUserInfo method to get basic user + guild info (base-guild-user-info/:guild_id/:user_id)
 func BaseGuildUserInfo(
 	ctx context.Context,
-	clusterId int,
 	guildID string,
 	userID string,
 ) (res *rpc_messages.BaseGuildUserInfo, err error) {
@@ -19,7 +18,7 @@ func BaseGuildUserInfo(
 		ctx,
 		state.IpcClient,
 		"GET",
-		fmt.Sprintf("%s/base-guild-user-info/%s/%s", CalcBotAddr(clusterId), guildID, userID),
+		fmt.Sprintf("%s/base-guild-user-info/%s/%s", CalcBotAddr(), guildID, userID),
 		nil,
 		true,
 	)

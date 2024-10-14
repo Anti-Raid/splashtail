@@ -33,7 +33,7 @@ pub async fn check_modules_test() {
     let mut env_builder = env_logger::builder();
 
     let mut default_filter =
-        "serenity=error,rust_assetgen=info,bot_binutils=info,botox=info,templating=debug,sqlx=info"
+        "serenity=error,rust_assetgen=info,bot_binutils=info,botox=info,templating=debug,sqlx=error"
             .to_string();
 
     for module in modules() {
@@ -168,7 +168,6 @@ pub async fn check_modules_test() {
 
     let pg_pool = PgPoolOptions::new()
         .max_connections(POSTGRES_MAX_CONNECTIONS)
-        .acquire_timeout(std::time::Duration::from_secs(30))
         .connect(&config::CONFIG.meta.postgres_url)
         .await
         .expect("Could not initialize connection");
@@ -324,8 +323,8 @@ impl silverpelt::data::Props for Props {
         self
     }
 
-    fn name(&self) -> String {
-        "testBot".to_string()
+    fn extra_description(&self) -> String {
+        "Test Bot".to_string()
     }
 
     async fn shards(&self) -> Result<Vec<u16>, Error> {
@@ -334,22 +333,6 @@ impl silverpelt::data::Props for Props {
 
     async fn shard_count(&self) -> Result<u16, Error> {
         Ok(0)
-    }
-
-    fn cluster_id(&self) -> u16 {
-        0
-    }
-
-    fn cluster_name(&self) -> String {
-        "testBot".to_string()
-    }
-
-    fn cluster_count(&self) -> u16 {
-        1
-    }
-
-    fn available_clusters(&self) -> usize {
-        1
     }
 
     async fn total_guilds(&self) -> Result<u64, Error> {

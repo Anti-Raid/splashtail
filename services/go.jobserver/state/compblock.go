@@ -8,5 +8,4 @@ import (
 	_ "go.std/objectstorage"
 	_ "go.std/structparser/db"
 	_ "go.std/utils"
-	_ "go.std/utils/mewext"
 )
