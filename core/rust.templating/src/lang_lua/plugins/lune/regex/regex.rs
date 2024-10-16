@@ -1,3 +1,6 @@
+/// From https://github.com/lune-org/lune/blob/main/crates/lune-std-regex/src/regex.rs
+///
+/// SPDX-License-Identifier: MPL-2.0
 use std::sync::Arc;
 
 use mlua::prelude::*;

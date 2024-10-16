@@ -6,6 +6,7 @@ At AntiRaid, we believe that bot developers should be able to access the best to
 
 - [**@lune/datetime**](https://lune-org.github.io/docs/api-reference/datetime)
 - [**@lune/regex**](https://lune-org.github.io/docs/api-reference/regex)
+- [**@lune/serde**](https://lune-org.github.io/docs/api-reference/serde)
 
 ## Legal Disclaimer
 

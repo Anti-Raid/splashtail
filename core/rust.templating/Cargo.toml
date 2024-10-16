@@ -14,10 +14,36 @@ sqlx = { version = "0.8", features = [ "runtime-tokio-rustls", "postgres", "chro
 rand = "0.8"
 typetag = "0.2"
 chrono = { version = "0.4", features = ["serde"]}
+
+# @lune/datetime
 chrono_lc = "0.1"
 thiserror = "1.0"
-regex = "1"
 self_cell = "1"
+
+# @lune/regex
+regex = "1"
+
+# @lune/serde
+async-compression = { version = "0.4", features = [
+    "tokio",
+    "brotli",
+    "deflate",
+    "gzip",
+    "zlib",
+] }
+bstr = "1.9"
+lz4 = "1.26"
+serde_yaml = "0.9"
+toml = { version = "0.8", features = ["preserve_order"] }
+digest = "0.10.7"
+hmac = "0.12.1"
+md-5 = "0.10.6"
+sha1 = "0.10.6"
+sha2 = "0.10.8"
+sha3 = "0.10.8"
+# This feature MIGHT break due to the unstable nature of the digest crate.
+# Check before updating it.
+blake3 = { version = "=1.5.0", features = ["traits-preview"] }
 
 # Anti-Raid specific
 permissions = { path = "../rust.permissions" }

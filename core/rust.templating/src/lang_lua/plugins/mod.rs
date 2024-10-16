@@ -17,6 +17,7 @@ pub static PLUGINS: LazyLock<indexmap::IndexMap<String, ModuleFn>> = LazyLock::n
         "@antiraid/permissions".to_string() => permissions::init_plugin as ModuleFn,
         "@lune/datetime".to_string() => lune::datetime::init_plugin as ModuleFn,
         "@lune/regex".to_string() => lune::regex::init_plugin as ModuleFn,
+        "@lune/serde".to_string() => lune::serde::init_plugin as ModuleFn,
     }
 });
 
