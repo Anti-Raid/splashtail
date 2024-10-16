@@ -101,3 +101,19 @@ pub async fn execute<C: Context + serde::Serialize, RenderResult: serde::de::Des
         }
     }
 }
+
+#[cfg(feature = "lua")]
+pub mod luau_utils {
+    pub fn wrap_main_in_entrypoint(template: &str) -> String {
+        format!(
+            r#"@pragma {{"lang":"lua"}}
+function (args) 
+    if 1==1 then
+        {}
+        return _main(args)
+    end
+end"#,
+            template
+        )
+    }
+}

@@ -130,6 +130,9 @@
       ],
       "is_full_available": [
         "bool"
+      ],
+      "unavailable": [
+        "bool"
       ]
     },
     "GuildEmojisUpdate": {
@@ -192,7 +195,7 @@
         "Option",
         "String"
       ],
-      "old": [
+      "old_if_available": [
         "Option",
         "Member"
       ],
@@ -292,10 +295,10 @@
       ]
     },
     "GuildUpdate": {
-      "new": [
+      "new_data": [
         "PartialGuild"
       ],
-      "old": [
+      "old_data_if_available": [
         "Option",
         "Guild"
       ]
@@ -407,7 +410,7 @@
         "Option",
         "GuildId"
       ],
-      "message_ids": [
+      "multiple_deleted_messages_ids": [
         "Vec",
         "MessageId"
       ]
@@ -535,7 +538,7 @@
         "Option",
         "Message"
       ],
-      "old": [
+      "old_if_available": [
         "Option",
         "Message"
       ],

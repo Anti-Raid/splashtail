@@ -14,14 +14,16 @@ fn load_embedded_event_template(event: &str) -> Result<String, silverpelt::Error
         None => {
             // Load default.art
             DEFAULT_TEMPLATES
-                .get_file("default.art")
+                .get_file("default.luau")
                 .ok_or("Failed to load default template")?
         }
     };
 
     let template_str = template.contents_utf8().ok_or("Failed to load template")?;
 
-    Ok(template_str.to_string())
+    Ok(templating::luau_utils::wrap_main_in_entrypoint(
+        template_str,
+    ))
 }
 
 #[inline]

@@ -1,5 +1,4 @@
-@pragma {"lang":"lua"}
-function (args) 
+function _main(args) 
     local interop = require "@antiraid/interop"
 
     local captcha_config = {}

@@ -17,26 +17,26 @@ pub const MAX_VM_THREAD_STACK_SIZE: usize = 1024 * 1024 * 4; // 4MB maximum memo
 pub const MAX_TEMPLATE_LIFETIME: std::time::Duration = std::time::Duration::from_secs(60 * 10); // 10 minutes maximum lifetime
 pub const MAX_TEMPLATES_EXECUTION_TIME: std::time::Duration = std::time::Duration::from_secs(5); // 5 seconds maximum execution time
 
-pub struct LoadLuaTemplate {
-    pub template: String,
-    pub args: Option<serde_json::Value>,
-    pub callback: tokio::sync::oneshot::Sender<Result<serde_json::Value, LuaError>>,
+struct LoadLuaTemplate {
+    template: String,
+    args: Option<serde_json::Value>,
+    callback: tokio::sync::oneshot::Sender<Result<serde_json::Value, LuaError>>,
 }
 
 #[derive(Clone)]
-pub struct ArLua {
+struct ArLua {
     /// The Lua VM. The VM is wrapped in an async aware Mutex to ensure it is safe to use across await points
     #[allow(dead_code)]
-    pub vm: Lua,
+    vm: Lua,
     /// The last execution time of the Lua VM
-    pub last_execution_time: Arc<atomicinstant::AtomicInstant>,
+    last_execution_time: Arc<atomicinstant::AtomicInstant>,
     /// The thread handle for the Lua VM
-    pub thread_handle: (
+    thread_handle: (
         std::thread::Thread,
         tokio::sync::mpsc::UnboundedSender<LoadLuaTemplate>,
     ),
     /// Is the VM broken/needs to be remade
-    pub broken: Arc<std::sync::atomic::AtomicBool>,
+    broken: Arc<std::sync::atomic::AtomicBool>,
 }
 
 /// Create a new Lua VM complete with sandboxing and modules pre-loaded

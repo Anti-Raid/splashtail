@@ -55,6 +55,7 @@
   "GuildDelete": {
     "guild": "Option<Guild>",
     "is_full_available": "bool",
+    "unavailable": "bool",
     "guild_id": "GuildId"
   },
   "GuildEmojisUpdate": {
@@ -73,7 +74,7 @@
     "member_data_if_available": "Option<Member>"
   },
   "GuildMemberUpdate": {
-    "old": "Option<Member>",
+    "old_if_available": "Option<Member>",
     "new": "Option<Member>",
     "guild_id": "GuildId",
     "nick": "Option<FixedString<u8>>",
@@ -108,8 +109,8 @@
     "stickers": "Vec<Sticker>"
   },
   "GuildUpdate": {
-    "old": "Option<Guild>",
-    "new": "PartialGuild"
+    "old_data_if_available": "Option<Guild>",
+    "new_data": "PartialGuild"
   },
   "InviteCreate": {
     "channel_id": "ChannelId",
@@ -140,11 +141,11 @@
   },
   "MessageDeleteBulk": {
     "channel_id": "ChannelId",
-    "message_ids": "Vec<MessageId>",
+    "multiple_deleted_messages_ids": "Vec<MessageId>",
     "guild_id": "Option<GuildId>"
   },
   "MessageUpdate": {
-    "old": "Option<Message>",
+    "old_if_available": "Option<Message>",
     "new": "Option<Message>",
     "id": "MessageId",
     "channel_id": "ChannelId",

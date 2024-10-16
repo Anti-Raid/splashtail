@@ -112,6 +112,9 @@
     "is_full_available": [
       "bool"
     ],
+    "unavailable": [
+      "bool"
+    ],
     "guild_id": [
       "GuildId"
     ]
@@ -148,7 +151,7 @@
     ]
   },
   "GuildMemberUpdate": {
-    "old": [
+    "old_if_available": [
       "Option",
       "Member"
     ],
@@ -239,11 +242,11 @@
     ]
   },
   "GuildUpdate": {
-    "old": [
+    "old_data_if_available": [
       "Option",
       "Guild"
     ],
-    "new": [
+    "new_data": [
       "PartialGuild"
     ]
   },
@@ -323,7 +326,7 @@
     "channel_id": [
       "ChannelId"
     ],
-    "message_ids": [
+    "multiple_deleted_messages_ids": [
       "Vec",
       "MessageId"
     ],
@@ -333,7 +336,7 @@
     ]
   },
   "MessageUpdate": {
-    "old": [
+    "old_if_available": [
       "Option",
       "Message"
     ],

@@ -27,7 +27,7 @@ pub async fn captcha_test(ctx: Context<'_>, use_sample: Option<bool>) -> Result<
                 }
             }
         } else {
-            include_str!("templates/sample.art").to_string()
+            templating::luau_utils::wrap_main_in_entrypoint(include_str!("templates/sample.luau"))
         }
     };
 

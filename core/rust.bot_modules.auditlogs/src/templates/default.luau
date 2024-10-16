@@ -1,5 +1,4 @@
-@pragma {"lang":"lua"}
-function (args) 
+function _main(args) 
     local message_plugin = require "@antiraid/message"
 
     -- Make the embed
