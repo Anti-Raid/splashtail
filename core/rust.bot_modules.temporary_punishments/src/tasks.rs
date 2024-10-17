@@ -4,6 +4,17 @@ const MAX_CONCURRENT: usize = 7;
 enum EventError {
     Serenity(serenity::Error),
     Generic(String),
+    BotNotInGuild(sqlx::types::Uuid),
+}
+
+impl std::fmt::Display for EventError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            EventError::Serenity(e) => write!(f, "Serenity error: {}", e),
+            EventError::Generic(e) => write!(f, "Generic error: {}", e),
+            EventError::BotNotInGuild(id) => write!(f, "Bot not in guild: {}", id),
+        }
+    }
 }
 
 pub async fn temporary_punishment_task(
@@ -48,6 +59,28 @@ pub async fn temporary_punishment_task(
                     Ok(Err(EventError::Serenity(e))) => {
                         log::error!("Error while reverting punishment [discord]: {}", e)
                     }
+                    Ok(Err(EventError::BotNotInGuild(id))) => {
+                        // Void the sting
+                        match sqlx::query!(
+                            "UPDATE punishments SET duration = NULL, handle_log = $1 WHERE id = $2",
+                            serde_json::json!({
+                                "error": "Bot not in guild",
+                            }),
+                            id
+                        )
+                        .execute(pool)
+                        .await
+                        .map_err(|e| EventError::Generic(e.to_string()))
+                        {
+                            Err(e) => {
+                                log::error!(
+                                    "Error while reverting punishment [bot not in guild]: {}",
+                                    e
+                                );
+                            }
+                            _ => {}
+                        };
+                    }
                     Ok(Err(EventError::Generic(e))) => {
                         log::error!("Error while reverting punishment [generic]: {}", e)
                     }
@@ -78,8 +111,7 @@ pub async fn temporary_punishment_task(
             {
                 Some(user) => user,
                 None => {
-                    // Bot is not in the guild, update the sting entry
-                    return Err(EventError::Generic("Bot is not in the guild".into()));
+                    return Err(EventError::BotNotInGuild(punishment.id).into());
                 }
             };
 
@@ -138,6 +170,24 @@ pub async fn temporary_punishment_task(
             Ok(Ok(_)) => {}
             Ok(Err(EventError::Serenity(e))) => {
                 log::error!("Error while running unban [discord]: {}", e)
+            }
+            Ok(Err(EventError::BotNotInGuild(id))) => {
+                match sqlx::query!(
+                    "UPDATE punishments SET duration = NULL, handle_log = $1 WHERE id = $2",
+                    serde_json::json!({
+                        "error": "Bot not in guild",
+                    }),
+                    id
+                )
+                .execute(pool)
+                .await
+                .map_err(|e| EventError::Generic(e.to_string()))
+                {
+                    Err(e) => {
+                        log::error!("Error while running unban [bot not in guild]: {}", e);
+                    }
+                    _ => {}
+                };
             }
             Ok(Err(EventError::Generic(e))) => {
                 /*sqlx::query!(
