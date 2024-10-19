@@ -1,4 +1,58 @@
+use governor::{clock::QuantaClock, DefaultKeyedRateLimiter};
+use std::num::NonZeroU32;
 use std::sync::Arc;
+use std::time::Duration;
+
+#[allow(dead_code)]
+pub struct LuaActionsRatelimit {
+    pub clock: QuantaClock,
+    pub global: Vec<DefaultKeyedRateLimiter<()>>,
+    pub per_bucket: scc::HashMap<String, Vec<DefaultKeyedRateLimiter<()>>>,
+}
+
+impl LuaActionsRatelimit {
+    ///
+    /// Default global limit: 10 actions per 60 seconds
+    /// Bucket limits:
+    /// -> ban: [5 per 30 seconds, 10 per 75 seconds]
+    pub fn new() -> Result<Self, crate::Error> {
+        fn create_quota(
+            limit_per: NonZeroU32,
+            limit_time: Duration,
+        ) -> Result<governor::Quota, crate::Error> {
+            let quota = governor::Quota::with_period(limit_time)
+                .ok_or("Failed to create quota")?
+                .allow_burst(limit_per);
+
+            Ok(quota)
+        }
+
+        // Create the global limit
+        let global_quota = create_quota(NonZeroU32::new(10).unwrap(), Duration::from_secs(60))?;
+        let global1 = DefaultKeyedRateLimiter::keyed(global_quota);
+        let global = vec![global1];
+
+        // Create the per-bucket limits
+        let per_bucket = scc::HashMap::new();
+
+        let ban_quota1 = create_quota(NonZeroU32::new(5).unwrap(), Duration::from_secs(30))?;
+        let ban_lim1 = DefaultKeyedRateLimiter::keyed(ban_quota1);
+        let ban_quota2 = create_quota(NonZeroU32::new(10).unwrap(), Duration::from_secs(75))?;
+        let ban_lim2 = DefaultKeyedRateLimiter::keyed(ban_quota2);
+        per_bucket
+            .insert("ban".to_string(), vec![ban_lim1, ban_lim2])
+            .map_err(|_| "Failed to insert ban bucket")?;
+
+        // Create the clock
+        let clock = QuantaClock::default();
+
+        Ok(LuaActionsRatelimit {
+            global,
+            per_bucket,
+            clock,
+        })
+    }
+}
 
 #[allow(dead_code)]
 pub struct LuaKVConstraints {
@@ -30,12 +84,16 @@ pub struct TemplateData {
 pub struct LuaUserData {
     pub pool: sqlx::PgPool,
     pub guild_id: serenity::all::GuildId,
+    pub cache_http: botox::cache::CacheHttpImpl,
     pub kv_constraints: LuaKVConstraints,
 
     /// Stores a list of tokens to template data
     ///
     /// Used by actions and other things which use pragma
     pub per_template: scc::HashMap<String, Arc<TemplateData>>,
+
+    /// Stores the lua actions ratelimiters
+    pub ratelimits: Arc<LuaActionsRatelimit>,
 }
 
 pub fn add_template(

@@ -315,6 +315,7 @@ async fn dispatch_audit_log(
             guild_id,
             &template,
             data.pool.clone(),
+            botox::cache::CacheHttpImpl::from_ctx(ctx),
             AuditLogContext {
                 event_titlename: event_titlename.to_string(),
                 event_name: event_name.to_string(),

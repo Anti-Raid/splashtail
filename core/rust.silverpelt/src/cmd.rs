@@ -430,6 +430,7 @@ pub async fn check_command(
                 guild_id,
                 template,
                 pool.clone(),
+                cache_http.clone(),
                 PermissionTemplateContext {
                     member_native_permissions: member_perms,
                     member_kittycat_permissions: kittycat_perms,

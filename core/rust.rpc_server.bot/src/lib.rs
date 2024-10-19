@@ -222,19 +222,27 @@ async fn check_command_permission(
 
 /// Verify/parse a set of permission checks returning the parsed checks [ParsePermissionChecks]
 async fn parse_permission_checks(
-    State(AppData { data, .. }): State<AppData>,
+    State(AppData {
+        data,
+        serenity_context,
+        ..
+    }): State<AppData>,
     Path(guild_id): Path<serenity::all::GuildId>,
     Json(checks): Json<permissions::types::PermissionChecks>,
 ) -> Response<permissions::types::PermissionChecks> {
-    let parsed_checks =
-        silverpelt::validators::parse_permission_checks(guild_id, data.pool.clone(), &checks)
-            .await
-            .map_err(|e| {
-                (
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                    format!("Failed to parse permission checks: {:#?}", e),
-                )
-            })?;
+    let parsed_checks = silverpelt::validators::parse_permission_checks(
+        guild_id,
+        data.pool.clone(),
+        botox::cache::CacheHttpImpl::from_ctx(&serenity_context),
+        &checks,
+    )
+    .await
+    .map_err(|e| {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("Failed to parse permission checks: {:#?}", e),
+        )
+    })?;
 
     Ok(Json(parsed_checks))
 }

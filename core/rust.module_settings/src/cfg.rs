@@ -413,8 +413,13 @@ async fn _validate_value(
                                 InnerColumnTypeStringKind::Token { .. } => v, // Handled in parse_value
                                 InnerColumnTypeStringKind::Textarea => v,
                                 InnerColumnTypeStringKind::Template { .. } => {
-                                    let compiled =
-                                        templating::parse(guild_id, s, data.pool.clone()).await;
+                                    let compiled = templating::parse(
+                                        guild_id,
+                                        s,
+                                        data.pool.clone(),
+                                        data.cache_http.clone(),
+                                    )
+                                    .await;
 
                                     if let Err(err) = compiled {
                                         return Err(SettingsError::SchemaCheckValidationError {

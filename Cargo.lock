@@ -537,6 +537,7 @@ name = "bot_modules_auditlogs"
 version = "0.1.0"
 dependencies = [
  "async-trait",
+ "botox",
  "futures-util",
  "gwevent",
  "include_dir",
@@ -3872,6 +3873,7 @@ version = "6.0.0"
 dependencies = [
  "axum",
  "bitflags 2.6.0",
+ "botox",
  "indexmap",
  "kittycat",
  "module_settings",
@@ -4878,6 +4880,7 @@ dependencies = [
  "config",
  "digest",
  "futures-util",
+ "governor",
  "gwevent",
  "hmac",
  "indexmap",

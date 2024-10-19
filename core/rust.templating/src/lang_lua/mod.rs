@@ -45,7 +45,11 @@ struct ArLua {
 /// Note that callers should instead call the render_template functions
 ///
 /// As such, this function is private and should not be used outside of this module
-async fn create_lua_vm(guild_id: GuildId, pool: sqlx::PgPool) -> LuaResult<ArLua> {
+async fn create_lua_vm(
+    guild_id: GuildId,
+    pool: sqlx::PgPool,
+    cache_http: botox::cache::CacheHttpImpl,
+) -> LuaResult<ArLua> {
     let lua = Lua::new_with(
         LuaStdLib::ALL_SAFE,
         LuaOptions::new().catch_rust_panics(true),
@@ -109,8 +113,12 @@ async fn create_lua_vm(guild_id: GuildId, pool: sqlx::PgPool) -> LuaResult<ArLua
     let user_data = state::LuaUserData {
         pool,
         guild_id,
+        cache_http,
         kv_constraints: state::LuaKVConstraints::default(),
         per_template: scc::HashMap::new(),
+        ratelimits: Arc::new(
+            state::LuaActionsRatelimit::new().map_err(|e| LuaError::external(e.to_string()))?,
+        ),
     };
 
     lua.set_app_data(user_data);
@@ -259,18 +267,22 @@ async fn create_lua_vm(guild_id: GuildId, pool: sqlx::PgPool) -> LuaResult<ArLua
 /// Get a Lua VM for a guild
 ///
 /// This function will either return an existing Lua VM for the guild or create a new one if it does not exist
-async fn get_lua_vm(guild_id: GuildId, pool: sqlx::PgPool) -> LuaResult<ArLua> {
+async fn get_lua_vm(
+    guild_id: GuildId,
+    pool: sqlx::PgPool,
+    cache_http: botox::cache::CacheHttpImpl,
+) -> LuaResult<ArLua> {
     match VMS.get(&guild_id).await {
         Some(vm) => {
             if vm.broken.load(std::sync::atomic::Ordering::Acquire) {
-                let vm = create_lua_vm(guild_id, pool).await?;
+                let vm = create_lua_vm(guild_id, pool, cache_http).await?;
                 VMS.insert(guild_id, vm.clone()).await;
                 return Ok(vm);
             }
             Ok(vm.clone())
         }
         None => {
-            let vm = create_lua_vm(guild_id, pool).await?;
+            let vm = create_lua_vm(guild_id, pool, cache_http).await?;
             VMS.insert(guild_id, vm.clone()).await;
             Ok(vm)
         }
@@ -279,12 +291,13 @@ async fn get_lua_vm(guild_id: GuildId, pool: sqlx::PgPool) -> LuaResult<ArLua> {
 
 /// Compiles a template
 pub async fn parse(
+    cache_http: botox::cache::CacheHttpImpl,
     guild_id: serenity::all::GuildId,
     pragma: crate::TemplatePragma,
     template: &str,
     pool: sqlx::PgPool,
 ) -> LuaResult<()> {
-    let lua = get_lua_vm(guild_id, pool).await?;
+    let lua = get_lua_vm(guild_id, pool, cache_http).await?;
 
     // Update last execution time.
     lua.last_execution_time.store(
@@ -316,13 +329,14 @@ pub async fn parse(
 
 /// Render a template
 pub async fn render_template<Request: serde::Serialize, Response: serde::de::DeserializeOwned>(
+    cache_http: botox::cache::CacheHttpImpl,
     guild_id: GuildId,
     pragma: crate::TemplatePragma,
     template: &str,
     pool: sqlx::PgPool,
     args: Request,
 ) -> LuaResult<Response> {
-    let lua = get_lua_vm(guild_id, pool).await?;
+    let lua = get_lua_vm(guild_id, pool, cache_http).await?;
 
     let args = serde_json::to_value(&args).map_err(|e| LuaError::external(e.to_string()))?;
 

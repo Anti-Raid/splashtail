@@ -25,6 +25,11 @@ git = "https://github.com/Anti-Raid/serenity"
 branch = "next"
 features = ["model", "http", "cache", "rustls_backend", "unstable"]
 
+[dependencies.botox]
+git = "https://github.com/Anti-Raid/botox"
+branch = "main"
+
 [dependencies.kittycat]
 git = "https://github.com/infinitybotlist/kittycat"
 branch = "main"
+

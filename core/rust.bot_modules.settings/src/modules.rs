@@ -681,6 +681,7 @@ pub async fn modules_modperms(
                         let parsed = silverpelt::validators::parse_permission_checks(
                             guild_id,
                             data.pool.clone(),
+                            cache_http.clone(),
                             &perms,
                         )
                         .await?;
