@@ -3,8 +3,8 @@ use module_settings::{
     state::State,
     types::{
         settings_wrap, Column, ColumnSuggestion, ColumnType, ConfigOption, HookContext,
-        InnerColumnType, InnerColumnTypeStringKind, NoOpPostAction, NoOpValidator,
-        OperationSpecific, OperationType, PostAction, SettingsError,
+        InnerColumnType, InnerColumnTypeStringKind, NoOpValidator, OperationSpecific,
+        OperationType, PostAction, SettingsError,
     },
 };
 use std::sync::LazyLock;
@@ -194,68 +194,3 @@ impl PostAction for InspectorFakeBotsPostAction {
         Ok(())
     }
 }
-
-pub static LAST_TASK_EXPIRY: LazyLock<ConfigOption> = LazyLock::new(|| ConfigOption {
-    id: "sudo__lte",
-    name: "Last Task Expiry",
-    description: "Internal table used to schedule long-running tasks (1 week etc.)",
-    table: "last_task_expiry",
-    common_filters: indexmap::indexmap! {},
-    default_common_filters: indexmap::indexmap! {},
-    primary_key: "id",
-    max_entries: None,
-    max_return: 15,
-    data_store: settings_wrap(PostgresDataStore {}),
-    columns: settings_wrap(vec![
-        Column {
-            id: "id",
-            name: "ID",
-            description: "The unique identifier for the guild role.",
-            column_type: ColumnType::new_scalar(InnerColumnType::Uuid {}),
-            nullable: false,
-            default: None,
-            unique: true,
-            suggestions: ColumnSuggestion::None {},
-            ignored_for: vec![OperationType::Create],
-            secret: false,
-        },
-        Column {
-            id: "task",
-            name: "Task",
-            description: "The name of the task",
-            column_type: ColumnType::new_scalar(InnerColumnType::String {
-                min_length: None,
-                max_length: Some(64),
-                allowed_values: vec![],
-                kind: InnerColumnTypeStringKind::Normal,
-            }),
-            nullable: false,
-            default: None,
-            unique: false,
-            suggestions: ColumnSuggestion::None {},
-            ignored_for: vec![],
-            secret: false,
-        },
-        module_settings::common_columns::created_at(),
-    ]),
-    title_template: "{id} - {task} - {created_at}",
-    operations: indexmap::indexmap! {
-        OperationType::View => OperationSpecific {
-            columns_to_set: indexmap::indexmap! {
-            },
-        },
-        OperationType::Create => OperationSpecific {
-            columns_to_set: indexmap::indexmap! {
-                "created_at" => "{__now}",
-            },
-        },
-        OperationType::Update => OperationSpecific {
-            columns_to_set: indexmap::indexmap! {},
-        },
-        OperationType::Delete => OperationSpecific {
-            columns_to_set: indexmap::indexmap! {},
-        },
-    },
-    post_action: settings_wrap(NoOpPostAction {}),
-    validator: settings_wrap(NoOpValidator {}),
-});

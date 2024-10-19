@@ -42,9 +42,6 @@ impl silverpelt::module::Module for Module {
     }
 
     fn config_options(&self) -> Vec<module_settings::types::ConfigOption> {
-        vec![
-            (*settings::INSPECTOR_FAKE_BOTS).clone(),
-            (*settings::LAST_TASK_EXPIRY).clone(),
-        ]
+        vec![(*settings::INSPECTOR_FAKE_BOTS).clone()]
     }
 }

@@ -35,3 +35,7 @@ I can understand now why the game modding industry uses lua, it’s basically th
 Lua is legit the only sane scripting language on this entire list
 
 [rhai is not only slower than lua, its sandboxing (i said it above here too in a vent i think) requires actual pointer arithmetic that isnt thread safe, its also a custom lang no one knows while lua is well known in the game community. Luau is used in Roblox games so it caters to Discords target market as well]
+
+# Template Tokens
+
+All lua templates include a special template token in addition to the template arguments. Modules requiring more privileged levels of access (or otherwise require the template state) should require this token and use it to access the required template state.

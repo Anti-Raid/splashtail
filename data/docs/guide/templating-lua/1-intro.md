@@ -99,3 +99,15 @@ return { __error = "You have reached the maximum number of tries in this 5 minut
 -- Runtime Error
 error("Could not parse user ID for some reason")
 ```
+
+## Template Tokens
+
+All Lua templates include a special template token in addition to the template arguments. Modules requiring more privileged levels of access will require this token as an argument.
+
+## Example
+
+```lua
+function(args, token)
+    print(token)
+end
+```

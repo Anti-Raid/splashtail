@@ -456,6 +456,21 @@ impl PostgresDataStoreImpl {
                 typ: "internal".to_string(),
             })
     }
+
+    fn filter_fields(
+        fields: &[String],
+        valid_columns: &std::collections::HashSet<String>,
+    ) -> Vec<String> {
+        let mut new_fields = Vec::new();
+
+        for f in fields {
+            if valid_columns.contains(f) {
+                new_fields.push(f.to_string());
+            }
+        }
+
+        new_fields
+    }
 }
 
 #[async_trait]
@@ -525,7 +540,7 @@ impl DataStore for PostgresDataStoreImpl {
 
         let sql_stmt = format!(
             "SELECT {} FROM {} WHERE {}",
-            fields.join(", "),
+            PostgresDataStoreImpl::filter_fields(fields, &self.valid_columns).join(", "),
             self.setting_table,
             sql_utils::create_where_clause(&self.valid_columns, &filters, 0).map_err(|e| {
                 SettingsError::Generic {

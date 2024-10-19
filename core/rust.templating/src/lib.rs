@@ -73,7 +73,7 @@ pub async fn parse(
     match pragma.lang {
         #[cfg(feature = "lua")]
         TemplateLanguage::Lua => {
-            lang_lua::parse(guild_id, template, pool).await?;
+            lang_lua::parse(guild_id, pragma, template, pool).await?;
         }
     }
 
@@ -95,7 +95,7 @@ pub async fn execute<C: Context + serde::Serialize, RenderResult: serde::de::Des
     match pragma.lang {
         #[cfg(feature = "lua")]
         TemplateLanguage::Lua => {
-            let v = lang_lua::render_template(guild_id, template, pool, ctx).await?;
+            let v = lang_lua::render_template(guild_id, pragma, template, pool, ctx).await?;
 
             Ok(v)
         }

@@ -1,5 +1,5 @@
 mod plugins;
-mod state;
+pub(crate) mod state;
 
 use crate::atomicinstant;
 use mlua::prelude::*;
@@ -19,6 +19,7 @@ pub const MAX_TEMPLATES_EXECUTION_TIME: std::time::Duration = std::time::Duratio
 
 struct LoadLuaTemplate {
     template: String,
+    pragma: crate::TemplatePragma,
     args: Option<serde_json::Value>,
     callback: tokio::sync::oneshot::Sender<Result<serde_json::Value, LuaError>>,
 }
@@ -109,6 +110,7 @@ async fn create_lua_vm(guild_id: GuildId, pool: sqlx::PgPool) -> LuaResult<ArLua
         pool,
         guild_id,
         kv_constraints: state::LuaKVConstraints::default(),
+        per_template: scc::HashMap::new(),
     };
 
     lua.set_app_data(user_data);
@@ -156,10 +158,19 @@ async fn create_lua_vm(guild_id: GuildId, pool: sqlx::PgPool) -> LuaResult<ArLua
                     while let Some(template) = rx.recv().await {
                         let args = template.args;
                         let callback = template.callback;
+                        let pragma = template.pragma;
                         let template = template.template;
                         let lua_ref = lua_ref.clone();
 
                         rt.spawn(async move {
+                            let token = match state::add_template(&lua_ref, pragma) {
+                                Ok(token) => token,
+                                Err(e) => {
+                                    let _ = callback.send(Err(LuaError::external(e.to_string())));
+                                    return;
+                                }
+                            };
+
                             let f: LuaFunction = match lua_ref
                                 .load(&template)
                                 .set_name("script")
@@ -175,6 +186,9 @@ async fn create_lua_vm(guild_id: GuildId, pool: sqlx::PgPool) -> LuaResult<ArLua
                                 Ok(f) => f,
                                 Err(e) => {
                                     let _ = callback.send(Err(e));
+                                    if let Err(e) = state::remove_template(&lua_ref, &token) {
+                                        log::error!("Could not remove template: {}", e);
+                                    };
                                     return;
                                 }
                             };
@@ -184,25 +198,38 @@ async fn create_lua_vm(guild_id: GuildId, pool: sqlx::PgPool) -> LuaResult<ArLua
                                     let args = match lua_ref.to_value(&args) {
                                         Ok(args) => args,
                                         Err(e) => {
-                                            let _ = callback
-                                                .send(Err(LuaError::external(e.to_string())));
+                                            let _ = callback.send(Err(LuaError::external(e)));
+                                            if let Err(e) = state::remove_template(&lua_ref, &token)
+                                            {
+                                                log::error!("Could not remove template: {}", e);
+                                            };
                                             return;
                                         }
                                     };
 
-                                    let v: LuaValue = match f.call_async(args).await {
-                                        Ok(v) => v,
-                                        Err(e) => {
-                                            let _ = callback.send(Err(e));
-                                            return;
-                                        }
-                                    };
+                                    let v: LuaValue =
+                                        match f.call_async((args, token.clone())).await {
+                                            Ok(v) => v,
+                                            Err(e) => {
+                                                let _ = callback.send(Err(e));
+                                                if let Err(e) =
+                                                    state::remove_template(&lua_ref, &token)
+                                                {
+                                                    log::error!("Could not remove template: {}", e);
+                                                };
+                                                return;
+                                            }
+                                        };
 
                                     let _v: Result<serde_json::Value, LuaError> = lua_ref
                                         .from_value(v)
                                         .map_err(|e| LuaError::external(e.to_string()));
 
                                     let _ = callback.send(_v);
+
+                                    if let Err(e) = state::remove_template(&lua_ref, &token) {
+                                        log::error!("Could not remove template: {}", e);
+                                    };
                                 }
                                 None => {
                                     // Just compiling etc. return Null
@@ -253,6 +280,7 @@ async fn get_lua_vm(guild_id: GuildId, pool: sqlx::PgPool) -> LuaResult<ArLua> {
 /// Compiles a template
 pub async fn parse(
     guild_id: serenity::all::GuildId,
+    pragma: crate::TemplatePragma,
     template: &str,
     pool: sqlx::PgPool,
 ) -> LuaResult<()> {
@@ -269,6 +297,7 @@ pub async fn parse(
     lua.thread_handle
         .1
         .send(LoadLuaTemplate {
+            pragma,
             template: template.to_string(),
             args: None,
             callback: tx,
@@ -288,6 +317,7 @@ pub async fn parse(
 /// Render a template
 pub async fn render_template<Request: serde::Serialize, Response: serde::de::DeserializeOwned>(
     guild_id: GuildId,
+    pragma: crate::TemplatePragma,
     template: &str,
     pool: sqlx::PgPool,
     args: Request,
@@ -307,6 +337,7 @@ pub async fn render_template<Request: serde::Serialize, Response: serde::de::Des
     lua.thread_handle
         .1
         .send(LoadLuaTemplate {
+            pragma,
             template: template.to_string(),
             args: Some(args),
             callback: tx,
