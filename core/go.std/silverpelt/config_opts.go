@@ -46,12 +46,6 @@ type CanonicalSettingsError struct {
 	} `json:"MaximumCountReached,omitempty"`
 }
 
-type CanonicalColumnTypeDynamicClause struct {
-	Field      string              `json:"field"`
-	Value      any                 `json:"value"`
-	ColumnType CanonicalColumnType `json:"column_type"`
-}
-
 type CanonicalColumnType struct {
 	Scalar *struct {
 		ColumnType CanonicalInnerColumnType `json:"column_type"`
@@ -59,9 +53,6 @@ type CanonicalColumnType struct {
 	Array *struct {
 		Inner CanonicalInnerColumnType `json:"inner"`
 	} `json:"Array,omitempty"`
-	Dynamic *struct {
-		Clauses []CanonicalColumnTypeDynamicClause `json:"clauses"`
-	} `json:"Dynamic,omitempty"`
 }
 
 type CanonicalInnerColumnTypeStringKind struct {
