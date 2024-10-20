@@ -177,6 +177,7 @@ impl Limit {
     }
 }
 
+#[derive(Clone, Serialize, Deserialize)]
 pub struct HandleModAction {
     /// Guild ID
     pub guild_id: GuildId,

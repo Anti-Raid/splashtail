@@ -1,18 +1,16 @@
 use super::core::HandleModAction;
-use botox::crypto::gen_random;
-use std::collections::HashMap;
 use dashmap::DashMap;
+use std::collections::HashMap;
 use std::sync::LazyLock;
 
-pub static STRATEGY: LazyLock<DashMap<String, Box<dyn CreateStrategy>>> =
-    LazyLock::new(|| {
-        let map: DashMap<String, Box<dyn CreateStrategy>> = DashMap::new();
+pub static STRATEGY: LazyLock<DashMap<String, Box<dyn CreateStrategy>>> = LazyLock::new(|| {
+    let map: DashMap<String, Box<dyn CreateStrategy>> = DashMap::new();
 
-        map.insert("in-memory".to_string(), Box::new(CreateInMemoryStrategy));
-        map.insert("persist".to_string(), Box::new(CreatePersistStrategy));
+    map.insert("in-memory".to_string(), Box::new(CreateInMemoryStrategy));
+    map.insert("template".to_string(), Box::new(CreateTemplateStrategy));
 
-        map
-    });
+    map
+});
 
 /// Given a string, returns the limit strategy
 pub fn from_limit_strategy_string(s: &str) -> Result<Box<dyn Strategy>, silverpelt::Error> {
@@ -26,17 +24,17 @@ pub fn from_limit_strategy_string(s: &str) -> Result<Box<dyn Strategy>, silverpe
     Err("Unknown lockdown mode".into())
 }
 
+#[derive(serde::Serialize, serde::Deserialize)]
 pub struct StrategyResult {
-    pub stings: i32,                                    // How many stings to give
-    pub hit_limits: Vec<String>,                        // Which limit IDs were hit
-    pub expiries: HashMap<String, std::time::Duration>, // If possible, the time at which the limit will be lifted
-    pub expiry: Option<std::time::Duration>, // If possible/needed, the time at which the stings should expire
-    pub causes: Option<HashMap<String, Vec<String>>>, // If possible, the actions which caused the limit to be hit
+    pub stings: i32,                               // How many stings to give
+    pub sting_expiry: Option<std::time::Duration>, // The expiry of the stings, in seconds
+    pub reason: Option<String>,                    // The reason for the stings
+    pub data: Option<serde_json::Value>,           // The strategy data
 }
 
 pub trait CreateStrategy
 where
-    Self: Send + Sync, 
+    Self: Send + Sync,
 {
     /// Returns the syntax for the limit
     ///
@@ -62,7 +60,7 @@ where
     /// Adds a mod action to the strategy
     async fn add_mod_action(
         &self,
-        data: &silverpelt::data::Data,
+        ctx: &serenity::all::Context,
         ha: &HandleModAction,
         cgl: &super::cache::CachedGuildLimit,
     ) -> Result<StrategyResult, silverpelt::Error>;
@@ -96,22 +94,23 @@ impl Strategy for InMemoryStrategy {
         Box::new(CreateInMemoryStrategy)
     }
 
-    // NOTE: In memory aggregates the causes so there is nothing to return for that
+    // NOTE: In memory aggregates the causes
     async fn add_mod_action(
         &self,
-        _data: &silverpelt::data::Data,
+        _ctx: &serenity::all::Context,
         ha: &HandleModAction,
         cgl: &super::cache::CachedGuildLimit,
     ) -> Result<StrategyResult, silverpelt::Error> {
+        const DEFAULT_EXPIRY: std::time::Duration = std::time::Duration::from_secs(60 * 5);
+
         let (ok, result) = cgl.1.limit(ha.user_id, ha.limit).await;
 
         if ok {
             return Ok(StrategyResult {
                 stings: 0,
-                hit_limits: Vec::new(),
-                expiries: HashMap::new(),
-                expiry: None,
-                causes: None,
+                reason: None,
+                sting_expiry: None,
+                data: None,
             });
         }
 
@@ -128,148 +127,86 @@ impl Strategy for InMemoryStrategy {
             }
         }
 
+        let sting_expiry = {
+            // Get the longest duration from expiries
+            let max = expiries.iter().max();
+
+            match max {
+                Some((_, expiry)) => *expiry,
+                None => DEFAULT_EXPIRY,
+            }
+        };
+
         Ok(StrategyResult {
             stings,
-            hit_limits,
-            expiries,
-            expiry: None,
-            causes: None,
+            sting_expiry: Some(sting_expiry),
+            reason: Some(format!("Hit limits: {:?}", hit_limits)),
+            data: Some(serde_json::json!({
+                "hit_limits": hit_limits,
+                "expiries": expiries,
+            })),
         })
     }
 }
 
-pub struct CreatePersistStrategy;
+pub struct CreateTemplateStrategy;
 
-impl CreateStrategy for CreatePersistStrategy {
+impl CreateStrategy for CreateTemplateStrategy {
     fn to_strategy(&self, s: &str) -> Result<Option<Box<dyn Strategy>>, silverpelt::Error> {
-        if s == "persist" {
-            Ok(Some(Box::new(PersistStrategy)))
+        if s.starts_with("template:") && s.len() > 9 {
+            Ok(Some(Box::new(TemplateStrategy(s[9..].to_string()))))
         } else {
             Ok(None)
         }
     }
 
     fn syntax(&self) -> &'static str {
-        "persist"
+        "template:<template name>"
     }
 }
 
-pub struct PersistStrategy;
+pub struct TemplateStrategy(String);
 
 #[async_trait::async_trait]
-impl Strategy for PersistStrategy {
+impl Strategy for TemplateStrategy {
     fn string_form(&self) -> String {
-        "persist".to_string()
+        format!("template:{}", self.0)
     }
 
     fn creator(&self) -> Box<dyn CreateStrategy> {
-        Box::new(CreatePersistStrategy)
+        Box::new(CreateTemplateStrategy)
     }
 
     async fn add_mod_action(
         &self,
-        data: &silverpelt::data::Data,
+        ctx: &serenity::all::Context,
         ha: &HandleModAction,
         cgl: &super::cache::CachedGuildLimit,
     ) -> Result<StrategyResult, silverpelt::Error> {
-        let mut tx = data.pool.begin().await?;
-
-        let action_id = gen_random(48);
-
-        sqlx::query!(
-            "INSERT INTO limits__user_actions (action_id, guild_id, user_id, target, limit_type, action_data, created_at, stings) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)",
-            action_id,
-            ha.guild_id.to_string(),
-            ha.user_id.to_string(),
-            ha.target,
-            ha.limit.to_string(),
-            ha.action_data,
-            sqlx::types::chrono::Utc::now(),
-            0
+        let data = ctx.data::<silverpelt::data::Data>();
+        templating::execute::<_, StrategyResult>(
+            ha.guild_id,
+            templating::Template::Named(self.0.clone()),
+            data.pool.clone(),
+            botox::cache::CacheHttpImpl::from_ctx(ctx),
+            data.reqwest.clone(),
+            TemplateStrategyContext {
+                handle_mod_action: ha.clone(),
+                limits: cgl.2.clone(),
+                limit_guild: cgl.0.clone(),
+            },
         )
-        .execute(&mut *tx)
-        .await?;
-
-        let mut hit_limits = Vec::new();
-
-        let mut stings = 0;
-        let mut largest_expiry = 0;
-        let mut expiries = HashMap::new();
-        for (_limit_id, guild_limit) in cgl.2.iter() {
-            let stings_from_limit = guild_limit.stings;
-            let limit_time_from_limit = guild_limit.limit_time;
-
-            expiries.insert(
-                guild_limit.limit_id.clone(),
-                std::time::Duration::from_secs(limit_time_from_limit as u64),
-            );
-
-            // Ensure the expiry is based on all limits, not just infringing
-            if limit_time_from_limit > largest_expiry {
-                largest_expiry = limit_time_from_limit;
-            }
-
-            // Check the limit type and user_id and guild to see if it is in the cache
-            let infringing_actions = sqlx::query!(
-                "select action_id from limits__user_actions where guild_id = $1 and user_id = $2 and limit_type = $3 and created_at + make_interval(secs => $4) > now()",
-                ha.guild_id.to_string(),
-                ha.user_id.to_string(),
-                ha.limit.to_string(),
-                guild_limit.limit_time as f64,
-            )
-            .fetch_all(&mut *tx)
-            .await?;
-
-            if infringing_actions.len() >= guild_limit.limit_per as usize {
-                hit_limits.push((
-                    infringing_actions
-                        .into_iter()
-                        .map(|v| v.action_id)
-                        .collect::<Vec<String>>(),
-                    guild_limit,
-                ));
-
-                stings += stings_from_limit;
-            }
-        }
-
-        if stings > 0 || largest_expiry > 0 {
-            sqlx::query!(
-                "UPDATE limits__user_actions SET stings = $1, stings_expiry = $2 WHERE action_id = $3",
-                stings,
-                sqlx::types::chrono::Utc::now() + chrono::Duration::seconds(largest_expiry),
-                action_id
-            )
-            .execute(&mut *tx)
-            .await?;
-
-            // Delete older user actions
-            sqlx::query!(
-            "DELETE FROM limits__user_actions WHERE user_id = $1 AND guild_id = $2 AND created_at < now() - make_interval(secs => $3)",
-            ha.user_id.to_string(),
-            ha.guild_id.to_string(),
-            largest_expiry as f64,
-        )
-        .execute(&mut *tx)
-        .await?;
-        }
-
-        tx.commit().await?;
-
-        let hit_limits_result = hit_limits.iter().flat_map(|(ids, _)| ids.clone()).collect();
-
-        let mut causes = HashMap::new();
-
-        for (ids, limit) in hit_limits {
-            causes.insert(limit.limit_id.clone(), ids);
-        }
-
-        Ok(StrategyResult {
-            stings,
-            hit_limits: hit_limits_result,
-            expiries,
-            expiry: None,
-            causes: Some(causes),
-        })
+        .await
     }
 }
+
+/// A TemplateStrategyContext is a context for template strategy templates
+#[derive(Clone, serde::Serialize, serde::Deserialize)]
+pub struct TemplateStrategyContext {
+    pub handle_mod_action: HandleModAction,
+    pub limits: std::collections::HashMap<String, super::core::Limit>,
+    pub limit_guild: super::core::LimitGuild,
+}
+
+#[typetag::serde]
+impl templating::Context for TemplateStrategyContext {}

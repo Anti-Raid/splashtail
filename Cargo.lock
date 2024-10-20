@@ -705,6 +705,8 @@ dependencies = [
  "std_events",
  "strum",
  "strum_macros",
+ "templating",
+ "typetag",
 ]
 
 [[package]]

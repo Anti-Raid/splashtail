@@ -67,11 +67,7 @@ impl GuildLimitsCache {
     }
 }
 
-pub type CachedGuildLimit = (
-    LimitGuild,
-    GuildLimitsCache,
-    HashMap<String, Limit>,
-);
+pub type CachedGuildLimit = (LimitGuild, GuildLimitsCache, HashMap<String, Limit>);
 
 pub static GUILD_LIMITS: LazyLock<Cache<GuildId, Arc<CachedGuildLimit>>> =
     LazyLock::new(|| Cache::builder().support_invalidation_closures().build());
@@ -111,11 +107,7 @@ pub async fn get_limits(
                 .insert(limit.limit_id.clone(), lim);
         }
 
-        let limits = Arc::new((
-            limit_guild,
-            limits,
-            limits_db,
-        ));
+        let limits = Arc::new((limit_guild, limits, limits_db));
 
         GUILD_LIMITS.insert(guild_id, limits.clone()).await;
 

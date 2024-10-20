@@ -20,12 +20,14 @@ moka = { version = "0.12", features = ["future", "futures-util"] }
 governor = "0.6"
 async-trait = "0.1.80"
 dashmap = { version = "6", features = ["serde", "inline", "rayon"] }
+typetag = "0.2"
 
 # Anti-Raid specific
 silverpelt = { path = "../rust.silverpelt" }
 splashcore_rs = { path = "../rust.std" }
 module_settings = { path = "../rust.module_settings" }
 std_events = { path = "../rust.stdevents" }
+templating = { path = "../rust.templating" }
 
 [dependencies.serenity]
 git = "https://github.com/Anti-Raid/serenity"

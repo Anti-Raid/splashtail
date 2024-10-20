@@ -936,7 +936,7 @@ pub static GUILD_TEMPLATES: LazyLock<ConfigOption> = LazyLock::new(|| {
         default_common_filters: indexmap::indexmap! {
             "guild_id" => "{__guild_id}"
         },
-        primary_key: "role_id",
+        primary_key: "name",
         max_entries: None,
         max_return: 10,
         data_store: settings_wrap(PostgresDataStore {}),
