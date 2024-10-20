@@ -964,7 +964,9 @@ pub static GUILD_TEMPLATES: LazyLock<ConfigOption> = LazyLock::new(|| {
                 name: "Content",
                 description: "The content of the template",
                 column_type: ColumnType::new_scalar(InnerColumnType::String {
-                    kind: InnerColumnTypeStringKind::Normal,
+                    kind: InnerColumnTypeStringKind::Textarea {
+                        ctx: "template",
+                    },
                     min_length: None,
                     max_length: None,
                     allowed_values: vec![],

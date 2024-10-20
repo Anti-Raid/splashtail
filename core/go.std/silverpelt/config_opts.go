@@ -60,7 +60,9 @@ type CanonicalInnerColumnTypeStringKind struct {
 	Token  *struct {
 		DefaultLength uint64 `json:"default_length"`
 	} `json:"Token,omitempty"`
-	Textarea    *struct{} `json:"Textarea,omitempty"`
+	Textarea *struct {
+		Ctx string `json:"ctx"`
+	} `json:"Textarea,omitempty"`
 	TemplateRef *struct {
 		Kind string `json:"kind"`
 		Ctx  string `json:"ctx"`

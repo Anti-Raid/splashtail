@@ -150,7 +150,7 @@ pub enum CanonicalInnerColumnTypeStringKind {
         default_length: usize,
     },
     /// A textarea
-    Textarea {},
+    Textarea { ctx: String },
     /// A reference to a template by name
     TemplateRef {
         /// The kind of template
@@ -186,8 +186,10 @@ impl From<super::types::InnerColumnTypeStringKind> for CanonicalInnerColumnTypeS
             super::types::InnerColumnTypeStringKind::Token { default_length } => {
                 CanonicalInnerColumnTypeStringKind::Token { default_length }
             }
-            super::types::InnerColumnTypeStringKind::Textarea => {
-                CanonicalInnerColumnTypeStringKind::Textarea {}
+            super::types::InnerColumnTypeStringKind::Textarea { ctx } => {
+                CanonicalInnerColumnTypeStringKind::Textarea {
+                    ctx: ctx.to_string(),
+                }
             }
             super::types::InnerColumnTypeStringKind::TemplateRef { kind, ctx } => {
                 CanonicalInnerColumnTypeStringKind::TemplateRef {

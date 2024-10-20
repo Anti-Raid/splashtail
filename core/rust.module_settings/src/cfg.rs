@@ -394,7 +394,7 @@ async fn _validate_value(
                             let parsed_value = match kind {
                                 InnerColumnTypeStringKind::Normal => v,
                                 InnerColumnTypeStringKind::Token { .. } => v, // Handled in parse_value
-                                InnerColumnTypeStringKind::Textarea => v,
+                                InnerColumnTypeStringKind::Textarea { .. } => v,
                                 InnerColumnTypeStringKind::TemplateRef { .. } => {
                                     // Check that the template exists
                                     let count = sqlx::query!(
