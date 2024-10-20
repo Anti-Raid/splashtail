@@ -1,5 +1,4 @@
 pub mod actions;
-pub mod concurrency;
 pub mod interop;
 pub mod lune;
 pub mod message;
@@ -12,7 +11,6 @@ use std::sync::LazyLock;
 pub static PLUGINS: LazyLock<indexmap::IndexMap<String, ModuleFn>> = LazyLock::new(|| {
     indexmap::indexmap! {
         "@antiraid/builtins".to_string() => builtins as ModuleFn,
-        "@antiraid/concurrency".to_string() => concurrency::init_plugin as ModuleFn,
         "@antiraid/interop".to_string() => interop::init_plugin as ModuleFn,
         "@antiraid/message".to_string() => message::init_plugin as ModuleFn,
         "@antiraid/permissions".to_string() => permissions::init_plugin as ModuleFn,

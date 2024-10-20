@@ -10,22 +10,6 @@ Provides some basic builtins for AntiRaid.
 
 - ``require(module_name: string) -> table<any>``
 
-## Concurrency
-
-**Module Name:** ``@antiraid/concurrency``
-
-Not really useful right now. Will be expanded in the future.
-
-**UNTESTED**
-
-### Functions
-
-- ``select_ok(coros: {coroutine}) -> coroutine``
-
-Creates a new coroutine which will select the first successful coroutine over a list of coroutine. The created coroutine is then executed and the result returned
-
-The returned coroutine will wait for any coroutine within the list to be ready and Ok. Unlike select_all (not yet implemented, todo), this will only return the first successful completion, or the last failure. This is useful in contexts where any success is desired and failures are ignored, unless all the coroutines fail.
-
 ## Interop
 
 **Module Name:** ``@antiraid/interop``
