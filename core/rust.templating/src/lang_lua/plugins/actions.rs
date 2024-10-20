@@ -79,7 +79,7 @@ impl ActionExecutor {
 
 impl LuaUserData for ActionExecutor {
     fn add_methods<M: LuaUserDataMethods<Self>>(methods: &mut M) {
-        methods.add_async_method("ban", |lua, this, (data,): (LuaValue,)| async move {
+        methods.add_async_method("ban", |lua, this, data: LuaValue| async move {
             let data = lua.from_value::<BanAction>(data)?;
 
             this.check_action("ban".to_string())
@@ -119,7 +119,7 @@ impl LuaUserData for ActionExecutor {
             Ok(())
         });
 
-        methods.add_async_method("kick", |lua, this, (data,): (LuaValue,)| async move {
+        methods.add_async_method("kick", |lua, this, data: LuaValue| async move {
             let data = lua.from_value::<KickAction>(data)?;
 
             this.check_action("kick".to_string())
@@ -140,7 +140,7 @@ impl LuaUserData for ActionExecutor {
             Ok(())
         });
 
-        methods.add_async_method("timeout", |lua, this, (data,): (LuaValue,)| async move {
+        methods.add_async_method("timeout", |lua, this, data: LuaValue| async move {
             let data = lua.from_value::<TimeoutAction>(data)?;
 
             this.check_action("timeout".to_string())
@@ -180,8 +180,6 @@ impl LuaUserData for ActionExecutor {
 pub fn init_plugin(lua: &Lua) -> LuaResult<LuaTable> {
     let module = lua.create_table()?;
 
-    module.set_readonly(true); // Block any attempt to modify this table
-
     module.set(
         "new",
         lua.create_function(|lua, (token,): (String,)| {
@@ -204,6 +202,8 @@ pub fn init_plugin(lua: &Lua) -> LuaResult<LuaTable> {
             Ok(executor)
         })?,
     )?;
+
+    module.set_readonly(true); // Block any attempt to modify this table
 
     Ok(module)
 }
