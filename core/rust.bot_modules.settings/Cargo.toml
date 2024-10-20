@@ -21,6 +21,7 @@ splashcore_rs = { path = "../rust.std" }
 permissions = { path = "../rust.permissions" }
 module_settings = { path = "../rust.module_settings" }
 sandwich_driver = { path = "../rust.sandwich_driver" }
+templating = { path = "../rust.templating" }
 
 [dependencies.serenity]
 git = "https://github.com/Anti-Raid/serenity"

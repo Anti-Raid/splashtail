@@ -863,6 +863,7 @@ dependencies = [
  "silverpelt",
  "splashcore_rs",
  "sqlx",
+ "templating",
 ]
 
 [[package]]
@@ -2937,7 +2938,6 @@ dependencies = [
  "serenity",
  "splashcore_rs",
  "sqlx",
- "templating",
 ]
 
 [[package]]

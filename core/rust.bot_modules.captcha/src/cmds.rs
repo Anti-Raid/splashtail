@@ -21,13 +21,15 @@ pub async fn captcha_test(ctx: Context<'_>, use_sample: Option<bool>) -> Result<
             .await?;
 
             match captcha_template {
-                Some(captcha_template) => captcha_template.template,
+                Some(captcha_template) => templating::Template::Named(captcha_template.template),
                 None => {
                     return Err("This guild does not have a captcha template set".into());
                 }
             }
         } else {
-            templating::luau_utils::wrap_main_in_entrypoint(include_str!("templates/sample.luau"))
+            templating::Template::Raw(templating::luau_utils::wrap_main_in_entrypoint(
+                include_str!("templates/sample.luau"),
+            ))
         }
     };
 
@@ -39,7 +41,7 @@ pub async fn captcha_test(ctx: Context<'_>, use_sample: Option<bool>) -> Result<
 
     let captcha_config = templating::execute::<_, super::templater::CaptchaConfig>(
         guild_id,
-        &template,
+        template,
         ctx.data().pool.clone(),
         botox::cache::CacheHttpImpl::from_ctx(ctx.serenity_context()),
         ctx.data().reqwest.clone(),
@@ -98,7 +100,7 @@ pub async fn verify(ctx: Context<'_>) -> Result<(), Error> {
 
     let captcha_config = templating::execute::<_, super::templater::CaptchaConfig>(
         guild_id,
-        &template,
+        templating::Template::Named(template.clone()),
         ctx.data().pool.clone(),
         botox::cache::CacheHttpImpl::from_ctx(ctx.serenity_context()),
         ctx.data().reqwest.clone(),

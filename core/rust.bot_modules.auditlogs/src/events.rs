@@ -259,8 +259,8 @@ async fn dispatch_audit_log(
                 }
             },
             {
-                if let Some(ref embed_template) = sink.embed_template {
-                    !embed_template.is_empty()
+                if let Some(ref template) = sink.template {
+                    !template.is_empty()
                 } else {
                     false
                 }
@@ -272,21 +272,21 @@ async fn dispatch_audit_log(
         }
 
         let template = {
-            if let Some(ref embed_template) = sink.embed_template {
-                if !embed_template.is_empty() {
-                    embed_template.clone()
+            if let Some(ref template) = sink.template {
+                if !template.is_empty() {
+                    templating::Template::Named(template.clone())
                 } else {
                     // Load default template
-                    load_embedded_event_template(event_name)?
+                    templating::Template::Raw(load_embedded_event_template(event_name)?)
                 }
             } else {
-                load_embedded_event_template(event_name)?
+                templating::Template::Raw(load_embedded_event_template(event_name)?)
             }
         };
 
         let discord_reply = templating::execute::<_, Option<templating::core::messages::Message>>(
             guild_id,
-            &template,
+            template,
             data.pool.clone(),
             botox::cache::CacheHttpImpl::from_ctx(ctx),
             data.reqwest.clone(),

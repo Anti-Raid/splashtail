@@ -63,6 +63,7 @@ impl silverpelt::module::Module for Module {
         vec![
             (*settings::GUILD_ROLES).clone(),
             (*settings::GUILD_MEMBERS).clone(),
+            (*settings::GUILD_TEMPLATES).clone(),
         ]
     }
 

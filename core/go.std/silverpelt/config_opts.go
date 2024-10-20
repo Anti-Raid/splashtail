@@ -60,11 +60,11 @@ type CanonicalInnerColumnTypeStringKind struct {
 	Token  *struct {
 		DefaultLength uint64 `json:"default_length"`
 	} `json:"Token,omitempty"`
-	Textarea *struct{} `json:"Textarea,omitempty"`
-	Template *struct {
+	Textarea    *struct{} `json:"Textarea,omitempty"`
+	TemplateRef *struct {
 		Kind string `json:"kind"`
 		Ctx  string `json:"ctx"`
-	} `json:"Template,omitempty"`
+	} `json:"TemplateRef,omitempty"`
 	User    *struct{} `json:"User,omitempty"`
 	Channel *struct {
 		AllowedTypes         []discordgo.ChannelType `json:"allowed_types"`

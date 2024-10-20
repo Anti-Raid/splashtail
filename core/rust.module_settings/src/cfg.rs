@@ -395,22 +395,28 @@ async fn _validate_value(
                                 InnerColumnTypeStringKind::Normal => v,
                                 InnerColumnTypeStringKind::Token { .. } => v, // Handled in parse_value
                                 InnerColumnTypeStringKind::Textarea => v,
-                                InnerColumnTypeStringKind::Template { .. } => {
-                                    let compiled = templating::parse(
-                                        guild_id,
-                                        s,
-                                        data.pool.clone(),
-                                        data.cache_http.clone(),
-                                        data.reqwest.clone(),
+                                InnerColumnTypeStringKind::TemplateRef { .. } => {
+                                    // Check that the template exists
+                                    let count = sqlx::query!(
+                                        "SELECT COUNT(*) FROM guild_templates WHERE guild_id = $1 AND name = $2",
+                                        guild_id.to_string(),
+                                        s
                                     )
-                                    .await;
+                                    .fetch_one(&data.pool)
+                                    .await
+                                    .map_err(|e| SettingsError::SchemaCheckValidationError {
+                                        column: column_id.to_string(),
+                                        check: "template_ref".to_string(),
+                                        accepted_range: "Valid template name".to_string(),
+                                        error: e.to_string(),
+                                    })?;
 
-                                    if let Err(err) = compiled {
+                                    if count.count.unwrap_or(0) == 0 {
                                         return Err(SettingsError::SchemaCheckValidationError {
                                             column: column_id.to_string(),
-                                            check: "template_compile".to_string(),
-                                            accepted_range: "Valid template".to_string(),
-                                            error: err.to_string(),
+                                            check: "template_ref".to_string(),
+                                            accepted_range: "Valid template name".to_string(),
+                                            error: "Template not found".to_string(),
                                         });
                                     }
 

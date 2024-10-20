@@ -65,15 +65,44 @@ impl std::fmt::Display for TemplateLanguage {
     }
 }
 
+async fn get_template(
+    guild_id: serenity::all::GuildId,
+    template: &str,
+    pool: &sqlx::PgPool,
+) -> Result<String, Error> {
+    let rec = sqlx::query!(
+        "SELECT content FROM guild_templates WHERE guild_id = $1 AND name = $2",
+        guild_id.to_string(),
+        template
+    )
+    .fetch_optional(pool)
+    .await?;
+
+    match rec {
+        Some(rec) => Ok(rec.content),
+        None => Err("Template not found".into()),
+    }
+}
+
+pub enum Template {
+    Raw(String),
+    Named(String),
+}
+
 #[allow(unused_variables)]
 pub async fn parse(
     guild_id: serenity::all::GuildId,
-    template: &str,
+    template: Template,
     pool: sqlx::PgPool,
     cache_http: botox::cache::CacheHttpImpl,
     reqwest_client: reqwest::Client,
 ) -> Result<(), Error> {
-    let (template, pragma) = TemplatePragma::parse(template)?;
+    let template = match template {
+        Template::Raw(template) => template,
+        Template::Named(template) => get_template(guild_id, &template, &pool).await?,
+    };
+
+    let (template, pragma) = TemplatePragma::parse(&template)?;
 
     match pragma.lang {
         #[cfg(feature = "lua")]
@@ -91,13 +120,18 @@ pub trait Context: Send + Sync {}
 /// Executes a template
 pub async fn execute<C: Context + serde::Serialize, RenderResult: serde::de::DeserializeOwned>(
     guild_id: serenity::all::GuildId,
-    template: &str,
+    template: Template,
     pool: sqlx::PgPool,
     cache_http: botox::cache::CacheHttpImpl,
     reqwest_client: reqwest::Client,
     ctx: C,
 ) -> Result<RenderResult, Error> {
-    let (template, pragma) = TemplatePragma::parse(template)?;
+    let template = match template {
+        Template::Raw(template) => template,
+        Template::Named(template) => get_template(guild_id, &template, &pool).await?,
+    };
+
+    let (template, pragma) = TemplatePragma::parse(&template)?;
 
     match pragma.lang {
         #[cfg(feature = "lua")]

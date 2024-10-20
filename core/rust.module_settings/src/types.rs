@@ -165,8 +165,8 @@ pub enum InnerColumnTypeStringKind {
     },
     /// A textarea
     Textarea,
-    /// A template string
-    Template {
+    /// A reference to a template by name
+    TemplateRef {
         kind: &'static str,
         ctx: &'static str,
     },
@@ -197,8 +197,8 @@ impl std::fmt::Display for InnerColumnTypeStringKind {
                 write!(f, "Token (default_length: {})", default_length)
             }
             InnerColumnTypeStringKind::Textarea => write!(f, "Textarea"),
-            InnerColumnTypeStringKind::Template { kind, ctx } => {
-                write!(f, "Template {} ({})", kind, ctx)
+            InnerColumnTypeStringKind::TemplateRef { kind, ctx } => {
+                write!(f, "TemplateRef (kind: {}, ctx: {})", kind, ctx)
             }
             InnerColumnTypeStringKind::KittycatPermission => write!(f, "KittycatPermission"),
             InnerColumnTypeStringKind::User => write!(f, "User"),

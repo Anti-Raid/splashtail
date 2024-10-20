@@ -6,7 +6,7 @@ use module_settings::{
     types::{
         settings_wrap, Column, ColumnSuggestion, ColumnType, ConfigOption, HookContext,
         InnerColumnType, InnerColumnTypeStringKind, OperationSpecific, OperationType, PostAction,
-        SettingDataValidator, SettingsError, NoOpPostAction
+        SettingDataValidator, SettingsError, NoOpPostAction, NoOpValidator
     },
 };
 use splashcore_rs::value::Value;
@@ -922,6 +922,131 @@ impl SettingDataValidator for GuildMembersValidator {
             }
         }
         
+        Ok(())
+    }
+}
+
+pub static GUILD_TEMPLATES: LazyLock<ConfigOption> = LazyLock::new(|| {
+    ConfigOption {
+        id: "guild_templates",
+        name: "Server Templates",
+        description: "Configure/Setup Server Templates (Lua/Roblox Luau scripts)",
+        table: "guild_templates",
+        common_filters: indexmap::indexmap! {},
+        default_common_filters: indexmap::indexmap! {
+            "guild_id" => "{__guild_id}"
+        },
+        primary_key: "role_id",
+        max_entries: None,
+        max_return: 10,
+        data_store: settings_wrap(PostgresDataStore {}),
+        columns: settings_wrap(vec![
+            module_settings::common_columns::guild_id("guild_id", "Guild ID", "The Guild ID"),
+            Column {
+                id: "name",
+                name: "Name",
+                description: "The name to give to the template",
+                column_type: ColumnType::new_scalar(InnerColumnType::String {
+                    kind: InnerColumnTypeStringKind::Normal,
+                    min_length: None,
+                    max_length: Some(64),
+                    allowed_values: vec![],
+                }),
+                nullable: false,
+                default: None,
+                unique: true,
+                suggestions: ColumnSuggestion::None {},
+                ignored_for: vec![],
+                secret: false,
+            },
+            Column {
+                id: "content",
+                name: "Content",
+                description: "The content of the template",
+                column_type: ColumnType::new_scalar(InnerColumnType::String {
+                    kind: InnerColumnTypeStringKind::Normal,
+                    min_length: None,
+                    max_length: None,
+                    allowed_values: vec![],
+                }),
+                nullable: false,
+                default: None,
+                unique: true,
+                suggestions: ColumnSuggestion::None {},
+                ignored_for: vec![],
+                secret: false,
+            },
+            module_settings::common_columns::created_at(),
+            module_settings::common_columns::created_by(),
+            module_settings::common_columns::last_updated_at(),
+            module_settings::common_columns::last_updated_by(),
+        ]),
+        title_template: "{name}",
+        operations: indexmap::indexmap! {
+            OperationType::View => OperationSpecific {
+                columns_to_set: indexmap::indexmap! {},
+            },
+            OperationType::Create => OperationSpecific {
+                columns_to_set: indexmap::indexmap! {
+                    "created_at" => "{__now}",
+                    "created_by" => "{__author}",
+                    "last_updated_at" => "{__now}",
+                    "last_updated_by" => "{__author}",
+                },
+            },
+            OperationType::Update => OperationSpecific {
+                columns_to_set: indexmap::indexmap! {
+                    "last_updated_at" => "{__now}",
+                    "last_updated_by" => "{__author}",
+                },
+            },
+            OperationType::Delete => OperationSpecific {
+                columns_to_set: indexmap::indexmap! {},
+            },
+        },
+        validator: settings_wrap(NoOpValidator {}),
+        post_action: settings_wrap(NoOpPostAction {}),
+    }
+});
+
+pub struct GuildTemplateValidator;
+
+#[async_trait::async_trait]
+impl SettingDataValidator for GuildTemplateValidator {
+    async fn validate<'a>(
+        &self,
+        ctx: HookContext<'a>,
+        state: &'a mut State,
+    ) -> Result<(), SettingsError> {
+        if ctx.operation_type == OperationType::View {
+            return Ok(());
+        }
+
+        let Some(Value::String(s)) = state.state.get("content") else {
+            return Err(SettingsError::MissingOrInvalidField {
+                field: "content".to_string(),
+                src: "guild_templates->content".to_string(),
+            });
+        };
+
+        let compiled = templating::parse(
+            ctx.guild_id,
+            templating::Template::Raw(s.to_string()),
+            ctx.data.pool.clone(),
+            ctx.data.cache_http.clone(),
+            ctx.data.reqwest.clone(),
+        )
+        .await;
+
+        if let Err(err) = compiled {
+            return Err(SettingsError::SchemaCheckValidationError {
+                column: "content".to_string(),
+                check: "GuildTemplateValidator".to_string(),
+                accepted_range: "Valid template".to_string(),
+                error: err.to_string(),
+            });
+        }
+
         Ok(())
     }
 }

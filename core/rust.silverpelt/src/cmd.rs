@@ -422,13 +422,9 @@ pub async fn check_command(
             permissions::eval_checks(checks, member_perms, kittycat_perms)
         }
         PermissionChecks::Template { template } => {
-            if template.is_empty() {
-                return PermissionResult::Ok {};
-            }
-
             match templating::execute(
                 guild_id,
-                template,
+                templating::Template::Named(template.clone()),
                 pool.clone(),
                 cache_http.clone(),
                 reqwest.clone(),

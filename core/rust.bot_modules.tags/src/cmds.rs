@@ -84,7 +84,7 @@ pub async fn tag(
 
     let discord_reply = templating::execute::<_, Option<templating::core::messages::Message>>(
         guild_id,
-        &template,
+        templating::Template::Named(template),
         ctx.data().pool.clone(),
         botox::cache::CacheHttpImpl::from_ctx(ctx.serenity_context()),
         ctx.data().reqwest.clone(),

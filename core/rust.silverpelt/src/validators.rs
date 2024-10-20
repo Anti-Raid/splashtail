@@ -75,7 +75,14 @@ pub async fn parse_permission_checks(
             })
         }
         PermissionChecks::Template { template } => {
-            templating::parse(guild_id, template, pool, cache_http, reqwest_client).await?;
+            templating::parse(
+                guild_id,
+                templating::Template::Named(template.clone()),
+                pool,
+                cache_http,
+                reqwest_client,
+            )
+            .await?;
             Ok(PermissionChecks::Template {
                 template: template.clone(),
             })

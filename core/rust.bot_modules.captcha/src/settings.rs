@@ -32,7 +32,7 @@ pub static CAPTCHA: LazyLock<ConfigOption> = LazyLock::new(|| ConfigOption {
                 min_length: None,
                 max_length: None,
                 allowed_values: vec![],
-                kind: InnerColumnTypeStringKind::Template {
+                kind: InnerColumnTypeStringKind::TemplateRef {
                     kind: "captcha",
                     ctx: "CaptchaContext",
                 },

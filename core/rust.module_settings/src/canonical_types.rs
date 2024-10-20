@@ -151,8 +151,8 @@ pub enum CanonicalInnerColumnTypeStringKind {
     },
     /// A textarea
     Textarea {},
-    /// A template string
-    Template {
+    /// A reference to a template by name
+    TemplateRef {
         /// The kind of template
         kind: String,
         /// The context type to use
@@ -189,10 +189,10 @@ impl From<super::types::InnerColumnTypeStringKind> for CanonicalInnerColumnTypeS
             super::types::InnerColumnTypeStringKind::Textarea => {
                 CanonicalInnerColumnTypeStringKind::Textarea {}
             }
-            super::types::InnerColumnTypeStringKind::Template { kind, ctx } => {
-                CanonicalInnerColumnTypeStringKind::Template {
-                    kind: kind.into(),
-                    ctx: ctx.into(),
+            super::types::InnerColumnTypeStringKind::TemplateRef { kind, ctx } => {
+                CanonicalInnerColumnTypeStringKind::TemplateRef {
+                    kind: kind.to_string(),
+                    ctx: ctx.to_string(),
                 }
             }
             super::types::InnerColumnTypeStringKind::KittycatPermission => {
