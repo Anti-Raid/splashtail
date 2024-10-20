@@ -682,6 +682,7 @@ pub async fn modules_modperms(
                             guild_id,
                             data.pool.clone(),
                             cache_http.clone(),
+                            data.reqwest.clone(),
                             &perms,
                         )
                         .await?;

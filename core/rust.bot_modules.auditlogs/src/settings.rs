@@ -1,9 +1,9 @@
 use module_settings::data_stores::PostgresDataStore;
 use module_settings::state::State;
 use module_settings::types::{
-    settings_wrap, Column, ColumnSuggestion, ColumnType, ColumnTypeDynamicClause, ConfigOption,
-    HookContext, InnerColumnType, InnerColumnTypeStringKind, OperationSpecific, OperationType,
-    PostAction, SettingDataValidator, SettingsError,
+    settings_wrap, Column, ColumnSuggestion, ColumnType, ConfigOption, HookContext,
+    InnerColumnType, InnerColumnTypeStringKind, NoOpValidator, OperationSpecific, OperationType,
+    PostAction, SettingsError,
 };
 use serenity::all::{ChannelType, Permissions};
 use splashcore_rs::value::Value;
@@ -38,38 +38,13 @@ pub static SINK: LazyLock<ConfigOption> = LazyLock::new(|| {
             },
             module_settings::common_columns::guild_id("guild_id", "Guild ID", "The Guild ID the sink belongs to"),
             Column {
-                id: "type",
-                name: "Sink Type",
-                description: "The type of sink. This can be a sink that sends messages to a channel (`channel`) or a discord webhook (`discordhook`).",
-                column_type: ColumnType::new_scalar(InnerColumnType::String { min_length: None, max_length: None, allowed_values: vec!["channel", "discordhook"], kind: InnerColumnTypeStringKind::Normal }),
-                nullable: false,
-                default: None,
-                unique: false,
-                suggestions: ColumnSuggestion::None {},
-                ignored_for: vec![],
-                secret: false,
-            },
-            Column {
                 id: "sink",
                 name: "Sink",
-                description: "The sink where the logs are sent to. This can be a channel ID (if `channel`) or a discord webhook URL (if `discordhook`).",
-                column_type: ColumnType::new_dynamic(
-                    vec![
-                        ColumnTypeDynamicClause {
-                            field: "{type}",
-                            value: Value::String("discordhook".to_string()),
-                            column_type: ColumnType::new_scalar(InnerColumnType::String { min_length: None, max_length: None, allowed_values: vec![], kind: InnerColumnTypeStringKind::Normal })
-                        },
-                        ColumnTypeDynamicClause {
-                            field: "{type}",
-                            value: Value::String("channel".to_string()),
-                            column_type: ColumnType::new_scalar(InnerColumnType::String { min_length: None, max_length: None, allowed_values: vec![], kind: InnerColumnTypeStringKind::Channel {
-                                allowed_types: vec![ChannelType::Text, ChannelType::Voice, ChannelType::PublicThread, ChannelType::PrivateThread, ChannelType::News],
-                                needed_bot_permissions: Permissions::VIEW_CHANNEL | Permissions::SEND_MESSAGES | Permissions::EMBED_LINKS,
-                            } })
-                        }
-                    ]
-                ),
+                description: "The sink where the logs are sent to if returned by template",
+                column_type: ColumnType::new_scalar(InnerColumnType::String { min_length: None, max_length: None, allowed_values: vec![], kind: InnerColumnTypeStringKind::Channel {
+                    allowed_types: vec![ChannelType::Text, ChannelType::Voice, ChannelType::PublicThread, ChannelType::PrivateThread, ChannelType::News],
+                    needed_bot_permissions: Permissions::VIEW_CHANNEL | Permissions::SEND_MESSAGES | Permissions::EMBED_LINKS,
+                } }),
                 nullable: false,
                 default: None,
                 unique: false,
@@ -98,18 +73,6 @@ pub static SINK: LazyLock<ConfigOption> = LazyLock::new(|| {
                 secret: false,
                 nullable: true,
                 default: None,
-                unique: false,
-                suggestions: ColumnSuggestion::None {},
-            },
-            Column {
-                id: "send_json_context",
-                name: "Send JSON Context",
-                description: "Whether to send the JSON context of the event to the sink. This can be useful for seeing exactly what happened to your server.",
-                column_type: ColumnType::new_scalar(InnerColumnType::Boolean {}),
-                ignored_for: vec![],
-                secret: false,
-                nullable: false,
-                default: Some(|_| Value::Boolean(false)),
                 unique: false,
                 suggestions: ColumnSuggestion::None {},
             },
@@ -153,114 +116,10 @@ pub static SINK: LazyLock<ConfigOption> = LazyLock::new(|| {
                 columns_to_set: indexmap::indexmap! {},
             },
         },
-        validator: settings_wrap(SinkValidator {}),
+        validator: settings_wrap(NoOpValidator {}),
         post_action: settings_wrap(ClearCachePostAction {}),
     }
 });
-
-/// Special validator for sinks
-pub struct SinkValidator;
-
-#[async_trait::async_trait]
-impl SettingDataValidator for SinkValidator {
-    async fn validate<'a>(
-        &self,
-        ctx: HookContext<'a>,
-        state: &'a mut State,
-    ) -> Result<(), SettingsError> {
-        // Ignore for View
-        if ctx.operation_type == OperationType::View {
-            return Ok(());
-        }
-
-        let Some(Value::String(sink)) = state.state.get("sink") else {
-            return Err(SettingsError::MissingOrInvalidField {
-                field: "sink".to_string(),
-                src: "sink->NativeAction [default_pre_checks]".to_string(),
-            });
-        };
-
-        let Some(Value::String(typ)) = state.state.get("type") else {
-            return Err(SettingsError::MissingOrInvalidField {
-                field: "type".to_string(),
-                src: "sink->NativeAction [default_pre_checks]".to_string(),
-            });
-        };
-
-        if typ == "discordhook" {
-            let sink_url =
-                url::Url::parse(sink).map_err(|e| SettingsError::SchemaCheckValidationError {
-                    column: "sink".to_string(),
-                    check: "parse_webhook.parse_sink_to_url".to_string(),
-                    error: e.to_string(),
-                    accepted_range: "Valid Discord webhook URL".to_string(),
-                })?;
-
-            if serenity::utils::parse_webhook(&sink_url).is_none() {
-                return Err(SettingsError::SchemaCheckValidationError {
-                    column: "sink".to_string(),
-                    check: "parse_webhook.parse".to_string(),
-                    error: "Discord webhook sinks must be a valid webhook URL".to_string(),
-                    accepted_range: "Valid Discord webhook URL".to_string(),
-                });
-            }
-        } else if typ == "channel" {
-            sink.parse::<serenity::all::ChannelId>().map_err(|e| {
-                SettingsError::SchemaCheckValidationError {
-                    column: "sink".to_string(),
-                    check: "snowflake_parse".to_string(),
-                    accepted_range: "Valid channel id".to_string(),
-                    error: e.to_string(),
-                }
-            })?;
-        } else {
-            return Err(SettingsError::SchemaCheckValidationError {
-                column: "type".to_string(),
-                check: "parse_webhook.parse".to_string(),
-                error: "Invalid sink type".to_string(),
-                accepted_range: "Valid Discord webhook URL".to_string(),
-            });
-        }
-
-        // Check the events next
-        match state.state.get("events") {
-            Some(Value::List(events_value)) => {
-                let mut events = Vec::new();
-
-                for event in events_value {
-                    if let Value::String(event) = event {
-                        events.push(event.clone());
-                    } else {
-                        return Err(SettingsError::SchemaCheckValidationError {
-                            column: "events".to_string(),
-                            check: "parse_webhook.parse".to_string(),
-                            error: "Invalid event type".to_string(),
-                            accepted_range: "String".to_string(),
-                        });
-                    }
-                }
-
-                super::checks::check_all_events(events).await.map_err(|e| {
-                    SettingsError::SchemaCheckValidationError {
-                        column: "events".to_string(),
-                        check: "check_all_events".to_string(),
-                        error: e.to_string(),
-                        accepted_range: "Valid event".to_string(),
-                    }
-                })?;
-            }
-            Some(Value::None) => {}
-            _ => {
-                return Err(SettingsError::MissingOrInvalidField {
-                    field: "events".to_string(),
-                    src: "SinkValidator".to_string(),
-                });
-            }
-        }
-
-        Ok(()) // TODO
-    }
-}
 
 /// Post action to clear the cache
 pub struct ClearCachePostAction;

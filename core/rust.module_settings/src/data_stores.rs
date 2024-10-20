@@ -95,7 +95,6 @@ impl PostgresDataStoreImpl {
         query: sqlx::query::Query<'a, sqlx::Postgres, sqlx::postgres::PgArguments>,
         value: Value,
         default_column_type: &ColumnType,
-        state: &State,
     ) -> sqlx::query::Query<'a, sqlx::Postgres, sqlx::postgres::PgArguments> {
         match value {
             Value::Uuid(value) => query.bind(value),
@@ -266,22 +265,6 @@ impl PostgresDataStoreImpl {
                     InnerColumnType::Boolean {} => query.bind(None::<Vec<bool>>),
                     InnerColumnType::Json {} => query.bind(None::<Vec<serde_json::Value>>),
                 },
-                ColumnType::Dynamic { clauses } => {
-                    for clause in clauses {
-                        let _value = state.template_to_string(clause.field);
-
-                        if _value == clause.value {
-                            return Self::_query_bind_value(
-                                query,
-                                value,
-                                &clause.column_type,
-                                state,
-                            );
-                        }
-                    }
-
-                    query.bind(None::<String>) // Default to string
-                }
             },
         }
     }
@@ -292,7 +275,6 @@ impl PostgresDataStoreImpl {
     fn bind_map<'a>(
         query: sqlx::query::Query<'a, sqlx::Postgres, sqlx::postgres::PgArguments>,
         map: indexmap::IndexMap<String, Value>,
-        state: &State,
         bind_nulls: bool,
         columns: &[Column],
     ) -> Result<sqlx::query::Query<'a, sqlx::Postgres, sqlx::postgres::PgArguments>, SettingsError>
@@ -343,7 +325,7 @@ impl PostgresDataStoreImpl {
                         typ: "internal".to_string(),
                     })?;
 
-            query = Self::_query_bind_value(query, value, &column.column_type, state);
+            query = Self::_query_bind_value(query, value, &column.column_type);
         }
 
         // Add limit and offset last
@@ -554,8 +536,7 @@ impl DataStore for PostgresDataStoreImpl {
         let mut query = sqlx::query(sql_stmt.as_str());
 
         if !filters.is_empty() {
-            let filter_state = State::new_with_special_variables(self.author, self.guild_id); // TODO: Avoid needing filter state here
-            query = Self::bind_map(query, filters, &filter_state, false, &self.columns)?;
+            query = Self::bind_map(query, filters, false, &self.columns)?;
         }
 
         // Execute the query and process it to a Vec<state>
@@ -603,8 +584,7 @@ impl DataStore for PostgresDataStoreImpl {
         let mut query = sqlx::query(sql_stmt.as_str());
 
         if !filters.is_empty() {
-            let filter_state = State::new_with_special_variables(self.author, self.guild_id); // TODO: Avoid needing filter state here
-            query = Self::bind_map(query, filters, &filter_state, false, &self.columns)?;
+            query = Self::bind_map(query, filters, false, &self.columns)?;
         }
 
         // Execute the query
@@ -647,7 +627,7 @@ impl DataStore for PostgresDataStoreImpl {
         // Bind the sql query arguments
         let mut state = State::from_indexmap(entry.clone());
 
-        query = Self::bind_map(query, entry, &state, true, &self.columns)?;
+        query = Self::bind_map(query, entry, true, &self.columns)?;
 
         // Execute the query
         let pkey_row = self.fetchone_query(query).await?;
@@ -699,10 +679,8 @@ impl DataStore for PostgresDataStoreImpl {
 
         let mut query = sqlx::query(sql_stmt.as_str());
 
-        let entry_state = State::from_indexmap(entry.clone());
-
-        query = Self::bind_map(query, entry, &entry_state, true, &self.columns)?; // Bind the entry
-        query = Self::bind_map(query, filters, &entry_state, false, &self.columns)?; // Bind the filters
+        query = Self::bind_map(query, entry, true, &self.columns)?; // Bind the entry
+        query = Self::bind_map(query, filters, false, &self.columns)?; // Bind the filters
 
         // Execute the query
         self.execute_query(query).await?;
@@ -735,8 +713,7 @@ impl DataStore for PostgresDataStoreImpl {
         let mut query = sqlx::query(sql_stmt.as_str());
 
         if !filters.is_empty() {
-            let filter_state = State::new_with_special_variables(self.author, self.guild_id); // TODO: Avoid needing filter state here
-            query = Self::bind_map(query, filters, &filter_state, false, &self.columns)?;
+            query = Self::bind_map(query, filters, false, &self.columns)?;
         }
 
         // Execute the query

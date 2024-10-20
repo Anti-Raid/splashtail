@@ -10,6 +10,7 @@ pub async fn parse_permission_checks(
     guild_id: serenity::all::GuildId,
     pool: sqlx::PgPool,
     cache_http: botox::cache::CacheHttpImpl,
+    reqwest_client: reqwest::Client,
     pc: &PermissionChecks,
 ) -> Result<PermissionChecks, crate::Error> {
     match pc {
@@ -74,7 +75,7 @@ pub async fn parse_permission_checks(
             })
         }
         PermissionChecks::Template { template } => {
-            templating::parse(guild_id, template, pool, cache_http).await?;
+            templating::parse(guild_id, template, pool, cache_http, reqwest_client).await?;
             Ok(PermissionChecks::Template {
                 template: template.clone(),
             })

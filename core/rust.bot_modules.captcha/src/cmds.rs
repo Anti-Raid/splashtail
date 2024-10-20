@@ -42,6 +42,7 @@ pub async fn captcha_test(ctx: Context<'_>, use_sample: Option<bool>) -> Result<
         &template,
         ctx.data().pool.clone(),
         botox::cache::CacheHttpImpl::from_ctx(ctx.serenity_context()),
+        ctx.data().reqwest.clone(),
         super::templater::CaptchaContext {
             guild_id,
             user: ctx.author().clone(),
@@ -100,6 +101,7 @@ pub async fn verify(ctx: Context<'_>) -> Result<(), Error> {
         &template,
         ctx.data().pool.clone(),
         botox::cache::CacheHttpImpl::from_ctx(ctx.serenity_context()),
+        ctx.data().reqwest.clone(),
         super::templater::CaptchaContext {
             guild_id,
             user: ctx.author().clone(),

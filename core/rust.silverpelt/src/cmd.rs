@@ -431,6 +431,7 @@ pub async fn check_command(
                 template,
                 pool.clone(),
                 cache_http.clone(),
+                reqwest.clone(),
                 PermissionTemplateContext {
                     member_native_permissions: member_perms,
                     member_kittycat_permissions: kittycat_perms,

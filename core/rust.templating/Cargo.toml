@@ -16,6 +16,8 @@ typetag = "0.2"
 chrono = { version = "0.4", features = ["serde"]}
 scc = "2"
 governor = "0.6"
+sandwich_driver = { path = "../rust.sandwich_driver" }
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls", "rustls-tls-native-roots"] }
 
 # @lune/datetime
 chrono_lc = "0.1"

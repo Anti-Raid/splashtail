@@ -322,23 +322,6 @@ fn _parse_value(
                 got_type: format!("{:?}", v),
             }),
         },
-        ColumnType::Dynamic { clauses } => {
-            for clause in clauses {
-                let value = state.template_to_string(clause.field);
-
-                if value == clause.value {
-                    // We got the kind
-                    return _parse_value(v, state, &clause.column_type, column_id);
-                }
-            }
-
-            Err(SettingsError::SchemaCheckValidationError {
-                column: column_id.to_string(),
-                check: "dynamic_clause".to_string(),
-                accepted_range: "Valid dynamic clause".to_string(),
-                error: "No valid dynamic clause matched".to_string(),
-            })
-        }
     }
 }
 
@@ -418,6 +401,7 @@ async fn _validate_value(
                                         s,
                                         data.pool.clone(),
                                         data.cache_http.clone(),
+                                        data.reqwest.clone(),
                                     )
                                     .await;
 
@@ -688,32 +672,6 @@ async fn _validate_value(
                 got_type: format!("{:?}", v),
             }),
         },
-        ColumnType::Dynamic { clauses } => {
-            for clause in clauses {
-                let value = state.template_to_string(clause.field);
-
-                if value == clause.value {
-                    // We got the kind
-                    return _validate_value(
-                        v,
-                        state,
-                        guild_id,
-                        data,
-                        &clause.column_type,
-                        column_id,
-                        is_nullable,
-                    )
-                    .await;
-                }
-            }
-
-            Err(SettingsError::SchemaCheckValidationError {
-                column: column_id.to_string(),
-                check: "dynamic_clause".to_string(),
-                accepted_range: "Valid dynamic clause".to_string(),
-                error: "No valid dynamic clause matched".to_string(),
-            })
-        }
     }?;
 
     if matches!(v, Value::None) && !is_nullable {

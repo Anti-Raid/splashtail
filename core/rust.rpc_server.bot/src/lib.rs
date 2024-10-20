@@ -234,6 +234,7 @@ async fn parse_permission_checks(
         guild_id,
         data.pool.clone(),
         botox::cache::CacheHttpImpl::from_ctx(&serenity_context),
+        data.reqwest.clone(),
         &checks,
     )
     .await

@@ -8,13 +8,10 @@ use std::time::Duration;
 
 #[derive(Debug, Clone)]
 pub struct Sink {
-    // id, type AS typ, sink, events, embed_template, send_json_context
     pub id: Uuid,
-    pub typ: String,
     pub sink: String,
     pub events: Option<Vec<String>>,
     pub embed_template: Option<String>,
-    pub send_json_context: bool,
 }
 
 pub static SINKS_CACHE: LazyLock<Cache<GuildId, Arc<Vec<Sink>>>> = LazyLock::new(|| {
@@ -31,7 +28,7 @@ pub async fn get_sinks(guild_id: GuildId, pool: &PgPool) -> Result<Arc<Vec<Sink>
 
     let sinks = sqlx::query_as!(
         Sink,
-        "SELECT id, type AS typ, sink, events, embed_template, send_json_context FROM auditlogs__sinks WHERE guild_id = $1 AND broken = false",
+        "SELECT id, sink, events, embed_template FROM auditlogs__sinks WHERE guild_id = $1 AND broken = false",
         guild_id.to_string(),
     )
     .fetch_all(pool)

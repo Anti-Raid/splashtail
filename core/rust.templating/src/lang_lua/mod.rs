@@ -49,6 +49,7 @@ async fn create_lua_vm(
     guild_id: GuildId,
     pool: sqlx::PgPool,
     cache_http: botox::cache::CacheHttpImpl,
+    reqwest_client: reqwest::Client,
 ) -> LuaResult<ArLua> {
     let lua = Lua::new_with(
         LuaStdLib::ALL_SAFE,
@@ -114,6 +115,7 @@ async fn create_lua_vm(
         pool,
         guild_id,
         cache_http,
+        reqwest_client,
         kv_constraints: state::LuaKVConstraints::default(),
         per_template: scc::HashMap::new(),
         ratelimits: Arc::new(
@@ -271,18 +273,19 @@ async fn get_lua_vm(
     guild_id: GuildId,
     pool: sqlx::PgPool,
     cache_http: botox::cache::CacheHttpImpl,
+    reqwest_client: reqwest::Client,
 ) -> LuaResult<ArLua> {
     match VMS.get(&guild_id).await {
         Some(vm) => {
             if vm.broken.load(std::sync::atomic::Ordering::Acquire) {
-                let vm = create_lua_vm(guild_id, pool, cache_http).await?;
+                let vm = create_lua_vm(guild_id, pool, cache_http, reqwest_client).await?;
                 VMS.insert(guild_id, vm.clone()).await;
                 return Ok(vm);
             }
             Ok(vm.clone())
         }
         None => {
-            let vm = create_lua_vm(guild_id, pool, cache_http).await?;
+            let vm = create_lua_vm(guild_id, pool, cache_http, reqwest_client).await?;
             VMS.insert(guild_id, vm.clone()).await;
             Ok(vm)
         }
@@ -292,12 +295,13 @@ async fn get_lua_vm(
 /// Compiles a template
 pub async fn parse(
     cache_http: botox::cache::CacheHttpImpl,
+    reqwest_client: reqwest::Client,
     guild_id: serenity::all::GuildId,
     pragma: crate::TemplatePragma,
     template: &str,
     pool: sqlx::PgPool,
 ) -> LuaResult<()> {
-    let lua = get_lua_vm(guild_id, pool, cache_http).await?;
+    let lua = get_lua_vm(guild_id, pool, cache_http, reqwest_client).await?;
 
     // Update last execution time.
     lua.last_execution_time.store(
@@ -330,13 +334,14 @@ pub async fn parse(
 /// Render a template
 pub async fn render_template<Request: serde::Serialize, Response: serde::de::DeserializeOwned>(
     cache_http: botox::cache::CacheHttpImpl,
+    reqwest_client: reqwest::Client,
     guild_id: GuildId,
     pragma: crate::TemplatePragma,
     template: &str,
     pool: sqlx::PgPool,
     args: Request,
 ) -> LuaResult<Response> {
-    let lua = get_lua_vm(guild_id, pool, cache_http).await?;
+    let lua = get_lua_vm(guild_id, pool, cache_http, reqwest_client).await?;
 
     let args = serde_json::to_value(&args).map_err(|e| LuaError::external(e.to_string()))?;
 

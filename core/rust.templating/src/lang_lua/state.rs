@@ -7,7 +7,7 @@ use std::time::Duration;
 pub struct LuaActionsRatelimit {
     pub clock: QuantaClock,
     pub global: Vec<DefaultKeyedRateLimiter<()>>,
-    pub per_bucket: scc::HashMap<String, Vec<DefaultKeyedRateLimiter<()>>>,
+    pub per_bucket: indexmap::IndexMap<String, Vec<DefaultKeyedRateLimiter<()>>>,
 }
 
 impl LuaActionsRatelimit {
@@ -33,22 +33,31 @@ impl LuaActionsRatelimit {
         let global = vec![global1];
 
         // Create the per-bucket limits
-        let per_bucket = scc::HashMap::new();
-
         let ban_quota1 = create_quota(NonZeroU32::new(5).unwrap(), Duration::from_secs(30))?;
         let ban_lim1 = DefaultKeyedRateLimiter::keyed(ban_quota1);
         let ban_quota2 = create_quota(NonZeroU32::new(10).unwrap(), Duration::from_secs(75))?;
         let ban_lim2 = DefaultKeyedRateLimiter::keyed(ban_quota2);
-        per_bucket
-            .insert("ban".to_string(), vec![ban_lim1, ban_lim2])
-            .map_err(|_| "Failed to insert ban bucket")?;
+
+        let kick_quota1 = create_quota(NonZeroU32::new(5).unwrap(), Duration::from_secs(30))?;
+        let kick_lim1 = DefaultKeyedRateLimiter::keyed(kick_quota1);
+        let kick_quota2 = create_quota(NonZeroU32::new(10).unwrap(), Duration::from_secs(75))?;
+        let kick_lim2 = DefaultKeyedRateLimiter::keyed(kick_quota2);
+
+        // Send message channel limits (are smaller to allow for more actions)
+        let sendmessage_channel_quota1 =
+            create_quota(NonZeroU32::new(15).unwrap(), Duration::from_secs(20))?;
+        let sendmessage_channel_lim1 = DefaultKeyedRateLimiter::keyed(sendmessage_channel_quota1);
 
         // Create the clock
         let clock = QuantaClock::default();
 
         Ok(LuaActionsRatelimit {
             global,
-            per_bucket,
+            per_bucket: indexmap::indexmap!(
+                "ban".to_string() => vec![ban_lim1, ban_lim2] as Vec<DefaultKeyedRateLimiter<()>>,
+                "kick".to_string() => vec![kick_lim1, kick_lim2] as Vec<DefaultKeyedRateLimiter<()>>,
+                "sendmessage_channel".to_string() => vec![sendmessage_channel_lim1] as Vec<DefaultKeyedRateLimiter<()>>,
+            ),
             clock,
         })
     }
@@ -85,6 +94,7 @@ pub struct LuaUserData {
     pub pool: sqlx::PgPool,
     pub guild_id: serenity::all::GuildId,
     pub cache_http: botox::cache::CacheHttpImpl,
+    pub reqwest_client: reqwest::Client,
     pub kv_constraints: LuaKVConstraints,
 
     /// Stores a list of tokens to template data

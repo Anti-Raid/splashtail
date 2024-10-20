@@ -51,17 +51,6 @@ fn _get_display_value(column_type: &ColumnType, value: &Value, state: &State) ->
                 _ => _get_display_value(&ColumnType::new_scalar(inner.clone()), value, state),
             }
         }
-        ColumnType::Dynamic { clauses } => {
-            for clause in clauses {
-                let _value = state.template_to_string(clause.field);
-
-                if _value == clause.value {
-                    return _get_display_value(&clause.column_type, value, state);
-                }
-            }
-
-            value.to_string()
-        }
     }
 }
 

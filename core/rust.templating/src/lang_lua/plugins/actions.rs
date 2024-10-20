@@ -18,12 +18,19 @@ pub struct KickAction {
     reason: String,
 }
 
-/// A kick action
+/// A timeout action
 #[derive(serde::Serialize, serde::Deserialize)]
 pub struct TimeoutAction {
     user_id: serenity::all::UserId,
     reason: String,
     duration_seconds: u64,
+}
+
+/// A kick action
+#[derive(serde::Serialize, serde::Deserialize)]
+pub struct SendMessageChannelAction {
+    channel_id: serenity::all::ChannelId, // Channel *must* be in the same guild
+    message: crate::core::messages::Message,
 }
 
 /// An action executor is used to execute actions such as kick/ban/timeout from Lua
@@ -32,6 +39,7 @@ pub struct ActionExecutor {
     template_data: Arc<state::TemplateData>,
     guild_id: serenity::all::GuildId,
     cache_http: botox::cache::CacheHttpImpl,
+    reqwest_client: reqwest::Client,
     ratelimits: Arc<state::LuaActionsRatelimit>,
 }
 
@@ -174,6 +182,86 @@ impl LuaUserData for ActionExecutor {
 
             Ok(())
         });
+
+        methods.add_async_method(
+            "sendmessage_channel",
+            |lua, this, data: LuaValue| async move {
+                let data = lua.from_value::<SendMessageChannelAction>(data)?;
+
+                this.check_action("sendmessage_channel".to_string())
+                    .map_err(|e| LuaError::external(e))?;
+
+                let msg = crate::core::messages::to_discord_reply(data.message)
+                    .map_err(|e| LuaError::external(e))?;
+
+                // Perform required checks
+                let channel = sandwich_driver::channel(
+                    &this.cache_http,
+                    &this.reqwest_client,
+                    Some(this.guild_id),
+                    data.channel_id,
+                )
+                .await
+                .map_err(|e| LuaError::external(e))?;
+
+                let Some(channel) = channel else {
+                    return Err(LuaError::external("Channel not found"));
+                };
+
+                let Some(guild_channel) = channel.guild() else {
+                    return Err(LuaError::external("Channel not in guild"));
+                };
+
+                if guild_channel.guild_id != this.guild_id {
+                    return Err(LuaError::external("Channel not in guild"));
+                }
+
+                let bot_user_id = this.cache_http.cache.current_user().id;
+
+                let bot_user = sandwich_driver::member_in_guild(
+                    &this.cache_http,
+                    &this.reqwest_client,
+                    this.guild_id,
+                    bot_user_id,
+                )
+                .await
+                .map_err(|e| LuaError::external(e))?;
+
+                let Some(bot_user) = bot_user else {
+                    return Err(LuaError::external("Bot user not found"));
+                };
+
+                let guild =
+                    sandwich_driver::guild(&this.cache_http, &this.reqwest_client, this.guild_id)
+                        .await
+                        .map_err(|e| LuaError::external(e))?;
+
+                // Check if the bot has permissions to send messages in the given channel
+                if !guild
+                    .user_permissions_in(&guild_channel, &bot_user)
+                    .send_messages()
+                {
+                    return Err(LuaError::external(
+                        "Bot does not have permission to send messages in the given channel",
+                    ));
+                }
+
+                let mut cm = serenity::all::CreateMessage::new();
+
+                if let Some(content) = msg.content {
+                    cm = cm.content(content);
+                }
+
+                cm = cm.embeds(msg.embeds);
+
+                guild_channel
+                    .send_message(&this.cache_http.http, cm)
+                    .await
+                    .map_err(|e| LuaError::external(e))?;
+
+                Ok(())
+            },
+        );
     }
 }
 
@@ -196,6 +284,7 @@ pub fn init_plugin(lua: &Lua) -> LuaResult<LuaTable> {
                 template_data: template_data.clone(),
                 guild_id: data.guild_id.clone(),
                 cache_http: data.cache_http.clone(),
+                reqwest_client: data.reqwest_client.clone(),
                 ratelimits: data.ratelimits.clone(),
             };
 

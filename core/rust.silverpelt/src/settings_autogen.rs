@@ -51,7 +51,6 @@ fn convert_bitflags_string_to_value(
 fn serenity_resolvedvalue_to_value<'a>(
     rv: &serenity::all::ResolvedValue<'a>,
     column_type: &ColumnType,
-    current_values: Option<&indexmap::IndexMap<String, splashcore_rs::value::Value>>,
 ) -> Result<splashcore_rs::value::Value, crate::Error> {
     // Before checking column_type, first handle unresolved resolved values so they don't waste our time
     match rv {
@@ -85,30 +84,6 @@ fn serenity_resolvedvalue_to_value<'a>(
     let (is_array, inner_column_type) = match column_type {
         ColumnType::Scalar { ref column_type } => (false, column_type),
         ColumnType::Array { ref inner } => (true, inner),
-        ColumnType::Dynamic { ref clauses } => {
-            let Some(map) = current_values else {
-                return Err("INTERNAL: Dynamic column type requires current_values".into());
-            };
-
-            let mut current_value = None;
-
-            for clause in clauses {
-                let value =
-                    module_settings::state::State::template_to_string_map(map, clause.field);
-
-                if value == clause.value {
-                    current_value = Some(clause.column_type.clone());
-                    break;
-                }
-            }
-
-            if let Some(ref current_value) = current_value {
-                // Recurse
-                return serenity_resolvedvalue_to_value(rv, current_value, current_values);
-            } else {
-                return Err("INTERNAL: Dynamic column type failed to find a match".into());
-            }
-        }
     };
 
     let pot_output = {
@@ -303,7 +278,7 @@ fn poise_getvalues(
             continue; // Done with special handling for choice
         }
 
-        let value = serenity_resolvedvalue_to_value(&arg.value, &column.column_type, Some(&map))
+        let value = serenity_resolvedvalue_to_value(&arg.value, &column.column_type)
             .map_err(|e| format!("Column `{}`: {}", column.id, e))?;
 
         map.insert(column.id.to_string(), value);

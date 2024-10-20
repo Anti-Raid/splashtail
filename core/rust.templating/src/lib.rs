@@ -71,13 +71,14 @@ pub async fn parse(
     template: &str,
     pool: sqlx::PgPool,
     cache_http: botox::cache::CacheHttpImpl,
+    reqwest_client: reqwest::Client,
 ) -> Result<(), Error> {
     let (template, pragma) = TemplatePragma::parse(template)?;
 
     match pragma.lang {
         #[cfg(feature = "lua")]
         TemplateLanguage::Lua => {
-            lang_lua::parse(cache_http, guild_id, pragma, template, pool).await?;
+            lang_lua::parse(cache_http, reqwest_client, guild_id, pragma, template, pool).await?;
         }
     }
 
@@ -93,6 +94,7 @@ pub async fn execute<C: Context + serde::Serialize, RenderResult: serde::de::Des
     template: &str,
     pool: sqlx::PgPool,
     cache_http: botox::cache::CacheHttpImpl,
+    reqwest_client: reqwest::Client,
     ctx: C,
 ) -> Result<RenderResult, Error> {
     let (template, pragma) = TemplatePragma::parse(template)?;
@@ -100,8 +102,16 @@ pub async fn execute<C: Context + serde::Serialize, RenderResult: serde::de::Des
     match pragma.lang {
         #[cfg(feature = "lua")]
         TemplateLanguage::Lua => {
-            let v = lang_lua::render_template(cache_http, guild_id, pragma, template, pool, ctx)
-                .await?;
+            let v = lang_lua::render_template(
+                cache_http,
+                reqwest_client,
+                guild_id,
+                pragma,
+                template,
+                pool,
+                ctx,
+            )
+            .await?;
 
             Ok(v)
         }

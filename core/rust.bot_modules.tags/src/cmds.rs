@@ -82,11 +82,12 @@ pub async fn tag(
         .into_message()
         .await?;
 
-    let discord_reply = templating::execute::<_, templating::core::messages::Message>(
+    let discord_reply = templating::execute::<_, Option<templating::core::messages::Message>>(
         guild_id,
         &template,
         ctx.data().pool.clone(),
         botox::cache::CacheHttpImpl::from_ctx(ctx.serenity_context()),
+        ctx.data().reqwest.clone(),
         TagContext {
             user: ctx.author().clone(),
             guild_id,
@@ -97,18 +98,30 @@ pub async fn tag(
     .await;
 
     let discord_reply = match discord_reply {
-        Ok(reply) => match templating::core::messages::to_discord_reply(reply) {
-            Ok(reply) => reply,
-            Err(e) => {
+        Ok(reply) => {
+            if let Some(reply) = reply {
+                match templating::core::messages::to_discord_reply(reply) {
+                    Ok(reply) => reply,
+                    Err(e) => {
+                        let embed = serenity::all::CreateEmbed::default()
+                            .description(format!("Failed to render tag: {}", e));
+
+                        templating::core::messages::DiscordReply {
+                            embeds: vec![embed],
+                            ..Default::default()
+                        }
+                    }
+                }
+            } else {
                 let embed = serenity::all::CreateEmbed::default()
-                    .description(format!("Failed to render tag: {}", e));
+                    .description(format!("Template returned no message"));
 
                 templating::core::messages::DiscordReply {
                     embeds: vec![embed],
                     ..Default::default()
                 }
             }
-        },
+        }
         Err(e) => {
             let embed = serenity::all::CreateEmbed::default()
                 .description(format!("Failed to render template: {}", e));

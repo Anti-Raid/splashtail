@@ -40,12 +40,6 @@ pub struct SilverpeltCache {
 
     /// Cache of the canonical forms of all modules
     pub canonical_module_cache: dashmap::DashMap<String, CanonicalModule>,
-
-    /// Cache of all regexes and their parsed forms
-    pub regex_cache: Cache<String, regex::Regex>,
-
-    /// Cache of all regexes and their pat as a (String, String) to a boolean indicating success
-    pub regex_match_cache: Cache<(String, String), bool>,
 }
 
 impl Default for SilverpeltCache {
@@ -56,8 +50,6 @@ impl Default for SilverpeltCache {
             module_cache: dashmap::DashMap::new(),
             command_id_module_map: dashmap::DashMap::new(),
             canonical_module_cache: dashmap::DashMap::new(),
-            regex_cache: Cache::builder().support_invalidation_closures().build(),
-            regex_match_cache: Cache::builder().support_invalidation_closures().build(),
         }
     }
 }
@@ -103,35 +95,5 @@ impl SilverpeltCache {
 
             self.canonical_module_cache.remove(module_id);
         }
-    }
-
-    // This method attempts to match on a regex while using the cache where possible
-    pub async fn regex_match(&self, regex: &str, pat: &str) -> Result<bool, crate::Error> {
-        if let Some(m) = self
-            .regex_match_cache
-            .get(&(regex.to_string(), pat.to_string()))
-            .await
-        {
-            return Ok(m);
-        }
-
-        let compiled_regex = if let Some(compiled_regex) = self.regex_cache.get(regex).await {
-            compiled_regex
-        } else {
-            let regex_compiled = regex::Regex::new(regex)?;
-            self.regex_cache
-                .insert(regex.to_string(), regex_compiled.clone())
-                .await;
-
-            regex_compiled
-        };
-
-        let result = compiled_regex.is_match(pat);
-
-        self.regex_match_cache
-            .insert((regex.to_string(), pat.to_string()), result)
-            .await;
-
-        Ok(result)
     }
 }

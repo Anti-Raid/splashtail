@@ -46,12 +46,18 @@ pub(crate) async fn event_listener(ectx: &EventHandlerContext) -> Result<(), sil
                 return Ok(()); // Ignore unknown events
             }
 
-            match serde_json::from_value::<Vec<String>>(data.clone()) {
-                Ok(events) => crate::checks::check_all_events(events).await?,
-                Err(e) => return Err(format!("ie: {}", e).into()), // internal error
-            }
-
-            Ok(())
+            dispatch_audit_log(
+                ctx,
+                &ectx.data,
+                "AR/TrustedWebEvent",
+                "(Anti Raid) Trusted Web Event",
+                indexmap::indexmap! {
+                    "event_name".to_string() => event_name.clone().into(),
+                    "data".to_string() => data.clone().into(),
+                },
+                ectx.guild_id,
+            )
+            .await
         }
         AntiraidEvent::Discord(ref event) => {
             if not_audit_loggable_event().contains(&event.into()) {
@@ -199,13 +205,11 @@ pub(crate) async fn event_listener(ectx: &EventHandlerContext) -> Result<(), sil
 /// - If filter matches the event_name, return true unless a special case applies
 ///
 /// Special cases:
-/// - If filter starts with `R/`, treat it as a regex
 /// - If event_name is MESSAGE, then it must be an exact match to be dispatched AND must have a custom template declared for it. This is to avoid spam
 pub(crate) async fn should_dispatch_event(
     event_name: &str,
     filters: &[String],
     uses_custom_template: bool,
-    silverpelt_cache: &silverpelt::cache::SilverpeltCache,
 ) -> Result<bool, silverpelt::Error> {
     if event_name == "MESSAGE" {
         if !filters.contains(&event_name.to_string()) {
@@ -224,29 +228,7 @@ pub(crate) async fn should_dispatch_event(
         return Ok(true);
     }
 
-    let mut regexes = Vec::new();
-
-    for filter in filters.iter() {
-        if filter.starts_with("R/") && filter.len() > 2 {
-            regexes.push(&filter[2..]);
-        }
-
-        if event_name == filter {
-            return Ok(true);
-        }
-    }
-
-    for regex in regexes {
-        match silverpelt_cache.regex_match(regex, event_name).await {
-            Ok(true) => return Ok(true),
-            Ok(false) => {}
-            Err(e) => {
-                log::warn!("Failed to match regex: {}", e);
-            }
-        };
-    }
-
-    Ok(false)
+    return Ok(filters.contains(&event_name.to_string()));
 }
 
 async fn dispatch_audit_log(
@@ -262,14 +244,6 @@ async fn dispatch_audit_log(
     if sinks.is_empty() {
         return Ok(());
     }
-
-    let event_json = serde_json::to_string(&serde_json::json! {
-        {
-            "event_data": event_data,
-            "event_name": event_name,
-            "event_titlename": event_titlename,
-        }
-    })?;
 
     for sink in sinks.iter() {
         // Verify event dispatch
@@ -291,7 +265,6 @@ async fn dispatch_audit_log(
                     false
                 }
             },
-            &data.silverpelt_cache,
         )
         .await?
         {
@@ -311,11 +284,12 @@ async fn dispatch_audit_log(
             }
         };
 
-        let discord_reply = templating::execute::<_, templating::core::messages::Message>(
+        let discord_reply = templating::execute::<_, Option<templating::core::messages::Message>>(
             guild_id,
             &template,
             data.pool.clone(),
             botox::cache::CacheHttpImpl::from_ctx(ctx),
+            data.reqwest.clone(),
             AuditLogContext {
                 event_titlename: event_titlename.to_string(),
                 event_name: event_name.to_string(),
@@ -325,18 +299,24 @@ async fn dispatch_audit_log(
         .await;
 
         let discord_reply = match discord_reply {
-            Ok(reply) => match templating::core::messages::to_discord_reply(reply) {
-                Ok(reply) => reply,
-                Err(e) => {
-                    let embed = serenity::all::CreateEmbed::default()
-                        .description(format!("Failed to render template: {}", e));
+            Ok(reply) => {
+                if let Some(reply) = reply {
+                    match templating::core::messages::to_discord_reply(reply) {
+                        Ok(reply) => reply,
+                        Err(e) => {
+                            let embed = serenity::all::CreateEmbed::default()
+                                .description(format!("Failed to render template: {}", e));
 
-                    templating::core::messages::DiscordReply {
-                        embeds: vec![embed],
-                        ..Default::default()
+                            templating::core::messages::DiscordReply {
+                                embeds: vec![embed],
+                                ..Default::default()
+                            }
+                        }
                     }
+                } else {
+                    continue;
                 }
-            },
+            }
             Err(e) => {
                 let embed = serenity::all::CreateEmbed::default()
                     .description(format!("Failed to render template: {}", e));
@@ -348,77 +328,25 @@ async fn dispatch_audit_log(
             }
         };
 
-        match sink.typ.as_str() {
-            "channel" => {
-                let channel: ChannelId = sink.sink.parse()?;
+        let channel: ChannelId = sink.sink.parse()?;
 
-                let mut message = CreateMessage::default().embeds(discord_reply.embeds);
+        let mut message = CreateMessage::default().embeds(discord_reply.embeds);
 
-                if let Some(content) = discord_reply.content {
-                    message = message.content(content);
-                }
+        if let Some(content) = discord_reply.content {
+            message = message.content(content);
+        }
 
-                if sink.send_json_context {
-                    message = message.add_file(serenity::all::CreateAttachment::bytes(
-                        event_json.clone().into_bytes(),
-                        "event_data.json",
-                    ))
-                }
+        match channel.send_message(&ctx.http, message).await {
+            Ok(_) => {}
+            Err(e) => {
+                warn!(
+                    "Failed to send audit log event to channel: {} [sink id: {}]",
+                    e, sink.id
+                );
 
-                match channel.send_message(&ctx.http, message).await {
-                    Ok(_) => {}
-                    Err(e) => {
-                        warn!(
-                            "Failed to send audit log event to channel: {} [sink id: {}]",
-                            e, sink.id
-                        );
-
-                        if let serenity::Error::Http(
-                            serenity::http::HttpError::UnsuccessfulRequest(ref err),
-                        ) = e
-                        {
-                            match err.status_code {
-                                reqwest::StatusCode::FORBIDDEN
-                                | reqwest::StatusCode::UNAUTHORIZED
-                                | reqwest::StatusCode::NOT_FOUND
-                                | reqwest::StatusCode::GONE => {
-                                    sqlx::query!(
-                                        "UPDATE auditlogs__sinks SET broken = true WHERE id = $1",
-                                        sink.id
-                                    )
-                                    .execute(&data.pool)
-                                    .await?;
-                                }
-                                _ => {}
-                            }
-                        }
-                    }
-                };
-            }
-            "discord_webhook" => {
-                let parsed_sink = sink.sink.parse()?;
-                let Some((id, token)) = serenity::utils::parse_webhook(&parsed_sink) else {
-                    warn!(
-                        "Failed to parse webhook URL: {} [sink id: {}]",
-                        sink.sink, sink.id
-                    );
-                    continue;
-                };
-
-                let mut files = Vec::new();
-                if sink.send_json_context {
-                    files.push(serenity::all::CreateAttachment::bytes(
-                        event_json.clone().into_bytes(),
-                        "event_data.json",
-                    ));
-                }
-
-                if let Err(serenity::Error::Http(serenity::http::HttpError::UnsuccessfulRequest(
+                if let serenity::Error::Http(serenity::http::HttpError::UnsuccessfulRequest(
                     ref err,
-                ))) = ctx
-                    .http
-                    .execute_webhook(id, None, token, false, files, &discord_reply)
-                    .await
+                )) = e
                 {
                     match err.status_code {
                         reqwest::StatusCode::FORBIDDEN
@@ -436,12 +364,7 @@ async fn dispatch_audit_log(
                     }
                 }
             }
-            _ => {
-                warn!("Unknown sink type: {} [sink id: {}]", sink.typ, sink.id);
-            }
-        }
-
-        log::info!("Dispatched audit log event: {}", event_name);
+        };
     }
 
     Ok(())

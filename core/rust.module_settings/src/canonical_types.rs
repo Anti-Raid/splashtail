@@ -113,27 +113,6 @@ impl From<super::types::SettingsError> for CanonicalSettingsError {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[allow(dead_code)]
-pub struct CanonicalColumnTypeDynamicClause {
-    /// The field to check in state (lite templating [only variable substitution] is allowed)
-    pub field: String,
-    /// The value to check for
-    pub value: serde_json::Value,
-    /// The column type to set if the value matches
-    pub column_type: CanonicalColumnType,
-}
-
-impl From<super::types::ColumnTypeDynamicClause> for CanonicalColumnTypeDynamicClause {
-    fn from(clause: super::types::ColumnTypeDynamicClause) -> Self {
-        Self {
-            field: clause.field.to_string(),
-            value: clause.value.to_json(),
-            column_type: clause.column_type.into(),
-        }
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[allow(dead_code)]
 pub enum CanonicalColumnType {
     /// A single valued column (scalar)
     Scalar {
@@ -145,13 +124,6 @@ pub enum CanonicalColumnType {
         /// The inner type of the array
         inner: CanonicalInnerColumnType,
     },
-    /// Dynamic type that changes based on the value of another field
-    ///
-    /// Dynamic types are the one case where the field order matters.
-    Dynamic {
-        /// The clauses to check for setting the actual kind
-        clauses: Vec<CanonicalColumnTypeDynamicClause>,
-    },
 }
 
 impl From<super::types::ColumnType> for CanonicalColumnType {
@@ -162,9 +134,6 @@ impl From<super::types::ColumnType> for CanonicalColumnType {
             },
             super::types::ColumnType::Array { inner } => CanonicalColumnType::Array {
                 inner: inner.into(),
-            },
-            super::types::ColumnType::Dynamic { clauses } => CanonicalColumnType::Dynamic {
-                clauses: clauses.into_iter().map(|v| (v.into())).collect(),
             },
         }
     }
