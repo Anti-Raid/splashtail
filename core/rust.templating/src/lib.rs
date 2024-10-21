@@ -10,6 +10,9 @@ type Error = Box<dyn std::error::Error + Send + Sync>; // This is constant and s
 
 use std::str::FromStr;
 
+const MAX_ACTIONS: usize = 50;
+const MAX_KV_OPS: usize = 50;
+
 #[derive(Clone, serde::Serialize, serde::Deserialize)]
 pub struct TemplatePragma {
     pub lang: TemplateLanguage,
@@ -38,7 +41,17 @@ impl TemplatePragma {
         // Remove out the @pragma and serde parse it
         let first_line = first_line.replace("@pragma ", "");
 
-        Ok((rest, serde_json::from_str(&first_line)?))
+        let pragma: TemplatePragma = serde_json::from_str(&first_line)?;
+
+        if pragma.actions.len() > MAX_ACTIONS {
+            return Err("Too many actions specified".into());
+        }
+
+        if pragma.kv_ops.len() > MAX_KV_OPS {
+            return Err("Too many kv ops specified".into());
+        }
+
+        Ok((rest, pragma))
     }
 }
 
