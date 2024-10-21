@@ -15,7 +15,7 @@ pub struct KvExecutor {
 
 impl KvExecutor {
     pub fn base_check(&self, action: String) -> Result<(), crate::Error> {
-        if !self.template_data.pragma.kv_ops.is_empty() {
+        if self.template_data.pragma.kv_ops.is_empty() {
             return Err("Key-value operations are disabled on this template".into());
         }
 
@@ -162,6 +162,9 @@ impl LuaUserData for KvExecutor {
             .await
             .map_err(LuaError::external)?;
 
+            tx.commit().await
+            .map_err(LuaError::external)?;
+
             Ok(())
         });
 
@@ -242,6 +245,9 @@ impl LuaUserData for KvExecutor {
                 .await
                 .map_err(LuaError::external)?;
 
+                tx.commit().await
+                    .map_err(LuaError::external)?;
+
                 Ok(Some(lua.to_value(&current_val)?))
             } else {
                 let rec = sqlx::query!(
@@ -264,6 +270,9 @@ impl LuaUserData for KvExecutor {
                 )
                 .execute(&mut *tx)
                 .await
+                .map_err(LuaError::external)?;
+
+                tx.commit().await
                 .map_err(LuaError::external)?;
 
                 Ok(None)
