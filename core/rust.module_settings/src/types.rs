@@ -240,7 +240,9 @@ pub enum InnerColumnType {
         values: indexmap::IndexMap<String, i64>,
     },
     Boolean {},
-    Json {},
+    Json {
+        max_bytes: Option<usize>,
+    },
 }
 
 impl std::fmt::Display for InnerColumnType {
@@ -281,7 +283,7 @@ impl std::fmt::Display for InnerColumnType {
                 write!(f, ")")
             }
             InnerColumnType::Boolean {} => write!(f, "Boolean"),
-            InnerColumnType::Json {} => write!(f, "Json"),
+            InnerColumnType::Json { max_bytes } => write!(f, "Json (max bytes: {:?})", max_bytes),
         }
     }
 }

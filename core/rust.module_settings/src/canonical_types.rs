@@ -246,7 +246,10 @@ pub enum CanonicalInnerColumnType {
         values: indexmap::IndexMap<String, i64>,
     },
     Boolean {},
-    Json {},
+    Json {
+        /// The maximum number of bytes for the json
+        max_bytes: Option<usize>,
+    },
 }
 
 impl From<super::types::InnerColumnType> for CanonicalInnerColumnType {
@@ -280,7 +283,9 @@ impl From<super::types::InnerColumnType> for CanonicalInnerColumnType {
                 }
             }
             super::types::InnerColumnType::Boolean {} => CanonicalInnerColumnType::Boolean {},
-            super::types::InnerColumnType::Json {} => CanonicalInnerColumnType::Json {},
+            super::types::InnerColumnType::Json { max_bytes } => {
+                CanonicalInnerColumnType::Json { max_bytes }
+            }
         }
     }
 }

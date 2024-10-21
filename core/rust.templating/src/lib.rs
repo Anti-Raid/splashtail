@@ -3,6 +3,8 @@ pub mod core;
 
 #[cfg(feature = "lua")]
 mod lang_lua;
+#[cfg(feature = "lua")]
+pub use lang_lua::state::LuaKVConstraints;
 
 type Error = Box<dyn std::error::Error + Send + Sync>; // This is constant and should be copy pasted
 

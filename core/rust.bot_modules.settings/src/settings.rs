@@ -1052,3 +1052,78 @@ impl SettingDataValidator for GuildTemplateValidator {
         Ok(())
     }
 }
+
+pub static GUILD_TEMPLATES_KV: LazyLock<ConfigOption> = LazyLock::new(|| {
+    ConfigOption {
+        id: "guild_templates_kv",
+        name: "Server Templates (key-value db)",
+        description: "Key-value database available to templates on this server",
+        table: "guild_templates_kv",
+        common_filters: indexmap::indexmap! {},
+        default_common_filters: indexmap::indexmap! {
+            "guild_id" => "{__guild_id}"
+        },
+        primary_key: "key",
+        max_entries: Some(templating::LuaKVConstraints::default().max_keys),
+        max_return: 10,
+        data_store: settings_wrap(PostgresDataStore {}),
+        columns: settings_wrap(vec![
+            module_settings::common_columns::guild_id("guild_id", "Guild ID", "The Guild ID"),
+            Column {
+                id: "key",
+                name: "Key",
+                description: "key",
+                column_type: ColumnType::new_scalar(InnerColumnType::String {
+                    kind: InnerColumnTypeStringKind::Normal,
+                    min_length: None,
+                    max_length: Some(templating::LuaKVConstraints::default().max_key_length),
+                    allowed_values: vec![],
+                }),
+                nullable: false,
+                default: None,
+                unique: true,
+                suggestions: ColumnSuggestion::None {},
+                ignored_for: vec![],
+                secret: false,
+            },
+            Column {
+                id: "value",
+                name: "Content",
+                description: "The content of the template",
+                column_type: ColumnType::new_scalar(InnerColumnType::Json {
+                    max_bytes: Some(templating::LuaKVConstraints::default().max_value_bytes),
+                }),
+                nullable: false,
+                default: None,
+                unique: true,
+                suggestions: ColumnSuggestion::None {},
+                ignored_for: vec![],
+                secret: false,
+            },
+            module_settings::common_columns::created_at(),
+            module_settings::common_columns::last_updated_at(),
+        ]),
+        title_template: "{name}",
+        operations: indexmap::indexmap! {
+            OperationType::View => OperationSpecific {
+                columns_to_set: indexmap::indexmap! {},
+            },
+            OperationType::Create => OperationSpecific {
+                columns_to_set: indexmap::indexmap! {
+                    "created_at" => "{__now}",
+                    "last_updated_at" => "{__now}",
+                },
+            },
+            OperationType::Update => OperationSpecific {
+                columns_to_set: indexmap::indexmap! {
+                    "last_updated_at" => "{__now}",
+                },
+            },
+            OperationType::Delete => OperationSpecific {
+                columns_to_set: indexmap::indexmap! {},
+            },
+        },
+        validator: settings_wrap(NoOpValidator {}),
+        post_action: settings_wrap(NoOpPostAction {}),
+    }
+});

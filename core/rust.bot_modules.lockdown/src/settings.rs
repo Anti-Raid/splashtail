@@ -167,7 +167,7 @@ pub static LOCKDOWNS: LazyLock<ConfigOption> = LazyLock::new(|| ConfigOption {
             id: "data",
             name: "Data",
             description: "The data stored of the lockdown.",
-            column_type: ColumnType::new_scalar(InnerColumnType::Json {}),
+            column_type: ColumnType::new_scalar(InnerColumnType::Json { max_bytes: None }),
             nullable: false,
             default: None,
             unique: false,

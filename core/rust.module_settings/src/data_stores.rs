@@ -247,7 +247,7 @@ impl PostgresDataStoreImpl {
                     InnerColumnType::Float {} => query.bind(None::<f64>),
                     InnerColumnType::BitFlag { .. } => query.bind(None::<i64>),
                     InnerColumnType::Boolean {} => query.bind(None::<bool>),
-                    InnerColumnType::Json {} => query.bind(None::<serde_json::Value>),
+                    InnerColumnType::Json { .. } => query.bind(None::<serde_json::Value>),
                 },
                 ColumnType::Array {
                     inner: column_type_hint,
@@ -263,7 +263,7 @@ impl PostgresDataStoreImpl {
                     InnerColumnType::Float {} => query.bind(None::<Vec<f64>>),
                     InnerColumnType::BitFlag { .. } => query.bind(None::<Vec<i64>>),
                     InnerColumnType::Boolean {} => query.bind(None::<Vec<bool>>),
-                    InnerColumnType::Json {} => query.bind(None::<Vec<serde_json::Value>>),
+                    InnerColumnType::Json { .. } => query.bind(None::<Vec<serde_json::Value>>),
                 },
             },
         }

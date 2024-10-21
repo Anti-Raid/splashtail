@@ -92,7 +92,7 @@ pub static USER_ACTIONS: LazyLock<ConfigOption> = LazyLock::new(|| ConfigOption 
             id: "action_data",
             name: "Action Data",
             description: "Any extra data regarding the action",
-            column_type: ColumnType::new_scalar(InnerColumnType::Json {}),
+            column_type: ColumnType::new_scalar(InnerColumnType::Json { max_bytes: None }),
             nullable: false,
             default: None,
             unique: false,

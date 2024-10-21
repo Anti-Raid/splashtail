@@ -16,7 +16,7 @@ fn _parse_value(
     match column_type {
         ColumnType::Scalar { column_type } => {
             // Special case: JSON columns can be any type
-            if matches!(v, Value::List(_)) && !matches!(column_type, InnerColumnType::Json {}) {
+            if matches!(v, Value::List(_)) && !matches!(column_type, InnerColumnType::Json { .. }) {
                 return Err(SettingsError::SchemaTypeValidationError {
                     column: column_id.to_string(),
                     expected_type: "Scalar".to_string(),
@@ -299,29 +299,86 @@ fn _parse_value(
                         got_type: format!("{:?}", v),
                     }),
                 },
-                InnerColumnType::Json {} => Ok(v),
+                InnerColumnType::Json { max_bytes } => {
+                    // Convert back to json to get bytes
+                    let json = serde_json::to_string(&v.to_json()).map_err(|e| {
+                        SettingsError::SchemaCheckValidationError {
+                            column: column_id.to_string(),
+                            check: "json_parse".to_string(),
+                            accepted_range: "Valid JSON".to_string(),
+                            error: e.to_string(),
+                        }
+                    })?;
+
+                    if let Some(max_bytes) = max_bytes {
+                        if json.as_bytes().len() > *max_bytes {
+                            return Err(SettingsError::SchemaCheckValidationError {
+                                column: column_id.to_string(),
+                                check: "json_max_bytes".to_string(),
+                                accepted_range: format!("<{}", max_bytes),
+                                error: format!(
+                                    "json.as_bytes().len() > *max_bytes: {}",
+                                    json.as_bytes().len()
+                                ),
+                            });
+                        }
+                    }
+
+                    Ok(v)
+                }
             }
         }
-        ColumnType::Array { inner } => match v {
-            Value::List(l) => {
-                let mut values: Vec<Value> = Vec::new();
+        ColumnType::Array { inner } => {
+            match inner {
+                InnerColumnType::Json { max_bytes } => {
+                    // Convert back to json to get bytes
+                    let json = serde_json::to_string(&v.to_json()).map_err(|e| {
+                        SettingsError::SchemaCheckValidationError {
+                            column: column_id.to_string(),
+                            check: "json_parse".to_string(),
+                            accepted_range: "Valid JSON".to_string(),
+                            error: e.to_string(),
+                        }
+                    })?;
 
-                let column_type = ColumnType::new_scalar(inner.clone());
-                for v in l {
-                    let new_v = _parse_value(v, state, &column_type, column_id)?;
-
-                    values.push(new_v);
+                    if let Some(max_bytes) = max_bytes {
+                        if json.as_bytes().len() > *max_bytes {
+                            return Err(SettingsError::SchemaCheckValidationError {
+                                column: column_id.to_string(),
+                                check: "json_max_bytes".to_string(),
+                                accepted_range: format!("<{}", max_bytes),
+                                error: format!(
+                                    "json.as_bytes().len() > *max_bytes: {}",
+                                    json.as_bytes().len()
+                                ),
+                            });
+                        }
+                    }
                 }
-
-                Ok(Value::List(values))
+                _ => {}
             }
-            Value::None => Ok(v),
-            _ => Err(SettingsError::SchemaTypeValidationError {
-                column: column_id.to_string(),
-                expected_type: "Array".to_string(),
-                got_type: format!("{:?}", v),
-            }),
-        },
+
+            match v {
+                Value::List(l) => {
+                    let mut values: Vec<Value> = Vec::new();
+
+                    let column_type = ColumnType::new_scalar(inner.clone());
+                    for v in l {
+                        let new_v = _parse_value(v, state, &column_type, column_id)?;
+
+                        values.push(new_v);
+                    }
+
+                    Ok(Value::List(values))
+                }
+                Value::None => Ok(v),
+                _ => Err(SettingsError::SchemaTypeValidationError {
+                    column: column_id.to_string(),
+                    expected_type: "Array".to_string(),
+                    got_type: format!("{:?}", v),
+                }),
+            }
+        }
     }
 }
 
@@ -343,7 +400,7 @@ async fn _validate_value(
     let v = match column_type {
         ColumnType::Scalar { column_type } => {
             // Special case: JSON columns can be any type
-            if matches!(v, Value::List(_)) && !matches!(column_type, InnerColumnType::Json {}) {
+            if matches!(v, Value::List(_)) && !matches!(column_type, InnerColumnType::Json { .. }) {
                 return Err(SettingsError::SchemaTypeValidationError {
                     column: column_id.to_string(),
                     expected_type: "Scalar".to_string(),

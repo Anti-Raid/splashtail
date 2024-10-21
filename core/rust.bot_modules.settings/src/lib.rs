@@ -64,6 +64,7 @@ impl silverpelt::module::Module for Module {
             (*settings::GUILD_ROLES).clone(),
             (*settings::GUILD_MEMBERS).clone(),
             (*settings::GUILD_TEMPLATES).clone(),
+            (*settings::GUILD_TEMPLATES_KV).clone(),
         ]
     }
 
