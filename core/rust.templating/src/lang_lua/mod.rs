@@ -118,7 +118,10 @@ async fn create_lua_vm(
         reqwest_client,
         kv_constraints: state::LuaKVConstraints::default(),
         per_template: scc::HashMap::new(),
-        ratelimits: Arc::new(
+        kv_ratelimits: Arc::new(
+            state::LuaKvRatelimit::new().map_err(|e| LuaError::external(e.to_string()))?,
+        ),
+        actions_ratelimits: Arc::new(
             state::LuaActionsRatelimit::new().map_err(|e| LuaError::external(e.to_string()))?,
         ),
     };

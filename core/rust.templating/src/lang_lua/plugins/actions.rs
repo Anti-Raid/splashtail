@@ -285,7 +285,7 @@ pub fn init_plugin(lua: &Lua) -> LuaResult<LuaTable> {
                 guild_id: data.guild_id.clone(),
                 cache_http: data.cache_http.clone(),
                 reqwest_client: data.reqwest_client.clone(),
-                ratelimits: data.ratelimits.clone(),
+                ratelimits: data.actions_ratelimits.clone(),
             };
 
             Ok(executor)

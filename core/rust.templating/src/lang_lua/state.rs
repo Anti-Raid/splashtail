@@ -11,10 +11,6 @@ pub struct LuaActionsRatelimit {
 }
 
 impl LuaActionsRatelimit {
-    ///
-    /// Default global limit: 10 actions per 60 seconds
-    /// Bucket limits:
-    /// -> ban: [5 per 30 seconds, 10 per 75 seconds]
     pub fn new() -> Result<Self, crate::Error> {
         fn create_quota(
             limit_per: NonZeroU32,
@@ -51,7 +47,7 @@ impl LuaActionsRatelimit {
         // Create the clock
         let clock = QuantaClock::default();
 
-        Ok(LuaActionsRatelimit {
+        Ok(Self {
             global,
             per_bucket: indexmap::indexmap!(
                 "ban".to_string() => vec![ban_lim1, ban_lim2] as Vec<DefaultKeyedRateLimiter<()>>,
@@ -64,6 +60,44 @@ impl LuaActionsRatelimit {
 }
 
 #[allow(dead_code)]
+pub struct LuaKvRatelimit {
+    pub clock: QuantaClock,
+    pub global: Vec<DefaultKeyedRateLimiter<()>>,
+    pub per_bucket: indexmap::IndexMap<String, Vec<DefaultKeyedRateLimiter<()>>>,
+}
+
+impl LuaKvRatelimit {
+    ///
+    /// Default global limit: 10 actions per 60 seconds
+    pub fn new() -> Result<Self, crate::Error> {
+        fn create_quota(
+            limit_per: NonZeroU32,
+            limit_time: Duration,
+        ) -> Result<governor::Quota, crate::Error> {
+            let quota = governor::Quota::with_period(limit_time)
+                .ok_or("Failed to create quota")?
+                .allow_burst(limit_per);
+
+            Ok(quota)
+        }
+
+        // Create the global limit
+        let global_quota = create_quota(NonZeroU32::new(10).unwrap(), Duration::from_secs(60))?;
+        let global1 = DefaultKeyedRateLimiter::keyed(global_quota);
+        let global = vec![global1];
+
+        // Create the clock
+        let clock = QuantaClock::default();
+
+        Ok(Self {
+            global,
+            per_bucket: indexmap::indexmap!(),
+            clock,
+        })
+    }
+}
+
+#[derive(Clone, Copy, serde::Serialize, serde::Deserialize)]
 pub struct LuaKVConstraints {
     /// Maximum number of keys allowed in the KV store
     pub max_keys: usize,
@@ -103,7 +137,10 @@ pub struct LuaUserData {
     pub per_template: scc::HashMap<String, Arc<TemplateData>>,
 
     /// Stores the lua actions ratelimiters
-    pub ratelimits: Arc<LuaActionsRatelimit>,
+    pub actions_ratelimits: Arc<LuaActionsRatelimit>,
+
+    /// Stores the lua kv ratelimiters
+    pub kv_ratelimits: Arc<LuaKvRatelimit>,
 }
 
 pub fn add_template(

@@ -17,6 +17,9 @@ pub struct TemplatePragma {
     #[serde(default)]
     pub actions: Vec<String>,
 
+    #[serde(default)]
+    pub kv_ops: Vec<String>,
+
     #[serde(flatten)]
     pub extra_info: indexmap::IndexMap<String, serde_json::Value>,
 }
