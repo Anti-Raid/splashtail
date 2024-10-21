@@ -91,7 +91,7 @@ impl LuaUserData for ActionExecutor {
             let data = lua.from_value::<BanAction>(data)?;
 
             this.check_action("ban".to_string())
-                .map_err(|e| LuaError::external(e))?;
+                .map_err(LuaError::external)?;
 
             let delete_message_days = {
                 if let Some(days) = data.delete_message_days {
@@ -122,7 +122,7 @@ impl LuaUserData for ActionExecutor {
                     Some(data.reason.as_str()),
                 )
                 .await
-                .map_err(|e| LuaError::external(e))?;
+                .map_err(LuaError::external)?;
 
             Ok(())
         });
@@ -131,7 +131,7 @@ impl LuaUserData for ActionExecutor {
             let data = lua.from_value::<KickAction>(data)?;
 
             this.check_action("kick".to_string())
-                .map_err(|e| LuaError::external(e))?;
+                .map_err(LuaError::external)?;
 
             if data.reason.len() > 128 || data.reason.is_empty() {
                 return Err(LuaError::external(
@@ -143,7 +143,7 @@ impl LuaUserData for ActionExecutor {
                 .http
                 .kick_member(this.guild_id, data.user_id, Some(data.reason.as_str()))
                 .await
-                .map_err(|e| LuaError::external(e))?;
+                .map_err(LuaError::external)?;
 
             Ok(())
         });
@@ -152,7 +152,7 @@ impl LuaUserData for ActionExecutor {
             let data = lua.from_value::<TimeoutAction>(data)?;
 
             this.check_action("timeout".to_string())
-                .map_err(|e| LuaError::external(e))?;
+                .map_err(LuaError::external)?;
 
             if data.reason.len() > 128 || data.reason.is_empty() {
                 return Err(LuaError::external(
@@ -178,7 +178,7 @@ impl LuaUserData for ActionExecutor {
                         .disable_communication_until(communication_disabled_until.into()),
                 )
                 .await
-                .map_err(|e| LuaError::external(e))?;
+                .map_err(LuaError::external)?;
 
             Ok(())
         });
@@ -189,10 +189,10 @@ impl LuaUserData for ActionExecutor {
                 let data = lua.from_value::<SendMessageChannelAction>(data)?;
 
                 this.check_action("sendmessage_channel".to_string())
-                    .map_err(|e| LuaError::external(e))?;
+                    .map_err(LuaError::external)?;
 
                 let msg = crate::core::messages::to_discord_reply(data.message)
-                    .map_err(|e| LuaError::external(e))?;
+                    .map_err(LuaError::external)?;
 
                 // Perform required checks
                 let channel = sandwich_driver::channel(
@@ -202,7 +202,7 @@ impl LuaUserData for ActionExecutor {
                     data.channel_id,
                 )
                 .await
-                .map_err(|e| LuaError::external(e))?;
+                .map_err(LuaError::external)?;
 
                 let Some(channel) = channel else {
                     return Err(LuaError::external("Channel not found"));
@@ -225,7 +225,7 @@ impl LuaUserData for ActionExecutor {
                     bot_user_id,
                 )
                 .await
-                .map_err(|e| LuaError::external(e))?;
+                .map_err(LuaError::external)?;
 
                 let Some(bot_user) = bot_user else {
                     return Err(LuaError::external("Bot user not found"));
@@ -234,7 +234,7 @@ impl LuaUserData for ActionExecutor {
                 let guild =
                     sandwich_driver::guild(&this.cache_http, &this.reqwest_client, this.guild_id)
                         .await
-                        .map_err(|e| LuaError::external(e))?;
+                        .map_err(LuaError::external)?;
 
                 // Check if the bot has permissions to send messages in the given channel
                 if !guild
@@ -257,7 +257,7 @@ impl LuaUserData for ActionExecutor {
                 guild_channel
                     .send_message(&this.cache_http.http, cm)
                     .await
-                    .map_err(|e| LuaError::external(e))?;
+                    .map_err(LuaError::external)?;
 
                 Ok(())
             },
@@ -282,7 +282,7 @@ pub fn init_plugin(lua: &Lua) -> LuaResult<LuaTable> {
 
             let executor = ActionExecutor {
                 template_data: template_data.clone(),
-                guild_id: data.guild_id.clone(),
+                guild_id: data.guild_id,
                 cache_http: data.cache_http.clone(),
                 reqwest_client: data.reqwest_client.clone(),
                 ratelimits: data.actions_ratelimits.clone(),

@@ -238,7 +238,9 @@ async fn start_testing<'a>(
                 }
             };
         }
-        _ => {}
+        _ => {
+            // Not used for now
+        }
     };
 
     Ok(())

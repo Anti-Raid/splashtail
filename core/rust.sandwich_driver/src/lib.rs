@@ -456,7 +456,7 @@ pub async fn channel(
 
 pub async fn get_status(client: &reqwest::Client) -> Result<GetStatusResponse, Error> {
     let res = client
-        .get(&format!(
+        .get(format!(
             "{}/api/status",
             config::CONFIG.meta.sandwich_http_api
         ))

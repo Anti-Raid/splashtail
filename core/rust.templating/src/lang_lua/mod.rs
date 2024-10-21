@@ -56,14 +56,26 @@ async fn create_lua_vm(
         LuaOptions::new().catch_rust_panics(true),
     )?;
 
-    // Override print function with function that appends to __stack.stdout table
-    // We do this by executing a lua script
+    let compiler = mlua::Compiler::new()
+        .set_optimization_level(2)
+        .set_type_info_level(1);
+    lua.set_compiler(compiler);
+
+    // Prelude code providing some basic functions directly to the Lua VM
     lua.load(
         r#"
+        -- Override print function with function that appends to __stack.stdout table
+        -- We do this by executing a lua script
         _G.print = function(...)
             local args = {...}
 
-            __stack.stdout = __stack.stdout or {}
+            if not _G.__stack then
+                error("No __stack found")
+            end
+
+            if not _G.__stack.stdout then
+                _G.__stack.stdout = {}
+            end
 
             if #args == 0 then
                 table.insert(__stack.stdout, "nil")
@@ -71,24 +83,34 @@ async fn create_lua_vm(
 
             local str = ""
             for i = 1, #args do
-                str = str .. tostring(args[i]) .. "\t"
+                str = str .. tostring(args[i])
             end
             table.insert(__stack.stdout, str)
         end
+
+        -- Set AntiRaid version
+        _G.ANTIRAID_VER = "1"
+
+        -- To allow locking down _G, we need to create a table to store user data (__stack)
+        -- Note: this becomes read-write later and is the ONLY global variable that is read-write
+        _G.__stack = {}
     "#,
     )
+    .set_name("prelude")
     .exec()?;
 
     lua.sandbox(true)?; // We explicitly want globals to be shared across all scripts in this VM
     lua.set_memory_limit(MAX_TEMPLATE_MEMORY_USAGE)?;
 
-    // To allow locking down _G, we need to create a table to store user data (__stack)
-    lua.globals().set("__stack", lua.create_table()?)?;
+    // Make __stack read-write
+    let stack = lua.globals().get::<LuaTable>("__stack")?;
+    stack.set_readonly(false);
 
-    // First copy existing require function to registry
+    // Override require function for plugin support
+    // 1. First copy existing require function to registry
     lua.set_named_registry_value("_lua_require", lua.globals().get::<LuaFunction>("require")?)?;
 
-    // Then override require
+    // 2. Then override require
     lua.globals()
         .set("require", lua.create_function(plugins::require)?)?;
 
@@ -160,10 +182,10 @@ async fn create_lua_vm(
                         broken_ref: Arc<std::sync::atomic::AtomicBool>,
                     ) -> Box<dyn Fn(&PanicHookInfo<'_>) + 'static + Sync + Send>
                     {
-                        return Box::new(move |_| {
+                        Box::new(move |_| {
                             log::error!("Lua thread panicked: {}", guild_id);
                             broken_ref.store(true, std::sync::atomic::Ordering::Release);
-                        });
+                        })
                     }
 
                     std::panic::set_hook(panic_catcher(guild_id, broken_ref));
@@ -188,11 +210,6 @@ async fn create_lua_vm(
                                 .load(&template)
                                 .set_name("script")
                                 .set_mode(mlua::ChunkMode::Text) // Ensure auto-detection never selects binary mode
-                                .set_compiler(
-                                    mlua::Compiler::new()
-                                        .set_optimization_level(2)
-                                        .set_type_info_level(1),
-                                )
                                 .eval_async()
                                 .await
                             {
@@ -376,14 +393,11 @@ pub async fn render_template<Request: serde::Serialize, Response: serde::de::Des
             };
 
             // Check for an error
-            match value {
-                Ok(serde_json::Value::Object(ref map)) => {
-                    if let Some(value) = map.get("__error") {
-                        return Err(LuaError::external(value.to_string()));
-                    }
-                },
-                _ => {}
-            };
+            if let Ok(serde_json::Value::Object(ref map)) = value {
+                if let Some(value) = map.get("__error") {
+                    return Err(LuaError::external(value.to_string()));
+                }
+            }
 
             let v: Response = serde_json::from_value(value?)
                 .map_err(|e| LuaError::external(e.to_string()))?;

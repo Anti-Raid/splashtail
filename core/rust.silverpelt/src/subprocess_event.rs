@@ -36,7 +36,7 @@ impl SubprocessEvent {
 
         if cmd.1.is_none() || cmd.1.as_mut().unwrap().try_wait()?.is_some() {
             let spawned_child = cmd.0.spawn()?;
-            (*cmd).1 = Some(spawned_child);
+            cmd.1 = Some(spawned_child);
         }
 
         let child = cmd.1.as_mut().unwrap();

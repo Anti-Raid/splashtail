@@ -413,8 +413,8 @@ pub(crate) async fn event_listener(ectx: &EventHandlerContext) -> Result<(), sil
                 }
             }
 
-            return Ok(());
+            Ok(())
         }
-        _ => return Ok(()), // Ignore non-discord events
+        _ => Ok(()), // Ignore non-discord events
     }
 }

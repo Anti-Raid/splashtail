@@ -3,8 +3,8 @@ use module_settings::{
     data_stores::PostgresDataStore,
     types::{
         settings_wrap, Column, ColumnSuggestion, ColumnType, ConfigOption, HookContext,
-        InnerColumnType, InnerColumnTypeStringKind, OperationSpecific, OperationType, PostAction,
-        SettingDataValidator, SettingsError,
+        InnerColumnType, InnerColumnTypeStringKind, NoOpValidator, OperationSpecific,
+        OperationType, PostAction, SettingDataValidator, SettingsError,
     },
 };
 use splashcore_rs::value::Value;
@@ -377,60 +377,9 @@ pub static INSPECTOR_SPECIFIC_OPTIONS: LazyLock<ConfigOption> = LazyLock::new(||
             columns_to_set: indexmap::indexmap! {},
         },
     },
-    validator: settings_wrap(InspectorSpecificOptionsValidator {}),
+    validator: settings_wrap(NoOpValidator {}),
     post_action: settings_wrap(InspectorSpecificOptionsPostActions {}),
 });
-
-/// Special validator for Inspector Options to handle Guild Protection
-pub struct InspectorSpecificOptionsValidator;
-
-#[async_trait::async_trait]
-impl SettingDataValidator for InspectorSpecificOptionsValidator {
-    async fn validate<'a>(
-        &self,
-        ctx: HookContext<'a>,
-        state: &'a mut State,
-    ) -> Result<(), SettingsError> {
-        // Ignore for View
-        if ctx.operation_type == OperationType::View {
-            return Ok(());
-        }
-
-        let Some(Value::List(modifiers)) = state.state.get("modifier") else {
-            return Err(SettingsError::MissingOrInvalidField {
-                field: "modifier".to_string(),
-                src: "index->NativeAction [default_pre_checks]".to_string(),
-            });
-        };
-
-        for modifier in modifiers {
-            let modifier = match splashcore_rs::modifier::Modifier::from_repr(&modifier.to_string())
-            {
-                Ok(modifier) => modifier,
-                Err(e) => {
-                    return Err(SettingsError::Generic {
-                        message: format!("Error while parsing modifier: {}", e),
-                        typ: "value_error".to_string(),
-                        src: "inspector__specific_options.modifier".to_string(),
-                    });
-                }
-            };
-
-            match modifier {
-                splashcore_rs::modifier::Modifier::Role(_) => {
-                    return Err(SettingsError::Generic {
-                        message: "Role modifiers are not supported yet".to_string(),
-                        typ: "value_error".to_string(),
-                        src: "inspector__specific_options.modifier".to_string(),
-                    });
-                }
-                _ => {}
-            }
-        }
-
-        Ok(())
-    }
-}
 
 /// Post actions for Inspector Specific Options
 pub struct InspectorSpecificOptionsPostActions;

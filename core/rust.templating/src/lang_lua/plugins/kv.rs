@@ -59,7 +59,7 @@ impl LuaUserData for KvExecutor {
     fn add_methods<M: LuaUserDataMethods<Self>>(methods: &mut M) {
         methods.add_async_method("get", |lua, this, key: String| async move {
             this.base_check("get".to_string())
-                .map_err(|e| LuaError::external(e))?;
+                .map_err(LuaError::external)?;
 
             if !this.template_data.pragma.kv_ops.contains(&"*".to_string())
                 && this
@@ -67,7 +67,7 @@ impl LuaUserData for KvExecutor {
                     .pragma
                     .kv_ops
                     .contains(&format!("get:{}", key))
-                && this.template_data.pragma.kv_ops.contains(&format!("get:*"))
+                && this.template_data.pragma.kv_ops.contains(&"get:*".to_string())
                 && this.template_data.pragma.kv_ops.contains(&key)
             {
                 return Err(LuaError::external(
@@ -108,7 +108,7 @@ impl LuaUserData for KvExecutor {
             let data = lua.from_value::<serde_json::Value>(value)?;
             
             this.base_check("set".to_string())
-                .map_err(|e| LuaError::external(e))?;
+                .map_err(LuaError::external)?;
 
             if !this.template_data.pragma.kv_ops.contains(&"*".to_string())
                 && this
@@ -116,7 +116,7 @@ impl LuaUserData for KvExecutor {
                     .pragma
                     .kv_ops
                     .contains(&format!("set:{}", key))
-                && this.template_data.pragma.kv_ops.contains(&format!("set:*"))
+                && this.template_data.pragma.kv_ops.contains(&"set:*".to_string())
                 && this.template_data.pragma.kv_ops.contains(&key)
             {
                 return Err(LuaError::external(
@@ -131,14 +131,14 @@ impl LuaUserData for KvExecutor {
 
             // Check bytes length
             let data_str = serde_json::to_string(&data)
-                .map_err(|e| LuaError::external(e))?;
+                .map_err(LuaError::external)?;
 
             if data_str.as_bytes().len() > this.kv_constraints.max_value_bytes {
                 return Err(LuaError::external("Value length too long"));
             }
 
             let mut tx = this.pool.begin().await
-                .map_err(|e| LuaError::external(e))?;
+                .map_err(LuaError::external)?;
 
             let rec = sqlx::query!(
                 "SELECT COUNT(*) FROM guild_templates_kv WHERE guild_id = $1",
@@ -146,9 +146,9 @@ impl LuaUserData for KvExecutor {
             )
             .fetch_one(&mut *tx)
             .await
-            .map_err(|e| LuaError::external(e))?;
+            .map_err(LuaError::external)?;
 
-            if rec.count.unwrap_or(0) >= this.kv_constraints.max_keys.try_into().map_err(|e| LuaError::external(e))? {
+            if rec.count.unwrap_or(0) >= this.kv_constraints.max_keys.try_into().map_err(LuaError::external)? {
                 return Err(LuaError::external("Max keys limit reached"));
             }
 
@@ -160,7 +160,7 @@ impl LuaUserData for KvExecutor {
             )
             .execute(&mut *tx)
             .await
-            .map_err(|e| LuaError::external(e))?;
+            .map_err(LuaError::external)?;
 
             Ok(())
         });
@@ -169,7 +169,7 @@ impl LuaUserData for KvExecutor {
             let data = lua.from_value::<serde_json::Value>(value)?;
             
             this.base_check("set_get".to_string())
-                .map_err(|e| LuaError::external(e))?;
+                .map_err(LuaError::external)?;
 
             // Check if can get
             if !this.template_data.pragma.kv_ops.contains(&"*".to_string())
@@ -178,7 +178,7 @@ impl LuaUserData for KvExecutor {
                     .pragma
                     .kv_ops
                     .contains(&format!("get:{}", key))
-                && this.template_data.pragma.kv_ops.contains(&format!("get:*"))
+                && this.template_data.pragma.kv_ops.contains(&"get:*".to_string())
                 && this.template_data.pragma.kv_ops.contains(&key)
             {
                 return Err(LuaError::external(
@@ -193,7 +193,7 @@ impl LuaUserData for KvExecutor {
                     .pragma
                     .kv_ops
                     .contains(&format!("set:{}", key))
-                && this.template_data.pragma.kv_ops.contains(&format!("set:*"))
+                && this.template_data.pragma.kv_ops.contains(&"set:*".to_string())
                 && this.template_data.pragma.kv_ops.contains(&key)
             {
                 return Err(LuaError::external(
@@ -208,14 +208,14 @@ impl LuaUserData for KvExecutor {
 
             // Check bytes length
             let data_str = serde_json::to_string(&data)
-                .map_err(|e| LuaError::external(e))?;
+                .map_err(LuaError::external)?;
 
             if data_str.as_bytes().len() > this.kv_constraints.max_value_bytes {
                 return Err(LuaError::external("Value length too long"));
             }
 
             let mut tx = this.pool.begin().await
-                .map_err(|e| LuaError::external(e))?;
+                .map_err(LuaError::external)?;
 
             let current_val = sqlx::query!(
                 "SELECT value FROM guild_templates_kv WHERE guild_id = $1 AND key = $2",
@@ -224,7 +224,7 @@ impl LuaUserData for KvExecutor {
             )
             .fetch_optional(&mut *tx)
             .await
-            .map_err(|e| LuaError::external(e))?;
+            .map_err(LuaError::external)?;
 
             let current_val = match current_val {
                 Some(val) => val.value,
@@ -240,7 +240,7 @@ impl LuaUserData for KvExecutor {
                 )
                 .execute(&mut *tx)
                 .await
-                .map_err(|e| LuaError::external(e))?;
+                .map_err(LuaError::external)?;
 
                 Ok(Some(lua.to_value(&current_val)?))
             } else {
@@ -250,9 +250,9 @@ impl LuaUserData for KvExecutor {
                 )
                 .fetch_one(&mut *tx)
                 .await
-                .map_err(|e| LuaError::external(e))?;
+                .map_err(LuaError::external)?;
 
-                if rec.count.unwrap_or(0) >= this.kv_constraints.max_keys.try_into().map_err(|e| LuaError::external(e))? {
+                if rec.count.unwrap_or(0) >= this.kv_constraints.max_keys.try_into().map_err(LuaError::external)? {
                     return Err(LuaError::external("Max keys limit reached"));
                 }
 
@@ -264,7 +264,7 @@ impl LuaUserData for KvExecutor {
                 )
                 .execute(&mut *tx)
                 .await
-                .map_err(|e| LuaError::external(e))?;
+                .map_err(LuaError::external)?;
 
                 Ok(None)
             }
@@ -289,7 +289,7 @@ pub fn init_plugin(lua: &Lua) -> LuaResult<LuaTable> {
 
             let executor = KvExecutor {
                 template_data: template_data.clone(),
-                guild_id: data.guild_id.clone(),
+                guild_id: data.guild_id,
                 pool: data.pool.clone(),
                 ratelimits: data.kv_ratelimits.clone(),
                 kv_constraints: data.kv_constraints,

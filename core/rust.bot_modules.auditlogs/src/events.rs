@@ -228,7 +228,7 @@ pub(crate) async fn should_dispatch_event(
         return Ok(true);
     }
 
-    return Ok(filters.contains(&event_name.to_string()));
+    Ok(filters.contains(&event_name.to_string()))
 }
 
 async fn dispatch_audit_log(

@@ -1,5 +1,6 @@
 mod captures;
 mod matches;
+#[allow(clippy::module_inception)]
 mod regex;
 
 use crate::lang_lua::plugins::lune::{regex::regex::LuaRegex, utils::TableBuilder};

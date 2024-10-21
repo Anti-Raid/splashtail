@@ -379,7 +379,7 @@ impl From<&super::types::Column> for CanonicalColumn {
             description: column.description.to_string(),
             column_type: column.column_type.clone().into(),
             nullable: column.nullable,
-            default: column.default.clone().map(|v| v(true).to_json()),
+            default: column.default.map(|v| v(true).to_json()),
             suggestions: column.suggestions.clone().into(),
             unique: column.unique,
             ignored_for: column.ignored_for.iter().map(|o| (*o).into()).collect(),

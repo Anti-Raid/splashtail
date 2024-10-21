@@ -15,7 +15,7 @@ pub struct CaptchaConfig {
 
 impl CaptchaConfig {
     pub fn is_valid(&self) -> Result<(), silverpelt::Error> {
-        if self.char_count <= 0 {
+        if self.char_count == 0 {
             return Err("char_count must be greater than 0".into());
         }
 
@@ -31,7 +31,7 @@ impl CaptchaConfig {
             return Err(format!("filters must be less than or equal to {}", MAX_FILTERS).into());
         }
 
-        if self.viewbox_size.0 <= 0 || self.viewbox_size.0 >= MAX_VIEWBOX_X {
+        if self.viewbox_size.0 == 0 || self.viewbox_size.0 >= MAX_VIEWBOX_X {
             return Err(format!(
                 "viewbox_size.0 must be greater than 0 and less than {}",
                 MAX_VIEWBOX_X
@@ -39,7 +39,7 @@ impl CaptchaConfig {
             .into());
         }
 
-        if self.viewbox_size.1 <= 0 || self.viewbox_size.1 >= MAX_VIEWBOX_Y {
+        if self.viewbox_size.1 == 0 || self.viewbox_size.1 >= MAX_VIEWBOX_Y {
             return Err(format!(
                 "viewbox_size.1 must be greater than 0 and less than {}",
                 MAX_VIEWBOX_Y

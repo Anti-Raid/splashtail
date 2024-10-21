@@ -501,25 +501,25 @@ impl LockdownSet {
         pg: &mut serenity::all::PartialGuild,
         pgc: &mut [serenity::all::GuildChannel],
     ) -> Result<sqlx::types::Uuid, silverpelt::Error> {
-        let critical_roles = get_critical_roles(&pg, &self.settings.member_roles)?;
+        let critical_roles = get_critical_roles(pg, &self.settings.member_roles)?;
 
         // Test new lockdown if required
         if self.settings.require_correct_layout {
             let test_results = lockdown_type
-                .test(lockdown_data, &pg, &pgc, &critical_roles, &self.lockdowns)
+                .test(lockdown_data, pg, pgc, &critical_roles, &self.lockdowns)
                 .await?;
 
             if !test_results.can_apply_perfectly() {
-                return Err(test_results.display_result(&pg).into());
+                return Err(test_results.display_result(pg).into());
             }
         }
 
         // Setup the lockdown
         let data = lockdown_type
-            .setup(lockdown_data, &pg, &pgc, &critical_roles, &self.lockdowns)
+            .setup(lockdown_data, pg, pgc, &critical_roles, &self.lockdowns)
             .await?;
 
-        let current_handles = self.get_handles(lockdown_data, &pg, &pgc).await?;
+        let current_handles = self.get_handles(lockdown_data, pg, pgc).await?;
 
         // TODO: Block redundant handles, this is required until we support getting underlying permissions during a lockdown
         /*let new_handle = lockdown_type
@@ -580,17 +580,17 @@ impl LockdownSet {
             silverpelt::Error::from("Lockdown index out of bounds (does not exist)")
         })?;
 
-        let critical_roles = get_critical_roles(&pg, &self.settings.member_roles)?;
+        let critical_roles = get_critical_roles(pg, &self.settings.member_roles)?;
 
-        let mut current_handles = self.get_handles(lockdown_data, &pg, &pgc).await?;
+        let mut current_handles = self.get_handles(lockdown_data, pg, pgc).await?;
 
         // Remove handle from the set
         let handle = lockdown
             .r#type
             .handles(
                 lockdown_data,
-                &pg,
-                &pgc,
+                pg,
+                pgc,
                 &critical_roles,
                 &lockdown.data,
                 &self.lockdowns,

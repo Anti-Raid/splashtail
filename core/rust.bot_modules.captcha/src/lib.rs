@@ -49,9 +49,6 @@ struct EventHandler;
 #[async_trait::async_trait]
 impl silverpelt::module::ModuleEventListeners for EventHandler {
     fn event_handler_filter(&self, event: &silverpelt::ar_event::AntiraidEvent) -> bool {
-        match event {
-            silverpelt::ar_event::AntiraidEvent::Discord(_) => true,
-            _ => false,
-        }
+        matches!(event, silverpelt::ar_event::AntiraidEvent::Discord(_))
     }
 }

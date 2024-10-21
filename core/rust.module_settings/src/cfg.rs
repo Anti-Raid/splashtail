@@ -9,7 +9,6 @@ use splashcore_rs::value::Value;
 /// Parse a value against the schema's column type
 fn _parse_value(
     v: Value,
-    state: &State,
     column_type: &ColumnType,
     column_id: &str,
 ) -> Result<Value, SettingsError> {
@@ -329,33 +328,30 @@ fn _parse_value(
             }
         }
         ColumnType::Array { inner } => {
-            match inner {
-                InnerColumnType::Json { max_bytes } => {
-                    // Convert back to json to get bytes
-                    let json = serde_json::to_string(&v.to_json()).map_err(|e| {
-                        SettingsError::SchemaCheckValidationError {
-                            column: column_id.to_string(),
-                            check: "json_parse".to_string(),
-                            accepted_range: "Valid JSON".to_string(),
-                            error: e.to_string(),
-                        }
-                    })?;
+            if let InnerColumnType::Json { max_bytes } = inner {
+                // Convert back to json to get bytes
+                let json = serde_json::to_string(&v.to_json()).map_err(|e| {
+                    SettingsError::SchemaCheckValidationError {
+                        column: column_id.to_string(),
+                        check: "json_parse".to_string(),
+                        accepted_range: "Valid JSON".to_string(),
+                        error: e.to_string(),
+                    }
+                })?;
 
-                    if let Some(max_bytes) = max_bytes {
-                        if json.as_bytes().len() > *max_bytes {
-                            return Err(SettingsError::SchemaCheckValidationError {
-                                column: column_id.to_string(),
-                                check: "json_max_bytes".to_string(),
-                                accepted_range: format!("<{}", max_bytes),
-                                error: format!(
-                                    "json.as_bytes().len() > *max_bytes: {}",
-                                    json.as_bytes().len()
-                                ),
-                            });
-                        }
+                if let Some(max_bytes) = max_bytes {
+                    if json.as_bytes().len() > *max_bytes {
+                        return Err(SettingsError::SchemaCheckValidationError {
+                            column: column_id.to_string(),
+                            check: "json_max_bytes".to_string(),
+                            accepted_range: format!("<{}", max_bytes),
+                            error: format!(
+                                "json.as_bytes().len() > *max_bytes: {}",
+                                json.as_bytes().len()
+                            ),
+                        });
                     }
                 }
-                _ => {}
             }
 
             match v {
@@ -364,7 +360,7 @@ fn _parse_value(
 
                     let column_type = ColumnType::new_scalar(inner.clone());
                     for v in l {
-                        let new_v = _parse_value(v, state, &column_type, column_id)?;
+                        let new_v = _parse_value(v, &column_type, column_id)?;
 
                         values.push(new_v);
                     }
@@ -390,7 +386,6 @@ fn _parse_value(
 #[allow(clippy::too_many_arguments)]
 async fn _validate_value(
     v: Value,
-    state: &State,
     guild_id: serenity::all::GuildId,
     data: &SettingsData,
     column_type: &ColumnType,
@@ -712,16 +707,9 @@ async fn _validate_value(
 
                 let column_type = ColumnType::new_scalar(inner.clone());
                 for v in l {
-                    let new_v = _validate_value(
-                        v,
-                        state,
-                        guild_id,
-                        data,
-                        &column_type,
-                        column_id,
-                        is_nullable,
-                    )
-                    .await?;
+                    let new_v =
+                        _validate_value(v, guild_id, data, &column_type, column_id, is_nullable)
+                            .await?;
 
                     values.push(new_v);
                 }
@@ -869,7 +857,7 @@ pub async fn settings_view(
             let mut val = state.state.swap_remove(col.id).unwrap_or(Value::None);
 
             // Validate the value. returning the parsed value
-            val = _parse_value(val, &state, &col.column_type, col.id)?;
+            val = _parse_value(val, &col.column_type, col.id)?;
 
             // Reinsert
             state.state.insert(col.id.to_string(), val);
@@ -981,17 +969,16 @@ pub async fn settings_create(
         // If the column is a secret column, then ensure we set it to something random as this is a create operation
         let value = {
             if column.ignored_for.contains(&OperationType::Create) {
-                _parse_value(Value::None, &state, &column.column_type, column.id)?
+                _parse_value(Value::None, &column.column_type, column.id)?
             } else {
                 // Get the value
                 let val = fields.swap_remove(column.id).unwrap_or(Value::None);
 
-                let parsed_value = _parse_value(val, &state, &column.column_type, column.id)?;
+                let parsed_value = _parse_value(val, &column.column_type, column.id)?;
 
                 // Validate and parse the value
                 _validate_value(
                     parsed_value,
-                    &state,
                     guild_id,
                     data,
                     &column.column_type,
@@ -1212,11 +1199,10 @@ pub async fn settings_update(
         } else {
             match fields.swap_remove(column.id) {
                 Some(val) => {
-                    let parsed_value = _parse_value(val, &state, &column.column_type, column.id)?;
+                    let parsed_value = _parse_value(val, &column.column_type, column.id)?;
 
                     let parsed_value = _validate_value(
                         parsed_value,
-                        &state,
                         guild_id,
                         data,
                         &column.column_type,
@@ -1472,7 +1458,7 @@ pub async fn settings_delete(
         });
     };
 
-    let pkey = _parse_value(pkey, &state, &pkey_column.column_type, setting.primary_key)?;
+    let pkey = _parse_value(pkey, &pkey_column.column_type, setting.primary_key)?;
 
     let mut data_store = setting
         .data_store

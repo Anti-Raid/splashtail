@@ -217,7 +217,7 @@ impl SettingDataValidator for GuildGlobalsValidator {
             });
         };
 
-        if let Err(e) = super::strategy::from_limit_strategy_string(&strategy) {
+        if let Err(e) = super::strategy::from_limit_strategy_string(strategy) {
             let mut accepted_strategies = Vec::new();
 
             for s in super::strategy::STRATEGY.iter() {

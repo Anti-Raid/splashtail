@@ -51,7 +51,7 @@ impl silverpelt::data::Props for Props {
     }
 
     fn extra_description(&self) -> String {
-        format!("...")
+        "...".to_string()
     }
 
     async fn shards(&self) -> Result<Vec<u16>, Error> {

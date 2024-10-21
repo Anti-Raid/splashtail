@@ -118,33 +118,32 @@ impl SettingDataValidator for WebhookValidator {
             return Ok(());
         }
 
-        match ctx.operation_type {
-            OperationType::Create => {
-                // ID Fixup on create
-                let id = botox::crypto::gen_random(128);
-                state.state.insert("id".to_string(), Value::String(id.to_string()));
-                state.bypass_ignore_for.insert("id".to_string());
+        if ctx.operation_type == OperationType::Create {
+            // ID Fixup on create
+            let id = botox::crypto::gen_random(128);
+            state.state.insert("id".to_string(), Value::String(id.to_string()));
+            state.bypass_ignore_for.insert("id".to_string());
 
-                // Secret fixup
-                let Some(Value::String(secret)) = state.state.get("secret") else {
-                    return Err(SettingsError::MissingOrInvalidField { 
-                        field: "secret".to_string(),
-                        src: "secret->NativeActon [pre_checks]".to_string(),
-                    });
-                };
+            // Secret fixup
+            let Some(Value::String(secret)) = state.state.get("secret") else {
+                return Err(SettingsError::MissingOrInvalidField { 
+                    field: "secret".to_string(),
+                    src: "secret->NativeActon [pre_checks]".to_string(),
+                });
+            };
 
-                let Some(Value::String(id)) = state.state.get("id") else {
-                    return Err(SettingsError::MissingOrInvalidField { 
-                        field: "id".to_string(),
-                        src: "id->NativeActon [pre_checks]".to_string(),
-                    });
-                };
+            let Some(Value::String(id)) = state.state.get("id") else {
+                return Err(SettingsError::MissingOrInvalidField { 
+                    field: "id".to_string(),
+                    src: "id->NativeActon [pre_checks]".to_string(),
+                });
+            };
 
-                // Insert message
-                state.state.insert(
-                    "__message".to_string(), 
-                    Value::String(format!(
-                        "
+            // Insert message
+            state.state.insert(
+                "__message".to_string(), 
+                Value::String(format!(
+                    "
 Next, add the following webhook to your Github repositories (or organizations): `{api_url}/integrations/gitlogs/kittycat?id={id}`
 
 Set the `Secret` field to `{webh_secret}` and ensure that Content Type is set to `application/json`. 
@@ -152,14 +151,12 @@ Set the `Secret` field to `{webh_secret}` and ensure that Content Type is set to
 When creating repositories, use `{id}` as the ID.
 
 **Note that the above URL and secret is unique and should not be shared with others**
-                        ",
-                        api_url=config::CONFIG.sites.api,
-                        id=id,
-                        webh_secret=secret
-                    )
-                ));
-            },
-            _ => { }
+                    ",
+                    api_url=config::CONFIG.sites.api,
+                    id=id,
+                    webh_secret=secret
+                )
+            ));
         }
 
         Ok(())
@@ -285,14 +282,11 @@ impl SettingDataValidator for RepoValidator {
             return Ok(());
         }
 
-        match ctx.operation_type {
-            OperationType::Create => {
+        if ctx.operation_type == OperationType::Create {
                 // ID fixup on create
                 let id = botox::crypto::gen_random(32);
                 state.state.insert("id".to_string(), Value::String(id.to_string()));
                 state.bypass_ignore_for.insert("id".to_string());
-            }
-            _ => {}
         }
         
         // Check for webhook
@@ -327,46 +321,43 @@ impl SettingDataValidator for RepoValidator {
         }
 
         // Check if repo exists
-        match ctx.operation_type {
-            OperationType::Create => {
-                if let Some(Value::String(repo_name)) = state.state.get("repo_name") {
-                    let split = repo_name.split('/').collect::<Vec<&str>>();
+        if ctx.operation_type == OperationType::Create {
+            if let Some(Value::String(repo_name)) = state.state.get("repo_name") {
+                let split = repo_name.split('/').collect::<Vec<&str>>();
 
-                    if split.len() != 2 {
-                        return Err(SettingsError::SchemaCheckValidationError { 
-                            column: "repo_name".to_string(),
-                            check: "repo_name->NativeAction [default_pre_checks]".to_string(),
-                            error: "Repository name must be in the format org/repo".to_string(),
-                            accepted_range: "Valid repository name".to_string(),
-                        });
-                    }
-                    
-                    // Check if the repo exists
-                    let repo = sqlx::query!(
-                        "SELECT COUNT(1) FROM gitlogs__repos WHERE lower(repo_name) = $1 AND guild_id = $2 AND webhook_id = $3",
-                        repo_name,
-                        webhook_id,
-                        ctx.guild_id.to_string()
-                    )
-                    .fetch_one(&ctx.data.pool)
-                    .await
-                    .map_err(|e| SettingsError::Generic { 
-                        message: e.to_string(),
-                        src: "repo_id->NativeAction [default_pre_checks]".to_string(),
-                        typ: "database error".to_string(),
-                    })?;
-
-                    if repo.count.unwrap_or_default() > 0 {
-                        return Err(SettingsError::SchemaCheckValidationError { 
-                            column: "repo_id".to_string(),
-                            check: "repo_id->NativeAction [default_pre_checks]".to_string(),
-                            error: "The specified repository already exists".to_string(),
-                            accepted_range: "Valid repository ID".to_string(),
-                        });
-                    }
+                if split.len() != 2 {
+                    return Err(SettingsError::SchemaCheckValidationError { 
+                        column: "repo_name".to_string(),
+                        check: "repo_name->NativeAction [default_pre_checks]".to_string(),
+                        error: "Repository name must be in the format org/repo".to_string(),
+                        accepted_range: "Valid repository name".to_string(),
+                    });
                 }
-            },
-            _ => {}
+                
+                // Check if the repo exists
+                let repo = sqlx::query!(
+                    "SELECT COUNT(1) FROM gitlogs__repos WHERE lower(repo_name) = $1 AND guild_id = $2 AND webhook_id = $3",
+                    repo_name,
+                    webhook_id,
+                    ctx.guild_id.to_string()
+                )
+                .fetch_one(&ctx.data.pool)
+                .await
+                .map_err(|e| SettingsError::Generic { 
+                    message: e.to_string(),
+                    src: "repo_id->NativeAction [default_pre_checks]".to_string(),
+                    typ: "database error".to_string(),
+                })?;
+
+                if repo.count.unwrap_or_default() > 0 {
+                    return Err(SettingsError::SchemaCheckValidationError { 
+                        column: "repo_id".to_string(),
+                        check: "repo_id->NativeAction [default_pre_checks]".to_string(),
+                        error: "The specified repository already exists".to_string(),
+                        accepted_range: "Valid repository ID".to_string(),
+                    });
+                }
+            }
         }
 
         Ok(())
@@ -555,14 +546,11 @@ impl SettingDataValidator for EventModifierValidator {
             }
         }
 
-        match ctx.operation_type {
-            OperationType::Create => {
-                // ID fixup on create
-                let id = botox::crypto::gen_random(256);
-                state.state.insert("id".to_string(), Value::String(id.to_string()));
-                state.bypass_ignore_for.insert("id".to_string());
-}
-            _ => {}
+        if ctx.operation_type == OperationType::Create {
+            // ID fixup on create
+            let id = botox::crypto::gen_random(256);
+            state.state.insert("id".to_string(), Value::String(id.to_string()));
+            state.bypass_ignore_for.insert("id".to_string());            
         }
 
         let Some(Value::String(webhook_id)) = state.state.get("webhook_id") else {
