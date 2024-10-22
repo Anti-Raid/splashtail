@@ -41,8 +41,8 @@ pub fn require(lua: &Lua, (plugin_name,): (String,)) -> LuaResult<LuaTable> {
                 return Ok(table);
             }
 
-            Err(LuaError::external(format!(
-                "Module '{}' not found",
+            Err(LuaError::runtime(format!(
+                "module '{}' not found",
                 plugin_name
             )))
         }
