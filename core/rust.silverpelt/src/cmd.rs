@@ -440,11 +440,9 @@ pub async fn check_command(
             .await
             {
                 Ok(v) => v,
-                Err(e) => {
-                    return PermissionResult::GenericError {
-                        error: format!("Failed to render permission template: {}", e),
-                    };
-                }
+                Err(e) => PermissionResult::GenericError {
+                    error: format!("Failed to render permission template: {}", e),
+                },
             }
         }
     }

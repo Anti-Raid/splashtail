@@ -69,13 +69,11 @@ pub fn rederive_perms_impl(
         return vec!["global.*".into()];
     }
 
-    let resolved_perms = kittycat::perms::StaffPermissions {
+    kittycat::perms::StaffPermissions {
         user_positions,
         perm_overrides,
     }
-    .resolve();
-
-    resolved_perms
+    .resolve()
 }
 
 /// Rederive permissions rederives the permissions given a member id and a list of roles

@@ -387,7 +387,7 @@ impl SettingDataValidator for GuildRolesValidator {
                 typ: "internal".to_string(),
             })?;
             silverpelt::member_permission_calc::get_kittycat_perms(
-                &mut *conn,
+                &mut conn,
                 ctx.guild_id,
                 guild.owner_id,
                 ctx.author,
@@ -730,7 +730,7 @@ impl GuildMembersValidator {
             typ: "internal".to_string(),
         })?;
 
-        let roles = member.roles.iter().map(|x| *x).collect::<Vec<serenity::all::RoleId>>();
+        let roles = member.roles.iter().copied().collect::<Vec<serenity::all::RoleId>>();
 
         Ok((roles, kittycat_perms))
     }
@@ -768,14 +768,12 @@ impl SettingDataValidator for GuildMembersValidator {
         // Only the author can set public to true
         if !ctx.unchanged_fields.contains(&"public".to_string()) {
             if let Some(Value::Boolean(public)) = state.state.get("public") {
-                if *public {
-                    if ctx.author != user_id {
-                        return Err(SettingsError::Generic {
-                            message: "Only the author can set publicity".to_string(),
-                            src: "guildmembers->public".to_string(),
-                            typ: "external".to_string(),
-                        });
-                    }
+                if *public && ctx.author != user_id {
+                    return Err(SettingsError::Generic {
+                        message: "Only the author can set publicity".to_string(),
+                        src: "guildmembers->public".to_string(),
+                        typ: "external".to_string(),
+                    });
                 }
             }
         }

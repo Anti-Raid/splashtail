@@ -1,3 +1,4 @@
+mod perthreadpanichook;
 mod plugins;
 pub(crate) mod state;
 
@@ -188,7 +189,7 @@ async fn create_lua_vm(
                         })
                     }
 
-                    std::panic::set_hook(panic_catcher(guild_id, broken_ref));
+                    perthreadpanichook::set_hook(panic_catcher(guild_id, broken_ref));
 
                     while let Some(template) = rx.recv().await {
                         let args = template.args;

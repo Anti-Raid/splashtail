@@ -7,7 +7,7 @@ use module_settings::types::{
 use splashcore_rs::value::Value;
 use std::time::Duration;
 
-fn _get_display_value(column_type: &ColumnType, value: &Value, state: &State) -> String {
+fn _get_display_value(column_type: &ColumnType, value: &Value) -> String {
     match column_type {
         ColumnType::Scalar { column_type } => match column_type {
             InnerColumnType::String { kind, .. } => match kind {
@@ -45,10 +45,10 @@ fn _get_display_value(column_type: &ColumnType, value: &Value, state: &State) ->
             match value {
                 Value::List(values) => values
                     .iter()
-                    .map(|v| _get_display_value(&ColumnType::new_scalar(inner.clone()), v, state))
+                    .map(|v| _get_display_value(&ColumnType::new_scalar(inner.clone()), v))
                     .collect::<Vec<String>>()
                     .join(", "),
-                _ => _get_display_value(&ColumnType::new_scalar(inner.clone()), value, state),
+                _ => _get_display_value(&ColumnType::new_scalar(inner.clone()), value),
             }
         }
     }
@@ -114,7 +114,7 @@ pub async fn settings_viewer(
             };
 
             let mut display_value = if let Some(column) = column {
-                _get_display_value(&column.column_type, value, &values[index])
+                _get_display_value(&column.column_type, value)
             } else {
                 value.to_string()
             };
@@ -327,7 +327,7 @@ pub async fn settings_creator(
             };
 
             let mut display_value = if let Some(column) = column {
-                _get_display_value(&column.column_type, v, value)
+                _get_display_value(&column.column_type, v)
             } else {
                 v.to_string()
             };
@@ -458,7 +458,7 @@ pub async fn settings_updater(
             };
 
             let mut display_value = if let Some(column) = column {
-                _get_display_value(&column.column_type, v, value)
+                _get_display_value(&column.column_type, v)
             } else {
                 v.to_string()
             };
@@ -577,7 +577,7 @@ pub async fn settings_deleter(
             };
 
             let mut display_value = if let Some(column) = column {
-                _get_display_value(&column.column_type, v, value)
+                _get_display_value(&column.column_type, v)
             } else {
                 v.to_string()
             };

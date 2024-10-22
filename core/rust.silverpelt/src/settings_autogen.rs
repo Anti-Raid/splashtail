@@ -48,11 +48,12 @@ fn convert_bitflags_string_to_value(
 }
 
 /// This function takes in a serenity ResolvedValue and a ColumnType and returns a splashcore_rs::value::Value
-fn serenity_resolvedvalue_to_value<'a>(
-    rv: &serenity::all::ResolvedValue<'a>,
+fn serenity_resolvedvalue_to_value(
+    rv: &serenity::all::ResolvedValue,
     column_type: &ColumnType,
 ) -> Result<splashcore_rs::value::Value, crate::Error> {
     // Before checking column_type, first handle unresolved resolved values so they don't waste our time
+    #[allow(clippy::single_match)]
     match rv {
         serenity::all::ResolvedValue::Unresolved(inner) => match inner {
             serenity::all::Unresolved::Attachment(aid) => {
@@ -400,39 +401,33 @@ pub fn create_poise_commands_from_setting(
     module_id: &str,
     config_opt: &module_settings::types::ConfigOption,
 ) -> poise::Command<crate::data::Data, crate::Error> {
-    let mut cmd = poise::Command::default();
+    poise::Command {
+        name: config_opt.id.to_string(),
+        qualified_name: config_opt.id.to_string(),
+        description: {
+            if config_opt.description.len() > 100 {
+                Some(config_opt.description[..97].to_string() + "...")
+            } else {
+                Some(config_opt.description.to_string())
+            }
+        },
+        guild_only: true,
+        subcommand_required: true,
+        category: Some(module_id.to_string()),
+        prefix_action: Some(|p_ctx| {
+            let ctx = poise::Context::Prefix(p_ctx);
 
-    // Set base info
-    cmd.name = config_opt.id.to_string();
-    cmd.qualified_name = config_opt.id.to_string();
-    cmd.description = {
-        if config_opt.description.len() > 100 {
-            Some(config_opt.description[..97].to_string() + "...")
-        } else {
-            Some(config_opt.description.to_string())
-        }
-    };
-    cmd.guild_only = true;
-    cmd.subcommand_required = true;
-    cmd.category = Some(module_id.to_string());
+            base_command(ctx).boxed()
+        }),
+        slash_action: Some(|app_ctx| {
+            let ctx = poise::Context::Application(app_ctx);
 
-    cmd.prefix_action = Some(|p_ctx| {
-        let ctx = poise::Context::Prefix(p_ctx);
-
-        base_command(ctx).boxed()
-    });
-
-    cmd.slash_action = Some(|app_ctx| {
-        let ctx = poise::Context::Application(app_ctx);
-
-        base_command(ctx).boxed()
-    });
-
-    // Create subcommands
-    cmd.subcommands
-        .extend(create_poise_subcommands_from_setting(module_id, config_opt));
-
-    cmd
+            base_command(ctx).boxed()
+        }),
+        // Create subcommands
+        subcommands: create_poise_subcommands_from_setting(module_id, config_opt),
+        ..Default::default()
+    }
 }
 
 pub fn create_poise_subcommands_from_setting(
@@ -443,38 +438,28 @@ pub fn create_poise_subcommands_from_setting(
 
     // Create subcommands
     for (operation_type, _) in config_opt.operations.iter() {
-        let mut sub_cmd = poise::Command::default();
-
-        sub_cmd.name = operation_type.corresponding_command_suffix().to_string();
-        sub_cmd.qualified_name = sub_cmd.name.clone();
-        sub_cmd.parameters = create_command_args_for_operation_type(config_opt, *operation_type);
-
-        match operation_type {
-            OperationType::View => {
-                sub_cmd.description = Some(format!("View {}", config_opt.id));
-            }
-            OperationType::Create => {
-                sub_cmd.description = Some(format!("Create {}", config_opt.id));
-            }
-            OperationType::Update => {
-                sub_cmd.description = Some(format!("Update {}", config_opt.id));
-            }
-            OperationType::Delete => {
-                sub_cmd.description = Some(format!("Delete {}", config_opt.id));
-            }
-        };
-        sub_cmd.guild_only = true;
-        sub_cmd.subcommand_required = false;
-        sub_cmd.category = Some(module_id.to_string());
-        sub_cmd.custom_data = Box::new(SubcommandCallbackWrapper {
-            config_option: config_opt.clone(),
-            operation_type: *operation_type,
-        }); // Store the config_opt in the command
-
-        sub_cmd.slash_action = Some(|app_ctx| subcommand_command(app_ctx).boxed());
-
-        // Add to command list
-        sub_cmds.push(sub_cmd);
+        sub_cmds.push(poise::Command {
+            name: operation_type.corresponding_command_suffix().to_string(),
+            qualified_name: operation_type.corresponding_command_suffix().to_string(),
+            parameters: create_command_args_for_operation_type(config_opt, *operation_type),
+            description: {
+                match operation_type {
+                    OperationType::View => Some(format!("View {}", config_opt.id)),
+                    OperationType::Create => Some(format!("Create {}", config_opt.id)),
+                    OperationType::Update => Some(format!("Update {}", config_opt.id)),
+                    OperationType::Delete => Some(format!("Delete {}", config_opt.id)),
+                }
+            },
+            guild_only: true,
+            subcommand_required: false,
+            category: Some(module_id.to_string()),
+            custom_data: Box::new(SubcommandCallbackWrapper {
+                config_option: config_opt.clone(),
+                operation_type: *operation_type,
+            }), // Store the config_opt in the command
+            slash_action: Some(|app_ctx| subcommand_command(app_ctx).boxed()),
+            ..Default::default()
+        });
     }
 
     sub_cmds

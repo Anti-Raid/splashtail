@@ -37,29 +37,14 @@ pub fn require(lua: &Lua, (plugin_name,): (String,)) -> LuaResult<LuaTable> {
     match PLUGINS.get(plugin_name.as_str()) {
         Some(plugin) => plugin(lua),
         None => {
-            // These core modules are provided directly in globals.
-            //
-            // To ensure compatibility with Lua scripts though, we need to manually allow them to be imported
-            let is_module = matches!(
-                plugin_name.as_str(),
-                "math"
-                    | "table"
-                    | "string"
-                    | "coroutine"
-                    | "bit32"
-                    | "utf8"
-                    | "os"
-                    | "debug"
-                    | "buffer"
-            );
-
-            if is_module {
-                return lua.globals().get::<LuaTable>(plugin_name);
+            if let Ok(table) = lua.globals().get::<LuaTable>(plugin_name.clone()) {
+                return Ok(table);
             }
 
-            // Import the plugin from lua stdlib
-            let require = lua.named_registry_value::<LuaFunction>("_lua_require")?;
-            require.call::<LuaTable>(plugin_name)
+            Err(LuaError::external(format!(
+                "Module '{}' not found",
+                plugin_name
+            )))
         }
     }
 }

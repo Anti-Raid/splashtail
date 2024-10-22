@@ -114,7 +114,7 @@ pub async fn tag(
                 }
             } else {
                 let embed = serenity::all::CreateEmbed::default()
-                    .description(format!("Template returned no message"));
+                    .description("Template returned no message");
 
                 templating::core::messages::DiscordReply {
                     embeds: vec![embed],

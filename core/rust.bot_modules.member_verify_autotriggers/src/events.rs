@@ -4,6 +4,7 @@ use silverpelt::Error;
 pub async fn event_listener(ectx: &EventHandlerContext) -> Result<(), Error> {
     let ctx = &ectx.serenity_context;
 
+    #[allow(clippy::single_match)]
     match ectx.event {
         silverpelt::ar_event::AntiraidEvent::MemberVerify((user_id, ..)) => {
             // Do something with the user_id TODO

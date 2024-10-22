@@ -9,7 +9,7 @@ pub(crate) async fn event_listener(ectx: &EventHandlerContext) -> Result<(), sil
             crate::core::autotrigger(&ectx.serenity_context, guild_id).await
         }
         _ => {
-            return Ok(()); // Ignore non-discord events
+            Ok(()) // Ignore non-discord events
         }
     }
 }

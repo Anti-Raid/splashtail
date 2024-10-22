@@ -310,7 +310,7 @@ async fn check_modules_test_impl(ctx: &serenity::all::Context) -> Result<(), Err
         }
     }
 
-    return Ok(());
+    Ok(())
 }
 
 // Boilerplate code
