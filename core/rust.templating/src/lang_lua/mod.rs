@@ -107,11 +107,7 @@ async fn create_lua_vm(
     let stack = lua.globals().get::<LuaTable>("__stack")?;
     stack.set_readonly(false);
 
-    // Override require function for plugin support
-    // 1. First copy existing require function to registry
-    lua.set_named_registry_value("_lua_require", lua.globals().get::<LuaFunction>("require")?)?;
-
-    // 2. Then override require
+    // Override require function for plugin support and increased security
     lua.globals()
         .set("require", lua.create_function(plugins::require)?)?;
 
