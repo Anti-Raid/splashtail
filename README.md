@@ -60,11 +60,8 @@ Note that if a canonical representation is used, the structs should be in a sepe
 - ``clang``
 - ``libclang-14-dev`` 
 - ``lld`` 
-- ``mold``
 
-*lld dependency note:* Note that currently ``mold`` is used as the linker but this can change if required. ``mold`` is still new software and critical bugs may be present. You can switch to ``lld`` by editting ``.cargo/config.toml`` and changing ``link-arg=--ld-path=/usr/bin/mold`` to ``link-arg=--ld-path=/usr/bin/ld.lld``. ``lld`` is otherwise an optional (unused) dependency that may be required in the future and is hence listed here
-
-On Ubuntu, you can use ``sudo apt install pkg-config openssl libssl-dev build-essential clangd clang libclang-14-dev lld mold`` to install most of the dependencies. ``sqlx-cli`` is a bit special as it is tied to the version of ``sqlx`` used on the project (??). Use ``cargo install --version 0.7.4 sqlx-cli`` to install ``sqlx-cli``.
+On Ubuntu, you can use ``sudo apt install pkg-config openssl libssl-dev build-essential clangd clang libclang-14-dev lld`` to install most of the dependencies. ``sqlx-cli`` is a bit special as it is tied to the version of ``sqlx`` used on the project (??). Use ``cargo install --version 0.7.4 sqlx-cli`` to install ``sqlx-cli``.
 
 For Go, use the following commands:
 
