@@ -1,6 +1,7 @@
 use crate::lang_lua::state;
 use governor::clock::Clock;
 use mlua::prelude::*;
+use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
 /// An kv executor is used to execute key-value ops from Lua
@@ -11,6 +12,16 @@ pub struct KvExecutor {
     pool: sqlx::PgPool,
     kv_constraints: state::LuaKVConstraints,
     ratelimits: Arc<state::LuaKvRatelimit>,
+}
+
+/// Represents a full record complete with metadata
+#[derive(Serialize, Deserialize)]
+pub struct KvRecord {
+    pub key: String,
+    pub value: serde_json::Value,
+    pub exists: bool,
+    pub created_at: Option<chrono::DateTime<chrono::Utc>>,
+    pub last_updated_at: Option<chrono::DateTime<chrono::Utc>>,
 }
 
 impl KvExecutor {
@@ -104,6 +115,59 @@ impl LuaUserData for KvExecutor {
             }
         });
 
+        methods.add_async_method("getrecord", |lua, this, key: String| async move {
+            this.base_check("get".to_string())
+                .map_err(LuaError::external)?;
+
+            if !this.template_data.pragma.kv_ops.contains(&"*".to_string())
+                && this
+                    .template_data
+                    .pragma
+                    .kv_ops
+                    .contains(&format!("get:{}", key))
+                && this.template_data.pragma.kv_ops.contains(&"get:*".to_string())
+                && this.template_data.pragma.kv_ops.contains(&key)
+            {
+                return Err(LuaError::external(
+                    format!("Operation `getrecord` [`get` variant] not allowed in this template context for key '{}'", key),
+                ));
+            }
+
+            // Check key length
+            if key.len() > this.kv_constraints.max_key_length {
+                return Err(LuaError::external("Key length too long"));
+            }
+
+            let rec = sqlx::query!(
+                "SELECT value, created_at, last_updated_at FROM guild_templates_kv WHERE guild_id = $1 AND key = $2",
+                this.guild_id.to_string(),
+                key
+            )
+            .fetch_optional(&this.pool)
+            .await;
+
+            let record = match rec {
+                Ok(Some(rec)) => KvRecord {
+                    key,
+                    value: rec.value.unwrap_or(serde_json::Value::Null),
+                    exists: true,
+                    created_at: Some(rec.created_at),
+                    last_updated_at: Some(rec.last_updated_at),
+                },
+                Ok(None) => KvRecord {
+                    key,
+                    value: serde_json::Value::Null,
+                    exists: false,
+                    created_at: None,
+                    last_updated_at: None,
+                },
+                Err(e) => return Err(LuaError::external(e)),
+            };
+
+            let record: LuaValue = lua.to_value(&record)?;
+            Ok(record)
+        });
+
         methods.add_async_method("set", |lua, this, (key, value): (String, LuaValue)| async move {
             let data = lua.from_value::<serde_json::Value>(value)?;
             
@@ -153,7 +217,7 @@ impl LuaUserData for KvExecutor {
             }
 
             sqlx::query!(
-                "INSERT INTO guild_templates_kv (guild_id, key, value) VALUES ($1, $2, $3) ON CONFLICT (guild_id, key) DO UPDATE SET value = $3",
+                "INSERT INTO guild_templates_kv (guild_id, key, value) VALUES ($1, $2, $3) ON CONFLICT (guild_id, key) DO UPDATE SET value = $3, last_updated_at = NOW()",
                 this.guild_id.to_string(),
                 key,
                 data,
@@ -236,7 +300,7 @@ impl LuaUserData for KvExecutor {
 
             if let Some(current_val) = current_val {
                 sqlx::query!(
-                    "UPDATE guild_templates_kv SET value = $1 WHERE guild_id = $2 AND key = $3",
+                    "UPDATE guild_templates_kv SET value = $1, last_updated_at = NOW() WHERE guild_id = $2 AND key = $3",
                     data,
                     this.guild_id.to_string(),
                     key,
