@@ -1091,7 +1091,7 @@ pub static GUILD_TEMPLATES_KV: LazyLock<ConfigOption> = LazyLock::new(|| {
                 column_type: ColumnType::new_scalar(InnerColumnType::Json {
                     max_bytes: Some(templating::LuaKVConstraints::default().max_value_bytes),
                 }),
-                nullable: false,
+                nullable: true,
                 default: None,
                 unique: true,
                 suggestions: ColumnSuggestion::None {},
