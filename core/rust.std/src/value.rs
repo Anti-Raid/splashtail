@@ -35,6 +35,9 @@ pub enum Value {
     /// A (indexmap) of values
     Map(indexmap::IndexMap<String, Value>),
 
+    /// Raw JSON data
+    Json(serde_json::Value),
+
     /// None
     None,
 }
@@ -57,6 +60,7 @@ impl Hash for Value {
                     v.hash(state);
                 }
             }
+            Value::Json(j) => j.to_string().hash(state),
             Value::None => None::<u8>.hash(state),
         }
     }
@@ -87,6 +91,7 @@ impl Value {
                 }
                 serde_json::Value::Object(obj)
             }
+            Value::Json(j) => j.clone(),
             Value::None => serde_json::Value::Null,
         }
     }
@@ -365,6 +370,7 @@ impl std::fmt::Display for Value {
                 }
                 write!(f, "]")
             }
+            Value::Json(j) => write!(f, "{}", j),
             Value::Map(m) => {
                 write!(f, "{{")?;
                 for (i, (k, v)) in m.iter().enumerate() {

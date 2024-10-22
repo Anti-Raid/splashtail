@@ -105,6 +105,7 @@ impl PostgresDataStoreImpl {
             Value::Integer(value) => query.bind(value),
             Value::Float(value) => query.bind(value),
             Value::Boolean(value) => query.bind(value),
+            Value::Json(value) => query.bind(value),
             Value::List(values) => {
                 // Get the type of the first element
                 let first = values.first();
@@ -213,6 +214,15 @@ impl PostgresDataStoreImpl {
                             query.bind(vec)
                         }
                         Value::List(_) => {
+                            let mut vec = Vec::new();
+
+                            for value in values {
+                                vec.push(value.to_json());
+                            }
+
+                            query.bind(vec)
+                        }
+                        Value::Json(_) => {
                             let mut vec = Vec::new();
 
                             for value in values {

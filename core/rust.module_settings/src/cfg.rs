@@ -300,36 +300,70 @@ fn _parse_value(
                 },
                 InnerColumnType::Json { max_bytes } => {
                     // Convert back to json to get bytes
-                    let json = serde_json::to_string(&v.to_json()).map_err(|e| {
-                        SettingsError::SchemaCheckValidationError {
-                            column: column_id.to_string(),
-                            check: "json_parse".to_string(),
-                            accepted_range: "Valid JSON".to_string(),
-                            error: e.to_string(),
-                        }
-                    })?;
+                    match v {
+                        Value::String(s) => {
+                            if s.as_bytes().len() > max_bytes.unwrap_or(0) {
+                                return Err(SettingsError::SchemaCheckValidationError {
+                                    column: column_id.to_string(),
+                                    check: "json_max_bytes".to_string(),
+                                    accepted_range: format!("<{}", max_bytes.unwrap_or(0)),
+                                    error: format!(
+                                        "s.as_bytes().len() > *max_bytes: {}",
+                                        s.as_bytes().len()
+                                    ),
+                                });
+                            }
 
-                    if let Some(max_bytes) = max_bytes {
-                        if json.as_bytes().len() > *max_bytes {
-                            return Err(SettingsError::SchemaCheckValidationError {
-                                column: column_id.to_string(),
-                                check: "json_max_bytes".to_string(),
-                                accepted_range: format!("<{}", max_bytes),
-                                error: format!(
-                                    "json.as_bytes().len() > *max_bytes: {}",
-                                    json.as_bytes().len()
-                                ),
-                            });
+                            let v: serde_json::Value = {
+                                if !s.starts_with("[") && !s.starts_with("{") {
+                                    serde_json::Value::String(s)
+                                } else {
+                                    serde_json::from_str(&s).map_err(|e| {
+                                        SettingsError::SchemaCheckValidationError {
+                                            column: column_id.to_string(),
+                                            check: "json_parse".to_string(),
+                                            accepted_range: "Valid JSON".to_string(),
+                                            error: e.to_string(),
+                                        }
+                                    })?
+                                }
+                            };
+
+                            Ok(Value::Json(v))
+                        }
+                        _ => {
+                            let bytes = serde_json::to_string(&v.to_json()).map_err(|e| {
+                                SettingsError::SchemaCheckValidationError {
+                                    column: column_id.to_string(),
+                                    check: "json_parse".to_string(),
+                                    accepted_range: "Valid JSON".to_string(),
+                                    error: e.to_string(),
+                                }
+                            })?;
+
+                            if let Some(max_bytes) = max_bytes {
+                                if bytes.as_bytes().len() > *max_bytes {
+                                    return Err(SettingsError::SchemaCheckValidationError {
+                                        column: column_id.to_string(),
+                                        check: "json_max_bytes".to_string(),
+                                        accepted_range: format!("<{}", max_bytes),
+                                        error: format!(
+                                            "json.as_bytes().len() > *max_bytes: {}",
+                                            bytes.as_bytes().len()
+                                        ),
+                                    });
+                                }
+                            }
+
+                            Ok(v)
                         }
                     }
-
-                    Ok(v)
                 }
             }
         }
         ColumnType::Array { inner } => {
             if let InnerColumnType::Json { max_bytes } = inner {
-                // Convert back to json to get bytes
+                // Convert back to json to get bytes of the full payload as a whole
                 let json = serde_json::to_string(&v.to_json()).map_err(|e| {
                     SettingsError::SchemaCheckValidationError {
                         column: column_id.to_string(),
