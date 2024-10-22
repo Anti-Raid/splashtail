@@ -1,9 +1,7 @@
 mod atomicinstant;
 pub mod core;
 
-#[cfg(feature = "lua")]
 mod lang_lua;
-#[cfg(feature = "lua")]
 pub use lang_lua::state::LuaKVConstraints;
 
 type Error = Box<dyn std::error::Error + Send + Sync>; // This is constant and should be copy pasted
@@ -12,8 +10,9 @@ use std::str::FromStr;
 
 const MAX_ACTIONS: usize = 50;
 const MAX_KV_OPS: usize = 50;
+const MAX_PRAGMA_SIZE: usize = 2048;
 
-#[derive(Clone, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, serde::Serialize, serde::Deserialize, Default)]
 pub struct TemplatePragma {
     pub lang: TemplateLanguage,
 
@@ -31,15 +30,19 @@ impl TemplatePragma {
     pub fn parse(template: &str) -> Result<(&str, Self), Error> {
         let (first_line, rest) = match template.find('\n') {
             Some(i) => template.split_at(i),
-            None => return Err("No/unknown template language specified".into()),
+            None => return Ok((template, Self::default())),
         };
 
         if !first_line.contains("@pragma ") {
-            return Err("No/unknown template language specified".into());
+            return Ok((template, Self::default()));
         }
 
         // Remove out the @pragma and serde parse it
         let first_line = first_line.replace("@pragma ", "");
+
+        if first_line.as_bytes().len() > MAX_PRAGMA_SIZE {
+            return Err("Pragma too large".into());
+        }
 
         let pragma: TemplatePragma = serde_json::from_str(&first_line)?;
 
@@ -55,10 +58,11 @@ impl TemplatePragma {
     }
 }
 
-#[derive(Clone, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, serde::Serialize, serde::Deserialize, Default)]
 pub enum TemplateLanguage {
     #[cfg(feature = "lua")]
     #[serde(rename = "lua")]
+    #[default]
     Lua,
 }
 
@@ -102,6 +106,7 @@ async fn get_template(
     }
 }
 
+#[derive(Clone, Hash, PartialEq, Eq)]
 pub enum Template {
     Raw(String),
     Named(String),
@@ -115,19 +120,12 @@ pub async fn parse(
     cache_http: botox::cache::CacheHttpImpl,
     reqwest_client: reqwest::Client,
 ) -> Result<(), Error> {
-    let template = match template {
-        Template::Raw(template) => template,
-        Template::Named(template) => get_template(guild_id, &template, &pool).await?,
+    let template_content = match template {
+        Template::Raw(ref template) => template.clone(),
+        Template::Named(ref template) => get_template(guild_id, template, &pool).await?,
     };
 
-    let (template, pragma) = TemplatePragma::parse(&template)?;
-
-    match pragma.lang {
-        #[cfg(feature = "lua")]
-        TemplateLanguage::Lua => {
-            lang_lua::parse(cache_http, reqwest_client, guild_id, pragma, template, pool).await?;
-        }
-    }
+    let (template_content, pragma) = TemplatePragma::parse(&template_content)?;
 
     Ok(())
 }
@@ -144,29 +142,29 @@ pub async fn execute<C: Context + serde::Serialize, RenderResult: serde::de::Des
     reqwest_client: reqwest::Client,
     ctx: C,
 ) -> Result<RenderResult, Error> {
-    let template = match template {
-        Template::Raw(template) => template,
-        Template::Named(template) => get_template(guild_id, &template, &pool).await?,
+    let template_content = match template {
+        Template::Raw(ref template) => template.clone(),
+        Template::Named(ref template) => get_template(guild_id, template, &pool).await?,
     };
 
-    let (template, pragma) = TemplatePragma::parse(&template)?;
+    let (template_content, pragma) = TemplatePragma::parse(&template_content)?;
 
     match pragma.lang {
         #[cfg(feature = "lua")]
-        TemplateLanguage::Lua => {
-            let v = lang_lua::render_template(
+        TemplateLanguage::Lua => lang_lua::render_template(
+            ctx,
+            lang_lua::ParseCompileState {
                 cache_http,
                 reqwest_client,
                 guild_id,
-                pragma,
                 template,
+                pragma,
+                template_content: template_content.to_string(),
                 pool,
-                ctx,
-            )
-            .await?;
-
-            Ok(v)
-        }
+            },
+        )
+        .await
+        .map_err(|e| e.into()),
     }
 }
 

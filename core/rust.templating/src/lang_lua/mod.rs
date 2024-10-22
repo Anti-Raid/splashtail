@@ -6,6 +6,8 @@ use crate::atomicinstant;
 use mlua::prelude::*;
 use moka::future::Cache;
 use serenity::all::GuildId;
+use std::hash::Hash;
+use std::hash::Hasher;
 use std::panic::PanicHookInfo;
 use std::sync::Arc;
 use std::sync::LazyLock;
@@ -19,11 +21,14 @@ pub const MAX_TEMPLATE_LIFETIME: std::time::Duration = std::time::Duration::from
 pub const MAX_TEMPLATES_EXECUTION_TIME: std::time::Duration = std::time::Duration::from_secs(30); // 30 seconds maximum execution time
 
 struct LoadLuaTemplate {
-    template: String,
+    content: String,
+    template: crate::Template,
     pragma: crate::TemplatePragma,
-    args: Option<serde_json::Value>,
+    args: serde_json::Value,
     callback: tokio::sync::oneshot::Sender<Result<serde_json::Value, LuaError>>,
 }
+
+pub type BytecodeCache = scc::HashMap<crate::Template, (Vec<u8>, u64)>;
 
 #[derive(Clone)]
 struct ArLua {
@@ -38,6 +43,21 @@ struct ArLua {
         tokio::sync::mpsc::UnboundedSender<LoadLuaTemplate>,
     ),
     /// Is the VM broken/needs to be remade
+    broken: Arc<std::sync::atomic::AtomicBool>,
+    #[allow(dead_code)]
+    /// The compiler for the Lua VM
+    compiler: Arc<mlua::Compiler>,
+    #[allow(dead_code)]
+    /// The bytecode cache maps template to (bytecode, source hash)
+    ///
+    /// If source hash does not match expected source hash (the template changed), the template is recompiled
+    bytecode_cache: Arc<BytecodeCache>,
+}
+
+struct ArLuaThreadInnerState {
+    lua: Lua,
+    bytecode_cache: Arc<BytecodeCache>,
+    compiler: Arc<mlua::Compiler>,
     broken: Arc<std::sync::atomic::AtomicBool>,
 }
 
@@ -60,7 +80,7 @@ async fn create_lua_vm(
     let compiler = mlua::Compiler::new()
         .set_optimization_level(2)
         .set_type_info_level(1);
-    lua.set_compiler(compiler);
+    lua.set_compiler(compiler.clone());
 
     // Prelude code providing some basic functions directly to the Lua VM
     lua.load(
@@ -147,11 +167,17 @@ async fn create_lua_vm(
 
     lua.set_app_data(user_data);
 
-    let lua_ref = lua.clone();
-
-    // Used to mark a thread as broken and needing to be remade
+    let bytecode_cache: Arc<BytecodeCache> = Arc::new(scc::HashMap::new());
     let broken = Arc::new(std::sync::atomic::AtomicBool::new(false));
-    let broken_ref = broken.clone();
+    let compiler = Arc::new(compiler);
+
+    let thread_inner_state = Arc::new(ArLuaThreadInnerState {
+        lua: lua.clone(),
+        bytecode_cache: bytecode_cache.clone(),
+        compiler: compiler.clone(),
+        broken: broken.clone(),
+    });
+
     // Create thread handle for async execution
     //
     // This both avoids locking and allows running multiple scripts concurrently
@@ -170,8 +196,8 @@ async fn create_lua_vm(
                     .build()
                     .unwrap();
 
-                let lua_ref = lua_ref.clone();
-                let broken_ref = broken_ref.clone();
+                let tis_ref = thread_inner_state.clone();
+
                 rt.block_on(async {
                     // Catch panics
                     fn panic_catcher(
@@ -185,83 +211,82 @@ async fn create_lua_vm(
                         })
                     }
 
-                    perthreadpanichook::set_hook(panic_catcher(guild_id, broken_ref));
+                    perthreadpanichook::set_hook(panic_catcher(guild_id, tis_ref.broken.clone()));
 
                     while let Some(template) = rx.recv().await {
                         let args = template.args;
                         let callback = template.callback;
                         let pragma = template.pragma;
+                        let template_content = template.content;
                         let template = template.template;
-                        let lua_ref = lua_ref.clone();
+
+                        println!("Received template: {:?}", template_content);
+
+                        let tis_ref = tis_ref.clone();
 
                         rt.spawn(async move {
-                            let token = match state::add_template(&lua_ref, pragma) {
-                                Ok(token) => token,
+                            // Check bytecode cache first, compile template if not found
+                            let template_bytecode = match resolve_template_to_bytecode(
+                                template_content,
+                                template.clone(),
+                                &tis_ref.bytecode_cache,
+                                &tis_ref.compiler,
+                            )
+                            .await
+                            {
+                                Ok(bytecode) => bytecode,
                                 Err(e) => {
-                                    let _ = callback.send(Err(LuaError::external(e.to_string())));
+                                    let _ = callback.send(Err(e));
                                     return;
                                 }
                             };
 
-                            let f: LuaFunction = match lua_ref
-                                .load(&template)
+                            let token = match state::add_template(&tis_ref.lua, pragma) {
+                                Ok(token) => token,
+                                Err(e) => {
+                                    let _ = callback.send(Err(LuaError::external(e)));
+                                    return;
+                                }
+                            };
+
+                            let args = match tis_ref.lua.to_value(&args) {
+                                Ok(args) => args,
+                                Err(e) => {
+                                    let _ = callback.send(Err(LuaError::external(e)));
+                                    if let Err(e) = state::remove_template(&tis_ref.lua, &token) {
+                                        log::error!("Could not remove template: {}", e);
+                                    };
+                                    return;
+                                }
+                            };
+
+                            let v: LuaValue = match tis_ref
+                                .lua
+                                .load(&template_bytecode)
                                 .set_name("script")
-                                .set_mode(mlua::ChunkMode::Text) // Ensure auto-detection never selects binary mode
-                                .eval_async()
+                                .set_mode(mlua::ChunkMode::Binary) // Ensure auto-detection never selects binary mode
+                                .call_async((args, token.clone()))
                                 .await
                             {
                                 Ok(f) => f,
                                 Err(e) => {
                                     let _ = callback.send(Err(e));
-                                    if let Err(e) = state::remove_template(&lua_ref, &token) {
+                                    if let Err(e) = state::remove_template(&tis_ref.lua, &token) {
                                         log::error!("Could not remove template: {}", e);
                                     };
                                     return;
                                 }
                             };
 
-                            match args {
-                                Some(args) => {
-                                    let args = match lua_ref.to_value(&args) {
-                                        Ok(args) => args,
-                                        Err(e) => {
-                                            let _ = callback.send(Err(LuaError::external(e)));
-                                            if let Err(e) = state::remove_template(&lua_ref, &token)
-                                            {
-                                                log::error!("Could not remove template: {}", e);
-                                            };
-                                            return;
-                                        }
-                                    };
+                            let _v: Result<serde_json::Value, LuaError> = tis_ref
+                                .lua
+                                .from_value(v)
+                                .map_err(|e| LuaError::external(e.to_string()));
 
-                                    let v: LuaValue =
-                                        match f.call_async((args, token.clone())).await {
-                                            Ok(v) => v,
-                                            Err(e) => {
-                                                let _ = callback.send(Err(e));
-                                                if let Err(e) =
-                                                    state::remove_template(&lua_ref, &token)
-                                                {
-                                                    log::error!("Could not remove template: {}", e);
-                                                };
-                                                return;
-                                            }
-                                        };
+                            let _ = callback.send(_v);
 
-                                    let _v: Result<serde_json::Value, LuaError> = lua_ref
-                                        .from_value(v)
-                                        .map_err(|e| LuaError::external(e.to_string()));
-
-                                    let _ = callback.send(_v);
-
-                                    if let Err(e) = state::remove_template(&lua_ref, &token) {
-                                        log::error!("Could not remove template: {}", e);
-                                    };
-                                }
-                                None => {
-                                    // Just compiling etc. return Null
-                                    let _ = callback.send(Ok(serde_json::Value::Null));
-                                }
+                            if let Err(e) = state::remove_template(&tis_ref.lua, &token) {
+                                log::error!("Could not remove template: {}", e);
                             };
                         });
                     }
@@ -278,9 +303,44 @@ async fn create_lua_vm(
         last_execution_time,
         thread_handle,
         broken,
+        compiler,
+        bytecode_cache,
     };
 
     Ok(ar_lua)
+}
+
+/// Helper method to fetch a template from bytecode or compile it if it doesnt exist in bytecode cache
+pub(crate) async fn resolve_template_to_bytecode(
+    template_content: String,
+    template: crate::Template,
+    bytecode_cache_ref: &BytecodeCache,
+    compiler_ref: &mlua::Compiler,
+) -> Result<Vec<u8>, LuaError> {
+    // Check if the source hash matches the expected source hash
+    let mut hasher = std::hash::DefaultHasher::new();
+    template.hash(&mut hasher);
+    let cur_hash = hasher.finish();
+
+    let existing_bycode = bytecode_cache_ref.read(&template, |_, v| {
+        if v.1 == cur_hash {
+            Some(v.0.clone())
+        } else {
+            None
+        }
+    });
+
+    if let Some(Some(bytecode)) = existing_bycode {
+        return Ok(bytecode);
+    }
+
+    let bytecode = compiler_ref.compile(&template_content)?;
+
+    let _ = bytecode_cache_ref
+        .insert_async(template, (bytecode.clone(), cur_hash))
+        .await;
+
+    Ok(bytecode)
 }
 
 /// Get a Lua VM for a guild
@@ -309,56 +369,56 @@ async fn get_lua_vm(
     }
 }
 
-/// Compiles a template
-pub async fn parse(
-    cache_http: botox::cache::CacheHttpImpl,
-    reqwest_client: reqwest::Client,
-    guild_id: serenity::all::GuildId,
-    pragma: crate::TemplatePragma,
-    template: &str,
-    pool: sqlx::PgPool,
-) -> LuaResult<()> {
-    let lua = get_lua_vm(guild_id, pool, cache_http, reqwest_client).await?;
+pub(crate) struct ParseCompileState {
+    pub cache_http: botox::cache::CacheHttpImpl,
+    pub reqwest_client: reqwest::Client,
+    pub guild_id: GuildId,
+    pub template: crate::Template,
+    pub pragma: crate::TemplatePragma,
+    pub template_content: String,
+    pub pool: sqlx::PgPool,
+}
 
-    // Update last execution time.
-    lua.last_execution_time.store(
-        std::time::Instant::now(),
-        std::sync::atomic::Ordering::Release,
-    );
+// If the code in question is a function expression starting with `function`, we need to unravel it
+fn unravel_function_expression(template_content: String) -> String {
+    let template_content = template_content.trim().to_string();
+    if template_content.starts_with("function") && template_content.ends_with("end") {
+        let mut lines = template_content.lines().collect::<Vec<&str>>();
+        lines.remove(0);
+        lines.pop();
+        let uw = lines.join("\n");
 
-    let (tx, rx) = tokio::sync::oneshot::channel();
-
-    lua.thread_handle
-        .1
-        .send(LoadLuaTemplate {
-            pragma,
-            template: template.to_string(),
-            args: None,
-            callback: tx,
-        })
-        .map_err(|e| LuaError::external(format!("Could not send data to Lua thread: {}", e)))?;
-
-    tokio::select! {
-        _ = tokio::time::sleep(MAX_TEMPLATES_EXECUTION_TIME) => {
-            return Err(LuaError::external("Template took too long to compile"));
-        }
-        _ = rx => {}
+        format!(
+            "
+local arg = table.pack(...)
+local args = arg[1]
+local token = arg[2]
+{}
+        ",
+            uw
+        )
+    } else {
+        template_content
     }
-
-    Ok(())
 }
 
 /// Render a template
 pub async fn render_template<Request: serde::Serialize, Response: serde::de::DeserializeOwned>(
-    cache_http: botox::cache::CacheHttpImpl,
-    reqwest_client: reqwest::Client,
-    guild_id: GuildId,
-    pragma: crate::TemplatePragma,
-    template: &str,
-    pool: sqlx::PgPool,
     args: Request,
+    state: ParseCompileState,
 ) -> LuaResult<Response> {
-    let lua = get_lua_vm(guild_id, pool, cache_http, reqwest_client).await?;
+    let state = ParseCompileState {
+        template_content: unravel_function_expression(state.template_content),
+        ..state
+    };
+
+    let lua = get_lua_vm(
+        state.guild_id,
+        state.pool,
+        state.cache_http,
+        state.reqwest_client,
+    )
+    .await?;
 
     let args = serde_json::to_value(&args).map_err(|e| LuaError::external(e.to_string()))?;
 
@@ -373,9 +433,10 @@ pub async fn render_template<Request: serde::Serialize, Response: serde::de::Des
     lua.thread_handle
         .1
         .send(LoadLuaTemplate {
-            pragma,
-            template: template.to_string(),
-            args: Some(args),
+            template: state.template,
+            content: state.template_content,
+            pragma: state.pragma,
+            args,
             callback: tx,
         })
         .map_err(|e| LuaError::external(format!("Could not send data to Lua thread: {}", e)))?;
