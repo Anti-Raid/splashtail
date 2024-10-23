@@ -6,9 +6,11 @@ To help you get started with templating, we have provided a few examples below a
 
 ## Explanation
 
-### 1. Pragma
+### 1. Pragma (optional)
 
-The first line of the template is a pragma. This is a special statement beginning with ``@pragma`` that tells AntiRaid what language the template is written in, what options to use, and how tools such as CI, websites and other automation should handle your template. The rest of the pragma is a JSON object that contains the options. 
+**Note: The pragma is optional and is only required for using certain APIs such as the Actions API and the KV API.**
+
+The first line of the template is a pragma. This is a special statement beginning with ``@pragma`` or ``-- @pragma`` that tells AntiRaid what language the template is written in, what options to use, and how tools such as CI, websites and other automation should handle your template. The rest of the pragma is a JSON object that contains the options. 
 
 In this case, we are telling AntiRaid that this template is written in Lua (the ``{"lang":"lua"}``) with default options.
 
@@ -22,11 +24,9 @@ In case you're still confused by the pragma, here is a case where pragma *is* he
 
 Here, notice that the builderInfo contains the embeds, content, and checksum of the template. When the user wants to reread their template, the website only has to reread the pragma statement to reconstruct the state and show the right tab (either Builder if they are just making a simple embed, or Advanced if they were making changes to the content of the template itself). Without the pragma, the website would have to use its own arcane syntax on top of comments or execute the template just to reconstruct state.
 
-### 2. Function
+**Once again, please note that the pragma is optional and is only required for using certain APIs such as the Actions API and the KV API.**
 
-All lua templates must be wrapped in a function to ensure clarity and to allow typing. This function takes a single argument, ``args``, which is a table containing the arguments passed to the template.
-
-### 3. Setup
+### 2. Setup
 
 Before doing anything regarding messages, we first need to import the message plugin. The message plugin is a part of the AntiRaid SDK and provides functions for creating messages and embeds. This is done using the ``require`` statement like below:
 
@@ -45,7 +45,7 @@ embed.description = "" -- Start with an empty description
 
 **NOTE: You can use the [API Reference](./2-plugins.md) to see what functions are available in the AntiRaid SDK**
 
-### 4. Adding fields
+### 3. Adding fields
 
 **TIP: When making a template for a Gateway Event, the fields are passed to the template through a table named ``fields``.**
 
@@ -68,11 +68,11 @@ end
 When using Gateway Events, there are two cases to pay attention to, the first is the field itself being ``nil`` and the second is the field type being ``None``. In both cases, we don't want to add the field to the embed. Lets do that!
 
 ```lua
-    local should_set = false
+local should_set = false
 
-    if value ~= nil and value.field.type ~= "None" then
-        should_set = true
-    end
+if value ~= nil and value.field.type ~= "None" then
+    should_set = true
+end
 ```
 
 Lastly, we need to format the field and add it to the description. Luckily, the message plugin provides a function for formatting any categorized field. This function is called ``format_gwevent_field``. 
@@ -116,33 +116,30 @@ Pro tip: ``table.insert`` is a function that inserts an element into a table. It
 The final result of putting the above together is actually AntiRaids default template for Gateway Events (yes, actually!)
 
 ```lua
-@pragma {"lang":"lua"}
-function (args) 
-    local message_plugin = require "@antiraid/message"
+local message_plugin = require "@antiraid/message"
 
-    -- Make the embed
-    local embed = message_plugin.new_message_embed()
-    embed.title = args.event_titlename
-    embed.description = "" -- Start with an empty description
+-- Make the embed
+local embed = message_plugin.new_message_embed()
+embed.title = args.event_titlename
+embed.description = "" -- Start with an empty description
 
-    -- Add the fields to the description
-    for key, value in pairs(args.event_data) do
-        local should_set = false
+-- Add the fields to the description
+for key, value in pairs(args.event_data) do
+    local should_set = false
 
-        if value ~= nil and value.type ~= "None" then
-            should_set = true
-        end
-    
-        if should_set then
-            local formatted_value = message_plugin.format_gwevent_field(value)
-            embed.description = embed.description .. "**" .. key:gsub("_", " "):upper() .. "**: " .. formatted_value .. "\n"
-        end
+    if value ~= nil and value.type ~= "None" then
+        should_set = true
     end
 
-    local message = message_plugin.new_message()
-
-    table.insert(message.embeds, embed)
-
-    return message
+    if should_set then
+        local formatted_value = message_plugin.format_gwevent_field(value)
+        embed.description = embed.description .. "**" .. key:gsub("_", " "):upper() .. "**: " .. formatted_value .. "\n"
+    end
 end
+
+local message = message_plugin.new_message()
+
+table.insert(message.embeds, embed)
+
+return message
 ```

@@ -33,6 +33,9 @@ impl TemplatePragma {
             None => return Ok((template, Self::default())),
         };
 
+        // Unravel any comments before the @pragma
+        let first_line = first_line.trim_start_matches("--").trim();
+
         if !first_line.contains("@pragma ") {
             return Ok((template, Self::default()));
         }
@@ -165,21 +168,5 @@ pub async fn execute<C: Context + serde::Serialize, RenderResult: serde::de::Des
         )
         .await
         .map_err(|e| e.into()),
-    }
-}
-
-#[cfg(feature = "lua")]
-pub mod luau_utils {
-    pub fn wrap_main_in_entrypoint(template: &str) -> String {
-        format!(
-            r#"@pragma {{"lang":"lua"}}
-function (args) 
-    if 1==1 then
-        {}
-        return _main(args)
-    end
-end"#,
-            template
-        )
     }
 }

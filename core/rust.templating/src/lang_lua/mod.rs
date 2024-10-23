@@ -220,8 +220,6 @@ async fn create_lua_vm(
                         let template_content = template.content;
                         let template = template.template;
 
-                        println!("Received template: {:?}", template_content);
-
                         let tis_ref = tis_ref.clone();
 
                         rt.spawn(async move {
@@ -319,7 +317,7 @@ pub(crate) async fn resolve_template_to_bytecode(
 ) -> Result<Vec<u8>, LuaError> {
     // Check if the source hash matches the expected source hash
     let mut hasher = std::hash::DefaultHasher::new();
-    template.hash(&mut hasher);
+    template_content.hash(&mut hasher);
     let cur_hash = hasher.finish();
 
     let existing_bycode = bytecode_cache_ref.read(&template, |_, v| {
@@ -329,6 +327,8 @@ pub(crate) async fn resolve_template_to_bytecode(
             None
         }
     });
+
+    println!("Resolving template to bytecode: {:?}", template_content);
 
     if let Some(Some(bytecode)) = existing_bycode {
         return Ok(bytecode);
@@ -390,9 +390,7 @@ fn unravel_function_expression(template_content: String) -> String {
 
         format!(
             "
-local arg = table.pack(...)
-local args = arg[1]
-local token = arg[2]
+local args, token = ...
 {}
         ",
             uw

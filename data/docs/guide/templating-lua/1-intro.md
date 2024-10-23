@@ -27,34 +27,34 @@ The above limits are in place to prevent abuse and ensure that the bot remains r
 - Execution of all scripts is timed out when the last executed script takes longer than ``MAX_TEMPLATES_EXECUTION_TIME`` (currently 30 seconds).
 - A lua VM will exist for a total of ``MAX_TEMPLATE_LIFETIME`` (currently 10 minutes) after the last access before being destroyed. This is to reduce memory+CPU usage.
 - The ``__stack`` table can be used to share data across templates safely *while the VM is running*. without affecting other templates. This is useful for sharing data between templates such as Audit Logs. **Note that AntiRaid uses luau sandboxing meaning that `_G` is readonly.**
-- The entrypoint of any Lua template is ``function(args)``. All code must be inside this function.
 - The standard ``require`` statement can be used to import AntiRaid modules. **Note that the modules are read-only** and cannot be monkey-patched etc.
 - **Because Lua is a single-threaded language, only one template can be executed at a time**
-- Naked returns are not allowed within a function (outside the last return) are not allowed. E.g, the below may not compile:
+
+There are 2 valid syntax for a Luau template:
+
+1. Lua script syntax
 
 ```lua
-function (args)
-    print("Hello")
-    return ABC
-    print("World")
-    return DEF
+local args, token = ...
+-- Do something
+return output
+```
+
+2. Function expression syntax (not recommended for new code)
+
+```lua
+function(args, token)
+    -- Do something
+    return output
 end
 ```
 
-However, the following will:
+Note that option 1 is recommended as it is both more idiomatic and is also valid syntax for LSP's and Luau parsers. Note that option 2 is actually converted to option 1 internally through the below wrapper:
 
-```lua
-function (args)
-    if 1 == 1 then
-        print("Hello")
-        return ABC
-        print("World")
-        return DEF
-    end
-end
 ```
-
-If you need this behaviour, consider using [luau-bundler](https://www.github.com/Anti-Raid/luau-bundler).
+local args, token = ...
+{function body here}
+```
 
 ## Interop
 
@@ -102,12 +102,13 @@ error("Could not parse user ID for some reason")
 
 ## Template Tokens
 
-All Lua templates include a special template token in addition to the template arguments. Modules requiring more privileged levels of access will require this token as an argument.
+All Lua templates include a special template token in addition to the template arguments. "Executors" use this token to get access to the low-level per-template state. Examples of executors include the ``@antiraid/actions`` `ActionExecutor`, which allows you to perform actions such as banning/kicking/timing out users and other Discord actions and ``@antiraid/kv`` `KvExecutor` which allow for persistent storage via a key-value interface. 
 
-## Example
+Note that token is randomly generated for each *template invocation* and is only guaranteed to be valid during a template execution. It is also guaranteed, however, that the created executor is complete and does not rely on the token itself whatsoever after creation. This means that a template executor can be used after the template has finished executing (e.g. in a coroutine).
+
+### Example
 
 ```lua
-function(args, token)
-    print(token)
-end
+local args, token = ...
+print(token)
 ```

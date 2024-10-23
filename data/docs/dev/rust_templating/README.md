@@ -17,9 +17,12 @@ Lua is the recommended language for templating
 
 - Messages
 - Permissions
+- Captcha
+- Actions
+- Key Value API
 
 2. All languages must provide a way to sandbox the execution of the code. This is a security requirement. In particular, timeouts and heap/stack/memory limits are required.
-3. Callers must use the abstracted out function calls from ``lib.rs``. Language support is auto-determined based on the first line of the file, which must be: ``"//lang:lang_XXX"`` where ``XXX`` is the language name.
+3. Callers must use the abstracted out function calls from ``lib.rs``
 
 ## My language vent
 
