@@ -117,7 +117,7 @@ Systemd example services are provided in ``data/systemd-example``
 2. Run Sandwich
 
 **Systemd:** ``ar-sandwich-staging.service``
-**Example Command:** ``infra/Sandwich-Daemon/out/sandwich -configurationPath=sandwich.yaml -prometheusAddress :3931 -grpcHost localhost:10294 -grpcNetwork tcp -httpEnabled  --httpHost 0.0.0.0:29334 -level debug``
+**Example Command:** ``out/sandwich -configurationPath=sandwich.yaml -prometheusAddress :3931 -grpcHost localhost:10294 -grpcNetwork tcp -httpEnabled  --httpHost 0.0.0.0:29334 -level debug``
 
 3. Run Job Server
 
