@@ -8,7 +8,22 @@ Provides some basic builtins for AntiRaid.
 
 ### Functions
 
-- ``require(module_name: string) -> table<any>``
+- ``require(module_name: string, args: Option<table>) -> table<any>``
+
+``args`` is an optional table of arguments to pass to the module:
+- ``plugin_cache`` (bool) -> whether or not to cache the plugin / load the plugin from cache, may improve performance.
+
+## Async
+
+**Module Name:** ``@antiraid/async``
+
+Provides basic async primitives
+
+### Functions
+
+- ``sleep(duration: f64)``
+
+Pauses execution for the specified duration in seconds. Note that the duration passed to sleep *cannot* exeed the maximum VM lifetime.
 
 ## Interop
 

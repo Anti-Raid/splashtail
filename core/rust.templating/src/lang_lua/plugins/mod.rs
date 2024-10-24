@@ -1,4 +1,5 @@
 pub mod actions;
+pub mod r#async;
 pub mod interop;
 pub mod kv;
 pub mod lune;
@@ -12,6 +13,7 @@ use std::sync::LazyLock;
 pub static PLUGINS: LazyLock<indexmap::IndexMap<String, ModuleFn>> = LazyLock::new(|| {
     indexmap::indexmap! {
         "@antiraid/actions".to_string() => actions::init_plugin as ModuleFn,
+        "@antiraid/async".to_string() => r#async::init_plugin as ModuleFn,
         "@antiraid/builtins".to_string() => builtins as ModuleFn,
         "@antiraid/interop".to_string() => interop::init_plugin as ModuleFn,
         "@antiraid/kv".to_string() => kv::init_plugin as ModuleFn,
@@ -33,9 +35,35 @@ pub fn builtins(lua: &Lua) -> LuaResult<LuaTable> {
     Ok(module)
 }
 
-pub fn require(lua: &Lua, (plugin_name,): (String,)) -> LuaResult<LuaTable> {
+#[derive(serde::Serialize, serde::Deserialize, Default)]
+pub struct RequireOptArgs {
+    pub plugin_cache: Option<bool>,
+}
+
+pub fn require(lua: &Lua, (plugin_name, args): (String, LuaValue)) -> LuaResult<LuaTable> {
+    let args: RequireOptArgs = lua
+        .from_value::<Option<RequireOptArgs>>(args)?
+        .unwrap_or_default();
+
     match PLUGINS.get(plugin_name.as_str()) {
-        Some(plugin) => plugin(lua),
+        Some(plugin) => {
+            if args.plugin_cache.unwrap_or(true) {
+                // Get table from vm cache
+                if let Ok(table) = lua.named_registry_value::<LuaTable>(&plugin_name) {
+                    return Ok(table);
+                }
+            }
+
+            let res = plugin(lua);
+
+            if args.plugin_cache.unwrap_or(true) {
+                if let Ok(table) = &res {
+                    lua.set_named_registry_value(&plugin_name, table.clone())?;
+                }
+            }
+
+            res
+        }
         None => {
             if let Ok(table) = lua.globals().get::<LuaTable>(plugin_name.clone()) {
                 return Ok(table);

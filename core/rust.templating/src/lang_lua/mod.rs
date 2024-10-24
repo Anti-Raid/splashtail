@@ -149,7 +149,6 @@ async fn create_lua_vm(
     });
 
     // Set lua user data
-    // TODO: Use guild id to find any custom constraints
     let user_data = state::LuaUserData {
         pool,
         guild_id,
@@ -163,6 +162,7 @@ async fn create_lua_vm(
         actions_ratelimits: Arc::new(
             state::LuaActionsRatelimit::new().map_err(|e| LuaError::external(e.to_string()))?,
         ),
+        last_execution_time: last_execution_time.clone(),
     };
 
     lua.set_app_data(user_data);
