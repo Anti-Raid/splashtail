@@ -1,0 +1,333 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>A Simple Example - AntiRaid Documentation</title>
+
+
+        <!-- Custom HTML head -->
+        
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../../favicon.svg">
+        <link rel="shortcut icon" href="../../favicon.png">
+        <link rel="stylesheet" href="../../css/variables.css">
+        <link rel="stylesheet" href="../../css/general.css">
+        <link rel="stylesheet" href="../../css/chrome.css">
+        <link rel="stylesheet" href="../../css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../../FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="../../fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="../../highlight.css">
+        <link rel="stylesheet" href="../../tomorrow-night.css">
+        <link rel="stylesheet" href="../../ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+
+    </head>
+    <body class="sidebar-visible no-js">
+    <div id="body-container">
+        <!-- Provide site root to javascript -->
+        <script>
+            var path_to_root = "../../";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "light";
+        </script>
+
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            var html = document.querySelector('html');
+            html.classList.remove('light')
+            html.classList.add(theme);
+            var body = document.querySelector('body');
+            body.classList.remove('no-js')
+            body.classList.add('js');
+        </script>
+
+        <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            var body = document.querySelector('body');
+            var sidebar = null;
+            var sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+            }
+            sidebar_toggle.checked = sidebar === 'visible';
+            body.classList.remove('sidebar-visible');
+            body.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <div class="sidebar-scrollbox">
+                <ol class="chapter"><li class="chapter-item expanded affix "><a href="../../index.html">Introduction</a></li><li class="chapter-item expanded affix "><li class="part-title">User Guide</li><li class="chapter-item expanded "><a href="../../user/permissions/index.html"><strong aria-hidden="true">1.</strong> Permissions</a></li><li class="chapter-item expanded "><a href="../../user/templating/index.html"><strong aria-hidden="true">2.</strong> Templating</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../../user/templating/1-intro.html"><strong aria-hidden="true">2.1.</strong> Introduction</a></li><li class="chapter-item expanded "><a href="../../user/templating/2-plugins.html"><strong aria-hidden="true">2.2.</strong> Plugins</a></li><li class="chapter-item expanded "><a href="../../user/templating/3-example.html" class="active"><strong aria-hidden="true">2.3.</strong> A Simple Example</a></li><li class="chapter-item expanded "><a href="../../user/templating/4-luau-ecosystem.html"><strong aria-hidden="true">2.4.</strong> Ecosystem</a></li></ol></li><li class="chapter-item expanded "><a href="../../user/captcha/index.html"><strong aria-hidden="true">3.</strong> Captcha</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../../user/captcha/1-intro.html"><strong aria-hidden="true">3.1.</strong> Introduction</a></li><li class="chapter-item expanded "><a href="../../user/captcha/2-examples.html"><strong aria-hidden="true">3.2.</strong> Examples</a></li></ol></li><li class="chapter-item expanded "><a href="../../user/lockdown/index.html"><strong aria-hidden="true">4.</strong> Lockdown</a></li><li class="chapter-item expanded "><a href="../../user/modifiers/1-modifiers.html"><strong aria-hidden="true">5.</strong> Modifiers</a></li><li class="chapter-item expanded "><a href="../../user/backups/index.html"><strong aria-hidden="true">6.</strong> Backups</a></li><li class="chapter-item expanded affix "><li class="part-title">Developer Guide</li><li class="chapter-item expanded "><a href="../../dev/go_jobs/index.html"><strong aria-hidden="true">7.</strong> Go Jobserver</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../../dev/go_jobs/backups.html"><strong aria-hidden="true">7.1.</strong> Backups</a></li></ol></li><li class="chapter-item expanded "><a href="../../dev/rust_bot_modules_lockdown/index.html"><strong aria-hidden="true">8.</strong> Lockdown Module</a></li><li class="chapter-item expanded "><a href="../../dev/rust_silverpelt/index.html"><strong aria-hidden="true">9.</strong> Silverpelt</a></li><li class="chapter-item expanded "><a href="../../dev/rust_templating/index.html"><strong aria-hidden="true">10.</strong> Templating</a></li><li class="chapter-item expanded "><a href="../../dev/rust_text/index.html"><strong aria-hidden="true">11.</strong> Text</a></li></ol>
+            </div>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <!-- Track and set sidebar scroll position -->
+        <script>
+            var sidebarScrollbox = document.querySelector('#sidebar .sidebar-scrollbox');
+            sidebarScrollbox.addEventListener('click', function(e) {
+                if (e.target.tagName === 'A') {
+                    sessionStorage.setItem('sidebar-scroll', sidebarScrollbox.scrollTop);
+                }
+            }, { passive: true });
+            var sidebarScrollTop = sessionStorage.getItem('sidebar-scroll');
+            sessionStorage.removeItem('sidebar-scroll');
+            if (sidebarScrollTop) {
+                // preserve sidebar scroll position when navigating via links within sidebar
+                sidebarScrollbox.scrollTop = sidebarScrollTop;
+            } else {
+                // scroll sidebar to current active section when navigating via "next/previous chapter" buttons
+                var activeSection = document.querySelector('#sidebar .active');
+                if (activeSection) {
+                    activeSection.scrollIntoView({ block: 'center' });
+                }
+            }
+        </script>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </label>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">AntiRaid Documentation</h1>
+
+                    <div class="right-buttons">
+                        <a href="../../print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="example-templates"><a class="header" href="#example-templates">Example Templates</a></h1>
+<p>To help you get started with templating, we have provided a few examples below along with explanations of what/how they work</p>
+<h2 id="example-1-simple-audit-logging"><a class="header" href="#example-1-simple-audit-logging">Example 1: Simple Audit Logging</a></h2>
+<h3 id="explanation"><a class="header" href="#explanation">Explanation</a></h3>
+<h4 id="1-pragma"><a class="header" href="#1-pragma">1. Pragma</a></h4>
+<p>The first line of the template is a pragma. This is a special statement beginning with <code>@pragma</code> or <code>-- @pragma</code> that tells AntiRaid what language the template is written in, what options to use, and how tools such as CI, websites and other automation should handle your template. The rest of the pragma is a JSON object that contains the options. Note that if you do not provide a pragma, a default one will be used, however this will not allow you to provide capabilities to your template such as sending a message on Discord etc.</p>
+<p>In this case, we want to tell AntiRaid that we are coding a template in Lua and that we want to allow the capability to send messages to Discord. This is done by adding the <code>allowed_caps</code> key to the pragma and specifying the capabilities we want to allow as seen below:</p>
+<pre><code class="language-lua">-- @pragma {"lang":"lua","allowed_caps":["discord:sendmessage_channel"]}
+</code></pre>
+<p>Another example of pragma is on the Website:</p>
+<p><img src="3-example-pragmaimg.png" alt="Pragma on website image" /></p>
+<pre><code class="language-json">{"lang":"lua","builderInfo":{"ver":1,"data":{"embeds":[{"title":"Test","description":"","fields":[]}],"content":""},"checksum":"72e7225dfa2725a979fccc763e2e5bac3855f1cd3c10b5cd00c90b53e724db23"},"allowed_caps":["discord:sendmessage_channel"]}
+</code></pre>
+<p>Here, notice that the builderInfo contains the embeds, content, and checksum of the template. When the user wants to reread their template, the website only has to reread the pragma statement to reconstruct the state and show the right tab (either Builder if they are just making a simple embed, or Advanced if they were making changes to the content of the template itself). Without the pragma, the website would have to use its own arcane syntax on top of comments or execute the template just to reconstruct state.</p>
+<h4 id="2-creating-a-message"><a class="header" href="#2-creating-a-message">2. Creating a message</a></h4>
+<p>Next, we need to extract the arguments and token from the context. The arguments are passed to the template when it is executed and contain all the data we need to work with. The token is used to authenticate the template and gain access to the templates context in privileged AntiRaid API's. All of this is provided using variable arguments.</p>
+<pre><code class="language-lua">local args, token = ...
+</code></pre>
+<p>There are 3 things we want to import for this template to work. The first is the Discord module, which allows us to send messages to Discord. The second is the Interop module, which provides some functions allowing for seamless interoperability between your template and AntiRaid. The third is the Formatters module, which provides some helper methods for formatting audit log fields (formally known as <code>gwevent_fields</code>).</p>
+<pre><code class="language-lua">local discord = require "@antiraid/discord"
+local interop = require "@antiraid/interop"
+local formatter = require "@antiraid/formatters"
+</code></pre>
+<p>Next, we create the embed. <code>args.event_titlename</code> is specific to Audit Logs and contains the friendly name for an event.</p>
+<pre><code class="language-lua">-- Make the embed
+local embed = {
+    title = args.event_titlename, 
+    description = "", -- Start with empty description
+}
+</code></pre>
+<p><strong>NOTE: You can use the <a href="./2-plugins.html">API Reference</a> to see what functions are available in the AntiRaid SDK</strong></p>
+<h4 id="3-adding-fields"><a class="header" href="#3-adding-fields">3. Adding fields</a></h4>
+<p><strong>TIP: When making a template for a Gateway Event, the fields are passed to the template through a table named <code>fields</code>.</strong></p>
+<p>The next step is to add fields to the embed. In this case, we can do this by iterating over <code>fields</code>. In Lua, tables can be iterated over using the builtin <code>pairs</code> function like below:</p>
+<pre><code class="language-lua">for key, value in pairs(my_table) do
+    -- Do something with key and value
+end
+</code></pre>
+<p>In the same way, we can now iterate over <code>args.event_data</code>:</p>
+<pre><code class="language-lua">for key, value in pairs(args.event_data) do
+    -- Do something with key and value
+end
+</code></pre>
+<p>When using Audit Log Events, there are two cases to pay attention to, the first is the field itself being <code>nil</code> and the second is the field type being <code>None</code>. In both cases, we don't want to add the field to the embed. Lets do that!</p>
+<pre><code class="language-lua">local should_set = false
+
+if value ~= nil and value.field.type ~= "None" then
+    should_set = true
+end
+</code></pre>
+<p>Lastly, we need to format the field and add it to the description. Luckily, the formatter plugin provides a function for formatting any categorized field. This function is called <code>format_gwevent_field</code>.</p>
+<pre><code class="language-lua">local formatted_value = formatter.format_gwevent_field(value)
+</code></pre>
+<h4 id="4-sending-the-message"><a class="header" href="#4-sending-the-message">4. Sending the message</a></h4>
+<p>Finally, we can send the message using the Discord module. To do this, we need to create a message object and set the embeds property to an array containing our embed. This is also where interop comes in handy, as we need to set the metatable of the embeds array to the interop array metatable so AntiRaid knows that embeds is an array. Next, we use the Discord plugin to make a new Discord action executor which then lets us send the message to the specified channel (<code>args.sink</code> is another Audit Log specific variable that contains the channel ID/whatever <code>sink</code> is set to in the database).</p>
+<pre><code class="language-lua">local message = { embeds = {} }
+setmetatable(message.embeds, interop.array_metatable)
+
+table.insert(message.embeds, embed)
+
+-- Send message using action executor
+local discord_executor = discord.new(token);
+discord_executor:sendmessage_channel({
+    channel_id = args.sink,
+    message = message
+})
+</code></pre>
+<p>Finally, we can put the entire loop together as so:</p>
+<pre><code class="language-lua">-- @pragma {"lang":"lua","allowed_caps":["discord:sendmessage_channel"]}
+local args, token = ...
+local discord = require "@antiraid/discord"
+local interop = require "@antiraid/interop"
+local formatter = require "@antiraid/formatters"
+
+-- Make the embed
+local embed = {
+    title = args.event_titlename, 
+    description = "", -- Start with empty description
+}
+
+-- Add the event data to the description
+for key, value in pairs(args.event_data) do
+    local should_set = false
+
+    if value ~= nil and value.type ~= "None" then
+        should_set = true
+    end
+
+    if should_set then
+        local formatted_value = formatter.format_gwevent_field(value)
+        embed.description = embed.description .. "**" .. key:gsub("_", " "):upper() .. "**: " .. formatted_value .. "\n"
+    end
+end
+
+local message = { embeds = {} }
+setmetatable(message.embeds, interop.array_metatable)
+
+table.insert(message.embeds, embed)
+
+-- Send message using action executor
+local discord_executor = discord.new(token);
+discord_executor:sendmessage_channel({
+    channel_id = args.sink,
+    message = message
+})
+</code></pre>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../../user/templating/2-plugins.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+
+                            <a rel="next prefetch" href="../../user/templating/4-luau-ecosystem.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../../user/templating/2-plugins.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+
+                    <a rel="next prefetch" href="../../user/templating/4-luau-ecosystem.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../../elasticlunr.min.js"></script>
+        <script src="../../mark.min.js"></script>
+        <script src="../../searcher.js"></script>
+
+        <script src="../../clipboard.min.js"></script>
+        <script src="../../highlight.js"></script>
+        <script src="../../book.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+    </div>
+    </body>
+</html>
