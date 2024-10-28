@@ -174,31 +174,30 @@
                 <div id="content" class="content">
                     <main>
                         <h1 id="permissions"><a class="header" href="#permissions">Permissions</a></h1>
-<p>Imagine. Imagine a discord bot which you could completely control. You could decide who can use any specific command, who can change the bot's settings, and who can even use the bot at all.</p>
+<p>Imagine. Imagine a discord bot that you could completely control. You could decide who can use any specific command, who can change the bot's settings, and who can even use the bot at all.</p>
 <p><em>Thats AntiRaid...</em></p>
-<p>AntiRaid has a customizable permission system which uses both Discord permissions for simplicity and <a href="https://github.com/InfinityBotList/kittycat">kittycat</a> permissions for more specific requirements. For more complex cases, AntiRaid provides support for Lua scripting, which can be used to extend Antiraid with arbitrarily complex permission systems, among other things.</p>
-<p>The idea is simple: All roles have permissions attached to them and members can have special permission overrides on top of that. The permissions are then checked when a command is run.</p>
-<p><strong>Note:</strong> The documentation for this is not yet finished and is a WIP.</p>
+<p>AntiRaid has a customizable permission system that uses both Discord permissions for simplicity and <a href="https://github.com/InfinityBotList/kittycat">kittycat</a> permissions for more specific requirements. For more complex cases, AntiRaid provides support for Lua scripting, which can be used to extend Antiraid with arbitrarily complex permission systems, among other things.</p>
+<p>The idea is simple: All roles have permissions attached to them and members can have special permission overrides. The members' permissions are then checked when a command is run.</p>
 <h2 id="modes"><a class="header" href="#modes">Modes</a></h2>
 <p>Anti-Raid has two different modes for permission checks depending on how custom your needs are:</p>
 <ul>
-<li><code>Simple</code>: In simple mode, you just need to specify the exact permissions needed to run a command. This is the default mode.</li>
-<li><code>Template</code>: If you have more advanced needs, you can also use custom templates to determine if a user has the required permissions. See <a href="../templating-lua/1-intro.html"><code>Templating</code></a> for more information on how templating works.</li>
+<li><code>Simple</code>: In simple mode, just specify the exact permissions needed to run a command. This is the default mode.</li>
+<li><code>Template</code>: If you have more advanced needs, use custom templates to determine if a user has the required permissions. See <a href="../templating-lua/1-intro.html"><code>Templating</code></a> for more information on how templating works.</li>
 </ul>
 <h2 id="simple-permission-checks"><a class="header" href="#simple-permission-checks">Simple Permission Checks</a></h2>
-<p>Since not everyone knows how to code, AntiRaid provides a simple permission checking system builtin that should be enough for most. Heres how it works:</p>
+<p>Since not everyone knows how to code, AntiRaid provides a simple permission-checking system built in that should be enough for most:</p>
 <ol>
-<li>Commands are the base primitive of AntiRaid. These commands can be either real or virtual. Real commands are commands that you can actually run (as well as configure) while virtual commands are placeholders for permissions, help commands or external modules that don't use the normal AntiRaid module system [e.g. modules written in Gleam].</li>
-<li>Commands can be configured through either permissions or by simply disabling them (some commands cannot be disabled however to ensure you can't break the bot permanently).</li>
+<li>Commands can have permissions that gate actions.</li>
+<li>Commands can be either real or virtual. Real commands can be run. Virtual commands are placeholders for permission-gating actions.</li>
+<li>Commands can be configured by setting their permissions or disabling them (some commands cannot be disabled to avoid breakage).</li>
 <li>Server admins can set permissions on their server roles and then override them for specific users through permission overrides.</li>
 <li>Server admins can then set permissions on commands and default permissions on modules. These permissions are then checked when a command is run.</li>
 </ol>
-<p>Of course, the above is just an overview of AntiRaid permission system. This is just an overview, of course.</p>
 <h2 id="template-permission-checks"><a class="header" href="#template-permission-checks">Template Permission Checks</a></h2>
-<p>For more advanced users, AntiRaid provides a template system that allows you to create custom permission checks. This is done through the use of our custom Luau templating system.</p>
+<p>For more advanced users, AntiRaid provides a template system that allows you to create custom permission checks. This is done through custom Luau templating.</p>
 <p>See the <a href="../templating-lua/1-intro.html">templating guide</a> for more information on how to use Lua templates. Then, just code away!</p>
 <h2 id="tip"><a class="header" href="#tip">TIP</a></h2>
-<p>For best results, consider limiting server permissions of other users to the minimum required. Then, use AntiRaid for actual moderation. That's better than giving everyone admin permissions and then trying to restrict them with AntiRaid and also allows AntiRaid to work fully!</p>
+<p>For best results, consider limiting the server permissions of other users to the minimum required. Then, use AntiRaid for actual moderation. That's better than giving everyone admin permissions and then trying to restrict them with AntiRaid.</p>
 
                     </main>
 
