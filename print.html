@@ -174,8 +174,12 @@
 
                 <div id="content" class="content">
                     <main>
-                        <h1 id="anti-raid-documentation"><a class="header" href="#anti-raid-documentation">Anti-Raid Documentation</a></h1>
-<p>This is the documentation for the Anti-Raid bot.</p>
+                        <h1 id="introduction"><a class="header" href="#introduction">Introduction</a></h1>
+<p><strong>NOTE:</strong> Just adding AntiRaid (or any discord bot) to your server will not do much unless you configure it first!</p>
+<p>AntiRaid is a discord bot that takes a very unique approach to protecting servers. Instead of providing a single-size-fits-all solution, AntiRaid makes use of "structured templating" and a (work in progress/coming soon) template shop to allow servers to protect themselves in a way that is tailored to them.</p>
+<h2 id="our-philosophy"><a class="header" href="#our-philosophy">Our Philosophy</a></h2>
+<p>While many bots like Wick provide a managed anti-raid/anti-nuke solution, these systems often provide suboptimal user experience to many servers as they may not cater to specific needs of the server. Wick, for example, is often criticized for limiting the abilities of server moderators in a way that makes moderation harder. While Wick is useful in many servers and does work quite well in the anti-raid/anti-nuke field from our experience, it may not be the best solution for all servers.</p>
+<p>Templating, on the other hand, allows servers to tailor their needs directly without needing to go through the pain of making a custom discord bot, hosting it and then navigating the complexities of the discord API manually while reinventing concepts like stings/punishments/permissions/captchas all over again.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="permissions"><a class="header" href="#permissions">Permissions</a></h1>
 <p>Imagine. Imagine a discord bot that you could completely control. You could decide who can use any specific command, who can change the bot's settings, and who can even use the bot at all.</p>
 <p><em>Thats AntiRaid...</em></p>
@@ -583,7 +587,7 @@ discord_executor:create_message({
 <p>Discord Events are special. AntiRaid uses Serenity for handling Discord events. As such, please see <a href="https://docs.rs/serenity/latest/serenity/client/enum.FullEvent.html#variants">Serenity's Documentation</a> for what fields are available in each event. It's much better documentation than what we can come up with.</p>
 <p>AntiRaid does not modify the events in any way, so you can expect the same fields as what Serenity provides. Note, however, that only the fields are available to templates, not the methods provided by Serenity.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="captcha"><a class="header" href="#captcha">Captcha</a></h1>
-<div style="break-before: page; page-break-before: always;"></div><h1 id="introduction"><a class="header" href="#introduction">Introduction</a></h1>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="introduction-1"><a class="header" href="#introduction-1">Introduction</a></h1>
 <p><em>WARNING: Captcha's are being heavily churned/rewritten into a new Lua plugin</em></p>
 <p>A CAPTCHA is a security measure that can be used to try and filter out the more basic and spammy bots from accessing your server. It presents a challenge that users must complete to prove they are human. This can help protect your server from unwanted automated access and ensure that real users can interact with your community. <strong>Note that CAPTCHA's are NOT foolproof and that more sophistiated bots may still bypass them.</strong></p>
 <p>Of course, with the current landscape with AI everywhere, just serving a single CAPTCHA type (or config) does not really work. Furthermore, AntiRaid recognizes that different servers have different needs. Therefore, we provide a flexible CAPTCHA system, fully integrated with our Lua Templating system that allows you to completely customize the CAPTCHA experience for your users. This occurs through filters.</p>
