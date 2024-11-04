@@ -180,11 +180,11 @@
 <h4 id="1-pragma"><a class="header" href="#1-pragma">1. Pragma</a></h4>
 <p>The first line of the template is a pragma. This is a special statement beginning with <code>@pragma</code> or <code>-- @pragma</code> that tells AntiRaid what language the template is written in, what options to use, and how tools such as CI, websites and other automation should handle your template. The rest of the pragma is a JSON object that contains the options. Note that if you do not provide a pragma, a default one will be used, however this will not allow you to provide capabilities to your template such as sending a message on Discord etc.</p>
 <p>In this case, we want to tell AntiRaid that we are coding a template in Lua and that we want to allow the capability to send messages to Discord. This is done by adding the <code>allowed_caps</code> key to the pragma and specifying the capabilities we want to allow as seen below:</p>
-<pre><code class="language-lua">-- @pragma {"lang":"lua","allowed_caps":["discord:sendmessage_channel"]}
+<pre><code class="language-lua">-- @pragma {"lang":"lua","allowed_caps":["discord:create_message"]}
 </code></pre>
 <p>Another example of pragma is on the Website:</p>
 <p><img src="3-example-pragmaimg.png" alt="Pragma on website image" /></p>
-<pre><code class="language-json">{"lang":"lua","builderInfo":{"ver":1,"data":{"embeds":[{"title":"Test","description":"","fields":[]}],"content":""},"checksum":"72e7225dfa2725a979fccc763e2e5bac3855f1cd3c10b5cd00c90b53e724db23"},"allowed_caps":["discord:sendmessage_channel"]}
+<pre><code class="language-json">{"lang":"lua","builderInfo":{"ver":1,"data":{"embeds":[{"title":"Test","description":"","fields":[]}],"content":""},"checksum":"72e7225dfa2725a979fccc763e2e5bac3855f1cd3c10b5cd00c90b53e724db23"},"allowed_caps":["discord:create_message"]}
 </code></pre>
 <p>Here, notice that the builderInfo contains the embeds, content, and checksum of the template. When the user wants to reread their template, the website only has to reread the pragma statement to reconstruct the state and show the right tab (either Builder if they are just making a simple embed, or Advanced if they were making changes to the content of the template itself). Without the pragma, the website would have to use its own arcane syntax on top of comments or execute the template just to reconstruct state.</p>
 <h4 id="2-creating-a-message"><a class="header" href="#2-creating-a-message">2. Creating a message</a></h4>
@@ -235,13 +235,13 @@ table.insert(message.embeds, embed)
 
 -- Send message using action executor
 local discord_executor = discord.new(token);
-discord_executor:sendmessage_channel({
+discord_executor:create_message({
     channel_id = args.sink,
     message = message
 })
 </code></pre>
 <p>Finally, we can put the entire loop together as so:</p>
-<pre><code class="language-lua">-- @pragma {"lang":"lua","allowed_caps":["discord:sendmessage_channel"]}
+<pre><code class="language-lua">-- @pragma {"lang":"lua","allowed_caps":["discord:create_message"]}
 local args, token = ...
 local discord = require "@antiraid/discord"
 local interop = require "@antiraid/interop"
@@ -274,7 +274,7 @@ table.insert(message.embeds, embed)
 
 -- Send message using action executor
 local discord_executor = discord.new(token);
-discord_executor:sendmessage_channel({
+discord_executor:create_message({
     channel_id = args.sink,
     message = message
 })
