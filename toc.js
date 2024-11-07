@@ -1,0 +1,54 @@
+// Populate the sidebar
+//
+// This is a script, and not included directly in the page, to control the total size of the book.
+// The TOC contains an entry for each page, so if each page includes a copy of the TOC,
+// the total size of the page becomes O(n**2).
+var sidebarScrollbox = document.querySelector("#sidebar .sidebar-scrollbox");
+sidebarScrollbox.innerHTML = '<ol class="chapter"><li class="chapter-item expanded affix "><a href="index.html">Introduction</a></li><li class="chapter-item expanded affix "><li class="part-title">User Guide</li><li class="chapter-item expanded "><a href="user/permissions/index.html"><strong aria-hidden="true">1.</strong> Permissions</a></li><li class="chapter-item expanded "><a href="user/templating/index.html"><strong aria-hidden="true">2.</strong> Templating</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="user/templating/1-intro.html"><strong aria-hidden="true">2.1.</strong> Introduction</a></li><li class="chapter-item expanded "><a href="user/templating/2-plugins.html"><strong aria-hidden="true">2.2.</strong> Plugins</a></li><li class="chapter-item expanded "><a href="user/templating/3-example.html"><strong aria-hidden="true">2.3.</strong> A Simple Example</a></li><li class="chapter-item expanded "><a href="user/templating/4-luau-ecosystem.html"><strong aria-hidden="true">2.4.</strong> Ecosystem</a></li><li class="chapter-item expanded "><a href="user/templating/5-hooks.html"><strong aria-hidden="true">2.5.</strong> Hooks</a></li></ol></li><li class="chapter-item expanded "><a href="user/captcha/index.html"><strong aria-hidden="true">3.</strong> Captcha</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="user/captcha/1-intro.html"><strong aria-hidden="true">3.1.</strong> Introduction</a></li><li class="chapter-item expanded "><a href="user/captcha/2-examples.html"><strong aria-hidden="true">3.2.</strong> Examples</a></li></ol></li><li class="chapter-item expanded "><a href="user/lockdown/index.html"><strong aria-hidden="true">4.</strong> Lockdown</a></li><li class="chapter-item expanded "><a href="user/modifiers/1-modifiers.html"><strong aria-hidden="true">5.</strong> Modifiers</a></li><li class="chapter-item expanded "><a href="user/backups/index.html"><strong aria-hidden="true">6.</strong> Backups</a></li><li class="chapter-item expanded affix "><li class="part-title">Developer Guide</li><li class="chapter-item expanded "><a href="dev/go_jobs/index.html"><strong aria-hidden="true">7.</strong> Go Jobserver</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="dev/go_jobs/backups.html"><strong aria-hidden="true">7.1.</strong> Backups</a></li></ol></li><li class="chapter-item expanded "><a href="dev/rust_bot_modules_lockdown/index.html"><strong aria-hidden="true">8.</strong> Lockdown Module</a></li><li class="chapter-item expanded "><a href="dev/rust_silverpelt/index.html"><strong aria-hidden="true">9.</strong> Silverpelt</a></li><li class="chapter-item expanded "><a href="dev/rust_templating/index.html"><strong aria-hidden="true">10.</strong> Templating</a></li><li class="chapter-item expanded "><a href="dev/rust_text/index.html"><strong aria-hidden="true">11.</strong> Text</a></li></ol>';
+(function() {
+    let current_page = document.location.href.toString();
+    if (current_page.endsWith("/")) {
+        current_page += "index.html";
+    }
+    var links = sidebarScrollbox.querySelectorAll("a");
+    var l = links.length;
+    for (var i = 0; i < l; ++i) {
+        var link = links[i];
+        var href = link.getAttribute("href");
+        if (href && !href.startsWith("#") && !/^(?:[a-z+]+:)?\/\//.test(href)) {
+            link.href = path_to_root + href;
+        }
+        // The "index" page is supposed to alias the first chapter in the book.
+        if (link.href === current_page || (i === 0 && path_to_root === "" && current_page.endsWith("/index.html"))) {
+            link.classList.add("active");
+            var parent = link.parentElement;
+            while (parent) {
+                if (parent.tagName === "LI" && parent.previousElementSibling) {
+                    if (parent.previousElementSibling.classList.contains("chapter-item")) {
+                        parent.previousElementSibling.classList.add("expanded");
+                    }
+                }
+                parent = parent.parentElement;
+            }
+        }
+    }
+})();
+
+// Track and set sidebar scroll position
+sidebarScrollbox.addEventListener('click', function(e) {
+    if (e.target.tagName === 'A') {
+        sessionStorage.setItem('sidebar-scroll', sidebarScrollbox.scrollTop);
+    }
+}, { passive: true });
+var sidebarScrollTop = sessionStorage.getItem('sidebar-scroll');
+sessionStorage.removeItem('sidebar-scroll');
+if (sidebarScrollTop) {
+    // preserve sidebar scroll position when navigating via links within sidebar
+    sidebarScrollbox.scrollTop = sidebarScrollTop;
+} else {
+    // scroll sidebar to current active section when navigating via "next/previous chapter" buttons
+    var activeSection = document.querySelector('#sidebar .active');
+    if (activeSection) {
+        activeSection.scrollIntoView({ block: 'center' });
+    }
+}
