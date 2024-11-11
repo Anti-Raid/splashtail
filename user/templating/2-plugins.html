@@ -155,168 +155,509 @@
                         <h1 id="antiraidasync"><a class="header" href="#antiraidasync">@antiraid/async</a></h1>
 <p>Utilities for asynchronous operations and timing</p>
 <h2 id="methods"><a class="header" href="#methods">Methods</a></h2>
-<p><strong>sleep</strong></p>
+<h3 id="sleep"><a class="header" href="#sleep">sleep</a></h3>
 <pre><code class="language-lua">function sleep(duration: f64) -&gt; slept_time: f64
 </code></pre>
 <p>Sleep for a given duration.</p>
-<h3 id="parameters"><a class="header" href="#parameters">Parameters</a></h3>
+<h4 id="parameters"><a class="header" href="#parameters">Parameters</a></h4>
 <ul>
 <li><code>duration</code> (<a href="#type.f64">f64</a>): The duration to sleep for.</li>
 </ul>
-<h3 id="returns"><a class="header" href="#returns">Returns</a></h3>
+<h4 id="returns"><a class="header" href="#returns">Returns</a></h4>
 <ul>
 <li><code>slept_time</code> (<a href="#type.f64">f64</a>): The actual duration slept for.</li>
 </ul>
 <hr />
 <h1 id="antiraidinterop"><a class="header" href="#antiraidinterop">@antiraid/interop</a></h1>
 <p>This plugin allows interoperability with AntiRaid and controlled interaction with the low-levels of AntiRaid templating subsystem.</p>
+<h2 id="types"><a class="header" href="#types">Types</a></h2>
+<div id="type.null" />
+<h3 id="null"><a class="header" href="#null">null</a></h3>
+<p><code>null</code> is a special value that represents nothing. It is often used in AntiRaid instead of <code>nil</code> due to issues regarding existence etc. <code>null</code> is not equal to <code>nil</code> but is also an opaque type.</p>
+<div id="type.array_metatable" />
+<h3 id="array_metatable"><a class="header" href="#array_metatable">array_metatable</a></h3>
+<p><code>array_metatable</code> is a special metatable that is used to represent arrays across the Lua-AntiRaid templating subsystem boundary. This metatable must be set on all arrays over this boundary and is required to ensure AntiRaid knows the value you're sending it is actually an array and not an arbitrary Luau table.</p>
+<div id="type.TemplatePragma" />
+<h3 id="templatepragma"><a class="header" href="#templatepragma">TemplatePragma</a></h3>
+<p><code>TemplatePragma</code> contains the pragma of the template. Note that the list of fields below in non-exhaustive as templates can define extra fields on the pragma as well</p>
+<pre><code class="language-json">{
+  "lang": "lua",
+  "allowed_caps": []
+}
+</code></pre>
+<h4 id="json-schema"><a class="header" href="#json-schema">JSON schema</a></h4>
+<p>Map (key/value)<br />
+- <strong>lang</strong>
+=&gt; string ["lua"]
+- <strong>allowed_caps</strong>
+=&gt; (Array)</p>
+<h4 id="fields"><a class="header" href="#fields">Fields</a></h4>
+<ul>
+<li><code>lang</code> (<a href="#type.string">string</a>): The language of the template.</li>
+<li><code>allowed_caps</code> (<a href="#type.string">{string}</a>): The allowed capabilities provided to the template.</li>
+</ul>
+<div id="type.TemplateData" />
+<h3 id="templatedata"><a class="header" href="#templatedata">TemplateData</a></h3>
+<p><code>TemplateData</code> is a struct that represents the data associated with a template token. It is used to store the path and pragma of a template token.</p>
+<pre><code class="language-json">{
+  "path": "",
+  "pragma": {
+    "lang": "lua",
+    "allowed_caps": []
+  }
+}
+</code></pre>
+<h4 id="json-schema-1"><a class="header" href="#json-schema-1">JSON schema</a></h4>
+<ul>
+<li><strong>path</strong> =&gt; string [""]</li>
+<li><strong>pragma</strong> =&gt; Map (key/value)
+<ul>
+<li><strong>lang</strong>
+=&gt; string ["lua"]</li>
+<li><strong>allowed_caps</strong>
+=&gt; (Array)</li>
+</ul>
+</li>
+</ul>
+<h4 id="fields-1"><a class="header" href="#fields-1">Fields</a></h4>
+<ul>
+<li><code>path</code> (<a href="#type.string">string</a>): The path of the template token.</li>
+<li><code>pragma</code> (<a href="#type.TemplatePragma">TemplatePragma</a>): The pragma of the template.</li>
+</ul>
 <h2 id="methods-1"><a class="header" href="#methods-1">Methods</a></h2>
-<p><strong>memusage</strong></p>
+<h3 id="array_metatable-1"><a class="header" href="#array_metatable-1">array_metatable</a></h3>
+<pre><code class="language-lua">function array_metatable() -&gt; array_metatable: table
+</code></pre>
+<p>Returns the array metatable.</p>
+<h4 id="returns-1"><a class="header" href="#returns-1">Returns</a></h4>
+<ul>
+<li><code>array_metatable</code> (<a href="#type.table">table</a>): The array metatable.</li>
+</ul>
+<h3 id="null-1"><a class="header" href="#null-1">null</a></h3>
+<pre><code class="language-lua">function null() -&gt; null: null
+</code></pre>
+<p>Returns the null value.</p>
+<h4 id="returns-2"><a class="header" href="#returns-2">Returns</a></h4>
+<ul>
+<li><code>null</code> (<a href="#type.null">null</a>): The null value.</li>
+</ul>
+<h3 id="memusage"><a class="header" href="#memusage">memusage</a></h3>
 <pre><code class="language-lua">function memusage() -&gt; memory_usage: f64
 </code></pre>
 <p>Returns the current memory usage of the Lua VM.</p>
-<h3 id="returns-1"><a class="header" href="#returns-1">Returns</a></h3>
+<h4 id="returns-3"><a class="header" href="#returns-3">Returns</a></h4>
 <ul>
 <li><code>memory_usage</code> (<a href="#type.f64">f64</a>): The current memory usage, in bytes, of the Lua VM.</li>
 </ul>
-<p><strong>guild_id</strong></p>
+<h3 id="guild_id"><a class="header" href="#guild_id">guild_id</a></h3>
 <pre><code class="language-lua">function guild_id() -&gt; guild_id: string
 </code></pre>
 <p>Returns the current guild ID of the Lua VM.</p>
-<h3 id="returns-2"><a class="header" href="#returns-2">Returns</a></h3>
+<h4 id="returns-4"><a class="header" href="#returns-4">Returns</a></h4>
 <ul>
 <li><code>guild_id</code> (<a href="#type.string">string</a>): The current guild ID.</li>
 </ul>
-<p><strong>gettemplatedata</strong></p>
+<h3 id="gettemplatedata"><a class="header" href="#gettemplatedata">gettemplatedata</a></h3>
 <pre><code class="language-lua">function gettemplatedata(token: string) -&gt; data: TemplateData?
 </code></pre>
 <p>Returns the data associated with a template token.</p>
-<h3 id="parameters-1"><a class="header" href="#parameters-1">Parameters</a></h3>
+<h4 id="parameters-1"><a class="header" href="#parameters-1">Parameters</a></h4>
 <ul>
 <li><code>token</code> (<a href="#type.string">string</a>): The token of the template to retrieve data for.</li>
 </ul>
-<h3 id="returns-3"><a class="header" href="#returns-3">Returns</a></h3>
+<h4 id="returns-5"><a class="header" href="#returns-5">Returns</a></h4>
 <ul>
 <li><code>data</code> (<a href="#type.TemplateData">TemplateData?</a>): The data associated with the template token, or <code>null</code> if no data is found.</li>
 </ul>
-<p><strong>current_user</strong></p>
+<h3 id="current_user"><a class="header" href="#current_user">current_user</a></h3>
 <pre><code class="language-lua">function current_user() -&gt; user: serenity::model::user::User
 </code></pre>
 <p>Returns the current user of the Lua VM.</p>
-<h3 id="returns-4"><a class="header" href="#returns-4">Returns</a></h3>
+<h4 id="returns-6"><a class="header" href="#returns-6">Returns</a></h4>
 <ul>
 <li><code>user</code> (<a href="https://docs.rs/serenity/latest/serenity/model/user/struct.User.html">serenity::model::user::User</a>): Returns AntiRaid's discord user object.</li>
 </ul>
 <hr />
 <h1 id="antiraidimg_captcha"><a class="header" href="#antiraidimg_captcha">@antiraid/img_captcha</a></h1>
 <p>This plugin allows for the creation of text/image CAPTCHA's with customizable filters which can be useful in protecting against bots.</p>
+<h2 id="types-1"><a class="header" href="#types-1">Types</a></h2>
+<div id="type.CaptchaConfig" />
+<h3 id="captchaconfig"><a class="header" href="#captchaconfig">CaptchaConfig</a></h3>
+<p>Captcha configuration. See examples for the arguments</p>
+<pre><code class="language-json">{
+  "char_count": 5,
+  "filters": [
+    {
+      "filter": "Noise",
+      "prob": 0.1
+    },
+    {
+      "filter": "Wave",
+      "f": 4.0,
+      "amp": 2.0,
+      "d": "horizontal"
+    },
+    {
+      "filter": "Line",
+      "p1": [
+        1.0,
+        0.0
+      ],
+      "p2": [
+        20.0,
+        20.0
+      ],
+      "thickness": 2.0,
+      "color": {
+        "r": 0,
+        "g": 30,
+        "b": 100
+      }
+    },
+    {
+      "filter": "RandomLine"
+    },
+    {
+      "filter": "Grid",
+      "y_gap": 30,
+      "x_gap": 10
+    },
+    {
+      "filter": "ColorInvert"
+    }
+  ],
+  "viewbox_size": [
+    512,
+    512
+  ],
+  "set_viewbox_at_idx": null
+}
+</code></pre>
+<h4 id="json-schema-2"><a class="header" href="#json-schema-2">JSON schema</a></h4>
+<ul>
+<li><strong>char_count</strong> =&gt; u8 [5]</li>
+<li><strong>filters</strong> =&gt; (Array) Map (key/value)
+<ul>
+<li><strong>filter</strong>
+=&gt; string ["Noise"]</li>
+<li><strong>prob</strong>
+=&gt; f32 [0.1]</li>
+</ul>
+</li>
+</ul>
+<p>, Map (key/value)<br />
+- <strong>filter</strong>
+=&gt; string ["Wave"]
+- <strong>f</strong>
+=&gt; f64 [4]
+- <strong>amp</strong>
+=&gt; f64 [2]
+- <strong>d</strong>
+=&gt; string ["horizontal"]</p>
+<p>, Map (key/value)<br />
+- <strong>filter</strong>
+=&gt; string ["Line"]
+- <strong>p1</strong>
+=&gt; (Array) f32 [1]f32 [0]
+- <strong>p2</strong>
+=&gt; (Array) f32 [20]f32 [20]
+- <strong>thickness</strong>
+=&gt; f32 [2]
+- <strong>color</strong>
+=&gt; Struct SerdeColor
+- <strong>r</strong> =&gt; u8 [0]
+- <strong>g</strong> =&gt; u8 [30]
+- <strong>b</strong> =&gt; u8 [100]</p>
+<p>Map (key/value)<br />
+- <strong>filter</strong>
+=&gt; string ["RandomLine"]</p>
+<p>Map (key/value)<br />
+- <strong>filter</strong>
+=&gt; string ["Grid"]
+- <strong>y_gap</strong>
+=&gt; u32 [30]
+- <strong>x_gap</strong>
+=&gt; u32 [10]</p>
+<p>Map (key/value)<br />
+- <strong>filter</strong>
+=&gt; string ["ColorInvert"]</p>
+<ul>
+<li><strong>viewbox_size</strong> =&gt; (Array) u32 [512]u32 [512]</li>
+<li><strong>set_viewbox_at_idx</strong> =&gt; None (unknown value type)</li>
+</ul>
+<h4 id="fields-2"><a class="header" href="#fields-2">Fields</a></h4>
+<ul>
+<li><code>filter</code> (<a href="#type.string">string</a>): The name of the filter to use. See example for the parameters to pass for the filter as well as https://github.com/Anti-Raid/captcha.</li>
+</ul>
 <h2 id="methods-2"><a class="header" href="#methods-2">Methods</a></h2>
-<p><strong>new</strong></p>
+<h3 id="new"><a class="header" href="#new">new</a></h3>
 <pre><code class="language-lua">function new(config: CaptchaConfig) -&gt; captcha: {u8}
 </code></pre>
 <p>Creates a new CAPTCHA with the given configuration.</p>
-<h3 id="parameters-2"><a class="header" href="#parameters-2">Parameters</a></h3>
+<h4 id="parameters-2"><a class="header" href="#parameters-2">Parameters</a></h4>
 <ul>
 <li><code>config</code> (<a href="#type.CaptchaConfig">CaptchaConfig</a>): The configuration to use for the CAPTCHA.</li>
 </ul>
-<h3 id="returns-5"><a class="header" href="#returns-5">Returns</a></h3>
+<h4 id="returns-7"><a class="header" href="#returns-7">Returns</a></h4>
 <ul>
 <li><code>captcha</code> (<a href="#type.u8">{u8}</a>): The created CAPTCHA object.</li>
 </ul>
 <hr />
 <h1 id="antiraidkv"><a class="header" href="#antiraidkv">@antiraid/kv</a></h1>
 <p>Utilities for key-value operations.</p>
-<h2 id="methods-3"><a class="header" href="#methods-3">Methods</a></h2>
-<p><strong>new</strong></p>
+<h2 id="types-2"><a class="header" href="#types-2">Types</a></h2>
+<div id="type.KvRecord" />
+<h3 id="kvrecord"><a class="header" href="#kvrecord">KvRecord</a></h3>
+<p>KvRecord represents a key-value record with metadata.</p>
+<pre><code class="language-json">{
+  "key": "",
+  "value": null,
+  "exists": false,
+  "created_at": null,
+  "last_updated_at": null
+}
+</code></pre>
+<h4 id="json-schema-3"><a class="header" href="#json-schema-3">JSON schema</a></h4>
+<ul>
+<li><strong>key</strong> =&gt; string [""]</li>
+<li><strong>value</strong> =&gt; No Data/Unit Type (unknown value type)</li>
+<li><strong>exists</strong> =&gt; bool [false]</li>
+<li><strong>created_at</strong> =&gt; None (unknown value type)</li>
+<li><strong>last_updated_at</strong> =&gt; None (unknown value type)</li>
+</ul>
+<h4 id="fields-3"><a class="header" href="#fields-3">Fields</a></h4>
+<ul>
+<li><code>key</code> (<a href="#type.string">string</a>): The key of the record.</li>
+<li><code>value</code> (<a href="#type.any">any</a>): The value of the record.</li>
+<li><code>exists</code> (<a href="#type.boolean">boolean</a>): Whether the record exists.</li>
+<li><code>created_at</code> (<a href="#type.datetime">datetime</a>): The time the record was created.</li>
+<li><code>last_updated_at</code> (<a href="#type.datetime">datetime</a>): The time the record was last updated.</li>
+</ul>
+<div id="type.KvExecutor" />
+<h3 id="kvexecutor"><a class="header" href="#kvexecutor">KvExecutor</a></h3>
+<p>KvExecutor allows templates to get, store and find persistent data within a server.</p>
+<h4 id="methods-3"><a class="header" href="#methods-3">Methods</a></h4>
+<h3 id="find"><a class="header" href="#find">find</a></h3>
+<pre><code class="language-lua">function KvExecutor:find(key: string)
+</code></pre>
+<h4 id="parameters-3"><a class="header" href="#parameters-3">Parameters</a></h4>
+<ul>
+<li><code>key</code> (<a href="#type.string">string</a>): The key to search for. % matches zero or more characters; _ matches a single character. To search anywhere in a string, surround {KEY} with %, e.g. %{KEY}%</li>
+</ul>
+<h3 id="get"><a class="header" href="#get">get</a></h3>
+<pre><code class="language-lua">function KvExecutor:get(key: string)
+</code></pre>
+<h4 id="parameters-4"><a class="header" href="#parameters-4">Parameters</a></h4>
+<ul>
+<li><code>key</code> (<a href="#type.string">string</a>): The key to get.</li>
+</ul>
+<h4 id="returns-8"><a class="header" href="#returns-8">Returns</a></h4>
+<ul>
+<li><code>value</code> (<a href="#type.any">any</a>): The value of the key.- <code>exists</code> (<a href="#type.boolean">boolean</a>): Whether the key exists.</li>
+</ul>
+<h3 id="getrecord"><a class="header" href="#getrecord">getrecord</a></h3>
+<pre><code class="language-lua">function KvExecutor:getrecord(key: string) -&gt; record: KvRecord
+</code></pre>
+<h4 id="parameters-5"><a class="header" href="#parameters-5">Parameters</a></h4>
+<ul>
+<li><code>key</code> (<a href="#type.string">string</a>): The key to get.</li>
+</ul>
+<h4 id="returns-9"><a class="header" href="#returns-9">Returns</a></h4>
+<ul>
+<li><code>record</code> (<a href="#type.KvRecord">KvRecord</a>): The record of the key.</li>
+</ul>
+<h3 id="set"><a class="header" href="#set">set</a></h3>
+<pre><code class="language-lua">function KvExecutor:set(key: string, value: any)
+</code></pre>
+<h4 id="parameters-6"><a class="header" href="#parameters-6">Parameters</a></h4>
+<ul>
+<li><code>key</code> (<a href="#type.string">string</a>): The key to set.</li>
+<li><code>value</code> (<a href="#type.any">any</a>): The value to set.</li>
+</ul>
+<h3 id="delete"><a class="header" href="#delete">delete</a></h3>
+<pre><code class="language-lua">function KvExecutor:delete(key: string)
+</code></pre>
+<h4 id="parameters-7"><a class="header" href="#parameters-7">Parameters</a></h4>
+<ul>
+<li><code>key</code> (<a href="#type.string">string</a>): The key to delete.</li>
+</ul>
+<h2 id="methods-4"><a class="header" href="#methods-4">Methods</a></h2>
+<h3 id="new-1"><a class="header" href="#new-1">new</a></h3>
 <pre><code class="language-lua">function new(token: string) -&gt; executor: KvExecutor
 </code></pre>
-<h3 id="parameters-3"><a class="header" href="#parameters-3">Parameters</a></h3>
+<h4 id="parameters-8"><a class="header" href="#parameters-8">Parameters</a></h4>
 <ul>
 <li><code>token</code> (<a href="#type.string">string</a>): The token of the template to use.</li>
 </ul>
-<h3 id="returns-6"><a class="header" href="#returns-6">Returns</a></h3>
+<h4 id="returns-10"><a class="header" href="#returns-10">Returns</a></h4>
 <ul>
 <li><code>executor</code> (<a href="#type.KvExecutor">KvExecutor</a>): A key-value executor.</li>
 </ul>
 <hr />
 <h1 id="antiraidpermissions"><a class="header" href="#antiraidpermissions">@antiraid/permissions</a></h1>
 <p>Utilities for handling permission checks.</p>
-<h2 id="methods-4"><a class="header" href="#methods-4">Methods</a></h2>
-<p><strong>permission_from_string</strong></p>
+<h2 id="types-3"><a class="header" href="#types-3">Types</a></h2>
+<div id="type.PermissionResult" />
+<h3 id="permissionresult"><a class="header" href="#permissionresult">PermissionResult</a></h3>
+<p>PermissionResult is an internal type containing the status of a permission check in AntiRaid. The exact contents are undocumented as of now</p>
+<div id="type.LuaPermissionResult" />
+<h3 id="luapermissionresult"><a class="header" href="#luapermissionresult">LuaPermissionResult</a></h3>
+<p>LuaPermissionResult is a type containing the status of a permission check in AntiRaid with prior parsing done for Lua.</p>
+<pre><code class="language-json">{
+  "result": {
+    "var": "Ok"
+  },
+  "is_ok": true,
+  "code": "Ok",
+  "markdown": ""
+}
+</code></pre>
+<h4 id="json-schema-4"><a class="header" href="#json-schema-4">JSON schema</a></h4>
+<ul>
+<li>
+<p><strong>result</strong> =&gt; Struct PermissionResult</p>
+<ul>
+<li><strong>var</strong> =&gt; string ["Ok"]</li>
+</ul>
+</li>
+<li>
+<p><strong>is_ok</strong> =&gt; bool [true]</p>
+</li>
+<li>
+<p><strong>code</strong> =&gt; string ["Ok"]</p>
+</li>
+<li>
+<p><strong>markdown</strong> =&gt; string [""]</p>
+</li>
+</ul>
+<h4 id="fields-4"><a class="header" href="#fields-4">Fields</a></h4>
+<ul>
+<li><code>result</code> (<a href="#type.PermissionResult">PermissionResult</a>): The raw/underlying result of the permission check.</li>
+<li><code>is_ok</code> (<a href="#type.boolean">boolean</a>): Whether the permission check was successful.</li>
+<li><code>code</code> (<a href="#type.string">string</a>): The code of the permission check.</li>
+<li><code>markdown</code> (<a href="#type.string">string</a>): The markdown representation of the permission check.</li>
+</ul>
+<div id="type.PermissionCheck" />
+<h3 id="permissioncheck"><a class="header" href="#permissioncheck">PermissionCheck</a></h3>
+<p>PermissionCheck is a type containing the permissions to check for a user.</p>
+<pre><code class="language-json">{
+  "kittycat_perms": [],
+  "native_perms": [],
+  "outer_and": false,
+  "inner_and": false
+}
+</code></pre>
+<h4 id="json-schema-5"><a class="header" href="#json-schema-5">JSON schema</a></h4>
+<ul>
+<li><strong>kittycat_perms</strong> =&gt; (Array)</li>
+<li><strong>native_perms</strong> =&gt; (Array)</li>
+<li><strong>outer_and</strong> =&gt; bool [false]</li>
+<li><strong>inner_and</strong> =&gt; bool [false]</li>
+</ul>
+<h4 id="fields-5"><a class="header" href="#fields-5">Fields</a></h4>
+<ul>
+<li><code>kittycat_perms</code> (<a href="#type.Permission">{Permission}</a>): The kittycat permissions needed to run the command.</li>
+<li><code>native_perms</code> (<a href="#type.string">{string}</a>): The native permissions needed to run the command.</li>
+<li><code>outer_and</code> (<a href="#type.boolean">boolean</a>): Whether the next permission check should be ANDed (all needed) or OR'd (at least one) to the current</li>
+<li><code>inner_and</code> (<a href="#type.boolean">boolean</a>): Whether or not the perms are ANDed (all needed) or OR'd (at least one)</li>
+</ul>
+<div id="type.Permission" />
+<h3 id="permission"><a class="header" href="#permission">Permission</a></h3>
+<p>Permission is the primitive permission type used by AntiRaid. See https://github.com/InfinityBotList/kittycat for more information</p>
+<pre><code class="language-json">{
+  "namespace": "moderation",
+  "perm": "ban",
+  "negator": false
+}
+</code></pre>
+<h4 id="json-schema-6"><a class="header" href="#json-schema-6">JSON schema</a></h4>
+<ul>
+<li><strong>namespace</strong> =&gt; string ["moderation"]</li>
+<li><strong>perm</strong> =&gt; string ["ban"]</li>
+<li><strong>negator</strong> =&gt; bool [false]</li>
+</ul>
+<h4 id="fields-6"><a class="header" href="#fields-6">Fields</a></h4>
+<ul>
+<li><code>namespace</code> (<a href="#type.string">string</a>): The namespace of the permission.</li>
+<li><code>perm</code> (<a href="#type.string">string</a>): The permission bit on the namespace.</li>
+<li><code>negator</code> (<a href="#type.boolean">boolean</a>): Whether the permission is a negator permission or not</li>
+</ul>
+<h2 id="methods-5"><a class="header" href="#methods-5">Methods</a></h2>
+<h3 id="permission_from_string"><a class="header" href="#permission_from_string">permission_from_string</a></h3>
 <pre><code class="language-lua">function permission_from_string(perm_string: string) -&gt; permission: Permission
 </code></pre>
 <p>Returns a Permission object from a string.</p>
-<h3 id="parameters-4"><a class="header" href="#parameters-4">Parameters</a></h3>
+<h4 id="parameters-9"><a class="header" href="#parameters-9">Parameters</a></h4>
 <ul>
 <li><code>perm_string</code> (<a href="#type.string">string</a>): The string to parse into a Permission object.</li>
 </ul>
-<h3 id="returns-7"><a class="header" href="#returns-7">Returns</a></h3>
+<h4 id="returns-11"><a class="header" href="#returns-11">Returns</a></h4>
 <ul>
 <li><code>permission</code> (<a href="#type.Permission">Permission</a>): The parsed Permission object.</li>
 </ul>
-<p><strong>permission_to_string</strong></p>
+<h3 id="permission_to_string"><a class="header" href="#permission_to_string">permission_to_string</a></h3>
 <pre><code class="language-lua">function permission_to_string(permission: Permission) -&gt; perm_string: string
 </code></pre>
 <p>Returns a string from a Permission object.</p>
-<h3 id="parameters-5"><a class="header" href="#parameters-5">Parameters</a></h3>
+<h4 id="parameters-10"><a class="header" href="#parameters-10">Parameters</a></h4>
 <ul>
 <li><code>permission</code> (<a href="#type.Permission">Permission</a>): The Permission object to parse into a string.</li>
 </ul>
-<h3 id="returns-8"><a class="header" href="#returns-8">Returns</a></h3>
+<h4 id="returns-12"><a class="header" href="#returns-12">Returns</a></h4>
 <ul>
 <li><code>perm_string</code> (<a href="#type.string">string</a>): The parsed string.</li>
 </ul>
-<p><strong>has_perm</strong></p>
+<h3 id="has_perm"><a class="header" href="#has_perm">has_perm</a></h3>
 <pre><code class="language-lua">function has_perm(permissions: {Permission}, permission: Permission) -&gt; has_perm: boolean
 </code></pre>
 <p>Checks if a list of permissions in Permission object form contains a specific permission.</p>
-<h3 id="parameters-6"><a class="header" href="#parameters-6">Parameters</a></h3>
+<h4 id="parameters-11"><a class="header" href="#parameters-11">Parameters</a></h4>
 <ul>
 <li><code>permissions</code> (<a href="#type.Permission">{Permission}</a>): The list of permissions</li>
 <li><code>permission</code> (<a href="#type.Permission">Permission</a>): The permission to check for.</li>
 </ul>
-<h3 id="returns-9"><a class="header" href="#returns-9">Returns</a></h3>
+<h4 id="returns-13"><a class="header" href="#returns-13">Returns</a></h4>
 <ul>
 <li><code>has_perm</code> (<a href="#type.boolean">boolean</a>): Whether the permission is present in the list of permissions as per kittycat rules.</li>
 </ul>
-<p><strong>has_perm_str</strong></p>
+<h3 id="has_perm_str"><a class="header" href="#has_perm_str">has_perm_str</a></h3>
 <pre><code class="language-lua">function has_perm_str(permissions: {string}, permission: string) -&gt; has_perm: boolean
 </code></pre>
 <p>Checks if a list of permissions in canonical string form contains a specific permission.</p>
-<h3 id="parameters-7"><a class="header" href="#parameters-7">Parameters</a></h3>
+<h4 id="parameters-12"><a class="header" href="#parameters-12">Parameters</a></h4>
 <ul>
 <li><code>permissions</code> (<a href="#type.string">{string}</a>): The list of permissions</li>
 <li><code>permission</code> (<a href="#type.string">string</a>): The permission to check for.</li>
 </ul>
-<h3 id="returns-10"><a class="header" href="#returns-10">Returns</a></h3>
+<h4 id="returns-14"><a class="header" href="#returns-14">Returns</a></h4>
 <ul>
 <li><code>has_perm</code> (<a href="#type.boolean">boolean</a>): Whether the permission is present in the list of permissions as per kittycat rules.</li>
 </ul>
-<p><strong>check_perms_single</strong></p>
+<h3 id="check_perms_single"><a class="header" href="#check_perms_single">check_perms_single</a></h3>
 <pre><code class="language-lua">function check_perms_single(check: PermissionCheck, member_native_perms: Permissions, member_kittycat_perms: {Permission}) -&gt; result: LuaPermissionResult
 </code></pre>
 <p>Checks if a single permission check passes.</p>
-<h3 id="parameters-8"><a class="header" href="#parameters-8">Parameters</a></h3>
+<h4 id="parameters-13"><a class="header" href="#parameters-13">Parameters</a></h4>
 <ul>
 <li><code>check</code> (<a href="#type.PermissionCheck">PermissionCheck</a>): The permission check to evaluate.</li>
 <li><code>member_native_perms</code> (<a href="#type.Permissions">Permissions</a>): The native permissions of the member.</li>
 <li><code>member_kittycat_perms</code> (<a href="#type.Permission">{Permission}</a>): The kittycat permissions of the member.</li>
 </ul>
-<h3 id="returns-11"><a class="header" href="#returns-11">Returns</a></h3>
+<h4 id="returns-15"><a class="header" href="#returns-15">Returns</a></h4>
 <ul>
 <li><code>result</code> (<a href="#type.LuaPermissionResult">LuaPermissionResult</a>): The result of the permission check.</li>
 </ul>
-<p><strong>eval_checks</strong></p>
+<h3 id="eval_checks"><a class="header" href="#eval_checks">eval_checks</a></h3>
 <pre><code class="language-lua">function eval_checks(checks: {PermissionCheck}, member_native_perms: Permissions, member_kittycat_perms: {Permission}) -&gt; result: LuaPermissionResult
 </code></pre>
 <p>Evaluates a list of permission checks.</p>
-<h3 id="parameters-9"><a class="header" href="#parameters-9">Parameters</a></h3>
+<h4 id="parameters-14"><a class="header" href="#parameters-14">Parameters</a></h4>
 <ul>
 <li><code>checks</code> (<a href="#type.PermissionCheck">{PermissionCheck}</a>): The list of permission checks to evaluate.</li>
 <li><code>member_native_perms</code> (<a href="#type.Permissions">Permissions</a>): The native permissions of the member.</li>
 <li><code>member_kittycat_perms</code> (<a href="#type.Permission">{Permission}</a>): The kittycat permissions of the member.</li>
 </ul>
-<h3 id="returns-12"><a class="header" href="#returns-12">Returns</a></h3>
+<h4 id="returns-16"><a class="header" href="#returns-16">Returns</a></h4>
 <ul>
 <li><code>result</code> (<a href="#type.LuaPermissionResult">LuaPermissionResult</a>): The result of the permission check.</li>
 </ul>
