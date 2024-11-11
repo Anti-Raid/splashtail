@@ -228,11 +228,15 @@
 <p>Utilities for key-value operations.</p>
 <h2 id="methods-3"><a class="header" href="#methods-3">Methods</a></h2>
 <p><strong>new</strong></p>
-<pre><code class="language-lua">function new(token: string)
+<pre><code class="language-lua">function new(token: string) -&gt; executor: KvExecutor
 </code></pre>
 <h3 id="parameters-3"><a class="header" href="#parameters-3">Parameters</a></h3>
 <ul>
 <li><code>token</code> (<a href="#type.string">string</a>): The token of the template to use.</li>
+</ul>
+<h3 id="returns-6"><a class="header" href="#returns-6">Returns</a></h3>
+<ul>
+<li><code>executor</code> (<a href="#type.KvExecutor">KvExecutor</a>): A key-value executor.</li>
 </ul>
 <hr />
 <h1 id="antiraidpermissions"><a class="header" href="#antiraidpermissions">@antiraid/permissions</a></h1>
@@ -246,7 +250,7 @@
 <ul>
 <li><code>perm_string</code> (<a href="#type.string">string</a>): The string to parse into a Permission object.</li>
 </ul>
-<h3 id="returns-6"><a class="header" href="#returns-6">Returns</a></h3>
+<h3 id="returns-7"><a class="header" href="#returns-7">Returns</a></h3>
 <ul>
 <li><code>permission</code> (<a href="#type.Permission">Permission</a>): The parsed Permission object.</li>
 </ul>
@@ -258,7 +262,7 @@
 <ul>
 <li><code>permission</code> (<a href="#type.Permission">Permission</a>): The Permission object to parse into a string.</li>
 </ul>
-<h3 id="returns-7"><a class="header" href="#returns-7">Returns</a></h3>
+<h3 id="returns-8"><a class="header" href="#returns-8">Returns</a></h3>
 <ul>
 <li><code>perm_string</code> (<a href="#type.string">string</a>): The parsed string.</li>
 </ul>
@@ -271,7 +275,7 @@
 <li><code>permissions</code> (<a href="#type.Permission">{Permission}</a>): The list of permissions</li>
 <li><code>permission</code> (<a href="#type.Permission">Permission</a>): The permission to check for.</li>
 </ul>
-<h3 id="returns-8"><a class="header" href="#returns-8">Returns</a></h3>
+<h3 id="returns-9"><a class="header" href="#returns-9">Returns</a></h3>
 <ul>
 <li><code>has_perm</code> (<a href="#type.boolean">boolean</a>): Whether the permission is present in the list of permissions as per kittycat rules.</li>
 </ul>
@@ -284,7 +288,7 @@
 <li><code>permissions</code> (<a href="#type.string">{string}</a>): The list of permissions</li>
 <li><code>permission</code> (<a href="#type.string">string</a>): The permission to check for.</li>
 </ul>
-<h3 id="returns-9"><a class="header" href="#returns-9">Returns</a></h3>
+<h3 id="returns-10"><a class="header" href="#returns-10">Returns</a></h3>
 <ul>
 <li><code>has_perm</code> (<a href="#type.boolean">boolean</a>): Whether the permission is present in the list of permissions as per kittycat rules.</li>
 </ul>
@@ -298,7 +302,7 @@
 <li><code>member_native_perms</code> (<a href="#type.Permissions">Permissions</a>): The native permissions of the member.</li>
 <li><code>member_kittycat_perms</code> (<a href="#type.Permission">{Permission}</a>): The kittycat permissions of the member.</li>
 </ul>
-<h3 id="returns-10"><a class="header" href="#returns-10">Returns</a></h3>
+<h3 id="returns-11"><a class="header" href="#returns-11">Returns</a></h3>
 <ul>
 <li><code>result</code> (<a href="#type.LuaPermissionResult">LuaPermissionResult</a>): The result of the permission check.</li>
 </ul>
@@ -312,7 +316,7 @@
 <li><code>member_native_perms</code> (<a href="#type.Permissions">Permissions</a>): The native permissions of the member.</li>
 <li><code>member_kittycat_perms</code> (<a href="#type.Permission">{Permission}</a>): The kittycat permissions of the member.</li>
 </ul>
-<h3 id="returns-11"><a class="header" href="#returns-11">Returns</a></h3>
+<h3 id="returns-12"><a class="header" href="#returns-12">Returns</a></h3>
 <ul>
 <li><code>result</code> (<a href="#type.LuaPermissionResult">LuaPermissionResult</a>): The result of the permission check.</li>
 </ul>
