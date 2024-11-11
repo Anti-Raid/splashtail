@@ -156,7 +156,7 @@
 <p>Utilities for asynchronous operations and timing</p>
 <h2 id="methods"><a class="header" href="#methods">Methods</a></h2>
 <h3 id="sleep"><a class="header" href="#sleep">sleep</a></h3>
-<pre><code class="language-lua">function sleep(duration: f64) -&gt; slept_time: f64
+<pre><code class="language-lua">function sleep(duration: f64) -&gt; f64
 </code></pre>
 <p>Sleep for a given duration.</p>
 <h4 id="parameters"><a class="header" href="#parameters">Parameters</a></h4>
@@ -208,7 +208,7 @@
 </ul>
 <h2 id="methods-1"><a class="header" href="#methods-1">Methods</a></h2>
 <h3 id="array_metatable-1"><a class="header" href="#array_metatable-1">array_metatable</a></h3>
-<pre><code class="language-lua">function array_metatable() -&gt; array_metatable: table
+<pre><code class="language-lua">function array_metatable() -&gt; table
 </code></pre>
 <p>Returns the array metatable.</p>
 <h4 id="returns-1"><a class="header" href="#returns-1">Returns</a></h4>
@@ -216,7 +216,7 @@
 <li><code>array_metatable</code> (<a href="#type.table">table</a>): The array metatable.</li>
 </ul>
 <h3 id="null-1"><a class="header" href="#null-1">null</a></h3>
-<pre><code class="language-lua">function null() -&gt; null: null
+<pre><code class="language-lua">function null() -&gt; null
 </code></pre>
 <p>Returns the null value.</p>
 <h4 id="returns-2"><a class="header" href="#returns-2">Returns</a></h4>
@@ -224,7 +224,7 @@
 <li><code>null</code> (<a href="#type.null">null</a>): The null value.</li>
 </ul>
 <h3 id="memusage"><a class="header" href="#memusage">memusage</a></h3>
-<pre><code class="language-lua">function memusage() -&gt; memory_usage: f64
+<pre><code class="language-lua">function memusage() -&gt; f64
 </code></pre>
 <p>Returns the current memory usage of the Lua VM.</p>
 <h4 id="returns-3"><a class="header" href="#returns-3">Returns</a></h4>
@@ -232,7 +232,7 @@
 <li><code>memory_usage</code> (<a href="#type.f64">f64</a>): The current memory usage, in bytes, of the Lua VM.</li>
 </ul>
 <h3 id="guild_id"><a class="header" href="#guild_id">guild_id</a></h3>
-<pre><code class="language-lua">function guild_id() -&gt; guild_id: string
+<pre><code class="language-lua">function guild_id() -&gt; string
 </code></pre>
 <p>Returns the current guild ID of the Lua VM.</p>
 <h4 id="returns-4"><a class="header" href="#returns-4">Returns</a></h4>
@@ -240,7 +240,7 @@
 <li><code>guild_id</code> (<a href="#type.string">string</a>): The current guild ID.</li>
 </ul>
 <h3 id="gettemplatedata"><a class="header" href="#gettemplatedata">gettemplatedata</a></h3>
-<pre><code class="language-lua">function gettemplatedata(token: string) -&gt; data: TemplateData?
+<pre><code class="language-lua">function gettemplatedata(token: string) -&gt; TemplateData?
 </code></pre>
 <p>Returns the data associated with a template token.</p>
 <h4 id="parameters-1"><a class="header" href="#parameters-1">Parameters</a></h4>
@@ -252,7 +252,7 @@
 <li><code>data</code> (<a href="#type.TemplateData">TemplateData?</a>): The data associated with the template token, or <code>null</code> if no data is found.</li>
 </ul>
 <h3 id="current_user"><a class="header" href="#current_user">current_user</a></h3>
-<pre><code class="language-lua">function current_user() -&gt; user: serenity::model::user::User
+<pre><code class="language-lua">function current_user() -&gt; serenity::model::user::User
 </code></pre>
 <p>Returns the current user of the Lua VM.</p>
 <h4 id="returns-6"><a class="header" href="#returns-6">Returns</a></h4>
@@ -321,7 +321,7 @@
 </ul>
 <h2 id="methods-2"><a class="header" href="#methods-2">Methods</a></h2>
 <h3 id="new"><a class="header" href="#new">new</a></h3>
-<pre><code class="language-lua">function new(config: CaptchaConfig) -&gt; captcha: {u8}
+<pre><code class="language-lua">function new(config: CaptchaConfig) -&gt; {u8}
 </code></pre>
 <p>Creates a new CAPTCHA with the given configuration.</p>
 <h4 id="parameters-2"><a class="header" href="#parameters-2">Parameters</a></h4>
@@ -378,7 +378,7 @@
 <li><code>value</code> (<a href="#type.any">any</a>): The value of the key.- <code>exists</code> (<a href="#type.boolean">boolean</a>): Whether the key exists.</li>
 </ul>
 <h3 id="kvexecutorgetrecord"><a class="header" href="#kvexecutorgetrecord">KvExecutor:getrecord</a></h3>
-<pre><code class="language-lua">function KvExecutor:getrecord(key: string) -&gt; record: KvRecord
+<pre><code class="language-lua">function KvExecutor:getrecord(key: string) -&gt; KvRecord
 </code></pre>
 <h4 id="parameters-5"><a class="header" href="#parameters-5">Parameters</a></h4>
 <ul>
@@ -405,7 +405,7 @@
 </ul>
 <h2 id="methods-4"><a class="header" href="#methods-4">Methods</a></h2>
 <h3 id="new-1"><a class="header" href="#new-1">new</a></h3>
-<pre><code class="language-lua">function new(token: string) -&gt; executor: KvExecutor
+<pre><code class="language-lua">function new(token: string) -&gt; KvExecutor
 </code></pre>
 <h4 id="parameters-8"><a class="header" href="#parameters-8">Parameters</a></h4>
 <ul>
@@ -475,7 +475,7 @@
 </ul>
 <h2 id="methods-5"><a class="header" href="#methods-5">Methods</a></h2>
 <h3 id="permission_from_string"><a class="header" href="#permission_from_string">permission_from_string</a></h3>
-<pre><code class="language-lua">function permission_from_string(perm_string: string) -&gt; permission: Permission
+<pre><code class="language-lua">function permission_from_string(perm_string: string) -&gt; Permission
 </code></pre>
 <p>Returns a Permission object from a string.</p>
 <h4 id="parameters-9"><a class="header" href="#parameters-9">Parameters</a></h4>
@@ -487,7 +487,7 @@
 <li><code>permission</code> (<a href="#type.Permission">Permission</a>): The parsed Permission object.</li>
 </ul>
 <h3 id="permission_to_string"><a class="header" href="#permission_to_string">permission_to_string</a></h3>
-<pre><code class="language-lua">function permission_to_string(permission: Permission) -&gt; perm_string: string
+<pre><code class="language-lua">function permission_to_string(permission: Permission) -&gt; string
 </code></pre>
 <p>Returns a string from a Permission object.</p>
 <h4 id="parameters-10"><a class="header" href="#parameters-10">Parameters</a></h4>
@@ -499,7 +499,7 @@
 <li><code>perm_string</code> (<a href="#type.string">string</a>): The parsed string.</li>
 </ul>
 <h3 id="has_perm"><a class="header" href="#has_perm">has_perm</a></h3>
-<pre><code class="language-lua">function has_perm(permissions: {Permission}, permission: Permission) -&gt; has_perm: boolean
+<pre><code class="language-lua">function has_perm(permissions: {Permission}, permission: Permission) -&gt; boolean
 </code></pre>
 <p>Checks if a list of permissions in Permission object form contains a specific permission.</p>
 <h4 id="parameters-11"><a class="header" href="#parameters-11">Parameters</a></h4>
@@ -512,7 +512,7 @@
 <li><code>has_perm</code> (<a href="#type.boolean">boolean</a>): Whether the permission is present in the list of permissions as per kittycat rules.</li>
 </ul>
 <h3 id="has_perm_str"><a class="header" href="#has_perm_str">has_perm_str</a></h3>
-<pre><code class="language-lua">function has_perm_str(permissions: {string}, permission: string) -&gt; has_perm: boolean
+<pre><code class="language-lua">function has_perm_str(permissions: {string}, permission: string) -&gt; boolean
 </code></pre>
 <p>Checks if a list of permissions in canonical string form contains a specific permission.</p>
 <h4 id="parameters-12"><a class="header" href="#parameters-12">Parameters</a></h4>
@@ -525,7 +525,7 @@
 <li><code>has_perm</code> (<a href="#type.boolean">boolean</a>): Whether the permission is present in the list of permissions as per kittycat rules.</li>
 </ul>
 <h3 id="check_perms_single"><a class="header" href="#check_perms_single">check_perms_single</a></h3>
-<pre><code class="language-lua">function check_perms_single(check: PermissionCheck, member_native_perms: Permissions, member_kittycat_perms: {Permission}) -&gt; result: LuaPermissionResult
+<pre><code class="language-lua">function check_perms_single(check: PermissionCheck, member_native_perms: Permissions, member_kittycat_perms: {Permission}) -&gt; LuaPermissionResult
 </code></pre>
 <p>Checks if a single permission check passes.</p>
 <h4 id="parameters-13"><a class="header" href="#parameters-13">Parameters</a></h4>
@@ -539,7 +539,7 @@
 <li><code>result</code> (<a href="#type.LuaPermissionResult">LuaPermissionResult</a>): The result of the permission check.</li>
 </ul>
 <h3 id="eval_checks"><a class="header" href="#eval_checks">eval_checks</a></h3>
-<pre><code class="language-lua">function eval_checks(checks: {PermissionCheck}, member_native_perms: Permissions, member_kittycat_perms: {Permission}) -&gt; result: LuaPermissionResult
+<pre><code class="language-lua">function eval_checks(checks: {PermissionCheck}, member_native_perms: Permissions, member_kittycat_perms: {Permission}) -&gt; LuaPermissionResult
 </code></pre>
 <p>Evaluates a list of permission checks.</p>
 <h4 id="parameters-14"><a class="header" href="#parameters-14">Parameters</a></h4>
