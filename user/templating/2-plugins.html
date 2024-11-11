@@ -161,11 +161,11 @@
 <p>Sleep for a given duration.</p>
 <h3 id="parameters"><a class="header" href="#parameters">Parameters</a></h3>
 <ul>
-<li><code>duration</code> (<code>[f64](#type.f64)</code>): The duration to sleep for.</li>
+<li><code>duration</code> (<a href="#type.f64">f64</a>): The duration to sleep for.</li>
 </ul>
 <h3 id="returns"><a class="header" href="#returns">Returns</a></h3>
 <ul>
-<li><code>slept_time</code> (<code>[f64](#type.f64)</code>): The actual duration slept for.</li>
+<li><code>slept_time</code> (<a href="#type.f64">f64</a>): The actual duration slept for.</li>
 </ul>
 <hr />
 <h1 id="antiraidinterop"><a class="header" href="#antiraidinterop">@antiraid/interop</a></h1>
@@ -177,7 +177,7 @@
 <p>Returns the current memory usage of the Lua VM.</p>
 <h3 id="returns-1"><a class="header" href="#returns-1">Returns</a></h3>
 <ul>
-<li><code>memory_usage</code> (<code>[f64](#type.f64)</code>): The current memory usage, in bytes, of the Lua VM.</li>
+<li><code>memory_usage</code> (<a href="#type.f64">f64</a>): The current memory usage, in bytes, of the Lua VM.</li>
 </ul>
 <p><strong>guild_id</strong></p>
 <pre><code class="language-lua">function guild_id() -&gt; guild_id: string
@@ -185,7 +185,7 @@
 <p>Returns the current guild ID of the Lua VM.</p>
 <h3 id="returns-2"><a class="header" href="#returns-2">Returns</a></h3>
 <ul>
-<li><code>guild_id</code> (<code>[string](#type.string)</code>): The current guild ID.</li>
+<li><code>guild_id</code> (<a href="#type.string">string</a>): The current guild ID.</li>
 </ul>
 <p><strong>gettemplatedata</strong></p>
 <pre><code class="language-lua">function gettemplatedata(token: string) -&gt; data: TemplateData?
@@ -193,11 +193,11 @@
 <p>Returns the data associated with a template token.</p>
 <h3 id="parameters-1"><a class="header" href="#parameters-1">Parameters</a></h3>
 <ul>
-<li><code>token</code> (<code>[string](#type.string)</code>): The token of the template to retrieve data for.</li>
+<li><code>token</code> (<a href="#type.string">string</a>): The token of the template to retrieve data for.</li>
 </ul>
 <h3 id="returns-3"><a class="header" href="#returns-3">Returns</a></h3>
 <ul>
-<li><code>data</code> (<code>[TemplateData?](#type.TemplateData)</code>): The data associated with the template token, or <code>null</code> if no data is found.</li>
+<li><code>data</code> (<a href="#type.TemplateData">TemplateData?</a>): The data associated with the template token, or <code>null</code> if no data is found.</li>
 </ul>
 <p><strong>current_user</strong></p>
 <pre><code class="language-lua">function current_user() -&gt; user: serenity::model::user::User
@@ -205,7 +205,7 @@
 <p>Returns the current user of the Lua VM.</p>
 <h3 id="returns-4"><a class="header" href="#returns-4">Returns</a></h3>
 <ul>
-<li><code>user</code> (<code>[serenity::model::user::User](https://docs.rs/serenity/model/user/latest/serenity/model/user/struct.User.html)</code>): Returns AntiRaid's discord user object.</li>
+<li><code>user</code> (<a href="https://docs.rs/serenity/model/user/latest/serenity/model/user/struct.User.html">serenity::model::user::User</a>): Returns AntiRaid's discord user object.</li>
 </ul>
 <hr />
 <h1 id="antiraidimg_captcha"><a class="header" href="#antiraidimg_captcha">@antiraid/img_captcha</a></h1>
@@ -217,11 +217,11 @@
 <p>Creates a new CAPTCHA with the given configuration.</p>
 <h3 id="parameters-2"><a class="header" href="#parameters-2">Parameters</a></h3>
 <ul>
-<li><code>config</code> (<code>[CaptchaConfig](#type.CaptchaConfig)</code>): The configuration to use for the CAPTCHA.</li>
+<li><code>config</code> (<a href="#type.CaptchaConfig">CaptchaConfig</a>): The configuration to use for the CAPTCHA.</li>
 </ul>
 <h3 id="returns-5"><a class="header" href="#returns-5">Returns</a></h3>
 <ul>
-<li><code>captcha</code> (<code>[{u8}](#type.u8)</code>): The created CAPTCHA object.</li>
+<li><code>captcha</code> (<a href="#type.u8">{u8}</a>): The created CAPTCHA object.</li>
 </ul>
 <hr />
 <h1 id="antiraidkv"><a class="header" href="#antiraidkv">@antiraid/kv</a></h1>
@@ -232,7 +232,7 @@
 </code></pre>
 <h3 id="parameters-3"><a class="header" href="#parameters-3">Parameters</a></h3>
 <ul>
-<li><code>token</code> (<code>[string](#type.string)</code>): The token of the template to use.</li>
+<li><code>token</code> (<a href="#type.string">string</a>): The token of the template to use.</li>
 </ul>
 <hr />
 <h1 id="antiraidpermissions"><a class="header" href="#antiraidpermissions">@antiraid/permissions</a></h1>
@@ -244,11 +244,11 @@
 <p>Returns a Permission object from a string.</p>
 <h3 id="parameters-4"><a class="header" href="#parameters-4">Parameters</a></h3>
 <ul>
-<li><code>perm_string</code> (<code>[string](#type.string)</code>): The string to parse into a Permission object.</li>
+<li><code>perm_string</code> (<a href="#type.string">string</a>): The string to parse into a Permission object.</li>
 </ul>
 <h3 id="returns-6"><a class="header" href="#returns-6">Returns</a></h3>
 <ul>
-<li><code>permission</code> (<code>[Permission](#type.Permission)</code>): The parsed Permission object.</li>
+<li><code>permission</code> (<a href="#type.Permission">Permission</a>): The parsed Permission object.</li>
 </ul>
 <p><strong>permission_to_string</strong></p>
 <pre><code class="language-lua">function permission_to_string(permission: Permission) -&gt; perm_string: string
@@ -256,11 +256,11 @@
 <p>Returns a string from a Permission object.</p>
 <h3 id="parameters-5"><a class="header" href="#parameters-5">Parameters</a></h3>
 <ul>
-<li><code>permission</code> (<code>[Permission](#type.Permission)</code>): The Permission object to parse into a string.</li>
+<li><code>permission</code> (<a href="#type.Permission">Permission</a>): The Permission object to parse into a string.</li>
 </ul>
 <h3 id="returns-7"><a class="header" href="#returns-7">Returns</a></h3>
 <ul>
-<li><code>perm_string</code> (<code>[string](#type.string)</code>): The parsed string.</li>
+<li><code>perm_string</code> (<a href="#type.string">string</a>): The parsed string.</li>
 </ul>
 <p><strong>has_perm</strong></p>
 <pre><code class="language-lua">function has_perm(permissions: {Permission}, permission: Permission) -&gt; has_perm: boolean
@@ -268,11 +268,11 @@
 <p>Checks if a list of permissions in Permission object form contains a specific permission.</p>
 <h3 id="parameters-6"><a class="header" href="#parameters-6">Parameters</a></h3>
 <ul>
-<li><code>permissions</code> (<code>[{Permission}](#type.Permission)</code>): The list of permissions- <code>permission</code> (<code>[Permission](#type.Permission)</code>): The permission to check for.</li>
+<li><code>permissions</code> (<a href="#type.Permission">{Permission}</a>): The list of permissions- <code>permission</code> (<a href="#type.Permission">Permission</a>): The permission to check for.</li>
 </ul>
 <h3 id="returns-8"><a class="header" href="#returns-8">Returns</a></h3>
 <ul>
-<li><code>has_perm</code> (<code>[boolean](#type.boolean)</code>): Whether the permission is present in the list of permissions as per kittycat rules.</li>
+<li><code>has_perm</code> (<a href="#type.boolean">boolean</a>): Whether the permission is present in the list of permissions as per kittycat rules.</li>
 </ul>
 <p><strong>has_perm_str</strong></p>
 <pre><code class="language-lua">function has_perm_str(permissions: {string}, permission: string) -&gt; has_perm: boolean
@@ -280,11 +280,11 @@
 <p>Checks if a list of permissions in canonical string form contains a specific permission.</p>
 <h3 id="parameters-7"><a class="header" href="#parameters-7">Parameters</a></h3>
 <ul>
-<li><code>permissions</code> (<code>[{string}](#type.string)</code>): The list of permissions- <code>permission</code> (<code>[string](#type.string)</code>): The permission to check for.</li>
+<li><code>permissions</code> (<a href="#type.string">{string}</a>): The list of permissions- <code>permission</code> (<a href="#type.string">string</a>): The permission to check for.</li>
 </ul>
 <h3 id="returns-9"><a class="header" href="#returns-9">Returns</a></h3>
 <ul>
-<li><code>has_perm</code> (<code>[boolean](#type.boolean)</code>): Whether the permission is present in the list of permissions as per kittycat rules.</li>
+<li><code>has_perm</code> (<a href="#type.boolean">boolean</a>): Whether the permission is present in the list of permissions as per kittycat rules.</li>
 </ul>
 <p><strong>check_perms_single</strong></p>
 <pre><code class="language-lua">function check_perms_single(check: PermissionCheck, member_native_perms: Permissions, member_kittycat_perms: {Permission}) -&gt; result: LuaPermissionResult
@@ -292,11 +292,11 @@
 <p>Checks if a single permission check passes.</p>
 <h3 id="parameters-8"><a class="header" href="#parameters-8">Parameters</a></h3>
 <ul>
-<li><code>check</code> (<code>[PermissionCheck](#type.PermissionCheck)</code>): The permission check to evaluate.- <code>member_native_perms</code> (<code>[Permissions](#type.Permissions)</code>): The native permissions of the member.- <code>member_kittycat_perms</code> (<code>[{Permission}](#type.Permission)</code>): The kittycat permissions of the member.</li>
+<li><code>check</code> (<a href="#type.PermissionCheck">PermissionCheck</a>): The permission check to evaluate.- <code>member_native_perms</code> (<a href="#type.Permissions">Permissions</a>): The native permissions of the member.- <code>member_kittycat_perms</code> (<a href="#type.Permission">{Permission}</a>): The kittycat permissions of the member.</li>
 </ul>
 <h3 id="returns-10"><a class="header" href="#returns-10">Returns</a></h3>
 <ul>
-<li><code>result</code> (<code>[LuaPermissionResult](#type.LuaPermissionResult)</code>): The result of the permission check.</li>
+<li><code>result</code> (<a href="#type.LuaPermissionResult">LuaPermissionResult</a>): The result of the permission check.</li>
 </ul>
 <p><strong>eval_checks</strong></p>
 <pre><code class="language-lua">function eval_checks(checks: {PermissionCheck}, member_native_perms: Permissions, member_kittycat_perms: {Permission}) -&gt; result: LuaPermissionResult
@@ -304,11 +304,11 @@
 <p>Evaluates a list of permission checks.</p>
 <h3 id="parameters-9"><a class="header" href="#parameters-9">Parameters</a></h3>
 <ul>
-<li><code>checks</code> (<code>[{PermissionCheck}](#type.PermissionCheck)</code>): The list of permission checks to evaluate.- <code>member_native_perms</code> (<code>[Permissions](#type.Permissions)</code>): The native permissions of the member.- <code>member_kittycat_perms</code> (<code>[{Permission}](#type.Permission)</code>): The kittycat permissions of the member.</li>
+<li><code>checks</code> (<a href="#type.PermissionCheck">{PermissionCheck}</a>): The list of permission checks to evaluate.- <code>member_native_perms</code> (<a href="#type.Permissions">Permissions</a>): The native permissions of the member.- <code>member_kittycat_perms</code> (<a href="#type.Permission">{Permission}</a>): The kittycat permissions of the member.</li>
 </ul>
 <h3 id="returns-11"><a class="header" href="#returns-11">Returns</a></h3>
 <ul>
-<li><code>result</code> (<code>[LuaPermissionResult](#type.LuaPermissionResult)</code>): The result of the permission check.</li>
+<li><code>result</code> (<a href="#type.LuaPermissionResult">LuaPermissionResult</a>): The result of the permission check.</li>
 </ul>
 <hr />
 
