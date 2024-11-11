@@ -185,12 +185,6 @@
   "allowed_caps": []
 }
 </code></pre>
-<h4 id="json-schema"><a class="header" href="#json-schema">JSON schema</a></h4>
-<p>Map (key/value)<br />
-- <strong>lang</strong>
-=&gt; string ["lua"]
-- <strong>allowed_caps</strong>
-=&gt; (Array)</p>
 <h4 id="fields"><a class="header" href="#fields">Fields</a></h4>
 <ul>
 <li><code>lang</code> (<a href="#type.string">string</a>): The language of the template.</li>
@@ -207,18 +201,6 @@
   }
 }
 </code></pre>
-<h4 id="json-schema-1"><a class="header" href="#json-schema-1">JSON schema</a></h4>
-<ul>
-<li><strong>path</strong> =&gt; string [""]</li>
-<li><strong>pragma</strong> =&gt; Map (key/value)
-<ul>
-<li><strong>lang</strong>
-=&gt; string ["lua"]</li>
-<li><strong>allowed_caps</strong>
-=&gt; (Array)</li>
-</ul>
-</li>
-</ul>
 <h4 id="fields-1"><a class="header" href="#fields-1">Fields</a></h4>
 <ul>
 <li><code>path</code> (<a href="#type.string">string</a>): The path of the template token.</li>
@@ -333,58 +315,6 @@
   "set_viewbox_at_idx": null
 }
 </code></pre>
-<h4 id="json-schema-2"><a class="header" href="#json-schema-2">JSON schema</a></h4>
-<ul>
-<li><strong>char_count</strong> =&gt; u8 [5]</li>
-<li><strong>filters</strong> =&gt; (Array) Map (key/value)
-<ul>
-<li><strong>filter</strong>
-=&gt; string ["Noise"]</li>
-<li><strong>prob</strong>
-=&gt; f32 [0.1]</li>
-</ul>
-</li>
-</ul>
-<p>, Map (key/value)<br />
-- <strong>filter</strong>
-=&gt; string ["Wave"]
-- <strong>f</strong>
-=&gt; f64 [4]
-- <strong>amp</strong>
-=&gt; f64 [2]
-- <strong>d</strong>
-=&gt; string ["horizontal"]</p>
-<p>, Map (key/value)<br />
-- <strong>filter</strong>
-=&gt; string ["Line"]
-- <strong>p1</strong>
-=&gt; (Array) f32 [1]f32 [0]
-- <strong>p2</strong>
-=&gt; (Array) f32 [20]f32 [20]
-- <strong>thickness</strong>
-=&gt; f32 [2]
-- <strong>color</strong>
-=&gt; Struct SerdeColor
-- <strong>r</strong> =&gt; u8 [0]
-- <strong>g</strong> =&gt; u8 [30]
-- <strong>b</strong> =&gt; u8 [100]</p>
-<p>Map (key/value)<br />
-- <strong>filter</strong>
-=&gt; string ["RandomLine"]</p>
-<p>Map (key/value)<br />
-- <strong>filter</strong>
-=&gt; string ["Grid"]
-- <strong>y_gap</strong>
-=&gt; u32 [30]
-- <strong>x_gap</strong>
-=&gt; u32 [10]</p>
-<p>Map (key/value)<br />
-- <strong>filter</strong>
-=&gt; string ["ColorInvert"]</p>
-<ul>
-<li><strong>viewbox_size</strong> =&gt; (Array) u32 [512]u32 [512]</li>
-<li><strong>set_viewbox_at_idx</strong> =&gt; None (unknown value type)</li>
-</ul>
 <h4 id="fields-2"><a class="header" href="#fields-2">Fields</a></h4>
 <ul>
 <li><code>filter</code> (<a href="#type.string">string</a>): The name of the filter to use. See example for the parameters to pass for the filter as well as https://github.com/Anti-Raid/captcha.</li>
@@ -417,14 +347,6 @@
   "last_updated_at": null
 }
 </code></pre>
-<h4 id="json-schema-3"><a class="header" href="#json-schema-3">JSON schema</a></h4>
-<ul>
-<li><strong>key</strong> =&gt; string [""]</li>
-<li><strong>value</strong> =&gt; No Data/Unit Type (unknown value type)</li>
-<li><strong>exists</strong> =&gt; bool [false]</li>
-<li><strong>created_at</strong> =&gt; None (unknown value type)</li>
-<li><strong>last_updated_at</strong> =&gt; None (unknown value type)</li>
-</ul>
 <h4 id="fields-3"><a class="header" href="#fields-3">Fields</a></h4>
 <ul>
 <li><code>key</code> (<a href="#type.string">string</a>): The key of the record.</li>
@@ -437,14 +359,14 @@
 <h3 id="kvexecutor"><a class="header" href="#kvexecutor">KvExecutor</a></h3>
 <p>KvExecutor allows templates to get, store and find persistent data within a server.</p>
 <h4 id="methods-3"><a class="header" href="#methods-3">Methods</a></h4>
-<h3 id="find"><a class="header" href="#find">find</a></h3>
+<h3 id="kvexecutorfind"><a class="header" href="#kvexecutorfind">KvExecutor:find</a></h3>
 <pre><code class="language-lua">function KvExecutor:find(key: string)
 </code></pre>
 <h4 id="parameters-3"><a class="header" href="#parameters-3">Parameters</a></h4>
 <ul>
 <li><code>key</code> (<a href="#type.string">string</a>): The key to search for. % matches zero or more characters; _ matches a single character. To search anywhere in a string, surround {KEY} with %, e.g. %{KEY}%</li>
 </ul>
-<h3 id="get"><a class="header" href="#get">get</a></h3>
+<h3 id="kvexecutorget"><a class="header" href="#kvexecutorget">KvExecutor:get</a></h3>
 <pre><code class="language-lua">function KvExecutor:get(key: string)
 </code></pre>
 <h4 id="parameters-4"><a class="header" href="#parameters-4">Parameters</a></h4>
@@ -455,7 +377,7 @@
 <ul>
 <li><code>value</code> (<a href="#type.any">any</a>): The value of the key.- <code>exists</code> (<a href="#type.boolean">boolean</a>): Whether the key exists.</li>
 </ul>
-<h3 id="getrecord"><a class="header" href="#getrecord">getrecord</a></h3>
+<h3 id="kvexecutorgetrecord"><a class="header" href="#kvexecutorgetrecord">KvExecutor:getrecord</a></h3>
 <pre><code class="language-lua">function KvExecutor:getrecord(key: string) -&gt; record: KvRecord
 </code></pre>
 <h4 id="parameters-5"><a class="header" href="#parameters-5">Parameters</a></h4>
@@ -466,7 +388,7 @@
 <ul>
 <li><code>record</code> (<a href="#type.KvRecord">KvRecord</a>): The record of the key.</li>
 </ul>
-<h3 id="set"><a class="header" href="#set">set</a></h3>
+<h3 id="kvexecutorset"><a class="header" href="#kvexecutorset">KvExecutor:set</a></h3>
 <pre><code class="language-lua">function KvExecutor:set(key: string, value: any)
 </code></pre>
 <h4 id="parameters-6"><a class="header" href="#parameters-6">Parameters</a></h4>
@@ -474,7 +396,7 @@
 <li><code>key</code> (<a href="#type.string">string</a>): The key to set.</li>
 <li><code>value</code> (<a href="#type.any">any</a>): The value to set.</li>
 </ul>
-<h3 id="delete"><a class="header" href="#delete">delete</a></h3>
+<h3 id="kvexecutordelete"><a class="header" href="#kvexecutordelete">KvExecutor:delete</a></h3>
 <pre><code class="language-lua">function KvExecutor:delete(key: string)
 </code></pre>
 <h4 id="parameters-7"><a class="header" href="#parameters-7">Parameters</a></h4>
@@ -512,24 +434,6 @@
   "markdown": ""
 }
 </code></pre>
-<h4 id="json-schema-4"><a class="header" href="#json-schema-4">JSON schema</a></h4>
-<ul>
-<li>
-<p><strong>result</strong> =&gt; Struct PermissionResult</p>
-<ul>
-<li><strong>var</strong> =&gt; string ["Ok"]</li>
-</ul>
-</li>
-<li>
-<p><strong>is_ok</strong> =&gt; bool [true]</p>
-</li>
-<li>
-<p><strong>code</strong> =&gt; string ["Ok"]</p>
-</li>
-<li>
-<p><strong>markdown</strong> =&gt; string [""]</p>
-</li>
-</ul>
 <h4 id="fields-4"><a class="header" href="#fields-4">Fields</a></h4>
 <ul>
 <li><code>result</code> (<a href="#type.PermissionResult">PermissionResult</a>): The raw/underlying result of the permission check.</li>
@@ -547,13 +451,6 @@
   "inner_and": false
 }
 </code></pre>
-<h4 id="json-schema-5"><a class="header" href="#json-schema-5">JSON schema</a></h4>
-<ul>
-<li><strong>kittycat_perms</strong> =&gt; (Array)</li>
-<li><strong>native_perms</strong> =&gt; (Array)</li>
-<li><strong>outer_and</strong> =&gt; bool [false]</li>
-<li><strong>inner_and</strong> =&gt; bool [false]</li>
-</ul>
 <h4 id="fields-5"><a class="header" href="#fields-5">Fields</a></h4>
 <ul>
 <li><code>kittycat_perms</code> (<a href="#type.Permission">{Permission}</a>): The kittycat permissions needed to run the command.</li>
@@ -570,12 +467,6 @@
   "negator": false
 }
 </code></pre>
-<h4 id="json-schema-6"><a class="header" href="#json-schema-6">JSON schema</a></h4>
-<ul>
-<li><strong>namespace</strong> =&gt; string ["moderation"]</li>
-<li><strong>perm</strong> =&gt; string ["ban"]</li>
-<li><strong>negator</strong> =&gt; bool [false]</li>
-</ul>
 <h4 id="fields-6"><a class="header" href="#fields-6">Fields</a></h4>
 <ul>
 <li><code>namespace</code> (<a href="#type.string">string</a>): The namespace of the permission.</li>
