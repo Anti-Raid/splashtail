@@ -359,47 +359,47 @@
 <h3 id="kvexecutor"><a class="header" href="#kvexecutor">KvExecutor</a></h3>
 <p>KvExecutor allows templates to get, store and find persistent data within a server.</p>
 <h4 id="methods-3"><a class="header" href="#methods-3">Methods</a></h4>
-<h3 id="kvexecutorfind"><a class="header" href="#kvexecutorfind">KvExecutor:find</a></h3>
+<h5 id="kvexecutorfind"><a class="header" href="#kvexecutorfind">KvExecutor:find</a></h5>
 <pre><code class="language-lua">function KvExecutor:find(key: string)
 </code></pre>
-<h4 id="parameters-3"><a class="header" href="#parameters-3">Parameters</a></h4>
+<h6 id="parameters-3"><a class="header" href="#parameters-3">Parameters</a></h6>
 <ul>
 <li><code>key</code> (<a href="#type.string">string</a>): The key to search for. % matches zero or more characters; _ matches a single character. To search anywhere in a string, surround {KEY} with %, e.g. %{KEY}%</li>
 </ul>
-<h3 id="kvexecutorget"><a class="header" href="#kvexecutorget">KvExecutor:get</a></h3>
+<h5 id="kvexecutorget"><a class="header" href="#kvexecutorget">KvExecutor:get</a></h5>
 <pre><code class="language-lua">function KvExecutor:get(key: string)
 </code></pre>
-<h4 id="parameters-4"><a class="header" href="#parameters-4">Parameters</a></h4>
+<h6 id="parameters-4"><a class="header" href="#parameters-4">Parameters</a></h6>
 <ul>
 <li><code>key</code> (<a href="#type.string">string</a>): The key to get.</li>
 </ul>
-<h4 id="returns-8"><a class="header" href="#returns-8">Returns</a></h4>
+<h6 id="returns-8"><a class="header" href="#returns-8">Returns</a></h6>
 <ul>
 <li><code>value</code> (<a href="#type.any">any</a>): The value of the key.- <code>exists</code> (<a href="#type.boolean">boolean</a>): Whether the key exists.</li>
 </ul>
-<h3 id="kvexecutorgetrecord"><a class="header" href="#kvexecutorgetrecord">KvExecutor:getrecord</a></h3>
+<h5 id="kvexecutorgetrecord"><a class="header" href="#kvexecutorgetrecord">KvExecutor:getrecord</a></h5>
 <pre><code class="language-lua">function KvExecutor:getrecord(key: string): KvRecord
 </code></pre>
-<h4 id="parameters-5"><a class="header" href="#parameters-5">Parameters</a></h4>
+<h6 id="parameters-5"><a class="header" href="#parameters-5">Parameters</a></h6>
 <ul>
 <li><code>key</code> (<a href="#type.string">string</a>): The key to get.</li>
 </ul>
-<h4 id="returns-9"><a class="header" href="#returns-9">Returns</a></h4>
+<h6 id="returns-9"><a class="header" href="#returns-9">Returns</a></h6>
 <ul>
 <li><code>record</code> (<a href="#type.KvRecord">KvRecord</a>): The record of the key.</li>
 </ul>
-<h3 id="kvexecutorset"><a class="header" href="#kvexecutorset">KvExecutor:set</a></h3>
+<h5 id="kvexecutorset"><a class="header" href="#kvexecutorset">KvExecutor:set</a></h5>
 <pre><code class="language-lua">function KvExecutor:set(key: string, value: any)
 </code></pre>
-<h4 id="parameters-6"><a class="header" href="#parameters-6">Parameters</a></h4>
+<h6 id="parameters-6"><a class="header" href="#parameters-6">Parameters</a></h6>
 <ul>
 <li><code>key</code> (<a href="#type.string">string</a>): The key to set.</li>
 <li><code>value</code> (<a href="#type.any">any</a>): The value to set.</li>
 </ul>
-<h3 id="kvexecutordelete"><a class="header" href="#kvexecutordelete">KvExecutor:delete</a></h3>
+<h5 id="kvexecutordelete"><a class="header" href="#kvexecutordelete">KvExecutor:delete</a></h5>
 <pre><code class="language-lua">function KvExecutor:delete(key: string)
 </code></pre>
-<h4 id="parameters-7"><a class="header" href="#parameters-7">Parameters</a></h4>
+<h6 id="parameters-7"><a class="header" href="#parameters-7">Parameters</a></h6>
 <ul>
 <li><code>key</code> (<a href="#type.string">string</a>): The key to delete.</li>
 </ul>
@@ -560,19 +560,19 @@
 <h3 id="luastream"><a class="header" href="#luastream">LuaStream<T></a></h3>
 <p>LuaStream<T> provides a stream implementation. This is returned by MessageHandle's await_component_interaction for instance for handling button clicks/select menu choices etc.</p>
 <h4 id="methods-6"><a class="header" href="#methods-6">Methods</a></h4>
-<h3 id="luastreamnext"><a class="header" href="#luastreamnext">LuaStream:next</a></h3>
+<h5 id="luastreamnext"><a class="header" href="#luastreamnext">LuaStream:next</a></h5>
 <pre><code class="language-lua">function LuaStream:next(): &lt;T&gt;
 </code></pre>
 <p>Returns the next item in the stream.</p>
-<h4 id="returns-17"><a class="header" href="#returns-17">Returns</a></h4>
+<h6 id="returns-17"><a class="header" href="#returns-17">Returns</a></h6>
 <ul>
 <li><code>item</code> (<code>&lt;T&gt;</code>): The next item in the stream.</li>
 </ul>
-<h3 id="luastreamfor_each"><a class="header" href="#luastreamfor_each">LuaStream:for_each</a></h3>
+<h5 id="luastreamfor_each"><a class="header" href="#luastreamfor_each">LuaStream:for_each</a></h5>
 <pre><code class="language-lua">function LuaStream:for_each(callback: &lt;function&gt;)
 </code></pre>
 <p>Executes a callback for every entry in the stream.</p>
-<h4 id="parameters-15"><a class="header" href="#parameters-15">Parameters</a></h4>
+<h6 id="parameters-15"><a class="header" href="#parameters-15">Parameters</a></h6>
 <ul>
 <li><code>callback</code> (<code>&lt;function&gt;</code>): The callback to execute for each entry.</li>
 </ul>
@@ -580,71 +580,71 @@
 <h3 id="u64"><a class="header" href="#u64">U64</a></h3>
 <p>U64 is a 64-bit unsigned integer type. Implements Add/Subtract/Multiply/Divide/Modulus/Power/Integer Division/Equality/Comparison (Lt/Le and its complements Gt/Ge) and ToString with a type name of U64</p>
 <h4 id="methods-7"><a class="header" href="#methods-7">Methods</a></h4>
-<h3 id="u64to_ne_bytes"><a class="header" href="#u64to_ne_bytes">U64:to_ne_bytes</a></h3>
+<h5 id="u64to_ne_bytes"><a class="header" href="#u64to_ne_bytes">U64:to_ne_bytes</a></h5>
 <pre><code class="language-lua">function U64:to_ne_bytes(): {u8}
 </code></pre>
 <p>Converts the U64 to a little-endian byte array.</p>
-<h4 id="returns-18"><a class="header" href="#returns-18">Returns</a></h4>
+<h6 id="returns-18"><a class="header" href="#returns-18">Returns</a></h6>
 <ul>
 <li><code>bytes</code> (<a href="#type.u8">{u8}</a>): The little-endian byte array.</li>
 </ul>
-<h3 id="u64from_ne_bytes"><a class="header" href="#u64from_ne_bytes">U64:from_ne_bytes</a></h3>
+<h5 id="u64from_ne_bytes"><a class="header" href="#u64from_ne_bytes">U64:from_ne_bytes</a></h5>
 <pre><code class="language-lua">function U64:from_ne_bytes(bytes: {u8}): U64
 </code></pre>
 <p>Converts a little-endian byte array to a U64.</p>
-<h4 id="parameters-16"><a class="header" href="#parameters-16">Parameters</a></h4>
+<h6 id="parameters-16"><a class="header" href="#parameters-16">Parameters</a></h6>
 <ul>
 <li><code>bytes</code> (<a href="#type.u8">{u8}</a>): The little-endian byte array.</li>
 </ul>
-<h4 id="returns-19"><a class="header" href="#returns-19">Returns</a></h4>
+<h6 id="returns-19"><a class="header" href="#returns-19">Returns</a></h6>
 <ul>
 <li><code>u64</code> (<a href="#type.U64">U64</a>): The U64 value.</li>
 </ul>
-<h3 id="u64to_le_bytes"><a class="header" href="#u64to_le_bytes">U64:to_le_bytes</a></h3>
+<h5 id="u64to_le_bytes"><a class="header" href="#u64to_le_bytes">U64:to_le_bytes</a></h5>
 <pre><code class="language-lua">function U64:to_le_bytes(): {u8}
 </code></pre>
 <p>Converts the U64 to a little-endian byte array.</p>
-<h4 id="returns-20"><a class="header" href="#returns-20">Returns</a></h4>
+<h6 id="returns-20"><a class="header" href="#returns-20">Returns</a></h6>
 <ul>
 <li><code>bytes</code> (<a href="#type.u8">{u8}</a>): The little-endian byte array.</li>
 </ul>
-<h3 id="u64from_le_bytes"><a class="header" href="#u64from_le_bytes">U64:from_le_bytes</a></h3>
+<h5 id="u64from_le_bytes"><a class="header" href="#u64from_le_bytes">U64:from_le_bytes</a></h5>
 <pre><code class="language-lua">function U64:from_le_bytes(bytes: {u8}): U64
 </code></pre>
 <p>Converts a little-endian byte array to a U64.</p>
-<h4 id="parameters-17"><a class="header" href="#parameters-17">Parameters</a></h4>
+<h6 id="parameters-17"><a class="header" href="#parameters-17">Parameters</a></h6>
 <ul>
 <li><code>bytes</code> (<a href="#type.u8">{u8}</a>): The little-endian byte array.</li>
 </ul>
-<h4 id="returns-21"><a class="header" href="#returns-21">Returns</a></h4>
+<h6 id="returns-21"><a class="header" href="#returns-21">Returns</a></h6>
 <ul>
 <li><code>u64</code> (<a href="#type.U64">U64</a>): The U64 value.</li>
 </ul>
-<h3 id="u64to_be_bytes"><a class="header" href="#u64to_be_bytes">U64:to_be_bytes</a></h3>
+<h5 id="u64to_be_bytes"><a class="header" href="#u64to_be_bytes">U64:to_be_bytes</a></h5>
 <pre><code class="language-lua">function U64:to_be_bytes(): {u8}
 </code></pre>
 <p>Converts the U64 to a big-endian byte array.</p>
-<h4 id="returns-22"><a class="header" href="#returns-22">Returns</a></h4>
+<h6 id="returns-22"><a class="header" href="#returns-22">Returns</a></h6>
 <ul>
 <li><code>bytes</code> (<a href="#type.u8">{u8}</a>): The big-endian byte array.</li>
 </ul>
-<h3 id="u64from_be_bytes"><a class="header" href="#u64from_be_bytes">U64:from_be_bytes</a></h3>
+<h5 id="u64from_be_bytes"><a class="header" href="#u64from_be_bytes">U64:from_be_bytes</a></h5>
 <pre><code class="language-lua">function U64:from_be_bytes(bytes: {u8}): U64
 </code></pre>
 <p>Converts a big-endian byte array to a U64.</p>
-<h4 id="parameters-18"><a class="header" href="#parameters-18">Parameters</a></h4>
+<h6 id="parameters-18"><a class="header" href="#parameters-18">Parameters</a></h6>
 <ul>
 <li><code>bytes</code> (<a href="#type.u8">{u8}</a>): The big-endian byte array.</li>
 </ul>
-<h4 id="returns-23"><a class="header" href="#returns-23">Returns</a></h4>
+<h6 id="returns-23"><a class="header" href="#returns-23">Returns</a></h6>
 <ul>
 <li><code>u64</code> (<a href="#type.U64">U64</a>): The U64 value.</li>
 </ul>
-<h3 id="u64to_i64"><a class="header" href="#u64to_i64">U64:to_i64</a></h3>
+<h5 id="u64to_i64"><a class="header" href="#u64to_i64">U64:to_i64</a></h5>
 <pre><code class="language-lua">function U64:to_i64(): I64
 </code></pre>
 <p>Converts the U64 to an i64.</p>
-<h4 id="returns-24"><a class="header" href="#returns-24">Returns</a></h4>
+<h6 id="returns-24"><a class="header" href="#returns-24">Returns</a></h6>
 <ul>
 <li><code>i64</code> (<a href="#type.I64">I64</a>): The i64 value.</li>
 </ul>
@@ -652,71 +652,71 @@
 <h3 id="i64"><a class="header" href="#i64">I64</a></h3>
 <p>I64 is a 64-bit signed integer type. Implements Add/Subtract/Multiply/Divide/Modulus/Power/Integer Division/Equality/Comparison (Lt/Le and its complements Gt/Ge) and ToString with a type name of I64</p>
 <h4 id="methods-8"><a class="header" href="#methods-8">Methods</a></h4>
-<h3 id="i64to_ne_bytes"><a class="header" href="#i64to_ne_bytes">I64:to_ne_bytes</a></h3>
+<h5 id="i64to_ne_bytes"><a class="header" href="#i64to_ne_bytes">I64:to_ne_bytes</a></h5>
 <pre><code class="language-lua">function I64:to_ne_bytes(): {u8}
 </code></pre>
 <p>Converts the I64 to a little-endian byte array.</p>
-<h4 id="returns-25"><a class="header" href="#returns-25">Returns</a></h4>
+<h6 id="returns-25"><a class="header" href="#returns-25">Returns</a></h6>
 <ul>
 <li><code>bytes</code> (<a href="#type.u8">{u8}</a>): The little-endian byte array.</li>
 </ul>
-<h3 id="i64from_ne_bytes"><a class="header" href="#i64from_ne_bytes">I64:from_ne_bytes</a></h3>
+<h5 id="i64from_ne_bytes"><a class="header" href="#i64from_ne_bytes">I64:from_ne_bytes</a></h5>
 <pre><code class="language-lua">function I64:from_ne_bytes(bytes: {u8}): I64
 </code></pre>
 <p>Converts a little-endian byte array to a I64.</p>
-<h4 id="parameters-19"><a class="header" href="#parameters-19">Parameters</a></h4>
+<h6 id="parameters-19"><a class="header" href="#parameters-19">Parameters</a></h6>
 <ul>
 <li><code>bytes</code> (<a href="#type.u8">{u8}</a>): The little-endian byte array.</li>
 </ul>
-<h4 id="returns-26"><a class="header" href="#returns-26">Returns</a></h4>
+<h6 id="returns-26"><a class="header" href="#returns-26">Returns</a></h6>
 <ul>
 <li><code>i64</code> (<a href="#type.I64">I64</a>): The I64 value.</li>
 </ul>
-<h3 id="i64to_le_bytes"><a class="header" href="#i64to_le_bytes">I64:to_le_bytes</a></h3>
+<h5 id="i64to_le_bytes"><a class="header" href="#i64to_le_bytes">I64:to_le_bytes</a></h5>
 <pre><code class="language-lua">function I64:to_le_bytes(): {u8}
 </code></pre>
 <p>Converts the I64 to a little-endian byte array.</p>
-<h4 id="returns-27"><a class="header" href="#returns-27">Returns</a></h4>
+<h6 id="returns-27"><a class="header" href="#returns-27">Returns</a></h6>
 <ul>
 <li><code>bytes</code> (<a href="#type.u8">{u8}</a>): The little-endian byte array.</li>
 </ul>
-<h3 id="i64from_le_bytes"><a class="header" href="#i64from_le_bytes">I64:from_le_bytes</a></h3>
+<h5 id="i64from_le_bytes"><a class="header" href="#i64from_le_bytes">I64:from_le_bytes</a></h5>
 <pre><code class="language-lua">function I64:from_le_bytes(bytes: {u8}): I64
 </code></pre>
 <p>Converts a little-endian byte array to a I64.</p>
-<h4 id="parameters-20"><a class="header" href="#parameters-20">Parameters</a></h4>
+<h6 id="parameters-20"><a class="header" href="#parameters-20">Parameters</a></h6>
 <ul>
 <li><code>bytes</code> (<a href="#type.u8">{u8}</a>): The little-endian byte array.</li>
 </ul>
-<h4 id="returns-28"><a class="header" href="#returns-28">Returns</a></h4>
+<h6 id="returns-28"><a class="header" href="#returns-28">Returns</a></h6>
 <ul>
 <li><code>i64</code> (<a href="#type.I64">I64</a>): The I64 value.</li>
 </ul>
-<h3 id="i64to_be_bytes"><a class="header" href="#i64to_be_bytes">I64:to_be_bytes</a></h3>
+<h5 id="i64to_be_bytes"><a class="header" href="#i64to_be_bytes">I64:to_be_bytes</a></h5>
 <pre><code class="language-lua">function I64:to_be_bytes(): {u8}
 </code></pre>
 <p>Converts the I64 to a big-endian byte array.</p>
-<h4 id="returns-29"><a class="header" href="#returns-29">Returns</a></h4>
+<h6 id="returns-29"><a class="header" href="#returns-29">Returns</a></h6>
 <ul>
 <li><code>bytes</code> (<a href="#type.u8">{u8}</a>): The big-endian byte array.</li>
 </ul>
-<h3 id="i64from_be_bytes"><a class="header" href="#i64from_be_bytes">I64:from_be_bytes</a></h3>
+<h5 id="i64from_be_bytes"><a class="header" href="#i64from_be_bytes">I64:from_be_bytes</a></h5>
 <pre><code class="language-lua">function I64:from_be_bytes(bytes: {u8}): I64
 </code></pre>
 <p>Converts a big-endian byte array to a I64.</p>
-<h4 id="parameters-21"><a class="header" href="#parameters-21">Parameters</a></h4>
+<h6 id="parameters-21"><a class="header" href="#parameters-21">Parameters</a></h6>
 <ul>
 <li><code>bytes</code> (<a href="#type.u8">{u8}</a>): The big-endian byte array.</li>
 </ul>
-<h4 id="returns-30"><a class="header" href="#returns-30">Returns</a></h4>
+<h6 id="returns-30"><a class="header" href="#returns-30">Returns</a></h6>
 <ul>
 <li><code>i64</code> (<a href="#type.I64">I64</a>): The I64 value.</li>
 </ul>
-<h3 id="i64to_u64"><a class="header" href="#i64to_u64">I64:to_u64</a></h3>
+<h5 id="i64to_u64"><a class="header" href="#i64to_u64">I64:to_u64</a></h5>
 <pre><code class="language-lua">function I64:to_u64(): U64
 </code></pre>
 <p>Converts the I64 to a U64.</p>
-<h4 id="returns-31"><a class="header" href="#returns-31">Returns</a></h4>
+<h6 id="returns-31"><a class="header" href="#returns-31">Returns</a></h6>
 <ul>
 <li><code>u64</code> (<a href="#type.U64">U64</a>): The U64 value.</li>
 </ul>
@@ -724,144 +724,144 @@
 <h3 id="bitu64"><a class="header" href="#bitu64">bitu64</a></h3>
 <p><a href="https://luau.org/library#bit32-library">bit32</a> but for U64 datatype. Note that bit64 is experimental and may not be properly documented at all times. When in doubt, reach for Luau's bit32 documentation and simply replace 31's with 63's</p>
 <h4 id="methods-9"><a class="header" href="#methods-9">Methods</a></h4>
-<h3 id="bitu64band"><a class="header" href="#bitu64band">bitu64:band</a></h3>
+<h5 id="bitu64band"><a class="header" href="#bitu64band">bitu64:band</a></h5>
 <pre><code class="language-lua">function bitu64:band(...: &lt;U64&gt;): U64
 </code></pre>
 <p>Performs a bitwise AND operation on the given values.</p>
-<h4 id="parameters-22"><a class="header" href="#parameters-22">Parameters</a></h4>
+<h6 id="parameters-22"><a class="header" href="#parameters-22">Parameters</a></h6>
 <ul>
 <li><code>...</code> (<code>&lt;U64&gt;</code>): The values to perform the operation on.</li>
 </ul>
-<h4 id="returns-32"><a class="header" href="#returns-32">Returns</a></h4>
+<h6 id="returns-32"><a class="header" href="#returns-32">Returns</a></h6>
 <ul>
 <li><code>result</code> (<a href="#type.U64">U64</a>): The result of the operation.</li>
 </ul>
-<h3 id="bitu64bnor"><a class="header" href="#bitu64bnor">bitu64:bnor</a></h3>
+<h5 id="bitu64bnor"><a class="header" href="#bitu64bnor">bitu64:bnor</a></h5>
 <pre><code class="language-lua">function bitu64:bnor(n: U64): U64
 </code></pre>
 <p>Performs a bitwise NOR operation on the given value.</p>
-<h4 id="parameters-23"><a class="header" href="#parameters-23">Parameters</a></h4>
+<h6 id="parameters-23"><a class="header" href="#parameters-23">Parameters</a></h6>
 <ul>
 <li><code>n</code> (<a href="#type.U64">U64</a>): The value to perform the operation on.</li>
 </ul>
-<h4 id="returns-33"><a class="header" href="#returns-33">Returns</a></h4>
+<h6 id="returns-33"><a class="header" href="#returns-33">Returns</a></h6>
 <ul>
 <li><code>result</code> (<a href="#type.U64">U64</a>): The result of the operation.</li>
 </ul>
-<h3 id="bitu64bor"><a class="header" href="#bitu64bor">bitu64:bor</a></h3>
+<h5 id="bitu64bor"><a class="header" href="#bitu64bor">bitu64:bor</a></h5>
 <pre><code class="language-lua">function bitu64:bor(...: &lt;U64&gt;): U64
 </code></pre>
 <p>Performs a bitwise OR operation on the given values.</p>
-<h4 id="parameters-24"><a class="header" href="#parameters-24">Parameters</a></h4>
+<h6 id="parameters-24"><a class="header" href="#parameters-24">Parameters</a></h6>
 <ul>
 <li><code>...</code> (<code>&lt;U64&gt;</code>): The values to perform the operation on.</li>
 </ul>
-<h4 id="returns-34"><a class="header" href="#returns-34">Returns</a></h4>
+<h6 id="returns-34"><a class="header" href="#returns-34">Returns</a></h6>
 <ul>
 <li><code>result</code> (<a href="#type.U64">U64</a>): The result of the operation.</li>
 </ul>
-<h3 id="bitu64bxor"><a class="header" href="#bitu64bxor">bitu64:bxor</a></h3>
+<h5 id="bitu64bxor"><a class="header" href="#bitu64bxor">bitu64:bxor</a></h5>
 <pre><code class="language-lua">function bitu64:bxor(...: &lt;U64&gt;): U64
 </code></pre>
 <p>Performs a bitwise XOR operation on the given values.</p>
-<h4 id="parameters-25"><a class="header" href="#parameters-25">Parameters</a></h4>
+<h6 id="parameters-25"><a class="header" href="#parameters-25">Parameters</a></h6>
 <ul>
 <li><code>...</code> (<code>&lt;U64&gt;</code>): The values to perform the operation on.</li>
 </ul>
-<h4 id="returns-35"><a class="header" href="#returns-35">Returns</a></h4>
+<h6 id="returns-35"><a class="header" href="#returns-35">Returns</a></h6>
 <ul>
 <li><code>result</code> (<a href="#type.U64">U64</a>): The result of the operation.</li>
 </ul>
-<h3 id="bitu64btest"><a class="header" href="#bitu64btest">bitu64:btest</a></h3>
+<h5 id="bitu64btest"><a class="header" href="#bitu64btest">bitu64:btest</a></h5>
 <pre><code class="language-lua">function bitu64:btest(...: &lt;U64&gt;): boolean
 </code></pre>
 <p>Tests if the bitwise AND of the given values is not zero.</p>
-<h4 id="parameters-26"><a class="header" href="#parameters-26">Parameters</a></h4>
+<h6 id="parameters-26"><a class="header" href="#parameters-26">Parameters</a></h6>
 <ul>
 <li><code>...</code> (<code>&lt;U64&gt;</code>): The values to perform the operation on.</li>
 </ul>
-<h4 id="returns-36"><a class="header" href="#returns-36">Returns</a></h4>
+<h6 id="returns-36"><a class="header" href="#returns-36">Returns</a></h6>
 <ul>
 <li><code>result</code> (<a href="#type.boolean">boolean</a>): True if the bitwise AND of the values is not zero, false otherwise.</li>
 </ul>
-<h3 id="bitu64extract"><a class="header" href="#bitu64extract">bitu64:extract</a></h3>
+<h5 id="bitu64extract"><a class="header" href="#bitu64extract">bitu64:extract</a></h5>
 <pre><code class="language-lua">function bitu64:extract(n: U64, f: u64, w: u64): U64
 </code></pre>
 <p>Extracts a field from a value.</p>
-<h4 id="parameters-27"><a class="header" href="#parameters-27">Parameters</a></h4>
+<h6 id="parameters-27"><a class="header" href="#parameters-27">Parameters</a></h6>
 <ul>
 <li><code>n</code> (<a href="#type.U64">U64</a>): The value to extract the field from.</li>
 <li><code>f</code> (<a href="#type.u64">u64</a>): The field to extract.</li>
 <li><code>w</code> (<a href="#type.u64">u64</a>): The width of the field to extract.</li>
 </ul>
-<h4 id="returns-37"><a class="header" href="#returns-37">Returns</a></h4>
+<h6 id="returns-37"><a class="header" href="#returns-37">Returns</a></h6>
 <ul>
 <li><code>result</code> (<a href="#type.U64">U64</a>): The extracted field.</li>
 </ul>
-<h3 id="bitu64lrotate"><a class="header" href="#bitu64lrotate">bitu64:lrotate</a></h3>
+<h5 id="bitu64lrotate"><a class="header" href="#bitu64lrotate">bitu64:lrotate</a></h5>
 <pre><code class="language-lua">function bitu64:lrotate(n: U64, i: i64): U64
 </code></pre>
 <p>Rotates a value left or right.</p>
-<h4 id="parameters-28"><a class="header" href="#parameters-28">Parameters</a></h4>
+<h6 id="parameters-28"><a class="header" href="#parameters-28">Parameters</a></h6>
 <ul>
 <li><code>n</code> (<a href="#type.U64">U64</a>): The value to rotate.</li>
 <li><code>i</code> (<a href="#type.i64">i64</a>): The amount to rotate by.</li>
 </ul>
-<h4 id="returns-38"><a class="header" href="#returns-38">Returns</a></h4>
+<h6 id="returns-38"><a class="header" href="#returns-38">Returns</a></h6>
 <ul>
 <li><code>result</code> (<a href="#type.U64">U64</a>): The rotated value.</li>
 </ul>
-<h3 id="bitu64lshift"><a class="header" href="#bitu64lshift">bitu64:lshift</a></h3>
+<h5 id="bitu64lshift"><a class="header" href="#bitu64lshift">bitu64:lshift</a></h5>
 <pre><code class="language-lua">function bitu64:lshift(n: U64, i: i64): U64
 </code></pre>
 <p>Shifts a value left or right.</p>
-<h4 id="parameters-29"><a class="header" href="#parameters-29">Parameters</a></h4>
+<h6 id="parameters-29"><a class="header" href="#parameters-29">Parameters</a></h6>
 <ul>
 <li><code>n</code> (<a href="#type.U64">U64</a>): The value to shift.</li>
 <li><code>i</code> (<a href="#type.i64">i64</a>): The amount to shift by.</li>
 </ul>
-<h4 id="returns-39"><a class="header" href="#returns-39">Returns</a></h4>
+<h6 id="returns-39"><a class="header" href="#returns-39">Returns</a></h6>
 <ul>
 <li><code>result</code> (<a href="#type.U64">U64</a>): The shifted value.</li>
 </ul>
-<h3 id="bitu64replace"><a class="header" href="#bitu64replace">bitu64:replace</a></h3>
+<h5 id="bitu64replace"><a class="header" href="#bitu64replace">bitu64:replace</a></h5>
 <pre><code class="language-lua">function bitu64:replace(n: U64, v: U64, f: u64, w: u64): U64
 </code></pre>
 <p>Replaces a field in a value.</p>
-<h4 id="parameters-30"><a class="header" href="#parameters-30">Parameters</a></h4>
+<h6 id="parameters-30"><a class="header" href="#parameters-30">Parameters</a></h6>
 <ul>
 <li><code>n</code> (<a href="#type.U64">U64</a>): The value to replace the field in.</li>
 <li><code>v</code> (<a href="#type.U64">U64</a>): The value to replace the field with.</li>
 <li><code>f</code> (<a href="#type.u64">u64</a>): The field to replace.</li>
 <li><code>w</code> (<a href="#type.u64">u64</a>): The width of the field to replace.</li>
 </ul>
-<h4 id="returns-40"><a class="header" href="#returns-40">Returns</a></h4>
+<h6 id="returns-40"><a class="header" href="#returns-40">Returns</a></h6>
 <ul>
 <li><code>result</code> (<a href="#type.U64">U64</a>): The value with the field replaced.</li>
 </ul>
-<h3 id="bitu64rrotate"><a class="header" href="#bitu64rrotate">bitu64:rrotate</a></h3>
+<h5 id="bitu64rrotate"><a class="header" href="#bitu64rrotate">bitu64:rrotate</a></h5>
 <pre><code class="language-lua">function bitu64:rrotate(n: U64, i: i64): U64
 </code></pre>
 <p>Rotates a value left or right.</p>
-<h4 id="parameters-31"><a class="header" href="#parameters-31">Parameters</a></h4>
+<h6 id="parameters-31"><a class="header" href="#parameters-31">Parameters</a></h6>
 <ul>
 <li><code>n</code> (<a href="#type.U64">U64</a>): The value to rotate.</li>
 <li><code>i</code> (<a href="#type.i64">i64</a>): The amount to rotate by.</li>
 </ul>
-<h4 id="returns-41"><a class="header" href="#returns-41">Returns</a></h4>
+<h6 id="returns-41"><a class="header" href="#returns-41">Returns</a></h6>
 <ul>
 <li><code>result</code> (<a href="#type.U64">U64</a>): The rotated value.</li>
 </ul>
-<h3 id="bitu64rshift"><a class="header" href="#bitu64rshift">bitu64:rshift</a></h3>
+<h5 id="bitu64rshift"><a class="header" href="#bitu64rshift">bitu64:rshift</a></h5>
 <pre><code class="language-lua">function bitu64:rshift(n: U64, i: i64): U64
 </code></pre>
 <p>Shifts a value left or right.</p>
-<h4 id="parameters-32"><a class="header" href="#parameters-32">Parameters</a></h4>
+<h6 id="parameters-32"><a class="header" href="#parameters-32">Parameters</a></h6>
 <ul>
 <li><code>n</code> (<a href="#type.U64">U64</a>): The value to shift.</li>
 <li><code>i</code> (<a href="#type.i64">i64</a>): The amount to shift by.</li>
 </ul>
-<h4 id="returns-42"><a class="header" href="#returns-42">Returns</a></h4>
+<h6 id="returns-42"><a class="header" href="#returns-42">Returns</a></h6>
 <ul>
 <li><code>result</code> (<a href="#type.U64">U64</a>): The shifted value.</li>
 </ul>
@@ -889,6 +889,107 @@
 <h4 id="returns-44"><a class="header" href="#returns-44">Returns</a></h4>
 <ul>
 <li><code>i64</code> (<a href="#type.I64">I64</a>): The I64 value.</li>
+</ul>
+<hr />
+<h1 id="primitives"><a class="header" href="#primitives">Primitives</a></h1>
+<h2 id="u8"><a class="header" href="#u8">u8</a></h2>
+<p><code>type u8 = number</code></p>
+<p>An unsigned 8-bit integer. <strong>Note: u8 arrays (<code>{u8}</code>) are often used to represent an array of bytes in AntiRaid</strong></p>
+<h3 id="constraints"><a class="header" href="#constraints">Constraints</a></h3>
+<ul>
+<li><strong>range</strong>: The range of values this number can take on</li>
+</ul>
+<hr />
+<h2 id="u16"><a class="header" href="#u16">u16</a></h2>
+<p><code>type u16 = number</code></p>
+<p>An unsigned 16-bit integer.</p>
+<h3 id="constraints-1"><a class="header" href="#constraints-1">Constraints</a></h3>
+<ul>
+<li><strong>range</strong>: The range of values this number can take on</li>
+</ul>
+<hr />
+<h2 id="u32"><a class="header" href="#u32">u32</a></h2>
+<p><code>type u32 = number</code></p>
+<p>An unsigned 32-bit integer.</p>
+<h3 id="constraints-2"><a class="header" href="#constraints-2">Constraints</a></h3>
+<ul>
+<li><strong>range</strong>: The range of values this number can take on</li>
+</ul>
+<hr />
+<h2 id="u64-2"><a class="header" href="#u64-2">u64</a></h2>
+<p><code>type u64 = number</code></p>
+<p>An unsigned 64-bit integer. <strong>Note that most, if not all, cases of <code>i64</code> in the actual API are either <code>string</code> or the <code>I64</code> custom type from typesext</strong></p>
+<h3 id="constraints-3"><a class="header" href="#constraints-3">Constraints</a></h3>
+<ul>
+<li><strong>range</strong>: The range of values this number can take on</li>
+</ul>
+<hr />
+<h2 id="i8"><a class="header" href="#i8">i8</a></h2>
+<p><code>type i8 = number</code></p>
+<p>A signed 8-bit integer.</p>
+<h3 id="constraints-4"><a class="header" href="#constraints-4">Constraints</a></h3>
+<ul>
+<li><strong>range</strong>: The range of values this number can take on</li>
+</ul>
+<hr />
+<h2 id="i16"><a class="header" href="#i16">i16</a></h2>
+<p><code>type i16 = number</code></p>
+<p>A signed 16-bit integer.</p>
+<h3 id="constraints-5"><a class="header" href="#constraints-5">Constraints</a></h3>
+<ul>
+<li><strong>range</strong>: The range of values this number can take on</li>
+</ul>
+<hr />
+<h2 id="i32"><a class="header" href="#i32">i32</a></h2>
+<p><code>type i32 = number</code></p>
+<p>A signed 32-bit integer.</p>
+<h3 id="constraints-6"><a class="header" href="#constraints-6">Constraints</a></h3>
+<ul>
+<li><strong>range</strong>: The range of values this number can take on</li>
+</ul>
+<hr />
+<h2 id="i64-2"><a class="header" href="#i64-2">i64</a></h2>
+<p><code>type i64 = number</code></p>
+<p>A signed 64-bit integer. <strong>Note that most, if not all, cases of <code>i64</code> in the actual API are either <code>string</code> or the <code>I64</code> custom type from typesext</strong></p>
+<h3 id="constraints-7"><a class="header" href="#constraints-7">Constraints</a></h3>
+<ul>
+<li><strong>range</strong>: The range of values this number can take on</li>
+</ul>
+<hr />
+<h2 id="f32"><a class="header" href="#f32">f32</a></h2>
+<p><code>type f32 = number</code></p>
+<p>A 32-bit floating point number.</p>
+<h3 id="constraints-8"><a class="header" href="#constraints-8">Constraints</a></h3>
+<ul>
+<li><strong>range</strong>: The range of values this number can take on</li>
+</ul>
+<hr />
+<h2 id="f64"><a class="header" href="#f64">f64</a></h2>
+<p><code>type f64 = number</code></p>
+<p>A 64-bit floating point number.</p>
+<h3 id="constraints-9"><a class="header" href="#constraints-9">Constraints</a></h3>
+<ul>
+<li><strong>range</strong>: The range of values this number can take on</li>
+</ul>
+<hr />
+<h2 id="bool"><a class="header" href="#bool">bool</a></h2>
+<p><code>type bool = boolean</code></p>
+<p>A boolean value.</p>
+<hr />
+<h2 id="char"><a class="header" href="#char">char</a></h2>
+<p><code>type char = string</code></p>
+<p>A single Unicode character.</p>
+<h3 id="constraints-10"><a class="header" href="#constraints-10">Constraints</a></h3>
+<ul>
+<li><strong>length</strong>: The length of the string</li>
+</ul>
+<hr />
+<h2 id="string"><a class="header" href="#string">string</a></h2>
+<p><code>type string = string</code></p>
+<p>A UTF-8 encoded string.</p>
+<h3 id="constraints-11"><a class="header" href="#constraints-11">Constraints</a></h3>
+<ul>
+<li><strong>encoding</strong>: Accepted character encoding</li>
 </ul>
 <hr />
 
