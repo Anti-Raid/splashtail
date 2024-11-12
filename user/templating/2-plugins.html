@@ -898,7 +898,7 @@
 <p>An unsigned 8-bit integer. <strong>Note: u8 arrays (<code>{u8}</code>) are often used to represent an array of bytes in AntiRaid</strong></p>
 <h3 id="constraints"><a class="header" href="#constraints">Constraints</a></h3>
 <ul>
-<li><strong>range</strong>: The range of values this number can take on</li>
+<li><strong>range</strong>: The range of values this number can take on (accepted values: 0-255)</li>
 </ul>
 <hr />
 <div id="type.u16" />
@@ -907,7 +907,7 @@
 <p>An unsigned 16-bit integer.</p>
 <h3 id="constraints-1"><a class="header" href="#constraints-1">Constraints</a></h3>
 <ul>
-<li><strong>range</strong>: The range of values this number can take on</li>
+<li><strong>range</strong>: The range of values this number can take on (accepted values: 0-65535)</li>
 </ul>
 <hr />
 <div id="type.u32" />
@@ -916,7 +916,7 @@
 <p>An unsigned 32-bit integer.</p>
 <h3 id="constraints-2"><a class="header" href="#constraints-2">Constraints</a></h3>
 <ul>
-<li><strong>range</strong>: The range of values this number can take on</li>
+<li><strong>range</strong>: The range of values this number can take on (accepted values: 0-4294967295)</li>
 </ul>
 <hr />
 <div id="type.u64" />
@@ -925,7 +925,7 @@
 <p>An unsigned 64-bit integer. <strong>Note that most, if not all, cases of <code>i64</code> in the actual API are either <code>string</code> or the <code>I64</code> custom type from typesext</strong></p>
 <h3 id="constraints-3"><a class="header" href="#constraints-3">Constraints</a></h3>
 <ul>
-<li><strong>range</strong>: The range of values this number can take on</li>
+<li><strong>range</strong>: The range of values this number can take on (accepted values: 0-18446744073709551615)</li>
 </ul>
 <hr />
 <div id="type.i8" />
@@ -934,7 +934,7 @@
 <p>A signed 8-bit integer.</p>
 <h3 id="constraints-4"><a class="header" href="#constraints-4">Constraints</a></h3>
 <ul>
-<li><strong>range</strong>: The range of values this number can take on</li>
+<li><strong>range</strong>: The range of values this number can take on (accepted values: -128-127)</li>
 </ul>
 <hr />
 <div id="type.i16" />
@@ -943,7 +943,7 @@
 <p>A signed 16-bit integer.</p>
 <h3 id="constraints-5"><a class="header" href="#constraints-5">Constraints</a></h3>
 <ul>
-<li><strong>range</strong>: The range of values this number can take on</li>
+<li><strong>range</strong>: The range of values this number can take on (accepted values: -32768-32767)</li>
 </ul>
 <hr />
 <div id="type.i32" />
@@ -952,7 +952,7 @@
 <p>A signed 32-bit integer.</p>
 <h3 id="constraints-6"><a class="header" href="#constraints-6">Constraints</a></h3>
 <ul>
-<li><strong>range</strong>: The range of values this number can take on</li>
+<li><strong>range</strong>: The range of values this number can take on (accepted values: -2147483648-2147483647)</li>
 </ul>
 <hr />
 <div id="type.i64" />
@@ -961,7 +961,7 @@
 <p>A signed 64-bit integer. <strong>Note that most, if not all, cases of <code>i64</code> in the actual API are either <code>string</code> or the <code>I64</code> custom type from typesext</strong></p>
 <h3 id="constraints-7"><a class="header" href="#constraints-7">Constraints</a></h3>
 <ul>
-<li><strong>range</strong>: The range of values this number can take on</li>
+<li><strong>range</strong>: The range of values this number can take on (accepted values: -9223372036854775808-9223372036854775807)</li>
 </ul>
 <hr />
 <div id="type.f32" />
@@ -970,7 +970,7 @@
 <p>A 32-bit floating point number.</p>
 <h3 id="constraints-8"><a class="header" href="#constraints-8">Constraints</a></h3>
 <ul>
-<li><strong>range</strong>: The range of values this number can take on</li>
+<li><strong>range</strong>: The range of values this number can take on (accepted values: IEEE 754 single-precision floating point)</li>
 </ul>
 <hr />
 <div id="type.f64" />
@@ -979,7 +979,7 @@
 <p>A 64-bit floating point number.</p>
 <h3 id="constraints-9"><a class="header" href="#constraints-9">Constraints</a></h3>
 <ul>
-<li><strong>range</strong>: The range of values this number can take on</li>
+<li><strong>range</strong>: The range of values this number can take on (accepted values: IEEE 754 double-precision floating point)</li>
 </ul>
 <hr />
 <div id="type.bool" />
@@ -993,7 +993,7 @@
 <p>A single Unicode character.</p>
 <h3 id="constraints-10"><a class="header" href="#constraints-10">Constraints</a></h3>
 <ul>
-<li><strong>length</strong>: The length of the string</li>
+<li><strong>length</strong>: The length of the string (accepted values: 1)</li>
 </ul>
 <hr />
 <div id="type.string" />
@@ -1002,7 +1002,7 @@
 <p>A UTF-8 encoded string.</p>
 <h3 id="constraints-11"><a class="header" href="#constraints-11">Constraints</a></h3>
 <ul>
-<li><strong>encoding</strong>: Accepted character encoding</li>
+<li><strong>encoding</strong>: Accepted character encoding (accepted values: UTF-8 <em>only</em>)</li>
 </ul>
 <hr />
 
