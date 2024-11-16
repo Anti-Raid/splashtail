@@ -9,8 +9,8 @@ import (
 )
 
 // ParsePermissionChecks verifies permission checks for a guild
-func ParsePermissionChecks(ctx context.Context, permChecks *silverpelt.PermissionChecks) (*silverpelt.PermissionChecks, error) {
-	return RpcQuery[silverpelt.PermissionChecks](
+func ParsePermissionChecks(ctx context.Context, permChecks *silverpelt.PermissionCheck) (*silverpelt.PermissionCheck, error) {
+	return RpcQuery[silverpelt.PermissionCheck](
 		ctx,
 		state.IpcClient,
 		"GET",

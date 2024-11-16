@@ -513,16 +513,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "bot_modules_acl"
-version = "0.1.0"
-dependencies = [
- "indexmap",
- "modules_ext",
- "poise",
- "silverpelt",
-]
-
-[[package]]
 name = "bot_modules_core"
 version = "0.1.0"
 dependencies = [
@@ -556,7 +546,6 @@ dependencies = [
 name = "bot_modules_default"
 version = "0.1.0"
 dependencies = [
- "bot_modules_acl",
  "bot_modules_core",
  "bot_modules_hooks",
  "bot_modules_lockdown",

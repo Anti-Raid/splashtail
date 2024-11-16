@@ -70,7 +70,6 @@ where
     since we generally want to convert into lua when we know we have
     a fixed point in time, and we guarantee that it doesn't change
 */
-
 impl FromLua for DateTimeValues {
     fn from_lua(value: LuaValue, _: &Lua) -> LuaResult<Self> {
         if !value.is_table() {

@@ -111,7 +111,7 @@ fn generate_markdown_for_primitive(primitive: Primitive, heading_level: usize) -
             &primitive
                 .constraints
                 .iter()
-                .map(|constraint| primitive_constraint_to_string(constraint))
+                .map(primitive_constraint_to_string)
                 .collect::<Vec<_>>()
                 .join("\n"),
         );

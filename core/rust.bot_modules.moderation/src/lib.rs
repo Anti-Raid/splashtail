@@ -1,7 +1,7 @@
 mod cmd;
 
 use indexmap::indexmap;
-use permissions::types::{PermissionCheck, PermissionChecks};
+use permissions::types::PermissionCheck;
 use silverpelt::types::CommandExtendedData;
 
 pub struct Module;
@@ -29,21 +29,10 @@ impl silverpelt::module::Module for Module {
                 cmd::prune_user(),
                 indexmap! {
                     "" => CommandExtendedData {
-                        default_perms: PermissionChecks::Simple {
-                            checks: vec![
-                                PermissionCheck {
-                                    kittycat_perms: vec!["moderation.prune_user".to_string()],
-                                    native_perms: vec![],
-                                    inner_and: false,
-                                    outer_and: false,
-                                },
-                                PermissionCheck {
-                                    kittycat_perms: vec![],
-                                    native_perms: vec![serenity::model::permissions::Permissions::MANAGE_MESSAGES, serenity::model::permissions::Permissions::MANAGE_GUILD],
-                                    inner_and: true,
-                                    outer_and: false,
-                                }
-                            ],
+                        default_perms: PermissionCheck {
+                            kittycat_perms: vec!["moderation.prune_user".to_string()],
+                            native_perms: vec![serenity::model::permissions::Permissions::MANAGE_MESSAGES, serenity::model::permissions::Permissions::MANAGE_GUILD],
+                            inner_and: true,
                         },
                         ..Default::default()
                     },
@@ -53,15 +42,10 @@ impl silverpelt::module::Module for Module {
                 cmd::kick(),
                 indexmap! {
                     "" => CommandExtendedData {
-                        default_perms: PermissionChecks::Simple {
-                            checks: vec![
-                                PermissionCheck {
-                                    kittycat_perms: vec!["moderation.kick".to_string()],
-                                    native_perms: vec![serenity::model::permissions::Permissions::KICK_MEMBERS],
-                                    inner_and: false,
-                                    outer_and: false,
-                                },
-                            ],
+                        default_perms: PermissionCheck {
+                            kittycat_perms: vec!["moderation.kick".to_string()],
+                            native_perms: vec![serenity::model::permissions::Permissions::KICK_MEMBERS],
+                            inner_and: false,
                         },
                         ..Default::default()
                     },
@@ -71,15 +55,10 @@ impl silverpelt::module::Module for Module {
                 cmd::ban(),
                 indexmap! {
                     "" => CommandExtendedData {
-                        default_perms: PermissionChecks::Simple {
-                            checks: vec![
-                                PermissionCheck {
-                                    kittycat_perms: vec!["moderation.ban".to_string()],
-                                    native_perms: vec![serenity::model::permissions::Permissions::BAN_MEMBERS],
-                                    inner_and: false,
-                                    outer_and: false,
-                                },
-                            ],
+                        default_perms: PermissionCheck {
+                            kittycat_perms: vec!["moderation.ban".to_string()],
+                            native_perms: vec![serenity::model::permissions::Permissions::BAN_MEMBERS],
+                            inner_and: false,
                         },
                         ..Default::default()
                     },
@@ -89,15 +68,10 @@ impl silverpelt::module::Module for Module {
                 cmd::tempban(),
                 indexmap! {
                     "" => CommandExtendedData {
-                        default_perms: PermissionChecks::Simple {
-                            checks: vec![
-                                PermissionCheck {
-                                    kittycat_perms: vec!["moderation.tempban".to_string()],
-                                    native_perms: vec![serenity::model::permissions::Permissions::BAN_MEMBERS],
-                                    inner_and: false,
-                                    outer_and: false,
-                                },
-                            ],
+                        default_perms: PermissionCheck {
+                            kittycat_perms: vec!["moderation.tempban".to_string()],
+                            native_perms: vec![serenity::model::permissions::Permissions::BAN_MEMBERS],
+                            inner_and: false,
                         },
                         ..Default::default()
                     },
@@ -107,15 +81,10 @@ impl silverpelt::module::Module for Module {
                 cmd::unban(),
                 indexmap! {
                     "" => CommandExtendedData {
-                        default_perms: PermissionChecks::Simple {
-                            checks: vec![
-                                PermissionCheck {
-                                    kittycat_perms: vec!["moderation.unban".to_string()],
-                                    native_perms: vec![serenity::model::permissions::Permissions::BAN_MEMBERS],
-                                    inner_and: false,
-                                    outer_and: false,
-                                },
-                            ],
+                        default_perms: PermissionCheck {
+                            kittycat_perms: vec!["moderation.unban".to_string()],
+                            native_perms: vec![serenity::model::permissions::Permissions::BAN_MEMBERS],
+                            inner_and: false,
                         },
                         ..Default::default()
                     },
@@ -125,15 +94,10 @@ impl silverpelt::module::Module for Module {
                 cmd::timeout(),
                 indexmap! {
                     "" => CommandExtendedData {
-                        default_perms: PermissionChecks::Simple {
-                            checks: vec![
-                                PermissionCheck {
-                                    kittycat_perms: vec!["moderation.timeout".to_string()],
-                                    native_perms: vec![serenity::model::permissions::Permissions::MODERATE_MEMBERS],
-                                    inner_and: false,
-                                    outer_and: false,
-                                },
-                            ],
+                        default_perms: PermissionCheck {
+                            kittycat_perms: vec!["moderation.timeout".to_string()],
+                            native_perms: vec![serenity::model::permissions::Permissions::MODERATE_MEMBERS],
+                            inner_and: false,
                         },
                         ..Default::default()
                     },

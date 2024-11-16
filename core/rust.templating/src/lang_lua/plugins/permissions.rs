@@ -66,7 +66,6 @@ pub fn plugin_docs() -> templating_docgen::Plugin {
                 .example(std::sync::Arc::new(permissions::types::PermissionCheck::default()))
                 .field("kittycat_perms", |f| f.typ("{Permission}").description("The kittycat permissions needed to run the command."))
                 .field("native_perms", |f| f.typ("{string}").description("The native permissions needed to run the command."))
-                .field("outer_and", |f| f.typ("bool").description("Whether the next permission check should be ANDed (all needed) or OR'd (at least one) to the current"))
                 .field("inner_and", |f| f.typ("bool").description("Whether or not the perms are ANDed (all needed) or OR'd (at least one)"))
             },
         )
@@ -123,25 +122,10 @@ pub fn plugin_docs() -> templating_docgen::Plugin {
                 r.typ("bool").description("Whether the permission is present in the list of permissions as per kittycat rules.")
             })
         })
-        .method_mut("check_perms_single", |m| {
-            m.description("Checks if a single permission check passes.")
+        .method_mut("check_perms", |m| {
+            m.description("Checks if a permission check passes.")
             .parameter("check", |p| {
                 p.typ("PermissionCheck").description("The permission check to evaluate.")
-            })
-            .parameter("member_native_perms", |p| {
-                p.typ("Permissions").description("The native permissions of the member.")
-            })
-            .parameter("member_kittycat_perms", |p| {
-                p.typ("{Permission}").description("The kittycat permissions of the member.")
-            })
-            .return_("result", |r| {
-                r.typ("LuaPermissionResult").description("The result of the permission check.")
-            })
-        })
-        .method_mut("eval_checks", |m| {
-            m.description("Evaluates a list of permission checks.")
-            .parameter("checks", |p| {
-                p.typ("{PermissionCheck}").description("The list of permission checks to evaluate.")
             })
             .parameter("member_native_perms", |p| {
                 p.typ("Permissions").description("The native permissions of the member.")
@@ -191,7 +175,7 @@ pub fn init_plugin(lua: &Lua) -> LuaResult<LuaTable> {
     )?;
 
     module.set(
-        "check_perms_single",
+        "check_perms",
         lua.create_function(
             |lua,
              (check, member_native_perms, member_kittycat_perms): (
@@ -204,33 +188,10 @@ pub fn init_plugin(lua: &Lua) -> LuaResult<LuaTable> {
                     lua.from_value(member_native_perms)?;
                 let member_kittycat_perms: Vec<kittycat::perms::Permission> =
                     lua.from_value(member_kittycat_perms)?;
-                lua.to_value(&LuaPermissionResult::new(permissions::check_perms_single(
+                lua.to_value(&LuaPermissionResult::new(permissions::check_perms(
                     &check,
                     member_native_perms,
                     &member_kittycat_perms,
-                )))
-            },
-        )?,
-    )?;
-
-    module.set(
-        "eval_checks",
-        lua.create_function(
-            |lua,
-             (checks, member_native_perms, member_kittycat_perms): (
-                LuaValue,
-                LuaValue,
-                LuaValue,
-            )| {
-                let checks: Vec<permissions::types::PermissionCheck> = lua.from_value(checks)?;
-                let member_native_perms: serenity::all::Permissions =
-                    lua.from_value(member_native_perms)?;
-                let member_kittycat_perms: Vec<kittycat::perms::Permission> =
-                    lua.from_value(member_kittycat_perms)?;
-                lua.to_value(&LuaPermissionResult::new(permissions::eval_checks(
-                    &checks,
-                    member_native_perms,
-                    member_kittycat_perms,
                 )))
             },
         )?,

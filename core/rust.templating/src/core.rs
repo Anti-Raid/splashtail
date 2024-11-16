@@ -161,7 +161,7 @@ pub mod messages {
                 if let Some(timestamp) = &template_embed.timestamp {
                     let timestamp = chrono::DateTime::parse_from_rfc3339(timestamp)
                         .map_err(|e| format!("Invalid timestamp provided to embed: {}", e))?;
-                    embed = embed.timestamp(timestamp.clone());
+                    embed = embed.timestamp(timestamp);
                     set = true;
                 }
 

@@ -95,7 +95,7 @@ pub async fn require(lua: Lua, (plugin_name, args): (String, LuaValue)) -> LuaRe
 
         let cache_key = format!("requireTemplate:{}", resolved_path);
 
-        if let Some(table) = lua.named_registry_value::<LuaTable>(&cache_key).ok() {
+        if let Ok(table) = lua.named_registry_value::<LuaTable>(&cache_key) {
             return Ok(table);
         }
 

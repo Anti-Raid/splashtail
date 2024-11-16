@@ -2,8 +2,7 @@ use silverpelt::module::Module;
 
 /// List of modules to load
 pub fn modules() -> Vec<Box<dyn Module>> {
-    // List of base modules (wrapped in an Box::new, not a macro)
-    let base_modules: Vec<Box<dyn Module>> = vec![
+    vec![
         Box::new(bot_modules_core::Module),
         Box::new(bot_modules_hooks::Module),
         Box::new(bot_modules_lockdown::Module),
@@ -14,21 +13,5 @@ pub fn modules() -> Vec<Box<dyn Module>> {
         Box::new(bot_modules_templating::Module),
         Box::new(bot_modules_temporary_punishments::Module),
         Box::new(bot_modules_root::Module),
-    ];
-
-    // Add ACL module
-    let mut module_ids = Vec::new();
-
-    for module in base_modules.iter() {
-        module_ids.push(module.id());
-    }
-
-    let mut modules: Vec<Box<dyn silverpelt::module::Module>> = Vec::new();
-
-    modules.push(Box::new(bot_modules_acl::Module { module_ids }));
-
-    // Add all base modules
-    modules.extend(base_modules);
-
-    modules
+    ]
 }

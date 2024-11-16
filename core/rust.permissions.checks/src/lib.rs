@@ -1,7 +1,7 @@
 use botox::cache::CacheHttpImpl;
 use kittycat::perms::Permission;
 use log::info;
-use permissions::types::{PermissionChecks, PermissionResult};
+use permissions::types::PermissionResult;
 use serde::{Deserialize, Serialize};
 use serenity::all::{GuildId, UserId};
 use serenity::small_fixed_array::FixedArray;
@@ -294,7 +294,6 @@ pub async fn check_command(
                 guild_id: guild_id.to_string(),
                 module: module_ref.clone(),
                 disabled: None,
-                default_perms: None,
             })
         }
     };
@@ -370,7 +369,7 @@ pub async fn check_command(
     let (is_owner, guild_owner_id, member_perms, roles) = match get_user_discord_info(
         guild_id,
         user_id,
-        &botox::cache::CacheHttpImpl::from_ctx(&serenity_context),
+        &botox::cache::CacheHttpImpl::from_ctx(serenity_context),
         reqwest,
         poise_ctx,
     )
@@ -401,62 +400,61 @@ pub async fn check_command(
     // - command_config.perms
     // - module_config.default_perms
     // - cmd_data.default_perms
-    let perms = {
+    let check = {
         if let Some(perms) = &command_config.perms {
-            perms
-        } else if let Some(perms) = &module_config.default_perms {
             perms
         } else {
             &cmd_data.default_perms
         }
     };
 
-    match perms {
-        PermissionChecks::Simple { checks } => {
-            if checks.is_empty() {
-                return PermissionResult::Ok {};
+    match silverpelt::ar_event::dispatch_event_to_modules(std::sync::Arc::new(
+        silverpelt::ar_event::EventHandlerContext {
+            guild_id,
+            data: serenity_context.data::<silverpelt::data::Data>(),
+            event: silverpelt::ar_event::AntiraidEvent::Custom(silverpelt::ar_event::CustomEvent {
+                event_name: "AR/CheckCommand".to_string(),
+                event_titlename: "(Anti-Raid) Check Command".to_string(),
+                event_data: serde_json::json!({
+                    "command": command,
+                    "user_id": user_id,
+                    "member_native_perms": member_perms,
+                    "member_kittycat_perms": kittycat_perms,
+                    "opts": opts,
+                    "check": check,
+                    "module_config": module_config,
+                    "command_config": command_config,
+                    "command_extended_data": cmd_data,
+                    "is_owner": is_owner,
+                    "guild_owner_id": guild_owner_id,
+                    "roles": roles,
+                }),
+            }),
+            serenity_context: serenity_context.clone(),
+        },
+    ))
+    .await
+    {
+        Ok(_) => {}
+        Err(e) => {
+            for (i, ei) in e.iter().enumerate() {
+                if ei.to_string() == "AR/CheckCommand/Skip" {
+                    return PermissionResult::OkWithMessage {
+                        message: format!("IDX=>{},message=>SKIP", i),
+                    };
+                }
             }
 
-            permissions::eval_checks(checks, member_perms, kittycat_perms)
+            return PermissionResult::GenericError {
+                error: e
+                    .into_iter()
+                    .map(|x| x.to_string())
+                    .collect::<Vec<_>>()
+                    .join("\n")
+                    .to_string(),
+            };
         }
-        PermissionChecks::Template { template } => {
-            match templating::execute(
-                guild_id,
-                templating::Template::Named(template.clone()),
-                pool.clone(),
-                serenity_context.clone(),
-                reqwest.clone(),
-                PermissionTemplateContext {
-                    member_native_permissions: member_perms,
-                    member_kittycat_permissions: kittycat_perms,
-                    user_id,
-                    guild_id,
-                    guild_owner_id,
-                    channel_id: opts.channel_id,
-                },
-            )
-            .await
-            {
-                Ok(v) => v,
-                Err(e) => PermissionResult::GenericError {
-                    error: format!("Failed to render permission template: {}", e),
-                },
-            }
-        }
-    }
-}
+    };
 
-/// A PermissionTemplateContext is a context for permission templates
-/// that can be accessed in permission templates
-#[derive(Clone, serde::Serialize, serde::Deserialize)]
-pub struct PermissionTemplateContext {
-    pub member_native_permissions: serenity::all::Permissions,
-    pub member_kittycat_permissions: Vec<kittycat::perms::Permission>,
-    pub user_id: serenity::all::UserId,
-    pub guild_id: serenity::all::GuildId,
-    pub guild_owner_id: serenity::all::UserId,
-    pub channel_id: Option<serenity::all::ChannelId>,
+    permissions::check_perms(check, member_perms, &kittycat_perms)
 }
-
-#[typetag::serde]
-impl templating::Context for PermissionTemplateContext {}

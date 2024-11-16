@@ -1,5 +1,5 @@
 use futures_util::StreamExt;
-use permissions::types::PermissionChecks;
+use permissions::types::PermissionCheck;
 use silverpelt::types::GuildCommandConfiguration;
 use silverpelt::Context;
 use silverpelt::Error;
@@ -724,11 +724,11 @@ pub async fn commands_modperms(
 
                 let perms_str = &resp.inputs[0];
 
-                let perms = serde_json::from_str::<PermissionChecks>(perms_str);
+                let perms = serde_json::from_str::<PermissionCheck>(perms_str);
 
                 match perms {
                     Ok(perms) => {
-                        let parsed = permissions::parse::parse_permission_checks(&perms).await?;
+                        let parsed = permissions::parse::parse_permission_check(&perms).await?;
 
                         let perm_res = permission_checks::check_command(
                             &data.silverpelt_cache,

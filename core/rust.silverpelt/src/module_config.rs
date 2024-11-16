@@ -89,7 +89,7 @@ pub async fn get_module_configuration(
     module: &str,
 ) -> Result<Option<GuildModuleConfiguration>, crate::Error> {
     let rec = sqlx::query!(
-        "SELECT id, guild_id, module, disabled, default_perms FROM guild_module_configurations WHERE guild_id = $1 AND module = $2",
+        "SELECT id, guild_id, module, disabled FROM guild_module_configurations WHERE guild_id = $1 AND module = $2",
         guild_id,
         module,
     )
@@ -102,13 +102,6 @@ pub async fn get_module_configuration(
             guild_id: rec.guild_id,
             module: rec.module,
             disabled: rec.disabled,
-            default_perms: {
-                if let Some(perms) = rec.default_perms {
-                    serde_json::from_value(perms)?
-                } else {
-                    None
-                }
-            },
         }))
     } else {
         Ok(None)

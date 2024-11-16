@@ -1,5 +1,5 @@
 use indexmap::{indexmap, IndexMap};
-use permissions::types::{PermissionCheck, PermissionChecks};
+use permissions::types::PermissionCheck;
 
 pub type CommandExtendedDataMap = IndexMap<&'static str, CommandExtendedData>;
 
@@ -7,7 +7,7 @@ pub type CommandExtendedDataMap = IndexMap<&'static str, CommandExtendedData>;
 #[derive(Clone, PartialEq, serde::Serialize, serde::Deserialize, Debug)]
 pub struct CommandExtendedData {
     /// The default permissions needed to run this command
-    pub default_perms: PermissionChecks,
+    pub default_perms: PermissionCheck,
     /// Whether the command is enabled by default or not
     pub is_default_enabled: bool,
     /// Whether the command should be hidden on the website or not
@@ -19,7 +19,11 @@ pub struct CommandExtendedData {
 impl Default for CommandExtendedData {
     fn default() -> Self {
         Self {
-            default_perms: PermissionChecks::Simple { checks: vec![] },
+            default_perms: PermissionCheck {
+                kittycat_perms: vec![],
+                native_perms: vec![],
+                inner_and: false,
+            },
             is_default_enabled: true,
             web_hidden: false,
             virtual_command: false,
@@ -30,7 +34,11 @@ impl Default for CommandExtendedData {
 impl CommandExtendedData {
     pub fn none() -> Self {
         CommandExtendedData {
-            default_perms: PermissionChecks::Simple { checks: vec![] },
+            default_perms: PermissionCheck {
+                kittycat_perms: vec![],
+                native_perms: vec![],
+                inner_and: false,
+            },
             is_default_enabled: true,
             web_hidden: false,
             virtual_command: false,
@@ -40,7 +48,11 @@ impl CommandExtendedData {
     pub fn none_map() -> CommandExtendedDataMap {
         indexmap! {
             "" => CommandExtendedData {
-                default_perms: PermissionChecks::Simple { checks: vec![] },
+                default_perms: PermissionCheck {
+                    kittycat_perms: vec![],
+                    native_perms: vec![],
+                    inner_and: false,
+                },
                 is_default_enabled: true,
                 web_hidden: false,
                 virtual_command: false,
@@ -50,13 +62,10 @@ impl CommandExtendedData {
 
     pub fn kittycat_simple(namespace: &str, permission: &str) -> CommandExtendedData {
         CommandExtendedData {
-            default_perms: PermissionChecks::Simple {
-                checks: vec![PermissionCheck {
-                    kittycat_perms: vec![format!("{}.{}", namespace, permission)],
-                    native_perms: vec![],
-                    outer_and: false,
-                    inner_and: false,
-                }],
+            default_perms: PermissionCheck {
+                kittycat_perms: vec![format!("{}.{}", namespace, permission)],
+                native_perms: vec![],
+                inner_and: false,
             },
             is_default_enabled: true,
             web_hidden: false,
@@ -66,13 +75,10 @@ impl CommandExtendedData {
 
     pub fn kittycat_or_admin(namespace: &str, permission: &str) -> CommandExtendedData {
         CommandExtendedData {
-            default_perms: PermissionChecks::Simple {
-                checks: vec![PermissionCheck {
-                    kittycat_perms: vec![format!("{}.{}", namespace, permission)],
-                    native_perms: vec![serenity::all::Permissions::ADMINISTRATOR],
-                    outer_and: false,
-                    inner_and: false,
-                }],
+            default_perms: PermissionCheck {
+                kittycat_perms: vec![format!("{}.{}", namespace, permission)],
+                native_perms: vec![serenity::all::Permissions::ADMINISTRATOR],
+                inner_and: false,
             },
             is_default_enabled: true,
             web_hidden: false,
@@ -90,8 +96,8 @@ pub struct GuildCommandConfiguration {
     pub guild_id: String,
     /// The command name
     pub command: String,
-    /// The permission checks on the command, if unset, will revert to either the modules default_perms and if that is unset, the default perms set on the command itself
-    pub perms: Option<PermissionChecks>,
+    /// The permission checks on the command, if unset, will revert to the default perms set on the command itself
+    pub perms: Option<PermissionCheck>,
     /// Whether or not the command is disabled. None means to use the default command configuration
     pub disabled: Option<bool>,
 }
@@ -136,8 +142,8 @@ pub struct FullGuildCommandConfiguration {
     pub guild_id: String,
     /// The command name
     pub command: String,
-    /// The permission checks on the command, if unset, will revert to either the modules default_perms and if that is unset, the default perms set on the command itself
-    pub perms: Option<PermissionChecks>,
+    /// The permission checks on the command, if unset, will revert to the default perms set on the command itself
+    pub perms: Option<PermissionCheck>,
     /// Whether or not the command is disabled. None means to use the default command configuration
     pub disabled: Option<bool>,
     /// The time the command configuration was created
@@ -179,6 +185,4 @@ pub struct GuildModuleConfiguration {
     pub module: String,
     /// Whether ot not the module is disabled or not. None means to use the default module configuration
     pub disabled: Option<bool>,
-    /// The default permission checks of the module, can be overrided by the command configuration
-    pub default_perms: Option<PermissionChecks>,
 }

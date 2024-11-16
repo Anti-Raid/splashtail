@@ -18,7 +18,6 @@ import (
 	"go.api/types"
 	"go.std/silverpelt"
 	"go.std/structparser/db"
-	"go.std/utils"
 	"go.uber.org/zap"
 )
 
@@ -204,81 +203,6 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 
 		if cacheFlushFlag&CACHE_FLUSH_MODULE_TOGGLE != CACHE_FLUSH_MODULE_TOGGLE {
 			cacheFlushFlag |= CACHE_FLUSH_MODULE_TOGGLE
-		}
-	}
-
-	if body.DefaultPerms != nil {
-		value, clear, err := body.DefaultPerms.Get()
-
-		if err != nil {
-			return uapi.HttpResponse{
-				Status: http.StatusBadRequest,
-				Json: types.ApiError{
-					Message: "Error parsing default_perms value: " + err.Error(),
-				},
-			}
-		}
-
-		// Check for permissions next
-		hresp, ok = api.HandlePermissionCheck(d.Auth.ID, guildId, "modules modperms", rpc_messages.RpcCheckCommandOptions{
-			CustomResolvedKittycatPerms: permLimits,
-		})
-
-		if !ok {
-			return hresp
-		}
-
-		hresp, ok = api.HandlePermissionCheck(d.Auth.ID, guildId, "acl__modules_modperms "+body.Module, rpc_messages.RpcCheckCommandOptions{
-			CustomResolvedKittycatPerms: permLimits,
-		})
-
-		if !ok {
-			return hresp
-		}
-
-		if clear {
-			hresp, ok = api.HandlePermissionCheck(d.Auth.ID, guildId, "acl__"+body.Module+"_defaultperms_check", rpc_messages.RpcCheckCommandOptions{
-				CustomResolvedKittycatPerms: permLimits,
-				CustomModuleConfiguration: silverpelt.GuildModuleConfiguration{
-					Disabled:     utils.Pointer(false),
-					Module:       body.Module,
-					DefaultPerms: nil,
-				}.Fill(),
-			})
-
-			if !ok {
-				return hresp
-			}
-
-			updateCols = append(updateCols, "default_perms")
-			updateArgs = append(updateArgs, nil)
-		} else {
-			parsedValue, err := rpc.ParsePermissionChecks(d.Context, value)
-
-			if err != nil {
-				return uapi.HttpResponse{
-					Status: http.StatusBadRequest,
-					Json: types.ApiError{
-						Message: "Error parsing permission checks: " + err.Error(),
-					},
-				}
-			}
-
-			hresp, ok = api.HandlePermissionCheck(d.Auth.ID, guildId, "acl__"+body.Module+"_defaultperms_check", rpc_messages.RpcCheckCommandOptions{
-				CustomResolvedKittycatPerms: permLimits,
-				CustomModuleConfiguration: silverpelt.GuildModuleConfiguration{
-					Disabled:     utils.Pointer(false),
-					Module:       body.Module,
-					DefaultPerms: parsedValue,
-				}.Fill(),
-			})
-
-			if !ok {
-				return hresp
-			}
-
-			updateCols = append(updateCols, "default_perms")
-			updateArgs = append(updateArgs, parsedValue)
 		}
 	}
 

@@ -434,7 +434,6 @@ PermissionCheck is a type containing the permissions to check for a user.
 {
   "kittycat_perms": [],
   "native_perms": [],
-  "outer_and": false,
   "inner_and": false
 }
 ```
@@ -443,7 +442,6 @@ PermissionCheck is a type containing the permissions to check for a user.
 
 - `kittycat_perms` ([{Permission}](#type.Permission)): The kittycat permissions needed to run the command.
 - `native_perms` ([{string}](#type.string)): The native permissions needed to run the command.
-- `outer_and` ([bool](#type.bool)): Whether the next permission check should be ANDed (all needed) or OR'd (at least one) to the current
 - `inner_and` ([bool](#type.bool)): Whether or not the perms are ANDed (all needed) or OR'd (at least one)
 
 
@@ -540,36 +538,17 @@ Checks if a list of permissions in canonical string form contains a specific per
 
 - `has_perm` ([bool](#type.bool)): Whether the permission is present in the list of permissions as per kittycat rules.
 
-### check_perms_single
+### check_perms
 
 ```lua
-function check_perms_single(check: PermissionCheck, member_native_perms: Permissions, member_kittycat_perms: {Permission}): LuaPermissionResult
+function check_perms(check: PermissionCheck, member_native_perms: Permissions, member_kittycat_perms: {Permission}): LuaPermissionResult
 ```
 
-Checks if a single permission check passes.
+Checks if a permission check passes.
 
 #### Parameters
 
 - `check` ([PermissionCheck](#type.PermissionCheck)): The permission check to evaluate.
-- `member_native_perms` ([Permissions](#type.Permissions)): The native permissions of the member.
-- `member_kittycat_perms` ([{Permission}](#type.Permission)): The kittycat permissions of the member.
-
-
-#### Returns
-
-- `result` ([LuaPermissionResult](#type.LuaPermissionResult)): The result of the permission check.
-
-### eval_checks
-
-```lua
-function eval_checks(checks: {PermissionCheck}, member_native_perms: Permissions, member_kittycat_perms: {Permission}): LuaPermissionResult
-```
-
-Evaluates a list of permission checks.
-
-#### Parameters
-
-- `checks` ([{PermissionCheck}](#type.PermissionCheck)): The list of permission checks to evaluate.
 - `member_native_perms` ([Permissions](#type.Permissions)): The native permissions of the member.
 - `member_kittycat_perms` ([{Permission}](#type.Permission)): The kittycat permissions of the member.
 

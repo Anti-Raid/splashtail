@@ -186,8 +186,8 @@ pub(crate) async fn should_dispatch_event(
     event_name: &str,
     filters: &[String],
 ) -> Result<bool, silverpelt::Error> {
-    if event_name == "MESSAGE" {
-        // Message should only be fired if the template explicitly wants MESSAGE events
+    if event_name == "MESSAGE" || event_name == "AR/CheckCommand" {
+        // Message should only be fired if the template explicitly wants the event
         if !filters.contains(&event_name.to_string()) {
             return Ok(false);
         }

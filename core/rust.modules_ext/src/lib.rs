@@ -20,21 +20,6 @@ pub fn create_full_command_list<T: Module + ?Sized>(module: &T) -> Vec<CommandOb
 
     let mut commands = module.raw_commands();
 
-    // acl__{module}_defaultperms_check is a special command that is added to all modules
-    let mut acl_module_defaultperms_check = base_cmd();
-    acl_module_defaultperms_check.name = format!("acl__{}_defaultperms_check", module.id());
-    acl_module_defaultperms_check.qualified_name =
-        format!("acl__{}_defaultperms_check", module.id());
-    commands.push((
-        acl_module_defaultperms_check,
-        indexmap::indexmap! {
-            "" => CommandExtendedData {
-                virtual_command: true,
-                ..Default::default()
-            },
-        },
-    ));
-
     // Add in the settings related commands as virtual commands to allow configuring permissions while not listing in the bot
     for config_opt in module.config_options() {
         let mut created_cmd = config_opt_base_cmd();

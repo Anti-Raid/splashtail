@@ -8,8 +8,6 @@ pub struct PermissionCheck {
     pub kittycat_perms: Vec<String>,
     /// The native permissions needed to run the command
     pub native_perms: Vec<serenity::all::Permissions>,
-    /// Whether the next permission check should be ANDed (all needed) or OR'd (at least one) to the current
-    pub outer_and: bool,
     /// Whether or not the perms are ANDed (all needed) or OR'd (at least one)
     pub inner_and: bool,
 }
@@ -60,55 +58,6 @@ impl Display for PermissionCheck {
     }
 }
 
-#[derive(Clone, Hash, Eq, PartialEq, Serialize, Deserialize, Debug)]
-pub enum PermissionChecks {
-    Simple {
-        /// The list of permission checks
-        checks: Vec<PermissionCheck>,
-    },
-    Template {
-        /// The template string to use
-        template: String,
-    },
-}
-
-impl Default for PermissionChecks {
-    fn default() -> Self {
-        Self::Simple { checks: vec![] }
-    }
-}
-
-impl Display for PermissionChecks {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::Simple { checks } => {
-                for (i, check) in checks.iter().enumerate() {
-                    if i != 0 {
-                        write!(f, " ")?;
-                    }
-
-                    write!(f, "\n{}. {}", i, check)?; // The Display trait on PermissionCheck automatically formats individual permissions the correct way
-
-                    let empty = check.kittycat_perms.is_empty() && check.native_perms.is_empty();
-
-                    if i < checks.len() - 1 {
-                        if check.outer_and && !empty {
-                            write!(f, " AND ")?;
-                        } else {
-                            write!(f, " OR ")?;
-                        }
-                    }
-                }
-            }
-            Self::Template { template } => {
-                write!(f, "Template: {}", template)?;
-            }
-        }
-
-        Ok(())
-    }
-}
-
 // @ci go=PermissionResult
 #[derive(Clone, Serialize, Deserialize, Debug)]
 #[serde(tag = "var")]
@@ -122,7 +71,6 @@ pub enum PermissionResult {
     UnknownModule { module: String },
     ModuleNotFound {},
     ModuleDisabled { module: String },
-    NoChecksSucceeded { checks: PermissionChecks },
     DiscordError { error: String },
     SudoNotGranted {},
     GenericError { error: String },
@@ -148,7 +96,6 @@ impl PermissionResult {
             PermissionResult::UnknownModule { .. } => "unknown_module",
             PermissionResult::ModuleNotFound { .. } => "module_not_found",
             PermissionResult::ModuleDisabled { .. } => "module_disabled",
-            PermissionResult::NoChecksSucceeded { .. } => "no_checks_succeeded",
             PermissionResult::DiscordError { .. } => "discord_error",
             PermissionResult::SudoNotGranted { .. } => "sudo_not_granted",
             PermissionResult::GenericError { .. } => "generic_error",
@@ -198,12 +145,6 @@ impl PermissionResult {
             }
             PermissionResult::ModuleDisabled { module } => {
                 format!("The module ``{}`` is disabled on this server", module)
-            }
-            PermissionResult::NoChecksSucceeded { checks } => {
-                format!(
-                    "You do not have the required permissions to perform this action. You need at least one of the following permissions to perform this action:\n\n**Required Permissions**: {}",
-                    checks
-                )
             }
             PermissionResult::DiscordError { error } => {
                 format!("A Discord-related error seems to have occurred: {}.\n\nPlease try again later, it might work!", error)

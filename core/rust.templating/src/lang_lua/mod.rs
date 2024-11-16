@@ -503,7 +503,7 @@ async fn shard_messenger_for_guild(
     let guild_shard_id = serenity::all::ShardId(guild_shard_id);
 
     if serenity_context.shard_id != guild_shard_id {
-        return Ok(data.props.shard_messenger(guild_shard_id).await?);
+        return data.props.shard_messenger(guild_shard_id).await;
     }
 
     Ok(serenity_context.shard.clone())

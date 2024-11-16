@@ -65,16 +65,9 @@ pub struct PrimitiveConstraint {
 }
 
 /// A special helper types for building a list of primitives.
+#[derive(Default)]
 pub struct PrimitiveListBuilder {
     primitives: Vec<Primitive>,
-}
-
-impl Default for PrimitiveListBuilder {
-    fn default() -> Self {
-        PrimitiveListBuilder {
-            primitives: Vec::new(),
-        }
-    }
 }
 
 impl PrimitiveListBuilder {
@@ -141,8 +134,10 @@ impl Plugin {
 
             *method = new_method;
         } else {
-            let mut method = Method::default();
-            method.name = name.to_string();
+            let method = Method {
+                name: name.to_string(),
+                ..Default::default()
+            };
             self.methods.push(f(method));
         }
 
@@ -178,8 +173,10 @@ impl Plugin {
 
             *field = new_field;
         } else {
-            let mut field = Field::default();
-            field.name = name.to_string();
+            let field = Field {
+                name: name.to_string(),
+                ..Default::default()
+            };
             p.fields.push(f(field));
         }
 
@@ -394,7 +391,7 @@ impl Field {
     }
 }
 
-#[derive(serde::Serialize, Clone)]
+#[derive(Default, serde::Serialize, Clone)]
 pub struct Type {
     pub name: String,
     pub description: String,
@@ -402,19 +399,6 @@ pub struct Type {
     pub example: Option<Arc<dyn erased_serde::Serialize + Send + Sync>>,
     pub fields: Vec<Field>, // Description of the fields in type
     pub methods: Vec<Method>,
-}
-
-impl Default for Type {
-    fn default() -> Self {
-        Type {
-            name: String::new(),
-            description: String::new(),
-            generics: Vec::new(),
-            example: None,
-            methods: Vec::new(),
-            fields: Vec::new(),
-        }
-    }
 }
 
 impl std::fmt::Debug for Type {
@@ -429,10 +413,11 @@ impl std::fmt::Debug for Type {
 // Type builder code
 impl Type {
     pub fn new(name: &str, description: &str) -> Self {
-        let mut t = Type::default();
-        t.name = name.to_string();
-        t.description = description.to_string();
-        t
+        Type {
+            name: name.to_string(),
+            description: description.to_string(),
+            ..Default::default()
+        }
     }
 
     pub fn example(self, example: Arc<dyn erased_serde::Serialize + Send + Sync>) -> Self {

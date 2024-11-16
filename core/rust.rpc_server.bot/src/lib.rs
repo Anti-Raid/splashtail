@@ -222,17 +222,17 @@ async fn check_command_permission(
     }))
 }
 
-/// Verify/parse a set of permission checks returning the parsed checks [ParsePermissionChecks]
+/// Verify/parse a permission check returning the parsed check [ParsePermissionChecks]
 async fn parse_permission_checks(
     State(AppData { .. }): State<AppData>,
-    Json(checks): Json<permissions::types::PermissionChecks>,
-) -> Response<permissions::types::PermissionChecks> {
-    let parsed_checks = permissions::parse::parse_permission_checks(&checks)
+    Json(checks): Json<permissions::types::PermissionCheck>,
+) -> Response<permissions::types::PermissionCheck> {
+    let parsed_checks = permissions::parse::parse_permission_check(&checks)
         .await
         .map_err(|e| {
             (
                 StatusCode::INTERNAL_SERVER_ERROR,
-                format!("Failed to parse permission checks: {:#?}", e),
+                format!("Failed to parse permission check: {:#?}", e),
             )
         })?;
 

@@ -31,10 +31,8 @@ pub fn init_plugin(lua: &Lua) -> LuaResult<LuaTable> {
                 };
     
                 // Get the last_execution_time of the VM
-                let last_exec_time = data.last_execution_time
-                .load(std::sync::atomic::Ordering::Acquire); // Get the elapsed time since the last execution
-            
-                last_exec_time
+                data.last_execution_time
+                .load(std::sync::atomic::Ordering::Acquire) // Get the elapsed time since the last execution
             };
 
             let start = Instant::now();

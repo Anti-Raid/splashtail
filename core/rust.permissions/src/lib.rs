@@ -1,14 +1,12 @@
 pub mod parse;
 pub mod types;
 
-use types::{PermissionCheck, PermissionChecks, PermissionResult};
+use types::{PermissionCheck, PermissionResult};
 
 pub type Error = Box<dyn std::error::Error + Send + Sync>; // This is constant and should be copy pasted
 
-/// This function runs a single permission check on a command without taking any branching decisions
-///
-/// This may be useful when mocking or visualizing a permission check
-pub fn check_perms_single(
+/// This function runs a permission check on a command
+pub fn check_perms(
     check: &PermissionCheck,
     member_native_perms: serenity::all::Permissions,
     member_kittycat_perms: &[kittycat::perms::Permission],
@@ -76,77 +74,24 @@ pub fn check_perms_single(
     PermissionResult::Ok {}
 }
 
-/// Executes a set of PermissionCheck against the member's native permissions and kittycat permissions
-pub fn eval_checks(
-    checks: &[PermissionCheck],
-    member_native_perms: serenity::all::Permissions,
-    member_kittycat_perms: Vec<kittycat::perms::Permission>,
-) -> PermissionResult {
-    let mut remaining_checks = std::collections::VecDeque::with_capacity(checks.len());
-
-    for check in checks {
-        remaining_checks.push_back(check);
-    }
-
-    while let Some(check) = remaining_checks.pop_front() {
-        // Run the check
-        let res = check_perms_single(check, member_native_perms, &member_kittycat_perms);
-
-        if check.outer_and {
-            let next = match remaining_checks.pop_front() {
-                Some(next) => next,
-                None => return res,
-            };
-
-            let res_next = check_perms_single(next, member_native_perms, &member_kittycat_perms);
-
-            if !res.is_ok() || !res_next.is_ok() {
-                return PermissionResult::NoChecksSucceeded {
-                    checks: PermissionChecks::Simple {
-                        checks: vec![check.clone(), next.clone()],
-                    },
-                };
-            }
-        } else {
-            if res.is_ok() {
-                return res;
-            }
-
-            let next = match remaining_checks.pop_front() {
-                Some(next) => next,
-                None => return res,
-            };
-
-            let res_next = check_perms_single(next, member_native_perms, &member_kittycat_perms);
-
-            if res_next.is_ok() {
-                return res_next;
-            }
-        }
-    }
-
-    PermissionResult::Ok {}
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
 
     fn err_with_code(e: PermissionResult, code: &str) -> bool {
         let code_got = e.code();
-        println!("test_check_perms_single: {} == {}", code_got, code);
+        println!("test_check_perms: {} == {}", code_got, code);
         code == code_got
     }
 
     #[test]
-    fn test_check_perms_single() {
+    fn test_check_perms() {
         // Basic tests
         assert!(err_with_code(
-            check_perms_single(
+            check_perms(
                 &PermissionCheck {
                     kittycat_perms: vec![],
                     native_perms: vec![serenity::all::Permissions::ADMINISTRATOR],
-                    outer_and: false,
                     inner_and: false,
                 },
                 serenity::all::Permissions::empty(),
@@ -155,11 +100,10 @@ mod tests {
             "missing_any_perms"
         ));
 
-        assert!(check_perms_single(
+        assert!(check_perms(
             &PermissionCheck {
                 kittycat_perms: vec![],
                 native_perms: vec![],
-                outer_and: false,
                 inner_and: false,
             },
             serenity::all::Permissions::empty(),
@@ -169,14 +113,13 @@ mod tests {
 
         // With inner and
         assert!(err_with_code(
-            check_perms_single(
+            check_perms(
                 &PermissionCheck {
                     kittycat_perms: vec![],
                     native_perms: vec![
                         serenity::all::Permissions::ADMINISTRATOR,
                         serenity::all::Permissions::BAN_MEMBERS
                     ],
-                    outer_and: false,
                     inner_and: true,
                 },
                 serenity::all::Permissions::BAN_MEMBERS,
@@ -186,11 +129,10 @@ mod tests {
         ));
 
         // Admin overrides other native perms
-        assert!(check_perms_single(
+        assert!(check_perms(
             &PermissionCheck {
                 kittycat_perms: vec![],
                 native_perms: vec![serenity::all::Permissions::BAN_MEMBERS],
-                outer_and: false,
                 inner_and: false,
             },
             serenity::all::Permissions::ADMINISTRATOR,
@@ -200,11 +142,10 @@ mod tests {
 
         // Kittycat
         assert!(err_with_code(
-            check_perms_single(
+            check_perms(
                 &PermissionCheck {
                     kittycat_perms: vec!["backups.create".to_string()],
                     native_perms: vec![],
-                    outer_and: false,
                     inner_and: false,
                 },
                 serenity::all::Permissions::ADMINISTRATOR,
@@ -212,115 +153,5 @@ mod tests {
             ),
             "missing_any_perms"
         ));
-    }
-
-    #[tokio::test]
-    async fn test_eval_checks() {
-        // Basic test
-        assert!(eval_checks(
-            &[PermissionCheck::default()],
-            serenity::all::Permissions::empty(),
-            vec!["abc.test".into()],
-        )
-        .is_ok());
-
-        // With a native permission
-        assert!(err_with_code(
-            eval_checks(
-                &[PermissionCheck {
-                    kittycat_perms: vec![],
-                    native_perms: vec![serenity::all::Permissions::ADMINISTRATOR],
-                    outer_and: false,
-                    inner_and: false,
-                }],
-                serenity::all::Permissions::empty(),
-                vec!["abc.test".into()],
-            ),
-            "missing_any_perms"
-        ));
-
-        assert!(err_with_code(
-            eval_checks(
-                &[PermissionCheck {
-                    kittycat_perms: vec![],
-                    native_perms: vec![serenity::all::Permissions::ADMINISTRATOR],
-                    outer_and: false,
-                    inner_and: false,
-                }],
-                serenity::all::Permissions::empty(),
-                vec!["abc.test".into()],
-            ),
-            "missing_any_perms"
-        ));
-
-        assert!(err_with_code(
-            eval_checks(
-                &[
-                    PermissionCheck {
-                        kittycat_perms: vec![],
-                        native_perms: vec![serenity::all::Permissions::BAN_MEMBERS],
-                        outer_and: true,
-                        inner_and: false,
-                    },
-                    PermissionCheck {
-                        kittycat_perms: vec![],
-                        native_perms: vec![serenity::all::Permissions::KICK_MEMBERS],
-                        outer_and: false,
-                        inner_and: false,
-                    },
-                ],
-                serenity::all::Permissions::BAN_MEMBERS,
-                vec!["abc.test".into()],
-            ),
-            "no_checks_succeeded"
-        ));
-
-        // Real-life example
-        assert!(err_with_code(
-            eval_checks(
-                &[PermissionCheck {
-                    kittycat_perms: vec!["backups.create".to_string()],
-                    native_perms: vec![],
-                    outer_and: false,
-                    inner_and: false,
-                }],
-                serenity::all::Permissions::ADMINISTRATOR,
-                vec![],
-            ),
-            "missing_any_perms"
-        ));
-
-        // Real-life example
-        assert!(eval_checks(
-            &[PermissionCheck {
-                kittycat_perms: vec!["backups.create".to_string()],
-                native_perms: vec![serenity::all::Permissions::ADMINISTRATOR],
-                outer_and: false,
-                inner_and: true,
-            }],
-            serenity::all::Permissions::ADMINISTRATOR,
-            vec!["backups.create".into()],
-        )
-        .is_ok());
-
-        assert!(eval_checks(
-            &[
-                PermissionCheck {
-                    kittycat_perms: vec![],
-                    native_perms: vec![serenity::all::Permissions::BAN_MEMBERS],
-                    outer_and: false,
-                    inner_and: false,
-                },
-                PermissionCheck {
-                    kittycat_perms: vec![],
-                    native_perms: vec![serenity::all::Permissions::KICK_MEMBERS],
-                    outer_and: false,
-                    inner_and: false,
-                },
-            ],
-            serenity::all::Permissions::BAN_MEMBERS,
-            vec!["abc.test".into()],
-        )
-        .is_ok());
     }
 }

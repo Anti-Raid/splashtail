@@ -6,6 +6,7 @@ mod ping;
 mod settings;
 mod stats;
 mod tasks;
+mod web;
 mod whois;
 
 use futures_util::future::FutureExt;
@@ -68,7 +69,6 @@ impl silverpelt::module::Module for Module {
                     "list" => silverpelt::types::CommandExtendedData::kittycat_or_admin("modules", "list"),
                     "enable" => silverpelt::types::CommandExtendedData::kittycat_or_admin("modules", "enable"),
                     "disable" => silverpelt::types::CommandExtendedData::kittycat_or_admin("modules", "disable"),
-                    "modperms" => silverpelt::types::CommandExtendedData::kittycat_or_admin("modules", "modperms"),
                 },
             ),
             (
@@ -78,6 +78,15 @@ impl silverpelt::module::Module for Module {
                     "enable" => silverpelt::types::CommandExtendedData::kittycat_or_admin("commands", "enable"),
                     "disable" => silverpelt::types::CommandExtendedData::kittycat_or_admin("commands", "disable"),
                     "modperms" => silverpelt::types::CommandExtendedData::kittycat_or_admin("commands", "modperms"),
+                },
+            ),
+            (
+                web::web(),
+                indexmap! {
+                    "use" => silverpelt::types::CommandExtendedData {
+                        virtual_command: true,
+                        ..silverpelt::types::CommandExtendedData::kittycat_or_admin("web", "use")
+                    },
                 },
             ),
         ]

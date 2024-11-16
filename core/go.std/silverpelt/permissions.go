@@ -9,7 +9,6 @@ type PermissionResult struct {
 	Check         *PermissionCheck           `json:"check,omitempty"`
 	CommandConfig *GuildCommandConfiguration `json:"command_config,omitempty"`
 	ModuleConfig  *GuildModuleConfiguration  `json:"module_config,omitempty"`
-	Checks        *PermissionChecks          `json:"checks,omitempty"`
 	Error         string                     `json:"error,omitempty"`
 }
 
@@ -40,8 +39,6 @@ func (p PermissionResult) Code() string {
 		return "module_not_found"
 	case "ModuleDisabled":
 		return "module_disabled"
-	case "NoChecksSucceeded":
-		return "no_checks_succeeded"
 	case "DiscordError":
 		return "discord_error"
 	case "SudoNotGranted":
