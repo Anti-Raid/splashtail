@@ -78,9 +78,8 @@ type SettingsOperationRequest struct {
 type RpcCheckCommandOptionsFlag uint8
 
 const (
-	RpcCheckCommandOptionsFlagIgnoreModuleDisabled        RpcCheckCommandOptionsFlag = 1 << 2
-	RpcCheckCommandOptionsFlagIgnoreCommandDisabled       RpcCheckCommandOptionsFlag = 1 << 3
-	RpcCheckCommandOptionsFlagSkipCustomResolvedFitChecks RpcCheckCommandOptionsFlag = 1 << 4
+	RpcCheckCommandOptionsFlagIgnoreModuleDisabled  RpcCheckCommandOptionsFlag = 1 << 2
+	RpcCheckCommandOptionsFlagIgnoreCommandDisabled RpcCheckCommandOptionsFlag = 1 << 3
 )
 
 type RpcCheckCommandOptions struct {

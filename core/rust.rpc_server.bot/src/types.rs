@@ -73,8 +73,6 @@ bitflags::bitflags! {
         const IGNORE_MODULE_DISABLED = 1 << 2;
         /// Whether or not to ignore the fact that the command is disabled in the guild
         const IGNORE_COMMAND_DISABLED = 1 << 3;
-        /// Skip custom resolved kittycat permission fit 'checks' (AKA does the user have the actual permissions ofthe custom resolved permissions)
-        const SKIP_CUSTOM_RESOLVED_FIT_CHECKS = 1 << 4;
     }
 }
 

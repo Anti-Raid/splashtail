@@ -209,9 +209,6 @@ async fn check_command_permission(
             }),
             custom_command_configuration: opts.custom_command_configuration.map(|x| *x),
             custom_module_configuration: opts.custom_module_configuration.map(|x| *x),
-            skip_custom_resolved_fit_checks: flags.contains(
-                crate::types::RpcCheckCommandOptionsFlags::SKIP_CUSTOM_RESOLVED_FIT_CHECKS,
-            ),
             channel_id: opts.channel_id,
         },
     )

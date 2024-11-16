@@ -146,27 +146,23 @@ pub async fn get_user_kittycat_perms(
     roles: &FixedArray<serenity::all::RoleId>,
 ) -> Result<Vec<kittycat::perms::Permission>, silverpelt::Error> {
     if let Some(ref custom_resolved_kittycat_perms) = opts.custom_resolved_kittycat_perms {
-        if !opts.skip_custom_resolved_fit_checks {
-            let kc_perms = silverpelt::member_permission_calc::get_kittycat_perms(
-                &mut *pool.acquire().await?,
-                guild_id,
-                guild_owner_id,
-                user_id,
-                roles,
-            )
-            .await?;
+        let kc_perms = silverpelt::member_permission_calc::get_kittycat_perms(
+            &mut *pool.acquire().await?,
+            guild_id,
+            guild_owner_id,
+            user_id,
+            roles,
+        )
+        .await?;
 
-            let mut resolved_perms = Vec::new();
-            for perm in custom_resolved_kittycat_perms {
-                if kittycat::perms::has_perm(&kc_perms, perm) {
-                    resolved_perms.push(perm.clone());
-                }
+        let mut resolved_perms = Vec::new();
+        for perm in custom_resolved_kittycat_perms {
+            if kittycat::perms::has_perm(&kc_perms, perm) {
+                resolved_perms.push(perm.clone());
             }
-
-            Ok(resolved_perms)
-        } else {
-            Ok(custom_resolved_kittycat_perms.to_vec())
         }
+
+        Ok(resolved_perms)
     } else {
         Ok(silverpelt::member_permission_calc::get_kittycat_perms(
             &mut *pool.acquire().await?,
@@ -189,10 +185,6 @@ pub struct CheckCommandOptions {
     /// Whether or not to ignore the fact that the command is disabled in the guild
     #[serde(default)]
     pub ignore_command_disabled: bool,
-
-    /// Skip custom resolved kittycat permission fit 'checks' (AKA does the user have the actual permissions ofthe custom resolved permissions)
-    #[serde(default)]
-    pub skip_custom_resolved_fit_checks: bool,
 
     /// What custom resolved permissions to use for the user. API needs this for limiting the permissions of a user
     #[serde(default)]
@@ -218,7 +210,6 @@ impl Default for CheckCommandOptions {
             ignore_module_disabled: false,
             ignore_command_disabled: false,
             custom_resolved_kittycat_perms: None,
-            skip_custom_resolved_fit_checks: false,
             custom_command_configuration: None,
             custom_module_configuration: None,
             channel_id: None,
