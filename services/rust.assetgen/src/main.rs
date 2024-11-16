@@ -1,4 +1,5 @@
 mod docgen;
+mod serenity_test;
 mod tester;
 
 use std::fs::File;
@@ -83,8 +84,11 @@ async fn main() {
 
             println!("{}", docs)
         }
+        Some("serenity.test") => {
+            crate::serenity_test::test_serenity().await;
+        }
         _ => {
-            println!("No/unknown command specified.\n\ngenassets: [generate build assets]\ntest [test bot with some sanity checks]\ntemplatedocs: [generate template docs]");
+            println!("No/unknown command specified.\n\ngenassets: [generate build assets]\ntest [test bot with some sanity checks]\ntemplatedocs: [generate template docs]\nserenity.test: [test serenity library]");
         }
     }
 }
