@@ -238,8 +238,11 @@ impl Method {
 
             *parameter = new_parameter;
         } else {
-            let mut parameter = Parameter::default();
-            parameter.name = name.to_string();
+            let parameter = Parameter {
+                name: name.to_string(),
+                ..Default::default()
+            };
+
             self.parameters.push(f(parameter));
         }
 
