@@ -4,7 +4,7 @@ const MAX_KITTYCAT_PERMS: usize = 10;
 const MAX_INDIVIDUAL_KITTYCAT_PERM_SIZE: usize = 128;
 const MAX_NATIVE_PERMS: usize = 10;
 
-// Parses a user-inputted PermissionChecks object into a parsed PermissionChecks object.
+// Parses a user-inputted PermissionCheck object into a parsed PermissionCheck object.
 pub async fn parse_permission_check(
     check: &PermissionCheck,
 ) -> Result<PermissionCheck, crate::Error> {

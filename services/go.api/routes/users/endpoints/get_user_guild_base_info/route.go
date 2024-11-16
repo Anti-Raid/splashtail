@@ -73,7 +73,7 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 
 	var finishedOnboarding bool
 
-	err = state.Pool.QueryRow(d.Context, "SELECT finished_onboarding FROM guilds WHERE guild_id = $2", d.Auth.ID, guildId).Scan(&finishedOnboarding)
+	err = state.Pool.QueryRow(d.Context, "SELECT finished_onboarding FROM guilds WHERE id = $1", guildId).Scan(&finishedOnboarding)
 
 	if err != nil {
 		return uapi.HttpResponse{
