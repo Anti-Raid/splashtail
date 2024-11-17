@@ -61,7 +61,14 @@ pub async fn get_user_discord_info(
                 return Ok((
                     mem.user.id == cached_guild.owner_id,
                     cached_guild.owner_id,
-                    cached_guild.member_permissions(mem),
+                    mem.permissions
+                        .unwrap_or(splashcore_rs::serenity_backport::user_permissions(
+                            mem.user.id,
+                            &mem.roles,
+                            cached_guild.id,
+                            &cached_guild.roles,
+                            cached_guild.owner_id,
+                        )),
                     mem.roles.clone(),
                 ));
             }
@@ -72,7 +79,13 @@ pub async fn get_user_discord_info(
             return Ok((
                 member.user.id == cached_guild.owner_id,
                 cached_guild.owner_id,
-                cached_guild.member_permissions(member),
+                splashcore_rs::serenity_backport::user_permissions(
+                    member.user.id,
+                    &member.roles,
+                    cached_guild.id,
+                    &cached_guild.roles,
+                    cached_guild.owner_id,
+                ),
                 member.roles.clone(),
             ));
         }
@@ -103,7 +116,14 @@ pub async fn get_user_discord_info(
             return Ok((
                 mem.user.id == guild.owner_id,
                 guild.owner_id,
-                guild.member_permissions(mem),
+                mem.permissions
+                    .unwrap_or(splashcore_rs::serenity_backport::user_permissions(
+                        mem.user.id,
+                        &mem.roles,
+                        guild.id,
+                        &guild.roles,
+                        guild.owner_id,
+                    )),
                 mem.roles.clone(),
             ));
         }
@@ -132,7 +152,13 @@ pub async fn get_user_discord_info(
     Ok((
         member.user.id == guild.owner_id,
         guild.owner_id,
-        guild.member_permissions(&member),
+        splashcore_rs::serenity_backport::user_permissions(
+            member.user.id,
+            &member.roles,
+            guild.id,
+            &guild.roles,
+            guild.owner_id,
+        ),
         member.roles.clone(),
     ))
 }

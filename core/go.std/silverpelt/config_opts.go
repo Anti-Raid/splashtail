@@ -1,9 +1,7 @@
 package silverpelt
 
 import (
-	"github.com/bwmarrin/discordgo"
 	orderedmap "github.com/wk8/go-ordered-map/v2"
-	"go.std/ext_types"
 )
 
 type CanonicalSettingsError struct {
@@ -67,11 +65,7 @@ type CanonicalInnerColumnTypeStringKind struct {
 		Kind string `json:"kind"`
 		Ctx  string `json:"ctx"`
 	} `json:"TemplateRef,omitempty"`
-	User    *struct{} `json:"User,omitempty"`
-	Channel *struct {
-		AllowedTypes         []discordgo.ChannelType `json:"allowed_types"`
-		NeededBotPermissions ext_types.Permissions   `json:"needed_bot_permissions"`
-	} `json:"Channel,omitempty"`
+	User     *struct{} `json:"User,omitempty"`
 	Role     *struct{} `json:"Role,omitempty"`
 	Emoji    *struct{} `json:"Emoji,omitempty"`
 	Message  *struct{} `json:"Message,omitempty"`

@@ -14,6 +14,26 @@ pub(crate) async fn event_listener(ectx: &EventHandlerContext) -> Result<(), sil
 
             let bot_id = ectx.serenity_context.cache.current_user().id;
 
+            let guild =
+                match sandwich_driver::guild(&cache_http, &ectx.data.reqwest, punishment.guild_id)
+                    .await
+                {
+                    Ok(guild) => guild,
+                    Err(e) => {
+                        sqlx::query!(
+                        "UPDATE punishments SET is_handled = true, handle_log = $1 WHERE id = $2",
+                        serde_json::json!({
+                            "error": format!("Unable to get guild: {}", e),
+                        }),
+                        punishment.id
+                    )
+                        .execute(&ectx.data.pool)
+                        .await?;
+
+                        return Ok(());
+                    }
+                };
+
             let current_user = match sandwich_driver::member_in_guild(
                 &cache_http,
                 &ectx.data.reqwest,
@@ -38,7 +58,8 @@ pub(crate) async fn event_listener(ectx: &EventHandlerContext) -> Result<(), sil
                 }
             };
 
-            let permissions = current_user.permissions(&ectx.serenity_context.cache)?;
+            let permissions =
+                splashcore_rs::serenity_backport::member_permissions(&guild, &current_user);
 
             // Bot doesn't have permissions to unban
             if !permissions.ban_members() {

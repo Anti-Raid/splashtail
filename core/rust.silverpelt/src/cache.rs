@@ -72,9 +72,9 @@ impl SilverpeltCache {
         // Add the commands to cache
         for (command, extended_data) in module.full_command_list().iter() {
             self.command_id_module_map
-                .insert(command.name.clone(), module.id().to_string());
+                .insert(command.name.to_string(), module.id().to_string());
             self.command_extra_data_map
-                .insert(command.name.clone(), extended_data.clone());
+                .insert(command.name.to_string(), extended_data.clone());
         }
 
         // Add to canonical cache
@@ -89,8 +89,9 @@ impl SilverpeltCache {
     pub fn remove_module(&mut self, module_id: &str) {
         if let Some((_, module)) = self.module_cache.remove(module_id) {
             for (command, _) in module.full_command_list().iter() {
-                self.command_id_module_map.remove(&command.name);
-                self.command_extra_data_map.remove(&command.name);
+                self.command_id_module_map.remove(&command.name.to_string());
+                self.command_extra_data_map
+                    .remove(&command.name.to_string());
             }
 
             self.canonical_module_cache.remove(module_id);

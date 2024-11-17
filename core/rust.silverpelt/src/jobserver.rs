@@ -76,9 +76,9 @@ pub fn embed<'a>(
             let furl = format!("{}/jobs/{}/ioauth/download-link", base_api_url, job.id);
             description += &format!("\n\n:link: [Download {}]({})", output.filename, &furl);
 
-            components.push(CreateActionRow::Buttons(vec![CreateButton::new_link(furl)
-                .label("Download")
-                .emoji('📥')]));
+            components.push(CreateActionRow::Buttons(
+                vec![CreateButton::new_link(furl).label("Download").emoji('📥')].into(),
+            ));
         }
     }
 

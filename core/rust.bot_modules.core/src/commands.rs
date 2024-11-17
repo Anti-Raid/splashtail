@@ -402,29 +402,32 @@ pub async fn commands_modperms(
         poise::CreateReply::new()
             .content(msg)
             .ephemeral(true)
-            .components(vec![serenity::all::CreateActionRow::Buttons(vec![
-                serenity::all::CreateButton::new("perms/editraw")
-                    .style(serenity::all::ButtonStyle::Primary)
-                    .label("Open Raw Permission Editor"),
-                if command_config.disabled.unwrap_or_default() {
-                    serenity::all::CreateButton::new("cmd/enable")
-                        .style(serenity::all::ButtonStyle::Success)
-                        .label("Enable Command")
-                } else {
-                    serenity::all::CreateButton::new("cmd/disable")
+            .components(vec![serenity::all::CreateActionRow::Buttons(
+                vec![
+                    serenity::all::CreateButton::new("perms/editraw")
+                        .style(serenity::all::ButtonStyle::Primary)
+                        .label("Open Raw Permission Editor"),
+                    if command_config.disabled.unwrap_or_default() {
+                        serenity::all::CreateButton::new("cmd/enable")
+                            .style(serenity::all::ButtonStyle::Success)
+                            .label("Enable Command")
+                    } else {
+                        serenity::all::CreateButton::new("cmd/disable")
+                            .style(serenity::all::ButtonStyle::Danger)
+                            .label("Disable Command")
+                    },
+                    serenity::all::CreateButton::new("cmd/reset-toggle")
                         .style(serenity::all::ButtonStyle::Danger)
-                        .label("Disable Command")
-                },
-                serenity::all::CreateButton::new("cmd/reset-toggle")
-                    .style(serenity::all::ButtonStyle::Danger)
-                    .label("Reset Command Toggle"),
-                serenity::all::CreateButton::new("perms/reset")
-                    .style(serenity::all::ButtonStyle::Danger)
-                    .label("Reset Command Perms"),
-                serenity::all::CreateButton::new("cmd/save")
-                    .style(serenity::all::ButtonStyle::Secondary)
-                    .label("Save Command Configuration"),
-            ])])
+                        .label("Reset Command Toggle"),
+                    serenity::all::CreateButton::new("perms/reset")
+                        .style(serenity::all::ButtonStyle::Danger)
+                        .label("Reset Command Perms"),
+                    serenity::all::CreateButton::new("cmd/save")
+                        .style(serenity::all::ButtonStyle::Secondary)
+                        .label("Save Command Configuration"),
+                ]
+                .into(),
+            )])
     }
 
     let msg = ctx
@@ -434,6 +437,7 @@ pub async fn commands_modperms(
         .await?;
 
     let collector = msg
+        .id
         .await_component_interactions(ctx.serenity_context().shard.clone())
         .author_id(ctx.author().id)
         .timeout(Duration::from_secs(600));

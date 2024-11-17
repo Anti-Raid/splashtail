@@ -47,10 +47,6 @@ impl silverpelt::module::Module for Module {
                 silverpelt::types::CommandExtendedData::none_map(),
             ),
             (
-                help::simplehelp(),
-                silverpelt::types::CommandExtendedData::none_map(),
-            ),
-            (
                 stats::stats(),
                 silverpelt::types::CommandExtendedData::none_map(),
             ),

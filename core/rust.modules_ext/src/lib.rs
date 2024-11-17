@@ -23,19 +23,19 @@ pub fn create_full_command_list<T: Module + ?Sized>(module: &T) -> Vec<CommandOb
     // Add in the settings related commands as virtual commands to allow configuring permissions while not listing in the bot
     for config_opt in module.config_options() {
         let mut created_cmd = config_opt_base_cmd();
-        created_cmd.name = config_opt.id.to_string();
-        created_cmd.qualified_name = config_opt.id.to_string();
+        created_cmd.name = config_opt.id.to_string().into();
+        created_cmd.qualified_name = config_opt.id.to_string().into();
 
         for (operation_type, _) in config_opt.operations.iter() {
             let mut subcmd = config_opt_base_cmd();
-            subcmd.name = operation_type.corresponding_command_suffix().to_string();
-            subcmd.qualified_name = operation_type.corresponding_command_suffix().to_string();
+            subcmd.name = operation_type.corresponding_command_suffix().into();
+            subcmd.qualified_name = operation_type.corresponding_command_suffix().into();
             subcmd.description = {
                 match operation_type {
-                    OperationType::View => Some(format!("View {}", config_opt.id)),
-                    OperationType::Create => Some(format!("Create {}", config_opt.id)),
-                    OperationType::Update => Some(format!("Update {}", config_opt.id)),
-                    OperationType::Delete => Some(format!("Delete {}", config_opt.id)),
+                    OperationType::View => Some(format!("View {}", config_opt.id).into()),
+                    OperationType::Create => Some(format!("Create {}", config_opt.id).into()),
+                    OperationType::Update => Some(format!("Update {}", config_opt.id).into()),
+                    OperationType::Delete => Some(format!("Delete {}", config_opt.id).into()),
                 }
             };
             created_cmd.subcommands.push(subcmd);

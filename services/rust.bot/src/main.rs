@@ -5,6 +5,7 @@ use gwevent::core::get_event_guild_id;
 use silverpelt::ar_event::{AntiraidEvent, EventHandlerContext};
 
 use std::sync::{Arc, LazyLock};
+use std::time::Duration;
 use tokio::sync::RwLock;
 
 use cap::Cap;
@@ -436,7 +437,7 @@ async fn main() {
                 // Record command execution counter
                 let _ = sqlx::query!(
                     "INSERT INTO cmd_usage_stats (command_name, uses) VALUES ($1, 1) ON CONFLICT (command_name) DO UPDATE SET uses = cmd_usage_stats.uses + 1",
-                    ctx.command().qualified_name
+                    ctx.command().qualified_name.to_string()
                 )
                 .execute(&ctx.data().pool)
                 .await;
@@ -497,6 +498,7 @@ async fn main() {
     let mut client = client_builder
         .framework(framework)
         .data(Arc::new(data))
+        .wait_time_between_shard_start(Duration::from_secs(0)) // Disable wait time between shard start due to Sandwich
         .await
         .expect("Error creating client");
 

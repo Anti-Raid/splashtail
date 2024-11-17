@@ -16,12 +16,13 @@ pub async fn on_error(error: poise::FrameworkError<'_, Data, Error>) {
                                 .title("An error has occurred")
                                 .description(error.to_string()),
                         )
-                        .components(vec![serenity::all::CreateActionRow::Buttons(vec![
-                            serenity::all::CreateButton::new_link(
+                        .components(vec![serenity::all::CreateActionRow::Buttons(
+                            vec![serenity::all::CreateButton::new_link(
                                 &config::CONFIG.meta.support_server_invite,
                             )
-                            .label("Support Server"),
-                        ])]),
+                            .label("Support Server")]
+                            .into(),
+                        )]),
                 )
                 .await;
 
@@ -48,12 +49,13 @@ pub async fn on_error(error: poise::FrameworkError<'_, Data, Error>) {
                                     .title("Command Check Failed")
                                     .description(error.to_string()),
                             )
-                            .components(vec![serenity::all::CreateActionRow::Buttons(vec![
-                                serenity::all::CreateButton::new_link(
+                            .components(vec![serenity::all::CreateActionRow::Buttons(
+                                vec![serenity::all::CreateButton::new_link(
                                     &config::CONFIG.meta.support_server_invite,
                                 )
-                                .label("Support Server"),
-                            ])]),
+                                .label("Support Server")]
+                                .into(),
+                            )]),
                     )
                     .await;
 
@@ -86,7 +88,7 @@ pub async fn on_error(error: poise::FrameworkError<'_, Data, Error>) {
                             &config::CONFIG.meta.support_server_invite,
                         )
                         .label("Support Server"),
-                    ])]),
+                    ].into())]),
                 )
                 .await;
 
@@ -130,7 +132,7 @@ Please check out the `User Guide` and use the `Website` to tailor AntiRaid to th
                         config::CONFIG.meta.support_server_invite.clone(),
                     )
                     .label("Support Server")
-                ]
+                ].into()
             )
         ]
     )
@@ -264,23 +266,21 @@ pub fn get_commands(
                 continue;
             }
 
-            cmd.category = Some(module.id().to_string());
+            cmd.category = Some(module.id().into());
 
             let mut subcommands = Vec::new();
             // Ensure subcommands are also linked to a category
             for subcommand in cmd.subcommands {
-                let ext_data = extended_data
-                    .get(subcommand.name.as_str())
-                    .unwrap_or_else(|| {
-                        panic!("Subcommand {} does not have extended data", subcommand.name)
-                    });
+                let ext_data = extended_data.get(&*subcommand.name).unwrap_or_else(|| {
+                    panic!("Subcommand {} does not have extended data", subcommand.name)
+                });
 
                 if ext_data.virtual_command {
                     continue;
                 }
 
                 subcommands.push(poise::Command {
-                    category: Some(module.id().to_string()),
+                    category: Some(module.id().into()),
                     ..subcommand
                 });
             }

@@ -1,11 +1,11 @@
-use serenity::all::AutocompleteChoice;
+use serenity::all::{AutocompleteChoice, CreateAutocompleteResponse};
 use silverpelt::Context;
 use silverpelt::Error;
 
 async fn module_list_autocomplete<'a>(
     ctx: Context<'_>,
     partial: &'a str,
-) -> Vec<AutocompleteChoice<'a>> {
+) -> CreateAutocompleteResponse<'a> {
     let data = ctx.data();
     let mut ac = Vec::new();
 
@@ -21,7 +21,7 @@ async fn module_list_autocomplete<'a>(
         }
     }
 
-    ac
+    CreateAutocompleteResponse::new().set_choices(ac)
 }
 
 #[poise::command(

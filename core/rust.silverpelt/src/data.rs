@@ -62,7 +62,7 @@ impl Data {
     /// Given a settings data, return the data
     ///
     /// This is just a wrapper for settings_data.serenity_context.data::<Data>().clone()
-    pub fn data(settings_data: &module_settings::types::SettingsData) -> Arc<Self> {
+    pub fn get_data(settings_data: &module_settings::types::SettingsData) -> Arc<Self> {
         settings_data.serenity_context.data::<Data>().clone()
     }
 }

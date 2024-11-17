@@ -2,6 +2,7 @@ pub mod jobserver;
 pub mod modifier;
 pub mod objectstore;
 pub mod priorityset;
+pub mod serenity_backport;
 pub mod utils;
 pub mod value;
 

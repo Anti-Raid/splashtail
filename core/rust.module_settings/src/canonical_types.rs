@@ -162,11 +162,6 @@ pub enum CanonicalInnerColumnTypeStringKind {
     KittycatPermission {},
     /// User
     User {},
-    /// Channel
-    Channel {
-        allowed_types: Vec<serenity::all::ChannelType>,
-        needed_bot_permissions: serenity::model::permissions::Permissions,
-    },
     /// Role
     Role {},
     /// Emoji
@@ -203,13 +198,6 @@ impl From<super::types::InnerColumnTypeStringKind> for CanonicalInnerColumnTypeS
             super::types::InnerColumnTypeStringKind::User => {
                 CanonicalInnerColumnTypeStringKind::User {}
             }
-            super::types::InnerColumnTypeStringKind::Channel {
-                allowed_types,
-                needed_bot_permissions,
-            } => CanonicalInnerColumnTypeStringKind::Channel {
-                allowed_types,
-                needed_bot_permissions,
-            },
             super::types::InnerColumnTypeStringKind::Role => {
                 CanonicalInnerColumnTypeStringKind::Role {}
             }

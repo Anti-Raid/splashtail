@@ -171,7 +171,7 @@ impl PostAction for InspectorFakeBotsPostAction {
             return Ok(());
         }
 
-        let data = silverpelt::data::Data::data(ctx.data);
+        let data = silverpelt::data::Data::get_data(ctx.data);
 
         silverpelt::ar_event::dispatch_event_to_modules_errflatten(std::sync::Arc::new(
             silverpelt::ar_event::EventHandlerContext {

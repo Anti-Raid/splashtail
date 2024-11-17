@@ -31,7 +31,7 @@ pub async fn filter(
 
         let res = permission_checks::check_command(
             &data.silverpelt_cache,
-            cmd.qualified_name.as_str(),
+            &cmd.qualified_name,
             guild_id,
             ctx.author().id,
             &ctx.data().pool,
@@ -95,14 +95,4 @@ pub async fn help(
         },
     )
     .await
-}
-
-#[poise::command(category = "Help", slash_command, user_cooldown = 1)]
-pub async fn simplehelp(
-    ctx: Context<'_>,
-    #[description = "Specific command to show help about"]
-    #[autocomplete = "poise::builtins::autocomplete_command"]
-    command: Option<String>,
-) -> Result<(), Error> {
-    botox::help::simplehelp(ctx, command).await
 }

@@ -310,44 +310,50 @@ pub async fn backups_list(ctx: Context<'_>) -> Result<(), Error> {
             .embed(create_embed_for_job(&backup_jobs[index]))
             .ephemeral(true)
             .components(vec![
-                serenity::all::CreateActionRow::Buttons(vec![
-                    serenity::all::CreateButton::new("backups_previous")
-                        .label("Previous")
-                        .emoji(serenity::all::ReactionType::Unicode(
-                            "◀️".to_string().trunc_into(),
-                        ))
-                        .style(serenity::all::ButtonStyle::Primary)
-                        .disabled(index == 0),
-                    serenity::all::CreateButton::new("backups_next")
-                        .label("Next")
-                        .emoji(serenity::all::ReactionType::Unicode(
-                            "▶️".to_string().trunc_into(),
-                        ))
-                        .style(serenity::all::ButtonStyle::Primary)
-                        .disabled(index >= backup_jobs.len()),
-                    serenity::all::CreateButton::new("backups_last")
-                        .label("Last")
-                        .emoji(serenity::all::ReactionType::Unicode(
-                            "⏩".to_string().trunc_into(),
-                        ))
-                        .style(serenity::all::ButtonStyle::Primary)
-                        .disabled(index >= backup_jobs.len()),
-                    serenity::all::CreateButton::new("backups_first")
-                        .label("First")
-                        .emoji(serenity::all::ReactionType::Unicode(
-                            "⏪".to_string().trunc_into(),
-                        ))
-                        .style(serenity::all::ButtonStyle::Primary)
-                        .disabled(index == 0),
-                ]),
-                serenity::all::CreateActionRow::Buttons(vec![
-                    serenity::all::CreateButton::new("backups_restore")
-                        .label("Restore")
-                        .style(serenity::all::ButtonStyle::Danger),
-                    serenity::all::CreateButton::new("backups_delete")
-                        .label("Delete")
-                        .style(serenity::all::ButtonStyle::Danger),
-                ]),
+                serenity::all::CreateActionRow::Buttons(
+                    vec![
+                        serenity::all::CreateButton::new("backups_previous")
+                            .label("Previous")
+                            .emoji(serenity::all::ReactionType::Unicode(
+                                "◀️".to_string().trunc_into(),
+                            ))
+                            .style(serenity::all::ButtonStyle::Primary)
+                            .disabled(index == 0),
+                        serenity::all::CreateButton::new("backups_next")
+                            .label("Next")
+                            .emoji(serenity::all::ReactionType::Unicode(
+                                "▶️".to_string().trunc_into(),
+                            ))
+                            .style(serenity::all::ButtonStyle::Primary)
+                            .disabled(index >= backup_jobs.len()),
+                        serenity::all::CreateButton::new("backups_last")
+                            .label("Last")
+                            .emoji(serenity::all::ReactionType::Unicode(
+                                "⏩".to_string().trunc_into(),
+                            ))
+                            .style(serenity::all::ButtonStyle::Primary)
+                            .disabled(index >= backup_jobs.len()),
+                        serenity::all::CreateButton::new("backups_first")
+                            .label("First")
+                            .emoji(serenity::all::ReactionType::Unicode(
+                                "⏪".to_string().trunc_into(),
+                            ))
+                            .style(serenity::all::ButtonStyle::Primary)
+                            .disabled(index == 0),
+                    ]
+                    .into(),
+                ),
+                serenity::all::CreateActionRow::Buttons(
+                    vec![
+                        serenity::all::CreateButton::new("backups_restore")
+                            .label("Restore")
+                            .style(serenity::all::ButtonStyle::Danger),
+                        serenity::all::CreateButton::new("backups_delete")
+                            .label("Delete")
+                            .style(serenity::all::ButtonStyle::Danger),
+                    ]
+                    .into(),
+                ),
             ]);
 
         Ok(cr)
@@ -360,6 +366,7 @@ pub async fn backups_list(ctx: Context<'_>) -> Result<(), Error> {
     let msg = ctx.send(cr).await?.into_message().await?;
 
     let collector = msg
+        .id
         .await_component_interactions(ctx.serenity_context().shard.clone())
         .author_id(ctx.author().id)
         .timeout(Duration::from_secs(180));
@@ -445,6 +452,7 @@ pub async fn backups_list(ctx: Context<'_>) -> Result<(), Error> {
                                         .label("No")
                                         .style(serenity::all::ButtonStyle::Danger),
                                     ]
+                                    .into()
                                 )
                             ]
                         )
@@ -454,6 +462,7 @@ pub async fn backups_list(ctx: Context<'_>) -> Result<(), Error> {
                     .await?;
 
                     let password_preinp_collector = password_preinput_warning
+                        .id
                         .await_component_interaction(ctx.serenity_context().shard.clone())
                         .author_id(ctx.author().id)
                         .timeout(Duration::from_secs(30))
@@ -516,6 +525,7 @@ pub async fn backups_list(ctx: Context<'_>) -> Result<(), Error> {
                                     .label("No")
                                     .style(serenity::all::ButtonStyle::Danger),
                                 ]
+                                .into()
                             )
                         ]
                     )
@@ -525,6 +535,7 @@ pub async fn backups_list(ctx: Context<'_>) -> Result<(), Error> {
                 .await?;
 
                 let confirm_collector = confirm
+                    .id
                     .await_component_interaction(ctx.serenity_context().shard.clone())
                     .author_id(ctx.author().id)
                     .timeout(Duration::from_secs(30))
@@ -724,6 +735,7 @@ pub async fn backups_list(ctx: Context<'_>) -> Result<(), Error> {
                                     .label("No")
                                     .style(serenity::all::ButtonStyle::Danger),
                                 ]
+                                .into()
                             )
                         ]
                     )
@@ -733,6 +745,7 @@ pub async fn backups_list(ctx: Context<'_>) -> Result<(), Error> {
                 .await?;
 
                 let confirm_collector = confirm
+                    .id
                     .await_component_interaction(ctx.serenity_context().shard.clone())
                     .author_id(ctx.author().id)
                     .timeout(Duration::from_secs(30))
@@ -892,6 +905,7 @@ pub async fn backups_delete(ctx: Context<'_>, id: String) -> Result<(), Error> {
                         .label("No")
                         .style(serenity::all::ButtonStyle::Danger),
                     ]
+                    .into()
                 )
             ]
         )
@@ -901,6 +915,7 @@ pub async fn backups_delete(ctx: Context<'_>, id: String) -> Result<(), Error> {
     .await?;
 
     let confirm_collector = confirm
+        .id
         .await_component_interaction(ctx.serenity_context().shard.clone())
         .author_id(ctx.author().id)
         .timeout(Duration::from_secs(30))

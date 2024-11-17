@@ -1,4 +1,4 @@
-use serenity::all::AutocompleteChoice;
+use serenity::all::{AutocompleteChoice, CreateAutocompleteResponse};
 use silverpelt::{Context, Error};
 
 /// A TagContext is the context for custom tags
@@ -21,9 +21,9 @@ impl templating::Context for TagContext {}
 async fn tag_name_autocomplete<'a>(
     ctx: Context<'_>,
     partial: &'a str,
-) -> Vec<AutocompleteChoice<'a>> {
+) -> CreateAutocompleteResponse<'a> {
     let Some(guild_id) = ctx.guild_id() else {
-        return Vec::new();
+        return CreateAutocompleteResponse::new();
     };
 
     let data = ctx.data();
@@ -43,7 +43,7 @@ async fn tag_name_autocomplete<'a>(
         }
     }
 
-    ac
+    CreateAutocompleteResponse::new().set_choices(ac)
 }
 
 /// Execute a tag

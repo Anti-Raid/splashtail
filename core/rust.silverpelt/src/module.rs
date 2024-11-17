@@ -159,8 +159,8 @@ pub fn validate_module<T: Module + ?Sized>(module: &T) -> Result<(), crate::Erro
             listed_subcommands.insert(0, "".to_string());
         }
 
-        if !actual_subcommands.contains(&"".to_string()) {
-            actual_subcommands.insert(0, "".to_string());
+        if !actual_subcommands.contains(&"".to_string().into()) {
+            actual_subcommands.insert(0, "".to_string().into());
         }
 
         if listed_subcommands != actual_subcommands {

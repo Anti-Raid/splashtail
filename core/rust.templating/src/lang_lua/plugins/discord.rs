@@ -73,8 +73,7 @@ impl DiscordActionExecutor {
             return Err("Bot user not found in guild".into());
         }; // Get the bot user
 
-        if !guild
-            .member_permissions(&member)
+        if !splashcore_rs::serenity_backport::member_permissions(&guild, &member)
             .contains(needed_permissions)
         {
             return Err(format!(
@@ -107,8 +106,7 @@ impl DiscordActionExecutor {
             return Err(format!("User not found in guild: {}", user_id.mention()).into());
         }; // Get the bot user
 
-        if !guild
-            .member_permissions(&member)
+        if !splashcore_rs::serenity_backport::member_permissions(&guild, &member)
             .contains(needed_permissions)
         {
             return Err(format!(
@@ -1325,7 +1323,8 @@ impl LuaUserData for MessageHandle {
         methods.add_method("await_component_interaction", |_, this, _: ()| {
             let stream = super::typesext::LuaStream::new(
                 this.message
-                    .await_component_interaction(this.shard_messenger.clone())
+                    .id
+                    .await_component_interactions(this.shard_messenger.clone())
                     .timeout(std::time::Duration::from_secs(60))
                     .stream()
                     .map(|interaction| MessageComponentHandle { interaction }),

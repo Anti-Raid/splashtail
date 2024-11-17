@@ -37,7 +37,7 @@ fn whois_member<'a>(member: &Member) -> CreateEmbed<'a> {
             },
             true,
         )
-        .field("Created At", member.user.created_at().to_string(), true)
+        .field("Created At", member.user.id.created_at().to_string(), true)
         .field("Bot", member.user.bot().to_string(), true)
         .field("Nickname", format!("{:#?}", member.nick), true)
         .field("Roles", roles, true)
@@ -59,7 +59,7 @@ fn whois_user<'a>(user: &User) -> CreateEmbed<'a> {
             },
             true,
         )
-        .field("Created At", user.created_at().to_string(), true)
+        .field("Created At", user.id.created_at().to_string(), true)
         .field("Bot", user.bot().to_string(), true)
 }
 

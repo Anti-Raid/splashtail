@@ -106,9 +106,9 @@ impl CanonicalCommand {
 impl From<&crate::Command> for CanonicalCommandData {
     fn from(cmd: &crate::Command) -> Self {
         CanonicalCommandData {
-            name: cmd.name.clone(),
-            qualified_name: cmd.qualified_name.clone(),
-            description: cmd.description.clone(),
+            name: cmd.name.to_string(),
+            qualified_name: cmd.qualified_name.to_string(),
+            description: cmd.description.as_ref().map(|x| x.to_string()),
             nsfw: cmd.nsfw_only,
             subcommands: cmd
                 .subcommands
@@ -120,8 +120,8 @@ impl From<&crate::Command> for CanonicalCommandData {
                 .parameters
                 .iter()
                 .map(|arg| CanonicalCommandArgument {
-                    name: arg.name.clone(),
-                    description: arg.description.clone(),
+                    name: arg.name.to_string(),
+                    description: arg.description.as_ref().map(|x| x.to_string()),
                     required: arg.required,
                     choices: arg
                         .choices
