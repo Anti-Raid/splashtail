@@ -279,9 +279,288 @@ print(token)
 <li><code>slept_time</code> (<a href="user/templating/2-plugins.html#type.f64">f64</a>): The actual duration slept for.</li>
 </ul>
 <hr />
+<h1 id="antiraiddiscord"><a class="header" href="#antiraiddiscord">@antiraid/discord</a></h1>
+<p>This plugin allows for templates to interact with the Discord API</p>
+<h2 id="types"><a class="header" href="#types">Types</a></h2>
+<div id="type.Serenity.User" />
+<h3 id="serenityuser"><a class="header" href="#serenityuser">Serenity.User</a></h3>
+<p>A user object in Discord, as represented by AntiRaid. Internal fields are subject to change</p>
+<p><strong>Refer to <a href="https://docs.rs/serenity/latest/serenity/model/user/struct.User.html">serenity::model::user::User</a> for more documentation on what this type contains. Fields may be incomplete</strong></p>
+<pre><code class="language-json">{
+  "id": "0",
+  "username": "",
+  "global_name": null,
+  "avatar": null,
+  "bot": false,
+  "system": false,
+  "mfa_enabled": false,
+  "banner": null,
+  "accent_color": null,
+  "locale": null,
+  "verified": null,
+  "email": null,
+  "flags": 0,
+  "premium_type": 0,
+  "public_flags": null,
+  "member": null
+}
+</code></pre>
+<div id="type.Serenity.AuditLogs" />
+<h3 id="serenityauditlogs"><a class="header" href="#serenityauditlogs">Serenity.AuditLogs</a></h3>
+<p>A audit log in Discord, as represented by AntiRaid. Internal fields are subject to change</p>
+<p><strong>Refer to <a href="https://docs.rs/serenity/latest/serenity/model/guild/audit_log/struct.AuditLogs.html">serenity::model::guild::audit_log::AuditLogs</a> for more documentation on what this type contains. Fields may be incomplete</strong></p>
+<div id="type.Serenity.AuditLogs.Action" />
+<h3 id="serenityauditlogsaction"><a class="header" href="#serenityauditlogsaction">Serenity.AuditLogs.Action</a></h3>
+<p>An audit log action in Discord, as represented by AntiRaid. Internal fields are subject to change</p>
+<p><strong>Refer to <a href="https://docs.rs/serenity/latest/serenity/model/guild/audit_log/struct.Action.html">serenity::model::guild::audit_log::Action</a> for more documentation on what this type contains. Fields may be incomplete</strong></p>
+<pre><code class="language-json">1
+</code></pre>
+<div id="type.Serenity.GuildChannel" />
+<h3 id="serenityguildchannel"><a class="header" href="#serenityguildchannel">Serenity.GuildChannel</a></h3>
+<p>A guild channel in Discord, as represented by AntiRaid. Internal fields are subject to change</p>
+<p><strong>Refer to <a href="https://docs.rs/serenity/latest/serenity/model/channel/struct.GuildChannel.html">serenity::model::channel::GuildChannel</a> for more documentation on what this type contains. Fields may be incomplete</strong></p>
+<pre><code class="language-json">{
+  "id": "0",
+  "bitrate": null,
+  "parent_id": null,
+  "guild_id": "0",
+  "type": 0,
+  "owner_id": null,
+  "last_message_id": null,
+  "last_pin_timestamp": null,
+  "name": "",
+  "permission_overwrites": [],
+  "position": 0,
+  "topic": null,
+  "user_limit": null,
+  "nsfw": false,
+  "rate_limit_per_user": null,
+  "rtc_region": null,
+  "video_quality_mode": null,
+  "message_count": null,
+  "member_count": null,
+  "thread_metadata": null,
+  "member": null,
+  "default_auto_archive_duration": null,
+  "permissions": null,
+  "flags": 0,
+  "total_message_sent": null,
+  "available_tags": [],
+  "applied_tags": [],
+  "default_reaction_emoji": null,
+  "default_thread_rate_limit_per_user": null,
+  "status": null,
+  "default_sort_order": null,
+  "default_forum_layout": null
+}
+</code></pre>
+<div id="type.Serenity.PermissionOverwrite" />
+<h3 id="serenitypermissionoverwrite"><a class="header" href="#serenitypermissionoverwrite">Serenity.PermissionOverwrite</a></h3>
+<p>A permission overwrite in Discord, as represented by AntiRaid. Internal fields are subject to change</p>
+<p><strong>Refer to <a href="https://docs.rs/serenity/latest/serenity/model/channel/struct.PermissionOverwrite.html">serenity::model::channel::PermissionOverwrite</a> for more documentation on what this type contains. Fields may be incomplete</strong></p>
+<pre><code class="language-json">{
+  "allow": "985162418487295",
+  "deny": "985162418487295",
+  "id": "0",
+  "type": 0
+}
+</code></pre>
+<div id="type.Serenity.ForumEmoji" />
+<h3 id="serenityforumemoji"><a class="header" href="#serenityforumemoji">Serenity.ForumEmoji</a></h3>
+<p>A forum emoji in Discord, as represented by AntiRaid. Internal fields are subject to change</p>
+<p><strong>Refer to <a href="https://docs.rs/serenity/latest/serenity/model/channel/struct.ForumEmoji.html">serenity::model::channel::ForumEmoji</a> for more documentation on what this type contains. Fields may be incomplete</strong></p>
+<pre><code class="language-json">{
+  "emoji_id": "0",
+  "emoji_name": null
+}
+</code></pre>
+<div id="type.GetAuditLogOptions" />
+<h3 id="getauditlogoptions"><a class="header" href="#getauditlogoptions">GetAuditLogOptions</a></h3>
+<p>Options for getting audit logs in Discord</p>
+<pre><code class="language-json">{
+  "action_type": 1,
+  "user_id": "0",
+  "before": "0",
+  "limit": 0
+}
+</code></pre>
+<h4 id="fields"><a class="header" href="#fields">Fields</a></h4>
+<ul>
+<li><code>action_type</code> (<a href="user/templating/2-plugins.html#type.Serenity.AuditLogs.Action">Serenity.AuditLogs.Action?</a>): The action type to filter by</li>
+<li><code>user_id</code> (<a href="user/templating/2-plugins.html#type.string">string?</a>): The user ID to filter by</li>
+<li><code>before</code> (<a href="user/templating/2-plugins.html#type.string">string?</a>): The entry ID to filter by</li>
+<li><code>limit</code> (<a href="user/templating/2-plugins.html#type.number">number?</a>): The limit of entries to return</li>
+</ul>
+<div id="type.GetChannelOptions" />
+<h3 id="getchanneloptions"><a class="header" href="#getchanneloptions">GetChannelOptions</a></h3>
+<p>Options for getting a channel in Discord</p>
+<pre><code class="language-json">{
+  "channel_id": "0"
+}
+</code></pre>
+<h4 id="fields-1"><a class="header" href="#fields-1">Fields</a></h4>
+<ul>
+<li><code>channel_id</code> (<a href="user/templating/2-plugins.html#type.string">string</a>): The channel ID to get</li>
+</ul>
+<div id="type.EditChannelOptions" />
+<h3 id="editchanneloptions"><a class="header" href="#editchanneloptions">EditChannelOptions</a></h3>
+<p>Options for editing a channel in Discord</p>
+<pre><code class="language-json">{
+  "channel_id": "0",
+  "reason": "",
+  "name": "my-channel",
+  "type": 0,
+  "position": 7,
+  "topic": "My channel topic",
+  "nsfw": true,
+  "rate_limit_per_user": 5,
+  "bitrate": null,
+  "permission_overwrites": null,
+  "parent_id": "0",
+  "rtc_region": "us-west",
+  "video_quality_mode": 1,
+  "default_auto_archive_duration": 1440,
+  "flags": 18,
+  "available_tags": null,
+  "default_reaction_emoji": {
+    "emoji_id": "0",
+    "emoji_name": null
+  },
+  "default_thread_rate_limit_per_user": null,
+  "default_sort_order": null,
+  "default_forum_layout": null
+}
+</code></pre>
+<h4 id="fields-2"><a class="header" href="#fields-2">Fields</a></h4>
+<ul>
+<li><code>channel_id</code> (<a href="user/templating/2-plugins.html#type.string">string</a>): The channel ID to edit</li>
+<li><code>reason</code> (<a href="user/templating/2-plugins.html#type.string">string</a>): The reason for editing the channel</li>
+<li><code>name</code> (<a href="user/templating/2-plugins.html#type.string">string?</a>): The name of the channel</li>
+<li><code>type</code> (<a href="user/templating/2-plugins.html#type.string">string?</a>): The type of the channel</li>
+<li><code>position</code> (<a href="user/templating/2-plugins.html#type.number">number?</a>): The position of the channel</li>
+<li><code>topic</code> (<a href="user/templating/2-plugins.html#type.string">string?</a>): The topic of the channel</li>
+<li><code>nsfw</code> (<a href="user/templating/2-plugins.html#type.boolean">boolean?</a>): Whether the channel is NSFW</li>
+<li><code>rate_limit_per_user</code> (<a href="user/templating/2-plugins.html#type.number">number?</a>): The rate limit per user/Slow mode of the channel</li>
+<li><code>bitrate</code> (<a href="user/templating/2-plugins.html#type.number">number?</a>): The bitrate of the channel</li>
+<li><code>permission_overwrites</code> (<a href="user/templating/2-plugins.html#type.Serenity.PermissionOverwrite">{Serenity.PermissionOverwrite}?</a>): The permission overwrites of the channel</li>
+<li><code>parent_id</code> (<a href="user/templating/2-plugins.html#type.string">string??</a>): The parent ID of the channel</li>
+<li><code>rtc_region</code> (<a href="user/templating/2-plugins.html#type.string">string??</a>): The RTC region of the channel</li>
+<li><code>video_quality_mode</code> (<a href="user/templating/2-plugins.html#type.string">string?</a>): The video quality mode of the channel</li>
+<li><code>default_auto_archive_duration</code> (<a href="user/templating/2-plugins.html#type.string">string?</a>): The default auto archive duration of the channel</li>
+<li><code>flags</code> (<a href="user/templating/2-plugins.html#type.string">string?</a>): The flags of the channel</li>
+<li><code>available_tags</code> (<a href="user/templating/2-plugins.html#type.Serenity.ForumTag">{Serenity.ForumTag}?</a>): The available tags of the channel</li>
+<li><code>default_reaction_emoji</code> (<a href="user/templating/2-plugins.html#type.Serenity.ForumEmoji">Serenity.ForumEmoji??</a>): The default reaction emoji of the channel</li>
+<li><code>default_thread_rate_limit_per_user</code> (<a href="user/templating/2-plugins.html#type.number">number?</a>): The default thread rate limit per user</li>
+<li><code>default_sort_order</code> (<a href="user/templating/2-plugins.html#type.string">string?</a>): The default sort order of the channel</li>
+<li><code>default_forum_layout</code> (<a href="user/templating/2-plugins.html#type.string">string?</a>): The default forum layout of the channel</li>
+</ul>
+<div id="type.EditThreadOptions" />
+<h3 id="editthreadoptions"><a class="header" href="#editthreadoptions">EditThreadOptions</a></h3>
+<p>Options for editing a thread in Discord</p>
+<pre><code class="language-json">{
+  "channel_id": "0",
+  "reason": "",
+  "name": "my-thread",
+  "archived": false,
+  "auto_archive_duration": 1440,
+  "locked": false,
+  "invitable": true,
+  "rate_limit_per_user": 5,
+  "flags": 18,
+  "applied_tags": null
+}
+</code></pre>
+<h4 id="fields-3"><a class="header" href="#fields-3">Fields</a></h4>
+<ul>
+<li><code>channel_id</code> (<a href="user/templating/2-plugins.html#type.string">string</a>): The channel ID to edit</li>
+<li><code>reason</code> (<a href="user/templating/2-plugins.html#type.string">string</a>): The reason for editing the channel</li>
+<li><code>name</code> (<a href="user/templating/2-plugins.html#type.string">string?</a>): The name of the thread</li>
+<li><code>archived</code> (<a href="user/templating/2-plugins.html#type.boolean">boolean?</a>): Whether the thread is archived</li>
+<li><code>auto_archive_duration</code> (<a href="user/templating/2-plugins.html#type.string">string?</a>): The auto archive duration of the thread</li>
+<li><code>locked</code> (<a href="user/templating/2-plugins.html#type.boolean">boolean?</a>): Whether the thread is locked</li>
+<li><code>invitable</code> (<a href="user/templating/2-plugins.html#type.boolean">boolean?</a>): Whether the thread is invitable</li>
+<li><code>rate_limit_per_user</code> (<a href="user/templating/2-plugins.html#type.number">number?</a>): The rate limit per user/Slow mode of the thread</li>
+<li><code>flags</code> (<a href="user/templating/2-plugins.html#type.string">string?</a>): The flags of the thread</li>
+<li><code>applied_tags</code> (<a href="user/templating/2-plugins.html#type.Serenity.ForumTag">{Serenity.ForumTag}?</a>): The applied tags of the thread</li>
+</ul>
+<div id="type.DeleteChannelOption" />
+<h3 id="deletechanneloption"><a class="header" href="#deletechanneloption">DeleteChannelOption</a></h3>
+<p>Options for deleting a channel in Discord</p>
+<pre><code class="language-json">{
+  "channel_id": "0",
+  "reason": "My reason here"
+}
+</code></pre>
+<h4 id="fields-4"><a class="header" href="#fields-4">Fields</a></h4>
+<ul>
+<li><code>channel_id</code> (<a href="user/templating/2-plugins.html#type.string">string</a>): The channel ID to delete</li>
+<li><code>reason</code> (<a href="user/templating/2-plugins.html#type.string">string</a>): The reason for deleting the channel</li>
+</ul>
+<h2 id="methods-1"><a class="header" href="#methods-1">Methods</a></h2>
+<h3 id="get_audit_logs"><a class="header" href="#get_audit_logs">get_audit_logs</a></h3>
+<pre><code class="language-lua">function get_audit_logs(data: GetAuditLogOptions): 
+</code></pre>
+<p>Gets the audit logs</p>
+<h4 id="parameters-1"><a class="header" href="#parameters-1">Parameters</a></h4>
+<ul>
+<li><code>data</code> (<a href="user/templating/2-plugins.html#type.GetAuditLogOptions">GetAuditLogOptions</a>): Options for getting audit logs.</li>
+</ul>
+<h4 id="returns-1"><a class="header" href="#returns-1">Returns</a></h4>
+<ul>
+<li><code>SerenityAuditLogs</code> (<a href="user/templating/2-plugins.html#type."></a>): The audit log entry</li>
+</ul>
+<h3 id="get_channel"><a class="header" href="#get_channel">get_channel</a></h3>
+<pre><code class="language-lua">function get_channel(data: GetChannelOptions): 
+</code></pre>
+<p>Gets a channel</p>
+<h4 id="parameters-2"><a class="header" href="#parameters-2">Parameters</a></h4>
+<ul>
+<li><code>data</code> (<a href="user/templating/2-plugins.html#type.GetChannelOptions">GetChannelOptions</a>): Options for getting a channel.</li>
+</ul>
+<h4 id="returns-2"><a class="header" href="#returns-2">Returns</a></h4>
+<ul>
+<li><code>Serenity.GuildChannel</code> (<a href="user/templating/2-plugins.html#type."></a>): The guild channel</li>
+</ul>
+<h3 id="edit_channel"><a class="header" href="#edit_channel">edit_channel</a></h3>
+<pre><code class="language-lua">function edit_channel(data: EditChannelOptions): 
+</code></pre>
+<p>Edits a channel</p>
+<h4 id="parameters-3"><a class="header" href="#parameters-3">Parameters</a></h4>
+<ul>
+<li><code>data</code> (<a href="user/templating/2-plugins.html#type.EditChannelOptions">EditChannelOptions</a>): Options for editing a channel.</li>
+</ul>
+<h4 id="returns-3"><a class="header" href="#returns-3">Returns</a></h4>
+<ul>
+<li><code>Serenity.GuildChannel</code> (<a href="user/templating/2-plugins.html#type."></a>): The guild channel</li>
+</ul>
+<h3 id="edit_thread"><a class="header" href="#edit_thread">edit_thread</a></h3>
+<pre><code class="language-lua">function edit_thread(data: EditThreadOptions): 
+</code></pre>
+<p>Edits a thread</p>
+<h4 id="parameters-4"><a class="header" href="#parameters-4">Parameters</a></h4>
+<ul>
+<li><code>data</code> (<a href="user/templating/2-plugins.html#type.EditThreadOptions">EditThreadOptions</a>): Options for editing a thread.</li>
+</ul>
+<h4 id="returns-4"><a class="header" href="#returns-4">Returns</a></h4>
+<ul>
+<li><code>Serenity.GuildChannel</code> (<a href="user/templating/2-plugins.html#type."></a>): The guild channel</li>
+</ul>
+<h3 id="delete_channel"><a class="header" href="#delete_channel">delete_channel</a></h3>
+<pre><code class="language-lua">function delete_channel(data: DeleteChannelOption): 
+</code></pre>
+<p>Deletes a channel</p>
+<h4 id="parameters-5"><a class="header" href="#parameters-5">Parameters</a></h4>
+<ul>
+<li><code>data</code> (<a href="user/templating/2-plugins.html#type.DeleteChannelOption">DeleteChannelOption</a>): Options for deleting a channel.</li>
+</ul>
+<h4 id="returns-5"><a class="header" href="#returns-5">Returns</a></h4>
+<ul>
+<li><code>Serenity.GuildChannel</code> (<a href="user/templating/2-plugins.html#type."></a>): The guild channel</li>
+</ul>
+<hr />
 <h1 id="antiraidinterop"><a class="header" href="#antiraidinterop">@antiraid/interop</a></h1>
 <p>This plugin allows interoperability with AntiRaid and controlled interaction with the low-levels of AntiRaid templating subsystem.</p>
-<h2 id="types"><a class="header" href="#types">Types</a></h2>
+<h2 id="types-1"><a class="header" href="#types-1">Types</a></h2>
 <div id="type.null" />
 <h3 id="null-1"><a class="header" href="#null-1">null</a></h3>
 <p><code>null</code> is a special value that represents nothing. It is often used in AntiRaid instead of <code>nil</code> due to issues regarding existence etc. <code>null</code> is not equal to <code>nil</code> but is also an opaque type.</p>
@@ -296,7 +575,7 @@ print(token)
   "allowed_caps": []
 }
 </code></pre>
-<h4 id="fields"><a class="header" href="#fields">Fields</a></h4>
+<h4 id="fields-5"><a class="header" href="#fields-5">Fields</a></h4>
 <ul>
 <li><code>lang</code> (<a href="user/templating/2-plugins.html#type.string">string</a>): The language of the template.</li>
 <li><code>allowed_caps</code> (<a href="user/templating/2-plugins.html#type.string">{string}</a>): The allowed capabilities provided to the template.</li>
@@ -312,17 +591,17 @@ print(token)
   }
 }
 </code></pre>
-<h4 id="fields-1"><a class="header" href="#fields-1">Fields</a></h4>
+<h4 id="fields-6"><a class="header" href="#fields-6">Fields</a></h4>
 <ul>
 <li><code>path</code> (<a href="user/templating/2-plugins.html#type.string">string</a>): The path of the template token.</li>
 <li><code>pragma</code> (<a href="user/templating/2-plugins.html#type.TemplatePragma">TemplatePragma</a>): The pragma of the template.</li>
 </ul>
-<h2 id="methods-1"><a class="header" href="#methods-1">Methods</a></h2>
+<h2 id="methods-2"><a class="header" href="#methods-2">Methods</a></h2>
 <h3 id="array_metatable-1"><a class="header" href="#array_metatable-1">array_metatable</a></h3>
 <pre><code class="language-lua">function array_metatable(): table
 </code></pre>
 <p>Returns the array metatable.</p>
-<h4 id="returns-1"><a class="header" href="#returns-1">Returns</a></h4>
+<h4 id="returns-6"><a class="header" href="#returns-6">Returns</a></h4>
 <ul>
 <li><code>array_metatable</code> (<a href="user/templating/2-plugins.html#type.table">table</a>): The array metatable.</li>
 </ul>
@@ -330,7 +609,7 @@ print(token)
 <pre><code class="language-lua">function null(): null
 </code></pre>
 <p>Returns the null value.</p>
-<h4 id="returns-2"><a class="header" href="#returns-2">Returns</a></h4>
+<h4 id="returns-7"><a class="header" href="#returns-7">Returns</a></h4>
 <ul>
 <li><code>null</code> (<a href="user/templating/2-plugins.html#type.null">null</a>): The null value.</li>
 </ul>
@@ -338,7 +617,7 @@ print(token)
 <pre><code class="language-lua">function memusage(): f64
 </code></pre>
 <p>Returns the current memory usage of the Lua VM.</p>
-<h4 id="returns-3"><a class="header" href="#returns-3">Returns</a></h4>
+<h4 id="returns-8"><a class="header" href="#returns-8">Returns</a></h4>
 <ul>
 <li><code>memory_usage</code> (<a href="user/templating/2-plugins.html#type.f64">f64</a>): The current memory usage, in bytes, of the Lua VM.</li>
 </ul>
@@ -346,7 +625,7 @@ print(token)
 <pre><code class="language-lua">function guild_id(): string
 </code></pre>
 <p>Returns the current guild ID of the Lua VM.</p>
-<h4 id="returns-4"><a class="header" href="#returns-4">Returns</a></h4>
+<h4 id="returns-9"><a class="header" href="#returns-9">Returns</a></h4>
 <ul>
 <li><code>guild_id</code> (<a href="user/templating/2-plugins.html#type.string">string</a>): The current guild ID.</li>
 </ul>
@@ -354,26 +633,26 @@ print(token)
 <pre><code class="language-lua">function gettemplatedata(token: string): TemplateData?
 </code></pre>
 <p>Returns the data associated with a template token.</p>
-<h4 id="parameters-1"><a class="header" href="#parameters-1">Parameters</a></h4>
+<h4 id="parameters-6"><a class="header" href="#parameters-6">Parameters</a></h4>
 <ul>
 <li><code>token</code> (<a href="user/templating/2-plugins.html#type.string">string</a>): The token of the template to retrieve data for.</li>
 </ul>
-<h4 id="returns-5"><a class="header" href="#returns-5">Returns</a></h4>
+<h4 id="returns-10"><a class="header" href="#returns-10">Returns</a></h4>
 <ul>
 <li><code>data</code> (<a href="user/templating/2-plugins.html#type.TemplateData">TemplateData?</a>): The data associated with the template token, or <code>null</code> if no data is found.</li>
 </ul>
 <h3 id="current_user"><a class="header" href="#current_user">current_user</a></h3>
-<pre><code class="language-lua">function current_user(): serenity::model::user::User
+<pre><code class="language-lua">function current_user(): Serenity.User
 </code></pre>
 <p>Returns the current user of the Lua VM.</p>
-<h4 id="returns-6"><a class="header" href="#returns-6">Returns</a></h4>
+<h4 id="returns-11"><a class="header" href="#returns-11">Returns</a></h4>
 <ul>
-<li><code>user</code> (<a href="https://docs.rs/serenity/latest/serenity/model/user/struct.User.html">serenity::model::user::User</a>): Returns AntiRaid's discord user object.</li>
+<li><code>user</code> (<a href="user/templating/2-plugins.html#type.Serenity.User">Serenity.User</a>): Returns AntiRaid's discord user object.</li>
 </ul>
 <hr />
 <h1 id="antiraidimg_captcha"><a class="header" href="#antiraidimg_captcha">@antiraid/img_captcha</a></h1>
 <p>This plugin allows for the creation of text/image CAPTCHA's with customizable filters which can be useful in protecting against bots.</p>
-<h2 id="types-1"><a class="header" href="#types-1">Types</a></h2>
+<h2 id="types-2"><a class="header" href="#types-2">Types</a></h2>
 <div id="type.CaptchaConfig" />
 <h3 id="captchaconfig"><a class="header" href="#captchaconfig">CaptchaConfig</a></h3>
 <p>Captcha configuration. See examples for the arguments</p>
@@ -426,27 +705,27 @@ print(token)
   "set_viewbox_at_idx": null
 }
 </code></pre>
-<h4 id="fields-2"><a class="header" href="#fields-2">Fields</a></h4>
+<h4 id="fields-7"><a class="header" href="#fields-7">Fields</a></h4>
 <ul>
 <li><code>filter</code> (<a href="user/templating/2-plugins.html#type.string">string</a>): The name of the filter to use. See example for the parameters to pass for the filter as well as https://github.com/Anti-Raid/captcha.</li>
 </ul>
-<h2 id="methods-2"><a class="header" href="#methods-2">Methods</a></h2>
+<h2 id="methods-3"><a class="header" href="#methods-3">Methods</a></h2>
 <h3 id="new"><a class="header" href="#new">new</a></h3>
 <pre><code class="language-lua">function new(config: CaptchaConfig): {u8}
 </code></pre>
 <p>Creates a new CAPTCHA with the given configuration.</p>
-<h4 id="parameters-2"><a class="header" href="#parameters-2">Parameters</a></h4>
+<h4 id="parameters-7"><a class="header" href="#parameters-7">Parameters</a></h4>
 <ul>
 <li><code>config</code> (<a href="user/templating/2-plugins.html#type.CaptchaConfig">CaptchaConfig</a>): The configuration to use for the CAPTCHA.</li>
 </ul>
-<h4 id="returns-7"><a class="header" href="#returns-7">Returns</a></h4>
+<h4 id="returns-12"><a class="header" href="#returns-12">Returns</a></h4>
 <ul>
 <li><code>captcha</code> (<a href="user/templating/2-plugins.html#type.u8">{u8}</a>): The created CAPTCHA object.</li>
 </ul>
 <hr />
 <h1 id="antiraidkv"><a class="header" href="#antiraidkv">@antiraid/kv</a></h1>
 <p>Utilities for key-value operations.</p>
-<h2 id="types-2"><a class="header" href="#types-2">Types</a></h2>
+<h2 id="types-3"><a class="header" href="#types-3">Types</a></h2>
 <div id="type.KvRecord" />
 <h3 id="kvrecord"><a class="header" href="#kvrecord">KvRecord</a></h3>
 <p>KvRecord represents a key-value record with metadata.</p>
@@ -458,7 +737,7 @@ print(token)
   "last_updated_at": null
 }
 </code></pre>
-<h4 id="fields-3"><a class="header" href="#fields-3">Fields</a></h4>
+<h4 id="fields-8"><a class="header" href="#fields-8">Fields</a></h4>
 <ul>
 <li><code>key</code> (<a href="user/templating/2-plugins.html#type.string">string</a>): The key of the record.</li>
 <li><code>value</code> (<a href="user/templating/2-plugins.html#type.any">any</a>): The value of the record.</li>
@@ -469,40 +748,40 @@ print(token)
 <div id="type.KvExecutor" />
 <h3 id="kvexecutor"><a class="header" href="#kvexecutor">KvExecutor</a></h3>
 <p>KvExecutor allows templates to get, store and find persistent data within a server.</p>
-<h4 id="methods-3"><a class="header" href="#methods-3">Methods</a></h4>
+<h4 id="methods-4"><a class="header" href="#methods-4">Methods</a></h4>
 <h5 id="kvexecutorfind"><a class="header" href="#kvexecutorfind">KvExecutor:find</a></h5>
 <pre><code class="language-lua">function KvExecutor:find(key: string)
 </code></pre>
-<h6 id="parameters-3"><a class="header" href="#parameters-3">Parameters</a></h6>
+<h6 id="parameters-8"><a class="header" href="#parameters-8">Parameters</a></h6>
 <ul>
 <li><code>key</code> (<a href="user/templating/2-plugins.html#type.string">string</a>): The key to search for. % matches zero or more characters; _ matches a single character. To search anywhere in a string, surround {KEY} with %, e.g. %{KEY}%</li>
 </ul>
 <h5 id="kvexecutorget"><a class="header" href="#kvexecutorget">KvExecutor:get</a></h5>
 <pre><code class="language-lua">function KvExecutor:get(key: string)
 </code></pre>
-<h6 id="parameters-4"><a class="header" href="#parameters-4">Parameters</a></h6>
+<h6 id="parameters-9"><a class="header" href="#parameters-9">Parameters</a></h6>
 <ul>
 <li><code>key</code> (<a href="user/templating/2-plugins.html#type.string">string</a>): The key to get.</li>
 </ul>
-<h6 id="returns-8"><a class="header" href="#returns-8">Returns</a></h6>
+<h6 id="returns-13"><a class="header" href="#returns-13">Returns</a></h6>
 <ul>
 <li><code>value</code> (<a href="user/templating/2-plugins.html#type.any">any</a>): The value of the key.- <code>exists</code> (<a href="user/templating/2-plugins.html#type.bool">bool</a>): Whether the key exists.</li>
 </ul>
 <h5 id="kvexecutorgetrecord"><a class="header" href="#kvexecutorgetrecord">KvExecutor:getrecord</a></h5>
 <pre><code class="language-lua">function KvExecutor:getrecord(key: string): KvRecord
 </code></pre>
-<h6 id="parameters-5"><a class="header" href="#parameters-5">Parameters</a></h6>
+<h6 id="parameters-10"><a class="header" href="#parameters-10">Parameters</a></h6>
 <ul>
 <li><code>key</code> (<a href="user/templating/2-plugins.html#type.string">string</a>): The key to get.</li>
 </ul>
-<h6 id="returns-9"><a class="header" href="#returns-9">Returns</a></h6>
+<h6 id="returns-14"><a class="header" href="#returns-14">Returns</a></h6>
 <ul>
 <li><code>record</code> (<a href="user/templating/2-plugins.html#type.KvRecord">KvRecord</a>): The record of the key.</li>
 </ul>
 <h5 id="kvexecutorset"><a class="header" href="#kvexecutorset">KvExecutor:set</a></h5>
 <pre><code class="language-lua">function KvExecutor:set(key: string, value: any)
 </code></pre>
-<h6 id="parameters-6"><a class="header" href="#parameters-6">Parameters</a></h6>
+<h6 id="parameters-11"><a class="header" href="#parameters-11">Parameters</a></h6>
 <ul>
 <li><code>key</code> (<a href="user/templating/2-plugins.html#type.string">string</a>): The key to set.</li>
 <li><code>value</code> (<a href="user/templating/2-plugins.html#type.any">any</a>): The value to set.</li>
@@ -510,26 +789,26 @@ print(token)
 <h5 id="kvexecutordelete"><a class="header" href="#kvexecutordelete">KvExecutor:delete</a></h5>
 <pre><code class="language-lua">function KvExecutor:delete(key: string)
 </code></pre>
-<h6 id="parameters-7"><a class="header" href="#parameters-7">Parameters</a></h6>
+<h6 id="parameters-12"><a class="header" href="#parameters-12">Parameters</a></h6>
 <ul>
 <li><code>key</code> (<a href="user/templating/2-plugins.html#type.string">string</a>): The key to delete.</li>
 </ul>
-<h2 id="methods-4"><a class="header" href="#methods-4">Methods</a></h2>
+<h2 id="methods-5"><a class="header" href="#methods-5">Methods</a></h2>
 <h3 id="new-1"><a class="header" href="#new-1">new</a></h3>
 <pre><code class="language-lua">function new(token: string): KvExecutor
 </code></pre>
-<h4 id="parameters-8"><a class="header" href="#parameters-8">Parameters</a></h4>
+<h4 id="parameters-13"><a class="header" href="#parameters-13">Parameters</a></h4>
 <ul>
 <li><code>token</code> (<a href="user/templating/2-plugins.html#type.string">string</a>): The token of the template to use.</li>
 </ul>
-<h4 id="returns-10"><a class="header" href="#returns-10">Returns</a></h4>
+<h4 id="returns-15"><a class="header" href="#returns-15">Returns</a></h4>
 <ul>
 <li><code>executor</code> (<a href="user/templating/2-plugins.html#type.KvExecutor">KvExecutor</a>): A key-value executor.</li>
 </ul>
 <hr />
 <h1 id="antiraidpermissions"><a class="header" href="#antiraidpermissions">@antiraid/permissions</a></h1>
 <p>Utilities for handling permission checks.</p>
-<h2 id="types-3"><a class="header" href="#types-3">Types</a></h2>
+<h2 id="types-4"><a class="header" href="#types-4">Types</a></h2>
 <div id="type.PermissionResult" />
 <h3 id="permissionresult"><a class="header" href="#permissionresult">PermissionResult</a></h3>
 <p>PermissionResult is an internal type containing the status of a permission check in AntiRaid. The exact contents are undocumented as of now</p>
@@ -545,7 +824,7 @@ print(token)
   "markdown": ""
 }
 </code></pre>
-<h4 id="fields-4"><a class="header" href="#fields-4">Fields</a></h4>
+<h4 id="fields-9"><a class="header" href="#fields-9">Fields</a></h4>
 <ul>
 <li><code>result</code> (<a href="user/templating/2-plugins.html#type.PermissionResult">PermissionResult</a>): The raw/underlying result of the permission check.</li>
 <li><code>is_ok</code> (<a href="user/templating/2-plugins.html#type.bool">bool</a>): Whether the permission check was successful.</li>
@@ -561,7 +840,7 @@ print(token)
   "inner_and": false
 }
 </code></pre>
-<h4 id="fields-5"><a class="header" href="#fields-5">Fields</a></h4>
+<h4 id="fields-10"><a class="header" href="#fields-10">Fields</a></h4>
 <ul>
 <li><code>kittycat_perms</code> (<a href="user/templating/2-plugins.html#type.Permission">{Permission}</a>): The kittycat permissions needed to run the command.</li>
 <li><code>native_perms</code> (<a href="user/templating/2-plugins.html#type.string">{string}</a>): The native permissions needed to run the command.</li>
@@ -576,22 +855,22 @@ print(token)
   "negator": false
 }
 </code></pre>
-<h4 id="fields-6"><a class="header" href="#fields-6">Fields</a></h4>
+<h4 id="fields-11"><a class="header" href="#fields-11">Fields</a></h4>
 <ul>
 <li><code>namespace</code> (<a href="user/templating/2-plugins.html#type.string">string</a>): The namespace of the permission.</li>
 <li><code>perm</code> (<a href="user/templating/2-plugins.html#type.string">string</a>): The permission bit on the namespace.</li>
 <li><code>negator</code> (<a href="user/templating/2-plugins.html#type.bool">bool</a>): Whether the permission is a negator permission or not</li>
 </ul>
-<h2 id="methods-5"><a class="header" href="#methods-5">Methods</a></h2>
+<h2 id="methods-6"><a class="header" href="#methods-6">Methods</a></h2>
 <h3 id="permission_from_string"><a class="header" href="#permission_from_string">permission_from_string</a></h3>
 <pre><code class="language-lua">function permission_from_string(perm_string: string): Permission
 </code></pre>
 <p>Returns a Permission object from a string.</p>
-<h4 id="parameters-9"><a class="header" href="#parameters-9">Parameters</a></h4>
+<h4 id="parameters-14"><a class="header" href="#parameters-14">Parameters</a></h4>
 <ul>
 <li><code>perm_string</code> (<a href="user/templating/2-plugins.html#type.string">string</a>): The string to parse into a Permission object.</li>
 </ul>
-<h4 id="returns-11"><a class="header" href="#returns-11">Returns</a></h4>
+<h4 id="returns-16"><a class="header" href="#returns-16">Returns</a></h4>
 <ul>
 <li><code>permission</code> (<a href="user/templating/2-plugins.html#type.Permission">Permission</a>): The parsed Permission object.</li>
 </ul>
@@ -599,11 +878,11 @@ print(token)
 <pre><code class="language-lua">function permission_to_string(permission: Permission): string
 </code></pre>
 <p>Returns a string from a Permission object.</p>
-<h4 id="parameters-10"><a class="header" href="#parameters-10">Parameters</a></h4>
+<h4 id="parameters-15"><a class="header" href="#parameters-15">Parameters</a></h4>
 <ul>
 <li><code>permission</code> (<a href="user/templating/2-plugins.html#type.Permission">Permission</a>): The Permission object to parse into a string.</li>
 </ul>
-<h4 id="returns-12"><a class="header" href="#returns-12">Returns</a></h4>
+<h4 id="returns-17"><a class="header" href="#returns-17">Returns</a></h4>
 <ul>
 <li><code>perm_string</code> (<a href="user/templating/2-plugins.html#type.string">string</a>): The parsed string.</li>
 </ul>
@@ -611,12 +890,12 @@ print(token)
 <pre><code class="language-lua">function has_perm(permissions: {Permission}, permission: Permission): bool
 </code></pre>
 <p>Checks if a list of permissions in Permission object form contains a specific permission.</p>
-<h4 id="parameters-11"><a class="header" href="#parameters-11">Parameters</a></h4>
+<h4 id="parameters-16"><a class="header" href="#parameters-16">Parameters</a></h4>
 <ul>
 <li><code>permissions</code> (<a href="user/templating/2-plugins.html#type.Permission">{Permission}</a>): The list of permissions</li>
 <li><code>permission</code> (<a href="user/templating/2-plugins.html#type.Permission">Permission</a>): The permission to check for.</li>
 </ul>
-<h4 id="returns-13"><a class="header" href="#returns-13">Returns</a></h4>
+<h4 id="returns-18"><a class="header" href="#returns-18">Returns</a></h4>
 <ul>
 <li><code>has_perm</code> (<a href="user/templating/2-plugins.html#type.bool">bool</a>): Whether the permission is present in the list of permissions as per kittycat rules.</li>
 </ul>
@@ -624,12 +903,12 @@ print(token)
 <pre><code class="language-lua">function has_perm_str(permissions: {string}, permission: string): bool
 </code></pre>
 <p>Checks if a list of permissions in canonical string form contains a specific permission.</p>
-<h4 id="parameters-12"><a class="header" href="#parameters-12">Parameters</a></h4>
+<h4 id="parameters-17"><a class="header" href="#parameters-17">Parameters</a></h4>
 <ul>
 <li><code>permissions</code> (<a href="user/templating/2-plugins.html#type.string">{string}</a>): The list of permissions</li>
 <li><code>permission</code> (<a href="user/templating/2-plugins.html#type.string">string</a>): The permission to check for.</li>
 </ul>
-<h4 id="returns-14"><a class="header" href="#returns-14">Returns</a></h4>
+<h4 id="returns-19"><a class="header" href="#returns-19">Returns</a></h4>
 <ul>
 <li><code>has_perm</code> (<a href="user/templating/2-plugins.html#type.bool">bool</a>): Whether the permission is present in the list of permissions as per kittycat rules.</li>
 </ul>
@@ -637,49 +916,52 @@ print(token)
 <pre><code class="language-lua">function check_perms(check: PermissionCheck, member_native_perms: Permissions, member_kittycat_perms: {Permission}): LuaPermissionResult
 </code></pre>
 <p>Checks if a permission check passes.</p>
-<h4 id="parameters-13"><a class="header" href="#parameters-13">Parameters</a></h4>
+<h4 id="parameters-18"><a class="header" href="#parameters-18">Parameters</a></h4>
 <ul>
 <li><code>check</code> (<a href="user/templating/2-plugins.html#type.PermissionCheck">PermissionCheck</a>): The permission check to evaluate.</li>
 <li><code>member_native_perms</code> (<a href="user/templating/2-plugins.html#type.Permissions">Permissions</a>): The native permissions of the member.</li>
 <li><code>member_kittycat_perms</code> (<a href="user/templating/2-plugins.html#type.Permission">{Permission}</a>): The kittycat permissions of the member.</li>
 </ul>
-<h4 id="returns-15"><a class="header" href="#returns-15">Returns</a></h4>
+<h4 id="returns-20"><a class="header" href="#returns-20">Returns</a></h4>
 <ul>
 <li><code>result</code> (<a href="user/templating/2-plugins.html#type.LuaPermissionResult">LuaPermissionResult</a>): The result of the permission check.</li>
 </ul>
 <hr />
 <h1 id="antiraidtypesext"><a class="header" href="#antiraidtypesext">@antiraid/typesext</a></h1>
 <p>Extra types used by Anti-Raid Lua templating subsystem to either add in common functionality such as streams or handle things like u64/i64 types performantly.</p>
-<h2 id="types-4"><a class="header" href="#types-4">Types</a></h2>
+<h2 id="types-5"><a class="header" href="#types-5">Types</a></h2>
 <div id="type.LuaStream" />
 <h3 id="luastream"><a class="header" href="#luastream">LuaStream<T></a></h3>
 <p>LuaStream<T> provides a stream implementation. This is returned by MessageHandle's await_component_interaction for instance for handling button clicks/select menu choices etc.</p>
-<h4 id="methods-6"><a class="header" href="#methods-6">Methods</a></h4>
+<h4 id="methods-7"><a class="header" href="#methods-7">Methods</a></h4>
 <h5 id="luastreamnext"><a class="header" href="#luastreamnext">LuaStream:next</a></h5>
 <pre><code class="language-lua">function LuaStream:next(): &lt;T&gt;
 </code></pre>
 <p>Returns the next item in the stream.</p>
-<h6 id="returns-16"><a class="header" href="#returns-16">Returns</a></h6>
+<h6 id="returns-21"><a class="header" href="#returns-21">Returns</a></h6>
 <ul>
-<li><code>item</code> (<code>&lt;T&gt;</code>): The next item in the stream.</li>
+<li><code>item</code> (<a href="user/templating/2-plugins.html#type.%3CT%3E"><T></a>): The next item in the stream.</li>
 </ul>
 <h5 id="luastreamfor_each"><a class="header" href="#luastreamfor_each">LuaStream:for_each</a></h5>
-<pre><code class="language-lua">function LuaStream:for_each(callback: &lt;function&gt;)
+<pre><code class="language-lua">function LuaStream:for_each(callback: function)
 </code></pre>
 <p>Executes a callback for every entry in the stream.</p>
-<h6 id="parameters-14"><a class="header" href="#parameters-14">Parameters</a></h6>
+<h6 id="parameters-19"><a class="header" href="#parameters-19">Parameters</a></h6>
 <ul>
-<li><code>callback</code> (<code>&lt;function&gt;</code>): The callback to execute for each entry.</li>
+<li><code>callback</code> (<a href="user/templating/2-plugins.html#type.function">function</a>): The callback to execute for each entry.</li>
 </ul>
+<div id="type.MultiOption" />
+<h3 id="multioption"><a class="header" href="#multioption">MultiOption<T></a></h3>
+<p>MultiOption allows distinguishing between <code>null</code> and empty fields. Use the value to show both existence and value (<code>Some(Some(value))</code>) an empty object to show existence (<code>Some(None)</code>) or null to show neither (<code>None</code>)</p>
 <div id="type.U64" />
 <h3 id="u64"><a class="header" href="#u64">U64</a></h3>
 <p>U64 is a 64-bit unsigned integer type. Implements Add/Subtract/Multiply/Divide/Modulus/Power/Integer Division/Equality/Comparison (Lt/Le and its complements Gt/Ge) and ToString with a type name of U64</p>
-<h4 id="methods-7"><a class="header" href="#methods-7">Methods</a></h4>
+<h4 id="methods-8"><a class="header" href="#methods-8">Methods</a></h4>
 <h5 id="u64to_ne_bytes"><a class="header" href="#u64to_ne_bytes">U64:to_ne_bytes</a></h5>
 <pre><code class="language-lua">function U64:to_ne_bytes(): {u8}
 </code></pre>
 <p>Converts the U64 to a little-endian byte array.</p>
-<h6 id="returns-17"><a class="header" href="#returns-17">Returns</a></h6>
+<h6 id="returns-22"><a class="header" href="#returns-22">Returns</a></h6>
 <ul>
 <li><code>bytes</code> (<a href="user/templating/2-plugins.html#type.u8">{u8}</a>): The little-endian byte array.</li>
 </ul>
@@ -687,11 +969,11 @@ print(token)
 <pre><code class="language-lua">function U64:from_ne_bytes(bytes: {u8}): U64
 </code></pre>
 <p>Converts a little-endian byte array to a U64.</p>
-<h6 id="parameters-15"><a class="header" href="#parameters-15">Parameters</a></h6>
+<h6 id="parameters-20"><a class="header" href="#parameters-20">Parameters</a></h6>
 <ul>
 <li><code>bytes</code> (<a href="user/templating/2-plugins.html#type.u8">{u8}</a>): The little-endian byte array.</li>
 </ul>
-<h6 id="returns-18"><a class="header" href="#returns-18">Returns</a></h6>
+<h6 id="returns-23"><a class="header" href="#returns-23">Returns</a></h6>
 <ul>
 <li><code>u64</code> (<a href="user/templating/2-plugins.html#type.U64">U64</a>): The U64 value.</li>
 </ul>
@@ -699,7 +981,7 @@ print(token)
 <pre><code class="language-lua">function U64:to_le_bytes(): {u8}
 </code></pre>
 <p>Converts the U64 to a little-endian byte array.</p>
-<h6 id="returns-19"><a class="header" href="#returns-19">Returns</a></h6>
+<h6 id="returns-24"><a class="header" href="#returns-24">Returns</a></h6>
 <ul>
 <li><code>bytes</code> (<a href="user/templating/2-plugins.html#type.u8">{u8}</a>): The little-endian byte array.</li>
 </ul>
@@ -707,11 +989,11 @@ print(token)
 <pre><code class="language-lua">function U64:from_le_bytes(bytes: {u8}): U64
 </code></pre>
 <p>Converts a little-endian byte array to a U64.</p>
-<h6 id="parameters-16"><a class="header" href="#parameters-16">Parameters</a></h6>
+<h6 id="parameters-21"><a class="header" href="#parameters-21">Parameters</a></h6>
 <ul>
 <li><code>bytes</code> (<a href="user/templating/2-plugins.html#type.u8">{u8}</a>): The little-endian byte array.</li>
 </ul>
-<h6 id="returns-20"><a class="header" href="#returns-20">Returns</a></h6>
+<h6 id="returns-25"><a class="header" href="#returns-25">Returns</a></h6>
 <ul>
 <li><code>u64</code> (<a href="user/templating/2-plugins.html#type.U64">U64</a>): The U64 value.</li>
 </ul>
@@ -719,7 +1001,7 @@ print(token)
 <pre><code class="language-lua">function U64:to_be_bytes(): {u8}
 </code></pre>
 <p>Converts the U64 to a big-endian byte array.</p>
-<h6 id="returns-21"><a class="header" href="#returns-21">Returns</a></h6>
+<h6 id="returns-26"><a class="header" href="#returns-26">Returns</a></h6>
 <ul>
 <li><code>bytes</code> (<a href="user/templating/2-plugins.html#type.u8">{u8}</a>): The big-endian byte array.</li>
 </ul>
@@ -727,11 +1009,11 @@ print(token)
 <pre><code class="language-lua">function U64:from_be_bytes(bytes: {u8}): U64
 </code></pre>
 <p>Converts a big-endian byte array to a U64.</p>
-<h6 id="parameters-17"><a class="header" href="#parameters-17">Parameters</a></h6>
+<h6 id="parameters-22"><a class="header" href="#parameters-22">Parameters</a></h6>
 <ul>
 <li><code>bytes</code> (<a href="user/templating/2-plugins.html#type.u8">{u8}</a>): The big-endian byte array.</li>
 </ul>
-<h6 id="returns-22"><a class="header" href="#returns-22">Returns</a></h6>
+<h6 id="returns-27"><a class="header" href="#returns-27">Returns</a></h6>
 <ul>
 <li><code>u64</code> (<a href="user/templating/2-plugins.html#type.U64">U64</a>): The U64 value.</li>
 </ul>
@@ -739,19 +1021,19 @@ print(token)
 <pre><code class="language-lua">function U64:to_i64(): I64
 </code></pre>
 <p>Converts the U64 to an i64.</p>
-<h6 id="returns-23"><a class="header" href="#returns-23">Returns</a></h6>
+<h6 id="returns-28"><a class="header" href="#returns-28">Returns</a></h6>
 <ul>
 <li><code>i64</code> (<a href="user/templating/2-plugins.html#type.I64">I64</a>): The i64 value.</li>
 </ul>
 <div id="type.I64" />
 <h3 id="i64"><a class="header" href="#i64">I64</a></h3>
 <p>I64 is a 64-bit signed integer type. Implements Add/Subtract/Multiply/Divide/Modulus/Power/Integer Division/Equality/Comparison (Lt/Le and its complements Gt/Ge) and ToString with a type name of I64</p>
-<h4 id="methods-8"><a class="header" href="#methods-8">Methods</a></h4>
+<h4 id="methods-9"><a class="header" href="#methods-9">Methods</a></h4>
 <h5 id="i64to_ne_bytes"><a class="header" href="#i64to_ne_bytes">I64:to_ne_bytes</a></h5>
 <pre><code class="language-lua">function I64:to_ne_bytes(): {u8}
 </code></pre>
 <p>Converts the I64 to a little-endian byte array.</p>
-<h6 id="returns-24"><a class="header" href="#returns-24">Returns</a></h6>
+<h6 id="returns-29"><a class="header" href="#returns-29">Returns</a></h6>
 <ul>
 <li><code>bytes</code> (<a href="user/templating/2-plugins.html#type.u8">{u8}</a>): The little-endian byte array.</li>
 </ul>
@@ -759,11 +1041,11 @@ print(token)
 <pre><code class="language-lua">function I64:from_ne_bytes(bytes: {u8}): I64
 </code></pre>
 <p>Converts a little-endian byte array to a I64.</p>
-<h6 id="parameters-18"><a class="header" href="#parameters-18">Parameters</a></h6>
+<h6 id="parameters-23"><a class="header" href="#parameters-23">Parameters</a></h6>
 <ul>
 <li><code>bytes</code> (<a href="user/templating/2-plugins.html#type.u8">{u8}</a>): The little-endian byte array.</li>
 </ul>
-<h6 id="returns-25"><a class="header" href="#returns-25">Returns</a></h6>
+<h6 id="returns-30"><a class="header" href="#returns-30">Returns</a></h6>
 <ul>
 <li><code>i64</code> (<a href="user/templating/2-plugins.html#type.I64">I64</a>): The I64 value.</li>
 </ul>
@@ -771,7 +1053,7 @@ print(token)
 <pre><code class="language-lua">function I64:to_le_bytes(): {u8}
 </code></pre>
 <p>Converts the I64 to a little-endian byte array.</p>
-<h6 id="returns-26"><a class="header" href="#returns-26">Returns</a></h6>
+<h6 id="returns-31"><a class="header" href="#returns-31">Returns</a></h6>
 <ul>
 <li><code>bytes</code> (<a href="user/templating/2-plugins.html#type.u8">{u8}</a>): The little-endian byte array.</li>
 </ul>
@@ -779,11 +1061,11 @@ print(token)
 <pre><code class="language-lua">function I64:from_le_bytes(bytes: {u8}): I64
 </code></pre>
 <p>Converts a little-endian byte array to a I64.</p>
-<h6 id="parameters-19"><a class="header" href="#parameters-19">Parameters</a></h6>
+<h6 id="parameters-24"><a class="header" href="#parameters-24">Parameters</a></h6>
 <ul>
 <li><code>bytes</code> (<a href="user/templating/2-plugins.html#type.u8">{u8}</a>): The little-endian byte array.</li>
 </ul>
-<h6 id="returns-27"><a class="header" href="#returns-27">Returns</a></h6>
+<h6 id="returns-32"><a class="header" href="#returns-32">Returns</a></h6>
 <ul>
 <li><code>i64</code> (<a href="user/templating/2-plugins.html#type.I64">I64</a>): The I64 value.</li>
 </ul>
@@ -791,7 +1073,7 @@ print(token)
 <pre><code class="language-lua">function I64:to_be_bytes(): {u8}
 </code></pre>
 <p>Converts the I64 to a big-endian byte array.</p>
-<h6 id="returns-28"><a class="header" href="#returns-28">Returns</a></h6>
+<h6 id="returns-33"><a class="header" href="#returns-33">Returns</a></h6>
 <ul>
 <li><code>bytes</code> (<a href="user/templating/2-plugins.html#type.u8">{u8}</a>): The big-endian byte array.</li>
 </ul>
@@ -799,11 +1081,11 @@ print(token)
 <pre><code class="language-lua">function I64:from_be_bytes(bytes: {u8}): I64
 </code></pre>
 <p>Converts a big-endian byte array to a I64.</p>
-<h6 id="parameters-20"><a class="header" href="#parameters-20">Parameters</a></h6>
+<h6 id="parameters-25"><a class="header" href="#parameters-25">Parameters</a></h6>
 <ul>
 <li><code>bytes</code> (<a href="user/templating/2-plugins.html#type.u8">{u8}</a>): The big-endian byte array.</li>
 </ul>
-<h6 id="returns-29"><a class="header" href="#returns-29">Returns</a></h6>
+<h6 id="returns-34"><a class="header" href="#returns-34">Returns</a></h6>
 <ul>
 <li><code>i64</code> (<a href="user/templating/2-plugins.html#type.I64">I64</a>): The I64 value.</li>
 </ul>
@@ -811,23 +1093,23 @@ print(token)
 <pre><code class="language-lua">function I64:to_u64(): U64
 </code></pre>
 <p>Converts the I64 to a U64.</p>
-<h6 id="returns-30"><a class="header" href="#returns-30">Returns</a></h6>
+<h6 id="returns-35"><a class="header" href="#returns-35">Returns</a></h6>
 <ul>
 <li><code>u64</code> (<a href="user/templating/2-plugins.html#type.U64">U64</a>): The U64 value.</li>
 </ul>
 <div id="type.bitu64" />
 <h3 id="bitu64"><a class="header" href="#bitu64">bitu64</a></h3>
 <p><a href="https://luau.org/library#bit32-library">bit32</a> but for U64 datatype. Note that bit64 is experimental and may not be properly documented at all times. When in doubt, reach for Luau's bit32 documentation and simply replace 31's with 63's</p>
-<h4 id="methods-9"><a class="header" href="#methods-9">Methods</a></h4>
+<h4 id="methods-10"><a class="header" href="#methods-10">Methods</a></h4>
 <h5 id="bitu64band"><a class="header" href="#bitu64band">bitu64:band</a></h5>
-<pre><code class="language-lua">function bitu64:band(...: &lt;U64&gt;): U64
+<pre><code class="language-lua">function bitu64:band(values: {U64}): U64
 </code></pre>
 <p>Performs a bitwise AND operation on the given values.</p>
-<h6 id="parameters-21"><a class="header" href="#parameters-21">Parameters</a></h6>
+<h6 id="parameters-26"><a class="header" href="#parameters-26">Parameters</a></h6>
 <ul>
-<li><code>...</code> (<code>&lt;U64&gt;</code>): The values to perform the operation on.</li>
+<li><code>values</code> (<a href="user/templating/2-plugins.html#type.U64">{U64}</a>): The values to perform the operation on.</li>
 </ul>
-<h6 id="returns-31"><a class="header" href="#returns-31">Returns</a></h6>
+<h6 id="returns-36"><a class="header" href="#returns-36">Returns</a></h6>
 <ul>
 <li><code>result</code> (<a href="user/templating/2-plugins.html#type.U64">U64</a>): The result of the operation.</li>
 </ul>
@@ -835,47 +1117,47 @@ print(token)
 <pre><code class="language-lua">function bitu64:bnor(n: U64): U64
 </code></pre>
 <p>Performs a bitwise NOR operation on the given value.</p>
-<h6 id="parameters-22"><a class="header" href="#parameters-22">Parameters</a></h6>
+<h6 id="parameters-27"><a class="header" href="#parameters-27">Parameters</a></h6>
 <ul>
 <li><code>n</code> (<a href="user/templating/2-plugins.html#type.U64">U64</a>): The value to perform the operation on.</li>
 </ul>
-<h6 id="returns-32"><a class="header" href="#returns-32">Returns</a></h6>
+<h6 id="returns-37"><a class="header" href="#returns-37">Returns</a></h6>
 <ul>
 <li><code>result</code> (<a href="user/templating/2-plugins.html#type.U64">U64</a>): The result of the operation.</li>
 </ul>
 <h5 id="bitu64bor"><a class="header" href="#bitu64bor">bitu64:bor</a></h5>
-<pre><code class="language-lua">function bitu64:bor(...: &lt;U64&gt;): U64
+<pre><code class="language-lua">function bitu64:bor(values: {U64}): U64
 </code></pre>
 <p>Performs a bitwise OR operation on the given values.</p>
-<h6 id="parameters-23"><a class="header" href="#parameters-23">Parameters</a></h6>
+<h6 id="parameters-28"><a class="header" href="#parameters-28">Parameters</a></h6>
 <ul>
-<li><code>...</code> (<code>&lt;U64&gt;</code>): The values to perform the operation on.</li>
+<li><code>values</code> (<a href="user/templating/2-plugins.html#type.U64">{U64}</a>): The values to perform the operation on.</li>
 </ul>
-<h6 id="returns-33"><a class="header" href="#returns-33">Returns</a></h6>
+<h6 id="returns-38"><a class="header" href="#returns-38">Returns</a></h6>
 <ul>
 <li><code>result</code> (<a href="user/templating/2-plugins.html#type.U64">U64</a>): The result of the operation.</li>
 </ul>
 <h5 id="bitu64bxor"><a class="header" href="#bitu64bxor">bitu64:bxor</a></h5>
-<pre><code class="language-lua">function bitu64:bxor(...: &lt;U64&gt;): U64
+<pre><code class="language-lua">function bitu64:bxor(values: {U64}): U64
 </code></pre>
 <p>Performs a bitwise XOR operation on the given values.</p>
-<h6 id="parameters-24"><a class="header" href="#parameters-24">Parameters</a></h6>
+<h6 id="parameters-29"><a class="header" href="#parameters-29">Parameters</a></h6>
 <ul>
-<li><code>...</code> (<code>&lt;U64&gt;</code>): The values to perform the operation on.</li>
+<li><code>values</code> (<a href="user/templating/2-plugins.html#type.U64">{U64}</a>): The values to perform the operation on.</li>
 </ul>
-<h6 id="returns-34"><a class="header" href="#returns-34">Returns</a></h6>
+<h6 id="returns-39"><a class="header" href="#returns-39">Returns</a></h6>
 <ul>
 <li><code>result</code> (<a href="user/templating/2-plugins.html#type.U64">U64</a>): The result of the operation.</li>
 </ul>
 <h5 id="bitu64btest"><a class="header" href="#bitu64btest">bitu64:btest</a></h5>
-<pre><code class="language-lua">function bitu64:btest(...: &lt;U64&gt;): bool
+<pre><code class="language-lua">function bitu64:btest(values: {U64}): bool
 </code></pre>
 <p>Tests if the bitwise AND of the given values is not zero.</p>
-<h6 id="parameters-25"><a class="header" href="#parameters-25">Parameters</a></h6>
+<h6 id="parameters-30"><a class="header" href="#parameters-30">Parameters</a></h6>
 <ul>
-<li><code>...</code> (<code>&lt;U64&gt;</code>): The values to perform the operation on.</li>
+<li><code>values</code> (<a href="user/templating/2-plugins.html#type.U64">{U64}</a>): The values to perform the operation on.</li>
 </ul>
-<h6 id="returns-35"><a class="header" href="#returns-35">Returns</a></h6>
+<h6 id="returns-40"><a class="header" href="#returns-40">Returns</a></h6>
 <ul>
 <li><code>result</code> (<a href="user/templating/2-plugins.html#type.bool">bool</a>): True if the bitwise AND of the values is not zero, false otherwise.</li>
 </ul>
@@ -883,13 +1165,13 @@ print(token)
 <pre><code class="language-lua">function bitu64:extract(n: U64, f: u64, w: u64): U64
 </code></pre>
 <p>Extracts a field from a value.</p>
-<h6 id="parameters-26"><a class="header" href="#parameters-26">Parameters</a></h6>
+<h6 id="parameters-31"><a class="header" href="#parameters-31">Parameters</a></h6>
 <ul>
 <li><code>n</code> (<a href="user/templating/2-plugins.html#type.U64">U64</a>): The value to extract the field from.</li>
 <li><code>f</code> (<a href="user/templating/2-plugins.html#type.u64">u64</a>): The field to extract.</li>
 <li><code>w</code> (<a href="user/templating/2-plugins.html#type.u64">u64</a>): The width of the field to extract.</li>
 </ul>
-<h6 id="returns-36"><a class="header" href="#returns-36">Returns</a></h6>
+<h6 id="returns-41"><a class="header" href="#returns-41">Returns</a></h6>
 <ul>
 <li><code>result</code> (<a href="user/templating/2-plugins.html#type.U64">U64</a>): The extracted field.</li>
 </ul>
@@ -897,12 +1179,12 @@ print(token)
 <pre><code class="language-lua">function bitu64:lrotate(n: U64, i: i64): U64
 </code></pre>
 <p>Rotates a value left or right.</p>
-<h6 id="parameters-27"><a class="header" href="#parameters-27">Parameters</a></h6>
+<h6 id="parameters-32"><a class="header" href="#parameters-32">Parameters</a></h6>
 <ul>
 <li><code>n</code> (<a href="user/templating/2-plugins.html#type.U64">U64</a>): The value to rotate.</li>
 <li><code>i</code> (<a href="user/templating/2-plugins.html#type.i64">i64</a>): The amount to rotate by.</li>
 </ul>
-<h6 id="returns-37"><a class="header" href="#returns-37">Returns</a></h6>
+<h6 id="returns-42"><a class="header" href="#returns-42">Returns</a></h6>
 <ul>
 <li><code>result</code> (<a href="user/templating/2-plugins.html#type.U64">U64</a>): The rotated value.</li>
 </ul>
@@ -910,12 +1192,12 @@ print(token)
 <pre><code class="language-lua">function bitu64:lshift(n: U64, i: i64): U64
 </code></pre>
 <p>Shifts a value left or right.</p>
-<h6 id="parameters-28"><a class="header" href="#parameters-28">Parameters</a></h6>
+<h6 id="parameters-33"><a class="header" href="#parameters-33">Parameters</a></h6>
 <ul>
 <li><code>n</code> (<a href="user/templating/2-plugins.html#type.U64">U64</a>): The value to shift.</li>
 <li><code>i</code> (<a href="user/templating/2-plugins.html#type.i64">i64</a>): The amount to shift by.</li>
 </ul>
-<h6 id="returns-38"><a class="header" href="#returns-38">Returns</a></h6>
+<h6 id="returns-43"><a class="header" href="#returns-43">Returns</a></h6>
 <ul>
 <li><code>result</code> (<a href="user/templating/2-plugins.html#type.U64">U64</a>): The shifted value.</li>
 </ul>
@@ -923,14 +1205,14 @@ print(token)
 <pre><code class="language-lua">function bitu64:replace(n: U64, v: U64, f: u64, w: u64): U64
 </code></pre>
 <p>Replaces a field in a value.</p>
-<h6 id="parameters-29"><a class="header" href="#parameters-29">Parameters</a></h6>
+<h6 id="parameters-34"><a class="header" href="#parameters-34">Parameters</a></h6>
 <ul>
 <li><code>n</code> (<a href="user/templating/2-plugins.html#type.U64">U64</a>): The value to replace the field in.</li>
 <li><code>v</code> (<a href="user/templating/2-plugins.html#type.U64">U64</a>): The value to replace the field with.</li>
 <li><code>f</code> (<a href="user/templating/2-plugins.html#type.u64">u64</a>): The field to replace.</li>
 <li><code>w</code> (<a href="user/templating/2-plugins.html#type.u64">u64</a>): The width of the field to replace.</li>
 </ul>
-<h6 id="returns-39"><a class="header" href="#returns-39">Returns</a></h6>
+<h6 id="returns-44"><a class="header" href="#returns-44">Returns</a></h6>
 <ul>
 <li><code>result</code> (<a href="user/templating/2-plugins.html#type.U64">U64</a>): The value with the field replaced.</li>
 </ul>
@@ -938,12 +1220,12 @@ print(token)
 <pre><code class="language-lua">function bitu64:rrotate(n: U64, i: i64): U64
 </code></pre>
 <p>Rotates a value left or right.</p>
-<h6 id="parameters-30"><a class="header" href="#parameters-30">Parameters</a></h6>
+<h6 id="parameters-35"><a class="header" href="#parameters-35">Parameters</a></h6>
 <ul>
 <li><code>n</code> (<a href="user/templating/2-plugins.html#type.U64">U64</a>): The value to rotate.</li>
 <li><code>i</code> (<a href="user/templating/2-plugins.html#type.i64">i64</a>): The amount to rotate by.</li>
 </ul>
-<h6 id="returns-40"><a class="header" href="#returns-40">Returns</a></h6>
+<h6 id="returns-45"><a class="header" href="#returns-45">Returns</a></h6>
 <ul>
 <li><code>result</code> (<a href="user/templating/2-plugins.html#type.U64">U64</a>): The rotated value.</li>
 </ul>
@@ -951,25 +1233,25 @@ print(token)
 <pre><code class="language-lua">function bitu64:rshift(n: U64, i: i64): U64
 </code></pre>
 <p>Shifts a value left or right.</p>
-<h6 id="parameters-31"><a class="header" href="#parameters-31">Parameters</a></h6>
+<h6 id="parameters-36"><a class="header" href="#parameters-36">Parameters</a></h6>
 <ul>
 <li><code>n</code> (<a href="user/templating/2-plugins.html#type.U64">U64</a>): The value to shift.</li>
 <li><code>i</code> (<a href="user/templating/2-plugins.html#type.i64">i64</a>): The amount to shift by.</li>
 </ul>
-<h6 id="returns-41"><a class="header" href="#returns-41">Returns</a></h6>
+<h6 id="returns-46"><a class="header" href="#returns-46">Returns</a></h6>
 <ul>
 <li><code>result</code> (<a href="user/templating/2-plugins.html#type.U64">U64</a>): The shifted value.</li>
 </ul>
-<h2 id="methods-10"><a class="header" href="#methods-10">Methods</a></h2>
+<h2 id="methods-11"><a class="header" href="#methods-11">Methods</a></h2>
 <h3 id="u64-1"><a class="header" href="#u64-1">U64</a></h3>
 <pre><code class="language-lua">function U64(value: u64): U64
 </code></pre>
 <p>Creates a new U64.</p>
-<h4 id="parameters-32"><a class="header" href="#parameters-32">Parameters</a></h4>
+<h4 id="parameters-37"><a class="header" href="#parameters-37">Parameters</a></h4>
 <ul>
 <li><code>value</code> (<a href="user/templating/2-plugins.html#type.u64">u64</a>): The value of the U64.</li>
 </ul>
-<h4 id="returns-42"><a class="header" href="#returns-42">Returns</a></h4>
+<h4 id="returns-47"><a class="header" href="#returns-47">Returns</a></h4>
 <ul>
 <li><code>u64</code> (<a href="user/templating/2-plugins.html#type.U64">U64</a>): The U64 value.</li>
 </ul>
@@ -977,11 +1259,11 @@ print(token)
 <pre><code class="language-lua">function I64(value: i64): I64
 </code></pre>
 <p>Creates a new I64.</p>
-<h4 id="parameters-33"><a class="header" href="#parameters-33">Parameters</a></h4>
+<h4 id="parameters-38"><a class="header" href="#parameters-38">Parameters</a></h4>
 <ul>
 <li><code>value</code> (<a href="user/templating/2-plugins.html#type.i64">i64</a>): The value of the I64.</li>
 </ul>
-<h4 id="returns-43"><a class="header" href="#returns-43">Returns</a></h4>
+<h4 id="returns-48"><a class="header" href="#returns-48">Returns</a></h4>
 <ul>
 <li><code>i64</code> (<a href="user/templating/2-plugins.html#type.I64">I64</a>): The I64 value.</li>
 </ul>
@@ -1112,6 +1394,12 @@ print(token)
 <ul>
 <li><strong>encoding</strong>: Accepted character encoding (accepted values: UTF-8 <em>only</em>)</li>
 </ul>
+<hr />
+<div id="type.function" />
+<h2 id="function"><a class="header" href="#function">function</a></h2>
+<pre><code class="language-lua">type function = function
+</code></pre>
+<p>A Lua function.</p>
 <hr />
 <div style="break-before: page; page-break-before: always;"></div><h1 id="example-templates"><a class="header" href="#example-templates">Example Templates</a></h1>
 <p>To help you get started with templating, we have provided a few examples below along with explanations of what/how they work</p>
