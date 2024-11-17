@@ -263,8 +263,10 @@ impl Method {
 
             *return_ = new_return_;
         } else {
-            let mut return_ = Parameter::default();
-            return_.name = name.to_string();
+            let return_ = Parameter {
+                name: name.to_string(),
+                ..Default::default()
+            };
             self.returns.push(f(return_));
         }
 
@@ -400,6 +402,7 @@ pub struct Type {
     pub description: String,
     pub generics: Vec<String>,
     pub example: Option<Arc<dyn erased_serde::Serialize + Send + Sync>>,
+    pub refers_to: Option<String>,
     pub fields: Vec<Field>, // Description of the fields in type
     pub methods: Vec<Method>,
 }
@@ -449,8 +452,10 @@ impl Type {
 
             *method = new_method;
         } else {
-            let mut method = Method::default();
-            method.name = name.to_string();
+            let method = Method {
+                name: name.to_string(),
+                ..Default::default()
+            };
             self.methods.push(f(method));
         }
 
@@ -471,8 +476,10 @@ impl Type {
 
             *field = new_field;
         } else {
-            let mut field = Field::default();
-            field.name = name.to_string();
+            let field = Field {
+                name: name.to_string(),
+                ..Default::default()
+            };
             self.fields.push(f(field));
         }
 
@@ -482,6 +489,19 @@ impl Type {
     pub fn add_generic(self, param: &str) -> Self {
         let mut t = self;
         t.generics.push(param.to_string());
+        t
+    }
+
+    pub fn refers_to(self, refer_to: &str) -> Self {
+        let mut t = self;
+        t.refers_to = Some(refer_to.to_string());
+        t
+    }
+
+    /// Helper function to refer to serenity docs using `serenity_link`
+    pub fn refers_to_serenity(self, typ: &str) -> Self {
+        let mut t = self;
+        t.refers_to = Some(serenity_link(typ.to_string()));
         t
     }
 
@@ -500,5 +520,88 @@ impl Type {
         }
 
         name
+    }
+}
+
+pub fn serenity_link(typ: String) -> String {
+    // Module on docs.rs, generate link
+    // E.g. std::sync::Arc -> [std::sync::Arc](https://docs.rs/std/latest/std/sync/struct.Arc.html)
+    // serenity::model::user::User -> [serenity::model::user::User](https://docs.rs/serenity/latest/serenity/model/user/struct.User.html)
+
+    let mut parts = typ.split("::").collect::<Vec<_>>();
+    let last = parts.pop().unwrap();
+    let first = parts.remove(0);
+
+    let mut url = format!("https://docs.rs/{}/latest/{}/", first, first);
+    url.push_str(&parts.join("/"));
+    url.push_str(&format!("/struct.{}.html", last));
+
+    format!("[{}]({})", typ, url)
+}
+
+pub struct LuaParamaterTypeMetadata {
+    pub table_dim: usize,
+    pub option_dim: usize,
+    pub raw_type: String,
+}
+
+impl LuaParamaterTypeMetadata {
+    /// Panics is t is invalid
+    ///
+    /// Note that this method is naive and only handles simple cases of <table><type><end table><option question marks>
+    pub fn from_type(t: &str) -> Self {
+        let mut table_dim = 0;
+        let mut option_dim = 0;
+
+        // Find and remove table `{`, `}`. Note that the ending bracket may be anywhere in the string
+        let mut in_table = false;
+        let mut remove_idx = vec![];
+        for (i, c) in t.chars().enumerate() {
+            // Table
+            if c == '{' {
+                table_dim += 1;
+                in_table = true;
+                // Remove from raw_type
+                remove_idx.push(i);
+            } else if c == '}' {
+                if !in_table {
+                    panic!("Invalid type: '}}' found without '{{'");
+                }
+                remove_idx.push(i);
+            }
+
+            // Option
+            if c == '?' {
+                option_dim += 1;
+                // Remove from raw_type
+                remove_idx.push(i);
+            }
+        }
+
+        LuaParamaterTypeMetadata {
+            table_dim,
+            option_dim,
+            raw_type: {
+                let mut raw_type = String::new();
+
+                for (i, c) in t.chars().enumerate() {
+                    if !remove_idx.contains(&i) {
+                        raw_type.push(c);
+                    }
+                }
+
+                raw_type
+            },
+        }
+    }
+
+    /// Returns true if the type is an option
+    pub fn is_option(&self) -> bool {
+        self.option_dim > 0
+    }
+
+    /// Returns true if the type is a table
+    pub fn is_multioption(&self) -> bool {
+        self.option_dim > 1
     }
 }

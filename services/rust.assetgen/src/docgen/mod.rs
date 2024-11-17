@@ -1,5 +1,8 @@
 // Generates AntiRaid documentation from docgen data
-use templating_docgen::{Field, Method, Parameter, Plugin, Primitive, PrimitiveConstraint, Type};
+use templating_docgen::{
+    Field, LuaParamaterTypeMetadata, Method, Parameter, Plugin, Primitive, PrimitiveConstraint,
+    Type,
+};
 
 pub fn create_documentation() -> String {
     let mut markdown = String::new();
@@ -138,6 +141,13 @@ fn type_to_string(typ: &Type, heading_level: usize) -> String {
         typ.description
     ));
 
+    if let Some(ref refers_to) = typ.refers_to {
+        markdown.push_str(&format!(
+            "**Refer to {} for more documentation on what this type contains. Fields may be incomplete**\n\n",
+            refers_to
+        ));
+    }
+
     if let Some(ref example) = typ.example {
         let example_json = serde_json::to_string_pretty(&example).unwrap();
 
@@ -221,43 +231,10 @@ fn param_to_string(param: &Parameter) -> String {
 }
 
 fn typeref_to_link(tref: &str) -> String {
-    if tref.contains("::") {
-        // Module on docs.rs, generate link
-        // E.g. std::sync::Arc -> [std::sync::Arc](https://docs.rs/std/latest/std/sync/struct.Arc.html)
-        // serenity::model::user::User -> [serenity::model::user::User](https://docs.rs/serenity/latest/serenity/model/user/struct.User.html)
-
-        let mut parts = tref.split("::").collect::<Vec<_>>();
-        let last = parts.pop().unwrap();
-        let first = parts.remove(0);
-
-        let mut url = format!("https://docs.rs/{}/latest/{}/", first, first);
-        url.push_str(&parts.join("/"));
-        url.push_str(&format!("/struct.{}.html", last));
-
-        format!("[{}]({})", tref, url)
-    } else if tref.starts_with("<") {
-        format!("`{}`", tref)
-    } else {
-        format!("[{}](#type.{})", tref, {
-            let mut tref = tref.to_string();
-
-            // Handle tables
-            if tref.starts_with('{') {
-                tref.remove(0);
-            }
-
-            if tref.ends_with('}') {
-                tref.pop();
-            }
-
-            // Handle optional
-            if tref.ends_with('?') {
-                tref.pop();
-            }
-
-            tref
-        })
-    }
+    format!("[{}](#type.{})", tref, {
+        let type_param = LuaParamaterTypeMetadata::from_type(tref);
+        type_param.raw_type
+    })
 }
 
 /// Helper function to generate a string of `#` characters

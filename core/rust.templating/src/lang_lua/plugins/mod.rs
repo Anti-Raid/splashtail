@@ -17,7 +17,7 @@ pub static PLUGINS: LazyLock<indexmap::IndexMap<String, (ModuleFn, Option<Module
     LazyLock::new(|| {
         indexmap::indexmap! {
             "@antiraid/async".to_string() => (r#async::init_plugin as ModuleFn, Some(r#async::plugin_docs as ModuleDocFn)),
-            "@antiraid/discord".to_string() => (discord::init_plugin as ModuleFn, None as Option<ModuleDocFn>),
+            "@antiraid/discord".to_string() => (discord::init_plugin as ModuleFn, Some(discord::plugin_docs as ModuleDocFn)),
             "@antiraid/interop".to_string() => (interop::init_plugin as ModuleFn, Some(interop::plugin_docs as ModuleDocFn)),
             "@antiraid/img_captcha".to_string() => (img_captcha::init_plugin as ModuleFn, Some(img_captcha::plugin_docs as ModuleDocFn)),
             "@antiraid/kv".to_string() => (kv::init_plugin as ModuleFn, Some(kv::plugin_docs as ModuleDocFn)),

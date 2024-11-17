@@ -85,5 +85,6 @@ pub fn document_primitives() -> Vec<templating_docgen::Primitive> {
                 "UTF-8 *only*",
             )
         })
+        .add("function", "function", "A Lua function.", |p| p)
         .build()
 }

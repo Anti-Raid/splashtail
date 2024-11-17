@@ -83,7 +83,9 @@ pub fn plugin_docs() -> templating_docgen::Plugin {
         .method_mut("current_user", |m| {
             m.description("Returns the current user of the Lua VM.")
             .return_("user", |r| {
-                r.typ("serenity::model::user::User").description("Returns AntiRaid's discord user object.")
+                r
+                .typ("Serenity.User")
+                .description("Returns AntiRaid's discord user object.")
             })
         })
 }

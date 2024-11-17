@@ -25,6 +25,383 @@ Sleep for a given duration.
 
 ---
 
+# @antiraid/discord
+
+This plugin allows for templates to interact with the Discord API
+
+## Types
+
+<div id="type.Serenity.User" />
+
+### Serenity.User
+
+A user object in Discord, as represented by AntiRaid. Internal fields are subject to change
+
+**Refer to [serenity::model::user::User](https://docs.rs/serenity/latest/serenity/model/user/struct.User.html) for more documentation on what this type contains. Fields may be incomplete**
+
+```json
+{
+  "id": "0",
+  "username": "",
+  "global_name": null,
+  "avatar": null,
+  "bot": false,
+  "system": false,
+  "mfa_enabled": false,
+  "banner": null,
+  "accent_color": null,
+  "locale": null,
+  "verified": null,
+  "email": null,
+  "flags": 0,
+  "premium_type": 0,
+  "public_flags": null,
+  "member": null
+}
+```
+
+<div id="type.Serenity.AuditLogs" />
+
+### Serenity.AuditLogs
+
+A audit log in Discord, as represented by AntiRaid. Internal fields are subject to change
+
+**Refer to [serenity::model::guild::audit_log::AuditLogs](https://docs.rs/serenity/latest/serenity/model/guild/audit_log/struct.AuditLogs.html) for more documentation on what this type contains. Fields may be incomplete**
+
+
+
+<div id="type.Serenity.AuditLogs.Action" />
+
+### Serenity.AuditLogs.Action
+
+An audit log action in Discord, as represented by AntiRaid. Internal fields are subject to change
+
+**Refer to [serenity::model::guild::audit_log::Action](https://docs.rs/serenity/latest/serenity/model/guild/audit_log/struct.Action.html) for more documentation on what this type contains. Fields may be incomplete**
+
+```json
+1
+```
+
+<div id="type.Serenity.GuildChannel" />
+
+### Serenity.GuildChannel
+
+A guild channel in Discord, as represented by AntiRaid. Internal fields are subject to change
+
+**Refer to [serenity::model::channel::GuildChannel](https://docs.rs/serenity/latest/serenity/model/channel/struct.GuildChannel.html) for more documentation on what this type contains. Fields may be incomplete**
+
+```json
+{
+  "id": "0",
+  "bitrate": null,
+  "parent_id": null,
+  "guild_id": "0",
+  "type": 0,
+  "owner_id": null,
+  "last_message_id": null,
+  "last_pin_timestamp": null,
+  "name": "",
+  "permission_overwrites": [],
+  "position": 0,
+  "topic": null,
+  "user_limit": null,
+  "nsfw": false,
+  "rate_limit_per_user": null,
+  "rtc_region": null,
+  "video_quality_mode": null,
+  "message_count": null,
+  "member_count": null,
+  "thread_metadata": null,
+  "member": null,
+  "default_auto_archive_duration": null,
+  "permissions": null,
+  "flags": 0,
+  "total_message_sent": null,
+  "available_tags": [],
+  "applied_tags": [],
+  "default_reaction_emoji": null,
+  "default_thread_rate_limit_per_user": null,
+  "status": null,
+  "default_sort_order": null,
+  "default_forum_layout": null
+}
+```
+
+<div id="type.Serenity.PermissionOverwrite" />
+
+### Serenity.PermissionOverwrite
+
+A permission overwrite in Discord, as represented by AntiRaid. Internal fields are subject to change
+
+**Refer to [serenity::model::channel::PermissionOverwrite](https://docs.rs/serenity/latest/serenity/model/channel/struct.PermissionOverwrite.html) for more documentation on what this type contains. Fields may be incomplete**
+
+```json
+{
+  "allow": "985162418487295",
+  "deny": "985162418487295",
+  "id": "0",
+  "type": 0
+}
+```
+
+<div id="type.Serenity.ForumEmoji" />
+
+### Serenity.ForumEmoji
+
+A forum emoji in Discord, as represented by AntiRaid. Internal fields are subject to change
+
+**Refer to [serenity::model::channel::ForumEmoji](https://docs.rs/serenity/latest/serenity/model/channel/struct.ForumEmoji.html) for more documentation on what this type contains. Fields may be incomplete**
+
+```json
+{
+  "emoji_id": "0",
+  "emoji_name": null
+}
+```
+
+<div id="type.GetAuditLogOptions" />
+
+### GetAuditLogOptions
+
+Options for getting audit logs in Discord
+
+```json
+{
+  "action_type": 1,
+  "user_id": "0",
+  "before": "0",
+  "limit": 0
+}
+```
+
+#### Fields
+
+- `action_type` ([Serenity.AuditLogs.Action?](#type.Serenity.AuditLogs.Action)): The action type to filter by
+- `user_id` ([string?](#type.string)): The user ID to filter by
+- `before` ([string?](#type.string)): The entry ID to filter by
+- `limit` ([number?](#type.number)): The limit of entries to return
+
+
+<div id="type.GetChannelOptions" />
+
+### GetChannelOptions
+
+Options for getting a channel in Discord
+
+```json
+{
+  "channel_id": "0"
+}
+```
+
+#### Fields
+
+- `channel_id` ([string](#type.string)): The channel ID to get
+
+
+<div id="type.EditChannelOptions" />
+
+### EditChannelOptions
+
+Options for editing a channel in Discord
+
+```json
+{
+  "channel_id": "0",
+  "reason": "",
+  "name": "my-channel",
+  "type": 0,
+  "position": 7,
+  "topic": "My channel topic",
+  "nsfw": true,
+  "rate_limit_per_user": 5,
+  "bitrate": null,
+  "permission_overwrites": null,
+  "parent_id": "0",
+  "rtc_region": "us-west",
+  "video_quality_mode": 1,
+  "default_auto_archive_duration": 1440,
+  "flags": 18,
+  "available_tags": null,
+  "default_reaction_emoji": {
+    "emoji_id": "0",
+    "emoji_name": null
+  },
+  "default_thread_rate_limit_per_user": null,
+  "default_sort_order": null,
+  "default_forum_layout": null
+}
+```
+
+#### Fields
+
+- `channel_id` ([string](#type.string)): The channel ID to edit
+- `reason` ([string](#type.string)): The reason for editing the channel
+- `name` ([string?](#type.string)): The name of the channel
+- `type` ([string?](#type.string)): The type of the channel
+- `position` ([number?](#type.number)): The position of the channel
+- `topic` ([string?](#type.string)): The topic of the channel
+- `nsfw` ([boolean?](#type.boolean)): Whether the channel is NSFW
+- `rate_limit_per_user` ([number?](#type.number)): The rate limit per user/Slow mode of the channel
+- `bitrate` ([number?](#type.number)): The bitrate of the channel
+- `permission_overwrites` ([{Serenity.PermissionOverwrite}?](#type.Serenity.PermissionOverwrite)): The permission overwrites of the channel
+- `parent_id` ([string??](#type.string)): The parent ID of the channel
+- `rtc_region` ([string??](#type.string)): The RTC region of the channel
+- `video_quality_mode` ([string?](#type.string)): The video quality mode of the channel
+- `default_auto_archive_duration` ([string?](#type.string)): The default auto archive duration of the channel
+- `flags` ([string?](#type.string)): The flags of the channel
+- `available_tags` ([{Serenity.ForumTag}?](#type.Serenity.ForumTag)): The available tags of the channel
+- `default_reaction_emoji` ([Serenity.ForumEmoji??](#type.Serenity.ForumEmoji)): The default reaction emoji of the channel
+- `default_thread_rate_limit_per_user` ([number?](#type.number)): The default thread rate limit per user
+- `default_sort_order` ([string?](#type.string)): The default sort order of the channel
+- `default_forum_layout` ([string?](#type.string)): The default forum layout of the channel
+
+
+<div id="type.EditThreadOptions" />
+
+### EditThreadOptions
+
+Options for editing a thread in Discord
+
+```json
+{
+  "channel_id": "0",
+  "reason": "",
+  "name": "my-thread",
+  "archived": false,
+  "auto_archive_duration": 1440,
+  "locked": false,
+  "invitable": true,
+  "rate_limit_per_user": 5,
+  "flags": 18,
+  "applied_tags": null
+}
+```
+
+#### Fields
+
+- `channel_id` ([string](#type.string)): The channel ID to edit
+- `reason` ([string](#type.string)): The reason for editing the channel
+- `name` ([string?](#type.string)): The name of the thread
+- `archived` ([boolean?](#type.boolean)): Whether the thread is archived
+- `auto_archive_duration` ([string?](#type.string)): The auto archive duration of the thread
+- `locked` ([boolean?](#type.boolean)): Whether the thread is locked
+- `invitable` ([boolean?](#type.boolean)): Whether the thread is invitable
+- `rate_limit_per_user` ([number?](#type.number)): The rate limit per user/Slow mode of the thread
+- `flags` ([string?](#type.string)): The flags of the thread
+- `applied_tags` ([{Serenity.ForumTag}?](#type.Serenity.ForumTag)): The applied tags of the thread
+
+
+<div id="type.DeleteChannelOption" />
+
+### DeleteChannelOption
+
+Options for deleting a channel in Discord
+
+```json
+{
+  "channel_id": "0",
+  "reason": "My reason here"
+}
+```
+
+#### Fields
+
+- `channel_id` ([string](#type.string)): The channel ID to delete
+- `reason` ([string](#type.string)): The reason for deleting the channel
+
+
+## Methods
+
+### get_audit_logs
+
+```lua
+function get_audit_logs(data: GetAuditLogOptions): 
+```
+
+Gets the audit logs
+
+#### Parameters
+
+- `data` ([GetAuditLogOptions](#type.GetAuditLogOptions)): Options for getting audit logs.
+
+
+#### Returns
+
+- `SerenityAuditLogs` ([](#type.)): The audit log entry
+
+### get_channel
+
+```lua
+function get_channel(data: GetChannelOptions): 
+```
+
+Gets a channel
+
+#### Parameters
+
+- `data` ([GetChannelOptions](#type.GetChannelOptions)): Options for getting a channel.
+
+
+#### Returns
+
+- `Serenity.GuildChannel` ([](#type.)): The guild channel
+
+### edit_channel
+
+```lua
+function edit_channel(data: EditChannelOptions): 
+```
+
+Edits a channel
+
+#### Parameters
+
+- `data` ([EditChannelOptions](#type.EditChannelOptions)): Options for editing a channel.
+
+
+#### Returns
+
+- `Serenity.GuildChannel` ([](#type.)): The guild channel
+
+### edit_thread
+
+```lua
+function edit_thread(data: EditThreadOptions): 
+```
+
+Edits a thread
+
+#### Parameters
+
+- `data` ([EditThreadOptions](#type.EditThreadOptions)): Options for editing a thread.
+
+
+#### Returns
+
+- `Serenity.GuildChannel` ([](#type.)): The guild channel
+
+### delete_channel
+
+```lua
+function delete_channel(data: DeleteChannelOption): 
+```
+
+Deletes a channel
+
+#### Parameters
+
+- `data` ([DeleteChannelOption](#type.DeleteChannelOption)): Options for deleting a channel.
+
+
+#### Returns
+
+- `Serenity.GuildChannel` ([](#type.)): The guild channel
+
+
+
+---
+
 # @antiraid/interop
 
 This plugin allows interoperability with AntiRaid and controlled interaction with the low-levels of AntiRaid templating subsystem.
@@ -158,14 +535,14 @@ Returns the data associated with a template token.
 ### current_user
 
 ```lua
-function current_user(): serenity::model::user::User
+function current_user(): Serenity.User
 ```
 
 Returns the current user of the Lua VM.
 
 #### Returns
 
-- `user` ([serenity::model::user::User](https://docs.rs/serenity/latest/serenity/model/user/struct.User.html)): Returns AntiRaid's discord user object.
+- `user` ([Serenity.User](#type.Serenity.User)): Returns AntiRaid's discord user object.
 
 
 
@@ -587,18 +964,26 @@ Returns the next item in the stream.
 
 ###### Returns
 
-- `item` (`<T>`): The next item in the stream.
+- `item` ([<T>](#type.<T>)): The next item in the stream.
 ##### LuaStream:for_each
 
 ```lua
-function LuaStream:for_each(callback: <function>)
+function LuaStream:for_each(callback: function)
 ```
 
 Executes a callback for every entry in the stream.
 
 ###### Parameters
 
-- `callback` (`<function>`): The callback to execute for each entry.
+- `callback` ([function](#type.function)): The callback to execute for each entry.
+
+
+
+<div id="type.MultiOption" />
+
+### MultiOption<T>
+
+MultiOption allows distinguishing between `null` and empty fields. Use the value to show both existence and value (`Some(Some(value))`) an empty object to show existence (``Some(None)``) or null to show neither (`None`)
 
 
 
@@ -823,14 +1208,14 @@ Converts the I64 to a U64.
 ##### bitu64:band
 
 ```lua
-function bitu64:band(...: <U64>): U64
+function bitu64:band(values: {U64}): U64
 ```
 
 Performs a bitwise AND operation on the given values.
 
 ###### Parameters
 
-- `...` (`<U64>`): The values to perform the operation on.
+- `values` ([{U64}](#type.U64)): The values to perform the operation on.
 
 
 ###### Returns
@@ -855,14 +1240,14 @@ Performs a bitwise NOR operation on the given value.
 ##### bitu64:bor
 
 ```lua
-function bitu64:bor(...: <U64>): U64
+function bitu64:bor(values: {U64}): U64
 ```
 
 Performs a bitwise OR operation on the given values.
 
 ###### Parameters
 
-- `...` (`<U64>`): The values to perform the operation on.
+- `values` ([{U64}](#type.U64)): The values to perform the operation on.
 
 
 ###### Returns
@@ -871,14 +1256,14 @@ Performs a bitwise OR operation on the given values.
 ##### bitu64:bxor
 
 ```lua
-function bitu64:bxor(...: <U64>): U64
+function bitu64:bxor(values: {U64}): U64
 ```
 
 Performs a bitwise XOR operation on the given values.
 
 ###### Parameters
 
-- `...` (`<U64>`): The values to perform the operation on.
+- `values` ([{U64}](#type.U64)): The values to perform the operation on.
 
 
 ###### Returns
@@ -887,14 +1272,14 @@ Performs a bitwise XOR operation on the given values.
 ##### bitu64:btest
 
 ```lua
-function bitu64:btest(...: <U64>): bool
+function bitu64:btest(values: {U64}): bool
 ```
 
 Tests if the bitwise AND of the given values is not zero.
 
 ###### Parameters
 
-- `...` (`<U64>`): The values to perform the operation on.
+- `values` ([{U64}](#type.U64)): The values to perform the operation on.
 
 
 ###### Returns
@@ -1250,6 +1635,18 @@ A UTF-8 encoded string.
 ### Constraints
 
 - **encoding**: Accepted character encoding (accepted values: UTF-8 *only*)
+
+---
+
+<div id="type.function" />
+
+## function
+
+```lua
+type function = function
+```
+
+A Lua function.
 
 ---
 

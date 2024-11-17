@@ -1,5 +1,6 @@
 use futures_util::stream::{Stream, StreamExt};
 use mlua::prelude::*;
+use serde::ser::SerializeMap;
 use std::pin::Pin;
 
 pub fn plugin_docs() -> templating_docgen::Plugin {
@@ -21,11 +22,15 @@ pub fn plugin_docs() -> templating_docgen::Plugin {
                 .method_mut("for_each", |m| {
                     m.description("Executes a callback for every entry in the stream.")
                     .parameter("callback", |p| {
-                        p.typ("<function>").description("The callback to execute for each entry.")
+                        p.typ("function").description("The callback to execute for each entry.")
                     })
                 })
             }
         )
+        .type_mut("MultiOption", "MultiOption allows distinguishing between `null` and empty fields. Use the value to show both existence and value (`Some(Some(value))`) an empty object to show existence (``Some(None)``) or null to show neither (`None`)", |t| {
+            t
+            .add_generic("T")
+        })
         .type_mut("U64", "U64 is a 64-bit unsigned integer type. Implements Add/Subtract/Multiply/Divide/Modulus/Power/Integer Division/Equality/Comparison (Lt/Le and its complements Gt/Ge) and ToString with a type name of U64", |mut t| {
             t
             .method_mut("to_ne_bytes", |m| {
@@ -138,8 +143,8 @@ pub fn plugin_docs() -> templating_docgen::Plugin {
             t
             .method_mut("band", |m| {
                 m.description("Performs a bitwise AND operation on the given values.")
-                .parameter("...", |p| {
-                    p.typ("<U64>").description("The values to perform the operation on.")
+                .parameter("values", |p| {
+                    p.typ("{U64}").description("The values to perform the operation on.")
                 })
                 .return_("result", |r| {
                     r.typ("U64").description("The result of the operation.")
@@ -156,8 +161,8 @@ pub fn plugin_docs() -> templating_docgen::Plugin {
             })
             .method_mut("bor", |m| {
                 m.description("Performs a bitwise OR operation on the given values.")
-                .parameter("...", |p| {
-                    p.typ("<U64>").description("The values to perform the operation on.")
+                .parameter("values", |p| {
+                    p.typ("{U64}").description("The values to perform the operation on.")
                 })
                 .return_("result", |r| {
                     r.typ("U64").description("The result of the operation.")
@@ -165,8 +170,8 @@ pub fn plugin_docs() -> templating_docgen::Plugin {
             })
             .method_mut("bxor", |m| {
                 m.description("Performs a bitwise XOR operation on the given values.")
-                .parameter("...", |p| {
-                    p.typ("<U64>").description("The values to perform the operation on.")
+                .parameter("values", |p| {
+                    p.typ("{U64}").description("The values to perform the operation on.")
                 })
                 .return_("result", |r| {
                     r.typ("U64").description("The result of the operation.")
@@ -174,8 +179,8 @@ pub fn plugin_docs() -> templating_docgen::Plugin {
             })
             .method_mut("btest", |m| {
                 m.description("Tests if the bitwise AND of the given values is not zero.")
-                .parameter("...", |p| {
-                    p.typ("<U64>").description("The values to perform the operation on.")
+                .parameter("values", |p| {
+                    p.typ("{U64}").description("The values to perform the operation on.")
                 })
                 .return_("result", |r| {
                     r.typ("bool").description("True if the bitwise AND of the values is not zero, false otherwise.")
@@ -323,6 +328,60 @@ impl<T: Stream<Item: IntoLua + Send> + Send + 'static> LuaUserData for LuaStream
                 Ok(())
             },
         );
+    }
+}
+
+pub struct MultiOption<T: for<'a> serde::Deserialize<'a> + serde::Serialize> {
+    pub inner: Option<Option<T>>,
+}
+
+impl<T: for<'a> serde::Deserialize<'a> + serde::Serialize> Default for MultiOption<T> {
+    fn default() -> Self {
+        Self::new(None)
+    }
+}
+
+impl<T: for<'a> serde::Deserialize<'a> + serde::Serialize> MultiOption<T> {
+    pub fn new(value: Option<T>) -> Self {
+        Self {
+            inner: value.map(Some),
+        }
+    }
+}
+
+// Deserialize
+//
+// If value is nil, we set it to None, if value is an empty object, we set it to Some(None), otherwise we set it to Some(Some(value))
+impl<'de, T: for<'a> serde::Deserialize<'a> + serde::Serialize> serde::Deserialize<'de>
+    for MultiOption<T>
+{
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let value: Option<serde_json::Value> = Option::deserialize(deserializer)?;
+        let inner = match value {
+            None => None,
+            Some(v) if v.is_object() && v.as_object().unwrap().is_empty() => Some(None),
+            Some(v) => Some(Some(
+                serde_json::from_value(v).map_err(serde::de::Error::custom)?,
+            )),
+        };
+        Ok(Self { inner })
+    }
+}
+
+// Serialize impl
+impl<T: for<'a> serde::Deserialize<'a> + serde::Serialize> serde::Serialize for MultiOption<T> {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        match &self.inner {
+            None => serializer.serialize_none(),
+            Some(None) => serializer.serialize_map(Some(0))?.end(),
+            Some(Some(value)) => value.serialize(serializer),
+        }
     }
 }
 
