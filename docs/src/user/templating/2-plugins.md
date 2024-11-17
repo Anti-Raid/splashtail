@@ -137,8 +137,8 @@ A permission overwrite in Discord, as represented by AntiRaid. Internal fields a
 
 ```json
 {
-  "allow": "985162418487295",
-  "deny": "985162418487295",
+  "allow": "2111062325329919",
+  "deny": "2111062325329919",
   "id": "0",
   "type": 0
 }
