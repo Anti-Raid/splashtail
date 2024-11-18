@@ -1,4 +1,5 @@
 mod atomicinstant;
+pub mod cache;
 pub mod core;
 
 mod lang_lua;
@@ -96,29 +97,33 @@ pub fn parse_shop_template(s: &str) -> Result<(String, String), Error> {
     Ok((template.to_string(), version.to_string()))
 }
 
+/// Creates a shop template string given name and version
+pub fn create_shop_template(template: &str, version: &str) -> String {
+    format!("$shop/{}#{}", template, version)
+}
+
+#[derive(serde::Deserialize, serde::Serialize, Clone, Debug)]
+pub struct GuildTemplate {
+    pub name: String,
+    pub description: Option<String>,
+    pub shop_name: Option<String>,
+    pub content: String,
+    pub created_by: String,
+    pub created_at: chrono::DateTime<chrono::Utc>,
+    pub updated_by: String,
+    pub updated_at: chrono::DateTime<chrono::Utc>,
+}
+
 async fn get_template(
     guild_id: serenity::all::GuildId,
     template: &str,
     pool: &sqlx::PgPool,
-) -> Result<String, Error> {
-    let rec = sqlx::query!(
-        "SELECT content FROM guild_templates WHERE guild_id = $1 AND name = $2",
-        guild_id.to_string(),
-        template
-    )
-    .fetch_optional(pool)
-    .await?;
-
-    let content = match rec {
-        Some(rec) => rec.content,
-        None => return Err("Template not found".into()),
-    };
-
+) -> Result<GuildTemplate, Error> {
     if template.starts_with("$shop/") {
         let (shop_tname, shop_tversion) = parse_shop_template(template)?;
 
         let shop_template = sqlx::query!(
-            "SELECT content FROM template_shop WHERE name = $1 AND version = $2",
+            "SELECT name, description, content, created_at, created_by, last_updated_at, last_updated_by FROM template_shop WHERE name = $1 AND version = $2",
             shop_tname,
             shop_tversion
         )
@@ -126,11 +131,40 @@ async fn get_template(
         .await?;
 
         match shop_template {
-            Some(shop_template) => Ok(format!("{}{}", content, shop_template.content)),
+            Some(shop_template) => Ok(GuildTemplate {
+                name: shop_template.name,
+                description: Some(shop_template.description),
+                shop_name: Some(template.to_string()),
+                content: shop_template.content,
+                created_by: shop_template.created_by,
+                created_at: shop_template.created_at,
+                updated_by: shop_template.last_updated_by,
+                updated_at: shop_template.last_updated_at,
+            }),
             None => Err("Shop template not found".into()),
         }
     } else {
-        Ok(content)
+        let rec = sqlx::query!(
+            "SELECT content, created_at, created_by, last_updated_at, last_updated_by FROM guild_templates WHERE guild_id = $1 AND name = $2",
+            guild_id.to_string(),
+            template
+        )
+        .fetch_optional(pool)
+        .await?;
+
+        match rec {
+            Some(rec) => Ok(GuildTemplate {
+                name: template.to_string(),
+                description: None,
+                shop_name: None,
+                content: rec.content,
+                created_by: rec.created_by,
+                created_at: rec.created_at,
+                updated_by: rec.last_updated_by,
+                updated_at: rec.last_updated_at,
+            }),
+            None => return Err("Template not found".into()),
+        }
     }
 }
 
@@ -148,7 +182,7 @@ pub async fn parse(
 ) -> Result<(), Error> {
     let template_content = match template {
         Template::Raw(ref template) => template.clone(),
-        Template::Named(ref template) => get_template(guild_id, template, &pool).await?,
+        Template::Named(ref template) => get_template(guild_id, template, &pool).await?.content,
     };
 
     let (template_content, pragma) = TemplatePragma::parse(&template_content)?;
@@ -170,7 +204,7 @@ pub async fn execute<C: Context + serde::Serialize, RenderResult: serde::de::Des
 ) -> Result<RenderResult, Error> {
     let template_content = match template {
         Template::Raw(ref template) => template.clone(),
-        Template::Named(ref template) => get_template(guild_id, template, &pool).await?,
+        Template::Named(ref template) => get_template(guild_id, template, &pool).await?.content,
     };
 
     let (template_content, pragma) = TemplatePragma::parse(&template_content)?;

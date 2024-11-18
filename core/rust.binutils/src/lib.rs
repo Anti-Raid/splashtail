@@ -1,6 +1,35 @@
 use log::{error, info};
 use silverpelt::{data::Data, Context, Error};
 
+/// Code to call on startup
+pub async fn on_startup(ctx: serenity::all::Context) -> Result<(), crate::Error> {
+    let data = ctx.data::<Data>();
+    // For every GuildId with templates, fire a OnStartup event
+    let guilds = sqlx::query!("SELECT guild_id FROM guild_templates")
+        .fetch_all(&data.pool)
+        .await?;
+
+    for guild in guilds {
+        let Ok(guild_id) = guild.guild_id.parse::<serenity::all::GuildId>() else {
+            continue;
+        };
+
+        templating::cache::clear_template_cache(guild_id).await;
+
+        let _ = silverpelt::ar_event::dispatch_event_to_modules_errflatten(std::sync::Arc::new(
+            silverpelt::ar_event::EventHandlerContext {
+                guild_id,
+                data: data.clone(),
+                event: silverpelt::ar_event::AntiraidEvent::OnStartup(vec![]),
+                serenity_context: ctx.clone(),
+            },
+        ))
+        .await;
+    }
+
+    Ok(())
+}
+
 /// Standard error handler for Anti-Raid
 pub async fn on_error(error: poise::FrameworkError<'_, Data, Error>) {
     match error {

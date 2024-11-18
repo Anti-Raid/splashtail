@@ -105,7 +105,7 @@ pub async fn require(lua: Lua, (plugin_name, args): (String, LuaValue)) -> LuaRe
             .map_err(|_| LuaError::external("Failed to get template"))?;
 
         let template_bytecode = crate::lang_lua::resolve_template_to_bytecode(
-            template_content,
+            template_content.content,
             crate::Template::Named(resolved_path.clone()),
             &vm_bytecode_cache,
             &compiler,

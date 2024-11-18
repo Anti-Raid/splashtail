@@ -40,7 +40,7 @@ pub(crate) async fn event_listener(ectx: &EventHandlerContext) -> Result<(), sil
                 return Ok(());
             }
 
-            // (hopefully temporary) work around to reduce spam
+            // Ignore ourselves
             match event {
                 FullEvent::GuildAuditLogEntryCreate { .. } => {}
                 _ => match gwevent::core::get_event_user_id(event) {
@@ -171,6 +171,19 @@ pub(crate) async fn event_listener(ectx: &EventHandlerContext) -> Result<(), sil
 
             Ok(())
         }
+        AntiraidEvent::OnStartup(ref modified) => {
+            dispatch_audit_log(
+                ctx,
+                &ectx.data,
+                "AR/OnStartup",
+                "(Anti Raid) On Startup",
+                serde_json::json!({
+                    "targets": modified
+                }),
+                ectx.guild_id,
+            )
+            .await
+        }
     }
 }
 
@@ -186,7 +199,7 @@ pub(crate) async fn should_dispatch_event(
     event_name: &str,
     filters: &[String],
 ) -> Result<bool, silverpelt::Error> {
-    if event_name == "MESSAGE" || event_name == "AR/CheckCommand" {
+    if event_name == "MESSAGE" || event_name == "AR/CheckCommand" || event_name == "AR/OnStartup" {
         // Message should only be fired if the template explicitly wants the event
         if !filters.contains(&event_name.to_string()) {
             return Ok(false);

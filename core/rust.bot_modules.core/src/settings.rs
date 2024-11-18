@@ -1005,7 +1005,7 @@ pub static GUILD_TEMPLATES: LazyLock<ConfigOption> = LazyLock::new(|| {
             },
         },
         validator: settings_wrap(GuildTemplateValidator {}),
-        post_action: settings_wrap(NoOpPostAction {}),
+        post_action: settings_wrap(GuildTemplatePostAction {}),
     }
 });
 
@@ -1060,6 +1060,46 @@ impl SettingDataValidator for GuildTemplateValidator {
                 );
             }
         }
+
+        Ok(())
+    }
+}
+
+pub struct GuildTemplatePostAction;
+
+#[async_trait::async_trait]
+impl PostAction for GuildTemplatePostAction {
+    async fn post_action<'a>(&self, context: HookContext<'a> , state: &'a mut module_settings::state::State) -> Result<(), SettingsError> {
+        if context.operation_type == OperationType::View {
+            return Ok(())
+        }
+        
+        // Dispatch a OnStartup event for the template
+        
+        // Get template ID
+        let Some(Value::String(name)) = state.state.get("name") else {
+            return Err(SettingsError::MissingOrInvalidField {
+                field: "name".to_string(),
+                src: "guild_templates->name".to_string(),
+            });
+        };
+
+        templating::cache::clear_template_cache(context.guild_id).await;
+
+        silverpelt::ar_event::dispatch_event_to_modules_errflatten(std::sync::Arc::new(
+            silverpelt::ar_event::EventHandlerContext {
+                guild_id: context.guild_id,
+                data: silverpelt::data::Data::get_data(context.data),
+                event: silverpelt::ar_event::AntiraidEvent::OnStartup(vec![name.to_string()]),
+                serenity_context: context.data.serenity_context.clone(),
+            },
+        ))
+        .await
+        .map_err(|e| SettingsError::Generic {
+            message: format!("Failed to dispatch OnStartup event: {:?}", e),
+            src: "guild_templates->post_action".to_string(),
+            typ: "internal".to_string(),
+        })?;
 
         Ok(())
     }

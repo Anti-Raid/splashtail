@@ -7,6 +7,7 @@ use tokio::task::JoinSet;
 pub use typetag; // Re-exported
 
 pub const SYSTEM_GUILD_ID: serenity::all::GuildId = serenity::all::GuildId::new(1);
+
 pub struct EventHandlerContext {
     pub guild_id: serenity::all::GuildId,
     pub data: Arc<Data>,
@@ -23,6 +24,7 @@ pub struct CustomEvent {
 }
 
 #[derive(Debug)]
+#[must_use]
 pub enum AntiraidEvent {
     /// A TrustedWebEvent is dispatched when a trusted web event is received
     ///
@@ -50,6 +52,11 @@ pub enum AntiraidEvent {
 
     /// A punishment expiration event. Dispatched when a punishment expires
     PunishmentExpire(super::punishments::Punishment),
+
+    /// An on startup event is fired *at least once* when the bot starts up or the set of templates are modified
+    ///
+    /// The inner Vec<String> is the list of templates modified/reloaded
+    OnStartup(Vec<String>),
 
     /// A custom event
     Custom(CustomEvent),

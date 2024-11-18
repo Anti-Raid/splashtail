@@ -503,6 +503,7 @@ dependencies = [
  "serenity",
  "silverpelt",
  "sqlx",
+ "templating",
  "tokio",
 ]
 
@@ -547,8 +548,6 @@ dependencies = [
  "bot_modules_punishment_autotriggers",
  "bot_modules_root",
  "bot_modules_server_backups",
- "bot_modules_tags",
- "bot_modules_templating",
  "bot_modules_temporary_punishments",
  "silverpelt",
 ]
@@ -691,60 +690,6 @@ dependencies = [
  "silverpelt",
  "splashcore_rs",
  "sqlx",
-]
-
-[[package]]
-name = "bot_modules_tags"
-version = "0.1.0"
-dependencies = [
- "async-trait",
- "botox",
- "chrono",
- "config",
- "futures-util",
- "indexmap",
- "module_settings",
- "modules_ext",
- "permissions",
- "poise",
- "reqwest",
- "sandwich_driver",
- "serde",
- "serde_json",
- "serenity",
- "silverpelt",
- "splashcore_rs",
- "sqlx",
- "templating",
- "tokio",
- "typetag",
-]
-
-[[package]]
-name = "bot_modules_templating"
-version = "0.1.0"
-dependencies = [
- "async-trait",
- "botox",
- "chrono",
- "config",
- "futures-util",
- "indexmap",
- "module_settings",
- "modules_ext",
- "permissions",
- "poise",
- "reqwest",
- "sandwich_driver",
- "serde",
- "serde_json",
- "serenity",
- "silverpelt",
- "splashcore_rs",
- "sqlx",
- "templating",
- "tokio",
- "typetag",
 ]
 
 [[package]]

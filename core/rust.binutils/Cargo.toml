@@ -12,6 +12,7 @@ log = "0.4"
 silverpelt = { path = "../rust.silverpelt" }
 permission_checks = { path = "../rust.permissions.checks" }
 config = { path = "../rust.config" }
+templating = { path = "../rust.templating" }
 
 [dependencies.serenity]
 git = "https://github.com/Anti-Raid/serenity"

@@ -55,6 +55,7 @@ impl silverpelt::module::ModuleEventListeners for EventHandler {
             silverpelt::ar_event::AntiraidEvent::StingDelete(_) => true,
             silverpelt::ar_event::AntiraidEvent::PunishmentCreate(_) => true,
             silverpelt::ar_event::AntiraidEvent::PunishmentExpire(_) => true,
+            silverpelt::ar_event::AntiraidEvent::OnStartup(_) => true,
         }
     }
 }
