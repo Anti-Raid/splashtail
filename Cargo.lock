@@ -516,6 +516,7 @@ dependencies = [
  "chrono",
  "config",
  "futures-util",
+ "gwevent",
  "indexmap",
  "kittycat",
  "log",

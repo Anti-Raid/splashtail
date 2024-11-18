@@ -27,6 +27,7 @@ modules_ext = { path = "../rust.modules_ext" }
 module_settings = { path = "../rust.module_settings" }
 splashcore_rs = { path = "../rust.std" }
 templating = { path = "../rust.templating" }
+gwevent = { path = "../rust.gwevent" }
 log = "0.4"
 
 [dependencies.serenity]

@@ -224,18 +224,18 @@ async fn dispatch_audit_log(
     event_data: serde_json::Value,
     guild_id: serenity::model::id::GuildId,
 ) -> Result<(), silverpelt::Error> {
-    let sinks = super::cache::get_sinks(guild_id, &data.pool).await?;
+    let templates = templating::cache::get_all_guild_templates(guild_id, &data.pool).await?;
 
-    if sinks.is_empty() {
+    if templates.is_empty() {
         return Ok(());
     }
 
-    for sink in sinks.iter() {
+    for template in templates.iter() {
         // Verify event dispatch
         if !should_dispatch_event(event_name, {
             // False positive, unwrap_or_default cannot be used here as it moves the event out of the sink
             #[allow(clippy::manual_unwrap_or_default)]
-            if let Some(ref events) = sink.events {
+            if let Some(ref events) = template.events {
                 events
             } else {
                 &[]
@@ -248,7 +248,7 @@ async fn dispatch_audit_log(
 
         templating::execute::<_, Option<()>>(
             guild_id,
-            templating::Template::Named(sink.template.clone()),
+            templating::Template::Named(template.name.clone()),
             data.pool.clone(),
             ctx.clone(),
             data.reqwest.clone(),
@@ -256,8 +256,7 @@ async fn dispatch_audit_log(
                 event_titlename: event_titlename.to_string(),
                 event_name: event_name.to_string(),
                 event_data: event_data.clone(),
-                sink_id: sink.id.to_string(),
-                sink: sink.sink.clone(),
+                template: template.clone(),
             },
         )
         .await?;
@@ -273,8 +272,7 @@ struct HookContext {
     pub event_titlename: String,
     pub event_name: String,
     pub event_data: serde_json::Value,
-    pub sink_id: String,
-    pub sink: String,
+    pub template: templating::GuildTemplate,
 }
 
 #[typetag::serde]

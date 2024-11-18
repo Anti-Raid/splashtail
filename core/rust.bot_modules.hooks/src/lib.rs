@@ -1,6 +1,4 @@
-mod cache;
 mod events;
-mod settings;
 
 pub struct Module;
 
@@ -23,10 +21,6 @@ impl silverpelt::module::Module for Module {
 
     fn event_listeners(&self) -> Option<Box<dyn silverpelt::module::ModuleEventListeners>> {
         Some(Box::new(EventHandler))
-    }
-
-    fn config_options(&self) -> Vec<module_settings::types::ConfigOption> {
-        vec![(*settings::SINK).clone()]
     }
 
     fn full_command_list(&self) -> Vec<silverpelt::module::CommandObj> {

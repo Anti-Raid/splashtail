@@ -107,6 +107,7 @@ pub struct GuildTemplate {
     pub name: String,
     pub description: Option<String>,
     pub shop_name: Option<String>,
+    pub events: Option<Vec<String>>,
     pub content: String,
     pub created_by: String,
     pub created_at: chrono::DateTime<chrono::Utc>,
@@ -135,6 +136,7 @@ async fn get_template(
                 name: shop_template.name,
                 description: Some(shop_template.description),
                 shop_name: Some(template.to_string()),
+                events: None, // TODO
                 content: shop_template.content,
                 created_by: shop_template.created_by,
                 created_at: shop_template.created_at,
@@ -145,7 +147,7 @@ async fn get_template(
         }
     } else {
         let rec = sqlx::query!(
-            "SELECT content, created_at, created_by, last_updated_at, last_updated_by FROM guild_templates WHERE guild_id = $1 AND name = $2",
+            "SELECT events, content, created_at, created_by, last_updated_at, last_updated_by FROM guild_templates WHERE guild_id = $1 AND name = $2",
             guild_id.to_string(),
             template
         )
@@ -157,6 +159,7 @@ async fn get_template(
                 name: template.to_string(),
                 description: None,
                 shop_name: None,
+                events: rec.events,
                 content: rec.content,
                 created_by: rec.created_by,
                 created_at: rec.created_at,
