@@ -258,9 +258,7 @@ pub struct HookContext<'a> {
     pub data: &'a SettingsData, // The data object
 }
 
-/// Settings can (optionally) have a post-action to allow for custom data validation/processing prior to executing an operation
-///
-/// Note that post-actions are guaranteed to have all data of the column set in state when called
+/// Settings must have an executor. Lua templates can also be used to provide the executor using events
 #[async_trait]
 pub trait SettingExecutor: Send + Sync {
     /// View the settings data
