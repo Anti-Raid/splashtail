@@ -653,32 +653,13 @@ async fn _validate_value(
     Ok(v)
 }
 
-/// Validate keys for basic sanity
-///
-/// This *MUST* be called at the start of any operation to ensure that the keys are valid and safe
-pub fn validate_keys(
-    _setting: &ConfigOption,
-    fields: &indexmap::IndexMap<String, Value>,
-) -> Result<(), SettingsError> {
-    const MAX_FIELDS: usize = 50;
-    if fields.len() > MAX_FIELDS {
-        return Err(SettingsError::Generic {
-            message: format!("Too many fields: {}", fields.len()),
-            src: "settings_common#validate_keys".to_string(),
-            typ: "internal".to_string(),
-        });
-    }
-
-    Ok(())
-}
-
 /// Settings API: View implementation
 pub async fn settings_view(
     setting: &ConfigOption,
     data: &SettingsData,
     guild_id: serenity::all::GuildId,
     author: serenity::all::UserId,
-    fields: indexmap::IndexMap<String, Value>, // The filters to apply
+    filters: indexmap::IndexMap<String, Value>, // The filters to apply
 ) -> Result<Vec<State>, SettingsError> {
     if !setting.supported_operations.contains(&OperationType::View) {
         return Err(SettingsError::OperationNotSupported {
@@ -686,19 +667,19 @@ pub async fn settings_view(
         });
     }
 
-    // WARNING: The ``validate_keys`` function call here should never be omitted, add back at once if you see this message without the function call
-    validate_keys(setting, &fields)?;
-
     let Some(ref executor) = setting.executor.0 else {
         return Ok(Vec::new());
     };
 
     let states = executor
-        .view(HookContext {
-            guild_id,
-            author,
-            data,
-        })
+        .view(
+            HookContext {
+                guild_id,
+                author,
+                data,
+            },
+            filters,
+        )
         .await
         .map_err(|e| SettingsError::Generic {
             message: e.to_string(),
@@ -756,26 +737,27 @@ pub async fn settings_save(
         });
     };
 
-    // WARNING: The ``validate_keys`` function call here should never be omitted, add back at once if you see this message without the function call
-    validate_keys(setting, &fields)?;
-
     let mut fields = fields; // Make fields mutable, consuming the input
 
     // Ensure all columns exist in fields, note that we can ignore extra fields so this one single loop is enough
     let mut state: State = State::new_with_special_variables(author, guild_id);
     for column in setting.columns.iter() {
+        if column.ignored_for.contains(&OperationType::Save) {
+            continue;
+        }
+
         // If the column is ignored for create, skip
         // If the column is a secret column, then ensure we set it to something random as this is a create operation
         let value = {
             if column.ignored_for.contains(&OperationType::Save) {
-                _parse_value(Value::None, &column.column_type, &column.id)?
+                let val = fields.swap_remove(&column.id).unwrap_or(Value::None);
+                _parse_value(val, &column.column_type, &column.id)?
             } else {
                 // Get the value
                 let val = fields.swap_remove(&column.id).unwrap_or(Value::None);
 
-                let parsed_value = _parse_value(val, &column.column_type, &column.id)?;
-
                 // Validate and parse the value
+                let parsed_value = _parse_value(val, &column.column_type, &column.id)?;
                 _validate_value(
                     parsed_value,
                     guild_id,

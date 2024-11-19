@@ -266,7 +266,11 @@ pub trait SettingExecutor: Send + Sync {
     /// __limit and __offset, if found, contains the limit/offset of the query
     ///
     /// All Executors should return an __count value containing the total count of the total number of entries
-    async fn view<'a>(&self, context: HookContext<'a>) -> Result<Vec<crate::state::State>, Error>;
+    async fn view<'a>(
+        &self,
+        context: HookContext<'a>,
+        filters: indexmap::IndexMap<String, splashcore_rs::value::Value>,
+    ) -> Result<Vec<crate::state::State>, Error>;
 
     /// Saves the setting
     async fn save<'a>(
