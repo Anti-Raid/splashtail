@@ -100,7 +100,21 @@ impl Value {
     #[allow(dead_code)]
     pub fn from_json(value: &serde_json::Value) -> Self {
         match value {
-            serde_json::Value::String(s) => Self::String(s.clone()),
+            serde_json::Value::String(s) => {
+                let t = chrono::NaiveDateTime::parse_from_str(&s, "%Y-%m-%d %H:%M:%S");
+
+                if let Ok(t) = t {
+                    return Self::Timestamp(t);
+                }
+
+                let value = chrono::DateTime::parse_from_rfc3339(&s);
+
+                if let Ok(value) = value {
+                    return Self::TimestampTz(value.into());
+                }
+
+                Self::String(s.clone())
+            }
             serde_json::Value::Number(n) => {
                 if n.is_i64() {
                     Self::Integer(n.as_i64().unwrap())
@@ -475,5 +489,24 @@ impl Value {
 
     pub fn as_none(&self) -> bool {
         matches!(self, Value::None)
+    }
+}
+
+impl serde::Serialize for Value {
+    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        let value = self.to_json();
+
+        value.serialize(serializer)
+    }
+}
+
+impl<'de> serde::Deserialize<'de> for Value {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let value = serde_json::Value::deserialize(deserializer)?;
+
+        Ok(Value::from_json(&value))
     }
 }

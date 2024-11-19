@@ -5,14 +5,12 @@ use super::types::{
 /// Standard created_at column
 pub fn created_at() -> Column {
     Column {
-        id: "created_at",
-        name: "Created At",
-        description: "The time the record was created.",
+        id: "created_at".to_string(),
+        name: "Created At".to_string(),
+        description: "The time the record was created.".to_string(),
         column_type: ColumnType::new_scalar(InnerColumnType::TimestampTz {}),
         nullable: false,
-        default: None,
-        unique: false,
-        ignored_for: vec![OperationType::Create, OperationType::Update],
+        ignored_for: vec![OperationType::Save],
         secret: false,
         suggestions: ColumnSuggestion::None {},
     }
@@ -21,20 +19,18 @@ pub fn created_at() -> Column {
 /// Standard created_by column
 pub fn created_by() -> Column {
     Column {
-        id: "created_by",
-        name: "Created By",
-        description: "The user who created the record.",
+        id: "created_by".to_string(),
+        name: "Created By".to_string(),
+        description: "The user who created the record.".to_string(),
         column_type: ColumnType::new_scalar(InnerColumnType::String {
             min_length: None,
             max_length: None,
             allowed_values: vec![],
             kind: InnerColumnTypeStringKind::User,
         }),
-        default: None,
-        ignored_for: vec![OperationType::Create, OperationType::Update],
+        ignored_for: vec![OperationType::Save],
         secret: false,
         nullable: false,
-        unique: false,
         suggestions: ColumnSuggestion::None {},
     }
 }
@@ -42,15 +38,13 @@ pub fn created_by() -> Column {
 /// Standard last_updated_at column
 pub fn last_updated_at() -> Column {
     Column {
-        id: "last_updated_at",
-        name: "Last Updated At",
-        description: "The time the record was last updated.",
+        id: "last_updated_at".to_string(),
+        name: "Last Updated At".to_string(),
+        description: "The time the record was last updated.".to_string(),
         column_type: ColumnType::new_scalar(InnerColumnType::TimestampTz {}),
-        ignored_for: vec![OperationType::Create, OperationType::Update],
+        ignored_for: vec![OperationType::Save],
         secret: false,
         nullable: false,
-        default: None,
-        unique: false,
         suggestions: ColumnSuggestion::None {},
     }
 }
@@ -58,29 +52,27 @@ pub fn last_updated_at() -> Column {
 /// Standard last_updated_by column
 pub fn last_updated_by() -> Column {
     Column {
-        id: "last_updated_by",
-        name: "Last Updated By",
-        description: "The user who last updated the record.",
+        id: "last_updated_by".to_string(),
+        name: "Last Updated By".to_string(),
+        description: "The user who last updated the record.".to_string(),
         column_type: ColumnType::new_scalar(InnerColumnType::String {
             min_length: None,
             max_length: None,
             allowed_values: vec![],
             kind: InnerColumnTypeStringKind::User,
         }),
-        ignored_for: vec![OperationType::Create, OperationType::Update],
+        ignored_for: vec![OperationType::Save],
         secret: false,
         nullable: false,
-        default: None,
-        unique: false,
         suggestions: ColumnSuggestion::None {},
     }
 }
 
 pub fn guild_id(id: &'static str, name: &'static str, description: &'static str) -> Column {
     Column {
-        id,
-        name,
-        description,
+        id: id.to_string(),
+        name: name.to_string(),
+        description: description.to_string(),
         column_type: ColumnType::new_scalar(InnerColumnType::String {
             min_length: None,
             max_length: None,
@@ -88,10 +80,8 @@ pub fn guild_id(id: &'static str, name: &'static str, description: &'static str)
             kind: InnerColumnTypeStringKind::Normal,
         }),
         nullable: false,
-        default: None,
-        unique: false,
         suggestions: ColumnSuggestion::None {},
-        ignored_for: vec![OperationType::Create, OperationType::Update],
+        ignored_for: vec![OperationType::Save],
         secret: false,
     }
 }

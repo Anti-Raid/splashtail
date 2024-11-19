@@ -2837,7 +2837,6 @@ dependencies = [
  "botox",
  "chrono",
  "futures-util",
- "governor",
  "indexmap",
  "moka",
  "reqwest",

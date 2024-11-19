@@ -1,3 +1,5 @@
+use crate::types::HookContext;
+
 use super::state::State;
 use super::types::SettingsError;
 use super::types::{
@@ -13,9 +15,9 @@ fn _parse_value(
     column_id: &str,
 ) -> Result<Value, SettingsError> {
     match column_type {
-        ColumnType::Scalar { column_type } => {
+        ColumnType::Scalar { inner } => {
             // Special case: JSON columns can be any type
-            if matches!(v, Value::List(_)) && !matches!(column_type, InnerColumnType::Json { .. }) {
+            if matches!(v, Value::List(_)) && !matches!(inner, InnerColumnType::Json { .. }) {
                 return Err(SettingsError::SchemaTypeValidationError {
                     column: column_id.to_string(),
                     expected_type: "Scalar".to_string(),
@@ -23,7 +25,7 @@ fn _parse_value(
                 });
             }
 
-            match column_type {
+            match inner {
                 InnerColumnType::Uuid {} => match v {
                     Value::String(s) => {
                         let value = s.parse::<sqlx::types::Uuid>().map_err(|e| {
@@ -427,9 +429,9 @@ async fn _validate_value(
     is_nullable: bool,
 ) -> Result<Value, SettingsError> {
     let v = match column_type {
-        ColumnType::Scalar { column_type } => {
+        ColumnType::Scalar { inner } => {
             // Special case: JSON columns can be any type
-            if matches!(v, Value::List(_)) && !matches!(column_type, InnerColumnType::Json { .. }) {
+            if matches!(v, Value::List(_)) && !matches!(inner, InnerColumnType::Json { .. }) {
                 return Err(SettingsError::SchemaTypeValidationError {
                     column: column_id.to_string(),
                     expected_type: "Scalar".to_string(),
@@ -437,7 +439,7 @@ async fn _validate_value(
                 });
             }
 
-            match column_type {
+            match inner {
                 InnerColumnType::String {
                     min_length,
                     max_length,
@@ -468,7 +470,7 @@ async fn _validate_value(
                                 }
                             }
 
-                            if !allowed_values.is_empty() && !allowed_values.contains(&s.as_str()) {
+                            if !allowed_values.is_empty() && !allowed_values.contains(&s) {
                                 return Err(SettingsError::SchemaCheckValidationError {
                                     column: column_id.to_string(),
                                     check: "allowed_values".to_string(),
@@ -651,27 +653,6 @@ async fn _validate_value(
     Ok(v)
 }
 
-/// Returns the common filters for a given operation type
-fn common_filters(
-    setting: &ConfigOption,
-    operation_type: OperationType,
-    base_state: &State,
-) -> indexmap::IndexMap<String, splashcore_rs::value::Value> {
-    let common_filters_unparsed = setting
-        .common_filters
-        .get(&operation_type)
-        .unwrap_or(&setting.default_common_filters);
-
-    let mut common_filters = indexmap::IndexMap::new();
-
-    for (key, value) in common_filters_unparsed.iter() {
-        let value = base_state.template_to_string(value);
-        common_filters.insert(key.to_string(), value);
-    }
-
-    common_filters
-}
-
 /// Validate keys for basic sanity
 ///
 /// This *MUST* be called at the start of any operation to ensure that the keys are valid and safe
@@ -699,160 +680,61 @@ pub async fn settings_view(
     author: serenity::all::UserId,
     fields: indexmap::IndexMap<String, Value>, // The filters to apply
 ) -> Result<Vec<State>, SettingsError> {
-    let Some(operation_specific) = setting.operations.get(&OperationType::View) else {
+    if !setting.supported_operations.contains(&OperationType::View) {
         return Err(SettingsError::OperationNotSupported {
             operation: OperationType::View,
         });
-    };
+    }
 
     // WARNING: The ``validate_keys`` function call here should never be omitted, add back at once if you see this message without the function call
     validate_keys(setting, &fields)?;
 
-    let mut fields = fields; // Make fields mutable, consuming the input
+    let Some(ref executor) = setting.executor.0 else {
+        return Ok(Vec::new());
+    };
 
-    // Ensure limit is good
-    let mut use_limit = setting.max_return;
-    if let Some(Value::Integer(limit)) = fields.get("__limit") {
-        use_limit = std::cmp::min(*limit, use_limit);
-    }
-    fields.insert("__limit".to_string(), Value::Integer(use_limit));
-
-    let mut data_store = setting
-        .data_store
-        .create(
-            setting,
+    let states = executor
+        .view(HookContext {
             guild_id,
             author,
             data,
-            common_filters(
-                setting,
-                OperationType::View,
-                &super::state::State::new_with_special_variables(author, guild_id),
-            ),
-        )
-        .await?;
-
-    if let Some(Value::Boolean(true)) = fields.get("__count") {
-        // We only need to count the number of rows
-        fields.shift_remove("__limit");
-        fields.shift_remove("__count");
-
-        let count = data_store.matching_entry_count(fields).await?;
-
-        let count = count.try_into().map_err(|e| SettingsError::Generic {
-            message: format!("Count too large: {:?}", e),
+        })
+        .await
+        .map_err(|e| SettingsError::Generic {
+            message: e.to_string(),
             src: "settings_view".to_string(),
             typ: "internal".to_string(),
         })?;
-
-        let mut state = super::state::State::new();
-
-        state
-            .state
-            .insert("count".to_string(), Value::Integer(count));
-
-        return Ok(vec![state]);
-    }
-
-    let cols = setting
-        .columns
-        .iter()
-        .map(|c| c.id.to_string())
-        .collect::<Vec<String>>();
-
-    let states = data_store.fetch_all(&cols, fields).await?;
-
-    if states.is_empty() {
-        return Ok(Vec::new());
-    }
 
     let mut values: Vec<State> = Vec::new();
 
     for mut state in states {
         // We know that the columns are in the same order as the row
         for col in setting.columns.iter() {
-            let mut val = state.state.swap_remove(col.id).unwrap_or(Value::None);
+            let mut val = state.state.swap_remove(&col.id).unwrap_or(Value::None);
 
             // Validate the value. returning the parsed value
-            val = _parse_value(val, &col.column_type, col.id)?;
+            val = _parse_value(val, &col.column_type, &col.id)?;
 
             // Reinsert
             state.state.insert(col.id.to_string(), val);
         }
 
-        // Run validators
-
-        setting
-            .validator
-            .validate(
-                super::types::HookContext {
-                    author,
-                    guild_id,
-                    operation_type: OperationType::View,
-                    data_store: &mut *data_store,
-                    data,
-                    unchanged_fields: vec![],
-                },
-                &mut state,
-            )
-            .await?;
-
-        // Get out the pkey and pkey_column data here as we need it for the rest of the update
-        let Some(pkey) = state.state.get(setting.primary_key) else {
-            return Err(SettingsError::MissingOrInvalidField {
-                field: setting.primary_key.to_string(),
-                src: "settings_update [pkey_let]".to_string(),
-            });
-        };
-
-        // Apply columns_to_set in operation specific data if there are columns to set
-        if !operation_specific.columns_to_set.is_empty() {
-            let filters = indexmap::indexmap! {
-                setting.primary_key.to_string() => pkey.clone(),
-            };
-            let mut update = indexmap::IndexMap::new();
-
-            for (col, value) in operation_specific.columns_to_set.iter() {
-                let value = state.template_to_string(value);
-
-                // Add directly to state
-                state.state.insert(col.to_string(), value.clone());
-                update.insert(col.to_string(), value);
-            }
-
-            data_store.update_matching_entries(filters, update).await?;
-        }
-
         // Remove ignored columns + secret columns now that the actions have been executed
         for col in setting.columns.iter() {
             if col.secret {
-                state.state.swap_remove(col.id);
+                state.state.swap_remove(&col.id);
                 continue; // Skip secret columns in view. **this applies to view and update only as create is creating a new object**
             }
 
-            if state.bypass_ignore_for.contains(col.id) {
+            if state.bypass_ignore_for.contains(&col.id) {
                 continue;
             }
 
             if col.ignored_for.contains(&OperationType::View) {
-                state.state.swap_remove(col.id);
+                state.state.swap_remove(&col.id);
             }
         }
-
-        setting
-            .post_action
-            .post_action(
-                super::types::HookContext {
-                    author,
-                    guild_id,
-                    operation_type: OperationType::View,
-                    data_store: &mut *data_store,
-                    data,
-                    unchanged_fields: vec![],
-                },
-                &mut state,
-            )
-            .await?;
 
         values.push(state);
     }
@@ -860,17 +742,17 @@ pub async fn settings_view(
     Ok(values)
 }
 
-/// Settings API: Create implementation
-pub async fn settings_create(
+/// Settings API: Save implementation
+pub async fn settings_save(
     setting: &ConfigOption,
     data: &SettingsData,
     guild_id: serenity::all::GuildId,
     author: serenity::all::UserId,
     fields: indexmap::IndexMap<String, Value>,
 ) -> Result<State, SettingsError> {
-    let Some(operation_specific) = setting.operations.get(&OperationType::Create) else {
+    if !setting.supported_operations.contains(&OperationType::Save) {
         return Err(SettingsError::OperationNotSupported {
-            operation: OperationType::Create,
+            operation: OperationType::Save,
         });
     };
 
@@ -885,13 +767,13 @@ pub async fn settings_create(
         // If the column is ignored for create, skip
         // If the column is a secret column, then ensure we set it to something random as this is a create operation
         let value = {
-            if column.ignored_for.contains(&OperationType::Create) {
-                _parse_value(Value::None, &column.column_type, column.id)?
+            if column.ignored_for.contains(&OperationType::Save) {
+                _parse_value(Value::None, &column.column_type, &column.id)?
             } else {
                 // Get the value
-                let val = fields.swap_remove(column.id).unwrap_or(Value::None);
+                let val = fields.swap_remove(&column.id).unwrap_or(Value::None);
 
-                let parsed_value = _parse_value(val, &column.column_type, column.id)?;
+                let parsed_value = _parse_value(val, &column.column_type, &column.id)?;
 
                 // Validate and parse the value
                 _validate_value(
@@ -899,7 +781,7 @@ pub async fn settings_create(
                     guild_id,
                     data,
                     &column.column_type,
-                    column.id,
+                    &column.id,
                     column.nullable,
                 )
                 .await?
@@ -907,78 +789,21 @@ pub async fn settings_create(
         };
 
         // Insert the value into the state
-        state.state.insert(
-            column.id.to_string(),
-            match value {
-                Value::None => {
-                    // Check for default
-                    if let Some(default) = &column.default {
-                        (default)(false)
-                    } else {
-                        value
-                    }
-                }
-                _ => value,
-            },
-        );
+        state.state.insert(column.id.to_string(), value);
     }
 
     drop(fields); // Drop fields to avoid accidental use of user data
     #[allow(unused_variables)]
     let fields = (); // Reset fields to avoid accidental use of user data
 
-    // Start the transaction now that basic validation is done
-    let mut data_store = setting
-        .data_store
-        .create(
-            setting,
-            guild_id,
-            author,
-            data,
-            common_filters(setting, OperationType::Create, &state),
-        )
-        .await?;
-
-    data_store.start_transaction().await?;
-
-    // Get all ids we currently have to check max_entries and uniqueness of the primary key in one shot
-    let ids = data_store
-        .fetch_all(
-            &[setting.primary_key.to_string()],
-            indexmap::IndexMap::new(),
-        )
-        .await?;
-
-    if let Some(max_entries) = setting.max_entries {
-        if ids.len() >= max_entries {
-            return Err(SettingsError::MaximumCountReached {
-                max: max_entries,
-                current: ids.len(),
-            });
-        }
-    }
-
-    for id in ids.iter() {
-        let id = id.state.get(setting.primary_key).unwrap_or(&Value::None);
-        // Check if the pkey is unique
-        if state.state.get(setting.primary_key) == Some(id) {
-            return Err(SettingsError::RowExists {
-                column_id: setting.primary_key.to_string(),
-                count: 1,
-            });
-        }
-    }
-
-    drop(ids); // Drop ids as it is no longer needed
-
-    // Now execute all actions and handle null/unique/pkey checks
+    // Now execute all actions and handle null checks
     for column in setting.columns.iter() {
         // Checks should only happen if the column is not being intentionally ignored
-        if column.ignored_for.contains(&OperationType::Create) {
+        if column.ignored_for.contains(&OperationType::Save) {
             continue;
         }
 
-        let Some(value) = state.state.get(column.id) else {
+        let Some(value) = state.state.get(&column.id) else {
             return Err(SettingsError::Generic {
                 message: format!(
                     "Column `{}` not found in state despite just being parsed",
@@ -996,358 +821,45 @@ pub async fn settings_create(
                 src: "settings_create [null check]".to_string(),
             });
         }
-
-        // Handle cases of uniqueness
-        //
-        // In the case of create, we can do this directly within the column validation
-        if column.unique {
-            let count = data_store
-                .matching_entry_count(indexmap::indexmap! {
-                    column.id.to_string() => value.clone()
-                })
-                .await?;
-
-            if count > 0 {
-                return Err(SettingsError::RowExists {
-                    column_id: column.id.to_string(),
-                    count: count.try_into().unwrap_or(i64::MAX),
-                });
-            }
-        }
     }
-
-    // Run validator
-    setting
-        .validator
-        .validate(
-            super::types::HookContext {
-                author,
-                guild_id,
-                operation_type: OperationType::Create,
-                data_store: &mut *data_store,
-                data,
-                unchanged_fields: vec![],
-            },
-            &mut state,
-        )
-        .await?;
 
     // Remove ignored columns now that the actions have been executed
     for col in setting.columns.iter() {
-        if state.bypass_ignore_for.contains(col.id) {
+        if state.bypass_ignore_for.contains(&col.id) {
             continue;
         }
 
-        if col.ignored_for.contains(&OperationType::Create) {
-            state.state.swap_remove(col.id);
+        if col.ignored_for.contains(&OperationType::Save) {
+            state.state.swap_remove(&col.id);
         }
     }
 
-    // Now insert all the columns_to_set into state
-    // As we have removed the ignored columns, we can just directly insert the columns_to_set into the state
-    for (column, value) in operation_specific.columns_to_set.iter() {
-        let value = state.template_to_string(value);
-        state.state.insert(column.to_string(), value);
-    }
-
     // Create the row
-    let mut new_state = data_store.create_entry(state.get_public()).await?;
+    let Some(ref executor) = setting.executor.0 else {
+        return Err(SettingsError::Generic {
+            message: "No executor found".to_string(),
+            src: "settings_save".to_string(),
+            typ: "internal".to_string(),
+        });
+    };
 
-    // Insert any internal columns
-    for (key, value) in state
-        .state
-        .into_iter()
-        .filter(|(k, _)| k.starts_with(super::state::INTERNAL_KEY))
-    {
-        new_state.state.insert(key, value);
-    }
-
-    // Commit the transaction
-    data_store.commit().await?;
-
-    // Execute post actions
-    setting
-        .post_action
-        .post_action(
-            super::types::HookContext {
-                author,
+    let new_state = executor
+        .save(
+            HookContext {
                 guild_id,
-                operation_type: OperationType::Create,
-                data_store: &mut *data_store,
+                author,
                 data,
-                unchanged_fields: vec![],
             },
-            &mut new_state,
+            &mut state,
         )
-        .await?;
+        .await
+        .map_err(|e| SettingsError::Generic {
+            message: e.to_string(),
+            src: "settings_save".to_string(),
+            typ: "internal".to_string(),
+        })?;
 
     Ok(new_state)
-}
-
-/// Settings API: Update implementation
-pub async fn settings_update(
-    setting: &ConfigOption,
-    data: &SettingsData,
-    guild_id: serenity::all::GuildId,
-    author: serenity::all::UserId,
-    fields: indexmap::IndexMap<String, Value>,
-) -> Result<State, SettingsError> {
-    let Some(operation_specific) = setting.operations.get(&OperationType::Update) else {
-        return Err(SettingsError::OperationNotSupported {
-            operation: OperationType::Update,
-        });
-    };
-
-    // WARNING: The ``validate_keys`` function call here should never be omitted, add back at once if you see this message without the function call
-    validate_keys(setting, &fields)?;
-
-    let mut fields = fields; // Make fields mutable, consuming the input
-
-    // Ensure all columns exist in fields, note that we can ignore extra fields so this one single loop is enough
-    let mut state: State = State::new_with_special_variables(author, guild_id);
-    let mut unchanged_fields = indexmap::IndexSet::new();
-    let mut pkey = None;
-    for column in setting.columns.iter() {
-        // If the column is ignored for update, skip
-        if column.ignored_for.contains(&OperationType::Update) && column.id != setting.primary_key {
-            if !column.secret {
-                unchanged_fields.insert(column.id.to_string()); // Ensure that ignored_for columns are still seen as unchanged but only if not secret
-            }
-        } else {
-            match fields.swap_remove(column.id) {
-                Some(val) => {
-                    let parsed_value = _parse_value(val, &column.column_type, column.id)?;
-
-                    let parsed_value = _validate_value(
-                        parsed_value,
-                        guild_id,
-                        data,
-                        &column.column_type,
-                        column.id,
-                        column.nullable,
-                    )
-                    .await?;
-
-                    if column.id == setting.primary_key {
-                        pkey = Some((column, parsed_value.clone()));
-                    }
-
-                    state.state.insert(column.id.to_string(), parsed_value);
-                }
-                None => {
-                    if !column.secret {
-                        unchanged_fields.insert(column.id.to_string()); // Don't retrieve the value if it's a secret column
-                    }
-                }
-            }
-        }
-    }
-
-    drop(fields); // Drop fields to avoid accidental use of user data
-    #[allow(unused_variables)]
-    let fields = (); // Reset fields to avoid accidental use of user data
-
-    // Get out the pkey and pkey_column data here as we need it for the rest of the update
-    let Some((_pkey_column, pkey)) = pkey else {
-        return Err(SettingsError::MissingOrInvalidField {
-            field: setting.primary_key.to_string(),
-            src: "settings_update [pkey_let]".to_string(),
-        });
-    };
-
-    // PKEY should already have passed the validation checks
-    if matches!(pkey, Value::None) {
-        return Err(SettingsError::MissingOrInvalidField {
-            field: setting.primary_key.to_string(),
-            src: "settings_update [pkey_none]".to_string(),
-        });
-    }
-
-    let mut data_store = setting
-        .data_store
-        .create(
-            setting,
-            guild_id,
-            author,
-            data,
-            common_filters(setting, OperationType::Update, &state),
-        )
-        .await?;
-
-    // Start the transaction now that basic validation is done
-    data_store.start_transaction().await?;
-
-    // Now retrieve all the unchanged fields
-    if !unchanged_fields.is_empty() {
-        let mut data = data_store
-            .fetch_all(
-                &unchanged_fields
-                    .iter()
-                    .map(|f| f.to_string())
-                    .collect::<Vec<String>>(),
-                indexmap::indexmap! {
-                    setting.primary_key.to_string() => pkey.clone(),
-                },
-            )
-            .await?;
-
-        if data.is_empty() {
-            return Err(SettingsError::RowDoesNotExist {
-                column_id: setting.primary_key.to_string(),
-            });
-        }
-
-        let unchanged_state = data.pop().unwrap(); // We know there is only one row
-
-        for (k, v) in unchanged_state.state.into_iter() {
-            state.state.insert(k.to_string(), v);
-        }
-    }
-
-    // Handle all the actual checks here, now that all validation and needed fetches are done
-    for column in setting.columns.iter() {
-        if column.ignored_for.contains(&OperationType::Update) {
-            continue;
-        }
-
-        let Some(value) = state.state.get(column.id) else {
-            return Err(SettingsError::Generic {
-                message: format!(
-                    "Column `{}` not found in state despite just being parsed",
-                    column.id
-                ),
-                src: "settings_update [ext_checks]".to_string(),
-                typ: "internal".to_string(),
-            });
-        };
-
-        // Nullability checks should only happen if the column is not being intentionally ignored
-        // Check if the column is nullable
-        if !column.nullable && matches!(value, Value::None) {
-            return Err(SettingsError::MissingOrInvalidField {
-                field: column.id.to_string(),
-                src: "settings_update [nullability check]".to_string(),
-            });
-        }
-
-        // Handle cases of uniqueness
-        //
-        // ** Difference from create: We can't treat unique and primary key the same as the unique check must take into account the existing row **
-        if column.unique {
-            if unchanged_fields.contains(&column.id.to_string()) {
-                continue; // Skip uniqueness check if the field is unchanged
-            }
-
-            let ids = data_store
-                .fetch_all(
-                    &[setting.primary_key.to_string()],
-                    indexmap::indexmap! {
-                        column.id.to_string() => value.clone(),
-                    },
-                )
-                .await?;
-
-            let ids = ids
-                .into_iter()
-                .filter(|id| {
-                    let id = id.state.get(column.id).unwrap_or(&Value::None);
-                    id != &pkey
-                })
-                .collect::<Vec<State>>();
-
-            if !ids.is_empty() {
-                return Err(SettingsError::RowExists {
-                    column_id: column.id.to_string(),
-                    count: ids.len().try_into().unwrap_or(i64::MAX),
-                });
-            }
-        }
-
-        // Handle cases of primary key next
-        // ** This is unique to updates **
-        if column.id == setting.primary_key {
-            let count = data_store
-                .matching_entry_count(indexmap::indexmap! {
-                    column.id.to_string() => value.clone(),
-                })
-                .await?;
-
-            if count == 0 {
-                return Err(SettingsError::RowDoesNotExist {
-                    column_id: column.id.to_string(),
-                });
-            }
-        }
-    }
-
-    // Run validator
-    setting
-        .validator
-        .validate(
-            super::types::HookContext {
-                author,
-                guild_id,
-                operation_type: OperationType::Update,
-                data_store: &mut *data_store,
-                data,
-                unchanged_fields: unchanged_fields.iter().map(|f| f.to_string()).collect(),
-            },
-            &mut state,
-        )
-        .await?;
-
-    // Remove ignored columns now that the actions have been executed
-    //
-    // Note that we cannot mutate state here
-    let mut columns_to_set = State::from_indexmap(state.get_public()); // Start with current public state
-    for col in setting.columns.iter() {
-        if state.bypass_ignore_for.contains(col.id) {
-            continue;
-        }
-
-        if col.ignored_for.contains(&OperationType::Update) {
-            columns_to_set.state.swap_remove(col.id);
-        }
-    }
-
-    // Now insert all the columns_to_set into state
-    // As we have removed the ignored columns, we can just directly insert the columns_to_set into the state
-    for (column, value) in operation_specific.columns_to_set.iter() {
-        let value = state.template_to_string(value);
-        state.state.insert(column.to_string(), value.clone()); // Ensure its in returned state
-        columns_to_set.state.insert(column.to_string(), value); // And in the columns to set
-    }
-
-    // Create the row
-    data_store
-        .update_matching_entries(
-            indexmap::indexmap! {
-                setting.primary_key.to_string() => pkey.clone(),
-            },
-            columns_to_set.state,
-        )
-        .await?;
-
-    // Commit the transaction
-    data_store.commit().await?;
-
-    // Execute post actions
-    setting
-        .post_action
-        .post_action(
-            super::types::HookContext {
-                author,
-                guild_id,
-                operation_type: OperationType::Update,
-                data_store: &mut *data_store,
-                data,
-                unchanged_fields: unchanged_fields.iter().map(|f| f.to_string()).collect(),
-            },
-            &mut state,
-        )
-        .await?;
-
-    Ok(state)
 }
 
 /// Settings API: Delete implementation
@@ -1359,13 +871,14 @@ pub async fn settings_delete(
     author: serenity::all::UserId,
     pkey: Value,
 ) -> Result<State, SettingsError> {
-    let Some(_operation_specific) = setting.operations.get(&OperationType::Delete) else {
+    if !setting
+        .supported_operations
+        .contains(&OperationType::Delete)
+    {
         return Err(SettingsError::OperationNotSupported {
             operation: OperationType::Delete,
         });
-    };
-
-    let state = State::new_with_special_variables(author, guild_id);
+    }
 
     let Some(pkey_column) = setting.columns.iter().find(|c| c.id == setting.primary_key) else {
         return Err(SettingsError::Generic {
@@ -1375,87 +888,32 @@ pub async fn settings_delete(
         });
     };
 
-    let pkey = _parse_value(pkey, &pkey_column.column_type, setting.primary_key)?;
+    let pkey = _parse_value(pkey, &pkey_column.column_type, &setting.primary_key)?;
 
-    let mut data_store = setting
-        .data_store
-        .create(
-            setting,
-            guild_id,
-            author,
-            data,
-            common_filters(setting, OperationType::Delete, &state),
-        )
-        .await?;
-
-    // Start the transaction now that basic validation is done
-    data_store.start_transaction().await?;
-
-    // Fetch entire row to execute actions on before deleting
-    let cols = setting
-        .columns
-        .iter()
-        .map(|c| c.id.to_string())
-        .collect::<Vec<String>>();
-
-    let mut state = data_store
-        .fetch_all(
-            &cols,
-            indexmap::indexmap! {
-                setting.primary_key.to_string() => pkey.clone(),
-            },
-        )
-        .await?;
-
-    if state.is_empty() {
-        return Err(SettingsError::RowDoesNotExist {
-            column_id: setting.primary_key.to_string(),
+    // Create the row
+    let Some(ref executor) = setting.executor.0 else {
+        return Err(SettingsError::Generic {
+            message: "No executor found".to_string(),
+            src: "settings_save".to_string(),
+            typ: "internal".to_string(),
         });
-    }
+    };
 
-    let mut state = state.pop().unwrap(); // We know there is only one row
-
-    // Run validator
-    setting
-        .validator
-        .validate(
-            super::types::HookContext {
-                author,
+    let state = executor
+        .delete(
+            HookContext {
                 guild_id,
-                operation_type: OperationType::Delete,
-                data_store: &mut *data_store,
-                data,
-                unchanged_fields: vec![],
-            },
-            &mut state,
-        )
-        .await?;
-
-    // Now delete the entire row, the ignored_for does not matter here as we are deleting the entire row
-    data_store
-        .delete_matching_entries(indexmap::indexmap! {
-            setting.primary_key.to_string() => pkey.clone(),
-        })
-        .await?;
-
-    // Commit the transaction
-    data_store.commit().await?;
-
-    // Execute post actions
-    setting
-        .post_action
-        .post_action(
-            super::types::HookContext {
                 author,
-                guild_id,
-                operation_type: OperationType::Delete,
-                data_store: &mut *data_store,
                 data,
-                unchanged_fields: vec![],
             },
-            &mut state,
+            pkey,
         )
-        .await?;
+        .await
+        .map_err(|e| SettingsError::Generic {
+            message: e.to_string(),
+            src: "settings_delete".to_string(),
+            typ: "internal".to_string(),
+        })?;
 
     Ok(state)
 }
