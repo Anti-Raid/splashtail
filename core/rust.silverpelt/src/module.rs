@@ -45,10 +45,6 @@ pub trait Module: Send + Sync {
         Vec::new()
     }
 
-    /// The full command list of the module.
-    ///
-    /// Note: most modules can use the modules_ext::create_full_command_list function to generate this automatically
-    fn full_command_list(&self) -> Vec<CommandObj>;
     /// Event listeners for the module
     fn event_listeners(&self) -> Option<Box<dyn ModuleEventListeners>> {
         None
@@ -188,7 +184,7 @@ pub fn validate_module<T: Module + ?Sized>(module: &T) -> Result<(), crate::Erro
             );
         }
 
-        config_ids.push(config_opt.id);
+        config_ids.push(config_opt.id.clone());
     }
 
     Ok(())

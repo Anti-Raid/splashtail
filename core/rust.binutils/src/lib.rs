@@ -285,7 +285,7 @@ pub fn get_commands(
             continue;
         }
 
-        for (mut cmd, extended_data) in module.full_command_list() {
+        for (mut cmd, extended_data) in module.raw_commands() {
             let root_is_virtual = match extended_data.get("") {
                 Some(root) => root.virtual_command,
                 None => false,

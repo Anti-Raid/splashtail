@@ -70,7 +70,7 @@ impl SilverpeltCache {
         let module: Arc<dyn Module> = module.into();
 
         // Add the commands to cache
-        for (command, extended_data) in module.full_command_list().iter() {
+        for (command, extended_data) in module.raw_commands().iter() {
             self.command_id_module_map
                 .insert(command.name.to_string(), module.id().to_string());
             self.command_extra_data_map
@@ -88,7 +88,7 @@ impl SilverpeltCache {
 
     pub fn remove_module(&mut self, module_id: &str) {
         if let Some((_, module)) = self.module_cache.remove(module_id) {
-            for (command, _) in module.full_command_list().iter() {
+            for (command, _) in module.raw_commands().iter() {
                 self.command_id_module_map.remove(&command.name.to_string());
                 self.command_extra_data_map
                     .remove(&command.name.to_string());

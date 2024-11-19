@@ -24,7 +24,6 @@ dashmap = { version = "6", features = ["serde", "inline", "rayon"] }
 
 # Anti-Raid specific
 module_settings = { path = "../rust.module_settings" }
-modules_ext = { path = "../rust.modules_ext" }
 
 [dependencies.serenity]
 git = "https://github.com/Anti-Raid/serenity"

@@ -35,7 +35,7 @@ pub struct CanonicalModule {
     pub s3_paths: Vec<String>,
 
     /// Config options for this module
-    pub config_options: Vec<module_settings::canonical_types::CanonicalConfigOption>,
+    pub config_options: Vec<module_settings::types::ConfigOption>,
 }
 
 /// Canonical representation of a command (data section) for external use
@@ -147,16 +147,12 @@ impl From<&dyn crate::module::Module> for CanonicalModule {
             web_hidden: module.web_hidden(),
             is_default_enabled: module.is_default_enabled(),
             commands: module
-                .full_command_list()
+                .raw_commands()
                 .iter()
                 .map(|(cmd, perms)| CanonicalCommand::from_repr(cmd, perms.clone()))
                 .collect(),
             s3_paths: module.s3_paths().clone(),
-            config_options: module
-                .config_options()
-                .iter()
-                .map(|x| module_settings::canonical_types::CanonicalConfigOption::from(x.clone()))
-                .collect(),
+            config_options: module.config_options(),
         }
     }
 }

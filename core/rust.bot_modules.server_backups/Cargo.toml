@@ -18,7 +18,6 @@ silverpelt = { path = "../rust.silverpelt" }
 permission_checks = { path = "../rust.permissions.checks" }
 splashcore_rs = { path = "../rust.std" }
 config = { path = "../rust.config" }
-modules_ext = { path = "../rust.modules_ext" }
 
 [dependencies.serenity]
 git = "https://github.com/Anti-Raid/serenity"

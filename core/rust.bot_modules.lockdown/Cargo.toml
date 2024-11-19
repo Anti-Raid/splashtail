@@ -25,7 +25,6 @@ silverpelt = { path = "../rust.silverpelt" }
 splashcore_rs = { path = "../rust.std" }
 module_settings = { path = "../rust.module_settings" }
 sandwich_driver = { path = "../rust.sandwich_driver" }
-modules_ext = { path = "../rust.modules_ext" }
 lockdowns = { path = "../rust.lockdowns" }
 
 [dependencies.serenity]

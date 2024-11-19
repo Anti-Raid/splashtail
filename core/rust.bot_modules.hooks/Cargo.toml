@@ -27,7 +27,6 @@ permissions = { path = "../rust.permissions" }
 module_settings = { path = "../rust.module_settings" }
 gwevent = { path = "../rust.gwevent" }
 templating = { path = "../rust.templating" }
-modules_ext = { path = "../rust.modules_ext" }
 
 [dependencies.tokio]
 version = "1"
