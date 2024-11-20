@@ -2,9 +2,7 @@ use async_trait::async_trait;
 use module_settings::{
     data_stores::{PostgresDataStore, PostgresDataStoreImpl},
     types::{
-        settings_wrap, Column, ColumnSuggestion, ColumnType, Setting,
-        CreateDataStore, DataStore, InnerColumnType, InnerColumnTypeStringKind, OperationSpecific,
-        OperationType, SettingsData, SettingsError, NoOpValidator, NoOpPostAction,
+        settings_wrap, Column, ColumnSuggestion, ColumnType, CreateDataStore, DataStore, HookContext, InnerColumnType, InnerColumnTypeStringKind, NoOpPostAction, NoOpValidator, OperationSpecific, OperationType, Setting, SettingExecutor, SettingsData, SettingsError
     },
 };
 use splashcore_rs::value::Value;
@@ -131,6 +129,42 @@ pub static LOCKDOWNS: LazyLock<Setting> = LazyLock::new(|| Setting {
         OperationType::Delete,
     ],
 });
+
+pub struct LockdownExecutor;
+
+#[async_trait]
+impl SettingExecutor for LockdownExecutor {
+    /// View the settings data
+    ///
+    /// __limit and __offset, if found, contains the limit/offset of the query
+    ///
+    /// All Executors should return an __count value containing the total count of the total number of entries
+    async fn view<'a>(
+        &self,
+        context: HookContext<'a>,
+        filters: indexmap::IndexMap<String, splashcore_rs::value::Value>,
+    ) -> Result<Vec<indexmap::IndexMap<String, splashcore_rs::value::Value>>, silverpelt::Error> {
+        Ok(vec![]) // TODO: Implement
+    }
+
+    /// Saves the setting
+    async fn save<'a>(
+        &self,
+        context: HookContext<'a>,
+        state: indexmap::IndexMap<String, splashcore_rs::value::Value>,
+    ) -> Result<indexmap::IndexMap<String, splashcore_rs::value::Value>, silverpelt::Error> {
+        Ok(indexmap::indexmap! {}) // TODO: Implement
+    }
+
+    /// Deletes the setting
+    async fn delete<'a>(
+        &self,
+        context: HookContext<'a>,
+        pkey: splashcore_rs::value::Value,
+    ) -> Result<indexmap::IndexMap<String, splashcore_rs::value::Value>, silverpelt::Error> {
+        Ok(indexmap::indexmap! {}) // TODO: Implement
+    }
+}
 
 /// A custom data store is needed to handle the specific requirements of the lockdown module
 pub struct LockdownDataStore {}

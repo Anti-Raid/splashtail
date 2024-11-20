@@ -1,6 +1,5 @@
 use crate::types::HookContext;
 
-use super::state::State;
 use super::types::SettingsError;
 use super::types::{
     ColumnType, InnerColumnType, InnerColumnTypeStringKind, OperationType, Setting, SettingsData,
@@ -659,7 +658,7 @@ pub async fn settings_view(
     guild_id: serenity::all::GuildId,
     author: serenity::all::UserId,
     filters: indexmap::IndexMap<String, Value>, // The filters to apply
-) -> Result<Vec<State>, SettingsError> {
+) -> Result<Vec<indexmap::IndexMap<String, Value>>, SettingsError> {
     if !setting.supported_operations.contains(&OperationType::View) {
         return Err(SettingsError::OperationNotSupported {
             operation: OperationType::View,
@@ -686,33 +685,29 @@ pub async fn settings_view(
             typ: "internal".to_string(),
         })?;
 
-    let mut values: Vec<State> = Vec::new();
+    let mut values: Vec<indexmap::IndexMap<String, Value>> = Vec::new();
 
     for mut state in states {
         // We know that the columns are in the same order as the row
         for col in setting.columns.iter() {
-            let mut val = state.state.swap_remove(&col.id).unwrap_or(Value::None);
+            let mut val = state.swap_remove(&col.id).unwrap_or(Value::None);
 
             // Validate the value. returning the parsed value
             val = _parse_value(val, &col.column_type, &col.id)?;
 
             // Reinsert
-            state.state.insert(col.id.to_string(), val);
+            state.insert(col.id.to_string(), val);
         }
 
         // Remove ignored columns + secret columns now that the actions have been executed
         for col in setting.columns.iter() {
             if col.secret {
-                state.state.swap_remove(&col.id);
+                state.swap_remove(&col.id);
                 continue; // Skip secret columns in view. **this applies to view and update only as create is creating a new object**
             }
 
-            if state.bypass_ignore_for.contains(&col.id) {
-                continue;
-            }
-
             if col.ignored_for.contains(&OperationType::View) {
-                state.state.swap_remove(&col.id);
+                state.swap_remove(&col.id);
             }
         }
 
@@ -729,17 +724,15 @@ pub async fn settings_save(
     guild_id: serenity::all::GuildId,
     author: serenity::all::UserId,
     fields: indexmap::IndexMap<String, Value>,
-) -> Result<State, SettingsError> {
+) -> Result<indexmap::IndexMap<String, Value>, SettingsError> {
     if !setting.supported_operations.contains(&OperationType::Save) {
         return Err(SettingsError::OperationNotSupported {
             operation: OperationType::Save,
         });
     };
 
-    let mut fields = fields; // Make fields mutable, consuming the input
-
     // Ensure all columns exist in fields, note that we can ignore extra fields so this one single loop is enough
-    let mut state: State = State::new_with_special_variables(author, guild_id);
+    let mut state = fields;
     for column in setting.columns.iter() {
         if column.ignored_for.contains(&OperationType::Save) {
             continue;
@@ -747,35 +740,28 @@ pub async fn settings_save(
 
         // If the column is ignored for create, skip
         // If the column is a secret column, then ensure we set it to something random as this is a create operation
-        let value = {
-            if column.ignored_for.contains(&OperationType::Save) {
-                let val = fields.swap_remove(&column.id).unwrap_or(Value::None);
-                _parse_value(val, &column.column_type, &column.id)?
-            } else {
-                // Get the value
-                let val = fields.swap_remove(&column.id).unwrap_or(Value::None);
+        let value = if column.ignored_for.contains(&OperationType::Save) {
+            let val = state.swap_remove(&column.id).unwrap_or(Value::None);
+            _parse_value(val, &column.column_type, &column.id)?
+        } else {
+            // Get the value
+            let val = state.swap_remove(&column.id).unwrap_or(Value::None);
 
-                // Validate and parse the value
-                let parsed_value = _parse_value(val, &column.column_type, &column.id)?;
-                _validate_value(
-                    parsed_value,
-                    guild_id,
-                    data,
-                    &column.column_type,
-                    &column.id,
-                    column.nullable,
-                )
-                .await?
-            }
+            // Validate and parse the value
+            let parsed_value = _parse_value(val, &column.column_type, &column.id)?;
+            _validate_value(
+                parsed_value,
+                guild_id,
+                data,
+                &column.column_type,
+                &column.id,
+                column.nullable,
+            )
+            .await?
         };
 
-        // Insert the value into the state
-        state.state.insert(column.id.to_string(), value);
+        state.insert(column.id.to_string(), value);
     }
-
-    drop(fields); // Drop fields to avoid accidental use of user data
-    #[allow(unused_variables)]
-    let fields = (); // Reset fields to avoid accidental use of user data
 
     // Now execute all actions and handle null checks
     for column in setting.columns.iter() {
@@ -784,7 +770,7 @@ pub async fn settings_save(
             continue;
         }
 
-        let Some(value) = state.state.get(&column.id) else {
+        let Some(value) = state.get(&column.id) else {
             return Err(SettingsError::Generic {
                 message: format!(
                     "Column `{}` not found in state despite just being parsed",
@@ -806,12 +792,8 @@ pub async fn settings_save(
 
     // Remove ignored columns now that the actions have been executed
     for col in setting.columns.iter() {
-        if state.bypass_ignore_for.contains(&col.id) {
-            continue;
-        }
-
         if col.ignored_for.contains(&OperationType::Save) {
-            state.state.swap_remove(&col.id);
+            state.swap_remove(&col.id);
         }
     }
 
@@ -831,7 +813,7 @@ pub async fn settings_save(
                 author,
                 data,
             },
-            &mut state,
+            state,
         )
         .await
         .map_err(|e| SettingsError::Generic {
@@ -851,7 +833,7 @@ pub async fn settings_delete(
     guild_id: serenity::all::GuildId,
     author: serenity::all::UserId,
     pkey: Value,
-) -> Result<State, SettingsError> {
+) -> Result<indexmap::IndexMap<String, Value>, SettingsError> {
     if !setting
         .supported_operations
         .contains(&OperationType::Delete)

@@ -1,4 +1,5 @@
 use async_trait::async_trait;
+use splashcore_rs::value::Value;
 use std::sync::Arc;
 
 pub type Error = Box<dyn std::error::Error + Send + Sync>; // This is constant and should be copy pasted
@@ -270,21 +271,21 @@ pub trait SettingExecutor: Send + Sync {
         &self,
         context: HookContext<'a>,
         filters: indexmap::IndexMap<String, splashcore_rs::value::Value>,
-    ) -> Result<Vec<crate::state::State>, Error>;
+    ) -> Result<Vec<indexmap::IndexMap<String, Value>>, Error>;
 
     /// Saves the setting
     async fn save<'a>(
         &self,
         context: HookContext<'a>,
-        state: &'a mut super::state::State,
-    ) -> Result<crate::state::State, Error>;
+        state: indexmap::IndexMap<String, Value>,
+    ) -> Result<indexmap::IndexMap<String, Value>, Error>;
 
     /// Deletes the setting
     async fn delete<'a>(
         &self,
         context: HookContext<'a>,
         pkey: splashcore_rs::value::Value,
-    ) -> Result<crate::state::State, Error>;
+    ) -> Result<indexmap::IndexMap<String, Value>, Error>;
 }
 
 impl std::fmt::Debug for dyn SettingExecutor {

@@ -249,201 +249,43 @@ pub fn split_input_to_string(s: &str, separator: &str) -> Vec<String> {
         .collect()
 }
 
-pub mod sql_utils {
-    pub const SPECIAL_VARS: [&str; 2] = ["__limit", "__offset"];
+pub mod value_utils {
+    use crate::value::Value;
 
-    use std::collections::HashSet;
+    /// Given a template string, where state variables are surrounded by curly braces, return the
+    /// template value (if a single variable) or a string if not
+    pub fn template_to_string_map(
+        map: &indexmap::IndexMap<String, Value>,
+        template: &str,
+    ) -> Value {
+        let mut result = template.to_string();
 
-    /// Helper method to create a WHERE clause from a set of filters
-    ///
-    /// E.g. a = $1 AND b IS NULL AND c = $2 etc.
-    ///
-    /// This does NOT check against column set and is hence potentially vulnerable to SQL injection if not used correctly
-    pub fn create_where_clause_unchecked(
-        filters: &indexmap::IndexMap<String, crate::value::Value>,
-        offset: usize,
-    ) -> String {
-        let mut filters_str = String::new();
+        // Get number of variables in the template
+        let num_starts = result.matches('{').count();
 
-        let mut i = 0;
+        // If 1 variables, return the value of the variable
+        if num_starts == 1 && result.starts_with('{') && result.ends_with('}') {
+            let var = template
+                .chars()
+                .skip(1)
+                .take(template.len() - 2)
+                .collect::<String>();
 
-        let mut spec_limit = false;
-        let mut spec_offset = false;
-
-        let mut needs_sep = false;
-        for (key, v) in filters.iter() {
-            if key == "__limit" {
-                if let crate::value::Value::Integer(_) = v {
-                    spec_limit = true;
-                }
-                continue;
-            } else if key == "__offset" {
-                if let crate::value::Value::Integer(_) = v {
-                    spec_offset = true;
-                }
-                continue;
-            }
-
-            if needs_sep {
-                filters_str.push_str(" AND ")
-            }
-
-            if matches!(v, crate::value::Value::None) {
-                filters_str.push_str(format!(" \"{}\" IS NULL", key).as_str());
-            } else {
-                filters_str.push_str(format!(" \"{}\" = ${}", key, (i + 1) + offset).as_str());
-                i += 1; // Only update i if we actually add a filter that binds a value
-            }
-
-            needs_sep = true;
+            return get_variable_value(map, &var);
         }
 
-        if filters_str.is_empty() {
-            // HACK: Use 1 = 1
-            filters_str.push_str("1 = 1");
+        for (key, value) in map {
+            result = result.replace(&format!("{{{}}}", key), &value.to_string());
         }
 
-        // Add the limit and offset *LAST* if they exist
-        if spec_limit {
-            filters_str.push_str(format!(" LIMIT ${}", (i + 1) + offset).as_str());
-        }
-
-        if spec_offset {
-            filters_str.push_str(format!(" OFFSET ${}", (i + 2) + offset).as_str());
-        }
-
-        filters_str
+        Value::String(result)
     }
 
-    /// Helper method to create a WHERE clause from a set of filters
-    ///
-    /// E.g. a = $1 AND b IS NULL AND c = $2 etc.
-    pub fn create_where_clause(
-        valid_columns: &HashSet<String>,
-        filters: &indexmap::IndexMap<String, crate::value::Value>,
-        offset: usize,
-    ) -> Result<String, crate::Error> {
-        for (key, _) in filters.iter() {
-            // The __limit, __offset etc key is special and is used for pagination
-            if SPECIAL_VARS.contains(&key.as_str()) {
-                continue;
-            }
-
-            // Validate the column to avoid SQL injection
-            let parts = key.split("__").collect::<Vec<&str>>();
-
-            if !valid_columns.contains(&parts[0].to_string()) {
-                return Err(format!("Invalid column [part 0 not valid column]: {}", key).into());
-            }
-
-            // Ensure all other parts are alphanumeric and/or contains an _
-            for part in parts.iter().skip(1) {
-                if !part.chars().all(|c| c.is_alphanumeric() || c == '_') {
-                    return Err(format!("Invalid column [rest not valid]: {}", key).into());
-                }
-            }
+    pub fn get_variable_value(map: &indexmap::IndexMap<String, Value>, variable: &str) -> Value {
+        match variable {
+            "__now" => Value::TimestampTz(chrono::Utc::now()),
+            "__now_naive" => Value::Timestamp(chrono::Utc::now().naive_utc()),
+            _ => map.get(variable).cloned().unwrap_or(Value::None),
         }
-
-        Ok(create_where_clause_unchecked(filters, offset))
-    }
-
-    /// Helper method to create a SET clause from a set of entries
-    /// E.g. "a" = $1, "b" = $2, "c" = $3 etc.
-    ///
-    /// This does NOT check against column set and is hence potentially vulnerable to SQL injection if not used correctly
-    pub fn create_update_set_clause_unchecked(
-        entry: &indexmap::IndexMap<String, crate::value::Value>,
-        offset: usize,
-    ) -> String {
-        let mut col_params = "".to_string();
-
-        let mut i = 0;
-
-        #[allow(clippy::explicit_counter_loop)]
-        for (col, _) in entry.iter() {
-            // $1 is first col param
-            col_params.push_str(&format!("\"{}\" = ${},", col, (i + 1) + offset));
-            i += 1;
-        }
-
-        // Remove the trailing comma
-        col_params.pop();
-
-        col_params
-    }
-
-    /// Helper method to create a SET clause from a set of entries
-    /// E.g. "a" = $1, "b" = $2, "c" = $3 etc.
-    pub fn create_update_set_clause(
-        valid_columns: &HashSet<String>,
-        entry: &indexmap::IndexMap<String, crate::value::Value>,
-        offset: usize,
-    ) -> Result<String, crate::Error> {
-        for (col, _) in entry.iter() {
-            if SPECIAL_VARS.contains(&col.as_str()) {
-                continue;
-            }
-
-            // Validate the column to avoid SQL injection, here we don't really need to care about parts etc.
-            if !valid_columns.contains(col) {
-                return Err(format!("Invalid column [part 0 not valid column]: {}", col).into());
-            }
-        }
-
-        Ok(create_update_set_clause_unchecked(entry, offset))
-    }
-
-    /// Helper method to create the col_params ("col1", "col2", "col3" etc.) and the n_params ($1, $2, $3 etc.)
-    /// for a query
-    pub fn create_col_and_n_params(
-        valid_columns: &HashSet<String>,
-        entry: &indexmap::IndexMap<String, crate::value::Value>,
-        offset: usize,
-    ) -> Result<(String, String), crate::Error> {
-        let mut n_params = "".to_string();
-        let mut col_params = "".to_string();
-        for (i, (col, _)) in entry.iter().enumerate() {
-            // Validate the column to avoid SQL injection, here we don't really need to care about parts etc.
-            if !valid_columns.contains(col) {
-                return Err(format!("Invalid column [part 0 not valid column]: {}", col).into());
-            }
-
-            n_params.push_str(&format!("${},", (i + 1) + offset));
-            col_params.push_str(&format!("\"{}\",", col));
-        }
-
-        // Remove the trailing comma
-        n_params.pop();
-        col_params.pop();
-
-        Ok((col_params, n_params))
-    }
-}
-
-#[cfg(test)]
-mod test {
-    pub use super::*;
-
-    #[test]
-    fn test_parse_numeric_list() {
-        assert_eq!(
-            parse_numeric_list::<i32>("1,2,3,4,5", &[]).unwrap(),
-            vec![1, 2, 3, 4, 5]
-        );
-        assert_eq!(
-            parse_numeric_list::<i32>("1,2,3,4,5,", &[]).unwrap(),
-            vec![1, 2, 3, 4, 5]
-        );
-        assert_eq!(
-            parse_numeric_list_to_str::<serenity::all::ChannelId>("1,2", &[(",", "")]).unwrap(),
-            vec!["1", "2"]
-        );
-    }
-
-    #[test]
-    fn test_parse_duration_string() {
-        assert_eq!(parse_duration_string("1d").unwrap(), (1, Unit::Days));
-        assert_eq!(parse_duration_string("1 day").unwrap(), (1, Unit::Days));
-        assert_eq!(parse_duration_string("1 days").unwrap(), (1, Unit::Days));
     }
 }
