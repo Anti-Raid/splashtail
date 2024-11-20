@@ -134,11 +134,6 @@ pub struct LockdownExecutor;
 
 #[async_trait]
 impl SettingExecutor for LockdownExecutor {
-    /// View the settings data
-    ///
-    /// __limit and __offset, if found, contains the limit/offset of the query
-    ///
-    /// All Executors should return an __count value containing the total count of the total number of entries
     async fn view<'a>(
         &self,
         context: HookContext<'a>,
@@ -147,7 +142,6 @@ impl SettingExecutor for LockdownExecutor {
         Ok(vec![]) // TODO: Implement
     }
 
-    /// Saves the setting
     async fn save<'a>(
         &self,
         context: HookContext<'a>,
@@ -156,7 +150,6 @@ impl SettingExecutor for LockdownExecutor {
         Ok(indexmap::indexmap! {}) // TODO: Implement
     }
 
-    /// Deletes the setting
     async fn delete<'a>(
         &self,
         context: HookContext<'a>,

@@ -510,3 +510,9 @@ impl<'de> serde::Deserialize<'de> for Value {
         Ok(Value::from_json(&value))
     }
 }
+
+impl From<serde_json::Value> for Value {
+    fn from(value: serde_json::Value) -> Self {
+        Value::from_json(&value)
+    }
+}

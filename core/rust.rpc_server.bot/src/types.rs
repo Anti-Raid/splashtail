@@ -89,7 +89,7 @@ pub struct DispatchTrustedWebEventResponse {}
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum CanonicalSettingsResult {
     Ok {
-        fields: Vec<indexmap::IndexMap<String, serde_json::Value>>,
+        fields: Vec<indexmap::IndexMap<String, splashcore_rs::value::Value>>,
     },
     Err {
         error: module_settings::types::SettingsError,
@@ -98,7 +98,7 @@ pub enum CanonicalSettingsResult {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SettingsOperationRequest {
-    pub fields: indexmap::IndexMap<String, serde_json::Value>,
+    pub fields: indexmap::IndexMap<String, splashcore_rs::value::Value>,
     pub op: module_settings::types::OperationType,
     pub setting: String,
 }
