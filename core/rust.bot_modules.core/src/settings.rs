@@ -1,7 +1,7 @@
 use kittycat::perms::Permission;
-use module_settings::state::State;
-use module_settings::types::SettingsData;
-use module_settings::{
+use ar_settings::state::State;
+use ar_settings::types::SettingsData;
+use ar_settings::{
     data_stores::{PostgresDataStore, PostgresDataStoreImpl},
     types::{
         settings_wrap, Column, ColumnSuggestion, ColumnType, Setting, HookContext,
@@ -27,7 +27,7 @@ pub static GUILD_ROLES: LazyLock<Setting> = LazyLock::new(|| {
         max_return: 20,
         data_store: settings_wrap(PostgresDataStore {}),
         columns: settings_wrap(vec![
-            module_settings::common_columns::guild_id("guild_id", "Guild ID", "The Guild ID"),
+            ar_settings::common_columns::guild_id("guild_id", "Guild ID", "The Guild ID"),
             Column {
                 id: "role_id",
                 name: "Role ID",
@@ -91,10 +91,10 @@ pub static GUILD_ROLES: LazyLock<Setting> = LazyLock::new(|| {
                 ignored_for: vec![],
                 secret: false,
             },
-            module_settings::common_columns::created_at(),
-            module_settings::common_columns::created_by(),
-            module_settings::common_columns::last_updated_at(),
-            module_settings::common_columns::last_updated_by(),
+            ar_settings::common_columns::created_at(),
+            ar_settings::common_columns::created_by(),
+            ar_settings::common_columns::last_updated_at(),
+            ar_settings::common_columns::last_updated_by(),
         ]),
         title_template: "{index} - {role_id}",
         operations: indexmap::indexmap! {
@@ -566,7 +566,7 @@ pub static GUILD_MEMBERS: LazyLock<Setting> = LazyLock::new(|| {
         max_return: 20,
         data_store: settings_wrap(PostgresDataStore {}),
         columns: settings_wrap(vec![
-            module_settings::common_columns::guild_id("guild_id", "Guild ID", "The Guild ID"),
+            ar_settings::common_columns::guild_id("guild_id", "Guild ID", "The Guild ID"),
             Column {
                 id: "user_id",
                 name: "User ID",
@@ -659,7 +659,7 @@ pub static GUILD_MEMBERS: LazyLock<Setting> = LazyLock::new(|| {
                 ignored_for: vec![],
                 secret: false,
             },
-            module_settings::common_columns::created_at(),
+            ar_settings::common_columns::created_at(),
         ]),
         title_template: "{user_id}, perm_overrides={perm_overrides}",
         operations: indexmap::indexmap! {
@@ -939,7 +939,7 @@ pub static GUILD_TEMPLATES: LazyLock<Setting> = LazyLock::new(|| {
         max_return: 10,
         data_store: settings_wrap(PostgresDataStore {}),
         columns: settings_wrap(vec![
-            module_settings::common_columns::guild_id("guild_id", "Guild ID", "The Guild ID"),
+            ar_settings::common_columns::guild_id("guild_id", "Guild ID", "The Guild ID"),
             Column {
                 id: "name",
                 name: "Name",
@@ -988,10 +988,10 @@ pub static GUILD_TEMPLATES: LazyLock<Setting> = LazyLock::new(|| {
                 ignored_for: vec![],
                 secret: false,
             },
-            module_settings::common_columns::created_at(),
-            module_settings::common_columns::created_by(),
-            module_settings::common_columns::last_updated_at(),
-            module_settings::common_columns::last_updated_by(),
+            ar_settings::common_columns::created_at(),
+            ar_settings::common_columns::created_by(),
+            ar_settings::common_columns::last_updated_at(),
+            ar_settings::common_columns::last_updated_by(),
         ]),
         title_template: "{name}",
         operations: indexmap::indexmap! {
@@ -1081,7 +1081,7 @@ pub struct GuildTemplatePostAction;
 
 #[async_trait::async_trait]
 impl PostAction for GuildTemplatePostAction {
-    async fn post_action<'a>(&self, context: HookContext<'a> , state: &'a mut module_settings::state::State) -> Result<(), SettingsError> {
+    async fn post_action<'a>(&self, context: HookContext<'a> , state: &'a mut ar_settings::state::State) -> Result<(), SettingsError> {
         if context.operation_type == OperationType::View {
             return Ok(())
         }
@@ -1132,7 +1132,7 @@ pub static GUILD_TEMPLATES_KV: LazyLock<Setting> = LazyLock::new(|| {
         max_return: 10,
         data_store: settings_wrap(PostgresDataStore {}),
         columns: settings_wrap(vec![
-            module_settings::common_columns::guild_id("guild_id", "Guild ID", "The Guild ID"),
+            ar_settings::common_columns::guild_id("guild_id", "Guild ID", "The Guild ID"),
             Column {
                 id: "key",
                 name: "Key",
@@ -1164,8 +1164,8 @@ pub static GUILD_TEMPLATES_KV: LazyLock<Setting> = LazyLock::new(|| {
                 ignored_for: vec![],
                 secret: false,
             },
-            module_settings::common_columns::created_at(),
-            module_settings::common_columns::last_updated_at(),
+            ar_settings::common_columns::created_at(),
+            ar_settings::common_columns::last_updated_at(),
         ]),
         title_template: "{key}",
         operations: indexmap::indexmap! {
@@ -1306,11 +1306,11 @@ pub static GUILD_TEMPLATE_SHOP: LazyLock<Setting> = LazyLock::new(|| {
                 ignored_for: vec![],
                 secret: false,
             },
-            module_settings::common_columns::guild_id("owner_guild", "Guild ID", "The Guild ID"),
-            module_settings::common_columns::created_at(),
-            module_settings::common_columns::created_by(),
-            module_settings::common_columns::last_updated_at(),
-            module_settings::common_columns::last_updated_by(),
+            ar_settings::common_columns::guild_id("owner_guild", "Guild ID", "The Guild ID"),
+            ar_settings::common_columns::created_at(),
+            ar_settings::common_columns::created_by(),
+            ar_settings::common_columns::last_updated_at(),
+            ar_settings::common_columns::last_updated_by(),
         ]),
         title_template: "{name}",
         operations: indexmap::indexmap! {
@@ -1452,11 +1452,11 @@ pub static GUILD_TEMPLATE_SHOP_PUBLIC_LIST: LazyLock<Setting> = LazyLock::new(||
                 ignored_for: vec![],
                 secret: false,
             },
-            module_settings::common_columns::guild_id("owner_guild", "Guild ID", "The Guild ID"),
-            module_settings::common_columns::created_at(),
-            module_settings::common_columns::created_by(),
-            module_settings::common_columns::last_updated_at(),
-            module_settings::common_columns::last_updated_by(),
+            ar_settings::common_columns::guild_id("owner_guild", "Guild ID", "The Guild ID"),
+            ar_settings::common_columns::created_at(),
+            ar_settings::common_columns::created_by(),
+            ar_settings::common_columns::last_updated_at(),
+            ar_settings::common_columns::last_updated_by(),
         ]),
         title_template: "{name}",
         operations: indexmap::indexmap! {

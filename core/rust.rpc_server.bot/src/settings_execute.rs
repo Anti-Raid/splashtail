@@ -1,9 +1,9 @@
 use crate::types::CanonicalSettingsResult;
+use ar_settings::{self, types::OperationType, types::SettingsError};
 use axum::{
     extract::{Path, State},
     Json,
 };
-use module_settings::{self, types::OperationType, types::SettingsError};
 use rust_rpc_server::AppData;
 
 /// Executes an operation on a setting [SettingsOperation]
@@ -28,15 +28,9 @@ pub(crate) async fn settings_operation(
         });
     };
 
-    if !setting.supported_operations.contains(&op) {
-        return Json(CanonicalSettingsResult::Err {
-            error: SettingsError::OperationNotSupported { operation: op },
-        });
-    }
-
     match op {
         OperationType::View => {
-            match module_settings::cfg::settings_view(
+            match ar_settings::cfg::settings_view(
                 &setting,
                 &data.settings_data(serenity_context),
                 guild_id,
@@ -49,8 +43,22 @@ pub(crate) async fn settings_operation(
                 Err(e) => Json(CanonicalSettingsResult::Err { error: e.into() }),
             }
         }
-        OperationType::Save => {
-            match module_settings::cfg::settings_save(
+        OperationType::Create => {
+            match ar_settings::cfg::settings_create(
+                &setting,
+                &data.settings_data(serenity_context),
+                guild_id,
+                user_id,
+                req.fields,
+            )
+            .await
+            {
+                Ok(res) => Json(CanonicalSettingsResult::Ok { fields: vec![res] }),
+                Err(e) => Json(CanonicalSettingsResult::Err { error: e.into() }),
+            }
+        }
+        OperationType::Update => {
+            match ar_settings::cfg::settings_update(
                 &setting,
                 &data.settings_data(serenity_context),
                 guild_id,
@@ -73,7 +81,7 @@ pub(crate) async fn settings_operation(
                 });
             };
 
-            match module_settings::cfg::settings_delete(
+            match ar_settings::cfg::settings_delete(
                 &setting,
                 &data.settings_data(serenity_context),
                 guild_id,
@@ -82,9 +90,7 @@ pub(crate) async fn settings_operation(
             )
             .await
             {
-                Ok(res) => Json(CanonicalSettingsResult::Ok {
-                    fields: vec![res.into()],
-                }),
+                Ok(_res) => Json(CanonicalSettingsResult::Ok { fields: vec![] }),
                 Err(e) => Json(CanonicalSettingsResult::Err { error: e.into() }),
             }
         }

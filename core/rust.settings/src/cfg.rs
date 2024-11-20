@@ -659,17 +659,13 @@ pub async fn settings_view(
     author: serenity::all::UserId,
     filters: indexmap::IndexMap<String, Value>, // The filters to apply
 ) -> Result<Vec<indexmap::IndexMap<String, Value>>, SettingsError> {
-    if !setting.supported_operations.contains(&OperationType::View) {
+    let Some(ref viewer) = setting.operations.view else {
         return Err(SettingsError::OperationNotSupported {
             operation: OperationType::View,
         });
-    }
-
-    let Some(ref executor) = setting.executor.0 else {
-        return Ok(Vec::new());
     };
 
-    let states = executor
+    let states = viewer
         .view(
             HookContext {
                 guild_id,
@@ -678,12 +674,7 @@ pub async fn settings_view(
             },
             filters,
         )
-        .await
-        .map_err(|e| SettingsError::Generic {
-            message: e.to_string(),
-            src: "settings_view".to_string(),
-            typ: "internal".to_string(),
-        })?;
+        .await?;
 
     let mut values: Vec<indexmap::IndexMap<String, Value>> = Vec::new();
 
@@ -717,30 +708,29 @@ pub async fn settings_view(
     Ok(values)
 }
 
-/// Settings API: Save implementation
-pub async fn settings_save(
+/// Settings API: Create implementation
+pub async fn settings_create(
     setting: &Setting,
     data: &SettingsData,
     guild_id: serenity::all::GuildId,
     author: serenity::all::UserId,
     fields: indexmap::IndexMap<String, Value>,
 ) -> Result<indexmap::IndexMap<String, Value>, SettingsError> {
-    if !setting.supported_operations.contains(&OperationType::Save) {
+    let Some(ref creator) = setting.operations.create else {
         return Err(SettingsError::OperationNotSupported {
-            operation: OperationType::Save,
+            operation: OperationType::Create,
         });
     };
 
     // Ensure all columns exist in fields, note that we can ignore extra fields so this one single loop is enough
     let mut state = fields;
     for column in setting.columns.iter() {
-        if column.ignored_for.contains(&OperationType::Save) {
+        if column.ignored_for.contains(&OperationType::Create) {
             continue;
         }
 
-        // If the column is ignored for create, skip
-        // If the column is a secret column, then ensure we set it to something random as this is a create operation
-        let value = if column.ignored_for.contains(&OperationType::Save) {
+        // If the column is ignored for, only parse, otherwise parse and validate
+        let value = if column.ignored_for.contains(&OperationType::Create) {
             let val = state.swap_remove(&column.id).unwrap_or(Value::None);
             _parse_value(val, &column.column_type, &column.id)?
         } else {
@@ -766,7 +756,7 @@ pub async fn settings_save(
     // Now execute all actions and handle null checks
     for column in setting.columns.iter() {
         // Checks should only happen if the column is not being intentionally ignored
-        if column.ignored_for.contains(&OperationType::Save) {
+        if column.ignored_for.contains(&OperationType::Create) {
             continue;
         }
 
@@ -792,22 +782,13 @@ pub async fn settings_save(
 
     // Remove ignored columns now that the actions have been executed
     for col in setting.columns.iter() {
-        if col.ignored_for.contains(&OperationType::Save) {
+        if col.ignored_for.contains(&OperationType::Create) {
             state.swap_remove(&col.id);
         }
     }
 
-    // Create the row
-    let Some(ref executor) = setting.executor.0 else {
-        return Err(SettingsError::Generic {
-            message: "No executor found".to_string(),
-            src: "settings_save".to_string(),
-            typ: "internal".to_string(),
-        });
-    };
-
-    let new_state = executor
-        .save(
+    let new_state = creator
+        .create(
             HookContext {
                 guild_id,
                 author,
@@ -815,12 +796,100 @@ pub async fn settings_save(
             },
             state,
         )
-        .await
-        .map_err(|e| SettingsError::Generic {
-            message: e.to_string(),
-            src: "settings_save".to_string(),
-            typ: "internal".to_string(),
-        })?;
+        .await?;
+
+    Ok(new_state)
+}
+
+/// Settings API: Update implementation
+pub async fn settings_update(
+    setting: &Setting,
+    data: &SettingsData,
+    guild_id: serenity::all::GuildId,
+    author: serenity::all::UserId,
+    fields: indexmap::IndexMap<String, Value>,
+) -> Result<indexmap::IndexMap<String, Value>, SettingsError> {
+    let Some(ref updater) = setting.operations.update else {
+        return Err(SettingsError::OperationNotSupported {
+            operation: OperationType::Update,
+        });
+    };
+
+    // Ensure all columns exist in fields, note that we can ignore extra fields so this one single loop is enough
+    let mut state = fields;
+    for column in setting.columns.iter() {
+        if column.ignored_for.contains(&OperationType::Update) {
+            continue;
+        }
+
+        // If the column is ignored for, only parse, otherwise parse and validate
+        let value = if column.ignored_for.contains(&OperationType::Update) {
+            let val = state.swap_remove(&column.id).unwrap_or(Value::None);
+            _parse_value(val, &column.column_type, &column.id)?
+        } else {
+            // Get the value
+            let val = state.swap_remove(&column.id).unwrap_or(Value::None);
+
+            // Validate and parse the value
+            let parsed_value = _parse_value(val, &column.column_type, &column.id)?;
+            _validate_value(
+                parsed_value,
+                guild_id,
+                data,
+                &column.column_type,
+                &column.id,
+                column.nullable,
+            )
+            .await?
+        };
+
+        state.insert(column.id.to_string(), value);
+    }
+
+    // Now execute all actions and handle null checks
+    for column in setting.columns.iter() {
+        // Checks should only happen if the column is not being intentionally ignored
+        if column.ignored_for.contains(&OperationType::Update) {
+            continue;
+        }
+
+        let Some(value) = state.get(&column.id) else {
+            return Err(SettingsError::Generic {
+                message: format!(
+                    "Column `{}` not found in state despite just being parsed",
+                    column.id
+                ),
+                src: "settings_update [ext_checks]".to_string(),
+                typ: "internal".to_string(),
+            });
+        };
+
+        // Check if the column is nullable
+        if !column.nullable && matches!(value, Value::None) {
+            return Err(SettingsError::MissingOrInvalidField {
+                field: column.id.to_string(),
+                src: "settings_create [null check]".to_string(),
+            });
+        }
+    }
+
+    // Remove ignored columns now that the actions have been executed
+    for col in setting.columns.iter() {
+        if col.ignored_for.contains(&OperationType::Update) {
+            state.swap_remove(&col.id);
+        }
+    }
+
+    let new_state = updater
+        .update(
+            HookContext {
+                guild_id,
+                author,
+                data,
+            },
+            state,
+        )
+        .await?;
 
     Ok(new_state)
 }
@@ -833,15 +902,12 @@ pub async fn settings_delete(
     guild_id: serenity::all::GuildId,
     author: serenity::all::UserId,
     pkey: Value,
-) -> Result<indexmap::IndexMap<String, Value>, SettingsError> {
-    if !setting
-        .supported_operations
-        .contains(&OperationType::Delete)
-    {
+) -> Result<(), SettingsError> {
+    let Some(ref deleter) = setting.operations.delete else {
         return Err(SettingsError::OperationNotSupported {
             operation: OperationType::Delete,
         });
-    }
+    };
 
     let Some(pkey_column) = setting.columns.iter().find(|c| c.id == setting.primary_key) else {
         return Err(SettingsError::Generic {
@@ -853,16 +919,7 @@ pub async fn settings_delete(
 
     let pkey = _parse_value(pkey, &pkey_column.column_type, &setting.primary_key)?;
 
-    // Create the row
-    let Some(ref executor) = setting.executor.0 else {
-        return Err(SettingsError::Generic {
-            message: "No executor found".to_string(),
-            src: "settings_save".to_string(),
-            typ: "internal".to_string(),
-        });
-    };
-
-    let state = executor
+    deleter
         .delete(
             HookContext {
                 guild_id,
@@ -871,12 +928,7 @@ pub async fn settings_delete(
             },
             pkey,
         )
-        .await
-        .map_err(|e| SettingsError::Generic {
-            message: e.to_string(),
-            src: "settings_delete".to_string(),
-            typ: "internal".to_string(),
-        })?;
+        .await?;
 
-    Ok(state)
+    Ok(())
 }

@@ -23,7 +23,7 @@ dashmap = { version = "6", features = ["serde", "inline", "rayon"] }
 # Anti-Raid specific
 silverpelt = { path = "../rust.silverpelt" }
 splashcore_rs = { path = "../rust.std" }
-module_settings = { path = "../rust.module_settings" }
+ar_settings = { path = "../rust.settings" }
 sandwich_driver = { path = "../rust.sandwich_driver" }
 lockdowns = { path = "../rust.lockdowns" }
 

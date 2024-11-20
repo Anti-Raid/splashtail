@@ -185,6 +185,26 @@ dependencies = [
 ]
 
 [[package]]
+name = "ar_settings"
+version = "6.0.0"
+dependencies = [
+ "async-recursion",
+ "async-trait",
+ "botox",
+ "chrono",
+ "futures-util",
+ "indexmap",
+ "moka",
+ "reqwest",
+ "sandwich_driver",
+ "serde",
+ "serde_json",
+ "serenity",
+ "splashcore_rs",
+ "sqlx",
+]
+
+[[package]]
 name = "arbitrary"
 version = "1.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -511,6 +531,7 @@ dependencies = [
 name = "bot_modules_core"
 version = "0.1.0"
 dependencies = [
+ "ar_settings",
  "async-trait",
  "botox",
  "chrono",
@@ -520,7 +541,6 @@ dependencies = [
  "indexmap",
  "kittycat",
  "log",
- "module_settings",
  "permission_checks",
  "permissions",
  "poise",
@@ -561,7 +581,6 @@ dependencies = [
  "gwevent",
  "indexmap",
  "log",
- "module_settings",
  "moka",
  "permissions",
  "poise",
@@ -583,6 +602,7 @@ dependencies = [
 name = "bot_modules_lockdown"
 version = "0.1.0"
 dependencies = [
+ "ar_settings",
  "async-trait",
  "botox",
  "chrono",
@@ -591,7 +611,6 @@ dependencies = [
  "indexmap",
  "lockdowns",
  "log",
- "module_settings",
  "moka",
  "poise",
  "reqwest",
@@ -632,13 +651,13 @@ dependencies = [
 name = "bot_modules_punishment_autotriggers"
 version = "0.1.0"
 dependencies = [
+ "ar_settings",
  "async-trait",
  "botox",
  "chrono",
  "dashmap 6.1.0",
  "indexmap",
  "log",
- "module_settings",
  "poise",
  "reqwest",
  "sandwich_driver",
@@ -2613,7 +2632,6 @@ dependencies = [
  "futures-util",
  "indexmap",
  "log",
- "module_settings",
  "moka",
  "poise",
  "reqwest",
@@ -2801,26 +2819,6 @@ dependencies = [
  "quote",
  "regex",
  "syn 2.0.87",
-]
-
-[[package]]
-name = "module_settings"
-version = "6.0.0"
-dependencies = [
- "async-recursion",
- "async-trait",
- "botox",
- "chrono",
- "futures-util",
- "indexmap",
- "moka",
- "reqwest",
- "sandwich_driver",
- "serde",
- "serde_json",
- "serenity",
- "splashcore_rs",
- "sqlx",
 ]
 
 [[package]]
@@ -3118,6 +3116,7 @@ checksum = "e3148f5046208a5d56bcfc03053e3ca6334e51da8dfb19b6cdc8b306fae3283e"
 name = "permission_checks"
 version = "0.1.0"
 dependencies = [
+ "ar_settings",
  "async-trait",
  "bitflags 2.6.0",
  "botox",
@@ -3128,7 +3127,6 @@ dependencies = [
  "indexmap",
  "kittycat",
  "log",
- "module_settings",
  "moka",
  "permissions",
  "poise",
@@ -3807,12 +3805,12 @@ dependencies = [
 name = "rust_rpc_server_bot"
 version = "6.0.0"
 dependencies = [
+ "ar_settings",
  "axum",
  "bitflags 2.6.0",
  "botox",
  "indexmap",
  "kittycat",
- "module_settings",
  "moka",
  "permission_checks",
  "permissions",
@@ -4272,6 +4270,7 @@ dependencies = [
 name = "silverpelt"
 version = "0.1.0"
 dependencies = [
+ "ar_settings",
  "async-trait",
  "bitflags 2.6.0",
  "botox",
@@ -4284,7 +4283,6 @@ dependencies = [
  "indexmap",
  "kittycat",
  "log",
- "module_settings",
  "moka",
  "permissions",
  "poise",

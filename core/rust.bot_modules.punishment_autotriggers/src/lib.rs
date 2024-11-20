@@ -25,7 +25,7 @@ impl silverpelt::module::Module for Module {
         Some(Box::new(EventListener))
     }
 
-    fn config_options(&self) -> Vec<module_settings::types::Setting> {
+    fn config_options(&self) -> Vec<ar_settings::types::Setting> {
         vec![(*settings::AUTOTRIGGERS).clone()]
     }
 }

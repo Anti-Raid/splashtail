@@ -92,14 +92,14 @@ pub enum CanonicalSettingsResult {
         fields: Vec<indexmap::IndexMap<String, splashcore_rs::value::Value>>,
     },
     Err {
-        error: module_settings::types::SettingsError,
+        error: ar_settings::types::SettingsError,
     },
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SettingsOperationRequest {
     pub fields: indexmap::IndexMap<String, splashcore_rs::value::Value>,
-    pub op: module_settings::types::OperationType,
+    pub op: ar_settings::types::OperationType,
     pub setting: String,
 }
 

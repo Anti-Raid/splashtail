@@ -1,4 +1,4 @@
-use module_settings::{
+use ar_settings::{
     data_stores::PostgresDataStore,
     state::State,
     types::{
@@ -10,53 +10,42 @@ use module_settings::{
 use std::sync::LazyLock;
 
 pub static AUTOTRIGGERS: LazyLock<Setting> = LazyLock::new(|| Setting {
-    id: "punishment_autotriggers",
-    name: "Punishment Autotriggers",
-    description: "All punishments that should be trigggred automatically based on stings",
-    table: "punishment_autotriggers__autotriggers",
-    common_filters: indexmap::indexmap! {},
-    default_common_filters: indexmap::indexmap! {
-        "guild_id" => "{__guild_id}"
-    },
-    primary_key: "id",
-    max_entries: None,
-    max_return: 20,
-    data_store: settings_wrap(PostgresDataStore {}),
+    id: "punishment_autotriggers".to_string(),
+    name: "Punishment Autotriggers".to_string(),
+    description: "All punishments that should be trigggred automatically based on stings"
+        .to_string(),
+    primary_key: "id".to_string(),
     columns: settings_wrap(vec![
         Column {
-            id: "id",
-            name: "ID",
-            description: "The ID used to refer to this autotrigger",
+            id: "id".to_string(),
+            name: "ID".to_string(),
+            description: "The ID used to refer to this autotrigger".to_string(),
             column_type: ColumnType::new_scalar(InnerColumnType::Uuid {}),
             nullable: true,
-            default: None,
-            unique: false,
             suggestions: ColumnSuggestion::None {},
             ignored_for: vec![OperationType::Create],
             secret: false,
         },
-        module_settings::common_columns::guild_id(
+        ar_settings::common_columns::guild_id(
             "guild_id",
             "Guild ID",
             "Guild ID of the server in question",
         ),
-        module_settings::common_columns::created_by(),
+        ar_settings::common_columns::created_by(),
         Column {
-            id: "stings",
-            name: "Stings",
-            description: "The number of stings required to trigger the action",
+            id: "stings".to_string(),
+            name: "Stings".to_string(),
+            description: "The number of stings required to trigger the action".to_string(),
             column_type: ColumnType::new_scalar(InnerColumnType::Integer {}),
             nullable: false,
-            default: None,
-            unique: false,
             suggestions: ColumnSuggestion::None {},
             ignored_for: vec![],
             secret: false,
         },
         Column {
-            id: "action",
-            name: "Action",
-            description: "The action to trigger when the stings are reached",
+            id: "action".to_string(),
+            name: "Action".to_string(),
+            description: "The action to trigger when the stings are reached".to_string(),
             column_type: ColumnType::new_scalar(InnerColumnType::String {
                 min_length: Some(1),
                 max_length: Some(100),
@@ -64,16 +53,14 @@ pub static AUTOTRIGGERS: LazyLock<Setting> = LazyLock::new(|| Setting {
                 kind: InnerColumnTypeStringKind::Normal,
             }),
             nullable: false,
-            default: None,
-            unique: false,
             suggestions: ColumnSuggestion::None {},
             ignored_for: vec![],
             secret: false,
         },
         Column {
-            id: "modifiers",
-            name: "Modifiers",
-            description: "Any modifiers to the action",
+            id: "modifiers".to_string(),
+            name: "Modifiers".to_string(),
+            description: "Any modifiers to the action".to_string(),
             column_type: ColumnType::new_array(InnerColumnType::String {
                 min_length: Some(1),
                 max_length: Some(100),
@@ -81,46 +68,29 @@ pub static AUTOTRIGGERS: LazyLock<Setting> = LazyLock::new(|| Setting {
                 kind: InnerColumnTypeStringKind::Modifier,
             }),
             nullable: false,
-            default: None,
-            unique: false,
             suggestions: ColumnSuggestion::None {},
             ignored_for: vec![],
             secret: false,
         },
-        module_settings::common_columns::created_at(),
+        ar_settings::common_columns::created_at(),
         Column {
-            id: "duration",
-            name: "Duration",
-            description: "The duration of the punishment to apply/use",
+            id: "duration".to_string(),
+            name: "Duration".to_string(),
+            description: "The duration of the punishment to apply/use".to_string(),
             column_type: ColumnType::new_scalar(InnerColumnType::Interval {}),
             nullable: true,
-            default: None,
-            unique: false,
             suggestions: ColumnSuggestion::None {},
             ignored_for: vec![],
             secret: false,
         },
     ]),
-    title_template: "At {stings} stings, {action} will be triggered",
-    operations: indexmap::indexmap! {
-        OperationType::View => OperationSpecific {
-            columns_to_set: indexmap::indexmap! {},
-        },
-        OperationType::Create => OperationSpecific {
-            columns_to_set: indexmap::indexmap! {
-                "created_at" => "{__now}",
-                "created_by" => "{__author}",
-            },
-        },
-        OperationType::Update => OperationSpecific {
-            columns_to_set: indexmap::indexmap! {},
-        },
-        OperationType::Delete => OperationSpecific {
-            columns_to_set: indexmap::indexmap! {},
-        },
-    },
-    validator: settings_wrap(AutotriggerValidator {}),
-    post_action: settings_wrap(NoOpPostAction {}),
+    title_template: "At {stings} stings, {action} will be triggered".to_string(),
+    supported_operations: vec![
+        OperationType::View,
+        OperationType::Create,
+        OperationType::Update,
+        OperationType::Delete,
+    ],
 });
 
 pub struct AutotriggerValidator;

@@ -42,7 +42,7 @@ pub struct SilverpeltCache {
     pub canonical_module_cache: dashmap::DashMap<String, CanonicalModule>,
 
     /// Cache of all known settings
-    pub settings_cache: dashmap::DashMap<String, module_settings::types::Setting>,
+    pub settings_cache: dashmap::DashMap<String, ar_settings::types::Setting>,
 }
 
 impl Default for SilverpeltCache {

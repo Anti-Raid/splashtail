@@ -18,7 +18,7 @@ impl silverpelt::module::Module for Module {
         "Lockdown module for quickly locking/unlocking your whole server or individual channels"
     }
 
-    fn config_options(&self) -> Vec<module_settings::types::Setting> {
+    fn config_options(&self) -> Vec<ar_settings::types::Setting> {
         vec![
             (*settings::LOCKDOWN_SETTINGS).clone(),
             (*settings::LOCKDOWNS).clone(),

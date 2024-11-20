@@ -24,7 +24,6 @@ async-trait = "0.1"
 silverpelt = { path = "../rust.silverpelt" }
 splashcore_rs = { path = "../rust.std" }
 permissions = { path = "../rust.permissions" }
-module_settings = { path = "../rust.module_settings" }
 gwevent = { path = "../rust.gwevent" }
 templating = { path = "../rust.templating" }
 

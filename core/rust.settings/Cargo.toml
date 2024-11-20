@@ -1,5 +1,5 @@
 [package]
-name = "module_settings"
+name = "ar_settings"
 version = "6.0.0"
 edition = "2021"
 

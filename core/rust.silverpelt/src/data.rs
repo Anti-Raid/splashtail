@@ -36,8 +36,8 @@ impl Data {
     pub fn settings_data(
         &self,
         serenity_context: serenity::all::Context,
-    ) -> module_settings::types::SettingsData {
-        module_settings::types::SettingsData {
+    ) -> ar_settings::types::SettingsData {
+        ar_settings::types::SettingsData {
             pool: self.pool.clone(),
             reqwest: self.reqwest.clone(),
             object_store: self.object_store.clone(),
@@ -50,7 +50,7 @@ impl Data {
     ///
     /// This is just a wrapper for <serenity_context>.data::<Data>().silverpelt_cache.clone()
     pub fn silverpelt_cache(
-        settings_data: &module_settings::types::SettingsData,
+        settings_data: &ar_settings::types::SettingsData,
     ) -> Arc<crate::cache::SilverpeltCache> {
         settings_data
             .serenity_context
@@ -62,7 +62,7 @@ impl Data {
     /// Given a settings data, return the data
     ///
     /// This is just a wrapper for settings_data.serenity_context.data::<Data>().clone()
-    pub fn get_data(settings_data: &module_settings::types::SettingsData) -> Arc<Self> {
+    pub fn get_data(settings_data: &ar_settings::types::SettingsData) -> Arc<Self> {
         settings_data.serenity_context.data::<Data>().clone()
     }
 }

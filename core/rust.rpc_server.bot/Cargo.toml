@@ -16,7 +16,7 @@ typetag = "0.2"
 
 # Anti-Raid specific
 splashcore_rs = { path = "../../core/rust.std" }
-module_settings = { path = "../../core/rust.module_settings" }
+ar_settings = { path = "../../core/rust.settings" }
 sandwich_driver = { path = "../../core/rust.sandwich_driver" }
 silverpelt = { path = "../../core/rust.silverpelt" }
 permission_checks = { path = "../../core/rust.permissions.checks" }
