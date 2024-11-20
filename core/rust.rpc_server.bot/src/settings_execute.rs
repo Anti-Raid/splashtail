@@ -3,7 +3,7 @@ use axum::{
     extract::{Path, State},
     Json,
 };
-use module_settings::{self, canonical_types::CanonicalSettingsError, types::OperationType};
+use module_settings::{self, types::OperationType, types::SettingsError};
 use rust_rpc_server::AppData;
 use splashcore_rs::value::Value;
 
@@ -20,24 +20,11 @@ pub(crate) async fn settings_operation(
     let op: OperationType = req.op.into();
 
     // Find the setting
-    let Some(module) = data.silverpelt_cache.module_cache.get(&req.module) else {
+    let Some(setting) = data.silverpelt_cache.settings_cache.get(&req.setting) else {
         return Json(CanonicalSettingsResult::Err {
-            error: CanonicalSettingsError::Generic {
-                message: "Module not found".to_string(),
-                src: "SettingsOperation".to_string(),
-                typ: "badRequest".to_string(),
-            },
-        });
-    };
-
-    let config_options = module.config_options(); // Get the config options
-
-    let Some(opt) = config_options.iter().find(|x| x.id == req.setting) else {
-        return Json(CanonicalSettingsResult::Err {
-            error: CanonicalSettingsError::Generic {
-                message: "Setting not found".to_string(),
-                src: "SettingsOperation".to_string(),
-                typ: "badRequest".to_string(),
+            error: SettingsError::MissingOrInvalidField {
+                field: "$opt".to_string(),
+                src: "rpc".to_string(),
             },
         });
     };
@@ -47,8 +34,8 @@ pub(crate) async fn settings_operation(
     // As the order of fields may not be guaranteed, we need to add the fields in the order of the columns
     //
     // We then add the rest of the fields not in columns as well
-    for column in opt.columns.iter() {
-        if let Some(value) = req.fields.get(column.id) {
+    for column in setting.columns.iter() {
+        if let Some(value) = req.fields.get(&column.id) {
             p_fields.insert(column.id.to_string(), Value::from_json(value));
         }
     }
@@ -62,38 +49,16 @@ pub(crate) async fn settings_operation(
         p_fields.insert(key, Value::from_json(&value));
     }
 
-    if opt.operations.get(&op).is_none() {
+    if !setting.supported_operations.contains(&op) {
         return Json(CanonicalSettingsResult::Err {
-            error: CanonicalSettingsError::OperationNotSupported {
-                operation: op.into(),
-            },
+            error: SettingsError::OperationNotSupported { operation: op },
         });
-    }
-
-    let perm_res = permission_checks::check_command(
-        &data.silverpelt_cache,
-        &opt.get_corresponding_command(op),
-        guild_id,
-        user_id,
-        &data.pool,
-        &serenity_context,
-        &data.reqwest,
-        &None,
-        permission_checks::CheckCommandOptions {
-            ignore_module_disabled: true,
-            ..Default::default()
-        },
-    )
-    .await;
-
-    if !perm_res.is_ok() {
-        return Json(CanonicalSettingsResult::PermissionError { res: perm_res });
     }
 
     match op {
         OperationType::View => {
             match module_settings::cfg::settings_view(
-                opt,
+                &setting,
                 &data.settings_data(serenity_context),
                 guild_id,
                 user_id,
@@ -107,25 +72,9 @@ pub(crate) async fn settings_operation(
                 Err(e) => Json(CanonicalSettingsResult::Err { error: e.into() }),
             }
         }
-        OperationType::Create => {
-            match module_settings::cfg::settings_create(
-                opt,
-                &data.settings_data(serenity_context),
-                guild_id,
-                user_id,
-                p_fields,
-            )
-            .await
-            {
-                Ok(res) => Json(CanonicalSettingsResult::Ok {
-                    fields: vec![res.into()],
-                }),
-                Err(e) => Json(CanonicalSettingsResult::Err { error: e.into() }),
-            }
-        }
-        OperationType::Update => {
-            match module_settings::cfg::settings_update(
-                opt,
+        OperationType::Save => {
+            match module_settings::cfg::settings_save(
+                &setting,
                 &data.settings_data(serenity_context),
                 guild_id,
                 user_id,
@@ -140,17 +89,17 @@ pub(crate) async fn settings_operation(
             }
         }
         OperationType::Delete => {
-            let Some(pkey) = p_fields.get(opt.primary_key) else {
+            let Some(pkey) = p_fields.get(&setting.primary_key) else {
                 return Json(CanonicalSettingsResult::Err {
-                    error: CanonicalSettingsError::MissingOrInvalidField {
-                        field: opt.primary_key.to_string(),
+                    error: SettingsError::MissingOrInvalidField {
+                        field: setting.primary_key.to_string(),
                         src: "SettingsOperation".to_string(),
                     },
                 });
             };
 
             match module_settings::cfg::settings_delete(
-                opt,
+                &setting,
                 &data.settings_data(serenity_context),
                 guild_id,
                 user_id,

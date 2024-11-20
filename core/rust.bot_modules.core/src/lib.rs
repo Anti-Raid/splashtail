@@ -123,7 +123,7 @@ impl silverpelt::module::Module for Module {
         ]
     }
 
-    fn config_options(&self) -> Vec<module_settings::types::ConfigOption> {
+    fn config_options(&self) -> Vec<module_settings::types::Setting> {
         vec![
             (*settings::GUILD_ROLES).clone(),
             (*settings::GUILD_MEMBERS).clone(),

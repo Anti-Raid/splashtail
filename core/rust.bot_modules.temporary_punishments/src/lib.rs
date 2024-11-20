@@ -26,10 +26,6 @@ impl silverpelt::module::Module for Module {
     fn event_listeners(&self) -> Option<Box<dyn silverpelt::module::ModuleEventListeners>> {
         Some(Box::new(EventListener))
     }
-
-    fn full_command_list(&self) -> Vec<silverpelt::module::CommandObj> {
-        modules_ext::create_full_command_list(self)
-    }
 }
 
 struct EventListener;

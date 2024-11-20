@@ -40,6 +40,9 @@ pub struct SilverpeltCache {
 
     /// Cache of the canonical forms of all modules
     pub canonical_module_cache: dashmap::DashMap<String, CanonicalModule>,
+
+    /// Cache of all known settings
+    pub settings_cache: dashmap::DashMap<String, module_settings::types::Setting>,
 }
 
 impl Default for SilverpeltCache {
@@ -50,6 +53,7 @@ impl Default for SilverpeltCache {
             module_cache: dashmap::DashMap::new(),
             command_id_module_map: dashmap::DashMap::new(),
             canonical_module_cache: dashmap::DashMap::new(),
+            settings_cache: dashmap::DashMap::new(),
         }
     }
 }
@@ -77,6 +81,12 @@ impl SilverpeltCache {
                 .insert(command.name.to_string(), extended_data.clone());
         }
 
+        // Add the settings to cache
+        for setting in module.config_options() {
+            self.settings_cache
+                .insert(setting.id.clone(), setting.clone());
+        }
+
         // Add to canonical cache
         self.canonical_module_cache
             .insert(module.id().to_string(), CanonicalModule::from(&module));
@@ -92,6 +102,10 @@ impl SilverpeltCache {
                 self.command_id_module_map.remove(&command.name.to_string());
                 self.command_extra_data_map
                     .remove(&command.name.to_string());
+            }
+
+            for setting in module.config_options() {
+                self.settings_cache.remove(&setting.id);
             }
 
             self.canonical_module_cache.remove(module_id);

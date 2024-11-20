@@ -2,14 +2,14 @@ use module_settings::{
     data_stores::PostgresDataStore,
     state::State,
     types::{
-        settings_wrap, Column, ColumnSuggestion, ColumnType, ConfigOption, HookContext,
-        InnerColumnType, InnerColumnTypeStringKind, NoOpPostAction, OperationSpecific,
-        OperationType, SettingDataValidator, SettingsError,
+        settings_wrap, Column, ColumnSuggestion, ColumnType, HookContext, InnerColumnType,
+        InnerColumnTypeStringKind, NoOpPostAction, OperationSpecific, OperationType, Setting,
+        SettingDataValidator, SettingsError,
     },
 };
 use std::sync::LazyLock;
 
-pub static AUTOTRIGGERS: LazyLock<ConfigOption> = LazyLock::new(|| ConfigOption {
+pub static AUTOTRIGGERS: LazyLock<Setting> = LazyLock::new(|| Setting {
     id: "punishment_autotriggers",
     name: "Punishment Autotriggers",
     description: "All punishments that should be trigggred automatically based on stings",

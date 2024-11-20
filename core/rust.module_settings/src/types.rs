@@ -208,7 +208,7 @@ pub enum OperationType {
 }
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
-pub struct ConfigOption {
+pub struct Setting {
     /// The ID of the option
     pub id: String,
 
@@ -237,7 +237,7 @@ pub struct ConfigOption {
     pub executor: OptionSettingExecutor,
 }
 
-impl PartialEq for ConfigOption {
+impl PartialEq for Setting {
     fn eq(&self, other: &Self) -> bool {
         self.id == other.id
     }

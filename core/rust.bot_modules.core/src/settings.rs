@@ -4,7 +4,7 @@ use module_settings::types::SettingsData;
 use module_settings::{
     data_stores::{PostgresDataStore, PostgresDataStoreImpl},
     types::{
-        settings_wrap, Column, ColumnSuggestion, ColumnType, ConfigOption, HookContext,
+        settings_wrap, Column, ColumnSuggestion, ColumnType, Setting, HookContext,
         InnerColumnType, InnerColumnTypeStringKind, OperationSpecific, OperationType, PostAction,
         SettingDataValidator, SettingsError, NoOpPostAction, NoOpValidator
     },
@@ -12,8 +12,8 @@ use module_settings::{
 use splashcore_rs::value::Value;
 use std::sync::LazyLock;
 
-pub static GUILD_ROLES: LazyLock<ConfigOption> = LazyLock::new(|| {
-    ConfigOption {
+pub static GUILD_ROLES: LazyLock<Setting> = LazyLock::new(|| {
+    Setting {
         id: "guild_roles",
         name: "Server Roles",
         description: "Configure/setup server roles which can then have permissions on AntiRaid",
@@ -551,8 +551,8 @@ impl PostAction for GuildRolesPostAction {
     }
 }
 
-pub static GUILD_MEMBERS: LazyLock<ConfigOption> = LazyLock::new(|| {
-    ConfigOption {
+pub static GUILD_MEMBERS: LazyLock<Setting> = LazyLock::new(|| {
+    Setting {
         id: "guild_members",
         name: "Server Members",
         description: "Manage server members",
@@ -924,8 +924,8 @@ impl SettingDataValidator for GuildMembersValidator {
     }
 }
 
-pub static GUILD_TEMPLATES: LazyLock<ConfigOption> = LazyLock::new(|| {
-    ConfigOption {
+pub static GUILD_TEMPLATES: LazyLock<Setting> = LazyLock::new(|| {
+    Setting {
         id: "guild_templates",
         name: "Server Templates",
         description: "Configure/Setup Server Templates (Lua/Roblox Luau scripts)",
@@ -1117,8 +1117,8 @@ impl PostAction for GuildTemplatePostAction {
     }
 }
 
-pub static GUILD_TEMPLATES_KV: LazyLock<ConfigOption> = LazyLock::new(|| {
-    ConfigOption {
+pub static GUILD_TEMPLATES_KV: LazyLock<Setting> = LazyLock::new(|| {
+    Setting {
         id: "guild_templates_kv",
         name: "Server Templates (key-value db)",
         description: "Key-value database available to templates on this server",
@@ -1192,8 +1192,8 @@ pub static GUILD_TEMPLATES_KV: LazyLock<ConfigOption> = LazyLock::new(|| {
     }
 });
 
-pub static GUILD_TEMPLATE_SHOP: LazyLock<ConfigOption> = LazyLock::new(|| {
-    ConfigOption {
+pub static GUILD_TEMPLATE_SHOP: LazyLock<Setting> = LazyLock::new(|| {
+    Setting {
         id: "template_shop",
         name: "Created/Published Templates",
         description: "Publish new templates to the shop that can be used by any other server",
@@ -1340,8 +1340,8 @@ pub static GUILD_TEMPLATE_SHOP: LazyLock<ConfigOption> = LazyLock::new(|| {
     }
 });
 
-pub static GUILD_TEMPLATE_SHOP_PUBLIC_LIST: LazyLock<ConfigOption> = LazyLock::new(|| {
-    ConfigOption {
+pub static GUILD_TEMPLATE_SHOP_PUBLIC_LIST: LazyLock<Setting> = LazyLock::new(|| {
+    Setting {
         id: "template_shop_public_list",
         name: "Explore the shop!",
         description: "Explore other templates published by other servers",

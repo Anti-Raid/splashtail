@@ -91,19 +91,15 @@ pub enum CanonicalSettingsResult {
     Ok {
         fields: Vec<indexmap::IndexMap<String, serde_json::Value>>,
     },
-    PermissionError {
-        res: PermissionResult,
-    },
     Err {
-        error: module_settings::canonical_types::CanonicalSettingsError,
+        error: module_settings::types::SettingsError,
     },
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SettingsOperationRequest {
     pub fields: indexmap::IndexMap<String, serde_json::Value>,
-    pub op: module_settings::canonical_types::CanonicalOperationType,
-    pub module: String,
+    pub op: module_settings::types::OperationType,
     pub setting: String,
 }
 

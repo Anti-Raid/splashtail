@@ -15,6 +15,5 @@ bot_modules_core = { path = "../../core/rust.bot_modules.core" }
 bot_modules_lockdown = { path = "../../core/rust.bot_modules.lockdown" }
 bot_modules_moderation = { path = "../../core/rust.bot_modules.moderation" }
 bot_modules_punishment_autotriggers = { path = "../../core/rust.bot_modules.punishment_autotriggers" }
-bot_modules_root = { path = "../../core/rust.bot_modules.root" }
 bot_modules_server_backups = { path = "../../core/rust.bot_modules.server_backups" }
 bot_modules_temporary_punishments = { path = "../../core/rust.bot_modules.temporary_punishments" }

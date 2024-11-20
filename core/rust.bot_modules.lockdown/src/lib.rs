@@ -18,7 +18,7 @@ impl silverpelt::module::Module for Module {
         "Lockdown module for quickly locking/unlocking your whole server or individual channels"
     }
 
-    fn config_options(&self) -> Vec<module_settings::types::ConfigOption> {
+    fn config_options(&self) -> Vec<module_settings::types::Setting> {
         vec![
             (*settings::LOCKDOWN_SETTINGS).clone(),
             (*settings::LOCKDOWNS).clone(),
@@ -36,9 +36,5 @@ impl silverpelt::module::Module for Module {
                 "remove" => CommandExtendedData::kittycat_or_admin("lockdowns", "remove"),
             },
         )]
-    }
-
-    fn full_command_list(&self) -> Vec<silverpelt::module::CommandObj> {
-        modules_ext::create_full_command_list(self)
     }
 }

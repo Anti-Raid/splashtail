@@ -2,7 +2,7 @@ use async_trait::async_trait;
 use module_settings::{
     data_stores::{PostgresDataStore, PostgresDataStoreImpl},
     types::{
-        settings_wrap, Column, ColumnSuggestion, ColumnType, ConfigOption,
+        settings_wrap, Column, ColumnSuggestion, ColumnType, Setting,
         CreateDataStore, DataStore, InnerColumnType, InnerColumnTypeStringKind, OperationSpecific,
         OperationType, SettingsData, SettingsError, NoOpValidator, NoOpPostAction,
     },
@@ -10,20 +10,12 @@ use module_settings::{
 use splashcore_rs::value::Value;
 use std::sync::LazyLock;
 
-pub static LOCKDOWN_SETTINGS: LazyLock<ConfigOption> = LazyLock::new(|| {
-    ConfigOption {
-        id: "lockdown_guilds",
-        name: "Lockdown Settings",
-        description: "Setup standard lockdown settings for a server",
-        table: "lockdown__guilds",
-        common_filters: indexmap::indexmap! {},
-        default_common_filters: indexmap::indexmap! {
-            "guild_id" => "{__guild_id}"
-        },
-        primary_key: "guild_id",
-        max_entries: Some(1),
-        max_return: 2,
-        data_store: settings_wrap(PostgresDataStore {}),
+pub static LOCKDOWN_SETTINGS: LazyLock<Setting> = LazyLock::new(|| {
+    Setting {
+        id: "lockdown_guilds".to_string(),
+        name: "Lockdown Settings".to_string(),
+        description: "Setup standard lockdown settings for a server".to_string(),
+        primary_key: "guild_id".to_string(),
         columns: settings_wrap(vec![
             module_settings::common_columns::guild_id(
                 "guild_id",
@@ -31,9 +23,9 @@ pub static LOCKDOWN_SETTINGS: LazyLock<ConfigOption> = LazyLock::new(|| {
                 "Guild ID of the server in question",
             ),
             Column {
-                id: "member_roles",
-                name: "Member Roles",
-                description: "Which roles to use as member roles for the purpose of lockdown. These roles will be explicitly modified during lockdown",
+                id: "member_roles".to_string(),
+                name: "Member Roles".to_string(),
+                description: "Which roles to use as member roles for the purpose of lockdown. These roles will be explicitly modified during lockdown".to_string(),
                 column_type: ColumnType::new_array(InnerColumnType::String {
                     kind: InnerColumnTypeStringKind::Role,
                     min_length: None,
@@ -41,22 +33,18 @@ pub static LOCKDOWN_SETTINGS: LazyLock<ConfigOption> = LazyLock::new(|| {
                     allowed_values: vec![],
                 }),
                 nullable: false,
-                default: None,
-                unique: false,
                 suggestions: ColumnSuggestion::None {},
                 ignored_for: vec![],
                 secret: false,
             },
             Column {
-                id: "require_correct_layout",
-                name: "Require Correct Layout",
-                description: "Whether or not a lockdown can proceed even without correct critical role permissions. May lead to partial lockdowns if disabled",
+                id: "require_correct_layout".to_string(),
+                name: "Require Correct Layout".to_string(),
+                description: "Whether or not a lockdown can proceed even without correct critical role permissions. May lead to partial lockdowns if disabled".to_string(),
                 column_type: ColumnType::new_scalar(InnerColumnType::Boolean {}),
                 nullable: false,
-                default: None,
-                unique: true,
                 suggestions: ColumnSuggestion::None {},
-                ignored_for: vec![OperationType::Create],
+                ignored_for: vec![],
                 secret: false,
             },
             module_settings::common_columns::created_at(),
@@ -64,56 +52,27 @@ pub static LOCKDOWN_SETTINGS: LazyLock<ConfigOption> = LazyLock::new(|| {
             module_settings::common_columns::last_updated_at(),
             module_settings::common_columns::last_updated_by(),
         ]),
-        title_template: "Lockdown Settings",
-        operations: indexmap::indexmap! {
-            OperationType::View => OperationSpecific {
-                columns_to_set: indexmap::indexmap! {},
-            },
-            OperationType::Create => OperationSpecific {
-                columns_to_set: indexmap::indexmap! {
-                    "created_at" => "{__now}",
-                    "created_by" => "{__author}",
-                    "last_updated_at" => "{__now}",
-                    "last_updated_by" => "{__author}",
-                },
-            },
-            OperationType::Update => OperationSpecific {
-                columns_to_set: indexmap::indexmap! {
-                    "last_updated_at" => "{__now}",
-                    "last_updated_by" => "{__author}",
-                },
-            },
-            OperationType::Delete => OperationSpecific {
-                columns_to_set: indexmap::indexmap! {},
-            },
-        },
-        validator: settings_wrap(NoOpValidator {}),
-        post_action: settings_wrap(NoOpPostAction {}),
+        title_template: "Lockdown Settings".to_string(),
+        supported_operations: vec![
+            OperationType::View,
+            OperationType::Save,
+            OperationType::Delete,
+        ],
     }
 });
 
-pub static LOCKDOWNS: LazyLock<ConfigOption> = LazyLock::new(|| ConfigOption {
-    id: "lockdowns",
-    name: "Lockdowns",
-    description: "Lockdowns",
-    table: "lockdown__guild_lockdowns",
-    common_filters: indexmap::indexmap! {},
-    default_common_filters: indexmap::indexmap! {
-        "guild_id" => "{__guild_id}"
-    },
-    primary_key: "id",
-    max_entries: Some(1),
-    max_return: 5,
-    data_store: settings_wrap(LockdownDataStore {}), // We use a custom data store here to make lockdown handling easier+more separate from settings
+pub static LOCKDOWNS: LazyLock<Setting> = LazyLock::new(|| Setting {
+    id: "lockdowns".to_string(),
+    name: "Lockdowns".to_string(),
+    description: "Lockdowns".to_string(),
+    primary_key: "id".to_string(),
     columns: settings_wrap(vec![
         Column {
-            id: "id",
-            name: "ID",
-            description: "The ID of the lockdown",
+            id: "id".to_string(),
+            name: "ID".to_string(),
+            description: "The ID of the lockdown".to_string(),
             column_type: ColumnType::new_scalar(InnerColumnType::Uuid {}),
             nullable: false,
-            default: None,
-            unique: false,
             suggestions: ColumnSuggestion::None {},
             ignored_for: vec![OperationType::Create],
             secret: false,
@@ -124,9 +83,9 @@ pub static LOCKDOWNS: LazyLock<ConfigOption> = LazyLock::new(|| ConfigOption {
             "The Guild ID referring to this lockdown",
         ),
         Column {
-            id: "type",
-            name: "Type",
-            description: "The type of the lockdown.",
+            id: "type".to_string(),
+            name: "Type".to_string(),
+            description: "The type of the lockdown.".to_string(),
             column_type: ColumnType::new_scalar(InnerColumnType::String {
                 kind: InnerColumnTypeStringKind::Normal,
                 min_length: Some(1),
@@ -134,28 +93,24 @@ pub static LOCKDOWNS: LazyLock<ConfigOption> = LazyLock::new(|| ConfigOption {
                 allowed_values: vec![],
             }),
             nullable: false,
-            default: None,
-            unique: false,
             suggestions: ColumnSuggestion::None {},
             ignored_for: vec![],
             secret: false,
         },
         Column {
-            id: "data",
-            name: "Data",
-            description: "The data stored of the lockdown.",
+            id: "data".to_string(),
+            name: "Data".to_string(),
+            description: "The data stored of the lockdown.".to_string(),
             column_type: ColumnType::new_scalar(InnerColumnType::Json { max_bytes: None }),
             nullable: false,
-            default: None,
-            unique: false,
             suggestions: ColumnSuggestion::None {},
-            ignored_for: vec![OperationType::Create],
+            ignored_for: vec![OperationType::Save],
             secret: false,
         },
         Column {
-            id: "reason",
-            name: "Reason",
-            description: "The reason for starting the lockdown.",
+            id: "reason".to_string(),
+            name: "Reason".to_string(),
+            description: "The reason for starting the lockdown.".to_string(),
             column_type: ColumnType::new_scalar(InnerColumnType::String {
                 kind: InnerColumnTypeStringKind::Normal,
                 min_length: Some(1),
@@ -163,30 +118,18 @@ pub static LOCKDOWNS: LazyLock<ConfigOption> = LazyLock::new(|| ConfigOption {
                 allowed_values: vec![],
             }),
             nullable: false,
-            default: None,
-            unique: false,
             suggestions: ColumnSuggestion::None {},
             ignored_for: vec![],
             secret: false,
         },
         module_settings::common_columns::created_at(),
     ]),
-    title_template: "Reason: {reason}",
-    operations: indexmap::indexmap! {
-        OperationType::View => OperationSpecific {
-            columns_to_set: indexmap::indexmap! {},
-        },
-        OperationType::Create => OperationSpecific {
-            columns_to_set: indexmap::indexmap! {
-                "created_at" => "{__now}",
-            },
-        },
-        OperationType::Delete => OperationSpecific {
-            columns_to_set: indexmap::indexmap! {},
-        }
-    },
-    validator: settings_wrap(NoOpValidator {}),
-    post_action: settings_wrap(NoOpPostAction {}),
+    title_template: "Reason: {reason}".to_string(),
+    supported_operations: vec![
+        OperationType::View,
+        OperationType::Save,
+        OperationType::Delete,
+    ],
 });
 
 /// A custom data store is needed to handle the specific requirements of the lockdown module
@@ -196,7 +139,7 @@ pub struct LockdownDataStore {}
 impl CreateDataStore for LockdownDataStore {
     async fn create(
         &self,
-        setting: &ConfigOption,
+        setting: &Setting,
         guild_id: serenity::all::GuildId,
         author: serenity::all::UserId,
         data: &SettingsData,

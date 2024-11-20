@@ -25,12 +25,8 @@ impl silverpelt::module::Module for Module {
         Some(Box::new(EventListener))
     }
 
-    fn config_options(&self) -> Vec<module_settings::types::ConfigOption> {
+    fn config_options(&self) -> Vec<module_settings::types::Setting> {
         vec![(*settings::AUTOTRIGGERS).clone()]
-    }
-
-    fn full_command_list(&self) -> Vec<silverpelt::module::CommandObj> {
-        modules_ext::create_full_command_list(self)
     }
 }
 

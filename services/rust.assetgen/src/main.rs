@@ -1,4 +1,5 @@
 mod docgen;
+mod poise_register;
 mod serenity_test;
 mod tester;
 

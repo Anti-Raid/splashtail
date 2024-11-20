@@ -3,8 +3,7 @@ use crate::types::HookContext;
 use super::state::State;
 use super::types::SettingsError;
 use super::types::{
-    ColumnType, ConfigOption, InnerColumnType, InnerColumnTypeStringKind, OperationType,
-    SettingsData,
+    ColumnType, InnerColumnType, InnerColumnTypeStringKind, OperationType, Setting, SettingsData,
 };
 use splashcore_rs::value::Value;
 
@@ -655,7 +654,7 @@ async fn _validate_value(
 
 /// Settings API: View implementation
 pub async fn settings_view(
-    setting: &ConfigOption,
+    setting: &Setting,
     data: &SettingsData,
     guild_id: serenity::all::GuildId,
     author: serenity::all::UserId,
@@ -725,7 +724,7 @@ pub async fn settings_view(
 
 /// Settings API: Save implementation
 pub async fn settings_save(
-    setting: &ConfigOption,
+    setting: &Setting,
     data: &SettingsData,
     guild_id: serenity::all::GuildId,
     author: serenity::all::UserId,
@@ -847,7 +846,7 @@ pub async fn settings_save(
 /// Settings API: Delete implementation
 #[allow(clippy::too_many_arguments)]
 pub async fn settings_delete(
-    setting: &ConfigOption,
+    setting: &Setting,
     data: &SettingsData,
     guild_id: serenity::all::GuildId,
     author: serenity::all::UserId,

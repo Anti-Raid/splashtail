@@ -64,7 +64,7 @@ pub trait Module: Send + Sync {
     }
 
     /// Config options for this module
-    fn config_options(&self) -> Vec<module_settings::types::ConfigOption> {
+    fn config_options(&self) -> Vec<module_settings::types::Setting> {
         Vec::new()
     }
 

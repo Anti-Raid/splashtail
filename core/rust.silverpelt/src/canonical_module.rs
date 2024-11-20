@@ -35,7 +35,7 @@ pub struct CanonicalModule {
     pub s3_paths: Vec<String>,
 
     /// Config options for this module
-    pub config_options: Vec<module_settings::types::ConfigOption>,
+    pub config_options: Vec<module_settings::types::Setting>,
 }
 
 /// Canonical representation of a command (data section) for external use
