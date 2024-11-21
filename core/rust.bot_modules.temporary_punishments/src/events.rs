@@ -15,24 +15,8 @@ pub(crate) async fn event_listener(ectx: &EventHandlerContext) -> Result<(), sil
             let bot_id = ectx.serenity_context.cache.current_user().id;
 
             let guild =
-                match sandwich_driver::guild(&cache_http, &ectx.data.reqwest, punishment.guild_id)
-                    .await
-                {
-                    Ok(guild) => guild,
-                    Err(e) => {
-                        sqlx::query!(
-                        "UPDATE punishments SET is_handled = true, handle_log = $1 WHERE id = $2",
-                        serde_json::json!({
-                            "error": format!("Unable to get guild: {}", e),
-                        }),
-                        punishment.id
-                    )
-                        .execute(&ectx.data.pool)
-                        .await?;
-
-                        return Ok(());
-                    }
-                };
+                sandwich_driver::guild(&cache_http, &ectx.data.reqwest, punishment.guild_id)
+                    .await?;
 
             let current_user = match sandwich_driver::member_in_guild(
                 &cache_http,
@@ -44,17 +28,7 @@ pub(crate) async fn event_listener(ectx: &EventHandlerContext) -> Result<(), sil
             {
                 Some(user) => user,
                 None => {
-                    sqlx::query!(
-                        "UPDATE punishments SET is_handled = true, handle_log = $1 WHERE id = $2",
-                        serde_json::json!({
-                            "error": "Bot not in guild",
-                        }),
-                        punishment.id
-                    )
-                    .execute(&ectx.data.pool)
-                    .await?;
-
-                    return Ok(());
+                    return Err("Bot is not in the guild".into());
                 }
             };
 
@@ -63,15 +37,7 @@ pub(crate) async fn event_listener(ectx: &EventHandlerContext) -> Result<(), sil
 
             // Bot doesn't have permissions to unban
             if !permissions.ban_members() {
-                sqlx::query!(
-                    "UPDATE punishments SET is_handled = true, handle_log = $1 WHERE id = $2",
-                    serde_json::json!({
-                        "error": "Bot doesn't have permissions to unban",
-                    }),
-                    punishment.id
-                )
-                .execute(&ectx.data.pool)
-                .await?;
+                return Err("Bot doesn't have permissions to unban".into());
             }
 
             let reason = format!(
@@ -95,15 +61,9 @@ pub(crate) async fn event_listener(ectx: &EventHandlerContext) -> Result<(), sil
                                             .unwrap_or(http::StatusCode::NOT_ACCEPTABLE),
                                     )
                                 {
-                                    sqlx::query!(
-                                            "UPDATE punishments SET is_handled = true, handle_log = $1 WHERE id = $2",
-                                            serde_json::json!({
-                                                "error": format!("Unable to unban: {}", http_err.status_code().unwrap_or(http::StatusCode::NOT_ACCEPTABLE)),
-                                            }),
-                                            punishment.id
-                                        )
-                                        .execute(&ectx.data.pool)
-                                        .await?;
+                                    return Err(
+                                        format!("Failed to unban user: {}", http_err).into()
+                                    );
                                 }
                             }
                             _ => return Err(Box::new(e)),
@@ -138,16 +98,6 @@ pub(crate) async fn event_listener(ectx: &EventHandlerContext) -> Result<(), sil
                     return Ok(());
                 }
             }
-
-            sqlx::query!(
-                "UPDATE punishments SET is_handled = true, handle_log = $1 WHERE id = $2",
-                serde_json::json!({
-                    "success": true,
-                }),
-                punishment.id
-            )
-            .execute(&ectx.data.pool)
-            .await?;
 
             Ok(())
         }

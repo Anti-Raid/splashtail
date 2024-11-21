@@ -46,6 +46,7 @@ pub async fn punishment_expiry_task(
         }
 
         // Dispatch event
+        let punishment_id = punishment.id;
         let event = silverpelt::ar_event::AntiraidEvent::PunishmentExpire(punishment);
 
         let event_handler_context =
@@ -57,17 +58,38 @@ pub async fn punishment_expiry_task(
             });
 
         // Spawn task to dispatch event
-        set.spawn(silverpelt::ar_event::dispatch_event_to_modules(
-            event_handler_context,
-        ));
+        let pool = data.pool.clone(); // Cloned for flagging is_handled
+        set.spawn(async move {
+            match silverpelt::ar_event::dispatch_event_to_modules(event_handler_context).await {
+                Ok(()) => {
+                    // Mark the punishment as handled
+                    let _ = sqlx::query!(
+                        "UPDATE punishments SET is_handled = true WHERE id = $1",
+                        punishment_id
+                    )
+                    .execute(&pool)
+                    .await;
+                }
+                Err(e) => {
+                    log::error!("Error in punishment_expiry_task: {:?}", e);
+                    // Mark the punishment as handled
+                    let _ = sqlx::query!(
+                        "UPDATE punishments SET is_handled = true, handle_log = $2 WHERE id = $1",
+                        punishment_id,
+                        serde_json::json!({
+                            "error": format!("{:?}", e),
+                        })
+                    )
+                    .execute(&pool)
+                    .await;
+                }
+            }
+        });
     }
 
     while let Some(res) = set.join_next().await {
         match res {
-            Ok(Ok(())) => {}
-            Ok(Err(e)) => {
-                log::error!("Error in punishment_expiry_task: {:?}", e);
-            }
+            Ok(()) => {}
             Err(e) => {
                 log::error!("Error in punishment_expiry_task: {}", e);
             }
@@ -101,6 +123,7 @@ pub async fn stings_expiry_task(
         }
 
         // Dispatch event
+        let sting_id = sting.id;
         let event = silverpelt::ar_event::AntiraidEvent::StingExpire(sting);
 
         let event_handler_context =
@@ -112,17 +135,38 @@ pub async fn stings_expiry_task(
             });
 
         // Spawn task to dispatch event
-        set.spawn(silverpelt::ar_event::dispatch_event_to_modules(
-            event_handler_context,
-        ));
+        let pool = data.pool.clone(); // Cloned for flagging is_handled
+        set.spawn(async move {
+            match silverpelt::ar_event::dispatch_event_to_modules(event_handler_context).await {
+                Ok(()) => {
+                    // Mark the punishment as handled
+                    let _ = sqlx::query!(
+                        "UPDATE stings SET is_handled = true WHERE id = $1",
+                        sting_id
+                    )
+                    .execute(&pool)
+                    .await;
+                }
+                Err(e) => {
+                    log::error!("Error in stings_expiry_task: {:?}", e);
+                    // Mark the punishment as handled
+                    let _ = sqlx::query!(
+                        "UPDATE stings SET is_handled = true, handle_log = $2 WHERE id = $1",
+                        sting_id,
+                        serde_json::json!({
+                            "error": format!("{:?}", e),
+                        })
+                    )
+                    .execute(&pool)
+                    .await;
+                }
+            }
+        });
     }
 
     while let Some(res) = set.join_next().await {
         match res {
-            Ok(Ok(())) => {}
-            Ok(Err(e)) => {
-                log::error!("Error in sting_expiry_task: {:?}", e);
-            }
+            Ok(()) => {}
             Err(e) => {
                 log::error!("Error in sting_expiry_task: {}", e);
             }

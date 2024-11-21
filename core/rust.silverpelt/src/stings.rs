@@ -34,6 +34,10 @@ pub struct Sting {
     pub duration: Option<std::time::Duration>,
     /// The data/metadata present within the sting, if any
     pub sting_data: Option<serde_json::Value>,
+    /// Is Handled
+    pub is_handled: bool,
+    /// The handle log encountered while handling the sting
+    pub handle_log: serde_json::Value,
 }
 
 impl Sting {
@@ -52,7 +56,7 @@ impl Sting {
         let page = std::cmp::max(page, 1) as i64; // Avoid negative pages
 
         let rec = sqlx::query!(
-            "SELECT id, module, src, stings, reason, void_reason, guild_id, creator, target, state, sting_data, created_at, duration FROM stings WHERE guild_id = $1 ORDER BY created_at DESC OFFSET $2 LIMIT $3",
+            "SELECT id, module, src, stings, reason, void_reason, guild_id, creator, target, state, sting_data, created_at, duration, is_handled, handle_log FROM stings WHERE guild_id = $1 ORDER BY created_at DESC OFFSET $2 LIMIT $3",
             guild_id.to_string(),
             (page - 1) * PAGE_SIZE,
             PAGE_SIZE,
@@ -80,6 +84,8 @@ impl Sting {
                     let secs = splashcore_rs::utils::pg_interval_to_secs(d);
                     std::time::Duration::from_secs(secs.try_into().unwrap())
                 }),
+                is_handled: row.is_handled,
+                handle_log: row.handle_log,
             });
         }
 
@@ -88,7 +94,7 @@ impl Sting {
 
     pub async fn get_expired(db: impl sqlx::PgExecutor<'_>) -> Result<Vec<Sting>, crate::Error> {
         let rec = sqlx::query!(
-            "SELECT id, module, src, stings, reason, void_reason, guild_id, creator, target, state, sting_data, created_at, duration FROM stings WHERE duration IS NOT NULL AND (created_at + duration) < NOW()",
+            "SELECT id, module, src, stings, reason, void_reason, guild_id, creator, target, state, sting_data, created_at, duration, is_handled, handle_log FROM stings WHERE duration IS NOT NULL AND is_handled = false AND (created_at + duration) < NOW()",
         )
         .fetch_all(db)
         .await?;
@@ -113,6 +119,8 @@ impl Sting {
                     let secs = splashcore_rs::utils::pg_interval_to_secs(d);
                     std::time::Duration::from_secs(secs.try_into().unwrap())
                 }),
+                is_handled: row.is_handled,
+                handle_log: row.handle_log,
             });
         }
 
@@ -220,6 +228,8 @@ impl StingCreate {
             created_at,
             duration: self.duration,
             sting_data: self.sting_data,
+            is_handled: false,
+            handle_log: serde_json::Value::Null,
         }
     }
 
