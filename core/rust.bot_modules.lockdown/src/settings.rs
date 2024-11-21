@@ -224,7 +224,7 @@ impl SettingDeleter for LockdownSettingsExecutor {
                 typ: "value_error".to_string(),
             })?;
 
-        Ok(()) // TODO: Implement
+        Ok(())
     }
 }
 
