@@ -139,6 +139,21 @@ async fn create_lua_vm(
         -- Set AntiRaid version
         _G.ANTIRAID_VER = "1"
 
+        -- Create new array() function to allow easily creating arrays
+        -- 
+        --- This function sets the array_metatable as well
+        _G.array = function(...)
+            local interop = require("@antiraid/interop")
+            local arr = {}
+            setmetatable(arr, interop.array_metatable)
+            local packed = table.pack(...)
+            for i = 1, select('#', ...) do
+                table.insert(arr, packed[i])
+            end
+
+            return arr
+        end
+
         -- To allow locking down _G, we need to create a table to store user data (__stack)
         -- Note: this becomes read-write later and is the ONLY global variable that is read-write
         _G.__stack = {}
