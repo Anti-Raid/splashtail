@@ -1,10 +1,11 @@
-use kittycat::perms::Permission;
-use ar_settings::types::SettingsData;
 use ar_settings::types::{
-    settings_wrap, Column, ColumnSuggestion, ColumnType, Setting, HookContext,
-    InnerColumnType, InnerColumnTypeStringKind, OperationSpecific, OperationType, PostAction,
-    SettingDataValidator, SettingsError, NoOpPostAction, NoOpValidator
+    settings_wrap, Column, ColumnSuggestion, ColumnType, HookContext, InnerColumnType,
+    InnerColumnTypeStringKind, OperationType, Setting, SettingsError,
 };
+use ar_settings::types::{
+    SettingCreator, SettingDeleter, SettingUpdater, SettingView, SettingsData,
+};
+use kittycat::perms::Permission;
 use splashcore_rs::value::Value;
 use std::sync::LazyLock;
 
@@ -77,57 +78,249 @@ pub static GUILD_ROLES: LazyLock<Setting> = LazyLock::new(|| {
             ar_settings::common_columns::last_updated_by(),
         ]),
         title_template: "{index} - {role_id}".to_string(),
-        operations: indexmap::indexmap! {
-            OperationType::View => OperationSpecific {
-                columns_to_set: indexmap::indexmap! {},
-            },
-            OperationType::Create => OperationSpecific {
-                columns_to_set: indexmap::indexmap! {
-                    "created_at" => "{__now}",
-                    "created_by" => "{__author}",
-                    "last_updated_at" => "{__now}",
-                    "last_updated_by" => "{__author}",
-                },
-            },
-            OperationType::Update => OperationSpecific {
-                columns_to_set: indexmap::indexmap! {
-                    "last_updated_at" => "{__now}",
-                    "last_updated_by" => "{__author}",
-                },
-            },
-            OperationType::Delete => OperationSpecific {
-                columns_to_set: indexmap::indexmap! {},
-            },
-        },
-        validator: settings_wrap(GuildRolesValidator {}),
-        post_action: settings_wrap(GuildRolesPostAction {}),
+        operations: GuildRolesExecutor.into(),
     }
 });
 
-/// GuildRolesValidator handles all the required permission checking etc. for guild roles
-pub struct GuildRolesValidator;
+#[derive(Clone)]
+pub struct GuildRolesExecutor;
 
 #[async_trait::async_trait]
-impl SettingDataValidator for GuildRolesValidator {
-    async fn validate<'a>(
+impl SettingView for GuildRolesExecutor {
+    async fn view<'a>(
         &self,
-        ctx: HookContext<'a>,
-        state: &'a mut State,
-    ) -> Result<(), SettingsError> {
-        // Early return if we are viewing, we don't need to check perms if so
-        if ctx.operation_type == OperationType::View {
-            return Ok(());
+        context: HookContext<'a>,
+        _filters: indexmap::IndexMap<String, splashcore_rs::value::Value>,
+    ) -> Result<Vec<indexmap::IndexMap<String, splashcore_rs::value::Value>>, SettingsError> {
+        let rows = sqlx::query!("SELECT role_id, perms, index, display_name, created_at, created_by, last_updated_at, last_updated_by FROM guild_roles WHERE guild_id = $1", context.guild_id.to_string())
+        .fetch_all(&context.data.pool)
+        .await
+        .map_err(|e| SettingsError::Generic {
+            message: format!("Error while fetching guild roles: {}", e),
+            src: "GuildRolesExecutor".to_string(),
+            typ: "value_error".to_string(),
+        })?;
+
+        let mut result = vec![];
+
+        for row in rows {
+            let map = indexmap::indexmap! {
+                "guild_id".to_string() => Value::String(context.guild_id.to_string()),
+                "role_id".to_string() => Value::String(row.role_id),
+                "perms".to_string() => Value::List(row.perms.iter().map(|x| Value::String(x.to_string())).collect()),
+                "index".to_string() => Value::Integer(row.index.into()),
+                "display_name".to_string() => Value::String(row.display_name),
+                "created_at".to_string() => Value::TimestampTz(row.created_at),
+                "created_by".to_string() => Value::String(row.created_by),
+                "last_updated_at".to_string() => Value::TimestampTz(row.last_updated_at),
+                "last_updated_by".to_string() => Value::String(row.last_updated_by),
+            };
+
+            result.push(map);
         }
 
-        // This should be safe as all actions for Create/Update/Delete run after fetching all prerequisite fields
-        let parsed_value = if let Some(new_index_val) = state.state.get("index") {
+        Ok(result) // TODO: Implement
+    }
+}
+
+#[async_trait::async_trait]
+impl SettingCreator for GuildRolesExecutor {
+    async fn create<'a>(
+        &self,
+        ctx: HookContext<'a>,
+        entry: indexmap::IndexMap<String, splashcore_rs::value::Value>,
+    ) -> Result<indexmap::IndexMap<String, splashcore_rs::value::Value>, SettingsError> {
+        let res = self
+            .base_verify_checks(&ctx, &entry, OperationType::Create)
+            .await?;
+
+        let count = sqlx::query!(
+            "SELECT COUNT(*) FROM guild_roles WHERE guild_id = $1 AND role_id = $2",
+            ctx.guild_id.to_string(),
+            res.role_id.to_string()
+        )
+        .fetch_one(&ctx.data.pool)
+        .await
+        .map_err(|e| SettingsError::Generic {
+            message: format!("Failed to check if role exists: {:?}", e),
+            src: "GuildRolesExecutor->create".to_string(),
+            typ: "internal".to_string(),
+        })?
+        .count
+        .unwrap_or_default();
+
+        if count > 0 {
+            return Err(SettingsError::Generic {
+                message: "Role already exists".to_string(),
+                src: "GuildRolesExecutor->create".to_string(),
+                typ: "internal".to_string(),
+            });
+        }
+
+        sqlx::query!(
+            "INSERT INTO guild_roles (guild_id, role_id, perms, index, display_name, created_by, last_updated_by) VALUES ($1, $2, $3, $4, $5, $6, $7)",
+            ctx.guild_id.to_string(),
+            res.role_id.to_string(),
+            &res.perms,
+            res.index,
+            res.display_name,
+            ctx.author.to_string(),
+            ctx.author.to_string()
+        )
+        .execute(&ctx.data.pool)
+        .await
+        .map_err(|e| SettingsError::Generic {
+            message: format!("Failed to insert role: {:?}", e),
+            src: "GuildRolesExecutor->create".to_string(),
+            typ: "internal".to_string(),
+        })?;
+
+        sqlx::query!(
+            "UPDATE guild_members SET needs_perm_rederive = true WHERE guild_id = $1 AND $2 = ANY(roles)",
+            ctx.guild_id.to_string(),
+            res.role_id.to_string()
+        )
+        .execute(&ctx.data.pool)
+        .await
+        .map_err(|e| SettingsError::Generic {
+            message: format!("Failed to update guild members cache: {:?}", e),
+            src: "GuildRolesExecutor".to_string(),
+            typ: "internal".to_string(),
+        })?;
+
+        Ok(entry)
+    }
+}
+
+#[async_trait::async_trait]
+impl SettingUpdater for GuildRolesExecutor {
+    async fn update<'a>(
+        &self,
+        ctx: HookContext<'a>,
+        entry: indexmap::IndexMap<String, splashcore_rs::value::Value>,
+    ) -> Result<indexmap::IndexMap<String, splashcore_rs::value::Value>, SettingsError> {
+        let res = self
+            .base_verify_checks(&ctx, &entry, OperationType::Update)
+            .await?;
+
+        sqlx::query!(
+            "UPDATE guild_roles SET perms = $1, index = $2, display_name = $3, last_updated_by = $4 WHERE guild_id = $5 AND role_id = $6",
+            &res.perms,
+            res.index,
+            res.display_name,
+            ctx.author.to_string(),
+            ctx.guild_id.to_string(),
+            res.role_id.to_string()
+        )
+        .execute(&ctx.data.pool)
+        .await
+        .map_err(|e| SettingsError::Generic {
+            message: format!("Failed to update role: {:?}", e),
+            src: "GuildRolesExecutor->update".to_string(),
+            typ: "internal".to_string(),
+        })?;
+
+        sqlx::query!(
+            "UPDATE guild_members SET needs_perm_rederive = true WHERE guild_id = $1 AND $2 = ANY(roles)",
+            ctx.guild_id.to_string(),
+            res.role_id.to_string()
+        )
+        .execute(&ctx.data.pool)
+        .await
+        .map_err(|e| SettingsError::Generic {
+            message: format!("Failed to update guild members cache: {:?}", e),
+            src: "GuildRolesExecutor".to_string(),
+            typ: "internal".to_string(),
+        })?;
+
+        Ok(entry)
+    }
+}
+
+#[async_trait::async_trait]
+impl SettingDeleter for GuildRolesExecutor {
+    async fn delete<'a>(
+        &self,
+        ctx: HookContext<'a>,
+        primary_key: splashcore_rs::value::Value,
+    ) -> Result<(), SettingsError> {
+        let Some(row) = sqlx::query!("SELECT role_id, perms, index, display_name FROM guild_roles WHERE guild_id = $1 AND role_id = $2", ctx.guild_id.to_string(), primary_key.to_string())
+        .fetch_optional(&ctx.data.pool)
+        .await
+        .map_err(|e| SettingsError::Generic {
+            message: format!("Error while fetching roles: {}", e),
+            src: "GuildRolesExecutor".to_string(),
+            typ: "value_error".to_string(),
+        })? else {
+            return Err(SettingsError::RowDoesNotExist {
+                column_id: "role_id".to_string(),
+            });
+        };
+
+        let entry = indexmap::indexmap! {
+            "guild_id".to_string() => Value::String(ctx.guild_id.to_string()),
+            "role_id".to_string() => Value::String(row.role_id),
+            "perms".to_string() => Value::List(row.perms.iter().map(|x| Value::String(x.to_string())).collect()),
+            "index".to_string() => Value::Integer(row.index.into()),
+            "display_name".to_string() => Value::String(row.display_name),
+        };
+
+        let res = self
+            .base_verify_checks(&ctx, &entry, OperationType::Delete)
+            .await?;
+
+        sqlx::query!(
+            "DELETE FROM guild_roles WHERE guild_id = $1 AND role_id = $2",
+            ctx.guild_id.to_string(),
+            res.role_id.to_string()
+        )
+        .execute(&ctx.data.pool)
+        .await
+        .map_err(|e| SettingsError::Generic {
+            message: format!("Failed to delete role: {:?}", e),
+            src: "GuildRolesExecutor->delete".to_string(),
+            typ: "internal".to_string(),
+        })?;
+
+        sqlx::query!(
+            "UPDATE guild_members SET needs_perm_rederive = true WHERE guild_id = $1 AND $2 = ANY(roles)",
+            ctx.guild_id.to_string(),
+            res.role_id.to_string()
+        )
+        .execute(&ctx.data.pool)
+        .await
+        .map_err(|e| SettingsError::Generic {
+            message: format!("Failed to update guild members cache: {:?}", e),
+            src: "GuildRolesExecutor".to_string(),
+            typ: "internal".to_string(),
+        })?;
+
+        Ok(())
+    }
+}
+
+pub struct GreBaseVerifyChecksResult {
+    pub role_id: serenity::all::RoleId,
+    pub index: i64,
+    pub perms: Vec<String>,
+    pub display_name: Option<String>,
+}
+
+impl GuildRolesExecutor {
+    async fn base_verify_checks<'a>(
+        &self,
+        ctx: &HookContext<'a>,
+        state: &indexmap::IndexMap<String, Value>,
+        op: OperationType,
+    ) -> Result<GreBaseVerifyChecksResult, silverpelt::Error> {
+        let parsed_value = if let Some(new_index_val) = state.get("index") {
             match new_index_val {
                 Value::Integer(new_index) => Value::Integer(*new_index),
                 Value::None => Value::None,
                 _ => {
                     return Err(SettingsError::MissingOrInvalidField {
                         field: "index".to_string(),
-                        src: "index->NativeAction [default_pre_checks]".to_string(),
+                        src: "base_verify_checks".to_string(),
                     })
                 }
             }
@@ -135,63 +328,40 @@ impl SettingDataValidator for GuildRolesValidator {
             Value::None
         };
 
-        let pg_data_store = PostgresDataStoreImpl::from_data_store(ctx.data_store)?;
-
+        // Get the index to set to
         let new_index = match parsed_value {
             Value::Integer(new_index_val) => new_index_val,
             Value::None => {
-                let highest_index_rec = if pg_data_store.tx.is_some() {
-                    let tx = pg_data_store.tx.as_deref_mut().unwrap();
+                let highest_index_rec = sqlx::query!(
+                    "SELECT MAX(index) FROM guild_roles WHERE guild_id = $1",
+                    ctx.guild_id.to_string()
+                )
+                .fetch_one(&ctx.data.pool)
+                .await
+                .map_err(|e| SettingsError::Generic {
+                    message: format!("Failed to get highest index: {:?}", e),
+                    src: "base_verify_checks->match parsed_value".to_string(),
+                    typ: "internal".to_string(),
+                })?
+                .max
+                .unwrap_or(0);
 
-                    sqlx::query!(
-                        "SELECT MAX(index) FROM guild_roles WHERE guild_id = $1",
-                        ctx.guild_id.to_string()
-                    )
-                    .fetch_one(tx)
-                    .await
-                    .map_err(|e| SettingsError::Generic {
-                        message: format!("Failed to get highest index: {:?}", e),
-                        src: "NativeAction->index".to_string(),
-                        typ: "internal".to_string(),
-                    })?
-                    .max
-                    .unwrap_or(0)
-                } else {
-                    sqlx::query!(
-                        "SELECT MAX(index) FROM guild_roles WHERE guild_id = $1",
-                        ctx.guild_id.to_string()
-                    )
-                    .fetch_one(&ctx.data.pool)
-                    .await
-                    .map_err(|e| SettingsError::Generic {
-                        message: format!("Failed to get highest index: {:?}", e),
-                        src: "NativeAction->index".to_string(),
-                        typ: "internal".to_string(),
-                    })?
-                    .max
-                    .unwrap_or(0)
-                };
-
-                let index_i64 = (highest_index_rec + 1).into();
-
-                state
-                    .state
-                    .insert("index".to_string(), Value::Integer(index_i64)); // Set the index
+                let index_i64: i64 = (highest_index_rec + 1).into();
 
                 index_i64
             }
             _ => {
                 return Err(SettingsError::MissingOrInvalidField {
                     field: "index".to_string(),
-                    src: "index->NativeAction [default_pre_checks]".to_string(),
+                    src: "base_verify_checks->match parsed_value, _ result".to_string(),
                 })
             }
         };
 
-        let Some(Value::String(settings_role_id_str)) = state.state.get("role_id") else {
+        let Some(Value::String(settings_role_id_str)) = state.get("role_id") else {
             return Err(SettingsError::MissingOrInvalidField {
                 field: "role_id".to_string(),
-                src: "index->NativeAction [default_pre_checks]".to_string(),
+                src: "base_verify_checks".to_string(),
             });
         };
 
@@ -202,21 +372,54 @@ impl SettingDataValidator for GuildRolesValidator {
                     "Failed to parse role id despite already having parsed it: {:?}",
                     e
                 ),
-                src: "NativeAction->index".to_string(),
+                src: "base_verify_checks".to_string(),
                 typ: "internal".to_string(),
             })?;
+
+        // Get the new permissions as a Vec<String>
+        let Some(Value::List(perms_value)) = state.get("perms") else {
+            return Err(SettingsError::MissingOrInvalidField {
+                field: "perms".to_string(),
+                src: "index->NativeAction [default_pre_checks]".to_string(),
+            });
+        };
+
+        let mut perms = Vec::with_capacity(perms_value.len());
+
+        for perm in perms_value {
+            if let Value::String(perm) = perm {
+                perms.push(perm.to_string());
+            } else {
+                return Err(SettingsError::Generic {
+                    message: "Failed to parse permissions".to_string(),
+                    src: "NativeAction->index".to_string(),
+                    typ: "internal".to_string(),
+                });
+            }
+        }
+
+        let display_name = if let Some(Value::String(display_name)) = state.get("display_name") {
+            Some(display_name.to_string())
+        } else {
+            None
+        };
 
         let guild = sandwich_driver::guild(&ctx.data.cache_http, &ctx.data.reqwest, ctx.guild_id)
             .await
             .map_err(|e| SettingsError::Generic {
                 message: format!("Failed to get guild: {:?}", e),
-                src: "NativeAction->index".to_string(),
+                src: "base_verify_checks".to_string(),
                 typ: "internal".to_string(),
             })?;
 
         // If owner, early return
         if guild.owner_id == ctx.author {
-            return Ok(());
+            return Ok(GreBaseVerifyChecksResult {
+                index: new_index,
+                role_id: settings_role_id,
+                perms,
+                display_name,
+            });
         }
 
         let Some(member) = sandwich_driver::member_in_guild(
@@ -239,25 +442,7 @@ impl SettingDataValidator for GuildRolesValidator {
             });
         };
 
-        let current_roles = if pg_data_store.tx.is_some() {
-            let tx = pg_data_store.tx.as_deref_mut().unwrap();
-            let query = sqlx::query!(
-                "SELECT index, role_id, perms FROM guild_roles WHERE guild_id = $1",
-                ctx.guild_id.to_string()
-            )
-            .fetch_all(tx)
-            .await
-            .map_err(|e| SettingsError::Generic {
-                message: format!("Failed to get current role configuration: {:?}", e),
-                src: "NativeAction->index".to_string(),
-                typ: "internal".to_string(),
-            })?;
-
-            query
-                .into_iter()
-                .map(|x| (x.role_id, (x.index, x.perms)))
-                .collect::<std::collections::HashMap<String, (i32, Vec<String>)>>()
-        } else {
+        let current_roles = {
             let query = sqlx::query!(
                 "SELECT index, role_id, perms FROM guild_roles WHERE guild_id = $1",
                 ctx.guild_id.to_string()
@@ -322,7 +507,7 @@ impl SettingDataValidator for GuildRolesValidator {
         let Some(lowest_index) = lowest_index else {
             return Err(SettingsError::Generic {
                 message: "You do not have any Anti-Raid configured roles yet!".to_string(),
-                src: "NativeAction->index".to_string(),
+                src: "base_verify_checks".to_string(),
                 typ: "index_check".to_string(),
             });
         };
@@ -344,74 +529,29 @@ impl SettingDataValidator for GuildRolesValidator {
             });
         }
 
-        let author_kittycat_perms = if pg_data_store.tx.is_some() {
-            let tx = pg_data_store.tx.as_deref_mut().unwrap();
-
-            silverpelt::member_permission_calc::get_kittycat_perms(
-                &mut *tx,
-                ctx.guild_id,
-                guild.owner_id,
-                ctx.author,
-                &member.roles,
-            )
-            .await
-            .map_err(|e| SettingsError::Generic {
-                message: format!("Failed to get author permissions: {:?}", e),
-                src: "NativeAction->index".to_string(),
-                typ: "internal".to_string(),
-            })?
-        } else {
-            let mut conn = ctx.data.pool.acquire().await.map_err(|e| SettingsError::Generic {
-                message: format!("Failed to get connection: {:?}", e),
-                src: "NativeAction->index".to_string(),
-                typ: "internal".to_string(),
-            })?;
-            silverpelt::member_permission_calc::get_kittycat_perms(
-                &mut conn,
-                ctx.guild_id,
-                guild.owner_id,
-                ctx.author,
-                &member.roles,
-            )
-            .await
-            .map_err(|e| SettingsError::Generic {
-                message: format!("Failed to get author permissions: {:?}", e),
-                src: "NativeAction->index".to_string(),
-                typ: "internal".to_string(),
-            })?
-        };
-
-        // Get the new permissions as a Vec<String>
-        let Some(Value::List(perms_value)) = state.state.get("perms") else {
-            return Err(SettingsError::MissingOrInvalidField {
-                field: "perms".to_string(),
-                src: "index->NativeAction [default_pre_checks]".to_string(),
-            });
-        };
-
-        let mut perms = Vec::with_capacity(perms_value.len());
-
-        for perm in perms_value {
-            if let Value::String(perm) = perm {
-                perms.push(perm);
-            } else {
-                return Err(SettingsError::Generic {
-                    message: "Failed to parse permissions".to_string(),
-                    src: "NativeAction->index".to_string(),
-                    typ: "internal".to_string(),
-                });
-            }
-        }
+        let author_kittycat_perms = silverpelt::member_permission_calc::get_kittycat_perms(
+            &ctx.data.pool,
+            ctx.guild_id,
+            guild.owner_id,
+            ctx.author,
+            &member.roles,
+        )
+        .await
+        .map_err(|e| SettingsError::Generic {
+            message: format!("Failed to get author permissions: {:?}", e),
+            src: "NativeAction->index".to_string(),
+            typ: "internal".to_string(),
+        })?;
 
         if new_index < lowest_index.into() {
             return Err(SettingsError::Generic {
-            message: format!("You do not have permission to edit this role's permissions as the new index would be lower than you: {} < {}", new_index, lowest_index),
-            src: "NativeAction->index".to_string(),
-            typ: "internal".to_string(),
-        });
+                message: format!("You do not have permission to edit this role's permissions as the new index would be lower than you: {} < {}", new_index, lowest_index),
+                src: "NativeAction->index".to_string(),
+                typ: "internal".to_string(),
+            });
         }
 
-        match ctx.operation_type {
+        match op {
             OperationType::Create => {
                 kittycat::perms::check_patch_changes(
                     &author_kittycat_perms,
@@ -426,7 +566,7 @@ impl SettingDataValidator for GuildRolesValidator {
                         "You do not have permission to add a role with these permissions: {}",
                         e
                     ),
-                    src: "NativeAction->index".to_string(),
+                    src: "base_verify_checks".to_string(),
                     typ: "perm_check_failed".to_string(),
                 })?;
             }
@@ -442,10 +582,10 @@ impl SettingDataValidator for GuildRolesValidator {
 
                 if *index < lowest_index {
                     return Err(SettingsError::Generic {
-                    message: format!("You do not have permission to edit this role's permissions as the current index is lower than you: {} < {}", *index, lowest_index),
-                    src: "NativeAction->index".to_string(),
-                    typ: "internal".to_string(),
-                });
+                        message: format!("You do not have permission to edit this role's permissions as the current index is lower than you: {} < {}", *index, lowest_index),
+                        src: "base_verify_checks".to_string(),
+                        typ: "internal".to_string(),
+                    });
                 }
 
                 kittycat::perms::check_patch_changes(
@@ -464,7 +604,7 @@ impl SettingDataValidator for GuildRolesValidator {
                         "You do not have permission to edit this role's permissions: {}",
                         e
                     ),
-                    src: "NativeAction->index".to_string(),
+                    src: "base_verify_checks".to_string(),
                     typ: "perm_check_failed".to_string(),
                 })?;
             }
@@ -482,198 +622,127 @@ impl SettingDataValidator for GuildRolesValidator {
                         "You do not have permission to remove a role with these permissions: {}",
                         e
                     ),
-                    src: "NativeAction->index".to_string(),
+                    src: "base_verify_checks".to_string(),
                     typ: "perm_check_failed".to_string(),
                 })?;
             }
             _ => {
-                return Err(SettingsError::OperationNotSupported {
-                    operation: ctx.operation_type,
-                });
+                return Err(SettingsError::OperationNotSupported { operation: op });
             }
         }
 
-        Ok(())
+        Ok(GreBaseVerifyChecksResult {
+            index: new_index,
+            role_id: settings_role_id,
+            perms,
+            display_name,
+        })
     }
 }
 
-/// Updates the cache to request a permission rederive
-pub struct GuildRolesPostAction;
-
-#[async_trait::async_trait]
-impl PostAction for GuildRolesPostAction {
-    async fn post_action<'a>(
-        &self,
-        ctx: HookContext<'a>,
-        state: &'a mut State,
-    ) -> Result<(), SettingsError> {
-        let Some(Value::String(settings_role_id_str)) = state.state.get("role_id") else {
-            return Err(SettingsError::MissingOrInvalidField {
-                field: "role_id".to_string(),
-                src: "index->NativeAction [default_pre_checks]".to_string(),
-            });
-        };
-
-        sqlx::query!(
-            "UPDATE guild_members SET needs_perm_rederive = true WHERE guild_id = $1 AND $2 = ANY(roles)",
-            ctx.guild_id.to_string(),
-            settings_role_id_str.to_string()
-        )
-        .execute(&ctx.data.pool)
-        .await
-        .map_err(|e| SettingsError::Generic {
-            message: format!("Failed to update guild members: {:?}", e),
-            src: "post_action#GuildRoles".to_string(),
-            typ: "internal".to_string(),
-        })?;
-
-        Ok(())
-    }
-}
-
-pub static GUILD_MEMBERS: LazyLock<Setting> = LazyLock::new(|| {
-    Setting {
-        id: "guild_members".to_string(),
-        name: "Server Members".to_string(),
-        description: "Manage server members".to_string(),
-        primary_key: "user_id".to_string(),
-        columns: settings_wrap(vec![
-            ar_settings::common_columns::guild_id("guild_id", "Guild ID", "The Guild ID"),
-            Column {
-                id: "user_id".to_string(),
-                name: "User ID".to_string(),
-                description: "The user ID. Cannot be updated once set".to_string(),
-                column_type: ColumnType::new_scalar(InnerColumnType::String {
-                    kind: InnerColumnTypeStringKind::User,
-                    min_length: None,
-                    max_length: Some(64),
-                    allowed_values: vec![],
-                }),
-                nullable: false,
-                suggestions: ColumnSuggestion::None {},
-                ignored_for: vec![OperationType::Update], 
-                secret: false,
-            },
-            Column {
-                id: "roles".to_string(),
-                name: "Roles".to_string(),
-                description: "The roles the member has. Cannot be editted and is updated internally".to_string(),
-                column_type: ColumnType::new_array(InnerColumnType::String {
-                    kind: InnerColumnTypeStringKind::Role,
-                    min_length: None,
-                    max_length: Some(64),
-                    allowed_values: vec![],
-                }),
-                nullable: false,
-                suggestions: ColumnSuggestion::None {},
-                ignored_for: vec![OperationType::Create, OperationType::Update, OperationType::Delete],
-                secret: false,
-            },
-            Column {
-                id: "perm_overrides".to_string(),
-                name: "Permission Overrides".to_string(),
-                description: "Any permission overrides the member has. This can and should be edited if needed".to_string(),
-                column_type: ColumnType::new_array(InnerColumnType::String {
-                    kind: InnerColumnTypeStringKind::KittycatPermission,
-                    min_length: None,
-                    max_length: Some(64),
-                    allowed_values: vec![],
-                }),
-                nullable: false,
-                suggestions: ColumnSuggestion::None {},
-                ignored_for: vec![],
-                secret: false,
-            },
-            Column {
-                id: "resolved_perms_cache".to_string(),
-                name: "Resolved Permissions Cache".to_string(),
-                description: "A cache of the resolved permissions for the member. This is updated internally and cannot be edited but could be useful for debugging".to_string(),
-                column_type: ColumnType::new_array(InnerColumnType::String {
-                    kind: InnerColumnTypeStringKind::KittycatPermission,
-                    min_length: None,
-                    max_length: Some(64),
-                    allowed_values: vec![],
-                }),
-                nullable: false,
-                suggestions: ColumnSuggestion::None {},
-                ignored_for: vec![OperationType::Create, OperationType::Update, OperationType::Delete],
-                secret: false,
-            },
-            Column {
-                id: "needs_perm_rederive".to_string(),
-                name: "Needs Permission Rederive".to_string(),
-                description: "Whether the member needs their permissions rederived. This is updated internally and cannot be edited but could be useful for debugging".to_string(),
-                column_type: ColumnType::new_scalar(InnerColumnType::Boolean {}),
-                nullable: false,
-                suggestions: ColumnSuggestion::None {},
-                ignored_for: vec![OperationType::Create, OperationType::Update, OperationType::Delete],
-                secret: false,
-            },
-            Column {
-                id: "public".to_string(),
-                name: "Public".to_string(),
-                description: "Whether the member is public or not".to_string(),
-                column_type: ColumnType::new_scalar(InnerColumnType::Boolean {}),
-                nullable: false,
-                suggestions: ColumnSuggestion::None {},
-                ignored_for: vec![],
-                secret: false,
-            },
-            ar_settings::common_columns::created_at(),
-        ]),
-        title_template: "{user_id}, perm_overrides={perm_overrides}".to_string(),
-        operations: indexmap::indexmap! {
-            OperationType::View => OperationSpecific {
-                columns_to_set: indexmap::indexmap! {},
-            },
-            OperationType::Create => OperationSpecific {
-                columns_to_set: indexmap::indexmap! {
-                    "created_at" => "{__now}",
-                    "needs_perm_rederive" => "{__true}",
-                },
-            },
-            OperationType::Update => OperationSpecific {
-                columns_to_set: indexmap::indexmap! {
-                    "needs_perm_rederive" => "{__true}",
-                },
-            },
-            OperationType::Delete => OperationSpecific {
-                columns_to_set: indexmap::indexmap! {},
+pub static GUILD_MEMBERS: LazyLock<Setting> = LazyLock::new(|| Setting {
+    id: "guild_members".to_string(),
+    name: "Server Members".to_string(),
+    description: "Manage server members".to_string(),
+    primary_key: "user_id".to_string(),
+    columns: settings_wrap(vec![
+        ar_settings::common_columns::guild_id("guild_id", "Guild ID", "The Guild ID"),
+        Column {
+            id: "user_id".to_string(),
+            name: "User ID".to_string(),
+            description: "The user ID. Cannot be updated once set".to_string(),
+            column_type: ColumnType::new_scalar(InnerColumnType::String {
+                kind: InnerColumnTypeStringKind::User,
+                min_length: None,
+                max_length: Some(64),
+                allowed_values: vec![],
+            }),
+            nullable: false,
+            suggestions: ColumnSuggestion::None {},
+            ignored_for: vec![OperationType::Update],
+            secret: false,
+        },
+        Column {
+            id: "perm_overrides".to_string(),
+            name: "Permission Overrides".to_string(),
+            description:
+                "Any permission overrides the member has. This can and should be edited if needed"
+                    .to_string(),
+            column_type: ColumnType::new_array(InnerColumnType::String {
+                kind: InnerColumnTypeStringKind::KittycatPermission,
+                min_length: None,
+                max_length: Some(64),
+                allowed_values: vec![],
+            }),
+            nullable: false,
+            suggestions: ColumnSuggestion::None {},
+            ignored_for: vec![],
+            secret: false,
+        },
+        Column {
+            id: "public".to_string(),
+            name: "Public".to_string(),
+            description: "Whether the member is public or not".to_string(),
+            column_type: ColumnType::new_scalar(InnerColumnType::Boolean {}),
+            nullable: false,
+            suggestions: ColumnSuggestion::None {},
+            ignored_for: vec![],
+            secret: false,
+        },
+        ar_settings::common_columns::created_at(),
+    ]),
+    title_template: "{user_id}, perm_overrides={perm_overrides}".to_string(),
+    operations: indexmap::indexmap! {
+        OperationType::View => OperationSpecific {
+            columns_to_set: indexmap::indexmap! {},
+        },
+        OperationType::Create => OperationSpecific {
+            columns_to_set: indexmap::indexmap! {
+                "created_at" => "{__now}",
+                "needs_perm_rederive" => "{__true}",
             },
         },
-        validator: settings_wrap(GuildMembersValidator {}),
-        post_action: settings_wrap(NoOpPostAction {}),
-    }
+        OperationType::Update => OperationSpecific {
+            columns_to_set: indexmap::indexmap! {
+                "needs_perm_rederive" => "{__true}",
+            },
+        },
+        OperationType::Delete => OperationSpecific {
+            columns_to_set: indexmap::indexmap! {},
+        },
+    },
+    validator: settings_wrap(GuildMembersValidator {}),
+    post_action: settings_wrap(NoOpPostAction {}),
 });
 
-/// GuildMembersValidator handles all the required permission checking etc. for guild members
-pub struct GuildMembersValidator;
+pub struct GmeBaseVerifyChecksResult {
+    pub user_id: serenity::all::UserId,
+    pub perm_overrides: Vec<kittycat::perms::Permission>,
+    pub public: bool,
+}
 
-impl GuildMembersValidator {
+#[derive(Clone)]
+pub struct GuildMembersExecutor;
+
+impl GuildMembersExecutor {
     async fn get_kittycat_perms_for_user<'a>(
-        &self, 
-        data: &SettingsData, 
+        &self,
+        data: &SettingsData,
         conn: &mut sqlx::PgConnection,
         guild_id: serenity::all::GuildId,
-        guild_owner_id: serenity::all::UserId, 
+        guild_owner_id: serenity::all::UserId,
         user_id: serenity::all::UserId,
-) -> Result<(Vec<serenity::all::RoleId>, Vec<kittycat::perms::Permission>), SettingsError> {
-        let Some(member) = sandwich_driver::member_in_guild(
-            &data.cache_http,
-            &data.reqwest,
-            guild_id,
-            user_id,
-        )
-        .await
-        .map_err(|e| SettingsError::Generic {
-            message: format!("Failed to get user {}: {:?}", user_id, e),
-            src: "NativeAction->index".to_string(),
-            typ: "internal".to_string(),
-        })? else {
-            return Ok((
-                Vec::new(),
-                Vec::new(),
-            ));
+    ) -> Result<(Vec<serenity::all::RoleId>, Vec<kittycat::perms::Permission>), SettingsError> {
+        let Some(member) =
+            sandwich_driver::member_in_guild(&data.cache_http, &data.reqwest, guild_id, user_id)
+                .await
+                .map_err(|e| SettingsError::Generic {
+                    message: format!("Failed to get user {}: {:?}", user_id, e),
+                    src: "GuildMembersExecutor".to_string(),
+                    typ: "internal".to_string(),
+                })?
+        else {
+            return Ok((Vec::new(), Vec::new()));
         };
 
         let kittycat_perms = silverpelt::member_permission_calc::get_kittycat_perms(
@@ -686,30 +755,27 @@ impl GuildMembersValidator {
         .await
         .map_err(|e| SettingsError::Generic {
             message: format!("Failed to get user permissions: {:?} ({})", e, user_id),
-            src: "NativeAction->index".to_string(),
+            src: "GuildMembersExecutor".to_string(),
             typ: "internal".to_string(),
         })?;
 
-        let roles = member.roles.iter().copied().collect::<Vec<serenity::all::RoleId>>();
+        let roles = member
+            .roles
+            .iter()
+            .copied()
+            .collect::<Vec<serenity::all::RoleId>>();
 
         Ok((roles, kittycat_perms))
     }
-}
 
-#[async_trait::async_trait]
-impl SettingDataValidator for GuildMembersValidator {
-    async fn validate<'a>(
+    async fn verify<'a>(
         &self,
-        ctx: HookContext<'a>,
-        state: &'a mut State,
-    ) -> Result<(), SettingsError> {
-        // Early return if we are viewing, we don't need to check perms if so
-        if ctx.operation_type == OperationType::View {
-            return Ok(());
-        }
-
+        ctx: &HookContext<'a>,
+        state: &indexmap::IndexMap<String, Value>,
+        op: OperationType,
+    ) -> Result<GmeBaseVerifyChecksResult, silverpelt::Error> {
         // Get the user id as this is required for all operations
-        let Some(Value::String(user_id)) = state.state.get("user_id") else {
+        let Some(Value::String(user_id)) = state.get("user_id") else {
             return Err(SettingsError::MissingOrInvalidField {
                 field: "user_id".to_string(),
                 src: "guildmembers->user_id".to_string(),
@@ -717,24 +783,41 @@ impl SettingDataValidator for GuildMembersValidator {
         };
 
         // Parse the user id
-        let user_id: serenity::all::UserId = user_id
-            .parse()
-            .map_err(|e| SettingsError::Generic {
+        let user_id: serenity::all::UserId =
+            user_id.parse().map_err(|e| SettingsError::Generic {
                 message: format!("Failed to parse user id: {:?}", e),
                 src: "guildmembers->user_id".to_string(),
                 typ: "external".to_string(),
             })?;
 
-        // Only the author can set public to true
-        if !ctx.unchanged_fields.contains(&"public".to_string()) {
-            if let Some(Value::Boolean(public)) = state.state.get("public") {
-                if *public && ctx.author != user_id {
-                    return Err(SettingsError::Generic {
-                        message: "Only the author can set publicity".to_string(),
-                        src: "guildmembers->public".to_string(),
-                        typ: "external".to_string(),
-                    });
-                }
+        let Some(Value::Boolean(public)) = state.get("public") else {
+            return Err(SettingsError::MissingOrInvalidField {
+                field: "public".to_string(),
+                src: "guildmembers->public".to_string(),
+            });
+        };
+
+        if op == OperationType::Update {
+            let current_public = sqlx::query!(
+                "SELECT public FROM guild_members WHERE guild_id = $1 AND user_id = $2",
+                ctx.guild_id.to_string(),
+                user_id.to_string()
+            )
+            .fetch_one(&ctx.data.pool)
+            .await
+            .map_err(|e| SettingsError::Generic {
+                message: format!("Failed to get current public status: {:?}", e),
+                src: "GuildMembersExecutor".to_string(),
+                typ: "internal".to_string(),
+            })?
+            .public;
+
+            if public != current_public && ctx.author != user_id {
+                return Err(SettingsError::Generic {
+                    message: "Only the user can change their public status".to_string(),
+                    src: "guildmembers->public".to_string(),
+                    typ: "external".to_string(),
+                });
             }
         }
 
@@ -765,69 +848,95 @@ impl SettingDataValidator for GuildMembersValidator {
         };
 
         let guild = sandwich_driver::guild(&ctx.data.cache_http, &ctx.data.reqwest, ctx.guild_id)
-        .await
-        .map_err(|e| SettingsError::Generic {
-            message: format!("Failed to get guild: {:?}", e),
-            src: "NativeAction->index".to_string(),
-            typ: "internal".to_string(),
-        })?;
-
-        // If owner, early return
-        if guild.owner_id == ctx.author {
-            return Ok(());
-        }
-
-        let settings_data = ctx.data;
-
-        let pg_data_store = PostgresDataStoreImpl::from_data_store(ctx.data_store)?;
-
-        // Get the transaction connection or acquire one from pool if not in a transaction
-        let conn = if pg_data_store.tx.is_some() {
-            pg_data_store.tx.as_deref_mut().unwrap()
-        } else {
-            &mut *ctx.data.pool.acquire().await.map_err(|e| SettingsError::Generic {
-                message: format!("Failed to get connection: {:?}", e),
-                src: "NativeAction->index".to_string(),
-                typ: "internal".to_string(),
-            })?
-        };
-
-        // Get the authors kittycat permissions
-        let author_kittycat_perms = match self.get_kittycat_perms_for_user(settings_data, conn, ctx.guild_id, guild.owner_id, ctx.author).await {
-            Ok((_, author_kittycat_perms)) => author_kittycat_perms,
-            Err(e) => return Err(SettingsError::Generic {
-                message: format!("Failed to get author permissions: {:?}", e),
-                src: "NativeAction->index".to_string(),
-                typ: "internal".to_string(),
-            }),
-        };
-
-        // Get the target members current kittycat permissions (if any) as well as their roles (for finding new permissions with overrides taken into account)
-        let (target_member_roles, current_user_kittycat_perms) = match self.get_kittycat_perms_for_user(settings_data, conn, ctx.guild_id, guild.owner_id, user_id).await {
-            Ok((target_member_roles, current_user_kittycat_perms)) => (target_member_roles, current_user_kittycat_perms),
-            Err(e) => return Err(SettingsError::Generic {
-                message: format!("Failed to get target member permissions: {:?}", e),
-                src: "NativeAction->index".to_string(),
-                typ: "internal".to_string(),
-            }),
-        };
-
-        // Find new user's permissions with the given perm overrides
-        let new_user_kittycat_perms = {
-            let roles_str = silverpelt::member_permission_calc::create_roles_list_for_guild(&target_member_roles, ctx.guild_id);
-
-            let user_positions = silverpelt::member_permission_calc::get_user_positions_from_db(&mut *conn, ctx.guild_id, &roles_str).await
+            .await
             .map_err(|e| SettingsError::Generic {
-                message: format!("Failed to get user positions: {:?}", e),
+                message: format!("Failed to get guild: {:?}", e),
                 src: "NativeAction->index".to_string(),
                 typ: "internal".to_string(),
             })?;
 
-            silverpelt::member_permission_calc::rederive_perms_impl(ctx.guild_id, user_id, user_positions, perm_overrides)
+        // If owner, early return
+        if guild.owner_id == ctx.author {
+            return Ok(GmeBaseVerifyChecksResult {
+                user_id,
+                perm_overrides,
+                public,
+            });
+        }
+
+        // Get the authors kittycat permissions
+        let author_kittycat_perms = match self
+            .get_kittycat_perms_for_user(
+                &ctx.data,
+                &ctx.data.pool,
+                ctx.guild_id,
+                guild.owner_id,
+                ctx.author,
+            )
+            .await
+        {
+            Ok((_, author_kittycat_perms)) => author_kittycat_perms,
+            Err(e) => {
+                return Err(SettingsError::Generic {
+                    message: format!("Failed to get author permissions: {:?}", e),
+                    src: "GuildMembersExecutor".to_string(),
+                    typ: "internal".to_string(),
+                })
+            }
+        };
+
+        // Get the target members current kittycat permissions (if any) as well as their roles (for finding new permissions with overrides taken into account)
+        let (target_member_roles, current_user_kittycat_perms) = match self
+            .get_kittycat_perms_for_user(
+                &ctx.data,
+                &ctx.data.pool,
+                ctx.guild_id,
+                guild.owner_id,
+                user_id,
+            )
+            .await
+        {
+            Ok((target_member_roles, current_user_kittycat_perms)) => {
+                (target_member_roles, current_user_kittycat_perms)
+            }
+            Err(e) => {
+                return Err(SettingsError::Generic {
+                    message: format!("Failed to get target member permissions: {:?}", e),
+                    src: "GuildMembersExecutor".to_string(),
+                    typ: "internal".to_string(),
+                })
+            }
+        };
+
+        // Find new user's permissions with the given perm overrides
+        let new_user_kittycat_perms = {
+            let roles_str = silverpelt::member_permission_calc::create_roles_list_for_guild(
+                &target_member_roles,
+                ctx.guild_id,
+            );
+
+            let user_positions = silverpelt::member_permission_calc::get_user_positions_from_db(
+                &ctx.data.pool,
+                ctx.guild_id,
+                &roles_str,
+            )
+            .await
+            .map_err(|e| SettingsError::Generic {
+                message: format!("Failed to get user positions: {:?}", e),
+                src: "GuildMembersExecutor".to_string(),
+                typ: "internal".to_string(),
+            })?;
+
+            silverpelt::member_permission_calc::rederive_perms_impl(
+                ctx.guild_id,
+                user_id,
+                user_positions,
+                perm_overrides,
+            )
         };
 
         // Check permissions
-        match ctx.operation_type {
+        match op {
             OperationType::Create => {
                 kittycat::perms::check_patch_changes(
                     &author_kittycat_perms,
@@ -839,7 +948,7 @@ impl SettingDataValidator for GuildMembersValidator {
                         "You do not have permission to add a role with these permissions: {}",
                         e
                     ),
-                    src: "NativeAction->index".to_string(),
+                    src: "GuildMembersExecutor".to_string(),
                     typ: "perm_check_failed".to_string(),
                 })?;
             }
@@ -854,7 +963,7 @@ impl SettingDataValidator for GuildMembersValidator {
                         "You do not have permission to edit this role's permissions: {}",
                         e
                     ),
-                    src: "NativeAction->index".to_string(),
+                    src: "GuildMembersExecutor".to_string(),
                     typ: "perm_check_failed".to_string(),
                 })?;
             }
@@ -869,18 +978,47 @@ impl SettingDataValidator for GuildMembersValidator {
                         "You do not have permission to remove this members permission overrides: {}",
                         e
                     ),
-                    src: "NativeAction->index".to_string(),
+                    src: "GuildMembersExecutor".to_string(),
                     typ: "perm_check_failed".to_string(),
                 })?;
             }
             _ => {
-                return Err(SettingsError::OperationNotSupported {
-                    operation: ctx.operation_type,
-                });
+                return Err(SettingsError::OperationNotSupported { operation: op });
             }
         }
-        
-        Ok(())
+    }
+}
+
+#[async_trait::async_trait]
+impl SettingView for GuildMembersExecutor {
+    async fn view<'a>(
+        &self,
+        context: HookContext<'a>,
+        _filters: indexmap::IndexMap<String, splashcore_rs::value::Value>,
+    ) -> Result<Vec<indexmap::IndexMap<String, splashcore_rs::value::Value>>, SettingsError> {
+        let rows = sqlx::query!("SELECT user_id, perm_overrides, public, created_at FROM guild_members WHERE guild_id = $1", context.guild_id.to_string())
+        .fetch_all(&context.data.pool)
+        .await
+        .map_err(|e| SettingsError::Generic {
+            message: format!("Error while fetching guild roles: {}", e),
+            src: "GuildRolesExecutor".to_string(),
+            typ: "value_error".to_string(),
+        })?;
+
+        let mut result = vec![];
+
+        for row in rows {
+            let map = indexmap::indexmap! {
+                "user_id".to_string() => Value::String(row.user_id),
+                "perm_overrides".to_string() => Value::List(row.perm_overrides.iter().map(|x| Value::String(x.to_string())).collect()),
+                "public".to_string() => Value::Boolean(row.public),
+                "created_at".to_string() => Value::TimestampTz(row.created_at),
+            };
+
+            result.push(map);
+        }
+
+        Ok(result) // TODO: Implement
     }
 }
 
@@ -988,13 +1126,13 @@ impl SettingDataValidator for GuildTemplateValidator {
         };
 
         if name.starts_with("$shop/") {
-            let (shop_tname, shop_tversion) = templating::parse_shop_template(name)
-            .map_err(|e| SettingsError::Generic {
-                message: format!("Failed to parse shop template: {:?}", e),
-                src: "guild_templates->name".to_string(),
-                typ: "external".to_string(),
-            })?;
-    
+            let (shop_tname, shop_tversion) =
+                templating::parse_shop_template(name).map_err(|e| SettingsError::Generic {
+                    message: format!("Failed to parse shop template: {:?}", e),
+                    src: "guild_templates->name".to_string(),
+                    typ: "external".to_string(),
+                })?;
+
             let shop_template = sqlx::query!(
                 "SELECT COUNT(*) FROM template_shop WHERE name = $1 AND version = $2",
                 shop_tname,
@@ -1007,15 +1145,13 @@ impl SettingDataValidator for GuildTemplateValidator {
                 src: "guild_templates->name".to_string(),
                 typ: "internal".to_string(),
             })?;
-    
+
             if shop_template.count.unwrap_or(0) == 0 {
-                return Err(
-                    SettingsError::Generic {
-                        message: "Could not find shop template".to_string(),
-                        src: "guild_templates->name".to_string(),
-                        typ: "external".to_string(),
-                    }
-                );
+                return Err(SettingsError::Generic {
+                    message: "Could not find shop template".to_string(),
+                    src: "guild_templates->name".to_string(),
+                    typ: "external".to_string(),
+                });
             }
         }
 
@@ -1027,13 +1163,17 @@ pub struct GuildTemplatePostAction;
 
 #[async_trait::async_trait]
 impl PostAction for GuildTemplatePostAction {
-    async fn post_action<'a>(&self, context: HookContext<'a> , state: &'a mut ar_settings::state::State) -> Result<(), SettingsError> {
+    async fn post_action<'a>(
+        &self,
+        context: HookContext<'a>,
+        state: &'a mut ar_settings::state::State,
+    ) -> Result<(), SettingsError> {
         if context.operation_type == OperationType::View {
-            return Ok(())
+            return Ok(());
         }
-        
+
         // Dispatch a OnStartup event for the template
-        
+
         // Get template ID
         let Some(Value::String(name)) = state.state.get("name") else {
             return Err(SettingsError::MissingOrInvalidField {
@@ -1063,67 +1203,65 @@ impl PostAction for GuildTemplatePostAction {
     }
 }
 
-pub static GUILD_TEMPLATES_KV: LazyLock<Setting> = LazyLock::new(|| {
-    Setting {
-        id: "guild_templates_kv".to_string(),
-        name: "Server Templates (key-value db)".to_string(),
-        description: "Key-value database available to templates on this server".to_string(),
-        primary_key: "key".to_string(),
-        columns: settings_wrap(vec![
-            ar_settings::common_columns::guild_id("guild_id", "Guild ID", "The Guild ID"),
-            Column {
-                id: "key".to_string(),
-                name: "Key".to_string(),
-                description: "Key".to_string(),
-                column_type: ColumnType::new_scalar(InnerColumnType::String {
-                    kind: InnerColumnTypeStringKind::Normal,
-                    min_length: None,
-                    max_length: Some(templating::LuaKVConstraints::default().max_key_length),
-                    allowed_values: vec![],
-                }),
-                nullable: false,
-                suggestions: ColumnSuggestion::None {},
-                ignored_for: vec![],
-                secret: false,
-            },
-            Column {
-                id: "value".to_string(),
-                name: "Content".to_string(),
-                description: "The content of the template".to_string(),
-                column_type: ColumnType::new_scalar(InnerColumnType::Json {
-                    max_bytes: Some(templating::LuaKVConstraints::default().max_value_bytes),
-                }),
-                nullable: true,
-                suggestions: ColumnSuggestion::None {},
-                ignored_for: vec![],
-                secret: false,
-            },
-            ar_settings::common_columns::created_at(),
-            ar_settings::common_columns::last_updated_at(),
-        ]),
-        title_template: "{key}".to_string(),
-        operations: indexmap::indexmap! {
-            OperationType::View => OperationSpecific {
-                columns_to_set: indexmap::indexmap! {},
-            },
-            OperationType::Create => OperationSpecific {
-                columns_to_set: indexmap::indexmap! {
-                    "created_at" => "{__now}",
-                    "last_updated_at" => "{__now}",
-                },
-            },
-            OperationType::Update => OperationSpecific {
-                columns_to_set: indexmap::indexmap! {
-                    "last_updated_at" => "{__now}",
-                },
-            },
-            OperationType::Delete => OperationSpecific {
-                columns_to_set: indexmap::indexmap! {},
+pub static GUILD_TEMPLATES_KV: LazyLock<Setting> = LazyLock::new(|| Setting {
+    id: "guild_templates_kv".to_string(),
+    name: "Server Templates (key-value db)".to_string(),
+    description: "Key-value database available to templates on this server".to_string(),
+    primary_key: "key".to_string(),
+    columns: settings_wrap(vec![
+        ar_settings::common_columns::guild_id("guild_id", "Guild ID", "The Guild ID"),
+        Column {
+            id: "key".to_string(),
+            name: "Key".to_string(),
+            description: "Key".to_string(),
+            column_type: ColumnType::new_scalar(InnerColumnType::String {
+                kind: InnerColumnTypeStringKind::Normal,
+                min_length: None,
+                max_length: Some(templating::LuaKVConstraints::default().max_key_length),
+                allowed_values: vec![],
+            }),
+            nullable: false,
+            suggestions: ColumnSuggestion::None {},
+            ignored_for: vec![],
+            secret: false,
+        },
+        Column {
+            id: "value".to_string(),
+            name: "Content".to_string(),
+            description: "The content of the template".to_string(),
+            column_type: ColumnType::new_scalar(InnerColumnType::Json {
+                max_bytes: Some(templating::LuaKVConstraints::default().max_value_bytes),
+            }),
+            nullable: true,
+            suggestions: ColumnSuggestion::None {},
+            ignored_for: vec![],
+            secret: false,
+        },
+        ar_settings::common_columns::created_at(),
+        ar_settings::common_columns::last_updated_at(),
+    ]),
+    title_template: "{key}".to_string(),
+    operations: indexmap::indexmap! {
+        OperationType::View => OperationSpecific {
+            columns_to_set: indexmap::indexmap! {},
+        },
+        OperationType::Create => OperationSpecific {
+            columns_to_set: indexmap::indexmap! {
+                "created_at" => "{__now}",
+                "last_updated_at" => "{__now}",
             },
         },
-        validator: settings_wrap(NoOpValidator {}),
-        post_action: settings_wrap(NoOpPostAction {}),
-    }
+        OperationType::Update => OperationSpecific {
+            columns_to_set: indexmap::indexmap! {
+                "last_updated_at" => "{__now}",
+            },
+        },
+        OperationType::Delete => OperationSpecific {
+            columns_to_set: indexmap::indexmap! {},
+        },
+    },
+    validator: settings_wrap(NoOpValidator {}),
+    post_action: settings_wrap(NoOpPostAction {}),
 });
 
 pub static GUILD_TEMPLATE_SHOP: LazyLock<Setting> = LazyLock::new(|| {

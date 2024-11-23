@@ -730,10 +730,7 @@ pub async fn settings_create(
         }
 
         // If the column is ignored for, only parse, otherwise parse and validate
-        let value = if column.ignored_for.contains(&OperationType::Create) {
-            let val = state.swap_remove(&column.id).unwrap_or(Value::None);
-            _parse_value(val, &column.column_type, &column.id)?
-        } else {
+        let value = {
             // Get the value
             let val = state.swap_remove(&column.id).unwrap_or(Value::None);
 
@@ -823,10 +820,7 @@ pub async fn settings_update(
         }
 
         // If the column is ignored for, only parse, otherwise parse and validate
-        let value = if column.ignored_for.contains(&OperationType::Update) {
-            let val = state.swap_remove(&column.id).unwrap_or(Value::None);
-            _parse_value(val, &column.column_type, &column.id)?
-        } else {
+        let value = {
             // Get the value
             let val = state.swap_remove(&column.id).unwrap_or(Value::None);
 
