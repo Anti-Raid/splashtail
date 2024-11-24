@@ -4,7 +4,7 @@ use std::sync::Arc;
 
 pub type Error = Box<dyn std::error::Error + Send + Sync>; // This is constant and should be copy pasted
 
-#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 #[serde(tag = "type")]
 pub enum SettingsError {
     /// Operation not supported
@@ -49,6 +49,9 @@ pub enum SettingsError {
     MaximumCountReached {
         max: usize,
         current: usize,
+    },
+    PermissionError {
+        result: permissions::types::PermissionResult,
     },
 }
 

@@ -1,6 +1,6 @@
 use ar_settings::types::{
     settings_wrap, Column, ColumnSuggestion, ColumnType, HookContext, InnerColumnType,
-    InnerColumnTypeStringKind, OperationType, Setting, SettingsError,
+    InnerColumnTypeStringKind, OperationType, Setting, SettingOperations, SettingsError,
 };
 use ar_settings::types::{
     SettingCreator, SettingDeleter, SettingUpdater, SettingView, SettingsData,
@@ -8,6 +8,29 @@ use ar_settings::types::{
 use kittycat::perms::Permission;
 use splashcore_rs::value::Value;
 use std::sync::LazyLock;
+
+async fn check_perms<'a>(
+    ctx: &HookContext<'a>,
+    perm: &kittycat::perms::Permission,
+) -> Result<(), SettingsError> {
+    let res = permission_checks::member_has_kittycat_perm(
+        ctx.guild_id,
+        ctx.author,
+        &ctx.data.pool,
+        &ctx.data.serenity_context,
+        &ctx.data.reqwest,
+        &None,
+        perm,
+        permission_checks::CheckCommandOptions::default(),
+    )
+    .await;
+
+    if res.is_ok() {
+        return Ok(());
+    }
+
+    Err(SettingsError::PermissionError { result: res })
+}
 
 pub static GUILD_ROLES: LazyLock<Setting> = LazyLock::new(|| {
     Setting {
@@ -130,6 +153,8 @@ impl SettingCreator for GuildRolesExecutor {
         ctx: HookContext<'a>,
         entry: indexmap::IndexMap<String, splashcore_rs::value::Value>,
     ) -> Result<indexmap::IndexMap<String, splashcore_rs::value::Value>, SettingsError> {
+        check_perms(&ctx, &"guild_roles.create".into()).await?;
+
         let res = self
             .base_verify_checks(&ctx, &entry, OperationType::Create)
             .await?;
@@ -199,12 +224,14 @@ impl SettingUpdater for GuildRolesExecutor {
         ctx: HookContext<'a>,
         entry: indexmap::IndexMap<String, splashcore_rs::value::Value>,
     ) -> Result<indexmap::IndexMap<String, splashcore_rs::value::Value>, SettingsError> {
+        check_perms(&ctx, &"guild_roles.update".into()).await?;
+
         let res = self
             .base_verify_checks(&ctx, &entry, OperationType::Update)
             .await?;
 
         sqlx::query!(
-            "UPDATE guild_roles SET perms = $1, index = $2, display_name = $3, last_updated_by = $4 WHERE guild_id = $5 AND role_id = $6",
+            "UPDATE guild_roles SET perms = $1, index = $2, display_name = $3, last_updated_at = NOW(), last_updated_by = $4 WHERE guild_id = $5 AND role_id = $6",
             &res.perms,
             res.index,
             res.display_name,
@@ -220,19 +247,6 @@ impl SettingUpdater for GuildRolesExecutor {
             typ: "internal".to_string(),
         })?;
 
-        sqlx::query!(
-            "UPDATE guild_members SET needs_perm_rederive = true WHERE guild_id = $1 AND $2 = ANY(roles)",
-            ctx.guild_id.to_string(),
-            res.role_id.to_string()
-        )
-        .execute(&ctx.data.pool)
-        .await
-        .map_err(|e| SettingsError::Generic {
-            message: format!("Failed to update guild members cache: {:?}", e),
-            src: "GuildRolesExecutor".to_string(),
-            typ: "internal".to_string(),
-        })?;
-
         Ok(entry)
     }
 }
@@ -244,6 +258,8 @@ impl SettingDeleter for GuildRolesExecutor {
         ctx: HookContext<'a>,
         primary_key: splashcore_rs::value::Value,
     ) -> Result<(), SettingsError> {
+        check_perms(&ctx, &"guild_roles.delete".into()).await?;
+
         let Some(row) = sqlx::query!("SELECT role_id, perms, index, display_name FROM guild_roles WHERE guild_id = $1 AND role_id = $2", ctx.guild_id.to_string(), primary_key.to_string())
         .fetch_optional(&ctx.data.pool)
         .await
@@ -1058,6 +1074,8 @@ impl SettingCreator for GuildMembersExecutor {
         ctx: HookContext<'a>,
         entry: indexmap::IndexMap<String, splashcore_rs::value::Value>,
     ) -> Result<indexmap::IndexMap<String, splashcore_rs::value::Value>, SettingsError> {
+        check_perms(&ctx, &"guild_members.create".into()).await?;
+
         let res = self.verify(&ctx, &entry, OperationType::Create).await?;
 
         let count = sqlx::query!(
@@ -1109,6 +1127,8 @@ impl SettingUpdater for GuildMembersExecutor {
         ctx: HookContext<'a>,
         entry: indexmap::IndexMap<String, splashcore_rs::value::Value>,
     ) -> Result<indexmap::IndexMap<String, splashcore_rs::value::Value>, SettingsError> {
+        check_perms(&ctx, &"guild_members.update".into()).await?;
+
         let res = self.verify(&ctx, &entry, OperationType::Update).await?;
 
         sqlx::query!(
@@ -1137,6 +1157,8 @@ impl SettingDeleter for GuildMembersExecutor {
         ctx: HookContext<'a>,
         primary_key: splashcore_rs::value::Value,
     ) -> Result<(), SettingsError> {
+        check_perms(&ctx, &"guild_members.delete".into()).await?;
+
         let Some(row) = sqlx::query!("SELECT user_id, perm_overrides, public FROM guild_members WHERE guild_id = $1 AND user_id = $2", ctx.guild_id.to_string(), primary_key.to_string())
         .fetch_optional(&ctx.data.pool)
         .await
@@ -1308,6 +1330,8 @@ impl SettingView for GuildTemplateExecutor {
         context: HookContext<'a>,
         _filters: indexmap::IndexMap<String, splashcore_rs::value::Value>,
     ) -> Result<Vec<indexmap::IndexMap<String, splashcore_rs::value::Value>>, SettingsError> {
+        check_perms(&context, &"guild_templates.view".into()).await?;
+
         let rows = sqlx::query!("SELECT name, content, events, created_at, created_by, last_updated_at, last_updated_by FROM guild_templates WHERE guild_id = $1", context.guild_id.to_string())
         .fetch_all(&context.data.pool)
         .await
@@ -1349,6 +1373,8 @@ impl SettingCreator for GuildTemplateExecutor {
         ctx: HookContext<'a>,
         entry: indexmap::IndexMap<String, splashcore_rs::value::Value>,
     ) -> Result<indexmap::IndexMap<String, splashcore_rs::value::Value>, SettingsError> {
+        check_perms(&ctx, &"guild_templates.create".into()).await?;
+
         let Some(Value::String(name)) = entry.get("name") else {
             return Err(SettingsError::MissingOrInvalidField {
                 field: "content".to_string(),
@@ -1438,6 +1464,8 @@ impl SettingUpdater for GuildTemplateExecutor {
         ctx: HookContext<'a>,
         entry: indexmap::IndexMap<String, splashcore_rs::value::Value>,
     ) -> Result<indexmap::IndexMap<String, splashcore_rs::value::Value>, SettingsError> {
+        check_perms(&ctx, &"guild_templates.update".into()).await?;
+
         let Some(Value::String(name)) = entry.get("name") else {
             return Err(SettingsError::MissingOrInvalidField {
                 field: "name".to_string(),
@@ -1475,7 +1503,7 @@ impl SettingUpdater for GuildTemplateExecutor {
         };
 
         sqlx::query!(
-            "UPDATE guild_templates SET content = $1, events = $2, last_updated_by = $3 WHERE guild_id = $4 AND name = $5",
+            "UPDATE guild_templates SET content = $1, events = $2, last_updated_at = NOW(), last_updated_by = $3 WHERE guild_id = $4 AND name = $5",
             content,
             events.as_deref(),
             ctx.author.to_string(),
@@ -1503,6 +1531,8 @@ impl SettingDeleter for GuildTemplateExecutor {
         ctx: HookContext<'a>,
         primary_key: splashcore_rs::value::Value,
     ) -> Result<(), SettingsError> {
+        check_perms(&ctx, &"guild_templates.delete".into()).await?;
+
         let Some(row) = sqlx::query!(
             "SELECT name FROM guild_templates WHERE guild_id = $1 AND name = $2",
             ctx.guild_id.to_string(),
@@ -1580,28 +1610,198 @@ pub static GUILD_TEMPLATES_KV: LazyLock<Setting> = LazyLock::new(|| Setting {
         ar_settings::common_columns::last_updated_at(),
     ]),
     title_template: "{key}".to_string(),
-    operations: indexmap::indexmap! {
-        OperationType::View => OperationSpecific {
-            columns_to_set: indexmap::indexmap! {},
-        },
-        OperationType::Create => OperationSpecific {
-            columns_to_set: indexmap::indexmap! {
-                "created_at" => "{__now}",
-                "last_updated_at" => "{__now}",
-            },
-        },
-        OperationType::Update => OperationSpecific {
-            columns_to_set: indexmap::indexmap! {
-                "last_updated_at" => "{__now}",
-            },
-        },
-        OperationType::Delete => OperationSpecific {
-            columns_to_set: indexmap::indexmap! {},
-        },
-    },
-    validator: settings_wrap(NoOpValidator {}),
-    post_action: settings_wrap(NoOpPostAction {}),
+    operations: GuildTemplatesKVExecutor.into(),
 });
+
+#[derive(Clone)]
+pub struct GuildTemplatesKVExecutor;
+
+#[async_trait::async_trait]
+impl SettingView for GuildTemplatesKVExecutor {
+    async fn view<'a>(
+        &self,
+        context: HookContext<'a>,
+        _filters: indexmap::IndexMap<String, splashcore_rs::value::Value>,
+    ) -> Result<Vec<indexmap::IndexMap<String, splashcore_rs::value::Value>>, SettingsError> {
+        check_perms(&context, &"guild_templates_kv.view".into()).await?;
+
+        let rows = sqlx::query!("SELECT key, value, created_at, last_updated_at FROM guild_templates_kv WHERE guild_id = $1", context.guild_id.to_string())
+        .fetch_all(&context.data.pool)
+        .await
+        .map_err(|e| SettingsError::Generic {
+            message: format!("Error while fetching guild templates kv: {}", e),
+            src: "GuildTemplatesKVExecutor".to_string(),
+            typ: "value_error".to_string(),
+        })?;
+
+        let mut result = vec![];
+
+        for row in rows {
+            let map = indexmap::indexmap! {
+                "key".to_string() => Value::String(row.key),
+                "value".to_string() => row.value.map(|x| Value::Json(x)).unwrap_or(Value::None),
+                "created_at".to_string() => Value::TimestampTz(row.created_at),
+                "last_updated_at".to_string() => Value::TimestampTz(row.last_updated_at),
+            };
+
+            result.push(map);
+        }
+
+        Ok(result)
+    }
+}
+
+#[async_trait::async_trait]
+impl SettingCreator for GuildTemplatesKVExecutor {
+    async fn create<'a>(
+        &self,
+        ctx: HookContext<'a>,
+        entry: indexmap::IndexMap<String, splashcore_rs::value::Value>,
+    ) -> Result<indexmap::IndexMap<String, splashcore_rs::value::Value>, SettingsError> {
+        check_perms(&ctx, &"guild_templates_kv.create".into()).await?;
+
+        let Some(Value::String(key)) = entry.get("key") else {
+            return Err(SettingsError::MissingOrInvalidField {
+                field: "key".to_string(),
+                src: "GuildTemplatesKVExecutor".to_string(),
+            });
+        };
+
+        let count = sqlx::query!(
+            "SELECT COUNT(*) FROM guild_templates_kv WHERE guild_id = $1 AND key = $2",
+            ctx.guild_id.to_string(),
+            key
+        )
+        .fetch_one(&ctx.data.pool)
+        .await
+        .map_err(|e| SettingsError::Generic {
+            message: format!("Failed to check if kv exists: {:?}", e),
+            src: "GuildTemplatesKVExecutor".to_string(),
+            typ: "internal".to_string(),
+        })?
+        .count
+        .unwrap_or_default();
+
+        if count > 0 {
+            return Err(SettingsError::Generic {
+                message: "KV already exists".to_string(),
+                src: "GuildTemplatesKVExecutor".to_string(),
+                typ: "internal".to_string(),
+            });
+        }
+
+        let Some(Value::Json(value)) = entry.get("value") else {
+            return Err(SettingsError::MissingOrInvalidField {
+                field: "value".to_string(),
+                src: "GuildTemplatesKVExecutor".to_string(),
+            });
+        };
+
+        sqlx::query!(
+            "INSERT INTO guild_templates_kv (guild_id, key, value, created_at, last_updated_at) VALUES ($1, $2, $3, NOW(), NOW())",
+            ctx.guild_id.to_string(),
+            key,
+            value
+        )
+        .execute(&ctx.data.pool)
+        .await
+        .map_err(|e| SettingsError::Generic {
+            message: format!("Failed to insert kv: {:?}", e),
+            src: "GuildTemplatesKVExecutor".to_string(),
+            typ: "internal".to_string(),
+        })?;
+
+        Ok(entry)
+    }
+}
+
+#[async_trait::async_trait]
+impl SettingUpdater for GuildTemplatesKVExecutor {
+    async fn update<'a>(
+        &self,
+        ctx: HookContext<'a>,
+        entry: indexmap::IndexMap<String, splashcore_rs::value::Value>,
+    ) -> Result<indexmap::IndexMap<String, splashcore_rs::value::Value>, SettingsError> {
+        check_perms(&ctx, &"guild_templates_kv.update".into()).await?;
+
+        let Some(Value::String(key)) = entry.get("key") else {
+            return Err(SettingsError::MissingOrInvalidField {
+                field: "key".to_string(),
+                src: "GuildTemplatesKVExecutor".to_string(),
+            });
+        };
+
+        let Some(Value::Json(value)) = entry.get("value") else {
+            return Err(SettingsError::MissingOrInvalidField {
+                field: "value".to_string(),
+                src: "GuildTemplatesKVExecutor".to_string(),
+            });
+        };
+
+        sqlx::query!(
+            "UPDATE guild_templates_kv SET value = $1, last_updated_at = NOW() WHERE guild_id = $2 AND key = $3",
+            value,
+            ctx.guild_id.to_string(),
+            key
+        )
+        .execute(&ctx.data.pool)
+        .await
+        .map_err(|e| SettingsError::Generic {
+            message: format!("Failed to update kv: {:?}", e),
+            src: "GuildTemplatesKVExecutor".to_string(),
+            typ: "internal".to_string(),
+        })?;
+
+        Ok(entry)
+    }
+}
+
+#[async_trait::async_trait]
+impl SettingDeleter for GuildTemplatesKVExecutor {
+    async fn delete<'a>(
+        &self,
+        ctx: HookContext<'a>,
+        primary_key: splashcore_rs::value::Value,
+    ) -> Result<(), SettingsError> {
+        check_perms(&ctx, &"guild_templates_kv.delete".into()).await?;
+
+        if sqlx::query!(
+            "SELECT COUNT(*) FROM guild_templates_kv WHERE guild_id = $1 AND key = $2",
+            ctx.guild_id.to_string(),
+            primary_key.to_string()
+        )
+        .fetch_one(&ctx.data.pool)
+        .await
+        .map_err(|e| SettingsError::Generic {
+            message: format!("Error while fetching kv: {}", e),
+            src: "GuildTemplatesKVExecutor".to_string(),
+            typ: "value_error".to_string(),
+        })?
+        .count
+        .unwrap_or_default()
+            <= 0
+        {
+            return Err(SettingsError::RowDoesNotExist {
+                column_id: "key".to_string(),
+            });
+        };
+
+        sqlx::query!(
+            "DELETE FROM guild_templates_kv WHERE guild_id = $1 AND key = $2",
+            ctx.guild_id.to_string(),
+            primary_key.to_string()
+        )
+        .execute(&ctx.data.pool)
+        .await
+        .map_err(|e| SettingsError::Generic {
+            message: format!("Failed to delete kv: {:?}", e),
+            src: "GuildTemplatesKVExecutor".to_string(),
+            typ: "internal".to_string(),
+        })?;
+
+        Ok(())
+    }
+}
 
 pub static GUILD_TEMPLATE_SHOP: LazyLock<Setting> = LazyLock::new(|| {
     Setting {
@@ -1704,32 +1904,280 @@ pub static GUILD_TEMPLATE_SHOP: LazyLock<Setting> = LazyLock::new(|| {
             ar_settings::common_columns::last_updated_by(),
         ]),
         title_template: "{name}".to_string(),
-        operations: indexmap::indexmap! {
-            OperationType::View => OperationSpecific {
-                columns_to_set: indexmap::indexmap! {},
-            },
-            OperationType::Create => OperationSpecific {
-                columns_to_set: indexmap::indexmap! {
-                    "created_at" => "{__now}",
-                    "created_by" => "{__author}",
-                    "last_updated_at" => "{__now}",
-                    "last_updated_by" => "{__author}",
-                },
-            },
-            OperationType::Update => OperationSpecific {
-                columns_to_set: indexmap::indexmap! {
-                    "last_updated_at" => "{__now}",
-                    "last_updated_by" => "{__author}",
-                },
-            },
-            OperationType::Delete => OperationSpecific {
-                columns_to_set: indexmap::indexmap! {},
-            },
-        },
-        validator: settings_wrap(NoOpValidator {}),
-        post_action: settings_wrap(NoOpPostAction {}),
+        operations: GuildTemplateShopExecutor.into(),
     }
 });
+
+#[derive(Clone)]
+pub struct GuildTemplateShopExecutor;
+
+#[async_trait::async_trait]
+impl SettingView for GuildTemplateShopExecutor {
+    async fn view<'a>(
+        &self,
+        context: HookContext<'a>,
+        _filters: indexmap::IndexMap<String, splashcore_rs::value::Value>,
+    ) -> Result<Vec<indexmap::IndexMap<String, splashcore_rs::value::Value>>, SettingsError> {
+        check_perms(&context, &"guild_templates_shop.view".into()).await?;
+
+        let rows = sqlx::query!("SELECT id, name, version, description, type, created_at, created_by, last_updated_at, last_updated_by FROM template_shop WHERE owner_guild = $1", context.guild_id.to_string())
+        .fetch_all(&context.data.pool)
+        .await
+        .map_err(|e| SettingsError::Generic {
+            message: format!("Error while fetching shop templates: {}", e),
+            src: "GuildTemplateShopExecutor".to_string(),
+            typ: "value_error".to_string(),
+        })?;
+
+        let mut result = vec![];
+
+        for row in rows {
+            let map = indexmap::indexmap! {
+                "id".to_string() => Value::String(row.id.to_string()),
+                "name".to_string() => Value::String(row.name),
+                "version".to_string() => Value::String(row.version),
+                "description".to_string() => Value::String(row.description),
+                "type".to_string() => Value::String(row.r#type),
+                "owner_guild".to_string() => Value::String(context.guild_id.to_string()),
+                "created_at".to_string() => Value::TimestampTz(row.created_at),
+                "created_by".to_string() => Value::String(row.created_by),
+                "last_updated_at".to_string() => Value::TimestampTz(row.last_updated_at),
+                "last_updated_by".to_string() => Value::String(row.last_updated_by),
+            };
+
+            result.push(map);
+        }
+
+        Ok(result)
+    }
+}
+
+#[async_trait::async_trait]
+impl SettingCreator for GuildTemplateShopExecutor {
+    async fn create<'a>(
+        &self,
+        ctx: HookContext<'a>,
+        entry: indexmap::IndexMap<String, splashcore_rs::value::Value>,
+    ) -> Result<indexmap::IndexMap<String, splashcore_rs::value::Value>, SettingsError> {
+        check_perms(&ctx, &"guild_templates_shop.create".into()).await?;
+
+        let Some(Value::String(name)) = entry.get("name") else {
+            return Err(SettingsError::MissingOrInvalidField {
+                field: "name".to_string(),
+                src: "GuildTemplateShopExecutor".to_string(),
+            });
+        };
+
+        let Some(Value::String(version)) = entry.get("version") else {
+            return Err(SettingsError::MissingOrInvalidField {
+                field: "version".to_string(),
+                src: "GuildTemplateShopExecutor".to_string(),
+            });
+        };
+
+        let count = sqlx::query!(
+            "SELECT COUNT(*) FROM template_shop WHERE owner_guild = $1 AND name = $2 AND version = $3",
+            ctx.guild_id.to_string(),
+            name,
+            version
+        )
+        .fetch_one(&ctx.data.pool)
+        .await
+        .map_err(|e| SettingsError::Generic {
+            message: format!("Failed to check if shop template exists: {:?}", e),
+            src: "GuildTemplateShopExecutor".to_string(),
+            typ: "internal".to_string(),
+        })?
+        .count
+        .unwrap_or_default();
+
+        if count > 0 {
+            return Err(SettingsError::Generic {
+                message: "Shop template with this name and version already exists".to_string(),
+                src: "GuildTemplateShopExecutor".to_string(),
+                typ: "internal".to_string(),
+            });
+        }
+
+        let Some(Value::String(description)) = entry.get("description") else {
+            return Err(SettingsError::MissingOrInvalidField {
+                field: "description".to_string(),
+                src: "GuildTemplateShopExecutor".to_string(),
+            });
+        };
+
+        let Some(Value::String(content)) = entry.get("content") else {
+            return Err(SettingsError::MissingOrInvalidField {
+                field: "content".to_string(),
+                src: "GuildTemplateShopExecutor".to_string(),
+            });
+        };
+
+        let Some(Value::String(r#type)) = entry.get("type") else {
+            return Err(SettingsError::MissingOrInvalidField {
+                field: "type".to_string(),
+                src: "GuildTemplateShopExecutor".to_string(),
+            });
+        };
+
+        let id = sqlx::query!(
+            "INSERT INTO template_shop (name, version, description, content, type, owner_guild, created_by, last_updated_by) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id",
+            name,
+            version,
+            description,
+            content,
+            r#type,
+            ctx.guild_id.to_string(),
+            ctx.author.to_string(),
+            ctx.author.to_string()
+        )
+        .fetch_one(&ctx.data.pool)
+        .await
+        .map_err(|e| SettingsError::Generic {
+            message: format!("Failed to insert shop template: {:?}", e),
+            src: "GuildTemplateShopExecutor".to_string(),
+            typ: "internal".to_string(),
+        })?;
+
+        // Add returned ID to entry
+        let mut entry = entry;
+        entry.insert("id".to_string(), Value::Uuid(id.id));
+
+        Ok(entry)
+    }
+}
+
+#[async_trait::async_trait]
+impl SettingUpdater for GuildTemplateShopExecutor {
+    async fn update<'a>(
+        &self,
+        ctx: HookContext<'a>,
+        entry: indexmap::IndexMap<String, splashcore_rs::value::Value>,
+    ) -> Result<indexmap::IndexMap<String, splashcore_rs::value::Value>, SettingsError> {
+        check_perms(&ctx, &"guild_templates_shop.update".into()).await?;
+
+        let Some(Value::Uuid(id)) = entry.get("id") else {
+            return Err(SettingsError::MissingOrInvalidField {
+                field: "id".to_string(),
+                src: "GuildTemplateShopExecutor".to_string(),
+            });
+        };
+
+        let count = sqlx::query!(
+            "SELECT COUNT(*) FROM template_shop WHERE owner_guild = $1 AND id = $2",
+            ctx.guild_id.to_string(),
+            id
+        )
+        .fetch_one(&ctx.data.pool)
+        .await
+        .map_err(|e| SettingsError::Generic {
+            message: format!("Failed to check if shop template exists: {:?}", e),
+            src: "GuildTemplateShopExecutor".to_string(),
+            typ: "internal".to_string(),
+        })?
+        .count
+        .unwrap_or_default();
+
+        if count <= 0 {
+            return Err(SettingsError::RowDoesNotExist {
+                column_id: "id".to_string(),
+            });
+        }
+
+        let Some(Value::String(description)) = entry.get("description") else {
+            return Err(SettingsError::MissingOrInvalidField {
+                field: "description".to_string(),
+                src: "GuildTemplateShopExecutor".to_string(),
+            });
+        };
+
+        let Some(Value::String(r#type)) = entry.get("type") else {
+            return Err(SettingsError::MissingOrInvalidField {
+                field: "type".to_string(),
+                src: "GuildTemplateShopExecutor".to_string(),
+            });
+        };
+
+        sqlx::query!(
+            "UPDATE template_shop SET description = $1, type = $2, last_updated_at = NOW(), last_updated_by = $3 WHERE owner_guild = $4 AND id = $5",
+            description,
+            r#type,
+            ctx.author.to_string(),
+            ctx.guild_id.to_string(),
+            id
+        )
+        .execute(&ctx.data.pool)
+        .await
+        .map_err(|e| SettingsError::Generic {
+            message: format!("Failed to update shop template: {:?}", e),
+            src: "GuildTemplateShopExecutor".to_string(),
+            typ: "internal".to_string(),
+        })?;
+
+        Ok(entry)
+    }
+}
+
+#[async_trait::async_trait]
+impl SettingDeleter for GuildTemplateShopExecutor {
+    async fn delete<'a>(
+        &self,
+        ctx: HookContext<'a>,
+        primary_key: splashcore_rs::value::Value,
+    ) -> Result<(), SettingsError> {
+        check_perms(&ctx, &"guild_templates_shop.delete".into()).await?;
+
+        let primary_key = match primary_key {
+            Value::Uuid(id) => id,
+            Value::String(id) => id.parse().map_err(|e| SettingsError::Generic {
+                message: format!("Failed to parse ID: {:?}", e),
+                src: "GuildTemplateShopExecutor".to_string(),
+                typ: "internal".to_string(),
+            })?,
+            _ => {
+                return Err(SettingsError::MissingOrInvalidField {
+                    field: "id".to_string(),
+                    src: "GuildTemplateShopExecutor".to_string(),
+                });
+            }
+        };
+
+        let Some(row) = sqlx::query!(
+            "SELECT id FROM template_shop WHERE owner_guild = $1 AND id = $2",
+            ctx.guild_id.to_string(),
+            primary_key
+        )
+        .fetch_optional(&ctx.data.pool)
+        .await
+        .map_err(|e| SettingsError::Generic {
+            message: format!("Error while fetching shop template: {}", e),
+            src: "GuildTemplateShopExecutor".to_string(),
+            typ: "value_error".to_string(),
+        })?
+        else {
+            return Err(SettingsError::RowDoesNotExist {
+                column_id: "id".to_string(),
+            });
+        };
+
+        let id = row.id;
+
+        sqlx::query!(
+            "DELETE FROM template_shop WHERE owner_guild = $1 AND id = $2",
+            ctx.guild_id.to_string(),
+            id
+        )
+        .execute(&ctx.data.pool)
+        .await
+        .map_err(|e| SettingsError::Generic {
+            message: format!("Failed to delete shop template: {:?}", e),
+            src: "GuildTemplateShopExecutor".to_string(),
+            typ: "internal".to_string(),
+        })?;
+
+        Ok(())
+    }
+}
 
 pub static GUILD_TEMPLATE_SHOP_PUBLIC_LIST: LazyLock<Setting> = LazyLock::new(|| {
     Setting {
@@ -1832,12 +2280,48 @@ pub static GUILD_TEMPLATE_SHOP_PUBLIC_LIST: LazyLock<Setting> = LazyLock::new(||
             ar_settings::common_columns::last_updated_by(),
         ]),
         title_template: "{name}".to_string(),
-        operations: indexmap::indexmap! {
-            OperationType::View => OperationSpecific {
-                columns_to_set: indexmap::indexmap! {},
-            },
-        },
-        validator: settings_wrap(NoOpValidator {}),
-        post_action: settings_wrap(NoOpPostAction {}),
+        operations: SettingOperations::to_view_op(GuildTemplateShopPublicListExecutor),
     }
 });
+
+#[derive(Clone)]
+pub struct GuildTemplateShopPublicListExecutor;
+
+#[async_trait::async_trait]
+impl SettingView for GuildTemplateShopPublicListExecutor {
+    async fn view<'a>(
+        &self,
+        context: HookContext<'a>,
+        _filters: indexmap::IndexMap<String, splashcore_rs::value::Value>,
+    ) -> Result<Vec<indexmap::IndexMap<String, splashcore_rs::value::Value>>, SettingsError> {
+        let rows = sqlx::query!("SELECT id, name, version, description, type, owner_guild, created_at, created_by, last_updated_at, last_updated_by FROM template_shop")
+        .fetch_all(&context.data.pool)
+        .await
+        .map_err(|e| SettingsError::Generic {
+            message: format!("Error while fetching shop templates: {}", e),
+            src: "GuildTemplateShopPublicListExecutor".to_string(),
+            typ: "value_error".to_string(),
+        })?;
+
+        let mut result = vec![];
+
+        for row in rows {
+            let map = indexmap::indexmap! {
+                "id".to_string() => Value::String(row.id.to_string()),
+                "name".to_string() => Value::String(row.name),
+                "version".to_string() => Value::String(row.version),
+                "description".to_string() => Value::String(row.description),
+                "type".to_string() => Value::String(row.r#type),
+                "owner_guild".to_string() => Value::String(row.owner_guild),
+                "created_at".to_string() => Value::TimestampTz(row.created_at),
+                "created_by".to_string() => Value::String(row.created_by),
+                "last_updated_at".to_string() => Value::TimestampTz(row.last_updated_at),
+                "last_updated_by".to_string() => Value::String(row.last_updated_by),
+            };
+
+            result.push(map);
+        }
+
+        Ok(result)
+    }
+}

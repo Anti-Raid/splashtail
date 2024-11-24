@@ -26,7 +26,6 @@ bitflags = "2"
 # Anti-Raid specific
 splashcore_rs = { path = "../rust.std" }
 permissions = { path = "../rust.permissions" }
-ar_settings = { path = "../rust.settings" }
 config = { path = "../rust.config" }
 sandwich_driver = { path = "../rust.sandwich_driver" }
 silverpelt = { path = "../rust.silverpelt" }

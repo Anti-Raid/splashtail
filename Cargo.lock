@@ -195,6 +195,7 @@ dependencies = [
  "futures-util",
  "indexmap",
  "moka",
+ "permissions",
  "reqwest",
  "sandwich_driver",
  "serde",
@@ -3116,7 +3117,6 @@ checksum = "e3148f5046208a5d56bcfc03053e3ca6334e51da8dfb19b6cdc8b306fae3283e"
 name = "permission_checks"
 version = "0.1.0"
 dependencies = [
- "ar_settings",
  "async-trait",
  "bitflags 2.6.0",
  "botox",

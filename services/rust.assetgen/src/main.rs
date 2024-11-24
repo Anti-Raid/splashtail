@@ -88,8 +88,11 @@ async fn main() {
         Some("serenity.test") => {
             crate::serenity_test::test_serenity().await;
         }
+        Some("poise.register") => {
+            crate::poise_register::register_poise_commands().await;
+        }
         _ => {
-            println!("No/unknown command specified.\n\ngenassets: [generate build assets]\ntest [test bot with some sanity checks]\ntemplatedocs: [generate template docs]\nserenity.test: [test serenity library]");
+            println!("No/unknown command specified.\n\ngenassets: [generate build assets]\ntest [test bot with some sanity checks]\ntemplatedocs: [generate template docs]\nserenity.test: [test serenity library]\npoise.register: [register poise commands]");
         }
     }
 }

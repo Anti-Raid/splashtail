@@ -1,7 +1,7 @@
 use botox::cache::CacheHttpImpl;
 use kittycat::perms::Permission;
 use log::info;
-use permissions::types::PermissionResult;
+use permissions::types::{PermissionCheck, PermissionResult};
 use serde::{Deserialize, Serialize};
 use serenity::all::{GuildId, UserId};
 use serenity::small_fixed_array::FixedArray;
@@ -483,4 +483,106 @@ pub async fn check_command(
     };
 
     permissions::check_perms(check, member_perms, &kittycat_perms)
+}
+
+/// Returns whether a member has a kittycat permission
+///
+/// Note that in opts, only custom_resolved_kittycat_perms is used
+pub async fn member_has_kittycat_perm(
+    guild_id: GuildId,
+    user_id: UserId,
+    pool: &PgPool,
+    serenity_context: &serenity::all::Context,
+    reqwest: &reqwest::Client,
+    // If a poise::Context is available and originates from a Application Command, we can fetch the guild+member from cache itself
+    poise_ctx: &Option<silverpelt::Context<'_>>,
+    perm: &kittycat::perms::Permission,
+    opts: CheckCommandOptions,
+) -> PermissionResult {
+    // Try getting guild+member from cache to speed up response times first
+    let (is_owner, guild_owner_id, member_perms, roles) = match get_user_discord_info(
+        guild_id,
+        user_id,
+        &botox::cache::CacheHttpImpl::from_ctx(serenity_context),
+        reqwest,
+        poise_ctx,
+    )
+    .await
+    {
+        Ok(v) => v,
+        Err(e) => {
+            return e;
+        }
+    };
+
+    if is_owner {
+        return PermissionResult::OkWithMessage {
+            message: "owner".to_string(),
+        };
+    }
+
+    let kittycat_perms =
+        match get_user_kittycat_perms(&opts, pool, guild_id, guild_owner_id, user_id, &roles).await
+        {
+            Ok(v) => v,
+            Err(e) => {
+                return e.into();
+            }
+        };
+
+    match silverpelt::ar_event::dispatch_event_to_modules(std::sync::Arc::new(
+        silverpelt::ar_event::EventHandlerContext {
+            guild_id,
+            data: serenity_context.data::<silverpelt::data::Data>(),
+            event: silverpelt::ar_event::AntiraidEvent::Custom(silverpelt::ar_event::CustomEvent {
+                event_name: "AR/CheckKittycatPermissions".to_string(),
+                event_titlename: "(Anti-Raid) Check Kittycat Permissions".to_string(),
+                event_data: serde_json::json!({
+                    "user_id": user_id,
+                    "member_native_perms": member_perms,
+                    "member_kittycat_perms": kittycat_perms,
+                    "perm": perm,
+                    "is_owner": is_owner,
+                    "guild_owner_id": guild_owner_id,
+                    "roles": roles,
+                    "opts": opts,
+                }),
+            }),
+            serenity_context: serenity_context.clone(),
+        },
+    ))
+    .await
+    {
+        Ok(_) => {}
+        Err(e) => {
+            for (i, ei) in e.iter().enumerate() {
+                if ei.to_string() == "AR/CheckKittycatPermissions/Skip" {
+                    return PermissionResult::OkWithMessage {
+                        message: format!("IDX=>{},message=>SKIP", i),
+                    };
+                }
+            }
+
+            return PermissionResult::GenericError {
+                error: e
+                    .into_iter()
+                    .map(|x| x.to_string())
+                    .collect::<Vec<_>>()
+                    .join("\n")
+                    .to_string(),
+            };
+        }
+    };
+
+    if !kittycat::perms::has_perm(&kittycat_perms, perm) {
+        return PermissionResult::MissingKittycatPerms {
+            check: PermissionCheck {
+                kittycat_perms: vec![perm.to_string()],
+                native_perms: vec![],
+                inner_and: false,
+            },
+        };
+    }
+
+    PermissionResult::Ok {}
 }

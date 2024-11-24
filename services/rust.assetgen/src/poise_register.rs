@@ -88,7 +88,7 @@ pub async fn register_poise_commands() {
 
     let http = Arc::new(
         HttpBuilder::new(&config::CONFIG.discord_auth.token)
-            .proxy(proxy_url)
+            .proxy(config::CONFIG.meta.proxy.clone())
             .ratelimiter_disabled(true)
             .build(),
     );
@@ -98,7 +98,7 @@ pub async fn register_poise_commands() {
 
     println!("Registering {} commands", num_commands);
 
-    serenity::all::Command::set_global_commands(&http, &create_commands)
+    serenity::all::Command::set_global_commands(&http, &commands_builder)
         .await
         .expect("Failed to set global commands");
 }

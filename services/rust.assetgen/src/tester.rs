@@ -223,7 +223,7 @@ pub async fn check_modules_test() {
 }
 
 async fn start_testing<'a>(
-    ctx: poise::FrameworkContext<'a, Data, Error>,
+    _ctx: poise::FrameworkContext<'a, Data, Error>,
     event: &FullEvent,
 ) -> Result<(), Error> {
     match event {
@@ -238,7 +238,7 @@ async fn start_testing<'a>(
 
             info!("Starting check_modules_test_impl");
 
-            match check_modules_test_impl(ctx.serenity_context).await {
+            match check_modules_test_impl().await {
                 Ok(_) => {
                     info!("check_modules_test_impl passed");
                     std::process::exit(0);
@@ -257,8 +257,7 @@ async fn start_testing<'a>(
     Ok(())
 }
 
-async fn check_modules_test_impl(ctx: &serenity::all::Context) -> Result<(), Error> {
-    let data = ctx.data::<Data>();
+async fn check_modules_test_impl() -> Result<(), Error> {
     // Check for env var CHECK_MODULES_TEST_ENABLED
     if std::env::var("CHECK_MODULES_TEST_ENABLED").unwrap_or_default() == "true" {
         return Ok(());
@@ -273,52 +272,6 @@ async fn check_modules_test_impl(ctx: &serenity::all::Context) -> Result<(), Err
 
     for module in modules() {
         module.validate()?;
-
-        // Ensure that all settings have all columns
-        for config_opt in module.config_options() {
-            let mut missing_columns = Vec::new();
-
-            for column in config_opt.columns.iter() {
-                missing_columns.push(column.id.to_string());
-            }
-            let mut data_store = config_opt
-                .data_store
-                .create(
-                    &config_opt,
-                    serenity::all::GuildId::new(1),
-                    serenity::all::UserId::new(1),
-                    &data.settings_data(ctx.clone()),
-                    indexmap::IndexMap::new(),
-                )
-                .await
-                .unwrap();
-
-            let columns = data_store.columns().await.unwrap();
-
-            println!(
-                "Module: {}, Config Opt: {}, Columns: {:?}",
-                module.id(),
-                config_opt.id,
-                columns
-            );
-
-            for column in columns {
-                if let Some(index) = missing_columns.iter().position(|x| x == &column) {
-                    missing_columns.remove(index);
-                }
-            }
-
-            if !missing_columns.is_empty() {
-                return Err(format!(
-                    "Module {} has a config option {} with missing columns: {}, table_name={}",
-                    module.id(),
-                    config_opt.id,
-                    missing_columns.join(", "),
-                    config_opt.table
-                )
-                .into());
-            }
-        }
     }
 
     Ok(())
