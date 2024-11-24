@@ -37,7 +37,6 @@ type DispatchTrustedWebEventResponse struct{}
 type SettingsOperationRequest struct {
 	Fields  orderedmap.OrderedMap[string, any] `json:"fields"`
 	Op      silverpelt.CanonicalOperationType  `json:"op"`
-	Module  string                             `json:"module"`
 	Setting string                             `json:"setting"`
 }
 
@@ -94,9 +93,6 @@ type CanonicalSettingsResult struct {
 	Ok *struct {
 		Fields []orderedmap.OrderedMap[string, any] `json:"fields"`
 	} `json:"Ok"`
-	PermissionError *struct {
-		Res silverpelt.PermissionResult `json:"res"`
-	} `json:"PermissionError"`
 	Err *struct {
 		Error silverpelt.CanonicalSettingsError `json:"error"`
 	} `json:"Err"`

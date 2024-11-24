@@ -142,7 +142,7 @@ impl SettingView for GuildRolesExecutor {
             result.push(map);
         }
 
-        Ok(result) // TODO: Implement
+        Ok(result)
     }
 }
 
@@ -1330,6 +1330,8 @@ impl SettingView for GuildTemplateExecutor {
         context: HookContext<'a>,
         _filters: indexmap::IndexMap<String, splashcore_rs::value::Value>,
     ) -> Result<Vec<indexmap::IndexMap<String, splashcore_rs::value::Value>>, SettingsError> {
+        log::info!("Viewing guild templates for guild id: {}", context.guild_id);
+
         check_perms(&context, &"guild_templates.view".into()).await?;
 
         let rows = sqlx::query!("SELECT name, content, events, created_at, created_by, last_updated_at, last_updated_by FROM guild_templates WHERE guild_id = $1", context.guild_id.to_string())

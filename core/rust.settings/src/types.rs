@@ -5,7 +5,6 @@ use std::sync::Arc;
 pub type Error = Box<dyn std::error::Error + Send + Sync>; // This is constant and should be copy pasted
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
-#[serde(tag = "type")]
 pub enum SettingsError {
     /// Operation not supported
     OperationNotSupported {
@@ -233,7 +232,7 @@ pub struct Setting {
     pub columns: Arc<Vec<Column>>,
 
     /// The supported operations for this option
-    #[serde(flatten, skip_deserializing)]
+    #[serde(skip_deserializing)]
     pub operations: SettingOperations,
 }
 
@@ -309,8 +308,6 @@ pub struct HookContext<'a> {
 #[async_trait]
 pub trait SettingView: Send + Sync {
     /// View the settings data
-    ///
-    /// __limit and __offset, if found, contains the limit/offset of the query
     ///
     /// All Executors should return an __count value containing the total count of the total number of entries
     async fn view<'a>(

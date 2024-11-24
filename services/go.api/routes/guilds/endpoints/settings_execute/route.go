@@ -70,11 +70,11 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 		return hresp
 	}
 
-	if body.Module == "" || body.Setting == "" {
+	if body.Setting == "" {
 		return uapi.HttpResponse{
 			Status: http.StatusBadRequest,
 			Json: types.ApiError{
-				Message: "Both `module` and `setting` must be provided",
+				Message: "`setting` must be provided",
 			},
 		}
 	}
@@ -95,7 +95,6 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 		&rpc_messages.SettingsOperationRequest{
 			Fields:  body.Fields,
 			Op:      body.Operation,
-			Module:  body.Module,
 			Setting: body.Setting,
 		},
 	)
@@ -114,16 +113,6 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 		return uapi.HttpResponse{
 			Json: types.SettingsExecuteResponse{
 				Fields: resp.Ok.Fields,
-			},
-		}
-	}
-
-	if resp.PermissionError != nil {
-		return uapi.HttpResponse{
-			Status: http.StatusForbidden,
-			Json:   resp.PermissionError.Res,
-			Headers: map[string]string{
-				"X-Error-Type": "permission_check",
 			},
 		}
 	}
