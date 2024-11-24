@@ -6,6 +6,29 @@ use ar_settings::types::{
 use splashcore_rs::value::Value;
 use std::sync::LazyLock;
 
+async fn check_perms<'a>(
+    ctx: &HookContext<'a>,
+    perm: &kittycat::perms::Permission,
+) -> Result<(), SettingsError> {
+    let res = permission_checks::member_has_kittycat_perm(
+        ctx.guild_id,
+        ctx.author,
+        &ctx.data.pool,
+        &ctx.data.serenity_context,
+        &ctx.data.reqwest,
+        &None,
+        perm,
+        permission_checks::CheckCommandOptions::default(),
+    )
+    .await;
+
+    if res.is_ok() {
+        return Ok(());
+    }
+
+    Err(SettingsError::PermissionError { result: res })
+}
+
 pub static AUTOTRIGGERS: LazyLock<Setting> = LazyLock::new(|| Setting {
     id: "punishment_autotriggers".to_string(),
     name: "Punishment Autotriggers".to_string(),
@@ -95,6 +118,8 @@ impl SettingView for AutotriggerExecutor {
         context: HookContext<'a>,
         _filters: indexmap::IndexMap<String, splashcore_rs::value::Value>,
     ) -> Result<Vec<indexmap::IndexMap<String, splashcore_rs::value::Value>>, SettingsError> {
+        check_perms(&context, &"punishment_autotriggers.view".into()).await?;
+
         let rows = sqlx::query!("SELECT id, stings, action, modifiers, duration, created_at, created_by FROM punishment_autotriggers__autotriggers WHERE guild_id = $1", context.guild_id.to_string())
             .fetch_all(&context.data.pool)
             .await
@@ -132,6 +157,8 @@ impl SettingCreator for AutotriggerExecutor {
         context: HookContext<'a>,
         state: indexmap::IndexMap<String, splashcore_rs::value::Value>,
     ) -> Result<indexmap::IndexMap<String, splashcore_rs::value::Value>, SettingsError> {
+        check_perms(&context, &"punishment_autotriggers.create".into()).await?;
+
         let Some(splashcore_rs::value::Value::Integer(stings)) = state.get("stings") else {
             return Err(SettingsError::Generic {
                 message: "Stings is required".to_string(),
@@ -239,6 +266,8 @@ impl SettingUpdater for AutotriggerExecutor {
         context: HookContext<'a>,
         state: indexmap::IndexMap<String, splashcore_rs::value::Value>,
     ) -> Result<indexmap::IndexMap<String, splashcore_rs::value::Value>, SettingsError> {
+        check_perms(&context, &"punishment_autotriggers.update".into()).await?;
+
         let mut tx = context
             .data
             .pool
@@ -394,6 +423,8 @@ impl SettingDeleter for AutotriggerExecutor {
         context: HookContext<'a>,
         primary_key: splashcore_rs::value::Value,
     ) -> Result<(), SettingsError> {
+        check_perms(&context, &"punishment_autotriggers.delete".into()).await?;
+
         let Value::Uuid(id) = primary_key else {
             return Err(SettingsError::Generic {
                 message: "ID is required".to_string(),

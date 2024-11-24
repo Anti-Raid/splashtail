@@ -5,6 +5,29 @@ use ar_settings::types::{
 use splashcore_rs::value::Value;
 use std::sync::LazyLock;
 
+async fn check_perms<'a>(
+    ctx: &HookContext<'a>,
+    perm: &kittycat::perms::Permission,
+) -> Result<(), SettingsError> {
+    let res = permission_checks::member_has_kittycat_perm(
+        ctx.guild_id,
+        ctx.author,
+        &ctx.data.pool,
+        &ctx.data.serenity_context,
+        &ctx.data.reqwest,
+        &None,
+        perm,
+        permission_checks::CheckCommandOptions::default(),
+    )
+    .await;
+
+    if res.is_ok() {
+        return Ok(());
+    }
+
+    Err(SettingsError::PermissionError { result: res })
+}
+
 pub static LOCKDOWN_SETTINGS: LazyLock<Setting> = LazyLock::new(|| {
     Setting {
         id: "lockdown_guilds".to_string(),
@@ -62,6 +85,8 @@ impl SettingView for LockdownSettingsExecutor {
         context: HookContext<'a>,
         _filters: indexmap::IndexMap<String, splashcore_rs::value::Value>,
     ) -> Result<Vec<indexmap::IndexMap<String, splashcore_rs::value::Value>>, SettingsError> {
+        check_perms(&context, &"lockdown_settings.view".into()).await?;
+
         let rows = sqlx::query!("SELECT member_roles, require_correct_layout, created_at, created_by, last_updated_at, last_updated_by FROM lockdown__guilds WHERE guild_id = $1", context.guild_id.to_string())
             .fetch_all(&context.data.pool)
             .await
@@ -98,6 +123,8 @@ impl SettingCreator for LockdownSettingsExecutor {
         context: HookContext<'a>,
         entry: indexmap::IndexMap<String, splashcore_rs::value::Value>,
     ) -> Result<indexmap::IndexMap<String, splashcore_rs::value::Value>, SettingsError> {
+        check_perms(&context, &"lockdown_settings.create".into()).await?;
+
         let Some(splashcore_rs::value::Value::List(member_roles)) = entry.get("member_roles") else {
             return Err(SettingsError::MissingOrInvalidField {
                 field: "member_roles".to_string(),
@@ -148,6 +175,8 @@ impl SettingUpdater for LockdownSettingsExecutor {
         context: HookContext<'a>,
         entry: indexmap::IndexMap<String, splashcore_rs::value::Value>,
     ) -> Result<indexmap::IndexMap<String, splashcore_rs::value::Value>, SettingsError> {
+        check_perms(&context, &"lockdown_settings.uodate".into()).await?;
+
         let Some(splashcore_rs::value::Value::List(member_roles)) = entry.get("member_roles") else {
             return Err(SettingsError::MissingOrInvalidField {
                 field: "member_roles".to_string(),
@@ -215,6 +244,8 @@ impl SettingDeleter for LockdownSettingsExecutor {
         context: HookContext<'a>,
         _primary_key: splashcore_rs::value::Value,
     ) -> Result<(), SettingsError> {
+        check_perms(&context, &"lockdown_settings.delete".into()).await?;
+
         sqlx::query!("DELETE FROM lockdown__guilds WHERE guild_id = $1", context.guild_id.to_string())
             .execute(&context.data.pool)
             .await
@@ -305,6 +336,8 @@ impl SettingView for LockdownExecutor {
         context: HookContext<'a>,
         _filters: indexmap::IndexMap<String, splashcore_rs::value::Value>,
     ) -> Result<Vec<indexmap::IndexMap<String, splashcore_rs::value::Value>>, SettingsError> {
+        check_perms(&context, &"lockdowns.view".into()).await?;
+
         let rows = sqlx::query!("SELECT id, data, type, reason, created_at FROM lockdown__guild_lockdowns WHERE guild_id = $1", context.guild_id.to_string())
             .fetch_all(&context.data.pool)
             .await
@@ -340,6 +373,8 @@ impl SettingCreator for LockdownExecutor {
         context: HookContext<'a>,
         entry: indexmap::IndexMap<String, splashcore_rs::value::Value>,
     ) -> Result<indexmap::IndexMap<String, splashcore_rs::value::Value>, SettingsError> {
+        check_perms(&context, &"lockdowns.create".into()).await?;
+
         let silverpelt_cache = silverpelt::data::Data::silverpelt_cache(&context.data);
         if !silverpelt::module_config::is_module_enabled(&silverpelt_cache, &context.data.pool, context.guild_id, "lockdown")
         .await
@@ -436,6 +471,8 @@ impl SettingDeleter for LockdownExecutor {
         context: HookContext<'a>,
         primary_key: splashcore_rs::value::Value,
     ) -> Result<(), SettingsError> {
+        check_perms(&context, &"lockdowns.delete".into()).await?;
+        
         let silverpelt_cache = silverpelt::data::Data::silverpelt_cache(&context.data);
         if !silverpelt::module_config::is_module_enabled(&silverpelt_cache, &context.data.pool, context.guild_id, "lockdown")
         .await
