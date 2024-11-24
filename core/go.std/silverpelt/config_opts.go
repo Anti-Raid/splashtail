@@ -42,6 +42,9 @@ type CanonicalSettingsError struct {
 		Max     uint64 `json:"max"`
 		Current uint64 `json:"current"`
 	} `json:"MaximumCountReached,omitempty"`
+	PermissionError *struct {
+		Result PermissionResult `json:"result"`
+	} `json:"PermissionError,omitempty"`
 }
 
 type CanonicalColumnType struct {
@@ -96,15 +99,6 @@ type CanonicalColumnSuggestion struct {
 	Static *struct {
 		Suggestions []string `json:"suggestions"`
 	} `json:"Static,omitempty"`
-	// A reference to another setting
-	//
-	// The primary key of the referred setting is used as the value
-	SettingsReference *struct {
-		// The module of the referenced setting
-		Module string `json:"module"`
-		// The setting of the referenced setting
-		Setting string `json:"setting"`
-	} `json:"SettingsReference,omitempty"`
 	None *struct{} `json:",omitempty"`
 }
 
@@ -115,15 +109,8 @@ type CanonicalColumn struct {
 	ColumnType  CanonicalColumnType       `json:"column_type"`
 	Nullable    bool                      `json:"nullable"`
 	Suggestions CanonicalColumnSuggestion `json:"suggestions"`
-	Unique      bool                      `json:"unique"`
 	Secret      bool                      `json:"secret"`
 	IgnoredFor  []CanonicalOperationType  `json:"ignored_for"`
-}
-
-type CanonicalOperationSpecific struct {
-	CorrespondingCommand string                                `json:"corresponding_command"`
-	ColumnIDs            []string                              `json:"column_ids"`
-	ColumnsToSet         orderedmap.OrderedMap[string, string] `json:"columns_to_set"`
 }
 
 type CanonicalOperationType string
@@ -154,16 +141,11 @@ func (c CanonicalOperationType) Parse() bool {
 }
 
 type CanonicalConfigOption struct {
-	ID                   string                                                                               `json:"id"`
-	Name                 string                                                                               `json:"name"`
-	Description          string                                                                               `json:"description"`
-	Table                string                                                                               `json:"table"`
-	CommonFilters        orderedmap.OrderedMap[CanonicalOperationType, orderedmap.OrderedMap[string, string]] `json:"common_filters"`
-	DefaultCommonFilters orderedmap.OrderedMap[string, string]                                                `json:"default_common_filters"`
-	PrimaryKey           string                                                                               `json:"primary_key"`
-	TitleTemplate        string                                                                               `json:"title_template"`
-	Columns              []CanonicalColumn                                                                    `json:"columns"`
-	MaxReturn            int                                                                                  `json:"max_return"`
-	MaxEntries           uint64                                                                               `json:"max_entries"`
-	Operations           orderedmap.OrderedMap[CanonicalOperationType, CanonicalOperationSpecific]            `json:"operations"`
+	ID            string                   `json:"id"`
+	Name          string                   `json:"name"`
+	Description   string                   `json:"description"`
+	PrimaryKey    string                   `json:"primary_key"`
+	TitleTemplate string                   `json:"title_template"`
+	Columns       []CanonicalColumn        `json:"columns"`
+	Operations    []CanonicalOperationType `json:"operations"`
 }
