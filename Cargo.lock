@@ -4798,6 +4798,7 @@ dependencies = [
  "chrono_lc",
  "config",
  "digest",
+ "erased-serde",
  "fred",
  "futures-util",
  "governor",

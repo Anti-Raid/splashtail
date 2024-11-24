@@ -3,6 +3,7 @@ mod perthreadpanichook;
 pub mod primitives_docs;
 pub mod samples;
 pub(crate) mod state;
+pub mod event;
 
 mod plugins;
 pub use plugins::PLUGINS;
@@ -33,7 +34,7 @@ enum LuaVmAction {
         content: String,
         template: crate::Template,
         pragma: crate::TemplatePragma,
-        args: serde_json::Value,
+        event: event::Event,
         callback: tokio::sync::oneshot::Sender<LuaVmResult>,
     },
     /// Stop the Lua VM entirely
@@ -267,7 +268,7 @@ async fn create_lua_vm(
 
                     while let Some(action) = rx.recv().await {
                         match action {
-                            LuaVmAction::Exec { content, template, pragma, args, callback } => {
+                            LuaVmAction::Exec { content, template, pragma, event, callback } => {
                                 if tis_ref.broken.load(std::sync::atomic::Ordering::Acquire) {
                                     // Close the callback channel
                                     let _ = callback.send(LuaVmResult::VmBroken {});
@@ -315,23 +316,6 @@ async fn create_lua_vm(
                                         }
                                     };
         
-                                    let args = match tis_ref.lua.to_value(&args) {
-                                        Ok(args) => args,
-                                        Err(e) => {
-                                            let _ = callback.send(
-                                                LuaVmResult::LuaError {
-                                                    err: LuaError::external(e.to_string()),
-                                                },
-                                            );
-        
-                                            while let Err(e) = state::remove_template(&tis_ref.lua, &token) {
-                                                log::error!("Could not remove template: {}. Trying again in 1 second", e);
-                                                tokio::time::sleep(std::time::Duration::from_secs(1)).await;
-                                            };
-                                            return;
-                                        }
-                                    };
-        
                                     let exec_name = match template {
                                         crate::Template::Raw(_) => "script".to_string(),
                                         crate::Template::Named(ref name) => name.to_string(),
@@ -342,7 +326,7 @@ async fn create_lua_vm(
                                         .load(&template_bytecode)
                                         .set_name(&exec_name)
                                         .set_mode(mlua::ChunkMode::Binary) // Ensure auto-detection never selects binary mode
-                                        .call_async((args, token.clone()))
+                                        .call_async((event, token.clone()))
                                         .await
                                     {
                                         Ok(f) => f,
@@ -507,8 +491,8 @@ local args, token = ...
 }
 
 /// Render a template
-pub async fn render_template<Request: serde::Serialize, Response: serde::de::DeserializeOwned>(
-    args: Request,
+pub async fn render_template<Response: serde::de::DeserializeOwned>(
+    event: event::Event,
     state: ParseCompileState,
 ) -> LuaResult<Response> {
     let state = ParseCompileState {
@@ -524,8 +508,6 @@ pub async fn render_template<Request: serde::Serialize, Response: serde::de::Des
     )
     .await?;
 
-    let args = serde_json::to_value(&args).map_err(|e| LuaError::external(e.to_string()))?;
-
     // Update last execution time.
     lua.last_execution_time.store(
         std::time::Instant::now(),
@@ -540,7 +522,7 @@ pub async fn render_template<Request: serde::Serialize, Response: serde::de::Des
             template: state.template,
             content: state.template_content,
             pragma: state.pragma,
-            args,
+            event,
             callback: tx,
         })
         .map_err(|e| LuaError::external(format!("Could not send data to Lua thread: {}", e)))?;

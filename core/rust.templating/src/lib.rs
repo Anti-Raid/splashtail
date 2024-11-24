@@ -3,6 +3,7 @@ pub mod cache;
 pub mod core;
 
 mod lang_lua;
+pub use lang_lua::event;
 pub use lang_lua::primitives_docs;
 pub use lang_lua::samples;
 pub use lang_lua::state::LuaKVConstraints;
@@ -193,17 +194,14 @@ pub async fn parse(
     Ok(())
 }
 
-#[typetag::serde(tag = "type")]
-pub trait Context: Send + Sync {}
-
 /// Executes a template
-pub async fn execute<C: Context + serde::Serialize, RenderResult: serde::de::DeserializeOwned>(
+pub async fn execute<RenderResult: serde::de::DeserializeOwned>(
     guild_id: serenity::all::GuildId,
     template: Template,
     pool: sqlx::PgPool,
     serenity_context: serenity::all::Context,
     reqwest_client: reqwest::Client,
-    ctx: C,
+    event: event::Event,
 ) -> Result<RenderResult, Error> {
     let template_content = match template {
         Template::Raw(ref template) => template.clone(),
@@ -215,7 +213,7 @@ pub async fn execute<C: Context + serde::Serialize, RenderResult: serde::de::Des
     match pragma.lang {
         #[cfg(feature = "lua")]
         TemplateLanguage::Lua => lang_lua::render_template(
-            ctx,
+            event,
             lang_lua::ParseCompileState {
                 serenity_context,
                 reqwest_client,

@@ -109,7 +109,7 @@ impl SettingView for GuildRolesExecutor {
                 "role_id".to_string() => Value::String(row.role_id),
                 "perms".to_string() => Value::List(row.perms.iter().map(|x| Value::String(x.to_string())).collect()),
                 "index".to_string() => Value::Integer(row.index.into()),
-                "display_name".to_string() => Value::String(row.display_name),
+                "display_name".to_string() => row.display_name.map(|x| Value::String(x)).unwrap_or(Value::None),
                 "created_at".to_string() => Value::TimestampTz(row.created_at),
                 "created_by".to_string() => Value::String(row.created_by),
                 "last_updated_at".to_string() => Value::TimestampTz(row.last_updated_at),
@@ -262,7 +262,7 @@ impl SettingDeleter for GuildRolesExecutor {
             "role_id".to_string() => Value::String(row.role_id),
             "perms".to_string() => Value::List(row.perms.iter().map(|x| Value::String(x.to_string())).collect()),
             "index".to_string() => Value::Integer(row.index.into()),
-            "display_name".to_string() => Value::String(row.display_name),
+            "display_name".to_string() => row.display_name.map(|x| Value::String(x)).unwrap_or(Value::None),
         };
 
         let res = self
@@ -301,7 +301,7 @@ impl SettingDeleter for GuildRolesExecutor {
 
 pub struct GreBaseVerifyChecksResult {
     pub role_id: serenity::all::RoleId,
-    pub index: i64,
+    pub index: i32,
     pub perms: Vec<String>,
     pub display_name: Option<String>,
 }
@@ -312,7 +312,7 @@ impl GuildRolesExecutor {
         ctx: &HookContext<'a>,
         state: &indexmap::IndexMap<String, Value>,
         op: OperationType,
-    ) -> Result<GreBaseVerifyChecksResult, silverpelt::Error> {
+    ) -> Result<GreBaseVerifyChecksResult, SettingsError> {
         let parsed_value = if let Some(new_index_val) = state.get("index") {
             match new_index_val {
                 Value::Integer(new_index) => Value::Integer(*new_index),
@@ -321,7 +321,7 @@ impl GuildRolesExecutor {
                     return Err(SettingsError::MissingOrInvalidField {
                         field: "index".to_string(),
                         src: "base_verify_checks".to_string(),
-                    })
+                    });
                 }
             }
         } else {
@@ -330,7 +330,15 @@ impl GuildRolesExecutor {
 
         // Get the index to set to
         let new_index = match parsed_value {
-            Value::Integer(new_index_val) => new_index_val,
+            Value::Integer(new_index_val) => {
+                new_index_val
+                    .try_into()
+                    .map_err(|e| SettingsError::Generic {
+                        message: format!("Failed to parse index: {:?}", e),
+                        src: "base_verify_checks->match parsed_value".to_string(),
+                        typ: "internal".to_string(),
+                    })?
+            }
             Value::None => {
                 let highest_index_rec = sqlx::query!(
                     "SELECT MAX(index) FROM guild_roles WHERE guild_id = $1",
@@ -346,15 +354,15 @@ impl GuildRolesExecutor {
                 .max
                 .unwrap_or(0);
 
-                let index_i64: i64 = (highest_index_rec + 1).into();
+                let index: i32 = (highest_index_rec + 1).into();
 
-                index_i64
+                index
             }
             _ => {
                 return Err(SettingsError::MissingOrInvalidField {
                     field: "index".to_string(),
                     src: "base_verify_checks->match parsed_value, _ result".to_string(),
-                })
+                });
             }
         };
 
@@ -530,7 +538,16 @@ impl GuildRolesExecutor {
         }
 
         let author_kittycat_perms = silverpelt::member_permission_calc::get_kittycat_perms(
-            &ctx.data.pool,
+            &mut *ctx
+                .data
+                .pool
+                .acquire()
+                .await
+                .map_err(|e| SettingsError::Generic {
+                    message: format!("Failed to get pool: {:?}", e),
+                    src: "GuildMembersExecutor".to_string(),
+                    typ: "internal".to_string(),
+                })?,
             ctx.guild_id,
             guild.owner_id,
             ctx.author,
@@ -692,27 +709,7 @@ pub static GUILD_MEMBERS: LazyLock<Setting> = LazyLock::new(|| Setting {
         ar_settings::common_columns::created_at(),
     ]),
     title_template: "{user_id}, perm_overrides={perm_overrides}".to_string(),
-    operations: indexmap::indexmap! {
-        OperationType::View => OperationSpecific {
-            columns_to_set: indexmap::indexmap! {},
-        },
-        OperationType::Create => OperationSpecific {
-            columns_to_set: indexmap::indexmap! {
-                "created_at" => "{__now}",
-                "needs_perm_rederive" => "{__true}",
-            },
-        },
-        OperationType::Update => OperationSpecific {
-            columns_to_set: indexmap::indexmap! {
-                "needs_perm_rederive" => "{__true}",
-            },
-        },
-        OperationType::Delete => OperationSpecific {
-            columns_to_set: indexmap::indexmap! {},
-        },
-    },
-    validator: settings_wrap(GuildMembersValidator {}),
-    post_action: settings_wrap(NoOpPostAction {}),
+    operations: GuildMembersExecutor.into(),
 });
 
 pub struct GmeBaseVerifyChecksResult {
@@ -773,7 +770,7 @@ impl GuildMembersExecutor {
         ctx: &HookContext<'a>,
         state: &indexmap::IndexMap<String, Value>,
         op: OperationType,
-    ) -> Result<GmeBaseVerifyChecksResult, silverpelt::Error> {
+    ) -> Result<GmeBaseVerifyChecksResult, SettingsError> {
         // Get the user id as this is required for all operations
         let Some(Value::String(user_id)) = state.get("user_id") else {
             return Err(SettingsError::MissingOrInvalidField {
@@ -812,7 +809,7 @@ impl GuildMembersExecutor {
             })?
             .public;
 
-            if public != current_public && ctx.author != user_id {
+            if *public != current_public && ctx.author != user_id {
                 return Err(SettingsError::Generic {
                     message: "Only the user can change their public status".to_string(),
                     src: "guildmembers->public".to_string(),
@@ -823,7 +820,7 @@ impl GuildMembersExecutor {
 
         // Get perm overrides
         let perm_overrides = {
-            let Some(Value::List(perm_overrides_value)) = state.state.get("perm_overrides") else {
+            let Some(Value::List(perm_overrides_value)) = state.get("perm_overrides") else {
                 return Err(SettingsError::MissingOrInvalidField {
                     field: "perm_overrides".to_string(),
                     src: "guildmembers->perm_overrides".to_string(),
@@ -834,7 +831,7 @@ impl GuildMembersExecutor {
 
             for perm in perm_overrides_value {
                 if let Value::String(perm) = perm {
-                    perm_overrides.push(kittycat::perms::Permission::from_string(perm));
+                    perm_overrides.push(kittycat::perms::Permission::from_string(&perm));
                 } else {
                     return Err(SettingsError::Generic {
                         message: "Failed to parse permissions".to_string(),
@@ -860,7 +857,7 @@ impl GuildMembersExecutor {
             return Ok(GmeBaseVerifyChecksResult {
                 user_id,
                 perm_overrides,
-                public,
+                public: *public,
             });
         }
 
@@ -868,7 +865,16 @@ impl GuildMembersExecutor {
         let author_kittycat_perms = match self
             .get_kittycat_perms_for_user(
                 &ctx.data,
-                &ctx.data.pool,
+                &mut *ctx
+                    .data
+                    .pool
+                    .acquire()
+                    .await
+                    .map_err(|e| SettingsError::Generic {
+                        message: format!("Failed to get pool: {:?}", e),
+                        src: "GuildMembersExecutor".to_string(),
+                        typ: "internal".to_string(),
+                    })?,
                 ctx.guild_id,
                 guild.owner_id,
                 ctx.author,
@@ -889,7 +895,16 @@ impl GuildMembersExecutor {
         let (target_member_roles, current_user_kittycat_perms) = match self
             .get_kittycat_perms_for_user(
                 &ctx.data,
-                &ctx.data.pool,
+                &mut *ctx
+                    .data
+                    .pool
+                    .acquire()
+                    .await
+                    .map_err(|e| SettingsError::Generic {
+                        message: format!("Failed to get pool: {:?}", e),
+                        src: "GuildMembersExecutor".to_string(),
+                        typ: "internal".to_string(),
+                    })?,
                 ctx.guild_id,
                 guild.owner_id,
                 user_id,
@@ -909,31 +924,39 @@ impl GuildMembersExecutor {
         };
 
         // Find new user's permissions with the given perm overrides
-        let new_user_kittycat_perms = {
-            let roles_str = silverpelt::member_permission_calc::create_roles_list_for_guild(
-                &target_member_roles,
-                ctx.guild_id,
-            );
+        let new_user_kittycat_perms =
+            {
+                let roles_str = silverpelt::member_permission_calc::create_roles_list_for_guild(
+                    &target_member_roles,
+                    ctx.guild_id,
+                );
 
-            let user_positions = silverpelt::member_permission_calc::get_user_positions_from_db(
-                &ctx.data.pool,
-                ctx.guild_id,
-                &roles_str,
-            )
-            .await
-            .map_err(|e| SettingsError::Generic {
-                message: format!("Failed to get user positions: {:?}", e),
-                src: "GuildMembersExecutor".to_string(),
-                typ: "internal".to_string(),
-            })?;
+                let user_positions =
+                    silverpelt::member_permission_calc::get_user_positions_from_db(
+                        &mut *ctx.data.pool.acquire().await.map_err(|e| {
+                            SettingsError::Generic {
+                                message: format!("Failed to get pool: {:?}", e),
+                                src: "GuildMembersExecutor".to_string(),
+                                typ: "internal".to_string(),
+                            }
+                        })?,
+                        ctx.guild_id,
+                        &roles_str,
+                    )
+                    .await
+                    .map_err(|e| SettingsError::Generic {
+                        message: format!("Failed to get user positions: {:?}", e),
+                        src: "GuildMembersExecutor".to_string(),
+                        typ: "internal".to_string(),
+                    })?;
 
-            silverpelt::member_permission_calc::rederive_perms_impl(
-                ctx.guild_id,
-                user_id,
-                user_positions,
-                perm_overrides,
-            )
-        };
+                silverpelt::member_permission_calc::rederive_perms_impl(
+                    ctx.guild_id,
+                    user_id,
+                    user_positions,
+                    perm_overrides.clone(),
+                )
+            };
 
         // Check permissions
         match op {
@@ -986,6 +1009,12 @@ impl GuildMembersExecutor {
                 return Err(SettingsError::OperationNotSupported { operation: op });
             }
         }
+
+        Ok(GmeBaseVerifyChecksResult {
+            user_id,
+            perm_overrides,
+            public: *public,
+        })
     }
 }
 
@@ -1018,7 +1047,132 @@ impl SettingView for GuildMembersExecutor {
             result.push(map);
         }
 
-        Ok(result) // TODO: Implement
+        Ok(result)
+    }
+}
+
+#[async_trait::async_trait]
+impl SettingCreator for GuildMembersExecutor {
+    async fn create<'a>(
+        &self,
+        ctx: HookContext<'a>,
+        entry: indexmap::IndexMap<String, splashcore_rs::value::Value>,
+    ) -> Result<indexmap::IndexMap<String, splashcore_rs::value::Value>, SettingsError> {
+        let res = self.verify(&ctx, &entry, OperationType::Create).await?;
+
+        let count = sqlx::query!(
+            "SELECT COUNT(*) FROM guild_members WHERE guild_id = $1 AND user_id = $2",
+            ctx.guild_id.to_string(),
+            res.user_id.to_string()
+        )
+        .fetch_one(&ctx.data.pool)
+        .await
+        .map_err(|e| SettingsError::Generic {
+            message: format!("Failed to check if role exists: {:?}", e),
+            src: "GuildRolesExecutor->create".to_string(),
+            typ: "internal".to_string(),
+        })?
+        .count
+        .unwrap_or_default();
+
+        if count > 0 {
+            return Err(SettingsError::Generic {
+                message: "Role already exists".to_string(),
+                src: "GuildRolesExecutor->create".to_string(),
+                typ: "internal".to_string(),
+            });
+        }
+
+        sqlx::query!(
+            "INSERT INTO guild_members (guild_id, user_id, perm_overrides, public) VALUES ($1, $2, $3, $4)",
+            ctx.guild_id.to_string(),
+            res.user_id.to_string(),
+            &res.perm_overrides.into_iter().map(|x| x.to_string()).collect::<Vec<String>>(),
+            res.public
+        )
+        .execute(&ctx.data.pool)
+        .await
+        .map_err(|e| SettingsError::Generic {
+            message: format!("Failed to insert role: {:?}", e),
+            src: "GuildRolesExecutor->create".to_string(),
+            typ: "internal".to_string(),
+        })?;
+
+        Ok(entry)
+    }
+}
+
+#[async_trait::async_trait]
+impl SettingUpdater for GuildMembersExecutor {
+    async fn update<'a>(
+        &self,
+        ctx: HookContext<'a>,
+        entry: indexmap::IndexMap<String, splashcore_rs::value::Value>,
+    ) -> Result<indexmap::IndexMap<String, splashcore_rs::value::Value>, SettingsError> {
+        let res = self.verify(&ctx, &entry, OperationType::Update).await?;
+
+        sqlx::query!(
+            "UPDATE guild_members SET perm_overrides = $1, public = $2 WHERE guild_id = $3 AND user_id = $4",
+            &res.perm_overrides.into_iter().map(|x| x.to_string()).collect::<Vec<String>>(),
+            res.public,
+            ctx.guild_id.to_string(),
+            res.user_id.to_string()
+        )
+        .execute(&ctx.data.pool)
+        .await
+        .map_err(|e| SettingsError::Generic {
+            message: format!("Failed to update role: {:?}", e),
+            src: "GuildRolesExecutor->update".to_string(),
+            typ: "internal".to_string(),
+        })?;
+
+        Ok(entry)
+    }
+}
+
+#[async_trait::async_trait]
+impl SettingDeleter for GuildMembersExecutor {
+    async fn delete<'a>(
+        &self,
+        ctx: HookContext<'a>,
+        primary_key: splashcore_rs::value::Value,
+    ) -> Result<(), SettingsError> {
+        let Some(row) = sqlx::query!("SELECT user_id, perm_overrides, public FROM guild_members WHERE guild_id = $1 AND user_id = $2", ctx.guild_id.to_string(), primary_key.to_string())
+        .fetch_optional(&ctx.data.pool)
+        .await
+        .map_err(|e| SettingsError::Generic {
+            message: format!("Error while fetching roles: {}", e),
+            src: "GuildRolesExecutor".to_string(),
+            typ: "value_error".to_string(),
+        })? else {
+            return Err(SettingsError::RowDoesNotExist {
+                column_id: "user_id".to_string(),
+            });
+        };
+
+        let entry = indexmap::indexmap! {
+            "guild_id".to_string() => Value::String(ctx.guild_id.to_string()),
+            "user_id".to_string() => Value::String(row.user_id),
+            "perm_overrides".to_string() => Value::List(row.perm_overrides.iter().map(|x| Value::String(x.to_string())).collect()),
+            "public".to_string() => Value::Boolean(row.public),
+        };
+
+        let res = self.verify(&ctx, &entry, OperationType::Delete).await?;
+
+        sqlx::query!(
+            "DELETE FROM guild_members WHERE guild_id = $1 AND user_id = $2",
+            ctx.guild_id.to_string(),
+            res.user_id.to_string()
+        )
+        .execute(&ctx.data.pool)
+        .await
+        .map_err(|e| SettingsError::Generic {
+            message: format!("Failed to delete role: {:?}", e),
+            src: "GuildRolesExecutor->delete".to_string(),
+            typ: "internal".to_string(),
+        })?;
+
+        Ok(())
     }
 }
 
@@ -1078,53 +1232,15 @@ pub static GUILD_TEMPLATES: LazyLock<Setting> = LazyLock::new(|| {
             ar_settings::common_columns::last_updated_by(),
         ]),
         title_template: "{name}".to_string(),
-        operations: indexmap::indexmap! {
-            OperationType::View => OperationSpecific {
-                columns_to_set: indexmap::indexmap! {},
-            },
-            OperationType::Create => OperationSpecific {
-                columns_to_set: indexmap::indexmap! {
-                    "created_at" => "{__now}",
-                    "created_by" => "{__author}",
-                    "last_updated_at" => "{__now}",
-                    "last_updated_by" => "{__author}",
-                },
-            },
-            OperationType::Update => OperationSpecific {
-                columns_to_set: indexmap::indexmap! {
-                    "last_updated_at" => "{__now}",
-                    "last_updated_by" => "{__author}",
-                },
-            },
-            OperationType::Delete => OperationSpecific {
-                columns_to_set: indexmap::indexmap! {},
-            },
-        },
-        validator: settings_wrap(GuildTemplateValidator {}),
-        post_action: settings_wrap(GuildTemplatePostAction {}),
+        operations: GuildTemplateExecutor.into(),
     }
 });
 
-pub struct GuildTemplateValidator;
+#[derive(Clone)]
+pub struct GuildTemplateExecutor;
 
-#[async_trait::async_trait]
-impl SettingDataValidator for GuildTemplateValidator {
-    async fn validate<'a>(
-        &self,
-        ctx: HookContext<'a>,
-        state: &'a mut State,
-    ) -> Result<(), SettingsError> {
-        if ctx.operation_type == OperationType::View {
-            return Ok(());
-        }
-
-        let Some(Value::String(name)) = state.state.get("name") else {
-            return Err(SettingsError::MissingOrInvalidField {
-                field: "content".to_string(),
-                src: "guild_templates->content".to_string(),
-            });
-        };
-
+impl GuildTemplateExecutor {
+    async fn validate<'a>(&self, ctx: &HookContext<'a>, name: &str) -> Result<(), SettingsError> {
         if name.starts_with("$shop/") {
             let (shop_tname, shop_tversion) =
                 templating::parse_shop_template(name).map_err(|e| SettingsError::Generic {
@@ -1146,7 +1262,7 @@ impl SettingDataValidator for GuildTemplateValidator {
                 typ: "internal".to_string(),
             })?;
 
-            if shop_template.count.unwrap_or(0) == 0 {
+            if shop_template.count.unwrap_or_default() == 0 {
                 return Err(SettingsError::Generic {
                     message: "Could not find shop template".to_string(),
                     src: "guild_templates->name".to_string(),
@@ -1157,47 +1273,270 @@ impl SettingDataValidator for GuildTemplateValidator {
 
         Ok(())
     }
-}
 
-pub struct GuildTemplatePostAction;
-
-#[async_trait::async_trait]
-impl PostAction for GuildTemplatePostAction {
     async fn post_action<'a>(
         &self,
-        context: HookContext<'a>,
-        state: &'a mut ar_settings::state::State,
+        ctx: &HookContext<'a>,
+        name: &str,
     ) -> Result<(), SettingsError> {
-        if context.operation_type == OperationType::View {
-            return Ok(());
-        }
+        templating::cache::clear_template_cache(ctx.guild_id).await;
 
         // Dispatch a OnStartup event for the template
-
-        // Get template ID
-        let Some(Value::String(name)) = state.state.get("name") else {
-            return Err(SettingsError::MissingOrInvalidField {
-                field: "name".to_string(),
-                src: "guild_templates->name".to_string(),
-            });
-        };
-
-        templating::cache::clear_template_cache(context.guild_id).await;
-
         silverpelt::ar_event::dispatch_event_to_modules_errflatten(std::sync::Arc::new(
             silverpelt::ar_event::EventHandlerContext {
-                guild_id: context.guild_id,
-                data: silverpelt::data::Data::get_data(context.data),
+                guild_id: ctx.guild_id,
+                data: silverpelt::data::Data::get_data(ctx.data),
                 event: silverpelt::ar_event::AntiraidEvent::OnStartup(vec![name.to_string()]),
-                serenity_context: context.data.serenity_context.clone(),
+                serenity_context: ctx.data.serenity_context.clone(),
             },
         ))
         .await
         .map_err(|e| SettingsError::Generic {
             message: format!("Failed to dispatch OnStartup event: {:?}", e),
-            src: "guild_templates->post_action".to_string(),
+            src: "GuildTemplateExecutor".to_string(),
             typ: "internal".to_string(),
         })?;
+
+        Ok(())
+    }
+}
+
+#[async_trait::async_trait]
+impl SettingView for GuildTemplateExecutor {
+    async fn view<'a>(
+        &self,
+        context: HookContext<'a>,
+        _filters: indexmap::IndexMap<String, splashcore_rs::value::Value>,
+    ) -> Result<Vec<indexmap::IndexMap<String, splashcore_rs::value::Value>>, SettingsError> {
+        let rows = sqlx::query!("SELECT name, content, events, created_at, created_by, last_updated_at, last_updated_by FROM guild_templates WHERE guild_id = $1", context.guild_id.to_string())
+        .fetch_all(&context.data.pool)
+        .await
+        .map_err(|e| SettingsError::Generic {
+            message: format!("Error while fetching guild templates: {}", e),
+            src: "GuildTemplateExecutor".to_string(),
+            typ: "value_error".to_string(),
+        })?;
+
+        let mut result = vec![];
+
+        for row in rows {
+            let map = indexmap::indexmap! {
+                "name".to_string() => Value::String(row.name),
+                "content".to_string() => Value::String(row.content),
+                "events".to_string() => {
+                    match row.events {
+                        Some(events) => Value::List(events.iter().map(|x| Value::String(x.to_string())).collect()),
+                        None => Value::None,
+                    }
+                },
+                "created_at".to_string() => Value::TimestampTz(row.created_at),
+                "created_by".to_string() => Value::String(row.created_by),
+                "last_updated_at".to_string() => Value::TimestampTz(row.last_updated_at),
+                "last_updated_by".to_string() => Value::String(row.last_updated_by),
+            };
+
+            result.push(map);
+        }
+
+        Ok(result)
+    }
+}
+
+#[async_trait::async_trait]
+impl SettingCreator for GuildTemplateExecutor {
+    async fn create<'a>(
+        &self,
+        ctx: HookContext<'a>,
+        entry: indexmap::IndexMap<String, splashcore_rs::value::Value>,
+    ) -> Result<indexmap::IndexMap<String, splashcore_rs::value::Value>, SettingsError> {
+        let Some(Value::String(name)) = entry.get("name") else {
+            return Err(SettingsError::MissingOrInvalidField {
+                field: "content".to_string(),
+                src: "GuildTemplateExecutor".to_string(),
+            });
+        };
+
+        let count = sqlx::query!(
+            "SELECT COUNT(*) FROM guild_templates WHERE guild_id = $1 AND name = $2",
+            ctx.guild_id.to_string(),
+            name
+        )
+        .fetch_one(&ctx.data.pool)
+        .await
+        .map_err(|e| SettingsError::Generic {
+            message: format!("Failed to check if template exists: {:?}", e),
+            src: "GuildTemplateExecutor".to_string(),
+            typ: "internal".to_string(),
+        })?
+        .count
+        .unwrap_or_default();
+
+        if count > 0 {
+            return Err(SettingsError::Generic {
+                message: "Template already exists".to_string(),
+                src: "GuildTemplateExecutor".to_string(),
+                typ: "internal".to_string(),
+            });
+        }
+
+        self.validate(&ctx, &name).await?;
+
+        let Some(Value::String(content)) = entry.get("content") else {
+            return Err(SettingsError::MissingOrInvalidField {
+                field: "content".to_string(),
+                src: "GuildTemplateExecutor".to_string(),
+            });
+        };
+
+        let events = match entry.get("events") {
+            Some(Value::List(events)) => Some(
+                events
+                    .iter()
+                    .map(|x| {
+                        if let Value::String(x) = x {
+                            Ok(x.to_string())
+                        } else {
+                            Err(SettingsError::Generic {
+                                message: "Failed to parse events".to_string(),
+                                src: "GuildTemplateExecutor".to_string(),
+                                typ: "internal".to_string(),
+                            })
+                        }
+                    })
+                    .collect::<Result<Vec<String>, SettingsError>>()?,
+            ),
+            _ => None,
+        };
+
+        sqlx::query!(
+            "INSERT INTO guild_templates (guild_id, name, content, events, created_by, last_updated_by) VALUES ($1, $2, $3, $4, $5, $6)",
+            ctx.guild_id.to_string(),
+            name,
+            content,
+            events.as_deref(),
+            ctx.author.to_string(),
+            ctx.author.to_string()
+        )
+        .execute(&ctx.data.pool)
+        .await
+        .map_err(|e| SettingsError::Generic {
+            message: format!("Failed to insert template: {:?}", e),
+            src: "GuildTemplateExecutor".to_string(),
+            typ: "internal".to_string(),
+        })?;
+
+        self.post_action(&ctx, name).await?;
+
+        Ok(entry)
+    }
+}
+
+#[async_trait::async_trait]
+impl SettingUpdater for GuildTemplateExecutor {
+    async fn update<'a>(
+        &self,
+        ctx: HookContext<'a>,
+        entry: indexmap::IndexMap<String, splashcore_rs::value::Value>,
+    ) -> Result<indexmap::IndexMap<String, splashcore_rs::value::Value>, SettingsError> {
+        let Some(Value::String(name)) = entry.get("name") else {
+            return Err(SettingsError::MissingOrInvalidField {
+                field: "name".to_string(),
+                src: "GuildTemplateExecutor".to_string(),
+            });
+        };
+
+        self.validate(&ctx, &name).await?;
+
+        let Some(Value::String(content)) = entry.get("content") else {
+            return Err(SettingsError::MissingOrInvalidField {
+                field: "content".to_string(),
+                src: "GuildTemplateExecutor".to_string(),
+            });
+        };
+
+        let events = match entry.get("events") {
+            Some(Value::List(events)) => Some(
+                events
+                    .iter()
+                    .map(|x| {
+                        if let Value::String(x) = x {
+                            Ok(x.to_string())
+                        } else {
+                            Err(SettingsError::Generic {
+                                message: "Failed to parse events".to_string(),
+                                src: "GuildTemplateExecutor".to_string(),
+                                typ: "internal".to_string(),
+                            })
+                        }
+                    })
+                    .collect::<Result<Vec<String>, SettingsError>>()?,
+            ),
+            _ => None,
+        };
+
+        sqlx::query!(
+            "UPDATE guild_templates SET content = $1, events = $2, last_updated_by = $3 WHERE guild_id = $4 AND name = $5",
+            content,
+            events.as_deref(),
+            ctx.author.to_string(),
+            ctx.guild_id.to_string(),
+            name
+        )
+        .execute(&ctx.data.pool)
+        .await
+        .map_err(|e| SettingsError::Generic {
+            message: format!("Failed to update template: {:?}", e),
+            src: "GuildTemplateExecutor".to_string(),
+            typ: "internal".to_string(),
+        })?;
+
+        self.post_action(&ctx, name).await?;
+
+        Ok(entry)
+    }
+}
+
+#[async_trait::async_trait]
+impl SettingDeleter for GuildTemplateExecutor {
+    async fn delete<'a>(
+        &self,
+        ctx: HookContext<'a>,
+        primary_key: splashcore_rs::value::Value,
+    ) -> Result<(), SettingsError> {
+        let Some(row) = sqlx::query!(
+            "SELECT name FROM guild_templates WHERE guild_id = $1 AND name = $2",
+            ctx.guild_id.to_string(),
+            primary_key.to_string()
+        )
+        .fetch_optional(&ctx.data.pool)
+        .await
+        .map_err(|e| SettingsError::Generic {
+            message: format!("Error while fetching template: {}", e),
+            src: "GuildTemplateExecutor".to_string(),
+            typ: "value_error".to_string(),
+        })?
+        else {
+            return Err(SettingsError::RowDoesNotExist {
+                column_id: "name".to_string(),
+            });
+        };
+
+        let name = row.name;
+
+        sqlx::query!(
+            "DELETE FROM guild_templates WHERE guild_id = $1 AND name = $2",
+            ctx.guild_id.to_string(),
+            name
+        )
+        .execute(&ctx.data.pool)
+        .await
+        .map_err(|e| SettingsError::Generic {
+            message: format!("Failed to delete template: {:?}", e),
+            src: "GuildTemplateExecutor".to_string(),
+            typ: "internal".to_string(),
+        })?;
+
+        self.post_action(&ctx, &name).await?;
 
         Ok(())
     }

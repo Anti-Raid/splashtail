@@ -1,4 +1,4 @@
-use crate::types::{ExecuteTemplateResponse, RpcExecuteTemplateContext};
+use crate::types::ExecuteTemplateResponse;
 use crate::AppData;
 use axum::{
     extract::{Path, State},
@@ -32,17 +32,22 @@ pub(crate) async fn execute_template(
         return Json(ExecuteTemplateResponse::PermissionError { res: perm_res });
     }
 
-    let resp = templating::execute::<_, Option<serde_json::Value>>(
+    let resp = templating::execute::<Option<serde_json::Value>>(
         guild_id,
         templating::Template::Raw(req.template),
         data.pool.clone(),
         serenity_context.clone(),
         data.reqwest.clone(),
-        RpcExecuteTemplateContext {
-            args: req.args,
-            guild_id,
-            user_id,
-        },
+        templating::event::Event::new(
+            "(Anti-Raid) Template Execution".to_string(),
+            "AR/Virtual_ExecTemplate".to_string(),
+            serde_json::json!({
+                "args": req.args,
+                "user_id": user_id,
+            }),
+            false,
+            None,
+        ),
     )
     .await;
 

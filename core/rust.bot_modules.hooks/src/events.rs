@@ -246,34 +246,22 @@ async fn dispatch_audit_log(
             continue;
         }
 
-        templating::execute::<_, Option<()>>(
+        templating::execute::<Option<()>>(
             guild_id,
             templating::Template::Named(template.name.clone()),
             data.pool.clone(),
             ctx.clone(),
             data.reqwest.clone(),
-            HookContext {
-                event_titlename: event_titlename.to_string(),
-                event_name: event_name.to_string(),
-                event_data: event_data.clone(),
-                template: template.clone(),
-            },
+            templating::event::Event::new(
+                event_titlename.to_string(),
+                event_name.to_string(),
+                event_data.clone(),
+                false,
+                Some(template.clone()),
+            ),
         )
         .await?;
     }
 
     Ok(())
 }
-
-/// A HookContext is a context for message templates
-/// that can be accessed in hook templates
-#[derive(Clone, serde::Serialize, serde::Deserialize)]
-struct HookContext {
-    pub event_titlename: String,
-    pub event_name: String,
-    pub event_data: serde_json::Value,
-    pub template: templating::GuildTemplate,
-}
-
-#[typetag::serde]
-impl templating::Context for HookContext {}
