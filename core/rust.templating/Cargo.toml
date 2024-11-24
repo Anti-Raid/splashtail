@@ -61,6 +61,8 @@ captcha = { git = "https://github.com/Anti-Raid/captcha", branch = "master" }
 fred = { version = "9.3", features = ["serde-json"] }
 sandwich_driver = { path = "../rust.sandwich_driver" }
 templating_docgen = { path = "../rust.templating.docgen" }
+ar_settings = { path = "../rust.settings" }
+async-trait = "0.1.80"
 
 # Template language support
 mlua = { version = "0.10.1", features = ["async", "luau", "serialize", "macros", "send"], optional = true } # Supported by default

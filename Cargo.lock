@@ -4794,7 +4794,9 @@ dependencies = [
 name = "templating"
 version = "0.1.0"
 dependencies = [
+ "ar_settings",
  "async-compression",
+ "async-trait",
  "blake3",
  "botox",
  "bstr",

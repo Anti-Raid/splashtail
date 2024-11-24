@@ -1,4 +1,4 @@
-pub fn document_primitives() -> Vec<templating_docgen::Primitive> {
+pub fn document_primitives() -> templating_docgen::PrimitiveListBuilder {
     templating_docgen::PrimitiveListBuilder::default()
         .add("u8", "number", "An unsigned 8-bit integer. **Note: u8 arrays (`{u8}`) are often used to represent an array of bytes in AntiRaid**", |p| {
             p.add_constraint(
@@ -86,5 +86,51 @@ pub fn document_primitives() -> Vec<templating_docgen::Primitive> {
             )
         })
         .add("function", "function", "A Lua function.", |p| p)
-        .build()
+        .method_mut("array", |f| {
+            f
+            .description("Helper method to create an array from a list of tables, setting the array_metatable on the result.")
+            .parameter("...", |p| {
+                p
+                .typ("unknown")
+                .description("The elements used to form the array.")
+            })
+            .return_("table", |p| {
+                p
+                .typ("{unknown}")
+                .description("The array table.")
+            })
+        })
+        .type_mut("Event", "An event that has been dispatched to the template. This is what `args` is in the template.", |mut t| {
+            t
+            .field("title", |f| {
+                f
+                .typ("string")
+                .description("The title name of the event.")
+            })
+            .field("base_name", |f| {
+                f
+                .typ("string")
+                .description("The base name of the event.")
+            })
+            .field("name", |f| {
+                f
+                .typ("string")
+                .description("The name of the event.")
+            })
+            .field("data", |f| {
+                f
+                .typ("unknown")
+                .description("The data of the event.")
+            })
+            .field("is_deniable", |f| {
+                f
+                .typ("boolean")
+                .description("Whether the event can be denied.")
+            })
+            .field("uid", |f| {
+                f
+                .typ("string")
+                .description("The unique identifier ID of the event. Will be guaranteed to be unique at a per-guild level.")
+            })
+        })
 }

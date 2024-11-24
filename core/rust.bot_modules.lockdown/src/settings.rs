@@ -45,7 +45,7 @@ pub static LOCKDOWN_SETTINGS: LazyLock<Setting> = LazyLock::new(|| {
                 name: "Member Roles".to_string(),
                 description: "Which roles to use as member roles for the purpose of lockdown. These roles will be explicitly modified during lockdown".to_string(),
                 column_type: ColumnType::new_array(InnerColumnType::String {
-                    kind: InnerColumnTypeStringKind::Role,
+                    kind: InnerColumnTypeStringKind::Role {},
                     min_length: None,
                     max_length: None,
                     allowed_values: vec![],
@@ -285,7 +285,7 @@ pub static LOCKDOWNS: LazyLock<Setting> = LazyLock::new(|| Setting {
             name: "Type".to_string(),
             description: "The type of the lockdown.".to_string(),
             column_type: ColumnType::new_scalar(InnerColumnType::String {
-                kind: InnerColumnTypeStringKind::Normal,
+                kind: InnerColumnTypeStringKind::Normal {},
                 min_length: Some(1),
                 max_length: Some(256),
                 allowed_values: vec![],
@@ -310,7 +310,7 @@ pub static LOCKDOWNS: LazyLock<Setting> = LazyLock::new(|| Setting {
             name: "Reason".to_string(),
             description: "The reason for starting the lockdown.".to_string(),
             column_type: ColumnType::new_scalar(InnerColumnType::String {
-                kind: InnerColumnTypeStringKind::Normal,
+                kind: InnerColumnTypeStringKind::Normal {},
                 min_length: Some(1),
                 max_length: Some(256),
                 allowed_values: vec![],

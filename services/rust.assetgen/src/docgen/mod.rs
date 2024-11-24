@@ -46,12 +46,33 @@ pub fn document_all_primitives(heading_level: usize) -> String {
 
     markdown.push_str(&format!("{} Primitives\n\n", _headings(heading_level)));
 
-    for primitive in templating::primitives_docs::document_primitives() {
+    let primitive_list = templating::primitives_docs::document_primitives();
+
+    for primitive in primitive_list.primitives {
         markdown.push_str(&generate_markdown_for_primitive(
             primitive,
             heading_level + 1,
         ));
         markdown.push_str("\n\n---\n\n");
+    }
+
+    if !primitive_list.methods.is_empty() {
+        markdown.push_str(&format!("{} Methods\n\n", _headings(heading_level)));
+
+        primitive_list.methods.iter().for_each(|method| {
+            markdown.push_str(&format!(
+                "{}\n\n",
+                method_to_string(method, None, heading_level + 1)
+            ));
+        });
+    }
+
+    if !primitive_list.types.is_empty() {
+        markdown.push_str(&format!("{} Types\n\n", _headings(heading_level)));
+
+        primitive_list.types.iter().for_each(|typ| {
+            markdown.push_str(&format!("{}\n\n", type_to_string(typ, heading_level + 1)));
+        });
     }
 
     markdown

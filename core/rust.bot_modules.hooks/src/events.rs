@@ -73,7 +73,7 @@ pub(crate) async fn event_listener(ectx: &EventHandlerContext) -> Result<(), sil
                 templating::event::CreateEventArc::new_arc(
                     event_titlename,
                     "Discord".to_string(),
-                    event.snake_case_name().to_string(),
+                    event.snake_case_name().to_uppercase(),
                     event.clone(),
                     false,
                 ),

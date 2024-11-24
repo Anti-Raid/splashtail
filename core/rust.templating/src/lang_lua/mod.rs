@@ -435,7 +435,7 @@ pub(crate) async fn resolve_template_to_bytecode(
 /// Get a Lua VM for a guild
 ///
 /// This function will either return an existing Lua VM for the guild or create a new one if it does not exist
-async fn get_lua_vm(
+pub async fn get_lua_vm(
     guild_id: GuildId,
     pool: sqlx::PgPool,
     serenity_context: serenity::all::Context,

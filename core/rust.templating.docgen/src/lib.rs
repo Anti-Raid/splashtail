@@ -67,7 +67,9 @@ pub struct PrimitiveConstraint {
 /// A special helper types for building a list of primitives.
 #[derive(Default)]
 pub struct PrimitiveListBuilder {
-    primitives: Vec<Primitive>,
+    pub primitives: Vec<Primitive>,
+    pub methods: Vec<Method>,
+    pub types: Vec<Type>,
 }
 
 impl PrimitiveListBuilder {
@@ -90,8 +92,36 @@ impl PrimitiveListBuilder {
         p
     }
 
-    pub fn build(self) -> Vec<Primitive> {
-        self.primitives
+    pub fn method_mut(mut self, name: &str, f: impl FnOnce(Method) -> Method) -> Self {
+        let method = self.methods.iter_mut().find(|m| m.name == name);
+
+        if let Some(method) = method {
+            let new_method = f(method.clone());
+
+            *method = new_method;
+        } else {
+            let method = Method {
+                name: name.to_string(),
+                ..Default::default()
+            };
+            self.methods.push(f(method));
+        }
+
+        self
+    }
+
+    pub fn type_mut(self, name: &str, description: &str, f: impl FnOnce(Type) -> Type) -> Self {
+        let mut p = self;
+        let new_typ = Type::new(name, description);
+        p.types.push(f(new_typ));
+
+        p
+    }
+
+    pub fn add_type(self, types: Type) -> Self {
+        let mut p = self;
+        p.types.push(types);
+        p
     }
 }
 

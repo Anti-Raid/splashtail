@@ -45,7 +45,7 @@ pub static GUILD_ROLES: LazyLock<Setting> = LazyLock::new(|| {
                 name: "Role ID".to_string(),
                 description: "The role ID".to_string(),
                 column_type: ColumnType::new_scalar(InnerColumnType::String {
-                    kind: InnerColumnTypeStringKind::Role,
+                    kind: InnerColumnTypeStringKind::Role {},
                     min_length: None,
                     max_length: Some(64),
                     allowed_values: vec![],
@@ -60,7 +60,7 @@ pub static GUILD_ROLES: LazyLock<Setting> = LazyLock::new(|| {
                 name: "Permissions".to_string(),
                 description: "What permissions should the role have".to_string(),
                 column_type: ColumnType::new_array(InnerColumnType::String {
-                    kind: InnerColumnTypeStringKind::KittycatPermission,
+                    kind: InnerColumnTypeStringKind::KittycatPermission {},
                     min_length: None,
                     max_length: Some(64),
                     allowed_values: vec![],
@@ -85,7 +85,7 @@ pub static GUILD_ROLES: LazyLock<Setting> = LazyLock::new(|| {
                 name: "Display Name".to_string(),
                 description: "What should the role be displayed as in API's etc".to_string(),
                 column_type: ColumnType::new_scalar(InnerColumnType::String {
-                    kind: InnerColumnTypeStringKind::KittycatPermission,
+                    kind: InnerColumnTypeStringKind::KittycatPermission {},
                     min_length: None,
                     max_length: Some(64),
                     allowed_values: vec![],
@@ -685,7 +685,7 @@ pub static GUILD_MEMBERS: LazyLock<Setting> = LazyLock::new(|| Setting {
             name: "User ID".to_string(),
             description: "The user ID. Cannot be updated once set".to_string(),
             column_type: ColumnType::new_scalar(InnerColumnType::String {
-                kind: InnerColumnTypeStringKind::User,
+                kind: InnerColumnTypeStringKind::User {},
                 min_length: None,
                 max_length: Some(64),
                 allowed_values: vec![],
@@ -702,7 +702,7 @@ pub static GUILD_MEMBERS: LazyLock<Setting> = LazyLock::new(|| Setting {
                 "Any permission overrides the member has. This can and should be edited if needed"
                     .to_string(),
             column_type: ColumnType::new_array(InnerColumnType::String {
-                kind: InnerColumnTypeStringKind::KittycatPermission,
+                kind: InnerColumnTypeStringKind::KittycatPermission {},
                 min_length: None,
                 max_length: Some(64),
                 allowed_values: vec![],
@@ -1211,7 +1211,7 @@ pub static GUILD_TEMPLATES: LazyLock<Setting> = LazyLock::new(|| {
                 name: "Name".to_string(),
                 description: "The name to give to the template".to_string(),
                 column_type: ColumnType::new_scalar(InnerColumnType::String {
-                    kind: InnerColumnTypeStringKind::Normal,
+                    kind: InnerColumnTypeStringKind::Normal {},
                     min_length: None,
                     max_length: Some(64),
                     allowed_values: vec![],
@@ -1242,7 +1242,7 @@ pub static GUILD_TEMPLATES: LazyLock<Setting> = LazyLock::new(|| {
                 id: "events".to_string(),
                 name: "Events".to_string(),
                 description: "The events that this template can be dispatched on. If empty, this template is never dispatched.".to_string(),
-                column_type: ColumnType::new_array(InnerColumnType::String { min_length: None, max_length: None, allowed_values: vec![], kind: InnerColumnTypeStringKind::Normal }),
+                column_type: ColumnType::new_array(InnerColumnType::String { min_length: None, max_length: None, allowed_values: vec![], kind: InnerColumnTypeStringKind::Normal {} }),
                 nullable: true,
                 suggestions: ColumnSuggestion::Static { suggestions: gwevent::core::event_list().to_vec().into_iter().map(|x| x.to_string()).collect() },
                 ignored_for: vec![],
@@ -1586,7 +1586,7 @@ pub static GUILD_TEMPLATES_KV: LazyLock<Setting> = LazyLock::new(|| Setting {
             name: "Key".to_string(),
             description: "Key".to_string(),
             column_type: ColumnType::new_scalar(InnerColumnType::String {
-                kind: InnerColumnTypeStringKind::Normal,
+                kind: InnerColumnTypeStringKind::Normal {},
                 min_length: None,
                 max_length: Some(templating::LuaKVConstraints::default().max_key_length),
                 allowed_values: vec![],
@@ -1827,7 +1827,7 @@ pub static GUILD_TEMPLATE_SHOP: LazyLock<Setting> = LazyLock::new(|| {
                 name: "Name".to_string(),
                 description: "The name of the template on the shop. Cannot be updated once set".to_string(),
                 column_type: ColumnType::new_scalar(InnerColumnType::String {
-                    kind: InnerColumnTypeStringKind::Normal,
+                    kind: InnerColumnTypeStringKind::Normal {},
                     min_length: None,
                     max_length: Some(64),
                     allowed_values: vec![],
@@ -1842,7 +1842,7 @@ pub static GUILD_TEMPLATE_SHOP: LazyLock<Setting> = LazyLock::new(|| {
                 name: "Version".to_string(),
                 description: "The version of the template. Cannot be updated once set".to_string(), 
                 column_type: ColumnType::new_scalar(InnerColumnType::String {
-                    kind: InnerColumnTypeStringKind::Normal,
+                    kind: InnerColumnTypeStringKind::Normal {},
                     min_length: None,
                     max_length: Some(64),
                     allowed_values: vec![],
@@ -1857,7 +1857,7 @@ pub static GUILD_TEMPLATE_SHOP: LazyLock<Setting> = LazyLock::new(|| {
                 name: "Description".to_string(),
                 description: "The description of the template".to_string(), 
                 column_type: ColumnType::new_scalar(InnerColumnType::String {
-                    kind: InnerColumnTypeStringKind::Normal,
+                    kind: InnerColumnTypeStringKind::Normal {},
                     min_length: None,
                     max_length: Some(4096),
                     allowed_values: vec![],
@@ -1889,7 +1889,7 @@ pub static GUILD_TEMPLATE_SHOP: LazyLock<Setting> = LazyLock::new(|| {
                 name: "Type".to_string(),
                 description: "The type of the template".to_string(),
                 column_type: ColumnType::new_scalar(InnerColumnType::String {
-                    kind: InnerColumnTypeStringKind::Normal,
+                    kind: InnerColumnTypeStringKind::Normal {},
                     min_length: None,
                     max_length: None,
                     allowed_values: vec!["hook".to_string(), "library".to_string()],
@@ -2203,7 +2203,7 @@ pub static GUILD_TEMPLATE_SHOP_PUBLIC_LIST: LazyLock<Setting> = LazyLock::new(||
                 name: "Name".to_string(),
                 description: "The name of the template on the shop. Cannot be updated once set".to_string(),
                 column_type: ColumnType::new_scalar(InnerColumnType::String {
-                    kind: InnerColumnTypeStringKind::Normal,
+                    kind: InnerColumnTypeStringKind::Normal {},
                     min_length: None,
                     max_length: Some(64),
                     allowed_values: vec![],
@@ -2218,7 +2218,7 @@ pub static GUILD_TEMPLATE_SHOP_PUBLIC_LIST: LazyLock<Setting> = LazyLock::new(||
                 name: "Version".to_string(),
                 description: "The version of the template. Cannot be updated once set".to_string(), 
                 column_type: ColumnType::new_scalar(InnerColumnType::String {
-                    kind: InnerColumnTypeStringKind::Normal,
+                    kind: InnerColumnTypeStringKind::Normal {},
                     min_length: None,
                     max_length: Some(64),
                     allowed_values: vec![],
@@ -2233,7 +2233,7 @@ pub static GUILD_TEMPLATE_SHOP_PUBLIC_LIST: LazyLock<Setting> = LazyLock::new(||
                 name: "Description".to_string(),
                 description: "The description of the template".to_string(), 
                 column_type: ColumnType::new_scalar(InnerColumnType::String {
-                    kind: InnerColumnTypeStringKind::Normal,
+                    kind: InnerColumnTypeStringKind::Normal {},
                     min_length: None,
                     max_length: Some(4096),
                     allowed_values: vec![],
@@ -2265,7 +2265,7 @@ pub static GUILD_TEMPLATE_SHOP_PUBLIC_LIST: LazyLock<Setting> = LazyLock::new(||
                 name: "Type".to_string(),
                 description: "The type of the template".to_string(),
                 column_type: ColumnType::new_scalar(InnerColumnType::String {
-                    kind: InnerColumnTypeStringKind::Normal,
+                    kind: InnerColumnTypeStringKind::Normal {},
                     min_length: None,
                     max_length: None,
                     allowed_values: vec!["hook".to_string(), "library".to_string()],

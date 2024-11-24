@@ -4,6 +4,7 @@ pub mod img_captcha;
 pub mod interop;
 pub mod kv;
 pub mod lune;
+pub mod page;
 pub mod permissions;
 pub mod stings;
 pub mod typesext;

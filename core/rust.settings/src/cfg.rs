@@ -478,7 +478,7 @@ async fn _validate_value(
                             }
 
                             let parsed_value = match kind {
-                                InnerColumnTypeStringKind::Normal => v,
+                                InnerColumnTypeStringKind::Normal { .. } => v,
                                 InnerColumnTypeStringKind::Token { .. } => v, // Handled in parse_value
                                 InnerColumnTypeStringKind::Textarea { .. } => v,
                                 InnerColumnTypeStringKind::TemplateRef { .. } => {
@@ -508,8 +508,8 @@ async fn _validate_value(
 
                                     v
                                 }
-                                InnerColumnTypeStringKind::KittycatPermission => v, // All kittycat permissions are valid
-                                InnerColumnTypeStringKind::User => {
+                                InnerColumnTypeStringKind::KittycatPermission { .. } => v, // All kittycat permissions are valid
+                                InnerColumnTypeStringKind::User { .. } => {
                                     // Try parsing to a UserId
                                     if let Err(err) = s.parse::<serenity::all::UserId>() {
                                         return Err(SettingsError::SchemaCheckValidationError {
@@ -522,7 +522,7 @@ async fn _validate_value(
 
                                     v
                                 }
-                                InnerColumnTypeStringKind::Role => {
+                                InnerColumnTypeStringKind::Role { .. } => {
                                     // Try parsing to a RoleId
                                     if let Err(err) = s.parse::<serenity::all::RoleId>() {
                                         return Err(SettingsError::SchemaCheckValidationError {
@@ -535,7 +535,7 @@ async fn _validate_value(
 
                                     v
                                 }
-                                InnerColumnTypeStringKind::Emoji => {
+                                InnerColumnTypeStringKind::Emoji { .. } => {
                                     // Try parsing to a ChannelId
                                     if let Err(err) = s.parse::<serenity::all::EmojiId>() {
                                         return Err(SettingsError::SchemaCheckValidationError {
@@ -548,7 +548,7 @@ async fn _validate_value(
 
                                     v
                                 }
-                                InnerColumnTypeStringKind::Message => {
+                                InnerColumnTypeStringKind::Message { .. } => {
                                     // The format of a message on db should be channel_id/message_id
                                     //
                                     // So, split by '/' and check if the first part is a valid channel id
@@ -592,7 +592,7 @@ async fn _validate_value(
 
                                     v
                                 }
-                                InnerColumnTypeStringKind::Modifier => {
+                                InnerColumnTypeStringKind::Modifier { .. } => {
                                     splashcore_rs::modifier::Modifier::from_repr(s).map_err(
                                         |e| SettingsError::SchemaCheckValidationError {
                                             column: column_id.to_string(),

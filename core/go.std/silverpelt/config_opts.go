@@ -92,7 +92,9 @@ type CanonicalInnerColumnType struct {
 		Values orderedmap.OrderedMap[string, int64] `json:"values"`
 	} `json:"BitFlag,omitempty"`
 	Boolean *struct{} `json:"Boolean,omitempty"`
-	Json    *struct{} `json:"Json,omitempty"`
+	Json    *struct {
+		MaxBytes *int `json:"max_bytes"`
+	} `json:"Json,omitempty"`
 }
 
 type CanonicalColumnSuggestion struct {

@@ -236,6 +236,17 @@ async fn event_listener<'a>(
                     }
                 });
 
+                let ctx = ctx.serenity_context.clone();
+                let _ = tokio::task::spawn(async move {
+                    match bot_binutils::on_startup(ctx).await {
+                        Ok(_) => {}
+                        Err(e) => {
+                            error!("Error in on_startup: {}", e);
+                            std::process::exit(1);
+                        }
+                    };
+                });
+
                 CONNECT_STATE
                     .started_tasks
                     .store(true, std::sync::atomic::Ordering::SeqCst);
@@ -244,17 +255,6 @@ async fn event_listener<'a>(
             CONNECT_STATE
                 .ready
                 .insert(ctx.serenity_context.shard_id, true);
-
-            let ctx = ctx.serenity_context.clone();
-            let _ = tokio::task::spawn(async move {
-                match bot_binutils::on_startup(ctx).await {
-                    Ok(_) => {}
-                    Err(e) => {
-                        error!("Error in on_startup: {}", e);
-                        std::process::exit(1);
-                    }
-                };
-            });
 
             drop(_lock);
         }
