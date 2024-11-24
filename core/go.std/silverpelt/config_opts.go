@@ -48,12 +48,24 @@ type CanonicalSettingsError struct {
 }
 
 type CanonicalColumnType struct {
-	Scalar *struct {
-		ColumnType CanonicalInnerColumnType `json:"column_type"`
-	} `json:"Scalar,omitempty"`
-	Array *struct {
-		Inner CanonicalInnerColumnType `json:"inner"`
-	} `json:"Array,omitempty"`
+	Type   string    `json:"type"` // Either Scalar or Array
+	Uuid   *struct{} `json:"Uuid,omitempty"`
+	String *struct {
+		MinLength     *int                               `json:"min_length,omitempty"`
+		MaxLength     *int                               `json:"max_length,omitempty"`
+		AllowedValues []string                           `json:"allowed_values,omitempty"`
+		Kind          CanonicalInnerColumnTypeStringKind `json:"kind,omitempty"`
+	} `json:"String,omitempty"`
+	Timestamp   *struct{} `json:"Timestamp,omitempty"`
+	TimestampTz *struct{} `json:"TimestampTz,omitempty"`
+	Interval    *struct{} `json:"Interval,omitempty"`
+	Integer     *struct{} `json:"Integer,omitempty"`
+	Float       *struct{} `json:"Float,omitempty"`
+	BitFlag     *struct {
+		Values orderedmap.OrderedMap[string, int64] `json:"values"`
+	} `json:"BitFlag,omitempty"`
+	Boolean *struct{} `json:"Boolean,omitempty"`
+	Json    *struct{} `json:"Json,omitempty"`
 }
 
 type CanonicalInnerColumnTypeStringKind struct {
@@ -73,26 +85,6 @@ type CanonicalInnerColumnTypeStringKind struct {
 	Emoji    *struct{} `json:"Emoji,omitempty"`
 	Message  *struct{} `json:"Message,omitempty"`
 	Modifier *struct{} `json:"Modifier,omitempty"`
-}
-
-type CanonicalInnerColumnType struct {
-	Uuid   *struct{} `json:"Uuid,omitempty"`
-	String *struct {
-		MinLength     *int                               `json:"min_length,omitempty"`
-		MaxLength     *int                               `json:"max_length,omitempty"`
-		AllowedValues []string                           `json:"allowed_values,omitempty"`
-		Kind          CanonicalInnerColumnTypeStringKind `json:"kind,omitempty"`
-	} `json:"String,omitempty"`
-	Timestamp   *struct{} `json:"Timestamp,omitempty"`
-	TimestampTz *struct{} `json:"TimestampTz,omitempty"`
-	Interval    *struct{} `json:"Interval,omitempty"`
-	Integer     *struct{} `json:"Integer,omitempty"`
-	Float       *struct{} `json:"Float,omitempty"`
-	BitFlag     *struct {
-		Values orderedmap.OrderedMap[string, int64] `json:"values"`
-	} `json:"BitFlag,omitempty"`
-	Boolean *struct{} `json:"Boolean,omitempty"`
-	Json    *struct{} `json:"Json,omitempty"`
 }
 
 type CanonicalColumnSuggestion struct {
