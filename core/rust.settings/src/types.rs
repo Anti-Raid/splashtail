@@ -64,7 +64,6 @@ pub struct SettingsData {
 
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 #[allow(dead_code)]
-#[serde(tag = "type")]
 pub enum ColumnType {
     /// A single valued column (scalar)
     Scalar {
