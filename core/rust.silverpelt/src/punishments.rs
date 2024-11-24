@@ -75,7 +75,7 @@ impl Punishment {
             crate::ar_event::EventHandlerContext {
                 guild_id: self.guild_id,
                 data: ctx.data::<crate::data::Data>(),
-                event: crate::ar_event::AntiraidEvent::PunishmentCreate(self),
+                event: crate::ar_event::AntiraidEvent::PunishmentCreate(self.into()),
                 serenity_context: ctx,
             },
         ))

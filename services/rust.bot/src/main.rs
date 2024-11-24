@@ -272,7 +272,7 @@ async fn event_listener<'a>(
     let event_handler_context = Arc::new(EventHandlerContext {
         guild_id: event_guild_id,
         data: ctx.user_data(),
-        event: AntiraidEvent::Discord(event.clone()),
+        event: AntiraidEvent::Discord(event.clone().into()),
         serenity_context: ctx.serenity_context.clone(),
     });
 

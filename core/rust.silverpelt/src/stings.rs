@@ -136,7 +136,7 @@ impl Sting {
             crate::ar_event::EventHandlerContext {
                 guild_id: self.guild_id,
                 data: ctx.data::<crate::data::Data>(),
-                event: crate::ar_event::AntiraidEvent::StingCreate(self),
+                event: crate::ar_event::AntiraidEvent::StingCreate(self.into()),
                 serenity_context: ctx,
             },
         ))
@@ -154,7 +154,7 @@ impl Sting {
             crate::ar_event::EventHandlerContext {
                 guild_id: self.guild_id,
                 data: ctx.data::<crate::data::Data>(),
-                event: crate::ar_event::AntiraidEvent::StingDelete(self),
+                event: crate::ar_event::AntiraidEvent::StingDelete(self.into()),
                 serenity_context: ctx,
             },
         ))

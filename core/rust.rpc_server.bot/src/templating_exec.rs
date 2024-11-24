@@ -38,15 +38,15 @@ pub(crate) async fn execute_template(
         data.pool.clone(),
         serenity_context.clone(),
         data.reqwest.clone(),
-        templating::event::Event::new(
+        templating::event::Event::new_boxed(
             "(Anti-Raid) Template Execution".to_string(),
+            "AR/Virtual_ExecTemplate".to_string(),
             "AR/Virtual_ExecTemplate".to_string(),
             serde_json::json!({
                 "args": req.args,
                 "user_id": user_id,
             }),
             false,
-            None,
         ),
     )
     .await;

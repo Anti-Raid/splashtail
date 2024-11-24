@@ -20,28 +20,25 @@ pub(crate) async fn event_listener(ectx: &EventHandlerContext) -> Result<(), sil
             dispatch_audit_log(
                 ctx,
                 &ectx.data,
-                "AR/TrustedWebEvent",
-                "(Anti Raid) Trusted Web Event",
-                {
-                    let mut m = serde_json::Map::new();
-                    m.insert(
-                        "event_name".to_string(),
-                        serde_json::Value::String(event_name.to_string()),
-                    );
-                    m.insert("data".to_string(), data.clone());
-                    serde_json::Value::Object(m)
-                },
+                templating::event::CreateEventArc::new(
+                    "(Anti Raid) Trusted Web Event".to_string(),
+                    "TrustedWebEvent".to_string(),
+                    event_name.to_string(),
+                    data.clone(),
+                    false,
+                ),
                 ectx.guild_id,
             )
             .await
         }
         AntiraidEvent::Discord(ref event) => {
-            if not_audit_loggable_event().contains(&event.into()) {
+            let event_ref = event.as_ref();
+            if not_audit_loggable_event().contains(&event_ref.into()) {
                 return Ok(());
             }
 
             // Ignore ourselves
-            match event {
+            match event_ref {
                 FullEvent::GuildAuditLogEntryCreate { .. } => {}
                 _ => match gwevent::core::get_event_user_id(event) {
                     Ok(user_id) => {
@@ -55,8 +52,6 @@ pub(crate) async fn event_listener(ectx: &EventHandlerContext) -> Result<(), sil
                     Err(None) => {}
                 },
             }
-
-            let event_data = serde_json::to_value(event)?;
 
             // Convert to titlecase by capitalizing the first letter of each word
             let event_titlename = event
@@ -72,14 +67,16 @@ pub(crate) async fn event_listener(ectx: &EventHandlerContext) -> Result<(), sil
                 .collect::<Vec<String>>()
                 .join(" ");
 
-            let event_name: &'static str = event.into();
-
             dispatch_audit_log(
                 ctx,
                 &ectx.data,
-                event_name,
-                &event_titlename,
-                event_data,
+                templating::event::CreateEventArc::new_arc(
+                    event_titlename,
+                    "Discord".to_string(),
+                    event.snake_case_name().to_string(),
+                    event.clone(),
+                    false,
+                ),
                 ectx.guild_id,
             )
             .await
@@ -89,22 +86,28 @@ pub(crate) async fn event_listener(ectx: &EventHandlerContext) -> Result<(), sil
             dispatch_audit_log(
                 ctx,
                 &ectx.data,
-                &event.event_name,
-                &event.event_titlename,
-                event.event_data.clone(),
+                templating::event::CreateEventArc::new(
+                    event.event_titlename.clone(),
+                    "Custom".to_string(),
+                    event.event_name.clone(),
+                    event.event_data.clone(),
+                    false,
+                ),
                 ectx.guild_id,
             )
             .await
         }
         AntiraidEvent::StingCreate(ref sting) => {
-            let sting = serde_json::to_value(sting)?;
-
             dispatch_audit_log(
                 ctx,
                 &ectx.data,
-                "AR/StingCreate",
-                "(Anti Raid) Sting Created",
-                serde_json::to_value(sting)?,
+                templating::event::CreateEventArc::new_arc(
+                    "(Anti Raid) Sting Created".to_string(),
+                    "StingCreate".to_string(),
+                    "StingCreate".to_string(),
+                    sting.clone(),
+                    false,
+                ),
                 ectx.guild_id,
             )
             .await?;
@@ -112,14 +115,16 @@ pub(crate) async fn event_listener(ectx: &EventHandlerContext) -> Result<(), sil
             Ok(())
         }
         AntiraidEvent::StingExpire(ref sting) => {
-            let sting = serde_json::to_value(sting)?;
-
             dispatch_audit_log(
                 ctx,
                 &ectx.data,
-                "AR/StingExpire",
-                "(Anti Raid) Sting Expired",
-                serde_json::to_value(sting)?,
+                templating::event::CreateEventArc::new_arc(
+                    "(Anti Raid) Sting Expired".to_string(),
+                    "StingExpire".to_string(),
+                    "StingExpire".to_string(),
+                    sting.clone(),
+                    false,
+                ),
                 ectx.guild_id,
             )
             .await?;
@@ -127,14 +132,16 @@ pub(crate) async fn event_listener(ectx: &EventHandlerContext) -> Result<(), sil
             Ok(())
         }
         AntiraidEvent::StingDelete(ref sting) => {
-            let sting = serde_json::to_value(sting)?;
-
             dispatch_audit_log(
                 ctx,
                 &ectx.data,
-                "AR/StingDelete",
-                "(Anti Raid) Sting Deleted",
-                serde_json::to_value(sting)?,
+                templating::event::CreateEventArc::new_arc(
+                    "(Anti Raid) Sting Deleted".to_string(),
+                    "StingDelete".to_string(),
+                    "StingDelete".to_string(),
+                    sting.clone(),
+                    false,
+                ),
                 ectx.guild_id,
             )
             .await?;
@@ -142,14 +149,16 @@ pub(crate) async fn event_listener(ectx: &EventHandlerContext) -> Result<(), sil
             Ok(())
         }
         AntiraidEvent::PunishmentCreate(ref punishment) => {
-            let punishment = serde_json::to_value(punishment)?;
-
             dispatch_audit_log(
                 ctx,
                 &ectx.data,
-                "AR/PunishmentCreate",
-                "(Anti Raid) Punishment Created",
-                serde_json::to_value(punishment)?,
+                templating::event::CreateEventArc::new_arc(
+                    "(Anti Raid) Punishment Created".to_string(),
+                    "PunishmentCreate".to_string(),
+                    "PunishmentCreate".to_string(),
+                    punishment.clone(),
+                    false,
+                ),
                 ectx.guild_id,
             )
             .await?;
@@ -157,14 +166,16 @@ pub(crate) async fn event_listener(ectx: &EventHandlerContext) -> Result<(), sil
             Ok(())
         }
         AntiraidEvent::PunishmentExpire(ref punishment) => {
-            let punishment = serde_json::to_value(punishment)?;
-
             dispatch_audit_log(
                 ctx,
                 &ectx.data,
-                "AR/PunishmentExpire",
-                "(Anti Raid) Punishment Expired",
-                serde_json::to_value(punishment)?,
+                templating::event::CreateEventArc::new_arc(
+                    "(Anti Raid) Punishment Expired".to_string(),
+                    "PunishmentExpire".to_string(),
+                    "PunishmentExpire".to_string(),
+                    punishment.clone(),
+                    false,
+                ),
                 ectx.guild_id,
             )
             .await?;
@@ -175,11 +186,15 @@ pub(crate) async fn event_listener(ectx: &EventHandlerContext) -> Result<(), sil
             dispatch_audit_log(
                 ctx,
                 &ectx.data,
-                "AR/OnStartup",
-                "(Anti Raid) On Startup",
-                serde_json::json!({
-                    "targets": modified
-                }),
+                templating::event::CreateEventArc::new(
+                    "(Anti Raid) On Startup".to_string(),
+                    "OnStartup".to_string(),
+                    "OnStartup".to_string(),
+                    serde_json::json!({
+                        "targets": modified
+                    }),
+                    false,
+                ),
                 ectx.guild_id,
             )
             .await
@@ -219,9 +234,7 @@ pub(crate) async fn should_dispatch_event(
 async fn dispatch_audit_log(
     ctx: &serenity::all::client::Context,
     data: &silverpelt::data::Data,
-    event_name: &str,
-    event_titlename: &str,
-    event_data: serde_json::Value,
+    event: templating::event::CreateEventArc,
     guild_id: serenity::model::id::GuildId,
 ) -> Result<(), silverpelt::Error> {
     let templates = templating::cache::get_all_guild_templates(guild_id, &data.pool).await?;
@@ -232,7 +245,7 @@ async fn dispatch_audit_log(
 
     for template in templates.iter() {
         // Verify event dispatch
-        if !should_dispatch_event(event_name, {
+        if !should_dispatch_event(&event.name, {
             // False positive, unwrap_or_default cannot be used here as it moves the event out of the sink
             #[allow(clippy::manual_unwrap_or_default)]
             if let Some(ref events) = template.events {
@@ -252,13 +265,7 @@ async fn dispatch_audit_log(
             data.pool.clone(),
             ctx.clone(),
             data.reqwest.clone(),
-            templating::event::Event::new(
-                event_titlename.to_string(),
-                event_name.to_string(),
-                event_data.clone(),
-                false,
-                Some(template.clone()),
-            ),
+            event.into_event(),
         )
         .await?;
     }
