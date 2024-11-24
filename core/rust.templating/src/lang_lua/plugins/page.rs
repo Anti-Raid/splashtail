@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use ar_settings::types::{
     HookContext, SettingCreator, SettingDeleter, SettingUpdater, SettingView, SettingsError,
 };
@@ -8,14 +10,17 @@ use serde::{Deserialize, Serialize};
 pub struct Page {
     pub title: String,
     pub description: String,
+    pub template_name: String,
     pub settings: Vec<ar_settings::types::Setting>,
 }
 
 #[derive(FromLua, Clone)]
 pub struct CreatePageSetting {
     pub setting: ar_settings::types::Setting,
+    pub operations: Vec<ar_settings::types::OperationType>,
 }
 
+#[derive(Clone)]
 pub struct LuaSettingExecutor {
     pub template_name: String,
     pub name: String,
@@ -134,7 +139,7 @@ impl SettingDeleter for LuaSettingExecutor {
         context: HookContext<'a>,
         pkey: splashcore_rs::value::Value,
     ) -> Result<(), SettingsError> {
-        let result: indexmap::IndexMap<String, splashcore_rs::value::Value> = crate::execute(
+        let _: () = crate::execute(
             context.guild_id,
             crate::Template::Named(self.template_name.clone()),
             context.data.pool.clone(),
@@ -164,8 +169,49 @@ impl LuaUserData for Page {
         // Go to the next item in the stream
         methods.add_async_method_mut(
             "add_setting",
-            |lua, mut this, setting: CreatePageSetting| async move {
-                // Create new setting executor
+            |_lua, mut this, setting: CreatePageSetting| async move {
+                let settings_executor = LuaSettingExecutor {
+                    template_name: this.template_name.clone(),
+                    name: setting.setting.name.clone(),
+                };
+
+                let ops = setting.operations;
+                let mut setting = setting.setting;
+
+                let sops = ar_settings::types::SettingOperations {
+                    view: {
+                        if ops.contains(&ar_settings::types::OperationType::View) {
+                            Some(Arc::new(settings_executor.clone()))
+                        } else {
+                            None
+                        }
+                    },
+                    create: {
+                        if ops.contains(&ar_settings::types::OperationType::Create) {
+                            Some(Arc::new(settings_executor.clone()))
+                        } else {
+                            None
+                        }
+                    },
+                    update: {
+                        if ops.contains(&ar_settings::types::OperationType::Update) {
+                            Some(Arc::new(settings_executor.clone()))
+                        } else {
+                            None
+                        }
+                    },
+                    delete: {
+                        if ops.contains(&ar_settings::types::OperationType::Delete) {
+                            Some(Arc::new(settings_executor.clone()))
+                        } else {
+                            None
+                        }
+                    },
+                };
+
+                setting.operations = sops;
+
+                this.settings.push(setting);
                 Ok(())
             },
         ); // Implement the method
