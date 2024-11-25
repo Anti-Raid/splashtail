@@ -473,7 +473,10 @@
 <h3 id="templatedata"><a class="header" href="#templatedata">TemplateData</a></h3>
 <p><code>TemplateData</code> is a struct that represents the data associated with a template token. It is used to store the path and pragma of a template token.</p>
 <pre><code class="language-json">{
-  "path": "",
+  "path": "test",
+  "template": {
+    "Named": "foo"
+  },
   "pragma": {
     "lang": "lua",
     "allowed_caps": []
@@ -1290,6 +1293,32 @@
 </code></pre>
 <p>A Lua function.</p>
 <hr />
+<h1 id="methods-12"><a class="header" href="#methods-12">Methods</a></h1>
+<h2 id="array"><a class="header" href="#array">array</a></h2>
+<pre><code class="language-lua">function array(...: unknown): {unknown}
+</code></pre>
+<p>Helper method to create an array from a list of tables, setting the array_metatable on the result.</p>
+<h3 id="parameters-39"><a class="header" href="#parameters-39">Parameters</a></h3>
+<ul>
+<li><code>...</code> (<a href="#type.unknown">unknown</a>): The elements used to form the array.</li>
+</ul>
+<h3 id="returns-49"><a class="header" href="#returns-49">Returns</a></h3>
+<ul>
+<li><code>table</code> (<a href="#type.unknown">{unknown}</a>): The array table.</li>
+</ul>
+<h1 id="types-6"><a class="header" href="#types-6">Types</a></h1>
+<div id="type.Event" />
+<h2 id="event"><a class="header" href="#event">Event</a></h2>
+<p>An event that has been dispatched to the template. This is what <code>args</code> is in the template.</p>
+<h3 id="fields-12"><a class="header" href="#fields-12">Fields</a></h3>
+<ul>
+<li><code>title</code> (<a href="#type.string">string</a>): The title name of the event.</li>
+<li><code>base_name</code> (<a href="#type.string">string</a>): The base name of the event.</li>
+<li><code>name</code> (<a href="#type.string">string</a>): The name of the event.</li>
+<li><code>data</code> (<a href="#type.unknown">unknown</a>): The data of the event.</li>
+<li><code>is_deniable</code> (<a href="#type.boolean">boolean</a>): Whether the event can be denied.</li>
+<li><code>uid</code> (<a href="#type.string">string</a>): The unique identifier ID of the event. Will be guaranteed to be unique at a per-guild level.</li>
+</ul>
 
                     </main>
 
