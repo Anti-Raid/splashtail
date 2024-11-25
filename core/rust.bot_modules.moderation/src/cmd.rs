@@ -1,13 +1,12 @@
 use futures_util::StreamExt;
+use jobserver::embed::{embed as embed_job, get_icon_of_state};
 use poise::CreateReply;
 use sandwich_driver::{guild, member_in_guild};
 use serenity::all::{
     ChannelId, CreateEmbed, EditMember, EditMessage, GuildId, Mentionable, Timestamp, User, UserId,
 };
-use silverpelt::jobserver::{embed as embed_job, get_icon_of_state};
 use silverpelt::Context;
 use silverpelt::Error;
-use splashcore_rs::jobserver;
 use splashcore_rs::utils::{
     create_special_allocation_from_str, parse_duration_string, parse_numeric_list_to_str, Unit,
     REPLACE_CHANNEL,
@@ -253,31 +252,19 @@ pub async fn prune_user(
     let data = ctx.data();
 
     // Make request to jobserver
-    let resp = data
-        .reqwest
-        .post(format!(
-            "{}:{}/spawn",
-            config::CONFIG.base_ports.jobserver_base_addr,
-            config::CONFIG.base_ports.jobserver
-        ))
-        .json(&splashcore_rs::jobserver::Spawn {
+    let id = jobserver::spawn::spawn_task(
+        &data.reqwest,
+        &jobserver::Spawn {
             name: "message_prune".to_string(),
             data: prune_opts.clone(),
             create: true,
             execute: true,
             id: None,
             user_id: author.user.id.to_string(),
-        })
-        .send()
-        .await
-        .map_err(|e| format!("Failed to initiate message prune: {}", e))?
-        .error_for_status()
-        .map_err(|e| format!("Failed to initiate message prune: {}", e))?;
-
-    let id = resp
-        .json::<splashcore_rs::jobserver::SpawnResponse>()
-        .await?
-        .id;
+        },
+    )
+    .await?
+    .id;
 
     tx.commit().await?;
 

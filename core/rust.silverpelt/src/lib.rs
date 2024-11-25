@@ -2,7 +2,6 @@ pub mod ar_event;
 pub mod cache;
 pub mod canonical_module;
 pub mod data;
-pub mod jobserver;
 pub mod member_permission_calc;
 pub mod module;
 pub mod module_config;

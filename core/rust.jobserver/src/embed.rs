@@ -1,6 +1,6 @@
-use crate::Error;
+use crate::Job;
 use serenity::all::{CreateActionRow, CreateButton, CreateEmbed};
-use splashcore_rs::jobserver::Job;
+use splashcore_rs::Error;
 
 pub fn get_icon_of_state(state: &str) -> String {
     match state {

@@ -1,7 +1,9 @@
+pub mod embed;
 pub mod poll;
+pub mod spawn;
 
-use crate::objectstore::ObjectStore;
 use indexmap::IndexMap;
+use splashcore_rs::objectstore::ObjectStore;
 use sqlx::{types::uuid::Uuid, PgPool};
 use std::str::FromStr;
 use std::sync::Arc;
@@ -55,7 +57,7 @@ pub struct Owner {
 }
 
 impl FromStr for Owner {
-    type Err = crate::Error;
+    type Err = splashcore_rs::Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let mut split = s.splitn(2, '/');
@@ -90,7 +92,7 @@ pub struct JobCreateResponse {
 
 impl Job {
     /// Fetches a task from the database based on id
-    pub async fn from_id(id: Uuid, pool: &PgPool) -> Result<Self, crate::Error> {
+    pub async fn from_id(id: Uuid, pool: &PgPool) -> Result<Self, splashcore_rs::Error> {
         let rec = sqlx::query!(
             "SELECT id, name, output, statuses, owner, expiry, state, created_at, fields, resumable FROM jobs WHERE id = $1 ORDER BY created_at DESC",
             id,
@@ -139,7 +141,7 @@ impl Job {
     pub async fn from_guild(
         guild_id: serenity::all::GuildId,
         pool: &sqlx::PgPool,
-    ) -> Result<Vec<Self>, crate::Error> {
+    ) -> Result<Vec<Self>, splashcore_rs::Error> {
         let recs = sqlx::query!(
             "SELECT id, name, output, statuses, owner, expiry, state, created_at, fields, resumable FROM jobs WHERE owner = $1",
             format!("g/{}", guild_id)
@@ -194,7 +196,7 @@ impl Job {
         guild_id: serenity::all::GuildId,
         name: &str,
         pool: &sqlx::PgPool,
-    ) -> Result<Vec<Self>, crate::Error> {
+    ) -> Result<Vec<Self>, splashcore_rs::Error> {
         let recs = sqlx::query!(
             "SELECT id, name, output, statuses, owner, expiry, state, created_at, fields, resumable FROM jobs WHERE owner = $1 AND name = $2",
             format!("g/{}", guild_id),
@@ -279,7 +281,10 @@ impl Job {
     }
 
     #[allow(dead_code)]
-    pub async fn get_url(&self, object_store: &Arc<ObjectStore>) -> Result<String, crate::Error> {
+    pub async fn get_url(
+        &self,
+        object_store: &Arc<ObjectStore>,
+    ) -> Result<String, splashcore_rs::Error> {
         // Check if the job has an output
         let Some(path) = &self.get_file_path() else {
             return Err("Job has no output".into());
@@ -293,7 +298,7 @@ impl Job {
         &self,
         client: &reqwest::Client,
         object_store: &Arc<ObjectStore>,
-    ) -> Result<(), crate::Error> {
+    ) -> Result<(), splashcore_rs::Error> {
         // Check if the job has an output
         let Some(path) = self.get_path() else {
             return Err("Job has no output".into());
@@ -311,7 +316,7 @@ impl Job {
     }
 
     /// Delete the job from the database, this also consumes the job dropping it from memory
-    pub async fn delete_from_db(self, pool: &PgPool) -> Result<(), crate::Error> {
+    pub async fn delete_from_db(self, pool: &PgPool) -> Result<(), splashcore_rs::Error> {
         sqlx::query!("DELETE FROM jobs WHERE id = $1", self.id,)
             .execute(pool)
             .await?;
@@ -327,7 +332,7 @@ impl Job {
         pool: &PgPool,
         client: &reqwest::Client,
         object_store: &Arc<ObjectStore>,
-    ) -> Result<(), crate::Error> {
+    ) -> Result<(), splashcore_rs::Error> {
         self.delete_from_storage(client, object_store).await?;
         self.delete_from_db(pool).await?;
 

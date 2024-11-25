@@ -1,4 +1,4 @@
-use super::Job;
+use crate::Job;
 use futures_util::Stream;
 use std::sync::Arc;
 
@@ -23,7 +23,8 @@ pub fn reactive(
     pool: &sqlx::PgPool,
     id: &str,
     to: PollTaskOptions,
-) -> Result<impl Stream<Item = Result<Option<Arc<Job>>, crate::Error>>, crate::Error> {
+) -> Result<impl Stream<Item = Result<Option<Arc<Job>>, splashcore_rs::Error>>, splashcore_rs::Error>
+{
     let interval = to.interval;
     let timeout_nostatuschange = to.timeout_nostatuschange;
     let duration = std::time::Duration::from_secs(interval);

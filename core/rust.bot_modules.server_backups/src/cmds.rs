@@ -1,10 +1,9 @@
 use futures_util::StreamExt;
+use jobserver::embed::{embed as embed_job, get_icon_of_state};
 use serenity::all::{ChannelId, CreateEmbed, EditMessage};
 use serenity::small_fixed_array::TruncatingInto;
-use silverpelt::jobserver::{embed as embed_job, get_icon_of_state};
 use silverpelt::Context;
 use silverpelt::Error;
-use splashcore_rs::jobserver;
 use splashcore_rs::utils::{
     create_special_allocation_from_str, parse_numeric_list, REPLACE_CHANNEL,
 };
@@ -164,31 +163,19 @@ pub async fn backups_create(
     let data = ctx.data();
 
     // Make request to jobserver
-    let resp = data
-        .reqwest
-        .post(format!(
-            "{}:{}/spawn",
-            config::CONFIG.base_ports.jobserver_base_addr,
-            config::CONFIG.base_ports.jobserver
-        ))
-        .json(&splashcore_rs::jobserver::Spawn {
+    let backup_id = jobserver::spawn::spawn_task(
+        &data.reqwest,
+        &jobserver::Spawn {
             name: "guild_create_backup".to_string(),
             data: backup_args,
             create: true,
             execute: true,
             id: None,
             user_id: ctx.author().id.to_string(),
-        })
-        .send()
-        .await
-        .map_err(|e| format!("Failed to initiate backup: {}", e))?
-        .error_for_status()
-        .map_err(|e| format!("Failed to initiate backup: {}", e))?;
-
-    let backup_id = resp
-        .json::<splashcore_rs::jobserver::SpawnResponse>()
-        .await?
-        .id;
+        },
+    )
+    .await?
+    .id;
 
     base_message
         .edit(
@@ -588,31 +575,19 @@ pub async fn backups_list(ctx: Context<'_>) -> Result<(), Error> {
                 });
 
                 // Restore backup
-                let resp = data
-                    .reqwest
-                    .post(format!(
-                        "{}:{}/spawn",
-                        config::CONFIG.base_ports.jobserver_base_addr,
-                        config::CONFIG.base_ports.jobserver
-                    ))
-                    .json(&splashcore_rs::jobserver::Spawn {
+                let restore_id = jobserver::spawn::spawn_task(
+                    &data.reqwest,
+                    &jobserver::Spawn {
                         name: "guild_restore_backup".to_string(),
                         data: json,
                         create: true,
                         execute: true,
                         id: None,
                         user_id: ctx.author().id.to_string(),
-                    })
-                    .send()
-                    .await
-                    .map_err(|e| format!("Failed to initiate backup: {}", e))?
-                    .error_for_status()
-                    .map_err(|e| format!("Failed to initiate backup: {}", e))?;
-
-                let restore_id = resp
-                    .json::<splashcore_rs::jobserver::SpawnResponse>()
-                    .await?
-                    .id;
+                    },
+                )
+                .await?
+                .id;
 
                 base_message
                     .edit(
@@ -1166,31 +1141,19 @@ pub async fn backups_restore(
     });
 
     // Restore backup
-    let resp = data
-        .reqwest
-        .post(format!(
-            "{}:{}/spawn",
-            config::CONFIG.base_ports.jobserver_base_addr,
-            config::CONFIG.base_ports.jobserver
-        ))
-        .json(&splashcore_rs::jobserver::Spawn {
+    let restore_id = jobserver::spawn::spawn_task(
+        &data.reqwest,
+        &jobserver::Spawn {
             name: "guild_restore_backup".to_string(),
             data: json,
             create: true,
             execute: true,
             id: None,
             user_id: ctx.author().id.to_string(),
-        })
-        .send()
-        .await
-        .map_err(|e| format!("Failed to initiate backup restore: {}", e))?
-        .error_for_status()
-        .map_err(|e| format!("Failed to initiate backup restore: {}", e))?;
-
-    let restore_id = resp
-        .json::<splashcore_rs::jobserver::SpawnResponse>()
-        .await?
-        .id;
+        },
+    )
+    .await?
+    .id;
 
     base_message
         .edit(

@@ -639,6 +639,7 @@ dependencies = [
  "futures-util",
  "gwevent",
  "indexmap",
+ "jobserver 0.1.0",
  "log",
  "permissions",
  "poise",
@@ -685,6 +686,7 @@ dependencies = [
  "config",
  "futures-util",
  "indexmap",
+ "jobserver 0.1.0",
  "log",
  "permission_checks",
  "poise",
@@ -851,7 +853,7 @@ version = "1.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "fd9de9f2205d5ef3fd67e685b0df337994ddd4495e2a28d185500d0e1edfea47"
 dependencies = [
- "jobserver",
+ "jobserver 0.1.32",
  "libc",
  "shlex",
 ]
@@ -2500,6 +2502,30 @@ name = "itoa"
 version = "1.0.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "49f1f14873335454500d59611f1cf4a4b0f786f9ac11f4312a78e4cf2566695b"
+
+[[package]]
+name = "jobserver"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "botox",
+ "chrono",
+ "config",
+ "dashmap 6.1.0",
+ "extract_map",
+ "futures-util",
+ "indexmap",
+ "log",
+ "poise",
+ "reqwest",
+ "rusty-s3",
+ "serde",
+ "serde_json",
+ "serenity",
+ "splashcore_rs",
+ "sqlx",
+ "tokio",
+]
 
 [[package]]
 name = "jobserver"

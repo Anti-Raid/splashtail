@@ -1,5 +1,5 @@
 [package]
-name = "bot_modules_moderation"
+name = "jobserver"
 version = "0.1.0"
 edition = "2021"
 
@@ -7,32 +7,30 @@ edition = "2021"
 
 [dependencies]
 poise = { git = "https://github.com/Anti-Raid/poise", branch = "serenity-next" }
-log = "0.4"
-sqlx = { version = "0.8", features = [ "runtime-tokio-rustls", "postgres", "chrono", "uuid", "json"] }
 chrono = { version = "0.4", features = ["serde"]}
-serde_json = "1.0"
 indexmap = { version = "2", features = ["serde"] }
-async-trait = "0.1.80"
 futures-util = "0.3"
-
-# Anti-Raid specific
-splashcore_rs = { path = "../rust.std" }
-silverpelt = { path = "../rust.silverpelt" }
-permissions = { path = "../rust.permissions" }
+serde_json = "1.0"
+serde = { version = "1.0", features = ["derive"] }
+dashmap = { version = "6", features = ["serde", "inline", "rayon"] }
+sqlx = { version = "0.8", features = [ "runtime-tokio-rustls", "postgres", "chrono", "uuid", "json"] }
+rusty-s3 = "0.5"
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls", "rustls-tls-native-roots"] }
+async-trait = "0.1.80"
+extract_map = { version = "0.1.0", features = ["serde", "iter_mut"] }
+log = "0.4"
 config = { path = "../rust.config" }
-gwevent = { path = "../rust.gwevent" }
-sandwich_driver = { path = "../rust.sandwich_driver" }
-jobserver = { path = "../rust.jobserver" }
+splashcore_rs = { path = "../rust.std" }
 
 [dependencies.tokio]
 version = "1"
 features = ["sync", "macros", "rt-multi-thread"]
 
+[dependencies.botox]
+git = "https://github.com/Anti-Raid/botox"
+branch = "main"
+
 [dependencies.serenity]
 git = "https://github.com/Anti-Raid/serenity"
 branch = "next"
 features = ["model", "http", "cache", "rustls_backend", "unstable"]
-
-[dependencies.botox]
-git = "https://github.com/Anti-Raid/botox"
-branch = "main"
