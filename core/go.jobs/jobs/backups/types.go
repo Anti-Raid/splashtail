@@ -39,7 +39,7 @@ type BackupConstraints struct {
 
 var FreePlanBackupConstraints = &BackupConstraints{
 	Create: &BackupCreateConstraints{
-		TotalMaxMessages:          500,
+		TotalMaxMessages:          1000,
 		MaxAttachmentFileSize:     8_000_000,  // 8MB
 		FileSizeWarningThreshold:  50_000_000, // 50MB
 		MinPerChannel:             50,
