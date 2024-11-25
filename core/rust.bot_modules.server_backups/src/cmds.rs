@@ -38,15 +38,6 @@ type BackupRestoreOpts struct {
 }
 */
 
-/// Checks backup encryption, when encrypted, Options->Encrypt is not empty ("SET" / a random string)
-fn is_backup_encrypted(fields: &indexmap::IndexMap<String, serde_json::Value>) -> bool {
-    fields
-        .get("Options")
-        .and_then(|options| options.get("Encrypt"))
-        .map(|v| !v.as_str().unwrap_or_default().is_empty())
-        .unwrap_or_default()
-}
-
 /// Create, load and get info on backups of your server!
 #[poise::command(
     slash_command,
@@ -237,11 +228,10 @@ pub async fn backups_list(ctx: Context<'_>) -> Result<(), Error> {
 
     fn create_embed_for_job<'a>(job: &jobserver::Job) -> serenity::all::CreateEmbed<'a> {
         let mut initial_desc = format!(
-            "ID: {}\nName: {}\nState: {}\n**Encrypted:** {}\n\n**Created At**: <t:{}:f> (<t:{}:R>)",
+            "ID: {}\nName: {}\nState: {}\n**Created At**: <t:{}:f> (<t:{}:R>)",
             job.id,
             job.name,
             job.state,
-            is_backup_encrypted(&job.fields),
             job.created_at.and_utc().timestamp(),
             job.created_at.and_utc().timestamp()
         );
@@ -401,67 +391,66 @@ pub async fn backups_list(ctx: Context<'_>) -> Result<(), Error> {
                 followup_done = true;
 
                 // Check for encryption, is so give a prompt
-                let job = &backup_jobs[index];
-
-                let mut password = None;
-                if is_backup_encrypted(&job.fields) {
-                    let mut password_preinput_warning = ctx.send(
+                let mut password_preinput_warning = ctx
+                    .send(
                         poise::reply::CreateReply::default()
-                        .content("This backup is encrypted. Please provide the password to decrypt it!")
-                        .ephemeral(true)
-                        .components(
-                            vec![
-                                serenity::all::CreateActionRow::Buttons(
-                                    vec![
-                                        serenity::all::CreateButton::new("backups_restore_enc_cont")
-                                        .label("Continue")
+                            .content("Do you want to provide a password to decrypt this backup?")
+                            .ephemeral(true)
+                            .components(vec![serenity::all::CreateActionRow::Buttons(
+                                vec![
+                                    serenity::all::CreateButton::new("backups_restore_enc_cont")
+                                        .label("Provide Password")
                                         .style(serenity::all::ButtonStyle::Success),
-                                        serenity::all::CreateButton::new("backups_restore_enc_cancel")
-                                        .label("No")
+                                    serenity::all::CreateButton::new("backups_restore_enc_cont")
+                                        .label("No Password Set")
+                                        .style(serenity::all::ButtonStyle::Success),
+                                    serenity::all::CreateButton::new("backups_restore_enc_cancel")
+                                        .label("Cancel")
                                         .style(serenity::all::ButtonStyle::Danger),
-                                    ]
-                                    .into()
-                                )
-                            ]
-                        )
+                                ]
+                                .into(),
+                            )]),
                     )
                     .await?
                     .into_message()
                     .await?;
 
-                    let password_preinp_collector = password_preinput_warning
-                        .id
-                        .await_component_interaction(ctx.serenity_context().shard.clone())
-                        .author_id(ctx.author().id)
-                        .timeout(Duration::from_secs(30))
-                        .await;
+                let password_preinp_collector = password_preinput_warning
+                    .id
+                    .await_component_interaction(ctx.serenity_context().shard.clone())
+                    .author_id(ctx.author().id)
+                    .timeout(Duration::from_secs(30))
+                    .await;
 
-                    if password_preinp_collector.is_none() {
-                        // Edit the message to say that the user took too long to respond
-                        password_preinput_warning
-                            .edit(
-                                &ctx.serenity_context().http,
-                                EditMessage::default().content("You took too long to respond"),
-                            )
-                            .await?;
-                    }
-
-                    let item = password_preinp_collector.unwrap();
-
-                    if item.data.custom_id.as_str() == "backups_restore_enc_cancel" {
-                        item.create_response(
+                if password_preinp_collector.is_none() {
+                    // Edit the message to say that the user took too long to respond
+                    password_preinput_warning
+                        .edit(
                             &ctx.serenity_context().http,
-                            serenity::all::CreateInteractionResponse::Message(
-                                serenity::all::CreateInteractionResponseMessage::default()
-                                    .ephemeral(true)
-                                    .content("Cancelled restoration of backup"),
-                            ),
+                            EditMessage::default().content("You took too long to respond"),
                         )
                         .await?;
+                }
 
-                        continue;
-                    }
+                let item = password_preinp_collector.unwrap();
 
+                if item.data.custom_id.as_str() == "backups_restore_enc_cancel" {
+                    item.create_response(
+                        &ctx.serenity_context().http,
+                        serenity::all::CreateInteractionResponse::Message(
+                            serenity::all::CreateInteractionResponseMessage::default()
+                                .ephemeral(true)
+                                .content("Cancelled restoration of backup"),
+                        ),
+                    )
+                    .await?;
+
+                    continue;
+                }
+
+                let password = if item.data.custom_id.as_str() == "backups_restore_enc_cont" {
+                    None
+                } else {
                     // Ask for password in modal
                     let password_modal = serenity::all::CreateQuickModal::new("Password")
                         .short_field("Password")
@@ -474,8 +463,8 @@ pub async fn backups_list(ctx: Context<'_>) -> Result<(), Error> {
                         continue;
                     };
 
-                    password = Some(password_modal.inputs[0].to_string());
-                }
+                    Some(password_modal.inputs[0].to_string())
+                };
 
                 // Ask for final confirmation
                 let mut confirm = ctx.send(
