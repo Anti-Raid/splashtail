@@ -539,7 +539,6 @@ pub mod templating_core {
     }
 
     #[derive(Clone, Hash, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
-    #[serde(tag = "type")]
     pub enum Template {
         Raw(String),
         Named(String),

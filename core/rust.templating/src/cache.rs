@@ -78,6 +78,26 @@ pub async fn add_page(guild_id: GuildId, page: Page) -> Result<(), crate::Error>
     Ok(())
 }
 
+/// Returns a setting from the page cache given the setting ID
+pub async fn get_setting(
+    guild_id: GuildId,
+    setting_id: &str,
+) -> Option<ar_settings::types::Setting> {
+    PAGES
+        .read_async(&guild_id, |_, v| {
+            for page in v.iter() {
+                for setting in page.settings.iter() {
+                    if setting.id == setting_id {
+                        return Some(setting.clone());
+                    }
+                }
+            }
+
+            None
+        })
+        .await?
+}
+
 /// Takes out the page from the page cache by page ID
 pub async fn take_page(guild_id: GuildId, page_id: String) -> Result<Page, crate::Error> {
     match PAGES.get_async(&guild_id).await {

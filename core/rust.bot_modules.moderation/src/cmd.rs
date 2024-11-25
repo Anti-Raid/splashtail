@@ -1,8 +1,8 @@
+use futures_util::StreamExt;
 use poise::CreateReply;
 use sandwich_driver::{guild, member_in_guild};
 use serenity::all::{
-    ChannelId, CreateEmbed, EditMember, EditMessage, GuildId, Mentionable, Message, Timestamp,
-    User, UserId,
+    ChannelId, CreateEmbed, EditMember, EditMessage, GuildId, Mentionable, Timestamp, User, UserId,
 };
 use silverpelt::jobserver::{embed as embed_job, get_icon_of_state};
 use silverpelt::Context;
@@ -13,7 +13,6 @@ use splashcore_rs::utils::{
     REPLACE_CHANNEL,
 };
 use std::collections::HashMap;
-use std::sync::Arc;
 
 /// Helper method to get the username of a user
 pub fn username(m: &User) -> String {
@@ -202,11 +201,7 @@ pub async fn prune_user(
             user.mention()
         ));
 
-    let mut base_message = ctx
-        .send(CreateReply::new().embed(embed))
-        .await?
-        .into_message()
-        .await?;
+    let base_message = ctx.send(CreateReply::new().embed(embed)).await?;
 
     let Some(author) = ctx.author_member().await else {
         return Err("This command can only be used in a guild".into());
@@ -327,61 +322,41 @@ pub async fn prune_user(
         );
 
     base_message
-        .edit(&ctx.http(), EditMessage::new().embed(embed.clone()))
+        .edit(ctx.clone(), CreateReply::new().embed(embed.clone()))
         .await?;
 
-    let ch = botox::cache::CacheHttpImpl {
-        cache: ctx.serenity_context().cache.clone(),
-        http: ctx.serenity_context().http.clone(),
-    };
-
-    async fn update_base_message(
-        user: Arc<User>,
-        prune_debug: bool,
-        cache_http: botox::cache::CacheHttpImpl,
-        mut base_message: Message,
-        job: Arc<jobserver::Job>,
-    ) -> Result<(), Error> {
-        let new_job_msg = embed_job(
-            &config::CONFIG.sites.api,
-            &job,
-            vec![CreateEmbed::default()
-                .title("Pruning User Messages...")
-                .description(format!(
-                    "{} | Pruning User Messages {}",
-                    get_icon_of_state(&job.state),
-                    user.mention()
-                ))],
-            prune_debug,
-        )?;
-
-        let prefix_msg = new_job_msg.to_prefix_edit(EditMessage::default());
-
-        base_message.edit(&cache_http, prefix_msg).await?;
-
-        Ok(())
-    }
-
-    let uarc = Arc::new(user);
-
-    // Use jobserver::reactive to keep updating the message
-    let prune_debug = prune_debug.unwrap_or(false);
-    jobserver::poll::reactive(
-        &ch,
+    let mut stream = Box::pin(jobserver::poll::reactive(
         &ctx.data().pool,
         &id,
-        |cache_http, job| {
-            Box::pin(update_base_message(
-                uarc.clone(),
-                prune_debug,
-                cache_http.clone(),
-                base_message.clone(),
-                job.clone(),
-            ))
-        },
         jobserver::poll::PollTaskOptions::default(),
-    )
-    .await?;
+    )?);
+
+    while let Some(job) = stream.next().await {
+        match job {
+            Ok(Some(job)) => {
+                let new_job_msg = embed_job(
+                    &config::CONFIG.sites.api,
+                    &job,
+                    vec![CreateEmbed::default()
+                        .title("Pruning User Messages...")
+                        .description(format!(
+                            "{} | Pruning User Messages {}",
+                            get_icon_of_state(&job.state),
+                            user.mention()
+                        ))],
+                    prune_debug.unwrap_or(false),
+                )?;
+
+                base_message.edit(ctx.clone(), new_job_msg).await?;
+            }
+            Ok(None) => {
+                continue; // Go to the next iteration
+            }
+            Err(e) => {
+                return Err(e);
+            }
+        }
+    }
 
     Ok(())
 }

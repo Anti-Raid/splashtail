@@ -10,7 +10,6 @@ use splashcore_rs::utils::{
 };
 use sqlx::types::uuid::Uuid;
 use std::fmt::Display;
-use std::sync::Arc;
 use std::time::Duration;
 
 /*
@@ -135,7 +134,7 @@ pub async fn backups_create(
 
     let special_allocations = create_special_allocation_from_str(&special_allocations)?;
 
-    let mut base_message = ctx
+    let base_message = ctx
         .send(
             poise::CreateReply::default().embed(
                 CreateEmbed::default()
@@ -143,8 +142,6 @@ pub async fn backups_create(
                     .description(":yellow_circle: Please wait, starting backup..."),
             ),
         )
-        .await?
-        .into_message()
         .await?;
 
     // Create backup
@@ -195,8 +192,8 @@ pub async fn backups_create(
 
     base_message
         .edit(
-            &ctx,
-            serenity::all::EditMessage::default().embed(
+            ctx.clone(),
+            poise::CreateReply::default().embed(
                 CreateEmbed::default()
                     .title("Creating Backup...")
                     .description(format!(
@@ -207,43 +204,27 @@ pub async fn backups_create(
         )
         .await?;
 
-    let ch = botox::cache::CacheHttpImpl {
-        cache: ctx.serenity_context().cache.clone(),
-        http: ctx.serenity_context().http.clone(),
-    };
-
-    async fn update_base_message(
-        cache_http: botox::cache::CacheHttpImpl,
-        mut base_message: serenity::model::channel::Message,
-        job: Arc<jobserver::Job>,
-    ) -> Result<(), Error> {
-        let new_job_msg = embed_job(&config::CONFIG.sites.api, &job, vec![], true)?;
-
-        base_message
-            .edit(
-                &cache_http,
-                new_job_msg.to_prefix_edit(serenity::all::EditMessage::default()),
-            )
-            .await?;
-
-        Ok(())
-    }
-
-    // Use jobserver::reactive to keep updating the message
-    jobserver::poll::reactive(
-        &ch,
+    let mut stream = Box::pin(jobserver::poll::reactive(
         &ctx.data().pool,
         &backup_id,
-        |cache_http, job| {
-            Box::pin(update_base_message(
-                cache_http.clone(),
-                base_message.clone(),
-                job.clone(),
-            ))
-        },
         jobserver::poll::PollTaskOptions::default(),
-    )
-    .await?;
+    )?);
+
+    while let Some(job) = stream.next().await {
+        match job {
+            Ok(Some(job)) => {
+                let new_job_msg = embed_job(&config::CONFIG.sites.api, &job, vec![], true)?;
+
+                base_message.edit(ctx.clone(), new_job_msg).await?;
+            }
+            Ok(None) => {
+                continue; // Go to the next iteration
+            }
+            Err(e) => {
+                return Err(e);
+            }
+        }
+    }
 
     Ok(())
 }
@@ -583,7 +564,7 @@ pub async fn backups_list(ctx: Context<'_>) -> Result<(), Error> {
                     format!("job:///{}", path)
                 };
 
-                let mut base_message = ctx
+                let base_message = ctx
                     .send(
                         poise::CreateReply::default().embed(
                             CreateEmbed::default()
@@ -593,8 +574,6 @@ pub async fn backups_list(ctx: Context<'_>) -> Result<(), Error> {
                                 ),
                         ),
                     )
-                    .await?
-                    .into_message()
                     .await?;
 
                 let json = serde_json::json!({
@@ -637,8 +616,8 @@ pub async fn backups_list(ctx: Context<'_>) -> Result<(), Error> {
 
                 base_message
                     .edit(
-                        &ctx,
-                        serenity::all::EditMessage::default().embed(
+                        ctx.clone(),
+                        poise::CreateReply::default().embed(
                             CreateEmbed::default()
                                 .title("Restoring Backup...")
                                 .description(format!(
@@ -649,43 +628,28 @@ pub async fn backups_list(ctx: Context<'_>) -> Result<(), Error> {
                     )
                     .await?;
 
-                let ch = botox::cache::CacheHttpImpl {
-                    cache: ctx.serenity_context().cache.clone(),
-                    http: ctx.serenity_context().http.clone(),
-                };
-
-                async fn update_base_message(
-                    cache_http: botox::cache::CacheHttpImpl,
-                    mut base_message: serenity::model::channel::Message,
-                    job: Arc<jobserver::Job>,
-                ) -> Result<(), Error> {
-                    let new_job_msg = embed_job(&config::CONFIG.sites.api, &job, vec![], true)?;
-
-                    base_message
-                        .edit(
-                            &cache_http,
-                            new_job_msg.to_prefix_edit(serenity::all::EditMessage::default()),
-                        )
-                        .await?;
-
-                    Ok(())
-                }
-
-                // Use jobserver::reactive to keep updating the message
-                jobserver::poll::reactive(
-                    &ch,
+                let mut stream = Box::pin(jobserver::poll::reactive(
                     &ctx.data().pool,
-                    restore_id.as_str(),
-                    |cache_http, job| {
-                        Box::pin(update_base_message(
-                            cache_http.clone(),
-                            base_message.clone(),
-                            job.clone(),
-                        ))
-                    },
+                    &restore_id,
                     jobserver::poll::PollTaskOptions::default(),
-                )
-                .await?;
+                )?);
+
+                while let Some(job) = stream.next().await {
+                    match job {
+                        Ok(Some(job)) => {
+                            let new_job_msg =
+                                embed_job(&config::CONFIG.sites.api, &job, vec![], true)?;
+
+                            base_message.edit(ctx.clone(), new_job_msg).await?;
+                        }
+                        Ok(None) => {
+                            continue; // Go to the next iteration
+                        }
+                        Err(e) => {
+                            return Err(e);
+                        }
+                    }
+                }
             }
             "backups_delete" => {
                 // Check permission
@@ -1178,7 +1142,7 @@ pub async fn backups_restore(
         p
     };
 
-    let mut base_message = ctx
+    let base_message = ctx
         .send(
             poise::CreateReply::default().embed(
                 CreateEmbed::default()
@@ -1186,8 +1150,6 @@ pub async fn backups_restore(
                     .description(":yellow_circle: Please wait, initiating backup restore..."),
             ),
         )
-        .await?
-        .into_message()
         .await?;
 
     let json = serde_json::json!({
@@ -1232,8 +1194,8 @@ pub async fn backups_restore(
 
     base_message
         .edit(
-            &ctx,
-            serenity::all::EditMessage::default().embed(
+            ctx.clone(),
+            poise::CreateReply::default().embed(
                 CreateEmbed::default()
                     .title("Restoring Backup...")
                     .description(format!(
@@ -1244,43 +1206,27 @@ pub async fn backups_restore(
         )
         .await?;
 
-    let ch = botox::cache::CacheHttpImpl {
-        cache: ctx.serenity_context().cache.clone(),
-        http: ctx.serenity_context().http.clone(),
-    };
-
-    async fn update_base_message(
-        cache_http: botox::cache::CacheHttpImpl,
-        mut base_message: serenity::model::channel::Message,
-        job: Arc<jobserver::Job>,
-    ) -> Result<(), Error> {
-        let new_job_msg = embed_job(&config::CONFIG.sites.api, &job, vec![], true)?;
-
-        base_message
-            .edit(
-                &cache_http,
-                new_job_msg.to_prefix_edit(serenity::all::EditMessage::default()),
-            )
-            .await?;
-
-        Ok(())
-    }
-
-    // Use jobserver::reactive to keep updating the message
-    jobserver::poll::reactive(
-        &ch,
+    let mut stream = Box::pin(jobserver::poll::reactive(
         &ctx.data().pool,
-        restore_id.as_str(),
-        |cache_http, job| {
-            Box::pin(update_base_message(
-                cache_http.clone(),
-                base_message.clone(),
-                job.clone(),
-            ))
-        },
+        &restore_id,
         jobserver::poll::PollTaskOptions::default(),
-    )
-    .await?;
+    )?);
+
+    while let Some(job) = stream.next().await {
+        match job {
+            Ok(Some(job)) => {
+                let new_job_msg = embed_job(&config::CONFIG.sites.api, &job, vec![], true)?;
+
+                base_message.edit(ctx.clone(), new_job_msg).await?;
+            }
+            Ok(None) => {
+                continue; // Go to the next iteration
+            }
+            Err(e) => {
+                return Err(e);
+            }
+        }
+    }
 
     Ok(())
 }

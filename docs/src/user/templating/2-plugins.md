@@ -451,7 +451,10 @@ This plugin allows interoperability with AntiRaid and controlled interaction wit
 
 ```json
 {
-  "path": "",
+  "path": "test",
+  "template": {
+    "Named": "foo"
+  },
   "pragma": {
     "lang": "lua",
     "allowed_caps": []
@@ -1649,5 +1652,44 @@ type function = function
 A Lua function.
 
 ---
+
+# Methods
+
+## array
+
+```lua
+function array(...: unknown): {unknown}
+```
+
+Helper method to create an array from a list of tables, setting the array_metatable on the result.
+
+### Parameters
+
+- `...` ([unknown](#type.unknown)): The elements used to form the array.
+
+
+### Returns
+
+- `table` ([{unknown}](#type.unknown)): The array table.
+
+# Types
+
+<div id="type.Event" />
+
+## Event
+
+An event that has been dispatched to the template. This is what `args` is in the template.
+
+
+
+### Fields
+
+- `title` ([string](#type.string)): The title name of the event.
+- `base_name` ([string](#type.string)): The base name of the event.
+- `name` ([string](#type.string)): The name of the event.
+- `data` ([unknown](#type.unknown)): The data of the event.
+- `is_deniable` ([boolean](#type.boolean)): Whether the event can be denied.
+- `uid` ([string](#type.string)): The unique identifier ID of the event. Will be guaranteed to be unique at a per-guild level.
+
 
 

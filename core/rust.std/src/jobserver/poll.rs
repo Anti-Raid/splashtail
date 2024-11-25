@@ -1,7 +1,5 @@
 use super::Job;
-use botox::cache::CacheHttpImpl;
-use std::future::Future;
-use std::pin::Pin;
+use futures_util::Stream;
 use std::sync::Arc;
 
 pub struct PollTaskOptions {
@@ -21,58 +19,84 @@ impl Default for PollTaskOptions {
     }
 }
 
-pub async fn reactive(
-    cache_http: &CacheHttpImpl,
+pub fn reactive(
     pool: &sqlx::PgPool,
     id: &str,
-    mut func: impl FnMut(
-        &CacheHttpImpl,
-        Arc<Job>,
-    ) -> Pin<Box<dyn Future<Output = Result<(), crate::Error>> + Send>>,
     to: PollTaskOptions,
-) -> Result<(), crate::Error> {
+) -> Result<impl Stream<Item = Result<Option<Arc<Job>>, crate::Error>>, crate::Error> {
     let interval = to.interval;
     let timeout_nostatuschange = to.timeout_nostatuschange;
     let duration = std::time::Duration::from_secs(interval);
-    let mut interval = tokio::time::interval(duration);
+    let interval = tokio::time::interval(duration);
     let id = sqlx::types::uuid::Uuid::parse_str(id)?;
-    let mut prev_job: Option<Arc<Job>> = None;
+    let last_statuschange = tokio::time::Instant::now();
 
-    let mut last_statuschange = tokio::time::Instant::now();
-    loop {
-        interval.tick().await;
+    Ok(futures_util::stream::unfold(
+        JobserverStreamState {
+            pool: pool.clone(),
+            id,
+            timeout_nostatuschange,
+            prev_job: None,
+            interval,
+            last_statuschange,
+            at_end: false,
+        },
+        |state| async move {
+            let mut state = state;
 
-        if timeout_nostatuschange > 0
-            && tokio::time::Instant::now() - last_statuschange
-                > tokio::time::Duration::from_secs(timeout_nostatuschange)
-        {
-            return Err(format!(
-                "Job poll timeout of {} seconds reached without status change",
-                timeout_nostatuschange
-            )
-            .into());
-        }
-
-        let job = Arc::new(super::Job::from_id(id, pool).await?);
-
-        if let Some(ref prev_job) = prev_job {
-            if prev_job.state == job.state && job.statuses == prev_job.statuses {
-                continue;
+            if let Some(ref prev_job) = state.prev_job {
+                if prev_job.state == "completed" {
+                    if state.at_end {
+                        return None;
+                    } else {
+                        state.at_end = true;
+                    }
+                } else {
+                    state.at_end = false;
+                }
             }
-        }
 
-        prev_job = Some(job.clone());
+            state.interval.tick().await;
 
-        last_statuschange = tokio::time::Instant::now();
+            if state.timeout_nostatuschange > 0
+                && tokio::time::Instant::now() - state.last_statuschange
+                    > tokio::time::Duration::from_secs(state.timeout_nostatuschange)
+            {
+                return Some((
+                    Err(format!(
+                        "Job poll timeout of {} seconds reached without status change",
+                        state.timeout_nostatuschange
+                    )
+                    .into()),
+                    state,
+                ));
+            }
 
-        func(cache_http, job.clone()).await?;
+            let job = match super::Job::from_id(state.id, &state.pool).await {
+                Ok(job) => Arc::new(job),
+                Err(e) => return Some((Err(e), state)),
+            };
 
-        if job.state != "pending" && job.state != "running" {
-            break;
-        }
-    }
+            if let Some(ref prev_job) = state.prev_job {
+                if prev_job.state == job.state && job.statuses == prev_job.statuses {
+                    return Some((Ok(None), state));
+                }
+            }
 
-    drop(prev_job); // Drop prev_task
+            state.prev_job = Some(job.clone());
+            state.last_statuschange = tokio::time::Instant::now();
 
-    Ok(())
+            return Some((Ok(Some(job.clone())), state));
+        },
+    ))
+}
+
+pub struct JobserverStreamState {
+    pool: sqlx::PgPool,
+    id: sqlx::types::Uuid,
+    timeout_nostatuschange: u64,
+    prev_job: Option<Arc<Job>>,
+    interval: tokio::time::Interval,
+    last_statuschange: tokio::time::Instant,
+    at_end: bool,
 }

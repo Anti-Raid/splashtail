@@ -19,11 +19,22 @@ pub(crate) async fn settings_operation(
     let op: OperationType = req.op.into();
 
     // Find the setting
-    let Some(setting) = data.silverpelt_cache.settings_cache.get(&req.setting) else {
+    let mut setting = None;
+
+    if let Some(module_setting) = data.silverpelt_cache.settings_cache.get(&req.setting) {
+        setting = Some(module_setting.clone());
+    };
+
+    if let Some(page_setting) = templating::cache::get_setting(guild_id, &req.setting).await {
+        setting = Some(page_setting);
+    };
+
+    let Some(setting) = setting else {
         return Json(CanonicalSettingsResult::Err {
-            error: SettingsError::MissingOrInvalidField {
-                field: "$opt".to_string(),
-                src: "rpc".to_string(),
+            error: SettingsError::Generic {
+                message: "Setting not found".to_string(),
+                src: "SettingsOperationCore".to_string(),
+                typ: "client".to_string(),
             },
         });
     };
