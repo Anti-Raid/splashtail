@@ -62,7 +62,11 @@ pub fn plugin_docs() -> templating_docgen::Plugin {
             "`TemplateData` is a struct that represents the data associated with a template token. It is used to store the path and pragma of a template token.",
             |t| {
                 t
-                .example(std::sync::Arc::new(crate::lang_lua::state::TemplateData::default()))
+                .example(std::sync::Arc::new(crate::lang_lua::state::TemplateData {
+                    path: "test".to_string(),
+                    pragma: crate::TemplatePragma::default(),
+                    template: crate::Template::Named("foo".to_string()),
+                }))
                 .field("path", |f| {
                     f.typ("string").description("The path of the template token.")
                 })

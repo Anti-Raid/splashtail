@@ -153,9 +153,10 @@ impl Default for LuaKVConstraints {
     }
 }
 
-#[derive(Default, Clone, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, serde::Serialize, serde::Deserialize)]
 pub struct TemplateData {
     pub path: String,
+    pub template: crate::Template,
     pub pragma: crate::TemplatePragma,
 }
 
@@ -193,11 +194,16 @@ pub struct LuaUserData {
 pub fn add_template(
     lua: &mlua::Lua,
     path: String,
+    template: crate::Template,
     pragma: crate::TemplatePragma,
 ) -> Result<String, crate::Error> {
     let token = botox::crypto::gen_random(32);
 
-    let data = TemplateData { path, pragma };
+    let data = TemplateData {
+        path,
+        pragma,
+        template,
+    };
 
     let data = Arc::new(data);
 

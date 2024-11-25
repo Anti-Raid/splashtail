@@ -1301,7 +1301,7 @@ impl GuildTemplateExecutor {
         ctx: &HookContext<'a>,
         name: &str,
     ) -> Result<(), SettingsError> {
-        templating::cache::clear_template_cache(ctx.guild_id).await;
+        templating::cache::clear_cache(ctx.guild_id).await;
 
         // Dispatch a OnStartup event for the template
         silverpelt::ar_event::dispatch_event_to_modules_errflatten(std::sync::Arc::new(

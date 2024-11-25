@@ -303,6 +303,7 @@ async fn create_lua_vm(
                                             crate::Template::Raw(_) => "".to_string(),
                                             crate::Template::Named(ref name) => name.clone(),
                                         },
+                                        template.clone(),
                                         pragma,
                                     ) {
                                         Ok(token) => token,

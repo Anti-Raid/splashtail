@@ -1,17 +1,18 @@
-use std::sync::Arc;
-
+use crate::lang_lua::state;
 use ar_settings::types::{
     HookContext, SettingCreator, SettingDeleter, SettingUpdater, SettingView, SettingsError,
 };
 use mlua::prelude::*;
-use serde::{Deserialize, Serialize};
+use std::sync::Arc;
 
-#[derive(Serialize, Deserialize, Debug)]
-pub struct Page {
+pub struct CreatePage {
+    pub page_id: String,
+    pub guild_id: serenity::all::GuildId,
     pub title: String,
     pub description: String,
-    pub template_name: String,
+    pub template: crate::Template,
     pub settings: Vec<ar_settings::types::Setting>,
+    pub is_created: bool,
 }
 
 #[derive(FromLua, Clone)]
@@ -22,7 +23,10 @@ pub struct CreatePageSetting {
 
 #[derive(Clone)]
 pub struct LuaSettingExecutor {
-    pub template_name: String,
+    /// The template to execute
+    pub template: crate::Template,
+
+    /// The ID of the setting
     pub name: String,
 }
 
@@ -35,7 +39,7 @@ impl SettingView for LuaSettingExecutor {
     ) -> Result<Vec<indexmap::IndexMap<String, splashcore_rs::value::Value>>, SettingsError> {
         let result: Vec<indexmap::IndexMap<String, splashcore_rs::value::Value>> = crate::execute(
             context.guild_id,
-            crate::Template::Named(self.template_name.clone()),
+            self.template.clone(),
             context.data.pool.clone(),
             context.data.serenity_context.clone(),
             context.data.reqwest.clone(),
@@ -67,7 +71,7 @@ impl SettingCreator for LuaSettingExecutor {
     ) -> Result<indexmap::IndexMap<String, splashcore_rs::value::Value>, SettingsError> {
         let result: indexmap::IndexMap<String, splashcore_rs::value::Value> = crate::execute(
             context.guild_id,
-            crate::Template::Named(self.template_name.clone()),
+            self.template.clone(),
             context.data.pool.clone(),
             context.data.serenity_context.clone(),
             context.data.reqwest.clone(),
@@ -99,7 +103,7 @@ impl SettingUpdater for LuaSettingExecutor {
     ) -> Result<indexmap::IndexMap<String, splashcore_rs::value::Value>, SettingsError> {
         let result: indexmap::IndexMap<String, splashcore_rs::value::Value> = crate::execute(
             context.guild_id,
-            crate::Template::Named(self.template_name.clone()),
+            self.template.clone(),
             context.data.pool.clone(),
             context.data.serenity_context.clone(),
             context.data.reqwest.clone(),
@@ -122,15 +126,6 @@ impl SettingUpdater for LuaSettingExecutor {
     }
 }
 
-/*
-   /// Deletes the setting
-   async fn delete<'a>(
-       &self,
-       context: HookContext<'a>,
-       pkey: splashcore_rs::value::Value,
-   ) -> Result<(), SettingsError>;
-*/
-
 #[async_trait::async_trait]
 impl SettingDeleter for LuaSettingExecutor {
     /// Deletes the setting
@@ -141,7 +136,7 @@ impl SettingDeleter for LuaSettingExecutor {
     ) -> Result<(), SettingsError> {
         let _: () = crate::execute(
             context.guild_id,
-            crate::Template::Named(self.template_name.clone()),
+            self.template.clone(),
             context.data.pool.clone(),
             context.data.serenity_context.clone(),
             context.data.reqwest.clone(),
@@ -164,15 +159,109 @@ impl SettingDeleter for LuaSettingExecutor {
     }
 }
 
-impl LuaUserData for Page {
+impl LuaUserData for CreatePage {
+    fn add_fields<F: LuaUserDataFields<Self>>(fields: &mut F) {
+        // Page ID (Read/Write with restrictions)
+        fields.add_field_method_get("page_id", |lua, this| {
+            let page_id = lua.to_value(&this.page_id)?;
+            Ok(page_id)
+        });
+
+        fields.add_field_method_set("page_id", |_lua, this, value: String| {
+            if this.is_created {
+                return Err(LuaError::runtime("Page is already created"));
+            }
+
+            if value.len() > crate::core::page::MAX_PAGE_ID_LENGTH {
+                return Err(LuaError::runtime("Page ID is too long"));
+            }
+
+            if value.contains(' ')
+                || value.contains('\n')
+                || value.contains('\0')
+                || value.contains('\r')
+                || value.contains('\t')
+            {
+                return Err(LuaError::runtime(
+                    "Page ID cannot contain spaces, newlines, or null characters",
+                ));
+            }
+
+            // Ensure Page ID is fully ASCII
+            if !value.is_ascii() {
+                return Err(LuaError::runtime("Page ID must be ASCII"));
+            }
+
+            if !this.settings.is_empty() {
+                return Err(LuaError::runtime(
+                    "Cannot change page ID after settings are added",
+                ));
+            }
+
+            this.page_id = value;
+            Ok(())
+        });
+
+        // Title (Read/Write)
+        fields.add_field_method_get("title", |lua, this| {
+            let title = lua.to_value(&this.title)?;
+            Ok(title)
+        });
+
+        fields.add_field_method_set("title", |_lua, this, value: String| {
+            if this.is_created {
+                return Err(LuaError::runtime("Page is already created"));
+            }
+            this.title = value;
+            Ok(())
+        });
+
+        // Description (Read/Write)
+        fields.add_field_method_get("description", |lua, this| {
+            let description = lua.to_value(&this.description)?;
+            Ok(description)
+        });
+
+        fields.add_field_method_set("description", |_lua, this, value: String| {
+            if this.is_created {
+                return Err(LuaError::runtime("Page is already created"));
+            }
+
+            this.description = value;
+            Ok(())
+        });
+
+        // Settings (Read only)
+        fields.add_field_method_get("settings", |lua, this| {
+            let settings = lua.to_value(&this.settings)?;
+            Ok(settings)
+        });
+
+        // Is created (Read only)
+        fields.add_field_method_get("is_created", |lua, this| {
+            let is_created = lua.to_value(&this.is_created)?;
+            Ok(is_created)
+        });
+
+        // Template (Read only)
+        fields.add_field_method_get("template", |lua, this| {
+            let template = lua.to_value(&this.template)?;
+            Ok(template)
+        });
+    }
+
     fn add_methods<M: LuaUserDataMethods<Self>>(methods: &mut M) {
-        // Go to the next item in the stream
+        // Adds a setting to the page
         methods.add_async_method_mut(
             "add_setting",
             |_lua, mut this, setting: CreatePageSetting| async move {
+                if this.is_created {
+                    return Err(LuaError::runtime("Page is already created"));
+                }
+
                 let settings_executor = LuaSettingExecutor {
-                    template_name: this.template_name.clone(),
-                    name: setting.setting.name.clone(),
+                    template: this.template.clone(),
+                    name: setting.setting.id.clone(),
                 };
 
                 let ops = setting.operations;
@@ -210,16 +299,102 @@ impl LuaUserData for Page {
                 };
 
                 setting.operations = sops;
+                setting.id = format!("{}:{}", this.page_id, setting.id);
 
                 this.settings.push(setting);
                 Ok(())
             },
         ); // Implement the method
+
+        // Creates the page
+        methods.add_async_method_mut("create", |_lua, mut this, _: ()| async move {
+            if this.is_created {
+                return Err(LuaError::runtime("Page is already created"));
+            }
+
+            // Create the page
+            let page = crate::Page {
+                page_id: this.page_id.clone(),
+                title: this.title.clone(),
+                description: this.description.clone(),
+                template: this.template.clone(),
+                settings: this.settings.clone(),
+            };
+
+            // Add the page to the cache
+            crate::cache::add_page(this.guild_id, page)
+                .await
+                .map_err(|e| LuaError::external(e.to_string()))?;
+
+            this.is_created = true;
+            Ok(())
+        });
+
+        // Removes the page (by page ID)
+        methods.add_async_method_mut("remove", |_lua, mut this, _: ()| async move {
+            if !this.is_created {
+                return Err(LuaError::runtime("Page is not created"));
+            }
+
+            crate::cache::remove_page(this.guild_id, this.page_id.clone())
+                .await
+                .map_err(|e| LuaError::external(e.to_string()))?;
+
+            this.is_created = false;
+            Ok(())
+        });
+
+        // Pulls out a page (by page ID) and populates the user data with it
+        //
+        // Note that the CreatePage being modified is overwritten with the page data of the pulled page
+        methods.add_async_method_mut("pull", |_lua, mut this, _: ()| async move {
+            let page = crate::cache::take_page(this.guild_id, this.page_id.clone())
+                .await
+                .map_err(|e| LuaError::external(e.to_string()))?;
+
+            *this = CreatePage {
+                page_id: page.page_id,
+                guild_id: this.guild_id,
+                title: page.title,
+                description: page.description,
+                template: page.template,
+                settings: page.settings,
+                is_created: true,
+            };
+
+            Ok(())
+        });
     }
 }
 
 pub fn init_plugin(lua: &Lua) -> LuaResult<LuaTable> {
     let module = lua.create_table()?;
+
+    module.set(
+        "new",
+        lua.create_function(|lua, (token,): (String,)| {
+            let Some(data) = lua.app_data_ref::<state::LuaUserData>() else {
+                return Err(LuaError::external("No app data found"));
+            };
+
+            let template_data = data
+                .per_template
+                .get(&token)
+                .ok_or_else(|| LuaError::external("Template not found"))?;
+
+            let page = CreatePage {
+                page_id: sqlx::types::Uuid::new_v4().to_string(),
+                guild_id: data.guild_id,
+                template: template_data.template.clone(),
+                title: template_data.path.clone(),
+                description: "Missing description".to_string(),
+                settings: vec![],
+                is_created: false,
+            };
+
+            Ok(page)
+        })?,
+    )?;
 
     module.set_readonly(true); // Block any attempt to modify this table
 

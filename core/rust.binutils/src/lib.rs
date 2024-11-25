@@ -14,7 +14,7 @@ pub async fn on_startup(ctx: serenity::all::Context) -> Result<(), crate::Error>
             continue;
         };
 
-        templating::cache::clear_template_cache(guild_id).await;
+        templating::cache::clear_cache(guild_id).await;
 
         let _ = silverpelt::ar_event::dispatch_event_to_modules_errflatten(std::sync::Arc::new(
             silverpelt::ar_event::EventHandlerContext {

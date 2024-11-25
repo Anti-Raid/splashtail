@@ -1,3 +1,4 @@
+use crate::core::page::Page;
 use crate::GuildTemplate;
 use moka::future::Cache;
 use serenity::all::GuildId;
@@ -13,6 +14,10 @@ pub static TEMPLATES_CACHE: LazyLock<Cache<GuildId, Arc<Vec<GuildTemplate>>>> =
             .build()
     });
 
+pub static PAGES: LazyLock<scc::HashMap<GuildId, Vec<Page>>> =
+    LazyLock::new(|| scc::HashMap::new());
+
+/// Gets all templates for a guild
 #[allow(dead_code)]
 pub async fn get_all_guild_templates(
     guild_id: GuildId,
@@ -47,7 +52,75 @@ pub async fn get_all_guild_templates(
     Ok(templates)
 }
 
-#[allow(dead_code)]
-pub async fn clear_template_cache(guild_id: GuildId) {
+/// Clears the template cache for a guild
+pub async fn clear_cache(guild_id: GuildId) {
     TEMPLATES_CACHE.remove(&guild_id).await;
+    PAGES.remove_async(&guild_id).await;
+}
+
+/// Adds a page to the page cache
+pub async fn add_page(guild_id: GuildId, page: Page) -> Result<(), crate::Error> {
+    match PAGES.get_async(&guild_id).await {
+        Some(mut pages) => {
+            for existing_page in pages.iter() {
+                if existing_page.page_id == page.page_id {
+                    return Err("Page already exists".into());
+                }
+            }
+            pages.push(page);
+        }
+        None => {
+            let pages = vec![page];
+            PAGES.upsert_async(guild_id, pages).await;
+        }
+    }
+
+    Ok(())
+}
+
+/// Takes out the page from the page cache by page ID
+pub async fn take_page(guild_id: GuildId, page_id: String) -> Result<Page, crate::Error> {
+    match PAGES.get_async(&guild_id).await {
+        Some(mut pages) => {
+            let mut index = None;
+            for (i, page) in pages.iter().enumerate() {
+                if page.page_id == page_id {
+                    index = Some(i);
+                    break;
+                }
+            }
+
+            if let Some(index) = index {
+                let page = (*pages).remove(index);
+                return Ok(page);
+            } else {
+                return Err("Page not found".into());
+            }
+        }
+        None => return Err("No pages found".into()),
+    }
+}
+
+/// Removes a page from the page cache by page ID
+pub async fn remove_page(guild_id: GuildId, page_id: String) -> Result<(), crate::Error> {
+    match PAGES.get_async(&guild_id).await {
+        Some(mut pages) => {
+            let mut index = None;
+            for (i, page) in pages.iter().enumerate() {
+                if page.page_id == page_id {
+                    index = Some(i);
+                    break;
+                }
+            }
+
+            if let Some(index) = index {
+                (*pages).remove(index);
+            } else {
+                return Err("Page not found".into());
+            }
+        }
+        None => return Err("No pages found".into()),
+    }
+
+    Ok(())
 }
