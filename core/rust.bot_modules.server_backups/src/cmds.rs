@@ -401,7 +401,7 @@ pub async fn backups_list(ctx: Context<'_>) -> Result<(), Error> {
                                     serenity::all::CreateButton::new("backups_restore_enc_cont")
                                         .label("Provide Password")
                                         .style(serenity::all::ButtonStyle::Success),
-                                    serenity::all::CreateButton::new("backups_restore_enc_cont")
+                                    serenity::all::CreateButton::new("backups_restore_enc_nopass")
                                         .label("No Password Set")
                                         .style(serenity::all::ButtonStyle::Success),
                                     serenity::all::CreateButton::new("backups_restore_enc_cancel")
@@ -448,7 +448,7 @@ pub async fn backups_list(ctx: Context<'_>) -> Result<(), Error> {
                     continue;
                 }
 
-                let password = if item.data.custom_id.as_str() == "backups_restore_enc_cont" {
+                let password = if item.data.custom_id.as_str() == "backups_restore_enc_nopass" {
                     None
                 } else {
                     // Ask for password in modal
