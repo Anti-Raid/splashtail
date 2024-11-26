@@ -36,22 +36,22 @@ pub enum AntiraidEvent {
     TrustedWebEvent((String, serde_json::Value)),
 
     /// A regular discord event
-    Discord(Arc<serenity::all::FullEvent>),
+    Discord(serenity::all::FullEvent),
 
     /// A sting create event. Dispatched when a sting is created
-    StingCreate(Arc<super::stings::Sting>),
+    StingCreate(super::stings::Sting),
 
     /// A sting expiry event. Dispatched when a sting expires
-    StingExpire(Arc<super::stings::Sting>),
+    StingExpire(super::stings::Sting),
 
     /// A sting delete event. Dispatched when a sting is manually deleted
-    StingDelete(Arc<super::stings::Sting>),
+    StingDelete(super::stings::Sting),
 
     /// A punishment create event. Dispatched when a punishment is created
-    PunishmentCreate(Arc<super::punishments::Punishment>),
+    PunishmentCreate(super::punishments::Punishment),
 
     /// A punishment expiration event. Dispatched when a punishment expires
-    PunishmentExpire(Arc<super::punishments::Punishment>),
+    PunishmentExpire(super::punishments::Punishment),
 
     /// An on startup event is fired *at least once* when the bot starts up or the set of templates are modified
     ///

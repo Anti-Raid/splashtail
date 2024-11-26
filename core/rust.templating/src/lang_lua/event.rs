@@ -1,19 +1,38 @@
 pub use mlua::prelude::*;
 use std::{ops::Deref, sync::Arc};
 
-pub enum ArcOrBox<T: ?Sized> {
+pub enum ArcOrNormal<T: Sized> {
     Arc(Arc<T>),
-    Box(Box<T>),
+    Normal(T),
 }
 
-impl Deref for ArcOrBox<dyn erased_serde::Serialize + Send + Sync> {
-    type Target = dyn erased_serde::Serialize + Send + Sync;
+impl<T: Sized> Deref for ArcOrNormal<T> {
+    type Target = T;
 
     fn deref(&self) -> &Self::Target {
         match self {
-            ArcOrBox::Arc(a) => a.as_ref(),
-            ArcOrBox::Box(b) => b.as_ref(),
+            ArcOrNormal::Arc(a) => a.as_ref(),
+            ArcOrNormal::Normal(b) => &b,
         }
+    }
+}
+
+impl<T: serde::Serialize> serde::Serialize for ArcOrNormal<T> {
+    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        match self {
+            ArcOrNormal::Arc(a) => serde::Serialize::serialize(a, serializer),
+            ArcOrNormal::Normal(b) => serde::Serialize::serialize(b, serializer),
+        }
+    }
+}
+
+impl<'de, T: serde::de::Deserialize<'de>> serde::de::Deserialize<'de> for ArcOrNormal<T> {
+    fn deserialize<D>(deserializer: D) -> Result<ArcOrNormal<T>, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let v = T::deserialize(deserializer)?;
+        Ok(ArcOrNormal::Normal(v))
     }
 }
 
@@ -22,17 +41,17 @@ pub struct CreateEventArc {
     pub title: String,
     pub base_name: String,
     pub name: String,
-    pub data: Arc<dyn erased_serde::Serialize + Send + Sync>,
+    pub data: Arc<serde_json::Value>,
     pub is_deniable: bool,
 }
 
 impl CreateEventArc {
     /// Creates a new CreateEventArc with data already wrapped in an Arc
-    pub fn new_arc<T: erased_serde::Serialize + Send + Sync + 'static>(
+    pub fn new_arc(
         title: String,
         base_name: String,
         name: String,
-        data: Arc<T>,
+        data: Arc<serde_json::Value>,
         is_deniable: bool,
     ) -> Self {
         Self {
@@ -45,11 +64,11 @@ impl CreateEventArc {
     }
 
     /// Creates a new CreateEventArc with data that will be wrapped in an Arc
-    pub fn new<T: erased_serde::Serialize + Send + Sync + 'static>(
+    pub fn new(
         title: String,
         base_name: String,
         name: String,
-        data: T,
+        data: serde_json::Value,
         is_deniable: bool,
     ) -> Self {
         Self::new_arc(title, base_name, name, Arc::new(data), is_deniable)
@@ -60,13 +79,14 @@ impl CreateEventArc {
             self.title.clone(),
             self.base_name.clone(),
             self.name.clone(),
-            ArcOrBox::Arc(self.data.clone()),
+            ArcOrNormal::Arc(self.data.clone()),
             self.is_deniable,
         )
     }
 }
 
 /// An `Event` is an object that can be passed to a Lua template
+#[derive(serde::Serialize, serde::Deserialize)]
 pub struct Event {
     /// The title name of the event
     title: String,
@@ -75,42 +95,45 @@ pub struct Event {
     /// The name of the event
     name: String,
     /// The inner data of the object
-    data: ArcOrBox<dyn erased_serde::Serialize + Send + Sync>,
+    data: ArcOrNormal<serde_json::Value>,
     /// Whether or not further processing of the action that triggered the event can be denied
     is_deniable: bool,
     /// The random identifier of the event
     uid: sqlx::types::Uuid,
+
+    #[serde(skip)]
+    #[serde(default = "std::sync::Mutex::default")]
     /// The cached serialized value of the data
     cached_data: std::sync::Mutex<Option<LuaValue>>,
 }
 
 impl Event {
     /// Creates a new event using boxing
-    pub fn new_boxed<T: erased_serde::Serialize + Send + Sync + 'static>(
+    pub fn new_normal(
         title: String,
         base_name: String,
         name: String,
-        data: T,
+        data: serde_json::Value,
         is_deniable: bool,
     ) -> Self {
         Self::new(
             title,
             base_name,
             name,
-            ArcOrBox::Box(Box::new(data)),
+            ArcOrNormal::Normal(data),
             is_deniable,
         )
     }
 
     /// Creates a new event using an Arc
-    pub fn new_arc<T: erased_serde::Serialize + Send + Sync + 'static>(
+    pub fn new_arc(
         title: String,
         base_name: String,
         name: String,
-        data: Arc<T>,
+        data: Arc<serde_json::Value>,
         is_deniable: bool,
     ) -> Self {
-        Self::new(title, base_name, name, ArcOrBox::Arc(data), is_deniable)
+        Self::new(title, base_name, name, ArcOrNormal::Arc(data), is_deniable)
     }
 
     /// Create from ArcOrBox
@@ -118,7 +141,7 @@ impl Event {
         title: String,
         base_name: String,
         name: String,
-        data: ArcOrBox<dyn erased_serde::Serialize + Send + Sync>,
+        data: ArcOrNormal<serde_json::Value>,
         is_deniable: bool,
     ) -> Self {
         Self {

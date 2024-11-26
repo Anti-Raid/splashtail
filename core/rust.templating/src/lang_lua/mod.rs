@@ -1,9 +1,10 @@
 // Work in progress
+pub mod event;
+mod handler;
 mod perthreadpanichook;
 pub mod primitives_docs;
 pub mod samples;
 pub(crate) mod state;
-pub mod event;
 
 mod plugins;
 pub use plugins::PLUGINS;
@@ -27,6 +28,7 @@ pub const MAX_TEMPLATE_LIFETIME: std::time::Duration = std::time::Duration::from
 pub const MAX_TEMPLATES_EXECUTION_TIME: std::time::Duration =
     std::time::Duration::from_secs(60 * 5); // 5 minute maximum execution time
 
+#[derive(serde::Serialize, serde::Deserialize)]
 #[allow(dead_code)]
 enum LuaVmAction {
     /// Execute a template
@@ -35,21 +37,15 @@ enum LuaVmAction {
         template: crate::Template,
         pragma: crate::TemplatePragma,
         event: event::Event,
-        callback: tokio::sync::oneshot::Sender<LuaVmResult>,
     },
     /// Stop the Lua VM entirely
     Stop {},
     /// Returns the memory usage of the Lua VM
-    GetMemoryUsage {
-        callback: tokio::sync::oneshot::Sender<usize>,
-    },
+    GetMemoryUsage {},
     /// Set the memory limit of the Lua VM
-    SetMemoryLimit {
-        limit: usize,
-        callback: tokio::sync::oneshot::Sender<LuaResult<usize>>,
-    },
+    SetMemoryLimit { limit: usize },
 }
-    
+
 enum LuaVmResult {
     Ok { result_val: serde_json::Value },
     LuaError { err: LuaError },
@@ -59,7 +55,7 @@ enum LuaVmResult {
 pub type BytecodeCache = scc::HashMap<crate::Template, (Vec<u8>, u64)>;
 
 /// ArLua provides a handle to a Lua VM
-/// 
+///
 /// Note that the Lua VM is not directly exposed due to thread safety issues
 #[derive(Clone)]
 struct ArLua {
@@ -68,7 +64,10 @@ struct ArLua {
     /// The thread handle for the Lua VM
     thread_handle: (
         std::thread::Thread,
-        tokio::sync::mpsc::UnboundedSender<LuaVmAction>,
+        tokio::sync::mpsc::UnboundedSender<(
+            LuaVmAction,
+            tokio::sync::oneshot::Sender<LuaVmResult>,
+        )>,
     ),
     /// Is the VM broken/needs to be remade
     broken: Arc<std::sync::atomic::AtomicBool>,
@@ -236,9 +235,15 @@ async fn create_lua_vm(
     // This both avoids locking and allows running multiple scripts concurrently
     let thread_handle: (
         std::thread::Thread,
-        tokio::sync::mpsc::UnboundedSender<LuaVmAction>,
+        tokio::sync::mpsc::UnboundedSender<(
+            LuaVmAction,
+            tokio::sync::oneshot::Sender<LuaVmResult>,
+        )>,
     ) = {
-        let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel::<LuaVmAction>();
+        let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel::<(
+            LuaVmAction,
+            tokio::sync::oneshot::Sender<LuaVmResult>,
+        )>();
 
         let thread = std::thread::Builder::new()
             .name(format!("lua-vm-{}", guild_id))
@@ -266,120 +271,13 @@ async fn create_lua_vm(
 
                     perthreadpanichook::set_hook(panic_catcher(guild_id, tis_ref.broken.clone()));
 
-                    while let Some(action) = rx.recv().await {
-                        match action {
-                            LuaVmAction::Exec { content, template, pragma, event, callback } => {
-                                if tis_ref.broken.load(std::sync::atomic::Ordering::Acquire) {
-                                    // Close the callback channel
-                                    let _ = callback.send(LuaVmResult::VmBroken {});
-                                    rx.close();
-                                    return;
-                                }
-        
-                                let tis_ref = tis_ref.clone();
-        
-                                rt.spawn(async move {
-                                    // Check bytecode cache first, compile template if not found
-                                    let template_bytecode = match resolve_template_to_bytecode(
-                                        content,
-                                        template.clone(),
-                                        &tis_ref.bytecode_cache,
-                                        &tis_ref.compiler,
-                                    )
-                                    .await
-                                    {
-                                        Ok(bytecode) => bytecode,
-                                        Err(e) => {
-                                            let _ = callback.send(LuaVmResult::LuaError {
-                                                err: e,
-                                            });
-                                            return;
-                                        }
-                                    };
-        
-                                    let token = match state::add_template(
-                                        &tis_ref.lua,
-                                        match template {
-                                            crate::Template::Raw(_) => "".to_string(),
-                                            crate::Template::Named(ref name) => name.clone(),
-                                        },
-                                        template.clone(),
-                                        pragma,
-                                    ) {
-                                        Ok(token) => token,
-                                        Err(e) => {
-                                            let _ = callback.send(
-                                                LuaVmResult::LuaError {
-                                                    err: LuaError::external(e),
-                                                },
-                                            );
-                                            return;
-                                        }
-                                    };
-        
-                                    let exec_name = match template {
-                                        crate::Template::Raw(_) => "script".to_string(),
-                                        crate::Template::Named(ref name) => name.to_string(),
-                                    };
-        
-                                    let v: LuaValue = match tis_ref
-                                        .lua
-                                        .load(&template_bytecode)
-                                        .set_name(&exec_name)
-                                        .set_mode(mlua::ChunkMode::Binary) // Ensure auto-detection never selects binary mode
-                                        .call_async((event, token.clone()))
-                                        .await
-                                    {
-                                        Ok(f) => f,
-                                        Err(e) => {
-                                            let _ = callback.send(LuaVmResult::LuaError {
-                                                err: e,
-                                            });
-        
-                                            while let Err(e) = state::remove_template(&tis_ref.lua, &token) {
-                                                log::error!("Could not remove template: {}. Trying again in 1 second", e);
-                                                tokio::time::sleep(std::time::Duration::from_secs(1)).await;
-                                            };
-        
-                                            return;
-                                        }
-                                    };
-        
-                                    match tis_ref
-                                        .lua
-                                        .from_value::<serde_json::Value>(v) {
-                                        Ok(v) => {
-                                            let _ = callback.send(LuaVmResult::Ok {
-                                                result_val: v,
-                                            });
-                                        },
-                                        Err(e) => {
-                                            let _ = callback.send(LuaVmResult::LuaError {
-                                                err: LuaError::external(e.to_string()),
-                                            });
-                                        }
-                                    };
-        
-                                    while let Err(e) = state::remove_template(&tis_ref.lua, &token) {
-                                        log::error!("Could not remove template: {}. Trying again in 1 second", e);
-                                        tokio::time::sleep(std::time::Duration::from_secs(1)).await;
-                                    };
-                                });                                
-                            },
-                            LuaVmAction::Stop {} => {
-                                // Mark VM as broken
-                                tis_ref.broken.store(true, std::sync::atomic::Ordering::Release);
-                                rx.close();
-                                return;
-                            }
-                            LuaVmAction::GetMemoryUsage { callback } => {
-                                let used = tis_ref.lua.used_memory();
-                                let _ = callback.send(used);
-                            }
-                            LuaVmAction::SetMemoryLimit { limit, callback } => {
-                                let _ = callback.send(tis_ref.lua.set_memory_limit(limit));
-                            }
-                        }
+                    while let Some((action, callback)) = rx.recv().await {
+                        let tis_ref = tis_ref.clone();
+                        rt.spawn(async move {
+                            let result = handler::handle_event(action, &tis_ref).await;
+
+                            let _ = callback.send(result);
+                        });
                     }
                 });
             })?;
@@ -519,13 +417,15 @@ pub async fn render_template<Response: serde::de::DeserializeOwned>(
 
     lua.thread_handle
         .1
-        .send(LuaVmAction::Exec {
-            template: state.template,
-            content: state.template_content,
-            pragma: state.pragma,
-            event,
-            callback: tx,
-        })
+        .send((
+            LuaVmAction::Exec {
+                template: state.template,
+                content: state.template_content,
+                pragma: state.pragma,
+                event,
+            },
+            tx,
+        ))
         .map_err(|e| LuaError::external(format!("Could not send data to Lua thread: {}", e)))?;
 
     tokio::select! {

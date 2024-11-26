@@ -49,6 +49,16 @@ build_rust:
 		cd ${PWD}; \
 	done
 
+build_rust_dbg:
+	mkdir -p ${PWD}/out/debug
+	for d in services/rust.*; do \
+		PROJECT_NAME=$$(basename $$d) && \
+		OUTPUT_FILE=$$(echo $$PROJECT_NAME | tr . _) && \
+		echo $$d && cd ${PWD}/$$d && cargo build && \
+		mv ${PWD}/target/debug/$$OUTPUT_FILE ${PWD}/out/debug/$$PROJECT_NAME && \
+		cd ${PWD}; \
+	done
+
 copyassets:
 ifndef CI_BUILD
 	# For every project in core/* and services/*, copy .generated/* to data/generated/{project_name} and to the website (services/website/lib/generated)

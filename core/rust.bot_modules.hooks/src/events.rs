@@ -32,13 +32,12 @@ pub(crate) async fn event_listener(ectx: &EventHandlerContext) -> Result<(), sil
             .await
         }
         AntiraidEvent::Discord(ref event) => {
-            let event_ref = event.as_ref();
-            if not_audit_loggable_event().contains(&event_ref.into()) {
+            if not_audit_loggable_event().contains(&event.into()) {
                 return Ok(());
             }
 
             // Ignore ourselves
-            match event_ref {
+            match event {
                 FullEvent::GuildAuditLogEntryCreate { .. } => {}
                 _ => match gwevent::core::get_event_user_id(event) {
                     Ok(user_id) => {
@@ -74,7 +73,7 @@ pub(crate) async fn event_listener(ectx: &EventHandlerContext) -> Result<(), sil
                     event_titlename,
                     "Discord".to_string(),
                     event.snake_case_name().to_uppercase(),
-                    event.clone(),
+                    serde_json::to_value(event)?.into(),
                     false,
                 ),
                 ectx.guild_id,
@@ -105,7 +104,7 @@ pub(crate) async fn event_listener(ectx: &EventHandlerContext) -> Result<(), sil
                     "(Anti Raid) Sting Created".to_string(),
                     "StingCreate".to_string(),
                     "StingCreate".to_string(),
-                    sting.clone(),
+                    serde_json::to_value(&sting)?.into(),
                     false,
                 ),
                 ectx.guild_id,
@@ -122,7 +121,7 @@ pub(crate) async fn event_listener(ectx: &EventHandlerContext) -> Result<(), sil
                     "(Anti Raid) Sting Expired".to_string(),
                     "StingExpire".to_string(),
                     "StingExpire".to_string(),
-                    sting.clone(),
+                    serde_json::to_value(&sting)?.into(),
                     false,
                 ),
                 ectx.guild_id,
@@ -139,7 +138,7 @@ pub(crate) async fn event_listener(ectx: &EventHandlerContext) -> Result<(), sil
                     "(Anti Raid) Sting Deleted".to_string(),
                     "StingDelete".to_string(),
                     "StingDelete".to_string(),
-                    sting.clone(),
+                    serde_json::to_value(&sting)?.into(),
                     false,
                 ),
                 ectx.guild_id,
@@ -156,7 +155,7 @@ pub(crate) async fn event_listener(ectx: &EventHandlerContext) -> Result<(), sil
                     "(Anti Raid) Punishment Created".to_string(),
                     "PunishmentCreate".to_string(),
                     "PunishmentCreate".to_string(),
-                    punishment.clone(),
+                    serde_json::to_value(&punishment)?.into(),
                     false,
                 ),
                 ectx.guild_id,
@@ -173,7 +172,7 @@ pub(crate) async fn event_listener(ectx: &EventHandlerContext) -> Result<(), sil
                     "(Anti Raid) Punishment Expired".to_string(),
                     "PunishmentExpire".to_string(),
                     "PunishmentExpire".to_string(),
-                    punishment.clone(),
+                    serde_json::to_value(&punishment)?.into(),
                     false,
                 ),
                 ectx.guild_id,

@@ -1,5 +1,5 @@
 [package]
-name = "rust_bot"
+name = "rust_luaproc"
 version = "0.1.0"
 edition = "2021"
 
@@ -14,6 +14,10 @@ reqwest = { version = "0.12", default-features = false, features = ["json", "rus
 indexmap = { version = "2", features = ["serde"] }
 dashmap = { version = "6", features = ["serde", "inline", "rayon"] }
 async-trait = "0.1.80"
+uuid = { version = "1", features = ["serde"] }
+
+# IPC (Servo IPC Channel)
+ipc-channel = { version = "0.19", features = ["memfd"] }
 
 # Anti-Raid specific
 splashcore_rs = { path = "../../core/rust.std" }
@@ -25,11 +29,7 @@ clap = { version = "4.5.16", features = ["derive"] }
 fred = { version = "9.3", features = ["serde-json"] }
 
 # Modules
-bot_modules_default = { path = "../../core/rust.bot_modules_default" }
-bot_binutils = { path = "../../core/rust.binutils" }
-rust_rpc_server = { path = "../../core/rust.rpc_server" }
-rust_rpc_server_bot = { path = "../../core/rust.rpc_server.bot" }
-
+templating = { path = "../../core/rust.templating" }
 
 [dependencies.tokio]
 version = "1"
