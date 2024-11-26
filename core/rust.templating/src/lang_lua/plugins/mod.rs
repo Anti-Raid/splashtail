@@ -22,6 +22,7 @@ pub static PLUGINS: LazyLock<indexmap::IndexMap<String, (ModuleFn, Option<Module
             "@antiraid/interop".to_string() => (interop::init_plugin as ModuleFn, Some(interop::plugin_docs as ModuleDocFn)),
             "@antiraid/img_captcha".to_string() => (img_captcha::init_plugin as ModuleFn, Some(img_captcha::plugin_docs as ModuleDocFn)),
             "@antiraid/kv".to_string() => (kv::init_plugin as ModuleFn, Some(kv::plugin_docs as ModuleDocFn)),
+            "@antiraid/page".to_string() => (page::init_plugin as ModuleFn, Some(page::plugin_docs as ModuleDocFn)),
             "@antiraid/permissions".to_string() => (permissions::init_plugin as ModuleFn, Some(permissions::plugin_docs as ModuleDocFn)),
             "@antiraid/stings".to_string() => (stings::init_plugin as ModuleFn, None as Option<ModuleDocFn>),
             "@antiraid/typesext".to_string() => (typesext::init_plugin as ModuleFn, Some(typesext::plugin_docs as ModuleDocFn)),

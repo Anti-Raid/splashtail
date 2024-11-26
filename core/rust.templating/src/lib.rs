@@ -15,6 +15,12 @@ pub use lang_lua::state::LuaKVConstraints;
 pub use lang_lua::PLUGINS;
 pub use lang_lua::{handle_event, ArLuaThreadInnerState, LuaVmAction, LuaVmResult};
 
+pub const MAX_TEMPLATE_MEMORY_USAGE: usize = 1024 * 1024 * 3; // 3MB maximum memory
+pub const MAX_VM_THREAD_STACK_SIZE: usize = 1024 * 1024 * 8; // 8MB maximum memory
+pub const MAX_TEMPLATE_LIFETIME: std::time::Duration = std::time::Duration::from_secs(60 * 15); // 15 minutes maximum lifetime
+pub const MAX_TEMPLATES_EXECUTION_TIME: std::time::Duration =
+    std::time::Duration::from_secs(60 * 5); // 5 minute maximum execution time
+
 type Error = Box<dyn std::error::Error + Send + Sync>; // This is constant and should be copy pasted
 
 async fn get_template(
@@ -106,7 +112,6 @@ pub async fn execute<RenderResult: serde::de::DeserializeOwned>(
     let (template_content, pragma) = TemplatePragma::parse(&template_content)?;
 
     match pragma.lang {
-        #[cfg(feature = "lua")]
         TemplateLanguage::Lua => lang_lua::render_template(
             event,
             lang_lua::ParseCompileState {

@@ -152,7 +152,6 @@ pub fn plugin_docs() -> templating_docgen::Plugin {
     templating_docgen::Plugin::default()
         .name("@antiraid/discord")
         .description("This plugin allows for templates to interact with the Discord API")
-
         // Serenity types
         .type_mut("Serenity.User", "A user object in Discord, as represented by AntiRaid. Internal fields are subject to change", |t| {
             t
@@ -196,7 +195,7 @@ pub fn plugin_docs() -> templating_docgen::Plugin {
             .refers_to_serenity("serenity::model::channel::ForumEmoji")
         })
 
-        // Methods
+        // Options
         .type_mut("GetAuditLogOptions", "Options for getting audit logs in Discord", |t| {
             t
             .example(std::sync::Arc::new(types::GetAuditLogOptions::default()))
@@ -221,18 +220,6 @@ pub fn plugin_docs() -> templating_docgen::Plugin {
                 .description("The limit of entries to return")
             })
         })
-        .method_mut("get_audit_logs", |typ| {
-            typ
-            .description("Gets the audit logs")
-            .parameter("data", |p| {
-                p.typ("GetAuditLogOptions").description("Options for getting audit logs.")
-            })
-            .return_("SerenityAuditLogs", |p| {
-                p.description("The audit log entry")
-            })
-        })
-
-        // Channel
         .type_mut("GetChannelOptions", "Options for getting a channel in Discord", |t| {
             t
             .example(std::sync::Arc::new(types::GetChannelOptions::default()))
@@ -240,16 +227,6 @@ pub fn plugin_docs() -> templating_docgen::Plugin {
                 f
                 .typ("string")
                 .description("The channel ID to get")
-            })
-        })
-        .method_mut("get_channel", |typ| {
-            typ
-            .description("Gets a channel")
-            .parameter("data", |p| {
-                p.typ("GetChannelOptions").description("Options for getting a channel.")
-            })
-            .return_("Serenity.GuildChannel", |p| {
-                p.description("The guild channel")
             })
         })
         .type_mut("EditChannelOptions", "Options for editing a channel in Discord", |t| {
@@ -356,16 +333,6 @@ pub fn plugin_docs() -> templating_docgen::Plugin {
                 .description("The default forum layout of the channel")
             })
         })
-        .method_mut("edit_channel", |typ| {
-            typ
-            .description("Edits a channel")
-            .parameter("data", |p| {
-                p.typ("EditChannelOptions").description("Options for editing a channel.")
-            })
-            .return_("Serenity.GuildChannel", |p| {
-                p.description("The guild channel")
-            })
-        })
         .type_mut("EditThreadOptions", "Options for editing a thread in Discord", |t| {
             t
             .example(std::sync::Arc::new(types::EditThreadOptions::default()))
@@ -420,16 +387,6 @@ pub fn plugin_docs() -> templating_docgen::Plugin {
                 .description("The applied tags of the thread")
             })
         })
-        .method_mut("edit_thread", |typ| {
-            typ
-            .description("Edits a thread")
-            .parameter("data", |p| {
-                p.typ("EditThreadOptions").description("Options for editing a thread.")
-            })
-            .return_("Serenity.GuildChannel", |p| {
-                p.description("The guild channel")
-            })
-        })
         .type_mut("DeleteChannelOption", "Options for deleting a channel in Discord", |t| {
             t
             .example(std::sync::Arc::new(types::DeleteChannelOption::default()))
@@ -444,15 +401,236 @@ pub fn plugin_docs() -> templating_docgen::Plugin {
                 .description("The reason for deleting the channel")
             })
         })
-        .method_mut("delete_channel", |typ| {
-            typ
-            .description("Deletes a channel")
-            .parameter("data", |p| {
-                p.typ("DeleteChannelOption").description("Options for deleting a channel.")
+        .type_mut("CreateMessageEmbedField", "A field in a message embed", |t| {
+            t
+            .example(std::sync::Arc::new(types::messages::CreateMessageEmbedField::default()))
+            .field("name", |f| {
+                f
+                .typ("string")
+                .description("The name of the field")
             })
-            .return_("Serenity.GuildChannel", |p| {
-                p.description("The guild channel")
+            .field("value", |f| {
+                f
+                .typ("string")
+                .description("The value of the field")
             })
+            .field("inline", |f| {
+                f
+                .typ("boolean")
+                .description("Whether the field is inline")
+            })
+        })
+        .type_mut("CreateMessageEmbedAuthor", "An author in a message embed", |t| {
+            t
+            .example(std::sync::Arc::new(types::messages::CreateMessageEmbedAuthor::default()))
+            .field("name", |f| {
+                f
+                .typ("string")
+                .description("The name of the author")
+            })
+            .field("url", |f| {
+                f
+                .typ("string?")
+                .description("The URL of the author")
+            })
+            .field("icon_url", |f| {
+                f
+                .typ("string?")
+                .description("The icon URL of the author")
+            })
+        })
+        .type_mut("CreateMessageEmbedFooter", "A footer in a message embed", |t| {
+            t
+            .example(std::sync::Arc::new(types::messages::CreateMessageEmbedFooter::default()))
+            .field("text", |f| {
+                f
+                .typ("string")
+                .description("The text of the footer")
+            })
+            .field("icon_url", |f| {
+                f
+                .typ("string?")
+                .description("The icon URL of the footer")
+            })
+        })
+        .type_mut("CreateMessageEmbed", "An embed in a message", |t| {
+            t
+            .example(std::sync::Arc::new(types::messages::CreateMessageEmbed::default()))
+            .field("title", |f| {
+                f
+                .typ("string?")
+                .description("The title of the embed")
+            })
+            .field("description", |f| {
+                f
+                .typ("string?")
+                .description("The description of the embed")
+            })
+            .field("url", |f| {
+                f
+                .typ("string?")
+                .description("The URL of the embed")
+            })
+            .field("timestamp", |f| {
+                f
+                .typ("string?")
+                .description("The timestamp of the embed")
+            })
+            .field("color", |f| {
+                f
+                .typ("string?")
+                .description("The color of the embed")
+            })
+            .field("footer", |f| {
+                f
+                .typ("{Serenity.CreateMessageEmbedFooter}?")
+                .description("The footer of the embed")
+            })
+            .field("image", |f| {
+                f
+                .typ("string?")
+                .description("The image URL of the embed")
+            })
+            .field("thumbnail", |f| {
+                f
+                .typ("string?")
+                .description("The thumbnail URL of the embed")
+            })
+            .field("author", |f| {
+                f
+                .typ("{Serenity.CreateMessageEmbedAuthor}?")
+                .description("The author of the embed")
+            })
+            .field("fields", |f| {
+                f
+                .typ("{Serenity.CreateMessageEmbedField}?")
+                .description("The fields of the embed")
+            })
+        })
+        .type_mut("CreateMessageAttachment", "An attachment in a message", |t| {
+            t
+            .example(std::sync::Arc::new(types::messages::CreateMessageAttachment::default()))
+            .field("filename", |f| {
+                f
+                .typ("string")
+                .description("The filename of the attachment")
+            })
+            .field("description", |f| {
+                f
+                .typ("string?")
+                .description("The description (if any) of the attachment")
+            })
+            .field("content", |f| {
+                f
+                .typ("{byte}")
+                .description("The content of the attachment")
+            })
+        })
+        .type_mut("CreateMessage", "Options for creating a message in Discord", |t| {
+            t
+            .example(std::sync::Arc::new(types::messages::CreateMessage::default()))
+            .field("embeds", |f| {
+                f
+                .typ("{Serenity.CreateMessageEmbed}?")
+                .description("The embeds of the message")
+            })
+            .field("content", |f| {
+                f
+                .typ("string?")
+                .description("The content of the message")
+            })
+            .field("attachments", |f| {
+                f
+                .typ("{Serenity.CreateMessageAttachment}?")
+                .description("The attachments of the message")
+            })
+        })
+        .type_mut(
+            "MessageHandle",
+            "A handle to a message in Discord, as represented by AntiRaid. Internal fields are subject to change",
+            |mut t| {
+                t
+                .method_mut("data", |m| {
+                    m
+                    .description("Gets the data of the message")
+                    .return_("data", |r| {
+                        r
+                        .typ("any")
+                        .description("The inner data of the message")
+                    })
+                })
+            }
+        )
+        .type_mut(
+            "DiscordExecutor",
+            "DiscordExecutor allows templates to access/use the Discord API in a sandboxed form.",
+            |mut t| {
+                t
+                .method_mut("get_audit_logs", |typ| {
+                    typ
+                    .description("Gets the audit logs")
+                    .parameter("data", |p| {
+                        p.typ("GetAuditLogOptions").description("Options for getting audit logs.")
+                    })
+                    .return_("SerenityAuditLogs", |p| {
+                        p.description("The audit log entry")
+                    })
+                })
+                .method_mut("get_channel", |typ| {
+                    typ
+                    .description("Gets a channel")
+                    .parameter("data", |p| {
+                        p.typ("GetChannelOptions").description("Options for getting a channel.")
+                    })
+                    .return_("Serenity.GuildChannel", |p| {
+                        p.description("The guild channel")
+                    })
+                })
+                .method_mut("edit_channel", |typ| {
+                    typ
+                    .description("Edits a channel")
+                    .parameter("data", |p| {
+                        p.typ("EditChannelOptions").description("Options for editing a channel.")
+                    })
+                    .return_("Serenity.GuildChannel", |p| {
+                        p.description("The guild channel")
+                    })
+                })
+                .method_mut("edit_thread", |typ| {
+                    typ
+                    .description("Edits a thread")
+                    .parameter("data", |p| {
+                        p.typ("EditThreadOptions").description("Options for editing a thread.")
+                    })
+                    .return_("Serenity.GuildChannel", |p| {
+                        p.description("The guild channel")
+                    })
+                })
+                .method_mut("delete_channel", |typ| {
+                    typ
+                    .description("Deletes a channel")
+                    .parameter("data", |p| {
+                        p.typ("DeleteChannelOption").description("Options for deleting a channel.")
+                    })
+                    .return_("Serenity.GuildChannel", |p| {
+                        p.description("The guild channel")
+                    })
+                })
+                .method_mut("create_message", |typ| {
+                    typ
+                    .description("Creates a message")
+                    .parameter("data", |p| {
+                        p.typ("CreateMessage").description("Options for creating a message.")
+                    })
+                    .return_("MessageHandle", |p| {
+                        p.description("The message")
+                    })
+                })
+            }
+        )
+        .method_mut("new", |mut m| {
+            m.parameter("token", |p| p.typ("string").description("The token of the template to use."))
+            .return_("executor", |r| r.typ("DiscordExecutor").description("A discord executor."))
         })
 }
 
@@ -585,17 +763,452 @@ mod types {
             }
         }
     }
+
+    pub mod messages {
+        use limits::{embed_limits, message_limits};
+        use serde::{Deserialize, Serialize};
+
+        pub fn get_char_limit(total_chars: usize, limit: usize, max_chars: usize) -> usize {
+            if max_chars <= total_chars {
+                return 0;
+            }
+
+            // If limit is 6000 and max_chars - total_chars is 1000, return 1000 etc.
+            std::cmp::min(limit, max_chars - total_chars)
+        }
+
+        pub fn slice_chars(
+            s: &str,
+            total_chars: &mut usize,
+            limit: usize,
+            max_chars: usize,
+        ) -> String {
+            let char_limit = get_char_limit(*total_chars, limit, max_chars);
+
+            if char_limit == 0 {
+                return String::new();
+            }
+
+            if s.len() > char_limit {
+                *total_chars += char_limit;
+                s.chars().take(char_limit).collect()
+            } else {
+                *total_chars += s.len();
+                s.to_string()
+            }
+        }
+
+        /// Represents an embed field
+        #[derive(Serialize, Deserialize, Debug, Default, Clone)]
+        pub struct CreateMessageEmbedField {
+            /// The name of the field
+            pub name: String,
+            /// The value of the field
+            pub value: String,
+            /// Whether the field is inline
+            pub inline: bool,
+        }
+
+        /// Represents an embed author
+        #[derive(Serialize, Deserialize, Debug, Default, Clone)]
+        pub struct CreateMessageEmbedAuthor {
+            /// The name of the author
+            pub name: String,
+            /// The URL of the author, must be a valid URL
+            pub url: Option<String>,
+            /// The icon URL of the author, must be a valid URL
+            pub icon_url: Option<String>,
+        }
+
+        /// Represents an embed footer
+        #[derive(Serialize, Deserialize, Debug, Default, Clone)]
+        pub struct CreateMessageEmbedFooter {
+            /// The text of the footer
+            pub text: String,
+            /// The icon URL of the footer, must be a valid URL
+            pub icon_url: Option<String>,
+        }
+
+        /// Represents a message embed
+        #[derive(Serialize, Deserialize, Debug, Default, Clone)]
+        pub struct CreateMessageEmbed {
+            /// The title set by the template
+            pub title: Option<String>,
+            /// The description set by the template
+            pub description: Option<String>,
+            /// The URL the embed should link to
+            pub url: Option<String>,
+            /// The timestamp to display on the embed
+            pub timestamp: Option<String>,
+            /// The color of the embed
+            pub color: Option<serenity::all::Color>,
+            /// The footer of the embed
+            pub footer: Option<CreateMessageEmbedFooter>,
+            /// The image URL for the embed
+            pub image: Option<String>,
+            /// The thumbnail URL for the embed
+            pub thumbnail: Option<String>,
+            /// The author of the embed
+            pub author: Option<CreateMessageEmbedAuthor>,
+            /// The fields that were set by the template
+            pub fields: Option<Vec<CreateMessageEmbedField>>,
+        }
+
+        /// Message attachment
+        #[derive(Serialize, Deserialize, Debug, Default, Clone)]
+        pub struct CreateMessageAttachment {
+            pub filename: String,
+            pub description: Option<String>,
+            pub content: Vec<u8>,
+        }
+
+        /// Represents a message that can be created by templates
+        #[derive(Serialize, Deserialize, Debug, Default, Clone)]
+        pub struct CreateMessage {
+            /// Embeds [current_index, embeds]
+            pub embeds: Option<Vec<CreateMessageEmbed>>,
+            /// What content to set on the message
+            pub content: Option<String>,
+            /// The attachments
+            pub attachments: Option<Vec<CreateMessageAttachment>>,
+        }
+
+        /// Converts a templated message to a discord reply
+        ///
+        /// This method also handles all of the various discord message+embed limits as well, returning an error if unable to comply
+        pub fn to_discord_reply<'a>(
+            message: CreateMessage,
+        ) -> Result<DiscordReply<'a>, crate::Error> {
+            let mut total_chars = 0;
+            let mut total_content_chars = 0;
+            let mut embeds = Vec::new();
+
+            if let Some(t_embeds) = message.embeds {
+                for template_embed in t_embeds {
+                    if embeds.len() >= embed_limits::EMBED_MAX_COUNT {
+                        break;
+                    }
+
+                    let mut set = false; // Is something set on the embed?
+                    let mut embed = serenity::all::CreateEmbed::default();
+
+                    if let Some(title) = &template_embed.title {
+                        // Slice title to EMBED_TITLE_LIMIT
+                        embed = embed.title(slice_chars(
+                            title,
+                            &mut total_chars,
+                            embed_limits::EMBED_TITLE_LIMIT,
+                            embed_limits::EMBED_TOTAL_LIMIT,
+                        ));
+                        set = true;
+                    }
+
+                    if let Some(description) = &template_embed.description {
+                        // Slice description to EMBED_DESCRIPTION_LIMIT
+                        embed = embed.description(
+                            slice_chars(
+                                description,
+                                &mut total_chars,
+                                embed_limits::EMBED_DESCRIPTION_LIMIT,
+                                embed_limits::EMBED_TOTAL_LIMIT,
+                            )
+                            .to_string(),
+                        );
+                        set = true;
+                    }
+
+                    if let Some(url) = &template_embed.url {
+                        if url.is_empty() {
+                            return Err("URL cannot be empty".into());
+                        }
+
+                        if !url.starts_with("http://") && !url.starts_with("https://") {
+                            return Err("URL must start with http:// or https://".into());
+                        }
+
+                        embed = embed.url(url.clone());
+                        set = true;
+                    }
+
+                    if let Some(timestamp) = &template_embed.timestamp {
+                        let timestamp = chrono::DateTime::parse_from_rfc3339(timestamp)
+                            .map_err(|e| format!("Invalid timestamp provided to embed: {}", e))?;
+                        embed = embed.timestamp(timestamp);
+                        set = true;
+                    }
+
+                    if let Some(color) = template_embed.color {
+                        embed = embed.color(color);
+                        set = true;
+                    }
+
+                    if let Some(footer) = &template_embed.footer {
+                        let text = slice_chars(
+                            &footer.text,
+                            &mut total_chars,
+                            embed_limits::EMBED_FOOTER_TEXT_LIMIT,
+                            embed_limits::EMBED_TOTAL_LIMIT,
+                        );
+
+                        let mut cef = serenity::all::CreateEmbedFooter::new(text);
+
+                        if let Some(footer_icon_url) = &footer.icon_url {
+                            if footer_icon_url.is_empty() {
+                                return Err("Footer icon URL cannot be empty".into());
+                            }
+
+                            if !footer_icon_url.starts_with("http://")
+                                && !footer_icon_url.starts_with("https://")
+                            {
+                                return Err(
+                                    "Footer icon URL must start with http:// or https://".into()
+                                );
+                            }
+
+                            cef = cef.icon_url(footer_icon_url.clone());
+                        }
+
+                        embed = embed.footer(cef);
+
+                        set = true;
+                    }
+
+                    if let Some(image) = &template_embed.image {
+                        if image.is_empty() {
+                            return Err("Image URL cannot be empty".into());
+                        }
+
+                        if !image.starts_with("http://") && !image.starts_with("https://") {
+                            return Err("Image URL must start with http:// or https://".into());
+                        }
+
+                        embed = embed.image(image.clone());
+                        set = true;
+                    }
+
+                    if let Some(thumbnail) = &template_embed.thumbnail {
+                        if thumbnail.is_empty() {
+                            return Err("Thumbnail URL cannot be empty".into());
+                        }
+
+                        if !thumbnail.starts_with("http://") && !thumbnail.starts_with("https://") {
+                            return Err("Thumbnail URL must start with http:// or https://".into());
+                        }
+
+                        embed = embed.thumbnail(thumbnail.clone());
+                        set = true;
+                    }
+
+                    if let Some(author) = &template_embed.author {
+                        let name = slice_chars(
+                            &author.name,
+                            &mut total_chars,
+                            embed_limits::EMBED_AUTHOR_NAME_LIMIT,
+                            embed_limits::EMBED_TOTAL_LIMIT,
+                        );
+
+                        let mut cea = serenity::all::CreateEmbedAuthor::new(name);
+
+                        if let Some(url) = &author.url {
+                            if url.is_empty() {
+                                return Err("Author URL cannot be empty".into());
+                            }
+
+                            if !url.starts_with("http://") && !url.starts_with("https://") {
+                                return Err("Author URL must start with http:// or https://".into());
+                            }
+
+                            cea = cea.url(url.clone());
+                        }
+
+                        if let Some(icon_url) = &author.icon_url {
+                            if icon_url.is_empty() {
+                                return Err("Author icon URL cannot be empty".into());
+                            }
+
+                            if !icon_url.starts_with("http://") && !icon_url.starts_with("https://")
+                            {
+                                return Err(
+                                    "Author icon URL must start with http:// or https://".into()
+                                );
+                            }
+
+                            cea = cea.icon_url(icon_url.clone());
+                        }
+
+                        embed = embed.author(cea);
+
+                        set = true;
+                    }
+
+                    if let Some(fields) = template_embed.fields {
+                        if !fields.is_empty() {
+                            set = true;
+                        }
+
+                        for (count, field) in fields.into_iter().enumerate() {
+                            if count >= embed_limits::EMBED_FIELDS_MAX_COUNT {
+                                break;
+                            }
+
+                            let name = field.name.trim();
+                            let value = field.value.trim();
+
+                            if name.is_empty() || value.is_empty() {
+                                continue;
+                            }
+
+                            // Slice field name to EMBED_FIELD_NAME_LIMIT
+                            let name = slice_chars(
+                                name,
+                                &mut total_chars,
+                                embed_limits::EMBED_FIELD_NAME_LIMIT,
+                                embed_limits::EMBED_TOTAL_LIMIT,
+                            );
+
+                            // Slice field value to EMBED_FIELD_VALUE_LIMIT
+                            let value = slice_chars(
+                                value,
+                                &mut total_chars,
+                                embed_limits::EMBED_FIELD_VALUE_LIMIT,
+                                embed_limits::EMBED_TOTAL_LIMIT,
+                            );
+
+                            embed = embed.field(name, value, field.inline);
+                        }
+                    }
+
+                    if set {
+                        embeds.push(embed);
+                    }
+                }
+            }
+
+            // Now handle content
+            let content = message.content.map(|c| {
+                slice_chars(
+                    &c,
+                    &mut total_content_chars,
+                    message_limits::MESSAGE_CONTENT_LIMIT,
+                    message_limits::MESSAGE_CONTENT_LIMIT,
+                )
+            });
+
+            // Lastly handle attachments
+            let mut attachments = Vec::new();
+
+            if let Some(attach) = message.attachments {
+                if attach.len() > message_limits::MESSAGE_MAX_ATTACHMENT_COUNT {
+                    return Err(format!(
+                        "Too many attachments, limit is {}",
+                        message_limits::MESSAGE_MAX_ATTACHMENT_COUNT
+                    )
+                    .into());
+                }
+
+                for attachment in attach {
+                    let desc = attachment.description.unwrap_or_default();
+                    if desc.len() > message_limits::MESSAGE_ATTACHMENT_DESCRIPTION_LIMIT {
+                        return Err(format!(
+                            "Attachment description exceeds limit of {}",
+                            message_limits::MESSAGE_ATTACHMENT_DESCRIPTION_LIMIT
+                        )
+                        .into());
+                    }
+
+                    let content = attachment.content;
+
+                    if content.is_empty() {
+                        return Err("Attachment content cannot be empty".into());
+                    }
+
+                    if content.len() > message_limits::MESSAGE_ATTACHMENT_CONTENT_BYTES_LIMIT {
+                        return Err(format!(
+                            "Attachment content exceeds limit of {} bytes",
+                            message_limits::MESSAGE_ATTACHMENT_CONTENT_BYTES_LIMIT
+                        )
+                        .into());
+                    }
+
+                    let mut ca =
+                        serenity::all::CreateAttachment::bytes(content, attachment.filename);
+
+                    if !desc.is_empty() {
+                        ca = ca.description(desc);
+                    }
+
+                    attachments.push(ca);
+                }
+            }
+
+            if content.is_none() && embeds.is_empty() && attachments.is_empty() {
+                return Err("No content/embeds/attachments set".into());
+            }
+
+            Ok(DiscordReply {
+                embeds,
+                content,
+                attachments,
+            })
+        }
+
+        #[derive(Default)]
+        pub struct DiscordReply<'a> {
+            pub content: Option<String>,
+            pub embeds: Vec<serenity::all::CreateEmbed<'a>>,
+            pub attachments: Vec<serenity::all::CreateAttachment<'a>>,
+        }
+
+        impl<'a> DiscordReply<'a> {
+            pub fn to_create_message(self) -> serenity::all::CreateMessage<'a> {
+                let mut message = serenity::all::CreateMessage::default();
+
+                if let Some(content) = self.content {
+                    message = message.content(content);
+                }
+
+                message = message.embeds(self.embeds);
+
+                for attachment in self.attachments {
+                    message = message.add_file(attachment);
+                }
+
+                message
+            }
+
+            #[allow(dead_code)]
+            pub fn to_edit_message(self) -> serenity::all::EditMessage<'a> {
+                let mut message = serenity::all::EditMessage::default();
+
+                if let Some(content) = self.content {
+                    message = message.content(content);
+                }
+
+                message = message.embeds(self.embeds);
+
+                // NOTE: This resets old attachments
+                for attachment in self.attachments {
+                    message = message.new_attachment(attachment);
+                }
+
+                message
+            }
+        }
+    }
+
+    /// Represents a message that can be sent to a channel
+    #[derive(serde::Serialize, serde::Deserialize)]
+    pub struct SendMessageChannelAction {
+        pub channel_id: serenity::all::ChannelId, // Channel *must* be in the same guild
+        pub message: messages::CreateMessage,
+    }
 }
 
 impl LuaUserData for DiscordActionExecutor {
     fn add_methods<M: LuaUserDataMethods<Self>>(methods: &mut M) {
         // Audit Log
 
-        // @method get_audit_logs
-        //
-        // Gets the audit logs
-        //
-        // @param data(inner.GetAuditLogOptions): Options for getting audit logs.
+        // Should be documented
         methods.add_async_method("get_audit_logs", |lua, this, data: LuaValue| async move {
             let data = lua.from_value::<types::GetAuditLogOptions>(data)?;
 
@@ -652,6 +1265,7 @@ impl LuaUserData for DiscordActionExecutor {
             },
         );
 
+        // Not yet documented, not yet stable
         methods.add_async_method(
             "get_auto_moderation_rule",
             |lua, this, data: LuaValue| async move {
@@ -679,6 +1293,7 @@ impl LuaUserData for DiscordActionExecutor {
             },
         );
 
+        // Not yet documented, not yet stable
         methods.add_async_method(
             "create_auto_moderation_rule",
             |lua, this, data: LuaValue| async move {
@@ -834,6 +1449,8 @@ impl LuaUserData for DiscordActionExecutor {
         );*/
 
         // Channel
+
+        // Should be documented
         methods.add_async_method("get_channel", |lua, this, data: LuaValue| async move {
             let data = lua.from_value::<types::GetChannelOptions>(data)?;
 
@@ -858,6 +1475,7 @@ impl LuaUserData for DiscordActionExecutor {
             Ok(v)
         });
 
+        // Should be documented
         methods.add_async_method("edit_channel", |lua, this, data: LuaValue| async move {
             let data = lua.from_value::<types::EditChannelOptions>(data)?;
 
@@ -987,6 +1605,7 @@ impl LuaUserData for DiscordActionExecutor {
             Ok(v)
         });
 
+        // Should be documented
         methods.add_async_method("edit_thread", |lua, this, data: LuaValue| async move {
             let data = lua.from_value::<types::EditThreadOptions>(data)?;
 
@@ -1048,6 +1667,7 @@ impl LuaUserData for DiscordActionExecutor {
             Ok(v)
         });
 
+        // Should be documented
         methods.add_async_method(
             "delete_channel",
             |lua, this, channel_id: LuaValue| async move {
@@ -1135,6 +1755,7 @@ impl LuaUserData for DiscordActionExecutor {
             Ok(())
         });
 
+        // Ban/Kick/Timeout, not yet documented as it is not yet stable
         methods.add_async_method("kick", |lua, this, data: LuaValue| async move {
             /// A kick action
             #[derive(serde::Serialize, serde::Deserialize)]
@@ -1173,6 +1794,7 @@ impl LuaUserData for DiscordActionExecutor {
             Ok(())
         });
 
+        // Ban/Kick/Timeout, not yet documented as it is not yet stable
         methods.add_async_method("timeout", |lua, this, data: LuaValue| async move {
             /// A timeout action
             #[derive(serde::Serialize, serde::Deserialize)]
@@ -1226,20 +1848,15 @@ impl LuaUserData for DiscordActionExecutor {
             Ok(())
         });
 
+        // Should be documented
         methods.add_async_method("create_message", |lua, this, data: LuaValue| async move {
-            #[derive(serde::Serialize, serde::Deserialize)]
-            pub struct SendMessageChannelAction {
-                channel_id: serenity::all::ChannelId, // Channel *must* be in the same guild
-                message: crate::core::messages::CreateMessage,
-            }
-
-            let data = lua.from_value::<SendMessageChannelAction>(data)?;
+            let data = lua.from_value::<types::SendMessageChannelAction>(data)?;
 
             this.check_action("create_message".to_string())
                 .map_err(LuaError::external)?;
 
-            let msg = crate::core::messages::to_discord_reply(data.message)
-                .map_err(LuaError::external)?;
+            let msg =
+                types::messages::to_discord_reply(data.message).map_err(LuaError::external)?;
 
             // Perform required checks
             let channel = sandwich_driver::channel(
@@ -1320,6 +1937,7 @@ impl LuaUserData for MessageHandle {
             Ok(v)
         });
 
+        // Not yet documented
         methods.add_method("await_component_interaction", |_, this, _: ()| {
             let stream = super::typesext::LuaStream::new(
                 this.message
@@ -1335,6 +1953,7 @@ impl LuaUserData for MessageHandle {
     }
 }
 
+// Not yet documented
 pub struct MessageComponentHandle {
     pub interaction: serenity::all::ComponentInteraction,
 }

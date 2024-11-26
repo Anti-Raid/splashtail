@@ -311,92 +311,291 @@ Options for deleting a channel in Discord
 - `reason` ([string](#type.string)): The reason for deleting the channel
 
 
-## Methods
+<div id="type.CreateMessageEmbedField" />
 
-### get_audit_logs
+### CreateMessageEmbedField
+
+A field in a message embed
+
+```json
+{
+  "name": "",
+  "value": "",
+  "inline": false
+}
+```
+
+#### Fields
+
+- `name` ([string](#type.string)): The name of the field
+- `value` ([string](#type.string)): The value of the field
+- `inline` ([boolean](#type.boolean)): Whether the field is inline
+
+
+<div id="type.CreateMessageEmbedAuthor" />
+
+### CreateMessageEmbedAuthor
+
+An author in a message embed
+
+```json
+{
+  "name": "",
+  "url": null,
+  "icon_url": null
+}
+```
+
+#### Fields
+
+- `name` ([string](#type.string)): The name of the author
+- `url` ([string?](#type.string)): The URL of the author
+- `icon_url` ([string?](#type.string)): The icon URL of the author
+
+
+<div id="type.CreateMessageEmbedFooter" />
+
+### CreateMessageEmbedFooter
+
+A footer in a message embed
+
+```json
+{
+  "text": "",
+  "icon_url": null
+}
+```
+
+#### Fields
+
+- `text` ([string](#type.string)): The text of the footer
+- `icon_url` ([string?](#type.string)): The icon URL of the footer
+
+
+<div id="type.CreateMessageEmbed" />
+
+### CreateMessageEmbed
+
+An embed in a message
+
+```json
+{
+  "title": null,
+  "description": null,
+  "url": null,
+  "timestamp": null,
+  "color": null,
+  "footer": null,
+  "image": null,
+  "thumbnail": null,
+  "author": null,
+  "fields": null
+}
+```
+
+#### Fields
+
+- `title` ([string?](#type.string)): The title of the embed
+- `description` ([string?](#type.string)): The description of the embed
+- `url` ([string?](#type.string)): The URL of the embed
+- `timestamp` ([string?](#type.string)): The timestamp of the embed
+- `color` ([string?](#type.string)): The color of the embed
+- `footer` ([{Serenity.CreateMessageEmbedFooter}?](#type.Serenity.CreateMessageEmbedFooter)): The footer of the embed
+- `image` ([string?](#type.string)): The image URL of the embed
+- `thumbnail` ([string?](#type.string)): The thumbnail URL of the embed
+- `author` ([{Serenity.CreateMessageEmbedAuthor}?](#type.Serenity.CreateMessageEmbedAuthor)): The author of the embed
+- `fields` ([{Serenity.CreateMessageEmbedField}?](#type.Serenity.CreateMessageEmbedField)): The fields of the embed
+
+
+<div id="type.CreateMessageAttachment" />
+
+### CreateMessageAttachment
+
+An attachment in a message
+
+```json
+{
+  "filename": "",
+  "description": null,
+  "content": []
+}
+```
+
+#### Fields
+
+- `filename` ([string](#type.string)): The filename of the attachment
+- `description` ([string?](#type.string)): The description (if any) of the attachment
+- `content` ([{byte}](#type.byte)): The content of the attachment
+
+
+<div id="type.CreateMessage" />
+
+### CreateMessage
+
+Options for creating a message in Discord
+
+```json
+{
+  "embeds": null,
+  "content": null,
+  "attachments": null
+}
+```
+
+#### Fields
+
+- `embeds` ([{Serenity.CreateMessageEmbed}?](#type.Serenity.CreateMessageEmbed)): The embeds of the message
+- `content` ([string?](#type.string)): The content of the message
+- `attachments` ([{Serenity.CreateMessageAttachment}?](#type.Serenity.CreateMessageAttachment)): The attachments of the message
+
+
+<div id="type.MessageHandle" />
+
+### MessageHandle
+
+A handle to a message in Discord, as represented by AntiRaid. Internal fields are subject to change
+
+
+
+#### Methods
+
+##### MessageHandle:data
 
 ```lua
-function get_audit_logs(data: GetAuditLogOptions): 
+function MessageHandle:data(): any
+```
+
+Gets the data of the message
+
+###### Returns
+
+- `data` ([any](#type.any)): The inner data of the message
+
+
+<div id="type.DiscordExecutor" />
+
+### DiscordExecutor
+
+DiscordExecutor allows templates to access/use the Discord API in a sandboxed form.
+
+
+
+#### Methods
+
+##### DiscordExecutor:get_audit_logs
+
+```lua
+function DiscordExecutor:get_audit_logs(data: GetAuditLogOptions): 
 ```
 
 Gets the audit logs
 
-#### Parameters
+###### Parameters
 
 - `data` ([GetAuditLogOptions](#type.GetAuditLogOptions)): Options for getting audit logs.
 
 
-#### Returns
+###### Returns
 
 - `SerenityAuditLogs` ([](#type.)): The audit log entry
-
-### get_channel
+##### DiscordExecutor:get_channel
 
 ```lua
-function get_channel(data: GetChannelOptions): 
+function DiscordExecutor:get_channel(data: GetChannelOptions): 
 ```
 
 Gets a channel
 
-#### Parameters
+###### Parameters
 
 - `data` ([GetChannelOptions](#type.GetChannelOptions)): Options for getting a channel.
 
 
-#### Returns
+###### Returns
 
 - `Serenity.GuildChannel` ([](#type.)): The guild channel
-
-### edit_channel
+##### DiscordExecutor:edit_channel
 
 ```lua
-function edit_channel(data: EditChannelOptions): 
+function DiscordExecutor:edit_channel(data: EditChannelOptions): 
 ```
 
 Edits a channel
 
-#### Parameters
+###### Parameters
 
 - `data` ([EditChannelOptions](#type.EditChannelOptions)): Options for editing a channel.
 
 
-#### Returns
+###### Returns
 
 - `Serenity.GuildChannel` ([](#type.)): The guild channel
-
-### edit_thread
+##### DiscordExecutor:edit_thread
 
 ```lua
-function edit_thread(data: EditThreadOptions): 
+function DiscordExecutor:edit_thread(data: EditThreadOptions): 
 ```
 
 Edits a thread
 
-#### Parameters
+###### Parameters
 
 - `data` ([EditThreadOptions](#type.EditThreadOptions)): Options for editing a thread.
 
 
-#### Returns
+###### Returns
 
 - `Serenity.GuildChannel` ([](#type.)): The guild channel
-
-### delete_channel
+##### DiscordExecutor:delete_channel
 
 ```lua
-function delete_channel(data: DeleteChannelOption): 
+function DiscordExecutor:delete_channel(data: DeleteChannelOption): 
 ```
 
 Deletes a channel
 
-#### Parameters
+###### Parameters
 
 - `data` ([DeleteChannelOption](#type.DeleteChannelOption)): Options for deleting a channel.
 
 
-#### Returns
+###### Returns
 
 - `Serenity.GuildChannel` ([](#type.)): The guild channel
+##### DiscordExecutor:create_message
+
+```lua
+function DiscordExecutor:create_message(data: CreateMessage): 
+```
+
+Creates a message
+
+###### Parameters
+
+- `data` ([CreateMessage](#type.CreateMessage)): Options for creating a message.
+
+
+###### Returns
+
+- `MessageHandle` ([](#type.)): The message
+
+
+## Methods
+
+### new
+
+```lua
+function new(token: string): DiscordExecutor
+```
+
+#### Parameters
+
+- `token` ([string](#type.string)): The token of the template to use.
+
+
+#### Returns
+
+- `executor` ([DiscordExecutor](#type.DiscordExecutor)): A discord executor.
 
 
 
@@ -760,6 +959,532 @@ function new(token: string): KvExecutor
 #### Returns
 
 - `executor` ([KvExecutor](#type.KvExecutor)): A key-value executor.
+
+
+
+---
+
+# @antiraid/page
+
+Create a page dedicated to your template on a server.
+
+## Types
+
+<div id="type.Setting.Column" />
+
+### Setting.Column
+
+A setting column
+
+```json
+{
+  "id": "created_at",
+  "name": "Created At",
+  "description": "The time the record was created.",
+  "column_type": {
+    "Scalar": {
+      "inner": {
+        "TimestampTz": {}
+      }
+    }
+  },
+  "nullable": false,
+  "suggestions": {
+    "None": {}
+  },
+  "secret": false,
+  "ignored_for": [
+    "Create",
+    "Update"
+  ]
+}
+```
+
+#### Fields
+
+- `id` ([string](#type.string)): The ID of the column.
+- `name` ([string](#type.string)): The name of the column.
+- `description` ([string](#type.string)): The description of the column.
+- `column_type` ([Stting.Column.ColumnType](#type.Stting.Column.ColumnType)): The type of the column.
+- `nullable` ([boolean](#type.boolean)): Whether the column can be null.
+- `suggestions` ([Setting.Column.ColumnSuggestion](#type.Setting.Column.ColumnSuggestion)): The suggestions for the column.
+- `secret` ([boolean](#type.boolean)): Whether the column is secret.
+- `ignored_for` ([{OperationType}](#type.OperationType)): The operations that the column is ignored for [read-only]. It is *not guaranteed* that ignored field are sent to the template.
+
+
+<div id="type.Setting" />
+
+### Setting
+
+A setting
+
+```json
+{
+  "id": "setting_id",
+  "name": "Setting Name",
+  "description": "Setting Description",
+  "primary_key": "id",
+  "title_template": "{col1} - {col2}",
+  "columns": [
+    {
+      "id": "col1",
+      "name": "Column 1",
+      "description": "Column 1 desc",
+      "column_type": {
+        "Scalar": {
+          "inner": {
+            "String": {
+              "min_length": 120,
+              "max_length": 120,
+              "allowed_values": [
+                "allowed_value"
+              ],
+              "kind": {
+                "Normal": {}
+              }
+            }
+          }
+        }
+      },
+      "nullable": false,
+      "suggestions": {
+        "Static": {
+          "suggestions": [
+            "suggestion"
+          ]
+        }
+      },
+      "secret": false,
+      "ignored_for": [
+        "Create"
+      ]
+    },
+    {
+      "id": "col2",
+      "name": "Column 2",
+      "description": "Column 2 desc",
+      "column_type": {
+        "Array": {
+          "inner": {
+            "String": {
+              "min_length": 120,
+              "max_length": 120,
+              "allowed_values": [
+                "allowed_value"
+              ],
+              "kind": {
+                "Token": {
+                  "default_length": 10
+                }
+              }
+            }
+          }
+        }
+      },
+      "nullable": false,
+      "suggestions": {
+        "Static": {
+          "suggestions": [
+            "suggestion"
+          ]
+        }
+      },
+      "secret": false,
+      "ignored_for": [
+        "View"
+      ]
+    },
+    {
+      "id": "col3",
+      "name": "Column 3",
+      "description": "Column 3 desc",
+      "column_type": {
+        "Array": {
+          "inner": {
+            "String": {
+              "min_length": 120,
+              "max_length": 120,
+              "allowed_values": [
+                "allowed_value"
+              ],
+              "kind": {
+                "Textarea": {
+                  "ctx": "anything"
+                }
+              }
+            }
+          }
+        }
+      },
+      "nullable": false,
+      "suggestions": {
+        "Static": {
+          "suggestions": [
+            "suggestion"
+          ]
+        }
+      },
+      "secret": false,
+      "ignored_for": [
+        "Create"
+      ]
+    },
+    {
+      "id": "col4",
+      "name": "Column 4",
+      "description": "Column 4 desc",
+      "column_type": {
+        "Array": {
+          "inner": {
+            "String": {
+              "min_length": 120,
+              "max_length": 120,
+              "allowed_values": [
+                "allowed_value"
+              ],
+              "kind": {
+                "TemplateRef": {}
+              }
+            }
+          }
+        }
+      },
+      "nullable": false,
+      "suggestions": {
+        "Static": {
+          "suggestions": [
+            "suggestion"
+          ]
+        }
+      },
+      "secret": false,
+      "ignored_for": [
+        "Create"
+      ]
+    },
+    {
+      "id": "col5",
+      "name": "Column 5",
+      "description": "Column 5 desc",
+      "column_type": {
+        "Array": {
+          "inner": {
+            "String": {
+              "min_length": 120,
+              "max_length": 120,
+              "allowed_values": [
+                "allowed_value"
+              ],
+              "kind": {
+                "KittycatPermission": {}
+              }
+            }
+          }
+        }
+      },
+      "nullable": false,
+      "suggestions": {
+        "Static": {
+          "suggestions": [
+            "suggestion"
+          ]
+        }
+      },
+      "secret": false,
+      "ignored_for": [
+        "Create"
+      ]
+    },
+    {
+      "id": "col6",
+      "name": "Column 6",
+      "description": "Column 6 desc",
+      "column_type": {
+        "Array": {
+          "inner": {
+            "String": {
+              "min_length": 120,
+              "max_length": 120,
+              "allowed_values": [
+                "allowed_value"
+              ],
+              "kind": {
+                "User": {}
+              }
+            }
+          }
+        }
+      },
+      "nullable": false,
+      "suggestions": {
+        "Static": {
+          "suggestions": [
+            "suggestion"
+          ]
+        }
+      },
+      "secret": false,
+      "ignored_for": [
+        "Create"
+      ]
+    },
+    {
+      "id": "col7",
+      "name": "Column 7",
+      "description": "Column 7 desc",
+      "column_type": {
+        "Array": {
+          "inner": {
+            "String": {
+              "min_length": 120,
+              "max_length": 120,
+              "allowed_values": [
+                "allowed_value"
+              ],
+              "kind": {
+                "Role": {}
+              }
+            }
+          }
+        }
+      },
+      "nullable": false,
+      "suggestions": {
+        "Static": {
+          "suggestions": [
+            "suggestion"
+          ]
+        }
+      },
+      "secret": false,
+      "ignored_for": [
+        "Create"
+      ]
+    },
+    {
+      "id": "col8",
+      "name": "Column 8",
+      "description": "Column 8 desc",
+      "column_type": {
+        "Array": {
+          "inner": {
+            "String": {
+              "min_length": 120,
+              "max_length": 120,
+              "allowed_values": [
+                "allowed_value"
+              ],
+              "kind": {
+                "Modifier": {}
+              }
+            }
+          }
+        }
+      },
+      "nullable": false,
+      "suggestions": {
+        "Static": {
+          "suggestions": [
+            "suggestion"
+          ]
+        }
+      },
+      "secret": false,
+      "ignored_for": [
+        "Update"
+      ]
+    },
+    {
+      "id": "col9",
+      "name": "Column 9",
+      "description": "Column 9 desc",
+      "column_type": {
+        "Scalar": {
+          "inner": {
+            "Integer": {}
+          }
+        }
+      },
+      "nullable": false,
+      "suggestions": {
+        "Static": {
+          "suggestions": [
+            "suggestion"
+          ]
+        }
+      },
+      "secret": false,
+      "ignored_for": [
+        "Update"
+      ]
+    },
+    {
+      "id": "col10",
+      "name": "Column 10",
+      "description": "Column 10 desc",
+      "column_type": {
+        "Scalar": {
+          "inner": {
+            "Boolean": {}
+          }
+        }
+      },
+      "nullable": false,
+      "suggestions": {
+        "Static": {
+          "suggestions": [
+            "suggestion"
+          ]
+        }
+      },
+      "secret": false,
+      "ignored_for": [
+        "Update"
+      ]
+    },
+    {
+      "id": "created_at",
+      "name": "Created At",
+      "description": "The time the record was created.",
+      "column_type": {
+        "Scalar": {
+          "inner": {
+            "TimestampTz": {}
+          }
+        }
+      },
+      "nullable": false,
+      "suggestions": {
+        "None": {}
+      },
+      "secret": false,
+      "ignored_for": [
+        "Create",
+        "Update"
+      ]
+    }
+  ],
+  "operations": []
+}
+```
+
+#### Fields
+
+- `id` ([string](#type.string)): The ID of the setting.
+- `name` ([string](#type.string)): The name of the setting.
+- `description` ([string](#type.string)): The description of the setting.
+- `operations` ([{OperationType}](#type.OperationType)): The operations that can be performed on the setting. **Note that when using ``add_settings``, you must pass this as the second argument to settings and ignore this field.**
+- `primary_key` ([string](#type.string)): The primary key of the setting that UNIQUELY identifies the row. When ``Delete`` is called, the value of this is what will be sent in the event. On ``Update``, this key MUST also exist (otherwise, the template MUST error out)
+- `title_template` ([string](#type.string)): The template for the title of each row for the setting. This is a string that can contain placeholders for columns. The placeholders are in the form of ``{column_id}``. For example, if you have a column with ID ``col1`` and another with ID ``col2``, you can have a title template of ``{col1} - {col2}`` etc..
+- `columns` ([{Setting.Column}](#type.Setting.Column)): The columns of the setting.
+
+
+<div id="type.CreatePageSetting" />
+
+### CreatePageSetting
+
+A table containing a setting for a page
+
+
+
+#### Fields
+
+- `setting` ([Setting](#type.Setting)): The setting to add to the page.
+- `operations` ([{string}](#type.string)): The operations to perform on the setting. Elements of the array can be either `View`, `Create`, `Update` or `Delete`.
+
+
+<div id="type.CreatePage" />
+
+### CreatePage
+
+An intermediary structure for creating a page for a template
+
+
+
+#### Fields
+
+- `page_id` ([string](#type.string)): The ID of the page. This field **can be updated ONLY if the page is not created yet with no current settings.** The ID must not contain spaces, newlines, null characters, or tabs.
+- `title` ([string](#type.string)): The title of the page. This field **can be updated ONLY if the page is not created yet.**
+- `description` ([string](#type.string)): The description of the page. This field **can be updated ONLY if the page is not created yet.**
+- `settings` ([table](#type.table)): The settings of the page. **This field is read-only.**
+- `is_created` ([boolean](#type.boolean)): Whether the page is created. **This field is read-only.**
+- `template` ([Template](#type.Template)): The template of the page. **This field is read-only.**
+
+
+#### Methods
+
+##### CreatePage:add_setting
+
+```lua
+function CreatePage:add_setting(setting: CreatePageSetting): nil
+```
+
+###### Parameters
+
+- `setting` ([CreatePageSetting](#type.CreatePageSetting)): The setting to add to the page.
+
+
+###### Returns
+
+- `ret` ([nil](#type.nil)): 
+
+
+## Enums
+
+<div id="type.Setting.Column.InnerColumnType" />
+
+### Setting.Column.InnerColumnType
+
+The inner column type of the value
+
+
+
+<div id="type.Setting.Column.ColumnType" />
+
+### Setting.Column.ColumnType
+
+The type of a setting column
+
+
+
+#### Variants
+
+##### Setting.Column.ColumnType::Scalar
+
+A scalar column type.
+
+
+
+###### Fields
+
+- `inner` ([Setting.Column.InnerColumnType](#type.Setting.Column.InnerColumnType)): The inner type of the column.
+##### Setting.Column.ColumnType::Array
+
+An array column type.
+
+
+
+###### Fields
+
+- `inner` ([Setting.Column.InnerColumnType](#type.Setting.Column.InnerColumnType)): The array type of the column.
+
+
+## Methods
+
+### create_page
+
+```lua
+function create_page(token: string): CreatePage
+```
+
+#### Parameters
+
+- `token` ([string](#type.string)): The token of the template to use.
+
+
+#### Returns
+
+- `create_page` ([CreatePage](#type.CreatePage)): An empty created page.
 
 
 

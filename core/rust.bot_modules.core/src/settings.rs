@@ -1970,6 +1970,71 @@ impl SettingCreator for GuildTemplateShopExecutor {
             });
         };
 
+        // Rules for name:
+        // Only namespaced templates can contain @ or /
+        // Namespaced templates must use a namespace owned by the server
+        // Namespaced templates must be in the format @namespace/<pkgname>. <pkgname> itself cannot contain '@' but may use '/'
+
+        if !name.is_ascii() {
+            return Err(SettingsError::Generic {
+                message: "Name must be ASCII".to_string(),
+                src: "GuildTemplateShopExecutor".to_string(),
+                typ: "external".to_string(),
+            });
+        }
+
+        if name.chars().next() == Some('@') {
+            // This is a namespaced template, check that the server owns the namespace
+            if !name.contains('/') {
+                return Err(SettingsError::Generic {
+                    message: "Please contact support to claim ownership over a specific namespace"
+                        .to_string(),
+                    src: "GuildTemplateShopExecutor".to_string(),
+                    typ: "external".to_string(),
+                });
+            }
+
+            let namespace = name.split('/').next().unwrap();
+            let pkgname = name.replace(&format!("{}{}", namespace, "/"), "");
+
+            if pkgname.contains("@") {
+                return Err(SettingsError::Generic {
+                    message: "Package name cannot contain '@'".to_string(),
+                    src: "GuildTemplateShopExecutor".to_string(),
+                    typ: "external".to_string(),
+                });
+            }
+
+            let count = sqlx::query!(
+                "SELECT COUNT(*) FROM template_shop WHERE owner_guild = $1 AND name = $2",
+                ctx.guild_id.to_string(),
+                namespace
+            )
+            .fetch_one(&ctx.data.pool)
+            .await
+            .map_err(|e| SettingsError::Generic {
+                message: format!("Failed to check if namespace exists: {:?}", e),
+                src: "GuildTemplateShopExecutor".to_string(),
+                typ: "internal".to_string(),
+            })?
+            .count
+            .unwrap_or_default();
+
+            if count <= 0 {
+                return Err(SettingsError::Generic {
+                    message: "Namespace does not exist".to_string(),
+                    src: "GuildTemplateShopExecutor".to_string(),
+                    typ: "internal".to_string(),
+                });
+            }
+        } else if name.contains('@') || name.contains('/') {
+            return Err(SettingsError::Generic {
+                message: "Name cannot contain '@' or '/' unless it is a namespace".to_string(),
+                src: "GuildTemplateShopExecutor".to_string(),
+                typ: "external".to_string(),
+            });
+        }
+
         let Some(Value::String(version)) = entry.get("version") else {
             return Err(SettingsError::MissingOrInvalidField {
                 field: "version".to_string(),

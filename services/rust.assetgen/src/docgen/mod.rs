@@ -1,7 +1,7 @@
 // Generates AntiRaid documentation from docgen data
 use templating_docgen::{
-    Field, LuaParamaterTypeMetadata, Method, Parameter, Plugin, Primitive, PrimitiveConstraint,
-    Type,
+    Enum, EnumVariant, Field, LuaParamaterTypeMetadata, Method, Parameter, Plugin, Primitive,
+    PrimitiveConstraint, Type,
 };
 
 pub fn create_documentation() -> String {
@@ -97,6 +97,15 @@ fn generate_markdown_for_plugin(plugin: Plugin, heading_level: usize) -> String 
         });
     }
 
+    // Document the enums
+    if !plugin.enums.is_empty() {
+        markdown.push_str(&format!("{} Enums\n\n", _headings(heading_level + 1)));
+
+        plugin.enums.iter().for_each(|enu| {
+            markdown.push_str(&format!("{}\n\n", enum_to_string(enu, heading_level + 2)));
+        });
+    }
+
     // Document the methods
     if !plugin.methods.is_empty() {
         markdown.push_str(&format!("{} Methods\n\n", _headings(heading_level + 1)));
@@ -149,6 +158,77 @@ fn primitive_constraint_to_string(p_constraint: &PrimitiveConstraint) -> String 
         "- **{}**: {} (accepted values: {})",
         p_constraint.name, p_constraint.description, p_constraint.accepted_values
     )
+}
+
+fn enum_to_string(enu: &Enum, heading_level: usize) -> String {
+    let mut markdown = String::new();
+
+    markdown.push_str(&format!(
+        "<div id=\"type.{}\" />\n\n{} {}\n\n{}\n\n",
+        enu.name,
+        _headings(heading_level),
+        enu.name,
+        enu.description
+    ));
+
+    if !enu.variants.is_empty() {
+        markdown.push_str(&format!(
+            "\n\n{} Variants\n\n",
+            _headings(heading_level + 1)
+        ));
+
+        enu.variants.iter().for_each(|variant| {
+            markdown.push_str(&enum_variant_to_string(enu, &variant, heading_level + 2));
+        });
+    }
+
+    markdown
+}
+
+fn enum_variant_to_string(enu: &Enum, variant: &EnumVariant, heading_level: usize) -> String {
+    let mut markdown = String::new();
+
+    markdown.push_str(&format!(
+        "{} {}::{}\n\n{}\n\n",
+        _headings(heading_level),
+        enu.name,
+        variant.name,
+        variant.description
+    ));
+
+    if let Some(ref refers_to) = variant.refers_to {
+        markdown.push_str(&format!(
+            "**Refer to {} for more documentation on what this variant contains. Fields may be incomplete**\n\n",
+            refers_to
+        ));
+    }
+
+    if let Some(ref example) = variant.example {
+        let example_json = serde_json::to_string_pretty(&example).unwrap();
+
+        markdown.push_str(&format!("```json\n{}\n```", example_json));
+    }
+
+    if !variant.fields.is_empty() {
+        markdown.push_str(&format!("\n\n{} Fields\n\n", _headings(heading_level + 1)));
+
+        variant.fields.iter().for_each(|field| {
+            markdown.push_str(&format!("{}\n", field_to_string(field)));
+        });
+    }
+
+    if !variant.methods.is_empty() {
+        markdown.push_str(&format!("\n\n{} Methods\n\n", _headings(heading_level + 1)));
+
+        variant.methods.iter().for_each(|method| {
+            markdown.push_str(&format!(
+                "{}\n",
+                method_to_string(method, Some(variant.name.clone()), heading_level + 2),
+            ));
+        });
+    }
+
+    markdown
 }
 
 fn type_to_string(typ: &Type, heading_level: usize) -> String {

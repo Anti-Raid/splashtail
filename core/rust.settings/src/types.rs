@@ -112,17 +112,13 @@ pub enum InnerColumnTypeStringKind {
     /// A textarea
     Textarea { ctx: String },
     /// A reference to a template by name
-    TemplateRef { kind: String, ctx: String },
+    TemplateRef {},
     /// A kittycat permission
     KittycatPermission {},
     /// User
     User {},
     /// Role
     Role {},
-    /// Emoji
-    Emoji {},
-    /// Message
-    Message {},
     /// Modifier
     Modifier {},
 }

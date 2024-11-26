@@ -1,6 +1,5 @@
 // Work in progress
 pub mod event;
-mod perthreadpanichook;
 pub mod primitives_docs;
 pub mod samples;
 pub(crate) mod state;
@@ -12,23 +11,20 @@ mod handler;
 pub use handler::handle_event;
 
 use crate::atomicinstant;
+use crate::{MAX_TEMPLATES_EXECUTION_TIME, MAX_TEMPLATE_LIFETIME, MAX_TEMPLATE_MEMORY_USAGE};
 use mlua::prelude::*;
 use moka::future::Cache;
 use serenity::all::GuildId;
 use std::hash::Hash;
 use std::hash::Hasher;
-use std::panic::PanicHookInfo;
 use std::sync::Arc;
 use std::sync::LazyLock;
 
+#[cfg(feature = "thread_proc")]
+mod thread_proc;
+
 static VMS: LazyLock<Cache<GuildId, ArLua>> =
     LazyLock::new(|| Cache::builder().time_to_idle(MAX_TEMPLATE_LIFETIME).build());
-
-pub const MAX_TEMPLATE_MEMORY_USAGE: usize = 1024 * 1024 * 3; // 3MB maximum memory
-pub const MAX_VM_THREAD_STACK_SIZE: usize = 1024 * 1024 * 8; // 8MB maximum memory
-pub const MAX_TEMPLATE_LIFETIME: std::time::Duration = std::time::Duration::from_secs(60 * 15); // 15 minutes maximum lifetime
-pub const MAX_TEMPLATES_EXECUTION_TIME: std::time::Duration =
-    std::time::Duration::from_secs(60 * 5); // 5 minute maximum execution time
 
 #[derive(serde::Serialize, serde::Deserialize)]
 #[allow(dead_code)]
@@ -64,13 +60,10 @@ struct ArLua {
     /// The last execution time of the Lua VM
     last_execution_time: Arc<atomicinstant::AtomicInstant>,
     /// The thread handle for the Lua VM
-    thread_handle: (
-        std::thread::Thread,
-        tokio::sync::mpsc::UnboundedSender<(
-            LuaVmAction,
-            tokio::sync::oneshot::Sender<LuaVmResult>,
-        )>,
-    ),
+    handle: tokio::sync::mpsc::UnboundedSender<(
+        LuaVmAction,
+        tokio::sync::oneshot::Sender<LuaVmResult>,
+    )>,
     /// Is the VM broken/needs to be remade
     broken: Arc<std::sync::atomic::AtomicBool>,
     #[allow(dead_code)]
@@ -232,66 +225,10 @@ async fn create_lua_vm(
         broken: broken.clone(),
     });
 
-    // Create thread handle for async execution
-    //
-    // This both avoids locking and allows running multiple scripts concurrently
-    let thread_handle: (
-        std::thread::Thread,
-        tokio::sync::mpsc::UnboundedSender<(
-            LuaVmAction,
-            tokio::sync::oneshot::Sender<LuaVmResult>,
-        )>,
-    ) = {
-        let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel::<(
-            LuaVmAction,
-            tokio::sync::oneshot::Sender<LuaVmResult>,
-        )>();
-
-        let thread = std::thread::Builder::new()
-            .name(format!("lua-vm-{}", guild_id))
-            .stack_size(MAX_VM_THREAD_STACK_SIZE)
-            .spawn(move || {
-                let rt = tokio::runtime::Builder::new_current_thread()
-                    .enable_all()
-                    .build()
-                    .unwrap();
-
-                let tis_ref = thread_inner_state.clone();
-
-                rt.block_on(async {
-                    // Catch panics
-                    fn panic_catcher(
-                        guild_id: GuildId,
-                        broken_ref: Arc<std::sync::atomic::AtomicBool>,
-                    ) -> Box<dyn Fn(&PanicHookInfo<'_>) + 'static + Sync + Send>
-                    {
-                        Box::new(move |_| {
-                            log::error!("Lua thread panicked: {}", guild_id);
-                            broken_ref.store(true, std::sync::atomic::Ordering::Release);
-                        })
-                    }
-
-                    perthreadpanichook::set_hook(panic_catcher(guild_id, tis_ref.broken.clone()));
-
-                    while let Some((action, callback)) = rx.recv().await {
-                        let tis_ref = tis_ref.clone();
-                        rt.spawn(async move {
-                            let result = handle_event(action, &tis_ref).await;
-
-                            let _ = callback.send(result);
-                        });
-                    }
-                });
-            })?;
-
-        let thread_handle = thread.thread().clone();
-
-        (thread_handle, tx)
-    };
-
     let ar_lua = ArLua {
         last_execution_time,
-        thread_handle,
+        #[cfg(feature = "thread_proc")]
+        handle: thread_proc::lua_thread_impl(thread_inner_state.clone(), guild_id)?,
         broken,
         compiler,
         bytecode_cache,
@@ -417,8 +354,7 @@ pub async fn render_template<Response: serde::de::DeserializeOwned>(
 
     let (tx, rx) = tokio::sync::oneshot::channel();
 
-    lua.thread_handle
-        .1
+    lua.handle
         .send((
             LuaVmAction::Exec {
                 template: state.template,

@@ -509,19 +509,6 @@ async fn _validate_value(
                                     v
                                 }
                                 InnerColumnTypeStringKind::KittycatPermission { .. } => v, // All kittycat permissions are valid
-                                InnerColumnTypeStringKind::User { .. } => {
-                                    // Try parsing to a UserId
-                                    if let Err(err) = s.parse::<serenity::all::UserId>() {
-                                        return Err(SettingsError::SchemaCheckValidationError {
-                                            column: column_id.to_string(),
-                                            check: "snowflake_parse".to_string(),
-                                            accepted_range: "Valid user id".to_string(),
-                                            error: err.to_string(),
-                                        });
-                                    }
-
-                                    v
-                                }
                                 InnerColumnTypeStringKind::Role { .. } => {
                                     // Try parsing to a RoleId
                                     if let Err(err) = s.parse::<serenity::all::RoleId>() {
@@ -535,58 +522,14 @@ async fn _validate_value(
 
                                     v
                                 }
-                                InnerColumnTypeStringKind::Emoji { .. } => {
-                                    // Try parsing to a ChannelId
-                                    if let Err(err) = s.parse::<serenity::all::EmojiId>() {
+                                InnerColumnTypeStringKind::User { .. } => {
+                                    // Try parsing to a UserId
+                                    if let Err(err) = s.parse::<serenity::all::UserId>() {
                                         return Err(SettingsError::SchemaCheckValidationError {
                                             column: column_id.to_string(),
                                             check: "snowflake_parse".to_string(),
-                                            accepted_range: "Valid emoji id".to_string(),
+                                            accepted_range: "Valid user id".to_string(),
                                             error: err.to_string(),
-                                        });
-                                    }
-
-                                    v
-                                }
-                                InnerColumnTypeStringKind::Message { .. } => {
-                                    // The format of a message on db should be channel_id/message_id
-                                    //
-                                    // So, split by '/' and check if the first part is a valid channel id
-                                    // and the second part is a valid message id
-                                    let parts: Vec<&str> = s.split('/').collect();
-
-                                    if parts.len() != 2 {
-                                        return Err(SettingsError::SchemaCheckValidationError {
-                                            column: column_id.to_string(),
-                                            check: "message_parse_plength".to_string(),
-                                            accepted_range:
-                                                "Valid message id in format <channel_id>/<message_id>"
-                                                    .to_string(),
-                                            error: "parts.len() != 2".to_string(),
-                                        });
-                                    }
-
-                                    // Try parsing to a ChannelId
-                                    if let Err(err) = parts[0].parse::<serenity::all::ChannelId>() {
-                                        return Err(SettingsError::SchemaCheckValidationError {
-                                            column: column_id.to_string(),
-                                            check: "message_parse_0".to_string(),
-                                            accepted_range:
-                                                "Valid message id in format <channel_id>/<message_id>"
-                                                    .to_string(),
-                                            error: format!("p1: {}", err),
-                                        });
-                                    }
-
-                                    // Try parsing to a MessageId
-                                    if let Err(err) = parts[1].parse::<serenity::all::MessageId>() {
-                                        return Err(SettingsError::SchemaCheckValidationError {
-                                            column: column_id.to_string(),
-                                            check: "message_parse_1".to_string(),
-                                            accepted_range:
-                                                "Valid message id in format <channel_id>/<message_id>"
-                                                    .to_string(),
-                                            error: format!("p2: {}", err),
                                         });
                                     }
 

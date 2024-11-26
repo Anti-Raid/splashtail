@@ -133,6 +133,7 @@ pub struct Plugin {
     pub methods: Vec<Method>,
     pub fields: Vec<Field>,
     pub types: Vec<Type>,
+    pub enums: Vec<Enum>,
 }
 
 #[allow(dead_code)]
@@ -186,10 +187,24 @@ impl Plugin {
         p
     }
 
+    pub fn add_enum(self, enums: Enum) -> Self {
+        let mut p = self;
+        p.enums.push(enums);
+        p
+    }
+
     pub fn type_mut(self, name: &str, description: &str, f: impl FnOnce(Type) -> Type) -> Self {
         let mut p = self;
         let new_typ = Type::new(name, description);
         p.types.push(f(new_typ));
+
+        p
+    }
+
+    pub fn enum_mut(self, name: &str, description: &str, f: impl FnOnce(Enum) -> Enum) -> Self {
+        let mut p = self;
+        let new_enum = Enum::new(name, description);
+        p.enums.push(f(new_enum));
 
         p
     }
@@ -534,10 +549,6 @@ impl Type {
         t.refers_to = Some(serenity_link(typ.to_string()));
         t
     }
-
-    pub fn build(self) -> Type {
-        self
-    }
 }
 
 // Other type code
@@ -550,6 +561,163 @@ impl Type {
         }
 
         name
+    }
+}
+
+#[derive(Default, serde::Serialize, Clone)]
+pub struct EnumVariant {
+    pub name: String,
+    pub description: String,
+    pub example: Option<Arc<dyn erased_serde::Serialize + Send + Sync>>,
+    pub refers_to: Option<String>,
+    pub fields: Vec<Field>, // Description of the fields in type
+    pub methods: Vec<Method>,
+}
+
+impl std::fmt::Debug for EnumVariant {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("EnumVariant")
+            .field("description", &self.description)
+            .field("methods", &self.methods)
+            .finish()
+    }
+}
+
+// EnumVariant builder code
+impl EnumVariant {
+    pub fn new(name: &str, description: &str) -> Self {
+        EnumVariant {
+            name: name.to_string(),
+            description: description.to_string(),
+            ..Default::default()
+        }
+    }
+
+    pub fn example(self, example: Arc<dyn erased_serde::Serialize + Send + Sync>) -> Self {
+        let mut t = self;
+        t.example = Some(example);
+        t
+    }
+
+    pub fn description(self, description: &str) -> Self {
+        let mut t = self;
+        t.description = description.to_string();
+        t
+    }
+
+    pub fn add_method(self, methods: Method) -> Self {
+        let mut t = self;
+        t.methods.push(methods);
+        t
+    }
+
+    pub fn method_mut(&mut self, name: &str, f: impl FnOnce(Method) -> Method) -> Self {
+        let method = self.methods.iter_mut().find(|m| m.name == name);
+
+        if let Some(method) = method {
+            let new_method = f(method.clone());
+
+            *method = new_method;
+        } else {
+            let method = Method {
+                name: name.to_string(),
+                ..Default::default()
+            };
+            self.methods.push(f(method));
+        }
+
+        self.clone()
+    }
+
+    pub fn add_field(self, fields: Field) -> Self {
+        let mut t = self;
+        t.fields.push(fields);
+        t
+    }
+
+    pub fn field(&mut self, name: &str, f: impl FnOnce(Field) -> Field) -> Self {
+        let fields = self.fields.iter_mut().find(|p| p.name == name);
+
+        if let Some(field) = fields {
+            let new_field = f(field.clone());
+
+            *field = new_field;
+        } else {
+            let field = Field {
+                name: name.to_string(),
+                ..Default::default()
+            };
+            self.fields.push(f(field));
+        }
+
+        self.clone()
+    }
+
+    pub fn refers_to(self, refer_to: &str) -> Self {
+        let mut t = self;
+        t.refers_to = Some(refer_to.to_string());
+        t
+    }
+
+    /// Helper function to refer to serenity docs using `serenity_link`
+    pub fn refers_to_serenity(self, typ: &str) -> Self {
+        let mut t = self;
+        t.refers_to = Some(serenity_link(typ.to_string()));
+        t
+    }
+}
+
+#[derive(Default, Debug, serde::Serialize, Clone)]
+pub struct Enum {
+    pub name: String,
+    pub description: String,
+    pub variants: Vec<EnumVariant>,
+}
+
+impl Enum {
+    pub fn new(name: &str, description: &str) -> Self {
+        Enum {
+            name: name.to_string(),
+            description: description.to_string(),
+            variants: vec![],
+        }
+    }
+
+    #[allow(dead_code)]
+    pub fn name(self, name: &str) -> Self {
+        let mut e = self;
+        e.name = name.to_string();
+        e
+    }
+
+    #[allow(dead_code)]
+    pub fn description(self, description: &str) -> Self {
+        let mut e = self;
+        e.description = description.to_string();
+        e
+    }
+
+    pub fn add_variant(&mut self, variant: EnumVariant) {
+        self.variants.push(variant);
+    }
+
+    pub fn variant(self, name: &str, f: impl FnOnce(EnumVariant) -> EnumVariant) -> Self {
+        let mut e = self;
+        let variant = e.variants.iter_mut().find(|v| v.name == name);
+
+        if let Some(variant) = variant {
+            let new_variant = f(variant.clone());
+
+            *variant = new_variant;
+        } else {
+            let variant = EnumVariant {
+                name: name.to_string(),
+                ..Default::default()
+            };
+            e.variants.push(f(variant));
+        }
+
+        e
     }
 }
 
