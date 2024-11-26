@@ -62,6 +62,17 @@ pub async fn handle_event(action: LuaVmAction, tis_ref: &ArLuaThreadInnerState) 
             {
                 Ok(f) => f,
                 Err(e) => {
+                    // Temporary workaround to avoid foreign exception aborting the VM
+                    match e {
+                        LuaError::MemoryError(_) => {
+                            // Mark VM as broken
+                            tis_ref
+                                .broken
+                                .store(true, std::sync::atomic::Ordering::Release);
+                        }
+                        _ => {}
+                    }
+
                     while let Err(e) = state::remove_template(&tis_ref.lua, &token) {
                         log::error!(
                             "Could not remove template: {}. Trying again in 300 milliseconds",
