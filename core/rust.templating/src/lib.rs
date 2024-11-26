@@ -13,6 +13,7 @@ pub use lang_lua::primitives_docs;
 pub use lang_lua::samples;
 pub use lang_lua::state::LuaKVConstraints;
 pub use lang_lua::PLUGINS;
+pub use lang_lua::{handle_event, ArLuaThreadInnerState, LuaVmAction, LuaVmResult};
 
 type Error = Box<dyn std::error::Error + Send + Sync>; // This is constant and should be copy pasted
 

@@ -1,6 +1,5 @@
 // Work in progress
 pub mod event;
-mod handler;
 mod perthreadpanichook;
 pub mod primitives_docs;
 pub mod samples;
@@ -8,6 +7,9 @@ pub(crate) mod state;
 
 mod plugins;
 pub use plugins::PLUGINS;
+
+mod handler;
+pub use handler::handle_event;
 
 use crate::atomicinstant;
 use mlua::prelude::*;
@@ -30,7 +32,7 @@ pub const MAX_TEMPLATES_EXECUTION_TIME: std::time::Duration =
 
 #[derive(serde::Serialize, serde::Deserialize)]
 #[allow(dead_code)]
-enum LuaVmAction {
+pub enum LuaVmAction {
     /// Execute a template
     Exec {
         content: String,
@@ -46,7 +48,7 @@ enum LuaVmAction {
     SetMemoryLimit { limit: usize },
 }
 
-enum LuaVmResult {
+pub enum LuaVmResult {
     Ok { result_val: serde_json::Value },
     LuaError { err: LuaError },
     VmBroken {},
@@ -81,7 +83,7 @@ struct ArLua {
     bytecode_cache: Arc<BytecodeCache>,
 }
 
-struct ArLuaThreadInnerState {
+pub struct ArLuaThreadInnerState {
     lua: Lua,
     bytecode_cache: Arc<BytecodeCache>,
     compiler: Arc<mlua::Compiler>,
@@ -274,7 +276,7 @@ async fn create_lua_vm(
                     while let Some((action, callback)) = rx.recv().await {
                         let tis_ref = tis_ref.clone();
                         rt.spawn(async move {
-                            let result = handler::handle_event(action, &tis_ref).await;
+                            let result = handle_event(action, &tis_ref).await;
 
                             let _ = callback.send(result);
                         });
