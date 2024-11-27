@@ -328,7 +328,7 @@
 <li><code>type</code> (<a href="#type.string">string?</a>): The type of the channel</li>
 <li><code>position</code> (<a href="#type.number">number?</a>): The position of the channel</li>
 <li><code>topic</code> (<a href="#type.string">string?</a>): The topic of the channel</li>
-<li><code>nsfw</code> (<a href="#type.boolean">boolean?</a>): Whether the channel is NSFW</li>
+<li><code>nsfw</code> (<a href="#type.bool">bool?</a>): Whether the channel is NSFW</li>
 <li><code>rate_limit_per_user</code> (<a href="#type.number">number?</a>): The rate limit per user/Slow mode of the channel</li>
 <li><code>bitrate</code> (<a href="#type.number">number?</a>): The bitrate of the channel</li>
 <li><code>permission_overwrites</code> (<a href="#type.Serenity.PermissionOverwrite">{Serenity.PermissionOverwrite}?</a>): The permission overwrites of the channel</li>
@@ -364,10 +364,10 @@
 <li><code>channel_id</code> (<a href="#type.string">string</a>): The channel ID to edit</li>
 <li><code>reason</code> (<a href="#type.string">string</a>): The reason for editing the channel</li>
 <li><code>name</code> (<a href="#type.string">string?</a>): The name of the thread</li>
-<li><code>archived</code> (<a href="#type.boolean">boolean?</a>): Whether the thread is archived</li>
+<li><code>archived</code> (<a href="#type.bool">bool?</a>): Whether the thread is archived</li>
 <li><code>auto_archive_duration</code> (<a href="#type.string">string?</a>): The auto archive duration of the thread</li>
-<li><code>locked</code> (<a href="#type.boolean">boolean?</a>): Whether the thread is locked</li>
-<li><code>invitable</code> (<a href="#type.boolean">boolean?</a>): Whether the thread is invitable</li>
+<li><code>locked</code> (<a href="#type.bool">bool?</a>): Whether the thread is locked</li>
+<li><code>invitable</code> (<a href="#type.bool">bool?</a>): Whether the thread is invitable</li>
 <li><code>rate_limit_per_user</code> (<a href="#type.number">number?</a>): The rate limit per user/Slow mode of the thread</li>
 <li><code>flags</code> (<a href="#type.string">string?</a>): The flags of the thread</li>
 <li><code>applied_tags</code> (<a href="#type.Serenity.ForumTag">{Serenity.ForumTag}?</a>): The applied tags of the thread</li>
@@ -398,7 +398,7 @@
 <ul>
 <li><code>name</code> (<a href="#type.string">string</a>): The name of the field</li>
 <li><code>value</code> (<a href="#type.string">string</a>): The value of the field</li>
-<li><code>inline</code> (<a href="#type.boolean">boolean</a>): Whether the field is inline</li>
+<li><code>inline</code> (<a href="#type.bool">bool</a>): Whether the field is inline</li>
 </ul>
 <div id="type.CreateMessageEmbedAuthor" />
 <h3 id="createmessageembedauthor"><a class="header" href="#createmessageembedauthor">CreateMessageEmbedAuthor</a></h3>
@@ -872,10 +872,10 @@
 <li><code>id</code> (<a href="#type.string">string</a>): The ID of the column.</li>
 <li><code>name</code> (<a href="#type.string">string</a>): The name of the column.</li>
 <li><code>description</code> (<a href="#type.string">string</a>): The description of the column.</li>
-<li><code>column_type</code> (<a href="#type.Stting.Column.ColumnType">Stting.Column.ColumnType</a>): The type of the column.</li>
-<li><code>nullable</code> (<a href="#type.boolean">boolean</a>): Whether the column can be null.</li>
+<li><code>column_type</code> (<a href="#type.Setting.Column.ColumnType">Setting.Column.ColumnType</a>): The type of the column.</li>
+<li><code>nullable</code> (<a href="#type.bool">bool</a>): Whether the column can be null.</li>
 <li><code>suggestions</code> (<a href="#type.Setting.Column.ColumnSuggestion">Setting.Column.ColumnSuggestion</a>): The suggestions for the column.</li>
-<li><code>secret</code> (<a href="#type.boolean">boolean</a>): Whether the column is secret.</li>
+<li><code>secret</code> (<a href="#type.bool">bool</a>): Whether the column is secret.</li>
 <li><code>ignored_for</code> (<a href="#type.OperationType">{OperationType}</a>): The operations that the column is ignored for [read-only]. It is <em>not guaranteed</em> that ignored field are sent to the template.</li>
 </ul>
 <div id="type.Setting" />
@@ -1256,7 +1256,7 @@
 <li><code>title</code> (<a href="#type.string">string</a>): The title of the page. This field <strong>can be updated ONLY if the page is not created yet.</strong></li>
 <li><code>description</code> (<a href="#type.string">string</a>): The description of the page. This field <strong>can be updated ONLY if the page is not created yet.</strong></li>
 <li><code>settings</code> (<a href="#type.table">table</a>): The settings of the page. <strong>This field is read-only.</strong></li>
-<li><code>is_created</code> (<a href="#type.boolean">boolean</a>): Whether the page is created. <strong>This field is read-only.</strong></li>
+<li><code>is_created</code> (<a href="#type.bool">bool</a>): Whether the page is created. <strong>This field is read-only.</strong></li>
 <li><code>template</code> (<a href="#type.Template">Template</a>): The template of the page. <strong>This field is read-only.</strong></li>
 </ul>
 <h4 id="methods-8"><a class="header" href="#methods-8">Methods</a></h4>
@@ -1279,15 +1279,15 @@
 <h3 id="settingcolumncolumntype"><a class="header" href="#settingcolumncolumntype">Setting.Column.ColumnType</a></h3>
 <p>The type of a setting column</p>
 <h4 id="variants"><a class="header" href="#variants">Variants</a></h4>
-<h5 id="settingcolumncolumntypescalar"><a class="header" href="#settingcolumncolumntypescalar">Setting.Column.ColumnType::Scalar</a></h5>
+<h4 id="settingcolumncolumntypescalar"><a class="header" href="#settingcolumncolumntypescalar">Setting.Column.ColumnType::Scalar</a></h4>
 <p>A scalar column type.</p>
-<h6 id="fields-19"><a class="header" href="#fields-19">Fields</a></h6>
+<h5 id="fields-19"><a class="header" href="#fields-19">Fields</a></h5>
 <ul>
 <li><code>inner</code> (<a href="#type.Setting.Column.InnerColumnType">Setting.Column.InnerColumnType</a>): The inner type of the column.</li>
 </ul>
-<h5 id="settingcolumncolumntypearray"><a class="header" href="#settingcolumncolumntypearray">Setting.Column.ColumnType::Array</a></h5>
+<h4 id="settingcolumncolumntypearray"><a class="header" href="#settingcolumncolumntypearray">Setting.Column.ColumnType::Array</a></h4>
 <p>An array column type.</p>
-<h6 id="fields-20"><a class="header" href="#fields-20">Fields</a></h6>
+<h5 id="fields-20"><a class="header" href="#fields-20">Fields</a></h5>
 <ul>
 <li><code>inner</code> (<a href="#type.Setting.Column.InnerColumnType">Setting.Column.InnerColumnType</a>): The array type of the column.</li>
 </ul>
