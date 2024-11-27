@@ -264,7 +264,7 @@ pub fn plugin_docs() -> templating_docgen::Plugin {
             })
             .field("nsfw", |f| {
                 f
-                .typ("boolean?")
+                .typ("bool?")
                 .description("Whether the channel is NSFW")
             })
             .field("rate_limit_per_user", |f| {
@@ -353,7 +353,7 @@ pub fn plugin_docs() -> templating_docgen::Plugin {
             })
             .field("archived", |f| {
                 f
-                .typ("boolean?")
+                .typ("bool?")
                 .description("Whether the thread is archived")
             })
             .field("auto_archive_duration", |f| {
@@ -363,12 +363,12 @@ pub fn plugin_docs() -> templating_docgen::Plugin {
             })
             .field("locked", |f| {
                 f
-                .typ("boolean?")
+                .typ("bool?")
                 .description("Whether the thread is locked")
             })
             .field("invitable", |f| {
                 f
-                .typ("boolean?")
+                .typ("bool?")
                 .description("Whether the thread is invitable")
             })
             .field("rate_limit_per_user", |f| {
@@ -416,7 +416,7 @@ pub fn plugin_docs() -> templating_docgen::Plugin {
             })
             .field("inline", |f| {
                 f
-                .typ("boolean")
+                .typ("bool")
                 .description("Whether the field is inline")
             })
         })

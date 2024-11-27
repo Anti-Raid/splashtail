@@ -241,7 +241,7 @@ Options for editing a channel in Discord
 - `type` ([string?](#type.string)): The type of the channel
 - `position` ([number?](#type.number)): The position of the channel
 - `topic` ([string?](#type.string)): The topic of the channel
-- `nsfw` ([boolean?](#type.boolean)): Whether the channel is NSFW
+- `nsfw` ([bool?](#type.bool)): Whether the channel is NSFW
 - `rate_limit_per_user` ([number?](#type.number)): The rate limit per user/Slow mode of the channel
 - `bitrate` ([number?](#type.number)): The bitrate of the channel
 - `permission_overwrites` ([{Serenity.PermissionOverwrite}?](#type.Serenity.PermissionOverwrite)): The permission overwrites of the channel
@@ -283,10 +283,10 @@ Options for editing a thread in Discord
 - `channel_id` ([string](#type.string)): The channel ID to edit
 - `reason` ([string](#type.string)): The reason for editing the channel
 - `name` ([string?](#type.string)): The name of the thread
-- `archived` ([boolean?](#type.boolean)): Whether the thread is archived
+- `archived` ([bool?](#type.bool)): Whether the thread is archived
 - `auto_archive_duration` ([string?](#type.string)): The auto archive duration of the thread
-- `locked` ([boolean?](#type.boolean)): Whether the thread is locked
-- `invitable` ([boolean?](#type.boolean)): Whether the thread is invitable
+- `locked` ([bool?](#type.bool)): Whether the thread is locked
+- `invitable` ([bool?](#type.bool)): Whether the thread is invitable
 - `rate_limit_per_user` ([number?](#type.number)): The rate limit per user/Slow mode of the thread
 - `flags` ([string?](#type.string)): The flags of the thread
 - `applied_tags` ([{Serenity.ForumTag}?](#type.Serenity.ForumTag)): The applied tags of the thread
@@ -329,7 +329,7 @@ A field in a message embed
 
 - `name` ([string](#type.string)): The name of the field
 - `value` ([string](#type.string)): The value of the field
-- `inline` ([boolean](#type.boolean)): Whether the field is inline
+- `inline` ([bool](#type.bool)): Whether the field is inline
 
 
 <div id="type.CreateMessageEmbedAuthor" />
@@ -1005,10 +1005,10 @@ A setting column
 - `id` ([string](#type.string)): The ID of the column.
 - `name` ([string](#type.string)): The name of the column.
 - `description` ([string](#type.string)): The description of the column.
-- `column_type` ([Stting.Column.ColumnType](#type.Stting.Column.ColumnType)): The type of the column.
-- `nullable` ([boolean](#type.boolean)): Whether the column can be null.
+- `column_type` ([Setting.Column.ColumnType](#type.Setting.Column.ColumnType)): The type of the column.
+- `nullable` ([bool](#type.bool)): Whether the column can be null.
 - `suggestions` ([Setting.Column.ColumnSuggestion](#type.Setting.Column.ColumnSuggestion)): The suggestions for the column.
-- `secret` ([boolean](#type.boolean)): Whether the column is secret.
+- `secret` ([bool](#type.bool)): Whether the column is secret.
 - `ignored_for` ([{OperationType}](#type.OperationType)): The operations that the column is ignored for [read-only]. It is *not guaranteed* that ignored field are sent to the template.
 
 
@@ -1407,7 +1407,7 @@ An intermediary structure for creating a page for a template
 - `title` ([string](#type.string)): The title of the page. This field **can be updated ONLY if the page is not created yet.**
 - `description` ([string](#type.string)): The description of the page. This field **can be updated ONLY if the page is not created yet.**
 - `settings` ([table](#type.table)): The settings of the page. **This field is read-only.**
-- `is_created` ([boolean](#type.boolean)): Whether the page is created. **This field is read-only.**
+- `is_created` ([bool](#type.bool)): Whether the page is created. **This field is read-only.**
 - `template` ([Template](#type.Template)): The template of the page. **This field is read-only.**
 
 
@@ -1449,22 +1449,22 @@ The type of a setting column
 
 #### Variants
 
-##### Setting.Column.ColumnType::Scalar
+#### Setting.Column.ColumnType::Scalar
 
 A scalar column type.
 
 
 
-###### Fields
+##### Fields
 
 - `inner` ([Setting.Column.InnerColumnType](#type.Setting.Column.InnerColumnType)): The inner type of the column.
-##### Setting.Column.ColumnType::Array
+#### Setting.Column.ColumnType::Array
 
 An array column type.
 
 
 
-###### Fields
+##### Fields
 
 - `inner` ([Setting.Column.InnerColumnType](#type.Setting.Column.InnerColumnType)): The array type of the column.
 

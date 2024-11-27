@@ -421,16 +421,16 @@ pub fn plugin_docs() -> templating_docgen::Plugin {
                 f.typ("string").description("The description of the column.")
             })
             .field("column_type", |f| {
-                f.typ("Stting.Column.ColumnType").description("The type of the column.")
+                f.typ("Setting.Column.ColumnType").description("The type of the column.")
             })
             .field("nullable", |f| {
-                f.typ("boolean").description("Whether the column can be null.")
+                f.typ("bool").description("Whether the column can be null.")
             })
             .field("suggestions", |f| {
                 f.typ("Setting.Column.ColumnSuggestion").description("The suggestions for the column.")
             })
             .field("secret", |f| {
-                f.typ("boolean").description("Whether the column is secret.")
+                f.typ("bool").description("Whether the column is secret.")
             })
             .field("ignored_for", |f| {
                 f.typ("{OperationType}").description("The operations that the column is ignored for [read-only]. It is *not guaranteed* that ignored field are sent to the template.")
@@ -661,7 +661,7 @@ pub fn plugin_docs() -> templating_docgen::Plugin {
                 f.typ("table").description("The settings of the page. **This field is read-only.**")
             })
             .field("is_created", |f| {
-                f.typ("boolean").description("Whether the page is created. **This field is read-only.**")
+                f.typ("bool").description("Whether the page is created. **This field is read-only.**")
             })
             .field("template", |f| {
                 f.typ("Template").description("The template of the page. **This field is read-only.**")
