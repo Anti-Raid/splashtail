@@ -168,7 +168,7 @@ pub async fn lockdowns_scl(
     Ok(())
 }
 
-#[poise::command(slash_command, guild_only, rename = "scl")]
+#[poise::command(slash_command, guild_only, rename = "role")]
 /// Starts a single channel lockdown
 pub async fn lockdowns_role(
     ctx: Context<'_>,

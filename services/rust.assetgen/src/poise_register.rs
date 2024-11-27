@@ -93,6 +93,12 @@ pub async fn register_poise_commands() {
             .build(),
     );
 
+    let app = http
+        .get_current_application_info()
+        .await
+        .expect("Failed to get application info");
+    http.set_application_id(app.id);
+
     let commands_builder = poise::builtins::create_application_commands(&commands);
     let num_commands = commands_builder.len();
 

@@ -33,6 +33,7 @@ impl silverpelt::module::Module for Module {
                 "tsl" => CommandExtendedData::kittycat_or_admin("lockdowns", "create"),
                 "qsl" => CommandExtendedData::kittycat_or_admin("lockdowns", "create"),
                 "scl" => CommandExtendedData::kittycat_or_admin("lockdowns", "create"),
+                "role" => CommandExtendedData::kittycat_simple("lockdowns", "role"),
                 "remove" => CommandExtendedData::kittycat_or_admin("lockdowns", "remove"),
             },
         )]
