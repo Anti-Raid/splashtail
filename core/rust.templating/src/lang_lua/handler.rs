@@ -62,7 +62,7 @@ pub async fn handle_event(action: LuaVmAction, tis_ref: &ArLuaThreadInnerState) 
             {
                 Ok(f) => f,
                 Err(e) => {
-                    // Temporary workaround to avoid foreign exception aborting the VM
+                    // Mark memory error'd VMs as broken automatically to avoid user grief/pain
                     match e {
                         LuaError::MemoryError(_) => {
                             // Mark VM as broken
