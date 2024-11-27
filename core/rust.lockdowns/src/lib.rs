@@ -18,6 +18,7 @@ pub static CREATE_LOCKDOWN_MODES: LazyLock<DashMap<String, Box<dyn CreateLockdow
             "scl".to_string(),
             Box::new(scl::CreateSingleChannelLockdown),
         );
+        map.insert("role".to_string(), Box::new(role::CreateRoleLockdown));
 
         map
     });
@@ -370,12 +371,71 @@ impl Lockdown {
         }
     }
 
-    pub async fn get_underlying_role_permissions(
-        lockdowns: &[Self],
-        role_id: serenity::all::RoleId,
-    ) -> Option<serenity::all::Permissions> {
-        let mut perms = None;
+    /// Merges a set of lockdown sharable data's assuming that least recent lockdowns are first
+    fn merge_lsd(lsd: Vec<LockdownSharableData>) -> LockdownSharableData {
+        let mut new_channel_perms = std::collections::HashMap::new();
 
+        // Add all new/unique permission overwrites of users/roles
+        //
+        // If said users overwrites are already present in the map, new overwrites will be ignored.
+        //
+        // This works because the least recent lockdowns are checked first
+        let mut per_channel_done_roles = std::collections::HashMap::new();
+        let mut per_channel_done_users = std::collections::HashMap::new();
+        for data in lsd.iter() {
+            for (channel_id, overwrites) in data.channel_permissions.iter() {
+                let done_roles = per_channel_done_roles
+                    .entry(channel_id)
+                    .or_insert_with(|| std::collections::HashSet::new());
+                let done_users = per_channel_done_users
+                    .entry(channel_id)
+                    .or_insert_with(|| std::collections::HashSet::new());
+                let channel_pos = new_channel_perms
+                    .entry(*channel_id)
+                    .or_insert_with(|| Vec::new());
+
+                for overwrite in overwrites.iter() {
+                    match overwrite.kind {
+                        serenity::all::PermissionOverwriteType::Role(role_id) => {
+                            if !done_roles.contains(&role_id) {
+                                channel_pos.push(overwrite.clone());
+                                done_roles.insert(role_id);
+                            }
+                        }
+                        serenity::all::PermissionOverwriteType::Member(user_id) => {
+                            if !done_users.contains(&user_id) {
+                                channel_pos.push(overwrite.clone());
+                                done_users.insert(user_id);
+                            }
+                        }
+                        _ => {}
+                    }
+                }
+            }
+        }
+
+        // Merge role permissions, taking only the first found entry
+        let mut new_role_perms = std::collections::HashMap::new();
+
+        for data in lsd {
+            for (role_id, perms) in data.role_permissions.iter() {
+                if !new_role_perms.contains_key(role_id) {
+                    new_role_perms.insert(*role_id, perms.clone());
+                }
+            }
+        }
+
+        LockdownSharableData {
+            role_permissions: new_role_perms,
+            channel_permissions: new_channel_perms,
+        }
+    }
+
+    pub async fn get_underlying<T, U>(
+        lockdowns: &[Self],
+        state: T,
+        f: fn(&LockdownSharableData, &T) -> Option<U>,
+    ) -> Option<U> {
         // Sort lockdown indexes by creation date with least recent first (reverse)
         let mut lockdown_idxs: Vec<usize> = (0..lockdowns.len()).collect();
 
@@ -386,54 +446,48 @@ impl Lockdown {
                 .reverse()
         });
 
-        // Now loop over all lockdowns, and look for channel permissions in shareable data
+        // Now loop over all lockdowns
+        //
         // Because we sorted by creation date, the least recent lockdowns will be checked first
         // hence ensuring the permissions we get are from before lockdowns
+        let mut unmerged_lsds = Vec::new();
         for idx in lockdown_idxs {
             let lockdown = &lockdowns[idx];
 
-            if let Ok(data) = lockdown.r#type.shareable(&lockdown.data).await {
-                if let Some(permissions) = data.role_permissions.get(&role_id) {
-                    perms = Some(*permissions);
-                    break;
+            match lockdown.r#type.shareable(&lockdown.data).await {
+                Ok(data) => {
+                    unmerged_lsds.push(data);
+                }
+                Err(e) => {
+                    log::error!("Error while getting shareable data: {}", e);
+                    continue;
                 }
             }
         }
 
-        perms
+        let merged_lsd = Self::merge_lsd(unmerged_lsds);
+
+        f(&merged_lsd, &state)
+    }
+
+    pub async fn get_underlying_role_permissions(
+        lockdowns: &[Self],
+        role_id: serenity::all::RoleId,
+    ) -> Option<serenity::all::Permissions> {
+        Self::get_underlying(lockdowns, role_id, |data, role_id| {
+            data.role_permissions.get(role_id).cloned()
+        })
+        .await
     }
 
     pub async fn get_underlying_channel_permissions(
         lockdowns: &[Self],
         channel_id: serenity::all::ChannelId,
     ) -> Option<Vec<serenity::all::PermissionOverwrite>> {
-        let mut perms = None;
-
-        // Sort lockdown indexes by creation date with least recent first (reverse)
-        let mut lockdown_idxs: Vec<usize> = (0..lockdowns.len()).collect();
-
-        lockdown_idxs.sort_by(|a, b| {
-            lockdowns[*a]
-                .created_at
-                .cmp(&lockdowns[*b].created_at)
-                .reverse()
-        });
-
-        // Now loop over all lockdowns, and look for channel permissions in shareable data
-        // Because we sorted by creation date, the least recent lockdowns will be checked first
-        // hence ensuring the permissions we get are from before lockdowns
-        for idx in lockdown_idxs {
-            let lockdown = &lockdowns[idx];
-
-            if let Ok(data) = lockdown.r#type.shareable(&lockdown.data).await {
-                if let Some(permissions) = data.channel_permissions.get(&channel_id) {
-                    perms = Some(permissions.clone());
-                    break;
-                }
-            }
-        }
-
-        perms
+        Self::get_underlying(lockdowns, channel_id, |data, channel_id| {
+            data.channel_permissions.get(channel_id).cloned()
+        })
+        .await
     }
 }
 
@@ -1557,6 +1611,351 @@ pub mod scl {
             Ok(LockdownModeHandle {
                 roles: HashSet::new(),
                 channels: std::iter::once(self.0).collect(),
+            })
+        }
+    }
+}
+
+/// Single role lockdown
+pub mod role {
+    use super::*;
+    use serde::{Deserialize, Serialize};
+
+    pub static DENY_PERMS: std::sync::LazyLock<serenity::all::Permissions> =
+        std::sync::LazyLock::new(|| {
+            serenity::all::Permissions::ADMINISTRATOR
+                | serenity::all::Permissions::MANAGE_GUILD
+                | serenity::all::Permissions::MANAGE_ROLES
+                | serenity::all::Permissions::MANAGE_CHANNELS
+                | serenity::all::Permissions::MANAGE_MESSAGES
+                | serenity::all::Permissions::MANAGE_WEBHOOKS
+                | serenity::all::Permissions::MANAGE_GUILD_EXPRESSIONS
+                | serenity::all::Permissions::KICK_MEMBERS
+                | serenity::all::Permissions::BAN_MEMBERS
+                | serenity::all::Permissions::MODERATE_MEMBERS
+                | serenity::all::Permissions::MANAGE_NICKNAMES
+                | serenity::all::Permissions::MOVE_MEMBERS
+                | serenity::all::Permissions::MUTE_MEMBERS
+                | serenity::all::Permissions::DEAFEN_MEMBERS
+                | serenity::all::Permissions::MENTION_EVERYONE
+                | serenity::all::Permissions::MANAGE_THREADS
+        });
+
+    #[derive(Debug, Serialize, Deserialize, Clone)]
+    pub struct RoleLockdownTestResult;
+
+    impl LockdownTestResult for RoleLockdownTestResult {
+        fn can_apply_perfectly(&self) -> bool {
+            true
+        }
+
+        fn display_result(&self, _pg: &serenity::all::PartialGuild) -> String {
+            "".to_string()
+        }
+    }
+
+    pub struct CreateRoleLockdown;
+
+    #[async_trait]
+    impl CreateLockdownMode for CreateRoleLockdown {
+        fn syntax(&self) -> &'static str {
+            "role/<role_id>"
+        }
+
+        fn to_lockdown_mode(
+            &self,
+            s: &str,
+        ) -> Result<Option<Box<dyn LockdownMode>>, silverpelt::Error> {
+            if s.starts_with("role/") {
+                let role_id = s
+                    .strip_prefix("role/")
+                    .ok_or_else(|| silverpelt::Error::from("Invalid syntax"))?;
+
+                let role_id = role_id
+                    .parse()
+                    .map_err(|e| format!("Error while parsing role id: {}", e))?;
+
+                Ok(Some(Box::new(RoleLockdown(role_id))))
+            } else {
+                Ok(None)
+            }
+        }
+    }
+
+    #[derive(Debug, Serialize, Deserialize, Clone)]
+    pub struct RoleLockdownData {
+        pub global_perms: serenity::all::Permissions,
+        pub channel_overrides:
+            std::collections::HashMap<serenity::all::ChannelId, serenity::all::PermissionOverwrite>,
+    }
+
+    pub struct RoleLockdown(pub serenity::all::RoleId);
+
+    impl RoleLockdown {
+        pub fn from_data(data: &serde_json::Value) -> Result<RoleLockdownData, silverpelt::Error> {
+            let v: RoleLockdownData = serde_json::from_value(data.clone())
+                .map_err(|e| format!("Error while deserializing role data: {}", e))?;
+
+            Ok(v)
+        }
+    }
+
+    #[async_trait]
+    impl LockdownMode for RoleLockdown {
+        fn creator(&self) -> Box<dyn CreateLockdownMode> {
+            Box::new(CreateRoleLockdown)
+        }
+
+        fn string_form(&self) -> String {
+            format!("role/{}", self.0)
+        }
+
+        // SCL > TSL as it updates a single channel
+        fn specificity(&self) -> usize {
+            2
+        }
+
+        // SCL doesn't need to test anything so just return the result
+        async fn test(
+            &self,
+            _lockdown_data: &LockdownData,
+            _pg: &serenity::all::PartialGuild,
+            _pgc: &[serenity::all::GuildChannel],
+            _critical_roles: &HashSet<serenity::all::RoleId>,
+            _lockdowns: &[Lockdown],
+        ) -> Result<Box<dyn LockdownTestResult>, silverpelt::Error> {
+            Ok(Box::new(RoleLockdownTestResult))
+        }
+
+        async fn setup(
+            &self,
+            _lockdown_data: &LockdownData,
+            pg: &serenity::all::PartialGuild,
+            pgc: &[serenity::all::GuildChannel],
+            _critical_roles: &HashSet<serenity::all::RoleId>,
+            lockdowns: &[Lockdown],
+        ) -> Result<serde_json::Value, silverpelt::Error> {
+            let role = pg
+                .roles
+                .iter()
+                .find(|c| c.id == self.0)
+                .ok_or_else(|| silverpelt::Error::from("Role not found"))?;
+
+            let mut permissions = role.permissions;
+
+            // Check for an underlying permission to the role
+            if let Some(underlying_permissions) =
+                Lockdown::get_underlying_role_permissions(lockdowns, role.id).await
+            {
+                permissions = underlying_permissions; // Overwrite the permissions
+            }
+
+            let mut overwrites = std::collections::HashMap::new();
+
+            for channel in pgc.iter() {
+                let mut overwrite = channel
+                    .permission_overwrites
+                    .iter()
+                    .find(|o| match o.kind {
+                        serenity::all::PermissionOverwriteType::Role(role_id) => role_id == self.0,
+                        _ => false,
+                    })
+                    .cloned();
+
+                // Check for an underlying permission overwrite to the channel
+                if let Some(underlying_overwrite) =
+                    Lockdown::get_underlying_channel_permissions(lockdowns, channel.id).await
+                {
+                    // Try finding the overwrite for this role, override the overwrite if found
+                    let mut found = false;
+
+                    for u_overwrite in underlying_overwrite.iter() {
+                        match u_overwrite.kind {
+                            serenity::all::PermissionOverwriteType::Role(role_id) => {
+                                if role_id == self.0 {
+                                    overwrite = Some(u_overwrite.clone());
+                                    found = true;
+                                    break;
+                                }
+                            }
+                            _ => continue,
+                        }
+                    }
+
+                    if !found {
+                        overwrite = None
+                    }
+                }
+
+                if let Some(overwrite) = overwrite {
+                    overwrites.insert(channel.id, overwrite);
+                }
+            }
+
+            Ok(serde_json::to_value(RoleLockdownData {
+                global_perms: permissions,
+                channel_overrides: overwrites,
+            })?)
+        }
+
+        async fn shareable(
+            &self,
+            data: &serde_json::Value,
+        ) -> Result<LockdownSharableData, silverpelt::Error> {
+            let data = Self::from_data(data)?;
+            Ok(LockdownSharableData {
+                role_permissions: std::iter::once((self.0, data.global_perms)).collect(),
+                channel_permissions: {
+                    let mut map = std::collections::HashMap::new();
+
+                    for (channel_id, overwrite) in data.channel_overrides.into_iter() {
+                        map.insert(channel_id, vec![overwrite]);
+                    }
+
+                    map
+                },
+            })
+        }
+
+        async fn create(
+            &self,
+            lockdown_data: &LockdownData,
+            pg: &mut serenity::all::PartialGuild,
+            pgc: &mut [serenity::all::GuildChannel],
+            _critical_roles: &HashSet<serenity::all::RoleId>,
+            _data: &serde_json::Value,
+            all_handles: &LockdownModeHandles,
+            _lockdowns: &[Lockdown],
+        ) -> Result<(), silverpelt::Error> {
+            if all_handles
+                .is_role_locked(self.0, self.specificity())
+                .is_some()
+            {
+                return Ok(()); // Someone else is handling this role
+            }
+
+            // 1. Edit the role
+            pg.id
+                .edit_role(
+                    &lockdown_data.cache_http.http,
+                    self.0,
+                    serenity::all::EditRole::new().permissions(serenity::all::Permissions::empty()),
+                )
+                .await?;
+
+            // 2. Edit the permission overwrites for each channel
+            for ch in pgc.iter_mut() {
+                let mut found_overwrite = false;
+
+                let mut overwrites = ch.permission_overwrites.to_vec();
+
+                if let Some(overwrite) = overwrites.iter_mut().find(|o| match o.kind {
+                    serenity::all::PermissionOverwriteType::Role(role_id) => role_id == self.0,
+                    _ => false,
+                }) {
+                    found_overwrite = true;
+                    overwrite.allow = serenity::all::Permissions::empty();
+                    overwrite.deny = *DENY_PERMS;
+                }
+
+                if !found_overwrite {
+                    overwrites.push(serenity::all::PermissionOverwrite {
+                        allow: serenity::all::Permissions::empty(),
+                        deny: *DENY_PERMS,
+                        kind: serenity::all::PermissionOverwriteType::Role(self.0),
+                    });
+                }
+
+                ch.edit(
+                    &lockdown_data.cache_http.http,
+                    serenity::all::EditChannel::new().permissions(overwrites),
+                )
+                .await?;
+            }
+
+            Ok(())
+        }
+
+        async fn revert(
+            &self,
+            lockdown_data: &LockdownData,
+            pg: &mut serenity::all::PartialGuild,
+            pgc: &mut [serenity::all::GuildChannel],
+            _critical_roles: &HashSet<serenity::all::RoleId>,
+            data: &serde_json::Value,
+            all_handles: &LockdownModeHandles,
+            _lockdowns: &[Lockdown],
+        ) -> Result<(), silverpelt::Error> {
+            if all_handles
+                .is_role_locked(self.0, self.specificity())
+                .is_some()
+            {
+                return Ok(()); // Someone else is handling this role
+            }
+
+            let rld = Self::from_data(data)?;
+
+            // First edit the role itself
+            pg.id
+                .edit_role(
+                    &lockdown_data.cache_http.http,
+                    self.0,
+                    serenity::all::EditRole::new().permissions(rld.global_perms),
+                )
+                .await?;
+
+            // Then fix up channels
+            for ch in pgc {
+                let old_overwrites = rld.channel_overrides.get(&ch.id);
+
+                let mut overwrites = ch.permission_overwrites.to_vec();
+
+                // Remove old/existing overwrites
+                let mut found_overwrite = None;
+                for (i, overwrite) in overwrites.iter().enumerate() {
+                    match overwrite.kind {
+                        serenity::all::PermissionOverwriteType::Role(role_id) => {
+                            if role_id == self.0 {
+                                found_overwrite = Some(i);
+                                break;
+                            }
+                        }
+                        _ => continue,
+                    }
+                }
+
+                if let Some(i) = found_overwrite {
+                    overwrites.remove(i);
+                }
+
+                // Add back the old overwrite
+                if let Some(old_overwrite) = old_overwrites {
+                    overwrites.push(old_overwrite.clone());
+                }
+
+                ch.edit(
+                    &lockdown_data.cache_http.http,
+                    serenity::all::EditChannel::new().permissions(overwrites),
+                )
+                .await?;
+            }
+
+            Ok(())
+        }
+
+        async fn handles(
+            &self,
+            _lockdown_data: &LockdownData,
+            _pg: &serenity::all::PartialGuild,
+            _pgc: &[serenity::all::GuildChannel],
+            _critical_roles: &HashSet<serenity::all::RoleId>,
+            _data: &serde_json::Value,
+            _lockdowns: &[Lockdown],
+        ) -> Result<LockdownModeHandle, silverpelt::Error> {
+            // Role locks a single role
+            Ok(LockdownModeHandle {
+                roles: std::iter::once(self.0).collect(),
+                channels: HashSet::new(),
             })
         }
     }

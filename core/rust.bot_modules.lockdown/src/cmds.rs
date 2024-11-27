@@ -8,6 +8,7 @@ use silverpelt::{Context, Error};
         "lockdowns_tsl",
         "lockdowns_qsl",
         "lockdowns_scl",
+        "lockdowns_role",
         "lockdowns_remove"
     )
 )]
@@ -147,6 +148,46 @@ pub async fn lockdowns_scl(
 
     // Create the lockdown
     let lockdown_type = lockdowns::scl::SingleChannelLockdown(channel);
+
+    let lockdown_data = lockdowns::LockdownData {
+        cache_http: botox::cache::CacheHttpImpl::from_ctx(ctx.serenity_context()),
+        pool: data.pool.clone(),
+        reqwest: data.reqwest.clone(),
+        object_store: data.object_store.clone(),
+    };
+
+    ctx.defer().await?;
+
+    lockdowns
+        .easy_apply(Box::new(lockdown_type), &lockdown_data, &reason)
+        .await
+        .map_err(|e| format!("Error while applying lockdown: {}", e))?;
+
+    ctx.say("Lockdown started").await?;
+
+    Ok(())
+}
+
+#[poise::command(slash_command, guild_only, rename = "scl")]
+/// Starts a single channel lockdown
+pub async fn lockdowns_role(
+    ctx: Context<'_>,
+    role: serenity::all::RoleId,
+    reason: String,
+) -> Result<(), Error> {
+    let Some(guild_id) = ctx.guild_id() else {
+        return Err("This command can only be used in a guild".into());
+    };
+
+    let data = ctx.data();
+
+    // Get the current lockdown set
+    let mut lockdowns = lockdowns::LockdownSet::guild(guild_id, &data.pool)
+        .await
+        .map_err(|e| format!("Error while fetching lockdown set: {}", e))?;
+
+    // Create the lockdown
+    let lockdown_type = lockdowns::role::RoleLockdown(role);
 
     let lockdown_data = lockdowns::LockdownData {
         cache_http: botox::cache::CacheHttpImpl::from_ctx(ctx.serenity_context()),
