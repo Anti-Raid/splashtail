@@ -10,7 +10,6 @@ edition = "2021"
 silverpelt = { path = "../rust.silverpelt" }
 
 # Modules
-bot_modules_hooks = { path = "../../core/rust.bot_modules.hooks" }
 bot_modules_core = { path = "../../core/rust.bot_modules.core" }
 bot_modules_lockdown = { path = "../../core/rust.bot_modules.lockdown" }
 bot_modules_moderation = { path = "../../core/rust.bot_modules.moderation" }

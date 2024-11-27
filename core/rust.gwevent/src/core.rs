@@ -4,7 +4,6 @@ use serenity::all::{FullEvent, GuildId, UserId};
 use strum::VariantNames;
 
 /// Returns all events
-#[allow(dead_code)]
 pub const fn event_list() -> &'static [&'static str] {
     FullEvent::VARIANTS
 }

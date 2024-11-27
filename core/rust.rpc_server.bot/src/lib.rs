@@ -34,10 +34,10 @@ pub fn create_bot_rpc_server(
         )
         // Verify/parse a set of permission checks returning the parsed checks [ParsePermissionChecks]
         .route("/parse-permission-checks", get(parse_permission_checks))
-        // Dispatches a TrustedWebEvent
+        // Clears the modules enabled cache [ClearModulesEnabledCache]
         .route(
-            "/dispatch-trusted-web-event",
-            post(dispatch_trusted_web_event),
+            "/clear-modules-enabled-cache",
+            post(clear_modules_enabled_cache),
         )
         // Executes a template on a Lua VM
         .route(
@@ -239,32 +239,31 @@ async fn parse_permission_checks(
     Ok(Json(parsed_checks))
 }
 
-// Dispatches a TrustedWebEvent
-async fn dispatch_trusted_web_event(
-    State(AppData {
-        data,
-        serenity_context,
-        ..
-    }): State<AppData>,
-    Json(req): Json<crate::types::DispatchTrustedWebEventRequest>,
-) -> Response<crate::types::DispatchTrustedWebEventResponse> {
-    silverpelt::ar_event::dispatch_event_to_modules_errflatten(Arc::new(
-        silverpelt::ar_event::EventHandlerContext {
-            guild_id: req
-                .guild_id
-                .unwrap_or(silverpelt::ar_event::SYSTEM_GUILD_ID),
-            data: data.clone(),
-            event: silverpelt::ar_event::AntiraidEvent::TrustedWebEvent((req.event_name, req.args)),
-            serenity_context: serenity_context.clone(),
-        },
-    ))
-    .await
-    .map_err(|e| {
-        (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            format!("Failed to dispatch event: {:#?}", e),
-        )
-    })?;
+// Clears the modules enabled cache [ClearModulesEnabledCache]
+async fn clear_modules_enabled_cache(
+    State(AppData { data, .. }): State<AppData>,
+    Json(req): Json<crate::types::ClearModulesEnabledCacheRequest>,
+) -> Response<crate::types::ClearModulesEnabledCacheResponse> {
+    if let Some(guild_id) = req.guild_id {
+        if let Some(module) = req.module {
+            data.silverpelt_cache
+                .module_enabled_cache
+                .invalidate(&(guild_id, module))
+                .await;
+        } else {
+            // Global enable/disable the module by iterating the entire cache
+            for (k, _) in data.silverpelt_cache.module_enabled_cache.iter() {
+                if k.0 == guild_id {
+                    data.silverpelt_cache
+                        .module_enabled_cache
+                        .invalidate(&(k.0, k.1.clone()))
+                        .await;
+                }
+            }
+        }
+    } else {
+        data.silverpelt_cache.module_enabled_cache.invalidate_all()
+    }
 
-    Ok(Json(crate::types::DispatchTrustedWebEventResponse {}))
+    Ok(Json(crate::types::ClearModulesEnabledCacheResponse {}))
 }

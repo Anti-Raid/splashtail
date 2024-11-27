@@ -296,14 +296,11 @@ func Route(d uapi.RouteData, r *http.Request) uapi.HttpResponse {
 	}
 
 	if cacheFlushFlag&CACHE_FLUSH_MODULE_TOGGLE == CACHE_FLUSH_MODULE_TOGGLE && body.Disabled != nil {
-		_, err := rpc.DispatchTrustedWebEvent(
+		_, err := rpc.ClearModulesEnabledCache(
 			d.Context,
-			&rpc_messages.DispatchTrustedWebEventRequest{
-				EventName: "settings.clearModuleEnabledCache",
-				GuildID:   guildId,
-				Args: map[string]any{
-					"module": body.Module,
-				},
+			&rpc_messages.ClearModulesEnabledCacheRequest{
+				GuildID: guildId,
+				Module:  body.Module,
 			},
 		)
 

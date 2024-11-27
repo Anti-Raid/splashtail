@@ -150,12 +150,7 @@ impl silverpelt::module::ModuleEventListeners for EventHandler {
         events::event_listener(ectx).await
     }
 
-    fn event_handler_filter(&self, event: &silverpelt::ar_event::AntiraidEvent) -> bool {
-        match event {
-            silverpelt::ar_event::AntiraidEvent::TrustedWebEvent((event_name, _)) => {
-                event_name == "settings.clearModuleEnabledCache"
-            }
-            _ => false,
-        }
+    fn event_handler_filter(&self, _event: &silverpelt::ar_event::AntiraidEvent) -> bool {
+        true // All events should be sent
     }
 }

@@ -26,13 +26,12 @@ type CheckCommandPermissionRequest struct {
 	Opts    RpcCheckCommandOptions `json:"opts"`
 }
 
-type DispatchTrustedWebEventRequest struct {
-	EventName string `json:"event_name"`
-	GuildID   string `json:"guild_id"`
-	Args      any    `json:"args"`
+type ClearModulesEnabledCacheRequest struct {
+	GuildID string `json:"guild_id,omitempty"`
+	Module  string `json:"module,omitempty"`
 }
 
-type DispatchTrustedWebEventResponse struct{}
+type ClearModulesEnabledCacheResponse struct{}
 
 type SettingsOperationRequest struct {
 	Fields  orderedmap.OrderedMap[string, any] `json:"fields"`

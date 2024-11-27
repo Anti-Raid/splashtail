@@ -77,14 +77,13 @@ bitflags::bitflags! {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct DispatchTrustedWebEventRequest {
-    pub event_name: String,
+pub struct ClearModulesEnabledCacheRequest {
     pub guild_id: Option<serenity::all::GuildId>,
-    pub args: serde_json::Value,
+    pub module: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DispatchTrustedWebEventResponse {}
+pub struct ClearModulesEnabledCacheResponse {}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum CanonicalSettingsResult {
