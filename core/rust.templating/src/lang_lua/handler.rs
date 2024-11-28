@@ -1,4 +1,3 @@
-use super::state;
 use super::{resolve_template_to_bytecode, ArLuaThreadInnerState, LuaVmAction, LuaVmResult};
 use mlua::prelude::*;
 
@@ -30,34 +29,27 @@ pub async fn handle_event(action: LuaVmAction, tis_ref: &ArLuaThreadInnerState) 
                 }
             };
 
-            let token = match state::add_template(
-                &tis_ref.lua,
-                match template {
-                    crate::Template::Raw(_) => "".to_string(),
-                    crate::Template::Named(ref name) => name.clone(),
-                },
-                template.clone(),
-                pragma,
-            ) {
-                Ok(token) => token,
-                Err(e) => {
-                    return LuaVmResult::LuaError {
-                        err: LuaError::external(e),
-                    };
-                }
-            };
-
             let exec_name = match template {
                 crate::Template::Raw(_) => "script".to_string(),
                 crate::Template::Named(ref name) => name.to_string(),
             };
+
+            // Now, create the template context that should be passed to the template
+            let template_context = super::ctx::TemplateContext::new(super::state::TemplateData {
+                path: match template {
+                    crate::Template::Raw(_) => "".to_string(),
+                    crate::Template::Named(ref name) => name.clone(),
+                },
+                template,
+                pragma,
+            });
 
             let v: LuaValue = match tis_ref
                 .lua
                 .load(&template_bytecode)
                 .set_name(&exec_name)
                 .set_mode(mlua::ChunkMode::Binary) // Ensure auto-detection never selects binary mode
-                .call_async((event, token.clone()))
+                .call_async((event, template_context))
                 .await
             {
                 Ok(f) => f,
@@ -73,25 +65,9 @@ pub async fn handle_event(action: LuaVmAction, tis_ref: &ArLuaThreadInnerState) 
                         _ => {}
                     }
 
-                    while let Err(e) = state::remove_template(&tis_ref.lua, &token) {
-                        log::error!(
-                            "Could not remove template: {}. Trying again in 300 milliseconds",
-                            e
-                        );
-                        tokio::time::sleep(std::time::Duration::from_millis(300)).await;
-                    }
-
                     return LuaVmResult::LuaError { err: e };
                 }
             };
-
-            while let Err(e) = state::remove_template(&tis_ref.lua, &token) {
-                log::error!(
-                    "Could not remove template: {}. Trying again in 300 milliseconds",
-                    e
-                );
-                tokio::time::sleep(std::time::Duration::from_millis(300)).await;
-            }
 
             match tis_ref.lua.from_value::<serde_json::Value>(v) {
                 Ok(v) => {

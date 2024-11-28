@@ -44,7 +44,6 @@ pub struct RequirePluginArgs {
 
 #[derive(serde::Serialize, serde::Deserialize, Default)]
 pub struct RequireTemplateImportArgs {
-    pub token: Option<String>,
     pub current_path: Option<String>,
     pub custom_prefix: Option<String>,
 }
@@ -55,7 +54,7 @@ pub async fn require(lua: Lua, (plugin_name, args): (String, LuaValue)) -> LuaRe
         || plugin_name.starts_with("../")
         || plugin_name.starts_with("$shop/")
     {
-        let (pool, guild_id, compiler, vm_bytecode_cache, per_template) = {
+        let (pool, guild_id, compiler, vm_bytecode_cache) = {
             let Some(data) = lua.app_data_ref::<state::LuaUserData>() else {
                 return Err(LuaError::external("No app data found"));
             };
@@ -65,7 +64,6 @@ pub async fn require(lua: Lua, (plugin_name, args): (String, LuaValue)) -> LuaRe
                 data.guild_id,
                 data.compiler.clone(),
                 data.vm_bytecode_cache.clone(),
-                data.per_template.clone(),
             )
         };
 
@@ -75,14 +73,7 @@ pub async fn require(lua: Lua, (plugin_name, args): (String, LuaValue)) -> LuaRe
 
         // Get the current path if token is specified
         let current_path = {
-            if let Some(token) = args.token {
-                // Get the current path from the token
-                let template_data = per_template
-                    .get(&token)
-                    .ok_or_else(|| LuaError::external("Template not found"))?;
-
-                template_data.path.clone()
-            } else if let Some(current_path) = args.current_path {
+            if let Some(current_path) = args.current_path {
                 current_path
             } else {
                 // Root is the current path

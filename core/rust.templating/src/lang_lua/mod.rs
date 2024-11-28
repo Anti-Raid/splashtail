@@ -1,4 +1,4 @@
-// Work in progress
+pub mod ctx;
 pub mod event;
 pub mod primitives_docs;
 pub mod samples;
@@ -199,7 +199,6 @@ async fn create_lua_vm(
         serenity_context,
         reqwest_client,
         kv_constraints: state::LuaKVConstraints::default(),
-        per_template: scc::HashMap::new(),
         kv_ratelimits: Arc::new(
             state::LuaRatelimits::new_kv_rl().map_err(|e| LuaError::external(e.to_string()))?,
         ),

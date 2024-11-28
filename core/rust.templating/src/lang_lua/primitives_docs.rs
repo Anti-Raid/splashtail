@@ -133,4 +133,48 @@ pub fn document_primitives() -> templating_docgen::PrimitiveListBuilder {
                 .description("The unique identifier ID of the event. Will be guaranteed to be unique at a per-guild level.")
             })
         })
+                .type_mut(
+            "TemplatePragma",
+            "`TemplatePragma` contains the pragma of the template. Note that the list of fields below in non-exhaustive as templates can define extra fields on the pragma as well",
+            |t| {
+                t
+                .example(std::sync::Arc::new(crate::TemplatePragma::default()))
+                .field("lang", |f| {
+                    f.typ("string").description("The language of the template.")
+                })
+                .field("allowed_caps", |f| {
+                    f.typ("{string}").description("The allowed capabilities provided to the template.")
+                })
+            },
+        )
+        .type_mut(
+            "TemplateData",
+            "`TemplateData` is a struct that represents the data associated with a template token. It is used to store the path and pragma of a template token.",
+            |t| {
+                t
+                .example(std::sync::Arc::new(crate::lang_lua::state::TemplateData {
+                    path: "test".to_string(),
+                    pragma: crate::TemplatePragma::default(),
+                    template: crate::Template::Named("foo".to_string()),
+                }))
+                .field("path", |f| {
+                    f.typ("string").description("The path of the template token.")
+                })
+                .field("pragma", |f| {
+                    f.typ("TemplatePragma").description("The pragma of the template.")
+                })
+            },
+        )
+        .type_mut(
+            "TemplateContext",
+            "`TemplateContext` is a struct that represents the context of a template. Stores data including the templates data, pragma and what capabilities it should have access to. Passing a TemplateContext is often required when using AntiRaid plugins for security purposes.",
+            |mut t| {
+                t
+                .field("template_data", |f| {
+                    f
+                    .typ("TemplateData")
+                    .description("The data associated with the template.")
+                })
+            },
+        )
 }

@@ -8,6 +8,7 @@ pub use core::templating_core::{
     create_shop_template, parse_shop_template, GuildTemplate, Template, TemplateLanguage,
     TemplatePragma,
 };
+pub use lang_lua::ctx::TemplateContextRef;
 pub use lang_lua::event;
 pub use lang_lua::primitives_docs;
 pub use lang_lua::samples;

@@ -170,11 +170,6 @@ pub struct LuaUserData {
     pub reqwest_client: reqwest::Client,
     pub kv_constraints: LuaKVConstraints,
 
-    /// Stores a list of tokens to template data
-    ///
-    /// Used by actions and other things which use pragma
-    pub per_template: scc::HashMap<String, Arc<TemplateData>>,
-
     /// Stores the lua actions ratelimiters
     pub actions_ratelimits: Arc<LuaRatelimits>,
 
@@ -189,42 +184,4 @@ pub struct LuaUserData {
 
     /// Stores the luau compiler
     pub compiler: Arc<mlua::Compiler>,
-}
-
-pub fn add_template(
-    lua: &mlua::Lua,
-    path: String,
-    template: crate::Template,
-    pragma: crate::TemplatePragma,
-) -> Result<String, crate::Error> {
-    let token = botox::crypto::gen_random(32);
-
-    let data = TemplateData {
-        path,
-        pragma,
-        template,
-    };
-
-    let data = Arc::new(data);
-
-    let app_data = lua
-        .app_data_ref::<LuaUserData>()
-        .ok_or("Failed to get user data")?;
-
-    app_data
-        .per_template
-        .insert(token.clone(), data)
-        .map_err(|_| "Failed to insert template token")?;
-
-    Ok(token)
-}
-
-pub fn remove_template(lua: &mlua::Lua, token: &str) -> Result<(), crate::Error> {
-    let app_data = lua
-        .app_data_ref::<LuaUserData>()
-        .ok_or("Failed to get user data")?;
-
-    app_data.per_template.remove(token);
-
-    Ok(())
 }

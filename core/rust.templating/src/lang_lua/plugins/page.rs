@@ -385,7 +385,7 @@ pub fn plugin_docs() -> templating_docgen::Plugin {
         .description("Create a page dedicated to your template on a server.")
         .method_mut("create_page", |mut m| {
             m.parameter("token", |p| {
-                p.typ("string")
+                p.typ("TemplateContext")
                     .description("The token of the template to use.")
             })
             .return_("create_page", |r| {
@@ -682,21 +682,16 @@ pub fn init_plugin(lua: &Lua) -> LuaResult<LuaTable> {
 
     module.set(
         "create_page",
-        lua.create_function(|lua, (token,): (String,)| {
+        lua.create_function(|lua, (token,): (crate::TemplateContextRef,)| {
             let Some(data) = lua.app_data_ref::<state::LuaUserData>() else {
                 return Err(LuaError::external("No app data found"));
             };
 
-            let template_data = data
-                .per_template
-                .get(&token)
-                .ok_or_else(|| LuaError::external("Template not found"))?;
-
             let page = CreatePage {
                 page_id: sqlx::types::Uuid::new_v4().to_string(),
                 guild_id: data.guild_id,
-                template: template_data.template.clone(),
-                title: template_data.path.clone(),
+                template: token.template_data.template.clone(),
+                title: token.template_data.path.clone(),
                 description: "Missing description".to_string(),
                 settings: vec![],
                 is_created: false,

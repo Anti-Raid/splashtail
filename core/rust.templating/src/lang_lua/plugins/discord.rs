@@ -629,7 +629,7 @@ pub fn plugin_docs() -> templating_docgen::Plugin {
             }
         )
         .method_mut("new", |mut m| {
-            m.parameter("token", |p| p.typ("string").description("The token of the template to use."))
+            m.parameter("token", |p| p.typ("TemplateContext").description("The token of the template to use."))
             .return_("executor", |r| r.typ("DiscordExecutor").description("A discord executor."))
         })
 }
@@ -1976,18 +1976,13 @@ pub fn init_plugin(lua: &Lua) -> LuaResult<LuaTable> {
 
     module.set(
         "new",
-        lua.create_function(|lua, (token,): (String,)| {
+        lua.create_function(|lua, (token,): (crate::TemplateContextRef,)| {
             let Some(data) = lua.app_data_ref::<state::LuaUserData>() else {
                 return Err(LuaError::external("No app data found"));
             };
 
-            let template_data = data
-                .per_template
-                .get(&token)
-                .ok_or_else(|| LuaError::external("Template not found"))?;
-
             let executor = DiscordActionExecutor {
-                template_data: template_data.clone(),
+                template_data: token.template_data.clone(),
                 guild_id: data.guild_id,
                 cache_http: botox::cache::CacheHttpImpl::from_ctx(&data.serenity_context),
                 serenity_context: data.serenity_context.clone(),
