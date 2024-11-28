@@ -271,14 +271,14 @@ async fn event_listener<'a>(
     };
 
     // Create context for event handlers, this is done here and wrapped in an Arc to avoid useless clones
-    let event_handler_context = Arc::new(EventHandlerContext {
+    let event_handler_context = EventHandlerContext {
         guild_id: event_guild_id,
         data: ctx.user_data(),
         event: AntiraidEvent::Discord(event.clone().into()),
         serenity_context: ctx.serenity_context.clone(),
-    });
+    };
 
-    if let Err(e) = silverpelt::ar_event::dispatch_event_to_modules(event_handler_context).await {
+    if let Err(e) = silverpelt::ar_event::dispatch_event_to_modules(&event_handler_context).await {
         error!(
             "Error dispatching event to modules: {}",
             e.into_iter()

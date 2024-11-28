@@ -16,15 +16,31 @@ pub async fn on_startup(ctx: serenity::all::Context) -> Result<(), crate::Error>
 
         templating::cache::clear_cache(guild_id).await;
 
-        let _ = silverpelt::ar_event::dispatch_event_to_modules_errflatten(std::sync::Arc::new(
-            silverpelt::ar_event::EventHandlerContext {
+        match silverpelt::ar_event::dispatch_event_to_modules(
+            &silverpelt::ar_event::EventHandlerContext {
                 guild_id,
                 data: data.clone(),
                 event: silverpelt::ar_event::AntiraidEvent::OnStartup(vec![]),
                 serenity_context: ctx.clone(),
             },
-        ))
-        .await;
+        )
+        .await
+        .map_err(|e| {
+            format!("Failed to dispatch event: {}", {
+                let mut strs = String::new();
+
+                for err in e {
+                    strs.push_str(&format!("{}\n", err));
+                }
+
+                strs
+            })
+        }) {
+            Ok(_) => {}
+            Err(e) => {
+                error!("Failed to dispatch OnStartup event: {}", e);
+            }
+        }
     }
 
     Ok(())

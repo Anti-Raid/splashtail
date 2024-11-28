@@ -1304,17 +1304,25 @@ impl GuildTemplateExecutor {
         templating::cache::clear_cache(ctx.guild_id).await;
 
         // Dispatch a OnStartup event for the template
-        silverpelt::ar_event::dispatch_event_to_modules_errflatten(std::sync::Arc::new(
-            silverpelt::ar_event::EventHandlerContext {
+        silverpelt::ar_event::dispatch_event_to_modules(
+            &silverpelt::ar_event::EventHandlerContext {
                 guild_id: ctx.guild_id,
                 data: silverpelt::data::Data::get_data(ctx.data),
                 event: silverpelt::ar_event::AntiraidEvent::OnStartup(vec![name.to_string()]),
                 serenity_context: ctx.data.serenity_context.clone(),
             },
-        ))
+        )
         .await
         .map_err(|e| SettingsError::Generic {
-            message: format!("Failed to dispatch OnStartup event: {:?}", e),
+            message: format!("Failed to dispatch OnStartup event: {}", {
+                let mut strs = String::new();
+
+                for err in e {
+                    strs.push_str(&format!("{}\n", err));
+                }
+
+                strs
+            }),
             src: "GuildTemplateExecutor".to_string(),
             typ: "internal".to_string(),
         })?;

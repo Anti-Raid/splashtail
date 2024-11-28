@@ -6,7 +6,6 @@ use indexmap::IndexMap;
 use splashcore_rs::objectstore::ObjectStore;
 use sqlx::{types::uuid::Uuid, PgPool};
 use std::str::FromStr;
-use std::sync::Arc;
 use std::time::Duration;
 
 #[derive(serde::Deserialize, serde::Serialize)]
@@ -283,7 +282,7 @@ impl Job {
     #[allow(dead_code)]
     pub async fn get_url(
         &self,
-        object_store: &Arc<ObjectStore>,
+        object_store: &ObjectStore,
     ) -> Result<String, splashcore_rs::Error> {
         // Check if the job has an output
         let Some(path) = &self.get_file_path() else {
@@ -297,7 +296,7 @@ impl Job {
     pub async fn delete_from_storage(
         &self,
         client: &reqwest::Client,
-        object_store: &Arc<ObjectStore>,
+        object_store: &ObjectStore,
     ) -> Result<(), splashcore_rs::Error> {
         // Check if the job has an output
         let Some(path) = self.get_path() else {
@@ -331,7 +330,7 @@ impl Job {
         self,
         pool: &PgPool,
         client: &reqwest::Client,
-        object_store: &Arc<ObjectStore>,
+        object_store: &ObjectStore,
     ) -> Result<(), splashcore_rs::Error> {
         self.delete_from_storage(client, object_store).await?;
         self.delete_from_db(pool).await?;

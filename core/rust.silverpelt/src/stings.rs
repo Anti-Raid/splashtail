@@ -132,15 +132,24 @@ impl Sting {
         self,
         ctx: serenity::all::Context,
     ) -> Result<(), crate::Error> {
-        crate::ar_event::dispatch_event_to_modules_errflatten(std::sync::Arc::new(
-            crate::ar_event::EventHandlerContext {
-                guild_id: self.guild_id,
-                data: ctx.data::<crate::data::Data>(),
-                event: crate::ar_event::AntiraidEvent::StingCreate(self.into()),
-                serenity_context: ctx,
-            },
-        ))
-        .await?;
+        crate::ar_event::dispatch_event_to_modules(&crate::ar_event::EventHandlerContext {
+            guild_id: self.guild_id,
+            data: ctx.data::<crate::data::Data>(),
+            event: crate::ar_event::AntiraidEvent::StingCreate(self.into()),
+            serenity_context: ctx,
+        })
+        .await
+        .map_err(|e| {
+            format!("Failed to dispatch event: {}", {
+                let mut strs = String::new();
+
+                for err in e {
+                    strs.push_str(&format!("{}\n", err));
+                }
+
+                strs
+            })
+        })?;
 
         Ok(())
     }
@@ -150,15 +159,24 @@ impl Sting {
         self,
         ctx: serenity::all::Context,
     ) -> Result<(), crate::Error> {
-        crate::ar_event::dispatch_event_to_modules_errflatten(std::sync::Arc::new(
-            crate::ar_event::EventHandlerContext {
-                guild_id: self.guild_id,
-                data: ctx.data::<crate::data::Data>(),
-                event: crate::ar_event::AntiraidEvent::StingDelete(self.into()),
-                serenity_context: ctx,
-            },
-        ))
-        .await?;
+        crate::ar_event::dispatch_event_to_modules(&crate::ar_event::EventHandlerContext {
+            guild_id: self.guild_id,
+            data: ctx.data::<crate::data::Data>(),
+            event: crate::ar_event::AntiraidEvent::StingDelete(self.into()),
+            serenity_context: ctx,
+        })
+        .await
+        .map_err(|e| {
+            format!("Failed to dispatch event: {}", {
+                let mut strs = String::new();
+
+                for err in e {
+                    strs.push_str(&format!("{}\n", err));
+                }
+
+                strs
+            })
+        })?;
 
         Ok(())
     }

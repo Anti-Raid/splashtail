@@ -71,15 +71,24 @@ impl Punishment {
 
     /// Dispatch a PunishmentCreate event
     pub async fn dispatch_event(self, ctx: serenity::all::Context) -> Result<(), crate::Error> {
-        crate::ar_event::dispatch_event_to_modules_errflatten(std::sync::Arc::new(
-            crate::ar_event::EventHandlerContext {
-                guild_id: self.guild_id,
-                data: ctx.data::<crate::data::Data>(),
-                event: crate::ar_event::AntiraidEvent::PunishmentCreate(self.into()),
-                serenity_context: ctx,
-            },
-        ))
-        .await?;
+        crate::ar_event::dispatch_event_to_modules(&crate::ar_event::EventHandlerContext {
+            guild_id: self.guild_id,
+            data: ctx.data::<crate::data::Data>(),
+            event: crate::ar_event::AntiraidEvent::PunishmentCreate(self.into()),
+            serenity_context: ctx,
+        })
+        .await
+        .map_err(|e| {
+            format!("Failed to dispatch event: {}", {
+                let mut strs = String::new();
+
+                for err in e {
+                    strs.push_str(&format!("{}\n", err));
+                }
+
+                strs
+            })
+        })?;
 
         Ok(())
     }

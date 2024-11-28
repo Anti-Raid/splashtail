@@ -434,8 +434,8 @@ pub async fn check_command(
         }
     };
 
-    match silverpelt::ar_event::dispatch_event_to_modules(std::sync::Arc::new(
-        silverpelt::ar_event::EventHandlerContext {
+    match silverpelt::ar_event::dispatch_event_to_modules(
+        &silverpelt::ar_event::EventHandlerContext {
             guild_id,
             data: serenity_context.data::<silverpelt::data::Data>(),
             event: silverpelt::ar_event::AntiraidEvent::Custom(silverpelt::ar_event::CustomEvent {
@@ -458,7 +458,7 @@ pub async fn check_command(
             }),
             serenity_context: serenity_context.clone(),
         },
-    ))
+    )
     .await
     {
         Ok(_) => {}
@@ -530,8 +530,8 @@ pub async fn member_has_kittycat_perm(
             }
         };
 
-    match silverpelt::ar_event::dispatch_event_to_modules(std::sync::Arc::new(
-        silverpelt::ar_event::EventHandlerContext {
+    match silverpelt::ar_event::dispatch_event_to_modules(
+        &silverpelt::ar_event::EventHandlerContext {
             guild_id,
             data: serenity_context.data::<silverpelt::data::Data>(),
             event: silverpelt::ar_event::AntiraidEvent::Custom(silverpelt::ar_event::CustomEvent {
@@ -550,7 +550,7 @@ pub async fn member_has_kittycat_perm(
             }),
             serenity_context: serenity_context.clone(),
         },
-    ))
+    )
     .await
     {
         Ok(_) => {}

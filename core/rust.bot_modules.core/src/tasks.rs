@@ -49,18 +49,17 @@ pub async fn punishment_expiry_task(
         let punishment_id = punishment.id;
         let event = silverpelt::ar_event::AntiraidEvent::PunishmentExpire(punishment.into());
 
-        let event_handler_context =
-            std::sync::Arc::new(silverpelt::ar_event::EventHandlerContext {
-                event,
-                guild_id,
-                data: data.clone(),
-                serenity_context: ctx.clone(),
-            });
+        let event_handler_context = silverpelt::ar_event::EventHandlerContext {
+            event,
+            guild_id,
+            data: data.clone(),
+            serenity_context: ctx.clone(),
+        };
 
         // Spawn task to dispatch event
         let pool = data.pool.clone(); // Cloned for flagging is_handled
         set.spawn(async move {
-            match silverpelt::ar_event::dispatch_event_to_modules(event_handler_context).await {
+            match silverpelt::ar_event::dispatch_event_to_modules(&event_handler_context).await {
                 Ok(()) => {
                     // Mark the punishment as handled
                     let _ = sqlx::query!(
@@ -126,18 +125,17 @@ pub async fn stings_expiry_task(
         let sting_id = sting.id;
         let event = silverpelt::ar_event::AntiraidEvent::StingExpire(sting.into());
 
-        let event_handler_context =
-            std::sync::Arc::new(silverpelt::ar_event::EventHandlerContext {
-                event,
-                guild_id,
-                data: data.clone(),
-                serenity_context: ctx.clone(),
-            });
+        let event_handler_context = silverpelt::ar_event::EventHandlerContext {
+            event,
+            guild_id,
+            data: data.clone(),
+            serenity_context: ctx.clone(),
+        };
 
         // Spawn task to dispatch event
         let pool = data.pool.clone(); // Cloned for flagging is_handled
         set.spawn(async move {
-            match silverpelt::ar_event::dispatch_event_to_modules(event_handler_context).await {
+            match silverpelt::ar_event::dispatch_event_to_modules(&event_handler_context).await {
                 Ok(()) => {
                     // Mark the punishment as handled
                     let _ = sqlx::query!(
