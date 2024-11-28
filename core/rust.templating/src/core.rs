@@ -105,6 +105,7 @@ pub mod templating_core {
         pub description: Option<String>,
         pub shop_name: Option<String>,
         pub events: Option<Vec<String>>,
+        pub error_channel: Option<serenity::all::ChannelId>,
         pub content: String,
         pub created_by: String,
         pub created_at: chrono::DateTime<chrono::Utc>,

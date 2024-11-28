@@ -1248,6 +1248,24 @@ pub static GUILD_TEMPLATES: LazyLock<Setting> = LazyLock::new(|| {
                 ignored_for: vec![],
                 secret: false,
             },
+            Column {
+                id: "error_channel".to_string(),
+                name: "Error Channel".to_string(),
+                description: "The channel to report errors to. If not specified, an Error event will be omitted instead".to_string(),
+                column_type: ColumnType::new_scalar(InnerColumnType::String {
+                    kind: InnerColumnTypeStringKind::Channel {
+                        needed_bot_permissions: serenity::all::Permissions::SEND_MESSAGES,
+                        allowed_channel_types: vec![]
+                    },
+                    min_length: None,
+                    max_length: None,
+                    allowed_values: vec![],
+                }),
+                nullable: true,
+                suggestions: ColumnSuggestion::None {},
+                ignored_for: vec![],
+                secret: false,
+            },
             ar_settings::common_columns::created_at(),
             ar_settings::common_columns::created_by(),
             ar_settings::common_columns::last_updated_at(),
@@ -1342,7 +1360,7 @@ impl SettingView for GuildTemplateExecutor {
 
         check_perms(&context, &"guild_templates.view".into()).await?;
 
-        let rows = sqlx::query!("SELECT name, content, events, created_at, created_by, last_updated_at, last_updated_by FROM guild_templates WHERE guild_id = $1", context.guild_id.to_string())
+        let rows = sqlx::query!("SELECT name, content, events, error_channel, created_at, created_by, last_updated_at, last_updated_by FROM guild_templates WHERE guild_id = $1", context.guild_id.to_string())
         .fetch_all(&context.data.pool)
         .await
         .map_err(|e| SettingsError::Generic {
@@ -1360,6 +1378,12 @@ impl SettingView for GuildTemplateExecutor {
                 "events".to_string() => {
                     match row.events {
                         Some(events) => Value::List(events.iter().map(|x| Value::String(x.to_string())).collect()),
+                        None => Value::None,
+                    }
+                },
+                "error_channel".to_string() => {
+                    match row.error_channel {
+                        Some(error_channel) => Value::String(error_channel),
                         None => Value::None,
                     }
                 },
@@ -1444,12 +1468,18 @@ impl SettingCreator for GuildTemplateExecutor {
             _ => None,
         };
 
+        let error_channel = match entry.get("error_channel") {
+            Some(Value::String(error_channel)) => Some(error_channel.to_string()),
+            _ => None,
+        };
+
         sqlx::query!(
-            "INSERT INTO guild_templates (guild_id, name, content, events, created_by, last_updated_by) VALUES ($1, $2, $3, $4, $5, $6)",
+            "INSERT INTO guild_templates (guild_id, name, content, events, error_channel, created_by, last_updated_by) VALUES ($1, $2, $3, $4, $5, $6, $7)",
             ctx.guild_id.to_string(),
             name,
             content,
             events.as_deref(),
+            error_channel,
             ctx.author.to_string(),
             ctx.author.to_string()
         )
@@ -1512,11 +1542,17 @@ impl SettingUpdater for GuildTemplateExecutor {
             _ => None,
         };
 
+        let error_channel = match entry.get("error_channel") {
+            Some(Value::String(error_channel)) => Some(error_channel.to_string()),
+            _ => None,
+        };
+
         sqlx::query!(
-            "UPDATE guild_templates SET content = $1, events = $2, last_updated_at = NOW(), last_updated_by = $3 WHERE guild_id = $4 AND name = $5",
+            "UPDATE guild_templates SET content = $1, events = $2, last_updated_at = NOW(), last_updated_by = $3, error_channel = $4 WHERE guild_id = $5 AND name = $6",
             content,
             events.as_deref(),
             ctx.author.to_string(),
+            error_channel,
             ctx.guild_id.to_string(),
             name
         )

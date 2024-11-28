@@ -40,12 +40,28 @@ async fn get_template(
         .fetch_optional(pool)
         .await?;
 
+        let guild_data = sqlx::query!(
+            "SELECT events, error_channel FROM guild_templates WHERE guild_id = $1 AND name = $2",
+            guild_id.to_string(),
+            template
+        )
+        .fetch_optional(pool)
+        .await?;
+
+        let Some(guild_data) = guild_data else {
+            return Err("Guild data not found".into());
+        };
+
         match shop_template {
             Some(shop_template) => Ok(GuildTemplate {
                 name: shop_template.name,
                 description: Some(shop_template.description),
                 shop_name: Some(template.to_string()),
-                events: None, // TODO
+                events: guild_data.events,
+                error_channel: match guild_data.error_channel {
+                    Some(channel_id) => Some(channel_id.parse()?),
+                    None => None,
+                },
                 content: shop_template.content,
                 created_by: shop_template.created_by,
                 created_at: shop_template.created_at,
@@ -56,7 +72,7 @@ async fn get_template(
         }
     } else {
         let rec = sqlx::query!(
-            "SELECT events, content, created_at, created_by, last_updated_at, last_updated_by FROM guild_templates WHERE guild_id = $1 AND name = $2",
+            "SELECT events, content, error_channel, created_at, created_by, last_updated_at, last_updated_by FROM guild_templates WHERE guild_id = $1 AND name = $2",
             guild_id.to_string(),
             template
         )
@@ -69,6 +85,10 @@ async fn get_template(
                 description: None,
                 shop_name: None,
                 events: rec.events,
+                error_channel: match rec.error_channel {
+                    Some(channel_id) => Some(channel_id.parse()?),
+                    None => None,
+                },
                 content: rec.content,
                 created_by: rec.created_by,
                 created_at: rec.created_at,

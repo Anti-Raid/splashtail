@@ -262,20 +262,7 @@ async fn dispatch(
         {
             Ok(_) => {}
             Err(e) => {
-                dispatch_error(
-                    ctx,
-                    data,
-                    templating::event::CreateEventArc::new(
-                        "Error".to_string(),
-                        "Error".to_string(),
-                        "Error".to_string(),
-                        e.to_string().into(),
-                        false,
-                        None,
-                    ),
-                    guild_id,
-                )
-                .await?;
+                dispatch_error(ctx, data, &e.to_string(), guild_id, template).await?;
             }
         }
     }
@@ -283,11 +270,13 @@ async fn dispatch(
     Ok(())
 }
 
+/// Dispatches an error event
 async fn dispatch_error(
     ctx: &serenity::all::client::Context,
     data: &silverpelt::data::Data,
-    event: templating::event::CreateEventArc,
+    error: &str,
     guild_id: serenity::model::id::GuildId,
+    template: &templating::GuildTemplate,
 ) -> Result<(), silverpelt::Error> {
     let templates = templating::cache::get_all_guild_templates(guild_id, &data.pool).await?;
 
@@ -295,31 +284,66 @@ async fn dispatch_error(
         return Ok(());
     }
 
-    for template in templates.iter() {
-        // Verify event dispatch
-        if !should_dispatch_event(&event.name, {
-            // False positive, unwrap_or_default cannot be used here as it moves the event out of the sink
-            #[allow(clippy::manual_unwrap_or_default)]
-            if let Some(ref events) = template.events {
-                events
-            } else {
-                &[]
-            }
-        })
-        .await?
-        {
-            continue;
-        }
+    match template.error_channel {
+        Some(c) => {
+            let Some(channel) = sandwich_driver::channel(
+                &botox::cache::CacheHttpImpl::from_ctx(ctx),
+                &data.reqwest,
+                Some(guild_id),
+                c,
+            )
+            .await?
+            else {
+                return Ok(());
+            };
 
-        templating::execute::<Option<()>>(
-            guild_id,
-            templating::Template::Named(template.name.clone()),
-            data.pool.clone(),
-            ctx.clone(),
-            data.reqwest.clone(),
-            event.into_event(),
-        )
-        .await?;
+            let Some(guild_channel) = channel.guild() else {
+                return Ok(());
+            };
+
+            if guild_channel.guild_id != guild_id {
+                return Ok(());
+            }
+
+            c.send_message(
+                &ctx.http,
+                serenity::all::CreateMessage::new()
+                    .embed(
+                        serenity::all::CreateEmbed::new()
+                            .title("Error executing template")
+                            .field("Error", error, false)
+                            .field("Template", template.name.clone(), false),
+                    )
+                    .components(vec![serenity::all::CreateActionRow::Buttons(
+                        vec![serenity::all::CreateButton::new_link(
+                            &config::CONFIG.meta.support_server_invite,
+                        )
+                        .label("Support Server")]
+                        .into(),
+                    )]),
+            )
+            .await?;
+        }
+        None => {
+            // Try firing the error event
+            templating::execute::<Option<()>>(
+                guild_id,
+                templating::Template::Named(template.name.clone()),
+                data.pool.clone(),
+                ctx.clone(),
+                data.reqwest.clone(),
+                templating::event::CreateEventArc::new(
+                    "Error".to_string(),
+                    "Error".to_string(),
+                    "Error".to_string(),
+                    error.into(),
+                    false,
+                    None,
+                )
+                .into_event(),
+            )
+            .await?;
+        }
     }
 
     Ok(())
