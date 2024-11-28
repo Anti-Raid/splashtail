@@ -50,7 +50,7 @@ pub(crate) async fn event_listener(ectx: &EventHandlerContext) -> Result<(), sil
                 .collect::<Vec<String>>()
                 .join(" ");
 
-            dispatch_audit_log(
+            dispatch(
                 ctx,
                 &ectx.data,
                 templating::event::CreateEventArc::new_arc(
@@ -67,7 +67,7 @@ pub(crate) async fn event_listener(ectx: &EventHandlerContext) -> Result<(), sil
         }
 
         AntiraidEvent::Custom(ref event) => {
-            dispatch_audit_log(
+            dispatch(
                 ctx,
                 &ectx.data,
                 templating::event::CreateEventArc::new(
@@ -83,7 +83,7 @@ pub(crate) async fn event_listener(ectx: &EventHandlerContext) -> Result<(), sil
             .await
         }
         AntiraidEvent::StingCreate(ref sting) => {
-            dispatch_audit_log(
+            dispatch(
                 ctx,
                 &ectx.data,
                 templating::event::CreateEventArc::new_arc(
@@ -101,7 +101,7 @@ pub(crate) async fn event_listener(ectx: &EventHandlerContext) -> Result<(), sil
             Ok(())
         }
         AntiraidEvent::StingExpire(ref sting) => {
-            dispatch_audit_log(
+            dispatch(
                 ctx,
                 &ectx.data,
                 templating::event::CreateEventArc::new_arc(
@@ -119,7 +119,7 @@ pub(crate) async fn event_listener(ectx: &EventHandlerContext) -> Result<(), sil
             Ok(())
         }
         AntiraidEvent::StingDelete(ref sting) => {
-            dispatch_audit_log(
+            dispatch(
                 ctx,
                 &ectx.data,
                 templating::event::CreateEventArc::new_arc(
@@ -137,7 +137,7 @@ pub(crate) async fn event_listener(ectx: &EventHandlerContext) -> Result<(), sil
             Ok(())
         }
         AntiraidEvent::PunishmentCreate(ref punishment) => {
-            dispatch_audit_log(
+            dispatch(
                 ctx,
                 &ectx.data,
                 templating::event::CreateEventArc::new_arc(
@@ -155,7 +155,7 @@ pub(crate) async fn event_listener(ectx: &EventHandlerContext) -> Result<(), sil
             Ok(())
         }
         AntiraidEvent::PunishmentExpire(ref punishment) => {
-            dispatch_audit_log(
+            dispatch(
                 ctx,
                 &ectx.data,
                 templating::event::CreateEventArc::new_arc(
@@ -173,7 +173,7 @@ pub(crate) async fn event_listener(ectx: &EventHandlerContext) -> Result<(), sil
             Ok(())
         }
         AntiraidEvent::OnStartup(ref modified) => {
-            dispatch_audit_log(
+            dispatch(
                 ctx,
                 &ectx.data,
                 templating::event::CreateEventArc::new(
@@ -222,7 +222,68 @@ pub(crate) async fn should_dispatch_event(
     Ok(filters.contains(&event_name.to_string()))
 }
 
-async fn dispatch_audit_log(
+async fn dispatch(
+    ctx: &serenity::all::client::Context,
+    data: &silverpelt::data::Data,
+    event: templating::event::CreateEventArc,
+    guild_id: serenity::model::id::GuildId,
+) -> Result<(), silverpelt::Error> {
+    let templates = templating::cache::get_all_guild_templates(guild_id, &data.pool).await?;
+
+    if templates.is_empty() {
+        return Ok(());
+    }
+
+    for template in templates.iter() {
+        // Verify event dispatch
+        if !should_dispatch_event(&event.name, {
+            // False positive, unwrap_or_default cannot be used here as it moves the event out of the sink
+            #[allow(clippy::manual_unwrap_or_default)]
+            if let Some(ref events) = template.events {
+                events
+            } else {
+                &[]
+            }
+        })
+        .await?
+        {
+            continue;
+        }
+
+        match templating::execute::<Option<()>>(
+            guild_id,
+            templating::Template::Named(template.name.clone()),
+            data.pool.clone(),
+            ctx.clone(),
+            data.reqwest.clone(),
+            event.into_event(),
+        )
+        .await
+        {
+            Ok(_) => {}
+            Err(e) => {
+                dispatch_error(
+                    ctx,
+                    data,
+                    templating::event::CreateEventArc::new(
+                        "Error".to_string(),
+                        "Error".to_string(),
+                        "Error".to_string(),
+                        e.to_string().into(),
+                        false,
+                        None,
+                    ),
+                    guild_id,
+                )
+                .await?;
+            }
+        }
+    }
+
+    Ok(())
+}
+
+async fn dispatch_error(
     ctx: &serenity::all::client::Context,
     data: &silverpelt::data::Data,
     event: templating::event::CreateEventArc,

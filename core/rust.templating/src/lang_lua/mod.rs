@@ -46,7 +46,7 @@ pub enum LuaVmAction {
 
 pub enum LuaVmResult {
     Ok { result_val: serde_json::Value },
-    LuaError { err: LuaError },
+    LuaError { err: String },
     VmBroken {},
 }
 
@@ -331,7 +331,7 @@ local args, token = ...
 pub async fn render_template<Response: serde::de::DeserializeOwned>(
     event: event::Event,
     state: ParseCompileState,
-) -> LuaResult<Response> {
+) -> Result<Response, silverpelt::Error> {
     let state = ParseCompileState {
         template_content: unravel_function_expression(state.template_content),
         ..state
@@ -367,30 +367,30 @@ pub async fn render_template<Response: serde::de::DeserializeOwned>(
 
     tokio::select! {
         _ = tokio::time::sleep(MAX_TEMPLATES_EXECUTION_TIME) => {
-            Err(LuaError::external("Template took too long to compile"))
+            Err("Template took too long to compile".into())
         }
         value = rx => {
             let Ok(value) = value else {
-                return Err(LuaError::external("Could not receive data from Lua thread"));
+                return Err("Could not receive data from Lua thread".into());
             };
             match value {
                 LuaVmResult::Ok { result_val: value }=> {
                     // Check for __error
                     if let serde_json::Value::Object(ref map) = value {
                         if let Some(value) = map.get("__error") {
-                            return Err(LuaError::external(value.to_string()));
+                            return Err(value.to_string().into());
                         }
                     }
 
                     let v: Response = serde_json::from_value(value)
-                        .map_err(|e| LuaError::external(e.to_string()))?;
+                        .map_err(|e| e.to_string())?;
 
                     Ok(v)
                 }
-                LuaVmResult::LuaError { err } => Err(err),
+                LuaVmResult::LuaError { err } => Err(err.into()),
                 LuaVmResult::VmBroken {} => {
                     // Rerun render_template
-                    return Err(LuaError::external("Lua VM is broken"));
+                    return Err("Lua VM is broken".into());
                 },
             }
         }

@@ -107,11 +107,6 @@ pub struct Event {
     uid: sqlx::types::Uuid,
     /// The author, if any, of the event
     author: Option<String>,
-
-    #[serde(skip)]
-    #[serde(default = "std::sync::Mutex::default")]
-    /// The cached serialized value of the data
-    cached_data: std::sync::Mutex<Option<LuaValue>>,
 }
 
 impl Event {
@@ -169,7 +164,6 @@ impl Event {
             data,
             is_deniable,
             uid: sqlx::types::Uuid::new_v4(),
-            cached_data: std::sync::Mutex::new(None),
             author,
         }
     }
@@ -202,20 +196,8 @@ impl LuaUserData for Event {
             Ok(name)
         });
         fields.add_field_method_get("data", |lua, this| {
-            let mut cached_data = this
-                .cached_data
-                .lock()
-                .map_err(|e| LuaError::external(e.to_string()))?;
-
-            if let Some(v) = cached_data.as_ref() {
-                return Ok(v.clone());
-            }
-
             log::info!("Event: Serializing data");
             let v = lua.to_value(&*this.data)?;
-
-            *cached_data = Some(v.clone());
-
             Ok(v)
         });
         fields.add_field_method_get("is_deniable", |_, this| Ok(this.is_deniable));

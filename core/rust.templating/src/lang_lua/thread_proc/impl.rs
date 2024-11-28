@@ -25,9 +25,10 @@ pub fn lua_thread_impl(
                 .build()
                 .unwrap();
 
-            let tis_ref = thread_inner_state.clone();
+            let local = tokio::task::LocalSet::new();
 
-            rt.block_on(async {
+            let tis_ref = thread_inner_state.clone();
+            local.block_on(&rt, async {
                 // Catch panics
                 fn panic_catcher(
                     guild_id: GuildId,
@@ -46,7 +47,7 @@ pub fn lua_thread_impl(
 
                 while let Some((action, callback)) = rx.recv().await {
                     let tis_ref = tis_ref.clone();
-                    rt.spawn(async move {
+                    local.spawn_local(async move {
                         let result = handle_event(action, &tis_ref).await;
 
                         let _ = callback.send(result);

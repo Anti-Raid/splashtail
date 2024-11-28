@@ -25,7 +25,7 @@ pub async fn handle_event(action: LuaVmAction, tis_ref: &ArLuaThreadInnerState) 
             {
                 Ok(bytecode) => bytecode,
                 Err(e) => {
-                    return LuaVmResult::LuaError { err: e };
+                    return LuaVmResult::LuaError { err: e.to_string() };
                 }
             };
 
@@ -65,7 +65,7 @@ pub async fn handle_event(action: LuaVmAction, tis_ref: &ArLuaThreadInnerState) 
                         _ => {}
                     }
 
-                    return LuaVmResult::LuaError { err: e };
+                    return LuaVmResult::LuaError { err: e.to_string() };
                 }
             };
 
@@ -74,7 +74,7 @@ pub async fn handle_event(action: LuaVmAction, tis_ref: &ArLuaThreadInnerState) 
                     return LuaVmResult::Ok { result_val: v };
                 }
                 Err(e) => {
-                    return LuaVmResult::LuaError { err: e };
+                    return LuaVmResult::LuaError { err: e.to_string() };
                 }
             }
         }
@@ -101,7 +101,7 @@ pub async fn handle_event(action: LuaVmAction, tis_ref: &ArLuaThreadInnerState) 
                     };
                 }
                 Err(e) => {
-                    return LuaVmResult::LuaError { err: e };
+                    return LuaVmResult::LuaError { err: e.to_string() };
                 }
             };
         }
