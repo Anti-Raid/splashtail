@@ -2,7 +2,9 @@ use serenity::http;
 use silverpelt::ar_event::{AntiraidEvent, EventHandlerContext};
 
 /// Temporary Punishments event listener
-pub(crate) async fn event_listener(ectx: &EventHandlerContext) -> Result<(), silverpelt::Error> {
+pub(crate) async fn event_listener<'a>(
+    ectx: &EventHandlerContext<'a>,
+) -> Result<(), silverpelt::Error> {
     match ectx.event {
         AntiraidEvent::PunishmentExpire(ref punishment) => {
             let target_user_id = match punishment.target {

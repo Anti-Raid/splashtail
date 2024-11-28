@@ -4,10 +4,10 @@ use std::sync::Arc;
 
 pub use typetag; // Re-exported
 
-pub struct EventHandlerContext {
+pub struct EventHandlerContext<'a> {
     pub guild_id: serenity::all::GuildId,
     pub data: Arc<Data>,
-    pub event: AntiraidEvent,
+    pub event: AntiraidEvent<'a>,
     pub serenity_context: serenity::all::Context,
 }
 
@@ -21,9 +21,9 @@ pub struct CustomEvent {
 
 #[derive(Debug)]
 #[must_use]
-pub enum AntiraidEvent {
+pub enum AntiraidEvent<'a> {
     /// A regular discord event
-    Discord(serenity::all::FullEvent),
+    Discord(&'a serenity::all::FullEvent),
 
     /// A sting create event. Dispatched when a sting is created
     StingCreate(super::stings::Sting),
@@ -52,8 +52,8 @@ pub enum AntiraidEvent {
 /// Dispatches an event to all modules sequentially
 ///
 /// This works well because Anti-Raid uses very few event listeners (only 2)
-pub async fn dispatch_event_to_modules(
-    event_handler_context: &EventHandlerContext,
+pub async fn dispatch_event_to_modules<'a>(
+    event_handler_context: &EventHandlerContext<'a>,
 ) -> Result<(), Vec<Error>> {
     let mut errors = Vec::new();
 

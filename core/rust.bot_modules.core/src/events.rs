@@ -12,11 +12,13 @@ pub(crate) const fn not_audit_loggable_event() -> &'static [&'static str] {
     ]
 }
 
-pub(crate) async fn event_listener(ectx: &EventHandlerContext) -> Result<(), silverpelt::Error> {
+pub(crate) async fn event_listener<'a>(
+    ectx: &EventHandlerContext<'a>,
+) -> Result<(), silverpelt::Error> {
     let ctx = &ectx.serenity_context;
 
     match ectx.event {
-        AntiraidEvent::Discord(ref event) => {
+        AntiraidEvent::Discord(event) => {
             if not_audit_loggable_event().contains(&event.into()) {
                 return Ok(());
             }

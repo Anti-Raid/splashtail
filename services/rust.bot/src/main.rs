@@ -274,7 +274,7 @@ async fn event_listener<'a>(
     let event_handler_context = EventHandlerContext {
         guild_id: event_guild_id,
         data: ctx.user_data(),
-        event: AntiraidEvent::Discord(event.clone().into()),
+        event: AntiraidEvent::Discord(&event),
         serenity_context: ctx.serenity_context.clone(),
     };
 
