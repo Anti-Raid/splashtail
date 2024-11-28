@@ -585,12 +585,12 @@ Creates a message
 ### new
 
 ```lua
-function new(token: string): DiscordExecutor
+function new(token: TemplateContext): DiscordExecutor
 ```
 
 #### Parameters
 
-- `token` ([string](#type.string)): The token of the template to use.
+- `token` ([TemplateContext](#type.TemplateContext)): The token of the template to use.
 
 
 #### Returns
@@ -621,50 +621,6 @@ This plugin allows interoperability with AntiRaid and controlled interaction wit
 
 `array_metatable` is a special metatable that is used to represent arrays across the Lua-AntiRaid templating subsystem boundary. This metatable must be set on all arrays over this boundary and is required to ensure AntiRaid knows the value you're sending it is actually an array and not an arbitrary Luau table.
 
-
-
-<div id="type.TemplatePragma" />
-
-### TemplatePragma
-
-`TemplatePragma` contains the pragma of the template. Note that the list of fields below in non-exhaustive as templates can define extra fields on the pragma as well
-
-```json
-{
-  "lang": "lua",
-  "allowed_caps": []
-}
-```
-
-#### Fields
-
-- `lang` ([string](#type.string)): The language of the template.
-- `allowed_caps` ([{string}](#type.string)): The allowed capabilities provided to the template.
-
-
-<div id="type.TemplateData" />
-
-### TemplateData
-
-`TemplateData` is a struct that represents the data associated with a template token. It is used to store the path and pragma of a template token.
-
-```json
-{
-  "path": "test",
-  "template": {
-    "Named": "foo"
-  },
-  "pragma": {
-    "lang": "lua",
-    "allowed_caps": []
-  }
-}
-```
-
-#### Fields
-
-- `path` ([string](#type.string)): The path of the template token.
-- `pragma` ([TemplatePragma](#type.TemplatePragma)): The pragma of the template.
 
 
 ## Methods
@@ -716,23 +672,6 @@ Returns the current guild ID of the Lua VM.
 #### Returns
 
 - `guild_id` ([string](#type.string)): The current guild ID.
-
-### gettemplatedata
-
-```lua
-function gettemplatedata(token: string): TemplateData?
-```
-
-Returns the data associated with a template token.
-
-#### Parameters
-
-- `token` ([string](#type.string)): The token of the template to retrieve data for.
-
-
-#### Returns
-
-- `data` ([TemplateData?](#type.TemplateData)): The data associated with the template token, or `null` if no data is found.
 
 ### current_user
 
@@ -948,12 +887,12 @@ function KvExecutor:delete(key: string)
 ### new
 
 ```lua
-function new(token: string): KvExecutor
+function new(token: TemplateContext): KvExecutor
 ```
 
 #### Parameters
 
-- `token` ([string](#type.string)): The token of the template to use.
+- `token` ([TemplateContext](#type.TemplateContext)): The token of the template to use.
 
 
 #### Returns
@@ -1474,12 +1413,12 @@ An array column type.
 ### create_page
 
 ```lua
-function create_page(token: string): CreatePage
+function create_page(token: TemplateContext): CreatePage
 ```
 
 #### Parameters
 
-- `token` ([string](#type.string)): The token of the template to use.
+- `token` ([TemplateContext](#type.TemplateContext)): The token of the template to use.
 
 
 #### Returns
@@ -2415,6 +2354,63 @@ An event that has been dispatched to the template. This is what `args` is in the
 - `data` ([unknown](#type.unknown)): The data of the event.
 - `is_deniable` ([boolean](#type.boolean)): Whether the event can be denied.
 - `uid` ([string](#type.string)): The unique identifier ID of the event. Will be guaranteed to be unique at a per-guild level.
+
+
+<div id="type.TemplatePragma" />
+
+## TemplatePragma
+
+`TemplatePragma` contains the pragma of the template. Note that the list of fields below in non-exhaustive as templates can define extra fields on the pragma as well
+
+```json
+{
+  "lang": "lua",
+  "allowed_caps": []
+}
+```
+
+### Fields
+
+- `lang` ([string](#type.string)): The language of the template.
+- `allowed_caps` ([{string}](#type.string)): The allowed capabilities provided to the template.
+
+
+<div id="type.TemplateData" />
+
+## TemplateData
+
+`TemplateData` is a struct that represents the data associated with a template token. It is used to store the path and pragma of a template token.
+
+```json
+{
+  "path": "test",
+  "template": {
+    "Named": "foo"
+  },
+  "pragma": {
+    "lang": "lua",
+    "allowed_caps": []
+  }
+}
+```
+
+### Fields
+
+- `path` ([string](#type.string)): The path of the template token.
+- `pragma` ([TemplatePragma](#type.TemplatePragma)): The pragma of the template.
+
+
+<div id="type.TemplateContext" />
+
+## TemplateContext
+
+`TemplateContext` is a struct that represents the context of a template. Stores data including the templates data, pragma and what capabilities it should have access to. Passing a TemplateContext is often required when using AntiRaid plugins for security purposes.
+
+
+
+### Fields
+
+- `template_data` ([TemplateData](#type.TemplateData)): The data associated with the template.
 
 
 
