@@ -1214,7 +1214,13 @@ A setting
                 "allowed_value"
               ],
               "kind": {
-                "Modifier": {}
+                "Channel": {
+                  "needed_bot_permissions": "2048",
+                  "allowed_channel_types": [
+                    0,
+                    2
+                  ]
+                }
               }
             }
           }
@@ -2354,6 +2360,7 @@ An event that has been dispatched to the template. This is what `args` is in the
 - `data` ([unknown](#type.unknown)): The data of the event.
 - `is_deniable` ([boolean](#type.boolean)): Whether the event can be denied.
 - `uid` ([string](#type.string)): The unique identifier ID of the event. Will be guaranteed to be unique at a per-guild level.
+- `author` ([string?](#type.string)): The author of the event, if any. If there is no known author, this field will either be `nil` or `null`.
 
 
 <div id="type.TemplatePragma" />

@@ -132,6 +132,11 @@ pub fn document_primitives() -> templating_docgen::PrimitiveListBuilder {
                 .typ("string")
                 .description("The unique identifier ID of the event. Will be guaranteed to be unique at a per-guild level.")
             })
+            .field("author", |f| {
+                f
+                .typ("string?")
+                .description("The author of the event, if any. If there is no known author, this field will either be `nil` or `null`.")
+            })
         })
                 .type_mut(
             "TemplatePragma",

@@ -119,8 +119,11 @@ pub enum InnerColumnTypeStringKind {
     User {},
     /// Role
     Role {},
-    /// Modifier
-    Modifier {},
+    /// Channel selector
+    Channel {
+        needed_bot_permissions: serenity::all::Permissions,
+        allowed_channel_types: Vec<serenity::all::ChannelType>,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]

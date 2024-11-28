@@ -18,6 +18,7 @@ splashcore_rs = { path = "../rust.std" }
 permissions = { path = "../rust.permissions" }
 async-recursion = "1.1.1"
 async-trait = "0.1"
+sandwich_driver = { path = "../rust.sandwich_driver" }
 
 [dependencies.serenity]
 git = "https://github.com/Anti-Raid/serenity"

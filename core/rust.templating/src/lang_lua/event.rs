@@ -43,6 +43,7 @@ pub struct CreateEventArc {
     pub name: String,
     pub data: Arc<serde_json::Value>,
     pub is_deniable: bool,
+    pub author: Option<String>,
 }
 
 impl CreateEventArc {
@@ -53,6 +54,7 @@ impl CreateEventArc {
         name: String,
         data: Arc<serde_json::Value>,
         is_deniable: bool,
+        author: Option<String>,
     ) -> Self {
         Self {
             title,
@@ -60,6 +62,7 @@ impl CreateEventArc {
             name,
             data,
             is_deniable,
+            author,
         }
     }
 
@@ -70,8 +73,9 @@ impl CreateEventArc {
         name: String,
         data: serde_json::Value,
         is_deniable: bool,
+        author: Option<String>,
     ) -> Self {
-        Self::new_arc(title, base_name, name, Arc::new(data), is_deniable)
+        Self::new_arc(title, base_name, name, Arc::new(data), is_deniable, author)
     }
 
     pub fn into_event(&self) -> Event {
@@ -81,6 +85,7 @@ impl CreateEventArc {
             self.name.clone(),
             ArcOrNormal::Arc(self.data.clone()),
             self.is_deniable,
+            self.author.clone(),
         )
     }
 }
@@ -100,6 +105,8 @@ pub struct Event {
     is_deniable: bool,
     /// The random identifier of the event
     uid: sqlx::types::Uuid,
+    /// The author, if any, of the event
+    author: Option<String>,
 
     #[serde(skip)]
     #[serde(default = "std::sync::Mutex::default")]
@@ -115,6 +122,7 @@ impl Event {
         name: String,
         data: serde_json::Value,
         is_deniable: bool,
+        author: Option<String>,
     ) -> Self {
         Self::new(
             title,
@@ -122,6 +130,7 @@ impl Event {
             name,
             ArcOrNormal::Normal(data),
             is_deniable,
+            author,
         )
     }
 
@@ -132,8 +141,16 @@ impl Event {
         name: String,
         data: Arc<serde_json::Value>,
         is_deniable: bool,
+        author: Option<String>,
     ) -> Self {
-        Self::new(title, base_name, name, ArcOrNormal::Arc(data), is_deniable)
+        Self::new(
+            title,
+            base_name,
+            name,
+            ArcOrNormal::Arc(data),
+            is_deniable,
+            author,
+        )
     }
 
     /// Create from ArcOrBox
@@ -143,6 +160,7 @@ impl Event {
         name: String,
         data: ArcOrNormal<serde_json::Value>,
         is_deniable: bool,
+        author: Option<String>,
     ) -> Self {
         Self {
             title,
@@ -152,6 +170,7 @@ impl Event {
             is_deniable,
             uid: sqlx::types::Uuid::new_v4(),
             cached_data: std::sync::Mutex::new(None),
+            author,
         }
     }
 }
@@ -203,6 +222,10 @@ impl LuaUserData for Event {
         fields.add_field_method_get("uid", |lua, this| {
             let uid = lua.to_value(&this.uid)?;
             Ok(uid)
+        });
+        fields.add_field_method_get("author", |lua, this| {
+            let author = lua.to_value(&this.author)?;
+            Ok(author)
         });
     }
 }

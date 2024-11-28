@@ -195,6 +195,7 @@ dependencies = [
  "indexmap",
  "permissions",
  "reqwest",
+ "sandwich_driver",
  "serde",
  "serde_json",
  "serenity",
@@ -544,7 +545,6 @@ dependencies = [
  "bot_modules_core",
  "bot_modules_lockdown",
  "bot_modules_moderation",
- "bot_modules_punishment_autotriggers",
  "bot_modules_server_backups",
  "bot_modules_temporary_punishments",
  "silverpelt",
@@ -587,26 +587,6 @@ dependencies = [
  "serenity",
  "silverpelt",
  "splashcore_rs",
-]
-
-[[package]]
-name = "bot_modules_punishment_autotriggers"
-version = "0.1.0"
-dependencies = [
- "ar_settings",
- "async-trait",
- "botox",
- "chrono",
- "indexmap",
- "kittycat",
- "permission_checks",
- "sandwich_driver",
- "serde_json",
- "serenity",
- "silverpelt",
- "splashcore_rs",
- "sqlx",
- "strum",
 ]
 
 [[package]]

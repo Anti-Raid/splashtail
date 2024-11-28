@@ -15,7 +15,6 @@
     - [Introduction](./user/captcha/1-intro.md)
     - [Examples](./user/captcha/2-examples.md)
 - [Lockdown](./user/lockdown/README.md)
-- [Modifiers](./user/modifiers/1-modifiers.md)
 - [Backups](./user/backups/README.md)
 
 # Developer Guide

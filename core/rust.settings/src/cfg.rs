@@ -522,6 +522,143 @@ async fn _validate_value(
 
                                     v
                                 }
+                                InnerColumnTypeStringKind::Channel {
+                                    allowed_channel_types,
+                                    needed_bot_permissions,
+                                } => {
+                                    let Ok(channel_id) = s.parse::<serenity::all::ChannelId>()
+                                    else {
+                                        return Err(SettingsError::SchemaCheckValidationError {
+                                            column: column_id.to_string(),
+                                            check: "snowflake_parse".to_string(),
+                                            accepted_range: "Valid channel id".to_string(),
+                                            error: "Channel id parse error".to_string(),
+                                        });
+                                    };
+
+                                    // Perform required checks
+                                    let channel = sandwich_driver::channel(
+                                        &data.cache_http,
+                                        &data.reqwest,
+                                        Some(guild_id),
+                                        channel_id,
+                                    )
+                                    .await
+                                    .map_err(|e| SettingsError::SchemaCheckValidationError {
+                                        column: column_id.to_string(),
+                                        check: "channel_check".to_string(),
+                                        accepted_range: "Valid channel id".to_string(),
+                                        error: e.to_string(),
+                                    })?;
+
+                                    let Some(channel) = channel else {
+                                        return Err(SettingsError::SchemaCheckValidationError {
+                                            column: column_id.to_string(),
+                                            check: "channel_check".to_string(),
+                                            accepted_range: "Valid channel id".to_string(),
+                                            error: "Channel not found".to_string(),
+                                        });
+                                    };
+
+                                    let Some(guild_channel) = channel.guild() else {
+                                        return Err(SettingsError::SchemaCheckValidationError {
+                                            column: column_id.to_string(),
+                                            check: "channel_check".to_string(),
+                                            accepted_range: "Valid channel id".to_string(),
+                                            error: "Channel not in guild".to_string(),
+                                        });
+                                    };
+
+                                    if guild_channel.guild_id != guild_id {
+                                        return Err(SettingsError::SchemaCheckValidationError {
+                                            column: column_id.to_string(),
+                                            check: "channel_check".to_string(),
+                                            accepted_range: "Valid channel id".to_string(),
+                                            error: "Channel not in guild".to_string(),
+                                        });
+                                    }
+
+                                    if !allowed_channel_types.is_empty()
+                                        && !allowed_channel_types.contains(&guild_channel.kind)
+                                    {
+                                        return Err(SettingsError::SchemaCheckValidationError {
+                                            column: column_id.to_string(),
+                                            check: "allowed_channel_types".to_string(),
+                                            accepted_range: format!("{:?}", allowed_channel_types),
+                                            error: "Channel type not allowed".to_string(),
+                                        });
+                                    }
+
+                                    if !needed_bot_permissions.is_empty() {
+                                        let bot_user = {
+                                            let bot_user_id =
+                                                data.serenity_context.cache.current_user().id;
+
+                                            let bot_user = sandwich_driver::member_in_guild(
+                                                &data.cache_http,
+                                                &data.reqwest,
+                                                guild_id,
+                                                bot_user_id,
+                                            )
+                                            .await
+                                            .map_err(|e| {
+                                                SettingsError::SchemaCheckValidationError {
+                                                    column: column_id.to_string(),
+                                                    check: "bot_user".to_string(),
+                                                    accepted_range: "Valid bot user".to_string(),
+                                                    error: e.to_string(),
+                                                }
+                                            })?;
+
+                                            let Some(bot_user) = bot_user else {
+                                                return Err(
+                                                    SettingsError::SchemaCheckValidationError {
+                                                        column: column_id.to_string(),
+                                                        check: "bot_user".to_string(),
+                                                        accepted_range: "Valid bot user"
+                                                            .to_string(),
+                                                        error: "Bot user not found".to_string(),
+                                                    },
+                                                );
+                                            };
+
+                                            bot_user
+                                        };
+
+                                        let guild = sandwich_driver::guild(
+                                            &data.cache_http,
+                                            &data.reqwest,
+                                            guild_id,
+                                        )
+                                        .await
+                                        .map_err(|e| SettingsError::SchemaCheckValidationError {
+                                            column: column_id.to_string(),
+                                            check: "guild".to_string(),
+                                            accepted_range: "Valid guild".to_string(),
+                                            error: e.to_string(),
+                                        })?;
+
+                                        let permissions =
+                                            guild.user_permissions_in(&guild_channel, &bot_user);
+
+                                        if !permissions.contains(*needed_bot_permissions) {
+                                            return Err(
+                                                SettingsError::SchemaCheckValidationError {
+                                                    column: column_id.to_string(),
+                                                    check: "bot_permissions".to_string(),
+                                                    accepted_range: format!(
+                                                        "{:?}",
+                                                        needed_bot_permissions
+                                                    ),
+                                                    error: "Bot does not have required permissions"
+                                                        .to_string(),
+                                                },
+                                            );
+                                        }
+                                    }
+
+                                    v
+                                }
                                 InnerColumnTypeStringKind::User { .. } => {
                                     // Try parsing to a UserId
                                     if let Err(err) = s.parse::<serenity::all::UserId>() {
@@ -532,18 +669,6 @@ async fn _validate_value(
                                             error: err.to_string(),
                                         });
                                     }
-
-                                    v
-                                }
-                                InnerColumnTypeStringKind::Modifier { .. } => {
-                                    splashcore_rs::modifier::Modifier::from_repr(s).map_err(
-                                        |e| SettingsError::SchemaCheckValidationError {
-                                            column: column_id.to_string(),
-                                            check: "modifier_parse".to_string(),
-                                            accepted_range: "Valid modifier".to_string(),
-                                            error: e.to_string(),
-                                        },
-                                    )?;
 
                                     v
                                 }

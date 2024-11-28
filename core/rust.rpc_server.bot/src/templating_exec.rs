@@ -42,11 +42,9 @@ pub(crate) async fn execute_template(
             "(Anti-Raid) Template Execution".to_string(),
             "AR/Virtual_ExecTemplate".to_string(),
             "AR/Virtual_ExecTemplate".to_string(),
-            serde_json::json!({
-                "args": req.args,
-                "user_id": user_id,
-            }),
+            req.args,
             false,
+            Some(user_id.to_string()),
         ),
     )
     .await;

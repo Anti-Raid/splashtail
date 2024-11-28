@@ -9,7 +9,7 @@ use std::time::Duration;
 use tokio::sync::RwLock;
 
 use clap::Parser;
-use log::{error, info, warn};
+use log::{error, info};
 use serenity::all::{FullEvent, HttpBuilder};
 use silverpelt::{data::Data, Error};
 use sqlx::postgres::PgPoolOptions;
@@ -266,12 +266,8 @@ async fn event_listener<'a>(
 
     // Get guild id
     let event_guild_id = match get_event_guild_id(event) {
-        Ok(guild_id) => guild_id,
-        Err(None) => return Ok(()),
-        Err(Some(e)) => {
-            warn!("Error getting guild id for event: {}", e);
-            return Err(e);
-        }
+        Some(guild_id) => guild_id,
+        None => return Ok(()),
     };
 
     // Create context for event handlers, this is done here and wrapped in an Arc to avoid useless clones

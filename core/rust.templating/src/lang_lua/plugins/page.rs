@@ -53,6 +53,7 @@ impl SettingView for LuaSettingExecutor {
                     typ: "internal".to_string(),
                 })?,
                 false,
+                Some(context.author.to_string()),
             ),
         )
         .await
@@ -89,6 +90,7 @@ impl SettingCreator for LuaSettingExecutor {
                     typ: "internal".to_string(),
                 })?,
                 false,
+                Some(context.author.to_string()),
             ),
         )
         .await
@@ -125,6 +127,7 @@ impl SettingUpdater for LuaSettingExecutor {
                     typ: "internal".to_string(),
                 })?,
                 false,
+                Some(context.author.to_string()),
             ),
         )
         .await
@@ -158,6 +161,7 @@ impl SettingDeleter for LuaSettingExecutor {
                 self.name.clone(),
                 pkey.to_json(),
                 false,
+                Some(context.author.to_string()),
             ),
         )
         .await
@@ -582,7 +586,10 @@ pub fn plugin_docs() -> templating_docgen::Plugin {
                                 min_length: Some(120),
                                 max_length: Some(120),
                                 allowed_values: vec!["allowed_value".to_string()],
-                                kind: ar_settings::types::InnerColumnTypeStringKind::Modifier {},
+                                kind: ar_settings::types::InnerColumnTypeStringKind::Channel {
+                                    allowed_channel_types: vec![serenity::all::ChannelType::Text, serenity::all::ChannelType::Voice],
+                                    needed_bot_permissions: serenity::all::Permissions::SEND_MESSAGES,
+                                },
                             },
                         ),
                         nullable: false,

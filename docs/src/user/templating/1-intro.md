@@ -100,11 +100,23 @@ return { __error = "You have reached the maximum number of tries in this 5 minut
 error("Could not parse user ID for some reason")
 ```
 
-## Template Tokens
+## Events
 
-All Lua templates include a special template token in addition to the template arguments. "Executors" use this token to get access to the low-level per-template state. Examples of executors include the ``@antiraid/actions`` `ActionExecutor`, which allows you to perform actions such as banning/kicking/timing out users and other Discord actions and ``@antiraid/kv`` `KvExecutor` which allow for persistent storage via a key-value interface. 
+All Lua templates are invoked via events. As such, the first argument to the template is an ``Event``. ``Event`` is a ``userdata``. The below will explain the most important fields exposed by ``Event``. Note that all fields, unless stated otherwise, are read-only:
 
-Note that token is randomly generated for each *template invocation* and is only guaranteed to be valid during a template execution. It is also guaranteed, however, that the created executor is complete and does not rely on the token itself whatsoever after creation. This means that a template executor can be used after the template has finished executing (e.g. in a coroutine).
+- ``
+
+## Template Context
+
+All Lua templates are passed both the ``Event`` (denoted by `args`) and a `TemplateContext` userdata (denoted by `token`). Note that like ``Event``, ``TemplateContext`` is a *userdata* (not a table). As such, they cannot be manually constructed in templates themselves.
+
+"Executors" and other sensistive APIs use the `TemplateContext` to read ``template_data`` including the pragma (note that `template_data` is also exposed to templates as a read-only field). This is what allows AntiRaids capability system to correctly sandbox templates based on what capabilities they have been given.
+
+Examples of executors include the ``@antiraid/actions`` `ActionExecutor`, which allows you to perform actions such as banning/kicking/timing out users and other Discord actions and ``@antiraid/kv`` `KvExecutor` which allow for persistent storage via a key-value interface. 
+
+``TemplateContext`` is guaranteed to be valid while accessible in the VM . This means that templates can choose to share their capabilities with other templates using the ``__stack``.
+
+It is also guaranteed that the created executor is complete and does not rely on the token itself whatsoever after creation. This means that a template executor can be used after the template has finished executing (e.g. in a coroutine).
 
 ### Example
 

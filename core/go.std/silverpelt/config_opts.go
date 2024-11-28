@@ -68,11 +68,14 @@ type CanonicalInnerColumnTypeStringKind struct {
 		Kind string `json:"kind"`
 		Ctx  string `json:"ctx"`
 	} `json:"TemplateRef,omitempty"`
-	User     *struct{} `json:"User,omitempty"`
-	Role     *struct{} `json:"Role,omitempty"`
-	Emoji    *struct{} `json:"Emoji,omitempty"`
-	Message  *struct{} `json:"Message,omitempty"`
-	Modifier *struct{} `json:"Modifier,omitempty"`
+	User    *struct{} `json:"User,omitempty"`
+	Role    *struct{} `json:"Role,omitempty"`
+	Emoji   *struct{} `json:"Emoji,omitempty"`
+	Message *struct{} `json:"Message,omitempty"`
+	Channel *struct {
+		NeededBotPermissions string   `json:"needed_bot_permissions"`
+		AllowedChannelTypes  []string `json:"allowed_channel_types"`
+	} `json:"Channel,omitempty"`
 }
 
 type CanonicalInnerColumnType struct {

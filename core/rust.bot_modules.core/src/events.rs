@@ -21,19 +21,18 @@ pub(crate) async fn event_listener(ectx: &EventHandlerContext) -> Result<(), sil
                 return Ok(());
             }
 
+            let user_id = gwevent::core::get_event_user_id(event);
+
             // Ignore ourselves
             match event {
                 FullEvent::GuildAuditLogEntryCreate { .. } => {}
-                _ => match gwevent::core::get_event_user_id(event) {
-                    Ok(user_id) => {
+                _ => match user_id {
+                    Some(user_id) => {
                         if user_id == ctx.cache.current_user().id {
                             return Ok(());
                         }
                     }
-                    Err(Some(e)) => {
-                        return Err(e);
-                    }
-                    Err(None) => {}
+                    None => {}
                 },
             }
 
@@ -60,6 +59,7 @@ pub(crate) async fn event_listener(ectx: &EventHandlerContext) -> Result<(), sil
                     event.snake_case_name().to_uppercase(),
                     serde_json::to_value(event)?.into(),
                     false,
+                    user_id.map(|u| u.to_string()),
                 ),
                 ectx.guild_id,
             )
@@ -76,6 +76,7 @@ pub(crate) async fn event_listener(ectx: &EventHandlerContext) -> Result<(), sil
                     event.event_name.clone(),
                     event.event_data.clone(),
                     false,
+                    None,
                 ),
                 ectx.guild_id,
             )
@@ -91,6 +92,7 @@ pub(crate) async fn event_listener(ectx: &EventHandlerContext) -> Result<(), sil
                     "StingCreate".to_string(),
                     serde_json::to_value(&sting)?.into(),
                     false,
+                    None,
                 ),
                 ectx.guild_id,
             )
@@ -108,6 +110,7 @@ pub(crate) async fn event_listener(ectx: &EventHandlerContext) -> Result<(), sil
                     "StingExpire".to_string(),
                     serde_json::to_value(&sting)?.into(),
                     false,
+                    None,
                 ),
                 ectx.guild_id,
             )
@@ -125,6 +128,7 @@ pub(crate) async fn event_listener(ectx: &EventHandlerContext) -> Result<(), sil
                     "StingDelete".to_string(),
                     serde_json::to_value(&sting)?.into(),
                     false,
+                    None,
                 ),
                 ectx.guild_id,
             )
@@ -142,6 +146,7 @@ pub(crate) async fn event_listener(ectx: &EventHandlerContext) -> Result<(), sil
                     "PunishmentCreate".to_string(),
                     serde_json::to_value(&punishment)?.into(),
                     false,
+                    None,
                 ),
                 ectx.guild_id,
             )
@@ -159,6 +164,7 @@ pub(crate) async fn event_listener(ectx: &EventHandlerContext) -> Result<(), sil
                     "PunishmentExpire".to_string(),
                     serde_json::to_value(&punishment)?.into(),
                     false,
+                    None,
                 ),
                 ectx.guild_id,
             )
@@ -178,6 +184,7 @@ pub(crate) async fn event_listener(ectx: &EventHandlerContext) -> Result<(), sil
                         "targets": modified
                     }),
                     false,
+                    None,
                 ),
                 ectx.guild_id,
             )
