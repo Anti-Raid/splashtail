@@ -172,16 +172,6 @@ pub async fn check_modules_test() {
         .await
         .expect("Could not initialize connection");
 
-    let redis = fred::clients::RedisPool::new(
-        fred::prelude::RedisConfig::from_url(&config::CONFIG.meta.redis_url)
-            .expect("Could not parse Redis URL"),
-        None,
-        None,
-        Some(fred::prelude::ReconnectPolicy::default()),
-        10,
-    )
-    .expect("Could not initialize Redis connection");
-
     let reqwest = reqwest::Client::builder()
         .connect_timeout(std::time::Duration::from_secs(30))
         .timeout(std::time::Duration::from_secs(90))
@@ -199,7 +189,6 @@ pub async fn check_modules_test() {
                 .build()
                 .expect("Could not initialize object store"),
         ),
-        redis,
         pool: pg_pool.clone(),
         reqwest,
         extra_data: dashmap::DashMap::new(),

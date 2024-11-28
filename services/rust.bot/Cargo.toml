@@ -17,7 +17,6 @@ gwevent = { path = "../../core/rust.gwevent" }
 config = { path = "../../core/rust.config" }
 silverpelt = { path = "../../core/rust.silverpelt" }
 clap = { version = "4.5.16", features = ["derive"] }
-fred = { version = "9.3", features = ["serde-json"] }
 
 # Modules
 bot_modules_default = { path = "../../core/rust.bot_modules_default" }

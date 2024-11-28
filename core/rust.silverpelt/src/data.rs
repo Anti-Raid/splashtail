@@ -6,7 +6,6 @@ use std::sync::Arc;
 #[derive(Clone)]
 pub struct Data {
     pub pool: sqlx::PgPool,
-    pub redis: fred::clients::RedisPool,
     pub reqwest: reqwest::Client,
     pub object_store: Arc<ObjectStore>,
     pub props: Arc<dyn Props + Send + Sync>,
