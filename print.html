@@ -256,9 +256,17 @@ return { __error = "You have reached the maximum number of tries in this 5 minut
 -- Runtime Error
 error("Could not parse user ID for some reason")
 </code></pre>
-<h2 id="template-tokens"><a class="header" href="#template-tokens">Template Tokens</a></h2>
-<p>All Lua templates include a special template token in addition to the template arguments. "Executors" use this token to get access to the low-level per-template state. Examples of executors include the <code>@antiraid/actions</code> <code>ActionExecutor</code>, which allows you to perform actions such as banning/kicking/timing out users and other Discord actions and <code>@antiraid/kv</code> <code>KvExecutor</code> which allow for persistent storage via a key-value interface.</p>
-<p>Note that token is randomly generated for each <em>template invocation</em> and is only guaranteed to be valid during a template execution. It is also guaranteed, however, that the created executor is complete and does not rely on the token itself whatsoever after creation. This means that a template executor can be used after the template has finished executing (e.g. in a coroutine).</p>
+<h2 id="events"><a class="header" href="#events">Events</a></h2>
+<p>All Lua templates are invoked via events. As such, the first argument to the template is an <code>Event</code>. <code>Event</code> is a <code>userdata</code>. The below will explain the most important fields exposed by <code>Event</code>. Note that all fields, unless stated otherwise, are read-only:</p>
+<ul>
+<li>``</li>
+</ul>
+<h2 id="template-context"><a class="header" href="#template-context">Template Context</a></h2>
+<p>All Lua templates are passed both the <code>Event</code> (denoted by <code>args</code>) and a <code>TemplateContext</code> userdata (denoted by <code>token</code>). Note that like <code>Event</code>, <code>TemplateContext</code> is a <em>userdata</em> (not a table). As such, they cannot be manually constructed in templates themselves.</p>
+<p>"Executors" and other sensistive APIs use the <code>TemplateContext</code> to read <code>template_data</code> including the pragma (note that <code>template_data</code> is also exposed to templates as a read-only field). This is what allows AntiRaids capability system to correctly sandbox templates based on what capabilities they have been given.</p>
+<p>Examples of executors include the <code>@antiraid/actions</code> <code>ActionExecutor</code>, which allows you to perform actions such as banning/kicking/timing out users and other Discord actions and <code>@antiraid/kv</code> <code>KvExecutor</code> which allow for persistent storage via a key-value interface.</p>
+<p><code>TemplateContext</code> is guaranteed to be valid while accessible in the VM . This means that templates can choose to share their capabilities with other templates using the <code>__stack</code>.</p>
+<p>It is also guaranteed that the created executor is complete and does not rely on the token itself whatsoever after creation. This means that a template executor can be used after the template has finished executing (e.g. in a coroutine).</p>
 <h3 id="example"><a class="header" href="#example">Example</a></h3>
 <pre><code class="language-lua">local args, token = ...
 print(token)
@@ -1204,7 +1212,13 @@ print(token)
                 "allowed_value"
               ],
               "kind": {
-                "Modifier": {}
+                "Channel": {
+                  "needed_bot_permissions": "2048",
+                  "allowed_channel_types": [
+                    0,
+                    2
+                  ]
+                }
               }
             }
           }
@@ -1991,6 +2005,7 @@ print(token)
 <li><code>data</code> (<a href="user/templating/2-plugins.html#type.unknown">unknown</a>): The data of the event.</li>
 <li><code>is_deniable</code> (<a href="user/templating/2-plugins.html#type.boolean">boolean</a>): Whether the event can be denied.</li>
 <li><code>uid</code> (<a href="user/templating/2-plugins.html#type.string">string</a>): The unique identifier ID of the event. Will be guaranteed to be unique at a per-guild level.</li>
+<li><code>author</code> (<a href="user/templating/2-plugins.html#type.string">string?</a>): The author of the event, if any. If there is no known author, this field will either be <code>nil</code> or <code>null</code>.</li>
 </ul>
 <div id="type.TemplatePragma" />
 <h2 id="templatepragma"><a class="header" href="#templatepragma">TemplatePragma</a></h2>
@@ -2313,17 +2328,6 @@ return captcha
 <pre><code>/lockdown lock type:scl/&lt;channel_id&gt; reason:There is a raid going on
 </code></pre>
 <p>Where <code>&lt;channel_id&gt;</code> is the ID of the channel to lockdown.</p>
-<div style="break-before: page; page-break-before: always;"></div><h1 id="modifiers"><a class="header" href="#modifiers">Modifiers</a></h1>
-<p>There are many cases where you want to either target or override settings for users/channels/roles/globally/other targets. This is where modifiers come in. Modifiers can be used to target users/channels/role/globally.</p>
-<p>Each modifier is a string that can be used to target a specific user, channel, role, or globally. The following modifiers are available:</p>
-<ul>
-<li><strong>User ID</strong> - target a specific user (<code>user/{id}</code>, specificity = <code>3</code>)</li>
-<li><strong>Channel ID</strong> - target a specific channel (<code>channel/{id}</code>, specificity = <code>2</code>)</li>
-<li><strong>Role ID</strong> - target a specific role (<code>role/{id}</code>, specificity = <code>1</code>)</li>
-<li><strong>Custom Variable</strong> - target a specific variable (<code>custom/{key}/{value}/{specificity}</code>, specificity = <code>{specificity}</code>)</li>
-<li><strong>Global</strong> - target everything globally (guild-wide) (<code>global</code>, specificity = <code>0</code>)</li>
-</ul>
-<p>To allow handling conflicts between modifiers, each modifier has a specificity which is essentially a number as seen above.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="backups"><a class="header" href="#backups">Backups</a></h1>
 <h2 id="whats-backed-up"><a class="header" href="#whats-backed-up">What's backed up</a></h2>
 <p>Guild structure (roles/channels/name/icon/other settings), some messages (Discord has limits here) and attachments (within reasonable limits).</p>
@@ -2467,7 +2471,7 @@ For starlark/skylark, go to the point on rhai but hopefully without the unsafe b
 I can understand now why the game modding industry uses lua, it’s basically the only sane language for handling user input
 Lua is legit the only sane scripting language on this entire list</p>
 <p>[rhai is not only slower than lua, its sandboxing (i said it above here too in a vent i think) requires actual pointer arithmetic that isnt thread safe, its also a custom lang no one knows while lua is well known in the game community. Luau is used in Roblox games so it caters to Discords target market as well]</p>
-<h1 id="template-tokens-1"><a class="header" href="#template-tokens-1">Template Tokens</a></h1>
+<h1 id="template-tokens"><a class="header" href="#template-tokens">Template Tokens</a></h1>
 <p>All lua templates include a special template token in addition to the template arguments. Modules requiring more privileged levels of access (or otherwise require the template state) should require this token and use it to access the required template state.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="text-difference-utilities"><a class="header" href="#text-difference-utilities">Text difference utilities</a></h1>
 <p><strong>diff.rs:</strong> Taken from https://docs.rs/text-diff/latest/src/text_diff with some modernizing. All credits go to the author.</p>

@@ -221,9 +221,17 @@ return { __error = "You have reached the maximum number of tries in this 5 minut
 -- Runtime Error
 error("Could not parse user ID for some reason")
 </code></pre>
-<h2 id="template-tokens"><a class="header" href="#template-tokens">Template Tokens</a></h2>
-<p>All Lua templates include a special template token in addition to the template arguments. "Executors" use this token to get access to the low-level per-template state. Examples of executors include the <code>@antiraid/actions</code> <code>ActionExecutor</code>, which allows you to perform actions such as banning/kicking/timing out users and other Discord actions and <code>@antiraid/kv</code> <code>KvExecutor</code> which allow for persistent storage via a key-value interface.</p>
-<p>Note that token is randomly generated for each <em>template invocation</em> and is only guaranteed to be valid during a template execution. It is also guaranteed, however, that the created executor is complete and does not rely on the token itself whatsoever after creation. This means that a template executor can be used after the template has finished executing (e.g. in a coroutine).</p>
+<h2 id="events"><a class="header" href="#events">Events</a></h2>
+<p>All Lua templates are invoked via events. As such, the first argument to the template is an <code>Event</code>. <code>Event</code> is a <code>userdata</code>. The below will explain the most important fields exposed by <code>Event</code>. Note that all fields, unless stated otherwise, are read-only:</p>
+<ul>
+<li>``</li>
+</ul>
+<h2 id="template-context"><a class="header" href="#template-context">Template Context</a></h2>
+<p>All Lua templates are passed both the <code>Event</code> (denoted by <code>args</code>) and a <code>TemplateContext</code> userdata (denoted by <code>token</code>). Note that like <code>Event</code>, <code>TemplateContext</code> is a <em>userdata</em> (not a table). As such, they cannot be manually constructed in templates themselves.</p>
+<p>"Executors" and other sensistive APIs use the <code>TemplateContext</code> to read <code>template_data</code> including the pragma (note that <code>template_data</code> is also exposed to templates as a read-only field). This is what allows AntiRaids capability system to correctly sandbox templates based on what capabilities they have been given.</p>
+<p>Examples of executors include the <code>@antiraid/actions</code> <code>ActionExecutor</code>, which allows you to perform actions such as banning/kicking/timing out users and other Discord actions and <code>@antiraid/kv</code> <code>KvExecutor</code> which allow for persistent storage via a key-value interface.</p>
+<p><code>TemplateContext</code> is guaranteed to be valid while accessible in the VM . This means that templates can choose to share their capabilities with other templates using the <code>__stack</code>.</p>
+<p>It is also guaranteed that the created executor is complete and does not rely on the token itself whatsoever after creation. This means that a template executor can be used after the template has finished executing (e.g. in a coroutine).</p>
 <h3 id="example"><a class="header" href="#example">Example</a></h3>
 <pre><code class="language-lua">local args, token = ...
 print(token)

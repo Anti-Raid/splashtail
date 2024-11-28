@@ -1093,7 +1093,13 @@
                 "allowed_value"
               ],
               "kind": {
-                "Modifier": {}
+                "Channel": {
+                  "needed_bot_permissions": "2048",
+                  "allowed_channel_types": [
+                    0,
+                    2
+                  ]
+                }
               }
             }
           }
@@ -1880,6 +1886,7 @@
 <li><code>data</code> (<a href="#type.unknown">unknown</a>): The data of the event.</li>
 <li><code>is_deniable</code> (<a href="#type.boolean">boolean</a>): Whether the event can be denied.</li>
 <li><code>uid</code> (<a href="#type.string">string</a>): The unique identifier ID of the event. Will be guaranteed to be unique at a per-guild level.</li>
+<li><code>author</code> (<a href="#type.string">string?</a>): The author of the event, if any. If there is no known author, this field will either be <code>nil</code> or <code>null</code>.</li>
 </ul>
 <div id="type.TemplatePragma" />
 <h2 id="templatepragma"><a class="header" href="#templatepragma">TemplatePragma</a></h2>
