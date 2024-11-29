@@ -97,6 +97,10 @@ ts:
 	# Patch to change all "SelectMenu = any;" to "SelectMenu = undefined /*tygo workaround*/;" to work around tygo issue
 	sed -i 's:SelectMenu = any;:SelectMenu = undefined /*tygo workaround*/;:g' services/website/src/lib/generated/discordgo.ts
 
+	# Copy typings to badgerfang
+	rm -rf services/badgerfang/src/lib/generated
+	cp -rf services/website/src/lib/generated services/badgerfang/src/lib/generated
+
 lint_go:
 	for d in core/go.* services/go.*; do \
 		~/go/bin/golangci-lint run ./$$d/...; \
