@@ -43,15 +43,17 @@ impl SettingView for LuaSettingExecutor {
             context.data.pool.clone(),
             context.data.serenity_context.clone(),
             context.data.reqwest.clone(),
-            crate::event::Event::new_normal(
+            crate::event::Event::new(
                 "(Anti-Raid) View Setting".to_string(),
                 "Settings/View".to_string(),
                 self.name.clone(),
-                serde_json::to_value(filters).map_err(|e| SettingsError::Generic {
-                    message: e.to_string(),
-                    src: "LuaSettingExecutor".to_string(),
-                    typ: "internal".to_string(),
-                })?,
+                crate::event::ArcOrNormal::Normal(
+                    serde_json::to_value(filters).map_err(|e| SettingsError::Generic {
+                        message: e.to_string(),
+                        src: "LuaSettingExecutor".to_string(),
+                        typ: "internal".to_string(),
+                    })?
+                ),
                 false,
                 Some(context.author.to_string()),
             ),
@@ -80,15 +82,17 @@ impl SettingCreator for LuaSettingExecutor {
             context.data.pool.clone(),
             context.data.serenity_context.clone(),
             context.data.reqwest.clone(),
-            crate::event::Event::new_normal(
+            crate::event::Event::new(
                 "(Anti-Raid) Create Setting".to_string(),
                 "Settings/Create".to_string(),
                 self.name.clone(),
-                serde_json::to_value(state).map_err(|e| SettingsError::Generic {
-                    message: e.to_string(),
-                    src: "LuaSettingExecutor".to_string(),
-                    typ: "internal".to_string(),
-                })?,
+                crate::event::ArcOrNormal::Normal(
+                    serde_json::to_value(state).map_err(|e| SettingsError::Generic {
+                        message: e.to_string(),
+                        src: "LuaSettingExecutor".to_string(),
+                        typ: "internal".to_string(),
+                    })?
+                ),
                 false,
                 Some(context.author.to_string()),
             ),
@@ -117,15 +121,17 @@ impl SettingUpdater for LuaSettingExecutor {
             context.data.pool.clone(),
             context.data.serenity_context.clone(),
             context.data.reqwest.clone(),
-            crate::event::Event::new_normal(
+            crate::event::Event::new(
                 "(Anti-Raid) Update Setting".to_string(),
                 "Settings/Update".to_string(),
                 self.name.clone(),
-                serde_json::to_value(state).map_err(|e| SettingsError::Generic {
-                    message: e.to_string(),
-                    src: "LuaSettingExecutor".to_string(),
-                    typ: "internal".to_string(),
-                })?,
+                crate::event::ArcOrNormal::Normal(
+                    serde_json::to_value(state).map_err(|e| SettingsError::Generic {
+                        message: e.to_string(),
+                        src: "LuaSettingExecutor".to_string(),
+                        typ: "internal".to_string(),
+                    })?)
+                ,
                 false,
                 Some(context.author.to_string()),
             ),
@@ -155,11 +161,11 @@ impl SettingDeleter for LuaSettingExecutor {
             context.data.pool.clone(),
             context.data.serenity_context.clone(),
             context.data.reqwest.clone(),
-            crate::event::Event::new_normal(
+            crate::event::Event::new(
                 "(Anti-Raid) Delete Setting".to_string(),
                 "Settings/Delete".to_string(),
                 self.name.clone(),
-                pkey.to_json(),
+                crate::event::ArcOrNormal::Normal(pkey.to_json()),
                 false,
                 Some(context.author.to_string()),
             ),

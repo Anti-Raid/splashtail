@@ -3195,15 +3195,6 @@ name = "rust_buildstats"
 version = "6.2.0"
 
 [[package]]
-name = "rust_luaproc"
-version = "0.1.0"
-dependencies = [
- "clap",
- "templating",
- "tokio",
-]
-
-[[package]]
 name = "rust_rpc_server"
 version = "6.0.0"
 dependencies = [

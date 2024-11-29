@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use poise::serenity_prelude::FullEvent;
 use silverpelt::ar_event::{AntiraidEvent, EventHandlerContext};
 
@@ -55,11 +57,11 @@ pub(crate) async fn event_listener<'a>(
             dispatch(
                 ctx,
                 &ectx.data,
-                templating::event::CreateEventArc::new_arc(
+                templating::event::Event::new(
                     event_titlename,
                     "Discord".to_string(),
                     event.snake_case_name().to_uppercase(),
-                    serde_json::to_value(event)?.into(),
+                    templating::event::ArcOrNormal::Arc(Arc::new(serde_json::to_value(event)?)),
                     false,
                     user_id.map(|u| u.to_string()),
                 ),
@@ -72,11 +74,11 @@ pub(crate) async fn event_listener<'a>(
             dispatch(
                 ctx,
                 &ectx.data,
-                templating::event::CreateEventArc::new(
+                templating::event::Event::new(
                     event.event_titlename.clone(),
                     "Custom".to_string(),
                     event.event_name.clone(),
-                    event.event_data.clone(),
+                    templating::event::ArcOrNormal::Arc(Arc::new(event.event_data.clone())),
                     false,
                     None,
                 ),
@@ -88,11 +90,11 @@ pub(crate) async fn event_listener<'a>(
             dispatch(
                 ctx,
                 &ectx.data,
-                templating::event::CreateEventArc::new_arc(
+                templating::event::Event::new(
                     "(Anti Raid) Sting Created".to_string(),
                     "StingCreate".to_string(),
                     "StingCreate".to_string(),
-                    serde_json::to_value(&sting)?.into(),
+                    templating::event::ArcOrNormal::Arc(Arc::new(serde_json::to_value(&sting)?)),
                     false,
                     None,
                 ),
@@ -106,11 +108,11 @@ pub(crate) async fn event_listener<'a>(
             dispatch(
                 ctx,
                 &ectx.data,
-                templating::event::CreateEventArc::new_arc(
+                templating::event::Event::new(
                     "(Anti Raid) Sting Expired".to_string(),
                     "StingExpire".to_string(),
                     "StingExpire".to_string(),
-                    serde_json::to_value(&sting)?.into(),
+                    templating::event::ArcOrNormal::Arc(Arc::new(serde_json::to_value(&sting)?)),
                     false,
                     None,
                 ),
@@ -124,11 +126,11 @@ pub(crate) async fn event_listener<'a>(
             dispatch(
                 ctx,
                 &ectx.data,
-                templating::event::CreateEventArc::new_arc(
+                templating::event::Event::new(
                     "(Anti Raid) Sting Deleted".to_string(),
                     "StingDelete".to_string(),
                     "StingDelete".to_string(),
-                    serde_json::to_value(&sting)?.into(),
+                    templating::event::ArcOrNormal::Arc(Arc::new(serde_json::to_value(&sting)?)),
                     false,
                     None,
                 ),
@@ -142,11 +144,13 @@ pub(crate) async fn event_listener<'a>(
             dispatch(
                 ctx,
                 &ectx.data,
-                templating::event::CreateEventArc::new_arc(
+                templating::event::Event::new(
                     "(Anti Raid) Punishment Created".to_string(),
                     "PunishmentCreate".to_string(),
                     "PunishmentCreate".to_string(),
-                    serde_json::to_value(&punishment)?.into(),
+                    templating::event::ArcOrNormal::Arc(Arc::new(
+                        serde_json::to_value(&punishment)?.into(),
+                    )),
                     false,
                     None,
                 ),
@@ -160,11 +164,13 @@ pub(crate) async fn event_listener<'a>(
             dispatch(
                 ctx,
                 &ectx.data,
-                templating::event::CreateEventArc::new_arc(
+                templating::event::Event::new(
                     "(Anti Raid) Punishment Expired".to_string(),
                     "PunishmentExpire".to_string(),
                     "PunishmentExpire".to_string(),
-                    serde_json::to_value(&punishment)?.into(),
+                    templating::event::ArcOrNormal::Arc(Arc::new(serde_json::to_value(
+                        &punishment,
+                    )?)),
                     false,
                     None,
                 ),
@@ -178,13 +184,14 @@ pub(crate) async fn event_listener<'a>(
             dispatch(
                 ctx,
                 &ectx.data,
-                templating::event::CreateEventArc::new(
+                templating::event::Event::new(
                     "(Anti Raid) On Startup".to_string(),
                     "OnStartup".to_string(),
                     "OnStartup".to_string(),
-                    serde_json::json!({
-                        "targets": modified
-                    }),
+                    templating::event::ArcOrNormal::Arc(Arc::new(serde_json::json!({
+                            "targets": modified
+                        }
+                    ))),
                     false,
                     None,
                 ),
@@ -203,31 +210,28 @@ pub(crate) async fn event_listener<'a>(
 ///
 /// Special cases:
 /// - If event_name is MESSAGE, then it must be an exact match to be dispatched AND must have a custom template declared for it. This is to avoid spam
-pub(crate) async fn should_dispatch_event(
-    event_name: &str,
-    filters: &[String],
-) -> Result<bool, silverpelt::Error> {
+pub(crate) fn should_dispatch_event(event_name: &str, filters: &[String]) -> bool {
     if event_name == "MESSAGE" || event_name == "AR/CheckCommand" || event_name == "AR/OnStartup" {
         // Message should only be fired if the template explicitly wants the event
         if !filters.contains(&event_name.to_string()) {
-            return Ok(false);
+            return false;
         }
 
-        return Ok(true);
+        return true;
     }
 
     // If empty, always return Ok
     if filters.is_empty() {
-        return Ok(true);
+        return true;
     }
 
-    Ok(filters.contains(&event_name.to_string()))
+    filters.contains(&event_name.to_string())
 }
 
 async fn dispatch(
     ctx: &serenity::all::client::Context,
     data: &silverpelt::data::Data,
-    event: templating::event::CreateEventArc,
+    event: templating::event::Event,
     guild_id: serenity::model::id::GuildId,
 ) -> Result<(), silverpelt::Error> {
     let templates = templating::cache::get_all_guild_templates(guild_id, &data.pool).await?;
@@ -236,9 +240,8 @@ async fn dispatch(
         return Ok(());
     }
 
-    for template in templates.iter() {
-        // Verify event dispatch
-        if !should_dispatch_event(&event.name, {
+    for template in templates.iter().filter(|template| {
+        should_dispatch_event(&event.name(), {
             // False positive, unwrap_or_default cannot be used here as it moves the event out of the sink
             #[allow(clippy::manual_unwrap_or_default)]
             if let Some(ref events) = template.events {
@@ -247,18 +250,14 @@ async fn dispatch(
                 &[]
             }
         })
-        .await?
-        {
-            continue;
-        }
-
+    }) {
         match templating::execute::<Option<()>>(
             guild_id,
             templating::Template::Named(template.name.clone()),
             data.pool.clone(),
             ctx.clone(),
             data.reqwest.clone(),
-            event.into_event(),
+            event.clone(),
         )
         .await
         {
@@ -268,7 +267,6 @@ async fn dispatch(
             }
         }
     }
-
     Ok(())
 }
 
@@ -334,15 +332,14 @@ async fn dispatch_error(
                 data.pool.clone(),
                 ctx.clone(),
                 data.reqwest.clone(),
-                templating::event::CreateEventArc::new(
+                templating::event::Event::new(
                     "Error".to_string(),
                     "Error".to_string(),
                     "Error".to_string(),
-                    error.into(),
+                    templating::event::ArcOrNormal::Normal(error.into()),
                     false,
                     None,
-                )
-                .into_event(),
+                ),
             )
             .await?;
         }

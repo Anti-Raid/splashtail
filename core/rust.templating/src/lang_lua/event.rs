@@ -36,62 +36,17 @@ impl<'de, T: serde::de::Deserialize<'de>> serde::de::Deserialize<'de> for ArcOrN
     }
 }
 
-/// A create event struct that can be cloned and/or turned into an Event
-pub struct CreateEventArc {
-    pub title: String,
-    pub base_name: String,
-    pub name: String,
-    pub data: Arc<serde_json::Value>,
-    pub is_deniable: bool,
-    pub author: Option<String>,
-}
-
-impl CreateEventArc {
-    /// Creates a new CreateEventArc with data already wrapped in an Arc
-    pub fn new_arc(
-        title: String,
-        base_name: String,
-        name: String,
-        data: Arc<serde_json::Value>,
-        is_deniable: bool,
-        author: Option<String>,
-    ) -> Self {
-        Self {
-            title,
-            base_name,
-            name,
-            data,
-            is_deniable,
-            author,
+impl<T: Clone> Clone for ArcOrNormal<T> {
+    fn clone(&self) -> Self {
+        match self {
+            ArcOrNormal::Arc(a) => ArcOrNormal::Arc(a.clone()),
+            ArcOrNormal::Normal(b) => ArcOrNormal::Normal(b.clone()),
         }
-    }
-
-    /// Creates a new CreateEventArc with data that will be wrapped in an Arc
-    pub fn new(
-        title: String,
-        base_name: String,
-        name: String,
-        data: serde_json::Value,
-        is_deniable: bool,
-        author: Option<String>,
-    ) -> Self {
-        Self::new_arc(title, base_name, name, Arc::new(data), is_deniable, author)
-    }
-
-    pub fn into_event(&self) -> Event {
-        Event::new(
-            self.title.clone(),
-            self.base_name.clone(),
-            self.name.clone(),
-            ArcOrNormal::Arc(self.data.clone()),
-            self.is_deniable,
-            self.author.clone(),
-        )
     }
 }
 
 /// An `Event` is an object that can be passed to a Lua template
-#[derive(serde::Serialize, serde::Deserialize)]
+#[derive(serde::Serialize, serde::Deserialize, Clone)]
 pub struct Event {
     /// The title name of the event
     title: String,
@@ -110,45 +65,7 @@ pub struct Event {
 }
 
 impl Event {
-    /// Creates a new event using boxing
-    pub fn new_normal(
-        title: String,
-        base_name: String,
-        name: String,
-        data: serde_json::Value,
-        is_deniable: bool,
-        author: Option<String>,
-    ) -> Self {
-        Self::new(
-            title,
-            base_name,
-            name,
-            ArcOrNormal::Normal(data),
-            is_deniable,
-            author,
-        )
-    }
-
-    /// Creates a new event using an Arc
-    pub fn new_arc(
-        title: String,
-        base_name: String,
-        name: String,
-        data: Arc<serde_json::Value>,
-        is_deniable: bool,
-        author: Option<String>,
-    ) -> Self {
-        Self::new(
-            title,
-            base_name,
-            name,
-            ArcOrNormal::Arc(data),
-            is_deniable,
-            author,
-        )
-    }
-
-    /// Create from ArcOrBox
+    /// Create a new Event
     pub fn new(
         title: String,
         base_name: String,
@@ -197,7 +114,7 @@ impl LuaUserData for Event {
         });
         fields.add_field_method_get("data", |lua, this| {
             log::info!("Event: Serializing data");
-            let v = lua.to_value(&*this.data)?;
+            let v = lua.to_value(&this.data)?;
             Ok(v)
         });
         fields.add_field_method_get("is_deniable", |_, this| Ok(this.is_deniable));

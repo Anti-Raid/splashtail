@@ -38,11 +38,11 @@ pub(crate) async fn execute_template(
         data.pool.clone(),
         serenity_context.clone(),
         data.reqwest.clone(),
-        templating::event::Event::new_normal(
+        templating::event::Event::new(
             "(Anti-Raid) Template Execution".to_string(),
             "AR/Virtual_ExecTemplate".to_string(),
             "AR/Virtual_ExecTemplate".to_string(),
-            req.args,
+            templating::event::ArcOrNormal::Normal(req.args),
             false,
             Some(user_id.to_string()),
         ),
