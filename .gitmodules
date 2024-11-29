@@ -9,3 +9,7 @@
 [submodule "infra/Sandwich-Daemon"]
 	path = infra/Sandwich-Daemon
 	url = https://github.com/anti-raid/Sandwich-Daemon
+[submodule "services/badgerfang"]
+	path = services/badgerfang
+	url = https://github.com/anti-raid/badgerfang-next
+	branch = development
