@@ -98,8 +98,8 @@ ts:
 	sed -i 's:SelectMenu = any;:SelectMenu = undefined /*tygo workaround*/;:g' services/website/src/lib/generated/discordgo.ts
 
 	# Copy typings to badgerfang
-	rm -rf services/badgerfang/src/lib/generated
-	cp -rf services/website/src/lib/generated services/badgerfang/src/lib/generated
+	rm -rf services/badgerfang/src/types/splashtail
+	cp -rf services/website/src/lib/generated services/badgerfang/src/types/splashtail
 
 lint_go:
 	for d in core/go.* services/go.*; do \
