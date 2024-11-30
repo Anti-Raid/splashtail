@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/Anti-Raid/corelib_go/silverpelt"
 	"go.api/state"
-	"go.std/silverpelt"
 )
 
 func Modules(ctx context.Context) (*[]silverpelt.CanonicalModule, error) {

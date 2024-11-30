@@ -3,8 +3,8 @@ package types
 import (
 	"time"
 
+	"github.com/Anti-Raid/corelib_go/ext_types"
 	"github.com/infinitybotlist/eureka/dovewing/dovetypes"
-	"go.std/ext_types"
 )
 
 // Represents a user on Antiraid

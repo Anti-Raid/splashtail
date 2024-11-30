@@ -8,13 +8,13 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/Anti-Raid/corelib_go/splashcore"
 	"github.com/go-chi/chi/v5"
 	"go.api/constants"
 	"go.api/rpc"
 	"go.api/rpc_messages"
 	"go.api/state"
 	"go.api/types"
-	"go.std/splashcore"
 	"go.uber.org/zap"
 
 	"github.com/infinitybotlist/eureka/uapi"

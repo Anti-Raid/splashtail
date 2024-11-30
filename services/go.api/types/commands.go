@@ -1,6 +1,6 @@
 package types
 
-import "go.std/silverpelt"
+import "github.com/Anti-Raid/corelib_go/silverpelt"
 
 // PatchGuildModuleConfiguration allows updating the guild module configuration
 type PatchGuildCommandConfiguration struct {

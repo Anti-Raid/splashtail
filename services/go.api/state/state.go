@@ -9,10 +9,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Anti-Raid/corelib_go/config"
+	"github.com/Anti-Raid/corelib_go/objectstorage"
+	"github.com/Anti-Raid/corelib_go/utils"
 	"go.api/state/redishotcache"
-	"go.std/config"
-	"go.std/objectstorage"
-	"go.std/utils"
 	"golang.org/x/net/http2"
 
 	"github.com/bwmarrin/discordgo"

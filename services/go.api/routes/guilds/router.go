@@ -3,6 +3,7 @@ package guilds
 import (
 	"net/http"
 
+	"github.com/Anti-Raid/corelib_go/splashcore"
 	"github.com/go-chi/chi/v5"
 	"github.com/infinitybotlist/eureka/uapi"
 	"go.api/api"
@@ -13,7 +14,6 @@ import (
 	"go.api/routes/guilds/endpoints/patch_command_configuration"
 	"go.api/routes/guilds/endpoints/patch_module_configuration"
 	"go.api/routes/guilds/endpoints/settings_execute"
-	"go.std/splashcore"
 )
 
 const tagName = "Guilds"

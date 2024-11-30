@@ -5,6 +5,9 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/Anti-Raid/corelib_go/structparser/db"
+	jobs "github.com/Anti-Raid/jobserver/jobs"
+	jobtypes "github.com/Anti-Raid/jobserver/types"
 	"github.com/go-chi/chi/v5"
 	docs "github.com/infinitybotlist/eureka/doclib"
 	"github.com/infinitybotlist/eureka/uapi"
@@ -13,9 +16,6 @@ import (
 	"go.api/rpc_messages"
 	"go.api/state"
 	"go.api/types"
-	jobs "go.jobs"
-	jobtypes "go.jobs/types"
-	"go.std/structparser/db"
 	"go.uber.org/zap"
 )
 

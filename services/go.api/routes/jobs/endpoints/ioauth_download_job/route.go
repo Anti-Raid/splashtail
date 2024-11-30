@@ -9,14 +9,14 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Anti-Raid/corelib_go/splashcore"
+	"github.com/Anti-Raid/corelib_go/structparser/db"
+	jobs "github.com/Anti-Raid/jobserver/jobs"
+	jobtypes "github.com/Anti-Raid/jobserver/types"
 	"go.api/api"
 	"go.api/rpc_messages"
 	"go.api/state"
 	"go.api/types"
-	jobs "go.jobs"
-	jobtypes "go.jobs/types"
-	"go.std/splashcore"
-	"go.std/structparser/db"
 
 	"github.com/go-chi/chi/v5"
 	docs "github.com/infinitybotlist/eureka/doclib"

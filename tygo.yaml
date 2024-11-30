@@ -34,7 +34,7 @@ packages:
       time.Microsecond: "0.000001"
       time.Nanosecond: "0.000000001"
 
-  - path: "go.std/silverpelt"
+  - path: "github.com/Anti-Raid/corelib_go/silverpelt"
     output_path: "services/website/src/lib/generated/silverpelt.ts"
     frontmatter: |
       import * as ext from "./ext"
@@ -53,7 +53,7 @@ packages:
       discordgo.Channel: discordgo.Channel
       discordgo.ChannelType: discordgo.ChannelType
 
-  - path: "go.std/ext_types"
+  - path: "github.com/Anti-Raid/corelib_go/ext_types"
     output_path: "services/website/src/lib/generated/ext.ts"
     frontmatter: |
       import * as discordgo from "./discordgo"

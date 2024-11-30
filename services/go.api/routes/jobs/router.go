@@ -3,12 +3,12 @@ package jobs
 import (
 	"net/http"
 
+	"github.com/Anti-Raid/corelib_go/splashcore"
 	"go.api/api"
 	"go.api/routes/jobs/endpoints/create_guild_job"
 	"go.api/routes/jobs/endpoints/get_guild_job"
 	"go.api/routes/jobs/endpoints/get_job_list"
 	"go.api/routes/jobs/endpoints/ioauth_download_job"
-	"go.std/splashcore"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/infinitybotlist/eureka/uapi"

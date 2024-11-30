@@ -1,8 +1,8 @@
 package types
 
 import (
+	"github.com/Anti-Raid/corelib_go/silverpelt"
 	"github.com/infinitybotlist/eureka/dovewing/dovetypes"
-	"go.std/silverpelt"
 )
 
 type DashboardGuild struct {

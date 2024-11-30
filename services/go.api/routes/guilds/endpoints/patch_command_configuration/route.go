@@ -6,6 +6,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Anti-Raid/corelib_go/silverpelt"
+	"github.com/Anti-Raid/corelib_go/structparser/db"
+	"github.com/Anti-Raid/corelib_go/utils"
 	"github.com/go-chi/chi/v5"
 	docs "github.com/infinitybotlist/eureka/doclib"
 	"github.com/infinitybotlist/eureka/ratelimit"
@@ -16,9 +19,6 @@ import (
 	"go.api/rpc_messages"
 	"go.api/state"
 	"go.api/types"
-	"go.std/silverpelt"
-	"go.std/structparser/db"
-	"go.std/utils"
 	"go.uber.org/zap"
 )
 

@@ -3,10 +3,10 @@ package get_modules
 import (
 	"net/http"
 
+	"github.com/Anti-Raid/corelib_go/silverpelt"
 	"go.api/rpc"
 	"go.api/state"
 	"go.api/types"
-	"go.std/silverpelt"
 
 	docs "github.com/infinitybotlist/eureka/doclib"
 	"github.com/infinitybotlist/eureka/uapi"

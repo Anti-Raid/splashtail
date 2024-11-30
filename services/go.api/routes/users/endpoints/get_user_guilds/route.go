@@ -6,12 +6,12 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/Anti-Raid/corelib_go/utils"
 	"github.com/bwmarrin/discordgo"
 	"github.com/jackc/pgx/v5/pgtype"
 	"go.api/rpc"
 	"go.api/state"
 	"go.api/types"
-	"go.std/utils"
 	"go.uber.org/zap"
 
 	docs "github.com/infinitybotlist/eureka/doclib"

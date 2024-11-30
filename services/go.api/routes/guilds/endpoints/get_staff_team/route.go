@@ -4,9 +4,9 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/Anti-Raid/corelib_go/utils/syncmap"
 	"go.api/state"
 	"go.api/types"
-	"go.std/utils/syncmap"
 	"go.uber.org/zap"
 
 	"github.com/bwmarrin/discordgo"

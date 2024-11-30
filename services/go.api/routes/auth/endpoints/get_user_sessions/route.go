@@ -5,10 +5,10 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/Anti-Raid/corelib_go/structparser/db"
 	"github.com/jackc/pgx/v5"
 	"go.api/state"
 	"go.api/types"
-	"go.std/structparser/db"
 	"go.uber.org/zap"
 
 	docs "github.com/infinitybotlist/eureka/doclib"
