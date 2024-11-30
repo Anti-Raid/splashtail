@@ -6,8 +6,7 @@ use (
 	.
 
 	// Core
-	./core/go.jobs
-	./core/go.std
+	./core/go
 
 	// Infra
 	./infra/Sandwich-Daemon
