@@ -4,10 +4,6 @@ go 1.23.1
 
 toolchain go1.23.2
 
-replace go.std => ../../core/go.std
-
-replace go.jobs => ../../core/go.jobs
-
 require (
 	github.com/bwmarrin/discordgo v0.28.1
 	github.com/fatih/color v1.17.0

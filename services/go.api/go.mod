@@ -2,10 +2,6 @@ module go.api
 
 go 1.22.5
 
-replace go.std => ../../core/go.std
-
-replace go.jobs => ../../core/go.jobs
-
 require (
 	github.com/bwmarrin/discordgo v0.28.1
 	github.com/cloudflare/tableflip v1.2.3
