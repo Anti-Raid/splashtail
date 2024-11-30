@@ -25,3 +25,6 @@
 [submodule "services/api"]
 	path = services/api
 	url = https://github.com/anti-raid/api
+[submodule "services/bot"]
+	path = services/bot
+	url = https://github.com/anti-raid/bot
