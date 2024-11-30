@@ -7,7 +7,7 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-silverpelt = { path = "../rust/rust.silverpelt" }
+silverpelt = { path = "../../core/rust/rust.silverpelt" }
 
 # Modules
 bot_modules_core = { path = "../rust.bot_modules.core" }

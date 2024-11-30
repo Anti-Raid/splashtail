@@ -14,11 +14,11 @@ futures-util = "0.3"
 indexmap = { version = "2", features = ["serde"] }
 
 # Anti-Raid specific
-silverpelt = { path = "../rust/rust.silverpelt" }
-permission_checks = { path = "../rust/rust.permissions.checks" }
-splashcore_rs = { path = "../rust/rust.std" }
-config = { path = "../rust/rust.config" }
-jobserver = { path = "../rust/rust.jobserver" }
+silverpelt = { path = "../../core/rust/rust.silverpelt" }
+permission_checks = { path = "../../core/rust/rust.permissions.checks" }
+splashcore_rs = { path = "../../core/rust/rust.std" }
+config = { path = "../../core/rust/rust.config" }
+jobserver = { path = "../../core/rust/rust.jobserver" }
 
 [dependencies.serenity]
 git = "https://github.com/Anti-Raid/serenity"

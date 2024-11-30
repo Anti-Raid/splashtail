@@ -22,7 +22,7 @@ permissions = { path = "../../core/rust/rust.permissions" }
 silverpelt = { path = "../../core/rust/rust.silverpelt" }
 templating = { path = "../../core/rust/rust.templating" }
 templating_docgen = { path = "../../core/rust/rust.templating.docgen" }
-bot_modules_default = { path = "../../core/rust.bot_modules_default" }
+bot_modules_default = { path = "../../modules/rust.bot_modules_default" }
 bot_binutils = { path = "../../core/rust/rust.binutils" }
 
 [dependencies.tokio]

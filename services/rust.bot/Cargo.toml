@@ -16,7 +16,7 @@ async-trait = "0.1.80"
 clap = { version = "4.5.16", features = ["derive"] }
 
 # Modules
-bot_modules_default = { path = "../../core/rust.bot_modules_default" }
+bot_modules_default = { path = "../../modules/rust.bot_modules_default" }
 bot_binutils = { path = "../../core/rust/rust.binutils" }
 rust_rpc_server = { path = "../../core/rust/rust.rpc_server" }
 rust_rpc_server_bot = { path = "../../core/rust/rust.rpc_server.bot" }

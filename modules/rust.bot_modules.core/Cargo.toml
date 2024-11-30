@@ -1,5 +1,5 @@
 [package]
-name = "bot_modules_lockdown"
+name = "bot_modules_core"
 version = "0.1.0"
 edition = "2021"
 
@@ -8,17 +8,24 @@ edition = "2021"
 [dependencies]
 poise = { git = "https://github.com/Anti-Raid/poise", branch = "serenity-next" }
 sqlx = { version = "0.8", features = [ "runtime-tokio-rustls", "postgres", "chrono", "uuid", "json"] }
-uuid = { version = "1", features = ["serde"] }
 chrono = { version = "0.4", features = ["serde"]}
+futures-util = "0.3"
+async-trait = "0.1"
+serde_json = "1.0"
 indexmap = { version = "2", features = ["serde"] }
-async-trait = "0.1.80"
 
 # Anti-Raid specific
-silverpelt = { path = "../rust/rust.silverpelt" }
-splashcore_rs = { path = "../rust/rust.std" }
-ar_settings = { path = "../rust/rust.settings" }
-lockdowns = { path = "../rust/rust.lockdowns" }
-permission_checks = { path = "../rust/rust.permissions.checks" }
+silverpelt = { path = "../../core/rust/rust.silverpelt" }
+permissions = { path = "../../core/rust/rust.permissions" }
+permission_checks = { path = "../../core/rust/rust.permissions.checks" }
+config = { path = "../../core/rust/rust.config" }
+sandwich_driver = { path = "../../core/rust/rust.sandwich_driver" }
+rust_buildstats = { path = "../rust.buildstats" }
+ar_settings = { path = "../../core/rust/rust.settings" }
+splashcore_rs = { path = "../../core/rust/rust.std" }
+templating = { path = "../../core/rust/rust.templating" }
+gwevent = { path = "../../core/rust/rust.gwevent" }
+log = "0.4"
 
 [dependencies.serenity]
 git = "https://github.com/Anti-Raid/serenity"
@@ -33,5 +40,6 @@ branch = "main"
 git = "https://github.com/infinitybotlist/kittycat"
 branch = "main"
 
-[package.metadata.cargo-machete]
-ignored = ["uuid", "chrono"]
+[dependencies.tokio]
+version = "1"
+features = ["sync", "macros", "rt-multi-thread"]

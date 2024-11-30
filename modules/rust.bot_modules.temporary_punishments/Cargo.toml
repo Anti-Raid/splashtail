@@ -6,9 +6,9 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-silverpelt = { path = "../rust/rust.silverpelt" }
-sandwich_driver = { path = "../rust/rust.sandwich_driver" }
-splashcore_rs = { path = "../rust/rust.std" }
+silverpelt = { path = "../../core/rust/rust.silverpelt" }
+sandwich_driver = { path = "../../core/rust/rust.sandwich_driver" }
+splashcore_rs = { path = "../../core/rust/rust.std" }
 async-trait = "0.1.80"
 
 [dependencies.serenity]
