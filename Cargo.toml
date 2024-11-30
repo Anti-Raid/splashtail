@@ -1,7 +1,8 @@
 [workspace]
 members = [
     "services/bot/crates/*",
-    "services/bot"
+    "services/bot", 
+    "services/template-worker"
 ]
 resolver = "2"
 

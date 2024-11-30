@@ -4141,6 +4141,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "template-worker"
+version = "0.1.0"
+
+[[package]]
 name = "templating"
 version = "0.1.0"
 dependencies = [

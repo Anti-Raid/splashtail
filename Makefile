@@ -51,8 +51,14 @@ build_rust_dbg:
 clean: 
 	rm -rf out target
 
+cleanassets:
+	rm -rf services/website/src/lib/generated services/badgerfang/src/types/splashtail
+
+deepclean:
+	make clean
+	make cleanassets
+
 copyassets:
-ifndef CI_BUILD
 	# For every project in core/* and services/*, copy .generated/* to data/generated/{project_name} and to the website (services/website/lib/generated)
 	rm -rf data/generated/build_assets
 	mkdir -p data/generated/build_assets
@@ -75,16 +81,7 @@ ifndef CI_BUILD
 	cd data/generated/build_assets && ../../../out/bot genassets && cd ../../..
 	cd services/website/src/lib/generated/build_assets && ../../../../../../out/bot genassets && cd ../../../../../..
 
-endif
-
-templatedocs:
-	./out/bot templatedocs > docs/src/user/templating/2-plugins.md
-
-tests:
-	./out/bot test
-
-ts:
-	rm -rf services/website/src/lib/generated
+	# Generate typings for website
 	~/go/bin/tygo generate
 
 	# Patch to change all "SelectMenu = any;" to "SelectMenu = undefined /*tygo workaround*/;" to work around tygo issue
@@ -93,7 +90,12 @@ ts:
 	# Copy typings to badgerfang
 	rm -rf services/badgerfang/src/types/splashtail
 	cp -rf services/website/src/lib/generated services/badgerfang/src/types/splashtail
-	make copyassets
+
+templatedocs:
+	./out/bot templatedocs > docs/src/user/templating/2-plugins.md
+
+tests:
+	./out/bot test
 
 lint_go:
 	for d in core/go.* services/go.*; do \
