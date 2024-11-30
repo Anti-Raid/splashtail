@@ -1,4 +1,4 @@
-go 1.23.1
+go 1.23.2
 
 toolchain go1.23.2
 
@@ -14,6 +14,6 @@ use (
 
 	// Services
 	./services/go.api
-	./services/go.jobserver
+	./services/jobserver
 	./services/go.localjobs
 )
