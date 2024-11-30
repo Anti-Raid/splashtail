@@ -17,13 +17,13 @@ dashmap = { version = "6", features = ["serde", "inline", "rayon"] }
 async-trait = "0.1.80"
 
 # AntiRaid specific
-config = { path = "../../core/rust.config" }
-permissions = { path = "../../core/rust.permissions" }
-silverpelt = { path = "../../core/rust.silverpelt" }
-templating = { path = "../../core/rust.templating" }
-templating_docgen = { path = "../../core/rust.templating.docgen" }
+config = { path = "../../core/rust/rust.config" }
+permissions = { path = "../../core/rust/rust.permissions" }
+silverpelt = { path = "../../core/rust/rust.silverpelt" }
+templating = { path = "../../core/rust/rust.templating" }
+templating_docgen = { path = "../../core/rust/rust.templating.docgen" }
 bot_modules_default = { path = "../../core/rust.bot_modules_default" }
-bot_binutils = { path = "../../core/rust.binutils" }
+bot_binutils = { path = "../../core/rust/rust.binutils" }
 
 [dependencies.tokio]
 version = "1"

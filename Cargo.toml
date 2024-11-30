@@ -1,5 +1,6 @@
 [workspace]
 members = [
+    "core/rust/*",
     "core/rust.*",
     "services/rust.*"
 ]

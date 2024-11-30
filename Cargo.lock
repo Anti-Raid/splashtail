@@ -2612,7 +2612,6 @@ name = "permission_checks"
 version = "0.1.0"
 dependencies = [
  "botox",
- "config",
  "dashmap 6.1.0",
  "kittycat",
  "log",

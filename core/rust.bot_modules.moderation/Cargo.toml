@@ -13,12 +13,12 @@ indexmap = { version = "2", features = ["serde"] }
 futures-util = "0.3"
 
 # Anti-Raid specific
-splashcore_rs = { path = "../rust.std" }
-silverpelt = { path = "../rust.silverpelt" }
-permissions = { path = "../rust.permissions" }
-config = { path = "../rust.config" }
-sandwich_driver = { path = "../rust.sandwich_driver" }
-jobserver = { path = "../rust.jobserver" }
+splashcore_rs = { path = "../rust/rust.std" }
+silverpelt = { path = "../rust/rust.silverpelt" }
+permissions = { path = "../rust/rust.permissions" }
+config = { path = "../rust/rust.config" }
+sandwich_driver = { path = "../rust/rust.sandwich_driver" }
+jobserver = { path = "../rust/rust.jobserver" }
 
 [dependencies.serenity]
 git = "https://github.com/Anti-Raid/serenity"

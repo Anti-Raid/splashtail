@@ -10,6 +10,7 @@ ljconfig
 .DS_Store
 /**/target
 /**/.DS_Store
+
 .idea
 semver
 cmd/nursery/ban_possibilities

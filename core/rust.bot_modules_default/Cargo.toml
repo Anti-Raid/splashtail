@@ -7,11 +7,11 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-silverpelt = { path = "../rust.silverpelt" }
+silverpelt = { path = "../rust/rust.silverpelt" }
 
 # Modules
-bot_modules_core = { path = "../../core/rust.bot_modules.core" }
-bot_modules_lockdown = { path = "../../core/rust.bot_modules.lockdown" }
-bot_modules_moderation = { path = "../../core/rust.bot_modules.moderation" }
-bot_modules_server_backups = { path = "../../core/rust.bot_modules.server_backups" }
-bot_modules_temporary_punishments = { path = "../../core/rust.bot_modules.temporary_punishments" }
+bot_modules_core = { path = "../rust.bot_modules.core" }
+bot_modules_lockdown = { path = "../rust.bot_modules.lockdown" }
+bot_modules_moderation = { path = "../rust.bot_modules.moderation" }
+bot_modules_server_backups = { path = "../rust.bot_modules.server_backups" }
+bot_modules_temporary_punishments = { path = "../rust.bot_modules.temporary_punishments" }

@@ -15,16 +15,16 @@ serde_json = "1.0"
 indexmap = { version = "2", features = ["serde"] }
 
 # Anti-Raid specific
-silverpelt = { path = "../rust.silverpelt" }
-permissions = { path = "../rust.permissions" }
-permission_checks = { path = "../rust.permissions.checks" }
-config = { path = "../rust.config" }
-sandwich_driver = { path = "../rust.sandwich_driver" }
+silverpelt = { path = "../rust/rust.silverpelt" }
+permissions = { path = "../rust/rust.permissions" }
+permission_checks = { path = "../rust/rust.permissions.checks" }
+config = { path = "../rust/rust.config" }
+sandwich_driver = { path = "../rust/rust.sandwich_driver" }
 rust_buildstats = { path = "../rust.buildstats" }
-ar_settings = { path = "../rust.settings" }
-splashcore_rs = { path = "../rust.std" }
-templating = { path = "../rust.templating" }
-gwevent = { path = "../rust.gwevent" }
+ar_settings = { path = "../rust/rust.settings" }
+splashcore_rs = { path = "../rust/rust.std" }
+templating = { path = "../rust/rust.templating" }
+gwevent = { path = "../rust/rust.gwevent" }
 log = "0.4"
 
 [dependencies.serenity]
