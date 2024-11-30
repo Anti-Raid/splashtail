@@ -36,28 +36,17 @@ build:
 	make templatedocs
 
 build_go:
-	for d in services/go.*; do \
+	for d in services/api services/jobserver; do \
 		echo $$d && cd ${PWD}/$$d && go build -v -o ${PWD}/out && cd ${PWD}; \
 	done
 
 build_rust:
-	for d in services/rust.*; do \
-		PROJECT_NAME=$$(basename $$d) && \
-		OUTPUT_FILE=$$(echo $$PROJECT_NAME | tr . _) && \
-		echo $$d && cd ${PWD}/$$d && cargo build --release && \
-		mv ${PWD}/target/release/$$OUTPUT_FILE ${PWD}/out/$$PROJECT_NAME && \
-		cd ${PWD}; \
-	done
+	mkdir -p ${PWD}/out
+	cd services/bot && cargo build --release && mv ${PWD}/target/release/bot ${PWD}/out/bot && cd ${PWD}
 
 build_rust_dbg:
 	mkdir -p ${PWD}/out/debug
-	for d in services/rust.*; do \
-		PROJECT_NAME=$$(basename $$d) && \
-		OUTPUT_FILE=$$(echo $$PROJECT_NAME | tr . _) && \
-		echo $$d && cd ${PWD}/$$d && cargo build && \
-		mv ${PWD}/target/debug/$$OUTPUT_FILE ${PWD}/out/debug/$$PROJECT_NAME && \
-		cd ${PWD}; \
-	done
+	cd services/bot && cargo build && mv ${PWD}/target/debug/bot ${PWD}/out/debug/bot && cd ${PWD}
 
 copyassets:
 ifndef CI_BUILD
