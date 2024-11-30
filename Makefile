@@ -48,6 +48,9 @@ build_rust_dbg:
 	mkdir -p ${PWD}/out/debug
 	cd services/bot && cargo build && mv ${PWD}/target/debug/bot ${PWD}/out/debug/bot && cd ${PWD}
 
+clean: 
+	rm -rf out target
+
 copyassets:
 ifndef CI_BUILD
 	# For every project in core/* and services/*, copy .generated/* to data/generated/{project_name} and to the website (services/website/lib/generated)
@@ -69,18 +72,19 @@ ifndef CI_BUILD
 	done
 
 	# Build rust assets too
-	cd data/generated/build_assets && ../../../out/rust.assetgen genassets && cd ../../..
-	cd services/website/src/lib/generated/build_assets && ../../../../../../out/rust.assetgen genassets && cd ../../../../../..
+	cd data/generated/build_assets && ../../../out/bot genassets && cd ../../..
+	cd services/website/src/lib/generated/build_assets && ../../../../../../out/bot genassets && cd ../../../../../..
 
 endif
 
 templatedocs:
-	./out/rust.assetgen templatedocs > docs/src/user/templating/2-plugins.md
+	./out/bot templatedocs > docs/src/user/templating/2-plugins.md
 
 tests:
-	./out/rust.assetgen test
+	./out/bot test
 
 ts:
+	rm -rf services/website/src/lib/generated
 	~/go/bin/tygo generate
 
 	# Patch to change all "SelectMenu = any;" to "SelectMenu = undefined /*tygo workaround*/;" to work around tygo issue
@@ -89,6 +93,7 @@ ts:
 	# Copy typings to badgerfang
 	rm -rf services/badgerfang/src/types/splashtail
 	cp -rf services/website/src/lib/generated services/badgerfang/src/types/splashtail
+	make copyassets
 
 lint_go:
 	for d in core/go.* services/go.*; do \
