@@ -13,3 +13,6 @@
 	path = services/badgerfang
 	url = https://github.com/anti-raid/badgerfang-next
 	branch = development
+[submodule "core/rust"]
+	path = core/rust
+	url = https://github.com/Anti-Raid/corelib_rs
