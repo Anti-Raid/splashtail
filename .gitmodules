@@ -16,3 +16,9 @@
 [submodule "core/rust"]
 	path = core/rust
 	url = https://github.com/Anti-Raid/corelib_rs
+[submodule "services/jobserver"]
+	path = services/jobserver
+	url = https://github.com/Anti-Raid/jobserver
+[submodule "core/go"]
+	path = core/go
+	url = https://github.com/Anti-Raid/corelib_go
