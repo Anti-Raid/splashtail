@@ -1,8 +1,7 @@
 [workspace]
 members = [
-    "modules/*",
-    "core/rust/*",
-    "services/rust.*"
+    "services/bot/crates/*",
+    "services/bot"
 ]
 resolver = "2"
 

@@ -490,6 +490,34 @@ dependencies = [
 ]
 
 [[package]]
+name = "bot"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "bot_binutils",
+ "bot_modules_default",
+ "botox",
+ "clap",
+ "config",
+ "dashmap 6.1.0",
+ "env_logger",
+ "gwevent",
+ "indexmap",
+ "log",
+ "poise",
+ "reqwest",
+ "rust_rpc_server",
+ "rust_rpc_server_bot",
+ "serde_json",
+ "serenity",
+ "silverpelt",
+ "sqlx",
+ "templating",
+ "templating_docgen",
+ "tokio",
+]
+
+[[package]]
 name = "bot_binutils"
 version = "0.1.0"
 dependencies = [
@@ -3139,54 +3167,6 @@ dependencies = [
  "spki",
  "subtle",
  "zeroize",
-]
-
-[[package]]
-name = "rust_assetgen"
-version = "0.1.0"
-dependencies = [
- "async-trait",
- "bot_binutils",
- "bot_modules_default",
- "config",
- "dashmap 6.1.0",
- "env_logger",
- "indexmap",
- "log",
- "permissions",
- "poise",
- "reqwest",
- "serde_json",
- "serenity",
- "silverpelt",
- "sqlx",
- "templating",
- "templating_docgen",
- "tokio",
-]
-
-[[package]]
-name = "rust_bot"
-version = "0.1.0"
-dependencies = [
- "async-trait",
- "bot_binutils",
- "bot_modules_default",
- "botox",
- "clap",
- "config",
- "dashmap 6.1.0",
- "env_logger",
- "gwevent",
- "log",
- "poise",
- "reqwest",
- "rust_rpc_server",
- "rust_rpc_server_bot",
- "serenity",
- "silverpelt",
- "sqlx",
- "tokio",
 ]
 
 [[package]]
