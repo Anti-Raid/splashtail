@@ -1,5 +1,5 @@
 packages:
-  - path: "go.api/types"
+  - path: "github.com/Anti-Raid/api/types"
     output_path: "services/website/src/lib/generated/types.ts"
     frontmatter: |
       import { PlatformUser } from "./eureka-dovewing"

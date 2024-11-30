@@ -13,6 +13,6 @@ use (
 	./infra/nirn-proxy
 
 	// Services
-	./services/go.api
+	./services/api
 	./services/jobserver
 )
