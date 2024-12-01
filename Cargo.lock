@@ -190,7 +190,6 @@ version = "6.0.0"
 dependencies = [
  "async-recursion",
  "async-trait",
- "botox",
  "chrono",
  "indexmap",
  "permissions",
@@ -199,6 +198,7 @@ dependencies = [
  "serde",
  "serde_json",
  "serenity",
+ "silverpelt",
  "splashcore_rs",
  "sqlx",
 ]
@@ -208,6 +208,12 @@ name = "arbitrary"
 version = "1.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "dde20b3d026af13f561bdd0f15edf01fc734f0dafcedbaf42bba506a9517f223"
+
+[[package]]
+name = "arc-swap"
+version = "1.7.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "69f7f8c3906b62b754cd5326047894316021dcfe5a194c8ea52bdd94934a3457"
 
 [[package]]
 name = "arg_enum_proc_macro"
@@ -500,7 +506,6 @@ dependencies = [
  "config",
  "dashmap 6.1.0",
  "env_logger",
- "gwevent",
  "indexmap",
  "log",
  "modules",
@@ -551,7 +556,6 @@ dependencies = [
  "bot_modules_moderation",
  "bot_modules_server_backups",
  "modules",
- "silverpelt",
 ]
 
 [[package]]
@@ -2137,7 +2141,6 @@ name = "lockdowns"
 version = "0.1.0"
 dependencies = [
  "async-trait",
- "botox",
  "chrono",
  "dashmap 6.1.0",
  "indexmap",
@@ -2332,7 +2335,6 @@ version = "6.2.0"
 dependencies = [
  "ar_settings",
  "async-trait",
- "botox",
  "chrono",
  "dashmap 6.1.0",
  "indexmap",
@@ -3153,7 +3155,6 @@ name = "rust_rpc_server"
 version = "6.0.0"
 dependencies = [
  "axum",
- "botox",
  "hyper",
  "hyper-util",
  "log",
@@ -3341,7 +3342,6 @@ dependencies = [
 name = "sandwich_driver"
 version = "6.0.0"
 dependencies = [
- "botox",
  "config",
  "log",
  "reqwest",
@@ -3629,24 +3629,17 @@ dependencies = [
 name = "silverpelt"
 version = "0.1.0"
 dependencies = [
- "ar_settings",
  "async-trait",
- "botox",
  "chrono",
  "config",
  "dashmap 6.1.0",
- "indexmap",
  "kittycat",
- "log",
- "moka",
- "permissions",
  "reqwest",
  "serde",
  "serde_json",
  "serenity",
  "splashcore_rs",
  "sqlx",
- "tokio",
  "typetag",
  "uuid",
 ]
@@ -3752,6 +3745,7 @@ dependencies = [
  "extract_map",
  "indexmap",
  "log",
+ "rand",
  "reqwest",
  "rusty-s3",
  "serde",
@@ -4116,6 +4110,7 @@ dependencies = [
 name = "template-worker"
 version = "0.1.0"
 dependencies = [
+ "arc-swap",
  "async-trait",
  "axum",
  "botox",
@@ -4124,7 +4119,6 @@ dependencies = [
  "dashmap 6.1.0",
  "env_logger",
  "gwevent",
- "indexmap",
  "log",
  "reqwest",
  "rust_rpc_server",

@@ -43,10 +43,12 @@ build_go:
 build_rust:
 	mkdir -p ${PWD}/out
 	cd services/bot && cargo build --release && mv ${PWD}/target/release/bot ${PWD}/out/bot && cd ${PWD}
+	cd services/template-worker && cargo build --release && mv ${PWD}/target/release/template-worker ${PWD}/out/template-worker && cd ${PWD}
 
 build_rust_dbg:
 	mkdir -p ${PWD}/out/debug
 	cd services/bot && cargo build && mv ${PWD}/target/debug/bot ${PWD}/out/debug/bot && cd ${PWD}
+	cd services/template-worker && cargo build && mv ${PWD}/target/debug/template-worker ${PWD}/out/debug/template-worker && cd ${PWD}
 
 clean: 
 	rm -rf out target
@@ -92,7 +94,7 @@ copyassets:
 	cp -rf services/website/src/lib/generated services/badgerfang/src/types/splashtail
 
 templatedocs:
-	./out/bot templatedocs > docs/src/user/templating/2-plugins.md
+	./out/template-worker templatedocs > docs/src/user/templating/2-plugins.md
 
 tests:
 	./out/bot test
