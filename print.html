@@ -2414,7 +2414,7 @@ return captcha
 <p><code>tsl + scl/&lt;channel_id&gt; - tsl - scl/&lt;channel_id&gt; = 0</code></p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="silverpelt"><a class="header" href="#silverpelt">Silverpelt</a></h1>
 <p>Silverpelt provides a standard library for all Anti-Raid modules.</p>
-<p>To create a new Anti-Raid bot making use of Anti-Raid modules, simply implement the trait <code>silverpelt::module::Module</code>. These modules must then be added to a <code>SilverpeltCache</code> which is then inserted into <code>silverpelt::Data</code>.</p>
+<p>To create a new Anti-Raid bot making use of Anti-Raid modules, simply implement the trait <code>modules::Module</code>. These modules must then be added to a <code>SilverpeltCache</code> which is then inserted into <code>silverpelt::Data</code>.</p>
 <p>Most things in silverpelt are abstracted out through traits or dispatched via events. This allows silverpelt to be used as an abstract interface allowing for Anti-Raid to quickly evolve and change/adapt to different targets.</p>
 <p><strong>Note:</strong> AntiRaid uses a event-driven architecture. This means that modules+the main bot process make events that are dispatched to modules. The event system is currently passive (meaning there is no continously running event loop), however this is subject to change in the future.</p>
 <h2 id="interfaces"><a class="header" href="#interfaces">Interfaces</a></h2>
