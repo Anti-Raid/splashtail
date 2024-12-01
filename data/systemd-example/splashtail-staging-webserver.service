@@ -1,6 +1,6 @@
 [Service]
 Type=simple
-ExecStart=/home/antiraid/splashtail/staging/out/go.api
+ExecStart=/home/antiraid/splashtail/staging/out/api
 User=antiraid
 Group=antiraid
 WorkingDirectory=/home/antiraid/splashtail/staging

@@ -1,6 +1,6 @@
 [Service]
 Type=simple
-ExecStart=/home/antiraid/splashtail/staging/infra/Sandwich-Daemon/out/sandwich -configurationPath=sandwich.yaml -prometheusAddress :3931 -grpcHost localhost:10294 -grpcNetwork tcp -httpEnabled  --httpHost 0.0.0.0:29334 -level debug
+ExecStart=/home/antiraid/splashtail/staging/infra/Sandwich-Daemon/out/sandwich -configurationPath=sandwich.yaml -prometheusAddress :3931 -httpEnabled  --httpHost 0.0.0.0:29334 -level debug
 User=antiraid
 Group=antiraid
 WorkingDirectory=/home/antiraid/splashtail/staging/infra/Sandwich-Daemon

@@ -1,6 +1,6 @@
 [Service]
 Type=simple
-ExecStart=/home/antiraid/splashtail/staging/out/jobserver jobs
+ExecStart=/home/antiraid/splashtail/staging/out/template-worker start
 User=antiraid
 Group=antiraid
 WorkingDirectory=/home/antiraid/splashtail/staging
@@ -16,5 +16,5 @@ WantedBy=multi-user.target
 
 [Unit]
 PartOf=antiraid-v6.target
-Description="Antiraid Job Server"
+Description="AntiRaid template worker service"
 After=ibl-maint.service
