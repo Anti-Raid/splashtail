@@ -2,7 +2,8 @@
 members = [
     "services/bot/crates/*",
     "services/bot", 
-    "services/template-worker"
+    "services/template-worker",
+    "services/template-worker/crates/*",
 ]
 resolver = "2"
 

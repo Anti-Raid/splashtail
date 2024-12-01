@@ -494,7 +494,6 @@ name = "bot"
 version = "0.1.0"
 dependencies = [
  "async-trait",
- "bot_binutils",
  "bot_modules_default",
  "botox",
  "clap",
@@ -504,6 +503,7 @@ dependencies = [
  "gwevent",
  "indexmap",
  "log",
+ "modules",
  "poise",
  "reqwest",
  "rust_rpc_server",
@@ -512,24 +512,7 @@ dependencies = [
  "serenity",
  "silverpelt",
  "sqlx",
- "templating",
- "templating_docgen",
  "tokio",
-]
-
-[[package]]
-name = "bot_binutils"
-version = "0.1.0"
-dependencies = [
- "botox",
- "config",
- "log",
- "permission_checks",
- "poise",
- "serenity",
- "silverpelt",
- "sqlx",
- "templating",
 ]
 
 [[package]]
@@ -546,7 +529,7 @@ dependencies = [
  "indexmap",
  "kittycat",
  "log",
- "permission_checks",
+ "modules",
  "permissions",
  "poise",
  "rust_buildstats",
@@ -556,7 +539,6 @@ dependencies = [
  "silverpelt",
  "splashcore_rs",
  "sqlx",
- "templating",
  "tokio",
 ]
 
@@ -568,7 +550,7 @@ dependencies = [
  "bot_modules_lockdown",
  "bot_modules_moderation",
  "bot_modules_server_backups",
- "bot_modules_temporary_punishments",
+ "modules",
  "silverpelt",
 ]
 
@@ -583,7 +565,7 @@ dependencies = [
  "indexmap",
  "kittycat",
  "lockdowns",
- "permission_checks",
+ "modules",
  "poise",
  "serenity",
  "silverpelt",
@@ -602,6 +584,7 @@ dependencies = [
  "indexmap",
  "jobserver 0.1.0",
  "log",
+ "modules",
  "permissions",
  "poise",
  "sandwich_driver",
@@ -620,25 +603,13 @@ dependencies = [
  "indexmap",
  "jobserver 0.1.0",
  "log",
- "permission_checks",
+ "modules",
  "poise",
  "serde_json",
  "serenity",
  "silverpelt",
  "splashcore_rs",
  "sqlx",
-]
-
-[[package]]
-name = "bot_modules_temporary_punishments"
-version = "0.1.0"
-dependencies = [
- "async-trait",
- "botox",
- "sandwich_driver",
- "serenity",
- "silverpelt",
- "splashcore_rs",
 ]
 
 [[package]]
@@ -2026,7 +1997,6 @@ dependencies = [
  "config",
  "futures-util",
  "indexmap",
- "poise",
  "reqwest",
  "serde",
  "serde_json",
@@ -2357,6 +2327,31 @@ dependencies = [
 ]
 
 [[package]]
+name = "modules"
+version = "6.2.0"
+dependencies = [
+ "ar_settings",
+ "async-trait",
+ "botox",
+ "chrono",
+ "dashmap 6.1.0",
+ "indexmap",
+ "kittycat",
+ "log",
+ "moka",
+ "permissions",
+ "poise",
+ "reqwest",
+ "sandwich_driver",
+ "serde",
+ "serde_json",
+ "serenity",
+ "silverpelt",
+ "splashcore_rs",
+ "sqlx",
+]
+
+[[package]]
 name = "moka"
 version = "0.12.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2634,26 +2629,6 @@ name = "percent-encoding"
 version = "2.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e3148f5046208a5d56bcfc03053e3ca6334e51da8dfb19b6cdc8b306fae3283e"
-
-[[package]]
-name = "permission_checks"
-version = "0.1.0"
-dependencies = [
- "botox",
- "dashmap 6.1.0",
- "kittycat",
- "log",
- "permissions",
- "poise",
- "reqwest",
- "sandwich_driver",
- "serde",
- "serde_json",
- "serenity",
- "silverpelt",
- "splashcore_rs",
- "sqlx",
-]
 
 [[package]]
 name = "permissions"
@@ -3198,7 +3173,7 @@ dependencies = [
  "bitflags 2.6.0",
  "indexmap",
  "kittycat",
- "permission_checks",
+ "modules",
  "permissions",
  "rust_rpc_server",
  "sandwich_driver",
@@ -3207,7 +3182,6 @@ dependencies = [
  "serenity",
  "silverpelt",
  "splashcore_rs",
- "templating",
 ]
 
 [[package]]
@@ -3666,7 +3640,6 @@ dependencies = [
  "log",
  "moka",
  "permissions",
- "poise",
  "reqwest",
  "serde",
  "serde_json",
@@ -3779,7 +3752,6 @@ dependencies = [
  "extract_map",
  "indexmap",
  "log",
- "poise",
  "reqwest",
  "rusty-s3",
  "serde",
@@ -4143,6 +4115,29 @@ dependencies = [
 [[package]]
 name = "template-worker"
 version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "axum",
+ "botox",
+ "clap",
+ "config",
+ "dashmap 6.1.0",
+ "env_logger",
+ "gwevent",
+ "indexmap",
+ "log",
+ "reqwest",
+ "rust_rpc_server",
+ "sandwich_driver",
+ "serde_json",
+ "serenity",
+ "silverpelt",
+ "splashcore_rs",
+ "sqlx",
+ "templating",
+ "templating_docgen",
+ "tokio",
+]
 
 [[package]]
 name = "templating"
