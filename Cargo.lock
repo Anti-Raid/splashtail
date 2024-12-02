@@ -4119,6 +4119,7 @@ dependencies = [
  "dashmap 6.1.0",
  "env_logger",
  "gwevent",
+ "limits",
  "log",
  "reqwest",
  "rust_rpc_server",
