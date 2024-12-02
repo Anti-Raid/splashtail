@@ -1506,18 +1506,153 @@ print(token)
 <li><code>result</code> (<a href="user/templating/2-plugins.html#type.LuaPermissionResult">LuaPermissionResult</a>): The result of the permission check.</li>
 </ul>
 <hr />
+<h1 id="antiraidstings"><a class="header" href="#antiraidstings">@antiraid/stings</a></h1>
+<p>List, get, create, update and delete stings on Anti-Raid.</p>
+<h2 id="types-6"><a class="header" href="#types-6">Types</a></h2>
+<div id="type.StingCreate" />
+<h3 id="stingcreate"><a class="header" href="#stingcreate">StingCreate</a></h3>
+<p>A type representing a new sting to be created.</p>
+<pre><code class="language-json">{
+  "src": "test",
+  "stings": 10,
+  "reason": "test",
+  "void_reason": null,
+  "guild_id": "128384",
+  "creator": "system",
+  "target": "user:1945824",
+  "state": "active",
+  "duration": {
+    "secs": 60,
+    "nanos": 0
+  },
+  "sting_data": {
+    "a": "b"
+  }
+}
+</code></pre>
+<h4 id="fields-22"><a class="header" href="#fields-22">Fields</a></h4>
+<ul>
+<li><code>module</code> (<a href="user/templating/2-plugins.html#type.string">string</a>): The module name.</li>
+<li><code>src</code> (<a href="user/templating/2-plugins.html#type.string">string?</a>): The source of the sting.</li>
+<li><code>stings</code> (<a href="user/templating/2-plugins.html#type.number">number</a>): The number of stings.</li>
+<li><code>reason</code> (<a href="user/templating/2-plugins.html#type.string">string?</a>): The reason for the stings.</li>
+<li><code>void_reason</code> (<a href="user/templating/2-plugins.html#type.string">string?</a>): The reason the stings were voided.</li>
+<li><code>guild_id</code> (<a href="user/templating/2-plugins.html#type.string">string</a>): The guild ID the sting targets. <strong>MUST MATCH THE GUILD ID THE TEMPLATE IS RUNNING ON</strong></li>
+<li><code>creator</code> (<a href="user/templating/2-plugins.html#type.StingTarget">StingTarget</a>): The creator of the sting.</li>
+<li><code>target</code> (<a href="user/templating/2-plugins.html#type.StingTarget">StingTarget</a>): The target of the sting.</li>
+<li><code>state</code> (<a href="user/templating/2-plugins.html#type.StingState">StingState</a>): The state of the sting.</li>
+<li><code>created_at</code> (<a href="user/templating/2-plugins.html#type.string">string</a>): When the sting was created as a chrono datetime.</li>
+<li><code>duration</code> (<a href="user/templating/2-plugins.html#type.Duration">Duration?</a>): When the sting expires as a duration.</li>
+<li><code>sting_data</code> (<a href="user/templating/2-plugins.html#type.any">any?</a>): The data/metadata present within the sting, if any.</li>
+</ul>
+<div id="type.Sting" />
+<h3 id="sting"><a class="header" href="#sting">Sting</a></h3>
+<p>Represents a sting on AntiRaid</p>
+<pre><code class="language-json">{
+  "id": "470a2958-3827-4e59-8b97-928a583a37a3",
+  "src": "test",
+  "stings": 10,
+  "reason": "test",
+  "void_reason": null,
+  "guild_id": "128384",
+  "creator": "system",
+  "target": "user:1945824",
+  "state": "active",
+  "created_at": "2024-12-02T23:03:10.919155525Z",
+  "duration": {
+    "secs": 60,
+    "nanos": 0
+  },
+  "sting_data": {
+    "a": "b"
+  },
+  "is_handled": false,
+  "handle_log": {
+    "a": "b"
+  }
+}
+</code></pre>
+<h4 id="fields-23"><a class="header" href="#fields-23">Fields</a></h4>
+<ul>
+<li><code>id</code> (<a href="user/templating/2-plugins.html#type.string">string</a>): The sting ID.</li>
+<li><code>module</code> (<a href="user/templating/2-plugins.html#type.string">string</a>): The module name.</li>
+<li><code>src</code> (<a href="user/templating/2-plugins.html#type.string">string?</a>): The source of the sting.</li>
+<li><code>stings</code> (<a href="user/templating/2-plugins.html#type.number">number</a>): The number of stings.</li>
+<li><code>reason</code> (<a href="user/templating/2-plugins.html#type.string">string?</a>): The reason for the stings.</li>
+<li><code>void_reason</code> (<a href="user/templating/2-plugins.html#type.string">string?</a>): The reason the stings were voided.</li>
+<li><code>guild_id</code> (<a href="user/templating/2-plugins.html#type.string">string</a>): The guild ID the sting targets. <strong>MUST MATCH THE GUILD ID THE TEMPLATE IS RUNNING ON</strong></li>
+<li><code>creator</code> (<a href="user/templating/2-plugins.html#type.StingTarget">StingTarget</a>): The creator of the sting.</li>
+<li><code>target</code> (<a href="user/templating/2-plugins.html#type.StingTarget">StingTarget</a>): The target of the sting.</li>
+<li><code>state</code> (<a href="user/templating/2-plugins.html#type.StingState">StingState</a>): The state of the sting.</li>
+<li><code>duration</code> (<a href="user/templating/2-plugins.html#type.Duration">Duration?</a>): When the sting expires as a duration.</li>
+<li><code>sting_data</code> (<a href="user/templating/2-plugins.html#type.any">any?</a>): The data/metadata present within the sting, if any.</li>
+<li><code>is_handled</code> (<a href="user/templating/2-plugins.html#type.boolean">boolean</a>): Is Handled</li>
+<li><code>handle_log</code> (<a href="user/templating/2-plugins.html#type.any">any</a>): The handle log encountered while handling the sting.</li>
+</ul>
+<div id="type.StingExecutor" />
+<h3 id="stingexecutor"><a class="header" href="#stingexecutor">StingExecutor</a></h3>
+<p>An sting executor is used to execute actions related to stings from Lua templates</p>
+<h4 id="methods-11"><a class="header" href="#methods-11">Methods</a></h4>
+<h5 id="stingexecutorlist"><a class="header" href="#stingexecutorlist">StingExecutor:list</a></h5>
+<pre><code class="language-lua">function StingExecutor:list(page: number): {Sting}
+</code></pre>
+<h6 id="parameters-22"><a class="header" href="#parameters-22">Parameters</a></h6>
+<ul>
+<li><code>page</code> (<a href="user/templating/2-plugins.html#type.number">number</a>): The page number to fetch.</li>
+</ul>
+<h6 id="returns-25"><a class="header" href="#returns-25">Returns</a></h6>
+<ul>
+<li><code>stings</code> (<a href="user/templating/2-plugins.html#type.Sting">{Sting}</a>): The list of stings.</li>
+</ul>
+<h5 id="stingexecutorget"><a class="header" href="#stingexecutorget">StingExecutor:get</a></h5>
+<pre><code class="language-lua">function StingExecutor:get(id: string): Sting
+</code></pre>
+<h6 id="parameters-23"><a class="header" href="#parameters-23">Parameters</a></h6>
+<ul>
+<li><code>id</code> (<a href="user/templating/2-plugins.html#type.string">string</a>): The sting ID.</li>
+</ul>
+<h6 id="returns-26"><a class="header" href="#returns-26">Returns</a></h6>
+<ul>
+<li><code>sting</code> (<a href="user/templating/2-plugins.html#type.Sting">Sting</a>): The sting.</li>
+</ul>
+<h5 id="stingexecutorcreate"><a class="header" href="#stingexecutorcreate">StingExecutor:create</a></h5>
+<pre><code class="language-lua">function StingExecutor:create(data: StingCreate): string
+</code></pre>
+<h6 id="parameters-24"><a class="header" href="#parameters-24">Parameters</a></h6>
+<ul>
+<li><code>data</code> (<a href="user/templating/2-plugins.html#type.StingCreate">StingCreate</a>): The sting data.</li>
+</ul>
+<h6 id="returns-27"><a class="header" href="#returns-27">Returns</a></h6>
+<ul>
+<li><code>id</code> (<a href="user/templating/2-plugins.html#type.string">string</a>): The sting ID of the created sting.</li>
+</ul>
+<h5 id="stingexecutorupdate"><a class="header" href="#stingexecutorupdate">StingExecutor:update</a></h5>
+<pre><code class="language-lua">function StingExecutor:update(data: Sting)
+</code></pre>
+<h6 id="parameters-25"><a class="header" href="#parameters-25">Parameters</a></h6>
+<ul>
+<li><code>data</code> (<a href="user/templating/2-plugins.html#type.Sting">Sting</a>): The sting to update to. Note that if an invalid ID is used, this method may either do nothing or error out.</li>
+</ul>
+<h5 id="stingexecutordelete"><a class="header" href="#stingexecutordelete">StingExecutor:delete</a></h5>
+<pre><code class="language-lua">function StingExecutor:delete(id: string)
+</code></pre>
+<h6 id="parameters-26"><a class="header" href="#parameters-26">Parameters</a></h6>
+<ul>
+<li><code>id</code> (<a href="user/templating/2-plugins.html#type.string">string</a>): The sting ID.</li>
+</ul>
+<hr />
 <h1 id="antiraidtypesext"><a class="header" href="#antiraidtypesext">@antiraid/typesext</a></h1>
 <p>Extra types used by Anti-Raid Lua templating subsystem to either add in common functionality such as streams or handle things like u64/i64 types performantly.</p>
-<h2 id="types-6"><a class="header" href="#types-6">Types</a></h2>
+<h2 id="types-7"><a class="header" href="#types-7">Types</a></h2>
 <div id="type.LuaStream" />
 <h3 id="luastream"><a class="header" href="#luastream">LuaStream<T></a></h3>
 <p>LuaStream<T> provides a stream implementation. This is returned by MessageHandle's await_component_interaction for instance for handling button clicks/select menu choices etc.</p>
-<h4 id="methods-11"><a class="header" href="#methods-11">Methods</a></h4>
+<h4 id="methods-12"><a class="header" href="#methods-12">Methods</a></h4>
 <h5 id="luastreamnext"><a class="header" href="#luastreamnext">LuaStream:next</a></h5>
 <pre><code class="language-lua">function LuaStream:next(): &lt;T&gt;
 </code></pre>
 <p>Returns the next item in the stream.</p>
-<h6 id="returns-25"><a class="header" href="#returns-25">Returns</a></h6>
+<h6 id="returns-28"><a class="header" href="#returns-28">Returns</a></h6>
 <ul>
 <li><code>item</code> (<a href="user/templating/2-plugins.html#type.%3CT%3E"><T></a>): The next item in the stream.</li>
 </ul>
@@ -1525,7 +1660,7 @@ print(token)
 <pre><code class="language-lua">function LuaStream:for_each(callback: function)
 </code></pre>
 <p>Executes a callback for every entry in the stream.</p>
-<h6 id="parameters-22"><a class="header" href="#parameters-22">Parameters</a></h6>
+<h6 id="parameters-27"><a class="header" href="#parameters-27">Parameters</a></h6>
 <ul>
 <li><code>callback</code> (<a href="user/templating/2-plugins.html#type.function">function</a>): The callback to execute for each entry.</li>
 </ul>
@@ -1535,12 +1670,12 @@ print(token)
 <div id="type.U64" />
 <h3 id="u64"><a class="header" href="#u64">U64</a></h3>
 <p>U64 is a 64-bit unsigned integer type. Implements Add/Subtract/Multiply/Divide/Modulus/Power/Integer Division/Equality/Comparison (Lt/Le and its complements Gt/Ge) and ToString with a type name of U64</p>
-<h4 id="methods-12"><a class="header" href="#methods-12">Methods</a></h4>
+<h4 id="methods-13"><a class="header" href="#methods-13">Methods</a></h4>
 <h5 id="u64to_ne_bytes"><a class="header" href="#u64to_ne_bytes">U64:to_ne_bytes</a></h5>
 <pre><code class="language-lua">function U64:to_ne_bytes(): {u8}
 </code></pre>
 <p>Converts the U64 to a little-endian byte array.</p>
-<h6 id="returns-26"><a class="header" href="#returns-26">Returns</a></h6>
+<h6 id="returns-29"><a class="header" href="#returns-29">Returns</a></h6>
 <ul>
 <li><code>bytes</code> (<a href="user/templating/2-plugins.html#type.u8">{u8}</a>): The little-endian byte array.</li>
 </ul>
@@ -1548,11 +1683,11 @@ print(token)
 <pre><code class="language-lua">function U64:from_ne_bytes(bytes: {u8}): U64
 </code></pre>
 <p>Converts a little-endian byte array to a U64.</p>
-<h6 id="parameters-23"><a class="header" href="#parameters-23">Parameters</a></h6>
+<h6 id="parameters-28"><a class="header" href="#parameters-28">Parameters</a></h6>
 <ul>
 <li><code>bytes</code> (<a href="user/templating/2-plugins.html#type.u8">{u8}</a>): The little-endian byte array.</li>
 </ul>
-<h6 id="returns-27"><a class="header" href="#returns-27">Returns</a></h6>
+<h6 id="returns-30"><a class="header" href="#returns-30">Returns</a></h6>
 <ul>
 <li><code>u64</code> (<a href="user/templating/2-plugins.html#type.U64">U64</a>): The U64 value.</li>
 </ul>
@@ -1560,7 +1695,7 @@ print(token)
 <pre><code class="language-lua">function U64:to_le_bytes(): {u8}
 </code></pre>
 <p>Converts the U64 to a little-endian byte array.</p>
-<h6 id="returns-28"><a class="header" href="#returns-28">Returns</a></h6>
+<h6 id="returns-31"><a class="header" href="#returns-31">Returns</a></h6>
 <ul>
 <li><code>bytes</code> (<a href="user/templating/2-plugins.html#type.u8">{u8}</a>): The little-endian byte array.</li>
 </ul>
@@ -1568,11 +1703,11 @@ print(token)
 <pre><code class="language-lua">function U64:from_le_bytes(bytes: {u8}): U64
 </code></pre>
 <p>Converts a little-endian byte array to a U64.</p>
-<h6 id="parameters-24"><a class="header" href="#parameters-24">Parameters</a></h6>
+<h6 id="parameters-29"><a class="header" href="#parameters-29">Parameters</a></h6>
 <ul>
 <li><code>bytes</code> (<a href="user/templating/2-plugins.html#type.u8">{u8}</a>): The little-endian byte array.</li>
 </ul>
-<h6 id="returns-29"><a class="header" href="#returns-29">Returns</a></h6>
+<h6 id="returns-32"><a class="header" href="#returns-32">Returns</a></h6>
 <ul>
 <li><code>u64</code> (<a href="user/templating/2-plugins.html#type.U64">U64</a>): The U64 value.</li>
 </ul>
@@ -1580,7 +1715,7 @@ print(token)
 <pre><code class="language-lua">function U64:to_be_bytes(): {u8}
 </code></pre>
 <p>Converts the U64 to a big-endian byte array.</p>
-<h6 id="returns-30"><a class="header" href="#returns-30">Returns</a></h6>
+<h6 id="returns-33"><a class="header" href="#returns-33">Returns</a></h6>
 <ul>
 <li><code>bytes</code> (<a href="user/templating/2-plugins.html#type.u8">{u8}</a>): The big-endian byte array.</li>
 </ul>
@@ -1588,11 +1723,11 @@ print(token)
 <pre><code class="language-lua">function U64:from_be_bytes(bytes: {u8}): U64
 </code></pre>
 <p>Converts a big-endian byte array to a U64.</p>
-<h6 id="parameters-25"><a class="header" href="#parameters-25">Parameters</a></h6>
+<h6 id="parameters-30"><a class="header" href="#parameters-30">Parameters</a></h6>
 <ul>
 <li><code>bytes</code> (<a href="user/templating/2-plugins.html#type.u8">{u8}</a>): The big-endian byte array.</li>
 </ul>
-<h6 id="returns-31"><a class="header" href="#returns-31">Returns</a></h6>
+<h6 id="returns-34"><a class="header" href="#returns-34">Returns</a></h6>
 <ul>
 <li><code>u64</code> (<a href="user/templating/2-plugins.html#type.U64">U64</a>): The U64 value.</li>
 </ul>
@@ -1600,19 +1735,19 @@ print(token)
 <pre><code class="language-lua">function U64:to_i64(): I64
 </code></pre>
 <p>Converts the U64 to an i64.</p>
-<h6 id="returns-32"><a class="header" href="#returns-32">Returns</a></h6>
+<h6 id="returns-35"><a class="header" href="#returns-35">Returns</a></h6>
 <ul>
 <li><code>i64</code> (<a href="user/templating/2-plugins.html#type.I64">I64</a>): The i64 value.</li>
 </ul>
 <div id="type.I64" />
 <h3 id="i64"><a class="header" href="#i64">I64</a></h3>
 <p>I64 is a 64-bit signed integer type. Implements Add/Subtract/Multiply/Divide/Modulus/Power/Integer Division/Equality/Comparison (Lt/Le and its complements Gt/Ge) and ToString with a type name of I64</p>
-<h4 id="methods-13"><a class="header" href="#methods-13">Methods</a></h4>
+<h4 id="methods-14"><a class="header" href="#methods-14">Methods</a></h4>
 <h5 id="i64to_ne_bytes"><a class="header" href="#i64to_ne_bytes">I64:to_ne_bytes</a></h5>
 <pre><code class="language-lua">function I64:to_ne_bytes(): {u8}
 </code></pre>
 <p>Converts the I64 to a little-endian byte array.</p>
-<h6 id="returns-33"><a class="header" href="#returns-33">Returns</a></h6>
+<h6 id="returns-36"><a class="header" href="#returns-36">Returns</a></h6>
 <ul>
 <li><code>bytes</code> (<a href="user/templating/2-plugins.html#type.u8">{u8}</a>): The little-endian byte array.</li>
 </ul>
@@ -1620,11 +1755,11 @@ print(token)
 <pre><code class="language-lua">function I64:from_ne_bytes(bytes: {u8}): I64
 </code></pre>
 <p>Converts a little-endian byte array to a I64.</p>
-<h6 id="parameters-26"><a class="header" href="#parameters-26">Parameters</a></h6>
+<h6 id="parameters-31"><a class="header" href="#parameters-31">Parameters</a></h6>
 <ul>
 <li><code>bytes</code> (<a href="user/templating/2-plugins.html#type.u8">{u8}</a>): The little-endian byte array.</li>
 </ul>
-<h6 id="returns-34"><a class="header" href="#returns-34">Returns</a></h6>
+<h6 id="returns-37"><a class="header" href="#returns-37">Returns</a></h6>
 <ul>
 <li><code>i64</code> (<a href="user/templating/2-plugins.html#type.I64">I64</a>): The I64 value.</li>
 </ul>
@@ -1632,7 +1767,7 @@ print(token)
 <pre><code class="language-lua">function I64:to_le_bytes(): {u8}
 </code></pre>
 <p>Converts the I64 to a little-endian byte array.</p>
-<h6 id="returns-35"><a class="header" href="#returns-35">Returns</a></h6>
+<h6 id="returns-38"><a class="header" href="#returns-38">Returns</a></h6>
 <ul>
 <li><code>bytes</code> (<a href="user/templating/2-plugins.html#type.u8">{u8}</a>): The little-endian byte array.</li>
 </ul>
@@ -1640,11 +1775,11 @@ print(token)
 <pre><code class="language-lua">function I64:from_le_bytes(bytes: {u8}): I64
 </code></pre>
 <p>Converts a little-endian byte array to a I64.</p>
-<h6 id="parameters-27"><a class="header" href="#parameters-27">Parameters</a></h6>
+<h6 id="parameters-32"><a class="header" href="#parameters-32">Parameters</a></h6>
 <ul>
 <li><code>bytes</code> (<a href="user/templating/2-plugins.html#type.u8">{u8}</a>): The little-endian byte array.</li>
 </ul>
-<h6 id="returns-36"><a class="header" href="#returns-36">Returns</a></h6>
+<h6 id="returns-39"><a class="header" href="#returns-39">Returns</a></h6>
 <ul>
 <li><code>i64</code> (<a href="user/templating/2-plugins.html#type.I64">I64</a>): The I64 value.</li>
 </ul>
@@ -1652,7 +1787,7 @@ print(token)
 <pre><code class="language-lua">function I64:to_be_bytes(): {u8}
 </code></pre>
 <p>Converts the I64 to a big-endian byte array.</p>
-<h6 id="returns-37"><a class="header" href="#returns-37">Returns</a></h6>
+<h6 id="returns-40"><a class="header" href="#returns-40">Returns</a></h6>
 <ul>
 <li><code>bytes</code> (<a href="user/templating/2-plugins.html#type.u8">{u8}</a>): The big-endian byte array.</li>
 </ul>
@@ -1660,11 +1795,11 @@ print(token)
 <pre><code class="language-lua">function I64:from_be_bytes(bytes: {u8}): I64
 </code></pre>
 <p>Converts a big-endian byte array to a I64.</p>
-<h6 id="parameters-28"><a class="header" href="#parameters-28">Parameters</a></h6>
+<h6 id="parameters-33"><a class="header" href="#parameters-33">Parameters</a></h6>
 <ul>
 <li><code>bytes</code> (<a href="user/templating/2-plugins.html#type.u8">{u8}</a>): The big-endian byte array.</li>
 </ul>
-<h6 id="returns-38"><a class="header" href="#returns-38">Returns</a></h6>
+<h6 id="returns-41"><a class="header" href="#returns-41">Returns</a></h6>
 <ul>
 <li><code>i64</code> (<a href="user/templating/2-plugins.html#type.I64">I64</a>): The I64 value.</li>
 </ul>
@@ -1672,55 +1807,19 @@ print(token)
 <pre><code class="language-lua">function I64:to_u64(): U64
 </code></pre>
 <p>Converts the I64 to a U64.</p>
-<h6 id="returns-39"><a class="header" href="#returns-39">Returns</a></h6>
+<h6 id="returns-42"><a class="header" href="#returns-42">Returns</a></h6>
 <ul>
 <li><code>u64</code> (<a href="user/templating/2-plugins.html#type.U64">U64</a>): The U64 value.</li>
 </ul>
 <div id="type.bitu64" />
 <h3 id="bitu64"><a class="header" href="#bitu64">bitu64</a></h3>
 <p><a href="https://luau.org/library#bit32-library">bit32</a> but for U64 datatype. Note that bit64 is experimental and may not be properly documented at all times. When in doubt, reach for Luau's bit32 documentation and simply replace 31's with 63's</p>
-<h4 id="methods-14"><a class="header" href="#methods-14">Methods</a></h4>
+<h4 id="methods-15"><a class="header" href="#methods-15">Methods</a></h4>
 <h5 id="bitu64band"><a class="header" href="#bitu64band">bitu64:band</a></h5>
 <pre><code class="language-lua">function bitu64:band(values: {U64}): U64
 </code></pre>
 <p>Performs a bitwise AND operation on the given values.</p>
-<h6 id="parameters-29"><a class="header" href="#parameters-29">Parameters</a></h6>
-<ul>
-<li><code>values</code> (<a href="user/templating/2-plugins.html#type.U64">{U64}</a>): The values to perform the operation on.</li>
-</ul>
-<h6 id="returns-40"><a class="header" href="#returns-40">Returns</a></h6>
-<ul>
-<li><code>result</code> (<a href="user/templating/2-plugins.html#type.U64">U64</a>): The result of the operation.</li>
-</ul>
-<h5 id="bitu64bnor"><a class="header" href="#bitu64bnor">bitu64:bnor</a></h5>
-<pre><code class="language-lua">function bitu64:bnor(n: U64): U64
-</code></pre>
-<p>Performs a bitwise NOR operation on the given value.</p>
-<h6 id="parameters-30"><a class="header" href="#parameters-30">Parameters</a></h6>
-<ul>
-<li><code>n</code> (<a href="user/templating/2-plugins.html#type.U64">U64</a>): The value to perform the operation on.</li>
-</ul>
-<h6 id="returns-41"><a class="header" href="#returns-41">Returns</a></h6>
-<ul>
-<li><code>result</code> (<a href="user/templating/2-plugins.html#type.U64">U64</a>): The result of the operation.</li>
-</ul>
-<h5 id="bitu64bor"><a class="header" href="#bitu64bor">bitu64:bor</a></h5>
-<pre><code class="language-lua">function bitu64:bor(values: {U64}): U64
-</code></pre>
-<p>Performs a bitwise OR operation on the given values.</p>
-<h6 id="parameters-31"><a class="header" href="#parameters-31">Parameters</a></h6>
-<ul>
-<li><code>values</code> (<a href="user/templating/2-plugins.html#type.U64">{U64}</a>): The values to perform the operation on.</li>
-</ul>
-<h6 id="returns-42"><a class="header" href="#returns-42">Returns</a></h6>
-<ul>
-<li><code>result</code> (<a href="user/templating/2-plugins.html#type.U64">U64</a>): The result of the operation.</li>
-</ul>
-<h5 id="bitu64bxor"><a class="header" href="#bitu64bxor">bitu64:bxor</a></h5>
-<pre><code class="language-lua">function bitu64:bxor(values: {U64}): U64
-</code></pre>
-<p>Performs a bitwise XOR operation on the given values.</p>
-<h6 id="parameters-32"><a class="header" href="#parameters-32">Parameters</a></h6>
+<h6 id="parameters-34"><a class="header" href="#parameters-34">Parameters</a></h6>
 <ul>
 <li><code>values</code> (<a href="user/templating/2-plugins.html#type.U64">{U64}</a>): The values to perform the operation on.</li>
 </ul>
@@ -1728,15 +1827,51 @@ print(token)
 <ul>
 <li><code>result</code> (<a href="user/templating/2-plugins.html#type.U64">U64</a>): The result of the operation.</li>
 </ul>
+<h5 id="bitu64bnor"><a class="header" href="#bitu64bnor">bitu64:bnor</a></h5>
+<pre><code class="language-lua">function bitu64:bnor(n: U64): U64
+</code></pre>
+<p>Performs a bitwise NOR operation on the given value.</p>
+<h6 id="parameters-35"><a class="header" href="#parameters-35">Parameters</a></h6>
+<ul>
+<li><code>n</code> (<a href="user/templating/2-plugins.html#type.U64">U64</a>): The value to perform the operation on.</li>
+</ul>
+<h6 id="returns-44"><a class="header" href="#returns-44">Returns</a></h6>
+<ul>
+<li><code>result</code> (<a href="user/templating/2-plugins.html#type.U64">U64</a>): The result of the operation.</li>
+</ul>
+<h5 id="bitu64bor"><a class="header" href="#bitu64bor">bitu64:bor</a></h5>
+<pre><code class="language-lua">function bitu64:bor(values: {U64}): U64
+</code></pre>
+<p>Performs a bitwise OR operation on the given values.</p>
+<h6 id="parameters-36"><a class="header" href="#parameters-36">Parameters</a></h6>
+<ul>
+<li><code>values</code> (<a href="user/templating/2-plugins.html#type.U64">{U64}</a>): The values to perform the operation on.</li>
+</ul>
+<h6 id="returns-45"><a class="header" href="#returns-45">Returns</a></h6>
+<ul>
+<li><code>result</code> (<a href="user/templating/2-plugins.html#type.U64">U64</a>): The result of the operation.</li>
+</ul>
+<h5 id="bitu64bxor"><a class="header" href="#bitu64bxor">bitu64:bxor</a></h5>
+<pre><code class="language-lua">function bitu64:bxor(values: {U64}): U64
+</code></pre>
+<p>Performs a bitwise XOR operation on the given values.</p>
+<h6 id="parameters-37"><a class="header" href="#parameters-37">Parameters</a></h6>
+<ul>
+<li><code>values</code> (<a href="user/templating/2-plugins.html#type.U64">{U64}</a>): The values to perform the operation on.</li>
+</ul>
+<h6 id="returns-46"><a class="header" href="#returns-46">Returns</a></h6>
+<ul>
+<li><code>result</code> (<a href="user/templating/2-plugins.html#type.U64">U64</a>): The result of the operation.</li>
+</ul>
 <h5 id="bitu64btest"><a class="header" href="#bitu64btest">bitu64:btest</a></h5>
 <pre><code class="language-lua">function bitu64:btest(values: {U64}): bool
 </code></pre>
 <p>Tests if the bitwise AND of the given values is not zero.</p>
-<h6 id="parameters-33"><a class="header" href="#parameters-33">Parameters</a></h6>
+<h6 id="parameters-38"><a class="header" href="#parameters-38">Parameters</a></h6>
 <ul>
 <li><code>values</code> (<a href="user/templating/2-plugins.html#type.U64">{U64}</a>): The values to perform the operation on.</li>
 </ul>
-<h6 id="returns-44"><a class="header" href="#returns-44">Returns</a></h6>
+<h6 id="returns-47"><a class="header" href="#returns-47">Returns</a></h6>
 <ul>
 <li><code>result</code> (<a href="user/templating/2-plugins.html#type.bool">bool</a>): True if the bitwise AND of the values is not zero, false otherwise.</li>
 </ul>
@@ -1744,13 +1879,13 @@ print(token)
 <pre><code class="language-lua">function bitu64:extract(n: U64, f: u64, w: u64): U64
 </code></pre>
 <p>Extracts a field from a value.</p>
-<h6 id="parameters-34"><a class="header" href="#parameters-34">Parameters</a></h6>
+<h6 id="parameters-39"><a class="header" href="#parameters-39">Parameters</a></h6>
 <ul>
 <li><code>n</code> (<a href="user/templating/2-plugins.html#type.U64">U64</a>): The value to extract the field from.</li>
 <li><code>f</code> (<a href="user/templating/2-plugins.html#type.u64">u64</a>): The field to extract.</li>
 <li><code>w</code> (<a href="user/templating/2-plugins.html#type.u64">u64</a>): The width of the field to extract.</li>
 </ul>
-<h6 id="returns-45"><a class="header" href="#returns-45">Returns</a></h6>
+<h6 id="returns-48"><a class="header" href="#returns-48">Returns</a></h6>
 <ul>
 <li><code>result</code> (<a href="user/templating/2-plugins.html#type.U64">U64</a>): The extracted field.</li>
 </ul>
@@ -1758,48 +1893,7 @@ print(token)
 <pre><code class="language-lua">function bitu64:lrotate(n: U64, i: i64): U64
 </code></pre>
 <p>Rotates a value left or right.</p>
-<h6 id="parameters-35"><a class="header" href="#parameters-35">Parameters</a></h6>
-<ul>
-<li><code>n</code> (<a href="user/templating/2-plugins.html#type.U64">U64</a>): The value to rotate.</li>
-<li><code>i</code> (<a href="user/templating/2-plugins.html#type.i64">i64</a>): The amount to rotate by.</li>
-</ul>
-<h6 id="returns-46"><a class="header" href="#returns-46">Returns</a></h6>
-<ul>
-<li><code>result</code> (<a href="user/templating/2-plugins.html#type.U64">U64</a>): The rotated value.</li>
-</ul>
-<h5 id="bitu64lshift"><a class="header" href="#bitu64lshift">bitu64:lshift</a></h5>
-<pre><code class="language-lua">function bitu64:lshift(n: U64, i: i64): U64
-</code></pre>
-<p>Shifts a value left or right.</p>
-<h6 id="parameters-36"><a class="header" href="#parameters-36">Parameters</a></h6>
-<ul>
-<li><code>n</code> (<a href="user/templating/2-plugins.html#type.U64">U64</a>): The value to shift.</li>
-<li><code>i</code> (<a href="user/templating/2-plugins.html#type.i64">i64</a>): The amount to shift by.</li>
-</ul>
-<h6 id="returns-47"><a class="header" href="#returns-47">Returns</a></h6>
-<ul>
-<li><code>result</code> (<a href="user/templating/2-plugins.html#type.U64">U64</a>): The shifted value.</li>
-</ul>
-<h5 id="bitu64replace"><a class="header" href="#bitu64replace">bitu64:replace</a></h5>
-<pre><code class="language-lua">function bitu64:replace(n: U64, v: U64, f: u64, w: u64): U64
-</code></pre>
-<p>Replaces a field in a value.</p>
-<h6 id="parameters-37"><a class="header" href="#parameters-37">Parameters</a></h6>
-<ul>
-<li><code>n</code> (<a href="user/templating/2-plugins.html#type.U64">U64</a>): The value to replace the field in.</li>
-<li><code>v</code> (<a href="user/templating/2-plugins.html#type.U64">U64</a>): The value to replace the field with.</li>
-<li><code>f</code> (<a href="user/templating/2-plugins.html#type.u64">u64</a>): The field to replace.</li>
-<li><code>w</code> (<a href="user/templating/2-plugins.html#type.u64">u64</a>): The width of the field to replace.</li>
-</ul>
-<h6 id="returns-48"><a class="header" href="#returns-48">Returns</a></h6>
-<ul>
-<li><code>result</code> (<a href="user/templating/2-plugins.html#type.U64">U64</a>): The value with the field replaced.</li>
-</ul>
-<h5 id="bitu64rrotate"><a class="header" href="#bitu64rrotate">bitu64:rrotate</a></h5>
-<pre><code class="language-lua">function bitu64:rrotate(n: U64, i: i64): U64
-</code></pre>
-<p>Rotates a value left or right.</p>
-<h6 id="parameters-38"><a class="header" href="#parameters-38">Parameters</a></h6>
+<h6 id="parameters-40"><a class="header" href="#parameters-40">Parameters</a></h6>
 <ul>
 <li><code>n</code> (<a href="user/templating/2-plugins.html#type.U64">U64</a>): The value to rotate.</li>
 <li><code>i</code> (<a href="user/templating/2-plugins.html#type.i64">i64</a>): The amount to rotate by.</li>
@@ -1808,11 +1902,11 @@ print(token)
 <ul>
 <li><code>result</code> (<a href="user/templating/2-plugins.html#type.U64">U64</a>): The rotated value.</li>
 </ul>
-<h5 id="bitu64rshift"><a class="header" href="#bitu64rshift">bitu64:rshift</a></h5>
-<pre><code class="language-lua">function bitu64:rshift(n: U64, i: i64): U64
+<h5 id="bitu64lshift"><a class="header" href="#bitu64lshift">bitu64:lshift</a></h5>
+<pre><code class="language-lua">function bitu64:lshift(n: U64, i: i64): U64
 </code></pre>
 <p>Shifts a value left or right.</p>
-<h6 id="parameters-39"><a class="header" href="#parameters-39">Parameters</a></h6>
+<h6 id="parameters-41"><a class="header" href="#parameters-41">Parameters</a></h6>
 <ul>
 <li><code>n</code> (<a href="user/templating/2-plugins.html#type.U64">U64</a>): The value to shift.</li>
 <li><code>i</code> (<a href="user/templating/2-plugins.html#type.i64">i64</a>): The amount to shift by.</li>
@@ -1821,16 +1915,57 @@ print(token)
 <ul>
 <li><code>result</code> (<a href="user/templating/2-plugins.html#type.U64">U64</a>): The shifted value.</li>
 </ul>
-<h2 id="methods-15"><a class="header" href="#methods-15">Methods</a></h2>
+<h5 id="bitu64replace"><a class="header" href="#bitu64replace">bitu64:replace</a></h5>
+<pre><code class="language-lua">function bitu64:replace(n: U64, v: U64, f: u64, w: u64): U64
+</code></pre>
+<p>Replaces a field in a value.</p>
+<h6 id="parameters-42"><a class="header" href="#parameters-42">Parameters</a></h6>
+<ul>
+<li><code>n</code> (<a href="user/templating/2-plugins.html#type.U64">U64</a>): The value to replace the field in.</li>
+<li><code>v</code> (<a href="user/templating/2-plugins.html#type.U64">U64</a>): The value to replace the field with.</li>
+<li><code>f</code> (<a href="user/templating/2-plugins.html#type.u64">u64</a>): The field to replace.</li>
+<li><code>w</code> (<a href="user/templating/2-plugins.html#type.u64">u64</a>): The width of the field to replace.</li>
+</ul>
+<h6 id="returns-51"><a class="header" href="#returns-51">Returns</a></h6>
+<ul>
+<li><code>result</code> (<a href="user/templating/2-plugins.html#type.U64">U64</a>): The value with the field replaced.</li>
+</ul>
+<h5 id="bitu64rrotate"><a class="header" href="#bitu64rrotate">bitu64:rrotate</a></h5>
+<pre><code class="language-lua">function bitu64:rrotate(n: U64, i: i64): U64
+</code></pre>
+<p>Rotates a value left or right.</p>
+<h6 id="parameters-43"><a class="header" href="#parameters-43">Parameters</a></h6>
+<ul>
+<li><code>n</code> (<a href="user/templating/2-plugins.html#type.U64">U64</a>): The value to rotate.</li>
+<li><code>i</code> (<a href="user/templating/2-plugins.html#type.i64">i64</a>): The amount to rotate by.</li>
+</ul>
+<h6 id="returns-52"><a class="header" href="#returns-52">Returns</a></h6>
+<ul>
+<li><code>result</code> (<a href="user/templating/2-plugins.html#type.U64">U64</a>): The rotated value.</li>
+</ul>
+<h5 id="bitu64rshift"><a class="header" href="#bitu64rshift">bitu64:rshift</a></h5>
+<pre><code class="language-lua">function bitu64:rshift(n: U64, i: i64): U64
+</code></pre>
+<p>Shifts a value left or right.</p>
+<h6 id="parameters-44"><a class="header" href="#parameters-44">Parameters</a></h6>
+<ul>
+<li><code>n</code> (<a href="user/templating/2-plugins.html#type.U64">U64</a>): The value to shift.</li>
+<li><code>i</code> (<a href="user/templating/2-plugins.html#type.i64">i64</a>): The amount to shift by.</li>
+</ul>
+<h6 id="returns-53"><a class="header" href="#returns-53">Returns</a></h6>
+<ul>
+<li><code>result</code> (<a href="user/templating/2-plugins.html#type.U64">U64</a>): The shifted value.</li>
+</ul>
+<h2 id="methods-16"><a class="header" href="#methods-16">Methods</a></h2>
 <h3 id="u64-1"><a class="header" href="#u64-1">U64</a></h3>
 <pre><code class="language-lua">function U64(value: u64): U64
 </code></pre>
 <p>Creates a new U64.</p>
-<h4 id="parameters-40"><a class="header" href="#parameters-40">Parameters</a></h4>
+<h4 id="parameters-45"><a class="header" href="#parameters-45">Parameters</a></h4>
 <ul>
 <li><code>value</code> (<a href="user/templating/2-plugins.html#type.u64">u64</a>): The value of the U64.</li>
 </ul>
-<h4 id="returns-51"><a class="header" href="#returns-51">Returns</a></h4>
+<h4 id="returns-54"><a class="header" href="#returns-54">Returns</a></h4>
 <ul>
 <li><code>u64</code> (<a href="user/templating/2-plugins.html#type.U64">U64</a>): The U64 value.</li>
 </ul>
@@ -1838,11 +1973,11 @@ print(token)
 <pre><code class="language-lua">function I64(value: i64): I64
 </code></pre>
 <p>Creates a new I64.</p>
-<h4 id="parameters-41"><a class="header" href="#parameters-41">Parameters</a></h4>
+<h4 id="parameters-46"><a class="header" href="#parameters-46">Parameters</a></h4>
 <ul>
 <li><code>value</code> (<a href="user/templating/2-plugins.html#type.i64">i64</a>): The value of the I64.</li>
 </ul>
-<h4 id="returns-52"><a class="header" href="#returns-52">Returns</a></h4>
+<h4 id="returns-55"><a class="header" href="#returns-55">Returns</a></h4>
 <ul>
 <li><code>i64</code> (<a href="user/templating/2-plugins.html#type.I64">I64</a>): The I64 value.</li>
 </ul>
@@ -1980,24 +2115,24 @@ print(token)
 </code></pre>
 <p>A Lua function.</p>
 <hr />
-<h1 id="methods-16"><a class="header" href="#methods-16">Methods</a></h1>
+<h1 id="methods-17"><a class="header" href="#methods-17">Methods</a></h1>
 <h2 id="array"><a class="header" href="#array">array</a></h2>
 <pre><code class="language-lua">function array(...: unknown): {unknown}
 </code></pre>
 <p>Helper method to create an array from a list of tables, setting the array_metatable on the result.</p>
-<h3 id="parameters-42"><a class="header" href="#parameters-42">Parameters</a></h3>
+<h3 id="parameters-47"><a class="header" href="#parameters-47">Parameters</a></h3>
 <ul>
 <li><code>...</code> (<a href="user/templating/2-plugins.html#type.unknown">unknown</a>): The elements used to form the array.</li>
 </ul>
-<h3 id="returns-53"><a class="header" href="#returns-53">Returns</a></h3>
+<h3 id="returns-56"><a class="header" href="#returns-56">Returns</a></h3>
 <ul>
 <li><code>table</code> (<a href="user/templating/2-plugins.html#type.unknown">{unknown}</a>): The array table.</li>
 </ul>
-<h1 id="types-7"><a class="header" href="#types-7">Types</a></h1>
+<h1 id="types-8"><a class="header" href="#types-8">Types</a></h1>
 <div id="type.Event" />
 <h2 id="event"><a class="header" href="#event">Event</a></h2>
 <p>An event that has been dispatched to the template. This is what <code>args</code> is in the template.</p>
-<h3 id="fields-22"><a class="header" href="#fields-22">Fields</a></h3>
+<h3 id="fields-24"><a class="header" href="#fields-24">Fields</a></h3>
 <ul>
 <li><code>title</code> (<a href="user/templating/2-plugins.html#type.string">string</a>): The title name of the event.</li>
 <li><code>base_name</code> (<a href="user/templating/2-plugins.html#type.string">string</a>): The base name of the event.</li>
@@ -2015,7 +2150,7 @@ print(token)
   "allowed_caps": []
 }
 </code></pre>
-<h3 id="fields-23"><a class="header" href="#fields-23">Fields</a></h3>
+<h3 id="fields-25"><a class="header" href="#fields-25">Fields</a></h3>
 <ul>
 <li><code>lang</code> (<a href="user/templating/2-plugins.html#type.string">string</a>): The language of the template.</li>
 <li><code>allowed_caps</code> (<a href="user/templating/2-plugins.html#type.string">{string}</a>): The allowed capabilities provided to the template.</li>
@@ -2034,7 +2169,7 @@ print(token)
   }
 }
 </code></pre>
-<h3 id="fields-24"><a class="header" href="#fields-24">Fields</a></h3>
+<h3 id="fields-26"><a class="header" href="#fields-26">Fields</a></h3>
 <ul>
 <li><code>path</code> (<a href="user/templating/2-plugins.html#type.string">string</a>): The path of the template token.</li>
 <li><code>pragma</code> (<a href="user/templating/2-plugins.html#type.TemplatePragma">TemplatePragma</a>): The pragma of the template.</li>
@@ -2042,7 +2177,7 @@ print(token)
 <div id="type.TemplateContext" />
 <h2 id="templatecontext"><a class="header" href="#templatecontext">TemplateContext</a></h2>
 <p><code>TemplateContext</code> is a struct that represents the context of a template. Stores data including the templates data, pragma and what capabilities it should have access to. Passing a TemplateContext is often required when using AntiRaid plugins for security purposes.</p>
-<h3 id="fields-25"><a class="header" href="#fields-25">Fields</a></h3>
+<h3 id="fields-27"><a class="header" href="#fields-27">Fields</a></h3>
 <ul>
 <li><code>template_data</code> (<a href="user/templating/2-plugins.html#type.TemplateData">TemplateData</a>): The data associated with the template.</li>
 </ul>
@@ -2418,7 +2553,7 @@ return captcha
 <p>Most things in silverpelt are abstracted out through traits or dispatched via events. This allows silverpelt to be used as an abstract interface allowing for Anti-Raid to quickly evolve and change/adapt to different targets.</p>
 <p><strong>Note:</strong> AntiRaid uses a event-driven architecture. This means that modules+the main bot process make events that are dispatched to modules. The event system is currently passive (meaning there is no continously running event loop), however this is subject to change in the future.</p>
 <h2 id="interfaces"><a class="header" href="#interfaces">Interfaces</a></h2>
-<h3 id="sting"><a class="header" href="#sting">Sting</a></h3>
+<h3 id="sting-1"><a class="header" href="#sting-1">Sting</a></h3>
 <p>Silverpelt provides concrete structures, utilities and special events for handling stings.</p>
 <h3 id="punishments"><a class="header" href="#punishments">Punishments</a></h3>
 <p>Silverpelt provides concrete structures, utilities and special events for handling punishments.</p>
