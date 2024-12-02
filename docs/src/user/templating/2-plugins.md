@@ -1611,6 +1611,182 @@ Checks if a permission check passes.
 
 ---
 
+# @antiraid/stings
+
+List, get, create, update and delete stings on Anti-Raid.
+
+## Types
+
+<div id="type.StingCreate" />
+
+### StingCreate
+
+A type representing a new sting to be created.
+
+```json
+{
+  "src": "test",
+  "stings": 10,
+  "reason": "test",
+  "void_reason": null,
+  "guild_id": "128384",
+  "creator": "system",
+  "target": "user:1945824",
+  "state": "active",
+  "duration": {
+    "secs": 60,
+    "nanos": 0
+  },
+  "sting_data": {
+    "a": "b"
+  }
+}
+```
+
+#### Fields
+
+- `module` ([string](#type.string)): The module name.
+- `src` ([string?](#type.string)): The source of the sting.
+- `stings` ([number](#type.number)): The number of stings.
+- `reason` ([string?](#type.string)): The reason for the stings.
+- `void_reason` ([string?](#type.string)): The reason the stings were voided.
+- `guild_id` ([string](#type.string)): The guild ID the sting targets. **MUST MATCH THE GUILD ID THE TEMPLATE IS RUNNING ON**
+- `creator` ([StingTarget](#type.StingTarget)): The creator of the sting.
+- `target` ([StingTarget](#type.StingTarget)): The target of the sting.
+- `state` ([StingState](#type.StingState)): The state of the sting.
+- `created_at` ([string](#type.string)): When the sting was created as a chrono datetime.
+- `duration` ([Duration?](#type.Duration)): When the sting expires as a duration.
+- `sting_data` ([any?](#type.any)): The data/metadata present within the sting, if any.
+
+
+<div id="type.Sting" />
+
+### Sting
+
+Represents a sting on AntiRaid
+
+```json
+{
+  "id": "470a2958-3827-4e59-8b97-928a583a37a3",
+  "src": "test",
+  "stings": 10,
+  "reason": "test",
+  "void_reason": null,
+  "guild_id": "128384",
+  "creator": "system",
+  "target": "user:1945824",
+  "state": "active",
+  "created_at": "2024-12-02T23:03:10.919155525Z",
+  "duration": {
+    "secs": 60,
+    "nanos": 0
+  },
+  "sting_data": {
+    "a": "b"
+  },
+  "is_handled": false,
+  "handle_log": {
+    "a": "b"
+  }
+}
+```
+
+#### Fields
+
+- `id` ([string](#type.string)): The sting ID.
+- `module` ([string](#type.string)): The module name.
+- `src` ([string?](#type.string)): The source of the sting.
+- `stings` ([number](#type.number)): The number of stings.
+- `reason` ([string?](#type.string)): The reason for the stings.
+- `void_reason` ([string?](#type.string)): The reason the stings were voided.
+- `guild_id` ([string](#type.string)): The guild ID the sting targets. **MUST MATCH THE GUILD ID THE TEMPLATE IS RUNNING ON**
+- `creator` ([StingTarget](#type.StingTarget)): The creator of the sting.
+- `target` ([StingTarget](#type.StingTarget)): The target of the sting.
+- `state` ([StingState](#type.StingState)): The state of the sting.
+- `duration` ([Duration?](#type.Duration)): When the sting expires as a duration.
+- `sting_data` ([any?](#type.any)): The data/metadata present within the sting, if any.
+- `is_handled` ([boolean](#type.boolean)): Is Handled
+- `handle_log` ([any](#type.any)): The handle log encountered while handling the sting.
+
+
+<div id="type.StingExecutor" />
+
+### StingExecutor
+
+An sting executor is used to execute actions related to stings from Lua templates
+
+
+
+#### Methods
+
+##### StingExecutor:list
+
+```lua
+function StingExecutor:list(page: number): {Sting}
+```
+
+###### Parameters
+
+- `page` ([number](#type.number)): The page number to fetch.
+
+
+###### Returns
+
+- `stings` ([{Sting}](#type.Sting)): The list of stings.
+##### StingExecutor:get
+
+```lua
+function StingExecutor:get(id: string): Sting
+```
+
+###### Parameters
+
+- `id` ([string](#type.string)): The sting ID.
+
+
+###### Returns
+
+- `sting` ([Sting](#type.Sting)): The sting.
+##### StingExecutor:create
+
+```lua
+function StingExecutor:create(data: StingCreate): string
+```
+
+###### Parameters
+
+- `data` ([StingCreate](#type.StingCreate)): The sting data.
+
+
+###### Returns
+
+- `id` ([string](#type.string)): The sting ID of the created sting.
+##### StingExecutor:update
+
+```lua
+function StingExecutor:update(data: Sting)
+```
+
+###### Parameters
+
+- `data` ([Sting](#type.Sting)): The sting to update to. Note that if an invalid ID is used, this method may either do nothing or error out.
+
+##### StingExecutor:delete
+
+```lua
+function StingExecutor:delete(id: string)
+```
+
+###### Parameters
+
+- `id` ([string](#type.string)): The sting ID.
+
+
+
+
+
+---
+
 # @antiraid/typesext
 
 Extra types used by Anti-Raid Lua templating subsystem to either add in common functionality such as streams or handle things like u64/i64 types performantly.
