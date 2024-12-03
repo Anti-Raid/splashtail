@@ -7,6 +7,13 @@ At AntiRaid, we believe that bot developers should be able to access the best to
 - [**@lune/datetime**](https://lune-org.github.io/docs/api-reference/datetime)
 - [**@lune/regex**](https://lune-org.github.io/docs/api-reference/regex)
 - [**@lune/serde**](https://lune-org.github.io/docs/api-reference/serde)
+- [**@lune/roblox**](https://lune-org.github.io/docs/api-reference/roblox) (Note: only the roblox data types [here](https://lune-org.github.io/docs/roblox/4-api-status) can be found in AntiRaids version of ``@lune/roblox``. The rest of the library is not available)
+
+Roblox data types etc can be found in ``@lune/roblox``. For example, you can make a Vector3 object like this:
+
+```lua
+local Vector3 = require('@lune/roblox').Vector3
+```
 
 ## Legal Disclaimer
 
