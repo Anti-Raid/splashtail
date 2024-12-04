@@ -1676,7 +1676,7 @@ Represents a sting on AntiRaid
   "creator": "system",
   "target": "user:1945824",
   "state": "active",
-  "created_at": "2024-12-03T03:34:31.268715742Z",
+  "created_at": "2024-12-04T21:26:11.934514407Z",
   "duration": {
     "secs": 60,
     "nanos": 0
@@ -1806,14 +1806,14 @@ LuaStream<T> provides a stream implementation. This is returned by MessageHandle
 ##### LuaStream:next
 
 ```lua
-function LuaStream:next(): <T>
+function LuaStream:next(): <T>?
 ```
 
 Returns the next item in the stream.
 
 ###### Returns
 
-- `item` ([<T>](#type.<T>)): The next item in the stream.
+- `item` ([<T>?](#type.<T>)): The next item in the stream.
 ##### LuaStream:for_each
 
 ```lua
@@ -2498,25 +2498,6 @@ type function = function
 A Lua function.
 
 ---
-
-# Methods
-
-## array
-
-```lua
-function array(...: unknown): {unknown}
-```
-
-Helper method to create an array from a list of tables, setting the array_metatable on the result.
-
-### Parameters
-
-- `...` ([unknown](#type.unknown)): The elements used to form the array.
-
-
-### Returns
-
-- `table` ([{unknown}](#type.unknown)): The array table.
 
 # Types
 
