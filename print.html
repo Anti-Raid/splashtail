@@ -1558,7 +1558,7 @@ print(token)
   "creator": "system",
   "target": "user:1945824",
   "state": "active",
-  "created_at": "2024-12-03T03:34:31.268715742Z",
+  "created_at": "2024-12-04T21:26:11.934514407Z",
   "duration": {
     "secs": 60,
     "nanos": 0
@@ -1649,12 +1649,12 @@ print(token)
 <p>LuaStream<T> provides a stream implementation. This is returned by MessageHandle's await_component_interaction for instance for handling button clicks/select menu choices etc.</p>
 <h4 id="methods-12"><a class="header" href="#methods-12">Methods</a></h4>
 <h5 id="luastreamnext"><a class="header" href="#luastreamnext">LuaStream:next</a></h5>
-<pre><code class="language-lua">function LuaStream:next(): &lt;T&gt;
+<pre><code class="language-lua">function LuaStream:next(): &lt;T&gt;?
 </code></pre>
 <p>Returns the next item in the stream.</p>
 <h6 id="returns-28"><a class="header" href="#returns-28">Returns</a></h6>
 <ul>
-<li><code>item</code> (<a href="user/templating/2-plugins.html#type.%3CT%3E"><T></a>): The next item in the stream.</li>
+<li><code>item</code> (<a href="user/templating/2-plugins.html#type.%3CT%3E"><T>?</a>): The next item in the stream.</li>
 </ul>
 <h5 id="luastreamfor_each"><a class="header" href="#luastreamfor_each">LuaStream:for_each</a></h5>
 <pre><code class="language-lua">function LuaStream:for_each(callback: function)
@@ -2115,19 +2115,6 @@ print(token)
 </code></pre>
 <p>A Lua function.</p>
 <hr />
-<h1 id="methods-17"><a class="header" href="#methods-17">Methods</a></h1>
-<h2 id="array"><a class="header" href="#array">array</a></h2>
-<pre><code class="language-lua">function array(...: unknown): {unknown}
-</code></pre>
-<p>Helper method to create an array from a list of tables, setting the array_metatable on the result.</p>
-<h3 id="parameters-47"><a class="header" href="#parameters-47">Parameters</a></h3>
-<ul>
-<li><code>...</code> (<a href="user/templating/2-plugins.html#type.unknown">unknown</a>): The elements used to form the array.</li>
-</ul>
-<h3 id="returns-56"><a class="header" href="#returns-56">Returns</a></h3>
-<ul>
-<li><code>table</code> (<a href="user/templating/2-plugins.html#type.unknown">{unknown}</a>): The array table.</li>
-</ul>
 <h1 id="types-8"><a class="header" href="#types-8">Types</a></h1>
 <div id="type.Event" />
 <h2 id="event"><a class="header" href="#event">Event</a></h2>
