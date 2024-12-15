@@ -30,30 +30,12 @@ The above limits are in place to prevent abuse and ensure that the bot remains r
 - The standard ``require`` statement can be used to import AntiRaid modules. **Note that the modules are read-only** and cannot be monkey-patched etc.
 - **Because Lua is a single-threaded language, only one template can be executed at a time**
 
-There are 2 valid syntax for a Luau template:
-
-1. Lua script syntax
+In general, all AntiRaid templates should start with the following:
 
 ```lua
 local args, token = ...
 -- Do something
 return output
-```
-
-2. Function expression syntax (not recommended for new code)
-
-```lua
-function(args, token)
-    -- Do something
-    return output
-end
-```
-
-Note that option 1 is recommended as it is both more idiomatic and is also valid syntax for LSP's and Luau parsers. Note that option 2 is actually converted to option 1 internally through the below wrapper:
-
-```
-local args, token = ...
-{function body here}
 ```
 
 ## Interop

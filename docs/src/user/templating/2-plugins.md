@@ -1,30 +1,3 @@
-# @antiraid/async
-
-Utilities for asynchronous operations and timing
-
-## Methods
-
-### sleep
-
-```lua
-function sleep(duration: f64): f64
-```
-
-Sleep for a given duration.
-
-#### Parameters
-
-- `duration` ([f64](#type.f64)): The duration to sleep for.
-
-
-#### Returns
-
-- `slept_time` ([f64](#type.f64)): The actual duration slept for.
-
-
-
----
-
 # @antiraid/discord
 
 This plugin allows for templates to interact with the Discord API
@@ -490,6 +463,10 @@ function DiscordExecutor:get_audit_logs(data: GetAuditLogOptions):
 
 Gets the audit logs
 
+**Note that this method returns a promise that must be yielded using [`promise.yield`](#type.promise.yield) to actually execute and return results.**
+
+
+
 ###### Parameters
 
 - `data` ([GetAuditLogOptions](#type.GetAuditLogOptions)): Options for getting audit logs.
@@ -497,7 +474,7 @@ Gets the audit logs
 
 ###### Returns
 
-- `SerenityAuditLogs` ([](#type.)): The audit log entry
+- `Serenity.AuditLogs` ([](#type.)): The audit log entry
 ##### DiscordExecutor:get_channel
 
 ```lua
@@ -505,6 +482,10 @@ function DiscordExecutor:get_channel(data: GetChannelOptions):
 ```
 
 Gets a channel
+
+**Note that this method returns a promise that must be yielded using [`promise.yield`](#type.promise.yield) to actually execute and return results.**
+
+
 
 ###### Parameters
 
@@ -522,6 +503,10 @@ function DiscordExecutor:edit_channel(data: EditChannelOptions):
 
 Edits a channel
 
+**Note that this method returns a promise that must be yielded using [`promise.yield`](#type.promise.yield) to actually execute and return results.**
+
+
+
 ###### Parameters
 
 - `data` ([EditChannelOptions](#type.EditChannelOptions)): Options for editing a channel.
@@ -537,6 +522,10 @@ function DiscordExecutor:edit_thread(data: EditThreadOptions):
 ```
 
 Edits a thread
+
+**Note that this method returns a promise that must be yielded using [`promise.yield`](#type.promise.yield) to actually execute and return results.**
+
+
 
 ###### Parameters
 
@@ -554,6 +543,10 @@ function DiscordExecutor:delete_channel(data: DeleteChannelOption):
 
 Deletes a channel
 
+**Note that this method returns a promise that must be yielded using [`promise.yield`](#type.promise.yield) to actually execute and return results.**
+
+
+
 ###### Parameters
 
 - `data` ([DeleteChannelOption](#type.DeleteChannelOption)): Options for deleting a channel.
@@ -569,6 +562,10 @@ function DiscordExecutor:create_message(data: CreateMessage):
 ```
 
 Creates a message
+
+**Note that this method returns a promise that must be yielded using [`promise.yield`](#type.promise.yield) to actually execute and return results.**
+
+
 
 ###### Parameters
 
@@ -637,18 +634,6 @@ Returns the array metatable.
 
 - `array_metatable` ([table](#type.table)): The array metatable.
 
-### null
-
-```lua
-function null(): null
-```
-
-Returns the null value.
-
-#### Returns
-
-- `null` ([null](#type.null)): The null value.
-
 ### memusage
 
 ```lua
@@ -660,30 +645,6 @@ Returns the current memory usage of the Lua VM.
 #### Returns
 
 - `memory_usage` ([f64](#type.f64)): The current memory usage, in bytes, of the Lua VM.
-
-### guild_id
-
-```lua
-function guild_id(): string
-```
-
-Returns the current guild ID of the Lua VM.
-
-#### Returns
-
-- `guild_id` ([string](#type.string)): The current guild ID.
-
-### current_user
-
-```lua
-function current_user(): Serenity.User
-```
-
-Returns the current user of the Lua VM.
-
-#### Returns
-
-- `user` ([Serenity.User](#type.Serenity.User)): Returns AntiRaid's discord user object.
 
 
 
@@ -767,6 +728,10 @@ function new(config: CaptchaConfig): {u8}
 
 Creates a new CAPTCHA with the given configuration.
 
+**Note that this method returns a promise that must be yielded using [`promise.yield`](#type.promise.yield) to actually execute and return results.**
+
+
+
 #### Parameters
 
 - `config` ([CaptchaConfig](#type.CaptchaConfig)): The configuration to use for the CAPTCHA.
@@ -824,18 +789,30 @@ KvExecutor allows templates to get, store and find persistent data within a serv
 ##### KvExecutor:find
 
 ```lua
-function KvExecutor:find(key: string)
+function KvExecutor:find(key: string): {KvRecord}
 ```
+
+**Note that this method returns a promise that must be yielded using [`promise.yield`](#type.promise.yield) to actually execute and return results.**
+
+
 
 ###### Parameters
 
 - `key` ([string](#type.string)): The key to search for. % matches zero or more characters; _ matches a single character. To search anywhere in a string, surround {KEY} with %, e.g. %{KEY}%
 
+
+###### Returns
+
+- `records` ([{KvRecord}](#type.KvRecord)): The records found.
 ##### KvExecutor:get
 
 ```lua
 function KvExecutor:get(key: string)
 ```
+
+**Note that this method returns a promise that must be yielded using [`promise.yield`](#type.promise.yield) to actually execute and return results.**
+
+
 
 ###### Parameters
 
@@ -851,6 +828,10 @@ function KvExecutor:get(key: string)
 function KvExecutor:getrecord(key: string): KvRecord
 ```
 
+**Note that this method returns a promise that must be yielded using [`promise.yield`](#type.promise.yield) to actually execute and return results.**
+
+
+
 ###### Parameters
 
 - `key` ([string](#type.string)): The key to get.
@@ -865,6 +846,10 @@ function KvExecutor:getrecord(key: string): KvRecord
 function KvExecutor:set(key: string, value: any)
 ```
 
+**Note that this method returns a promise that must be yielded using [`promise.yield`](#type.promise.yield) to actually execute and return results.**
+
+
+
 ###### Parameters
 
 - `key` ([string](#type.string)): The key to set.
@@ -875,6 +860,10 @@ function KvExecutor:set(key: string, value: any)
 ```lua
 function KvExecutor:delete(key: string)
 ```
+
+**Note that this method returns a promise that must be yielded using [`promise.yield`](#type.promise.yield) to actually execute and return results.**
+
+
 
 ###### Parameters
 
@@ -1676,7 +1665,7 @@ Represents a sting on AntiRaid
   "creator": "system",
   "target": "user:1945824",
   "state": "active",
-  "created_at": "2024-12-04T21:26:11.934514407Z",
+  "created_at": "2024-12-15T03:00:13.671868435Z",
   "duration": {
     "secs": 60,
     "nanos": 0
@@ -1725,6 +1714,10 @@ An sting executor is used to execute actions related to stings from Lua template
 function StingExecutor:list(page: number): {Sting}
 ```
 
+**Note that this method returns a promise that must be yielded using [`promise.yield`](#type.promise.yield) to actually execute and return results.**
+
+
+
 ###### Parameters
 
 - `page` ([number](#type.number)): The page number to fetch.
@@ -1738,6 +1731,10 @@ function StingExecutor:list(page: number): {Sting}
 ```lua
 function StingExecutor:get(id: string): Sting
 ```
+
+**Note that this method returns a promise that must be yielded using [`promise.yield`](#type.promise.yield) to actually execute and return results.**
+
+
 
 ###### Parameters
 
@@ -1753,6 +1750,10 @@ function StingExecutor:get(id: string): Sting
 function StingExecutor:create(data: StingCreate): string
 ```
 
+**Note that this method returns a promise that must be yielded using [`promise.yield`](#type.promise.yield) to actually execute and return results.**
+
+
+
 ###### Parameters
 
 - `data` ([StingCreate](#type.StingCreate)): The sting data.
@@ -1767,6 +1768,10 @@ function StingExecutor:create(data: StingCreate): string
 function StingExecutor:update(data: Sting)
 ```
 
+**Note that this method returns a promise that must be yielded using [`promise.yield`](#type.promise.yield) to actually execute and return results.**
+
+
+
 ###### Parameters
 
 - `data` ([Sting](#type.Sting)): The sting to update to. Note that if an invalid ID is used, this method may either do nothing or error out.
@@ -1777,11 +1782,52 @@ function StingExecutor:update(data: Sting)
 function StingExecutor:delete(id: string)
 ```
 
+**Note that this method returns a promise that must be yielded using [`promise.yield`](#type.promise.yield) to actually execute and return results.**
+
+
+
 ###### Parameters
 
 - `id` ([string](#type.string)): The sting ID.
 
 
+
+
+
+---
+
+# @antiraid/stream
+
+Lua Streams, yield for a set of values using next.
+
+## Types
+
+<div id="type.LuaStream" />
+
+### LuaStream<T>
+
+LuaStream<T> provides a stream implementation. This is returned by MessageHandle's await_component_interaction for instance for handling button clicks/select menu choices etc.
+
+
+
+## Methods
+
+### next
+
+```lua
+function next(stream: LuaStream<T>): T
+```
+
+Returns the next value in the stream. Note that this is the only function other than `promise.yield` that yields.
+
+#### Parameters
+
+- `stream` ([LuaStream<T>](#type.LuaStream<T>)): The stream to get the next value from.
+
+
+#### Returns
+
+- `T` ([T](#type.T)): The next value in the stream, or nil if the stream is exhausted.
 
 
 
@@ -2515,7 +2561,8 @@ An event that has been dispatched to the template. This is what `args` is in the
 - `base_name` ([string](#type.string)): The base name of the event.
 - `name` ([string](#type.string)): The name of the event.
 - `data` ([unknown](#type.unknown)): The data of the event.
-- `is_deniable` ([boolean](#type.boolean)): Whether the event can be denied.
+- `can_respond` ([boolean](#type.boolean)): Whether the event can be responded to.
+- `response` ([unknown](#type.unknown)): The current response of the event. This can be overwritten by the template by just setting it to a new value.
 - `uid` ([string](#type.string)): The unique identifier ID of the event. Will be guaranteed to be unique at a per-guild level.
 - `author` ([string?](#type.string)): The author of the event, if any. If there is no known author, this field will either be `nil` or `null`.
 
@@ -2575,6 +2622,8 @@ An event that has been dispatched to the template. This is what `args` is in the
 ### Fields
 
 - `template_data` ([TemplateData](#type.TemplateData)): The data associated with the template.
+- `guild_id` ([string](#type.string)): The current guild ID the template is running on.
+- `current_user` ([Serenity.User](#type.Serenity.User)): Returns AntiRaid's discord user object [the current discord bot user driving the template].
 
 
 
