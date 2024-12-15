@@ -16,3 +16,4 @@ jobserver
 .idea
 semver
 cmd/nursery/ban_possibilities
+.env

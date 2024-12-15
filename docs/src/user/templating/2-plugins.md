@@ -1665,7 +1665,7 @@ Represents a sting on AntiRaid
   "creator": "system",
   "target": "user:1945824",
   "state": "active",
-  "created_at": "2024-12-15T03:00:13.671868435Z",
+  "created_at": "2024-12-15T19:49:01.996579125Z",
   "duration": {
     "secs": 60,
     "nanos": 0
