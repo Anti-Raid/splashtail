@@ -152,23 +152,7 @@
 
                 <div id="content" class="content">
                     <main>
-                        <h1 id="antiraidasync"><a class="header" href="#antiraidasync">@antiraid/async</a></h1>
-<p>Utilities for asynchronous operations and timing</p>
-<h2 id="methods"><a class="header" href="#methods">Methods</a></h2>
-<h3 id="sleep"><a class="header" href="#sleep">sleep</a></h3>
-<pre><code class="language-lua">function sleep(duration: f64): f64
-</code></pre>
-<p>Sleep for a given duration.</p>
-<h4 id="parameters"><a class="header" href="#parameters">Parameters</a></h4>
-<ul>
-<li><code>duration</code> (<a href="#type.f64">f64</a>): The duration to sleep for.</li>
-</ul>
-<h4 id="returns"><a class="header" href="#returns">Returns</a></h4>
-<ul>
-<li><code>slept_time</code> (<a href="#type.f64">f64</a>): The actual duration slept for.</li>
-</ul>
-<hr />
-<h1 id="antiraiddiscord"><a class="header" href="#antiraiddiscord">@antiraid/discord</a></h1>
+                        <h1 id="antiraiddiscord"><a class="header" href="#antiraiddiscord">@antiraid/discord</a></h1>
 <p>This plugin allows for templates to interact with the Discord API</p>
 <h2 id="types"><a class="header" href="#types">Types</a></h2>
 <div id="type.Serenity.User" />
@@ -490,40 +474,42 @@
 <div id="type.MessageHandle" />
 <h3 id="messagehandle"><a class="header" href="#messagehandle">MessageHandle</a></h3>
 <p>A handle to a message in Discord, as represented by AntiRaid. Internal fields are subject to change</p>
-<h4 id="methods-1"><a class="header" href="#methods-1">Methods</a></h4>
+<h4 id="methods"><a class="header" href="#methods">Methods</a></h4>
 <h5 id="messagehandledata"><a class="header" href="#messagehandledata">MessageHandle:data</a></h5>
 <pre><code class="language-lua">function MessageHandle:data(): any
 </code></pre>
 <p>Gets the data of the message</p>
-<h6 id="returns-1"><a class="header" href="#returns-1">Returns</a></h6>
+<h6 id="returns"><a class="header" href="#returns">Returns</a></h6>
 <ul>
 <li><code>data</code> (<a href="#type.any">any</a>): The inner data of the message</li>
 </ul>
 <div id="type.DiscordExecutor" />
 <h3 id="discordexecutor"><a class="header" href="#discordexecutor">DiscordExecutor</a></h3>
 <p>DiscordExecutor allows templates to access/use the Discord API in a sandboxed form.</p>
-<h4 id="methods-2"><a class="header" href="#methods-2">Methods</a></h4>
+<h4 id="methods-1"><a class="header" href="#methods-1">Methods</a></h4>
 <h5 id="discordexecutorget_audit_logs"><a class="header" href="#discordexecutorget_audit_logs">DiscordExecutor:get_audit_logs</a></h5>
 <pre><code class="language-lua">function DiscordExecutor:get_audit_logs(data: GetAuditLogOptions): 
 </code></pre>
 <p>Gets the audit logs</p>
-<h6 id="parameters-1"><a class="header" href="#parameters-1">Parameters</a></h6>
+<p><strong>Note that this method returns a promise that must be yielded using <a href="#type.promise.yield"><code>promise.yield</code></a> to actually execute and return results.</strong></p>
+<h6 id="parameters"><a class="header" href="#parameters">Parameters</a></h6>
 <ul>
 <li><code>data</code> (<a href="#type.GetAuditLogOptions">GetAuditLogOptions</a>): Options for getting audit logs.</li>
 </ul>
-<h6 id="returns-2"><a class="header" href="#returns-2">Returns</a></h6>
+<h6 id="returns-1"><a class="header" href="#returns-1">Returns</a></h6>
 <ul>
-<li><code>SerenityAuditLogs</code> (<a href="#type."></a>): The audit log entry</li>
+<li><code>Serenity.AuditLogs</code> (<a href="#type."></a>): The audit log entry</li>
 </ul>
 <h5 id="discordexecutorget_channel"><a class="header" href="#discordexecutorget_channel">DiscordExecutor:get_channel</a></h5>
 <pre><code class="language-lua">function DiscordExecutor:get_channel(data: GetChannelOptions): 
 </code></pre>
 <p>Gets a channel</p>
-<h6 id="parameters-2"><a class="header" href="#parameters-2">Parameters</a></h6>
+<p><strong>Note that this method returns a promise that must be yielded using <a href="#type.promise.yield"><code>promise.yield</code></a> to actually execute and return results.</strong></p>
+<h6 id="parameters-1"><a class="header" href="#parameters-1">Parameters</a></h6>
 <ul>
 <li><code>data</code> (<a href="#type.GetChannelOptions">GetChannelOptions</a>): Options for getting a channel.</li>
 </ul>
-<h6 id="returns-3"><a class="header" href="#returns-3">Returns</a></h6>
+<h6 id="returns-2"><a class="header" href="#returns-2">Returns</a></h6>
 <ul>
 <li><code>Serenity.GuildChannel</code> (<a href="#type."></a>): The guild channel</li>
 </ul>
@@ -531,11 +517,12 @@
 <pre><code class="language-lua">function DiscordExecutor:edit_channel(data: EditChannelOptions): 
 </code></pre>
 <p>Edits a channel</p>
-<h6 id="parameters-3"><a class="header" href="#parameters-3">Parameters</a></h6>
+<p><strong>Note that this method returns a promise that must be yielded using <a href="#type.promise.yield"><code>promise.yield</code></a> to actually execute and return results.</strong></p>
+<h6 id="parameters-2"><a class="header" href="#parameters-2">Parameters</a></h6>
 <ul>
 <li><code>data</code> (<a href="#type.EditChannelOptions">EditChannelOptions</a>): Options for editing a channel.</li>
 </ul>
-<h6 id="returns-4"><a class="header" href="#returns-4">Returns</a></h6>
+<h6 id="returns-3"><a class="header" href="#returns-3">Returns</a></h6>
 <ul>
 <li><code>Serenity.GuildChannel</code> (<a href="#type."></a>): The guild channel</li>
 </ul>
@@ -543,11 +530,12 @@
 <pre><code class="language-lua">function DiscordExecutor:edit_thread(data: EditThreadOptions): 
 </code></pre>
 <p>Edits a thread</p>
-<h6 id="parameters-4"><a class="header" href="#parameters-4">Parameters</a></h6>
+<p><strong>Note that this method returns a promise that must be yielded using <a href="#type.promise.yield"><code>promise.yield</code></a> to actually execute and return results.</strong></p>
+<h6 id="parameters-3"><a class="header" href="#parameters-3">Parameters</a></h6>
 <ul>
 <li><code>data</code> (<a href="#type.EditThreadOptions">EditThreadOptions</a>): Options for editing a thread.</li>
 </ul>
-<h6 id="returns-5"><a class="header" href="#returns-5">Returns</a></h6>
+<h6 id="returns-4"><a class="header" href="#returns-4">Returns</a></h6>
 <ul>
 <li><code>Serenity.GuildChannel</code> (<a href="#type."></a>): The guild channel</li>
 </ul>
@@ -555,11 +543,12 @@
 <pre><code class="language-lua">function DiscordExecutor:delete_channel(data: DeleteChannelOption): 
 </code></pre>
 <p>Deletes a channel</p>
-<h6 id="parameters-5"><a class="header" href="#parameters-5">Parameters</a></h6>
+<p><strong>Note that this method returns a promise that must be yielded using <a href="#type.promise.yield"><code>promise.yield</code></a> to actually execute and return results.</strong></p>
+<h6 id="parameters-4"><a class="header" href="#parameters-4">Parameters</a></h6>
 <ul>
 <li><code>data</code> (<a href="#type.DeleteChannelOption">DeleteChannelOption</a>): Options for deleting a channel.</li>
 </ul>
-<h6 id="returns-6"><a class="header" href="#returns-6">Returns</a></h6>
+<h6 id="returns-5"><a class="header" href="#returns-5">Returns</a></h6>
 <ul>
 <li><code>Serenity.GuildChannel</code> (<a href="#type."></a>): The guild channel</li>
 </ul>
@@ -567,23 +556,24 @@
 <pre><code class="language-lua">function DiscordExecutor:create_message(data: CreateMessage): 
 </code></pre>
 <p>Creates a message</p>
-<h6 id="parameters-6"><a class="header" href="#parameters-6">Parameters</a></h6>
+<p><strong>Note that this method returns a promise that must be yielded using <a href="#type.promise.yield"><code>promise.yield</code></a> to actually execute and return results.</strong></p>
+<h6 id="parameters-5"><a class="header" href="#parameters-5">Parameters</a></h6>
 <ul>
 <li><code>data</code> (<a href="#type.CreateMessage">CreateMessage</a>): Options for creating a message.</li>
 </ul>
-<h6 id="returns-7"><a class="header" href="#returns-7">Returns</a></h6>
+<h6 id="returns-6"><a class="header" href="#returns-6">Returns</a></h6>
 <ul>
 <li><code>MessageHandle</code> (<a href="#type."></a>): The message</li>
 </ul>
-<h2 id="methods-3"><a class="header" href="#methods-3">Methods</a></h2>
+<h2 id="methods-2"><a class="header" href="#methods-2">Methods</a></h2>
 <h3 id="new"><a class="header" href="#new">new</a></h3>
 <pre><code class="language-lua">function new(token: TemplateContext): DiscordExecutor
 </code></pre>
-<h4 id="parameters-7"><a class="header" href="#parameters-7">Parameters</a></h4>
+<h4 id="parameters-6"><a class="header" href="#parameters-6">Parameters</a></h4>
 <ul>
 <li><code>token</code> (<a href="#type.TemplateContext">TemplateContext</a>): The token of the template to use.</li>
 </ul>
-<h4 id="returns-8"><a class="header" href="#returns-8">Returns</a></h4>
+<h4 id="returns-7"><a class="header" href="#returns-7">Returns</a></h4>
 <ul>
 <li><code>executor</code> (<a href="#type.DiscordExecutor">DiscordExecutor</a>): A discord executor.</li>
 </ul>
@@ -597,46 +587,22 @@
 <div id="type.array_metatable" />
 <h3 id="array_metatable"><a class="header" href="#array_metatable">array_metatable</a></h3>
 <p><code>array_metatable</code> is a special metatable that is used to represent arrays across the Lua-AntiRaid templating subsystem boundary. This metatable must be set on all arrays over this boundary and is required to ensure AntiRaid knows the value you're sending it is actually an array and not an arbitrary Luau table.</p>
-<h2 id="methods-4"><a class="header" href="#methods-4">Methods</a></h2>
+<h2 id="methods-3"><a class="header" href="#methods-3">Methods</a></h2>
 <h3 id="array_metatable-1"><a class="header" href="#array_metatable-1">array_metatable</a></h3>
 <pre><code class="language-lua">function array_metatable(): table
 </code></pre>
 <p>Returns the array metatable.</p>
-<h4 id="returns-9"><a class="header" href="#returns-9">Returns</a></h4>
+<h4 id="returns-8"><a class="header" href="#returns-8">Returns</a></h4>
 <ul>
 <li><code>array_metatable</code> (<a href="#type.table">table</a>): The array metatable.</li>
-</ul>
-<h3 id="null-1"><a class="header" href="#null-1">null</a></h3>
-<pre><code class="language-lua">function null(): null
-</code></pre>
-<p>Returns the null value.</p>
-<h4 id="returns-10"><a class="header" href="#returns-10">Returns</a></h4>
-<ul>
-<li><code>null</code> (<a href="#type.null">null</a>): The null value.</li>
 </ul>
 <h3 id="memusage"><a class="header" href="#memusage">memusage</a></h3>
 <pre><code class="language-lua">function memusage(): f64
 </code></pre>
 <p>Returns the current memory usage of the Lua VM.</p>
-<h4 id="returns-11"><a class="header" href="#returns-11">Returns</a></h4>
+<h4 id="returns-9"><a class="header" href="#returns-9">Returns</a></h4>
 <ul>
 <li><code>memory_usage</code> (<a href="#type.f64">f64</a>): The current memory usage, in bytes, of the Lua VM.</li>
-</ul>
-<h3 id="guild_id"><a class="header" href="#guild_id">guild_id</a></h3>
-<pre><code class="language-lua">function guild_id(): string
-</code></pre>
-<p>Returns the current guild ID of the Lua VM.</p>
-<h4 id="returns-12"><a class="header" href="#returns-12">Returns</a></h4>
-<ul>
-<li><code>guild_id</code> (<a href="#type.string">string</a>): The current guild ID.</li>
-</ul>
-<h3 id="current_user"><a class="header" href="#current_user">current_user</a></h3>
-<pre><code class="language-lua">function current_user(): Serenity.User
-</code></pre>
-<p>Returns the current user of the Lua VM.</p>
-<h4 id="returns-13"><a class="header" href="#returns-13">Returns</a></h4>
-<ul>
-<li><code>user</code> (<a href="#type.Serenity.User">Serenity.User</a>): Returns AntiRaid's discord user object.</li>
 </ul>
 <hr />
 <h1 id="antiraidimg_captcha"><a class="header" href="#antiraidimg_captcha">@antiraid/img_captcha</a></h1>
@@ -698,16 +664,17 @@
 <ul>
 <li><code>filter</code> (<a href="#type.string">string</a>): The name of the filter to use. See example for the parameters to pass for the filter as well as https://github.com/Anti-Raid/captcha.</li>
 </ul>
-<h2 id="methods-5"><a class="header" href="#methods-5">Methods</a></h2>
+<h2 id="methods-4"><a class="header" href="#methods-4">Methods</a></h2>
 <h3 id="new-1"><a class="header" href="#new-1">new</a></h3>
 <pre><code class="language-lua">function new(config: CaptchaConfig): {u8}
 </code></pre>
 <p>Creates a new CAPTCHA with the given configuration.</p>
-<h4 id="parameters-8"><a class="header" href="#parameters-8">Parameters</a></h4>
+<p><strong>Note that this method returns a promise that must be yielded using <a href="#type.promise.yield"><code>promise.yield</code></a> to actually execute and return results.</strong></p>
+<h4 id="parameters-7"><a class="header" href="#parameters-7">Parameters</a></h4>
 <ul>
 <li><code>config</code> (<a href="#type.CaptchaConfig">CaptchaConfig</a>): The configuration to use for the CAPTCHA.</li>
 </ul>
-<h4 id="returns-14"><a class="header" href="#returns-14">Returns</a></h4>
+<h4 id="returns-10"><a class="header" href="#returns-10">Returns</a></h4>
 <ul>
 <li><code>captcha</code> (<a href="#type.u8">{u8}</a>): The created CAPTCHA object.</li>
 </ul>
@@ -737,40 +704,48 @@
 <div id="type.KvExecutor" />
 <h3 id="kvexecutor"><a class="header" href="#kvexecutor">KvExecutor</a></h3>
 <p>KvExecutor allows templates to get, store and find persistent data within a server.</p>
-<h4 id="methods-6"><a class="header" href="#methods-6">Methods</a></h4>
+<h4 id="methods-5"><a class="header" href="#methods-5">Methods</a></h4>
 <h5 id="kvexecutorfind"><a class="header" href="#kvexecutorfind">KvExecutor:find</a></h5>
-<pre><code class="language-lua">function KvExecutor:find(key: string)
+<pre><code class="language-lua">function KvExecutor:find(key: string): {KvRecord}
 </code></pre>
-<h6 id="parameters-9"><a class="header" href="#parameters-9">Parameters</a></h6>
+<p><strong>Note that this method returns a promise that must be yielded using <a href="#type.promise.yield"><code>promise.yield</code></a> to actually execute and return results.</strong></p>
+<h6 id="parameters-8"><a class="header" href="#parameters-8">Parameters</a></h6>
 <ul>
 <li><code>key</code> (<a href="#type.string">string</a>): The key to search for. % matches zero or more characters; _ matches a single character. To search anywhere in a string, surround {KEY} with %, e.g. %{KEY}%</li>
+</ul>
+<h6 id="returns-11"><a class="header" href="#returns-11">Returns</a></h6>
+<ul>
+<li><code>records</code> (<a href="#type.KvRecord">{KvRecord}</a>): The records found.</li>
 </ul>
 <h5 id="kvexecutorget"><a class="header" href="#kvexecutorget">KvExecutor:get</a></h5>
 <pre><code class="language-lua">function KvExecutor:get(key: string)
 </code></pre>
-<h6 id="parameters-10"><a class="header" href="#parameters-10">Parameters</a></h6>
+<p><strong>Note that this method returns a promise that must be yielded using <a href="#type.promise.yield"><code>promise.yield</code></a> to actually execute and return results.</strong></p>
+<h6 id="parameters-9"><a class="header" href="#parameters-9">Parameters</a></h6>
 <ul>
 <li><code>key</code> (<a href="#type.string">string</a>): The key to get.</li>
 </ul>
-<h6 id="returns-15"><a class="header" href="#returns-15">Returns</a></h6>
+<h6 id="returns-12"><a class="header" href="#returns-12">Returns</a></h6>
 <ul>
 <li><code>value</code> (<a href="#type.any">any</a>): The value of the key.- <code>exists</code> (<a href="#type.bool">bool</a>): Whether the key exists.</li>
 </ul>
 <h5 id="kvexecutorgetrecord"><a class="header" href="#kvexecutorgetrecord">KvExecutor:getrecord</a></h5>
 <pre><code class="language-lua">function KvExecutor:getrecord(key: string): KvRecord
 </code></pre>
-<h6 id="parameters-11"><a class="header" href="#parameters-11">Parameters</a></h6>
+<p><strong>Note that this method returns a promise that must be yielded using <a href="#type.promise.yield"><code>promise.yield</code></a> to actually execute and return results.</strong></p>
+<h6 id="parameters-10"><a class="header" href="#parameters-10">Parameters</a></h6>
 <ul>
 <li><code>key</code> (<a href="#type.string">string</a>): The key to get.</li>
 </ul>
-<h6 id="returns-16"><a class="header" href="#returns-16">Returns</a></h6>
+<h6 id="returns-13"><a class="header" href="#returns-13">Returns</a></h6>
 <ul>
 <li><code>record</code> (<a href="#type.KvRecord">KvRecord</a>): The record of the key.</li>
 </ul>
 <h5 id="kvexecutorset"><a class="header" href="#kvexecutorset">KvExecutor:set</a></h5>
 <pre><code class="language-lua">function KvExecutor:set(key: string, value: any)
 </code></pre>
-<h6 id="parameters-12"><a class="header" href="#parameters-12">Parameters</a></h6>
+<p><strong>Note that this method returns a promise that must be yielded using <a href="#type.promise.yield"><code>promise.yield</code></a> to actually execute and return results.</strong></p>
+<h6 id="parameters-11"><a class="header" href="#parameters-11">Parameters</a></h6>
 <ul>
 <li><code>key</code> (<a href="#type.string">string</a>): The key to set.</li>
 <li><code>value</code> (<a href="#type.any">any</a>): The value to set.</li>
@@ -778,19 +753,20 @@
 <h5 id="kvexecutordelete"><a class="header" href="#kvexecutordelete">KvExecutor:delete</a></h5>
 <pre><code class="language-lua">function KvExecutor:delete(key: string)
 </code></pre>
-<h6 id="parameters-13"><a class="header" href="#parameters-13">Parameters</a></h6>
+<p><strong>Note that this method returns a promise that must be yielded using <a href="#type.promise.yield"><code>promise.yield</code></a> to actually execute and return results.</strong></p>
+<h6 id="parameters-12"><a class="header" href="#parameters-12">Parameters</a></h6>
 <ul>
 <li><code>key</code> (<a href="#type.string">string</a>): The key to delete.</li>
 </ul>
-<h2 id="methods-7"><a class="header" href="#methods-7">Methods</a></h2>
+<h2 id="methods-6"><a class="header" href="#methods-6">Methods</a></h2>
 <h3 id="new-2"><a class="header" href="#new-2">new</a></h3>
 <pre><code class="language-lua">function new(token: TemplateContext): KvExecutor
 </code></pre>
-<h4 id="parameters-14"><a class="header" href="#parameters-14">Parameters</a></h4>
+<h4 id="parameters-13"><a class="header" href="#parameters-13">Parameters</a></h4>
 <ul>
 <li><code>token</code> (<a href="#type.TemplateContext">TemplateContext</a>): The token of the template to use.</li>
 </ul>
-<h4 id="returns-17"><a class="header" href="#returns-17">Returns</a></h4>
+<h4 id="returns-14"><a class="header" href="#returns-14">Returns</a></h4>
 <ul>
 <li><code>executor</code> (<a href="#type.KvExecutor">KvExecutor</a>): A key-value executor.</li>
 </ul>
@@ -1221,15 +1197,15 @@
 <li><code>is_created</code> (<a href="#type.bool">bool</a>): Whether the page is created. <strong>This field is read-only.</strong></li>
 <li><code>template</code> (<a href="#type.Template">Template</a>): The template of the page. <strong>This field is read-only.</strong></li>
 </ul>
-<h4 id="methods-8"><a class="header" href="#methods-8">Methods</a></h4>
+<h4 id="methods-7"><a class="header" href="#methods-7">Methods</a></h4>
 <h5 id="createpageadd_setting"><a class="header" href="#createpageadd_setting">CreatePage:add_setting</a></h5>
 <pre><code class="language-lua">function CreatePage:add_setting(setting: CreatePageSetting): nil
 </code></pre>
-<h6 id="parameters-15"><a class="header" href="#parameters-15">Parameters</a></h6>
+<h6 id="parameters-14"><a class="header" href="#parameters-14">Parameters</a></h6>
 <ul>
 <li><code>setting</code> (<a href="#type.CreatePageSetting">CreatePageSetting</a>): The setting to add to the page.</li>
 </ul>
-<h6 id="returns-18"><a class="header" href="#returns-18">Returns</a></h6>
+<h6 id="returns-15"><a class="header" href="#returns-15">Returns</a></h6>
 <ul>
 <li><code>ret</code> (<a href="#type.nil">nil</a>):</li>
 </ul>
@@ -1253,15 +1229,15 @@
 <ul>
 <li><code>inner</code> (<a href="#type.Setting.Column.InnerColumnType">Setting.Column.InnerColumnType</a>): The array type of the column.</li>
 </ul>
-<h2 id="methods-9"><a class="header" href="#methods-9">Methods</a></h2>
+<h2 id="methods-8"><a class="header" href="#methods-8">Methods</a></h2>
 <h3 id="create_page"><a class="header" href="#create_page">create_page</a></h3>
 <pre><code class="language-lua">function create_page(token: TemplateContext): CreatePage
 </code></pre>
-<h4 id="parameters-16"><a class="header" href="#parameters-16">Parameters</a></h4>
+<h4 id="parameters-15"><a class="header" href="#parameters-15">Parameters</a></h4>
 <ul>
 <li><code>token</code> (<a href="#type.TemplateContext">TemplateContext</a>): The token of the template to use.</li>
 </ul>
-<h4 id="returns-19"><a class="header" href="#returns-19">Returns</a></h4>
+<h4 id="returns-16"><a class="header" href="#returns-16">Returns</a></h4>
 <ul>
 <li><code>create_page</code> (<a href="#type.CreatePage">CreatePage</a>): An empty created page.</li>
 </ul>
@@ -1321,16 +1297,16 @@
 <li><code>perm</code> (<a href="#type.string">string</a>): The permission bit on the namespace.</li>
 <li><code>negator</code> (<a href="#type.bool">bool</a>): Whether the permission is a negator permission or not</li>
 </ul>
-<h2 id="methods-10"><a class="header" href="#methods-10">Methods</a></h2>
+<h2 id="methods-9"><a class="header" href="#methods-9">Methods</a></h2>
 <h3 id="permission_from_string"><a class="header" href="#permission_from_string">permission_from_string</a></h3>
 <pre><code class="language-lua">function permission_from_string(perm_string: string): Permission
 </code></pre>
 <p>Returns a Permission object from a string.</p>
-<h4 id="parameters-17"><a class="header" href="#parameters-17">Parameters</a></h4>
+<h4 id="parameters-16"><a class="header" href="#parameters-16">Parameters</a></h4>
 <ul>
 <li><code>perm_string</code> (<a href="#type.string">string</a>): The string to parse into a Permission object.</li>
 </ul>
-<h4 id="returns-20"><a class="header" href="#returns-20">Returns</a></h4>
+<h4 id="returns-17"><a class="header" href="#returns-17">Returns</a></h4>
 <ul>
 <li><code>permission</code> (<a href="#type.Permission">Permission</a>): The parsed Permission object.</li>
 </ul>
@@ -1338,11 +1314,11 @@
 <pre><code class="language-lua">function permission_to_string(permission: Permission): string
 </code></pre>
 <p>Returns a string from a Permission object.</p>
-<h4 id="parameters-18"><a class="header" href="#parameters-18">Parameters</a></h4>
+<h4 id="parameters-17"><a class="header" href="#parameters-17">Parameters</a></h4>
 <ul>
 <li><code>permission</code> (<a href="#type.Permission">Permission</a>): The Permission object to parse into a string.</li>
 </ul>
-<h4 id="returns-21"><a class="header" href="#returns-21">Returns</a></h4>
+<h4 id="returns-18"><a class="header" href="#returns-18">Returns</a></h4>
 <ul>
 <li><code>perm_string</code> (<a href="#type.string">string</a>): The parsed string.</li>
 </ul>
@@ -1350,12 +1326,12 @@
 <pre><code class="language-lua">function has_perm(permissions: {Permission}, permission: Permission): bool
 </code></pre>
 <p>Checks if a list of permissions in Permission object form contains a specific permission.</p>
-<h4 id="parameters-19"><a class="header" href="#parameters-19">Parameters</a></h4>
+<h4 id="parameters-18"><a class="header" href="#parameters-18">Parameters</a></h4>
 <ul>
 <li><code>permissions</code> (<a href="#type.Permission">{Permission}</a>): The list of permissions</li>
 <li><code>permission</code> (<a href="#type.Permission">Permission</a>): The permission to check for.</li>
 </ul>
-<h4 id="returns-22"><a class="header" href="#returns-22">Returns</a></h4>
+<h4 id="returns-19"><a class="header" href="#returns-19">Returns</a></h4>
 <ul>
 <li><code>has_perm</code> (<a href="#type.bool">bool</a>): Whether the permission is present in the list of permissions as per kittycat rules.</li>
 </ul>
@@ -1363,12 +1339,12 @@
 <pre><code class="language-lua">function has_perm_str(permissions: {string}, permission: string): bool
 </code></pre>
 <p>Checks if a list of permissions in canonical string form contains a specific permission.</p>
-<h4 id="parameters-20"><a class="header" href="#parameters-20">Parameters</a></h4>
+<h4 id="parameters-19"><a class="header" href="#parameters-19">Parameters</a></h4>
 <ul>
 <li><code>permissions</code> (<a href="#type.string">{string}</a>): The list of permissions</li>
 <li><code>permission</code> (<a href="#type.string">string</a>): The permission to check for.</li>
 </ul>
-<h4 id="returns-23"><a class="header" href="#returns-23">Returns</a></h4>
+<h4 id="returns-20"><a class="header" href="#returns-20">Returns</a></h4>
 <ul>
 <li><code>has_perm</code> (<a href="#type.bool">bool</a>): Whether the permission is present in the list of permissions as per kittycat rules.</li>
 </ul>
@@ -1376,13 +1352,13 @@
 <pre><code class="language-lua">function check_perms(check: PermissionCheck, member_native_perms: Permissions, member_kittycat_perms: {Permission}): LuaPermissionResult
 </code></pre>
 <p>Checks if a permission check passes.</p>
-<h4 id="parameters-21"><a class="header" href="#parameters-21">Parameters</a></h4>
+<h4 id="parameters-20"><a class="header" href="#parameters-20">Parameters</a></h4>
 <ul>
 <li><code>check</code> (<a href="#type.PermissionCheck">PermissionCheck</a>): The permission check to evaluate.</li>
 <li><code>member_native_perms</code> (<a href="#type.Permissions">Permissions</a>): The native permissions of the member.</li>
 <li><code>member_kittycat_perms</code> (<a href="#type.Permission">{Permission}</a>): The kittycat permissions of the member.</li>
 </ul>
-<h4 id="returns-24"><a class="header" href="#returns-24">Returns</a></h4>
+<h4 id="returns-21"><a class="header" href="#returns-21">Returns</a></h4>
 <ul>
 <li><code>result</code> (<a href="#type.LuaPermissionResult">LuaPermissionResult</a>): The result of the permission check.</li>
 </ul>
@@ -1439,7 +1415,7 @@
   "creator": "system",
   "target": "user:1945824",
   "state": "active",
-  "created_at": "2024-12-04T21:26:11.934514407Z",
+  "created_at": "2024-12-15T03:00:13.671868435Z",
   "duration": {
     "secs": 60,
     "nanos": 0
@@ -1473,67 +1449,92 @@
 <div id="type.StingExecutor" />
 <h3 id="stingexecutor"><a class="header" href="#stingexecutor">StingExecutor</a></h3>
 <p>An sting executor is used to execute actions related to stings from Lua templates</p>
-<h4 id="methods-11"><a class="header" href="#methods-11">Methods</a></h4>
+<h4 id="methods-10"><a class="header" href="#methods-10">Methods</a></h4>
 <h5 id="stingexecutorlist"><a class="header" href="#stingexecutorlist">StingExecutor:list</a></h5>
 <pre><code class="language-lua">function StingExecutor:list(page: number): {Sting}
 </code></pre>
-<h6 id="parameters-22"><a class="header" href="#parameters-22">Parameters</a></h6>
+<p><strong>Note that this method returns a promise that must be yielded using <a href="#type.promise.yield"><code>promise.yield</code></a> to actually execute and return results.</strong></p>
+<h6 id="parameters-21"><a class="header" href="#parameters-21">Parameters</a></h6>
 <ul>
 <li><code>page</code> (<a href="#type.number">number</a>): The page number to fetch.</li>
 </ul>
-<h6 id="returns-25"><a class="header" href="#returns-25">Returns</a></h6>
+<h6 id="returns-22"><a class="header" href="#returns-22">Returns</a></h6>
 <ul>
 <li><code>stings</code> (<a href="#type.Sting">{Sting}</a>): The list of stings.</li>
 </ul>
 <h5 id="stingexecutorget"><a class="header" href="#stingexecutorget">StingExecutor:get</a></h5>
 <pre><code class="language-lua">function StingExecutor:get(id: string): Sting
 </code></pre>
-<h6 id="parameters-23"><a class="header" href="#parameters-23">Parameters</a></h6>
+<p><strong>Note that this method returns a promise that must be yielded using <a href="#type.promise.yield"><code>promise.yield</code></a> to actually execute and return results.</strong></p>
+<h6 id="parameters-22"><a class="header" href="#parameters-22">Parameters</a></h6>
 <ul>
 <li><code>id</code> (<a href="#type.string">string</a>): The sting ID.</li>
 </ul>
-<h6 id="returns-26"><a class="header" href="#returns-26">Returns</a></h6>
+<h6 id="returns-23"><a class="header" href="#returns-23">Returns</a></h6>
 <ul>
 <li><code>sting</code> (<a href="#type.Sting">Sting</a>): The sting.</li>
 </ul>
 <h5 id="stingexecutorcreate"><a class="header" href="#stingexecutorcreate">StingExecutor:create</a></h5>
 <pre><code class="language-lua">function StingExecutor:create(data: StingCreate): string
 </code></pre>
-<h6 id="parameters-24"><a class="header" href="#parameters-24">Parameters</a></h6>
+<p><strong>Note that this method returns a promise that must be yielded using <a href="#type.promise.yield"><code>promise.yield</code></a> to actually execute and return results.</strong></p>
+<h6 id="parameters-23"><a class="header" href="#parameters-23">Parameters</a></h6>
 <ul>
 <li><code>data</code> (<a href="#type.StingCreate">StingCreate</a>): The sting data.</li>
 </ul>
-<h6 id="returns-27"><a class="header" href="#returns-27">Returns</a></h6>
+<h6 id="returns-24"><a class="header" href="#returns-24">Returns</a></h6>
 <ul>
 <li><code>id</code> (<a href="#type.string">string</a>): The sting ID of the created sting.</li>
 </ul>
 <h5 id="stingexecutorupdate"><a class="header" href="#stingexecutorupdate">StingExecutor:update</a></h5>
 <pre><code class="language-lua">function StingExecutor:update(data: Sting)
 </code></pre>
-<h6 id="parameters-25"><a class="header" href="#parameters-25">Parameters</a></h6>
+<p><strong>Note that this method returns a promise that must be yielded using <a href="#type.promise.yield"><code>promise.yield</code></a> to actually execute and return results.</strong></p>
+<h6 id="parameters-24"><a class="header" href="#parameters-24">Parameters</a></h6>
 <ul>
 <li><code>data</code> (<a href="#type.Sting">Sting</a>): The sting to update to. Note that if an invalid ID is used, this method may either do nothing or error out.</li>
 </ul>
 <h5 id="stingexecutordelete"><a class="header" href="#stingexecutordelete">StingExecutor:delete</a></h5>
 <pre><code class="language-lua">function StingExecutor:delete(id: string)
 </code></pre>
-<h6 id="parameters-26"><a class="header" href="#parameters-26">Parameters</a></h6>
+<p><strong>Note that this method returns a promise that must be yielded using <a href="#type.promise.yield"><code>promise.yield</code></a> to actually execute and return results.</strong></p>
+<h6 id="parameters-25"><a class="header" href="#parameters-25">Parameters</a></h6>
 <ul>
 <li><code>id</code> (<a href="#type.string">string</a>): The sting ID.</li>
 </ul>
 <hr />
-<h1 id="antiraidtypesext"><a class="header" href="#antiraidtypesext">@antiraid/typesext</a></h1>
-<p>Extra types used by Anti-Raid Lua templating subsystem to either add in common functionality such as streams or handle things like u64/i64 types performantly.</p>
+<h1 id="antiraidstream"><a class="header" href="#antiraidstream">@antiraid/stream</a></h1>
+<p>Lua Streams, yield for a set of values using next.</p>
 <h2 id="types-7"><a class="header" href="#types-7">Types</a></h2>
 <div id="type.LuaStream" />
 <h3 id="luastream"><a class="header" href="#luastream">LuaStream<T></a></h3>
+<p>LuaStream<T> provides a stream implementation. This is returned by MessageHandle's await_component_interaction for instance for handling button clicks/select menu choices etc.</p>
+<h2 id="methods-11"><a class="header" href="#methods-11">Methods</a></h2>
+<h3 id="next"><a class="header" href="#next">next</a></h3>
+<pre><code class="language-lua">function next(stream: LuaStream&lt;T&gt;): T
+</code></pre>
+<p>Returns the next value in the stream. Note that this is the only function other than <code>promise.yield</code> that yields.</p>
+<h4 id="parameters-26"><a class="header" href="#parameters-26">Parameters</a></h4>
+<ul>
+<li><code>stream</code> (<a href="#type.LuaStream%3CT%3E">LuaStream<T></a>): The stream to get the next value from.</li>
+</ul>
+<h4 id="returns-25"><a class="header" href="#returns-25">Returns</a></h4>
+<ul>
+<li><code>T</code> (<a href="#type.T">T</a>): The next value in the stream, or nil if the stream is exhausted.</li>
+</ul>
+<hr />
+<h1 id="antiraidtypesext"><a class="header" href="#antiraidtypesext">@antiraid/typesext</a></h1>
+<p>Extra types used by Anti-Raid Lua templating subsystem to either add in common functionality such as streams or handle things like u64/i64 types performantly.</p>
+<h2 id="types-8"><a class="header" href="#types-8">Types</a></h2>
+<div id="type.LuaStream" />
+<h3 id="luastream-1"><a class="header" href="#luastream-1">LuaStream<T></a></h3>
 <p>LuaStream<T> provides a stream implementation. This is returned by MessageHandle's await_component_interaction for instance for handling button clicks/select menu choices etc.</p>
 <h4 id="methods-12"><a class="header" href="#methods-12">Methods</a></h4>
 <h5 id="luastreamnext"><a class="header" href="#luastreamnext">LuaStream:next</a></h5>
 <pre><code class="language-lua">function LuaStream:next(): &lt;T&gt;?
 </code></pre>
 <p>Returns the next item in the stream.</p>
-<h6 id="returns-28"><a class="header" href="#returns-28">Returns</a></h6>
+<h6 id="returns-26"><a class="header" href="#returns-26">Returns</a></h6>
 <ul>
 <li><code>item</code> (<a href="#type.%3CT%3E"><T>?</a>): The next item in the stream.</li>
 </ul>
@@ -1556,7 +1557,7 @@
 <pre><code class="language-lua">function U64:to_ne_bytes(): {u8}
 </code></pre>
 <p>Converts the U64 to a little-endian byte array.</p>
-<h6 id="returns-29"><a class="header" href="#returns-29">Returns</a></h6>
+<h6 id="returns-27"><a class="header" href="#returns-27">Returns</a></h6>
 <ul>
 <li><code>bytes</code> (<a href="#type.u8">{u8}</a>): The little-endian byte array.</li>
 </ul>
@@ -1568,7 +1569,7 @@
 <ul>
 <li><code>bytes</code> (<a href="#type.u8">{u8}</a>): The little-endian byte array.</li>
 </ul>
-<h6 id="returns-30"><a class="header" href="#returns-30">Returns</a></h6>
+<h6 id="returns-28"><a class="header" href="#returns-28">Returns</a></h6>
 <ul>
 <li><code>u64</code> (<a href="#type.U64">U64</a>): The U64 value.</li>
 </ul>
@@ -1576,7 +1577,7 @@
 <pre><code class="language-lua">function U64:to_le_bytes(): {u8}
 </code></pre>
 <p>Converts the U64 to a little-endian byte array.</p>
-<h6 id="returns-31"><a class="header" href="#returns-31">Returns</a></h6>
+<h6 id="returns-29"><a class="header" href="#returns-29">Returns</a></h6>
 <ul>
 <li><code>bytes</code> (<a href="#type.u8">{u8}</a>): The little-endian byte array.</li>
 </ul>
@@ -1588,7 +1589,7 @@
 <ul>
 <li><code>bytes</code> (<a href="#type.u8">{u8}</a>): The little-endian byte array.</li>
 </ul>
-<h6 id="returns-32"><a class="header" href="#returns-32">Returns</a></h6>
+<h6 id="returns-30"><a class="header" href="#returns-30">Returns</a></h6>
 <ul>
 <li><code>u64</code> (<a href="#type.U64">U64</a>): The U64 value.</li>
 </ul>
@@ -1596,7 +1597,7 @@
 <pre><code class="language-lua">function U64:to_be_bytes(): {u8}
 </code></pre>
 <p>Converts the U64 to a big-endian byte array.</p>
-<h6 id="returns-33"><a class="header" href="#returns-33">Returns</a></h6>
+<h6 id="returns-31"><a class="header" href="#returns-31">Returns</a></h6>
 <ul>
 <li><code>bytes</code> (<a href="#type.u8">{u8}</a>): The big-endian byte array.</li>
 </ul>
@@ -1608,7 +1609,7 @@
 <ul>
 <li><code>bytes</code> (<a href="#type.u8">{u8}</a>): The big-endian byte array.</li>
 </ul>
-<h6 id="returns-34"><a class="header" href="#returns-34">Returns</a></h6>
+<h6 id="returns-32"><a class="header" href="#returns-32">Returns</a></h6>
 <ul>
 <li><code>u64</code> (<a href="#type.U64">U64</a>): The U64 value.</li>
 </ul>
@@ -1616,7 +1617,7 @@
 <pre><code class="language-lua">function U64:to_i64(): I64
 </code></pre>
 <p>Converts the U64 to an i64.</p>
-<h6 id="returns-35"><a class="header" href="#returns-35">Returns</a></h6>
+<h6 id="returns-33"><a class="header" href="#returns-33">Returns</a></h6>
 <ul>
 <li><code>i64</code> (<a href="#type.I64">I64</a>): The i64 value.</li>
 </ul>
@@ -1628,7 +1629,7 @@
 <pre><code class="language-lua">function I64:to_ne_bytes(): {u8}
 </code></pre>
 <p>Converts the I64 to a little-endian byte array.</p>
-<h6 id="returns-36"><a class="header" href="#returns-36">Returns</a></h6>
+<h6 id="returns-34"><a class="header" href="#returns-34">Returns</a></h6>
 <ul>
 <li><code>bytes</code> (<a href="#type.u8">{u8}</a>): The little-endian byte array.</li>
 </ul>
@@ -1640,7 +1641,7 @@
 <ul>
 <li><code>bytes</code> (<a href="#type.u8">{u8}</a>): The little-endian byte array.</li>
 </ul>
-<h6 id="returns-37"><a class="header" href="#returns-37">Returns</a></h6>
+<h6 id="returns-35"><a class="header" href="#returns-35">Returns</a></h6>
 <ul>
 <li><code>i64</code> (<a href="#type.I64">I64</a>): The I64 value.</li>
 </ul>
@@ -1648,7 +1649,7 @@
 <pre><code class="language-lua">function I64:to_le_bytes(): {u8}
 </code></pre>
 <p>Converts the I64 to a little-endian byte array.</p>
-<h6 id="returns-38"><a class="header" href="#returns-38">Returns</a></h6>
+<h6 id="returns-36"><a class="header" href="#returns-36">Returns</a></h6>
 <ul>
 <li><code>bytes</code> (<a href="#type.u8">{u8}</a>): The little-endian byte array.</li>
 </ul>
@@ -1660,7 +1661,7 @@
 <ul>
 <li><code>bytes</code> (<a href="#type.u8">{u8}</a>): The little-endian byte array.</li>
 </ul>
-<h6 id="returns-39"><a class="header" href="#returns-39">Returns</a></h6>
+<h6 id="returns-37"><a class="header" href="#returns-37">Returns</a></h6>
 <ul>
 <li><code>i64</code> (<a href="#type.I64">I64</a>): The I64 value.</li>
 </ul>
@@ -1668,7 +1669,7 @@
 <pre><code class="language-lua">function I64:to_be_bytes(): {u8}
 </code></pre>
 <p>Converts the I64 to a big-endian byte array.</p>
-<h6 id="returns-40"><a class="header" href="#returns-40">Returns</a></h6>
+<h6 id="returns-38"><a class="header" href="#returns-38">Returns</a></h6>
 <ul>
 <li><code>bytes</code> (<a href="#type.u8">{u8}</a>): The big-endian byte array.</li>
 </ul>
@@ -1680,7 +1681,7 @@
 <ul>
 <li><code>bytes</code> (<a href="#type.u8">{u8}</a>): The big-endian byte array.</li>
 </ul>
-<h6 id="returns-41"><a class="header" href="#returns-41">Returns</a></h6>
+<h6 id="returns-39"><a class="header" href="#returns-39">Returns</a></h6>
 <ul>
 <li><code>i64</code> (<a href="#type.I64">I64</a>): The I64 value.</li>
 </ul>
@@ -1688,7 +1689,7 @@
 <pre><code class="language-lua">function I64:to_u64(): U64
 </code></pre>
 <p>Converts the I64 to a U64.</p>
-<h6 id="returns-42"><a class="header" href="#returns-42">Returns</a></h6>
+<h6 id="returns-40"><a class="header" href="#returns-40">Returns</a></h6>
 <ul>
 <li><code>u64</code> (<a href="#type.U64">U64</a>): The U64 value.</li>
 </ul>
@@ -1704,7 +1705,7 @@
 <ul>
 <li><code>values</code> (<a href="#type.U64">{U64}</a>): The values to perform the operation on.</li>
 </ul>
-<h6 id="returns-43"><a class="header" href="#returns-43">Returns</a></h6>
+<h6 id="returns-41"><a class="header" href="#returns-41">Returns</a></h6>
 <ul>
 <li><code>result</code> (<a href="#type.U64">U64</a>): The result of the operation.</li>
 </ul>
@@ -1716,7 +1717,7 @@
 <ul>
 <li><code>n</code> (<a href="#type.U64">U64</a>): The value to perform the operation on.</li>
 </ul>
-<h6 id="returns-44"><a class="header" href="#returns-44">Returns</a></h6>
+<h6 id="returns-42"><a class="header" href="#returns-42">Returns</a></h6>
 <ul>
 <li><code>result</code> (<a href="#type.U64">U64</a>): The result of the operation.</li>
 </ul>
@@ -1728,7 +1729,7 @@
 <ul>
 <li><code>values</code> (<a href="#type.U64">{U64}</a>): The values to perform the operation on.</li>
 </ul>
-<h6 id="returns-45"><a class="header" href="#returns-45">Returns</a></h6>
+<h6 id="returns-43"><a class="header" href="#returns-43">Returns</a></h6>
 <ul>
 <li><code>result</code> (<a href="#type.U64">U64</a>): The result of the operation.</li>
 </ul>
@@ -1740,7 +1741,7 @@
 <ul>
 <li><code>values</code> (<a href="#type.U64">{U64}</a>): The values to perform the operation on.</li>
 </ul>
-<h6 id="returns-46"><a class="header" href="#returns-46">Returns</a></h6>
+<h6 id="returns-44"><a class="header" href="#returns-44">Returns</a></h6>
 <ul>
 <li><code>result</code> (<a href="#type.U64">U64</a>): The result of the operation.</li>
 </ul>
@@ -1752,7 +1753,7 @@
 <ul>
 <li><code>values</code> (<a href="#type.U64">{U64}</a>): The values to perform the operation on.</li>
 </ul>
-<h6 id="returns-47"><a class="header" href="#returns-47">Returns</a></h6>
+<h6 id="returns-45"><a class="header" href="#returns-45">Returns</a></h6>
 <ul>
 <li><code>result</code> (<a href="#type.bool">bool</a>): True if the bitwise AND of the values is not zero, false otherwise.</li>
 </ul>
@@ -1766,7 +1767,7 @@
 <li><code>f</code> (<a href="#type.u64">u64</a>): The field to extract.</li>
 <li><code>w</code> (<a href="#type.u64">u64</a>): The width of the field to extract.</li>
 </ul>
-<h6 id="returns-48"><a class="header" href="#returns-48">Returns</a></h6>
+<h6 id="returns-46"><a class="header" href="#returns-46">Returns</a></h6>
 <ul>
 <li><code>result</code> (<a href="#type.U64">U64</a>): The extracted field.</li>
 </ul>
@@ -1779,7 +1780,7 @@
 <li><code>n</code> (<a href="#type.U64">U64</a>): The value to rotate.</li>
 <li><code>i</code> (<a href="#type.i64">i64</a>): The amount to rotate by.</li>
 </ul>
-<h6 id="returns-49"><a class="header" href="#returns-49">Returns</a></h6>
+<h6 id="returns-47"><a class="header" href="#returns-47">Returns</a></h6>
 <ul>
 <li><code>result</code> (<a href="#type.U64">U64</a>): The rotated value.</li>
 </ul>
@@ -1792,7 +1793,7 @@
 <li><code>n</code> (<a href="#type.U64">U64</a>): The value to shift.</li>
 <li><code>i</code> (<a href="#type.i64">i64</a>): The amount to shift by.</li>
 </ul>
-<h6 id="returns-50"><a class="header" href="#returns-50">Returns</a></h6>
+<h6 id="returns-48"><a class="header" href="#returns-48">Returns</a></h6>
 <ul>
 <li><code>result</code> (<a href="#type.U64">U64</a>): The shifted value.</li>
 </ul>
@@ -1807,7 +1808,7 @@
 <li><code>f</code> (<a href="#type.u64">u64</a>): The field to replace.</li>
 <li><code>w</code> (<a href="#type.u64">u64</a>): The width of the field to replace.</li>
 </ul>
-<h6 id="returns-51"><a class="header" href="#returns-51">Returns</a></h6>
+<h6 id="returns-49"><a class="header" href="#returns-49">Returns</a></h6>
 <ul>
 <li><code>result</code> (<a href="#type.U64">U64</a>): The value with the field replaced.</li>
 </ul>
@@ -1820,7 +1821,7 @@
 <li><code>n</code> (<a href="#type.U64">U64</a>): The value to rotate.</li>
 <li><code>i</code> (<a href="#type.i64">i64</a>): The amount to rotate by.</li>
 </ul>
-<h6 id="returns-52"><a class="header" href="#returns-52">Returns</a></h6>
+<h6 id="returns-50"><a class="header" href="#returns-50">Returns</a></h6>
 <ul>
 <li><code>result</code> (<a href="#type.U64">U64</a>): The rotated value.</li>
 </ul>
@@ -1833,7 +1834,7 @@
 <li><code>n</code> (<a href="#type.U64">U64</a>): The value to shift.</li>
 <li><code>i</code> (<a href="#type.i64">i64</a>): The amount to shift by.</li>
 </ul>
-<h6 id="returns-53"><a class="header" href="#returns-53">Returns</a></h6>
+<h6 id="returns-51"><a class="header" href="#returns-51">Returns</a></h6>
 <ul>
 <li><code>result</code> (<a href="#type.U64">U64</a>): The shifted value.</li>
 </ul>
@@ -1846,7 +1847,7 @@
 <ul>
 <li><code>value</code> (<a href="#type.u64">u64</a>): The value of the U64.</li>
 </ul>
-<h4 id="returns-54"><a class="header" href="#returns-54">Returns</a></h4>
+<h4 id="returns-52"><a class="header" href="#returns-52">Returns</a></h4>
 <ul>
 <li><code>u64</code> (<a href="#type.U64">U64</a>): The U64 value.</li>
 </ul>
@@ -1858,7 +1859,7 @@
 <ul>
 <li><code>value</code> (<a href="#type.i64">i64</a>): The value of the I64.</li>
 </ul>
-<h4 id="returns-55"><a class="header" href="#returns-55">Returns</a></h4>
+<h4 id="returns-53"><a class="header" href="#returns-53">Returns</a></h4>
 <ul>
 <li><code>i64</code> (<a href="#type.I64">I64</a>): The I64 value.</li>
 </ul>
@@ -1996,7 +1997,7 @@
 </code></pre>
 <p>A Lua function.</p>
 <hr />
-<h1 id="types-8"><a class="header" href="#types-8">Types</a></h1>
+<h1 id="types-9"><a class="header" href="#types-9">Types</a></h1>
 <div id="type.Event" />
 <h2 id="event"><a class="header" href="#event">Event</a></h2>
 <p>An event that has been dispatched to the template. This is what <code>args</code> is in the template.</p>
@@ -2006,7 +2007,8 @@
 <li><code>base_name</code> (<a href="#type.string">string</a>): The base name of the event.</li>
 <li><code>name</code> (<a href="#type.string">string</a>): The name of the event.</li>
 <li><code>data</code> (<a href="#type.unknown">unknown</a>): The data of the event.</li>
-<li><code>is_deniable</code> (<a href="#type.boolean">boolean</a>): Whether the event can be denied.</li>
+<li><code>can_respond</code> (<a href="#type.boolean">boolean</a>): Whether the event can be responded to.</li>
+<li><code>response</code> (<a href="#type.unknown">unknown</a>): The current response of the event. This can be overwritten by the template by just setting it to a new value.</li>
 <li><code>uid</code> (<a href="#type.string">string</a>): The unique identifier ID of the event. Will be guaranteed to be unique at a per-guild level.</li>
 <li><code>author</code> (<a href="#type.string">string?</a>): The author of the event, if any. If there is no known author, this field will either be <code>nil</code> or <code>null</code>.</li>
 </ul>
@@ -2048,6 +2050,8 @@
 <h3 id="fields-27"><a class="header" href="#fields-27">Fields</a></h3>
 <ul>
 <li><code>template_data</code> (<a href="#type.TemplateData">TemplateData</a>): The data associated with the template.</li>
+<li><code>guild_id</code> (<a href="#type.string">string</a>): The current guild ID the template is running on.</li>
+<li><code>current_user</code> (<a href="#type.Serenity.User">Serenity.User</a>): Returns AntiRaid's discord user object [the current discord bot user driving the template].</li>
 </ul>
 
                     </main>

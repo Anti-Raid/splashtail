@@ -176,25 +176,10 @@ pub const MAX_TEMPLATES_EXECUTION_TIME: std::time::Duration = std::time::Duratio
 <li>The standard <code>require</code> statement can be used to import AntiRaid modules. <strong>Note that the modules are read-only</strong> and cannot be monkey-patched etc.</li>
 <li><strong>Because Lua is a single-threaded language, only one template can be executed at a time</strong></li>
 </ul>
-<p>There are 2 valid syntax for a Luau template:</p>
-<ol>
-<li>Lua script syntax</li>
-</ol>
+<p>In general, all AntiRaid templates should start with the following:</p>
 <pre><code class="language-lua">local args, token = ...
 -- Do something
 return output
-</code></pre>
-<ol start="2">
-<li>Function expression syntax (not recommended for new code)</li>
-</ol>
-<pre><code class="language-lua">function(args, token)
-    -- Do something
-    return output
-end
-</code></pre>
-<p>Note that option 1 is recommended as it is both more idiomatic and is also valid syntax for LSP's and Luau parsers. Note that option 2 is actually converted to option 1 internally through the below wrapper:</p>
-<pre><code>local args, token = ...
-{function body here}
 </code></pre>
 <h2 id="interop"><a class="header" href="#interop">Interop</a></h2>
 <p>Many features of Lua don't work so well when calling functions within the AntiRaid SDK. For example, both arrays and maps are expressed as tables in Lua. However, AntiRaid, being written in Rust, doesn't know this and hance needs some help to convert certain types for FFI. This is where the <code>@antiraid/interop</code> module comes in.</p>
