@@ -1430,60 +1430,6 @@ Utilities for handling permission checks.
 
 ## Types
 
-<div id="type.PermissionResult" />
-
-### PermissionResult
-
-PermissionResult is an internal type containing the status of a permission check in AntiRaid. The exact contents are undocumented as of now
-
-
-
-<div id="type.LuaPermissionResult" />
-
-### LuaPermissionResult
-
-LuaPermissionResult is a type containing the status of a permission check in AntiRaid with prior parsing done for Lua.
-
-```json
-{
-  "result": {
-    "var": "Ok"
-  },
-  "is_ok": true,
-  "code": "Ok",
-  "markdown": ""
-}
-```
-
-#### Fields
-
-- `result` ([PermissionResult](#type.PermissionResult)): The raw/underlying result of the permission check.
-- `is_ok` ([bool](#type.bool)): Whether the permission check was successful.
-- `code` ([string](#type.string)): The code of the permission check.
-- `markdown` ([string](#type.string)): The markdown representation of the permission check.
-
-
-<div id="type.PermissionCheck" />
-
-### PermissionCheck
-
-PermissionCheck is a type containing the permissions to check for a user.
-
-```json
-{
-  "kittycat_perms": [],
-  "native_perms": [],
-  "inner_and": false
-}
-```
-
-#### Fields
-
-- `kittycat_perms` ([{Permission}](#type.Permission)): The kittycat permissions needed to run the command.
-- `native_perms` ([{string}](#type.string)): The native permissions needed to run the command.
-- `inner_and` ([bool](#type.bool)): Whether or not the perms are ANDed (all needed) or OR'd (at least one)
-
-
 <div id="type.Permission" />
 
 ### Permission
@@ -1577,25 +1523,6 @@ Checks if a list of permissions in canonical string form contains a specific per
 
 - `has_perm` ([bool](#type.bool)): Whether the permission is present in the list of permissions as per kittycat rules.
 
-### check_perms
-
-```lua
-function check_perms(check: PermissionCheck, member_native_perms: Permissions, member_kittycat_perms: {Permission}): LuaPermissionResult
-```
-
-Checks if a permission check passes.
-
-#### Parameters
-
-- `check` ([PermissionCheck](#type.PermissionCheck)): The permission check to evaluate.
-- `member_native_perms` ([Permissions](#type.Permissions)): The native permissions of the member.
-- `member_kittycat_perms` ([{Permission}](#type.Permission)): The kittycat permissions of the member.
-
-
-#### Returns
-
-- `result` ([LuaPermissionResult](#type.LuaPermissionResult)): The result of the permission check.
-
 
 
 ---
@@ -1665,7 +1592,7 @@ Represents a sting on AntiRaid
   "creator": "system",
   "target": "user:1945824",
   "state": "active",
-  "created_at": "2024-12-15T19:49:01.996579125Z",
+  "created_at": "2024-12-24T07:37:48.710918096Z",
   "duration": {
     "secs": 60,
     "nanos": 0

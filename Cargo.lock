@@ -192,7 +192,6 @@ dependencies = [
  "async-trait",
  "chrono",
  "indexmap",
- "permissions",
  "reqwest",
  "sandwich_driver",
  "serde",
@@ -663,7 +662,6 @@ dependencies = [
  "kittycat",
  "log",
  "modules",
- "permissions",
  "poise",
  "rust_buildstats",
  "sandwich_driver",
@@ -715,9 +713,9 @@ dependencies = [
  "futures-util",
  "indexmap",
  "jobserver 0.1.0",
+ "kittycat",
  "log",
  "modules",
- "permissions",
  "poise",
  "sandwich_driver",
  "serde_json",
@@ -734,6 +732,7 @@ dependencies = [
  "futures-util",
  "indexmap",
  "jobserver 0.1.0",
+ "kittycat",
  "log",
  "modules",
  "poise",
@@ -2524,7 +2523,6 @@ dependencies = [
  "kittycat",
  "log",
  "moka",
- "permissions",
  "poise",
  "reqwest",
  "sandwich_driver",
@@ -2823,15 +2821,6 @@ name = "percent-encoding"
 version = "2.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e3148f5046208a5d56bcfc03053e3ca6334e51da8dfb19b6cdc8b306fae3283e"
-
-[[package]]
-name = "permissions"
-version = "0.1.0"
-dependencies = [
- "kittycat",
- "serde",
- "serenity",
-]
 
 [[package]]
 name = "pin-project-lite"
@@ -3490,7 +3479,6 @@ dependencies = [
  "indexmap",
  "kittycat",
  "modules",
- "permissions",
  "rust_rpc_server",
  "sandwich_driver",
  "serde",
@@ -4489,7 +4477,6 @@ dependencies = [
  "mlua_scheduler",
  "mlua_scheduler_ext",
  "moka",
- "permissions",
  "rand",
  "rbx_binary",
  "rbx_dom_weak",
