@@ -19,7 +19,9 @@ packages:
       ext_types.Permissions: ext.Permissions
       discordgo.Channel: discordgo.Channel
       discordgo.ChannelType: discordgo.ChannelType
-        
+      silverpelt.CanonicalCommand: silverpelt.CanonicalCommand
+      silverpelt.CanonicalConfigOption: silverpelt.CanonicalConfigOption
+
   - path: "github.com/infinitybotlist/eureka/dovewing/dovetypes"
     output_path: "services/website/src/lib/generated/eureka-dovewing.ts"
 

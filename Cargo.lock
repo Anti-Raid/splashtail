@@ -626,121 +626,34 @@ dependencies = [
 name = "bot"
 version = "0.1.0"
 dependencies = [
+ "ar_settings",
  "async-trait",
- "bot_modules_default",
+ "axum",
  "botox",
  "clap",
  "config",
  "dashmap 6.1.0",
  "env_logger",
- "indexmap",
- "log",
- "modules",
- "poise",
- "reqwest",
- "rust_rpc_server",
- "rust_rpc_server_bot",
- "serde_json",
- "serenity",
- "silverpelt",
- "sqlx",
- "tokio",
-]
-
-[[package]]
-name = "bot_modules_core"
-version = "0.1.0"
-dependencies = [
- "ar_settings",
- "async-trait",
- "botox",
- "chrono",
- "config",
  "futures-util",
  "gwevent",
  "indexmap",
+ "jobserver 0.1.0",
  "kittycat",
+ "lockdowns",
  "log",
- "modules",
  "poise",
+ "reqwest",
  "rust_buildstats",
+ "rust_rpc_server",
  "sandwich_driver",
+ "serde",
  "serde_json",
  "serenity",
  "silverpelt",
  "splashcore_rs",
  "sqlx",
  "tokio",
-]
-
-[[package]]
-name = "bot_modules_default"
-version = "0.1.0"
-dependencies = [
- "bot_modules_core",
- "bot_modules_lockdown",
- "bot_modules_moderation",
- "bot_modules_server_backups",
- "modules",
-]
-
-[[package]]
-name = "bot_modules_lockdown"
-version = "0.1.0"
-dependencies = [
- "ar_settings",
- "async-trait",
- "botox",
- "chrono",
- "indexmap",
- "kittycat",
- "lockdowns",
- "modules",
- "poise",
- "serenity",
- "silverpelt",
- "splashcore_rs",
- "sqlx",
- "uuid",
-]
-
-[[package]]
-name = "bot_modules_moderation"
-version = "0.1.0"
-dependencies = [
- "botox",
- "config",
- "futures-util",
- "indexmap",
- "jobserver 0.1.0",
- "kittycat",
- "log",
- "modules",
- "poise",
- "sandwich_driver",
- "serde_json",
- "serenity",
- "silverpelt",
- "splashcore_rs",
-]
-
-[[package]]
-name = "bot_modules_server_backups"
-version = "0.1.0"
-dependencies = [
- "config",
- "futures-util",
- "indexmap",
- "jobserver 0.1.0",
- "kittycat",
- "log",
- "modules",
- "poise",
- "serde_json",
- "serenity",
- "silverpelt",
- "splashcore_rs",
- "sqlx",
+ "tower-http",
 ]
 
 [[package]]
@@ -2512,29 +2425,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "modules"
-version = "6.2.0"
-dependencies = [
- "ar_settings",
- "async-trait",
- "chrono",
- "dashmap 6.1.0",
- "indexmap",
- "kittycat",
- "log",
- "moka",
- "poise",
- "reqwest",
- "sandwich_driver",
- "serde",
- "serde_json",
- "serenity",
- "silverpelt",
- "splashcore_rs",
- "sqlx",
-]
-
-[[package]]
 name = "moka"
 version = "0.12.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3467,25 +3357,6 @@ dependencies = [
  "tokio",
  "tower-http",
  "tower-service",
-]
-
-[[package]]
-name = "rust_rpc_server_bot"
-version = "6.0.0"
-dependencies = [
- "ar_settings",
- "axum",
- "bitflags 2.6.0",
- "indexmap",
- "kittycat",
- "modules",
- "rust_rpc_server",
- "sandwich_driver",
- "serde",
- "serde_json",
- "serenity",
- "silverpelt",
- "splashcore_rs",
 ]
 
 [[package]]
@@ -4445,6 +4316,7 @@ dependencies = [
  "templating",
  "templating_docgen",
  "tokio",
+ "tower-http",
 ]
 
 [[package]]
@@ -4461,6 +4333,7 @@ dependencies = [
  "chrono",
  "chrono_lc",
  "config",
+ "dashmap 6.1.0",
  "digest",
  "futures-util",
  "glam",
