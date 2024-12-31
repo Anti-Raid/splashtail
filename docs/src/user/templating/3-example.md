@@ -40,6 +40,7 @@ Next, we create the embed using the events ``title`` field as the embed title an
 local embed = {
     title = args.title, 
     description = "", -- Start with empty description
+    fields = {}, -- Start with empty fields
 }
 ```
 
@@ -53,18 +54,19 @@ for key, value in pairs(my_table) do
 end
 ```
 
-#### 3. Typing (optional)
+#### 3. Creating the audit log message fields etc.
 
 The next step is to add fields to the embed by actually handling the Discord events we want properly. This is pretty annoying to do without some typing and helper methods though...
 
-Fortunately, AntiRaid has a solution: [templating-types](https://github.com/Anti-Raid/templating-types)! This does require extra effort in the form of bundling.
+Fortunately, AntiRaid has a solution: [templating-types](https://github.com/Anti-Raid/templating-types)! This does require extra effort in the form of bundling with [templating-template](https://github.com/Anti-Raid/templating-template) as a template. See [our guide](./4-bundling.md) for more information on how to do this.
+
+Once you're done making the message as you'd like. It's time to send the message!
 
 #### 4. Sending the message
 
-Finally, we can send the message using the Discord module. To do this, we need to create a message object and set the embeds property to an array containing our embed. This is also where interop comes in handy, as we need to set the metatable of the embeds array to the interop array metatable so AntiRaid knows that embeds is an array. Next, we use the Discord plugin to make a new Discord action executor which then lets us send the message to the specified channel (`args.sink` is another Audit Log specific variable that contains the channel ID/whatever `sink` is set to in the database).
+Finally, we can send the message using the Discord module. To do this, we need to create a message object and set the embeds property to an array containing our embed. This is also where interop comes in handy, as we need to set the metatable of the embeds array to the interop array metatable so AntiRaid knows that embeds is an array. Next, we use the Discord plugin to make a new Discord action executor which then lets us send the message to the specified channel.
 
 ```lua
-local message = { embeds = {} }
 setmetatable(message.embeds, interop.array_metatable)
 
 table.insert(message.embeds, embed)
@@ -72,49 +74,18 @@ table.insert(message.embeds, embed)
 -- Send message using action executor
 local discord_executor = discord.new(token);
 discord_executor:create_message({
-    channel_id = args.sink,
+    channel_id = "CHANNEL_ID_HERE",
     message = message
 })
 ```
 
-Finally, we can put the entire loop together as so:
+### 5. (Optional) Key-value
+
+With ``@antiraid/kv``, you can save the channel id to a key-value store in the website and then fetch it like so:
 
 ```lua
--- @pragma {"lang":"lua","allowed_caps":["discord:create_message"]}
-local args, token = ...
-local discord = require "@antiraid/discord"
-local interop = require "@antiraid/interop"
-local formatter = require "@antiraid/formatters"
+local kv = require "@antiraid/kv"
 
--- Make the embed
-local embed = {
-    title = args.event_titlename, 
-    description = "", -- Start with empty description
-}
-
--- Add the event data to the description
-for key, value in pairs(args.event_data) do
-    local should_set = false
-
-    if value ~= nil and value.type ~= "None" then
-        should_set = true
-    end
-
-    if should_set then
-        local formatted_value = formatter.format_gwevent_field(value)
-        embed.description = embed.description .. "**" .. key:gsub("_", " "):upper() .. "**: " .. formatted_value .. "\n"
-    end
-end
-
-local message = { embeds = {} }
-setmetatable(message.embeds, interop.array_metatable)
-
-table.insert(message.embeds, embed)
-
--- Send message using action executor
-local discord_executor = discord.new(token);
-discord_executor:create_message({
-    channel_id = args.sink,
-    message = message
-})
+local kvExecutor = kv.new(token)
+local channelId = kvExecutor:get("auditlog_channel")
 ```

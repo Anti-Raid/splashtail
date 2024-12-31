@@ -6,7 +6,8 @@ members = [
     "services/template-worker/crates/*",
 ]
 exclude = [
-    "infra/templating-types/darklua" # Avoid workspace conflicts
+    "infra/templating-types/darklua", # Avoid workspace conflicts
+    "infra/templating-template/darklua"
 ]
 resolver = "2"
 
