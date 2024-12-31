@@ -624,19 +624,11 @@
 <h3 id="array_metatable"><a class="header" href="#array_metatable">array_metatable</a></h3>
 <p><code>array_metatable</code> is a special metatable that is used to represent arrays across the Lua-AntiRaid templating subsystem boundary. This metatable must be set on all arrays over this boundary and is required to ensure AntiRaid knows the value you're sending it is actually an array and not an arbitrary Luau table.</p>
 <h2 id="methods-4"><a class="header" href="#methods-4">Methods</a></h2>
-<h3 id="array_metatable-1"><a class="header" href="#array_metatable-1">array_metatable</a></h3>
-<pre><code class="language-lua">function array_metatable(): table
-</code></pre>
-<p>Returns the array metatable.</p>
-<h4 id="returns-11"><a class="header" href="#returns-11">Returns</a></h4>
-<ul>
-<li><code>array_metatable</code> (<a href="#type.table">table</a>): The array metatable.</li>
-</ul>
 <h3 id="memusage"><a class="header" href="#memusage">memusage</a></h3>
 <pre><code class="language-lua">function memusage(): f64
 </code></pre>
 <p>Returns the current memory usage of the Lua VM.</p>
-<h4 id="returns-12"><a class="header" href="#returns-12">Returns</a></h4>
+<h4 id="returns-11"><a class="header" href="#returns-11">Returns</a></h4>
 <ul>
 <li><code>memory_usage</code> (<a href="#type.f64">f64</a>): The current memory usage, in bytes, of the Lua VM.</li>
 </ul>
@@ -698,7 +690,10 @@
 </code></pre>
 <h4 id="fields-12"><a class="header" href="#fields-12">Fields</a></h4>
 <ul>
-<li><code>filter</code> (<a href="#type.string">string</a>): The name of the filter to use. See example for the parameters to pass for the filter as well as https://github.com/Anti-Raid/captcha.</li>
+<li><code>char_count</code> (<a href="#type.u8">u8</a>): The number of characters the CAPTCHA should have.</li>
+<li><code>filters</code> (<a href="#type.any">{any}</a>): See example for the parameters to pass for the filter as well as https://github.com/Anti-Raid/captcha</li>
+<li><code>viewbox_size</code> ([(u32, u32)](#type.(u32, u32))): The size of the viewbox to render the CAPTCHA in.</li>
+<li><code>set_viewbox_at_idx</code> (<a href="#type.Option%3Cusize%3E">Option<usize></a>): At what index of CAPTCHA generation should a viewbox be created at.</li>
 </ul>
 <h2 id="methods-5"><a class="header" href="#methods-5">Methods</a></h2>
 <h3 id="new-1"><a class="header" href="#new-1">new</a></h3>
@@ -710,7 +705,7 @@
 <ul>
 <li><code>config</code> (<a href="#type.CaptchaConfig">CaptchaConfig</a>): The configuration to use for the CAPTCHA.</li>
 </ul>
-<h4 id="returns-13"><a class="header" href="#returns-13">Returns</a></h4>
+<h4 id="returns-12"><a class="header" href="#returns-12">Returns</a></h4>
 <ul>
 <li><code>captcha</code> (<a href="#type.u8">{u8}</a>): The created CAPTCHA object.</li>
 </ul>
@@ -749,7 +744,7 @@
 <ul>
 <li><code>key</code> (<a href="#type.string">string</a>): The key to search for. % matches zero or more characters; _ matches a single character. To search anywhere in a string, surround {KEY} with %, e.g. %{KEY}%</li>
 </ul>
-<h6 id="returns-14"><a class="header" href="#returns-14">Returns</a></h6>
+<h6 id="returns-13"><a class="header" href="#returns-13">Returns</a></h6>
 <ul>
 <li><code>records</code> (<a href="#type.KvRecord">{KvRecord}</a>): The records found.</li>
 </ul>
@@ -761,7 +756,7 @@
 <ul>
 <li><code>key</code> (<a href="#type.string">string</a>): The key to get.</li>
 </ul>
-<h6 id="returns-15"><a class="header" href="#returns-15">Returns</a></h6>
+<h6 id="returns-14"><a class="header" href="#returns-14">Returns</a></h6>
 <ul>
 <li><code>value</code> (<a href="#type.any">any</a>): The value of the key.- <code>exists</code> (<a href="#type.bool">bool</a>): Whether the key exists.</li>
 </ul>
@@ -773,7 +768,7 @@
 <ul>
 <li><code>key</code> (<a href="#type.string">string</a>): The key to get.</li>
 </ul>
-<h6 id="returns-16"><a class="header" href="#returns-16">Returns</a></h6>
+<h6 id="returns-15"><a class="header" href="#returns-15">Returns</a></h6>
 <ul>
 <li><code>record</code> (<a href="#type.KvRecord">KvRecord</a>): The record of the key.</li>
 </ul>
@@ -802,7 +797,7 @@
 <ul>
 <li><code>token</code> (<a href="#type.TemplateContext">TemplateContext</a>): The token of the template to use.</li>
 </ul>
-<h4 id="returns-17"><a class="header" href="#returns-17">Returns</a></h4>
+<h4 id="returns-16"><a class="header" href="#returns-16">Returns</a></h4>
 <ul>
 <li><code>executor</code> (<a href="#type.KvExecutor">KvExecutor</a>): A key-value executor.</li>
 </ul>
@@ -1241,7 +1236,7 @@
 <ul>
 <li><code>setting</code> (<a href="#type.CreatePageSetting">CreatePageSetting</a>): The setting to add to the page.</li>
 </ul>
-<h6 id="returns-18"><a class="header" href="#returns-18">Returns</a></h6>
+<h6 id="returns-17"><a class="header" href="#returns-17">Returns</a></h6>
 <ul>
 <li><code>ret</code> (<a href="#type.nil">nil</a>):</li>
 </ul>
@@ -1273,7 +1268,7 @@
 <ul>
 <li><code>token</code> (<a href="#type.TemplateContext">TemplateContext</a>): The token of the template to use.</li>
 </ul>
-<h4 id="returns-19"><a class="header" href="#returns-19">Returns</a></h4>
+<h4 id="returns-18"><a class="header" href="#returns-18">Returns</a></h4>
 <ul>
 <li><code>create_page</code> (<a href="#type.CreatePage">CreatePage</a>): An empty created page.</li>
 </ul>
@@ -1305,7 +1300,7 @@
 <ul>
 <li><code>perm_string</code> (<a href="#type.string">string</a>): The string to parse into a Permission object.</li>
 </ul>
-<h4 id="returns-20"><a class="header" href="#returns-20">Returns</a></h4>
+<h4 id="returns-19"><a class="header" href="#returns-19">Returns</a></h4>
 <ul>
 <li><code>permission</code> (<a href="#type.Permission">Permission</a>): The parsed Permission object.</li>
 </ul>
@@ -1317,7 +1312,7 @@
 <ul>
 <li><code>permission</code> (<a href="#type.Permission">Permission</a>): The Permission object to parse into a string.</li>
 </ul>
-<h4 id="returns-21"><a class="header" href="#returns-21">Returns</a></h4>
+<h4 id="returns-20"><a class="header" href="#returns-20">Returns</a></h4>
 <ul>
 <li><code>perm_string</code> (<a href="#type.string">string</a>): The parsed string.</li>
 </ul>
@@ -1330,7 +1325,7 @@
 <li><code>permissions</code> (<a href="#type.Permission">{Permission}</a>): The list of permissions</li>
 <li><code>permission</code> (<a href="#type.Permission">Permission</a>): The permission to check for.</li>
 </ul>
-<h4 id="returns-22"><a class="header" href="#returns-22">Returns</a></h4>
+<h4 id="returns-21"><a class="header" href="#returns-21">Returns</a></h4>
 <ul>
 <li><code>has_perm</code> (<a href="#type.bool">bool</a>): Whether the permission is present in the list of permissions as per kittycat rules.</li>
 </ul>
@@ -1343,7 +1338,7 @@
 <li><code>permissions</code> (<a href="#type.string">{string}</a>): The list of permissions</li>
 <li><code>permission</code> (<a href="#type.string">string</a>): The permission to check for.</li>
 </ul>
-<h4 id="returns-23"><a class="header" href="#returns-23">Returns</a></h4>
+<h4 id="returns-22"><a class="header" href="#returns-22">Returns</a></h4>
 <ul>
 <li><code>has_perm</code> (<a href="#type.bool">bool</a>): Whether the permission is present in the list of permissions as per kittycat rules.</li>
 </ul>
@@ -1363,7 +1358,7 @@
 <ul>
 <li><code>promise</code> (<a href="#type.LuaPromise%3CT%3E">LuaPromise<T></a>): The promise to yield.</li>
 </ul>
-<h4 id="returns-24"><a class="header" href="#returns-24">Returns</a></h4>
+<h4 id="returns-23"><a class="header" href="#returns-23">Returns</a></h4>
 <ul>
 <li><code>T</code> (<a href="#type.T">T</a>): The result of executing the promise.</li>
 </ul>
@@ -1420,7 +1415,7 @@
   "creator": "system",
   "target": "user:1945824",
   "state": "active",
-  "created_at": "2024-12-31T10:45:59.302502629Z",
+  "created_at": "2024-12-31T12:15:42.277102248Z",
   "duration": {
     "secs": 60,
     "nanos": 0
@@ -1463,7 +1458,7 @@
 <ul>
 <li><code>page</code> (<a href="#type.number">number</a>): The page number to fetch.</li>
 </ul>
-<h6 id="returns-25"><a class="header" href="#returns-25">Returns</a></h6>
+<h6 id="returns-24"><a class="header" href="#returns-24">Returns</a></h6>
 <ul>
 <li><code>stings</code> (<a href="#type.Sting">{Sting}</a>): The list of stings.</li>
 </ul>
@@ -1475,7 +1470,7 @@
 <ul>
 <li><code>id</code> (<a href="#type.string">string</a>): The sting ID.</li>
 </ul>
-<h6 id="returns-26"><a class="header" href="#returns-26">Returns</a></h6>
+<h6 id="returns-25"><a class="header" href="#returns-25">Returns</a></h6>
 <ul>
 <li><code>sting</code> (<a href="#type.Sting">Sting</a>): The sting.</li>
 </ul>
@@ -1487,7 +1482,7 @@
 <ul>
 <li><code>data</code> (<a href="#type.StingCreate">StingCreate</a>): The sting data.</li>
 </ul>
-<h6 id="returns-27"><a class="header" href="#returns-27">Returns</a></h6>
+<h6 id="returns-26"><a class="header" href="#returns-26">Returns</a></h6>
 <ul>
 <li><code>id</code> (<a href="#type.string">string</a>): The sting ID of the created sting.</li>
 </ul>
@@ -1523,7 +1518,7 @@
 <ul>
 <li><code>stream</code> (<a href="#type.LuaStream%3CT%3E">LuaStream<T></a>): The stream to get the next value from.</li>
 </ul>
-<h4 id="returns-28"><a class="header" href="#returns-28">Returns</a></h4>
+<h4 id="returns-27"><a class="header" href="#returns-27">Returns</a></h4>
 <ul>
 <li><code>T</code> (<a href="#type.T">T</a>): The next value in the stream, or nil if the stream is exhausted.</li>
 </ul>
@@ -1539,7 +1534,7 @@
 <pre><code class="language-lua">function LuaStream:next(): &lt;T&gt;?
 </code></pre>
 <p>Returns the next item in the stream.</p>
-<h6 id="returns-29"><a class="header" href="#returns-29">Returns</a></h6>
+<h6 id="returns-28"><a class="header" href="#returns-28">Returns</a></h6>
 <ul>
 <li><code>item</code> (<a href="#type.%3CT%3E"><T>?</a>): The next item in the stream.</li>
 </ul>
@@ -1562,7 +1557,7 @@
 <pre><code class="language-lua">function U64:to_ne_bytes(): {u8}
 </code></pre>
 <p>Converts the U64 to a little-endian byte array.</p>
-<h6 id="returns-30"><a class="header" href="#returns-30">Returns</a></h6>
+<h6 id="returns-29"><a class="header" href="#returns-29">Returns</a></h6>
 <ul>
 <li><code>bytes</code> (<a href="#type.u8">{u8}</a>): The little-endian byte array.</li>
 </ul>
@@ -1574,7 +1569,7 @@
 <ul>
 <li><code>bytes</code> (<a href="#type.u8">{u8}</a>): The little-endian byte array.</li>
 </ul>
-<h6 id="returns-31"><a class="header" href="#returns-31">Returns</a></h6>
+<h6 id="returns-30"><a class="header" href="#returns-30">Returns</a></h6>
 <ul>
 <li><code>u64</code> (<a href="#type.U64">U64</a>): The U64 value.</li>
 </ul>
@@ -1582,7 +1577,7 @@
 <pre><code class="language-lua">function U64:to_le_bytes(): {u8}
 </code></pre>
 <p>Converts the U64 to a little-endian byte array.</p>
-<h6 id="returns-32"><a class="header" href="#returns-32">Returns</a></h6>
+<h6 id="returns-31"><a class="header" href="#returns-31">Returns</a></h6>
 <ul>
 <li><code>bytes</code> (<a href="#type.u8">{u8}</a>): The little-endian byte array.</li>
 </ul>
@@ -1594,7 +1589,7 @@
 <ul>
 <li><code>bytes</code> (<a href="#type.u8">{u8}</a>): The little-endian byte array.</li>
 </ul>
-<h6 id="returns-33"><a class="header" href="#returns-33">Returns</a></h6>
+<h6 id="returns-32"><a class="header" href="#returns-32">Returns</a></h6>
 <ul>
 <li><code>u64</code> (<a href="#type.U64">U64</a>): The U64 value.</li>
 </ul>
@@ -1602,7 +1597,7 @@
 <pre><code class="language-lua">function U64:to_be_bytes(): {u8}
 </code></pre>
 <p>Converts the U64 to a big-endian byte array.</p>
-<h6 id="returns-34"><a class="header" href="#returns-34">Returns</a></h6>
+<h6 id="returns-33"><a class="header" href="#returns-33">Returns</a></h6>
 <ul>
 <li><code>bytes</code> (<a href="#type.u8">{u8}</a>): The big-endian byte array.</li>
 </ul>
@@ -1614,7 +1609,7 @@
 <ul>
 <li><code>bytes</code> (<a href="#type.u8">{u8}</a>): The big-endian byte array.</li>
 </ul>
-<h6 id="returns-35"><a class="header" href="#returns-35">Returns</a></h6>
+<h6 id="returns-34"><a class="header" href="#returns-34">Returns</a></h6>
 <ul>
 <li><code>u64</code> (<a href="#type.U64">U64</a>): The U64 value.</li>
 </ul>
@@ -1622,7 +1617,7 @@
 <pre><code class="language-lua">function U64:to_i64(): I64
 </code></pre>
 <p>Converts the U64 to an i64.</p>
-<h6 id="returns-36"><a class="header" href="#returns-36">Returns</a></h6>
+<h6 id="returns-35"><a class="header" href="#returns-35">Returns</a></h6>
 <ul>
 <li><code>i64</code> (<a href="#type.I64">I64</a>): The i64 value.</li>
 </ul>
@@ -1634,7 +1629,7 @@
 <pre><code class="language-lua">function I64:to_ne_bytes(): {u8}
 </code></pre>
 <p>Converts the I64 to a little-endian byte array.</p>
-<h6 id="returns-37"><a class="header" href="#returns-37">Returns</a></h6>
+<h6 id="returns-36"><a class="header" href="#returns-36">Returns</a></h6>
 <ul>
 <li><code>bytes</code> (<a href="#type.u8">{u8}</a>): The little-endian byte array.</li>
 </ul>
@@ -1646,7 +1641,7 @@
 <ul>
 <li><code>bytes</code> (<a href="#type.u8">{u8}</a>): The little-endian byte array.</li>
 </ul>
-<h6 id="returns-38"><a class="header" href="#returns-38">Returns</a></h6>
+<h6 id="returns-37"><a class="header" href="#returns-37">Returns</a></h6>
 <ul>
 <li><code>i64</code> (<a href="#type.I64">I64</a>): The I64 value.</li>
 </ul>
@@ -1654,7 +1649,7 @@
 <pre><code class="language-lua">function I64:to_le_bytes(): {u8}
 </code></pre>
 <p>Converts the I64 to a little-endian byte array.</p>
-<h6 id="returns-39"><a class="header" href="#returns-39">Returns</a></h6>
+<h6 id="returns-38"><a class="header" href="#returns-38">Returns</a></h6>
 <ul>
 <li><code>bytes</code> (<a href="#type.u8">{u8}</a>): The little-endian byte array.</li>
 </ul>
@@ -1666,7 +1661,7 @@
 <ul>
 <li><code>bytes</code> (<a href="#type.u8">{u8}</a>): The little-endian byte array.</li>
 </ul>
-<h6 id="returns-40"><a class="header" href="#returns-40">Returns</a></h6>
+<h6 id="returns-39"><a class="header" href="#returns-39">Returns</a></h6>
 <ul>
 <li><code>i64</code> (<a href="#type.I64">I64</a>): The I64 value.</li>
 </ul>
@@ -1674,7 +1669,7 @@
 <pre><code class="language-lua">function I64:to_be_bytes(): {u8}
 </code></pre>
 <p>Converts the I64 to a big-endian byte array.</p>
-<h6 id="returns-41"><a class="header" href="#returns-41">Returns</a></h6>
+<h6 id="returns-40"><a class="header" href="#returns-40">Returns</a></h6>
 <ul>
 <li><code>bytes</code> (<a href="#type.u8">{u8}</a>): The big-endian byte array.</li>
 </ul>
@@ -1686,7 +1681,7 @@
 <ul>
 <li><code>bytes</code> (<a href="#type.u8">{u8}</a>): The big-endian byte array.</li>
 </ul>
-<h6 id="returns-42"><a class="header" href="#returns-42">Returns</a></h6>
+<h6 id="returns-41"><a class="header" href="#returns-41">Returns</a></h6>
 <ul>
 <li><code>i64</code> (<a href="#type.I64">I64</a>): The I64 value.</li>
 </ul>
@@ -1694,7 +1689,7 @@
 <pre><code class="language-lua">function I64:to_u64(): U64
 </code></pre>
 <p>Converts the I64 to a U64.</p>
-<h6 id="returns-43"><a class="header" href="#returns-43">Returns</a></h6>
+<h6 id="returns-42"><a class="header" href="#returns-42">Returns</a></h6>
 <ul>
 <li><code>u64</code> (<a href="#type.U64">U64</a>): The U64 value.</li>
 </ul>
@@ -1710,7 +1705,7 @@
 <ul>
 <li><code>values</code> (<a href="#type.U64">{U64}</a>): The values to perform the operation on.</li>
 </ul>
-<h6 id="returns-44"><a class="header" href="#returns-44">Returns</a></h6>
+<h6 id="returns-43"><a class="header" href="#returns-43">Returns</a></h6>
 <ul>
 <li><code>result</code> (<a href="#type.U64">U64</a>): The result of the operation.</li>
 </ul>
@@ -1722,7 +1717,7 @@
 <ul>
 <li><code>n</code> (<a href="#type.U64">U64</a>): The value to perform the operation on.</li>
 </ul>
-<h6 id="returns-45"><a class="header" href="#returns-45">Returns</a></h6>
+<h6 id="returns-44"><a class="header" href="#returns-44">Returns</a></h6>
 <ul>
 <li><code>result</code> (<a href="#type.U64">U64</a>): The result of the operation.</li>
 </ul>
@@ -1734,7 +1729,7 @@
 <ul>
 <li><code>values</code> (<a href="#type.U64">{U64}</a>): The values to perform the operation on.</li>
 </ul>
-<h6 id="returns-46"><a class="header" href="#returns-46">Returns</a></h6>
+<h6 id="returns-45"><a class="header" href="#returns-45">Returns</a></h6>
 <ul>
 <li><code>result</code> (<a href="#type.U64">U64</a>): The result of the operation.</li>
 </ul>
@@ -1746,7 +1741,7 @@
 <ul>
 <li><code>values</code> (<a href="#type.U64">{U64}</a>): The values to perform the operation on.</li>
 </ul>
-<h6 id="returns-47"><a class="header" href="#returns-47">Returns</a></h6>
+<h6 id="returns-46"><a class="header" href="#returns-46">Returns</a></h6>
 <ul>
 <li><code>result</code> (<a href="#type.U64">U64</a>): The result of the operation.</li>
 </ul>
@@ -1758,7 +1753,7 @@
 <ul>
 <li><code>values</code> (<a href="#type.U64">{U64}</a>): The values to perform the operation on.</li>
 </ul>
-<h6 id="returns-48"><a class="header" href="#returns-48">Returns</a></h6>
+<h6 id="returns-47"><a class="header" href="#returns-47">Returns</a></h6>
 <ul>
 <li><code>result</code> (<a href="#type.bool">bool</a>): True if the bitwise AND of the values is not zero, false otherwise.</li>
 </ul>
@@ -1772,7 +1767,7 @@
 <li><code>f</code> (<a href="#type.u64">u64</a>): The field to extract.</li>
 <li><code>w</code> (<a href="#type.u64">u64</a>): The width of the field to extract.</li>
 </ul>
-<h6 id="returns-49"><a class="header" href="#returns-49">Returns</a></h6>
+<h6 id="returns-48"><a class="header" href="#returns-48">Returns</a></h6>
 <ul>
 <li><code>result</code> (<a href="#type.U64">U64</a>): The extracted field.</li>
 </ul>
@@ -1785,7 +1780,7 @@
 <li><code>n</code> (<a href="#type.U64">U64</a>): The value to rotate.</li>
 <li><code>i</code> (<a href="#type.i64">i64</a>): The amount to rotate by.</li>
 </ul>
-<h6 id="returns-50"><a class="header" href="#returns-50">Returns</a></h6>
+<h6 id="returns-49"><a class="header" href="#returns-49">Returns</a></h6>
 <ul>
 <li><code>result</code> (<a href="#type.U64">U64</a>): The rotated value.</li>
 </ul>
@@ -1798,7 +1793,7 @@
 <li><code>n</code> (<a href="#type.U64">U64</a>): The value to shift.</li>
 <li><code>i</code> (<a href="#type.i64">i64</a>): The amount to shift by.</li>
 </ul>
-<h6 id="returns-51"><a class="header" href="#returns-51">Returns</a></h6>
+<h6 id="returns-50"><a class="header" href="#returns-50">Returns</a></h6>
 <ul>
 <li><code>result</code> (<a href="#type.U64">U64</a>): The shifted value.</li>
 </ul>
@@ -1813,7 +1808,7 @@
 <li><code>f</code> (<a href="#type.u64">u64</a>): The field to replace.</li>
 <li><code>w</code> (<a href="#type.u64">u64</a>): The width of the field to replace.</li>
 </ul>
-<h6 id="returns-52"><a class="header" href="#returns-52">Returns</a></h6>
+<h6 id="returns-51"><a class="header" href="#returns-51">Returns</a></h6>
 <ul>
 <li><code>result</code> (<a href="#type.U64">U64</a>): The value with the field replaced.</li>
 </ul>
@@ -1826,7 +1821,7 @@
 <li><code>n</code> (<a href="#type.U64">U64</a>): The value to rotate.</li>
 <li><code>i</code> (<a href="#type.i64">i64</a>): The amount to rotate by.</li>
 </ul>
-<h6 id="returns-53"><a class="header" href="#returns-53">Returns</a></h6>
+<h6 id="returns-52"><a class="header" href="#returns-52">Returns</a></h6>
 <ul>
 <li><code>result</code> (<a href="#type.U64">U64</a>): The rotated value.</li>
 </ul>
@@ -1839,7 +1834,7 @@
 <li><code>n</code> (<a href="#type.U64">U64</a>): The value to shift.</li>
 <li><code>i</code> (<a href="#type.i64">i64</a>): The amount to shift by.</li>
 </ul>
-<h6 id="returns-54"><a class="header" href="#returns-54">Returns</a></h6>
+<h6 id="returns-53"><a class="header" href="#returns-53">Returns</a></h6>
 <ul>
 <li><code>result</code> (<a href="#type.U64">U64</a>): The shifted value.</li>
 </ul>
@@ -1852,7 +1847,7 @@
 <ul>
 <li><code>value</code> (<a href="#type.u64">u64</a>): The value of the U64.</li>
 </ul>
-<h4 id="returns-55"><a class="header" href="#returns-55">Returns</a></h4>
+<h4 id="returns-54"><a class="header" href="#returns-54">Returns</a></h4>
 <ul>
 <li><code>u64</code> (<a href="#type.U64">U64</a>): The U64 value.</li>
 </ul>
@@ -1864,7 +1859,7 @@
 <ul>
 <li><code>value</code> (<a href="#type.i64">i64</a>): The value of the I64.</li>
 </ul>
-<h4 id="returns-56"><a class="header" href="#returns-56">Returns</a></h4>
+<h4 id="returns-55"><a class="header" href="#returns-55">Returns</a></h4>
 <ul>
 <li><code>i64</code> (<a href="#type.I64">I64</a>): The I64 value.</li>
 </ul>
