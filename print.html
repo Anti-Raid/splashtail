@@ -162,26 +162,7 @@
 <div style="break-before: page; page-break-before: always;"></div><h1 id="permissions"><a class="header" href="#permissions">Permissions</a></h1>
 <p>Imagine. Imagine a discord bot that you could completely control. You could decide who can use any specific command, who can change the bot's settings, and who can even use the bot at all.</p>
 <p><em>Thats AntiRaid...</em></p>
-<p>AntiRaid has a customizable permission system that uses both Discord permissions for simplicity and <a href="https://github.com/InfinityBotList/kittycat">kittycat</a> permissions for more specific requirements. For more complex cases, AntiRaid provides support for Lua scripting, which can be used to extend Antiraid with arbitrarily complex permission systems, among other things.</p>
-<p>The idea is simple: All roles have permissions attached to them and members can have special permission overrides. The members' permissions are then checked when a command is run.</p>
-<h2 id="modes"><a class="header" href="#modes">Modes</a></h2>
-<p>Anti-Raid has two different modes for permission checks depending on how custom your needs are:</p>
-<ul>
-<li><code>Simple</code>: In simple mode, just specify the exact permissions needed to run a command. This is the default mode.</li>
-<li><code>Template</code>: If you have more advanced needs, use custom templates to determine if a user has the required permissions. See <a href="user/permissions/../templating-lua/1-intro.html"><code>Templating</code></a> for more information on how templating works.</li>
-</ul>
-<h2 id="simple-permission-checks"><a class="header" href="#simple-permission-checks">Simple Permission Checks</a></h2>
-<p>Since not everyone knows how to code, AntiRaid provides a simple permission-checking system built in that should be enough for most:</p>
-<ol>
-<li>Commands can have permissions that gate actions.</li>
-<li>Commands can be either real or virtual. Real commands can be run. Virtual commands are placeholders for permission-gating actions.</li>
-<li>Commands can be configured by setting their permissions or disabling them (some commands cannot be disabled to avoid breakage).</li>
-<li>Server admins can set permissions on their server roles and then override them for specific users through permission overrides.</li>
-<li>Server admins can then set permissions on commands and default permissions on modules. These permissions are then checked when a command is run.</li>
-</ol>
-<h2 id="template-permission-checks"><a class="header" href="#template-permission-checks">Template Permission Checks</a></h2>
-<p>For more advanced users, AntiRaid provides a template system that allows you to create custom permission checks. This is done through custom Luau templating.</p>
-<p>See the <a href="user/permissions/../templating-lua/1-intro.html">templating guide</a> for more information on how to use Lua templates. Then, just code away!</p>
+<p>AntiRaid has a customizable permission system that uses both Discord permissions for simplicity and <a href="https://github.com/InfinityBotList/kittycat">kittycat</a> permissions for more specific requirements. While AntiRaid does provide some base-line defaults, Lua scripting can be used to augment these defaults and extend Antiraid with arbitrarily complex permission systems, among other things. See the <a href="user/permissions/../templating-lua/1-intro.html">templating guide</a> for more information on how to use Lua templates. Then, just code away!</p>
 <h2 id="tip"><a class="header" href="#tip">TIP</a></h2>
 <p>For best results, consider limiting the server permissions of other users to the minimum required. Then, use AntiRaid for actual moderation. That's better than giving everyone admin permissions and then trying to restrict them with AntiRaid.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="templating"><a class="header" href="#templating">Templating</a></h1>
@@ -197,7 +178,6 @@
 <pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>pub const MAX_TEMPLATE_MEMORY_USAGE: usize = 1024 * 1024 * 3; // 3MB maximum memory
-pub const MAX_TEMPLATE_LIFETIME: std::time::Duration = std::time::Duration::from_secs(60 * 15); // 15 minutes maximum lifetime
 pub const MAX_TEMPLATES_EXECUTION_TIME: std::time::Duration = std::time::Duration::from_secs(30); // 30 seconds maximum execution time
 <span class="boring">}</span></code></pre></pre>
 <p>The above limits are in place to prevent abuse and ensure that the bot remains responsive. If you require increased limits, please contact support (once again, this may change in the future).</p>
@@ -206,7 +186,7 @@ pub const MAX_TEMPLATES_EXECUTION_TIME: std::time::Duration = std::time::Duratio
 <li>Each guild is assigned a dedicated Lua VM. This VM is used to execute Lua code that is used in the templates.</li>
 <li>The total memory usage that a guild can use is limited to <code>MAX_TEMPLATE_MEMORY_USAGE</code> (currently 3MB). This is to prevent a single guild from using too much memory.</li>
 <li>Execution of all scripts is timed out when the last executed script takes longer than <code>MAX_TEMPLATES_EXECUTION_TIME</code> (currently 30 seconds).</li>
-<li>A lua VM will exist for a total of <code>MAX_TEMPLATE_LIFETIME</code> (currently 10 minutes) after the last access before being destroyed. This is to reduce memory+CPU usage.</li>
+<li>A guilds Lua VM will persist until marked as broken (either by explicitly requesting it or by exceeding memory limits)</li>
 <li>The <code>__stack</code> table can be used to share data across templates safely <em>while the VM is running</em>. without affecting other templates. This is useful for sharing data between templates such as Audit Logs. <strong>Note that AntiRaid uses luau sandboxing meaning that <code>_G</code> is readonly.</strong></li>
 <li>The standard <code>require</code> statement can be used to import AntiRaid modules. <strong>Note that the modules are read-only</strong> and cannot be monkey-patched etc.</li>
 <li><strong>Because Lua is a single-threaded language, only one template can be executed at a time</strong></li>
@@ -413,7 +393,7 @@ print(token)
 <li><code>channel_id</code> (<a href="user/templating/2-plugins.html#type.string">string</a>): The channel ID to edit</li>
 <li><code>reason</code> (<a href="user/templating/2-plugins.html#type.string">string</a>): The reason for editing the channel</li>
 <li><code>name</code> (<a href="user/templating/2-plugins.html#type.string">string?</a>): The name of the channel</li>
-<li><code>type</code> (<a href="user/templating/2-plugins.html#type.string">string?</a>): The type of the channel</li>
+<li><code>type</code> (<a href="user/templating/2-plugins.html#type.number">number?</a>): The type of the channel</li>
 <li><code>position</code> (<a href="user/templating/2-plugins.html#type.number">number?</a>): The position of the channel</li>
 <li><code>topic</code> (<a href="user/templating/2-plugins.html#type.string">string?</a>): The topic of the channel</li>
 <li><code>nsfw</code> (<a href="user/templating/2-plugins.html#type.bool">bool?</a>): Whether the channel is NSFW</li>
@@ -422,14 +402,14 @@ print(token)
 <li><code>permission_overwrites</code> (<a href="user/templating/2-plugins.html#type.Serenity.PermissionOverwrite">{Serenity.PermissionOverwrite}?</a>): The permission overwrites of the channel</li>
 <li><code>parent_id</code> (<a href="user/templating/2-plugins.html#type.string">string??</a>): The parent ID of the channel</li>
 <li><code>rtc_region</code> (<a href="user/templating/2-plugins.html#type.string">string??</a>): The RTC region of the channel</li>
-<li><code>video_quality_mode</code> (<a href="user/templating/2-plugins.html#type.string">string?</a>): The video quality mode of the channel</li>
-<li><code>default_auto_archive_duration</code> (<a href="user/templating/2-plugins.html#type.string">string?</a>): The default auto archive duration of the channel</li>
+<li><code>video_quality_mode</code> (<a href="user/templating/2-plugins.html#type.number">number?</a>): The video quality mode of the channel</li>
+<li><code>default_auto_archive_duration</code> (<a href="user/templating/2-plugins.html#type.number">number?</a>): The default auto archive duration of the channel</li>
 <li><code>flags</code> (<a href="user/templating/2-plugins.html#type.string">string?</a>): The flags of the channel</li>
 <li><code>available_tags</code> (<a href="user/templating/2-plugins.html#type.Serenity.ForumTag">{Serenity.ForumTag}?</a>): The available tags of the channel</li>
 <li><code>default_reaction_emoji</code> (<a href="user/templating/2-plugins.html#type.Serenity.ForumEmoji">Serenity.ForumEmoji??</a>): The default reaction emoji of the channel</li>
 <li><code>default_thread_rate_limit_per_user</code> (<a href="user/templating/2-plugins.html#type.number">number?</a>): The default thread rate limit per user</li>
-<li><code>default_sort_order</code> (<a href="user/templating/2-plugins.html#type.string">string?</a>): The default sort order of the channel</li>
-<li><code>default_forum_layout</code> (<a href="user/templating/2-plugins.html#type.string">string?</a>): The default forum layout of the channel</li>
+<li><code>default_sort_order</code> (<a href="user/templating/2-plugins.html#type.number">number?</a>): The default sort order of the channel</li>
+<li><code>default_forum_layout</code> (<a href="user/templating/2-plugins.html#type.number">number?</a>): The default forum layout of the channel</li>
 </ul>
 <div id="type.EditThreadOptions" />
 <h3 id="editthreadoptions"><a class="header" href="#editthreadoptions">EditThreadOptions</a></h3>
@@ -453,7 +433,7 @@ print(token)
 <li><code>reason</code> (<a href="user/templating/2-plugins.html#type.string">string</a>): The reason for editing the channel</li>
 <li><code>name</code> (<a href="user/templating/2-plugins.html#type.string">string?</a>): The name of the thread</li>
 <li><code>archived</code> (<a href="user/templating/2-plugins.html#type.bool">bool?</a>): Whether the thread is archived</li>
-<li><code>auto_archive_duration</code> (<a href="user/templating/2-plugins.html#type.string">string?</a>): The auto archive duration of the thread</li>
+<li><code>auto_archive_duration</code> (<a href="user/templating/2-plugins.html#type.number">number?</a>): The auto archive duration of the thread</li>
 <li><code>locked</code> (<a href="user/templating/2-plugins.html#type.bool">bool?</a>): Whether the thread is locked</li>
 <li><code>invitable</code> (<a href="user/templating/2-plugins.html#type.bool">bool?</a>): Whether the thread is invitable</li>
 <li><code>rate_limit_per_user</code> (<a href="user/templating/2-plugins.html#type.number">number?</a>): The rate limit per user/Slow mode of the thread</li>
@@ -538,7 +518,7 @@ print(token)
 <li><code>description</code> (<a href="user/templating/2-plugins.html#type.string">string?</a>): The description of the embed</li>
 <li><code>url</code> (<a href="user/templating/2-plugins.html#type.string">string?</a>): The URL of the embed</li>
 <li><code>timestamp</code> (<a href="user/templating/2-plugins.html#type.string">string?</a>): The timestamp of the embed</li>
-<li><code>color</code> (<a href="user/templating/2-plugins.html#type.string">string?</a>): The color of the embed</li>
+<li><code>color</code> (<a href="user/templating/2-plugins.html#type.number">number?</a>): The color of the embed</li>
 <li><code>footer</code> (<a href="user/templating/2-plugins.html#type.Serenity.CreateMessageEmbedFooter">{Serenity.CreateMessageEmbedFooter}?</a>): The footer of the embed</li>
 <li><code>image</code> (<a href="user/templating/2-plugins.html#type.string">string?</a>): The image URL of the embed</li>
 <li><code>thumbnail</code> (<a href="user/templating/2-plugins.html#type.string">string?</a>): The thumbnail URL of the embed</li>
@@ -587,10 +567,46 @@ print(token)
 <ul>
 <li><code>data</code> (<a href="user/templating/2-plugins.html#type.any">any</a>): The inner data of the message</li>
 </ul>
+<h5 id="messagehandleawait_component_interaction"><a class="header" href="#messagehandleawait_component_interaction">MessageHandle:await_component_interaction</a></h5>
+<pre><code class="language-lua">function MessageHandle:await_component_interaction(): LuaStream&lt;MessageComponentHandle&gt;
+</code></pre>
+<p>Awaits a component interaction on the message</p>
+<h6 id="returns-1"><a class="header" href="#returns-1">Returns</a></h6>
+<ul>
+<li><code>stream</code> (<a href="user/templating/2-plugins.html#type.LuaStream%3CMessageComponentHandle%3E">LuaStream<MessageComponentHandle></a>): The stream of component interaction handles</li>
+</ul>
+<div id="type.MessageComponentHandle" />
+<h3 id="messagecomponenthandle"><a class="header" href="#messagecomponenthandle">MessageComponentHandle</a></h3>
+<p>A handle to a message component interaction in Discord, as represented by AntiRaid. Internal fields are subject to change</p>
+<h4 id="methods-1"><a class="header" href="#methods-1">Methods</a></h4>
+<h5 id="messagecomponenthandledata"><a class="header" href="#messagecomponenthandledata">MessageComponentHandle:data</a></h5>
+<pre><code class="language-lua">function MessageComponentHandle:data(): any
+</code></pre>
+<p>The inner data of the message component interaction</p>
+<h6 id="returns-2"><a class="header" href="#returns-2">Returns</a></h6>
+<ul>
+<li><code>data</code> (<a href="user/templating/2-plugins.html#type.any">any</a>): The inner data of the message component interaction</li>
+</ul>
+<h5 id="messagecomponenthandlecustom_id"><a class="header" href="#messagecomponenthandlecustom_id">MessageComponentHandle:custom_id</a></h5>
+<pre><code class="language-lua">function MessageComponentHandle:custom_id(): string
+</code></pre>
+<p>The custom ID of the message component interaction</p>
+<h6 id="returns-3"><a class="header" href="#returns-3">Returns</a></h6>
+<ul>
+<li><code>custom_id</code> (<a href="user/templating/2-plugins.html#type.string">string</a>): The custom ID of the message component interaction</li>
+</ul>
+<div id="type.SendMessageChannelAction" />
+<h3 id="sendmessagechannelaction"><a class="header" href="#sendmessagechannelaction">SendMessageChannelAction</a></h3>
+<p>Options for sending a message in a channel in Discord</p>
+<h4 id="fields-11"><a class="header" href="#fields-11">Fields</a></h4>
+<ul>
+<li><code>channel_id</code> (<a href="user/templating/2-plugins.html#type.string">string</a>): The channel ID to send the message in</li>
+<li><code>data</code> (<a href="user/templating/2-plugins.html#type.Serenity.CreateMessage">Serenity.CreateMessage</a>): The data of the message to send</li>
+</ul>
 <div id="type.DiscordExecutor" />
 <h3 id="discordexecutor"><a class="header" href="#discordexecutor">DiscordExecutor</a></h3>
 <p>DiscordExecutor allows templates to access/use the Discord API in a sandboxed form.</p>
-<h4 id="methods-1"><a class="header" href="#methods-1">Methods</a></h4>
+<h4 id="methods-2"><a class="header" href="#methods-2">Methods</a></h4>
 <h5 id="discordexecutorget_audit_logs"><a class="header" href="#discordexecutorget_audit_logs">DiscordExecutor:get_audit_logs</a></h5>
 <pre><code class="language-lua">function DiscordExecutor:get_audit_logs(data: GetAuditLogOptions): 
 </code></pre>
@@ -600,7 +616,7 @@ print(token)
 <ul>
 <li><code>data</code> (<a href="user/templating/2-plugins.html#type.GetAuditLogOptions">GetAuditLogOptions</a>): Options for getting audit logs.</li>
 </ul>
-<h6 id="returns-1"><a class="header" href="#returns-1">Returns</a></h6>
+<h6 id="returns-4"><a class="header" href="#returns-4">Returns</a></h6>
 <ul>
 <li><code>Serenity.AuditLogs</code> (<a href="user/templating/2-plugins.html#type."></a>): The audit log entry</li>
 </ul>
@@ -613,7 +629,7 @@ print(token)
 <ul>
 <li><code>data</code> (<a href="user/templating/2-plugins.html#type.GetChannelOptions">GetChannelOptions</a>): Options for getting a channel.</li>
 </ul>
-<h6 id="returns-2"><a class="header" href="#returns-2">Returns</a></h6>
+<h6 id="returns-5"><a class="header" href="#returns-5">Returns</a></h6>
 <ul>
 <li><code>Serenity.GuildChannel</code> (<a href="user/templating/2-plugins.html#type."></a>): The guild channel</li>
 </ul>
@@ -626,7 +642,7 @@ print(token)
 <ul>
 <li><code>data</code> (<a href="user/templating/2-plugins.html#type.EditChannelOptions">EditChannelOptions</a>): Options for editing a channel.</li>
 </ul>
-<h6 id="returns-3"><a class="header" href="#returns-3">Returns</a></h6>
+<h6 id="returns-6"><a class="header" href="#returns-6">Returns</a></h6>
 <ul>
 <li><code>Serenity.GuildChannel</code> (<a href="user/templating/2-plugins.html#type."></a>): The guild channel</li>
 </ul>
@@ -639,7 +655,7 @@ print(token)
 <ul>
 <li><code>data</code> (<a href="user/templating/2-plugins.html#type.EditThreadOptions">EditThreadOptions</a>): Options for editing a thread.</li>
 </ul>
-<h6 id="returns-4"><a class="header" href="#returns-4">Returns</a></h6>
+<h6 id="returns-7"><a class="header" href="#returns-7">Returns</a></h6>
 <ul>
 <li><code>Serenity.GuildChannel</code> (<a href="user/templating/2-plugins.html#type."></a>): The guild channel</li>
 </ul>
@@ -652,24 +668,24 @@ print(token)
 <ul>
 <li><code>data</code> (<a href="user/templating/2-plugins.html#type.DeleteChannelOption">DeleteChannelOption</a>): Options for deleting a channel.</li>
 </ul>
-<h6 id="returns-5"><a class="header" href="#returns-5">Returns</a></h6>
+<h6 id="returns-8"><a class="header" href="#returns-8">Returns</a></h6>
 <ul>
 <li><code>Serenity.GuildChannel</code> (<a href="user/templating/2-plugins.html#type."></a>): The guild channel</li>
 </ul>
 <h5 id="discordexecutorcreate_message"><a class="header" href="#discordexecutorcreate_message">DiscordExecutor:create_message</a></h5>
-<pre><code class="language-lua">function DiscordExecutor:create_message(data: CreateMessage): 
+<pre><code class="language-lua">function DiscordExecutor:create_message(data: SendMessageChannelAction): 
 </code></pre>
 <p>Creates a message</p>
 <p><strong>Note that this method returns a promise that must be yielded using <a href="user/templating/2-plugins.html#type.promise.yield"><code>promise.yield</code></a> to actually execute and return results.</strong></p>
 <h6 id="parameters-5"><a class="header" href="#parameters-5">Parameters</a></h6>
 <ul>
-<li><code>data</code> (<a href="user/templating/2-plugins.html#type.CreateMessage">CreateMessage</a>): Options for creating a message.</li>
+<li><code>data</code> (<a href="user/templating/2-plugins.html#type.SendMessageChannelAction">SendMessageChannelAction</a>): Options for creating a message.</li>
 </ul>
-<h6 id="returns-6"><a class="header" href="#returns-6">Returns</a></h6>
+<h6 id="returns-9"><a class="header" href="#returns-9">Returns</a></h6>
 <ul>
 <li><code>MessageHandle</code> (<a href="user/templating/2-plugins.html#type."></a>): The message</li>
 </ul>
-<h2 id="methods-2"><a class="header" href="#methods-2">Methods</a></h2>
+<h2 id="methods-3"><a class="header" href="#methods-3">Methods</a></h2>
 <h3 id="new"><a class="header" href="#new">new</a></h3>
 <pre><code class="language-lua">function new(token: TemplateContext): DiscordExecutor
 </code></pre>
@@ -677,7 +693,7 @@ print(token)
 <ul>
 <li><code>token</code> (<a href="user/templating/2-plugins.html#type.TemplateContext">TemplateContext</a>): The token of the template to use.</li>
 </ul>
-<h4 id="returns-7"><a class="header" href="#returns-7">Returns</a></h4>
+<h4 id="returns-10"><a class="header" href="#returns-10">Returns</a></h4>
 <ul>
 <li><code>executor</code> (<a href="user/templating/2-plugins.html#type.DiscordExecutor">DiscordExecutor</a>): A discord executor.</li>
 </ul>
@@ -691,12 +707,12 @@ print(token)
 <div id="type.array_metatable" />
 <h3 id="array_metatable"><a class="header" href="#array_metatable">array_metatable</a></h3>
 <p><code>array_metatable</code> is a special metatable that is used to represent arrays across the Lua-AntiRaid templating subsystem boundary. This metatable must be set on all arrays over this boundary and is required to ensure AntiRaid knows the value you're sending it is actually an array and not an arbitrary Luau table.</p>
-<h2 id="methods-3"><a class="header" href="#methods-3">Methods</a></h2>
+<h2 id="methods-4"><a class="header" href="#methods-4">Methods</a></h2>
 <h3 id="array_metatable-1"><a class="header" href="#array_metatable-1">array_metatable</a></h3>
 <pre><code class="language-lua">function array_metatable(): table
 </code></pre>
 <p>Returns the array metatable.</p>
-<h4 id="returns-8"><a class="header" href="#returns-8">Returns</a></h4>
+<h4 id="returns-11"><a class="header" href="#returns-11">Returns</a></h4>
 <ul>
 <li><code>array_metatable</code> (<a href="user/templating/2-plugins.html#type.table">table</a>): The array metatable.</li>
 </ul>
@@ -704,7 +720,7 @@ print(token)
 <pre><code class="language-lua">function memusage(): f64
 </code></pre>
 <p>Returns the current memory usage of the Lua VM.</p>
-<h4 id="returns-9"><a class="header" href="#returns-9">Returns</a></h4>
+<h4 id="returns-12"><a class="header" href="#returns-12">Returns</a></h4>
 <ul>
 <li><code>memory_usage</code> (<a href="user/templating/2-plugins.html#type.f64">f64</a>): The current memory usage, in bytes, of the Lua VM.</li>
 </ul>
@@ -764,11 +780,11 @@ print(token)
   "set_viewbox_at_idx": null
 }
 </code></pre>
-<h4 id="fields-11"><a class="header" href="#fields-11">Fields</a></h4>
+<h4 id="fields-12"><a class="header" href="#fields-12">Fields</a></h4>
 <ul>
 <li><code>filter</code> (<a href="user/templating/2-plugins.html#type.string">string</a>): The name of the filter to use. See example for the parameters to pass for the filter as well as https://github.com/Anti-Raid/captcha.</li>
 </ul>
-<h2 id="methods-4"><a class="header" href="#methods-4">Methods</a></h2>
+<h2 id="methods-5"><a class="header" href="#methods-5">Methods</a></h2>
 <h3 id="new-1"><a class="header" href="#new-1">new</a></h3>
 <pre><code class="language-lua">function new(config: CaptchaConfig): {u8}
 </code></pre>
@@ -778,7 +794,7 @@ print(token)
 <ul>
 <li><code>config</code> (<a href="user/templating/2-plugins.html#type.CaptchaConfig">CaptchaConfig</a>): The configuration to use for the CAPTCHA.</li>
 </ul>
-<h4 id="returns-10"><a class="header" href="#returns-10">Returns</a></h4>
+<h4 id="returns-13"><a class="header" href="#returns-13">Returns</a></h4>
 <ul>
 <li><code>captcha</code> (<a href="user/templating/2-plugins.html#type.u8">{u8}</a>): The created CAPTCHA object.</li>
 </ul>
@@ -797,7 +813,7 @@ print(token)
   "last_updated_at": null
 }
 </code></pre>
-<h4 id="fields-12"><a class="header" href="#fields-12">Fields</a></h4>
+<h4 id="fields-13"><a class="header" href="#fields-13">Fields</a></h4>
 <ul>
 <li><code>key</code> (<a href="user/templating/2-plugins.html#type.string">string</a>): The key of the record.</li>
 <li><code>value</code> (<a href="user/templating/2-plugins.html#type.any">any</a>): The value of the record.</li>
@@ -808,7 +824,7 @@ print(token)
 <div id="type.KvExecutor" />
 <h3 id="kvexecutor"><a class="header" href="#kvexecutor">KvExecutor</a></h3>
 <p>KvExecutor allows templates to get, store and find persistent data within a server.</p>
-<h4 id="methods-5"><a class="header" href="#methods-5">Methods</a></h4>
+<h4 id="methods-6"><a class="header" href="#methods-6">Methods</a></h4>
 <h5 id="kvexecutorfind"><a class="header" href="#kvexecutorfind">KvExecutor:find</a></h5>
 <pre><code class="language-lua">function KvExecutor:find(key: string): {KvRecord}
 </code></pre>
@@ -817,7 +833,7 @@ print(token)
 <ul>
 <li><code>key</code> (<a href="user/templating/2-plugins.html#type.string">string</a>): The key to search for. % matches zero or more characters; _ matches a single character. To search anywhere in a string, surround {KEY} with %, e.g. %{KEY}%</li>
 </ul>
-<h6 id="returns-11"><a class="header" href="#returns-11">Returns</a></h6>
+<h6 id="returns-14"><a class="header" href="#returns-14">Returns</a></h6>
 <ul>
 <li><code>records</code> (<a href="user/templating/2-plugins.html#type.KvRecord">{KvRecord}</a>): The records found.</li>
 </ul>
@@ -829,7 +845,7 @@ print(token)
 <ul>
 <li><code>key</code> (<a href="user/templating/2-plugins.html#type.string">string</a>): The key to get.</li>
 </ul>
-<h6 id="returns-12"><a class="header" href="#returns-12">Returns</a></h6>
+<h6 id="returns-15"><a class="header" href="#returns-15">Returns</a></h6>
 <ul>
 <li><code>value</code> (<a href="user/templating/2-plugins.html#type.any">any</a>): The value of the key.- <code>exists</code> (<a href="user/templating/2-plugins.html#type.bool">bool</a>): Whether the key exists.</li>
 </ul>
@@ -841,7 +857,7 @@ print(token)
 <ul>
 <li><code>key</code> (<a href="user/templating/2-plugins.html#type.string">string</a>): The key to get.</li>
 </ul>
-<h6 id="returns-13"><a class="header" href="#returns-13">Returns</a></h6>
+<h6 id="returns-16"><a class="header" href="#returns-16">Returns</a></h6>
 <ul>
 <li><code>record</code> (<a href="user/templating/2-plugins.html#type.KvRecord">KvRecord</a>): The record of the key.</li>
 </ul>
@@ -862,7 +878,7 @@ print(token)
 <ul>
 <li><code>key</code> (<a href="user/templating/2-plugins.html#type.string">string</a>): The key to delete.</li>
 </ul>
-<h2 id="methods-6"><a class="header" href="#methods-6">Methods</a></h2>
+<h2 id="methods-7"><a class="header" href="#methods-7">Methods</a></h2>
 <h3 id="new-2"><a class="header" href="#new-2">new</a></h3>
 <pre><code class="language-lua">function new(token: TemplateContext): KvExecutor
 </code></pre>
@@ -870,7 +886,7 @@ print(token)
 <ul>
 <li><code>token</code> (<a href="user/templating/2-plugins.html#type.TemplateContext">TemplateContext</a>): The token of the template to use.</li>
 </ul>
-<h4 id="returns-14"><a class="header" href="#returns-14">Returns</a></h4>
+<h4 id="returns-17"><a class="header" href="#returns-17">Returns</a></h4>
 <ul>
 <li><code>executor</code> (<a href="user/templating/2-plugins.html#type.KvExecutor">KvExecutor</a>): A key-value executor.</li>
 </ul>
@@ -903,7 +919,7 @@ print(token)
   ]
 }
 </code></pre>
-<h4 id="fields-13"><a class="header" href="#fields-13">Fields</a></h4>
+<h4 id="fields-14"><a class="header" href="#fields-14">Fields</a></h4>
 <ul>
 <li><code>id</code> (<a href="user/templating/2-plugins.html#type.string">string</a>): The ID of the column.</li>
 <li><code>name</code> (<a href="user/templating/2-plugins.html#type.string">string</a>): The name of the column.</li>
@@ -1271,7 +1287,7 @@ print(token)
   "operations": []
 }
 </code></pre>
-<h4 id="fields-14"><a class="header" href="#fields-14">Fields</a></h4>
+<h4 id="fields-15"><a class="header" href="#fields-15">Fields</a></h4>
 <ul>
 <li><code>id</code> (<a href="user/templating/2-plugins.html#type.string">string</a>): The ID of the setting.</li>
 <li><code>name</code> (<a href="user/templating/2-plugins.html#type.string">string</a>): The name of the setting.</li>
@@ -1284,7 +1300,7 @@ print(token)
 <div id="type.CreatePageSetting" />
 <h3 id="createpagesetting"><a class="header" href="#createpagesetting">CreatePageSetting</a></h3>
 <p>A table containing a setting for a page</p>
-<h4 id="fields-15"><a class="header" href="#fields-15">Fields</a></h4>
+<h4 id="fields-16"><a class="header" href="#fields-16">Fields</a></h4>
 <ul>
 <li><code>setting</code> (<a href="user/templating/2-plugins.html#type.Setting">Setting</a>): The setting to add to the page.</li>
 <li><code>operations</code> (<a href="user/templating/2-plugins.html#type.string">{string}</a>): The operations to perform on the setting. Elements of the array can be either <code>View</code>, <code>Create</code>, <code>Update</code> or <code>Delete</code>.</li>
@@ -1292,7 +1308,7 @@ print(token)
 <div id="type.CreatePage" />
 <h3 id="createpage"><a class="header" href="#createpage">CreatePage</a></h3>
 <p>An intermediary structure for creating a page for a template</p>
-<h4 id="fields-16"><a class="header" href="#fields-16">Fields</a></h4>
+<h4 id="fields-17"><a class="header" href="#fields-17">Fields</a></h4>
 <ul>
 <li><code>page_id</code> (<a href="user/templating/2-plugins.html#type.string">string</a>): The ID of the page. This field <strong>can be updated ONLY if the page is not created yet with no current settings.</strong> The ID must not contain spaces, newlines, null characters, or tabs.</li>
 <li><code>title</code> (<a href="user/templating/2-plugins.html#type.string">string</a>): The title of the page. This field <strong>can be updated ONLY if the page is not created yet.</strong></li>
@@ -1301,7 +1317,7 @@ print(token)
 <li><code>is_created</code> (<a href="user/templating/2-plugins.html#type.bool">bool</a>): Whether the page is created. <strong>This field is read-only.</strong></li>
 <li><code>template</code> (<a href="user/templating/2-plugins.html#type.Template">Template</a>): The template of the page. <strong>This field is read-only.</strong></li>
 </ul>
-<h4 id="methods-7"><a class="header" href="#methods-7">Methods</a></h4>
+<h4 id="methods-8"><a class="header" href="#methods-8">Methods</a></h4>
 <h5 id="createpageadd_setting"><a class="header" href="#createpageadd_setting">CreatePage:add_setting</a></h5>
 <pre><code class="language-lua">function CreatePage:add_setting(setting: CreatePageSetting): nil
 </code></pre>
@@ -1309,7 +1325,7 @@ print(token)
 <ul>
 <li><code>setting</code> (<a href="user/templating/2-plugins.html#type.CreatePageSetting">CreatePageSetting</a>): The setting to add to the page.</li>
 </ul>
-<h6 id="returns-15"><a class="header" href="#returns-15">Returns</a></h6>
+<h6 id="returns-18"><a class="header" href="#returns-18">Returns</a></h6>
 <ul>
 <li><code>ret</code> (<a href="user/templating/2-plugins.html#type.nil">nil</a>):</li>
 </ul>
@@ -1323,17 +1339,17 @@ print(token)
 <h4 id="variants"><a class="header" href="#variants">Variants</a></h4>
 <h4 id="settingcolumncolumntypescalar"><a class="header" href="#settingcolumncolumntypescalar">Setting.Column.ColumnType::Scalar</a></h4>
 <p>A scalar column type.</p>
-<h5 id="fields-17"><a class="header" href="#fields-17">Fields</a></h5>
+<h5 id="fields-18"><a class="header" href="#fields-18">Fields</a></h5>
 <ul>
 <li><code>inner</code> (<a href="user/templating/2-plugins.html#type.Setting.Column.InnerColumnType">Setting.Column.InnerColumnType</a>): The inner type of the column.</li>
 </ul>
 <h4 id="settingcolumncolumntypearray"><a class="header" href="#settingcolumncolumntypearray">Setting.Column.ColumnType::Array</a></h4>
 <p>An array column type.</p>
-<h5 id="fields-18"><a class="header" href="#fields-18">Fields</a></h5>
+<h5 id="fields-19"><a class="header" href="#fields-19">Fields</a></h5>
 <ul>
 <li><code>inner</code> (<a href="user/templating/2-plugins.html#type.Setting.Column.InnerColumnType">Setting.Column.InnerColumnType</a>): The array type of the column.</li>
 </ul>
-<h2 id="methods-8"><a class="header" href="#methods-8">Methods</a></h2>
+<h2 id="methods-9"><a class="header" href="#methods-9">Methods</a></h2>
 <h3 id="create_page"><a class="header" href="#create_page">create_page</a></h3>
 <pre><code class="language-lua">function create_page(token: TemplateContext): CreatePage
 </code></pre>
@@ -1341,7 +1357,7 @@ print(token)
 <ul>
 <li><code>token</code> (<a href="user/templating/2-plugins.html#type.TemplateContext">TemplateContext</a>): The token of the template to use.</li>
 </ul>
-<h4 id="returns-16"><a class="header" href="#returns-16">Returns</a></h4>
+<h4 id="returns-19"><a class="header" href="#returns-19">Returns</a></h4>
 <ul>
 <li><code>create_page</code> (<a href="user/templating/2-plugins.html#type.CreatePage">CreatePage</a>): An empty created page.</li>
 </ul>
@@ -1358,13 +1374,13 @@ print(token)
   "negator": false
 }
 </code></pre>
-<h4 id="fields-19"><a class="header" href="#fields-19">Fields</a></h4>
+<h4 id="fields-20"><a class="header" href="#fields-20">Fields</a></h4>
 <ul>
 <li><code>namespace</code> (<a href="user/templating/2-plugins.html#type.string">string</a>): The namespace of the permission.</li>
 <li><code>perm</code> (<a href="user/templating/2-plugins.html#type.string">string</a>): The permission bit on the namespace.</li>
 <li><code>negator</code> (<a href="user/templating/2-plugins.html#type.bool">bool</a>): Whether the permission is a negator permission or not</li>
 </ul>
-<h2 id="methods-9"><a class="header" href="#methods-9">Methods</a></h2>
+<h2 id="methods-10"><a class="header" href="#methods-10">Methods</a></h2>
 <h3 id="permission_from_string"><a class="header" href="#permission_from_string">permission_from_string</a></h3>
 <pre><code class="language-lua">function permission_from_string(perm_string: string): Permission
 </code></pre>
@@ -1373,7 +1389,7 @@ print(token)
 <ul>
 <li><code>perm_string</code> (<a href="user/templating/2-plugins.html#type.string">string</a>): The string to parse into a Permission object.</li>
 </ul>
-<h4 id="returns-17"><a class="header" href="#returns-17">Returns</a></h4>
+<h4 id="returns-20"><a class="header" href="#returns-20">Returns</a></h4>
 <ul>
 <li><code>permission</code> (<a href="user/templating/2-plugins.html#type.Permission">Permission</a>): The parsed Permission object.</li>
 </ul>
@@ -1385,7 +1401,7 @@ print(token)
 <ul>
 <li><code>permission</code> (<a href="user/templating/2-plugins.html#type.Permission">Permission</a>): The Permission object to parse into a string.</li>
 </ul>
-<h4 id="returns-18"><a class="header" href="#returns-18">Returns</a></h4>
+<h4 id="returns-21"><a class="header" href="#returns-21">Returns</a></h4>
 <ul>
 <li><code>perm_string</code> (<a href="user/templating/2-plugins.html#type.string">string</a>): The parsed string.</li>
 </ul>
@@ -1398,7 +1414,7 @@ print(token)
 <li><code>permissions</code> (<a href="user/templating/2-plugins.html#type.Permission">{Permission}</a>): The list of permissions</li>
 <li><code>permission</code> (<a href="user/templating/2-plugins.html#type.Permission">Permission</a>): The permission to check for.</li>
 </ul>
-<h4 id="returns-19"><a class="header" href="#returns-19">Returns</a></h4>
+<h4 id="returns-22"><a class="header" href="#returns-22">Returns</a></h4>
 <ul>
 <li><code>has_perm</code> (<a href="user/templating/2-plugins.html#type.bool">bool</a>): Whether the permission is present in the list of permissions as per kittycat rules.</li>
 </ul>
@@ -1411,14 +1427,34 @@ print(token)
 <li><code>permissions</code> (<a href="user/templating/2-plugins.html#type.string">{string}</a>): The list of permissions</li>
 <li><code>permission</code> (<a href="user/templating/2-plugins.html#type.string">string</a>): The permission to check for.</li>
 </ul>
-<h4 id="returns-20"><a class="header" href="#returns-20">Returns</a></h4>
+<h4 id="returns-23"><a class="header" href="#returns-23">Returns</a></h4>
 <ul>
 <li><code>has_perm</code> (<a href="user/templating/2-plugins.html#type.bool">bool</a>): Whether the permission is present in the list of permissions as per kittycat rules.</li>
 </ul>
 <hr />
+<h1 id="antiraidpromise"><a class="header" href="#antiraidpromise">@antiraid/promise</a></h1>
+<p>Lua Promises, yield for a promise to execute the async action returning its result.</p>
+<h2 id="types-6"><a class="header" href="#types-6">Types</a></h2>
+<div id="type.LuaPromise" />
+<h3 id="luapromise"><a class="header" href="#luapromise">LuaPromise<T></a></h3>
+<p>LuaPromise<T> provides a promise that must be yielded to actually execute and get the result of the async action.</p>
+<h2 id="methods-11"><a class="header" href="#methods-11">Methods</a></h2>
+<h3 id="yield"><a class="header" href="#yield">yield</a></h3>
+<pre><code class="language-lua">function yield(promise: LuaPromise&lt;T&gt;): T
+</code></pre>
+<p>Yields the promise to execute the async action and return its result. Note that this is the only function other than <code>stream.next</code> that yields.</p>
+<h4 id="parameters-20"><a class="header" href="#parameters-20">Parameters</a></h4>
+<ul>
+<li><code>promise</code> (<a href="user/templating/2-plugins.html#type.LuaPromise%3CT%3E">LuaPromise<T></a>): The promise to yield.</li>
+</ul>
+<h4 id="returns-24"><a class="header" href="#returns-24">Returns</a></h4>
+<ul>
+<li><code>T</code> (<a href="user/templating/2-plugins.html#type.T">T</a>): The result of executing the promise.</li>
+</ul>
+<hr />
 <h1 id="antiraidstings"><a class="header" href="#antiraidstings">@antiraid/stings</a></h1>
 <p>List, get, create, update and delete stings on Anti-Raid.</p>
-<h2 id="types-6"><a class="header" href="#types-6">Types</a></h2>
+<h2 id="types-7"><a class="header" href="#types-7">Types</a></h2>
 <div id="type.StingCreate" />
 <h3 id="stingcreate"><a class="header" href="#stingcreate">StingCreate</a></h3>
 <p>A type representing a new sting to be created.</p>
@@ -1440,7 +1476,7 @@ print(token)
   }
 }
 </code></pre>
-<h4 id="fields-20"><a class="header" href="#fields-20">Fields</a></h4>
+<h4 id="fields-21"><a class="header" href="#fields-21">Fields</a></h4>
 <ul>
 <li><code>module</code> (<a href="user/templating/2-plugins.html#type.string">string</a>): The module name.</li>
 <li><code>src</code> (<a href="user/templating/2-plugins.html#type.string">string?</a>): The source of the sting.</li>
@@ -1468,7 +1504,7 @@ print(token)
   "creator": "system",
   "target": "user:1945824",
   "state": "active",
-  "created_at": "2024-12-25T12:46:36.832226484Z",
+  "created_at": "2024-12-31T10:45:59.302502629Z",
   "duration": {
     "secs": 60,
     "nanos": 0
@@ -1482,7 +1518,7 @@ print(token)
   }
 }
 </code></pre>
-<h4 id="fields-21"><a class="header" href="#fields-21">Fields</a></h4>
+<h4 id="fields-22"><a class="header" href="#fields-22">Fields</a></h4>
 <ul>
 <li><code>id</code> (<a href="user/templating/2-plugins.html#type.string">string</a>): The sting ID.</li>
 <li><code>module</code> (<a href="user/templating/2-plugins.html#type.string">string</a>): The module name.</li>
@@ -1502,16 +1538,16 @@ print(token)
 <div id="type.StingExecutor" />
 <h3 id="stingexecutor"><a class="header" href="#stingexecutor">StingExecutor</a></h3>
 <p>An sting executor is used to execute actions related to stings from Lua templates</p>
-<h4 id="methods-10"><a class="header" href="#methods-10">Methods</a></h4>
+<h4 id="methods-12"><a class="header" href="#methods-12">Methods</a></h4>
 <h5 id="stingexecutorlist"><a class="header" href="#stingexecutorlist">StingExecutor:list</a></h5>
 <pre><code class="language-lua">function StingExecutor:list(page: number): {Sting}
 </code></pre>
 <p><strong>Note that this method returns a promise that must be yielded using <a href="user/templating/2-plugins.html#type.promise.yield"><code>promise.yield</code></a> to actually execute and return results.</strong></p>
-<h6 id="parameters-20"><a class="header" href="#parameters-20">Parameters</a></h6>
+<h6 id="parameters-21"><a class="header" href="#parameters-21">Parameters</a></h6>
 <ul>
 <li><code>page</code> (<a href="user/templating/2-plugins.html#type.number">number</a>): The page number to fetch.</li>
 </ul>
-<h6 id="returns-21"><a class="header" href="#returns-21">Returns</a></h6>
+<h6 id="returns-25"><a class="header" href="#returns-25">Returns</a></h6>
 <ul>
 <li><code>stings</code> (<a href="user/templating/2-plugins.html#type.Sting">{Sting}</a>): The list of stings.</li>
 </ul>
@@ -1519,11 +1555,11 @@ print(token)
 <pre><code class="language-lua">function StingExecutor:get(id: string): Sting
 </code></pre>
 <p><strong>Note that this method returns a promise that must be yielded using <a href="user/templating/2-plugins.html#type.promise.yield"><code>promise.yield</code></a> to actually execute and return results.</strong></p>
-<h6 id="parameters-21"><a class="header" href="#parameters-21">Parameters</a></h6>
+<h6 id="parameters-22"><a class="header" href="#parameters-22">Parameters</a></h6>
 <ul>
 <li><code>id</code> (<a href="user/templating/2-plugins.html#type.string">string</a>): The sting ID.</li>
 </ul>
-<h6 id="returns-22"><a class="header" href="#returns-22">Returns</a></h6>
+<h6 id="returns-26"><a class="header" href="#returns-26">Returns</a></h6>
 <ul>
 <li><code>sting</code> (<a href="user/templating/2-plugins.html#type.Sting">Sting</a>): The sting.</li>
 </ul>
@@ -1531,11 +1567,11 @@ print(token)
 <pre><code class="language-lua">function StingExecutor:create(data: StingCreate): string
 </code></pre>
 <p><strong>Note that this method returns a promise that must be yielded using <a href="user/templating/2-plugins.html#type.promise.yield"><code>promise.yield</code></a> to actually execute and return results.</strong></p>
-<h6 id="parameters-22"><a class="header" href="#parameters-22">Parameters</a></h6>
+<h6 id="parameters-23"><a class="header" href="#parameters-23">Parameters</a></h6>
 <ul>
 <li><code>data</code> (<a href="user/templating/2-plugins.html#type.StingCreate">StingCreate</a>): The sting data.</li>
 </ul>
-<h6 id="returns-23"><a class="header" href="#returns-23">Returns</a></h6>
+<h6 id="returns-27"><a class="header" href="#returns-27">Returns</a></h6>
 <ul>
 <li><code>id</code> (<a href="user/templating/2-plugins.html#type.string">string</a>): The sting ID of the created sting.</li>
 </ul>
@@ -1543,7 +1579,7 @@ print(token)
 <pre><code class="language-lua">function StingExecutor:update(data: Sting)
 </code></pre>
 <p><strong>Note that this method returns a promise that must be yielded using <a href="user/templating/2-plugins.html#type.promise.yield"><code>promise.yield</code></a> to actually execute and return results.</strong></p>
-<h6 id="parameters-23"><a class="header" href="#parameters-23">Parameters</a></h6>
+<h6 id="parameters-24"><a class="header" href="#parameters-24">Parameters</a></h6>
 <ul>
 <li><code>data</code> (<a href="user/templating/2-plugins.html#type.Sting">Sting</a>): The sting to update to. Note that if an invalid ID is used, this method may either do nothing or error out.</li>
 </ul>
@@ -1551,43 +1587,43 @@ print(token)
 <pre><code class="language-lua">function StingExecutor:delete(id: string)
 </code></pre>
 <p><strong>Note that this method returns a promise that must be yielded using <a href="user/templating/2-plugins.html#type.promise.yield"><code>promise.yield</code></a> to actually execute and return results.</strong></p>
-<h6 id="parameters-24"><a class="header" href="#parameters-24">Parameters</a></h6>
+<h6 id="parameters-25"><a class="header" href="#parameters-25">Parameters</a></h6>
 <ul>
 <li><code>id</code> (<a href="user/templating/2-plugins.html#type.string">string</a>): The sting ID.</li>
 </ul>
 <hr />
 <h1 id="antiraidstream"><a class="header" href="#antiraidstream">@antiraid/stream</a></h1>
 <p>Lua Streams, yield for a set of values using next.</p>
-<h2 id="types-7"><a class="header" href="#types-7">Types</a></h2>
+<h2 id="types-8"><a class="header" href="#types-8">Types</a></h2>
 <div id="type.LuaStream" />
 <h3 id="luastream"><a class="header" href="#luastream">LuaStream<T></a></h3>
 <p>LuaStream<T> provides a stream implementation. This is returned by MessageHandle's await_component_interaction for instance for handling button clicks/select menu choices etc.</p>
-<h2 id="methods-11"><a class="header" href="#methods-11">Methods</a></h2>
+<h2 id="methods-13"><a class="header" href="#methods-13">Methods</a></h2>
 <h3 id="next"><a class="header" href="#next">next</a></h3>
 <pre><code class="language-lua">function next(stream: LuaStream&lt;T&gt;): T
 </code></pre>
 <p>Returns the next value in the stream. Note that this is the only function other than <code>promise.yield</code> that yields.</p>
-<h4 id="parameters-25"><a class="header" href="#parameters-25">Parameters</a></h4>
+<h4 id="parameters-26"><a class="header" href="#parameters-26">Parameters</a></h4>
 <ul>
 <li><code>stream</code> (<a href="user/templating/2-plugins.html#type.LuaStream%3CT%3E">LuaStream<T></a>): The stream to get the next value from.</li>
 </ul>
-<h4 id="returns-24"><a class="header" href="#returns-24">Returns</a></h4>
+<h4 id="returns-28"><a class="header" href="#returns-28">Returns</a></h4>
 <ul>
 <li><code>T</code> (<a href="user/templating/2-plugins.html#type.T">T</a>): The next value in the stream, or nil if the stream is exhausted.</li>
 </ul>
 <hr />
 <h1 id="antiraidtypesext"><a class="header" href="#antiraidtypesext">@antiraid/typesext</a></h1>
 <p>Extra types used by Anti-Raid Lua templating subsystem to either add in common functionality such as streams or handle things like u64/i64 types performantly.</p>
-<h2 id="types-8"><a class="header" href="#types-8">Types</a></h2>
+<h2 id="types-9"><a class="header" href="#types-9">Types</a></h2>
 <div id="type.LuaStream" />
 <h3 id="luastream-1"><a class="header" href="#luastream-1">LuaStream<T></a></h3>
 <p>LuaStream<T> provides a stream implementation. This is returned by MessageHandle's await_component_interaction for instance for handling button clicks/select menu choices etc.</p>
-<h4 id="methods-12"><a class="header" href="#methods-12">Methods</a></h4>
+<h4 id="methods-14"><a class="header" href="#methods-14">Methods</a></h4>
 <h5 id="luastreamnext"><a class="header" href="#luastreamnext">LuaStream:next</a></h5>
 <pre><code class="language-lua">function LuaStream:next(): &lt;T&gt;?
 </code></pre>
 <p>Returns the next item in the stream.</p>
-<h6 id="returns-25"><a class="header" href="#returns-25">Returns</a></h6>
+<h6 id="returns-29"><a class="header" href="#returns-29">Returns</a></h6>
 <ul>
 <li><code>item</code> (<a href="user/templating/2-plugins.html#type.%3CT%3E"><T>?</a>): The next item in the stream.</li>
 </ul>
@@ -1595,7 +1631,7 @@ print(token)
 <pre><code class="language-lua">function LuaStream:for_each(callback: function)
 </code></pre>
 <p>Executes a callback for every entry in the stream.</p>
-<h6 id="parameters-26"><a class="header" href="#parameters-26">Parameters</a></h6>
+<h6 id="parameters-27"><a class="header" href="#parameters-27">Parameters</a></h6>
 <ul>
 <li><code>callback</code> (<a href="user/templating/2-plugins.html#type.function">function</a>): The callback to execute for each entry.</li>
 </ul>
@@ -1605,12 +1641,12 @@ print(token)
 <div id="type.U64" />
 <h3 id="u64"><a class="header" href="#u64">U64</a></h3>
 <p>U64 is a 64-bit unsigned integer type. Implements Add/Subtract/Multiply/Divide/Modulus/Power/Integer Division/Equality/Comparison (Lt/Le and its complements Gt/Ge) and ToString with a type name of U64</p>
-<h4 id="methods-13"><a class="header" href="#methods-13">Methods</a></h4>
+<h4 id="methods-15"><a class="header" href="#methods-15">Methods</a></h4>
 <h5 id="u64to_ne_bytes"><a class="header" href="#u64to_ne_bytes">U64:to_ne_bytes</a></h5>
 <pre><code class="language-lua">function U64:to_ne_bytes(): {u8}
 </code></pre>
 <p>Converts the U64 to a little-endian byte array.</p>
-<h6 id="returns-26"><a class="header" href="#returns-26">Returns</a></h6>
+<h6 id="returns-30"><a class="header" href="#returns-30">Returns</a></h6>
 <ul>
 <li><code>bytes</code> (<a href="user/templating/2-plugins.html#type.u8">{u8}</a>): The little-endian byte array.</li>
 </ul>
@@ -1618,11 +1654,11 @@ print(token)
 <pre><code class="language-lua">function U64:from_ne_bytes(bytes: {u8}): U64
 </code></pre>
 <p>Converts a little-endian byte array to a U64.</p>
-<h6 id="parameters-27"><a class="header" href="#parameters-27">Parameters</a></h6>
+<h6 id="parameters-28"><a class="header" href="#parameters-28">Parameters</a></h6>
 <ul>
 <li><code>bytes</code> (<a href="user/templating/2-plugins.html#type.u8">{u8}</a>): The little-endian byte array.</li>
 </ul>
-<h6 id="returns-27"><a class="header" href="#returns-27">Returns</a></h6>
+<h6 id="returns-31"><a class="header" href="#returns-31">Returns</a></h6>
 <ul>
 <li><code>u64</code> (<a href="user/templating/2-plugins.html#type.U64">U64</a>): The U64 value.</li>
 </ul>
@@ -1630,7 +1666,7 @@ print(token)
 <pre><code class="language-lua">function U64:to_le_bytes(): {u8}
 </code></pre>
 <p>Converts the U64 to a little-endian byte array.</p>
-<h6 id="returns-28"><a class="header" href="#returns-28">Returns</a></h6>
+<h6 id="returns-32"><a class="header" href="#returns-32">Returns</a></h6>
 <ul>
 <li><code>bytes</code> (<a href="user/templating/2-plugins.html#type.u8">{u8}</a>): The little-endian byte array.</li>
 </ul>
@@ -1638,11 +1674,11 @@ print(token)
 <pre><code class="language-lua">function U64:from_le_bytes(bytes: {u8}): U64
 </code></pre>
 <p>Converts a little-endian byte array to a U64.</p>
-<h6 id="parameters-28"><a class="header" href="#parameters-28">Parameters</a></h6>
+<h6 id="parameters-29"><a class="header" href="#parameters-29">Parameters</a></h6>
 <ul>
 <li><code>bytes</code> (<a href="user/templating/2-plugins.html#type.u8">{u8}</a>): The little-endian byte array.</li>
 </ul>
-<h6 id="returns-29"><a class="header" href="#returns-29">Returns</a></h6>
+<h6 id="returns-33"><a class="header" href="#returns-33">Returns</a></h6>
 <ul>
 <li><code>u64</code> (<a href="user/templating/2-plugins.html#type.U64">U64</a>): The U64 value.</li>
 </ul>
@@ -1650,7 +1686,7 @@ print(token)
 <pre><code class="language-lua">function U64:to_be_bytes(): {u8}
 </code></pre>
 <p>Converts the U64 to a big-endian byte array.</p>
-<h6 id="returns-30"><a class="header" href="#returns-30">Returns</a></h6>
+<h6 id="returns-34"><a class="header" href="#returns-34">Returns</a></h6>
 <ul>
 <li><code>bytes</code> (<a href="user/templating/2-plugins.html#type.u8">{u8}</a>): The big-endian byte array.</li>
 </ul>
@@ -1658,11 +1694,11 @@ print(token)
 <pre><code class="language-lua">function U64:from_be_bytes(bytes: {u8}): U64
 </code></pre>
 <p>Converts a big-endian byte array to a U64.</p>
-<h6 id="parameters-29"><a class="header" href="#parameters-29">Parameters</a></h6>
+<h6 id="parameters-30"><a class="header" href="#parameters-30">Parameters</a></h6>
 <ul>
 <li><code>bytes</code> (<a href="user/templating/2-plugins.html#type.u8">{u8}</a>): The big-endian byte array.</li>
 </ul>
-<h6 id="returns-31"><a class="header" href="#returns-31">Returns</a></h6>
+<h6 id="returns-35"><a class="header" href="#returns-35">Returns</a></h6>
 <ul>
 <li><code>u64</code> (<a href="user/templating/2-plugins.html#type.U64">U64</a>): The U64 value.</li>
 </ul>
@@ -1670,19 +1706,19 @@ print(token)
 <pre><code class="language-lua">function U64:to_i64(): I64
 </code></pre>
 <p>Converts the U64 to an i64.</p>
-<h6 id="returns-32"><a class="header" href="#returns-32">Returns</a></h6>
+<h6 id="returns-36"><a class="header" href="#returns-36">Returns</a></h6>
 <ul>
 <li><code>i64</code> (<a href="user/templating/2-plugins.html#type.I64">I64</a>): The i64 value.</li>
 </ul>
 <div id="type.I64" />
 <h3 id="i64"><a class="header" href="#i64">I64</a></h3>
 <p>I64 is a 64-bit signed integer type. Implements Add/Subtract/Multiply/Divide/Modulus/Power/Integer Division/Equality/Comparison (Lt/Le and its complements Gt/Ge) and ToString with a type name of I64</p>
-<h4 id="methods-14"><a class="header" href="#methods-14">Methods</a></h4>
+<h4 id="methods-16"><a class="header" href="#methods-16">Methods</a></h4>
 <h5 id="i64to_ne_bytes"><a class="header" href="#i64to_ne_bytes">I64:to_ne_bytes</a></h5>
 <pre><code class="language-lua">function I64:to_ne_bytes(): {u8}
 </code></pre>
 <p>Converts the I64 to a little-endian byte array.</p>
-<h6 id="returns-33"><a class="header" href="#returns-33">Returns</a></h6>
+<h6 id="returns-37"><a class="header" href="#returns-37">Returns</a></h6>
 <ul>
 <li><code>bytes</code> (<a href="user/templating/2-plugins.html#type.u8">{u8}</a>): The little-endian byte array.</li>
 </ul>
@@ -1690,11 +1726,11 @@ print(token)
 <pre><code class="language-lua">function I64:from_ne_bytes(bytes: {u8}): I64
 </code></pre>
 <p>Converts a little-endian byte array to a I64.</p>
-<h6 id="parameters-30"><a class="header" href="#parameters-30">Parameters</a></h6>
+<h6 id="parameters-31"><a class="header" href="#parameters-31">Parameters</a></h6>
 <ul>
 <li><code>bytes</code> (<a href="user/templating/2-plugins.html#type.u8">{u8}</a>): The little-endian byte array.</li>
 </ul>
-<h6 id="returns-34"><a class="header" href="#returns-34">Returns</a></h6>
+<h6 id="returns-38"><a class="header" href="#returns-38">Returns</a></h6>
 <ul>
 <li><code>i64</code> (<a href="user/templating/2-plugins.html#type.I64">I64</a>): The I64 value.</li>
 </ul>
@@ -1702,7 +1738,7 @@ print(token)
 <pre><code class="language-lua">function I64:to_le_bytes(): {u8}
 </code></pre>
 <p>Converts the I64 to a little-endian byte array.</p>
-<h6 id="returns-35"><a class="header" href="#returns-35">Returns</a></h6>
+<h6 id="returns-39"><a class="header" href="#returns-39">Returns</a></h6>
 <ul>
 <li><code>bytes</code> (<a href="user/templating/2-plugins.html#type.u8">{u8}</a>): The little-endian byte array.</li>
 </ul>
@@ -1710,11 +1746,11 @@ print(token)
 <pre><code class="language-lua">function I64:from_le_bytes(bytes: {u8}): I64
 </code></pre>
 <p>Converts a little-endian byte array to a I64.</p>
-<h6 id="parameters-31"><a class="header" href="#parameters-31">Parameters</a></h6>
+<h6 id="parameters-32"><a class="header" href="#parameters-32">Parameters</a></h6>
 <ul>
 <li><code>bytes</code> (<a href="user/templating/2-plugins.html#type.u8">{u8}</a>): The little-endian byte array.</li>
 </ul>
-<h6 id="returns-36"><a class="header" href="#returns-36">Returns</a></h6>
+<h6 id="returns-40"><a class="header" href="#returns-40">Returns</a></h6>
 <ul>
 <li><code>i64</code> (<a href="user/templating/2-plugins.html#type.I64">I64</a>): The I64 value.</li>
 </ul>
@@ -1722,7 +1758,7 @@ print(token)
 <pre><code class="language-lua">function I64:to_be_bytes(): {u8}
 </code></pre>
 <p>Converts the I64 to a big-endian byte array.</p>
-<h6 id="returns-37"><a class="header" href="#returns-37">Returns</a></h6>
+<h6 id="returns-41"><a class="header" href="#returns-41">Returns</a></h6>
 <ul>
 <li><code>bytes</code> (<a href="user/templating/2-plugins.html#type.u8">{u8}</a>): The big-endian byte array.</li>
 </ul>
@@ -1730,11 +1766,11 @@ print(token)
 <pre><code class="language-lua">function I64:from_be_bytes(bytes: {u8}): I64
 </code></pre>
 <p>Converts a big-endian byte array to a I64.</p>
-<h6 id="parameters-32"><a class="header" href="#parameters-32">Parameters</a></h6>
+<h6 id="parameters-33"><a class="header" href="#parameters-33">Parameters</a></h6>
 <ul>
 <li><code>bytes</code> (<a href="user/templating/2-plugins.html#type.u8">{u8}</a>): The big-endian byte array.</li>
 </ul>
-<h6 id="returns-38"><a class="header" href="#returns-38">Returns</a></h6>
+<h6 id="returns-42"><a class="header" href="#returns-42">Returns</a></h6>
 <ul>
 <li><code>i64</code> (<a href="user/templating/2-plugins.html#type.I64">I64</a>): The I64 value.</li>
 </ul>
@@ -1742,23 +1778,23 @@ print(token)
 <pre><code class="language-lua">function I64:to_u64(): U64
 </code></pre>
 <p>Converts the I64 to a U64.</p>
-<h6 id="returns-39"><a class="header" href="#returns-39">Returns</a></h6>
+<h6 id="returns-43"><a class="header" href="#returns-43">Returns</a></h6>
 <ul>
 <li><code>u64</code> (<a href="user/templating/2-plugins.html#type.U64">U64</a>): The U64 value.</li>
 </ul>
 <div id="type.bitu64" />
 <h3 id="bitu64"><a class="header" href="#bitu64">bitu64</a></h3>
 <p><a href="https://luau.org/library#bit32-library">bit32</a> but for U64 datatype. Note that bit64 is experimental and may not be properly documented at all times. When in doubt, reach for Luau's bit32 documentation and simply replace 31's with 63's</p>
-<h4 id="methods-15"><a class="header" href="#methods-15">Methods</a></h4>
+<h4 id="methods-17"><a class="header" href="#methods-17">Methods</a></h4>
 <h5 id="bitu64band"><a class="header" href="#bitu64band">bitu64:band</a></h5>
 <pre><code class="language-lua">function bitu64:band(values: {U64}): U64
 </code></pre>
 <p>Performs a bitwise AND operation on the given values.</p>
-<h6 id="parameters-33"><a class="header" href="#parameters-33">Parameters</a></h6>
+<h6 id="parameters-34"><a class="header" href="#parameters-34">Parameters</a></h6>
 <ul>
 <li><code>values</code> (<a href="user/templating/2-plugins.html#type.U64">{U64}</a>): The values to perform the operation on.</li>
 </ul>
-<h6 id="returns-40"><a class="header" href="#returns-40">Returns</a></h6>
+<h6 id="returns-44"><a class="header" href="#returns-44">Returns</a></h6>
 <ul>
 <li><code>result</code> (<a href="user/templating/2-plugins.html#type.U64">U64</a>): The result of the operation.</li>
 </ul>
@@ -1766,11 +1802,11 @@ print(token)
 <pre><code class="language-lua">function bitu64:bnor(n: U64): U64
 </code></pre>
 <p>Performs a bitwise NOR operation on the given value.</p>
-<h6 id="parameters-34"><a class="header" href="#parameters-34">Parameters</a></h6>
+<h6 id="parameters-35"><a class="header" href="#parameters-35">Parameters</a></h6>
 <ul>
 <li><code>n</code> (<a href="user/templating/2-plugins.html#type.U64">U64</a>): The value to perform the operation on.</li>
 </ul>
-<h6 id="returns-41"><a class="header" href="#returns-41">Returns</a></h6>
+<h6 id="returns-45"><a class="header" href="#returns-45">Returns</a></h6>
 <ul>
 <li><code>result</code> (<a href="user/templating/2-plugins.html#type.U64">U64</a>): The result of the operation.</li>
 </ul>
@@ -1778,11 +1814,11 @@ print(token)
 <pre><code class="language-lua">function bitu64:bor(values: {U64}): U64
 </code></pre>
 <p>Performs a bitwise OR operation on the given values.</p>
-<h6 id="parameters-35"><a class="header" href="#parameters-35">Parameters</a></h6>
+<h6 id="parameters-36"><a class="header" href="#parameters-36">Parameters</a></h6>
 <ul>
 <li><code>values</code> (<a href="user/templating/2-plugins.html#type.U64">{U64}</a>): The values to perform the operation on.</li>
 </ul>
-<h6 id="returns-42"><a class="header" href="#returns-42">Returns</a></h6>
+<h6 id="returns-46"><a class="header" href="#returns-46">Returns</a></h6>
 <ul>
 <li><code>result</code> (<a href="user/templating/2-plugins.html#type.U64">U64</a>): The result of the operation.</li>
 </ul>
@@ -1790,11 +1826,11 @@ print(token)
 <pre><code class="language-lua">function bitu64:bxor(values: {U64}): U64
 </code></pre>
 <p>Performs a bitwise XOR operation on the given values.</p>
-<h6 id="parameters-36"><a class="header" href="#parameters-36">Parameters</a></h6>
+<h6 id="parameters-37"><a class="header" href="#parameters-37">Parameters</a></h6>
 <ul>
 <li><code>values</code> (<a href="user/templating/2-plugins.html#type.U64">{U64}</a>): The values to perform the operation on.</li>
 </ul>
-<h6 id="returns-43"><a class="header" href="#returns-43">Returns</a></h6>
+<h6 id="returns-47"><a class="header" href="#returns-47">Returns</a></h6>
 <ul>
 <li><code>result</code> (<a href="user/templating/2-plugins.html#type.U64">U64</a>): The result of the operation.</li>
 </ul>
@@ -1802,11 +1838,11 @@ print(token)
 <pre><code class="language-lua">function bitu64:btest(values: {U64}): bool
 </code></pre>
 <p>Tests if the bitwise AND of the given values is not zero.</p>
-<h6 id="parameters-37"><a class="header" href="#parameters-37">Parameters</a></h6>
+<h6 id="parameters-38"><a class="header" href="#parameters-38">Parameters</a></h6>
 <ul>
 <li><code>values</code> (<a href="user/templating/2-plugins.html#type.U64">{U64}</a>): The values to perform the operation on.</li>
 </ul>
-<h6 id="returns-44"><a class="header" href="#returns-44">Returns</a></h6>
+<h6 id="returns-48"><a class="header" href="#returns-48">Returns</a></h6>
 <ul>
 <li><code>result</code> (<a href="user/templating/2-plugins.html#type.bool">bool</a>): True if the bitwise AND of the values is not zero, false otherwise.</li>
 </ul>
@@ -1814,13 +1850,13 @@ print(token)
 <pre><code class="language-lua">function bitu64:extract(n: U64, f: u64, w: u64): U64
 </code></pre>
 <p>Extracts a field from a value.</p>
-<h6 id="parameters-38"><a class="header" href="#parameters-38">Parameters</a></h6>
+<h6 id="parameters-39"><a class="header" href="#parameters-39">Parameters</a></h6>
 <ul>
 <li><code>n</code> (<a href="user/templating/2-plugins.html#type.U64">U64</a>): The value to extract the field from.</li>
 <li><code>f</code> (<a href="user/templating/2-plugins.html#type.u64">u64</a>): The field to extract.</li>
 <li><code>w</code> (<a href="user/templating/2-plugins.html#type.u64">u64</a>): The width of the field to extract.</li>
 </ul>
-<h6 id="returns-45"><a class="header" href="#returns-45">Returns</a></h6>
+<h6 id="returns-49"><a class="header" href="#returns-49">Returns</a></h6>
 <ul>
 <li><code>result</code> (<a href="user/templating/2-plugins.html#type.U64">U64</a>): The extracted field.</li>
 </ul>
@@ -1828,12 +1864,12 @@ print(token)
 <pre><code class="language-lua">function bitu64:lrotate(n: U64, i: i64): U64
 </code></pre>
 <p>Rotates a value left or right.</p>
-<h6 id="parameters-39"><a class="header" href="#parameters-39">Parameters</a></h6>
+<h6 id="parameters-40"><a class="header" href="#parameters-40">Parameters</a></h6>
 <ul>
 <li><code>n</code> (<a href="user/templating/2-plugins.html#type.U64">U64</a>): The value to rotate.</li>
 <li><code>i</code> (<a href="user/templating/2-plugins.html#type.i64">i64</a>): The amount to rotate by.</li>
 </ul>
-<h6 id="returns-46"><a class="header" href="#returns-46">Returns</a></h6>
+<h6 id="returns-50"><a class="header" href="#returns-50">Returns</a></h6>
 <ul>
 <li><code>result</code> (<a href="user/templating/2-plugins.html#type.U64">U64</a>): The rotated value.</li>
 </ul>
@@ -1841,12 +1877,12 @@ print(token)
 <pre><code class="language-lua">function bitu64:lshift(n: U64, i: i64): U64
 </code></pre>
 <p>Shifts a value left or right.</p>
-<h6 id="parameters-40"><a class="header" href="#parameters-40">Parameters</a></h6>
+<h6 id="parameters-41"><a class="header" href="#parameters-41">Parameters</a></h6>
 <ul>
 <li><code>n</code> (<a href="user/templating/2-plugins.html#type.U64">U64</a>): The value to shift.</li>
 <li><code>i</code> (<a href="user/templating/2-plugins.html#type.i64">i64</a>): The amount to shift by.</li>
 </ul>
-<h6 id="returns-47"><a class="header" href="#returns-47">Returns</a></h6>
+<h6 id="returns-51"><a class="header" href="#returns-51">Returns</a></h6>
 <ul>
 <li><code>result</code> (<a href="user/templating/2-plugins.html#type.U64">U64</a>): The shifted value.</li>
 </ul>
@@ -1854,14 +1890,14 @@ print(token)
 <pre><code class="language-lua">function bitu64:replace(n: U64, v: U64, f: u64, w: u64): U64
 </code></pre>
 <p>Replaces a field in a value.</p>
-<h6 id="parameters-41"><a class="header" href="#parameters-41">Parameters</a></h6>
+<h6 id="parameters-42"><a class="header" href="#parameters-42">Parameters</a></h6>
 <ul>
 <li><code>n</code> (<a href="user/templating/2-plugins.html#type.U64">U64</a>): The value to replace the field in.</li>
 <li><code>v</code> (<a href="user/templating/2-plugins.html#type.U64">U64</a>): The value to replace the field with.</li>
 <li><code>f</code> (<a href="user/templating/2-plugins.html#type.u64">u64</a>): The field to replace.</li>
 <li><code>w</code> (<a href="user/templating/2-plugins.html#type.u64">u64</a>): The width of the field to replace.</li>
 </ul>
-<h6 id="returns-48"><a class="header" href="#returns-48">Returns</a></h6>
+<h6 id="returns-52"><a class="header" href="#returns-52">Returns</a></h6>
 <ul>
 <li><code>result</code> (<a href="user/templating/2-plugins.html#type.U64">U64</a>): The value with the field replaced.</li>
 </ul>
@@ -1869,12 +1905,12 @@ print(token)
 <pre><code class="language-lua">function bitu64:rrotate(n: U64, i: i64): U64
 </code></pre>
 <p>Rotates a value left or right.</p>
-<h6 id="parameters-42"><a class="header" href="#parameters-42">Parameters</a></h6>
+<h6 id="parameters-43"><a class="header" href="#parameters-43">Parameters</a></h6>
 <ul>
 <li><code>n</code> (<a href="user/templating/2-plugins.html#type.U64">U64</a>): The value to rotate.</li>
 <li><code>i</code> (<a href="user/templating/2-plugins.html#type.i64">i64</a>): The amount to rotate by.</li>
 </ul>
-<h6 id="returns-49"><a class="header" href="#returns-49">Returns</a></h6>
+<h6 id="returns-53"><a class="header" href="#returns-53">Returns</a></h6>
 <ul>
 <li><code>result</code> (<a href="user/templating/2-plugins.html#type.U64">U64</a>): The rotated value.</li>
 </ul>
@@ -1882,25 +1918,25 @@ print(token)
 <pre><code class="language-lua">function bitu64:rshift(n: U64, i: i64): U64
 </code></pre>
 <p>Shifts a value left or right.</p>
-<h6 id="parameters-43"><a class="header" href="#parameters-43">Parameters</a></h6>
+<h6 id="parameters-44"><a class="header" href="#parameters-44">Parameters</a></h6>
 <ul>
 <li><code>n</code> (<a href="user/templating/2-plugins.html#type.U64">U64</a>): The value to shift.</li>
 <li><code>i</code> (<a href="user/templating/2-plugins.html#type.i64">i64</a>): The amount to shift by.</li>
 </ul>
-<h6 id="returns-50"><a class="header" href="#returns-50">Returns</a></h6>
+<h6 id="returns-54"><a class="header" href="#returns-54">Returns</a></h6>
 <ul>
 <li><code>result</code> (<a href="user/templating/2-plugins.html#type.U64">U64</a>): The shifted value.</li>
 </ul>
-<h2 id="methods-16"><a class="header" href="#methods-16">Methods</a></h2>
+<h2 id="methods-18"><a class="header" href="#methods-18">Methods</a></h2>
 <h3 id="u64-1"><a class="header" href="#u64-1">U64</a></h3>
 <pre><code class="language-lua">function U64(value: u64): U64
 </code></pre>
 <p>Creates a new U64.</p>
-<h4 id="parameters-44"><a class="header" href="#parameters-44">Parameters</a></h4>
+<h4 id="parameters-45"><a class="header" href="#parameters-45">Parameters</a></h4>
 <ul>
 <li><code>value</code> (<a href="user/templating/2-plugins.html#type.u64">u64</a>): The value of the U64.</li>
 </ul>
-<h4 id="returns-51"><a class="header" href="#returns-51">Returns</a></h4>
+<h4 id="returns-55"><a class="header" href="#returns-55">Returns</a></h4>
 <ul>
 <li><code>u64</code> (<a href="user/templating/2-plugins.html#type.U64">U64</a>): The U64 value.</li>
 </ul>
@@ -1908,11 +1944,11 @@ print(token)
 <pre><code class="language-lua">function I64(value: i64): I64
 </code></pre>
 <p>Creates a new I64.</p>
-<h4 id="parameters-45"><a class="header" href="#parameters-45">Parameters</a></h4>
+<h4 id="parameters-46"><a class="header" href="#parameters-46">Parameters</a></h4>
 <ul>
 <li><code>value</code> (<a href="user/templating/2-plugins.html#type.i64">i64</a>): The value of the I64.</li>
 </ul>
-<h4 id="returns-52"><a class="header" href="#returns-52">Returns</a></h4>
+<h4 id="returns-56"><a class="header" href="#returns-56">Returns</a></h4>
 <ul>
 <li><code>i64</code> (<a href="user/templating/2-plugins.html#type.I64">I64</a>): The I64 value.</li>
 </ul>
@@ -2018,6 +2054,16 @@ print(token)
 <li><strong>range</strong>: The range of values this number can take on (accepted values: IEEE 754 double-precision floating point)</li>
 </ul>
 <hr />
+<div id="type.byte" />
+<h2 id="byte"><a class="header" href="#byte">byte</a></h2>
+<pre><code class="language-lua">type byte = number
+</code></pre>
+<p>An unsigned 8-bit integer that semantically stores a byte of information</p>
+<h3 id="constraints-10"><a class="header" href="#constraints-10">Constraints</a></h3>
+<ul>
+<li><strong>range</strong>: The range of values this number can take on (accepted values: 0-255)</li>
+</ul>
+<hr />
 <div id="type.bool" />
 <h2 id="bool"><a class="header" href="#bool">bool</a></h2>
 <pre><code class="language-lua">type bool = boolean
@@ -2029,7 +2075,7 @@ print(token)
 <pre><code class="language-lua">type char = string
 </code></pre>
 <p>A single Unicode character.</p>
-<h3 id="constraints-10"><a class="header" href="#constraints-10">Constraints</a></h3>
+<h3 id="constraints-11"><a class="header" href="#constraints-11">Constraints</a></h3>
 <ul>
 <li><strong>length</strong>: The length of the string (accepted values: 1)</li>
 </ul>
@@ -2039,7 +2085,7 @@ print(token)
 <pre><code class="language-lua">type string = string
 </code></pre>
 <p>A UTF-8 encoded string.</p>
-<h3 id="constraints-11"><a class="header" href="#constraints-11">Constraints</a></h3>
+<h3 id="constraints-12"><a class="header" href="#constraints-12">Constraints</a></h3>
 <ul>
 <li><strong>encoding</strong>: Accepted character encoding (accepted values: UTF-8 <em>only</em>)</li>
 </ul>
@@ -2050,11 +2096,11 @@ print(token)
 </code></pre>
 <p>A Lua function.</p>
 <hr />
-<h1 id="types-9"><a class="header" href="#types-9">Types</a></h1>
+<h1 id="types-10"><a class="header" href="#types-10">Types</a></h1>
 <div id="type.Event" />
 <h2 id="event"><a class="header" href="#event">Event</a></h2>
 <p>An event that has been dispatched to the template. This is what <code>args</code> is in the template.</p>
-<h3 id="fields-22"><a class="header" href="#fields-22">Fields</a></h3>
+<h3 id="fields-23"><a class="header" href="#fields-23">Fields</a></h3>
 <ul>
 <li><code>title</code> (<a href="user/templating/2-plugins.html#type.string">string</a>): The title name of the event.</li>
 <li><code>base_name</code> (<a href="user/templating/2-plugins.html#type.string">string</a>): The base name of the event.</li>
@@ -2073,7 +2119,7 @@ print(token)
   "allowed_caps": []
 }
 </code></pre>
-<h3 id="fields-23"><a class="header" href="#fields-23">Fields</a></h3>
+<h3 id="fields-24"><a class="header" href="#fields-24">Fields</a></h3>
 <ul>
 <li><code>lang</code> (<a href="user/templating/2-plugins.html#type.string">string</a>): The language of the template.</li>
 <li><code>allowed_caps</code> (<a href="user/templating/2-plugins.html#type.string">{string}</a>): The allowed capabilities provided to the template.</li>
@@ -2092,7 +2138,7 @@ print(token)
   }
 }
 </code></pre>
-<h3 id="fields-24"><a class="header" href="#fields-24">Fields</a></h3>
+<h3 id="fields-25"><a class="header" href="#fields-25">Fields</a></h3>
 <ul>
 <li><code>path</code> (<a href="user/templating/2-plugins.html#type.string">string</a>): The path of the template token.</li>
 <li><code>pragma</code> (<a href="user/templating/2-plugins.html#type.TemplatePragma">TemplatePragma</a>): The pragma of the template.</li>
@@ -2100,7 +2146,7 @@ print(token)
 <div id="type.TemplateContext" />
 <h2 id="templatecontext"><a class="header" href="#templatecontext">TemplateContext</a></h2>
 <p><code>TemplateContext</code> is a struct that represents the context of a template. Stores data including the templates data, pragma and what capabilities it should have access to. Passing a TemplateContext is often required when using AntiRaid plugins for security purposes.</p>
-<h3 id="fields-25"><a class="header" href="#fields-25">Fields</a></h3>
+<h3 id="fields-26"><a class="header" href="#fields-26">Fields</a></h3>
 <ul>
 <li><code>template_data</code> (<a href="user/templating/2-plugins.html#type.TemplateData">TemplateData</a>): The data associated with the template.</li>
 <li><code>guild_id</code> (<a href="user/templating/2-plugins.html#type.string">string</a>): The current guild ID the template is running on.</li>
@@ -2115,102 +2161,52 @@ print(token)
 <p>In this case, we want to tell AntiRaid that we are coding a template in Lua and that we want to allow the capability to send messages to Discord. This is done by adding the <code>allowed_caps</code> key to the pragma and specifying the capabilities we want to allow as seen below:</p>
 <pre><code class="language-lua">-- @pragma {"lang":"lua","allowed_caps":["discord:create_message"]}
 </code></pre>
-<p>Another example of pragma is on the Website:</p>
-<p><img src="user/templating/3-example-pragmaimg.png" alt="Pragma on website image" /></p>
-<pre><code class="language-json">{"lang":"lua","builderInfo":{"ver":1,"data":{"embeds":[{"title":"Test","description":"","fields":[]}],"content":""},"checksum":"72e7225dfa2725a979fccc763e2e5bac3855f1cd3c10b5cd00c90b53e724db23"},"allowed_caps":["discord:create_message"]}
-</code></pre>
-<p>Here, notice that the builderInfo contains the embeds, content, and checksum of the template. When the user wants to reread their template, the website only has to reread the pragma statement to reconstruct the state and show the right tab (either Builder if they are just making a simple embed, or Advanced if they were making changes to the content of the template itself). Without the pragma, the website would have to use its own arcane syntax on top of comments or execute the template just to reconstruct state.</p>
 <h4 id="2-creating-a-message"><a class="header" href="#2-creating-a-message">2. Creating a message</a></h4>
 <p>Next, we need to extract the arguments and token from the context. The arguments are passed to the template when it is executed and contain all the data we need to work with. The token is used to authenticate the template and gain access to the templates context in privileged AntiRaid API's. All of this is provided using variable arguments.</p>
 <pre><code class="language-lua">local args, token = ...
 </code></pre>
-<p>There are 3 things we want to import for this template to work. The first is the Discord module, which allows us to send messages to Discord. The second is the Interop module, which provides some functions allowing for seamless interoperability between your template and AntiRaid. The third is the Formatters module, which provides some helper methods for formatting audit log fields (formally known as <code>gwevent_fields</code>).</p>
+<p>There are 3 things we want to import for this template to work. The first is the Discord module, which allows us to send messages to Discord. The second is the Interop module, which provides some functions allowing for seamless interoperability between your template and AntiRaid. The third is the promise module which lets us run asynchronous tasks like sending a message to Discord.</p>
 <pre><code class="language-lua">local discord = require "@antiraid/discord"
 local interop = require "@antiraid/interop"
-local formatter = require "@antiraid/formatters"
+local promise = require "@antiraid/promise"
 </code></pre>
-<p>Next, we create the embed. <code>args.event_titlename</code> is specific to Audit Logs and contains the friendly name for an event.</p>
+<p>Next, we create the embed using the events <code>title</code> field as the embed title and an empty description.</p>
 <pre><code class="language-lua">-- Make the embed
 local embed = {
-    title = args.event_titlename, 
+    title = args.title, 
     description = "", -- Start with empty description
+    fields = {}, -- Start with empty fields
 }
 </code></pre>
 <p><strong>NOTE: You can use the <a href="user/templating/./2-plugins.html">API Reference</a> to see what functions are available in the AntiRaid SDK</strong></p>
-<h4 id="3-adding-fields"><a class="header" href="#3-adding-fields">3. Adding fields</a></h4>
-<p><strong>TIP: When making a template for a Gateway Event, the fields are passed to the template through a table named <code>fields</code>.</strong></p>
-<p>The next step is to add fields to the embed. In this case, we can do this by iterating over <code>fields</code>. In Lua, tables can be iterated over using the builtin <code>pairs</code> function like below:</p>
+<p>A quick side track here. When coding in Lua, tables can be iterated over using the builtin <code>pairs</code> function like below:</p>
 <pre><code class="language-lua">for key, value in pairs(my_table) do
     -- Do something with key and value
 end
 </code></pre>
-<p>In the same way, we can now iterate over <code>args.event_data</code>:</p>
-<pre><code class="language-lua">for key, value in pairs(args.event_data) do
-    -- Do something with key and value
-end
-</code></pre>
-<p>When using Audit Log Events, there are two cases to pay attention to, the first is the field itself being <code>nil</code> and the second is the field type being <code>None</code>. In both cases, we don't want to add the field to the embed. Lets do that!</p>
-<pre><code class="language-lua">local should_set = false
-
-if value ~= nil and value.field.type ~= "None" then
-    should_set = true
-end
-</code></pre>
-<p>Lastly, we need to format the field and add it to the description. Luckily, the formatter plugin provides a function for formatting any categorized field. This function is called <code>format_gwevent_field</code>.</p>
-<pre><code class="language-lua">local formatted_value = formatter.format_gwevent_field(value)
-</code></pre>
+<h4 id="3-creating-the-audit-log-message-fields-etc"><a class="header" href="#3-creating-the-audit-log-message-fields-etc">3. Creating the audit log message fields etc.</a></h4>
+<p>The next step is to add fields to the embed by actually handling the Discord events we want properly. This is pretty annoying to do without some typing and helper methods though...</p>
+<p>Fortunately, AntiRaid has a solution: <a href="https://github.com/Anti-Raid/templating-types">templating-types</a>! This does require extra effort in the form of bundling with <a href="https://github.com/Anti-Raid/templating-template">templating-template</a> as a template. See <a href="user/templating/./4-bundling.html">our guide</a> for more information on how to do this.</p>
+<p>Once you're done making the message as you'd like. It's time to send the message!</p>
 <h4 id="4-sending-the-message"><a class="header" href="#4-sending-the-message">4. Sending the message</a></h4>
-<p>Finally, we can send the message using the Discord module. To do this, we need to create a message object and set the embeds property to an array containing our embed. This is also where interop comes in handy, as we need to set the metatable of the embeds array to the interop array metatable so AntiRaid knows that embeds is an array. Next, we use the Discord plugin to make a new Discord action executor which then lets us send the message to the specified channel (<code>args.sink</code> is another Audit Log specific variable that contains the channel ID/whatever <code>sink</code> is set to in the database).</p>
-<pre><code class="language-lua">local message = { embeds = {} }
-setmetatable(message.embeds, interop.array_metatable)
+<p>Finally, we can send the message using the Discord module. To do this, we need to create a message object and set the embeds property to an array containing our embed. This is also where interop comes in handy, as we need to set the metatable of the embeds array to the interop array metatable so AntiRaid knows that embeds is an array. Next, we use the Discord plugin to make a new Discord action executor which then lets us send the message to the specified channel.</p>
+<pre><code class="language-lua">setmetatable(message.embeds, interop.array_metatable)
 
 table.insert(message.embeds, embed)
 
 -- Send message using action executor
 local discord_executor = discord.new(token);
 discord_executor:create_message({
-    channel_id = args.sink,
+    channel_id = "CHANNEL_ID_HERE",
     message = message
 })
 </code></pre>
-<p>Finally, we can put the entire loop together as so:</p>
-<pre><code class="language-lua">-- @pragma {"lang":"lua","allowed_caps":["discord:create_message"]}
-local args, token = ...
-local discord = require "@antiraid/discord"
-local interop = require "@antiraid/interop"
-local formatter = require "@antiraid/formatters"
+<h3 id="5-optional-key-value"><a class="header" href="#5-optional-key-value">5. (Optional) Key-value</a></h3>
+<p>With <code>@antiraid/kv</code>, you can save the channel id to a key-value store in the website and then fetch it like so:</p>
+<pre><code class="language-lua">local kv = require "@antiraid/kv"
 
--- Make the embed
-local embed = {
-    title = args.event_titlename, 
-    description = "", -- Start with empty description
-}
-
--- Add the event data to the description
-for key, value in pairs(args.event_data) do
-    local should_set = false
-
-    if value ~= nil and value.type ~= "None" then
-        should_set = true
-    end
-
-    if should_set then
-        local formatted_value = formatter.format_gwevent_field(value)
-        embed.description = embed.description .. "**" .. key:gsub("_", " "):upper() .. "**: " .. formatted_value .. "\n"
-    end
-end
-
-local message = { embeds = {} }
-setmetatable(message.embeds, interop.array_metatable)
-
-table.insert(message.embeds, embed)
-
--- Send message using action executor
-local discord_executor = discord.new(token);
-discord_executor:create_message({
-    channel_id = args.sink,
-    message = message
-})
+local kvExecutor = kv.new(token)
+local channelId = kvExecutor:get("auditlog_channel")
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="luau-ecosystem-integration-notes"><a class="header" href="#luau-ecosystem-integration-notes">Luau Ecosystem Integration Notes</a></h1>
 <p>At AntiRaid, we believe that bot developers should be able to access the best tools available to them. To this end, we have integrated some popular Luau libraries into our templating environment to provide a more powerful and flexible experience while taking into account security and stability of the bot. Below, we outline the libraries that are currently available for use in your Lua templates:</p>
@@ -2313,8 +2309,7 @@ local captcha = img_captcha.new(captcha_config)
 return captcha
 </code></pre>
 <h2 id="captcha-with-increasing-char-count-with-maximum-of-5-tries-per-user"><a class="header" href="#captcha-with-increasing-char-count-with-maximum-of-5-tries-per-user">CAPTCHA with increasing char count with maximum of 5 tries per user</a></h2>
-<pre><code class="language-lua">local args, token = ...
-local interop = require "@antiraid/interop"
+<pre><code class="language-lua">=local interop = require "@antiraid/interop"
 local img_captcha = require "@antiraid/img_captcha"
 
 local captcha_config = {}
@@ -2331,7 +2326,7 @@ end
 
 -- Check if user has reached maximum tries
 if __stack._captcha_user_tries[args.user.id] &gt;= 5 then
-    return { __error = "You have reached the maximum number of tries in this 5 minute window."}
+    error("You have reached the maximum number of tries in this 5 minute window.")
 end
 
 -- Basic options
