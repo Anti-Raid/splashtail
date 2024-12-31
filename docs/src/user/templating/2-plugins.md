@@ -681,18 +681,6 @@ This plugin allows interoperability with AntiRaid and controlled interaction wit
 
 ## Methods
 
-### array_metatable
-
-```lua
-function array_metatable(): table
-```
-
-Returns the array metatable.
-
-#### Returns
-
-- `array_metatable` ([table](#type.table)): The array metatable.
-
 ### memusage
 
 ```lua
@@ -774,7 +762,10 @@ Captcha configuration. See examples for the arguments
 
 #### Fields
 
-- `filter` ([string](#type.string)): The name of the filter to use. See example for the parameters to pass for the filter as well as https://github.com/Anti-Raid/captcha.
+- `char_count` ([u8](#type.u8)): The number of characters the CAPTCHA should have.
+- `filters` ([{any}](#type.any)): See example for the parameters to pass for the filter as well as https://github.com/Anti-Raid/captcha
+- `viewbox_size` ([(u32, u32)](#type.(u32, u32))): The size of the viewbox to render the CAPTCHA in.
+- `set_viewbox_at_idx` ([Option<usize>](#type.Option<usize>)): At what index of CAPTCHA generation should a viewbox be created at.
 
 
 ## Methods
@@ -1688,7 +1679,7 @@ Represents a sting on AntiRaid
   "creator": "system",
   "target": "user:1945824",
   "state": "active",
-  "created_at": "2024-12-31T10:45:59.302502629Z",
+  "created_at": "2024-12-31T12:15:42.277102248Z",
   "duration": {
     "secs": 60,
     "nanos": 0
