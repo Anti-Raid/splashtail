@@ -14,7 +14,6 @@ AntiRaid applies the following 3 global limits to all Lua templates. Note that w
 
 ```rust
 pub const MAX_TEMPLATE_MEMORY_USAGE: usize = 1024 * 1024 * 3; // 3MB maximum memory
-pub const MAX_TEMPLATE_LIFETIME: std::time::Duration = std::time::Duration::from_secs(60 * 15); // 15 minutes maximum lifetime
 pub const MAX_TEMPLATES_EXECUTION_TIME: std::time::Duration = std::time::Duration::from_secs(30); // 30 seconds maximum execution time
 ```
 
@@ -25,7 +24,7 @@ The above limits are in place to prevent abuse and ensure that the bot remains r
 - Each guild is assigned a dedicated Lua VM. This VM is used to execute Lua code that is used in the templates.
 - The total memory usage that a guild can use is limited to ``MAX_TEMPLATE_MEMORY_USAGE`` (currently 3MB). This is to prevent a single guild from using too much memory.
 - Execution of all scripts is timed out when the last executed script takes longer than ``MAX_TEMPLATES_EXECUTION_TIME`` (currently 30 seconds).
-- A lua VM will exist for a total of ``MAX_TEMPLATE_LIFETIME`` (currently 10 minutes) after the last access before being destroyed. This is to reduce memory+CPU usage.
+- A guilds Lua VM will persist until marked as broken (either by explicitly requesting it or by exceeding memory limits)
 - The ``__stack`` table can be used to share data across templates safely *while the VM is running*. without affecting other templates. This is useful for sharing data between templates such as Audit Logs. **Note that AntiRaid uses luau sandboxing meaning that `_G` is readonly.**
 - The standard ``require`` statement can be used to import AntiRaid modules. **Note that the modules are read-only** and cannot be monkey-patched etc.
 - **Because Lua is a single-threaded language, only one template can be executed at a time**

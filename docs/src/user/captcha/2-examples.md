@@ -75,8 +75,7 @@ return captcha
 ## CAPTCHA with increasing char count with maximum of 5 tries per user
 
 ```lua
-local args, token = ...
-local interop = require "@antiraid/interop"
+=local interop = require "@antiraid/interop"
 local img_captcha = require "@antiraid/img_captcha"
 
 local captcha_config = {}
@@ -93,7 +92,7 @@ end
 
 -- Check if user has reached maximum tries
 if __stack._captcha_user_tries[args.user.id] >= 5 then
-    return { __error = "You have reached the maximum number of tries in this 5 minute window."}
+    error("You have reached the maximum number of tries in this 5 minute window.")
 end
 
 -- Basic options

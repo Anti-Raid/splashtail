@@ -16,16 +16,6 @@ In this case, we want to tell AntiRaid that we are coding a template in Lua and 
 -- @pragma {"lang":"lua","allowed_caps":["discord:create_message"]}
 ```
 
-Another example of pragma is on the Website:
-
-![Pragma on website image](3-example-pragmaimg.png)
-
-```json
-{"lang":"lua","builderInfo":{"ver":1,"data":{"embeds":[{"title":"Test","description":"","fields":[]}],"content":""},"checksum":"72e7225dfa2725a979fccc763e2e5bac3855f1cd3c10b5cd00c90b53e724db23"},"allowed_caps":["discord:create_message"]}
-```
-
-Here, notice that the builderInfo contains the embeds, content, and checksum of the template. When the user wants to reread their template, the website only has to reread the pragma statement to reconstruct the state and show the right tab (either Builder if they are just making a simple embed, or Advanced if they were making changes to the content of the template itself). Without the pragma, the website would have to use its own arcane syntax on top of comments or execute the template just to reconstruct state.
-
 #### 2. Creating a message
 
 Next, we need to extract the arguments and token from the context. The arguments are passed to the template when it is executed and contain all the data we need to work with. The token is used to authenticate the template and gain access to the templates context in privileged AntiRaid API's. All of this is provided using variable arguments.
@@ -34,32 +24,28 @@ Next, we need to extract the arguments and token from the context. The arguments
 local args, token = ...
 ```
 
-There are 3 things we want to import for this template to work. The first is the Discord module, which allows us to send messages to Discord. The second is the Interop module, which provides some functions allowing for seamless interoperability between your template and AntiRaid. The third is the Formatters module, which provides some helper methods for formatting audit log fields (formally known as ``gwevent_fields``).
+There are 3 things we want to import for this template to work. The first is the Discord module, which allows us to send messages to Discord. The second is the Interop module, which provides some functions allowing for seamless interoperability between your template and AntiRaid. The third is the promise module which lets us run asynchronous tasks like sending a message to Discord.
 
 ```lua
 local discord = require "@antiraid/discord"
 local interop = require "@antiraid/interop"
-local formatter = require "@antiraid/formatters"
+local promise = require "@antiraid/promise"
 ```
 
 
-Next, we create the embed. ``args.event_titlename`` is specific to Audit Logs and contains the friendly name for an event.
+Next, we create the embed using the events ``title`` field as the embed title and an empty description.
 
 ```lua
 -- Make the embed
 local embed = {
-    title = args.event_titlename, 
+    title = args.title, 
     description = "", -- Start with empty description
 }
 ```
 
 **NOTE: You can use the [API Reference](./2-plugins.md) to see what functions are available in the AntiRaid SDK**
 
-#### 3. Adding fields
-
-**TIP: When making a template for a Gateway Event, the fields are passed to the template through a table named ``fields``.**
-
-The next step is to add fields to the embed. In this case, we can do this by iterating over ``fields``. In Lua, tables can be iterated over using the builtin ``pairs`` function like below:
+A quick side track here. When coding in Lua, tables can be iterated over using the builtin ``pairs`` function like below:
 
 ```lua
 for key, value in pairs(my_table) do
@@ -67,29 +53,11 @@ for key, value in pairs(my_table) do
 end
 ```
 
-In the same way, we can now iterate over ``args.event_data``:
+#### 3. Typing (optional)
 
-```lua
-for key, value in pairs(args.event_data) do
-    -- Do something with key and value
-end
-```
+The next step is to add fields to the embed by actually handling the Discord events we want properly. This is pretty annoying to do without some typing and helper methods though...
 
-When using Audit Log Events, there are two cases to pay attention to, the first is the field itself being ``nil`` and the second is the field type being ``None``. In both cases, we don't want to add the field to the embed. Lets do that!
-
-```lua
-local should_set = false
-
-if value ~= nil and value.field.type ~= "None" then
-    should_set = true
-end
-```
-
-Lastly, we need to format the field and add it to the description. Luckily, the formatter plugin provides a function for formatting any categorized field. This function is called ``format_gwevent_field``. 
-
-```lua
-local formatted_value = formatter.format_gwevent_field(value)
-```
+Fortunately, AntiRaid has a solution: [templating-types](https://github.com/Anti-Raid/templating-types)! This does require extra effort in the form of bundling.
 
 #### 4. Sending the message
 

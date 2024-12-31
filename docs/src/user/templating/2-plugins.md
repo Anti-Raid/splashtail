@@ -211,7 +211,7 @@ Options for editing a channel in Discord
 - `channel_id` ([string](#type.string)): The channel ID to edit
 - `reason` ([string](#type.string)): The reason for editing the channel
 - `name` ([string?](#type.string)): The name of the channel
-- `type` ([string?](#type.string)): The type of the channel
+- `type` ([number?](#type.number)): The type of the channel
 - `position` ([number?](#type.number)): The position of the channel
 - `topic` ([string?](#type.string)): The topic of the channel
 - `nsfw` ([bool?](#type.bool)): Whether the channel is NSFW
@@ -220,14 +220,14 @@ Options for editing a channel in Discord
 - `permission_overwrites` ([{Serenity.PermissionOverwrite}?](#type.Serenity.PermissionOverwrite)): The permission overwrites of the channel
 - `parent_id` ([string??](#type.string)): The parent ID of the channel
 - `rtc_region` ([string??](#type.string)): The RTC region of the channel
-- `video_quality_mode` ([string?](#type.string)): The video quality mode of the channel
-- `default_auto_archive_duration` ([string?](#type.string)): The default auto archive duration of the channel
+- `video_quality_mode` ([number?](#type.number)): The video quality mode of the channel
+- `default_auto_archive_duration` ([number?](#type.number)): The default auto archive duration of the channel
 - `flags` ([string?](#type.string)): The flags of the channel
 - `available_tags` ([{Serenity.ForumTag}?](#type.Serenity.ForumTag)): The available tags of the channel
 - `default_reaction_emoji` ([Serenity.ForumEmoji??](#type.Serenity.ForumEmoji)): The default reaction emoji of the channel
 - `default_thread_rate_limit_per_user` ([number?](#type.number)): The default thread rate limit per user
-- `default_sort_order` ([string?](#type.string)): The default sort order of the channel
-- `default_forum_layout` ([string?](#type.string)): The default forum layout of the channel
+- `default_sort_order` ([number?](#type.number)): The default sort order of the channel
+- `default_forum_layout` ([number?](#type.number)): The default forum layout of the channel
 
 
 <div id="type.EditThreadOptions" />
@@ -257,7 +257,7 @@ Options for editing a thread in Discord
 - `reason` ([string](#type.string)): The reason for editing the channel
 - `name` ([string?](#type.string)): The name of the thread
 - `archived` ([bool?](#type.bool)): Whether the thread is archived
-- `auto_archive_duration` ([string?](#type.string)): The auto archive duration of the thread
+- `auto_archive_duration` ([number?](#type.number)): The auto archive duration of the thread
 - `locked` ([bool?](#type.bool)): Whether the thread is locked
 - `invitable` ([bool?](#type.bool)): Whether the thread is invitable
 - `rate_limit_per_user` ([number?](#type.number)): The rate limit per user/Slow mode of the thread
@@ -372,7 +372,7 @@ An embed in a message
 - `description` ([string?](#type.string)): The description of the embed
 - `url` ([string?](#type.string)): The URL of the embed
 - `timestamp` ([string?](#type.string)): The timestamp of the embed
-- `color` ([string?](#type.string)): The color of the embed
+- `color` ([number?](#type.number)): The color of the embed
 - `footer` ([{Serenity.CreateMessageEmbedFooter}?](#type.Serenity.CreateMessageEmbedFooter)): The footer of the embed
 - `image` ([string?](#type.string)): The image URL of the embed
 - `thumbnail` ([string?](#type.string)): The thumbnail URL of the embed
@@ -443,6 +443,65 @@ Gets the data of the message
 ###### Returns
 
 - `data` ([any](#type.any)): The inner data of the message
+##### MessageHandle:await_component_interaction
+
+```lua
+function MessageHandle:await_component_interaction(): LuaStream<MessageComponentHandle>
+```
+
+Awaits a component interaction on the message
+
+###### Returns
+
+- `stream` ([LuaStream<MessageComponentHandle>](#type.LuaStream<MessageComponentHandle>)): The stream of component interaction handles
+
+
+<div id="type.MessageComponentHandle" />
+
+### MessageComponentHandle
+
+A handle to a message component interaction in Discord, as represented by AntiRaid. Internal fields are subject to change
+
+
+
+#### Methods
+
+##### MessageComponentHandle:data
+
+```lua
+function MessageComponentHandle:data(): any
+```
+
+The inner data of the message component interaction
+
+###### Returns
+
+- `data` ([any](#type.any)): The inner data of the message component interaction
+##### MessageComponentHandle:custom_id
+
+```lua
+function MessageComponentHandle:custom_id(): string
+```
+
+The custom ID of the message component interaction
+
+###### Returns
+
+- `custom_id` ([string](#type.string)): The custom ID of the message component interaction
+
+
+<div id="type.SendMessageChannelAction" />
+
+### SendMessageChannelAction
+
+Options for sending a message in a channel in Discord
+
+
+
+#### Fields
+
+- `channel_id` ([string](#type.string)): The channel ID to send the message in
+- `data` ([Serenity.CreateMessage](#type.Serenity.CreateMessage)): The data of the message to send
 
 
 <div id="type.DiscordExecutor" />
@@ -558,7 +617,7 @@ Deletes a channel
 ##### DiscordExecutor:create_message
 
 ```lua
-function DiscordExecutor:create_message(data: CreateMessage): 
+function DiscordExecutor:create_message(data: SendMessageChannelAction): 
 ```
 
 Creates a message
@@ -569,7 +628,7 @@ Creates a message
 
 ###### Parameters
 
-- `data` ([CreateMessage](#type.CreateMessage)): Options for creating a message.
+- `data` ([SendMessageChannelAction](#type.SendMessageChannelAction)): Options for creating a message.
 
 
 ###### Returns
@@ -1527,6 +1586,43 @@ Checks if a list of permissions in canonical string form contains a specific per
 
 ---
 
+# @antiraid/promise
+
+Lua Promises, yield for a promise to execute the async action returning its result.
+
+## Types
+
+<div id="type.LuaPromise" />
+
+### LuaPromise<T>
+
+LuaPromise<T> provides a promise that must be yielded to actually execute and get the result of the async action.
+
+
+
+## Methods
+
+### yield
+
+```lua
+function yield(promise: LuaPromise<T>): T
+```
+
+Yields the promise to execute the async action and return its result. Note that this is the only function other than `stream.next` that yields.
+
+#### Parameters
+
+- `promise` ([LuaPromise<T>](#type.LuaPromise<T>)): The promise to yield.
+
+
+#### Returns
+
+- `T` ([T](#type.T)): The result of executing the promise.
+
+
+
+---
+
 # @antiraid/stings
 
 List, get, create, update and delete stings on Anti-Raid.
@@ -1592,7 +1688,7 @@ Represents a sting on AntiRaid
   "creator": "system",
   "target": "user:1945824",
   "state": "active",
-  "created_at": "2024-12-25T12:46:36.832226484Z",
+  "created_at": "2024-12-30T17:10:22.259357866Z",
   "duration": {
     "secs": 60,
     "nanos": 0
@@ -2413,6 +2509,22 @@ A 64-bit floating point number.
 ### Constraints
 
 - **range**: The range of values this number can take on (accepted values: IEEE 754 double-precision floating point)
+
+---
+
+<div id="type.byte" />
+
+## byte
+
+```lua
+type byte = number
+```
+
+An unsigned 8-bit integer that semantically stores a byte of information
+
+### Constraints
+
+- **range**: The range of values this number can take on (accepted values: 0-255)
 
 ---
 

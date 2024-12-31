@@ -5,7 +5,11 @@ members = [
     "services/template-worker",
     "services/template-worker/crates/*",
 ]
+exclude = [
+    "infra/templating-types/darklua" # Avoid workspace conflicts
+]
 resolver = "2"
+
 
 [profile.release]
 strip = true  # Automatically strip symbols from the binary.

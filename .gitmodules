@@ -34,3 +34,6 @@
 [submodule "infra/templating-types"]
 	path = infra/templating-types
 	url = https://github.com/Anti-Raid/templating-types
+[submodule "infra/templating-template"]
+	path = infra/templating-template
+	url = https://github.com/Anti-Raid/templating-template
