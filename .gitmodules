@@ -37,3 +37,6 @@
 [submodule "infra/templating-template"]
 	path = infra/templating-template
 	url = https://github.com/Anti-Raid/templating-template
+[submodule "core/templating-runtime"]
+	path = core/templating-runtime
+	url = https://github.com/Anti-Raid/templating-runtime
