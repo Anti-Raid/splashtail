@@ -950,6 +950,167 @@ function new(token: TemplateContext, scope: string?): KvExecutor
 
 ---
 
+# @antiraid/lockdowns
+
+This plugin allows for templates to interact with AntiRaid lockdowns
+
+## Types
+
+<div id="type.Lockdown" />
+
+### Lockdown
+
+A created lockdown
+
+```json
+{
+  "id": "805c0dd1-a625-4875-81e4-8edc6a14f659",
+  "reason": "Testing",
+  "type": "qsl",
+  "data": {},
+  "created_at": "2025-01-05T18:35:14.927730080Z"
+}
+```
+
+#### Fields
+
+- `id` ([string](#type.string)): The id of the lockdown
+- `reason` ([string](#type.string)): The reason for the lockdown
+- `type` ([string](#type.string)): The type of lockdown in string form
+- `data` ([any](#type.any)): The data associated with the lockdown
+- `created_at` ([string](#type.string)): The time the lockdown was created
+
+
+<div id="type.LockdownExecutor" />
+
+### LockdownExecutor
+
+An executor for listing, creating and removing lockdowns
+
+
+
+#### Methods
+
+##### LockdownExecutor:list
+
+```lua
+function LockdownExecutor:list(): {Lockdown}
+```
+
+Lists all active lockdowns
+
+**Note that this method returns a promise that must be yielded using [`promise.yield`](#type.promise.yield) to actually execute and return results.**
+
+
+
+###### Returns
+
+- `lockdowns` ([{Lockdown}](#type.Lockdown)): A list of all currently active lockdowns
+##### LockdownExecutor:qsl
+
+```lua
+function LockdownExecutor:qsl(reason: string)
+```
+
+Starts a quick server lockdown
+
+**Note that this method returns a promise that must be yielded using [`promise.yield`](#type.promise.yield) to actually execute and return results.**
+
+
+
+###### Parameters
+
+- `reason` ([string](#type.string)): The reason for the lockdown
+
+##### LockdownExecutor:tsl
+
+```lua
+function LockdownExecutor:tsl(reason: string)
+```
+
+Starts a traditional server lockdown
+
+**Note that this method returns a promise that must be yielded using [`promise.yield`](#type.promise.yield) to actually execute and return results.**
+
+
+
+###### Parameters
+
+- `reason` ([string](#type.string)): The reason for the lockdown
+
+##### LockdownExecutor:scl
+
+```lua
+function LockdownExecutor:scl(channel: string, reason: string)
+```
+
+Starts a lockdown on a single channel
+
+**Note that this method returns a promise that must be yielded using [`promise.yield`](#type.promise.yield) to actually execute and return results.**
+
+
+
+###### Parameters
+
+- `channel` ([string](#type.string)): The channel to lock down
+- `reason` ([string](#type.string)): The reason for the lockdown
+
+##### LockdownExecutor:role
+
+```lua
+function LockdownExecutor:role(role: string, reason: string)
+```
+
+Starts a lockdown on a role
+
+**Note that this method returns a promise that must be yielded using [`promise.yield`](#type.promise.yield) to actually execute and return results.**
+
+
+
+###### Parameters
+
+- `role` ([string](#type.string)): The role to lock down
+- `reason` ([string](#type.string)): The reason for the lockdown
+
+##### LockdownExecutor:remove
+
+```lua
+function LockdownExecutor:remove(id: string)
+```
+
+Removes a lockdown
+
+**Note that this method returns a promise that must be yielded using [`promise.yield`](#type.promise.yield) to actually execute and return results.**
+
+
+
+###### Parameters
+
+- `id` ([string](#type.string)): The id of the lockdown to remove
+
+
+
+## Methods
+
+### new
+
+```lua
+function new(token: TemplateContext): LockdownExecutor
+```
+
+#### Parameters
+
+- `token` ([TemplateContext](#type.TemplateContext)): The token of the template to use
+
+
+#### Returns
+
+- `executor` ([LockdownExecutor](#type.LockdownExecutor)): A lockdown executor
+
+
+
+---
+
 # @antiraid/page
 
 Create a page dedicated to your template on a server.
@@ -1816,7 +1977,7 @@ Represents a sting on AntiRaid
   "creator": "system",
   "target": "user:1945824",
   "state": "active",
-  "created_at": "2025-01-03T09:48:34.148555950Z",
+  "created_at": "2025-01-05T18:35:14.928053825Z",
   "duration": {
     "secs": 60,
     "nanos": 0
@@ -2493,6 +2654,114 @@ Creates a new I64.
 #### Returns
 
 - `i64` ([I64](#type.I64)): The I64 value.
+
+
+
+---
+
+# @antiraid/userinfo
+
+This plugin allows for templates to interact with user's core information on AntiRaid (permissions etc)
+
+## Types
+
+<div id="type.UserInfo" />
+
+### UserInfo
+
+A user info object
+
+```json
+{
+  "discord_permissions": "2111062325329919",
+  "kittycat_staff_permissions": {
+    "user_positions": [],
+    "perm_overrides": [
+      {
+        "namespace": "global",
+        "perm": "*",
+        "negator": false
+      }
+    ]
+  },
+  "kittycat_resolved_permissions": [
+    {
+      "namespace": "moderation",
+      "perm": "kick",
+      "negator": false
+    },
+    {
+      "namespace": "moderation",
+      "perm": "ban",
+      "negator": false
+    }
+  ],
+  "guild_owner_id": "1234567890",
+  "guild_roles": [],
+  "member_roles": [
+    "1234567890"
+  ]
+}
+```
+
+#### Fields
+
+- `discord_permissions` ([string](#type.string)): The discord permissions of the user
+- `kittycat_staff_permissions` ([StaffPermissions](#type.StaffPermissions)): The staff permissions of the user
+- `kittycat_resolved_permissions` ([{Permission}](#type.Permission)): The resolved permissions of the user
+- `guild_owner_id` ([string](#type.string)): The guild owner id
+- `guild_roles` ([{[string]: Serenity.Role}](#type.[string]: Serenity.Role)): The roles of the guild
+- `member_roles` ([{string}](#type.string)): The roles of the member
+
+
+<div id="type.UserInfoExecutor" />
+
+### UserInfoExecutor
+
+UserInfoExecutor allows templates to access/use user infos not otherwise sent via events.
+
+
+
+#### Methods
+
+##### UserInfoExecutor:get
+
+```lua
+function UserInfoExecutor:get(user: string): 
+```
+
+Gets the user info of a user.
+
+**Note that this method returns a promise that must be yielded using [`promise.yield`](#type.promise.yield) to actually execute and return results.**
+
+
+
+###### Parameters
+
+- `user` ([string](#type.string)): The user id to get the info of.
+
+
+###### Returns
+
+- `UserInfo` ([](#type.)): The user info of the user.
+
+
+## Methods
+
+### new
+
+```lua
+function new(token: TemplateContext): UserInfoExecutor
+```
+
+#### Parameters
+
+- `token` ([TemplateContext](#type.TemplateContext)): The token of the template to use.
+
+
+#### Returns
+
+- `executor` ([UserInfoExecutor](#type.UserInfoExecutor)): A userinfo executor.
 
 
 
