@@ -3,7 +3,7 @@ members = [
     "services/bot/crates/*",
     "services/bot", 
     "services/template-worker",
-    "services/template-worker/crates/*",
+    "core/templating-runtime"
 ]
 exclude = [
     "infra/templating-types/darklua", # Avoid workspace conflicts

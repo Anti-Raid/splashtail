@@ -3616,6 +3616,7 @@ dependencies = [
  "dashmap 6.1.0",
  "kittycat",
  "reqwest",
+ "sandwich_driver",
  "serde",
  "serde_json",
  "serenity",
@@ -4090,6 +4091,7 @@ dependencies = [
  "botox",
  "clap",
  "config",
+ "dashmap 6.1.0",
  "env_logger",
  "gwevent",
  "limits",
@@ -4104,7 +4106,6 @@ dependencies = [
  "splashcore_rs",
  "sqlx",
  "templating",
- "templating_docgen",
  "tokio",
  "tower-http",
 ]
@@ -4124,6 +4125,7 @@ dependencies = [
  "config",
  "dashmap 6.1.0",
  "digest",
+ "erased-serde",
  "futures-util",
  "glam",
  "governor",
@@ -4160,18 +4162,9 @@ dependencies = [
  "silverpelt",
  "splashcore_rs",
  "sqlx",
- "templating_docgen",
  "thiserror 1.0.69",
  "tokio",
  "toml",
-]
-
-[[package]]
-name = "templating_docgen"
-version = "0.1.0"
-dependencies = [
- "erased-serde",
- "serde",
 ]
 
 [[package]]

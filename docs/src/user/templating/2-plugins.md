@@ -834,6 +834,13 @@ KvExecutor allows templates to get, store and find persistent data within a serv
 
 
 
+#### Fields
+
+- `guild_id` ([string](#type.string)): The guild ID the executor will perform key-value operations on.
+- `origin_guild_id` ([string](#type.string)): The originating guild ID (the guild ID of the template itself).
+- `scope` ([string](#type.string)): The scope of the executor.
+
+
 #### Methods
 
 ##### KvExecutor:find
@@ -926,12 +933,13 @@ function KvExecutor:delete(key: string)
 ### new
 
 ```lua
-function new(token: TemplateContext): KvExecutor
+function new(token: TemplateContext, scope: string?): KvExecutor
 ```
 
 #### Parameters
 
 - `token` ([TemplateContext](#type.TemplateContext)): The token of the template to use.
+- `scope` ([string?](#type.string)): The scope of the executor. `this_guild` to use the originating guilds data, `owner_guild` to use the KV of the guild that owns the template on the shop. Defaults to `this_guild` if not specified.
 
 
 #### Returns
@@ -1501,6 +1509,101 @@ Permission is the primitive permission type used by AntiRaid. See https://github
 - `negator` ([bool](#type.bool)): Whether the permission is a negator permission or not
 
 
+<div id="type.StaffPermissions" />
+
+### StaffPermissions
+
+StaffPermissions as per kittycat terminology.
+
+```json
+{
+  "user_positions": [
+    {
+      "id": "1234567890",
+      "index": 1,
+      "perms": [
+        {
+          "namespace": "moderation",
+          "perm": "ban",
+          "negator": false
+        },
+        {
+          "namespace": "moderation",
+          "perm": "kick",
+          "negator": false
+        }
+      ]
+    },
+    {
+      "id": "0987654321",
+      "index": 2,
+      "perms": [
+        {
+          "namespace": "moderation",
+          "perm": "ban",
+          "negator": false
+        },
+        {
+          "namespace": "moderation",
+          "perm": "kick",
+          "negator": false
+        }
+      ]
+    }
+  ],
+  "perm_overrides": [
+    {
+      "namespace": "moderation",
+      "perm": "ban",
+      "negator": true
+    },
+    {
+      "namespace": "moderation",
+      "perm": "kick",
+      "negator": true
+    }
+  ]
+}
+```
+
+#### Fields
+
+- `perm_overrides` ([{Permission}](#type.Permission)): Permission overrides on the member.
+- `user_positions` ([{PartialStaffPosition}](#type.PartialStaffPosition)): The staff positions of the user.
+
+
+<div id="type.PartialStaffPosition" />
+
+### PartialStaffPosition
+
+PartialStaffPosition as per kittycat terminology.
+
+```json
+{
+  "id": "1234567890",
+  "index": 1,
+  "perms": [
+    {
+      "namespace": "moderation",
+      "perm": "ban",
+      "negator": false
+    },
+    {
+      "namespace": "moderation",
+      "perm": "kick",
+      "negator": false
+    }
+  ]
+}
+```
+
+#### Fields
+
+- `id` ([string](#type.string)): The ID of the staff member.
+- `index` ([number](#type.number)): The index of the staff member.
+- `perms` ([{Permission}](#type.Permission)): The permissions of the staff member.
+
+
 ## Methods
 
 ### permission_from_string
@@ -1572,6 +1675,42 @@ Checks if a list of permissions in canonical string form contains a specific per
 #### Returns
 
 - `has_perm` ([bool](#type.bool)): Whether the permission is present in the list of permissions as per kittycat rules.
+
+### staff_permissions_resolve
+
+```lua
+function staff_permissions_resolve(sp: StaffPermissions): {Permission}
+```
+
+Resolves a StaffPermissions object into a list of Permission objects. See https://github.com/InfinityBotList/kittycat for more details
+
+#### Parameters
+
+- `sp` ([StaffPermissions](#type.StaffPermissions)): The StaffPermissions object to resolve.
+
+
+#### Returns
+
+- `permissions` ([{Permission}](#type.Permission)): The resolved list of Permission objects.
+
+### check_patch_changes
+
+```lua
+function check_patch_changes(manager_perms: {Permission}, current_perms: {Permission}, new_perms: {Permission})
+```
+
+Checks if a list of permissions can be patched to another list of permissions.
+
+#### Parameters
+
+- `manager_perms` ([{Permission}](#type.Permission)): The permissions of the manager.
+- `current_perms` ([{Permission}](#type.Permission)): The current permissions of the user.
+- `new_perms` ([{Permission}](#type.Permission)): The new permissions of the user.
+
+
+#### Returns
+
+- `can_patch` ([bool](#type.bool)): Whether the permissions can be patched.- `error` ([any](#type.any)): The error if the permissions cannot be patched. Will contain ``type`` field with the error type and additional fields depending on the error type.
 
 
 
@@ -1648,7 +1787,6 @@ A type representing a new sting to be created.
 
 #### Fields
 
-- `module` ([string](#type.string)): The module name.
 - `src` ([string?](#type.string)): The source of the sting.
 - `stings` ([number](#type.number)): The number of stings.
 - `reason` ([string?](#type.string)): The reason for the stings.
@@ -1656,8 +1794,7 @@ A type representing a new sting to be created.
 - `guild_id` ([string](#type.string)): The guild ID the sting targets. **MUST MATCH THE GUILD ID THE TEMPLATE IS RUNNING ON**
 - `creator` ([StingTarget](#type.StingTarget)): The creator of the sting.
 - `target` ([StingTarget](#type.StingTarget)): The target of the sting.
-- `state` ([StingState](#type.StingState)): The state of the sting.
-- `created_at` ([string](#type.string)): When the sting was created as a chrono datetime.
+- `state` ([string](#type.string)): The state of the sting. Must be one of 'active', 'voided' or 'handled'
 - `duration` ([Duration?](#type.Duration)): When the sting expires as a duration.
 - `sting_data` ([any?](#type.any)): The data/metadata present within the sting, if any.
 
@@ -1679,7 +1816,7 @@ Represents a sting on AntiRaid
   "creator": "system",
   "target": "user:1945824",
   "state": "active",
-  "created_at": "2024-12-31T12:15:42.277102248Z",
+  "created_at": "2025-01-03T09:48:34.148555950Z",
   "duration": {
     "secs": 60,
     "nanos": 0
@@ -1687,7 +1824,6 @@ Represents a sting on AntiRaid
   "sting_data": {
     "a": "b"
   },
-  "is_handled": false,
   "handle_log": {
     "a": "b"
   }
@@ -1697,7 +1833,6 @@ Represents a sting on AntiRaid
 #### Fields
 
 - `id` ([string](#type.string)): The sting ID.
-- `module` ([string](#type.string)): The module name.
 - `src` ([string?](#type.string)): The source of the sting.
 - `stings` ([number](#type.number)): The number of stings.
 - `reason` ([string?](#type.string)): The reason for the stings.
@@ -1708,8 +1843,8 @@ Represents a sting on AntiRaid
 - `state` ([StingState](#type.StingState)): The state of the sting.
 - `duration` ([Duration?](#type.Duration)): When the sting expires as a duration.
 - `sting_data` ([any?](#type.any)): The data/metadata present within the sting, if any.
-- `is_handled` ([boolean](#type.boolean)): Is Handled
 - `handle_log` ([any](#type.any)): The handle log encountered while handling the sting.
+- `created_at` ([string](#type.string)): When the sting was created at.
 
 
 <div id="type.StingExecutor" />
@@ -1803,6 +1938,28 @@ function StingExecutor:delete(id: string)
 ###### Parameters
 
 - `id` ([string](#type.string)): The sting ID.
+
+
+
+## Enums
+
+<div id="type.StingTarget" />
+
+### StingTarget
+
+The target of the sting.
+
+
+
+#### Variants
+
+#### StingTarget::system
+
+A system-target (no associated user)
+
+#### StingTarget::user:{user_id}
+
+A user-target
 
 
 
@@ -2593,7 +2750,6 @@ An event that has been dispatched to the template. This is what `args` is in the
 - `data` ([unknown](#type.unknown)): The data of the event.
 - `can_respond` ([boolean](#type.boolean)): Whether the event can be responded to.
 - `response` ([unknown](#type.unknown)): The current response of the event. This can be overwritten by the template by just setting it to a new value.
-- `uid` ([string](#type.string)): The unique identifier ID of the event. Will be guaranteed to be unique at a per-guild level.
 - `author` ([string?](#type.string)): The author of the event, if any. If there is no known author, this field will either be `nil` or `null`.
 
 
@@ -2616,30 +2772,32 @@ An event that has been dispatched to the template. This is what `args` is in the
 - `allowed_caps` ([{string}](#type.string)): The allowed capabilities provided to the template.
 
 
-<div id="type.TemplateData" />
+<div id="type.Template" />
 
-## TemplateData
+## Template
 
-`TemplateData` is a struct that represents the data associated with a template token. It is used to store the path and pragma of a template token.
+`Template` is a struct that represents the data associated with a template. Fields are still being documented and subject to change.
 
 ```json
 {
-  "path": "test",
-  "template": {
-    "Named": "foo"
-  },
+  "guild_id": "0",
+  "name": "",
+  "description": null,
+  "shop_name": null,
+  "shop_owner": null,
+  "events": [],
+  "error_channel": null,
+  "content": "",
   "pragma": {
     "lang": "lua",
     "allowed_caps": []
-  }
+  },
+  "created_by": "",
+  "created_at": "1970-01-01T00:00:00Z",
+  "updated_by": "",
+  "updated_at": "1970-01-01T00:00:00Z"
 }
 ```
-
-### Fields
-
-- `path` ([string](#type.string)): The path of the template token.
-- `pragma` ([TemplatePragma](#type.TemplatePragma)): The pragma of the template.
-
 
 <div id="type.TemplateContext" />
 
