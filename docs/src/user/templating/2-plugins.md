@@ -968,7 +968,7 @@ A created lockdown
   "reason": "Testing",
   "type": "qsl",
   "data": {},
-  "created_at": "2025-01-05T18:35:14.927730080Z"
+  "created_at": "2025-01-06T13:31:20.515508917Z"
 }
 ```
 
@@ -1977,7 +1977,7 @@ Represents a sting on AntiRaid
   "creator": "system",
   "target": "user:1945824",
   "state": "active",
-  "created_at": "2025-01-05T18:35:14.928053825Z",
+  "created_at": "2025-01-06T13:31:20.515825431Z",
   "duration": {
     "secs": 60,
     "nanos": 0
@@ -3013,32 +3013,12 @@ An event that has been dispatched to the template. This is what `args` is in the
 
 ### Fields
 
-- `title` ([string](#type.string)): The title name of the event.
 - `base_name` ([string](#type.string)): The base name of the event.
 - `name` ([string](#type.string)): The name of the event.
 - `data` ([unknown](#type.unknown)): The data of the event.
 - `can_respond` ([boolean](#type.boolean)): Whether the event can be responded to.
 - `response` ([unknown](#type.unknown)): The current response of the event. This can be overwritten by the template by just setting it to a new value.
 - `author` ([string?](#type.string)): The author of the event, if any. If there is no known author, this field will either be `nil` or `null`.
-
-
-<div id="type.TemplatePragma" />
-
-## TemplatePragma
-
-`TemplatePragma` contains the pragma of the template. Note that the list of fields below in non-exhaustive as templates can define extra fields on the pragma as well
-
-```json
-{
-  "lang": "lua",
-  "allowed_caps": []
-}
-```
-
-### Fields
-
-- `lang` ([string](#type.string)): The language of the template.
-- `allowed_caps` ([{string}](#type.string)): The allowed capabilities provided to the template.
 
 
 <div id="type.Template" />
@@ -3057,16 +3037,20 @@ An event that has been dispatched to the template. This is what `args` is in the
   "events": [],
   "error_channel": null,
   "content": "",
-  "pragma": {
-    "lang": "lua",
-    "allowed_caps": []
-  },
+  "lang": "luau",
+  "allowed_caps": [],
   "created_by": "",
   "created_at": "1970-01-01T00:00:00Z",
   "updated_by": "",
   "updated_at": "1970-01-01T00:00:00Z"
 }
 ```
+
+### Fields
+
+- `language` ([string](#type.string)): The language of the template.
+- `allowed_caps` ([{string}](#type.string)): The allowed capabilities provided to the template.
+
 
 <div id="type.TemplateContext" />
 

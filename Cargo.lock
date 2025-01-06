@@ -3623,6 +3623,7 @@ dependencies = [
  "serenity",
  "splashcore_rs",
  "sqlx",
+ "strum",
  "typetag",
  "uuid",
 ]
