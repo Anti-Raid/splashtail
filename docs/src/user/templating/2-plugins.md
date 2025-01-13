@@ -1,136 +1,8 @@
 # @antiraid/discord
 
-This plugin allows for templates to interact with the Discord API
+This plugin allows for templates to interact with the Discord API. Types are as defined by Discord if not explicitly documented
 
 ## Types
-
-<div id="type.Serenity.User" />
-
-### Serenity.User
-
-A user object in Discord, as represented by AntiRaid. Internal fields are subject to change
-
-**Refer to [serenity::model::user::User](https://docs.rs/serenity/latest/serenity/model/user/struct.User.html) for more documentation on what this type contains. Fields may be incomplete**
-
-```json
-{
-  "id": "0",
-  "username": "",
-  "global_name": null,
-  "avatar": null,
-  "bot": false,
-  "system": false,
-  "mfa_enabled": false,
-  "banner": null,
-  "accent_color": null,
-  "locale": null,
-  "verified": null,
-  "email": null,
-  "flags": 0,
-  "premium_type": 0,
-  "public_flags": null,
-  "member": null
-}
-```
-
-<div id="type.Serenity.AuditLogs" />
-
-### Serenity.AuditLogs
-
-A audit log in Discord, as represented by AntiRaid. Internal fields are subject to change
-
-**Refer to [serenity::model::guild::audit_log::AuditLogs](https://docs.rs/serenity/latest/serenity/model/guild/audit_log/struct.AuditLogs.html) for more documentation on what this type contains. Fields may be incomplete**
-
-
-
-<div id="type.Serenity.AuditLogs.Action" />
-
-### Serenity.AuditLogs.Action
-
-An audit log action in Discord, as represented by AntiRaid. Internal fields are subject to change
-
-**Refer to [serenity::model::guild::audit_log::Action](https://docs.rs/serenity/latest/serenity/model/guild/audit_log/struct.Action.html) for more documentation on what this type contains. Fields may be incomplete**
-
-```json
-1
-```
-
-<div id="type.Serenity.GuildChannel" />
-
-### Serenity.GuildChannel
-
-A guild channel in Discord, as represented by AntiRaid. Internal fields are subject to change
-
-**Refer to [serenity::model::channel::GuildChannel](https://docs.rs/serenity/latest/serenity/model/channel/struct.GuildChannel.html) for more documentation on what this type contains. Fields may be incomplete**
-
-```json
-{
-  "id": "0",
-  "bitrate": null,
-  "parent_id": null,
-  "guild_id": "0",
-  "type": 0,
-  "owner_id": null,
-  "last_message_id": null,
-  "last_pin_timestamp": null,
-  "name": "",
-  "permission_overwrites": [],
-  "position": 0,
-  "topic": null,
-  "user_limit": null,
-  "nsfw": false,
-  "rate_limit_per_user": null,
-  "rtc_region": null,
-  "video_quality_mode": null,
-  "message_count": null,
-  "member_count": null,
-  "thread_metadata": null,
-  "member": null,
-  "default_auto_archive_duration": null,
-  "permissions": null,
-  "flags": 0,
-  "total_message_sent": null,
-  "available_tags": [],
-  "applied_tags": [],
-  "default_reaction_emoji": null,
-  "default_thread_rate_limit_per_user": null,
-  "status": null,
-  "default_sort_order": null,
-  "default_forum_layout": null
-}
-```
-
-<div id="type.Serenity.PermissionOverwrite" />
-
-### Serenity.PermissionOverwrite
-
-A permission overwrite in Discord, as represented by AntiRaid. Internal fields are subject to change
-
-**Refer to [serenity::model::channel::PermissionOverwrite](https://docs.rs/serenity/latest/serenity/model/channel/struct.PermissionOverwrite.html) for more documentation on what this type contains. Fields may be incomplete**
-
-```json
-{
-  "allow": "2111062325329919",
-  "deny": "2111062325329919",
-  "id": "0",
-  "type": 0
-}
-```
-
-<div id="type.Serenity.ForumEmoji" />
-
-### Serenity.ForumEmoji
-
-A forum emoji in Discord, as represented by AntiRaid. Internal fields are subject to change
-
-**Refer to [serenity::model::channel::ForumEmoji](https://docs.rs/serenity/latest/serenity/model/channel/struct.ForumEmoji.html) for more documentation on what this type contains. Fields may be incomplete**
-
-```json
-{
-  "emoji_id": "0",
-  "emoji_name": null
-}
-```
 
 <div id="type.GetAuditLogOptions" />
 
@@ -172,45 +44,40 @@ Options for getting a channel in Discord
 - `channel_id` ([string](#type.string)): The channel ID to get
 
 
-<div id="type.EditChannelOptions" />
+<div id="type.EditChannel" />
 
-### EditChannelOptions
+### EditChannel
 
-Options for editing a channel in Discord
+The data for editing a channel in Discord
 
 ```json
 {
-  "channel_id": "0",
-  "reason": "",
   "name": "my-channel",
   "type": 0,
   "position": 7,
   "topic": "My channel topic",
   "nsfw": true,
   "rate_limit_per_user": 5,
-  "bitrate": null,
-  "permission_overwrites": null,
+  "user_limit": 10,
   "parent_id": "0",
   "rtc_region": "us-west",
   "video_quality_mode": 1,
   "default_auto_archive_duration": 1440,
   "flags": 18,
-  "available_tags": null,
   "default_reaction_emoji": {
     "emoji_id": "0",
     "emoji_name": null
   },
-  "default_thread_rate_limit_per_user": null,
-  "default_sort_order": null,
-  "default_forum_layout": null
+  "status": "online",
+  "archived": false,
+  "auto_archive_duration": 1440,
+  "locked": false,
+  "invitable": true
 }
 ```
 
 #### Fields
 
-- `channel_id` ([string](#type.string)): The channel ID to edit
-- `reason` ([string](#type.string)): The reason for editing the channel
-- `name` ([string?](#type.string)): The name of the channel
 - `type` ([number?](#type.number)): The type of the channel
 - `position` ([number?](#type.number)): The position of the channel
 - `topic` ([string?](#type.string)): The topic of the channel
@@ -228,26 +95,46 @@ Options for editing a channel in Discord
 - `default_thread_rate_limit_per_user` ([number?](#type.number)): The default thread rate limit per user
 - `default_sort_order` ([number?](#type.number)): The default sort order of the channel
 - `default_forum_layout` ([number?](#type.number)): The default forum layout of the channel
+- `archived` ([bool?](#type.bool)): Whether the thread is archived (thread only)
+- `auto_archive_duration` ([number?](#type.number)): The auto archive duration of the thread (thread only)
+- `locked` ([bool?](#type.bool)): Whether the thread is locked (thread only)
+- `invitable` ([bool?](#type.bool)): Whether the thread is invitable (thread only)
+- `applied_tags` ([{Serenity.ForumTag}?](#type.Serenity.ForumTag)): The applied tags of the thread (thread only)
 
 
-<div id="type.EditThreadOptions" />
+<div id="type.EditChannelOptions" />
 
-### EditThreadOptions
+### EditChannelOptions
 
-Options for editing a thread in Discord
+Options for editing a channel in Discord
 
 ```json
 {
   "channel_id": "0",
   "reason": "",
-  "name": "my-thread",
-  "archived": false,
-  "auto_archive_duration": 1440,
-  "locked": false,
-  "invitable": true,
-  "rate_limit_per_user": 5,
-  "flags": 18,
-  "applied_tags": null
+  "data": {
+    "name": "my-channel",
+    "type": 0,
+    "position": 7,
+    "topic": "My channel topic",
+    "nsfw": true,
+    "rate_limit_per_user": 5,
+    "user_limit": 10,
+    "parent_id": "0",
+    "rtc_region": "us-west",
+    "video_quality_mode": 1,
+    "default_auto_archive_duration": 1440,
+    "flags": 18,
+    "default_reaction_emoji": {
+      "emoji_id": "0",
+      "emoji_name": null
+    },
+    "status": "online",
+    "archived": false,
+    "auto_archive_duration": 1440,
+    "locked": false,
+    "invitable": true
+  }
 }
 ```
 
@@ -255,26 +142,19 @@ Options for editing a thread in Discord
 
 - `channel_id` ([string](#type.string)): The channel ID to edit
 - `reason` ([string](#type.string)): The reason for editing the channel
-- `name` ([string?](#type.string)): The name of the thread
-- `archived` ([bool?](#type.bool)): Whether the thread is archived
-- `auto_archive_duration` ([number?](#type.number)): The auto archive duration of the thread
-- `locked` ([bool?](#type.bool)): Whether the thread is locked
-- `invitable` ([bool?](#type.bool)): Whether the thread is invitable
-- `rate_limit_per_user` ([number?](#type.number)): The rate limit per user/Slow mode of the thread
-- `flags` ([string?](#type.string)): The flags of the thread
-- `applied_tags` ([{Serenity.ForumTag}?](#type.Serenity.ForumTag)): The applied tags of the thread
+- `data` ([EditChannel](#type.EditChannel)): The new channels' data
 
 
-<div id="type.DeleteChannelOption" />
+<div id="type.DeleteChannelOptions" />
 
-### DeleteChannelOption
+### DeleteChannelOptions
 
 Options for deleting a channel in Discord
 
 ```json
 {
   "channel_id": "0",
-  "reason": "My reason here"
+  "reason": ""
 }
 ```
 
@@ -284,102 +164,6 @@ Options for deleting a channel in Discord
 - `reason` ([string](#type.string)): The reason for deleting the channel
 
 
-<div id="type.CreateMessageEmbedField" />
-
-### CreateMessageEmbedField
-
-A field in a message embed
-
-```json
-{
-  "name": "",
-  "value": "",
-  "inline": false
-}
-```
-
-#### Fields
-
-- `name` ([string](#type.string)): The name of the field
-- `value` ([string](#type.string)): The value of the field
-- `inline` ([bool](#type.bool)): Whether the field is inline
-
-
-<div id="type.CreateMessageEmbedAuthor" />
-
-### CreateMessageEmbedAuthor
-
-An author in a message embed
-
-```json
-{
-  "name": "",
-  "url": null,
-  "icon_url": null
-}
-```
-
-#### Fields
-
-- `name` ([string](#type.string)): The name of the author
-- `url` ([string?](#type.string)): The URL of the author
-- `icon_url` ([string?](#type.string)): The icon URL of the author
-
-
-<div id="type.CreateMessageEmbedFooter" />
-
-### CreateMessageEmbedFooter
-
-A footer in a message embed
-
-```json
-{
-  "text": "",
-  "icon_url": null
-}
-```
-
-#### Fields
-
-- `text` ([string](#type.string)): The text of the footer
-- `icon_url` ([string?](#type.string)): The icon URL of the footer
-
-
-<div id="type.CreateMessageEmbed" />
-
-### CreateMessageEmbed
-
-An embed in a message
-
-```json
-{
-  "title": null,
-  "description": null,
-  "url": null,
-  "timestamp": null,
-  "color": null,
-  "footer": null,
-  "image": null,
-  "thumbnail": null,
-  "author": null,
-  "fields": null
-}
-```
-
-#### Fields
-
-- `title` ([string?](#type.string)): The title of the embed
-- `description` ([string?](#type.string)): The description of the embed
-- `url` ([string?](#type.string)): The URL of the embed
-- `timestamp` ([string?](#type.string)): The timestamp of the embed
-- `color` ([number?](#type.number)): The color of the embed
-- `footer` ([{Serenity.CreateMessageEmbedFooter}?](#type.Serenity.CreateMessageEmbedFooter)): The footer of the embed
-- `image` ([string?](#type.string)): The image URL of the embed
-- `thumbnail` ([string?](#type.string)): The thumbnail URL of the embed
-- `author` ([{Serenity.CreateMessageEmbedAuthor}?](#type.Serenity.CreateMessageEmbedAuthor)): The author of the embed
-- `fields` ([{Serenity.CreateMessageEmbedField}?](#type.Serenity.CreateMessageEmbedField)): The fields of the embed
-
-
 <div id="type.CreateMessageAttachment" />
 
 ### CreateMessageAttachment
@@ -387,11 +171,13 @@ An embed in a message
 An attachment in a message
 
 ```json
-{
-  "filename": "",
-  "description": null,
-  "content": []
-}
+[
+  {
+    "id": 0,
+    "filename": "test.txt",
+    "description": "Test file"
+  }
+]
 ```
 
 #### Fields
@@ -401,107 +187,44 @@ An attachment in a message
 - `content` ([{byte}](#type.byte)): The content of the attachment
 
 
-<div id="type.CreateMessage" />
+<div id="type.CreateMessageOptions" />
 
-### CreateMessage
+### CreateMessageOptions
 
-Options for creating a message in Discord
+Options for sending a message in a channel in Discord
 
 ```json
 {
-  "embeds": null,
-  "content": null,
-  "attachments": null
+  "channel_id": "0",
+  "data": {
+    "tts": false,
+    "embeds": [],
+    "sticker_ids": [],
+    "enforce_nonce": false
+  }
 }
 ```
 
 #### Fields
 
-- `embeds` ([{Serenity.CreateMessageEmbed}?](#type.Serenity.CreateMessageEmbed)): The embeds of the message
-- `content` ([string?](#type.string)): The content of the message
-- `attachments` ([{Serenity.CreateMessageAttachment}?](#type.Serenity.CreateMessageAttachment)): The attachments of the message
+- `channel_id` ([string](#type.string)): The channel ID to send the message in
+- `data` ([Serenity.CreateMessage](#type.Serenity.CreateMessage)): The data of the message to send
 
 
-<div id="type.MessageHandle" />
+<div id="type.CreateInteractionResponse" />
 
-### MessageHandle
+### CreateInteractionResponse
 
-A handle to a message in Discord, as represented by AntiRaid. Internal fields are subject to change
-
-
-
-#### Methods
-
-##### MessageHandle:data
-
-```lua
-function MessageHandle:data(): any
-```
-
-Gets the data of the message
-
-###### Returns
-
-- `data` ([any](#type.any)): The inner data of the message
-##### MessageHandle:await_component_interaction
-
-```lua
-function MessageHandle:await_component_interaction(): LuaStream<MessageComponentHandle>
-```
-
-Awaits a component interaction on the message
-
-###### Returns
-
-- `stream` ([LuaStream<MessageComponentHandle>](#type.LuaStream<MessageComponentHandle>)): The stream of component interaction handles
-
-
-<div id="type.MessageComponentHandle" />
-
-### MessageComponentHandle
-
-A handle to a message component interaction in Discord, as represented by AntiRaid. Internal fields are subject to change
-
-
-
-#### Methods
-
-##### MessageComponentHandle:data
-
-```lua
-function MessageComponentHandle:data(): any
-```
-
-The inner data of the message component interaction
-
-###### Returns
-
-- `data` ([any](#type.any)): The inner data of the message component interaction
-##### MessageComponentHandle:custom_id
-
-```lua
-function MessageComponentHandle:custom_id(): string
-```
-
-The custom ID of the message component interaction
-
-###### Returns
-
-- `custom_id` ([string](#type.string)): The custom ID of the message component interaction
-
-
-<div id="type.SendMessageChannelAction" />
-
-### SendMessageChannelAction
-
-Options for sending a message in a channel in Discord
+Options for creating an interaction response in Discord
 
 
 
 #### Fields
 
-- `channel_id` ([string](#type.string)): The channel ID to send the message in
-- `data` ([Serenity.CreateMessage](#type.Serenity.CreateMessage)): The data of the message to send
+- `interaction_id` ([string](#type.string)): The interaction ID to respond to
+- `interaction_token` ([string](#type.string)): The interaction token to respond to
+- `data` ([Serenity.InteractionResponse](#type.Serenity.InteractionResponse)): The interaction response body
+- `files` ([{Serenity.CreateMessageAttachment}?](#type.Serenity.CreateMessageAttachment)): The files to send with the response
 
 
 <div id="type.DiscordExecutor" />
@@ -533,7 +256,7 @@ Gets the audit logs
 
 ###### Returns
 
-- `Serenity.AuditLogs` ([](#type.)): The audit log entry
+- `Lazy<Serenity.AuditLogs>` ([](#type.)): The audit log entry
 ##### DiscordExecutor:get_channel
 
 ```lua
@@ -553,7 +276,7 @@ Gets a channel
 
 ###### Returns
 
-- `Serenity.GuildChannel` ([](#type.)): The guild channel
+- `Lazy<Serenity.GuildChannel>` ([](#type.)): The guild channel
 ##### DiscordExecutor:edit_channel
 
 ```lua
@@ -573,31 +296,11 @@ Edits a channel
 
 ###### Returns
 
-- `Serenity.GuildChannel` ([](#type.)): The guild channel
-##### DiscordExecutor:edit_thread
-
-```lua
-function DiscordExecutor:edit_thread(data: EditThreadOptions): 
-```
-
-Edits a thread
-
-**Note that this method returns a promise that must be yielded using [`promise.yield`](#type.promise.yield) to actually execute and return results.**
-
-
-
-###### Parameters
-
-- `data` ([EditThreadOptions](#type.EditThreadOptions)): Options for editing a thread.
-
-
-###### Returns
-
-- `Serenity.GuildChannel` ([](#type.)): The guild channel
+- `Lazy<Serenity.GuildChannel>` ([](#type.)): The guild channel
 ##### DiscordExecutor:delete_channel
 
 ```lua
-function DiscordExecutor:delete_channel(data: DeleteChannelOption): 
+function DiscordExecutor:delete_channel(data: DeleteChannelOptions): 
 ```
 
 Deletes a channel
@@ -608,12 +311,12 @@ Deletes a channel
 
 ###### Parameters
 
-- `data` ([DeleteChannelOption](#type.DeleteChannelOption)): Options for deleting a channel.
+- `data` ([DeleteChannelOptions](#type.DeleteChannelOptions)): Options for deleting a channel.
 
 
 ###### Returns
 
-- `Serenity.GuildChannel` ([](#type.)): The guild channel
+- `Lazy<Serenity.GuildChannel>` ([](#type.)): The guild channel
 ##### DiscordExecutor:create_message
 
 ```lua
@@ -633,7 +336,27 @@ Creates a message
 
 ###### Returns
 
-- `MessageHandle` ([](#type.)): The message
+- `Lazy<Message>` ([](#type.)): The message
+##### DiscordExecutor:create_interaction_response
+
+```lua
+function DiscordExecutor:create_interaction_response(data: CreateInteractionResponse): 
+```
+
+Creates an interaction response
+
+**Note that this method returns a promise that must be yielded using [`promise.yield`](#type.promise.yield) to actually execute and return results.**
+
+
+
+###### Parameters
+
+- `data` ([CreateInteractionResponse](#type.CreateInteractionResponse)): Options for creating a message.
+
+
+###### Returns
+
+- `Lazy<Message>` ([](#type.)): The message
 
 
 ## Methods
@@ -950,6 +673,49 @@ function new(token: TemplateContext, scope: string?): KvExecutor
 
 ---
 
+# @antiraid/lazy
+
+This plugin allows for templates to interact with and create 'lazy' data as well as providing documentation for the type. Note that events are *not* 'lazy' data's and have their own semantics
+
+## Types
+
+<div id="type.Lazy<T>" />
+
+### Lazy<T>
+
+A lazy data type that is only serialized to Lua upon first access. This can be much more efficient than serializing the data every time it is accessed. Note that events are *not* 'lazy' data's and have their own semantics
+
+
+
+#### Fields
+
+- `data` ([T](#type.T)): The inner data. This is cached upon first access
+- `lazy` ([boolean](#type.boolean)): Always returns true. Allows the user to check if the data is a lazy or not
+
+
+## Methods
+
+### new
+
+```lua
+function new(data: TemplateContext): Lazy<any>
+```
+
+Creates a new Lazy type from data. This can be useful as a deep-copy implementation [``lazy.new(value).data`` will copy data as long as ``value`` is serializable]
+
+#### Parameters
+
+- `data` ([TemplateContext](#type.TemplateContext)): The data to wrap in a lazy
+
+
+#### Returns
+
+- `lazy` ([Lazy<any>](#type.Lazy<any>)): A lazy value
+
+
+
+---
+
 # @antiraid/lockdowns
 
 This plugin allows for templates to interact with AntiRaid lockdowns
@@ -968,7 +734,7 @@ A created lockdown
   "reason": "Testing",
   "type": "qsl",
   "data": {},
-  "created_at": "2025-01-06T13:31:20.515508917Z"
+  "created_at": "2025-01-13T02:45:24.880176247Z"
 }
 ```
 
@@ -1977,7 +1743,7 @@ Represents a sting on AntiRaid
   "creator": "system",
   "target": "user:1945824",
   "state": "active",
-  "created_at": "2025-01-06T13:31:20.515825431Z",
+  "created_at": "2025-01-13T02:45:24.880496432Z",
   "duration": {
     "secs": 60,
     "nanos": 0
@@ -2128,38 +1894,364 @@ A user-target
 
 ---
 
-# @antiraid/stream
+# @antiraid/datetime
 
-Lua Streams, yield for a set of values using next.
+This plugin allows for the managing timezones.
 
 ## Types
 
-<div id="type.LuaStream" />
+<div id="type.Timezone" />
 
-### LuaStream<T>
+### Timezone
 
-LuaStream<T> provides a stream implementation. This is returned by MessageHandle's await_component_interaction for instance for handling button clicks/select menu choices etc.
+A timezone object.
 
+
+
+#### Methods
+
+##### Timezone:utcToTz
+
+```lua
+function Timezone:utcToTz(year: number, month: number, day: number, hours: number, minutes: number, secs: number, all: boolean?)
+```
+
+Translates a timestamp in UTC time to a datetime in the said specific timezone.
+
+###### Parameters
+
+- `year` ([number](#type.number)): The year to translate.
+- `month` ([number](#type.number)): The month to translate.
+- `day` ([number](#type.number)): The day to translate.
+- `hours` ([number](#type.number)): The hours to translate.
+- `minutes` ([number](#type.number)): The minutes to translate.
+- `secs` ([number](#type.number)): The seconds to translate.
+- `all` ([boolean?](#type.boolean)): Whether to return both offsets if the time is ambiguous.
+
+
+###### Returns
+
+- `date` ([DateTime](#type.DateTime)): The translated datetime.- `date2` ([DateTime?](#type.DateTime)): The second translated datetime if the time is ambiguous.
+##### Timezone:tzToUtc
+
+```lua
+function Timezone:tzToUtc(year: number, month: number, day: number, hours: number, minutes: number, secs: number, all: boolean?)
+```
+
+Translates a timestamp in the specified timezone to a datetime in UTC.
+
+###### Parameters
+
+- `year` ([number](#type.number)): The year to translate.
+- `month` ([number](#type.number)): The month to translate.
+- `day` ([number](#type.number)): The day to translate.
+- `hours` ([number](#type.number)): The hours to translate.
+- `minutes` ([number](#type.number)): The minutes to translate.
+- `secs` ([number](#type.number)): The seconds to translate.
+- `all` ([boolean?](#type.boolean)): Whether to return both offsets if the time is ambiguous.
+
+
+###### Returns
+
+- `date` ([DateTime](#type.DateTime)): The translated datetime.- `date2` ([DateTime?](#type.DateTime)): The second translated datetime if the time is ambiguous.
+##### Timezone:timeUtcToTz
+
+```lua
+function Timezone:timeUtcToTz(hours: number, minutes: number, secs: number): DateTime
+```
+
+Translates a time of the current day in UTC time to a datetime in the said specific timezone.
+
+###### Parameters
+
+- `hours` ([number](#type.number)): The hours to translate.
+- `minutes` ([number](#type.number)): The minutes to translate.
+- `secs` ([number](#type.number)): The seconds to translate.
+
+
+###### Returns
+
+- `date` ([DateTime](#type.DateTime)): The translated datetime.
+##### Timezone:timeTzToUtc
+
+```lua
+function Timezone:timeTzToUtc(hours: number, minutes: number, secs: number): DateTime
+```
+
+Translates a time of the current day in the said specific timezone to a datetime in UTC.
+
+###### Parameters
+
+- `hours` ([number](#type.number)): The hours to translate.
+- `minutes` ([number](#type.number)): The minutes to translate.
+- `secs` ([number](#type.number)): The seconds to translate.
+
+
+###### Returns
+
+- `date` ([DateTime](#type.DateTime)): The translated datetime.
+##### Timezone:date
+
+```lua
+function Timezone:date(): DateTime
+```
+
+Translates the current timestamp to a datetime in the said specific timezone.
+
+###### Returns
+
+- `date` ([DateTime](#type.DateTime)): The translated datetime.
+
+
+<div id="type.TimeDelta" />
+
+### TimeDelta
+
+A time delta object. Supports addition/subtraction with another TimeDelta object as well as comparisons with them.
+
+
+
+#### Fields
+
+- `nanos` ([number](#type.number)): The number of nanoseconds in the time delta.
+- `micros` ([number](#type.number)): The number of microseconds in the time delta.
+- `millis` ([number](#type.number)): The number of milliseconds in the time delta.
+- `seconds` ([number](#type.number)): The number of seconds in the time delta.
+- `minutes` ([number](#type.number)): The number of minutes in the time delta.
+- `hours` ([number](#type.number)): The number of hours in the time delta.
+- `days` ([number](#type.number)): The number of days in the time delta.
+- `weeks` ([number](#type.number)): The number of weeks in the time delta.
+
+
+#### Methods
+
+##### TimeDelta:offset_string
+
+```lua
+function TimeDelta:offset_string(): string
+```
+
+Returns the offset as a string.
+
+###### Returns
+
+- `offset` ([string](#type.string)): The offset as a string.
+
+
+<div id="type.DateTime" />
+
+### DateTime
+
+A datetime object. Supports addition/subtraction with TimeDelta objects as well as comparisons with other DateTime objects.
+
+
+
+#### Fields
+
+- `year` ([number](#type.number)): The year of the datetime.
+- `month` ([number](#type.number)): The month of the datetime.
+- `day` ([number](#type.number)): The day of the datetime.
+- `hour` ([number](#type.number)): The hour of the datetime.
+- `minute` ([number](#type.number)): The minute of the datetime.
+- `second` ([number](#type.number)): The second of the datetime.
+- `timestamp_seconds` ([number](#type.number)): The timestamp in seconds of the datetime from the Unix epoch.
+- `timestamp_millis` ([number](#type.number)): The timestamp in milliseconds of the datetime from the Unix epoch.
+- `timestamp_micros` ([number](#type.number)): The timestamp in microseconds of the datetime from the Unix epoch.
+- `timestamp_nanos` ([number](#type.number)): The timestamp in nanoseconds of the datetime from the Unix epoch.
+- `tz` ([Timezone](#type.Timezone)): The timezone of the datetime.
+- `offset` ([TimeDelta](#type.TimeDelta)): The offset of the datetime.
+
+
+#### Methods
+
+##### DateTime:with_timezone
+
+```lua
+function DateTime:with_timezone(tz: Timezone): DateTime
+```
+
+Converts the datetime to the specified timezone.
+
+###### Parameters
+
+- `tz` ([Timezone](#type.Timezone)): The timezone to convert to.
+
+
+###### Returns
+
+- `dt` ([DateTime](#type.DateTime)): The converted datetime.
+##### DateTime:format
+
+```lua
+function DateTime:format(format: string): string
+```
+
+Formats the datetime using the specified format string.
+
+###### Parameters
+
+- `format` ([string](#type.string)): The format string to use.
+
+
+###### Returns
+
+- `formatted` ([string](#type.string)): The formatted datetime.
 
 
 ## Methods
 
-### next
+### new
 
 ```lua
-function next(stream: LuaStream<T>): T
+function new(timezone: string): Timezone
 ```
 
-Returns the next value in the stream. Note that this is the only function other than `promise.yield` that yields.
+Returns a new Timezone object if the timezone is recognized/supported.
 
 #### Parameters
 
-- `stream` ([LuaStream<T>](#type.LuaStream<T>)): The stream to get the next value from.
+- `timezone` ([string](#type.string)): The timezone to get the offset for.
 
 
 #### Returns
 
-- `T` ([T](#type.T)): The next value in the stream, or nil if the stream is exhausted.
+- `tzobj` ([Timezone](#type.Timezone)): The timezone userdata object.
+
+### timedelta_weeks
+
+```lua
+function timedelta_weeks(weeks: number): TimeDelta
+```
+
+Creates a new TimeDelta object with the specified number of weeks.
+
+#### Parameters
+
+- `weeks` ([number](#type.number)): The number of weeks.
+
+
+#### Returns
+
+- `td` ([TimeDelta](#type.TimeDelta)): The TimeDelta object.
+
+### timedelta_days
+
+```lua
+function timedelta_days(days: number): TimeDelta
+```
+
+Creates a new TimeDelta object with the specified number of days.
+
+#### Parameters
+
+- `days` ([number](#type.number)): The number of days.
+
+
+#### Returns
+
+- `td` ([TimeDelta](#type.TimeDelta)): The TimeDelta object.
+
+### timedelta_hours
+
+```lua
+function timedelta_hours(hours: number): TimeDelta
+```
+
+Creates a new TimeDelta object with the specified number of hours.
+
+#### Parameters
+
+- `hours` ([number](#type.number)): The number of hours.
+
+
+#### Returns
+
+- `td` ([TimeDelta](#type.TimeDelta)): The TimeDelta object.
+
+### timedelta_minutes
+
+```lua
+function timedelta_minutes(minutes: number): TimeDelta
+```
+
+Creates a new TimeDelta object with the specified number of minutes.
+
+#### Parameters
+
+- `minutes` ([number](#type.number)): The number of minutes.
+
+
+#### Returns
+
+- `td` ([TimeDelta](#type.TimeDelta)): The TimeDelta object.
+
+### timedelta_seconds
+
+```lua
+function timedelta_seconds(seconds: number): TimeDelta
+```
+
+Creates a new TimeDelta object with the specified number of seconds.
+
+#### Parameters
+
+- `seconds` ([number](#type.number)): The number of seconds.
+
+
+#### Returns
+
+- `td` ([TimeDelta](#type.TimeDelta)): The TimeDelta object.
+
+### timedelta_millis
+
+```lua
+function timedelta_millis(millis: number): TimeDelta
+```
+
+Creates a new TimeDelta object with the specified number of milliseconds.
+
+#### Parameters
+
+- `millis` ([number](#type.number)): The number of milliseconds.
+
+
+#### Returns
+
+- `td` ([TimeDelta](#type.TimeDelta)): The TimeDelta object.
+
+### timedelta_micros
+
+```lua
+function timedelta_micros(micros: number): TimeDelta
+```
+
+Creates a new TimeDelta object with the specified number of microseconds.
+
+#### Parameters
+
+- `micros` ([number](#type.number)): The number of microseconds.
+
+
+#### Returns
+
+- `td` ([TimeDelta](#type.TimeDelta)): The TimeDelta object.
+
+### timedelta_nanos
+
+```lua
+function timedelta_nanos(nanos: number): TimeDelta
+```
+
+Creates a new TimeDelta object with the specified number of nanoseconds.
+
+#### Parameters
+
+- `nanos` ([number](#type.number)): The number of nanoseconds.
+
+
+#### Returns
+
+- `td` ([TimeDelta](#type.TimeDelta)): The TimeDelta object.
 
 
 
