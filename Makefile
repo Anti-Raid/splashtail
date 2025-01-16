@@ -33,7 +33,6 @@ build:
 	make build_go
 	make build_rust
 	make copyassets
-	make templatedocs
 
 build_go:
 	for d in services/api services/jobserver; do \
@@ -92,9 +91,6 @@ copyassets:
 	# Copy typings to badgerfang
 	rm -rf services/badgerfang/src/types/splashtail
 	cp -rf services/website/src/lib/generated services/badgerfang/src/types/splashtail
-
-templatedocs:
-	./out/template-worker templatedocs > docs/src/user/templating/2-plugins.md
 
 tests:
 	./out/bot test

@@ -2,7 +2,6 @@
 members = [
     "services/bot/crates/*",
     "services/bot", 
-    "services/template-worker/crates/*",
     "services/template-worker",
 ]
 exclude = [
