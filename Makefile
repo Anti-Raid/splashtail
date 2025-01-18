@@ -92,6 +92,9 @@ copyassets:
 	rm -rf services/badgerfang/src/types/splashtail
 	cp -rf services/website/src/lib/generated services/badgerfang/src/types/splashtail
 
+docs:
+	python3 docs/gen_khronos_docs.py ~/khronos docs/src/dev/templating/2-plugins.md
+
 tests:
 	./out/bot test
 
