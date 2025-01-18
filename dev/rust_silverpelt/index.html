@@ -153,27 +153,6 @@
                 <div id="content" class="content">
                     <main>
                         <h1 id="silverpelt"><a class="header" href="#silverpelt">Silverpelt</a></h1>
-<p>Silverpelt provides a standard library for all Anti-Raid modules.</p>
-<p>To create a new Anti-Raid bot making use of Anti-Raid modules, simply implement the trait <code>modules::Module</code>. These modules must then be added to a <code>SilverpeltCache</code> which is then inserted into <code>silverpelt::Data</code>.</p>
-<p>Most things in silverpelt are abstracted out through traits or dispatched via events. This allows silverpelt to be used as an abstract interface allowing for Anti-Raid to quickly evolve and change/adapt to different targets.</p>
-<p><strong>Note:</strong> AntiRaid uses a event-driven architecture. This means that modules+the main bot process make events that are dispatched to modules. The event system is currently passive (meaning there is no continously running event loop), however this is subject to change in the future.</p>
-<h2 id="interfaces"><a class="header" href="#interfaces">Interfaces</a></h2>
-<h3 id="sting"><a class="header" href="#sting">Sting</a></h3>
-<p>Silverpelt provides concrete structures, utilities and special events for handling stings.</p>
-<h3 id="punishments"><a class="header" href="#punishments">Punishments</a></h3>
-<p>Silverpelt provides concrete structures, utilities and special events for handling punishments.</p>
-<h2 id="some-extra-misc-points"><a class="header" href="#some-extra-misc-points">Some extra misc points</a></h2>
-<ul>
-<li>
-<p>A command is the base unit for access control. This means that all operations with differing access controls must have commands associated with them.</p>
-</li>
-<li>
-<p>This means that all operations (list backup, create/restore backup, delete backup) <em>MUST</em> have associated commands</p>
-</li>
-<li>
-<p>Sometimes, an operation (such as a web-only operation) may not have a module/command associated with it. In such cases, a 'virtual' module should be used. Virtual modules are modules with commands that are not registered via Discord's API. They are used to group commands together for access control purposes and to ensure that each operation is tied to a command</p>
-</li>
-</ul>
 
                     </main>
 
@@ -183,7 +162,7 @@
                                 <i class="fa fa-angle-left"></i>
                             </a>
 
-                            <a rel="next prefetch" href="../../dev/rust_templating/index.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                            <a rel="next prefetch" href="../../dev/templating/index.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <i class="fa fa-angle-right"></i>
                             </a>
 
@@ -197,7 +176,7 @@
                         <i class="fa fa-angle-left"></i>
                     </a>
 
-                    <a rel="next prefetch" href="../../dev/rust_templating/index.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                    <a rel="next prefetch" href="../../dev/templating/index.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <i class="fa fa-angle-right"></i>
                     </a>
             </nav>

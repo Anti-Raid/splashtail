@@ -3,7 +3,7 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>Templating - AntiRaid Documentation</title>
+        <title>Introduction - AntiRaid Documentation</title>
 
 
         <!-- Custom HTML head -->
@@ -152,55 +152,72 @@
 
                 <div id="content" class="content">
                     <main>
-                        <h1 id="anti-raid-templating-system"><a class="header" href="#anti-raid-templating-system">Anti-Raid Templating System</a></h1>
-<h2 id="supported-languages"><a class="header" href="#supported-languages">Supported Languages</a></h2>
+                        <h1 id="lua-templating"><a class="header" href="#lua-templating">Lua Templating</a></h1>
+<p>At AntiRaid, we prioritize flexibility and customization for our users. To this end, our bot supports advanced templating to allow for extensive personalization of embeds and messages. While many bots utilize proprietary languages or templating engines, we have chosen to leverage Lua—a renowned scripting language widely used in game development and other applications. This decision ensures that our users benefit from a powerful, well-documented, and versatile language, enhancing the capability and ease of customizing their AntiRaid experience.</p>
+<p>Specifically, Anti Raid uses a variant of Lua called Luau. If you've ever used Roblox before, this is the same variant of Lua used there too (which is why Luau is also known as Roblox Lua in many places). You can check out the <a href="https://luau-lang.org/">Luau docs</a> for more information on the language itself. Unlike PUC Lua (the reference implementation), Luau is both faster and offers robust sandboxing capabilities allowing AntiRaid to run scripts in as safe an environment as possible.</p>
+<h2 id="getting-started"><a class="header" href="#getting-started">Getting Started</a></h2>
+<p>Note that the remainder of these docs will cover AntiRaids Lua SDKs. To learn more about Lua itself, please checkout Lua's official tutorial for Lua 5.0 <a href="https://www.lua.org/pil/1.html">here</a>. Other resources for Lua exist (Lua is very popular after all), including <a href="https://devforum.roblox.com/t/lua-scripting-starter-guide/394618#print-5">Roblox's tutorial</a> (ignore the Studio bits), <a href="https://www.tutorialspoint.com/lua/lua_quick_guide.htm">TutorialPoint</a> and <a href="https://www.codecademy.com/learn/learn-lua">Codecademy</a>.</p>
+<h2 id="limitations"><a class="header" href="#limitations">Limitations</a></h2>
+<p>AntiRaid applies the following 3 global limits to all Lua templates. Note that we may provide increased limits as a Premium feature in the future:</p>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>pub const MAX_TEMPLATE_MEMORY_USAGE: usize = 1024 * 1024 * 3; // 3MB maximum memory
+pub const MAX_TEMPLATES_EXECUTION_TIME: std::time::Duration = std::time::Duration::from_secs(30); // 30 seconds maximum execution time
+<span class="boring">}</span></code></pre></pre>
+<p>The above limits are in place to prevent abuse and ensure that the bot remains responsive. If you require increased limits, please contact support (once again, this may change in the future).</p>
+<h2 id="some-key-notes"><a class="header" href="#some-key-notes">Some key notes</a></h2>
 <ul>
-<li>Lua (luau / Roblox Lua) - Tier 1</li>
+<li>Each guild is assigned a dedicated Lua VM. This VM is used to execute Lua code that is used in the templates.</li>
+<li>The total memory usage that a guild can use is limited to <code>MAX_TEMPLATE_MEMORY_USAGE</code> (currently 3MB). This is to prevent a single guild from using too much memory.</li>
+<li>Execution of all scripts is timed out when the last executed script takes longer than <code>MAX_TEMPLATES_EXECUTION_TIME</code> (currently 30 seconds).</li>
+<li>A guilds Lua VM will persist until marked as broken (either by explicitly requesting it or by exceeding memory limits)</li>
+<li>AntiRaid monkey-patches <code>_G</code> to be read-write for new values while preserving Luau's sandboxing features. This means that builtins will remain read-only, but new values can be added.</li>
+<li>The standard <code>require</code> statement can be used to import AntiRaid plugins. <strong>Note that plugins are read-only</strong> and cannot be monkey-patched etc.</li>
+<li>All templates are executed as Luau threads.</li>
 </ul>
-<p>Lua is the recommended language for templating</p>
-<h2 id="wippotential-languages"><a class="header" href="#wippotential-languages">WIP/Potential Languages</a></h2>
-<ul>
-<li>JavaScript (see <code>lang_javascript_quickjs</code> and <code>lang_javascript_v8</code> for the current load experiments + integration experiments), potential but unlikely unless someone finds a solution</li>
-<li>WebAssembly (potential, not yet decided)</li>
-</ul>
-<h2 id="language-requirements"><a class="header" href="#language-requirements">Language Requirements</a></h2>
-<ol>
-<li>All languages must export the following modules/helpers to the extent required as per the templating documentation. (TODO: Improve this spec)</li>
-</ol>
-<ul>
-<li>Messages</li>
-<li>Permissions</li>
-<li>Captcha</li>
-<li>Actions</li>
-<li>Key Value API</li>
-</ul>
-<ol start="2">
-<li>All languages must provide a way to sandbox the execution of the code. This is a security requirement. In particular, timeouts and heap/stack/memory limits are required.</li>
-<li>Callers must use the abstracted out function calls from <code>lib.rs</code></li>
-</ol>
-<h2 id="my-language-vent"><a class="header" href="#my-language-vent">My language vent</a></h2>
-<p><strong>For reference on my discord vents: https://discord.com/channels/763812938875535361/1040734156327501905/1267195190100361440</strong></p>
-<p>Why is lua the only sane language for embedding
-V8 has big ffi problems with rust. If you try spawning too many isolates, you have a 100% chance of aborting your process and this issue can only be resolved by performing unsafe void* pointer casts
-Quickjs is a bit too slow and poorly documented
-Rhai is good but it’s a custom language and it’s sandboxing abilities need unsafe code to fully work (and said unsafe code involves pointer arithmetic that is not thread safe) and heap memory limits require you to manually calculate the heap usage
-Tera has virtually no safety features and will gladly execute an infinite recursion
-For starlark/skylark, go to the point on rhai but hopefully without the unsafe bits
-I can understand now why the game modding industry uses lua, it’s basically the only sane language for handling user input
-Lua is legit the only sane scripting language on this entire list</p>
-<p>[rhai is not only slower than lua, its sandboxing (i said it above here too in a vent i think) requires actual pointer arithmetic that isnt thread safe, its also a custom lang no one knows while lua is well known in the game community. Luau is used in Roblox games so it caters to Discords target market as well]</p>
-<h1 id="template-tokens"><a class="header" href="#template-tokens">Template Tokens</a></h1>
-<p>All lua templates include a special template token in addition to the template arguments. Modules requiring more privileged levels of access (or otherwise require the template state) should require this token and use it to access the required template state.</p>
+<p>In general, all AntiRaid templates should start with the following:</p>
+<pre><code class="language-lua">local args, token = ...
+-- Do something
+return output
+</code></pre>
+<h2 id="interop"><a class="header" href="#interop">Interop</a></h2>
+<p>Many features of Lua don't work so well when calling functions within the AntiRaid SDK. For example, both arrays and maps are expressed as tables in Lua. However, AntiRaid, being written in Rust, doesn't know this and hance needs some help to convert certain types for FFI. This is where the <code>@antiraid/interop</code> module comes in.</p>
+<h3 id="arrays"><a class="header" href="#arrays">Arrays</a></h3>
+<p>To pass arrays to modules within the AntiRaid SDK, you need to set the metatable to <code>@antiraid/interop#array_metatable</code>. This will allow the SDK to convert the array to a Rust <code>Vec</code> internally.</p>
+<pre><code class="language-lua">local interop = require '@antiraid/interop'
+setmetatable({a = 5}, interop.array_metatable)
+</code></pre>
+<h3 id="null"><a class="header" href="#null">Null</a></h3>
+<p>While the Lua <code>nil</code> does work in many cases (and even when calling the SDK), its not the best choice. When querying AntiRaid SDK, the SDK will use the <code>@antiraid/interop#null</code> value to represent a null value. Your Lua templates can also use this value if desired</p>
+<pre><code class="language-lua">local interop = require '@antiraid/interop'
+local null = interop.null -- This is the null value
+</code></pre>
+<h3 id="memory-usage"><a class="header" href="#memory-usage">Memory Usage</a></h3>
+<p>While not strictly useful for interop, it is often desirable to know the memory usage of a Lua template as AntiRaid will kill your template if it exceeds the memory limit. For this, you can use the <code>@antiraid/interop#memusage</code> function.</p>
+<pre><code class="language-lua">local interop = require '@antiraid/interop'
+print(interop.memusage())
+</code></pre>
+<h2 id="events"><a class="header" href="#events">Events</a></h2>
+<p>All Lua templates are invoked via events. As such, the first argument to the template is an <code>Event</code>. <code>Event</code> is a <code>userdata</code>. The below will explain the most important fields exposed by <code>Event</code>. Note that all fields, unless stated otherwise, are read-only and cached.</p>
+<h2 id="template-context"><a class="header" href="#template-context">Template Context</a></h2>
+<p>All Lua templates are passed both the <code>Event</code> (denoted by <code>args</code>) and a <code>TemplateContext</code> userdata (denoted by <code>token</code>). Note that like <code>Event</code>, <code>TemplateContext</code> is a <em>userdata</em> (not a table). As such, they cannot be manually constructed in templates themselves.</p>
+<p>"Executors" and other sensistive APIs use the <code>TemplateContext</code> to read internal data. Examples of executors include the <code>@antiraid/discord</code> <code>DiscordActionExecutor</code>, which allows you to perform actions such as banning/kicking/timing out users and other Discord actions and <code>@antiraid/kv</code> <code>KvExecutor</code> which allow for persistent storage via a key-value interface.</p>
+<p><code>TemplateContext</code> is guaranteed to be valid while accessible in the VM . This means that templates can choose to share their capabilities with other templates using <code>_G</code>.</p>
+<p>Likewise, it is also guaranteed that the created executor is complete and does not rely on the token itself whatsoever after creation. This means that a template executor can be used after the template has finished executing (e.g. in a coroutine).</p>
+<h3 id="example"><a class="header" href="#example">Example</a></h3>
+<pre><code class="language-lua">local args, token = ...
+print(token)
+</code></pre>
 
                     </main>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
-                            <a rel="prev" href="../../dev/rust_silverpelt/index.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <a rel="prev" href="../../dev/templating/index.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <i class="fa fa-angle-left"></i>
                             </a>
 
-                            <a rel="next prefetch" href="../../dev/rust_text/index.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                            <a rel="next prefetch" href="../../dev/templating/2-plugins.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <i class="fa fa-angle-right"></i>
                             </a>
 
@@ -210,11 +227,11 @@ Lua is legit the only sane scripting language on this entire list</p>
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
-                    <a rel="prev" href="../../dev/rust_silverpelt/index.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <a rel="prev" href="../../dev/templating/index.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <i class="fa fa-angle-left"></i>
                     </a>
 
-                    <a rel="next prefetch" href="../../dev/rust_text/index.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                    <a rel="next prefetch" href="../../dev/templating/2-plugins.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <i class="fa fa-angle-right"></i>
                     </a>
             </nav>
