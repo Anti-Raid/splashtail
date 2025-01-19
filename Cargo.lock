@@ -625,9 +625,9 @@ dependencies = [
 
 [[package]]
 name = "cc"
-version = "1.2.9"
+version = "1.2.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c8293772165d9345bdaaa39b45b2109591e63fe5e6fbc23c6ff930a048aa310b"
+checksum = "13208fcbb66eaeffe09b99fffbe1af420f00a7b35aa99ad683dfc1aa76145229"
 dependencies = [
  "jobserver 0.1.32",
  "libc",
@@ -1973,7 +1973,7 @@ dependencies = [
 [[package]]
 name = "khronos_runtime"
 version = "1.0.0"
-source = "git+https://github.com/anti-raid/khronos#07e4afb944ef3510bdbfc326142c3871764f5e14"
+source = "git+https://github.com/anti-raid/khronos#f7e9661d1410ee9fdb7a6281af7b928a883d9fee"
 dependencies = [
  "antiraid-types",
  "arrayvec",
