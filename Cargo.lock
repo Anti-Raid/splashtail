@@ -161,14 +161,16 @@ dependencies = [
 [[package]]
 name = "antiraid-types"
 version = "0.1.0"
-source = "git+https://github.com/Anti-Raid/antiraid-types#e623c2c7f9468c5f0a218b0e049bdc90b30e1eff"
+source = "git+https://github.com/Anti-Raid/antiraid-types#c12d643659e68021aacb725f74cb79812316bbba"
 dependencies = [
  "chrono",
  "extract_map",
+ "indexmap",
  "kittycat",
  "serde",
  "serde_json",
  "serenity",
+ "strum",
  "uuid",
 ]
 
