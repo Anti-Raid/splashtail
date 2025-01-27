@@ -161,7 +161,7 @@ dependencies = [
 [[package]]
 name = "antiraid-types"
 version = "0.1.0"
-source = "git+https://github.com/Anti-Raid/antiraid-types#c12d643659e68021aacb725f74cb79812316bbba"
+source = "git+https://github.com/Anti-Raid/antiraid-types#827424e4eaf96966d684aa60d4971641c86a5305"
 dependencies = [
  "chrono",
  "extract_map",
