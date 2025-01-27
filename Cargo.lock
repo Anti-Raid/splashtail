@@ -192,7 +192,7 @@ dependencies = [
 [[package]]
 name = "ar_settings"
 version = "6.0.0"
-source = "git+https://github.com/Anti-Raid/settings#cb4160a4c81790a1368ddfd8866a8e617c277e45"
+source = "git+https://github.com/Anti-Raid/settings#a7807a4ec27acb85b3f932f1acbf1adddf27f1c3"
 dependencies = [
  "async-trait",
  "chrono",
