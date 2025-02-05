@@ -17,7 +17,6 @@
 
 - [Go Jobserver](./dev/go_jobs/README.md)
     - [Backups](./dev/go_jobs/backups.md)
-- [Lockdown Module](./dev/rust_bot_modules_lockdown/README.md)
 - [Silverpelt](./dev/rust_silverpelt/README.md)
 - [Templating](./dev/templating/README.md)
     - [Introduction](./dev/templating/1-intro.md)
