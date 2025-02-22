@@ -27,6 +27,10 @@ format:
 		cd $$d && go fmt && cd ../..; \
 	done
 
+prepare:
+	cd services/bot && cargo sqlx prepare
+	cd services/template-worker && cargo sqlx prepare
+
 # Builds AntiRaid services
 build:
 	mkdir -p out
