@@ -1,0 +1,72 @@
+services:
+  # Redis
+  api_redis:
+    container_name: api_redis
+    networks:
+      - antiraid_api
+    image: redis:7.2.7 # Use 7.2.7 to avoid licensing change with 7.4+
+    expose:
+      - 6379
+    command: redis-server --save 900 1 --save 300 10 --save 60 10000 --loglevel notice --bind 0.0.0.0
+
+  # Nirn Proxy
+  nirn_proxy:
+    container_name: nirn_proxy
+    networks:
+      - antiraid
+    build:
+      context: ./infra/nirn-proxy
+      dockerfile: ./Dockerfile
+    volumes:
+      - ./infra/nirn-proxy/secrets.json:/secrets.json:ro
+    command: cache-endpoints=false port=3221 ratelimit-over-408 endpoint-rewrite=/api/gateway/bot@http://sandwich:29334/antiraid,/api/v*/gateway/bot@http://sandwich:29334/antiraid token-map-file=secrets.json
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:3221/nirn/healthz" ]
+      interval: 3s
+      timeout: 10s
+      retries: 3
+    ports:
+      - "3222:3221"
+
+  # Sandwich
+  sandwich:
+    container_name: sandwich
+    networks:
+      - antiraid
+    build:
+      context: ./infra/Sandwich-Daemon
+      dockerfile: ./Dockerfile
+    volumes:
+      - ./infra/Sandwich-Daemon/sandwich.yaml:/sandwich.yaml:ro
+    command: -configurationPath=/sandwich.yaml -prometheusAddress :3931 -httpEnabled --httpHost 0.0.0.0:29334 -level debug
+
+  api:
+    container_name: api
+    networks:
+      - antiraid
+      - antiraid_api
+    depends_on:
+      api_redis:
+        condition: service_started
+      nirn_proxy:
+        condition: service_healthy
+    ports:
+      - "8082:8081"
+    build:
+      context: ./services/api
+      dockerfile: ./Dockerfile
+    volumes:
+      - ./config.yaml:/app/config.yaml:ro
+    environment:
+      REDIS_URL: redis://api_redis:6379/1
+      PROXY_URL: http://nirn_proxy:3221
+
+networks:
+  antiraid:
+    name: antiraid
+    driver: bridge
+    external: true
+  antiraid_api:
+    name: antiraid_api
+    driver: bridge
+    external: false
