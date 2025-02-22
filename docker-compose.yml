@@ -14,6 +14,9 @@ services:
     container_name: nirn_proxy
     networks:
       - antiraid
+    depends_on:
+      sandwich:
+        condition: service_healthy
     build:
       context: ./infra/nirn-proxy
       dockerfile: ./Dockerfile
@@ -38,7 +41,12 @@ services:
       dockerfile: ./Dockerfile
     volumes:
       - ./infra/Sandwich-Daemon/sandwich.yaml:/sandwich.yaml:ro
-    command: -configurationPath=/sandwich.yaml -prometheusAddress :3931 -httpEnabled --httpHost 0.0.0.0:29334 -level debug
+    command: ./app/sandwich -configurationPath=/sandwich.yaml -prometheusAddress :3931 -httpEnabled --httpHost 0.0.0.0:29334 -level debug
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:29334/antiraid/api/v9/gateway/bot" ]
+      interval: 10s
+      timeout: 10s
+      retries: 1000000000
 
   api:
     container_name: api
@@ -49,9 +57,9 @@ services:
       api_redis:
         condition: service_started
       nirn_proxy:
-        condition: service_healthy
+        condition: service_started
     ports:
-      - "8082:8081"
+      - "5600:5600"
     build:
       context: ./services/api
       dockerfile: ./Dockerfile
@@ -60,13 +68,18 @@ services:
     environment:
       REDIS_URL: redis://api_redis:6379/1
       PROXY_URL: http://nirn_proxy:3221
+      BOT_URL: http://bot
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8081" ]
+      interval: 3s
+      timeout: 10s
+      retries: 3
 
 networks:
   antiraid:
     name: antiraid
     driver: bridge
-    external: true
   antiraid_api:
     name: antiraid_api
     driver: bridge
-    external: false
+
