@@ -67,6 +67,37 @@ services:
       - ./data/seed.iblcli-seed:/seed.iblcli-seed:ro
       - ./data/state/postgres-other:/var/lib/postgresql
       - ./data/state/postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD", "pg_isready", "-U", "antiraid" ]
+      interval: 3s
+      timeout: 10s
+      retries: 3
+
+  # Bot process itself
+  bot:
+    container_name: bot
+    networks:
+      - antiraid_internal # Exposed to internal services
+    depends_on:
+      nirn_proxy:
+        condition: service_healthy
+      sandwich:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    build:
+      context: ./services/bot
+      dockerfile: ./Dockerfile
+    volumes:
+      - ./config.yaml:/app/config.yaml:ro
+    environment:
+      PROXY_URL: http://nirn_proxy:3221
+      TEMPLATE_WORKER_URL: http://template_worker
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:20000" ]
+      interval: 3s
+      timeout: 10s
+      retries: 3
 
   api:
     container_name: api
@@ -78,6 +109,10 @@ services:
         condition: service_started
       nirn_proxy:
         condition: service_started
+      postgres:
+        condition: service_healthy
+      bot:
+        condition: service_healthy
     build:
       context: ./services/api
       dockerfile: ./Dockerfile

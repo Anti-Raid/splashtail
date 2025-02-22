@@ -899,13 +899,13 @@ dependencies = [
  "poise",
  "reqwest",
  "rust_buildstats",
- "rust_rpc_server",
- "sandwich_driver",
+ "rust_rpc_server 6.0.0 (git+https://github.com/Anti-Raid/corelib_rs)",
+ "sandwich_driver 6.0.0 (git+https://github.com/Anti-Raid/corelib_rs)",
  "serde",
  "serde_json",
  "serde_yaml",
  "serenity",
- "silverpelt",
+ "silverpelt 0.1.0 (git+https://github.com/Anti-Raid/corelib_rs)",
  "sqlx",
  "tokio",
  "tower-http",
@@ -2530,6 +2530,7 @@ checksum = "d75a2a4b1b190afb6f5425f10f6a8f959d2ea0b9c2b1d79553551850539e4674"
 [[package]]
 name = "jobserver"
 version = "0.1.0"
+source = "git+https://github.com/Anti-Raid/corelib_rs#c876b570be56eaefccc6621d8274aac84714f9ab"
 dependencies = [
  "chrono",
  "futures-util",
@@ -2538,7 +2539,7 @@ dependencies = [
  "serde",
  "serde_json",
  "serenity",
- "splashcore_rs",
+ "silverpelt 0.1.0 (git+https://github.com/Anti-Raid/corelib_rs)",
  "sqlx",
  "tokio",
 ]
@@ -4000,6 +4001,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "rust_rpc_server"
+version = "6.0.0"
+source = "git+https://github.com/Anti-Raid/corelib_rs#c876b570be56eaefccc6621d8274aac84714f9ab"
+dependencies = [
+ "axum",
+ "hyper 1.6.0",
+ "hyper-util",
+ "log",
+ "tokio",
+ "tower-service",
+]
+
+[[package]]
 name = "rustc-demangle"
 version = "0.1.24"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4201,6 +4215,18 @@ dependencies = [
 [[package]]
 name = "sandwich_driver"
 version = "6.0.0"
+dependencies = [
+ "log",
+ "reqwest",
+ "serde",
+ "serde_repr",
+ "serenity",
+]
+
+[[package]]
+name = "sandwich_driver"
+version = "6.0.0"
+source = "git+https://github.com/Anti-Raid/corelib_rs#c876b570be56eaefccc6621d8274aac84714f9ab"
 dependencies = [
  "log",
  "reqwest",
@@ -4556,11 +4582,35 @@ dependencies = [
  "kittycat",
  "lockdowns",
  "reqwest",
- "sandwich_driver",
+ "sandwich_driver 6.0.0",
  "serde",
  "serde_json",
  "serenity",
  "splashcore_rs",
+ "sqlx",
+ "uuid",
+]
+
+[[package]]
+name = "silverpelt"
+version = "0.1.0"
+source = "git+https://github.com/Anti-Raid/corelib_rs#c876b570be56eaefccc6621d8274aac84714f9ab"
+dependencies = [
+ "antiraid-types",
+ "async-trait",
+ "aws-sdk-s3",
+ "aws-smithy-types",
+ "botox",
+ "chrono",
+ "dashmap 6.1.0",
+ "indexmap",
+ "kittycat",
+ "lockdowns",
+ "reqwest",
+ "sandwich_driver 6.0.0 (git+https://github.com/Anti-Raid/corelib_rs)",
+ "serde",
+ "serde_json",
+ "serenity",
  "sqlx",
  "uuid",
 ]
@@ -5056,14 +5106,14 @@ dependencies = [
  "moka",
  "rand 0.8.5",
  "reqwest",
- "rust_rpc_server",
- "sandwich_driver",
+ "rust_rpc_server 6.0.0",
+ "sandwich_driver 6.0.0",
  "scc",
  "serde",
  "serde_json",
  "serde_yaml",
  "serenity",
- "silverpelt",
+ "silverpelt 0.1.0",
  "sqlx",
  "tokio",
  "tower-http",
