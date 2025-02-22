@@ -161,7 +161,7 @@ dependencies = [
 [[package]]
 name = "antiraid-types"
 version = "0.1.0"
-source = "git+https://github.com/anti-raid/antiraid-types#083aae201b08178e6c41d8c14cc50dc12eea32a0"
+source = "git+https://github.com/Anti-Raid/antiraid-types#083aae201b08178e6c41d8c14cc50dc12eea32a0"
 dependencies = [
  "chrono",
  "extract_map",
@@ -192,7 +192,7 @@ dependencies = [
 [[package]]
 name = "ar_settings"
 version = "6.0.0"
-source = "git+https://github.com/anti-raid/settings#a5a5654db4d5103f0d9a71bb6047724930f2443f"
+source = "git+https://github.com/Anti-Raid/settings#a5a5654db4d5103f0d9a71bb6047724930f2443f"
 dependencies = [
  "async-trait",
  "chrono",
@@ -785,7 +785,7 @@ dependencies = [
  "futures-util",
  "gwevent",
  "indexmap",
- "jobserver 0.1.0",
+ "jobserver 0.1.0 (git+https://github.com/Anti-Raid/corelib_rs)",
  "kittycat",
  "lockdowns",
  "log",
@@ -2419,6 +2419,22 @@ name = "itoa"
 version = "1.0.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d75a2a4b1b190afb6f5425f10f6a8f959d2ea0b9c2b1d79553551850539e4674"
+
+[[package]]
+name = "jobserver"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "futures-util",
+ "indexmap",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "serenity",
+ "silverpelt 0.1.0",
+ "sqlx",
+ "tokio",
+]
 
 [[package]]
 name = "jobserver"

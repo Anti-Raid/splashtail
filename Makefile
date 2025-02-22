@@ -18,7 +18,7 @@ infra:
 	
 format:
 	# For every project in core/rust.*
-	for d in core/rust.* services/rust.*; do \
+	for d in core/rust.* services/bot services/template-worker; do \
 		cd $$d && cargo fmt && cd ../..; \
 	done
 
@@ -30,6 +30,9 @@ format:
 prepare:
 	cd services/bot && cargo sqlx prepare
 	cd services/template-worker && cargo sqlx prepare
+	for d in core/rust/rust.*; do \
+		echo $$d && cd $$d && cargo sqlx prepare && cd $(PWD); \
+	done
 
 # Builds AntiRaid services
 build:
