@@ -46,6 +46,8 @@ services:
     volumes:
       - ./infra/Sandwich-Daemon/sandwich.yaml:/sandwich.yaml:ro
     command: ./app/sandwich -configurationPath=/sandwich.yaml -prometheusAddress :3931 -httpEnabled --httpHost 0.0.0.0:29334 -level debug
+    environment:
+      EXTERNAL_GATEWAY_ADDRESS: ws://sandwich:3600
     healthcheck:
       test: [ "CMD", "curl", "-f", "http://localhost:29334/antiraid/api/v9/gateway/bot" ]
       interval: 10s
@@ -54,6 +56,7 @@ services:
     ports:
       - "29334:29334" # Exposed to host for testing/auditing
       - "3931:3931" # Prometheus metrics
+      - "3600:3600" # Websocket connection for the bot
 
   postgres:
     container_name: postgres
@@ -91,13 +94,15 @@ services:
     volumes:
       - ./config.yaml:/app/config.yaml:ro
     environment:
+      POSTGRES_URL: postgres://antiraid:AnTiRaId123!@postgres:5432/antiraid
       PROXY_URL: http://nirn_proxy:3221
       TEMPLATE_WORKER_URL: http://template_worker
+      SANDWICH_URL: http://sandwich:29334
     healthcheck:
       test: [ "CMD", "curl", "-f", "http://localhost:20000" ]
       interval: 3s
       timeout: 10s
-      retries: 3
+      retries: 100
 
   api:
     container_name: api
