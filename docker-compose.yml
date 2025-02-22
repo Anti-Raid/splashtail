@@ -96,10 +96,41 @@ services:
     environment:
       POSTGRES_URL: postgres://antiraid:AnTiRaId123!@postgres:5432/antiraid
       PROXY_URL: http://nirn_proxy:3221
-      TEMPLATE_WORKER_URL: http://template_worker
+      TEMPLATE_WORKER_URL: template-worker
       SANDWICH_URL: http://sandwich:29334
     healthcheck:
-      test: [ "CMD", "curl", "-f", "http://localhost:20000" ]
+      test: [ "CMD", "curl", "-f", "http://127.0.0.1:20000/state" ]
+      interval: 3s
+      timeout: 10s
+      retries: 10
+
+  # Template worker process
+  template-worker:
+    container_name: template-worker
+    networks:
+      - antiraid_internal # Exposed to internal services
+    depends_on:
+      nirn_proxy:
+        condition: service_healthy
+      sandwich:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      bot:
+        condition: service_started
+    build:
+      context: ./services/template-worker
+      dockerfile: ./Dockerfile
+    volumes:
+      - ./config.yaml:/app/config.yaml:ro
+    environment:
+      POSTGRES_URL: postgres://antiraid:AnTiRaId123!@postgres:5432/antiraid
+      PROXY_URL: http://nirn_proxy:3221
+      TEMPLATE_WORKER_URL: template_worker
+      SANDWICH_URL: http://sandwich:29334
+      RUST_LOG: "template-worker=info"
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:60000" ]
       interval: 3s
       timeout: 10s
       retries: 100
@@ -127,11 +158,6 @@ services:
       REDIS_URL: redis://api_redis:6379/1
       PROXY_URL: http://nirn_proxy:3221
       BOT_URL: http://bot
-    healthcheck:
-      test: [ "CMD", "curl", "-f", "http://localhost:8081" ]
-      interval: 3s
-      timeout: 10s
-      retries: 3
 
   # Nginx process to expose the API outwards while ensuring API itself doesn't get any
   # external net access
@@ -148,6 +174,11 @@ services:
       - ./data/docker/nginx.conf:/etc/nginx/conf.d/default.conf:ro
     ports:
       - "5600:5600" # Expose API to host for testing/auditing
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8081" ]
+      interval: 3s
+      timeout: 10s
+      retries: 3
 
 networks:
   antiraid_infra:

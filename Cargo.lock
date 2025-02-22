@@ -2608,6 +2608,11 @@ name = "limits"
 version = "0.1.0"
 
 [[package]]
+name = "limits"
+version = "0.1.0"
+source = "git+https://github.com/Anti-Raid/corelib_rs#008f9cee3a89969f3e28db9e26c0e0620bbe4cf5"
+
+[[package]]
 name = "linux-raw-sys"
 version = "0.4.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4990,7 +4995,7 @@ dependencies = [
  "gwevent",
  "indexmap",
  "khronos_runtime",
- "limits",
+ "limits 0.1.0 (git+https://github.com/Anti-Raid/corelib_rs)",
  "lockdowns",
  "log",
  "mlua",
@@ -4999,14 +5004,14 @@ dependencies = [
  "moka",
  "rand 0.8.5",
  "reqwest",
- "rust_rpc_server 6.0.0",
- "sandwich_driver 6.0.0",
+ "rust_rpc_server 6.0.0 (git+https://github.com/Anti-Raid/corelib_rs)",
+ "sandwich_driver 6.0.0 (git+https://github.com/Anti-Raid/corelib_rs)",
  "scc",
  "serde",
  "serde_json",
  "serde_yaml",
  "serenity",
- "silverpelt 0.1.0",
+ "silverpelt 0.1.0 (git+https://github.com/Anti-Raid/corelib_rs)",
  "sqlx",
  "tokio",
  "tower-http",
