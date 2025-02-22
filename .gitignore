@@ -17,3 +17,4 @@ jobserver
 semver
 cmd/nursery/ban_possibilities
 .env
+data/state

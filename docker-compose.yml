@@ -3,17 +3,20 @@ services:
   api_redis:
     container_name: api_redis
     networks:
-      - antiraid_api
+      - antiraid_api # Only communicates with API
     image: redis:7.2.7 # Use 7.2.7 to avoid licensing change with 7.4+
     expose:
       - 6379
     command: redis-server --save 900 1 --save 300 10 --save 60 10000 --loglevel notice --bind 0.0.0.0
+    volumes:
+      - ./data/state/redis:/data
 
   # Nirn Proxy
   nirn_proxy:
     container_name: nirn_proxy
     networks:
-      - antiraid
+      - antiraid_infra
+      - antiraid_internal # Exposed to internal services
     depends_on:
       sandwich:
         condition: service_healthy
@@ -29,13 +32,14 @@ services:
       timeout: 10s
       retries: 3
     ports:
-      - "3222:3221"
+      - "3222:3221" # And exposed to host for testing/auditing
 
   # Sandwich
   sandwich:
     container_name: sandwich
     networks:
-      - antiraid
+      - antiraid_infra
+      - antiraid_internal # Exposed to internal services
     build:
       context: ./infra/Sandwich-Daemon
       dockerfile: ./Dockerfile
@@ -47,19 +51,33 @@ services:
       interval: 10s
       timeout: 10s
       retries: 1000000000
+    ports:
+      - "29334:29334" # Exposed to host for testing/auditing
+      - "3931:3931" # Prometheus metrics
+
+  postgres:
+    container_name: postgres
+    networks:
+      - antiraid_internal # Exposed to internal services
+    build:
+      context: ./data/docker/postgres
+      dockerfile: ./Dockerfile
+    # Expose /seed.iblcli-seed
+    volumes:
+      - ./data/seed.iblcli-seed:/seed.iblcli-seed:ro
+      - ./data/state/postgres-other:/var/lib/postgresql
+      - ./data/state/postgres:/var/lib/postgresql/data
 
   api:
     container_name: api
     networks:
-      - antiraid
+      - antiraid_internal # Doesn't need external net access
       - antiraid_api
     depends_on:
       api_redis:
         condition: service_started
       nirn_proxy:
         condition: service_started
-    ports:
-      - "5600:5600"
     build:
       context: ./services/api
       dockerfile: ./Dockerfile
@@ -75,11 +93,33 @@ services:
       timeout: 10s
       retries: 3
 
+  # Nginx process to expose the API outwards while ensuring API itself doesn't get any
+  # external net access
+  api_exposer:
+    container_name: api_exposer
+    networks:
+      - antiraid_api
+      - antiraid_infra # Needs access to the outside world
+    depends_on:
+      api:
+        condition: service_started
+    image: nginx:1.27.4-alpine
+    volumes:
+      - ./data/docker/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    ports:
+      - "5600:5600" # Expose API to host for testing/auditing
+
 networks:
-  antiraid:
-    name: antiraid
+  antiraid_infra:
+    name: antiraid_infra
     driver: bridge
+    internal: false # Infra needs external access
+  antiraid_internal:
+    name: antiraid_internal
+    driver: bridge
+    internal: true # No external net access
   antiraid_api:
+    # Used for internal API services (Redis/Nginx etc.)
     name: antiraid_api
     driver: bridge
-
+    internal: true # No external net access
