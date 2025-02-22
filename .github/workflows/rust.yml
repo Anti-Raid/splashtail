@@ -37,7 +37,7 @@ jobs:
 
       - uses: ankane/setup-postgres@v1
         with:
-          postgres-version: 16
+          postgres-version: 17
           dev-files: true
       
       - run: createdb runner
