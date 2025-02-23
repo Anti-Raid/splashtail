@@ -15,6 +15,13 @@ if [ ! -f /etc/seaweedfs/replication.toml ]; then \
     echo "/etc/seaweedfs/replication.toml already exists, not overwriting"; \
     fi
 
+# Same with s3.json
+if [ ! -f /etc/seaweedfs/s3.json ]; then \
+    cp /s3.json /etc/seaweedfs/s3.json; \
+    else \
+    echo "/etc/seaweedfs/s3.json already exists, not overwriting"; \
+    fi
+
 # We only care about server
 case "$1" in
   'server')

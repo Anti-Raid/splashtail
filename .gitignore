@@ -17,4 +17,11 @@ jobserver
 semver
 cmd/nursery/ban_possibilities
 .env
+
+# Docker
 data/state
+data/docker/seaweed/s3.json
+**.docker.yaml
+**.docker.json
+/**/**.docker.yaml
+/**/**.docker.json

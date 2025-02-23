@@ -12,7 +12,7 @@ services:
       context: ./infra/nirn-proxy
       dockerfile: ./Dockerfile
     volumes:
-      - ./infra/nirn-proxy/secrets.json:/secrets.json:ro
+      - ./infra/nirn-proxy/secrets.docker.json:/secrets.json:ro
     command: cache-endpoints=false port=3221 ratelimit-over-408 endpoint-rewrite=/api/gateway/bot@http://sandwich:29334/antiraid,/api/v*/gateway/bot@http://sandwich:29334/antiraid token-map-file=secrets.json
     healthcheck:
       test: [ "CMD", "curl", "-f", "http://localhost:3221/nirn/healthz" ]
@@ -34,7 +34,7 @@ services:
       context: ./infra/Sandwich-Daemon
       dockerfile: ./Dockerfile
     volumes:
-      - ./infra/Sandwich-Daemon/sandwich.yaml:/sandwich.yaml:ro
+      - ./infra/Sandwich-Daemon/sandwich.docker.yaml:/sandwich.yaml:ro
     command: ./app/sandwich -configurationPath=/sandwich.yaml -prometheusAddress :3931 -httpEnabled --httpHost 0.0.0.0:29334 -level debug
     environment:
       EXTERNAL_GATEWAY_ADDRESS: ws://sandwich:3600
@@ -128,7 +128,7 @@ services:
       context: ./services/bot
       dockerfile: ./Dockerfile
     volumes:
-      - ./config.yaml:/app/config.yaml:ro
+      - ./config.docker.yaml:/app/config.yaml:ro
     environment:
       POSTGRES_URL: postgres://antiraid:AnTiRaId123!@postgres:5432/antiraid
       PROXY_URL: http://nirn_proxy:3221
@@ -160,7 +160,7 @@ services:
       context: ./services/template-worker
       dockerfile: ./Dockerfile
     volumes:
-      - ./config.yaml:/app/config.yaml:ro
+      - ./config.docker.yaml:/app/config.yaml:ro
     environment:
       POSTGRES_URL: postgres://antiraid:AnTiRaId123!@postgres:5432/antiraid
       PROXY_URL: http://nirn_proxy:3221
@@ -216,7 +216,7 @@ services:
       context: ./services/api
       dockerfile: ./Dockerfile
     volumes:
-      - ./config.yaml:/app/config.yaml:ro
+      - ./config.docker.yaml:/app/config.yaml:ro
     environment:
       REDIS_URL: redis://api_redis:6379/1
       PROXY_URL: http://nirn_proxy:3221
@@ -232,6 +232,7 @@ services:
     networks:
       - antiraid_api
       - antiraid_infra # Needs access to the outside world
+      - antiraid_seaweed # Needs access to SeaweedFS
     depends_on:
       api:
         condition: service_started
@@ -239,7 +240,8 @@ services:
     volumes:
       - ./data/docker/nginx.conf:/etc/nginx/conf.d/default.conf:ro
     ports:
-      - "5600:5600" # Expose API to host for testing/auditing
+      - "5600:5600" # Expose API to host
+      - "5601:5601" # Expose SeaweedFS to host
     healthcheck:
       test: [ "CMD", "curl", "-f", "http://localhost:8081" ]
       interval: 3s
