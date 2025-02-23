@@ -129,11 +129,6 @@ services:
       dockerfile: ./Dockerfile
     volumes:
       - ./config.docker.yaml:/app/config.yaml:ro
-    environment:
-      POSTGRES_URL: postgres://antiraid:AnTiRaId123!@postgres:5432/antiraid
-      PROXY_URL: http://nirn_proxy:3221
-      TEMPLATE_WORKER_URL: template-worker
-      SANDWICH_URL: http://sandwich:29334
     healthcheck:
       test: [ "CMD", "curl", "-f", "http://127.0.0.1:20000/state" ]
       interval: 3s
@@ -162,10 +157,6 @@ services:
     volumes:
       - ./config.docker.yaml:/app/config.yaml:ro
     environment:
-      POSTGRES_URL: postgres://antiraid:AnTiRaId123!@postgres:5432/antiraid
-      PROXY_URL: http://nirn_proxy:3221
-      TEMPLATE_WORKER_URL: template_worker
-      SANDWICH_URL: http://sandwich:29334
       RUST_LOG: "template-worker=info"
     healthcheck:
       test: [ "CMD", "curl", "-X", "POST", "-f", "http://localhost:60000/healthcheck" ]
@@ -194,6 +185,31 @@ services:
     labels:
       type: "cache"
 
+  # Jobserver process
+  jobserver:
+    container_name: jobserver
+    networks:
+      - antiraid_internal # Exposed to internal services
+    depends_on:
+      nirn_proxy:
+        condition: service_healthy
+      sandwich:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    build:
+      context: ./services/jobserver
+      dockerfile: ./Dockerfile
+    volumes:
+      - ./config.docker.yaml:/app/config.yaml:ro
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:30000" ]
+      interval: 3s
+      timeout: 10s
+      retries: 10
+    labels:
+      type: "service"
+
   # API process
   # Like all other processes, the API process does not have external net access
   # outside of Nirn proxy, however, the api_exposer Nginx proxy is used to bridge
@@ -217,10 +233,6 @@ services:
       dockerfile: ./Dockerfile
     volumes:
       - ./config.docker.yaml:/app/config.yaml:ro
-    environment:
-      REDIS_URL: redis://api_redis:6379/1
-      PROXY_URL: http://nirn_proxy:3221
-      BOT_URL: http://bot
     labels:
       type: "service"
       special-networking-used: "api" # API has special networking needs, so we document that as a nice label

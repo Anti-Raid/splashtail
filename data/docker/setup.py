@@ -58,7 +58,7 @@ discord_auth:
 
 sites:
   frontend: https://antiraid.xyz # Staging value
-  api: https://splashtail-staging.antiraid.xyz # Staging value
+  api: http://localhost:5600 # Staging value
   docs: https://docs.antiraid.xyz # Documentation URL
 
 channels:
@@ -81,36 +81,37 @@ servers:
 
 meta:
   web_disable_ratelimits: true
-  postgres_url: postgresql://antiraid:dummy@127.0.0.1:5433/antiraid # Postgres URL
-  redis_url: redis://localhost/1 # Staging value
+  postgres_url: postgres://antiraid:AnTiRaId123!@postgres:5432/antiraid # Postgres URL
+  redis_url: redis://api_redis:6379/1 # Staging value
   jobserver_port: 5602
   port: 5600 
   bot_port: 10000
   cdn_path: /failuremgmt/cdn/antiraid # CDN Path
   secure_storage: /failuremgmt/sec/antiraid # Blob Storage URL
   urgent_mentions: <@&1061643797315993701> # Urgent mentions
-  proxy: http://127.0.0.1:3221 # Proxy URL
+  proxy: http://nirn_proxy:3221 # Proxy URL
   support_server_invite: https://discord.gg/9BJWSrEBBJ
-  sandwich_http_api: http://127.0.0.1:29334
+  sandwich_http_api: http://sandwich:29334
 
 object_storage:
   type: s3-like # Type of object storage. Can be s3-like or local
   path: antiraid # DEBUG: Use /failuremgmt/sec/antiraid for local debugging/development
-  endpoint: localhost:8333 # Endpoint for Seaweed
-  cdn_endpoint: objectstore.purrquinox.com # CDN Endpoint for Seaweed
+  endpoint: seaweed:8333 # Endpoint for Seaweed
+  cdn_endpoint: localhost:8333 # CDN Endpoint for Seaweed
   access_key: {s3_access_key} # Access Key for Seaweed
   secret_key: {s3_secret_key} # Secret Key for Seaweed
   secure: false
   cdn_secure: true
 
 base_ports:
-  jobserver_base_addr: http://localhost
-  bot_base_addr: http://localhost
+  jobserver_base_addr: http://jobserver
+  bot_base_addr: http://bot
   jobserver_bind_addr: 0.0.0.0
   bot_bind_addr: 0.0.0.0
   jobserver: 30000
   bot: 20000
-  template_worker_addr: 0.0.0.0
+  template_worker_base_addr: 0.0.0.0
+  template_worker_addr: template-worker
   template_worker_port: 60000
 """
 
