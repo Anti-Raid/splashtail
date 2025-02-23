@@ -25,7 +25,7 @@ if [ ! -f /etc/seaweedfs/s3.json ]; then \
 # We only care about server
 case "$1" in
   'server')
-  	ARGS="-dir=/data -volume.max=0 -master.volumePreallocate -master.volumeSizeLimitMB=4096 -filer.encryptVolumeData"
+  	ARGS="-dir=/data -volume.max=0 -master.volumePreallocate -master.volumeSizeLimitMB=4096 -filer.encryptVolumeData -s3.config=/etc/seaweedfs/s3.json"
  	shift
   	exec /usr/bin/weed -logtostderr=true server $ARGS $@
   	;;
