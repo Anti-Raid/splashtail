@@ -1,16 +1,4 @@
 services:
-  # Redis
-  api_redis:
-    container_name: api_redis
-    networks:
-      - antiraid_api # Only communicates with API
-    image: redis:7.2.7 # Use 7.2.7 to avoid licensing change with 7.4+
-    expose:
-      - 6379
-    command: redis-server --save 900 1 --save 300 10 --save 60 10000 --loglevel notice --bind 0.0.0.0
-    volumes:
-      - ./data/state/redis:/data
-
   # Nirn Proxy
   nirn_proxy:
     container_name: nirn_proxy
@@ -33,6 +21,8 @@ services:
       retries: 3
     ports:
       - "3222:3221" # And exposed to host for testing/auditing
+    labels:
+      type: "discord-rest"
 
   # Sandwich
   sandwich:
@@ -57,7 +47,10 @@ services:
       - "29334:29334" # Exposed to host for testing/auditing
       - "3931:3931" # Prometheus metrics
       - "3600:3600" # Websocket connection for the bot
+    labels:
+      type: "discord-gateway"
 
+  # Postgres database
   postgres:
     container_name: postgres
     networks:
@@ -75,6 +68,47 @@ services:
       interval: 3s
       timeout: 10s
       retries: 3
+    labels:
+      type: "database"
+
+  # Seaweed needs a postgres database to function
+  seaweed_postgres:
+    container_name: seaweed_postgres
+    networks:
+      - antiraid_seaweed # Exposed to SeaweedFS services
+    build:
+      context: ./data/docker/seaweed-postgres
+      dockerfile: ./Dockerfile
+    volumes:
+      - ./data/state/seaweed_postgres-other:/var/lib/postgresql
+      - ./data/state/seaweed_postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD", "pg_isready", "-U", "seaweed" ]
+      interval: 3s
+      timeout: 10s
+      retries: 3
+
+  # Seaweed FS itself 
+  seaweed:
+    container_name: seaweed
+    build:
+      context: ./data/docker/seaweed
+      dockerfile: ./Dockerfile
+    networks:
+      - antiraid_internal # Exposed to internal services
+      - antiraid_seaweed # Exposed to SeaweedFS services
+    depends_on:
+      seaweed_postgres:
+        condition: service_healthy
+    command: server -filer -s3 -volume.max=100 -master.port=9333 -volume.port=9334 -master.volumeSizeLimitMB=4096 -filer.encryptVolumeData
+    volumes:
+      - ./data/state/seaweed:/data
+      - ./data/state/seaweed-config:/etc/seaweedfs
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:9333/cluster/status" ]
+      interval: 10s
+      timeout: 10s
+      retries: 30
 
   # Bot process itself
   bot:
@@ -87,6 +121,8 @@ services:
       sandwich:
         condition: service_healthy
       postgres:
+        condition: service_healthy
+      template-worker:
         condition: service_healthy
     build:
       context: ./services/bot
@@ -103,8 +139,12 @@ services:
       interval: 3s
       timeout: 10s
       retries: 10
+    labels:
+      type: "service"
 
   # Template worker process
+  # The template worker is required for the bot to function as it handles Luau
+  # scripting and permissions etc.
   template-worker:
     container_name: template-worker
     networks:
@@ -116,8 +156,6 @@ services:
         condition: service_healthy
       postgres:
         condition: service_healthy
-      bot:
-        condition: service_started
     build:
       context: ./services/template-worker
       dockerfile: ./Dockerfile
@@ -130,11 +168,36 @@ services:
       SANDWICH_URL: http://sandwich:29334
       RUST_LOG: "template-worker=info"
     healthcheck:
-      test: [ "CMD", "curl", "-f", "http://localhost:60000" ]
+      test: [ "CMD", "curl", "-X", "POST", "-f", "http://localhost:60000/healthcheck" ]
       interval: 3s
       timeout: 10s
       retries: 100
+    labels:
+      type: "service"
 
+  # Redis
+  api_redis:
+    container_name: api_redis
+    networks:
+      - antiraid_api # Only communicates with API
+    image: redis:7.2.7 # Use 7.2.7 to avoid licensing change with 7.4+
+    expose:
+      - 6379
+    command: redis-server --save 900 1 --save 300 10 --save 60 10000 --loglevel notice --bind 0.0.0.0
+    volumes:
+      - ./data/state/redis:/data
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 3s
+      timeout: 10s
+      retries: 3
+    labels:
+      type: "cache"
+
+  # API process
+  # Like all other processes, the API process does not have external net access
+  # outside of Nirn proxy, however, the api_exposer Nginx proxy is used to bridge
+  # the gap between the API and the outside world.
   api:
     container_name: api
     networks:
@@ -158,9 +221,12 @@ services:
       REDIS_URL: redis://api_redis:6379/1
       PROXY_URL: http://nirn_proxy:3221
       BOT_URL: http://bot
+    labels:
+      type: "service"
+      special-networking-used: "api" # API has special networking needs, so we document that as a nice label
 
   # Nginx process to expose the API outwards while ensuring API itself doesn't get any
-  # external net access
+  # external net access. Bridges external and internal layers
   api_exposer:
     container_name: api_exposer
     networks:
@@ -192,5 +258,10 @@ networks:
   antiraid_api:
     # Used for internal API services (Redis/Nginx etc.)
     name: antiraid_api
+    driver: bridge
+    internal: true # No external net access
+  antiraid_seaweed:
+    # Used for internal SeaweedFS services
+    name: antiraid_seaweed
     driver: bridge
     internal: true # No external net access

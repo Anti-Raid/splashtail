@@ -28,8 +28,6 @@ ENV POSTGRES_PASSWORD=AnTiRaId123!
 ENV POSTGRES_DB=antiraid
 ENV POSTGRES_PORT=5432
 ENV POSTGRES_INITDB_ARGS="--encoding=UTF8 --locale=C --lc-collate=C --lc-ctype=C"
-ENV POSTGRES_INITDB_WALDIR=/var/lib/postgresql/wal
-ENV POSTGRES_INITDB_XLOGDIR=/var/lib/postgresql/xlog
 
 RUN git clone https://github.com/infinitybotlist/ibldev /ibl
 WORKDIR /ibl
