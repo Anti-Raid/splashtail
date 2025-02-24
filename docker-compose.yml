@@ -257,7 +257,7 @@ services:
       - "5600:5600" # Expose API to host
       - "5601:5601" # Expose SeaweedFS to host
     healthcheck:
-      test: [ "CMD", "curl", "-f", "http://localhost:8081" ]
+      test: [ "CMD", "curl", "-f", "http://localhost:5600/docs/splashtail" ]
       interval: 3s
       timeout: 10s
       retries: 3

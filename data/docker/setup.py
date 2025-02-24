@@ -97,7 +97,7 @@ object_storage:
   type: s3-like # Type of object storage. Can be s3-like or local
   path: antiraid # DEBUG: Use /failuremgmt/sec/antiraid for local debugging/development
   endpoint: seaweed:8333 # Endpoint for Seaweed
-  cdn_endpoint: localhost:5601 # CDN Endpoint for Seaweed
+  cdn_endpoint: $DOCKER:localhost:5601 # CDN Endpoint for Seaweed
   access_key: {s3_access_key} # Access Key for Seaweed
   secret_key: {s3_secret_key} # Secret Key for Seaweed
   secure: false
