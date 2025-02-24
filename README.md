@@ -34,7 +34,19 @@ In some cases, the internal representation of a type is not suitable for externa
 
 Note that if a canonical representation is used, the structs should be in a seperate file and the ``From<T>`` trait should be implemented on the canonical type for the internal type. This allows for easy conversion between the internal and canonical representations.
 
-## Self-Hosting and Deployment
+## Docker Compose Setup
+
+Prerequisites:
+
+- Python 3
+- Docker 
+- Docker Compose V2 (``docker compose`` and not ``docker-compose``)
+
+1. Clone this repository recursively using ``git clone https://github.com/Anti-Raid/antiraid --recursive``. This will clone all the submodules needed for AntiRaid to run.
+2. Run ``python3 data/docker/setup.py`` and input the bot token you want to run AntiRaid on along with its client id and client secret as well as a discord webhook for gateway alerts. This will setup all the needed config files in the needed place
+3. Run ``docker compose up`` to start the bot. This will build and start all the services needed for AntiRaid to run.
+
+## Manual Self-Hosting and Deployment
 
 ### Prerequisites
 
