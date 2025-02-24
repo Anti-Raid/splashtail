@@ -243,11 +243,13 @@ services:
     container_name: api_exposer
     networks:
       - antiraid_api
+      - antiraid_internal # Exposed to internal services
       - antiraid_infra # Needs access to the outside world
-      - antiraid_seaweed # Needs access to SeaweedFS
     depends_on:
       api:
         condition: service_started
+      seaweed:
+        condition: service_healthy
     image: nginx:1.27.4-alpine
     volumes:
       - ./data/docker/nginx.conf:/etc/nginx/conf.d/default.conf:ro
