@@ -190,6 +190,7 @@ services:
     container_name: jobserver
     networks:
       - antiraid_internal # Exposed to internal services
+      - antiraid_jobserver # Needs external net access too
     depends_on:
       nirn_proxy:
         condition: service_healthy
@@ -281,3 +282,8 @@ networks:
     name: antiraid_seaweed
     driver: bridge
     internal: true # No external net access
+  antiraid_jobserver:
+    # Used for internal Jobserver services
+    name: antiraid_jobserver
+    driver: bridge
+    internal: false # Needs external net access
