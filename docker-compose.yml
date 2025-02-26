@@ -100,7 +100,7 @@ services:
     depends_on:
       seaweed_postgres:
         condition: service_healthy
-    command: server -filer -s3 -volume.max=100 -master.port=9333 -volume.port=9334 -master.volumeSizeLimitMB=4096 -filer.encryptVolumeData
+    command: server -filer -s3 -volume.max=100 -master.port=9333 -volume.port=9334 -master.volumeSizeLimitMB=4096 -filer.encryptVolumeData -ip.bind=0.0.0.0
     volumes:
       - ./data/state/seaweed:/data
       - ./data/state/seaweed-config:/etc/seaweedfs
