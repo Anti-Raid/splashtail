@@ -1,0 +1,29 @@
+# Postgres database
+services:
+  postgres:
+    container_name: postgres
+    networks:
+      - antiraid_pgonly
+    ports:
+      - 5432:5432
+    build:
+      context: ./data/docker/postgres
+      dockerfile: ./Dockerfile
+    # Expose /seed.iblcli-seed
+    volumes:
+      - ./data/seed.iblcli-seed:/seed.iblcli-seed:ro
+      - ./data/state/postgres-other:/var/lib/postgresql
+      - ./data/state/postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD", "pg_isready", "-U", "antiraid" ]
+      interval: 3s
+      timeout: 10s
+      retries: 3
+    labels:
+      type: "database"
+
+networks:
+  antiraid_pgonly:
+    name: antiraid_pgonly
+    driver: bridge
+    internal: false # Infra needs external access
