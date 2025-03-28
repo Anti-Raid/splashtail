@@ -115,9 +115,9 @@ lintfull_go:
 
 update_go:
 	PWD=$(shell pwd)
-	for d in core/go.* services/go.*; do \
+	for d in core/go/* services/api services/jobserver; do \
 		echo $$d; \
-		cd $$d && go get -u ./... && cd ${PWD}; \
+		cd $$d && GOPROXY=direct go get -u ./... && cd ${PWD}; \
 	done
 
 gomodtidy:
