@@ -161,7 +161,7 @@ dependencies = [
 [[package]]
 name = "antiraid-types"
 version = "0.1.0"
-source = "git+https://github.com/Anti-Raid/antiraid-types#083aae201b08178e6c41d8c14cc50dc12eea32a0"
+source = "git+https://github.com/anti-raid/antiraid-types#083aae201b08178e6c41d8c14cc50dc12eea32a0"
 dependencies = [
  "chrono",
  "extract_map",
@@ -192,7 +192,7 @@ dependencies = [
 [[package]]
 name = "ar_settings"
 version = "6.0.0"
-source = "git+https://github.com/Anti-Raid/settings#63413676937ed6fc2f7dfd60db389b55459dc59f"
+source = "git+https://github.com/anti-raid/settings#63413676937ed6fc2f7dfd60db389b55459dc59f"
 dependencies = [
  "async-trait",
  "chrono",
@@ -330,9 +330,9 @@ dependencies = [
 
 [[package]]
 name = "aws-lc-rs"
-version = "1.12.6"
+version = "1.13.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dabb68eb3a7aa08b46fddfd59a3d55c978243557a90ab804769f7e20e67d2b01"
+checksum = "19b756939cb2f8dc900aa6dcd505e6e2428e9cae7ff7b028c49e3946efa70878"
 dependencies = [
  "aws-lc-sys",
  "zeroize",
@@ -340,9 +340,9 @@ dependencies = [
 
 [[package]]
 name = "aws-lc-sys"
-version = "0.27.1"
+version = "0.28.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "77926887776171ced7d662120a75998e444d3750c951abfe07f90da130514b1f"
+checksum = "b9f7720b74ed28ca77f90769a71fd8c637a0137f6fae4ae947e1050229cff57f"
 dependencies = [
  "bindgen",
  "cc",
@@ -379,9 +379,9 @@ dependencies = [
 
 [[package]]
 name = "aws-sdk-s3"
-version = "1.81.0"
+version = "1.82.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fb2ea66273123dbffd673dc7a2a04184cdd0c77f81d5c919bd6a4f4733a75094"
+checksum = "e6eab2900764411ab01c8e91a76fd11a63b4e12bc3da97d9e14a0ce1343d86d3"
 dependencies = [
  "aws-credential-types",
  "aws-runtime",
@@ -1009,7 +1009,7 @@ version = "1.2.17"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1fcb57c740ae1daf453ae85f16e37396f672b039e00d9d866e07ddb24e328e3a"
 dependencies = [
- "jobserver 0.1.32",
+ "jobserver 0.1.33",
  "libc",
  "shlex",
 ]
@@ -1109,9 +1109,9 @@ dependencies = [
 
 [[package]]
 name = "clap"
-version = "4.5.34"
+version = "4.5.35"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e958897981290da2a852763fe9cdb89cd36977a5d729023127095fa94d95e2ff"
+checksum = "d8aa86934b44c19c50f87cc2790e19f54f7a67aedb64101c2e1a2e5ecfb73944"
 dependencies = [
  "clap_builder",
  "clap_derive",
@@ -1119,9 +1119,9 @@ dependencies = [
 
 [[package]]
 name = "clap_builder"
-version = "4.5.34"
+version = "4.5.35"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "83b0f35019843db2160b5bb19ae09b4e6411ac33fc6a712003c33e03090e2489"
+checksum = "2414dbb2dd0695280da6ea9261e327479e9d37b0630f6b53ba2a11c60c679fd9"
 dependencies = [
  "anstream",
  "anstyle",
@@ -1553,9 +1553,9 @@ dependencies = [
 
 [[package]]
 name = "env_logger"
-version = "0.11.7"
+version = "0.11.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c3716d7a920fb4fac5d84e9d4bce8ceb321e9414b4409da61b07b75c1e3d0697"
+checksum = "13c863f0904021b108aa8b2f55046443e6b1ebde8fd4a15c399893aae4fa069f"
 dependencies = [
  "anstream",
  "anstyle",
@@ -2229,9 +2229,9 @@ dependencies = [
 
 [[package]]
 name = "hyper-util"
-version = "0.1.10"
+version = "0.1.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "df2dcfbe0677734ab2f3ffa7fa7bfd4706bfdc1ef393f2ee30184aed67e631b4"
+checksum = "497bbc33a26fdd4af9ed9c70d63f61cf56a938375fbb32df34db9b1cd6d643f2"
 dependencies = [
  "bytes",
  "futures-channel",
@@ -2239,6 +2239,7 @@ dependencies = [
  "http 1.3.1",
  "http-body 1.0.1",
  "hyper 1.6.0",
+ "libc",
  "pin-project-lite",
  "socket2",
  "tokio",
@@ -2248,9 +2249,9 @@ dependencies = [
 
 [[package]]
 name = "iana-time-zone"
-version = "0.1.62"
+version = "0.1.63"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b2fd658b06e56721792c5df4475705b6cda790e9298d19d2f8af083457bcd127"
+checksum = "b0c919e5debc312ad217002b8048a17b7d83f80703865bbfcfebb0458b0b27d8"
 dependencies = [
  "android_system_properties",
  "core-foundation-sys",
@@ -2258,7 +2259,7 @@ dependencies = [
  "js-sys",
  "log",
  "wasm-bindgen",
- "windows-core 0.52.0",
+ "windows-core 0.61.0",
 ]
 
 [[package]]
@@ -2473,6 +2474,25 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d0263a3d970d5c054ed9312c0057b4f3bde9c0b33836d3637361d4a9e6e7a408"
 
 [[package]]
+name = "include_dir"
+version = "0.7.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "923d117408f1e49d914f1a379a309cffe4f18c05cf4e3d12e613a15fc81bd0dd"
+dependencies = [
+ "include_dir_macros",
+]
+
+[[package]]
+name = "include_dir_macros"
+version = "0.7.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7cab85a7ed0bd5f0e76d93846e0147172bed2e2d3f859bcc33a8d9699cad1a75"
+dependencies = [
+ "proc-macro2",
+ "quote",
+]
+
+[[package]]
 name = "indexmap"
 version = "2.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2592,7 +2612,7 @@ dependencies = [
 [[package]]
 name = "jobserver"
 version = "0.1.0"
-source = "git+https://github.com/Anti-Raid/corelib_rs#66a6a9cdb2d83f88896583a94a08b3cd2bc83207"
+source = "git+https://github.com/Anti-Raid/corelib_rs#acd47d16eab12d89a3fdd920c7e125e009731bdf"
 dependencies = [
  "chrono",
  "futures-util",
@@ -2609,10 +2629,11 @@ dependencies = [
 
 [[package]]
 name = "jobserver"
-version = "0.1.32"
+version = "0.1.33"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "48d1dbcbbeb6a7fec7e059840aa538bd62aaccf972c7346c4d9d2059312853d0"
+checksum = "38f262f097c174adebe41eb73d66ae9c06b2844fb0da69969647bbddd9b0538a"
 dependencies = [
+ "getrandom 0.3.2",
  "libc",
 ]
 
@@ -2644,7 +2665,7 @@ dependencies = [
 [[package]]
 name = "khronos_runtime"
 version = "1.0.0"
-source = "git+https://github.com/anti-raid/khronos#143adcd3c6fce4fca3ce089d777f636a5bc4feb4"
+source = "git+https://github.com/anti-raid/khronos#61acfe050fd44395ce886438fd5915d183ec18bb"
 dependencies = [
  "antiraid-types",
  "arrayvec",
@@ -2663,6 +2684,7 @@ dependencies = [
  "hmac",
  "indexmap",
  "kittycat",
+ "lockdowns",
  "log",
  "lz4",
  "md-5",
@@ -2771,7 +2793,7 @@ version = "0.1.0"
 [[package]]
 name = "limits"
 version = "0.1.0"
-source = "git+https://github.com/Anti-Raid/corelib_rs#66a6a9cdb2d83f88896583a94a08b3cd2bc83207"
+source = "git+https://github.com/Anti-Raid/corelib_rs#acd47d16eab12d89a3fdd920c7e125e009731bdf"
 
 [[package]]
 name = "linux-raw-sys"
@@ -2804,7 +2826,7 @@ dependencies = [
 [[package]]
 name = "lockdowns"
 version = "0.1.0"
-source = "git+https://github.com/Anti-Raid/lockdowns#5b3143b13d9c21efdae7cc1f8e5d32124dda68a3"
+source = "git+https://github.com/Anti-Raid/lockdowns#ad940f13f96d9529407ded869a4932d1f53a2bdb"
 dependencies = [
  "async-trait",
  "chrono",
@@ -2857,9 +2879,9 @@ dependencies = [
 
 [[package]]
 name = "luau0-src"
-version = "0.12.3+luau663"
+version = "0.13.0+luau667"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "76ae337c644bbf86a8d8e9ce3ee023311833d41741baf5e51acc31b37843aba1"
+checksum = "06da345d11ee4cb827892fb63eab424790ae33dc12b428a72b0253ec86ebe919"
 dependencies = [
  "cc",
 ]
@@ -2980,7 +3002,7 @@ dependencies = [
 [[package]]
 name = "mlua"
 version = "0.10.3"
-source = "git+https://github.com/mlua-rs/mlua#1f970824b4f8187a86794fb08e0a1093a58737af"
+source = "git+https://github.com/mlua-rs/mlua#c1a018a60d31fb6ad008ff816592b081a18f4797"
 dependencies = [
  "bstr",
  "either",
@@ -2999,7 +3021,7 @@ dependencies = [
 [[package]]
 name = "mlua-sys"
 version = "0.6.7"
-source = "git+https://github.com/mlua-rs/mlua#1f970824b4f8187a86794fb08e0a1093a58737af"
+source = "git+https://github.com/mlua-rs/mlua#c1a018a60d31fb6ad008ff816592b081a18f4797"
 dependencies = [
  "cc",
  "cfg-if",
@@ -3010,7 +3032,7 @@ dependencies = [
 [[package]]
 name = "mlua_derive"
 version = "0.10.1"
-source = "git+https://github.com/mlua-rs/mlua#1f970824b4f8187a86794fb08e0a1093a58737af"
+source = "git+https://github.com/mlua-rs/mlua#c1a018a60d31fb6ad008ff816592b081a18f4797"
 dependencies = [
  "itertools 0.13.0",
  "once_cell",
@@ -3024,7 +3046,7 @@ dependencies = [
 [[package]]
 name = "mlua_scheduler"
 version = "1.0.0"
-source = "git+https://github.com/anti-raid/mlua_scheduler#e32983962320290f7f286ad3ab826f96c9d21558"
+source = "git+https://github.com/anti-raid/mlua_scheduler#47eaa08504e8f82dc3b2532f66a2e6e49bae1cfc"
 dependencies = [
  "futures-util",
  "log",
@@ -3035,7 +3057,7 @@ dependencies = [
 [[package]]
 name = "mlua_scheduler_ext"
 version = "1.0.0"
-source = "git+https://github.com/anti-raid/mlua_scheduler#e32983962320290f7f286ad3ab826f96c9d21558"
+source = "git+https://github.com/anti-raid/mlua_scheduler#47eaa08504e8f82dc3b2532f66a2e6e49bae1cfc"
 dependencies = [
  "log",
  "mlua",
@@ -4155,7 +4177,7 @@ dependencies = [
 [[package]]
 name = "rust_rpc_server"
 version = "6.0.0"
-source = "git+https://github.com/Anti-Raid/corelib_rs#66a6a9cdb2d83f88896583a94a08b3cd2bc83207"
+source = "git+https://github.com/Anti-Raid/corelib_rs#acd47d16eab12d89a3fdd920c7e125e009731bdf"
 dependencies = [
  "axum",
  "hyper 1.6.0",
@@ -4207,9 +4229,9 @@ dependencies = [
 
 [[package]]
 name = "rustix"
-version = "1.0.3"
+version = "1.0.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e56a18552996ac8d29ecc3b190b4fdbb2d91ca4ec396de7bbffaf43f3d637e96"
+checksum = "d97817398dd4bb2e6da002002db259209759911da105da92bec29ccb12cf58bf"
 dependencies = [
  "bitflags 2.9.0",
  "errno",
@@ -4404,7 +4426,7 @@ dependencies = [
 [[package]]
 name = "sandwich_driver"
 version = "6.0.0"
-source = "git+https://github.com/Anti-Raid/corelib_rs#66a6a9cdb2d83f88896583a94a08b3cd2bc83207"
+source = "git+https://github.com/Anti-Raid/corelib_rs#acd47d16eab12d89a3fdd920c7e125e009731bdf"
 dependencies = [
  "log",
  "reqwest",
@@ -4787,7 +4809,7 @@ dependencies = [
 [[package]]
 name = "silverpelt"
 version = "0.1.0"
-source = "git+https://github.com/Anti-Raid/corelib_rs#66a6a9cdb2d83f88896583a94a08b3cd2bc83207"
+source = "git+https://github.com/Anti-Raid/corelib_rs#acd47d16eab12d89a3fdd920c7e125e009731bdf"
 dependencies = [
  "antiraid-types",
  "async-trait",
@@ -4871,9 +4893,9 @@ dependencies = [
 
 [[package]]
 name = "socket2"
-version = "0.5.8"
+version = "0.5.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c970269d99b64e60ec3bd6ad27270092a5394c4e309314b18ae3fe575695fbe8"
+checksum = "4f5fd57c80058a56cf5c777ab8a126398ece8e442983605d280a44ce79d0edef"
 dependencies = [
  "libc",
  "windows-sys 0.52.0",
@@ -5248,7 +5270,7 @@ dependencies = [
  "fastrand",
  "getrandom 0.3.2",
  "once_cell",
- "rustix 1.0.3",
+ "rustix 1.0.5",
  "windows-sys 0.59.0",
 ]
 
@@ -5267,6 +5289,7 @@ dependencies = [
  "env_logger",
  "governor",
  "gwevent",
+ "include_dir",
  "indexmap",
  "khronos_runtime",
  "limits 0.1.0 (git+https://github.com/Anti-Raid/corelib_rs)",
@@ -6150,24 +6173,28 @@ dependencies = [
 
 [[package]]
 name = "windows-core"
-version = "0.52.0"
+version = "0.58.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "33ab640c8d7e35bf8ba19b884ba838ceb4fba93a4e8c65a9059d08afcfc683d9"
+checksum = "6ba6d44ec8c2591c134257ce647b7ea6b20335bf6379a27dac5f1641fcf59f99"
 dependencies = [
+ "windows-implement 0.58.0",
+ "windows-interface 0.58.0",
+ "windows-result 0.2.0",
+ "windows-strings 0.1.0",
  "windows-targets 0.52.6",
 ]
 
 [[package]]
 name = "windows-core"
-version = "0.58.0"
+version = "0.61.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6ba6d44ec8c2591c134257ce647b7ea6b20335bf6379a27dac5f1641fcf59f99"
+checksum = "4763c1de310c86d75a878046489e2e5ba02c649d185f21c67d4cf8a56d098980"
 dependencies = [
- "windows-implement",
- "windows-interface",
- "windows-result 0.2.0",
- "windows-strings 0.1.0",
- "windows-targets 0.52.6",
+ "windows-implement 0.60.0",
+ "windows-interface 0.59.1",
+ "windows-link",
+ "windows-result 0.3.2",
+ "windows-strings 0.4.0",
 ]
 
 [[package]]
@@ -6182,10 +6209,32 @@ dependencies = [
 ]
 
 [[package]]
+name = "windows-implement"
+version = "0.60.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a47fddd13af08290e67f4acabf4b459f647552718f683a7b415d290ac744a836"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.100",
+]
+
+[[package]]
 name = "windows-interface"
 version = "0.58.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "053c4c462dc91d3b1504c6fe5a726dd15e216ba718e84a0e46a88fbe5ded3515"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.100",
+]
+
+[[package]]
+name = "windows-interface"
+version = "0.59.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bd9211b69f8dcdfa817bfd14bf1c97c9188afa36f4750130fcdf3f400eca9fa8"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -6242,6 +6291,15 @@ name = "windows-strings"
 version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "87fa48cc5d406560701792be122a10132491cff9d0aeb23583cc2dcafc847319"
+dependencies = [
+ "windows-link",
+]
+
+[[package]]
+name = "windows-strings"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7a2ba9642430ee452d5a7aa78d72907ebe8cfda358e8cb7918a2050581322f97"
 dependencies = [
  "windows-link",
 ]
