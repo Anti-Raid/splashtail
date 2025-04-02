@@ -1680,9 +1680,9 @@ checksum = "94c970b525906eb37d3940083aa65b95e481fc1857d467d13374e1d925cfc163"
 
 [[package]]
 name = "flate2"
-version = "1.1.0"
+version = "1.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "11faaf5a5236997af9848be0bef4db95824b1d534ebc64d0f0c6cf3e67bd38dc"
+checksum = "7ced92e76e966ca2fd84c8f7aa01a4aea65b0eb6648d72f7c8f3e2764a67fece"
 dependencies = [
  "crc32fast",
  "miniz_oxide",
@@ -2665,7 +2665,7 @@ dependencies = [
 [[package]]
 name = "khronos_runtime"
 version = "1.0.0"
-source = "git+https://github.com/anti-raid/khronos#61acfe050fd44395ce886438fd5915d183ec18bb"
+source = "git+https://github.com/anti-raid/khronos#9fef3890d4f4210d14aa5312c51a92133b6d8297"
 dependencies = [
  "antiraid-types",
  "arrayvec",
@@ -3046,7 +3046,7 @@ dependencies = [
 [[package]]
 name = "mlua_scheduler"
 version = "1.0.0"
-source = "git+https://github.com/anti-raid/mlua_scheduler#47eaa08504e8f82dc3b2532f66a2e6e49bae1cfc"
+source = "git+https://github.com/anti-raid/mlua_scheduler?rev=e32983962320290f7f286ad3ab826f96c9d21558#e32983962320290f7f286ad3ab826f96c9d21558"
 dependencies = [
  "futures-util",
  "log",
@@ -3057,7 +3057,7 @@ dependencies = [
 [[package]]
 name = "mlua_scheduler_ext"
 version = "1.0.0"
-source = "git+https://github.com/anti-raid/mlua_scheduler#47eaa08504e8f82dc3b2532f66a2e6e49bae1cfc"
+source = "git+https://github.com/anti-raid/mlua_scheduler?rev=e32983962320290f7f286ad3ab826f96c9d21558#e32983962320290f7f286ad3ab826f96c9d21558"
 dependencies = [
  "log",
  "mlua",
