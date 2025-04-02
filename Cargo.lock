@@ -2612,7 +2612,7 @@ dependencies = [
 [[package]]
 name = "jobserver"
 version = "0.1.0"
-source = "git+https://github.com/Anti-Raid/corelib_rs#acd47d16eab12d89a3fdd920c7e125e009731bdf"
+source = "git+https://github.com/Anti-Raid/corelib_rs#e0125bee9bfeb37fe4e644dd8e20995031e7b89e"
 dependencies = [
  "chrono",
  "futures-util",
@@ -2793,7 +2793,7 @@ version = "0.1.0"
 [[package]]
 name = "limits"
 version = "0.1.0"
-source = "git+https://github.com/Anti-Raid/corelib_rs#acd47d16eab12d89a3fdd920c7e125e009731bdf"
+source = "git+https://github.com/Anti-Raid/corelib_rs#e0125bee9bfeb37fe4e644dd8e20995031e7b89e"
 
 [[package]]
 name = "linux-raw-sys"
@@ -4177,7 +4177,7 @@ dependencies = [
 [[package]]
 name = "rust_rpc_server"
 version = "6.0.0"
-source = "git+https://github.com/Anti-Raid/corelib_rs#acd47d16eab12d89a3fdd920c7e125e009731bdf"
+source = "git+https://github.com/Anti-Raid/corelib_rs#e0125bee9bfeb37fe4e644dd8e20995031e7b89e"
 dependencies = [
  "axum",
  "hyper 1.6.0",
@@ -4426,7 +4426,7 @@ dependencies = [
 [[package]]
 name = "sandwich_driver"
 version = "6.0.0"
-source = "git+https://github.com/Anti-Raid/corelib_rs#acd47d16eab12d89a3fdd920c7e125e009731bdf"
+source = "git+https://github.com/Anti-Raid/corelib_rs#e0125bee9bfeb37fe4e644dd8e20995031e7b89e"
 dependencies = [
  "log",
  "reqwest",
@@ -4809,7 +4809,7 @@ dependencies = [
 [[package]]
 name = "silverpelt"
 version = "0.1.0"
-source = "git+https://github.com/Anti-Raid/corelib_rs#acd47d16eab12d89a3fdd920c7e125e009731bdf"
+source = "git+https://github.com/Anti-Raid/corelib_rs#e0125bee9bfeb37fe4e644dd8e20995031e7b89e"
 dependencies = [
  "antiraid-types",
  "async-trait",
