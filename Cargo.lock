@@ -2665,7 +2665,7 @@ dependencies = [
 [[package]]
 name = "khronos_runtime"
 version = "1.0.0"
-source = "git+https://github.com/anti-raid/khronos#d4461a3a123d5ad093c033e5b278dabb9de0a860"
+source = "git+https://github.com/anti-raid/khronos#2e2afcd42800e2b8d62be9c7dee604d2ce475a20"
 dependencies = [
  "antiraid-types",
  "arrayvec",
@@ -3046,7 +3046,7 @@ dependencies = [
 [[package]]
 name = "mlua_scheduler"
 version = "1.0.0"
-source = "git+https://github.com/anti-raid/mlua_scheduler#80109f159c456e1dd26ed4899b2d3d46b7ce6997"
+source = "git+https://github.com/anti-raid/mlua_scheduler#3ca5d3cd6ed4f70171a9421b0cce947a81965727"
 dependencies = [
  "futures-util",
  "log",
@@ -3057,7 +3057,7 @@ dependencies = [
 [[package]]
 name = "mlua_scheduler_ext"
 version = "1.0.0"
-source = "git+https://github.com/anti-raid/mlua_scheduler#80109f159c456e1dd26ed4899b2d3d46b7ce6997"
+source = "git+https://github.com/anti-raid/mlua_scheduler#3ca5d3cd6ed4f70171a9421b0cce947a81965727"
 dependencies = [
  "log",
  "mlua",
