@@ -1005,9 +1005,9 @@ dependencies = [
 
 [[package]]
 name = "cc"
-version = "1.2.17"
+version = "1.2.18"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1fcb57c740ae1daf453ae85f16e37396f672b039e00d9d866e07ddb24e328e3a"
+checksum = "525046617d8376e3db1deffb079e91cef90a89fc3ca5c185bbf8c9ecdd15cd5c"
 dependencies = [
  "jobserver 0.1.33",
  "libc",
@@ -1582,9 +1582,9 @@ dependencies = [
 
 [[package]]
 name = "errno"
-version = "0.3.10"
+version = "0.3.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "33d852cb9b869c2a9b3df2f71a3074817f01e1844f839a144f5fcef059a4eb5d"
+checksum = "976dd42dc7e85965fe702eb8164f21f450704bdde31faefd6471dba214cb594e"
 dependencies = [
  "libc",
  "windows-sys 0.59.0",
@@ -2665,7 +2665,7 @@ dependencies = [
 [[package]]
 name = "khronos_runtime"
 version = "1.0.0"
-source = "git+https://github.com/anti-raid/khronos#9fef3890d4f4210d14aa5312c51a92133b6d8297"
+source = "git+https://github.com/anti-raid/khronos#8b0edefefd07d6e6bbff5556a8f2e5d6b1031adc"
 dependencies = [
  "antiraid-types",
  "arrayvec",
@@ -2980,9 +2980,9 @@ checksum = "68354c5c6bd36d73ff3feceb05efa59b6acb7626617f4962be322a825e61f79a"
 
 [[package]]
 name = "miniz_oxide"
-version = "0.8.5"
+version = "0.8.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8e3e04debbb59698c15bacbb6d93584a8c0ca9cc3213cb423d31f760d8843ce5"
+checksum = "ff70ce3e48ae43fa075863cef62e8b43b71a4f2382229920e0df362592919430"
 dependencies = [
  "adler2",
  "simd-adler32",
@@ -3002,7 +3002,7 @@ dependencies = [
 [[package]]
 name = "mlua"
 version = "0.10.3"
-source = "git+https://github.com/mlua-rs/mlua#c1a018a60d31fb6ad008ff816592b081a18f4797"
+source = "git+https://github.com/Anti-Raid/mlua#176b6f6e17d9cba5dbbf8da61a047376e092b2d1"
 dependencies = [
  "bstr",
  "either",
@@ -3021,7 +3021,7 @@ dependencies = [
 [[package]]
 name = "mlua-sys"
 version = "0.6.7"
-source = "git+https://github.com/mlua-rs/mlua#c1a018a60d31fb6ad008ff816592b081a18f4797"
+source = "git+https://github.com/Anti-Raid/mlua#176b6f6e17d9cba5dbbf8da61a047376e092b2d1"
 dependencies = [
  "cc",
  "cfg-if",
@@ -3032,7 +3032,7 @@ dependencies = [
 [[package]]
 name = "mlua_derive"
 version = "0.10.1"
-source = "git+https://github.com/mlua-rs/mlua#c1a018a60d31fb6ad008ff816592b081a18f4797"
+source = "git+https://github.com/Anti-Raid/mlua#176b6f6e17d9cba5dbbf8da61a047376e092b2d1"
 dependencies = [
  "itertools 0.13.0",
  "once_cell",
@@ -3046,7 +3046,7 @@ dependencies = [
 [[package]]
 name = "mlua_scheduler"
 version = "1.0.0"
-source = "git+https://github.com/anti-raid/mlua_scheduler?rev=e32983962320290f7f286ad3ab826f96c9d21558#e32983962320290f7f286ad3ab826f96c9d21558"
+source = "git+https://github.com/anti-raid/mlua_scheduler#80109f159c456e1dd26ed4899b2d3d46b7ce6997"
 dependencies = [
  "futures-util",
  "log",
@@ -3057,7 +3057,7 @@ dependencies = [
 [[package]]
 name = "mlua_scheduler_ext"
 version = "1.0.0"
-source = "git+https://github.com/anti-raid/mlua_scheduler?rev=e32983962320290f7f286ad3ab826f96c9d21558#e32983962320290f7f286ad3ab826f96c9d21558"
+source = "git+https://github.com/anti-raid/mlua_scheduler#80109f159c456e1dd26ed4899b2d3d46b7ce6997"
 dependencies = [
  "log",
  "mlua",
