@@ -21,20 +21,21 @@ The above limits are in place to prevent abuse and ensure that the bot remains r
 
 ## Some key notes
 
-- Each guild is assigned a dedicated Lua VM. This VM is used to execute Lua code that is used in the templates.
+- Each guild is assigned a dedicated Lua(u) VM. This VM is used to execute Lua code that is used in the templates.
 - The total memory usage that a guild can use is limited to ``MAX_TEMPLATE_MEMORY_USAGE`` (currently 3MB). This is to prevent a single guild from using too much memory.
 - Execution of all scripts is timed out when the last executed script takes longer than ``MAX_TEMPLATES_EXECUTION_TIME`` (currently 30 seconds).
-- A guilds Lua VM will persist until marked as broken (either by explicitly requesting it or by exceeding memory limits)
-- AntiRaid monkey-patches ``_G`` to be read-write for new values while preserving Luau's sandboxing features. This means that builtins will remain read-only, but new values can be added.
-- The standard ``require`` statement can be used to import AntiRaid plugins. **Note that plugins are read-only** and cannot be monkey-patched etc.
+- A guilds Lua(u) VM will persist until marked as broken (either by explicitly requesting it or by exceeding memory limits)
+- While a guilds Lua(u) VM will internally have a read-only shared global table, AntiRaid provides a special global table that is isolated at the template level with a custom ``__index`` and ``__metatable`` set to proxy writes (similar to Roblox's setup). This means that builtins will remain read-only, but new values can be added.
+- The standard ``require`` statement can be used to either import AntiRaid plugins or to import other Luau assets that belong to the template. AntiRaid internally uses standard Luau require-by-string semantics with support for ``init.luau`` files for requires.
+- Note that plugins are read-only/sandboxed and cannot be monkey-patched etc.
 - All templates are executed as Luau threads.
 
 In general, all AntiRaid templates should start with the following:
 
 ```lua
-local args, token = ...
+local evt, token = ...
 -- Do something
-return output
+return output -- Optionally return something here
 ```
 
 ## Interop
@@ -52,7 +53,7 @@ setmetatable({a = 5}, interop.array_metatable)
 
 ### Null
 
-While the Lua ``nil`` does work in many cases (and even when calling the SDK), its not the best choice. When querying AntiRaid SDK, the SDK will use the ``@antiraid/interop#null`` value to represent a null value. Your Lua templates can also use this value if desired
+In some instances, interactions with AntiRaid may yield a special ``null`` lightuserdata value. This lightuserdata value is exposed under ``@antiraid/interop#null`` and can also be used template-side as desired:
 
 ```lua
 local interop = require '@antiraid/interop'
