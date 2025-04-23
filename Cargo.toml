@@ -6,6 +6,7 @@ members = [
     "core/rust/rust.*"
 ]
 exclude = [
+    "infra/templating-types",
     "infra/templating-types/darklua", # Avoid workspace conflicts
     "infra/templating-template/darklua"
 ]
