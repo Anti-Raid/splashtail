@@ -37,3 +37,6 @@
 [submodule "infra/templating-types"]
 	path = infra/templating-types
 	url = https://github.com/anti-raid/templating-types
+[submodule "builtins"]
+	path = builtins
+	url = https://github.com/anti-raid/builtins
