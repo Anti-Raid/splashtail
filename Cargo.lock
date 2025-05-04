@@ -1734,6 +1734,7 @@ checksum = "da0e4dd2a88388a1f4ccc7c9ce104604dab68d9f408dc34cd45823d5a9069095"
 dependencies = [
  "futures-core",
  "futures-sink",
+ "nanorand",
  "spin",
 ]
 
@@ -2639,9 +2640,9 @@ checksum = "4a5f13b858c8d314ee3e8f639011f7ccefe71f97f96e50151fb991f267928e2c"
 
 [[package]]
 name = "jiff"
-version = "0.2.11"
+version = "0.2.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "27e77966151130221b079bcec80f1f34a9e414fa489d99152a201c07fd2182bc"
+checksum = "d07d8d955d798e7a4d6f9c58cd1f1916e790b42b092758a9ef6e16fef9f1b3fd"
 dependencies = [
  "jiff-static",
  "log",
@@ -2652,9 +2653,9 @@ dependencies = [
 
 [[package]]
 name = "jiff-static"
-version = "0.2.11"
+version = "0.2.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "97265751f8a9a4228476f2fc17874a9e7e70e96b893368e42619880fe143b48a"
+checksum = "f244cfe006d98d26f859c7abd1318d85327e1882dc9cef80f62daeeb0adcf300"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -2734,7 +2735,7 @@ dependencies = [
 [[package]]
 name = "khronos_runtime"
 version = "1.0.0"
-source = "git+https://github.com/anti-raid/khronos#506c62619d0b47131c62713b0409236e09215042"
+source = "git+https://github.com/anti-raid/khronos#74e75f5149f8ab3b00341f6879ddd32b177657c3"
 dependencies = [
  "antiraid-types",
  "arrayvec",
@@ -2747,6 +2748,7 @@ dependencies = [
  "chrono_lc",
  "digest",
  "extract_map",
+ "flume",
  "glam",
  "governor",
  "hmac",
@@ -3134,7 +3136,7 @@ dependencies = [
 [[package]]
 name = "mlua_scheduler"
 version = "1.0.0"
-source = "git+https://github.com/anti-raid/mlua_scheduler#c60709e5a685b799a4abdf462e37961a71ee9537"
+source = "git+https://github.com/anti-raid/mlua_scheduler#ae7244651be2be12c455771dcdbb0144feba11ac"
 dependencies = [
  "futures-util",
  "log",
@@ -3145,7 +3147,7 @@ dependencies = [
 [[package]]
 name = "mlua_scheduler_ext"
 version = "1.0.0"
-source = "git+https://github.com/anti-raid/mlua_scheduler#c60709e5a685b799a4abdf462e37961a71ee9537"
+source = "git+https://github.com/anti-raid/mlua_scheduler#ae7244651be2be12c455771dcdbb0144feba11ac"
 dependencies = [
  "log",
  "mlua",
@@ -3188,6 +3190,15 @@ dependencies = [
  "num-traits",
  "simba",
  "typenum",
+]
+
+[[package]]
+name = "nanorand"
+version = "0.7.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6a51313c5820b0b02bd422f4b44776fbf47961755c74ce64afc73bfad10226c3"
+dependencies = [
+ "getrandom 0.2.16",
 ]
 
 [[package]]
@@ -4084,9 +4095,9 @@ dependencies = [
 
 [[package]]
 name = "redox_syscall"
-version = "0.5.11"
+version = "0.5.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d2f103c6d277498fbceb16e84d317e2a400f160f46904d5f5410848c829511a3"
+checksum = "928fca9cf2aa042393a8325b9ead81d2f0df4cb12e1e24cef072922ccd99c5af"
 dependencies = [
  "bitflags 2.9.0",
 ]
@@ -5462,6 +5473,7 @@ dependencies = [
  "clap",
  "dashmap 6.1.0",
  "env_logger",
+ "flume",
  "governor",
  "gwevent",
  "include_dir",
