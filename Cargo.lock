@@ -161,7 +161,7 @@ dependencies = [
 [[package]]
 name = "antiraid-types"
 version = "0.1.0"
-source = "git+https://github.com/anti-raid/antiraid-types#3a330641c98eebe5187b6d515d44e56e2da9a43f"
+source = "git+https://github.com/Anti-Raid/antiraid-types#3a330641c98eebe5187b6d515d44e56e2da9a43f"
 dependencies = [
  "chrono",
  "extract_map",
@@ -192,7 +192,7 @@ dependencies = [
 [[package]]
 name = "ar_settings"
 version = "6.0.0"
-source = "git+https://github.com/anti-raid/settings#7a83d880c86b63971e47e604fe45ba01086ca639"
+source = "git+https://github.com/Anti-Raid/settings#7a83d880c86b63971e47e604fe45ba01086ca639"
 dependencies = [
  "async-trait",
  "chrono",
@@ -771,7 +771,7 @@ dependencies = [
  "bitflags 2.9.0",
  "cexpr",
  "clang-sys",
- "itertools 0.12.1",
+ "itertools 0.10.5",
  "lazy_static",
  "lazycell",
  "log",
@@ -2329,7 +2329,7 @@ dependencies = [
  "js-sys",
  "log",
  "wasm-bindgen",
- "windows-core 0.61.0",
+ "windows-core",
 ]
 
 [[package]]
@@ -2682,7 +2682,7 @@ dependencies = [
 [[package]]
 name = "jobserver"
 version = "0.1.0"
-source = "git+https://github.com/Anti-Raid/corelib_rs#c7c7ed4b873e8da66c6d1948b4b5a0351ef9fa7b"
+source = "git+https://github.com/Anti-Raid/corelib_rs#62bc668507fca9ee2059fe6daf7a1def34a932d2"
 dependencies = [
  "chrono",
  "futures-util",
@@ -2735,7 +2735,7 @@ dependencies = [
 [[package]]
 name = "khronos_runtime"
 version = "1.0.0"
-source = "git+https://github.com/anti-raid/khronos#74e75f5149f8ab3b00341f6879ddd32b177657c3"
+source = "git+https://github.com/anti-raid/khronos#4ca9a02fce69a50d0415de69b2917b606b27aaa8"
 dependencies = [
  "antiraid-types",
  "arrayvec",
@@ -2749,6 +2749,7 @@ dependencies = [
  "digest",
  "extract_map",
  "flume",
+ "futures-util",
  "glam",
  "governor",
  "hmac",
@@ -2877,7 +2878,7 @@ version = "0.1.0"
 [[package]]
 name = "limits"
 version = "0.1.0"
-source = "git+https://github.com/Anti-Raid/corelib_rs#c7c7ed4b873e8da66c6d1948b4b5a0351ef9fa7b"
+source = "git+https://github.com/Anti-Raid/corelib_rs#62bc668507fca9ee2059fe6daf7a1def34a932d2"
 
 [[package]]
 name = "linkify"
@@ -2971,8 +2972,9 @@ dependencies = [
 
 [[package]]
 name = "luau0-src"
-version = "0.13.0+luau667"
-source = "git+https://github.com/mlua-rs/luau-src-rs?rev=dc1102e#dc1102eb475b2fb65d1ad64e427c6e808e74bd4c"
+version = "0.14.2+luau672"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bdcef7360b48d6b9c822a92213def9669cf16dce30e86d1ee9dffb6067c30117"
 dependencies = [
  "cc",
 ]
@@ -3093,7 +3095,7 @@ dependencies = [
 [[package]]
 name = "mlua"
 version = "0.10.3"
-source = "git+https://github.com/Anti-Raid/mlua#9efc47d9765d47522286c08a11b406ce0bbed039"
+source = "git+https://github.com/Anti-Raid/mlua#107661d498c6222d68c002209035e9e53df47d71"
 dependencies = [
  "bstr",
  "either",
@@ -3111,7 +3113,7 @@ dependencies = [
 [[package]]
 name = "mlua-sys"
 version = "0.6.7"
-source = "git+https://github.com/Anti-Raid/mlua#9efc47d9765d47522286c08a11b406ce0bbed039"
+source = "git+https://github.com/Anti-Raid/mlua#107661d498c6222d68c002209035e9e53df47d71"
 dependencies = [
  "cc",
  "cfg-if",
@@ -3122,7 +3124,7 @@ dependencies = [
 [[package]]
 name = "mlua_derive"
 version = "0.10.1"
-source = "git+https://github.com/Anti-Raid/mlua#9efc47d9765d47522286c08a11b406ce0bbed039"
+source = "git+https://github.com/Anti-Raid/mlua#107661d498c6222d68c002209035e9e53df47d71"
 dependencies = [
  "itertools 0.14.0",
  "once_cell",
@@ -4343,7 +4345,7 @@ dependencies = [
 [[package]]
 name = "rust_rpc_server"
 version = "6.0.0"
-source = "git+https://github.com/Anti-Raid/corelib_rs#c7c7ed4b873e8da66c6d1948b4b5a0351ef9fa7b"
+source = "git+https://github.com/Anti-Raid/corelib_rs#62bc668507fca9ee2059fe6daf7a1def34a932d2"
 dependencies = [
  "axum",
  "hyper 1.6.0",
@@ -4592,7 +4594,7 @@ dependencies = [
 [[package]]
 name = "sandwich_driver"
 version = "6.0.0"
-source = "git+https://github.com/Anti-Raid/corelib_rs#c7c7ed4b873e8da66c6d1948b4b5a0351ef9fa7b"
+source = "git+https://github.com/Anti-Raid/corelib_rs#62bc668507fca9ee2059fe6daf7a1def34a932d2"
 dependencies = [
  "log",
  "reqwest",
@@ -4973,7 +4975,7 @@ dependencies = [
 [[package]]
 name = "silverpelt"
 version = "0.1.0"
-source = "git+https://github.com/Anti-Raid/corelib_rs#c7c7ed4b873e8da66c6d1948b4b5a0351ef9fa7b"
+source = "git+https://github.com/Anti-Raid/corelib_rs#62bc668507fca9ee2059fe6daf7a1def34a932d2"
 dependencies = [
  "antiraid-types",
  "async-trait",
@@ -6376,7 +6378,7 @@ version = "0.58.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "dd04d41d93c4992d421894c18c8b43496aa748dd4c081bac0dc93eb0489272b6"
 dependencies = [
- "windows-core 0.58.0",
+ "windows-core",
  "windows-targets 0.52.6",
 ]
 
@@ -6386,24 +6388,11 @@ version = "0.58.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6ba6d44ec8c2591c134257ce647b7ea6b20335bf6379a27dac5f1641fcf59f99"
 dependencies = [
- "windows-implement 0.58.0",
- "windows-interface 0.58.0",
+ "windows-implement",
+ "windows-interface",
  "windows-result 0.2.0",
  "windows-strings 0.1.0",
  "windows-targets 0.52.6",
-]
-
-[[package]]
-name = "windows-core"
-version = "0.61.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4763c1de310c86d75a878046489e2e5ba02c649d185f21c67d4cf8a56d098980"
-dependencies = [
- "windows-implement 0.60.0",
- "windows-interface 0.59.1",
- "windows-link",
- "windows-result 0.3.2",
- "windows-strings 0.4.0",
 ]
 
 [[package]]
@@ -6418,32 +6407,10 @@ dependencies = [
 ]
 
 [[package]]
-name = "windows-implement"
-version = "0.60.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a47fddd13af08290e67f4acabf4b459f647552718f683a7b415d290ac744a836"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn 2.0.101",
-]
-
-[[package]]
 name = "windows-interface"
 version = "0.58.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "053c4c462dc91d3b1504c6fe5a726dd15e216ba718e84a0e46a88fbe5ded3515"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn 2.0.101",
-]
-
-[[package]]
-name = "windows-interface"
-version = "0.59.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bd9211b69f8dcdfa817bfd14bf1c97c9188afa36f4750130fcdf3f400eca9fa8"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -6500,15 +6467,6 @@ name = "windows-strings"
 version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "87fa48cc5d406560701792be122a10132491cff9d0aeb23583cc2dcafc847319"
-dependencies = [
- "windows-link",
-]
-
-[[package]]
-name = "windows-strings"
-version = "0.4.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7a2ba9642430ee452d5a7aa78d72907ebe8cfda358e8cb7918a2050581322f97"
 dependencies = [
  "windows-link",
 ]
