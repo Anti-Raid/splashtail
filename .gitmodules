@@ -1,7 +1,3 @@
-[submodule "website"]
-	path = services/website
-	url = https://github.com/Anti-Raid/website
-        branch = production
 [submodule "nirn-proxy"]
 	path = infra/nirn-proxy
 	url = https://github.com/Anti-Raid/nirn-proxy
@@ -9,10 +5,6 @@
 [submodule "infra/Sandwich-Daemon"]
 	path = infra/Sandwich-Daemon
 	url = https://github.com/anti-raid/Sandwich-Daemon
-[submodule "services/badgerfang"]
-	path = services/badgerfang
-	url = https://github.com/anti-raid/badgerfang-next
-	branch = development
 [submodule "core/rust"]
 	path = core/rust
 	url = https://github.com/Anti-Raid/corelib_rs
