@@ -59,45 +59,8 @@ build_rust_dbg:
 clean: 
 	rm -rf out target
 
-cleanassets:
-	rm -rf services/website/src/lib/generated services/badgerfang/src/types/splashtail
-
 deepclean:
 	make clean
-	make cleanassets
-
-copyassets:
-	# For every project in core/* and services/*, copy .generated/* to data/generated/{project_name} and to the website (services/website/lib/generated)
-	rm -rf data/generated/build_assets
-	mkdir -p data/generated/build_assets
-	for d in core/* services/*; do \
-		[ -d $$d/.generated ] || continue; \
-		mkdir -p data/generated/build_assets/$$(basename $$d); \
-		cp -rf $$d/.generated/* data/generated/build_assets/$$(basename $$d); \
-	done
-
-	rm -rf services/website/src/lib/generated/build_assets
-	mkdir -p services/website/src/lib/generated/build_assets
-	
-	for d in core/* services/*; do \
-		[ -d $$d/.generated ] || continue; \
-		mkdir -p services/website/src/lib/generated/build_assets/$$(basename $$d); \
-		cp -rf $$d/.generated/* services/website/src/lib/generated/build_assets/$$(basename $$d); \
-	done
-
-	# Build rust assets too
-	cd data/generated/build_assets && ../../../out/bot genassets && cd ../../..
-	cd services/website/src/lib/generated/build_assets && ../../../../../../out/bot genassets && cd ../../../../../..
-
-	# Generate typings for website
-	~/go/bin/tygo generate
-
-	# Patch to change all "SelectMenu = any;" to "SelectMenu = undefined /*tygo workaround*/;" to work around tygo issue
-	sed -i 's:SelectMenu = any;:SelectMenu = undefined /*tygo workaround*/;:g' services/website/src/lib/generated/discordgo.ts
-
-	# Copy typings to badgerfang
-	rm -rf services/badgerfang/src/types/splashtail
-	cp -rf services/website/src/lib/generated services/badgerfang/src/types/splashtail
 
 docs:
 	python3 docs/gen_khronos_docs.py ~/khronos docs/src/dev/templating/2-plugins.md
