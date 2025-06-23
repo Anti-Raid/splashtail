@@ -38,3 +38,31 @@ I can understand now why the game modding industry uses lua, it’s basically th
 Lua is legit the only sane scripting language on this entire list
 
 [rhai is not only slower than lua, its sandboxing (i said it above here too in a vent i think) requires actual pointer arithmetic that isnt thread safe, its also a custom lang no one knows while lua is well known in the game community. Luau is used in Roblox games so it caters to Discords target market as well]
+
+# AntiRaid Templating Developer Docs
+
+This folder documents the AntiRaid templating system, which allows users to write custom logic for moderation, automation, and more using embedded scripting languages.
+
+## Supported Languages
+- **Lua (Luau/Roblox Lua):** Tier 1, recommended and fully supported
+
+## WIP/Potential Languages
+- JavaScript (QuickJS/V8 experiments)
+- WebAssembly (potential)
+
+## Files
+- `1-intro.md`: Introduction to the templating system
+- `2-example.md`: Example templates
+- `3-luau-ecosystem.md`: Luau ecosystem notes
+- `4-events.md`: Event system for templates
+- `5-archnotes.md`: Architectural notes
+- `README.md`: Overview and language rationale
+
+## Key Points
+- All languages must provide sandboxing, timeouts, and memory limits
+- Lua is chosen for its safety, performance, and ecosystem
+- See each file for details on API, events, and best practices
+
+---
+
+For API reference, see the [`../templating-api/`](../templating-api/) folder.
