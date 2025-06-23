@@ -203,6 +203,34 @@ For starlark/skylark, go to the point on rhai but hopefully without the unsafe b
 I can understand now why the game modding industry uses lua, it’s basically the only sane language for handling user input
 Lua is legit the only sane scripting language on this entire list</p>
 <p>[rhai is not only slower than lua, its sandboxing (i said it above here too in a vent i think) requires actual pointer arithmetic that isnt thread safe, its also a custom lang no one knows while lua is well known in the game community. Luau is used in Roblox games so it caters to Discords target market as well]</p>
+<h1 id="antiraid-templating-developer-docs"><a class="header" href="#antiraid-templating-developer-docs">AntiRaid Templating Developer Docs</a></h1>
+<p>This folder documents the AntiRaid templating system, which allows users to write custom logic for moderation, automation, and more using embedded scripting languages.</p>
+<h2 id="supported-languages-1"><a class="header" href="#supported-languages-1">Supported Languages</a></h2>
+<ul>
+<li><strong>Lua (Luau/Roblox Lua):</strong> Tier 1, recommended and fully supported</li>
+</ul>
+<h2 id="wippotential-languages-1"><a class="header" href="#wippotential-languages-1">WIP/Potential Languages</a></h2>
+<ul>
+<li>JavaScript (QuickJS/V8 experiments)</li>
+<li>WebAssembly (potential)</li>
+</ul>
+<h2 id="files"><a class="header" href="#files">Files</a></h2>
+<ul>
+<li><code>1-intro.md</code>: Introduction to the templating system</li>
+<li><code>2-example.md</code>: Example templates</li>
+<li><code>3-luau-ecosystem.md</code>: Luau ecosystem notes</li>
+<li><code>4-events.md</code>: Event system for templates</li>
+<li><code>5-archnotes.md</code>: Architectural notes</li>
+<li><code>README.md</code>: Overview and language rationale</li>
+</ul>
+<h2 id="key-points"><a class="header" href="#key-points">Key Points</a></h2>
+<ul>
+<li>All languages must provide sandboxing, timeouts, and memory limits</li>
+<li>Lua is chosen for its safety, performance, and ecosystem</li>
+<li>See each file for details on API, events, and best practices</li>
+</ul>
+<hr />
+<p>For API reference, see the <a href="../templating-api/"><code>../templating-api/</code></a> folder.</p>
 
                     </main>
 

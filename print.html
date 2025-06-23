@@ -170,6 +170,30 @@
                         <h1 id="introduction"><a class="header" href="#introduction">Introduction</a></h1>
 <p><strong>NOTE:</strong> Just adding AntiRaid (or any discord bot) to your server will not do much unless you configure it first!</p>
 <p>AntiRaid is a discord bot that takes a very unique approach to protecting servers. Instead of providing a single-size-fits-all solution, AntiRaid makes use of "structured templating" and a (work in progress/coming soon) template shop to allow servers to protect themselves in a way that is tailored to them.</p>
+<hr />
+<h2 id="documentation-index"><a class="header" href="#documentation-index">Documentation Index</a></h2>
+<h3 id="developer-docs"><a class="header" href="#developer-docs">Developer Docs</a></h3>
+<ul>
+<li><a href="./dev/core/">Core Libraries</a></li>
+<li><a href="./dev/infra/">Infrastructure</a></li>
+<li><a href="./dev/bot/">Bot Service</a></li>
+<li><a href="./dev/api/">API Service</a></li>
+<li><a href="./dev/jobserver/">Jobserver</a></li>
+<li><a href="./dev/services/">Services</a></li>
+<li><a href="./dev/templating/">Templating System</a></li>
+<li><a href="./dev/templating-api/">Templating API Reference</a></li>
+<li><a href="./dev/rust_settings/">Rust Settings</a></li>
+<li><a href="./dev/go_jobs/">Go Jobserver</a></li>
+<li><a href="./dev/builtins/">Builtins</a></li>
+<li><a href="./dev/cmd/">Command-line Tools</a></li>
+<li><a href="./dev/data/">Data &amp; Assets</a></li>
+<li><a href="./dev/hosting/">Hosting</a></li>
+</ul>
+<h3 id="user-docs"><a class="header" href="#user-docs">User Docs</a></h3>
+<ul>
+<li><a href="../user/">User Guides</a></li>
+</ul>
+<hr />
 <h2 id="our-philosophy"><a class="header" href="#our-philosophy">Our Philosophy</a></h2>
 <p>While many bots like Wick provide a managed anti-raid/anti-nuke solution, these systems often provide suboptimal user experience to many servers as they may not cater to specific needs of the server. Wick, for example, is often criticized for limiting the abilities of server moderators in a way that makes moderation harder. While Wick is useful in many servers and does work quite well in the anti-raid/anti-nuke field from our experience, it may not be the best solution for all servers.</p>
 <p>Templating, on the other hand, allows servers to tailor their needs directly without needing to go through the pain of making a custom discord bot, hosting it and then navigating the complexities of the discord API manually while reinventing concepts like stings/punishments/permissions/captchas all over again.</p>
@@ -353,6 +377,21 @@ return captcha
 <p>See the <a href="user/backups/../../dev/go_jobs/backups.html">dev guide</a> to learn more about the format</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="go-jobserver"><a class="header" href="#go-jobserver">Go Jobserver</a></h1>
 <p>The Go Jobserver handles server backups, message prunes and other long running tasks on a server</p>
+<h1 id="go-jobserver-developer-docs"><a class="header" href="#go-jobserver-developer-docs">Go Jobserver Developer Docs</a></h1>
+<p>This folder documents the Go Jobserver component of AntiRaid. The jobserver is responsible for handling long-running and background tasks such as server backups, message pruning, and other asynchronous jobs.</p>
+<h2 id="files"><a class="header" href="#files">Files</a></h2>
+<ul>
+<li><code>backups.md</code>: Details on the backup job system and implementation.</li>
+<li><code>README.md</code>: Overview of the jobserver's responsibilities and architecture.</li>
+</ul>
+<h2 id="key-concepts"><a class="header" href="#key-concepts">Key Concepts</a></h2>
+<ul>
+<li>Jobs are queued and executed independently of the main bot/API processes.</li>
+<li>Designed for reliability and resumability: jobs can survive bot/API restarts.</li>
+<li>Written in Go for concurrency and performance.</li>
+</ul>
+<hr />
+<p>For more details, see each file in this folder.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="backups-1"><a class="header" href="#backups-1">Backups</a></h1>
 <p><strong>Note that this document describes the technical details of the backup system</strong></p>
 <h2 id="format"><a class="header" href="#format">Format</a></h2>
@@ -403,6 +442,34 @@ For starlark/skylark, go to the point on rhai but hopefully without the unsafe b
 I can understand now why the game modding industry uses lua, it’s basically the only sane language for handling user input
 Lua is legit the only sane scripting language on this entire list</p>
 <p>[rhai is not only slower than lua, its sandboxing (i said it above here too in a vent i think) requires actual pointer arithmetic that isnt thread safe, its also a custom lang no one knows while lua is well known in the game community. Luau is used in Roblox games so it caters to Discords target market as well]</p>
+<h1 id="antiraid-templating-developer-docs"><a class="header" href="#antiraid-templating-developer-docs">AntiRaid Templating Developer Docs</a></h1>
+<p>This folder documents the AntiRaid templating system, which allows users to write custom logic for moderation, automation, and more using embedded scripting languages.</p>
+<h2 id="supported-languages-1"><a class="header" href="#supported-languages-1">Supported Languages</a></h2>
+<ul>
+<li><strong>Lua (Luau/Roblox Lua):</strong> Tier 1, recommended and fully supported</li>
+</ul>
+<h2 id="wippotential-languages-1"><a class="header" href="#wippotential-languages-1">WIP/Potential Languages</a></h2>
+<ul>
+<li>JavaScript (QuickJS/V8 experiments)</li>
+<li>WebAssembly (potential)</li>
+</ul>
+<h2 id="files-1"><a class="header" href="#files-1">Files</a></h2>
+<ul>
+<li><code>1-intro.md</code>: Introduction to the templating system</li>
+<li><code>2-example.md</code>: Example templates</li>
+<li><code>3-luau-ecosystem.md</code>: Luau ecosystem notes</li>
+<li><code>4-events.md</code>: Event system for templates</li>
+<li><code>5-archnotes.md</code>: Architectural notes</li>
+<li><code>README.md</code>: Overview and language rationale</li>
+</ul>
+<h2 id="key-points"><a class="header" href="#key-points">Key Points</a></h2>
+<ul>
+<li>All languages must provide sandboxing, timeouts, and memory limits</li>
+<li>Lua is chosen for its safety, performance, and ecosystem</li>
+<li>See each file for details on API, events, and best practices</li>
+</ul>
+<hr />
+<p>For API reference, see the <a href="dev/templating/../templating-api/"><code>../templating-api/</code></a> folder.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="lua-templating"><a class="header" href="#lua-templating">Lua Templating</a></h1>
 <p>At AntiRaid, we prioritize flexibility and customization for our users. To this end, our bot supports advanced templating to allow for extensive personalization of embeds and messages. While many bots utilize proprietary languages or templating engines, we have chosen to leverage Lua—a renowned scripting language widely used in game development and other applications. This decision ensures that our users benefit from a powerful, well-documented, and versatile language, enhancing the capability and ease of customizing their AntiRaid experience.</p>
 <p>Specifically, Anti Raid uses a variant of Lua called Luau. If you've ever used Roblox before, this is the same variant of Lua used there too (which is why Luau is also known as Roblox Lua in many places). You can check out the <a href="https://luau-lang.org/">Luau docs</a> for more information on the language itself. Unlike PUC Lua (the reference implementation), Luau is both faster and offers robust sandboxing capabilities allowing AntiRaid to run scripts in as safe an environment as possible.</p>

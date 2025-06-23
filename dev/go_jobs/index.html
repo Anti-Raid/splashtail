@@ -168,6 +168,21 @@
                     <main>
                         <h1 id="go-jobserver"><a class="header" href="#go-jobserver">Go Jobserver</a></h1>
 <p>The Go Jobserver handles server backups, message prunes and other long running tasks on a server</p>
+<h1 id="go-jobserver-developer-docs"><a class="header" href="#go-jobserver-developer-docs">Go Jobserver Developer Docs</a></h1>
+<p>This folder documents the Go Jobserver component of AntiRaid. The jobserver is responsible for handling long-running and background tasks such as server backups, message pruning, and other asynchronous jobs.</p>
+<h2 id="files"><a class="header" href="#files">Files</a></h2>
+<ul>
+<li><code>backups.md</code>: Details on the backup job system and implementation.</li>
+<li><code>README.md</code>: Overview of the jobserver's responsibilities and architecture.</li>
+</ul>
+<h2 id="key-concepts"><a class="header" href="#key-concepts">Key Concepts</a></h2>
+<ul>
+<li>Jobs are queued and executed independently of the main bot/API processes.</li>
+<li>Designed for reliability and resumability: jobs can survive bot/API restarts.</li>
+<li>Written in Go for concurrency and performance.</li>
+</ul>
+<hr />
+<p>For more details, see each file in this folder.</p>
 
                     </main>
 
