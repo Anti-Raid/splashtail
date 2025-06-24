@@ -79,7 +79,7 @@ For Rust, use the following command (using Rustup): ``curl --proto '=https' --tl
 To load the database seed, follow the following steps:
 
 0. Install and setup PostgreSQL 16.4.
-1. Install ``iblcli`` using ``git clone https://github.com/InfinityBotList/ibldev && cd ibldev && make``. This will build ``ibldev`` which is used for database seeding which you can either copy it to ``/usr/bin`` or, through other means, add to your ``$PATH``.
+1. Install ``iblcli`` using ``git clone https://github.com/anti-raid/ibldev && cd ibldev && make``. This will build ``ibldev`` which is used for database seeding which you can either copy it to ``/usr/bin`` or, through other means, add to your ``$PATH``.
 2. Install postgres server development headers: ``apt install postgresql-server-dev-VERSION`` where version is >= 15.
 3. Create the following databases and roles:
     - ``antiraid``

@@ -4,7 +4,7 @@
 
 ## Format
 
-A backup is an [https://github.com/infinitybotlist/iblfile](iblfile) with the standard ``AutoEncryptedFile`` format and has the following fields:
+A backup is an [https://github.com/anti-raid/iblfile](iblfile) with the standard ``AutoEncryptedFile`` format and has the following fields:
 
 - ``backup_opts`` - JSON containing a ``types.BackupCreateOpts`` object
 - ``core/guild`` - The core guild data (``discordgo.Guild``)

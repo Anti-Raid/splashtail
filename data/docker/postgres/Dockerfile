@@ -29,7 +29,7 @@ ENV POSTGRES_DB=antiraid
 ENV POSTGRES_PORT=5432
 ENV POSTGRES_INITDB_ARGS="--encoding=UTF8 --locale=C --lc-collate=C --lc-ctype=C"
 
-RUN git clone https://github.com/infinitybotlist/ibldev /ibl
+RUN git clone https://github.com/anti-raid/ibldev /ibl
 WORKDIR /ibl
 RUN --mount=type=cache,target=/go/pkg/mod \
     --mount=type=cache,target=/root/.cache/go-build \ 

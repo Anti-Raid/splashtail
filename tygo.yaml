@@ -20,7 +20,7 @@ packages:
       silverpelt.CanonicalCommand: silverpelt.CanonicalCommand
       silverpelt.CanonicalConfigOption: silverpelt.CanonicalConfigOption
 
-  - path: "github.com/infinitybotlist/eureka/dovewing/dovetypes"
+  - path: "github.com/anti-raid/eureka/dovewing/dovetypes"
     output_path: "services/website/src/lib/generated/eureka-dovewing.ts"
 
   - path: "github.com/bwmarrin/discordgo"

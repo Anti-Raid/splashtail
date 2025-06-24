@@ -4,8 +4,8 @@ package {package}
 import (
 	"net/http"
 
-	docs "github.com/infinitybotlist/eureka/doclib"
-	"github.com/infinitybotlist/eureka/uapi"
+	docs "github.com/anti-raid/eureka/doclib"
+	"github.com/anti-raid/eureka/uapi"
 	"go.uber.org/zap"
 
 	"github.com/go-chi/chi/v5"

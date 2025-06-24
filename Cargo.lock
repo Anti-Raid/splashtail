@@ -2879,7 +2879,7 @@ dependencies = [
 [[package]]
 name = "kittycat"
 version = "0.2.0"
-source = "git+https://github.com/anti-raid/kittycat?branch=main#58b75c73a7942b6243615e839b2457efcabfd9e2"
+source = "git+https://github.com/anti-raid/kittycat?branch=main#19df26098714f4ca5e12ee40c33dca5b1a85908a"
 dependencies = [
  "indexmap 2.9.0",
  "serde",
