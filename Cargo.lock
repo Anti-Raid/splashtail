@@ -164,7 +164,7 @@ dependencies = [
 [[package]]
 name = "antiraid-types"
 version = "0.1.0"
-source = "git+https://github.com/Anti-Raid/antiraid-types#2c1df7eaa7551a89d3ca623a85b2999b638f2958"
+source = "git+https://github.com/anti-raid/antiraid-types#2c1df7eaa7551a89d3ca623a85b2999b638f2958"
 dependencies = [
  "chrono",
  "extract_map",
@@ -195,7 +195,7 @@ dependencies = [
 [[package]]
 name = "ar_settings"
 version = "6.0.0"
-source = "git+https://github.com/Anti-Raid/settings#7a83d880c86b63971e47e604fe45ba01086ca639"
+source = "git+https://github.com/anti-raid/settings#7a83d880c86b63971e47e604fe45ba01086ca639"
 dependencies = [
  "async-trait",
  "chrono",
