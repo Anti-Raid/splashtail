@@ -200,7 +200,7 @@
 <div style="break-before: page; page-break-before: always;"></div><h1 id="permissions"><a class="header" href="#permissions">Permissions</a></h1>
 <p>Imagine. Imagine a discord bot that you could completely control. You could decide who can use any specific command, who can change the bot's settings, and who can even use the bot at all.</p>
 <p><em>Thats AntiRaid...</em></p>
-<p>AntiRaid has a customizable permission system that uses both Discord permissions for simplicity and <a href="https://github.com/InfinityBotList/kittycat">kittycat</a> permissions for more specific requirements. While AntiRaid does provide some base-line defaults, Lua scripting can be used to augment these defaults and extend Antiraid with arbitrarily complex permission systems, among other things. See the <a href="user/permissions/../templating-lua/1-intro.html">templating guide</a> for more information on how to use Lua templates. Then, just code away!</p>
+<p>AntiRaid has a customizable permission system that uses both Discord permissions for simplicity and <a href="https://github.com/anti-raid/kittycat">kittycat</a> permissions for more specific requirements. While AntiRaid does provide some base-line defaults, Lua scripting can be used to augment these defaults and extend Antiraid with arbitrarily complex permission systems, among other things. See the <a href="user/permissions/../templating-lua/1-intro.html">templating guide</a> for more information on how to use Lua templates. Then, just code away!</p>
 <h2 id="tip"><a class="header" href="#tip">TIP</a></h2>
 <p>For best results, consider limiting the server permissions of other users to the minimum required. Then, use AntiRaid for actual moderation. That's better than giving everyone admin permissions and then trying to restrict them with AntiRaid.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="templating"><a class="header" href="#templating">Templating</a></h1>
@@ -395,7 +395,7 @@ return captcha
 <div style="break-before: page; page-break-before: always;"></div><h1 id="backups-1"><a class="header" href="#backups-1">Backups</a></h1>
 <p><strong>Note that this document describes the technical details of the backup system</strong></p>
 <h2 id="format"><a class="header" href="#format">Format</a></h2>
-<p>A backup is an <a href="dev/go_jobs/iblfile">https://github.com/infinitybotlist/iblfile</a> with the standard <code>AutoEncryptedFile</code> format and has the following fields:</p>
+<p>A backup is an <a href="dev/go_jobs/iblfile">https://github.com/anti-raid/iblfile</a> with the standard <code>AutoEncryptedFile</code> format and has the following fields:</p>
 <ul>
 <li><code>backup_opts</code> - JSON containing a <code>types.BackupCreateOpts</code> object</li>
 <li><code>core/guild</code> - The core guild data (<code>discordgo.Guild</code>)</li>
