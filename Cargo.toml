@@ -11,9 +11,3 @@ exclude = [
     "infra/templating-template/darklua"
 ]
 resolver = "2"
-
-
-[profile.release]
-strip = true  # Automatically strip symbols from the binary.
-incremental = true # Enable incremental compilation.
-opt-level = 3
