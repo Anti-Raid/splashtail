@@ -89,10 +89,6 @@ github.com/hashicorp/go-retryablehttp v0.5.3/go.mod h1:9B5zBasrRhHXnJnui7y6sL7es
 github.com/hashicorp/golang-lru v1.0.2/go.mod h1:iADmTwqILo4mZ8BN3D2Q6+9jd8WM5uGBxy+E8yxSoD4=
 github.com/ianlancetaylor/demangle v0.0.0-20220319035150-800ac71e25c2/go.mod h1:aYm2/VgdVmcIU8iMfdMvDMsRAQjcfZSKFby6HOFvi/w=
 github.com/ianlancetaylor/demangle v0.0.0-20240312041847-bd984b5ce465/go.mod h1:gx7rwoVhcfuVKG5uya9Hs3Sxj7EIvldVofAWIUtGouw=
-github.com/infinitybotlist/eureka v0.5.0/go.mod h1:XY/H8htZ4EQJwyfwnDrLuKg5M7DGoo6835ZJSKSswCg=
-github.com/infinitybotlist/eureka v1.1.0/go.mod h1:+XpKNt78xfvzOLdakj1CLt4Fn6wIaQ6L3Cq0X2luIPY=
-github.com/infinitybotlist/iblfile v0.0.0-20240822045208-fa5e42749283 h1:+fhtjjV92F8uoQ1pOGVX/HEZx/UwvBPT1p/cLVytvJE=
-github.com/infinitybotlist/iblfile v0.0.0-20240822045208-fa5e42749283/go.mod h1:2+IsRbfsQ79wG2sbIuNVKMHzyhDf+iaxn/GXdnBJO6c=
 github.com/invopop/yaml v0.2.0/go.mod h1:2XuRLgs/ouIrW3XNzuNj7J3Nvu/Dig5MXvbCEdiBN3Q=
 github.com/jackc/pgservicefile v0.0.0-20221227161230-091c0ba34f0a/go.mod h1:5TJZWKEWniPve33vlWYSoGYefn3gLQRzjfDlhSJ9ZKM=
 github.com/jackc/pgx/v5 v5.3.1/go.mod h1:t3JDKnCBlYIc0ewLF0Q7B8MXmoIaBOZj/ic7iHozM/8=
