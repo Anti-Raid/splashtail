@@ -26,8 +26,8 @@ pub async fn create_lua_vm(
     pool: sqlx::PgPool,
     serenity_context: serenity::all::Context,
     reqwest_client: reqwest::Client,
-    object_store: Arc<silverpelt::objectstore::ObjectStore>
-) -> Result<ArLua, silverpelt::Error> {
+    object_store: Arc<crate::objectstore::ObjectStore>
+) -> Result<ArLua, crate::Error> {
     let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel::<(
         LuaVmAction,
         tokio::sync::oneshot::Sender<Vec<(String, LuaVmResult)>>,

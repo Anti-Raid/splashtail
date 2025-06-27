@@ -54,7 +54,7 @@ dependencies = [
  "bytestring",
  "proc-macro2",
  "quote",
- "syn 2.0.104",
+ "syn",
 ]
 
 [[package]]
@@ -164,7 +164,7 @@ dependencies = [
 [[package]]
 name = "antiraid-types"
 version = "0.1.0"
-source = "git+https://github.com/Anti-Raid/antiraid-types#8c82ea24b31d9db85034bbe96563e6e4387a2a7f"
+source = "git+https://github.com/anti-raid/antiraid-types#8c82ea24b31d9db85034bbe96563e6e4387a2a7f"
 dependencies = [
  "chrono",
  "extract_map",
@@ -195,7 +195,7 @@ dependencies = [
 [[package]]
 name = "ar_settings"
 version = "6.0.0"
-source = "git+https://github.com/Anti-Raid/settings#7a83d880c86b63971e47e604fe45ba01086ca639"
+source = "git+https://github.com/anti-raid/settings#7a83d880c86b63971e47e604fe45ba01086ca639"
 dependencies = [
  "async-trait",
  "chrono",
@@ -221,7 +221,7 @@ checksum = "0ae92a5119aa49cdbcf6b9f893fe4e1d98b04ccbf82ee0584ad948a44a734dea"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.104",
+ "syn",
 ]
 
 [[package]]
@@ -283,7 +283,7 @@ checksum = "c7c24de15d275a1ecfd47a380fb4d5ec9bfe0933f309ed5e705b775596a3574d"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.104",
+ "syn",
 ]
 
 [[package]]
@@ -294,7 +294,7 @@ checksum = "e539d3fca749fcee5236ab05e93a52867dd549cc157c8cb7f99595f3cedffdb5"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.104",
+ "syn",
 ]
 
 [[package]]
@@ -727,7 +727,7 @@ checksum = "57d123550fa8d071b7255cb0cc04dc302baa6c8c4a79f55701552684d8399bce"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.104",
+ "syn",
 ]
 
 [[package]]
@@ -804,7 +804,7 @@ dependencies = [
  "regex",
  "rustc-hash 1.1.0",
  "shlex",
- "syn 2.0.104",
+ "syn",
  "which",
 ]
 
@@ -867,44 +867,8 @@ dependencies = [
  "darling",
  "proc-macro2",
  "quote",
- "syn 2.0.104",
+ "syn",
  "to-arraystring",
-]
-
-[[package]]
-name = "bot"
-version = "0.1.0"
-dependencies = [
- "antiraid-types",
- "ar_settings",
- "async-trait",
- "axum",
- "botox",
- "chrono",
- "clap",
- "dashmap 6.1.0",
- "env_logger",
- "futures-util",
- "gwevent",
- "indexmap 2.9.0",
- "jobserver 0.1.0 (git+https://github.com/Anti-Raid/corelib_rs)",
- "kittycat",
- "lockdowns",
- "log",
- "poise",
- "reqwest",
- "rust_buildstats",
- "rust_rpc_server 6.0.0 (git+https://github.com/Anti-Raid/corelib_rs)",
- "sandwich_driver 6.0.0 (git+https://github.com/Anti-Raid/corelib_rs)",
- "serde",
- "serde_json",
- "serde_yaml",
- "serenity",
- "silverpelt 0.1.0 (git+https://github.com/Anti-Raid/corelib_rs)",
- "sqlx",
- "tokio",
- "tower-http 0.5.2",
- "uuid",
 ]
 
 [[package]]
@@ -1027,7 +991,7 @@ version = "1.2.27"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d487aa071b5f64da6f19a3e848e3578944b726ee5a4854b82172f02aa876bfdc"
 dependencies = [
- "jobserver 0.1.33",
+ "jobserver",
  "libc",
  "shlex",
 ]
@@ -1157,7 +1121,7 @@ dependencies = [
  "heck",
  "proc-macro2",
  "quote",
- "syn 2.0.104",
+ "syn",
 ]
 
 [[package]]
@@ -1421,7 +1385,7 @@ dependencies = [
  "proc-macro2",
  "quote",
  "strsim 0.11.1",
- "syn 2.0.104",
+ "syn",
 ]
 
 [[package]]
@@ -1432,7 +1396,7 @@ checksum = "fc34b93ccb385b40dc71c6fceac4b2ad23662c7eeb248cf10d529b7e055b6ead"
 dependencies = [
  "darling_core",
  "quote",
- "syn 2.0.104",
+ "syn",
 ]
 
 [[package]]
@@ -1502,17 +1466,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "derivative"
-version = "2.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fcc3dd5e9e9c0b295d6e1e4d811fb6f157d5ffd784b8d202fc62eac8035a770b"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn 1.0.109",
-]
-
-[[package]]
 name = "digest"
 version = "0.10.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1553,7 +1506,7 @@ checksum = "97369cbbc041bc366949bc74d34658d6cda5621039731c6310521892a3a20ae0"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.104",
+ "syn",
 ]
 
 [[package]]
@@ -1664,7 +1617,7 @@ checksum = "44f23cf4b44bfce11a86ace86f8a73ffdec849c9fd00a386a53d278bd9e81fb3"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.104",
+ "syn",
 ]
 
 [[package]]
@@ -1923,7 +1876,7 @@ checksum = "162ee34ebcb7c64a8abebc059ce0fee27c2262618d7b60ed8faf72fef13c3650"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.104",
+ "syn",
 ]
 
 [[package]]
@@ -2660,7 +2613,7 @@ checksum = "c34819042dc3d3971c46c2190835914dfbe0c3c13f61449b2997f4e9722dfa60"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.104",
+ "syn",
 ]
 
 [[package]]
@@ -2748,42 +2701,7 @@ checksum = "03343451ff899767262ec32146f6d559dd759fdadf42ff0e227c7c48f72594b4"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.104",
-]
-
-[[package]]
-name = "jobserver"
-version = "0.1.0"
-dependencies = [
- "chrono",
- "futures-util",
- "indexmap 2.9.0",
- "reqwest",
- "serde",
- "serde_json",
- "serenity",
- "silverpelt 0.1.0",
- "sqlx",
- "tokio",
- "uuid",
-]
-
-[[package]]
-name = "jobserver"
-version = "0.1.0"
-source = "git+https://github.com/Anti-Raid/corelib_rs#5b12805352306258c8cb07c93b9a42c822c26722"
-dependencies = [
- "chrono",
- "futures-util",
- "indexmap 2.9.0",
- "reqwest",
- "serde",
- "serde_json",
- "serenity",
- "silverpelt 0.1.0 (git+https://github.com/Anti-Raid/corelib_rs)",
- "sqlx",
- "tokio",
- "uuid",
+ "syn",
 ]
 
 [[package]]
@@ -2958,15 +2876,6 @@ dependencies = [
  "pkg-config",
  "vcpkg",
 ]
-
-[[package]]
-name = "limits"
-version = "0.1.0"
-
-[[package]]
-name = "limits"
-version = "0.1.0"
-source = "git+https://github.com/Anti-Raid/corelib_rs#5b12805352306258c8cb07c93b9a42c822c26722"
 
 [[package]]
 name = "linkify"
@@ -3397,7 +3306,7 @@ checksum = "ed3955f1a9c7c0c15e092f9c887db08b1fc683305fdf6eb6684f22555355e202"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.104",
+ "syn",
 ]
 
 [[package]]
@@ -3485,7 +3394,7 @@ checksum = "a948666b637a0f465e8564c73e89d4dde00d72d4d473cc972f390fc3dcee7d9c"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.104",
+ "syn",
 ]
 
 [[package]]
@@ -3667,7 +3576,7 @@ checksum = "6e918e4ff8c4549eb882f14b3a4bc8c8bc93de829416eacf579f1207a8fbf861"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.104",
+ "syn",
 ]
 
 [[package]]
@@ -3733,35 +3642,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "poise"
-version = "0.6.1"
-source = "git+https://github.com/Anti-Raid/poise?branch=serenity-next#4b821671828512f2db4df1cf484f17fd51ba30e5"
-dependencies = [
- "async-trait",
- "derivative",
- "futures-util",
- "indexmap 2.9.0",
- "parking_lot",
- "poise_macros",
- "regex",
- "serenity",
- "tokio",
- "tracing",
- "trim-in-place",
-]
-
-[[package]]
-name = "poise_macros"
-version = "0.6.1"
-source = "git+https://github.com/Anti-Raid/poise?branch=serenity-next#4b821671828512f2db4df1cf484f17fd51ba30e5"
-dependencies = [
- "darling",
- "proc-macro2",
- "quote",
- "syn 2.0.104",
-]
-
-[[package]]
 name = "portable-atomic"
 version = "1.11.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3807,7 +3687,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "061c1221631e079b26479d25bbf2275bfe5917ae8419cd7e34f13bfc2aa7539a"
 dependencies = [
  "proc-macro2",
- "syn 2.0.104",
+ "syn",
 ]
 
 [[package]]
@@ -3835,7 +3715,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "52717f9a02b6965224f95ca2a81e2e0c5c43baacd28ca057577988930b6c3d5b"
 dependencies = [
  "quote",
- "syn 2.0.104",
+ "syn",
 ]
 
 [[package]]
@@ -3858,7 +3738,7 @@ dependencies = [
  "itertools 0.14.0",
  "proc-macro2",
  "quote",
- "syn 2.0.104",
+ "syn",
 ]
 
 [[package]]
@@ -4414,7 +4294,7 @@ dependencies = [
  "quote",
  "rust-embed-utils",
  "shellexpand",
- "syn 2.0.104",
+ "syn",
  "walkdir",
 ]
 
@@ -4426,35 +4306,6 @@ checksum = "f6cc0c81648b20b70c491ff8cce00c1c3b223bb8ed2b5d41f0e54c6c4c0a3594"
 dependencies = [
  "sha2",
  "walkdir",
-]
-
-[[package]]
-name = "rust_buildstats"
-version = "6.2.0"
-
-[[package]]
-name = "rust_rpc_server"
-version = "6.0.0"
-dependencies = [
- "axum",
- "hyper 1.6.0",
- "hyper-util",
- "log",
- "tokio",
- "tower-service",
-]
-
-[[package]]
-name = "rust_rpc_server"
-version = "6.0.0"
-source = "git+https://github.com/Anti-Raid/corelib_rs#5b12805352306258c8cb07c93b9a42c822c26722"
-dependencies = [
- "axum",
- "hyper 1.6.0",
- "hyper-util",
- "log",
- "tokio",
- "tower-service",
 ]
 
 [[package]]
@@ -4675,29 +4526,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "sandwich_driver"
-version = "6.0.0"
-dependencies = [
- "log",
- "reqwest",
- "serde",
- "serde_repr",
- "serenity",
-]
-
-[[package]]
-name = "sandwich_driver"
-version = "6.0.0"
-source = "git+https://github.com/Anti-Raid/corelib_rs#5b12805352306258c8cb07c93b9a42c822c26722"
-dependencies = [
- "log",
- "reqwest",
- "serde",
- "serde_repr",
- "serenity",
-]
-
-[[package]]
 name = "scc"
 version = "2.3.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4850,7 +4678,7 @@ checksum = "5b0276cf7f2c73365f7157c8123c21cd9a50fbbd844757af28ca1f5925fc2a00"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.104",
+ "syn",
 ]
 
 [[package]]
@@ -4883,7 +4711,7 @@ checksum = "175ee3e80ae9982737ca543e96133087cbd9a485eecc3bc4de9c1a37b47ea59c"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.104",
+ "syn",
 ]
 
 [[package]]
@@ -5041,53 +4869,6 @@ checksum = "77549399552de45a898a580c1b41d445bf730df867cc44e6c0233bbc4b8329de"
 dependencies = [
  "digest",
  "rand_core 0.6.4",
-]
-
-[[package]]
-name = "silverpelt"
-version = "0.1.0"
-dependencies = [
- "antiraid-types",
- "async-trait",
- "aws-sdk-s3",
- "aws-smithy-types",
- "botox",
- "chrono",
- "dashmap 6.1.0",
- "indexmap 2.9.0",
- "kittycat",
- "lockdowns",
- "reqwest",
- "sandwich_driver 6.0.0",
- "serde",
- "serde_json",
- "serenity",
- "sqlx",
- "uuid",
-]
-
-[[package]]
-name = "silverpelt"
-version = "0.1.0"
-source = "git+https://github.com/Anti-Raid/corelib_rs#5b12805352306258c8cb07c93b9a42c822c26722"
-dependencies = [
- "antiraid-types",
- "async-trait",
- "aws-sdk-s3",
- "aws-smithy-types",
- "botox",
- "chrono",
- "dashmap 6.1.0",
- "indexmap 2.9.0",
- "kittycat",
- "lockdowns",
- "reqwest",
- "sandwich_driver 6.0.0 (git+https://github.com/Anti-Raid/corelib_rs)",
- "serde",
- "serde_json",
- "serenity",
- "sqlx",
- "uuid",
 ]
 
 [[package]]
@@ -5257,7 +5038,7 @@ dependencies = [
  "quote",
  "sqlx-core",
  "sqlx-macros-core",
- "syn 2.0.104",
+ "syn",
 ]
 
 [[package]]
@@ -5280,7 +5061,7 @@ dependencies = [
  "sqlx-mysql",
  "sqlx-postgres",
  "sqlx-sqlite",
- "syn 2.0.104",
+ "syn",
  "tokio",
  "url",
 ]
@@ -5442,7 +5223,7 @@ dependencies = [
  "proc-macro2",
  "quote",
  "rustversion",
- "syn 2.0.104",
+ "syn",
 ]
 
 [[package]]
@@ -5450,17 +5231,6 @@ name = "subtle"
 version = "2.6.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "13c2bddecc57b384dee18652358fb23172facb8a2c51ccc10d74c157bdea3292"
-
-[[package]]
-name = "syn"
-version = "1.0.109"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "72b64191b275b66ffe2469e8af2c1cfe3bafa67b529ead792a6d0160888b4237"
-dependencies = [
- "proc-macro2",
- "quote",
- "unicode-ident",
-]
 
 [[package]]
 name = "syn"
@@ -5490,7 +5260,7 @@ checksum = "728a70f3dbaf5bab7f0c4b1ac8d7ae5ea60a4b5549c8a5914361c99147a709d2"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.104",
+ "syn",
 ]
 
 [[package]]
@@ -5559,37 +5329,39 @@ dependencies = [
  "antiraid-types",
  "ar_settings",
  "async-trait",
+ "aws-sdk-s3",
+ "aws-smithy-types",
  "axum",
  "botox",
  "chrono",
  "clap",
  "console-subscriber",
+ "dashmap 6.1.0",
  "env_logger",
  "futures",
  "governor",
  "gwevent",
+ "hyper 1.6.0",
+ "hyper-util",
  "indexmap 2.9.0",
- "jobserver 0.1.0 (git+https://github.com/Anti-Raid/corelib_rs)",
  "khronos_runtime",
  "kittycat",
- "limits 0.1.0 (git+https://github.com/Anti-Raid/corelib_rs)",
  "lockdowns",
  "log",
  "moka",
  "rand 0.8.5",
  "reqwest",
  "rust-embed",
- "rust_rpc_server 6.0.0 (git+https://github.com/Anti-Raid/corelib_rs)",
- "sandwich_driver 6.0.0 (git+https://github.com/Anti-Raid/corelib_rs)",
  "scc",
  "serde",
  "serde_json",
+ "serde_repr",
  "serde_yaml",
  "serenity",
- "silverpelt 0.1.0 (git+https://github.com/Anti-Raid/corelib_rs)",
  "sqlx",
  "tokio",
  "tower-http 0.5.2",
+ "tower-service",
  "uuid",
  "vfs",
 ]
@@ -5620,7 +5392,7 @@ checksum = "4fee6c4efc90059e10f81e6d42c60a18f76588c3d74cb83a0b242a2b6c7504c1"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.104",
+ "syn",
 ]
 
 [[package]]
@@ -5631,7 +5403,7 @@ checksum = "7f7cf42b4507d8ea322120659672cf1b9dbb93f8f2d4ecfd6e51350ff5b17a1d"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.104",
+ "syn",
 ]
 
 [[package]]
@@ -5748,7 +5520,7 @@ checksum = "6e06d43f1345a3bcd39f6a56dbb7dcab2ba47e68e8ac134855e7e2bdbaf8cab8"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.104",
+ "syn",
 ]
 
 [[package]]
@@ -6008,7 +5780,7 @@ checksum = "81383ab64e72a7a8b8e13130c49e3dab29def6d0c7d76a03087b3cf71c5c6903"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.104",
+ "syn",
 ]
 
 [[package]]
@@ -6049,12 +5821,6 @@ dependencies = [
  "tracing-core",
  "tracing-log",
 ]
-
-[[package]]
-name = "trim-in-place"
-version = "0.1.7"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "343e926fc669bc8cde4fa3129ab681c63671bae288b1f1081ceee6d9d37904fc"
 
 [[package]]
 name = "try-lock"
@@ -6109,7 +5875,7 @@ checksum = "0cbc2d8952dd1e08b0164a5b51549e80631ac9da4107669d26c8ea89cb0b5545"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.104",
+ "syn",
  "to-arraystring",
 ]
 
@@ -6138,7 +5904,7 @@ checksum = "536b6812192bda8551cfa0e52524e328c6a951b48e66529ee4522d6c721243d6"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.104",
+ "syn",
 ]
 
 [[package]]
@@ -6162,7 +5928,7 @@ checksum = "35f5380909ffc31b4de4f4bdf96b877175a016aa2ca98cee39fcfd8c4d53d952"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.104",
+ "syn",
 ]
 
 [[package]]
@@ -6365,7 +6131,7 @@ dependencies = [
  "log",
  "proc-macro2",
  "quote",
- "syn 2.0.104",
+ "syn",
  "wasm-bindgen-shared",
 ]
 
@@ -6400,7 +6166,7 @@ checksum = "8ae87ea40c9f689fc23f209965b6fb8a99ad69aeeb0231408be24920604395de"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.104",
+ "syn",
  "wasm-bindgen-backend",
  "wasm-bindgen-shared",
 ]
@@ -6588,7 +6354,7 @@ checksum = "a47fddd13af08290e67f4acabf4b459f647552718f683a7b415d290ac744a836"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.104",
+ "syn",
 ]
 
 [[package]]
@@ -6599,7 +6365,7 @@ checksum = "bd9211b69f8dcdfa817bfd14bf1c97c9188afa36f4750130fcdf3f400eca9fa8"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.104",
+ "syn",
 ]
 
 [[package]]
@@ -6933,7 +6699,7 @@ checksum = "38da3c9736e16c5d3c8c597a9aaa5d1fa565d0532ae05e27c24aa62fb32c0ab6"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.104",
+ "syn",
  "synstructure",
 ]
 
@@ -6954,7 +6720,7 @@ checksum = "9ecf5b4cc5364572d7f4c329661bcc82724222973f2cab6f050a4e5c22f75181"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.104",
+ "syn",
 ]
 
 [[package]]
@@ -6974,7 +6740,7 @@ checksum = "d71e5d6e06ab090c67b5e44993ec16b72dcbaabc526db883a360057678b48502"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.104",
+ "syn",
  "synstructure",
 ]
 
@@ -7014,7 +6780,7 @@ checksum = "5b96237efa0c878c64bd89c436f661be4e46b2f3eff1ebb976f7ef2321d2f58f"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.104",
+ "syn",
 ]
 
 [[package]]

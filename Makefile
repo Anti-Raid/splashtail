@@ -18,7 +18,7 @@ infra:
 	
 format:
 	# For every project in core/rust.*
-	for d in core/rust.* services/bot services/template-worker; do \
+	for d in core/rust.* services/template-worker; do \
 		cd $$d && cargo fmt && cd ../..; \
 	done
 
@@ -28,7 +28,6 @@ format:
 	done
 
 prepare:
-	cd services/bot && cargo sqlx prepare
 	cd services/template-worker && cargo sqlx prepare
 	for d in core/rust/rust.*; do \
 		echo $$d && cd $$d && cargo sqlx prepare && cd $(PWD); \
@@ -48,12 +47,10 @@ build_go:
 
 build_rust:
 	mkdir -p ${PWD}/out
-	cd services/bot && cargo build --release && mv ${PWD}/target/release/bot ${PWD}/out/bot && cd ${PWD}
 	cd services/template-worker && cargo build --release && mv ${PWD}/target/release/template-worker ${PWD}/out/template-worker && cd ${PWD}
 
 build_rust_dbg:
 	mkdir -p ${PWD}/out/debug
-	cd services/bot && cargo build && mv ${PWD}/target/debug/bot ${PWD}/out/debug/bot && cd ${PWD}
 	cd services/template-worker && cargo build && mv ${PWD}/target/debug/template-worker ${PWD}/out/debug/template-worker && cd ${PWD}
 
 clean: 

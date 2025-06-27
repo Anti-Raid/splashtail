@@ -1,9 +1,6 @@
 [workspace]
 members = [
-    "services/bot/crates/*",
-    "services/bot", 
     "services/template-worker",
-    "core/rust/rust.*"
 ]
 exclude = [
     "infra/templating-types",
