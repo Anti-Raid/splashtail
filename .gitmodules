@@ -5,9 +5,6 @@
 [submodule "infra/Sandwich-Daemon"]
 	path = infra/Sandwich-Daemon
 	url = https://github.com/anti-raid/Sandwich-Daemon
-[submodule "core/rust"]
-	path = core/rust
-	url = https://github.com/Anti-Raid/corelib_rs
 [submodule "services/jobserver"]
 	path = services/jobserver
 	url = https://github.com/Anti-Raid/jobserver
