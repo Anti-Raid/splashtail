@@ -11,12 +11,12 @@ Badgerfang is the rewrite of the old Svelte-kit powered website which is now dec
 
 Badger is built upon:
 
-- [![Next.js](https://cdn.worldvectorlogo.com/logos/next-js.svg)](https://nextjs.org/) **Next.js**
-- [![Framer Motion](https://framerusercontent.com/images/FwGRzdHhlF5dVX3w3adwXRyFz7U.svg)](https://www.framer.com/motion/) **Framer Motion**
-- [![react-icons](https://react-icons.github.io/react-icons/favicon.ico)](https://react-icons.github.io/react-icons/) **react-icons**
-- [![Tailwind CSS](https://tailwindcss.com/favicons/favicon-32x32.png)](https://tailwindcss.com/) **Tailwind CSS**
-- [![Recharts](https://recharts.org/favicon.ico)](https://recharts.org/en-US) **Recharts**
-- [![Axios](https://axios-http.com/assets/favicon.ico)](https://axios-http.com/) **Axios**
+- <img src="https://cdn.worldvectorlogo.com/logos/next-js.svg" alt="Next.js" width="16" height="16" style="display:inline; vertical-align:middle;" /> [**Next.js**](https://nextjs.org/)
+- <img src="https://framerusercontent.com/images/FwGRzdHhlF5dVX3w3adwXRyFz7U.svg" alt="Framer Motion" width="16" height="16" style="display:inline; vertical-align:middle;" /> [**Framer Motion**](https://www.framer.com/motion/)
+- <img src="https://react-icons.github.io/react-icons/favicon.ico" alt="react-icons" width="16" height="16" style="display:inline; vertical-align:middle;" /> [**react-icons**](https://react-icons.github.io/react-icons/)
+- <img src="https://tailwindcss.com/favicons/favicon-32x32.png" alt="Tailwind CSS" width="16" height="16" style="display:inline; vertical-align:middle;" /> [**Tailwind CSS**](https://tailwindcss.com/)
+- <img src="https://recharts.org/favicon.ico" alt="Recharts" width="16" height="16" style="display:inline; vertical-align:middle;" /> [**Recharts**](https://recharts.org/en-US)
+- <img src="https://axios-http.com/assets/favicon.ico" alt="Axios" width="16" height="16" style="display:inline; vertical-align:middle;" /> [**Axios**](https://axios-http.com/)
 
 # Overview
 
