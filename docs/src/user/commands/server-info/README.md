@@ -17,4 +17,4 @@ Yet another utility based command, which provides information on the current ser
 
 This command can be used by __any__ user just by running `/serverinfo`
 
-[Image](/serverinfo.png)
+![Image](/serverinfo.png)

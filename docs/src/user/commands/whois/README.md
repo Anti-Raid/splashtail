@@ -16,4 +16,4 @@ Provides basic information about a user regarding there:
 
 this command can be ran by __any__ user by doing `/whois user:Username(optional)`
 
-[Image](/whois.png)
+![Image](/whois.png)
