@@ -11,7 +11,7 @@ This folder documents built-in modules, types, and helpers available across the 
 - Builtins are imported or available by default in most services and templates.
 - Extend builtins by adding new types or helpers to this folder and registering them in the host service.
 
-Builtins are a replacement for the current "bot" commands. these are currently in works and prone to change
+Builtins is a replacement for the old "bot" commands.
 
 ---
 

@@ -1,36 +1,27 @@
-# AntiRaid: Advanced Discord Server Protection
-AntiRaid provides advanced security solutions to protect Discord servers from raids, malicious attacks, and other threats, ensuring a safe and stable environment for your community.
+---
+title: "Badgerfang"
+description: "A sleek guide to using and working on AntiRaid's Website"
+---
 
-## Description
-This repository serves as a resource for the AntiRaid system, offering tools, documentation, and community-driven scripts designed to enhance Discord server security. Our goal is to empower server administrators with robust protection mechanisms and foster a collaborative environment for security development.
+# Introduction
 
-## Features
-- Comprehensive Server Protection: Implement advanced features to safeguard your Discord server against various forms of raids and unwanted intrusions.
+Badgerfang is the rewrite of the old Svelte-kit powered website which is now decrypted.
 
-- Customizable Premium Scripts: Explore and utilize a collection of community-made scripts to tailor your server's security and moderation policies to your specific needs.
+# Stack Used:
 
-- Developer Resources: Access API documentation and a dedicated developer portal to integrate AntiRaid functionalities into other applications or develop custom solutions.
+Badger is built upon:
 
-- Community Support: Engage with other users and get assistance through our official Discord server, AntiRaid Forums, and informative AntiRaid Blogs.
+- [![Next.js](https://cdn.worldvectorlogo.com/logos/next-js.svg)](https://nextjs.org/) **Next.js**
+- [![Framer Motion](https://framerusercontent.com/images/FwGRzdHhlF5dVX3w3adwXRyFz7U.svg)](https://www.framer.com/motion/) **Framer Motion**
+- [![react-icons](https://react-icons.github.io/react-icons/favicon.ico)](https://react-icons.github.io/react-icons/) **react-icons**
+- [![Tailwind CSS](https://tailwindcss.com/favicons/favicon-32x32.png)](https://tailwindcss.com/) **Tailwind CSS**
+- [![Recharts](https://recharts.org/favicon.ico)](https://recharts.org/en-US) **Recharts**
+- [![Axios](https://axios-http.com/assets/favicon.ico)](https://axios-http.com/) **Axios**
 
-## Getting Started
-  To protect your Discord server with AntiRaid or explore its features, please visit the official website: https://antiraid.xyz/ 
+# Overview
 
-## Community and Support
-### Join our community and get support through the following channels:
+Badgerfang's structure is not complex. It uses NextJS's App router for its directory structure and thats about it!
 
-- Discord Server: Connect with other users and the AntiRaid team. (Link not provided, please refer to the website)
+# Insight and workings
 
-- AntiRaid Forums: Discuss topics, ask questions, and share insights. (Link not provided, please refer to the website)
-
-- AntiRaid Blogs: Stay updated with the latest news, features, and security tips. (Link not provided, please refer to the website)
-
-## Contributing
-Specific contribution guidelines would be outlined in a CONTRIBUTING.md file within a GitHub repository. Generally, contributions could involve:
-
-- Script Development: Creating and submitting new premium scripts to enhance server security.
-
-- Bug Reports: Reporting issues or vulnerabilities found in the system.
-
-- Feature Suggestions: Proposing new functionalities or improvements.
-
+Well if you want to know more about Badgerfang's inner working and secret sauce then be sure to read further!
