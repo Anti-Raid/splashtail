@@ -164,7 +164,7 @@ dependencies = [
 [[package]]
 name = "antiraid-types"
 version = "0.1.0"
-source = "git+https://github.com/anti-raid/antiraid-types#8c82ea24b31d9db85034bbe96563e6e4387a2a7f"
+source = "git+https://github.com/anti-raid/antiraid-types#fe2a21e64bd6b3339b3ca2d187c7cfc1e9f1c76e"
 dependencies = [
  "chrono",
  "extract_map",
@@ -2742,7 +2742,7 @@ dependencies = [
 [[package]]
 name = "khronos_runtime"
 version = "1.0.0"
-source = "git+https://github.com/anti-raid/khronos#6e51a6ac279c30ac040d5efbf23bcaeb3e32917f"
+source = "git+https://github.com/anti-raid/khronos#6a1d0477b4fad558b99ceeeb28dfa53104f5ffa1"
 dependencies = [
  "antiraid-types",
  "arrayvec",
