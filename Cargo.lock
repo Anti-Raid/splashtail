@@ -164,7 +164,7 @@ dependencies = [
 [[package]]
 name = "antiraid-types"
 version = "0.1.0"
-source = "git+https://github.com/anti-raid/antiraid-types#ad4a5c265bd49355d365a500bc89dac05d8d3199"
+source = "git+https://github.com/anti-raid/antiraid-types#c9f71fcf1b1fc8e21fa68f857c33e07181c07ded"
 dependencies = [
  "chrono",
  "extract_map",
@@ -972,9 +972,9 @@ dependencies = [
 
 [[package]]
 name = "cc"
-version = "1.2.27"
+version = "1.2.29"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d487aa071b5f64da6f19a3e848e3578944b726ee5a4854b82172f02aa876bfdc"
+checksum = "5c1599538de2394445747c8cf7935946e3cc27e9625f889d979bfb2aaf569362"
 dependencies = [
  "jobserver",
  "libc",
@@ -2738,7 +2738,7 @@ dependencies = [
 [[package]]
 name = "khronos_runtime"
 version = "1.0.0"
-source = "git+https://github.com/anti-raid/khronos#336a229112e8f58091eb2a7a245286d4a856c2bb"
+source = "git+https://github.com/anti-raid/khronos#e1b282078cc6aef705003551b1a32c47c5ae23d6"
 dependencies = [
  "antiraid-types",
  "arrayvec",
@@ -2970,9 +2970,9 @@ checksum = "112b39cec0b298b6c1999fee3e31427f74f676e4cb9879ed1a121b43661a4154"
 
 [[package]]
 name = "luau0-src"
-version = "0.15.2+luau679"
+version = "0.15.3+luau681"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "829d1609fb22f827d84a017cd15649947eea96cd2e218723e10d89e37e66de74"
+checksum = "a5d113b8f2dc58a0d609e1bdc0d748199c33cd9fbd7a706dd4ba4030d2a97f8a"
 dependencies = [
  "cc",
 ]
@@ -4208,9 +4208,9 @@ dependencies = [
 
 [[package]]
 name = "rgb"
-version = "0.8.50"
+version = "0.8.51"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "57397d16646700483b67d2dd6511d79318f9d057fdbd21a4066aeac8b41d310a"
+checksum = "a457e416a0f90d246a4c3288bd7a25b2304ca727f253f95be383dd17af56be8f"
 
 [[package]]
 name = "ring"
@@ -5488,9 +5488,9 @@ dependencies = [
 
 [[package]]
 name = "tokio"
-version = "1.46.0"
+version = "1.46.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1140bb80481756a8cbe10541f37433b459c5aa1e727b4c020fbfebdc25bf3ec4"
+checksum = "0cc3a2344dafbe23a245241fe8b09735b521110d30fcefbbd5feb1797ca35d17"
 dependencies = [
  "backtrace",
  "bytes",
