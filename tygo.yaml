@@ -1,6 +1,6 @@
 packages:
   - path: "github.com/Anti-Raid/api/types"
-    output_path: "services/website/src/lib/generated/types.ts"
+    output_path: ".generated/go/types.ts"
     frontmatter: |
       import { PlatformUser } from "./eureka-dovewing"
       import * as discordgo from "./discordgo"
@@ -17,14 +17,12 @@ packages:
       ext_types.Permissions: ext.Permissions
       discordgo.Channel: discordgo.Channel
       discordgo.ChannelType: discordgo.ChannelType
-      silverpelt.CanonicalCommand: silverpelt.CanonicalCommand
-      silverpelt.CanonicalConfigOption: silverpelt.CanonicalConfigOption
 
   - path: "github.com/anti-raid/eureka/dovewing/dovetypes"
-    output_path: "services/website/src/lib/generated/eureka-dovewing.ts"
+    output_path: ".generated/go/eureka-dovewing.ts"
 
   - path: "github.com/bwmarrin/discordgo"
-    output_path: "services/website/src/lib/generated/discordgo.ts"
+    output_path: ".generated/go/discordgo.ts"
     type_mappings:
       time.Time: "string /* RFC3339 */"
       time.Second: "1"

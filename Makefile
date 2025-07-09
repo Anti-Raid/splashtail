@@ -38,7 +38,6 @@ build:
 	mkdir -p out
 	make build_go
 	make build_rust
-	make copyassets
 
 build_go:
 	for d in services/api services/jobserver; do \

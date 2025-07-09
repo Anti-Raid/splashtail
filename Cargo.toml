@@ -1,10 +1,5 @@
 [workspace]
 members = [
-    "services/template-worker",
-]
-exclude = [
-    "infra/templating-types",
-    "infra/templating-types/darklua", # Avoid workspace conflicts
-    "infra/templating-template/darklua"
+    "services/template-worker"
 ]
 resolver = "2"
