@@ -2,15 +2,9 @@
 	path = infra/nirn-proxy
 	url = https://github.com/Anti-Raid/nirn-proxy
         branch = production
-[submodule "infra/Sandwich-Daemon"]
-	path = infra/Sandwich-Daemon
-	url = https://github.com/anti-raid/Sandwich-Daemon
 [submodule "services/jobserver"]
 	path = services/jobserver
 	url = https://github.com/Anti-Raid/jobserver
-[submodule "core/go"]
-	path = core/go
-	url = https://github.com/Anti-Raid/corelib_go
 [submodule "services/api"]
 	path = services/api
 	url = https://github.com/anti-raid/api
@@ -20,12 +14,6 @@
 [submodule "services/template-worker"]
 	path = services/template-worker
 	url = https://github.com/Anti-Raid/template-worker
-[submodule "infra/templating-template"]
-	path = infra/templating-template
-	url = https://github.com/Anti-Raid/templating-template
-[submodule "infra/templating-types"]
-	path = infra/templating-types
-	url = https://github.com/anti-raid/templating-types
 [submodule "builtins"]
 	path = builtins
 	url = https://github.com/anti-raid/builtins
