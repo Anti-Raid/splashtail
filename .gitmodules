@@ -29,3 +29,6 @@
 [submodule "builtins"]
 	path = builtins
 	url = https://github.com/anti-raid/builtins
+[submodule "templating-types"]
+	path = templating-types
+	url = https://github.com/anti-raid/templating-types
