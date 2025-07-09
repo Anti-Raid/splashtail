@@ -4,6 +4,11 @@ This document details the Docker-based hosting setup for the AntiRaid project, c
 
 ---
 
+<Callout title="Note" type="warning">
+ While we support hosting from docker this is currently not recommended as we've seen decreased performance and other similar issues.
+ </Callout>
+
+
 ## Overview
 
 AntiRaid uses Docker Compose to orchestrate a multi-service infrastructure, including:
