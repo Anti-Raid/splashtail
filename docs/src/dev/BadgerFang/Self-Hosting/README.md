@@ -7,10 +7,10 @@ description: Self hosting guide to badgerfang
 
 for production usage run the following commands to build the website:
 
-```npm
+```sh
 npm install
 ```
 
-```npm
+```sh
 npm run build
 ```
