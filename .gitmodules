@@ -2,9 +2,6 @@
 	path = infra/nirn-proxy
 	url = https://github.com/Anti-Raid/nirn-proxy
         branch = production
-[submodule "services/jobserver"]
-	path = services/jobserver
-	url = https://github.com/Anti-Raid/jobserver
 [submodule "services/api"]
 	path = services/api
 	url = https://github.com/anti-raid/api
