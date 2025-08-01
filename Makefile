@@ -40,7 +40,7 @@ build:
 	make build_rust
 
 build_go:
-	for d in services/api services/jobserver; do \
+	for d in services/api; do \
 		echo $$d && cd ${PWD}/$$d && go build -v -o ${PWD}/out && cd ${PWD}; \
 	done
 
@@ -74,7 +74,7 @@ lintfull_go:
 
 update_go:
 	PWD=$(shell pwd)
-	for d in core/go/* services/api services/jobserver; do \
+	for d in core/go/* services/api; do \
 		echo $$d; \
 		cd $$d && GOPROXY=direct go get -u ./... && cd ${PWD}; \
 	done

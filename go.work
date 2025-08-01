@@ -7,5 +7,4 @@ use (
 
 	// Services
 	./services/api
-	./services/jobserver
 )
