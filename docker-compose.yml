@@ -9,10 +9,10 @@ services:
       sandwich:
         condition: service_healthy
     build:
-      context: ./infra/nirn-proxy
+      context: http://github.com/anti-raid/nirn-proxy.git
       dockerfile: ./Dockerfile
     volumes:
-      - ./infra/nirn-proxy/secrets.docker.json:/secrets.json:ro
+      - ./data/dockerconf/secrets.docker.json:/secrets.json:ro
     command: cache-endpoints=false port=3221 ratelimit-over-408 endpoint-rewrite=/api/gateway/bot@http://sandwich:29334/antiraid,/api/v*/gateway/bot@http://sandwich:29334/antiraid token-map-file=secrets.json
     healthcheck:
       test: [ "CMD", "curl", "-f", "http://localhost:3221/nirn/healthz" ]
@@ -31,11 +31,11 @@ services:
       - antiraid_infra
       - antiraid_internal # Exposed to internal services
     build:
-      context: ./infra/Sandwich-Daemon
+      context: http://github.com/anti-raid/Sandwich-Daemon.git
       dockerfile: ./Dockerfile
     volumes:
-      - ./infra/Sandwich-Daemon/sandwich.docker.yaml:/sandwich.yaml:ro
-    command: ./app/sandwich -configurationPath=/sandwich.yaml -prometheusAddress :3931 -httpEnabled --httpHost 0.0.0.0:29334 -level debug
+      - ./data/dockerconf/sandwich.docker.yaml:/sandwich.yaml:ro
+    command: /app/sandwich -configurationPath=/sandwich.yaml -prometheusAddress :3931 -httpEnabled --httpHost 0.0.0.0:29334 -level debug
     environment:
       EXTERNAL_GATEWAY_ADDRESS: ws://sandwich:3600
     healthcheck:
@@ -110,89 +110,19 @@ services:
       timeout: 10s
       retries: 30
 
-  # SeaweedFS management
-  filestash:
-    container_name: filestash
-    image: machines/filestash:latest
-    restart: always
-    environment:
-      - APPLICATION_URL=
-      - CANARY=true
-      - OFFICE_URL=http://wopi_server:9980
-      - OFFICE_FILESTASH_URL=http://app:8334
-      - OFFICE_REWRITE_URL=http://127.0.0.1:9980
-    ports:
-      - "8334:8334"
-    volumes:
-      - ./data/state/filestash:/app/data/state/
-    networks:
-      - antiraid_seaweed
-
-  filestash_wopi:
-    container_name: filestash_wopi
-    image: collabora/code:24.04.10.2.1
-    restart: always
-    environment:
-      - "extra_params=--o:ssl.enable=false"
-      - aliasgroup1="https://.*:443"
-    command:
-      - /bin/bash
-      - -c
-      - |
-        curl -o /usr/share/coolwsd/browser/dist/branding-desktop.css https://gist.githubusercontent.com/mickael-kerjean/bc1f57cd312cf04731d30185cc4e7ba2/raw/d706dcdf23c21441e5af289d871b33defc2770ea/destop.css
-        /bin/su -s /bin/bash -c '/start-collabora-online.sh' cool
-    user: root
-    ports:
-      - "9980:9980"
-    volumes:
-      - ./data/state/filestash:/app/data/state/
-    networks:
-      - antiraid_seaweed
-
-  # Bot process itself
-  bot:
-    container_name: bot
-    networks:
-      - antiraid_internal # Exposed to internal services
-    depends_on:
-      nirn_proxy:
-        condition: service_healthy
-      sandwich:
-        condition: service_healthy
-      postgres:
-        condition: service_healthy
-      template-worker:
-        condition: service_healthy
-    build:
-      context: ./services/bot
-      dockerfile: ./Dockerfile
-    volumes:
-      - ./config.docker.yaml:/app/config.yaml:ro
-    healthcheck:
-      test: [ "CMD", "curl", "-f", "http://127.0.0.1:20000/state" ]
-      interval: 3s
-      timeout: 10s
-      retries: 10
-    labels:
-      type: "service"
-
   # Template worker process
-  # The template worker is required for the bot to function as it handles Luau
-  # scripting and permissions etc.
   template-worker:
     container_name: template-worker
     networks:
       - antiraid_internal # Exposed to internal services
     depends_on:
-      nirn_proxy:
-        condition: service_healthy
       sandwich:
         condition: service_healthy
       postgres:
         condition: service_healthy
     build:
-      context: ./services/template-worker
-      dockerfile: ./Dockerfile
+      context: .
+      dockerfile: ./services/template-worker/Dockerfile
     volumes:
       - ./config.docker.yaml:/app/config.yaml:ro
     environment:
@@ -205,89 +135,16 @@ services:
     labels:
       type: "service"
 
-  # Redis
-  api_redis:
-    container_name: api_redis
-    networks:
-      - antiraid_api # Only communicates with API
-    image: redis:7.2.7 # Use 7.2.7 to avoid licensing change with 7.4+
-    expose:
-      - 6379
-    command: redis-server --save 900 1 --save 300 10 --save 60 10000 --loglevel notice --bind 0.0.0.0
-    volumes:
-      - ./data/state/redis:/data
-    healthcheck:
-      test: [ "CMD", "redis-cli", "ping" ]
-      interval: 3s
-      timeout: 10s
-      retries: 3
-    labels:
-      type: "cache"
-
-  # Jobserver process
-  jobserver:
-    container_name: jobserver
-    networks:
-      - antiraid_internal # Exposed to internal services
-      - antiraid_jobserver # Needs external net access too
-    depends_on:
-      nirn_proxy:
-        condition: service_healthy
-      sandwich:
-        condition: service_healthy
-      postgres:
-        condition: service_healthy
-    build:
-      context: ./services/jobserver
-      dockerfile: ./Dockerfile
-    volumes:
-      - ./config.docker.yaml:/app/config.yaml:ro
-    healthcheck:
-      test: [ "CMD", "curl", "-f", "http://localhost:30000" ]
-      interval: 3s
-      timeout: 10s
-      retries: 10
-    labels:
-      type: "service"
-
-  # API process
-  # Like all other processes, the API process does not have external net access
-  # outside of Nirn proxy, however, the api_exposer Nginx proxy is used to bridge
-  # the gap between the API and the outside world.
-  api:
-    container_name: api
-    networks:
-      - antiraid_internal # Doesn't need external net access
-      - antiraid_api
-    depends_on:
-      api_redis:
-        condition: service_started
-      nirn_proxy:
-        condition: service_started
-      postgres:
-        condition: service_healthy
-      bot:
-        condition: service_healthy
-    build:
-      context: ./services/api
-      dockerfile: ./Dockerfile
-    volumes:
-      - ./config.docker.yaml:/app/config.yaml:ro
-    labels:
-      type: "service"
-      special-networking-used: "api" # API has special networking needs, so we document that as a nice label
-
   # Nginx process to expose the API outwards while ensuring API itself doesn't get any
   # external net access. Bridges external and internal layers
   api_exposer:
     container_name: api_exposer
     networks:
-      - antiraid_api
       - antiraid_internal # Exposed to internal services
       - antiraid_infra # Needs access to the outside world
       - antiraid_seaweed
     depends_on:
-      api:
+      template-worker:
         condition: service_started
       seaweed:
         condition: service_healthy

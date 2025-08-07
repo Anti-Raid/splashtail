@@ -25,3 +25,4 @@ data/docker/seaweed/s3.json
 **.docker.json
 /**/**.docker.yaml
 /**/**.docker.json
+data/dockerconf

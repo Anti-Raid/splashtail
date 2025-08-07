@@ -6,6 +6,8 @@ import base64
 import json
 import pathlib
 
+os.mkdir("./data/dockerconf")
+
 # Get bot token, client id and client secret
 def get_var(prompt: str, env_var: str) -> str:
     """Gets a variable from the user or environment"""
@@ -92,6 +94,7 @@ meta:
   proxy: http://nirn_proxy:3221 # Proxy URL
   support_server_invite: https://discord.gg/9BJWSrEBBJ
   sandwich_http_api: http://sandwich:29334
+  default_error_channel: "1234567890" # Change this
 
 object_storage:
   type: s3-like # Type of object storage. Can be s3-like or local
@@ -113,19 +116,20 @@ base_ports:
   template_worker_base_addr: 0.0.0.0
   template_worker_addr: template-worker
   template_worker_port: 60000
+  template_worker_bind_addr: 0.0.0.0
 """
 
 print("Saving config.docker.yaml")
 with open("config.docker.yaml", "w") as f:
     f.write(BASE_CONFIG_FILE)
 
-# Save ./infra/nirn-proxy/secrets.docker.json with <faketoken>:<token>
+# Save secrets.docker.json with <faketoken>:<token>
 nirn_secrets = {
     faketoken: realtoken,
 }
 
-print("Saving infra/nirn-proxy/secrets.docker.json")
-with open("./infra/nirn-proxy/secrets.docker.json", "w") as f:
+print("Saving secrets.docker.json")
+with open("./data/dockerconf/secrets.docker.json", "w") as f:
     json.dump(nirn_secrets, f, indent=4)
 
 SANDWICH_YAML = f"""
@@ -205,9 +209,9 @@ managers:
         shard_ids: ""
 """
 
-# Save to infra/Sandwich-Daemon/sandwich.docker.yaml
-print("Saving infra/Sandwich-Daemon/sandwich.docker.yaml")
-with open("./infra/Sandwich-Daemon/sandwich.docker.yaml", "w") as f:
+# Save to sandwich.docker.yaml
+print("Saving sandwich.docker.yaml")
+with open("./data/dockerconf/sandwich.docker.yaml", "w") as f:
     f.write(SANDWICH_YAML)
 
 # Finally seaweed
