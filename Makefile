@@ -18,13 +18,7 @@ ts:
 # Builds AntiRaid services
 build:
 	mkdir -p out
-	make build_go
 	make build_rust
-
-build_go:
-	for d in services/api; do \
-		echo $$d && cd ${PWD}/$$d && go build -v -o ${PWD}/out && cd ${PWD}; \
-	done
 
 build_rust:
 	mkdir -p ${PWD}/out
