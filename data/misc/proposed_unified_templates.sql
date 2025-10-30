@@ -41,7 +41,7 @@ CREATE TABLE template_shop_listings (
     last_updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-CREATE INDEX template_shop_idx ON template_shop (id, template_pool_ref, review_state, created_at);
+CREATE INDEX template_shop_idx ON template_shop (template_pool_ref, review_state, created_at);
 
 -- Guild attached templates
 CREATE TABLE attached_guild_templates(
