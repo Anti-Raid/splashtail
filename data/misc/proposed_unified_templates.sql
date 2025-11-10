@@ -1,6 +1,6 @@
 -- Proposed Unified Template 'RFC'/project
 --
--- This project moves content, ownership data and state
+-- This project moves content state
 -- to its own table called template_pool with guild attached templates
 -- and listings in the shop referencing the pool.
 --
@@ -25,10 +25,9 @@ CREATE TABLE template_pool (
     -- Key metadata
     last_updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    state TEXT NOT NULL DEFAULT 'active', -- 'active', 'paused', 'suspended'
 );
 
-CREATE INDEX template_pool_idx ON template_pool (id, owner_type, owner_id, language, created_at, state);
+CREATE INDEX template_pool_idx ON template_pool (id, owner_type, owner_id, language, created_at);
 
 -- Template shop listings, these reference templates in the pool
 CREATE TABLE template_shop_listings (
@@ -37,19 +36,42 @@ CREATE TABLE template_shop_listings (
     review_state TEXT NOT NULL DEFAULT 'pending', -- 'pending', 'approved', 'denied'
     default_events TEXT[] NOT NULL DEFAULT '{}'::text[],
     default_allowed_caps TEXT[] NOT NULL DEFAULT '{}'::text[],
+    
+    -- Metadata
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     last_updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE INDEX template_shop_idx ON template_shop (template_pool_ref, review_state, created_at);
 
--- Guild attached templates
-CREATE TABLE attached_guild_templates(
-    guild_id TEXT NOT NULL,
+-- Attached templates added to a guild/user
+CREATE TABLE attached_templates(
+    -- Owner data
+    owner_type TEXT NOT NULL, -- 'user' or 'guild'
+    owner_id TEXT NOT NULL,   -- user ID or guild ID
+
+    -- Data
     template_pool_ref UUID NOT NULL REFERENCES template_pool(id) ON UPDATE CASCADE ON DELETE CASCADE,
     source TEXT NOT NULL, -- Source of how this template was attached (e.g., 'shop_listing', 'created', etc.)
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     allowed_caps TEXT[] NOT NULL DEFAULT '{}'::text[],
     events TEXT[] NOT NULL DEFAULT '{}'::text[],
-    PRIMARY KEY (guild_id, template_pool_ref)
+
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    last_updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+
+    PRIMARY KEY (owner_type, owner_id, template_pool_ref)
 );
+
+CREATE TABLE builtins_custom_attachments (
+    -- Owner data
+    owner_type TEXT NOT NULL, -- 'user' or 'guild'
+    owner_id TEXT NOT NULL,   -- user ID or guild ID
+
+    allowed_caps TEXT[] NOT NULL DEFAULT '{}'::text[],
+    events TEXT[] NOT NULL DEFAULT '{}'::text[],
+
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    last_updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+
+    PRIMARY KEY (owner_type, owner_id)
+)
