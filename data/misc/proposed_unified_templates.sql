@@ -18,7 +18,7 @@ CREATE TABLE template_shop_listings (
     last_updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-CREATE INDEX template_shop_idx ON template_shop (id, review_state, created_at);
+CREATE INDEX template_shop_idx ON template_shop_listings (id, review_state, created_at);
 
 -- Attached templates added to a guild/user
 CREATE TABLE attached_templates(
@@ -43,8 +43,7 @@ CREATE TABLE attached_templates(
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     last_updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     allowed_caps TEXT[] NOT NULL DEFAULT '{}'::text[],
-    events TEXT[] NOT NULL DEFAULT '{}'::text[],
-    state TEXT NOT NULL DEFAULT 'active' -- 'active', 'paused' or 'suspended'
+    state TEXT NOT NULL DEFAULT 'active' -- 'active', 'paused'
 );
 
 ALTER TABLE 
