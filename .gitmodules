@@ -8,9 +8,10 @@
 [submodule "services/bot"]
 	path = services/bot
 	url = https://github.com/anti-raid/bot
-[submodule "services/template-worker"]
-	path = services/template-worker
-	url = https://github.com/Anti-Raid/template-worker
 [submodule "builtins"]
 	path = builtins
 	url = https://github.com/anti-raid/builtins
+[submodule "services/template-worker"]
+	path = services/template-worker
+	url = https://github.com/anti-raid/template-worker
+	branch = prod
